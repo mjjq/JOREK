@@ -213,7 +213,7 @@ call initialise_basis                                       ! define the basis f
 ! --- Initialize the new_diag framework and print some information (.true.)
 ! additional to jorek2_fieldlines_vtk
 call init_new_diag(.true.)
-expr_list = exprs(scalar_exprs, n_scalars)
+expr_list = create_exprs(scalar_exprs, n_scalars)
 
 ! --- Read ADAS data and generate coronal equilibrium is needed
 ! additional to jorek2_fieldlines_vtk

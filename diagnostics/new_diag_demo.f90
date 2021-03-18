@@ -102,7 +102,7 @@ program demo
   
   
   
-!  expr_list = exprs((/'R    ', 'Z    ', 'B_R  ', 'B_Z  ', 'B_tor', 'B_abs', 'zj' /), 7, 2)
+!  expr_list = create_exprs((/'R    ', 'Z    ', 'B_R  ', 'B_Z  ', 'B_tor', 'B_abs', 'zj' /), 7, 2)
 !  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, Rmin=1., Rmax=2.5, nR=20, Zmin=-1.25, Zmax=1.25, &
 !    nZ=20)
 !  
@@ -119,7 +119,7 @@ program demo
   
   
   
-  expr_list = exprs((/'r_minor   ', 'theta_star', 'R         ', 'Z         ', 'B_R       ', &
+  expr_list = create_exprs((/'r_minor   ', 'theta_star', 'R         ', 'Z         ', 'B_R       ', &
     'B_Z       ', 'B_tor     ', 'B_abs     '/), 8, 4)
   call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, nPsiN=60, nTht=120)
   call create_tor_pos(tor_pos_list, ierr, nphi=16)
@@ -162,14 +162,14 @@ program demo
   
 !  ! --- How to select expressions, some examples:
 !  expr_list = exprs_all
-!  expr_list = exprs((/'Psi ', 'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 6)
+!  expr_list = create_exprs((/'Psi ', 'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 6)
 !  
 !  
 !  
 !  ! --- Evaluate several expressions at one single position.
 !  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, R=3., Z=0.1)
 !  call create_tor_pos(tor_pos_list, ierr, phi=0.)
-!  expr_list = exprs((/'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 5)
+!  expr_list = create_exprs((/'B_R ', 'xjac', 'T   ', 'rho ', 'zj  '/), 5)
 !  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
 !  
 !  
@@ -182,14 +182,14 @@ program demo
 !  
 !  
 !  ! --- Or as a single call:
-!  call eval_expr(ES, JOREK_UNITS, exprs((/'B_R ', 'xjac', 'T   ', 'rho ', &
+!  call eval_expr(ES, JOREK_UNITS, create_exprs((/'B_R ', 'xjac', 'T   ', 'rho ', &
 !       'zj  '/), 5),          &
 !    pol_pos(node_list,element_list,ES,R=3.,Z=0.1), tor_pos(phi=0.), result, ierr)
 !  
 !  
 !  
 !  ! --- Evaluate several expressions on the outboard midplane and write to file.
-!  expr_list = exprs((/'R    ', 'Z    ', 'Psi_N', 'Psi  ', 'theta', 'x    ', 'y    ', &
+!  expr_list = create_exprs((/'R    ', 'Z    ', 'Psi_N', 'Psi  ', 'theta', 'x    ', 'y    ', &
 !       'phi  ', 'B_R  ', 'xjac ', 'T    ', 'rho  ', 'zj   ', 'omega', 'u    '/), 15)
 !  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES,                    &
 !      Rstart=ES%R_axis, Rend=ES%R_midpl(2)-1.d-3, Zstart=ES%Z_axis,     &

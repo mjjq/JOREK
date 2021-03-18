@@ -1162,7 +1162,7 @@ do i=1,n_vertex_max
             case default
             end select
 
-            ! fourth order diffusion terms
+            ! --- fourth order diffusion terms
             lap_Vstar = v_R / R + v_RR + v_ZZ
 
             lap_AR  = AR0_R  / R  + AR0_RR   + AR0_ZZ
@@ -1399,8 +1399,19 @@ do i=1,n_vertex_max
                   bf_p  = H(k,l,ms,mt)   * element%size(k,l) * HHZ_p(in,mp)
                   bf_s  = H_s(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
                   bf_t  = H_t(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
-                  bf_R = (   y_t(ms,mt) * bf_s - y_s(ms,mt) * bf_t ) / xjac
-                  bf_Z = ( - x_t(ms,mt) * bf_s + x_s(ms,mt) * bf_t ) / xjac
+                  bf_R  = (   y_t(ms,mt) * bf_s - y_s(ms,mt) * bf_t ) / xjac
+                  bf_Z  = ( - x_t(ms,mt) * bf_s + x_s(ms,mt) * bf_t ) / xjac
+                  bf_ss = H_ss(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
+                  bf_tt = H_tt(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
+                  bf_st = H_st(k,l,ms,mt) * element%size(k,l) * HHZ(in,mp)
+                  bf_RR = (bf_ss * y_t(ms,mt)**2 - 2.d0*bf_st * y_s(ms,mt)*y_t(ms,mt) + bf_tt * y_s(ms,mt)**2  &
+                         + bf_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
+                         + bf_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2               & 
+                         - xjac_R * (bf_s * y_t(ms,mt) - bf_t * y_s(ms,mt)) / xjac**2
+                  bf_ZZ = (bf_ss * x_t(ms,mt)**2 - 2.d0*bf_st * x_s(ms,mt)*x_t(ms,mt) + bf_tt * x_s(ms,mt)**2  &
+                         + bf_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
+                         + bf_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            & 
+                         - xjac_Z * (- bf_s * x_t(ms,mt) + bf_t * x_s(ms,mt) ) / xjac**2
 
                   UR    = bf    ;  UZ    = bf    ;  Up    = bf
                   UR_R  = bf_R  ;  UZ_R  = bf_R  ;  Up_R  = bf_R

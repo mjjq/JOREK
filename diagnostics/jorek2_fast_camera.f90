@@ -452,9 +452,9 @@ program jorek2_fast_camera
         
     maxlight = maxval(Light)
     do i=1, n_pix
-      write(20,'(A,i6,A,e)') ' xx[',i-1,'] = ',Zp(i)*1.d5
-      write(20,'(A,i6,A,e)') ' yy[',i-1,'] = ',Yp(i)*1.d5
-      write(20,'(A,i6,A,e)') ' ii[',i-1,'] = ',Light(i)/maxlight
+      write(20,'(A,i6,A,e18.5)') ' xx[',i-1,'] = ',Zp(i)*1.d5
+      write(20,'(A,i6,A,e18.5)') ' yy[',i-1,'] = ',Yp(i)*1.d5
+      write(20,'(A,i6,A,e18.5)') ' ii[',i-1,'] = ',Light(i)/maxlight
     enddo
     write(20,'(A)')      ' pylab.figure()'
     write(20,'(A,i6,A)') ' for i in range(',n_pix,'):'

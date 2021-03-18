@@ -75,12 +75,6 @@ if [ ! -d "${codedir}/non_regression_tests" ]; then
     exit 1
 fi
 
-# --- Verify that 'Makefile.inc' exist
-if [ ! -f "Makefile.inc" ]; then
-  printf "\n$ERROR_COL Please provide a Makefile.inc file.\n $NO_COL"
-  exit 1
-fi
-
 # --- Process command line options
 testcase="NONE"         # (preset) 
 compile="yes"           # (preset)
@@ -213,12 +207,21 @@ elif [ ! -d  "${startdir}/testcases/$testcase" ]; then
   exit 1
 fi
 
+
 if [ "$checkexists" == "yes" ]; then
   echo "Case $testcase exists."
   exit 0
 fi
 
+
 testcasedir=`readlink -f ${startdir}/testcases/$testcase`
+
+
+# --- Verify that 'Makefile.inc' exist
+if [ ! -f "Makefile.inc" ]; then
+  printf "\n$ERROR_COL Please provide a Makefile.inc file.\n $NO_COL"
+  exit 1
+fi
 
 
 # --- Read test case information

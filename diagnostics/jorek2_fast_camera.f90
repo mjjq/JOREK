@@ -16,50 +16,50 @@ program jorek2_fast_camera
   type (type_element_list), pointer :: element_list
   type (type_surface_list)          :: flux_list
 
-  integer		:: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
-  real*4,allocatable	:: xyz (:,:), scalars(:,:), vectors(:,:,:)
-  integer,allocatable	:: ien (:,:)
-  integer, parameter	:: ivtk = 22 ! an arbitrary unit number for the VTK output file
-  integer		:: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node
-  character		:: buffer*80, lf*1, str1*12, str2*12
+  integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
+  real*4,allocatable    :: xyz (:,:), scalars(:,:), vectors(:,:,:)
+  integer,allocatable   :: ien (:,:)
+  integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
+  integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node
+  character             :: buffer*80, lf*1, str1*12, str2*12
   character*12, allocatable :: scalar_names(:), vector_names(:)
-  real*8		:: s, t
-  real*8		:: P,P_s,P_t,P_st,P_ss,P_tt
-  real*8		:: R,R_s,R_t,R_st,R_ss,R_tt
-  real*8		:: Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
-  real*8		:: PPPsi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt
-  real*8		:: ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt
-  real*8		:: U,U_s,U_t,U_st,U_ss,U_tt
-  real*8		:: W,W_s,W_t,W_st,W_ss,W_tt
-  real*8		:: RRRHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt
-  real*8		:: TTT,TT_s,TT_t,TT_st,TT_ss,TT_tt
-  real*8		:: Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt
-  real*8		:: TTTe,Te_s,Te_t,Te_st,Te_ss,Te_tt
-  real*8		:: V, V_s, V_t, V_st, V_ss, V_tt
-  real*8		:: psi_00, rho_00, Ti_00, Te_00
-  real*8		:: ps_x, ps_y
-  real*8		:: u0_x, u0_y
-  real*8		:: zj_x, zj_y
-  real*8		:: w0_x, w0_y, w0_xx, w0_yy
-  real*8		:: RHO_x, RHO_y, RHO_p
-  real*8		:: TT_x, TT_y, TT_p
-  real*8		:: Ti_x, Ti_y, Ti_p
-  real*8		:: Te_x, Te_y, Te_p
-  real*8		:: psi_axis,	  R_axis,      Z_axis,      s_axis,	 t_axis
-  real*8		:: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
-  real*8		:: ps0, psi_norm, psi_bnd, grad_psi
-  real*8		:: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
-  real*8		:: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
-  integer	        :: i_find, i_elm_find(8)
-  real*8	        :: Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
-  real*8	        :: Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
-  real*8	        :: s_find(8), t_find(8)
-  real*8	 	:: Jb
-  real*8	 	:: central_ne
-  integer		:: i_elm_axis, i_elm_xpoint(2), k_tor
-  logical		:: without_n0_mode
+  real*8                :: s, t
+  real*8                :: P,P_s,P_t,P_st,P_ss,P_tt
+  real*8                :: R,R_s,R_t,R_st,R_ss,R_tt
+  real*8                :: Z,Z_s,Z_t,Z_st,Z_ss,Z_tt
+  real*8                :: PPPsi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt
+  real*8                :: ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt
+  real*8                :: U,U_s,U_t,U_st,U_ss,U_tt
+  real*8                :: W,W_s,W_t,W_st,W_ss,W_tt
+  real*8                :: RRRHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt
+  real*8                :: TTT,TT_s,TT_t,TT_st,TT_ss,TT_tt
+  real*8                :: Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt
+  real*8                :: TTTe,Te_s,Te_t,Te_st,Te_ss,Te_tt
+  real*8                :: V, V_s, V_t, V_st, V_ss, V_tt
+  real*8                :: psi_00, rho_00, Ti_00, Te_00
+  real*8                :: ps_x, ps_y
+  real*8                :: u0_x, u0_y
+  real*8                :: zj_x, zj_y
+  real*8                :: w0_x, w0_y, w0_xx, w0_yy
+  real*8                :: RHO_x, RHO_y, RHO_p
+  real*8                :: TT_x, TT_y, TT_p
+  real*8                :: Ti_x, Ti_y, Ti_p
+  real*8                :: Te_x, Te_y, Te_p
+  real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
+  real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
+  real*8                :: ps0, psi_norm, psi_bnd, grad_psi
+  real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
+  real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
+  integer               :: i_find, i_elm_find(8)
+  real*8                :: Router,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
+  real*8                :: Zouter,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+  real*8                :: s_find(8), t_find(8)
+  real*8                :: Jb
+  real*8                :: central_ne
+  integer               :: i_elm_axis, i_elm_xpoint(2), k_tor
+  logical               :: without_n0_mode
   !====================== --- add the diagnostics Er, Vtheta and [not yet Vneo]
-  real*8		:: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound
+  real*8                :: Er, psi_abs, Vtheta, Btheta, Mach_par,Mach_pol,Vsound
   
 
 
@@ -71,29 +71,29 @@ program jorek2_fast_camera
   integer               :: PEC_size, PEC_index_Ne, PEC_index_Te, PEC_index
   character*44          :: PEC_file
   character*50          :: line
-  real*8,allocatable	:: PEC_dens(:), PEC_temp(:), PEC(:)
+  real*8,allocatable    :: PEC_dens(:), PEC_temp(:), PEC(:)
   ! --- Camera variables
   integer               :: n_pixels_hor, n_pixels_ver, n_pix, ncount
-  real*8	 	:: pixel_dim, focus, vec_size
-  real*8	 	:: X_cam, Y_cam, Z_cam
-  real*8,allocatable	:: Xp(:), Yp(:), Zp(:)
-  real*8,allocatable	:: Xv(:), Yv(:), Zv(:)
-  real*8,allocatable	:: Light(:)
+  real*8                :: pixel_dim, focus, vec_size
+  real*8                :: X_cam, Y_cam, Z_cam
+  real*8,allocatable    :: Xp(:), Yp(:), Zp(:)
+  real*8,allocatable    :: Xv(:), Yv(:), Zv(:)
+  real*8,allocatable    :: Light(:)
   character*1           :: rgb(3)
   integer               :: itmp, icnt
   ! --- Integration variables
   integer               :: i_elm, ifail, inside
   integer               :: n_step
-  real*8	 	:: step
-  real*8	 	:: X_tmp, Y_tmp, Z_tmp
-  real*8	 	:: RR,    ZZ,    Phi
-  real*8	 	:: R_out, Z_out
-  real*8	 	:: ss,    tt
-  real*8,allocatable	:: HZ_tor(:)
-  real*8	 	:: psi, rho, rho_n, Te, eV2Joules, solenoid
-  real*8	 	:: tanh_psi, tanh_zmin, tanh_zpls
+  real*8                :: step
+  real*8                :: X_tmp, Y_tmp, Z_tmp
+  real*8                :: RR,    ZZ,    Phi
+  real*8                :: R_out, Z_out
+  real*8                :: ss,    tt
+  real*8,allocatable    :: HZ_tor(:)
+  real*8                :: psi, rho, rho_n, Te, eV2Joules, solenoid
+  real*8                :: tanh_psi, tanh_zmin, tanh_zpls
 
-  real*8	 	:: maxlight
+  real*8                :: maxlight
   
   
   
@@ -290,7 +290,7 @@ program jorek2_fast_camera
     Y_tmp  = Yp(i)
     Z_tmp  = Zp(i)
     ifail  = 1
-    inside = 0	
+    inside = 0  
     
     ! --- For each step on the line of sight...
     do j=1, n_step
@@ -298,13 +298,13 @@ program jorek2_fast_camera
       ! --- If we are entering the plasma core, increase step size
       if ( (ifail .eq. 0) .and. (psi .lt. 0.6) .and. (inside .eq. 0) ) then
         step   = 4.d0*step
-	inside = 1	
+        inside = 1      
       endif
 
       ! --- If we are exiting the plasma core, reduce step size
       if ( (ifail .eq. 0) .and. (psi .ge. 0.6) .and. (inside .eq. 1) ) then
         step   = step/4.d0
-	inside = 0	
+        inside = 0      
       endif
       
       ! --- X,Y,Z-coords
@@ -329,38 +329,38 @@ program jorek2_fast_camera
       if (ifail .eq. 0) then
 
         ! --- Need the harmonic contributions for the toroidal location
-    	HZ_tor(1)   = 1.d0
-    	do i_tor=1,(n_tor-1)/2
-    	  HZ_tor(2*i_tor)     = cos(mode(2*i_tor)  *Phi)
-    	  HZ_tor(2*i_tor+1)   = sin(mode(2*i_tor+1)*Phi)
-    	enddo
-	
+        HZ_tor(1)   = 1.d0
+        do i_tor=1,(n_tor-1)/2
+          HZ_tor(2*i_tor)     = cos(mode(2*i_tor)  *Phi)
+          HZ_tor(2*i_tor+1)   = sin(mode(2*i_tor+1)*Phi)
+        enddo
+
         ! --- Build variables
-  	psi   = 0.d0 
-  	rho   = 0.d0 
-  	rho_n = 0.d0 
-  	Te    = 0.d0 
-  	do i_tor=1,n_tor
-  	  call interp(node_list,element_list,i_elm,1,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
-  	  psi = psi + P * HZ_tor(i_tor)
-  	  call interp(node_list,element_list,i_elm,5,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
-  	  rho = rho + P * HZ_tor(i_tor)
-  	  call interp(node_list,element_list,i_elm,6,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
-  	  Te  = Te  + P * HZ_tor(i_tor)
+        psi   = 0.d0 
+        rho   = 0.d0 
+        rho_n = 0.d0 
+        Te    = 0.d0 
+        do i_tor=1,n_tor
+          call interp(node_list,element_list,i_elm,1,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+          psi = psi + P * HZ_tor(i_tor)
+          call interp(node_list,element_list,i_elm,5,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+          rho = rho + P * HZ_tor(i_tor)
+          call interp(node_list,element_list,i_elm,6,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+          Te  = Te  + P * HZ_tor(i_tor)
           if ( ( jorek_model == 500 ) .or. ( jorek_model == 555 ) ) then
-  	    call interp(node_list,element_list,i_elm,8,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
-  	    rho_n = rho_n + P * HZ_tor(i_tor)
+            call interp(node_list,element_list,i_elm,8,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+            rho_n = rho_n + P * HZ_tor(i_tor)
           endif
-  	enddo
+        enddo
         
-	! --- Normalise psi and denormalise density and temperature
-	eV2Joules = 1.602176487d-19
-	psi   = (psi-psi_axis)/(psi_bnd-psi_axis)
-	rho   = rho*central_ne
-	rho_n = rho_n*central_ne
-	Te    = Te/(central_ne*MU_ZERO*eV2Joules)
-	
-	! --- Neutral density (assumed 20% of core density outside plasma for MAST), if not using neutrals model
+        ! --- Normalise psi and denormalise density and temperature
+        eV2Joules = 1.602176487d-19
+        psi   = (psi-psi_axis)/(psi_bnd-psi_axis)
+        rho   = rho*central_ne
+        rho_n = rho_n*central_ne
+        Te    = Te/(central_ne*MU_ZERO*eV2Joules)
+
+        ! --- Neutral density (assumed 20% of core density outside plasma for MAST), if not using neutrals model
         if ( ( jorek_model .ne. 500 ) .and. ( jorek_model .ne. 555 ) ) then
           !tanh_psi  = 2.5d16 * (0.5 - 0.5* tanh((1.05 - psi)/0.025) ) + 2.5d12
           tanh_psi  = 2.5d16 * (0.5 - 0.5* tanh((0.99 - psi)/0.025) ) + 2.5d12
@@ -376,36 +376,36 @@ program jorek2_fast_camera
           rho_n = 0.4d0*central_ne*( 0.5d0 - 0.5d0*tanh((1.0-psi)/0.001) ) + 0.01d0*central_ne
           !rho_n = rho_n * tanh_zmin * tanh_zpls
         endif
-	
-	! --- Calculate PEC(Ne,Te)
+
+        ! --- Calculate PEC(Ne,Te)
         do k=2,PEC_size
-	  if (rho .lt. PEC_dens(k)) then
-	    if (abs(PEC_dens(k)-rho) .lt. abs(PEC_dens(k-1)-rho)) then
-	      PEC_index_Ne = k
-	    else
-	      PEC_index_Ne = k-1	    
-	    endif
-	    exit
-	  endif
-	  if (k .eq. PEC_size) write(*,'(A,3e)') 'Warning! no PEC found for density :',rho,PEC_dens(1),PEC_dens(k)
-	enddo
+          if (rho .lt. PEC_dens(k)) then
+            if (abs(PEC_dens(k)-rho) .lt. abs(PEC_dens(k-1)-rho)) then
+              PEC_index_Ne = k
+            else
+              PEC_index_Ne = k-1            
+            endif
+            exit
+          endif
+          !if (k .eq. PEC_size) write(*,'(A,3e18.6)') 'Warning! no PEC found for density :',rho,PEC_dens(1),PEC_dens(k)
+        enddo
         do k=2,PEC_size
-	  if (Te .lt. PEC_temp(k)) then
-	    if (abs(PEC_temp(k)-Te) .lt. abs(PEC_temp(k-1)-Te)) then
-	      PEC_index_Te = k
-	    else
-	      PEC_index_Te = k-1	    
-	    endif
-	    exit
-	  endif
-	  if (k .eq. PEC_size) write(*,'(A,3e)') 'Warning! no PEC found for temperature:',Te,PEC_temp(1),PEC_temp(k)
-	enddo        
-	PEC_index = (PEC_index_Ne-1)*PEC_size + PEC_index_Te
-	
-	! --- Integrate Emissivity
-	Light(i) = Light(i) + step*rho_n*rho*PEC(PEC_index)
+          if (Te .lt. PEC_temp(k)) then
+            if (abs(PEC_temp(k)-Te) .lt. abs(PEC_temp(k-1)-Te)) then
+              PEC_index_Te = k
+            else
+              PEC_index_Te = k-1            
+            endif
+            exit
+          endif
+          !if (k .eq. PEC_size) write(*,'(A,3e18.6)') 'Warning! no PEC found for temperature:',Te,PEC_temp(1),PEC_temp(k)
+        enddo        
+        PEC_index = (PEC_index_Ne-1)*PEC_size + PEC_index_Te
+
+        ! --- Integrate Emissivity
+        Light(i) = Light(i) + step*rho_n*rho*PEC(PEC_index)
         !if (Light(i) .lt. 1.d-14) write(*,*)'zero light:',rho_n,rho,PEC(PEC_index)
-	        
+                
       endif
       
     enddo

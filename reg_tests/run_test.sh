@@ -212,6 +212,7 @@ elif [ ! -d  "${startdir}/testcases/$testcase" ]; then
 fi
 
 if [ "$checkexists" == "yes" ]; then
+  echo "Case $testcase exists."
   exit 0
 fi
 

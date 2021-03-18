@@ -231,17 +231,16 @@ module pellet_module
   
     spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
       
-    spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
-  
-    if (spi_phi_inj >= 2.*PI) then
-      spi_phi_inj   = mod(spi_phi_inj,2.*PI)
-    else if (spi_phi_inj < 0.) then
-      spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
-    end if
-  
     loop_over_shards: do i = 1, n_spi
   
       ! -- Update position     
+      spi_phi_inj            = pellets(i)%spi_phi_init
+      if (spi_phi_inj >= 2.*PI) then
+        spi_phi_inj   = mod(spi_phi_inj,2.*PI)
+      else if (spi_phi_inj < 0.) then
+        spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
+      end if
+
       spi_delta_phi          = pellets(i)%spi_phi - spi_phi_inj
       spi_Vel_R_tmp          = pellets(i)%spi_Vel_R * cos(spi_delta_phi) &
                                + pellets(i)%spi_Vel_RxZ * sin(spi_delta_phi)
@@ -720,6 +719,7 @@ module pellet_module
         pellets(i)%spi_R       = spi_R_tmp
         pellets(i)%spi_Z       = spi_Z_tmp
         pellets(i)%spi_phi     = spi_phi_tmp
+        pellets(i)%spi_phi_init= spi_phi_inj
         pellets(i)%spi_Vel_R   = spi_Vel_R_tmp
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_tmp
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
@@ -766,11 +766,11 @@ module pellet_module
     integer, save         :: dtype
     logical, save         :: dtype_set = .false.
   
-    integer :: len(9) = (/1,1,1,1,1,1,1,1,1/), t(9) = (/ &
+    integer :: len(10) = (/1,1,1,1,1,1,1,1,1,1/), t(10) = (/ &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-      MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+      MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
   
-    integer(kind=MPI_ADDRESS_KIND) :: base, disp(9)
+    integer(kind=MPI_ADDRESS_KIND) :: base, disp(10)
     type(type_SPI) :: sample_pellet
   
     dtype_out = dtype
@@ -781,18 +781,19 @@ module pellet_module
     call MPI_Get_address(sample_pellet%spi_R,       disp(1), ierr)
     call MPI_Get_address(sample_pellet%spi_Z,       disp(2), ierr)
     call MPI_Get_address(sample_pellet%spi_phi,     disp(3), ierr)
-    call MPI_Get_address(sample_pellet%spi_Vel_R,   disp(4), ierr)
-    call MPI_Get_address(sample_pellet%spi_Vel_Z,   disp(5), ierr)
-    call MPI_Get_address(sample_pellet%spi_Vel_RxZ, disp(6), ierr)
-    call MPI_Get_address(sample_pellet%spi_radius,  disp(7), ierr)
-    call MPI_Get_address(sample_pellet%spi_abl,     disp(8), ierr)
-    call MPI_Get_address(sample_pellet%spi_species, disp(9), ierr)
+    call MPI_Get_address(sample_pellet%spi_phi_init,disp(4), ierr)
+    call MPI_Get_address(sample_pellet%spi_Vel_R,   disp(5), ierr)
+    call MPI_Get_address(sample_pellet%spi_Vel_Z,   disp(6), ierr)
+    call MPI_Get_address(sample_pellet%spi_Vel_RxZ, disp(7), ierr)
+    call MPI_Get_address(sample_pellet%spi_radius,  disp(8), ierr)
+    call MPI_Get_address(sample_pellet%spi_abl,     disp(9), ierr)
+    call MPI_Get_address(sample_pellet%spi_species, disp(10),ierr)
   
     ! Rebase to particle memory beginning
     disp = disp - base
   
     ! Commit the structured type
-    call MPI_Type_create_struct(9, len, disp, t, dtype, ierr)
+    call MPI_Type_create_struct(10, len, disp, t, dtype, ierr)
     call MPI_Type_commit(dtype, ierr)
   
     ! Set the save bit

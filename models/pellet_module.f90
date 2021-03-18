@@ -234,7 +234,7 @@ module pellet_module
     loop_over_shards: do i = 1, n_spi
   
       ! -- Update position     
-      spi_phi_inj            = pellets(i)%spi_phi_init
+      spi_phi_inj            = pellets(i)%spi_phi_init + ns_phi_rotate
       if (spi_phi_inj >= 2.*PI) then
         spi_phi_inj   = mod(spi_phi_inj,2.*PI)
       else if (spi_phi_inj < 0.) then

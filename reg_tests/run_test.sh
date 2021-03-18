@@ -156,6 +156,7 @@ while [ $# -gt 0 ]; do
 	exit 0
     elif [ "$option" == "-e" ]; then
         checkexists="yes"
+        shift
     elif [ "$option" == "-i" ]; then
         if [ "$firstoption" == "no" ]; then
           printf "$ERROR_COL ERROR: When providing the option '-i', it needs to be the first option. \n $NO_COL"
@@ -229,8 +230,10 @@ if [ "$compile" == "yes" ]; then
   compilopt="-j $compilethreads"
   make cleanall
   if [ "$compiletest" == "yes" ]; then
+    mv communication/eqdsk2jorek.f90 communication/eqdsk2jorek.f90.bck
     ./util/config.sh model=$compilemodel
     make -j 8 objs all
+    mv communication/eqdsk2jorek.f90.bck communication/eqdsk2jorek.f90
     exit $?
   fi
   compile_jorek

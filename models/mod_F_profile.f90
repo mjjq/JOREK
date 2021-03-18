@@ -337,7 +337,9 @@ subroutine integrate_F_profile()
     write(*,*)'                    FFprime, or use a numerical FFprime !!!'
     write(*,*)'                    ie. FF_coef(9) should be set to 1.d0, and FF_coef(6)'
     write(*,*)'                    should be denormalised as '
-    write(*,*)'                    FF_coef(6) = FF_coef(6) * (psi_bnd-psi_axis)...'
+    write(*,*)'                    FF_coef(6) = FF_coef(6) / (psi_bnd-psi_axis)...'
+    write(*,*)'                    where psi_axis and psi_bnd have been calculated from'
+    write(*,*)'                    the Grad-Shafranov with Reduced-MHD'
     write(*,*)'                    Aborting...'
     stop
   endif

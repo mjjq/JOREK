@@ -85,15 +85,15 @@ real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 ! --- Variables inside the OMP loop
 integer    :: k, l, index_ij, index_kl, ij, kl
 
-real*8     :: AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, AR0_ss, AR0_tt, AR0_st,  AR0_RR, AR0_ZZ, AR0_RZ, AR0_pp
-real*8     :: AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, AZ0_ss, AZ0_tt, AZ0_st,  AZ0_RR, AZ0_ZZ, AZ0_RZ, AZ0_pp
-real*8     :: A30,  A30_R,  A30_Z,  A30_p,  A30_s,  A30_t, A30_ss, A30_tt, A30_st,  A30_RR, A30_ZZ, A30_RZ, A30_pp
-real*8     :: UR0,  UR0_R,  UR0_Z,  UR0_p,  UR0_s,  UR0_t,  UR0_ss, UR0_st, UR0_tt, UR0_RR, UR0_ZZ, UR0_RZ, UR0_pp
-real*8     :: UZ0,  UZ0_R,  UZ0_Z,  UZ0_p,  UZ0_s,  UZ0_t,  UZ0_ss, UZ0_st, UZ0_tt, UZ0_RR, UZ0_ZZ, UZ0_RZ, UZ0_pp
-real*8     :: Up0,  Up0_R,  Up0_Z,  Up0_p,  Up0_s,  Up0_t,  Up0_ss, Up0_st, Up0_tt, Up0_RR, Up0_ZZ, Up0_RZ, Up0_pp
-real*8     :: rho0, rho0_R, rho0_Z, rho0_p, rho0_s, rho0_t, rho0_corr, rho0_ss, rho0_st, rho0_tt, rho0_RR, rho0_ZZ, rho0_RZ, rho0_pp
-real*8     :: T0,   T0_R,   T0_Z,   T0_p,   T0_s,   T0_t,   T0_corr  , T0_ss, T0_st, T0_tt, T0_RR, T0_ZZ, T0_RZ, T0_pp
-real*8     :: p0,   p0_R,   p0_Z,   p0_p,   p0_s,   p0_t,   p0_corr
+real*8     :: AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, AR0_ss, AR0_tt, AR0_st, AR0_RR, AR0_ZZ, AR0_RZ, AR0_pp
+real*8     :: AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, AZ0_ss, AZ0_tt, AZ0_st, AZ0_RR, AZ0_ZZ, AZ0_RZ, AZ0_pp
+real*8     :: A30,  A30_R,  A30_Z,  A30_p,  A30_s,  A30_t, A30_ss, A30_tt, A30_st, A30_RR, A30_ZZ, A30_RZ, A30_pp
+real*8     :: UR0,  UR0_R,  UR0_Z,  UR0_p,  UR0_s,  UR0_t, UR0_ss, UR0_st, UR0_tt, UR0_RR, UR0_ZZ, UR0_RZ, UR0_pp
+real*8     :: UZ0,  UZ0_R,  UZ0_Z,  UZ0_p,  UZ0_s,  UZ0_t, UZ0_ss, UZ0_st, UZ0_tt, UZ0_RR, UZ0_ZZ, UZ0_RZ, UZ0_pp
+real*8     :: Up0,  Up0_R,  Up0_Z,  Up0_p,  Up0_s,  Up0_t, Up0_ss, Up0_st, Up0_tt, Up0_RR, Up0_ZZ, Up0_RZ, Up0_pp
+real*8     :: rho0, rho0_R, rho0_Z, rho0_p, rho0_s, rho0_t,rho0_ss,rho0_st,rho0_tt,rho0_RR,rho0_ZZ,rho0_RZ,rho0_pp, rho0_corr
+real*8     :: T0,   T0_R,   T0_Z,   T0_p,   T0_s,   T0_t,  T0_ss,  T0_st,  T0_tt,  T0_RR,  T0_ZZ,  T0_RZ,  T0_pp,   T0_corr
+real*8     :: p0,   p0_R,   p0_Z,   p0_p,   p0_s,   p0_t,  p0_corr
 
 real*8     :: AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t
 real*8     :: AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t
@@ -104,7 +104,7 @@ real*8     :: Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t
 real*8     :: T,   T_R,   T_Z,   T_p,   T_s,   T_t
 real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 
-real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p, v_ss, v_st, v_tt, v_RR, v_ZZ
+real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p,  v_ss,  v_st,  v_tt,  v_RR,  v_ZZ
 real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
 
 real*8     :: Fprof
@@ -301,6 +301,12 @@ real*8     :: Qvisc_T_UZ__p, Qvisc_T_UZ__n
 real*8     :: Qvisc_T_Up__p, Qvisc_T_Up__n
 real*8     :: Qvisc_T_T__p,  Qvisc_T_T__n
 
+! --- fourth order stabilization (numerical diffusion terms)
+real*8     :: lap_Vstar, lap_bf
+real*8     :: lap_AR, lap_AZ, lap_A3
+real*8     :: lap_UR, lap_UZ, lap_Up
+real*8     :: lap_rho, lap_T
+
 ! --- VMS
 real*8     :: VdotB
 real*8     :: CvR0, CvZ0, Cvp0, CvGradAR0, CvGradAZ0, CvGradA30, CvGradr0, CvGradT0
@@ -316,12 +322,6 @@ real*8     :: VmsCoefF, VmsCoefF_T
 real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, QvmsF_p, QvmsF_n, QvmsF_k, QvmsF_kn
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
-
-! fourth order stabilization
-real*8     :: lap_Vstar, lap_bf
-real*8     :: lap_AR, lap_AZ, lap_A3
-real*8     :: lap_UR, lap_UZ, lap_Up
-real*8     :: lap_rho, lap_T
 
 rho_min = 0.005 ! should be moved to namelist input
 
@@ -1220,6 +1220,7 @@ do i=1,n_vertex_max
                              + R * v * (eta_R * BZ0 - eta_Z * BR0)          &
                              + eta_T * v * current_source_Jp(ms,mt)         &
                              + eta_num * lap_Vstar * lap_A3
+
             !###################################################################################################
             !#  equation 4   (R component momentum equation)                                                   #
             !###################################################################################################
@@ -1286,6 +1287,7 @@ do i=1,n_vertex_max
             Qvec_k(var_rho) = + rho0 * VdiaGradVstar__k                         &
                               - D_prof * gradRho_gradVstar__k                   &
                               - (D_par-D_prof) * BgradVstar__k * BgradRho / BB2 
+
             !###################################################################################################
             !#  equation 8 (Pressure equation)                                                                 #
             !###################################################################################################

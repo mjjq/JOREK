@@ -35,6 +35,7 @@ function printusage() {
     echo "   -d            Compilation with debugging options (DEBUG=1)"
     echo "   -l            List available test cases using long format."
     echo "   -L            List available test cases without any description (short format)"
+    echo "   -e            Check whether a test case exists"
     echo "   -n            Do not compile (assume executables already exist)"
     echo "   --diff        Print difference between results and reference (using Python + numpy)"
     echo "   -p            Prepare the case but do not run it"
@@ -105,6 +106,7 @@ runit="yes"             # (preset)
 initialrun="no"         # (preset)
 printdiff="no"          # (preset)
 debugoptions=""         # (preset)
+checkexists="no"        # (preset)
 if [ -z "$compilethreads" ]; then
     compilethreads="8"  # (preset)
 fi
@@ -152,6 +154,8 @@ while [ $# -gt 0 ]; do
         fi
 	done
 	exit 0
+    elif [ "$option" == "-e" ]; then
+        checkexists="yes"
     elif [ "$option" == "-i" ]; then
         if [ "$firstoption" == "no" ]; then
           printf "$ERROR_COL ERROR: When providing the option '-i', it needs to be the first option. \n $NO_COL"
@@ -189,17 +193,34 @@ while [ $# -gt 0 ]; do
 done
 echo " tmpdir = " $tmpdir
 
+# --- Detect which case of test (run test or compile test)
+if [ "${testcase:0:17}" == "compile_objs_all_" ]; then
+  compiletest="yes"
+  compilemodel=${testcase:17}
+fi
+
 # --- Check if the testcase exists
-if [ ! -d  "${startdir}/testcases/$testcase" ]; then
+if [ "$compiletest" == "yes" ]; then
+  if [ ! -d "models/model$compilemodel" ]; then
+  printf "\n$ERROR_COL ERROR: Testcase '$testcase' does not exist. Model $compilemodel not present in this code version.$NO_COL\n"
+  exit 1
+  fi
+elif [ ! -d  "${startdir}/testcases/$testcase" ]; then
   printf "\n$ERROR_COL ERROR: Testcase '$testcase' does not exist. Use command line option -l to list available test cases.$NO_COL\n"
-  printusage
   exit 1
 fi
+
+if [ "$checkexists" == "yes" ]; then
+  exit 0
+fi
+
 testcasedir=`readlink -f ${startdir}/testcases/$testcase`
 
 
 # --- Read test case information
-source $testcasedir/settings.sh
+if [ "$compiletest" == "no" ]; then
+  source $testcasedir/settings.sh
+fi
 
 
 # --- Set hard-coded parameters and compile
@@ -207,6 +228,11 @@ if [ "$compile" == "yes" ]; then
   cd $codedir
   compilopt="-j $compilethreads"
   make cleanall
+  if [ "$compiletest" == "yes" ]; then
+    ./util/config.sh model=$compilemodel
+    make -j 8 objs all
+    exit $?
+  fi
   compile_jorek
   make cleanall
   if [ $? -ne 0 ]; then

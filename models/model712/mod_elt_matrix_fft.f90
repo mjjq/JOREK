@@ -801,9 +801,9 @@ do i=1,n_vertex_max
           Ti0_t    = eq_t(mp,var_Ti,ms,mt)
           Ti0_R    = (   y_t(ms,mt) * Ti0_s  - y_s(ms,mt) * Ti0_t ) / xjac
           Ti0_Z    = ( - x_t(ms,mt) * Ti0_s  + x_s(ms,mt) * Ti0_t ) / xjac
-          Ti0_ss   = eq_ss(mp,var_T,ms,mt)
-          Ti0_st   = eq_st(mp,var_T,ms,mt)
-          Ti0_tt   = eq_tt(mp,var_T,ms,mt)
+          Ti0_ss   = eq_ss(mp,var_Ti,ms,mt)
+          Ti0_st   = eq_st(mp,var_Ti,ms,mt)
+          Ti0_tt   = eq_tt(mp,var_Ti,ms,mt)
           Ti0_RR   = ( Ti0_ss * y_t(ms,mt)**2 - 2.d0*Ti0_st * y_s(ms,mt)*y_t(ms,mt)              &
                        + Ti0_tt * y_s(ms,mt)**2 &
                        + Ti0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &
@@ -824,9 +824,9 @@ do i=1,n_vertex_max
           Te0_t    = eq_t(mp,var_Te,ms,mt)
           Te0_R    = (   y_t(ms,mt) * Te0_s  - y_s(ms,mt) * Te0_t ) / xjac
           Te0_Z    = ( - x_t(ms,mt) * Te0_s  + x_s(ms,mt) * Te0_t ) / xjac
-          Te0_ss   = eq_ss(mp,var_T,ms,mt)
-          Te0_st   = eq_st(mp,var_T,ms,mt)
-          Te0_tt   = eq_tt(mp,var_T,ms,mt)
+          Te0_ss   = eq_ss(mp,var_Te,ms,mt)
+          Te0_st   = eq_st(mp,var_Te,ms,mt)
+          Te0_tt   = eq_tt(mp,var_Te,ms,mt)
           Te0_RR   = ( Te0_ss * y_t(ms,mt)**2 - 2.d0*Te0_st * y_s(ms,mt)*y_t(ms,mt)              &
                        + Te0_tt * y_s(ms,mt)**2 &
                        + Te0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &
@@ -846,9 +846,9 @@ do i=1,n_vertex_max
           rhon0_t    = eq_t(mp,var_rhon,ms,mt)
           rhon0_R    = (   y_t(ms,mt) * rhon0_s  - y_s(ms,mt) * rhon0_t ) / xjac
           rhon0_Z    = ( - x_t(ms,mt) * rhon0_s  + x_s(ms,mt) * rhon0_t ) / xjac
-          rhon0_ss   = eq_ss(mp,var_rho,ms,mt)
-          rhon0_st   = eq_st(mp,var_rho,ms,mt)
-          rhon0_tt   = eq_tt(mp,var_rho,ms,mt)
+          rhon0_ss   = eq_ss(mp,var_rhon,ms,mt)
+          rhon0_st   = eq_st(mp,var_rhon,ms,mt)
+          rhon0_tt   = eq_tt(mp,var_rhon,ms,mt)
           rhon0_RR   = ( rhon0_ss * y_t(ms,mt)**2 - 2.d0*rhon0_st * y_s(ms,mt)*y_t(ms,mt)              &
                        + rhon0_tt * y_s(ms,mt)**2 &
                        + rhon0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &

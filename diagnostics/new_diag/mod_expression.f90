@@ -291,10 +291,10 @@ module mod_expression
     call add(exprs_all_int, 'I_halo      ', 'Total poloidal halo currents                          ')
     call add(exprs_all_int, 'TPF_halo    ', 'Toroidal peaking factor of the poloidal halos         ')
 
-    call add(exprs_all_four, 'absolute    ', 'Absolute value of 2D Fourier analysis                ')
-    call add(exprs_all_four, 'real        ', 'Real part      of 2D Fourier analysis                ')
-    call add(exprs_all_four, 'imaginary   ', 'Imaginary part of 2D Fourier analysis                ')
-    call add(exprs_all_four, 'phase       ', 'Complex phase  of 2D Fourier analysis                ')
+    call add(exprs_all_four, 'absolute    ', 'Absolute value of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'real        ', 'Real part      of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'imaginary   ', 'Imaginary part of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'phase       ', 'Complex phase  of 2D Fourier analysis                 ')
 
   end subroutine init_expr
   

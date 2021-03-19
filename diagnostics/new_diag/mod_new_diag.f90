@@ -502,7 +502,7 @@ module mod_new_diag
             output_name   = 'imaginary_part'
 
           case ( 'phase' )        
-            outp(:,:,:,:) = atan2( real(cp(:,:,:,:)), aimag(cp(:,:,:,:)) ) !#########correct?
+            outp(:,:,:,:) = atan2( aimag(cp(:,:,:,:)), real(cp(:,:,:,:)) ) 
             output_name   = 'complex_phase '
 
           case default

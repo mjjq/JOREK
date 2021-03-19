@@ -337,7 +337,7 @@ module exec_commands
     step_imported = .true.
     
     ! (not elegant, admittedly... but guarantees consistent time normalization:)
-    call eval_expr(ES, get_int_setting('units', ierr), create_exprs('t',1),                  &
+    call eval_expr(ES, get_int_setting('units', ierr), exprs('t',1),                  &
       pol_pos(node_list,element_list,ES,R=ES%R_axis,Z=ES%Z_axis), tor_pos(phi=0.d0), result, ierr)
     time_now = result(1,1,1,1)
     
@@ -1005,7 +1005,7 @@ module exec_commands
       
     else
       
-      expr_list = create_exprs(command%args(1:command%n_args), command%n_args)
+      expr_list = exprs(command%args(1:command%n_args), command%n_args)
       call print_exprs(expr_list,.true.)
       
     end if
@@ -1030,7 +1030,7 @@ module exec_commands
       
     else
       
-      expr_list_four = create_exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_four)
+      expr_list_four = exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_four)
       call print_exprs(expr_list_four,.true.)
        
     end if
@@ -1052,7 +1052,7 @@ module exec_commands
       
     else
       
-      expr_list = create_exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_int)
+      expr_list = exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_int)
       call print_exprs(expr_list,.true.)
        
     end if
@@ -2777,8 +2777,8 @@ module exec_commands
     
     ! --- If no fourier expressions are given, output absolute values by default
     if ( expr_list_four%n_expr .eq. 0 ) then
-      write(*,*) 'WARNING: No expressions for 2D-Fourier analysis given. Output absolute values by default.'
-      expr_list_four = create_exprs((/'absolute'/), 1, exprs_all_local=exprs_all_four)
+      write(*,*) 'WARNING: No expressions for 2D Fourier analysis given. Output all components by default.'
+      expr_list_four = exprs_all_four
     end if
 
     call fourier_analysis(node_list, element_list, ES, units, expr_list, cp, npts, ierr,           &
@@ -2845,7 +2845,7 @@ module exec_commands
       call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, Rmin=R_min, Rmax=R_max2,&
         nR=n_R, Zmin=Z_min, Zmax=Z_max2, nZ=n_Z)
       tor_pos_list  = tor_pos(phistart=0.d0, phiend=phi_max2, nphi=n_phi)
-      tmp_expr_list = create_exprs((/'B_tor', 'B_R  ', 'B_Z  '/), 3)
+      tmp_expr_list = exprs((/'B_tor', 'B_R  ', 'B_Z  '/), 3)
     end if
     call eval_expr(ES, JOREK_UNITS, tmp_expr_list, pol_pos_list, tor_pos_list, result, ierr)
     if ( fact_btor /= 1.d0 ) result(:,:,:,1  ) = result(:,:,:,1  ) * fact_btor

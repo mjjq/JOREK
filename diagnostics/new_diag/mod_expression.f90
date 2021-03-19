@@ -322,10 +322,10 @@ module mod_expression
   
   
   !> Creates a subset of all available expressions.
-  function create_exprs(name, n_expr, n_coord, exprs_all_local) result(expr_list)
+  function exprs(name, n_expr, n_coord, exprs_all_local) result(expr_list)
     type(t_expr_list) :: expr_list
     
-    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':create_exprs'
+    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
     
     ! --- Routine parameters
     character(len=*),            intent(in) :: name(n_expr)
@@ -356,7 +356,7 @@ module mod_expression
     expr_list%n_coord = 0
     if ( present(n_coord) ) expr_list%n_coord = n_coord
     
-  end function create_exprs
+  end function exprs
 
   
   

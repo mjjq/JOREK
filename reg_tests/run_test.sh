@@ -246,6 +246,7 @@ if [ "$compile" == "yes" ]; then
     exit $? # exit after compiling for compile tests
   fi
   if [ -e $testcasedir/.not-with-debug ]; then
+    echo "Switching off debug options since the test case is marked incompatible with it"
     debugoptions=""
   fi
   compile_jorek

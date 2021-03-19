@@ -84,6 +84,7 @@ initialrun="no"         # (preset)
 printdiff="no"          # (preset)
 debugoptions=""         # (preset)
 checkexists="no"        # (preset)
+compiletest="no"        # (preset)
 if [ -z "$compilethreads" ]; then
     compilethreads="8"  # (preset)
 fi
@@ -225,7 +226,7 @@ fi
 
 
 # --- Read test case information
-if [ "$compiletest" == "no" ]; then
+if [ "$compiletest" != "yes" ]; then
   source $testcasedir/settings.sh
 fi
 

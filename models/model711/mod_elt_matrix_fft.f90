@@ -1123,7 +1123,8 @@ do i=1,n_vertex_max
             lap_UZ  = UZ0_R  / R  + UZ0_RR   + UZ0_ZZ 
             lap_Up  = Up0_R  / R  + Up0_RR   + Up0_ZZ 
             lap_rho = rho0_R / R  + rho0_RR  + rho0_ZZ
-            lap_T   = T0_R   / R   + T0_RR   + T0_ZZ  
+            lap_Ti  = Ti0_R  / R  + Ti0_RR   + Ti0_ZZ  
+            lap_Te  = Te0_R  / R  + Te0_RR   + Te0_ZZ  
 
             rhs_p_ij  = 0.d0
             rhs_k_ij  = 0.d0

@@ -173,6 +173,13 @@ done
 echo " tmpdir = " $tmpdir
 
 
+# --- Detect which case of test (run test or compile test)
+if [ "${testcase:0:17}" == "compile_objs_all_" ]; then
+  compiletest="yes"
+  compilemodel=${testcase:17}
+fi
+
+
 # --- Check if the testcase exists
 if [ "$compiletest" == "yes" ]; then
   if [ ! -d "models/model$compilemodel" ]; then
@@ -190,12 +197,6 @@ if [ "$checkexists" == "yes" ]; then
   exit 0
 fi
 
-
-# --- Detect which case of test (run test or compile test)
-if [ "${testcase:0:17}" == "compile_objs_all_" ]; then
-  compiletest="yes"
-  compilemodel=${testcase:17}
-fi
 
 if [ "$compiletest" != "yes" ]; then
   testcasedir=`readlink -f ${startdir}/testcases/$testcase`

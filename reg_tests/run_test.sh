@@ -172,30 +172,6 @@ while [ $# -gt 0 ]; do
 done
 echo " tmpdir = " $tmpdir
 
-# --- Detect which case of test (run test or compile test)
-if [ "${testcase:0:17}" == "compile_objs_all_" ]; then
-  compiletest="yes"
-  compilemodel=${testcase:17}
-fi
-
-if [ "$compiletest" != "yes" ]; then
-  # --- Verify that $MPIRUN can be executed
-  MPIRUN_cmd=`echo $MPIRUN | cut -d' ' -f1`
-  stringarray=($MPIRUN)
-  MPIRUN_cmd=${stringarray[0]}
-  which $MPIRUN_cmd >/dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    printf "\nERROR: $MPIRUN_cmd not found\n"
-    exit 1
-  fi
-  
-  # --- Verify that 'h5diff' can be executed
-  which h5diff >/dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    printf "\nERROR: h5diff not found\n"
-    exit 1
-  fi
-fi
 
 # --- Check if the testcase exists
 if [ "$compiletest" == "yes" ]; then
@@ -215,7 +191,32 @@ if [ "$checkexists" == "yes" ]; then
 fi
 
 
-testcasedir=`readlink -f ${startdir}/testcases/$testcase`
+# --- Detect which case of test (run test or compile test)
+if [ "${testcase:0:17}" == "compile_objs_all_" ]; then
+  compiletest="yes"
+  compilemodel=${testcase:17}
+fi
+
+if [ "$compiletest" != "yes" ]; then
+  testcasedir=`readlink -f ${startdir}/testcases/$testcase`
+  
+  # --- Verify that $MPIRUN can be executed
+  MPIRUN_cmd=`echo $MPIRUN | cut -d' ' -f1`
+  stringarray=($MPIRUN)
+  MPIRUN_cmd=${stringarray[0]}
+  which $MPIRUN_cmd >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    printf "\nERROR: $MPIRUN_cmd not found\n"
+    exit 1
+  fi
+  
+  # --- Verify that 'h5diff' can be executed
+  which h5diff >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    printf "\nERROR: h5diff not found\n"
+    exit 1
+  fi
+fi
 
 
 # --- Verify that 'Makefile.inc' exist

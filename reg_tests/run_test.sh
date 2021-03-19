@@ -243,7 +243,10 @@ if [ "$compile" == "yes" ]; then
     ./util/config.sh model=$compilemodel
     make -j 8 objs all
     mv communication/eqdsk2jorek.f90.bck communication/eqdsk2jorek.f90
-    exit $?
+    exit $? # exit after compiling for compile tests
+  fi
+  if [ -e $testcasedir/.not-with-debug ]; then
+    debugoptions=""
   fi
   compile_jorek
   make cleanall

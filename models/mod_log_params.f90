@@ -705,7 +705,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
      write(*,REAL_FMT) 'ns_amplitude        ',  ns_amplitude
      write(*,REAL_FMT) 'ns_R                ',  ns_R
      write(*,REAL_FMT) 'ns_Z                ',  ns_Z

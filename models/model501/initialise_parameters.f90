@@ -3,10 +3,6 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use data_structure
-use constants
-use mpi_mod
-use corr_neg
 use mumps_module,  only: no_zeros_mumps, mumps_ordering
 use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
@@ -22,18 +18,9 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
+integer :: ierr,err,i
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-
-integer :: ierr,err,ferr,i,ifail,i_elm,i_surface
-
-real*8, dimension(2) :: P, P_s, P_t, P_phi
-real*8  :: R, R_s, R_t, Z, Z_s, Z_t
-real*8  :: s_out,t_out,R_out,Z_out
-
-
-! --- Namelist with input parameters.                                                                                                                        
+! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 eta, visco, visco_par,                              &
@@ -150,7 +137,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
                 vert_FB_tact, start_VFB_ts, I_coils_max
 
- if (my_id .eq. 0) then
+if (my_id .eq. 0) then
+
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
 
@@ -169,7 +157,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
     read(42,in1)
     close(42)
   else
-
     read(5,in1)
   endif
 
@@ -177,7 +164,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
   if (trim(R_Z_psi_bnd_file) .ne. 'none') then
-
     ! --- Open the file.
     OPEN(UNIT=243, FILE=R_Z_psi_bnd_file, FORM='FORMATTED', STATUS='OLD', ACTION='READ', IOSTAT=err)
     if ( err /= 0 ) then
@@ -185,7 +171,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
       stop
     endif
     write(*,'(A)') ' boundary info from R_Z_psi_bnd_file: R_boundary, Z_boundary, psi_boundary '
-
     do i=1,n_boundary
       read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
       write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
@@ -250,18 +235,18 @@ if ( my_id == 0 ) then
       stop
     end if
   end if
-  
+
   if (using_spi) then
     if (JET_MGI .or. ASDEX_MGI) then
       write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
       write(*,*) "JET_MGI:", JET_MGI
       write(*,*) "ASDEX_MGI:", ASDEX_MGI
       stop
-    else
+    else 
       call init_spi()
     end if
   end if
 end if
-  
+
 return
 end subroutine initialise_parameters

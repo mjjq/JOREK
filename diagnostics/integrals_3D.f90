@@ -27,7 +27,7 @@ type (type_node)         :: nodes(n_vertex_max)
 
 real*8  :: x_g(n_gauss,n_gauss),        x_s(n_gauss,n_gauss),        x_t(n_gauss,n_gauss)
 real*8  :: y_g(n_gauss,n_gauss),        y_s(n_gauss,n_gauss),        y_t(n_gauss,n_gauss)
-real*8  :: eq_g(n_plane,n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
+real*8  :: eq_g(n_plane,0:n_var,n_gauss,n_gauss), eq_s(n_plane,n_var,n_gauss,n_gauss)
 real*8  :: eq_t(n_plane,n_var,n_gauss,n_gauss), eq_p(n_plane,n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
 

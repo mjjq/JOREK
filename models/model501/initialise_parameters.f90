@@ -211,23 +211,20 @@ if (my_id .eq. 0) then
   endif
 
   call allocate_live_data()
+  
+  keep_n0_const  = ( keep_n0_const .or. linear_run )
+  ! --- Read numerical profiles for rho, T, and ff'.
+  call read_num_profiles(my_id)
+  
+  ! --- Determine the derivatives of the numerical input profiles.
+  call derive_num_profiles(my_id)
+  
+  ! --- For now the diamagnetic term has not been implemented properly
+  if (tauIC /= 0.d0) then
+    tauIC = 0.d0
+    write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 501, setting tauIC = 0 now."
+  endif
 
-endif
-
-keep_n0_const  = ( keep_n0_const .or. linear_run )
-! --- Read numerical profiles for rho, T, and ff'.
-call read_num_profiles(my_id)
-
-! --- Determine the derivatives of the numerical input profiles.
-call derive_num_profiles(my_id)
-
-! --- For now the diamagnetic term has not been implemented properly
-if (tauIC /= 0.d0) then
-  tauIC = 0.d0
-  write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 501, setting tauIC = 0 now."
-endif
-
-if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
     if (t_now > t_ns) then

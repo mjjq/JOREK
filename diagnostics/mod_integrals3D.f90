@@ -490,28 +490,16 @@ do ife = ife_min, ife_max
         ps0    = eq_g(mp,var_psi,ms,mt)
         ps0_s  = eq_s(mp,var_psi,ms,mt) 
         ps0_t  = eq_t(mp,var_psi,ms,mt)
-#ifndef fullmhd
         u0_s   = eq_s(mp,var_u,ms,mt) 
         u0_t   = eq_t(mp,var_u,ms,mt)
         u0_p   = eq_p(mp,var_u,ms,mt)
-#else
-        u0_s   = 0.d0
-        u0_t   = 0.d0
-        u0_p   = 0.d0
-#endif
         p0_s   = r0*eq_s(mp,var_T,ms,mt) + T0 * eq_s(mp,var_rho,ms,mt) 
         p0_t   = r0*eq_t(mp,var_T,ms,mt) + T0 * eq_t(mp,var_rho,ms,mt) 
         p0_p   = r0*eq_p(mp,var_T,ms,mt) + T0 * eq_p(mp,var_rho,ms,mt) 
 
-#ifndef fullmhd
         vpar0   = eq_g(mp,var_Vpar,ms,mt)
         vpar_s  = eq_s(mp,var_Vpar,ms,mt)
         vpar_t  = eq_t(mp,var_Vpar,ms,mt)
-#else
-        vpar0   = 0.d0
-        vpar_s  = 0.d0
-        vpar_t  = 0.d0
-#endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
         rn0    = eq_g(mp,var_rhon,ms,mt)
@@ -586,19 +574,11 @@ do ife = ife_min, ife_max
         dpsidx = (   y_t(ms,mt) * eq_s(mp,var_psi,ms,mt) - y_s(ms,mt) * eq_t(mp,var_psi,ms,mt) ) / xjac
         dpsidy = ( - x_t(ms,mt) * eq_s(mp,var_psi,ms,mt) + x_s(ms,mt) * eq_t(mp,var_psi,ms,mt) ) / xjac
 
-#ifndef fullmhd
         dudx = (   y_t(ms,mt) * eq_s(mp,var_u,ms,mt) - y_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
         dudy = ( - x_t(ms,mt) * eq_s(mp,var_u,ms,mt) + x_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
 
         vpar_x = (   y_t(ms,mt) * vpar_s - y_s(ms,mt) * vpar_t ) / xjac
         vpar_y = ( - x_t(ms,mt) * vpar_s + x_s(ms,mt) * vpar_t ) / xjac
-#else
-        dudx = 0.d0
-        dudy = 0.d0
-
-        vpar_x = 0.d0
-        vpar_y = 0.d0
-#endif
 
         BB2 = (F0*F0 + dpsidx*dpsidx + dpsidy*dpsidy) / BigR**2
 

@@ -44,36 +44,38 @@ module mod_impurity
         deallocate(imp_adas)
         stop
       else
-        do i=1, n_adas
-          select case ( trim(imp_type) )
-            case('C')
-              adas_suffix = '96_c'
-            case('H')
-              adas_suffix = '12_h'
-            case('D')
-              adas_suffix = '12_h' ! We are using the hydrogen data here, in want of deuterium data
-            case('Ar')
-              adas_suffix = '89_ar'
-            case('Ne')
-              adas_suffix = '96_ne'
-            case('W')
-              adas_suffix = '50_w'
-            case default
-              write(*,*) "Unrecognized species, terminating."
-              adas_suffix = 'none'
-              deallocate(imp_cor)
-              deallocate(imp_adas)
-              stop
-          end select
+        if (nimp_bg .gt. 0 .or. with_impurities)
+          do i=1, n_adas
+            select case ( trim(imp_type) )
+              case('C')
+                adas_suffix = '96_c'
+              case('H')
+                adas_suffix = '12_h'
+              case('D')
+                adas_suffix = '12_h' ! We are using the hydrogen data here, in want of deuterium data
+              case('Ar')
+                adas_suffix = '89_ar'
+              case('Ne')
+                adas_suffix = '96_ne'
+              case('W')
+                adas_suffix = '50_w'
+              case default
+                write(*,*) "Unrecognized species, terminating."
+                adas_suffix = 'none'
+                deallocate(imp_cor)
+                deallocate(imp_adas)
+                stop
+            end select
 
-          imp_adas(i) = read_adf11(my_id, trim(adas_suffix),trim(adas_dir))
-          imp_cor(i)  = coronal(imp_adas(i))
+            imp_adas(i) = read_adf11(my_id, trim(adas_suffix),trim(adas_dir))
+            imp_cor(i)  = coronal(imp_adas(i))
 
-          
-          ! This is to output a coronal equilibrium charge distribution as a
-          ! function of temperature assuming constant density
-          if (my_id == 0) call output_coronal(imp_cor(i))
-        end do
+            
+            ! This is to output a coronal equilibrium charge distribution as a
+            ! function of temperature assuming constant density
+            if (my_id == 0) call output_coronal(imp_cor(i))
+          end do
+        endif
       end if
 
     end if

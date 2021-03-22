@@ -595,9 +595,6 @@ module pellet_module
                            spi_rnd_seed, spi_angle, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
                            xtime_spi_ablation_bg_rate, nstep, spi_shard_file, spi_abl_model, n_spi_tot
     use mpi_mod
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
-    use mod_neutral_source
-#endif
     use corr_neg
     
     implicit none

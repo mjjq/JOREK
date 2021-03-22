@@ -692,9 +692,6 @@ do ife = ife_min, ife_max
     end if
   end if
 
-  ! Frictional heat source from ionization
-  fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (r0_corr * rn0_corr * Sion_T)&
-                  + 0.5 * vpar0**2 * BB2 * (r0_corr * rn0_corr * Sion_T)
 #endif
 
 #ifdef WITH_Impurities
@@ -902,6 +899,7 @@ do ife = ife_min, ife_max
         ! Frictional heat source
         fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&
                         + 0.5 * vpar0**2 * BB2 * (source_bg + source_imp)
+        fric_disp_tot = fric_disp_tot + fric_disp * BigR * xjac * wst * delta_phi 
 
         ! Neutral injection rate in particles/s
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * m_i_over_m_imp * bigR &
@@ -909,8 +907,6 @@ do ife = ife_min, ife_max
         ! Total neutrals in particles
         local_n_particles     = local_n_particles + central_density * 1.d20 * rn0 * m_i_over_m_imp * bigR * xjac * wst * delta_phi
 #endif
-
-        fric_disp_tot = fric_disp_tot + fric_disp * BigR * xjac * wst * delta_phi 
 
         if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
 #ifdef WITH_Impurities

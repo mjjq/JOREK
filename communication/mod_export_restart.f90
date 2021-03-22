@@ -41,6 +41,9 @@ subroutine export_binary_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  use mod_neutral_source
+#endif
   use vacuum, only: export_restart_vacuum
 
   implicit none
@@ -58,6 +61,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_phi_init_arr (:)
   real*8, allocatable :: spi_Vel_R_arr (:)
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
@@ -146,6 +150,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     allocate (spi_R_arr(n_spi_tot),stat=err_alloc)  
     allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)     
     allocate (spi_phi_arr(n_spi_tot),stat=err_alloc) 
+    allocate (spi_phi_init_arr(n_spi_tot,stat=err_alloc)) 
     allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc) 
     allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc) 
     allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc) 
@@ -157,6 +162,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
       spi_R_arr(i)       = pellets(i)%spi_R
       spi_Z_arr(i)       = pellets(i)%spi_Z
       spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_phi_init_arr(i)= pellets(i)%spi_phi_init
       spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
       spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
       spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
@@ -168,6 +174,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     write(21) spi_R_arr(1:n_spi_tot)
     write(21) spi_Z_arr(1:n_spi_tot)
     write(21) spi_phi_arr(1:n_spi_tot)
+    write(21) spi_phi_init_arr(1:n_spi_tot)
     write(21) spi_Vel_R_arr(1:n_spi_tot)
     write(21) spi_Vel_Z_arr(1:n_spi_tot)
     write(21) spi_Vel_RxZ_arr(1:n_spi_tot)
@@ -178,6 +185,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
     deallocate (spi_phi_arr)
+    deallocate (spi_phi_init_arr)
     deallocate (spi_Vel_R_arr)
     deallocate (spi_Vel_Z_arr)
     deallocate (spi_Vel_RxZ_arr)
@@ -224,6 +232,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  use mod_neutral_source
+#endif
   use vacuum, only : export_HDF5_restart_vacuum
   
 #ifdef USE_HDF5
@@ -282,6 +293,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_phi_init_arr (:)
   real*8, allocatable :: spi_Vel_R_arr (:)
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
@@ -653,6 +665,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     allocate (spi_R_arr(n_spi_tot),stat=err_alloc)
     allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)
     allocate (spi_phi_arr(n_spi_tot),stat=err_alloc)
+    allocate (spi_phi_init_arr(n_spi_tot),stat=err_alloc)
     allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc)
     allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc)
     allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc)
@@ -664,6 +677,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
       spi_R_arr(i)       = pellets(i)%spi_R
       spi_Z_arr(i)       = pellets(i)%spi_Z
       spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_phi_init_arr(i)= pellets(i)%spi_phi_init
       spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
       spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
       spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
@@ -678,6 +692,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
              n_spi_tot,'spi_Z_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_phi_arr, &
              n_spi_tot,'spi_phi_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_phi_init_arr, &
+             n_spi_tot,'spi_phi_init_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Vel_R_arr, &
              n_spi_tot,'spi_Vel_R_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Vel_Z_arr, &
@@ -694,6 +710,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
     deallocate (spi_phi_arr)
+    deallocate (spi_phi_init_arr)
     deallocate (spi_Vel_R_arr)
     deallocate (spi_Vel_Z_arr)
     deallocate (spi_Vel_RxZ_arr)

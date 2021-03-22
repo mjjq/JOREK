@@ -32,17 +32,6 @@ real*8, dimension(2) :: P, P_s, P_t, P_phi
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t
 real*8  :: s_out,t_out,R_out,Z_out
 
-real*8  :: n_SI, T_eV, n_corr, T_corr
-real*8  :: spi_gd_angle_01, spi_gd_angle_02        ! The dispersion angles for each shard
-real*8  :: spi_rotation_01, spi_rotation_02        ! The rotation angle from shard coordinates to (R,Z,phi) coordinates
-real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
-real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         ! Shard velocity in injection coordinates
-real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       ! Injection position of SPI 
-real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp
-real*8  :: sign_corr, real_total_quantity
-real*8, allocatable :: rnd(:)                      ! The random number array 
-real*8, allocatable :: shard_size(:)               ! The shard size array
-
 
 ! --- Namelist with input parameters.                                                                                                                        
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &

@@ -128,6 +128,7 @@ real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
 real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, Ti, Ti_s, Ti_t, Te, Te_s, Te_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
 real*8  :: u0_p, u_s, u_t, u_p
+real*8  :: u0_x, u0_y
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 
@@ -318,6 +319,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
+!$omp           u0_x, u0_y,                                                                    &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, fric_disp, p0_p, T0_corr, r0_corr, u0_p,     &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
@@ -496,6 +498,8 @@ do ife = ife_min, ife_max
         u0_s   = eq_s(mp,var_u,ms,mt) 
         u0_t   = eq_t(mp,var_u,ms,mt)
         u0_p   = eq_p(mp,var_u,ms,mt)
+        u0_x   = (   y_t(ms,mt) * eq_s(mp,var_u,ms,mt) - y_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
+        u0_y   = ( - x_t(ms,mt) * eq_s(mp,var_u,ms,mt) + x_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
         p0_s   = r0*eq_s(mp,var_T,ms,mt) + T0 * eq_s(mp,var_rho,ms,mt) 
         p0_t   = r0*eq_t(mp,var_T,ms,mt) + T0 * eq_t(mp,var_rho,ms,mt) 
         p0_p   = r0*eq_p(mp,var_T,ms,mt) + T0 * eq_p(mp,var_rho,ms,mt) 
@@ -688,6 +692,9 @@ do ife = ife_min, ife_max
     end if
   end if
 
+  ! Frictional heat source from ionization
+  fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (r0_corr * rn0_corr * Sion_T)&
+                  + 0.5 * vpar0**2 * BB2 * (r0_corr * rn0_corr * Sion_T)
 #endif
 
 #ifdef WITH_Impurities
@@ -895,7 +902,6 @@ do ife = ife_min, ife_max
         ! Frictional heat source
         fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&
                         + 0.5 * vpar0**2 * BB2 * (source_bg + source_imp)
-        fric_disp_tot = fric_disp_tot + fric_disp * BigR * xjac * wst * delta_phi 
 
         ! Neutral injection rate in particles/s
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * m_i_over_m_imp * bigR &
@@ -904,6 +910,7 @@ do ife = ife_min, ife_max
         local_n_particles     = local_n_particles + central_density * 1.d20 * rn0 * m_i_over_m_imp * bigR * xjac * wst * delta_phi
 #endif
 
+        fric_disp_tot = fric_disp_tot + fric_disp * BigR * xjac * wst * delta_phi 
 
         if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
 #ifdef WITH_Impurities

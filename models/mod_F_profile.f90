@@ -523,6 +523,8 @@ subroutine check_F_profile_accuracy()
   accumulated_error   = 0.d0
   accumulated_profile = 0.d0
   n_prof_core         = 0
+  ff1                 = 0.d0
+  iff1                = 0.d0
   do i_prof = 1,n_Fprofile_internal
     psi_n(i_prof) = Fprofile_psi_max * real(i_prof-1)/real(n_Fprofile_internal-1)
     if (psi_n(i_prof) .gt. 1.01) cycle ! count just the core (outside, FFprime should be zero)

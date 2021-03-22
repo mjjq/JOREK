@@ -20,12 +20,7 @@ module exec_commands
   use mod_interp
   use mod_poloidal_currents 
   use mod_bootstrap_functions
-#ifdef WITH_Impurities
-  use mod_impurity 
-#endif
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-   use mod_neutral_source
-#endif
+  use mod_impurity, only: init_imp_adas 
   
   implicit none
   

@@ -46,16 +46,18 @@ module mod_impurity
       else
         do i=1, n_adas
           select case ( trim(imp_type) )
-            case('D2')
-              write(*,*) "Deuterium adas calculation unsupported for now, terminating."
-              adas_suffix = 'none'
-              deallocate(imp_cor)
-              deallocate(imp_adas)
-              stop
+            case('C')
+              adas_suffix = '96_c'
+            case('H')
+              adas_suffix = '12_h'
+            case('D')
+              adas_suffix = '12_h' ! We are using the hydrogen data here, in want of deuterium data
             case('Ar')
               adas_suffix = '89_ar'
             case('Ne')
               adas_suffix = '96_ne'
+            case('W')
+              adas_suffix = '50_w'
             case default
               write(*,*) "Unrecognized species, terminating."
               adas_suffix = 'none'
@@ -122,8 +124,8 @@ module mod_impurity
         drad_dT(iz) = dradRB_dT + dradLT_dT
         drad_dn(iz) = dradRB_dn + dradLT_dn
       enddo ! radiation emitted by atoms at level iz
-       if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
-       if (present(dLrad_dNe)) dLrad_dTe = dot_product(p_Ne,rad_p) + dot_product(p,drad_dn)
+      if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
+      if (present(dLrad_dNe)) dLrad_dTe = dot_product(p_Ne,rad_p) + dot_product(p,drad_dn)
     end if
 
   end subroutine radiation_function

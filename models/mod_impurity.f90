@@ -9,6 +9,7 @@ module mod_impurity
     use phys_module
     use mod_openadas
     use mod_coronal
+    use mod_parameters, only: with_impurities
 
     implicit none
 
@@ -44,7 +45,7 @@ module mod_impurity
         deallocate(imp_adas)
         stop
       else
-        if (nimp_bg .gt. 0 .or. with_impurities)
+        if (nimp_bg .gt. 0 .or. with_impurities) then
           do i=1, n_adas
             select case ( trim(imp_type) )
               case('C')

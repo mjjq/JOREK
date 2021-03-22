@@ -23,14 +23,8 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-#ifdef WITH_Impurities
-  use mod_impurity, only: radiation_function
-#endif
+  use mod_impurity, only: radiation_function, radiation_function_linear
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-      
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
   
   implicit none
   

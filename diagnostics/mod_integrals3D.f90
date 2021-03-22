@@ -24,8 +24,8 @@ module mod_integrals3D
 #endif
 #ifdef WITH_Impurities
   use mod_injection_source, only: get_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
-  use mod_impurity, only: radiation_function, radiation_function_linear
 #endif
+  use mod_impurity, only: radiation_function, radiation_function_linear
   use equil_info, only : get_psi_n, ES
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 

@@ -787,7 +787,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index), friction_dissip_tot_t(index),&
                                                                   xtime_rad_power(index), xtime_E_ion_power(index)
 #else
-    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index). friction_dissip_tot_t(index)
+    write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), viscopar_dissip_tot_t(index), friction_dissip_tot_t(index)
 #endif
 
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@mag_energy_src: ', xtime(index), mag_ener_src_tot(index)

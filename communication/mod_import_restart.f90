@@ -865,7 +865,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_species_arr (:)
   integer, allocatable :: spi_species_arr_old (:)  !< For backward compatibility only
 
-  integer :: err_alloc, err_exists, dterr
+  integer :: err_alloc, err_exists, dterr, n_spi_begin, i_inj
   logical :: flag_exists, type_match
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
@@ -1663,7 +1663,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       if (flag_exists .and. err_exists == 0) then
         call HDF5_array1D_reading(file_id,spi_phi_init_arr,"spi_phi_init_arr")
       else
-        spi_phi_init_arr = ns_phi
+        n_spi_begin = 1
+        do i_inj = 1, n_inj
+          if(n_spi(i_inj)>0) spi_phi_init_arr(n_spi_begin:(n_spi_begin+n_spi(i_inj)-1)) = ns_phi(i_inj)
+          n_spi_begin = n_spi_begin + n_spi(i_inj)
+        end do
         write(*,*)"Backward Compatibility: No spi_phi_init location found, assuming to be ns_phi."
       end if
 

@@ -16,18 +16,19 @@ integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
 
 ! --- Local variables
-integer :: ierr, i, err
+integer :: ierr, err, i
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
-                eta, visco, visco_par,                              &
-                restart, regrid, write_ps, bootstrap,               &
-                force_horizontal_Xline,                             &
+                restart, regrid, write_ps, time_evol_theta,         &
+                time_evol_zeta, force_horizontal_Xline,             &
+                Mach1_openBC, thermalization,                       &
+                eta_ARAZ_on, tauIC_ARAZ_on,                         &
+                n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg, n_leg_out, n_ext,         &
-                n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
-                n_tht_equidistant,                                  &
+                n_open, n_private, n_leg,                           &
+                n_outer, n_inner, n_up_priv, n_up_leg,              &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
@@ -39,71 +40,86 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                n_pfc, n_tor_fft_thresh, manipulate_psi_map,        &
-                Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
+                extend_existing_grid, no_mach1_bc,                  &
                 grid_to_wall, RZ_grid_inside_wall,                  &
-                n_wall_blocks, n_ext_block,                         &
+                n_wall_blocks, n_ext_block, corner_block,           &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
-                tokamak_device,                                     &
-                F0, time_evol_scheme,                               &
+                tokamak_device, manipulate_psi_map,                 &
+                F0, gamma, gamma_stangeby,                          &
+                gamma_sheath_i, gamma_sheath_e,                     &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
-                central_density, central_mass,                      &
-                T_0,   T_1,   T_coef,                               &
+                T_0,   T_1,   T_coef, T_min,                        &
                 Ti_0,  Ti_1,  Ti_coef,                              &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
-                ZK_i_par, ZK_i_perp, ZK_e_par, ZK_e_perp,           &
-                D_par, D_perp, ZK_par_max,                          &
-                Q_bar, sigma, gamma_sheath, gamma_stangeby,         &
-                V_0,V_1,V_coef,                			    &
-                particlesource,                                     &
-                heatsource_i, heatsource_e, tauIC, Wdia,            &
-                eta_num, visco_num, visco_par_num,                  &
-                D_perp_num, ZK_perp_num,                            &
-                pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
-                pellet_radius, pellet_sig, pellet_length,           &
-                pellet_psi, pellet_delta_psi,                       &
-                ellip,tria_u,tria_l,quad_u,quad_l,                  &
-                xampl,xwidth,xsig,xtheta,xshift,xleft,xpoint,xcase, &
-                SDN_threshold,                                      &
-                D_perp_file, ZK_e_perp_file, ZK_i_perp_file,        &
-                rho_file, T_file, Ti_file, Te_file,                 &
-                ffprime_file, freeboundary_equil,                   &
-                freeboundary, resistive_wall, freeb_change_indices, &
-                wall_resistivity, wall_resistivity_fact,            &
-                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
-                use_mumps, mumps_ordering, use_strumpack,           &
-                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
-                use_pastix, use_murge, use_murge_element, use_wsmp, &
-                pastix_smp_only, refinement, force_central_node,    &
-                fix_axis_nodes,                                     &
-                adaptive_time, equil, bench_without_plot,           &
-                no_zeros_pastix, no_zeros_mumps,                    &
-                eta_T_dependent, visco_T_dependent,                 &
+                V_0, V_1, V_coef,                                   &
+                ZK_par, ZK_i_par, ZK_e_par, ZK_par_max,             &
+                ZK_perp, ZK_i_perp, ZK_e_perp, D_par, D_perp,       &
+                heatsource_e, heatsource_i,                         &
+                eta, visco, visco_par,                              &
+                eta_num, visco_num, visco_par_num, D_perp_num,      &
+                Dn_perp_num,                                        &
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
                 particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_i, heatsource_gauss_e,             &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
-                produce_live_data,                                  &
+                particlesource, heatsource, tauIC,                  &
+                pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
+                pellet_radius, pellet_sig, pellet_length,           &
+                pellet_psi, pellet_delta_psi,                       &
+                central_density, central_mass,                      &
+                pellet_particles, use_pellet,                       &
+                ellip,tria_u,tria_l,quad_u,quad_l,                  &
+                xampl,xwidth,xsig,xtheta,xshift,xleft, xpoint,      &
+                xcase, time_evol_scheme,                            &
+                freeboundary_equil,                                 &
+                rho_file, T_file, ffprime_file, Fprofile_file,      &
+                Ti_file, Te_file,                                   &
+                bc_natural_open, bc_natural_flux, gamma_sheath,     &
+                freeboundary, resistive_wall, freeb_change_indices, &
+                use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
+                use_mumps, mumps_ordering, use_strumpack,           &
+                use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
+                use_pastix, use_murge, use_murge_element,           &
+                pastix_smp_only, refinement, grid_to_wall,          &
+                fix_axis_nodes,                                     &
+                adaptive_time, equil, bench_without_plot,           &
+                no_zeros_pastix, no_zeros_mumps,                    &
+                eta_T_dependent, visco_T_dependent,ZKpar_T_dependent,&
+                heatsource_psin, heatsource_sig,                    &
+                particlesource_psin, particlesource_sig,            &
+                edgeparticlesource, edgeparticlesource_psin,        &
+                edgeparticlesource_sig,                             &
+                neutral_line_source,                                &
+                neutral_line_R_start, neutral_line_Z_start,         &
+                neutral_line_R_end,   neutral_line_Z_end,           &
+                produce_live_data, gmres, gmres_max_iter,           &
+                iter_precon, gmres_4, gmres_m, gmres_tol,           &
+                max_steps_noUpdate,                                 &
                 keep_n0_const, linear_run, export_for_nemec,        &
-                NEO, neo_file, aki_neo_const, amu_neo_const,        &
-                gmres, gmres_max_iter,                              &
-                gmres_m, gmres_4, gmres_tol, iter_precon,           &
-                tgnum, max_steps_noUpdate,                          &
-                RMP_on, RMP_har_cos, RMP_har_sin,                   &
-                RMP_growth_rate, RMP_ramp_up_time,                  &
-                RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 output_bnd_elements,                                &
-                corr_neg_temp_coef, corr_neg_dens_coef,             &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &
-                n_limiter, R_limiter, Z_limiter, bc_natural_open,   &
+                n_limiter, R_limiter, Z_limiter,                    &
+                spi_tor_rot, tor_frequency,                         &
+                NEO, neo_file, aki_neo_const, amu_neo_const,        &
+                D_neutral_x, D_neutral_y, D_neutral_p,              &
+                neutral_reflection,                                 &
+                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
+                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
+                spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
+                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
+                spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
+                delta_n_convection, nimp_bg,                        &
                 amix, amix_freeb, equil_accuracy,                   &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -114,44 +130,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
-                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max
-
+                pastix_maxthrd, centralize_harm_mat
 
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
   call vacuum_preset(my_id, freeboundary_equil, freeboundary, resistive_wall)
-  
+
   ! --- Model-specific presets
-  Te_file        = 'none'
-  Ti_file        = 'none'
-  ZK_e_perp_file = 'none'
-  ZK_i_perp_file = 'none'
-  
-  Ti_0   =  0.5d-6
-  Ti_1   =  0.5d-8
-  
-  Te_0   =  0.5d-6
-  Te_1   =  0.5d-8
-  
-  Ti_coef     = 0.d0
-  Ti_coef(1)  = -1.d0
-  Te_coef     = 0.d0
-  Te_coef(1)  = -1.d0
-
-  heatsource_i   = 0.5e-7
-  heatsource_e   = 0.5e-7
-
-  ZK_i_perp(:) = 0.d0
-  ZK_i_perp(1) = 1.d-5; ZK_i_perp(2) = 0.d0; ZK_i_perp(3)= 0.d0; ZK_i_perp(4)= 99.d0; ZK_i_perp(5) = 99.d0
-  ZK_i_par     = 1.d0
-  
-  ZK_e_perp(:) = 0.d0  
-  ZK_e_perp(1) = 1.d-5; ZK_e_perp(2) = 0.d0; ZK_e_perp(3)= 0.d0; ZK_e_perp(4)= 99.d0; ZK_e_perp(5) = 99.d0
-  ZK_e_par     = 1.d0
+  ! -none-
   
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
@@ -200,12 +188,20 @@ if (my_id .eq. 0) then
     endif    
     CLOSE(244)
   endif
+  
+  ! --- Calculate normalisation factor for MGI source (related to its toroidal shape)
+  ns_tor_norm = ns_deltaphi * PI**0.5 * ERF(PI/ns_deltaphi)
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
-  if (gamma_stangeby > -1.d89) then
-    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
+  if (gamma_e_stangeby > -1.d89) then
+    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
   else
-    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
+    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
+  end if
+  if (gamma_i_stangeby > -1.d89) then
+    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+  else
+    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
   end if
 
   if (sum(nstep_n) .gt. 0) then

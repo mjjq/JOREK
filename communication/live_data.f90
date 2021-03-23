@@ -282,7 +282,7 @@ module live_data
                                     Xpoint_up Xpoint_low bnd_point                                                             &
                                     area volume li3 energy_conservation net_tor_wall_curr dparticles_dt bnd_particle_fluxes    & 
                                      vert_FB_response vert_FB_axis'
-    write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names((/1:n_var/))
+    write(LIVE_DATA_HANDLE,'(A,15(A11,1X))') '@variable_names: ', variable_names((/i,i=1,n_var,1/))
     
     ! --- Write file headers indicating what data is in the files.
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_times: ', 1

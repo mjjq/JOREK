@@ -178,6 +178,10 @@ ifeq (.true., $(shell ./util/config.sh -p with_refluid))
   DEFINES  := $(DEFINES) -DWITH_REFluid
 endif
 
+ifneq (0, $(shell ./util/config.sh -p n_mod_ext))
+  DEFINES  := $(DEFINES) -DMODEL_FAMILY
+endif
+
 ifeq (1, $(USE_FFTW))
   LIBS     := $(LIBS) $(LIBFFTW)
   DEFINES  := $(DEFINES) -DUSE_FFTW

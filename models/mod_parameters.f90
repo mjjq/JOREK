@@ -74,6 +74,8 @@ end function variable_names
 
 
 
+#ifdef MODEL_FAMILY
+
 !> Are all selected extensions available and compatible?
 logical pure function ext_correct()
 
@@ -96,6 +98,8 @@ do iext1 = 1, n_mod_ext
 end do
 
 end function ext_correct
+
+#endif
 
 
 

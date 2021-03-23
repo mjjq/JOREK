@@ -19,6 +19,8 @@ module mod_model_settings
   logical, parameter :: with_Vpar       = .false.
   logical, parameter :: with_refluid    = .false.
 
+  integer, parameter :: n_mod_ext            = 0 !< this model is not a model family => no extensions
+
   integer, parameter :: n_var    = 10
   
   integer, parameter :: var_A3   = 1                       ! place of variable psi/mag pot 3               (ps or A3)

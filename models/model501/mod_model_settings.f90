@@ -40,6 +40,7 @@ module mod_model_settings
   integer, parameter :: var_jec  = 0                       ! place of variable ECCD current                (jec)
   integer, parameter :: var_jec1 = 0                       ! place of variable ECCD current #1             (jec1)
   integer, parameter :: var_jec2 = 0                       ! place of variable ECCD current #2             (jec2)
+  integer, parameter :: var_nre  = 0                       ! place of variable for RE number density       (nre)
 
   !> element_matrix and element_matrix_fft combined into a single one?
   logical, parameter :: unified_element_matrix = .false.

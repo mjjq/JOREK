@@ -445,14 +445,14 @@ do ife = ife_min, ife_max
       call density(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                    dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-#ifdef WITH_TiTe
-      call temperature_e(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+      if ( with_TiTe ) then
+        call temperature_e(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
-#else
-      call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt),   &
+      else
+        call temperature(xpoint, xcase, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt),   &
                        dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
-      eq_zTe(ms,mt) = eq_zTe(ms,mt) / 2.d0	! electron temperature
-#endif
+        eq_zTe(ms,mt) = eq_zTe(ms,mt) / 2.d0	! electron temperature
+      end if
     enddo
   enddo
 
@@ -591,14 +591,15 @@ do ife = ife_min, ife_max
                      + F0 * zj0 * u0_p / (BigR**2.d0)
         vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
-#ifdef WITH_TiTe
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
-                     particle_source,heat_source_i,heat_source_e)
-        heat_source = heat_source_i + heat_source_e
-#else
-        call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, psi_as_coord, psi_axis, psi_bnd, &
-                     particle_source,heat_source)
-#endif
+        if ( with_TiTe ) then
+          call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
+                       particle_source,heat_source_i,heat_source_e)
+          heat_source = heat_source_i + heat_source_e
+        else
+          call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, psi_as_coord, psi_axis, psi_bnd, &
+                       particle_source,heat_source)
+        end if
+
         if (keep_current_prof) then
           call current(xpoint, xcase, x_g(ms,mt),y_g(ms,mt), Z_xpoint, psi_as_coord,&
                        psi_axis,psi_bnd,current_source)
@@ -1077,29 +1078,29 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         rho_s = rho_s + RH_s * HZ(in,mp)
         rho_t = rho_t + RH_t * HZ(in,mp)
 
-#ifdef WITH_TiTe
-        call interp(node_list,element_list,m_elm,var_Ti,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-        Ti_s = Ti_s + TT_s * HZ(in,mp)
-        Ti_t = Ti_t + TT_t * HZ(in,mp)
-        call interp(node_list,element_list,m_elm,var_Te,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-        Te_s = Te_s + TT_s * HZ(in,mp)
-        Te_t = Te_t + TT_t * HZ(in,mp)
-        T_s = Te_s + Ti_s
-        T_t = Te_t + Ti_t
-#else
-        call interp(node_list,element_list,m_elm,var_T,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
-        T_s = T_s + TT_s * HZ(in,mp)
-        T_t = T_t + TT_t * HZ(in,mp)
-#endif
+        if ( with_TiTe ) then
+          call interp(node_list,element_list,m_elm,var_Ti,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+          Ti_s = Ti_s + TT_s * HZ(in,mp)
+          Ti_t = Ti_t + TT_t * HZ(in,mp)
+          call interp(node_list,element_list,m_elm,var_Te,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+          Te_s = Te_s + TT_s * HZ(in,mp)
+          Te_t = Te_t + TT_t * HZ(in,mp)
+          T_s = Te_s + Ti_s
+          T_t = Te_t + Ti_t
+        else
+          call interp(node_list,element_list,m_elm,var_T,in,sg,tg,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+          T_s = T_s + TT_s * HZ(in,mp)
+          T_t = T_t + TT_t * HZ(in,mp)
+        end if
 
-#ifdef WITH_Vpar
-        call interp(node_list,element_list,m_elm,var_Vpar,in,sg,tg,vp,vp_s,vp_t,vp_st,vp_ss,vp_tt)
-        vpar_s = vpar_s + vp_s * HZ(in,mp)
-        vpar_t = vpar_t + vp_t * HZ(in,mp)
-#else
-        vpar_s = 0.d0
-        vpar_t = 0.d0
-#endif
+        if ( with_vpar ) then
+          call interp(node_list,element_list,m_elm,var_Vpar,in,sg,tg,vp,vp_s,vp_t,vp_st,vp_ss,vp_tt)
+          vpar_s = vpar_s + vp_s * HZ(in,mp)
+          vpar_t = vpar_t + vp_t * HZ(in,mp)
+        else
+          vpar_s = 0.d0
+          vpar_t = 0.d0
+        end if
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
         call interp(node_list,element_list,m_elm,8,in,sg,tg,rn,rn_s,rn_t,rn_st,rn_ss,rn_tt)

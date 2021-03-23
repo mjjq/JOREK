@@ -75,7 +75,6 @@ program JOREK2
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
-
 #endif
   use mpi_mod
 
@@ -614,7 +613,6 @@ required = 0
 #endif
 
     ! --- Compute the plasma equilibrium
-
     if (equil) then
       call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase, .true.) 
       if (export_for_nemec) then
@@ -843,7 +841,6 @@ required = 0
     !* MPI_COMM_MASTER : group of masters of each harmonic *
     !*  		 (i.e id=0 from each MPI_COMM_N)   *
     !*******************************************************
-
     if (gmres) then
     
        call create_communicators(my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, &
@@ -854,11 +851,9 @@ required = 0
        call distribute_modes
        
     else
-
        my_id_n = my_id
        MPI_COMM_N = MPI_COMM_WORLD
        m_cpu = n_cpu
-
     endif
 
 
@@ -884,6 +879,7 @@ required = 0
     local_index_start = index_min
     local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
+
     call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
          local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),              & 
          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor,                 &
@@ -898,9 +894,9 @@ required = 0
     if ((gmres).and.(my_id_n.eq.0)) call map_row_index(ndof_glob)
     if (use_mumps) then
        if (.not. gmres) then
-         call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
+    	  call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
        else
-         call initialise_mumps(MPI_COMM_N)        ! start MUMPS sparse matrix solver on local groups
+    	  call initialise_mumps(MPI_COMM_N)	   ! start MUMPS sparse matrix solver on local groups
        endif
     endif
 
@@ -991,7 +987,7 @@ required = 0
       ! ... in the first step of a simulation (also when restarting)
       ! ... when tstep changes
       ! ... when the previous time steps took too many iterations
-      solve_only = (istep > 1) .and. ((iter_gmres+iter_prev <= 2*iter_precon) .or. (n_since_update > max_steps_noUpdate))
+      solve_only = (istep > 1) .and. ((iter_gmres+iter_prev <= 2*iter_precon) .and. (n_since_update < max_steps_noUpdate))
       if (solve_only) then 
         n_since_update = n_since_update + 1
       else
@@ -1020,76 +1016,7 @@ required = 0
       write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
     endif     
 
-    if (gmres) then
-
-      if (.not. solve_only) then
-
-        call clck_time_barrier(t0)
-
-#ifndef DIRECT_CONSTRUCTION
-         ! --- Extract harmonic matrix from global matrix via MPI communication
-        call distribute_harmonics(my_id,my_id_n,n_cpu)
-        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-
-        call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        call clck_time_barrier(t1)
-        call clck_ldiff(t0,t1,tsecond)
-        if (my_id .eq. 0) write(*,FMT_TIMING) my_id, '# Elapsed time in distributing harmonics :',tsecond
-#else 
-         ! --- Direct construction of harmonic matrix
-        call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-              node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, freeboundary, .true.)
-        call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        call clck_time_barrier(t1) 
-        call clck_ldiff(t0,t1,tsecond)
-
-        if (my_id .eq. 0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
-
-
-        call clck_time_barrier(t0) 
-        ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
-        call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
-        call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  
-
-
-
-        call clck_time_barrier(t0) 
-        ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
-        call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
-        call clck_time_barrier(t1)
-        call clck_ldiff(t0,t1,tsecond)
-
-        if (my_id .eq. 0) write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
-#endif
-
-      else
-
-        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-      endif
-
-       ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
-       call del_thread_buffers()
-
-       call clck_time(t0)
-
-
-      if (use_strumpack) then 
-#ifdef USE_STRUMPACK
-
-        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-#endif
-      else
-        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
-      endif
-
-      call clck_time_barrier(t1)
-      call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0) then
-        write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
-      endif
-
-    else
+    if (.not. gmres) then
 
       if (use_mumps) then
 #ifdef USE_MUMPS
@@ -1103,6 +1030,70 @@ required = 0
         call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
       endif
 
+    else
+
+      if (.not. solve_only) then
+
+#ifndef DIRECT_CONSTRUCTION
+        call clck_time(t0)
+        ! --- Extract harmonic matrix from global matrix via MPI communication
+        call distribute_harmonics(my_id,my_id_n,n_cpu)
+        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+        call clck_time_barrier(t1)
+        call clck_ldiff(t0,t1,tsecond)
+        if (my_id .eq. 0) then
+          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+        end if
+#else 
+
+        call clck_time_barrier(t0) 
+        ! --- Direct construction of harmonic matrix
+        call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
+             node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, freeboundary, .true.)
+        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+        call clck_time_barrier(t1) 
+
+        if (my_id .eq. 0) then
+          call clck_ldiff(t0,t1,tsecond)
+          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
+        endif     
+
+        call clck_time_barrier(t0) 
+        ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
+        call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  
+        call clck_time_barrier(t1) 
+
+        if (my_id .eq. 0) then
+          call clck_ldiff(t0,t1,tsecond)
+          write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
+        endif     
+
+#endif
+
+      else
+        if (my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+      endif
+
+      ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
+      call del_thread_buffers()
+
+      call clck_time(t0)
+      if (use_strumpack) then 
+#ifdef USE_STRUMPACK
+        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+#endif
+      else
+        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+      endif
+
+
+      call clck_time_barrier(t1)
+      call clck_ldiff(t0,t1,tsecond)
+      if (my_id .eq. 0) then
+        write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
+      end if
     endif
 
     call clck_time(t0)
@@ -1290,6 +1281,17 @@ required = 0
       write(fileout,'(A5,i5.5)') 'jorek',index_now
       call export_restart(node_list, element_list, fileout)
     endif
+    
+    ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
+    inquire(file='STOP_NOW', exist=file_exists)
+    if ( file_exists ) then
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
+        write(*,*)
+      end if
+      exit jstep_loop
+    end if
 
     ! --- Redo LU decomposition if a file "REDO_LU" exists in the run directory.
     inquire(file='REDO_LU', exist=file_exists)
@@ -1305,16 +1307,6 @@ required = 0
       iter_gmres = iter_precon + 1
     end if
 
-    ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
-    inquire(file='STOP_NOW', exist=file_exists)
-    if ( file_exists ) then
-      if ( my_id == 0 ) then
-        write(*,*)
-        write(*,*) '>>>>> FOUND FILE STOP_NOW: EXITING THE CODE <<<<<'
-        write(*,*)
-      end if
-      exit jstep_loop
-    end if
 
     ! --- Exit the code if SIGTERM has been called on any node
     call MPI_ALLReduce(sigterm_called(), to_quit, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, ierr)

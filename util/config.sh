@@ -131,8 +131,8 @@ if [ "$1" == "-p" ]; then
   else
     value=`getparam $2`
     if [ -z "$value" ]; then
-      echo "ERROR: Could not find parameter '$2'." >&2
-      exit 1
+      echo "Could not find parameter '$2'."
+      exit
     fi
     echo "$value"
   fi

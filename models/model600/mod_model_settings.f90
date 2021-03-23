@@ -17,7 +17,7 @@ module mod_model_settings
 
 
 ! The following line is needed by ./util/config.sh:
-! #SETTINGS# with_vpar with_TiTe
+! #SETTINGS# with_vpar
 
 
 ! --- model number and description

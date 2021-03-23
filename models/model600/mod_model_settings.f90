@@ -5,9 +5,10 @@ module mod_model_settings
 
   logical, parameter :: with_vpar       = .true.
   logical, parameter :: with_TiTe       = .true.
-  logical, parameter :: with_neutrals   = .true.
-  logical, parameter :: with_impurities = .false.
-  logical, parameter :: with_etaOhm     = .false.
+  logical, parameter :: with_neutrals   = .false. ! not yet
+  logical, parameter :: with_impurities = .false. ! not yet
+  logical, parameter :: with_etaOhm     = .false. ! not yet
+  logical, parameter :: with_refluid    = .false. ! not yet
 
 
 ! ##################################################################################################

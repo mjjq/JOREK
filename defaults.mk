@@ -158,6 +158,26 @@ ifeq (model712, $(MODEL))
   DEFINES  := $(DEFINES) -Dfullmhd
 endif
 
+ifeq (.true., $(shell ./util/config.sh -p with_vpar))
+  DEFINES  := $(DEFINES) -DWITH_Vpar
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_TiTe))
+  DEFINES  := $(DEFINES) -DWITH_TiTe
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_neutrals))
+  DEFINES  := $(DEFINES) -DWITH_Neutrals
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_impurities))
+  DEFINES  := $(DEFINES) -DWITH_Impurities
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_refluid))
+  DEFINES  := $(DEFINES) -DWITH_REFluid
+endif
+
 ifeq (1, $(USE_FFTW))
   LIBS     := $(LIBS) $(LIBFFTW)
   DEFINES  := $(DEFINES) -DUSE_FFTW

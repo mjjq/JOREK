@@ -62,7 +62,7 @@ do ife =1,  element_list%n_elements
       enddo
     enddo
   enddo
-  
+
   do in=1,n_tor
 
     eq_g(:,:,:) = 0.d0; eq_s(:,:,:) = 0.d0; eq_t(:,:,:) = 0.d0; AR0_p(:,:) = 0.d0; AZ0_p(:,:) = 0.d0
@@ -112,7 +112,7 @@ do ife =1,  element_list%n_elements
       do mt=1, n_gauss
 
         wst = wgauss(ms)*wgauss(mt)
-        
+
         xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
         BigR = x_g(ms,mt)
 

@@ -33,4 +33,4 @@ module mod_model_settings
   !> element_matrix and element_matrix_fft combined into a single one?
   logical, parameter :: unified_element_matrix = .false.
 
-endmodule
+end module mod_model_settings

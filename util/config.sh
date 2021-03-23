@@ -24,7 +24,7 @@ function usage() {
 
 SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 make_config_files=`ls config.in Makefile.inc 2>/dev/null`
-params="n_tor n_period n_plane n_vertex_max n_nodes_max n_elements_max n_boundary_max n_pieces_max"
+params="n_tor n_period n_plane with_vpar with_twotemp n_vertex_max n_nodes_max n_elements_max n_boundary_max n_pieces_max"
 
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
   usage && exit
@@ -111,7 +111,7 @@ function print_info() {
 }
 
 function check_param_file() {
-  param_file="models/$model/mod_parameters.f90"
+  param_file="models/mod_settings.f90"
   if [ ! -f $param_file ]; then
     echo "ERROR: File '$param_file' does not exist." >&2
     exit 1

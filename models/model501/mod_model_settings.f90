@@ -3,13 +3,21 @@ module mod_model_settings
 
   implicit none
 
+! ##################################################################################################
+! ####  @USERS: This file should not be modified ###################################################
+! ##################################################################################################
+
   integer, parameter :: jorek_model    = 501       !< JOREK physics model
 
+  logical, parameter :: hydrodynamics   = .false.
+  logical, parameter :: reduced_MHD     = .true.
+  logical, parameter :: full_MHD        = .false.
+  
   logical, parameter :: with_TiTe       = .false.
   logical, parameter :: with_neutrals   = .false.
   logical, parameter :: with_impurities = .true.
   logical, parameter :: with_Vpar       = .true.
-  logical, parameter :: with_etaOhm     = .true.
+  logical, parameter :: with_refluid    = .false.
 
   integer, parameter :: var_A3   = 0                       ! place of variable psi/mag pot 3               (ps or A3)
   integer, parameter :: var_AR   = 0                       ! place of variable mag pot  1                  (AR)

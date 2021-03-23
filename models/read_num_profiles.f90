@@ -88,7 +88,8 @@ subroutine read_num_profiles(my_id)
     write(*,*)'*** Aborting...'
     stop
   endif
-#ifdef fullmhd
+  
+  if ( full_mhd ) then
   if (my_id == 0) then
     if ( .not. num_Fprofile ) then
       ! --- Numerical integration of FFprime
@@ -120,7 +121,7 @@ subroutine read_num_profiles(my_id)
         check_positive=.false.)
     end if
   end if
-#endif
+  end if
   
   num_d_perp = ( d_perp_file /= 'none' )
   if ( num_d_perp .and. ( my_id == 0 ) ) then

@@ -1,14 +1,23 @@
+!> Basic model-dependend hard-coded run parameters.
 module mod_model_settings
 
   implicit none
 
-  integer, parameter :: jorek_model    = 001       !< JOREK physics model
+! ##################################################################################################
+! ####  @USERS: This file should not be modified ###################################################
+! ##################################################################################################
 
+  integer, parameter :: jorek_model    = 001       !< JOREK physics model
+  
+  logical, parameter :: hydrodynamics   = .true.
+  logical, parameter :: reduced_MHD     = .false.
+  logical, parameter :: full_MHD        = .false.
+  
   logical, parameter :: with_TiTe       = .false.
   logical, parameter :: with_neutrals   = .false.
   logical, parameter :: with_impurities = .false.
   logical, parameter :: with_Vpar       = .false.
-  logical, parameter :: with_etaOhm     = .false.
+  logical, parameter :: with_refluid    = .false.
 
   integer, parameter :: var_A3   = 0                       ! place of variable psi/mag pot 3               (ps or A3)
   integer, parameter :: var_AR   = 0                       ! place of variable mag pot  1                  (AR)

@@ -1,14 +1,13 @@
 !> Basic model-dependend hard-coded run parameters.
 module mod_model_settings
 
-  implicit none
+implicit none
 
-  logical, parameter :: with_vpar       = .true.
-  logical, parameter :: with_TiTe       = .true.
-  logical, parameter :: with_neutrals   = .false. ! not yet
-  logical, parameter :: with_impurities = .false. ! not yet
-  logical, parameter :: with_etaOhm     = .false. ! not yet
-  logical, parameter :: with_refluid    = .false. ! not yet
+logical, parameter :: with_vpar       = .true.
+logical, parameter :: with_TiTe       = .true.  ! not yet possible to switch
+logical, parameter :: with_neutrals   = .false. ! not yet possible to switch
+logical, parameter :: with_impurities = .false. ! not yet possible to switch
+logical, parameter :: with_refluid    = .false. ! not yet possible to switch
 
 
 ! ##################################################################################################
@@ -19,9 +18,12 @@ module mod_model_settings
 ! The following line is needed by ./util/config.sh:
 ! #SETTINGS# with_vpar
 
+integer, parameter :: jorek_model     = 600
 
-! --- model number and description
-integer, parameter :: jorek_model       = 600
+logical, parameter :: hydrodynamics   = .false.
+logical, parameter :: reduced_MHD     = .true.
+logical, parameter :: full_MHD        = .false.
+
 logical, parameter :: model_family      = .true. !< Is this 
 integer, parameter :: sub_model         = 000000000 !<<<<<<<<<<<<#####
 character(len=42)  :: base_mod_descr    = 'Model family for tokamak reduced MHD'
@@ -56,8 +58,8 @@ integer, parameter :: var_rho  = 5
 integer, parameter :: var_T    = sum(merge( (/0/), (/6/), with_TiTe ))
 ! --- variable indices for the model extensions
 integer, parameter :: var_Ti   = sum(merge((/                               6/), (/0/), with_TiTe    ))
-integer, parameter :: var_Te   = sum(merge((/n_var_base                    +1/), (/0/), with_TiTe    ))
-integer, parameter :: var_Vpar = sum(merge((/n_var_base+sum(n_var_ext(1:1))+1/), (/0/), with_vpar    ))
+integer, parameter :: var_Te   = sum(merge((/n_var_base+n_var_vpar         +1/), (/0/), with_TiTe    ))
+integer, parameter :: var_Vpar = sum(merge((/                               7/), (/0/), with_vpar    ))
 integer, parameter :: var_rhon = sum(merge((/n_var_base+sum(n_var_ext(1:2))+1/), (/0/), with_neutrals))
 integer, parameter :: var_nre  = sum(merge((/n_var_base+sum(n_var_ext(1:3))+1/), (/0/), with_refluid ))
 ! --- variables not relevant to this model

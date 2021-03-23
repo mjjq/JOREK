@@ -25,7 +25,6 @@ logical, parameter :: reduced_MHD     = .true.
 logical, parameter :: full_MHD        = .false.
 
 logical, parameter :: model_family      = .true. !< Is this 
-integer, parameter :: sub_model         = 000000000 !<<<<<<<<<<<<#####
 character(len=42)  :: base_mod_descr    = 'Model family for tokamak reduced MHD'
 
 ! --- extensions to it

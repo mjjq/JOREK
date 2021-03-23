@@ -57,7 +57,7 @@ module live_data2
     write(LIVE_DATA_HANDLE2,'(A,I5)') '@n_plane: ', n_plane
     write(LIVE_DATA_HANDLE2,'(A,I5)') '@n_period: ', n_period
     write(LIVE_DATA_HANDLE2,'(A)') '@plottable: energies growth_rates times input_profiles'
-    write(LIVE_DATA_HANDLE2,'(A,15(A11,1X))') '@variable_names: ', variable_names((/i,i=1,n_var/))
+    write(LIVE_DATA_HANDLE2,'(A,15(A11,1X))') '@variable_names: ', variable_names((/(i, i=1,n_var)/))
     
     ! --- Write file headers indicating what data is in the files.
     write(LIVE_DATA_HANDLE2,'(A,I5)') '@n_times: ', 1

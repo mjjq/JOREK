@@ -1,5 +1,5 @@
 !> Basic model-dependend hard-coded run parameters.
-module mod_parameters
+module mod_model_settings
 
   implicit none
 
@@ -55,4 +55,4 @@ module mod_parameters
   !> element_matrix and element_matrix_fft combined into a single one?
   logical, parameter :: unified_element_matrix = .true.
 
-end module mod_parameters
+end module mod_model_settings

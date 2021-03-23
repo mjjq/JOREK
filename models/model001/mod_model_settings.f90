@@ -1,4 +1,4 @@
-module mod_parameters
+module mod_model_settings
 
   implicit none
 

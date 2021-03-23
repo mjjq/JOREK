@@ -30,26 +30,6 @@ module mod_model_settings
   integer, parameter :: var_jec1 = 0                       ! place of variable ECCD current #1             (jec1)
   integer, parameter :: var_jec2 = 0                       ! place of variable ECCD current #2             (jec2)
 
-  integer, parameter :: n_var          = 2         !< number of variables
-  integer, parameter :: n_dim          = 2         !< number of dimensions
-  integer, parameter :: n_order        = 3         !< order of the polynomial basis
-  integer, parameter :: n_tor          = 1         !< number of toroidal harmonics in physics variables
-  integer, parameter :: n_coord_tor    = 1         !< number of toroidal harmonics in (R, Z) coordinates
-  integer, parameter :: n_period       = 1         !< periodicity in toroidal direction
-  integer, parameter :: n_plane        = 1         !< number of toroidal angles
-  integer, parameter :: n_vertex_max   = 4         !< maximum number of corners of an element
-  integer, parameter :: n_nodes_max    = 80001     !< maximum number of nodes
-  integer, parameter :: n_elements_max = 80001     !< maximum number of elements
-  integer, parameter :: n_boundary_max = 1001      !< maximum number of boundary elements
-  integer, parameter :: n_pieces_max   = 6001      !< maximum number of line pieces describing a flux surface
-  integer, parameter :: n_degrees      = n_order+1 !< degrees of freedom per variable per node
-  integer, parameter :: nref_max       = 10000     !< (refinement)
-  integer, parameter :: n_ref_list     = 10000     !< (refinement)
-  character*11 :: variable_names(n_var)
- 
-  !> Names of the physical variables
-  parameter (variable_names = (/ 'Potential  ','Vorticity  ' /))
-  
   !> element_matrix and element_matrix_fft combined into a single one?
   logical, parameter :: unified_element_matrix = .false.
 

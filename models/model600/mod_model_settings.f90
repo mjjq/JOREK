@@ -3,56 +3,137 @@ module mod_model_settings
 
   implicit none
 
-  integer, parameter :: jorek_model    = 401       !< JOREK physics model
-
+  logical, parameter :: with_vpar       = .false.
   logical, parameter :: with_TiTe       = .true.
-  logical, parameter :: with_neutrals   = .false.
+  logical, parameter :: with_neutrals   = .true.
   logical, parameter :: with_impurities = .false.
-  logical, parameter :: with_Vpar       = .true.
   logical, parameter :: with_etaOhm     = .false.
 
-  integer, parameter :: var_A3   = 0                       ! place of variable psi/mag pot 3               (ps or A3)
-  integer, parameter :: var_AR   = 0                       ! place of variable mag pot  1                  (AR)
-  integer, parameter :: var_AZ   = 0                       ! place of variable mag pot  2                  (AZ)
-  integer, parameter :: var_uR   = 0                       ! place of variable velocity 1                  (UR)
-  integer, parameter :: var_uZ   = 0                       ! place of variable velocity 2                  (UZ)
-  integer, parameter :: var_up   = 0                       ! place of variable velocity 3                  (Up)
-  integer, parameter :: var_rho  = 5                       ! place of variable density                     (r or rho)
-  integer, parameter :: var_T    = 0                       ! place of variable temperature                 (T)
-  integer, parameter :: var_psi  = 1                       ! place of variable psi/mag pot 3               (ps or A3)  
-  integer, parameter :: var_u    = 2                       ! place of variable velocity stream function    (u)
-  integer, parameter :: var_zj   = 3                       ! place of variable toroidal current density    (zj)
-  integer, parameter :: var_w    = 4                       ! place of variable vorticity                   (w)
-  integer, parameter :: var_Vpar = 7                       ! place of variable parallel velocity           (Vpar)
-  integer, parameter :: var_rhon = 0                       ! place of variable neutral or impurity density (rn)
-  integer, parameter :: var_Ti   = 6                       ! place of variable ion temperature             (Ti)
-  integer, parameter :: var_Te   = 8                       ! place of variable electron temperature        (Te)
-  integer, parameter :: var_jec  = 0                       ! place of variable ECCD current                (jec)
-  integer, parameter :: var_jec1 = 0                       ! place of variable ECCD current #1             (jec1)
-  integer, parameter :: var_jec2 = 0                       ! place of variable ECCD current #2             (jec2)
 
-  integer, parameter :: n_var          = 8         !< number of variables
-  integer, parameter :: n_dim          = 2         !< number of dimensions
-  integer, parameter :: n_order        = 3         !< order of the polynomial basis
-  integer, parameter :: n_tor          = 1         !< number of toroidal harmonics in physics variables
-  integer, parameter :: n_coord_tor    = 1         !< number of toroidal harmonics in (R, Z) coordinates
-  integer, parameter :: n_period       = 1         !< periodicity in toroidal direction
-  integer, parameter :: n_plane        = 1         !< number of toroidal angles
-  integer, parameter :: n_vertex_max   = 4         !< maximum number of corners of an element
-  integer, parameter :: n_nodes_max    = 60001     !< maximum number of nodes
-  integer, parameter :: n_elements_max = 60001     !< maximum number of elements
-  integer, parameter :: n_boundary_max = 1001      !< maximum number of boundary elements
-  integer, parameter :: n_pieces_max   = 6001      !< maximum number of line pieces describing a flux surface
-  integer, parameter :: n_degrees      = n_order+1 !< degrees of freedom per variable per node
-  integer, parameter :: nref_max       = 10000     !< (refinement)
-  integer, parameter :: n_ref_list     = 10000     !< (refinement)
- 
-  !> Names of the physical variables
-  character(len=11) :: variable_names(n_var) =                       &
-    (/ 'Flux       ','Potential  ','Current    ','Vorticity  ',      &
-       'Density    ','T_ion      ','V_parallel ','T_electron ' /)
+! ##################################################################################################
+! ####  @USERS: Please do not change below this line ###############################################
+! ##################################################################################################
+
+
+! The following line is needed by ./util/config.sh:
+! #SETTINGS# with_vpar with_TiTe
+
+
+! --- model number and description
+integer, parameter :: jorek_model       = 600
+logical, parameter :: model_family      = .true. !< Is this 
+integer, parameter :: sub_model         = 000000000 !<<<<<<<<<<<<#####
+character(len=42)  :: base_mod_descr    = 'Model family for tokamak reduced MHD'
+
+! --- extensions to it
+integer, parameter :: n_mod_ext            = 5      !< Number of model extensions
+integer, parameter :: i_ext_TiTe           = 1
+integer, parameter :: i_ext_vpar           = 2
+integer, parameter :: i_ext_neutrals       = 3
+integer, parameter :: i_ext_impurities     = 4
+integer, parameter :: i_ext_refluid        = 5
+logical, parameter :: with_ext(n_mod_ext) = &
+  (/ with_TiTe, with_vpar, with_neutrals, with_impurities, with_refluid /)
+
+! --- number of variables (for base model, extension, and in total)
+integer, parameter :: n_var_base        = 6         !< number of variables in base model
+integer, parameter :: n_var_TiTe        = sum(merge( (/1/), (/0/), with_TiTe      ))
+integer, parameter :: n_var_vpar        = sum(merge( (/1/), (/0/), with_vpar      ))
+integer, parameter :: n_var_neutrals    = sum(merge( (/1/), (/0/), with_neutrals  )) !### not yet
+integer, parameter :: n_var_impurities  = sum(merge( (/1/), (/0/), with_impurities)) !### not yet
+integer, parameter :: n_var_refluid     = sum(merge( (/1/), (/0/), with_refluid   )) !### not yet
+integer, parameter :: n_var_ext(n_mod_ext) = (/ n_var_TiTe, n_var_vpar, n_var_neutrals,         &
+  n_var_impurities, n_var_refluid /)
+integer, parameter :: n_var = n_var_base + sum(n_var_ext) !< total number of variables
+
+! --- variable indices for the base model
+integer, parameter :: var_psi  = 1
+integer, parameter :: var_u    = 2
+integer, parameter :: var_zj   = 3
+integer, parameter :: var_w    = 4
+integer, parameter :: var_rho  = 5
+integer, parameter :: var_T    = sum(merge( (/0/), (/6/), with_TiTe ))
+! --- variable indices for the model extensions
+integer, parameter :: var_Ti   = sum(merge((/                               6/), (/0/), with_TiTe    ))
+integer, parameter :: var_Te   = sum(merge((/n_var_base                    +1/), (/0/), with_TiTe    ))
+integer, parameter :: var_Vpar = sum(merge((/n_var_base+sum(n_var_ext(1:1))+1/), (/0/), with_vpar    ))
+integer, parameter :: var_rhon = sum(merge((/n_var_base+sum(n_var_ext(1:2))+1/), (/0/), with_neutrals))
+integer, parameter :: var_nre  = sum(merge((/n_var_base+sum(n_var_ext(1:3))+1/), (/0/), with_refluid ))
+! --- variables not relevant to this model
+integer, parameter :: var_AR   = 0
+integer, parameter :: var_AZ   = 0
+integer, parameter :: var_A3   = 0
+
+! --- Element matrix and element matrix fft combined?
+logical, parameter :: unified_element_matrix = .true.
+
+
+
+contains
+
+
+
+!> Is the extension available?
+elemental pure logical function ext_available(i_ext)
   
-  !> element_matrix and element_matrix_fft combined into a single one?
-  logical, parameter :: unified_element_matrix = .true.
+  implicit none
+  
+  ! --- Function parameters
+  integer, intent(in) :: i_ext
+  
+  
+  ! --- Preset to .true. unless invalid extension number
+  if ( (i_ext < 1) .or. (i_ext > n_mod_ext) ) then
+    ext_available = .false.
+  else
+    ext_available = .true.
+  end if
+  
+  ! --- exceptions for not implemented
+  if ( i_ext == i_ext_TiTe ) then
+    ext_available = .true.
+  else if ( i_ext == i_ext_vpar ) then
+    ext_available = .true.
+  else if ( i_ext == i_ext_neutrals ) then
+    ext_available = .false.
+  else if ( i_ext == i_ext_impurities ) then
+    ext_available = .false.
+  else if ( i_ext == i_ext_refluid ) then
+    ext_available = .false.
+  end if
+  
+end function ext_available
+
+
+
+!> Are two extensions compatible?
+pure logical function ext_compatible(i_ext1, i_ext2)
+  
+  implicit none
+  
+  ! --- Function parameters
+  integer, intent(in) :: i_ext1, i_ext2
+  
+  ! --- Local variables
+  integer :: iext1, iext2
+  
+  ! --- sort extension indices, since compatibility is symmetric
+  iext1 = min(i_ext1, i_ext2)
+  iext2 = max(i_ext1, i_ext2)
+  
+  ! --- preset to .true. unless wrong indices were provided
+  if ( (iext1 < 1) .or. (iext2 > n_mod_ext) ) then
+    ext_compatible = .false.
+  else
+    ext_compatible = .true.
+  end if
+  
+  ! --- exceptions for compatibility
+  if ( ( iext1 == i_ext_TiTe ) .and. ( iext2 == i_ext_refluid ) ) then
+    ext_compatible = .false. ! ### just an example
+  end if
+  
+end function ext_compatible
+
 
 end module mod_model_settings

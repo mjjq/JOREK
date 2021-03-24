@@ -587,7 +587,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'vert_FB_amp           ', vert_FB_amp(n_pf_coils)
+    if ( n_pf_coils > 0 ) &
+      write(*,REAL_FMT,advance='no') 'vert_FB_amp           ', vert_FB_amp(n_pf_coils)
     write(*,REAL_FMT,advance='no') 'pf_coils%pert         '
     do i = 1, n_pf_coils
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%pert

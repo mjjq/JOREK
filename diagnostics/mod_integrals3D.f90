@@ -1034,11 +1034,17 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         call interp(node_list,element_list,m_elm,var_psi,in,sg,tg,PS,PS_s,PS_t,PS_st,PS_ss,PS_tt)
         psi_s = psi_s + PS_s * HZ(in,mp)
         psi_t = psi_t + PS_t * HZ(in,mp)
-
-        call interp(node_list,element_list,m_elm,var_u,in,sg,tg,UU,UU_s,UU_t,UU_st,UU_ss,UU_tt)
-        u_s   = u_s   + UU_s * HZ(in,mp)
-        u_t   = u_t   + UU_t * HZ(in,mp)
-        u_p   = u_p   + UU   * HZ_p(in,mp)
+        
+        if ( var_u /= 0 ) then
+          call interp(node_list,element_list,m_elm,var_u,in,sg,tg,UU,UU_s,UU_t,UU_st,UU_ss,UU_tt)
+          u_s   = u_s   + UU_s * HZ(in,mp)
+          u_t   = u_t   + UU_t * HZ(in,mp)
+          u_p   = u_p   + UU   * HZ_p(in,mp)
+        else
+          u_s = 0.d0
+          u_t = 0.d0
+          u_p = 0.d0
+        end if
 
         call interp(node_list,element_list,m_elm,var_rho,in,sg,tg,RH,RH_s,RH_t,RH_st,RH_ss,RH_tt)
         rho_s = rho_s + RH_s * HZ(in,mp)

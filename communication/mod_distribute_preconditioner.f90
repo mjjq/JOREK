@@ -252,18 +252,18 @@ contains
 ! --- Change indices of the local matrices to local indices
 !$omp do private(i,j,n_i,n_j)
       do i=1,mumps_par%nz
-        n_i = mod(mumps_par%irn(i)-1,n_tor) + 1
+        n_i = mod(mumps_par%irn(i)-Int1,n_tor_int) + 1
         do j=1, my_mode_set_n
           if (n_i.eq.my_mode_set(j)) then
-            mumps_par%irn(i) = int((mumps_par%irn(i)-Int1)/n_tor)*my_mode_set_n + j
+            mumps_par%irn(i) = int((mumps_par%irn(i)-Int1)/n_tor_int)*my_mode_set_n + j
             exit
           endif
         enddo
 
-        n_j = mod(mumps_par%jcn(i)-1,n_tor) + 1
+        n_j = mod(mumps_par%jcn(i)-Int1,n_tor_int) + 1
         do j=1, my_mode_set_n
           if (n_j.eq.my_mode_set(j)) then
-            mumps_par%jcn(i) = int((mumps_par%jcn(i)-Int1)/n_tor)*my_mode_set_n + j
+            mumps_par%jcn(i) = int((mumps_par%jcn(i)-Int1)/n_tor_int)*my_mode_set_n + j
             exit
           endif
         enddo

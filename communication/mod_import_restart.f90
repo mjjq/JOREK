@@ -56,6 +56,9 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   use data_structure
   use phys_module
   use pellet_module
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  use mod_neutral_source
+#endif
   use vacuum, only: import_restart_vacuum, current_FB_fact
   use mod_element_rtree, only: populate_element_rtree
   
@@ -77,6 +80,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8,  allocatable :: spi_R_arr (:)
   real*8,  allocatable :: spi_Z_arr (:)
   real*8,  allocatable :: spi_phi_arr (:)
+  real*8,  allocatable :: spi_phi_init_arr (:)
   real*8,  allocatable :: spi_Vel_R_arr (:)
   real*8,  allocatable :: spi_Vel_Z_arr (:)
   real*8,  allocatable :: spi_Vel_RxZ_arr (:)
@@ -531,6 +535,7 @@ endif
       allocate (spi_R_arr(n_spi))
       allocate (spi_Z_arr(n_spi))
       allocate (spi_phi_arr(n_spi))
+      allocate (spi_phi_init_arr(n_spi))
       allocate (spi_Vel_R_arr(n_spi))
       allocate (spi_Vel_Z_arr(n_spi))
       allocate (spi_Vel_RxZ_arr(n_spi))
@@ -541,6 +546,7 @@ endif
       read(21,err=999, end=999)  spi_R_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Z_arr(1:n_spi)
       read(21,err=999, end=999)  spi_phi_arr(1:n_spi)
+      read(21,err=999, end=999)  spi_phi_init_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Vel_R_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Vel_Z_arr(1:n_spi)
       read(21,err=999, end=999)  spi_Vel_RxZ_arr(1:n_spi)
@@ -552,6 +558,7 @@ endif
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
         pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_phi_init= spi_phi_init_arr(i)
         pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
@@ -566,6 +573,7 @@ endif
       deallocate (spi_R_arr)
       deallocate (spi_Z_arr)
       deallocate (spi_phi_arr)
+      deallocate (spi_phi_init_arr)
       deallocate (spi_Vel_R_arr)
       deallocate (spi_Vel_Z_arr)
       deallocate (spi_Vel_RxZ_arr)
@@ -767,6 +775,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   use data_structure
   use phys_module
   use pellet_module
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  use mod_neutral_source
+#endif
   use vacuum, only: import_HDF5_restart_vacuum, current_FB_fact
   use mod_element_rtree, only: populate_element_rtree
 #ifdef USE_HDF5
@@ -839,6 +850,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_phi_init_arr (:)
   real*8, allocatable :: spi_Vel_R_arr (:)
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
@@ -1077,10 +1089,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     ! --- Split "total" temperature into electron and ion temperature
     if ( import_3xx_4xx ) then
       do j=1,n_degrees_tmp
-        node_list%node(i)%values(:,j,8) = node_list%node(i)%values(:,j,6) / 2.d0
-        node_list%node(i)%deltas(:,j,8) = node_list%node(i)%deltas(:,j,6) / 2.d0
-        node_list%node(i)%values(:,j,6) = node_list%node(i)%values(:,j,6) / 2.d0
-        node_list%node(i)%deltas(:,j,6) = node_list%node(i)%deltas(:,j,6) / 2.d0
+        node_list%node(i)%values(:,j,var_Te) = node_list%node(i)%values(:,j,6) / 2.d0
+        node_list%node(i)%deltas(:,j,var_Te) = node_list%node(i)%deltas(:,j,6) / 2.d0
+        node_list%node(i)%values(:,j,var_Ti) = node_list%node(i)%values(:,j,6) / 2.d0
+        node_list%node(i)%deltas(:,j,var_Ti) = node_list%node(i)%deltas(:,j,6) / 2.d0
       end do
     end if
 
@@ -1618,6 +1630,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       allocate (spi_R_arr(n_spi))
       allocate (spi_Z_arr(n_spi))
       allocate (spi_phi_arr(n_spi))
+      allocate (spi_phi_init_arr(n_spi))
       allocate (spi_Vel_R_arr(n_spi))
       allocate (spi_Vel_Z_arr(n_spi))
       allocate (spi_Vel_RxZ_arr(n_spi))
@@ -1628,6 +1641,16 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
       call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
       call HDF5_array1D_reading(file_id,spi_phi_arr,"spi_phi_arr")
+
+      call H5Lexists_f(file_id,"spi_phi_init_arr",flag_exists,err_exists)
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_array1D_reading(file_id,spi_phi_init_arr,"spi_phi_init_arr")
+      else
+        spi_phi_init_arr = ns_phi
+        write(*,*)"Backward Compatibility: No spi_phi_init location found, assuming to be ns_phi."
+      end if
+
+
       call HDF5_array1D_reading(file_id,spi_Vel_R_arr,"spi_Vel_R_arr")
       call HDF5_array1D_reading(file_id,spi_Vel_Z_arr,"spi_Vel_Z_arr")
       call HDF5_array1D_reading(file_id,spi_Vel_RxZ_arr,"spi_Vel_RxZ_arr")
@@ -1661,6 +1684,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
         pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_phi_init= spi_phi_init_arr(i)
         pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
@@ -1675,6 +1699,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_R_arr)
       deallocate (spi_Z_arr)
       deallocate (spi_phi_arr)
+      deallocate (spi_phi_init_arr)
       deallocate (spi_Vel_R_arr)
       deallocate (spi_Vel_Z_arr)
       deallocate (spi_Vel_RxZ_arr)
@@ -1731,10 +1756,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         do m=2,n_tor
           if ( new_mode(m) .eq. 1 ) then
           node_list%node(i)%values(m,:,:) = 0.d0
-          node_list%node(i)%values(m,:,5)   = amplitude * node_list%node(i)%values(1,:,5)
-          node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
+          node_list%node(i)%values(m,:,var_rho)   = amplitude * node_list%node(i)%values(1,:,var_rho)
 #ifdef WITH_TiTe
-          node_list%node(i)%values(m,:,8)= amplitude * node_list%node(i)%values(1,:,8)
+          node_list%node(i)%values(m,:,var_Ti)   = amplitude * node_list%node(i)%values(1,:,var_Ti)
+          node_list%node(i)%values(m,:,var_Te)   = amplitude * node_list%node(i)%values(1,:,var_Te)
+#else
+          node_list%node(i)%values(m,:,var_T)    = amplitude * node_list%node(i)%values(1,:,var_T)
 #endif
 #ifdef fullmhd
           node_list%node(i)%values(m,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)

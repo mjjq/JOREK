@@ -3,7 +3,7 @@ module mod_atomic_coeff_deuterium
 
 use mod_openadas
 use constants
-use phys_module, only: central_density, central_mass, gamma, deuterium_adas, old_deuterium_atomic
+use phys_module, only: central_density, central_mass, gamma, deuterium_adas, deuterium_adas_1e20, old_deuterium_atomic
 
 implicit none
 

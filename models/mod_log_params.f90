@@ -647,6 +647,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
+  write(*,LOGI_FMT) 'deuterium_adas_1e20   ', deuterium_adas_1e20
   write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
   write(*,LOGI_FMT) 'no_mach1_bc           ', no_mach1_bc
 

@@ -1415,7 +1415,7 @@ enddo  ! n_elements
       Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
       call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_corr ) 
 
       r0_real8  = scalars(i,5)
       rn0_real8 = scalars(i,8)

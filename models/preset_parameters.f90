@@ -67,6 +67,7 @@ subroutine preset_parameters
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
   
   deuterium_adas        = .false. 
+  deuterium_adas_1e20   = .false. 
   old_deuterium_atomic  = .false. 
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n

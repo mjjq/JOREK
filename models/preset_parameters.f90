@@ -197,8 +197,8 @@ subroutine preset_parameters
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
-  T_min              =-1.0d20
-  rho_min            =-1.0d20
+  T_min              = 1.0d-20
+  rho_min            = 1.0d-20
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -208,6 +208,8 @@ subroutine preset_parameters
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
+  ZK_i_perp_num = 0.d0
+  ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
   eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.

@@ -13,19 +13,19 @@ module mod_distribute_preconditioner
 
 contains
 
-  subroutine distribute_harmonics(my_id,my_id_n,n_cpu)
   !> Extract Preconditioner (PC) matrices from distributed global sparce matrix
-  !> A_glob(1:nz_glob), irn_glob(1:nz_glob), jcn_glob(1:nz_glob)
-  !> Uses splitted communication if number of send/recv entries exceeds INT_MAX
-  !> nsplit - number of split communications
-  !> nz_split - number of nonzeros to go through in each communication cycle
-  !>
-  !> Sends the reduced local matrices to the masters only
-  !>  (centralize_harm_mat=.true.) or distribute by rows among all ranks
-  !>
-  !>    mumps_par%A(1:mumps_par%nz), mumsp_par%rhs(1:mumps_par%n)
-  !>    mumps_par%irn(1:mumps_par%nz)
-  !>    mumps_par%jcn(1:mumps_par%nz)
+  !! A_glob(1:nz_glob), irn_glob(1:nz_glob), jcn_glob(1:nz_glob)
+  !! Uses splitted communication if number of send/recv entries exceeds INT_MAX
+  !! nsplit - number of split communications
+  !! nz_split - number of nonzeros to go through in each communication cycle
+  !!
+  !! Sends the reduced local matrices to the masters only
+  !!  (centralize_harm_mat=.true.) or distribute by rows among all ranks
+  !!
+  !!    mumps_par%A(1:mumps_par%nz), mumsp_par%rhs(1:mumps_par%n)
+  !!    mumps_par%irn(1:mumps_par%nz)
+  !!    mumps_par%jcn(1:mumps_par%nz)
+  subroutine distribute_harmonics(my_id,my_id_n,n_cpu)
 
     use tr_module
     use mod_parameters, only : n_tor, n_var
@@ -281,8 +281,9 @@ contains
   end subroutine distribute_harmonics
 
 
-  subroutine distribute_vector(rhs,rhs_dis,comm)
   !> Distribute vector rhs among each mode group master
+  subroutine distribute_vector(rhs,rhs_dis,comm)
+
     use global_distributed_matrix, only: ndof_glob
     use mumps_module, only: mumps_par
     use mpi_mod
@@ -303,8 +304,9 @@ contains
   end subroutine distribute_vector
 
 
-  subroutine get_send_recv(my_id,n_cpu,i0,i1,long_send_counts,long_recv_counts)
   !> Calculate send-recv counts
+  subroutine get_send_recv(my_id,n_cpu,i0,i1,long_send_counts,long_recv_counts)
+
     use mpi_mod
     use mod_integer_types
     use mod_parameters, only : n_tor, n_var

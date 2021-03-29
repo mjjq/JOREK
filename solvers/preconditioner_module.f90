@@ -20,9 +20,10 @@ module preconditioner_module
 
   contains
 
-  subroutine distribute_ranks(n_cpu,i_tor)
   !> Distribute MPI ranks among mode families
-  !> i_tor(n_cpu) provides family ID for each rank within MPI_COMM_WORLD
+  !! i_tor(n_cpu) provides family ID for each rank within MPI_COMM_WORLD
+  subroutine distribute_ranks(n_cpu,i_tor)
+
     implicit none
 
     integer, intent(in) :: n_cpu
@@ -82,8 +83,9 @@ module preconditioner_module
 
   end subroutine distribute_ranks
 
-  subroutine distribute_modes
   !> Distribute toroidal modes among mode families
+  subroutine distribute_modes
+
     use mod_parameters, only : n_tor
     implicit none
 
@@ -110,8 +112,9 @@ module preconditioner_module
  
   end subroutine distribute_modes
 
-  subroutine create_communicators(my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS)
   !> Set up MPI communicators for mode families and corresponding masters
+  subroutine create_communicators(my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS)
+
     use mpi
     implicit none
 
@@ -177,8 +180,9 @@ module preconditioner_module
 
   end subroutine create_communicators
 
-  subroutine map_row_index(ndof)
   !> Determine mapping from local to globar row index for the RHS
+  subroutine map_row_index(ndof)
+
     use mod_parameters, only: n_tor
     use tr_module
     use mod_integer_types
@@ -211,8 +215,9 @@ module preconditioner_module
     return
   end subroutine map_row_index
 
-  subroutine check_preconditioner_consistency
   !> Check mode families consistency
+  subroutine check_preconditioner_consistency
+
     use mpi
     use mod_parameters, only: n_tor
 

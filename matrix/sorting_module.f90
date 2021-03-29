@@ -1,6 +1,6 @@
-module sorting_module
 !> Contains subroutines to sort/remove duplicates for equilibrium solve
-!> and fast column sorting for PC sparse matrix as needed for STRUMPACK
+!! and fast column sorting for PC sparse matrix as needed for STRUMPACK
+module sorting_module
 
   use iso_c_binding
   use mod_integer_types
@@ -14,7 +14,6 @@ module sorting_module
 interface
 
   subroutine qsort(array, elem_count, elem_size, compar) bind(C,name="qsort")
-  !> Interface to C-function qsort
     import
     type(c_ptr),value       :: array
     integer(C_INT_ALL),value :: elem_count
@@ -53,9 +52,10 @@ contains
     if ( a .gt. b ) compar = 1
   end function compar
 
+  !> Sort and remove duplicates from 1D array using qsort
+  !! replace list with uniquelly sorted entries; return number of unique elements
   subroutine unique_sorted(array,n)
-  !> Sort and remove duplicates from 1D list
-  !> replace list with uniquelly sorted entries; return number of unique elements
+
     use, intrinsic :: iso_c_binding
     implicit none
 
@@ -96,8 +96,9 @@ contains
 
   end subroutine unique_sorted
 
-  recursive function find_index(list,low,high,x) result(idx)
   !> Find index of element x in the list
+  recursive function find_index(list,low,high,x) result(idx)
+
     use mod_integer_types
 
     integer(kind=INTSIZE), intent(in) :: x
@@ -131,8 +132,10 @@ contains
 
   end function find_index
 
-  subroutine remove_duplicates(n,nnz,irn,jcn,val)
   !> Sort and remove duplicates from sparse matrix
+  !! by converting to 1D array of ij index
+  subroutine remove_duplicates(n,nnz,irn,jcn,val)
+
     use, intrinsic :: iso_c_binding
     use mod_integer_types
 
@@ -188,10 +191,10 @@ contains
 
   end subroutine remove_duplicates
 
-  subroutine convert_sorting(nnz,irn,jcn,val,block_size,indx)
   !> Convert to CSR while sorting column-wise
-  !> based on matrix being structured in consecutive (non-uniform)
-  !> blocks of irn values
+  !! based on matrix being structured in consecutive (non-uniform)
+  !! blocks of irn values
+  subroutine convert_sorting(nnz,irn,jcn,val,block_size,indx)
 
     use, intrinsic :: iso_c_binding
     use mod_integer_types
@@ -256,11 +259,6 @@ contains
       endif
     enddo
 
-    !do i = 1, n_irn_block
-    !  write(*,*) i, iblock(i), iblock(i+1)-1, indmin(iblock(i)), indmax(iblock(i+1)-1)
-    !enddo
-    !call exit
-
     do ib = 1, n_irn_block
       cnt = 1
       n1 = indmin(iblock(ib))
@@ -268,7 +266,6 @@ contains
       ni = n2 - n1 + 1
       allocate(jcn_tmp(ni),val_tmp(ni))
       do idum = iblock(ib),iblock(ib+1)-1
-        !write(*,*) "idum", idum, indmin(idum), indmax(idum)
         do i = indmin(idum), indmax(idum), block_size
           if (irn(i).eq.idum) then
             jcn_tmp(cnt:cnt + block_size - 1) = jcn(i:i + block_size - 1)
@@ -282,19 +279,8 @@ contains
       deallocate(jcn_tmp,val_tmp)
     enddo
 
-!    idum = nloc
-!    ni = iptr(idum+1) - iptr(idum)
-!    write(*,*) "irn =", idum + irn0, "ni", ni, "jcn =", jcn(iptr(idum+1)-ni:iptr(idum+1)-1)
-
-    ! replace irn by iprt
-    !deallocate(irn)
-    !allocate(irn(nloc+1))
     irn(1:nloc+1) = iptr(1:nloc+1)
     deallocate(iptr)
-
-    !idum = 1
-    !ni = irn(idum+1) - irn(idum)
-    !write(*,*) "irn =", idum + irn0, "jcn =", jcn(irn(idum+1)-1)
 
     ! check sorting consistency
     if (.false.) then

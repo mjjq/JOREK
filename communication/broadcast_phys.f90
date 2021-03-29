@@ -601,14 +601,16 @@ if (my_id .eq. 0) then
   call MPI_PACK(RMP_har_sin_spectrum,   N_RMP_MAX,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(pastix_maxthrd,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(mumps_ordering,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  
-  call MPI_PACK(n_mode_families,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  do i=1,n_tor
-    call MPI_PACK(mode_families_modes(i,1:n_tor),n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  enddo
-  call MPI_PACK(modes_per_family(1:n_tor),n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(autodistribute_modes,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(weights_per_family(1:n_tor),n_tor,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+ 
+  call MPI_PACK(autodistribute_modes,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr) 
+  if (.not. autodistribute_modes) then
+    call MPI_PACK(n_mode_families,1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(modes_per_family(1:n_mode_families),n_mode_families,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    do i=1,n_mode_families
+      call MPI_PACK(mode_families_modes(i,1:n_tor),n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+    enddo
+    call MPI_PACK(weights_per_family(1:n_mode_families),n_mode_families,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  endif
   call MPI_PACK(autodistribute_ranks,1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ranks_per_family(1:n_tor),n_tor,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
@@ -1196,14 +1198,16 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position, RMP_har_sin_spectrum,  N_RMP_MAX,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,pastix_maxthrd,         1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,mumps_ordering,         1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  
-  call MPI_UNPACK(buffer,bufsize,position,n_mode_families,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  do i=1,n_tor
-    call MPI_UNPACK(buffer,bufsize,position,mode_families_modes(i,1:n_tor),n_tor,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  enddo
-  call MPI_UNPACK(buffer,bufsize,position,modes_per_family(1:n_tor),n_tor,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,autodistribute_modes,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,weights_per_family(1:n_tor),n_tor,MPI_REAL8,MPI_COMM_WORLD,ierr)
+ 
+  call MPI_UNPACK(buffer,bufsize,position,autodistribute_modes,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr) 
+  if (.not. autodistribute_modes) then
+    call MPI_UNPACK(buffer,bufsize,position,n_mode_families,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,bufsize,position,modes_per_family(1:n_mode_families),n_mode_families,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    do i=1,n_mode_families
+      call MPI_UNPACK(buffer,bufsize,position,mode_families_modes(i,1:n_tor),n_tor,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    enddo
+    call MPI_UNPACK(buffer,bufsize,position,weights_per_family(1:n_mode_families),n_mode_families,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  endif
   call MPI_UNPACK(buffer,bufsize,position,autodistribute_ranks,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ranks_per_family(1:n_tor),n_tor,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   

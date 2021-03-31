@@ -274,8 +274,13 @@ do ms=1, n_gauss
     if (keep_current_prof) &
       call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
   
-    call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
-                 particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
+    if ( with_TiTe ) then
+      call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+                   particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
+    else
+      call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+                   particle_source(ms,mt),heat_source(ms,mt))
+    end if
 
     ! Source of parallel velocity
     if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
@@ -286,11 +291,16 @@ do ms=1, n_gauss
     call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                  dn_dpsi(ms,mt),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, eq_zTi(ms,mt), &
-                     dTi_dpsi(ms,mt),dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
-
-    call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
-                     dTe_dpsi(ms,mt),dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+    if ( with_TiTe ) then
+      call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, eq_zTi(ms,mt), &
+                       dTi_dpsi(ms,mt),dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
+  
+      call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+                       dTe_dpsi(ms,mt),dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+    else
+      call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zT(ms,mt), &
+                       dT_dpsi(ms,mt),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+    end if
 
     if ( NEO ) then 
       if (num_neo_file) then
@@ -389,18 +399,18 @@ do i=1,n_vertex_max
           r0_x_hat = 2.d0 * BigR * BigR_x  * r0 + BigR**2 * r0_x
           r0_y_hat = BigR**2 * r0_y
 
-          T0    = eq_g(mp,var_Ti,ms,mt)
-          T0_x  = (   y_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) - y_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
-          T0_y  = ( - x_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) + x_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
-          T0_p  = eq_p(mp,var_Ti,ms,mt)
-          T0_s  = eq_s(mp,var_Ti,ms,mt)
-          T0_t  = eq_t(mp,var_Ti,ms,mt)
-          T0_ss = eq_ss(mp,var_Ti,ms,mt)
-          T0_tt = eq_tt(mp,var_Ti,ms,mt)
-          T0_st = eq_st(mp,var_Ti,ms,mt)
+          T0    = eq_g(mp,var_T,ms,mt)
+          T0_x  = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
+          T0_y  = ( - x_t(ms,mt) * eq_s(mp,var_T,ms,mt) + x_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
+          T0_p  = eq_p(mp,var_T,ms,mt)
+          T0_s  = eq_s(mp,var_T,ms,mt)
+          T0_t  = eq_t(mp,var_T,ms,mt)
+          T0_ss = eq_ss(mp,var_T,ms,mt)
+          T0_tt = eq_tt(mp,var_T,ms,mt)
+          T0_st = eq_st(mp,var_T,ms,mt)
 
-          T0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
-          dT0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+          T0_corr     = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
+          dT0_corr_dT = dcorr_neg_temp_dT(T0) ! Improve the correction
 
           Ti0    = eq_g(mp,var_Ti,ms,mt)
           Ti0_x  = (   y_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) - y_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
@@ -610,111 +620,260 @@ do i=1,n_vertex_max
           delta_ps_x = (   y_t(ms,mt) * delta_s(mp,var_psi,ms,mt) - y_s(ms,mt) * delta_t(mp,var_psi,ms,mt) ) / xjac
           delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,var_psi,ms,mt) + x_s(ms,mt) * delta_t(mp,var_psi,ms,mt) ) / xjac
 
-          ! --- Temperature dependent resistivity
-          if ( eta_T_dependent .and. Te0_corr <= T_max_eta) then
-            eta_T     = eta   * (corr_neg_temp1(Te0)/Te_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. Te0_corr > T_max_eta) then
-            eta_T     = eta   * (T_max_eta/Te_0)**(-1.5d0)
-            deta_dT   = 0.
-            d2eta_d2T = 0.     
-          else
-            eta_T     = eta
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-          end if
-
-          if ( eta_T_dependent .and.  xpoint2 .and. (Te0 .lt. T_min) ) then
-              eta_T     = eta    * (max(Te0,T_min)/Te_0)**(-1.5d0)
+          if ( with_TiTe ) then ! ******************************************************************
+            
+            ! --- Temperature dependent resistivity
+            if ( eta_T_dependent .and. Te0_corr <= T_max_eta) then
+              eta_T     = eta   * (corr_neg_temp1(Te0)/Te_0)**(-1.5d0)
+              deta_dT   = - eta   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+              d2eta_d2T =   eta   * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
+            else if ( eta_T_dependent .and. Te0_corr > T_max_eta) then
+              eta_T     = eta   * (T_max_eta/Te_0)**(-1.5d0)
+              deta_dT   = 0.
+              d2eta_d2T = 0.     
+            else
+              eta_T     = eta
               deta_dT   = 0.d0
               d2eta_d2T = 0.d0
-          end if
-
-          ! --- Eta for ohmic heating
-          if ( eta_T_dependent .and. Te0_corr <= T_max_eta_ohm) then
-            eta_T_ohm     = eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
-            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. Te0_corr > T_max_eta_ohm) then
-            eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/Te_0)**(-1.5d0)
-            deta_dT_ohm   = 0.    
-          else
-            eta_T_ohm     = eta_ohmic
-            deta_dT_ohm   = 0.d0
-          end if
-
-          ! --- Temperature dependent viscosity
-          if ( visco_T_dependent ) then
-            visco_T     =   visco * (Te0_corr/Te_0)**(-1.5d0)
-            dvisco_dT   = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-            d2visco_dT2 =   visco * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
-            if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-              visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
+            end if
+            
+            if ( eta_T_dependent .and.  xpoint2 .and. (Te0 .lt. T_min) ) then
+                eta_T     = eta    * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                deta_dT   = 0.d0
+                d2eta_d2T = 0.d0
+            end if
+            
+            ! --- Eta for ohmic heating
+            if ( eta_T_dependent .and. Te0_corr <= T_max_eta_ohm) then
+              eta_T_ohm     = eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
+              deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+            else if ( eta_T_dependent .and. Te0_corr > T_max_eta_ohm) then
+              eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/Te_0)**(-1.5d0)
+              deta_dT_ohm   = 0.    
+            else
+              eta_T_ohm     = eta_ohmic
+              deta_dT_ohm   = 0.d0
+            end if
+            
+            ! --- Temperature dependent viscosity
+            if ( visco_T_dependent ) then
+              visco_T     =   visco * (Te0_corr/Te_0)**(-1.5d0)
+              dvisco_dT   = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
+              d2visco_dT2 =   visco * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
+              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
+                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+                d2visco_dT2 = 0.d0
+              endif
+            else
+              visco_T     = visco
               dvisco_dT   = 0.d0
               d2visco_dT2 = 0.d0
-            endif
-          else
-            visco_T     = visco
-            dvisco_dT   = 0.d0
-            d2visco_dT2 = 0.d0
-          end if
-
-          ! --- Temperature dependent parallel heat diffusivity
-          if ( ZKpar_T_dependent ) then
-            ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-            dZKi_par_dT = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0) * dTi0_corr_dT
-            if (ZKi_par_T .gt. ZK_par_max) then
-              ZKi_par_T   = Zk_par_max
+            end if
+            
+            ! --- Temperature dependent parallel heat diffusivity
+            if ( ZKpar_T_dependent ) then
+              ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+              dZKi_par_dT = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0) * dTi0_corr_dT
+              if (ZKi_par_T .gt. ZK_par_max) then
+                ZKi_par_T   = Zk_par_max
+                dZKi_par_dT = 0.d0
+              endif
+              if ( xpoint2 .and. (Ti0 .lt. T_min) ) then
+                ZKi_par_T   = ZK_i_par * (max(Ti0,T_min)/Ti_0)**(+2.5d0)
+                dZKi_par_dT = 0.d0
+              endif
+              
+              ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+              dZKe_par_dT = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0) * dTe0_corr_dT
+              if (ZKe_par_T .gt. ZK_par_max) then
+                ZKe_par_T   = Zk_par_max
+                dZKe_par_dT = 0.d0
+              endif
+              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
+                ZKe_par_T   = ZK_e_par * (max(Te0,T_min)/Te_0)**(+2.5d0)
+                dZKe_par_dT = 0.d0
+              endif
+            else
+              ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
               dZKi_par_dT = 0.d0
-            endif
-            if ( xpoint2 .and. (Ti0 .lt. T_min) ) then
-              ZKi_par_T   = ZK_i_par * (max(Ti0,T_min)/Ti_0)**(+2.5d0)
-              dZKi_par_dT = 0.d0
-            endif
-
-            ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-            dZKe_par_dT = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0) * dTe0_corr_dT
-            if (ZKe_par_T .gt. ZK_par_max) then
-              ZKe_par_T   = Zk_par_max
+              ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
               dZKe_par_dT = 0.d0
             endif
-            if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-              ZKe_par_T   = ZK_e_par * (max(Te0,T_min)/Te_0)**(+2.5d0)
-              dZKe_par_dT = 0.d0
-            endif
-          else
-            ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
-            dZKi_par_dT = 0.d0
-            ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
-            dZKe_par_dT = 0.d0
-          endif
-
-          ! --- Temperature dependent hyper-resistivity
-          if ( eta_num_T_dependent ) then
-            eta_num_T     =   eta_num   * (Te0_corr/Te_0)**(-3.d0)
-            deta_num_dT   = - eta_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
-            if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-              eta_num_T     = eta_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
+            
+            ! --- Temperature dependent hyper-resistivity
+            if ( eta_num_T_dependent ) then
+              eta_num_T     =   eta_num   * (Te0_corr/Te_0)**(-3.d0)
+              deta_num_dT   = - eta_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
+              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
+                eta_num_T     = eta_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
+                deta_num_dT   = 0.d0
+              endif
+            else
+              eta_num_T     = eta_num
               deta_num_dT   = 0.d0
-            endif
-          else
-            eta_num_T     = eta_num
-            deta_num_dT   = 0.d0
-          end if
-   
-          ! --- Temperature dependent hyper-viscosity
-          if ( visco_num_T_dependent ) then
-            visco_num_T     =   visco_num   * (Te0_corr/Te_0)**(-3.d0)
-            dvisco_num_dT   = - visco_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
-            if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-              visco_num_T     = visco_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
+            end if
+            
+            ! --- Temperature dependent hyper-viscosity
+            if ( visco_num_T_dependent ) then
+              visco_num_T     =   visco_num   * (Te0_corr/Te_0)**(-3.d0)
+              dvisco_num_dT   = - visco_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
+              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
+                visco_num_T     = visco_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
+                dvisco_num_dT   = 0.d0
+              endif
+            else
+              visco_num_T     = visco_num
               dvisco_num_dT   = 0.d0
+            end if
+            
+            ! --- Ion-electron energy transfer
+            if (thermalization) then
+              ! Te in eV:
+              Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+              dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
+              
+              ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
+              if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
+              
+              lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
+              nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
+                             * (1.d14*central_density*r0_corr) * lambda_e_bg &
+                             / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
+                             / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
+              
+              if (nu_e_bg < 0.)  nu_e_bg  = 0.
+              
+              !Converting the energy transfer rate from s^-1 to JOREK unit
+              t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+              nu_e_bg  = nu_e_bg * t_norm    
+              
+              dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
+              dTi_e    = -dTe_i
+              
+              !Calculating the density and temperature derivative for amats
+              !We negelect the coulomb log's dericatives due to their smallness
+              
+              dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+              dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
+                                / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+             
+              dnu_e_bg_drho   = nu_e_bg * dr0_corr_dn / r0_corr
+              
+              ddTe_i_dTi      = dnu_e_bg_dTi * (Ti0_corr - Te0_corr) + nu_e_bg
+              ddTe_i_dTe      = dnu_e_bg_dTe * (Ti0_corr - Te0_corr) - nu_e_bg
+              ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
+              
+              ddTi_e_dTi      = -ddTe_i_dTi
+              ddTi_e_dTe      = -ddTe_i_dTe
+              ddTi_e_drho     = -ddTe_i_drho
+            else
+              dTe_i = 0.
+              dTi_e = 0.
+              ddTe_i_dTi = 0.
+              ddTe_i_dTe = 0.
+              ddTe_i_drho = 0.
+              ddTi_e_dTi = 0.
+              ddTi_e_dTe = 0.
+              ddTi_e_drho = 0.
             endif
-          else
-            visco_num_T     = visco_num
-            dvisco_num_dT   = 0.d0
-          end if
-
+            
+          else ! (with_TiTe) ***********************************************************************
+              
+            if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
+              eta_T     = eta   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+              deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+              d2eta_d2T =   eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
+            else if ( eta_T_dependent .and. T0_corr > T_max_eta) then
+              eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
+              deta_dT   = 0.
+              d2eta_d2T = 0.     
+            else
+              eta_T     = eta
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
+            end if
+            
+            if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
+                eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
+                deta_dT   = 0.d0
+                d2eta_d2T = 0.d0
+            end if
+            
+            ! --- Eta for ohmic heating
+            if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm) then
+              eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
+              deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+            else if ( eta_T_dependent .and. T0_corr > T_max_eta_ohm) then
+              eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
+              deta_dT_ohm   = 0.    
+            else
+              eta_T_ohm     = eta_ohmic
+              deta_dT_ohm   = 0.d0
+            end if
+            
+            ! --- Tmperature dependent viscosity
+            if ( visco_T_dependent ) then
+              visco_T     =   visco * (T0_corr/T_0)**(-1.5d0)
+              dvisco_dT   = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+              d2visco_dT2 =   visco * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
+              if ( xpoint2 .and. (T0 .lt. T_min) ) then
+                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+                d2visco_dT2 = 0.d0
+              endif
+            else
+              visco_T     = visco
+              dvisco_dT   = 0.d0
+              d2visco_dT2 = 0.d0
+            end if
+            
+            ! --- Tmperature dependent parallel heat diffusivity
+            if ( ZKpar_T_dependent ) then
+              ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+              dZK_par_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0) * dT0_corr_dT
+              if (ZK_par_T .gt. ZK_par_max) then
+                ZK_par_T   = Zk_par_max
+                dZK_par_dT = 0.d0
+              endif
+              if ( xpoint2 .and. (T0 .lt. T_min) ) then
+                ZK_par_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+                dZK_par_dT = 0.d0
+              endif
+            else
+              ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
+              dZKi_par_dT = 0.d0
+              ZK_par_T   = ZK_par                                            ! parallel conductivity
+              dZK_par_dT = 0.d0
+            endif
+            
+            ! --- Tmperature dependent hyper-resistivity
+            if ( eta_num_T_dependent ) then
+              eta_num_T     =   eta_num   * (T0_corr/T_0)**(-3.d0)
+              deta_num_dT   = - eta_num   * (3.d0)  * T0_corr**(-4.d0) * T_0**(3.d0)
+              if ( xpoint2 .and. (T0 .lt. T_min) ) then
+                eta_num_T     = eta_num    * (max(T0,T_min)/T_0)**(-3.d0)
+                deta_num_dT   = 0.d0
+              endif
+            else
+              eta_num_T     = eta_num
+              deta_num_dT   = 0.d0
+            end if
+            
+            ! --- Tmperature dependent hyper-viscosity
+            if ( visco_num_T_dependent ) then
+              visco_num_T     =   visco_num   * (T0_corr/T_0)**(-3.d0)
+              dvisco_num_dT   = - visco_num   * (3.d0)  * T0_corr**(-4.d0) * T_0**(3.d0)
+              if ( xpoint2 .and. (T0 .lt. T_min) ) then
+                visco_num_T     = visco_num    * (max(T0,T_min)/T_0)**(-3.d0)
+                dvisco_num_dT   = 0.d0
+              endif
+            else
+              visco_num_T     = visco_num
+              dvisco_num_dT   = 0.d0
+            end if
+            
+          end if ! (with_TiTe) *********************************************************************
 
           ! --- Diamagnetic viscosity
           if (Wdia) then
@@ -724,107 +883,63 @@ do i=1,n_vertex_max
             W_dia = 0.d0
           endif
 
-   !--------------------------------------------------------
-   ! --- Ion-electron energy transfer
-   !--------------------------------------------------------
-
-          if (thermalization) then
-            ! Te in eV:
-            Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-            dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
-  
-            ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
-            if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
-  
-            lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
-            nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
-                           * (1.d14*central_density*r0_corr) * lambda_e_bg &
-                           / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
-                           / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
-        
-            if (nu_e_bg < 0.)  nu_e_bg  = 0.
-        
-            !Converting the energy transfer rate from s^-1 to JOREK unit
-            t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-            nu_e_bg  = nu_e_bg * t_norm    
-        
-            dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
-            dTi_e    = -dTe_i
-        
-            !Calculating the density and temperature derivative for amats
-            !We negelect the coulomb log's dericatives due to their smallness
-        
-            dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-            dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
-                              / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-  
-            dnu_e_bg_drho   = nu_e_bg * dr0_corr_dn / r0_corr
-  
-            ddTe_i_dTi      = dnu_e_bg_dTi * (Ti0_corr - Te0_corr) + nu_e_bg
-            ddTe_i_dTe      = dnu_e_bg_dTe * (Ti0_corr - Te0_corr) - nu_e_bg
-            ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
-        
-            ddTi_e_dTi      = -ddTe_i_dTi
-            ddTi_e_dTe      = -ddTe_i_dTe
-            ddTi_e_drho     = -ddTe_i_drho
-          else
-            dTe_i = 0.
-            dTi_e = 0.
-            ddTe_i_dTi = 0.
-            ddTe_i_dTe = 0.
-            ddTe_i_drho = 0.
-            ddTi_e_dTi = 0.
-            ddTi_e_dTe = 0.
-            ddTi_e_drho = 0.
-          endif
-
-
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
 
           ! --- Bootstrap current 
           if (bootstrap) then
-            ! --- Full Sauter formula
-            call bootstrap_current(bigR, y_g(ms,mt),                     &
-                                   R_axis,   Z_axis,   psi_axis,         &
-                                   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
-                                   ps0, ps0_x, ps0_y,                    &
-                                   r0,  r0_x,  r0_y,                     &
-                                   Ti0, Ti0_x, Ti0_y,                    &
-                                   Te0, Te0_x, Te0_y,                  Jb)
-            
-            
-            ! --- Full Sauter formula for initial profiles
-            
-            zTi   = eq_zTi(ms,mt)        
-            zTi_x = dTi_dpsi(ms,mt) * ps0_x
-            zTi_y = dTi_dpsi(ms,mt) * ps0_y
-            zTe   = eq_zTe(ms,mt)  
-            zTe_x = dTe_dpsi(ms,mt) * ps0_x 
-            zTe_y = dTe_dpsi(ms,mt) * ps0_y
-            zn_x  = dn_dpsi(ms,mt)  * ps0_x
-            zn_y  = dn_dpsi(ms,mt)  * ps0_y
-
-            call bootstrap_current(bigR, y_g(ms,mt),                       &
-                                   R_axis,   Z_axis,   psi_axis,           &
-                                   R_xpoint, Z_xpoint, psi_bnd, psi_norm,  &
-                                   ps0, ps0_x, ps0_y,                      &
-                                   eq_zne(ms,mt),  zn_x,  zn_y,            &
-                                   zTi, zTi_x, zTi_y,                      &
-                                   zTe, zTe_x, zTe_y,                    Jb_0)
-            ! --- Subtract the initial equilibrium part
-            Jb = Jb - Jb_0
+            if ( with_TiTe ) then
+              ! --- Full Sauter formula
+              call bootstrap_current(bigR, y_g(ms,mt),                     &
+                                     R_axis,   Z_axis,   psi_axis,         &
+                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+                                     ps0, ps0_x, ps0_y,                    &
+                                     r0,  r0_x,  r0_y,                     &
+                                     Ti0, Ti0_x, Ti0_y,                    &
+                                     Te0, Te0_x, Te0_y,                  Jb)
+              
+              ! --- Full Sauter formula for initial profiles
+              
+              zTi   = eq_zTi(ms,mt)        
+              zTi_x = dTi_dpsi(ms,mt) * ps0_x
+              zTi_y = dTi_dpsi(ms,mt) * ps0_y
+              zTe   = eq_zTe(ms,mt)  
+              zTe_x = dTe_dpsi(ms,mt) * ps0_x 
+              zTe_y = dTe_dpsi(ms,mt) * ps0_y
+              zn_x  = dn_dpsi(ms,mt)  * ps0_x
+              zn_y  = dn_dpsi(ms,mt)  * ps0_y
+  
+              call bootstrap_current(bigR, y_g(ms,mt),                       &
+                                     R_axis,   Z_axis,   psi_axis,           &
+                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,  &
+                                     ps0, ps0_x, ps0_y,                      &
+                                     eq_zne(ms,mt),  zn_x,  zn_y,            &
+                                     zTi, zTi_x, zTi_y,                      &
+                                     zTe, zTe_x, zTe_y,                    Jb_0)
+              ! --- Subtract the initial equilibrium part
+              Jb = Jb - Jb_0
+            else ! (with_TiTe) 
+              !########################### to be added ####
+            end if
           else
             Jb = 0.d0
           endif
+            
 
           D_prof   = get_dperp (psi_norm)
-          ZKi_prof = get_zk_iperp(psi_norm)
-          ZKe_prof = get_zk_eperp(psi_norm)
+          if ( with_TiTe ) then
+            ZKi_prof = get_zk_iperp(psi_norm)
+            ZKe_prof = get_zk_eperp(psi_norm)
+          else
+            ZK_prof = get_zk_perp(psi_norm)
+          end if
 
           ! --- Increase diffusivity if very small density/temperature
           if (xpoint2) then
             if (r0 .lt. D_prof_neg_thresh)  then
               D_prof  = D_prof_neg
+            endif
+            if (T0 .lt. ZK_prof_neg_thresh) then
+              ZK_prof = ZK_prof_neg
             endif
             if (Te0 .lt. ZK_prof_neg_thresh) then
               ZKe_prof = ZK_prof_neg

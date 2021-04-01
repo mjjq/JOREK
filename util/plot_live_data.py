@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-# I. Holod, 26.03.2021
+""" Reads and plot data from macroscopic_variables.dat
+    https://www.jorek.eu/wiki/doku.php?id=plot_live_data.py
+    iholod@ipp.mpg.de
+"""
 
 import os.path
 import argparse

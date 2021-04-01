@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-# I. Holod, 09/06/2020
+""" Reads memory usage files and optionally 
+    JOREK timeline file. Plot memory usage vs time with 
+    optional time line marks
+    https://www.jorek.eu/wiki/doku.php?id=plot_mlog.py
+    iholod@ipp.mpg.de
+"""
 
 import os.path
 import argparse

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""find variable in JOREK logfile"""
+""" Search JOREK log file for lines containing specific string and 
+    get average/sum for the values found at the end of such lines
+    https://www.jorek.eu/wiki/doku.php?id=read_jorek_logfile.py
+    iholod@ipp.mpg.de
+"""
+
 import numpy as np
 import pylab as plt
 import time

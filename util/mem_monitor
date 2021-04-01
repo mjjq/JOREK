@@ -27,6 +27,8 @@
 Launch and watch the resident memory footprint of a child process, write the
 result periodically into the file <mem_rank_{RANK}.log>, or, as a fallback,
 <mem_pid_{CHILD_PID}.log>, in case the MPI rank cannot be determined.
+
+I. Holod: Modyfied to record absolute time for possible synchronization with JOREK's timeline
 """
 
 import os
@@ -36,7 +38,7 @@ import subprocess
 from datetime import datetime
 
 # watch process every  t_sleep  seconds
-t_sleep = 0.1
+t_sleep = 0.5
 # flush output, may cause problems with large numbers of parallel processes
 do_flush = True
 

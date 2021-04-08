@@ -1734,10 +1734,14 @@ if (my_id .eq. 0) then
                                  Ohm_tot/1.d6,heating_in/1d6+heating_out/1.d6 ,source_in+source_out
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-  write(*,'(A,4es14.6)')  ' Integrals_3D, MGI               : ', total_n_particles_inj, total_n_particles
-  write(*,'(A,1e14.6,A)') ' Radiation power                 : ', total_radiation/1.d6, ' [MW]'
-  write(*,'(A,1e14.6,A)') ' Radiation power SANITY          : ', sum(total_radiation_phi)/1.d6, ' [MW]'
-  write(*,'(A,1e14.6,A)') ' Ionization power                : ', total_E_ion/1.d6, ' [MW]'
+  write(*,'(A,4es14.6)')   ' Integrals_3D, MGI              : ', total_n_particles_inj, total_n_particles
+  write(*,'(A,1e14.6,A)')  ' Radiation power                : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)')  ' Radiation power SANITY         : ', sum(total_radiation_phi)/1.d6, ' [MW]'
+  if (with_neutrals) then
+    write(*,'(A,1e14.6,A)') ' Ionization power               : ', total_E_ion/1.d6, ' [MW]'
+  else if (with_impurities) then ! With CE assumption, it's easier to obtain the total ionization energy then get the ionization power by finite difference
+    write(*,'(A,1e14.6,A)') ' Ionization energy              : ', total_E_ion/1.d6, ' [MJ]'
+  endif
 
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
@@ -1756,14 +1760,20 @@ if (my_id .eq. 0) then
     close (20)
   end if
 
-  if (index_now > 1) then
-    xtime_E_ion(index_now) = xtime_E_ion(index_now-1) + t_norm * tstep * total_E_ion
-  else if (index_now == 1) then
-    xtime_E_ion(index_now) = t_norm * tstep * total_E_ion
-  end if
-  if (index_now > 0) then
-  xtime_E_ion_power(index_now) = total_E_ion
-  end if
+  if (with_neutrals) then
+    if (index_now > 1) then
+      xtime_E_ion(index_now) = xtime_E_ion(index_now-1) + t_norm * tstep * total_E_ion
+    else if (index_now == 1) then
+      xtime_E_ion(index_now) = t_norm * tstep * total_E_ion
+    end if
+    if (index_now > 0) then
+      xtime_E_ion_power(index_now) = total_E_ion
+    end if
+  else if (with_impurities) then ! For CE assumption, we directly give the total ionization energy
+    if (index_now > 0) then
+      xtime_E_ion(index_now) = total_E_ion
+    end if
+  endif
 #endif
 
   do k = 1, n_var
@@ -1845,6 +1855,11 @@ if (my_id .eq. 0) then
       dnpart_tot_dt(index_now-1) = (npart_tot_t(index_now) - r_dt2*npart_tot_t(index_now-2) &
         -(1.d0-r_dt2)*npart_tot_t(index_now-1))  / (dt_now + dt_back*r_dt2) / t_norm
 
+      if (with_impurities) then ! Calculate the ionization energy change
+        xtime_E_ion_power(index_now-1) = (xtime_E_ion(index_now) - r_dt2*xtime_E_ion(index_now-2) &
+        -(1.d0-r_dt2)*xtime_E_ion(index_now-1))  / (dt_now + dt_back*r_dt2) / t_norm
+      endif
+
     endif
 
     !--- Estimate time derivatives for 1st tstep (1st order accuracy)
@@ -1864,6 +1879,10 @@ if (my_id .eq. 0) then
       dpart_tot_dt(index_now-1)    = (density_tot_t(index_now)-density_tot_t(index_now-1))   / dt_now / t_norm
 
       dnpart_tot_dt(index_now-1)   = (npart_tot_t(index_now)-npart_tot_t(index_now-1))       / dt_now / t_norm
+
+      if (with_impurities) then ! Calculate the ionization energy change
+        xtime_E_ion_power(index_now-1) = (xtime_E_ion(index_now)-xtime_E_ion(index_now-1))   / dt_now / t_norm
+      endif
 
     endif
 

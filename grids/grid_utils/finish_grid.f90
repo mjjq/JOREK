@@ -6,7 +6,7 @@ subroutine finish_grid(node_list, element_list, newnode_list, newelement_list, n
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint
+use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint, n_pol
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
@@ -63,7 +63,7 @@ write(*,*) '*****************************************'
 
 n_flux = n_grids(1)
 n_tht  = n_grids(2)
-
+if (n_tht .eq. 0) n_tht = n_pol
 
 
 !-------------------------------------------------------------------------------------------!
@@ -137,6 +137,8 @@ enddo
 !--------------------------- Fill in the values into the new grid --------------------------!
 !-------------------------------------------------------------------------------------------!
 write(*,*) '                 Fill in psi-values '
+psi    = 0.d0 ; PSI_R  = 0.d0 ; PSI_Z  = 0.d0
+PSI_RR = 0.d0 ; PSI_ZZ = 0.d0 ; PSI_RZ = 0.d0
 if (include_psi) then
   ier = 0
   if (RZ_grid_inside_wall) then
@@ -259,7 +261,7 @@ if (include_axis) then
       enddo
     endif
   else
-    do j=1,n_tht
+    do j=2,n_tht
       newnode_list%node(j)%values(1,2:4,1) = 0.d0
     enddo
   endif
@@ -309,6 +311,9 @@ if (include_xpoint) then
     node_list%n_nodes = 8+n_tht-2
     node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
   endif
+else
+  node_list%n_nodes = n_tht
+  node_list%node(1:node_list%n_nodes) = newnode_list%node(1:node_list%n_nodes)
 endif
 do i_elm1 = 1,element_list%n_elements
   do i_vertex1 = 1,n_vertex_max
@@ -352,10 +357,14 @@ do i=1,node_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
   if (fix_axis_nodes .and. include_axis) then
-    if (xcase .ne. 3) then
-      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
+    if (include_xpoint) then
+      if (xcase .ne. 3) then
+        if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
+      else
+        if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
+      endif
     else
-      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
+      if (i .le. n_tht) node_list%node(i)%axis_node = .true.
     endif
   endif
 
@@ -367,14 +376,21 @@ do i=1,node_list%n_nodes
 
     ! Remove all but one node at axis
     if (force_central_node .and. include_axis) then
-      if (xcase .ne. 3) then
-        if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
-          node_list%node(i)%index(k) = node_list%node(5)%index(1)
-          index = index - 1
+      if (include_xpoint) then
+        if (xcase .ne. 3) then
+          if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.eq.1)) then
+            node_list%node(i)%index(k) = node_list%node(5)%index(1)
+            index = index - 1
+          endif
+        else
+          if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
+            node_list%node(i)%index(k) = node_list%node(9)%index(1)
+            index = index - 1
+          endif
         endif
       else
-        if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
-          node_list%node(i)%index(k) = node_list%node(9)%index(1)
+        if ((i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
+          node_list%node(i)%index(k) = node_list%node(1)%index(1)
           index = index - 1
         endif
       endif

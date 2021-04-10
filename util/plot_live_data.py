@@ -53,7 +53,7 @@ def plot1d(x,y,xlbl,ylbl,**kwargs):
     for ip in range(len(x)):
         label = None
         if (printLegend): label = legend[ip]
-        ax.plot(x[ip],y[ip],linewidth= 2,label=label)
+        ax.plot(x[ip],y[ip],linewidth=1,marker=".",markersize=5,label=label)
 
 #     ax.yaxis.set_major_formatter(FormatStrFormatter('%1.2e'))
     ax.yaxis.get_major_formatter().set_powerlimits((0, 3))

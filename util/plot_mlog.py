@@ -191,7 +191,7 @@ else:
         ax.properties()['children'][0].set_color('black')
         ax.properties()['children'][0].set(color='black',linewidth=2)
         print("Max value = ",max(mmc[-1]))
-    ax.set_ylim([0,400])
+#    ax.set_ylim([0,400])
 #    ax.set_ylim([0,2000])
 
 

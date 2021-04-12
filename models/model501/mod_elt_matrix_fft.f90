@@ -712,7 +712,7 @@ do ms=1, n_gauss
         Dn0y = D_imp_extra_neg
         Dn0p = D_imp_extra_neg
        endif
-    endif
+     endif
    
      ! -------------------------------
      ! --- Impurity related things

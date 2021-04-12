@@ -1334,8 +1334,7 @@ do ms=1, n_gauss
 !################################################################################################### 
 
 
-	   rhs_ij_8 = BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2) * xjac * tstep	        & 
-
+	   rhs_ij_8 = BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2) * xjac * tstep	        &
                       ! New diffusion scheme for impurities
                       - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhon)                              * xjac * tstep & 
                       - D_prof_imp * BigR  * (v_x*(rn0_x) + v_y*(rn0_y) + v_p*(rn0_p) * eps_cyl**2 /BigR**2 )            * xjac * tstep & 

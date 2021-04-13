@@ -223,7 +223,7 @@ if ( my_id == 0 ) then
 
 
   if (n_inj > n_inj_max .or. n_inj < 1) then
-    write(*,*) "ERROR! Do not support n_inj larger than 10 or smaller than 1, EXITING!"
+    write(*,*) "ERROR! Do not support n_inj larger than n_inj_max or smaller than 1, EXITING!"
     stop
   end if  
 

@@ -470,8 +470,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
-  write(*,REAL_FMT) 'D_imp_extra_x         ', D_imp_extra_x
-  write(*,REAL_FMT) 'D_imp_extra_y         ', D_imp_extra_y
+  write(*,REAL_FMT) 'D_imp_extra_R         ', D_imp_extra_R
+  write(*,REAL_FMT) 'D_imp_extra_Z         ', D_imp_extra_Z
   write(*,REAL_FMT) 'D_imp_extra_p         ', D_imp_extra_p
   write(*,REAL_FMT) 'D_imp_extra_neg       ', D_imp_extra_neg
   write(*,REAL_FMT) 'D_imp_extra_neg_thresh', D_imp_extra_neg_thresh

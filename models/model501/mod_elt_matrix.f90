@@ -685,8 +685,8 @@ do ms=1, n_gauss
        endif
      endif
    
-     Dn0x = D_imp_extra_x      
-     Dn0y = D_imp_extra_y      
+     Dn0x = D_imp_extra_R      
+     Dn0y = D_imp_extra_Z      
      Dn0p = D_imp_extra_p      
 
      if (xpoint2) then

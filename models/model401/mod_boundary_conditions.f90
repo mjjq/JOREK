@@ -36,8 +36,8 @@ use data_structure
 use vacuum, ONLY: is_freebound
 use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_cos_dR, dpsi_RMP_cos_dZ, &
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,            &
-       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min, no_mach1_bc,                                &
-       mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef,                                         &
+       RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
+       mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef, no_mach1_bc,                            &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
 use tr_module
 use mpi_mod

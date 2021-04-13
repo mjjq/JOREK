@@ -649,6 +649,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
 
 
   use grid_xpoint_data, only: n_wall, R_wall, Z_wall
+  use phys_module, only : RZ_grid_jump_thres
   
   implicit none
   

@@ -93,6 +93,7 @@
  ! --- Grid parameters
  ! -------------------------------
  RZ_grid_inside_wall = .t.
+ RZ_grid_jump_thres  = 0.95
  grid_to_wall        = .t.
  n_tht_equidistant   = .t.
  fix_axis_nodes      = .t.

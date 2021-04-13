@@ -613,7 +613,7 @@ required = 0
     end if
     
     ! --- Check sanity of grid
-    call check_grid(my_id, node_list, element_list)
+    if (.not. RZ_grid_inside_wall) call check_grid(my_id, node_list, element_list)
 
 #ifdef USE_MUMPS
     ! --- Initialize MUMPS solver (used for equilibrium)

@@ -367,6 +367,7 @@ subroutine preset_parameters
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
+  RZ_grid_jump_thres = 0.85                 ! threshold for jump of R-resolution as RZ-grid gets squeezed by limiter contour
   
   ! --- Option to manipulate psi_boundary, switched off by default
   manipulate_psi_map(:,1) = 0.

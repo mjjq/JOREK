@@ -9,11 +9,11 @@ module pellet_module
   real*8 :: total_plasma_particles    !< the total plasma density (before this timestep)
   real*8 :: total_pellet_volume       !< the volume of the simulated pellet in this timestep
   
-  real*8 :: phys_pellet_volume        !< the physical pellet radius (in m^3)
+  real*8 :: phys_pellet_volume        !< the physical pellet volume (in m^3)
   real*8 :: pellet_volume             !< approximated value of simulated pellet volume
   real*8 :: pellet_atomic             !< atomic number of pellet mass
   
-  real*8 :: phys_ablation             !< physical ablation rate (non normalised)
+  real*8 :: phys_ablation             !< physical ablation rate (not normalised)
   
   real*8, allocatable  :: xtime_pellet_R(:)
   real*8, allocatable  :: xtime_pellet_Z(:)
@@ -121,11 +121,9 @@ module pellet_module
   return
   end subroutine pellet_source2
 
+  !> Update the pellet position and  size of the simulated and physical pellet
+  !! (from the integral of the pellet particle source)
   subroutine update_pellet(my_id,node_List,element_list)
-  !******************************************************************************
-  ! routine updates the pellet position and the size of the simulated           *
-  ! and physical pellet sizes (from the integral of the pellet particle source) *
-  !******************************************************************************
   
     use constants
     use data_structure
@@ -182,15 +180,13 @@ module pellet_module
     return 
    
   end subroutine update_pellet
-  
+
+  !> Update the shattered pellet position and the simulated and physical pellet sizes
+  !! (from the integral of the pellet particle source)  
   subroutine update_spi(my_id,node_List,element_list,&
                         ns_R,ns_Z,ns_phi,ns_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
                         spi_quantity,spi_quantity_bg,spi_Vel_diff,spi_L_inj,n_spi,n_spi_begin)
-    !******************************************************************************
-    ! routine updates the shattered pellet position and the size of the simulated *
-    ! and physical pellet sizes (from the integral of the pellet particle source) *
-    !******************************************************************************
-    
+
     use constants
     use data_structure
     use phys_module, only: pellets, imp_type, central_density, central_mass, spi_abl_model, spi_tor_rot,      &
@@ -244,7 +240,7 @@ module pellet_module
     spi_Vel_phi_tmp = 0.
     spi_phi_inj     = ns_phi
 
-    V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO) ! assumes Deuterium!
+    V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
     t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
   
     spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
@@ -294,11 +290,14 @@ module pellet_module
         else if (pellet_density_bg > 0. .and. pellet_density > 0.) then
           spi_density_tmp = 1./((1.-pellets(i_p)%spi_species)/pellet_density_bg + pellets(i_p)%spi_species/pellet_density)
         else
-          write(*,*) "Something is wrong when determining the pellet species, exiting"
+          write(*,*) "ERROR: Something is wrong when determining the pellet species, exiting"
           stop
         end if
   
-        if (spi_density_tmp == 0. .or. spi_density_tmp /= spi_density_tmp) write(*,*) "Wrong spi_density!", spi_density_tmp
+        if (spi_density_tmp == 0. .or. spi_density_tmp /= spi_density_tmp) then
+          write(*,*) "ERROR: Problem calculating spi_density!", spi_density_tmp
+          stop
+        endif
   
         pellets(i_p)%spi_radius = pellets(i_p)%spi_radius - t_norm * tstep * &
                                   (pellets(i_p)%spi_abl / (4.d0 * PI * pellets(i_p)%spi_radius**2.d0 *    &
@@ -333,7 +332,7 @@ module pellet_module
           pellets(i_p)%spi_abl = 0.
           cycle
         else if (ifail /= 0) then
-          write(*,*) "Something Wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
+          write(*,*) "Something wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
           stop
         end if
 
@@ -762,18 +761,18 @@ module pellet_module
         pellets(i_p)%spi_radius  = shard_size(i)/size_beta !Here we are using exactly the same distribution for each injector
       end do
 
-!===================Determine the rotational transform of coordinate===============
-!Here, we perform the following rotational transform from the original
-!coordinate R, Z, RxZ to the so-called spi coordinate x, y ,z, with the !reference
-!direction of spi injection being the z axis, while y axis locates within the 
-!same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
-!as the following: first, we rotate the system around x axis clockwise, facing
-!the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
-!Then we further rotate around Y' clockwise, facing the positive Y' direction !for
-!spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
-!R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + !cos(spi_rotation_01)*z)
-!Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
-!RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + !cos(spi_rotation_01)*z)
+      !===================Determine the rotational transform of coordinate===============
+      !Here, we perform the following rotational transform from the original
+      !coordinate R, Z, RxZ to the so-called spi coordinate x, y ,z, with the !reference
+      !direction of spi injection being the z axis, while y axis locates within the 
+      !same surface as Z and z. The rotational transform from x, y, z to R, Z, RxZ is
+      !as the following: first, we rotate the system around x axis clockwise, facing
+      !the positive x direction, for spi_rotation_01 to get coordinate X', Y', Z'. 
+      !Then we further rotate around Y' clockwise, facing the positive Y' direction !for
+      !spi_rotation_02 to acquire R, Z, RxZ. Hence we have:
+      !R   = cos(spi_rotation_02)*x - sin(spi_rotation_02)*(-sin(spi_rotation_01)*y + !cos(spi_rotation_01)*z)
+      !Z   = cos(spi_rotation_01)*y + sin(spi_rotation_01)*z
+      !RxZ = sin(spi_rotation_02)*x + cos(spi_rotation_02)*(-sin(spi_rotation_01)*y + !cos(spi_rotation_01)*z)
 
       spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
 
@@ -876,7 +875,7 @@ module pellet_module
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg_rate")
 
     else
-      write(*,*) "...... Seriously!? Double check the input file"
+      write(*,*) "ERROR: n_spi<1"
       stop
     end if
 

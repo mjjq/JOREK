@@ -547,7 +547,6 @@ module pellet_module
     implicit none
     
     integer             :: i, n_spi_begin
-    integer             :: err_alloc=0, err_alloc_rnd=0    
     logical             :: ferr
     
     n_spi_tot = 0
@@ -559,25 +558,20 @@ module pellet_module
       deallocate(pellets)
     end if
 
-    allocate (pellets(n_spi_tot),stat=err_alloc)  !< Dynamically allocate memeries for pellets
+    allocate (pellets(n_spi_tot))  !< Dynamically allocate memeries for pellets
 
-    if (err_alloc /= 0) then
-      write(*,*) "Error when trying to dynamically allocate memeries for pellets, exiting."
+    if (JET_MGI .or. ASDEX_MGI) then
+      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
+      write(*,*) "JET_MGI:", JET_MGI
+      write(*,*) "ASDEX_MGI:", ASDEX_MGI
       stop
-    else
-      if (JET_MGI .or. ASDEX_MGI) then
-        write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
-        write(*,*) "JET_MGI:", JET_MGI
-        write(*,*) "ASDEX_MGI:", ASDEX_MGI
-        stop
-      else      !< Do one initialization for each injection location
-        n_spi_begin = 1
-        do i = 1, n_inj
-          call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
-                        spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
-          n_spi_begin = n_spi_begin + n_spi(i)
-        end do
-      end if
+    else      !< Do one initialization for each injection location
+      n_spi_begin = 1
+      do i = 1, n_inj
+        call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+                      spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),n_spi(i),n_spi_begin)
+        n_spi_begin = n_spi_begin + n_spi(i)
+      end do
     end if
 
     return
@@ -599,7 +593,6 @@ module pellet_module
     implicit none
     
     integer             :: ierr,err,i,i_surface, i_p
-    integer             :: err_alloc=0, err_alloc_rnd=0    
     logical             :: ferr
     
     real*8  :: n_SI, T_eV, n_corr, T_corr
@@ -636,14 +629,8 @@ module pellet_module
 
     if (n_spi >= 1) then
       if (allocated(shard_size)) deallocate(shard_size)
-      allocate (shard_size(n_spi),stat=err_alloc)  !< Dynamically allocate memeries for shard sizes
-      if (err_alloc /= 0) then
-        write(*,*) "Error when trying to dynamically allocate memeries for shard size, exiting."
-        deallocate(pellets)
-        stop
-      else
-        shard_size = 0.0
-      end if
+      allocate (shard_size(n_spi))  !< Dynamically allocate memeries for shard sizes
+      shard_size = 0.0
 
       size_beta    = 0.0
       N_shard_norm = 0.0
@@ -796,14 +783,7 @@ module pellet_module
       ! numbers uniquely define a random velocity of the shard, which is then transformed into
       ! the R, Z, RxZ space.
       if (allocated(rnd)) deallocate(rnd)
-      allocate (rnd(3*n_spi),stat=err_alloc_rnd)  !< Dynamically allocate memeries for randoms
-
-      if (err_alloc_rnd /= 0) then
-        write(*,*) "Error when trying to dynamically allocate memeries for randoms."
-        deallocate(pellets)
-        deallocate(shard_size)
-        stop
-      end if
+      allocate (rnd(3*n_spi))  !< Dynamically allocate memeries for randoms
 
       CALL random_seed(put=spi_rnd_seed) 
       CALL random_number(rnd)

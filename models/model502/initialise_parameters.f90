@@ -43,8 +43,6 @@ real*8  :: sign_corr, real_total_quantity
 real*8, allocatable :: rnd(:)                      !The random number array 
 real*8, allocatable :: shard_size(:)               !The shard size array
 
-integer :: err_alloc=0
-
 ! --- Namelist with input parameters.                                                                                                                        
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &

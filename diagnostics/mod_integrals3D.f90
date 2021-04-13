@@ -569,11 +569,11 @@ do ife = ife_min, ife_max
         psi_as_coord = ps0
 #endif
 #ifdef WITH_TiTe
-        eta_T         = resistivity(eta, T0e_corr, T_max_eta)  
-        eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm)
+        eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
+        eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
 #else
-        eta_T         = resistivity(eta, T0_corr, T_max_eta)  
-        eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm)
+        eta_T         = resistivity(eta, T0_corr, T_max_eta, T_0)  
+        eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm, T_0)
 #endif
         ! This is currently broken for two temperature models !
         ! Some of these do not seem to be doing anything so I'm commenting them off !
@@ -621,63 +621,63 @@ do ife = ife_min, ife_max
 ! --- Radiation and ionization power
 ! ------------------------------------------
 #if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
-  ! --- Get ionization, recombination and radiation coefficients for Deuterium 
-  call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                      LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
-
-
-  ! Get coefficient:  Prad,SI = coef_prad_si * Prad,jorek
-  coef_prad_si = 1./((GAMMA-1)*MU_ZERO*(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**0.5) 
-
-  ksiion = central_density * 1.d20 * ksi_ion   !Normalisation of the ionization energy cost for Deuterium
-
-  ! --- Radiation from background impurity
-  ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-  Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
-
-  if (use_imp_adas) then  ! use open adas by default  
-    ! Use radiation coefficients from ADAS
-    if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > 0) then
-      Lrad_imp = 0.0
-      call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
-      if (Lrad_imp < 0.) Lrad_imp = 0.
-    else
-      Lrad_imp = 0.
-    end if
-    ! This is to detect N/A
-    if (Lrad_imp/=Lrad_imp) then
-      write(*,*) "WARNING: Lrad_imp ", Lrad_imp
-      stop
-    end if
-    local_radiation_phi(mp) = local_radiation_phi(mp) + ( (r0_corr * rn0_corr  * LradDrays_T    &
-                               + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
-                               + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi  
-    local_radiation         = local_radiation + ( (r0_corr * rn0_corr  * LradDrays_T            &
-                               + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
-                               + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi 
-    local_E_ion             = local_E_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
-                             * bigR * xjac * wst * delta_phi
-  else
-    if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
-      Arad_bg = 2.4d-31 
-      Brad_bg = 20.
-      Crad_bg = 0.8
-      frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                      *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
-              
-      local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
-                                 + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
-                                 * bigR * xjac * wst * delta_phi  
-      local_radiation         = local_radiation + (r0_corr * rn0_corr  * LradDrays_T &
-                                 + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
-                                 * bigR * xjac * wst * delta_phi 
-      local_E_ion             = local_E_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
-                                 * bigR * xjac * wst * delta_phi
-    else
-      write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
-      stop
-    end if
-  end if
+        ! --- Get ionization, recombination and radiation coefficients for Deuterium 
+        call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                            LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+      
+      
+        ! Get coefficient:  Prad,SI = coef_prad_si * Prad,jorek
+        coef_prad_si = 1./((GAMMA-1)*MU_ZERO*(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**0.5) 
+      
+        ksiion = central_density * 1.d20 * ksi_ion   !Normalisation of the ionization energy cost for Deuterium
+      
+        ! --- Radiation from background impurity
+        ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+        Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+      
+        if (use_imp_adas) then  ! use open adas by default  
+          ! Use radiation coefficients from ADAS
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > 0) then
+            Lrad_imp = 0.0
+            call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
+            if (Lrad_imp < 0.) Lrad_imp = 0.
+          else
+            Lrad_imp = 0.
+          end if
+          ! This is to detect N/A
+          if (Lrad_imp/=Lrad_imp) then
+            write(*,*) "WARNING: Lrad_imp ", Lrad_imp
+            stop
+          end if
+          local_radiation_phi(mp) = local_radiation_phi(mp) + ( (r0_corr * rn0_corr  * LradDrays_T    &
+                                     + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
+                                     + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi  
+          local_radiation         = local_radiation + ( (r0_corr * rn0_corr  * LradDrays_T            &
+                                     + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
+                                     + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi 
+          local_E_ion             = local_E_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
+                                   * bigR * xjac * wst * delta_phi
+        else
+          if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+            Arad_bg = 2.4d-31 
+            Brad_bg = 20.
+            Crad_bg = 0.8
+            frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
+                            *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                    
+            local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
+                                       + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
+                                       * bigR * xjac * wst * delta_phi  
+            local_radiation         = local_radiation + (r0_corr * rn0_corr  * LradDrays_T &
+                                       + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
+                                       * bigR * xjac * wst * delta_phi 
+            local_E_ion             = local_E_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
+                                       * bigR * xjac * wst * delta_phi
+          else
+            write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+            stop
+          end if
+        end if
 
 #endif
 
@@ -1151,8 +1151,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
  
 #ifdef WITH_TiTe
       T0e_corr      = corr_neg_temp1(T0e)
-      eta_T         = resistivity(eta, T0e_corr, T_max_eta)  
-      eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm)
+      eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
+      eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
 
       ZK_e_prof     = get_zk_eperp(psi_n)
       ZK_i_prof     = get_zk_iperp(psi_n)
@@ -1166,8 +1166,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       endif
 #else
       T0_corr       = corr_neg_temp1(T0)
-      eta_T         = resistivity(eta, T0_corr, T_max_eta)  
-      eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm)
+      eta_T         = resistivity(eta, T0_corr, T_max_eta, T_0)  
+      eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm, T_0)
 
       ZK_prof = get_zkperp(psi_n)
  

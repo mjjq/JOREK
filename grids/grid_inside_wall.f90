@@ -693,7 +693,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   width_prev1    = 0.0
   width_prev2    = 0.0
   inside_boot    = 0
-  jump_threshold = 0.85
+  jump_threshold = RZ_grid_jump_thres
   elm_count      = 0
   do i = 1,nZ/2+1
     !write(*,*)'Doing lower horizontal line ',nZ/2+1-i

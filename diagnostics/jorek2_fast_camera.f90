@@ -124,6 +124,7 @@ program jorek2_fast_camera
   
   if ( ierr .ne. 0 ) then
     if (my_id .eq. 0) write(*,*) 'Failed to open PEC data file ',PEC_file,ierr
+    if (my_id .eq. 0) write(*,*) 'You can find the my_pec.dat file in jorek/util/my_pec.dat'
     if (my_id .eq. 0) write(*,*) 'Aborting...'
     call MPI_FINALIZE(ierr)
     stop

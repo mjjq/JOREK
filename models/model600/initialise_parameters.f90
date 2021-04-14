@@ -49,6 +49,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device, thermalization,                     &
                 F0,                                                 &
                 gamma_sheath_i, gamma_sheath_e,                     &

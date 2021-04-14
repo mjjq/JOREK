@@ -131,6 +131,7 @@ module phys_module
   integer :: n_block_points_right(n_wall_blocks_max)                            !< Number of points on left side of block
   real*8  :: R_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
   real*8  :: Z_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
+  logical :: use_simple_bnd_types                                               !< convert Stan's bnd_types to Guido's bnd_types
   
   !> @name Define X-point geometry by geometrical properties
   !!

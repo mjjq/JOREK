@@ -295,6 +295,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
         write(*,REAL_FMT) 'Z_block_points_right  ', Z_block_points_right(i,j)
       enddo
     enddo
+    write(*,LOGI_FMT) 'use_simple_bnd_types  ', use_simple_bnd_types
   endif
 
   write(*,INTG_FMT) 'nout                  ', nout

@@ -436,6 +436,7 @@ subroutine preset_parameters
   n_block_points_right = 0
   R_block_points_right = 0.d0
   Z_block_points_right = 0.d0
+  use_simple_bnd_types = .false.
  
  !======================MB rotation profile
   V_0 = 0.d0

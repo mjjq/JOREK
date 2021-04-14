@@ -347,7 +347,7 @@ subroutine update_boundary_types_final(element_list,node_list)
   use constants
   use mod_parameters
   use data_structure
-  use phys_module, only: xcase
+  use phys_module, only: xcase, use_simple_bnd_types
   use mod_boundary
   
   implicit none
@@ -659,6 +659,23 @@ subroutine update_boundary_types_final(element_list,node_list)
   ! 20 ->  9 (because not defined!)
   ! 21 ->  not defined!
   !  3 ->  3
+
+
+  ! --- Convert to Guido's definition
+  if (use_simple_bnd_types) then
+    do i_node=1,node_list%n_nodes
+      if (node_list%node(i_node)%boundary .eq. 0 ) cycle
+      if (node_list%node(i_node)%boundary .eq. 11) node_list%node(i_node)%boundary = 1
+      if (node_list%node(i_node)%boundary .eq. 15) node_list%node(i_node)%boundary = 5
+      if (node_list%node(i_node)%boundary .eq. 19) node_list%node(i_node)%boundary = 9
+      if (node_list%node(i_node)%boundary .eq. 12) node_list%node(i_node)%boundary = 4
+      if (node_list%node(i_node)%boundary .eq. 20) node_list%node(i_node)%boundary = 9
+      if (node_list%node(i_node)%boundary .eq. 21) node_list%node(i_node)%boundary = 9
+    enddo
+  endif
+    
+
+
   
   !!! OSOLETE !!! THE INITIAL DEFINITION BY STAN (INCOMPATIBLE WITH GUIDO)
   ! 1: TARGET,  side 2                                   (inward  field)

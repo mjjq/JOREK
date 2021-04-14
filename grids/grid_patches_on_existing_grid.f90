@@ -13,7 +13,7 @@ use mod_eqdsk_tools
 use mod_element_rtree
 
 ! --- Input parameters
-use phys_module, only:     n_wall_blocks, xpoint, n_flux, n_tht, n_radial
+use phys_module, only:     n_wall_blocks, xpoint, n_flux, n_tht, n_radial, freeboundary
 
 implicit none
 
@@ -34,6 +34,7 @@ real*8              :: seg_prev(n_seg_max)
 integer             :: n_loop, i, j, k, index, ier
 logical             :: include_axis, include_xpoint, include_psi
 logical             :: normal_eqdsk, normal_eqdsk_wall
+logical             :: freeb_save
 logical, parameter  :: plot_grid = .true.
 character*2         :: char_patch
 character*256       :: filename
@@ -61,8 +62,8 @@ write(*,*) ' '
 n_grids(1) = n_flux
 n_grids(2) = n_tht
 
-
-
+freeb_save = freeboundary    ! Disable freeboundary for this routine
+freeboundary = .false.       ! This allows to export restart files for diagnosing the grid patches
 
 
 
@@ -163,7 +164,7 @@ if (plot_grid) then
 endif
 
 
-
+freeboundary  = freeb_save   ! Reset freeboundary to input value
 
 ! --- Deallocate data structures for new nodes and initialize them
 deallocate(node_list_tmp,node_list_tmp2,node_list_new)

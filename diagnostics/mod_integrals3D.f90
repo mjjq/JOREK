@@ -173,10 +173,6 @@ real*8  :: alpha_i, alpha_e, dalpha_e_dT
 
 !   -Ion-electron energy transfer
 real*8     :: nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i
-real*8     :: dnu_e_imp_dTi, dnu_e_imp_dTe, dnu_e_bg_dTi, dnu_e_bg_dTe
-real*8     :: dnu_e_imp_drho, dnu_e_imp_drhon, dnu_e_bg_drho, dnu_e_bg_drhon
-real*8     :: ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhon
-real*8     :: ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhon
 #else /* WITH_TiTe */
 !   -Coefficients related to Z_imp
 real*8  :: alpha_imp, beta_imp, dbeta_imp_dT
@@ -354,7 +350,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV, Ti_eV,                          &
 #endif
 #if (defined WITH_Impurities) && (defined WITH_TiTe)
-!$omp           alpha_i, alpha_e,                                                              &
+!$omp           alpha_i, alpha_e, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i,  &
 #endif
 #if (defined WITH_Impurities) && (!defined WITH_TiTe) 
 !$omp           alpha_imp, beta_imp,                                                           &

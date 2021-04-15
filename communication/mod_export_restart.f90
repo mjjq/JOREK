@@ -128,6 +128,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   if (index_now .gt. 0) write(21) xtime_rad_power(1:index_now)
   if (index_now .gt. 0) write(21) xtime_E_ion(1:index_now)
   if (index_now .gt. 0) write(21) xtime_E_ion_power(1:index_now)
+  if (index_now .gt. 0) write(21) xtime_P_ei(1:index_now)
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi .and. n_spi_tot >= 1) then
@@ -637,6 +638,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     if ( allocated(xtime_rad_power)   ) call HDF5_array1D_saving(file_id,xtime_rad_power, index_now,'xtime_rad_power'//char(0))
     if ( allocated(xtime_E_ion)       ) call HDF5_array1D_saving(file_id,xtime_E_ion, index_now,'xtime_E_ion'//char(0))
     if ( allocated(xtime_E_ion_power) ) call HDF5_array1D_saving(file_id,xtime_E_ion_power, index_now,'xtime_E_ion_power'//char(0))
+    if ( allocated(xtime_Pei)         ) call HDF5_array1D_saving(file_id,xtime_P_ei, index_now,'xtime_P_ei'//char(0))
   end if
 
   ! Dynamically allocate memeries for temporary arrays in order to export

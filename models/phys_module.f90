@@ -327,6 +327,7 @@ module phys_module
 
   real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
+  real*8, allocatable  :: xtime_P_ei(:)         !< The time history of electron-ion energy exchange power
 
   integer :: n_spi(n_inj_max)   !< Number of shattered pellets injected
   integer :: n_spi_tot          !< Total number of shattered pellets injected

@@ -8,6 +8,7 @@ program jorek2_fast_camera
   use basis_at_gaussian
   use diffusivities, only: get_dperp, get_zkperp
   use mod_interp
+  use constants
 
   implicit none
   !include 'mpif.h'
@@ -75,12 +76,14 @@ program jorek2_fast_camera
   ! --- Camera variables
   integer               :: n_pixels_hor, n_pixels_ver, n_pix, ncount
   real*8                :: pixel_dim, focus, vec_size
+  real*8                :: angle_hor, angle_ver, toroidal_angle_location
   real*8                :: X_cam, Y_cam, Z_cam
   real*8,allocatable    :: Xp(:), Yp(:), Zp(:)
   real*8,allocatable    :: Xv(:), Yv(:), Zv(:)
   real*8,allocatable    :: Light(:)
   character*1           :: rgb(3)
   integer               :: itmp, icnt
+  integer               :: colormap
   ! --- Integration variables
   integer               :: i_elm, ifail, inside
   integer               :: n_step
@@ -92,8 +95,9 @@ program jorek2_fast_camera
   real*8,allocatable    :: HZ_tor(:)
   real*8                :: psi, rho, rho_n, Te, eV2Joules, solenoid
   real*8                :: tanh_psi, tanh_zmin, tanh_zpls
+  logical               :: go_faster_in_core
 
-  real*8                :: maxlight
+  real*8                :: maxlight, light_saturation
   
   
   
@@ -114,11 +118,57 @@ program jorek2_fast_camera
   allocate(node_list)
   allocate(element_list)
 
+
   ! ********************************************************************** !
-  !  Read data file with PEC(Ne,Te) grid (Photon Emissivity Coefficients)  !
+  !  User input parameter: Camera position, view, focal length, resolution !
   ! ********************************************************************** !
   
-  !PEC_file = "/scratch/pstanis/MAST/fast_camera/my_pec.dat"
+  ! --- MAST fast-visible camera midplane view
+  ! --- Number of horizontal and vertical pixels
+  n_pixels_hor = 800!640
+  n_pixels_ver = 650!500
+  ! --- Pixel dimension (assumed to be a square)
+  pixel_dim = 17.d-6
+  
+  ! --- Location of camera focus
+  X_cam = 2.05
+  Y_cam = 0.0 
+  Z_cam = 0.0 
+
+  ! --- Toroidal angular position of camera (easier so that Z_cam can always be zero)
+  toroidal_angle_location = 0.d0 ! 0.5 * PI
+
+  ! --- Orientation of camera (horizontal and vertical angles)
+  angle_hor = 0.d0!-0.25 * PI
+  angle_ver = 0.d0!-0.25 * PI
+  
+  ! --- Focal length of camera lens
+  focus = 4.8d-3
+ 
+  ! --- Artificial saturation of the camera: 1.0 = no saturation, 10.0 = 10x lower saturation, 0.1 = 10x higher saturation 
+  light_saturation = 1.d0
+
+  ! --- Colormap of output image
+  ! --- =0  : From black to white (default, ie. natural BnW)
+  ! --- =-1 : From white to black (reversed photons...)
+  ! --- =1  : Heat colorbar from white to yellow to red to black
+  ! --- =2  : Rainbow colorbar from blue to green to white to yellow to red to black
+  colormap = 2
+ 
+  ! --- The step size for integration and number of steps to get to the other side of plasma
+  step   = 1.d-3 ! 1.d-2
+  ! --- Increase integration step in the core (eg. on MAST, most light comes from the edge)
+  go_faster_in_core = .false. 
+
+
+
+
+  ! ********************************************************************** !
+  !  Read data file with PEC(Ne,Te) grid (Photon Emissivity Coefficients)  !
+  !  WARNING: THIS NEEDS TO BE REPLACED BY EXACT ADAS DATA, IT WAS ONLY    !
+  !           MEANT FOR NICE PICTURES OF MAST, NOT QUANTITATIVE DIAGNOSTIC !
+  ! ********************************************************************** !
+  
   PEC_file = "./my_pec.dat"
   open(123, file=PEC_file, action='read', iostat=ierr)
   
@@ -174,29 +224,7 @@ program jorek2_fast_camera
   ! ********************************************************************** !
   !                     Build lines of sight for camera                    !
   ! ********************************************************************** !
-  
-  ! --- MAST low-res
-  ! --- Number of horizontal and vertical pixels
-  n_pixels_hor = 230!640!320!
-  n_pixels_ver = 180!368!240!
-  ! --- Pixel dimension (assumed to be a square)
-  pixel_dim = 6.8e-05!17.d-6!4.6d-5!
-  
-  ! --- MAST high-res
-  ! --- Number of horizontal and vertical pixels
-  n_pixels_hor = 640!230!320!
-  n_pixels_ver = 500!180!240!
-  ! --- Pixel dimension (assumed to be a square)
-  pixel_dim = 17.d-6!6.8e-05!4.6d-5!
-  
-  ! --- Location of camera focus (R,Z)
-  X_cam = 2.05
-  Y_cam = 0.0 
-  Z_cam = 0.0 
-  
-  ! --- Focal length of camera lens
-  focus = 4.8d-3
-  
+ 
   ! --- Allocate the lines of sight coords (one Point plus one Vector plus Light intensity)
   n_pix = n_pixels_hor*n_pixels_ver
   allocate(Xp(n_pix),Yp(n_pix),Zp(n_pix))
@@ -211,8 +239,8 @@ program jorek2_fast_camera
     do j=1, n_pixels_ver
       ncount     = ncount+1
       Xp(ncount) = X_cam - focus
-      Yp(ncount) = Y_cam + pixel_dim*(n_pixels_ver-1)/2 - pixel_dim*(j-1)
-      Zp(ncount) = Z_cam - pixel_dim*(n_pixels_hor-1)/2 + pixel_dim*(i-1)
+      Yp(ncount) = Y_cam + pixel_dim*(n_pixels_ver-1)/2 - pixel_dim*(j-1) + focus * sin(angle_ver)
+      Zp(ncount) = Z_cam - pixel_dim*(n_pixels_hor-1)/2 + pixel_dim*(i-1) + focus * sin(angle_hor)
       Xv(ncount) = Xp(ncount) - X_cam
       Yv(ncount) = Yp(ncount) - Y_cam
       Zv(ncount) = Zp(ncount) - Z_cam
@@ -274,7 +302,6 @@ program jorek2_fast_camera
   pix_delta = pix_end-pix_start+1
 
   ! --- The step size for integration and number of steps to get to the other side of plasma
-  step   = 1.d-2!5.d-3
   n_step = 2.d0*(2.0*X_cam/step)
   
   ! --- Need the harmonic contributions for the toroidal location
@@ -297,13 +324,13 @@ program jorek2_fast_camera
     do j=1, n_step
       
       ! --- If we are entering the plasma core, increase step size
-      if ( (ifail .eq. 0) .and. (psi .lt. 0.6) .and. (inside .eq. 0) ) then
+      if ( (go_faster_in_core) .and. (ifail .eq. 0) .and. (psi .lt. 0.6) .and. (inside .eq. 0) ) then
         step   = 4.d0*step
         inside = 1      
       endif
 
       ! --- If we are exiting the plasma core, reduce step size
-      if ( (ifail .eq. 0) .and. (psi .ge. 0.6) .and. (inside .eq. 1) ) then
+      if ( (go_faster_in_core) .and. (ifail .eq. 0) .and. (psi .ge. 0.6) .and. (inside .eq. 1) ) then
         step   = step/4.d0
         inside = 0      
       endif
@@ -316,7 +343,7 @@ program jorek2_fast_camera
       ! --- R,Z,Phi-coords
       RR  = ( X_tmp**2.d0 + Z_tmp**2.d0 )**0.5d0
       ZZ  = Y_tmp
-      Phi = atan2(Z_tmp,X_tmp)
+      Phi = atan2(Z_tmp,X_tmp) + toroidal_angle_location
       if (Phi .lt. 0.d0) Phi = Phi + 2.d0*PI
       
       ! --- If we hit the solenoid, stop integrating
@@ -436,7 +463,7 @@ program jorek2_fast_camera
     call mpi_send(Light(pix_start:pix_end), nsend, MPI_DOUBLE_PRECISION, 0, my_id, MPI_COMM_WORLD, ierr)
   endif
 
-  ! --- write matlab plot file (temporary!)
+  ! --- write python plot file (temporary! and too slow!)
   !if (my_id .eq. 0) then
   if (.false.) then
     ! --- Open output files
@@ -451,7 +478,7 @@ program jorek2_fast_camera
     write(20,'(A,i6,A)') ' yy = numpy.zeros(',n_pix,')'
     write(20,'(A,i6,A)') ' ii = numpy.zeros(',n_pix,')'
         
-    maxlight = maxval(Light)
+    maxlight = maxval(Light) * light_saturation
     do i=1, n_pix
       write(20,'(A,i6,A,e18.5)') ' xx[',i-1,'] = ',Zp(i)*1.d5
       write(20,'(A,i6,A,e18.5)') ' yy[',i-1,'] = ',Yp(i)*1.d5
@@ -471,7 +498,7 @@ program jorek2_fast_camera
   
   ! --- write image file
   if (my_id .eq. 0) then
-    maxlight = maxval(Light)
+    maxlight = maxval(Light) * light_saturation
     ! --- Open image file with PPM P3 format
     open(unit=2,file='fast_camera.ppm',status='unknown')
     write(*,*) 'Now writing PPM (P3) file : ', 'fast_camera.ppm'
@@ -482,7 +509,7 @@ program jorek2_fast_camera
     icnt = 0
     do j=1, n_pixels_ver
       do i=1, n_pixels_hor
-        call get_color(0, Light(j + (i-1)*n_pixels_ver)/maxlight, rgb)
+        call get_color(colormap, Light(j + (i-1)*n_pixels_ver)/maxlight, rgb)
         do k = 1, 3
           itmp = ichar(rgb(k))
           icnt = icnt + 4
@@ -571,7 +598,7 @@ subroutine get_color(colormap, density, rgb)
     red = 0.d0 + density
     gre = 0.d0 + density
     blu = 0.d0 + density
-  else
+  elseif (colormap .eq. -1) then
   ! --- From white to black
     red = 1.d0 - density
     gre = 1.d0 - density

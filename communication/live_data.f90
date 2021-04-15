@@ -540,7 +540,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@li3: %"time"         "inside separatrix"  "All domain" '
     write(LIVE_DATA_HANDLE,*)
 
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energy_conservation: ', 3
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_energy_conservation: ', 2
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_ylabel: Total energy conservation'
@@ -548,7 +548,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energy_conservation_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energy_conservation_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + sources + dissipative terms"     "Electron-ion energy exchange"'
+    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + sources + dissipative terms"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_mag_energy_balance: ', 6
@@ -824,7 +824,7 @@ module live_data
 
      sum_mag_energy_terms = -ohmic_tot_t(index-1) + flux_poynting_t(index-1) + Magwork_tot_t(index-1) + mag_ener_src_tot(index-1) 
  
-     write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index-1), -dE_tot_dt(index-1), sum_fluxes_dissip, xtime_P_ei(index-1) 
+     write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index-1), -dE_tot_dt(index-1), sum_fluxes_dissip 
      write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@mag_energy_balance: ', xtime(index-1), dWmag_tot_dt(index-1),  -ohmic_tot_t(index-1),     &
                                                             flux_poynting_t(index-1), Magwork_tot_t(index-1),mag_ener_src_tot(index-1), &
                                                             sum_mag_energy_terms 
@@ -833,7 +833,7 @@ module live_data
       sum_mag_energy_terms = -ohmic_tot_t(index) + flux_poynting_t(index) + Magwork_tot_t(index) + mag_ener_src_tot(index) 
 
       write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dEdt: ', xtime(index), 0.d0, 0.d0, 0.d0, 0.d0, 0.d0
-      write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index), 0.d0, 0.d0, 0.d0 
+      write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@energy_conservation: ', xtime(index), 0.d0, 0.d0 
       write(LIVE_DATA_HANDLE,'(A,7ES17.9)') '@mag_energy_balance: ', xtime(index), 0.d0,  -ohmic_tot_t(index),     &
                                                             flux_poynting_t(index), Magwork_tot_t(index),mag_ener_src_tot(index), &
                                                             sum_mag_energy_terms 

@@ -5,6 +5,7 @@ use data_structure
 use mod_particle_sim
 use mod_particle_types, only: particle_get_q, particle_base
 use mod_ionisation_recombination, only: fields_interp_ne_Te
+use mod_parameters
 implicit none
 private
 public proj_Lz
@@ -34,7 +35,7 @@ function proj_Lz(sim, group, particle)
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   ! Calculate neutral_density if model5XX (model501 has n_imp in 8)
-  call sim%fields%interp_PRZ(sim%time,particle%i_elm,[8],1,particle%st(1), &
+  call sim%fields%interp_PRZ(sim%time,particle%i_elm,[var_rhon],1,particle%st(1), &
       particle%st(2),particle%x(3),P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
   n_n = P(1)
 #endif

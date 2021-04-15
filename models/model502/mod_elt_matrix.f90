@@ -1390,7 +1390,7 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
                     ! Energy exchange term
-                    + v * BigR * dTi_e                                                         * xjac * tstep 
+                    + v * BigR * dTi_e * (r0 + rn0 * alpha_i)                                  * xjac * tstep 
 
 !###################################################################################################
 !#  equation 7 (parallel velocity  equation)                                                       #
@@ -1567,7 +1567,7 @@ do ms=1, n_gauss
                     - v * BigR * (r0_corr+alpha_e*rn0_corr) * rn0_corr * Lrad                * xjac * tstep &
                     - v * BigR * r0_corr * frad_bg                                           * xjac * tstep &
                     ! Energy exchange term
-                    + v * BigR * dTe_i                                                       * xjac * tstep
+                    + v * BigR * dTe_i * (r0_corr+alpha_e*rn0_corr)                          * xjac * tstep
 
 !###################################################################################################
 !#  RHS equations end                                                                                  #
@@ -2032,7 +2032,8 @@ do ms=1, n_gauss
                            + v * rho * GAMMA * Ti0 * F0 / BigR * vpar0_p                        * xjac * theta * tstep &
 
                            ! Energy exchange term
-                           - v * BigR * ddTi_e_drho * rho                                       * xjac * theta * tstep &
+                           - v * BigR * ddTi_e_drho * rho * (r0 + rn0 * alpha_i)                * xjac * theta * tstep &
+                           - v * BigR * dTi_e       * rho                                       * xjac * theta * tstep &
 
                            + TG_num6 * 0.25d0 * BigR**2 * Ti0* (rho_x * u0_y - rho_y * u0_x)     &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep     &
@@ -2068,7 +2069,7 @@ do ms=1, n_gauss
                            + v * (r0 + rn0 * alpha_i) * GAMMA * Ti * F0 / BigR * vpar0_p          * xjac * theta * tstep &
 
                            ! Energy exchange term
-                           - v * BigR * ddTi_e_dTi * Ti                                           * xjac * theta * tstep &
+                           - v * BigR * ddTi_e_dTi * Ti * (r0 + rn0 * alpha_i)                    * xjac * theta * tstep &
 
                            + (ZK_i_par_T-ZK_i_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Ti_T      * xjac * theta * tstep &
                            + ZK_i_prof * BigR * (v_x*Ti_x + v_y*Ti_y + v_p*Ti_p /BigR**2 )        * xjac * theta * tstep &
@@ -2148,9 +2149,10 @@ do ms=1, n_gauss
                            + v * alpha_i * rhon * GAMMA * Ti0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)       * theta * tstep &
                            + v * alpha_i * rhon * GAMMA * Ti0 * F0 / BigR * vpar0_p                * xjac * theta * tstep &
                            ! Energy exchange term
-                           - v * BigR * ddTi_e_drhon * rhon                                        * xjac * theta * tstep 
+                           - v * BigR * ddTi_e_drhon * rhon * (r0 + rn0 * alpha_i)                 * xjac * theta * tstep 
+                           - v * BigR * dTi_e        * rhon * alpha_i                              * xjac * theta * tstep 
 
-                 amat_69 = - v * BigR * ddTi_e_dTe * Te                                            * xjac * theta * tstep 
+                 amat_69 = - v * BigR * ddTi_e_dTe * Te * (r0 + rn0 * alpha_i)                     * xjac * theta * tstep 
 
 !###################################################################################################
 !#  equation 7   parallel velocity equation                                                        #
@@ -2472,7 +2474,8 @@ do ms=1, n_gauss
                            + v * rho * GAMMA * Te0 * F0 / BigR * vpar0_p                        * xjac * theta * tstep &
 
                            ! Energy exchange term
-                           - v * BigR * ddTe_i_drho * rho                                       * xjac * theta * tstep &
+                           - v * BigR * ddTe_i_drho * rho * (r0_corr+alpha_e*rn0_corr)          * xjac * theta * tstep &
+                           - v * BigR * dTe_i       * rho *                                     * xjac * theta * tstep &
 
                            + TG_num9 * 0.25d0 * BigR**2 * Te0* (rho_x * u0_y - rho_y * u0_x)     &
                                      * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep     &
@@ -2510,7 +2513,7 @@ do ms=1, n_gauss
 
 !================= End ionization potential energy ===========================
 
-                 amat_96 = - v * BigR * ddTe_i_dTi * Ti                                     * xjac * theta * tstep 
+                 amat_96 = - v * BigR * ddTe_i_dTi * Ti * (r0_corr+alpha_e*rn0_corr)        * xjac * theta * tstep 
 
 
                  amat_97 = + v * (r0 + rn0 * alpha_e_bis) * F0 / BigR * Vpar * Te0_p        * xjac * theta * tstep &
@@ -2600,7 +2603,8 @@ do ms=1, n_gauss
                            + v * alpha_e * rhon * GAMMA * Te0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
 
                            ! Energy exchange term
-                           - v * BigR * ddTe_i_drhon * rhon                                         * xjac * theta * tstep & 
+                           - v * BigR * ddTe_i_drhon * rhon * (r0_corr+alpha_e*rn0_corr)            * xjac * theta * tstep & 
+                           - v * BigR * dTe_i        * rhon * alpha_e                               * xjac * theta * tstep & 
 
                            + v * BigR * rhon * (r0_corr + 2.*alpha_e*rn0_corr) * Lrad               * xjac * theta * tstep
 
@@ -2639,7 +2643,8 @@ do ms=1, n_gauss
                            + v * (r0 + rn0 * alpha_e_bis) * GAMMA * Te * F0 / BigR * vpar0_p         * xjac * theta * tstep &
 
                            ! Energy exchange term
-                           - v * BigR * ddTe_i_dTe * Te                                              * xjac * theta * tstep &
+                           - v * BigR * ddTe_i_dTe * Te * (r0_corr+alpha_e*rn0_corr)                 * xjac * theta * tstep &
+                           - v * BigR * dTe_i      * Te * dalpha_e_dT * rn0_corr                     * xjac * theta * tstep &
 
                            + (ZK_e_par_T-ZK_e_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Te_T         * xjac * theta * tstep &
                            + ZK_e_prof * BigR * (v_x*Te_x + v_y*Te_y + v_p*Te_p /BigR**2 )           * xjac * theta * tstep &

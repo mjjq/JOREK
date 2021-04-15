@@ -1455,10 +1455,12 @@ mag_source_tot       = mag_src_tot
 V_min                = varmin
 V_max                = varmax
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 total_radiation      = local_radiation
 total_E_ion          = local_E_ion
 total_P_ei           = local_P_ei
 total_radiation_phi  = local_radiation_phi
+#endif /* (defined WITH_Neutrals) || (defined WITH_Impurities) */
 #endif /* NOMPIVERSION */
 
 if (use_pellet) then

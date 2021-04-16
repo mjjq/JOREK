@@ -535,7 +535,7 @@ module vacuum_response
       disp = disp + sizeof(comment)
 
       sr%file_version = read_intparam_parallel(filehandle, 'file_version', disp)
-      if ( sr%file_version > 4 ) then
+      if ( sr%file_version > 5 ) then
         write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
         stop
       end if
@@ -547,10 +547,32 @@ module vacuum_response
       end if
       
       sr%nd_bez = read_intparam_parallel(filehandle, 'nd_bez', disp)
+
+      if ( sr%file_version >= 5 ) then
+        sr%nv       = read_intparam_parallel(filehandle, 'nv',        disp)
+        sr%n_points = read_intparam_parallel(filehandle, 'n_points',  disp)
+      endif
+
       sr%ncoil  = read_intparam_parallel(filehandle, 'ncoil' , disp)
       sr%npot_w = read_intparam_parallel(filehandle, 'npot_w', disp)
       sr%n_w    = read_intparam_parallel(filehandle, 'n_w'   , disp)
       sr%ntri_w = read_intparam_parallel(filehandle, 'ntri_w', disp)
+
+      if ( sr%file_version >= 5 ) then
+        sr%iwall    = read_intparam_parallel(filehandle, 'iwall',    disp)
+        sr%nwu      = read_intparam_parallel(filehandle, 'nwu',      disp)
+        sr%nwv      = read_intparam_parallel(filehandle, 'nwv' ,     disp)
+        sr%mn_w     = read_intparam_parallel(filehandle, 'mn_w',     disp)
+        sr%max_mn_w = read_intparam_parallel(filehandle, 'MAX_MN_W', disp)
+
+        call read_array_not_distr(filehandle, 'm_w',         (/sr%max_mn_w,0/),  disp,  int1d=sr%m_w)
+        call read_array_not_distr(filehandle, 'n_w_fourier', (/sr%max_mn_w,0/),  disp,  int1d=sr%n_w_fourier)
+        call read_array_not_distr(filehandle, 'rc_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%rc_w)
+        call read_array_not_distr(filehandle, 'rs_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%rs_w)
+        call read_array_not_distr(filehandle, 'zc_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%zc_w)
+        call read_array_not_distr(filehandle, 'zs_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%zs_w)
+      endif
+
       sr%n_tor  = read_intparam_parallel(filehandle, 'n_tor' , disp)
       sr%n_tor0 = sr%n_tor
 
@@ -643,6 +665,9 @@ module vacuum_response
     if(my_id == 0) then
       call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
       call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
+      if ( sr%file_version >= 5 ) then
+        call read_array_not_distr(filehandle, 'phi0_w',   (/sr%ntri_w,3/), disp, float2d=sr%phi0_w)
+      endif
     end if
 
     call MPI_FILE_CLOSE(filehandle, err)
@@ -914,6 +939,15 @@ module vacuum_response
     call MPI_bcast(sr%ntri_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor0,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+
+    call MPI_bcast(sr%nv,                      1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_points,                1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%iwall,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nwu,                     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nwv,                     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%mn_w,                    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%max_mn_w,                1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+
     call MPI_bcast(sr%ntri_c,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_pol_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_rmp_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -928,12 +962,25 @@ module vacuum_response
     n_dof_starwall = sr%nd_bez
     n_wall_curr    = sr%n_w
     
-    ! --- Allocate matrics.
+    ! --- Allocate matrices.
     if ( my_id /= 0 ) then
       if (allocated(sr%i_tor)   ) deallocate(sr%i_tor);    allocate(sr%i_tor(sr%n_tor))
       if (allocated(sr%d_yy)    ) deallocate(sr%d_yy);     allocate(sr%d_yy(sr%n_w))
       if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
       if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
+
+      if ( sr%file_version>=5 ) then 
+        if (allocated(sr%m_w)        ) deallocate(sr%m_w);          allocate(        sr%m_w(sr%max_mn_w))
+        if (allocated(sr%n_w_fourier)) deallocate(sr%n_w_fourier);  allocate(sr%n_w_fourier(sr%max_mn_w))
+
+        if (allocated(sr%rc_w)       ) deallocate(sr%rc_w);         allocate(sr%rc_w(sr%max_mn_w))
+        if (allocated(sr%rs_w)       ) deallocate(sr%rs_w);         allocate(sr%rs_w(sr%max_mn_w))
+        if (allocated(sr%zc_w)       ) deallocate(sr%zc_w);         allocate(sr%zc_w(sr%max_mn_w))
+        if (allocated(sr%zs_w)       ) deallocate(sr%zs_w);         allocate(sr%zs_w(sr%max_mn_w))
+        if (allocated(sr%phi0_w)     ) deallocate(sr%phi0_w);       allocate(sr%phi0_w(sr%ntri_w,3))
+      endif
+
+        
       if ( sr%ncoil > 0 ) then
         if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
         if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
@@ -951,6 +998,17 @@ module vacuum_response
     call MPI_bcast(sr%d_yy,     sr%n_w,                  MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,             MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,             MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+
+    if ( sr%file_version>=5 ) then 
+      call MPI_bcast(sr%m_w,            sr%max_mn_w,     MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%n_w_fourier,    sr%max_mn_w,     MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%rc_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%rs_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%zc_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%zs_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi0_w,         sr%ntri_w*3,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    endif
+
     if ( sr%ncoil > 0 ) then
       call MPI_bcast(sr%jtri_c,   sr%ncoil,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
       call MPI_bcast(sr%x_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
@@ -1022,10 +1080,17 @@ module vacuum_response
        write(*,33) 'file_version            =', sr%file_version
        write(*,33) 'n_bnd                   =', sr%n_bnd
        write(*,33) 'nd_bez                  =', sr%nd_bez
+       write(*,33) 'nv                      =', sr%nv    
+       write(*,33) 'n_points                =', sr%n_points
        write(*,33) 'ncoil                   =', sr%ncoil
        write(*,33) 'npot_w                  =', sr%npot_w
        write(*,33) 'n_w                     =', sr%n_w
        write(*,33) 'ntri_w                  =', sr%ntri_w
+       write(*,33) 'iwall                   =', sr%iwall  
+       write(*,33) 'nwu                     =', sr%nwu    
+       write(*,33) 'nwv                     =', sr%nwv    
+       write(*,33) 'mn_w                    =', sr%mn_w   
+       write(*,33) 'max_mn_w                =', sr%max_mn_w   
        write(*,33) 'n_tor                   =', sr%n_tor
        write(*,33) 'n_tor0                  =', sr%n_tor0
        write(*,33) 'n_pol_coils             =', sr%n_pol_coils

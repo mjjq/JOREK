@@ -1220,10 +1220,11 @@ module vacuum_response
     real*8              :: ephi12(3),ephi13(3),ephi23(3), jsides(3)
     real*8              :: pol13(3), pol32(3), pol21(3)
     real*8              :: mid12(3), mid23(3), mid13(3), angle12, angle13, angle23
+    real*8              :: Iw_net_tor 
     integer             :: filehandle = 60, i, maxcurr_pos
     logical             :: Iphi_max, Ipol_max, jphi_lin, jpol_lin
     character(len=18)   :: filename
-    real*8, allocatable :: tripot_w(:)
+    real*8, allocatable :: tripot_w(:), dtripot_w(:)
     integer :: ierr
 
     if ( mod(index,nout) /= 0 ) return
@@ -1233,7 +1234,7 @@ module vacuum_response
       
       ! --- Preset values
       Iphi_max = .false.
-      jphi_lin = .true.
+      jphi_lin = .false.
       Ipol_max = .false.
       jpol_lin = .false.    
       
@@ -1268,7 +1269,7 @@ module vacuum_response
       write(filehandle,140) 'LOOKUP_TABLE default'
     end if
     
-    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
+    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
 
     if(my_id == 0) then
       do i = 1, sr%npot_w
@@ -1280,13 +1281,15 @@ module vacuum_response
       write(filehandle,140) 'LOOKUP_TABLE default'
     end if
 
-    call reconstruct_triangle_potentials(tripot_w, dwall_curr, my_id)
+    call reconstruct_triangle_potentials(dtripot_w, dwall_curr, my_id)
 
     if(my_id == 0) then
   
       do i = 1, sr%npot_w
-        write(filehandle,142) tripot_w(i)
+        write(filehandle,142) dtripot_w(i)
       end do
+
+      deallocate(dtripot_w)
       
       ! --- Cell data variables
       write(filehandle,141) 'CELL_DATA', sr%ntri_w
@@ -1595,16 +1598,10 @@ module vacuum_response
         
         end do
       end if
-        
-      ! --- Total wall current vectors
-      write(filehandle,140) 'VECTORS jsurf_w(MA/m) float'
-  
-    end if
+      
+      ! --- Current density: Contribution of single valued potentials  
+      write(filehandle,140) 'VECTORS jw_single_val(MA/m) float'
 
-    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
-
-    if (my_id == 0) then
-  
       do i = 1, sr%ntri_w
         ! --- Wall potential at triangle nodes
         phi1   = tripot_w(sr%jpot_w(i,1))
@@ -1623,12 +1620,61 @@ module vacuum_response
         write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
                               / mu_zero * 1.d-6
       end do
+
+      if (sr%file_version >= 5) then
+
+        ! --- Current density: Contribution of net wall potential 
+        write(filehandle,140) 'VECTORS jw_net(MA/m) float'
+  
+        do i = 1, sr%ntri_w
+          ! --- Wall potential at triangle nodes
+          phi1   = Iw_net_tor * sr%phi0_w(i,1) 
+          phi2   = Iw_net_tor * sr%phi0_w(i,2) 
+          phi3   = Iw_net_tor * sr%phi0_w(i,3)
+          ! --- Position of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
+            
+          ! Exports the linear wall density current in MA/m  
+          write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
+                                / mu_zero * 1.d-6
+        end do
+
+        ! --- Total wall current density
+        write(filehandle,140) 'VECTORS jw_tot(MA/m) float'
+  
+        do i = 1, sr%ntri_w
+          ! --- Wall potential at triangle nodes
+          phi1   = Iw_net_tor * sr%phi0_w(i,1) + tripot_w(sr%jpot_w(i,1)) 
+          phi2   = Iw_net_tor * sr%phi0_w(i,2) + tripot_w(sr%jpot_w(i,2))
+          phi3   = Iw_net_tor * sr%phi0_w(i,3) + tripot_w(sr%jpot_w(i,3))
+          ! --- Position of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
+            
+          ! Exports the linear wall density current in MA/m  
+          write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
+                                / mu_zero * 1.d-6
+        end do
+      endif    ! file version 5
+
       
       ! --- Close file, clean up
-      if ( allocated(tripot_w) ) deallocate( tripot_w )
       close(filehandle)
   
-    end if
+    end if  ! my_id==0
+
+    if ( allocated(tripot_w) ) deallocate( tripot_w )
 
   end subroutine write_wall_vtk
   
@@ -2412,11 +2458,11 @@ module vacuum_response
   !! The physical wall potentials include different types of potentials,
   !! and the way they are ordered in the array is
   !!
-  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net, Potw_1, Potw_2, ..., Potw_npotw-1)
+  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net_tor, Potw_1, Potw_2, ..., Potw_npotw-1)
   !!  
   !! where I_coil are the coil currents, Iw_net is the net wall current
   !! and Potw are the single valued wall potentials.  
-  subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
+  subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
     
     use mpi_mod
 
@@ -2426,6 +2472,7 @@ module vacuum_response
     real*8, allocatable, intent(inout) :: tripot_w(:)
     real*8, allocatable, intent(in)    :: wall_curr(:)
     integer,             intent(in)    :: my_id
+    real*8,  optional,   intent(inout) :: Iw_net_tor 
 
     ! --- Local variables
     integer              :: i, j, ierr, global_index, ntasks
@@ -2451,6 +2498,10 @@ module vacuum_response
     end if
 
     call MPI_AllREDUCE(MPI_IN_PLACE,pot_tmp,size(pot_tmp),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+    if (present(Iw_net_tor)) then
+      Iw_net_tor = pot_tmp(1)
+    endif
 
     ! --- Correct indexing (1st potential is the net curret potential)
     ! --- Shift indexing so 1st wall node corresponds to 1st single valued potential (and so on)

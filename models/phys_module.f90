@@ -184,7 +184,7 @@ module phys_module
   real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num, Zk_i_perp_num, Zk_e_perp_num
   logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
   logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   
@@ -272,11 +272,14 @@ module phys_module
   logical :: use_pellet
 
   !> @name Massive gas injection-related input parameters
-  real*8  :: t_ns(10)          !< MGI onset time (JOREK units)
-  real*8  :: ns_amplitude(10)  !< Amplitude of gas source
-  real*8  :: ns_R(10)          !< R position of gas source
-  real*8  :: ns_Z(10)          !< Z position of gas source
-  real*8  :: ns_phi(10)        !< Phi position of gas source
+  
+  integer, parameter :: n_inj_max = 10 ! The hard coded maximum number of injections
+
+  real*8  :: t_ns(n_inj_max)   !< MGI onset time (JOREK units)
+  real*8  :: ns_amplitude(n_inj_max)  !< Amplitude of gas source
+  real*8  :: ns_R(n_inj_max)   !< R position of gas source
+  real*8  :: ns_Z(n_inj_max)   !< Z position of gas source
+  real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
   real*8  :: ns_radius         !< Poloidal radius of gas source
   real*8  :: ns_sig            !< Obsolete (still in the code but not used)
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
@@ -299,19 +302,19 @@ module phys_module
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
   ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI; see [[spi_tutorial|SPI Tutorial]]
-  real*8  :: spi_Vel_Rref(10)   !< Reference velocity of pellet center along R upon injection
-  real*8  :: spi_Vel_Zref(10)   !< Reference velocity of pellet center along Z upon injection
-  real*8  :: spi_Vel_RxZref(10) !< Reference velocity of pellet center along RxZ direction upon injection
-  real*8  :: spi_quantity(10)   !< Total injected atom number for impurity SPI
-  real*8  :: spi_quantity_bg(10)!< Total injected atom number for background species SPI
-  real*8  :: ng_radius_ratio    !< We are assuming a constant ratio between the radius of NG clouds
-                                !< and that of shattered pellets
+  real*8  :: spi_Vel_Rref(n_inj_max)   !< Reference velocity of pellet center along R upon injection
+  real*8  :: spi_Vel_Zref(n_inj_max)   !< Reference velocity of pellet center along Z upon injection
+  real*8  :: spi_Vel_RxZref(n_inj_max) !< Reference velocity of pellet center along RxZ direction upon injection
+  real*8  :: spi_quantity(n_inj_max)   !< Total injected atom number for impurity SPI
+  real*8  :: spi_quantity_bg(n_inj_max)!< Total injected atom number for background species SPI
+  real*8  :: ng_radius_ratio           !< We are assuming a constant ratio between the radius of NG clouds
+                                       !< and that of shattered pellets
 
-  real*8  :: spi_Vel_diff(10)   !< The reference veolocity difference from the reference velocity
-  real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
-  real*8  :: spi_L_inj(10)      !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
-  real*8  :: ns_phi_rotate      !< The toroidal position of rotated injection point
-  real*8  :: tor_frequency      !< The rigid body rotation frequency
+  real*8  :: spi_Vel_diff(n_inj_max)   !< The reference veolocity difference from the reference velocity
+  real*8  :: spi_angle                 !< The vertex angle of spi spreading in terms of rad
+  real*8  :: spi_L_inj(n_inj_max)      !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
+  real*8  :: ns_phi_rotate             !< The toroidal position of rotated injection point
+  real*8  :: tor_frequency             !< The rigid body rotation frequency
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
@@ -325,8 +328,9 @@ module phys_module
 
   real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
+  real*8, allocatable  :: xtime_P_ei(:)         !< The time history of electron-ion energy exchange power
 
-  integer :: n_spi(10)          !< Number of shattered pellets injected
+  integer :: n_spi(n_inj_max)   !< Number of shattered pellets injected
   integer :: n_spi_tot          !< Total number of shattered pellets injected
   integer :: n_inj              !< Number of injection locations
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
@@ -630,11 +634,12 @@ module phys_module
     pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
     E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &
     Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
-    dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:),                      &
+    dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:), friction_dissip_tot_t(:), &
     Magwork_tot_t(:), thmwork_tot_t(:), viscopar_dissip_tot_t(:), viscopar_flux_t(:), li3_t(:),      &
     li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:), mag_ener_src_tot(:), &
     dpart_tot_dt(:), part_flux_Dpar_t(:), part_flux_Dperp_t(:), part_flux_vpar_t(:), part_flux_vperp_t(:), & 
-    dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:)
+    dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:),         &
+    thermal_e_tot_t(:), thermal_i_tot_t(:)
 
   !> @name gmres parameters
   integer             :: iter_precon        !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated
@@ -656,6 +661,11 @@ module phys_module
   real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: ZK_par_neg_thresh  !< ZK_par_neg becomes effective if T < ZK_par_neg_thresh
+  real*8              :: D_imp_extra_R           !< Additional impurity diffusivity in R-direction
+  real*8              :: D_imp_extra_Z           !< Additional impurity diffusivity in Z-direction
+  real*8              :: D_imp_extra_p           !< Additional impurity diffusivity in phi-direction
+  real*8              :: D_imp_extra_neg         !< Additional impurity diffusion coefficient in regions with negative impurity density
+  real*8              :: D_imp_extra_neg_thresh  !< D_imp_extra_neg becomes effective if rho_imp < D_imp_extra_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
   real*8              :: rho_min            !< minimum density
 

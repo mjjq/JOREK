@@ -18,7 +18,7 @@ character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
-integer :: ierr,err,i, err_alloc, n_spi_begin
+integer :: ierr,err,i, n_spi_begin
 
 ! --- Namelist with input parameters.
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
@@ -116,7 +116,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 neutral_reflection, rho_min,                        &
                 ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
-                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
+                spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
                 spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
@@ -141,7 +141,6 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
                 vert_FB_tact, start_VFB_ts, I_coils_max
 
-
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
@@ -151,7 +150,7 @@ if (my_id .eq. 0) then
   
   ! --- Model-specific presets
   particlesource_psin = 100.d0
-  
+
   ! --- Read input parameters from namelist.
   if (trim(filename) .ne. "__NO_FILENAME__" ) then
     open(42, file=filename, status='old', action='read', iostat=ierr)
@@ -240,6 +239,19 @@ if ( my_id == 0 ) then
       stop
     end if
   end if
+
+
+  if (n_inj > n_inj_max .or. n_inj < 1) then
+    write(*,*) "ERROR! Do not support n_inj larger than n_inj_max or smaller than 1, EXITING!"
+    stop
+  end if  
+
+  do i = 1, n_inj_max
+    if (n_spi(i)/=0 .and. i > n_inj) then
+      write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!", n_spi, n_inj
+      stop
+    end if
+  end do 
 
   if (using_spi) call init_spi_all()
 

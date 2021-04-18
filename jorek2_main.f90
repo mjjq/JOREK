@@ -76,13 +76,7 @@ program JOREK2
   use matio_module, only: timestamp
 #endif
   use mpi_mod
-
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
-#ifdef WITH_Impurities
-  use mod_impurity
-#endif
+  use mod_impurity, only: init_imp_adas
 
 
   use, intrinsic :: iso_c_binding
@@ -432,12 +426,10 @@ required = 0
     write(*,*) '  Consider testing, whether you get better performance by increasing the number'
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
-  if (with_etaOhm) then
-    if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
-      write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
-      write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
-      write(*,*) '  but with this setup you are not conserving energy.   '
-    endif
+  if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
+    write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
+    write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 
+    write(*,*) '  but with this setup you are not conserving energy.   '
   endif
   if (abs(T_max_eta-T_max_eta_ohm)/(T_max_eta+T_max_eta_ohm) > 1.d-6) then
     write(*,*) 'WARNING: T_max_eta and T_max_eta_ohm are not the same, which breaks  &
@@ -526,7 +518,7 @@ required = 0
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
                                sig1, xr2, sig2, refinement)
       end if
-      if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+      if ( freeboundary .or. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
       
     end if
     
@@ -582,7 +574,7 @@ required = 0
       if ( extend_existing_grid .and. (n_flux .le. 0) ) &
           call grid_patches_on_existing_grid(node_list, element_list)
 
-      if ( freeboundary .and. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+      if ( freeboundary .or. freeb_change_indices ) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
@@ -689,7 +681,7 @@ required = 0
         if (extend_existing_grid) &
             call grid_patches_on_existing_grid(node_list, element_list)
 
-        if ( freeboundary .and. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
+        if ( freeboundary .or. freeb_change_indices .and. (my_id == 0)) call exchange_indices_for_vacuum(node_list, my_id, n_cpu)
 
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
@@ -922,7 +914,7 @@ required = 0
     ! Construct index_min, index_max and local_elems
     !
     call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,.false.,local_elms, & 
-         n_local_elms,ndof_glob,index_min,index_max)
+         n_local_elms,ndof_glob,index_min,index_max, restart, freeboundary)    
 
     node_list%n_dof = ndof_glob
     local_index_start = index_min
@@ -1035,7 +1027,7 @@ required = 0
       ! ... in the first step of a simulation (also when restarting)
       ! ... when tstep changes
       ! ... when the previous time steps took too many iterations
-      solve_only = (istep > 1) .and. ((iter_gmres+iter_prev <= 2*iter_precon) .or. (n_since_update > max_steps_noUpdate))
+      solve_only = (istep > 1) .and. ((iter_gmres+iter_prev <= 2*iter_precon) .and. (n_since_update < max_steps_noUpdate))
       if (solve_only) then 
         n_since_update = n_since_update + 1
       else
@@ -1245,7 +1237,6 @@ required = 0
 
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
-
        call energy(node_list,element_list,W_mag,W_kin)
 
        R_axis_t(index_now)       = ES%R_axis
@@ -1283,7 +1274,7 @@ required = 0
 
        write(*,*) ' exiting current energies '
 #endif
-       
+
        ! --- Output some information about the current timestep
        130 format(1x,a,i5.5,a,es10.3,a)
        131 format(1x,a,2(2(es10.2,' ...',es10.2,',')))

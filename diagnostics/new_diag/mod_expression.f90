@@ -23,14 +23,8 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-#ifdef WITH_Impurities
-  use mod_impurity, only: radiation_function
-#endif
+  use mod_impurity, only: radiation_function, radiation_function_linear
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-      
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
   
   implicit none
   
@@ -90,7 +84,7 @@ module mod_expression
   
   
   ! --- Standard lists of expressions (require init_expr call first!).
-  type(t_expr_list), save :: exprs_all, exprs_all_int     !< All available expressions.
+  type(t_expr_list), save :: exprs_all, exprs_all_int, exprs_all_four     !< All available expressions.
   
   
   
@@ -107,6 +101,7 @@ module mod_expression
     
     exprs_all%n_expr     = 0
     exprs_all_int%n_expr = 0
+    exprs_all_four%n_expr = 0
     call add(exprs_all, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
     call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
@@ -238,6 +233,12 @@ module mod_expression
     call add(exprs_all_int, 'Thermal_tot ', 'Total thermal energy                                  ')
     call add(exprs_all_int, 'Thermal_in  ', 'Thermal energy (inside  LCFS)                         ')
     call add(exprs_all_int, 'Thermal_out ', 'Thermal energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_tot','Total electron thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_e_in ','Thermal electron energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_out','Thermal electron energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_tot','Total ion thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_i_in ','Thermal ion energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_out','Thermal ion energy (outside LCFS)                         ')
     call add(exprs_all_int, 'Kin_par_tot ', 'Total parallel kinetic energy                         ')
     call add(exprs_all_int, 'Kin_par_in  ', 'Parallel kinetic energy (inside  LCFS)                ')
     call add(exprs_all_int, 'Kin_par_out ', 'Parallel kinetic energy (outside LCFS)                ')
@@ -258,6 +259,7 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
+    call add(exprs_all_int, 'Friction_diss','Total frictional dissipation                          ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
     call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
@@ -290,6 +292,11 @@ module mod_expression
     call add(exprs_all_int, 'I_halo      ', 'Total poloidal halo currents                          ')
     call add(exprs_all_int, 'TPF_halo    ', 'Toroidal peaking factor of the poloidal halos         ')
 
+    call add(exprs_all_four, 'absolute    ', 'Absolute value of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'real        ', 'Real part      of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'imaginary   ', 'Imaginary part of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'phase       ', 'Complex phase  of 2D Fourier analysis                 ')
+
   end subroutine init_expr
   
   
@@ -315,33 +322,35 @@ module mod_expression
   end subroutine add
   
   
-  
-  
-  
   !> Creates a subset of all available expressions.
-  function exprs(name, n_expr, n_coord) result(expr_list)
+  function exprs(name, n_expr, n_coord, exprs_all_local) result(expr_list)
     type(t_expr_list) :: expr_list
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
     
     ! --- Routine parameters
-    character(len=*),  intent(in) :: name(n_expr)
-    integer,           intent(in) :: n_expr
-    integer, optional, intent(in) :: n_coord
+    character(len=*),            intent(in) :: name(n_expr)
+    integer,                     intent(in) :: n_expr
+    integer, optional,           intent(in) :: n_coord
+    type(t_expr_list), optional, intent(in) :: exprs_all_local
+    type(t_expr_list)                       :: exprs_all_local0
     
     ! --- Local variables
     integer :: i, j, k
     
+    exprs_all_local0 = exprs_all
+    if ( present(exprs_all_local) ) exprs_all_local0 = exprs_all_local
+
     k = 0
     do i = 1, n_expr
-      j = get_expr_num(exprs_all, trim(name(i)))
+      j = get_expr_num(exprs_all_local0, trim(name(i)))
       if ( j < 1 ) then
         write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Unknown expression "'//trim(name(i)) &
           //'" ignored.'
         cycle
       end if
       k = k + 1
-      expr_list%expr(k) = exprs_all%expr(j)
+      expr_list%expr(k) = exprs_all_local0%expr(j)
     end do
     expr_list%n_expr = k
     
@@ -349,40 +358,7 @@ module mod_expression
     if ( present(n_coord) ) expr_list%n_coord = n_coord
     
   end function exprs
-  
-  
-  !> Creates a subset of all available expressions.
-  function exprs_int(name, n_expr, n_coord) result(expr_list)
-    type(t_expr_list) :: expr_list
-    
-    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
-    
-    ! --- Routine parameters
-    character(len=*),  intent(in) :: name(n_expr)
-    integer,           intent(in) :: n_expr
-    integer, optional, intent(in) :: n_coord
-    
-    ! --- Local variables
-    integer :: i, j, k
-    
-    k = 0
-    do i = 1, n_expr
-      j = get_expr_num_int(exprs_all_int, trim(name(i)))
-      if ( j < 1 ) then
-        write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Unknown expression "'//trim(name(i)) &
-          //'" ignored.'
-        cycle
-      end if
-      k = k + 1
-      expr_list%expr(k) = exprs_all_int%expr(j)
-    end do
-    expr_list%n_expr = k
-    
-    expr_list%n_coord = 0
-    if ( present(n_coord) ) expr_list%n_coord = n_coord
-    
-  end function exprs_int
-  
+
   
   
   !> Merge several expression lists.    ### NOT USED AT PRESENT
@@ -489,37 +465,13 @@ module mod_expression
     
     num = -99
     do i = 1, exprs_all%n_expr
-      if ( trim(exprs_all%expr(i)%name) == trim(name) ) then
+      if ( trim(expr_list%expr(i)%name) == trim(name) ) then
         num = i
         exit
       end if
     end do
     
   end function get_expr_num
-  
-  
-  
-  
-  
-   !> Find out expression number in an expression list.
-  integer function get_expr_num_int(expr_list, name) result(num)
-    
-    ! --- Routine parameters
-    type(t_expr_list),       intent(in) :: expr_list
-    character(len=*), intent(in) :: name
-    
-    ! --- Local variables
-    integer :: i
-    
-    num = -99
-    do i = 1, exprs_all_int%n_expr
-      if ( trim(exprs_all_int%expr(i)%name) == trim(name) ) then
-        num = i
-        exit
-      end if
-    end do
-    
-  end function get_expr_num_int
   
   
   
@@ -627,7 +579,7 @@ module mod_expression
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg
-    real*8  :: Lrad_imp, m_i_over_m_imp_bg, r_imp, coef_rad_imp
+    real*8  :: Lrad_imp, r_imp, coef_rad_imp
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -813,7 +765,7 @@ module mod_expression
                 hhz_p  = HZ_p (i_tor)
                 hhz_pp = HZ_pp(i_tor)
                 vv(:)  = 0.d0
-                vv(1:)  = nodes(i)%values(i_tor,j,:)
+                vv(1:n_var)  = nodes(i)%values(i_tor,j,:)
                 
                 ! --- Poloidal Flux
                 ps0      = ps0      + vv(var_psi) * sz * hh    * hhz
@@ -1374,7 +1326,7 @@ module mod_expression
           ! --- Coulomb logarithms calculated according to Ref. [L. Hesselow et al, J Plasma Phys 84,
           !     p. 905840605 (2018); doi:10.1017/S0022377818001113] Eq. (2.7) and (2.9):
           Te0_eV     = Te0 / ( EL_CHG * MU_ZERO * central_density * 1.d20 )
-          ne0_20     = r0 * central_density
+          ne0_20     = max(1.d-8, r0) * central_density
           ln_Lambda0 = 14.9 - 0.5 * log( ne0_20 ) + log( Te0_eV / 1000.d0 ) ! Eq. (2.7) at thermal speeds
           ln_Lambda  = 14.6 + 0.5 * log( Te0_eV / ne0_20 )                  ! Eq. (2.9) at relativistic energies
           
@@ -1407,35 +1359,19 @@ module mod_expression
     ! --- Radiation from background impurity
     !--------------------------------------------------------
       ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)
-      r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
-
-      select case ( trim(imp_type) )
-        case('C')
-          m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
-        case('Ar')
-          m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
-        case('Ne')
-          m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
-        case('W')
-          m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
-        case default
-          if (nimp_bg > 0) then
-            write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
-            stop
-          end if 
-      end select      
+      r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
 
       if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
         ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
         coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                     *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
+                     *(central_density*1.d20)**2.5d0
         Lrad_imp = 0.0
         call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)         
         if (Lrad_imp < 0.) then
           Lrad_imp = 0.
         end if
         if ( units == SI_UNITS ) then
-          frad_bg = nimp_bg * Lrad_imp * m_i_over_m_imp_bg
+          frad_bg = nimp_bg * Lrad_imp
         else if ( units == JOREK_UNITS ) then
           frad_bg = r_imp * Lrad_imp * coef_rad_imp 
         endif

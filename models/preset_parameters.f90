@@ -52,7 +52,7 @@ subroutine preset_parameters
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
   freeb_equil_iterate_area = .false.
-  freeb_change_indices = .true. ! exchange grid node indices to parallelize boundary integral
+  freeb_change_indices = .false. ! exchange grid node indices to parallelize boundary integral (only needed when running fixed boundary at first)
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
   bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
@@ -190,6 +190,12 @@ subroutine preset_parameters
 
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+
+  D_imp_extra_R = 0.d0
+  D_imp_extra_Z = 0.d0
+  D_imp_extra_p = 0.d0
+  D_imp_extra_neg      = 1.d-6
+  D_imp_extra_neg_thresh  = -1.d3 ! to disable by default enhanced impurities diffusion in model501
   ZK_prof_neg        = 1.d-5
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
@@ -198,8 +204,8 @@ subroutine preset_parameters
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
-  T_min              =-1.0d20
-  rho_min            =-1.0d20
+  T_min              = 1.0d-20
+  rho_min            = 1.0d-20
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -209,6 +215,8 @@ subroutine preset_parameters
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
+  ZK_i_perp_num = 0.d0
+  ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
   eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.

@@ -264,7 +264,7 @@ contains
     	do j = 1, n_tor_local*n_vertex_max*(n_order+1)*n_var
     	  
     	  if (abs(thread_struct(omp_tid)%ELM(i,j)-thread_struct(omp_tid)%ELM2(i,j))/  &
-    	      (abs(thread_struct(omp_tid)%ELM(i,j))+abs(thread_struct(omp_tid)%ELM2(i,j))+1.d0) .gt. 1.d-8) then
+    	      (abs(thread_struct(omp_tid)%ELM(i,j))+abs(thread_struct(omp_tid)%ELM2(i,j))+1.d0) .gt. 1.d-10) then
     	    call decrypt_index(i, ivertex, iorder, ivar, itor)
     	    call decrypt_index(j, jvertex, jorder, jvar, jtor)
     	    write(*,'(4x,3i8,4x,3i4,4x,1i8,7x,3i4,4x,1i8,7x,3es16.8)') my_id, i, j, ivertex, iorder, itor, ivar, &
@@ -341,7 +341,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer(kind=int_all), intent(in) :: n
   integer(kind=int_all), intent(in) :: nz
   integer(kind=int_all), intent(in) :: ndof
-  integer,               intent(in) :: n_matrix_block_size
+  integer(kind=int_all), intent(in) :: n_matrix_block_size
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable :: A_mat(:)
   real*8,                intent(inout), allocatable :: rhs(:)

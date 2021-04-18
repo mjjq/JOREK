@@ -43,8 +43,6 @@ real*8  :: sign_corr, real_total_quantity
 real*8, allocatable :: rnd(:)                      !The random number array 
 real*8, allocatable :: shard_size(:)               !The shard size array
 
-integer :: err_alloc=0
-
 ! --- Namelist with input parameters.                                                                                                                        
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
@@ -112,7 +110,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
                 eta_num_T_dependent, visco_num_T_dependent,         &
-                zkpar_T_dependent, T_max_eta, T_max_eta,            & 
+                zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
@@ -136,9 +134,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
-                D_neutral_x, D_neutral_y, D_neutral_p,              &
-                imp_reflection, rho_min,                            &
-                neutral_reflection, rho_min,                        &
+                D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
+                D_imp_extra_neg, D_imp_extra_neg_thresh,            &
+                imp_reflection, neutral_reflection, rho_min,        &
                 ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
@@ -224,10 +222,15 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
   endif
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
-  if (gamma_stangeby > -1.d89) then
-    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
+  if (gamma_e_stangeby > -1.d89) then
+    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
   else
-    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma)
+    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
+  end if
+  if (gamma_i_stangeby > -1.d89) then
+    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+  else
+    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
   end if
 
   if (sum(nstep_n) .gt. 0) then
@@ -266,12 +269,12 @@ if ( my_id == 0 ) then
     end if
   end if
 
-  if (n_inj > 10 .or. n_inj < 1) then
-    write(*,*) "ERROR! Do not support n_inj larger than 10 or smaller than 1, EXITING!"
+  if (n_inj > n_inj_max .or. n_inj < 1) then
+    write(*,*) "ERROR! Do not support n_inj larger than n_inj_max or smaller than 1, EXITING!"
     stop
   end if  
 
-  do i = 1, 10
+  do i = 1, n_inj_max
     if (n_spi(i)/=0 .and. i > n_inj) then
       write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!", n_spi, n_inj
       stop

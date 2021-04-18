@@ -77,6 +77,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8,  allocatable :: spi_R_arr (:)
   real*8,  allocatable :: spi_Z_arr (:)
   real*8,  allocatable :: spi_phi_arr (:)
+  real*8,  allocatable :: spi_phi_init_arr (:)
   real*8,  allocatable :: spi_Vel_R_arr (:)
   real*8,  allocatable :: spi_Vel_Z_arr (:)
   real*8,  allocatable :: spi_Vel_RxZ_arr (:)
@@ -84,7 +85,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8,  allocatable :: spi_abl_arr (:)
   real*8, allocatable  :: spi_species_arr (:)
 
-  integer              :: err_alloc, n_spi_check, n_inj_check
+  integer              :: n_spi_check, n_inj_check
   logical              :: modes_changed
  
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
@@ -308,6 +309,14 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     call tr_allocate(thermal_tot_t,1,index_start+nstep,"thermal_tot_t",CAT_UNKNOWN)
     thermal_tot_t = 0.d0
 
+    if (allocated(thermal_e_tot_t)) call tr_deallocate(thermal_e_tot_t,"thermal_e_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thermal_e_tot_t,1,index_start+nstep,"thermal_e_tot_t",CAT_UNKNOWN)
+    thermal_e_tot_t = 0.d0
+
+    if (allocated(thermal_i_tot_t)) call tr_deallocate(thermal_i_tot_t,"thermal_i_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thermal_i_tot_t,1,index_start+nstep,"thermal_i_tot_t",CAT_UNKNOWN)
+    thermal_i_tot_t = 0.d0
+
     if (allocated(kin_par_tot_t)) call tr_deallocate(kin_par_tot_t,"kin_par_tot_t",CAT_UNKNOWN)
     call tr_allocate(kin_par_tot_t,1,index_start+nstep,"kin_par_tot_t",CAT_UNKNOWN)
     kin_par_tot_t = 0.d0
@@ -396,6 +405,10 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     call tr_allocate(viscopar_dissip_tot_t,1,index_start+nstep,"viscopar_dissip_tot_t",CAT_UNKNOWN)
     viscopar_dissip_tot_t = 0.d0
 
+    if (allocated(friction_dissip_tot_t)) call tr_deallocate(friction_dissip_tot_t,"friction_dissip_tot_t",CAT_UNKNOWN)
+    call tr_allocate(friction_dissip_tot_t,1,index_start+nstep,"friction_dissip_tot_t",CAT_UNKNOWN)
+    friction_dissip_tot_t = 0.d0
+
     if (allocated(thmwork_tot_t)) call tr_deallocate(thmwork_tot_t,"thmwork_tot_t",CAT_UNKNOWN)
     call tr_allocate(thmwork_tot_t,1,index_start+nstep,"thmwork_tot_t",CAT_UNKNOWN)
     thmwork_tot_t = 0.d0
@@ -476,6 +489,7 @@ endif
     write(*,'(A,e12.4,2f10.5)') ' *** PELLET PARAMETERS : ',pellet_particles, pellet_R, pellet_Z
   endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   if (index_start >= 1) then
     if (allocated(xtime_radiation)) &
       call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
@@ -493,7 +507,12 @@ endif
       call tr_deallocate(xtime_E_ion_power,"xtime_E_ion_power",CAT_UNKNOWN)
     call tr_allocate(xtime_E_ion_power,1,index_start+nstep,"xtime_E_ion_power",CAT_UNKNOWN)
     read(21)  xtime_E_ion_power(1:index_start)
+    if (allocated(xtime_P_ei)) &
+      call tr_deallocate(xtime_P_ei,"xtime_P_ei",CAT_UNKNOWN)
+    call tr_allocate(xtime_P_ei,1,index_start+nstep,"xtime_P_ei",CAT_UNKNOWN)
+    read(21)  xtime_P_ei(1:index_start)
   end if
+#endif
 
   if (using_spi) then
     if (n_spi_tot >= 1) then
@@ -533,19 +552,21 @@ endif
         stop
       end if      
 
-      allocate (spi_R_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_phi_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_radius_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_abl_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_species_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_R_arr(n_spi_tot))
+      allocate (spi_Z_arr(n_spi_tot))
+      allocate (spi_phi_arr(n_spi_tot))
+      allocate (spi_phi_init_arr(n_spi_tot))
+      allocate (spi_Vel_R_arr(n_spi_tot))
+      allocate (spi_Vel_Z_arr(n_spi_tot))
+      allocate (spi_Vel_RxZ_arr(n_spi_tot))
+      allocate (spi_radius_arr(n_spi_tot))
+      allocate (spi_abl_arr(n_spi_tot))
+      allocate (spi_species_arr(n_spi_tot))
     
       read(21,err=999, end=999)  spi_R_arr(1:n_spi_tot)
       read(21,err=999, end=999)  spi_Z_arr(1:n_spi_tot)
       read(21,err=999, end=999)  spi_phi_arr(1:n_spi_tot)
+      read(21,err=999, end=999)  spi_phi_init_arr(1:n_spi_tot)
       read(21,err=999, end=999)  spi_Vel_R_arr(1:n_spi_tot)
       read(21,err=999, end=999)  spi_Vel_Z_arr(1:n_spi_tot)
       read(21,err=999, end=999)  spi_Vel_RxZ_arr(1:n_spi_tot)
@@ -557,6 +578,7 @@ endif
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
         pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_phi_init= spi_phi_init_arr(i)
         pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
@@ -571,6 +593,7 @@ endif
       deallocate (spi_R_arr)
       deallocate (spi_Z_arr)
       deallocate (spi_phi_arr)
+      deallocate (spi_phi_init_arr)
       deallocate (spi_Vel_R_arr)
       deallocate (spi_Vel_Z_arr)
       deallocate (spi_Vel_RxZ_arr)
@@ -843,6 +866,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_phi_init_arr (:)
   real*8, allocatable :: spi_Vel_R_arr (:)
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
@@ -851,7 +875,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_species_arr (:)
   integer, allocatable :: spi_species_arr_old (:)  !< For backward compatibility only
 
-  integer :: err_alloc, err_exists, dterr
+  integer :: err_exists, dterr, n_spi_begin, i_inj
   logical :: flag_exists, type_match
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
@@ -1076,10 +1100,10 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
     ! --- Split "total" temperature into electron and ion temperature
     if ( import_3xx_4xx ) then
-      node_list%node(i)%values(:,:,8) = node_list%node(i)%values(:,:,6) / 2.d0
-      node_list%node(i)%deltas(:,:,8) = node_list%node(i)%deltas(:,:,6) / 2.d0
-      node_list%node(i)%values(:,:,6) = node_list%node(i)%values(:,:,6) / 2.d0
-      node_list%node(i)%deltas(:,:,6) = node_list%node(i)%deltas(:,:,6) / 2.d0
+      node_list%node(i)%values(:,:,var_Te) = node_list%node(i)%values(:,:,6) / 2.d0
+      node_list%node(i)%deltas(:,:,var_Te) = node_list%node(i)%deltas(:,:,6) / 2.d0
+      node_list%node(i)%values(:,:,var_Ti) = node_list%node(i)%values(:,:,6) / 2.d0
+      node_list%node(i)%deltas(:,:,var_Ti) = node_list%node(i)%deltas(:,:,6) / 2.d0
     end if
 
 
@@ -1284,6 +1308,16 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     thermal_tot_t = 0.d0
     call HDF5_array1D_reading(file_id,thermal_tot_t,'thermal_tot_t')
 
+    if (allocated(thermal_e_tot_t)) call tr_deallocate(thermal_e_tot_t,"thermal_e_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thermal_e_tot_t,1,index_start+nstep,"thermal_e_tot_t",CAT_UNKNOWN)
+    thermal_e_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,thermal_e_tot_t,'thermal_e_tot_t')
+
+    if (allocated(thermal_i_tot_t)) call tr_deallocate(thermal_i_tot_t,"thermal_i_tot_t",CAT_UNKNOWN)
+    call tr_allocate(thermal_i_tot_t,1,index_start+nstep,"thermal_i_tot_t",CAT_UNKNOWN)
+    thermal_i_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,thermal_i_tot_t,'thermal_i_tot_t')
+
     if (allocated(kin_par_tot_t)) call tr_deallocate(kin_par_tot_t,"kin_par_tot_t",CAT_UNKNOWN)
     call tr_allocate(kin_par_tot_t,1,index_start+nstep,"kin_par_tot_t",CAT_UNKNOWN)
     kin_par_tot_t = 0.d0
@@ -1393,6 +1427,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     call tr_allocate(viscopar_dissip_tot_t,1,index_start+nstep,"viscopar_dissip_tot_t",CAT_UNKNOWN)
     viscopar_dissip_tot_t = 0.d0
     call HDF5_array1D_reading(file_id,viscopar_dissip_tot_t,'viscopar_dissip_tot_t')
+
+    if (allocated(friction_dissip_tot_t)) call tr_deallocate(friction_dissip_tot_t,"friction_dissip_tot_t",CAT_UNKNOWN)
+    call tr_allocate(friction_dissip_tot_t,1,index_start+nstep,"friction_dissip_tot_t",CAT_UNKNOWN)
+    friction_dissip_tot_t = 0.d0
+    call HDF5_array1D_reading(file_id,friction_dissip_tot_t,'friction_dissip_tot_t')
 
     if (allocated(thmwork_tot_t)) call tr_deallocate(thmwork_tot_t,"thmwork_tot_t",CAT_UNKNOWN)
     call tr_allocate(thmwork_tot_t,1,index_start+nstep,"thmwork_tot_t",CAT_UNKNOWN)
@@ -1550,6 +1589,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
      call HDF5_real_reading(file_id,pellet_particles,"pellet_particles")
   endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   if (index_start >= 1) then
     if (allocated(xtime_radiation)) &
       call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_UNKNOWN)
@@ -1567,7 +1607,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       call tr_deallocate(xtime_E_ion_power,"xtime_E_ion_power",CAT_UNKNOWN)
     call tr_allocate(xtime_E_ion_power,1,index_start+nstep,"xtime_E_ion_power",CAT_UNKNOWN)
     call HDF5_array1D_reading(file_id,xtime_E_ion_power,"xtime_E_ion_power")
+    if (allocated(xtime_P_ei)) &
+      call tr_deallocate(xtime_P_ei,"xtime_P_ei",CAT_UNKNOWN)
+    call tr_allocate(xtime_P_ei,1,index_start+nstep,"xtime_P_ei",CAT_UNKNOWN)
+    call HDF5_array1D_reading(file_id,xtime_P_ei,"xtime_P_ei")
   end if
+#endif
 
   if (using_spi) then
     if (n_spi_tot >= 1) then
@@ -1627,21 +1672,34 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         write(*,*)"Backward Compatibility: No n_inj information found, but n_inj larger than 1, aborting."
         stop
       end if
-      
 
-      allocate (spi_R_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Z_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_phi_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Vel_R_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Vel_Z_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_Vel_RxZ_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_radius_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_abl_arr(n_spi_tot),stat=err_alloc)
-      allocate (spi_species_arr(n_spi_tot),stat=err_alloc)
+      allocate (spi_R_arr(n_spi_tot))
+      allocate (spi_Z_arr(n_spi_tot))
+      allocate (spi_phi_arr(n_spi_tot))
+      allocate (spi_phi_init_arr(n_spi_tot))
+      allocate (spi_Vel_R_arr(n_spi_tot))
+      allocate (spi_Vel_Z_arr(n_spi_tot))
+      allocate (spi_Vel_RxZ_arr(n_spi_tot))
+      allocate (spi_radius_arr(n_spi_tot))
+      allocate (spi_abl_arr(n_spi_tot))
+      allocate (spi_species_arr(n_spi_tot))
 
       call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
       call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
       call HDF5_array1D_reading(file_id,spi_phi_arr,"spi_phi_arr")
+
+      call H5Lexists_f(file_id,"spi_phi_init_arr",flag_exists,err_exists)
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_array1D_reading(file_id,spi_phi_init_arr,"spi_phi_init_arr")
+      else
+        n_spi_begin = 1
+        do i_inj = 1, n_inj
+          if(n_spi(i_inj)>0) spi_phi_init_arr(n_spi_begin:(n_spi_begin+n_spi(i_inj)-1)) = ns_phi(i_inj)
+          n_spi_begin = n_spi_begin + n_spi(i_inj)
+        end do
+        write(*,*)"Backward Compatibility: No spi_phi_init location found, assuming to be ns_phi."
+      end if
+
       call HDF5_array1D_reading(file_id,spi_Vel_R_arr,"spi_Vel_R_arr")
       call HDF5_array1D_reading(file_id,spi_Vel_Z_arr,"spi_Vel_Z_arr")
       call HDF5_array1D_reading(file_id,spi_Vel_RxZ_arr,"spi_Vel_RxZ_arr")
@@ -1657,7 +1715,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         call H5Dclose_f(dataset,dterr)
         if (type_match .and. dterr == 0) then
           write(*,*) "Backward Compatibility: Converting integer spi_species into double precision"
-          allocate (spi_species_arr_old(n_spi_tot),stat=err_alloc)
+          allocate (spi_species_arr_old(n_spi_tot))
           call HDF5_array1D_reading_int(file_id,spi_species_arr_old,"spi_species_arr")
           spi_species_arr = REAL(spi_species_arr_old,8)
         else if (dterr == 0) then
@@ -1681,6 +1739,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
         pellets(i)%spi_phi     = spi_phi_arr(i)
+        pellets(i)%spi_phi_init= spi_phi_init_arr(i)
         pellets(i)%spi_Vel_R   = spi_Vel_R_arr(i)
         pellets(i)%spi_Vel_Z   = spi_Vel_Z_arr(i)
         pellets(i)%spi_Vel_RxZ = spi_Vel_RxZ_arr(i)
@@ -1695,6 +1754,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_R_arr)
       deallocate (spi_Z_arr)
       deallocate (spi_phi_arr)
+      deallocate (spi_phi_init_arr)
       deallocate (spi_Vel_R_arr)
       deallocate (spi_Vel_Z_arr)
       deallocate (spi_Vel_RxZ_arr)
@@ -1751,10 +1811,12 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         do m=2,n_tor
           if ( new_mode(m) .eq. 1 ) then
           node_list%node(i)%values(m,:,:) = 0.d0
-          node_list%node(i)%values(m,:,5)   = amplitude * node_list%node(i)%values(1,:,5)
-          node_list%node(i)%values(m,:,6)   = amplitude * node_list%node(i)%values(1,:,6)
+          node_list%node(i)%values(m,:,var_rho)   = amplitude * node_list%node(i)%values(1,:,var_rho)
 #ifdef WITH_TiTe
-          node_list%node(i)%values(m,:,var_Te)= amplitude * node_list%node(i)%values(1,:,var_Te)
+          node_list%node(i)%values(m,:,var_Ti)   = amplitude * node_list%node(i)%values(1,:,var_Ti)
+          node_list%node(i)%values(m,:,var_Te)   = amplitude * node_list%node(i)%values(1,:,var_Te)
+#else
+          node_list%node(i)%values(m,:,var_T)    = amplitude * node_list%node(i)%values(1,:,var_T)
 #endif
 #ifdef fullmhd
           node_list%node(i)%values(m,:,var_AR)= amplitude * node_list%node(i)%values(1,:,var_AR)

@@ -76,8 +76,9 @@ real*8     :: P0, P0_s, P0_t, P0_x, P0_y, P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_x
 real*8     :: Pi0, Pi0_x, Pi0_y, Pi0_s, Pi0_t, Pi0_ss, Pi0_st, Pi0_tt, Pi0_p, Pi0_xx, Pi0_xy, Pi0_yy
 real*8     :: Pe0, Pe0_x, Pe0_y, Pe0_s, Pe0_t, Pe0_ss, Pe0_st, Pe0_tt, Pe0_p, Pe0_xx, Pe0_xy, Pe0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
-real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T, eta_Sp, detaSp_dT
-real*8     :: detaSp_dr0, detaSP_drn0, deta_dr0, deta_drn0, deta_num_dT, dvisco_num_dT
+real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, eta_num_T
+real*8     :: deta_dr0, deta_drn0, deta_num_dT, dvisco_num_dT
+real*8     :: eta_T_ohm, deta_dT_ohm, deta_dr0_ohm, deta_drn0_ohm
 real*8     :: ZK_par_num, Ti0_ps0_x, Ti_ps0_x, Ti0_psi_x, Ti0_ps0_y, Ti_ps0_y, Ti0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: Te0_ps0_x, Te_ps0_x, Te0_psi_x, Te0_ps0_y, Te_ps0_y, Te0_psi_y
 real*8     :: amat_11, amat_12, amat_21, amat_22, amat_23, amat_24, amat_25, amat_26, amat_33, amat_31, amat_44, amat_42
@@ -132,6 +133,8 @@ real*8     :: source_imp, source_bg
 
 ! time normalization
 real*8     :: t_norm
+
+real*8     :: Dn0x, Dn0y, Dn0p
 
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
@@ -628,11 +631,22 @@ do ms=1, n_gauss
        deta_drn0 = 0.
      end if
 
-     eta_Sp = 1.65d-9*17*(1.d-3*Te0_corr/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
-                               *sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) 
-     
-     detaSp_dT = -1.65d-9*17 * (1.5d0) * Te0_corr**(-2.5d0) * (1.d-3/(2*EL_CHG*MU_ZERO*central_density*1.d20))**(-1.5d0) &
-                      * sqrt(central_mass*MASS_PROTON*1.d20*central_density/MU_ZERO) * dTe0_corr_dT
+     if ( eta_T_dependent .and. Te0_corr <= T_max_eta_ohm ) then
+       eta_T_ohm     = eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
+       deta_dT_ohm   = ( - eta_ohmic   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0) ) * dTe0_corr_dT
+       deta_dr0_ohm  = 0.
+       deta_drn0_ohm = 0.
+     else if (eta_T_dependent .and. Te0_corr > T_max_eta_ohm) then
+       eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/Te_0)**(-1.5d0)
+       deta_dT_ohm   = 0.
+       deta_dr0_ohm  = 0.
+       deta_drn0_ohm = 0.
+     else
+       eta_T_ohm      = eta_ohmic
+       deta_dT_ohm    = 0.d0
+       deta_dr0_ohm   = 0.
+       deta_drn0_ohm  = 0.
+     end if
 
      ! --- Temperature dependent viscosity
      ! --- Note: No good physics basis, simply for keeping the magnetic Prandtl number constant
@@ -768,6 +782,18 @@ do ms=1, n_gauss
 
      source_pellet = 0.d0
      source_volume = 0.d0
+
+     Dn0x = D_imp_extra_R      
+     Dn0y = D_imp_extra_Z      
+     Dn0p = D_imp_extra_p      
+
+     if (xpoint2) then
+       if (rn0 .lt. D_imp_extra_neg_thresh)  then
+        Dn0x = D_imp_extra_neg
+        Dn0y = D_imp_extra_neg
+        Dn0p = D_imp_extra_neg
+       endif
+     endif
    
   !-------------------------------------------
   ! Atomic physics parameters for Argon
@@ -907,6 +933,8 @@ do ms=1, n_gauss
        dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2 ! Its temperature gradient
      end do
      Z_eff        = Z_eff / ne_JOREK
+     if (Z_eff < 1.) Z_eff = 1.
+     if (Z_eff > (imp_adas(1)%n_Z)**2) Z_eff = (imp_adas(1)%n_Z)**2
 
      ! Then three(!) gradients
      if (Z_eff >= 1.) then
@@ -937,16 +965,16 @@ do ms=1, n_gauss
      deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
      deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
 
-     detaSp_dr0   = eta_Sp * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-     detaSp_drn0  = eta_Sp * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
-     detaSp_dT    = detaSp_dT * eta_coef + eta_Sp * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
-     eta_Sp       = eta_Sp * eta_coef
-
      if ( eta_T_dependent ) then
        deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
        deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
        deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
        eta_T     = eta_T * eta_coef
+
+       deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+       deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
+       deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
+       eta_T_ohm = eta_T_ohm * eta_coef
      end if
 
 
@@ -1070,8 +1098,8 @@ do ms=1, n_gauss
     nu_e_imp = nu_e_imp * t_norm
     nu_e_bg  = nu_e_bg * t_norm
 
-    dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr)
-    dTi_e    = -dTe_i * (r0_corr + alpha_e*rn0_corr) / (r0_corr + alpha_i*rn0_corr)
+    dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)
+    dTi_e    = -dTe_i
 
     !Calculating the density and temperature derivative for amats
     !We negelect the coulomb log's dericatives due to their smallness
@@ -1096,18 +1124,20 @@ do ms=1, n_gauss
       dnu_e_bg_drho  = nu_e_bg * dr0_corr_dn / (r0_corr-rn0_corr)
     end if
 
-    ddTe_i_dTi      = (dnu_e_imp_dTi + dnu_e_bg_dTi) * (Ti0_corr - Te0_corr) + nu_e_imp + nu_e_bg
-    ddTe_i_dTe      = (dnu_e_imp_dTe + dnu_e_bg_dTe) * (Ti0_corr - Te0_corr) - nu_e_imp - nu_e_bg
-    ddTe_i_drhon    = (dnu_e_imp_drhon + dnu_e_bg_drhon) * (Ti0_corr - Te0_corr)
-    ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0_corr - Te0_corr)
+    ddTe_i_dTi      = (dnu_e_imp_dTi + dnu_e_bg_dTi) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
+                      + (nu_e_imp + nu_e_bg) * dTi0_corr_dT * (r0_corr + alpha_e*rn0_corr)
+    ddTe_i_dTe      = (dnu_e_imp_dTe + dnu_e_bg_dTe) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
+                      - (nu_e_imp + nu_e_bg) * dTe0_corr_dT * (r0_corr + alpha_e*rn0_corr)                 &
+                      - (nu_e_imp + nu_e_bg) * Te0_corr     * dalpha_e_dT * rn0_corr
+    ddTe_i_drhon    = (dnu_e_imp_drhon + dnu_e_bg_drhon) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
+                      +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * alpha_e * drn0_corr_dn
+    ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
+                      +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * dr0_corr_dn
 
-    ddTi_e_dTi      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTi / (r0_corr+alpha_i*rn0_corr)
-    ddTi_e_dTe      = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_dTe / (r0_corr+alpha_i*rn0_corr) &
-                      -dTe_i * rn0_corr * dalpha_e_dT * dTe0_corr_dT / (r0_corr+alpha_i*rn0_corr)
-    ddTi_e_drhon    = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drhon / (r0_corr+alpha_i*rn0_corr) &
-                      -dTe_i * (alpha_e-alpha_i) * r0_corr * drn0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
-    ddTi_e_drho     = -(r0_corr+alpha_e*rn0_corr) * ddTe_i_drho  / (r0_corr+alpha_i*rn0_corr) &
-                      -dTe_i * (alpha_i-alpha_e) * rn0_corr * dr0_corr_dn / (r0_corr+alpha_i*rn0_corr)**2
+    ddTi_e_dTi      = -ddTe_i_dTi
+    ddTi_e_dTe      = -ddTe_i_dTe
+    ddTi_e_drhon    = -ddTe_i_drhon
+    ddTi_e_drho     = -ddTe_i_drho
 
     if (r0_corr+alpha_e*rn0_corr < 0.) then
       dTi_e         = 0.
@@ -1303,6 +1333,7 @@ do ms=1, n_gauss
                     !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho)               * xjac * tstep &
                     ! The old diffusion scheme for the impurities
                     !- D_prof * BigR  * (v_x*(r0_x) + v_y*(r0_y)             )                  * xjac * tstep &
+                    + BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                        * xjac * tstep &  
                     - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
                     - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
                     - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep &
@@ -1330,6 +1361,7 @@ do ms=1, n_gauss
                        !Old diffusion scheme for impurities
                        !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rho)             * xjac * tstep &
                        !- D_prof * BigR  * (          v_p*(r0_p) * eps_cyl**2 /BigR**2 )           * xjac * tstep &
+                       + BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                         * xjac * tstep & 
                     - TG_num5 * 0.25d0 / BigR * vpar0**2 &
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                               * (                            + F0 / BigR * v_p) * xjac * tstep * tstep
@@ -1481,7 +1513,7 @@ do ms=1, n_gauss
 !################################################################################################### 
 
 
-	   rhs_ij_8 =   &       
+	   rhs_ij_8 =   BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                                            * xjac * tstep &       
                     ! The new diffusion scheme for the impurities
                       - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhon) * xjac * tstep &
                     ! The new diffusion scheme for the impurities
@@ -1508,9 +1540,9 @@ do ms=1, n_gauss
                         * BigR * xjac * tstep
 
 
-           rhs_ij_8_k =  & 
+           rhs_ij_8_k =  BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                              * xjac * tstep            & 
                        ! The new diffusion scheme for the impurities
-                       - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rhon)             * xjac * tstep &
+                       - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rhon)         * xjac * tstep &
                        - D_prof_imp * BigR  * (          v_p*(rn0_p) * eps_cyl**2  /BigR**2)           * xjac * tstep &
 
                         - TG_num8 * 0.25d0 / BigR * vpar0**2                                                                    &
@@ -1600,7 +1632,7 @@ do ms=1, n_gauss
                                                                                                       )  * xjac * tstep &
 
 !==============================End of ionization energy terms=================
-                    + v * BigR * ((GAMMA-1.)/(BigR**2)) * eta_Sp * zj0**2                    * xjac * tstep &
+                    + v * BigR * ((GAMMA-1.)/(BigR**2)) * eta_T_ohm * zj0**2                 * xjac * tstep &
                     - v * BigR * (r0_corr+alpha_e*rn0_corr) * rn0_corr * Lrad                * xjac * tstep &
                     - v * BigR * r0_corr * frad_bg                                           * xjac * tstep &
                     ! Energy exchange term
@@ -2025,6 +2057,7 @@ do ms=1, n_gauss
              amat_57_n = + v * r0 * F0 / BigR * vpar_p                                             * xjac * theta * tstep
 	     
              amat_58   = &
+                         + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                      * xjac * theta * tstep &
                          - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon           * xjac * theta * tstep &
                          + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon   * xjac * theta * tstep &
                          - D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y )                             * xjac * theta * tstep &
@@ -2037,6 +2070,7 @@ do ms=1, n_gauss
                           + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon_n * xjac * theta * tstep
 
              amat_58_kn = &
+                          + Dn0p * rhon_p * v_p*eps_cyl**2/BigR * xjac * theta * tstep &
                           - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n       * xjac * theta * tstep &
                           + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n * xjac * theta * tstep &
                           - D_prof * BigR  * ( v_p*rhon_p * eps_cyl**2 /BigR**2 )                   * xjac * theta * tstep &
@@ -2647,7 +2681,7 @@ do ms=1, n_gauss
                     + TG_num8 * 0.25d0 / BigR * vpar0**2                                                              &
                                * (rhon_x * ps0_y - rhon_y * ps0_x )                                                   &
                                * ( v_x * ps0_y -  v_y * ps0_x   ) * xjac * theta * tstep * tstep                      &
-
+                   + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                        * xjac * theta * tstep  &
                    + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)  * BigR * xjac * theta * tstep 
           
 
@@ -2667,7 +2701,7 @@ do ms=1, n_gauss
                                * ( v_x * ps0_y -  v_y * ps0_x                      ) * xjac * theta * tstep * tstep
 
 	          
-         amat_88_kn = &
+         amat_88_kn = + Dn0p * rhon_p * v_p*eps_cyl**2/BigR * xjac * theta * tstep                                    &
                      ! New diffusion scheme for impurities
                       + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n    * xjac * theta * tstep &
                       + D_prof_imp * BigR  * ( v_p*rhon_p * eps_cyl**2 /BigR**2 )                * xjac * theta * tstep &
@@ -2778,7 +2812,7 @@ do ms=1, n_gauss
                        + TG_num9 * 0.25d0 * BigR**2 * (r0+alpha_e_bis*rn0)* (Te0_x * u0_y - Te0_y * u0_x)            &
                                  * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep
 
-             amat_93 = - v * BigR * zj * 2. * ((GAMMA-1.)/BigR**2) * eta_Sp * zj0            * xjac * theta * tstep
+             amat_93 = - v * BigR * zj * 2. * ((GAMMA-1.)/BigR**2) * eta_T_ohm * zj0        * xjac * theta * tstep
 
              amat_95 =   v * rho * Te0   * BigR * xjac * (1.d0 + zeta)    &
 
@@ -2815,7 +2849,7 @@ do ms=1, n_gauss
                        + v * BigR * rho * rn0_corr * Lrad                                   * xjac * theta * tstep &
                        + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
                       ! New term from Z_eff
-                       - v * BigR * rho * ((GAMMA-1.)/BigR**2) * detaSp_dr0 * zj0**2        * xjac * theta * tstep &
+                       - v * BigR * rho * ((GAMMA-1.)/BigR**2) * deta_dr0_ohm * zj0**2      * xjac * theta * tstep &
 !=============== The ionization potential energy term=========================
                        + (GAMMA-1.) * v * rho * E_ion_bg * BigR * xjac * (1.d0 + zeta)  &
                        - (GAMMA-1.) * v * E_ion_bg * BigR**2 * (rho_s * u0_t - rho_t * u0_s) * theta * tstep &
@@ -2953,7 +2987,7 @@ do ms=1, n_gauss
                           * ( v_x * ps0_y -  v_y * ps0_x                    ) * xjac * theta * tstep * tstep &
 !===========================End of new TG_num terms===========================
                        ! New term from Z_eff
-                       - v * BigR * rhon * ((GAMMA-1.)/BigR**2) * detaSp_drn0 * zj0**2 * xjac * theta * tstep &
+                       - v * BigR * rhon*((GAMMA-1.)/BigR**2) * deta_drn0_ohm * zj0**2 * xjac * theta * tstep &
                        - v * rhon * BigR**2 * alpha_e_bis * (Te0_s * u0_t - Te0_t * u0_s)     * theta * tstep &
                        - v * alpha_e * Te0 * BigR**2 * (rhon_s * u0_t - rhon_t * u0_s)        * theta * tstep &
                        + v * rhon * F0 / BigR * Vpar0 * alpha_e_bis * Te0_p            * xjac * theta * tstep &
@@ -3069,7 +3103,7 @@ do ms=1, n_gauss
                                  * (alpha_e_tri*rn0)* Te * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)      &
                                  * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
 
-                       - v * BigR * Te * ((GAMMA-1.)/BigR**2) * detaSp_dT * zj0**2          * xjac * theta * tstep  &
+                       - v * BigR * Te * ((GAMMA-1.)/BigR**2) * deta_dT_ohm * zj0**2        * xjac * theta * tstep  &
                        + v * BigR * Te * (r0_corr + alpha_e*rn0_corr) * rn0_corr * dLrad_dT * xjac * theta * tstep  &
                        + v * BigR * Te * dalpha_e_dT * rn0_corr**2 * Lrad                   * xjac * theta * tstep  &
                        + v * BigR * Te * r0_corr * dfrad_bg_dT                              * xjac * theta * tstep

@@ -6,7 +6,7 @@
 !* https://www.jorek.eu/wiki/doku.php?id=diagnostics#diagnostics      *
 !**********************************************************************
 
-program jorek2_diagno
+program jorek2_diagno_spi
 !-----------------------------------------------------------------------
 !
 !-----------------------------------------------------------------------
@@ -17,12 +17,7 @@ use pellet_module
 use mpi_mod
 use mod_boundary, only: boundary_from_grid 
 use mod_import_restart
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
-#ifdef WITH_Impurities
-  use mod_impurity
-#endif
+use mod_impurity
 use mod_integrals3D
 use mod_expression, only: exprs_all_int, init_expr, t_expr_list
 
@@ -206,4 +201,4 @@ endif
 
 !call finplt
 
-end program jorek2_diagno
+end program jorek2_diagno_spi

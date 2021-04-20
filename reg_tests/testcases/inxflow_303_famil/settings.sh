@@ -4,7 +4,7 @@ description="Ballooning mode, simple X-point plasma, model$jorekmodel, n_tor=7 +
 mpitasks=8
 binaries="jorek_model${jorekmodel}_7"
 binaries_initial="jorek_model${jorekmodel}_1"
-requiredfiles="input input.mf"
+requiredfiles="input"
 extra_remote_files=""
 
 
@@ -28,7 +28,7 @@ function compile_jorek () {
 
 # --- Initial run only required when preparing or updating the test case
 function initial_run () {
-  ${codedir}/util/setinput.sh input nstep_n=5,5,5,5,5 tstep_n=0.1,1,5,10,20          || exit 1
+  ${codedir}/util/setinput.sh input restart=.f. nstep_n=5,5,5,5,5 tstep_n=0.1,1,5,10,20          || exit 1
   $MPIRUN 1 ./jorek_model${jorekmodel}_1 < input | tee logfile_initial               || exit 1
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=70 tstep_n=20                || exit 1
   $MPIRUN $mpitasks ./jorek_model${jorekmodel}_7 < input | tee logfile_initial2      || exit 1
@@ -37,7 +37,11 @@ function initial_run () {
 
 # --- Carry out the test case
 function restart_run () {
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_7 < input.mf | tee logfile              || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=20                 || exit 1
+  ${codedir}/util/setinput.sh input centralize_harm_mat=.f.                          || exit 1
+  ${codedir}/util/setinput.sh input autodistribute_modes=.f.                         || exit 1
+  ${codedir}/util/setinput.sh input autodistribute_ranks=.f.                         || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_7 < input | tee logfile               || exit 1
 }
 
 

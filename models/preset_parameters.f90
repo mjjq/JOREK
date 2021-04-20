@@ -506,7 +506,7 @@ subroutine preset_parameters
   jw3=1.d0  ! outer cut-off
   
   !> @name Mode families preconditioner parameters
-  n_mode_families      = 0
+  n_mode_families      = (n_tor + 1)/2
   autodistribute_modes = .true.
   mode_families_modes  = 0
   modes_per_family     = 0

@@ -4,7 +4,7 @@ description="Ballooning mode, simple X-point plasma, model$jorekmodel, n_tor=7 +
 mpitasks=5
 binaries="jorek_model${jorekmodel}_7"
 binaries_initial="jorek_model${jorekmodel}_1"
-requiredfiles="input input_mf"
+requiredfiles="input"
 extra_remote_files=""
 
 
@@ -33,7 +33,10 @@ function initial_run () {
 
 # --- Carry out the test case
 function restart_run () {
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_7 < input_mf | tee logfile              || exit 1
+  ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=20                 || exit 1
+  ${codedir}/util/setinput.sh input autodistribute_modes=.f.                         || exit 1
+  ${codedir}/util/setinput.sh input autodistribute_ranks=.f.                         || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_7 < input | tee logfile               || exit 1
 }
 
 

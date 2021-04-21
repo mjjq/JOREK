@@ -282,9 +282,9 @@ module mod_vacuum_fields
       enddo
     enddo
 
-    bx = bx * mu_zero
-    by = by * mu_zero
-    bz = bz * mu_zero
+    bx = -bx * mu_zero
+    by = -by * mu_zero
+    bz = -bz * mu_zero
 
     deallocate( x1, y1, z1, x2, y2, z2, x3, y3, z3, sn )
 

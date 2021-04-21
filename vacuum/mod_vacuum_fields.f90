@@ -70,16 +70,17 @@ module mod_vacuum_fields
 
 
   !< This routine calculates the fields created by the STARWALL coils at given cartesian coordinates
-  subroutine coil_fields_at_xyz(my_id,x,y,z,bx,by,bz)
+  subroutine coil_fields_at_xyz(my_id,x,y,z,bx,by,bz, icoil)
 
     use constants
 
     implicit none
 
     ! --- External parameters
-    integer, intent(in)     :: my_id
-    real*8,  intent(in)     :: x(:), y(:), z(:)     ! Points where fields are calculated
-    real*8,  intent(inout)  :: bx(:), by(:), bz(:)
+    integer,           intent(in)     :: my_id
+    real*8,            intent(in)     :: x(:), y(:), z(:)     ! Points where fields are calculated
+    real*8,            intent(inout)  :: bx(:), by(:), bz(:)
+    integer, optional, intent(in)     :: icoil ! If present, gets fields only from coil number "icoil"
 
     ! --- Local parameters
     real*8,  allocatable    :: pot_c(:)
@@ -102,6 +103,11 @@ module mod_vacuum_fields
     do i_c=1, sr%ncoil
 
       i_tri_end = i_tri_start + sr%jtri_c(i_c) - 1
+
+      ! --- When icoil is given, set the other coil currents to 0
+      if (present(icoil)) then
+        if (i_c /= icoil) pot_c(i_c) = 0.d0
+      endif
 
       do i = i_tri_start, i_tri_end
         do j = 1, 3

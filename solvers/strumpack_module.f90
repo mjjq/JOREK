@@ -112,7 +112,7 @@ module strumpack_module
         logical :: upd=.false., dflag=.false., eql=.false.
 
         integer :: rank, ncpu, indx=1
-        integer(kind=int_all) :: nnzloc, nloc, i, j
+        integer(kind=int_all) :: nnzloc, nloc, i, j, imin, imax
 
         if(present(update)) upd = update
         if(present(distributed)) dflag = distributed
@@ -177,10 +177,12 @@ module strumpack_module
             ! get row distribution from irn in case of pre-distributed matrix
             if (associated(dist)) dist=>null()
             allocate(dist(ncpu+1))
-            dist(:) = 0
-            dist(rank+1) = minval(irn)
+            dist(1:ncpu+1) = 0
+            imin = minval(irn(1:nnz))
+            imax = maxval(irn(1:nnz))
+            dist(rank+1) = imin
 
-            if (rank.eq.(ncpu-1)) dist(rank+2) = maxval(irn) + 1
+            if (rank.eq.(ncpu-1)) dist(rank+2) = imax + 1
             call MPI_Allreduce(MPI_IN_PLACE,dist,ncpu+1,MPI_INTEGER,MPI_SUM,comm,ierr)
 
             ! check for consistency
@@ -196,8 +198,9 @@ module strumpack_module
             endif
 
             nloc = dist(rank+2) - dist(rank+1)
-            irn(:) = irn(:) - dist(rank+1) + 1 ! irn starts from 1
-            dist(:) = dist(:) - indx
+            
+            irn(1:nnz) = irn(1:nnz) - imin + 1 ! irn starts from 1
+            dist(1:ncpu+1) = dist(1:ncpu+1) - indx
 
 #if (defined(USEMKL))
             call convert2csr(indx,nloc,n,nnz,irn,jcn,val)

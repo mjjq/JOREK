@@ -211,6 +211,9 @@ module mod_plasma_response
   !-------------------------------------------------------------------------------------
   subroutine plasma_fields_at_xyz(my_id, node_list,element_list, x,y,z, bx, by, bz)
 
+    !$ use omp_lib
+    use mpi_mod
+
     implicit none
 
     integer,                  intent(in) :: my_id
@@ -233,15 +236,28 @@ module mod_plasma_response
     real*8     :: zj0, R, xp,yp,zp, dd, wst, xjac, delta_phi, phi
     real*8     :: d_vec(3), J_vec(3), cross(3), dB(3)
     integer    :: n_points
-    
+
+    real*8, allocatable :: bx_tmp(:), by_tmp(:), bz_tmp(:)
+
+    ! --- MPI initialization
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
+    n_cpu = max(n_cpu,1)
+
+    ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
+    ife_min   =      my_id     * ife_delta + 1
+    ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
+
+   
     n_points = size(x,1)
+    allocate(bx_tmp(n_points), by_tmp(n_points), bz_tmp(n_points))
     
-    bx = 0.d0;  by = 0.d0;  bz = 0.d0;
+    bx     = 0.d0;  by     = 0.d0;  bz     = 0.d0;
+    bx_tmp = 0.d0;  by_tmp = 0.d0;  bz_tmp = 0.d0;
 
     delta_phi = 2.d0 * PI / float(n_plane) 
         
     !--- Go through all the elements
-    do ife = 1, element_list%n_elements
+    do ife = ife_min, ife_max
     
       element = element_list%element(ife)
 
@@ -313,19 +329,19 @@ module mod_plasma_response
             ! --- Go over the given points
             do i=1, n_points
 
-              d_vec(:) = (/ xp-x(i), yp-y(i), zp-z(i) /)
+              d_vec(:)  = (/ xp-x(i), yp-y(i), zp-z(i) /)
 
-              dd       = max(sqrt( sum( d_vec(:)**2.d0 ) ) , 1.d-9 )
+              dd        = max(sqrt( sum( d_vec(:)**2.d0 ) ) , 1.d-9 )
     
-              cross    = (/  d_vec(2)*J_vec(3) - d_vec(3)*J_vec(2),  &
-                             d_vec(3)*J_vec(1) - d_vec(1)*J_vec(3),  &
-                             d_vec(1)*J_vec(2) - d_vec(2)*J_vec(1) /)
+              cross     = (/  d_vec(2)*J_vec(3) - d_vec(3)*J_vec(2),  &
+                              d_vec(3)*J_vec(1) - d_vec(1)*J_vec(3),  &
+                              d_vec(1)*J_vec(2) - d_vec(2)*J_vec(1) /)
     
-              dB(:)    =  cross(:) / (dd**3.d0) / (4.d0*PI) * wst * xjac * R * delta_phi
+              dB(:)     =  cross(:) / (dd**3.d0) / (4.d0*PI) * wst * xjac * R * delta_phi
     
-              bx(i)    = bx(i) + dB(1)
-              by(i)    = by(i) + dB(2)
-              bz(i)    = bz(i) + dB(3)
+              bx_tmp(i) = bx_tmp(i) + dB(1)
+              by_tmp(i) = by_tmp(i) + dB(2)
+              bz_tmp(i) = bz_tmp(i) + dB(3)
             enddo
 
           enddo
@@ -334,6 +350,10 @@ module mod_plasma_response
       
     
     enddo !---elements
+
+    call MPI_AllReduce(bx_tmp,bx,n_points,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllReduce(by_tmp,by,n_points,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllReduce(bz_tmp,bz,n_points,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
   end subroutine plasma_fields_at_xyz
   

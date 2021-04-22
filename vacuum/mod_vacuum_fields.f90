@@ -59,7 +59,7 @@ module mod_vacuum_fields
 
     phi_w   = phi_w / mu_zero  ! Wall current potentials in Amperes
 
-    call triang_fields_at_xyz(x,y,z,x_w,y_w,z_w,phi_w,bx,by,bz)
+    call triang_fields_at_xyz(my_id,x,y,z,x_w,y_w,z_w,phi_w,bx,by,bz)
 
     deallocate(phi_w, x_w, y_w, z_w)
 
@@ -121,7 +121,7 @@ module mod_vacuum_fields
 
     phi_c   = phi_c / mu_zero  ! Wall current potentials in Amperes
 
-    call triang_fields_at_xyz(x,y,z,sr%x_coil,sr%y_coil,sr%z_coil,phi_c,bx,by,bz)
+    call triang_fields_at_xyz(my_id,x,y,z,sr%x_coil,sr%y_coil,sr%z_coil,phi_c,bx,by,bz)
 
     deallocate(phi_c)
 
@@ -134,19 +134,22 @@ module mod_vacuum_fields
 
   !< This routine calculates the fields produced by currents flowing on a set of triangles
   !! at given xyz points (taken from STARWALL)
-  subroutine triang_fields_at_xyz(x,y,z,x_tri,y_tri,z_tri,phi_tri,bx,by,bz)
+  subroutine triang_fields_at_xyz(my_id,x,y,z,x_tri,y_tri,z_tri,phi_tri,bx,by,bz)
 
     use constants
+    use mpi_mod
 !!!$ use omp_lib
 
     implicit none
 
     ! --- External parameters
-    real*8,  intent(in)     ::  x(:), y(:), z(:) ! Points where fields are calculated
-    real*8,  intent(in)     ::  x_tri(:,:), y_tri(:,:), z_tri(:,:), phi_tri(:,:)
+    integer, intent(in)     :: my_id
+    real*8,  intent(in)     :: x(:), y(:), z(:) ! Points where fields are calculated
+    real*8,  intent(in)     :: x_tri(:,:), y_tri(:,:), z_tri(:,:), phi_tri(:,:)
     real*8,  intent(inout)  :: bx(:), by(:), bz(:)
 
     ! --- Local parameters
+    integer :: ierr, n_cpu, k_delta, k_min, k_max
     integer :: i, j, k, np, ntri, omp_nthreads, omp_tid
     real*8  :: s1,s2,s3                                    &
               ,d221,d232,d213,al1,al2,al3                  &
@@ -159,19 +162,29 @@ module mod_vacuum_fields
               ,nx,ny,nz,pi41,area,d21,d32,d13,jx,jy,jz     &
               ,dep1,dep2,dep3,dem1,dem2,dem3
     real*8  :: Rcent, jphi, cosx, siny
-    real*8, dimension(:),   allocatable   :: x1,y1,z1,x2,y2,z2,x3,y3,z3,sn
+    real*8, dimension(:),   allocatable  :: x1,y1,z1,x2,y2,z2,x3,y3,z3,sn
+    real*8,                 allocatable  :: bx_tmp(:), by_tmp(:), bz_tmp(:)
 
     np   = size(x,1)
     ntri = size(x_tri,1)
 
     pi41 = 0.125d0/asin(1.d0)
 
-    bx = 0.d0;  by = 0.d0;  bz = 0.d0;
-
     allocate( x1(np), y1(np), z1(np), x2(np), y2(np), z2(np), x3(np), y3(np), z3(np), sn(np) )
+    allocate(bx_tmp(np), by_tmp(np), bz_tmp(np))
 
+    bx     = 0.d0;  by     = 0.d0;  bz     = 0.d0;
+    bx_tmp = 0.d0;  by_tmp = 0.d0;  bz_tmp = 0.d0;
 
-    do k=1, ntri    ! --- integral over wall triangles
+    ! --- MPI initialization
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
+    n_cpu = max(n_cpu,1)
+
+    k_delta = ceiling(float(ntri) / n_cpu)
+    k_min   =      my_id     * k_delta + 1
+    k_max   = min((my_id +1) * k_delta, ntri)
+
+    do k=k_min, k_max    ! --- integral over wall triangles
 
      !--- only use toroidal current, projection
       x21   = x_tri(k,2) - x_tri(k,1)
@@ -275,18 +288,23 @@ module mod_vacuum_fields
         vy    = -ny*at + al1*ty3/d21+al2*ty1/d32+al3*ty2/d13
         vz    = -nz*at + al1*tz3/d21+al2*tz1/d32+al3*tz2/d13
 
-        bx(i) = bx(i) + vy*jz-vz*jy
-        by(i) = by(i) + vz*jx-vx*jz
-        bz(i) = bz(i) + vx*jy-vy*jx
+        bx_tmp(i) = bx_tmp(i) + vy*jz-vz*jy
+        by_tmp(i) = by_tmp(i) + vz*jx-vx*jz
+        bz_tmp(i) = bz_tmp(i) + vx*jy-vy*jx
 
       enddo
     enddo
+
+    call MPI_AllReduce(bx_tmp,bx,np,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllReduce(by_tmp,by,np,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_AllReduce(bz_tmp,bz,np,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
     bx = -bx * mu_zero
     by = -by * mu_zero
     bz = -bz * mu_zero
 
     deallocate( x1, y1, z1, x2, y2, z2, x3, y3, z3, sn )
+    deallocate(bx_tmp, by_tmp, bz_tmp)   
 
   end subroutine triang_fields_at_xyz
 

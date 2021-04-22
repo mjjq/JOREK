@@ -378,6 +378,8 @@ module mod_plasma_response
     call MPI_AllReduce(by_tmp,by,n_points,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     call MPI_AllReduce(bz_tmp,bz,n_points,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
+    deallocate(bx_tmp, by_tmp, bz_tmp)   
+
   end subroutine plasma_fields_at_xyz
   
   

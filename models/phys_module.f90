@@ -330,8 +330,8 @@ module phys_module
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
   real*8, allocatable  :: xtime_P_ei(:)         !< The time history of electron-ion energy exchange power
 
-  integer :: n_spi(n_inj_max)   !< Number of shattered pellets injected
-  integer :: n_spi_tot          !< Total number of shattered pellets injected
+  integer :: n_spi(n_inj_max)   !< Number of shattered fragment injected for each injection
+  integer :: n_spi_tot          !< Total number of shattered fragments injected
   integer :: n_inj              !< Number of injections
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model,

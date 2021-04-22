@@ -261,11 +261,6 @@ module mod_injection_source
   return
   end subroutine inj_source
 
-
-!============================================================!
-! Important note: in order to implementing more complicated  !
-!    model, we should add more arguments to inj_source       !
-!============================================================!
   subroutine get_source(R,Z,phi,source_background,source_impurity,mass_ratio) 
 
     use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius

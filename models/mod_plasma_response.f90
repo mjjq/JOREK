@@ -222,7 +222,6 @@ module mod_plasma_response
     real*8,  intent(in)                  :: x(:), y(:), z(:)     ! Points where fields are calculated
     real*8,  intent(inout)               :: bx(:), by(:), bz(:)
 
-
     ! --- local variables    
     type (type_element)      :: element
     type (type_node)         :: nodes(n_vertex_max)
@@ -235,6 +234,7 @@ module mod_plasma_response
     integer    :: ierr, n_cpu, ife_delta, ife_min, ife_max, omp_nthreads, omp_tid
     real*8     :: zj0, R, xp,yp,zp, dd, wst, xjac, delta_phi, phi
     real*8     :: d_vec(3), J_vec(3), cross(3), dB(3)
+    real*8     :: wgauss_copy(n_gauss)
     integer    :: n_points
 
     real*8, allocatable :: bx_tmp(:), by_tmp(:), bz_tmp(:)
@@ -255,7 +255,27 @@ module mod_plasma_response
     bx_tmp = 0.d0;  by_tmp = 0.d0;  bz_tmp = 0.d0;
 
     delta_phi = 2.d0 * PI / float(n_plane) 
-        
+ 
+    wgauss_copy = wgauss
+
+    ! --- OpenMP parallelization of element loop
+    !$omp parallel default(none)                                                           &
+    !$omp   shared(my_id,element_list,node_list, H, H_s, H_t, HZ, ife_min, ife_max,        &
+    !$omp          delta_phi, n_points, x, y, z, bx_tmp, by_tmp, bz_tmp, wgauss_copy)      &
+    !$omp   private(ife,iv,inode,element,nodes,i,j, in, mp, ms, mt,                        &
+    !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, zj0, R, xp, yp, zp, dd, phi, &
+    !$omp           d_vec, J_vec, cross, dB, wst, omp_nthreads,omp_tid)
+    
+#ifdef OPENMP
+    omp_nthreads = omp_get_num_threads()
+    omp_tid      = omp_get_thread_num()
+#else
+    omp_nthreads = 1
+    omp_tid      = 0
+#endif
+    
+    !$omp do reduction(+:bx_tmp, by_tmp, bz_tmp)     
+       
     !--- Go through all the elements
     do ife = ife_min, ife_max
     
@@ -312,7 +332,7 @@ module mod_plasma_response
       do ms=1, n_gauss
         do mt=1, n_gauss
 
-          wst  = wgauss(ms)*wgauss(mt)
+          wst  = wgauss_copy(ms)*wgauss_copy(mt)
           xjac = x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
           R    = x_g(ms,mt)
           zp   = y_g(ms,mt)
@@ -350,6 +370,9 @@ module mod_plasma_response
       
     
     enddo !---elements
+    !$omp end do
+    !$omp end parallel
+
 
     call MPI_AllReduce(bx_tmp,bx,n_points,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     call MPI_AllReduce(by_tmp,by,n_points,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)

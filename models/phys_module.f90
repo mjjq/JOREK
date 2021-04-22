@@ -332,7 +332,7 @@ module phys_module
 
   integer :: n_spi(n_inj_max)   !< Number of shattered pellets injected
   integer :: n_spi_tot          !< Total number of shattered pellets injected
-  integer :: n_inj              !< Number of injection locations
+  integer :: n_inj              !< Number of injections
   integer :: spi_abl_model      !< Determine which type of ablation model is using.
                                 !< 0 for constant release rate, 1 for NGS model,
                                 !< 2 for Sergeev formula, 3 for Parks formula.

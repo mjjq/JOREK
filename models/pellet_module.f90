@@ -183,9 +183,7 @@ module pellet_module
 
   !> Update the shattered pellet position and the simulated and physical pellet sizes
   !! (from the integral of the pellet particle source)  
-  subroutine update_spi(my_id,node_List,element_list,&
-                        ns_R,ns_Z,ns_phi,ns_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
-                        spi_quantity,spi_quantity_bg,spi_Vel_diff,spi_L_inj,n_spi,n_spi_begin)
+  subroutine update_spi(my_id,node_List,element_list,n_spi,n_spi_begin)
 
     use constants
     use data_structure
@@ -213,25 +211,13 @@ module pellet_module
     real*8  :: s_out,t_out
     
     real*8  :: n_SI, T_eV, n_corr, T_corr, n_imp_SI, ne_SI
-    real*8  :: t_norm, spi_Vel_totref, B0, nu
+    real*8  :: t_norm, B0, nu
     real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
     real*8  :: spi_density_tmp
     
     !   -Mean impurity ionization state and related quantities
     real*8     :: Z_imp, beta_imp, mu_imp
   
-    real*8, intent(in)  :: ns_R
-    real*8, intent(in)  :: ns_Z
-    real*8, intent(in)  :: ns_phi
-    real*8, intent(in)  :: ns_amplitude
-    real*8, intent(in)  :: spi_Vel_Rref
-    real*8, intent(in)  :: spi_Vel_Zref
-    real*8, intent(in)  :: spi_Vel_RxZref
-    real*8, intent(in)  :: spi_quantity
-    real*8, intent(in)  :: spi_quantity_bg
-    real*8, intent(in)  :: spi_Vel_diff
-    real*8, intent(in)  :: spi_L_inj
-    
     integer, intent(in) :: n_spi
     integer, intent(in) :: n_spi_begin
   
@@ -243,19 +229,17 @@ module pellet_module
     V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
     t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
   
-    spi_Vel_totref  = sqrt(spi_Vel_Rref**2+spi_Vel_Zref**2+spi_Vel_RxZref**2)
-
-    spi_phi_inj     = ns_phi + ns_phi_rotate - spi_L_inj * (spi_Vel_RxZref/spi_Vel_totref)/ns_R
-  
-    if (spi_phi_inj >= 2.*PI) then
-      spi_phi_inj   = mod(spi_phi_inj,2.*PI)
-    else if (spi_phi_inj < 0.) then
-      spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
-    end if
-  
     loop_over_shards: do i=1, n_spi
-  
+
       i_p = i - 1 + n_spi_begin
+
+      spi_phi_inj              = pellet(i_p)%spi_phi_init + ns_phi_rotate
+
+      if (spi_phi_inj >= 2.*PI) then
+        spi_phi_inj   = mod(spi_phi_inj,2.*PI)
+      else if (spi_phi_inj < 0.) then
+        spi_phi_inj   = mod(spi_phi_inj,2.*PI) + 2.*PI
+      end if
       
       spi_delta_phi            = pellets(i_p)%spi_phi - spi_phi_inj
       spi_Vel_R_tmp            = pellets(i_p)%spi_Vel_R * cos(spi_delta_phi) &

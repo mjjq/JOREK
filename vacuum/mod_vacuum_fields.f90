@@ -17,6 +17,110 @@ module mod_vacuum_fields
 
 
 
+
+  !< This routine calculates the total wall forces by integrating the force tensor on a closed surface
+  !! outside the wall (doi:10.1088/1741-4326/aa8876)
+  subroutine total_wall_forces(my_id, node_list, element_list, Fx, Fy, Fz)
+
+    use constants
+    use data_structure
+    use mod_plasma_response,    only: plasma_fields_at_xyz    
+    use phys_module,            only: F0
+
+    implicit none
+
+    ! --- External parameters
+    integer,                   intent(in)    :: my_id
+    type (type_node_list),     intent(in)    :: node_list
+    type (type_element_list),  intent(in)    :: element_list   
+    real*8,                    intent(inout) :: Fx, Fy, Fz  ! --- The total force in SI units (cartesian components)
+
+    ! --- Local parameters
+    real*8               :: scale_fact, bx, by, bz
+    real*8, allocatable  :: bx_c(:), by_c(:), bz_c(:)
+    real*8, allocatable  :: bx_w(:), by_w(:), bz_w(:)
+    real*8, allocatable  :: bx_p(:), by_p(:), bz_p(:)
+    real*8, allocatable  ::  x_w(:),  y_w(:),  z_w(:)
+    real*8               :: tri_area, B2, Bn, r1(3), r2(3), r3(3), r21(3), r32(3) 
+    real*8               :: nx, ny, nz, r21_cross_r32(3), x_mid, y_mid, R_mid
+    real*8               :: Bphi_x, Bphi_y
+    integer              :: i
+
+    ! --- Create a surface just outside the wall (made of triangles)
+    scale_fact = 1.01d0
+    call resize_starwall_wall(scale_fact)
+
+    ! --- Obtain xyz points at the center of the triangles
+    allocate( x_w(sr%ntri_w), y_w(sr%ntri_w), z_w(sr%ntri_w) )
+    do i=1, sr%ntri_w
+      x_w(i) = sum( xw_scaled(i,:) ) / 3.d0
+      y_w(i) = sum( yw_scaled(i,:) ) / 3.d0
+      z_w(i) = sum( zw_scaled(i,:) ) / 3.d0
+    end do 
+
+    ! --- Calculate the total magnetic field at the triangle centers
+    allocate(bx_c(sr%ntri_w), by_c(sr%ntri_w), bz_c(sr%ntri_w))
+    allocate(bx_w(sr%ntri_w), by_w(sr%ntri_w), bz_w(sr%ntri_w))
+    allocate(bx_p(sr%ntri_w), by_p(sr%ntri_w), bz_p(sr%ntri_w))
+
+    call coil_fields_at_xyz(my_id, x_w, y_w, z_w, bx_c, by_c, bz_c)
+    call wall_fields_at_xyz(my_id, x_w, y_w, z_w, bx_w, by_w, bz_w)
+    call plasma_fields_at_xyz(my_id, node_list,element_list, x_w, y_w, z_w, bx_p, by_p, bz_p)
+
+    ! ---- Do integral of the force tensor over the triangle discretized surface
+    Fx = 0.d0;    Fy = 0.d0;   Fz = 0.d0
+
+    do i=1, sr%ntri_w
+
+      r1(:)  = (/ xw_scaled(i,1), yw_scaled(i,1), zw_scaled(i,1) /)
+      r2(:)  = (/ xw_scaled(i,2), yw_scaled(i,2), zw_scaled(i,2) /)
+      r3(:)  = (/ xw_scaled(i,3), yw_scaled(i,3), zw_scaled(i,3) /)
+
+      r21(:) = r1(:)-r2(:)
+      r32(:) = r2(:)-r3(:)
+
+      r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+        r21(1)*r32(2) - r21(2)*r32(1) /)
+
+      tri_area = sqrt(sum(r21_cross_r32**2.d0)) / 2.d0     
+
+      nx = r21_cross_r32(1) / sqrt(sum(r21_cross_r32**2.d0)) 
+      ny = r21_cross_r32(2) / sqrt(sum(r21_cross_r32**2.d0)) 
+      nz = r21_cross_r32(3) / sqrt(sum(r21_cross_r32**2.d0)) 
+
+      x_mid  =  sum( xw_scaled(i,:) ) / 3.d0
+      y_mid  =  sum( yw_scaled(i,:) ) / 3.d0
+      R_mid  = sqrt( x_mid**2.d0 + y_mid**2.d0 )
+
+      Bphi_x = F0/R_mid * (  y_mid/R_mid ) ! Bphi * (-sin phi) 
+      Bphi_y = F0/R_mid * ( -x_mid/R_mid ) ! Bphi * (-cos phi)
+
+      bx = bx_p(i) + bx_c(i) + bx_w(i) + Bphi_x
+      by = by_p(i) + by_c(i) + by_w(i) + Bphi_y
+      bz = bz_p(i) + bz_c(i) + bz_w(i)
+
+      Bn = bx*nx + by*ny + bz*nz
+      B2 = bx**2.d0 + by**2.d0 + bz**2.d0 
+
+      Fx = Fx - (Bn*bx - B2*0.5d0*nx) * tri_area / mu_zero
+      Fy = Fy - (Bn*by - B2*0.5d0*ny) * tri_area / mu_zero
+      Fz = Fz - (Bn*bz - B2*0.5d0*nz) * tri_area / mu_zero
+
+    end do 
+
+    ! --- Clean-up
+    deallocate(bx_c, by_c, bz_c)
+    deallocate(bx_w, by_w, bz_w)
+    deallocate(bx_p, by_p, bz_p)
+    deallocate( x_w,  y_w,  z_w)  
+    deallocate(xw_scaled, yw_scaled, zw_scaled)
+
+  end subroutine total_wall_forces
+
+
+
+
+
  
   !< This routine calculates the fields created by the STARWALL wall at given cartesian coordinates
   subroutine wall_fields_at_xyz(my_id,x,y,z,bx,by,bz)

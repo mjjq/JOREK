@@ -183,7 +183,7 @@ module pellet_module
 
   !> Update the shattered pellet position and the simulated and physical pellet sizes
   !! (from the integral of the pellet particle source)  
-  subroutine update_spi(my_id,node_List,element_list,n_spi,n_spi_begin)
+  subroutine update_spi(my_id,node_List,element_list,i_inj,n_spi_begin)
 
     use constants
     use data_structure
@@ -218,22 +218,21 @@ module pellet_module
     !   -Mean impurity ionization state and related quantities
     real*8     :: Z_imp, beta_imp, mu_imp
   
-    integer, intent(in) :: n_spi
+    integer, intent(in) :: i_inj
     integer, intent(in) :: n_spi_begin
   
     spi_delta_phi   = 0.
     spi_Vel_R_tmp   = 0.
     spi_Vel_phi_tmp = 0.
-    spi_phi_inj     = ns_phi
 
     V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
     t_norm          = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
   
-    loop_over_shards: do i=1, n_spi
+    loop_over_shards: do i=1, n_spi(i_inj)
 
       i_p = i - 1 + n_spi_begin
 
-      spi_phi_inj              = pellet(i_p)%spi_phi_init + ns_phi_rotate
+      spi_phi_inj              = pellets(i_p)%spi_phi_init + ns_phi_rotate
 
       if (spi_phi_inj >= 2.*PI) then
         spi_phi_inj   = mod(spi_phi_inj,2.*PI)
@@ -305,7 +304,7 @@ module pellet_module
       end if
   
       if (spi_abl_model == 0) then
-        pellets(i_p)%spi_abl   = ns_amplitude
+        pellets(i_p)%spi_abl   = ns_amplitude(i_inj)
       elseif (spi_abl_model >= 1) then
   
         call find_RZ(node_list,element_list,pellets(i_p)%spi_R,pellets(i_p)%spi_Z,&

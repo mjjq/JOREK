@@ -280,7 +280,6 @@ module phys_module
   real*8  :: ns_Z(n_inj_max)   !< Z position of gas source
   real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
   real*8  :: ns_radius         !< Poloidal radius of gas source
-  real*8  :: ns_sig            !< Obsolete (still in the code but not used)
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
   real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
 

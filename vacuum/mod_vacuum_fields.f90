@@ -138,7 +138,7 @@ module mod_vacuum_fields
 
     use constants
     use mpi_mod
-!!!$ use omp_lib
+    !$ use omp_lib
 
     implicit none
 
@@ -183,7 +183,27 @@ module mod_vacuum_fields
     k_delta = ceiling(float(ntri) / n_cpu)
     k_min   =      my_id     * k_delta + 1
     k_max   = min((my_id +1) * k_delta, ntri)
+    ! --- OpenMP parallelization of given points loop
+    !$omp parallel default(none)                                                            &
+    !$omp   shared(np,x_tri,y_tri,z_tri,x,y,z, k_min, k_max,pi41,phi_tri,                   &
+    !$omp          bx_tmp, by_tmp, bz_tmp)                                                  &
+    !$omp   private(i,x1,y1,z1,x2,y2,z2,x3,y3,z3,sn,h,s21,s22,s23,s1,s2,s3,al1,al2,al3,     &
+    !$omp           ar1,ar2,ar3,dp1,dp2,dp3,dm1,dm2,dm3,ap1,ap2,ap3,dep1,dep2,dep3,         &
+    !$omp           d21,d32,d13,tx2,ty2,tz2,tx3,ty3,tz3,d221, d232,d213,area,Rcent,cosx,    &
+    !$omp           nx,ny,nz, jx,jy,jz, tx1,ty1,tz1,k,x21,y21,z21,x32,y32,z32,x13,y13,z13,  &
+    !$omp           dem1,dem2,dem3,am1,am2,am3,ata1,ata2,ata3,at,vx,vy,vz,siny,jphi,        &
+    !$omp           omp_nthreads,omp_tid)
+    
+#ifdef OPENMP
+    omp_nthreads = omp_get_num_threads()
+    omp_tid      = omp_get_thread_num()
+#else
+    omp_nthreads = 1
+    omp_tid      = 0
+#endif
 
+    !$omp do reduction(+:bx_tmp, by_tmp, bz_tmp)     
+ 
     do k=k_min, k_max    ! --- integral over wall triangles
 
      !--- only use toroidal current, projection
@@ -236,6 +256,7 @@ module mod_vacuum_fields
       tx3   = (y21*nz-z21*ny)
       ty3   = (z21*nx-x21*nz)
       tz3   = (x21*ny-y21*nx)
+
 
       do i=1, np      ! --- go over given points
 
@@ -294,6 +315,9 @@ module mod_vacuum_fields
 
       enddo
     enddo
+    !$omp end do
+    !$omp end parallel
+
 
     call MPI_AllReduce(bx_tmp,bx,np,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
     call MPI_AllReduce(by_tmp,by,np,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)

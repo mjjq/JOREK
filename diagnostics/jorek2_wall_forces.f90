@@ -1,7 +1,15 @@
-!< This program reads a jorek_restart file and a "starwall_response.dat" file
+!< This program reads jorek_restart files and a "starwall_response.dat" file
 !! and calculates the total wall forces on the STARWALL wall. It involves the 
 !! computation of expensive volume integrals in the plasma, so run it
-!! in paralllel with several MPI processes for large cases
+!! in paralllel with several MPI processes for large cases. 
+!! To select the given JOREK restart files create a file named wall_forces.nml
+!! with 3 integers in the first line (istart, iend, delta_step)
+!!   istart     = 1st  restart file index
+!!   iend       = Last restart file index
+!!   delta_step = index jump between the restart files
+!! The forces are exported to the total_wall_forces.dat file
+!! Note that to calculate the require plasma fields n_plane typically should be
+!! more than 60 (even for 2D)
 program jorek2_wall_forces 
 
   use mod_vacuum_fields,   only: total_wall_forces 
@@ -11,7 +19,7 @@ program jorek2_wall_forces
   use nodes_elements
   use mod_boundary,            only: boundary_from_grid
   use vacuum
-  use vacuum_response,     only: get_vacuum_response, update_response, init_wall_currents, I_coils
+  use vacuum_response,     only: get_vacuum_response, broadcast_starwall_response, init_wall_currents
   use vacuum_equilibrium,  only: import_external_fields
   use mod_import_restart
   use mod_element_rtree, only: populate_element_rtree
@@ -34,10 +42,13 @@ program jorek2_wall_forces
   integer   :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer   :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
   integer   :: required,provided,StatInfo
+  integer   :: istep, delta_step, istart, iend
   integer*4 :: rank, comm_size 
+  logical   :: first_step
 
   real*8    :: Fx, Fy, Fz
 
+  character*17                          :: file_in
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
  
@@ -82,57 +93,89 @@ program jorek2_wall_forces
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()
 
-  if ( my_id == 0 ) then
-    call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
-    if ( ierr /= 0 ) stop
-  endif
-
-  ! This is necessary for the parallel vacuum version during the code restart 
-  call broadcast_phys(my_id)  
-  if(freeboundary) call broadcast_vacuum(my_id, resistive_wall)
-
-  call populate_element_rtree(node_list, element_list)
- 
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  
-  ! --- Determine boundary information from the grid
-  if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
-  call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
-  
-  ! --- Fill the vacuum response matrices for freeboundary computations
-  if ( freeboundary ) then
-    call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
-      resistive_wall)
-    call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
-    call import_external_fields('coil_field.dat', my_id)
-    call set_coil_curr_time_trace()
-    call read_Z_axis_profile() 
-    if ( (.not. restart) .or. (.not. wall_curr_initialized) ) call init_wall_currents(my_id, resistive_wall)
-  end if
-  
-  call broadcast_elements(my_id, element_list)                ! elements
-
-  call broadcast_nodes(my_id, node_list)                      ! nodes
-
-  call populate_element_rtree(node_list, element_list)
-
-  call broadcast_phys(my_id)                                  ! physics parameters
-
-  if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-  !***********************************************************************
-  !*              end intialisation                                      *
-  !***********************************************************************
-
-  ! --- FORCES ---
-  call total_wall_forces(my_id, node_list, element_list, Fx, Fy, Fz)
+  first_step = .true.
 
   if (my_id==0) then
-    write(*,*) ' Fx = ', Fx
-    write(*,*) ' Fy = ', Fy
-    write(*,*) ' Fz = ', Fz
+    open(25,file='wall_forces.nml',action='read',iostat=ierr)
+    if (ierr/=0) then
+      write(*,*) 'Could not read wall_forces.nml'
+      stop
+    endif
+    read(25,*) istart, iend, delta_step   
+    close(25)
+
+    open(87,file='total_wall_forces.dat',action='write')
+    write(87,*) '#Step  time(norm)   time(ms)      Fx(N)        Fy(N)          Fz(N)'
   endif
+
+  call MPI_BCAST(     istart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(       iend,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST( delta_step,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+
+  ! --- Loop over restart files
+  do istep = istart, iend, delta_step 
+
+    write(file_in,'(A5,i5.5)') 'jorek', istep
+
+    if ( my_id == 0 ) then
+      call import_restart(node_list, element_list, file_in, rst_format, ierr)
+      if ( ierr /= 0 ) cycle 
+    endif
+  
+    call broadcast_phys(my_id)  
+    call broadcast_elements(my_id, element_list)                ! elements
+    call broadcast_nodes(my_id, node_list)                      ! nodes
+  
+    if (.not. freeboundary) then
+      write(*,*) ' **** Fatal: jorek2_wall_forces needs freeboundary simulations ****'
+      stop
+    endif
+  
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    
+    ! --- Determine boundary information from the grid
+    if ( my_id == 0 ) call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
+    call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list)
+   
+    call broadcast_vacuum(my_id, resistive_wall)
+
+    ! --- Fill the vacuum response matrices for freeboundary computations
+    if (first_step) then
+      call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
+        resistive_wall)
+      call import_external_fields('coil_field.dat', my_id)
+      if ( .not. wall_curr_initialized ) call init_wall_currents(my_id, resistive_wall)
+      first_step = .false.
+    endif
+
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  
+    !***********************************************************************
+    !*              end intialisation                                      *
+    !***********************************************************************
+  
+    if (.not. starwall_equil_coils) then
+      write(*,*) ' **** Fatal: jorek2_wall_forces needs freeboundary n=0 and '
+      write(*,*) '             starwall PF coils                             '
+      stop
+    endif 
+  
+    ! --- FORCES ---
+    call total_wall_forces(my_id, node_list, element_list, Fx, Fy, Fz)
+ 
+    if (my_id==0) then
+      write(87,'(I5.5,5ES14.6)') istep, t_start, t_start*sqrt_mu0_rho0*1.d3, Fx, Fy, Fz 
+    endif
+  
+    if (my_id==0) then
+      write(*,*) ' Fx = ', Fx
+      write(*,*) ' Fy = ', Fy
+      write(*,*) ' Fz = ', Fz
+    endif
+
+  enddo
+
+  close(87)
 
   call MPI_FINALIZE(IERR)                                ! clean up MPI
 

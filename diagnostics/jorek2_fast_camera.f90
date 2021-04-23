@@ -707,6 +707,7 @@ program jorek2_fast_camera
     ! --- The step size for integration and number of steps to get to the other side of plasma
     if (.not. include_reflections) then
       n_step_pix(1,i) = 2.d0*(2.0*X_cam/step)
+      step_pix(1,i) = step
     endif
 
     ! --- Reflection coefficient on first travel always 1.0
@@ -717,9 +718,9 @@ program jorek2_fast_camera
     do i_ref = 1,n_reflections+1
  
       !write(*,'(A,i6,A,i6)')'n_pix : ',i,' out of ',n_pix
-      X_tmp  = Xp(1,i)
-      Y_tmp  = Yp(1,i)
-      Z_tmp  = Zp(1,i)
+      X_tmp  = Xp(i_ref,i)
+      Y_tmp  = Yp(i_ref,i)
+      Z_tmp  = Zp(i_ref,i)
       ifail  = 1
       inside_core = 0  
       inside_wall = 0

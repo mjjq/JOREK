@@ -455,7 +455,8 @@ module mod_vacuum_fields
     ! --- Local parameters
     real*8              :: pi2,fnu,alu,alv
     real*8              :: cm,cn,cov,siv,cou,siu,cop,sip,co,si
-    real*8, allocatable :: r_w(:), x_w(:), y_w(:), z_w(:)
+    real*8, allocatable ::  r_w(:),  x_w(:),  y_w(:),  z_w(:)
+    real*8, allocatable :: rc_w(:), rs_w(:), zc_w(:), zs_w(:)
     integer             :: nwuv, i, j, kv, ku
 
     if (sr%file_version < 5) then
@@ -470,6 +471,7 @@ module mod_vacuum_fields
     nwuv  = sr%nwu*sr%nwv ! total number of wall nodes
 
     allocate (x_w(nwuv),y_w(nwuv),z_w(nwuv),r_w(nwuv))
+    allocate (rc_w(sr%mn_w),rs_w(sr%mn_w),zc_w(sr%mn_w),zs_w(sr%mn_w))
     if (allocated(xw_scaled)) deallocate(xw_scaled)
     if (allocated(yw_scaled)) deallocate(yw_scaled)
     if (allocated(zw_scaled)) deallocate(zw_scaled)
@@ -482,10 +484,16 @@ module mod_vacuum_fields
     alv  = pi2/float(sr%nwv)
     z_w = 0.
     r_w = 0.
-    sr%rc_w(2:sr%mn_w) =sr%rc_w(2:sr%mn_w)*scale_fact
-    sr%rs_w(2:sr%mn_w) =sr%rs_w(2:sr%mn_w)*scale_fact
-    sr%zc_w(2:sr%mn_w) =sr%zc_w(2:sr%mn_w)*scale_fact
-    sr%zs_w(2:sr%mn_w) =sr%zs_w(2:sr%mn_w)*scale_fact
+
+    rc_w(1) =sr%rc_w(1)
+    rs_w(1) =sr%rs_w(1)
+    zc_w(1) =sr%zc_w(1)
+    zs_w(1) =sr%zs_w(1)
+
+    rc_w(2:sr%mn_w) =sr%rc_w(2:sr%mn_w)*scale_fact
+    rs_w(2:sr%mn_w) =sr%rs_w(2:sr%mn_w)*scale_fact
+    zc_w(2:sr%mn_w) =sr%zc_w(2:sr%mn_w)*scale_fact
+    zs_w(2:sr%mn_w) =sr%zs_w(2:sr%mn_w)*scale_fact
 
     do  j =  1, sr%mn_w
       cm = sr%m_w(j)*pi2
@@ -501,8 +509,8 @@ module mod_vacuum_fields
           cop = cou*cov-siu*siv
           sip = siu*cov+cou*siv
     
-          r_w(i) = r_w(i) + sr%rs_w(j)*sip + sr%rc_w(j)*cop
-          z_w(i) = z_w(i) + sr%zs_w(j)*sip + sr%zc_w(j)*cop 
+          r_w(i) = r_w(i) + rs_w(j)*sip + rc_w(j)*cop
+          z_w(i) = z_w(i) + zs_w(j)*sip + zc_w(j)*cop 
         end do
       end do
     end do
@@ -532,7 +540,8 @@ module mod_vacuum_fields
       zw_scaled(i,3) = z_w(sr%jpot_w(i,3))
     end do
 
-    deallocate(x_w, y_w, z_w, r_w)
+    deallocate( x_w,  y_w,  z_w,  r_w)
+    deallocate(rc_w, rs_w, zc_w, zs_w)
 
   end subroutine resize_starwall_wall
 

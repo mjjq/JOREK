@@ -9,6 +9,8 @@ program jorek2_fast_camera
   use diffusivities, only: get_dperp, get_zkperp
   use mod_interp
   use constants, only: PI
+  use equil_info
+  use mod_element_rtree, only: populate_element_rtree
 
   implicit none
   !include 'mpif.h'
@@ -46,9 +48,7 @@ program jorek2_fast_camera
   real*8                :: TT_x, TT_y, TT_p
   real*8                :: Ti_x, Ti_y, Ti_p
   real*8                :: Te_x, Te_y, Te_p
-  real*8                :: psi_axis,      R_axis,      Z_axis,      s_axis,      t_axis
-  real*8                :: psi_xpoint(2), R_xpoint(2), Z_xpoint(2), s_xpoint(2), t_xpoint(2)
-  real*8                :: ps0, psi_norm, psi_bnd, grad_psi
+  real*8                :: ps0, psi_norm, grad_psi
   real*8                :: xjac, xjac_x, xjac_y, v_perp, Psi_J, R_p, error, Btot, BigR
   real*8                :: particle_source, D_prof, ZK_prof, source_pellet, ZKpar_T
   integer               :: i_find, i_elm_find(8)
@@ -57,7 +57,7 @@ program jorek2_fast_camera
   real*8                :: s_find(8), t_find(8)
   real*8                :: Jb
   real*8                :: central_ne
-  integer               :: i_elm_axis, i_elm_xpoint(2), k_tor
+  integer               :: k_tor
   
 
 
@@ -361,11 +361,16 @@ program jorek2_fast_camera
   do k_tor=1, n_tor
     mode(k_tor) = + int(k_tor / 2) * n_period
   enddo
-  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+  !call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+  if (my_id .eq. 0) call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
   call initialise_basis
   call broadcast_elements(my_id, element_list)                ! elements
   call broadcast_nodes(my_id, node_list)                      ! nodes
+  call populate_element_rtree(node_list, element_list)        ! rtree
   call broadcast_phys(my_id)                                  ! physics parameters
+  call broadcast_equil_state(my_id)                           ! equil_state
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   ! --- Sanity check for reflection and wall data
   if ( (include_reflections) .and. (n_limiter .eq. 0) ) then
@@ -397,21 +402,8 @@ program jorek2_fast_camera
     endif
   endif
   
-  ! --- Find axis
-  call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-
-  ! --- Find Xpoint
-  if (xpoint) then
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-    psi_bnd  = psi_xpoint(1)
-    if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-      psi_bnd = psi_xpoint(2)
-    endif
-    if (xcase .eq. 2) Z_xpoint(1) = -999.0
-    if (xcase .eq. 1) Z_xpoint(2) = +999.0
-  else
-    psi_bnd = 0.d0
-  endif
+  if (xcase .eq. 2) ES%Z_xpoint(1) = -999.0
+  if (xcase .eq. 1) ES%Z_xpoint(2) = +999.0
   
   ! --- Just in case
   if (central_density .gt. 1.d10) then
@@ -436,6 +428,13 @@ program jorek2_fast_camera
 
   ! --- MPI barrier
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+  ! --- Dummy call for useless Rtree printout...
+  RR = 0.d0 ; ZZ = 0.d0
+  call find_RZ(node_list,element_list,RR,ZZ,R_out,Z_out,i_elm,ss,tt,ifail)
+  call sleep(3)
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+        
       
   
   ! ********************************************************************** !
@@ -495,7 +494,7 @@ program jorek2_fast_camera
               call wall_intersection(Rl,Zl, i_int, R_int,Z_int, ifail)
               ! --- If we haven't found the intersection (which should never happen in principle)
               if (ifail .ne. 0) then
-                write(*,'(A,4e18.7)')'WARNING: wall intersection not found on entry!',Rl,Zl
+                !write(*,'(A,4e18.7)')'WARNING: wall intersection not found on entry!',Rl,Zl
                 ! --- Take the last point...
                 Xref(1,i) = X_tmp
                 Yref(1,i) = Y_tmp
@@ -522,7 +521,7 @@ program jorek2_fast_camera
             call wall_intersection(Rl,Zl, i_int, R_int,Z_int, ifail)
             ! --- If we haven't found the intersection (which should never happen in principle)
             if (ifail .ne. 0) then
-              write(*,'(A,4e18.7)')'WARNING: wall intersection not found on 2nd exit!',Rl,Zl
+              !write(*,'(A,4e18.7)')'WARNING: wall intersection not found on 2nd exit!',Rl,Zl
               ! --- Take the last point...
               Xref(3,i) = X_tmp
               Yref(3,i) = Y_tmp
@@ -549,11 +548,15 @@ program jorek2_fast_camera
             call wall_intersection(Rl,Zl, i_int, R_int,Z_int, ifail)
             ! --- If we haven't found the intersection (which should never happen in principle)
             if (ifail .ne. 0) then
-              write(*,'(A,4e18.7)')'WARNING: wall intersection not found on exit!',Rl,Zl
+              !write(*,'(A,4e18.7)')'WARNING: wall intersection not found on exit!',Rl,Zl
               ! --- Take the last point...
               Xref(2,i) = X_tmp
               Yref(2,i) = Y_tmp
               Zref(2,i) = Z_tmp
+              ! --- Just ignore reflection, it probably means that los and wall are almost parallel...
+              Xref(3,i) = Xref(2,i)
+              Yref(3,i) = Yref(2,i)
+              Zref(3,i) = Zref(2,i)
             ! --- If we found the intersection
             else
               distance = sqrt( (R_int-RR_prev)**2 + (Z_int-ZZ_prev)**2 )
@@ -681,11 +684,11 @@ program jorek2_fast_camera
       ! --- Number/size of steps for first reflection
       distance = sqrt( (Xref(2,i)-Xref(1,i))**2 + (Yref(2,i)-Yref(1,i))**2 + (Zref(2,i)-Zref(1,i))**2 )
       n_step_pix(1,i) = int(distance / step)
-      step_pix(1,i) = distance / float(n_step_pix(1,i))
+      if (n_step_pix(1,i) .gt. 0) step_pix(1,i) = distance / float(n_step_pix(1,i))
       ! --- Number/size of steps for second reflection
       distance = sqrt( (Xref(3,i)-Xref(2,i))**2 + (Yref(3,i)-Yref(2,i))**2 + (Zref(3,i)-Zref(2,i))**2 )
       n_step_pix(2,i) = int(distance / step)
-      step_pix(2,i) = distance / float(n_step_pix(2,i))
+      if (n_step_pix(2,i) .gt. 0) step_pix(2,i) = distance / float(n_step_pix(2,i))
       
     enddo ! pixels
       
@@ -796,7 +799,7 @@ program jorek2_fast_camera
           
           ! --- Normalise psi and denormalise density and temperature
           eV2Joules = 1.602176487d-19
-          psi   = (psi-psi_axis)/(psi_bnd-psi_axis) ! we don't include Z-tanh on purpose!
+          psi   = (psi-ES%psi_axis)/(ES%psi_bnd-ES%psi_axis) ! we don't include Z-tanh on purpose!
           rho   = rho*central_ne
           rho_n = rho_n*central_ne
           Te    = Te/(central_ne*MU_ZERO*eV2Joules)
@@ -810,8 +813,8 @@ program jorek2_fast_camera
             ! --- Artificial neutral density, if not using neutrals model500
             if ( .not. with_neutrals ) then
               tanh_psi  = 0.5 - 0.5* tanh(+(psi - rhon_prof(6))/rhon_prof(5))
-              tanh_zmin = 0.5 - 0.5* tanh(+(ZZ - Z_xpoint(1)-rhon_prof(8 ))/rhon_prof(7))
-              tanh_zpls = 0.5 - 0.5* tanh(-(ZZ - Z_xpoint(2)-rhon_prof(10))/rhon_prof(9))
+              tanh_zmin = 0.5 - 0.5* tanh(+(ZZ - ES%Z_xpoint(1)-rhon_prof(8 ))/rhon_prof(7))
+              tanh_zpls = 0.5 - 0.5* tanh(-(ZZ - ES%Z_xpoint(2)-rhon_prof(10))/rhon_prof(9))
               rho_n = ( rhon_prof(1) - rhon_prof(2) ) * tanh_psi + rhon_prof(2)
               rho_n = rho_n * (1.0 - tanh_zmin) + rhon_prof(3) * tanh_zmin
               rho_n = rho_n * (1.0 - tanh_zpls) + rhon_prof(4) * tanh_zpls
@@ -828,8 +831,7 @@ program jorek2_fast_camera
                 endif
                 exit
               endif
-              !if (k .eq. PEC_size) write(*,'(A,3e18.6)') 'Warning! no PEC found for density :',rho,PEC_dens(1),PEC_dens(k)
-              if (k .eq. PEC_size) PEC_index_Ne = 0
+              if ( (k .eq. PEC_size) .and. (rho .gt. PEC_dens(PEC_size)) ) PEC_index_Ne = PEC_size
             enddo
             do k=2,PEC_size
               if (Te .lt. PEC_temp(k)) then
@@ -840,15 +842,10 @@ program jorek2_fast_camera
                 endif
                 exit
               endif
-              !if (k .eq. PEC_size) write(*,'(A,3e18.6)') 'Warning! no PEC found for temperature:',Te,PEC_temp(1),PEC_temp(k)
-              if (k .eq. PEC_size) PEC_index_Te = 0
+              if ( (k .eq. PEC_size) .and. (Te .gt. PEC_temp(PEC_size)) ) PEC_index_Te = PEC_size
             enddo        
             PEC_index = (PEC_index_Ne-1)*PEC_size + PEC_index_Te
-            if ( (PEC_index_Ne .eq. 0) .or. (PEC_index_Te .eq. 0) ) then
-              PEC_tmp = 0.d0
-            else
-              PEC_tmp = PEC(PEC_index)
-            endif
+            PEC_tmp = PEC(PEC_index)
            
             ! --- Integrate Emissivity
             Light(i) = Light(i) + refl_coef(i_ref)*step_pix(i_ref,i)*rho_n*rho*PEC_tmp

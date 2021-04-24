@@ -280,6 +280,9 @@ program jorek2_fast_camera
     
     ! --- Allocate vectors
     allocate(PEC_dens(PEC_size),PEC_temp(PEC_size),PEC(PEC_size*PEC_size))
+    PEC_dens = 0.d0
+    PEC_temp = 0.d0
+    PEC      = 0.d0
     
     ! --- Then comes the density profile
     read(123,'(A)') line
@@ -773,14 +776,19 @@ program jorek2_fast_camera
           rho_n = 0.d0 
           Te    = 0.d0 
           do i_tor=1,n_tor
-            call interp(node_list,element_list,i_elm,1,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+            call interp(node_list,element_list,i_elm,var_psi,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
             psi = psi + P * HZ_tor(i_tor)
-            call interp(node_list,element_list,i_elm,5,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+            call interp(node_list,element_list,i_elm,var_rho,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
             rho = rho + P * HZ_tor(i_tor)
-            call interp(node_list,element_list,i_elm,6,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
-            Te  = Te  + P * HZ_tor(i_tor)
+            if ( with_TiTe ) then
+              call interp(node_list,element_list,i_elm,var_Te,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+              Te  = Te  + 0.5 * P * HZ_tor(i_tor)
+            else
+              call interp(node_list,element_list,i_elm,var_T,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+              Te  = Te  + P * HZ_tor(i_tor)
+            endif
             if ( with_neutrals ) then
-              call interp(node_list,element_list,i_elm,8,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
+              call interp(node_list,element_list,i_elm,var_rhon,i_tor,ss,tt,P,P_s,P_t,P_st,P_ss,P_tt)
               rho_n = rho_n + P * HZ_tor(i_tor)
             endif
           enddo

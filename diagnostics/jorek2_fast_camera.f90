@@ -70,6 +70,7 @@ program jorek2_fast_camera
   character*44          :: PEC_file
   character*50          :: line
   real*8,allocatable    :: PEC_dens(:), PEC_temp(:), PEC(:)
+  real*8                :: PEC_tmp
   ! --- Camera variables
   integer               :: n_pixels_hor, n_pixels_ver, n_pix, ncount
   real*8                :: pixel_dim, focus, vec_size
@@ -828,6 +829,7 @@ program jorek2_fast_camera
                 exit
               endif
               !if (k .eq. PEC_size) write(*,'(A,3e18.6)') 'Warning! no PEC found for density :',rho,PEC_dens(1),PEC_dens(k)
+              if (k .eq. PEC_size) PEC_index_Ne = 0
             enddo
             do k=2,PEC_size
               if (Te .lt. PEC_temp(k)) then
@@ -839,11 +841,17 @@ program jorek2_fast_camera
                 exit
               endif
               !if (k .eq. PEC_size) write(*,'(A,3e18.6)') 'Warning! no PEC found for temperature:',Te,PEC_temp(1),PEC_temp(k)
+              if (k .eq. PEC_size) PEC_index_Te = 0
             enddo        
             PEC_index = (PEC_index_Ne-1)*PEC_size + PEC_index_Te
+            if ( (PEC_index_Ne .eq. 0) .or. (PEC_index_Te .eq. 0) ) then
+              PEC_tmp = 0.d0
+            else
+              PEC_tmp = PEC(PEC_index)
+            endif
            
             ! --- Integrate Emissivity
-            Light(i) = Light(i) + refl_coef(i_ref)*step_pix(i_ref,i)*rho_n*rho*PEC(PEC_index)
+            Light(i) = Light(i) + refl_coef(i_ref)*step_pix(i_ref,i)*rho_n*rho*PEC_tmp
           
           ! --- Use artificial "light" instead of visible emission
           else

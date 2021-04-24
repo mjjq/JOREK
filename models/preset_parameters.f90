@@ -189,6 +189,12 @@ subroutine preset_parameters
 
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+
+  D_imp_extra_R = 0.d0
+  D_imp_extra_Z = 0.d0
+  D_imp_extra_p = 0.d0
+  D_imp_extra_neg      = 1.d-6
+  D_imp_extra_neg_thresh  = -1.d3 ! to disable by default enhanced impurities diffusion in model501
   ZK_prof_neg        = 1.d-5
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
@@ -508,6 +514,15 @@ subroutine preset_parameters
   jw1=5.d-1 ! inner cut-off
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
+  
+  !> @name Mode families preconditioner parameters
+  n_mode_families      = (n_tor + 1)/2
+  autodistribute_modes = .true.
+  mode_families_modes  = 0
+  modes_per_family     = 0
+  weights_per_family   = 1.0
+  autodistribute_ranks = .true.
+  ranks_per_family     = 0
 
 !===================== Thermalization flag========
 

@@ -70,7 +70,7 @@ program jorek2_fast_camera
   character*44          :: PEC_file
   character*50          :: line
   real*8,allocatable    :: PEC_dens(:), PEC_temp(:), PEC(:)
-  real*8                :: PEC_tmp
+  real*8                :: PEC_tmp, Te_PEC_min
   ! --- Camera variables
   integer               :: n_pixels_hor, n_pixels_ver, n_pix, ncount
   real*8                :: pixel_dim, focus, vec_size
@@ -126,7 +126,7 @@ program jorek2_fast_camera
                          focus, light_saturation, colormap, &
                          step, go_faster_in_core, &
                          include_reflections, reflective_coefficient, &
-                         solenoid, rhon_prof, PEC_file, &
+                         solenoid, rhon_prof, PEC_file, Te_PEC_min, &
                          artificial_light
   
 
@@ -211,6 +211,11 @@ program jorek2_fast_camera
 
   ! --- Location of emission data file
   PEC_file = "./my_pec.dat"
+  ! --- Minimal temperature allowed for emission.
+  ! --- This is very important for strongly non-linear cases with Te <= 0
+  ! --- Because the emission spikes at very low Te.
+  ! --- For neutrals simulations, where Te can be very low, maybe this can be lowered.
+  Te_PEC_min = 20.0 !eV
 
   ! --- Artificial light instead of emission (user defined, hard-coded! default is edge gaussian)
   artificial_light = .false.
@@ -804,9 +809,9 @@ program jorek2_fast_camera
           rho_n = rho_n*central_ne
           Te    = Te/(central_ne*MU_ZERO*eV2Joules)
           ! --- Make sure everything is positive
-          rho   = max(1.d-12,rho)
+          rho   = max(0.d0,rho)
           rho_n = max(1.d-12,rho_n)
-          Te    = max(1.d-12,Te)
+          Te    = max(Te_PEC_min,Te)
           
           ! --- Use real visible emission
           if (.not. artificial_light) then
@@ -822,6 +827,7 @@ program jorek2_fast_camera
             endif
            
             ! --- Calculate PEC(Ne,Te)
+            PEC_tmp = 0.d0
             do k=2,PEC_size
               if (rho .lt. PEC_dens(k)) then
                 if (abs(PEC_dens(k)-rho) .lt. abs(PEC_dens(k-1)-rho)) then
@@ -831,7 +837,8 @@ program jorek2_fast_camera
                 endif
                 exit
               endif
-              if ( (k .eq. PEC_size) .and. (rho .gt. PEC_dens(PEC_size)) ) PEC_index_Ne = PEC_size
+              if (rho .lt. PEC_dens(1       )) PEC_index_Ne = 0!1
+              if (rho .gt. PEC_dens(PEC_size)) PEC_index_Ne = 0!PEC_size
             enddo
             do k=2,PEC_size
               if (Te .lt. PEC_temp(k)) then
@@ -842,10 +849,15 @@ program jorek2_fast_camera
                 endif
                 exit
               endif
-              if ( (k .eq. PEC_size) .and. (Te .gt. PEC_temp(PEC_size)) ) PEC_index_Te = PEC_size
+              if (Te .lt. PEC_temp(1       )) PEC_index_Te = 0!1
+              if (Te .gt. PEC_temp(PEC_size)) PEC_index_Te = 0!PEC_size
             enddo        
-            PEC_index = (PEC_index_Ne-1)*PEC_size + PEC_index_Te
-            PEC_tmp = PEC(PEC_index)
+            if ( (PEC_index_Ne .eq. 0) .or. (PEC_index_Te .eq. 0) ) then
+              PEC_tmp = 0.d0
+            else
+              PEC_index = (PEC_index_Ne-1)*PEC_size + PEC_index_Te
+              PEC_tmp = PEC(PEC_index)
+            endif
            
             ! --- Integrate Emissivity
             Light(i) = Light(i) + refl_coef(i_ref)*step_pix(i_ref,i)*rho_n*rho*PEC_tmp

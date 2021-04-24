@@ -64,6 +64,11 @@
 
   ! --- Location of emission data file
   PEC_file = "./my_pec.dat"
+  ! --- Minimal temperature allowed for emission.
+  ! --- This is very important for very non-linear cases with Te <= 0
+  ! --- Because the emission spikes at very low Te.
+  ! --- For neutrals simulations, where Te can be very low, maybe this can be lowered.
+  Te_PEC_min = 10.0 !eV
 
   ! --- Artificial light instead of emission (user defined, hard-coded! default is edge gaussian)
   artificial_light = .false.

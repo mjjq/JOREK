@@ -169,6 +169,11 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,200)
   write(*,  112) ' jorek_model    =  ', jorek_model       
   write(*,  112) ' n_var          =  ', n_var             
+  write(*,112, advance='no') ' variable_names ='
+  do i = 1, n_var
+    write(*,'(" ",a)', advance='no') trim(variable_names(i))
+  end do
+  write(*,*)
   write(*,  112) ' n_dim          =  ', n_dim             
   write(*,  112) ' n_order        =  ', n_order           
   write(*,  112) ' n_tor          =  ', n_tor             
@@ -182,34 +187,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,  112) ' n_degrees      =  ', n_degrees         
   write(*,  112) ' nref_max       =  ', nref_max          
   write(*,  112) ' n_ref_list     =  ', n_ref_list        
-
-  write(*,*)
-  write(*,200)
-  write(*,*) '* Simulation variables:                                                       *'
-  write(*,200)
-
-  ! determine number of rows needed to show all variable_names
-  n_rows = ceiling(n_var/4.0)
-
-  ! The first loop loops through the row needed. The the left eastectics is
-  ! written followed by a loop that print out the variable_name of white space
-  ! depending on it this variable_name exist. The last write is the eastectics
-  ! on the right.
-  do i = 0,n_rows-1
-    write(*,'(A)',advance='no') ' *      '
-    do j = (i*4) + 1, (i*4) + 4
-      if ( j .gt. n_var) then
-        write(*,'(11x)',advance='no')
-      else
-        write(*,'(A11)',advance='no') variable_names(j)
-      end if
-      if ( j .lt. (i*4 + 4)) then
-        write(*,'(7x)',advance='no')
-      end if
-    end do
-    write(*,'(A)') '      *'
-  end do
-  write(*,200)
 
   ! stop function when case this log function is called from command line function
   if ( short2 ) return
@@ -461,6 +438,10 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
   write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
+#ifdef WITH_TiTe
+  write(*,REAL_FMT) 'ZK_i_perp_num         ', ZK_i_perp_num
+  write(*,REAL_FMT) 'ZK_e_perp_num         ', ZK_e_perp_num
+#endif
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
   write(*,LOGI_FMT) 'linear_run            ', linear_run
@@ -583,7 +564,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%current
     end do
     write(*,*)
-    write(*,REAL_FMT,advance='no') 'vert_FB_amp           ', vert_FB_amp(n_pf_coils)
+    if ( n_pf_coils > 0 ) &
+      write(*,REAL_FMT,advance='no') 'vert_FB_amp           ', vert_FB_amp(n_pf_coils)
     write(*,REAL_FMT,advance='no') 'pf_coils%pert         '
     do i = 1, n_pf_coils
       write(*,'(10ES12.4)',advance='no') pf_coils(i)%pert
@@ -706,7 +688,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'jecamp              ',  jecamp
   endif
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
      write(*,REAL_FMT) 'ns_amplitude        ',  ns_amplitude
      write(*,REAL_FMT) 'ns_R                ',  ns_R
      write(*,REAL_FMT) 'ns_Z                ',  ns_Z

@@ -102,9 +102,9 @@ module mod_vacuum_fields
       Bn = bx*nx + by*ny + bz*nz
       B2 = bx**2.d0 + by**2.d0 + bz**2.d0 
 
-      Fx = Fx - (Bn*bx - B2*0.5d0*nx) * tri_area / mu_zero
-      Fy = Fy - (Bn*by - B2*0.5d0*ny) * tri_area / mu_zero
-      Fz = Fz - (Bn*bz - B2*0.5d0*nz) * tri_area / mu_zero
+      Fx = Fx + (Bn*bx - B2*0.5d0*nx) * tri_area / mu_zero
+      Fy = Fy + (Bn*by - B2*0.5d0*ny) * tri_area / mu_zero
+      Fz = Fz + (Bn*bz - B2*0.5d0*nz) * tri_area / mu_zero
 
     end do 
 
@@ -266,15 +266,14 @@ module mod_vacuum_fields
               ,nx,ny,nz,pi41,area,d21,d32,d13,jx,jy,jz     &
               ,dep1,dep2,dep3,dem1,dem2,dem3
     real*8  :: Rcent, jphi, cosx, siny
-    real*8, dimension(:),   allocatable  :: x1,y1,z1,x2,y2,z2,x3,y3,z3,sn
-    real*8,                 allocatable  :: bx_tmp(:), by_tmp(:), bz_tmp(:)
+    real*8  :: x1,y1,z1,x2,y2,z2,x3,y3,z3,sn
+    real*8,  allocatable  :: bx_tmp(:), by_tmp(:), bz_tmp(:)
 
     np   = size(x,1)
     ntri = size(x_tri,1)
 
     pi41 = 0.125d0/asin(1.d0)
 
-    allocate( x1(np), y1(np), z1(np), x2(np), y2(np), z2(np), x3(np), y3(np), z3(np), sn(np) )
     allocate(bx_tmp(np), by_tmp(np), bz_tmp(np))
 
     bx     = 0.d0;  by     = 0.d0;  bz     = 0.d0;
@@ -364,29 +363,29 @@ module mod_vacuum_fields
 
       do i=1, np      ! --- go over given points
 
-        x1(i) = x_tri(k,1) - x(i)
-        y1(i) = y_tri(k,1) - y(i)
-        z1(i) = z_tri(k,1) - z(i)
-        x2(i) = x_tri(k,2) - x(i)
-        y2(i) = y_tri(k,2) - y(i)
-        z2(i) = z_tri(k,2) - z(i)
-        x3(i) = x_tri(k,3) - x(i)
-        y3(i) = y_tri(k,3) - y(i)
-        z3(i) = z_tri(k,3) - z(i)
-        sn(i) = nx*x1(i)+ny*y1(i)+nz*z1(i)
-        h     = abs(sn(i))
-        s21   = x1(i)**2+y1(i)**2+z1(i)**2
-        s22   = x2(i)**2+y2(i)**2+z2(i)**2
-        s23   = x3(i)**2+y3(i)**2+z3(i)**2
+        x1    = x_tri(k,1) - x(i)
+        y1    = y_tri(k,1) - y(i)
+        z1    = z_tri(k,1) - z(i)
+        x2    = x_tri(k,2) - x(i)
+        y2    = y_tri(k,2) - y(i)
+        z2    = z_tri(k,2) - z(i)
+        x3    = x_tri(k,3) - x(i)
+        y3    = y_tri(k,3) - y(i)
+        z3    = z_tri(k,3) - z(i)
+        sn    = nx*x1+ny*y1+nz*z1
+        h     = abs(sn)
+        s21   = x1**2+y1**2+z1**2
+        s22   = x2**2+y2**2+z2**2
+        s23   = x3**2+y3**2+z3**2
         s1    = sqrt(s21)
         s2    = sqrt(s22)
         s3    = sqrt(s23)
         al1   = alog((s2+s1+d21)/(s1+s2-d21))
         al2   = alog((s3+s2+d32)/(s3+s2-d32))
         al3   = alog((s1+s3+d13)/(s1+s3-d13))
-        ar1   = x1(i)*tx3+y1(i)*ty3+z1(i)*tz3
-        ar2   = x2(i)*tx1+y2(i)*ty1+z2(i)*tz1
-        ar3   = x3(i)*tx2+y3(i)*ty2+z3(i)*tz2
+        ar1   = x1*tx3+y1*ty3+z1*tz3
+        ar2   = x2*tx1+y2*ty1+z2*tz1
+        ar3   = x3*tx2+y3*ty2+z3*tz2
         dp1   = .5*(s22-s21+d221)
         dp2   = .5*(s23-s22+d232)
         dp3   = .5*(s21-s23+d213)
@@ -408,7 +407,7 @@ module mod_vacuum_fields
         ata1  = atan2(ap1*dem1-am1*dep1,dep1*dem1+ap1*am1)
         ata2  = atan2(ap2*dem2-am2*dep2,dep2*dem2+ap2*am2)
         ata3  = atan2(ap3*dem3-am3*dep3,dep3*dem3+ap3*am3)
-        at    = sign(1.,sn(i))*(ata1+ata2+ata3)
+        at    = sign(1.,sn)*(ata1+ata2+ata3)
         vx    = -nx*at + al1*tx3/d21+al2*tx1/d32+al3*tx2/d13
         vy    = -ny*at + al1*ty3/d21+al2*ty1/d32+al3*ty2/d13
         vz    = -nz*at + al1*tz3/d21+al2*tz1/d32+al3*tz2/d13
@@ -431,7 +430,6 @@ module mod_vacuum_fields
     by = -by * mu_zero
     bz = -bz * mu_zero
 
-    deallocate( x1, y1, z1, x2, y2, z2, x3, y3, z3, sn )
     deallocate(bx_tmp, by_tmp, bz_tmp)   
 
   end subroutine triang_fields_at_xyz

@@ -3,7 +3,7 @@ module mod_interp
 use data_structure
 use mod_basisfunctions
 use mod_parameters, only: n_period, n_tor
-use phys_module, only: treat_axis
+use phys_module, only: treat_axis, treat_axis2
 implicit none
 private
 public :: interp !< interp a specific harmonic in finite elements
@@ -58,7 +58,7 @@ call sincosperiod_moivre(phi, HZ, dHZ) ! dHZ unused
 element = element_list%element(i_elm)
 esize(:,:) = element%size(:,:)
 BasFun    = H
-if(treat_axis .and. element%axis_element) then
+if( (treat_axis .or. treat_axis2) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -170,7 +170,7 @@ esize(:,:) = element%size(:,:)
 BasFun    = H
 BasFun_s  = H_s
 BasFun_t  = H_t
-if(treat_axis .and. element%axis_element) then
+if((treat_axis  .or. treat_axis2).and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -302,7 +302,7 @@ BasFun_t  = H_t
 BasFun_ss = H_ss
 BasFun_st = H_st
 BasFun_tt = H_tt
-if(treat_axis .and. element%axis_element) then
+if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -506,7 +506,7 @@ BasFun_t  = G_t
 BasFun_ss = G_ss
 BasFun_st = G_st
 BasFun_tt = G_tt
-if(treat_axis .and. element%axis_element) then
+if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -592,7 +592,7 @@ BasFun_t  = G_t
 BasFun_ss = G_ss
 BasFun_st = G_st
 BasFun_tt = G_tt
-if(treat_axis .and. element%axis_element) then
+if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -648,7 +648,7 @@ call basisfunctions(s,t,H)
 element   = element_list%element(i_elm)
 esize(:,:)= element%size(:,:)
 BasFun    = H
-if(treat_axis .and. element%axis_element) then
+if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -705,7 +705,7 @@ call basisfunctions(s,t,H)
 element   = element_list%element(i_elm)
 esize(:,:)= element%size(:,:)
 BasFun    = H
-if(treat_axis .and. element%axis_element) then
+if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)

@@ -1,6 +1,6 @@
 subroutine identify_axis_elements(node_list,element_list)
 use data_structure
-use phys_module, only: treat_axis
+use phys_module, only: treat_axis, treat_axis2
 
 implicit none
 integer :: ie, iv, j1, j2 ,j3 ,j4
@@ -16,7 +16,7 @@ do ie = 1, element_list%n_elements
   element_list%element(ie)%axis_element = .false.
 
   ! The first and fourth vertex is on the grid-axis.
-  if (treat_axis .and. ( node_list%node(j1)%axis_node .and. node_list%node(j4)%axis_node) ) then
+  if ( (treat_axis .or. treat_axis2) .and. ( node_list%node(j1)%axis_node .and. node_list%node(j4)%axis_node) ) then
      element_list%element(ie)%axis_element = .true.
   endif
 enddo

@@ -506,6 +506,7 @@ subroutine preset_parameters
   jw3=1.d0  ! outer cut-off
 
   treat_axis = .false.       ! flag for chosing grid axis treatment
+  treat_axis2= .false.       ! flag for chosing grid axis treatment
 
 !===================== Thermalization flag========
 

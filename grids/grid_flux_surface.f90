@@ -7,7 +7,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node, fix_axis_nodes, treat_axis
+use phys_module, only: force_central_node, fix_axis_nodes, treat_axis, treat_axis2
 use equil_info
 
 implicit none
@@ -449,7 +449,7 @@ do i=1,nrnew
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
       ! Share 4 DoFs of all nodes on the grid axis and flag axis nodes
-      if(treat_axis)then
+      if(treat_axis .or. treat_axis2)then
 
          if(i.eq.1)then
            node_list%node(index)%index(1) = 1

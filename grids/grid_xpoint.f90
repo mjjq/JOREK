@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node, write_ps, fix_axis_nodes, treat_axis
+use phys_module, only: force_central_node, write_ps, fix_axis_nodes, treat_axis, treat_axis2
 
 implicit none
 
@@ -1368,7 +1368,7 @@ enddo
 !***********************************************************************
 
 ! Share 4 DoFs of all nodes on the grid axis
-if(treat_axis)then
+if(treat_axis .or. treat_axis2)then
 
   do i=1, n_tht - 1
     newnode_list%node(i)%index(1) = 1
@@ -1505,7 +1505,7 @@ do i=1,newnode_list%n_nodes
   PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
 
   ! Adapt to axis treatment that involves new basis functions
-  if(treat_axis .and. newnode_list%node(i)%axis_node)then
+  if( (treat_axis .or. treat_axis2) .and. newnode_list%node(i)%axis_node)then
     newnode_list%node(i)%x(1,3,1:2) = 0.d0
     newnode_list%node(i)%values(1,1,1) = PSg1
     newnode_list%node(i)%values(1,2,1) = PSI_R
@@ -1527,7 +1527,7 @@ newnode_list%node(index_xpoint+1)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+2)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+3)%values(1,2:4,1) = 0.d0
 
-if(treat_axis)then
+if(treat_axis .or. treat_axis2)then
   ! do nothing here. For axis treatment it is not necessory 
   ! that 2nd and 4th DoF should be zero.
 else

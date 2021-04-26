@@ -15,7 +15,7 @@ contains
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order, unified_element_matrix
-    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const
+    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const, treat_axis2
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
@@ -23,9 +23,10 @@ contains
     use mod_locate_irn_jcn
     use mod_global_matrix_structure
     use mpi_mod
+    use mod_axis_treatment
 
     ! --- Routine parameters
-    type (type_element),              intent(in)     :: element
+    type (type_element),              intent(inout)  :: element
     type (type_node),                 intent(inout)  :: nodes(n_vertex_max)
     logical,                          intent(in)     :: xpoint2
     integer,                          intent(in)     :: xcase2
@@ -57,6 +58,10 @@ contains
     my_id = rank
 #endif
 
+    if(treat_axis2 .and. element%axis_element ) then
+      call new2old_dofs_on_the_axis(node_list, element, nodes)
+    endif
+
     ! --- Call element_matrix
     if ( ( (i_tor_min .eq. 1) .and. (i_tor_max .eq. n_tor) .and. (n_tor .ge. n_tor_fft_thresh) )   &
       .or. (unified_element_matrix) ) then
@@ -78,6 +83,10 @@ contains
         i_tor_min, i_tor_max)
     endif
     
+   if(treat_axis2 .and. element%axis_element ) then
+     call old2new_basis_on_the_axis(nodes, element, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
+   endif
+
     ! --- Apply sheath boundary conditions at the targets
     if (bc_natural_open) then
       ! --- Loop over the 4 nodes
@@ -488,7 +497,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
     call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis,        &
       psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
-    
+
 #ifdef PRINT_ELM_RHS
     if (.not. harmonic_matrix) then
       ! --- Write out rhs and elm for one element to compare models.

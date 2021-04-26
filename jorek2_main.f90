@@ -83,7 +83,7 @@ program JOREK2
 #ifdef WITH_Impurities
   use mod_injection_source
 #endif
-
+  use mod_axis_treatment
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &

@@ -88,11 +88,7 @@ do iv = 1, n_vertex_max
 
     ! Extract RHS associated with a vertex iv: rhs_iv
     do io = 1, n_order+1
-      if (use_fft) then
-        index_iv_io =       n_var*(n_order+1)*(iv-1) +       n_var*(io-1) + 1 + (ivar-1)
-      else
-        index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
-      endif
+      index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
       rhs_i(io)   = RHS(index_iv_io)
     enddo
 
@@ -101,11 +97,7 @@ do iv = 1, n_vertex_max
 
     ! fill the updated entries in RHS vector
     do io = 1, n_order+1
-      if (use_fft) then
-        index_iv_io =       n_var*(n_order+1)*(iv-1) +       n_var*(io-1) + 1 + (ivar-1)
-      else
-        index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
-      endif
+      index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
       RHS(index_iv_io) = rhs_i(io)
     enddo
 
@@ -131,19 +123,11 @@ do iv = 1, n_vertex_max
     do im = n_tor_start, n_tor_end
     do ivar = 1, n_var
       do io = 1, n_order+1
-        if (use_fft) then
-          index_iv_io =       n_var*(n_order+1)*(iv-1) +       n_var*(io-1) + 1 + (ivar-1)
-        else
-          index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
-        endif
+        index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
         do in =  n_tor_start, n_tor_end
         do jvar = 1, n_var
            do jo = 1, n_order+1
-             if (use_fft) then
-               index_jv_jo =       n_var*(n_order+1)*(jv-1) +       n_var*(jo-1) + 1 + (jvar-1)
-             else
-               index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + in - n_tor_start +1 + (jvar-1) * n_tor_local
-             endif
+             index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + in - n_tor_start +1 + (jvar-1) * n_tor_local
              elm_ij(io, jo) =  ELM(index_iv_io, index_jv_jo)
            enddo
         enddo
@@ -159,19 +143,11 @@ do iv = 1, n_vertex_max
     do im = n_tor_start, n_tor_end
     do ivar = 1, n_var
       do io = 1, n_order+1
-        if (use_fft) then
-          index_iv_io =       n_var*(n_order+1)*(iv-1) +       n_var*(io-1) + 1 + (ivar-1)
-        else
-          index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
-        endif
+        index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + im - n_tor_start +1 + (ivar-1)*n_tor_local
         do in =  n_tor_start, n_tor_end
         do jvar = 1, n_var
           do jo = 1, n_order+1
-             if (use_fft) then
-               index_jv_jo =       n_var*(n_order+1)*(jv-1) +       n_var*(jo-1) + 1 + (jvar-1)
-             else
-               index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + in - n_tor_start +1 + (jvar-1) * n_tor_local
-             endif
+            index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + in - n_tor_start +1 + (jvar-1) * n_tor_local
             ELM(index_iv_io, index_jv_jo) = elm_ij(io, jo)
           enddo
         enddo

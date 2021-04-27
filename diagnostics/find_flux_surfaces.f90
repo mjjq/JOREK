@@ -6,7 +6,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only:   SDN_threshold, treat_axis
+use phys_module, only:   SDN_threshold, treat_axis, treat_axis2
 
 implicit none
 
@@ -83,7 +83,7 @@ do i=1, element_list%n_elements
  
   ! change size for elements on the grid axis
   esize(:,:) = element_list%element(i)%size(:,:)
-  if(treat_axis .and. element_list%element(i)%axis_element)then
+  if((treat_axis .or. treat_axis2) .and. element_list%element(i)%axis_element)then
      element = element_list%element(i)
      do iv = 1, n_vertex_max
         inode     = element%vertex(iv)

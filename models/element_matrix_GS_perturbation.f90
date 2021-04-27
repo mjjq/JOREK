@@ -45,7 +45,7 @@ RHS=0.d0
 esize(:,:) = element%size(:,:)
 BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
 
-if(treat_axis .and. element%axis_element)then
+if((treat_axis .or. treat_axis2) .and. element%axis_element)then
   call on_the_axis(element, nodes, H  ,  BasFun  )
   call on_the_axis(element, nodes, H_s,  BasFun_s)
   call on_the_axis(element, nodes, H_t,  BasFun_t)

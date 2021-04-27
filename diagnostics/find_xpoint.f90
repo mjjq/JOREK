@@ -4,7 +4,7 @@ subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: tokamak_device, treat_axis
+use phys_module, only: tokamak_device, treat_axis, treat_axis2
 use mod_interp
 
 implicit none
@@ -72,7 +72,7 @@ do i=1,element_list%n_elements    ! --- loop over elements
   esize(:,:) = element_list%element(i)%size(:,:)
   BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
 
-  if(treat_axis .and. element_list%element(i)%axis_element)then
+  if((treat_axis .or. treat_axis2) .and. element_list%element(i)%axis_element)then
      element = element_list%element(i)
      do iv = 1, n_vertex_max
         inode     = element%vertex(iv)

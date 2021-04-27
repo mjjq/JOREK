@@ -59,7 +59,7 @@ contains
 #endif
 
     if(treat_axis2 .and. element%axis_element ) then
-      call new2old_dofs_on_the_axis(node_list, element, nodes)
+      call new2old_dofs_on_the_axis(node_list, element, nodes, i_tor_min, i_tor_max)
     endif
 
     ! --- Call element_matrix
@@ -84,7 +84,9 @@ contains
     endif
     
    if(treat_axis2 .and. element%axis_element ) then
+     print*, norm2(thread_struct(omp_tid)%ELM) , norm2(thread_struct(omp_tid)%RHS)           
      call old2new_basis_on_the_axis(nodes, element, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
+     print*, norm2(thread_struct(omp_tid)%ELM) , norm2(thread_struct(omp_tid)%RHS)
    endif
 
     ! --- Apply sheath boundary conditions at the targets
@@ -711,7 +713,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   if (fix_axis_nodes) then
     call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
                            ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
-  elseif(treat_axis)then
+  elseif(treat_axis .or. treat_axis2)then
     call penalize_third_dof_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, &
                            ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
   endif

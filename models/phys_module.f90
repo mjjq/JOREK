@@ -685,7 +685,9 @@ module phys_module
   real*8  :: D_neutral
  
   !> @name  
-  logical  :: treat_axis, treat_axis2        ! flag for chosing grid axis treatment
+  logical  :: treat_axis         ! flag for chosing grid axis treatment
+  logical  :: treat_axis2        ! flag for chosing grid axis treatment
+  
   contains
   
 end module phys_module

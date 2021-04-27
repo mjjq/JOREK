@@ -107,7 +107,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 pastix_maxthrd, centralize_harm_mat,                & 
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
                 vert_FB_tact, start_VFB_ts, I_coils_max, treat_axis,&
-                force_central_node
+                force_central_node, treat_axis2
 
 
 if (my_id .eq. 0) then

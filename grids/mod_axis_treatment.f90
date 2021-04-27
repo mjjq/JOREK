@@ -2,12 +2,13 @@ module mod_axis_treatment
 
 contains
 
-subroutine new2old_dofs_on_the_axis(node_list, element, nodes)
+subroutine new2old_dofs_on_the_axis(node_list, element, nodes, i_tor_min, i_tor_max)
 use data_structure
 implicit none
 type(type_node_list),  intent(in)    :: node_list
 type(type_element),    intent(inout) :: element
 type(type_node),       intent(inout) :: nodes(n_vertex_max)
+integer ,              intent(in)    ::  i_tor_min, i_tor_max
 ! --- routine parameters
 integer :: iv, vg, ivar, in, dof2, dof4
 
@@ -15,7 +16,7 @@ dof2 = 2 ; dof4 = 4
 
 do iv = 1, 4, 3  ! loop over axis nodes only, 1 and 4 are axis nodes
 vg = element%vertex(iv)
-  do in=1,n_tor
+  do in = i_tor_min, i_tor_max
     do ivar = 1, n_var
       nodes(iv)%values(in,dof2,ivar) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%values(in,dof2,ivar) &
                                      + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%values(in,dof4,ivar)
@@ -46,26 +47,10 @@ integer :: axis_vertex1, axis_vertex4, dof1, dof2, dof3, dof4
 integer :: iv, io, jv, jo, index_iv_io, index_jv_jo, ivar, jvar
 integer :: im, in, n_tor_start, n_tor_end, n_tor_local
 real*8  :: Ptrans(1:4, 1:4), Pmat(1:4, 1:4), rhs_i(1:4), elm_ij(1:4, 1:4)
-logical :: use_fft
 
 axis_vertex1 = 1 ; axis_vertex4 = 4
 dof1 = 1 ; dof2 = 2 ; dof3 = 3 ; dof4 = 4
 
-if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
-  ! In case of global matrix construction:
-  use_fft = n_tor > n_tor_fft_thresh
-else
-  ! In case of "direct construction" of harmonic matrix never FFT:
-  use_fft = .false.
-end if
-if ( use_fft ) then
-  ! In case of FFT, don't loop over toroidal harmonics:
-  n_tor_start = 1
-  n_tor_end   = 1
-else
-  n_tor_start = i_tor_min
-  n_tor_end   = i_tor_max
-end if
 n_tor_local = n_tor_end - n_tor_start +1
 
 do iv = 1, n_vertex_max

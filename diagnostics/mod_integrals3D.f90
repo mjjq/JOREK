@@ -139,6 +139,7 @@ real*8  :: source_bg, source_imp, source_tmp
 #endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion
+real*8  :: local_P_ion, total_P_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 real*8  :: ne_SI, Te_eV
 #endif
@@ -260,6 +261,7 @@ local_n_particles     = 0.d0
 local_radiation       = 0.d0
 local_radiation_phi   = 0.d0
 local_E_ion           = 0.d0
+local_P_ion           = 0.d0
 #endif
 
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
@@ -297,10 +299,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type,              &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-!$omp          nimp_bg, local_E_ion, ksi_ion, GAMMA, use_imp_adas,                             &
+!$omp          nimp_bg, local_E_ion, local_P_ion, ksi_ion, GAMMA, use_imp_adas,                &
 #endif
 #ifdef WITH_Impurities
-!$omp          local_E_ion,                                                                    &
+!$omp          local_E_ion, local_P_ion,                                                       &
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
 #endif
 !$omp          wgauss_copy, varmin, varmax)                                                    &
@@ -349,7 +351,7 @@ omp_tid      = 0
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
-!$omp                local_radiation, local_radiation_phi, local_E_ion,                       &
+!$omp                local_radiation, local_radiation_phi, local_E_ion, local_P_ion,          &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -643,7 +645,7 @@ do ife = ife_min, ife_max
     local_radiation         = local_radiation + ( (r0_corr * rn0_corr  * LradDrays_T            &
                                + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
                                + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi 
-    local_E_ion             = local_E_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
+    local_P_ion             = local_P_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
                              * bigR * xjac * wst * delta_phi
   else
     if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
@@ -659,7 +661,7 @@ do ife = ife_min, ife_max
       local_radiation         = local_radiation + (r0_corr * rn0_corr  * LradDrays_T &
                                  + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
                                  * bigR * xjac * wst * delta_phi 
-      local_E_ion             = local_E_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
+      local_P_ion             = local_P_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
                                  * bigR * xjac * wst * delta_phi
     else
       write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
@@ -1246,6 +1248,7 @@ V_max                = varmax
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_P_ion, total_P_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_radiation_phi, total_radiation_phi,n_plane,&
                    MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #endif
@@ -1329,6 +1332,7 @@ area                 = n_period * area / (2.d0 * PI)
 total_radiation     = n_period * total_radiation
 total_radiation_phi = n_period * total_radiation_phi
 total_E_ion         = n_period * total_E_ion
+total_P_ion         = n_period * total_P_ion
 #endif
 
 ! --- Boundary integrals
@@ -1631,7 +1635,11 @@ if (my_id .eq. 0) then
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI               : ', total_n_particles_inj, total_n_particles
   write(*,'(A,1e14.6,A)') ' Radiation power          : ', total_radiation/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)') ' Radiation power SANITY   : ', sum(total_radiation_phi)/1.d6, ' [MW]'
-  write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_E_ion/1.d6, ' [MW]'
+  if (with_neutrals) then
+    write(*,'(A,1e14.6,A)') ' Ionization power         : ', total_P_ion/1.d6, ' [MW]'
+  else if (with_impurities) then ! With CE assumption, it's easier to obtain the total ionization energy then get the ionization power by finite difference
+    write(*,'(A,1e14.6,A)') ' Ionization energy        : ', total_E_ion/1.d6, ' [MJ]'
+  endif
 
   if (index_now > 1) then
     xtime_radiation(index_now) = xtime_radiation(index_now-1) + t_norm * tstep * total_radiation
@@ -1650,14 +1658,20 @@ if (my_id .eq. 0) then
     close (20)
   end if
 
-  if (index_now > 1) then
-    xtime_E_ion(index_now) = xtime_E_ion(index_now-1) + t_norm * tstep * total_E_ion
-  else if (index_now == 1) then
-    xtime_E_ion(index_now) = t_norm * tstep * total_E_ion
-  end if
-  if (index_now > 0) then
-  xtime_E_ion_power(index_now) = total_E_ion
-  end if
+  if (with_neutrals) then
+    if (index_now > 1) then
+      xtime_E_ion(index_now) = xtime_E_ion(index_now-1) + t_norm * tstep * total_P_ion
+    else if (index_now == 1) then
+      xtime_E_ion(index_now) = t_norm * tstep * total_P_ion
+    end if
+    if (index_now > 0) then
+      xtime_E_ion_power(index_now) = total_P_ion
+    end if
+  else if (with_impurities) then ! For CE assumption, we directly give the total ionization energy
+    if (index_now > 0) then
+      xtime_E_ion(index_now) = total_E_ion
+    end if
+  endif
 #endif
 
   do k = 1, n_var
@@ -1738,6 +1752,11 @@ if (my_id .eq. 0) then
       dnpart_tot_dt(index_now-1) = (npart_tot_t(index_now) - r_dt2*npart_tot_t(index_now-2) &
         -(1.d0-r_dt2)*npart_tot_t(index_now-1))  / (dt_now + dt_back*r_dt2) / t_norm
 
+      if (with_impurities) then ! Calculate the ionization energy change
+        xtime_E_ion_power(index_now-1) = (xtime_E_ion(index_now) - r_dt2*xtime_E_ion(index_now-2) &
+        -(1.d0-r_dt2)*xtime_E_ion(index_now-1))  / (dt_now + dt_back*r_dt2) / t_norm
+      endif
+
     endif
 
     !--- Estimate time derivatives for 1st tstep (1st order accuracy)
@@ -1757,6 +1776,10 @@ if (my_id .eq. 0) then
       dpart_tot_dt(index_now-1)    = (density_tot_t(index_now)-density_tot_t(index_now-1))   / dt_now / t_norm
 
       dnpart_tot_dt(index_now-1)   = (npart_tot_t(index_now)-npart_tot_t(index_now-1))       / dt_now / t_norm
+
+      if (with_impurities) then ! Calculate the ionization energy change
+        xtime_E_ion_power(index_now-1) = (xtime_E_ion(index_now)-xtime_E_ion(index_now-1))   / dt_now / t_norm
+      endif
 
     endif
 

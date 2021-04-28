@@ -356,7 +356,9 @@ if ( SI_units ) then
    else
       scalar_names(var_T)='Te_keV      '
    endif
-   scalar_names(var_Vpar)='Vpar_km/s   '
+   if (with_Vpar) then
+      scalar_names(var_Vpar)='Vpar_km/s   '
+   endif
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -1482,7 +1484,9 @@ if (SI_units) then
       scalars(i,var_T) = scalars(i,var_T) / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
     endif
     !=====================================Vparal in km/s *Btot!!!
-    scalars(i,var_Vpar) = scalars(i,var_Vpar) /t_norm/1.e3
+    if (with_Vpar) then
+       scalars(i,var_Vpar) = scalars(i,var_Vpar) /t_norm/1.e3
+    endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     !===================================== Neutral density in 1e20m-3
     scalars(i,var_rhon) = scalars(i,var_rhon) * central_density

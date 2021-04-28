@@ -612,7 +612,7 @@ do ife = ife_min, ife_max
 #if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
   ! --- Get ionization, recombination and radiation coefficients for Deuterium 
   call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                      LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_corr ) 
+                                      LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
 
 
   ! Get coefficient:  Prad,SI = coef_prad_si * Prad,jorek

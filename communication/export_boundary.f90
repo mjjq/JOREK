@@ -27,7 +27,7 @@ subroutine export_boundary(node_list, boundary_list, bnd_node_list)
     idir1 = boundary_list%bnd_element(i)%direction(1,2)
     idir2 = boundary_list%bnd_element(i)%direction(2,2)
 
-    write(22,'(3i7,99e16.8)') i, ib1, ib2,      &
+    write(22,'(3i7,999e16.8)') i, ib1, ib2,      &
       node_list%node(iv1)%x(:,1,1),             &
       node_list%node(iv1)%x(:,1,2),             &
       node_list%node(iv1)%x(:,idir1,1),         &

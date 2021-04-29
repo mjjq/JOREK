@@ -58,10 +58,6 @@ contains
     my_id = rank
 #endif
 
-    if(treat_axis2 .and. element%axis_element ) then
-      call new2old_dofs_on_the_axis(node_list, element, nodes, i_tor_min, i_tor_max)
-    endif
-
     ! --- Call element_matrix
     if ( ( (i_tor_min .eq. 1) .and. (i_tor_max .eq. n_tor) .and. (n_tor .ge. n_tor_fft_thresh) )   &
       .or. (unified_element_matrix) ) then
@@ -83,12 +79,6 @@ contains
         i_tor_min, i_tor_max)
     endif
     
-   if(treat_axis2 .and. element%axis_element ) then
-     print*, norm2(thread_struct(omp_tid)%ELM) , norm2(thread_struct(omp_tid)%RHS)           
-     call old2new_basis_on_the_axis(nodes, element, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
-     print*, norm2(thread_struct(omp_tid)%ELM) , norm2(thread_struct(omp_tid)%RHS)
-   endif
-
     ! --- Apply sheath boundary conditions at the targets
     if (bc_natural_open) then
       ! --- Loop over the 4 nodes
@@ -455,7 +445,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
   !$omp           ivar, itor, jvertex, jorder, jvar, jtor, random_element, n_var_reduced, v1, v2, im,      &
-  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8        )
+  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8, treat_axis2   )
 
 ! --- omp id
 #ifdef _OPENMP
@@ -465,7 +455,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   omp_nthreads = 1
   omp_tid      = 1
 #endif
-  
+ 
   n_tor_local = i_tor_max - i_tor_min + 1 
 ! --- Loop over local elements
   !$omp do schedule(runtime)
@@ -497,8 +487,16 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
     endif
 
+    if(treat_axis2 .and. element%axis_element ) then
+      call new2old_dofs_on_the_axis(node_list, element, nodes, i_tor_min, i_tor_max)
+    endif
+
     call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis,        &
       psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
+
+    if(treat_axis2 .and. element%axis_element ) then
+      call old2new_basis_on_the_axis(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
+    endif
 
 #ifdef PRINT_ELM_RHS
     if (.not. harmonic_matrix) then
@@ -700,7 +698,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   end do
   !$omp end do
   !$omp end parallel
-  
+ 
   ! --- Memory tracking
   call tr_vnorms("cm_A_bef_bc",A_mat,nz)
   

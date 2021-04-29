@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mumps_module
 use pastix_module
-use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq, treat_axis, fix_axis_nodes
+use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq, treat_axis, fix_axis_nodes, treat_axis2
 use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
 use mpi_mod
@@ -105,7 +105,7 @@ if (my_id == 0) then
   n_border = 0
   if (itype .ne. 710) then
     do i=1,node_list%n_nodes
-      if(treat_axis .and. xpoint)then
+      if((treat_axis .or. treat_axis2) .and. xpoint)then
         ! no of DoFs on which bc to be applied
         if (node_list%node(i)%axis_node      ) n_border = n_border+1
       else
@@ -275,7 +275,7 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
   
       if (node_list%node(i)%axis_node) then
       
-        if (treat_axis) then
+        if (treat_axis .or. treat_axis2) then
           ! penalize 3rd DoF to enforce C0 continuity at the grid center        
           index_i = node_list%node(i)%index(3)  ! base index in the main matrix
           mumps_par%irn(ilarge+1) = index_i

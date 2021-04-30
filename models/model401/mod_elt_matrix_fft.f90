@@ -21,7 +21,6 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zk_iperp, get_zk_eperp
 use equil_info, only : get_psi_n
 use corr_neg
-use mod_neutral_source
 use mod_bootstrap_functions
 
 implicit none

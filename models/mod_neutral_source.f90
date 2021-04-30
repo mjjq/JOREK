@@ -141,7 +141,7 @@ module mod_neutral_source
   end subroutine neutral_source
 
 
-  subroutine get_source(R,Z,phi,source_neutral) 
+  subroutine total_neutral_source(R,Z,phi,source_neutral) 
 
     use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
@@ -207,7 +207,7 @@ module mod_neutral_source
       end do
     end if
 
-  end subroutine get_source
+  end subroutine total_neutral_source
 
   !> Calculates the total number of neutral particles injected from the start of the simulation and for each timestep.
   subroutine total_neutrals(my_id,node_list,element_list)

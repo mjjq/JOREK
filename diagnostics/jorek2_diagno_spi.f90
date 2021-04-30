@@ -115,7 +115,7 @@ close(20)
 
 open(20,file="thermal_history.dat")
 
-write(20,'(3A20)') 'time', 'e_th_energy (MJ)' 'i_th_energy (MJ)'
+write(20,'(3A20)') 'time', 'e_th_energy (MJ)', 'i_th_energy (MJ)'
 
 do i=1,index_start
   write(20,'(i7,f12.3,2e14.6)') i,xtime(i), thermal_e_tot_t(i)/1.d6, thermal_i_tot_t(i)/1.d6

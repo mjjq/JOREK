@@ -27,6 +27,7 @@ use spmf
 #ifdef USE_STRUMPACK
 use strumpack_module
 #endif
+use mod_axis_treatment
 
 implicit none
 
@@ -191,6 +192,10 @@ if (my_id == 0) then
       nodes(iv) = node_list%node(inode)
     enddo
   
+    if(treat_axis2 .and. element%axis_element ) then
+      call new2old_dofs_on_the_axis_poisson(node_list, element, nodes, ivar_in, ivar_out, i_harm)
+    endif
+    
     if (itype .eq. -1) then
       
       call element_matrix_GS_perturbation(xpoint,xcase,Z_xpoint,psi_axis,psi_bnd,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
@@ -212,7 +217,11 @@ if (my_id == 0) then
       call element_matrix_Poisson(itype,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
   
     endif
-  
+ 
+    if(treat_axis2 .and. element%axis_element ) then
+      call old2new_basis_on_the_axis_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
+    endif
+    
     if (refinement) then ! Processing  "constrained nodes"
       call Chgmt_node(ife,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
     else

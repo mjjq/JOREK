@@ -28,7 +28,7 @@ real*8     :: psi_bnd_kl(n_vertex_max,(n_order+1))
 real*8     :: xjac, wst
 real*8     :: ps0_x, ps0_y, v, v_x, v_y, psi, psi_x, psi_y, rhs_ij
 real*8     :: pprime_fact, fact_newton
-integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm, xcase2, nc
+integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm, xcase2, nc, ierr
 logical    :: xpoint2, newton_method_GS
 real*8     :: Z_xpoint(2),psi_axis,psi_bnd,dj_dpsi,dj_dz, psi_norm, fact_private
 real*8     :: zn, dn_dpsi, dn_dz,  ddn_dpsi,  ddn_dz,  ddn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
@@ -56,7 +56,7 @@ else
     write(*,*) "*  input file for Newton iterations for the GS equation     *"
     write(*,*) "*  If unknown, calculate it with newton_GS_fixbnd=.false.   *"
     write(*,*) "*************************************************************"
-    stop
+    call MPI_ABORT(MPI_COMM_WORLD,3,ierr) 
   endif
 endif
 

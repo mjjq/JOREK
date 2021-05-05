@@ -492,7 +492,7 @@ subroutine preset_parameters
   ns_phi_rotate   = 0.0
   tor_frequency   = 0.0
   n_spi           = 0
-  n_spi_tot       = 0
+  n_spi(1)        = 1
   n_inj           = 1
   spi_rnd_seed    = 0
   spi_abl_model   = 0

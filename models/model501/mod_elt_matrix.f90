@@ -245,6 +245,11 @@ do i=1,n_vertex_max
  enddo
 enddo
 
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
+delta_t = delta_t * tstep / tstep_prev
+
 do ms=1, n_gauss
   do mt=1, n_gauss
 
@@ -910,7 +915,7 @@ do ms=1, n_gauss
      source_imp = 0.d0                    
      source_bg  = 0.d0
 
-     call get_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
 
      ! This is to detect N/A
      if (source_imp /= source_imp .or. source_bg /= source_bg) then

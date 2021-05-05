@@ -43,11 +43,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 force_horizontal_Xline,                            &
                 n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
-                grid_to_wall, RZ_grid_inside_wall,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
                 n_wall_blocks, n_ext_block,                         &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device, thermalization,                     &
                 F0,                                                 &
                 gamma_sheath_i, gamma_sheath_e,                     &
@@ -112,8 +114,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 rho_min,                                            &
                 corr_neg_temp_coef,                                 &
-                corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,      &  
-                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,        &  
+                ns_deltaphi, ksi_ion, spi_rnd_seed,                 &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
@@ -134,7 +136,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     &
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family
 
 if (my_id .eq. 0) then
 

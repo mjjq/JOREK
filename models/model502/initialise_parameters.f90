@@ -65,11 +65,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
-                grid_to_wall, RZ_grid_inside_wall,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
                 n_wall_blocks, n_ext_block,                         &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device, gamma_i_stangeby, gamma_sheath_e,   &
                 F0,gamma_sheath_i,gamma_e_stangeby,                 &
                 mach_one_bnd_integral, Vpar_smoothing,              &
@@ -137,7 +139,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &
                 imp_reflection, neutral_reflection, rho_min,        &
-                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_deltaphi, ksi_ion, spi_rnd_seed,                 &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
@@ -164,7 +166,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max
+                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family
 
  if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
@@ -223,14 +229,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
   if (gamma_e_stangeby > -1.d89) then
-    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
+    gamma_sheath_e = (gamma-1.d0) * (gamma_e_stangeby - 1.d0)
   else
-    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
+    gamma_e_stangeby = gamma_sheath_e / (gamma-1.d0) + 1.d0
   end if
   if (gamma_i_stangeby > -1.d89) then
-    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+    gamma_sheath_i = (gamma-1.d0) * (gamma_i_stangeby - 1.d0 - gamma)
   else
-    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
+    gamma_i_stangeby = gamma_sheath_i / (gamma-1.d0) + 1.d0 + gamma
   end if
 
   if (sum(nstep_n) .gt. 0) then
@@ -257,7 +263,7 @@ call derive_num_profiles(my_id)
 ! --- For now the diamagnetic term has not been implemented properly
 if (tauIC .ne. 0.0) then
   tauIC = 0.0
-  write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 501, setting tauIC = 0 now."
+  write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 502, setting tauIC = 0 now."
 endif
 
 if ( my_id == 0 ) then

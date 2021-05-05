@@ -45,6 +45,7 @@ module phys_module
   real*8  :: imp_reflection       !< impurity reflection coefficient on open fieldlines
   logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
   logical :: deuterium_adas       !< use OPEN ADAS to calculate ionization, recombination and radiation coeffients for deuterium                        
+  logical :: deuterium_adas_1e20  !< use OPEN ADAS with fixed density=1e20 to calculate ionization, recombination and radiation coeffients for deuterium
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
   real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
@@ -67,6 +68,7 @@ module phys_module
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
   logical :: grid_to_wall         !< extend the grid to a physical wall
   logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
+  real*8  :: RZ_grid_jump_thres   !< threshold to change R-resolution as RZ-grid gets sqeezed by limiter contour
   real*8  :: manipulate_psi_map(5,5) !< Option to manipulate Psi_boundary for the initial grid
   logical :: adaptive_time        !< (presently not useful)
   logical :: equil                !< compute equilibrium
@@ -117,18 +119,21 @@ module phys_module
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
   !> Points used as blocks to extend grid into complex wall structures, see https://www.jorek.eu/wiki/doku.php?id=wallgrid_tutorial
+  real*8  :: eqdsk_psi_fact                                                     !< multiply eqdsk psi by factor for grid_inside_wall
   logical :: extend_existing_grid                                               !< Add patches to existing grid from restart file
   integer, parameter :: n_wall_blocks_max = 30                                  !< Maximum number of blocks (30 should be enough)
   integer :: n_wall_blocks                                                      !< Number of blocks
   integer, parameter :: n_wall_block_points_max = 20                            !< Max number of blocks points
   integer :: corner_block(n_wall_blocks_max)                                    !< =1 for a corner block ("left" side will also be wall-aligned)
   integer :: n_ext_block(n_wall_blocks_max)                                     !< Number of 'radial' grid points from the outermost flux surface to wall)
+  logical :: n_ext_equidistant(n_wall_blocks_max)                               !< if true, radial spacing of grid points will be equidistant (not adapted)
   integer :: n_block_points_left (n_wall_blocks_max)                            !< Number of points on left side of block
   real*8  :: R_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
   real*8  :: Z_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
   integer :: n_block_points_right(n_wall_blocks_max)                            !< Number of points on left side of block
   real*8  :: R_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
   real*8  :: Z_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
+  logical :: use_simple_bnd_types                                               !< convert Stan's bnd_types to Guido's bnd_types
   
   !> @name Define X-point geometry by geometrical properties
   !!
@@ -271,8 +276,7 @@ module phys_module
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
 
-  !> @name Massive gas injection-related input parameters
-  
+  !> @name shared between MGI and SPI applications
   integer, parameter :: n_inj_max = 10 ! The hard coded maximum number of injections
 
   real*8  :: t_ns(n_inj_max)   !< MGI onset time (JOREK units)
@@ -281,9 +285,14 @@ module phys_module
   real*8  :: ns_Z(n_inj_max)   !< Z position of gas source
   real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
   real*8  :: ns_radius         !< Poloidal radius of gas source
-  real*8  :: ns_sig            !< Obsolete (still in the code but not used)
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
   real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
+
+  character(len=80) :: imp_type !< Type of injected material or background impurity species: Argon, neon, ...
+  logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
+
+  !> @name Massive gas injection-related input parameters
+  
   logical :: JET_MGI           !< Switch to use a JET-like MGI
   logical :: ASDEX_MGI         !< Switch to use an ASDEX-like MGI
   real*8  :: V_Dmv             !< Volume of the DMV reservoir
@@ -294,8 +303,6 @@ module phys_module
   real*8  :: ksi_ion            !< Energy cost of each ionization
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
-  character(len=80) :: imp_type !< Type of injected material or background impurity species: Argon, neon, ...
-  logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
  
   !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
@@ -310,7 +317,7 @@ module phys_module
   real*8  :: ng_radius_ratio           !< We are assuming a constant ratio between the radius of NG clouds
                                        !< and that of shattered pellets
 
-  real*8  :: spi_Vel_diff(n_inj_max)   !< The reference veolocity difference from the reference velocity
+  real*8  :: spi_Vel_diff(n_inj_max)   !< The veolocity difference from the reference velocity
   real*8  :: spi_angle                 !< The vertex angle of spi spreading in terms of rad
   real*8  :: spi_L_inj(n_inj_max)      !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
   real*8  :: ns_phi_rotate             !< The toroidal position of rotated injection point
@@ -330,12 +337,14 @@ module phys_module
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
   real*8, allocatable  :: xtime_P_ei(:)         !< The time history of electron-ion energy exchange power
 
-  integer :: n_spi(n_inj_max)   !< Number of shattered pellets injected
-  integer :: n_spi_tot          !< Total number of shattered pellets injected
-  integer :: n_inj              !< Number of injection locations
-  integer :: spi_abl_model      !< Determine which type of ablation model is using.
+  integer :: n_spi(n_inj_max)   !< Number of shattered fragment injected for each injection
+  integer :: n_spi_tot          !< Total number of shattered fragments injected
+  integer :: n_inj              !< Number of injections
+  integer :: spi_abl_model      !< Determine which type of ablation model is used.
                                 !< 0 for constant release rate, 1 for NGS model,
                                 !< 2 for Sergeev formula, 3 for Parks formula.
+                                !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
+                                !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
@@ -694,6 +703,16 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
+  
+  !> @name Mode families preconditioner parameters
+  integer, parameter :: n_fam_max = 100               !< maximum number of families
+  integer :: n_mode_families                          !< number of families
+  logical :: autodistribute_modes                     !< use automatic or manual mode distribution
+  integer :: modes_per_family(n_fam_max)              !< Number of modes in families
+  integer :: mode_families_modes(n_fam_max,n_fam_max) !< Mode numbers (i_tor) belonging to each family; first index: family number
+  real*8  :: weights_per_family(n_fam_max)            !< Multiplication factor of family's contribution to the full solution
+  logical :: autodistribute_ranks                     !< use automatic or manual rank distribution
+  integer :: ranks_per_family(n_fam_max)              !< Number of MPI ranks per mode families
   
   contains
   

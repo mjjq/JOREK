@@ -20,10 +20,10 @@ module mod_integrals3D
   use corr_neg
   use pellet_module
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source, only: get_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
+  use mod_neutral_source, only: total_neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
 #endif
 #ifdef WITH_Impurities
-  use mod_injection_source, only: get_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
+  use mod_injection_source, only: total_imp_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
 #endif
   use mod_impurity, only: radiation_function, radiation_function_linear
   use equil_info, only : get_psi_n, ES
@@ -316,7 +316,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          eta_ohmic, central_mass,                                                        &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
-!$omp          ns_phi, ns_radius, ns_sig, ns_deltaphi, ns_tor_norm, spi_tor_rot, local_E_ion,  &
+!$omp          ns_phi, ns_radius, ns_deltaphi, ns_tor_norm, spi_tor_rot, local_E_ion,          &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI, local_P_ion,&
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type, local_P_ei,  &
 #endif
@@ -632,7 +632,7 @@ do ife = ife_min, ife_max
 #if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
         ! --- Get ionization, recombination and radiation coefficients for Deuterium 
         call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                            LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+                                            LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
       
       
         ! Get coefficient:  Prad,SI = coef_prad_si * Prad,jorek
@@ -833,6 +833,7 @@ do ife = ife_min, ife_max
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
 #ifdef WITH_Impurities
+        D_tot  = D_tot  + (r0-rn0) * xjac * BigR * wst * delta_phi 
 #ifdef WITH_TiTe
         P_e_tot = P_e_tot + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
         P_i_tot = P_i_tot + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi
@@ -843,6 +844,7 @@ do ife = ife_min, ife_max
         P_i_tot = P_e_tot
 #endif /* WITH_TiTe */
 #else /* WITH_Impurities */
+        D_tot  = D_tot  + r0       * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
         P_e_tot = P_e_tot + r0 * T0e * xjac * BigR * wst * delta_phi
         P_i_tot = P_i_tot + r0 * T0i * xjac * BigR * wst * delta_phi
@@ -854,7 +856,6 @@ do ife = ife_min, ife_max
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
 
-        D_tot  = D_tot  + r0      * xjac * BigR * wst * delta_phi
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
         VM_tot = VM_tot + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
@@ -884,7 +885,7 @@ do ife = ife_min, ife_max
 
         source_neutral = 0.d0
 
-        call get_source(x_g(ms,mt),y_g(ms,mt),phi,source_neutral)
+        call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,source_neutral)
 
         ! Neutral injection rate in particles/s
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR *&
@@ -898,7 +899,7 @@ do ife = ife_min, ife_max
         source_imp = 0.d0
         source_bg  = 0.d0
 
-        call get_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
+        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
 
         ! Frictional heat source
         fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&

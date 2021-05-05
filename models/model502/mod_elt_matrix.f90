@@ -1409,9 +1409,7 @@ do ms=1, n_gauss
          rhs_ij_7 = - v * F0 / BigR * P0_p                                              * xjac * tstep &
                     - v * (P0_s * ps0_t - P0_t * ps0_s)                                        * tstep &
 
-                      - visco_par * (v_x * vpar0_x + v_y * vpar0_y) * BigR                * xjac * tstep &
-		       
-		      - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                * tstep &
+                      - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                * tstep &
                       + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                     * xjac * tstep &
 
                       - 0.5d0 * v * vpar0**2 * BB2 * (ps0_s * r0_t - ps0_t * r0_s)                * tstep &
@@ -1421,7 +1419,7 @@ do ms=1, n_gauss
                                   
                       + zeta * v * delta_g(mp,7,ms,mt) * R0 * F0**2 / BigR                       * xjac  &
                       ! Why it is F0**2 rather than BB2 here?
-		      + zeta * v * r0 * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR * xjac  &
+                      + zeta * v * r0 * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR * xjac  &
 
                       ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
                       ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
@@ -1462,6 +1460,12 @@ do ms=1, n_gauss
 !
 !===============================End of new TG_num terms============================
 
+         if (normalized_velocity_profile) then
+           rhs_ij_7 = rhs_ij_7 - visco_par * (v_x * (vpar0_x      ) + v_y * (vpar0_y      )) * BigR* xjac * tstep
+         else
+           rhs_ij_7 = rhs_ij_7 - visco_par * (v_x * (vpar0_x * F0**2 / BigR**2 - 2 * vpar0 * F0**2 / BigR**3) & 
+                                            + v_y * (vpar0_y * F0**2 / BigR**2           ) ) * BigR* xjac * tstep 
+         endif
 
 !################################################################################################### 
 !#  equation 8 (impurity density equation)                                                          # 
@@ -2255,7 +2259,6 @@ do ms=1, n_gauss
 
 
                  amat_77 = v * Vpar * r0 * F0**2 / BigR * xjac * (1.d0 + zeta) &
-                         + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR        * xjac  * theta * tstep &
 
                          ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
                          ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
@@ -2300,6 +2303,12 @@ do ms=1, n_gauss
                                    * (-(ps0_s * v_t  - ps0_t * v_s) /xjac + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
 
 !===============================End of new TG_num terms============================
+
+                 if (normalized_velocity_profile) then
+                   amat_77 = amat_77 + visco_par * (v_x * Vpar_x + v_y * Vpar_y) * BigR       * xjac  * theta * tstep 
+                 else
+                   amat_77 = amat_77 + visco_par * F0**2 / BigR**2 * (v_x * (Vpar_x - 2*vpar/BigR) + v_y * Vpar_y) * BigR * xjac  * theta * tstep 
+                 endif
 
                  amat_78 = + v * (rhon_s * alpha_i * Ti0 * ps0_t - rhon_t * alpha_i * Ti0 * ps0_s)         * theta * tstep &
                            + v * (rhon * alpha_i * Ti0_s * ps0_t - rhon * alpha_i * Ti0_t * ps0_s)         * theta * tstep &

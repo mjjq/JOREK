@@ -71,7 +71,17 @@ if (my_id .eq. 0) then
     write(*,*) '           MUMPS OR STRUMPACK INSTEAD. For example               '
     write(*,*) '           (add use_mumps_eq=.t. to namelist and  USE_MUMPS = 1  '
     write(*,*) '           in Makefile.inc)                                      '
+    write(*,*) ' '
 #endif
+  endif
+
+  if ((newton_GS_fixbnd .or. newton_GS_freebnd) .and. (.not. xpoint2)) then
+    write(*,*) ' '
+    write(*,*) ' WARNING: THE NEWTON METHOD FOR THE GRAD-SHAFRANOV SOLVER DOES   '
+    write(*,*) '           NOT TAKE EFFECT FOR LIMITER PLASMAS (XPOINT=.F.)      '
+    write(*,*) '           AND PICARD ITERATIONS ARE RECOVERED                   '
+    write(*,*) '           FURTHER DEVELOPMENTS ARE NEEDED FOR LIMITER PLASMAS   '
+    write(*,*) ' '
   endif
 
 endif

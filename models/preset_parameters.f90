@@ -78,7 +78,10 @@ subroutine preset_parameters
   equil_accuracy       = 1.d-6
   equil_accuracy_freeb = 1.d-6
   axis_srch_radius     = 99.d0
-
+  delta_psi_GS         = 10000.d0
+  newton_GS_fixbnd     = .false.
+  newton_GS_freebnd    = .true.
+  
   n_R          = 0
   n_Z          = 0
 

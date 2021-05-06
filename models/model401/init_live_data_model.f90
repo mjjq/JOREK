@@ -15,7 +15,7 @@ subroutine init_live_data_model(file_handle)
   real*8  :: d_perp, zk_e_perp, zk_i_perp
   real*8  :: d, d1, d2, d3, d4, d5, d6 ! dummies
   
-  write(file_handle,'(A,I5)') '@n_input_profiles: ', 13
+  write(file_handle,'(A,I5)') '@n_input_profiles: ', 14
   write(file_handle,'(A)') '@input_profiles_xlabel: Psi_{normalized}'
   write(file_handle,'(A)') '@input_profiles_xlabel_si: Psi_{normalized}'
   write(file_handle,'(A)') '@input_profiles_ylabel: input profiles'

@@ -6,6 +6,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use mod_axis_treatment
 
 implicit none
 
@@ -32,6 +33,10 @@ real*8 :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
 
 W_mag = 0.d0
 W_kin = 0.d0
+
+if(treat_axis2) then
+  call transform_nodelist(node_list, 1, n_tor)
+endif
 
 do ife =1,  element_list%n_elements
 
@@ -182,6 +187,10 @@ do ife =1,  element_list%n_elements
 
 enddo
 
+if(treat_axis2) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 do in=1,n_tor
   if (mode(in) .ne. 0) then
     W_mag(in) = 0.5d0 * W_mag(in)
@@ -191,3 +200,4 @@ enddo
 
 return
 end
+

@@ -6,12 +6,13 @@ use gauss
 use basis_at_gaussian
 use phys_module, only: tokamak_device, treat_axis, treat_axis2
 use mod_interp
+use mod_axis_treatment
 
 implicit none
 
 ! --- Routine parameters
 integer,                  intent(in)    :: my_id
-type (type_node_list),    intent(in)    :: node_list
+type (type_node_list),    intent(inout) :: node_list
 type (type_element_list), intent(in)    :: element_list
 real*8,                   intent(out)   :: psi_xpoint(2)
 real*8,                   intent(out)   :: R_xpoint(2)
@@ -65,6 +66,9 @@ include_pt_up = .false.
 found_upper = .false. 
 found_lower = .false.
 
+if(treat_axis2) then
+  call transform_nodelist(node_list, 1, n_tor)
+endif
 
 do i=1,element_list%n_elements    ! --- loop over elements
   
@@ -72,7 +76,7 @@ do i=1,element_list%n_elements    ! --- loop over elements
   esize(:,:) = element_list%element(i)%size(:,:)
   BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
 
-  if((treat_axis .or. treat_axis2) .and. element_list%element(i)%axis_element)then
+  if((treat_axis) .and. element_list%element(i)%axis_element)then
      element = element_list%element(i)
      do iv = 1, n_vertex_max
         inode     = element%vertex(iv)
@@ -146,6 +150,9 @@ do i=1,element_list%n_elements    ! --- loop over elements
 
 enddo    ! --- end loop over elements
 
+if(treat_axis2) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
 
 if(xcase .ne. 2) then
   do i_tries=1,  n_tries  ! --- start attempts to find the lower x-point

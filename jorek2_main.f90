@@ -489,6 +489,8 @@ required = 0
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
+    if(treat_axis2) call transform_back_nodelist(node_list, 1, n_tor)
+
     ! for variable time step Gears method
     if ( index_now <= 1 ) then
       tstep_prev = tstep
@@ -965,8 +967,10 @@ required = 0
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
+    if(treat_axis2) call transform_nodelist(node_list, 1, n_tor)          
     fileout = 'jorek00000'
     call export_restart(node_list, element_list, fileout)
+    if(treat_axis2) call transform_back_nodelist(node_list, 1, n_tor)    
   end if
   
   if ( ( my_id == 0 ) .and. ( (node_list%n_nodes > n_nodes_max+1000)                               &
@@ -1337,8 +1341,10 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
+      if(treat_axis2) call transform_nodelist(node_list, 1, n_tor)            
       write(fileout,'(A5,i5.5)') 'jorek',index_now
       call export_restart(node_list, element_list, fileout)
+      if(treat_axis2) call transform_back_nodelist(node_list, 1, n_tor)      
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.

@@ -2,13 +2,13 @@ module mod_axis_treatment
 
 contains
 
-subroutine new2old_dofs_on_the_axis_poisson(node_list, element, nodes,  ivar_in, ivar_out, i_harm)
+subroutine new2old_dofs_on_the_axis_poisson(node_list, element, nodes, itype, ivar_in, ivar_out, i_harm)
 use data_structure
 implicit none
 type(type_node_list),  intent(in)    :: node_list
 type(type_element),    intent(inout) :: element
 type(type_node),       intent(inout) :: nodes(n_vertex_max)
-integer ,              intent(in)    ::   ivar_in, ivar_out, i_harm
+integer ,              intent(in)    :: itype, ivar_in, ivar_out, i_harm
 ! --- routine parameters
 integer :: iv, vg, dof2, dof4
 
@@ -21,16 +21,19 @@ do iv = 1, 4, 3  ! loop over axis nodes only, 1 and 4 are axis nodes
    nodes(iv)%values(i_harm,dof4,ivar_in)  = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%values(i_harm,dof2,ivar_in) &
                                           + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%values(i_harm,dof4,ivar_in)
 
+   if(itype .eq. 710)then
+#if fullmhd
+   nodes(iv)%Fprof_eq(dof2) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%Fprof_eq(dof2) &
+                            + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%Fprof_eq(dof4)
+   nodes(iv)%Fprof_eq(dof4) = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%Fprof_eq(dof2) &
+                            + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%Fprof_eq(dof4)
+#endif
+   else
    nodes(iv)%values(i_harm,dof2,ivar_out) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%values(i_harm,dof2,ivar_out) &
                                           + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%values(i_harm,dof4,ivar_out)
    nodes(iv)%values(i_harm,dof4,ivar_out) = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%values(i_harm,dof2,ivar_out) &
                                           + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%values(i_harm,dof4,ivar_out)
-#if fullmhd
-      nodes(iv)%Fprof_eq(dof2) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%Fprof_eq(dof2) &
-                               + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%Fprof_eq(dof4)
-      nodes(iv)%Fprof_eq(dof4) = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%Fprof_eq(dof2) &
-                               + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%Fprof_eq(dof4)
-#endif
+   endif
 enddo
 end subroutine new2old_dofs_on_the_axis_poisson
 
@@ -48,7 +51,23 @@ integer :: iv, vg, ivar, in, dof2, dof4
 dof2 = 2 ; dof4 = 4
 
 do iv = 1, 4, 3  ! loop over axis nodes only, 1 and 4 are axis nodes
-   vg = element%vertex(iv)
+   vg = element%vertex(iv) ! global index of the vertex
+#if fullmhd
+   nodes(iv)%Fprof_eq(dof2) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%Fprof_eq(dof2) &
+                            + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%Fprof_eq(dof4)
+   nodes(iv)%Fprof_eq(dof4) = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%Fprof_eq(dof2) &
+                            + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%Fprof_eq(dof4)
+
+   nodes(iv)%psi_eq(dof2) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%psi_eq(dof2) &
+                          + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%psi_eq(dof4)
+   nodes(iv)%psi_eq(dof4) = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%psi_eq(dof2) &
+                          + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%psi_eq(dof4)
+#elif altcs
+   nodes(iv)%psi_eq(dof2) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%psi_eq(dof2) &
+                          + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%psi_eq(dof4)
+   nodes(iv)%psi_eq(dof4) = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%psi_eq(dof2) &
+                          + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%psi_eq(dof4)                  
+#endif
    do in = i_tor_min, i_tor_max
    do ivar = 1, n_var
       nodes(iv)%values(in,dof2,ivar) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%values(in,dof2,ivar) &
@@ -62,12 +81,6 @@ do iv = 1, 4, 3  ! loop over axis nodes only, 1 and 4 are axis nodes
                                      + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%deltas(in,dof4,ivar)
    enddo
    enddo
-#if fullmhd
-   nodes(iv)%Fprof_eq(dof2) = nodes(iv)%x(1,dof2,1) * node_list%node(vg)%Fprof_eq(dof2) &
-                            + nodes(iv)%x(1,dof2,2) * node_list%node(vg)%Fprof_eq(dof4)
-   nodes(iv)%Fprof_eq(dof4) = nodes(iv)%x(1,dof4,1) * node_list%node(vg)%Fprof_eq(dof2) &
-                            + nodes(iv)%x(1,dof4,2) * node_list%node(vg)%Fprof_eq(dof4)
-#endif
 enddo
 end subroutine new2old_dofs_on_the_axis
 
@@ -99,7 +112,7 @@ do iv = 1, n_vertex_max
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
     Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
-    PTrans(dof3,dof3) = 0.d0
+    !PTrans(dof3,dof3) = 0.d0
     Ptrans(dof4,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof4,dof4) = nodes(iv)%x(1,dof4,2)
   endif
 
@@ -127,7 +140,7 @@ do iv = 1, n_vertex_max
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
       Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof4) = nodes(jv)%x(1,dof2,2)
-      Pmat(dof3,dof3)  = 0.d0
+      !Pmat(dof3,dof3)  = 0.d0
       Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof4) = nodes(jv)%x(1,dof4,2)
     endif
 
@@ -187,7 +200,7 @@ do iv = 1, n_vertex_max
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
     Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
-    PTrans(dof3,dof3) = 0.d0
+    !PTrans(dof3,dof3) = 0.d0
     Ptrans(dof4,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof4,dof4) = nodes(iv)%x(1,dof4,2)
   endif
 
@@ -219,7 +232,7 @@ do iv = 1, n_vertex_max
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
       Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof4) = nodes(jv)%x(1,dof2,2)
-      Pmat(dof3,dof3)  = 0.d0
+      !Pmat(dof3,dof3)  = 0.d0
       Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof4) = nodes(jv)%x(1,dof4,2)
     endif
 
@@ -259,6 +272,141 @@ do iv = 1, n_vertex_max
 enddo ! loop over iv
 
 end subroutine old2new_basis_on_the_axis
+
+pure subroutine transform_nodelist(node_list, i_tor_min, i_tor_max)
+use data_structure
+use phys_module
+implicit none
+integer :: vg, dof2, dof4, in, ivar
+type(type_node_list),  intent(inout) :: node_list
+integer ,              intent(in)    :: i_tor_min, i_tor_max
+real*8  :: Pmat(2,2), vec(2)
+
+return
+
+dof2 = 2 ; dof4 = 4
+
+do vg = 1, node_list%n_nodes
+
+  if ( node_list%node(vg)%axis_node ) then
+
+    Pmat(1,1) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(1,2) = node_list%node(vg)%x(1,dof2,2)
+    Pmat(2,1) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(2,2) = node_list%node(vg)%x(1,dof4,2)
+
+#if fullmhd
+    vec(1) = node_list%node(vg)%Fprof_eq(dof2)
+    vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%Fprof_eq(dof2) = vec(1)
+    node_list%node(vg)%Fprof_eq(dof4) = vec(2) 
+
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)
+#elif altcs
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)    
+#endif
+
+    do in = i_tor_min, i_tor_max
+    do ivar = 1, n_var
+
+       vec(1) = node_list%node(vg)%values(in,dof2,ivar)
+       vec(2) = node_list%node(vg)%values(in,dof4,ivar)
+       vec    = matmul(Pmat, vec)
+    
+       node_list%node(vg)%values(in,dof2,ivar) = vec(1)
+       node_list%node(vg)%values(in,dof4,ivar) = vec(2)
+
+       vec(1) = node_list%node(vg)%deltas(in,dof2,ivar)
+       vec(2) = node_list%node(vg)%deltas(in,dof4,ivar)
+       vec    = matmul(Pmat, vec)
+
+       node_list%node(vg)%deltas(in,dof2,ivar) = vec(1)
+       node_list%node(vg)%deltas(in,dof4,ivar) = vec(2)
+
+    enddo
+    enddo
+
+  endif
+
+enddo
+end subroutine transform_nodelist
+
+pure subroutine transform_back_nodelist(node_list, i_tor_min, i_tor_max)
+use data_structure
+use phys_module
+implicit none
+integer :: vg, dof2, dof4, in, ivar
+type(type_node_list),    intent(inout) :: node_list
+integer ,              intent(in)    ::  i_tor_min, i_tor_max
+real*8  :: Pmat(2,2), vec(2), aa, bb, cc, dd
+
+return
+
+dof2 = 2 ; dof4 = 4
+
+do vg = 1, node_list%n_nodes
+
+  if ( node_list%node(vg)%axis_node ) then
+
+    aa = node_list%node(vg)%x(1,dof2,1)  ;  bb = node_list%node(vg)%x(1,dof2,2)
+    cc = node_list%node(vg)%x(1,dof4,1)  ;  dd = node_list%node(vg)%x(1,dof4,2)
+          
+    Pmat(1,1) =  dd  ;  Pmat(1,2) = -bb
+    Pmat(2,1) = -cc  ;  Pmat(2,2) =  aa
+
+    Pmat = Pmat / (aa*dd - bb*cc)
+
+#if fullmhd
+    vec(1) = node_list%node(vg)%Fprof_eq(dof2)
+    vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%Fprof_eq(dof2) = vec(1)
+    node_list%node(vg)%Fprof_eq(dof4) = vec(2) 
+
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)    
+#elif altcs
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)
+#endif
+
+    do in = i_tor_min, i_tor_max
+    do ivar = 1, n_var
+
+       vec(1) = node_list%node(vg)%values(in,dof2,ivar)
+       vec(2) = node_list%node(vg)%values(in,dof4,ivar)
+       vec    = matmul(Pmat, vec)
+    
+       node_list%node(vg)%values(in,dof2,ivar) = vec(1)
+       node_list%node(vg)%values(in,dof4,ivar) = vec(2)
+
+       vec(1) = node_list%node(vg)%deltas(in,dof2,ivar)
+       vec(2) = node_list%node(vg)%deltas(in,dof4,ivar)
+       vec    = matmul(Pmat, vec)
+
+       node_list%node(vg)%deltas(in,dof2,ivar) = vec(1)
+       node_list%node(vg)%deltas(in,dof4,ivar) = vec(2)
+
+    enddo
+    enddo
+
+  endif
+
+enddo
+end subroutine transform_back_nodelist
 
 subroutine identify_axis_elements(node_list,element_list)
 use data_structure

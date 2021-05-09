@@ -15,7 +15,7 @@ contains
 
     ! --- Modules
     use mod_parameters,           only : n_tor, jorek_model, n_vertex_max, n_order, unified_element_matrix
-    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const, treat_axis2
+    use phys_module,              only : bc_natural_open, bc_natural_flux, n_tor_fft_thresh, grid_to_wall, n_wall_blocks, keep_n0_const
     USE data_structure,           only : type_element, type_node, type_node_list, thread_struct
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
@@ -23,7 +23,6 @@ contains
     use mod_locate_irn_jcn
     use mod_global_matrix_structure
     use mpi_mod
-    use mod_axis_treatment
 
     ! --- Routine parameters
     type (type_element),              intent(inout)  :: element
@@ -42,7 +41,7 @@ contains
     integer,                          intent(in)     :: i_tor_min   
     integer,                          intent(in)     :: i_tor_max   
     TYPE (type_node_list),            intent(in)     :: node_list
-    
+   
     ! -- internal parameters
     integer :: iv, iv2, iv3, iv4, inode1, inode2, inode3, inode4, i, j
     integer :: vertex(2), direction(2), bnd1, bnd2, side1, side2
@@ -209,8 +208,6 @@ contains
 #ifdef COMPARE_ELEMENT_MATRIX
     ! --- Comparison is performed only for one finite element
     if (ife .eq. n_local_elms/2) then
-
-      ! --- Call both routines
       if (     (jorek_model .eq. 303) &
           .or. (jorek_model .eq. 333) &
           .or. (jorek_model .eq. 500) &
@@ -313,6 +310,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   use mod_fix_axis_nodes, only : fix_nodes_on_axis, penalize_third_dof_on_axis
   use mod_locate_irn_jcn
   use mod_integer_types
+  use mod_axis_treatment
+  
   !$ use omp_lib
   implicit none
   

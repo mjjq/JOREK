@@ -193,7 +193,7 @@ if (my_id == 0) then
     enddo
   
     if(treat_axis2 .and. element%axis_element ) then
-      call new2old_dofs_on_the_axis_poisson(node_list, element, nodes, ivar_in, ivar_out, i_harm)
+      call new2old_dofs_on_the_axis_poisson(node_list, element, nodes, itype, ivar_in, ivar_out, i_harm)
     endif
     
     if (itype .eq. -1) then

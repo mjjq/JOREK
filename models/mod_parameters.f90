@@ -71,19 +71,13 @@ else if ( i_var == var_AR ) then
 else if ( i_var == var_AZ ) then
   name  = 'A_Z'
   descr = 'Z-component of Magnetic potential'
-else if ( i_var == var_UR ) then
+else if ( i_var == var_uR ) then
   name  = 'u_R'
   descr = 'R-component of Velocity'
-else if ( i_var == var_UZ ) then
+else if ( i_var == var_uZ ) then
   name  = 'u_Z'
   descr = 'Z-component of Velocity'
-else if ( i_var == var_UZ ) then
-  name  = 'u_Z'
-  descr = 'Z-component of Velocity'
-else if ( i_var == var_UZ ) then
-  name  = 'u_Z'
-  descr = 'Z-component of Velocity'
-else if ( i_var == var_Up ) then
+else if ( i_var == var_up ) then
   name  = 'u_phi'
   descr = 'phi-component of Velocity'
 else if ( i_var == var_rho ) then

@@ -4,6 +4,7 @@ use data_structure
 use mod_basisfunctions
 use mod_parameters, only: n_period, n_tor
 use phys_module, only: treat_axis, treat_axis2
+use mod_axis_treatment, only: transform_nodelist, transform_back_nodelist
 implicit none
 private
 public :: interp !< interp a specific harmonic in finite elements
@@ -58,7 +59,7 @@ call sincosperiod_moivre(phi, HZ, dHZ) ! dHZ unused
 element = element_list%element(i_elm)
 esize(:,:) = element%size(:,:)
 BasFun    = H
-if( (treat_axis .or. treat_axis2) .and. element%axis_element) then
+if( (treat_axis) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -67,6 +68,10 @@ if( (treat_axis .or. treat_axis2) .and. element%axis_element) then
   esize(1  ,:) = 1.0d0
   esize(2:3,:) = element%size(2:3,:)
   esize(4  ,:) = 1.0d0
+endif
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_nodelist(node_list, 1, n_tor)
 endif
 
 P = 0.d0
@@ -133,6 +138,11 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 end subroutine interp_PRZ_0
 
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
@@ -170,7 +180,7 @@ esize(:,:) = element%size(:,:)
 BasFun    = H
 BasFun_s  = H_s
 BasFun_t  = H_t
-if((treat_axis  .or. treat_axis2).and. element%axis_element) then
+if((treat_axis ).and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -181,6 +191,10 @@ if((treat_axis  .or. treat_axis2).and. element%axis_element) then
   esize(1  ,:) = 1.0d0
   esize(2:3,:) = element%size(2:3,:)
   esize(4  ,:) = 1.0d0
+endif
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_nodelist(node_list, 1, n_tor)
 endif
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_phi = 0.d0
@@ -259,6 +273,11 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 end subroutine interp_PRZ_1
 
 
@@ -302,7 +321,7 @@ BasFun_t  = H_t
 BasFun_ss = H_ss
 BasFun_st = H_st
 BasFun_tt = H_tt
-if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
+if((treat_axis) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -316,6 +335,10 @@ if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   esize(1  ,:) = 1.0d0
   esize(2:3,:) = element%size(2:3,:)
   esize(4  ,:) = 1.0d0
+endif
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_nodelist(node_list, 1, n_tor)
 endif
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
@@ -409,6 +432,11 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 end subroutine interp_PRZ_2
 
 ! Apply De Moivre formula to calculate the series of sines.
@@ -506,7 +534,7 @@ BasFun_t  = G_t
 BasFun_ss = G_ss
 BasFun_st = G_st
 BasFun_tt = G_tt
-if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
+if((treat_axis) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -520,6 +548,10 @@ if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   esize(1  ,:) = 1.0d0
   esize(2:3,:) = element%size(2:3,:)
   esize(4  ,:) = 1.0d0
+endif
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_nodelist(node_list, 1, n_tor)
 endif
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
@@ -556,6 +588,11 @@ do kv = 1,n_vertex_max  ! 4 vertices
 #endif
   end do
 end do
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 end subroutine interp
 
 
@@ -592,7 +629,7 @@ BasFun_t  = G_t
 BasFun_ss = G_ss
 BasFun_st = G_st
 BasFun_tt = G_tt
-if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
+if((treat_axis) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -608,6 +645,10 @@ if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   esize(4  ,:) = 1.0d0
 endif
 
+if(treat_axis2 .and. element%axis_element) then
+  call transform_nodelist(node_list, 1, n_tor)
+endif
+
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
@@ -621,6 +662,11 @@ do kv = 1,n_vertex_max  ! 4 vertices
     P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * esize(kv,kf) * BasFun_tt(kv,kf)
   end do
 end do
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 end subroutine interp_delta
 
 
@@ -648,7 +694,7 @@ call basisfunctions(s,t,H)
 element   = element_list%element(i_elm)
 esize(:,:)= element%size(:,:)
 BasFun    = H
-if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
+if((treat_axis) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -657,6 +703,10 @@ if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   esize(1  ,:) = 1.0d0
   esize(2:3,:) = element%size(2:3,:)
   esize(4  ,:) = 1.0d0
+endif
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_nodelist(node_list, 1, n_tor)
 endif
 
 P = 0.d0
@@ -676,6 +726,11 @@ do kv = 1,n_vertex_max  ! 4 vertices
     end do
   end do
 end do
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 end subroutine interp_0
 
 
@@ -705,7 +760,7 @@ call basisfunctions(s,t,H)
 element   = element_list%element(i_elm)
 esize(:,:)= element%size(:,:)
 BasFun    = H
-if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
+if((treat_axis) .and. element%axis_element) then
   do iv = 1, n_vertex_max
      inode     = element%vertex(iv)
      nodes(iv) = node_list%node(inode)
@@ -714,6 +769,10 @@ if((treat_axis  .or. treat_axis2) .and. element%axis_element) then
   esize(1  ,:) = 1.0d0
   esize(2:3,:) = element%size(2:3,:)
   esize(4  ,:) = 1.0d0
+endif
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_nodelist(node_list, 1, n_tor)
 endif
 
 P = 0.d0
@@ -733,6 +792,11 @@ do kv = 1,n_vertex_max  ! 4 vertices
     end do
   end do
 end do
+
+if(treat_axis2 .and. element%axis_element) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
+
 end subroutine interp_0_delta
 
 

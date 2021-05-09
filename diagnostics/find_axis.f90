@@ -8,6 +8,7 @@ use basis_at_gaussian
 use equil_info,  only: ES
 use phys_module, only: R_geo, Z_geo, axis_srch_radius, R_axis_t, Z_axis_t, index_start, treat_axis, treat_axis2  
 use mod_interp
+use mod_axis_treatment
 
 implicit none
 
@@ -23,7 +24,7 @@ end interface
 
 ! --- Routine parameters
 integer,                 intent(in)  :: my_id        !< MPI proc number
-type(type_node_list),    intent(in)  :: node_list    !< List of grid nodes
+type(type_node_list),    intent(inout):: node_list    !< List of grid nodes
 type(type_element_list), intent(in)  :: element_list !< List of grid elements
 real*8,                  intent(out) :: psi_axis     !< Poloidal flux at axis
 real*8,                  intent(out) :: R_axis       !< R-position of axis
@@ -92,6 +93,9 @@ else
 endif
 
 
+if(treat_axis2) then
+  call transform_nodelist(node_list, 1, n_tor)
+endif
 ! save |grad_psi| at gaussian points of all elements
 do i=1,element_list%n_elements   ! --- loop over elements
 
@@ -99,7 +103,7 @@ do i=1,element_list%n_elements   ! --- loop over elements
   esize(:,:) = element_list%element(i)%size(:,:)
   BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
 
-  if((treat_axis .or. treat_axis2) .and. element_list%element(i)%axis_element)then
+  if((treat_axis) .and. element_list%element(i)%axis_element)then
      element = element_list%element(i)
      do iv = 1, n_vertex_max
         inode     = element%vertex(iv)
@@ -159,6 +163,9 @@ do i=1,element_list%n_elements   ! --- loop over elements
 
 enddo   ! --- end loop over elements
 
+if(treat_axis2) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
 
 do i_tries=1,  n_tries  ! --- start attempts to find the axis
 

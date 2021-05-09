@@ -7,6 +7,7 @@ use data_structure
 use grid_xpoint_data
 use mod_interp
 use phys_module, only:   SDN_threshold, treat_axis, treat_axis2
+use mod_axis_treatment
 
 implicit none
 
@@ -14,7 +15,7 @@ implicit none
 integer,                  intent(in)     :: my_id        !< MPI proc number
 logical,                  intent(in)     :: xpoint
 integer,                  intent(in)     :: xcase
-type (type_node_list)   , intent(in)     :: node_list
+type (type_node_list)   , intent(inout)  :: node_list
 type (type_element_list), intent(in)     :: element_list
 type (type_surface_list), intent(inout)  :: surface_list
 
@@ -76,6 +77,9 @@ if (xpoint) then
   endif
 endif
 
+if(treat_axis2) then
+  call transform_nodelist(node_list, 1, n_tor)
+endif
 
 do i=1, element_list%n_elements
        
@@ -83,7 +87,7 @@ do i=1, element_list%n_elements
  
   ! change size for elements on the grid axis
   esize(:,:) = element_list%element(i)%size(:,:)
-  if((treat_axis .or. treat_axis2) .and. element_list%element(i)%axis_element)then
+  if((treat_axis) .and. element_list%element(i)%axis_element)then
      element = element_list%element(i)
      do iv = 1, n_vertex_max
         inode     = element%vertex(iv)
@@ -363,6 +367,10 @@ do i=1, element_list%n_elements
   enddo
 
 enddo
+
+if(treat_axis2) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
 
 return
 end

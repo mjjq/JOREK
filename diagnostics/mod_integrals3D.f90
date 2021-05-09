@@ -28,6 +28,7 @@ module mod_integrals3D
 #endif
   use equil_info, only : get_psi_n, ES
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
+  use mod_axis_treatment
 
   implicit none
   
@@ -44,7 +45,7 @@ subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list
  
 implicit none
 
-type (type_node_list),        intent(in)    :: node_list
+type (type_node_list),        intent(inout) :: node_list
 type (type_element_list),     intent(in)    :: element_list   
 type (type_bnd_node_list),    intent(in)    :: bnd_node_list
 type (type_bnd_element_list), intent(in)    :: bnd_elm_list   
@@ -271,6 +272,10 @@ psi_bnd    = ES%psi_bnd
 ife_delta = ceiling(float(element_list%n_elements) / n_cpu)
 ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
+
+if(treat_axis2) then
+  call transform_nodelist(node_list, 1, n_tor)
+endif
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
@@ -920,6 +925,10 @@ do ife = ife_min, ife_max
 enddo
 !$omp end do
 !$omp end parallel
+
+if(treat_axis2) then
+  call transform_back_nodelist(node_list, 1, n_tor)
+endif
 
 !------ Calculate boundary fluxes --------------------------------------------------------
 !--- go through the boundary elements

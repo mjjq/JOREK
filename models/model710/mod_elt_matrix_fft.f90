@@ -1059,9 +1059,9 @@ do i=1,n_vertex_max
             v_p = BasFun  (i,j,ms,mt) * esize(i,j) * HHZ_p(im,mp)
             v_R = (  y_t(ms,mt) * v_s - y_s(ms,mt) * v_t ) / xjac
             v_Z = (- x_t(ms,mt) * v_s + x_s(ms,mt) * v_t ) / xjac 
-            v_ss= H_ss(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
-            v_st= H_st(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
-            v_tt= H_tt(i,j,ms,mt) * element%size(i,j) * HHZ(im,mp)
+            v_ss= BasFun_ss(i,j,ms,mt) * esize(i,j) * HHZ(im,mp)
+            v_st= BasFun_st(i,j,ms,mt) * esize(i,j) * HHZ(im,mp)
+            v_tt= BasFun_tt(i,j,ms,mt) * esize(i,j) * HHZ(im,mp)
             v_RR= ( v_ss * y_t(ms,mt)**2 - 2.d0*v_st * y_s(ms,mt)*y_t(ms,mt) &
                   + v_tt * y_s(ms,mt)**2 &
                   + v_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                &

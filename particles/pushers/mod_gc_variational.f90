@@ -109,7 +109,7 @@ particle_out%vpar  = particle_in%vpar
 particle_out%st    = particle_in%st
 particle_out%q     = particle_in%q
 particle_out%weight= particle_in%weight
-  
+
 return
 end
 
@@ -203,6 +203,7 @@ subroutine convert_gc_vpar_to_kinetic(node_list, element_list, particle_in, B, m
 
 end subroutine convert_gc_vpar_to_kinetic
 
+
 subroutine initialise_gc_Qin(fields, particle_Qin, mass, timestep)
 ! initialising backward in time
 use mod_particle_types
@@ -243,54 +244,12 @@ call fields%calc_Qin(time_0, particle_Vpar%i_elm, particle_Vpar%st, particle_Vpa
                      A_m, dA_m, B_m, dB_m, Bnorm_m, dBnorm_m, bn_m, dbn_m, E_m)
 !call fields%calc_Qin_analytic(particle_Vpar%x(1), particle_Vpar%x(2), particle_Vpar%x(3), A_m, dA_m, B_m, dB_m, Bnorm_m, dBnorm_m, bn_m, dbn_m, E_m)
 
+particle_Qin%vpar_m = (particle_Qin%Astar_k(3) - qom * A_m(3)) / Bnorm_m(3)
 particle_Qin%Astar_m = qom * A_m + particle_Qin%vpar_m *  Bnorm_m
- 
-return
-end
 
-
-subroutine initialise_gc_Qin2(fields, particle_Qin, mass, timestep)
-! initialising forward in time
-use mod_particle_types
-use mod_fields, only: fields_base
-class(fields_base)      :: fields
-type(particle_gc_Qin)  :: particle_Qin
-real*8, intent(in)     :: timestep ! [s]
-real*8, intent(in)     :: mass     ! [amu]
-type(particle_gc_Vpar) :: particle_Vpar
-
-real*8 :: A_m(3), dA_m(3,3), B_m(3), dB_m(3,3), E_m(3), bn_m, dbn_m(3), bnorm_m(3), dbnorm_m(3,3)
-real*8 :: A_k(3), dA_k(3,3), B_k(3), dB_k(3,3), E_k(3), bn_k, dbn_k(3), bnorm_k(3), dbnorm_k(3,3)
-real*8 :: qom, time_0
-
-time_0 = 0.d0
-qom = particle_Qin%q * EL_CHG / (mass * ATOMIC_MASS_UNIT) 
-
-call fields%calc_Qin(time_0, particle_Qin%i_elm, particle_Qin%st, particle_Qin%x(3), &
-                     A_m, dA_m, B_m, dB_m, Bnorm_m, dBnorm_m, bn_m, dbn_m, E_m)
-
-particle_Qin%Astar_m  =  qom * A_m + particle_Qin%vpar *  Bnorm_m
-
-call copy_particle_gc_Qin_to_Vpar(particle_Qin, particle_Vpar)
-
-call push_gc_rk4(fields, particle_Vpar, mass, timestep, 1, 0)      ! should be only the very first call
-
-particle_Qin%x_m    = particle_Qin%x
-particle_Qin%vpar_m = particle_Qin%vpar
-particle_Qin%x      = particle_Vpar%x
-particle_Qin%vpar   = particle_Vpar%vpar
-particle_Qin%i_elm  = particle_Vpar%i_elm
-particle_Qin%st     = particle_Vpar%st
-
-call fields%calc_Qin(time_0, particle_Qin%i_elm, particle_Qin%st, particle_Qin%x(3), &
-                     A_k, dA_k, B_k, dB_k, Bnorm_k, dBnorm_k, bn_k, dbn_k, E_k)
-
-particle_Qin%Astar_k  = qom *  A_k + particle_Qin%vpar *  bnorm_k
-particle_Qin%dAstar_k = qom * dA_k + particle_Qin%vpar * dbnorm_k 
-particle_Qin%Bn_k     = Bn_k   
-particle_Qin%dBn_k    = dBn_k   
-particle_Qin%Bnorm_k  = Bnorm_k 
-particle_Qin%E_k      = E_k 
+!particle_Qin%vpar = (particle_Qin%Astar_m(3) - qom * A_k(3)) / Bnorm_k(3)
+!particle_Qin%Astar_k  = qom *  A_k + particle_Qin%vpar *  bnorm_k
+!particle_Qin%dAstar_k = qom * dA_k + particle_Qin%vpar * dbnorm_k 
 
 return
 end
@@ -348,13 +307,13 @@ do it=1, n_steps
 
   call fields%calc_Qin(time_0, particle_Qin%i_elm, particle_Qin%st, particle_Qin%x(3), &
                        A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
-  !call fields%calc_Qin_analytic(particle_Qin%x(1), particle_Qin%x(2), particle_Qin%x(3), A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
+ !call fields%calc_Qin_analytic(particle_Qin%x(1), particle_Qin%x(2), particle_Qin%x(3), A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
 
   Astar_p  = qom *  A_p + particle_Qin%vpar *  bnorm_p
   dAstar_p = qom * dA_p + particle_Qin%vpar * dbnorm_p
 
   !---------------------------- Newton iterations
-  do iter =1,8
+  do iter = 1,3
  
      do i=1,3
 
@@ -363,7 +322,7 @@ do it=1, n_steps
                     + 2.d0 * timestep * (particle_Qin%mu * particle_Qin%dBn_k(i)  -  qom * particle_Qin%E_k(i)) &
 
                     - dot_product(particle_Qin%dAstar_k(:,i), particle_Qin%x - particle_Qin%x_m)
-!     if (i .eq. 3) write(*,*) it, iter, norm2(newton_rhs)
+     !if (i .eq. 3) write(*,*) it, iter, norm2(newton_rhs)
      do j=1,3
         
         newton_matrix(j,i) = + particle_Qin%dAstar_k(i,j) - qom * dA_p(j,i)           &
@@ -390,8 +349,8 @@ do it=1, n_steps
   
     if (particle_Qin%i_elm .le. 0) return
 
-    call fields%calc_Qin(time_0, particle_Qin%i_elm, particle_Qin%st, particle_Qin%x(3), &
-                         A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
+      call fields%calc_Qin(time_0, particle_Qin%i_elm, particle_Qin%st, particle_Qin%x(3), &
+                           A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
     !call fields%calc_Qin_analytic(particle_Qin%x(1), particle_Qin%x(2), particle_Qin%x(3), A_p, dA_p, B_p, dB_p, Bnorm_p, dBnorm_p, bn_p, dbn_p, E_p)  
   
     Astar_p  = qom *  A_p + particle_Qin%vpar *  bnorm_p
@@ -406,7 +365,7 @@ do it=1, n_steps
                  - dot_product(particle_Qin%dAstar_k(:,j), particle_Qin%x - particle_Qin%x_m)
   enddo
   residue = norm2(newton_rhs)
-  if (residue .gt. 1.d-6) write(*,'(A,i4,e14.6)') ' Qin : residue : ',it, residue
+!  if (residue .gt. 1.d-3) write(*,'(A,i4,e14.6)') ' Qin : residue : ',it, residue
 
 !  mp_p = Astar_p(3)
 !  wp_p = 0.25d0 * (vpar_k**2 + particle_Qin%vpar**2) + 0.5d0 * particle_Qin%mu * (particle_Qin%bn_k + bn_p)
@@ -469,8 +428,8 @@ call copy_particle_gc_vpar(particle_gc,p_3)
 call fields%calc_RK4(time_0, p_0%i_elm, p_0%st, p_0%x(3), A_0, dA_0, B_0, dB_0, Bnorm_0, dBnorm_0, bn_0, dbn_0, E_0)
 !call fields%calc_RK4_analytic(p_0%x(1), p_0%x(2), p_0%x(3), A_0, dA_0, B_0, dB_0, Bnorm_0, dBnorm_0, bn_0, dbn_0, E_0)
 
-!call convert_gc_vpar_to_kinetic(node_list, element_list, p_0, B_0, mass, n_gyro_phases, p_orbit)
-!call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_0)
+call convert_gc_vpar_to_kinetic(node_list, element_list, p_0, B_0, mass, n_gyro_phases, p_orbit)
+call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_0)
 
 do i =1, n_steps
   
@@ -484,11 +443,11 @@ do i =1, n_steps
                                                
   if (p_1%i_elm .le. 0) return
     
-   call fields%calc_RK4(time_1, p_1%i_elm, p_1%st, p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
-!  call fields%calc_RK4_analytic(p_1%x(1), p_1%x(2), p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
+  call fields%calc_RK4(time_1, p_1%i_elm, p_1%st, p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
+ !call fields%calc_RK4_analytic(p_1%x(1), p_1%x(2), p_1%x(3), A_1, dA_1, B_1, dB_1, Bnorm_1, dBnorm_1, bn_1, dbn_1, E_1)
 
-!  call convert_gc_vpar_to_kinetic(node_list, element_list, p_1, B_1, mass, n_gyro_phases, p_orbit)
-!  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_1)
+  call convert_gc_vpar_to_kinetic(node_list, element_list, p_1, B_1, mass, n_gyro_phases, p_orbit)
+  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_1)
   
   call rk4_step(p_1%x, p_1%vpar, qom, p_1%mu, E_1, B_1, Bnorm_1, dBnorm_1, dBn_1, delta_x2, delta_u2)
 
@@ -499,11 +458,11 @@ do i =1, n_steps
                                                p_2%x(1), p_2%x(2), p_2%st(1), p_2%st(2), p_2%i_elm, ifail)
   if (p_2%i_elm .le. 0) return
   
-   call fields%calc_RK4(time_2, p_2%i_elm, p_2%st, p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
-!  call fields%calc_RK4_analytic(p_2%x(1), p_2%x(2), p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
+  call fields%calc_RK4(time_2, p_2%i_elm, p_2%st, p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
+ !call fields%calc_RK4_analytic(p_2%x(1), p_2%x(2), p_2%x(3), A_2, dA_2, B_2, dB_2, Bnorm_2, dBnorm_2, bn_2, dbn_2, E_2)
             
-!  call convert_gc_vpar_to_kinetic(node_list, element_list, p_2, B_2, mass, n_gyro_phases, p_orbit)
-!  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_2)
+  call convert_gc_vpar_to_kinetic(node_list, element_list, p_2, B_2, mass, n_gyro_phases, p_orbit)
+  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_2)
 
   call rk4_step(p_2%x, p_2%vpar, qom, p_2%mu, E_2, B_2, Bnorm_2, dBnorm_2, dBn_2, delta_x3, delta_u3)
 
@@ -516,10 +475,10 @@ do i =1, n_steps
   if (p_3%i_elm .le. 0) return                                             
   
   call fields%calc_RK4(time_3, p_3%i_elm, p_3%st, p_3%x(3), A_3, dA_3, B_3, dB_3, Bnorm_3, dBnorm_3, bn_3, dbn_3, E_3)
-!  call fields%calc_RK4_analytic(p_3%x(1), p_3%x(2), p_3%x(3), A_3, dA_3, B_3, dB_3, Bnorm_3, dBnorm_3, bn_3, dbn_3, E_3)
+ !call fields%calc_RK4_analytic(p_3%x(1), p_3%x(2), p_3%x(3), A_3, dA_3, B_3, dB_3, Bnorm_3, dBnorm_3, bn_3, dbn_3, E_3)
     
-!  call convert_gc_vpar_to_kinetic(node_list, element_list, p_3, B_3, mass, n_gyro_phases, p_orbit)
-!  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_3)
+  call convert_gc_vpar_to_kinetic(node_list, element_list, p_3, B_3, mass, n_gyro_phases, p_orbit)
+  call fields%calc_gyro_average_E(time_0, p_orbit, n_gyro_phases, E_3)
 
   call rk4_step(p_3%x, p_3%vpar, qom, p_3%mu, E_3, B_3, Bnorm_3, dBnorm_3, dBn_3, delta_x4, delta_u4)
                                 

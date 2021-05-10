@@ -50,6 +50,8 @@ real*8    :: r_out, z_out, s_out, t_out
 real*8    :: p_phi_gc, energy_gc, p_phi_gc_start, energy_gc_start 
 real*8    :: p_phi_lf, energy_lf, p_phi_lf_start, energy_lf_start
 real*8    :: p_phi_qin, energy_qin, p_phi_qin_start, energy_qin_start
+real*8,allocatable :: error_W_rk4(:), error_W_qin(:), error_W_lf(:)
+real*8,allocatable :: error_P_rk4(:), error_P_qin(:), error_P_lf(:)
 integer   :: i_elm_out
 !$ real*8 :: w0, w1, mmm(3)
 
@@ -68,6 +70,9 @@ n_particles_local = 1
 timesteps   = tstep_particles
 nstep       = nstep_particles
 n_steps     = nsubstep_particles
+
+allocate(error_W_rk4(nstep), error_W_qin(nstep), error_W_lf(nstep))
+allocate(error_P_rk4(nstep), error_P_qin(nstep), error_P_lf(nstep))
 
 n_phases = 16  ! number of phase angles for orbit reconstruction from gc
 
@@ -241,13 +246,14 @@ write(*,*) 'total time : ',timesteps * nstep_particles, timesteps * nstep_partic
 do i=1, nstep_particles
 
   particle_start_time = sim%time
-  !call loop_particle_kinetic_leapfrog(sim, timesteps, n_steps, particle_start_time)
+  
+  call loop_particle_kinetic_leapfrog(sim, timesteps, n_steps, particle_start_time)
 
   select type (p_gc => sim%groups(2)%particles)
   type is (particle_gc_vpar)	
 
     do j=1, n_particles 
-      call push_gc_rk4(sim%fields, p_gc(j), sim%groups(2)%mass, timesteps, 1, 0)
+      call push_gc_rk4(sim%fields, p_gc(j), sim%groups(2)%mass, timesteps, n_steps, 0)
     enddo
 
     call sim%fields%calc_RK4(sim%time, p_gc(1)%i_elm, p_gc(1)%st, p_gc(1)%x(3), A, dA, B, dB, Bnorm, dBnorm, bn, dbn, E)
@@ -259,7 +265,10 @@ do i=1, nstep_particles
     p_phi_gc  = p_gc(1)%x(1) * ( p_gc(1)%vpar * Bnorm(3) + qom * A(3))
     energy_gc = 0.5d0 * p_gc(1)%vpar**2 + p_gc(1)%mu * bn
 
-    write(112,'(A,i6,12e18.10)') 'RK4: ',p_gc(1)%i_elm,p_gc(1)%mu,p_gc(1)%x,p_gc(1)%vpar,(p_phi_gc-p_phi_gc_start)/p_phi_gc_start,(energy_gc-energy_gc_start)/energy_gc_start
+    error_W_rk4(i) = abs((energy_gc - energy_gc_start)/energy_gc_start)
+    error_P_rk4(i) = abs((P_phi_gc  - P_phi_gc_start) /P_phi_gc_start)
+
+    write(114,'(A,i6,12e18.10)') 'RK4: ',p_gc(1)%i_elm,p_gc(1)%mu,p_gc(1)%x,p_gc(1)%vpar,(p_phi_gc-p_phi_gc_start)/p_phi_gc_start,(energy_gc-energy_gc_start)/energy_gc_start
 
   end select
 
@@ -267,7 +276,7 @@ do i=1, nstep_particles
   type is (particle_gc_Qin)	
 
     do j=1, n_particles 
-      call push_gc_Qin(sim%fields, p_Qin(j), sim%groups(3)%mass, timesteps, 1)
+      call push_gc_Qin(sim%fields, p_Qin(j), sim%groups(3)%mass, timesteps, n_steps)
     enddo
 
     call sim%fields%calc_Qin(sim%time, p_qin(1)%i_elm, p_qin(1)%st, p_qin(1)%x(3), A, dA, B, dB, Bnorm, dBnorm, bn, dbn, E)
@@ -275,6 +284,9 @@ do i=1, nstep_particles
     
     p_phi_qin  = p_Qin(1)%vpar * Bnorm(3) + qom * A(3)
     energy_qin = 0.5d0 * p_Qin(1)%vpar**2 + p_Qin(1)%mu * bn
+
+    error_W_qin(i) = abs((energy_qin - energy_qin_start)/energy_qin_start)
+    error_P_qin(i) = abs((P_phi_qin - P_phi_qin_start)/P_phi_qin_start)
 
     write(113,'(A,i6,12e18.10)') 'QIN: ',p_Qin(1)%i_elm,p_Qin(1)%mu,p_Qin(1)%x,p_Qin(1)%vpar,(p_phi_Qin-p_phi_qin_start)/p_phi_Qin_start,(energy_Qin-energy_Qin_start)/energy_qin_start
 
@@ -289,19 +301,24 @@ do i=1, nstep_particles
     p_phi_lf  = p_lf(1)%x(1) * p_lf(1)%v(3) + 0.5d0 * qom * (psi + psi_prev)
     energy_lf = 0.5d0 * dot_product(p_lf(1)%v,p_lf(1)%v) 
 
+    error_W_lf(i) = abs((energy_lf - energy_lf_start)/energy_lf_start)
+    error_P_lf(i) = abs((P_phi_lf- P_phi_lf_start)/P_phi_lf_start)
+
   end select
   
   !write(111,'(12e16.8)') sim%groups(1)%particles(1)%x, sim%groups(2)%particles(1)%x, sim%groups(3)%particles(1)%x
 
 enddo
 
-!write(*,'(A,12e18.10)') 'LF  : P_phi, energy : ',sim%time, P_phi_lf_start, energy_lf_start, &
-!                      P_phi_lf, energy_lf, (P_phi_lf-P_phi_lf_start)/P_phi_lf_start,(energy_lf-energy_lf_start)/energy_lf_start
+write(*,'(A,12e18.10)') 'LF  : P_phi, energy : ',sim%time, P_phi_lf_start, energy_lf_start, &
+                      P_phi_lf, energy_lf, (P_phi_lf-P_phi_lf_start)/P_phi_lf_start,(energy_lf-energy_lf_start)/energy_lf_start
 write(*,'(A,12e18.10)') 'RK4 : P_phi, energy : ',sim%time,  P_phi_gc_start, energy_gc_start,&
                       P_phi_gc, energy_gc, (P_phi_gc-P_phi_gc_start)/P_phi_gc_start,(energy_gc-energy_gc_start)/energy_gc_start
 write(*,'(A,12e18.10)') 'Qin : P_phi, energy : ',sim%time,  P_phi_qin_start, energy_qin_start, &
                       P_phi_qin, energy_qin, (P_phi_qin-P_phi_qin_start)/P_phi_qin_start,(energy_qin-energy_qin_start)/energy_qin_start
-
+write(*,'(A,8e14.6)') 'LF  max(error) : ',maxval(error_P_lf),maxval(error_W_lf),sum(error_P_lf)/real(nstep,8),sum(error_W_lf)/real(nstep,8)
+write(*,'(A,8e14.6)') 'RK4 max(error) : ',maxval(error_P_rk4),maxval(error_W_rk4),sum(error_P_rk4)/real(nstep,8),sum(error_W_rk4)/real(nstep,8)
+write(*,'(A,8e14.6)') 'Qin max(error) : ',maxval(error_P_qin),maxval(error_W_qin),sum(error_P_qin)/real(nstep,8),sum(error_W_qin)/real(nstep,8)
 
 call sim%finalize
 

@@ -790,7 +790,6 @@ do ife = ife_min, ife_max
           if (Lrad < 0.) Lrad = 0.
         else
           Lrad = 0.
-          E_ion = 0.
         end if
 
         Lrad = Lrad * m_i_over_m_imp

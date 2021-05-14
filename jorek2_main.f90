@@ -83,7 +83,6 @@ program JOREK2
 #ifdef WITH_Impurities
   use mod_injection_source
 #endif
-  use mod_axis_treatment
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -258,7 +257,7 @@ required = 0
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
   
   ! WARNING for axis treatment
-  if((treat_axis .or. treat_axis2) .and. (fix_axis_nodes .or. force_central_node))then
+  if(treat_axis .and. (fix_axis_nodes .or. force_central_node))then
     write(*,*) 'WARNING :'
     write(*,*) 'If using treat_axis = .true. then'
     write(*,*) 'fix_axis_nodes and force_central_nodes both MUST be .false.'
@@ -489,8 +488,6 @@ required = 0
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
-    if(treat_axis2) call transform_back_nodelist(node_list, 1, n_tor)
-
     ! for variable time step Gears method
     if ( index_now <= 1 ) then
       tstep_prev = tstep
@@ -575,8 +572,7 @@ required = 0
         
         call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
           node_list, element_list)
-        call identify_axis_elements(node_list, element_list)
-        
+
       else
         write(*,*) ' FATAL : no valid combination of grid-sizes specified'
         call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
@@ -651,7 +647,7 @@ required = 0
       if (my_id == 0) then
 
         ! WARNING for axis treatment
-        if((treat_axis .or. treat_axis2).and. (grid_to_wall .or. (xcase .ge. 2)))then
+        if(treat_axis.and. (grid_to_wall .or. (xcase .ge. 2)))then
           write(*,*) 'Grid axis treatment has not yet implemented for'
           write(*,*) 'grid_to_wall and/or more than one xpoint grids.'
           write(*,*) 'Aborting...'
@@ -671,7 +667,6 @@ required = 0
             if (.not. grid_to_wall) then
               call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
                                SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
-              call identify_axis_elements(node_list, element_list)
             else
 !!! works only for ITER wall for the moment
  !            write(*,*) 'ITER wall started'
@@ -687,7 +682,6 @@ required = 0
           
           call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
                                  xr1, sig1, xr2, sig2,refinement)
-          call identify_axis_elements(node_list, element_list)
           
           call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
           
@@ -967,10 +961,8 @@ required = 0
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-    if(treat_axis2) call transform_nodelist(node_list, 1, n_tor)          
     fileout = 'jorek00000'
     call export_restart(node_list, element_list, fileout)
-    if(treat_axis2) call transform_back_nodelist(node_list, 1, n_tor)    
   end if
   
   if ( ( my_id == 0 ) .and. ( (node_list%n_nodes > n_nodes_max+1000)                               &
@@ -1341,10 +1333,8 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-      if(treat_axis2) call transform_nodelist(node_list, 1, n_tor)            
       write(fileout,'(A5,i5.5)') 'jorek',index_now
       call export_restart(node_list, element_list, fileout)
-      if(treat_axis2) call transform_back_nodelist(node_list, 1, n_tor)      
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.

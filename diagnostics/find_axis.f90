@@ -6,7 +6,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use equil_info,  only: ES
-use phys_module, only: R_geo, Z_geo, axis_srch_radius, R_axis_t, Z_axis_t, index_start, treat_axis, treat_axis2  
+use phys_module, only: R_geo, Z_geo, axis_srch_radius, R_axis_t, Z_axis_t, index_start, treat_axis
 use mod_interp
 use mod_axis_treatment
 
@@ -24,7 +24,7 @@ end interface
 
 ! --- Routine parameters
 integer,                 intent(in)  :: my_id        !< MPI proc number
-type(type_node_list),    intent(inout):: node_list    !< List of grid nodes
+type(type_node_list),    intent(in)  :: node_list    !< List of grid nodes
 type(type_element_list), intent(in)  :: element_list !< List of grid elements
 real*8,                  intent(out) :: psi_axis     !< Poloidal flux at axis
 real*8,                  intent(out) :: R_axis       !< R-position of axis
@@ -37,21 +37,13 @@ integer,                 intent(out) :: ifail        !< Error code
 ! --- Local variables
 real*8  :: ps_x, ps_y, ps_s, ps_t, xjac
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
-integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indices(3)
+integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indices(3), inode
 real*8  :: x(2), s, t, xerr, ferr, s_axis_init, t_axis_init
 real*8  :: R0, Z0, search_radius
 logical :: found_axis, axis_in_rst_file
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt(:,:,:)
-
-!--- Axis treatment related variables
-integer :: inode
-type (type_element)      :: element
-type (type_node)         :: nodes(n_vertex_max)
-real*8 :: esize(n_vertex_max,n_order+1)
-real*8 :: BasFun   (n_vertex_max, n_order+1, n_gauss, n_gauss)
-real*8 :: BasFun_s (n_vertex_max, n_order+1, n_gauss, n_gauss)
-real*8 :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
+type (type_node)     :: nodes(n_vertex_max)
 
 if (my_id .eq. 0) then
   write(*,*) '*********************************'
@@ -93,29 +85,16 @@ else
 endif
 
 
-if(treat_axis2) then
-  call transform_nodelist(node_list, 1, n_tor)
-endif
 ! save |grad_psi| at gaussian points of all elements
 do i=1,element_list%n_elements   ! --- loop over elements
 
-  ! Change basis functions for elements on the axis
-  esize(:,:) = element_list%element(i)%size(:,:)
-  BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
-
-  if((treat_axis) .and. element_list%element(i)%axis_element)then
-     element = element_list%element(i)
-     do iv = 1, n_vertex_max
-        inode     = element%vertex(iv)
-        nodes(iv) = node_list%node(inode)
-     enddo
-     call on_the_axis(element, nodes, H  ,  BasFun  )
-     call on_the_axis(element, nodes, H_s,  BasFun_s)
-     call on_the_axis(element, nodes, H_t,  BasFun_t)
-     esize(1,  :) = 1.0d0
-     esize(2:3,:) = element_list%element(i)%size(2:3,:)
-     esize(4  ,:) = 1.0d0
-  endif
+  do iv = 1, n_vertex_max
+    inode     = element_list%element(i)%vertex(iv)
+    nodes(iv) = node_list%node(inode)
+    if(treat_axis .and. nodes(iv)%axis_node) then
+       call transform_dofs_for_axis_node(nodes(iv), [var_A3], 1, [1:n_tor], n_tor, .false.)
+    endif
+  enddo
 
   do ms = 1, 4           ! 4 Gaussian points
     do mt = 1, 4         ! 4 Gaussian points
@@ -134,9 +113,8 @@ do i=1,element_list%n_elements   ! --- loop over elements
 
           iv = element_list%element(i)%vertex(kv)
 
-          ! use new basis function for physical variables in elements on the axis
-          ps_s = ps_s + node_list%node(iv)%values(1,kf,1) * esize(kv,kf) * BasFun_s(kv,kf,ms,mt)
-          ps_t = ps_t + node_list%node(iv)%values(1,kf,1) * esize(kv,kf) * BasFun_t(kv,kf,ms,mt)
+          ps_s = ps_s + nodes(kv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
+          ps_t = ps_t + nodes(kv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
 
           R   = R   + node_list%node(iv)%x(1,kf,1) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
           Z   = Z   + node_list%node(iv)%x(1,kf,2) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
@@ -163,9 +141,6 @@ do i=1,element_list%n_elements   ! --- loop over elements
 
 enddo   ! --- end loop over elements
 
-if(treat_axis2) then
-  call transform_back_nodelist(node_list, 1, n_tor)
-endif
 
 do i_tries=1,  n_tries  ! --- start attempts to find the axis
 

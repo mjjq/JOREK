@@ -7,7 +7,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use equil_info, only: ES
-use phys_module, only: xpoint, xcase, treat_axis
+use phys_module, only: xpoint, xcase
 use mod_F_profile
 
 implicit none
@@ -27,31 +27,10 @@ real*8     :: v, psi, rhs_ij
 integer    :: ms, mt, i, j, k, l, index_ij, index_kl, itype, ivar_in, ivar_out, i_harm
 real*8     :: F_prof        ,dF_dpsi      ,dF_dz      , dF_dpsi2      ,dF_dz2       ,dF_dpsi_dz
 real*8     :: zFFprime      ,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz
-
-! axis treatment related variables
-integer    :: inode
-real*8     :: esize(n_vertex_max,n_order+1)
-real*8     :: BasFun   (n_vertex_max, n_order+1, n_gauss, n_gauss)
-real*8     :: BasFun_s (n_vertex_max, n_order+1, n_gauss, n_gauss)
-real*8     :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
-
 #ifdef fullmhd
 
 ELM=0.d0
 RHS=0.d0
-
-! change basis function for elements on the grid axis
-esize(:,:) = element%size(:,:)
-BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
-
-if(treat_axis .and. element%axis_element)then
-  call on_the_axis(element, nodes, H  ,  BasFun  )
-  call on_the_axis(element, nodes, H_s,  BasFun_s)
-  call on_the_axis(element, nodes, H_t,  BasFun_t)
-  esize(1  ,:) = 1.0d0
-  esize(2:3,:) = element%size(2:3,:)
-  esize(4  ,:) = 1.0d0
-endif
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g(:,:)   = 0.d0; x_s(:,:)   = 0.d0; x_t(:,:)   = 0.d0;
@@ -72,13 +51,13 @@ do i=1,n_vertex_max
        y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
        y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       eq_g(ms,mt)  = eq_g(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * esize(i,j) * BasFun(i,j,ms,mt)
-       eq_s(ms,mt)  = eq_s(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * esize(i,j) * BasFun_s(i,j,ms,mt)
-       eq_t(ms,mt)  = eq_t(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * esize(i,j) * BasFun_t(i,j,ms,mt)
+       eq_g(ms,mt)  = eq_g(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * element%size(i,j) * H(i,j,ms,mt)
+       eq_s(ms,mt)  = eq_s(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * element%size(i,j) * H_s(i,j,ms,mt)
+       eq_t(ms,mt)  = eq_t(ms,mt)  + nodes(i)%values(i_harm,j,ivar_in) * element%size(i,j) * H_t(i,j,ms,mt)
 
-       eq2_g(ms,mt)  = eq2_g(ms,mt)  + nodes(i)%Fprof_eq(j) * esize(i,j) * BasFun(i,j,ms,mt)
-       eq2_s(ms,mt)  = eq2_s(ms,mt)  + nodes(i)%Fprof_eq(j) * esize(i,j) * BasFun_s(i,j,ms,mt)
-       eq2_t(ms,mt)  = eq2_t(ms,mt)  + nodes(i)%Fprof_eq(j) * esize(i,j) * BasFun_t(i,j,ms,mt)
+       eq2_g(ms,mt)  = eq2_g(ms,mt)  + nodes(i)%Fprof_eq(j) * element%size(i,j) * H(i,j,ms,mt)
+       eq2_s(ms,mt)  = eq2_s(ms,mt)  + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_s(i,j,ms,mt)
+       eq2_t(ms,mt)  = eq2_t(ms,mt)  + nodes(i)%Fprof_eq(j) * element%size(i,j) * H_t(i,j,ms,mt)
 
      enddo
    enddo
@@ -108,7 +87,7 @@ do ms=1, n_gauss
 
        index_ij = (i-1)*(n_order+1) + j
 
-       v   = BasFun(i,j,ms,mt)  * esize(i,j)
+       v   = h(i,j,ms,mt)  * element%size(i,j)
 
        rhs_ij = + F_prof
 
@@ -119,7 +98,7 @@ do ms=1, n_gauss
 
          do l=1,n_order+1
 
-           psi   = BasFun(k,l,ms,mt)  * esize(k,l)
+           psi   = h(k,l,ms,mt)  * element%size(k,l)
 
            index_kl = (k-1)*(n_order+1) + l
 

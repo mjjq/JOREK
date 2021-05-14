@@ -44,6 +44,7 @@ module phys_module
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
   logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
   logical :: deuterium_adas       !< use OPEN ADAS to calculate ionization, recombination and radiation coeffients for deuterium                        
+  logical :: deuterium_adas_1e20  !< use OPEN ADAS with fixed density=1e20 to calculate ionization, recombination and radiation coeffients for deuterium
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
   real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
@@ -66,6 +67,7 @@ module phys_module
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
   logical :: grid_to_wall         !< extend the grid to a physical wall
   logical :: RZ_grid_inside_wall  !< build the rectangular grid inside first wall
+  real*8  :: RZ_grid_jump_thres   !< threshold to change R-resolution as RZ-grid gets sqeezed by limiter contour
   real*8  :: manipulate_psi_map(5,5) !< Option to manipulate Psi_boundary for the initial grid
   logical :: adaptive_time        !< (presently not useful)
   logical :: equil                !< compute equilibrium
@@ -116,18 +118,21 @@ module phys_module
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
   !> Points used as blocks to extend grid into complex wall structures, see https://www.jorek.eu/wiki/doku.php?id=wallgrid_tutorial
+  real*8  :: eqdsk_psi_fact                                                     !< multiply eqdsk psi by factor for grid_inside_wall
   logical :: extend_existing_grid                                               !< Add patches to existing grid from restart file
   integer, parameter :: n_wall_blocks_max = 30                                  !< Maximum number of blocks (30 should be enough)
   integer :: n_wall_blocks                                                      !< Number of blocks
   integer, parameter :: n_wall_block_points_max = 20                            !< Max number of blocks points
   integer :: corner_block(n_wall_blocks_max)                                    !< =1 for a corner block ("left" side will also be wall-aligned)
   integer :: n_ext_block(n_wall_blocks_max)                                     !< Number of 'radial' grid points from the outermost flux surface to wall)
+  logical :: n_ext_equidistant(n_wall_blocks_max)                               !< if true, radial spacing of grid points will be equidistant (not adapted)
   integer :: n_block_points_left (n_wall_blocks_max)                            !< Number of points on left side of block
   real*8  :: R_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
   real*8  :: Z_block_points_left (n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
   integer :: n_block_points_right(n_wall_blocks_max)                            !< Number of points on left side of block
   real*8  :: R_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< R-positions of points on left side of block
   real*8  :: Z_block_points_right(n_wall_blocks_max,n_wall_block_points_max)    !< Z-positions of points on left side of block
+  logical :: use_simple_bnd_types                                               !< convert Stan's bnd_types to Guido's bnd_types
   
   !> @name Define X-point geometry by geometrical properties
   !!
@@ -351,6 +356,9 @@ module phys_module
   real*8  :: amix              !< Mix Poisson solution with previous one with a given factor
   real*8  :: equil_accuracy    !< Tolerance of the convergence for the fix-boundary equilibrium
   real*8  :: axis_srch_radius  !< Magnetic axis will be searched inside a circle with this radius
+  real*8  :: delta_psi_GS      !< Expected psi_bnd - psi_axis for the final equilibrium  
+  logical :: newton_GS_fixbnd  !< Newton instead of Picard iterations for fixed-boundary equilibria?
+  logical :: newton_GS_freebnd !< Newton instead of Picard iterations for free-boundary equilibria?
  
   !> @name Free boundary extension
   !! Input parameters related to the free boundary extension (folder vacuum/).
@@ -655,6 +663,11 @@ module phys_module
   real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: ZK_par_neg_thresh  !< ZK_par_neg becomes effective if T < ZK_par_neg_thresh
+  real*8              :: D_imp_extra_R           !< Additional impurity diffusivity in R-direction
+  real*8              :: D_imp_extra_Z           !< Additional impurity diffusivity in Z-direction
+  real*8              :: D_imp_extra_p           !< Additional impurity diffusivity in phi-direction
+  real*8              :: D_imp_extra_neg         !< Additional impurity diffusion coefficient in regions with negative impurity density
+  real*8              :: D_imp_extra_neg_thresh  !< D_imp_extra_neg becomes effective if rho_imp < D_imp_extra_neg_thresh
   real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
   real*8              :: rho_min            !< minimum density
 
@@ -683,10 +696,19 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
+  
+  !> @name Mode families preconditioner parameters
+  integer, parameter :: n_fam_max = 100               !< maximum number of families
+  integer :: n_mode_families                          !< number of families
+  logical :: autodistribute_modes                     !< use automatic or manual mode distribution
+  integer :: modes_per_family(n_fam_max)              !< Number of modes in families
+  integer :: mode_families_modes(n_fam_max,n_fam_max) !< Mode numbers (i_tor) belonging to each family; first index: family number
+  real*8  :: weights_per_family(n_fam_max)            !< Multiplication factor of family's contribution to the full solution
+  logical :: autodistribute_ranks                     !< use automatic or manual rank distribution
+  integer :: ranks_per_family(n_fam_max)              !< Number of MPI ranks per mode families
  
   !> @name  
   logical  :: treat_axis         ! flag for chosing grid axis treatment
-  logical  :: treat_axis2        ! flag for chosing grid axis treatment
   
   contains
   

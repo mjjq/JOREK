@@ -25,18 +25,8 @@ integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: W_kin(n_tor), W_mag(n_tor), xjac, BigR, wst
 real*8     :: ps0_x, ps0_y, u0_x, u0_y
 
-! axis treatment related variables
-real*8 :: esize(n_vertex_max,n_order+1)
-real*8 :: BasFun   (n_vertex_max, n_order+1, n_gauss, n_gauss)
-real*8 :: BasFun_s (n_vertex_max, n_order+1, n_gauss, n_gauss)
-real*8 :: BasFun_t (n_vertex_max, n_order+1, n_gauss, n_gauss)
-
 W_mag = 0.d0
 W_kin = 0.d0
-
-if(treat_axis2) then
-  call transform_nodelist(node_list, 1, n_tor)
-endif
 
 do ife =1,  element_list%n_elements
 
@@ -45,20 +35,10 @@ do ife =1,  element_list%n_elements
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
+    if(treat_axis .and. nodes(iv)%axis_node) then
+       call transform_dofs_for_axis_node(nodes(iv), [1:n_var], n_var, [1:n_tor], n_tor, .false.)
+    endif
   enddo
-
-  ! change basis function for elements on the grid axis
-  esize(:,:) = element%size(:,:)
-  BasFun  = H ; BasFun_s  = H_s ; BasFun_t  = H_t
-
-  if((treat_axis .or. treat_axis2) .and. element%axis_element)then
-     call on_the_axis(element, nodes, H  ,  BasFun  )
-     call on_the_axis(element, nodes, H_s,  BasFun_s)
-     call on_the_axis(element, nodes, H_t,  BasFun_t)
-     esize(1,  :) = 1.0d0
-     esize(2:3,:) = element%size(2:3,:)
-     esize(4  ,:) = 1.0d0
-  endif
 
   x_g(:,:) = 0.d0;    x_s(:,:) = 0.d0;    x_t(:,:) = 0.d0;
   y_g(:,:) = 0.d0;    y_s(:,:) = 0.;      y_t(:,:) = 0.d0;
@@ -79,8 +59,7 @@ do ife =1,  element_list%n_elements
           y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
 #ifdef fullmhd
-          ! change basis functions for physical variables only
-          Fprofile(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * esize(i,j) * BasFun(i,j,ms,mt)  
+          Fprofile(ms,mt) = Fprofile(ms,mt) + nodes(i)%Fprof_eq(j) * element%size(i,j) * H(i,j,ms,mt)  
 #endif
 
         enddo
@@ -97,11 +76,10 @@ do ife =1,  element_list%n_elements
         do ms=1, n_gauss
           do mt=1, n_gauss
 
-            ! change basis functions for physical variables only 
             do k=1,n_var
-              eq_g(k,ms,mt)  = eq_g(k,ms,mt)  + nodes(i)%values(in,j,k) * esize(i,j) * BasFun(i,j,ms,mt)
-              eq_s(k,ms,mt)  = eq_s(k,ms,mt)  + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_s(i,j,ms,mt)
-              eq_t(k,ms,mt)  = eq_t(k,ms,mt)  + nodes(i)%values(in,j,k) * esize(i,j) * BasFun_t(i,j,ms,mt)
+              eq_g(k,ms,mt)  = eq_g(k,ms,mt)  + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)
+              eq_s(k,ms,mt)  = eq_s(k,ms,mt)  + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)
+              eq_t(k,ms,mt)  = eq_t(k,ms,mt)  + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)
             enddo
         
 	    if (in .eq. 1) then
@@ -117,12 +95,12 @@ do ife =1,  element_list%n_elements
 
             if ( mod(in,2) == 0 ) then  ! cosine
               ! in+1 is a sine, so d/dphi a cosine
-              AR0_p(ms,mt) = AR0_p(ms,mt) + mode(in) * nodes(i)%values(in+1,j,var_AR) * esize(i,j) * BasFun(i,j,ms,mt)
-              AZ0_p(ms,mt) = AZ0_p(ms,mt) + mode(in) * nodes(i)%values(in+1,j,var_AZ) * esize(i,j) * BasFun(i,j,ms,mt)
+              AR0_p(ms,mt) = AR0_p(ms,mt) + mode(in) * nodes(i)%values(in+1,j,var_AR) * element%size(i,j) * H(i,j,ms,mt)
+              AZ0_p(ms,mt) = AZ0_p(ms,mt) + mode(in) * nodes(i)%values(in+1,j,var_AZ) * element%size(i,j) * H(i,j,ms,mt)
             elseif( mode(in) /= 0) then ! sine (for n=0 component AR0_p = AZ0_p = 0)
               ! in-1 is a cosine, so d/dphi a (-)sine
-              AR0_p(ms,mt) = AR0_p(ms,mt) - mode(in) * nodes(i)%values(in-1,j,var_AR) * esize(i,j) * BasFun(i,j,ms,mt)
-              AZ0_p(ms,mt) = AZ0_p(ms,mt) - mode(in) * nodes(i)%values(in-1,j,var_AZ) * esize(i,j) * BasFun(i,j,ms,mt)
+              AR0_p(ms,mt) = AR0_p(ms,mt) - mode(in) * nodes(i)%values(in-1,j,var_AR) * element%size(i,j) * H(i,j,ms,mt)
+              AZ0_p(ms,mt) = AZ0_p(ms,mt) - mode(in) * nodes(i)%values(in-1,j,var_AZ) * element%size(i,j) * H(i,j,ms,mt)
             endif
 #endif
 
@@ -187,10 +165,6 @@ do ife =1,  element_list%n_elements
 
 enddo
 
-if(treat_axis2) then
-  call transform_back_nodelist(node_list, 1, n_tor)
-endif
-
 do in=1,n_tor
   if (mode(in) .ne. 0) then
     W_mag(in) = 0.5d0 * W_mag(in)
@@ -200,4 +174,3 @@ enddo
 
 return
 end
-

@@ -7,7 +7,7 @@ use tr_module
 use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
-use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node, treat_axis, n_flux, treat_axis2
+use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node, treat_axis, n_flux
 
 implicit none
 
@@ -306,7 +306,7 @@ do i=1,nr
 
    ! Share 4 DoFs of all nodes on the grid axis and flag axis nodes. This should done only if non-flux aligned
    ! grid to be used for simulations e.g. VDEs
-   if((treat_axis .or. treat_axis2) .and. (.not. doing_polar_square) .and. (n_flux .le. 1))then
+   if(treat_axis .and. (.not. doing_polar_square) .and. (n_flux .le. 1))then
 
       if(i.eq.1)then
         node_list%node(index)%index(1) = 1
@@ -416,5 +416,8 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 enddo
 
 if ( .not. skip_update_neighbours ) call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
+
+if(treat_axis .and. (.not. doing_polar_square) .and. (n_flux .le. 1)) call identify_axis_elements(node_list, element_list)
+
 return
 end subroutine grid_polar_bezier

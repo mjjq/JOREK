@@ -10,7 +10,7 @@ use tr_module
 use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use phys_module, only: force_central_node, write_ps, fix_axis_nodes, treat_axis, treat_axis2
+use phys_module, only: force_central_node, write_ps, fix_axis_nodes, treat_axis
 
 implicit none
 
@@ -1368,7 +1368,7 @@ enddo
 !***********************************************************************
 
 ! Share 4 DoFs of all nodes on the grid axis
-if(treat_axis .or. treat_axis2)then
+if(treat_axis)then
 
   do i=1, n_tht - 1
     newnode_list%node(i)%index(1) = 1
@@ -1505,7 +1505,7 @@ do i=1,newnode_list%n_nodes
   PSI_Z  = ( - dRRg1_ds * dPSg1_dr + dRRg1_dr * dPSg1_ds ) / RZ_jac
 
   ! Adapt to axis treatment that involves new basis functions
-  if( (treat_axis .or. treat_axis2) .and. newnode_list%node(i)%axis_node)then
+  if(treat_axis .and. newnode_list%node(i)%axis_node)then
     newnode_list%node(i)%x(1,3,1:2) = 0.d0
     newnode_list%node(i)%values(1,1,1) = PSg1
     newnode_list%node(i)%values(1,2,1) = PSI_R
@@ -1527,13 +1527,13 @@ newnode_list%node(index_xpoint+1)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+2)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+3)%values(1,2:4,1) = 0.d0
 
-if(treat_axis .or. treat_axis2)then
+if(treat_axis)then
   ! do nothing here. For axis treatment it is not necessory 
   ! that 2nd and 4th DoF should be zero.
 else
-do j=1,n_tht - 1
-  newnode_list%node(i)%values(1,2:4,1) = 0.d0
-enddo
+  do j=1,n_tht - 1
+    newnode_list%node(i)%values(1,2:4,1) = 0.d0
+  enddo
 endif
 
 !----------------------------- empty old nodes/elements
@@ -1596,5 +1596,8 @@ call tr_deallocate(keep,"keep",CAT_GRID)
 call tr_deallocate(k_cross,"k_cross",CAT_GRID)
 
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
+
+if(treat_axis) call identify_axis_elements(node_list, element_list)
+
 return
 end subroutine grid_xpoint

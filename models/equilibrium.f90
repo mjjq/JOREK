@@ -428,6 +428,12 @@ if (my_id == 0) then
                                             + dn_dpsi2    * dT_dz + zn    * dT_dpsi2_dz  + 2.d0 * dn_dpsi    * dT_dpsi_dz)
   
   
+    if(treat_axis .and. node_list%node(i)%axis_node)then
+      node_list%node(i)%values(1,1,3) = zjz
+      node_list%node(i)%values(1,2,3) = dj_dR
+      node_list%node(i)%values(1,3,3) = 0.d0
+      node_list%node(i)%values(1,4,3) = dj_dZ
+    endif                                
     node_list%node(i)%values(1,1,3) = zjz
   
     node_list%node(i)%values(1,2,3) = dj_dpsi * node_list%node(i)%values(1,2,1) &
@@ -452,7 +458,7 @@ if (my_id == 0) then
                                                  + node_list%node(i)%x(1,3,2) * node_list%node(i)%values(1,2,1) )
   
   enddo
-  
+
   ! --- Find flux surfaces and plot them; determine the q-profile.  
   if (xpoint2 .and. (n_flux .gt. 1)) then
     

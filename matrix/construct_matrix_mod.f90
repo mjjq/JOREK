@@ -444,7 +444,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
   !$omp           ivar, itor, jvertex, jorder, jvar, jtor, random_element, n_var_reduced, v1, v2, im,      &
-  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8, treat_axis2   )
+  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8, treat_axis    )
 
 ! --- omp id
 #ifdef _OPENMP
@@ -482,19 +482,24 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
       do iv = 1, n_vertex_max
        inode   = element%vertex(iv)
        nodes(iv) = node_list%node(inode)
+
+       if(treat_axis .and. nodes(iv)%axis_node) then
+
+         call transform_dofs_for_axis_node(nodes(iv), [1:n_var], n_var, [i_tor_min:i_tor_max], n_tor_local, .true.)
+
+       endif
+
       enddo
 
-    endif
-
-    if(treat_axis2 .and. element%axis_element ) then
-      call new2old_dofs_on_the_axis(node_list, element, nodes, i_tor_min, i_tor_max)
     endif
 
     call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis,        &
       psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
 
-    if(treat_axis2 .and. element%axis_element ) then
-      call old2new_basis_on_the_axis(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
+    if(treat_axis .and. element%axis_element ) then
+
+      call transform_basis_for_axis_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
+
     endif
 
 #ifdef PRINT_ELM_RHS
@@ -710,7 +715,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   if (fix_axis_nodes) then
     call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
                            ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
-  elseif(treat_axis .or. treat_axis2)then
+  elseif(treat_axis)then
     call penalize_third_dof_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, &
                            ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
   endif

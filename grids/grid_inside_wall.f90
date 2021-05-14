@@ -883,7 +883,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   ! --- Then upper part
   nR = nR_save
   sig_Z = 0.3
-  call meshac2(nZ/2+1,Zlines,1.d0,9999.d0,sig_Z,9999.d0,0.3,1.0d0)
+  call meshac2(nZ/2,Zlines,1.d0,9999.d0,sig_Z,9999.d0,0.3,1.0d0)
   Zlines = Zlines * Zmax
   width_prev1    = 0.0
   width_prev2    = 0.0

@@ -307,7 +307,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   enddo
   
   ! --- This is just for debug, it could be removed (or not?)
-  call export_restart(node_list, element_list, 'jorek_restart')
+  call export_restart(node_list, element_list, 'grid_initial')
   
   ! --- Also for debug: Print a python file that plots a cross with the 4 nodes of each element
   if (plot_grid) then

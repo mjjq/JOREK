@@ -72,7 +72,7 @@ subroutine update_boundary_types(element_list,node_list, across_xpoint)
         if ( (i_node .le. 4) .and. (xcase .ne. 3) .and. (across_xpoint .gt. 0) ) cycle
         if ( (i_node .le. 8) .and. (xcase .eq. 3) .and. (across_xpoint .gt. 0) ) cycle
         call adjacent_elements(element_list,node_list,i_elm,i_vertex,3,elm_sum)
-        ! --- We want a type-3 boundary to start with (note this also make it safer if we have axis nodes on our grid)
+        ! --- We want a corner node to start with (note this also make it safer if we have axis nodes on our grid)
         ! --- We want an inverted corner when looking for additional holes
         if (     ( (elm_sum .eq. 0) .and. (i_times .eq. 1) ) &
             .or. ( (elm_sum .eq. 2) .and. (i_times .gt. 1) ) ) then
@@ -134,7 +134,7 @@ subroutine update_boundary_types(element_list,node_list, across_xpoint)
       if (elm_sum .eq. 2) node_list%node(i_node)%boundary = 3
       
       ! --- Find the next boundary node on this element
-      i_vertex_next = mod(i_vertex_now,4) + 1 ! it should always be the same direction (ie. +1, not -1)... or should it?
+      i_vertex_next = mod(i_vertex_now,4) + 1 ! it should always be the same direction (ie. +1, not -1).
       call adjacent_elements(element_list,node_list,i_elm_now,i_vertex_next,3,elm_sum)
       if (debug2) write(*,'(A,i6,2f10.3,i2)')'Trying next bnd node   :',element_list%element(i_elm_now)%vertex(i_vertex_next),&
                                               node_list%node(element_list%element(i_elm_now)%vertex(i_vertex_next))%x(1,1,1:2),elm_sum
@@ -347,7 +347,7 @@ subroutine update_boundary_types_final(element_list,node_list)
   use constants
   use mod_parameters
   use data_structure
-  use phys_module, only: xcase
+  use phys_module, only: xcase, use_simple_bnd_types
   use mod_boundary
   
   implicit none
@@ -659,6 +659,23 @@ subroutine update_boundary_types_final(element_list,node_list)
   ! 20 ->  9 (because not defined!)
   ! 21 ->  not defined!
   !  3 ->  3
+
+
+  ! --- Convert to Guido's definition
+  if (use_simple_bnd_types) then
+    do i_node=1,node_list%n_nodes
+      if (node_list%node(i_node)%boundary .eq. 0 ) cycle
+      if (node_list%node(i_node)%boundary .eq. 11) node_list%node(i_node)%boundary = 1
+      if (node_list%node(i_node)%boundary .eq. 15) node_list%node(i_node)%boundary = 5
+      if (node_list%node(i_node)%boundary .eq. 19) node_list%node(i_node)%boundary = 9
+      if (node_list%node(i_node)%boundary .eq. 12) node_list%node(i_node)%boundary = 4
+      if (node_list%node(i_node)%boundary .eq. 20) node_list%node(i_node)%boundary = 9
+      if (node_list%node(i_node)%boundary .eq. 21) node_list%node(i_node)%boundary = 9
+    enddo
+  endif
+    
+
+
   
   !!! OSOLETE !!! THE INITIAL DEFINITION BY STAN (INCOMPATIBLE WITH GUIDO)
   ! 1: TARGET,  side 2                                   (inward  field)

@@ -956,7 +956,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
   real*8  :: R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss
   real*8  :: Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss
   real*8  :: surface_length, length, length_sum, length_seg
-  real*8, parameter :: tol_find = 1.d-4
+  real*8, parameter :: tol_find = 5.d-4
   
   ! --- Find the corresponding end points on each surface
   allocate(surface_list_tmp%psi_values(1))

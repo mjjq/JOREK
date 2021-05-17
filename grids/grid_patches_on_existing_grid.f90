@@ -13,7 +13,7 @@ use mod_eqdsk_tools
 use mod_element_rtree
 
 ! --- Input parameters
-use phys_module, only:     n_wall_blocks, xpoint
+use phys_module, only:     n_wall_blocks, xpoint, n_flux, n_tht, n_radial, freeboundary
 
 implicit none
 
@@ -31,8 +31,13 @@ integer             :: my_id, i_ext
 integer             :: n_grids(12)
 integer             :: n_seg_prev
 real*8              :: seg_prev(n_seg_max)
-integer             :: n_loop, i, j, k, index
+integer             :: n_loop, i, j, k, index, ier
+logical             :: include_axis, include_xpoint, include_psi
+logical             :: normal_eqdsk, normal_eqdsk_wall
+logical             :: freeb_save
 logical, parameter  :: plot_grid = .true.
+character*2         :: char_patch
+character*256       :: filename
 
 my_id  = 1 ! Just don't want the printout...
 
@@ -54,9 +59,11 @@ write(*,*) ' '
 !-------------------------------------------------------------------------------------------!
 
 
+n_grids(1) = n_flux
+n_grids(2) = n_tht
 
-
-
+freeb_save = freeboundary    ! Disable freeboundary for this routine
+freeboundary = .false.       ! This allows to export restart files for diagnosing the grid patches
 
 
 
@@ -64,6 +71,8 @@ write(*,*) ' '
 if (sum(element_list%element(1)%neighbours) .eq. 0) then
   call update_neighbours_basic(element_list,node_list)
 endif
+call temporary_element_sizes(node_list, element_list)
+call export_restart(node_list, element_list, 'grid_no_patch')
 
 ! --- Allocate data structures for new nodes and initialize them
 allocate(node_list_tmp,node_list_tmp2,node_list_new)
@@ -83,6 +92,13 @@ do i_ext = 1,n_wall_blocks
   call define_extension_patch(node_list_new, element_list_new, node_list_tmp, element_list_tmp, n_seg_prev, seg_prev, i_ext)
   call update_neighbours_basic(element_list_tmp,node_list_tmp)
   call update_boundary_types  (element_list_tmp,node_list_tmp, 0)
+  ! --- create restart file for vtk plots BEG
+  if (i_ext .lt. 10) write(char_patch,'(i1)') i_ext
+  if (i_ext .ge. 10) write(char_patch,'(i2)') i_ext
+  write(filename,'(A10,A)')'grid_patch',trim(char_patch)
+  call temporary_element_sizes(node_list_tmp, element_list_tmp)
+  call export_restart(node_list_tmp, element_list_tmp, filename)
+  ! --- create restart file for vtk plots END
   call join_grid_patches(node_list_new,  element_list_new, &
                          node_list_tmp,  element_list_tmp, &
                          node_list_tmp2, element_list_tmp2, .false.)
@@ -94,17 +110,16 @@ enddo
 
 
 ! --- Finalise grid (element size, nodes index etc.)
-if (xpoint) then
-  call finish_grid(node_list, element_list, node_list_new, element_list_new, n_grids)
-else
-  call finish_grid_no_xpoint_no_axis(node_list, element_list, node_list_new, element_list_new, n_grids)
-endif
+include_axis   = .true.
+include_xpoint = .true.
+include_psi    = .true.
+if ( (n_flux .eq. 0) .and. (n_radial .eq. 0) ) include_axis   = .false.
+if (n_flux .eq. 0) include_xpoint = .false.
+call get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
+if ( (ier .ne. 0) .and. (n_flux .eq. 0) ) include_psi = .false.
+call finish_grid(node_list, element_list, node_list_new, element_list_new, n_grids, include_axis, include_xpoint, include_psi)
 
-do i=1,node_list%n_nodes
-  if (node_list%node(i)%boundary .ne. 0) node_list%node(i)%values = 0.d0
-enddo
-
-call export_restart(node_list, element_list, 'jorek_restart')
+call export_restart(node_list, element_list, 'jorek_grid')
 
 
 
@@ -149,7 +164,7 @@ if (plot_grid) then
 endif
 
 
-
+freeboundary  = freeb_save   ! Reset freeboundary to input value
 
 ! --- Deallocate data structures for new nodes and initialize them
 deallocate(node_list_tmp,node_list_tmp2,node_list_new)

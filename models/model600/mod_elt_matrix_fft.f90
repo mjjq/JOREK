@@ -41,7 +41,7 @@ integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_
 integer    :: n_tor_start, n_tor_end, n_tor_local, n_tor_loop
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8, ij, kl
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi
-real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source_i(n_gauss,n_gauss),heat_source_e(n_gauss,n_gauss)
+real*8     :: current_source(n_gauss,n_gauss),particle_source(n_gauss,n_gauss),heat_source(n_gauss,n_gauss),heat_source_i(n_gauss,n_gauss),heat_source_e(n_gauss,n_gauss)
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dpsi, dj_dz, source_pellet, source_volume
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_Ti, Bgrad_Te, Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_Ti_psi, Bgrad_T_psi, Bgrad_Ti_Ti, Bgrad_Te_psi, Bgrad_T_T, Bgrad_Te_Te, BB2_psi
@@ -200,6 +200,7 @@ current_source  = 0.d0
 particle_source = 0.d0
 heat_source_i   = 0.d0
 heat_source_e   = 0.d0
+heat_source     = 0.d0
 V_source        = 0.d0
 dV_dpsi_source  = 0.d0
 dV_dz_source    = 0.d0
@@ -272,39 +273,39 @@ do ms=1, n_gauss
   do mt=1, n_gauss
 
     if (keep_current_prof) &
-      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
+      call current(xpoint2, xcase2, x_g(ms,mt),y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,current_source(ms,mt))
   
     if ( with_TiTe ) then
-      call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+      call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd, &
                    particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
     else
-      call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+      call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd, &
                    particle_source(ms,mt),heat_source(ms,mt))
     end if
 
     ! Source of parallel velocity
     if ( ( abs(V_0) .ge. 1.e-12 ) .or. ( num_rot ) ) then
-      call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
+      call velocity(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt), psi_axis, psi_bnd, V_source(ms,mt), &
                     dV_dpsi_source(ms,mt),dV_dz_source(ms,mt),dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
     endif
 
-    call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
+    call density(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zne(ms,mt), &
                  dn_dpsi(ms,mt),dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
     if ( with_TiTe ) then
-      call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, eq_zTi(ms,mt), &
+      call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd, eq_zTi(ms,mt), &
                        dTi_dpsi(ms,mt),dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
   
-      call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
+      call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zTe(ms,mt), &
                        dTe_dpsi(ms,mt),dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
     else
-      call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd,eq_zT(ms,mt), &
+      call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd,eq_zT(ms,mt), &
                        dT_dpsi(ms,mt),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
     end if
 
     if ( NEO ) then 
       if (num_neo_file) then
-        call neo_coef( xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, amu_neo_prof(ms,mt), aki_neo_prof(ms,mt))
+        call neo_coef( xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd, amu_neo_prof(ms,mt), aki_neo_prof(ms,mt))
       else
         amu_neo_prof(ms,mt) = amu_neo_const
         aki_neo_prof(ms,mt) = aki_neo_const
@@ -917,9 +918,42 @@ do i=1,n_vertex_max
                                      zTe, zTe_x, zTe_y,                    Jb_0)
               ! --- Subtract the initial equilibrium part
               Jb = Jb - Jb_0
+
             else ! (with_TiTe) 
-              !########################### to be added ####
-            end if
+
+              ! --- Full Sauter formula
+              Ti0   = T0   / 2.d0 ; Te0   = T0   / 2.d0
+              Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
+              Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
+              call bootstrap_current(bigR, y_g(ms,mt),                     &
+                                     R_axis,   Z_axis,   psi_axis,         &
+                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+                                     ps0, ps0_x, ps0_y,                    &
+                                     r0,  r0_x,  r0_y,                     &
+                                     Ti0, Ti0_x, Ti0_y,                    &
+                                     Te0, Te0_x, Te0_y,                  Jb)
+
+              ! --- Full Sauter formula for initial profiles
+
+              zTi   = eq_zT(ms,mt) / 2.
+              zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.
+              zTi_y = dT_dpsi(ms,mt) * ps0_y / 2.
+              zTe   = zTi
+              zTe_x = zTi_x
+              zTe_y = zTi_y
+              zn_x  = dn_dpsi(ms,mt)  * ps0_x
+              zn_y  = dn_dpsi(ms,mt)  * ps0_y
+
+              call bootstrap_current(bigR, y_g(ms,mt),                       &
+                                     R_axis,   Z_axis,   psi_axis,           &
+                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,  &
+                                     ps0, ps0_x, ps0_y,                      &
+                                     eq_zne(ms,mt),  zn_x,  zn_y,            &
+                                     zTi, zTi_x, zTi_y,                      &
+                                     zTe, zTe_x, zTe_y,                    Jb_0)
+              ! --- Subtract the initial equilibrium part
+              Jb = Jb - Jb_0
+            end if ! (with_TiTe)
           else
             Jb = 0.d0
           endif

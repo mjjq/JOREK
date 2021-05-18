@@ -10,6 +10,8 @@
 !! The forces are exported to the total_wall_forces.dat file
 !! Note that to calculate the require plasma fields n_plane typically should be
 !! more than 60 (even for 2D)
+!! See more documentation in
+!!    https://www.jorek.eu/wiki/doku.php?id=jorek2_wall_forces
 program jorek2_wall_forces 
 
   use mod_vacuum_fields,   only: total_wall_forces 

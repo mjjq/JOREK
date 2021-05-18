@@ -27,6 +27,9 @@
 !!
 !! Note that to calculate the require plasma fields n_plane typically should be
 !! more than 60 (even for 2D)
+!!
+!! See more documentation here
+!!   https://www.jorek.eu/wiki/doku.php?id=jorek2_fields_xyz
 program jorek2_fields_xyz 
 
   use mod_vacuum_fields

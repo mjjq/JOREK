@@ -5,7 +5,7 @@ module mod_basisfunctions
 implicit none
 
 private
-public :: basisfunctions1, basisfunctions, basisfunctions_axis
+public :: basisfunctions1, basisfunctions
 public :: basisfunctions_T !< Transposed version, for faster interp_PRZ
 public :: basisfunctions3
 
@@ -646,36 +646,5 @@ H(4,4)   =-9.d0*(-1.d0 + s)**2*s*(-1.d0 + t)*t**2
 H_s(4,4) =9.d0*(1.d0 - 3.d0*s)*(-1.d0 + s)*(-1.d0 + t)*t**2
 H_t(4,4) =-9.d0*(-1.d0 + s)**2*s*t*(-2.d0 + 3.d0*t)
 end subroutine basisfunctions3
-
-! For details, please see https://www.jorek.eu/wiki/doku.php?id=grid-axis
-pure subroutine basisfunctions_axis(element, nodes, Hf, Nf)
-use data_structure
-implicit none
-type (type_element),intent(in)   :: element
-type (type_node),intent(in)      :: nodes(n_vertex_max)
-real*8,intent(in) :: Hf(n_vertex_max, n_order+1)
-real*8,intent(out) :: Nf(n_vertex_max, n_order+1)
-integer    :: i, j, k, l
-
-Nf = Hf
-
-!vertex 1
-Nf(1,1) = element%size(1,1) * Hf(1,1)
-Nf(1,2) = element%size(1,2) * Hf(1,2) * nodes(1)%x(1,2,1)+ &
-          element%size(1,4) * Hf(1,4) * nodes(1)%x(1,4,1)
-Nf(1,3) = element%size(1,3) * Hf(1,3)
-Nf(1,4) = element%size(1,2) * Hf(1,2) * nodes(1)%x(1,2,2) + &
-          element%size(1,4) * Hf(1,4) * nodes(1)%x(1,4,2)
-
-! vertex 4
-Nf(4,1) = element%size(4,1) * Hf(4,1)
-Nf(4,2) = element%size(4,2) * Hf(4,2) * nodes(4)%x(1,2,1) + &
-          element%size(4,4) * Hf(4,4) * nodes(4)%x(1,4,1)
-Nf(4,3) = element%size(4,3) * Hf(4,3)
-Nf(4,4) = element%size(4,2) * Hf(4,2) * nodes(4)%x(1,2,2) + &
-          element%size(4,4) * Hf(4,4) * nodes(4)%x(1,4,2)
-
-return
-end subroutine basisfunctions_axis
 
 end module mod_basisfunctions

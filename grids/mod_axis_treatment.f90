@@ -28,6 +28,7 @@ node%psi_eq(dof4) = vec(2)
 #endif
 
 do ivar = 1, n_v
+#if fullmhd
    if(i_v(ivar) == 710)then
      vec(1) = node%Fprof_eq(dof2)
      vec(2) = node%Fprof_eq(dof4)
@@ -40,7 +41,8 @@ do ivar = 1, n_v
      vec    = matmul(Pmat, vec)
      node%psi_eq(dof2) = vec(1)
      node%psi_eq(dof4) = vec(2)
-   else
+   endif
+#endif     
    do in   = 1, n_harm
       vec(1) = node%values(i_n(in),dof2,i_v(ivar))
       vec(2) = node%values(i_n(in),dof4,i_v(ivar))
@@ -48,7 +50,6 @@ do ivar = 1, n_v
       node%values(i_n(in),dof2,i_v(ivar)) = vec(1)
       node%values(i_n(in),dof2,i_v(ivar)) = vec(2)
     enddo       
-   endif
 enddo
 
 if (transform_deltas) then

@@ -18,7 +18,7 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use pellet_module
-use diffusivities, only: get_dperp, get_zk_iperp, get_zk_eperp
+use diffusivities, only: get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp
 use equil_info, only : get_psi_n
 use corr_neg
 use mod_neutral_source
@@ -46,8 +46,8 @@ real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2), dj_dp
 real*8     :: Bgrad_rho_star,     Bgrad_rho,     Bgrad_T_star,  Bgrad_Ti, Bgrad_Te, Bgrad_T, BB2
 real*8     :: Bgrad_rho_star_psi, Bgrad_rho_psi, Bgrad_rho_rho, Bgrad_T_star_psi, Bgrad_Ti_psi, Bgrad_T_psi, Bgrad_Ti_Ti, Bgrad_Te_psi, Bgrad_T_T, Bgrad_Te_Te, BB2_psi
 real*8     :: Bgrad_rho_k_star, Bgrad_T_k_star, Bgrad_Ti_Ti_n, Bgrad_Te_Te_n, Bgrad_T_T_n, Bgrad_rho_rho_n
-real*8     :: ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT
-real*8     :: D_prof, ZKi_prof, ZKe_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y
+real*8     :: ZK_par_T, dZK_par_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT
+real*8     :: D_prof, ZK_prof, ZKi_prof, ZKe_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y
 real*8     :: rhs_ij(n_var), rhs_ij_k(n_var)
 real*8     :: amat(n_var,n_var), amat_k(n_var,n_var), amat_n(n_var,n_var), amat_kn(n_var,n_var)
 
@@ -87,8 +87,9 @@ real*8     :: V_source(n_gauss,n_gauss), Vt_x_psi, Vt_y_psi, Omega_tor_x_psi, Om
 
 real*8     :: dV_dpsi_source(n_gauss,n_gauss), dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2,dV_dpsi2_dz
-real*8     :: eq_zne(n_gauss,n_gauss),  eq_zTi(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
+real*8     :: eq_zne(n_gauss,n_gauss),  eq_zT(n_gauss,n_gauss), eq_zTi(n_gauss,n_gauss), eq_zTe(n_gauss,n_gauss)
 real*8     :: dn_dpsi(n_gauss,n_gauss), dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
+real*8     :: dT_dpsi(n_gauss,n_gauss), dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
 real*8     :: dTi_dpsi(n_gauss,n_gauss),dTi_dz, dTi_dpsi2, dTi_dz2, dTi_dpsi_dz, dTi_dpsi3, dTi_dpsi_dz2, dTi_dpsi2_dz
 real*8     :: dTe_dpsi(n_gauss,n_gauss),dTe_dz, dTe_dpsi2, dTe_dz2, dTe_dpsi_dz, dTe_dpsi3, dTe_dpsi_dz2, dTe_dpsi2_dz
 
@@ -987,7 +988,7 @@ do i=1,n_vertex_max
             ZKi_prof = get_zk_iperp(psi_norm)
             ZKe_prof = get_zk_eperp(psi_norm)
           else
-            ZK_prof = get_zk_perp(psi_norm)
+            ZK_prof = get_zkperp(psi_norm)
           end if
 
           ! --- Increase diffusivity if very small density/temperature

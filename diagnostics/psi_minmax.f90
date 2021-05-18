@@ -30,8 +30,8 @@ do iv= 1, n_vertex_max
   node1 = node_list%node(n1)
   node2 = node_list%node(n2)
 
-  if(treat_axis .and. node1%axis_node) call transform_dofs_for_axis_node(node1, [1], 1, [1], 1, .false.)
-  if(treat_axis .and. node2%axis_node) call transform_dofs_for_axis_node(node2, [1], 1, [1], 1, .false.)
+  if(treat_axis .and. node1%axis_node) call transform_dofs_for_axis_node(node1, (/1/), 1, (/1/), 1, .false.)
+  if(treat_axis .and. node2%axis_node) call transform_dofs_for_axis_node(node2, (/1/), 1, (/1/), 1, .false.)
   
   !if (node_list%node(n1)%axis_node .and. node_list%node(n2)%axis_node) cycle
   if (node1%axis_node .and. node2%axis_node) cycle

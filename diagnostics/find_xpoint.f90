@@ -65,7 +65,7 @@ do i=1,element_list%n_elements    ! --- loop over elements
     inode     = element_list%element(i)%vertex(iv)
     nodes(iv) = node_list%node(inode)
     if(treat_axis .and. nodes(iv)%axis_node) then
-       call transform_dofs_for_axis_node(nodes(iv), [var_A3], 1, [1:n_tor], n_tor, .false.)
+       call transform_dofs_for_axis_node(nodes(iv), (/1/), 1, (/1/), 1, .false.)
     endif
   enddo
 

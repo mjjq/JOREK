@@ -45,6 +45,7 @@ real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
 type (type_node) :: nodes(n_vertex_max)
+integer :: i_harm(n_tor)
 
 call basisfunctions(s,t,H)
 H = transpose(H)
@@ -63,7 +64,12 @@ do kv = 1,n_vertex_max  ! 4 vertices
   sizes(:) = element_list%element(i_elm)%size(kv,:)
 
   nodes(kv) = node_list%node(iv)
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1:n_tor], n_tor, my_deltas)
+  if(treat_axis .and. nodes(kv)%axis_node) then
+    do i = 1, n_tor
+       i_harm(i) = i
+    enddo
+    call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, i_harm, n_tor, my_deltas)
+  endif
 
   if (my_deltas) then
     do i = 1, n_v
@@ -116,6 +122,7 @@ real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
 type (type_node) :: nodes(n_vertex_max)
+integer :: i_harm(n_tor)
 
 ! 7% exec time
 call basisfunctions_T(s,t,H,H_s,H_t)
@@ -137,7 +144,12 @@ do kv = 1,n_vertex_max  ! 4 vertices
   sizes(:) = element_list%element(i_elm)%size(kv,:)
 
   nodes(kv) = node_list%node(iv)
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1:n_tor], n_tor, my_deltas)
+  if(treat_axis .and. nodes(kv)%axis_node) then
+    do i = 1, n_tor
+       i_harm(i) = i
+    enddo          
+    call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, i_harm, n_tor, my_deltas)
+  endif
   
   if (my_deltas) then
     do i = 1, n_v
@@ -202,6 +214,7 @@ real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp, vpp
 logical :: my_deltas
 type (type_node) :: nodes(n_vertex_max)
+integer :: i_harm(n_tor)
 
 call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
 
@@ -224,7 +237,12 @@ do kv = 1,n_vertex_max  ! 4 vertices
   sizes(:) = element_list%element(i_elm)%size(kv,:)
 
   nodes(kv) = node_list%node(iv)
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1:n_tor], n_tor, my_deltas)
+  if(treat_axis .and. nodes(kv)%axis_node)then
+    do i = 1, n_tor
+       i_harm(i) = i
+    enddo
+    call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, i_harm, n_tor, my_deltas)
+  endif
   
   if (my_deltas) then
     do i = 1, n_v
@@ -366,7 +384,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   nodes(kv) = node_list%node(iv)
 
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), [i_var], 1, [i_harm], 1, .false.)
+  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), (/i_var/), 1, (/i_harm/), 1, .false.)
   
   do kf = 1, n_order+1       ! 4 basis functions
 
@@ -426,7 +444,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   nodes(kv) = node_list%node(iv)
 
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), [i_var], 1, [i_harm], 1, .true.)
+  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), (/i_var/), 1, (/i_harm/), 1, .true.)
 
   do kf = 1, n_order+1       ! 4 basis functions
     P    = P    + nodes(kv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
@@ -461,7 +479,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   nodes(kv) = node_list%node(iv)
 
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1], 1, .false.)
+  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, (/1/), 1, .false.)
   
   do kf = 1, n_order+1       ! 4 basis functions
     ss  = element_list%element(i_elm)%size(kv,kf)
@@ -502,7 +520,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   nodes(kv) = node_list%node(iv)
 
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1], 1, .true.)
+  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, (/1/), 1, .true.)
   
   do kf = 1, n_order+1       ! 4 basis functions
     ss  = element_list%element(i_elm)%size(kv,kf)

@@ -184,6 +184,7 @@ integer*8  :: i_phi
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
 
 #endif
+integer    :: i_v(n_var), i_harm(n_tor)
 
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -338,7 +339,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
 !$omp           ion_k, Z_eff, eta_coef,                                                        &
 #endif
-!$omp           omp_nthreads,omp_tid,treat_axis)
+!$omp           omp_nthreads,omp_tid,treat_axis,i_v,i_harm)
 
 
 #ifdef OPENMP
@@ -367,7 +368,13 @@ do ife = ife_min, ife_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
     if(treat_axis .and. nodes(iv)%axis_node) then
-       call transform_dofs_for_axis_node(nodes(iv), [1:n_var], n_var, [1:n_tor], n_tor, .false.)
+       do i = 1, n_var
+          i_v(i) = i
+       enddo     
+       do i = 1, n_tor     
+          i_harm(i) = i
+       enddo                
+       call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
     endif    
   enddo
 

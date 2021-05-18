@@ -133,8 +133,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
-                pastix_maxthrd, centralize_harm_mat, treat_axis,    &
-                force_central_nodes
+                pastix_maxthrd, centralize_harm_mat, treat_axis
 
 if (my_id .eq. 0) then
 

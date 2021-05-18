@@ -369,6 +369,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer                           :: random_element, n_var_reduced, v1, v2, im, index_ij_model400_e, index_kl_model400_e
   real*8                            :: tmp_rhs, tmp_elm, tmp_elm_v2_8
   CHARACTER(LEN=128)                :: fname
+  integer                           :: i_v(n_var)
+  integer, allocatable              :: i_harm(:)
 
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
@@ -444,7 +446,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
   !$omp           i_father,element_father, nodes_father, inode_father, node_out, ivertex, iorder,          &
   !$omp           ivar, itor, jvertex, jorder, jvar, jtor, random_element, n_var_reduced, v1, v2, im,      &
-  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8, treat_axis    )
+  !$omp           index_ij_model400_e, index_kl_model400_e,  tmp_rhs, tmp_elm, tmp_elm_v2_8, treat_axis,   &
+  !$omp           i_v, i_harm                                                                              )
 
 ! --- omp id
 #ifdef _OPENMP
@@ -484,9 +487,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
        nodes(iv) = node_list%node(inode)
 
        if(treat_axis .and. nodes(iv)%axis_node) then
-
-         call transform_dofs_for_axis_node(nodes(iv), [1:n_var], n_var, [i_tor_min:i_tor_max], n_tor_local, .true.)
-
+         do i = 1, n_var
+            i_v(i) = i
+         enddo
+         if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))         
+         do i = i_tor_min, i_tor_max
+            i_harm(i) = i
+         enddo
+         call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor_local, .true.)
+         deallocate(i_harm)
        endif
 
       enddo

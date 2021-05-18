@@ -76,9 +76,8 @@ use data_structure
 use phys_module
 implicit none
 type(type_node),       intent(inout) :: nodes(n_vertex_max)
-#define DIM0 n_vertex_max*(n_order+1)
-real*8,          intent(inout) :: ELM(1:DIM0, 1:DIM0)
-real*8,          intent(inout) :: RHS(1:DIM0)
+real*8,          intent(inout) :: ELM(1:n_vertex_max*(n_order+1), 1:n_vertex_max*(n_order+1))
+real*8,          intent(inout) :: RHS(1:n_vertex_max*(n_order+1))
 integer ,        intent(in)    :: ivar_in, ivar_out, i_harm
 ! --- routine parameters
 integer :: axis_vertex1, axis_vertex4, dof1, dof2, dof3, dof4
@@ -163,9 +162,8 @@ use data_structure
 use phys_module
 implicit none
 type(type_node),       intent(inout) :: nodes(n_vertex_max)
-#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
-real*8,          intent(inout) :: ELM(1:DIM0, 1:DIM0)
-real*8,          intent(inout) :: RHS(1:DIM0)
+real*8,          intent(inout) :: ELM(1:n_tor*n_vertex_max*(n_order+1)*n_var, 1:n_tor*n_vertex_max*(n_order+1)*n_var)
+real*8,          intent(inout) :: RHS(1:n_tor*n_vertex_max*(n_order+1)*n_var)
 integer ,        intent(in)    ::  i_tor_min, i_tor_max
 ! --- routine parameters
 integer :: axis_vertex1, axis_vertex4, dof1, dof2, dof3, dof4

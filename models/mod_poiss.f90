@@ -227,7 +227,7 @@ if (my_id == 0) then
       inode     = element%vertex(iv)
       nodes(iv) = node_list%node(inode)
       if(treat_axis .and. nodes(iv)%axis_node ) then
-        call transform_dofs_for_axis_node(nodes(iv), [ivar_in, ivar_out], 2, [i_harm], 1, .false.)
+        call transform_dofs_for_axis_node(nodes(iv), (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .false.)
       endif      
     enddo
   

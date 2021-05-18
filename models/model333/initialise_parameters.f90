@@ -125,11 +125,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-<<<<<<< HEAD
                 ranks_per_family, treat_axis
-=======
-                ranks_per_family
->>>>>>> develop
 
 
 if (my_id .eq. 0) then

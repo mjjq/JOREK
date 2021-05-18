@@ -13,6 +13,7 @@ use basis_at_gaussian
 use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node, treat_axis
 use mod_neighbours, only: update_neighbours
 use mod_interp
+use mod_axis_treatment
 
 implicit none
 
@@ -2009,8 +2010,6 @@ deallocate(ielm_flux,k_cross)
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
 
 write(*,*) ' completed grid_xpoint_wall'
-
-if(treat_axis) call identify_axis_elements(node_list, element_list)
 
 return
 end subroutine grid_xpoint_wall

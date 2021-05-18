@@ -539,15 +539,15 @@ do i=1,element_list%n_elements
       ! compute all derivatives, as in loop below
       if ((xjac .gt. 1.d-6)) then
 
-        call interp(node_list,element_list,i,var_psi,i_tor,s,t,Ps0,Ps0_s,Ps0_t,Ps0_st,Ps0_ss,Ps0_tt)
-        call interp(node_list,element_list,i,var_u,  i_tor,s,t,U0, U0_s, U0_t, U0_st, U0_ss, U0_tt)
-        call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ0,ZJ0_s,ZJ0_t,ZJ0_st,ZJ0_ss,ZJ0_tt)
-        call interp(node_list,element_list,i,var_w,  i_tor,s,t,W0, W0_s, W0_t, W0_st, W0_ss, W0_tt)
-        call interp(node_list,element_list,i,var_rho,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
-        call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
+        call interp(node_list,element_list,i,1,i_tor,s,t,Ps0,Ps0_s,Ps0_t,Ps0_st,Ps0_ss,Ps0_tt)
+        call interp(node_list,element_list,i,2,i_tor,s,t,U0, U0_s, U0_t, U0_st, U0_ss, U0_tt)
+        call interp(node_list,element_list,i,3,i_tor,s,t,ZJ0,ZJ0_s,ZJ0_t,ZJ0_st,ZJ0_ss,ZJ0_tt)
+        call interp(node_list,element_list,i,4,i_tor,s,t,W0, W0_s, W0_t, W0_st, W0_ss, W0_tt)
+        call interp(node_list,element_list,i,5,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
+        call interp(node_list,element_list,i,6,i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
 
         if (with_Vpar) then
-          call interp(node_list,element_list,i,var_Vpar,i_tor,s,t,V0,V0_s,V0_t,V0_st,V0_ss,V0_tt)
+          call interp(node_list,element_list,i,7,i_tor,s,t,V0,V0_s,V0_t,V0_st,V0_ss,V0_tt)
         else
           V0=0; V0_s=0; V0_t=0; V0_st=0; V0_ss=0; V0_tt=0
         end if
@@ -670,14 +670,14 @@ do i=1,element_list%n_elements
 
         if ((xjac .gt. 1.d-6)) then
 
-          call interp(node_list,element_list,i,var_psi,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
-          call interp(node_list,element_list,i,var_u,  i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
-          call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
-          call interp(node_list,element_list,i,var_w,  i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
-          call interp(node_list,element_list,i,var_rho,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
-          call interp(node_list,element_list,i,var_T,  i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+          call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
+          call interp(node_list,element_list,i,2,i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
+          call interp(node_list,element_list,i,3,i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
+          call interp(node_list,element_list,i,4,i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
+          call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
+          call interp(node_list,element_list,i,6,i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
           if (with_Vpar) then
-            call interp(node_list,element_list,i,var_Vpar,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+            call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
           else
             V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
           end if
@@ -975,23 +975,23 @@ do i=1,element_list%n_elements
              scalars(inode,m) = scalars(inode,m) + P * HZ(i_tor,i_plane)
           enddo
           
-          call interp_delta(node_list,element_list,i,var_psi,i_tor,s,t,dpsi,dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt)
-          call interp_delta(node_list,element_list,i,var_u,  i_tor,s,t,dU,dU_s, dU_t, dU_st, dU_ss, dU_tt)         
+          call interp_delta(node_list,element_list,i,1,i_tor,s,t,dpsi,dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt)
+          call interp_delta(node_list,element_list,i,2,i_tor,s,t,dU,dU_s, dU_t, dU_st, dU_ss, dU_tt)         
 
-          call interp(node_list,element_list,i,var_psi,i_tor,s,t,Psi,Ps_s, Ps_t, Ps_st, Ps_ss, Ps_tt)
-          call interp(node_list,element_list,i,var_u,  i_tor,s,t,U  ,U_s,  U_t,  U_st,  U_ss,  U_tt)
-          call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ ,ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt)
-          call interp(node_list,element_list,i,var_w,  i_tor,s,t,W  ,W_s,  W_t,  W_st,  W_ss,  W_tt)
-          call interp(node_list,element_list,i,var_rho,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
+          call interp(node_list,element_list,i,1,i_tor,s,t,Psi,Ps_s, Ps_t, Ps_st, Ps_ss, Ps_tt)
+          call interp(node_list,element_list,i,2,i_tor,s,t,U  ,U_s,  U_t,  U_st,  U_ss,  U_tt)
+          call interp(node_list,element_list,i,3,i_tor,s,t,ZJ ,ZJ_s, ZJ_t, ZJ_st, ZJ_ss, ZJ_tt)
+          call interp(node_list,element_list,i,4,i_tor,s,t,W  ,W_s,  W_t,  W_st,  W_ss,  W_tt)
+          call interp(node_list,element_list,i,5,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           if (with_TiTe) then
              call interp(node_list,element_list,i,var_Ti,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
              call interp(node_list,element_list,i,var_Te,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
           else
-             call interp(node_list,element_list,i,var_T,  i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
+             call interp(node_list,element_list,i,6,  i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
           endif
          
           if (with_Vpar) then
-             call interp(node_list,element_list,i,var_Vpar,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+             call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
           else
              V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
           endif

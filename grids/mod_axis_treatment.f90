@@ -2,78 +2,6 @@ module mod_axis_treatment
 
 contains
 
-! This subroutine is not used so far. We may not need it. Instead we can use transform_dofs_for_axis_node().
-! This subroutine transforms DoFs for the nodes in the grid-axis-element.
-subroutine transform_dofs_for_axis_element(node_list, element, nodes, i_v, n_v, i_n, n_harm, transform_deltas)
-use data_structure
-implicit none
-type(type_node_list),  intent(in)    :: node_list
-type(type_element),    intent(inout) :: element
-type(type_node),       intent(inout) :: nodes(n_vertex_max)
-integer,               intent(in)    :: n_v, i_v(n_v), n_harm, i_n(n_harm)
-logical,               intent(in)    :: transform_deltas
-! --- routine parameters
-integer :: iv, vg, ivar, in, dof2, dof4
-real*8  :: Pmat(2,2), vec(2)
-
-dof2 = 2 ; dof4 = 4
-
-do iv = 1, 4, 3  ! loop over axis nodes only, 1 and 4 are axis nodes
-
-   vg = element%vertex(iv) ! global index of the vertex
-
-   Pmat(1,1) = nodes(iv)%x(1,dof2,1)  ;  Pmat(1,2) = nodes(iv)%x(1,dof2,2)
-   Pmat(2,1) = nodes(iv)%x(1,dof4,1)  ;  Pmat(2,2) = nodes(iv)%x(1,dof4,2)
-   
-#if fullmhd
-
-   vec(1) = node_list%node(vg)%Fprof_eq(dof2)
-   vec(2) = node_list%node(vg)%Fprof_eq(dof4)
-   vec    = matmul(Pmat, vec)
-   nodes(iv)%Fprof_eq(dof2) = vec(1)
-   nodes(iv)%Fprof_eq(dof4) = vec(2)
-
-   vec(1) = node_list%node(vg)%psi_eq(dof2)
-   vec(2) = node_list%node(vg)%psi_eq(dof4)
-   vec    = matmul(Pmat, vec)
-   nodes(iv)%psi_eq(dof2) = vec(1)
-   nodes(iv)%psi_eq(dof4) = vec(2)
-  
-#elif altcs
-
-   vec(1) = node_list%node(vg)%psi_eq(dof2)
-   vec(2) = node_list%node(vg)%psi_eq(dof4)
-   vec    = matmul(Pmat, vec)
-   nodes(iv)%psi_eq(dof2) = vec(1)
-   nodes(iv)%psi_eq(dof4) = vec(2)
-
-#endif
-
-   do ivar = 1, n_v
-   do in   = 1, n_harm
-      vec(1) = node_list%node(vg)%values(i_n(in),dof2,i_v(ivar))
-      vec(1) = node_list%node(vg)%values(i_n(in),dof4,i_v(ivar))
-      vec    = matmul(Pmat, vec)
-      nodes(iv)%values(in,dof2,ivar) = vec(1)
-      nodes(iv)%values(in,dof4,ivar) = vec(2)
-   enddo
-   enddo
-
-   if (transform_deltas) then
-   do ivar = 1, n_v
-   do in   = 1, n_harm
-      vec(1) = node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar))
-      vec(1) = node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar))
-      vec    = matmul(Pmat, vec)
-      nodes(iv)%deltas(in,dof2,ivar) = vec(1)
-      nodes(iv)%deltas(in,dof4,ivar) = vec(2)
-   enddo
-   enddo
-   endif
-
-enddo
-end subroutine transform_dofs_for_axis_element
-
 ! This subroutine transforms DoFs for a grid axis-node. The transfromation is from 
 ! new Dofs to old DoFs. This is done so that we can use old element matrix subroutines. 
 pure subroutine transform_dofs_for_axis_node(node, i_v, n_v, i_n, n_harm, transform_deltas)
@@ -91,38 +19,36 @@ dof2 = 2 ; dof4 = 4
 Pmat(1,1) = node%x(1,dof2,1)  ;  Pmat(1,2) = node%x(1,dof2,2)
 Pmat(2,1) = node%x(1,dof4,1)  ;  Pmat(2,2) = node%x(1,dof4,2)
 
-#if fullmhd
-
-vec(1) = node%Fprof_eq(dof2)
-vec(2) = node%Fprof_eq(dof4)
-vec    = matmul(Pmat, vec)
-node%Fprof_eq(dof2) = vec(1)
-node%Fprof_eq(dof4) = vec(2)
-
+#if altcs
 vec(1) = node%psi_eq(dof2)
 vec(2) = node%psi_eq(dof4)
 vec    = matmul(Pmat, vec)
 node%psi_eq(dof2) = vec(1)
 node%psi_eq(dof4) = vec(2)
-
-#elif altcs
-
-vec(1) = node%psi_eq(dof2)
-vec(2) = node%psi_eq(dof4)
-vec    = matmul(Pmat, vec)
-node%psi_eq(dof2) = vec(1)
-node%psi_eq(dof4) = vec(2)
-
 #endif
 
 do ivar = 1, n_v
-do in   = 1, n_harm
-   vec(1) = node%values(i_n(in),dof2,i_v(ivar))
-   vec(2) = node%values(i_n(in),dof4,i_v(ivar))
-   vec    = matmul(Pmat, vec)
-   node%values(i_n(in),dof2,i_v(ivar)) = vec(1)
-   node%values(i_n(in),dof2,i_v(ivar)) = vec(2)
-enddo
+   if(i_v(ivar) == 710)then
+     vec(1) = node%Fprof_eq(dof2)
+     vec(2) = node%Fprof_eq(dof4)
+     vec    = matmul(Pmat, vec)
+     node%Fprof_eq(dof2) = vec(1)
+     node%Fprof_eq(dof4) = vec(2)
+   elseif(i_v(ivar) == 711)then
+     vec(1) = node%psi_eq(dof2)
+     vec(2) = node%psi_eq(dof4)
+     vec    = matmul(Pmat, vec)
+     node%psi_eq(dof2) = vec(1)
+     node%psi_eq(dof4) = vec(2)
+   else
+   do in   = 1, n_harm
+      vec(1) = node%values(i_n(in),dof2,i_v(ivar))
+      vec(2) = node%values(i_n(in),dof4,i_v(ivar))
+      vec    = matmul(Pmat, vec)
+      node%values(i_n(in),dof2,i_v(ivar)) = vec(1)
+      node%values(i_n(in),dof2,i_v(ivar)) = vec(2)
+    enddo       
+   endif
 enddo
 
 if (transform_deltas) then
@@ -332,30 +258,77 @@ enddo ! loop over iv
 
 end subroutine transform_basis_for_axis_element
 
-! This subroutine identifies element on the axis.
-subroutine identify_axis_elements(node_list,element_list)
-use data_structure
-use phys_module
-implicit none
-integer :: ie, iv, j1, j2 ,j3 ,j4
-type(type_node_list),    intent(inout) :: node_list
-type(type_element_list), intent(inout) :: element_list
-
-do ie = 1, element_list%n_elements
-  j1 = element_list%element(ie)%vertex(1)
-  j2 = element_list%element(ie)%vertex(2)
-  j3 = element_list%element(ie)%vertex(3)
-  j4 = element_list%element(ie)%vertex(4)
-
-  element_list%element(ie)%axis_element = .false.
-
-  ! The first and fourth vertex is on the grid-axis.
-  if ( treat_axis .and. ( node_list%node(j1)%axis_node .and. node_list%node(j4)%axis_node) ) then
-     element_list%element(ie)%axis_element = .true.
-  endif
-enddo
-
-end subroutine identify_axis_elements
+! This subroutine is not used so far. We may not need it. Instead we can use transform_dofs_for_axis_node().
+! This subroutine transforms DoFs for the nodes in the grid-axis-element.
+!subroutine transform_dofs_for_axis_element(node_list, element, nodes, i_v, n_v, i_n, n_harm, transform_deltas)
+!use data_structure
+!implicit none
+!type(type_node_list),  intent(in)    :: node_list
+!type(type_element),    intent(inout) :: element
+!type(type_node),       intent(inout) :: nodes(n_vertex_max)
+!integer,               intent(in)    :: n_v, i_v(n_v), n_harm, i_n(n_harm)
+!logical,               intent(in)    :: transform_deltas
+!! --- routine parameters
+!integer :: iv, vg, ivar, in, dof2, dof4
+!real*8  :: Pmat(2,2), vec(2)
+!
+!dof2 = 2 ; dof4 = 4
+!
+!do iv = 1, 4, 3  ! loop over axis nodes only, 1 and 4 are axis nodes
+!
+!   vg = element%vertex(iv) ! global index of the vertex
+!
+!   Pmat(1,1) = nodes(iv)%x(1,dof2,1)  ;  Pmat(1,2) = nodes(iv)%x(1,dof2,2)
+!   Pmat(2,1) = nodes(iv)%x(1,dof4,1)  ;  Pmat(2,2) = nodes(iv)%x(1,dof4,2)
+!   
+!#if fullmhd
+!
+!   vec(1) = node_list%node(vg)%Fprof_eq(dof2)
+!   vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+!   vec    = matmul(Pmat, vec)
+!   nodes(iv)%Fprof_eq(dof2) = vec(1)
+!   nodes(iv)%Fprof_eq(dof4) = vec(2)
+!
+!   vec(1) = node_list%node(vg)%psi_eq(dof2)
+!   vec(2) = node_list%node(vg)%psi_eq(dof4)
+!   vec    = matmul(Pmat, vec)
+!   nodes(iv)%psi_eq(dof2) = vec(1)
+!   nodes(iv)%psi_eq(dof4) = vec(2)
+!  
+!#elif altcs
+!
+!   vec(1) = node_list%node(vg)%psi_eq(dof2)
+!   vec(2) = node_list%node(vg)%psi_eq(dof4)
+!   vec    = matmul(Pmat, vec)
+!   nodes(iv)%psi_eq(dof2) = vec(1)
+!   nodes(iv)%psi_eq(dof4) = vec(2)
+!
+!#endif
+!
+!   do ivar = 1, n_v
+!   do in   = 1, n_harm
+!      vec(1) = node_list%node(vg)%values(i_n(in),dof2,i_v(ivar))
+!      vec(1) = node_list%node(vg)%values(i_n(in),dof4,i_v(ivar))
+!      vec    = matmul(Pmat, vec)
+!      nodes(iv)%values(in,dof2,ivar) = vec(1)
+!      nodes(iv)%values(in,dof4,ivar) = vec(2)
+!   enddo
+!   enddo
+!
+!   if (transform_deltas) then
+!   do ivar = 1, n_v
+!   do in   = 1, n_harm
+!      vec(1) = node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar))
+!      vec(1) = node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar))
+!      vec    = matmul(Pmat, vec)
+!      nodes(iv)%deltas(in,dof2,ivar) = vec(1)
+!      nodes(iv)%deltas(in,dof4,ivar) = vec(2)
+!   enddo
+!   enddo
+!   endif
+!
+!enddo
+!end subroutine transform_dofs_for_axis_element
 
 ! Following two subroutines 'transform_nodelist' and 'transform_back_nodelist' 
 ! transforms takes global node_list and transfrom axis nodes to and fro. Their

@@ -279,7 +279,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer,     allocatable :: t_vertex(:,:)                ! n_vertex_max
   integer,     allocatable :: t_neighbours(:,:)            ! n_vertex_max
   real(RKIND), allocatable :: t_size(:,:,:)                ! n_vertex_max,n_order+1
-  character,   allocatable :: t_axis_element(:)
   integer,     allocatable :: t_father(:)
   integer,     allocatable :: t_n_sons(:)
   integer,     allocatable :: t_n_gen(:)
@@ -341,7 +340,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_allocate(t_vertex,1,element_list%n_elements,1,n_vertex_max,"vertex",CAT_UNKNOWN)
   call tr_allocate(t_neighbours,1,element_list%n_elements,1,n_vertex_max,"neighbours",CAT_UNKNOWN)
   call tr_allocate(t_size,1,element_list%n_elements,1,n_vertex_max,1,n_order+1,"size",CAT_UNKNOWN)
-  call tr_allocate(t_axis_element,1,node_list%n_nodes,"axis_element",CAT_UNKNOWN)
   call tr_allocate(t_father,1,element_list%n_elements,"father",CAT_UNKNOWN)
   call tr_allocate(t_n_sons,1,element_list%n_elements,"n_sons",CAT_UNKNOWN)
   call tr_allocate(t_n_gen,1,element_list%n_elements,"n_gen",CAT_UNKNOWN)
@@ -417,11 +415,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      t_sons(i,:)         = element_list%element(i)%sons
      t_contain_node(i,:) = element_list%element(i)%contain_node
      t_nref(i)           = element_list%element(i)%nref
-     if (element_list%element(i)%axis_element) then
-        t_axis_element(i)  = 'T'
-     else
-        t_axis_element(i)  = 'F'
-     end if
   end do
 
   ! -> Create and open HDF5 file
@@ -515,8 +508,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
        element_list%n_elements,n_vertex_max,'neighbours'//char(0))
   call HDF5_array3D_saving(file_id,t_size, &
        element_list%n_elements,n_vertex_max,n_order+1,'size'//char(0))
-  call HDF5_array1D_saving_char(file_id,t_axis_element, &
-       element_list%n_elements,'axis_element'//char(0))
   call HDF5_array1D_saving_int(file_id,t_father, &
        element_list%n_elements,'father'//char(0))
   call HDF5_array1D_saving_int(file_id,t_n_sons, &
@@ -755,7 +746,6 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call tr_deallocate(t_vertex,"vertex",CAT_UNKNOWN)
   call tr_deallocate(t_neighbours,"neighbours",CAT_UNKNOWN)
   call tr_deallocate(t_size,"size",CAT_UNKNOWN)
-  call tr_deallocate(t_axis_element,"axis_element",CAT_UNKNOWN)
   call tr_deallocate(t_father,"father",CAT_UNKNOWN)
   call tr_deallocate(t_n_sons,"n_sons",CAT_UNKNOWN)
   call tr_deallocate(t_n_gen,"n_gen",CAT_UNKNOWN)

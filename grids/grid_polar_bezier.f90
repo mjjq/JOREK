@@ -8,6 +8,7 @@ use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
 use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node, treat_axis, n_flux
+use mod_axis_treatment
 
 implicit none
 
@@ -216,9 +217,6 @@ do i=1,nr-1
                  element_list%element(Index)%vertex(3) = n_node_start + i*np    + 1
    endif    
 
-  ! We do not want to implement axis treatment on non-flux aligned grid
-   element_list%element(index)%axis_element = .false.
-
            !Neighbours of the element (refinement procedure)
 
             if(i==1) then               
@@ -416,8 +414,6 @@ do k=n_element_start+1 , element_list%n_elements   ! fill in the size of the ele
 enddo
 
 if ( .not. skip_update_neighbours ) call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
-
-if(treat_axis .and. (.not. doing_polar_square) .and. (n_flux .le. 1)) call identify_axis_elements(node_list, element_list)
 
 return
 end subroutine grid_polar_bezier

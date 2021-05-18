@@ -461,7 +461,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   nodes(kv) = node_list%node(iv)
 
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1:n_tor], n_tor, .false.)
+  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1], 1, .false.)
   
   do kf = 1, n_order+1       ! 4 basis functions
     ss  = element_list%element(i_elm)%size(kv,kf)
@@ -502,7 +502,7 @@ do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   nodes(kv) = node_list%node(iv)
 
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1:n_tor], n_tor, .true.)
+  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, [1], 1, .true.)
   
   do kf = 1, n_order+1       ! 4 basis functions
     ss  = element_list%element(i_elm)%size(kv,kf)

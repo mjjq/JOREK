@@ -40,7 +40,6 @@ module data_structure
     integer :: vertex(n_vertex_max)               !< nodes of the corners
     integer :: neighbours(n_vertex_max)           !< neighbouring elements
     real*8  :: size(n_vertex_max,n_order+1)       !< size of vectors at each vertex of the element
-    logical :: axis_element                       !< Flag elements that are on the axis (and can/need-to-be be stabilised)
     integer :: father                             !< index of father element (0 if no father)"refinement"
     integer :: n_sons                             !< Number of sons elements"refinement"
     integer :: n_gen                              !< Generation rank of the element"refinement"

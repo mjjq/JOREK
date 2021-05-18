@@ -9,6 +9,7 @@ use mod_neighbours, only: update_neighbours
 use mod_interp
 use phys_module, only: force_central_node, fix_axis_nodes, treat_axis
 use equil_info
+use mod_axis_treatment
 
 implicit none
 

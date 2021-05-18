@@ -11,6 +11,7 @@ use data_structure
 use mod_neighbours, only: update_neighbours
 use mod_interp
 use phys_module, only: force_central_node, write_ps, fix_axis_nodes, treat_axis
+use mod_axis_treatment
 
 implicit none
 
@@ -1596,8 +1597,5 @@ call tr_deallocate(keep,"keep",CAT_GRID)
 call tr_deallocate(k_cross,"k_cross",CAT_GRID)
 
 call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)
-
-if(treat_axis) call identify_axis_elements(node_list, element_list)
-
 return
 end subroutine grid_xpoint

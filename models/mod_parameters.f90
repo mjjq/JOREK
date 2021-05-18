@@ -62,33 +62,6 @@ else if ( i_var == var_rhon ) then
 else if ( i_var == var_nre ) then
   name  = 'n_RE'
   descr = 'runaway electron particle density'
-else if ( i_var == var_A3 ) then
-  name  = 'A_3'
-  descr = 'Magnetic flux'
-else if ( i_var == var_AR ) then
-  name  = 'A_R'
-  descr = 'R-component of Magnetic potential'
-else if ( i_var == var_AZ ) then
-  name  = 'A_Z'
-  descr = 'Z-component of Magnetic potential'
-else if ( i_var == var_uR ) then
-  name  = 'u_R'
-  descr = 'R-component of Velocity'
-else if ( i_var == var_uZ ) then
-  name  = 'u_Z'
-  descr = 'Z-component of Velocity'
-else if ( i_var == var_up ) then
-  name  = 'u_phi'
-  descr = 'phi-component of Velocity'
-else if ( i_var == var_rho ) then
-  name  = 'Density'
-  descr = 'Density'
-else if ( i_var == var_T ) then
-  name  = 'Temperature'
-  descr = 'Temperature'
-else if ( i_var == var_rhon) then
-  name  = 'Density_n'
-  descr = 'Density_n'
 end if
 
 if ( .not. long2 ) then

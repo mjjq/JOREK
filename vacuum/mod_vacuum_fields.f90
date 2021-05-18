@@ -1,5 +1,8 @@
 !< Calculates fields created by wall and PF coil currents at arbitrary points
-!< Additionally wall forces are computed through the integral of the stress tensor
+!< The points can be inside the plasma or in the vacuum, any xyz point but
+!< DO NOT calculate the fields exactly at the STARWALL's coil/wall triangles
+!< Otherwise singularities at those points may occur!
+!< Additionally, wall forces are computed through the integral of the stress tensor
 module mod_vacuum_fields
 
   use vacuum
@@ -123,6 +126,8 @@ module mod_vacuum_fields
 
  
   !< This routine calculates the fields created by the STARWALL wall at given cartesian coordinates
+  !< DO NOT calculate the fields exactly at the STARWALL's coil/wall triangles
+  !< Otherwise singularities at those points may occur!
   subroutine wall_fields_at_xyz(my_id,x,y,z,bx,by,bz)
 
     use constants
@@ -174,6 +179,8 @@ module mod_vacuum_fields
 
 
   !< This routine calculates the fields created by the STARWALL coils at given cartesian coordinates
+  !< DO NOT calculate the fields exactly at the STARWALL's coil/wall triangles
+  !< Otherwise singularities at those points may occur!
   subroutine coil_fields_at_xyz(my_id,x,y,z,bx,by,bz, icoil)
 
     use constants

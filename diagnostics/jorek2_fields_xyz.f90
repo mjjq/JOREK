@@ -12,6 +12,9 @@
 !!    :         :         :   
 !!   x_n       y_n       z_n  
 !!
+!! DO NOT specify the points exactly at the STARWALL's coil/wall
+!! triangles. Otherwise singularities at those points may occur!
+!!
 !! To select the given JOREK restart files create a file named steps.nml
 !! with 3 integers in the first line (istart, iend, delta_step)
 !!   istart     = 1st  restart file index

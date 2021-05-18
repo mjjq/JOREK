@@ -19,7 +19,7 @@ dof2 = 2 ; dof4 = 4
 Pmat(1,1) = node%x(1,dof2,1)  ;  Pmat(1,2) = node%x(1,dof2,2)
 Pmat(2,1) = node%x(1,dof4,1)  ;  Pmat(2,2) = node%x(1,dof4,2)
 
-#if altcs
+#ifdef altcs
 vec(1) = node%psi_eq(dof2)
 vec(2) = node%psi_eq(dof4)
 vec    = matmul(Pmat, vec)
@@ -28,28 +28,31 @@ node%psi_eq(dof4) = vec(2)
 #endif
 
 do ivar = 1, n_v
-#if fullmhd
-   if(i_v(ivar) == 710)then
-     vec(1) = node%Fprof_eq(dof2)
-     vec(2) = node%Fprof_eq(dof4)
-     vec    = matmul(Pmat, vec)
-     node%Fprof_eq(dof2) = vec(1)
-     node%Fprof_eq(dof4) = vec(2)
-   elseif(i_v(ivar) == 711)then
-     vec(1) = node%psi_eq(dof2)
-     vec(2) = node%psi_eq(dof4)
-     vec    = matmul(Pmat, vec)
-     node%psi_eq(dof2) = vec(1)
-     node%psi_eq(dof4) = vec(2)
-   endif
+#ifdef fullmhd
+  if(i_v(ivar) == 710)then
+    vec(1) = node%Fprof_eq(dof2)
+    vec(2) = node%Fprof_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node%Fprof_eq(dof2) = vec(1)
+    node%Fprof_eq(dof4) = vec(2)
+  elseif(i_v(ivar) == 711)then
+    vec(1) = node%psi_eq(dof2)
+    vec(2) = node%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node%psi_eq(dof2) = vec(1)
+    node%psi_eq(dof4) = vec(2)
+  else
 #endif     
-   do in   = 1, n_harm
+    do in   = 1, n_harm
       vec(1) = node%values(i_n(in),dof2,i_v(ivar))
       vec(2) = node%values(i_n(in),dof4,i_v(ivar))
       vec    = matmul(Pmat, vec)
       node%values(i_n(in),dof2,i_v(ivar)) = vec(1)
       node%values(i_n(in),dof2,i_v(ivar)) = vec(2)
-    enddo       
+     enddo
+#ifdef fullmhd
+   endif
+#endif    
 enddo
 
 if (transform_deltas) then

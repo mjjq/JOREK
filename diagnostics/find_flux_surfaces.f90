@@ -6,7 +6,8 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only:   SDN_threshold
+use phys_module, only:   SDN_threshold, treat_axis
+use mod_axis_treatment
 
 implicit none
 
@@ -36,6 +37,7 @@ real*8  :: r_psi_copy(4), s_psi_copy(4), tht_copy(4)
 integer :: l, i_neigh, Xneigh, icount
 integer :: i, j, k, ifound, iv, im, is, n1, n2, n3
 integer :: ifail, itht(4), itmp,i_elm_xpoint(2)
+type (type_node) :: node1, node2
 
 if (my_id == 0) then
   write(*,*) '***********************************'
@@ -87,14 +89,21 @@ do i=1, element_list%n_elements
         n1 = element_list%element(i)%vertex(iv)
         n2 = element_list%element(i)%vertex(im)
 
-        if (node_list%node(n1)%axis_node .and. node_list%node(n2)%axis_node) cycle
+        node1 = node_list%node(n1)
+        node2 = node_list%node(n2)
+
+        if(treat_axis .and. node1%axis_node) call transform_dofs_for_axis_node(node1, [1], 1, [1], 1, .false.)
+        if(treat_axis .and. node2%axis_node) call transform_dofs_for_axis_node(node2, [1], 1, [1], 1, .false.)
+        
+        !if (node_list%node(n1)%axis_node .and. node_list%node(n2)%axis_node) cycle
+        if (node1%axis_node .and. node2%axis_node) cycle
 
         is = mod(iv+1,2) + 2
 
-        p1  =  node_list%node(n1)%values(1,1,1)  * element_list%element(i)%size(iv,1)
-        dp1 =  node_list%node(n1)%values(1,is,1) * element_list%element(i)%size(iv,is)
-        p4  =  node_list%node(n2)%values(1,1,1)  * element_list%element(i)%size(im,1)
-        dp4 =  node_list%node(n2)%values(1,is,1) * element_list%element(i)%size(im,is)
+        p1  =  node1%values(1,1,1)  * element_list%element(i)%size(iv,1)
+        dp1 =  node1%values(1,is,1) * element_list%element(i)%size(iv,is)
+        p4  =  node2%values(1,1,1)  * element_list%element(i)%size(im,1)
+        dp4 =  node2%values(1,is,1) * element_list%element(i)%size(im,is)
 
         p2  = p1 + dp1
         p3  = p4 + dp4

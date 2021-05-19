@@ -8,6 +8,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use mod_axis_treatment
 
 implicit none
 
@@ -38,6 +39,9 @@ do ife =1,  element_list%n_elements
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
+    if(treat_axis .and. nodes(iv)%axis_node) then
+       call transform_dofs_for_axis_node(nodes(iv), (/1/), 1,(/1/), 1, .false.)
+    endif     
   enddo
 
   x_g(:,:)   = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;

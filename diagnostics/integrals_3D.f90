@@ -16,6 +16,7 @@ use equil_info, only : get_psi_n, ES
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
   use mod_neutral_source
 #endif
+use mod_axis_treatment
 
 implicit none
 
@@ -55,6 +56,7 @@ real*8  :: local_n_particles_inj, local_n_particles, source_neutral, rn0, rho_ba
 
 integer    :: spi_i
 real*8     :: ng_radius
+integer    :: i_v(n_var), i_harm(n_tor)
 
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -154,7 +156,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           rn0, source_neutral,                                                           &
 #endif
-!$omp           omp_nthreads,omp_tid)
+!$omp           omp_nthreads,omp_tid,treat_axis,i_v,i_harm)
 
 
 #ifdef OPENMP
@@ -180,6 +182,15 @@ do ife = ife_min, ife_max
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
+    if(treat_axis .and. nodes(iv)%axis_node) then
+       do i = 1, n_var
+          i_v(i) = i
+       enddo
+       do i = 1, n_tor
+          i_harm(i) = i
+       enddo
+       call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
+    endif    
   enddo
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;

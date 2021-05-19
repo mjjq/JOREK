@@ -1,4 +1,6 @@
 !> Determine the heat and particle sources at a given position.
+!> If heat_source_e is not included in the call, the subroutine corresponds 
+!> to with_TiTe = .false. 
 subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particle_source, heat_source_i, heat_source_e)
 
 use phys_module
@@ -6,15 +8,16 @@ use phys_module
 implicit none
 
 ! --- Routine parameters.
-logical, intent(in)   :: xpoint2
-integer, intent(in)   :: xcase2
-real*8,  intent(in)   :: Z
-real*8,  intent(in)   :: Z_xpoint(2)
-real*8,  intent(in)   :: psi
-real*8,  intent(in)   :: psi_axis
-real*8,  intent(in)   :: psi_bnd
-real*8,  intent(out)  :: particle_source
-real*8,  intent(out)  :: heat_source_e, heat_source_i
+logical, intent(in)             :: xpoint2
+integer, intent(in)             :: xcase2
+real*8,  intent(in)             :: Z
+real*8,  intent(in)             :: Z_xpoint(2)
+real*8,  intent(in)             :: psi
+real*8,  intent(in)             :: psi_axis
+real*8,  intent(in)             :: psi_bnd
+real*8,  intent(out)            :: particle_source
+real*8,  intent(out)            :: heat_source_i
+real*8,  intent(out), optional  :: heat_source_e
 
 ! --- Local variables
 real*8 :: psi_n
@@ -31,11 +34,16 @@ particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_p
      + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))&
      + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
 
-heat_source_i     = heatsource_i     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-      + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+if ( with_TiTe ) then 
+  heat_source_i     = heatsource_i     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+        + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
 
-heat_source_e     = heatsource_e     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-      + heatsource_gauss_e * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+  heat_source_e     = heatsource_e     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+        + heatsource_gauss_e * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+else
+  heat_source_i     = heatsource       * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+        + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+end if 
 
 return
 end subroutine sources

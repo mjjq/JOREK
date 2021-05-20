@@ -7,7 +7,7 @@ contains
 #include "corr_neg_include.f90"
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
+  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max, only_term)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -34,6 +34,7 @@ type (type_node)      :: nodes(n_vertex_max)
 
 integer, intent(in)            :: tid
 integer, intent(in)            :: i_tor_min, i_tor_max
+integer, intent(in), optional  :: only_term(2)
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
@@ -122,6 +123,9 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer*8  :: plan
 
+integer, paramter :: maxterms = 100
+real*8     :: factor(n_var,maxterms)
+
 integer    :: i_v, i_loc, j_loc
 
 #define DIM1 n_plane
@@ -146,6 +150,12 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
+if ( present(only_term) ) then
+  factor(:,:) = 0.d0
+  factor(only_term(1),only_term(2)) = 1.d0
+else
+  factor(:,:) = 1.d0
+end if
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -895,7 +905,7 @@ do i=1,n_vertex_max
             !#  equation 1   (induction equation)                                                              #
             !###################################################################################################
 
-            rhs_ij(1) = v * eta_T  * (zj0 - current_source(ms,mt) - Jb)/ BigR * xjac * tstep &
+            rhs_ij(1) = v * eta_T  * (zj0 - current_source(ms,mt) - Jb)/ BigR * xjac * tstep * factor(1,1) &
                       + v * (ps0_s * u0_t - ps0_t * u0_s)                            * tstep &
                       - v * F0 / BigR  * u0_p                                 * xjac * tstep &
                       + eta_num_T * (v_x * zj0_x + v_y * zj0_y)               * xjac * tstep &

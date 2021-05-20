@@ -1197,6 +1197,8 @@ do i=1,n_vertex_max
               RHS(ij7) = RHS(ij7) + (rhs_ij(7) + rhs_ij_k(7)) * wst
               RHS(ij8) = RHS(ij8) + (rhs_ij(8) + rhs_ij_k(8)) * wst
             endif
+            
+            if ( present(only_term) ) cycle
 
             do k=1,n_vertex_max
 

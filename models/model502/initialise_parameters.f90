@@ -23,9 +23,6 @@ real*8 :: vacuum_fraction, b_over_a, a_over_b
 
 ! --- Local variables
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-
 integer :: ierr,err,ferr,i,ifail,i_elm, n_spi_begin
 
 real*8, dimension(2) :: P, P_s, P_t, P_phi

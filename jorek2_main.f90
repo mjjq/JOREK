@@ -157,6 +157,7 @@ program JOREK2
   integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev, n_since_update
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
+  integer                  :: i_node, i_tor, k_var, index_node, index_RHS 
   type (type_element)      :: element
   integer                  :: index_size, id_elements
   integer                  :: list_to_be_refined(n_ref_list), n_to_be_refined    
@@ -1008,6 +1009,26 @@ required = 0
          irn_jcn, harmonic_matrix=.false.)
 
 
+
+k_var = 6
+
+do i_node=1,node_list%n_nodes
+  do i_order=1, n_order+1
+  
+    index_node = node_list%node(i_node)%index(i_order)
+    
+    do i_tor=1, n_tor
+
+      index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
+
+      node_list%node(i_node)%values(i_tor, i_order, 1) = rhs_glob(index_RHS)
+      
+    end do
+  end do
+end do
+
+
+
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
       call clck_ldiff(t0,t1,tsecond)
@@ -1140,8 +1161,8 @@ required = 0
 #endif
 
 
-      call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
-      call update_deltas(my_id,node_list)
+!      call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
+!      call update_deltas(my_id,node_list)
  
       t_now = t_now + tstep
 

@@ -56,8 +56,9 @@ integer    :: n_tor_local
 type (type_node)         :: tmp_node
 
 theta = time_evol_theta
-zeta  = time_evol_zeta
-
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 Zbig = 1.d12
 
 !--------------------- reorder the nodes to have the same direction as full element (maybe not necesary)
@@ -101,10 +102,10 @@ delta_g = 0.d0; delta_s = 0.d0;
 direction_perp(1) = 6 / direction(2)     ! =3 if direction(2)=2, =2 if direction(2)=3
 direction_perp(2) = 4
 
-R_mid = sum(nodes(1:2)%x(1,1)) / 2.d0     ! mid point on boundary (approx.)
-Z_mid = sum(nodes(1:2)%x(1,2)) / 2.d0
-R_cnt = sum(nodes(1:4)%x(1,1)) / 4.d0     ! center point within element (approx.)
-Z_cnt = sum(nodes(1:4)%x(1,2)) / 4.d0
+R_mid = sum(nodes(1:2)%x(1,1,1)) / 2.d0     ! mid point on boundary (approx.)
+Z_mid = sum(nodes(1:2)%x(1,1,2)) / 2.d0
+R_cnt = sum(nodes(1:4)%x(1,1,1)) / 4.d0     ! center point within element (approx.)
+Z_cnt = sum(nodes(1:4)%x(1,1,2)) / 4.d0
 
 normal_direction = (/R_mid - R_cnt, Z_mid - Z_cnt /) / norm2((/R_mid - R_cnt, Z_mid - Z_cnt /))
 
@@ -124,13 +125,13 @@ do i=1,2    ! sum over 2 verices
 
     do ms=1, n_gauss
 
-      x_g(ms)  = x_g(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1(i,j,ms)
-      x_s(ms)  = x_s(ms)  + nodes(i)%x(j2,1) * element_size_ij * H1_s(i,j,ms)
-      x_t(ms)  = x_t(ms)  + nodes(i)%x(j3,1) * element_size_ij * H1(i,j,ms)   * element_size_perp
+      x_g(ms)  = x_g(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1(i,j,ms)
+      x_s(ms)  = x_s(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1_s(i,j,ms)
+      x_t(ms)  = x_t(ms)  + nodes(i)%x(1,j3,1) * element_size_ij * H1(i,j,ms)   * element_size_perp
 
-      y_g(ms)  = y_g(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1(i,j,ms)
-      y_s(ms)  = y_s(ms)  + nodes(i)%x(j2,2) * element_size_ij * H1_s(i,j,ms)
-      y_t(ms)  = y_t(ms)  + nodes(i)%x(j3,2) * element_size_ij * H1(i,j,ms)   * element_size_perp
+      y_g(ms)  = y_g(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1(i,j,ms)
+      y_s(ms)  = y_s(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1_s(i,j,ms)
+      y_t(ms)  = y_t(ms)  + nodes(i)%x(1,j3,2) * element_size_ij * H1(i,j,ms)   * element_size_perp
 
       do mp=1,n_plane
 
@@ -154,6 +155,10 @@ do i=1,2    ! sum over 2 verices
     enddo
   enddo
 enddo
+
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
 
 n_tor_local = i_tor_max - i_tor_min +1
 !--------------------------------------------------- sum over the Gaussian integration points

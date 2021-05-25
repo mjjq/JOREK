@@ -290,7 +290,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   my_include_vpar = .false.
   if (present(include_vpar)) my_include_vpar = include_vpar
   ! Check if we are in the 3,4,5 series of models
-  if (my_include_vpar .and. .not. (jorek_model .ge. 300 .and. jorek_model .lt. 700)) then
+  if (my_include_vpar .and. .not. with_Vpar) then
     write(*,*) "WARNING: This model, ", jorek_model, "does not support parallel flows, disabling"
     my_include_vpar = .false.
   end if
@@ -503,7 +503,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
           temp = T_Maxwell
         else
           temp = P(1)/(2.d0*MU_ZERO*central_density*1.d20*EL_CHG) ! [eV]
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
           temp = temp*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
         endif
@@ -667,7 +667,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       ! P(1)/(kb mu_zero n_zero) is in [K], multiply by kb/el_chg to go to eV
       T = P(1)/(2.d0*MU_ZERO*central_density*1.d20*EL_CHG) ! [eV] factor 2 is due to
       ! definition of P(1) as ion + electron temperature
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
       T = T*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
       ! Workaround for low-temperature regions
@@ -859,6 +859,7 @@ subroutine adjust_particle_weights(particles, num_atoms_total)
 
 end subroutine adjust_particle_weights
 
+<<<<<<< HEAD
 function q_coronal(node_list, element_list, s, t, phi, i_elm, cor, u)
   use data_structure
   use phys_module, only: central_density
@@ -877,7 +878,7 @@ function q_coronal(node_list, element_list, s, t, phi, i_elm, cor, u)
   real*8 :: local_Te, local_Ne, DUMMY_REAL
   real*8 :: q(0:cor%n_Z)
 
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
    call interp_PRZ(node_list,element_list,i_elm,[5,8],2,s,t,phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t) ! electron temperature
 #else
    call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s,t,phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t) ! electron temperature + ion temperature (assumed equal)
@@ -885,8 +886,8 @@ function q_coronal(node_list, element_list, s, t, phi, i_elm, cor, u)
 
   local_Ne = P(1) * 1d20                           ! plasma density [1/m^3]
   local_Te = P(2)/(2.d0*MU_ZERO*central_density*1.d20)/K_BOLTZ
-#if (JOREK_MODEL == 400)
-  local_Te = local_T_e*2d0 ! P(1) contains the electron temperature, reverse previous correction
+#ifdef WITH_TiTe
+  local_Te = local_T_e*2.d0 ! P(1) contains the electron temperature, reverse previous correction
 #endif
 
   if (local_Ne .le. 0.d0 .or. local_Te .le. 0.d0) then
@@ -934,7 +935,7 @@ call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
 if (my_id .eq. 0) seed = random_seed()
 call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
 
-#if (JOREK_MODEL < 300)
+#ifndef WITH_Vpar
 if (present(v_par) .and. v_par) then
   write(*,*) "ERROR: initialization with v// not possible with this model"
   call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
@@ -943,17 +944,17 @@ end if
 
 do i=1,size(particles)
   if (particles(i)%i_elm .eq. 0) cycle
-#if (JOREK_MODEL == 400)
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,8,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+#ifdef WITH_TiTe
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,var_Te,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #else
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,6,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,var_T,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #endif
 
   background_density = P(2) * 1d20                           ! plasma density [1/m^3]
   ! Assume that the particles have the same temperature as the electrons
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
   background_kbT = P(3)/(MU_ZERO*central_density*1.d20)      ! P(1) contains the electron temperature
 #else
   background_kbT = P(3)/(2.d0*MU_ZERO*central_density*1.d20) ! P(1) contains the total plasma temperature in J/kB = T = Te + Ti

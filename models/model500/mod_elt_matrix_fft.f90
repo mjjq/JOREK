@@ -25,6 +25,7 @@ use equil_info, only : get_psi_n
 use corr_neg
 use mod_neutral_source
 use mod_bootstrap_functions
+use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 
 implicit none
 
@@ -101,7 +102,6 @@ real*8     :: t_norm
 integer    :: spi_i
 real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
 ! Atomic physics coefficients:
-real*8     :: Te_eV                                           ! Electron temperature in eV
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
 real*8     :: coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss ! Ionization rate parameters
@@ -114,8 +114,12 @@ real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) rad
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
 real*8     :: T_rad                                           ! Temperature used in radiation rate
 real*8     :: coef_rad_1                                      ! Radiation rate parameters
+real*8     :: ne_SI                                           ! Electron density used in radiation rate
+
 !   -Radiation from background impurities
-real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT ! Retain the hard-coded fitting for argon
+real*8     :: Lrad_imp, dLrad_imp_dT                          ! Radiation rate and its derivative wrt. temperature
+real*8     :: r_imp                                           ! Background impurity density in JOREK unit
 
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
@@ -163,7 +167,9 @@ TG_num1    = TGNUM(1); TG_num2    = TGNUM(2); TG_num5    = TGNUM(5); TG_num6    
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
-zeta  = time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 ! --- Do we need to use the FFT or non-FFT version?
 if ( (i_tor_min == 1) .and. (i_tor_max == n_tor) ) then
@@ -226,21 +232,21 @@ do i=1,n_vertex_max
     do ms=1, n_gauss
       do mt=1, n_gauss
 
-        x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H(i,j,ms,mt)
-        x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-        x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+        x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
+        x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+        x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
-        x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
-        x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_st(i,j,ms,mt)
-        x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+        x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+        x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+        x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
 
-        y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H(i,j,ms,mt)
-        y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-        y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+        y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H(i,j,ms,mt)
+        y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+        y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
 
-        y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
-        y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_st(i,j,ms,mt)
-        y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+        y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+        y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+        y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
 
       end do
     end do
@@ -273,6 +279,11 @@ do i=1,n_vertex_max
     enddo
   enddo
 enddo
+
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
+delta_t = delta_t * tstep / tstep_prev
 
 do ms=1, n_gauss
   do mt=1, n_gauss
@@ -718,140 +729,125 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
-  ! Electron temperature in eV
-    Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+          call atomic_coeff_deuterium(0.5d0*T0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                      LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 )
 
-  !-------------------------------------------
-  ! --- Normalisation of the ionization energy cost for Deuterium
-  !------------------------------------------- 
+          ! --- Transform derivatives on Te to derivatives in total T
+          dSion_dT      = dSion_dT      / 2.d0
+          dSrec_dT      = dSrec_dT      / 2.d0
+          dLradDrays_dT = dLradDrays_dT / 2.d0
+          dLradDcont_dT = dLradDcont_dT / 2.d0
 
-    ksiion = central_density * 1.d20 * ksi_ion
+          !-------------------------------------------
+          ! --- Normalisation of the ionization energy cost for Deuterium
+          !------------------------------------------- 
+      
+          ksiion = central_density * 1.d20 * ksi_ion
+      
+          !--------------------------------------------------------
+          ! --- Source of neutrals, e.g. from MGI/SPI
+          !--------------------------------------------------------
+      
+          source_neutral = 0.d0                    
+      
+          if (using_spi) then
+      
+            do spi_i=1, n_spi
+      
+              source_neutral_tmp = 0.d0
+      
+              if (pellets(spi_i)%spi_radius > 0.0) then
+      
+                ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+      
+                if (ng_radius < ng_radius_min) then
+                  ng_radius = ng_radius_min
+                end if
+      
+                call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                              ng_radius,ns_sig,ns_deltaphi,&
+                              ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,x_g(ms,mt),y_g(ms,mt),     &
+                              phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+              end if
+      
+              source_neutral = source_neutral + source_neutral_tmp
+      
+            end do
+      
+          else
+      
+            call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
+                          JET_MGI,ASDEX_MGI,central_density,central_mass)
+      
+          end if
+          
+          source_neutral = max(source_neutral,0.)
+      
+         !-----------------------------------------------------------------
+         ! --- Radiation from background impurity, using ADAS (by default)
+         !-----------------------------------------------------------------
+          ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+          T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
 
-  !-------------------------------------------
-  ! --- Ionization rate for Deuterium
-  ! --- (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#ionization_rate_for_deuterium)
-  !------------------------------------------- 
+          if (use_imp_adas) then  ! use open adas by default
+            r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
+            if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
+              ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+              coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                    *(central_density*1.d20)**2.5d0
 
-    coef_ion_1  = sqrt(MU_ZERO*central_mass*MASS_PROTON) * (central_density*1.d20)**(1.5d0) * 0.2917d-13
-    coef_ion_2  = 0.232d0
-    coef_ion_3  = EL_CHG*MU_ZERO*central_density*1.d20 * 27.2d0
-    S_ion_puiss = 3.9d-1
+              Lrad_imp = 0.0
+              dLrad_imp_dT = 0.0
 
-    if (Te_eV .gt. 0.1) then
-      Sion_T   = coef_ion_1*((coef_ion_3/T0)**S_ion_puiss)*1/(coef_ion_2+coef_ion_3/T0)*exp(-coef_ion_3/T0)
-      dSion_dT = Sion_T * ( -S_ion_puiss/T0 + coef_ion_3/(T0*(coef_ion_2*T0+coef_ion_3)) + coef_ion_3*T0**(-2.d0) )
-    else
-      Sion_T   = 0.
-      dSion_dT = 0. 
-    endif
+              call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp,dLrad_imp_dT)
+              Lrad_imp = Lrad_imp * coef_rad_1
 
-  !-------------------------------------------
-  ! --- Radiative Power for neutral Deuterium
-  ! ------------------------------------------
+              ! Convert gradient wrt. to T from 1/K into 1/eV
+              dLrad_imp_dT = dLrad_imp_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
+              ! ...and now from 1/eV into 1/(JOREK units)
+              dLrad_imp_dT = dLrad_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+              dLrad_imp_dT = dLrad_imp_dT * dT0_corr_dT            
 
-   T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+              if (Lrad_imp < 0.) then
+                Lrad_imp = 0.
+                dLrad_imp_dT = 0.
+              end if
+            else     
+              Lrad_imp = 0.
+              dLrad_imp_dT = 0.
+            end if
+   
+            ! This is to detect N/A
+            if (Lrad_imp/=Lrad_imp .or. dLrad_imp_dT/=dLrad_imp_dT) then
+              write(*,*) "WARNING: Lrad_imp, dLrad_imp_dT ", Lrad_imp, dLrad_imp_dT
+              stop
+            end if
 
-   if (T0 .gt. 1.d-6) then
+            frad_bg = r_imp * Lrad_imp
+            dfrad_bg_dT = r_imp * dLrad_imp_dT 
 
-! Formulae for radiative power is in SI units and for T = Te + Ti
+          else 
 
-   coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
+            if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+              Arad_bg = 2.4d-31
+              Brad_bg = 20.
+              Crad_bg = 0.8
+      
+              frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
+                            *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+      
+              dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
+                            *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+            else
+              write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+              stop
+            end if 
 
-   LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
-
-   dLradDcont_dT = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*(8*EL_CHG*MU_ZERO*central_density*1.d20*sqrt(T_rad))**(-1.d0) * dT0_corr_dT
+          end if
 
 
-   LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
-
-   dLradDrays_dT = -coef_rad_1*(-29.440d0*(2.8428d0)**(-2.d0)*(log10(T_rad)-4.4283d0)/T0_corr*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                -60.947d0*(0.9048d0)**(-2.d0)*(log10(T_rad)+2.0835d0)/T0_corr*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                -24.067d0*(2.1700d0)**(-2.d0)*(log10(T_rad)+0.7363d0)/T0_corr*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))&
-                                *(1.d1)**(-29.440d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0))) * dT0_corr_dT
-
-   else
-
-   LradDcont_T = 0.d0
-   dLradDcont_dT = 0.d0
-   LradDrays_T = 0.d0
-   dLradDrays_dT = 0.d0
-
-   endif
-
-  !-------------------------------------------------
-  ! --- Recombination rate for ionized Deuterium
-  ! (see Wiki for more info: http://jorek.eu/wiki/doku.php?id=model500_501_555#recombination_rate_for_deuterium)
-  !-------------------------------------------------
-
-!  if (Te_ev .gt. 0.1d0) then      
-    coef_rec_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)   
- 
-    Srec_T    =            coef_rec_1 * 0.7d-19 * (13.6d0*(2.d0*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-0.5d0)      
-    dSrec_dT  = - 0.25d0 * coef_rec_1 * 0.7d-19 * (13.6d0*(2.d0*EL_CHG*MU_ZERO*central_density*1.d20))**(0.5d0) * (T0_corr/(2.d0))**(-1.5d0) * dT0_corr_dT
-!  else
-!    Srec_T   = 0.d0
-!    dSrec_dT = 0.d0
-!  endif
-
-   !--------------------------------------------------------
-   ! --- Source of neutrals, e.g. from MGI/SPI
-   !--------------------------------------------------------
-
-     source_neutral = 0.d0                    
-
-     if (using_spi) then
-
-       do spi_i=1, n_spi
-
-         source_neutral_tmp = 0.d0
-
-         if (pellets(spi_i)%spi_radius > 0.0) then
-
-           ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
-
-           if (ng_radius < ng_radius_min) then
-             ng_radius = ng_radius_min
-           end if
-
-           call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
-                         ng_radius,ns_sig,ns_deltaphi,&
-                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,x_g(ms,mt),y_g(ms,mt),     &
-                         phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
-         end if
-
-         source_neutral = source_neutral + source_neutral_tmp
-
-       end do
-
-     else
-
-       call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
-                     JET_MGI,ASDEX_MGI,central_density,central_mass)
-
-     end if
-    
-     source_neutral = max(source_neutral,0.)
-
-   !--------------------------------------------------------
-   ! --- Radiation from background impurity
-   !--------------------------------------------------------
-
-    Arad_bg = 2.4d-31
-    Brad_bg = 20.
-    Crad_bg = 0.8
-
-    frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-!--------------------------------------------------------
+         !--------------------------------------------------------
 
           do im=n_tor_start, n_tor_end
 

@@ -42,14 +42,19 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 n_pfc, n_tor_fft_thresh, manipulate_psi_map,        &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
-                grid_to_wall, RZ_grid_inside_wall,                  &
-                n_wall_blocks, n_ext_block,                         &
+                extend_existing_grid, no_mach1_bc,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
+                n_wall_blocks, n_ext_block, corner_block,           &
+                n_ext_equidistant,                                  &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device,                                     &
                 F0,gamma_sheath,gamma_stangeby, density_reflection, &
-                mach_one_bnd_integral,                              &
+                mach_one_bnd_integral, Vpar_smoothing,              &
+                Vpar_smoothing_coef,                                &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef,                             &
                 T_0,   T_1,   T_coef,                               &
@@ -118,7 +123,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     &
+                delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family,                                   &
                 n_particles, tstep_particles, nstep_particles,      &
                 nsubstep_particles,                                 &
                 filter_perp,    filter_hyper,    filter_par,        &
@@ -185,9 +197,9 @@ if (my_id .eq. 0) then
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
   if (gamma_stangeby > -1.d89) then
-    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0)
+    gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
   else
-    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 )
+    gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
   end if
 
   if (sum(nstep_n) .gt. 0) then

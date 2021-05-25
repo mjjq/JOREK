@@ -1,12 +1,15 @@
       module mod_coicsr
+      use mod_integer_types
       implicit none
       contains
 !------------------------------------------------------------------------
 ! routine from SPARSKIT2
 !------------------------------------------------------------------------
       subroutine coicsr (n,nnz,job,a,ja,ia,iwk)
-      integer :: n, nnz, job, ia(nnz),ja(nnz),iwk(n+1) 
-      real*8  :: a(*)
+      use mod_integer_types
+      integer               :: job 
+      integer(kind=int_all) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1) 
+      real*8                :: a(*)
 !------------------------------------------------------------------------
 ! IN-PLACE coo-csr conversion routine.
 !------------------------------------------------------------------------
@@ -43,12 +46,12 @@
 !  Coded by Y. Saad, Sep. 26 1989                                      c
 !----------------------------------------------------------------------c
 !#ifndef USE_COMPLEX_PRECOND
-      real*8  ::   t,tnext
+      real*8                ::   t,tnext
 !#else
 !      double complex  ::   t,tnext
 !#endif
-      logical ::   values
-      integer ::   i,j,k, init, ipos, inext, jnext
+      logical               ::   values
+      integer(kind=int_all) ::   i,j,k, init, ipos, inext, jnext
 !-----------------------------------------------------------------------
       values = (job .eq. 1)
 ! find pointer array for resulting matrix.
@@ -111,17 +114,18 @@
 ! routine for complex matrix
 !------------------------------------------------------------------------
       subroutine coicsr_cmplx (n,nnz,job,a,ja,ia,iwk)
+      use mod_integer_types
      
       ! --- Routine parameters
-      integer, intent(inout)        :: n, nnz 
-      integer, intent(in)           :: job 
-      integer, intent(inout)        :: ia(nnz),ja(nnz),iwk(n+1) 
-      double complex, intent(inout) :: a(*) 
+      integer(kind=int_all), intent(inout) :: n, nnz 
+      integer,               intent(in)    :: job 
+      integer(kind=int_all), intent(inout) :: ia(nnz),ja(nnz),iwk(n+1) 
+      double complex,        intent(inout) :: a(*) 
  
       ! --- Local variables
       double complex                :: t,tnext
       logical                       :: values
-      integer                       :: i,j,k, init, ipos, inext, jnext
+      integer(kind=int_all)         :: i,j,k, init, ipos, inext, jnext
 !-----------------------------------------------------------------------
       values = (job .eq. 1)
 ! find pointer array for resulting matrix.
@@ -182,9 +186,10 @@
       end subroutine coicsr_cmplx
 
       subroutine coicsr2 (n,nnz,a,ja,ia,ndof,iwk)
+      use mod_integer_types
       implicit none
-      integer :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
-      real*8  :: a(*)
+      integer(kind=int_all) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
+      real*8                :: a(*)
 !------------------------------------------------------------------------
 ! IN-PLACE coo-csr conversion routine.(with added option ndof)
 !------------------------------------------------------------------------
@@ -218,8 +223,8 @@
 !----------------------------------------------------------------------c
 !  Coded by Y. Saad, Sep. 26 1989                                      c
 !----------------------------------------------------------------------c
-      integer ::   i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
-      real*8  ::   t(ndof*ndof),tnext(ndof*ndof)
+      integer(kind=int_all) ::   i,j,k, init, ipos, inext, jnext, ndof, ndof2, id, jd
+      real*8                ::   t(ndof*ndof),tnext(ndof*ndof)
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof
       
@@ -286,15 +291,16 @@
 
       !> Routine for complex matrix block
       subroutine coicsr2_cmplx (n,nnz,a,ja,ia,ndof,iwk)
+      use mod_integer_types
       implicit none
 
       ! --- Routine parameters
-      integer,        intent(inout) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
-      double complex, intent(inout) :: a(*)
-      integer,        intent(inout) :: ndof
+      integer(kind=int_all), intent(inout) :: n, nnz, ia(nnz),ja(nnz),iwk(n+1)
+      double complex,        intent(inout) :: a(*)
+      integer(kind=int_all), intent(inout) :: ndof
 
       ! --- Local variables
-      integer                       :: i,j,k, init, ipos, inext, jnext, ndof2, id, jd
+      integer(kind=int_all)         :: i,j,k, init, ipos, inext, jnext, ndof2, id, jd
       double complex                :: t(ndof*ndof),tnext(ndof*ndof)
 !-----------------------------------------------------------------------
       ndof2  = ndof*ndof

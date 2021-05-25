@@ -1,6 +1,7 @@
 !> Set of subroutines for custom diagnistics
 module matio_module
   use hdf5_io_module
+  use iso_c_binding, only: c_double
   implicit none
 
   logical :: fileexist=.false.
@@ -121,9 +122,10 @@ module matio_module
     else
       write (fname, "(A12)") 'timeline.out'
     endif
-
+    
+    inquire(file=fname, exist=fileexist)
     if (.not.fileexist) open(unit = 1001, file = trim(fname), status='REPLACE', action='WRITE')
-    fileexist = .true.
+
 
     call date_and_time(VALUES=values)
     t = values(5)*3600000 + values(6)*60000 + values(7)*1000 + values(8)

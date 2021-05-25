@@ -1,0 +1,104 @@
+&in1
+ 
+ restart        = .f.
+ nstep_n        = 0
+ tstep_n        = 1e-3
+ nout       = 5
+
+ fbnd(1)   = 2.
+ fbnd(2:4) = 0.
+ mf        = 0
+
+ ellip  = 1.
+ tria_u = 0.
+ tria_l = 0.
+ quad_u = 0.
+ quad_l = 0.
+
+ freeboundary = .t.
+ freeboundary_equil = .t.
+ resistive_wall = .t.
+ wall_resistivity_fact=0.d0
+
+ newton_GS_freebnd    = .f. 
+
+ pf_coils( 1)%current    =  2.63d+4       
+ pf_coils( 2)%current    =  2.63d+4        
+ pf_coils( 3)%current    =  2.63d+4       
+ pf_coils( 4)%current    = -1.23d+4     
+ pf_coils( 5)%current    = -1.23d+4        
+ pf_coils( 6)%current    = -1.23d+4   
+
+ !current_ref = 0.1d+6 
+ FB_Ip_position      = 0.3d0
+ FB_Ip_integral      = 0.0d0
+ amix_freeb = 0.9
+ equil_accuracy_freeb = 1.d-6
+ 
+ freeb_equil_iterate_area  = .t.
+ psi_offset_freeb    = 0.51
+
+ xpoint = .f.
+
+ R_geo = 10.0
+ Z_geo = 0.
+ F0    = 6.
+
+ amin     = 1.
+ n_limiter = 1
+ R_limiter(1) = 9.12d0
+ Z_limiter(1) = 0.d0
+
+ n_radial = 61
+ n_pol    = 42
+
+ n_flux   = 0
+ n_tht    = 32
+
+ eta   = 1.0e-6
+ eta_t_dependent = .f.
+ visco = 1.d-8
+
+ eta_num = 0.d-10
+ visco_num = 0.d0
+
+ D_par  = 0.d0
+ D_perp = 1.d-7
+
+ ZK_par  = 1.d0
+ ZK_perp = 1.d-7
+
+ FF_0 = 1.173
+ FF_1 = 0.01
+ FF_coef(1)  = -1.0
+ FF_coef(2)  = 0.d0
+ FF_coef(3)  = 0.d0
+ FF_coef(4)  = 0.03d0
+ FF_coef(5)  = 1.0d0
+ FF_coef(6)  = 1.d0
+ FF_coef(7)  = 10.d0
+ FF_coef(8)  = 1.d0
+ 
+ heatsource     = 0.d0
+ particlesource = 0.d0
+
+ T_0 = 1.d-6
+ T_1 = 1.d-8
+ T_coef(1) = -1.d0
+ T_coef(2) = +0.0d0
+ T_coef(3) = 0.d0
+ T_coef(4) = 0.3d0
+ T_coef(5) = 1.d0
+
+ rho_0 = 1.
+ rho_1 = 1.
+ rho_coef(1)  =  0.0
+ rho_coef(2)  =  0.0
+ rho_coef(3)  =  0.0
+ rho_coef(4)  =  1.d0
+ rho_coef(5)  =  5.d0
+
+ iter_precon = 11
+ gmres_max_iter = 40
+ gmres_tol = 1.d-7
+/

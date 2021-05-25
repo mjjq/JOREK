@@ -852,11 +852,11 @@ if (plot_grid) then
     do j=1,n_loop
       do i=1,2
         index = newelement_list%element(j)%vertex(i)
-        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1)
-        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-2,'] = ',newnode_list%node(index)%x(1,1,2)
         index = newelement_list%element(j)%vertex(i+2)
-        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1)
-        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+2*i-1,'] = ',newnode_list%node(index)%x(1,1,2)
       enddo
     enddo
     write(101,'(A,i6,A)')    ' for i in range (0,',n_loop*2,'):'
@@ -864,8 +864,8 @@ if (plot_grid) then
     do j=1,n_loop
       do i=1,4
         index = newelement_list%element(j)%vertex(i)
-        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1)
-        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,2)
+        write(101,'(A,i6,A,f15.4)') ' r[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1,1)
+        write(101,'(A,i6,A,f15.4)') ' z[',4*(j-1)+i-1,'] = ',newnode_list%node(index)%x(1,1,2)
       enddo
     enddo
     write(101,'(A,i6,A)')    ' for i in range (0,',n_loop,'):'
@@ -956,6 +956,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
   real*8  :: R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss
   real*8  :: Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss
   real*8  :: surface_length, length, length_sum, length_seg
+  real*8, parameter :: tol_find = 5.d-4
   
   ! --- Find the corresponding end points on each surface
   allocate(surface_list_tmp%psi_values(1))
@@ -1058,22 +1059,21 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
           call interp_RZ(node_list,element_list,i_elm,rr,ss,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
                                                             Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
           diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
-          if (diff_beg .le. diff_min_beg) then
-            if (.not. xpoint_surface) then
-              diff_min_beg = diff_beg
-              i_part_beg  = i_part
-              i_piece_beg = i_piece
-              st_beg      = st_find(j_find)
-            else
-              if (i_part .eq. i_part_end) then
-                diff_pieces = abs(i_piece-i_piece_end)
-                if (diff_pieces .lt. diff_pieces_min) then
-                  diff_pieces_min = diff_pieces
-                  diff_min_beg = diff_beg
-                  i_part_beg  = i_part
-                  i_piece_beg = i_piece
-                  st_beg      = st_find(j_find)
-                endif
+          if ( (.not. xpoint_surface) .and. (diff_beg .le. diff_min_beg) ) then
+            diff_min_beg = diff_beg
+            i_part_beg  = i_part
+            i_piece_beg = i_piece
+            st_beg      = st_find(j_find)
+          endif
+          if ( (xpoint_surface) .and. (diff_beg .le. tol_find) ) then
+            if (i_part .eq. i_part_end) then
+              diff_pieces = abs(i_piece-i_piece_end)
+              if (diff_pieces .lt. diff_pieces_min) then
+                diff_pieces_min = diff_pieces
+                diff_min_beg = diff_beg
+                i_part_beg  = i_part
+                i_piece_beg = i_piece
+                st_beg      = st_find(j_find)
               endif
             endif
           endif

@@ -197,7 +197,9 @@ C*
 *
 * Input variables
 * ---------------
-       integer n, nloc, lwork, icntl(*)
+       use mod_integer_types
+       integer(kind=int_all) n, nloc, lwork
+       integer icntl(*)
        double precision   cntl(*)
        double precision   sA, sb, sPA, sPb
 * Output variables
@@ -206,14 +208,14 @@ C*
        double precision    rinfo(*)
 * Input/Output variables
 * ----------------------
-       integer  m, irc(*)
+       integer(kind=int_all)  m, irc(*)
        double precision work(*)
 * Local variables
 * ---------------
-       integer xptr, bptr, wptr, r0ptr, Vptr, Hptr, dotptr
-       integer yCurrent,rotSin, rotCos, xCurrent
-       integer sizeWrk, newRestart
-       integer iwarn, ierr, ihist, compRsd
+       integer(kind=int_all) xptr, bptr, wptr, r0ptr, Vptr, Hptr, dotptr
+       integer(kind=int_all) yCurrent,rotSin, rotCos, xCurrent
+       integer(kind=int_all) sizeWrk, newRestart
+       integer(kind=int_all) iwarn, ierr, ihist, compRsd
        real    rn,rx,rc
        double precision DZRO
        parameter (DZRO = 0.0d0)
@@ -414,9 +416,9 @@ C*
              write(ihist,'(A32,I2)') 'Warnings are displayed in unit: ',
      &                               iwarn
            endif 
-           write(ihist,'(A13,I7)') 'Matrix size: ',n
-           write(ihist,'(A19,I7)') 'Local matrix size: ',nloc
-           write(ihist,'(A9,I7)') 'Restart: ',m
+           write(ihist,'(A13,I20)') 'Matrix size: ',n
+           write(ihist,'(A19,I20)') 'Local matrix size: ',nloc
+           write(ihist,'(A9,I20)') 'Restart: ',m
            if (icntl(4).eq.0) then
              write(ihist,'(A18)') 'No preconditioning'
            elseif (icntl(4).eq.1) then
@@ -478,7 +480,7 @@ C*
            endif
 *
            write(ihist,5) info(3)
-5     format('Optimal size for the local workspace:',I7)
+5     format('Optimal size for the local workspace:',I20)
            write(ihist,*) 
            write(ihist,6)
 6     format('Convergence history: b.e. on the preconditioned system')
@@ -522,6 +524,7 @@ C*
 *
         subroutine dgmres(n,m,b,x,H,w,r0,V,dot,yCurrent,xCurrent,rotSin,
      &                   rotCos,irc,icntl,cntl,info,rinfo)
+       use mod_integer_types
 *
 *
 *  Purpose
@@ -685,7 +688,8 @@ C*
 *
 * Input variables
 * ---------------
-        integer  n, m, icntl(*)
+        integer(kind=int_all)  n, m
+        integer  icntl(*)
         double precision b(*)
         double precision    cntl(*)
 *
@@ -696,7 +700,7 @@ C*
 *
 * Input/Output variables
 * ----------------------
-       integer  irc(*)
+       integer(kind=int_all)  irc(*)
        double precision x(*), H(m+1,*), w(*), r0(*) 
        double precision V(n,*),dot(*),yCurrent(*)  
        double precision xCurrent(*), rotSin(*)
@@ -704,12 +708,16 @@ C*
 *
 * Local variables
 * ---------------
-       integer  j, jH, iterOut, nOrtho, iterMax, initGuess, iOrthog
-       integer  xptr, bptr, wptr, r0ptr, Vptr, Hptr, yptr, xcuptr
-       integer  dotptr
-       integer  typePrec, leftPrec, rightPrec, dblePrec, noPrec
-       integer  iwarn, ihist
-       integer  compRsd
+       integer(kind=int_all)  j, jH, iterOut, nOrtho, iterMax
+       integer(kind=int_all)  initGuess, iOrthog
+       integer(kind=int_all)  xptr, bptr, wptr, r0ptr, Vptr, Hptr
+       integer(kind=int_all)  yptr, xcuptr
+       integer(kind=int_all)  dotptr
+       integer(kind=int_all)  typePrec, leftPrec, rightPrec
+       integer(kind=int_all)  dblePrec, noPrec
+       integer(kind=int_all)  iwarn, ihist
+       integer(kind=int_all)  compRsd
+       integer(kind=int_all)  Int1
        double precision    beta, bn, sA, sb, sPA, sPb, bea, be, temp
        double precision    dloo, dnormw, dnormx, dnormres, trueNormRes
        double precision dVi, aux
@@ -746,6 +754,8 @@ C*
        parameter(matvec=1, precondLeft=2, precondRight=3, prosca=4)
        integer retlbl
        DATA retlbl /0/
+
+       Int1 = 1
 *
 *       Executable statements
 *
@@ -946,14 +956,14 @@ C*
            r0(j) = b(j)-r0(j)
          enddo
        else
-         call dcopy(n,b,1,r0,1)
+         call dcopy(n,b,Int1,r0,Int1)
        endif 
 *
 * Compute the preconditioned residual if necessary
 *      M_1Y = X : w <-- M_1^{-1} r0
 *
        if ((typePrec.eq.noPrec).or.(typePrec.eq.rightPrec)) then
-         call dcopy(n,r0,1,w,1)
+         call dcopy(n,r0,Int1,w,Int1)
        else
          irc(1) = precondLeft
          irc(2) = r0ptr
@@ -1004,7 +1014,7 @@ C*
        do j=1,n
          V(j,1) = ZERO
        enddo
-       call daxpy(n,aux,w,1,V(1,1),1)
+       call daxpy(n,aux,w,Int1,V(1,1),Int1)
 *
 *       Most outer loop : dgmres iteration
 *
@@ -1041,7 +1051,7 @@ C*
          retlbl = 21
          return
        else
-         call dcopy(n,V(1,jH),1,w,1)
+         call dcopy(n,V(1,jH),Int1,w,Int1)
        endif
  21    continue
 *
@@ -1057,7 +1067,7 @@ C*
 *      MY = X : w <-- M_1^{-1} r0
 *
        if ((typePrec.eq.noPrec).or.(typePrec.eq.rightPrec)) then
-         call dcopy(n,r0,1,w,1)
+         call dcopy(n,r0,Int1,w,Int1)
        else
          irc(1) = precondLeft
          irc(2) = r0ptr
@@ -1106,7 +1116,7 @@ C*
          H(j,jH) = H(j,jH) + dVi
          dloo    = dloo + dabs(dVi)**2
          aux = -ONE*dVi
-         call daxpy(n,aux,V(1,j),1,w,1)
+         call daxpy(n,aux,V(1,j),Int1,w,Int1)
          j = j + 1
          if (j.le.jH) goto 23
 *          enddo_j
@@ -1127,9 +1137,9 @@ C*
  34    continue
        if ((iOrthog.eq.2).or.(iOrthog.eq.3)) then
 *
-         call daxpy(jH,ONE,dot,1,H(1,jH),1)
-         call dgemv('N',n,jH,-ONE,V(1,1),n,dot,1,ONE,w,1)
-         dloo = dnrm2(jH,dot,1)**2
+         call daxpy(jH,ONE,dot,Int1,H(1,jH),Int1)
+         call dgemv('N',n,jH,-ONE,V(1,1),n,dot,Int1,ONE,w,Int1)
+         dloo = dnrm2(jH,dot,Int1)**2
        endif
 *
 *         dnormw = dnrm2(n,w,1)
@@ -1159,27 +1169,27 @@ C*
          do j=1,n
            V(j,jH+1) = ZERO
          enddo
-         call daxpy(n,aux,w,1,V(1,jH+1),1)
+         call daxpy(n,aux,w,Int1,V(1,jH+1),Int1)
        endif
 * Apply previous Givens rotations to the new column of H
        do j=1,jH-1
-         call drot(1, H(j,jH), 1, H(j+1,jH), 1,(rotCos(j)), 
-     &             rotSin(j))
+         call drot(Int1, H(j,jH), Int1, H(j+1,jH),
+     &   Int1,(rotCos(j)), rotSin(j))
        enddo
        auxHjj = H(jH,jH)
        auxHjp1j= H(jH+1,jH)
        call drotg(auxHjj, auxHjp1j,temp,rotSin(jH))
        rotCos(jH) = temp
 * Apply current rotation to the rhs of the least squares problem
-       call drot(1, H(jH,m+1), 1, H(jH+1,m+1), 1, (rotCos(jH)),
-     &            rotSin(jH))
+       call drot(Int1, H(jH,m+1), Int1, H(jH+1,m+1),
+     & Int1, (rotCos(jH)), rotSin(jH))
 *
 * zabs(H(jH+1,m+1)) is the residual computed using the least squares
 *          solver
 * Complete the QR factorisation of the Hessenberg matrix by apply the current
 * rotation to the last entry of the collumn
-       call drot(1, H(jH,jH), 1, H(jH+1,jH), 1, (rotCos(jH)),
-     &           rotSin(jH))
+       call drot(Int1, H(jH,jH), Int1, H(jH+1,jH), 
+     & Int1, (rotCos(jH)), rotSin(jH))
        H(jH+1,jH) = ZERO
 *
 * Get the Least square residual
@@ -1189,13 +1199,13 @@ C*
 *
 * Compute the solution of the current linear least squares problem
 *
-         call dcopy(jH,H(1,m+1),1,yCurrent,1)
-         call dtrsv('U','N','N',jH,H,m+1,yCurrent,1)
+         call dcopy(jH,H(1,m+1),Int1,yCurrent,Int1)
+         call dtrsv('U','N','N',jH,H,m+Int1,yCurrent,Int1)
 *
 * Compute the value of the new iterate 
 *
          call dgemv('N',n,jH,ONE,v,n,
-     &            yCurrent,1,ZERO,xCurrent,1)
+     &            yCurrent,Int1,ZERO,xCurrent,Int1)
 *
          if ((typePrec.eq.rightPrec).or.(typePrec.eq.dblePrec)) then  
 *
@@ -1207,7 +1217,7 @@ C*
            retlbl = 36
            return
          else
-           call dcopy(n,xCurrent,1,r0,1)
+           call dcopy(n,xCurrent,Int1,r0,Int1)
          endif
        endif
  36    continue
@@ -1215,8 +1225,8 @@ C*
 *
        if (sPa.ne.DZRO) then
 * Update the current solution
-         call dcopy(n,x,1,xCurrent,1)
-         call daxpy(n,ONE,r0,1,xCurrent,1)
+         call dcopy(n,x,Int1,xCurrent,Int1)
+         call daxpy(n,ONE,r0,Int1,xCurrent,Int1)
 *
 *         dnormx = dnrm2(n,xCurrent,1)
 *
@@ -1250,13 +1260,13 @@ C*
 *
 * Compute the solution of the current linear least squares problem
 *
-           call dcopy(jH,H(1,m+1),1,yCurrent,1)
-           call dtrsv('U','N','N',jH,H,m+1,yCurrent,1)
+           call dcopy(jH,H(1,m+1),Int1,yCurrent,Int1)
+           call dtrsv('U','N','N',jH,H,m+Int1,yCurrent,Int1)
 *
 * Compute the value of the new iterate 
 *
            call dgemv('N',n,jH,ONE,v,n,
-     &            yCurrent,1,ZERO,xCurrent,1)
+     &            yCurrent,Int1,ZERO,xCurrent,Int1)
 *
            if ((typePrec.eq.rightPrec).or.(typePrec.eq.dblePrec)) then
 * 
@@ -1268,7 +1278,7 @@ C*
              retlbl = 37
              return
            else
-             call dcopy(n,xCurrent,1,r0,1)
+             call dcopy(n,xCurrent,Int1,r0,Int1)
            endif
          endif
        endif
@@ -1276,11 +1286,11 @@ C*
        if ((bea.le.cntl(1)).or.(iterOut*m+jH.ge.iterMax)) then
          if (sPA.eq.DZRO) then
 * Update the current solution
-            call dcopy(n,x,1,xCurrent,1)
-            call daxpy(n,ONE,r0,1,xCurrent,1)
+            call dcopy(n,x,Int1,xCurrent,Int1)
+            call daxpy(n,ONE,r0,Int1,xCurrent,Int1)
          endif
 *
-         call dcopy(n,xCurrent,1,r0,1)
+         call dcopy(n,xCurrent,Int1,r0,Int1)
 * Compute the true residual, the Arnoldi one may be unaccurate
 *
 *           Y = AX : w  <-- A r0
@@ -1323,7 +1333,7 @@ C*
            retlbl = 46
            return
          else 
-           call dcopy(n,w,1,r0,1)
+           call dcopy(n,w,Int1,r0,Int1)
          endif
        endif
  46    continue
@@ -1347,7 +1357,7 @@ C*
 * Save the backward error on a file if convergence history requested
          if (ihist.ne.0) then
            write(ihist,1000)iterOut*m+jH,bea,be
-1000  format(I5,11x,E9.2,7x,E9.2)
+1000  format(I20,11x,E9.2,7x,E9.2)
          endif
 *
        endif
@@ -1358,7 +1368,7 @@ C*
          if ((be.le.cntl(1)).or.(iterOut*m+jH.ge.iterMax)) then   
 * The convergence has been achieved, we restore the solution in x
 * and compute the two backward errors.
-           call dcopy(n,xCurrent,1,x,1)
+           call dcopy(n,xCurrent,Int1,x,Int1)
 *
            if (sA.ne.DZRO) then
 *
@@ -1429,7 +1439,7 @@ C*
 * Save the backward error on a file if convergence history requested
          if (ihist.ne.0) then
            write(ihist,1001)iterOut*m+jH,bea
-1001  format(I5,11x,E9.2,7x,'--')
+1001  format(I20,11x,E9.2,7x,'--')
          endif
 *
        endif  
@@ -1449,13 +1459,13 @@ C*
 * Compute the solution of the current linear least squares problem
 *
          jH = jH - 1
-         call dcopy(jH,H(1,m+1),1,yCurrent,1)
-         call dtrsv('U','N','N',jH,H,m+1,yCurrent,1)
+         call dcopy(jH,H(1,m+1),Int1,yCurrent,Int1)
+         call dtrsv('U','N','N',jH,H,m+Int1,yCurrent,Int1)
 *
 * Compute the value of the new iterate
 *
          call dgemv('N',n,jH,ONE,v,n,
-     &            yCurrent,1,ZERO,xCurrent,1)
+     &            yCurrent,Int1,ZERO,xCurrent,Int1)
 *
          if ((typePrec.eq.rightPrec).or.(typePrec.eq.dblePrec)) then
 *
@@ -1467,23 +1477,23 @@ C*
            retlbl = 52
            return
          else
-           call dcopy(n,xCurrent,1,r0,1)
+           call dcopy(n,xCurrent,Int1,r0,Int1)
          endif
        endif
  52    continue
        if ((sPa.eq.DZRO).and.(bea.gt.cntl(1))) then
 * Update the current solution
-         call dcopy(n,x,1,xCurrent,1)
-         call daxpy(n,ONE,r0,1,xCurrent,1)
+         call dcopy(n,x,Int1,xCurrent,Int1)
+         call daxpy(n,ONE,r0,Int1,xCurrent,Int1)
        endif
 *
-       call dcopy(n,xCurrent,1,x,1)
+       call dcopy(n,xCurrent,Int1,x,Int1)
 *
        if (compRsd.eq.1) then
 *
 * Compute the true residual
 *
-         call dcopy(n,x,1,w,1)
+         call dcopy(n,x,Int1,w,Int1)
          irc(1) = matvec
          irc(2) = wptr
          irc(4) = r0ptr
@@ -1508,7 +1518,7 @@ C*
            retlbl = 66
            return
          else
-           call dcopy(n,r0,1,w,1)
+           call dcopy(n,r0,Int1,w,Int1)
          endif
        endif
  66    continue
@@ -1534,20 +1544,21 @@ C*
 * Apply the Givens rotation is the reverse order
          do j=m,1,-1
            H(j,m+1)   = ZERO
-           call drot(1, H(j,m+1), 1, H(j+1,m+1), 1,
-     &               (rotCos(j)), -rotSin(j))
+           call drot(Int1, H(j,m+1), Int1, H(j+1,m+1),
+     &          Int1, (rotCos(j)), -rotSin(j))
          enddo
 *
 * On applique les vecteurs V
 *
-         call dgemv('N',n,m+1,ONE,v,n,H(1,m+1),1,ZERO,w,1)
+         call dgemv('N',n,m+Int1,ONE,v,n,H(1,m+1),
+     &        Int1,ZERO,w,Int1)
 *
        endif
        do j=1,n
          V(j,1) = ZERO
        enddo
        aux = ONE/beta
-       call daxpy(n,aux,w,1,V(1,1),1)
+       call daxpy(n,aux,w,Int1,V(1,1),Int1)
 *
        goto 7
 *

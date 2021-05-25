@@ -16,6 +16,13 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+   use mod_neutral_source
+#endif
+#if (!defined WITH_Neutrals) && (defined WITH_Impurities)
+   use mod_injection_source
+#endif
+
 implicit none
 
 type (type_node_list)    :: node_list
@@ -87,6 +94,10 @@ if (use_pellet) then
 
 endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  ! --- Read ADAS data and generate coronal equilibrium if needed
+  call init_imp_adas(my_id)
+#endif
 
 
 call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)

@@ -147,9 +147,39 @@ endef
 LIBS += $(LIBLAPACK) $(LIBBLAS) $(OPENMPLIB)
 DEFINES += -DJOREK_MODEL=$(MODEL_NUMBER) -DUSE_MPI
 
-# Use flags
+# Full-MHD models flags
 ifeq (model710, $(MODEL))
   DEFINES  := $(DEFINES) -Dfullmhd
+endif
+ifeq (model711, $(MODEL))
+  DEFINES  := $(DEFINES) -Dfullmhd
+endif
+ifeq (model712, $(MODEL))
+  DEFINES  := $(DEFINES) -Dfullmhd
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_vpar))
+  DEFINES  := $(DEFINES) -DWITH_Vpar
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_TiTe))
+  DEFINES  := $(DEFINES) -DWITH_TiTe
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_neutrals))
+  DEFINES  := $(DEFINES) -DWITH_Neutrals
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_impurities))
+  DEFINES  := $(DEFINES) -DWITH_Impurities
+endif
+
+ifeq (.true., $(shell ./util/config.sh -p with_refluid))
+  DEFINES  := $(DEFINES) -DWITH_REFluid
+endif
+
+ifneq (0, $(shell ./util/config.sh -p n_mod_ext))
+  DEFINES  := $(DEFINES) -DMODEL_FAMILY
 endif
 
 ifeq (1, $(USE_FFTW))
@@ -220,6 +250,10 @@ endif
 
 ifeq (1, $(USE_COMPLEX_PRECOND))
   DEFINES  := $(DEFINES) -DUSE_COMPLEX_PRECOND
+endif
+
+ifeq (1, $(USE_INTSIZE64))
+  DEFINES  := $(DEFINES) -DINTSIZE64
 endif
 
 ifeq (1, $(USE_STRUMPACK))

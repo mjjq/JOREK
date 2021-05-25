@@ -41,7 +41,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   use mod_neutral_source
 #endif
   use vacuum, only: export_restart_vacuum
@@ -61,11 +61,13 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_phi_init_arr (:)
   real*8, allocatable :: spi_Vel_R_arr (:)
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
+  real*8, allocatable :: spi_species_arr (:)
 
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
@@ -124,6 +126,11 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) pellet_particles, pellet_R, pellet_Z
   endif
 
+  ! Radiation and ionization energy history
+  if (index_now .gt. 0) write(21) xtime_radiation(1:index_now)
+  if (index_now .gt. 0) write(21) xtime_rad_power(1:index_now)
+  if (index_now .gt. 0) write(21) xtime_E_ion(1:index_now)
+  if (index_now .gt. 0) write(21) xtime_E_ion_power(1:index_now)
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi .and. n_spi >= 1) then
@@ -131,6 +138,8 @@ subroutine export_binary_restart(node_list,element_list,filename)
     if (index_now .gt. 0) then
       write(21) xtime_spi_ablation(:,1:index_now)
       write(21) xtime_spi_ablation_rate(:,1:index_now)
+      write(21) xtime_spi_ablation_bg(:,1:index_now)
+      write(21) xtime_spi_ablation_bg_rate(:,1:index_now)
     endif
 
     write(21) n_spi
@@ -138,40 +147,48 @@ subroutine export_binary_restart(node_list,element_list,filename)
     allocate (spi_R_arr(n_spi))  
     allocate (spi_Z_arr(n_spi))     
     allocate (spi_phi_arr(n_spi)) 
+    allocate (spi_phi_init_arr(n_spi)) 
     allocate (spi_Vel_R_arr(n_spi)) 
     allocate (spi_Vel_Z_arr(n_spi)) 
     allocate (spi_Vel_RxZ_arr(n_spi)) 
     allocate (spi_radius_arr(n_spi)) 
     allocate (spi_abl_arr(n_spi))
+    allocate (spi_species_arr(n_spi))
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R
       spi_Z_arr(i)       = pellets(i)%spi_Z
       spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_phi_init_arr(i)= pellets(i)%spi_phi_init
       spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
       spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
       spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
       spi_radius_arr(i)  = pellets(i)%spi_radius
       spi_abl_arr(i)     = pellets(i)%spi_abl
+      spi_species_arr(i) = pellets(i)%spi_species
     end do
 
     write(21) spi_R_arr(1:n_spi)
     write(21) spi_Z_arr(1:n_spi)
     write(21) spi_phi_arr(1:n_spi)
+    write(21) spi_phi_init_arr(1:n_spi)
     write(21) spi_Vel_R_arr(1:n_spi)
     write(21) spi_Vel_Z_arr(1:n_spi)
     write(21) spi_Vel_RxZ_arr(1:n_spi)
     write(21) spi_radius_arr(1:n_spi)
     write(21) spi_abl_arr(1:n_spi)
+    write(21) spi_species_arr(1:n_spi)
 
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
     deallocate (spi_phi_arr)
+    deallocate (spi_phi_init_arr)
     deallocate (spi_Vel_R_arr)
     deallocate (spi_Vel_Z_arr)
     deallocate (spi_Vel_RxZ_arr)
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
+    deallocate (spi_species_arr)
 
     if (spi_tor_rot) then
       write(21) ns_phi_rotate
@@ -212,7 +229,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   use data_structure
   use phys_module
   use pellet_module
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 501 || JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   use mod_neutral_source
 #endif
   use vacuum, only : export_HDF5_restart_vacuum
@@ -242,9 +259,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer            :: ind, ierr
 
   ! type_node, node_list%n_nodes
-  real(RKIND), allocatable :: t_x(:,:,:)                   ! n_order+1, n_dim
-  real(RKIND), allocatable :: t_values(:,:,:,:)            ! n_tor, n_order+1, n_var
-  real(RKIND), allocatable :: t_deltas(:,:,:,:)            ! n_tor, n_order+1, n_var
+  real(RKIND), allocatable :: t_x(:,:,:,:)                 ! n_coord_tor, n_order+1, n_dim
+  real(RKIND), allocatable :: t_values(:,:,:,:)            !       n_tor, n_order+1, n_var
+  real(RKIND), allocatable :: t_deltas(:,:,:,:)            !       n_tor, n_order+1, n_var
 
   real(RKIND), allocatable :: t_psi_eq(:,:)                ! n_order+1
   real(RKIND), allocatable :: t_Fprof_eq(:,:)              ! n_order+1
@@ -273,11 +290,13 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
   real*8, allocatable :: spi_phi_arr (:)
+  real*8, allocatable :: spi_phi_init_arr (:)
   real*8, allocatable :: spi_Vel_R_arr (:)
   real*8, allocatable :: spi_Vel_Z_arr (:)
   real*8, allocatable :: spi_Vel_RxZ_arr (:)
   real*8, allocatable :: spi_radius_arr (:)
   real*8, allocatable :: spi_abl_arr (:)
+  real*8, allocatable :: spi_species_arr (:)
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
@@ -291,8 +310,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 #endif
 
   ! type_node, node_list%n_nodes
-  call tr_allocate(t_x,1,node_list%n_nodes,1,n_order+1,1,n_dim, &
-       "node_list%x",CAT_UNKNOWN)
+  call tr_allocate(t_x,1,node_list%n_nodes,1,n_coord_tor,1,n_order+1,1,n_dim, &
+      "node_list%x",CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_var, &
        "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor,1,n_order+1,1,n_var, &
@@ -357,7 +376,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   !
   do i=1,node_list%n_nodes
-     t_x(i,:,:)        = node_list%node(i)%x
+     t_x(i,:,:,:)        = node_list%node(i)%x
      t_values(i,:,:,:) = node_list%node(i)%values
      t_deltas(i,:,:,:) = node_list%node(i)%deltas
 
@@ -427,6 +446,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,n_dim,'n_dim'//char(0))
   call HDF5_integer_saving(file_id,n_order,'n_order'//char(0))
   call HDF5_integer_saving(file_id,n_tor,'n_tor'//char(0))
+  call HDF5_integer_saving(file_id,n_coord_tor,'n_coord_tor'//char(0))
   call HDF5_integer_saving(file_id,n_period,'n_period'//char(0))
   call HDF5_integer_saving(file_id,n_plane,'n_plane'//char(0))
   call HDF5_integer_saving(file_id,n_vertex_max,'n_vertex_max'//char(0))
@@ -442,9 +462,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   call HDF5_integer_saving(file_id,node_list%n_nodes,'n_nodes'//char(0))
   call HDF5_integer_saving(file_id,element_list%n_elements,'n_elements'//char(0))
   call HDF5_integer_saving(file_id,node_list%n_dof,'n_dof'//char(0))
-
-  call HDF5_array3D_saving(file_id,t_x, &
-       node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+  
+  if (rst_hdf5_version .eq. 2) then
+    call HDF5_array4D_saving(file_id,t_x, &
+         node_list%n_nodes,n_coord_tor,n_order+1,n_dim,'x'//char(0))
+  else
+    call HDF5_array3D_saving(file_id,t_x(:,1,:,:), &
+         node_list%n_nodes,n_order+1,n_dim,'x'//char(0))
+  endif
   call HDF5_array4D_saving(file_id,t_values, &
        node_list%n_nodes,n_tor,n_order+1,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &
@@ -608,6 +633,13 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
      call HDF5_real_saving(file_id,pellet_Z,"pellet_Z"//char(0))
   end if
 
+  ! Radiation and ionization energy history
+  if (index_now .gt. 0) then
+    if ( allocated(xtime_radiation)   ) call HDF5_array1D_saving(file_id,xtime_radiation, index_now,'xtime_radiation'//char(0))
+    if ( allocated(xtime_rad_power)   ) call HDF5_array1D_saving(file_id,xtime_rad_power, index_now,'xtime_rad_power'//char(0))
+    if ( allocated(xtime_E_ion)       ) call HDF5_array1D_saving(file_id,xtime_E_ion, index_now,'xtime_E_ion'//char(0))
+    if ( allocated(xtime_E_ion_power) ) call HDF5_array1D_saving(file_id,xtime_E_ion_power, index_now,'xtime_E_ion_power'//char(0))
+  end if
 
   ! Dynamically allocate memeries for temporary arrays in order to export
   if (using_spi .and. n_spi>=1) then
@@ -616,6 +648,10 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
              n_spi,index_now,'xtime_spi_ablation'//char(0))
       call HDF5_array2D_saving(file_id,xtime_spi_ablation_rate, &
              n_spi,index_now,'xtime_spi_ablation_rate'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg, &
+             n_spi,index_now,'xtime_spi_ablation_bg'//char(0))
+      call HDF5_array2D_saving(file_id,xtime_spi_ablation_bg_rate, &
+             n_spi,index_now,'xtime_spi_ablation_bg_rate'//char(0))
     end if
 
     call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))
@@ -623,21 +659,25 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     allocate (spi_R_arr(n_spi))
     allocate (spi_Z_arr(n_spi))
     allocate (spi_phi_arr(n_spi))
+    allocate (spi_phi_init_arr(n_spi))
     allocate (spi_Vel_R_arr(n_spi))
     allocate (spi_Vel_Z_arr(n_spi))
     allocate (spi_Vel_RxZ_arr(n_spi))
     allocate (spi_radius_arr(n_spi))
     allocate (spi_abl_arr(n_spi))
+    allocate (spi_species_arr(n_spi))
 
     do i=1, n_spi
       spi_R_arr(i)       = pellets(i)%spi_R
       spi_Z_arr(i)       = pellets(i)%spi_Z
       spi_phi_arr(i)     = pellets(i)%spi_phi
+      spi_phi_init_arr(i)= pellets(i)%spi_phi_init
       spi_Vel_R_arr(i)   = pellets(i)%spi_Vel_R
       spi_Vel_Z_arr(i)   = pellets(i)%spi_Vel_Z
       spi_Vel_RxZ_arr(i) = pellets(i)%spi_Vel_RxZ
       spi_radius_arr(i)  = pellets(i)%spi_radius
       spi_abl_arr(i)     = pellets(i)%spi_abl
+      spi_species_arr(i) = pellets(i)%spi_species
     end do
 
     call HDF5_array1D_saving(file_id,spi_R_arr, &
@@ -646,6 +686,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
              n_spi,'spi_Z_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_phi_arr, &
              n_spi,'spi_phi_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_phi_init_arr, &
+             n_spi,'spi_phi_init_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Vel_R_arr, &
              n_spi,'spi_Vel_R_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_Vel_Z_arr, &
@@ -656,20 +698,21 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
              n_spi,'spi_radius_arr'//char(0))
     call HDF5_array1D_saving(file_id,spi_abl_arr, &
              n_spi,'spi_abl_arr'//char(0))
+    call HDF5_array1D_saving(file_id,spi_species_arr, &
+             n_spi,'spi_species_arr'//char(0))
 
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
     deallocate (spi_phi_arr)
+    deallocate (spi_phi_init_arr)
     deallocate (spi_Vel_R_arr)
     deallocate (spi_Vel_Z_arr)
     deallocate (spi_Vel_RxZ_arr)
     deallocate (spi_radius_arr)
     deallocate (spi_abl_arr)
+    deallocate (spi_species_arr)
 
-    if (spi_tor_rot) then
-      call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0))  
-    end if
-
+    if (spi_tor_rot) call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0)) 
   else
     n_spi = 0
     call HDF5_integer_saving(file_id,n_spi,"n_spi"//char(0))

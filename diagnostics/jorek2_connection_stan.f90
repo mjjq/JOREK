@@ -10,9 +10,9 @@ program jorek2_poincare
   use mod_import_restart
   use mod_neighbours
   use mod_interp
+  use mpi
   
   implicit none
-  include 'mpif.h'
   
   ! --- Poincare data
   real*8,allocatable	:: rp(:), zp(:), R_all(:), Z_all(:), C_all(:), C_minus(:), C_plus(:)
@@ -151,10 +151,10 @@ program jorek2_poincare
   ! --- Get domain limits
   Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
   do i=1,node_list%n_nodes
-    Rmin = min(Rmin,node_list%node(i)%x(1,1))
-    Rmax = max(Rmax,node_list%node(i)%x(1,1))
-    Zmin = min(Zmin,node_list%node(i)%x(1,2))
-    Zmax = max(Zmax,node_list%node(i)%x(1,2))
+    Rmin = min(Rmin,node_list%node(i)%x(1,1,1))
+    Rmax = max(Rmax,node_list%node(i)%x(1,1,1))
+    Zmin = min(Zmin,node_list%node(i)%x(1,1,2))
+    Zmax = max(Zmax,node_list%node(i)%x(1,1,2))
   enddo
   
   ! --- find x-point(s)

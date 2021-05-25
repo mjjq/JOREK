@@ -116,8 +116,8 @@ real*8 :: ion_rate, rec_rate
 
 fractions(0) = 1.d0
 do iz=1,ad%n_Z
-  call ad%SCD%interp_linear(iz-1, density, temperature, ion_rate) ! ionizing to level iz (0 is neutral)
-  call ad%ACD%interp_linear(iz,   density, temperature, rec_rate) ! recombining from iz+1
+  call ad%SCD%interp(iz-1, density, temperature, ion_rate) ! ionizing to level iz (0 is neutral)
+  call ad%ACD%interp(iz,   density, temperature, rec_rate) ! recombining from iz+1
   fractions(iz) = fractions(iz-1) * ion_rate/rec_rate
 end do
 fractions = fractions/sum(fractions)
@@ -346,8 +346,8 @@ if (present(p_out) .or. present(p_Te_out) .or. present(p_Ne_out)) then
   end do
 
   ! Converting log gradient to real gradient
-  p_Te = p_Te / (log(10.d)*10.d0**temperature)
-  p_Ne = p_Ne / (log(10.d)*10.d0**density)
+  p_Te = p_Te / (log(10.d0)*10.d0**temperature)
+  p_Ne = p_Ne / (log(10.d0)*10.d0**density)
   p_TeTe = p_TeTe / (log(10.d0)**2 * 10.d0**(2.d0*temperature)) - p_Te/(10.d0**temperature)
 
   if (present(p_out))    p_out    = p

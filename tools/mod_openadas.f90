@@ -34,6 +34,7 @@ type ADF11_all
   type(ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
   type(ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
   real*8, dimension(:), allocatable :: ionisation_energy !< energy in eV required to ionize to a level, indexed by the new charge state (i.e. 1 to 74 for W), no interpolation needed
+  character(len=8) :: suffix = '' !< The dataset name (like 50_w)
 end type ADF11_all
 contains
 
@@ -94,6 +95,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
 
   read(10,*)  a%n_z, n_d, n_T, a%izmin, a%izmax
   ad%n_z = a%n_z
+  ad%suffix = suffix
   allocate(a%density(n_d), a%temperature(n_T), a%GRC(n_d,n_T,0:a%n_z))
   allocate(a%GRCFspline(0:a%n_z))
   

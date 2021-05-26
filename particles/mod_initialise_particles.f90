@@ -859,7 +859,6 @@ subroutine adjust_particle_weights(particles, num_atoms_total)
 
 end subroutine adjust_particle_weights
 
-<<<<<<< HEAD
 function q_coronal(node_list, element_list, s, t, phi, i_elm, cor, u)
   use data_structure
   use phys_module, only: central_density

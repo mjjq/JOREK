@@ -59,7 +59,7 @@ program jorek2_fields_xyz
                                             stderr=>error_unit
   implicit none
  
-  integer   :: my_id, my_id_n, my_id_master, ierr
+  integer   :: my_id, my_id_n, my_id_master, ierr, ierr2
   integer   :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer   :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
   integer   :: required,provided,StatInfo
@@ -173,15 +173,17 @@ program jorek2_fields_xyz
 
     if ( my_id == 0 ) then
       call import_restart(node_list, element_list, file_in, rst_format, ierr)
-      if ( ierr /= 0 ) cycle 
     endif
-  
+
+    call MPI_BCAST(ierr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr2)
+    if ( ierr /= 0 ) cycle
+
     call broadcast_phys(my_id)  
     call broadcast_elements(my_id, element_list)                ! elements
     call broadcast_nodes(my_id, node_list)                      ! nodes
   
     if (.not. freeboundary) then
-      write(*,*) ' **** Fatal: jorek2_wall_forces needs freeboundary simulations ****'
+      write(*,*) ' **** Fatal: jorek2_fields_xyz needs freeboundary simulations ****'
       stop
     endif
   

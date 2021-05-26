@@ -210,7 +210,15 @@ program jorek2_fields_xyz
   
     if (freeboundary) then
       call wall_fields_at_xyz(my_id, x, y, z, bx_w, by_w, bz_w)
-      if (sr%ncoil > 1) then
+      if (sr%ncoil > 0) then
+        if (.not. starwall_equil_coils) then
+          if (my_id==0) then
+            write(*,*) '******************************************************'
+            write(*,*) '*** WARNING: You are running without equilibrium coils'
+            write(*,*) '***    n=0 component of PF coils fields is missing!   '
+            write(*,*) '******************************************************'
+          endif
+        endif
         call coil_fields_at_xyz(my_id, x, y, z, bx_c, by_c, bz_c)
       else
         if (my_id==0) then
@@ -220,14 +228,6 @@ program jorek2_fields_xyz
           write(*,*) '******************************************************'
         endif
         bx_c = 0.d0;    by_c = 0.d0;    bz_c = 0.d0;
-      endif
-      if (.not. starwall_equil_coils) then
-         if (my_id==0) then
-          write(*,*) '******************************************************'
-          write(*,*) '*** WARNING: You are running without equilibrium coils'
-          write(*,*) '***    n=0 component of PF coils fields is missing!   '
-          write(*,*) '******************************************************'
-        endif
       endif
     else
       if (my_id==0) then

@@ -1,6 +1,6 @@
 !> This module contains some testcases for projecting particles.
 !> First we test the projection and scaling with n.
-!> Then we look into the effect of the smoothing parameter s.
+!> Then we look into the effect of the filter parameter s.
 module particle_projection_spec
 use mod_project_particles
 use data_structure
@@ -168,10 +168,10 @@ end subroutine test_rhs_square_10_10_sob
 
 
 !*************************
-! Smoothing parameter test
+! filter parameter test
 !*************************
 
-!> Test convergence of RHS for 10000 particles with varying smoothing factor
+!> Test convergence of RHS for 10000 particles with varying filter factor
 subroutine test_polar_30_22_10000_sob_smoothing
   use phys_module
   type(type_node_list) :: node_list
@@ -247,7 +247,7 @@ subroutine project_n(node_list, element_list, n, rng, name, volume, smoothing, r
     s = smoothing
     write(ss,'(g8.1)') s
   end if
-  p = projection(node_list, element_list, smoothing=s)
+  p = projection(node_list, element_list, filter=s)
   allocate(sim%groups(1))
 
   do j=1,size(n)

@@ -221,6 +221,8 @@ subroutine test_projection_matrix_square_2_2
       0.034898,0.0055102,-0.00840136,-0.00132653,& ! index 3 (but node 4, because index is switched with matrix order)
       0.0165306,-0.00382653,-0.00397959,0.000921202] ! index 4 (but node 3)
   real*8, parameter :: tol = 1d-6
+  real*8  :: area, volume
+  real*8, allocatable :: integral_weights(:)
   integer :: mpi_comm_world, mpi_comm_n, mpi_comm_master, i_tor_local, n_tor_local
 
   mpi_comm_world  = 0
@@ -229,11 +231,14 @@ subroutine test_projection_matrix_square_2_2
   i_tor_local     = 0
   n_tor_local     = 0
 
-  node_list%n_nodes = 0
+  node_list%n_nodes       = 0
   element_list%n_elements = 0
+  
   call grid_bezier_square(n_R, n_Z, R_geo-amin,R_geo+amin, Z_geo-amin, Z_geo+amin, .true., node_list, element_list)
+ 
   call prepare_mumps_par_n0(node_list, element_list, n_tor_local, i_tor_local, mpi_comm_world, mpi_comm_n, mpi_comm_master, &
-                           p,  area, volume, filter=my_filter, filter_hyper=my_filter_hyper, filter_parallel=0.d0 )
+                            p,  area, volume, filter=0.d0, filter_hyper=0.d0, filter_parallel=0.d0, integral_weights=integral_weights )
+
   do i=1,size(p%irn)
     if (p%irn(i) == 1) call assert_equals(ref(p%jcn(i)), p%A(i), tol, 'matrix element must match reference')
   end do
@@ -254,10 +259,18 @@ subroutine test_omp_projection_matrix_construction
 
   integer :: i, j, n_threads
   real*8, allocatable, dimension(:,:) :: A_par, A_seq
+  integer :: mpi_comm_world, mpi_comm_n, mpi_comm_master, i_tor_local, n_tor_local
   character(len=11) :: s
   n_threads = 1
 
   if (.not. EXTRATEST) return
+
+  mpi_comm_world  = 0
+  mpi_comm_n      = 0
+  mpi_comm_master = 0
+  i_tor_local     = 0
+  n_tor_local     = 0
+
 
   node_list%n_nodes = 0
   element_list%n_elements = 0
@@ -267,9 +280,11 @@ subroutine test_omp_projection_matrix_construction
   !$omp parallel
     !$n_threads = omp_get_num_threads()
   !$omp end parallel
-  call prepare_mumps_par(node_list, element_list, p_par, smoothing=0d0, skip_factorisation=.true.,smoothing2=0.d0)
+  call prepare_mumps_par(node_list, element_list, n_tor_local, i_tor_local, mpi_comm_world, mpi_comm_n, mpi_comm_master, &
+                         p_par, filter=0d0, filter_hyper=0.d0, filter_parallel=0.d0, skip_factorisation=.true.)
   !$ call omp_set_num_threads(1)
-  call prepare_mumps_par(node_list, element_list, p_seq, smoothing=0d0, skip_factorisation=.true.,smoothing2=0.d0)
+  call prepare_mumps_par(node_list, element_list, n_tor_local, i_tor_local, mpi_comm_world, mpi_comm_n, mpi_comm_master, &
+                         p_seq, filter=0d0, filter_hyper=0.d0, filter_parallel=0.d0, skip_factorisation=.true.)
   !$ call omp_set_num_threads(n_threads)
 
   ! Check that p_par and p_seq contain the same matrix

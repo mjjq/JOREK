@@ -4,6 +4,7 @@ use mod_parameters
 use data_structure
 use mod_basisfunctions
 use mod_export_restart
+use phys_module, only: treat_axis
 
 implicit none
 
@@ -21,7 +22,7 @@ type (type_element) :: element
 type (type_node)    :: node
 integer             :: ielm, ivert, idof, ms, mt
 real*8              :: x_g, x_s, x_t, y_g, y_s, y_t, xjac, xjac_min, xjac_max, s, t
-logical             :: problem_found
+logical             :: problem_found, axis_element
 real*8, dimension(4,4,NST,NST) :: H, H_s, H_t
 
 problem_found = .false.
@@ -43,6 +44,13 @@ end do
 
 do ielm = 1, element_list%n_elements
   element = element_list%element(ielm)
+
+  ! skip axis element from this check. Note that axis treatment does not affect grid data
+  ! and hence this subroutine. This is just a work-around.
+  axis_element = .false.
+  if ( node_list%node(element%vertex(1))%axis_node .and. &
+       node_list%node(element%vertex(4))%axis_node ) axis_element = .true.
+
   xjac_min = +1.d99
   xjac_max = -1.d99
   do ms = 1, NST
@@ -64,7 +72,7 @@ do ielm = 1, element_list%n_elements
       xjac_max = max( xjac_max, xjac )
     end do
   end do
-  if ( xjac_min * xjac_max < 0.d0 ) then
+  if ( (.not. axis_element) .and. xjac_min * xjac_max < 0.d0 ) then
     write(*,*) 'ERROR in check_grid: Jacobian changes sign inside element!'
     write(*,'(1x,a,i7,a,f9.4,a,f9.4)') 'Element ', ielm, ' near R=',x_g, ' Z=', y_g
     write(*,*) xjac_min, xjac_max

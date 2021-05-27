@@ -29,11 +29,15 @@ program test_rhs_diagno
   type(t_expr_list)    :: expr_list
   integer :: my_id, ierr, k_tor, i, j, k, n(4), ife, iv, inode, index_node, index_total
   integer :: omp_nthreads, omp_tid, n_tor_local, i_order, index_large_i, index_ij
-  integer :: index_RHS, k_var, i_tor, only_term(2)
+  integer :: index_RHS, k_var, i_tor, only_term(2), iterm, term_count
   real*8, allocatable :: result(:,:,:,:), res0d(:), res1d(:,:), res2d(:,:,:)
-  complex*16, allocatable :: cp(:,:,:,:)
   real*8,     allocatable :: rhs(:)
-  
+  integer, parameter      :: max_terms=100
+  character(len=64)       :: file_name, label 
+
+  type(type_node_list) :: node_list_rhs
+
+ 
   ! --- Normal initialization
   allocate(node_list)
   allocate(element_list)
@@ -75,9 +79,6 @@ program test_rhs_diagno
   time_evol_zeta =1
 
 
-  ! --- Get RHS of ZK_perp of the T equation
-  only_term = (/ 6, 1 /)
-
   index_total = -1
   do inode=1,node_list%n_nodes
     index_total = max(index_total,maxval(node_list%node(inode)%index))
@@ -85,83 +86,115 @@ program test_rhs_diagno
   node_list%n_dof = index_total * n_tor * n_var
 
   allocate(rhs(node_list%n_dof))
-  rhs = 0.0d0 
 
-  do ife = 1, element_list%n_elements 
-    
-    element = element_list%element(ife)
-      
-    do iv = 1, n_vertex_max
-     inode     = element%vertex(iv)
-     nodes(iv) = node_list%node(inode)
-    enddo
+  node_list_rhs%n_nodes = node_list%n_nodes 
+  do i=1, node_list%n_nodes 
+    node_list_rhs%node(i)%x              = node_list%node(i)%x
+    node_list_rhs%node(i)%boundary       = node_list%node(i)%boundary
+    node_list_rhs%node(i)%boundary_index = node_list%node(i)%boundary_index
+    node_list_rhs%node(i)%deltas         = 0.d0                            
+  enddo
 
 
-    call element_matrix_fft(element,nodes, xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd,   &
-     ES%R_xpoint, ES%Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid,       &
-     thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k,  &
-     thread_struct(omp_tid)%ELM_kn, thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k, &
-     thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, thread_struct(omp_tid)%eq_t,     &
-     thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st,   &
-     thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g,                              &
-     thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t, 1, n_tor, only_term)
+  do k_var=1, n_var
 
-     do iv=1,n_vertex_max
+    term_count = 0
 
-       inode = element%vertex(iv)
+    if (k_var/=6) cycle  ! JUST to get T RHS
 
-       do i_order = 1, n_order+1
+    do iterm=1, max_terms
 
-         index_node = node_list%node(inode)%index(i_order)
+      rhs = 0.0d0 
 
-         index_large_i = n_tor * n_var * (index_node - 1)
-
-         do j = 1, n_var * n_tor
-
-           index_ij = n_tor * n_var * (n_order+1) * (iv-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
-            
-           !$omp atomic
-           rhs(index_large_i+j) = rhs(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-           !$omp end atomic
-         enddo 
-
-       enddo ! order
-    enddo ! vertex
+      ! --- Get RHS of ZK_perp of the T equation
+      only_term = (/ k_var, iterm /)
 
 
-  enddo ! --- elements
-
-
-  ! --- Save RHS into node_list (now saved into variable 1)
-  k_var = 6
-  
-  do inode=1,node_list%n_nodes
-    do i_order=1, n_order+1
-    
-      index_node = node_list%node(inode)%index(i_order)
-      
-      do i_tor=1, n_tor
-  
-        index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
-  
-        node_list%node(inode)%values(i_tor, i_order, 1) = rhs(index_RHS)
+      do ife = 1, element_list%n_elements 
         
+        element = element_list%element(ife)
+          
+        do iv = 1, n_vertex_max
+         inode     = element%vertex(iv)
+         nodes(iv) = node_list%node(inode)
+        enddo
+    
+    
+        call element_matrix_fft(element,nodes, xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd,   &
+         ES%R_xpoint, ES%Z_xpoint, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, omp_tid,       &
+         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k,  &
+         thread_struct(omp_tid)%ELM_kn, thread_struct(omp_tid)%RHS_p, thread_struct(omp_tid)%RHS_k, &
+         thread_struct(omp_tid)%eq_g, thread_struct(omp_tid)%eq_s, thread_struct(omp_tid)%eq_t,     &
+         thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st,   &
+         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g,                              &
+         thread_struct(omp_tid)%delta_s, thread_struct(omp_tid)%delta_t, 1, n_tor, only_term)
+    
+        do iv=1,n_vertex_max
+    
+          inode = element%vertex(iv)
+    
+          do i_order = 1, n_order+1
+    
+            index_node = node_list%node(inode)%index(i_order)
+    
+            index_large_i = n_tor * n_var * (index_node - 1)
+    
+            do j = 1, n_var * n_tor
+    
+              index_ij = n_tor * n_var * (n_order+1) * (iv-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
+               
+              !$omp atomic
+              rhs(index_large_i+j) = rhs(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
+              !$omp end atomic
+            enddo 
+    
+          enddo ! order
+        enddo ! vertex
+    
+      enddo ! --- elements
+
+      if (sum(rhs) == 0.d0) cycle
+   
+      ! --- Save rhs term into node_list_rhs 
+      term_count = term_count + 1
+
+      do inode=1,node_list%n_nodes
+        do i_order=1, n_order+1
+        
+          index_node = node_list%node(inode)%index(i_order)
+          
+          do i_tor=1, n_tor
+      
+            index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
+      
+            node_list_rhs%node(inode)%values(i_tor, i_order, 1) = rhs(index_RHS)
+            
+          end do
+        end do
       end do
-    end do
-  end do
+
+      ! Export vtk for variable k with several plotted terms   
+      ! --- Plot expressions in vtk 
+      expr_list = exprs((/'R         ', 'Z         ',  'Psi       '/), 3, 2)
+
+      call create_pol_pos(pol_pos_list, ierr, node_list_rhs, element_list, ES, grid=.true., nsub=4)
+      call create_tor_pos(tor_pos_list, ierr, nphi=2)
+  
+      call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+  
+      call reduce_result_to_2d(ierr, result, res2d, i1=1)
+      write (file_name,'(a, i2.2, a, i3.3, a)') 'RHS_', k_var, '_', iterm, '.vtk'
+      write (label,'(a, i2.2, a, i3.3)') 'RHS_', k_var, '_', iterm
+      expr_list%expr(3)%name=label
+      call write_vtk_2d(ierr, expr_list, res2d, file_name, (/1,2/), close1=.true.)
+ 
+    enddo    ! --- max terms
 
 
-  ! --- Plot expressions in vtk 
-  expr_list = exprs((/'R         ', 'Z         ', 'BR        ', &
-    'BZ        ', 'Psi       ', 'T         '/), 6, 2)
 
-  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, grid=.true., nsub=7)
-  call create_tor_pos(tor_pos_list, ierr, nphi=2)
-  
-  call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-  
-  call reduce_result_to_2d(ierr, result, res2d, i1=1)
-  call write_vtk_2d(ierr, expr_list, res2d, 'RHS.vtk', (/1,2/), close1=.true.)
-  
+  enddo !--- variables
+
+
+ 
  
 end program test_rhs_diagno

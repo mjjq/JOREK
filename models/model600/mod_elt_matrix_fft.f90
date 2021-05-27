@@ -931,8 +931,8 @@ do i=1,n_vertex_max
               zTe   =   eq_zTe(ms,mt)
               zTe_x = dTe_dpsi(ms,mt) * ps0_x 
               zTe_y = dTe_dpsi(ms,mt) * ps0_y
-              zn_x  = ddn_dpsi(ms,mt) * ps0_x
-              zn_y  = ddn_dpsi(ms,mt) * ps0_y
+              zn_x  =  dn_dpsi(ms,mt) * ps0_x
+              zn_y  =  dn_dpsi(ms,mt) * ps0_y
 
               call bootstrap_current(bigR, y_g(ms,mt),                       &
                                      R_axis,   Z_axis,   psi_axis,           &

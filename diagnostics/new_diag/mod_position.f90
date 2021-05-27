@@ -197,7 +197,7 @@ module mod_position
   !! To be added: Single node; All nodes; All nodes with subdivision of elements (for vtk) ###
   recursive subroutine create_pol_pos(pos_list, ierr, node_list, element_list, eq, R, Z, ielm, s,  &
     t, Rmin, Rmax, nR, Zmin, Zmax, nZ, Rstart, Rend, Zstart, Zend, n, PsiN, nTht, PsiNmin, PsiNmax,&
-    nPsiN, nmaxsteps, deltaphi, nsmallsteps)
+    nPsiN, nmaxsteps, deltaphi, nsmallsteps, grid, nsub)
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':create_pol_pos'
     
@@ -210,13 +210,14 @@ module mod_position
     real*8,  optional,            intent(in)    :: R, Z, s, t, Rmin, Rmax, Zmin, Zmax, PsiN,       &
       Rstart, Rend, Zstart, Zend, PsiNmin, PsiNmax, deltaphi
     integer, optional,            intent(in)    :: ielm, nR, nZ, n, nTht, nPsiN, nmaxsteps,        &
-      nsmallsteps
+      nsmallsteps, nsub
+    logical, optional,            intent(in)    :: grid
     
     ! --- Local variables
     type(t_theta_mapping) :: mapping
     type(t_pol_pos), pointer :: pos
     real*8  :: R_out, Z_out, hh, gx, gy, gg, ax, ay, full_length
-    integer :: i, j
+    integer :: i, j, k, nsub_loc
     real*8, allocatable :: surface(:) !< Poloidal surface inside flux surface (for r_minor)
     
     ierr = 0
@@ -241,6 +242,31 @@ module mod_position
       pos%s    = s
       pos%t    = t
       call fill_pol_pos(pos, node_list, element_list)
+
+    ! --- Subdivde the grid into several points
+    else if ( present(grid) .and. present(nsub) ) then
+
+      if (nsub < 1) then
+        write(*,*) 'FATAL error: nsub must be bigger than 0 '
+        stop
+      endif
+
+      ! --- nsub=1 recovers the original grid size
+      nsub_loc = nsub + 1  
+
+      call alloc_pol_pos( pos_list, (/nsub_loc, element_list%n_elements*nsub_loc /) )
+     
+      do i=1, element_list%n_elements
+        do j=1, nsub_loc
+          do k=1, nsub_loc
+            pos      => pos_list%pos(j, (i-1)*nsub_loc + k)
+            pos%ielm = i
+            pos%s    = float(j-1)/float(nsub_loc-1)  
+            pos%t    = float(k-1)/float(nsub_loc-1) 
+            call fill_pol_pos(pos, node_list, element_list)
+         enddo
+        enddo
+      enddo
       
     ! --- Rectangular array of positions in R and Z.
     else if ( present(Rmin) .and. present(Rmax) .and. present(nR) .and. present(Zmin) .and.        &

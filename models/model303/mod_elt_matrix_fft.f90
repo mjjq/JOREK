@@ -891,10 +891,54 @@ do i=1,n_vertex_max
             !#  equation 6   (energy equation)                                                                 #
             !###################################################################################################
 
-            rhs_ij_6 =   v * T0   
+            rhs_ij_6 =   v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
             
+                       + v * r0 * BigR**2 * ( T0_s * u0_t - T0_t * u0_s)                         * tstep &
+                       + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep &
 
-            rhs_ij_6_k = 0.d0 
+                       + v * r0 * T0 * 2.d0* GAMMA * BigR * u0_y                          * xjac * tstep &
+
+                       - v * r0 * F0 / BigR * Vpar0 * T0_p                                * xjac * tstep &
+                       - v * T0 * F0 / BigR * Vpar0 * r0_p                                * xjac * tstep &
+
+                       - v * r0 * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)                          * tstep &
+                       - v * T0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                          * tstep &
+
+                       - v * r0 * T0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * tstep &
+                       - v * r0 * T0 * GAMMA * F0 / BigR * vpar0_p                        * xjac * tstep &
+
+                       - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T     * xjac * tstep &
+                       - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y                     ) * xjac * tstep &
+ 
+                       - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(T0_xx + T0_x/Bigr + T0_yy) * BigR * xjac * tstep &
+
+                       - TG_num6 * 0.25d0 * BigR**3 * T0 * (r0_x * u0_y - r0_y * u0_x) &
+                                          * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
+                       - TG_num6 * 0.25d0 * BigR**3 * r0 * (T0_x * u0_y - T0_y * u0_x) &
+                                          * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep  &
+
+                       - TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                                 * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                         &
+                                 * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
+                       - TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                                 * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                         &
+                                 * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep  &
+
+                       + zeta * v * r0 * delta_g(mp,6,ms,mt) * BigR                       * xjac &
+                       + zeta * v * T0 * delta_g(mp,5,ms,mt) * BigR                       * xjac &
+
+                       + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac  * tstep
+
+
+            rhs_ij_6_k =  - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T  * xjac * tstep &
+                          - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )   * xjac * tstep  &
+
+                         - TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                                 * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                         &
+                                 * (                                 + F0 / BigR * v_p) * xjac * tstep * tstep   &
+                         - TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                                 * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                         &
+                                 * (                                 + F0 / BigR * v_p) * xjac * tstep * tstep
 
             !###################################################################################################
             !#  equation 7   (parallel velocity equation)                                                      #
@@ -995,8 +1039,6 @@ do i=1,n_vertex_max
               RHS(ij6) = RHS(ij6) + (rhs_ij_6 + rhs_ij_6_k) * wst
               RHS(ij7) = RHS(ij7) + (rhs_ij_7 + rhs_ij_7_k) * wst
             endif
-
-!            cycle
 
             do k=1,n_vertex_max
 

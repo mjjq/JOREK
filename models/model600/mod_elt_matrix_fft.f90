@@ -207,7 +207,8 @@ dV_dpsi_source  = 0.d0
 dV_dz_source    = 0.d0
 eq_zne          = 0.d0
 eq_zTi          = 0.d0         
-eq_zTe          = 0.d0         
+eq_zTe          = 0.d0
+eq_zT           = 0.d0
 
 amu_neo_prof   = 0.d0
 aki_neo_prof   = 0.d0
@@ -921,25 +922,25 @@ do i=1,n_vertex_max
                                      r0,  r0_x,  r0_y,                     &
                                      Ti0, Ti0_x, Ti0_y,                    &
                                      Te0, Te0_x, Te0_y,                  Jb)
-              
+
               ! --- Full Sauter formula for initial profiles
-              
-              zTi   = eq_zTi(ms,mt)        
+
+              zTi   =   eq_zTi(ms,mt)
               zTi_x = dTi_dpsi(ms,mt) * ps0_x
               zTi_y = dTi_dpsi(ms,mt) * ps0_y
-              zTe   = eq_zTe(ms,mt)  
+              zTe   =   eq_zTe(ms,mt)
               zTe_x = dTe_dpsi(ms,mt) * ps0_x 
               zTe_y = dTe_dpsi(ms,mt) * ps0_y
-              zn_x  = dn_dpsi(ms,mt)  * ps0_x
-              zn_y  = dn_dpsi(ms,mt)  * ps0_y
-  
+              zn_x  = ddn_dpsi(ms,mt) * ps0_x
+              zn_y  = ddn_dpsi(ms,mt) * ps0_y
+
               call bootstrap_current(bigR, y_g(ms,mt),                       &
                                      R_axis,   Z_axis,   psi_axis,           &
                                      R_xpoint, Z_xpoint, psi_bnd, psi_norm,  &
                                      ps0, ps0_x, ps0_y,                      &
                                      eq_zne(ms,mt),  zn_x,  zn_y,            &
                                      zTi, zTi_x, zTi_y,                      &
-                                     zTe, zTe_x, zTe_y,                    Jb_0)
+                                     zTe, zTe_x, zTe_y,                  Jb_0)
               ! --- Subtract the initial equilibrium part
               Jb = Jb - Jb_0
 
@@ -959,14 +960,14 @@ do i=1,n_vertex_max
 
               ! --- Full Sauter formula for initial profiles
 
-              zTi   = eq_zT(ms,mt) / 2.
-              zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.
-              zTi_y = dT_dpsi(ms,mt) * ps0_y / 2.
+              zTi   =   eq_zT(ms,mt)         / 2.d0
+              zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.d0
+              zTi_y = dT_dpsi(ms,mt) * ps0_y / 2.d0
               zTe   = zTi
               zTe_x = zTi_x
               zTe_y = zTi_y
-              zn_x  = dn_dpsi(ms,mt)  * ps0_x
-              zn_y  = dn_dpsi(ms,mt)  * ps0_y
+              zn_x  = dn_dpsi(ms,mt) * ps0_x
+              zn_y  = dn_dpsi(ms,mt) * ps0_y
 
               call bootstrap_current(bigR, y_g(ms,mt),                       &
                                      R_axis,   Z_axis,   psi_axis,           &
@@ -974,14 +975,14 @@ do i=1,n_vertex_max
                                      ps0, ps0_x, ps0_y,                      &
                                      eq_zne(ms,mt),  zn_x,  zn_y,            &
                                      zTi, zTi_x, zTi_y,                      &
-                                     zTe, zTe_x, zTe_y,                    Jb_0)
+                                     zTe, zTe_x, zTe_y,                  Jb_0)
               ! --- Subtract the initial equilibrium part
               Jb = Jb - Jb_0
             end if ! (with_TiTe)
           else
             Jb = 0.d0
           endif
-            
+
 
           D_prof   = get_dperp (psi_norm)
           if ( with_TiTe ) then
@@ -1880,6 +1881,8 @@ do i=1,n_vertex_max
                     endif
   
                     amat_k(var_vpar,var_psi) = - 0.5d0 * r0 * vpar0**2 * BB2_psi * F0 / BigR * v_p    * xjac * theta * tstep 
+
+                    amat(var_vpar,var_u) = 0.d0
   
                     !---------------------------------------- NEO
                     if ( NEO ) then
@@ -1924,19 +1927,26 @@ do i=1,n_vertex_max
                                           * (                                          + F0 / BigR * rho_p)* xjac * theta * tstep*tstep
                     
                     if ( with_TiTe ) then ! (with_TiTe)
-                      amat(var_vpar,var_Ti) = + v * (Ti_s * r0   * ps0_t - Ti_t * r0   * ps0_s) * theta * tstep &
-                                + v * (Ti   * r0_s * ps0_t - Ti   * r0_t * ps0_s)               * theta * tstep &
-                                + v * F0 / BigR * Ti * r0_p                              * xjac * theta * tstep     
+                      amat(var_vpar,var_Ti)   = + v * (Ti_s * r0   * ps0_t - Ti_t * r0   * ps0_s)        * theta * tstep &
+                                                + v * (Ti   * r0_s * ps0_t - Ti   * r0_t * ps0_s)        * theta * tstep &
+                                                + v * F0 / BigR * Ti * r0_p                       * xjac * theta * tstep
 
-                      amat_n(var_vpar,var_Ti) = + v * F0 / BigR * Ti_p * R0              * xjac * theta * tstep
+                      amat_n(var_vpar,var_Ti) = + v * F0 / BigR * Ti_p * R0                       * xjac * theta * tstep
+
+                      amat(var_vpar,var_Te)   = + v * (Te_s * r0   * ps0_t - Te_t * r0   * ps0_s)        * theta * tstep  &
+                                                + v * (Te   * r0_s * ps0_t - Te   * r0_t * ps0_s)        * theta * tstep  &
+                                                + v * F0 / BigR * Te * r0_p                       * xjac * theta * tstep
+
+                      amat_n(var_vpar,var_Te) = + v * F0 / BigR * Te_p * r0                       * xjac * theta * tstep
                     else ! (with_TiTe)
-                      amat(var_vpar,var_T)  = + v * (T_s  * r0   * ps0_t - T_t  * r0   * ps0_s) * theta * tstep &
-                                + v * (T    * r0_s * ps0_t - T    * r0_t * ps0_s)               * theta * tstep &
-                                + v * F0 / BigR * T * r0_p                               * xjac * theta * tstep
+                      amat(var_vpar,var_T)    = + v * (T_s  * r0   * ps0_t - T_t  * r0   * ps0_s)        * theta * tstep  &
+                                                + v * (T    * r0_s * ps0_t - T    * r0_t * ps0_s)        * theta * tstep  &
+                                                + v * F0 / BigR * T  * r0_p                       * xjac * theta * tstep
 
-                      amat_n(var_vpar,var_T)  = + v * F0 / BigR * T_p  * R0              * xjac * theta * tstep
+                      amat_n(var_vpar,var_T)  = + v * F0 / BigR * T_p  * r0                       * xjac * theta * tstep
                     end if ! (with_TiTe)
-  
+
+ 
                     amat(var_vpar,var_vpar) = v * Vpar * r0_corr * F0**2 / BigR * xjac * (1.d0 + zeta) &
   
                             + v*(particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR * xjac * theta * tstep &
@@ -2007,21 +2017,6 @@ do i=1,n_vertex_max
                       amat(var_vpar,var_vpar) = amat(var_vpar,var_vpar) + v * amu_neo_prof(ms,mt) * BB2 * Btheta2/(Btheta2+epsil) * r0 * vpar * BigR * xjac * tstep * theta 
                     endif
   
-  
-                    if ( with_TiTe ) then ! (with_TiTe)
-                      amat(var_vpar,var_Te)   = + v * (Te_s * r0   * ps0_t - Te_t * r0   * ps0_s)                   * theta * tstep  &
-                                    + v * (Te   * r0_s * ps0_t - Te   * r0_t * ps0_s)                   * theta * tstep  &
-                                    + v * F0 / BigR * Te * r0_p                                  * xjac * theta * tstep 
-                      
-                      amat_n(var_vpar,var_Te) = + v * F0 / BigR * Te_p * r0                                  * xjac * theta * tstep
-                    else ! (with_TiTe)
-                      amat(var_vpar,var_T)    = + v * (T_s  * r0   * ps0_t - T_t  * r0   * ps0_s)                   * theta * tstep  &
-                                    + v * (T    * r0_s * ps0_t - T    * r0_t * ps0_s)                   * theta * tstep  &
-                                    + v * F0 / BigR * T  * r0_p                                  * xjac * theta * tstep 
-
-                      amat_n(var_vpar,var_T)  = + v * F0 / BigR * T_p  * r0                                  * xjac * theta * tstep
-                    end if ! (with_TiTe)
-
                   end if ! (with_vpar)
 
                   if ( with_TiTe ) then

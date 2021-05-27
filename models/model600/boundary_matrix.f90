@@ -106,12 +106,12 @@ do ms=1, n_gauss
 
    do mp = 1, n_plane
 
-     ps0   = eq_g(mp,1,ms)
-     ps0_s = eq_s(mp,1,ms)
+     ps0   = eq_g(mp,var_psi,ms)
+     ps0_s = eq_s(mp,var_psi,ms)
 
-     r0    = eq_g(mp,5,ms)
-     T0    = eq_g(mp,6,ms)
-     Vpar0 = eq_g(mp,7,ms)
+     r0    = eq_g(mp,var_rho,ms)
+     T0    = eq_g(mp,var_T,ms)
+     Vpar0 = eq_g(mp,var_Vpar,ms)
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then

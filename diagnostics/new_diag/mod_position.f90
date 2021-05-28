@@ -217,7 +217,7 @@ module mod_position
     type(t_theta_mapping) :: mapping
     type(t_pol_pos), pointer :: pos
     real*8  :: R_out, Z_out, hh, gx, gy, gg, ax, ay, full_length
-    integer :: i, j, k, nsub_loc
+    integer :: i, j, k, nsub_loc, inode
     real*8, allocatable :: surface(:) !< Poloidal surface inside flux surface (for r_minor)
     
     ierr = 0
@@ -252,17 +252,18 @@ module mod_position
       endif
 
       ! --- nsub=1 recovers the original grid size
-      nsub_loc = nsub + 1  
+      call alloc_pol_pos( pos_list, (/element_list%n_elements*nsub*nsub, 1 /) )
 
-      call alloc_pol_pos( pos_list, (/nsub_loc, element_list%n_elements*nsub_loc /) )
+      inode = 0
      
       do i=1, element_list%n_elements
-        do j=1, nsub_loc
-          do k=1, nsub_loc
-            pos      => pos_list%pos(j, (i-1)*nsub_loc + k)
+        do j=1, nsub
+          do k=1, nsub
+            inode    = inode + 1
+            pos      => pos_list%pos(inode, 1)
             pos%ielm = i
-            pos%s    = float(j-1)/float(nsub_loc-1)  
-            pos%t    = float(k-1)/float(nsub_loc-1) 
+            pos%s    = float(j-1)/float(nsub-1)  
+            pos%t    = float(k-1)/float(nsub-1) 
             call fill_pol_pos(pos, node_list, element_list)
          enddo
         enddo

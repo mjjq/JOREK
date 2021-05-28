@@ -9,13 +9,13 @@ program test_rhs_diagno
   use mod_new_diag
   use basis_at_gaussian
   use mod_import_restart
+  use mod_vtk
   use equil_info
-!!  use construct_matrix_mod
   use mod_elt_matrix_fft
   !$ use omp_lib
 
   implicit none
-  
+
   type(type_node_list),         pointer :: node_list
   type(type_element_list),      pointer :: element_list
   type (type_bnd_element_list), pointer :: bnd_elm_list
@@ -27,16 +27,27 @@ program test_rhs_diagno
   type(t_tor_pos_list) :: tor_pos_list
   type(t_four_filter)  :: filter
   type(t_expr_list)    :: expr_list
+  integer,allocatable  :: ien (:,:)
+  real*4,allocatable   :: xyz (:,:), scalars(:,:), scalars_o(:,:)
+  character*12, allocatable :: scalar_names(:), scalar_names_o(:)
+
   integer :: my_id, ierr, k_tor, i, j, k, n(4), ife, iv, inode, index_node, index_total
   integer :: omp_nthreads, omp_tid, n_tor_local, i_order, index_large_i, index_ij
-  integer :: index_RHS, k_var, i_tor, only_term(2), iterm, term_count
-  real*8, allocatable :: result(:,:,:,:), res0d(:), res1d(:,:), res2d(:,:,:)
+  integer :: index_RHS, k_var, i_tor, only_term(2), iterm, term_count, nsub, nnos, ielm, it_o 
+  real*8, allocatable :: result(:,:,:,:), res2d(:,:,:)
   real*8,     allocatable :: rhs(:)
-  integer, parameter      :: max_terms=100
+  integer, parameter      :: max_terms=7
   character(len=64)       :: file_name, label 
 
-  type(type_node_list) :: node_list_rhs
+#ifdef USE_FFTW
+  real*8     :: in_fft(1:n_plane)
+  complex*16 :: out_fft(1:n_plane)
+#endif
 
+  ! --- Initialize FFTW
+#ifdef USE_FFTW
+  call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
+#endif
  
   ! --- Normal initialization
   allocate(node_list)
@@ -78,29 +89,60 @@ program test_rhs_diagno
   tstep_prev = 1
   time_evol_zeta =1
 
-
+  ! --- Calculate DOFs
   index_total = -1
   do inode=1,node_list%n_nodes
     index_total = max(index_total,maxval(node_list%node(inode)%index))
   enddo
   node_list%n_dof = index_total * n_tor * n_var
 
+  ! --- Create grid points and save them for the vtk
+  nsub    = 4
+  nnos    = nsub*nsub*element_list%n_elements
+  allocate(xyz(3,nnos))
+  xyz     = 0
+
   allocate(rhs(node_list%n_dof))
 
-  node_list_rhs%n_nodes = node_list%n_nodes 
-  do i=1, node_list%n_nodes 
-    node_list_rhs%node(i)%x              = node_list%node(i)%x
-    node_list_rhs%node(i)%boundary       = node_list%node(i)%boundary
-    node_list_rhs%node(i)%boundary_index = node_list%node(i)%boundary_index
-    node_list_rhs%node(i)%deltas         = 0.d0                            
+  call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, grid=.true., nsub=nsub)
+  call create_tor_pos(tor_pos_list, ierr, nphi=2)
+
+  do i = 1, pol_pos_list%n_pos(1)
+    do j = 1, pol_pos_list%n_pos(2)
+      xyz(1:3,i) = (/ pol_pos_list%pos(i,j)%R, pol_pos_list%pos(i,j)%Z, 0.d0 /)
+    enddo
+  enddo
+ 
+  ! --- Create vtk grid indices
+  allocate(ien(4,(nsub-1)*(nsub-1)*element_list%n_elements))
+  ielm  = 0
+  inode = 0
+  ien   = 0
+
+  do i=1,element_list%n_elements
+
+    do j=1,nsub
+      do k=1,nsub
+        inode       = inode +1
+      enddo
+    enddo
+
+    do j=1,nsub-1
+      do k=1,nsub-1
+        ielm        = ielm  +1
+        ien(1,ielm) = inode - nsub*nsub + nsub*(j-1) + k-1       ! indices for VTK
+        ien(2,ielm) = inode - nsub*nsub + nsub*(j  ) + k-1
+        ien(3,ielm) = inode - nsub*nsub + nsub*(j  ) + k
+        ien(4,ielm) = inode - nsub*nsub + nsub*(j-1) + k
+      enddo
+    enddo
   enddo
 
+  term_count = 0
 
+  ! --- Go over variables 
   do k_var=1, n_var
 
-    term_count = 0
-
-    if (k_var/=6) cycle  ! JUST to get T RHS
 
     do iterm=1, max_terms
 
@@ -143,9 +185,9 @@ program test_rhs_diagno
     
               index_ij = n_tor * n_var * (n_order+1) * (iv-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
                
-              !$omp atomic
+             !$omp atomic
               rhs(index_large_i+j) = rhs(index_large_i+j) + thread_struct(omp_tid)%RHS(index_ij) 
-              !$omp end atomic
+             !$omp end atomic
             enddo 
     
           enddo ! order
@@ -153,48 +195,73 @@ program test_rhs_diagno
     
       enddo ! --- elements
 
-      if (sum(rhs) == 0.d0) cycle
+      if (sum(abs(rhs)) < 1.d-30) cycle
    
-      ! --- Save rhs term into node_list_rhs 
       term_count = term_count + 1
 
-      do inode=1,node_list%n_nodes
+      write(*,*) 'term counter  = ', term_count
+      write(*,*) 'sum RHS       = ', sum(rhs)
+      write(*,*) 'variable      = ', k_var
+      Write(*,*) 'term number   = ', iterm 
+      Write(*,*) ' ' 
+      
+      ! --- Replace node psi values in pol_pos_list by RHS
+      do i = 1, pol_pos_list%n_pos(1)
+
         do i_order=1, n_order+1
-        
-          index_node = node_list%node(inode)%index(i_order)
+
+          do iv=1, n_vertex_max
           
-          do i_tor=1, n_tor
-      
-            index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
-      
-            node_list_rhs%node(inode)%values(i_tor, i_order, 1) = rhs(index_RHS)
-            
-          end do
-        end do
-      end do
+            index_node = pol_pos_list%pos(i,1)%nodes(iv)%index(i_order)
+  
+            do i_tor=1, n_tor
+  
+              index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
+        
+              pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1) = rhs(index_RHS)
+  
+            enddo 
+          enddo
+        enddo
+      enddo
 
-      ! Export vtk for variable k with several plotted terms   
-      ! --- Plot expressions in vtk 
+      it_o = term_count - 1
+      if (term_count/=1) then 
+        scalars_o(:, 1:it_o) = scalars(:,1:it_o)
+        scalar_names_o(1:it_o) = scalar_names_o(1:it_o)
+      endif
+
+      if (allocated(scalars))      deallocate(scalars)
+      if (allocated(scalar_names)) deallocate(scalar_names)
+      allocate(  scalars(nnos,1:term_count),   scalar_names(term_count))
+
       expr_list = exprs((/'R         ', 'Z         ',  'Psi       '/), 3, 2)
-
-      call create_pol_pos(pol_pos_list, ierr, node_list_rhs, element_list, ES, grid=.true., nsub=4)
-      call create_tor_pos(tor_pos_list, ierr, nphi=2)
-  
       call eval_expr(ES, JOREK_UNITS, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-  
       call reduce_result_to_2d(ierr, result, res2d, i1=1)
-      write (file_name,'(a, i2.2, a, i3.3, a)') 'RHS_', k_var, '_', iterm, '.vtk'
+
+      scalars(:,term_count)    = res2d(:,1,3)
       write (label,'(a, i2.2, a, i3.3)') 'RHS_', k_var, '_', iterm
-      expr_list%expr(3)%name=label
-      call write_vtk_2d(ierr, expr_list, res2d, file_name, (/1,2/), close1=.true.)
- 
+      scalar_names(term_count) = label
+
+      ! Recover old values 
+      if (term_count/=1) then
+        scalars(:, 1:it_o) = scalars_o(:,1:it_o)
+        scalar_names(1:it_o) = scalar_names_o(1:it_o)
+      endif
+
+      if (allocated(scalars_o))      deallocate(scalars_o)
+      if (allocated(scalar_names_o)) deallocate(scalar_names_o)
+      allocate(scalars_o(nnos,1:term_count), scalar_names_o(term_count))
+      scalars_o(:, 1:term_count) = scalars(:,1:term_count)
+      scalar_names_o(1:term_count) = scalar_names(1:term_count)
+
     enddo    ! --- max terms
 
+  enddo  ! --- variables
 
 
-  enddo !--- variables
-
-
+  write (file_name,'(a, i5.5, a)') 'RHS.', index_start, '.vtk'
+  call write_vtk(file_name,xyz,ien,9,scalar_names,scalars)
  
  
 end program test_rhs_diagno

@@ -20,6 +20,7 @@ use mod_F_profile
 use mod_bootstrap_functions
 use pellet_module
 use mod_neutral_source
+use mod_impurity, only: radiation_function, radiation_function_linear
 
 implicit none
 
@@ -994,7 +995,7 @@ do i=1,n_vertex_max
             t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
             nu_e_bg  = nu_e_bg * t_norm    
 
-            dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
+            dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr) * rho0_corr
             dTi_e    = -dTe_i
 
             !Calculating the density and temperature derivative for amats
@@ -1009,13 +1010,15 @@ do i=1,n_vertex_max
 
             dnu_e_bg_drho   = 0.d0!nu_e_bg * drho0_corr_dn / rho0_corr
 
-            ddTe_i_dTi      = 0.d0!dnu_e_bg_dTi  * (Ti0_corr - Te0_corr) + nu_e_bg
-            ddTe_i_dTe      = 0.d0!dnu_e_bg_dTe  * (Ti0_corr - Te0_corr) - nu_e_bg
-            ddTe_i_drho     = 0.d0!dnu_e_bg_drho * (Ti0_corr - Te0_corr)
+            ddTe_i_dTi      = 0.d0!dnu_e_bg_dTi * (Ti0_corr - Te0_corr) * rho0_corr + nu_e_bg * dTi0_corr_dT * rho0_corr
+            ddTe_i_dTe      = 0.d0!dnu_e_bg_dTe * (Ti0_corr - Te0_corr) * rho0_corr - nu_e_bg * dTe0_corr_dT * rho0_corr
+            ddTe_i_drho     = 0.d0!dnu_e_bg_drho * (Ti0_corr - Te0_corr) * rho0_corr &
+                              !+ nu_e_bg * (Ti0_corr - Te0_corr) * drho0_corr_dn
+        
+            ddTi_e_dTi      = -ddTe_i_dTi
+            ddTi_e_dTe      = -ddTe_i_dTe
+            ddTi_e_drho     = -ddTe_i_drho
 
-            ddTi_e_dTi      = 0.d0!-ddTe_i_dTi
-            ddTi_e_dTe      = 0.d0!-ddTe_i_dTe
-            ddTi_e_drho     = 0.d0!-ddTe_i_drho
           else
             dTe_i       = 0.d0
             dTi_e       = 0.d0
@@ -1179,26 +1182,7 @@ do i=1,n_vertex_max
 
           ! --- Source of neutrals, e.g. from MGI/SPI
           source_neutral = 0.d0
-          if (using_spi) then
-            do spi_i=1, n_spi
-              source_neutral_tmp = 0.d0
-              if (pellets(spi_i)%spi_radius > 0.0) then
-                ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
-                if (ng_radius < ng_radius_min) then
-                  ng_radius = ng_radius_min
-                end if
-                call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
-                              ng_radius,ns_sig,ns_deltaphi,&
-                              ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,R,Z,     &
-                              phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
-              end if
-              source_neutral = source_neutral + source_neutral_tmp
-            end do
-          else
-            call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,source_neutral,t_now, &
-                          JET_MGI,ASDEX_MGI,central_density,central_mass)
-          end if
+          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,source_neutral)
           source_neutral = max(source_neutral,0.) + source_pellet
 
           !--------------------------------------------------------

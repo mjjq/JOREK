@@ -43,11 +43,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 force_horizontal_Xline,                            &
                 n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
-                grid_to_wall, RZ_grid_inside_wall,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
                 n_wall_blocks, n_ext_block,                         &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device, thermalization,                     &
                 F0,                                                 &
                 gamma_sheath_i, gamma_sheath_e,                     &
@@ -112,8 +114,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 rho_min,                                            &
                 corr_neg_temp_coef,                                 &
-                corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,      &  
-                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,        &  
+                ns_deltaphi, ksi_ion, spi_rnd_seed,                 &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi,        &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
@@ -134,7 +136,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, eta_ohmic, centralize_harm_mat
+                delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
+                pastix_maxthrd, eta_ohmic, centralize_harm_mat,     &
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family
 
 if (my_id .eq. 0) then
 
@@ -178,16 +185,15 @@ if (my_id .eq. 0) then
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
   if (gamma_e_stangeby > -1.d89) then
-    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
+    gamma_sheath_e = (gamma-1.d0) * (gamma_e_stangeby - 1.d0)
   else
-    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
+    gamma_e_stangeby = gamma_sheath_e / (gamma-1.d0) + 1.d0
   end if
   if (gamma_i_stangeby > -1.d89) then
-    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+    gamma_sheath_i = (gamma-1.d0) * (gamma_i_stangeby - 1.d0 - gamma)
   else
-    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
+    gamma_i_stangeby = gamma_sheath_i / (gamma-1.d0) + 1.d0 + gamma
   end if
-
 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
@@ -215,22 +221,27 @@ call derive_num_profiles(my_id)
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
-    if (t_now > t_ns) then
+    if (t_now > minval(t_ns)) then
       write(*,*) "EXITING NOW!!!"
       stop
     end if
   end if
 
-  if (using_spi) then
-    if (JET_MGI .or. ASDEX_MGI) then
-      write(*,*) "WARNING: Using SPI, conflicting with MGI settings"
-      write(*,*) "JET_MGI:", JET_MGI
-      write(*,*) "ASDEX_MGI:", ASDEX_MGI
+
+  if (n_inj > n_inj_max .or. n_inj < 1) then
+    write(*,*) "ERROR! Do not support n_inj larger than n_inj_max or smaller than 1, EXITING!"
+    stop
+  end if  
+
+  do i = 1, n_inj_max
+    if (n_spi(i)/=0 .and. i > n_inj) then
+      write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!", n_spi, n_inj
       stop
-    else 
-      call init_spi()
     end if
-  end if
+  end do 
+
+  if (using_spi) call init_spi_all()
+
 end if
 
 return

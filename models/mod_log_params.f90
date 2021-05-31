@@ -273,10 +273,13 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   end if
 
   if ( ( (grid_to_wall) .or. (extend_existing_grid) ) .and. (n_wall_blocks .gt. 0) ) then
+    write(*,REAL_FMT) 'eqdsk_psi_fact        ', eqdsk_psi_fact
     write(*,LOGI_FMT) 'RZ_grid_inside_wall   ', RZ_grid_inside_wall
+    write(*,REAL_FMT) 'RZ_grid_jump_thres    ', RZ_grid_jump_thres
     write(*,INTG_FMT) 'n_wall_blocks         ', n_wall_blocks
     do i=1,n_wall_blocks
       write(*,INTG_FMT) 'Wall Patch number:    ', i
+      write(*,LOGI_FMT) 'n_ext_equidistant:    ', n_ext_equidistant(i)
       write(*,INTG_FMT) 'corner block:         ', corner_block(i)
       write(*,INTG_FMT) 'resolution of block:  ', n_ext_block(i)
       write(*,INTG_FMT) 'n_block_points_left   ', n_block_points_left(i)
@@ -292,6 +295,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
         write(*,REAL_FMT) 'Z_block_points_right  ', Z_block_points_right(i,j)
       enddo
     enddo
+    write(*,LOGI_FMT) 'use_simple_bnd_types  ', use_simple_bnd_types
   endif
 
   write(*,INTG_FMT) 'nout                  ', nout
@@ -451,6 +455,11 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
   write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
   write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
+  write(*,REAL_FMT) 'D_imp_extra_R         ', D_imp_extra_R
+  write(*,REAL_FMT) 'D_imp_extra_Z         ', D_imp_extra_Z
+  write(*,REAL_FMT) 'D_imp_extra_p         ', D_imp_extra_p
+  write(*,REAL_FMT) 'D_imp_extra_neg       ', D_imp_extra_neg
+  write(*,REAL_FMT) 'D_imp_extra_neg_thresh', D_imp_extra_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
@@ -539,6 +548,9 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'amix                  ', amix
   write(*,REAL_FMT) 'equil_accuracy        ', equil_accuracy
   write(*,REAL_FMT) 'axis_srch_radius      ', axis_srch_radius
+  write(*,REAL_FMT) 'delta_psi_GS          ', delta_psi_GS
+  write(*,LOGI_FMT) 'newton_GS_fixbnd      ', newton_GS_fixbnd
+  write(*,LOGI_FMT) 'newton_GS_freebnd     ', newton_GS_freebnd
   
   if (freeboundary_equil) then
     write(*,LOGI_FMT) 'starwall_equil_coils  ', starwall_equil_coils
@@ -624,6 +636,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
+  write(*,LOGI_FMT) 'deuterium_adas_1e20   ', deuterium_adas_1e20
   write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
   write(*,LOGI_FMT) 'no_mach1_bc           ', no_mach1_bc
 
@@ -693,7 +706,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'ns_Z                ',  ns_Z
      write(*,REAL_FMT) 'ns_phi              ',  ns_phi
      write(*,REAL_FMT) 'ns_radius           ',  ns_radius
-     write(*,REAL_FMT) 'ns_sig              ',  ns_sig
+     write(*,REAL_FMT) 'ng_radius_min       ',  ng_radius_min
      write(*,REAL_FMT) 'ns_deltaphi         ',  ns_deltaphi
      write(*,REAL_FMT) 'ns_tor_norm         ',  ns_tor_norm
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
@@ -713,6 +726,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'neutral_line_R_end  ', neutral_line_R_end
      write(*,REAL_FMT) 'neutral_line_Z_end  ', neutral_line_Z_end
      write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
+     write(*,REAL_FMT) 'imp_reflection      ', imp_reflection
      write(*,LOGI_FMT) 'output_prad_phi     ', output_prad_phi
      write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
      write(*,INTG_FMT) 'n_adas              ',  n_adas
@@ -725,6 +739,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
      write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,INTG_FMT) 'n_spi               ',  n_spi
+     write(*,INTG_FMT) 'n_spi_tot           ',  n_spi_tot
+     write(*,INTG_FMT) 'n_inj               ',  n_inj
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
      write(*,CHAR_FMT) 'spi_shard_file      ',  trim(spi_shard_file)

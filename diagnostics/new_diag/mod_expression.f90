@@ -23,14 +23,8 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-#ifdef WITH_Impurities
-  use mod_injection_source
-#endif
+  use mod_impurity, only: radiation_function, radiation_function_linear
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-      
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
   
   implicit none
   
@@ -239,6 +233,12 @@ module mod_expression
     call add(exprs_all_int, 'Thermal_tot ', 'Total thermal energy                                  ')
     call add(exprs_all_int, 'Thermal_in  ', 'Thermal energy (inside  LCFS)                         ')
     call add(exprs_all_int, 'Thermal_out ', 'Thermal energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_tot','Total electron thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_e_in ','Thermal electron energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_out','Thermal electron energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_tot','Total ion thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_i_in ','Thermal ion energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_out','Thermal ion energy (outside LCFS)                         ')
     call add(exprs_all_int, 'Kin_par_tot ', 'Total parallel kinetic energy                         ')
     call add(exprs_all_int, 'Kin_par_in  ', 'Parallel kinetic energy (inside  LCFS)                ')
     call add(exprs_all_int, 'Kin_par_out ', 'Parallel kinetic energy (outside LCFS)                ')
@@ -259,6 +259,7 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
+    call add(exprs_all_int, 'Friction_diss','Total frictional dissipation                          ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
     call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
@@ -836,7 +837,7 @@ module mod_expression
                 Te0_p     = Te0_p     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
                 Te0_pp    = Te0_pp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
 
-                ! --- Temperature (ion + electron) in models .ne. 400
+                ! --- Temperature (ion + electron) in models .ne. 400 & 502
                 T0       = T0       + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz
                 T0_s     = T0_s     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_s  * hhz
                 T0_t     = T0_t     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_t  * hhz
@@ -1351,7 +1352,7 @@ module mod_expression
 
    if (use_imp_adas) then
      call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
      ! Note the input Te0 for atomic_coeff_deuterium should be in JOREK units!!!
 
     !--------------------------------------------------------
@@ -1398,11 +1399,7 @@ module mod_expression
 
 #ifdef WITH_Impurities
 
-          if (T_min > T_1) then
-            T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min)
-          else
-            T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_1)
-          end if
+          T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
           Te_corr_eV   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
           Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
   
@@ -1414,20 +1411,20 @@ module mod_expression
           r0_corr  = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3)
           rn0_corr = corr_neg_dens(rn0,(/1.d-9,1.d-5 /),1.d-3)
           ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-		  
+  
           ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
           coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
-		  
+  
           if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
-	    Lrad = 0.
+            Lrad = 0.
             call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
             Lrad = Lrad * coef_rad_1
           else
             Lrad = 0.
           end if
-		  
+  
           ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
-		  
+  
 #endif
 
           ! --- Factors for switching between JOREK normalized and SI units.

@@ -307,7 +307,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   enddo
   
   ! --- This is just for debug, it could be removed (or not?)
-  call export_restart(node_list, element_list, 'jorek_restart')
+  call export_restart(node_list, element_list, 'grid_initial')
   
   ! --- Also for debug: Print a python file that plots a cross with the 4 nodes of each element
   if (plot_grid) then
@@ -649,6 +649,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
 
 
   use grid_xpoint_data, only: n_wall, R_wall, Z_wall
+  use phys_module, only : RZ_grid_jump_thres
   
   implicit none
   
@@ -693,7 +694,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   width_prev1    = 0.0
   width_prev2    = 0.0
   inside_boot    = 0
-  jump_threshold = 0.85
+  jump_threshold = RZ_grid_jump_thres
   elm_count      = 0
   do i = 1,nZ/2+1
     !write(*,*)'Doing lower horizontal line ',nZ/2+1-i
@@ -882,7 +883,7 @@ subroutine create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_
   ! --- Then upper part
   nR = nR_save
   sig_Z = 0.3
-  call meshac2(nZ/2+1,Zlines,1.d0,9999.d0,sig_Z,9999.d0,0.3,1.0d0)
+  call meshac2(nZ/2,Zlines,1.d0,9999.d0,sig_Z,9999.d0,0.3,1.0d0)
   Zlines = Zlines * Zmax
   width_prev1    = 0.0
   width_prev2    = 0.0

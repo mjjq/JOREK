@@ -14,7 +14,7 @@ module mod_neutral_source
 
 
   !> Calculates the neutral source
-  subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
+  subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,ns_tor_norm, &
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,               &
                               JET_MGI,ASDEX_MGI,central_density,central_mass)
 
@@ -22,7 +22,7 @@ module mod_neutral_source
 
     ! --- Routine parameters
     real*8,  intent(in)  :: R, Z, phi, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_now, t_ns, ns_amplitude
-    real*8,  intent(in)  :: ns_R, ns_Z, ns_phi, ns_radius, ns_sig, ns_deltaphi, L_tube
+    real*8,  intent(in)  :: ns_R, ns_Z, ns_phi, ns_radius, ns_deltaphi, L_tube
     real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
@@ -141,6 +141,73 @@ module mod_neutral_source
   end subroutine neutral_source
 
 
+  subroutine total_neutral_source(R,Z,phi,source_neutral) 
+
+    use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
+    use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
+    use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
+    use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
+
+    implicit none
+
+    real*8, intent(in)   :: R
+    real*8, intent(in)   :: Z
+    real*8, intent(in)   :: phi
+    real*8, intent(out)  :: source_neutral
+
+    ! Temporary variables serving the SPI module
+    integer    :: spi_i, i_inj,  n_spi_tmp
+    
+    real*8     :: spi_R_tmp
+    real*8     :: spi_Z_tmp
+    real*8     :: spi_phi_tmp
+    real*8     :: spi_abl_tmp
+    real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
+    real*8     :: source_neutral_tmp
+
+    if (using_spi) then
+
+      do spi_i=1, n_spi_tot
+
+        source_neutral_tmp = 0.d0 
+
+        if (pellets(spi_i)%spi_radius > 0.0) then
+
+          ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+          if (ng_radius < ng_radius_min) then
+            ng_radius = ng_radius_min
+          end if
+
+          n_spi_tmp = 0
+          do i_inj = 1, n_inj
+            n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+            if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+          end do
+
+          call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
+                        ng_radius,ns_deltaphi,ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,R,Z,     &
+                        phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+
+        end if
+
+        source_neutral = source_neutral + source_neutral_tmp
+
+      end do
+
+    else
+
+      do i_inj = 1, n_inj
+        source_neutral_tmp = 0.d0
+        call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj), &
+                      ns_radius,ns_deltaphi,ns_tor_norm, &
+                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_neutral,t_now, &
+                      JET_MGI,ASDEX_MGI,central_density,central_mass)
+        source_neutral = source_neutral + source_neutral_tmp
+      end do
+    end if
+
+  end subroutine total_neutral_source
 
   !> Calculates the total number of neutral particles injected from the start of the simulation and for each timestep.
   subroutine total_neutrals(my_id,node_list,element_list)
@@ -171,134 +238,6 @@ module mod_neutral_source
     endif
 
   end subroutine total_neutrals
-
-  !> Initialize ADAS for background impurity 
-  subroutine init_imp_adas(my_id)
-
-    use phys_module
-    use mod_openadas
-    use mod_coronal
-
-    implicit none
-
-    integer, intent(in) :: my_id
-    integer             :: err_alloc, i
-
-    character(len=512)  :: adas_suffix     !The suffix of adas data file to be read
-
-    ! Temporary variable for charge state distribution
-    integer             :: i_T, i_ion
-    real*8, allocatable :: dP_imp_dT(:), P_imp(:)
-    real*8              :: Z_imp
-
-    n_adas = 1 ! For now we only trace one species, in the future probably more 
-
-    if (allocated(imp_adas)) then
-      deallocate(imp_adas)
-    end if
-
-    allocate (imp_adas(n_adas),stat=err_alloc)  !< Dynamically allocate memeries for adas data
-
-    if (err_alloc /= 0) then
-      write(*,*) "Error when trying to dynamically allocate memeries for adas data.", my_id
-      stop
-    else
-      if (allocated(imp_cor)) then
-        deallocate(imp_cor)
-      end if
-
-      allocate (imp_cor(n_adas),stat=err_alloc)  !< Dynamically allocate memeries for adas data
-      if (err_alloc /= 0) then
-        write(*,*) "Error when trying to dynamically allocate memeries for CE vector.", my_id
-        deallocate(imp_adas)
-        stop
-      else
-        if (nimp_bg .gt. 0) then
-          do i=1, n_adas
-            select case ( trim(imp_type) )
-              case('C')
-                adas_suffix = '96_c'
-              case('Ar')
-                adas_suffix = '89_ar'
-              case('Ne')
-                adas_suffix = '96_ne'
-              case('W')
-                adas_suffix = '50_w'
-              case default
-                write(*,*) "Unrecognized species, terminating."
-                adas_suffix = 'none'
-                deallocate(imp_cor)
-                deallocate(imp_adas)
-                stop
-            end select
-
-            imp_adas(i) = read_adf11(my_id, trim(adas_suffix),trim(adas_dir))
-            imp_cor(i)  = coronal(imp_adas(i))
-          
-          ! This is to output a coronal equilibrium charge distribution as a
-          ! function of temperature assuming constant density
-            if (my_id == 0) call output_coronal(imp_cor(i))
-          end do
-        end if
-      end if
-    end if
-
-    if ( my_id == 0 ) then
-      if (allocated(xtime_radiation)) call tr_deallocate(xtime_radiation,"xtime_radiation",CAT_GRID)
-      if (nstep .gt. 0) call tr_allocate(xtime_radiation,1,nstep,"xtime_radiation")
-      if (allocated(xtime_rad_power)) call tr_deallocate(xtime_rad_power,"xtime_rad_power",CAT_GRID)
-      if (nstep .gt. 0) call tr_allocate(xtime_rad_power,1,nstep,"xtime_rad_power")
-      if (allocated(xtime_E_ion)) call tr_deallocate(xtime_E_ion,"xtime_E_ion",CAT_GRID)
-      if (nstep .gt. 0) call tr_allocate(xtime_E_ion,1,nstep,"xtime_E_ion")
-      if (allocated(xtime_E_ion_power)) call tr_deallocate(xtime_E_ion_power,"xtime_E_ion_power",CAT_GRID)
-      if (nstep .gt. 0) call tr_allocate(xtime_E_ion_power,1,nstep,"xtime_E_ion_power")
-    end if 
-
-  end subroutine init_imp_adas
-
-  !> Get the radiation coefficients from adas, outputs Lrad in [wm^3] and dLrad_dTe in [Wm^3/K]
-  subroutine radiation_function_linear(ad,cor, density, temperature, Lrad, dLrad_dTe)
-
-    use phys_module
-    use mod_openadas
-    use mod_coronal
-    use mod_interp_splinear
-
-    implicit none
-
-    type(adf11_all), intent(in) :: ad
-    type(coronal), intent(in)   :: cor
-    real*8, intent(in)          :: density !< log10 density in m^-3
-    real*8, intent(in)          :: temperature !< log10 electron temperature in K
-
-    real*8, intent(out)         :: Lrad ! value of radiation function
-    real*8, intent(out), optional :: dLrad_dTe ! derivatives of radiation function
-
-    real*8                      :: rad!Local density multiplied radiation function
-    real*8                      :: radRB, radLT
-    real*8, dimension(0:ad%n_Z) :: rad_p, drad_dT, dradRB_dT, dradLT_dT
-    real*8, dimension(0:cor%n_Z):: p          !< charge state distribution
-    real*8, dimension(0:cor%n_Z):: p_Te       !< gradient of distribution of charge states (sum = 1) to Te and Ne
-    integer :: iz
-    
-    call cor%interp_linear(density,temperature,rad_out=rad)
-    Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
-    if (present(dLrad_dTe)) then
-      call cor%interp_linear(density,temperature,p_out=p,p_Te_out=p_Te)
-      dradRB_dT = ad%PRB%interp_grad_T(density,temperature) !Loglog gradient still!!!
-      dradLT_dT = ad%PLT%interp_grad_T(density,temperature) !Loglog gradient still!!!
-      do iz=0,ad%n_Z
-        radRB     = ad%PRB%interp_linear(iz,density,temperature)
-        radLT     = ad%PLT%interp_linear(iz,density,temperature)
-        rad_p(iz)   = radRB + radLT
-        drad_dT(iz) = dradRB_dT(iz) * radRB / (10.0**temperature) &
-                      + dradLT_dT(iz) * radLT / (10.0**temperature) ! Convert to normal gradient
-      enddo ! radiation emitted by atoms at level iz
-      if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
-    end if
-
-  end subroutine radiation_function_linear
-
 
   !> Calculates the factorial of a number (which appears in gas dynamics formulae!)
   integer function factorial(n)

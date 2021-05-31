@@ -19,6 +19,7 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use corr_neg
 use mod_injection_source
+use mod_impurity
 use mod_coronal
 use mod_bootstrap_functions
 use equil_info, only : get_psi_n
@@ -36,7 +37,7 @@ integer, intent(in)            :: tid
 integer, intent(in)            :: i_tor_min, i_tor_max
 
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2, i_inj, n_spi_tmp
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, eps_cyl
 real*8     :: current_source(n_gauss,n_gauss), particle_source(n_gauss,n_gauss), heat_source(n_gauss,n_gauss)
@@ -116,22 +117,11 @@ real*8     :: amat_25_n, amat_27_n
 
 ! Neutral source
 real*8     :: source_imp, source_bg
-real*8     :: source_tmp       !Temporary neutral source for each shattered pellets 
 
 ! time normalization
 real*8     :: t_norm
 
-! Temporary variables serving the SPI module
-integer    :: spi_i
-real*8     :: spi_R_tmp
-real*8     :: spi_Z_tmp
-real*8     :: spi_phi_tmp
-real*8     :: spi_abl_tmp 
-real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
-! Additional variables reserved for future implementation
-!real*8     :: spi_Vel_R_tmp
-!real*8     :: spi_Vel_Z_tmp
-!real*8     :: spi_Vel_phi_tmp
+real*8     :: Dn0x, Dn0y, Dn0p
 
 ! Atomic physics coefficients:
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
@@ -282,6 +272,11 @@ do i=1,n_vertex_max
    enddo
  enddo
 enddo
+
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
+delta_t = delta_t * tstep / tstep_prev
 
 do ms=1, n_gauss
   do mt=1, n_gauss
@@ -700,6 +695,18 @@ do ms=1, n_gauss
          ZKpar_T = ZK_par_neg
        endif
      endif
+
+     Dn0x = D_imp_extra_R      
+     Dn0y = D_imp_extra_Z      
+     Dn0p = D_imp_extra_p      
+
+     if (xpoint2) then
+       if (rn0 .lt. D_imp_extra_neg_thresh)  then
+        Dn0x = D_imp_extra_neg
+        Dn0y = D_imp_extra_neg
+        Dn0p = D_imp_extra_neg
+       endif
+     endif
    
      ! -------------------------------
      ! --- Impurity related things
@@ -791,6 +798,12 @@ do ms=1, n_gauss
      dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dZ_imp_dT = dZ_imp_dT * dT0_corr_dT                      ! Account for the temperature correction
 
+     if (Te_corr_eV < 0.1) then
+       Z_imp = 0.
+       dZ_imp_dT = 0.
+       d2Z_imp_dT2 = 0.
+     endif
+
      if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
        write(*,*) "Te_corr_eV =", Te_corr_eV
@@ -829,6 +842,8 @@ do ms=1, n_gauss
        Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
      end do
      Z_eff        = Z_eff / ne_JOREK
+     if (Z_eff < 1.) Z_eff = 1.
+     if (Z_eff > (imp_adas(1)%n_Z)**2) Z_eff = (imp_adas(1)%n_Z)**2
 
      ! Then three(!) gradients
      if (Z_eff >= 1.) then
@@ -926,52 +941,7 @@ do ms=1, n_gauss
      source_imp = 0.d0
      source_bg  = 0.d0
 
-     if (using_spi) then
-
-       if (JET_MGI .or. ASDEX_MGI) then
-         write(*,*) "WARNING: Using SPI, disabling MGI settings"
-         JET_MGI = .false.
-         ASDEX_MGI = .false.
-       end if
-
-       do spi_i=1, n_spi
-
-         source_tmp = 0.d0 
-
-         if (pellets(spi_i)%spi_radius > 0.0) then
-           spi_R_tmp   = pellets(spi_i)%spi_R
-           spi_Z_tmp   = pellets(spi_i)%spi_Z
-           spi_phi_tmp = pellets(spi_i)%spi_phi
-           spi_abl_tmp = pellets(spi_i)%spi_abl
-
-           ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
-
-           if (ng_radius < ng_radius_min) then
-             ng_radius = ng_radius_min
-           end if
-
-           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_sig,ns_deltaphi,&
-                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,x_g(ms,mt),y_g(ms,mt),    &
-                         phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
-         end if
-
-         ! Converting number density into mass density for each species respectively
-         source_bg  = source_bg + source_tmp * ( 1. - pellets(spi_i)%spi_species)
-         source_imp = source_imp + source_tmp * pellets(spi_i)%spi_species / m_i_over_m_imp
-
-       end do
-
-     else ! if not using SPI
-
-       call inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                     A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_imp,t_now,  &
-                     JET_MGI,ASDEX_MGI,central_density,central_mass)
-
-       ! Converting number density into mass density for each species
-       ! respectively
-       source_imp = source_imp / m_i_over_m_imp
-   
-     end if
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
 
      ! This is to detect N/A
      if (source_imp /= source_imp .or. source_bg /= source_bg) then
@@ -1158,6 +1128,7 @@ do ms=1, n_gauss
                     !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho)               * xjac * tstep &
                     ! The old diffusion scheme for the impurities
                     !- D_prof * BigR  * (v_x*(r0_x) + v_y*(r0_y)             )                  * xjac * tstep &
+                    + BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                        * xjac * tstep &  
                     - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
                     - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
                     - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep &
@@ -1183,6 +1154,7 @@ do ms=1, n_gauss
                        !Old diffusion scheme for impurities
                        !- (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rho)             * xjac * tstep &
                        !- D_prof * BigR  * (          v_p*(r0_p) * eps_cyl**2 /BigR**2 )           * xjac * tstep &
+                       + BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                         * xjac * tstep & 
                     - TG_num5 * 0.25d0 / BigR * vpar0**2 &
                               * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                               * (                            + F0 / BigR * v_p) * xjac * tstep * tstep
@@ -1273,8 +1245,7 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)  &
-                                                          * (F0 / BigR) **2                    * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
 !==========================End of viscous heating terms==============================
 
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
@@ -1376,7 +1347,7 @@ do ms=1, n_gauss
 !################################################################################################### 
 
 
-	   rhs_ij_8 =    &       
+	   rhs_ij_8 = BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                                          * xjac * tstep &              
                     ! The new diffusion scheme for the impurities
                       - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhon) * xjac * tstep &
                     ! The new diffusion scheme for the impurities
@@ -1403,7 +1374,7 @@ do ms=1, n_gauss
                         * BigR * xjac * tstep
 
 
-           rhs_ij_8_k =  & 
+           rhs_ij_8_k = BigR* ( - Dn0p * rn0_p * v_p*eps_cyl**2/BigR**2)                             * xjac * tstep	        & 
                        ! The new diffusion scheme for the impurities
                        - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rhon)             * xjac * tstep &
                        - D_prof_imp * BigR  * (          v_p*(rn0_p) * eps_cyl**2  /BigR**2)           * xjac * tstep &
@@ -1792,6 +1763,7 @@ do ms=1, n_gauss
              amat_57_n = + v * r0 * F0 / BigR * vpar_p                                             * xjac * theta * tstep
 	     
              amat_58   = &
+                         + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                      * xjac * theta * tstep &
                          - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon           * xjac * theta * tstep &
                          + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon   * xjac * theta * tstep &
                          - D_prof * BigR  * (v_x*rhon_x + v_y*rhon_y )                             * xjac * theta * tstep &
@@ -1804,6 +1776,7 @@ do ms=1, n_gauss
                           + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho_rhon_n * xjac * theta * tstep
 
              amat_58_kn = &
+                          + Dn0p * rhon_p * v_p*eps_cyl**2/BigR * xjac * theta * tstep &
                           - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n       * xjac * theta * tstep &
                           + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n * xjac * theta * tstep &
                           - D_prof * BigR  * ( v_p*rhon_p * eps_cyl**2 /BigR**2 )                   * xjac * theta * tstep &
@@ -2075,7 +2048,6 @@ do ms=1, n_gauss
                        + (GAMMA - 1.) * dE_ion_dT * T * D_prof_imp * BigR  * (                          + v_p*(rn0_p) * eps_cyl**2 /BigR**2 ) * xjac * tstep &
 
 !================= End ionization potential energy ===========================
-
                    + TG_num6 * 0.25d0 / BigR * vpar0**2 &
                              * T * ((r0_x+alpha_imp_bis*rn0_x) * ps0_y - (r0_y+alpha_imp_bis*rn0_y) * ps0_x      &
                                     + F0 / BigR * (r0_p+alpha_imp_bis*rn0_p))                                    &
@@ -2130,8 +2102,7 @@ do ms=1, n_gauss
                        - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) &
-                                                                    * (F0 / BigR) **2           * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
  
                    + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
@@ -2542,7 +2513,7 @@ do ms=1, n_gauss
                     + TG_num8 * 0.25d0 / BigR * vpar0**2                                                              &
                                * (rhon_x * ps0_y - rhon_y * ps0_x )                                                   &
                                * ( v_x * ps0_y -  v_y * ps0_x   ) * xjac * theta * tstep * tstep                      &
-
+                   + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                        * xjac * theta * tstep  &
                    + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)  * BigR * xjac * theta * tstep 
           
 
@@ -2562,7 +2533,7 @@ do ms=1, n_gauss
                                * ( v_x * ps0_y -  v_y * ps0_x                      ) * xjac * theta * tstep * tstep
 
 	          
-         amat_88_kn = &
+         amat_88_kn = + Dn0p * rhon_p * v_p*eps_cyl**2/BigR * xjac * theta * tstep                                    &
                      ! New diffusion scheme for impurities
                       + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rhon_n    * xjac * theta * tstep &
                       + D_prof_imp * BigR  * ( v_p*rhon_p * eps_cyl**2 /BigR**2 )                * xjac * theta * tstep &

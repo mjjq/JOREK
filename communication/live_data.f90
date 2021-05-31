@@ -138,6 +138,12 @@ module live_data
     if (allocated(thermal_tot_t)) call tr_deallocate(thermal_tot_t,"thermal_tot_t",CAT_UNKNOWN)
     if (nstep .gt. 0) call tr_allocate(thermal_tot_t,1,index_start+nstep,"thermal_tot_t",CAT_UNKNOWN)
 
+    if (allocated(thermal_e_tot_t)) call tr_deallocate(thermal_e_tot_t,"thermal_e_tot_t",CAT_UNKNOWN)
+    if (nstep .gt. 0) call tr_allocate(thermal_e_tot_t,1,index_start+nstep,"thermal_e_tot_t",CAT_UNKNOWN)
+
+    if (allocated(thermal_i_tot_t)) call tr_deallocate(thermal_i_tot_t,"thermal_i_tot_t",CAT_UNKNOWN)
+    if (nstep .gt. 0) call tr_allocate(thermal_i_tot_t,1,index_start+nstep,"thermal_i_tot_t",CAT_UNKNOWN)
+
     if (allocated(Wmag_tot_t)) call tr_deallocate(Wmag_tot_t,"Wmag_tot_t",CAT_UNKNOWN)
     if (nstep .gt. 0) call tr_allocate(Wmag_tot_t,1,index_start+nstep,"Wmag_tot_t",CAT_UNKNOWN)
 
@@ -188,6 +194,9 @@ module live_data
 
     if (allocated(friction_dissip_tot_t)) call tr_deallocate(friction_dissip_tot_t,"friction_dissip_tot_t",CAT_UNKNOWN)
     if (nstep .gt. 0) call tr_allocate(friction_dissip_tot_t,1,index_start+nstep,"friction_dissip_tot_t",CAT_UNKNOWN)
+
+    if (allocated(xtime_P_ei)) call tr_deallocate(xtime_P_ei,"xtime_P_ei",CAT_UNKNOWN)
+    if (nstep .gt. 0) call tr_allocate(xtime_P_ei,1,index_start+nstep,"xtime_P_ei",CAT_UNKNOWN)
 
     if (allocated(viscopar_flux_t)) call tr_deallocate(viscopar_flux_t,"viscopar_flux_t",CAT_UNKNOWN)
     if (nstep .gt. 0) call tr_allocate(viscopar_flux_t,1,index_start+nstep,"viscopar_flux_t",CAT_UNKNOWN)
@@ -435,7 +444,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A)') '@bnd_point: %"time"           "R position"              "Z position"           "Psi on boundary point"'
     write(LIVE_DATA_HANDLE,*)
 
-    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_integrated_energies: ', 5 
+    write(LIVE_DATA_HANDLE,'(A,I5)') '@n_integrated_energies: ', 7 
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_xlabel: normalized time'
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies__xlabel_si: time [ms]'
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_ylabel: Total integrated energies [J]'
@@ -444,7 +453,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@integrated_energies_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies_logy: 0'
     write(LIVE_DATA_HANDLE,'(A)') '@integrated_energies: %"time"           "Total energy"              "Magnetic"           "Kinetic parallel"    &
-                                   "Kinetic perpendicular"                 "Thermal energy"     '
+                                   "Kinetic perpendicular"                 "Thermal energy"     "Electron thermal energy"    "Ion thermal energy"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_bnd_fluxes: ', 4 
@@ -539,7 +548,7 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energy_conservation_x2si: ', sqrt_mu0_rho0*1.e3
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@energy_conservation_y2si: ', 1.0
     write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation_logy: 0'
-    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + sources + dissipative terms" '
+    write(LIVE_DATA_HANDLE,'(A)') '@energy_conservation: %"time"       "-dEtotdt"     "Sum bnd fluxes + sources + dissipative terms"'
     write(LIVE_DATA_HANDLE,*)
 
     write(LIVE_DATA_HANDLE,'(A,I5)') '@n_mag_energy_balance: ', 6
@@ -688,7 +697,8 @@ module live_data
       thmwork_tot_t, viscopar_dissip_tot_t, viscopar_flux_t, li3_t, friction_dissip_tot_t,     &
       li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta, &
       dpart_tot_dt, part_flux_Dpar_t, part_flux_Dperp_t, part_flux_vpar_t, part_flux_vperp_t, &
-      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power, xtime_E_ion_power  
+      dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power, &
+      xtime_E_ion_power, thermal_e_tot_t, thermal_i_tot_t, xtime_P_ei
 
 
     implicit none
@@ -776,16 +786,18 @@ module live_data
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@thermalenergy: ', xtime(index), pressure_in_t(index), pressure_out_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@heatingpower: ', xtime(index), heat_src_tot_t(index), heat_src_in_t(index), heat_src_out_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@particlesource: ', xtime(index), part_src_tot_t(index), part_src_in_t(index), part_src_out_t(index)
-    write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@integrated_energies: ', xtime(index), E_tot_t(index), Wmag_tot_t(index), &
-                                                     kin_par_tot_t(index),  kin_perp_tot_t(index),  thermal_tot_t(index)  
+    write(LIVE_DATA_HANDLE,'(A,8ES17.9)') '@integrated_energies: ', xtime(index), E_tot_t(index), Wmag_tot_t(index), &
+                                                     kin_par_tot_t(index),  kin_perp_tot_t(index),  thermal_tot_t(index), thermal_e_tot_t(index), thermal_i_tot_t(index) 
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@helicity: ', xtime(index), helicity_tot_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@area: ', xtime(index), area_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@volume: ', xtime(index), volume_t(index)
     write(LIVE_DATA_HANDLE,'(A,5ES17.9)') '@li3: ', xtime(index), li3_t(index), li3_tot_t(index)
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-    write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), friction_dissip_tot_t(index), viscopar_dissip_tot_t(index), &
-                                                                  xtime_rad_power(index), xtime_E_ion_power(index)
+    if (index>1) then
+      write(LIVE_DATA_HANDLE,'(A,6ES17.9)') '@dissipative_terms: ', xtime(index-1), ohmic_tot_t(index-1), friction_dissip_tot_t(index-1), viscopar_dissip_tot_t(index-1), &
+                                                                    xtime_rad_power(index-1), xtime_E_ion_power(index-1)
+    endif
 #else
     write(LIVE_DATA_HANDLE,'(A,4ES17.9)') '@dissipative_terms: ', xtime(index), ohmic_tot_t(index), friction_dissip_tot_t(index), viscopar_dissip_tot_t(index)
 #endif

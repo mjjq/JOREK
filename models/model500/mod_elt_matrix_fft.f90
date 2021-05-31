@@ -24,6 +24,7 @@ use corr_neg
 use mod_neutral_source
 use mod_bootstrap_functions
 use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
+use mod_impurity, only: radiation_function, radiation_function_linear
 
 implicit none
 
@@ -38,7 +39,7 @@ integer, intent(in)            :: i_tor_min, i_tor_max
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
 
-integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
+integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2, i_inj, n_spi_tmp
 integer    :: n_tor_start, n_tor_end, n_tor_local
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8, kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8, ij, kl
 real*8     :: wst, xjac, xjac_s, xjac_t, xjac_x, xjac_y, BigR, r2, phi, delta_phi
@@ -744,41 +745,11 @@ do i=1,n_vertex_max
           !--------------------------------------------------------
           ! --- Source of neutrals, e.g. from MGI/SPI
           !--------------------------------------------------------
-      
-          source_neutral = 0.d0                    
-      
-          if (using_spi) then
-      
-            do spi_i=1, n_spi
-      
-              source_neutral_tmp = 0.d0
-      
-              if (pellets(spi_i)%spi_radius > 0.0) then
-      
-                ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
-      
-                if (ng_radius < ng_radius_min) then
-                  ng_radius = ng_radius_min
-                end if
-      
-                call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
-                              ng_radius,ns_sig,ns_deltaphi,&
-                              ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,x_g(ms,mt),y_g(ms,mt),     &
-                              phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
-              end if
-      
-              source_neutral = source_neutral + source_neutral_tmp
-      
-            end do
-      
-          else
-      
-            call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,x_g(ms,mt),y_g(ms,mt),phi,source_neutral,t_now, &
-                          JET_MGI,ASDEX_MGI,central_density,central_mass)
-      
-          end if
-          
+
+          source_neutral = 0.d0                   
+     
+          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,source_neutral)
+     
           source_neutral = max(source_neutral,0.)
       
          !-----------------------------------------------------------------

@@ -244,6 +244,7 @@ do i=1, n_local_elms !=== do elements
       then
         apply_cs = .true.
       endif
+
       if (no_mach1_bc) apply_cs = .false.
       if (no_mach1_bc) apply_dirichlet_all = .true.
 
@@ -627,23 +628,31 @@ do i=1, n_local_elms !=== do elements
 
 
           if (in .eq. 1) then
-            call boundary_conditions_add_RHS(                                    &
-                   index_node2, var_vpar, in, index_min, index_max, RHS_loc,           &
-                   Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0_b * direction   &
-                                  + Hfact_b / Btot * cs0           * direction), &
-                   i_tor_min, i_tor_max)
 
-            call boundary_conditions_add_RHS(                                    &
-                   index_node2, var_vpar, in, index_min, index_max, RHS_loc,           &
-                   Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0i_b * direction   &
-                                  + Hfact_b / Btot * cs0           * direction), &
-                   i_tor_min, i_tor_max)
+            if ( with_TiTe) then
 
-            call boundary_conditions_add_RHS(                                    &
-                   index_node2, var_vpar, in, index_min, index_max, RHS_loc,           &
-                   Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0e_b * direction   &
-                                  + Hfact_b / Btot * cs0           * direction), &
-                   i_tor_min, i_tor_max)
+              call boundary_conditions_add_RHS(                                    &
+                     index_node2, var_vpar, in, index_min, index_max, RHS_loc,     &
+                     Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0i_b * direction   &
+                                    + Hfact_b / Btot * cs0           * direction), &
+                     i_tor_min, i_tor_max)
+
+              call boundary_conditions_add_RHS(                                    &
+                     index_node2, var_vpar, in, index_min, index_max, RHS_loc,     &
+                     Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0e_b * direction   &
+                                    + Hfact_b / Btot * cs0           * direction), &
+                     i_tor_min, i_tor_max)
+
+            else
+
+              call boundary_conditions_add_RHS(                                    &
+                     index_node2, var_vpar, in, index_min, index_max, RHS_loc,     &
+                     Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0_b * direction    &
+                                    + Hfact_b / Btot * cs0           * direction), &
+                     i_tor_min, i_tor_max)
+
+            endif !with_TiTe
+
           else
              call boundary_conditions_add_RHS(                         &
                    index_node2, var_vpar, in, index_min, index_max, RHS_loc, &

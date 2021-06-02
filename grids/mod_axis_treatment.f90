@@ -157,18 +157,18 @@ end subroutine transform_basis_for_axis_element_poisson
 
 ! This subroutine transforms basis functions in RHS and ELM for grid-axis-elements.
 ! This is done to achieve C1 continuity in (R, Z)-plane.
-subroutine transform_basis_for_axis_element(nodes, ELM, RHS, i_tor_min, i_tor_max)
+subroutine transform_basis_for_axis_element(nodes, ELM, RHS, n_tor_start, n_tor_end)
 use data_structure
 use phys_module
 implicit none
 type(type_node),       intent(inout) :: nodes(n_vertex_max)
-real*8,          intent(inout) :: ELM(1:n_tor*n_vertex_max*(n_order+1)*n_var, 1:n_tor*n_vertex_max*(n_order+1)*n_var)
-real*8,          intent(inout) :: RHS(1:n_tor*n_vertex_max*(n_order+1)*n_var)
-integer ,        intent(in)    ::  i_tor_min, i_tor_max
+real*8,   :: ELM(1:n_tor*n_vertex_max*(n_order+1)*n_var, 1:n_tor*n_vertex_max*(n_order+1)*n_var)
+real*8,   :: RHS(1:n_tor*n_vertex_max*(n_order+1)*n_var)
+integer ,        intent(in)    :: n_tor_start, n_tor_end
 ! --- routine parameters
 integer :: axis_vertex1, axis_vertex4, dof1, dof2, dof3, dof4
 integer :: iv, io, jv, jo, index_iv_io, index_jv_jo
-integer :: ivar, jvar, im, in, n_tor_start, n_tor_end, n_tor_local
+integer :: ivar, jvar, im, in, n_tor_local
 real*8  :: Ptrans(1:4, 1:4), Pmat(1:4, 1:4), rhs_i(1:4), elm_ij(1:4, 1:4)
 
 axis_vertex1 = 1 ; axis_vertex4 = 4

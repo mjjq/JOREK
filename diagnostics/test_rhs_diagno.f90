@@ -14,6 +14,7 @@ program test_rhs_diagno
   use mod_elt_matrix_fft
   use omp_lib
   use mpi_mod
+  use mod_impurity, only: init_imp_adas
 
   implicit none
 
@@ -60,10 +61,15 @@ integer   :: required,provided,StatInfo
   allocate(bnd_node_list)
   my_id = 0
   call initialise_parameters(my_id, "__NO_FILENAME__")
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  ! --- Read ADAS data and generate coronal equilibrium if needed
+  call init_imp_adas(my_id)
+#endif
   call det_modes()
   call import_restart(node_list, element_list, 'jorek_restart',  rst_format, ierr, .true.)
   call initialise_basis()
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
+
   
   ! --- Initialize the plasma equilibrium data structure
   call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
@@ -244,7 +250,7 @@ integer   :: required,provided,StatInfo
       it_o = term_count - 1
       if (term_count/=1) then 
         scalars_o(:, 1:it_o) = scalars(:,1:it_o)
-        scalar_names_o(1:it_o) = scalar_names_o(1:it_o)
+        scalar_names_o(1:it_o) = scalar_names(1:it_o)
       endif
 
       if (allocated(scalars))      deallocate(scalars)

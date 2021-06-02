@@ -976,9 +976,9 @@ do i=1,n_vertex_max
             rhs_ij_k(5) = - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho            * xjac * tstep * factor(5,4) &
                           - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep * factor(5,5) &
 
-                       - TG_num5 * 0.25d0 / BigR * vpar0**2 * factor(1,1) &
+                       - TG_num5 * 0.25d0 / BigR * vpar0**2 * factor(5,12) &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                                            &
-                                 * (                            + F0 / BigR * v_p) * xjac * tstep * tstep* factor(5,12) 
+                                 * (                            + F0 / BigR * v_p) * xjac * tstep * tstep 
 
             !###################################################################################################
             !#  equation 6   (energy equation)                                                                 #

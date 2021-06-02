@@ -77,13 +77,7 @@ program JOREK2
   use hdf5_io_module
 #endif
   use mpi_mod
-
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
-#ifdef WITH_Impurities
-  use mod_injection_source
-#endif
+  use mod_impurity, only: init_imp_adas
 
 
   use, intrinsic :: iso_c_binding
@@ -154,7 +148,7 @@ program JOREK2
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   real*8,allocatable       :: res(:) 
-  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev, n_since_update
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev, n_since_update, n_spi_begin
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
@@ -176,6 +170,10 @@ program JOREK2
   integer :: DUMMY_INT (1:1)
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
+
+  integer :: holder
+  integer :: getpid
+
   integer :: nsolvers=0
   logical :: solvers(4), solvers_eq(3)
  
@@ -1000,6 +998,17 @@ required = 0
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
 
+    ! --- The following is for parallel debugging only
+
+    !holder = 0;
+    !write(*,*) "my_id", my_id, "PID", getpid(), "Host", name
+
+    !do while (holder == 0)
+    !  call sleep(5)
+    !end do
+
+    ! --- End of parallel debugging section 
+
     !--------- Constructing Global Matrix
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
@@ -1127,16 +1136,14 @@ required = 0
 
       endif
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-      call total_neutrals(my_id,node_list,element_list)
-      if (using_spi .and. t_now >= t_ns) then
-        call update_spi(my_id,node_list,element_list)
-      end if
-#endif
-#ifdef WITH_Impurities
-      if (using_spi .and. t_now >= t_ns) then
-        call update_spi(my_id,node_list,element_list)
-      end if
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+       if (using_spi) then
+         n_spi_begin = 1
+         do i = 1, n_inj !< Do one update for each injection location
+           if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
+           n_spi_begin = n_spi_begin + n_spi(i)
+         end do
+       end if
 #endif
 
 

@@ -42,6 +42,7 @@ module phys_module
   real*8  :: gamma_i_stangeby     !< Sheath tranmission coefficient given by P. Stangeby in (The plasma boundary of magnetic fusion devices)
   real*8  :: density_reflection   !< density reflection coeefficient on open fieldlines
   real*8  :: neutral_reflection   !< reflection coefficient of ions into neutrals (model500)
+  real*8  :: imp_reflection       !< impurity reflection coefficient on open fieldlines
   logical :: old_deuterium_atomic !< use old fit to calculate atomic coefficients for D (ionization, recombination, radiation), otherwise a better fit is used
   logical :: deuterium_adas       !< use OPEN ADAS to calculate ionization, recombination and radiation coeffients for deuterium                        
   logical :: deuterium_adas_1e20  !< use OPEN ADAS with fixed density=1e20 to calculate ionization, recombination and radiation coeffients for deuterium
@@ -274,50 +275,53 @@ module phys_module
   real*8  :: pellet_density_bg !< background species pellet atom number density (in units 10^20 m^-3)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
+
+  !> @name shared between MGI and SPI applications
+  integer, parameter :: n_inj_max = 10 ! The hard coded maximum number of injections
+
+  real*8  :: t_ns(n_inj_max)   !< MGI onset time (JOREK units)
+  real*8  :: ns_amplitude(n_inj_max)  !< Amplitude of gas source
+  real*8  :: ns_R(n_inj_max)   !< R position of gas source
+  real*8  :: ns_Z(n_inj_max)   !< Z position of gas source
+  real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
+  real*8  :: ns_radius         !< Poloidal radius of gas source
+  real*8  :: ns_deltaphi       !< Toroidal extension of gas source
+  real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
+
+  character(len=80) :: imp_type !< Type of injected material or background impurity species: Argon, neon, ...
+  logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
+
+  !> @name Massive gas injection-related input parameters
   
-  !> @name MGI or SPI-related input parameters
-  ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
-  real*8  :: t_ns               !< Neutrals source onset time (JOREK units)
-  real*8  :: ns_amplitude       !< Amplitude of neutrals source (atoms/s)
-  real*8  :: ns_R               !< R position of neutrals source
-  real*8  :: ns_Z               !< Z position of neutrals source
-  real*8  :: ns_phi             !< Phi position of neutrals source
-  real*8  :: ns_radius          !< Poloidal radius of neutral source
-  real*8  :: ns_deltaphi        !< Toroidal extension of neutrals source
-  real*8  :: ns_tor_norm        !< Neutrals source normalization factor related to its toroidal shape
-  real*8  :: ns_sig             !< Obsolete (still in the code but not used)
-  logical :: JET_MGI            !< Switch to use a JET-like MGI
-  logical :: ASDEX_MGI          !< Switch to use an ASDEX-like MGI
-  real*8  :: V_Dmv              !< Volume of the DMV reservoir
-  real*8  :: P_Dmv              !< Pressure in the DMV reservoir (bar)
-  real*8  :: A_Dmv              !< Cross sectional area of DMV (Disruption mitigation valve) pipe
-  real*8  :: K_Dmv              !< Correction parameter describing the gas expansion near the pipe orifice
-  real*8  :: L_tube             !< Pipe length
+  logical :: JET_MGI           !< Switch to use a JET-like MGI
+  logical :: ASDEX_MGI         !< Switch to use an ASDEX-like MGI
+  real*8  :: V_Dmv             !< Volume of the DMV reservoir
+  real*8  :: P_Dmv             !< Pressure in the DMV reservoir (bar)
+  real*8  :: A_Dmv             !< Cross sectional area of DMV (Disruption mitigation valve) pipe
+  real*8  :: K_Dmv             !< Correction parameter describing the gas expansion near the pipe orifice
+  real*8  :: L_tube            !< Pipe length
   real*8  :: ksi_ion            !< Energy cost of each ionization
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
-  character(len=80) :: imp_type !< Type of injected material or background impurity species: Argon, neon, ...
-  logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
  
   !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
   ! More information on the wiki: https://www.jorek.eu/wiki/doku.php?id=spi_tutorial
   logical :: using_spi          !< This determines whether to use SPI or traditional MGI; see [[spi_tutorial|SPI Tutorial]]
-  real*8  :: spi_Vel_Rref       !< Reference velocity of pellet center along R upon injection (in m/s)
-  real*8  :: spi_Vel_Zref       !< Reference velocity of pellet center along Z upon injection (in m/s)
-  real*8  :: spi_Vel_RxZref     !< Reference velocity of pellet center along RxZ direction upon injection (in m/s)
-  real*8  :: spi_quantity       !< Total number of injected atoms by SPI
-  real*8  :: spi_quantity_bg    !< Total injected atom number for background species SPI
-  real*8  :: ng_radius_ratio    !< Ratio between the radius of neutral gas cloud and shard radius
-                                !< Assumed constant. If ng_radius_ratio times shard radius > ng_radius_min,
-                                !< this radius is used for neutral deposition, otherwise the ng_radius_min.
+  real*8  :: spi_Vel_Rref(n_inj_max)   !< Reference velocity of pellet center along R upon injection
+  real*8  :: spi_Vel_Zref(n_inj_max)   !< Reference velocity of pellet center along Z upon injection
+  real*8  :: spi_Vel_RxZref(n_inj_max) !< Reference velocity of pellet center along RxZ direction upon injection
+  real*8  :: spi_quantity(n_inj_max)   !< Total injected atom number for impurity SPI
+  real*8  :: spi_quantity_bg(n_inj_max)!< Total injected atom number for background species SPI
+  real*8  :: ng_radius_ratio           !< We are assuming a constant ratio between the radius of NG clouds
+                                       !< and that of shattered pellets
 
-  real*8  :: spi_Vel_diff       !< The maximum speed difference from the reference speed
-  real*8  :: spi_angle          !< The vertex angle of spi spreading in terms of rad
-  real*8  :: spi_L_inj          !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
-  real*8  :: ns_phi_rotate      !< Toroidal position of injection point, used for mimicking rotating plasma
-  real*8  :: tor_frequency      !< The rigid body rotation frequency of SPI
+  real*8  :: spi_Vel_diff(n_inj_max)   !< The veolocity difference from the reference velocity
+  real*8  :: spi_angle                 !< The vertex angle of spi spreading in terms of rad
+  real*8  :: spi_L_inj(n_inj_max)      !< Distance between SPI nozzle and ns_R, ns_Z, ns_phi
+  real*8  :: ns_phi_rotate             !< The toroidal position of rotated injection point
+  real*8  :: tor_frequency             !< The rigid body rotation frequency
 
   real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
@@ -331,11 +335,16 @@ module phys_module
 
   real*8, allocatable  :: xtime_E_ion(:)        !< The time history of the ionization potential energy in SI unit
   real*8, allocatable  :: xtime_E_ion_power(:)  !< Time derivative of xtime_E_ion
+  real*8, allocatable  :: xtime_P_ei(:)         !< The time history of electron-ion energy exchange power
 
-
-  integer :: n_spi              !< Number of shattered pellets injected
-  integer :: spi_abl_model      !< Ablation model to be used. 0 for constant release rate, 1 for NGS model, 2 for Sergeev formula
-
+  integer :: n_spi(n_inj_max)   !< Number of shattered fragment injected for each injection
+  integer :: n_spi_tot          !< Total number of shattered fragments injected
+  integer :: n_inj              !< Number of injections
+  integer :: spi_abl_model      !< Determine which type of ablation model is used.
+                                !< 0 for constant release rate, 1 for NGS model,
+                                !< 2 for Sergeev formula, 3 for Parks formula.
+                                !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
+                                !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
   character(len=256) :: spi_shard_file !< The name of the shard size file
@@ -637,11 +646,12 @@ module phys_module
     pressure_out_t(:), heat_src_in_t(:), heat_src_out_t(:), part_src_in_t(:), part_src_out_t(:),   &
     E_tot_t(:), Helicity_tot_t(:), Kin_perp_tot_t(:), thermal_tot_t(:), kin_par_tot_t(:), ohmic_tot_t(:),      &
     Wmag_tot_t(:), Ip_tot_t(:), flux_Pvn_t(:), flux_qpar_t(:), dE_tot_dt(:), flux_qperp_t(:), flux_kinpar_t(:), &
-    dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:),                      &
+    dWmag_tot_dt(:), dthermal_tot_dt(:), dkinpar_tot_dt(:), dkinperp_tot_dt(:), friction_dissip_tot_t(:), &
     Magwork_tot_t(:), thmwork_tot_t(:), viscopar_dissip_tot_t(:), viscopar_flux_t(:), li3_t(:),      &
     li3_tot_t(:), part_src_tot_t(:), heat_src_tot_t(:), volume_t(:), area_t(:), mag_ener_src_tot(:), &
     dpart_tot_dt(:), part_flux_Dpar_t(:), part_flux_Dperp_t(:), part_flux_vpar_t(:), part_flux_vperp_t(:), & 
-    dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:)
+    dnpart_tot_dt(:), npart_tot_t(:), npart_flux_t(:), density_tot_t(:), flux_poynting_t(:),         &
+    thermal_e_tot_t(:), thermal_i_tot_t(:)
 
   !> @name gmres parameters
   integer             :: iter_precon        !< whenever the number of gmres iterations exceeds iter_precon, the preconditioning matrix is updated

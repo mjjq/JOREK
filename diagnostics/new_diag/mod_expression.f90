@@ -23,14 +23,8 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-#ifdef WITH_Impurities
-  use mod_injection_source
-#endif
+  use mod_impurity, only: radiation_function, radiation_function_linear
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-      
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
   
   implicit none
   
@@ -139,6 +133,7 @@ module mod_expression
     call add(exprs_all, 'gradP_R     ', 'Pressure gradient force (R component)                 ')
     call add(exprs_all, 'gradP_Z     ', 'Pressure gradient force (Z component)                 ')
     call add(exprs_all, 'gradP_phi   ', 'Pressure gradient force (phi component)               ')
+    call add(exprs_all, 'gradP_B     ', 'Parallel pressure gradient (along B)                  ')
     call add(exprs_all, 'gradPdotCurv', 'grad p dot curvature                                  ')
     call add(exprs_all, 'curvat_R    ', 'curvature (= b . grad ( b )) in the R direction       ')
     call add(exprs_all, 'curvat_Z    ', 'curvature (= b . grad ( b )) in the Z direction       ')
@@ -213,6 +208,7 @@ module mod_expression
     call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ', 'boundary    ')
     call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary    ')
+    call add(exprs_all, 'gradP_norm  ', 'Total pressure gradient normal to the boundary        ', 'boundary    ')
 #if JOREK_MODEL >= 303
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
@@ -239,6 +235,12 @@ module mod_expression
     call add(exprs_all_int, 'Thermal_tot ', 'Total thermal energy                                  ')
     call add(exprs_all_int, 'Thermal_in  ', 'Thermal energy (inside  LCFS)                         ')
     call add(exprs_all_int, 'Thermal_out ', 'Thermal energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_tot','Total electron thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_e_in ','Thermal electron energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_out','Thermal electron energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_tot','Total ion thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_i_in ','Thermal ion energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_out','Thermal ion energy (outside LCFS)                         ')
     call add(exprs_all_int, 'Kin_par_tot ', 'Total parallel kinetic energy                         ')
     call add(exprs_all_int, 'Kin_par_in  ', 'Parallel kinetic energy (inside  LCFS)                ')
     call add(exprs_all_int, 'Kin_par_out ', 'Parallel kinetic energy (outside LCFS)                ')
@@ -259,6 +261,7 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
+    call add(exprs_all_int, 'Friction_diss','Total frictional dissipation                          ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
     call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
@@ -557,7 +560,7 @@ module mod_expression
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
-      ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt
+      ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
@@ -838,7 +841,7 @@ module mod_expression
                 Te0_p     = Te0_p     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
                 Te0_pp    = Te0_pp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
 
-                ! --- Temperature (ion + electron) in models .ne. 400
+                ! --- Temperature (ion + electron) in models .ne. 400 & 502
                 T0       = T0       + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz
                 T0_s     = T0_s     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_s  * hhz
                 T0_t     = T0_t     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_t  * hhz
@@ -1400,11 +1403,7 @@ module mod_expression
 
 #ifdef WITH_Impurities
 
-          if (T_min > T_1) then
-            T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_min)
-          else
-            T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/),2.*T_1)
-          end if
+          T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
           Te_corr_eV   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
           Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
   
@@ -1416,20 +1415,20 @@ module mod_expression
           r0_corr  = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3)
           rn0_corr = corr_neg_dens(rn0,(/1.d-9,1.d-5 /),1.d-3)
           ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-		  
+  
           ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
           coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
-		  
+  
           if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
-	    Lrad = 0.
+            Lrad = 0.
             call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
             Lrad = Lrad * coef_rad_1
           else
             Lrad = 0.
           end if
-		  
+  
           ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
-		  
+  
 #endif
 
           ! --- Factors for switching between JOREK normalized and SI units.
@@ -1625,6 +1624,9 @@ module mod_expression
  
               case ( 'gradP_phi' )
                 res = P0_p / BigR / fact_mu_zero
+
+              case ( 'gradP_B' )
+                res = (BR*P0_R+BZ*P0_Z+Btor*P0_p/BigR) / Btot / fact_mu_zero
  
               case ( 'gradPdotCurv' )
                 res = ( P0_R*Kappa_R + P0_Z*Kappa_Z + P0_p / BigR * Kappa_phi ) / fact_mu_zero
@@ -1710,6 +1712,9 @@ module mod_expression
               case ( 'Jnorm'        )
                 res = (JpolR*nmlR + JpolZ*nmlZ) / fact_mu_zero
 
+              case ( 'gradP_norm' )
+                res = (P0_R *nmlR +  P0_Z*nmlZ) / fact_mu_zero
+ 
               case ( 'Jpar'         )
                 res = Jpar/fact_mu_zero
 

@@ -49,7 +49,7 @@ real*8     :: normal_sign, normal_sign3
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
 real*8     :: ps0, ps0_s, ps0_t, ps0_x, ps0_y, Vpar0, r0_corr, T0_corr, Ti0_corr, Te0_corr, cs0  
 real*8     :: psi, psi_s, psi_t, vpar, T, Ti, Te, cs_T, cs_Ti, cs_Te
-real*8     :: T0,   T0_s,  T0_t,  T0_x,  T0_y, T0_p
+real*8     :: T0,   T0_s,  T0_t,                T0_p
 real*8     :: Ti0, Ti0_s, Ti0_t, Ti0_x, Ti0_y, Ti0_p
 real*8     :: Te0, Te0_s, Te0_t, Te0_x, Te0_y, Te0_p
 real*8     :: r0, r0_s, r0_t, r0_p, r0_x, r0_y, rho, rho_s, rho_t, rho_x, rho_y
@@ -233,16 +233,13 @@ do ms=1, n_gauss
       Ti0_t  = T0_t  * 0.5d0 
       Ti0_p  = T0_p  * 0.5d0 
 
-      Te0    = T0    * 0.5d0 
-      Te0_s  = T0_s  * 0.5d0 
-      Te0_t  = T0_t  * 0.5d0 
-      Te0_p  = T0_p  * 0.5d0 
+      Te0    = Ti0
+      Te0_s  = Ti0_s
+      Te0_t  = Ti0_t
+      Te0_p  = Ti0_p
     endif
 
 
-    T0_x = (   y_t(ms) * T0_s - y_s(ms) * T0_t ) / xjac
-    T0_y = ( - x_t(ms) * T0_s + x_s(ms) * T0_t ) / xjac
-     
     Ti0_x = (   y_t(ms) * Ti0_s - y_s(ms) * Ti0_t ) / xjac
     Ti0_y = ( - x_t(ms) * Ti0_s + x_s(ms) * Ti0_t ) / xjac
     

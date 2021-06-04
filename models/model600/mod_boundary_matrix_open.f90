@@ -381,7 +381,7 @@ do ms=1, n_gauss
                     amat(var_vpar,var_Ti) =   v * ( - cs_Ti) * factor         * dl * Zbig * factor_cs_bnd_integral
                     amat(var_vpar,var_Te) =   v * ( - cs_Te) * factor         * dl * Zbig * factor_cs_bnd_integral
                   else
-                    amat(var_vpar,var_Te) =   v * ( - cs_T)  * factor         * dl * Zbig * factor_cs_bnd_integral
+                    amat(var_vpar,var_T)  =   v * ( - cs_T)  * factor         * dl * Zbig * factor_cs_bnd_integral
                   endif
                 endif  
 

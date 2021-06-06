@@ -52,7 +52,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_simple_bnd_types,                               &
                 tokamak_device, thermalization,                     &
                 F0,                                                 &
-                gamma_sheath_i, gamma_sheath_e,                     &
+                gamma_sheath, gamma_sheath_i, gamma_sheath_e,       &
                 density_reflection,                                 &
                 mach_one_bnd_integral,                              &
                 zjz_0, zjz_1, zj_coef,                              &
@@ -184,15 +184,23 @@ if (my_id .eq. 0) then
   endif
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
-  if (gamma_e_stangeby > -1.d89) then
-    gamma_sheath_e = (gamma-1.d0) * (gamma_e_stangeby - 1.d0)
+  if ( with_TiTe ) then
+    if (gamma_e_stangeby > -1.d89) then
+      gamma_sheath_e = (gamma-1.d0) * (gamma_e_stangeby - 1.d0)
+    else
+      gamma_e_stangeby = gamma_sheath_e / (gamma-1.d0) + 1.d0
+    end if
+    if (gamma_i_stangeby > -1.d89) then
+      gamma_sheath_i = (gamma-1.d0) * (gamma_i_stangeby - 1.d0 - gamma)
+    else
+      gamma_i_stangeby = gamma_sheath_i / (gamma-1.d0) + 1.d0 + gamma
+    end if
   else
-    gamma_e_stangeby = gamma_sheath_e / (gamma-1.d0) + 1.d0
-  end if
-  if (gamma_i_stangeby > -1.d89) then
-    gamma_sheath_i = (gamma-1.d0) * (gamma_i_stangeby - 1.d0 - gamma)
-  else
-    gamma_i_stangeby = gamma_sheath_i / (gamma-1.d0) + 1.d0 + gamma
+    if (gamma_stangeby > -1.d89) then
+      gamma_sheath = (gamma-1.d0) * (0.5d0*gamma_stangeby - 1.d0 - 0.5d0*gamma)
+    else
+      gamma_stangeby = 2.d0 * ( gamma_sheath / (gamma-1.d0) + 1.d0 + 0.5d0 * gamma )
+    end if
   end if
 
   if (sum(nstep_n) .gt. 0) then

@@ -245,6 +245,11 @@ do i=1,n_vertex_max
  enddo
 enddo
 
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
+delta_t = delta_t * tstep / tstep_prev
+
 do ms=1, n_gauss
   do mt=1, n_gauss
 
@@ -774,6 +779,12 @@ do ms=1, n_gauss
      dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dZ_imp_dT = dZ_imp_dT * dT0_corr_dT
 
+     if (Te_corr_eV < 0.1) then
+       Z_imp = 0.
+       dZ_imp_dT = 0.
+       d2Z_imp_dT2 = 0.
+     endif
+
      if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
       write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
       write(*,*) "Te_corr_eV =", Te_corr_eV
@@ -910,7 +921,7 @@ do ms=1, n_gauss
      source_imp = 0.d0                    
      source_bg  = 0.d0
 
-     call get_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
 
      ! This is to detect N/A
      if (source_imp /= source_imp .or. source_bg /= source_bg) then
@@ -1206,8 +1217,7 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y) &
-                                                          * (F0 / BigR) **2                    * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
 !==========================End of viscous heating terms==============================
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2            * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad          * xjac * tstep  &
@@ -1909,7 +1919,7 @@ do ms=1, n_gauss
 !================= End ionization potential energy ===========================
 !============================Behold, the parallel viscous heating terms!=============
                            - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y)              &
-                                                                        * (F0 / BigR) **2        * xjac * theta * tstep  &
+                                                                                                 * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
 !===================== Additional terms from friction terms============
                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &

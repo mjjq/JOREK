@@ -106,10 +106,19 @@ endif
 
 open(20,file="rad_history.dat")
 
-write(20,'(2A20)') 'time', 'total_radiation (MJ)'
+write(20,'(3A20)') 'time', 'tot_rad_power (MW)', 'total_radiation (MJ)'
 
 do i=1,index_start
-  write(20,'(i7,f12.3,1e14.6)') i,xtime(i), xtime_radiation(i)/1.d6
+  write(20,'(i7,f12.3,2e14.6)') i,xtime(i), xtime_rad_power(i)/1.d6, xtime_radiation(i)/1.d6
+enddo
+close(20)
+
+open(20,file="thermal_history.dat")
+
+write(20,'(3A20)') 'time', 'e_th_energy (MJ)', 'i_th_energy (MJ)'
+
+do i=1,index_start
+  write(20,'(i7,f12.3,2e14.6)') i,xtime(i), thermal_e_tot_t(i)/1.d6, thermal_i_tot_t(i)/1.d6
 enddo
 close(20)
 
@@ -156,7 +165,7 @@ endif
 #endif
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume
-!   call update_pellet(0d,node_list,element_list)
+!   call update_pellet(0,node_list,element_list)
 !end if
 !------------------lowshape3bis outside
 !Rplot(1) = 3.0

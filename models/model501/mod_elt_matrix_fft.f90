@@ -273,6 +273,11 @@ do i=1,n_vertex_max
  enddo
 enddo
 
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
+delta_t = delta_t * tstep / tstep_prev
+
 do ms=1, n_gauss
   do mt=1, n_gauss
 
@@ -600,9 +605,9 @@ do ms=1, n_gauss
        dZKpar_dT = 0.d0
      endif
 
-     ! --- Temperature dependent hyper-resistivity resistivity, there is no
-     ! physical reason for this dependence whatsoever, just to keep a constant
-     ! ratio between the resistivity and hyper-resistivity
+     ! --- Temperature dependent hyper-resistivity. There is no physical
+     ! reason for this dependence whatsoever, this is just to keep a constant
+     ! ratio between the resistivity and hyper-resistivity.
      if ( eta_num_T_dependent .and. T0_corr <= T_max_eta) then
        eta_num_T = eta_num * (T0_corr/T_0)**(-1.5d0)
        deta_num_dT = ( - eta_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) ) * dT0_corr_dT
@@ -793,6 +798,12 @@ do ms=1, n_gauss
      dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
      dZ_imp_dT = dZ_imp_dT * dT0_corr_dT                      ! Account for the temperature correction
 
+     if (Te_corr_eV < 0.1) then
+       Z_imp = 0.
+       dZ_imp_dT = 0.
+       d2Z_imp_dT2 = 0.
+     endif
+
      if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
        write(*,*) "Te_corr_eV =", Te_corr_eV
@@ -930,7 +941,7 @@ do ms=1, n_gauss
      source_imp = 0.d0
      source_bg  = 0.d0
 
-     call get_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
 
      ! This is to detect N/A
      if (source_imp /= source_imp .or. source_bg /= source_bg) then
@@ -1234,8 +1245,7 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)  &
-                                                          * (F0 / BigR) **2                    * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
 !==========================End of viscous heating terms==============================
 
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
@@ -2092,8 +2102,7 @@ do ms=1, n_gauss
                        - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) &
-                                                                    * (F0 / BigR) **2           * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
  
                    + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &

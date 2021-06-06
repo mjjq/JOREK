@@ -59,15 +59,16 @@ subroutine preset_parameters
 
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
-  gamma_sheath_e     = 2.33d0 ! sheath transmission factor (electron fluid) in the JOREK definition
+  gamma_sheath_e     = 3.00d0 ! sheath transmission factor (electron fluid) in the JOREK definition
   gamma_e_stangeby   = -1.d99 ! sheath transmission factor (electron fluid) given by Stangeby
-  gamma_sheath_i     = 1.0d0  ! sheath transmission factor (ion fluid) in the JOREK definition
+  gamma_sheath_i     = -1.11d-1! sheath transmission factor (ion fluid) in the JOREK definition
   gamma_i_stangeby   = -1.d99 ! sheath transmission factor (ion fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
   imp_reflection     = 0.d0   ! reflection coefficient for (fluid) impurities
   
   deuterium_adas        = .false. 
+  deuterium_adas_1e20   = .false. 
   old_deuterium_atomic  = .false. 
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
@@ -78,6 +79,9 @@ subroutine preset_parameters
   equil_accuracy       = 1.d-6
   equil_accuracy_freeb = 1.d-6
   axis_srch_radius     = 99.d0
+  delta_psi_GS         = 10000.d0
+  newton_GS_fixbnd     = .false.
+  newton_GS_freebnd    = .true.
   
   n_R          = 0
   n_Z          = 0
@@ -374,6 +378,7 @@ subroutine preset_parameters
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
+  RZ_grid_jump_thres = 0.85                 ! threshold for jump of R-resolution as RZ-grid gets squeezed by limiter contour
   
   ! --- Option to manipulate psi_boundary, switched off by default
   manipulate_psi_map(:,1) = 0.
@@ -430,16 +435,19 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  eqdsk_psi_fact = 1.d0
   extend_existing_grid = .false.
   n_wall_blocks        = 0
   corner_block         = 0
   n_ext_block          = 0
+  n_ext_equidistant    = .false.
   n_block_points_left  = 0
   R_block_points_left  = 0.d0
   Z_block_points_left  = 0.d0
   n_block_points_right = 0
   R_block_points_right = 0.d0
   Z_block_points_right = 0.d0
+  use_simple_bnd_types = .false.
  
  !======================MB rotation profile
   V_0 = 0.d0
@@ -454,7 +462,6 @@ subroutine preset_parameters
   ns_Z      =  1.5d0
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
-  ns_sig    =  0.05
   ns_deltaphi =  0.5
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
@@ -488,7 +495,7 @@ subroutine preset_parameters
   ns_phi_rotate   = 0.0
   tor_frequency   = 0.0
   n_spi           = 0
-  n_spi_tot       = 0
+  n_spi(1)        = 1
   n_inj           = 1
   spi_rnd_seed    = 0
   spi_abl_model   = 0
@@ -513,6 +520,15 @@ subroutine preset_parameters
   jw1=5.d-1 ! inner cut-off
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
+  
+  !> @name Mode families preconditioner parameters
+  n_mode_families      = (n_tor + 1)/2
+  autodistribute_modes = .true.
+  mode_families_modes  = 0
+  modes_per_family     = 0
+  weights_per_family   = 1.0
+  autodistribute_ranks = .true.
+  ranks_per_family     = 0
 
 !===================== Thermalization flag========
 

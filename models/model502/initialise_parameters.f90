@@ -3,10 +3,6 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use data_structure
-use constants
-use mpi_mod
-use corr_neg
 use mumps_module,  only: no_zeros_mumps, mumps_ordering
 use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
     pastix_maxthrd
@@ -21,28 +17,7 @@ integer,                      intent(in) :: my_id
 character(len=*),             intent(in) :: filename
 real*8 :: vacuum_fraction, b_over_a, a_over_b
 
-! --- Local variables
-
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
-
-integer :: ierr,err,ferr,i,ifail,i_elm, n_spi_begin
-
-real*8, dimension(2) :: P, P_s, P_t, P_phi
-real*8  :: R, R_s, R_t, Z, Z_s, Z_t
-real*8  :: s_out,t_out,R_out,Z_out
-
-real*8  :: n_SI, T_eV, n_corr, T_corr
-real*8  :: spi_gd_angle_01, spi_gd_angle_02        !The dispersion angles for each spi
-real*8  :: spi_rotation_01, spi_rotation_02        !The rotation angle from spi coordinate to real coordinate
-real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp
-real*8  :: spi_Vel_x, spi_Vel_y, spi_Vel_z         !Spi velocity in injection coordinate
-real*8  :: spi_R_inj, spi_Z_inj, spi_phi_inj       !Injection position of SPI 
-real*8  :: spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_radius_tmp
-real*8  :: sign_corr, real_total_quantity
-real*8, allocatable :: rnd(:)                      !The random number array 
-real*8, allocatable :: shard_size(:)               !The shard size array
-
+integer :: ierr,err,i
 ! --- Namelist with input parameters.                                                                                                                        
 namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
@@ -65,11 +40,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
-                grid_to_wall, RZ_grid_inside_wall,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
                 n_wall_blocks, n_ext_block,                         &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device, gamma_i_stangeby, gamma_sheath_e,   &
                 F0,gamma_sheath_i,gamma_e_stangeby,                 &
                 mach_one_bnd_integral, Vpar_smoothing,              &
@@ -137,7 +114,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &
                 imp_reflection, neutral_reflection, rho_min,        &
-                ns_sig, ns_deltaphi, ksi_ion, spi_rnd_seed,         &
+                ns_deltaphi, ksi_ion, spi_rnd_seed,                 &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
@@ -162,11 +139,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
+                delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
                 pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max
+                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family
 
- if (my_id .eq. 0) then
+if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
   call preset_parameters()
 
@@ -223,14 +205,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)
   if (gamma_e_stangeby > -1.d89) then
-    gamma_sheath_e = (gamma-1.d0) * (0.5d0*gamma_e_stangeby - 1.d0)
+    gamma_sheath_e = (gamma-1.d0) * (gamma_e_stangeby - 1.d0)
   else
-    gamma_e_stangeby = 2.d0 * ( gamma_sheath_e / (gamma-1.d0) + 1.d0 )
+    gamma_e_stangeby = gamma_sheath_e / (gamma-1.d0) + 1.d0
   end if
   if (gamma_i_stangeby > -1.d89) then
-    gamma_sheath_i = (gamma-1.d0) * (0.5d0*gamma_i_stangeby - 1.d0)
+    gamma_sheath_i = (gamma-1.d0) * (gamma_i_stangeby - 1.d0 - gamma)
   else
-    gamma_i_stangeby = 2.d0 * ( gamma_sheath_i / (gamma-1.d0) + 1.d0 )
+    gamma_i_stangeby = gamma_sheath_i / (gamma-1.d0) + 1.d0 + gamma
   end if
 
   if (sum(nstep_n) .gt. 0) then
@@ -245,22 +227,21 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
 
   call allocate_live_data()
 
-endif
 
-keep_n0_const  = ( keep_n0_const .or. linear_run )
-! --- Read numerical profiles for rho, T, and ff'.
-call read_num_profiles(my_id)
+  keep_n0_const  = ( keep_n0_const .or. linear_run )
 
-! --- Determine the derivatives of the numerical input profiles.
-call derive_num_profiles(my_id)
+  ! --- Read numerical profiles for rho, T, and ff'.
+  call read_num_profiles(my_id)
 
-! --- For now the diamagnetic term has not been implemented properly
-if (tauIC .ne. 0.0) then
-  tauIC = 0.0
-  write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 501, setting tauIC = 0 now."
-endif
+  ! --- Determine the derivatives of the numerical input profiles.
+  call derive_num_profiles(my_id)
 
-if ( my_id == 0 ) then
+  ! --- For now the diamagnetic term has not been implemented properly
+  if (tauIC .ne. 0.0) then
+    tauIC = 0.0
+    write(*,*) "WARNING! The diamagnetic term has not been implemented properly for model 502, setting tauIC = 0 now."
+  endif
+
   if (2*PI/(n_tor*n_period) >= ns_deltaphi .and. my_id == 0) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
     if (t_now > minval(t_ns)) then
@@ -283,7 +264,7 @@ if ( my_id == 0 ) then
   
   !if (using_spi) call init_spi()
   if (using_spi) call init_spi_all()
-end if
+endif
 
 return
 end subroutine initialise_parameters

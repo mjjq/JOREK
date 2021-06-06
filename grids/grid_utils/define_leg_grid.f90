@@ -253,7 +253,7 @@ else
     R_end(3) = stpts%RLeftCorn_UpperInnerLeg;  Z_end(3) = stpts%ZLeftCorn_UpperInnerLeg
     i_surf(3) = n_flux + n_open + n_outer + n_inner
     n_seg = n_up_leg
-    if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
+    if ( (xcase .eq. 2) .or. ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) ) ) then
       n_surf_tot = n_inner + n_open + n_up_priv + 1
       allocate(i_flux(n_surf_tot))
       do i=1,n_up_priv
@@ -279,8 +279,14 @@ else
         i_flux(n_up_priv+1+i) = n_flux + n_open + n_outer +i
       enddo
     endif
-    n_xpoint_1 = 7 ! please see "create_x_node.f90" if confused
-    n_xpoint_2 = 8
+    ! --- please see "create_x_node.f90" if confused
+    if (xcase .eq. 2) then
+      n_xpoint_1 = 3
+      n_xpoint_2 = 4
+    else
+      n_xpoint_1 = 7
+      n_xpoint_2 = 8
+    endif
   ! --- inner or outer leg?
   else
     R_end(1) = stpts%RLeftCorn_UpperOuterLeg;  Z_end(1) = stpts%ZLeftCorn_UpperOuterLeg
@@ -290,7 +296,7 @@ else
     i_surf(3) = n_flux + n_open + n_outer
     n_seg = n_up_leg
     if (n_up_leg_out .gt. 0) n_seg = n_up_leg_out
-    if ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis)) ) then
+    if ( (xcase .eq. 2) .or. ( (xcase .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(2)-psi_axis)) ) ) then
       n_surf_tot = n_outer + n_open + n_up_priv + 1
       allocate(i_flux(n_surf_tot))
       do i=1,n_up_priv
@@ -316,8 +322,14 @@ else
         i_flux(n_up_priv+1+i) = n_flux + n_open + i
       enddo
     endif
-    n_xpoint_1 = 6 ! please see "create_x_node.f90" if confused
-    n_xpoint_2 = 5
+    ! --- please see "create_x_node.f90" if confused
+    if (xcase .eq. 2) then
+      n_xpoint_1 = 2
+      n_xpoint_2 = 1
+    else
+      n_xpoint_1 = 6
+      n_xpoint_2 = 5
+    endif
   endif
   SIG_0 = SIG_up_leg_0
   SIG_1 = SIG_up_leg_1
@@ -956,6 +968,7 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
   real*8  :: R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss
   real*8  :: Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss
   real*8  :: surface_length, length, length_sum, length_seg
+  real*8, parameter :: tol_find = 5.d-4
   
   ! --- Find the corresponding end points on each surface
   allocate(surface_list_tmp%psi_values(1))
@@ -1058,22 +1071,21 @@ subroutine segment_surface_length(node_list,element_list,surface, R_beg, Z_beg, 
           call interp_RZ(node_list,element_list,i_elm,rr,ss,R3,dR3_dr,dR3_ds,dR3_drs,dR3_drr,dR3_dss, &
                                                             Z3,dZ3_dr,dZ3_ds,dZ3_drs,dZ3_drr,dZ3_dss)
           diff_beg = sqrt( (R3-R_beg)**2 + (Z3-Z_beg)**2 )
-          if (diff_beg .le. diff_min_beg) then
-            if (.not. xpoint_surface) then
-              diff_min_beg = diff_beg
-              i_part_beg  = i_part
-              i_piece_beg = i_piece
-              st_beg      = st_find(j_find)
-            else
-              if (i_part .eq. i_part_end) then
-                diff_pieces = abs(i_piece-i_piece_end)
-                if (diff_pieces .lt. diff_pieces_min) then
-                  diff_pieces_min = diff_pieces
-                  diff_min_beg = diff_beg
-                  i_part_beg  = i_part
-                  i_piece_beg = i_piece
-                  st_beg      = st_find(j_find)
-                endif
+          if ( (.not. xpoint_surface) .and. (diff_beg .le. diff_min_beg) ) then
+            diff_min_beg = diff_beg
+            i_part_beg  = i_part
+            i_piece_beg = i_piece
+            st_beg      = st_find(j_find)
+          endif
+          if ( (xpoint_surface) .and. (diff_beg .le. tol_find) ) then
+            if (i_part .eq. i_part_end) then
+              diff_pieces = abs(i_piece-i_piece_end)
+              if (diff_pieces .lt. diff_pieces_min) then
+                diff_pieces_min = diff_pieces
+                diff_min_beg = diff_beg
+                i_part_beg  = i_part
+                i_piece_beg = i_piece
+                st_beg      = st_find(j_find)
               endif
             endif
           endif

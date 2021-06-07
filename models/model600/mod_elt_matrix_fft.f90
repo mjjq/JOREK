@@ -455,6 +455,19 @@ do i=1,n_vertex_max
             Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
             dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
 
+            T0    = Ti0    + Te0 
+            T0_x  = Ti0_x  + Te0_x 
+            T0_y  = Ti0_y  + Te0_y
+            T0_p  = Ti0_p  + Te0_p 
+            T0_s  = Ti0_s  + Te0_s 
+            T0_t  = Ti0_t  + Te0_t 
+            T0_ss = Ti0_ss + Te0_ss
+            T0_tt = Ti0_tt + Te0_tt
+            T0_st = Ti0_st + Te0_st
+
+            T0_corr     = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
+            dT0_corr_dT = dcorr_neg_temp_dT(T0) ! Improve the correction
+
           else ! (with_TiTe) ***********************************************************************
 
             T0    = eq_g(mp,var_T,ms,mt)
@@ -480,6 +493,9 @@ do i=1,n_vertex_max
             Ti0_tt = T0_tt / 2.d0
             Ti0_st = T0_st / 2.d0
 
+            Ti0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
+            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+ 
             Te0    = Ti0
             Te0_x  = Ti0_x
             Te0_y  = Ti0_y
@@ -489,6 +505,10 @@ do i=1,n_vertex_max
             Te0_ss = Ti0_ss
             Te0_tt = Ti0_tt
             Te0_st = Ti0_st
+
+            Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
+            dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
+
 
           end if ! (with_TiTe) *********************************************************************
 
@@ -515,28 +535,28 @@ do i=1,n_vertex_max
           end if
 
           if (with_neutrals) then
-            rn0    = eq_g(mp,var_rhon,ms,mt)
-            rn0_x  = (   y_t(ms,mt) * eq_s(mp,var_rhon,ms,mt) - y_s(ms,mt) * eq_t(mp,var_rhon,ms,mt) ) / xjac    
-            rn0_y  = ( - x_t(ms,mt) * eq_s(mp,var_rhon,ms,mt) + x_s(ms,mt) * eq_t(mp,var_rhon,ms,mt) ) / xjac   
-            rn0_p  = eq_p(mp,var_rhon,ms,mt)                                                             
-            rn0_s  = eq_s(mp,var_rhon,ms,mt)                                                             
-            rn0_t  = eq_t(mp,var_rhon,ms,mt)                                                             
-            rn0_ss = eq_ss(mp,var_rhon,ms,mt)                                                            
-            rn0_st = eq_st(mp,var_rhon,ms,mt)                                                            
-            rn0_tt = eq_tt(mp,var_rhon,ms,mt)  
+            rn0      = eq_g(mp,var_rhon,ms,mt)
+            rn0_x    = (   y_t(ms,mt) * eq_s(mp,var_rhon,ms,mt) - y_s(ms,mt) * eq_t(mp,var_rhon,ms,mt) ) / xjac    
+            rn0_y    = ( - x_t(ms,mt) * eq_s(mp,var_rhon,ms,mt) + x_s(ms,mt) * eq_t(mp,var_rhon,ms,mt) ) / xjac   
+            rn0_p    = eq_p(mp,var_rhon,ms,mt)                                                             
+            rn0_s    = eq_s(mp,var_rhon,ms,mt)                                                             
+            rn0_t    = eq_t(mp,var_rhon,ms,mt)                                                             
+            rn0_ss   = eq_ss(mp,var_rhon,ms,mt)                                                            
+            rn0_st   = eq_st(mp,var_rhon,ms,mt)                                                            
+            rn0_tt   = eq_tt(mp,var_rhon,ms,mt)  
+            rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...
           else
-            rn0    = 0.d0
-            rn0_x  = 0.d0  
-            rn0_y  = 0.d0 
-            rn0_p  = 0.d0
-            rn0_s  = 0.d0
-            rn0_t  = 0.d0
-            rn0_ss = 0.d0
-            rn0_st = 0.d0
-            rn0_tt = 0.d0
+            rn0      = 0.d0
+            rn0_x    = 0.d0  
+            rn0_y    = 0.d0 
+            rn0_p    = 0.d0
+            rn0_s    = 0.d0
+            rn0_t    = 0.d0
+            rn0_ss   = 0.d0
+            rn0_st   = 0.d0
+            rn0_tt   = 0.d0
+            rn0_corr = 0.d0 
           endif
-
-          rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...
      
           rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
             + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
@@ -1105,6 +1125,12 @@ do i=1,n_vertex_max
             Omega_tor0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
           endif
 
+          !-------------------------------------------
+          ! --- Normalisation of the ionization energy cost for Deuterium
+          !------------------------------------------- 
+      
+          ksiion = central_density * 1.d20 * ksi_ion
+ 
           if (with_neutrals) then
             !-------------------------------------------------------------------------------
             !---------- Atomic data for neutrals and background constant impurity ----------
@@ -1121,12 +1147,7 @@ do i=1,n_vertex_max
               dLradDcont_dT = dLradDcont_dT / 2.d0
             endif
 
-            !-------------------------------------------
-            ! --- Normalisation of the ionization energy cost for Deuterium
-            !------------------------------------------- 
-      
-            ksiion = central_density * 1.d20 * ksi_ion
-      
+     
             !--------------------------------------------------------
             ! --- Source of neutrals, e.g. from MGI/SPI
             !--------------------------------------------------------
@@ -2350,7 +2371,9 @@ do i=1,n_vertex_max
                       amat(var_vpar,var_vpar) = amat(var_vpar,var_vpar) + v * amu_neo_prof(ms,mt) * BB2 * Btheta2/(Btheta2+epsil) * r0 * vpar * BigR * xjac * tstep * theta 
                     endif
 
-                    amat(var_vpar,var_rhon) = (1.d0 - delta_n_convection) * v *(r0_corr * rhon * Sion_T) * vpar0 * BB2 * BigR * xjac * theta * tstep
+                    if (with_neutrals) then
+                      amat(var_vpar,var_rhon) = (1.d0 - delta_n_convection) * v *(r0_corr * rhon * Sion_T) * vpar0 * BB2 * BigR * xjac * theta * tstep
+                    endif
 
                   end if ! (with_vpar)
 

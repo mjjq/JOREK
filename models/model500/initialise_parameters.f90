@@ -121,7 +121,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
-                spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
+                spi_L_inj, spi_L_inj_diff,                          &
+                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg, output_prad_phi,       &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &

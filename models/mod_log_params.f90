@@ -447,6 +447,23 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'ZK_e_perp_num         ', ZK_e_perp_num
 #endif
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
+  write(*,REAL_FMT) 'tgnum_psi             ', tgnum_psi 
+  write(*,REAL_FMT) 'tgnum_u               ', tgnum_u   
+  write(*,REAL_FMT) 'tgnum_zj              ', tgnum_zj  
+  write(*,REAL_FMT) 'tgnum_w               ', tgnum_w   
+  write(*,REAL_FMT) 'tgnum_rho             ', tgnum_rho 
+  write(*,REAL_FMT) 'tgnum_T               ', tgnum_T   
+  write(*,REAL_FMT) 'tgnum_Ti              ', tgnum_Ti  
+  write(*,REAL_FMT) 'tgnum_Te              ', tgnum_Te  
+  write(*,REAL_FMT) 'tgnum_vpar            ', tgnum_vpar
+  write(*,REAL_FMT) 'tgnum_rhon            ', tgnum_rhon
+  write(*,REAL_FMT) 'tgnum_nre             ', tgnum_nre 
+  write(*,REAL_FMT) 'tgnum_AR              ', tgnum_AR  
+  write(*,REAL_FMT) 'tgnum_AZ              ', tgnum_AZ  
+  write(*,REAL_FMT) 'tgnum_A3              ', tgnum_A3  
+
+
+
   write(*,LOGI_FMT) 'keep_current_prof     ', keep_current_prof
   write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg

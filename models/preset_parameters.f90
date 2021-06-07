@@ -359,6 +359,20 @@ subroutine preset_parameters
   ! ------------------------------------------------------------------------
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
+  tgnum_psi          = 0.d0          
+  tgnum_u            = 0.d0
+  tgnum_zj           = 0.d0
+  tgnum_w            = 0.d0
+  tgnum_rho          = 0.d0
+  tgnum_T            = 0.d0
+  tgnum_Ti           = 0.d0
+  tgnum_Te           = 0.d0
+  tgnum_vpar         = 0.d0
+  tgnum_rhon         = 0.d0
+  tgnum_nre          = 0.d0
+  tgnum_AR           = 0.d0
+  tgnum_AZ           = 0.d0
+  tgnum_A3           = 0.d0
 
   keep_current_prof  = .true.               ! Keep the current_source term
   

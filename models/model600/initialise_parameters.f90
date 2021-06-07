@@ -109,7 +109,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &
-                tgnum,  pastix_pivot, max_steps_noUpdate,           &
+                pastix_pivot, max_steps_noUpdate,                   &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
@@ -155,7 +155,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family
+                ranks_per_family,                                   &
+                tgnum_psi, tgnum_u, tgnum_zj, tgnum_w, tgnum_rho,   &
+                tgnum_T, tgnum_Ti, tgnum_Te, tgnum_vpar, tgnum_rhon,&
+                tgnum_nre, tgnum_AR, tgnum_AZ, tgnum_A3  
 
 if (my_id .eq. 0) then
 

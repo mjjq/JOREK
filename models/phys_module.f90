@@ -652,6 +652,20 @@ module phys_module
 
   !> @name Taylor-Galerkin Stabilisation coefficients
   real*8              :: tgnum(n_var)   !< Coefficients for Taylor Galerkin stabilization for each equation separately
+  real*8              :: tgnum_psi      !< Same as previous line, but avoiding equation indexing for model families 
+  real*8              :: tgnum_u      
+  real*8              :: tgnum_zj     
+  real*8              :: tgnum_w      
+  real*8              :: tgnum_rho    
+  real*8              :: tgnum_T      
+  real*8              :: tgnum_Ti     
+  real*8              :: tgnum_Te     
+  real*8              :: tgnum_vpar   
+  real*8              :: tgnum_rhon   
+  real*8              :: tgnum_nre    
+  real*8              :: tgnum_AR     
+  real*8              :: tgnum_AZ    
+  real*8              :: tgnum_A3    
 
   !> @name Flag to determine whether or not we keep current source term  
   logical             :: keep_current_prof !< Artificial current source to approximately keep the initial current profile, i.e., \f$\eta(j-j0)\f$?

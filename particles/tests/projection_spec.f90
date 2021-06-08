@@ -283,7 +283,7 @@ subroutine test_omp_projection_matrix_construction
 
   integer            :: i, j, n_threads
   real*8, allocatable, dimension(:,:) :: A_par, A_seq
-  integer            :: mpi_comm_world, mpi_comm_n, mpi_comm_master, i_tor_local, n_tor_local, ierr
+  integer            :: mpi_comm_n, mpi_comm_master, i_tor_local, n_tor_local, ierr
   character(len=11)  :: s
   n_threads = 1
 

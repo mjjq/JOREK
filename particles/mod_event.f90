@@ -13,7 +13,7 @@ public :: TICK
 public :: new_event_ptr
 
 !> @name Time precision
-real*8,  parameter :: TICK             = 1d-13                    !< Time precision for events [s]
+real*8,  parameter :: TICK             = 1d-12                    !< Time precision for events [s]
 
 !> Action abstract type, representing anything that can be done to a simulation
 type, abstract :: action

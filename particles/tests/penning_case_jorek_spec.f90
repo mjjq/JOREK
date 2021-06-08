@@ -27,6 +27,7 @@ subroutine test_square_10_10
   call default_square_grid(f%node_list, f%element_list, 10)
   call jorek_penning_fields(f%node_list, f%element_list)
   call verify_solution(f)
+  write(*,*) ' completed test_square_10_10'
 end subroutine test_square_10_10
 
 subroutine test_polar_30_32
@@ -35,6 +36,7 @@ subroutine test_polar_30_32
   call default_polar_grid(f%node_list, f%element_list, 32)
   call jorek_penning_fields(f%node_list, f%element_list)
   call verify_solution(f)
+  write(*,*) ' completed test_polar_30_32'
 end subroutine test_polar_30_32
 
 ! flux aligned grid does not work since there is no axis in the domain (and there aren't really flux surfaces in any useful way)
@@ -58,10 +60,12 @@ subroutine verify_solution(f)
     call interp_RZ(f%node_list,f%element_list,i_elm,0.5d0,0.5d0,R,Z)
 
     E_ref = ref%E([R,Z,0.d0], 0.d0)
+    if (i_elm .eq. f%element_list%n_elements/2) write(*,'(A,i3,6e)') ' E : ',i_elm,E_ref,E
     call assert_equals(E_ref(1), E(1), 1d-10, 'E_r')
     call assert_equals(E_ref(2), E(2), 3d-11, 'E_z')
     call assert_equals(E_ref(3), E(3), 0.d0, 'E_phi')
     B_ref = ref%B([R,Z,0.d0], 0.d0)
+    if (i_elm .eq. f%element_list%n_elements/2) write(*,'(A,i3,6e)') ' B : ',i_elm,B_ref,B
     call assert_equals(B_ref(1), B(1), 2d-11, 'B_r')
     call assert_equals(B_ref(2), B(2), 2d-11, 'B_z')
     call assert_equals(B_ref(3), B(3), 2*F0, 'B_phi') ! includes the cheat factor

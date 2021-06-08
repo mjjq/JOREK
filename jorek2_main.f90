@@ -439,7 +439,7 @@ required = 0
     write(*,*) '  No compression will be used in this run.'
   endif
 #endif
-  call check_preconditioner_consistency
+  if (nstep .gt. 0)   call check_preconditioner_consistency
   
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()

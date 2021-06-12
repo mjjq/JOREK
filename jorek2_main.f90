@@ -416,7 +416,7 @@ required = 0
   end if
   if ( tauIC .ne. 0.d0 ) then
     write(*,*) 'WARNING: tauIC in model401 has been modified to match model303. '
-    write(*,*) '         tauIC should be = m_{ion} / ( e F_0 sqrt(\mu_0 \rho_0) (1. + T_i/T_e) )'
+    write(*,*) '         tauIC should be = m_{ion} / ( e * F0 * sqrt_mu0_rho0 * (1. + T_i/T_e) )'
   endif
   if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
     write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '

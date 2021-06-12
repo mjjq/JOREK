@@ -414,6 +414,10 @@ required = 0
     write(*,*) '  Consider testing, whether you get better performance by increasing the number'
     write(*,*) '  of MPI tasks and reducing the number of OpenMP threads in the jobscript.'
   end if
+  if ( tauIC .ne. 0.d0 ) then
+    write(*,*) 'WARNING: tauIC in model401 has been modified to match model303. '
+    write(*,*) '         tauIC should be = m_{ion} / ( e F_0 sqrt(\mu_0 \rho_0) (1. + T_i/T_e) )'
+  endif
   if (abs(eta-eta_ohmic)/(eta+eta_ohmic+1.d-12) > 1.d-6) then
     write(*,*) 'WARNING: The resistivity eta and the resistivity used for Ohmic heating '
     write(*,*) '  eta_ohm are not the same. No problem if you know what you are doing,  ' 

@@ -34,15 +34,15 @@ particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_p
      + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))&
      + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
 
-if ( with_TiTe ) then 
-  heat_source_i     = heatsource_i     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-        + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
-
-  heat_source_e     = heatsource_e     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-        + heatsource_gauss_e * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
-else
-  heat_source_i     = heatsource       * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-        + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+if ( present(heat_source_e) ) then 
+  heat_source_i     = heatsource_i * ( 0.5d0 - 0.5d0*tanh((psi_n - heatsource_i_psin)/heatsource_i_sig))  &
+        + heatsource_gauss_i * exp(-(psi_n  - heatsource_gauss_i_psin)**2/(heatsource_gauss_i_sig**2))     
+                                                                                                           
+  heat_source_e     = heatsource_e * ( 0.5d0 - 0.5d0*tanh((psi_n - heatsource_e_psin)/heatsource_e_sig))  &
+        + heatsource_gauss_e * exp(-(psi_n  - heatsource_gauss_e_psin)**2/(heatsource_gauss_e_sig**2))     
+else                                                                                                       
+  heat_source_i     = heatsource   * ( 0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin  )/heatsource_sig  ))  &
+        + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin  )**2/(heatsource_gauss_sig**2  ))
 end if 
 
 return

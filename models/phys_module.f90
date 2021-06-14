@@ -178,15 +178,23 @@ module phys_module
   real*8  :: neutral_line_R_end(10)    !< neutral inflow source (end point of line source)
   real*8  :: neutral_line_Z_end(10)    !< neutral inflow source
   real*8  :: heatsource                !< Heat source amplitude
+  real*8  :: heatsource_e              !< Electron heat source amplitude
+  real*8  :: heatsource_i              !< Ion heat source amplitude
   real*8  :: heatsource_psin           !< Position around which the source is ramped down
   real*8  :: heatsource_sig            !< Width over which the source is ramped down
-  real*8  :: heatsource_i              !< Ion heat source amplitude
-  real*8  :: heatsource_e              !< Electron heat source amplitude
+  real*8  :: heatsource_e_psin         !< Position around which the electron source is ramped down
+  real*8  :: heatsource_e_sig          !< Width over which the electron source is ramped down
+  real*8  :: heatsource_i_psin         !< Position around which the ion source is ramped down
+  real*8  :: heatsource_i_sig          !< Width over which the ion source is ramped down
   real*8  :: heatsource_gauss          !< Additional Gaussian heat source amplitude
-  real*8  :: heatsource_gauss_e        !< Gaussian heat source for electrons
-  real*8  :: heatsource_gauss_i        !< Gaussiam heat source for ions
   real*8  :: heatsource_gauss_psin     !< Position around which Gaussian source is located
   real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
+  real*8  :: heatsource_gauss_e        !< Gaussian heat source for electrons
+  real*8  :: heatsource_gauss_i        !< Gaussian heat source for ions
+  real*8  :: heatsource_gauss_e_psin   !< Position around which electrons Gaussian source is located
+  real*8  :: heatsource_gauss_e_sig    !< Width over which electrons Gaussian source extends
+  real*8  :: heatsource_gauss_i_psin   !< Position around which ions Gaussian source is located
+  real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num, Zk_i_perp_num, Zk_e_perp_num

@@ -99,13 +99,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent,                                  & 
-                heatsource_psin, heatsource_sig,                    &
+                heatsource_psin,   heatsource_sig,                  &
+                heatsource_e_psin, heatsource_e_sig,                &
+                heatsource_i_psin, heatsource_i_sig,                &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
-                particlesource_gauss, heatsource_gauss,             &
-                heatsource_gauss_i, heatsource_gauss_e,             &
-                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss,    heatsource_gauss,          &
+                heatsource_gauss_i,      heatsource_gauss_e,        &
+                heatsource_gauss_psin,   heatsource_gauss_sig,      &
+                heatsource_gauss_i_psin, heatsource_gauss_i_sig,    &
+                heatsource_gauss_e_psin, heatsource_gauss_e_sig,    &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 produce_live_data, gmres, gmres_max_iter,           &
                 gmres_m, gmres_4, gmres_tol, iter_precon,           &

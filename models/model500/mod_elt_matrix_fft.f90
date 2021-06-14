@@ -7,7 +7,7 @@ contains
 #include "corr_neg_include.f90"
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max, only_term)
+  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max, get_terms)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -35,7 +35,7 @@ type (type_node)      :: nodes(n_vertex_max)
 
 integer, intent(in)            :: tid
 integer, intent(in)            :: i_tor_min, i_tor_max
-integer, intent(in), optional  :: only_term(2)
+logical, intent(in), optional  :: get_terms   
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
@@ -124,8 +124,9 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer*8  :: plan
 
-integer, parameter :: maxterms = 100
-real*8     :: factor(n_var,maxterms)
+integer, parameter :: max_terms = 20
+integer    :: max_terms_loop, i_term
+real*8     :: factor(n_var,max_terms)
 
 integer    :: i_v, i_loc, j_loc
 
@@ -151,12 +152,11 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
-if ( present(only_term) ) then
-  factor(:,:) = 0.d0
-  factor(only_term(1),only_term(2)) = 1.d0
+if (present(get_terms)) then
+  max_terms_loop = max_terms
 else
-  factor(:,:) = 1.d0
-end if
+  max_terms_loop = 1
+endif
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -166,6 +166,7 @@ RHS_p = 0.d0
 RHS_k = 0.d0
 ELM   = 0.d0
 RHS   = 0.d0
+
 
 epsil=1.d-3
 zk_par_num = 0.d0
@@ -872,6 +873,15 @@ do i=1,n_vertex_max
             v_ps0_x  = v_xx  * ps0_y - v_xy  * ps0_x + v_x  * ps0_xy - v_y * ps0_xx
             v_ps0_y  = v_xy  * ps0_y - v_yy  * ps0_x + v_x  * ps0_yy - v_y * ps0_xy
 
+            do i_term=1, max_terms_loop
+
+            if (present(get_terms)) then
+              factor          = 0.d0
+              factor(:,i_term) = 1.d0
+            else
+              factor          = 1.d0
+            endif
+
             !###################################################################################################
             !#  equation 1   (induction equation)                                                              #
             !###################################################################################################
@@ -1153,6 +1163,25 @@ do i=1,n_vertex_max
               RHS_k(mp,ij6) = RHS_k(mp,ij6) + rhs_ij_k(6) * wst
               RHS_k(mp,ij7) = RHS_k(mp,ij7) + rhs_ij_k(7) * wst
               RHS_k(mp,ij8) = RHS_k(mp,ij8) + rhs_ij_k(8) * wst
+
+              !--- THIS IS ONLY USED FOR DIAGNOSTIC PURPOSES-------------------------
+              !--- ELM structures are re-used to plot separate terms in vtk ---------
+              if ( present(get_terms) ) then
+                ELM_p(mp,i_term,ij1) = ELM_p(mp,i_term,ij1) + rhs_ij(1) * wst
+                ELM_p(mp,i_term,ij2) = ELM_p(mp,i_term,ij2) + rhs_ij(2) * wst
+                ELM_p(mp,i_term,ij3) = ELM_p(mp,i_term,ij3) + rhs_ij(3) * wst
+                ELM_p(mp,i_term,ij4) = ELM_p(mp,i_term,ij4) + rhs_ij(4) * wst
+                ELM_p(mp,i_term,ij5) = ELM_p(mp,i_term,ij5) + rhs_ij(5) * wst
+                ELM_p(mp,i_term,ij6) = ELM_p(mp,i_term,ij6) + rhs_ij(6) * wst
+                ELM_p(mp,i_term,ij7) = ELM_p(mp,i_term,ij7) + rhs_ij(7) * wst
+                ELM_p(mp,i_term,ij8) = ELM_p(mp,i_term,ij8) + rhs_ij(8) * wst
+
+                ELM_k(mp,i_term,ij5) = ELM_k(mp,i_term,ij5) + rhs_ij_k(5) * wst
+                ELM_k(mp,i_term,ij6) = ELM_k(mp,i_term,ij6) + rhs_ij_k(6) * wst
+                ELM_k(mp,i_term,ij7) = ELM_k(mp,i_term,ij7) + rhs_ij_k(7) * wst
+                ELM_k(mp,i_term,ij8) = ELM_k(mp,i_term,ij8) + rhs_ij_k(8) * wst
+              endif
+              !----------------------------------------------------------------------
             else
               ij1 = index_ij
               ij2 = index_ij + 1*n_tor_local
@@ -1171,9 +1200,25 @@ do i=1,n_vertex_max
               RHS(ij6) = RHS(ij6) + (rhs_ij(6) + rhs_ij_k(6)) * wst
               RHS(ij7) = RHS(ij7) + (rhs_ij(7) + rhs_ij_k(7)) * wst
               RHS(ij8) = RHS(ij8) + (rhs_ij(8) + rhs_ij_k(8)) * wst
+
+              !--- THIS IS ONLY USED FOR DIAGNOSTIC PURPOSES-------------------------
+              !--- ELM structure is re-used to plot separate terms in vtk -----------             
+              if ( present(get_terms) ) then
+                ELM(i_term,ij1) = ELM(i_term,ij1) + (rhs_ij(1) + rhs_ij_k(1)) * wst
+                ELM(i_term,ij2) = ELM(i_term,ij2) + (rhs_ij(2) + rhs_ij_k(2)) * wst
+                ELM(i_term,ij3) = ELM(i_term,ij3) + (rhs_ij(3) + rhs_ij_k(3)) * wst
+                ELM(i_term,ij4) = ELM(i_term,ij4) + (rhs_ij(4) + rhs_ij_k(4)) * wst
+                ELM(i_term,ij5) = ELM(i_term,ij5) + (rhs_ij(5) + rhs_ij_k(5)) * wst
+                ELM(i_term,ij6) = ELM(i_term,ij6) + (rhs_ij(6) + rhs_ij_k(6)) * wst
+                ELM(i_term,ij7) = ELM(i_term,ij7) + (rhs_ij(7) + rhs_ij_k(7)) * wst
+                ELM(i_term,ij8) = ELM(i_term,ij8) + (rhs_ij(8) + rhs_ij_k(8)) * wst
+              endif
+              !----------------------------------------------------------------------
             endif
             
-            if ( present(only_term) ) cycle
+            enddo ! max_terms_loop for diagnostic purposes
+
+            if ( present(get_terms) ) cycle
 
             do k=1,n_vertex_max
 
@@ -2042,6 +2087,7 @@ do i=1,n_vertex_max
       enddo ! ms loop
     enddo ! mt loop
 
+    if (present(get_terms)) cycle
 
     if (use_fft) then
 
@@ -2261,51 +2307,107 @@ do i=1,n_vertex_max
   enddo ! j loop (n_order+1)
 enddo ! i loop (n_vertex)
 
+
 if (.NOT. use_fft) return
 
-ELM = 0.5d0 * ELM
+!--- THIS IS ONLY USED FOR DIAGNOSTIC PURPOSES-------------------------
+!--- ELM structure is re-used to plot separate terms in vtk ----------- 
+if (present(get_terms)) then
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+  do i_term=1, max_terms
 
-  in_fft = RHS_p(1:n_plane,j)
-#ifdef USE_FFTW
-  call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
-#else
-  call my_fft(in_fft, out_fft, n_plane)
-#endif
+    do j=1, n_vertex_max*n_var*(n_order+1)
     
-  index = n_tor*(j-1) + 1
-  RHS(index) = real(out_fft(1))
+      in_fft = ELM_p(1:n_plane,i_term, j)
+    #ifdef USE_FFTW
+      call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+    #else
+      call my_fft(in_fft, out_fft, n_plane)
+    #endif
+        
+      index = n_tor*(j-1) + 1
+      ELM(i_term,index) = real(out_fft(1))
+    
+      do k=2,(n_tor+1)/2
+        index = n_tor*(j-1) + 2*(k-1)
+        ELM(i_term,index)   =   real(out_fft(k))
+        ELM(i_term,index+1) = - imag(out_fft(k))
+      enddo
+    
+    enddo
+    
+    do j=1, n_vertex_max*n_var*(n_order+1)
+    
+      in_fft = ELM_k(1:n_plane,i_term,j)
+    #ifdef USE_FFTW
+      call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+    #else
+      call my_fft(in_fft, out_fft, n_plane)
+    #endif
+      
+      index = n_tor*(j-1) + 1
+      ik    = 1
+      ELM(i_term,index) = ELM(i_term,index) + imag(out_fft(1)) * float(mode(ik))
+    
+      do k=2,(n_tor+1)/2
+        ik    = max(2*(k-1),1)
+        index = n_tor*(j-1) + 2*(k-1)
+        ELM(i_term,index)   = ELM(i_term,index)   + imag(out_fft(k)) * float(mode(ik))
+        ELM(i_term,index+1) = ELM(i_term,index+1) + real(out_fft(k)) * float(mode(ik))
+      enddo
+    
+    enddo
 
-  do k=2,(n_tor+1)/2
-    index = n_tor*(j-1) + 2*(k-1)
-    RHS(index)   =   real(out_fft(k))
-    RHS(index+1) = - imag(out_fft(k))
-  enddo
+  enddo ! maxterms
+!----------------------------------------------------------------------
 
-enddo
+else
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+  ELM = 0.5d0 * ELM
 
-  in_fft = RHS_k(1:n_plane,j)
-#ifdef USE_FFTW
-  call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
-#else
-  call my_fft(in_fft, out_fft, n_plane)
-#endif
+  do j=1, n_vertex_max*n_var*(n_order+1)
   
-  index = n_tor*(j-1) + 1
-  ik    = 1
-  RHS(index) = RHS(index) + imag(out_fft(1)) * float(mode(ik))
-
-  do k=2,(n_tor+1)/2
-    ik    = max(2*(k-1),1)
-    index = n_tor*(j-1) + 2*(k-1)
-    RHS(index)   = RHS(index)   + imag(out_fft(k)) * float(mode(ik))
-    RHS(index+1) = RHS(index+1) + real(out_fft(k)) * float(mode(ik))
+    in_fft = RHS_p(1:n_plane,j)
+  #ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+  #else
+    call my_fft(in_fft, out_fft, n_plane)
+  #endif
+      
+    index = n_tor*(j-1) + 1
+    RHS(index) = real(out_fft(1))
+  
+    do k=2,(n_tor+1)/2
+      index = n_tor*(j-1) + 2*(k-1)
+      RHS(index)   =   real(out_fft(k))
+      RHS(index+1) = - imag(out_fft(k))
+    enddo
+  
+  enddo
+  
+  do j=1, n_vertex_max*n_var*(n_order+1)
+  
+    in_fft = RHS_k(1:n_plane,j)
+  #ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+  #else
+    call my_fft(in_fft, out_fft, n_plane)
+  #endif
+    
+    index = n_tor*(j-1) + 1
+    ik    = 1
+    RHS(index) = RHS(index) + imag(out_fft(1)) * float(mode(ik))
+  
+    do k=2,(n_tor+1)/2
+      ik    = max(2*(k-1),1)
+      index = n_tor*(j-1) + 2*(k-1)
+      RHS(index)   = RHS(index)   + imag(out_fft(k)) * float(mode(ik))
+      RHS(index+1) = RHS(index+1) + real(out_fft(k)) * float(mode(ik))
+    enddo
+  
   enddo
 
-enddo
+endif ! get_terms
 
 return
 end subroutine element_matrix_fft

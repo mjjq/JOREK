@@ -2682,23 +2682,28 @@ module exec_commands
     real*8, allocatable :: result(:,:,:,:), res2d(:,:,:)
     real*8,     allocatable :: rhs(:,:)
     integer, parameter      :: max_terms=20
-    integer :: dim0, dim1, dim2
+    integer :: dim0, dim1, dim2, only_itor
     character(len=64)       :: file_name, label 
     integer   :: required,provided,StatInfo
 #ifdef USE_FFTW
     real*8     :: in_fft(1:n_plane)
     complex*16 :: out_fft(1:n_plane)
 #endif
-    real*8 :: tsecond, sum_rhs 
+    real*8 :: tsecond, sum_rhs, ftor 
     type(clcktype)           :: t_itstart, t0, t1
     TYPE(type_thread_buffer), dimension(:), allocatable :: test_struct 
     
+    ! --- Initialize FFTW
+#ifdef USE_FFTW
+    call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
+#endif
     
     ! --- Some checks
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);            if ( ierr /= 0 ) return
 
-    nsub = get_int_setting('nsub_vtk', ierr);  if ( ierr /= 0 ) return
+    nsub      = get_int_setting('nsub_vtk' , ierr);  if ( ierr /= 0 ) return
+    only_itor = get_int_setting('only_itor', ierr);  if ( ierr /= 0 ) return
 
     if (jorek_model/=500) then
       write(*,*) 'Sorry RHS diagnostic is only available for model 500!'
@@ -2936,24 +2941,36 @@ module exec_commands
   
           do iv=1, n_vertex_max
   
+            pol_pos_list%pos(i,1)%nodes(iv)%values(:,:,1)  = 0.d0 
+
             do i_order=1, n_order+1
             
               index_node = pol_pos_list%pos(i,1)%nodes(iv)%index(i_order)
     
               do i_tor=1, n_tor
+
+                if (only_itor >= 0) then
+                  if (only_itor /= i_tor) cycle
+                endif
+                
+                if (i_tor>1) then
+                  ftor=2.d0
+                else
+                  ftor=1.d0
+                endif
     
                 index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
           
-                pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1)  = rhs(i_term, index_RHS)
+                pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1)  = rhs(i_term, index_RHS) / n_plane * ftor
     
-                sum_rhs = sum_rhs + rhs(i_term, index_RHS)
+                sum_rhs = sum_rhs + abs(rhs(i_term, index_RHS))
               enddo 
             enddo
           enddo
         enddo
   
         if (sum_rhs < 1.d-30) cycle
-     
+ 
         term_count = term_count + 1
   
         write(*,'(2i15.2)')  k_var, i_term
@@ -3005,7 +3022,9 @@ module exec_commands
    
     deallocate(rhs, scalars, scalar_names, scalars_o, scalar_names_o, result, res2d, test_struct)
 
-   
+#ifdef USE_FFTW
+    call dfftw_destroy_plan(fftw_plan)
+#endif
     
   end subroutine RHS_terms_vtk   
   

@@ -2319,11 +2319,11 @@ if (present(get_terms)) then
     do j=1, n_vertex_max*n_var*(n_order+1)
     
       in_fft = ELM_p(1:n_plane,i_term, j)
-    #ifdef USE_FFTW
+#ifdef USE_FFTW
       call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
-    #else
+#else
       call my_fft(in_fft, out_fft, n_plane)
-    #endif
+#endif
         
       index = n_tor*(j-1) + 1
       ELM(i_term,index) = real(out_fft(1))
@@ -2339,11 +2339,11 @@ if (present(get_terms)) then
     do j=1, n_vertex_max*n_var*(n_order+1)
     
       in_fft = ELM_k(1:n_plane,i_term,j)
-    #ifdef USE_FFTW
+#ifdef USE_FFTW
       call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
-    #else
+#else
       call my_fft(in_fft, out_fft, n_plane)
-    #endif
+#endif
       
       index = n_tor*(j-1) + 1
       ik    = 1
@@ -2368,11 +2368,11 @@ else
   do j=1, n_vertex_max*n_var*(n_order+1)
   
     in_fft = RHS_p(1:n_plane,j)
-  #ifdef USE_FFTW
+#ifdef USE_FFTW
     call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
-  #else
+#else
     call my_fft(in_fft, out_fft, n_plane)
-  #endif
+#endif
       
     index = n_tor*(j-1) + 1
     RHS(index) = real(out_fft(1))
@@ -2388,11 +2388,11 @@ else
   do j=1, n_vertex_max*n_var*(n_order+1)
   
     in_fft = RHS_k(1:n_plane,j)
-  #ifdef USE_FFTW
+#ifdef USE_FFTW
     call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
-  #else
+#else
     call my_fft(in_fft, out_fft, n_plane)
-  #endif
+#endif
     
     index = n_tor*(j-1) + 1
     ik    = 1

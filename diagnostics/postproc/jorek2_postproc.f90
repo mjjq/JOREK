@@ -44,6 +44,7 @@ program jorek2_postproc
   call set_setting('nTht',            '32',    ierr, 'numerical parameter for field line tracing'         )
   call set_setting('nsub_bnd',        '4',     ierr, 'points per boundary element for boundary_quantities')
   call set_setting('nsub_vtk',        '4',     ierr, 'number of element subdivisions for vtk plots       ')
+  call set_setting('only_itor',      '-1',     ierr, 'select a single toroidal harmonic for calculations ')
   
   ! --- Print getting started information
   call specific_help('getting_started')

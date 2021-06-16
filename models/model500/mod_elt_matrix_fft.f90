@@ -331,10 +331,13 @@ eq_zTe = eq_zTe / 2.d0  ! electron temperature
 !--------------------------------------------------- sum over the Gaussian integration points
 do i=1,n_vertex_max
   do j=1,n_order+1
-    ELM_p(:,:,1:n_var)  = 0
-    ELM_n(:,:,1:n_var)  = 0
-    ELM_k(:,:,1:n_var)  = 0
-    ELM_kn(:,:,1:n_var) = 0
+
+    if (.not. present(get_terms)) then
+      ELM_p(:,:,1:n_var)  = 0
+      ELM_n(:,:,1:n_var)  = 0
+      ELM_k(:,:,1:n_var)  = 0
+      ELM_kn(:,:,1:n_var) = 0
+    endif
 
     do ms=1, n_gauss
       do mt=1, n_gauss

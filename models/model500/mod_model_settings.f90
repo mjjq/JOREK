@@ -81,10 +81,10 @@ module mod_model_settings
                                                    'u_Eq__neoclassical_term'/)   ! 12:
 
    character*36, dimension(n_terms_zj),   parameter :: zj_term_names=  &
-                                                (/ 'zj_Eq__Laplacian_Psi   '/)  !  1:
+                                                (/ 'zj_Eq__DeltaStar_Psi   '/)  !  1:
 
    character*36, dimension(n_terms_w),    parameter :: w_term_names=  &
-                                                (/ 'w_Eq__Laplacian_u      '/)  !  1:
+                                                (/ 'w_Eq__DeltaStar_u      '/)  !  1:
 
    character*36, dimension(n_terms_rho),  parameter :: rho_term_names=  &
                                                 (/ 'rho_Eq__ext_dens_source  ', &  !  1:

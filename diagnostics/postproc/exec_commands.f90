@@ -21,7 +21,8 @@ module exec_commands
   use mod_poloidal_currents 
   use mod_bootstrap_functions
   use mod_impurity, only: init_imp_adas 
-  
+  use mod_model_settings
+ 
   implicit none
   
   
@@ -2673,7 +2674,7 @@ module exec_commands
 
     integer,allocatable  :: ien (:,:)
     real*4,allocatable   :: xyz (:,:), scalars(:,:), scalars_o(:,:)
-    character*12, allocatable :: scalar_names(:), scalar_names_o(:)
+    character*36, allocatable :: scalar_names(:), scalar_names_o(:)
   
     integer :: my_id, k_tor, i, j, k, n(4), ife, iv, inode, index_node, index_total
     integer :: omp_nthreads, omp_tid, n_tor_local, i_order, index_large_i, index_ij
@@ -2681,7 +2682,6 @@ module exec_commands
     logical :: get_terms 
     real*8, allocatable :: result(:,:,:,:), res2d(:,:,:)
     real*8,     allocatable :: rhs(:,:)
-    integer, parameter      :: max_terms=20
     integer :: dim0, dim1, dim2, only_itor
     character(len=64)       :: file_name, label 
     integer   :: required,provided,StatInfo
@@ -2713,6 +2713,9 @@ module exec_commands
     if (command%n_args > 0) then    
       eq_index  = to_int(command%args(1), ierr); 
     endif
+
+
+    call assign_term_names()
 
     ! --- Initialize clock
     call clck_init()
@@ -2934,6 +2937,8 @@ module exec_commands
 
       do i_term=1, max_terms
        
+        if (trim(term_names(k_var, i_term))=='') cycle
+
         sum_rhs = 0.d0
   
         ! --- Replace node psi values in pol_pos_list by RHS
@@ -2994,7 +2999,7 @@ module exec_commands
         ! --- Save RHS values into scalar vtk vector 
         scalars(:,term_count)    = res2d(:,1,1)
         write (label,'(a, i2.2, a, i3.3)') 'RHS_', k_var, '_', i_term
-        scalar_names(term_count) = label
+        scalar_names(term_count) = trim(term_names(k_var, i_term))
   
         ! Recover old values (to append the array in fortran...) 
         if (term_count/=1) then

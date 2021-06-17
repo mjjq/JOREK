@@ -25,6 +25,7 @@ use mod_neutral_source
 use mod_bootstrap_functions
 use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_impurity, only: radiation_function, radiation_function_linear
+use mod_model_settings
 
 implicit none
 
@@ -124,7 +125,6 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer*8  :: plan
 
-integer, parameter :: max_terms = 20
 integer    :: max_terms_loop, i_term
 real*8     :: factor(n_var,max_terms)
 

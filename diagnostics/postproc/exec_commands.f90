@@ -20,9 +20,7 @@ module exec_commands
   use mod_interp
   use mod_poloidal_currents 
   use mod_bootstrap_functions
-  
-  
-  
+  use mod_impurity, only: init_imp_adas 
   
   implicit none
   
@@ -54,8 +52,8 @@ module exec_commands
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
   logical,             private, save :: verbose
   logical,             private, save :: debug
-  type(t_expr_list),   private, save :: expr_list
-  real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), sum(:)
+  type(t_expr_list),   private, save :: expr_list, expr_list_four
+  real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), the_sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
   
@@ -147,6 +145,8 @@ module exec_commands
           call expressions(command, ierr)
         case ( 'expressions_int' )
           call expressions_int(command, ierr)
+        case ( 'expressions_four' )
+          call expressions_four(command, ierr)
         case ( 'fluxsurfaces' )
           call fluxsurfaces(command, ierr)
         case ( 'for' )
@@ -189,6 +189,10 @@ module exec_commands
           call set_postproc_dir(command, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+          ! --- Read ADAS data and generate coronal equilibrium is needed
+          call init_imp_adas(0)
+#endif
         case ( 'params' )
           call log_parameters(0, .false.)
         case ( 'point' )
@@ -209,6 +213,8 @@ module exec_commands
           call select_loop_si_units(command, ierr)
         case ( 'spi-state' )
           call spi_state(command, first_step, ierr)
+        case ( 'shards' )
+          call shards(command, ierr)
         case ( 'timesteps' )
           call timesteps 
         case default
@@ -225,7 +231,8 @@ module exec_commands
           'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
-          'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d')
+          'shards', 'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d',     &
+          'expressions_four')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -324,7 +331,7 @@ module exec_commands
     step_imported = .true.
     
     ! (not elegant, admittedly... but guarantees consistent time normalization:)
-    call eval_expr(ES, get_int_setting('units', ierr), exprs('t',1),                               &
+    call eval_expr(ES, get_int_setting('units', ierr), exprs('t',1),                  &
       pol_pos(node_list,element_list,ES,R=ES%R_axis,Z=ES%Z_axis), tor_pos(phi=0.d0), result, ierr)
     time_now = result(1,1,1,1)
     
@@ -814,7 +821,6 @@ module exec_commands
   subroutine load_namelist(command, ierr)
     
     use phys_module     
-    
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     integer,            intent(out) :: ierr        !< Error flag
@@ -1004,6 +1010,28 @@ module exec_commands
 
 
   !> List or Select Available Expressions.
+  subroutine expressions_four(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    if ( command%n_args == 0 ) then
+      
+      call print_exprs(exprs_all_four)
+      
+    else
+      
+      expr_list_four = exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_four)
+      call print_exprs(expr_list_four,.true.)
+       
+    end if
+    
+  end subroutine expressions_four
+ 
+   !> List or Select Available Expressions.
   subroutine expressions_int(command, ierr)
     
     ! --- Routine parameters
@@ -1018,13 +1046,12 @@ module exec_commands
       
     else
       
-    expr_list = exprs_int(command%args(1:command%n_args), command%n_args)
-    call print_exprs(expr_list,.true.)
+      expr_list = exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_int)
+      call print_exprs(expr_list,.true.)
        
     end if
     
   end subroutine expressions_int
- 
   
   
   !> Mark some expressions as coordinates.
@@ -1484,7 +1511,7 @@ module exec_commands
 
     write(comment,'(a,i6.6)') 'time step #', index_now
 
-    call int_along_pol_lineout(node_list, element_list, ES, units, expr_list, sum, phi, Rstart, Zstart,    &
+    call int_along_pol_lineout(node_list, element_list, ES, units, expr_list, the_sum, phi, Rstart, Zstart,    &
       Rend, Zend, npts, ierr, filename, append=(.not.first_step), comment=trim(comment) )
 
   end subroutine int_along_pol_line
@@ -1858,7 +1885,7 @@ module exec_commands
     atoms_left = 0.d0
     abl_tot    = 0.d0
     
-    do i = 1, n_SPI
+    do i = 1, n_spi_tot
       shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
       
       atoms_left = atoms_left + shard_atoms_left
@@ -1893,7 +1920,48 @@ module exec_commands
   end subroutine spi_state
 
 
+  !> Write out SPI shards characteristics
+  subroutine shards(command, ierr)
 
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ! --- Local variables
+    integer             :: i_file, i_spi, units
+    character(len=1024) :: filename, status, access
+    
+    ierr = 0
+    
+    ! --- Some checks
+    call check_args(command%n_args,ierr,0);  if ( ierr /= 0 ) return
+    call check_step_imported(ierr);          if ( ierr /= 0 ) return
+    call check_exprs_selected(ierr);         if ( ierr /= 0 ) return
+    
+    units = get_int_setting('units', ierr)
+    
+    write(filename,'(4a)') trim(DIR), 'shards', trim(step_range_string(index_start,index_start)), '.txt'
+
+    i_file = 133
+
+    call open_ascii_file(ierr, i_file, filename, .false.)
+
+    do i_spi = 1, n_spi_tot
+    
+      call eval_expr(ES, units, expr_list,  &
+        pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
+        tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
+
+      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+    	
+      write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+        pellets(i_spi)%spi_radius, res0d
+
+    enddo
+    
+    close(i_file)
+
+  end subroutine shards
 
   
   !> Output integrated poloidal current that is normal to the boudary and
@@ -2076,7 +2144,6 @@ module exec_commands
   
   
  
-
 
   !> Output current density normal to the jorek boundary as a function of Rbnd
   !! and Zbnd
@@ -2701,8 +2768,14 @@ module exec_commands
     write(*,*) 'rad_range    =', radial_range
     write(*,*) 'n_thetastar  =', n_thetastar
     
+    ! --- If no fourier expressions are given, output absolute values by default
+    if ( expr_list_four%n_expr .eq. 0 ) then
+      write(*,*) 'WARNING: No expressions for 2D Fourier analysis given. Output all components by default.'
+      expr_list_four = exprs_all_four
+    end if
+
     call fourier_analysis(node_list, element_list, ES, units, expr_list, cp, npts, ierr,           &
-      filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &
+      filename_start, expr_list_four, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &
       rad_range=radial_range, nTht=n_thetastar)
     
   end subroutine four2d

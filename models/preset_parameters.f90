@@ -28,6 +28,9 @@ subroutine preset_parameters
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
+
   eta           = 1.d-5
   T_max_eta     = 1.d3
   eta_ohmic     = 0.d0
@@ -49,16 +52,23 @@ subroutine preset_parameters
   freeboundary       = .false. ! use free or fixed boundary?
   resistive_wall     = .false. ! use a resistive or ideal wall?    (freeboundary only)
   freeb_equil_iterate_area = .false.
-  freeb_change_indices = .true. ! exchange grid node indices to parallelize boundary integral
+  freeb_change_indices = .false. ! exchange grid node indices to parallelize boundary integral (only needed when running fixed boundary at first)
 
   bc_natural_flux    = .false.! boundary conditions for flux surface boundaries (2 and 3)
   bc_natural_open    = .false. ! use sheath (Bohm) boundary conditions
+
   gamma_sheath       = 4.5d0  ! sheath transmission factor (single fluid) in the JOREK definition
   gamma_stangeby     = -1.d99 ! sheath transmission factor (single fluid) given by Stangeby
+  gamma_sheath_e     = 3.00d0 ! sheath transmission factor (electron fluid) in the JOREK definition
+  gamma_e_stangeby   = -1.d99 ! sheath transmission factor (electron fluid) given by Stangeby
+  gamma_sheath_i     = -1.11d-1! sheath transmission factor (ion fluid) in the JOREK definition
+  gamma_i_stangeby   = -1.d99 ! sheath transmission factor (ion fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
+  imp_reflection     = 0.d0   ! reflection coefficient for (fluid) impurities
   
   deuterium_adas        = .false. 
+  deuterium_adas_1e20   = .false. 
   old_deuterium_atomic  = .false. 
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
@@ -69,6 +79,9 @@ subroutine preset_parameters
   equil_accuracy       = 1.d-6
   equil_accuracy_freeb = 1.d-6
   axis_srch_radius     = 99.d0
+  delta_psi_GS         = 10000.d0
+  newton_GS_fixbnd     = .false.
+  newton_GS_freebnd    = .true.
   
   n_R          = 0
   n_Z          = 0
@@ -167,18 +180,36 @@ subroutine preset_parameters
   Z_begin = -0.1d0
   Z_end   = 0.1d0
   
-  ZK_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_perp(1:5)   = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_i_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  ZK_e_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   ZK_par       = 1.d0
+  ZK_i_par     = 1.d0
+  ZK_e_par     = 1.d0
   ZK_par_max   = 1.d20
   D_perp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   D_par        = 0.d0
-  
+  D_perp_imp(1:5)  = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
+  D_par_imp        = 0.d0
+
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+
+  D_imp_extra_R = 0.d0
+  D_imp_extra_Z = 0.d0
+  D_imp_extra_p = 0.d0
+  D_imp_extra_neg      = 1.d-6
+  D_imp_extra_neg_thresh  = -1.d3 ! to disable by default enhanced impurities diffusion in model501
   ZK_prof_neg        = 1.d-5
+  ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
-  T_min              =-1.0d20
-  rho_min            =-1.0d20
+  ZK_par_neg_thresh  = 0.d0
+
+  ne_SI_min          = 1.d18
+  Te_eV_min          = 5.
+  rn0_min            = 1.d-8
+  T_min              = 1.0d-20
+  rho_min            = 1.0d-20
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -188,9 +219,15 @@ subroutine preset_parameters
   visco_par_num = 0.d0
   D_perp_num    = 0.d0
   ZK_perp_num   = 0.d0
+  ZK_i_perp_num = 0.d0
+  ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
+  eta_num_T_dependent   = .false.
+  visco_num_T_dependent = .false.
 
   heatsource          = 1.e-7
+  heatsource_e        = 0.5e-7
+  heatsource_i        = 0.5e-7
   heatsource_psin     = 1.0d0
   heatsource_sig      = 0.1d0
   particlesource      = 1.e-5
@@ -200,6 +237,8 @@ subroutine preset_parameters
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01
   heatsource_gauss          = 0.d0
+  heatsource_gauss_i        = 0.d0
+  heatsource_gauss_e        = 0.d0
   heatsource_gauss_psin     = 0.9d0
   heatsource_gauss_sig      = 0.1d0
   particlesource_gauss      = 0.d0
@@ -296,6 +335,12 @@ subroutine preset_parameters
   rho_coef    = 0.d0;  rho_coef(1) =  0.d0
   FF_coef     = 0.d0;  FF_coef(1)  = -1.d0
 
+  rhon_0 =  0.d0
+  rhon_1 =  0.d0
+  rhon_coef    = 0.d0
+  rhon_coef(4) = 0.01
+  rhon_coef(8) = 0.01
+
   pellet_amplitude  = 0.d0
   pellet_R          = 3.8d0
   pellet_Z          = 0.0d0
@@ -311,6 +356,7 @@ subroutine preset_parameters
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
   pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 3.d8
   use_pellet        = .false.
   
   t_now       = 0.d0
@@ -335,6 +381,7 @@ subroutine preset_parameters
   Fprofile_file      = 'none'
   ffprime_file       = 'none'
   d_perp_file        = 'none'
+  d_perp_imp_file    = 'none'
   zk_perp_file       = 'none'
   zk_e_perp_file     = 'none'
   zk_i_perp_file     = 'none'
@@ -387,6 +434,7 @@ subroutine preset_parameters
   
   grid_to_wall       = .false.              ! extend the grid to a physical wall
   RZ_grid_inside_wall= .false.              ! build the rectangular grid inside first wall
+  RZ_grid_jump_thres = 0.85                 ! threshold for jump of R-resolution as RZ-grid gets squeezed by limiter contour
   
   ! --- Option to manipulate psi_boundary, switched off by default
   manipulate_psi_map(:,1) = 0.
@@ -399,6 +447,8 @@ subroutine preset_parameters
   
   equil              = .true.               ! compute equilibrium
   
+  no_mach1_bc        = .false.              ! Never apply Mach-1 BCs
+
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
 
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
@@ -441,14 +491,19 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  eqdsk_psi_fact = 1.d0
+  extend_existing_grid = .false.
   n_wall_blocks        = 0
+  corner_block         = 0
   n_ext_block          = 0
+  n_ext_equidistant    = .false.
   n_block_points_left  = 0
   R_block_points_left  = 0.d0
   Z_block_points_left  = 0.d0
   n_block_points_right = 0
   R_block_points_right = 0.d0
   Z_block_points_right = 0.d0
+  use_simple_bnd_types = .false.
  
  !======================MB rotation profile
   V_0 = 0.d0
@@ -463,7 +518,6 @@ subroutine preset_parameters
   ns_Z      =  1.5d0
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
-  ns_sig    =  0.05
   ns_deltaphi =  0.5
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
@@ -472,16 +526,23 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
+  n_adas = 0
+  adas_dir = ''
+  imp_type = ''
+  use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
+
   !====== JET DMV-2 parameters
-  L_tube = 2.d0
+  L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
+  V_Dmv = 9.75d-4
   t_ns  = 2.d3
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
   spi_Vel_Zref    = 0.0d0
   spi_Vel_RxZref  = 0.0d0
   spi_quantity    = 0.0
+  spi_quantity_bg = 0.0
   ng_radius_ratio = 1.4d0
   ng_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
@@ -489,12 +550,16 @@ subroutine preset_parameters
   spi_L_inj       = 0.25
   ns_phi_rotate   = 0.0
   tor_frequency   = 0.0
-  n_spi           = 1
+  n_spi           = 0
+  n_spi(1)        = 1
+  n_inj           = 1
   spi_rnd_seed    = 0
   spi_abl_model   = 0
   spi_shard_file  = 'none'
   spi_tor_rot     = .false.
   using_spi       = .false.
+
+  output_prad_phi = .false.
 
 !======================JP ECCD injection parameters
   nu_jec_fast=1.d1
@@ -511,5 +576,18 @@ subroutine preset_parameters
   jw1=5.d-1 ! inner cut-off
   jw2=1.d0  ! outer cut-off
   jw3=1.d0  ! outer cut-off
+  
+  !> @name Mode families preconditioner parameters
+  n_mode_families      = (n_tor + 1)/2
+  autodistribute_modes = .true.
+  mode_families_modes  = 0
+  modes_per_family     = 0
+  weights_per_family   = 1.0
+  autodistribute_ranks = .true.
+  ranks_per_family     = 0
+
+!===================== Thermalization flag========
+
+  thermalization = .false.
 
 end subroutine preset_parameters

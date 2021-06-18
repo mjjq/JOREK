@@ -40,6 +40,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
+                extend_existing_grid, no_mach1_bc,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
+                n_wall_blocks, n_ext_block, corner_block,           &
+                n_block_points_left,  n_block_points_right,         &
+                R_block_points_left,  R_block_points_right,         &
+                Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device, manipulate_psi_map,                 &
                 F0, gamma, gamma_stangeby,                          &
                 zjz_0, zjz_1, zj_coef,                              &
@@ -47,8 +55,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 T_0,   T_1,   T_coef, T_min,                        &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
-                eta, visco, visco_par,                              &
+                ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
+                eta, visco, visco_par, ZK_perp_num,                 &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 particlesource, heatsource, tauIC,                  &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
@@ -75,6 +83,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
+                particlesource, heatsource, tauIC,                  &
                 produce_live_data, gmres, gmres_max_iter,           &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &
                 max_steps_noUpdate,                                 &
@@ -94,7 +106,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, centralize_harm_mat
+                delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
+                pastix_maxthrd, centralize_harm_mat,                & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family
+
+
 
 if (my_id .eq. 0) then
 

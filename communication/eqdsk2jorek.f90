@@ -454,6 +454,7 @@ else
 end if
 write(21,*) ' amin  = 1.d0 ! scale factor for plasma size only'
 write(21,*)
+write(21,*) ' psi_axis_init  = ', ssimag 
 write(21,*)
 write(21,*) ' !_____________________________________grid parameters'
 

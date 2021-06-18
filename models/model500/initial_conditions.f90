@@ -17,8 +17,9 @@ type (type_bnd_element_list) :: bnd_elm_list
 
 integer    :: my_id, i, in, mm, i_elm, ifail, xcase2
 real*8     :: amplitude, psi, psi_n, theta
-real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
-real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
+real*8     :: zn,  dn_dpsi,  dn_dpsi2,  dn_dz,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi2_dz,  dn_dpsi_dz2
+real*8     :: zrn, drn_dpsi, drn_dpsi2, drn_dz, drn_dz2, drn_dpsi_dz, drn_dpsi3, drn_dpsi2_dz, drn_dpsi_dz2
+real*8     :: zT,  dT_dpsi,  dT_dpsi2,  dT_dz,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi2_dz,  dT_dpsi_dz2
 real*8     :: zFFprime,dFFprime_dpsi,dFFprime_dz, dFFprime_dpsi_dz, dFFprime_dz2, dFFprime_dpsi2
 real*8     :: R, Z, BigR, T0, BigR_s, T0_s
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi
@@ -39,8 +40,8 @@ if (my_id .eq. 0) then
   do i=1,node_list%n_nodes
 
     psi = node_list%node(i)%values(1,1,var_psi)
-    R   = node_list%node(i)%x(1,1)
-    Z   = node_list%node(i)%x(1,2)
+    R   = node_list%node(i)%x(1,1,1)
+    Z   = node_list%node(i)%x(1,1,2)
    
 
     call density(  xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
@@ -48,6 +49,9 @@ if (my_id .eq. 0) then
 
     call temperature(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
                                                                dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+
+    call neutral_density(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zrn,drn_dpsi,drn_dz,drn_dpsi2,drn_dz2,             &
+                                                               drn_dpsi_dz,drn_dpsi3,drn_dpsi_dz2, drn_dpsi2_dz)
 
     call FFprime(   xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
 
@@ -61,31 +65,40 @@ if (my_id .eq. 0) then
     dp_dpsi_dz = zn * dT_dpsi_dz + dn_dz * dT_dpsi + dn_dpsi * dT_dz + dn_dpsi_dz * zT
 
     node_list%node(i)%values(1,1,var_rho) = zn
-    node_list%node(i)%values(1,2,var_rho) = dn_dpsi    * node_list%node(i)%values(1,2,var_psi) + dn_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,var_rho) = dn_dpsi    * node_list%node(i)%values(1,3,var_psi) + dn_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,var_rho) = dn_dpsi    * node_list%node(i)%values(1,4,var_psi) + dn_dz * node_list%node(i)%x(4,2) &
+    node_list%node(i)%values(1,2,var_rho) = dn_dpsi    * node_list%node(i)%values(1,2,var_psi) + dn_dz * node_list%node(i)%x(1,2,2)
+    node_list%node(i)%values(1,3,var_rho) = dn_dpsi    * node_list%node(i)%values(1,3,var_psi) + dn_dz * node_list%node(i)%x(1,3,2)
+    node_list%node(i)%values(1,4,var_rho) = dn_dpsi    * node_list%node(i)%values(1,4,var_psi) + dn_dz * node_list%node(i)%x(1,4,2) &
                                     + dn_dpsi2   * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%values(1,3,var_psi)  &
-                                    + dn_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
-                                    + dn_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(2,2)         &
-                                    + dn_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(3,2)      
+                                    + dn_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(1,2,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(1,3,2)      
+
+    node_list%node(i)%values(1,1,var_rhon) = zrn
+    node_list%node(i)%values(1,2,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,2,var_psi) + drn_dz * node_list%node(i)%x(1,2,2)
+    node_list%node(i)%values(1,3,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,3,var_psi) + drn_dz * node_list%node(i)%x(1,3,2)
+    node_list%node(i)%values(1,4,var_rhon) = drn_dpsi    * node_list%node(i)%values(1,4,var_psi) + drn_dz * node_list%node(i)%x(1,4,2) &
+                                    + drn_dpsi2   * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%values(1,3,var_psi)  &
+                                    + drn_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + drn_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(1,2,2)         &
+                                    + drn_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(1,3,2)
 
     node_list%node(i)%values(1,1,var_T) = zT
-    node_list%node(i)%values(1,2,var_T) = dT_dpsi    * node_list%node(i)%values(1,2,var_psi) + dT_dz * node_list%node(i)%x(2,2)
-    node_list%node(i)%values(1,3,var_T) = dT_dpsi    * node_list%node(i)%values(1,3,var_psi) + dT_dz * node_list%node(i)%x(3,2)
-    node_list%node(i)%values(1,4,var_T) = dT_dpsi    * node_list%node(i)%values(1,4,var_psi) + dT_dz * node_list%node(i)%x(4,2) &
+    node_list%node(i)%values(1,2,var_T) = dT_dpsi    * node_list%node(i)%values(1,2,var_psi) + dT_dz * node_list%node(i)%x(1,2,2)
+    node_list%node(i)%values(1,3,var_T) = dT_dpsi    * node_list%node(i)%values(1,3,var_psi) + dT_dz * node_list%node(i)%x(1,3,2)
+    node_list%node(i)%values(1,4,var_T) = dT_dpsi    * node_list%node(i)%values(1,4,var_psi) + dT_dz * node_list%node(i)%x(1,4,2) &
                                     + dT_dpsi2   * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%values(1,3,var_psi)  &
-                                    + dT_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
-                                    + dT_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(2,2)         &
-                                    + dT_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(3,2)      
+                                    + dT_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + dT_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(1,2,2)         &
+                                    + dT_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(1,3,2)      
 
     node_list%node(i)%values(1,1,var_u) = - tauIC * zp 
-    node_list%node(i)%values(1,2,var_u) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,var_psi) + dp_dz * node_list%node(i)%x(2,2))
-    node_list%node(i)%values(1,3,var_u) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,3,var_psi) + dp_dz * node_list%node(i)%x(3,2))
-    node_list%node(i)%values(1,4,var_u) = - tauIC * (dP_dpsi  * node_list%node(i)%values(1,4,var_psi) + dP_dz * node_list%node(i)%x(4,2) &
+    node_list%node(i)%values(1,2,var_u) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,2,var_psi) + dp_dz * node_list%node(i)%x(1,2,2))
+    node_list%node(i)%values(1,3,var_u) = - tauIC * (dp_dpsi  * node_list%node(i)%values(1,3,var_psi) + dp_dz * node_list%node(i)%x(1,3,2))
+    node_list%node(i)%values(1,4,var_u) = - tauIC * (dP_dpsi  * node_list%node(i)%values(1,4,var_psi) + dP_dz * node_list%node(i)%x(1,4,2) &
                                     + dP_dpsi2   * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%values(1,3,var_psi)  &
-                                    + dP_dz2     * node_list%node(i)%x(2,2)              * node_list%node(i)%x(3,2)         &
-                                    + dP_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(2,2)         &
-                                    + dP_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(3,2) )
+                                    + dP_dz2     * node_list%node(i)%x(1,2,2)              * node_list%node(i)%x(1,3,2)         &
+                                    + dP_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(1,2,2)         &
+                                    + dP_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(1,3,2) )
  
     node_list%node(i)%values(1,:,var_w) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
 
@@ -106,13 +119,13 @@ if (my_id .eq. 0) then
                       dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
 
         node_list%node(i)%values(1,1,var_Vpar) = zV
-        node_list%node(i)%values(1,2,var_Vpar) = dV_dpsi  * node_list%node(i)%values(1,2,var_psi) + dV_dz * node_list%node(i)%x(2,2)
-        node_list%node(i)%values(1,3,var_Vpar) = dV_dpsi  * node_list%node(i)%values(1,3,var_psi) + dV_dz * node_list%node(i)%x(3,2)
-        node_list%node(i)%values(1,4,var_Vpar) = dV_dpsi  * node_list%node(i)%values(1,4,var_psi) + dV_dz * node_list%node(i)%x(4,2) &
+        node_list%node(i)%values(1,2,var_Vpar) = dV_dpsi  * node_list%node(i)%values(1,2,var_psi) + dV_dz * node_list%node(i)%x(1,2,2)
+        node_list%node(i)%values(1,3,var_Vpar) = dV_dpsi  * node_list%node(i)%values(1,3,var_psi) + dV_dz * node_list%node(i)%x(1,3,2)
+        node_list%node(i)%values(1,4,var_Vpar) = dV_dpsi  * node_list%node(i)%values(1,4,var_psi) + dV_dz * node_list%node(i)%x(1,4,2) &
                                     + dV_dpsi2   * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%values(1,3,var_psi)  &
-                                    + dV_dz2     * node_list%node(i)%x(2,2)        * node_list%node(i)%x(3,2)         &
-                                    + dV_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(2,2)         &
-                                    + dV_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(3,2) 
+                                    + dV_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + dV_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(1,2,2)         &
+                                    + dV_dpsi_dz * node_list%node(i)%values(1,2,var_psi) * node_list%node(i)%x(1,3,2) 
   
       else
 
@@ -120,29 +133,29 @@ if (my_id .eq. 0) then
                     dOmega_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
 
         node_list%node(i)%values(1,1,var_Vpar) = R**2 * Omega
-        node_list%node(i)%values(1,2,var_Vpar) = 2.d0 * R * node_list%node(i)%x(2,1) * Omega              &
+        node_list%node(i)%values(1,2,var_Vpar) = 2.d0 * R * node_list%node(i)%x(1,2,1) * Omega              &
                                                + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,2,var_psi)   &
-                                               + R**2 * dOmega_dz    * node_list%node(i)%x(2,2)
-        node_list%node(i)%values(1,3,var_Vpar) = 2.d0 * R * node_list%node(i)%x(3,1) * Omega              &
+                                               + R**2 * dOmega_dz    * node_list%node(i)%x(1,2,2)
+        node_list%node(i)%values(1,3,var_Vpar) = 2.d0 * R * node_list%node(i)%x(1,3,1) * Omega              &
                                                + R**2 * dOmega_dpsi  * node_list%node(i)%values(1,3,var_psi)   &
-                                               + R**2 * dOmega_dz * node_list%node(i)%x(3,2)
+                                               + R**2 * dOmega_dz * node_list%node(i)%x(1,3,2)
 
-        node_list%node(i)%values(1,4,var_Vpar) = 2.d0 *     node_list%node(i)%x(2,1)**2  * Omega &
-                                               + 2.d0 * R * node_list%node(i)%x(4,1)     * Omega &
-                                               + 2.d0 * R * node_list%node(i)%x(2,1)     * dOmega_dpsi * node_list%node(i)%values(1,3,var_psi) &
-                                               + 2.d0 * R * node_list%node(i)%x(2,1)     * dOmega_dz   * node_list%node(i)%x(3,2) 
+        node_list%node(i)%values(1,4,var_Vpar) = 2.d0 *     node_list%node(i)%x(1,2,1)**2  * Omega &
+                                               + 2.d0 * R * node_list%node(i)%x(1,4,1)     * Omega &
+                                               + 2.d0 * R * node_list%node(i)%x(1,2,1)     * dOmega_dpsi * node_list%node(i)%values(1,3,var_psi) &
+                                               + 2.d0 * R * node_list%node(i)%x(1,2,1)     * dOmega_dz   * node_list%node(i)%x(1,3,2) 
     
         node_list%node(i)%values(1,4,var_Vpar) = node_list%node(i)%values(1,4,var_Vpar) &
-                                               + 2.d0 * R * node_list%node(i)%x(3,1) * dOmega_dpsi             * node_list%node(i)%values(1,2,var_psi) &
+                                               + 2.d0 * R * node_list%node(i)%x(1,3,1) * dOmega_dpsi             * node_list%node(i)%values(1,2,var_psi) &
                                                + R**2 * dOmega_dpsi2   * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%values(1,2,var_psi) &
-                                               + R**2 * dOmega_dpsi_dz * node_list%node(i)%x(3,2)              * node_list%node(i)%values(1,2,var_psi) &
+                                               + R**2 * dOmega_dpsi_dz * node_list%node(i)%x(1,3,2)              * node_list%node(i)%values(1,2,var_psi) &
                                                + R**2 * dOmega_dpsi    * node_list%node(i)%values(1,4,var_psi)
     
         node_list%node(i)%values(1,4,var_Vpar) = node_list%node(i)%values(1,4,var_Vpar) &
-                                               + 2.d0 * R * node_list%node(i)%x(3,1) * dOmega_dz               * node_list%node(i)%x(2,2) &
-                                               + R**2 * dOmega_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(3,2) &
-                                               + R**2 * dOmega_dz2     * node_list%node(i)%x(3,2)              * node_list%node(i)%x(3,2) &
-                                               + R**2 * dOmega_dz * node_list%node(i)%x(4,2)
+                                               + 2.d0 * R * node_list%node(i)%x(1,3,1) * dOmega_dz               * node_list%node(i)%x(1,2,2) &
+                                               + R**2 * dOmega_dpsi_dz * node_list%node(i)%values(1,3,var_psi) * node_list%node(i)%x(1,3,2) &
+                                               + R**2 * dOmega_dz2     * node_list%node(i)%x(1,3,2)              * node_list%node(i)%x(1,3,2) &
+                                               + R**2 * dOmega_dz * node_list%node(i)%x(1,4,2)
 
         node_list%node(i)%values(1,1,var_Vpar) = 2.d0 * PI / F0 * node_list%node(i)%values(1,1,var_Vpar)
         node_list%node(i)%values(1,2,var_Vpar) = 2.d0 * PI / F0 * node_list%node(i)%values(1,2,var_Vpar)
@@ -178,7 +191,7 @@ do in=2,n_tor
       node_list%node(i)%values(in,:,:) = 0.d0
 
       psi = node_list%node(i)%values(1,1,var_psi)
-      Z   = node_list%node(i)%x(1,2)
+      Z   = node_list%node(i)%x(1,1,2)
       psi_n = (psi - ES%psi_axis)/(ES%psi_bnd - ES%psi_axis)
 
       node_list%node(i)%values(in,1,var_w) = amplitude * psi_n * (1.d0 -psi_n)
@@ -206,52 +219,54 @@ enddo
 return
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
-do i=1,node_list%n_nodes
+if (.not. no_mach1_bc) then
+  do i=1,node_list%n_nodes
 
 #ifdef altcs
     node_list%node(i)%psi_eq(:) = node_list%node(i)%values(1,:,var_psi)
 #endif
 
-  if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
-
-    ps0_s     = node_list%node(i)%values(1,2,var_psi)
-    ps0_t     = node_list%node(i)%values(1,3,var_psi)
-    R_s       = node_list%node(i)%x(2,1)
-    R_t       = node_list%node(i)%x(3,1)
-    Z_s       = node_list%node(i)%x(2,2)
-    Z_t       = node_list%node(i)%x(3,2)
-
-    xjac  =  R_s*Z_t - R_t*Z_s
-    ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
-    ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
-
-    direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
-    if (xcase2 .eq. 2) direction = -direction
-    if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,2) .gt. (ES%Z_xpoint(1)+ES%Z_xpoint(2))/2.d0) ) direction = -direction
-    if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0 ! everything to zero for grid with patches
-
-    BigR = node_list%node(i)%x(1,1)
-    Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
-    BigR_s = node_list%node(i)%x(2,1)
-
-    T0   = node_list%node(i)%values(1,1,var_T)
-    node_list%node(i)%values(1,1,var_Vpar) = direction / Btot * sqrt(GAMMA * T0)
-
-    T0_s   = node_list%node(i)%values(1,2,var_T)
-    node_list%node(i)%values(1,2,var_Vpar) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
-    node_list%node(i)%values(1,2,var_Vpar) = direction *  node_list%node(i)%values(1,2,var_Vpar)
-
-    if(xcase2 .eq. 1) then
-      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(1),node_list%node(i)%values(1,1,var_psi),ps0_x,ps0_y, &
-      		    node_list%node(i)%values(1,1,var_Vpar),BigR/F0 * sqrt(GAMMA*T0)
+    if ((node_list%node(i)%boundary .eq. 1) .or. (node_list%node(i)%boundary .eq. 3)) then
+ 
+      ps0_s     = node_list%node(i)%values(1,2,var_psi)
+      ps0_t     = node_list%node(i)%values(1,3,var_psi)
+      R_s       = node_list%node(i)%x(1,2,1)
+      R_t       = node_list%node(i)%x(1,3,1)
+      Z_s       = node_list%node(i)%x(1,2,2)
+      Z_t       = node_list%node(i)%x(1,3,2)
+ 
+      xjac  =  R_s*Z_t - R_t*Z_s
+      ps0_x = (   Z_t * ps0_s - Z_s * ps0_t ) / xjac
+      ps0_y = ( - R_t * ps0_s + R_s * ps0_t ) / xjac
+ 
+      direction = + ps0_x / abs(ps0_x)		 ! temporary solution for lower x-point only
+      if (xcase2 .eq. 2) direction = -direction
+      if ( (xcase2 .eq. 3) .and. (node_list%node(i)%x(1,1,2) .gt. (ES%Z_xpoint(1)+ES%Z_xpoint(2))/2.d0) ) direction = -direction
+      if ( (grid_to_wall) .and. (n_wall_blocks .ne. 0) ) direction = 0.d0 ! everything to zero for grid with patches
+ 
+      BigR = node_list%node(i)%x(1,1,1)
+      Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+      BigR_s = node_list%node(i)%x(1,2,1)
+ 
+      T0   = node_list%node(i)%values(1,1,var_T)
+      node_list%node(i)%values(1,1,var_Vpar) = direction / Btot * sqrt(GAMMA * T0)
+ 
+      T0_s   = node_list%node(i)%values(1,2,var_T)
+      node_list%node(i)%values(1,2,var_Vpar) = BigR_s / (BigR*Btot) * sqrt(GAMMA * T0) + 0.5d0 / Btot * sqrt(GAMMA / T0) * T0_s
+      node_list%node(i)%values(1,2,var_Vpar) = direction *  node_list%node(i)%values(1,2,var_Vpar)
+ 
+      if(xcase2 .eq. 1) then
+        write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(1),node_list%node(i)%values(1,1,var_psi),ps0_x,ps0_y, &
+        		    node_list%node(i)%values(1,1,var_Vpar),BigR/F0 * sqrt(GAMMA*T0)
+      endif
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (ES%psi_xpoint(2) .lt. ES%psi_xpoint(1))) ) then
+        write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(2),node_list%node(i)%values(1,1,var_psi),ps0_x,ps0_y, &
+        		    node_list%node(i)%values(1,1,var_Vpar),BigR/F0 * sqrt(GAMMA*T0)
+      endif
+ 
     endif
-    if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (ES%psi_xpoint(2) .lt. ES%psi_xpoint(1))) ) then
-      write(*,'(A,8e14.6)') ' Boundary condition (eq): ',BigR,ES%psi_xpoint(2),node_list%node(i)%values(1,1,var_psi),ps0_x,ps0_y, &
-      		    node_list%node(i)%values(1,1,var_Vpar),BigR/F0 * sqrt(GAMMA*T0)
-    endif
-
-  endif
-enddo
+  enddo
+endif
 
 return
 end

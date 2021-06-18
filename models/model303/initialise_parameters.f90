@@ -132,6 +132,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 weights_per_family, autodistribute_ranks,           &
                 ranks_per_family
 
+
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.

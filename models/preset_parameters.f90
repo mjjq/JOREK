@@ -253,44 +253,45 @@ subroutine preset_parameters
 
   ! --- Default boundary conditions ----------
   apply_dirichlet_BC(:,:) = .true. 
+  apply_dirichlet_BC(0,:) = .false.
   
   apply_dirichlet_bc(var_rho,  1)  = .false.
-  apply_dirichlet_bc(var_rho,3:5)  = .false.
+  apply_dirichlet_bc(var_rho,4:5)  = .false.
   apply_dirichlet_bc(var_rho,  9)  = .false.
   apply_dirichlet_bc(var_rho, 11)  = .false.
   apply_dirichlet_bc(var_rho, 15)  = .false.
   apply_dirichlet_bc(var_rho, 19)  = .false.
 
   apply_dirichlet_bc(var_T,  1)    = .false.
-  apply_dirichlet_bc(var_T,3:5)    = .false.
+  apply_dirichlet_bc(var_T,4:5)    = .false.
   apply_dirichlet_bc(var_T,  9)    = .false.
   apply_dirichlet_bc(var_T, 11)    = .false.
   apply_dirichlet_bc(var_T, 15)    = .false.
   apply_dirichlet_bc(var_T, 19)    = .false.
 
   apply_dirichlet_bc(var_Te,  1)   = .false.
-  apply_dirichlet_bc(var_Te,3:5)   = .false.
+  apply_dirichlet_bc(var_Te,4:5)   = .false.
   apply_dirichlet_bc(var_Te,  9)   = .false.
   apply_dirichlet_bc(var_Te, 11)   = .false.
   apply_dirichlet_bc(var_Te, 15)   = .false.
   apply_dirichlet_bc(var_Te, 19)   = .false.
 
   apply_dirichlet_bc(var_Ti,  1)   = .false.
-  apply_dirichlet_bc(var_Ti,3:5)   = .false.
+  apply_dirichlet_bc(var_Ti,4:5)   = .false.
   apply_dirichlet_bc(var_Ti,  9)   = .false.
   apply_dirichlet_bc(var_Ti, 11)   = .false.
   apply_dirichlet_bc(var_Ti, 15)   = .false.
   apply_dirichlet_bc(var_Ti, 19)   = .false.
 
   apply_dirichlet_bc(var_vpar,  1) = .false.
-  apply_dirichlet_bc(var_vpar,3:5) = .false.
+  apply_dirichlet_bc(var_vpar,4:5) = .false.
   apply_dirichlet_bc(var_vpar,  9) = .false.
   apply_dirichlet_bc(var_vpar, 11) = .false.
   apply_dirichlet_bc(var_vpar, 15) = .false.
   apply_dirichlet_bc(var_vpar, 19) = .false.
 
   apply_dirichlet_bc(var_rhon,  1) = .false.
-  apply_dirichlet_bc(var_rhon,3:5) = .false.
+  apply_dirichlet_bc(var_rhon,4:5) = .false.
   apply_dirichlet_bc(var_rhon,  9) = .false.
   apply_dirichlet_bc(var_rhon, 11) = .false.
   apply_dirichlet_bc(var_rhon, 15) = .false.

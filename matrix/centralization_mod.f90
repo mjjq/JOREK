@@ -64,12 +64,12 @@ contains
   
     ! --- Allocate arrays for centralized matrix
     ! --- Centralize matrix (if it was not distributed, copy it into the right data structure)
-      if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
-      if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
-      if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
-      call tr_allocatep(mumps_par%A,  Int1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
-      call tr_allocatep(mumps_par%irn,Int1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
-      call tr_allocatep(mumps_par%jcn,Int1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
+    if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,  "dh_mumps_par%A",  CAT_DMATRIX)
+    if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
+    if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%A,  Int1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
+    call tr_allocatep(mumps_par%irn,Int1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%jcn,Int1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
 
     if (n_cpu_n > 1) then
       call MPI_GATHERV(A_harm, nz_harm, MPI_DOUBLE_PRECISION, mumps_par%A, nz_array, disp_array,&
@@ -100,9 +100,9 @@ contains
     mumps_par%rhs(i) = rhs_harm(i)
   enddo  
 
-  call tr_deallocate(A_harm,"A_harm",CAT_DMATRIX)
-  call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)
-  call tr_deallocate(jcn_harm,"jcn_harm",CAT_DMATRIX)
+  if (allocated(A_harm)) call tr_deallocate(A_harm,"A_harm",CAT_DMATRIX)
+  if (allocated(irn_harm)) call tr_deallocate(irn_harm,"irn_harm",CAT_DMATRIX)
+  if (allocated(jcn_harm)) call tr_deallocate(jcn_harm,"jcn_harm",CAT_DMATRIX)
   
   end subroutine centralization_harmonic
 

@@ -175,7 +175,7 @@ module strumpack_module
 
           elseif (dflag.and.(ncpu.gt.1)) then
             ! get row distribution from irn in case of pre-distributed matrix
-            if (associated(dist)) dist=>null()
+            if (associated(dist)) deallocate(dist)
             allocate(dist(ncpu+1))
             dist(1:ncpu+1) = 0
             imin = minval(irn(1:nnz))

@@ -36,10 +36,12 @@ contains
     call tr_allocatep(mumps_par%A,  Int1,mumps_par%nz,"dh_mumps_par%A",  CAT_DMATRIX)
     call tr_allocatep(mumps_par%irn,Int1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
     call tr_allocatep(mumps_par%jcn,Int1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
-
-    mumps_par%A(1:mumps_par%nz)   = A_harm(1:mumps_par%nz)
-    mumps_par%irn(1:mumps_par%nz) = irn_harm(1:mumps_par%nz)
-    mumps_par%jcn(1:mumps_par%nz) = jcn_harm(1:mumps_par%nz)
+    
+    do i = Int1, mumps_par%nz
+      mumps_par%A(i)   = A_harm(i)
+      mumps_par%irn(i)   = irn_harm(i)
+      mumps_par%jcn(i)   = jcn_harm(i)
+    enddo
     
   else
 
@@ -81,9 +83,13 @@ contains
       call MPI_GATHERV(jcn_harm, nz_harm, MPI_INTEGER_ALL, mumps_par%jcn, nz_array, disp_array,&
         MPI_INTEGER_ALL, 0, MPI_COMM_N, ierr)
     else 
-      mumps_par%A(1:mumps_par%nz)   = A_harm(1:mumps_par%nz)   
-      mumps_par%irn(1:mumps_par%nz) = irn_harm(1:mumps_par%nz)
-      mumps_par%jcn(1:mumps_par%nz) = jcn_harm(1:mumps_par%nz)
+
+     do i = Int1, mumps_par%nz
+       mumps_par%A(i)   = A_harm(i) 
+       mumps_par%irn(i)   = irn_harm(i)
+       mumps_par%jcn(i)   = jcn_harm(i)
+     enddo
+
     endif
 
     if ( allocated(nz_array) )   deallocate(nz_array)

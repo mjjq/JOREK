@@ -492,6 +492,7 @@ subroutine preset_parameters
   spi_Vel_diff    = 0.0
   spi_angle       = 0.0
   spi_L_inj       = 0.25
+  spi_L_inj_diff  = 0.0
   ns_phi_rotate   = 0.0
   tor_frequency   = 0.0
   n_spi           = 0

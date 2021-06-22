@@ -219,6 +219,7 @@ call derive_num_profiles(my_id)
 ! --- Initialize the shattered pellet position
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+spi_quantity_bg   = spi_quantity
 pellet_density_bg = pellet_density
 #endif
 

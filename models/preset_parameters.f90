@@ -299,8 +299,8 @@ subroutine preset_parameters
   pellet_velocity_R = 0.d0
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
-  pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
-  pellet_density_bg = 3.d8
+  pellet_density    = 5.985d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 5.958d8
   use_pellet        = .false.
   
   t_now       = 0.d0

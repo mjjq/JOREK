@@ -776,13 +776,10 @@ module pellet_module
         stop
       end if
 
-      ! Here we assume that a positive spi_L_inj_diff makes
-      ! the shards positions spread in between the point (ns_R,ns_Z,ns_phi) and the SPI nozzle
-      ! A negative spi_L_inj_diff will instead make the spread ahead of that point
-      ! Although this is admissible, a warning message is given to avoid unwanted behaviour
       if (spi_L_inj_diff < 0) then
-        write(*,*) "WARNING, negative spi_L_inj_diff = ", spi_L_inj_diff
-        write(*,*) "This will make the shards spread AHEAD of the point (ns_R,ns_Z,ns_phi)" 
+        write(*,*) "WARNING, negative position spread, spi_L_inj_diff = ", spi_L_inj_diff
+        write(*,*) "Please always use a positive spi_L_inj_diff, EXITING!" 
+        stop
       end if
 
       do i=1, n_spi
@@ -791,7 +788,7 @@ module pellet_module
         spi_gd_angle_01 =   rnd(3 * i - 3)         * spi_angle / 2.0
         spi_gd_angle_02 =   rnd(3 * i - 2)         * 2. * PI
         spi_Vel_i       = ( rnd(3 * i - 1) - 0.5 ) * spi_Vel_diff   + spi_Vel_totref
-        spi_L_inj_i     = - rnd(3 * i    )         * spi_L_inj_diff + spi_L_inj
+        spi_L_inj_i     = ( rnd(3 * i    ) - 0.5 ) * spi_L_inj_diff + spi_L_inj
 
 
         !write(*,*) "Random angle:", i, spi_gd_angle_01, spi_gd_angle_02

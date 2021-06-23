@@ -542,7 +542,7 @@ module mod_plasma_response
   
     real*8,  allocatable :: R_vec(:), Z_vec(:), coeff(:,:), B_all(:,:), B_p(:,:), B_ext(:,:), Psitot(:)
     real*8,  allocatable :: Btan_ext(:), v_tan(:,:), weights(:), psi_c(:), psi_c_min(:), psi_p(:)
-    real*8,  allocatable :: A_mat_min(:,:), RHS_min(:), RHS_min_per_turn(:)
+    real*8,  allocatable :: A_mat_min(:,:), RHS_min(:), RHS_min_per_turn(:), pf_current_Aturn(:)
     integer, allocatable :: ipiv(:)
     integer              :: n_points, n_points_elm, numb_coils
     integer              :: i, pt, count, i_c, j_c, info
@@ -679,6 +679,7 @@ module mod_plasma_response
     write(*,*) 'Solve minimization problem'
     
     allocate(RHS_min(numb_coils), A_mat_min(numb_coils,numb_coils), RHS_min_per_turn(numb_coils) )
+    allocate(pf_current_Aturn(numb_coils))
     allocate(ipiv(numb_coils))
     RHS_min = 0.d0;     A_mat_min = 0.d0
     
@@ -698,6 +699,7 @@ module mod_plasma_response
    write(*,*) 'info = ', info
    do i = 1, numb_coils
      RHS_min_per_turn(i) = RHS_min(i)/coils(i)%n_turns
+     pf_current_Aturn(i) = pf_coils(i)%current*coils(i)%n_turns
    end do
 
    write(*,*) ' '
@@ -705,14 +707,15 @@ module mod_plasma_response
    open(26,file='Icoils_found.txt',status="replace", position="append", action="write")
    open(25,file='Psi_coils.txt',status="replace", position="append", action="write")
 
-   call  psi_coils(coils,R_vec,Z_vec,psi_c)
-   call  psi_coils(coils,R_vec,Z_vec,psi_c_min,RHS_min_per_turn)
+   call  psi_coils(coils,R_vec,Z_vec,psi_c, pf_current_Aturn)
+   call  psi_coils(coils,R_vec,Z_vec,psi_c_min,RHS_min)
    call  psi_plasma(node_list,element_list,R_vec,Z_vec,psi_p)
 
    write(25,*) 'R    Z    psi_coil    psi_coil_min    psi_plasma    psi_tot'
     do i = 1, n_points
       write(25,'(6ES14.6)') R_vec(i), Z_vec(i), psi_c(i), psi_c_min(i), psi_p(i), Psitot(i)
     enddo
+   write(26,*) '#current kAturns      current/turn'
    do i=1, numb_coils
      write(26,'(2ES18.10)')   RHS_min(i),  RHS_min_per_turn(i)
      write(*, '(2ES18.10)')   RHS_min(i),  RHS_min_per_turn(i)
@@ -723,10 +726,16 @@ module mod_plasma_response
    !----- Compare given and calculated currents
    write(*,*) ' '
    write(*,*) ' Initial coil currents, Calculated currents, Relative differences '
+   write(*,*) ' Assuming pf_coils%fcurrent is given in A/turn '
    do i=1, numb_coils
-     write(*,'(3ES14.6)') pf_coils(i)%current,  RHS_min_per_turn(i), (pf_coils(i)%current*coils(i)%n_turns - RHS_min(i)) / (pf_coils(i)%current*coils(i)%n_turns + 0.1)
+     write(*,'(3ES14.6)') pf_coils(i)%current,  RHS_min_per_turn(i), (pf_coils(i)%current - RHS_min(i)/coils(i)%n_turns) / (pf_coils(i)%current + 0.1)
    enddo
-
+   deallocate(RHS_min_per_turn, RHS_min, A_mat_min, ipiv)
+   deallocate(psi_c, psi_c_min, psi_p, pf_current_Aturn)
+   deallocate( R_vec, Z_vec, coeff)
+   deallocate( B_all, B_ext, B_p , Psitot)
+   deallocate( v_tan, Btan_ext, weights)    
+  
   end subroutine find_Icoils 
   
   
@@ -1320,7 +1329,7 @@ module mod_plasma_response
           call Greens_functions(R0(i_p), Z0(i_p), R_f, Z_f, G_BR, G_BZ, G_psi)
             
           !--- psi = \int Greens_funct * I   see (4.66 Computational Methods in P.Physics, Jardin)
-          psi_c(i_p) = psi_c(i_p) - G_psi * I_coil * coils(i_c)%pol_coil%weight(i_f)*coils(i_c)%n_turns * mu_zero
+          psi_c(i_p) = psi_c(i_p) - G_psi * I_coil * coils(i_c)%pol_coil%weight(i_f) * mu_zero
 
         enddo
       enddo

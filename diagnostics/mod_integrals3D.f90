@@ -603,11 +603,6 @@ do ife = ife_min, ife_max
         !dPdx = r0 * dTdx + T0 * drhodx
         !dPdy = r0 * dTdy + T0 * drhody
 
-        hel1       = F0* ( (ps0 - psi_off) - y_g(ms,mt)*dpsidy) / (BigR**2.d0)
-        mag_wk     = - (ps0_s*u0_t - ps0_t*u0_s) / xjac * zj0 / BigR  &
-                     + F0 * zj0 * u0_p / (BigR**2.d0)
-        vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
-
 #ifdef WITH_TiTe
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
                      particle_source,heat_source_i,heat_source_e)
@@ -886,7 +881,11 @@ do ife = ife_min, ife_max
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
 
-        thm_wk = vpar0 * (p0_s*ps0_t - p0_t*ps0_s) + vpar0 * F0/BigR*p0_p*xjac 
+        thm_wk     = vpar0 * (p0_s*ps0_t - p0_t*ps0_s) + vpar0 * F0/BigR*p0_p*xjac 
+        hel1       = F0* ( (ps0 - psi_off) - y_g(ms,mt)*dpsidy) / (BigR**2.d0)
+        mag_wk     = - (ps0_s*u0_t - ps0_t*u0_s) / xjac * zj0 / BigR  &
+                     + F0 * zj0 * u0_p / (BigR**2.d0)
+        vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi

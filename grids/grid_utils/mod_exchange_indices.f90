@@ -36,7 +36,7 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
   integer :: i, j, k, l, ind_max, n_bnd, ind_bnd, ind1, ind2, len_exchange
   logical :: skip
   
-  if ( indices_exchanged /= back ) then
+  if ( indices_exchanged .neqv. back ) then
     write(*,*) 'ERROR: Somewhere in the code you call exchange_indices to often or not often enough.'
     stop
   else if ( indices_exchanged .and. ( .not. initialized ) ) then

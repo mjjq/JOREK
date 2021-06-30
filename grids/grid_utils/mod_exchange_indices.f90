@@ -11,6 +11,7 @@ logical, save              :: indices_exchanged = .false. !< Have the indices be
                                                           !! their normal order?
 integer, save, allocatable :: exchange_table(:,:)         !< Table with the indices that should be
                                                           !! exchanged
+integer, save              :: len_exchange                !< How many entries in the exchange table?
 
 
 contains
@@ -33,7 +34,7 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
   ! --- Local variables
   logical, parameter   :: DEBUG_OUTPUT = .false.
   integer, allocatable :: first_index_usable(:), mm(:)
-  integer :: i, j, k, l, ind_max, n_bnd, ind_bnd, ind1, ind2, len_exchange
+  integer :: i, j, k, l, ind_max, n_bnd, ind_bnd, ind1, ind2
   logical :: skip
   
   if ( indices_exchanged .neqv. back ) then

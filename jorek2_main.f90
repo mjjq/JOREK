@@ -506,11 +506,12 @@ required = 0
         call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
                                sig1, xr2, sig2, refinement)
       end if
-      if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
       
     end if
     
-  end if !   if ( restart .and. (my_id == 0) ) then
+    if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    
+ end if !   if ( restart .and. (my_id == 0) ) then
 
   ! This is necessary for the parallel vacuum version during the code restart 
   if(restart) then

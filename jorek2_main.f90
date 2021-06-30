@@ -562,7 +562,7 @@ required = 0
       if ( extend_existing_grid .and. (n_flux .le. 0) ) &
           call grid_patches_on_existing_grid(node_list, element_list)
 
-      if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+      if ( freeboundary .and. (n_flux==0) ) call exchange_indices(node_list, my_id, n_cpu, .false.)
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)

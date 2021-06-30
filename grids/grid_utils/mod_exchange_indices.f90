@@ -6,6 +6,7 @@ module mod_exchange_indices
 
 implicit none
 
+logical, parameter         :: DEBUG_OUTPUT      = .false. !< Hard-coded parameter for debug output
 logical, save              :: initialized       = .false. !< Has the module been initialized?
 logical, save              :: indices_exchanged = .false. !< Have the indices been exchanged w.r.t.
                                                           !! their normal order?
@@ -32,7 +33,6 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
                                                 !! don't exchange the wrong number of times)
   
   ! --- Local variables
-  logical, parameter   :: DEBUG_OUTPUT = .false.
   integer, allocatable :: first_index_usable(:), mm(:)
   integer :: i, j, k, l, ind_max, n_bnd, ind_bnd, ind1, ind2
   logical :: skip
@@ -43,6 +43,9 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
   else if ( indices_exchanged .and. ( .not. initialized ) ) then
     write(*,*) 'ERROR: Indices have already been exchanged but has not been initialized? Internal bug!'
     stop
+  else if ( n_cpu == 1 ) then
+    write(*,*) 'Remark: Exchange_indices is being skipped for a single MPI task.'
+    return
   end if
   
   if ( .not. initialized ) then

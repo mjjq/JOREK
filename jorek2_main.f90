@@ -902,10 +902,14 @@ required = 0
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-    fileout = 'jorek00000'
+    write(*,*) 'a1'
     if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+    write(*,*) 'b1'
+    fileout = 'jorek00000'
     call export_restart(node_list, element_list, fileout)
+    write(*,*) 'c1'
     if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    write(*,*) 'd1'
   end if
   
   if ( ( my_id == 0 ) .and. ( (node_list%n_nodes > n_nodes_max+1000)                               &
@@ -1288,10 +1292,14 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-      write(fileout,'(A5,i5.5)') 'jorek',index_now
+    write(*,*) 'a2'
       if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+    write(*,*) 'b2'
+      write(fileout,'(A5,i5.5)') 'jorek',index_now
       call export_restart(node_list, element_list, fileout)
+    write(*,*) 'c2'
       if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    write(*,*) 'd3'
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
@@ -1416,10 +1424,14 @@ required = 0
   !***********************************************************************
 
   if (my_id .eq. 0)  then
-    fileout = 'jorek_restart'
+    write(*,*) 'a3'
     if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+    write(*,*) 'b3'
+    fileout = 'jorek_restart'
     call export_restart(node_list, element_list, fileout)
+    write(*,*) 'c3'
     if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    write(*,*) 'd3'
     if ( write_ps ) then
       if (.not. bench_without_plot) then
         do ivar=1,n_var

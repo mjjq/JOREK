@@ -239,6 +239,11 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+spi_quantity_bg   = spi_quantity
+pellet_density_bg = pellet_density
+#endif
+
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"

@@ -632,13 +632,13 @@ module pellet_module
         shard_size = 1.
       end if
 
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       do i = 1, n_spi
         pellets(i)%spi_species = 0.
-        N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * pellet_density * 1.d20
+        N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * pellet_density_bg * 1.d20
       end do
 
-      size_beta    = (spi_quantity / N_shard_norm) ** (-1./3.)
+      size_beta    = (spi_quantity_bg / N_shard_norm) ** (-1./3.)
       write(*,*) "Characteristic shard size (m):", 1./size_beta
 #endif
 #ifdef WITH_Impurities

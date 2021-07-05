@@ -19,13 +19,8 @@ module exec_commands
   use mod_import_restart
   use mod_interp
   use mod_poloidal_currents 
-#ifdef WITH_Impurities
-  use mod_injection_source
-#endif
   use mod_bootstrap_functions
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-   use mod_neutral_source
-#endif
+  use mod_impurity, only: init_imp_adas 
   
   implicit none
   
@@ -194,7 +189,6 @@ module exec_commands
           call set_postproc_dir(command, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
-
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
           ! --- Read ADAS data and generate coronal equilibrium is needed
           call init_imp_adas(0)
@@ -1891,7 +1885,7 @@ module exec_commands
     atoms_left = 0.d0
     abl_tot    = 0.d0
     
-    do i = 1, n_SPI
+    do i = 1, n_spi_tot
       shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
       
       atoms_left = atoms_left + shard_atoms_left
@@ -1952,7 +1946,7 @@ module exec_commands
 
     call open_ascii_file(ierr, i_file, filename, .false.)
 
-    do i_spi = 1, n_spi
+    do i_spi = 1, n_spi_tot
     
       call eval_expr(ES, units, expr_list,  &
         pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
@@ -2150,7 +2144,6 @@ module exec_commands
   
   
  
-
 
   !> Output current density normal to the jorek boundary as a function of Rbnd
   !! and Zbnd

@@ -548,8 +548,7 @@ if (my_id == 0) then
     
     ! Define the flux values to be plotted...
     psi_axis = psi_axis+0.01 !Just offset a little, because finding surfaces along the side of an element (on the xpoint grid) can be hard...
-    call define_flux_values(node_list, element_list, surface_list, sep_list, &
-                            xcase2, R_xpoint, Z_xpoint, psi_xpoint, psi_axis, n_grids, sigmas)
+    call define_flux_values(node_list, element_list, surface_list, sep_list, xcase2, n_grids, sigmas)
     psi_axis = psi_axis-0.01 !Put it back, it's not used anyway, but just for principle!
     
   else
@@ -573,19 +572,19 @@ if (my_id == 0) then
   
   if (freeboundary_equil) then
     !call plot_coils(.true.)
-    call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
-    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
+    call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
   
-    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
-    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
+    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
     !call plot_coils(.false.)
   else
     if (xpoint2 .and. (n_flux .gt. 1)) then
-      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
-      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
+      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,xpoint2,xcase2)
+      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
     else
-      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.false.,0, psi_axis)
-      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2, psi_axis)
+      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,.false.,0)
+      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
     endif
   endif
   

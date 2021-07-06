@@ -9,9 +9,9 @@ module equil_info
   
   
   
-  use constants,      only: LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL
+  use constants,      only: LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL, SYMMETRIC
   use data_structure, only: type_node_list, type_element_list, type_bnd_element_list
-  use phys_module,    only: R_geo, Z_geo, FF_0, psi_axis_t, psi_bnd_t, Z_xpoint_t, index_now
+  use phys_module,    only: R_geo, Z_geo, FF_0, psi_axis_t, psi_bnd_t, Z_xpoint_t, index_now, SDN_threshold
   use mod_interp
   
   
@@ -159,6 +159,14 @@ module equil_info
           ES%psi_bnd       = ES%psi_xpoint(2)
           ES%active_xpoint = UPPER_XPOINT
         end if
+
+        ! If we have a symmetric double-null, force the single separatrix
+        if ( abs(ES%psi_xpoint(1)-ES%psi_xpoint(2)) < SDN_threshold ) then
+          ES%psi_xpoint(1) = (ES%psi_xpoint(1)+ES%psi_xpoint(2))/2.d0
+          ES%psi_xpoint(2) = ES%psi_xpoint(1)
+          ES%psi_bnd       = ES%psi_xpoint(1)
+          ES%active_xpoint = SYMMETRIC
+        endif
         
       else ! This should never happen.
         write(*,*) 'ERROR: ILLEGAL VALUE FOR XCASE:', xcase

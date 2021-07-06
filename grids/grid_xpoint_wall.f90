@@ -154,7 +154,7 @@ enddo
 
 call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
-call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase, psi_axis)
+call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,xpoint,xcase)
 
 if ( write_ps ) then 
   call lincol(3)
@@ -530,7 +530,7 @@ do j=1,n_leg
 enddo
 
 
-call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase, psi_axis)
+call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,xpoint,xcase)
 
 if ( write_ps ) then
   call lincol(3)
@@ -1729,7 +1729,7 @@ do k=1, newelement_list%n_elements   ! fill in the size of the elements
 enddo
 
 
-call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint,xcase, psi_axis)
+call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,xpoint,xcase)
 
 !***********************************************************************
 !*             fill in the values into the new grid                    *

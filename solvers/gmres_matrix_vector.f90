@@ -47,8 +47,9 @@ index_offset = (local_index_start(my_id+1)-1) * n_blocksize
 call tr_allocate(y_tmp,Int1,ndof_local,"y_tmp",CAT_GMRES)
 y_tmp(1:ndof_local) = 0.d0
 !$omp parallel default(none)                                                                                              &
-!$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize, nz_glob, local_index_start, index_offset,Int1)  &
-!$omp   private(i,iA_start,ix_start, iy_start, ir, jc, y_tmp_block)
+!$omp   shared(A_glob, jcn_glob, irn_glob,x, n_blocks,n_blocksize, nz_glob, local_index_start, index_offset,Int1)  &
+!$omp   private(i,iA_start,ix_start, iy_start, ir, jc, y_tmp_block) &
+!$omp   reduction(+:y_tmp)
 
 !$omp do
 do i=1, n_blocks
@@ -58,10 +59,7 @@ do i=1, n_blocks
   iy_start = irn_glob(iA_start+1) - index_offset
   
   call dgemv('T',n_blocksize,n_blocksize,1.d0,A_glob(iA_start+1),n_blocksize,x(ix_start),Int1,0.d0,y_tmp_block,Int1)
-  
-  !$omp critical
   y_tmp(iy_start:iy_start+n_blocksize-1) = y_tmp(iy_start:iy_start+n_blocksize-1) + y_tmp_block(1:n_blocksize)
-  !$omp end critical
   
 end do
 !$omp end do

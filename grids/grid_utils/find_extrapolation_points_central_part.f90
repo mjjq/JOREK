@@ -1,5 +1,5 @@
 !> Subroutine defines the new grid_points from crossing of polar and radial coordinate lines
-subroutine find_extrapolation_points_central_part(node_list, element_list, flux_list, xcase   &
+subroutine find_extrapolation_points_central_part(node_list, element_list, flux_list, xcase,   &
                                                   n_grids, stpts, sigmas, nwpts)
 
 use constants

@@ -47,7 +47,7 @@ subroutine add_exchange_rules(ind1, ind2, num)
   integer :: i
   
   do i = 1, num-1
-    if ( exhange_table(i,1) == ind2 ) return
+    if ( exchange_table(i,1) == ind2 ) return
   end do
   
   exchange_table(num,:) = (/ind1, ind2/)

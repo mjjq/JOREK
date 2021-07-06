@@ -105,7 +105,7 @@ if (xcase .eq. UPPER_XPOINT) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      UPPER_XPOINT, ES%R_axis, ES%Z_axis, ES%R_xpoint, ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint)
 endif 
-if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) then ! Put lower Xpoint first
+if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) then ! Put lower Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      LOWER_XPOINT, ES%R_axis, ES%Z_axis, ES%R_xpoint, ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
@@ -162,20 +162,20 @@ newnode_list%n_nodes = index
 n_start_open = newnode_list%n_nodes + 1
 if (xcase .eq. LOWER_XPOINT) n_loop = 2*(n_leg-1)    + n_tht 
 if (xcase .eq. UPPER_XPOINT) n_loop = 2*(n_up_leg-1) + n_tht
-if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) n_loop = 2*(n_leg-1)    + n_tht - 1 
+if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) n_loop = 2*(n_leg-1)    + n_tht - 1 
 if ( (xcase .eq. DOUBLE_NULL) .and. (  ES%active_xpoint .eq. UPPER_XPOINT)                                          ) n_loop = 2*(n_up_leg-1) + n_tht - 1
 n_loop2 = n_flux+n_open+1
 if (xcase .eq. DOUBLE_NULL) n_loop2 = n_flux+n_open               
 n_tmp = n_tht
 if (xcase .eq. DOUBLE_NULL) n_tmp = n_tht-1  ! n_tht_mid and n_tht_mid+1 are the same for double null          
-if (ES%active_xpoint .ne. SYMMETRIC) then  ! ignore if symmetric double-null
+if (ES%active_xpoint .ne. SYMMETRIC_XPOINT) then  ! ignore if symmetric double-null
   
   do i=n_flux+1,n_loop2
     
     do l=1,n_loop                 
     
       !-------------------------------- CASE 1 : Lower Xpoint is the main one
-      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
         
         !---- First part : right lower strike line
         if (l .le. n_leg-1) then 
@@ -253,7 +253,7 @@ newnode_list%n_nodes = index
        
 n_start_outer = newnode_list%n_nodes + 1
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) n_tmp = n_tht_mid 
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) n_tmp = n_tht_mid 
   if (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) n_tmp = n_tht_mid2
   n_loop = (n_leg-1) + (n_up_leg-1) + n_tmp
   do i=n_flux+n_open+1,n_flux+n_open+n_outer+1                
@@ -269,7 +269,7 @@ if (xcase .eq. DOUBLE_NULL) then
       !---- Second part : along the outer side of the separatrix
       if ( (l .gt. n_leg-1) .and. (l .le. (n_leg-1)+n_tmp) ) then        
         j = l-(n_leg-1)
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then 
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then 
           if ( (j .lt. n_tmp) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
             index = index + 1
             call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)
@@ -309,7 +309,7 @@ endif
        
 n_start_inner = newnode_list%n_nodes + 1
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) n_tmp = n_tht_mid2
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) n_tmp = n_tht_mid2
   if (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) n_tmp = n_tht_mid
   n_loop = (n_leg-1) + (n_up_leg-1) + n_tmp
   do k=n_flux+n_open+n_outer+1,n_flux+n_open+n_outer+n_inner+1                
@@ -328,7 +328,7 @@ if (xcase .eq. DOUBLE_NULL) then
       !---- Second part : along the outer side of the separatrix
       if ( (l .gt. n_up_leg-1) .and. (l .le. (n_up_leg-1)+n_tmp) ) then          
         j = l-(n_up_leg-1)
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
           if ( (j .gt. 1) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
             j = j+n_tht_mid
             index = index + 1
@@ -626,13 +626,13 @@ do i=1,n_flux
 
     ! Connect with open (or sandwich) region (or outer and inner in case of symmetric double-null)
     if (i .eq. n_flux) then
-      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or.(ES%active_xpoint .eq. SYMMETRIC) ) then
+      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or.(ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
         n_xpoint_1 = n_start_open + n_leg-1 -1
       else 
         n_xpoint_1 = n_start_open + n_up_leg-1 -1
       endif
-      if (  ES%active_xpoint .eq. SYMMETRIC  ) n_xpoint_1 = n_start_outer + n_leg-1
-      if ( (ES%active_xpoint .eq. SYMMETRIC  ) .and. (l .gt. n_tht_mid-1) ) then
+      if (  ES%active_xpoint .eq. SYMMETRIC_XPOINT  ) n_xpoint_1 = n_start_outer + n_leg-1
+      if ( (ES%active_xpoint .eq. SYMMETRIC_XPOINT  ) .and. (l .gt. n_tht_mid-1) ) then
         n_xpoint_1 = n_start_inner + n_up_leg-1 -1
         j = j - n_tht_mid+1
       endif
@@ -644,10 +644,10 @@ do i=1,n_flux
       if (l .eq. n_loop) then ! Special case for element arriving at Xpoint
         newelement_list%element(index)%vertex(3) = 3 ! We need to finish at NODE3 of the lower Xpoint (or NODE7=NODE3 of the upper Xpoint)
       endif
-      if ( (ES%active_xpoint .eq. SYMMETRIC) .and. (l .eq. n_tht_mid-1) ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
+      if ( (ES%active_xpoint .eq. SYMMETRIC_XPOINT) .and. (l .eq. n_tht_mid-1) ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
         newelement_list%element(index)%vertex(3) = 7 ! We need to arrive at NODE7 of the upper Xpoint
       endif
-      if ( (ES%active_xpoint .eq. SYMMETRIC) .and. (l .eq. n_tht_mid)   ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
+      if ( (ES%active_xpoint .eq. SYMMETRIC_XPOINT) .and. (l .eq. n_tht_mid)   ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
         newelement_list%element(index)%vertex(2) = 6 ! We need to leave from NODE6 of the upper Xpoint
       endif
     endif  
@@ -667,7 +667,7 @@ if (xcase .eq. LOWER_XPOINT) then
   n_xpoint_2 = n_leg-1 + n_tht-1         ! Second time through Xpoint
   n_loop     = 2*(n_leg-1) + n_tht-1
 endif 
-if ((xcase .eq. DOUBLE_NULL ) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) then
+if ((xcase .eq. DOUBLE_NULL ) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) then
   n_xpoint_1 = n_leg-1                   ! First time through first Xpoint
   n_xpoint_2 = n_leg-1 + n_tht-2         ! Second time through first Xpoint
   n_xpoint_3 = n_leg-1 + n_tht_mid-1     ! Going through second Xpoint
@@ -684,7 +684,7 @@ if (xcase .eq. UPPER_XPOINT) then
   n_xpoint_2 = n_up_leg-1 + n_tht-1      ! Second time through first Xpoint
   n_loop     = 2*(n_up_leg-1) + n_tht-1
 endif 
-if ( ES%active_xpoint .ne. SYMMETRIC ) then ! ignore if symmetric double-null  
+if ( ES%active_xpoint .ne. SYMMETRIC_XPOINT ) then ! ignore if symmetric double-null  
   do i=1,n_open
     do l=1, n_loop
 
@@ -716,7 +716,7 @@ if ( ES%active_xpoint .ne. SYMMETRIC ) then ! ignore if symmetric double-null
 
       ! Connect with outer and inner regions
       if ( (i .eq. n_open) .and. (xcase .eq. DOUBLE_NULL) ) then
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
           if (l .le. n_xpoint_3) then
             newelement_list%element(index)%vertex(2) = n_start_outer + j2 - 1
             newelement_list%element(index)%vertex(3) = n_start_outer + j2
@@ -755,14 +755,14 @@ end if
 
 !-------------------------------- The outer region
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     n_xpoint_1 = (n_leg-1)+(n_tht_mid-1)
     n_loop     = (n_leg-1)+(n_up_leg-1)+(n_tht_mid-1)
   else
     n_xpoint_1 = (n_leg-1)
     n_loop     = (n_leg-1)+(n_up_leg-1)+(n_tht_mid2-1)
   endif 
-  if (ES%active_xpoint .eq. SYMMETRIC) then
+  if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
     n_xpoint_1 = (n_leg-1)+(n_tht_mid-1)
     n_xpoint_2 = (n_leg-1)
     n_loop     = (n_leg-1)+(n_up_leg-1)+(n_tht_mid-1)
@@ -790,10 +790,10 @@ if (xcase .eq. DOUBLE_NULL) then
         if (l .eq. n_xpoint_1+1) then ! Special case for element leaving second Xpoint
           newelement_list%element(index)%vertex(1) = 5 ! We need to leave at NODE1 of the second Xpoint
         endif
-        if ( (l .eq. n_xpoint_2)   .and. (ES%active_xpoint .eq. SYMMETRIC) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
+        if ( (l .eq. n_xpoint_2)   .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
           newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE8=NODE4 of the first Xpoint
         endif
-        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC) ) then ! Special case for element leaving first Xpoint of symmetric double-null
+        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then ! Special case for element leaving first Xpoint of symmetric double-null
           newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE1 of the first Xpoint
         endif
       endif
@@ -810,14 +810,14 @@ end if
 
 !-------------------------------- The inner region
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     n_xpoint_1 = (n_up_leg-1)
     n_loop     = (n_up_leg-1)+(n_leg-1)+(n_tht_mid2-1)
   else
     n_xpoint_1 = (n_up_leg-1)+(n_tht_mid-1)
     n_loop     = (n_up_leg-1)+(n_leg-1)+(n_tht_mid-1)
   endif 
-  if (ES%active_xpoint .eq. SYMMETRIC) then
+  if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
     n_xpoint_1 = (n_up_leg-1)
     n_xpoint_2 = (n_up_leg-1)+(n_tht_mid2-1)
     n_loop     = (n_up_leg-1)+(n_leg-1)+(n_tht_mid2-1)
@@ -845,10 +845,10 @@ if (xcase .eq. DOUBLE_NULL) then
         if (l .eq. n_xpoint_1+1) then! Special case for element leaving second Xpoint
           newelement_list%element(index)%vertex(1) = 5 ! We need to leave at NODE5=NODE1 of the second Xpoint
         endif
-        if ( (l .eq. n_xpoint_2)   .and. (ES%active_xpoint .eq. SYMMETRIC) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
+        if ( (l .eq. n_xpoint_2)   .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
           newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE4 of the first Xpoint
         endif
-        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC) ) then ! Special case for element leaving first Xpoint of symmetric double-null
+        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then ! Special case for element leaving first Xpoint of symmetric double-null
           newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE5=NODE1 of the first Xpoint
         endif
       endif
@@ -869,12 +869,12 @@ if (xcase .ne. UPPER_XPOINT) then
   n_xpoint_1      = n_leg-1
   n_start_connect = n_start_open
   if (  xcase .eq. LOWER_XPOINT                                                                                       ) n_jump = n_tht-3
-  if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) n_jump = n_tht-4
+  if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) n_jump = n_tht-4
   if ( (xcase .eq. DOUBLE_NULL) .and. ( ES%active_xpoint .eq. UPPER_XPOINT )                                          ) then
     n_start_connect  =   n_start_outer
     n_jump           = - n_start_outer - (n_leg-1) + n_start_inner + (n_up_leg-1) + (n_tht_mid-1) -1
   endif
-  if (ES%active_xpoint .eq. SYMMETRIC) then ! Symmetric double-node
+  if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then ! Symmetric double-node
     n_start_connect  =   n_start_outer
     n_jump           = - n_start_outer - (n_leg-1) + n_start_inner + (n_up_leg-1) + (n_tht_mid2-1) -1
   endif
@@ -924,7 +924,7 @@ if (xcase .ne. LOWER_XPOINT) then
   n_start_connect = n_start_open
   if (  xcase .eq. UPPER_XPOINT                                                                                       ) n_jump = n_tht-3
   if ( (xcase .eq. DOUBLE_NULL) .and. (  ES%active_xpoint .eq. UPPER_XPOINT)                                          ) n_jump = n_tht-4
-  if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) then ! Warning - note that we include the symmetric double-node here
+  if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) then ! Warning - note that we include the symmetric double-node here
     n_start_connect  =   n_start_inner
     n_jump           = - n_start_inner - (n_up_leg-1) + n_start_outer + (n_leg-1) + (n_tht_mid-1) -1
   endif
@@ -949,11 +949,11 @@ if (xcase .ne. LOWER_XPOINT) then
         newelement_list%element(index)%vertex(3) = n_start_connect + j
         if (l .eq. n_xpoint_1) then ! Special case for element arriving at upper Xpoint
           newelement_list%element(index)%vertex(3) = 3 ! We need to arrive at NODE3 of the Xpoint
-          if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) newelement_list%element(index)%vertex(3) = 7 
+          if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) newelement_list%element(index)%vertex(3) = 7 
         endif
         if (l .eq. n_xpoint_1+1) then! Special case for element leaving upper Xpoint
           newelement_list%element(index)%vertex(2) = 2 ! We need to leave at NODE2 of the Xpoint
-          if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) newelement_list%element(index)%vertex(2) = 6 
+          if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) newelement_list%element(index)%vertex(2) = 6 
         endif
       endif
 

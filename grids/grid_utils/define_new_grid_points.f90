@@ -101,7 +101,7 @@ if (xcase .ne. DOUBLE_NULL) then
   enddo
   call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
 else ! xcase == DOUBLE_NULL
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     tht_x1 = atan2(ES%Z_xpoint(1)-ES%Z_axis,ES%R_xpoint(1)-ES%R_axis)
     tht_x2 = atan2(ES%Z_xpoint(2)-ES%Z_axis,ES%R_xpoint(2)-ES%R_axis)
   else
@@ -113,7 +113,7 @@ else ! xcase == DOUBLE_NULL
   !write(*,'(A,2f15.4)') ' angles : ',tht_x1,tht_x2
   
   ! Spread out points evenly (outer angle between tht_x1 and tht_x2 is usually bigger than inner angle)
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     n_tht_mid = int(n_tht * (2.d0*PI - (tht_x1 - tht_x2)) / (2.d0*PI))
     ! Make sure n_tht_mid is odd and save it to n_grids for later use
     if(mod(n_tht_mid,2) .eq. 0) n_tht_mid = n_tht_mid + 1
@@ -195,7 +195,7 @@ else ! xcase == DOUBLE_NULL
   do j=2,n_tht-1
     if((j .ne. n_tht_mid) .and. (j .ne. n_tht_mid+1)) then
       if (theta_sep(j) .ge. pi) then
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
           call find_theta_surface(node_list,element_list,flux_list,i_sep1,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
         else
           call find_theta_surface(node_list,element_list,flux_list,i_sep2,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
@@ -214,7 +214,7 @@ else ! xcase == DOUBLE_NULL
         nwpts%R_sep(j) = RRg1
         nwpts%Z_sep(j) = ZZg1
       else
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
           call find_theta_surface(node_list,element_list,flux_list,i_sep2,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
         else
           call find_theta_surface(node_list,element_list,flux_list,i_sep1,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
@@ -250,7 +250,7 @@ if (xcase .eq. UPPER_XPOINT) then
   nwpts%Z_sep(n_tht)         = ES%Z_xpoint(2) ! this one is known - safer...
 endif
 if (xcase .eq. DOUBLE_NULL ) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     nwpts%R_sep(1)           = ES%R_xpoint(1) ! this one is known - safer...
     nwpts%Z_sep(1)           = ES%Z_xpoint(1) ! this one is known - safer...
     nwpts%R_sep(n_tht)       = ES%R_xpoint(1) ! this one is known - safer...
@@ -276,7 +276,7 @@ do j=1,n_tht
 
   if (nwpts%Z_sep(j) .le. ES%Z_axis) then
   
-    if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+    if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
       if (j .gt. n_tht_mid) then
         nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_LowerInnerLeg - ES%Z_xpoint(1)) * ((nwpts%Z_sep(j) - ES%Z_axis)/(ES%Z_xpoint(1) - ES%Z_axis))**2
         i_max = n_flux + n_open + n_outer + n_inner
@@ -310,7 +310,7 @@ do j=1,n_tht
                    ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
     if(    (xcase .eq. UPPER_XPOINT)  &
-      .or. (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) &
+      .or. (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) &
            .and. (    ( (RRg1 .gt. ES%R_xpoint(1)) .and. (j.lt.n_tht_mid) ) &
                  .or. ( (RRg1 .lt. ES%R_xpoint(1)) .and. (j.gt.n_tht_mid) ) ) ) &
       .or. (     ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .eq. UPPER_XPOINT) ) &
@@ -350,7 +350,7 @@ do j=1,n_tht
 
     endif
     
-    if (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) &
+    if (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) &
        .and. ((j .eq. 1) .or. (j .eq. n_tht))                                                   ) then
       nwpts%R_max(1)              = stpts%RLimit_LowerOuterLeg ! this one is known - safer...
       nwpts%Z_max(1)              = stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
@@ -375,14 +375,14 @@ do j=1,n_tht
 
   else
         
-    if (    ( (j .gt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) & 
+    if (    ( (j .gt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL) .and. (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. UPPER_XPOINT)                                                                                    ) ) then
       nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperInnerLeg - ES%Z_xpoint(2)) * ((nwpts%Z_sep(j) - ES%Z_axis)/(ES%Z_xpoint(2) - ES%Z_axis))**2
       i_max = n_flux + n_open + n_outer + n_inner
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
     endif 
-    if (    ( (j .le. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) &
+    if (    ( (j .le. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) &
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL) .and. (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) ) & 
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. UPPER_XPOINT)                                                                                    ) ) then
       nwpts%Z_max(j) = nwpts%Z_sep(j) + (stpts%ZLimit_UpperOuterLeg - ES%Z_xpoint(2)) * ((nwpts%Z_sep(j) - ES%Z_axis)/(ES%Z_xpoint(2) - ES%Z_axis))**2
@@ -405,7 +405,7 @@ do j=1,n_tht
 
 
     if(    (xcase .eq. LOWER_XPOINT) &
-      .or. (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) &
+      .or. (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) &
            .and. (    ( (RRg1 .ge. ES%R_xpoint(2)) .and. (j .le. n_tht_mid) ) &
                  .or. ( (RRg1 .lt. ES%R_xpoint(2)) .and. (j .gt. n_tht_mid) ) ) ) &
       .or. (     ( ES%active_xpoint .eq. UPPER_XPOINT                                                                             ) &
@@ -457,7 +457,7 @@ do j=1,n_tht
       nwpts%ZZ_new(i_max+1,1)       = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
     endif
     
-    if (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) & 
+    if (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) & 
        .and. ( (j .eq. n_tht_mid) .or. (j .eq. n_tht_mid+1) )            ) then
       nwpts%R_max(n_tht_mid)            = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
       nwpts%Z_max(n_tht_mid)            = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
@@ -1250,7 +1250,7 @@ enddo
 !----------------------------------- The main inner/outer parts (without legs)
 if (xcase .eq. DOUBLE_NULL) then
   do i=n_flux+n_open+1,n_flux+n_open+n_outer+n_inner
-    if (     ( ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) .and. (i .lt. n_flux+n_open+n_outer+1) )  &
+    if (     ( ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) .and. (i .lt. n_flux+n_open+n_outer+1) )  &
         .or. ( (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) .and. (i .ge. n_flux+n_open+n_outer+1) )  ) then
       n_start = 1
       n_loop  = n_tht_mid

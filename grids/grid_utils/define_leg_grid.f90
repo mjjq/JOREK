@@ -142,7 +142,7 @@ if (which_leg .le. 2) then
   R_beg(1) = stpts%RMiddle_LowerPrivate; Z_beg(1) = stpts%ZMiddle_LowerPrivate
   R_beg(2) = ES%R_xpoint(1);                Z_beg(2) = ES%Z_xpoint(1)
   i_surf(1) = n_flux + n_open + n_outer + n_inner + n_private
-  if ( (xcase .ne. DOUBLE_NULL) .or. ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) ) then
+  if ( (xcase .ne. DOUBLE_NULL) .or. ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) ) then
     i_surf(2) = n_flux
   else
     i_surf(2) = n_flux + n_open
@@ -226,7 +226,7 @@ else
   i_surf(1) = n_flux + n_open + n_outer + n_inner + n_private + n_up_priv
   R_beg(1) = stpts%RMiddle_UpperPrivate; Z_beg(1) = stpts%ZMiddle_UpperPrivate
   R_beg(2) = ES%R_xpoint(2);             Z_beg(2) = ES%Z_xpoint(2)
-  if ( (xcase .ne. DOUBLE_NULL) .or. ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. UPPER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) ) then
+  if ( (xcase .ne. DOUBLE_NULL) .or. ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. UPPER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) ) then
     i_surf(2) = n_flux
   else
     i_surf(2) = n_flux + n_open
@@ -723,7 +723,7 @@ if (xcase .eq. UPPER_XPOINT) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      UPPER_XPOINT, ES%R_axis, ES%Z_axis, ES%R_xpoint, ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint)
 endif 
-if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) then ! Put lower Xpoint first
+if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) then ! Put lower Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      LOWER_XPOINT, ES%R_axis, ES%Z_axis, ES%R_xpoint, ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &

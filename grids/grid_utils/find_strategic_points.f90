@@ -766,7 +766,7 @@ stpts%RMiddle_UpperPrivate       = 999.d0;  stpts%ZMiddle_UpperPrivate     = -1.
 
 
 ! ---------------------------------- Find main strike points for symmetric case
-if ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .eq. SYMMETRIC) ) then
+if ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
   if (debug) write(*,*)'looking for strike points of up-down symmetric DN'
   count_lower = 0
   count_upper = 0
@@ -995,7 +995,7 @@ else
 endif
 
 ! ---------------------------------- Find strike points of 2nd separatrix
-if ( (xcase .eq. DOUBLE_NULL) .and. ( ES%active_xpoint .ne. SYMMETRIC ) ) then
+if ( (xcase .eq. DOUBLE_NULL) .and. ( ES%active_xpoint .ne. SYMMETRIC_XPOINT ) ) then
   if (debug) write(*,*)'looking for strike points of secondary separatrix on main target'
   i_surf = n_flux + n_open
   count = 0
@@ -1501,7 +1501,7 @@ if (xcase .ne. LOWER_XPOINT) then
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Lower corner of the Upper Outer Leg  : (',stpts%RLimit_UpperOuterLeg,     ', ', stpts%ZLimit_UpperOuterLeg,     ') |'
 endif
 
-if ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .ne. SYMMETRIC) ) then
+if ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .ne. SYMMETRIC_XPOINT) ) then
   write(*,'(A)')                '| Secondary Strike Points : ------------------------------|'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Left  Strike point of 2nd separatrix : (',stpts%RSecondStrike_InnerLeg,   ', ', stpts%ZSecondStrike_InnerLeg,   ') |'
   write(*,'(A,F5.2,A,F5.2,A)')  '|   Right Strike point of 2nd separatrix : (',stpts%RSecondStrike_OuterLeg,   ', ', stpts%ZSecondStrike_OuterLeg,   ') |'

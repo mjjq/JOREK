@@ -73,7 +73,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
       psi_bnd2 = ES%psi_xpoint(2)  
     endif
     ! If we have a symmetric double-null, force the single separatrix
-    if ( ES%active_xpoint .eq. SYMMETRIC ) then
+    if ( ES%active_xpoint .eq. SYMMETRIC_XPOINT ) then
       psi_bnd  = ES%psi_xpoint(1)
       psi_bnd2 = psi_bnd  
     endif
@@ -92,7 +92,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   
   !-------------------------------- Open flux surfaces (in case of single-null)
   !-------------------------------- OR Sandwich flux surfaces (in case of double-null) - in between the two separatrices
-  if (ES%active_xpoint .ne. SYMMETRIC) then ! Ignore in case of symmetric double-null
+  if (ES%active_xpoint .ne. SYMMETRIC_XPOINT) then ! Ignore in case of symmetric double-null
     call tr_allocate(s_tmp,1,n_open+1,"s_tmp",CAT_GRID)
     s_tmp = 0
     j     = n_flux

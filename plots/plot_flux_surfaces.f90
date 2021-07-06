@@ -159,7 +159,7 @@ do j = 1, surface_list%n_psi, every_nth
         if(     (ES%active_xpoint .eq. UPPER_XPOINT) &
           .and. ((surface_list%psi_values(j) .eq. ES%psi_xpoint(1)) &
           .or.   (minval(zplot) .ge. ES%Z_xpoint(1)))  ) call lplot6(21,11,rplot,zplot,-nplot,' ')
-        if(     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) &
+        if(     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) &
           .and. ((surface_list%psi_values(j) .eq. ES%psi_xpoint(2)) &
           .or.   (maxval(zplot) .le. ES%Z_xpoint(2)))  ) call lplot6(21,11,rplot,zplot,-nplot,' ')
       endif

@@ -157,7 +157,7 @@ if (xcase .ne. DOUBLE_NULL) then
     theta_beg(j) = tht_x1 + 2.d0 * PI * real(j-1)/real(n_tht-1)
   enddo
 else ! xcase == DOUBLE_NULL
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     tht_x1 = atan2(ES%Z_xpoint(1)-ES%Z_axis,ES%R_xpoint(1)-ES%R_axis)
     tht_x2 = atan2(ES%Z_xpoint(2)-ES%Z_axis,ES%R_xpoint(2)-ES%R_axis)
   else
@@ -168,7 +168,7 @@ else ! xcase == DOUBLE_NULL
   if (tht_x2 .lt. 0.d0) tht_x2 = tht_x2 + 2.d0 * PI
   
   ! Spread out points evenly (outer angle between tht_x1 and tht_x2 is usually bigger than inner angle)
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT ) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT ) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     ! n_tht_mid corresponds to the secondary X-point
     n_tht_mid = int(n_tht * (2.d0*PI - (tht_x1 - tht_x2)) / (2.d0*PI))
     ! Make sure n_tht_mid is odd and save it to n_grids for later use
@@ -271,7 +271,7 @@ else ! xcase == DOUBLE_NULL
   do j=2,n_tht-1
     if((j .ne. n_tht_mid) .and. (j .ne. n_tht_mid+1)) then
       if (theta_sep(j) .ge. pi) then
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
           call find_theta_surface(node_list,element_list,flux_list,i_sep1,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
         else
           call find_theta_surface(node_list,element_list,flux_list,i_sep2,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
@@ -288,7 +288,7 @@ else ! xcase == DOUBLE_NULL
           endif
         enddo
       else
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
           call find_theta_surface(node_list,element_list,flux_list,i_sep2,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
         else
           call find_theta_surface(node_list,element_list,flux_list,i_sep1,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
@@ -322,7 +322,7 @@ if (xcase .eq. UPPER_XPOINT) then
   nwpts%Z_sep(n_tht)         = ES%Z_xpoint(2) ! this one is known - safer...
 endif
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     nwpts%R_sep(1)           = ES%R_xpoint(1) ! this one is known - safer...
     nwpts%Z_sep(1)           = ES%Z_xpoint(1) ! this one is known - safer...
     nwpts%R_sep(n_tht)       = ES%R_xpoint(1) ! this one is known - safer...
@@ -353,7 +353,7 @@ do j=1,n_tht
     scale_out_points = (nwpts%Z_sep(j) - Zend)/(Zbeg - Zend)
     if (scale_out_points .lt. 0.d0) scale_out_points = 0.d0
     if (scale_out_points .gt. 1.d0) scale_out_points = 1.d0
-    if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+    if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
       if (j .gt. n_tht_mid) then
         tht_SOL = 1.0*PI + (stpts%angle_LowerLeft  - 1.0*PI) * scale_out_points
         i_max = n_flux + n_open + n_outer + n_inner
@@ -390,7 +390,7 @@ do j=1,n_tht
                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if(    (xcase .eq. UPPER_XPOINT)   &
-        .or. (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) &
+        .or. (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) &
              .and. (    ( (RRg1 .gt. ES%R_xpoint(1)) .and. (j.lt.n_tht_mid) ) &
                    .or. ( (RRg1 .lt. ES%R_xpoint(1)) .and. (j.gt.n_tht_mid) ) )  ) &
         .or. (     ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .eq. UPPER_XPOINT) ) &
@@ -410,7 +410,7 @@ do j=1,n_tht
       endif
     enddo
     
-    if (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) &
+    if (     ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) &
        .and. ((j .eq. 1) .or. (j .eq. n_tht))                                                   ) then
       nwpts%R_max(1)              = stpts%RLimit_LowerOuterLeg ! this one is known - safer...
       nwpts%Z_max(1)              = stpts%ZLimit_LowerOuterLeg ! this one is known - safer...
@@ -440,14 +440,14 @@ do j=1,n_tht
     scale_out_points = (nwpts%Z_sep(j) - Zend)/(Zbeg - Zend)
     if (scale_out_points .lt. 0.d0) scale_out_points = 0.d0
     if (scale_out_points .gt. 1.d0) scale_out_points = 1.d0
-    if (    ( (j .gt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL ) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) & 
+    if (    ( (j .gt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL ) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL ) .and. (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) ) & 
        .or. ( (j .lt. n_tht_mid) .and. (xcase .eq. UPPER_XPOINT) )                               ) then
       tht_SOL = 1.0*PI + (stpts%angle_UpperLeft  - 1.0*PI) * scale_out_points
       i_max = n_flux + n_open + n_outer + n_inner
       call find_theta_surface(node_list,element_list,flux_list,i_max,tht_SOL,nwpts%R_sep(j),nwpts%Z_sep(j),i_elm_find,s_find,t_find,i_find)    
     endif 
-    if (    ( (j .le. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL ) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) &
+    if (    ( (j .le. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL ) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) &
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. DOUBLE_NULL ) .and. (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) ) & 
        .or. ( (j .gt. n_tht_mid) .and. (xcase .eq. UPPER_XPOINT) )                               ) then
       if (stpts%angle_UpperRight .gt. PI) then
@@ -468,7 +468,7 @@ do j=1,n_tht
                      ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss)
 
       if(    (xcase .eq. LOWER_XPOINT)     &
-        .or. (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) )   &
+        .or. (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) )   &
              .and. (    ( (RRg1 .ge. ES%R_xpoint(2)) .and. (j .le. n_tht_mid) ) &
                    .or. ( (RRg1 .lt. ES%R_xpoint(2)) .and. (j .gt. n_tht_mid) ) )  ) &
         .or. (     ( ES%active_xpoint .eq. UPPER_XPOINT )   &
@@ -499,7 +499,7 @@ do j=1,n_tht
       nwpts%ZZ_new(i_max+1,1)       = stpts%ZLimit_UpperInnerLeg ! this one is known - safer...
     endif
     
-    if (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) & 
+    if (     ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) & 
        .and. ( (j .eq. n_tht_mid) .or. (j .eq. n_tht_mid+1) )            ) then
       nwpts%R_max(n_tht_mid)            = stpts%RLimit_UpperOuterLeg ! this one is known - safer...
       nwpts%Z_max(n_tht_mid)            = stpts%ZLimit_UpperOuterLeg ! this one is known - safer...
@@ -675,7 +675,7 @@ if (xcase .eq. UPPER_XPOINT) then
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      UPPER_XPOINT, ES%R_axis, ES%Z_axis, ES%R_xpoint, ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint)
 endif 
-if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) then ! Put lower Xpoint first
+if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) then ! Put lower Xpoint first
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
                      LOWER_XPOINT, ES%R_axis, ES%Z_axis, ES%R_xpoint, ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint)
   call create_x_node(node_list, element_list, newnode_list, nwpts, stpts, &
@@ -730,13 +730,13 @@ newnode_list%n_nodes = index
 n_start_open = newnode_list%n_nodes + 1
 if (xcase .eq. LOWER_XPOINT) n_loop = n_tht 
 if (xcase .eq. UPPER_XPOINT) n_loop = n_tht
-if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) n_loop = n_tht - 1 
+if ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) n_loop = n_tht - 1 
 if ( (xcase .eq. DOUBLE_NULL) .and. (  ES%active_xpoint .eq. UPPER_XPOINT )                                         ) n_loop = n_tht - 1
 n_loop2 = n_flux+n_open+1
 if (xcase .eq. DOUBLE_NULL) n_loop2 = n_flux+n_open
 n_tmp = n_tht
 if (xcase .eq. DOUBLE_NULL) n_tmp = n_tht-1  ! n_tht_mid and n_tht_mid+1 are the same for double null          
-if (ES%active_xpoint .ne. SYMMETRIC ) then ! ignore if symmetric double-null
+if (ES%active_xpoint .ne. SYMMETRIC_XPOINT ) then ! ignore if symmetric double-null
   
   do i=n_flux+1,n_loop2
     
@@ -744,7 +744,7 @@ if (ES%active_xpoint .ne. SYMMETRIC ) then ! ignore if symmetric double-null
     
       j = l
       !-------------------------------- CASE 1 : Lower Xpoint is the main one
-      if ( (xcase .eq. LOWER_XPOINT) .or. (xcase .eq. UPPER_XPOINT) .or. ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) ) ) then
+      if ( (xcase .eq. LOWER_XPOINT) .or. (xcase .eq. UPPER_XPOINT) .or. ( (xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) ) ) then
         if ( ((j .gt. 1) .and. (j .lt. n_tmp)) .or. (i .ne. n_flux+1) ) then ! Don't put the Xpoint twice
           if ( (xcase .eq. DOUBLE_NULL) .and. (j .gt. n_tht_mid) ) j = j+1  ! n_tht_mid and n_tht_mid+1 are the same for double null
           index = index + 1
@@ -767,13 +767,13 @@ newnode_list%n_nodes = index
        
 n_start_outer = newnode_list%n_nodes + 1
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) n_loop = n_tht_mid 
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) n_loop = n_tht_mid 
   if (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) n_loop = n_tht_mid2
   do i=n_flux+n_open+1,n_flux+n_open+n_outer+1
     do l=1,n_loop
     
       j = l
-      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then 
+      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then 
         if ( (j .lt. n_tmp) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
           index = index + 1
           call create_new_node(node_list, element_list, newnode_list, index, i, j, nwpts)
@@ -801,7 +801,7 @@ endif
        
 n_start_inner = newnode_list%n_nodes + 1
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) n_loop = n_tht_mid2
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) n_loop = n_tht_mid2
   if (  ES%active_xpoint .eq. UPPER_XPOINT                                         ) n_loop = n_tht_mid
   do k=n_flux+n_open+n_outer+1,n_flux+n_open+n_outer+n_inner+1                
     do l=1,n_loop
@@ -810,7 +810,7 @@ if (xcase .eq. DOUBLE_NULL) then
       if (i .eq. n_flux+n_open+n_outer+1) i = n_flux+n_open+1  !Doing the second separatrix first
       
       j = l
-      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
         if ( (j .gt. 1) .or. (i .ne. n_flux+n_open+1) ) then ! Don't put the Xpoint twice
           j = j+n_tht_mid
           index = index + 1
@@ -877,13 +877,13 @@ do i=1,n_flux
 
     ! Connect with open (or sandwich) region (or outer and inner in case of symmetric double-null)
     if (i .eq. n_flux) then
-      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+      if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
         n_xpoint_1 = n_start_open -1
       else 
         n_xpoint_1 = n_start_open -1
       endif
-      if ( ES%active_xpoint .eq. SYMMETRIC) n_xpoint_1 = n_start_outer
-      if ((ES%active_xpoint .eq. SYMMETRIC) .and. (l .gt. n_tht_mid-1) ) then
+      if ( ES%active_xpoint .eq. SYMMETRIC_XPOINT) n_xpoint_1 = n_start_outer
+      if ((ES%active_xpoint .eq. SYMMETRIC_XPOINT) .and. (l .gt. n_tht_mid-1) ) then
         n_xpoint_1 = n_start_inner -1
         j = j - n_tht_mid+1
       endif
@@ -895,10 +895,10 @@ do i=1,n_flux
       if (l .eq. n_loop) then ! Special case for element arriving at Xpoint
         newelement_list%element(index)%vertex(3) = 3 ! We need to finish at NODE3 of the lower Xpoint (or NODE7=NODE3 of the upper Xpoint)
       endif
-      if ( (ES%active_xpoint .eq. SYMMETRIC) .and. (l .eq. n_tht_mid-1) ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
+      if ( (ES%active_xpoint .eq. SYMMETRIC_XPOINT) .and. (l .eq. n_tht_mid-1) ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
         newelement_list%element(index)%vertex(3) = 7 ! We need to arrive at NODE7 of the upper Xpoint
       endif
-      if ( (ES%active_xpoint .eq. SYMMETRIC) .and. (l .eq. n_tht_mid  ) ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
+      if ( (ES%active_xpoint .eq. SYMMETRIC_XPOINT) .and. (l .eq. n_tht_mid  ) ) then ! Special case for element passing through 2nd Xpoint (for symmetric only)
         newelement_list%element(index)%vertex(2) = 6 ! We need to leave from NODE6 of the upper Xpoint
       endif
     endif  
@@ -914,7 +914,7 @@ if (xcase .eq. LOWER_XPOINT) then
   n_xpoint_2 = n_tht-1         ! Second time through Xpoint
   n_loop     = n_tht-1
 endif 
-if ((xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) )) then
+if ((xcase .eq. DOUBLE_NULL) .and. ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) )) then
   n_xpoint_1 = 0               ! First time through first Xpoint
   n_xpoint_2 = n_tht-2         ! Second time through first Xpoint
   n_xpoint_3 = n_tht_mid-1     ! Going through second Xpoint
@@ -931,7 +931,7 @@ if (xcase .eq. UPPER_XPOINT) then
   n_xpoint_2 = n_tht-1      ! Second time through first Xpoint
   n_loop     = n_tht-1
 endif 
-if (ES%active_xpoint .ne. SYMMETRIC) then ! ignore if symmetric double-null
+if (ES%active_xpoint .ne. SYMMETRIC_XPOINT) then ! ignore if symmetric double-null
   do i=1,n_open
     do l=1, n_loop
 
@@ -963,7 +963,7 @@ if (ES%active_xpoint .ne. SYMMETRIC) then ! ignore if symmetric double-null
 
       ! Connect with outer and inner regions
       if ( (i .eq. n_open) .and. (xcase .eq. DOUBLE_NULL) ) then
-        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+        if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
           if (l .le. n_xpoint_3) then
             newelement_list%element(index)%vertex(2) = n_start_outer + j2 - 1
             newelement_list%element(index)%vertex(3) = n_start_outer + j2
@@ -998,14 +998,14 @@ newelement_list%n_elements = index
 
 !-------------------------------- The outer region
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     n_xpoint_1 = (n_tht_mid-1)
     n_loop     = (n_tht_mid-1)
   else
     n_xpoint_1 = 0
     n_loop     = (n_tht_mid2-1)
   endif 
-  if (ES%active_xpoint .eq. SYMMETRIC) then
+  if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
     n_xpoint_1 = (n_tht_mid-1)
     n_xpoint_2 = 0
     n_loop     = (n_tht_mid-1)
@@ -1029,7 +1029,7 @@ if (xcase .eq. DOUBLE_NULL) then
         if (l .eq. n_xpoint_1)   then ! Special case for element arriving at second Xpoint
           newelement_list%element(index)%vertex(4) = 8 ! We need to arrive at NODE8=NODE4 of the second Xpoint
         endif
-        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC) ) then ! Special case for element leaving first Xpoint of symmetric double-null
+        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then ! Special case for element leaving first Xpoint of symmetric double-null
           newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE1 of the first Xpoint
         endif
       endif
@@ -1042,14 +1042,14 @@ newelement_list%n_elements = index
 
 !-------------------------------- The inner region
 if (xcase .eq. DOUBLE_NULL) then
-  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC) ) then
+  if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
     n_xpoint_1 = 0
     n_loop     = (n_tht_mid2-1)
   else
     n_xpoint_1 = (n_tht_mid-1)
     n_loop     = (n_tht_mid-1)
   endif 
-  if (ES%active_xpoint .eq. SYMMETRIC) then
+  if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
     n_xpoint_1 = 0
     n_xpoint_2 = (n_tht_mid2-1)
     n_loop     = (n_tht_mid2-1)
@@ -1077,10 +1077,10 @@ if (xcase .eq. DOUBLE_NULL) then
         if (l .eq. n_xpoint_1+1) then! Special case for element leaving second Xpoint
           newelement_list%element(index)%vertex(1) = 5 ! We need to leave at NODE5=NODE1 of the second Xpoint
         endif
-        if ( (l .eq. n_xpoint_2)   .and. (ES%active_xpoint .eq. SYMMETRIC) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
+        if ( (l .eq. n_xpoint_2)   .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then ! Special case for element arriving at first Xpoint of symmetric double-null
           newelement_list%element(index)%vertex(4) = 4 ! We need to arrive at NODE4 of the first Xpoint
         endif
-        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC) ) then ! Special case for element leaving first Xpoint of symmetric double-null
+        if ( (l .eq. n_xpoint_2+1) .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then ! Special case for element leaving first Xpoint of symmetric double-null
           newelement_list%element(index)%vertex(1) = 1 ! We need to leave at NODE5=NODE1 of the first Xpoint
         endif
       endif

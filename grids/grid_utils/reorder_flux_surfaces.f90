@@ -691,15 +691,15 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids)
   ! --- Get separatrices
   sep_list%n_psi = 1
   if ( xcase .eq. DOUBLE_NULL ) sep_list%n_psi = 2
-  if (ES%active_xpoint .eq. SYMMETRIC) sep_list%n_psi = 1
+  if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) sep_list%n_psi = 1
   if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
   call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   sep_list%psi_values(1) = flux_list%psi_values(n_flux)
-  if ((xcase .eq. DOUBLE_NULL ) .and. (ES%active_xpoint .ne. SYMMETRIC)) sep_list%psi_values(2) = flux_list%psi_values(n_flux+n_open)
+  if ((xcase .eq. DOUBLE_NULL ) .and. (ES%active_xpoint .ne. SYMMETRIC_XPOINT)) sep_list%psi_values(2) = flux_list%psi_values(n_flux+n_open)
   call find_flux_surfaces(0,.true.,xcase,node_list,element_list,sep_list)  
   call reorder_flux_surfaces(node_list, element_list, sep_list, ifail)
   if (debug .eq. 2) write(*,*) 'cleaning all surfaces'
-  if ((xcase .eq. DOUBLE_NULL ) .and. (ES%active_xpoint .eq. SYMMETRIC)) then
+  if ((xcase .eq. DOUBLE_NULL ) .and. (ES%active_xpoint .eq. SYMMETRIC_XPOINT)) then
     call get_symmetric_separatrix_contours(node_list, element_list, sep_list)
   else
     call get_separatrix_contours(node_list, element_list, sep_list)
@@ -749,7 +749,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids)
   
   
   ! --- The main separatrix if not symmetric
-  if ( (xcase .ne. DOUBLE_NULL) .or. (ES%active_xpoint .ne. SYMMETRIC) ) then
+  if ( (xcase .ne. DOUBLE_NULL) .or. (ES%active_xpoint .ne. SYMMETRIC_XPOINT) ) then
     if (debug .eq. 2) write(*,*) 'cleaning separatrix'
     i_surf = n_flux
     i_part_save = 0
@@ -793,7 +793,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids)
   endif
 
   ! --- Loop over each sandwich surface
-  if ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .ne. SYMMETRIC) ) then
+  if ( (xcase .eq. DOUBLE_NULL) .and. (ES%active_xpoint .ne. SYMMETRIC_XPOINT) ) then
     if (debug .eq. 2) write(*,*) 'cleaning sandwich surfaces'
     i_part_save = 0
     do i_surf=n_flux+1,n_flux+n_open-1

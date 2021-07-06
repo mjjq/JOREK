@@ -38,6 +38,27 @@ end function is_responsible
 
 
 
+!> Add another pair of exchange rules to the table
+subroutine add_exchange_rules(ind1, ind2, num)
+  
+  integer, intent(in)    :: ind1, ind2
+  integer, intent(inout) :: num
+  
+  integer :: i
+  
+  do i = 1, num-1
+    if ( exhange_table(i,1) == ind2 ) return
+  end do
+  
+  exchange_table(num,:) = (/ind1, ind2/)
+  num = num + 1
+  exchange_table(num,:) = (/ind2, ind1/)
+  num = num + 1
+  
+end subroutine add_exchange_rules
+
+
+
 !> Exchange some indices of grid nodes in order to parallelize the vacuum boundary integral.
 subroutine initialize(node_list, my_id, n_cpu)
   
@@ -122,10 +143,7 @@ subroutine initialize(node_list, my_id, n_cpu)
         ind1    = node_list%node(i)%index(l) ! exchange this index
         ind2    = mm(k) + l - 1              ! with this one for which MPI rank k is responsible
         if ( is_responsible(ind1,k) ) cycle ! need not exchange as MPI rank is already responsible
-        exchange_table(j,:) = (/ind1, ind2/)
-        j = j + 1
-        exchange_table(j,:) = (/ind2, ind1/)
-        j = j + 1
+        call add_exchange_rules(ind1, ind2, j)
         if ( DEBUG_OUTPUT ) write(*,*) 'LIST: ', ind1, '<->', ind2
       end do
       mm(k) = mm(k) + 4

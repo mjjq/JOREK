@@ -121,6 +121,7 @@ subroutine initialize(node_list, my_id, n_cpu)
       do l = 1, 4 ! the four dofs of one node
         ind1    = node_list%node(i)%index(l) ! exchange this index
         ind2    = mm(k) + l - 1              ! with this one for which MPI rank k is responsible
+        if ( is_responsible(ind1,k) ) cycle ! need not exchange as MPI rank is already responsible
         exchange_table(j,:) = (/ind1, ind2/)
         j = j + 1
         exchange_table(j,:) = (/ind2, ind1/)

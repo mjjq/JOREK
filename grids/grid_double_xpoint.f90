@@ -34,7 +34,7 @@ integer             :: n_psi
 integer             :: i_elm_find(8), ifail
 real*8              :: psi_bnd, psi_bnd2
 real*8              :: sigmas(16)
-integer             :: n_grids(10)
+integer             :: n_grids(12)
 
 write(*,*) ' '
 write(*,*) ' '

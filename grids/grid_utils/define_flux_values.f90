@@ -18,7 +18,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   type (type_surface_list), intent(inout) :: flux_list, sep_list
   type (type_node_list),    intent(inout) :: node_list
   type (type_element_list), intent(inout) :: element_list
-  integer,                  intent(in)    :: n_grids(10), xcase
+  integer,                  intent(in)    :: n_grids(12), xcase
   real*8,                   intent(in)    :: sigmas(16)
   
   ! --- local variables
@@ -311,7 +311,7 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
   type (type_surface_list), intent(inout)       :: surface_list
   type (type_node_list),    intent(in)          :: node_list
   type (type_element_list), intent(in)          :: element_list
-  integer,                  intent(inout)       :: n_grids(10), xcase
+  integer,                  intent(inout)       :: n_grids(12), xcase
   integer,                  intent(inout)       :: n_int_max, n_target, index_target(n_int_max,4)
   real*8,                   intent(inout)       :: R_target(n_int_max), Z_target(n_int_max)
   integer,                  intent(inout)       :: n_surf_max
@@ -961,7 +961,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   type (type_node_list),    intent(in)          :: node_list
   type (type_element_list), intent(in)          :: element_list
   integer,                  intent(in)          :: i_wall
-  integer,                  intent(inout)       :: n_grids(10), xcase
+  integer,                  intent(inout)       :: n_grids(12), xcase
   integer,                  intent(inout)       :: n_int_max, n_target, index_target(n_int_max,4)
   real*8,                   intent(inout)       :: R_target(n_int_max), Z_target(n_int_max)
   integer,                  intent(inout)       :: n_surf_max
@@ -1256,7 +1256,7 @@ subroutine remove_flux_surface(surface_list, i_remove, n_grids,  &
   
   ! --- Routine parameters
   type (type_surface_list), intent(inout)       :: surface_list
-  integer,                  intent(inout)       :: i_remove, n_grids(10)
+  integer,                  intent(inout)       :: i_remove, n_grids(12)
   integer,                  intent(inout)       :: n_int_max, index_target(n_int_max,4)
   integer,                  intent(inout)       :: n_surf_max
   integer,                  intent(inout)       :: n_int_surf(n_surf_max) ! number of intersections for each surface

@@ -18,7 +18,7 @@ type (type_node_list)       , intent(inout) :: node_list
 type (type_element_list)    , intent(inout) :: element_list
 type (type_node_list)       , intent(inout) :: newnode_list
 type (type_element_list)    , intent(inout) :: newelement_list
-integer                     , intent(in)    :: n_grids(10)
+integer                     , intent(in)    :: n_grids(12)
 logical                     , intent(in)    :: include_axis, include_xpoint, include_psi
 
 

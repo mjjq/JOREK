@@ -18,7 +18,7 @@ type (type_surface_list),     intent(inout) :: flux_list
 type (type_node_list),        intent(inout) :: node_list
 type (type_element_list),     intent(inout) :: element_list
 type (type_strategic_points), intent(inout) :: stpts
-integer,                      intent(in)    :: n_grids(10) 
+integer,                      intent(in)    :: n_grids(12) 
 integer,                      intent(in)    :: xcase
 logical,                      intent(in)    :: force_horizontal_Xline
 
@@ -668,7 +668,7 @@ type (type_surface_list),     intent(inout) :: flux_list
 type (type_node_list),        intent(inout) :: node_list
 type (type_element_list),     intent(inout) :: element_list
 type (type_strategic_points), intent(inout) :: stpts
-integer,                      intent(in)    :: n_grids(10) 
+integer,                      intent(in)    :: n_grids(12) 
 integer,                      intent(in)    :: xcase
 logical,                      intent(in)    :: force_horizontal_Xline
 

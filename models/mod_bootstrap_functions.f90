@@ -396,7 +396,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   integer                  :: i, k, ig, i_surf, i_piece, n_psi, i_elm
   real*8                   :: psi_bnd, psi_bnd2
   real*8                   :: sigmas(16)
-  integer                  :: n_grids(10)
+  integer                  :: n_grids(12)
   real*8                   :: rr, s, t, ds, dt, xjac, dl, sum_dl
   real*8                   :: R, dR_ds, dR_dt, dR_dl
   real*8                   :: Z, dZ_ds, dZ_dt, dZ_dl
@@ -582,7 +582,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   integer                  :: i, k, ig, i_surf, i_piece, n_psi, i_elm, i_ft
   real*8                   :: psi_bnd, psi_bnd2
   real*8                   :: sigmas(16)
-  integer                  :: n_grids(10)
+  integer                  :: n_grids(12)
   real*8                   :: rr, s, t, ds, dt, xjac, dl, sum_dl
   real*8                   :: R,  dR_ds,  dR_dt, dR_dl
   real*8                   :: Z,  dZ_ds,  dZ_dt, dZ_dl

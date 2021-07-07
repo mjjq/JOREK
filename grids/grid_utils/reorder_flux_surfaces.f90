@@ -658,7 +658,7 @@ subroutine clean_surfaces(node_list,element_list,flux_list,n_grids)
   type (type_node_list),        intent(in)      :: node_list
   type (type_element_list),     intent(in)      :: element_list
   type (type_surface_list),     intent(inout)   :: flux_list
-  integer,                      intent(in)      :: n_grids(10) 
+  integer,                      intent(in)      :: n_grids(12) 
   
   ! --- Internal parameters
   type (type_surface_list) :: sep_list

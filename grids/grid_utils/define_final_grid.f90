@@ -20,7 +20,7 @@ type (type_node_list)       , intent(inout) :: node_list
 type (type_element_list)    , intent(inout) :: element_list
 type (type_strategic_points), intent(in)    :: stpts
 type (type_new_points)      , intent(in)    :: nwpts
-integer,                      intent(in)    :: n_grids(10), xcase
+integer,                      intent(in)    :: n_grids(12), xcase
 
 
 ! --- local variables

@@ -18,7 +18,7 @@ type (type_node_list)       , intent(inout) :: node_list
 type (type_element_list)    , intent(inout) :: element_list
 type (type_strategic_points), intent(inout) :: stpts
 type (type_new_points)      , intent(inout) :: nwpts
-integer,                      intent(inout) :: n_grids(10)
+integer,                      intent(inout) :: n_grids(12)
 integer,                      intent(in)    :: xcase
 real*8,                       intent(in)    :: sigmas(16)
 

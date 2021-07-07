@@ -23,6 +23,7 @@ use equil_info, only : get_psi_n
 use corr_neg
 use mod_neutral_source
 use mod_bootstrap_functions
+use mod_sources
 
 implicit none
 
@@ -399,6 +400,17 @@ do i=1,n_vertex_max
           r0_y_hat = BigR**2 * r0_y
 
           if ( with_TiTe ) then ! ******************************************************************
+            
+            T0    = 0.d0
+            T0_x  = 0.d0
+            T0_y  = 0.d0
+            T0_p  = 0.d0
+            T0_s  = 0.d0
+            T0_t  = 0.d0
+            T0_ss = 0.d0
+            T0_tt = 0.d0
+            T0_st = 0.d0
+            
             Ti0    = eq_g(mp,var_Ti,ms,mt)
             Ti0_x  = (   y_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) - y_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
             Ti0_y  = ( - x_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) + x_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac

@@ -6,6 +6,7 @@ subroutine init_live_data_model(file_handle)
   use mod_parameters
   use phys_module,   only: xpoint, xcase
   use diffusivities, only: get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp
+  use mod_sources
   
   implicit none
   

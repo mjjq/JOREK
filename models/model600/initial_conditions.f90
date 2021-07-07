@@ -1,12 +1,12 @@
 subroutine initial_conditions(my_id,node_list,element_list,bnd_node_list, bnd_elm_list, xpoint2, xcase2)
-!-----------------------------------------------------------------------
-!
-!-----------------------------------------------------------------------
+
 use constants
 use data_structure
 use phys_module
 use mod_poiss
 use equil_info
+use mod_sources
+
 implicit none
 
 type (type_node_list)    :: node_list

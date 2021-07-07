@@ -151,13 +151,29 @@ module equil_info
       else if ( (xcase==DOUBLE_NULL) ) then
         
         ES%limiter_plasma = .false.
-        
+
         if ( abs(ES%psi_axis-ES%psi_xpoint(1)) < abs(ES%psi_axis-ES%psi_xpoint(2)) ) then
           ES%psi_bnd       = ES%psi_xpoint(1)
           ES%active_xpoint = LOWER_XPOINT
+
+          ! --- Save boundary point inforamtion for DOUBLE_NULL cases       
+          ES%R_bnd      =  ES%R_xpoint(ES%active_xpoint)
+          ES%Z_bnd      =  ES%Z_xpoint(ES%active_xpoint)
+          ES%i_elm_bnd  =  ES%i_elm_xpoint(ES%active_xpoint)
+          ES%s_bnd      =  ES%s_xpoint(ES%active_xpoint)
+          ES%t_bnd      =  ES%t_xpoint(ES%active_xpoint)
+          ES%ifail_bnd  =  ES%ifail_xpoint
         else
           ES%psi_bnd       = ES%psi_xpoint(2)
           ES%active_xpoint = UPPER_XPOINT
+
+          ! --- Save boundary point inforamtion for DOUBLE_NULL cases       
+          ES%R_bnd      =  ES%R_xpoint(ES%active_xpoint)
+          ES%Z_bnd      =  ES%Z_xpoint(ES%active_xpoint)
+          ES%i_elm_bnd  =  ES%i_elm_xpoint(ES%active_xpoint)
+          ES%s_bnd      =  ES%s_xpoint(ES%active_xpoint)
+          ES%t_bnd      =  ES%t_xpoint(ES%active_xpoint)
+          ES%ifail_bnd  =  ES%ifail_xpoint
         end if
 
         ! If we have a symmetric double-null, force the single separatrix
@@ -222,12 +238,14 @@ module equil_info
       ES%t_bnd      =  ES%t_lim
       ES%ifail_bnd  =  ES%ifail_lim
     else
-      ES%R_bnd      =  ES%R_xpoint(ES%active_xpoint)
-      ES%Z_bnd      =  ES%Z_xpoint(ES%active_xpoint)
-      ES%i_elm_bnd  =  ES%i_elm_xpoint(ES%active_xpoint)
-      ES%s_bnd      =  ES%s_xpoint(ES%active_xpoint)
-      ES%t_bnd      =  ES%t_xpoint(ES%active_xpoint)
-      ES%ifail_bnd  =  ES%ifail_xpoint
+      if (xcase .ne. DOUBLE_NULL) then
+        ES%R_bnd      =  ES%R_xpoint(ES%active_xpoint)
+        ES%Z_bnd      =  ES%Z_xpoint(ES%active_xpoint)
+        ES%i_elm_bnd  =  ES%i_elm_xpoint(ES%active_xpoint)
+        ES%s_bnd      =  ES%s_xpoint(ES%active_xpoint)
+        ES%t_bnd      =  ES%t_xpoint(ES%active_xpoint)
+        ES%ifail_bnd  =  ES%ifail_xpoint
+      endif
     endif  
     
     ! --- Strike points.

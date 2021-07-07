@@ -6,7 +6,7 @@ module mod_exchange_indices
 
 implicit none
 
-logical, parameter         :: DEBUG_OUTPUT      = .false.  !< Hard-coded parameter for debug output
+logical, parameter         :: DEBUG_OUTPUT      = .true.   !< Hard-coded parameter for debug output
 logical, save              :: initialized       = .false. !< Has the module been initialized?
 logical, save              :: indices_exchanged = .false. !< Have the indices been exchanged w.r.t.
                                                           !! their normal order?
@@ -63,6 +63,7 @@ end subroutine add_exchange_rules
 subroutine initialize(node_list, my_id, n_cpu)
   
   use data_structure
+  use phys_module, only: n_R, freeb_change_indices
   
   ! --- Routine parameters
   type(type_node_list), intent(inout) :: node_list
@@ -74,6 +75,12 @@ subroutine initialize(node_list, my_id, n_cpu)
   integer :: i, j, k, l, ind_max, n_bnd, ind_bnd, ind1, ind2
   
   if ( DEBUG_OUTPUT ) write(*,*) 'Initializing module mod_exchange_indices'
+  
+  if ( n_R /= 0 ) then
+    write(*,*) 'Exchange indices is not compatible with n_R/=0, switching it off.'
+    freeb_change_indices = .false.
+    return
+  end if
 
   ! --- Determine maximum index in the grid and number of boundary nodes
   ind_max = -1
@@ -164,7 +171,8 @@ end subroutine initialize
 subroutine exchange_indices(node_list, my_id, n_cpu, back)
   
   use data_structure
-  
+  use phys_module, only: freeb_change_indices
+    
   ! --- Routine parameters
   type(type_node_list), intent(inout) :: node_list
   integer,              intent(in)    :: my_id
@@ -199,6 +207,7 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
   
   ! --- Initialize when called the first time in a run (or after a grid change)
   if ( .not. initialized ) call initialize(node_list, my_id, n_cpu)
+  if ( .not. freeb_change_indices ) return
   
   ! --- Exchange the indices
   l = 0
@@ -206,7 +215,7 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
     do j = 1, 4
       do k = 1, len_exchange
         if ( node_list%node(i)%index(j) == exchange_table(k,1) ) then
-          if ( DEBUG_OUTPUT ) write(*,*) 'ex:', node_list%node(i)%index(j), '->', exchange_table(k,2)
+          if ( DEBUG_OUTPUT ) write(*,'(a,i7,a,i7,a,i7,a,i3,a)') 'ex:', node_list%node(i)%index(j), '->', exchange_table(k,2), ' (node', i, ', dof', j, ')'
           node_list%node(i)%index(j) = exchange_table(k,2)
           l = l + 1
           exit

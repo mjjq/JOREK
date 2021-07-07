@@ -509,7 +509,7 @@ required = 0
       
     end if
     
-    if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    if ( freeboundary .and. freeb_change_indices) call exchange_indices(node_list, my_id, n_cpu, .false.)
     
  end if !   if ( restart .and. (my_id == 0) ) then
 
@@ -563,7 +563,7 @@ required = 0
       if ( extend_existing_grid .and. (n_flux .le. 0) ) &
           call grid_patches_on_existing_grid(node_list, element_list)
 
-      if ( freeboundary .and. (n_flux==0) ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+      if ( freeboundary .and. (n_flux==0) .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
       
       ! --- Determine boundary information from the grid
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
@@ -669,7 +669,7 @@ required = 0
         if (extend_existing_grid) &
             call grid_patches_on_existing_grid(node_list, element_list)
 
-        if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+        if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
 
         ! --- Determine boundary information from the grid
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
@@ -902,10 +902,10 @@ required = 0
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-    if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
     fileout = 'jorek00000'
     call export_restart(node_list, element_list, fileout)
-    if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
   end if
   
   if ( ( my_id == 0 ) .and. ( (node_list%n_nodes > n_nodes_max+1000)                               &
@@ -1288,10 +1288,10 @@ required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-      if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+      if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
       write(fileout,'(A5,i5.5)') 'jorek',index_now
       call export_restart(node_list, element_list, fileout)
-      if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+      if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
@@ -1416,10 +1416,10 @@ required = 0
   !***********************************************************************
 
   if (my_id .eq. 0)  then
-    if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
     fileout = 'jorek_restart'
     call export_restart(node_list, element_list, fileout)
-    if ( freeboundary ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
     if ( write_ps ) then
       if (.not. bench_without_plot) then
         do ivar=1,n_var

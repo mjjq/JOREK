@@ -63,7 +63,6 @@ end subroutine add_exchange_rules
 subroutine initialize(node_list, my_id, n_cpu)
   
   use data_structure
-  use phys_module, only: n_R, freeb_change_indices
   
   ! --- Routine parameters
   type(type_node_list), intent(inout) :: node_list
@@ -76,12 +75,6 @@ subroutine initialize(node_list, my_id, n_cpu)
   
   if ( DEBUG_OUTPUT ) write(*,*) 'Initializing module mod_exchange_indices'
   
-  if ( n_R /= 0 ) then
-    write(*,*) 'Exchange indices is not compatible with n_R/=0, switching it off.'
-    freeb_change_indices = .false.
-    return
-  end if
-
   ! --- Determine maximum index in the grid and number of boundary nodes
   ind_max = -1
   n_bnd   = 0
@@ -171,7 +164,6 @@ end subroutine initialize
 subroutine exchange_indices(node_list, my_id, n_cpu, back)
   
   use data_structure
-  use phys_module, only: freeb_change_indices
     
   ! --- Routine parameters
   type(type_node_list), intent(inout) :: node_list
@@ -207,7 +199,6 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
   
   ! --- Initialize when called the first time in a run (or after a grid change)
   if ( .not. initialized ) call initialize(node_list, my_id, n_cpu)
-  if ( .not. freeb_change_indices ) return
   
   ! --- Exchange the indices
   l = 0
@@ -223,10 +214,7 @@ subroutine exchange_indices(node_list, my_id, n_cpu, back)
       end do
     end do
   end do
-  if ( len_exchange /= l ) then
-    write(*,*) my_id, 'ERROR: The actual number of exchanged indices does not match the expected value.', l, len_exchange
-    stop
-  end if
+  if ( len_exchange /= l ) write(*,*) my_id, 'WARNING: The actual number of exchanged indices does not match the expected value.', l, len_exchange
   if ( DEBUG_OUTPUT .and. (my_id == 0) ) write (*,*) 'num exchanged ', l
   
   indices_exchanged = .not. indices_exchanged ! switch the state

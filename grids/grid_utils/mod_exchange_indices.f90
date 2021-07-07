@@ -6,7 +6,7 @@ module mod_exchange_indices
 
 implicit none
 
-logical, parameter         :: DEBUG_OUTPUT      = .true.   !< Hard-coded parameter for debug output
+logical, parameter         :: DEBUG_OUTPUT      = .false. !< Hard-coded parameter for debug output
 logical, save              :: initialized       = .false. !< Has the module been initialized?
 logical, save              :: indices_exchanged = .false. !< Have the indices been exchanged w.r.t.
                                                           !! their normal order?

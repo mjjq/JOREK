@@ -250,61 +250,127 @@ subroutine preset_parameters
   neutral_line_R_end        = 2.d20
   neutral_line_Z_end        = 2.d20
 
-
+  ! ------------------------------------------
   ! --- Default boundary conditions ----------
-  apply_dirichlet_BC(:,:) = .true. 
-  apply_dirichlet_BC(0,:) = .false.
-  
-  apply_dirichlet_bc(var_rho,  1)  = .false.
-  apply_dirichlet_bc(var_rho,4:5)  = .false.
-  apply_dirichlet_bc(var_rho,  9)  = .false.
-  apply_dirichlet_bc(var_rho, 11)  = .false.
-  apply_dirichlet_bc(var_rho, 15)  = .false.
-  apply_dirichlet_bc(var_rho, 19)  = .false.
+  ! ------------------------------------------
 
-  apply_dirichlet_bc(var_T,  1)    = .false.
-  apply_dirichlet_bc(var_T,4:5)    = .false.
-  apply_dirichlet_bc(var_T,  9)    = .false.
-  apply_dirichlet_bc(var_T, 11)    = .false.
-  apply_dirichlet_bc(var_T, 15)    = .false.
-  apply_dirichlet_bc(var_T, 19)    = .false.
+  ! --- Dirichlet
+  bcs(:)%dirichlet%psi     = .true.
+  bcs(:)%dirichlet%u       = .true.
+  bcs(:)%dirichlet%zj      = .true.
+  bcs(:)%dirichlet%w       = .true.
+  bcs(:)%dirichlet%rho     = .true.
+  bcs(:)%dirichlet%T       = .true.
+  bcs(:)%dirichlet%Ti      = .true.
+  bcs(:)%dirichlet%Te      = .true.
+  bcs(:)%dirichlet%Vpar    = .true.
+  bcs(:)%dirichlet%rhon    = .true.
+  bcs(:)%dirichlet%nre     = .true.
+  bcs(:)%dirichlet%AR      = .true.
+  bcs(:)%dirichlet%AZ      = .true.
+  bcs(:)%dirichlet%A3      = .true.
 
-  apply_dirichlet_bc(var_Te,  1)   = .false.
-  apply_dirichlet_bc(var_Te,4:5)   = .false.
-  apply_dirichlet_bc(var_Te,  9)   = .false.
-  apply_dirichlet_bc(var_Te, 11)   = .false.
-  apply_dirichlet_bc(var_Te, 15)   = .false.
-  apply_dirichlet_bc(var_Te, 19)   = .false.
+  bcs(  1)%dirichlet%rho   = .false.
+  bcs(4:5)%dirichlet%rho   = .false.
+  bcs(  9)%dirichlet%rho   = .false.
+  bcs( 11)%dirichlet%rho   = .false.
+  bcs( 15)%dirichlet%rho   = .false.
+  bcs( 19)%dirichlet%rho   = .false.
 
-  apply_dirichlet_bc(var_Ti,  1)   = .false.
-  apply_dirichlet_bc(var_Ti,4:5)   = .false.
-  apply_dirichlet_bc(var_Ti,  9)   = .false.
-  apply_dirichlet_bc(var_Ti, 11)   = .false.
-  apply_dirichlet_bc(var_Ti, 15)   = .false.
-  apply_dirichlet_bc(var_Ti, 19)   = .false.
+  bcs(  1)%dirichlet%T     = .false.
+  bcs(4:5)%dirichlet%T     = .false.
+  bcs(  9)%dirichlet%T     = .false.
+  bcs( 11)%dirichlet%T     = .false.
+  bcs( 15)%dirichlet%T     = .false.
+  bcs( 19)%dirichlet%T     = .false.
 
-  apply_dirichlet_bc(var_vpar,  1) = .false.
-  apply_dirichlet_bc(var_vpar,4:5) = .false.
-  apply_dirichlet_bc(var_vpar,  9) = .false.
-  apply_dirichlet_bc(var_vpar, 11) = .false.
-  apply_dirichlet_bc(var_vpar, 15) = .false.
-  apply_dirichlet_bc(var_vpar, 19) = .false.
+  bcs(  1)%dirichlet%Te    = .false.
+  bcs(4:5)%dirichlet%Te    = .false.
+  bcs(  9)%dirichlet%Te    = .false.
+  bcs( 11)%dirichlet%Te    = .false.
+  bcs( 15)%dirichlet%Te    = .false.
+  bcs( 19)%dirichlet%Te    = .false.
 
-  apply_dirichlet_bc(var_rhon,  1) = .false.
-  apply_dirichlet_bc(var_rhon,4:5) = .false.
-  apply_dirichlet_bc(var_rhon,  9) = .false.
-  apply_dirichlet_bc(var_rhon, 11) = .false.
-  apply_dirichlet_bc(var_rhon, 15) = .false.
-  apply_dirichlet_bc(var_rhon, 19) = .false.
+  bcs(  1)%dirichlet%Ti    = .false.
+  bcs(4:5)%dirichlet%Ti    = .false.
+  bcs(  9)%dirichlet%Ti    = .false.
+  bcs( 11)%dirichlet%Ti    = .false.
+  bcs( 15)%dirichlet%Ti    = .false.
+  bcs( 19)%dirichlet%Ti    = .false.
 
-  apply_mach1_bc(:)   = .false.
+  bcs(  1)%dirichlet%vpar  = .false.
+  bcs(4:5)%dirichlet%vpar  = .false.
+  bcs(  9)%dirichlet%vpar  = .false.
+  bcs( 11)%dirichlet%vpar  = .false.
+  bcs( 15)%dirichlet%vpar  = .false.
+  bcs( 19)%dirichlet%vpar  = .false.
 
-  apply_mach1_bc(  1) = .true.
-  apply_mach1_bc(3:5) = .true.
-  apply_mach1_bc(  9) = .true.
-  apply_mach1_bc( 11) = .true.
-  apply_mach1_bc( 15) = .true.
-  apply_mach1_bc( 19) = .true.
+  bcs(  1)%dirichlet%rhon  = .false.
+  bcs(4:5)%dirichlet%rhon  = .false.
+  bcs(  9)%dirichlet%rhon  = .false.
+  bcs( 11)%dirichlet%rhon  = .false.
+  bcs( 15)%dirichlet%rhon  = .false.
+  bcs( 19)%dirichlet%rhon  = .false.
+
+  ! --- Mach 1
+  bcs(:)%mach1   = .false.
+
+  bcs(  1)%mach1 = .true.
+  bcs(3:5)%mach1 = .true.
+  bcs(  9)%mach1 = .true.
+  bcs( 11)%mach1 = .true.
+  bcs( 15)%mach1 = .true.
+  bcs( 19)%mach1 = .true.
+
+  ! --- Natural BCs
+  bcs(:)%natural%rho     = .false.
+  bcs(:)%natural%T       = .false.
+  bcs(:)%natural%Ti      = .false.
+  bcs(:)%natural%Te      = .false.
+  bcs(:)%natural%Vpar    = .false.
+  bcs(:)%natural%rhon    = .false.
+
+  bcs(  1)%natural%rho   = .true.
+  bcs(4:5)%natural%rho   = .true.
+  bcs(  9)%natural%rho   = .true.
+  bcs( 11)%natural%rho   = .true.
+  bcs( 15)%natural%rho   = .true.
+  bcs( 19)%natural%rho   = .true.
+
+  bcs(  1)%natural%T     = .true.
+  bcs(4:5)%natural%T     = .true.
+  bcs(  9)%natural%T     = .true.
+  bcs( 11)%natural%T     = .true.
+  bcs( 15)%natural%T     = .true.
+  bcs( 19)%natural%T     = .true.
+
+  bcs(  1)%natural%Te    = .true.
+  bcs(4:5)%natural%Te    = .true.
+  bcs(  9)%natural%Te    = .true.
+  bcs( 11)%natural%Te    = .true.
+  bcs( 15)%natural%Te    = .true.
+  bcs( 19)%natural%Te    = .true.
+
+  bcs(  1)%natural%Ti    = .true.
+  bcs(4:5)%natural%Ti    = .true.
+  bcs(  9)%natural%Ti    = .true.
+  bcs( 11)%natural%Ti    = .true.
+  bcs( 15)%natural%Ti    = .true.
+  bcs( 19)%natural%Ti    = .true.
+
+  bcs(  1)%natural%vpar  = .true.
+  bcs(4:5)%natural%vpar  = .true.
+  bcs(  9)%natural%vpar  = .true.
+  bcs( 11)%natural%vpar  = .true.
+  bcs( 15)%natural%vpar  = .true.
+  bcs( 19)%natural%vpar  = .true.
+
+  bcs(  1)%natural%rhon  = .true.
+  bcs(4:5)%natural%rhon  = .true.
+  bcs(  9)%natural%rhon  = .true.
+  bcs( 11)%natural%rhon  = .true.
+  bcs( 15)%natural%rhon  = .true.
+  bcs( 19)%natural%rhon  = .true.
   ! -------------------------------------------
 
   

@@ -98,8 +98,47 @@ module phys_module
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
 
-  logical, dimension(0:n_var, 30) :: apply_dirichlet_bc  !< Apply_dirichlet_bc(k,j) for variable k and boundary type j? 
-  logical, dimension(30)          :: apply_mach1_bc      !< Apply Mach=1 B.C. for vpar? 
+  ! ------------------------------------------------
+  ! --- Structures to implement BCs in model600
+  ! ------------------------------------------------
+  integer, parameter :: max_bnd_types=30
+
+  type type_dirichlet_bc                           
+    logical :: psi  
+    logical :: u    
+    logical :: zj   
+    logical :: w    
+    logical :: rho  
+    logical :: T    
+    logical :: Ti   
+    logical :: Te   
+    logical :: Vpar 
+    logical :: rhon 
+    logical :: nre  
+    logical :: AR   
+    logical :: AZ   
+    logical :: A3  
+  end type type_dirichlet_bc
+
+  type type_natural_bc                           
+    logical :: rho  
+    logical :: T    
+    logical :: Ti   
+    logical :: Te   
+    logical :: Vpar 
+    logical :: rhon 
+    logical :: nre  
+  end type type_natural_bc
+
+  type type_bcs                           
+    type (type_dirichlet_bc) :: dirichlet
+    type (type_natural_bc)   :: natural
+    logical                  :: mach1 
+  end type type_bcs
+
+  type (type_bcs), dimension(max_bnd_types) :: bcs   
+  ! ------------------------------------------------
+
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"

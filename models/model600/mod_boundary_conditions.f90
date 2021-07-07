@@ -39,7 +39,7 @@ use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_co
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
        mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef, no_mach1_bc,                            &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const, &
-       apply_dirichlet_bc, apply_mach1_bc
+       bcs 
 use tr_module
 use mpi_mod
 use mod_locate_irn_jcn
@@ -310,7 +310,18 @@ do i=1, n_local_elms !=== do elements
           endif
           !------------------------------------------------ --------------------------------------------------                      
 
-          if ( apply_dirichlet_BC(k, bnd_type)  ) then
+          if (  ( (k == var_psi  ) .and. bcs(bnd_type)%dirichlet%psi  )  .or.  &
+                ( (k == var_u    ) .and. bcs(bnd_type)%dirichlet%u    )  .or.  &
+                ( (k == var_zj   ) .and. bcs(bnd_type)%dirichlet%zj   )  .or.  &
+                ( (k == var_w    ) .and. bcs(bnd_type)%dirichlet%w    )  .or.  &
+                ( (k == var_rho  ) .and. bcs(bnd_type)%dirichlet%rho  )  .or.  &
+                ( (k == var_T    ) .and. bcs(bnd_type)%dirichlet%T    )  .or.  &
+                ( (k == var_Ti   ) .and. bcs(bnd_type)%dirichlet%Ti   )  .or.  &
+                ( (k == var_Te   ) .and. bcs(bnd_type)%dirichlet%Te   )  .or.  &
+                ( (k == var_Vpar ) .and. bcs(bnd_type)%dirichlet%Vpar )  .or.  &
+                ( (k == var_rhon ) .and. bcs(bnd_type)%dirichlet%rhon )  .or.  &
+                ( (k == var_nre  ) .and. bcs(bnd_type)%dirichlet%nre  )        &
+             ) then
 
             ! --- If special conditions (freeboundary) apply to psi and zj, do not apply Dirichlet even if specified in
             ! --- the namelist
@@ -339,7 +350,7 @@ do i=1, n_local_elms !=== do elements
 
         if ((node_list%node(inode)%boundary .eq.  3) .and. (node_list%node(inode2)%boundary .eq.  2)) cycle
 
-        if ( (.not. mach_one_bnd_integral) .and. apply_mach1_bc(bnd_type) .and. with_vpar) then
+        if ( (.not. mach_one_bnd_integral) .and. bcs(bnd_type)%mach1 .and. with_vpar) then
 
           call basisfunctions1(0.d0, H1, H1_s, H1_ss)
 

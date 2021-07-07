@@ -65,6 +65,7 @@ subroutine preset_parameters
   gamma_i_stangeby   = -1.d99 ! sheath transmission factor (ion fluid) given by Stangeby
   density_reflection = 0.d0   ! reflection coefficient for outgoing density
   neutral_reflection = 0.d0   ! reflection coefficient for (fluid) neutrals
+  imp_reflection     = 0.d0   ! reflection coefficient for (fluid) impurities
   
   deuterium_adas        = .false. 
   deuterium_adas_1e20   = .false. 
@@ -306,8 +307,8 @@ subroutine preset_parameters
   pellet_velocity_R = 0.d0
   pellet_velocity_Z = 0.d0
   pellet_particles  = 0.d0
-  pellet_density    = 3.d8       ! pellet density (in units 10^20 m^-3)
-  pellet_density_bg = 3.d8
+  pellet_density    = 5.985d8       ! pellet density (in units 10^20 m^-3)
+  pellet_density_bg = 5.958d8
   use_pellet        = .false.
   
   t_now       = 0.d0
@@ -483,7 +484,6 @@ subroutine preset_parameters
   ns_Z      =  1.5d0
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
-  ns_sig    =  0.05
   ns_deltaphi =  0.5
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
@@ -514,9 +514,12 @@ subroutine preset_parameters
   spi_Vel_diff    = 0.0
   spi_angle       = 0.0
   spi_L_inj       = 0.25
+  spi_L_inj_diff  = 0.0
   ns_phi_rotate   = 0.0
   tor_frequency   = 0.0
-  n_spi           = 1
+  n_spi           = 0
+  n_spi(1)        = 1
+  n_inj           = 1
   spi_rnd_seed    = 0
   spi_abl_model   = 0
   spi_shard_file  = 'none'

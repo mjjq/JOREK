@@ -614,6 +614,7 @@ required = 0
       if (export_for_nemec) then
         if(my_id ==0 ) call export_nemec(node_list, element_list, xpoint, xcase)
       endif
+      if (my_id == 0) call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
     end if ! if (equil) then
 
   

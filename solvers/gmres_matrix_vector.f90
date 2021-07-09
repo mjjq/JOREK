@@ -57,7 +57,7 @@ y_tmp        = 0.d0
 if ( n_tor <= 7 ) then
   
   !$omp parallel default(none)                                                                     &
-  !$omp   shared(A_glob, jcn_glob, irn_glob, x, n_blocks, n_blocksize, index_offset, Int1)         &
+  !$omp   shared(A_glob, jcn_glob, irn_glob, x, n_blocks, n_blocksize, index_offset)               &
   !$omp   private(i,iA_start,ix_start, iy_start, ir, jc, y_tmp_block )                             &
   !$omp   reduction(+:y_tmp)
   
@@ -79,7 +79,7 @@ if ( n_tor <= 7 ) then
 else ! ... so in case n_tor is larger than 7
   
   !$omp parallel default(none)                                                                     &
-  !$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob, x, n_blocks, n_blocksize, index_offset, Int1)  &
+  !$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob, x, n_blocks, n_blocksize, index_offset)        &
   !$omp   private(i,iA_start,ix_start, iy_start, ir, jc, y_tmp_block)
   
   !$omp do schedule(guided)

@@ -103,12 +103,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        &                                 
                 heatsource_psin, heatsource_sig,                    &
+                heatsource_e_psin, heatsource_e_sig,                &
+                heatsource_i_psin, heatsource_i_sig,                &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
-                particlesource_gauss, heatsource_gauss,             &
-                heatsource_gauss_i, heatsource_gauss_e,             &
-                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss,    heatsource_gauss,          &
+                heatsource_gauss_i,      heatsource_gauss_e,        &
+                heatsource_gauss_psin,   heatsource_gauss_sig,      &
+                heatsource_gauss_i_psin, heatsource_gauss_i_sig,    &
+                heatsource_gauss_e_psin, heatsource_gauss_e_sig,    &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 neutral_line_source,                                &
                 neutral_line_R_start, neutral_line_Z_start,         &

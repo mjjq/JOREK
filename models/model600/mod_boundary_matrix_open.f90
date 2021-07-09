@@ -317,18 +317,18 @@ do ms=1, n_gauss
                                 - v * r0_corr * cs0 * BigR * dl * c_angle * tstep     ! particle flux at 1 degree angle  
 
             ! --- Sheath heat flux (c_angle for mininum heat fluxes at grazing angles)
-            if (with_TiTe) then
+          if (with_TiTe) then
               rhs_ij(var_Ti)  = - v * (gamma_sheath_i-1.d0) * r0_corr *Ti0_corr * vpar0 * ps0_s * normal_sign3 * tstep &
                                 - v * (gamma_sheath_i-1.d0) * r0_corr *Ti0_corr * cs0    * BigR * dl * c_angle * tstep  
 
               rhs_ij(var_Te)  = - v * (gamma_sheath_e-1.d0) * r0_corr *Te0_corr * vpar0 * ps0_s * normal_sign3 * tstep &
                                 - v * (gamma_sheath_e-1.d0) * r0_corr *Te0_corr * cs0  * BigR * dl * c_angle   * tstep  
-            else
+          else
               rhs_ij(var_T)   = - v * (gamma_sheath  -1.d0) * r0_corr * T0_corr * vpar0 * ps0_s * normal_sign3 * tstep &
                                 - v * (gamma_sheath  -1.d0) * r0_corr * T0_corr * cs0    * BigR * dl * c_angle * tstep  
-            endif
+          endif
 
-            ! --- Mach=1 through boundary integral penalization method
+          ! --- Mach=1 through boundary integral penalization method
             rhs_ij(var_vpar) = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * dl * Zbig  * factor_cs_bnd_integral 
 
             ! --- Fluid neutral reflection
@@ -377,14 +377,15 @@ do ms=1, n_gauss
 
                 ! --- Density reflection
                 if (with_vpar) then
-
                   ! --- Density reflection and minimum particle flux (c_angle)
                   amat(var_rho,var_psi)   = - v * density_reflection * r0_corr  * vpar0 * psi_s * normal_sign3 * theta * tstep 
                   amat(var_rho,var_rho)   = - v * density_reflection * rho      * vpar0 * ps0_s * normal_sign3 * theta * tstep &
                                             + v                      * rho      * cs0   * BigR * dl * c_angle  * theta * tstep 
                   amat(var_rho,var_vpar)  = - v * density_reflection * r0_corr  * vpar  * ps0_s * normal_sign3 * theta * tstep 
-           
-                  if (with_TiTe) then                
+
+                ! --- Sheath heat flux
+                if (with_TiTe) then                
+
                     amat(var_rho,var_Ti)  = + v * r0_corr  * cs_Ti * BigR * dl * c_angle  * theta * tstep
                     amat(var_rho,var_Te)  = + v * r0_corr  * cs_Te * BigR * dl * c_angle  * theta * tstep
                   else
@@ -447,9 +448,8 @@ do ms=1, n_gauss
                   endif ! with neutrals
 
                 endif   ! with_vpar
-
                 index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min +1  ! index in the ELM matrix
-                 
+
                 ! --- Add contributions to ELM matrix                 
                 do k_var = 1, n_var
                   do i_var = 1, n_var

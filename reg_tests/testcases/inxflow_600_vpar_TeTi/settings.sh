@@ -1,5 +1,6 @@
 # --- General settings
 jorekmodel="600"
+options="with_vpar=.true. with_TiTe=.true. with_neutrals=.false. with_impurities=.false. with_refluid=.false."
 description="Ballooning mode, simple X-point plasma, model$jorekmodel, n_tor=3 + FFT."
 mpitasks=2
 binaries="jorek_model${jorekmodel}_3"
@@ -11,12 +12,12 @@ extra_remote_files=""
 # --- Compile the code for the test case
 function compile_jorek () {
   if [ "$initialrun" == "yes" ]; then
-    ./util/config.sh model=$jorekmodel n_tor=1 n_plane=1 n_period=1 with_vpar=.true. with_TiTe=.true. with_neutrals=.false. with_impurities=.false. with_refluid=.false. || exit 1
+    ./util/config.sh model=$jorekmodel n_tor=1 n_plane=1 n_period=1 $options         || exit 1
     make $compilopt $debugoptions jorek_model${jorekmodel}                           || exit 1
     mv jorek_model${jorekmodel} jorek_model${jorekmodel}_1                           || exit 1
     make cleanall                                                                    || exit 1
   fi
-  ./util/config.sh model=$jorekmodel n_tor=3 n_plane=4 n_period=6 with_vpar=.true.   || exit 1
+  ./util/config.sh model=$jorekmodel n_tor=3 n_plane=4 n_period=6 $options           || exit 1
   make $compilopt $debugoptions jorek_model${jorekmodel}                             || exit 1
   mv jorek_model${jorekmodel} jorek_model${jorekmodel}_3                             || exit 1
 }

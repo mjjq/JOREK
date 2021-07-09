@@ -229,7 +229,11 @@ subroutine preset_parameters
   heatsource_e        = 0.5e-7
   heatsource_i        = 0.5e-7
   heatsource_psin     = 1.0d0
+  heatsource_e_psin   = 1.0d0
+  heatsource_i_psin   = 1.0d0
   heatsource_sig      = 0.1d0
+  heatsource_e_sig    = 0.1d0
+  heatsource_i_sig    = 0.1d0
   particlesource      = 1.e-5
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
@@ -237,10 +241,14 @@ subroutine preset_parameters
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01
   heatsource_gauss          = 0.d0
-  heatsource_gauss_i        = 0.d0
   heatsource_gauss_e        = 0.d0
+  heatsource_gauss_i        = 0.d0
   heatsource_gauss_psin     = 0.9d0
+  heatsource_gauss_e_psin   = 0.9d0
+  heatsource_gauss_i_psin   = 0.9d0
   heatsource_gauss_sig      = 0.1d0
+  heatsource_gauss_e_sig    = 0.1d0
+  heatsource_gauss_i_sig    = 0.1d0
   particlesource_gauss      = 0.d0
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0

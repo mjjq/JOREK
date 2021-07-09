@@ -378,7 +378,17 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,CHAR_FMT) 'ZK_i_perp_file        ', trim(ZK_i_perp_file)
     end if
     write(*,REAL_FMT) 'heatsource_e           ', heatsource_e
+    write(*,REAL_FMT) 'heatsource_e_psin      ', heatsource_e_psin
+    write(*,REAL_FMT) 'heatsource_e_sig       ', heatsource_e_sig
+    write(*,REAL_FMT) 'heatsource_gauss_e     ', heatsource_gauss_e
+    write(*,REAL_FMT) 'heatsource_gauss_e_psin', heatsource_gauss_e_psin
+    write(*,REAL_FMT) 'heatsource_gauss_e_sig ', heatsource_gauss_e_sig
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
+    write(*,REAL_FMT) 'heatsource_i_psin      ', heatsource_i_psin
+    write(*,REAL_FMT) 'heatsource_i_sig       ', heatsource_i_sig
+    write(*,REAL_FMT) 'heatsource_gauss_i     ', heatsource_gauss_i
+    write(*,REAL_FMT) 'heatsource_gauss_i_psin', heatsource_gauss_i_psin
+    write(*,REAL_FMT) 'heatsource_gauss_i_sig ', heatsource_gauss_i_sig
     write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
     write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
     write(*,LOGI_FMT) 'thermalization         ', thermalization
@@ -427,12 +437,11 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
   write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
-  write(*,REAL_FMT) 'heatsource_gauss_e    ', heatsource_gauss_e
-  write(*,REAL_FMT) 'heatsource_gauss_i    ', heatsource_gauss_i
   write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
   write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'gamma                 ', gamma
   write(*,REAL_FMT) 'tauIC                 ', tauIC
+  write(*,REAL_FMT) 'tauIC_suggested       ', tauIC_suggested
   write(*,LOGI_FMT) 'Wdia                  ', Wdia
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,LOGI_FMT) 'eta_num_T_dependent   ', eta_num_T_dependent

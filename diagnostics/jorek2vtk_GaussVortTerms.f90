@@ -64,6 +64,7 @@ use elements_nodes_neighbours
 use mod_import_restart
 use mod_neighbours
 use equil_info, only : get_psi_n, ES
+use mod_sources
 
 
 implicit none

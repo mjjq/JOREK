@@ -548,7 +548,7 @@ if (my_id == 0) then
     
     ! Define the flux values to be plotted...
     psi_axis = psi_axis+0.01 !Just offset a little, because finding surfaces along the side of an element (on the xpoint grid) can be hard...
-    call define_flux_values(node_list, element_list, surface_list, sep_list, xcase2, n_grids, sigmas)
+    call define_flux_values(node_list, element_list, surface_list, sep_list, xcase2, psi_xpoint, n_grids, sigmas)
     psi_axis = psi_axis-0.01 !Put it back, it's not used anyway, but just for principle!
     
   else

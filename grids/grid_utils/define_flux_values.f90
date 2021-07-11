@@ -1,4 +1,4 @@
-subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcase, n_grids, sigmas)
+subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint, n_grids, sigmas)
   !-----------------------------------------------------------------------
   ! subroutine defines the flux values of the flux surfaces on which the
   ! finite element grid will be aligned
@@ -20,6 +20,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   type (type_element_list), intent(inout) :: element_list
   integer,                  intent(in)    :: n_grids(12), xcase
   real*8,                   intent(in)    :: sigmas(16)
+  real*8,                   intent(inout) :: psi_xpoint(2)
   
   ! --- local variables
   real*8, allocatable :: s_tmp(:)
@@ -34,7 +35,6 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   real*8              :: bgf_open, bgf_closed
   real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
   real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
-  real*8              :: psi_xpoint(2)
   real*8              :: rr, ss, drr, dss, tt
   real*8              :: rr1, ss1, drr1, dss1
   real*8              :: rr2, ss2, drr2, dss2
@@ -63,8 +63,6 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   
   !-------------------------------- Define psi_bnd and psi_bn2
   xpoint        = .true.
-  psi_xpoint(1) = ES%psi_xpoint(1)
-  psi_xpoint(2) = ES%psi_xpoint(2)
   if(xcase .eq. LOWER_XPOINT) psi_bnd = psi_xpoint(1)
   if(xcase .eq. UPPER_XPOINT) psi_bnd = psi_xpoint(2)
   if(xcase .eq. DOUBLE_NULL ) then
@@ -80,6 +78,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
       psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
       psi_xpoint(2) = psi_xpoint(1)
       psi_bnd  = psi_xpoint(1)
+      psi_bnd2 = psi_bnd
     endif
   endif
   
@@ -294,8 +293,8 @@ end subroutine define_flux_values
   
   
 subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_grids, &
-                                n_int_max, n_target, R_target, Z_target, index_target, &
-                                n_surf_max, n_int_surf, index_int_surf)
+                                psi_xpoint, n_int_max, n_target, R_target, Z_target,   &
+                                index_target, n_surf_max, n_int_surf, index_int_surf)
   !------------------------------------------------------------------------
   ! subroutine redefines the flux values of the flux surfaces to add values
   ! for the wall corners inside the grid
@@ -315,6 +314,7 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
   type (type_surface_list), intent(inout)       :: surface_list
   type (type_node_list),    intent(in)          :: node_list
   type (type_element_list), intent(in)          :: element_list
+  real*8,                   intent(in)          :: psi_xpoint(2)
   integer,                  intent(inout)       :: n_grids(12), xcase
   integer,                  intent(inout)       :: n_int_max, n_target, index_target(n_int_max,4)
   real*8,                   intent(inout)       :: R_target(n_int_max), Z_target(n_int_max)
@@ -466,8 +466,8 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
       iend   = i_beg(LowerLeft)
     endif
     do i=istart+1,iend
-      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, i, &
-                            n_int_max, n_target, R_target, Z_target, index_target,    &
+      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, psi_xpoint, &
+                            i, n_int_max, n_target, R_target, Z_target, index_target,          &
                             n_surf_max, n_int_surf, index_int_surf)
     enddo
     istart = i_beg(LowerRight)
@@ -477,8 +477,8 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
       iend   = i_beg(LowerRight)
     endif
     do i=istart+1,iend
-      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, i, &
-                            n_int_max, n_target, R_target, Z_target, index_target,    &
+      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, psi_xpoint, &
+                            i, n_int_max, n_target, R_target, Z_target, index_target,          &
                             n_surf_max, n_int_surf, index_int_surf)
     enddo
   endif
@@ -490,8 +490,8 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
       iend   = i_beg(UpperLeft)
     endif
     do i=istart+1,iend
-      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, i, &
-                            n_int_max, n_target, R_target, Z_target, index_target,    &
+      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, psi_xpoint, &
+                            i, n_int_max, n_target, R_target, Z_target, index_target,          &
                             n_surf_max, n_int_surf, index_int_surf)
     enddo
     istart = i_beg(UpperRight)
@@ -501,8 +501,8 @@ subroutine redefine_flux_values(node_list, element_list, surface_list, xcase, n_
       iend   = i_beg(UpperRight)
     endif
     do i=istart+1,iend
-      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, i, &
-                            n_int_max, n_target, R_target, Z_target, index_target,    &
+      call add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, psi_xpoint, &
+                            i, n_int_max, n_target, R_target, Z_target, index_target,          &
                             n_surf_max, n_int_surf, index_int_surf)
     enddo
   endif
@@ -943,8 +943,8 @@ end subroutine redefine_flux_values
   
   
 
-subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, i_wall, &
-                            n_int_max, n_target, R_target, Z_target, index_target,         &
+subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grids, psi_xpoint, &
+                            i_wall, n_int_max, n_target, R_target, Z_target, index_target,     &
                             n_surf_max, n_int_surf, index_int_surf)
   !-------------------------------------------------------------------------------
   ! subroutine adds a flux surface for a given wall corner with wall index i_wall
@@ -964,6 +964,7 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   type (type_surface_list), intent(inout)       :: surface_list
   type (type_node_list),    intent(in)          :: node_list
   type (type_element_list), intent(in)          :: element_list
+  real*8,                   intent(in)          :: psi_xpoint(2)
   integer,                  intent(in)          :: i_wall
   integer,                  intent(inout)       :: n_grids(12), xcase
   integer,                  intent(inout)       :: n_int_max, n_target, index_target(n_int_max,4)
@@ -1019,28 +1020,28 @@ subroutine add_flux_surface(node_list, element_list, surface_list, xcase, n_grid
   call interp(node_list,element_list,i_elm_out,1,1,s_out,t_out,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   ! --- Determine which region of the grid the wall corner belongs to
-  if ( (xcase .ne. UPPER_XPOINT) .and. (abs(psi-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis)) &
+  if ( (xcase .ne. UPPER_XPOINT) .and. (abs(psi-ES%psi_axis) .lt. abs(psi_xpoint(1)-ES%psi_axis)) &
                                  .and. (Z_out .lt. ES%Z_axis)                         ) location = private
-  if ( (xcase .ne. LOWER_XPOINT) .and. (abs(psi-ES%psi_axis) .lt. abs(ES%psi_xpoint(2)-ES%psi_axis)) &
+  if ( (xcase .ne. LOWER_XPOINT) .and. (abs(psi-ES%psi_axis) .lt. abs(psi_xpoint(2)-ES%psi_axis)) &
                                  .and. (Z_out .gt. ES%Z_axis)                         ) location = upper_private
-  if ( (xcase .eq. LOWER_XPOINT) .and. (abs(psi-ES%psi_axis) .gt. abs(ES%psi_xpoint(1)-ES%psi_axis)) &
+  if ( (xcase .eq. LOWER_XPOINT) .and. (abs(psi-ES%psi_axis) .gt. abs(psi_xpoint(1)-ES%psi_axis)) &
                                  .and. (Z_out .lt. ES%Z_axis)                         ) location = SOL
-  if ( (xcase .eq. UPPER_XPOINT) .and. (abs(psi-ES%psi_axis) .gt. abs(ES%psi_xpoint(2)-ES%psi_axis)) &
+  if ( (xcase .eq. UPPER_XPOINT) .and. (abs(psi-ES%psi_axis) .gt. abs(psi_xpoint(2)-ES%psi_axis)) &
                                  .and. (Z_out .gt. ES%Z_axis)                         ) location = SOL
-  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. abs(ES%psi_xpoint(1)-ES%psi_axis)) &
-                                 .and. (abs(psi-ES%psi_axis) .lt. abs(ES%psi_xpoint(2)-ES%psi_axis)) ) location = sandwich
-  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis)) &
-                                 .and. (abs(psi-ES%psi_axis) .gt. abs(ES%psi_xpoint(2)-ES%psi_axis)) ) location = sandwich
-  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(ES%psi_xpoint(1)-ES%psi_axis),abs(ES%psi_xpoint(2)-ES%psi_axis))) &
+  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. abs(psi_xpoint(1)-ES%psi_axis)) &
+                                 .and. (abs(psi-ES%psi_axis) .lt. abs(psi_xpoint(2)-ES%psi_axis)) ) location = sandwich
+  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .lt. abs(psi_xpoint(1)-ES%psi_axis)) &
+                                 .and. (abs(psi-ES%psi_axis) .gt. abs(psi_xpoint(2)-ES%psi_axis)) ) location = sandwich
+  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(psi_xpoint(1)-ES%psi_axis),abs(psi_xpoint(2)-ES%psi_axis))) &
                                  .and. (Z_out .lt. ES%Z_axis) &
                                  .and. (R_out .gt. ES%R_xpoint(1))                    ) location = outer
-  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(ES%psi_xpoint(1)-ES%psi_axis),abs(ES%psi_xpoint(2)-ES%psi_axis))) &
+  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(psi_xpoint(1)-ES%psi_axis),abs(psi_xpoint(2)-ES%psi_axis))) &
                                  .and. (Z_out .lt. ES%Z_axis) &
                                  .and. (R_out .lt. ES%R_xpoint(1))                    ) location = inner
-  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(ES%psi_xpoint(1)-ES%psi_axis),abs(ES%psi_xpoint(2)-ES%psi_axis))) &
+  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(psi_xpoint(1)-ES%psi_axis),abs(psi_xpoint(2)-ES%psi_axis))) &
                                  .and. (Z_out .gt. ES%Z_axis) &
                                  .and. (R_out .gt. ES%R_xpoint(2))                    ) location = outer
-  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(ES%psi_xpoint(1)-ES%psi_axis),abs(ES%psi_xpoint(2)-ES%psi_axis))) &
+  if ( (xcase .eq. DOUBLE_NULL ) .and. (abs(psi-ES%psi_axis) .gt. max(abs(psi_xpoint(1)-ES%psi_axis),abs(psi_xpoint(2)-ES%psi_axis))) &
                                  .and. (Z_out .gt. ES%Z_axis) &
                                  .and. (R_out .lt. ES%R_xpoint(2))                    ) location = inner
   

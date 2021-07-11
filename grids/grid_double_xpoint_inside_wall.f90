@@ -38,6 +38,7 @@ type (type_element_list), pointer :: element_list_tmp, element_list_tmp2, elemen
 type (type_strategic_points) , pointer     :: stpts
 type (type_new_points)       , pointer     :: nwpts
 
+real*8              :: psi_xpoint(2)
 integer             :: n_psi
 integer             :: i_elm_find(8), ifail
 integer             :: i_ext
@@ -134,22 +135,26 @@ n_grids(10)= n_leg_out; n_grids(11)= n_up_leg_out
 !-------------------------------------------------------------------------------------------!
 !----------------------------- Find MagAxis and Xpoint -------------------------------------!
 !-------------------------------------------------------------------------------------------!
+psi_xpoint(1) = ES%psi_xpoint(1)
+psi_xpoint(2) = ES%psi_xpoint(2)
 
 psi_bnd  = 0.d0
 psi_bnd2 = 0.d0
-if(xcase .eq. LOWER_XPOINT) psi_bnd = ES%psi_xpoint(1)
-if(xcase .eq. UPPER_XPOINT) psi_bnd = ES%psi_xpoint(2)
+if(xcase .eq. LOWER_XPOINT) psi_bnd = psi_xpoint(1)
+if(xcase .eq. UPPER_XPOINT) psi_bnd = psi_xpoint(2)
 if(xcase .eq. DOUBLE_NULL ) then
   if(ES%active_xpoint .eq. UPPER_XPOINT) then
-    psi_bnd  = ES%psi_xpoint(2)
-    psi_bnd2 = ES%psi_xpoint(1)
+    psi_bnd  = psi_xpoint(2)
+    psi_bnd2 = psi_xpoint(1)
   else
-    psi_bnd  = ES%psi_xpoint(1)
-    psi_bnd2 = ES%psi_xpoint(2)  
+    psi_bnd  = psi_xpoint(1)
+    psi_bnd2 = psi_xpoint(2)  
   endif
   ! If we have a symmetric double-null, force the single separatrix
   if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
-    psi_bnd  = (ES%psi_xpoint(1)+ES%psi_xpoint(2))/2.d0
+    psi_xpoint(1)  = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+    psi_xpoint(2)  = psi_xpoint(1)
+    psi_bnd  = psi_xpoint(1)
     psi_bnd2 = psi_bnd  
     n_grids(3) = 0
   endif
@@ -173,7 +178,7 @@ if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_
 call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
 
 !-------------------------------- Call the routine
-call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, n_grids, sigmas)
+call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint, n_grids, sigmas)
 
 call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,.true.,xcase)
 call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,.true.,xcase)

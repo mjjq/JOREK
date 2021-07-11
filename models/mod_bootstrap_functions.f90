@@ -473,7 +473,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   
   ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, n_grids, sigmas)
+  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint, n_grids, sigmas)
   
   
   ! ---------------------------------------------
@@ -665,7 +665,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   
   ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, n_grids, sigmas)
+  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint, n_grids, sigmas)
   
   ! -----------------
   ! --- Get q-profile

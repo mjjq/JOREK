@@ -301,7 +301,7 @@ module pellet_module
   
       if (spi_abl_model == 0) then
         pellets(i_p)%spi_abl   = ns_amplitude(i_inj)
-      elseif (spi_abl_model >= 1) then
+      else if (spi_abl_model >= 1) then
   
         call find_RZ(node_list,element_list,pellets(i_p)%spi_R,pellets(i_p)%spi_Z,&
                      R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -519,8 +519,9 @@ module pellet_module
   
     use data_structure
     use phys_module, only: pellets, n_spi, n_spi_tot, n_inj, JET_MGI, ASDEX_MGI, ns_R, ns_Z, ns_phi,&
-                           ns_amplitude, spi_Vel_Rref, spi_Vel_Zref, spi_Vel_RxZref,&
-                           spi_quantity, spi_quantity_bg, spi_Vel_diff, spi_L_inj, spi_L_inj_diff
+                           ns_amplitude, spi_Vel_Rref, spi_Vel_Zref, spi_Vel_RxZref,                &
+                           spi_quantity, spi_quantity_bg, spi_Vel_diff, spi_L_inj, spi_L_inj_diff,  &
+                           spi_num_file
     use mpi_mod
     
     implicit none
@@ -547,9 +548,14 @@ module pellet_module
     else      !< Do one initialization for each injection location
       n_spi_begin = 1
       do i = 1, n_inj
-        call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
-                      spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),spi_L_inj_diff(i),n_spi(i),n_spi_begin)
-        n_spi_begin = n_spi_begin + n_spi(i)
+        if (spi_num_file(i) /= 'none') then ! if file exists, read shards information from it
+          call init_spi_num_file(i,spi_num_file(i),n_spi(i),n_spi_begin)
+          n_spi_begin = n_spi_begin + n_spi(i)
+        else ! if file does not exist, initialise shards based on parameters in the JOREK input file
+          call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+                        spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),spi_L_inj_diff(i),n_spi(i),n_spi_begin)
+          n_spi_begin = n_spi_begin + n_spi(i)
+        end if
       end do
     end if
 
@@ -571,10 +577,9 @@ module pellet_module
     
     implicit none
     
-    integer             :: ierr,err,i,i_surface, i_p
+    integer             :: i, i_p
     logical             :: ferr
     
-    real*8  :: n_SI, T_eV, n_corr, T_corr
     real*8  :: spi_gd_angle_01, spi_gd_angle_02        ! The dispersion angles for each shard
     real*8  :: spi_rotation_01, spi_rotation_02        ! The rotation angle from shard coordinates to (R,Z,phi) coordinates
     real*8  :: spi_Vel_totref, spi_Vel_i, spi_Vel_R_tmp, spi_Vel_Z_tmp, spi_Vel_RxZ_tmp, spi_L_inj_i
@@ -848,6 +853,295 @@ module pellet_module
 
     return
   end subroutine init_spi
+
+  !> Initializes the shattered pellet position, velocity and size by a given data file (HDF5 flag needed to be implemented)
+  !!  * non-HDF5 version of file is based on the format given by M3D-C1
+  !!   - should consists of 8 columns
+  !!   - 1st   2nd          3rd   4th         5th           6th         7th        8th 
+  !!     R [m] phi[radians] Z [m] Vel_R [m/s] Vel_phi [m/s] Vel_Z [m/s] radius [m] mol(D2)/(mol(D2)+mol(Impurity))
+  subroutine init_spi_num_file(i_inj,spi_file,n_spi,n_spi_begin)!,file_type = ASCII or HDF5 )
+
+    use iso_fortran_env
+
+    use constants
+    use tr_module
+    use data_structure
+    use phys_module, only: pellets, imp_type, pellet_density, pellet_density_bg, spi_angle, xtime_spi_ablation, &
+                           xtime_spi_ablation_bg, xtime_spi_ablation_rate, xtime_spi_ablation_bg_rate, nstep,   &
+                           spi_num_file, spi_hdf5, spi_abl_model, n_spi_tot, ns_phi_rotate, tor_frequency
+    use mpi_mod
+
+    implicit none
+
+    character(len=256), intent(in) :: spi_file
+    integer,            intent(in) :: i_inj, n_spi
+    integer,            intent(in) :: n_spi_begin
+
+    integer, parameter  :: n_col_max = 8  ! given non-HDF5 datafile should consists of '8' columns
+    real*8, allocatable :: spi_R_tmp(:),     spi_phi_tmp(:),     spi_Z_tmp(:),     &
+                           spi_Vel_R_tmp(:), spi_Vel_phi_tmp(:), spi_Vel_Z_tmp(:), &
+                           spi_radius_tmp(:),spi_species_molar_D2_tmp(:)
+
+    real*8              :: spi_species_atomic_tmp, imp_fraction, spi_density_tmp, mix_ratio
+    real*8              :: real_spi_quantity(2)
+
+    integer             :: i, i_p
+    logical             :: ferr
+
+    ! variables related to check whether the shards data file is in its format
+    integer             :: i_line, n_line, io, n_col
+    character           :: old_char, new_char
+    logical             :: beg_line
+
+    ! check some input parameters (especially the rigid body rotation parameters)
+    if ((ns_phi_rotate /= 0.d0) .or. (tor_frequency /= 0.d0)) then
+      write(*,*) "WARNING: non-zero 'ns_phi_rotate' or 'tor_frequency' cannot be treated properly with the SPI initialisation by datafiles"
+      stop
+    end if
+
+    if (n_spi >= 1) then
+      ! read spi shards information from Brendan's format
+      if (spi_hdf5 == 0) then
+        ! check 1) file existence
+        inquire(file=trim(spi_file), exist=ferr)
+        ! check 2) file format
+        if (ferr) then
+          open(32, file=trim(spi_file), status='old', action='read', form='unformatted', access='stream')
+          old_char = " "
+          n_line   = 0
+          beg_line = .true.
+          n_col    = 0
+          do
+            read(32, iostat=io) new_char
+
+            ! exit with End-Of-File
+            if (io < 0) exit
+
+            ! deal with empty lines
+            if (beg_line .and. new_char == new_line(new_char)) then
+              write(*,'(a, i5, a)') "Warning: ", n_line, "th line is empty. Possibly the spi shard file is defected."
+
+            ! deal with the beginning of line for white spaces
+            else if (beg_line) then
+              beg_line = .false.
+
+            ! count columns
+            else if (new_char == " " .and. old_char /= " ") then
+              n_col = n_col+1
+
+            ! end of line
+            else if (new_char == new_line(new_char)) then
+              if (old_char /= " ") then
+                n_col = n_col+1
+              end if
+
+              n_line = n_line+1
+
+              if (n_col /= n_col_max) then
+                write(*,*) "ERROR: spi shard file is defected."
+                stop
+              end if
+
+              ! reset for next line
+              n_col    = 0
+              beg_line = .true.
+            end if
+
+            old_char = new_char
+
+          end do
+
+          close(32)
+
+          ! check 3) Consistency of spi shard file with the parameters in the input file (especially 'n_spi')
+          if (n_spi /= n_line) then
+            write(*,*) "ERROR: spi shard file contains more number of lines than the ginve 'n_spi' in the input file."
+            stop
+          end if
+
+        else
+
+          write(*,*) "ERROR: 'spi_num_file' for ", i_inj, "th SPI does not exist, exiting now"
+          stop
+
+        end if
+
+      else if (spi_hdf5 == 1) then
+
+        write(*,*) "ERROR: reading spi shards information from a HDF5 is not yet implemented."
+        stop
+
+      else
+
+        write(*,*) "ERROR: spi_hdf5 has wrong value in the input file (it should be '0' or '1')"
+        stop
+
+      end if
+
+      ! Now that we have a proper spi shard files (ASCII or HDF5), start to read it
+      allocate( spi_R_tmp(n_spi),      spi_phi_tmp(n_spi),      spi_Z_tmp(n_spi),     &
+                spi_Vel_R_tmp(n_spi),  spi_Vel_phi_tmp(n_spi),  spi_Vel_Z_tmp(n_spi), &
+                spi_radius_tmp(n_spi), spi_species_molar_D2_tmp(n_spi) )
+
+      if (spi_hdf5 == 0) then
+
+        open(42,file=trim(spi_file),status="old",action="read")
+
+        do i = 1,n_line
+          read(42, *, iostat=io) spi_R_tmp(i),      spi_phi_tmp(i),      spi_Z_tmp(i),     &
+                                 spi_Vel_R_tmp(i),  spi_Vel_phi_tmp(i),  spi_Vel_Z_tmp(i), &
+                                 spi_radius_tmp(i), spi_species_molar_D2_tmp(i)
+          if (io /= 0) then
+            if (io == iostat_end) then
+              exit
+            else
+              write(*,*) "ERROR: in reading spi_num_file, iostat = ", io
+              stop
+            end if
+          end if
+        end do
+
+        close(42)
+
+      else if (spi_hdf5 == 1) then
+
+        write(*,*) "ERROR: reading spi shards information from a HDF5 is not yet implemented."
+        stop
+
+      else
+
+        write(*,*) "ERROR: spi_hdf5 has wrong value in the input file (it should be '0' or '1')"
+        stop
+
+      end if
+
+      ! simple checks for 'spi_species_molar_D2_tmp'
+      do i = 1,n_spi
+        if (spi_species_molar_D2_tmp(1) /= spi_species_molar_D2_tmp(i)) then
+          write(*,*) "EEROR: D2 molar fraction should be the same in the spi data file between all fragments"
+          stop
+        end if
+      end do
+
+      if (spi_species_molar_D2_tmp(1) < 0. .or. spi_species_molar_D2_tmp(1) > 1.) then
+        write(*,*) "ERROR: D2 molar fraction in spi data file has illegal values"
+      end if
+
+      ! convert 'spi_species_molar_D2_tmp' into 'mix_ratio'
+      if      ( (spi_species_molar_D2_tmp(1) == 0.) .and. (pellet_density > 0.) ) then
+        mix_ratio = 1.
+      else if ( (spi_species_molar_D2_tmp(1) == 1.) .and. (pellet_density_bg > 0.) ) then
+        mix_ratio = 0.
+      else if ( (pellet_density > 0.) .and. (pellet_density_bg > 0.) ) then
+        spi_species_atomic_tmp = 1.d0 - 2.d0 * spi_species_molar_D2_tmp(1) / (spi_species_molar_D2_tmp(1) + 1.d0)
+        imp_fraction = spi_species_atomic_tmp / (1.d0 - spi_species_atomic_tmp)
+        mix_ratio = ( imp_fraction / pellet_density ) / ( imp_fraction / pellet_density + 1.d0 / pellet_density_bg )
+      else
+        write(*,*) "ERROR: Something went wrong when converting D2 molar species values into 'mix_ratio'."
+        stop
+      end if
+
+      real_spi_quantity = 0.d0
+
+      select case ( trim(imp_type) )
+        case('D2')
+          write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+          stop
+        case('Ne')
+          ! Only Parks formula can properly treat the mixing of neon and D2/H2.
+          ! otherwise we assume neon and D2/H2 formed separately.
+          if (spi_abl_model == 3 .and. mix_ratio < 1. .and. mix_ratio > 0.) then
+            do i = 1, n_spi
+              i_p = i - 1 + n_spi_begin
+              pellets(i_p)%spi_species = spi_species_atomic_tmp
+              spi_density_tmp = 1./((1.-pellets(i_p)%spi_species)/pellet_density_bg &
+                                    + pellets(i_p)%spi_species/pellet_density) 
+              real_spi_quantity(2) = real_spi_quantity(2) &
+                                     + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp * 1.d20 &
+                                       * pellets(i_p)%spi_species
+              real_spi_quantity(1) = real_spi_quantity(1) &
+                                     + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp * 1.d20 &
+                                       * (1. - pellets(i_p)%spi_species)
+            end do
+          else
+            do i = 1, n_spi
+              i_p = i - 1 + n_spi_begin
+              if (i <= int(real(n_spi,8)*(mix_ratio))) then
+                pellets(i_p)%spi_species = 1.
+                spi_density_tmp = pellet_density
+                real_spi_quantity(2) = real_spi_quantity(2) + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp *1.d20
+              else
+                pellets(i_p)%spi_species = 0.
+                spi_density_tmp = pellet_density_bg
+                real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp *1.d20
+              end if
+            end do
+          end if
+        case('Ar')
+          ! Argon and D2/H2 part of the pellet ar always formed separately, thus we always treat them as such.
+          do i = 1, n_spi
+            i_p = i - 1 + n_spi_begin
+            if (i <= int(real(n_spi,8)*(mix_ratio))) then
+              pellets(i_p)%spi_species = 1.
+              spi_density_tmp = pellet_density
+              real_spi_quantity(2) = real_spi_quantity(2) + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp *1.d20
+            else
+              pellets(i_p)%spi_species = 0.
+              spi_density_tmp = pellet_density_bg
+              real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp *1.d20
+            end if
+          end do
+        case default
+          write(*,*) '!! Gas type "', trim(imp_type), '" unknown !!'
+          write(*,*) '=> We assume the gas is D2.'
+          write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+          stop
+      end select
+
+      write(*,*) "Real injection quantity (atom):", real_spi_quantity(1), real_spi_quantity(2)
+
+      ! put values into arrays
+      do i=1, n_spi
+
+        i_p = i - 1 + n_spi_begin
+
+        pellets(i_p)%spi_R       = spi_R_tmp(i)
+        pellets(i_p)%spi_Z       = spi_Z_tmp(i)
+        pellets(i_p)%spi_phi     = spi_phi_tmp(i)
+        pellets(i_p)%spi_phi_init= spi_phi_tmp(i)      ! SJLee is this right?
+        pellets(i_p)%spi_Vel_R   = spi_Vel_R_tmp(i)
+        pellets(i_p)%spi_Vel_Z   = spi_Vel_Z_tmp(i)
+        pellets(i_p)%spi_Vel_RxZ = spi_Vel_phi_tmp(i)  ! SJLee be careful with sign
+        pellets(i_p)%spi_radius  = spi_radius_tmp(i)   ! radius
+        pellets(i_p)%spi_abl     = 0.d0
+
+        write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
+                              pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
+
+      end do
+
+      if (allocated(xtime_spi_ablation)) call tr_deallocate(xtime_spi_ablation,"xtime_spi_ablation",CAT_UNKNOWN)
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation,1,n_spi_tot,1,nstep,"xtime_spi_ablation")
+
+      if (allocated(xtime_spi_ablation_rate)) &
+      call tr_deallocate(xtime_spi_ablation_rate,"xtime_spi_ablation_rate",CAT_UNKNOWN)
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_rate")
+
+      if (allocated(xtime_spi_ablation_bg)) &
+      call tr_deallocate(xtime_spi_ablation_bg,"xtime_spi_ablation_bg",CAT_UNKNOWN)
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg")
+
+      if (allocated(xtime_spi_ablation_bg_rate)) &
+      call tr_deallocate(xtime_spi_ablation_bg_rate,"xtime_spi_ablation_bg_rate",CAT_UNKNOWN)
+      if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg_rate")
+
+    else
+      write(*,*) "ERROR: n_spi<1"
+      stop
+    end if
+
+    return
+  end subroutine
 
 
   !> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)

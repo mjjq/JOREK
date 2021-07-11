@@ -348,7 +348,9 @@ module phys_module
                                 !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
-  character(len=256) :: spi_shard_file !< The name of the shard size file
+  character(len=256) :: spi_shard_file           !< The name of the shard size file
+  character(len=256) :: spi_num_file(n_inj_max)  !< The name of the shard information datafile (array)
+  integer            :: spi_hdf5                 !< if 'spi_num_file' is in HDF5format? (0: ASCII, 1:HDF5)
 
   integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
 

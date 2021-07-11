@@ -176,11 +176,8 @@ module equil_info
           ES%ifail_bnd  =  ES%ifail_xpoint
         end if
 
-        ! If we have a symmetric double-null, force the single separatrix
+        ! If one want to generate a symmetric double-null grid
         if ( abs(ES%psi_xpoint(1)-ES%psi_xpoint(2)) < SDN_threshold ) then
-          ES%psi_xpoint(1) = (ES%psi_xpoint(1)+ES%psi_xpoint(2))/2.d0
-          ES%psi_xpoint(2) = ES%psi_xpoint(1)
-          ES%psi_bnd       = ES%psi_xpoint(1)
           ES%active_xpoint = SYMMETRIC_XPOINT
         endif
         

@@ -43,7 +43,7 @@ integer             :: n_start_open, n_start_outer, n_start_inner
 integer             :: n_start_private, n_start_up_priv
 real*8              :: R_cub1d(4), Z_cub1d(4)
 real*8              :: tht_x1, tht_x2
-real*8              :: psi_norm
+real*8              :: psi_norm, psi_bnd
 real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
 real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
 integer             :: i_elm_find(8), i_find
@@ -62,6 +62,20 @@ write(*,*) '*****************************************'
 write(*,*) '* X-point grid inside wall :            *'
 write(*,*) '*****************************************'
 write(*,*) '                 Define central part of grid'
+
+if(xcase .eq. LOWER_XPOINT) psi_bnd = ES%psi_xpoint(1)
+if(xcase .eq. UPPER_XPOINT) psi_bnd = ES%psi_xpoint(2)
+if(xcase .eq. DOUBLE_NULL ) then
+  if (ES%active_xpoint .eq. UPPER_XPOINT) then
+    psi_bnd  = ES%psi_xpoint(2)
+  else
+    psi_bnd  = ES%psi_xpoint(1)
+  endif
+  ! If we have a symmetric double-null, force the single separatrix
+  if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
+    psi_bnd  = (ES%psi_xpoint(1)+ES%psi_xpoint(2))/2.d0
+  endif
+endif
 
 SIG_theta    = sigmas(2) 
 SIG_leg_0    = sigmas(8) ; SIG_leg_1    = sigmas(9) 
@@ -132,7 +146,7 @@ n_tht_2 = n_tht + 2*n_leg + 2*n_up_leg
 diff_min = 1.d10
 n_flux_mid = 0
 do i=1,n_flux
-  psi_norm = (flux_list%psi_values(i)-ES%psi_axis)/(ES%psi_bnd-ES%psi_axis)
+  psi_norm = (flux_list%psi_values(i)-ES%psi_axis)/(psi_bnd-ES%psi_axis)
   if (abs(psi_norm-0.5) .lt. diff_min) then
     diff_min = abs(psi_norm-0.5)
     n_flux_mid = i

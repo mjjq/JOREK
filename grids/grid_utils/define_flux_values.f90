@@ -34,6 +34,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   real*8              :: bgf_open, bgf_closed
   real*8              :: RRg1,dRRg1_dr,dRRg1_ds,dRRg1_drs,dRRg1_drr,dRRg1_dss
   real*8              :: ZZg1,dZZg1_dr,dZZg1_ds,dZZg1_drs,dZZg1_drr,dZZg1_dss
+  real*8              :: psi_xpoint(2)
   real*8              :: rr, ss, drr, dss, tt
   real*8              :: rr1, ss1, drr1, dss1
   real*8              :: rr2, ss2, drr2, dss2
@@ -61,21 +62,24 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   write(*,*) '*************************************'
   
   !-------------------------------- Define psi_bnd and psi_bn2
-  xpoint = .true.
-  if(xcase .eq. LOWER_XPOINT) psi_bnd = ES%psi_xpoint(1)
-  if(xcase .eq. UPPER_XPOINT) psi_bnd = ES%psi_xpoint(2)
+  xpoint        = .true.
+  psi_xpoint(1) = ES%psi_xpoint(1)
+  psi_xpoint(2) = ES%psi_xpoint(2)
+  if(xcase .eq. LOWER_XPOINT) psi_bnd = psi_xpoint(1)
+  if(xcase .eq. UPPER_XPOINT) psi_bnd = psi_xpoint(2)
   if(xcase .eq. DOUBLE_NULL ) then
     if ( ES%active_xpoint .eq. UPPER_XPOINT ) then
-      psi_bnd  = ES%psi_xpoint(2)
-      psi_bnd2 = ES%psi_xpoint(1)
+      psi_bnd  = psi_xpoint(2)
+      psi_bnd2 = psi_xpoint(1)
     else
-      psi_bnd  = ES%psi_xpoint(1)
-      psi_bnd2 = ES%psi_xpoint(2)  
+      psi_bnd  = psi_xpoint(1)
+      psi_bnd2 = psi_xpoint(2)  
     endif
     ! If we have a symmetric double-null, force the single separatrix
     if ( ES%active_xpoint .eq. SYMMETRIC_XPOINT ) then
-      psi_bnd  = ES%psi_xpoint(1)
-      psi_bnd2 = psi_bnd  
+      psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+      psi_xpoint(2) = psi_xpoint(1)
+      psi_bnd  = psi_xpoint(1)
     endif
   endif
   
@@ -142,7 +146,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
     j     = n_flux+n_open+n_outer+n_inner
     call meshac2(n_private+1,s_tmp,0.d0,9999.d0,SIG_private,9999.d0,0.6d0,1.0d0)
     do i=1,n_private
-      flux_list%psi_values(i+j) = ES%psi_axis + (ES%psi_xpoint(1) - ES%psi_axis) * (1.d0 - dPSI_private*s_tmp(i+1))**2
+      flux_list%psi_values(i+j) = ES%psi_axis + (psi_xpoint(1) - ES%psi_axis) * (1.d0 - dPSI_private*s_tmp(i+1))**2
     enddo
     call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   endif
@@ -154,7 +158,7 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
     j     = n_flux+n_open+n_outer+n_inner+n_private
     call meshac2(n_up_priv+1,s_tmp,0.d0,9999.d0,SIG_up_priv,9999.d0,0.6d0,1.0d0)
     do i=1,n_up_priv
-      flux_list%psi_values(i+j) = ES%psi_axis + (ES%psi_xpoint(2) - ES%psi_axis) * (1.d0 - dPSI_up_priv*s_tmp(i+1))**2
+      flux_list%psi_values(i+j) = ES%psi_axis + (psi_xpoint(2) - ES%psi_axis) * (1.d0 - dPSI_up_priv*s_tmp(i+1))**2
     enddo
     call tr_deallocate(s_tmp,"s_tmp",CAT_GRID)
   endif
@@ -164,8 +168,8 @@ subroutine define_flux_values(node_list, element_list, flux_list, sep_list, xcas
   sep_list%psi_values(2) = flux_list%psi_values(n_flux+n_open)
   sep_list%psi_values(3) = flux_list%psi_values(n_flux+n_open+n_private+n_up_priv)
   if(xcase .eq. DOUBLE_NULL) then
-    sep_list%psi_values(1) = ES%psi_xpoint(1)
-    sep_list%psi_values(2) = ES%psi_xpoint(2)
+    sep_list%psi_values(1) = psi_xpoint(1)
+    sep_list%psi_values(2) = psi_xpoint(2)
     sep_list%psi_values(3) = flux_list%psi_values(n_flux+n_open+n_outer)
     sep_list%psi_values(4) = flux_list%psi_values(n_flux+n_open+n_outer+n_inner)
     sep_list%psi_values(5) = flux_list%psi_values(n_flux+n_open+n_outer+n_inner+n_private)

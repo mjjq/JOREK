@@ -149,7 +149,7 @@ if(xcase .eq. DOUBLE_NULL ) then
   endif
   ! If we have a symmetric double-null, force the single separatrix
   if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
-    psi_bnd  = ES%psi_xpoint(1)
+    psi_bnd  = (ES%psi_xpoint(1)+ES%psi_xpoint(2))/2.d0
     psi_bnd2 = psi_bnd  
     n_grids(3) = 0
   endif

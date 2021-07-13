@@ -549,9 +549,11 @@ module pellet_module
       n_spi_begin = 1
       do i = 1, n_inj
         if (spi_num_file(i) /= 'none') then ! if file exists, read shards information from it
+          write(*,'(A16,I2,A25,A)') " >> Initialising ", i, " th SPI from a datafile: ", trim(spi_num_file(i))
           call init_spi_num_file(i,spi_num_file(i),n_spi(i),n_spi_begin)
           n_spi_begin = n_spi_begin + n_spi(i)
         else ! if file does not exist, initialise shards based on parameters in the JOREK input file
+          write(*,'(A16,I2,A)') " >> Initialising ", i, " th SPI from input parameters"
           call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
                         spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),spi_L_inj_diff(i),n_spi(i),n_spi_begin)
           n_spi_begin = n_spi_begin + n_spi(i)
@@ -955,7 +957,7 @@ module pellet_module
 
           ! check 3) Consistency of spi shard file with the parameters in the input file (especially 'n_spi')
           if (n_spi /= n_line) then
-            write(*,*) "ERROR: spi shard file contains more number of lines than the ginve 'n_spi' in the input file."
+            write(*,*) "ERROR: spi shard file contains more number of lines than the given 'n_spi' in the input file."
             stop
           end if
 

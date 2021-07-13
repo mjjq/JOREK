@@ -861,17 +861,23 @@ module pellet_module
   !!   - should consists of 8 columns
   !!   - 1st   2nd          3rd   4th         5th           6th         7th        8th 
   !!     R [m] phi[radians] Z [m] Vel_R [m/s] Vel_phi [m/s] Vel_Z [m/s] radius [m] mol(D2)/(mol(D2)+mol(Impurity))
-  subroutine init_spi_num_file(i_inj,spi_file,n_spi,n_spi_begin)!,file_type = ASCII or HDF5 )
+  subroutine init_spi_num_file(i_inj,spi_file,n_spi,n_spi_begin)
 
     use iso_fortran_env
 
     use constants
     use tr_module
     use data_structure
-    use phys_module, only: pellets, imp_type, pellet_density, pellet_density_bg, spi_angle, xtime_spi_ablation, &
+    use phys_module, only: pellets, imp_type, pellet_density, pellet_density_bg,  xtime_spi_ablation,           &
                            xtime_spi_ablation_bg, xtime_spi_ablation_rate, xtime_spi_ablation_bg_rate, nstep,   &
-                           spi_num_file, spi_hdf5, spi_abl_model, n_spi_tot, ns_phi_rotate, tor_frequency
+                           spi_num_file, spi_hdf5, spi_abl_model, n_spi_tot,                                    &
+                           spi_tor_rot, ns_phi_rotate, tor_frequency
     use mpi_mod
+#ifdef USE_HDF5
+    use hdf5
+    use hdf5_io_module
+    use mod_parameters
+#endif    
 
     implicit none
 
@@ -894,16 +900,25 @@ module pellet_module
     integer             :: i_line, n_line, io, n_col
     character           :: old_char, new_char
     logical             :: beg_line
+#ifdef USE_HDF5
+    integer(HID_T)      :: file_id
+    integer             :: error
+#endif
+
+    write(*,*) "  - Following SPI-related input parameters will not be activated in this case "
+    write(*,*) "    'spi_quantity(_bg)', 'ns_R/Z/phi', 'spi_Vel_Rref/Zref/RxZref/diff', 'spi_L_inj(_diff)', 'spi_angle' "
 
     ! check some input parameters (especially the rigid body rotation parameters)
-    if ((ns_phi_rotate /= 0.d0) .or. (tor_frequency /= 0.d0)) then
-      write(*,*) "WARNING: non-zero 'ns_phi_rotate' or 'tor_frequency' cannot be treated properly with the SPI initialisation by datafiles"
+    if ( (spi_tor_rot) .or. (ns_phi_rotate /= 0.d0) .or. (tor_frequency /= 0.d0)) then
+      write(*,*) "WARNING: rigid body rotation of SPI cannot be treated properly when initialising it with a datafile"
       stop
     end if
 
     if (n_spi >= 1) then
+
       ! read spi shards information from Brendan's format
       if (spi_hdf5 == 0) then
+
         ! check 1) file existence
         inquire(file=trim(spi_file), exist=ferr)
         ! check 2) file format
@@ -970,8 +985,27 @@ module pellet_module
 
       else if (spi_hdf5 == 1) then
 
-        write(*,*) "ERROR: reading spi shards information from a HDF5 is not yet implemented."
+#ifdef USE_HDF5
+
+        call HDF5_open(trim(spi_file),file_id,error)
+        if ( error /= 0 ) then
+          write(*,*) "ERROR: 'n_spi' in SPI HDF5 file does not match with the 'n_spi' in the input file."
+          stop
+        end if
+
+        call HDF5_integer_reading(file_id,n_line,"n_spi")
+
+        if (n_spi /= n_line) then
+            write(*,*) "ERROR: spi shard file contains more number of lines than the given 'n_spi' in the input file."
+            stop
+        end if
+
+#else
+
+        write(*,*) "ERROR: trying to use SPI datafile in HDF5 format without 'USE_HDF5'"
         stop
+
+#endif
 
       else
 
@@ -1007,17 +1041,36 @@ module pellet_module
 
       else if (spi_hdf5 == 1) then
 
-        write(*,*) "ERROR: reading spi shards information from a HDF5 is not yet implemented."
+#ifdef USE_HDF5
+
+        call HDF5_array1D_reading(file_id, spi_R_tmp,               "spi_R")
+        call HDF5_array1D_reading(file_id, spi_phi_tmp,             "spi_phi")
+        call HDF5_array1D_reading(file_id, spi_Z_tmp,               "spi_Z")
+        call HDF5_array1D_reading(file_id, spi_Vel_R_tmp,           "spi_Vel_R")
+        call HDF5_array1D_reading(file_id, spi_Vel_phi_tmp,         "spi_Vel_phi")
+        call HDF5_array1D_reading(file_id, spi_Vel_Z_tmp,           "spi_Vel_Z")
+        call HDF5_array1D_reading(file_id, spi_radius_tmp,          "spi_radius")
+        call HDF5_array1D_reading(file_id, spi_species_molar_D2_tmp,"spi_species_molar_D2")
+
+        call HDF5_close(file_id)
+
+#else
+
+        write(*,*) "ERROR: trying to use SPI datafile in HDF5 format without 'USE_HDF5'"
         stop
+
+#endif
 
       else
 
-        write(*,*) "ERROR: spi_hdf5 has wrong value in the input file (it should be '0' or '1')"
+        write(*,*) "ERROR: 'spi_hdf5' has wrong value in the input file (it should be '0' or '1')"
         stop
 
       end if
 
-      ! simple checks for 'spi_species_molar_D2_tmp'
+      ! Check if all elements in the 'spi_species_molar_D2_tmp' have the same value
+      ! (Just for simplicity. It can be relaxed if one has physical justification to have
+      !  different mixture ratio between fragments)
       do i = 1,n_spi
         if (spi_species_molar_D2_tmp(1) /= spi_species_molar_D2_tmp(i)) then
           write(*,*) "EEROR: D2 molar fraction should be the same in the spi data file between all fragments"
@@ -1107,15 +1160,16 @@ module pellet_module
 
         i_p = i - 1 + n_spi_begin
 
-        pellets(i_p)%spi_R       = spi_R_tmp(i)
-        pellets(i_p)%spi_Z       = spi_Z_tmp(i)
-        pellets(i_p)%spi_phi     = spi_phi_tmp(i)
-        pellets(i_p)%spi_phi_init= spi_phi_tmp(i)      ! SJLee is this right?
-        pellets(i_p)%spi_Vel_R   = spi_Vel_R_tmp(i)
-        pellets(i_p)%spi_Vel_Z   = spi_Vel_Z_tmp(i)
-        pellets(i_p)%spi_Vel_RxZ = spi_Vel_phi_tmp(i)  ! SJLee be careful with sign
-        pellets(i_p)%spi_radius  = spi_radius_tmp(i)   ! radius
-        pellets(i_p)%spi_abl     = 0.d0
+        ! conversion of coordinates from M3D-C1 (R,phi,Z) to JOREK (R,Z,phi)
+        pellets(i_p)%spi_R       =   spi_R_tmp(i)
+        pellets(i_p)%spi_Z       =   spi_Z_tmp(i)
+        pellets(i_p)%spi_phi     = - spi_phi_tmp(i)
+        pellets(i_p)%spi_phi_init= - spi_phi_tmp(i)
+        pellets(i_p)%spi_Vel_R   =   spi_Vel_R_tmp(i)
+        pellets(i_p)%spi_Vel_Z   =   spi_Vel_Z_tmp(i)
+        pellets(i_p)%spi_Vel_RxZ = - spi_Vel_phi_tmp(i)
+        pellets(i_p)%spi_radius  =   spi_radius_tmp(i)
+        pellets(i_p)%spi_abl     =   0.d0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius

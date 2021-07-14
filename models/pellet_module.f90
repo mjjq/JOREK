@@ -914,8 +914,7 @@ module pellet_module
 
     ! check some input parameters (especially the rigid body rotation parameters)
     if ( (spi_tor_rot) .or. (ns_phi_rotate /= 0.d0) .or. (tor_frequency /= 0.d0)) then
-      write(*,*) "WARNING: rigid body rotation of SPI cannot be treated properly when initialising it with a datafile"
-      stop
+      write(*,*) " WARNING: rigid body rotation of SPI might not be treated properly when initialised by a datafile"
     end if
 
     if (n_spi >= 1) then

@@ -905,8 +905,12 @@ module pellet_module
     integer             :: error
 #endif
 
-    write(*,*) "  - Following SPI-related input parameters will not be activated in this case "
-    write(*,*) "    'spi_quantity(_bg)', 'ns_R/Z/phi', 'spi_Vel_Rref/Zref/RxZref/diff', 'spi_L_inj(_diff)', 'spi_angle' "
+    write(*,*) " - Following SPI-related input parameters will not play any role during the initialisation "
+    write(*,'(2(A18))') "'spi_quantity',","'spi_quantity_bg'"
+    write(*,'(3(A18))') "'ns_R'        ,","'ns_Z'          ,","'ns_phi'         "
+    write(*,'(4(A18))') "'spi_Vel_Rref',","'spi_Vel_Zref'  ,","'spi_Vel_RxZref',","'spi_Vel_diff'   "
+    write(*,'(2(A18))') "'spi_L_inj'   ,","'spi_L_inj_diff' "
+    write(*,'(1(A18))') "'spi_angle'    "
 
     ! check some input parameters (especially the rigid body rotation parameters)
     if ( (spi_tor_rot) .or. (ns_phi_rotate /= 0.d0) .or. (tor_frequency /= 0.d0)) then
@@ -934,9 +938,9 @@ module pellet_module
             ! exit with End-Of-File
             if (io < 0) exit
 
-            ! deal with empty lines
+            ! if empty lines exist in ASCII data file, ignore those lines and give warnings
             if (beg_line .and. new_char == new_line(new_char)) then
-              write(*,'(a, i5, a)') "Warning: ", n_line, "th line is empty. Possibly the spi shard file is defected."
+              write(*,'(a, i5, a)') " Warning: ", n_line, "th line is empty. It is possible that the spi shard file is defected."
 
             ! deal with the beginning of line for white spaces
             else if (beg_line) then

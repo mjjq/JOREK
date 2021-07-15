@@ -1044,7 +1044,11 @@ if (my_id_n .eq. 0) then
 
   if (apply_dirichlet_condition) write(*,*) 'applying Dirichlet conditions'
 
+#ifdef __GFORTRAN__
+!$omp parallel do default(shared) &
+#else
 !$omp parallel do default(none) &
+#endif
 !$omp shared(element_list, node_list, n_tor_local, i_tor_local,                     &
 !$omp        H, H_s, H_t, H_ss, H_st, H_tt, Hz, Hz_p, mumps_par, wgauss2,           &
 !$omp        filter, filter_hyper, filter_parallel, F0, my_id_master)               &
@@ -1452,7 +1456,11 @@ if (my_id_n .eq. 0) then
   if (apply_zonal)               write(*,*) 'using n=0 zonal flow equations'
   if (apply_dirichlet_condition) write(*,*) 'applying Dirichlet conditions'
 
+#ifdef __GFORTRAN__
+!$omp parallel do default(shared) &
+#else
 !$omp parallel do default(none) &
+#endif
 !$omp shared(element_list, node_list, n_tor_local, i_tor_local,                       &
 !$omp        apply_dirichlet_condition, zonal_factor, apply_zonal,                    &
 !$omp        H, H_s, H_t, H_ss, H_st, H_tt, Hz, Hz_p, mumps_par, wgauss2,             &
@@ -1921,7 +1929,12 @@ scalars = 0.e0
 vectors = 0.e0
 
 ! Create points for each element
-!$omp parallel do default(none) shared(element_list,nsub,node_list,n_fields,scalars) &
+#ifdef __GFORTRAN__
+!$omp parallel do default(shared) &
+#else
+!$omp parallel do default(none) &
+#endif
+!$omp shared(element_list,nsub,node_list,n_fields,scalars) &
 !$omp private(i,j,k,l,m,inode,ivar,s,t,P, P_s, P_t, P_st, P_ss, P_tt) schedule(static)
 do i=1,element_list%n_elements
   do j=1,n_fields

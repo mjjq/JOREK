@@ -442,9 +442,13 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   real8_stats = 0.d0
   real4_stats = 0.d0
   int_stats  = 0
-  !$omp parallel do default(shared) & ! for gcc particle types are not in the omp region. reset to none to debug
-  !$omp shared(particles, fields, int_stats, real4_stats, real8_stats, mask, time, f0, mass, &
-  !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
+#ifdef __GFORTRAN__
+    !$omp parallel do default(shared) &
+#else
+    !$omp parallel do default(none) &
+#endif
+  !$omp shared(particles, fields, int_stats, real4_stats, real8_stats, mask, time, f0, mass, dt, &
+  !$omp        xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
   !$omp private(E, B, psi, U, particle, v_par, domain, particle_centered, real_stats_tmp, i_real8, i_real4, i_tmp, j)
   do i=1,size(particles,1)
     int_stats(i,4) = particles(i)%i_elm

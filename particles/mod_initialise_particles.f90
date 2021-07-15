@@ -344,6 +344,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
 #else
     !$omp parallel do default(none) &
 #endif
+    !$omp shared(fields,  psi_minmax_list) &
     !$omp private(i_elm) reduction(min:psimin) &
     !$omp reduction(max:psimax)
     do i_elm=1, fields%element_list%n_elements

@@ -433,7 +433,7 @@ subroutine do_particle_sputter(this, sim, ev)
     ! gfortran wants and does not want to have the types in the shared section at the same time.... default(shared) it is
     ! be very very careful however!
 #ifdef __GFORTRAN__
-    !$omp parallel default(shared) & 
+    !$omp parallel default(shared)  
 #else
     !$omp parallel default(none) &
     !$omp shared(this, sim, i), private(q, velocity, theta, E, &
@@ -732,11 +732,11 @@ subroutine do_particle_sputter(this, sim, ev)
     ! We need to properly use all RNGS here to avoid missing numbers
     ! needs default(shared) for gfortran
 #ifdef __GFORTRAN__
-    !$omp parallel default(shared) &
+    !$omp parallel default(shared) 
 #else
     !$omp parallel default(none) &
-#endif 
     !$omp shared(this, rng_sample, i, n_samples_fluid) private(i_rng, j)
+#endif
     i_rng = 1
     !$ i_rng = omp_get_thread_num()+1
     !$omp do schedule(static,1)
@@ -771,9 +771,9 @@ subroutine do_particle_sputter(this, sim, ev)
     !$omp parallel default(shared) &
 #else
     !$omp parallel default(none) &
-#endif
     !$omp shared(this, sim, i, k, rng_sample, xyz_sampled, st_sampled, i_elm_sampled, n_samples_fluid, i_free, &
-    !$omp integral, delta_t, q, Z, n_particle_groups) &
+    !$omp        integral, delta_t, q, Z, n_particle_groups) &
+#endif
     !$omp private(i_rng, j, theta, E, sputtering_yield, av_yield, sputtered_energy_coeff, u, i_p, vector_normal, T_e, T_eV, n_e)
     i_rng = 1
     !$ i_rng = omp_get_thread_num()+1
@@ -1073,9 +1073,9 @@ subroutine project_sputter_vars_on_edge(sim, n_relative, background_species, coe
     !$omp parallel do default(shared) &
 #else
     !$omp parallel do default(none) &
-#endif
     !$omp shared(fluid_sputter_yield, sim, n_relative, background_species, coeff, diagnostics, delta_t, &
-    !$omp i_patch, central_mass, psi_axis, psi_limit) &
+    !$omp i      i_patch, central_mass, psi_axis, psi_limit) &
+#endif
     !$omp private(i, n_e, T_e, E, B, psi, U, vector_normal, B_hat, cos_alpha, q, T_i, mass_ion, c_s, j, m, n_species, Gamma_d, &
     !$omp         n_offset, yield, Z) schedule(static)
     do i = 1, size(fluid_sputter_yield%patch(i_patch)%xyz, 2) !< over all nodes

@@ -10,6 +10,8 @@
  bootstrap       = .t.
  tauIC           = 1.d-3
  NEO             = .t.
+ aki_neo_const   = -1.e+0
+ amu_neo_const   = +1.e-5
  tgnum_psi       = 0.2d0
  tgnum_T         = 0.2d0
  tgnum_u         = 0.2d0

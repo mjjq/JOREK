@@ -118,6 +118,9 @@
  heatsource_gauss_i        = 1.d-8
  heatsource_gauss_i_psin   = 0.d0
  heatsource_gauss_i_sig    = 0.1d0
+ heatsource_gauss_e        = 1.d-8
+ heatsource_gauss_e_psin   = 0.d0
+ heatsource_gauss_e_sig    = 0.1d0
 
  Ti_0 = 0.75d-2
  Ti_1 = 1.5d-4

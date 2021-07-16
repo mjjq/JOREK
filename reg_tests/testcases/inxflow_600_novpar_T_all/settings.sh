@@ -1,7 +1,7 @@
 # --- General settings
 jorekmodel="600"
-options="with_vpar=.true. with_TiTe=.true. with_neutrals=.false. with_impurities=.false. with_refluid=.false."
-description="Ballooning mode, simple X-point plasma, model$jorekmodel, n_tor=3 + FFT."
+options="with_vpar=.false. with_TiTe=.false. with_neutrals=.false. with_impurities=.false. with_refluid=.false."
+description="Ballooning mode, simple X-point plasma, model$jorekmodel, single temperature, no vpar, n_tor=3 + FFT, many terms switched on."
 mpitasks=2
 binaries="jorek_model${jorekmodel}_3"
 binaries_initial="jorek_model${jorekmodel}_1"

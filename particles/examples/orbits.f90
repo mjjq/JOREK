@@ -374,7 +374,7 @@ type is (particle_kinetic_leapfrog)
 #endif
    !$omp private(particle_tmp, i_rng, j, k, t, E, B, psi, U, rz_old, st_old,      &
    !$omp i_elm_old, i_elm, ifail)                                                 &
-   !$omp schedule(dynamic,10)                                                     &
+   !$omp schedule(dynamic,10)                                                     
    do j=1,size(particles,1)
 
       call copy_particle_kinetic_leapfrog(particles(j),particle_tmp)

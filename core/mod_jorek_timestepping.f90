@@ -351,9 +351,13 @@ subroutine do_jorek_timestep(this, sim, ev)
   use mod_expression,          only: exprs_all_int, init_expr
   use mod_integrals3D
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use mgi_module,              only: update_mgi
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+  use mod_neutral_source
 #endif
+#ifdef WITH_Impurities
+  use mod_injection_source
+#endif
+
   class(jorek_timestep_action), intent(inout) :: this
   type(particle_sim), intent(inout)           :: sim
   type(event), intent(inout), optional        :: ev

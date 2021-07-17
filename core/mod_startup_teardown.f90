@@ -85,6 +85,12 @@ subroutine initialise(my_id, n_cpu, skip_help)
   if (n_tor == 1) then
     gmres     = .false.
   end if
+
+  #if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  ! --- Read ADAS data and generate coronal equilibrium if needed
+  call init_imp_adas(my_id)
+  #endif
+
   
   ! --- Define the basis functions at the Gaussian points
   call initialise_basis()

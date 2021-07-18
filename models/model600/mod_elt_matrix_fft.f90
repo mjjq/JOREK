@@ -442,6 +442,9 @@ do i=1,n_vertex_max
             T0_tt = 0.d0
             T0_st = 0.d0
             
+            T0_corr     = 0.d0
+            dT0_corr_dT = 0.d0
+           
             Ti0    = eq_g(mp,var_Ti,ms,mt)
             Ti0_x  = (   y_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) - y_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
             Ti0_y  = ( - x_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) + x_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
@@ -508,7 +511,7 @@ do i=1,n_vertex_max
 
             Ti0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
             dTi0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
- 
+           
             Te0    = Ti0
             Te0_x  = Ti0_x
             Te0_y  = Ti0_y
@@ -521,8 +524,6 @@ do i=1,n_vertex_max
 
             Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
             dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
-
-
           end if ! (with_TiTe) *********************************************************************
 
           if ( with_vpar ) then
@@ -659,6 +660,22 @@ do i=1,n_vertex_max
                    - r0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                        &
                    - r0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2           &     
                 - xjac_x * (- r0_s * x_t(ms,mt) + r0_t * x_s(ms,mt) )   / xjac**2
+
+          T0_xx = (T0_ss * y_t(ms,mt)**2 - 2.d0*T0_st * y_s(ms,mt)*y_t(ms,mt) + T0_tt * y_s(ms,mt)**2  &
+                + T0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
+                + T0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2             &     
+                - xjac_x * (T0_s * y_t(ms,mt) - T0_t * y_s(ms,mt))  / xjac**2
+
+          T0_yy = (T0_ss * x_t(ms,mt)**2 - 2.d0*T0_st * x_s(ms,mt)*x_t(ms,mt) + T0_tt * x_s(ms,mt)**2  &
+                + T0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                            &
+                + T0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2             &
+                - xjac_y * (- T0_s * x_t(ms,mt) + T0_t * x_s(ms,mt) )  / xjac**2
+
+          T0_xy = (- T0_ss * y_t(ms,mt)*x_t(ms,mt) - T0_tt * x_s(ms,mt)*y_s(ms,mt)                     &
+                   + T0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                        &
+                   - T0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                        &
+                   - T0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2          &
+                - xjac_x * (- T0_s * x_t(ms,mt) + T0_t * x_s(ms,mt) )   / xjac**2
 
           Ti0_xx = (Ti0_ss * y_t(ms,mt)**2 - 2.d0*Ti0_st * y_s(ms,mt)*y_t(ms,mt) + Ti0_tt * y_s(ms,mt)**2  &
                 + Ti0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
@@ -1044,16 +1061,13 @@ do i=1,n_vertex_max
             else ! (with_TiTe) 
 
               ! --- Full Sauter formula
-              Ti0   = T0   / 2.d0 ; Te0   = T0   / 2.d0
-              Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
-              Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
               call bootstrap_current(bigR, y_g(ms,mt),                     &
                                      R_axis,   Z_axis,   psi_axis,         &
                                      R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
                                      ps0, ps0_x, ps0_y,                    &
                                      r0,  r0_x,  r0_y,                     &
-                                     Ti0, Ti0_x, Ti0_y,                    &
-                                     Te0, Te0_x, Te0_y,                  Jb)
+                                     T0/2.d0, T0_x/2.d0, T0_y/2.d0,                    &
+                                     T0/2.d0, T0_x/2.d0, T0_y/2.d0,                  Jb)
 
               ! --- Full Sauter formula for initial profiles
 

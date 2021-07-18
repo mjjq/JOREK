@@ -412,6 +412,9 @@ do i=1,n_vertex_max
             T0_tt = 0.d0
             T0_st = 0.d0
             
+            T0_corr     = 0.d0
+            dT0_corr_dT = 0.d0
+           
             Ti0    = eq_g(mp,var_Ti,ms,mt)
             Ti0_x  = (   y_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) - y_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
             Ti0_y  = ( - x_t(ms,mt) * eq_s(mp,var_Ti,ms,mt) + x_s(ms,mt) * eq_t(mp,var_Ti,ms,mt) ) / xjac
@@ -463,6 +466,9 @@ do i=1,n_vertex_max
             Ti0_tt = T0_tt / 2.d0
             Ti0_st = T0_st / 2.d0
 
+            Ti0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
+            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+           
             Te0    = Ti0
             Te0_x  = Ti0_x
             Te0_y  = Ti0_y
@@ -473,6 +479,8 @@ do i=1,n_vertex_max
             Te0_tt = Ti0_tt
             Te0_st = Ti0_st
 
+            Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
+            dTe0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
           end if ! (with_TiTe) *********************************************************************
 
           if ( with_vpar ) then
@@ -972,16 +980,13 @@ do i=1,n_vertex_max
             else ! (with_TiTe) 
 
               ! --- Full Sauter formula
-              Ti0   = T0   / 2.d0 ; Te0   = T0   / 2.d0
-              Ti0_x = T0_x / 2.d0 ; Te0_x = T0_x / 2.d0
-              Ti0_y = T0_y / 2.d0 ; Te0_y = T0_y / 2.d0
               call bootstrap_current(bigR, y_g(ms,mt),                     &
                                      R_axis,   Z_axis,   psi_axis,         &
                                      R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
                                      ps0, ps0_x, ps0_y,                    &
                                      r0,  r0_x,  r0_y,                     &
-                                     Ti0, Ti0_x, Ti0_y,                    &
-                                     Te0, Te0_x, Te0_y,                  Jb)
+                                     T0/2.d0, T0_x/2.d0, T0_y/2.d0,                    &
+                                     T0/2.d0, T0_x/2.d0, T0_y/2.d0,                  Jb)
 
               ! --- Full Sauter formula for initial profiles
 

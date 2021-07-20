@@ -1074,7 +1074,7 @@ subroutine project_sputter_vars_on_edge(sim, n_relative, background_species, coe
 #else
     !$omp parallel do default(none) &
     !$omp shared(fluid_sputter_yield, sim, n_relative, background_species, coeff, diagnostics, delta_t, &
-    !$omp i      i_patch, central_mass, psi_axis, psi_limit) &
+    !$omp        i_patch, central_mass, psi_axis, psi_limit) &
 #endif
     !$omp private(i, n_e, T_e, E, B, psi, U, vector_normal, B_hat, cos_alpha, q, T_i, mass_ion, c_s, j, m, n_species, Gamma_d, &
     !$omp         n_offset, yield, Z) schedule(static)

@@ -11,6 +11,14 @@ subroutine initialise(my_id, n_cpu, skip_help)
   use data_structure, only: init_threads
   use basis_at_gaussian
   use phys_module, only: gmres
+
+#if ((defined WITH_Neutrals) && (!defined WITH_Impurities))
+  use mod_neutral_source
+#endif
+#ifdef WITH_Impurities
+  use mod_injection_source
+#endif
+
 #include "r3_info.h"
 ! Necessary for dependency reasons... should clean that up a bit and create a module
   integer, intent(out) :: my_id, n_cpu
@@ -86,10 +94,10 @@ subroutine initialise(my_id, n_cpu, skip_help)
     gmres     = .false.
   end if
 
-  #if (defined WITH_Neutrals) || (defined WITH_Impurities)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   ! --- Read ADAS data and generate coronal equilibrium if needed
   call init_imp_adas(my_id)
-  #endif
+#endif
 
   
   ! --- Define the basis functions at the Gaussian points

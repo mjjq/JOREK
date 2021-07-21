@@ -415,8 +415,8 @@ endif
 if(xcase .ne. LOWER_XPOINT) then
 
   angle_UpperCorner       = atan2(stpts%ZLeftCorn_UpperInnerLeg-ES%Z_xpoint(2),stpts%RLeftCorn_UpperInnerLeg-ES%R_xpoint(2))
-  stpts%angle_UpperLeft   = tht_x2 + 0.5d0*PI; if(xcase .eq. 2) stpts%angle_UpperLeft   = tht_x1 + 0.5d0*PI
-  stpts%angle_UpperRight  = tht_x2 + 1.5d0*PI; if(xcase .eq. 2) stpts%angle_UpperRight  = tht_x1 + 1.5d0*PI
+  stpts%angle_UpperLeft   = tht_x2 + 0.5d0*PI; if(xcase .eq. UPPER_XPOINT) stpts%angle_UpperLeft   = tht_x1 + 0.5d0*PI
+  stpts%angle_UpperRight  = tht_x2 + 1.5d0*PI; if(xcase .eq. UPPER_XPOINT) stpts%angle_UpperRight  = tht_x1 + 1.5d0*PI
   ! --- Depending on the equilibrium, it may be better to have a horizontal line... (eg. near double-null at JET)
   if(force_horizontal_Xline) then
     stpts%angle_UpperLeft   = PI

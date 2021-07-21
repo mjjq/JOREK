@@ -69,7 +69,7 @@ integer             :: n_remove_elements, n_remove_nodes, remove_elements(100), 
 
 xpoint = .true.
 extend = .true.;   if (n_ext .lt. 1) extend = .false.
-xcase  = 1
+xcase  = 1 ! LOWER_XPOINT
 my_id  = 0
 
 PI = 2.d0 * asin(1.d0)

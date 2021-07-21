@@ -120,7 +120,7 @@ if (my_id == 0) then
     if (xpoint2) then
       if (ES%ifail_xpoint == 0) then ! (otherwise, keep the values of the previous iteration as a reasonable guess)
         ES%psi_bnd  = ES%psi_xpoint(1)
-        if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
+        if( ES%active_xpoint .eq. UPPER_XPOINT ) then
           ES%psi_bnd = ES%psi_xpoint(2)
         endif
         psi_bnd     = ES%psi_bnd
@@ -128,8 +128,8 @@ if (my_id == 0) then
         Z_xpoint(1) = ES%Z_xpoint(1)
         R_xpoint(2) = ES%R_xpoint(2)
         Z_xpoint(2) = ES%Z_xpoint(2)
-        if(xcase2 .eq. 1) ES%Z_xpoint(2) = +99.d0
-        if(xcase2 .eq. 2) ES%Z_xpoint(1) = -99.d0
+        if(xcase2 .eq. LOWER_XPOINT) ES%Z_xpoint(2) = +99.d0
+        if(xcase2 .eq. UPPER_XPOINT) ES%Z_xpoint(1) = -99.d0
       else
         ES%R_xpoint = R_xpoint
         ES%Z_xpoint = Z_xpoint
@@ -152,8 +152,8 @@ if (my_id == 0) then
       endif
     endif
   
-    if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(1),ES%ifail_xpoint
-    if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(2),ES%ifail_xpoint
+    if(xcase2 .eq. LOWER_XPOINT) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(1),ES%ifail_xpoint
+    if(xcase2 .eq. UPPER_XPOINT) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(2),ES%ifail_xpoint
 
     write(*,'(A,1f14.8)')                       ' PSI_BND - PSI_AXIS : ', ES%psi_bnd-ES%psi_axis 
   
@@ -250,11 +250,11 @@ if (freeboundary_equil) then
       if (xpoint2) then
         if (ES%ifail_xpoint .ne. 1) then      
           ES%psi_bnd  = ES%psi_xpoint(1)
-          if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
+          if( ES%active_xpoint .eq. UPPER_XPOINT ) then
             ES%psi_bnd = ES%psi_xpoint(2)
           endif
-          if(xcase2 .eq. 1) ES%Z_xpoint(2) = +99.d0
-          if(xcase2 .eq. 2) ES%Z_xpoint(1) = -99.d0
+          if(xcase2 .eq. LOWER_XPOINT) ES%Z_xpoint(2) = +99.d0
+          if(xcase2 .eq. UPPER_XPOINT) ES%Z_xpoint(1) = -99.d0
         else
           ES%Z_xpoint(1) = -99.d0 
           ES%Z_xpoint(2) = +99.d0
@@ -371,11 +371,11 @@ if (my_id == 0) then
     call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
     if (ifail .ne. 1) then      
       psi_bnd  = psi_xpoint(1)
-      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
+      if( ES%active_xpoint .eq. UPPER_XPOINT ) then
         psi_bnd = psi_xpoint(2)
       endif
-      if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
-      if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
+      if(xcase2 .eq. LOWER_XPOINT) Z_xpoint(2) = +99.d0
+      if(xcase2 .eq. UPPER_XPOINT) Z_xpoint(1) = -99.d0
     else
       Z_xpoint(1) = -99.d0 
       Z_xpoint(2) = +99.d0
@@ -520,13 +520,13 @@ if (my_id == 0) then
     n_grids(3) = 2*n_open   ; n_grids(4) = 2*n_outer  ; n_grids(5) = 2*n_inner
     n_grids(6) = 2*n_private; n_grids(7) = 2*n_up_priv
     n_grids(8) = n_leg      ; n_grids(9) = n_up_leg
-    if (xcase .eq. 1) then
+    if (xcase .eq. LOWER_XPOINT) then
       n_grids(4) = 0
       n_grids(5) = 0
       n_grids(7) = 0
       n_grids(9) = 0
     endif
-    if (xcase .eq. 2) then
+    if (xcase .eq. UPPER_XPOINT) then
       n_grids(4) = 0
       n_grids(5) = 0
       n_grids(6) = 0
@@ -534,15 +534,15 @@ if (my_id == 0) then
     endif
   
     ! Allocate surface_list structure (that's for plotting only)
-    if (xcase2 .eq. 1) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_private
-    if (xcase2 .eq. 2) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_up_priv
-    if (xcase2 .eq. 3) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_outer + 2*n_inner + 2*n_private + 2*n_up_priv
+    if (xcase2 .eq. LOWER_XPOINT) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_private
+    if (xcase2 .eq. UPPER_XPOINT) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_up_priv
+    if (xcase2 .eq. DOUBLE_NULL ) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_outer + 2*n_inner + 2*n_private + 2*n_up_priv
     if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
     call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
     
     ! Allocate sep_list structure (that's for plotting only)  
     sep_list%n_psi =3
-    if(xcase .eq. 3) sep_list%n_psi =6
+    if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
     if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
     call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
     

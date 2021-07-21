@@ -372,11 +372,11 @@ contains
                   on_private            = .false.
                   on_inner              = .false.
                   on_inner_or_private   = .false.
-                  if ((xcase2 .ne. 3) .and. (ps0 .lt. psi_bnd)) then
+                  if ((xcase2 .ne. DOUBLE_NULL) .and. (ps0 .lt. psi_bnd)) then
                     on_inner_or_private = .true.
                     on_private          = .true.
                   endif
-                  if  (xcase2 .eq. 3) then
+                  if  (xcase2 .eq. DOUBLE_NULL) then
                     if ( (Z .lt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (ps0 .lt. psi_xpoint(1)) )                    on_private = .true.
                     if ( (Z .gt. (Z_xpoint(1)+Z_xpoint(2))/2.d0) .and. (ps0 .lt. psi_xpoint(2)) )                    on_private = .true.
                     if ( (R .lt. (R_xpoint(1)+R_xpoint(2))/2.d0) .and. (ps0 .gt. max(psi_xpoint(2),psi_xpoint(2))) ) on_inner   = .true.
@@ -543,11 +543,11 @@ contains
         direction = ps0_s * ( (R-R_inside)*Z_s - (Z-Z_inside)*R_s )
         direction = direction / abs(direction)
       endif
-      if (xcase .eq. 2) then
+      if (xcase .eq. UPPER_XPOINT) then
         direction = -direction
-      else if ((xcase .eq. 3).and.(Z .gt. Z_axis +0.1) .and. ( R .gt.R_xpoint(2))) then
+      else if ((xcase .eq. DOUBLE_NULL).and.(Z .gt. Z_axis +0.1) .and. ( R .gt.R_xpoint(2))) then
         direction = -1.
-      else if ((xcase .eq. 3) .and. (Z .gt. Z_axis +0.1) .and. (R .lt. R_xpoint(2))) then
+      else if ((xcase .eq. DOUBLE_NULL) .and. (Z .gt. Z_axis +0.1) .and. (R .lt. R_xpoint(2))) then
         direction = +1.
       end if
     endif

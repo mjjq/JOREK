@@ -378,7 +378,7 @@ do j=1,n_tht
       i_max = n_flux + n_open + n_outer
       call find_Z_surface(node_list,element_list,flux_list,i_max,nwpts%Z_max(j),i_elm_find,s_find,t_find,st_find,i_find)
     endif
-    if (xcase .eq. 1) then
+    if (xcase .eq. LOWER_XPOINT) then
       call find_theta_surface(node_list,element_list,flux_list,i_max,theta_sep(j),ES%R_axis,ES%Z_axis,i_elm_find,s_find,t_find,i_find)
     endif
 

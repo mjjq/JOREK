@@ -611,13 +611,13 @@ module equil_info
     
     if (ES%xpoint .and. correct_private) then
 
-      if ( ES%xcase .ne. 2 ) then
+      if ( ES%xcase .ne. UPPER_XPOINT ) then
         psi_n_xpoint_lower = ( ES%psi_xpoint(1) - ES%psi_axis ) / ( ES%psi_bnd - ES%psi_axis )       
         if ( (get_psi_n < psi_n_xpoint_lower) .and. (Z < ES%Z_xpoint(1)) ) then   ! if true is lower private region
           get_psi_n = 2.d0*psi_n_xpoint_lower - get_psi_n
         endif
       endif
-      if ( ES%xcase .ne. 1 ) then
+      if ( ES%xcase .ne. LOWER_XPOINT ) then
         psi_n_xpoint_upper = ( ES%psi_xpoint(2) - ES%psi_axis ) / ( ES%psi_bnd - ES%psi_axis )
         if ( (get_psi_n < psi_n_xpoint_upper) .and. (Z > ES%Z_xpoint(2)) ) then   ! if true is upper private region
           get_psi_n = 2.d0*psi_n_xpoint_upper - get_psi_n

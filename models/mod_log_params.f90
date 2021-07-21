@@ -441,7 +441,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
   write(*,REAL_FMT) 'gamma                 ', gamma
   write(*,REAL_FMT) 'tauIC                 ', tauIC
-  write(*,REAL_FMT) 'tauIC_suggested       ', tauIC_suggested
+  write(*,REAL_FMT) 'tauIC_nominal         ', tauIC_nominal
   write(*,LOGI_FMT) 'Wdia                  ', Wdia
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,LOGI_FMT) 'eta_num_T_dependent   ', eta_num_T_dependent

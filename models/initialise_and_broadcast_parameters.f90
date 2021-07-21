@@ -26,8 +26,8 @@ subroutine initialise_and_broadcast_parameters(my_id, filename)
   sqrt_mu0_rho0      = sqrt( mu_zero * ( central_density * 1.d20 * central_mass * mass_proton ) )
   sqrt_mu0_over_rho0 = sqrt( mu_zero / ( central_density * 1.d20 * central_mass * mass_proton ) )
 
-  ! --- Calculate suggested input parameters
-  tauIC_suggested    = central_mass * mass_proton / ( EL_CHG * F0 * sqrt_mu0_rho0 * 2.d0 )
+  ! --- Calculate nominal input parameters
+  tauIC_nominal      = central_mass * mass_proton / ( EL_CHG * F0 * sqrt_mu0_rho0 * 2.d0 )
   
   ! --- Deprecated input parameters ---
   if ( use_murge ) then

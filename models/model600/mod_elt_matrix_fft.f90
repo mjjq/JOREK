@@ -441,7 +441,7 @@ do i=1,n_vertex_max
             Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
             dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
 
-          else ! (with_TiTe) ***********************************************************************
+          else ! (with_TiTe), i.e. with single temperature *****************************************
 
             T0    = eq_g(mp,var_T,ms,mt)
             T0_x  = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
@@ -480,7 +480,7 @@ do i=1,n_vertex_max
             Te0_st = Ti0_st
 
             Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
-            dTe0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+            dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
           end if ! (with_TiTe) *********************************************************************
 
           if ( with_vpar ) then
@@ -685,7 +685,7 @@ do i=1,n_vertex_max
             
             ! --- Temperature dependent resistivity
             if ( eta_T_dependent .and. Te0_corr <= T_max_eta) then
-              eta_T     = eta   * (corr_neg_temp1(Te0)/Te_0)**(-1.5d0)
+              eta_T     =   eta   * (Te0_corr/Te_0)**(-1.5d0)
               deta_dT   = - eta   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
               d2eta_d2T =   eta   * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
             else if ( eta_T_dependent .and. Te0_corr > T_max_eta) then
@@ -839,10 +839,10 @@ do i=1,n_vertex_max
               ddTi_e_drho = 0.
             endif
             
-          else ! (with_TiTe) ***********************************************************************
+          else ! (with_TiTe), i.e. with single temperature *****************************************
               
             if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
-              eta_T     = eta   * (corr_neg_temp1(T0)/T_0)**(-1.5d0)
+              eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
               deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
               d2eta_d2T =   eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
             else if ( eta_T_dependent .and. T0_corr > T_max_eta) then
@@ -946,7 +946,7 @@ do i=1,n_vertex_max
 
           ! --- Bootstrap current 
           if (bootstrap) then
-            if ( with_TiTe ) then
+            if ( with_TiTe ) then ! (with_TiTe) ****************************************************
               ! --- Full Sauter formula
               call bootstrap_current(bigR, y_g(ms,mt),                     &
                                      R_axis,   Z_axis,   psi_axis,         &
@@ -977,7 +977,7 @@ do i=1,n_vertex_max
               ! --- Subtract the initial equilibrium part
               Jb = Jb - Jb_0
 
-            else ! (with_TiTe) 
+            else ! (with_TiTe), i.e. with single temperature ***************************************
 
               ! --- Full Sauter formula
               call bootstrap_current(bigR, y_g(ms,mt),                     &
@@ -985,8 +985,8 @@ do i=1,n_vertex_max
                                      R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
                                      ps0, ps0_x, ps0_y,                    &
                                      r0,  r0_x,  r0_y,                     &
-                                     T0/2.d0, T0_x/2.d0, T0_y/2.d0,                    &
-                                     T0/2.d0, T0_x/2.d0, T0_y/2.d0,                  Jb)
+                                     Ti0, Ti0_x, Ti0_y,                    &
+                                     Te0, Te0_x, Te0_y,                  Jb)
 
               ! --- Full Sauter formula for initial profiles
 
@@ -1008,7 +1008,7 @@ do i=1,n_vertex_max
                                      zTe, zTe_x, zTe_y,                  Jb_0)
               ! --- Subtract the initial equilibrium part
               Jb = Jb - Jb_0
-            end if ! (with_TiTe)
+            end if ! (with_TiTe) *******************************************************************
           else
             Jb = 0.d0
           endif
@@ -1028,18 +1028,18 @@ do i=1,n_vertex_max
               D_prof  = D_prof_neg
             endif
 
-            if ( with_TiTe ) then ! (with_TiTe)
+            if ( with_TiTe ) then ! (with_TiTe) ****************************************************
               if (Te0 .lt. ZK_prof_neg_thresh) then
                 ZKe_prof = ZK_prof_neg
               endif
               if (Ti0 .lt. ZK_prof_neg_thresh) then
                 ZKi_prof = ZK_prof_neg
               endif
-            else ! (with_TiTe)
+            else ! (with_TiTe), i.e. with single temperature ***************************************
               if (T0 .lt. ZK_prof_neg_thresh) then
                 ZK_prof = ZK_prof_neg
               endif
-            endif ! (with_TiTe)
+            endif ! (with_TiTe) ********************************************************************
 
           endif
 
@@ -1271,7 +1271,7 @@ do i=1,n_vertex_max
             end if ! (with_vpar)
 
 
-            if ( with_TiTe ) then ! (with_TiTe)
+            if ( with_TiTe ) then ! (with_TiTe) ****************************************************
               
               !###################################################################################################
               !#  Ion Energy Equation                                                                            #
@@ -1381,7 +1381,7 @@ do i=1,n_vertex_max
                                    * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                       &
                                    * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep
 
-            else ! (with_TiTe)
+            else ! (with_TiTe), i.e. with single temperature ***************************************
   
               !###################################################################################################
               !#  Electron + Ion Energy Equation                                                                 #
@@ -1435,7 +1435,7 @@ do i=1,n_vertex_max
                                      * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                           &
                                      * (                                   + F0 / BigR * v_p)   * xjac * tstep * tstep
 
-            end if ! (with_TiTe)
+            end if ! (with_TiTe) *******************************************************************
 
             !###################################################################################################
             !#  RHS equations end                                                                              #
@@ -1584,7 +1584,7 @@ do i=1,n_vertex_max
 
                   amat_n(var_psi,var_rho) = - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * Te0  * rho_p           * xjac * theta * tstep 
 
-                  if ( with_TiTe ) then ! (with_TiTe)
+                  if ( with_TiTe ) then ! (with_TiTe) **********************************************
                     amat(var_psi,var_Te) = - deta_dT * v * Te * (zj0 - current_source(ms,mt) - Jb)/ BigR * xjac  * theta * tstep &
                                    - deta_num_dT * Te * (v_x * zj0_x + v_y * zj0_y)              * xjac          * theta * tstep &
                               + v * tauIC*2./(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * Te_t  - ps0_t * Te_s) * theta * tstep &
@@ -1592,7 +1592,7 @@ do i=1,n_vertex_max
                               - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * Te * r0_p * xjac                    * theta * tstep
 
                     amat_n(var_psi,var_Te) = - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * r0 * Te_p     * xjac * theta * tstep
-                  else ! (with_TiTe)
+                  else ! (with_TiTe), i.e. with single temperature *********************************
                     amat(var_psi,var_T) = - deta_dT * v * T * (zj0 - current_source(ms,mt) - Jb)/ BigR    * xjac * theta * tstep &
                                    - deta_num_dT * T * (v_x * zj0_x + v_y * zj0_y)                        * xjac * theta * tstep &
                               + v * tauIC*2./(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s)   * theta * tstep &
@@ -1600,7 +1600,7 @@ do i=1,n_vertex_max
                               - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * T  * r0_p                    * xjac * theta * tstep
 
                     amat_n(var_psi,var_T) = - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * r0 * T_p       * xjac * theta * tstep
-                  end if ! (with_TiTe)
+                  end if ! (with_TiTe) *************************************************************
 
                   !###################################################################################################
                   !#  Perpendicular Momentum Equation                                                                #
@@ -1688,7 +1688,7 @@ do i=1,n_vertex_max
                          + aki_neo_prof(ms,mt) * tauIC*2. * rho * (ps0_x*Ti0_x + ps0_y*Ti0_y) - rho * Vpar0 * Btheta2) * BigR * xjac * tstep * theta
                   endif
 
-                  if ( with_TiTe ) then ! (with_TiTe)
+                  if ( with_TiTe ) then ! (with_TiTe) **********************************************
                     amat(var_u,var_Ti) = - BigR**2 * (v_s * r0_t * Ti   - v_t * r0_s * Ti)           * theta * tstep  &
                                          - BigR**2 * (v_s * r0   * Ti_t - v_t * r0   * Ti_s)         * theta * tstep  &
 
@@ -1723,7 +1723,7 @@ do i=1,n_vertex_max
                                 - d2visco_dT2*Te * bigR * W_dia   * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
                                 - dvisco_dT*Te   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep
 
-                  else ! (with_TiTe)
+                  else ! (with_TiTe), i.e. with single temperature *********************************
 
                     amat(var_u,var_T) = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)           * theta * tstep  &
                                         - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)         * theta * tstep  &
@@ -1758,7 +1758,7 @@ do i=1,n_vertex_max
  
                                 - d2visco_dT2*T * bigR * W_dia   * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
                                 - dvisco_dT*T   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep
-                  end if ! (with_TiTe)
+                  end if ! (with_TiTe) *************************************************************
 
                   !###################################################################################################
                   !#  Current Definition Equation                                                                    #
@@ -1850,9 +1850,9 @@ do i=1,n_vertex_max
 
                   if ( with_TiTe ) then
                     amat(var_rho,var_Ti) = - v * 2.d0 * tauIC*2. * (Ti_y * r0 + Ti*r0_y) * BigR                           * xjac * theta * tstep
-                  else ! (with_TiTe)
+                  else
                     amat(var_rho,var_T)  = - v * 2.d0 * tauIC*2. * (T_y  * r0 + T *r0_y) * BigR                           * xjac * theta * tstep
-                  end if ! (with_TiTe)
+                  end if
 
                   if ( with_vpar ) then
                     amat(var_rho,var_vpar) = + v * F0 / BigR * Vpar * r0_p                * xjac * theta * tstep &
@@ -1956,7 +1956,7 @@ do i=1,n_vertex_max
                                           * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
                                           * (                                          + F0 / BigR * rho_p)* xjac * theta * tstep*tstep
                     
-                    if ( with_TiTe ) then ! (with_TiTe)
+                    if ( with_TiTe ) then ! (with_TiTe) ********************************************
                       amat(var_vpar,var_Ti)   = + v * (Ti_s * r0   * ps0_t - Ti_t * r0   * ps0_s)        * theta * tstep &
                                                 + v * (Ti   * r0_s * ps0_t - Ti   * r0_t * ps0_s)        * theta * tstep &
                                                 + v * F0 / BigR * Ti * r0_p                       * xjac * theta * tstep
@@ -1968,13 +1968,13 @@ do i=1,n_vertex_max
                                                 + v * F0 / BigR * Te * r0_p                       * xjac * theta * tstep
 
                       amat_n(var_vpar,var_Te) = + v * F0 / BigR * Te_p * r0                       * xjac * theta * tstep
-                    else ! (with_TiTe)
+                    else ! (with_TiTe), i.e. with single temperature *******************************
                       amat(var_vpar,var_T)    = + v * (T_s  * r0   * ps0_t - T_t  * r0   * ps0_s)        * theta * tstep  &
                                                 + v * (T    * r0_s * ps0_t - T    * r0_t * ps0_s)        * theta * tstep  &
                                                 + v * F0 / BigR * T  * r0_p                       * xjac * theta * tstep
 
                       amat_n(var_vpar,var_T)  = + v * F0 / BigR * T_p  * r0                       * xjac * theta * tstep
-                    end if ! (with_TiTe)
+                    end if ! (with_TiTe) ***********************************************************
 
  
                     amat(var_vpar,var_vpar) = v * Vpar * r0_corr * F0**2 / BigR * xjac * (1.d0 + zeta) &
@@ -2034,22 +2034,22 @@ do i=1,n_vertex_max
                             * (rho * (ps0_x*u0_x + ps0_y*u0_y) + tauIC*2.*(ps0_x * (rho_x*Ti0 + rho*Ti0_x) + ps0_y*(rho_y*Ti0 + rho*Ti0_y)) &
                             + aki_neo_prof(ms,mt) * tauIC*2. * rho*(ps0_x*Ti0_x + ps0_y*Ti0_y) - rho * Vpar0 * Btheta2) * BigR * xjac * tstep * theta
                       
-                      if ( with_TiTe ) then ! (with_TiTe)
+                      if ( with_TiTe ) then ! (with_TiTe) ******************************************
                         amat(var_vpar,var_Ti) = amat(var_vpar,var_Ti) -v*amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)           &
                                   * (tauIC*2. * (ps0_x * (r0_x*Ti + r0*Ti_x) + ps0_y*(r0_y*Ti + r0*Ti_y)) &
                                   + aki_neo_prof(ms,mt) * tauIC*2. * r0 * (ps0_x*Ti_x + ps0_y*Ti_y)) * BigR * xjac * tstep * theta
-                      else ! (with_TiTe)
+                      else ! (with_TiTe), i.e. with single temperature *****************************
                         amat(var_vpar,var_T)  = amat(var_vpar,var_T)  -v*amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)           &
                                   * (tauIC*2. * (ps0_x * (r0_x*T  + r0*T_x ) + ps0_y*(r0_y*T  + r0*T_y )) &
                                   + aki_neo_prof(ms,mt) * tauIC*2. * r0 * (ps0_x*T_x  + ps0_y*T_y )) * BigR * xjac * tstep * theta
-                      end if ! (with_TiTe)
+                      end if ! (with_TiTe) *********************************************************
                     
                       amat(var_vpar,var_vpar) = amat(var_vpar,var_vpar) + v * amu_neo_prof(ms,mt) * BB2 * Btheta2/(Btheta2+epsil) * r0 * vpar * BigR * xjac * tstep * theta 
                     endif
   
                   end if ! (with_vpar)
 
-                  if ( with_TiTe ) then
+                  if ( with_TiTe ) then ! (with_TiTe) **********************************************
   
                     !###################################################################################################
                     !#  Ion Energy Equation                                                                            #
@@ -2427,7 +2427,7 @@ do i=1,n_vertex_max
                       amat_n(var_Te,var_vpar) = + v * r0 * GAMMA * Te0 * F0 / BigR * vpar_p          * xjac * theta * tstep
                     end if ! (with_vpar)
                     
-                  else ! (with_TiTe)
+                  else ! (with_TiTe), i.e. with single temperature *********************************
    
                     !###################################################################################################
                     !#  Electron + Ion Energy Equation                                                                 #
@@ -2611,7 +2611,7 @@ do i=1,n_vertex_max
                       amat_n(var_T,var_vpar) = + v * r0 * GAMMA * T0 * F0 / BigR * vpar_p                   * xjac * theta * tstep
                     end if ! (with_vpar)
                     
-                  end if ! (with_TiTe)
+                  end if ! (with_TiTe) *************************************************************
  
                   !###################################################################################################
                   !# end equations                                                                                   #

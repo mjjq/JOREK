@@ -558,7 +558,8 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,          &
+      P0_RR, P0_ZZ, P0_RZ, Pi0, Pi0_R, Pi0_Z, Pi0_p, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta,        &
+      psi_abs, E_par, E_crit,                                                                      &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
       BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi
@@ -1138,6 +1139,10 @@ module mod_expression
           P0_ZZ    = r0_ZZ * T0 + r0 * T0_ZZ + 2.d0 * r0_Z * T0_Z
           P0_RZ    = r0_RZ * T0 + r0 * T0_RZ + r0_R * T0_Z + r0_Z * T0_R
  
+          Pi0      = r0    * Ti0
+          Pi0_R    = r0_R  * Ti0 + r0 * Ti0_R
+          Pi0_Z    = r0_Z  * Ti0 + r0 * Ti0_Z
+ 
           rn0_R    = (   Z_t * rn0_s - Z_s * rn0_t ) / xjac
           rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac
 
@@ -1365,22 +1370,22 @@ module mod_expression
             Mach_par = Vpar0 / Vsound                             ! parallel Mach number
             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
             
-            Vtheta   = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+            Vtheta   = -1./Btheta * (  ( u0_R + 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z + 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z) + Vpar0 * Btheta
             
-            Vperp_i  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
+            Vperp_i  = -1./Btheta * (  ( u0_R + 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z + 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z )
             
-            Vperp_e  = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z - tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
+            Vperp_e  = -1./Btheta * (  ( u0_R - 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z - 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z )
             
             V_ExB    = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
             
-            Vstar_i  = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_i  = -1./Btheta * (  2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) * ps0_R  +            &
+              2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) * ps0_Z )
             
-            Vstar_e  = +1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_e  = +1./Btheta * (  2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) * ps0_R  +            &
+              2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) * ps0_Z )
             ! ### Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
           
@@ -1388,11 +1393,11 @@ module mod_expression
             if (num_neo_file) then ! (read neoclassical profiles from ascii file)
               call neo_coef( eq%xpoint, eq%xcase, Z, eq%Z_xpoint, Ps0 ,eq%psi_axis, eq%psi_bnd,    &
                 mu_neo, ki_neo)
-              Vneo = ki_neo / Btheta * tauIC  * ( ps0_R*T0_R + ps0_Z*T0_Z )
+              Vneo = ki_neo / Btheta * 2.d0*tauIC  * ( ps0_R*Ti0_R + ps0_Z*Ti0_Z )
             else ! (use constant neoclassical coefficients from namelist input file)
               mu_neo = amu_neo_const
               ki_neo = aki_neo_const
-              Vneo   = aki_neo_const / Btheta * tauIC * ( ps0_R*T0_R + ps0_Z*T0_Z )
+              Vneo   = aki_neo_const / Btheta * 2.d0*tauIC * ( ps0_R*Ti0_R + ps0_Z*Ti0_Z )
             end if
           end if
           
@@ -1404,7 +1409,7 @@ module mod_expression
           ln_Lambda  = 14.6 + 0.5 * log( Te0_eV / ne0_20 )                  ! Eq. (2.9) at relativistic energies
           
           E_par = - R * ( eta_T * zj0 / R**2                                                       &
-                        + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R + F0 * P0_p / R**2 ) )
+                        + 2.d0*tauIC / r0 * ( (Pi0_R * Ps0_Z - Pi0_Z * Ps0_R) / R + F0 * Pi0_p / R**2 ) )
           
           E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 * (central_density*1.d20*central_mass*MASS_PROTON)**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
           

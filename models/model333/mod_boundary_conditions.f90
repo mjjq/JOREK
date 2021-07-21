@@ -62,6 +62,7 @@ contains
                                  gmres, solve_only, ijA_index, ijA_size, irn_jcn,         & 
                                  irn, jcn, A_mat, i_tor_min, i_tor_max)
 
+    use constants
     use data_structure
     use vacuum, ONLY: is_freebound
     use phys_module, only: F0, GAMMA, freeboundary, tokamak_device, U_sheath,               &

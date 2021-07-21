@@ -32,6 +32,7 @@ module phys_module
   real*8  :: sigma                !< (model400)
   real*8  :: tauIC                !< Scaling factor for diamagnetic terms (see [[diamag|diamagnetic]])
   real*8  :: tauIC_nominal        !< Nominal scaling factor (considering Ti=Te) for diamagnetic terms (see [[diamag|diamagnetic]])
+  real*8  :: eta_spitzer          !< Spitzer resistivity (considering Ti=Te, main ion charge Z=1, effective ion charge Zeff=1)
   logical :: Wdia                 !< Include diamagnetic flows in viscosity terms? (see [[wdia|here]])
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
@@ -459,10 +460,13 @@ module phys_module
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
   real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
   real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
+  real*8  :: ZK_par_SpitzerHaerm  !< Spitzer-Haerm parallel heat diffusion value in the plasma center (assuming a Z=1 plasma with Te=Ti)
   real*8  :: ZK_i_perp(10) = 0.d0 !< Coefficients for perpendicular ion heat diffusion profile
   real*8  :: ZK_e_perp(10) = 0.d0 !< Coefficients for perpendicular electron heat diffusion profile
   real*8  :: ZK_i_par             !< Ion parallel heat diffusion coefficient in the plasma center
   real*8  :: ZK_e_par             !< Electron parallel heat diffusion coefficient in the plasma center
+  real*8  :: ZK_i_par_SpitzerHaerm!< Spitzer-Haerm ion parallel heat diffusion value in the plasma center (assuming a Z=1 plasma)
+  real*8  :: ZK_e_par_SpitzerHaerm!< Spitzer-Haerm electron parallel heat diffusion value in the plasma center (assuming a Z=1 plasma)
   real*8  :: D_neutral_x          !< Neutral particle diffusivity in R-direction
   real*8  :: D_neutral_y          !< Neutral particle diffusivity in Z-direction
   real*8  :: D_neutral_p          !< Neutral particle diffusivity in phi-direction

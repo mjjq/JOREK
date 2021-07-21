@@ -120,7 +120,7 @@ if (my_id == 0) then
     if (xpoint2) then
       if (ES%ifail_xpoint == 0) then ! (otherwise, keep the values of the previous iteration as a reasonable guess)
         ES%psi_bnd  = ES%psi_xpoint(1)
-        if( ES%active_xpoint .eq. UPPER_XPOINT ) then
+        if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
           ES%psi_bnd = ES%psi_xpoint(2)
         endif
         psi_bnd     = ES%psi_bnd
@@ -250,7 +250,7 @@ if (freeboundary_equil) then
       if (xpoint2) then
         if (ES%ifail_xpoint .ne. 1) then      
           ES%psi_bnd  = ES%psi_xpoint(1)
-          if( ES%active_xpoint .eq. UPPER_XPOINT ) then
+          if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
             ES%psi_bnd = ES%psi_xpoint(2)
           endif
           if(xcase2 .eq. LOWER_XPOINT) ES%Z_xpoint(2) = +99.d0
@@ -371,7 +371,7 @@ if (my_id == 0) then
     call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
     if (ifail .ne. 1) then      
       psi_bnd  = psi_xpoint(1)
-      if( ES%active_xpoint .eq. UPPER_XPOINT ) then
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
         psi_bnd = psi_xpoint(2)
       endif
       if(xcase2 .eq. LOWER_XPOINT) Z_xpoint(2) = +99.d0

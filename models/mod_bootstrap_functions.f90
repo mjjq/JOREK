@@ -385,8 +385,8 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   ! --- Routine parameters
   type (type_node_list),    intent(inout) :: node_list
   type (type_element_list), intent(inout) :: element_list
-  real*8,                   intent(inout) :: psi_axis, psi_xpoint(2)
-  real*8,                   intent(inout) :: R_xpoint(2), Z_xpoint(2)
+  real*8,                   intent(in)    :: psi_axis, psi_xpoint(2)
+  real*8,                   intent(in)    :: R_xpoint(2), Z_xpoint(2)
   
   ! --- Gaussian points between (-1.,1.) for Gauss-integration
   real*8, parameter :: xgs(4) = (/-0.861136311594053, -0.339981043584856, 0.339981043584856,  0.861136311594053 /)
@@ -403,6 +403,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   real*8                   :: Z, dZ_ds, dZ_dt, dZ_dl
   real*8                   :: psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt, psi_R, psi_Z
   real*8                   :: zj, dzj_ds, dzj_dt, dzj_dst, dzj_dss, dzj_dtt
+  real*8                   :: psi_xpoint_tmp(2)
 
 
   ! ------------------------------------------
@@ -444,6 +445,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   ! --- Get psi_bnd
   psi_bnd  = 0.d0
   psi_bnd2 = 0.d0
+  psi_xpoint_tmp = psi_xpoint
   if(xcase .eq. LOWER_XPOINT) psi_bnd = psi_xpoint(1)
   if(xcase .eq. UPPER_XPOINT) psi_bnd = psi_xpoint(2)
   if(xcase .eq. DOUBLE_NULL ) then
@@ -456,9 +458,9 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
     endif
     ! If we have a symmetric double-null, force the single separatrix
     if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
-      psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
-      psi_xpoint(2) = psi_xpoint(1)
-      psi_bnd  = psi_xpoint(1)
+      psi_xpoint_tmp(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+      psi_xpoint_tmp(2) = psi_xpoint_tmp(1)
+      psi_bnd  = psi_xpoint_tmp(1)
       psi_bnd2 = psi_bnd  
       n_grids(3) = 0
     endif
@@ -474,7 +476,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   
   ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint, n_grids, sigmas)
+  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
   
   
   ! ---------------------------------------------
@@ -496,8 +498,8 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   	! --- Ignore flux surface segments in the private flux region below the x-point.
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
 
         dR_dl = dR_ds * ds + dR_dt * dt
         dZ_dl = dZ_ds * ds + dZ_dt * dt
@@ -571,8 +573,8 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   ! --- Routine parameters
   type (type_node_list),    intent(inout) :: node_list
   type (type_element_list), intent(inout) :: element_list
-  real*8,                   intent(inout) :: psi_axis, psi_xpoint(2)
-  real*8,                   intent(inout) :: R_xpoint(2), Z_xpoint(2)
+  real*8,                   intent(in)    :: psi_axis, psi_xpoint(2)
+  real*8,                   intent(in)    :: R_xpoint(2), Z_xpoint(2)
   
   ! --- Gaussian points between (-1.,1.) for Gauss-integration
   real*8, parameter :: xgs(4) = (/-0.861136311594053, -0.339981043584856, 0.339981043584856,  0.861136311594053 /)
@@ -594,6 +596,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   integer                  :: n_int
   real*8                   :: lambda_ft, dlambda_ft, OneMinusLh
   real*8                   :: psi_n
+  real*8                   :: psi_xpoint_tmp(2)
 
 
   ! ------------------------------------------
@@ -637,6 +640,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   ! --- Get psi_bnd
   psi_bnd  = 0.d0
   psi_bnd2 = 0.d0
+  psi_xpoint_tmp = psi_xpoint
   if(xcase .eq. LOWER_XPOINT) psi_bnd = psi_xpoint(1)
   if(xcase .eq. UPPER_XPOINT) psi_bnd = psi_xpoint(2)
   if(xcase .eq. DOUBLE_NULL ) then
@@ -649,9 +653,9 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
     endif
     ! If we have a symmetric double-null, force the single separatrix
     if (abs(psi_xpoint(1)-psi_xpoint(2)) .lt. SDN_threshold) then
-      psi_xpoint(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
-      psi_xpoint(2) = psi_xpoint(1)
-      psi_bnd  = psi_xpoint(1)
+      psi_xpoint_tmp(1) = (psi_xpoint(1)+psi_xpoint(2))/2.d0
+      psi_xpoint_tmp(2) = psi_xpoint_tmp(1)
+      psi_bnd  = psi_xpoint_tmp(1)
       psi_bnd2 = psi_bnd  
       n_grids(3) = 0
     endif
@@ -667,14 +671,14 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
   
   ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint, n_grids, sigmas)
+  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
   
   ! -----------------
   ! --- Get q-profile
   ! -----------------
   
   ! --- Get q-profile on spline knots
-  call determine_q_profile(node_list,element_list,flux_list,psi_axis,psi_xpoint,Z_xpoint,q_knots,rad)
+  call determine_q_profile(node_list,element_list,flux_list,psi_axis,psi_xpoint_tmp,Z_xpoint,q_knots,rad)
 
   
   ! ------------------
@@ -695,8 +699,8 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   	! --- Ignore flux surface segments in the private flux region below the x-point.
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
 
   	xjac  = dR_ds * dZ_dt - dR_dt * dZ_ds
 
@@ -740,8 +744,8 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   	! --- Ignore flux surface segments in the private flux region below the x-point.
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
 
   	xjac  = dR_ds * dZ_dt - dR_dt * dZ_ds
 
@@ -772,8 +776,8 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   	call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
   	! --- Ignore flux surface segments in the private flux region below the x-point.
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
-  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
+  	if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
 
   	xjac  = dR_ds * dZ_dt - dR_dt * dZ_ds
 
@@ -817,8 +821,8 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
     	  call interp(node_list,element_list,i_elm,1,1,s,t,psi,dpsi_ds,dpsi_dt,dpsi_dst,dpsi_dss,dpsi_dtt)
 
     	  ! --- Ignore flux surface segments in the private flux region below the x-point.
-    	  if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
-    	  if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
+    	  if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(1)-psi_axis) < 1.d0) .and. (Z < z_xpoint(1)) .and. (xcase .ne. UPPER_XPOINT)) cycle
+    	  if ( xpoint .and. ((psi-psi_axis)/(psi_xpoint_tmp(2)-psi_axis) < 1.d0) .and. (Z > z_xpoint(2)) .and. (xcase .ne. LOWER_XPOINT)) cycle
 
     	  dR_dl = dR_ds * ds + dR_dt * dt
     	  dZ_dl = dZ_ds * ds + dZ_dt * dt

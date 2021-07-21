@@ -463,7 +463,8 @@ contains
   !******************************************************************************
   !******************************************************************************
   subroutine construct_variables(node, R_axis, Z_axis, R_xpoint, Z_xpoint, psi_bnd)
-  
+
+    use constants    
     use data_structure
     use phys_module, only: F0, FF_0, xpoint, xcase, tokamak_device,    &
                            central_mass, mass_proton, central_density, &

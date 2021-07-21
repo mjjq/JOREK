@@ -30,7 +30,7 @@ real*8     :: Omega, dOmega_dpsi, dOmega_dz, dOmega_dpsi2, dOmega_dz2, dOmega_dp
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
-  write(*,*) '*      initial conditions  (500)      *'
+  write(*,*) '*      initial conditions  (501)      *'
   write(*,*) '***************************************'
 endif
 
@@ -89,7 +89,7 @@ if (my_id .eq. 0) then
     node_list%node(i)%values(1,:,var_w) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
 
     node_list%node(i)%values(1,:,var_Vpar) = 0.d0        ! parallel velocity
-    
+
 !=================================================  Parallel velocity profile: 
 !                                                   if (normalized_velocity_profile) then
 !                                                      set Vpar,0 (JOREK normalized, ie without unit)= parallel velocity given as input profile 
@@ -202,6 +202,7 @@ do in=2,n_tor
 enddo
 
 return
+
 ! The following seems don't have any meaning since it is after the return, should we delete this
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)
 if (.not. no_mach1_bc) then

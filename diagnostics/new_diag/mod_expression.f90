@@ -157,6 +157,8 @@ module mod_expression
     call add(exprs_all, 'zkiprof     ', 'Perpendicular Ion Heat Diffusivity                    ')
     call add(exprs_all, 'zkeprof     ', 'Perpendicular Electron Heat Diffusivity               ')
     call add(exprs_all, 'pres        ', 'Total Pressure                                        ')
+    call add(exprs_all, 'pres_e      ', 'Electron Pressure                                     ')
+    call add(exprs_all, 'pres_i      ', 'Ion Pressure                                          ')
     call add(exprs_all, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
     call add(exprs_all, 'Btor        ', 'Toroidal Magnetic Field Component                     ')
     call add(exprs_all, 'BR          ', 'Magnetic Field Component Along R                      ')
@@ -558,8 +560,8 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, Pi0, Pi0_R, Pi0_Z, Pi0_p, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta,        &
-      psi_abs, E_par, E_crit,                                                                      &
+      P0_RR, P0_ZZ, P0_RZ, Pi0, Pi0_R, Pi0_Z, Pi0_p, Pe0, Pe0_R, Pe0_Z, Pe0_p,                     &
+      BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,                               &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
       BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi
@@ -1138,10 +1140,16 @@ module mod_expression
           P0_RR    = r0_RR * T0 + r0 * T0_RR + 2.d0 * r0_R * T0_R
           P0_ZZ    = r0_ZZ * T0 + r0 * T0_ZZ + 2.d0 * r0_Z * T0_Z
           P0_RZ    = r0_RZ * T0 + r0 * T0_RZ + r0_R * T0_Z + r0_Z * T0_R
- 
+  
           Pi0      = r0    * Ti0
           Pi0_R    = r0_R  * Ti0 + r0 * Ti0_R
           Pi0_Z    = r0_Z  * Ti0 + r0 * Ti0_Z
+          Pi0_p    = r0_p  * Ti0 + r0 * Ti0_p
+ 
+          Pe0      = r0    * Te0
+          Pe0_R    = r0_R  * Te0 + r0 * Te0_R
+          Pe0_Z    = r0_Z  * Te0 + r0 * Te0_Z
+          Pe0_p    = r0_p  * Te0 + r0 * Te0_p
  
           rn0_R    = (   Z_t * rn0_s - Z_s * rn0_t ) / xjac
           rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac
@@ -1647,9 +1655,15 @@ module mod_expression
                 
               case ( 'zkeprof' )
                 res = zke_prof / fact_time
-                
+                  
               case ( 'pres' )
                 res = P0 / fact_mu_zero
+                
+              case ( 'pres_e' )
+                res = Pe0 / fact_mu_zero
+                
+              case ( 'pres_i' )
+                res = Pi0 / fact_mu_zero
                 
               case ( 'B_abs' )
                 res = sqrt(BB2)

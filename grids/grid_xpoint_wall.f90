@@ -6,6 +6,7 @@ subroutine grid_xpoint_wall(node_list, element_list, n_flux, n_open, n_private, 
 ! Add shape of exetrnal wall, align to wall close to it.
 !-----------------------------------------------------------------------
 
+use constants,  only: LOWER_XPOINT
 use data_structure
 use tr_module 
 use gauss
@@ -69,7 +70,7 @@ integer             :: n_remove_elements, n_remove_nodes, remove_elements(100), 
 
 xpoint = .true.
 extend = .true.;   if (n_ext .lt. 1) extend = .false.
-xcase  = 1 ! LOWER_XPOINT
+xcase  = LOWER_XPOINT
 my_id  = 0
 
 PI = 2.d0 * asin(1.d0)

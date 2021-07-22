@@ -50,15 +50,19 @@ integer            :: ifail, inode, node, index, index0, n_node_start, n_element
 integer            :: my_id, n_index_start, node_iv, node_ivp, node_ivm
 integer            :: i_sons
 
+real*8             :: psi_axis_local, R_axis_local, Z_axis_local, s_axis_local, t_axis_local
+real*8             :: psi_xpoint_local(2), R_xpoint_local(2), Z_xpoint_local(2), s_xpoint_local(2), t_xpoint_local(2)
+integer            :: i_elm_axis_local, i_elm_xpoint_local(2)
+
 write(*,*) '**************************************'
 write(*,*) '*         flux surface grid          *'
 write(*,*) '**************************************'
 
 my_id = 0
  
-call find_axis(my_id,node_list,element_list,ES%psi_axis,ES%R_axis,ES%Z_axis,ES%i_elm_axis,ES%s_axis,ES%t_axis,ifail)  ! left to print some info
+call find_axis(my_id,node_list,element_list,psi_axis_local,R_axis_local,Z_axis_local,i_elm_axis_local,s_axis_local,t_axis_local,ifail)  ! left to print some info
  
-if (xpoint) call find_xpoint(my_id,node_list,element_list,ES%psi_xpoint,ES%R_xpoint,ES%Z_xpoint,ES%i_elm_xpoint,ES%s_xpoint,ES%t_xpoint,xcase,ifail) !left to print some info
+if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint_local,R_xpoint_local,Z_xpoint_local,i_elm_xpoint_local,s_xpoint_local,t_xpoint_local,xcase,ifail) !left to print some info
 
 surface_list%n_psi = n_flux - 1
 nrnew              = n_flux

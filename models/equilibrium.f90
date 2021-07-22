@@ -120,7 +120,7 @@ if (my_id == 0) then
     if (xpoint2) then
       if (ES%ifail_xpoint == 0) then ! (otherwise, keep the values of the previous iteration as a reasonable guess)
         ES%psi_bnd  = ES%psi_xpoint(1)
-        if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
+        if( (xcase2 .eq. UPPER_XPOINT) .or. ((xcase2 .eq. DOUBLE_NULL) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
           ES%psi_bnd = ES%psi_xpoint(2)
         endif
         psi_bnd     = ES%psi_bnd

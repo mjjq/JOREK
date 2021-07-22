@@ -889,7 +889,7 @@ do i=1,n_vertex_max
               d2visco_dT2 = 0.d0
             end if
             
-            ! --- Tmperature dependent parallel heat diffusivity
+            ! --- Temperature dependent parallel heat diffusivity
             if ( ZKpar_T_dependent ) then
               ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
               dZK_par_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0) * dT0_corr_dT
@@ -906,7 +906,7 @@ do i=1,n_vertex_max
               dZK_par_dT = 0.d0
             endif
             
-            ! --- Tmperature dependent hyper-resistivity
+            ! --- Temperature dependent hyper-resistivity
             if ( eta_num_T_dependent ) then
               eta_num_T     =   eta_num   * (T0_corr/T_0)**(-3.d0)
               deta_num_dT   = - eta_num   * (3.d0)  * T0_corr**(-4.d0) * T_0**(3.d0)
@@ -919,7 +919,7 @@ do i=1,n_vertex_max
               deta_num_dT   = 0.d0
             end if
             
-            ! --- Tmperature dependent hyper-viscosity
+            ! --- Temperature dependent hyper-viscosity
             if ( visco_num_T_dependent ) then
               visco_num_T     =   visco_num   * (T0_corr/T_0)**(-3.d0)
               dvisco_num_dT   = - visco_num   * (3.d0)  * T0_corr**(-4.d0) * T_0**(3.d0)

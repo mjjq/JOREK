@@ -343,7 +343,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   use mod_export_restart
   use construct_matrix_mod
   use solve_mat_n
-  use pellet_module,           only: pellet_volume
+  use pellet_module
   use vacuum
   use vacuum_response,         only: update_response
   use mod_fields_linear
@@ -505,8 +505,16 @@ subroutine do_jorek_timestep(this, sim, ev)
   if ( (gmres .and. (this%iter_gmres .lt. gmres_max_iter)) .or. (.not. gmres) ) then
 
     ! TODO add if use_pellet
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-    call update_mgi(sim%my_id, sim%fields%node_list, sim%fields%element_list)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+      call total_neutrals(sim%my_id,node_list,element_list)
+      if (using_spi .and. t_now >= t_ns) then
+        call update_spi(sim%my_id,node_list,element_list)
+      end if
+#endif
+#ifdef WITH_Impurities
+      if (using_spi .and. t_now >= t_ns) then
+        call update_spi(my_id,node_list,element_list)
+      end if
 #endif
 
     call update_values(sim%my_id, sim%fields%element_list, sim%fields%node_list, deltas)         ! add solution to node values

@@ -698,24 +698,27 @@ do i=1,n_vertex_max
               d2eta_d2T = 0.d0
             end if
             
-            if ( eta_T_dependent .and.  xpoint2 .and. (Te0 .lt. T_min) ) then
-                eta_T     = eta    * (max(Te0,T_min)/Te_0)**(-1.5d0)
-                deta_dT   = 0.d0
-                d2eta_d2T = 0.d0
-            end if
-            
             ! --- Eta for ohmic heating
             if ( eta_T_dependent .and. Te0_corr <= T_max_eta_ohm) then
-              eta_T_ohm     = eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
+              eta_T_ohm     =   eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
               deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
             else if ( eta_T_dependent .and. Te0_corr > T_max_eta_ohm) then
-              eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/Te_0)**(-1.5d0)
+              eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/Te_0)**(-1.5d0)
               deta_dT_ohm   = 0.    
             else
               eta_T_ohm     = eta_ohmic
               deta_dT_ohm   = 0.d0
             end if
-            
+
+            if ( eta_T_dependent .and.  xpoint2 .and. (Te0 .lt. T_min) ) then
+              eta_T     = eta       * (max(Te0,T_min)/Te_0)**(-1.5d0)
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
+
+              eta_T_ohm = eta_ohmic * (max(Te0,T_min)/Te_0)**(-1.5d0)
+              deta_dT_ohm   = 0.
+            end if
+
             ! --- Temperature dependent viscosity
             if ( visco_T_dependent ) then
               visco_T     =   visco * (Te0_corr/Te_0)**(-1.5d0)
@@ -855,24 +858,27 @@ do i=1,n_vertex_max
               d2eta_d2T = 0.d0
             end if
             
-            if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
-                eta_T     = eta    * (max(T0,T_min)/T_0)**(-1.5d0)
-                deta_dT   = 0.d0
-                d2eta_d2T = 0.d0
-            end if
-            
             ! --- Eta for ohmic heating
             if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm) then
-              eta_T_ohm     = eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
+              eta_T_ohm     =   eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
               deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
             else if ( eta_T_dependent .and. T0_corr > T_max_eta_ohm) then
-              eta_T_ohm     = eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
+              eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
               deta_dT_ohm   = 0.    
             else
               eta_T_ohm     = eta_ohmic
               deta_dT_ohm   = 0.d0
             end if
-            
+
+            if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
+              eta_T     = eta       * (max(T0,T_min)/T_0)**(-1.5d0)
+              deta_dT   = 0.d0
+              d2eta_d2T = 0.d0
+
+              eta_T_ohm = eta_ohmic * (max(T0,T_min)/T_0)**(-1.5d0)
+              deta_dT_ohm   = 0.
+            end if
+
             ! --- Temperature dependent viscosity
             if ( visco_T_dependent ) then
               visco_T     =   visco * (T0_corr/T_0)**(-1.5d0)

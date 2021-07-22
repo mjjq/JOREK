@@ -513,7 +513,7 @@ subroutine do_jorek_timestep(this, sim, ev)
 #endif
 #ifdef WITH_Impurities
       if (using_spi .and. t_now >= t_ns) then
-        call update_spi(my_id,node_list,element_list)
+        call update_spi(sim%my_id,node_list,element_list)
       end if
 #endif
 

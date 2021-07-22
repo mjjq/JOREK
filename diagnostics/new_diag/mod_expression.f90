@@ -1234,42 +1234,87 @@ module mod_expression
 
           ! --- Some input profiles
           if ( eta_T_dependent ) then
-            if ( with_TiTe) then
-              eta_T     =   eta   * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
-              deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
-              d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(Te0)**(-3.5d0) * Te_0**(1.5d0)
-            else
-              eta_T     =   eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-              deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-              d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
-            end if
+            if ( with_TiTe) then ! (with_TiTe) *****************************************************
+              if ( corr_neg_temp(Te0) <= T_max_eta ) then
+                eta_T     =   eta   * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
+                deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
+                d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(Te0)**(-3.5d0) * Te_0**(1.5d0)
+              else if ( corr_neg_temp(Te0) > T_max_eta ) then
+                eta_T     =   eta   * (T_max_eta/Te_0)**(-1.5d0)
+                deta_dT   =   0.
+                d2eta_d2T =   0.
+              else
+                eta_T     =   eta
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                eta_T     =   eta   * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+
+            else ! (with_TiTe), i.e. with single temperature ***************************************
+              if ( corr_neg_temp(T0) <= T_max_eta ) then
+                eta_T     =   eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+                deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+                d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+              else if ( corr_neg_temp(T0) > T_max_eta ) then
+                eta_T     =   eta   * (T_max_eta/T_0)**(-1.5d0)
+                deta_dT   =   0.
+                d2eta_d2T =   0.
+              else
+                eta_T     =   eta
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                eta_T     =   eta   * (max(T0,T_min)/T_0)**(-1.5d0)
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+
+            end if ! (with_TiTe) *******************************************************************
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
           end if
-          
+
           if ( visco_T_dependent ) then
-            if ( with_TiTe) then
-              visco_T   = visco * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
+            if ( with_TiTe) then ! (with_TiTe) *****************************************************
+              visco_T   =   visco * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
-            else
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              endif
+            else ! (with_TiTe), i.e. with single temperature ***************************************
               visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-            end if
+              if ( xpoint2 .and. (T0 .lt. T_min) ) then
+                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+                d2visco_dT2 = 0.d0
+              endif
+            end if ! (with_TiTe) *******************************************************************
           else
             visco_T   = visco
             dvisco_dT = 0.d0
           end if
           
-          if ( with_TiTe ) then
+          if ( with_TiTe ) then ! (with_TiTe) ******************************************************
             if ( ZKpar_T_dependent ) then
-              ZKi_par_T   = ZK_i_par * (corr_neg_temp(Ti0)/Ti_0)**(+2.5d0)
-              dZKi_par_dT = ZK_i_par * (2.5d0)  * corr_neg_temp(Ti0)**(+1.5d0) * Ti_0**(-2.5d0)
+              ZKi_par_T     = ZK_i_par * (corr_neg_temp(Ti0)/Ti_0)**(+2.5d0)
+              dZKi_par_dT   = ZK_i_par * (2.5d0)  * corr_neg_temp(Ti0)**(+1.5d0) * Ti_0**(-2.5d0)
               if (ZKi_par_T .gt. ZK_par_max) then
                 ZKi_par_T   = Zk_par_max
                 dZKi_par_dT = 0.d0
               end if
+              if ( eq%xpoint .and. (Ti0 .lt. T_min) ) then
+                ZKi_par_T   = ZK_i_par * (max(Ti0,T_min)/Ti_0)**(+2.5d0)
+                dZKi_par_dT = 0.d0
+              endif
 
               ZKe_par_T   = ZK_e_par * (corr_neg_temp(Te0)/Te_0)**(+2.5d0)
               dZKe_par_dT = ZK_e_par * (2.5d0)  * corr_neg_temp(Te0)**(+1.5d0) * Te_0**(-2.5d0)
@@ -1277,7 +1322,10 @@ module mod_expression
                 ZKe_par_T   = Zk_par_max
                 dZKe_par_dT = 0.d0
               end if
-
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                ZKe_par_T   = ZK_e_par * (max(Te0,T_min)/Te_0)**(+2.5d0)
+                dZKe_par_dT = 0.d0
+              endif
             else
               ZKi_par_T   = ZK_i_par
               dZKi_par_dT = 0.d0
@@ -1286,21 +1334,26 @@ module mod_expression
               dZKe_par_dT = 0.d0
             end if
             ZKpar_T   = 0.d0
-          else
+          else ! (with_TiTe), i.e. with single temperature *****************************************
             if ( ZKpar_T_dependent ) then
-              ZKpar_T   = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)
-              dZKpar_dT = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
+              ZKpar_T     = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)
+              dZKpar_dT   = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
               if (ZKpar_T .gt. ZK_par_max) then
                 ZKpar_T   = Zk_par_max
                 dZKpar_dT = 0.d0
               end if
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+                dZKpar_dT = 0.d0
+              endif
+
             else
               ZKpar_T   = ZK_par
               dZKpar_dT = 0.d0
             end if
             ZKi_par_T   = ZKpar_T
             ZKe_par_T   = ZKpar_T
-          end if
+          end if ! (with_TiTe) *********************************************************************
           
           D_prof  = get_dperp (psi_norm)
           if ( with_TiTe ) then

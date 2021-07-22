@@ -209,7 +209,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,LOGI_FMT) 'eta_T_dependent       ', eta_T_dependent
   write(*,REAL_FMT) 'eta                   ', eta
   write(*,REAL_FMT) 'eta_ohmic             ', eta_ohmic
-  write(*,REAL_FMT) 'eta_Spitzer           ', eta_Spitzer
+  write(*,REAL_FMT) 'eta_Spitzer (not input parameter; printed for reference)', eta_Spitzer
   write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
   write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm  
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
@@ -402,8 +402,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,REAL_FMT) 'ZK_e_par               ', ZK_e_par
     write(*,REAL_FMT) 'ZK_i_par               ', ZK_i_par
     write(*,REAL_FMT) 'ZK_par_max            ', ZK_par_max
-    write(*,REAL_FMT) 'ZK_e_par_SpitzerHaerm  ', ZK_e_par_SpitzerHaerm
-    write(*,REAL_FMT) 'ZK_i_par_SpitzerHaerm  ', ZK_i_par_SpitzerHaerm
+    write(*,REAL_FMT) 'ZK_e_par_SpitzerHaerm (not input parameter; printed for reference)', ZK_e_par_SpitzerHaerm
+    write(*,REAL_FMT) 'ZK_i_par_SpitzerHaerm (not input parameter; printed for reference)', ZK_i_par_SpitzerHaerm
     write(*,LOGI_FMT) 'ZKpar_T_dependent     ', ZKpar_T_dependent
     write(*,LOGI_FMT) 'thermalization         ', thermalization
 
@@ -423,7 +423,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     end if
     write(*,REAL_FMT) 'ZK_par                ', ZK_par
     write(*,REAL_FMT) 'ZK_par_max            ', ZK_par_max
-    write(*,REAL_FMT) 'ZK_par_SpitzerHaerm    ', ZK_par_SpitzerHaerm
+    write(*,REAL_FMT) 'ZK_par_SpitzerHaerm (not input parameter; printed for reference)', ZK_par_SpitzerHaerm
     write(*,LOGI_FMT) 'ZKpar_T_dependent     ', ZKpar_T_dependent
     write(*,REAL_FMT) 'heatsource            ', heatsource
     write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
@@ -457,7 +457,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
   write(*,REAL_FMT) 'gamma                 ', gamma
   write(*,REAL_FMT) 'tauIC                 ', tauIC
-  write(*,REAL_FMT) 'tauIC_nominal         ', tauIC_nominal
+  write(*,REAL_FMT) 'tauIC_nominal (not input parameter; printed for reference)', tauIC_nominal
   write(*,LOGI_FMT) 'Wdia                  ', Wdia
   write(*,REAL_FMT) 'eta_num               ', eta_num
   write(*,LOGI_FMT) 'eta_num_T_dependent   ', eta_num_T_dependent

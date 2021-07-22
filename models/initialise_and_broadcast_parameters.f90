@@ -28,7 +28,7 @@ subroutine initialise_and_broadcast_parameters(my_id, filename)
   sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
   sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
 
-  ! --- Calculate nominal input parameters
+  ! --- Calculate nominal parameters printed in the logfile for reference
   if (with_TiTe) then
     Te0_keV               = Te_0 / ( EL_CHG * mu_zero * central_density * 1.d+20 ) / 1.d+3
     Ti0_keV               = Ti_0 / ( EL_CHG * mu_zero * central_density * 1.d+20 ) / 1.d+3

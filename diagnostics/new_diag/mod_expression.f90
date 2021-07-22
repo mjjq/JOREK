@@ -1292,10 +1292,9 @@ module mod_expression
             else ! (with_TiTe), i.e. with single temperature ***************************************
               visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-              if ( xpoint2 .and. (T0 .lt. T_min) ) then
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
                 visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
-                d2visco_dT2 = 0.d0
               endif
             end if ! (with_TiTe) *******************************************************************
           else

@@ -374,6 +374,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   real*8         :: mindelta, maxdelta, sum_deltas
   character*8    :: label, itlabel
   character*14   :: fileout
+  integer        :: i, n_spi_begin
 
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -505,17 +506,16 @@ subroutine do_jorek_timestep(this, sim, ev)
   if ( (gmres .and. (this%iter_gmres .lt. gmres_max_iter)) .or. (.not. gmres) ) then
 
     ! TODO add if use_pellet
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-      call total_neutrals(sim%my_id,node_list,element_list)
-      if (using_spi .and. t_now >= t_ns) then
-        call update_spi(sim%my_id,node_list,element_list)
-      end if
-#endif
-#ifdef WITH_Impurities
-      if (using_spi .and. t_now >= t_ns) then
-        call update_spi(sim%my_id,node_list,element_list)
-      end if
-#endif
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+    if (using_spi) then
+      n_spi_begin = 1
+      do i = 1, n_inj !< Do one update for each injection location
+        if (t_now >= t_ns(i)) call update_spi(sim%my_id,sim%fields%node_list,sim%fields%element_list,i,n_spi_begin)
+        n_spi_begin = n_spi_begin + n_spi(i)
+      end do
+    end if
+#endif    
 
     call update_values(sim%my_id, sim%fields%element_list, sim%fields%node_list, deltas)         ! add solution to node values
     call update_deltas(sim%my_id, sim%fields%node_list)

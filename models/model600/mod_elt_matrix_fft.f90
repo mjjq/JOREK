@@ -441,6 +441,15 @@ do i=1,n_vertex_max
             Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
             dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
 
+            zTi   =   eq_zTi(ms,mt)
+            zTi_x = dTi_dpsi(ms,mt) * ps0_x
+            zTi_y = dTi_dpsi(ms,mt) * ps0_y
+            zTe   =   eq_zTe(ms,mt)
+            zTe_x = dTe_dpsi(ms,mt) * ps0_x
+            zTe_y = dTe_dpsi(ms,mt) * ps0_y
+            zn_x  =  dn_dpsi(ms,mt) * ps0_x
+            zn_y  =  dn_dpsi(ms,mt) * ps0_y
+
           else ! (with_TiTe), i.e. with single temperature *****************************************
 
             T0    = eq_g(mp,var_T,ms,mt)
@@ -481,6 +490,16 @@ do i=1,n_vertex_max
 
             Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
             dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
+
+            zTi   =   eq_zT(ms,mt)         / 2.d0
+            zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.d0
+            zTi_y = dT_dpsi(ms,mt) * ps0_y / 2.d0
+            zTe   = zTi
+            zTe_x = zTi_x
+            zTe_y = zTi_y
+            zn_x  = dn_dpsi(ms,mt) * ps0_x
+            zn_y  = dn_dpsi(ms,mt) * ps0_y
+
           end if ! (with_TiTe) *********************************************************************
 
           if ( with_vpar ) then
@@ -952,69 +971,26 @@ do i=1,n_vertex_max
 
           ! --- Bootstrap current 
           if (bootstrap) then
-            if ( with_TiTe ) then ! (with_TiTe) ****************************************************
-              ! --- Full Sauter formula
-              call bootstrap_current(bigR, y_g(ms,mt),                     &
-                                     R_axis,   Z_axis,   psi_axis,         &
-                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
-                                     ps0, ps0_x, ps0_y,                    &
-                                     r0,  r0_x,  r0_y,                     &
-                                     Ti0, Ti0_x, Ti0_y,                    &
-                                     Te0, Te0_x, Te0_y,                  Jb)
+            ! --- Full Sauter formula
+            call bootstrap_current(bigR, y_g(ms,mt),                     &
+                                   R_axis,   Z_axis,   psi_axis,         &
+                                   R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
+                                   ps0, ps0_x, ps0_y,                    &
+                                   r0,  r0_x,  r0_y,                     &
+                                   Ti0, Ti0_x, Ti0_y,                    &
+                                   Te0, Te0_x, Te0_y,                  Jb)
 
-              ! --- Full Sauter formula for initial profiles
+            ! --- Full Sauter formula for initial profiles
+            call bootstrap_current(bigR, y_g(ms,mt),                       &
+                                   R_axis,   Z_axis,   psi_axis,           &
+                                   R_xpoint, Z_xpoint, psi_bnd, psi_norm,  &
+                                   ps0, ps0_x, ps0_y,                      &
+                                   eq_zne(ms,mt),  zn_x,  zn_y,            &
+                                   zTi, zTi_x, zTi_y,                      &
+                                   zTe, zTe_x, zTe_y,                  Jb_0)
 
-              zTi   =   eq_zTi(ms,mt)
-              zTi_x = dTi_dpsi(ms,mt) * ps0_x
-              zTi_y = dTi_dpsi(ms,mt) * ps0_y
-              zTe   =   eq_zTe(ms,mt)
-              zTe_x = dTe_dpsi(ms,mt) * ps0_x 
-              zTe_y = dTe_dpsi(ms,mt) * ps0_y
-              zn_x  =  dn_dpsi(ms,mt) * ps0_x
-              zn_y  =  dn_dpsi(ms,mt) * ps0_y
-
-              call bootstrap_current(bigR, y_g(ms,mt),                       &
-                                     R_axis,   Z_axis,   psi_axis,           &
-                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,  &
-                                     ps0, ps0_x, ps0_y,                      &
-                                     eq_zne(ms,mt),  zn_x,  zn_y,            &
-                                     zTi, zTi_x, zTi_y,                      &
-                                     zTe, zTe_x, zTe_y,                  Jb_0)
-              ! --- Subtract the initial equilibrium part
-              Jb = Jb - Jb_0
-
-            else ! (with_TiTe), i.e. with single temperature ***************************************
-
-              ! --- Full Sauter formula
-              call bootstrap_current(bigR, y_g(ms,mt),                     &
-                                     R_axis,   Z_axis,   psi_axis,         &
-                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,&
-                                     ps0, ps0_x, ps0_y,                    &
-                                     r0,  r0_x,  r0_y,                     &
-                                     Ti0, Ti0_x, Ti0_y,                    &
-                                     Te0, Te0_x, Te0_y,                  Jb)
-
-              ! --- Full Sauter formula for initial profiles
-
-              zTi   =   eq_zT(ms,mt)         / 2.d0
-              zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.d0
-              zTi_y = dT_dpsi(ms,mt) * ps0_y / 2.d0
-              zTe   = zTi
-              zTe_x = zTi_x
-              zTe_y = zTi_y
-              zn_x  = dn_dpsi(ms,mt) * ps0_x
-              zn_y  = dn_dpsi(ms,mt) * ps0_y
-
-              call bootstrap_current(bigR, y_g(ms,mt),                       &
-                                     R_axis,   Z_axis,   psi_axis,           &
-                                     R_xpoint, Z_xpoint, psi_bnd, psi_norm,  &
-                                     ps0, ps0_x, ps0_y,                      &
-                                     eq_zne(ms,mt),  zn_x,  zn_y,            &
-                                     zTi, zTi_x, zTi_y,                      &
-                                     zTe, zTe_x, zTe_y,                  Jb_0)
-              ! --- Subtract the initial equilibrium part
-              Jb = Jb - Jb_0
-            end if ! (with_TiTe) *******************************************************************
+            ! --- Subtract the initial equilibrium part
+            Jb = Jb - Jb_0
           else
             Jb = 0.d0
           endif

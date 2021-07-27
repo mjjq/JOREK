@@ -886,7 +886,7 @@ module pellet_module
     integer,            intent(in) :: i_inj, n_spi
     integer,            intent(in) :: n_spi_begin
 
-    integer, parameter  :: n_col_max = 8  ! given non-HDF5 datafile should consists of '8' columns
+    integer, parameter  :: n_col_expected = 8  ! given non-HDF5 datafile should consists of '8' columns
     real*8, allocatable :: spi_R_tmp(:),     spi_phi_tmp(:),     spi_Z_tmp(:),     &
                            spi_Vel_R_tmp(:), spi_Vel_phi_tmp(:), spi_Vel_Z_tmp(:), &
                            spi_radius_tmp(:),spi_species_molar_D2_tmp(:)
@@ -958,7 +958,7 @@ module pellet_module
 
               n_line = n_line+1
 
-              if (n_col /= n_col_max) then
+              if (n_col /= n_col_expected) then
                 write(*,*) "ERROR: 'spi_num_file' is defected."
                 stop
               end if

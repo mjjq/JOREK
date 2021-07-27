@@ -641,7 +641,8 @@ module pellet_module
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       do i = 1, n_spi
-        pellets(i)%spi_species = 0.
+        i_p = i - 1 + n_spi_begin
+        pellets(i_p)%spi_species = 0.
         N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * pellet_density_bg * 1.d20
       end do
 
@@ -1077,7 +1078,8 @@ module pellet_module
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       do i = 1, n_spi
-        pellets(i)%spi_species = 0.
+        i_p = i - 1 + n_spi_begin
+        pellets(i_p)%spi_species = 0.
       end do
 #endif
 #ifdef WITH_Impurities

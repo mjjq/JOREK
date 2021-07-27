@@ -667,7 +667,7 @@ module pellet_module
 
       select case ( trim(imp_type) ) 
         case('D2')
-          write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
         case('Ne')
           ! Only Parks formula can properly treat the mixing of neon and D2/H2,
@@ -719,7 +719,7 @@ module pellet_module
         case default
           write(*,*) '!! Gas type "', trim(imp_type), '" unknown !!'
           write(*,*) '=> We assume the gas is D2.'
-          write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
       end select
   
@@ -958,7 +958,7 @@ module pellet_module
               n_line = n_line+1
 
               if (n_col /= n_col_max) then
-                write(*,*) "ERROR: spi shard file is defected."
+                write(*,*) "ERROR: 'spi_num_file' is defected."
                 stop
               end if
 
@@ -975,7 +975,7 @@ module pellet_module
 
           ! check 3) Consistency of spi shard file with the parameters in the input file (especially 'n_spi')
           if (n_spi /= n_line) then
-            write(*,*) "ERROR: spi shard file contains more number of lines than the given 'n_spi' in the input file."
+            write(*,*) "ERROR: 'spi_num_file' contains different number of lines than the given 'n_spi' in the input file."
             stop
           end if
 
@@ -992,27 +992,27 @@ module pellet_module
 
         call HDF5_open(trim(spi_file),file_id,error)
         if ( error /= 0 ) then
-          write(*,*) "ERROR: 'n_spi' in SPI HDF5 file does not match with the 'n_spi' in the input file."
+          write(*,*) "ERROR: failed to open 'spi_num_file (HDF5)'."
           stop
         end if
 
         call HDF5_integer_reading(file_id,n_line,"n_spi")
 
         if (n_spi /= n_line) then
-            write(*,*) "ERROR: spi shard file contains more number of lines than the given 'n_spi' in the input file."
+            write(*,*) "ERROR: 'n_spi' value does not match between the 'spi_num_file (HDF5)' and the input file."
             stop
         end if
 
 #else
 
-        write(*,*) "ERROR: trying to use SPI datafile in HDF5 format without 'USE_HDF5'"
+        write(*,*) "ERROR: trying to use 'spi_num_file' in HDF5 format without 'USE_HDF5'"
         stop
 
 #endif
 
       else
 
-        write(*,*) "ERROR: spi_hdf5 has wrong value in the input file (it should be '0' or '1')"
+        write(*,*) "ERROR: 'spi_hdf5' has wrong value in the input file (it should be '0' or '1')"
         stop
 
       end if
@@ -1034,7 +1034,7 @@ module pellet_module
             if (io == iostat_end) then
               exit
             else
-              write(*,*) "ERROR: in reading spi_num_file, iostat = ", io
+              write(*,*) "ERROR: in reading 'spi_num_file', iostat = ", io
               stop
             end if
           end if
@@ -1059,7 +1059,7 @@ module pellet_module
 
 #else
 
-        write(*,*) "ERROR: trying to use SPI datafile in HDF5 format without 'USE_HDF5'"
+        write(*,*) "ERROR: trying to use 'spi_num_file' in HDF5 format without 'USE_HDF5'"
         stop
 
 #endif
@@ -1071,21 +1071,19 @@ module pellet_module
 
       end if
 
-      ! Check if all elements in the 'spi_species_molar_D2_tmp' have the same value
-      ! (Just for simplicity. It can be relaxed if one has physical justification to have
-      !  different mixture ratio between fragments)
-      do i = 1,n_spi
-        if (spi_species_molar_D2_tmp(1) /= spi_species_molar_D2_tmp(i)) then
-          write(*,*) "EEROR: D2 molar fraction should be the same in the spi data file between all fragments"
-          stop
-        end if
-      end do
-
       if (spi_species_molar_D2_tmp(1) < 0. .or. spi_species_molar_D2_tmp(1) > 1.) then
         write(*,*) "ERROR: D2 molar fraction in spi data file has illegal values"
       end if
 
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+      do i = 1, n_spi
+        pellets(i)%spi_species = 0.
+      end do
+#endif
+#ifdef WITH_Impurities
       ! convert 'spi_species_molar_D2_tmp' into 'mix_ratio'
+      ! (Determine approximately how many fragments are of the impurity, how
+      !  much are of the background species)
       if      ( (spi_species_molar_D2_tmp(1) == 0.) .and. (pellet_density > 0.) ) then
         mix_ratio = 1.
       else if ( (spi_species_molar_D2_tmp(1) == 1.) .and. (pellet_density_bg > 0.) ) then
@@ -1103,7 +1101,7 @@ module pellet_module
 
       select case ( trim(imp_type) )
         case('D2')
-          write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
         case('Ne')
           ! Only Parks formula can properly treat the mixing of neon and D2/H2.
@@ -1152,11 +1150,12 @@ module pellet_module
         case default
           write(*,*) '!! Gas type "', trim(imp_type), '" unknown !!'
           write(*,*) '=> We assume the gas is D2.'
-          write(*,*) "Injection of D2 species should be done by spi_qiantity_bg, please revise input file accordingly."
+          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
       end select
 
       write(*,*) "Real injection quantity (atom):", real_spi_quantity(1), real_spi_quantity(2)
+#endif
 
       ! put values into arrays
       do i=1, n_spi

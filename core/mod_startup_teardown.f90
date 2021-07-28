@@ -11,6 +11,8 @@ subroutine initialise(my_id, n_cpu, skip_help)
   use data_structure, only: init_threads
   use basis_at_gaussian
   use phys_module, only: gmres
+  use mod_openadas, only : read_adf11
+
 
 #if ((defined WITH_Neutrals) && (!defined WITH_Impurities))
   use mod_neutral_source

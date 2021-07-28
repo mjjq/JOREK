@@ -695,8 +695,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
 #endif
 
-  write(*,LOGI_FMT) 'fix_axis_nodes        ',fix_axis_nodes 
-
   if (use_mumps) then
     write(*,INTG_FMT) 'mumps_ordering        ', mumps_ordering
   endif

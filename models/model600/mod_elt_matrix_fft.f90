@@ -115,6 +115,9 @@ real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Electron tempera
 real*8     :: ne_SI                                          ! Electron density in SI unit
 real*8     :: dr0_corr_dn
 
+! --- General T for T-denpendent functions
+real*8     :: T_or_Te, T_or_Te_corr, T_or_Te_0, dT_or_Te_corr_dT
+
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*(n_order+1)
 
@@ -701,59 +704,7 @@ do i=1,n_vertex_max
           delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,var_psi,ms,mt) + x_s(ms,mt) * delta_t(mp,var_psi,ms,mt) ) / xjac
 
           if ( with_TiTe ) then ! ******************************************************************
-            
-            ! --- Temperature dependent resistivity
-            if ( eta_T_dependent .and. Te0_corr <= T_max_eta) then
-              eta_T     =   eta   * (Te0_corr/Te_0)**(-1.5d0)
-              deta_dT   = - eta   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-              d2eta_d2T =   eta   * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
-            else if ( eta_T_dependent .and. Te0_corr > T_max_eta) then
-              eta_T     = eta   * (T_max_eta/Te_0)**(-1.5d0)
-              deta_dT   = 0.
-              d2eta_d2T = 0.     
-            else
-              eta_T     = eta
-              deta_dT   = 0.d0
-              d2eta_d2T = 0.d0
-            end if
-            
-            ! --- Eta for ohmic heating
-            if ( eta_T_dependent .and. Te0_corr <= T_max_eta_ohm) then
-              eta_T_ohm     =   eta_ohmic   * (Te0_corr/Te_0)**(-1.5d0)
-              deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-            else if ( eta_T_dependent .and. Te0_corr > T_max_eta_ohm) then
-              eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/Te_0)**(-1.5d0)
-              deta_dT_ohm   = 0.    
-            else
-              eta_T_ohm     = eta_ohmic
-              deta_dT_ohm   = 0.d0
-            end if
 
-            if ( eta_T_dependent .and.  xpoint2 .and. (Te0 .lt. T_min) ) then
-              eta_T     = eta       * (max(Te0,T_min)/Te_0)**(-1.5d0)
-              deta_dT   = 0.d0
-              d2eta_d2T = 0.d0
-
-              eta_T_ohm = eta_ohmic * (max(Te0,T_min)/Te_0)**(-1.5d0)
-              deta_dT_ohm   = 0.
-            end if
-
-            ! --- Temperature dependent viscosity
-            if ( visco_T_dependent ) then
-              visco_T     =   visco * (Te0_corr/Te_0)**(-1.5d0)
-              dvisco_dT   = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-              d2visco_dT2 =   visco * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
-              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
-                dvisco_dT   = 0.d0
-                d2visco_dT2 = 0.d0
-              endif
-            else
-              visco_T     = visco
-              dvisco_dT   = 0.d0
-              d2visco_dT2 = 0.d0
-            end if
-            
             ! --- Temperature dependent parallel heat diffusivity
             if ( ZKpar_T_dependent ) then
               ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)              ! temperature dependent parallel conductivity
@@ -783,32 +734,6 @@ do i=1,n_vertex_max
               ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
               dZKe_par_dT = 0.d0
             endif
-            
-            ! --- Temperature dependent hyper-resistivity
-            if ( eta_num_T_dependent ) then
-              eta_num_T     =   eta_num   * (Te0_corr/Te_0)**(-3.d0)
-              deta_num_dT   = - eta_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
-              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-                eta_num_T     = eta_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
-                deta_num_dT   = 0.d0
-              endif
-            else
-              eta_num_T     = eta_num
-              deta_num_dT   = 0.d0
-            end if
-            
-            ! --- Temperature dependent hyper-viscosity
-            if ( visco_num_T_dependent ) then
-              visco_num_T     =   visco_num   * (Te0_corr/Te_0)**(-3.d0)
-              dvisco_num_dT   = - visco_num   * (3.d0)  * Te0_corr**(-4.d0) * Te_0**(3.d0)
-              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-                visco_num_T     = visco_num    * (max(Te0,T_min)/Te_0)**(-3.d0)
-                dvisco_num_dT   = 0.d0
-              endif
-            else
-              visco_num_T     = visco_num
-              dvisco_num_dT   = 0.d0
-            end if
             
             ! --- Ion-electron energy transfer
             if (thermalization) then
@@ -860,60 +785,15 @@ do i=1,n_vertex_max
               ddTi_e_dTe = 0.
               ddTi_e_drho = 0.
             endif
+
+            ! ---Temperature parameters used for general T-dependent functions (eta, visco, etc)
+            T_or_Te          = Te0
+            T_or_Te_corr     = Te0_corr
+            T_or_Te_0        = Te_0
+            dT_or_Te_corr_dT = dTe0_corr_dT
             
           else ! (with_TiTe), i.e. with single temperature *****************************************
-              
-            if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
-              eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
-              deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-              d2eta_d2T =   eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
-            else if ( eta_T_dependent .and. T0_corr > T_max_eta) then
-              eta_T     = eta   * (T_max_eta/T_0)**(-1.5d0)
-              deta_dT   = 0.
-              d2eta_d2T = 0.     
-            else
-              eta_T     = eta
-              deta_dT   = 0.d0
-              d2eta_d2T = 0.d0
-            end if
-            
-            ! --- Eta for ohmic heating
-            if ( eta_T_dependent .and. T0_corr <= T_max_eta_ohm) then
-              eta_T_ohm     =   eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
-              deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-            else if ( eta_T_dependent .and. T0_corr > T_max_eta_ohm) then
-              eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_0)**(-1.5d0)
-              deta_dT_ohm   = 0.    
-            else
-              eta_T_ohm     = eta_ohmic
-              deta_dT_ohm   = 0.d0
-            end if
 
-            if ( eta_T_dependent .and.  xpoint2 .and. (T0 .lt. T_min) ) then
-              eta_T     = eta       * (max(T0,T_min)/T_0)**(-1.5d0)
-              deta_dT   = 0.d0
-              d2eta_d2T = 0.d0
-
-              eta_T_ohm = eta_ohmic * (max(T0,T_min)/T_0)**(-1.5d0)
-              deta_dT_ohm   = 0.
-            end if
-
-            ! --- Temperature dependent viscosity
-            if ( visco_T_dependent ) then
-              visco_T     =   visco * (T0_corr/T_0)**(-1.5d0)
-              dvisco_dT   = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-              d2visco_dT2 =   visco * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
-              if ( xpoint2 .and. (T0 .lt. T_min) ) then
-                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
-                dvisco_dT   = 0.d0
-                d2visco_dT2 = 0.d0
-              endif
-            else
-              visco_T     = visco
-              dvisco_dT   = 0.d0
-              d2visco_dT2 = 0.d0
-            end if
-            
             ! --- Temperature dependent parallel heat diffusivity
             if ( ZKpar_T_dependent ) then
               ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
@@ -930,34 +810,94 @@ do i=1,n_vertex_max
               ZK_par_T   = ZK_par                                            ! parallel conductivity
               dZK_par_dT = 0.d0
             endif
-            
-            ! --- Temperature dependent hyper-resistivity
-            if ( eta_num_T_dependent ) then
-              eta_num_T     =   eta_num   * (T0_corr/T_0)**(-3.d0)
-              deta_num_dT   = - eta_num   * (3.d0)  * T0_corr**(-4.d0) * T_0**(3.d0)
-              if ( xpoint2 .and. (T0 .lt. T_min) ) then
-                eta_num_T     = eta_num    * (max(T0,T_min)/T_0)**(-3.d0)
-                deta_num_dT   = 0.d0
-              endif
-            else
-              eta_num_T     = eta_num
-              deta_num_dT   = 0.d0
-            end if
-            
-            ! --- Temperature dependent hyper-viscosity
-            if ( visco_num_T_dependent ) then
-              visco_num_T     =   visco_num   * (T0_corr/T_0)**(-3.d0)
-              dvisco_num_dT   = - visco_num   * (3.d0)  * T0_corr**(-4.d0) * T_0**(3.d0)
-              if ( xpoint2 .and. (T0 .lt. T_min) ) then
-                visco_num_T     = visco_num    * (max(T0,T_min)/T_0)**(-3.d0)
-                dvisco_num_dT   = 0.d0
-              endif
-            else
-              visco_num_T     = visco_num
-              dvisco_num_dT   = 0.d0
-            end if
+
+            ! --- Temperature parameters used for general T-dependent functions (eta, visco, etc)
+            T_or_Te          = T0
+            T_or_Te_corr     = T0_corr
+            T_or_Te_0        = T_0
+            dT_or_Te_corr_dT = dT0_corr_dT
             
           end if ! (with_TiTe) *********************************************************************
+
+          ! --- Eta
+          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta) then
+            eta_T     =   eta   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
+            deta_dT   = - eta   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
+            d2eta_d2T =   eta   * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
+          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta) then
+            eta_T     = eta   * (T_max_eta/T_or_Te_0)**(-1.5d0)
+            deta_dT   = 0.
+            d2eta_d2T = 0.     
+          else
+            eta_T     = eta
+            deta_dT   = 0.d0
+            d2eta_d2T = 0.d0
+          end if
+          
+          ! --- Eta for ohmic heating
+          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
+            eta_T_ohm     =   eta_ohmic   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
+            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
+          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta_ohm) then
+            eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_or_Te_0)**(-1.5d0)
+            deta_dT_ohm   = 0.    
+          else
+            eta_T_ohm     = eta_ohmic
+            deta_dT_ohm   = 0.d0
+          end if
+
+          if ( eta_T_dependent .and.  xpoint2 .and. (T_or_Te .lt. T_min) ) then
+            eta_T     = eta       * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+            deta_dT   = 0.d0
+            d2eta_d2T = 0.d0
+
+            eta_T_ohm = eta_ohmic * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+            deta_dT_ohm   = 0.
+          end if
+
+          ! --- Temperature dependent viscosity
+          if ( visco_T_dependent ) then
+            visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
+            dvisco_dT   = - visco * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
+            d2visco_dT2 =   visco * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
+            if ( xpoint2 .and. (T_or_Te .lt. T_min) ) then
+              visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+              dvisco_dT   = 0.d0
+              d2visco_dT2 = 0.d0
+            endif
+          else
+            visco_T     = visco
+            dvisco_dT   = 0.d0
+            d2visco_dT2 = 0.d0
+          end if
+          
+
+          
+          ! --- Temperature dependent hyper-resistivity
+          if ( eta_num_T_dependent ) then
+            eta_num_T     =   eta_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
+            deta_num_dT   = - eta_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
+            if ( xpoint2 .and. (T_or_Te .lt. T_min) ) then
+              eta_num_T     = eta_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
+              deta_num_dT   = 0.d0
+            endif
+          else
+            eta_num_T     = eta_num
+            deta_num_dT   = 0.d0
+          end if
+          
+          ! --- Temperature dependent hyper-viscosity
+          if ( visco_num_T_dependent ) then
+            visco_num_T     =   visco_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
+            dvisco_num_dT   = - visco_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
+            if ( xpoint2 .and. (T_or_Te .lt. T_min) ) then
+              visco_num_T     = visco_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
+              dvisco_num_dT   = 0.d0
+            endif
+          else
+            visco_num_T     = visco_num
+            dvisco_num_dT   = 0.d0
+          end if
 
           ! --- Diamagnetic viscosity
           if (Wdia) then

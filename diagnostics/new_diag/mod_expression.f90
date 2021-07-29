@@ -157,6 +157,8 @@ module mod_expression
     call add(exprs_all, 'zkiprof     ', 'Perpendicular Ion Heat Diffusivity                    ')
     call add(exprs_all, 'zkeprof     ', 'Perpendicular Electron Heat Diffusivity               ')
     call add(exprs_all, 'pres        ', 'Total Pressure                                        ')
+    call add(exprs_all, 'pres_e      ', 'Electron Pressure                                     ')
+    call add(exprs_all, 'pres_i      ', 'Ion Pressure                                          ')
     call add(exprs_all, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
     call add(exprs_all, 'Btor        ', 'Toroidal Magnetic Field Component                     ')
     call add(exprs_all, 'BR          ', 'Magnetic Field Component Along R                      ')
@@ -558,7 +560,8 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,          &
+      P0_RR, P0_ZZ, P0_RZ, Pi0, Pi0_R, Pi0_Z, Pi0_p, Pe0, Pe0_R, Pe0_Z, Pe0_p,                     &
+      BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,                               &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
       BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi
@@ -1137,6 +1140,16 @@ module mod_expression
           P0_RR    = r0_RR * T0 + r0 * T0_RR + 2.d0 * r0_R * T0_R
           P0_ZZ    = r0_ZZ * T0 + r0 * T0_ZZ + 2.d0 * r0_Z * T0_Z
           P0_RZ    = r0_RZ * T0 + r0 * T0_RZ + r0_R * T0_Z + r0_Z * T0_R
+  
+          Pi0      = r0    * Ti0
+          Pi0_R    = r0_R  * Ti0 + r0 * Ti0_R
+          Pi0_Z    = r0_Z  * Ti0 + r0 * Ti0_Z
+          Pi0_p    = r0_p  * Ti0 + r0 * Ti0_p
+ 
+          Pe0      = r0    * Te0
+          Pe0_R    = r0_R  * Te0 + r0 * Te0_R
+          Pe0_Z    = r0_Z  * Te0 + r0 * Te0_Z
+          Pe0_p    = r0_p  * Te0 + r0 * Te0_p
  
           rn0_R    = (   Z_t * rn0_s - Z_s * rn0_t ) / xjac
           rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac
@@ -1221,42 +1234,86 @@ module mod_expression
 
           ! --- Some input profiles
           if ( eta_T_dependent ) then
-            if ( with_TiTe) then
-              eta_T     =   eta   * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
-              deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
-              d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(Te0)**(-3.5d0) * Te_0**(1.5d0)
-            else
-              eta_T     =   eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-              deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-              d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
-            end if
+            if ( with_TiTe) then ! (with_TiTe) *****************************************************
+              if ( corr_neg_temp(Te0) <= T_max_eta ) then
+                eta_T     =   eta   * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
+                deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
+                d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(Te0)**(-3.5d0) * Te_0**(1.5d0)
+              else if ( corr_neg_temp(Te0) > T_max_eta ) then
+                eta_T     =   eta   * (T_max_eta/Te_0)**(-1.5d0)
+                deta_dT   =   0.
+                d2eta_d2T =   0.
+              else
+                eta_T     =   eta
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                eta_T     =   eta   * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+
+            else ! (with_TiTe), i.e. with single temperature ***************************************
+              if ( corr_neg_temp(T0) <= T_max_eta ) then
+                eta_T     =   eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+                deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+                d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+              else if ( corr_neg_temp(T0) > T_max_eta ) then
+                eta_T     =   eta   * (T_max_eta/T_0)**(-1.5d0)
+                deta_dT   =   0.
+                d2eta_d2T =   0.
+              else
+                eta_T     =   eta
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                eta_T     =   eta   * (max(T0,T_min)/T_0)**(-1.5d0)
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+
+            end if ! (with_TiTe) *******************************************************************
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
           end if
-          
+
           if ( visco_T_dependent ) then
-            if ( with_TiTe) then
-              visco_T   = visco * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
+            if ( with_TiTe) then ! (with_TiTe) *****************************************************
+              visco_T   =   visco * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
-            else
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              endif
+            else ! (with_TiTe), i.e. with single temperature ***************************************
               visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-            end if
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              endif
+            end if ! (with_TiTe) *******************************************************************
           else
             visco_T   = visco
             dvisco_dT = 0.d0
           end if
           
-          if ( with_TiTe ) then
+          if ( with_TiTe ) then ! (with_TiTe) ******************************************************
             if ( ZKpar_T_dependent ) then
-              ZKi_par_T   = ZK_i_par * (corr_neg_temp(Ti0)/Ti_0)**(+2.5d0)
-              dZKi_par_dT = ZK_i_par * (2.5d0)  * corr_neg_temp(Ti0)**(+1.5d0) * Ti_0**(-2.5d0)
+              ZKi_par_T     = ZK_i_par * (corr_neg_temp(Ti0)/Ti_0)**(+2.5d0)
+              dZKi_par_dT   = ZK_i_par * (2.5d0)  * corr_neg_temp(Ti0)**(+1.5d0) * Ti_0**(-2.5d0)
               if (ZKi_par_T .gt. ZK_par_max) then
                 ZKi_par_T   = Zk_par_max
                 dZKi_par_dT = 0.d0
               end if
+              if ( eq%xpoint .and. (Ti0 .lt. T_min) ) then
+                ZKi_par_T   = ZK_i_par * (max(Ti0,T_min)/Ti_0)**(+2.5d0)
+                dZKi_par_dT = 0.d0
+              endif
 
               ZKe_par_T   = ZK_e_par * (corr_neg_temp(Te0)/Te_0)**(+2.5d0)
               dZKe_par_dT = ZK_e_par * (2.5d0)  * corr_neg_temp(Te0)**(+1.5d0) * Te_0**(-2.5d0)
@@ -1264,7 +1321,10 @@ module mod_expression
                 ZKe_par_T   = Zk_par_max
                 dZKe_par_dT = 0.d0
               end if
-
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                ZKe_par_T   = ZK_e_par * (max(Te0,T_min)/Te_0)**(+2.5d0)
+                dZKe_par_dT = 0.d0
+              endif
             else
               ZKi_par_T   = ZK_i_par
               dZKi_par_dT = 0.d0
@@ -1273,21 +1333,26 @@ module mod_expression
               dZKe_par_dT = 0.d0
             end if
             ZKpar_T   = 0.d0
-          else
+          else ! (with_TiTe), i.e. with single temperature *****************************************
             if ( ZKpar_T_dependent ) then
-              ZKpar_T   = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)
-              dZKpar_dT = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
+              ZKpar_T     = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)
+              dZKpar_dT   = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
               if (ZKpar_T .gt. ZK_par_max) then
                 ZKpar_T   = Zk_par_max
                 dZKpar_dT = 0.d0
               end if
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+                dZKpar_dT = 0.d0
+              endif
+
             else
               ZKpar_T   = ZK_par
               dZKpar_dT = 0.d0
             end if
             ZKi_par_T   = ZKpar_T
             ZKe_par_T   = ZKpar_T
-          end if
+          end if ! (with_TiTe) *********************************************************************
           
           D_prof  = get_dperp (psi_norm)
           if ( with_TiTe ) then
@@ -1365,22 +1430,22 @@ module mod_expression
             Mach_par = Vpar0 / Vsound                             ! parallel Mach number
             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
             
-            Vtheta   = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+            Vtheta   = -1./Btheta * (  ( u0_R + 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z + 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z) + Vpar0 * Btheta
             
-            Vperp_i  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
+            Vperp_i  = -1./Btheta * (  ( u0_R + 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z + 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z )
             
-            Vperp_e  = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z - tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
+            Vperp_e  = -1./Btheta * (  ( u0_R - 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z - 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z )
             
             V_ExB    = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
             
-            Vstar_i  = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_i  = -1./Btheta * (  2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) * ps0_R  +            &
+              2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) * ps0_Z )
             
-            Vstar_e  = +1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_e  = +1./Btheta * (  2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) * ps0_R  +            &
+              2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) * ps0_Z )
             ! ### Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
           
@@ -1388,11 +1453,11 @@ module mod_expression
             if (num_neo_file) then ! (read neoclassical profiles from ascii file)
               call neo_coef( eq%xpoint, eq%xcase, Z, eq%Z_xpoint, Ps0 ,eq%psi_axis, eq%psi_bnd,    &
                 mu_neo, ki_neo)
-              Vneo = ki_neo / Btheta * tauIC  * ( ps0_R*T0_R + ps0_Z*T0_Z )
+              Vneo = ki_neo / Btheta * 2.d0*tauIC  * ( ps0_R*Ti0_R + ps0_Z*Ti0_Z )
             else ! (use constant neoclassical coefficients from namelist input file)
               mu_neo = amu_neo_const
               ki_neo = aki_neo_const
-              Vneo   = aki_neo_const / Btheta * tauIC * ( ps0_R*T0_R + ps0_Z*T0_Z )
+              Vneo   = aki_neo_const / Btheta * 2.d0*tauIC * ( ps0_R*Ti0_R + ps0_Z*Ti0_Z )
             end if
           end if
           
@@ -1404,7 +1469,7 @@ module mod_expression
           ln_Lambda  = 14.6 + 0.5 * log( Te0_eV / ne0_20 )                  ! Eq. (2.9) at relativistic energies
           
           E_par = - R * ( eta_T * zj0 / R**2                                                       &
-                        + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R + F0 * P0_p / R**2 ) )
+                        + 2.d0*tauIC / r0 * ( (Pi0_R * Ps0_Z - Pi0_Z * Ps0_R) / R + F0 * Pi0_p / R**2 ) )
           
           E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 * (central_density*1.d20*central_mass*MASS_PROTON)**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
           
@@ -1642,9 +1707,15 @@ module mod_expression
                 
               case ( 'zkeprof' )
                 res = zke_prof / fact_time
-                
+                  
               case ( 'pres' )
                 res = P0 / fact_mu_zero
+                
+              case ( 'pres_e' )
+                res = Pe0 / fact_mu_zero
+                
+              case ( 'pres_i' )
+                res = Pi0 / fact_mu_zero
                 
               case ( 'B_abs' )
                 res = sqrt(BB2)

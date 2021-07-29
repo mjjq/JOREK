@@ -23,8 +23,8 @@ use equil_info, only : get_psi_n, ES
 
 implicit none
 
-real*8, intent(out)  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
-real*8, intent(out), optional :: kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in,mom_par_out
+real*8, intent(out) :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
+real*8, intent(out) :: kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
@@ -75,6 +75,7 @@ if (my_id .eq. 0) then
   write(*,*) ' n_cpu   : ',n_cpu
 endif
 
+wgauss_copy = wgauss
 
 density_tot  = 0.d0
 pressure = 0.d0
@@ -87,6 +88,7 @@ VP_int   = 0.d0
 VK_int   = 0.d0
 VM_int   = 0.d0
 J2_int   = 0.d0
+TVP_int  = 0.d0
 D_ext    = 0.d0
 P_ext    = 0.d0
 C_ext    = 0.d0
@@ -96,14 +98,15 @@ VP_ext   = 0.d0
 VK_ext   = 0.d0
 VM_ext   = 0.d0
 J2_ext   = 0.d0
+TVP_ext  = 0.d0
 Vol      = 0.d0
 P_tot    = 0.d0
 D_tot    = 0.d0
-wgauss_copy = wgauss
 VP_tot   = 0.d0
 VK_tot   = 0.d0
 VM_tot   = 0.d0
 J2_tot   = 0.d0
+TVP_tot  = 0.d0
 
 local_pellet_particles = 0.d0
 local_plasma_particles = 0.d0
@@ -421,12 +424,7 @@ call MPI_AllReduce(H_ext,heating_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WOR
 call MPI_AllReduce(H_int,heating_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(S_ext,source_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(S_int,source_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(VP_int,kin_par_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(VP_ext,kin_par_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(VP_tot,kin_par_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(TVP_int,mom_par_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(TVP_ext,mom_par_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_AllReduce(TVP_tot,mom_par_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
 call MPI_AllReduce(VK_int,kin_perp_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(VK_ext,kin_perp_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(VK_tot,kin_perp_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -436,6 +434,13 @@ call MPI_AllReduce(VM_tot,mag_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,
 call MPI_AllReduce(J2_int,ohm_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(J2_ext,ohm_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(J2_tot,ohm_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+call MPI_AllReduce(VP_int,kin_par_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(VP_ext,kin_par_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(VP_tot,kin_par_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(TVP_int,mom_par_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(TVP_ext,mom_par_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(TVP_tot,mom_par_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
 if (use_pellet) then
   call MPI_AllReduce(local_pellet_particles,total_pellet_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)

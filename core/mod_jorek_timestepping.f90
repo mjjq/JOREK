@@ -369,6 +369,7 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   real*8         :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
   real*8         :: density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
+  real*8         :: kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out
   real*8, allocatable :: res(:)
 
   real*8         :: mindelta, maxdelta, sum_deltas
@@ -447,7 +448,9 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   if (use_pellet) then            ! calculating the pellet_volume (total_pellet_volume)
     pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
-    call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
+    call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out, &
+                                                                                kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
+    
   endif
 
 

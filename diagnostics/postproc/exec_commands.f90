@@ -1966,9 +1966,9 @@ module exec_commands
       
       if ( i < 4 ) then
         
-        write(i_file,'(a)') '# i_spi              R              Z            phi          '//&
-          '   VR             VZ           VRxZ         radius            abl        species      qu'//&
-          'antities_evaluated_at_shards'
+        write(i_file,'(a)') '# i_spi       R [m]          Z [m]         phi [rad]      '//&
+             'VR [m/s]       VZ [m/s]      VRxZ [m/s]     radius [m]    abl [atoms/s]  atomic ratio   '//&
+             'quantities_evaluated_at_shards'
         
         do i_spi = 1, n_spi_tot
         

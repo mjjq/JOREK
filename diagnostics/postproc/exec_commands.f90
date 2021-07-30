@@ -1966,7 +1966,7 @@ module exec_commands
       
       if ( i < 4 ) then
         
-        write(i_file,'(a)') '          i_spi              R              Z            phi          '//&
+        write(i_file,'(a)') '# i_spi              R              Z            phi          '//&
           '   VR             VZ           VRxZ         radius            abl        species      qu'//&
           'antities_evaluated_at_shards'
         

@@ -1998,8 +1998,6 @@ module exec_commands
       
     end do
     
-    close(i_file)
-
   end subroutine shards
 
 

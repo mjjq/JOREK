@@ -1944,7 +1944,7 @@ module exec_commands
     
     i_file = 133
     
-    do i = 1, 3 ! write three different files
+    do i = 1, 4 ! write four different files
     
       if ( i == 1 ) then
         write(filename,'(4a)') trim(DIR), 'shards', trim(step_range_string(index_start,index_start)), '.txt'
@@ -1958,28 +1958,43 @@ module exec_commands
         write(filename,'(4a)') trim(DIR), 'active-shards', trim(step_range_string(index_start,index_start)), '.txt'
         radmin=0.d0
         radmax=+1.d99
+      else if ( i == 4 ) then
+        write(filename,'(4a)') trim(DIR), 'shards-m3dc1-format', trim(step_range_string(index_start,index_start)), '.txt'
       end if
       
       call open_ascii_file(ierr, i_file, filename, .false.)
-      write(i_file,'(a)') '          i_spi              R              Z            phi          '//&
-        '   VR             VZ           VRxZ         radius            abl        species      qu'//&
-        'antities_evaluated_at_shards'
       
-      do i_spi = 1, n_spi_tot
-      
-        call eval_expr(ES, units, expr_list,  &
-          pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
-          tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
+      if ( i < 4 ) then
         
-        call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-      	
-        write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-          pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_Z, pellets(i_spi)%spi_Vel_RxZ, &
-          pellets(i_spi)%spi_radius, pellets(i_spi)%spi_abl, pellets(i_spi)%spi_species, res0d
+        write(i_file,'(a)') '          i_spi              R              Z            phi          '//&
+          '   VR             VZ           VRxZ         radius            abl        species      qu'//&
+          'antities_evaluated_at_shards'
         
-      end do
-      
-      close(i_file)
+        do i_spi = 1, n_spi_tot
+        
+          call eval_expr(ES, units, expr_list,  &
+            pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
+            tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
+          
+          call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+        	
+          write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+            pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_Z, pellets(i_spi)%spi_Vel_RxZ, &
+            pellets(i_spi)%spi_radius, pellets(i_spi)%spi_abl, pellets(i_spi)%spi_species, res0d
+          
+        end do
+        
+        close(i_file)
+        
+      else
+        
+        do i_spi = 1, n_spi_tot
+          write(i_file,'(8es15.7)') pellets(i_spi)%spi_R, pellets(i_spi)%spi_phi, pellets(i_spi)%spi_Z, &
+            pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_RxZ, pellets(i_spi)%spi_Vel_Z, &
+            pellets(i_spi)%spi_radius, (1.d0 - pellets(i_spi)%spi_species)/(1.d0 + pellets(i_spi)%spi_species)
+        end do
+        
+      end if
       
     end do
     

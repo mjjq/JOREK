@@ -1920,8 +1920,6 @@ module exec_commands
   end subroutine spi_state
 
 
-
-
   !> Write out SPI shards characteristics
   subroutine shards(command, ierr)
 
@@ -1963,57 +1961,9 @@ module exec_commands
     
     close(i_file)
 
-    write(filename,'(4a)') trim(DIR), 'ablated-shards', trim(step_range_string(index_start,index_start)), '.txt'
-
-    i_file = 133
-
-    call open_ascii_file(ierr, i_file, filename, .false.)
-
-    do i_spi = 1, n_spi_tot
-      
-      if ( pellets(i_spi)%spi_radius > 0.d0 ) cycle
-      
-      call eval_expr(ES, units, expr_list,  &
-        pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
-        tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
-
-      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-    	
-      write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius, res0d
-
-    enddo
-    
-    close(i_file)
-
-    write(filename,'(4a)') trim(DIR), 'active-shards', trim(step_range_string(index_start,index_start)), '.txt'
-
-    i_file = 133
-
-    call open_ascii_file(ierr, i_file, filename, .false.)
-
-    do i_spi = 1, n_spi_tot
-      
-      if ( pellets(i_spi)%spi_radius == 0.d0 ) cycle
-      
-      call eval_expr(ES, units, expr_list,  &
-        pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
-        tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
-
-      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-    	
-      write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius, res0d
-
-    enddo
-    
-    close(i_file)
-
   end subroutine shards
 
-
-
-
+  
   !> Output integrated poloidal current that is normal to the boudary and
   !! toroidal peaking factor (TPF)
   subroutine I_halo_TPF(command, first_step, ierr)

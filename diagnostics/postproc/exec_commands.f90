@@ -1966,12 +1966,14 @@ module exec_commands
       
       if ( i < 4 ) then
         
-        write(i_file,'(a)') '# i_spi              R              Z            phi          '//&
+        write(i_file,'(a)') '#         i_spi              R              Z            phi          '//&
           '   VR             VZ           VRxZ         radius            abl        species      qu'//&
           'antities_evaluated_at_shards'
         
         do i_spi = 1, n_spi_tot
         
+          if ( (pellets(i_spi)%spi_radius <= radmin) .or. (pellets(i_spi)%spi_radius > radmax) ) cycle
+          
           call eval_expr(ES, units, expr_list,  &
             pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
             tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)

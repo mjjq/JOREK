@@ -172,7 +172,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ranks_per_family,                                   &
                 tgnum_psi, tgnum_u, tgnum_zj, tgnum_w, tgnum_rho,   &
                 tgnum_T, tgnum_Ti, tgnum_Te, tgnum_vpar, tgnum_rhon,&
-                tgnum_nre, tgnum_AR, tgnum_AZ, tgnum_A3  
+                tgnum_nre, tgnum_AR, tgnum_AZ, tgnum_A3,            &
+                bc_min_grazing_angle  
 
 if (my_id .eq. 0) then
 

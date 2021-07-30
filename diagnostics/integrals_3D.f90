@@ -19,6 +19,7 @@ use equil_info, only : get_psi_n, ES
 #ifdef WITH_Impurities
   use mod_impurity
 #endif
+use mod_sources
 
 implicit none
 

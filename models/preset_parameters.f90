@@ -227,7 +227,11 @@ subroutine preset_parameters
   heatsource_e        = 0.5e-7
   heatsource_i        = 0.5e-7
   heatsource_psin     = 1.0d0
+  heatsource_e_psin   = 1.0d0
+  heatsource_i_psin   = 1.0d0
   heatsource_sig      = 0.1d0
+  heatsource_e_sig    = 0.1d0
+  heatsource_i_sig    = 0.1d0
   particlesource      = 1.e-5
   particlesource_psin = 1.0d0
   particlesource_sig  = 0.1d0
@@ -235,10 +239,14 @@ subroutine preset_parameters
   edgeparticlesource_psin = 0.98
   edgeparticlesource_sig  = 0.01
   heatsource_gauss          = 0.d0
-  heatsource_gauss_i        = 0.d0
   heatsource_gauss_e        = 0.d0
+  heatsource_gauss_i        = 0.d0
   heatsource_gauss_psin     = 0.9d0
+  heatsource_gauss_e_psin   = 0.9d0
+  heatsource_gauss_i_psin   = 0.9d0
   heatsource_gauss_sig      = 0.1d0
+  heatsource_gauss_e_sig    = 0.1d0
+  heatsource_gauss_i_sig    = 0.1d0
   particlesource_gauss      = 0.d0
   particlesource_gauss_psin = 0.9d0
   particlesource_gauss_sig  = 0.1d0
@@ -358,6 +366,20 @@ subroutine preset_parameters
   ! ------------------------------------------------------------------------
 
   tgnum              = 0.d0                 ! Taylor-Galerkin Stabilisation coefficients (0.d0 == TG not used)
+  tgnum_psi          = 0.d0          
+  tgnum_u            = 0.d0
+  tgnum_zj           = 0.d0
+  tgnum_w            = 0.d0
+  tgnum_rho          = 0.d0
+  tgnum_T            = 0.d0
+  tgnum_Ti           = 0.d0
+  tgnum_Te           = 0.d0
+  tgnum_vpar         = 0.d0
+  tgnum_rhon         = 0.d0
+  tgnum_nre          = 0.d0
+  tgnum_AR           = 0.d0
+  tgnum_AZ           = 0.d0
+  tgnum_A3           = 0.d0
 
   keep_current_prof  = .true.               ! Keep the current_source term
   

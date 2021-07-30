@@ -1956,7 +1956,8 @@ module exec_commands
       call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
     	
       write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius, res0d
+        pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_Z, pellets(i_spi)%spi_Vel_RxZ, &
+        pellets(i_spi)%spi_radius, pellets(i_spi)%spi_abl, pellets(i_spi)%spi_species, res0d
 
     enddo
     
@@ -1979,7 +1980,8 @@ module exec_commands
       call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
     	
       write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius, res0d
+        pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_Z, pellets(i_spi)%spi_Vel_RxZ, &
+        pellets(i_spi)%spi_radius, pellets(i_spi)%spi_abl, pellets(i_spi)%spi_species, res0d
 
     enddo
     
@@ -2002,12 +2004,29 @@ module exec_commands
       call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
     	
       write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius, res0d
+        pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_Z, pellets(i_spi)%spi_Vel_RxZ, &
+        pellets(i_spi)%spi_radius, pellets(i_spi)%spi_abl, pellets(i_spi)%spi_species, res0d
 
     enddo
     
     close(i_file)
     
+    write(filename,'(4a)') trim(DIR), 'shards-m3dc1-format', trim(step_range_string(index_start,index_start)), '.txt'
+
+    i_file = 133
+
+    call open_ascii_file(ierr, i_file, filename, .false.)
+
+    do i_spi = 1, n_spi_tot
+    
+      write(i_file,'(8es15.7)') pellets(i_spi)%spi_R, pellets(i_spi)%spi_phi, pellets(i_spi)%spi_Z, &
+        pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_RxZ, pellets(i_spi)%spi_Vel_Z, &
+        pellets(i_spi)%spi_radius, (1.d0 - pellets(i_spi)%spi_species)/(1.d0 + pellets(i_spi)%spi_species)
+
+    enddo
+    
+    close(i_file)
+
   end subroutine shards
 
 

@@ -535,7 +535,6 @@ module exec_commands
     first_step = .true.
     if ( loop_mode == LOOP_S_MODE ) then
       do istep = loop_min_step, loop_max_step, loop_inc_step
-        call reload_namelist(input_err)
         call load_step(istep, load_error)
         if ( load_error /= 0 ) cycle
 
@@ -636,7 +635,6 @@ module exec_commands
       write(*,*) '--------------------------------------------------'
 
       do istep = 1, n_select
-        call reload_namelist(input_err)
         call load_step( selected_steps(istep), load_error)
         if ( load_error /= 0 ) cycle
       
@@ -855,37 +853,6 @@ module exec_commands
 
 
 
-  !> Load again the JOREK input file
-  subroutine reload_namelist(ierr)
-    
-    use phys_module     
-    
-    ! --- Routine parameters
-    integer,    intent(inout) :: ierr        !< Error flag
-    
-    ! --- Local variables
-    logical ::  file_exists
-    
-    ierr = 0
-    
-    inquire (file=input_file, exist=file_exists)
-      
-    ! --- Read the input namelist file
-    if (file_exists) then
-      call initialise_parameters(0, input_file)
-      input_loaded = .true.
-    else
-      ierr = 1
-      write(*,*) 'ERROR: input file "', trim(input_file), '" does not exist.'
-      call specific_help('namelist')
-    end if
-
-  end subroutine reload_namelist
-  
-  
-  
-
-  
   !> Check if a restart file has already been imported
   subroutine check_step_imported(ierr)
     integer, intent(out) :: ierr !< Error flag

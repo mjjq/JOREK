@@ -1592,7 +1592,7 @@ do i=1,n_vertex_max
                     + BigR * v * source_neutral                                              * xjac * tstep &
                     - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy)  * BigR * xjac * tstep &
 
-                    + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta
+                    + v * delta_g(mp,var_rhon,ms,mt) * BigR * xjac * zeta
 
               rhs_ij_k(var_rhon) = BigR * ( - Dn0p * rn0_p * v_p/BigR**2)   * xjac * tstep                              
 

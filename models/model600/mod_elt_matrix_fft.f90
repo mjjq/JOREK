@@ -1110,7 +1110,11 @@ do i=1,n_vertex_max
           ! --- Radiation from background impurity, using ADAS (by default)
           !-----------------------------------------------------------------
           ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-          T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          if (with_TiTe) then 
+            T_rad =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          else
+            T_rad = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          endif
 
           if (use_imp_adas) then  ! use open adas by default
             r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     

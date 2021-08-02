@@ -31,6 +31,8 @@ module phys_module
   real*8  :: Q_bar                !< (model400)
   real*8  :: sigma                !< (model400)
   real*8  :: tauIC                !< Scaling factor for diamagnetic terms (see [[diamag|diamagnetic]])
+  real*8  :: tauIC_nominal        !< Nominal scaling factor (considering Ti=Te) for diamagnetic terms (see [[diamag|diamagnetic]])
+  real*8  :: eta_spitzer          !< Spitzer resistivity in the core (considering main ion charge Z=1, effective ion charge Zeff=1)
   logical :: Wdia                 !< Include diamagnetic flows in viscosity terms? (see [[wdia|here]])
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
@@ -49,6 +51,7 @@ module phys_module
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
   real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
+  real*8  :: bc_min_grazing_angle !< For sheath boundary conditions: Minimum incident angle for heat and particle fluxes (in degrees)
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
@@ -220,15 +223,23 @@ module phys_module
   real*8  :: neutral_line_R_end(10)    !< neutral inflow source (end point of line source)
   real*8  :: neutral_line_Z_end(10)    !< neutral inflow source
   real*8  :: heatsource                !< Heat source amplitude
+  real*8  :: heatsource_e              !< Electron heat source amplitude
+  real*8  :: heatsource_i              !< Ion heat source amplitude
   real*8  :: heatsource_psin           !< Position around which the source is ramped down
   real*8  :: heatsource_sig            !< Width over which the source is ramped down
-  real*8  :: heatsource_i              !< Ion heat source amplitude
-  real*8  :: heatsource_e              !< Electron heat source amplitude
+  real*8  :: heatsource_e_psin         !< Position around which the electron source is ramped down
+  real*8  :: heatsource_e_sig          !< Width over which the electron source is ramped down
+  real*8  :: heatsource_i_psin         !< Position around which the ion source is ramped down
+  real*8  :: heatsource_i_sig          !< Width over which the ion source is ramped down
   real*8  :: heatsource_gauss          !< Additional Gaussian heat source amplitude
-  real*8  :: heatsource_gauss_e        !< Gaussian heat source for electrons
-  real*8  :: heatsource_gauss_i        !< Gaussiam heat source for ions
   real*8  :: heatsource_gauss_psin     !< Position around which Gaussian source is located
   real*8  :: heatsource_gauss_sig      !< Width over which Gaussian source extends
+  real*8  :: heatsource_gauss_e        !< Gaussian heat source for electrons
+  real*8  :: heatsource_gauss_i        !< Gaussian heat source for ions
+  real*8  :: heatsource_gauss_e_psin   !< Position around which electrons Gaussian source is located
+  real*8  :: heatsource_gauss_e_sig    !< Width over which electrons Gaussian source extends
+  real*8  :: heatsource_gauss_i_psin   !< Position around which ions Gaussian source is located
+  real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num, Zk_i_perp_num, Zk_e_perp_num
@@ -492,10 +503,13 @@ module phys_module
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
   real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
   real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
+  real*8  :: ZK_par_SpitzerHaerm  !< Spitzer-Haerm parallel heat diffusion value in the plasma center (assuming a Z=1 plasma with Te=Ti)
   real*8  :: ZK_i_perp(10) = 0.d0 !< Coefficients for perpendicular ion heat diffusion profile
   real*8  :: ZK_e_perp(10) = 0.d0 !< Coefficients for perpendicular electron heat diffusion profile
   real*8  :: ZK_i_par             !< Ion parallel heat diffusion coefficient in the plasma center
   real*8  :: ZK_e_par             !< Electron parallel heat diffusion coefficient in the plasma center
+  real*8  :: ZK_i_par_SpitzerHaerm!< Spitzer-Haerm ion parallel heat diffusion value in the plasma center (assuming a Z=1 plasma)
+  real*8  :: ZK_e_par_SpitzerHaerm!< Spitzer-Haerm electron parallel heat diffusion value in the plasma center (assuming a Z=1 plasma)
   real*8  :: D_neutral_x          !< Neutral particle diffusivity in R-direction
   real*8  :: D_neutral_y          !< Neutral particle diffusivity in Z-direction
   real*8  :: D_neutral_p          !< Neutral particle diffusivity in phi-direction
@@ -705,6 +719,20 @@ module phys_module
 
   !> @name Taylor-Galerkin Stabilisation coefficients
   real*8              :: tgnum(n_var)   !< Coefficients for Taylor Galerkin stabilization for each equation separately
+  real*8              :: tgnum_psi      !< Same as previous line, but avoiding equation indexing for model families 
+  real*8              :: tgnum_u      
+  real*8              :: tgnum_zj     
+  real*8              :: tgnum_w      
+  real*8              :: tgnum_rho    
+  real*8              :: tgnum_T      
+  real*8              :: tgnum_Ti     
+  real*8              :: tgnum_Te     
+  real*8              :: tgnum_vpar   
+  real*8              :: tgnum_rhon   
+  real*8              :: tgnum_nre    
+  real*8              :: tgnum_AR     
+  real*8              :: tgnum_AZ    
+  real*8              :: tgnum_A3    
 
   !> @name Flag to determine whether or not we keep current source term  
   logical             :: keep_current_prof !< Artificial current source to approximately keep the initial current profile, i.e., \f$\eta(j-j0)\f$?

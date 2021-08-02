@@ -305,7 +305,15 @@ do i=1, n_local_elms !=== do elements
           if (k == var_zj) then
             if ( .not. is_freebound(in,k) )   apply_current_BC = .true.
           endif
-          !------------------------------------------------ --------------------------------------------------                      
+          !---------------------------------------------------------------------------------------------------                      
+
+          
+          !------------ Decide when to apply vpar=cs ---------------------------------------------------------                      
+          apply_cs = .false.          
+          if ( (.not. mach_one_bnd_integral) .and. bcs(bnd_type)%mach1 .and. with_vpar) then
+            apply_cs = .true.
+          endif
+          !---------------------------------------------------------------------------------------------------                      
 
           if (  ( (k == var_psi  ) .and. bcs(bnd_type)%dirichlet%psi  )  .or.  &
                 ( (k == var_u    ) .and. bcs(bnd_type)%dirichlet%u    )  .or.  &
@@ -320,10 +328,10 @@ do i=1, n_local_elms !=== do elements
                 ( (k == var_nre  ) .and. bcs(bnd_type)%dirichlet%nre  )        &
              ) then
 
-            ! --- If special conditions (freeboundary) apply to psi and zj, do not apply Dirichlet even if specified in
-            ! --- the namelist
-            if ( (k==var_psi) .and. (.not. apply_psi_BC    ) ) cycle
-            if ( (k==var_zj ) .and. (.not. apply_current_BC) ) cycle
+            ! --- If special conditions apply (e.g. freeboundary, mach1), do not apply Dirichlet even if specified in the namelist
+            if ( (k==var_psi  ) .and. (.not. apply_psi_BC    ) ) cycle
+            if ( (k==var_zj   ) .and. (.not. apply_current_BC) ) cycle
+            if ( (k==var_vpar ) .and.  apply_cs                ) cycle  ! vpar=cs is a special case (this is done below)
 
 !            if ((k.eq.7) .and. (node_list%node(inode)%boundary .eq. 3)) cycle  !=== better included for ITER extended wall
 
@@ -347,7 +355,7 @@ do i=1, n_local_elms !=== do elements
 
         if ((node_list%node(inode)%boundary .eq.  3) .and. (node_list%node(inode2)%boundary .eq.  2)) cycle
 
-        if ( (.not. mach_one_bnd_integral) .and. bcs(bnd_type)%mach1 .and. with_vpar) then
+        if ( apply_cs ) then
 
           call basisfunctions1(0.d0, H1, H1_s, H1_ss)
 

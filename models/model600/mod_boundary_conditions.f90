@@ -329,9 +329,10 @@ do i=1, n_local_elms !=== do elements
              ) then
 
             ! --- If special conditions apply (e.g. freeboundary, mach1), do not apply Dirichlet even if specified in the namelist
-            if ( (k==var_psi  ) .and. (.not. apply_psi_BC    ) ) cycle
-            if ( (k==var_zj   ) .and. (.not. apply_current_BC) ) cycle
-            if ( (k==var_vpar ) .and.  apply_cs                ) cycle  ! vpar=cs is a special case (this is done below)
+            if ( (k==var_psi  ) .and. (.not. apply_psi_BC    ) )       cycle
+            if ( (k==var_zj   ) .and. (.not. apply_current_BC) )       cycle
+            if ( (k==var_vpar ) .and.  apply_cs .and. (bnd_type/=3)  ) cycle  ! vpar=cs is a special case (this is done below)
+                                                                              ! however bnd_type=3 needs both BCs for different directions
 
 !            if ((k.eq.7) .and. (node_list%node(inode)%boundary .eq. 3)) cycle  !=== better included for ITER extended wall
 

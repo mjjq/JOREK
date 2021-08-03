@@ -173,7 +173,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 tgnum_psi, tgnum_u, tgnum_zj, tgnum_w, tgnum_rho,   &
                 tgnum_T, tgnum_Ti, tgnum_Te, tgnum_vpar, tgnum_rhon,&
                 tgnum_nre, tgnum_AR, tgnum_AZ, tgnum_A3,            &
-                bc_min_grazing_angle, bcs  
+                min_sheath_angle, bcs      
 
 if (my_id .eq. 0) then
 

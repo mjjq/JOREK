@@ -51,7 +51,7 @@ module phys_module
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
   real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
-  real*8  :: bc_min_grazing_angle !< For sheath boundary conditions: Minimum incident angle for heat and particle fluxes (in degrees)
+  real*8  :: min_sheath_angle     !< For sheath boundary conditions: Minimum incident angle for heat and particle fluxes (in degrees)
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
@@ -100,6 +100,7 @@ module phys_module
   logical :: use_strumpack_eq     !< Use Strumpack equilibrium solver  
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
+  real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
 
   ! ------------------------------------------------
   ! --- Structures to implement BCs in model600
@@ -325,7 +326,7 @@ module phys_module
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
   real*8  :: pellet_density    !< pellet atom number density (in units \f$10^{20} m^{-3}\f$)
-  real*8  :: pellet_density_bg !< background species pellet atom number density (in units 10^20 m^-3)
+  real*8  :: pellet_density_bg !< background species pellet atom number density (in units \f$10^{20} m^{-3}\f$)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
 

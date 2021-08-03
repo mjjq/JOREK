@@ -72,7 +72,7 @@ Zbig = 1.d12
 rhs_ij = 0.d0
 amat   = 0.d0
 
-c_angle = bc_min_grazing_angle * PI / 180.d0 ! --- angle factor for minimum heat and particle fluxes (in radians here)
+c_angle = min_sheath_angle     * PI / 180.d0 ! --- angle factor for minimum heat and particle fluxes (in radians here)
 
 !--------------------- reorder the nodes to have the same direction as full element (maybe not necesary)
 if ((vertex(1) .eq. 3) .and. (vertex(2) .eq. 4)) then

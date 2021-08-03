@@ -222,8 +222,6 @@ subroutine preset_parameters
   ZK_i_perp_num = 0.d0
   ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
-  eta_num_T_dependent   = .false.
-  visco_num_T_dependent = .false.
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7
@@ -420,8 +418,6 @@ subroutine preset_parameters
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
-  fix_axis_nodes     = .false.              !< Fix t-derivative on axis to avoid noise)
-  
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
   no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
   no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
@@ -493,8 +489,8 @@ subroutine preset_parameters
   delta_n_convection = 0
   nimp_bg = 0.
   n_adas = 0
-  adas_dir = ''
-  imp_type = ''
+  adas_dir = ' '
+  imp_type = ' '
   use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
 
   !====== JET DMV-2 parameters

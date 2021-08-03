@@ -1887,6 +1887,7 @@ module exec_commands
   end subroutine spi_state
 
 
+
   !> Write out SPI shards characteristics
   subroutine shards(command, ierr)
 
@@ -1895,7 +1896,8 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer             :: i_file, i_spi, units
+    integer             :: i_file, i_spi, units, i
+    real*8              :: radmin, radmax
     character(len=1024) :: filename, status, access
     
     ierr = 0
@@ -1907,30 +1909,68 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    write(filename,'(4a)') trim(DIR), 'shards', trim(step_range_string(index_start,index_start)), '.txt'
-
     i_file = 133
-
-    call open_ascii_file(ierr, i_file, filename, .false.)
-
-    do i_spi = 1, n_spi_tot
     
-      call eval_expr(ES, units, expr_list,  &
-        pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
-        tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
-
-      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-    	
-      write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius, res0d
-
-    enddo
+    do i = 1, 4 ! write four different files
     
-    close(i_file)
-
+      if ( i == 1 ) then
+        write(filename,'(4a)') trim(DIR), 'shards', trim(step_range_string(index_start,index_start)), '.txt'
+        radmin=-1.d99
+        radmax=+1.d99
+      else if ( i == 2 ) then
+        write(filename,'(4a)') trim(DIR), 'ablated-shards', trim(step_range_string(index_start,index_start)), '.txt'
+        radmin=-1.d99
+        radmax=0.d0
+      else if ( i == 3 ) then
+        write(filename,'(4a)') trim(DIR), 'active-shards', trim(step_range_string(index_start,index_start)), '.txt'
+        radmin=0.d0
+        radmax=+1.d99
+      else if ( i == 4 ) then
+        write(filename,'(4a)') trim(DIR), 'shards-m3dc1-format', trim(step_range_string(index_start,index_start)), '.txt'
+      end if
+      
+      call open_ascii_file(ierr, i_file, filename, .false.)
+      
+      if ( i < 4 ) then
+        
+        write(i_file,'(a)') '# i_spi       R [m]          Z [m]         phi [rad]      '//&
+             'VR [m/s]       VZ [m/s]      VRxZ [m/s]     radius [m]    abl [atoms/s]  atomic ratio   '//&
+             'quantities_evaluated_at_shards'
+        
+        do i_spi = 1, n_spi_tot
+        
+          if ( (pellets(i_spi)%spi_radius <= radmin) .or. (pellets(i_spi)%spi_radius > radmax) ) cycle
+          
+          call eval_expr(ES, units, expr_list,  &
+            pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
+            tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
+          
+          call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+        	
+          write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+            pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_Z, pellets(i_spi)%spi_Vel_RxZ, &
+            pellets(i_spi)%spi_radius, pellets(i_spi)%spi_abl, pellets(i_spi)%spi_species, res0d
+          
+        end do
+        
+        close(i_file)
+        
+      else
+        
+        do i_spi = 1, n_spi_tot
+          write(i_file,'(8es15.7)') pellets(i_spi)%spi_R, pellets(i_spi)%spi_phi, pellets(i_spi)%spi_Z, &
+            pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_RxZ, pellets(i_spi)%spi_Vel_Z, &
+            pellets(i_spi)%spi_radius, (1.d0 - pellets(i_spi)%spi_species)/(1.d0 + pellets(i_spi)%spi_species)
+        end do
+        
+      end if
+      
+    end do
+    
   end subroutine shards
 
-  
+
+
   !> Output integrated poloidal current that is normal to the boudary and
   !! toroidal peaking factor (TPF)
   subroutine I_halo_TPF(command, first_step, ierr)

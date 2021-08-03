@@ -100,6 +100,7 @@ module phys_module
   logical :: use_strumpack_eq     !< Use Strumpack equilibrium solver  
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
+  real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
@@ -283,7 +284,7 @@ module phys_module
   real*8  :: pellet_velocity_R !< pellet velocity component radial direction
   real*8  :: pellet_velocity_Z !< pellet velocity component Z direction
   real*8  :: pellet_density    !< pellet atom number density (in units \f$10^{20} m^{-3}\f$)
-  real*8  :: pellet_density_bg !< background species pellet atom number density (in units 10^20 m^-3)
+  real*8  :: pellet_density_bg !< background species pellet atom number density (in units \f$10^{20} m^{-3}\f$)
   real*8  :: pellet_particles  !< the number of particles in the pellet (in units of \f$10^{20}\f$)
   logical :: use_pellet
 

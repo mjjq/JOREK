@@ -105,6 +105,7 @@ module phys_module
   ! ------------------------------------------------
   ! --- Structures to implement BCs in model600
   ! ------------------------------------------------
+  ! --- For more info see  https://www.jorek.eu/wiki/doku.php?id=choose_boundary_conditions
   integer, parameter :: max_bnd_types=30
 
   type type_dirichlet_bc                           

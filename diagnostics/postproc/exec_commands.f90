@@ -2653,7 +2653,8 @@ module exec_commands
     use mod_elt_matrix_fft
     use mod_clock
     use omp_lib
-  
+    use basis_at_gaussian 
+ 
     implicit none
   
 #include "r3_info.h"
@@ -2676,12 +2677,16 @@ module exec_commands
     real*4,allocatable   :: xyz (:,:), scalars(:,:), scalars_o(:,:)
     character*36, allocatable :: scalar_names(:), scalar_names_o(:)
   
-    integer :: my_id, k_tor, i, j, k, n(4), ife, iv, inode, index_node, index_total
+    integer :: my_id, k_tor, i, j, k, l, n(4), ife, iv, inode, index_node, index_total
     integer :: omp_nthreads, omp_tid, n_tor_local, i_order, index_large_i, index_ij
     integer :: index_RHS, k_var, i_tor, i_term, term_count, nsub, nnos, ielm, it_o
+    integer :: i_bs, j_bs, ms, mt, n_basis, info
+    integer, allocatable :: ipiv(:)
     logical :: get_terms 
-    real*8, allocatable :: result(:,:,:,:), res2d(:,:,:)
-    real*8,     allocatable :: rhs(:,:)
+    real*8,   allocatable :: result(:,:,:,:), res2d(:,:,:)
+    real*8,   allocatable :: rhs(:,:), BSmat(:,:), BSmat_elm(:,:), BSmat_tmp(:,:)
+    real*8  :: rhs_term(n_vertex_max*(n_order+1))
+    real*8  :: wst
     integer :: dim0, dim1, dim2, only_itor
     character(len=64)       :: file_name, label 
     integer   :: required,provided,StatInfo
@@ -2714,6 +2719,9 @@ module exec_commands
       eq_index  = to_int(command%args(1), ierr); 
     endif
 
+    n_basis = n_vertex_max*(n_order+1)
+    allocate( BSmat(n_basis, n_basis), BSmat_elm(n_basis, n_basis), ipiv(n_basis))
+    allocate( BSmat_tmp(n_basis, n_basis))
 
     call assign_term_names()
 
@@ -2775,6 +2783,36 @@ module exec_commands
       test_struct(i)%delta_s = 0.d0
       test_struct(i)%delta_t = 0.d0
     end do
+
+    ! --- Calculate integrated basis functions matrix ------------------------------
+    BSmat = 0.d0
+
+    ! --- Basis row
+    do i=1,n_vertex_max
+      do j=1,n_order+1
+
+        i_bs = (i-1)*n_vertex_max + j  ! basis function index
+
+        ! --- Basis column
+        do k=1,n_vertex_max
+          do l=1,n_order+1
+
+            j_bs = (k-1)*n_vertex_max + l  ! basis function index
+
+            do ms=1, n_gauss
+              do mt=1, n_gauss
+        
+                wst = wgauss(ms)*wgauss(mt)
+                BSmat(i_bs, j_bs) = BSmat(i_bs, j_bs) + wst * H(i,j,ms,mt) * H(k,l,ms,mt)
+    
+              enddo
+            enddo
+            
+          enddo
+        enddo
+      enddo
+    enddo
+    ! --------------------------------------------------------------------------
   
     write(*,*) '******************************************************'
     write(*,*) '**** RHS diagnostic for term visualization in vtk ****'
@@ -2851,11 +2889,11 @@ module exec_commands
   
     ! --- Declare shared and private variables for omp
     !$omp parallel default(none) &
-    !$omp   shared(element_list,node_list, ES, get_terms,        &
+    !$omp   shared(element_list,node_list, ES, get_terms, BSmat, n_basis,              &
     !$omp          xpoint,xcase, rhs, my_id, test_struct,n_tor_fft_thresh)             &
-    !$omp   private(ife,iv,inode,element,nodes,i,i_order,               &
-    !$omp           index_large_i,j,index_ij,k, index_node,         &
-    !$omp           omp_nthreads,omp_tid, i_term  )
+    !$omp   private(ife,iv,inode,element,nodes,i_order, info,                     &
+    !$omp           index_large_i,index_ij, index_node, BSmat_elm, rhs_term,           &
+    !$omp           omp_nthreads,omp_tid, i_term, i,j,k,l,i_bs,j_bs,ftor,ipiv,BSmat_tmp  )
   
    ! --- omp id
 #ifdef _OPENMP
@@ -2870,11 +2908,33 @@ module exec_commands
     do ife = 1, element_list%n_elements 
       
       element = element_list%element(ife)
-        
+
+       
       do iv = 1, n_vertex_max
-       inode     = element%vertex(iv)
-       nodes(iv) = node_list%node(inode)
+        inode     = element%vertex(iv)
+        nodes(iv) = node_list%node(inode)
       enddo
+
+      ! --- Multiply integrated basis functions matrix by element sizes --------------------------
+      do i=1,n_vertex_max
+        do j=1,n_order+1
+  
+          i_bs = (i-1)*n_vertex_max + j  ! basis function index
+  
+          ! --- Basis column
+          do k=1,n_vertex_max
+            do l=1,n_order+1
+  
+              j_bs = (k-1)*n_vertex_max + l  ! basis function index
+  
+              BSmat_elm(i_bs, j_bs) = BSmat(i_bs, j_bs) * element%size(i,j) * element%size(k,l)
+            enddo
+          enddo
+
+        enddo
+      enddo
+      ! ----------------------------------------------------------------------------------------
+
 #if (JOREK_MODEL == 500)    
       call element_matrix_fft(element,nodes, xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd,   &
        ES%R_xpoint, ES%Z_xpoint, test_struct(omp_tid)%ELM, test_struct(omp_tid)%RHS, omp_tid,       &
@@ -2887,29 +2947,47 @@ module exec_commands
 #endif
 
       do i_term=1, max_terms
-  
-        do iv=1,n_vertex_max
-      
-          inode = element%vertex(iv)
-      
-          do i_order = 1, n_order+1
-      
-            index_node = node_list%node(inode)%index(i_order)
-      
-            index_large_i = n_tor * n_var * (index_node - 1)
-      
-            do j = 1, n_var * n_tor
-      
-              index_ij = n_tor * n_var * (n_order+1) * (iv-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
-              
-             !$omp atomic
-              rhs(i_term, index_large_i+j) = rhs(i_term, index_large_i+j) + test_struct(omp_tid)%ELM(i_term, index_ij) 
-             !$omp end atomic
-            enddo 
-      
-          enddo ! order
-        enddo ! vertex
-  
+        do k_var=1, n_var 
+          do i_tor = 1, n_tor
+
+            ! --- For Fourier transform
+            if (i_tor>1) then
+              ftor=2.d0
+            else
+              ftor=1.d0
+            endif
+
+            ! collect element RHS of a given term and harmonic 
+            do i=1,n_vertex_max
+              do j=1,n_order+1
+                index_ij       = n_tor * n_var * ( (n_order+1)*(i-1) + (j-1) ) + n_tor*(k_var-1) + i_tor
+                i_bs           = (i-1)*n_vertex_max + j 
+                rhs_term(i_bs) = test_struct(omp_tid)%ELM(i_term, index_ij) * ftor 
+              enddo
+            enddo   
+ 
+            ! get Bezier coefficients at the nodes 
+            !$omp critical
+            BSmat_tmp = BSmat_elm
+            call dgesv( n_basis, 1, BSmat_tmp, n_basis, ipiv, rhs_term, n_basis, info )
+            !$omp end critical
+            do iv=1,n_vertex_max
+        
+              inode = element%vertex(iv)
+        
+              do i_order = 1, n_order+1
+         
+                i_bs          = (iv-1)*n_vertex_max + i_order 
+                index_node    = node_list%node(inode)%index(i_order)
+                
+                index_large_i = n_tor * n_var * (index_node - 1) + n_tor*(k_var-1) + i_tor
+                !$omp critical
+                rhs(i_term, index_large_i) = rhs_term(i_bs) 
+                !$omp end critical
+              enddo ! dofs
+            enddo ! vertices
+          enddo ! modes
+        enddo ! equations
       enddo ! terms
     
     enddo ! --- elements
@@ -2957,16 +3035,10 @@ module exec_commands
                 if (only_itor >= 0) then
                   if (only_itor /= i_tor) cycle
                 endif
-                
-                if (i_tor>1) then
-                  ftor=2.d0
-                else
-                  ftor=1.d0
-                endif
-    
+     
                 index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
           
-                pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1)  = rhs(i_term, index_RHS) / n_plane * ftor
+                pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1)  = rhs(i_term, index_RHS) / n_plane 
     
                 sum_rhs = sum_rhs + abs(rhs(i_term, index_RHS))
               enddo 

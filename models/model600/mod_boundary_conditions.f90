@@ -315,17 +315,18 @@ do i=1, n_local_elms !=== do elements
           endif
           !---------------------------------------------------------------------------------------------------                      
 
-          if (  ( (k == var_psi  ) .and. bcs(bnd_type)%dirichlet%psi  )  .or.  &
-                ( (k == var_u    ) .and. bcs(bnd_type)%dirichlet%u    )  .or.  &
-                ( (k == var_zj   ) .and. bcs(bnd_type)%dirichlet%zj   )  .or.  &
-                ( (k == var_w    ) .and. bcs(bnd_type)%dirichlet%w    )  .or.  &
-                ( (k == var_rho  ) .and. bcs(bnd_type)%dirichlet%rho  )  .or.  &
-                ( (k == var_T    ) .and. bcs(bnd_type)%dirichlet%T    )  .or.  &
-                ( (k == var_Ti   ) .and. bcs(bnd_type)%dirichlet%Ti   )  .or.  &
-                ( (k == var_Te   ) .and. bcs(bnd_type)%dirichlet%Te   )  .or.  &
-                ( (k == var_Vpar ) .and. bcs(bnd_type)%dirichlet%Vpar )  .or.  &
-                ( (k == var_rhon ) .and. bcs(bnd_type)%dirichlet%rhon )  .or.  &
-                ( (k == var_nre  ) .and. bcs(bnd_type)%dirichlet%nre  )        &
+          if (  ( (k == var_psi     ) .and. bcs(bnd_type)%dirichlet%psi     )  .or.  &
+                ( (k == var_u       ) .and. bcs(bnd_type)%dirichlet%u       )  .or.  &
+                ( (k == var_zj      ) .and. bcs(bnd_type)%dirichlet%zj      )  .or.  &
+                ( (k == var_w       ) .and. bcs(bnd_type)%dirichlet%w       )  .or.  &
+                ( (k == var_rho     ) .and. bcs(bnd_type)%dirichlet%rho     )  .or.  &
+                ( (k == var_T       ) .and. bcs(bnd_type)%dirichlet%T       )  .or.  &
+                ( (k == var_Ti      ) .and. bcs(bnd_type)%dirichlet%Ti      )  .or.  &
+                ( (k == var_Te      ) .and. bcs(bnd_type)%dirichlet%Te      )  .or.  &
+                ( (k == var_Vpar    ) .and. bcs(bnd_type)%dirichlet%Vpar    )  .or.  &
+                ( (k == var_rhon    ) .and. bcs(bnd_type)%dirichlet%rhon    )  .or.  &
+                ( (k == var_rho_imp ) .and. bcs(bnd_type)%dirichlet%rho_imp )  .or.  &
+                ( (k == var_nre     ) .and. bcs(bnd_type)%dirichlet%nre     )        &
              ) then
 
             ! --- If special conditions apply (e.g. freeboundary, mach1), do not apply Dirichlet even if specified in the namelist

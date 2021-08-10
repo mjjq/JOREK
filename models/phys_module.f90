@@ -119,6 +119,7 @@ module phys_module
     logical :: Te   
     logical :: Vpar 
     logical :: rhon 
+    logical :: rho_imp 
     logical :: nre  
     logical :: AR   
     logical :: AZ   
@@ -132,6 +133,7 @@ module phys_module
     logical :: Te   
     logical :: Vpar 
     logical :: rhon 
+    logical :: rho_imp 
     logical :: nre  
   end type type_natural_bc
 

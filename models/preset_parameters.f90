@@ -272,6 +272,7 @@ subroutine preset_parameters
   bcs(:)%dirichlet%Te      = .true.
   bcs(:)%dirichlet%Vpar    = .true.
   bcs(:)%dirichlet%rhon    = .true.
+  bcs(:)%dirichlet%rho_imp = .true.
   bcs(:)%dirichlet%nre     = .true.
   bcs(:)%dirichlet%AR      = .true.
   bcs(:)%dirichlet%AZ      = .true.
@@ -318,6 +319,13 @@ subroutine preset_parameters
   bcs( 11)%dirichlet%rhon  = .false.
   bcs( 15)%dirichlet%rhon  = .false.
   bcs( 19)%dirichlet%rhon  = .false.
+
+  bcs(  1)%dirichlet%rho_imp  = .false.
+  bcs(4:5)%dirichlet%rho_imp  = .false.
+  bcs(  9)%dirichlet%rho_imp  = .false.
+  bcs( 11)%dirichlet%rho_imp  = .false.
+  bcs( 15)%dirichlet%rho_imp  = .false.
+  bcs( 19)%dirichlet%rho_imp  = .false.
 
   ! --- Mach 1
   bcs(:)%mach1   = .false.
@@ -378,6 +386,13 @@ subroutine preset_parameters
   bcs( 11)%natural%rhon  = .true.
   bcs( 15)%natural%rhon  = .true.
   bcs( 19)%natural%rhon  = .true.
+
+  bcs(  1)%natural%rho_imp  = .true.
+  bcs(4:5)%natural%rho_imp  = .true.
+  bcs(  9)%natural%rho_imp  = .true.
+  bcs( 11)%natural%rho_imp  = .true.
+  bcs( 15)%natural%rho_imp  = .true.
+  bcs( 19)%natural%rho_imp  = .true.
   ! -------------------------------------------
 
   

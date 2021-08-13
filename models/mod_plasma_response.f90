@@ -718,7 +718,7 @@ module mod_plasma_response
     do i = 1, n_points
       write(25,'(6ES14.6)') R_vec(i), Z_vec(i), psi_c(i), psi_c_min(i), psi_p(i), Psitot(i)
     enddo
-   write(26,*) '#current kAturns      current/turn'
+   write(26,*) '#current Aturns      current[A]/turn'
    do i=1, numb_coils
      write(26,'(2ES18.10)')   RHS_min(i),  RHS_min_per_turn(i)
      write(*, '(2ES18.10)')   RHS_min(i),  RHS_min_per_turn(i)

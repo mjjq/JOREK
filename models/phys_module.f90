@@ -348,7 +348,7 @@ module phys_module
                                 !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
-  character(len=256) :: spi_shard_file           !< The name of the shard size file
+  character(len=256) :: spi_shard_file(n_inj_max)!< The name of the shard size file
   character(len=256) :: spi_plume_file(n_inj_max)!< The name of the shard information datafile (array)
   logical            :: spi_hdf5                 !< if 'spi_plume_file' is in HDF5format?
 

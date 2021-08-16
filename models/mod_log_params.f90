@@ -748,7 +748,9 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,LOGI_FMT) 'spi_hdf5            ',  spi_hdf5
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
-     write(*,CHAR_FMT) 'spi_shard_file      ',  trim(spi_shard_file)
+     do i = 1,n_inj_max
+       write(*,CHAR_FMT2) 'spi_shard_file(',i,')    ',  trim(spi_shard_file(i))
+     end do
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref

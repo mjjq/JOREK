@@ -550,11 +550,11 @@ module pellet_module
       do i = 1, n_inj
         if (spi_plume_file(i) /= 'none') then ! if file exists, read shards information from it
           write(*,'(A21,I2,A19,A)') " >> Initialising SPI(", i, ") from a datafile: ", trim(spi_plume_file(i))
-          call init_spi_plume_file(i,spi_plume_file(i),n_spi(i),n_spi_begin)
+          call init_spi_plume_file(i,n_spi(i),n_spi_begin)
           n_spi_begin = n_spi_begin + n_spi(i)
         else ! if file does not exist, initialise shards based on parameters in the JOREK input file
           write(*,'(A21,I2,A23)') " >> Initialising SPI(", i, ") from input parameters"
-          call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
+          call init_spi(i,ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
                         spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),spi_L_inj_diff(i),n_spi(i),n_spi_begin)
           n_spi_begin = n_spi_begin + n_spi(i)
         end if
@@ -565,7 +565,7 @@ module pellet_module
   end subroutine init_spi_all
 
   !> Initializes the shattered pellet position, velocity and size
-  subroutine init_spi(ns_R,ns_Z,ns_phi,ns_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
+  subroutine init_spi(i_inj,ns_R,ns_Z,ns_phi,ns_amplitude,spi_Vel_Rref,spi_Vel_Zref,spi_Vel_RxZref,&
                       spi_quantity,spi_quantity_bg,spi_Vel_diff,spi_L_inj,spi_L_inj_diff,n_spi,n_spi_begin)
   
     use constants
@@ -598,6 +598,7 @@ module pellet_module
     real*8  :: mix_ratio                               ! Volume mixture ratio of the mixed pellet 
     real*8  :: real_spi_quantity(2)                    ! Final injection quantity
 
+    integer,intent(in)  :: i_inj
     real*8, intent(in)  :: ns_R
     real*8, intent(in)  :: ns_Z
     real*8, intent(in)  :: ns_phi
@@ -625,10 +626,10 @@ module pellet_module
 
       ! Read normalized shard size distribution (if given in file) and calculate
       ! shard radius normalization factor size_beta
-      if (spi_shard_file /= 'none') then 
-        inquire(file=trim(spi_shard_file), exist=ferr) ! Check if the file exists
+      if (spi_shard_file(i_inj) /= 'none') then 
+        inquire(file=trim(spi_shard_file(i_inj)), exist=ferr) ! Check if the file exists
         if (ferr) then
-          open(42,file=trim(spi_shard_file),status="OLD",action="READ")
+          open(42,file=trim(spi_shard_file(i_inj)),status="OLD",action="READ")
           read(42,*)  shard_size(1:n_spi)
           close(42)
         else
@@ -862,7 +863,7 @@ module pellet_module
   !!   - should consists of 8 columns
   !!   - 1st   2nd          3rd   4th         5th           6th         7th        8th 
   !!     R [m] phi[radians] Z [m] Vel_R [m/s] Vel_phi [m/s] Vel_Z [m/s] radius [m] mol(D2)/(mol(D2)+mol(Impurity))
-  subroutine init_spi_plume_file(i_inj,spi_file,n_spi,n_spi_begin)
+  subroutine init_spi_plume_file(i_inj,n_spi,n_spi_begin)
 
     use iso_fortran_env
 
@@ -882,7 +883,6 @@ module pellet_module
 
     implicit none
 
-    character(len=256), intent(in) :: spi_file
     integer,            intent(in) :: i_inj, n_spi
     integer,            intent(in) :: n_spi_begin
 
@@ -924,10 +924,10 @@ module pellet_module
       if ( .not. spi_hdf5) then
 
         ! check 1) file existence
-        inquire(file=trim(spi_file), exist=ferr)
+        inquire(file=trim(spi_plume_file(i_inj)), exist=ferr)
         ! check 2) file format
         if (ferr) then
-          open(32, file=trim(spi_file), status='old', action='read', form='unformatted', access='stream')
+          open(32, file=trim(spi_plume_file(i_inj)), status='old', action='read', form='unformatted', access='stream')
           old_char = " "
           n_line   = 0
           beg_line = .true.
@@ -991,7 +991,7 @@ module pellet_module
 
 #ifdef USE_HDF5
 
-        call HDF5_open(trim(spi_file),file_id,error)
+        call HDF5_open(trim(spi_plume_file(i_inj)),file_id,error)
         if ( error /= 0 ) then
           write(*,*) "ERROR: failed to open 'spi_plume_file (HDF5)'."
           stop
@@ -1020,7 +1020,7 @@ module pellet_module
 
       if ( .not. spi_hdf5) then
 
-        open(42,file=trim(spi_file),status="old",action="read")
+        open(42,file=trim(spi_plume_file(i_inj)),status="old",action="read")
 
         do i = 1,n_line
           read(42, *, iostat=io) spi_R_tmp(i),      spi_phi_tmp(i),      spi_Z_tmp(i),     &

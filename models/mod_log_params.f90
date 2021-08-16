@@ -743,9 +743,9 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,INTG_FMT) 'n_spi_tot           ',  n_spi_tot
      write(*,INTG_FMT) 'n_inj               ',  n_inj
      do i = 1,n_inj_max
-       write(*,CHAR_FMT2) 'spi_num_file(',i,')    ',  trim(spi_num_file(i))
+       write(*,CHAR_FMT2) 'spi_plume_file(',i,')    ',  trim(spi_plume_file(i))
      end do
-     write(*,INTG_FMT) 'spi_hdf5            ',  spi_hdf5
+     write(*,LOGI_FMT) 'spi_hdf5            ',  spi_hdf5
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
      write(*,CHAR_FMT) 'spi_shard_file      ',  trim(spi_shard_file)

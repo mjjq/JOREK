@@ -501,8 +501,8 @@ subroutine preset_parameters
   spi_rnd_seed    = 0
   spi_abl_model   = 0
   spi_shard_file  = 'none'
-  spi_num_file    = 'none'
-  spi_hdf5        = 0
+  spi_plume_file(:) = 'none'
+  spi_hdf5        = .false.
   spi_tor_rot     = .false.
   using_spi       = .false.
 

@@ -521,7 +521,7 @@ module pellet_module
     use phys_module, only: pellets, n_spi, n_spi_tot, n_inj, JET_MGI, ASDEX_MGI, ns_R, ns_Z, ns_phi,&
                            ns_amplitude, spi_Vel_Rref, spi_Vel_Zref, spi_Vel_RxZref,                &
                            spi_quantity, spi_quantity_bg, spi_Vel_diff, spi_L_inj, spi_L_inj_diff,  &
-                           spi_num_file
+                           spi_plume_file
     use mpi_mod
     
     implicit none
@@ -548,12 +548,12 @@ module pellet_module
     else      !< Do one initialization for each injection location
       n_spi_begin = 1
       do i = 1, n_inj
-        if (spi_num_file(i) /= 'none') then ! if file exists, read shards information from it
-          write(*,'(A16,I2,A25,A)') " >> Initialising ", i, " th SPI from a datafile: ", trim(spi_num_file(i))
-          call init_spi_num_file(i,spi_num_file(i),n_spi(i),n_spi_begin)
+        if (spi_plume_file(i) /= 'none') then ! if file exists, read shards information from it
+          write(*,'(A21,I2,A19,A)') " >> Initialising SPI(", i, ") from a datafile: ", trim(spi_plume_file(i))
+          call init_spi_plume_file(i,spi_plume_file(i),n_spi(i),n_spi_begin)
           n_spi_begin = n_spi_begin + n_spi(i)
         else ! if file does not exist, initialise shards based on parameters in the JOREK input file
-          write(*,'(A16,I2,A)') " >> Initialising ", i, " th SPI from input parameters"
+          write(*,'(A21,I2,A23)') " >> Initialising SPI(", i, ") from input parameters"
           call init_spi(ns_R(i),ns_Z(i),ns_phi(i),ns_amplitude(i),spi_Vel_Rref(i),spi_Vel_Zref(i),spi_Vel_RxZref(i),&
                         spi_quantity(i),spi_quantity_bg(i),spi_Vel_diff(i),spi_L_inj(i),spi_L_inj_diff(i),n_spi(i),n_spi_begin)
           n_spi_begin = n_spi_begin + n_spi(i)
@@ -862,7 +862,7 @@ module pellet_module
   !!   - should consists of 8 columns
   !!   - 1st   2nd          3rd   4th         5th           6th         7th        8th 
   !!     R [m] phi[radians] Z [m] Vel_R [m/s] Vel_phi [m/s] Vel_Z [m/s] radius [m] mol(D2)/(mol(D2)+mol(Impurity))
-  subroutine init_spi_num_file(i_inj,spi_file,n_spi,n_spi_begin)
+  subroutine init_spi_plume_file(i_inj,spi_file,n_spi,n_spi_begin)
 
     use iso_fortran_env
 
@@ -871,7 +871,7 @@ module pellet_module
     use data_structure
     use phys_module, only: pellets, imp_type, pellet_density, pellet_density_bg,  xtime_spi_ablation,           &
                            xtime_spi_ablation_bg, xtime_spi_ablation_rate, xtime_spi_ablation_bg_rate, nstep,   &
-                           spi_num_file, spi_hdf5, spi_abl_model, n_spi_tot,                                    &
+                           spi_plume_file, spi_hdf5, spi_abl_model, n_spi_tot,                                    &
                            spi_tor_rot, ns_phi_rotate, tor_frequency
     use mpi_mod
 #ifdef USE_HDF5
@@ -921,7 +921,7 @@ module pellet_module
     if (n_spi >= 1) then
 
       ! read spi shards information from Brendan's format
-      if (spi_hdf5 == 0) then
+      if ( .not. spi_hdf5) then
 
         ! check 1) file existence
         inquire(file=trim(spi_file), exist=ferr)
@@ -959,7 +959,7 @@ module pellet_module
               n_line = n_line+1
 
               if (n_col /= n_col_expected) then
-                write(*,*) "ERROR: 'spi_num_file' is defected."
+                write(*,*) "ERROR: 'spi_plume_file' is defected."
                 stop
               end if
 
@@ -976,45 +976,40 @@ module pellet_module
 
           ! check 3) Consistency of spi shard file with the parameters in the input file (especially 'n_spi')
           if (n_spi /= n_line) then
-            write(*,*) "ERROR: 'spi_num_file' contains different number of lines than the given 'n_spi' in the input file."
+            write(*,*) "ERROR: 'spi_plume_file' contains different number of lines than the given 'n_spi' in the input file."
             stop
           end if
 
         else
 
-          write(*,*) "ERROR: 'spi_num_file' for ", i_inj, "th SPI does not exist, exiting now"
+          write(*,'(A33,I2,A)') "ERROR: 'spi_plume_file' for SPI (", i_inj, ") does not exist, exiting now"
           stop
 
         end if
 
-      else if (spi_hdf5 == 1) then
+      else ! spi_hdf5 == .true.
 
 #ifdef USE_HDF5
 
         call HDF5_open(trim(spi_file),file_id,error)
         if ( error /= 0 ) then
-          write(*,*) "ERROR: failed to open 'spi_num_file (HDF5)'."
+          write(*,*) "ERROR: failed to open 'spi_plume_file (HDF5)'."
           stop
         end if
 
         call HDF5_integer_reading(file_id,n_line,"n_spi")
 
         if (n_spi /= n_line) then
-            write(*,*) "ERROR: 'n_spi' value does not match between the 'spi_num_file (HDF5)' and the input file."
+            write(*,*) "ERROR: 'n_spi' value does not match between the 'spi_plume_file (HDF5)' and the input file."
             stop
         end if
 
 #else
 
-        write(*,*) "ERROR: trying to use 'spi_num_file' in HDF5 format without 'USE_HDF5'"
+        write(*,*) "ERROR: trying to use 'spi_plume_file' in HDF5 format without 'USE_HDF5'"
         stop
 
 #endif
-
-      else
-
-        write(*,*) "ERROR: 'spi_hdf5' has wrong value in the input file (it should be '0' or '1')"
-        stop
 
       end if
 
@@ -1023,7 +1018,7 @@ module pellet_module
                 spi_Vel_R_tmp(n_spi),  spi_Vel_phi_tmp(n_spi),  spi_Vel_Z_tmp(n_spi), &
                 spi_radius_tmp(n_spi), spi_species_molar_D2_tmp(n_spi) )
 
-      if (spi_hdf5 == 0) then
+      if ( .not. spi_hdf5) then
 
         open(42,file=trim(spi_file),status="old",action="read")
 
@@ -1035,7 +1030,7 @@ module pellet_module
             if (io == iostat_end) then
               exit
             else
-              write(*,*) "ERROR: in reading 'spi_num_file', iostat = ", io
+              write(*,*) "ERROR: in reading 'spi_plume_file', iostat = ", io
               stop
             end if
           end if
@@ -1043,7 +1038,7 @@ module pellet_module
 
         close(42)
 
-      else if (spi_hdf5 == 1) then
+      else ! spi_hdf5 == .true.
 
 #ifdef USE_HDF5
 
@@ -1060,15 +1055,10 @@ module pellet_module
 
 #else
 
-        write(*,*) "ERROR: trying to use 'spi_num_file' in HDF5 format without 'USE_HDF5'"
+        write(*,*) "ERROR: trying to use 'spi_plume_file' in HDF5 format without 'USE_HDF5'"
         stop
 
 #endif
-
-      else
-
-        write(*,*) "ERROR: 'spi_hdf5' has wrong value in the input file (it should be '0' or '1')"
-        stop
 
       end if
 
@@ -1201,7 +1191,7 @@ module pellet_module
     end if
 
     return
-  end subroutine
+  end subroutine init_spi_plume_file
 
 
   !> This function creates a derived MPI type for the pellets and returns it (in honor of Daan)

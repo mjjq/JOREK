@@ -1098,7 +1098,6 @@ module pellet_module
       end if
 
       ! simple check on 'mix_ratio'
-      print *, 'mix_ratio = ', mix_ratio
       if ( (mix_ratio < 0.) .or. (mix_ratio > 1.) ) then
         write(*,*) "ERROR: 'mix_ratio' has an illegal value."
         stop

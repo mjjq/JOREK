@@ -1,3 +1,15 @@
+module mod_sources
+
+
+
+implicit none
+
+
+
+contains
+
+
+
 !> Determine the heat and particle sources at a given position.
 subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particle_source, heat_source)
 
@@ -5,52 +17,38 @@ use phys_module
 
 implicit none
 
-  ! --- Routine parameters.
-  logical, intent(in)	:: xpoint2
-  integer, intent(in)	:: xcase2
-  real*8,  intent(in)	:: Z
-  real*8,  intent(in)	:: Z_xpoint(2)
-  real*8,  intent(in)	:: psi
-  real*8,  intent(in)	:: psi_axis
-  real*8,  intent(in)	:: psi_bnd
-  real*8,  intent(out)  :: particle_source
-  real*8,  intent(out)  :: heat_source
+! --- Routine parameters.
+logical, intent(in)   :: xpoint2
+integer, intent(in)   :: xcase2
+real*8,  intent(in)   :: Z
+real*8,  intent(in)   :: Z_xpoint(2)
+real*8,  intent(in)   :: psi
+real*8,  intent(in)   :: psi_axis
+real*8,  intent(in)   :: psi_bnd
+real*8,  intent(out)  :: particle_source
+real*8,  intent(out)  :: heat_source
 
-  ! --- Local variables
-  real*8 :: psi_n, sig
-  
-!  sig = 0.01
+! --- Local variables
+real*8 :: psi_n
 
-  psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
-  
-  if (xpoint2) then
-    if ((Z .lt. Z_xpoint(1)) .and. (psi_n .lt. 1.d0) ) then
-      psi_n = 2.d0 - psi_n
-    endif
+psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
+
+if (xpoint2) then
+  if ((Z .lt. Z_xpoint(1)) .and. (psi_n .lt. 1.d0) ) then
+     psi_n = 2.d0 - psi_n
   endif
-  
-  particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_psin)/particlesource_sig))  &
-      + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))  &
-      + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
-  heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-      + heatsource_gauss * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+endif
 
-!  if(xcase2 .eq. 1) then
-!    particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig)) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
-!    heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig)) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01))
-!  endif
-!  if(xcase2 .eq. 2) then
-!    particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-!    heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-!  endif
-!  if(xcase2 .eq. 3) then
-!    particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig)) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-!    heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - 0.8d0)/sig)) * (0.5d0 + 0.5d0*tanh((Z - Z_xpoint(1))/0.01)) * (0.5d0 + 0.5d0*tanh((Z_xpoint(2) - Z)/0.01))
-!  endif
+particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_psin)/particlesource_sig))  &
+    + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))  &
+    + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
+heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+    + heatsource_gauss * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
 
 return
 end subroutine sources
 
+!====MB===============parallel velocity profile which is kept by the // velocity source implemented in element_matrix.f90
 
 subroutine velocity(xpoint2,xcase2,Z,Z_xpoint,psi,psi_axis,psi_bnd,velocity_profile,dV_dpsi,dV_dz, &
                    dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
@@ -96,22 +94,21 @@ if ( .not. num_rot ) then ! use analytical representation
   dprof0_dpsi  = (V_0-V_1)*(V_coef(1) + 2.d0 * V_coef(2) * psi_n + 3.d0 * V_coef(3) * psi_n**2) / (psi_bnd - psi_axis)
   dprof0_dpsi2 = (V_0-V_1)*(2.d0 * V_coef(2) + 6.d0 * V_coef(3) * psi_n)                          / (psi_bnd - psi_axis)**2
   dprof0_dpsi3 = (V_0-V_1)*(6.d0 * V_coef(3))                                                       / (psi_bnd - psi_axis)**3
-  
+
   atn   = (0.5d0 - 0.5d0*tanh((psi_n - psi_barrier)/sig_n))
-  
+
   datn  = - 1.d0/cosh((psi_n - psi_barrier)/sig_n)**2 / (2.d0 * sig_n) / (psi_bnd - psi_axis)
-  
+
   d2atn =   1.d0/cosh((psi_n - psi_barrier)/sig_n)**2 / (sig_n**2)  &
         * tanh((psi_n - psi_barrier)/sig_n) / (psi_bnd - psi_axis)**2
-  
+
   d3atn = - 1.d0/cosh((psi_n - psi_barrier)/sig_n)**4 / (sig_n**3)  &
         * (-2.d0 + cosh(2.d0*(psi_n-psi_barrier)/sig_n) ) / (psi_bnd - psi_axis)**3
-  
+
   prof1        = prof0        * atn
   dprof1_dpsi  = dprof0_dpsi  * atn +         prof0       * datn
   dprof1_dpsi2 = dprof0_dpsi2 * atn + 2.d0 * dprof0_dpsi  * datn + prof0              * d2atn
   dprof1_dpsi3 = dprof0_dpsi3 * atn + 3.d0 * dprof0_dpsi2 * datn + 3.d0 * dprof0_dpsi * d2atn + prof0 * d3atn
-
 
 else ! use numerical respresentation
 !---------------------------------------------------------------------------------------------------------------
@@ -135,19 +132,8 @@ else ! use numerical respresentation
   dprof1_dpsi3 = ( num_rot_y3(left) * aux2 + num_rot_y3(right) * aux1 ) / delta_psi**3
   
 end if
-  
-dV_dpsi     = dprof1_dpsi   * factor
-dV_dpsi2    = dprof1_dpsi2
-dV_dpsi3    = dprof1_dpsi3  * factor
-  
-dV_dz       = 0.d0
-dV_dz2      = 0.d0
-dV_dpsi_dz  = 0.d0
-dV_dpsi2_dz = 0.d0
-dV_dpsi_dz2 = 0.d0
 
-velocity_profile = prof1
-  
+
 if (xpoint2) then
 
   sigz            = 0.05d0
@@ -169,18 +155,18 @@ if (xpoint2) then
   datn_z_u	   = -0.5d0/cosh3_u**2 / sigz
   d2atn_z_u	   =  1.0d0/cosh3_u**2 / sigz**2 * tanh2_u
   
-  if(xcase2 .eq. 1) then
+  if(xcase2 .eq. LOWER_XPOINT) then
     atn_z_u          = 1.d0
     datn_z_u         = 0.d0
     d2atn_z_u        = 0.d0
   endif
-  if(xcase2 .eq. 2) then
+  if(xcase2 .eq. UPPER_XPOINT) then
     atn_z            = 1.d0
     datn_z           = 0.d0
     d2atn_z          = 0.d0
   endif
-   
-  velocity_profile=   prof1        * atn_z * atn_z_u
+
+  velocity_profile =   prof1        * atn_z * atn_z_u
   dV_dpsi         =   dprof1_dpsi  * atn_z * atn_z_u
   dV_dpsi2        =   dprof1_dpsi2 * atn_z * atn_z_u
   dV_dpsi3        =   dprof1_dpsi3 * atn_z * atn_z_u
@@ -189,7 +175,19 @@ if (xpoint2) then
   dV_dpsi_dz      =   dprof1_dpsi  * ( datn_z * atn_z_u  +          atn_z * datn_z_u)
   dV_dpsi2_dz     =   dprof1_dpsi2 * ( datn_z * atn_z_u  +          atn_z * datn_z_u)
   dV_dpsi_dz2     =   dprof1_dpsi  * (d2atn_z * atn_z_u  +  2.d0 * datn_z * datn_z_u  +  atn_z * d2atn_z_u)
-   
+
+else
+  
+  velocity_profile = prof1
+  dV_dpsi     = dprof1_dpsi!   * factor
+  dV_dpsi2    = dprof1_dpsi2
+  dV_dpsi3    = dprof1_dpsi3!  * factor
+  dV_dz       = 0.d0
+  dV_dz2      = 0.d0
+  dV_dpsi_dz  = 0.d0
+  dV_dpsi2_dz = 0.d0
+  dV_dpsi_dz2 = 0.d0
+
 endif
 
 if ( .not. num_rot ) then 
@@ -197,31 +195,9 @@ if ( .not. num_rot ) then
 end if
 
 return
-end subroutine velocity
-  
-  
-  
-  
-subroutine mgi_source(pellet_amplitude,pellet_R,pellet_Z,pellet_phi,pellet_radius, &
-                      pellet_sig,pellet_length,R,Z,phi,particle_source)
+end
+!============================================Marina 14.02.2011================
 
-  implicit none
 
-  real*8 :: R, Z, phi, particle_source
-  real*8 :: pellet_amplitude, pellet_R, pellet_Z, pellet_phi, pellet_radius, pellet_sig, pellet_length
-  real*8 :: radius, atn, atn_phi, PI
 
-  PI = 3.14159265358979
-
-  if (phi .gt. PI) phi = 2*PI - phi
-
-  radius = sqrt((R-pellet_R)**2 + (Z-pellet_Z)**2)
-
-  atn     = (0.5d0 - 0.5d0*tanh((radius - pellet_radius)/pellet_sig))
-
-  atn_phi = (0.5d0 - 0.5d0*tanh((phi- pellet_phi)/pellet_length))
-
-  particle_source = pellet_amplitude * atn * atn_phi
-
-return
-end subroutine mgi_source
+end module mod_sources

@@ -520,7 +520,7 @@ subroutine preset_parameters
   spi_abl_model   = 0
   spi_shard_file(:) = 'none'
   spi_plume_file(:) = 'none'
-  spi_hdf5        = .false.
+  spi_plume_file_hdf5  = .false.
   spi_tor_rot     = .false.
   using_spi       = .false.
 

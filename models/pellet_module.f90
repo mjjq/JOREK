@@ -891,7 +891,10 @@ module pellet_module
                            spi_Vel_R_tmp(:), spi_Vel_phi_tmp(:), spi_Vel_Z_tmp(:), &
                            spi_radius_tmp(:),spi_species_molar_D2_tmp(:)
 
-    real*8              :: spi_species_atomic_tmp, imp_fraction, spi_density_tmp, mix_ratio
+    real*8              :: spi_species_molar_D2_sum
+
+    real*8, allocatable :: spi_species_atomic_tmp(:)
+    real*8              :: imp_fraction, spi_density_tmp, mix_ratio
     real*8              :: real_spi_quantity(2)
 
     integer             :: i, i_p
@@ -912,11 +915,6 @@ module pellet_module
     write(*,'(4(A18))') "'spi_Vel_Rref',","'spi_Vel_Zref'  ,","'spi_Vel_RxZref',","'spi_Vel_diff'   "
     write(*,'(2(A18))') "'spi_L_inj'   ,","'spi_L_inj_diff' "
     write(*,'(1(A18))') "'spi_angle'    "
-
-    ! check some input parameters (especially the rigid body rotation parameters)
-    if ( (spi_tor_rot) .or. (ns_phi_rotate /= 0.d0) .or. (tor_frequency /= 0.d0)) then
-      write(*,*) " WARNING: rigid body rotation of SPI might not be treated properly when initialised by a datafile"
-    end if
 
     if (n_spi >= 1) then
 
@@ -1016,7 +1014,8 @@ module pellet_module
       ! Now that we have a proper spi shard files (ASCII or HDF5), start to read it
       allocate( spi_R_tmp(n_spi),      spi_phi_tmp(n_spi),      spi_Z_tmp(n_spi),     &
                 spi_Vel_R_tmp(n_spi),  spi_Vel_phi_tmp(n_spi),  spi_Vel_Z_tmp(n_spi), &
-                spi_radius_tmp(n_spi), spi_species_molar_D2_tmp(n_spi) )
+                spi_radius_tmp(n_spi), spi_species_molar_D2_tmp(n_spi),               &
+                spi_species_atomic_tmp(n_spi) )
 
       if ( .not. spi_hdf5) then
 
@@ -1062,9 +1061,13 @@ module pellet_module
 
       end if
 
-      if (spi_species_molar_D2_tmp(1) < 0. .or. spi_species_molar_D2_tmp(1) > 1.) then
-        write(*,*) "ERROR: D2 molar fraction in spi data file has illegal values"
-      end if
+      spi_species_molar_D2_sum = 0.d0
+      do i = 1, n_spi
+        if (spi_species_molar_D2_tmp(i) < 0. .or. spi_species_molar_D2_tmp(i) > 1.) then
+          write(*,*) "ERROR: D2 molar fraction in spi data file has illegal values for the fragment ", i
+        end if
+        spi_species_molar_D2_sum = spi_species_molar_D2_sum + spi_species_molar_D2_tmp(i)
+      end do
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       do i = 1, n_spi
@@ -1076,16 +1079,28 @@ module pellet_module
       ! convert 'spi_species_molar_D2_tmp' into 'mix_ratio'
       ! (Determine approximately how many fragments are of the impurity, how
       !  much are of the background species)
-      if      ( (spi_species_molar_D2_tmp(1) == 0.) .and. (pellet_density > 0.) ) then
+      if      ( (spi_species_molar_D2_sum == 0.) .and. (pellet_density > 0.) ) then
         mix_ratio = 1.
-      else if ( (spi_species_molar_D2_tmp(1) == 1.) .and. (pellet_density_bg > 0.) ) then
+      else if ( (spi_species_molar_D2_sum == dble(n_spi)) .and. (pellet_density_bg > 0.) ) then
         mix_ratio = 0.
       else if ( (pellet_density > 0.) .and. (pellet_density_bg > 0.) ) then
-        spi_species_atomic_tmp = 1.d0 - 2.d0 * spi_species_molar_D2_tmp(1) / (spi_species_molar_D2_tmp(1) + 1.d0)
-        imp_fraction = spi_species_atomic_tmp / (1.d0 - spi_species_atomic_tmp)
+        imp_fraction = 0.
+        ! Here we calculate 'spi_species_atomic_tmp' separately for all 'n_spi' fragments. This will be only used for Neon 
+        ! with 'abl_model == 3', otherwise it will be converted into an averaged manner by 'mix_ratio'
+        do i = 1, n_spi
+          spi_species_atomic_tmp(i) = 1.d0 - 2.d0 * spi_species_molar_D2_tmp(i) / (spi_species_molar_D2_tmp(i) + 1.d0)
+          imp_fraction = imp_fraction + spi_species_atomic_tmp(i) / (1.d0 - spi_species_atomic_tmp(i)) / dble(n_spi)
+        end do
         mix_ratio = ( imp_fraction / pellet_density ) / ( imp_fraction / pellet_density + 1.d0 / pellet_density_bg )
       else
         write(*,*) "ERROR: Something went wrong when converting D2 molar species values into 'mix_ratio'."
+        stop
+      end if
+
+      ! simple check on 'mix_ratio'
+      print *, 'mix_ratio = ', mix_ratio
+      if ( (mix_ratio < 0.) .or. (mix_ratio > 1.) ) then
+        write(*,*) "ERROR: 'mix_ratio' has an illegal value."
         stop
       end if
 
@@ -1101,7 +1116,7 @@ module pellet_module
           if (spi_abl_model == 3 .and. mix_ratio < 1. .and. mix_ratio > 0.) then
             do i = 1, n_spi
               i_p = i - 1 + n_spi_begin
-              pellets(i_p)%spi_species = spi_species_atomic_tmp
+              pellets(i_p)%spi_species = spi_species_atomic_tmp(i)
               spi_density_tmp = 1./((1.-pellets(i_p)%spi_species)/pellet_density_bg &
                                     + pellets(i_p)%spi_species/pellet_density) 
               real_spi_quantity(2) = real_spi_quantity(2) &

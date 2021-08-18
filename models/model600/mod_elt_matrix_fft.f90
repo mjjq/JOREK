@@ -78,7 +78,7 @@ real*8     :: rn0, rn0_s, rn0_t, rn0_x, rn0_y, rn0_p, rn0_ss, rn0_st, rn0_tt, rn
 real*8     :: rn0_hat, rn0_x_hat, rn0_y_hat, rn0_corr
 real*8     :: rhon, rhon_s, rhon_t, rhon_p, rhon_x, rhon_y, rhon_ss, rhon_tt, rhon_st, rhon_xx, rhon_yy, rhon_xy
 real*8     :: rimp0, rimp0_s, rimp0_t, rimp0_x, rimp0_y, rimp0_p, rimp0_ss, rimp0_st, rimp0_tt, rimp0_xx, rimp0_yy
-real*8     :: rimp0_hat, rimp0_x_hat, rimp0_y_hat, rimp0_corr
+real*8     :: rimp0_hat, rimp0_x_hat, rimp0_y_hat, rimp0_corr, drimp0_corr_dn
 real*8     :: rhoimp, rhoimp_s, rhoimp_t, rhoimp_p, rhoimp_x, rhoimp_y
 real*8     :: rhoimp_ss, rhoimp_tt, rhoimp_st, rhoimp_xx, rhoimp_yy, rhoimp_xy
 real*8	   :: dn0x, dn0y, dn0p
@@ -90,6 +90,7 @@ real*8     :: Pe0, Pe0_s, Pe0_t, Pe0_x, Pe0_y, Pe0_p, Pe0_ss, Pe0_st, Pe0_tt, Pe
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_Ti
 real*8     :: eta_T_ohm, deta_dT_ohm,  deta_num_dT,  dvisco_num_dT
+real*8     :: deta_dr0, deta_drimp0, deta_dr0_ohm, deta_drimp0_ohm
 real*8     :: Ti0_ps0_x, Ti_ps0_x, Ti0_psi_x, Ti0_ps0_y, Ti_ps0_y, Ti0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: Te0_ps0_x, Te_ps0_x, Te0_psi_x, Te0_ps0_y, Te_ps0_y, Te0_psi_y
 
@@ -635,6 +636,7 @@ do i=1,n_vertex_max
             rimp0_st   = eq_st(mp,var_rhoimp,ms,mt)                                                            
             rimp0_tt   = eq_tt(mp,var_rhoimp,ms,mt)  
             rimp0_corr = corr_neg_dens(rimp0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rimp0 ...
+            drimp0_corr_dn = dcorr_neg_dens_drho(rn0, (/ 1.d-9, 1.d-5 /),1.d-3)
           else
             rimp0      = 0.d0
             rimp0_x    = 0.d0  
@@ -645,7 +647,8 @@ do i=1,n_vertex_max
             rimp0_ss   = 0.d0
             rimp0_st   = 0.d0
             rimp0_tt   = 0.d0
-            rimp0_corr = 0.d0 
+            rimp0_corr = 0.d0
+            drimp0_corr_dn = 0.d0 
           endif
 
           rimp0_xx = (rimp0_ss * y_t(ms,mt)**2 - 2.d0*rimp0_st * y_s(ms,mt)*y_t(ms,mt) + rimp0_tt * y_s(ms,mt)**2&
@@ -668,32 +671,34 @@ do i=1,n_vertex_max
           rimp0_x_hat = 2.d0 * BigR * BigR_x  * rimp0 + BigR**2 * rimp0_x                             
           rimp0_y_hat = BigR**2 * rimp0_y                                                            
 
-          Pi0    = r0    * Ti0
-          Pi0_x  = r0_x  * Ti0 + r0 * Ti0_x
-          Pi0_y  = r0_y  * Ti0 + r0 * Ti0_y
-          Pi0_s  = r0_s  * Ti0 + r0 * Ti0_s
-          Pi0_t  = r0_t  * Ti0 + r0 * Ti0_t
-          Pi0_p  = r0_p  * Ti0 + r0 * Ti0_p
-          Pi0_ss = r0_ss * Ti0 + 2.d0 * r0_s * Ti0_s + r0 * Ti0_ss
-          Pi0_tt = r0_tt * Ti0 + 2.d0 * r0_t * Ti0_t + r0 * Ti0_tt
-          Pi0_st = r0_st * Ti0 + r0_s * Ti0_t + r0_t * Ti0_s + r0 * Ti0_st
-
-          Pe0    = r0    * Te0
-          Pe0_x  = r0_x  * Te0 + r0 * Te0_x
-          Pe0_y  = r0_y  * Te0 + r0 * Te0_y
-          Pe0_s  = r0_s  * Te0 + r0 * Te0_s
-          Pe0_t  = r0_t  * Te0 + r0 * Te0_t
-          Pe0_p  = r0_p  * Te0 + r0 * Te0_p
-          Pe0_ss = r0_ss * Te0 + 2.d0 * r0_s * Te0_s + r0 * Te0_ss
-          Pe0_tt = r0_tt * Te0 + 2.d0 * r0_t * Te0_t + r0 * Te0_tt
-          Pe0_st = r0_st * Te0 + r0_s * Te0_t + r0_t * Te0_s + r0 * Te0_st
-
-          P0     = Pi0   + Pe0
-          P0_s   = Pi0_s + Pe0_s
-          P0_t   = Pi0_t + Pe0_t
-          P0_p   = Pi0_p + Pe0_p
-          P0_x   = Pi0_x + Pe0_x
-          P0_y   = Pi0_y + Pe0_y
+          if (.not. with_impurities) then
+            Pi0    = r0    * Ti0
+            Pi0_x  = r0_x  * Ti0 + r0 * Ti0_x
+            Pi0_y  = r0_y  * Ti0 + r0 * Ti0_y
+            Pi0_s  = r0_s  * Ti0 + r0 * Ti0_s
+            Pi0_t  = r0_t  * Ti0 + r0 * Ti0_t
+            Pi0_p  = r0_p  * Ti0 + r0 * Ti0_p
+            Pi0_ss = r0_ss * Ti0 + 2.d0 * r0_s * Ti0_s + r0 * Ti0_ss
+            Pi0_tt = r0_tt * Ti0 + 2.d0 * r0_t * Ti0_t + r0 * Ti0_tt
+            Pi0_st = r0_st * Ti0 + r0_s * Ti0_t + r0_t * Ti0_s + r0 * Ti0_st
+  
+            Pe0    = r0    * Te0
+            Pe0_x  = r0_x  * Te0 + r0 * Te0_x
+            Pe0_y  = r0_y  * Te0 + r0 * Te0_y
+            Pe0_s  = r0_s  * Te0 + r0 * Te0_s
+            Pe0_t  = r0_t  * Te0 + r0 * Te0_t
+            Pe0_p  = r0_p  * Te0 + r0 * Te0_p
+            Pe0_ss = r0_ss * Te0 + 2.d0 * r0_s * Te0_s + r0 * Te0_ss
+            Pe0_tt = r0_tt * Te0 + 2.d0 * r0_t * Te0_t + r0 * Te0_tt
+            Pe0_st = r0_st * Te0 + r0_s * Te0_t + r0_t * Te0_s + r0 * Te0_st
+  
+            P0     = Pi0   + Pe0
+            P0_s   = Pi0_s + Pe0_s
+            P0_t   = Pi0_t + Pe0_t
+            P0_p   = Pi0_p + Pe0_p
+            P0_x   = Pi0_x + Pe0_x
+            P0_y   = Pi0_y + Pe0_y
+          endif
 
           ps0_xx = (ps0_ss * y_t(ms,mt)**2 - 2.d0*ps0_st * y_s(ms,mt)*y_t(ms,mt) + ps0_tt * y_s(ms,mt)**2 &
                   + ps0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
@@ -807,14 +812,15 @@ do i=1,n_vertex_max
                       - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               &
                       - xjac_x * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) )   / xjac**2
 
-
-          Pi0_xx = r0_xx * Ti0 + 2.d0 * r0_x * Ti0_x + r0 * Ti0_xx
-          Pi0_yy = r0_yy * Ti0 + 2.d0 * r0_y * Ti0_y + r0 * Ti0_yy
-          Pi0_xy = r0_xy * Ti0 + r0_x * Ti0_y + r0_y * Ti0_x + r0 * Ti0_xy
-
-          Pe0_xx = r0_xx * Te0 + 2.d0 * r0_x * Te0_x + r0 * Te0_xx
-          Pe0_yy = r0_yy * Te0 + 2.d0 * r0_y * Te0_y + r0 * Te0_yy
-          Pe0_xy = r0_xy * Te0 + r0_x * Te0_y + r0_y * Te0_x + r0 * Te0_xy
+          if (.not. with_impurities) then
+            Pi0_xx = r0_xx * Ti0 + 2.d0 * r0_x * Ti0_x + r0 * Ti0_xx
+            Pi0_yy = r0_yy * Ti0 + 2.d0 * r0_y * Ti0_y + r0 * Ti0_yy
+            Pi0_xy = r0_xy * Ti0 + r0_x * Ti0_y + r0_y * Ti0_x + r0 * Ti0_xy
+  
+            Pe0_xx = r0_xx * Te0 + 2.d0 * r0_x * Te0_x + r0 * Te0_xx
+            Pe0_yy = r0_yy * Te0 + 2.d0 * r0_y * Te0_y + r0 * Te0_yy
+            Pe0_xy = r0_xy * Te0 + r0_x * Te0_y + r0_y * Te0_x + r0 * Te0_xy
+          endif
 
           Ti0_ps0_x = Ti0_xx * ps0_y - Ti0_xy * ps0_x + Ti0_x * ps0_xy - Ti0_y * ps0_xx
           Ti0_ps0_y = Ti0_xy * ps0_y - Ti0_yy * ps0_x + Ti0_x * ps0_yy - Ti0_y * ps0_xy
@@ -1123,62 +1129,111 @@ do i=1,n_vertex_max
                 end if
 
               endif
+
+              Pi0    = (r0+rimp0*alpha_i) * Ti0
+              Pi0_x  = (r0_x+rimp0_x*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_x
+              Pi0_y  = (r0_y+rimp0_y*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_y
+              Pi0_s  = (r0_s+rimp0_s*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_s
+              Pi0_t  = (r0_t+rimp0_t*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_t
+              Pi0_p  = (r0_p+rimp0_p*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_p
+              Pi0_ss = (r0_ss+rimp0_ss*alpha_i) * Ti0 + 2.d0 * (r0_s+rimp0_s*alpha_i) * Ti0_s + (r0+rimp0*alpha_i) * Ti0_ss
+              Pi0_tt = (r0_tt+rimp0_tt*alpha_i) * Ti0 + 2.d0 * (r0_t+rimp0_t*alpha_i) * Ti0_t + (r0+rimp0*alpha_i) * Ti0_tt
+              Pi0_st = (r0_st+rimp0_st*alpha_i) * Ti0 + (r0_t+rimp0_t*alpha_i) * Ti0_s + (r0_s+rimp0_s*alpha_i) * Ti0_t               &
+                       + (r0+rimp0*alpha_i) * Ti0_st
+              Pi0_xx = (r0_xx+rimp0_xx*alpha_i) * Ti0 + 2.d0 * (r0_x+rimp0_x*alpha_i) * Ti0_x + (r0+rimp0*alpha_i) * Ti0_xx
+              Pi0_yy = (r0_yy+rimp0_yy*alpha_i) * Ti0 + 2.d0 * (r0_y+rimp0_y*alpha_i) * Ti0_y + (r0+rimp0*alpha_i) * Ti0_yy
+              Pi0_xy = (r0_xy+rimp0_xy*alpha_i) * Ti0 + (r0_y+rimp0_y*alpha_i) * Ti0_x + (r0_x+rimp0_x*alpha_i) * Ti0_y               &
+                       + (r0+rimp0*alpha_i) * Ti0_xy
+
+              Pe0    = (r0+rimp0*alpha_e) * Te0
+              Pe0_x  = (r0_x+rimp0_x*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_x
+              Pe0_y  = (r0_y+rimp0_y*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_y
+              Pe0_s  = (r0_s+rimp0_s*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_s
+              Pe0_t  = (r0_t+rimp0_t*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_t
+              Pe0_p  = (r0_p+rimp0_p*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_p
+              Pe0_ss = (r0_ss+rimp0_ss*alpha_e) * Te0 + 2.d0 * (r0_s+rimp0_s*alpha_e_bis) * Te0_s + (r0+rimp0*alpha_e_bis) * Te0_ss &
+                       + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_s)**2.d0
+              Pe0_tt = (r0_tt+rimp0_tt*alpha_e) * Te0 + 2.d0 * (r0_t+rimp0_t*alpha_e_bis) * Te0_t + (r0+rimp0*alpha_e_bis) * Te0_tt &
+                       + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_t)**2.d0
+              Pe0_st = (r0_st+rimp0_st*alpha_e) * Te0 + (r0_t+rimp0_t*alpha_e_bis) * Te0_s + (r0_s+rimp0_s*alpha_e_bis) * Te0_t     &
+                       + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_s * Te0_t + (r0+rimp0*alpha_e_bis) * Te0_st
+              Pe0_xx = (r0_xx+rimp0_xx*alpha_e) * Te0 + 2.d0 * (r0_x+rimp0_x*alpha_e_bis) * Te0_x + (r0+rimp0*alpha_e_bis) * Te0_xx &
+                       + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_x)**2.d0
+              Pe0_yy = (r0_yy+rimp0_yy*alpha_e) * Te0 + 2.d0 * (r0_y+rimp0_y*alpha_e_bis) * Te0_y + (r0+rimp0*alpha_e_bis) * Te0_yy &
+                       + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_y)**2.d0
+              Pe0_xy = (r0_xy+rimp0_xy*alpha_e) * Te0 + (r0_y+rimp0_y*alpha_e_bis) * Te0_x + (r0_x+rimp0_x*alpha_e_bis) * Te0_y     &
+                       + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_x * Te0_y + (r0+rimp0*alpha_e_bis) * Te0_xy
+
+              P0     = Pi0 + Pe0
+              P0_x   = Pi0_x + Pe0_x
+              P0_y   = Pi0_y + Pe0_y
+              P0_s   = Pi0_s + Pe0_s
+              P0_t   = Pi0_t + Pe0_t
+              P0_p   = Pi0_p + Pe0_p
+              P0_ss  = Pi0_ss + Pe0_ss
+              P0_tt  = Pi0_tt + Pe0_tt
+              P0_st  = Pi0_st + Pe0_st
+              P0_xx  = Pi0_xx + Pe0_xx
+              P0_yy  = Pi0_yy + Pe0_yy
+              P0_xy  = Pi0_xy + Pe0_xy
+
+
             else
+
+              ! --- Ion-electron energy transfer
+              if (thermalization) then
+                ! Te in eV:
+                Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+                dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
+                
+                ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
+                if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
+                
+                lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
+                nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
+                               * (1.d14*central_density*r0_corr) * lambda_e_bg &
+                               / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
+                               / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
+                
+                if (nu_e_bg < 0.)  nu_e_bg  = 0.
+                
+                !Converting the energy transfer rate from s^-1 to JOREK unit
+                t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+                nu_e_bg  = nu_e_bg * t_norm    
+                
+                dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
+                dTi_e    = -dTe_i
+                
+                !Calculating the density and temperature derivative for amats
+                !We negelect the coulomb log's dericatives due to their smallness
+                
+                dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+                dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
+                                  / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+               
+                dnu_e_bg_drho   = nu_e_bg * dr0_corr_dn / r0_corr
+                
+                ddTe_i_dTi      = dnu_e_bg_dTi  * (Ti0_corr - Te0_corr) + nu_e_bg
+                ddTe_i_dTe      = dnu_e_bg_dTe  * (Ti0_corr - Te0_corr) - nu_e_bg
+                ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
+                
+                ddTi_e_dTi      = -ddTe_i_dTi
+                ddTi_e_dTe      = -ddTe_i_dTe
+                ddTi_e_drho     = -ddTe_i_drho
+              else
+                dTe_i = 0.
+                dTi_e = 0.
+                ddTe_i_dTi = 0.
+                ddTe_i_dTe = 0.
+                ddTe_i_drho = 0.
+                ddTi_e_dTi = 0.
+                ddTi_e_dTe = 0.
+                ddTi_e_drho = 0.
+              endif
 
 
             endif       ! with_impurities
  
-            ! --- Ion-electron energy transfer
-            if (thermalization) then
-              ! Te in eV:
-              Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-              dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
-              
-              ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
-              if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
-              
-              lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
-              nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
-                             * (1.d14*central_density*r0_corr) * lambda_e_bg &
-                             / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
-                             / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
-              
-              if (nu_e_bg < 0.)  nu_e_bg  = 0.
-              
-              !Converting the energy transfer rate from s^-1 to JOREK unit
-              t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-              nu_e_bg  = nu_e_bg * t_norm    
-              
-              dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
-              dTi_e    = -dTe_i
-              
-              !Calculating the density and temperature derivative for amats
-              !We negelect the coulomb log's dericatives due to their smallness
-              
-              dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-              dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
-                                / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-             
-              dnu_e_bg_drho   = nu_e_bg * dr0_corr_dn / r0_corr
-              
-              ddTe_i_dTi      = dnu_e_bg_dTi  * (Ti0_corr - Te0_corr) + nu_e_bg
-              ddTe_i_dTe      = dnu_e_bg_dTe  * (Ti0_corr - Te0_corr) - nu_e_bg
-              ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
-              
-              ddTi_e_dTi      = -ddTe_i_dTi
-              ddTi_e_dTe      = -ddTe_i_dTe
-              ddTi_e_drho     = -ddTe_i_drho
-            else
-              dTe_i = 0.
-              dTi_e = 0.
-              ddTe_i_dTi = 0.
-              ddTe_i_dTe = 0.
-              ddTe_i_drho = 0.
-              ddTi_e_dTi = 0.
-              ddTi_e_dTe = 0.
-              ddTi_e_drho = 0.
-            endif
-
             ! ---Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = Te0
             T_or_Te_corr     = Te0_corr
@@ -1204,6 +1259,179 @@ do i=1,n_vertex_max
               dZK_par_dT = 0.d0
             endif
 
+            if (with_impurities) then
+              select case ( trim(imp_type) )
+                case('D2')
+                  m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
+                case('Ar')
+                  m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
+                case('Ne')
+                  m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
+                case default
+                  write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+                  write(*,*) '=> We assume the gas is D2.'
+                  m_i_over_m_imp = central_mass/2.
+              end select
+         
+              Z_imp = 0.
+              dZ_imp_dT = 0.
+              d2Z_imp_dT2 = 0.
+         
+              ! Te in eV:
+              Te_corr_eV      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+              dTe_corr_eV_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+              Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+         
+              ! We get the charge state distribution assuming n_e=10^20/m^3.
+              ! Later maybe we should implement an iterative method.
+         
+              if (allocated(imp_adas(1)%ionisation_energy)) then
+         
+                if (allocated(P_imp)) deallocate(P_imp)
+                if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+         
+                allocate(P_imp(0:imp_adas(1)%n_Z))
+                allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+         
+         !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),           &
+         !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT, &
+         !                              z_TeTe_out=d2Z_imp_dT2)
+                call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+                                       p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT, &
+                                       z_avg_TeTe=d2Z_imp_dT2)
+         
+                ! Ionization potential energy
+                E_ion     = 0.
+                dE_ion_dT = 0.
+                E_ion_bg  = 13.6 ! (Note: H and D have a different ionization energy, 
+                                 !  but the difference is small.)
+         
+                ! In eV
+                do ion_i=1, imp_adas(1)%n_Z
+                  do ion_k=1, ion_i
+                    E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+                    dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+                  end do
+                end do
+                
+                ! Convert from eV to JOREK units
+                E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+                dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+                E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
+                ! Convert E_ion gradient wrt. T from 1/K into 1/(JOREK units)
+                dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
+         
+              else
+         
+                if (allocated(P_imp)) deallocate(P_imp)
+                if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+         
+                allocate(P_imp(0:imp_adas(1)%n_Z))
+                allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+         
+         !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+         !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
+                call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+                                              p_out=P_imp,p_Te_out=dP_imp_dT,                          &
+                                              z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
+         
+                E_ion     = 0.
+                dE_ion_dT = 0.
+                E_ion_bg  = 0.
+              end if
+         
+              ! Convert Z_imp gradient wrt. T from 1/K into 1/eV
+              dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
+              ! ...and now from 1/eV into 1/(JOREK units)
+              dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+              dZ_imp_dT = dZ_imp_dT * dT0_corr_dT                      ! Account for the temperature correction
+         
+              if (Te_corr_eV < 0.1) then
+                Z_imp = 0.
+                dZ_imp_dT = 0.
+                d2Z_imp_dT2 = 0.
+              endif
+         
+              if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
+                write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
+                write(*,*) "Te_corr_eV =", Te_corr_eV
+                stop
+              end if
+         
+              if (dZ_imp_dT < 0) then
+                write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
+                write(*,*) "Z_imp, T_e", Z_imp, Te_corr_eV, T0
+                stop
+              end if
+         
+              alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+              dalpha_imp_dT   = 0.5*m_i_over_m_imp*dZ_imp_dT
+              d2alpha_imp_dT2 = 0.5*m_i_over_m_imp*d2Z_imp_dT2
+              alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
+              alpha_imp_tri   = 2. * dalpha_imp_dT + d2alpha_imp_dT2 * T0
+         
+              beta_imp     = m_i_over_m_imp*Z_imp - 1.
+              dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
+         
+              ne_SI       = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
+              ne_JOREK     = r0_corr + beta_imp * rimp0_corr ! Electron density in JOREK unit
+              ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
+                                                                     ! Too small rho_1 will cause a problem
+         
+              ! Calculate the effective charge of all species
+              Z_eff        = 0.
+              dZ_eff_dT    = 0.
+              dZ_eff_dr0   = 0.
+              dZ_eff_drimp0= 0.
+         
+              ! First get the value of Z_eff
+              Z_eff        = r0_corr - rimp0_corr
+              do ion_i=1, imp_adas(1)%n_Z
+                Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
+              end do
+              Z_eff        = Z_eff / ne_JOREK
+              if (Z_eff < 1.) Z_eff = 1.
+              if (Z_eff > (imp_adas(1)%n_Z)**2) Z_eff = (imp_adas(1)%n_Z)**2
+         
+              ! Then three(!) gradients
+              if (Z_eff >= 1.) then
+                do ion_i=1, imp_adas(1)%n_Z
+                  dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rimp0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
+                end do
+                dZ_eff_dT    = dZ_eff_dT / ne_JOREK
+                dZ_eff_dT    = dZ_eff_dT - Z_eff * dbeta_imp_dT * rimp0_corr / ne_JOREK
+           
+                dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
+           
+                dZ_eff_drimp0  = dZ_eff_drimp0 - 1.
+                do ion_i=1, imp_adas(1)%n_Z
+                  dZ_eff_drimp0= dZ_eff_drimp0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
+                end do
+                dZ_eff_drimp0  = dZ_eff_drimp0 / ne_JOREK
+                dZ_eff_drimp0  = dZ_eff_drimp0 - Z_eff * beta_imp / ne_JOREK
+              else
+                Z_eff        = 1.
+              end if
+
+              P0    = (r0+rimp0*alpha_imp) * T0
+              P0_x  = (r0_x+rimp0_x*alpha_imp) * T0 + (r0+rimp0*alpha_imp_bis) * T0_x
+              P0_y  = (r0_y+rimp0_y*alpha_imp) * T0 + (r0+rimp0*alpha_imp_bis) * T0_y
+              P0_s  = (r0_s+rimp0_s*alpha_imp) * T0 + (r0+rimp0*alpha_imp_bis) * T0_s
+              P0_t  = (r0_t+rimp0_t*alpha_imp) * T0 + (r0+rimp0*alpha_imp_bis) * T0_t
+              P0_p  = (r0_p+rimp0_p*alpha_imp) * T0 + (r0+rimp0*alpha_imp_bis) * T0_p
+              P0_ss = (r0_ss+rimp0_ss*alpha_imp) * T0 + 2.d0 * (r0_s+rimp0_s*alpha_imp_bis) * T0_s + (r0+rimp0*alpha_imp_bis) * T0_ss &
+                      + rimp0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_s)**2.d0
+              P0_tt = (r0_tt+rimp0_tt*alpha_imp) * T0 + 2.d0 * (r0_t+rimp0_t*alpha_imp_bis) * T0_t + (r0+rimp0*alpha_imp_bis) * T0_tt &
+                      + rimp0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_t)**2.d0     
+              P0_st = (r0_st+rimp0_st*alpha_imp) * T0 + (r0_t+rimp0_t*alpha_imp_bis) * T0_s + (r0_s+rimp0_s*alpha_imp_bis) * T0_t     &
+                      + (r0+rimp0*alpha_imp_bis) * T0_st + rimp0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * T0_s * T0_t
+              P0_xx = (r0_xx+rimp0_xx*alpha_imp) * T0 + 2.d0 * (r0_x+rimp0_x*alpha_imp_bis) * T0_x + (r0+rimp0*alpha_imp_bis) * T0_xx &
+                      + rimp0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_x)**2.d0
+              P0_yy = (r0_yy+rimp0_yy*alpha_imp) * T0 + 2.d0 * (r0_y+rimp0_y*alpha_imp_bis) * T0_y + (r0+rimp0*alpha_imp_bis) * T0_yy &
+                      + rimp0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * (T0_y)**2.d0	     
+              P0_xy = (r0_xy+rimp0_xy*alpha_imp) * T0 + (r0_y+rimp0_y*alpha_imp_bis) * T0_x + (r0_x+rimp0_x*alpha_imp_bis) * T0_y     &
+                      + (r0+rimp0*alpha_imp_bis) * T0_xy + rimp0 * (2.d0*dalpha_imp_dT + d2alpha_imp_dT2*T0) * T0_x * T0_y 
+            endif
             ! --- Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = T0
             T_or_Te_corr     = T0_corr
@@ -1217,36 +1445,73 @@ do i=1,n_vertex_max
             eta_T     =   eta   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
             deta_dT   = - eta   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
             d2eta_d2T =   eta   * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
+            deta_dr0  = 0.
+            deta_drimp0 = 0.
           else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta) then
             eta_T     = eta   * (T_max_eta/T_or_Te_0)**(-1.5d0)
             deta_dT   = 0.
             d2eta_d2T = 0.     
+            deta_dr0  = 0.
+            deta_drimp0 = 0.
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
+            deta_dr0  = 0.
+            deta_drimp0 = 0.
           end if
           
           ! --- Eta for ohmic heating
           if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
             eta_T_ohm     =   eta_ohmic   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
             deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
+            deta_dr0_ohm  = 0.
+            deta_drimp0_ohm = 0.
           else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta_ohm) then
             eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_or_Te_0)**(-1.5d0)
             deta_dT_ohm   = 0.    
+            deta_dr0_ohm  = 0.
+            deta_drimp0_ohm = 0.
           else
             eta_T_ohm     = eta_ohmic
             deta_dT_ohm   = 0.d0
+            deta_dr0_ohm  = 0.
+            deta_drimp0_ohm = 0.
           end if
 
           if ( eta_T_dependent .and.  xpoint2 .and. (T_or_Te .lt. T_min) ) then
             eta_T     = eta       * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
+            deta_dr0  = 0.
+            deta_drimp0 = 0.
 
             eta_T_ohm = eta_ohmic * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
             deta_dT_ohm   = 0.
+            deta_dr0_ohm  = 0.
+            deta_drimp0_ohm = 0.
           end if
+          ! This is to represent the dependence on Z_eff in resistivity
+          eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+          eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+
+          deta_coef_dZeff = (1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+          deta_coef_dZeff = deta_coef_dZeff + Z_eff*(1.198+2.*0.222*Z_eff)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+          deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
+          deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
+
+          if ( eta_T_dependent ) then
+            deta_dr0    = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+            deta_drimp0 = eta_T * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
+            deta_dT     = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
+            eta_T       = eta_T * eta_coef
+
+            deta_dr0_ohm    = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+            deta_drimp0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
+            deta_dT_ohm     = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
+            eta_T_ohm       = eta_T_ohm * eta_coef
+          end if
+
 
           ! --- Temperature dependent viscosity
           if ( visco_T_dependent ) then

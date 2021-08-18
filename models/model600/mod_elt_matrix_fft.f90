@@ -1491,27 +1491,29 @@ do i=1,n_vertex_max
             deta_dr0_ohm  = 0.
             deta_drimp0_ohm = 0.
           end if
-          ! This is to represent the dependence on Z_eff in resistivity
-          eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-          eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
 
-          deta_coef_dZeff = (1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-          deta_coef_dZeff = deta_coef_dZeff + Z_eff*(1.198+2.*0.222*Z_eff)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-          deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
-          deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
-
-          if ( eta_T_dependent ) then
-            deta_dr0    = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-            deta_drimp0 = eta_T * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
-            deta_dT     = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
-            eta_T       = eta_T * eta_coef
-
-            deta_dr0_ohm    = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-            deta_drimp0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
-            deta_dT_ohm     = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
-            eta_T_ohm       = eta_T_ohm * eta_coef
-          end if
-
+          if (with_impurities) then
+            ! This is to represent the dependence on Z_eff in resistivity
+            eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+            eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
+  
+            deta_coef_dZeff = (1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+            deta_coef_dZeff = deta_coef_dZeff + Z_eff*(1.198+2.*0.222*Z_eff)/(1.+2.966*Z_eff+0.753*Z_eff**2)
+            deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
+            deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
+  
+            if ( eta_T_dependent ) then
+              deta_dr0    = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+              deta_drimp0 = eta_T * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
+              deta_dT     = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
+              eta_T       = eta_T * eta_coef
+  
+              deta_dr0_ohm    = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
+              deta_drimp0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
+              deta_dT_ohm     = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
+              eta_T_ohm       = eta_T_ohm * eta_coef
+            end if
+          endif
 
           ! --- Temperature dependent viscosity
           if ( visco_T_dependent ) then

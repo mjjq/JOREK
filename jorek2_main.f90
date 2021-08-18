@@ -256,14 +256,15 @@ required = 0
     gmres     = .false. 
   end if
 
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
-  ! --- Read ADAS data and generate coronal equilibrium if needed
-  call init_imp_adas(my_id)
-#else
-  if (use_imp_adas .and. (nimp_bg > 0.d0)) then
+  if (with_impurities) then
+    ! --- Read ADAS data and generate coronal equilibrium if needed
     call init_imp_adas(my_id)
+  elseif (with_neutrals) then
+    if (use_imp_adas .and. (nimp_bg > 0.d0)) then
+      call init_imp_adas(my_id)
+    endif
   endif
-#endif
+
 
   ! --- Write out all parameters defined in parameters and the namelist input file.
   call log_parameters(my_id)

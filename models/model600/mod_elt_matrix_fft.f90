@@ -1612,6 +1612,11 @@ do i=1,n_vertex_max
           if (xpoint2) then
             if (r0 .lt. D_prof_neg_thresh)  then
               D_prof  = D_prof_neg
+              D_par   = D_prof_neg
+              if (with_impurities) then
+                D_prof_imp = D_prof_neg
+                D_par_imp  = D_prof_neg
+              endif
             endif
 
             if ( with_TiTe ) then ! (with_TiTe) ****************************************************
@@ -1621,9 +1626,18 @@ do i=1,n_vertex_max
               if (Ti0 .lt. ZK_prof_neg_thresh) then
                 ZKi_prof = ZK_prof_neg
               endif
+              if (Te0 .lt. ZK_par_neg_thresh) then
+                ZKe_par_T = ZK_par_neg
+              endif
+              if (Ti0 .lt. ZK_par_neg_thresh) then
+                ZKi_par_T = ZK_par_neg
+              endif
             else ! (with_TiTe), i.e. with single temperature ***************************************
               if (T0 .lt. ZK_prof_neg_thresh) then
                 ZK_prof = ZK_prof_neg
+              endif
+              if (T0 .lt. ZK_par_neg_thresh) then
+                ZKpar_T = ZK_par_neg
               endif
             endif ! (with_TiTe) ********************************************************************
 
@@ -1809,6 +1823,7 @@ do i=1,n_vertex_max
             Bgrad_rho_star   = ( v_x  * ps0_y - v_y  * ps0_x ) / BigR                         
             Bgrad_rho_k_star = ( F0 / BigR * v_p )           / BigR                           
             Bgrad_rho        = ( F0 / BigR * r0_p +  r0_x * ps0_y - r0_y * ps0_x ) / BigR
+            Bgrad_rhoimp     = ( F0 / BigR * rimp0_p + rimp0_x * ps0_y - rimp0_y * ps0_x ) / BigR
 
             Bgrad_T_star     = ( v_x  * ps0_y - v_y  * ps0_x ) / BigR                         
             Bgrad_T_k_star   = ( F0 / BigR * v_p           ) / BigR                           
@@ -2261,19 +2276,19 @@ do i=1,n_vertex_max
                          - psi_t  * (x_st(ms,mt)*y_s(ms,mt) - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               & 
                          - xjac_x * (- psi_s * x_t(ms,mt) + psi_t * x_s(ms,mt) )   / xjac**2
 
-                  u    = psi    ;  zj    = psi    ;  w    = psi    ; rho    = psi    ;  Ti    = psi    ; vpar    = psi   ; Te   = psi    ; T   = psi
-                  u_x  = psi_x  ;  zj_x  = psi_x  ;  w_x  = psi_x  ; rho_x  = psi_x  ;  Ti_x  = psi_x  ; vpar_x  = psi_x ; Te_x = psi_x  ; T_x = psi_x
-                  u_y  = psi_y  ;  zj_y  = psi_y  ;  w_y  = psi_y  ; rho_y  = psi_y  ;  Ti_y  = psi_y  ; vpar_y  = psi_y ; Te_y = psi_y  ; T_y = psi_y
-                  u_p  = psi_p  ;  zj_p  = psi_p  ;  w_p  = psi_p  ; rho_p  = psi_p  ;  Ti_p  = psi_p  ; vpar_p  = psi_p ; Te_p = psi_p  ; T_p = psi_p
-                  u_s  = psi_s  ;  zj_s  = psi_s  ;  w_s  = psi_s  ; rho_s  = psi_s  ;  Ti_s  = psi_s  ; vpar_s  = psi_s ; Te_s = psi_s  ; T_s = psi_s
-                  u_t  = psi_t  ;  zj_t  = psi_t  ;  w_t  = psi_t  ; rho_t  = psi_t  ;  Ti_t  = psi_t  ; vpar_t  = psi_t ; Te_t = psi_t  ; T_t = psi_t
-                  u_ss = psi_ss ;  zj_ss = psi_ss ;  w_ss = psi_ss ; rho_ss = psi_ss ;  Ti_ss = psi_ss ; vpar_ss = psi_ss; Te_ss = psi_ss; T_ss = psi_ss
-                  u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  Ti_tt = psi_tt ; vpar_tt = psi_tt; Te_tt = psi_tt; T_tt = psi_tt
-                  u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  Ti_st = psi_st ; vpar_st = psi_st; Te_st = psi_st; T_st = psi_st
+                  u    = psi    ;  zj    = psi    ;  w    = psi    ; rho    = psi    ;  Ti    = psi    ; vpar    = psi   ; Te   = psi    ; T   = psi    ;  rhoimp    = psi    ;
+                  u_x  = psi_x  ;  zj_x  = psi_x  ;  w_x  = psi_x  ; rho_x  = psi_x  ;  Ti_x  = psi_x  ; vpar_x  = psi_x ; Te_x = psi_x  ; T_x = psi_x  ;  rhoimp_x  = psi    ;
+                  u_y  = psi_y  ;  zj_y  = psi_y  ;  w_y  = psi_y  ; rho_y  = psi_y  ;  Ti_y  = psi_y  ; vpar_y  = psi_y ; Te_y = psi_y  ; T_y = psi_y  ;  rhoimp_y  = psi    ;
+                  u_p  = psi_p  ;  zj_p  = psi_p  ;  w_p  = psi_p  ; rho_p  = psi_p  ;  Ti_p  = psi_p  ; vpar_p  = psi_p ; Te_p = psi_p  ; T_p = psi_p  ;  rhoimp_p  = psi    ;
+                  u_s  = psi_s  ;  zj_s  = psi_s  ;  w_s  = psi_s  ; rho_s  = psi_s  ;  Ti_s  = psi_s  ; vpar_s  = psi_s ; Te_s = psi_s  ; T_s = psi_s  ;  rhoimp_s  = psi    ;
+                  u_t  = psi_t  ;  zj_t  = psi_t  ;  w_t  = psi_t  ; rho_t  = psi_t  ;  Ti_t  = psi_t  ; vpar_t  = psi_t ; Te_t = psi_t  ; T_t = psi_t  ;  rhoimp_t  = psi    ;
+                  u_ss = psi_ss ;  zj_ss = psi_ss ;  w_ss = psi_ss ; rho_ss = psi_ss ;  Ti_ss = psi_ss ; vpar_ss = psi_ss; Te_ss = psi_ss; T_ss = psi_ss;  rhoimp_ss = psi    ;
+                  u_tt = psi_tt ;  zj_tt = psi_tt ;  w_tt = psi_tt ; rho_tt = psi_tt ;  Ti_tt = psi_tt ; vpar_tt = psi_tt; Te_tt = psi_tt; T_tt = psi_tt;  rhoimp_tt = psi    ;
+                  u_st = psi_st ;  zj_st = psi_st ;  w_st = psi_st ; rho_st = psi_st ;  Ti_st = psi_st ; vpar_st = psi_st; Te_st = psi_st; T_st = psi_st;  rhoimp_st = psi    ;
 
-                  u_xx = psi_xx ;                    w_xx = psi_xx ; rho_xx = psi_xx ;  Ti_xx = psi_xx ; vpar_xx = psi_xx; Te_xx = psi_xx; T_xx = psi_xx
-                  u_yy = psi_yy ;                    w_yy = psi_yy ; rho_yy = psi_yy ;  Ti_yy = psi_yy ; vpar_yy = psi_yy; Te_yy = psi_yy; T_yy = psi_yy
-                  u_xy = psi_xy ;                    w_xy = psi_xy ; rho_xy = psi_xy ;  Ti_xy = psi_xy ; vpar_xy = psi_xy; Te_xy = psi_xy; T_xy = psi_xy
+                  u_xx = psi_xx ;                    w_xx = psi_xx ; rho_xx = psi_xx ;  Ti_xx = psi_xx ; vpar_xx = psi_xx; Te_xx = psi_xx; T_xx = psi_xx;  rhoimp_xx = psi    ;
+                  u_yy = psi_yy ;                    w_yy = psi_yy ; rho_yy = psi_yy ;  Ti_yy = psi_yy ; vpar_yy = psi_yy; Te_yy = psi_yy; T_yy = psi_yy;  rhoimp_yy = psi    ;
+                  u_xy = psi_xy ;                    w_xy = psi_xy ; rho_xy = psi_xy ;  Ti_xy = psi_xy ; vpar_xy = psi_xy; Te_xy = psi_xy; T_xy = psi_xy;  rhoimp_xy = psi    ;
 
                   rhon   = psi
                   rhon_x = psi_x
@@ -2294,11 +2309,18 @@ do i=1,n_vertex_max
                   rho_x_hat = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x
                   rho_y_hat = BigR**2 * rho_y
 
+                  rhoimp_hat   = BigR**2 * rhoimp
+                  rhoimp_x_hat = 2.d0 * BigR * BigR_x  * rhoimp + BigR**2 * rhoimp_x
+                  rhoimp_y_hat = BigR**2 * rhoimp_y
+
                   Btheta2_psi        = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
                   Bgrad_rho_star_psi = ( v_x   * psi_y - v_y   * psi_x ) / BigR
                   Bgrad_rho_psi      = ( r0_x  * psi_y - r0_y  * psi_x ) / BigR
+                  Bgrad_rhoimp_psi   = ( rimp0_x  * psi_y - rimp0_y  * psi_x ) / BigR
                   Bgrad_rho_rho      = ( rho_x * ps0_y - rho_y * ps0_x ) / BigR
                   Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
+                  Bgrad_rhoimp_rhoimp   = ( rhoimp_x * ps0_y - rhoimp_y * ps0_x ) / BigR
+                  Bgrad_rhoimp_rhoimp_n = ( F0 / BigR * rhoimp_p ) / BigR
                   BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
                   Pi0_x_rho  = rho_x  * Ti0 +       rho   * Ti0_x

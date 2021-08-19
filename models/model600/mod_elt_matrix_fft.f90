@@ -1355,7 +1355,8 @@ do i=1,n_vertex_max
               rhs_ij(var_vpar) = - v * F0 / BigR * P0_p                                                                 * xjac * tstep &
                                  - v * (P0_s * ps0_t - P0_t * ps0_s)                                                           * tstep &
                                                                                                                         
-                                 - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR                    * xjac * tstep &
+                    ! Old term (not to be included anymore due to implementations of conservative momentum):
+                    !             - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR                    * xjac * tstep &
                                                                                                                         
                                  - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                                   * tstep &
                                  - 0.5d0 * v  * vpar0**2 * BB2 * (ps0_s * r0_t - ps0_t * r0_s)                                 * tstep &
@@ -1365,13 +1366,25 @@ do i=1,n_vertex_max
                                  
                                  + zeta * v * delta_g(mp,var_vpar,ms,mt) * r0_corr * F0**2 / BigR                       * xjac         &
                                  + zeta * v * r0_corr * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR        * xjac         &
+                                 ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                 ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                                 + zeta * v * delta_g(mp,var_rho,ms,mt) * vpar0 * F0**2 / BigR * xjac  &
+                                 + v * (r0_x_hat * u0_y - r0_y_hat * u0_x)       * vpar0 * BB2 * xjac * tstep &
+                                 - v * F0 / BigR * (r0 * vpar0_p + r0_p * vpar0) * vpar0 * BB2 * xjac * tstep &
+                                 - v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x)  * vpar0 * BB2 * xjac * tstep &
+                                 - v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)     * vpar0 * BB2 * xjac * tstep &
   
                            - tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2                                                                 &
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                        &
                                      * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac                      )        * xjac * tstep * tstep &
-                           - tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2                                                                 &
-                                     * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                        &
-                                     * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)           * xjac * tstep * tstep &
+!                           - tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2                                                                 &
+!                                     * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                        &
+!                                     * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)           * xjac * tstep * tstep &
+!=============================== New TG_num terms==================================
+                           - tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+                                     * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR  &
+                                     * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * tstep * tstep &
+!===============================End of new TG_num terms============================
                  
                                  + (1.d0 - delta_n_convection) * (     &
                                    - v *(r0_corr * rn0_corr * Sion_T) * vpar0 * BB2 * BigR                              * xjac * tstep &
@@ -1396,7 +1409,14 @@ do i=1,n_vertex_max
   
                  - tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
                            * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep 
+                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep& 
+!=============================== New TG_num terms==================================
+
+                 - tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+                           * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR  &
+                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep
+
+!===============================End of new TG_num terms============================
             end if ! (with_vpar)
 
 
@@ -1798,7 +1818,12 @@ do i=1,n_vertex_max
                   !#  Perpendicular Momentum Equation                                                                #
                   !###################################################################################################
 
-                  amat(var_u,var_psi) = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep
+                  amat(var_u,var_psi) = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep &
+
+                                        ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                        ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                                        - BigR**2 * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                        - BigR**2 * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
 
                   ! ------------------------------------------------------ NEO
                   if (NEO) then
@@ -1827,13 +1852,30 @@ do i=1,n_vertex_max
 
                                     + v * tauIC*2. * BigR**4 * (u_xy * (Pi0_xx - Pi0_yy) - Pi0_xy * (u_xx - u_yy)) * xjac * theta * tstep &
 
-                                    - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
+                                    ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                    ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                                    + BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x)      * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                                    + BigR**2 * (r0_x_hat * u_y  - r0_y_hat * u_x)       * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                    - BigR * F0 * (r0 * vpar0_p + vpar0 * r0_p)          * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                                    - BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                                    - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
+
+                       ! Old term (not to be included anymore due to implementations of terms above):
+                       !             - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
 
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)                                 &
                                               * ( v_x * u0_y - v_y * u0_x)                             * xjac * theta * tstep * tstep &
 
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)                                         &
                                       * ( v_x * u_y - v_y * u_x)                                                 * xjac * theta * tstep * tstep &
+!====================================New TG_num terms=================================
+                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u_y - r0_y * u_x) &
+                                              * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep &
+              
+                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                              * ( v_x * u_y - v_y * u_x) * theta * xjac * tstep * tstep & 
+
+!===============================End of NewTG_num terms==============================
                   
                                     + (1.d0 - delta_n_convection) * (  &
                                     - BigR**3 * (r0_corr*rn0_corr*Sion_T) * (v_x * u_x + v_y * u_y)              * xjac * theta * tstep &
@@ -1845,6 +1887,9 @@ do i=1,n_vertex_max
                               - amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2) * (ps0_x*v_x + ps0_y*v_y) * r0 *(ps0_x*u_x + ps0_y*u_y) &
                               * BigR * xjac * theta * tstep
                   endif
+                  ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                  ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
+                  amat_n(var_u,var_rho) = - BigR * vpar0 * F0 * rho_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
                   !---------------------------------------- NEO
 
                   amat(var_u,var_zj)   = - v * (ps0_s * zj_t  - ps0_t * zj_s)                                              * theta * tstep
@@ -1858,13 +1903,25 @@ do i=1,n_vertex_max
                                     + visco_num_T * (v_xx + v_x/BigR + v_yy)*(w_xx + w_x/BigR + w_yy)               * xjac * theta * tstep &
                                                                                                                     
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w_x * u0_y - w_y * u0_x)                                      &
-                                            * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
+                                            * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+!====================================New TG_num terms=================================
+                                    + tgnum_u * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                              * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep 
+
+!===============================End of NewTG_num terms==============================
 
                   amat(var_u,var_rho) = + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)                         * xjac * theta * tstep &
                                       + rho_hat * BigR**2 * w0 * (v_s * u0_t   - v_t * u0_s)                               * theta * tstep &
                                       - BigR**2 * (v_s * rho_t * (Ti0+Te0)     - v_t * rho_s * (Ti0+Te0))                  * theta * tstep &
                                       - BigR**2 * (v_s * rho   * (Ti0_t+Te0_t) - v_t * rho   * (Ti0_s+Te0_s))              * theta * tstep &
-                                                                                                                           
+                                      ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                      ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	     	    	     
+                                      - BigR**3 * rho * (v_x * u0_x + v_y * u0_y) * xjac  * (1.d0 + zeta)          &
+                                      + BigR**2 * (rho_x_hat * u0_y - rho_y_hat * u0_x)     * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                      - BigR * rho * F0 * vpar0_p                           * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                      - BigR**2 * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                      - BigR**2 * vpar0 * (rho_x * ps0_y - rho_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+
                                       + v * tauIC*2. * BigR**4 * Ti0  * (rho_s * w0_t - rho_t * w0_s)                      * theta * tstep &
                                       + v * tauIC*2. * BigR**4 * rho * (Ti0_s  * w0_t - Ti0_t  * w0_s)                     * theta * tstep &
                                       + tauIC*2. * BigR**3 * (Ti0_y * rho + Ti0 * rho_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
@@ -1877,6 +1934,11 @@ do i=1,n_vertex_max
 
                                       + tgnum_u * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)                                            &
                                       * ( v_x * u0_y - v_y * u0_x)                                           * xjac * theta * tstep * tstep     &
+!====================================New TG_num terms=================================
+                                      + tgnum_u * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                                * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep &
+
+!===============================End of NewTG_num terms==============================
 
                                       + (1.d0 - delta_n_convection) * (                                                                &
                                         - BigR**3 * (rho* rn0_corr * Sion_T)        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
@@ -1957,6 +2019,21 @@ do i=1,n_vertex_max
                       amat(var_u,var_vpar) = amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
                                 * BigR * xjac * tstep * theta
                     endif
+
+
+
+                    if (with_vpar) then
+                       ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                       ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	     	    	     	  
+                      amat(var_u,var_vpar) =   amat(var_u,var_vpar)   &
+                            - BigR * vpar * F0 * r0_p                          * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                            - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                            - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
+
+             ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+             ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
+                      amat_n(var_u,var_vpar) = - BigR * r0 * F0 * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep
+                    endif ! /with_vpar
 
 
                     amat(var_u,var_T) = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)           * theta * tstep  &

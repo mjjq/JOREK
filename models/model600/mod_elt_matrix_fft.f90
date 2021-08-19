@@ -77,12 +77,13 @@ real*8     :: Vpar, Vpar_x, Vpar_y, Vpar_p, Vpar_s, Vpar_t, Vpar_ss, Vpar_st, Vp
 real*8     :: rn0, rn0_s, rn0_t, rn0_x, rn0_y, rn0_p, rn0_ss, rn0_st, rn0_tt, rn0_xx, rn0_yy
 real*8     :: rn0_hat, rn0_x_hat, rn0_y_hat, rn0_corr
 real*8     :: rhon, rhon_s, rhon_t, rhon_p, rhon_x, rhon_y, rhon_ss, rhon_tt, rhon_st, rhon_xx, rhon_yy, rhon_xy
-real*8     :: rimp0, rimp0_s, rimp0_t, rimp0_x, rimp0_y, rimp0_p, rimp0_ss, rimp0_st, rimp0_tt, rimp0_xx, rimp0_yy
+real*8     :: rimp0, rimp0_s, rimp0_t, rimp0_x, rimp0_y, rimp0_p, rimp0_ss, rimp0_st, rimp0_tt
+real*8     :: rimp0_xx, rimp0_yy, rimp0_xy
 real*8     :: rimp0_hat, rimp0_x_hat, rimp0_y_hat, rimp0_corr, drimp0_corr_dn
 real*8     :: rhoimp, rhoimp_s, rhoimp_t, rhoimp_p, rhoimp_x, rhoimp_y
 real*8     :: rhoimp_ss, rhoimp_tt, rhoimp_st, rhoimp_xx, rhoimp_yy, rhoimp_xy
 real*8	   :: dn0x, dn0y, dn0p
-real*8     :: P0,  P0_s,  P0_t,  P0_x,  P0_y,  P0_p
+real*8     :: P0,  P0_s,  P0_t,  P0_x,  P0_y,  P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_xy, P0_yy
 real*8     :: Pi0, Pi0_s, Pi0_t, Pi0_x, Pi0_y, Pi0_p, Pi0_ss, Pi0_st, Pi0_tt, Pi0_xx, Pi0_xy, Pi0_yy
 real*8     :: Pi0_x_rho, Pi0_xx_rho, Pi0_y_rho, Pi0_yy_rho, Pi0_xy_rho
 real*8     :: Pi0_x_Ti,  Pi0_xx_Ti,  Pi0_y_Ti,  Pi0_yy_Ti,  Pi0_xy_Ti
@@ -145,9 +146,12 @@ real*8     :: m_i_over_m_imp, m_imp
 !   -Mean impurity ionization state
 real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, T0_Zimp, alpha_Zimp, Z_eff, dZ_eff_dT, eta_coef, deta_coef_dZeff
 real*8     :: dZ_eff_dr0, dZ_eff_drimp0, Z_eff_imp, dZ_eff_imp_dT
-!   -Coefficients related to Z_imp
+!   -Coefficients related to Z_imp (with_TeTi)
 real*8     :: alpha_i, dalpha_i_dT, d2alpha_i_dT2
 real*8     :: alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis, alpha_e_tri
+!   -Coefficients related to Z_imp (! with_TeTi)
+real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_imp_tri
+real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Temperature used in radiation rate
@@ -1091,7 +1095,7 @@ do i=1,n_vertex_max
                                   / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
             
                 dnu_e_imp_drhoimp = nu_e_imp * drimp0_corr_dn / rimp0_corr
-                dnu_e_imp_drhimp  = 0.
+                dnu_e_imp_drho    = 0.
             
                 dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT &
                                   / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)

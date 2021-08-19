@@ -1258,6 +1258,10 @@ do i=1,n_vertex_max
 
                          - tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep       &
+!====================================New TG_num terms=================================
+                         - tgnum_u * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                   * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep             &
+!===============================End of NewTG_num terms==============================
 
                          - v * tauIC*2. * BigR**4 * (Pi0_s * w0_t - Pi0_t * w0_s)                                  * tstep &
 
@@ -1269,9 +1273,17 @@ do i=1,n_vertex_max
                          + dvisco_dT * bigR * W_dia * (v_x*Ti0_x + v_y*Ti0_y)                               * xjac * tstep &
                          + visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy)                              * xjac * tstep &
 
-                         + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
+                      ! Old term (not to be included anymore due to implementations of terms above):
+                         !+ BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
                      
-                         - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
+                         - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac                    &
+                      ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                      ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):		      
+                         - zeta * BigR * BigR**2 * delta_g(mp,var_rho,ms,mt) * (v_x * u0_x + v_y * u0_y)  * xjac & 
+                         - BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x) * (v_x * u0_x + v_y * u0_y)      * xjac * tstep &
+                         + BigR * F0 * (r0 * vpar0_p + vpar0 * r0_p) * (v_x * u0_x + v_y * u0_y)          * xjac * tstep &
+                         + BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * tstep  &
+                         + BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u0_x + v_y * u0_y) * xjac * tstep
             
             !------------------------------------------------------------------------ NEO
             if (NEO) then

@@ -60,7 +60,7 @@ integer, parameter :: var_Ti     = sum(merge((/                               6/
 integer, parameter :: var_Te     = sum(merge((/n_var_base+n_var_vpar         +1/), (/0/), with_TiTe    ))
 integer, parameter :: var_Vpar   = sum(merge((/                               7/), (/0/), with_vpar    ))
 integer, parameter :: var_rhon   = sum(merge((/n_var_base+sum(n_var_ext(1:2))+1/), (/0/), with_neutrals))
-integer, parameter :: var_rhoimp = sum(merge((/n_var_base+sum(n_var_ext(1:3))+1/), (/0/), with_neutrals))
+integer, parameter :: var_rhoimp = sum(merge((/n_var_base+sum(n_var_ext(1:3))+1/), (/0/), with_impurities))
 integer, parameter :: var_nre    = sum(merge((/n_var_base+sum(n_var_ext(1:4))+1/), (/0/), with_refluid ))
 ! --- variables not relevant to this model
 integer, parameter :: var_AR   = 0

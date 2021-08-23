@@ -2321,7 +2321,7 @@ do i=1,n_vertex_max
                     
 !=============================== New TG_num terms==================================
 
-                      amat_kn(var_vpar,var_rho) = + TG_NUM7 * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
+                      amat_kn(var_vpar,var_rho) = + tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 &
                                           * (+ F0 / BigR * rho_p) / BigR  &
                                           * (+ F0 / BigR * v_p) * xjac * theta * tstep*tstep
 

@@ -67,7 +67,7 @@ write(*,*) sim%my_id,' TAE_LOOP n_mode_families: ',n_mode_families
 
 
 rho_part    = 1.195d19 !(corrected value to obtain density=1.441e17 (as in benchmark, for original profile with toroidal flux) 
-!rho_part    = 1.d18
+rho_part    = 1.d-18
 
 n_particles_local = int(n_particles/sim%n_cpu) 
 timesteps         = tstep_particles
@@ -308,17 +308,17 @@ call with(sim, counter)
 select type (particles => sim%groups(1)%particles)
 type is (particle_kinetic_leapfrog)
 #ifdef __GFORTRAN__
-    !$omp parallel do default(shared) & ! workaround for Error: �__vtab_mod_pcg32_rng_Pcg32_rng� not specified in enclosing �parallel�
+ !$omp parallel do default(shared) & 
 #else
-    !$omp parallel do default(none) &
-#endif
- !$omp schedule(dynamic,10) &
+ !$omp parallel do default(none) &
  !$omp shared(sim, particles, n_steps, timesteps, rng, particle_start_time,        &
  !$omp rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm,                           &
  !$omp jorek_feedback, CENTRAL_DENSITY, CENTRAL_MASS)                              &
+#endif
  !$omp private(particle_tmp, i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old,    &
  !$omp i_elm_old, i_elm, n_e, T_e,                                                 & 
  !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, ifail, v) & 
+ !$omp schedule(dynamic,10) &
  !$omp reduction(+:feedback_rhs)
  do j=1,size(particles,1)
 

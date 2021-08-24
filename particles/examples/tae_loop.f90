@@ -1,6 +1,5 @@
 !> Testing the coupling of the projections of particles to JOREK
-
-program example_loop
+program tae_loop
 
 use particle_tracer
 use mod_particle_diagnostics
@@ -63,11 +62,7 @@ integer   :: seed, i_rng, n_stream
 ! Start up MPI, jorek
 call sim%initialize(num_groups=1)
 
-write(*,*) sim%my_id,' TAE_LOOP n_mode_families: ',n_mode_families
-
-
 rho_part    = 1.195d19 !(corrected value to obtain density=1.441e17 (as in benchmark, for original profile with toroidal flux) 
-rho_part    = 1.d-18
 
 n_particles_local = int(n_particles/sim%n_cpu) 
 timesteps         = tstep_particles
@@ -75,8 +70,6 @@ timesteps         = tstep_particles
 ! Set up the field reader
 fieldreader = event(read_jorek_fields_interp_linear(basename='jorek', i=-1))
 call with(sim, fieldreader)
-
-write(*,*) sim%my_id,' ====TAE_LOOP n_mode_families: ',n_mode_families
 
 write(*,*) 'main : t_start = ',t_start
 
@@ -453,5 +446,4 @@ pure function f_toroidal_flux(n, P, grad_P) result(f)
 
 end function f_toroidal_flux
 
-
-end program example_loop
+end program tae_loop

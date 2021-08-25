@@ -147,7 +147,7 @@ endif
 jorek_feedback = new_projection(sim%fields%node_list, sim%fields%element_list, &
                                 filter    = filter_perp, filter_hyper    = filter_hyper, filter_parallel    = filter_par, &
                                 filter_n0 = filter_perp, filter_hyper_n0 = filter_hyper, filter_parallel_n0 = filter_par_n0, &
-                                calc_integrals=.false., to_vtk=.true., to_h5 = .false., basename='projections')
+                                calc_integrals=.false., to_vtk=.false., to_h5 = .false., basename='projections')
 
 allocate(jorek_feedback%rhs(n_order+1, n_vertex_max, sim%fields%element_list%n_elements, n_tor, 1))
 
@@ -381,8 +381,6 @@ type is (particle_kinetic_leapfrog)
 end select
 
 jorek_feedback%rhs = feedback_rhs
-
-write(*,*) 'jorek_feedback : ',maxval(abs(jorek_feedback%rhs))
 
 deallocate(feedback_rhs)
 

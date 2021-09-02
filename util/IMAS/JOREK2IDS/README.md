@@ -10,7 +10,7 @@ IMAS needs to be set up with
 
 Sample run can be saved with
 
-     python3 jorekHDF5toIDS_2.py --shot=303 --run=1 --user=${USER} --database=jorek --occurrence=0
+     python3 jorekHDF5toIDS.py --shot=303 --run=1 --user=${USER} --database=jorek --occurrence=0
 
 
 after selecting input directory such as inxflow_nper6

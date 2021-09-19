@@ -16,12 +16,7 @@ use mod_boundary
 use mod_vtk
 use mod_interp
 use mod_poloidal_currents
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source
-#endif
-#ifdef WITH_Impurities
-  use mod_injection_source
-#endif
+use mod_impurity, only: init_imp_adas, radiation_function, radiation_function_linear
 use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_openadas , only : read_adf11
 use mod_atomic_coeff_deuterium, only : ad_deuterium , atomic_coeff_deuterium
@@ -108,7 +103,7 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 logical               :: include_radiation
 integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg
-real*8                :: Te_eV, ne_SI, Lrad_imp, m_i_over_m_imp_bg, r_imp, coef_rad_imp
+real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp, coef_rad_imp
 real*8                :: T_corr, Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
@@ -339,7 +334,7 @@ allocate(scalar_names(n_scalars), vector_names(n_vectors))
 
 grad_psi = 0.d0
 
-scalar_names(1:n_var) = variable_names(1:n_var)
+scalar_names(1:n_var) = variable_names((/(i, i=1,n_var)/))
 if ( SI_units ) then
 #ifdef fullmhd
    scalar_names(var_rho)='n_e20m-3    '
@@ -348,6 +343,7 @@ if ( SI_units ) then
    scalar_names(var_UZ )='VZ_km/s     '
    scalar_names(var_Up )='Vp_km/s     '
 #else
+   scalar_names(var_u)='u_m/s       '
    scalar_names(var_zj)='j_MA/m2     '
    scalar_names(var_rho)='n_e20m-3    '
    if (with_TiTe) then
@@ -356,7 +352,9 @@ if ( SI_units ) then
    else
       scalar_names(var_T)='Te_keV      '
    endif
-   scalar_names(var_Vpar)='Vpar_km/s   '
+   if (with_Vpar) then
+      scalar_names(var_Vpar)='Vpar_km/s   '
+   endif
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -430,7 +428,7 @@ endif
 #ifdef WITH_Impurities
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &
-                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp ', 'Z_eff '/)
+                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp   ', 'Z_eff       '/)
  endif
 #endif
 
@@ -1229,29 +1227,11 @@ enddo  ! n_elements
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
       
       if (use_imp_adas) then  ! use open adas by default
-        r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU
-
-        select case ( trim(imp_type) )
-          case('C')
-            m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
-          case('Ar')
-            m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
-          case('Ne')
-            m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
-          case('W')
-            m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
-          case default
-            if (nimp_bg > 0) then
-              write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
-              stop
-            end if
-        end select      
-
+        r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU    
         if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
           ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
           coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                       *(central_density*1.d20)**2.5d0*m_i_over_m_imp_bg
-
+                       *(central_density*1.d20)**2.5d0
           Lrad_imp = 0.0
           call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)
           Lrad_imp = Lrad_imp * coef_rad_imp          
@@ -1292,30 +1272,30 @@ enddo  ! n_elements
   ! Atomic physics parameters for Impurities
   !-------------------------------------------
 
-     select case ( trim(imp_type) )
-       case('D2')
-         m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
-       case('Ar')
-         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
-       case('Ne')
-         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
-       case default
-         write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
-         write(*,*) '=> We assume the gas is D2.'
-         m_i_over_m_imp = central_mass/2.
-     end select
+   select case ( trim(imp_type) )
+     case('D2')
+       m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
+     case('Ar')
+       m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
+     case('Ne')
+       m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
+     case default
+       write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+       write(*,*) '=> We assume the gas is D2.'
+       m_i_over_m_imp = central_mass/2.
+   end select
 
    do i=1,nnos
-     T_real8 = scalars(i,6)
-     
-     if (T_min > T_1) then
-       T0_corr = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),2.*T_min)
+     if ( with_TiTe ) then
+       T_real8 = scalars(i,var_Te)
+       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),max(T_min,Te_1))/(EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
      else
-       T0_corr = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),2.*T_1)
-     end if
-     Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-
+       T_real8 = scalars(i,var_T)
+       Te_corr_eV = corr_neg_temp(T_real8,(/5.d-1,5.d-1/),max(2.*T_min,2.*T_1))/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+     endif
+     
      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
@@ -1413,11 +1393,12 @@ enddo  ! n_elements
       T_real8 = scalars(i,6)
       T_corr  = corr_neg_temp(T_real8)
       Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
+      
+      r0_real8  = scalars(i,5)
 
       call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_real8 )
 
-      r0_real8  = scalars(i,5)
       rn0_real8 = scalars(i,8)
 
       r0_corr   = corr_neg_dens(r0_real8)
@@ -1487,6 +1468,8 @@ if (SI_units) then
 
 #else /* not full-MHD */
 
+    !============================================u in m/s
+    scalars(i,var_u) = scalars(i,var_u)/t_norm
     !============================================j_phi in MA/m2
     scalars(i,var_zj) = currdens(i) / MU_zero * 1.e-6
     !============================================density in 1e20m-3
@@ -1500,7 +1483,9 @@ if (SI_units) then
       scalars(i,var_T) = scalars(i,var_T) / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
     endif
     !=====================================Vparal in km/s *Btot!!!
-    scalars(i,var_Vpar) = scalars(i,var_Vpar) /t_norm/1.e3
+    if (with_Vpar) then
+       scalars(i,var_Vpar) = scalars(i,var_Vpar) /t_norm/1.e3
+    endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     !===================================== Neutral density in 1e20m-3
     scalars(i,var_rhon) = scalars(i,var_rhon) * central_density
@@ -1550,7 +1535,7 @@ if (SI_units) then
       coef_rad_1 = (gamma-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
       ksiion = ksi_ion * central_density * 1.d20
-
+  
       T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
       ! ======= T_real8 in JOREK units
 
@@ -1562,7 +1547,7 @@ if (SI_units) then
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
 
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0)
-
+  
       scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
                                           * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T / coef_ion_1
 
@@ -1580,28 +1565,12 @@ if (SI_units) then
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
 
       if (use_imp_adas) then  ! use open adas by default
-        select case ( trim(imp_type) )
-          case('C')
-            m_i_over_m_imp_bg = central_mass/12.  ! Carbon mass = 12 u
-          case('Ar')
-            m_i_over_m_imp_bg = central_mass/40.  ! Argon mass = 40 u
-          case('Ne')
-            m_i_over_m_imp_bg = central_mass/20.  ! Neon mass = 20 u
-          case('W')
-            m_i_over_m_imp_bg = central_mass/184. ! Tungsten mass = 184 u
-          case default
-            if (nimp_bg > 0) then
-              write(*,*) 'Background impurity"', trim(imp_type), '" unknown (in mod_neutral_source.f90), terminating.'
-              stop
-            end if 
-        end select
-
         ! Use radiation coefficients from ADAS
         if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
           Lrad_imp = 0.0
           call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)
           if (Lrad_imp < 0.) Lrad_imp = 0.
-          Lrad_imp = Lrad_imp * m_i_over_m_imp_bg
+          Lrad_imp = Lrad_imp 
         else
           Lrad_imp = 0.
         end if

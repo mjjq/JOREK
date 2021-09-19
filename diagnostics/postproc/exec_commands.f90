@@ -19,13 +19,8 @@ module exec_commands
   use mod_import_restart
   use mod_interp
   use mod_poloidal_currents 
-#ifdef WITH_Impurities
-  use mod_injection_source
-#endif
   use mod_bootstrap_functions
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-   use mod_neutral_source
-#endif
+  use mod_impurity, only: init_imp_adas 
   
   implicit none
   
@@ -57,7 +52,7 @@ module exec_commands
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
   logical,             private, save :: verbose
   logical,             private, save :: debug
-  type(t_expr_list),   private, save :: expr_list
+  type(t_expr_list),   private, save :: expr_list, expr_list_four
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), the_sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
@@ -150,6 +145,8 @@ module exec_commands
           call expressions(command, ierr)
         case ( 'expressions_int' )
           call expressions_int(command, ierr)
+        case ( 'expressions_four' )
+          call expressions_four(command, ierr)
         case ( 'fluxsurfaces' )
           call fluxsurfaces(command, ierr)
         case ( 'for' )
@@ -192,7 +189,6 @@ module exec_commands
           call set_postproc_dir(command, ierr)
         case ( 'namelist' )
           call load_namelist(command, ierr)
-
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
           ! --- Read ADAS data and generate coronal equilibrium is needed
           call init_imp_adas(0)
@@ -235,7 +231,8 @@ module exec_commands
           'qprofile', 'q_at_psin', 'fluxsurfaces', 'separatrix', 'set', 'four2d', 'gourdon',       &
           'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics', 'rectangle',    &
           'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF', 'spi-state',         &
-          'shards', 'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d')
+          'shards', 'zeroD_quantities', 'boundary_quantities', 'find_q_surface', 'midplane2d',     &
+          'expressions_four')
           call add_to_command_queue(command, ierr)
         case ( 'help' )
           call help(command, ierr)
@@ -334,7 +331,7 @@ module exec_commands
     step_imported = .true.
     
     ! (not elegant, admittedly... but guarantees consistent time normalization:)
-    call eval_expr(ES, get_int_setting('units', ierr), exprs('t',1),                               &
+    call eval_expr(ES, get_int_setting('units', ierr), exprs('t',1),                  &
       pol_pos(node_list,element_list,ES,R=ES%R_axis,Z=ES%Z_axis), tor_pos(phi=0.d0), result, ierr)
     time_now = result(1,1,1,1)
     
@@ -538,7 +535,6 @@ module exec_commands
     first_step = .true.
     if ( loop_mode == LOOP_S_MODE ) then
       do istep = loop_min_step, loop_max_step, loop_inc_step
-        call reload_namelist(input_err)
         call load_step(istep, load_error)
         if ( load_error /= 0 ) cycle
 
@@ -639,7 +635,6 @@ module exec_commands
       write(*,*) '--------------------------------------------------'
 
       do istep = 1, n_select
-        call reload_namelist(input_err)
         call load_step( selected_steps(istep), load_error)
         if ( load_error /= 0 ) cycle
       
@@ -858,37 +853,6 @@ module exec_commands
 
 
 
-  !> Load again the JOREK input file
-  subroutine reload_namelist(ierr)
-    
-    use phys_module     
-    
-    ! --- Routine parameters
-    integer,    intent(inout) :: ierr        !< Error flag
-    
-    ! --- Local variables
-    logical ::  file_exists
-    
-    ierr = 0
-    
-    inquire (file=input_file, exist=file_exists)
-      
-    ! --- Read the input namelist file
-    if (file_exists) then
-      call initialise_parameters(0, input_file)
-      input_loaded = .true.
-    else
-      ierr = 1
-      write(*,*) 'ERROR: input file "', trim(input_file), '" does not exist.'
-      call specific_help('namelist')
-    end if
-
-  end subroutine reload_namelist
-  
-  
-  
-
-  
   !> Check if a restart file has already been imported
   subroutine check_step_imported(ierr)
     integer, intent(out) :: ierr !< Error flag
@@ -1013,6 +977,28 @@ module exec_commands
 
 
   !> List or Select Available Expressions.
+  subroutine expressions_four(command, ierr)
+    
+    ! --- Routine parameters
+    type(type_command), intent(in)  :: command     !< Command to be executed
+    integer,            intent(out) :: ierr        !< Error flag
+    
+    ierr = 0
+    
+    if ( command%n_args == 0 ) then
+      
+      call print_exprs(exprs_all_four)
+      
+    else
+      
+      expr_list_four = exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_four)
+      call print_exprs(expr_list_four,.true.)
+       
+    end if
+    
+  end subroutine expressions_four
+ 
+   !> List or Select Available Expressions.
   subroutine expressions_int(command, ierr)
     
     ! --- Routine parameters
@@ -1027,13 +1013,12 @@ module exec_commands
       
     else
       
-    expr_list = exprs_int(command%args(1:command%n_args), command%n_args)
-    call print_exprs(expr_list,.true.)
+      expr_list = exprs(command%args(1:command%n_args), command%n_args, exprs_all_local=exprs_all_int)
+      call print_exprs(expr_list,.true.)
        
     end if
     
   end subroutine expressions_int
- 
   
   
   !> Mark some expressions as coordinates.
@@ -1587,7 +1572,7 @@ module exec_commands
        tor_pos(phi=phi), result, ierr)
     
     call reduce_result_to_2d(ierr, result, res2d, i1=1)
-    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment))
+    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment), include_time=.true.)
     
     if ( allocated(result) ) deallocate(result)
     if ( allocated(res2d ) ) deallocate(res2d )
@@ -1643,7 +1628,7 @@ module exec_commands
        pol_pos(node_list,element_list,ES,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
        tor_pos(phistart=phimin, phiend=phimax, nphi=nphi), result, ierr)
     
-    call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment))
+    call write_hdf5_3d(ierr, expr_list, result, trim(filename), comment=trim(comment), include_time=.true.)
     
     if ( allocated(result) ) deallocate(result)
     
@@ -1867,7 +1852,7 @@ module exec_commands
     atoms_left = 0.d0
     abl_tot    = 0.d0
     
-    do i = 1, n_SPI
+    do i = 1, n_spi_tot
       shard_atoms_left = 4./3.*PI*pellets(i)%spi_radius**3 * pellet_density * 1.d20
       
       atoms_left = atoms_left + shard_atoms_left
@@ -1902,6 +1887,7 @@ module exec_commands
   end subroutine spi_state
 
 
+
   !> Write out SPI shards characteristics
   subroutine shards(command, ierr)
 
@@ -1910,7 +1896,8 @@ module exec_commands
     integer,            intent(out) :: ierr        !< Error flag
     
     ! --- Local variables
-    integer             :: i_file, i_spi, units
+    integer             :: i_file, i_spi, units, i
+    real*8              :: radmin, radmax
     character(len=1024) :: filename, status, access
     
     ierr = 0
@@ -1922,30 +1909,68 @@ module exec_commands
     
     units = get_int_setting('units', ierr)
     
-    write(filename,'(4a)') trim(DIR), 'shards', trim(step_range_string(index_start,index_start)), '.txt'
-
     i_file = 133
-
-    call open_ascii_file(ierr, i_file, filename, .false.)
-
-    do i_spi = 1, n_spi
     
-      call eval_expr(ES, units, expr_list,  &
-        pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
-        tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
-
-      call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
-    	
-      write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
-        pellets(i_spi)%spi_radius, res0d
-
-    enddo
+    do i = 1, 4 ! write four different files
     
-    close(i_file)
-
+      if ( i == 1 ) then
+        write(filename,'(4a)') trim(DIR), 'shards', trim(step_range_string(index_start,index_start)), '.txt'
+        radmin=-1.d99
+        radmax=+1.d99
+      else if ( i == 2 ) then
+        write(filename,'(4a)') trim(DIR), 'ablated-shards', trim(step_range_string(index_start,index_start)), '.txt'
+        radmin=-1.d99
+        radmax=0.d0
+      else if ( i == 3 ) then
+        write(filename,'(4a)') trim(DIR), 'active-shards', trim(step_range_string(index_start,index_start)), '.txt'
+        radmin=0.d0
+        radmax=+1.d99
+      else if ( i == 4 ) then
+        write(filename,'(4a)') trim(DIR), 'shards-m3dc1-format', trim(step_range_string(index_start,index_start)), '.txt'
+      end if
+      
+      call open_ascii_file(ierr, i_file, filename, .false.)
+      
+      if ( i < 4 ) then
+        
+        write(i_file,'(a)') '# i_spi       R [m]          Z [m]         phi [rad]      '//&
+             'VR [m/s]       VZ [m/s]      VRxZ [m/s]     radius [m]    abl [atoms/s]  atomic ratio   '//&
+             'quantities_evaluated_at_shards'
+        
+        do i_spi = 1, n_spi_tot
+        
+          if ( (pellets(i_spi)%spi_radius <= radmin) .or. (pellets(i_spi)%spi_radius > radmax) ) cycle
+          
+          call eval_expr(ES, units, expr_list,  &
+            pol_pos(node_list,element_list,ES,R=pellets(i_spi)%spi_R,Z=pellets(i_spi)%spi_Z),  &
+            tor_pos(phi=pellets(i_spi)%spi_phi), result, ierr)
+          
+          call reduce_result_to_0d(ierr, result, res0d, 1, 1, 1)
+        	
+          write(i_file,'(i7,9999es15.7)') i_spi, pellets(i_spi)%spi_R, pellets(i_spi)%spi_Z, pellets(i_spi)%spi_phi, &
+            pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_Z, pellets(i_spi)%spi_Vel_RxZ, &
+            pellets(i_spi)%spi_radius, pellets(i_spi)%spi_abl, pellets(i_spi)%spi_species, res0d
+          
+        end do
+        
+        close(i_file)
+        
+      else
+        
+        do i_spi = 1, n_spi_tot
+          write(i_file,'(8es15.7)') pellets(i_spi)%spi_R, pellets(i_spi)%spi_phi, pellets(i_spi)%spi_Z, &
+            pellets(i_spi)%spi_Vel_R, pellets(i_spi)%spi_Vel_RxZ, pellets(i_spi)%spi_Vel_Z, &
+            pellets(i_spi)%spi_radius, (1.d0 - pellets(i_spi)%spi_species)/(1.d0 + pellets(i_spi)%spi_species)
+        end do
+        
+      end if
+      
+    end do
+    
   end subroutine shards
 
-  
+
+
   !> Output integrated poloidal current that is normal to the boudary and
   !! toroidal peaking factor (TPF)
   subroutine I_halo_TPF(command, first_step, ierr)
@@ -2126,7 +2151,6 @@ module exec_commands
   
   
  
-
 
   !> Output current density normal to the jorek boundary as a function of Rbnd
   !! and Zbnd
@@ -2420,8 +2444,8 @@ module exec_commands
             Z, Z_s, Z_t, Z_st, Z_ss, Z_tt)
             
           ! --- Write out the (R,Z)-coordinates
-          if ( xpoint .and. ( xcase /= 2 ) .and. (Z < ES%Z_xpoint(1) ) ) cycle
-          if ( xpoint .and. ( xcase /= 1 ) .and. (Z > ES%Z_xpoint(2) ) ) cycle
+          if ( xpoint .and. ( xcase /= UPPER_XPOINT ) .and. (Z < ES%Z_xpoint(1) ) ) cycle
+          if ( xpoint .and. ( xcase /= LOWER_XPOINT ) .and. (Z > ES%Z_xpoint(2) ) ) cycle
           write(i_file,'(2ES16.7)') R, Z
         end do
         
@@ -2751,8 +2775,14 @@ module exec_commands
     write(*,*) 'rad_range    =', radial_range
     write(*,*) 'n_thetastar  =', n_thetastar
     
+    ! --- If no fourier expressions are given, output absolute values by default
+    if ( expr_list_four%n_expr .eq. 0 ) then
+      write(*,*) 'WARNING: No expressions for 2D Fourier analysis given. Output all components by default.'
+      expr_list_four = exprs_all_four
+    end if
+
     call fourier_analysis(node_list, element_list, ES, units, expr_list, cp, npts, ierr,           &
-      filename_start, OUTP_ABS_VALUE, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &
+      filename_start, expr_list_four, nsmallsteps=nsmall, nmaxsteps=nmaxstep, deltaphi=delta_phi,  &
       rad_range=radial_range, nTht=n_thetastar)
     
   end subroutine four2d

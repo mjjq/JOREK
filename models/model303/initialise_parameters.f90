@@ -43,11 +43,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_pfc, n_tor_fft_thresh, manipulate_psi_map,        &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 extend_existing_grid, no_mach1_bc,                  &
-                grid_to_wall, RZ_grid_inside_wall,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
                 n_wall_blocks, n_ext_block, corner_block,           &
+                n_ext_equidistant,                                  &
                 n_block_points_left,  n_block_points_right,         &
                 R_block_points_left,  R_block_points_right,         &
                 Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device,                                     &
                 F0,gamma_sheath,gamma_stangeby, density_reflection, &
                 mach_one_bnd_integral, Vpar_smoothing,              &
@@ -85,7 +88,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 adaptive_time, equil, bench_without_plot,           &
                 no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
-                zkpar_T_dependent, use_strumpack,                   & 
+                eta_num_T_dependent, visco_num_T_dependent,         &
+                zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 
+                use_strumpack,                                      & 
                 heatsource_psin, heatsource_sig,                    &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
@@ -120,9 +125,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
+                delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
                 pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max
+                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family
 
 
 if (my_id .eq. 0) then

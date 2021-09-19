@@ -2,6 +2,7 @@
 !!
 !! @see vacuum_response, vacuum_equilibrium
 module vacuum
+  use mod_parameters, only: var_zj, var_psi
   use phys_module, only: rst_hdf5_version, freeb_change_indices
   
   implicit none
@@ -11,8 +12,6 @@ module vacuum
   logical, parameter  :: vacuum_decouple_modes = .false. !< Option to switch off 3D wall mode coupling
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
-  integer, parameter  :: ivar_psi = 1                    !< Index of Psi variable
-  integer, parameter  :: ivar_j   = 3                    !< Index of j variable
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity_fact           !< Scaling factor for the wall and coil resistivities specified in STARWALL
@@ -100,6 +99,22 @@ module vacuum
     integer :: ntri_w                 = -1
     integer :: n_tor                  = -1
     integer :: n_tor0                 = -1
+
+    ! --- Additional STARWALL input parameters (version >= 5)
+    integer :: nv                     = -1  !< Number of toroidal points of the control surface
+    integer :: n_points               = -1  !< Number of triangles per JOREK boundary element (control surface)
+    integer :: iwall                  = -1  !< 1 if the wall is represented with Fourier harmonics 
+    integer :: nwu                    = -1  !< Number of poloidal grid points of the wall
+    integer :: nwv                    = -1  !< Number of toroidal grid points of the wall
+    integer :: mn_w                   = -1  !< Number of Fourier harmonics to represent the wall contour
+    integer :: MAX_MN_W               = -1  !< MAX number of mn_w
+    integer, allocatable :: m_w(:)          !< Wall contour: poloidal wall harmonics
+    integer, allocatable :: n_w_fourier(:)  !< Wall contour: toroidal wall harmonics
+    real*8,  allocatable :: rc_w(:)         !< Wall contour: Fourier cosine coefficients for R
+    real*8,  allocatable :: rs_w(:)         !< Wall contour: Fourier sine   coefficients for R
+    real*8,  allocatable :: zc_w(:)         !< Wall contour: Fourier cosine coefficients for Z
+    real*8,  allocatable :: zs_w(:)         !< Wall contour: Fourier sine   coefficients for Z
+
     integer :: ntri_c                 = 0  !< Number of coil triangles
     integer :: n_pol_coils            = 0  !< Number of poloidal field coils
     integer :: n_rmp_coils            = 0  !< Number of RMP coils
@@ -128,6 +143,7 @@ module vacuum
     type(t_distrib_mat)  :: s_ww
     type(t_distrib_mat)  :: s_ww_inv
     real*8,  allocatable :: xyzpot_w(:,:)
+    real*8,  allocatable :: phi0_w(:,:)   !< Toroidal net wall current potentials
     integer, allocatable :: jpot_w(:,:)
   end type t_starwall_response
   
@@ -481,7 +497,7 @@ module vacuum
     end do
     
     ! --- Free boundary conditions only for certain variables
-    is_freebound = is_freebound .and. ( (i_var == ivar_j) .or. (i_var == ivar_psi) )
+    is_freebound = is_freebound .and. ( (i_var == var_zj) .or. (i_var == var_psi) )
     
   end function is_freebound
   

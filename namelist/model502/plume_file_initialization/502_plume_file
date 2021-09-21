@@ -719,8 +719,8 @@
  n_spi           =  8000  
  t_ns            =  0.   
 
- spi_plume_file_hdf5  = .false.
- spi_plume_file(1)    = 'plume_file_inj_1.txt'
+ spi_plume_hdf5    = .false.
+ spi_plume_file(1) = 'plume_file_inj_1.txt'
 
  !===========================
  ! These parameters will not play role if you set 'spi_plume_file'

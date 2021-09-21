@@ -872,7 +872,7 @@ module pellet_module
     use data_structure
     use phys_module, only: pellets, imp_type, pellet_density, pellet_density_bg,  xtime_spi_ablation,           &
                            xtime_spi_ablation_bg, xtime_spi_ablation_rate, xtime_spi_ablation_bg_rate, nstep,   &
-                           spi_plume_file, spi_plume_file_hdf5, spi_abl_model, n_spi_tot,                                    &
+                           spi_plume_file, spi_plume_hdf5, spi_abl_model, n_spi_tot,                            &
                            spi_tor_rot, ns_phi_rotate, tor_frequency
     use mpi_mod
 #ifdef USE_HDF5
@@ -919,7 +919,7 @@ module pellet_module
     if (n_spi >= 1) then
 
       ! read spi shards information from Brendan's format
-      if ( .not. spi_plume_file_hdf5) then
+      if ( .not. spi_plume_hdf5) then
 
         ! check 1) file existence
         inquire(file=trim(spi_plume_file(i_inj)), exist=ferr)
@@ -985,7 +985,7 @@ module pellet_module
 
         end if
 
-      else ! spi_plume_file_hdf5 == .true.
+      else ! spi_plume_hdf5 == .true.
 
 #ifdef USE_HDF5
 
@@ -1016,7 +1016,7 @@ module pellet_module
                 spi_Vel_R_tmp(n_spi),  spi_Vel_phi_tmp(n_spi),  spi_Vel_Z_tmp(n_spi), &
                 spi_radius_tmp(n_spi), spi_species_molar_D2_tmp(n_spi) )
 
-      if ( .not. spi_plume_file_hdf5) then
+      if ( .not. spi_plume_hdf5) then
 
         open(42,file=trim(spi_plume_file(i_inj)),status="old",action="read")
 
@@ -1036,7 +1036,7 @@ module pellet_module
 
         close(42)
 
-      else ! spi_plume_file_hdf5 == .true.
+      else ! spi_plume_hdf5 == .true.
 
 #ifdef USE_HDF5
 

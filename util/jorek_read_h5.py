@@ -41,6 +41,8 @@ class fields(object):
             self.n_tor        = hf.get('n_tor')[0]
             self.n_vertex_max = hf.get('n_vertex_max')[0]
             n_elements   = hf.get('n_elements')[0]
+            self.tstep = hf['tstep'][0]
+            self.t_now = hf['t_now'][0]
 
         # Assume the grid not to change. Important!
         if (not (hasattr(self, 'n_elements') and self.n_elements == n_elements)):
@@ -172,6 +174,9 @@ class fields(object):
             self.cells = vtk.vtkCellArray()
             self.cells.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
 
+            self.xyz = xyz # expose for IMAS
+            self.ien = ien
+
         output.SetPoints(self.points)
 
         HZ = toroidal_basis(self.n_tor, self.n_period, phis, without_n0_mode)
@@ -192,6 +197,8 @@ class fields(object):
             tmp = npvtk.numpy_to_vtk(val[i,:], deep=True, array_type=vtk_prec)
             tmp.SetName(self.var_names[self.vars[i]])
             output.GetPointData().AddArray(tmp)
+
+        self.val = val # Expose for IDS
 
         if not(etype):
             if (quadratic):

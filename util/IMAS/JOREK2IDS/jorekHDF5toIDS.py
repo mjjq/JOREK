@@ -13,150 +13,52 @@
 #   Requirements:
 #       - pip3 install --user h5py
 #       - IMAS
+#       - mkdir -p $HOME/public/imasdb/smiter/3/0
 #
 #
 #   Author :
-#       Dejan Penko
+#       Dejan Penko and Leon Kos
 #   E-mail :
-#       dejan.penko@lecad.fs.uni-lj.si
+#       leon.kos@lecad.fs.uni-lj.si
 #
 # *****************************************************************************
-#     Copyright(c) 2020- D. Penko
 
 from os import listdir, getenv
 from os.path import isfile, join
 import numpy as np
-# import math
-# import logging
 import sys
-# import vtk
-import numpy as np
-from PyQt5 import QtWidgets
+import getpass
+import argparse
 
 sys.path.append('../../../util')
 import jorek_read_h5 as jorek
-# import imas
 
 from idsUtilities import basicIDS, writeIDS
 
-def getHDF5FileDialog():
-    """Run as standalone application.
-    """
-    # Set QApplication
-    app = QtWidgets.QApplication([])
-    # Set options
-    options = QtWidgets.QFileDialog.Options()
-    options |= QtWidgets.QFileDialog.DontUseNativeDialog
-    # Set file dialog
-    # Note: arguments are:  - parent (None),
-    #                       - window title
-    #                       - default file name
-    #                       - file types selectable options
-    #                       - options
-    filePath, _ = QtWidgets.QFileDialog \
-        .getOpenFileName(None,
-                         "Select VTK file",
-                         "",
-                         "H5 Files (*.h5);;HDF5 Files (*.hdf5)",
-                         options=options)
-    # Close application
-    app.exit()
-
-    print("Selected VTK file (full path): ", filePath)
-
-    return filePath
-
-
-def checkArguments():
-    """ Check arguments when running from the terminal.
-    """
-
-    if (len(sys.argv) > 1):
-        import argparse
-        from argparse import RawTextHelpFormatter
-        description = """Utility for storing JOREK output stored in HDF5 files
-to IMAS (IDSs). Example command:
-
->>> python3 jorekHDF5toIDS.py --shot=303 --run=1 --user=penkod --database=jorek --occurrence=0
-
-
-"""
-
-        parser = argparse.ArgumentParser(description=description,
-                                         formatter_class=RawTextHelpFormatter)
-
-        parser.add_argument("-s", "--shot", type=int, required=True,
-                            help="Case parameter: shot")
-        parser.add_argument("-r", "--run", type=int, required=True,
-                            help="Case parameter: run")
-        parser.add_argument("-u", "--user", type=str, required=False,
-                            help="Case parameter: username",
-                            default=getenv("USER"))
-        parser.add_argument("-d", "--database", type=str, required=True,
-                            help="Case parameter: database")
-        parser.add_argument("-o", "--occurrence", type=int, required=False,
-                            help="Case parameter: occurrence",
-                            default=0)
-
-        args = parser.parse_args()
-        IDS_parameters = {"shot": args.shot,
-                          "run": args.run,
-                          "user": args.user,
-                          "database": args.database,
-                          "occurrence": args.occurrence}
-    else:
-        # Default parameters
-        print("Using default parameters")
-        IDS_parameters = {"shot": 303,
-                          "run": 1,
-                          "user": "penkod",
-                          "database": "jorek",
-                          "occurrence": 0}
-
-    return IDS_parameters
-
-
 if __name__ == "__main__":
 
-    # Set mandatory arguments
-    IDS_parameters = checkArguments()
+    parser = argparse.ArgumentParser(description="Convert JOREK HDF5 file(s) to IMAS (IDSs)",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-s", "--shot", type=int, default=1,
+                        help="Shot number")
+    parser.add_argument("-r", "--run", type=int, default=3,
+                        help="Run number")
+    parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
+                        help="Location of $HOME/../$USER/public/imasdb")
+    parser.add_argument("-d", "--database", type=str, default="smiter",
+                        help="Database name under public/imasdb/")
+    parser.add_argument("-o", "--occurrence", type=int, default=0,
+                        help="Occurrence number")
+    parser.add_argument("hdf5files", metavar='jorek?????.h5', nargs='*',
+                        help="JOREK HDF5 file(s)", default=["/tmp/jorek_restart.h5"])
 
-    # FIRST FILE:
-    print("READING FIRST HDF5 FILE")
-    filePath = getHDF5FileDialog()
-
-    print(filePath.split("/"))
-    fileName = filePath.split("/")[-1]
-    print(fileName)
-    fileDirPath = filePath.split(fileName)[0]
-    print(fileDirPath)
-
-    # onlyfiles = [f for f in listdir(fileDirPath) if isfile(join(fileDirPath, f))]
-    # print(onlyfiles)
-
-    filePathList = []
-
-    for file in listdir(fileDirPath):
-        if file.startswith("jorek0") and file.endswith(".h5"):
-            # print(join(fileDirPath, file))
-            filePathList.append(join(fileDirPath, file))
-
-    # Sort list of files alphabetically
-    filePathList = sorted(filePathList)
-
-    f = jorek.fields()
+    args = parser.parse_args()
 
     print("PREPARING IDS")
-    shot = IDS_parameters['shot']
-    run = IDS_parameters['run']
-    username = IDS_parameters['user']
-    database = IDS_parameters['database']
-    # occurrence = IDS_parameters['occurrence']  # Not yet implemented
-
-    b_ids = basicIDS(shot, run, username, database)
+    b_ids = basicIDS(args.shot, args.run, args.user, args.database)
     b_ids.createNewIMASdatabase()
 
-    w_ids = writeIDS(shot, run, username, database)
+    w_ids = writeIDS(args.shot, args.run, args.user, args.database)
     comment = "Written results of multiple JOREK output HDF5 files/timeslices."
     # w_ids.createDatasetDescriptionIDS(user = 'penkod',
     #                                   source = 'JOREK',
@@ -164,21 +66,22 @@ if __name__ == "__main__":
     w_ids.createGridGGD('mhd', 1)
 
     # w_ids.imas_obj.mhd.time.resize(len(filePathList))
-    allTimeValues = np.array([0]*len(filePathList))
+    allTimeValues = np.array([0]*len(args.hdf5files))
 
     # Resize GGD to the number of timeslices
-    w_ids.imas_obj.mhd.ggd.resize(len(filePathList))
+    w_ids.imas_obj.mhd.ggd.resize(len(args.hdf5files))
 
     print("WRITING TO IDS")
 
+    f = jorek.fields()
+
     # Loop through the list of HDF5 files
-    for i_slice in range(len(filePathList)):
+    for i_slice in range(len(args.hdf5files)):
 
         print("Slice: ", i_slice)
 
         # Read file
-        f.read(filePathList[i_slice], variables=[0, 1, 2, 3, 4, 5, 6])
-
+        f.read(args.hdf5files[i_slice], variables=[0, 1, 2, 3, 4, 5, 6])
         print("Time step: ", f.tstep)
         print("Time: ", f.t_now)
 
@@ -203,11 +106,12 @@ if __name__ == "__main__":
             # y_coord = f.xyz[:,1]
 
             list_vertex = f.vertex
-            vtk_quad_conn_array = f.ien
+
             print ("* list_vertex: \n", list_vertex)
             print ("* len(list_vertex[0]): \n", len(list_vertex[0]))
             print ("* list_vertex[0]: \n", list_vertex[0])
             # Remove the vtk cell type ID from the matrix
+            vtk_quad_conn_array = f.ien
             quad_conn_array = vtk_quad_conn_array[:, 1:]
             print ("* vtk_quad_conn_array: \n", vtk_quad_conn_array)
             print ("* vtk_quad_conn_array.shape: \n", vtk_quad_conn_array.shape)

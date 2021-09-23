@@ -9,10 +9,10 @@ f.read('/tmp/jorek_restart.h5', variables=[2, 5])
 
 grid = f.to_vtk(n_sub=3, phi=[0,180], n_plane=3, bezier=False)
 
-writer = vtk.vtkXMLUnstructuredGridWriter()
-#writer = vtk.vtkUnstructuredGridWriter()
+#writer = vtk.vtkXMLUnstructuredGridWriter()
+writer = vtk.vtkUnstructuredGridWriter()
 #writer.SetDataModeToAscii()
-writer.SetFileName('jorek_3d.vtu')
+writer.SetFileName('jorek_3d_quadratic.vtk')
 writer.SetInputData(grid)
 writer.Write()
 

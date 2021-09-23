@@ -41,7 +41,7 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-s", "--shot", type=int, default=1,
                         help="Shot number")
-    parser.add_argument("-r", "--run", type=int, default=3,
+    parser.add_argument("-r", "--run", type=int, default=1,
                         help="Run number")
     parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                         help="Location of $HOME/../$USER/public/imasdb")
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             obj_2D_list_f90 = obj_2D_list_f90 + 1
 
             # Write grid geometry
-            w_ids.writeMeshToSlice(points_geo=f.xyz,
+            w_ids.writeMeshToSlice(points_geo=f.xyz[:, :],
                                    obj_0D_list=[],
                                    obj_1D_list=[],
                                    obj_2D_list=obj_2D_list_f90,
@@ -151,6 +151,10 @@ if __name__ == "__main__":
         w_ids.imas_obj.mhd.ggd[i_slice].time = f.t_now
         # Add to array of all time values of all time slices
         allTimeValues[i_slice] = f.t_now
+
+        w_ids.ids.put()
+        w_ids.idsClose()
+        exit(0)
 
         print("Array of quantity labels: ", quantity_names_list)
         for i in range(len(quantity_names_list)):
@@ -219,6 +223,3 @@ if __name__ == "__main__":
     # Set time array
     # w_ids.imas_obj.mhd.time = allTimeValues
 
-    w_ids.ids.put()
-
-    w_ids.idsClose()

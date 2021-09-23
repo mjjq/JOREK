@@ -168,6 +168,13 @@ class readIDS(basicIDS):
             ids = imas_obj.edge_profiles
             # 'Shortcut' variable to ...grid_ggd[0] node
             self.grid_ggd = ids.grid_ggd
+        if IDSName == 'mhd':
+            # Get the data and set 'Shortcut' variable to imas_obj.edge_profiles
+            # data tree node
+            ids = self.imas_obj.mhd
+            self.imas_obj.mhd.get()
+            self.grid_ggd = ids.grid_ggd
+            self.ggd = ids.ggd
         elif IDSName == 'wall':
             # Get the data and set 'Shortcut' variable to imas_obj.wall
             # data tree node

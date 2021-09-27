@@ -75,6 +75,9 @@ module vacuum
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
 
+  !> @name Time-evolution PF coils parameters
+  real*8              :: PF_pert_start_time              !< Time to start a perturbation to speed-up VDEs
+  
   
   ! ### various variables, some need to be removed
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
@@ -430,6 +433,7 @@ module vacuum
     
     n_iter_freeb         = 900
     
+    PF_pert_start_time   = 1.d99
     psi_offset_freeb     = 0.d0
 
   ! ---- Parameters for vertical feedback (VFB)
@@ -463,8 +467,8 @@ module vacuum
     sr%n_tor  = 0
     sr%n_tor0 = 0
     
-    if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. ( min(pf_coils%pert_start_time)>1.d30 ) ) then
-       write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since pert_start_time was not set to a reasonable value.'
+    if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
+       write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
     end if
     
   end subroutine vacuum_init
@@ -642,7 +646,7 @@ module vacuum
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         old_dpsibnd_vec(:) = 0.d0
         call HDF5_array1D_reading(file_id,old_dpsibnd_vec,"old_dpsibnd_vec")
-        
+        call HDF5_integer_reading(file_id,n_coils,"n_coils")
         if ( index_start > 1 ) then
 
           if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
@@ -747,7 +751,7 @@ module vacuum
       
       call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
       call HDF5_real_reading(file_id,dZ_axis_integral,'dZ_axis_integral')
-      call HDF5_integer_reading(file_id,n_coils,"n_coils")
+
       if ( n_coils /= 0 ) then
         if ( allocated(I_coils) ) deallocate(I_coils)
         allocate( I_coils(n_coils) )
@@ -909,14 +913,14 @@ module vacuum
      end if !--- resistive wall
 
       call HDF5_array1D_saving(file_id,old_dpsibnd_vec,n_dof_starwall,"old_dpsibnd_vec"//char(0))
-      
+      call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))      
       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
       call HDF5_real_saving(file_id,dZ_axis_integral,'dZ_axis_integral'//char(0))
       if ( (n_coils/=0) .and. (.not. allocated(I_coils)) )  then
         write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
         stop
       end if
-      call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))
+
       if ( n_coils /= 0 ) call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
     end if
     

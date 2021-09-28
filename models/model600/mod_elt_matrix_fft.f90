@@ -166,6 +166,10 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
+!  --- For shock capturing stabilization
+real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
+real*8     :: len1, len2, h_e
+real*8     :: f_p, d_p, sc_const, tau_sc, R_rho, R_Ti, R_Te, R_T
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -301,6 +305,17 @@ enddo
 delta_g = delta_g * tstep / tstep_prev
 delta_s = delta_s * tstep / tstep_prev
 delta_t = delta_t * tstep / tstep_prev
+
+! approximate estimate of the element length h_e
+! needed for Shock capturing stabilzation
+midp_edge1(:) =  0.5d0 * ( nodes(1)%x(1,1,:) + nodes(2)%x(1,1,:) )
+midp_edge2(:) =  0.5d0 * ( nodes(2)%x(1,1,:) + nodes(3)%x(1,1,:) )
+midp_edge3(:) =  0.5d0 * ( nodes(3)%x(1,1,:) + nodes(4)%x(1,1,:) )
+midp_edge4(:) =  0.5d0 * ( nodes(4)%x(1,1,:) + nodes(1)%x(1,1,:) )
+
+len1 = sqrt( (midp_edge1(1)-midp_edge3(1))**2 + (midp_edge1(2)-midp_edge3(2))**2 )
+len2 = sqrt( (midp_edge2(1)-midp_edge4(1))**2 + (midp_edge2(2)-midp_edge4(2))**2 )
+h_e = dmin1(len1, len2)
 
 do ms=1, n_gauss
   do mt=1, n_gauss
@@ -1601,6 +1616,107 @@ do i=1,n_vertex_max
               rhs_ij_k(var_rhon) = BigR * ( - Dn0p * rn0_p * v_p/BigR**2)   * xjac * tstep                              
 
             endif ! with_neutrals
+
+            !###################################################################################################
+            !#  Shock Capturing stabilization terms                                                            #
+            !###################################################################################################
+
+            d_p = 0.d0
+
+            ! approximate residual in density equation: \nabla \cdot (\rho \boldsymbol{v})
+            R_rho = + BigR**2 * ( r0_s * u0_t - r0_t * u0_s) &
+                    + 2.d0 * BigR * r0 * u0_y * xjac &
+
+                    - F0 / BigR * Vpar0 * r0_p * xjac &
+                    - Vpar0 * (r0_s * ps0_t - r0_t * ps0_s) &
+                    - F0 / BigR * r0 * vpar0_p * xjac &
+                    - r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)
+
+            d_p = d_p + T0 * R_rho
+
+            ! approximate residual in pressure equations: \boldsymbol{v} \cdot \nabla p + \gamma p \nabla \boldsymbol{v}
+            if ( with_TiTe ) then ! (with_TiTe)
+              R_Ti = + r0 * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                       &
+                     + Ti0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        &
+                     
+                     + r0 * Ti0 * 2.d0* GAMMA * BigR * u0_y                         * xjac &
+                     
+                     - r0 * F0 / BigR * Vpar0 * Ti0_p                               * xjac &
+                     - Ti0 * F0 / BigR * Vpar0 * r0_p                               * xjac &
+                     
+                     - r0 * Vpar0 * (Ti0_s * ps0_t - Ti0_t * ps0_s)                        &
+                     - Ti0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         &
+                     
+                     - r0 * Ti0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              &
+                     - r0 * Ti0 * GAMMA * F0 / BigR * vpar0_p                       * xjac
+ 
+              R_Te = + r0 * BigR**2  * (Te0_s * u0_t - Te0_t * u0_s)                       &
+                     + Te0 * BigR**2 * ( r0_s * u0_t -  r0_t * u0_s)                       &
+                                                                                    
+                     + r0 * Te0 * 2.d0* GAMMA * BigR * u0_y                         * xjac &
+                                                                                    
+                     - r0 * F0 / BigR * Vpar0 * Te0_p                               * xjac &
+                     - Te0 * F0 / BigR * Vpar0 * r0_p                               * xjac &
+                                                                                    
+                     - r0 * Vpar0 * (Te0_s * ps0_t - Te0_t * ps0_s)                        &
+                     - Te0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         &
+                                                                                    
+                     - r0 * Te0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              &
+                     - r0 * Te0 * GAMMA * F0 / BigR * vpar0_p                       * xjac
+                                                                                                 
+              d_p = d_p + r0 * (R_Ti + R_Te)
+            else
+              R_T = + r0 * BigR**2 * (T0_s  * u0_t - T0_t * u0_s)                          &
+                    + T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                          &
+                                                                               
+                    + r0 * T0 * 2.d0* GAMMA * BigR * u0_y                          * xjac  &
+                    
+                    - r0 * F0 / BigR * Vpar0 * T0_p                                * xjac  &
+                    - T0 * F0 / BigR * Vpar0 * r0_p                                * xjac  &
+                    
+                    - r0 * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)                           &
+                    - T0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                           &
+                                                                                
+                    - r0 * T0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)                &
+                    - r0 * T0 * GAMMA * F0 / BigR * vpar0_p                        * xjac  
+                            
+              d_p = d_p + r0 * R_T
+            endif
+
+            f_p = dabs( P0_x*P0_x + P0_y*P0_y + P0_p*P0_p/ (BigR*BigR) ) / P0 * h_e
+            sc_const = 1.d-3    ! set shock capturing stabilization coefficient here
+
+            tau_sc = sc_const * h_e * h_e * abs(d_p) * f_p
+
+            rhs_ij  (var_psi) = rhs_ij  (var_psi) + tau_sc * (ps0_x * v_x + ps0_y * v_y)
+            rhs_ij_k(var_psi) = rhs_ij_k(var_psi) + tau_sc * (ps0_p * v_p) / (BigR*BigR)
+
+            rhs_ij  (var_u) = rhs_ij  (var_u) + tau_sc * (u0_x * v_x + u0_y * v_y)
+            rhs_ij_k(var_u) = rhs_ij_k(var_u) + tau_sc * (u0_p * v_p) / (BigR*BigR)
+
+            rhs_ij  (var_rho) = rhs_ij  (var_rho) + tau_sc * (r0_x * v_x + r0_y * v_y)
+            rhs_ij_k(var_rho) = rhs_ij_k(var_rho) + tau_sc * (r0_p * v_p) / (BigR*BigR)
+
+            if ( with_vpar ) then
+              rhs_ij  (var_vpar) = rhs_ij  (var_vpar) + tau_sc * (vpar0_x * v_x + vpar0_y * v_y)
+              rhs_ij_k(var_vpar) = rhs_ij_k(var_vpar) + tau_sc * (vpar0_p * v_p) / (BigR*BigR)
+            endif
+
+            if ( with_TiTe ) then ! (with_TiTe)
+              rhs_ij  (var_Ti) = rhs_ij  (var_Ti) + tau_sc * (Ti0_x * v_x + Ti0_y * v_y)
+              rhs_ij_k(var_Ti) = rhs_ij_k(var_Ti) + tau_sc * (Ti0_p * v_p) / (BigR*BigR)
+
+              rhs_ij  (var_Te) = rhs_ij  (var_Te) + tau_sc * (Te0_x * v_x + Te0_y * v_y)
+              rhs_ij_k(var_Te) = rhs_ij_k(var_Te) + tau_sc * (Te0_p * v_p) / (BigR*BigR)
+            else
+              rhs_ij  (var_T) = rhs_ij  (var_T) + tau_sc * (T0_x * v_x + T0_y * v_y)
+              rhs_ij_k(var_T) = rhs_ij_k(var_T) + tau_sc * (T0_p * v_p) / (BigR*BigR)
+            endif
+
+            if (with_neutrals) then
+              rhs_ij  (var_rhon) = rhs_ij  (var_rhon) + tau_sc * (rn0_x * v_x + rn0_y * v_y)
+              rhs_ij_k(var_rhon) = rhs_ij_k(var_rhon) + tau_sc * (rn0_p * v_p) / (BigR*BigR)
+            endif
 
             !###################################################################################################
             !#  RHS equations end                                                                              #
@@ -3007,7 +3123,39 @@ do i=1,n_vertex_max
                      amat_kn(var_rhon,var_rhon) = + BigR * ( + Dn0p * rhon_p * v_p/BigR**2)                   * xjac * theta * tstep    
                    
                   endif ! with_neutrals 
-   
+ 
+                  !###################################################################################################
+                  !# Shock capturing stabilization terms                                                             #
+                  !###################################################################################################
+                  amat   (var_psi,var_psi) = amat   (var_psi,var_psi) + tau_sc * (psi_x*v_x + psi_y*v_y) 
+                  amat_kn(var_psi,var_psi) = amat_kn(var_psi,var_psi) + tau_sc * (psi_p*v_p) / (BigR*BigR)
+
+                  amat   (var_u,var_u) = amat   (var_u,var_u) + tau_sc * (u_x*v_x + u_y*v_y)         
+                  amat_kn(var_u,var_u) = amat_kn(var_u,var_u) + tau_sc * (u_p*v_p) / (BigR*BigR)
+ 
+                  amat   (var_rho,var_rho) = amat   (var_rho,var_rho) + tau_sc * (rho_x*v_x + rho_y*v_y)            
+                  amat_kn(var_rho,var_rho) = amat_kn(var_rho,var_rho) + tau_sc * (rho_p*v_p) / (BigR*BigR)
+
+                  if ( with_vpar ) then
+                    amat   (var_vpar,var_vpar) = amat   (var_vpar,var_vpar) + tau_sc * (vpar_x*v_x + vpar_y*v_y)
+                    amat_kn(var_vpar,var_vpar) = amat_kn(var_vpar,var_vpar) + tau_sc * (vpar_p*v_p) / (BigR*BigR)
+                  endif
+
+                  if (with_neutrals) then
+                    amat   (var_Ti,var_Ti) = amat   (var_Ti,var_Ti) + tau_sc * (Ti_x*v_x + Ti_y*v_y)
+                    amat_kn(var_Ti,var_Ti) = amat_kn(var_Ti,var_Ti) + tau_sc * (Ti_p*v_p) / (BigR*BigR)
+
+                    amat   (var_Te,var_Te) = amat   (var_Te,var_Te) + tau_sc * (Te_x*v_x + Te_y*v_y)
+                    amat_kn(var_Te,var_Te) = amat_kn(var_Te,var_Te) + tau_sc * (Te_p*v_p) / (BigR*BigR)
+                  else
+                    amat   (var_T,var_T) = amat   (var_T,var_T) + tau_sc * (T_x*v_x + T_y*v_y)            
+                    amat_kn(var_T,var_T) = amat_kn(var_T,var_T) + tau_sc * (T_p*v_p) / (BigR*BigR)
+                  endif 
+
+                  if (with_neutrals) then
+                    amat   (var_rhon,var_rhon) = amat   (var_rhon,var_rhon) + tau_sc * (rhon_x*v_x + rhon_y*v_y) 
+                    amat_kn(var_rhon,var_rhon) = amat_kn(var_rhon,var_rhon) + tau_sc * (rhon_p*v_p) / (BigR*BigR)
+                  endif
                   !###################################################################################################
                   !# end equations                                                                                   #
                   !###################################################################################################

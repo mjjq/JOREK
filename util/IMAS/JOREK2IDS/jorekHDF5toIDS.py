@@ -1,23 +1,37 @@
 #!/usr/bin/env python
-
 #   Name : jorekHDF5toIDS.py
 #
 #   Description :
-#       A script which reads a single JOREK HDF5 output file and writes its
-#       contents (grid geometry (xyz coordinates (!), quad connectivity
-#       array), data fields) to MHD IDS.
+#       A script which reads JOREK HDF5 output file(s) and writes its
+#       contents (grid geometry as Bezier elements, quad connectivity,
+#       data fields with Fourer harmonics) to IMAS MHD IDS.
+#  Main features:
+#      1. There are two grid_ggd spaces:
+#         - Space 1 is two-dimensional (R,Z) space of unstructured grid
+#           with geometry_2d associated to nodes and cells.
+#         - Space 2 is one-dimensional space with $\phi$ and
+#           geometry_type.index = 1 (Fourier) with geometry
+#           objects (1, 2, 3, ..., number of harmonics)
+#     2. Values (Te, n, w, ...), stored under ggd, with the above two
+#        spaces form a "structured" (implicitly defined) grid of node
+#        values, where explicitly RZ values of first harmonics are saved
+#        first, then RZ values of the second harmonics follow up to the
+#        last RZ harmonics. Similarly, coefficients on the nodes are saved.
+#        This definition follows column major (FORTRAN) notation,
+#        meaning that with varying first index (R) the values are close
+#        together in the memory and that the last index
+#        (phi in Fourier space) defines RZ block of values in memory.
 #
 #       JOREK HDF5 file contents:
 #           https://www.jorek.eu/wiki/doku.php?id=hdf5-tools&s[]=hdf5
 #
 #   Requirements:
-#       - pip3 install --user h5py
+#       - h5py
 #       - IMAS
 #       - mkdir -p $HOME/public/imasdb/smiter/3/0
 #
-#
 #   Author :
-#       Dejan Penko and Leon Kos
+#       Leon Kos and Miha Radež
 #   E-mail :
 #       leon.kos@lecad.fs.uni-lj.si
 #
@@ -43,10 +57,10 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-s", "--shot", type=int, default=1,
                         help="Shot number")
-    parser.add_argument("-r", "--run", type=int, default=4,
+    parser.add_argument("-r", "--run", type=int, default=5,
                         help="Run number")
     parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
-                        help="Location of $HOME/../$USER/public/imasdb")
+                        help="Location of ~$USER/public/imasdb")
     parser.add_argument("-d", "--database", type=str, default="smiter",
                         help="Database name under public/imasdb/")
     parser.add_argument("-o", "--occurrence", type=int, default=0,
@@ -97,19 +111,7 @@ if __name__ == "__main__":
             
         print("Time step: ", tstep)
         print("Time: ", t_now)
-        
-        
-        # Set angle for VTK object to be interpolated (3D grid geometry
-        # and data fields)
-        # Set phi=0 for regular 2D slice
-
-        # Pure 2D grid with quad elements
-        # grid = f.to_vtk(phi=0, quadratic=False, n_sub=4)
-        #grid = f.to_vtk(phi=0, quadratic=False, n_sub=2, n_plane=1)
-        # grid = f.to_vtk(phi=[0,np.pi/2], quadratic=False, n_plane=1)
-
-        # Denser grid (n_sub)
-        # grid = f.to_vtk(phi=0, quadratic=False, n_sub=8)
+        print("n_period = ", n_period)
 
         # Grid geometry is taken only from the first time slice. All other
         # time slices share the same geometry. No need to write the same grid
@@ -173,7 +175,7 @@ if __name__ == "__main__":
             #coordinate and derivates (s, t, mixed)
             for j in range(np.shape(x)[2]):
                 gr2d.objects_per_dimension.array[0].object.array[j].geometry_2d = x[:, :, j]
-                
+
             #size 1, d_{uk}, d_{vk}, d{uv}d{vk} as in Daan Van Vugt thesis
             for i in range(np.shape(size)[2]):
                 gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d = size[:, :, i]
@@ -251,12 +253,14 @@ if __name__ == "__main__":
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
 
-                #adding values and derivates for each fourier harmonic
+                #adding values and derivates for each Fourier harmonic
                 #caution for adding toroidal coordinate we must resize ...temperature to n_tor
                 val_tor = w_ids.imas_obj.mhd.ggd[i_slice].electrons.temperature
-                for j in range(n_tor):
-                    val_tor[j].coefficients = values[5, :, j, :]
-                    print("T toroidal coordinate writen (n,n_tor):", (j, n_tor - 1))
+                temp = values[5, :, :, :]
+                temp = np.swapaxes(temp, 0, 1)
+                a = np.shape(temp)
+                temp1 = np.reshape(temp, (a[0], a[1] * a[2]))
+                val_tor[0].coefficients = temp1
 
             elif label == 'v_par':  # V_parallel / parallel velocity
                 print("Writing quantity array: ", label)
@@ -273,4 +277,3 @@ if __name__ == "__main__":
 
     # Set time array
     w_ids.imas_obj.mhd.time = allTimeValues
-

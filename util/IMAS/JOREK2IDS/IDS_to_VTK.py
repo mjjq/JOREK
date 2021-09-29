@@ -13,13 +13,13 @@ vtk_prec=vtk.VTK_FLOAT
 parser = argparse.ArgumentParser(description="Convert IMAS MHD IDS to VTK file",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-s", "--shot", type=int, default=1, help="Shot number")
-parser.add_argument("-r", "--run", type=int, default=4, help="Run number")
+parser.add_argument("-r", "--run", type=int, default=5, help="Run number")
 parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")
 parser.add_argument("-d", "--database", type=str, default="smiter", help="Database name under public/imasdb/")
 parser.add_argument("-o", "--occurrence", type=int, default=0, help="Occurrence number")
-parser.add_argument("vtkfile", metavar='jorek.vtk', nargs='?', help="Resulting VTK filename", default="jorek.vtk")
-parser.add_argument("-p", "--phi", type=list, default=[0, 90], help="Phi coordinate")
+parser.add_argument("vtkfile", metavar='jorek.vtk', nargs='?', help="Resulting VTK filename", default="jorek_ids.vtu")
+parser.add_argument("-p", "--phi", type=list, default=[0, 180], help="Phi coordinate")
 parser.add_argument("-n", "--n_plane", type=int, default=3, help="Number of planes")
 parser.add_argument("-b", "--bezier", type=bool, default=True, help="Bezier grid")
 
@@ -85,11 +85,11 @@ def visualise():
             size[:, :, i] = gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d
 
         #values
-        val_tor = r_ids.ggd.array[0].electrons.temperature.array
-        n_tor = len(val_tor)
-        temp = np.empty((4, n_tor, len(xyz0)))
-        for j in range(n_tor):
-            temp[:, j, :] = val_tor[j].coefficients
+        val_tor = r_ids.ggd.array[0].electrons.temperature.array[0].coefficients
+        a = np.shape(val_tor)
+        n_tor = a[0]
+        temp = np.reshape(val_tor, (n_tor, 4, len(xyz0)))
+        temp = np.swapaxes(temp, 0, 1)
         values = np.array([temp])
 
         #vertex
@@ -219,10 +219,10 @@ def visualise():
 
         writer = vtk.vtkXMLUnstructuredGridWriter()
         # writer.SetDataModeToAscii()
-        writer.SetFileName("jore_test3D.vtu")
+        writer.SetFileName(args.vtkfile)
         writer.SetInputData(output)
         writer.Write()
-        print(".vtu done")
+        print(args.vtkfile, "saved OK")
         exit(0)
 
 def toroidal_basis(n_tor, n_period, phis, without_n0_mode):

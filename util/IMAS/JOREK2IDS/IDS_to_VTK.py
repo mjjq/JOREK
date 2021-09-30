@@ -13,13 +13,13 @@ vtk_prec=vtk.VTK_FLOAT
 parser = argparse.ArgumentParser(description="Convert IMAS MHD IDS to VTK file",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-s", "--shot", type=int, default=1, help="Shot number")
-parser.add_argument("-r", "--run", type=int, default=5, help="Run number")
+parser.add_argument("-r", "--run", type=int, default=6, help="Run number")
 parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")
 parser.add_argument("-d", "--database", type=str, default="smiter", help="Database name under public/imasdb/")
 parser.add_argument("-o", "--occurrence", type=int, default=0, help="Occurrence number")
 parser.add_argument("vtkfile", metavar='jorek.vtk', nargs='?', help="Resulting VTK filename", default="jorek_ids.vtu")
-parser.add_argument("-p", "--phi", type=list, default=[0, 180], help="Phi coordinate")
+parser.add_argument("-p", "--phi", type=list, default=[0, 90], help="Phi coordinate")
 parser.add_argument("-n", "--n_plane", type=int, default=3, help="Number of planes")
 parser.add_argument("-b", "--bezier", type=bool, default=True, help="Bezier grid")
 
@@ -28,6 +28,7 @@ args = parser.parse_args()
 b_ids = basicIDS(args.shot, args.run, args.user, args.database)
 r_ids = readIDS(args.shot, args.run, args.user, args.database)
 r_ids.getGGD("mhd")
+print("a")
 
 def visualise():
     if not(args.bezier):
@@ -73,6 +74,8 @@ def visualise():
         #excavating data from IDS file
         xyz0 = r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[0].object.array
         ien0 = np.array(r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
+
+        n_period = r_ids.grid_ggd.array[0].space.array[1].geometry_type.index
 
         x = np.zeros((2, 4, len(xyz0)))
         gr2d = r_ids.grid_ggd.array[0].space.array[0]
@@ -203,7 +206,7 @@ def visualise():
         output.SetPoints(points)
         output.SetCells(etype, cells)
         
-        HZ = toroidal_basis(n_tor, 3, phis, without_n0_mode)
+        HZ = toroidal_basis(n_tor, n_period, phis, without_n0_mode)
 
         val = interp_scalars_3D(values, vertex, size, n_sub, HZ).reshape((1, -1))
 

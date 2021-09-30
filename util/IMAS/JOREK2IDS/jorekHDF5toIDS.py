@@ -57,7 +57,7 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-s", "--shot", type=int, default=1,
                         help="Shot number")
-    parser.add_argument("-r", "--run", type=int, default=5,
+    parser.add_argument("-r", "--run", type=int, default=6,
                         help="Run number")
     parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                         help="Location of ~$USER/public/imasdb")
@@ -170,8 +170,10 @@ if __name__ == "__main__":
                                    n=0,
                                    label='JOREK output HDF5 file grid with quantities')
 
+            w_ids.grid_ggd.array[0].space.resize(2)
+            w_ids.grid_ggd.array[0].space.array[1].geometry_type.index = n_period
             gr2d = w_ids.grid_ggd.array[0].space.array[0]
-            
+
             #coordinate and derivates (s, t, mixed)
             for j in range(np.shape(x)[2]):
                 gr2d.objects_per_dimension.array[0].object.array[j].geometry_2d = x[:, :, j]
@@ -180,7 +182,6 @@ if __name__ == "__main__":
             for i in range(np.shape(size)[2]):
                 gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d = size[:, :, i]
             gr2d.geometry_type.index = 1
-
 
         quantity_names_list = ["psi", "u", "j", "w", "rho", "T", "v_par"]
         quantities_array = val
@@ -247,7 +248,7 @@ if __name__ == "__main__":
             elif label == 'T':  # Temperature / total temperature
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
-                w_ids.imas_obj.mhd.ggd[i_slice].electrons.temperature.resize(n_tor)
+                w_ids.imas_obj.mhd.ggd[i_slice].electrons.temperature.resize(1)
                 # Set IDS path
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].electrons.temperature[0]
                 # Write quantities

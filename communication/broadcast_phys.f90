@@ -186,6 +186,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(old_deuterium_atomic,   1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(Vpar_smoothing,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(Vpar_smoothing_coef,    3,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(min_sheath_angle    ,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(central_density,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(central_mass,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
@@ -407,7 +408,6 @@ if (my_id .eq. 0) then
   call MPI_PACK (delta_psi_GS     ,     1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
   call MPI_PACK (newton_GS_fixbnd,    1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (newton_GS_freebnd,   1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)    
-  call MPI_PACK (PF_pert_start_time ,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   
   call MPI_PACK(eqdsk_psi_fact,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK (n_wall_blocks,         1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -832,6 +832,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,old_deuterium_atomic,   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,vpar_smoothing,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,Vpar_smoothing_coef,    3,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,min_sheath_angle    ,   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,central_density,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,central_mass,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
@@ -1053,7 +1054,6 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,delta_psi_GS     ,      1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,newton_GS_fixbnd ,    1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,newton_GS_freebnd ,   1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,PF_pert_start_time ,    1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   
   call MPI_UNPACK(buffer,bufsize,position,eqdsk_psi_fact,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_wall_blocks          ,    1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
@@ -1313,6 +1313,7 @@ if (my_id .ne. 0) then
     enddo
     call MPI_UNPACK(buffer,bufsize,position,weights_per_family(1:n_mode_families),n_mode_families,MPI_REAL8,MPI_COMM_WORLD,ierr)
   endif
+  if (autodistribute_modes) n_mode_families = (n_tor+1)/2
   call MPI_UNPACK(buffer,bufsize,position,autodistribute_ranks,1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   if (.not. autodistribute_ranks) then
     call MPI_UNPACK(buffer,bufsize,position,ranks_per_family(1:n_mode_families),n_mode_families,MPI_INTEGER,MPI_COMM_WORLD,ierr)

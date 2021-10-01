@@ -557,10 +557,10 @@
  psi_axis_init = 0.3
  amix = 0.5
  
- ffprime_file= "jorek_ffprime.dat"
- Te_file     = "jorek_temperature_half.dat"
- Ti_file     = "jorek_temperature_half.dat"
- rho_file    = "jorek_density.dat"
+ ffprime_file= "jorek_ffprime"
+ Te_file     = "jorek_temperature_half"
+ Ti_file     = "jorek_temperature_half"
+ rho_file    = "jorek_density"
  
  central_density = 5.740669e-01 
  

@@ -30,6 +30,7 @@ character(len=512), parameter :: REA3_FMT = "(1X,A, ' = ', 9ES12.4, '     ...')"
 character(len=512), parameter :: VARI_FMT = "(3x,I3,': ',A)"
 character(len=512), parameter :: MODE_FMT = "(3x,I3,': ',A,'(',A,'*phi)')"
 character(len=512), parameter :: CHAR_FMT = "(1X,A, ' = ""', A, '""')"
+character(len=512), parameter :: CHAR_FMT2 = "(1X,A,I2,A,' = ""',A,'""')"
 
 ! --- Local variables
 integer           :: ivar, itor
@@ -569,7 +570,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
       write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
-    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
     write(*,REAL_FMT) 'start_VFB_ts          ', start_VFB_ts
     write(*,REAL_FMT) 'vert_FB_gain          ', vert_FB_gain(:)
     write(*,REAL_FMT) 'vert_FB_amp_ts        ', vert_FB_amp_ts(1:n_pf_coils)
@@ -790,9 +790,15 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,INTG_FMT) 'n_spi_tot           ',  n_spi_tot
      write(*,INTG_FMT) 'n_inj               ',  n_inj
+     do i = 1,n_inj
+       write(*,CHAR_FMT2) 'spi_plume_file(',i,')    ',  trim(spi_plume_file(i))
+     end do
+     write(*,LOGI_FMT) 'spi_plume_hdf5      ',  spi_plume_hdf5
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
-     write(*,CHAR_FMT) 'spi_shard_file      ',  trim(spi_shard_file)
+     do i = 1,n_inj
+       write(*,CHAR_FMT2) 'spi_shard_file(',i,')    ',  trim(spi_shard_file(i))
+     end do
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref

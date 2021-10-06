@@ -592,7 +592,7 @@ module mod_expression
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg
-    real*8  :: Lrad_imp, r_imp, coef_rad_imp
+    real*8  :: Lrad_imp, r_imp
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -1500,18 +1500,13 @@ module mod_expression
       r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
 
       if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
-        ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-        coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                     *(central_density*1.d20)**2.5d0
         Lrad_imp = 0.0
-        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)         
-        if (Lrad_imp < 0.) then
-          Lrad_imp = 0.
-        end if
         if ( units == SI_UNITS ) then
+          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)
           frad_bg = nimp_bg * Lrad_imp
         else if ( units == JOREK_UNITS ) then
-          frad_bg = r_imp * Lrad_imp * coef_rad_imp 
+          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
+          frad_bg = r_imp * Lrad_imp 
         endif
       else     
         Lrad_imp = 0.

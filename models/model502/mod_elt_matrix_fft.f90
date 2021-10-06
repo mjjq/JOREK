@@ -4,8 +4,9 @@ module mod_elt_matrix_fft
 
 contains
 
-subroutine element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid,&
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+                              ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt,               &
+                              delta_g, delta_s, delta_t, i_tor_min, i_tor_max, aux_nodes)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -27,8 +28,9 @@ use mod_sources
 
 implicit none
 
-type (type_element)   :: element
-type (type_node)      :: nodes(n_vertex_max)
+type (type_element)        :: element
+type (type_node)           :: nodes(n_vertex_max)
+type (type_node), optional :: aux_nodes(n_vertex_max)
 
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 
@@ -770,10 +772,14 @@ do ms=1, n_gauss
        endif
        if (Ti0 .lt. ZK_prof_neg_thresh) then
          ZK_i_prof = ZK_prof_neg
+       end if
+       if (Ti0 .lt. ZK_par_neg_thresh) then
          ZK_i_par_T = ZK_par_neg
        endif
        if (Te0 .lt. ZK_prof_neg_thresh) then
          ZK_e_prof = ZK_prof_neg
+       end if
+       if (Te0 .lt. ZK_par_neg_thresh) then
          ZK_e_par_T = ZK_par_neg
        endif
      endif
@@ -1071,7 +1077,7 @@ do ms=1, n_gauss
     frad_bg     = (GAMMA-1.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
                   *nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
+    dfrad_bg_dT = -(GAMMA-1.d0)/2.d0*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
                   *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
 
@@ -3104,7 +3110,7 @@ do ms=1, n_gauss
                           * (r0+alpha_e_bis*rn0) * (Te_x * ps0_y - Te_y * ps0_x                   )        &
                           * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
 
-                       + TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                       + TG_num9 * 0.25d0 / BigR * vpar0**2 &
                                  * (alpha_e_tri*rn0)* Te * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)      &
                                  * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
 
@@ -3128,7 +3134,7 @@ do ms=1, n_gauss
                                  + F0/BigR*(r0_p+alpha_e_bis*rn0_p))                                      &
                           * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep&
 
-                       + TG_num6 * 0.25d0 / BigR * vpar0**2 &
+                       + TG_num9 * 0.25d0 / BigR * vpar0**2 &
                                  * (alpha_e_tri*rn0)* Te * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)    &
                                  * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 

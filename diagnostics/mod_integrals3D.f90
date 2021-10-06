@@ -644,15 +644,9 @@ do ife = ife_min, ife_max
           ! Use radiation coefficients from ADAS
           if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > 0) then
             Lrad_imp = 0.0
-            call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
-            if (Lrad_imp < 0.) Lrad_imp = 0.
+            call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)
           else
             Lrad_imp = 0.
-          end if
-          ! This is to detect N/A
-          if (Lrad_imp/=Lrad_imp) then
-            write(*,*) "WARNING: Lrad_imp ", Lrad_imp
-            stop
           end if
           local_radiation_phi(mp) = local_radiation_phi(mp) + ( (r0_corr * rn0_corr  * LradDrays_T    &
                                      + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
@@ -783,8 +777,7 @@ do ife = ife_min, ife_max
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
           !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-          if (Lrad < 0.) Lrad = 0.
+          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad)
         else
           Lrad = 0.
         end if

@@ -122,7 +122,6 @@ real*8     :: coef_rec_1                                      ! Recombination ra
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
 real*8     :: T_rad                                           ! Temperature used in radiation rate
-real*8     :: coef_rad_1                                      ! Radiation rate parameters
 
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT ! Retain the hard-coded fitting for argon
@@ -1119,34 +1118,21 @@ do i=1,n_vertex_max
           if (use_imp_adas) then  ! use open adas by default
             r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
             if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
-              ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-              coef_rad_1 = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                    *(central_density*1.d20)**2.5d0
-
+            
               Lrad_imp = 0.0
               dLrad_imp_dT = 0.0
 
-              call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp,dLrad_imp_dT)
-              Lrad_imp = Lrad_imp * coef_rad_1
-
-              ! Convert gradient wrt. to T from 1/K into 1/eV
-              dLrad_imp_dT = dLrad_imp_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
-              ! ...and now from 1/eV into 1/(JOREK units)
-              dLrad_imp_dT = dLrad_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+              call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),.true.,Lrad_imp,dLrad_imp_dT)
               dLrad_imp_dT = dLrad_imp_dT * dT0_corr_dT            
 
-              if (Lrad_imp < 0.) then
-                Lrad_imp = 0.
-                dLrad_imp_dT = 0.
-              end if
             else     
               Lrad_imp = 0.
               dLrad_imp_dT = 0.
             end if
    
             ! This is to detect N/A
-            if (Lrad_imp/=Lrad_imp .or. dLrad_imp_dT/=dLrad_imp_dT) then
-              write(*,*) "WARNING: Lrad_imp, dLrad_imp_dT ", Lrad_imp, dLrad_imp_dT
+            if (dLrad_imp_dT/=dLrad_imp_dT) then
+              write(*,*) "WARNING: dLrad_imp_dT ", dLrad_imp_dT
               stop
             end if
 

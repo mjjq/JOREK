@@ -103,7 +103,7 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 logical               :: include_radiation
 integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg
-real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp, coef_rad_imp
+real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp
 real*8                :: T_corr, Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
@@ -1229,15 +1229,8 @@ enddo  ! n_elements
       if (use_imp_adas) then  ! use open adas by default
         r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU    
         if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
-          ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-          coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                       *(central_density*1.d20)**2.5d0
           Lrad_imp = 0.0
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)
-          Lrad_imp = Lrad_imp * coef_rad_imp          
-          if (Lrad_imp < 0.) then
-            Lrad_imp = 0.
-          end if
+          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
         else     
           Lrad_imp = 0.
         end if  
@@ -1354,11 +1347,6 @@ enddo  ! n_elements
   ! --- Radiative function, using interpolation
   ! ------------------------------------------
 
-     ! Normalization coefficient for radiation rate from SI units (W.m^3) to
-     ! JOREK units:
-     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                  *(central_density*1.d20)**2.5d0*m_i_over_m_imp
-
      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
 
        Lrad = 0.0
@@ -1366,9 +1354,8 @@ enddo  ! n_elements
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will be needed
        !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-
-       Lrad = Lrad * coef_rad_1
+       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad)
+       Lrad = Lrad * m_i_over_m_imp
 
      else
        Lrad = 0.
@@ -1568,9 +1555,7 @@ if (SI_units) then
         ! Use radiation coefficients from ADAS
         if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
           Lrad_imp = 0.0
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)
-          if (Lrad_imp < 0.) Lrad_imp = 0.
-          Lrad_imp = Lrad_imp 
+          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)
         else
           Lrad_imp = 0.
         end if

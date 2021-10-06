@@ -560,4 +560,23 @@ subroutine preset_parameters
   Q_bar = 0.d0
   Sigma = 0.d0
 
+!===================== particle input values
+n_particles        = 0
+nstep_particles    = 0
+nsubstep_particles = 1
+tstep_particles    = 1d-9
+filter_perp        = 0.d0
+filter_hyper       = 1.d-10
+filter_par         = 0.d0
+filter_perp_n0     = 0.d0
+filter_hyper_n0    = 1.d-10
+filter_par_n0      = 0.d0
+restart_particles  = .false.
+use_ncs            = .false.
+use_ccs            = .false.
+use_pcs            = .false.
+use_ionisation     = .true.
+use_sputtering     = .false.
+use_cx             = .true.
+
 end subroutine preset_parameters

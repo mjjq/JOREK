@@ -23,9 +23,8 @@ module mod_expression
   use mod_basisfunctions
   use mod_bootstrap_functions
   use mod_poloidal_currents
-  
-  
-  
+  use mod_impurity, only: radiation_function, radiation_function_linear
+  use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
   
   implicit none
   
@@ -85,7 +84,7 @@ module mod_expression
   
   
   ! --- Standard lists of expressions (require init_expr call first!).
-  type(t_expr_list), save :: exprs_all, exprs_all_int     !< All available expressions.
+  type(t_expr_list), save :: exprs_all, exprs_all_int, exprs_all_four     !< All available expressions.
   
   
   
@@ -102,6 +101,7 @@ module mod_expression
     
     exprs_all%n_expr     = 0
     exprs_all_int%n_expr = 0
+    exprs_all_four%n_expr = 0
     call add(exprs_all, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
     call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
@@ -133,6 +133,7 @@ module mod_expression
     call add(exprs_all, 'gradP_R     ', 'Pressure gradient force (R component)                 ')
     call add(exprs_all, 'gradP_Z     ', 'Pressure gradient force (Z component)                 ')
     call add(exprs_all, 'gradP_phi   ', 'Pressure gradient force (phi component)               ')
+    call add(exprs_all, 'gradP_B     ', 'Parallel pressure gradient (along B)                  ')
     call add(exprs_all, 'gradPdotCurv', 'grad p dot curvature                                  ')
     call add(exprs_all, 'curvat_R    ', 'curvature (= b . grad ( b )) in the R direction       ')
     call add(exprs_all, 'curvat_Z    ', 'curvature (= b . grad ( b )) in the Z direction       ')
@@ -140,15 +141,24 @@ module mod_expression
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
+#ifdef WITH_Impurities
+    call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
+#endif
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
     call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
-    call add(exprs_all, 'eta_T       ', 'Temperature Dependent Resistivity                     ')
-    call add(exprs_all, 'visco_T     ', 'Temperature Dependent Viscosity                       ')
-    call add(exprs_all, 'zkpar_T     ', 'Temperature Dependent Parallel Heat Diffusivity       ')
+    call add(exprs_all, 'eta_T       ', 'Resistivity                                           ')
+    call add(exprs_all, 'visco_T     ', 'Viscosity                                             ')
+    call add(exprs_all, 'zkpar_T     ', 'Parallel Heat Diffusivity                             ')
+    call add(exprs_all, 'zkipar_T    ', 'Parallel Ion Heat Diffusivity                         ')
+    call add(exprs_all, 'zkepar_T    ', 'Parallel ElectronHeat Diffusivity                     ')
     call add(exprs_all, 'dprof       ', 'Particle Diffusivity                                  ')
     call add(exprs_all, 'zkprof      ', 'Perpendicular Heat Diffusivity                        ')
+    call add(exprs_all, 'zkiprof     ', 'Perpendicular Ion Heat Diffusivity                    ')
+    call add(exprs_all, 'zkeprof     ', 'Perpendicular Electron Heat Diffusivity               ')
     call add(exprs_all, 'pres        ', 'Total Pressure                                        ')
+    call add(exprs_all, 'pres_e      ', 'Electron Pressure                                     ')
+    call add(exprs_all, 'pres_i      ', 'Ion Pressure                                          ')
     call add(exprs_all, 'B_abs       ', 'Norm of the Magnetic Field Vector                     ')
     call add(exprs_all, 'Btor        ', 'Toroidal Magnetic Field Component                     ')
     call add(exprs_all, 'BR          ', 'Magnetic Field Component Along R                      ')
@@ -204,11 +214,14 @@ module mod_expression
     call add(exprs_all, 'partF_total ', 'Total particle flux (normal to the boundary)          ', 'boundary    ')
     call add(exprs_all, 'npartF_total', 'Total neutral particle flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'ExB_norm    ', 'EM energy flux, Poynting vector (normal to boundary)  ', 'boundary    ')
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+    call add(exprs_all, 'gradP_norm  ', 'Total pressure gradient normal to the boundary        ', 'boundary    ')
+#if JOREK_MODEL >= 303
     call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                     ')
 #endif
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
+#endif
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
 #endif
     ! --- List of volume and boundary integrals
@@ -216,6 +229,8 @@ module mod_expression
     call add(exprs_all_int, 'psi_axis    ', 'psi at magnetic axis                                  ')
     call add(exprs_all_int, 'R_axis      ', 'R of magnetic axis                                    ')
     call add(exprs_all_int, 'Z_axis      ', 'Z of magnetic axis                                    ')
+    call add(exprs_all_int, 'R_curr_cent ', 'R current centroid,    doi:10.1088/0029-5515/38/5/307 ')  ! See equation 39
+    call add(exprs_all_int, 'Z_curr_cent ', 'Z current centroid,    doi:10.1088/0029-5515/38/5/307 ')  ! in the reference
     call add(exprs_all_int, 'psi_bnd     ', 'psi at boundary point (defining LCFS)                 ')
     call add(exprs_all_int, 'R_bnd       ', 'R of boundary point                                   ')
     call add(exprs_all_int, 'Z_bnd       ', 'Z of boundary point                                   ')
@@ -228,6 +243,12 @@ module mod_expression
     call add(exprs_all_int, 'Thermal_tot ', 'Total thermal energy                                  ')
     call add(exprs_all_int, 'Thermal_in  ', 'Thermal energy (inside  LCFS)                         ')
     call add(exprs_all_int, 'Thermal_out ', 'Thermal energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_tot','Total electron thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_e_in ','Thermal electron energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_e_out','Thermal electron energy (outside LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_tot','Total ion thermal energy                                  ')
+    call add(exprs_all_int, 'Thermal_i_in ','Thermal ion energy (inside  LCFS)                         ')
+    call add(exprs_all_int, 'Thermal_i_out','Thermal ion energy (outside LCFS)                         ')
     call add(exprs_all_int, 'Kin_par_tot ', 'Total parallel kinetic energy                         ')
     call add(exprs_all_int, 'Kin_par_in  ', 'Parallel kinetic energy (inside  LCFS)                ')
     call add(exprs_all_int, 'Kin_par_out ', 'Parallel kinetic energy (outside LCFS)                ')
@@ -248,6 +269,7 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
+    call add(exprs_all_int, 'Friction_diss','Total frictional dissipation                          ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
     call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
@@ -280,6 +302,11 @@ module mod_expression
     call add(exprs_all_int, 'I_halo      ', 'Total poloidal halo currents                          ')
     call add(exprs_all_int, 'TPF_halo    ', 'Toroidal peaking factor of the poloidal halos         ')
 
+    call add(exprs_all_four, 'absolute    ', 'Absolute value of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'real        ', 'Real part      of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'imaginary   ', 'Imaginary part of 2D Fourier analysis                 ')
+    call add(exprs_all_four, 'phase       ', 'Complex phase  of 2D Fourier analysis                 ')
+
   end subroutine init_expr
   
   
@@ -305,33 +332,35 @@ module mod_expression
   end subroutine add
   
   
-  
-  
-  
   !> Creates a subset of all available expressions.
-  function exprs(name, n_expr, n_coord) result(expr_list)
+  function exprs(name, n_expr, n_coord, exprs_all_local) result(expr_list)
     type(t_expr_list) :: expr_list
     
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
     
     ! --- Routine parameters
-    character(len=*),  intent(in) :: name(n_expr)
-    integer,           intent(in) :: n_expr
-    integer, optional, intent(in) :: n_coord
+    character(len=*),            intent(in) :: name(n_expr)
+    integer,                     intent(in) :: n_expr
+    integer, optional,           intent(in) :: n_coord
+    type(t_expr_list), optional, intent(in) :: exprs_all_local
+    type(t_expr_list)                       :: exprs_all_local0
     
     ! --- Local variables
     integer :: i, j, k
     
+    exprs_all_local0 = exprs_all
+    if ( present(exprs_all_local) ) exprs_all_local0 = exprs_all_local
+
     k = 0
     do i = 1, n_expr
-      j = get_expr_num(exprs_all, trim(name(i)))
+      j = get_expr_num(exprs_all_local0, trim(name(i)))
       if ( j < 1 ) then
         write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Unknown expression "'//trim(name(i)) &
           //'" ignored.'
         cycle
       end if
       k = k + 1
-      expr_list%expr(k) = exprs_all%expr(j)
+      expr_list%expr(k) = exprs_all_local0%expr(j)
     end do
     expr_list%n_expr = k
     
@@ -339,40 +368,7 @@ module mod_expression
     if ( present(n_coord) ) expr_list%n_coord = n_coord
     
   end function exprs
-  
-  
-  !> Creates a subset of all available expressions.
-  function exprs_int(name, n_expr, n_coord) result(expr_list)
-    type(t_expr_list) :: expr_list
-    
-    character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':exprs'
-    
-    ! --- Routine parameters
-    character(len=*),  intent(in) :: name(n_expr)
-    integer,           intent(in) :: n_expr
-    integer, optional, intent(in) :: n_coord
-    
-    ! --- Local variables
-    integer :: i, j, k
-    
-    k = 0
-    do i = 1, n_expr
-      j = get_expr_num_int(exprs_all_int, trim(name(i)))
-      if ( j < 1 ) then
-        write(*,*) 'WARNING in '//trim(THIS_ROUTINE_NAME)//': Unknown expression "'//trim(name(i)) &
-          //'" ignored.'
-        cycle
-      end if
-      k = k + 1
-      expr_list%expr(k) = exprs_all_int%expr(j)
-    end do
-    expr_list%n_expr = k
-    
-    expr_list%n_coord = 0
-    if ( present(n_coord) ) expr_list%n_coord = n_coord
-    
-  end function exprs_int
-  
+
   
   
   !> Merge several expression lists.    ### NOT USED AT PRESENT
@@ -479,37 +475,13 @@ module mod_expression
     
     num = -99
     do i = 1, exprs_all%n_expr
-      if ( trim(exprs_all%expr(i)%name) == trim(name) ) then
+      if ( trim(expr_list%expr(i)%name) == trim(name) ) then
         num = i
         exit
       end if
     end do
     
   end function get_expr_num
-  
-  
-  
-  
-  
-   !> Find out expression number in an expression list.
-  integer function get_expr_num_int(expr_list, name) result(num)
-    
-    ! --- Routine parameters
-    type(t_expr_list),       intent(in) :: expr_list
-    character(len=*), intent(in) :: name
-    
-    ! --- Local variables
-    integer :: i
-    
-    num = -99
-    do i = 1, exprs_all_int%n_expr
-      if ( trim(exprs_all_int%expr(i)%name) == trim(name) ) then
-        num = i
-        exit
-      end if
-    end do
-    
-  end function get_expr_num_int
   
   
   
@@ -554,7 +526,7 @@ module mod_expression
   
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
   subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
-    
+
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
     ! --- Routine parameters
@@ -588,29 +560,61 @@ module mod_expression
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
       Vpar0_R, Vpar0_Z, Vpar0_RR, Vpar0_ZZ, Vpar0_RZ, P0, P0_R, P0_Z, P0_s, P0_t, P0_p, P0_pp,     &
-      P0_RR, P0_ZZ, P0_RZ, BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,          &
+      P0_RR, P0_ZZ, P0_RZ, Pi0, Pi0_R, Pi0_Z, Pi0_p, Pe0, Pe0_R, Pe0_Z, Pe0_p,                     &
+      BB2, Btor, BR, BZ, BR_Z, BZ_R, Btheta, psi_abs, E_par, E_crit,                               &
       E_dreicer, AR0_R, AR0_Z, AZ0_R, AZ0_Z, A30_R, A30_Z, AR0_Rp, AZ0_Zp, A30_RR, A30_ZZ, AR0_ZZ, &
       AR0_RR, AZ0_RR, AZ0_ZZ, A30_Rp, A30_Zp, AR0_RZ, AZ0_RZ, AR0_Zp, AZ0_Rp, A30_RZ, BR_p, BZ_p,  &
       BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi
-    real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, ZKpar_T, dZKpar_dT, D_prof, ZK_prof
+    real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, D_prof, ZK_prof, ZKi_prof, ZKe_prof, &
+      ZKpar_T, dZKpar_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
-      ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt
+      ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Fluxes
-    real*8  ::  ZKpar_flux, ZKperp_flux, Dpar_flux, Dperp_flux, partF_cnv_par, partF_cnv_tot
+    real*8  ::  ZKpar_flux, ZKipar_flux, ZKepar_flux, ZKperp_flux, ZKiperp_flux, ZKeperp_flux,     &
+      Dpar_flux, Dperp_flux, partF_cnv_par, partF_cnv_tot
     real*8  ::  pres_flux_par, pres_flux_tot, kin_flux_par, kin_flux_tot, neut_part_flux, ExB_norm 
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
-      fact_resistiv, fact_Er, fact_flux
-    real*8  :: coef_rad_1
-    real*8  :: T_rad, LradDrays_T, LradDcont_T
+      fact_resistiv, fact_Er, fact_flux, fact_rad
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
-    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+    real*8  :: Te_corr_eV
+    real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
+    real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
+    real*8  :: ne_SI                              ! Electron density used in radiation rate
+#endif
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg
+    real*8  :: Lrad_imp, r_imp, coef_rad_imp
+#endif
+#ifdef WITH_Impurities
+    ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
+    real*8  :: coef_rad_1, Te_eV
+    real*8  :: T0_corr, r0_corr, rn0_corr
+    ! Atomic physics coefficients:
+    !   -Mass ratio between main ions and impurites (m_i/m_imp)
+    real*8  :: m_i_over_m_imp
+    !   -Mean impurity ionization state
+    real*8  :: Z_imp, T0_Zimp, alpha_Zimp
+    !   -Coefficients related to Z_imp
+    real*8  :: alpha_imp
+    real*8  :: beta_imp
+    !   -Radiation from injected impurities
+    real*8  :: Lrad                                ! Radiation rate
+    real*8  :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
+    real*8  :: A2_rad, T2_rad, sig2_rad
+    !   -Temporary variable for charge state distribution
+    real*8, allocatable :: P_imp(:)
+    real*8  :: E_ion
+    integer*8  :: ion_i, ion_k
+#endif
     
     ierr = 0
     
@@ -636,6 +640,20 @@ module mod_expression
       ierr = -103
       return
     end if
+
+#ifdef WITH_Impurities
+     select case ( trim(imp_type) )
+       case('D2')
+         m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
+       case('Ar')
+         m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u 
+       case('Ne')
+         m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u 
+       case default
+         write(*,*) 'ERROR: Unknown imp_type.'
+         stop
+     end select
+#endif
     
     if ( allocated(result) ) deallocate(result)
     allocate( result(tor_pos_list%n_pos, pol_pos_list%n_pos(1), pol_pos_list%n_pos(2),             &
@@ -760,7 +778,7 @@ module mod_expression
                 hhz_p  = HZ_p (i_tor)
                 hhz_pp = HZ_pp(i_tor)
                 vv(:)  = 0.d0
-                vv(1:)  = nodes(i)%values(i_tor,j,:)
+                vv(1:n_var)  = nodes(i)%values(i_tor,j,:)
                 
                 ! --- Poloidal Flux
                 ps0      = ps0      + vv(var_psi) * sz * hh    * hhz
@@ -832,7 +850,7 @@ module mod_expression
                 Te0_p     = Te0_p     + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_p
                 Te0_pp    = Te0_pp    + ( vv(var_Te) + vv(var_T)/2.d0 ) * sz * hh    * hhz_pp
 
-                ! --- Temperature (ion + electron) in models .ne. 400
+                ! --- Temperature (ion + electron) in models .ne. 400 & 502
                 T0       = T0       + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz
                 T0_s     = T0_s     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_s  * hhz
                 T0_t     = T0_t     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh_t  * hhz
@@ -1122,6 +1140,16 @@ module mod_expression
           P0_RR    = r0_RR * T0 + r0 * T0_RR + 2.d0 * r0_R * T0_R
           P0_ZZ    = r0_ZZ * T0 + r0 * T0_ZZ + 2.d0 * r0_Z * T0_Z
           P0_RZ    = r0_RZ * T0 + r0 * T0_RZ + r0_R * T0_Z + r0_Z * T0_R
+  
+          Pi0      = r0    * Ti0
+          Pi0_R    = r0_R  * Ti0 + r0 * Ti0_R
+          Pi0_Z    = r0_Z  * Ti0 + r0 * Ti0_Z
+          Pi0_p    = r0_p  * Ti0 + r0 * Ti0_p
+ 
+          Pe0      = r0    * Te0
+          Pe0_R    = r0_R  * Te0 + r0 * Te0_R
+          Pe0_Z    = r0_Z  * Te0 + r0 * Te0_Z
+          Pe0_p    = r0_p  * Te0 + r0 * Te0_p
  
           rn0_R    = (   Z_t * rn0_s - Z_s * rn0_t ) / xjac
           rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac
@@ -1206,37 +1234,136 @@ module mod_expression
 
           ! --- Some input profiles
           if ( eta_T_dependent ) then
-            eta_T     = eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+            if ( with_TiTe) then ! (with_TiTe) *****************************************************
+              if ( corr_neg_temp(Te0) <= T_max_eta ) then
+                eta_T     =   eta   * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
+                deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
+                d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(Te0)**(-3.5d0) * Te_0**(1.5d0)
+              else if ( corr_neg_temp(Te0) > T_max_eta ) then
+                eta_T     =   eta   * (T_max_eta/Te_0)**(-1.5d0)
+                deta_dT   =   0.
+                d2eta_d2T =   0.
+              else
+                eta_T     =   eta
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                eta_T     =   eta   * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+
+            else ! (with_TiTe), i.e. with single temperature ***************************************
+              if ( corr_neg_temp(T0) <= T_max_eta ) then
+                eta_T     =   eta   * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+                deta_dT   = - eta   * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+                d2eta_d2T =   eta   * (3.75d0) * corr_neg_temp(T0)**(-3.5d0) * T_0**(1.5d0)
+              else if ( corr_neg_temp(T0) > T_max_eta ) then
+                eta_T     =   eta   * (T_max_eta/T_0)**(-1.5d0)
+                deta_dT   =   0.
+                d2eta_d2T =   0.
+              else
+                eta_T     =   eta
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                eta_T     =   eta   * (max(T0,T_min)/T_0)**(-1.5d0)
+                deta_dT   =   0.d0
+                d2eta_d2T =   0.d0
+              end if
+
+            end if ! (with_TiTe) *******************************************************************
           else
             eta_T     = eta
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
           end if
-          
+
           if ( visco_T_dependent ) then
-            visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
-            dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+            if ( with_TiTe) then ! (with_TiTe) *****************************************************
+              visco_T   =   visco * (corr_neg_temp(Te0)/Te_0)**(-1.5d0)
+              dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(Te0)**(-2.5d0) * Te_0**(1.5d0)
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              endif
+            else ! (with_TiTe), i.e. with single temperature ***************************************
+              visco_T   = visco * (corr_neg_temp(T0)/T_0)**(-1.5d0)
+              dvisco_dT = - visco * (1.5d0)  * corr_neg_temp(T0)**(-2.5d0) * T_0**(1.5d0)
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              endif
+            end if ! (with_TiTe) *******************************************************************
           else
             visco_T   = visco
             dvisco_dT = 0.d0
           end if
           
-          if ( ZKpar_T_dependent ) then
-            ZKpar_T   = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)
-            dZKpar_dT = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
-            if (ZKpar_T .gt. ZK_par_max) then
-              ZKpar_T   = Zk_par_max
+          if ( with_TiTe ) then ! (with_TiTe) ******************************************************
+            if ( ZKpar_T_dependent ) then
+              ZKi_par_T     = ZK_i_par * (corr_neg_temp(Ti0)/Ti_0)**(+2.5d0)
+              dZKi_par_dT   = ZK_i_par * (2.5d0)  * corr_neg_temp(Ti0)**(+1.5d0) * Ti_0**(-2.5d0)
+              if (ZKi_par_T .gt. ZK_par_max) then
+                ZKi_par_T   = Zk_par_max
+                dZKi_par_dT = 0.d0
+              end if
+              if ( eq%xpoint .and. (Ti0 .lt. T_min) ) then
+                ZKi_par_T   = ZK_i_par * (max(Ti0,T_min)/Ti_0)**(+2.5d0)
+                dZKi_par_dT = 0.d0
+              endif
+
+              ZKe_par_T   = ZK_e_par * (corr_neg_temp(Te0)/Te_0)**(+2.5d0)
+              dZKe_par_dT = ZK_e_par * (2.5d0)  * corr_neg_temp(Te0)**(+1.5d0) * Te_0**(-2.5d0)
+              if (ZKe_par_T .gt. ZK_par_max) then
+                ZKe_par_T   = Zk_par_max
+                dZKe_par_dT = 0.d0
+              end if
+              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+                ZKe_par_T   = ZK_e_par * (max(Te0,T_min)/Te_0)**(+2.5d0)
+                dZKe_par_dT = 0.d0
+              endif
+            else
+              ZKi_par_T   = ZK_i_par
+              dZKi_par_dT = 0.d0
+
+              ZKe_par_T   = ZK_e_par
+              dZKe_par_dT = 0.d0
+            end if
+            ZKpar_T   = 0.d0
+          else ! (with_TiTe), i.e. with single temperature *****************************************
+            if ( ZKpar_T_dependent ) then
+              ZKpar_T     = ZK_par * (corr_neg_temp(T0)/T_0)**(+2.5d0)
+              dZKpar_dT   = ZK_par * (2.5d0)  * corr_neg_temp(T0)**(+1.5d0) * T_0**(-2.5d0)
+              if (ZKpar_T .gt. ZK_par_max) then
+                ZKpar_T   = Zk_par_max
+                dZKpar_dT = 0.d0
+              end if
+              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+                ZKpar_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
+                dZKpar_dT = 0.d0
+              endif
+
+            else
+              ZKpar_T   = ZK_par
               dZKpar_dT = 0.d0
             end if
-          else
-            ZKpar_T   = ZK_par
-            dZKpar_dT = 0.d0
-          end if
+            ZKi_par_T   = ZKpar_T
+            ZKe_par_T   = ZKpar_T
+          end if ! (with_TiTe) *********************************************************************
           
           D_prof  = get_dperp (psi_norm)
-          ZK_prof = get_zkperp(psi_norm)
+          if ( with_TiTe ) then
+            ZKi_prof = get_zk_iperp(psi_norm)
+            ZKe_prof = get_zk_eperp(psi_norm)
+            ZK_prof  = 0.d0
+          else
+            ZK_prof  = get_zkperp(psi_norm)
+            ZKi_prof = ZK_prof
+            ZKe_prof = ZK_prof
+          end if
 
           ! --- Fluxes 
           pres_flux_par =  gamma/(gamma-1.d0) * r0 * T0 * Vpar_tot * Bnorm / Btot          !  p v_par·n
@@ -1245,9 +1372,25 @@ module mod_expression
           kin_flux_par  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* Vpar_tot * Bnorm / Btot ! 0.5 nv^2 v_par·n
           kin_flux_tot  = 0.5d0*r0* (VR*VR + VZ*VZ + V_phi*V_phi)* (VR*nmlR + VZ*nmlZ)     ! 0.5 nv^2 v·n 
 
-          ZKpar_flux    = - ZKpar_T *(BR*T0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) ! q_par·n 
-          ZKperp_flux   = - ZK_prof *( T0_R*nmlR + T0_Z*nmlZ)        / (gamma-1.d0) &                ! q_perp·n
-                          + ZK_prof *(BR*T0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) 
+          if ( with_TiTe ) then
+            ZKipar_flux    = - ZKi_par_T *(BR*Ti0_R + BZ*Ti0_Z + Btor*Ti0_p/R) * Bnorm / BB2 / (gamma-1.d0)   ! q_par·n 
+            ZKiperp_flux   = - ZKi_prof  *( Ti0_R*nmlR + Ti0_Z*nmlZ)                         / (gamma-1.d0) & ! q_perp·n
+                             + ZKi_prof  *(BR*Ti0_R + BZ*Ti0_Z + Btor*Ti0_p/R) * Bnorm / BB2 / (gamma-1.d0) 
+            ZKepar_flux    = - ZKe_par_T *(BR*Te0_R + BZ*Te0_Z + Btor*Te0_p/R) * Bnorm / BB2 / (gamma-1.d0)   ! q_par·n 
+            ZKeperp_flux   = - ZKe_prof  *( Te0_R*nmlR + Te0_Z*nmlZ)                         / (gamma-1.d0) & ! q_perp·n
+                             + ZKe_prof  *(BR*Te0_R + BZ*Te0_Z + Btor*Te0_p/R) * Bnorm / BB2 / (gamma-1.d0) 
+            ZKpar_flux     = ZKipar_flux  + ZKepar_flux
+            ZKperp_flux    = ZKiperp_flux + ZKeperp_flux
+          else
+            ZKpar_flux    = - ZKpar_T *(BR*T0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) ! q_par·n 
+            ZKperp_flux   = - ZK_prof *( T0_R*nmlR + T0_Z*nmlZ)        / (gamma-1.d0) &                ! q_perp·n
+                            + ZK_prof *(BR*T0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2 / (gamma-1.d0) 
+            ZKipar_flux   = ZKpar_flux  / 2.d0
+            ZKiperp_flux  = ZKperp_flux / 2.d0
+
+            ZKepar_flux   = ZKpar_flux  / 2.d0
+            ZKeperp_flux  = ZKperp_flux / 2.d0
+          end if
     
           Dpar_flux     = - D_par  * (BR*r0_R + BZ*T0_Z + Btor*T0_p/R) * Bnorm / BB2
           Dperp_flux    = - D_prof * ( r0_R*nmlR + T0_Z*nmlZ)                       &                              
@@ -1256,7 +1399,7 @@ module mod_expression
           partF_cnv_par =   r0 * Vpar_tot * Bnorm / Btot                           !  p v_par·n
           partF_cnv_tot =   r0 * ( VR * nmlR + VZ * nmlZ )                         !  n v·n
     
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
           neut_part_flux= -D_neutral_x*rn0_R * nmlR - D_neutral_y * rn0_Z * nmlZ
 #else
           neut_part_flux= 0.d0
@@ -1267,7 +1410,7 @@ module mod_expression
           ! --- Other parameters (combination of the main variables)
           Er       = 0.d0
           Vtheta   = 0.d0
-	  mach_par = 0.d0
+          mach_par = 0.d0
           mach_pol = 0.d0
           vsound   = 0.d0
           Vneo     = 0.d0
@@ -1287,22 +1430,22 @@ module mod_expression
             Mach_par = Vpar0 / Vsound                             ! parallel Mach number
             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
             
-            Vtheta   = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z) + Vpar0 * Btheta
+            Vtheta   = -1./Btheta * (  ( u0_R + 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z + 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z) + Vpar0 * Btheta
             
-            Vperp_i  = -1./Btheta * (  ( u0_R + tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z + tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
+            Vperp_i  = -1./Btheta * (  ( u0_R + 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z + 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z )
             
-            Vperp_e  = -1./Btheta * (  ( u0_R - tauIC/r0 * (T0_R*r0 + r0_R*T0) ) * ps0_R  +        &
-              ( u0_Z - tauIC/r0 * (T0_Z*r0 + r0_Z*T0) ) * ps0_Z )
+            Vperp_e  = -1./Btheta * (  ( u0_R - 2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) ) * ps0_R  + &
+              ( u0_Z - 2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) ) * ps0_Z )
             
             V_ExB    = -1./Btheta* ( u0_R*ps0_R + u0_Z*ps0_Z )
             
-            Vstar_i  = -1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_i  = -1./Btheta * (  2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) * ps0_R  +            &
+              2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) * ps0_Z )
             
-            Vstar_e  = +1./Btheta * (  tauIC/r0 * (T0_R*r0 + r0_R*T0) * ps0_R  +                   &
-              tauIC/r0 * (T0_Z*r0 + r0_Z*T0) * ps0_Z )
+            Vstar_e  = +1./Btheta * (  2.d0*tauIC/r0 * (Ti0_R*r0 + r0_R*Ti0) * ps0_R  +            &
+              2.d0*tauIC/r0 * (Ti0_Z*r0 + r0_Z*Ti0) * ps0_Z )
             ! ### Warning : in jorek_model=400, Vstar_i .ne. -Vstar_e since T_i .ne. T_e
           end if
           
@@ -1310,29 +1453,29 @@ module mod_expression
             if (num_neo_file) then ! (read neoclassical profiles from ascii file)
               call neo_coef( eq%xpoint, eq%xcase, Z, eq%Z_xpoint, Ps0 ,eq%psi_axis, eq%psi_bnd,    &
                 mu_neo, ki_neo)
-              Vneo = ki_neo / Btheta * tauIC  * ( ps0_R*T0_R + ps0_Z*T0_Z )
+              Vneo = ki_neo / Btheta * 2.d0*tauIC  * ( ps0_R*Ti0_R + ps0_Z*Ti0_Z )
             else ! (use constant neoclassical coefficients from namelist input file)
               mu_neo = amu_neo_const
               ki_neo = aki_neo_const
-              Vneo   = aki_neo_const / Btheta * tauIC * ( ps0_R*T0_R + ps0_Z*T0_Z )
+              Vneo   = aki_neo_const / Btheta * 2.d0*tauIC * ( ps0_R*Ti0_R + ps0_Z*Ti0_Z )
             end if
           end if
           
           ! --- Coulomb logarithms calculated according to Ref. [L. Hesselow et al, J Plasma Phys 84,
           !     p. 905840605 (2018); doi:10.1017/S0022377818001113] Eq. (2.7) and (2.9):
           Te0_eV     = Te0 / ( EL_CHG * MU_ZERO * central_density * 1.d20 )
-          ne0_20     = r0 * central_density
+          ne0_20     = max(1.d-8, r0) * central_density
           ln_Lambda0 = 14.9 - 0.5 * log( ne0_20 ) + log( Te0_eV / 1000.d0 ) ! Eq. (2.7) at thermal speeds
           ln_Lambda  = 14.6 + 0.5 * log( Te0_eV / ne0_20 )                  ! Eq. (2.9) at relativistic energies
           
           E_par = - R * ( eta_T * zj0 / R**2                                                       &
-                        + tauIC / r0 * ( (P0_R * Ps0_Z - P0_Z * Ps0_R) / R + F0 * P0_p / R**2 ) )
+                        + 2.d0*tauIC / r0 * ( (Pi0_R * Ps0_Z - Pi0_Z * Ps0_R) / R + F0 * Pi0_p / R**2 ) )
           
           E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 * (central_density*1.d20*central_mass*MASS_PROTON)**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
           
           E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
           
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
+#if JOREK_MODEL >= 303
           if (bootstrap) then
             call bootstrap_current(R, Z, eq%R_axis, eq%Z_axis, eq%psi_axis, eq%R_xpoint, eq%Z_xpoint, eq%psi_bnd, psi_norm, ps0, ps0_R,    &
               ps0_Z, r0,  r0_R, r0_Z, Ti0, Ti0_R, Ti0_Z, Te0, Te0_R, Te0_Z, J_boot)
@@ -1341,50 +1484,86 @@ module mod_expression
           J_boot = 0.d0
 #endif
 
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 
-   T_rad = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
-  !write(*,*) 'T_rad = ', T_rad
-  if ( units == SI_UNITS ) then
+   Te_corr_eV = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
 
-   coef_rad_1 = 1.d0
+   if (use_imp_adas) then
+     call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
+     ! Note the input Te0 for atomic_coeff_deuterium should be in JOREK units!!!
 
-  else if ( units == JOREK_UNITS ) then
+    !--------------------------------------------------------
+    ! --- Radiation from background impurity
+    !--------------------------------------------------------
+      ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)
+      r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
 
-   coef_rad_1 = 2.d0/(3.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density * 1.d20)**2.5d0
-
-  endif
-
-   LradDcont_T = coef_rad_1*5.37d-37*(1.d1)**(-1.5d0)*(1.d0)**2*sqrt(T_rad) ! Only Bremsstrahlung contribution
-
-   LradDrays_T = coef_rad_1*(1.d1)**(-29.44d0*exp(-(log10(T_rad)-4.4283d0)**2.d0/(2.d0*(2.8428d0)**2.d0)) &
-                                    -60.947d0*exp(-(log10(T_rad)+2.0835d0)**2.d0/(2.d0*(0.9048d0)**2.d0)) &
-                                    -24.067d0*exp(-(log10(T_rad)+0.7363d0)**2.d0/(2.d0*(2.1700d0)**2.d0)))
-
- !write(*,*) 'Lbrem = ', LradDcont_T
- !write(*,*) 'Lrays = ', LradDrays_T
-
-  !--------------------------------------------------------
-  ! --- Radiation from background impurity
-  !--------------------------------------------------------
-
-    Arad_bg = 2.4d-31
-    Brad_bg = 20.
-    Crad_bg = 0.8
-
-  if ( units == SI_UNITS ) then
-
-    frad_bg = nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-  else if ( units == JOREK_UNITS ) then
-
-    frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-  endif
-  !--------------------------------------------------------
+      if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
+        ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+        coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                     *(central_density*1.d20)**2.5d0
+        Lrad_imp = 0.0
+        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)         
+        if (Lrad_imp < 0.) then
+          Lrad_imp = 0.
+        end if
+        if ( units == SI_UNITS ) then
+          frad_bg = nimp_bg * Lrad_imp
+        else if ( units == JOREK_UNITS ) then
+          frad_bg = r_imp * Lrad_imp * coef_rad_imp 
+        endif
+      else     
+        Lrad_imp = 0.
+        frad_bg = 0.
+      end if   
+    else
+      if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+        Arad_bg = 2.4d-31
+        Brad_bg = 20.
+        Crad_bg = 0.8
+        if ( units == SI_UNITS ) then
+          frad_bg = nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+        else if ( units == JOREK_UNITS ) then
+          frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+        end if
+      else
+        write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+        stop
+      end if      
+    end if  
 
 #endif
 
+#ifdef WITH_Impurities
+
+          T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
+          Te_corr_eV   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+  
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
+	  
+          alpha_imp = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+          beta_imp  = m_i_over_m_imp*Z_imp - 1.
+                  
+          r0_corr  = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3)
+          rn0_corr = corr_neg_dens(rn0,(/1.d-9,1.d-5 /),1.d-3)
+          ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+  
+          ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+          coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
+  
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+            Lrad = 0.
+            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+            Lrad = Lrad * coef_rad_1
+          else
+            Lrad = 0.
+          end if
+  
+          ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
+  
+#endif
 
           ! --- Factors for switching between JOREK normalized and SI units.
           if ( units == SI_UNITS ) then
@@ -1397,8 +1576,10 @@ module mod_expression
              fact_vpar     = sqrt(BB2) / fact_time                                 ! factor for Vpar
              fact_resistiv = sqrt ( MU_zero / rho_norm )                           ! factor for eta == 1 / (factor for visco)
              fact_Er       = F0 / fact_time
+             fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
              fact_flux     = 1.d0/(mu_zero*fact_time)  
           else if ( units == JOREK_UNITS ) then
+             rho_norm      = 1.d0
              fact_time     = 1.d0
              fact_mu_zero  = 1.d0
              fact_ne       = 1.d0
@@ -1407,6 +1588,7 @@ module mod_expression
              fact_vpar     = 1.d0
              fact_resistiv = 1.d0
              fact_Er       = 1.d0
+             fact_rad      = 1.d0
              fact_flux     = 1.d0 
           end if
           
@@ -1479,8 +1661,17 @@ module mod_expression
                 res = r0 * fact_rho
                 
               case ( 'ne' )
+#ifdef WITH_Impurities
+                res = ne_SI * fact_ne 
+#else
                 res = r0 * fact_ne
-                
+#endif
+
+#ifdef WITH_Impurities
+              case ( 'nimp' )
+                res = rn0 * fact_ne * m_i_over_m_imp
+#endif
+
               case ( 'T' )
                 res = T0 * fact_T
               
@@ -1495,18 +1686,36 @@ module mod_expression
                 
               case ( 'visco_T' )
                 res = visco_t / fact_resistiv
-                
+                  
               case ( 'zkpar_T' )
                 res = zkpar_t / fact_time
                 
+              case ( 'zkipar_T' )
+                res = zki_par_t / fact_time
+                
+              case ( 'zkepar_T' )
+                res = zke_par_t / fact_time
+                
               case ( 'dprof' ) 
                 res = d_prof / fact_time
-                
+                  
               case ( 'zkprof' )
                 res = zk_prof / fact_time
                 
+              case ( 'zkiprof' )
+                res = zki_prof / fact_time
+                
+              case ( 'zkeprof' )
+                res = zke_prof / fact_time
+                  
               case ( 'pres' )
                 res = P0 / fact_mu_zero
+                
+              case ( 'pres_e' )
+                res = Pe0 / fact_mu_zero
+                
+              case ( 'pres_i' )
+                res = Pi0 / fact_mu_zero
                 
               case ( 'B_abs' )
                 res = sqrt(BB2)
@@ -1567,6 +1776,9 @@ module mod_expression
  
               case ( 'gradP_phi' )
                 res = P0_p / BigR / fact_mu_zero
+
+              case ( 'gradP_B' )
+                res = (BR*P0_R+BZ*P0_Z+Btor*P0_p/BigR) / Btot / fact_mu_zero
  
               case ( 'gradPdotCurv' )
                 res = ( P0_R*Kappa_R + P0_Z*Kappa_Z + P0_p / BigR * Kappa_phi ) / fact_mu_zero
@@ -1652,6 +1864,9 @@ module mod_expression
               case ( 'Jnorm'        )
                 res = (JpolR*nmlR + JpolZ*nmlZ) / fact_mu_zero
 
+              case ( 'gradP_norm' )
+                res = (P0_R *nmlR +  P0_Z*nmlZ) / fact_mu_zero
+ 
               case ( 'Jpar'         )
                 res = Jpar/fact_mu_zero
 
@@ -1668,7 +1883,7 @@ module mod_expression
                 res = (VR*nmlR + VZ*nmlZ) / fact_time
 
               case ( 'heatF_sheath' )
-                res = gamma_sheath/(gamma-1.d0)*r0*T0*vpar0*Bnorm*fact_flux
+                res = gamma_stangeby*r0*Te0*vpar0*Bnorm*fact_flux
 
               case ( 'heatF_par_cd' )
                 res = ZKpar_flux * fact_flux
@@ -1721,12 +1936,10 @@ module mod_expression
               case ( 'ExB_norm'  )
                 res = ExB_norm * fact_flux
   
-#if JOREK_MODEL == 303 || JOREK_MODEL == 333 || JOREK_MODEL == 400 || JOREK_MODEL == 500
               case ( 'J_bootstrap' )
                 res = J_boot / R / fact_mu_zero
-#endif
 
-#if JOREK_MODEL == 500
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
               case ( 'radiation' )
 
                 if (rn0 .lt. 0.d0) then
@@ -1740,6 +1953,10 @@ module mod_expression
 
               case ( 'brem' )
                 res = r0 * fact_ne * r0 * fact_ne * LradDcont_T
+#endif
+#ifdef WITH_Impurities
+              case ( 'radiation' )
+                res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad
 #endif
 
               case default

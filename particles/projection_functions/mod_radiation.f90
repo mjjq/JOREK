@@ -40,11 +40,11 @@ function proj_Lz(sim, group, particle)
 
   q = particle_get_q(particle)
   ! From here on out we have a q
-  call sim%groups(group)%ad%PRB%interp_linear(q, log_n_e, log_T_e, PRB)
-  call sim%groups(group)%ad%PLT%interp_linear(q, log_n_e, log_T_e, PLT)
+  PRB = sim%groups(group)%ad%PRB%interp_linear(q, log_n_e, log_T_e)
+  PLT = sim%groups(group)%ad%PLT%interp_linear(q, log_n_e, log_T_e)
   proj_Lz      = (PRB + PLT) * n_e
 #if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
-  call sim%groups(group)%ad%PRC%interp_linear(q, log_n_e, log_T_e, PRC)
+  PRC = sim%groups(group)%ad%PRC%interp_linear(q, log_n_e, log_T_e)
   proj_Lz      = proj_Lz + PRC * n_n
 #endif
 end function proj_Lz

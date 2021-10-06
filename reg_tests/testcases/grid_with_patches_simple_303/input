@@ -1,0 +1,349 @@
+ &in1
+
+ !===============================
+ ! JET pulse 82630 at time 61.500000
+ ! BT    = 2.000000 T
+ ! IP    = 2.000000 MA
+ ! q_ax  = 1.100000
+ ! q_95  = 3.150000
+ ! P_nbi = 12.000000 MW
+ ! central_density  = 6.800000e+19 m-3
+ ! central_Te       = 2900.000000 eV
+ ! pedestal_density = 5.200000e+19 m-3
+ ! pedestal_Te      = 500.000000 eV
+ !===============================
+
+
+
+
+ !===============================
+ ! Time stepping parameters
+ !===============================
+
+ restart = .f.
+ regrid  = .f.
+ tstep_n = 1.0
+ nstep_n = 0
+
+ nout = 10
+
+ !===============================
+ ! Equilibrium parameters
+ !===============================
+
+ fbnd(1)   = 2.
+ fbnd(2:4) = 0.
+ mf	   = 0
+
+ n_boundary =  100
+ R_boundary(   1) = +4.045000, Z_boundary(   1) = +0.050000, psi_boundary(   1) = -2.007777
+ R_boundary(   2) = +4.045000, Z_boundary(   2) = +0.176150, psi_boundary(   2) = -1.991244
+ R_boundary(   3) = +4.044999, Z_boundary(   3) = +0.301792, psi_boundary(   3) = -1.986630
+ R_boundary(   4) = +4.044984, Z_boundary(   4) = +0.426421, psi_boundary(   4) = -1.993291
+ R_boundary(   5) = +4.044910, Z_boundary(   5) = +0.549533, psi_boundary(   5) = -2.010201
+ R_boundary(   6) = +4.044663, Z_boundary(   6) = +0.670635, psi_boundary(   6) = -2.035170
+ R_boundary(   7) = +4.044013, Z_boundary(   7) = +0.789237, psi_boundary(   7) = -2.065359
+ R_boundary(   8) = +4.042564, Z_boundary(   8) = +0.904862, psi_boundary(   8) = -2.097940
+ R_boundary(   9) = +4.039709, Z_boundary(   9) = +1.017045, psi_boundary(   9) = -2.130284
+ R_boundary(  10) = +4.034582, Z_boundary(  10) = +1.125335, psi_boundary(  10) = -2.159930
+ R_boundary(  11) = +4.026033, Z_boundary(  11) = +1.229294, psi_boundary(  11) = -2.184705
+ R_boundary(  12) = +4.012622, Z_boundary(  12) = +1.328505, psi_boundary(  12) = -2.203128
+ R_boundary(  13) = +3.992642, Z_boundary(  13) = +1.422567, psi_boundary(  13) = -2.213950
+ R_boundary(  14) = +3.964177, Z_boundary(  14) = +1.511103, psi_boundary(  14) = -2.216029
+ R_boundary(  15) = +3.925204, Z_boundary(  15) = +1.593755, psi_boundary(  15) = -2.208710
+ R_boundary(  16) = +3.873728, Z_boundary(  16) = +1.670192, psi_boundary(  16) = -2.191915
+ R_boundary(  17) = +3.807964, Z_boundary(  17) = +1.740104, psi_boundary(  17) = -2.165673
+ R_boundary(  18) = +3.726533, Z_boundary(  18) = +1.803211, psi_boundary(  18) = -2.130174
+ R_boundary(  19) = +3.628665, Z_boundary(  19) = +1.859258, psi_boundary(  19) = -2.086448
+ R_boundary(  20) = +3.514390, Z_boundary(  20) = +1.908020, psi_boundary(  20) = -2.036423
+ R_boundary(  21) = +3.384670, Z_boundary(  21) = +1.949301, psi_boundary(  21) = -1.982631
+ R_boundary(  22) = +3.241458, Z_boundary(  22) = +1.982933, psi_boundary(  22) = -1.928621
+ R_boundary(  23) = +3.087668, Z_boundary(  23) = +2.008783, psi_boundary(  23) = -1.879691
+ R_boundary(  24) = +2.927030, Z_boundary(  24) = +2.026745, psi_boundary(  24) = -1.839781
+ R_boundary(  25) = +2.763854, Z_boundary(  25) = +2.036747, psi_boundary(  25) = -1.810953
+ R_boundary(  26) = +2.602712, Z_boundary(  26) = +2.038750, psi_boundary(  26) = -1.793803
+ R_boundary(  27) = +2.448089, Z_boundary(  27) = +2.032744, psi_boundary(  27) = -1.786974
+ R_boundary(  28) = +2.304033, Z_boundary(  28) = +2.018755, psi_boundary(  28) = -1.787386
+ R_boundary(  29) = +2.173858, Z_boundary(  29) = +1.996838, psi_boundary(  29) = -1.792015
+ R_boundary(  30) = +2.059928, Z_boundary(  30) = +1.967082, psi_boundary(  30) = -1.798885
+ R_boundary(  31) = +1.963551, Z_boundary(  31) = +1.929607, psi_boundary(  31) = -1.806882
+ R_boundary(  32) = +1.884983, Z_boundary(  32) = +1.884563, psi_boundary(  32) = -1.815484
+ R_boundary(  33) = +1.823525, Z_boundary(  33) = +1.832132, psi_boundary(  33) = -1.824712
+ R_boundary(  34) = +1.777701, Z_boundary(  34) = +1.772525, psi_boundary(  34) = -1.834626
+ R_boundary(  35) = +1.745476, Z_boundary(  35) = +1.705981, psi_boundary(  35) = -1.845034
+ R_boundary(  36) = +1.724495, Z_boundary(  36) = +1.632770, psi_boundary(  36) = -1.855532
+ R_boundary(  37) = +1.712299, Z_boundary(  37) = +1.553186, psi_boundary(  37) = -1.865549
+ R_boundary(  38) = +1.706513, Z_boundary(  38) = +1.467549, psi_boundary(  38) = -1.874421
+ R_boundary(  39) = +1.705000, Z_boundary(  39) = +1.376204, psi_boundary(  39) = -1.881577
+ R_boundary(  40) = +1.705951, Z_boundary(  40) = +1.279518, psi_boundary(  40) = -1.886813
+ R_boundary(  41) = +1.707945, Z_boundary(  41) = +1.177882, psi_boundary(  41) = -1.890130
+ R_boundary(  42) = +1.709963, Z_boundary(  42) = +1.071704, psi_boundary(  42) = -1.891624
+ R_boundary(  43) = +1.711369, Z_boundary(  43) = +0.961413, psi_boundary(  43) = -1.891723
+ R_boundary(  44) = +1.711868, Z_boundary(  44) = +0.847451, psi_boundary(  44) = -1.891100
+ R_boundary(  45) = +1.711445, Z_boundary(  45) = +0.730278, psi_boundary(  45) = -1.890393
+ R_boundary(  46) = +1.710290, Z_boundary(  46) = +0.610366, psi_boundary(  46) = -1.890159
+ R_boundary(  47) = +1.708724, Z_boundary(  47) = +0.488198, psi_boundary(  47) = -1.890878
+ R_boundary(  48) = +1.707116, Z_boundary(  48) = +0.364265, psi_boundary(  48) = -1.892942
+ R_boundary(  49) = +1.705817, Z_boundary(  49) = +0.239066, psi_boundary(  49) = -1.896350
+ R_boundary(  50) = +1.705094, Z_boundary(  50) = +0.113107, psi_boundary(  50) = -1.900970
+ R_boundary(  51) = +1.705589, Z_boundary(  51) = -0.013107, psi_boundary(  51) = -1.906254
+ R_boundary(  52) = +1.710288, Z_boundary(  52) = -0.139066, psi_boundary(  52) = -1.909538
+ R_boundary(  53) = +1.719623, Z_boundary(  53) = -0.264265, psi_boundary(  53) = -1.910255
+ R_boundary(  54) = +1.733469, Z_boundary(  54) = -0.388198, psi_boundary(  54) = -1.908204
+ R_boundary(  55) = +1.751644, Z_boundary(  55) = -0.510366, psi_boundary(  55) = -1.903110
+ R_boundary(  56) = +1.773918, Z_boundary(  56) = -0.630278, psi_boundary(  56) = -1.894918
+ R_boundary(  57) = +1.800022, Z_boundary(  57) = -0.747451, psi_boundary(  57) = -1.883896
+ R_boundary(  58) = +1.829655, Z_boundary(  58) = -0.861413, psi_boundary(  58) = -1.870241
+ R_boundary(  59) = +1.862498, Z_boundary(  59) = -0.971704, psi_boundary(  59) = -1.854009
+ R_boundary(  60) = +1.898225, Z_boundary(  60) = -1.077882, psi_boundary(  60) = -1.835877
+ R_boundary(  61) = +1.936511, Z_boundary(  61) = -1.179518, psi_boundary(  61) = -1.816301
+ R_boundary(  62) = +1.977048, Z_boundary(  62) = -1.276204, psi_boundary(  62) = -1.794458
+ R_boundary(  63) = +2.019546, Z_boundary(  63) = -1.367549, psi_boundary(  63) = -1.770132
+ R_boundary(  64) = +2.063748, Z_boundary(  64) = -1.453186, psi_boundary(  64) = -1.745416
+ R_boundary(  65) = +2.109431, Z_boundary(  65) = -1.532770, psi_boundary(  65) = -1.722853
+ R_boundary(  66) = +2.156412, Z_boundary(  66) = -1.605981, psi_boundary(  66) = -1.703033
+ R_boundary(  67) = +2.204552, Z_boundary(  67) = -1.672525, psi_boundary(  67) = -1.685088
+ R_boundary(  68) = +2.253755, Z_boundary(  68) = -1.732132, psi_boundary(  68) = -1.667414
+ R_boundary(  69) = +2.303968, Z_boundary(  69) = -1.784563, psi_boundary(  69) = -1.645607
+ R_boundary(  70) = +2.355179, Z_boundary(  70) = -1.829607, psi_boundary(  70) = -1.614656
+ R_boundary(  71) = +2.407411, Z_boundary(  71) = -1.867082, psi_boundary(  71) = -1.574621
+ R_boundary(  72) = +2.460723, Z_boundary(  72) = -1.896838, psi_boundary(  72) = -1.535249
+ R_boundary(  73) = +2.515196, Z_boundary(  73) = -1.918755, psi_boundary(  73) = -1.523571
+ R_boundary(  74) = +2.570934, Z_boundary(  74) = -1.932744, psi_boundary(  74) = -1.525107
+ R_boundary(  75) = +2.628049, Z_boundary(  75) = -1.938750, psi_boundary(  75) = -1.530869
+ R_boundary(  76) = +2.686658, Z_boundary(  76) = -1.936747, psi_boundary(  76) = -1.533543
+ R_boundary(  77) = +2.746871, Z_boundary(  77) = -1.926745, psi_boundary(  77) = -1.535983
+ R_boundary(  78) = +2.808778, Z_boundary(  78) = -1.908783, psi_boundary(  78) = -1.550160
+ R_boundary(  79) = +2.872443, Z_boundary(  79) = -1.882933, psi_boundary(  79) = -1.602376
+ R_boundary(  80) = +2.937892, Z_boundary(  80) = -1.849301, psi_boundary(  80) = -1.684787
+ R_boundary(  81) = +3.005099, Z_boundary(  81) = -1.808020, psi_boundary(  81) = -1.768555
+ R_boundary(  82) = +3.073978, Z_boundary(  82) = -1.759258, psi_boundary(  82) = -1.846648
+ R_boundary(  83) = +3.144373, Z_boundary(  83) = -1.703211, psi_boundary(  83) = -1.925676
+ R_boundary(  84) = +3.216047, Z_boundary(  84) = -1.640104, psi_boundary(  84) = -2.008686
+ R_boundary(  85) = +3.288675, Z_boundary(  85) = -1.570192, psi_boundary(  85) = -2.087846
+ R_boundary(  86) = +3.361841, Z_boundary(  86) = -1.493755, psi_boundary(  86) = -2.139871
+ R_boundary(  87) = +3.435032, Z_boundary(  87) = -1.411103, psi_boundary(  87) = -2.143647
+ R_boundary(  88) = +3.507645, Z_boundary(  88) = -1.322567, psi_boundary(  88) = -2.113058
+ R_boundary(  89) = +3.578988, Z_boundary(  89) = -1.228505, psi_boundary(  89) = -2.090827
+ R_boundary(  90) = +3.648290, Z_boundary(  90) = -1.129294, psi_boundary(  90) = -2.087300
+ R_boundary(  91) = +3.714719, Z_boundary(  91) = -1.025335, psi_boundary(  91) = -2.086218
+ R_boundary(  92) = +3.777400, Z_boundary(  92) = -0.917045, psi_boundary(  92) = -2.085527
+ R_boundary(  93) = +3.835434, Z_boundary(  93) = -0.804862, psi_boundary(  93) = -2.085660
+ R_boundary(  94) = +3.887933, Z_boundary(  94) = -0.689237, psi_boundary(  94) = -2.083914
+ R_boundary(  95) = +3.934042, Z_boundary(  95) = -0.570635, psi_boundary(  95) = -2.079728
+ R_boundary(  96) = +3.972973, Z_boundary(  96) = -0.449533, psi_boundary(  96) = -2.072347
+ R_boundary(  97) = +4.004031, Z_boundary(  97) = -0.326421, psi_boundary(  97) = -2.061277
+ R_boundary(  98) = +4.026645, Z_boundary(  98) = -0.201792, psi_boundary(  98) = -2.046815
+ R_boundary(  99) = +4.040389, Z_boundary(  99) = -0.076150, psi_boundary(  99) = -2.028930
+ R_boundary( 100) = +4.045000, Z_boundary( 100) = +0.050000, psi_boundary( 100) = -2.007777
+ 
+ n_limiter =  100
+ R_limiter(   1) = +4.045000, Z_limiter(   1) = +0.050000
+ R_limiter(   2) = +4.045000, Z_limiter(   2) = +0.176150
+ R_limiter(   3) = +4.044999, Z_limiter(   3) = +0.301792
+ R_limiter(   4) = +4.044984, Z_limiter(   4) = +0.426421
+ R_limiter(   5) = +4.044910, Z_limiter(   5) = +0.549533
+ R_limiter(   6) = +4.044663, Z_limiter(   6) = +0.670635
+ R_limiter(   7) = +4.044013, Z_limiter(   7) = +0.789237
+ R_limiter(   8) = +4.042564, Z_limiter(   8) = +0.904862
+ R_limiter(   9) = +4.039709, Z_limiter(   9) = +1.017045
+ R_limiter(  10) = +4.034582, Z_limiter(  10) = +1.125335
+ R_limiter(  11) = +4.026033, Z_limiter(  11) = +1.229294
+ R_limiter(  12) = +4.012622, Z_limiter(  12) = +1.328505
+ R_limiter(  13) = +3.992642, Z_limiter(  13) = +1.422567
+ R_limiter(  14) = +3.964177, Z_limiter(  14) = +1.511103
+ R_limiter(  15) = +3.925204, Z_limiter(  15) = +1.593755
+ R_limiter(  16) = +3.873728, Z_limiter(  16) = +1.670192
+ R_limiter(  17) = +3.807964, Z_limiter(  17) = +1.740104
+ R_limiter(  18) = +3.726533, Z_limiter(  18) = +1.803211
+ R_limiter(  19) = +3.628665, Z_limiter(  19) = +1.859258
+ R_limiter(  20) = +3.514390, Z_limiter(  20) = +1.908020
+ R_limiter(  21) = +3.384670, Z_limiter(  21) = +1.949301
+ R_limiter(  22) = +3.241458, Z_limiter(  22) = +1.982933
+ R_limiter(  23) = +3.087668, Z_limiter(  23) = +2.008783
+ R_limiter(  24) = +2.927030, Z_limiter(  24) = +2.026745
+ R_limiter(  25) = +2.763854, Z_limiter(  25) = +2.036747
+ R_limiter(  26) = +2.602712, Z_limiter(  26) = +2.038750
+ R_limiter(  27) = +2.448089, Z_limiter(  27) = +2.032744
+ R_limiter(  28) = +2.304033, Z_limiter(  28) = +2.018755
+ R_limiter(  29) = +2.173858, Z_limiter(  29) = +1.996838
+ R_limiter(  30) = +2.059928, Z_limiter(  30) = +1.967082
+ R_limiter(  31) = +1.963551, Z_limiter(  31) = +1.929607
+ R_limiter(  32) = +1.884983, Z_limiter(  32) = +1.884563
+ R_limiter(  33) = +1.823525, Z_limiter(  33) = +1.832132
+ R_limiter(  34) = +1.777701, Z_limiter(  34) = +1.772525
+ R_limiter(  35) = +1.745476, Z_limiter(  35) = +1.705981
+ R_limiter(  36) = +1.724495, Z_limiter(  36) = +1.632770
+ R_limiter(  37) = +1.712299, Z_limiter(  37) = +1.553186
+ R_limiter(  38) = +1.706513, Z_limiter(  38) = +1.467549
+ R_limiter(  39) = +1.705000, Z_limiter(  39) = +1.376204
+ R_limiter(  40) = +1.705951, Z_limiter(  40) = +1.279518
+ R_limiter(  41) = +1.707945, Z_limiter(  41) = +1.177882
+ R_limiter(  42) = +1.709963, Z_limiter(  42) = +1.071704
+ R_limiter(  43) = +1.711369, Z_limiter(  43) = +0.961413
+ R_limiter(  44) = +1.711868, Z_limiter(  44) = +0.847451
+ R_limiter(  45) = +1.711445, Z_limiter(  45) = +0.730278
+ R_limiter(  46) = +1.710290, Z_limiter(  46) = +0.610366
+ R_limiter(  47) = +1.708724, Z_limiter(  47) = +0.488198
+ R_limiter(  48) = +1.707116, Z_limiter(  48) = +0.364265
+ R_limiter(  49) = +1.705817, Z_limiter(  49) = +0.239066
+ R_limiter(  50) = +1.705094, Z_limiter(  50) = +0.113107
+ R_limiter(  51) = +1.705589, Z_limiter(  51) = -0.013107
+ R_limiter(  52) = +1.710288, Z_limiter(  52) = -0.139066
+ R_limiter(  53) = +1.719623, Z_limiter(  53) = -0.264265
+ R_limiter(  54) = +1.733469, Z_limiter(  54) = -0.388198
+ R_limiter(  55) = +1.751644, Z_limiter(  55) = -0.510366
+ R_limiter(  56) = +1.773918, Z_limiter(  56) = -0.630278
+ R_limiter(  57) = +1.800022, Z_limiter(  57) = -0.747451
+ R_limiter(  58) = +1.829655, Z_limiter(  58) = -0.861413
+ R_limiter(  59) = +1.862498, Z_limiter(  59) = -0.971704
+ R_limiter(  60) = +1.898225, Z_limiter(  60) = -1.077882
+ R_limiter(  61) = +1.936511, Z_limiter(  61) = -1.179518
+ R_limiter(  62) = +1.977048, Z_limiter(  62) = -1.276204
+ R_limiter(  63) = +2.019546, Z_limiter(  63) = -1.367549
+ R_limiter(  64) = +2.063748, Z_limiter(  64) = -1.453186
+ R_limiter(  65) = +2.109431, Z_limiter(  65) = -1.532770
+ R_limiter(  66) = +2.156412, Z_limiter(  66) = -1.605981
+ R_limiter(  67) = +2.204552, Z_limiter(  67) = -1.672525
+ R_limiter(  68) = +2.253755, Z_limiter(  68) = -1.732132
+ R_limiter(  69) = +2.303968, Z_limiter(  69) = -1.784563
+ R_limiter(  70) = +2.355179, Z_limiter(  70) = -1.829607
+ R_limiter(  71) = +2.407411, Z_limiter(  71) = -1.867082
+ R_limiter(  72) = +2.460723, Z_limiter(  72) = -1.896838
+ R_limiter(  73) = +2.515196, Z_limiter(  73) = -1.918755
+ R_limiter(  74) = +2.570934, Z_limiter(  74) = -1.932744
+ R_limiter(  75) = +2.628049, Z_limiter(  75) = -1.938750
+ R_limiter(  76) = +2.686658, Z_limiter(  76) = -1.936747
+ R_limiter(  77) = +2.746871, Z_limiter(  77) = -1.926745
+ R_limiter(  78) = +2.808778, Z_limiter(  78) = -1.908783
+ R_limiter(  79) = +2.872443, Z_limiter(  79) = -1.882933
+ R_limiter(  80) = +2.937892, Z_limiter(  80) = -1.849301
+ R_limiter(  81) = +3.005099, Z_limiter(  81) = -1.808020
+ R_limiter(  82) = +3.073978, Z_limiter(  82) = -1.759258
+ R_limiter(  83) = +3.144373, Z_limiter(  83) = -1.703211
+ R_limiter(  84) = +3.216047, Z_limiter(  84) = -1.640104
+ R_limiter(  85) = +3.288675, Z_limiter(  85) = -1.570192
+ R_limiter(  86) = +3.361841, Z_limiter(  86) = -1.493755
+ R_limiter(  87) = +3.435032, Z_limiter(  87) = -1.411103
+ R_limiter(  88) = +3.507645, Z_limiter(  88) = -1.322567
+ R_limiter(  89) = +3.578988, Z_limiter(  89) = -1.228505
+ R_limiter(  90) = +3.648290, Z_limiter(  90) = -1.129294
+ R_limiter(  91) = +3.714719, Z_limiter(  91) = -1.025335
+ R_limiter(  92) = +3.777400, Z_limiter(  92) = -0.917045
+ R_limiter(  93) = +3.835434, Z_limiter(  93) = -0.804862
+ R_limiter(  94) = +3.887933, Z_limiter(  94) = -0.689237
+ R_limiter(  95) = +3.934042, Z_limiter(  95) = -0.570635
+ R_limiter(  96) = +3.972973, Z_limiter(  96) = -0.449533
+ R_limiter(  97) = +4.004031, Z_limiter(  97) = -0.326421
+ R_limiter(  98) = +4.026645, Z_limiter(  98) = -0.201792
+ R_limiter(  99) = +4.040389, Z_limiter(  99) = -0.076150
+ R_limiter( 100) = +4.045000, Z_limiter( 100) = +0.050000
+
+ ellip       = 1.81000 
+ tria_u      = 0.400000 
+ tria_l      = -0.400000 
+ quad_u      = 0.200000 
+ quad_l      = 0.400000 
+ amin        = 1.0 
+ 
+ xampl       = 0.0
+ xsig        = 0.3
+ xwidth      = 0.25
+ xtheta      = 4.55
+ xleft       = 0.0
+ xshift      = 0.0
+ xpoint      = .t.
+
+ R_begin     = 2.9 
+ R_end       = 3.1 
+ Z_begin     = -0.1 
+ Z_end       = 0.1 
+ 
+ R_geo = 2.875000
+ Z_geo = 0.165000
+ F0    = 5.932905
+ 
+ FF_0        = -2.5   
+ FF_1        = 0.000 
+ FF_coef(1)  = -0.45 
+ FF_coef(2)  = -1.07 
+ FF_coef(3)  = 0.350 
+ FF_coef(4)  = 0.007 
+ FF_coef(5)  = 1.005
+ FF_coef(6)  = -0.052
+ FF_coef(7)  = 0.979 
+ FF_coef(8)  = 0.017 
+ 
+ ! Core temperature is 4.598762e-16 Joules = 2.870322e+03 eV
+ T_0             = 0.078553
+ T_1             = 0.000547
+ T_coef(1)       = -0.896935
+ T_coef(2)       = 0.170577
+ T_coef(3)       = -0.138222
+ T_coef(4)       = 0.016390
+ T_coef(5)       = 0.9889
+ 
+ central_density = 0.68
+ rho_0           = 1.000000
+ rho_1           = 0.01
+ rho_coef(1)     = -0.272275
+ rho_coef(2)     = -0.009766
+ rho_coef(3)     = 0.037388
+ rho_coef(4)     = 0.017031
+ rho_coef(5)     = 1.0008
+ 
+ 
+ !===============================
+ ! Grid parameters
+ !===============================
+ 
+ n_R       = 000   
+ n_Z       = 000   
+ n_radial  = 30
+ n_pol     = 40
+
+ n_flux    = 20   
+ n_tht     = 061   
+ n_open    = 002   
+ n_leg     = 003   
+ n_private = 002   
+
+ SIG_closed  = 0.11d0
+ SIG_open    = 0.3d0
+ SIG_private = 0.5d0 
+ SIG_theta   = 0.02d0 
+ SIG_leg_0   = 0.05d0 
+ SIG_leg_1   = 0.2d0 
+
+ dPSI_open    = 0.040
+ dPSI_private = 0.02
+
+ grid_to_wall                = .t.
+ n_wall_blocks               = 2
+
+ n_ext_block         ( 1)    = 6
+ n_block_points_left ( 1)    =  2
+ R_block_points_left ( 1,1)  = +2.8646
+ Z_block_points_left ( 1,1)  = -1.5664
+ R_block_points_left ( 1,2)  = +3.1443
+ Z_block_points_left ( 1,2)  = -1.7032
+ n_block_points_right( 1)    = 2
+ R_block_points_right( 1,1)  = +3.1255
+ Z_block_points_right( 1,1)  = -1.1399
+ R_block_points_right( 1,2)  = +3.4350
+ Z_block_points_right( 1,2)  = -1.4111
+ 
+ n_ext_block         ( 2)    = 6
+ n_block_points_left ( 2)    =  2
+ R_block_points_left ( 2,1)  = +3.1255
+ Z_block_points_left ( 2,1)  = -1.1399
+ R_block_points_left ( 2,2)  = +3.4350
+ Z_block_points_left ( 2,2)  = -1.4111
+ n_block_points_right( 2)    = 2
+ R_block_points_right( 2,1)  = +3.7242
+ Z_block_points_right( 2,1)  = -0.3775
+ R_block_points_right( 2,2)  = +4.0040
+ Z_block_points_right( 2,2)  = -0.3264
+ 
+ /
+ 

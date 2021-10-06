@@ -5,6 +5,7 @@ use data_structure
 use mod_particle_sim
 use mod_particle_types, only: particle_get_q, particle_base
 use mod_ionisation_recombination, only: fields_interp_ne_Te
+use mod_parameters
 implicit none
 private
 public proj_Lz
@@ -20,7 +21,7 @@ function proj_Lz(sim, group, particle)
   real*8 :: n_e, T_e, log_T_e, log_n_e
   real*8 :: prb, plt, prc
   integer :: q
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   real*8 :: n_n
   real*8, dimension(1) :: P, P_s, P_t, P_phi, P_time
   real*8 :: R, R_s, R_t, Z, Z_s, Z_t
@@ -32,9 +33,9 @@ function proj_Lz(sim, group, particle)
   log_T_e = log(T_e)
   log_n_e = log(n_e)
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   ! Calculate neutral_density if model5XX (model501 has n_imp in 8)
-  call sim%fields%interp_PRZ(sim%time,particle%i_elm,[8],1,particle%st(1), &
+  call sim%fields%interp_PRZ(sim%time,particle%i_elm,[var_rhon],1,particle%st(1), &
       particle%st(2),particle%x(3),P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
   n_n = P(1)
 #endif
@@ -44,7 +45,7 @@ function proj_Lz(sim, group, particle)
   call sim%groups(group)%ad%PRB%interp(q, log_n_e, log_T_e, prb)
   call sim%groups(group)%ad%PLT%interp(q, log_n_e, log_T_e, plt)
   proj_Lz      = (prb + plt) * n_e
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 555)
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   call sim%groups(group)%ad%PRC%interp(q, log_n_e, log_T_e, prc)
   proj_Lz      = proj_Lz + prc * n_n
 #endif

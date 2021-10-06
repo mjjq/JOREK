@@ -151,7 +151,11 @@ subroutine initialise_particles(particles, node_list, element_list, &
   ! default(shared) is very dangerous but needed due to gfortran failures.
   ! be very careful (error message for default(none) below)
   ! Error: ‘__vtab_mod_particle_types_Particle_kinetic_leapfrog’ not specified in enclosing ‘parallel’
-  !$omp parallel default(none) &
+#ifdef __GFORTRAN__
+    !$omp parallel default(shared) &
+#else
+    !$omp parallel default(none) &
+#endif
   !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, variables, &
   !$omp          rngs, n_threads, n_streams, seed, my_id, n_mhd, n_geom, i_to_find, not_found) &
   !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL)
@@ -290,7 +294,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   my_include_vpar = .false.
   if (present(include_vpar)) my_include_vpar = include_vpar
   ! Check if we are in the 3,4,5 series of models
-  if (my_include_vpar .and. .not. (jorek_model .ge. 300 .and. jorek_model .lt. 700)) then
+  if (my_include_vpar .and. .not. with_Vpar) then
     write(*,*) "WARNING: This model, ", jorek_model, "does not support parallel flows, disabling"
     my_include_vpar = .false.
   end if
@@ -335,7 +339,12 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
     psimin= 1d10
     psimax=-1d10
     ! Preparatory work: determine psi_min,max
+#ifdef __GFORTRAN__
     !$omp parallel do default(shared) &
+#else
+    !$omp parallel do default(none) &
+#endif
+    !$omp shared(fields,  psi_minmax_list) &
     !$omp private(i_elm) reduction(min:psimin) &
     !$omp reduction(max:psimax)
     do i_elm=1, fields%element_list%n_elements
@@ -402,7 +411,11 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
     end select
     !allocate(particles_tmp(blocksize), mold=particles) ! this does not work in ifort 17
     allocate(found(blocksize))
-    !$omp parallel do default(none) & ! for gfortran which cannot handle the derived types otherwise
+#ifdef __GFORTRAN__
+    !$omp parallel do default(shared) &
+#else
+    !$omp parallel do default(none) &
+#endif
     !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, &
     !$omp           R_i, Z_i, xjac, grad_P2, u,  &
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp, ifail, DUMMY_R, DUMMY_Z) &
@@ -503,7 +516,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
           temp = T_Maxwell
         else
           temp = P(1)/(2.d0*MU_ZERO*central_density*1.d20*EL_CHG) ! [eV]
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
           temp = temp*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
         endif
@@ -633,7 +646,12 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
 
   ! default(shared) is very dangerous but needed due to gfortran failures... be careful adding variables
   ! and try compilation with default(none) if you change anything.
-  !$omp parallel do default(none) private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
+#ifdef __GFORTRAN__
+  !$omp parallel do default(shared) &
+#else
+  !$omp parallel do default(none) &
+#endif
+  !$omp private(i, psibar, H, n, T, P, P_s, P_t, P_phi, R, R_s, R_t, Z, Z_s, Z_t) &
   !$omp shared(particles, node_list, element_list, mass, central_density, my_alpha)
   do i=1,size(particles,1)
     
@@ -667,7 +685,7 @@ subroutine set_particle_weights_canonical_maxwellian(particles, node_list, eleme
       ! P(1)/(kb mu_zero n_zero) is in [K], multiply by kb/el_chg to go to eV
       T = P(1)/(2.d0*MU_ZERO*central_density*1.d20*EL_CHG) ! [eV] factor 2 is due to
       ! definition of P(1) as ion + electron temperature
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
       T = T*2d0 ! P(1) contains the ion temperature in this model, reverse previous correction
 #endif
       ! Workaround for low-temperature regions
@@ -842,17 +860,20 @@ subroutine adjust_particle_weights(particles, num_atoms_total)
   use mpi
   class(particle_base), intent(inout), dimension(:) :: particles
   real*8, intent(in)                                :: num_atoms_total !< What the sum of the weights should be
-  real*8 :: local_weights, sum_weights
+  real*8 :: local_weights, sum_weights, local_weights_active, sum_weights_active
   integer :: ifail
  
   local_weights = sum(particles(:)%weight)
 
-  call MPI_AllReduce(local_weights,sum_weights,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ifail)
+  local_weights_active = sum(particles(:)%weight, mask=particles(:)%i_elm .gt. 0)
+
+  call MPI_AllReduce(local_weights,       sum_weights,       1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ifail)
+  call MPI_AllReduce(local_weights_active,sum_weights_active,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,ifail)
 
 ! Divide all weights by the sum of weights and multiply by the requested number of atoms
 !  particles(:)%weight = real(real(particles(:)%weight,8) / sum_weights * num_atoms_total,4)
  
-  particles(:)%weight = particles(:)%weight / sum_weights * num_atoms_total
+  particles(:)%weight = particles(:)%weight / sum_weights_active * num_atoms_total
 
 end subroutine adjust_particle_weights
 
@@ -874,7 +895,7 @@ function q_coronal(node_list, element_list, s, t, phi, i_elm, cor, u)
   real*8 :: local_Te, local_Ne, DUMMY_REAL
   real*8 :: q(0:cor%n_Z)
 
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
    call interp_PRZ(node_list,element_list,i_elm,[5,8],2,s,t,phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t) ! electron temperature
 #else
    call interp_PRZ(node_list,element_list,i_elm,[5,6],2,s,t,phi,P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t) ! electron temperature + ion temperature (assumed equal)
@@ -882,8 +903,8 @@ function q_coronal(node_list, element_list, s, t, phi, i_elm, cor, u)
 
   local_Ne = P(1) * 1d20                           ! plasma density [1/m^3]
   local_Te = P(2)/(2.d0*MU_ZERO*central_density*1.d20)/K_BOLTZ
-#if (JOREK_MODEL == 400)
-  local_Te = local_T_e*2d0 ! P(1) contains the electron temperature, reverse previous correction
+#ifdef WITH_TiTe
+  local_Te = local_Te*2.d0 ! P(1) contains the electron temperature, reverse previous correction
 #endif
 
   if (local_Ne .le. 0.d0 .or. local_Te .le. 0.d0) then
@@ -931,7 +952,7 @@ call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
 if (my_id .eq. 0) seed = random_seed()
 call MPI_Bcast(seed, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ifail)
 
-#if (JOREK_MODEL < 300)
+#ifndef WITH_Vpar
 if (present(v_par) .and. v_par) then
   write(*,*) "ERROR: initialization with v// not possible with this model"
   call MPI_ABORT(-1, MPI_COMM_WORLD, ifail)
@@ -940,17 +961,17 @@ end if
 
 do i=1,size(particles)
   if (particles(i)%i_elm .eq. 0) cycle
-#if (JOREK_MODEL == 400)
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,8,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+#ifdef WITH_TiTe
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,var_Te,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #else
-  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,6,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
+  call interp_PRZ(node_list,element_list,particles(i)%i_elm,[1,5,var_T,7],4,particles(i)%st(1),particles(i)%st(2),particles(i)%x(3),&
       P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
 #endif
 
   background_density = P(2) * 1d20                           ! plasma density [1/m^3]
   ! Assume that the particles have the same temperature as the electrons
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
   background_kbT = P(3)/(MU_ZERO*central_density*1.d20)      ! P(1) contains the electron temperature
 #else
   background_kbT = P(3)/(2.d0*MU_ZERO*central_density*1.d20) ! P(1) contains the total plasma temperature in J/kB = T = Te + Ti

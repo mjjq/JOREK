@@ -31,19 +31,25 @@ contains
        &   irn, jcn, A_mat, i_tor_min, i_tor_max)
     use mod_parameters
     use mod_locate_irn_jcn
+    use mod_integer_types
 
-    integer, intent(in)                 :: index_node,  k,  in
-    integer, intent(in)                 :: index_node2, k2, in2
-    real*8,  intent(in)                 :: zbig
-    logical, intent(in)                 :: solve_only, gmres
-    integer, intent(in)                 :: index_min, index_max
-    integer, intent(in)                 :: i_tor_min, i_tor_max 
-    integer, intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer, intent(inout), allocatable :: irn(:), jcn(:) 
-    real*8,  intent(inout), allocatable :: A_mat(:) 
+    integer,               intent(in)                 :: k,  in
+    integer,               intent(in)                 :: k2, in2
+    integer,               intent(in)                 :: index_node
+    integer,               intent(in)                 :: index_node2
+    real*8,                intent(in)                 :: zbig
+    logical,               intent(in)                 :: solve_only, gmres
+    integer,               intent(in)                 :: index_min, index_max
+    integer,               intent(in)                 :: i_tor_min, i_tor_max 
+    integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
+    integer(kind=int_all), intent(inout), allocatable :: irn(:), jcn(:) 
+    real*8,                intent(inout), allocatable :: A_mat(:) 
     
-    logical                      :: is_local
-    integer                      :: ija_position, ilarge_vp, n_tor_local
+    logical                                           :: is_local
+    integer(kind=int_all)                             :: ija_position, ilarge_vp
+    integer                                           :: n_tor_local
+
+    if ( (k==0) .or. (k2==0) ) return ! ignore calls for model family extensions not in use (variable number zero)
 
     n_tor_local = i_tor_max - i_tor_min +1
     if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
@@ -85,13 +91,17 @@ contains
        &   rhs_loc,  val,                 &
        &   i_tor_min, i_tor_max)
     use mod_parameters
-    integer, intent(in)    :: index_node,  k,  in
-    integer, intent(in)    :: index_min, index_max
-    integer, intent(in)    :: i_tor_min, i_tor_max 
-    real*8,  intent(in)    :: val
-    real*8,  intent(inOUT) :: rhs_loc(*) 
-    integer                :: n_tor_local 
-    logical                :: is_local
+    use mod_integer_types
+    integer,               intent(in)    :: k,  in
+    integer,               intent(in)    :: index_node
+    integer,               intent(in)    :: index_min, index_max
+    integer,               intent(in)    :: i_tor_min, i_tor_max 
+    real*8,                intent(in)    :: val
+    real*8,                intent(inOUT) :: rhs_loc(*) 
+    integer                              :: n_tor_local 
+    logical                              :: is_local
+
+    if ( (k==0) ) return ! ignore calls for model family extensions not in use (variable number zero)
 
     n_tor_local = i_tor_max - i_tor_min +1
     if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then

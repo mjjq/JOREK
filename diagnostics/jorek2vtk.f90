@@ -108,6 +108,7 @@ real*8                :: T_corr, Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion,
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
 real*8                :: T0_corr, r0_corr, rn0_corr
+integer               :: i_imp     ! Loop for more than one impurity
 
 #ifdef WITH_Impurities
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -1225,18 +1226,23 @@ enddo  ! n_elements
       r0_corr   = corr_neg_dens(r0_real8)
 
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-      
+
       if (use_imp_adas) then  ! use open adas by default
-        r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU    
-        if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
-          Lrad_imp = 0.0
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
-        else     
-          Lrad_imp = 0.
-        end if  
-        frad_bg = r_imp * Lrad_imp
+        frad_bg = 0. 
+        do i_imp =1, n_adas
+          r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+            Lrad_imp = 0.0
+            call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                           log10(Te_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)           
+          else     
+            Lrad_imp = 0.
+          end if
+          frad_bg = frad_bg + r_imp * Lrad_imp
+        end do
+
       else
-        if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+        if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
 
           Arad_bg = 2.4d-31
           Brad_bg = 20.
@@ -1244,9 +1250,9 @@ enddo  ! n_elements
 
           frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
                      *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
-                     *nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                     *nimp_bg(1)* Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
         else
-          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ",use open adas instead!"
           stop
         end if
       end if   
@@ -1265,7 +1271,7 @@ enddo  ! n_elements
   ! Atomic physics parameters for Impurities
   !-------------------------------------------
 
-   select case ( trim(imp_type) )
+   select case ( trim(imp_type(1)) )
      case('D2')
        m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
      case('Ar')
@@ -1273,7 +1279,7 @@ enddo  ! n_elements
      case('Ne')
        m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
      case default
-       write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+       write(*,*) '!! Gas type "', trim(imp_type(1)'" unknown (in mod_injection_source.f90) !!'
        write(*,*) '=> We assume the gas is D2.'
        m_i_over_m_imp = central_mass/2.
    end select
@@ -1553,21 +1559,25 @@ if (SI_units) then
 
       if (use_imp_adas) then  ! use open adas by default
         ! Use radiation coefficients from ADAS
-        if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
-          Lrad_imp = 0.0
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)
-        else
-          Lrad_imp = 0.
-        end if
-        frad_bg = nimp_bg * Lrad_imp
+        frad_bg = 0. 
+        do i_imp =1, n_adas   
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
+            Lrad_imp = 0.0
+            call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                           log10(Te_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)           
+          else     
+            Lrad_imp = 0.
+          end if
+          frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
+        end do
       else
-        if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+        if ( trim(imp_type(1)= 'Ar') then ! Hard-coded fitting exists for argon
           Arad_bg = 2.4d-31
           Brad_bg = 20.
           Crad_bg = 0.8
-          frad_bg = nimp_bg * Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+          frad_bg = nimp_bg(1) * Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
         else 
-          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)",use open adas instead!"
           stop
         end if
       end if

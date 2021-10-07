@@ -23,7 +23,8 @@ module mod_impurity
     real*8, allocatable :: dP_imp_dT(:), P_imp(:)
     real*8              :: Z_imp
 
-    n_adas = 1 ! For now we only trace one species, in the future probably more 
+    ! n_adas = 1 ! For now we only trace one species, in the future probably more 
+    n_adas = size(imp_type) ! Allow using multiple impurities (in the backgroud plasma for now)
 
     if (allocated(imp_adas)) then
       deallocate(imp_adas)
@@ -36,9 +37,9 @@ module mod_impurity
     end if
 
     allocate (imp_cor(n_adas))  !< Dynamically allocate memeries for adas data
-    if (nimp_bg .gt. 0 .or. with_impurities) then
+    if (nimp_bg(1) .gt. 0 .or. with_impurities) then
       do i=1, n_adas
-        select case ( trim(imp_type) )
+        select case ( trim(imp_type(i)) )
           case('C')
             adas_suffix = '96_c'
           case('H')
@@ -172,7 +173,7 @@ module mod_impurity
     !---------------------------------------------------------------------------                  
     ! --- Some post-processing to convert units, check NaNs, etc, before output
     !---------------------------------------------------------------------------
-    if (opt_ju==.true.) then !Convert to JOREK units
+    if (opt_ju) then !Convert to JOREK units
     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
       coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
                          *(central_density*1.d20)**2.5d0

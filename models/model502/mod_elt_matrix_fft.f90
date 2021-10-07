@@ -1059,10 +1059,10 @@ do ms=1, n_gauss
     Crad_bg = 0.8
 
     frad_bg     = (GAMMA-1.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
     dfrad_bg_dT = -(GAMMA-1.d0)/2.d0*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
 
    !--------------------------------------------------------

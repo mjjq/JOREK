@@ -285,6 +285,23 @@ if ( my_id == 0 ) then
       stop
     end if
   end do 
+  
+  if ((size(imp_type) > n_imp_max) .or. (size(nimp_bg) > n_imp_max)) then 
+    write(*,*) "ERROR: imp_type and nimp_bg should be no more than n_imp_max, EXITING!"
+    stop
+  end if
+
+  if (size(imp_type) > 1 .and. (.not. use_imp_adas)) then
+    write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
+    stop
+  end if
+
+  if ( with_neutrals) then
+    if (size(imp_type) /= size(nimp_bg)) then
+      write(*,*) 'ERROR: nimp_bg should have the same size as imp_type in the input file, EXITING!'
+      stop
+    end if
+  end if
 
   if (using_spi) call init_spi_all()
 

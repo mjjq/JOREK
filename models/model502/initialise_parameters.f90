@@ -263,7 +263,12 @@ if (my_id .eq. 0) then
       stop
     end if
   end do 
-  
+
+  if ((size(imp_type) > n_imp_max) .or. (size(nimp_bg) > n_imp_max)) then 
+    write(*,*) "ERROR: imp_type and nimp_bg should be no more than n_imp_max, EXITING!"
+    stop
+  end if
+
   !if (using_spi) call init_spi()
   if (using_spi) call init_spi_all()
 endif

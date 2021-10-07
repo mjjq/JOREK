@@ -359,7 +359,7 @@ subroutine preset_parameters
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
   max_steps_noUpdate = 10000000             ! redo preconditioner when steps without preconditioning matrix update > max_steps_noUpdate
-  centralize_harm_mat= .false.              ! centralize harmonic matrices on toroidal master rank 
+  centralize_harm_mat= .true.              ! centralize harmonic matrices on toroidal master rank 
   
   ! --- deprecated, code will stop if these parameters are set to .true. ---
   use_murge          = .false.
@@ -555,5 +555,28 @@ subroutine preset_parameters
 !===================== Thermalization flag========
 
   thermalization = .false.
+
+!===================== not used?
+  Q_bar = 0.d0
+  Sigma = 0.d0
+
+!===================== particle input values
+n_particles        = 0
+nstep_particles    = 0
+nsubstep_particles = 1
+tstep_particles    = 1d-9
+filter_perp        = 0.d0
+filter_hyper       = 1.d-10
+filter_par         = 0.d0
+filter_perp_n0     = 0.d0
+filter_hyper_n0    = 1.d-10
+filter_par_n0      = 0.d0
+restart_particles  = .false.
+use_ncs            = .false.
+use_ccs            = .false.
+use_pcs            = .false.
+use_ionisation     = .true.
+use_sputtering     = .false.
+use_cx             = .true.
 
 end subroutine preset_parameters

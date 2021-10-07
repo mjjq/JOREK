@@ -739,6 +739,25 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
+
+  !> @name Particles-related input parameters
+  logical :: restart_particles
+  logical :: use_ncs          ! use neutral particles
+  logical :: use_ccs          ! use current coupling scheme for fast particles
+  logical :: use_pcs          ! use pressure coupling scheme for fast particles
+  logical :: use_cx           ! switch on sputtering         (in particle module)
+  logical :: use_sputtering   ! switch on charge-exchange    (in particle module)
+  logical :: use_ionisation   ! switch on ionisation         (in particle module)
+  real*8  :: n_particles      ! the number of particles (real on purpose)
+  real*8  :: tstep_particles  ! the time step for the particles
+  integer :: nstep_particles  ! the number of particle time steps
+  integer :: nsubstep_particles ! the number of particles substeps (without projection)
+  real*8  :: filter_perp      ! particle projection smoothing parameter, poloidal plane
+  real*8  :: filter_hyper     ! particle projection smoothing parameter, poloidal plane
+  real*8  :: filter_par       ! particle projection smoothing parameter, parallel direction
+  real*8  :: filter_perp_n0   ! particle projection smoothing parameter, poloidal plane (n=0)
+  real*8  :: filter_hyper_n0  ! particle projection smoothing parameter, poloidal plane (n=0)
+  real*8  :: filter_par_n0    ! particle projection smoothing parameter, parallel direction (n=0)
   
   !> @name Mode families preconditioner parameters
   integer, parameter :: n_fam_max = 100               !< maximum number of families

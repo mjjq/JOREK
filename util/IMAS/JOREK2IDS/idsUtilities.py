@@ -19,33 +19,11 @@
 import numpy as np
 import sys
 import os
+import imas
+from imas import imasdef
+import logging, logging.config
 
 ENABLED = True
-# Check if the mandatory IMAS module is loaded
-if 'IMAS_PREFIX' not in os.environ and 'IMAS_VERSION' not in os.environ:
-    if __name__ == '__main__':
-        print('IMAS module not found. Check if the module is loaded. ' +
-              'Exiting.')
-        sys.exit(2)
-    else:
-        ENABLED = False
-
-else:
-
-    try:
-        import imas
-    except ImportError:
-        if __name__ == '__main__':
-            print('There is no IMAS module... Exiting.')
-            sys.exit(2)
-        else:
-            ENABLED = False
-    except FileNotFoundError:
-        print(__name__, 'Corrupted IMAS module!')
-        if __name__ == '__main__':
-            sys.exit(2)
-        else:
-            ENABLED = False
 
 
 class basicIDS(object):
@@ -53,7 +31,7 @@ class basicIDS(object):
     databases - IDSs.
     """
 
-    def __init__(self, shot, run, user, device, version='3'):
+    def __init__(self, shot, run, user, device, backend=imasdef.MDSPLUS_BACKEND, version='3'):
         """
         Arguments:
             shot    (int): Shot number of the IDS case.
@@ -67,6 +45,7 @@ class basicIDS(object):
         self.run = run
         self.user = user
         self.device = device
+        self.backend = backend
         self.version = version
         self.state = False
         self.ggdName = ''
@@ -75,13 +54,17 @@ class basicIDS(object):
         # GGD for allocating and storing mesh data
         self.grid_ggd = None
         self.ggd = None
-        self.imas_obj = None
+        self.data_entry = None
+        self.idx = None
+        
+        logging.config.fileConfig(fname='log.conf')
+        self.logger = logging.getLogger('JOREK_HDF5_2_IDS')
 
     def openIMASdatabase(self):
         """Open IMAS database.
         """
 
-        print('Open IMAS database START')
+        self.logger.info('Open IMAS database START')
         self.state = True
 
         if not ENABLED:
@@ -89,47 +72,51 @@ class basicIDS(object):
             return
 
         try:
-            self.imas_obj = imas.ids(self.shot, self.run, self.shot, self.run)
-            self.imas_obj.open_env(self.user, self.device, self.version)
-            if self.imas_obj.isConnected():
-                print('Creation of data entry OK!')
+            self.data_entry = imas.DBEntry(self.backend, self.device, self.shot, self.run, user_name=self.user)
+            status, self.idx = self.data_entry.open()
+            if status == 0:
+                logger.info('Creation of data entry OK!')
             else:
-                print('Creation of data entry FAILED!')
+                logger.info('Creation of data entry FAILED! Exiting.')
                 self.state = False
+                sys.exit(-1)
         except Exception as e:
-            print('Failed to open IMAS database. The specified IMAS ' + \
-                  'database does not exist!')
+            logger.info('Failed to open IMAS database. The specified IMAS ' + \
+                  'database does not exist! Exiting.')
             self.state = False
+            sys.exit(-1)
 
-        print('Open IMAS database FINISHED')
+        self.logger.info('Open IMAS database FINISHED')
 
     def createNewIMASdatabase(self):
         """Created IMAS database.
         """
-        print('Create IMAS database START')
+        self.logger.info('Create IMAS database START')
         self.state = True
-
         if not ENABLED:
             self.state = False
             return
         try:
-            self.imas_obj = imas.ids(self.shot, self.run, self.shot, self.run)
-            self.imas_obj.create_env(self.user, self.device, self.version)
-            if self.imas_obj.isConnected():
-                print('Creation of data entry Ok!')
+            self.data_entry = imas.DBEntry(self.backend , self.device, self.shot, self.run, user_name=self.user)
+            status, self.idx = self.data_entry.create()
+            if status == 0:
+                self.logger.info('Creation of data entry Ok!')
                 self.state = True
             else:
-                print('Creation of data entry FAILED!')
+                self.logger.info('Creation of data entry FAILED! Exiting.')
                 self.state = False
+                sys.exit(-1)
         except Exception as e:
-            print('Failed to create IMAS database. Possible problems with IMAS'
-                  ' module!')
+            self.logger.info(e)
+            self.logger.info('Failed to create IMAS database. Possible problems with IMAS'
+                  ' module! Exiting.')
             self.state = False
-        print('Create IMAS database FINISHED')
+            sys.exit(-1)
+        self.logger.info('Create IMAS database FINISHED')
 
     def idsClose(self):
         """Close IDS database"""
-        self.imas_obj.close()
+        self.data_entry.close()
 
 
 class readIDS(basicIDS):
@@ -137,9 +124,9 @@ class readIDS(basicIDS):
     databases - IDSs.
     """
 
-    def __init__(self, shot, run, user, device, version='3'):
-        super(readIDS, self).__init__(shot, run, user, device, version)
-        if ENABLED:
+    def __init__(self, shot, run, user, device, backend=imasdef.MDSPLUS_BACKEND, version='3'):
+        super(readIDS, self).__init__(shot, run, user, device, backend, version)
+        if self.idx is None:
             self.openIMASdatabase()
 
     def getGGD(self, IDSName):
@@ -158,42 +145,30 @@ class readIDS(basicIDS):
 
         self.ggdName = IDSName
 
-        print('Get IDS GGD START')
+        self.logger.info('Get IDS GGD START')
+        if IDSName not in ['edge-profiles', 'mhd', 'wall']:
+           print('The specified IDS either is not supported or it does ' + \
+                  'not exist')
+           self.grid_ggd = None
+
+        ids = data_entry.get(IDSName)
 
         # Define self.grid_ggd
         if IDSName == 'edge-profiles':
-            # Get the data and set 'Shortcut' variable to imas_obj.edge_profiles
-            # data tree node
-            imas_obj.edge_profiles.get()
-            ids = imas_obj.edge_profiles
             # 'Shortcut' variable to ...grid_ggd[0] node
             self.grid_ggd = ids.grid_ggd
         if IDSName == 'mhd':
-            # Get the data and set 'Shortcut' variable to imas_obj.edge_profiles
-            # data tree node
-            ids = self.imas_obj.mhd
-            self.imas_obj.mhd.get()
             self.grid_ggd = ids.grid_ggd
             self.ggd = ids.ggd
         elif IDSName == 'wall':
-            # Get the data and set 'Shortcut' variable to imas_obj.wall
-            # data tree node
-            imas_obj.wall.get()
-            ids = imas_obj.wall
-
-            # 'Shortcut' variable to ...grid_ggd node
             self.grid_ggd = ids.description_ggd[0].grid_ggd
             self.ggd = ids.description_ggd[0].ggd
-        else:
-            print('The specified IDS either is not supported or it does ' + \
-                  'not exist')
-            self.grid_ggd = None
 
         # Return False if self.grid_ggd was not set
         if self.grid_ggd == None:
             return False
 
-        print('Get IDS GGD FINISHED')
+        self.logger.info('Get IDS GGD FINISHED')
         return True
 
     def getIDSMesh(self, n=0):
@@ -203,7 +178,7 @@ class readIDS(basicIDS):
         Arguments:
             n (int): The index of the slice in GGD
         """
-        print("getMesh START")
+        self.logger.info("getMesh START")
         grid_ggd = self.grid_ggd[n]
 
         # Get name of the mesh
@@ -245,10 +220,10 @@ class readIDS(basicIDS):
         else:
             num_obj_3D_all = 0
 
-        print("num_obj_0D_all: ", num_obj_0D_all)
-        print("num_obj_1D_all: ", num_obj_1D_all)
-        print("num_obj_2D_all: ", num_obj_2D_all)
-        print("num_obj_3D_all: ", num_obj_3D_all)
+        self.logger.info("num_obj_0D_all: ", num_obj_0D_all)
+        self.logger.info("num_obj_1D_all: ", num_obj_1D_all)
+        self.logger.info("num_obj_2D_all: ", num_obj_2D_all)
+        self.logger.info("num_obj_3D_all: ", num_obj_3D_all)
 
 
         # TODO: the use of empty lists and using 'append' is not and efficient
@@ -308,13 +283,13 @@ class readIDS(basicIDS):
         # print("First obj_1D: ", list1D[0])
         # print("First obj_2D: ", list2D[0])
 
-        print("getMesh from slice %d FINISHED" % n)
+        self.logger.info("getMesh from slice %d FINISHED" % n)
 
         return points_geo, list0D, list1D, list2D, list3D, meshName
 
     def createMesh(self):
         if self.grid_ggd is None:
-            print('No GGD has been retrieved!')
+            self.logger.error('No GGD has been retrieved!')
             return
 
         # Get number of slices
@@ -356,10 +331,8 @@ class readIDS(basicIDS):
         data.
         """
         import eqdsk
-        ids_equilibrium = self.imas_obj.equilibrium
-        ids_equilibrium.get()
-        ids_wall = self.imas_obj.wall
-        ids_wall.get()
+        ids_equilibrium = data_entry.get('equilibrium')
+        ids_wall = data_entry.get('wall')
 
         ok, err_msg = self.checkEqdskIDS(ids_equilibrium, ids_wall)
         if not ok:
@@ -421,39 +394,39 @@ class readIDS(basicIDS):
         return True
 
 class writeIDS(basicIDS):
-    def __init__(self, shot, run, user, device, version='3'):
-        super(writeIDS, self).__init__(shot, run, user, device, version)
-        if ENABLED:
+    def __init__(self, shot, run, user, device, backend=imasdef.MDSPLUS_BACKEND, version='3'):
+        super(writeIDS, self).__init__(shot, run, user, device, backend, version)
+        if self.idx is None:
             self.createNewIMASdatabase()
 
     def createGridGGD(self, IDSName, numSlices):
         """Open an IDS.
         """
         self.grid_ggdName = IDSName
-        print('Create IDS GGD START')
+        self.logger.info('Create IDS GGD START')
 
         if IDSName == "wall":
-            self.ids, self.grid_ggd = self.createGridGGDWall(self.imas_obj,
+            self.ids, self.grid_ggd = self.createGridGGDWall(self.data_entry,
                                                     numSlices)
         elif IDSName == 'edge_profiles':
-            self.ids, self.grid_ggd = self.createGridGGDEdgeProfiles(self.imas_obj,
+            self.ids, self.grid_ggd = self.createGridGGDEdgeProfiles(self.data_entry,
                                                             numSlices)
 
         elif IDSName == 'mhd':
-            self.ids, self.grid_ggd = self.createGridGGDMhd(self.imas_obj, numSlices)
+            self.ids, self.grid_ggd = self.createGridGGDMhd(self.data_entry, numSlices)
 
         else:
-            print('The specified IDS either is not supported or it does not '
+            self.logger.info('The specified IDS either is not supported or it does not '
                   'exist')
             return False
-        print('Create IDS GGD FINISHED')
+        self.logger.info('Create IDS GGD FINISHED')
         return True
 
     def setBaseEquilibrium(self):
         """Set fundamental data for Equilibrium IDS.
         """
         time = 0.0
-        ids_equilibrium = self.imas_obj.equilibrium
+        ids_equilibrium = self.data_entry.equilibrium
         ids_equilibrium.putNonTimed()
         ids_equilibrium.ids_properties.homogeneous_time = 1
         ids_equilibrium.time = np.array([time])
@@ -463,7 +436,7 @@ class writeIDS(basicIDS):
         """Set fundamental data for Wall IDS.
         """
         time = 0.0
-        ids_wall = self.imas_obj.wall
+        ids_wall = self.data_entry.wall
         ids_wall.putNonTimed()
         ids_wall.ids_properties.homogeneous_time = 1
         ids_wall.time.resize(1)
@@ -477,8 +450,8 @@ class writeIDS(basicIDS):
         """
         import time
         import os
-        # 'Shortcut' variable to imas_obj.dataset_description IDS
-        desc = self.imas_obj.dataset_description
+        # 'Shortcut' variable to data_entry.dataset_description IDS
+        desc = self.data_entry.dataset_description
         # Set IMAS database description and base information
         props = desc.ids_properties
         # props.comment = ""
@@ -498,9 +471,9 @@ class writeIDS(basicIDS):
         return True
 
     @staticmethod
-    def createGridGGDEdgeProfiles(imas_obj, numSlices):
+    def createGridGGDEdgeProfiles(data_entry, numSlices):
         time = 0.0
-        ids = imas_obj.edge_profiles
+        ids = data_entry.edge_profiles
         ids.putNonTimed()
         ids.ids_properties.homogeneous_time = 1
         ids.time.resize(1)
@@ -512,9 +485,9 @@ class writeIDS(basicIDS):
         return ids, ids.grid_ggd
 
     @staticmethod
-    def createGridGGDWall(imas_obj, numSlices):
+    def createGridGGDWall(data_entry, numSlices):
         time = 0.0
-        ids = imas_obj.wall
+        ids = data_entry.wall
         ids.putNonTimed()
         ids.ids_properties.homogeneous_time = 1
         ids.time.resize(1)
@@ -525,9 +498,9 @@ class writeIDS(basicIDS):
         return ids, ids.description_ggd[0].grid_ggd
 
     @staticmethod
-    def createGridGGDMhd(imas_obj, numSlices):
+    def createGridGGDMhd(data_entry, numSlices):
         time = 0.0
-        ids = imas_obj.mhd
+        ids = imas.mhd()
         # ids.putNonTimed()
         ids.ids_properties.homogeneous_time = 1
         ids.time.resize(1)
@@ -542,7 +515,7 @@ class writeIDS(basicIDS):
         """
 
         if self.grid_ggd[n] is None:
-            print('No IDS database created! Aborting')
+            self.logger.error('No IDS database created! Aborting')
             return False
 
         grid_ggd = self.grid_ggd[n]
@@ -662,7 +635,7 @@ class writeIDS(basicIDS):
         # if num_obj_3D_all > 0:
         #     num_grid_subset += 1
 
-        print("Number of grid_subsets to be made: ", str(num_grid_subset))
+        self.logger.info("Number of grid_subsets to be made: %s", str(num_grid_subset))
         grid_ggd.grid_subset.resize(num_grid_subset)
         gs_index = 0
 
@@ -749,22 +722,22 @@ class writeIDS(basicIDS):
         """
         for i in range(len(meshList)):
             if meshList[i] == '':
-                print('No mesh name provided')
+                self.logger.error('No mesh name provided')
                 continue
             # Write mesh to GGD, slice i
             ok = self.writeMeshToSlice(meshList[i], i)
             if not ok:
-                print('Failed to write mesh %s to slice %d' %
+                self.logger.error('Failed to write mesh %s to slice %d' %
                       meshList[i], i)
 
         # Try putting data to ids
         try:
-            self.ids.put()
+            self.data_entry.put(self.ids)
         except Exception as e:
-            print('Error when trying to write data to IDS!')
+            self.logger.error('Error when trying to write data to IDS!')
             self.idsClose()
             return False
-        print('Successfully written data to IDS!')
+        self.logger.info('Successfully written data to IDS!')
         self.idsClose()
         return True
 
@@ -778,7 +751,7 @@ class writeIDS(basicIDS):
         import time
 
         # Set Equilibrium IDS fundamental data
-        ids_equilibrium = self.imas_obj.equilibrium # Equilibrium IDS object
+        ids_equilibrium = self.data_entry.equilibrium # Equilibrium IDS object
 
         # Set Equilibrium IDS properties
         ids_equilibrium.ids_properties.provider = self.user
@@ -818,14 +791,14 @@ class writeIDS(basicIDS):
 
         # Try putting data to Equilibrium IDS
         try:
-            ids_equilibrium.put()
+            self.data_entry.put(ids_equilibrium)
         except Exception as e:
-            print('Error when trying to write data to Equilibrium IDS!')
+            self.logger.error('Error when trying to write data to Equilibrium IDS!')
             self.idsClose()
             return False
 
         # Set Wall IDS fundamental data
-        ids_wall = self.imas_obj.wall # Wall IDS object
+        ids_wall = self.data_entry.wall # Wall IDS object
         # Set eqdsk related data to Wall IDS
         ids_wall.description_2d.resize(1)
         ids_wall.description_2d[0].limiter.unit.resize(1)
@@ -835,12 +808,12 @@ class writeIDS(basicIDS):
 
         # Try putting data to Wall IDS
         try:
-            ids_wall.put()
+            self.data_entry.put(ids_wall)
         except Exception as e:
-            print('Error when trying to write data to Wall IDS!')
+            self.logger.error('Error when trying to write data to Wall IDS!')
             self.idsClose()
             return False
 
-        print('Successfully written data to IDS!')
+        self.logger.info('Successfully written data to IDS!')
         self.idsClose()
         return True

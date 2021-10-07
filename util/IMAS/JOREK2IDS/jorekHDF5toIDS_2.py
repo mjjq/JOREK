@@ -203,7 +203,7 @@ class jorekRun2IDS():
         basic_ids.createNewIMASdatabase()
 
         # Physics Data Dictionary (root)
-        self.pdd = basic_ids.imas_obj
+        self.pdd = basic_ids.data_entry
         # MHD ids
         self.mhd = self.pdd.mhd
         # Allocate grid_ggd AOS (grid geometry description)
@@ -500,7 +500,7 @@ class jorekRun2IDS():
         self.log.info("WRITING DATA TO IDS (put)")
         # Write the set data to IDS
         tt = time()
-        self.mhd.put()
+        self.pdd.put(self.mhd)
         print(f"Time required for put() command to finish: {time()-tt:.2f}s")
         # Close the database
         self.pdd.close()

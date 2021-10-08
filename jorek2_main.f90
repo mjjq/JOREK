@@ -1047,7 +1047,9 @@ required = 0
         call solve_strumpack_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
 #endif
       elseif (use_pastix) then
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)      
          call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
+#endif
       endif
 
     else
@@ -1107,7 +1109,9 @@ required = 0
         call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #endif
       else
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)
         call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+#endif
       endif
 
 

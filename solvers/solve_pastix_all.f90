@@ -1,3 +1,4 @@
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)
 subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
 !---------------------------------------------------------------------
 ! subroutine solves the complete system of equation using pastix with
@@ -434,3 +435,4 @@ if (allocated(displacements)) call tr_deallocate(displacements,"displacements",C
 
 return
 end
+#endif

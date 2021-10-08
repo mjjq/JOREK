@@ -68,13 +68,14 @@ contains
   end subroutine pastix_bind_threads
   
   
-  
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)    
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
 #ifdef USE_COMPLEX_PRECOND
     use real2complex_mod
 #endif
+
     use tr_module
     use mod_parameters
     use mumps_module
@@ -87,7 +88,6 @@ contains
     use mod_coicsr
 
     use mod_integer_types
-
  
 #ifdef USE_PASTIX6
     use iso_c_binding
@@ -101,8 +101,6 @@ contains
 #ifndef USE_PASTIX6
 #ifdef USE_PASTIX
 #include "pastix_fortran.h"
-#else
-#include "no_pastix_fortran.h"
 #endif
 #endif /* ifndef USE_PASTIX6 */
 
@@ -852,7 +850,10 @@ contains
     call tr_print_memsize("AfterSolveN")
     call r3_info_end (r3_info_index_0)         ! timing
     return
+ 
   end subroutine solve_matrix_n
+#endif
+!defined(USE_PASTIX) || defined(USE_PASTIX6)     
 
 ! > Solve the harmonic matrix system using STRUMPACK
 #ifdef USE_STRUMPACK  

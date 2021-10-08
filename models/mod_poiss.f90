@@ -30,6 +30,9 @@ use spmf
 #ifdef USE_STRUMPACK
 use strumpack_module
 #endif
+#ifdef WITH_PASTIX62
+use mod_pastix
+#endif
 
 implicit none
 
@@ -453,6 +456,18 @@ if (my_id == 0) then
     call strumpack_factorize(MPI_COMM_SELF)
     call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_SELF)
     call strumpack_finalize(MPI_COMM_SELF)
+  endif  
+#endif
+
+#ifdef WITH_PASTIX62
+  if (use_pastix_eq) then
+    call pastix_init(MPI_COMM_SELF)
+    call pastix_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,1,&
+                        MPI_COMM_SELF,UPDATE=.false.,DISTRIBUTED=.false.,EQUILIBRIUM=.true.)
+    call pastix_analyze()    
+    call pastix_factorize()
+    call pastix_solve(mumps_par%rhs)
+    call pastix_finalize() 
   endif  
 #endif
 

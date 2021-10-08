@@ -1047,7 +1047,7 @@ required = 0
         call solve_strumpack_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
 #endif
       elseif (use_pastix) then
-#if defined(USE_PASTIX) || defined(USE_PASTIX6)      
+#if defined(USE_PASTIX) || defined(USE_PASTIX6) || defined(WITH_PASTIX62)     
          call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
 #endif
       endif

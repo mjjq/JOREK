@@ -130,9 +130,7 @@ module mod_impurity
     use phys_module
     use mod_openadas
     use mod_coronal
-    use mod_interp_splinear
-
-    use constants, only: MU_ZERO, MASS_PROTON 
+    use mod_interp_splinear 
 
     implicit none
 
@@ -165,31 +163,32 @@ module mod_impurity
         rad_p(iz)   = radRB + radLT
         drad_dT(iz) = dradRB_dT(iz) * radRB / (10.0**temperature) &
                       + dradLT_dT(iz) * radLT / (10.0**temperature) ! Convert to normal gradient
-      enddo ! radiation emitted by atoms at level iz     
+      enddo ! radiation emitted by atoms at level iz    
       if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
     end if
 
     !---------------------------------------------------------------------------                  
     ! --- Some post-processing to convert units, check NaNs, etc, before output
     !---------------------------------------------------------------------------
-    if (opt_ju==.true.) then !Convert to JOREK units
+    
     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-      coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                         *(central_density*1.d20)**2.5d0
+    coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0 &
+                       *(central_density*1.d20)**2.5d0
+
+    if (opt_ju) then !Convert to JOREK units
       Lrad = Lrad * coef_rad_imp
       if (present(dLrad_dTe)) then
         ! Convert gradient wrt. to T from 1/K into 1/eV
         dLrad_dTe = dLrad_dTe * coef_rad_imp *  EL_CHG / K_BOLTZ 
         ! ...and now from 1/eV into 1/(JOREK units)
-        dLrad_dTe = dLrad_dTe / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-      !  dLrad_dTe = dLrad_dTe * dT0_corr_dT            
+        dLrad_dTe = dLrad_dTe / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)          
       end if
     end if
     if (Lrad < 0.) then
       Lrad = 0.
       if (present(dLrad_dTe)) dLrad_dTe = 0.
     end if  
-    if (Lrad/=Lrad .or. dLrad_dTe/=dLrad_dTe) then
+    if (Lrad/=Lrad) then
       write(*,*) "WARNING: Lrad ", Lrad
       stop
     end if
@@ -197,7 +196,6 @@ module mod_impurity
       write(*,*) "WARNING: dLrad_dTe ", dLrad_dTe
       stop
     end if
-
   end subroutine radiation_function_linear
 
 end module mod_impurity

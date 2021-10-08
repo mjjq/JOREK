@@ -24,8 +24,7 @@ module mod_impurity
     real*8              :: Z_imp
 
     ! n_adas = 1 ! For now we only trace one species, in the future probably more 
-    n_adas = size(imp_type) ! Allow using multiple impurities (in the backgroud plasma for now)
-
+ 
     if (allocated(imp_adas)) then
       deallocate(imp_adas)
     end if

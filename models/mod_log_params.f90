@@ -768,7 +768,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
-     do i = 1,(size(imp_type))
+     do i = 1, n_adas
        write(*,CHAR_FMT) 'imp_type(',i,')    ',  trim(imp_type(i))
      end do
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source

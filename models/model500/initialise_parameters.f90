@@ -130,7 +130,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
-                RMP_har_sin_spectrum, imp_type, adas_dir,           &
+                RMP_har_sin_spectrum, imp_type, adas_dir, n_adas,   &
                 amix, amix_freeb, equil_accuracy, use_imp_adas,     &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -267,17 +267,12 @@ if ( my_id == 0 ) then
     end if
   end do 
 
-  if ((size(imp_type) > n_imp_max) .or. (size(nimp_bg) > n_imp_max)) then 
+  if ((n_adas > n_imp_max) .or. (n_adas > n_imp_max)) then 
     write(*,*) "ERROR: imp_type and nimp_bg should be no more than n_imp_max, EXITING!"
     stop
   end if
 
-  if (size(imp_type) /= size(nimp_bg)) then
-    write(*,*) 'ERROR: nimp_bg should have the same size as imp_type in the input file, EXITING!'
-    stop
-  end if
-
-  if (size(imp_type) > 1 .and. (.not. use_imp_adas)) then
+  if (n_adas > 1 .and. (.not. use_imp_adas)) then
     write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
     stop
   end if

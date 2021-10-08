@@ -121,7 +121,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_L_inj, spi_L_inj_diff,                          &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
-                imp_type, delta_n_convection, nimp_bg,              &
+                imp_type, delta_n_convection, nimp_bg, n_adas,      &
                 adas_dir, output_prad_phi,                          &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 spi_plume_file, spi_plume_hdf5,                     &
@@ -257,7 +257,7 @@ if (my_id .eq. 0) then
     end if
   end do 
 
- if ((size(imp_type) > n_imp_max) .or. (size(nimp_bg) > n_imp_max)) then 
+ if ((n_adas > n_imp_max) .or. (n_adas > n_imp_max)) then 
     write(*,*) "ERROR: imp_type and nimp_bg should be no more than n_imp_max, EXITING!"
     stop
   end if

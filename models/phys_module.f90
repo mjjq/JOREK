@@ -365,7 +365,7 @@ module phys_module
   character(len=256) :: spi_plume_file(n_inj_max)!< The name of the shard information datafile (array)
   logical            :: spi_plume_hdf5           !< if 'spi_plume_file' is in HDF5format?
 
-  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
+  integer :: n_adas             !< Number of species to be traced by ADAS
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 

@@ -1039,7 +1039,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   end subroutine solve_matrix_n_spk
 #endif
 
-#if defined(USE_PASTIX62)
+#if defined(WITH_PASTIX62)
 
 subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use tr_module
@@ -1085,7 +1085,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       write(*,*) my_id,'*********************************'
       write(*,*) my_id,'*      solve local matrix  (n)  *'
       write(*,*) my_id,'*********************************'
-      write(*,*) my_id,'*     using solver STRUMPACK    *'
+      write(*,*) my_id,'*     using solver PaStiX v6.2  *'
       write(*,*) my_id,'*********************************'
     endif
 
@@ -1109,6 +1109,24 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       endif     
 
       if (centralize_harm_mat) then
+        ! --- Column scaling ----! Should be adopted for pre-distributed matrix
+        if (my_id_n .eq. 0) then
+          if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+          call tr_allocate(column_scaling,Int1,mumps_par%n,"column_scaling",CAT_DMATRIX)
+  
+          column_scaling = 1.d-20
+          do k=1,mumps_par%nz
+            j = mumps_par%jcn(k)
+            column_scaling(j) = min(max(column_scaling(j),abs(mumps_par%A(k))),1d20)
+          enddo
+          do k=1,mumps_par%nz
+            j = mumps_par%jcn(k)
+            mumps_par%A(k) = mumps_par%A(k) / column_scaling(j)
+          enddo
+        
+        endif
+        ! --- End column scaling -----
+      
         ! broadcast centralized matrix
         if (my_id_n.gt.0) then
           if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
@@ -1126,25 +1144,18 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         call split_broadcast(type,MPI_COMM_N)
         type='double'
         call split_broadcast(type,MPI_COMM_N)
-
-        !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
-        !call pastix_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,MPI_COMM_N,&
-        !        UPDATE=spss_analyzed,DISTRIBUTED=.false.,EQUILIBRIUM=.false.)
-        
-      else
-!        if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
-!        call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,&
-!                MPI_COMM_N,UPDATE=spss_analyzed,DISTRIBUTED=.true.,EQUILIBRIUM=.false.)
-
       endif
-
-      ! pastix keeps pointers to the original matrix
-      !if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-      !if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-      !if (associated(mumps_par%A))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
-
+      
+    
+      
+      
+      !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
+        
+      call pastix_set_mat(n, nnz, mumps_par%irn, mumps_par%jcn, mumps_par%a, block_size, MPI_COMM_N,&
+                UPDATE=spm_analyzed, DISTRIBUTED=.not.centralize_harm_mat, EQUILIBRIUM=.false.)
+                
       if (.not. spm_analyzed) then
-        if (my_id_n.eq. 0) then                  ! elapsed time reorder start
+        if (my_id_n.eq. 0) then
           call MPI_Barrier(MPI_COMM_MASTER,ierr)
           call clck_time(t0)
         endif
@@ -1191,6 +1202,9 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     call MPI_Barrier(MPI_COMM_N,ierr)
     !if (my_id_n.eq.0) call timestamp("Solve",my_id)
     call pastix_solve(mumps_par%rhs)
+      
+!    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+!    call exit(0)      
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end
        call MPI_Barrier(MPI_COMM_MASTER,ierr)
@@ -1207,12 +1221,11 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       deltas = 0.d0
 
       call tr_allocate(rhs_tmp,Int1,ndof_glob,"rhs_tmp",CAT_PRECOND)
-
+     
       rhs_tmp = 0.d0
       do i = 1, mumps_par%n
-        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor
+        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor/column_scaling(i)
       enddo
-
 
       call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)

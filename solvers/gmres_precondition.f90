@@ -21,12 +21,16 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   use pastixf
   use pastix_enums
   use spmf
-#elif USE_PASTIX
+#endif
+#if USE_PASTIX
 #include "pastix_fortran.h"
 #endif
 
 #ifdef USE_STRUMPACK
   use strumpack_module
+#endif
+#ifdef WITH_PASTIX62
+  use mod_pastix, only: pastix_solve
 #endif
 
   implicit none
@@ -168,6 +172,13 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   if (use_strumpack) then
     call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
     call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
+  endif
+#endif
+
+#ifdef WITH_PASTIX62
+  if (use_pastix) then
+    call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+    call pastix_solve(mumps_par%rhs)
   endif
 #endif
 

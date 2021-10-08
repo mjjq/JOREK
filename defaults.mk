@@ -204,15 +204,18 @@ ifeq (1, $(USE_PASTIX))
   ifeq (1, $(PASTIX_MEMORY_USAGE))
     DEFINES := $(DEFINES) -DMEMORY_USAGE
   endif
-#else
-#  # This is a hack to remove the linking problems that otherwise arise
-#  DEFINES += -Dpastix_fortran=fake_pastix_fortran
 endif
 
 ifeq (1, $(USE_PASTIX6))
   DEFINES  := $(DEFINES) -DUSE_PASTIX6
   LIBS     := $(LIBS) $(LIB_PASTIX6)  $(LIB_PASTIX6_BLAS)
   INCLUDES := $(INCLUDES) $(INC_PASTIX6)
+endif
+
+ifeq (1, $(WITH_PASTIX62))
+  DEFINES  := $(DEFINES) -DWITH_PASTIX62
+  LIBS     := $(LIBS) $(LIB_PASTIX)
+  INCLUDES := $(INCLUDES) $(INC_PASTIX)
 endif
 
 ifeq (1, $(USE_WSMP))

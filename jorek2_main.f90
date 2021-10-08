@@ -271,9 +271,9 @@ required = 0
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 
-#if (!defined (USE_PASTIX))&&(!defined (USE_PASTIX6))
+#if (!defined(USE_PASTIX))&&(!defined(USE_PASTIX6))&&(!defined(WITH_PASTIX62))
   if (use_pastix.or.use_pastix_eq) then
-    write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6'
+    write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6 or WITH_PASTIX62'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
   endif
@@ -1111,6 +1111,9 @@ required = 0
       else
 #if defined(USE_PASTIX) || defined(USE_PASTIX6)
         call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+#endif
+#if defined(WITH_PASTIX62)
+        call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #endif
       endif
 

@@ -1571,7 +1571,7 @@ if (SI_units) then
           frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
         end do
       else
-        if ( trim(imp_type(1)) = 'Ar' ) then ! Hard-coded fitting exists for argon
+        if ( trim(imp_type(1)) == 'Ar' ) then ! Hard-coded fitting exists for argon
           Arad_bg = 2.4d-31
           Brad_bg = 20.
           Crad_bg = 0.8

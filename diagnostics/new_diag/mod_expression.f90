@@ -642,7 +642,7 @@ module mod_expression
     end if
 
 #ifdef WITH_Impurities
-     select case ( trim(imp_type) )
+     select case ( trim(imp_type(1)) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')

@@ -132,8 +132,6 @@ module mod_impurity
     use mod_coronal
     use mod_interp_splinear
 
-    use constants, only: MU_ZERO, MASS_PROTON 
-
     implicit none
 
     type(adf11_all), intent(in) :: ad
@@ -172,10 +170,12 @@ module mod_impurity
     !---------------------------------------------------------------------------                  
     ! --- Some post-processing to convert units, check NaNs, etc, before output
     !---------------------------------------------------------------------------
-    if (opt_ju) then !Convert to JOREK units
+   
     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-      coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                         *(central_density*1.d20)**2.5d0
+    coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                       *(central_density*1.d20)**2.5d0
+
+    if (opt_ju) then !Convert to JOREK units
       Lrad = Lrad * coef_rad_imp
       if (present(dLrad_dTe)) then
         ! Convert gradient wrt. to T from 1/K into 1/eV
@@ -189,7 +189,7 @@ module mod_impurity
       Lrad = 0.
       if (present(dLrad_dTe)) dLrad_dTe = 0.
     end if  
-    if (Lrad/=Lrad .or. dLrad_dTe/=dLrad_dTe) then
+    if (Lrad/=Lrad) then
       write(*,*) "WARNING: Lrad ", Lrad
       stop
     end if

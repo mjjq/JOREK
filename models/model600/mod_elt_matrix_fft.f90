@@ -1316,7 +1316,7 @@ do i=1,n_vertex_max
 
                        + v * 2.d0 * tauIC*2. * Pi0_y * BigR                                          * xjac * tstep &
 
-                       + v * r0_corr * rn0      * BigR * Sion_T                                   * xjac * tstep &
+                       + v * r0_corr * rn0_corr * BigR * Sion_T                                   * xjac * tstep &
                        - v * r0_corr * r0_corr  * BigR * Srec_T                                   * xjac * tstep &
                        
                        + zeta * v * delta_g(mp,var_rho,ms,mt) * BigR                              * xjac         &

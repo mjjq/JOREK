@@ -168,10 +168,12 @@ if __name__ == "__main__":
                                    obj_2D_list=obj_2D_list_f90,
                                    obj_3D_list=[],
                                    n=0,
+                                   s=2,
                                    label='JOREK output HDF5 file grid with quantities')
-
-            w_ids.grid_ggd.array[0].space.resize(2)
-            w_ids.grid_ggd.array[0].space.array[1].geometry_type.index = n_period
+            path = w_ids.grid_ggd.array[0].space.array[1]
+            path.geometry_type.index = n_period
+            path.identifier.description = "toroidal space"
+            path.objects_per_dimension = [i + 1 for i in range(n_tor)]
             gr2d = w_ids.grid_ggd.array[0].space.array[0]
 
             #coordinate and derivates (s, t, mixed)
@@ -182,7 +184,7 @@ if __name__ == "__main__":
             for i in range(np.shape(size)[2]):
                 gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d = size[:, :, i]
             gr2d.geometry_type.index = 1
-
+            
         quantity_names_list = ["psi", "u", "j", "w", "rho", "T", "v_par"]
         quantities_array = val
         # print("quantity_names_list: ", quantity_names_list)
@@ -212,6 +214,13 @@ if __name__ == "__main__":
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].psi[0]
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+
+                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].psi
+                psi = values[0, :, :, :]
+                psi = np.swapaxes(psi, 0, 1)
+                a = np.shape(psi)
+                psi1 = np.reshape(psi, (a[0], a[1] * a[2]))
+                val_tor[0].coefficients = psi1
             elif label == 'u':  # Potential / electric potential
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
@@ -220,6 +229,13 @@ if __name__ == "__main__":
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].phi_potential[0]
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+
+                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].phi_potential
+                u = values[1, :, :, :]
+                u = np.swapaxes(u, 0, 1)
+                a = np.shape(u)
+                u1 = np.reshape(u, (a[0], a[1] * a[2]))
+                val_tor[0].coefficients = u1
             elif label == 'j':  # Current / toroidal current density
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
@@ -228,6 +244,13 @@ if __name__ == "__main__":
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].j_tor[0]
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+
+                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].j_tor
+                j = values[2, :, :, :]
+                j = np.swapaxes(j, 0, 1)
+                a = np.shape(j)
+                j1 = np.reshape(j, (a[0], a[1] * a[2]))
+                val_tor[0].coefficients = j1
             elif label == 'w':  # Vorticity
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
@@ -236,6 +259,14 @@ if __name__ == "__main__":
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].vorticity[0]
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+
+                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].vorticity
+                w = values[3, :, :, :]
+                w = np.swapaxes(w, 0, 1)
+                a = np.shape(w)
+                w1 = np.reshape(w, (a[0], a[1] * a[2]))
+                val_tor[0].coefficients = w1
+                
             elif label == 'rho':  # Mass Density
                 print("Writing quantity array: ", label)
                 # Resize/Allocate
@@ -244,6 +275,13 @@ if __name__ == "__main__":
                 IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].mass_density[0]
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i,:], 1)
+                
+                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].mass_density
+                rho = values[4, :, :, :]
+                rho = np.swapaxes(rho, 0, 1)
+                a = np.shape(rho)
+                rho1 = np.reshape(rho, (a[0], a[1] * a[2]))
+                val_tor[0].coefficients = rho1
                 pass
             elif label == 'T':  # Temperature / total temperature
                 print("Writing quantity array: ", label)
@@ -273,6 +311,13 @@ if __name__ == "__main__":
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
 
                 print("v_par max value: ", max(val[i, :]))
+
+                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].velocity_parallel
+                vp = values[6, :, :, :]
+                vp = np.swapaxes(vp, 0, 1)
+                a = np.shape(vp)
+                vp1 = np.reshape(vp, (a[0], a[1] * a[2]))
+                val_tor[0].coefficients = vp1
         w_ids.ids.put()
         w_ids.idsClose()
 

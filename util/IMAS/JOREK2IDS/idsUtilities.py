@@ -537,7 +537,7 @@ class writeIDS(basicIDS):
         return ids, ids.grid_ggd
 
     def writeMeshToSlice(self, points_geo, obj_0D_list, obj_1D_list,
-                         obj_2D_list, obj_3D_list, n = 0, label=''):
+                         obj_2D_list, obj_3D_list, n = 0, s=1, label=''):
         """Prepare data to be written to GGD, in the n-th slice.
         """
 
@@ -548,7 +548,7 @@ class writeIDS(basicIDS):
         grid_ggd = self.grid_ggd[n]
 
         # Set size of the grid_ggd[:].space[:] node
-        grid_ggd.space.resize(1)
+        grid_ggd.space.resize(s)
         grid_ggd.space[0].objects_per_dimension.resize(4)
 
         # Set the coordinate system information

@@ -95,6 +95,20 @@ def visualise():
         temp = np.swapaxes(temp, 0, 1)
         values = np.array([temp])
 
+        val_tor1 = np.array([r_ids.ggd.array[0].psi.array[0].coefficients,
+                             r_ids.ggd.array[0].phi_potential.array[0].coefficients,
+                             r_ids.ggd.array[0].j_tor.array[0].coefficients,
+                             r_ids.ggd.array[0].vorticity.array[0].coefficients,
+                             r_ids.ggd.array[0].mass_density.array[0].coefficients,
+                             r_ids.ggd.array[0].electrons.temperature.array[0].coefficients,
+                             r_ids.ggd.array[0].velocity_parallel.array[0].coefficients])
+        a = np.shape(val_tor1)
+        n_tor = a[1]
+        valu = np.reshape(val_tor1, (7, n_tor, 4, len(xyz0)))
+        values = np.swapaxes(valu, 1, 2)
+
+
+
         #vertex
         ien0 = np.array(r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
         ver = np.empty((np.shape(ien0)[0], np.shape(ien0[0].nodes)[0]))
@@ -208,17 +222,19 @@ def visualise():
         
         HZ = toroidal_basis(n_tor, n_period, phis, without_n0_mode)
 
-        val = interp_scalars_3D(values, vertex, size, n_sub, HZ).reshape((1, -1))
+        val = interp_scalars_3D(values, vertex, size, n_sub, HZ).reshape((7, -1))
 
         a = np.shape(val)
         val = val.reshape((a[0], a[1] // 16, 16))
         val[:, :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]] = val[:, :, [0, 12, 15, 3, 4, 8, 11, 7, 1,
                                                                                        13, 14, 2, 5, 9, 10, 6]]
         val = val.reshape((a[0], a[1]))
-
-        tmp = npvtk.numpy_to_vtk(val[0, :], deep=True, array_type=vtk_prec)
-        tmp.SetName("T")
-        output.GetPointData().AddArray(tmp)
+        
+        nam = ["psi", "u", "j", "w", "rho", "T", "v_par"]
+        for i in range(7):
+            tmp = npvtk.numpy_to_vtk(val[i, :], deep=True, array_type=vtk_prec)
+            tmp.SetName(nam[i])
+            output.GetPointData().AddArray(tmp)
 
         writer = vtk.vtkXMLUnstructuredGridWriter()
         # writer.SetDataModeToAscii()

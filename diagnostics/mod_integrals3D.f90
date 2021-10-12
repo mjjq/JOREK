@@ -369,7 +369,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
 !$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
 !$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
-!$omp           Lrad_imp, coef_prad_si,                                                        &
+!$omp           Lrad_imp, coef_prad_si, i_imp,                                                 &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -682,7 +682,7 @@ do ife = ife_min, ife_max
             local_P_ion             = local_P_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
                                        * bigR * xjac * wst * delta_phi
           else
-            write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ",use open adas instead!"
+            write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
             stop
           end if
         end if

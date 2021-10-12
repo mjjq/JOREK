@@ -1279,7 +1279,7 @@ enddo  ! n_elements
      case('Ne')
        m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
      case default
-       write(*,*) '!! Gas type "', trim(imp_type(1))'" unknown (in mod_injection_source.f90) !!'
+       write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
        write(*,*) '=> We assume the gas is D2.'
        m_i_over_m_imp = central_mass/2.
    end select
@@ -1577,7 +1577,7 @@ if (SI_units) then
           Crad_bg = 0.8
           frad_bg = nimp_bg(1) * Arad_bg * exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
         else 
-          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)",use open adas instead!"
+          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
           stop
         end if
       end if

@@ -1513,7 +1513,7 @@ module mod_expression
           endif
         else     
           Lrad_imp = 0.
-          frad_bg = 0.
+          frad_bg = frad_bg
         end if   
       end do 
     else

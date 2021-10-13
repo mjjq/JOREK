@@ -1109,7 +1109,7 @@ required = 0
         call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #endif
       else
-#if defined(USE_PASTIX) || defined(USE_PASTIX6)
+#if defined(USE_PASTIX) || defined(USE_PASTIX6) || defined(USE_MUMPS)
         call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
 #endif
 #if defined(WITH_PASTIX62)

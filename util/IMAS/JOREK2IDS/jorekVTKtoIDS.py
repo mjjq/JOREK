@@ -109,7 +109,7 @@ if  __name__ == "__main__":
                            label = 'JOREK output VTK file grid')
 
     # Resize GGD
-    w_ids.imas_obj.mhd.ggd.resize(1)
+    w_ids.data_entry.mhd.ggd.resize(1)
     # Set empty IDS path for quantity tree node
     IDSQuantityPath = None
 
@@ -118,57 +118,57 @@ if  __name__ == "__main__":
         print("Current quantity array: ", key)
         if key == 'Flux':
             # Resize/Allocate
-            w_ids.imas_obj.mhd.ggd[0].psi.resize(1)
+            w_ids.data_entry.mhd.ggd[0].psi.resize(1)
             # Set IDS path
-            IDSQuantityPath = w_ids.imas_obj.mhd.ggd[0].psi[0]
+            IDSQuantityPath = w_ids.data_entry.mhd.ggd[0].psi[0]
             # Write quantities
             w_ids.ggdWriteQuantityArray(IDSQuantityPath, readerData.field_dict[key], 1)
         elif key == 'Potential':
             # Resize/Allocate
-            w_ids.imas_obj.mhd.ggd[0].phi_potential.resize(1)
+            w_ids.data_entry.mhd.ggd[0].phi_potential.resize(1)
             # Set IDS path
-            IDSQuantityPath = w_ids.imas_obj.mhd.ggd[0].phi_potential[0]
+            IDSQuantityPath = w_ids.data_entry.mhd.ggd[0].phi_potential[0]
             # Write quantities
             w_ids.ggdWriteQuantityArray(IDSQuantityPath, readerData.field_dict[key], 1)
         elif key == 'Current':
             print("Writing quantity array: ", key)
             # Resize/Allocate
-            w_ids.imas_obj.mhd.ggd[i_slice].j_tor.resize(1)
+            w_ids.data_entry.mhd.ggd[i_slice].j_tor.resize(1)
             # Set IDS path
-            IDSQuantityPath = w_ids.imas_obj.mhd.ggd[i_slice].j_tor[0]
+            IDSQuantityPath = w_ids.data_entry.mhd.ggd[i_slice].j_tor[0]
             # Write quantities
             w_ids.ggdWriteQuantityArray(IDSQuantityPath, f.val[i,:], 1)
         elif key == 'Vorticity':
             # Resize/Allocate
-            w_ids.imas_obj.mhd.ggd[0].vorticity.resize(1)
+            w_ids.data_entry.mhd.ggd[0].vorticity.resize(1)
             # Set IDS path
-            IDSQuantityPath = w_ids.imas_obj.mhd.ggd[0].vorticity[0]
+            IDSQuantityPath = w_ids.data_entry.mhd.ggd[0].vorticity[0]
             # Write quantities
             w_ids.ggdWriteQuantityArray(IDSQuantityPath, readerData.field_dict[key], 1)
         elif key == 'Density':
             # # Resize/Allocate
-            # w_ids.imas_obj.mhd.ggd[0].electrons.density.resize(1)
+            # w_ids.data_entry.mhd.ggd[0].electrons.density.resize(1)
             # # Set IDS path
-            # IDSQuantityPath = w_ids.imas_obj.mhd.ggd[0].electrons.density[0]
+            # IDSQuantityPath = w_ids.data_entry.mhd.ggd[0].electrons.density[0]
             # # Write quantities
             # w_ids.ggdWriteQuantityArray(IDSQuantityPath, readerData.field_dict[key], 1)
             pass
         elif key == 'Temperature':
             # Resize/Allocate
-            w_ids.imas_obj.mhd.ggd[0].electrons.temperature.resize(1)
+            w_ids.data_entry.mhd.ggd[0].electrons.temperature.resize(1)
             # Set IDS path
-            IDSQuantityPath = w_ids.imas_obj.mhd.ggd[0].electrons.temperature[0]
+            IDSQuantityPath = w_ids.data_entry.mhd.ggd[0].electrons.temperature[0]
             # Write quantities
             w_ids.ggdWriteQuantityArray(IDSQuantityPath, readerData.field_dict[key], 1)
         elif key == 'V_parallel':
             # Resize/Allocate
-            w_ids.imas_obj.mhd.ggd[0].velocity_parallel.resize(1)
+            w_ids.data_entry.mhd.ggd[0].velocity_parallel.resize(1)
             # Set IDS path
-            IDSQuantityPath = w_ids.imas_obj.mhd.ggd[0].velocity_parallel[0]
+            IDSQuantityPath = w_ids.data_entry.mhd.ggd[0].velocity_parallel[0]
             # Write quantities
             w_ids.ggdWriteQuantityArray(IDSQuantityPath, readerData.field_dict[key], 1)
 
-    w_ids.ids.put()
+    w_ids.data_entry.put(w_ids.ids)
 
     w_ids.idsClose()
 

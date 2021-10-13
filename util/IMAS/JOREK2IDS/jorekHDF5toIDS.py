@@ -185,7 +185,7 @@ if __name__ == "__main__":
             path = w_ids.grid_ggd.array[0].space[1]
             path.geometry_type.index = n_period
             path.identifier.description = "toroidal space"
-            path.objects_per_dimension = [i + 1 for i in range(n_tor)]
+            path.objects_per_dimension = np.array([i + 1 for i in range(n_tor)])
             gr2d = w_ids.grid_ggd[0].space[0]
             gr2d.objects_per_dimension.resize(2)
             x_shape = np.shape(x)[2]
@@ -233,7 +233,7 @@ if __name__ == "__main__":
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
 
-                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].psi
+                val_tor = w_ids.ids.ggd[i_slice].psi
                 psi = values[0, :, :, :]
                 psi = np.swapaxes(psi, 0, 1)
                 a = np.shape(psi)
@@ -248,7 +248,7 @@ if __name__ == "__main__":
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
 
-                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].phi_potential
+                val_tor = w_ids.ids.ggd[i_slice].phi_potential
                 u = values[1, :, :, :]
                 u = np.swapaxes(u, 0, 1)
                 a = np.shape(u)
@@ -263,7 +263,7 @@ if __name__ == "__main__":
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
 
-                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].j_tor
+                val_tor = w_ids.ids.ggd[i_slice].j_tor
                 j = values[2, :, :, :]
                 j = np.swapaxes(j, 0, 1)
                 a = np.shape(j)
@@ -278,7 +278,7 @@ if __name__ == "__main__":
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
 
-                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].vorticity
+                val_tor = w_ids.ids.ggd[i_slice].vorticity
                 w = values[3, :, :, :]
                 w = np.swapaxes(w, 0, 1)
                 a = np.shape(w)
@@ -294,7 +294,7 @@ if __name__ == "__main__":
                 # Write quantities
                 w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i,:], 1)
                 
-                val_tor = w_ids.imas_obj.mhd.ggd[i_slice].mass_density
+                val_tor = w_ids.ids.ggd[i_slice].mass_density
                 rho = values[4, :, :, :]
                 rho = np.swapaxes(rho, 0, 1)
                 a = np.shape(rho)

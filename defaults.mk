@@ -216,6 +216,7 @@ ifeq (1, $(WITH_PASTIX62))
   DEFINES  := $(DEFINES) -DWITH_PASTIX62
   LIBS     := $(LIBS) $(LIB_PASTIX)
   INCLUDES := $(INCLUDES) $(INC_PASTIX)
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
 endif
 
 ifeq (1, $(USE_WSMP))

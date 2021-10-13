@@ -23,8 +23,6 @@ module solve_mat_n
 
 contains
 
-
-
   !> Routine for the binding of threads to cores in PaStiX
 #ifndef USE_PASTIX6
   subroutine pastix_bind_threads(my_id) ! For PaStiX before version 6.x
@@ -68,7 +66,7 @@ contains
   end subroutine pastix_bind_threads
   
   
-#if defined(USE_PASTIX) || defined(USE_PASTIX6)    
+#if defined(USE_PASTIX) || defined(USE_PASTIX6) || defined(USE_MUMPS)    
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 

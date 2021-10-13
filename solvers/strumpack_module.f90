@@ -113,7 +113,6 @@ module strumpack_module
         integer(kind=int_all) :: nnz_d, n_d, i, j, imin, imax, indx        
 
         integer(kind=C_INT_ALL), dimension(:), pointer :: myelm
-        logical :: upd=.false., dflag=.false., eql=.false.
         logical :: upd, dflag, eql
         
         upd = .false.

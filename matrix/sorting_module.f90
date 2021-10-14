@@ -300,11 +300,6 @@ contains
       endif
     endif
 
-    if (indx.ne.0) then
-      irn = irn - indx
-      jcn = jcn - indx
-    endif
-
     call system_clock(count=cc, count_rate=cr); t1 =  real(cc)/cr
     write(*,*) "Sorting/csr time (s) =",t1-t0
 

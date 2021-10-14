@@ -213,6 +213,8 @@ module strumpack_module
           call convert_sorting(nnz_d,irn,jcn,val,block_size,indx)
 #endif
         endif
+        irn(1:n_d+1) = irn(1:n_d+1) - indx;
+        jcn(1:nnz_d) = jcn(1:nnz_d) - indx;        
 
         call spk_set_mat(n_d,dist,irn,jcn,val,spss,comm,upd)
 

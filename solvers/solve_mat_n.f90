@@ -1198,7 +1198,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     
     call MPI_Barrier(MPI_COMM_N,ierr)
     !if (my_id_n.eq.0) call timestamp("Solve",my_id)
-    call pastix_solve(mumps_par%rhs,REFINE=.true.)
+    call pastix_solve(mumps_par%rhs)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end
        call MPI_Barrier(MPI_COMM_MASTER,ierr)

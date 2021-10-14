@@ -560,7 +560,7 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   call clck_time(t0)
 
   call pastix_factorize()   
-  call pastix_solve(mumps_par%rhs) !!! need to add refinement
+  call pastix_solve(mumps_par%rhs,REFINE=.true.)
  
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)

@@ -325,7 +325,7 @@ do i=1, n_local_elms !=== do elements
                 ( (k == var_Te      ) .and. bcs(bnd_type)%dirichlet%Te      )  .or.  &
                 ( (k == var_Vpar    ) .and. bcs(bnd_type)%dirichlet%Vpar    )  .or.  &
                 ( (k == var_rhon    ) .and. bcs(bnd_type)%dirichlet%rhon    )  .or.  &
-                ( (k == var_rho_imp ) .and. bcs(bnd_type)%dirichlet%rho_imp )  .or.  &
+                ( (k == var_rhoimp  ) .and. bcs(bnd_type)%dirichlet%rho_imp )  .or.  &
                 ( (k == var_nre     ) .and. bcs(bnd_type)%dirichlet%nre     )        &
              ) then
 

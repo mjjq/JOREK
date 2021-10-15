@@ -126,11 +126,6 @@ module strumpack_module
         call MPI_COMM_RANK(comm, rank, ierr)
         call MPI_COMM_SIZE(comm, ncpu, ierr)
 
-        if ((minval(irn).lt.1).or.(maxval(irn).gt.n)) then
-          write(*,*) rank, ": Error: inconsistent row indices", minval(irn), maxval(irn), n
-          call exit(0)
-        endif
-
         indx = 1
 
         call distribute_rows(n,1,block_size)
@@ -175,6 +170,7 @@ module strumpack_module
           ! get row distribution from irn in case of pre-distributed matrix
           if (allocated(dist)) deallocate(dist)
           allocate(dist(ncpu+1))
+          
           dist(1:ncpu+1) = 0
           imin = minval(irn(1:nnz))
           imax = maxval(irn(1:nnz))
@@ -279,6 +275,8 @@ module strumpack_module
         implicit none
 
         integer comm,ierr
+        
+        if (allocated(dist)) deallocate(dist)
 
         call spk_finalize(spss,comm)
         call MPI_Barrier(comm,ierr);

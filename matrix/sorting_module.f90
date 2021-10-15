@@ -280,8 +280,10 @@ contains
     enddo
 
     irn(1:nloc+1) = iptr(1:nloc+1)
-    deallocate(iptr)
-
+    
+    deallocate(indmin, indmax, iptr)
+    deallocate(iblock)
+    
     ! check sorting consistency
     if (.false.) then
       do n1 = 1, nloc

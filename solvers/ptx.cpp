@@ -57,13 +57,14 @@ extern "C" void ptx_set_mat(spmatrix_t **spm_, int *indx, int *n_p, int *nnz_p, 
     int gN = *n_p;  int gnnz = *nnz_p;
     int pe, npe;
     int rc = 0;
+    
+    MPI_Comm pastix_comm=MPI_Comm_f2c(*comm_);
+    MPI_Comm_rank(pastix_comm, &pe);
+    MPI_Comm_size(pastix_comm, &npe);    
 
     if (!(*update)){
-      std::cout<<"PaStiX: setting new matrix"<<std::endl;
-
-      MPI_Comm pastix_comm=MPI_Comm_f2c(*comm_);
-      MPI_Comm_rank(pastix_comm, &pe);
-      MPI_Comm_size(pastix_comm, &npe);
+      
+      std::cout<<pe<<": PaStiX: setting new matrix, n_d, nnz_d "<<n_d<<" "<<nnz_d<<std::endl;
 
       spm->comm = pastix_comm;
       spm->baseval = *indx;
@@ -91,7 +92,7 @@ extern "C" void ptx_set_mat(spmatrix_t **spm_, int *indx, int *n_p, int *nnz_p, 
       spm->glob2loc = *glob2loc;
 
     }else{
-
+      std::cout<<pe<<": PaStiX: updating matrix values "<<n_d<<" "<<nnz_d<<std::endl;
       spm->rowptr  = *rptr;
       spm->colptr  = *cptr;
       spm->values  = *values;

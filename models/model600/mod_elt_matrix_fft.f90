@@ -894,21 +894,18 @@ do i=1,n_vertex_max
 
             if (with_impurities) then
                
-              call chargestatedistribution(m_i_over_m_imp, m_imp, Te_corr_eV, dTe_corr_eV_dT, Te_eV, Te0, Te0_corr, dTe0_corr_dT, T0, T0_corr, dT0_corr_dT, dP_imp_dT, P_imp, E_ion, dE_ion_dT, E_ion_bg, Z_imp, dZ_imp_dT, d2Z_imp_dT2, Z_eff, dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, Z_eff_imp, dZ_eff_imp_dT, alpha_i, dalpha_i_dT, d2alpha_i_dT2, alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis, alpha_e_tri, alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_imp_tri, beta_imp, dbeta_imp_dT, ne_SI, ne_JOREK, rimp0_corr, r0_corr)
+              call construct_imp_charge_states()
               
-              if (thermalization) then
-                call thermalization(Te_corr_eV, Te0_corr, dTe0_corr_dT, Ti0_corr, dTi0_corr_dT, Z_imp, ne_SI, alpha_e, m_imp, m_i_over_m_imp, rimp0_corr, drimp0_corr_dn, r0_corr, dr0_corr_dn, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i, dnu_e_imp_dTi, dnu_e_imp_dTe, dnu_e_bg_dTi, dnu_e_bg_dTe, dnu_e_imp_drho, dnu_e_imp_drhoimp, dnu_e_bg_drho, dnu_e_bg_drhoimp, ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhoimp, ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhoimp)
-              end if
+              if (thermalization) call construct_thermalization_terms()
 
-              call pressure(Pi0, Pi0_x, Pi0_y, Pi0_s, Pi0_t, Pi0_p, Pi0_ss, Pi0_tt, Pi0_st, Pi0_xx, Pi0_yy, Pi0_xy, Ti0, Ti0_x, Ti0_y, Ti0_s, Ti0_t, Ti0_p, Ti0_ss, Ti0_tt, Ti0_st, Ti0_xx, Ti0_yy, Ti0_xy, Pe0, Pe0_x, Pe0_y, Pe0_s, Pe0_t, Pe0_p, Pe0_ss, Pe0_tt, Pe0_st, Pe0_xx, Pe0_yy, Pe0_xy, Te0, Te0_x, Te0_y, Te0_s, Te0_t, Te0_p, Te0_ss, Te0_tt, Te0_st, Te0_xx, Te0_yy, Te0_xy, P0, P0_x, P0_y, P0_s, P0_t, P0_p, P0_ss, P0_tt, P0_st, P0_xx, P0_yy, P0_xy, alpha_i, alpha_e, alpha_e_bis, dalpha_e_dT, d2alpha_e_dT2, r0, r0_x, r0_y, r0_s, r0_t, r0_p, r0_ss, r0_tt, r0_st, r0_xx, r0_yy, r0_xy, rimp0, rimp0_x, rimp0_y, rimp0_s, rimp0_t, rimp0_p, rimp0_ss, rimp0_tt, rimp0_st, rimp0_xx, rimp0_yy, rimp0_xy)
-
+              call construct_pressure()
 
             else
 
               ! --- Ion-electron energy transfer
               if (thermalization) then
                 ! Te in eV:
-                call thermalization(Te_corr_eV, Te0_corr, dTe0_corr_dT, Ti0_corr, dTi0_corr_dT, Z_imp, ne_SI, alpha_e, m_imp, m_i_over_m_imp, rimp0_corr, drimp0_corr_dn, r0_corr, dr0_corr_dn, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i, dnu_e_imp_dTi, dnu_e_imp_dTe, dnu_e_bg_dTi, dnu_e_bg_dTe, dnu_e_imp_drho, dnu_e_imp_drhoimp, dnu_e_bg_drho, dnu_e_bg_drhoimp, ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhoimp, ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhoimp)
+                call construct_thermalization_terms()
               else
                 dTe_i = 0.
                 dTi_e = 0.
@@ -920,7 +917,7 @@ do i=1,n_vertex_max
                 ddTi_e_drho = 0.
               endif
 
-              call pressure(Pi0, Pi0_x, Pi0_y, Pi0_s, Pi0_t, Pi0_p, Pi0_ss, Pi0_tt, Pi0_st, Pi0_xx, Pi0_yy, Pi0_xy, Ti0, Ti0_x, Ti0_y, Ti0_s, Ti0_t, Ti0_p, Ti0_ss, Ti0_tt, Ti0_st, Ti0_xx, Ti0_yy, Ti0_xy, Pe0, Pe0_x, Pe0_y, Pe0_s, Pe0_t, Pe0_p, Pe0_ss, Pe0_tt, Pe0_st, Pe0_xx, Pe0_yy, Pe0_xy, Te0, Te0_x, Te0_y, Te0_s, Te0_t, Te0_p, Te0_ss, Te0_tt, Te0_st, Te0_xx, Te0_yy, Te0_xy, P0, P0_x, P0_y, P0_s, P0_t, P0_p, P0_ss, P0_tt, P0_st, P0_xx, P0_yy, P0_xy, alpha_i, alpha_e, alpha_e_bis, dalpha_e_dT, d2alpha_e_dT2, r0, r0_x, r0_y, r0_s, r0_t, r0_p, r0_ss, r0_tt, r0_st, r0_xx, r0_yy, r0_xy, rimp0, rimp0_x, rimp0_y, rimp0_s, rimp0_t, rimp0_p, rimp0_ss, rimp0_tt, rimp0_st, rimp0_xx, rimp0_yy, rimp0_xy) 
+              call construct_pressure()
 
             endif       ! with_impurities
  
@@ -949,13 +946,9 @@ do i=1,n_vertex_max
               dZK_par_dT = 0.d0
             endif
 
-            if (with_impurities) then
-
-               call chargestatedistribution(m_i_over_m_imp, m_imp, Te_corr_eV, dTe_corr_eV_dT, Te_eV, Te0, Te0_corr, dTe0_corr_dT, T0, T0_corr, dT0_corr_dT, dP_imp_dT, P_imp, E_ion, dE_ion_dT, E_ion_bg, Z_imp, dZ_imp_dT, d2Z_imp_dT2, Z_eff, dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, Z_eff_imp, dZ_eff_imp_dT, alpha_i, dalpha_i_dT, d2alpha_i_dT2, alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis, alpha_e_tri, alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_imp_tri, beta_imp, dbeta_imp_dT, ne_SI, ne_JOREK, rimp0_corr, r0_corr)
+            if (with_impurities) call construct_imp_charge_states()
                
-            endif
-            
-            call pressure(Pi0, Pi0_x, Pi0_y, Pi0_s, Pi0_t, Pi0_p, Pi0_ss, Pi0_tt, Pi0_st, Pi0_xx, Pi0_yy, Pi0_xy, Ti0, Ti0_x, Ti0_y, Ti0_s, Ti0_t, Ti0_p, Ti0_ss, Ti0_tt, Ti0_st, Ti0_xx, Ti0_yy, Ti0_xy, Pe0, Pe0_x, Pe0_y, Pe0_s, Pe0_t, Pe0_p, Pe0_ss, Pe0_tt, Pe0_st, Pe0_xx, Pe0_yy, Pe0_xy, Te0, Te0_x, Te0_y, Te0_s, Te0_t, Te0_p, Te0_ss, Te0_tt, Te0_st, Te0_xx, Te0_yy, Te0_xy, P0, P0_x, P0_y, P0_s, P0_t, P0_p, P0_ss, P0_tt, P0_st, P0_xx, P0_yy, P0_xy, alpha_i, alpha_e, alpha_e_bis, dalpha_e_dT, d2alpha_e_dT2, r0, r0_x, r0_y, r0_s, r0_t, r0_p, r0_ss, r0_tt, r0_st, r0_xx, r0_yy, r0_xy, rimp0, rimp0_x, rimp0_y, rimp0_s, rimp0_t, rimp0_p, rimp0_ss, rimp0_tt, rimp0_st, rimp0_xx, rimp0_yy, rimp0_xy)
+            call construct_pressure()
             
             ! --- Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = T0
@@ -1242,7 +1235,7 @@ do i=1,n_vertex_max
           ! --- Radiation from background impurity, using ADAS (by default)
           !-----------------------------------------------------------------
 
-          call radiation(ne_SI_min, T_rad, Te0_corr, T0_corr, Te_eV_min, r_imp_bg, nimp_bg, Lrad_imp_bg, Lrad, dLrad_imp_bg_dT, dLrad_dT, frad_bg, dfrad_bg_dT, r0_corr)
+          call construct_radiation_parameters()
 
 !--------------------------------------------------------
 
@@ -3551,6 +3544,705 @@ do j=1, n_vertex_max*n_var*(n_order+1)
 
 enddo
 
+contains
+  ! This is to construct the impurity charge state related quantities
+  subroutine construct_imp_charge_states()
+  
+    implicit none
+  
+    if (with_TiTe) then
+  
+       select case ( trim(imp_type) )
+       case('D2')
+          m_i_over_m_imp = central_mass/2.
+          m_imp          = 2.
+       case('Ar')
+          m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+          m_imp          = 40.
+       case('Ne')
+          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+          m_imp          = 20.
+       case default
+          write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in inj_source.f90) !!'
+          write(*,*) '=> We assume the gas is D2.'
+          m_i_over_m_imp = central_mass/2.
+          m_imp          = 2.
+       end select
+  
+       Z_imp = 0.
+       dZ_imp_dT = 0.
+       d2Z_imp_dT2 = 0.
+  
+       ! Te in eV:
+       Te_corr_eV = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+       dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_eV = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
+  
+       ! We estimate the effective charge by a test density 10^20/m^3
+       ! Later maybe we should implement a iterative method
+  
+       if (allocated(imp_adas(1)%ionisation_energy)) then
+  
+          if (allocated(P_imp)) deallocate(P_imp)
+          if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+  
+          allocate(P_imp(0:imp_adas(1)%n_Z))
+          allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+  
+          !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+          !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
+          !                              z_TeTe_out=d2Z_imp_dT2)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+               p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,&
+               z_avg_TeTe=d2Z_imp_dT2)
+  
+  
+          ! Calculate the ionization potential energy and its derivative wrt. temperature
+          E_ion     = 0.
+          dE_ion_dT = 0.
+          E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
+          ! but the difference is of the next order.
+  
+          do ion_i=1, imp_adas(1)%n_Z
+             do ion_k=1, ion_i
+                E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+                dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+             end do
+          end do
+          ! Convert from eV to JOREK unit
+          E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+          dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+          E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
+          ! Convert the gradient in K to gradient in JOREK unit
+          dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
+  
+       else
+  
+          if (allocated(P_imp)) deallocate(P_imp)
+          if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+  
+          allocate(P_imp(0:imp_adas(1)%n_Z))
+          allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+  
+          !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+          !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+               p_out=P_imp,p_Te_out=dP_imp_dT,                          &
+               z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
+  
+          E_ion     = 0.
+          dE_ion_dT = 0.
+          E_ion_bg  = 0.
+       end if
+  
+       ! Convert gradient in T(K) in to gradient in T (eV)
+       dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
+       ! Derivative wrt to T, with T in JOREK units
+       dZ_imp_dT = dZ_imp_dT / (EL_CHG*MU_ZERO*central_density*1.d20)
+       dZ_imp_dT = dZ_imp_dT * dTe0_corr_dT
+  
+       if (Te_corr_eV < 0.1) then
+          Z_imp = 0.
+          dZ_imp_dT = 0.
+          d2Z_imp_dT2 = 0.
+       endif
+  
+       if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
+          write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
+          write(*,*) "Te_corr_eV =", Te_corr_eV
+          stop
+       end if
+  
+       if (dZ_imp_dT < 0) then
+          write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
+          write(*,*) "Z_imp, T_e", Z_imp, Te_corr_eV, Te0
+          stop
+       end if
+  
+       alpha_i       = m_i_over_m_imp - 1.
+       dalpha_i_dT   = 0.
+       d2alpha_i_dT2 = 0.
+  
+       alpha_e       = m_i_over_m_imp*Z_imp - 1.
+       dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
+       d2alpha_e_dT2 = m_i_over_m_imp*d2Z_imp_dT2
+       alpha_e_bis   = alpha_e + dalpha_e_dT*Te0
+       alpha_e_tri   = 2. * dalpha_e_dT + d2alpha_e_dT2 * Te0
+  
+       ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
+       ne_JOREK     = r0_corr + alpha_e * rimp0_corr ! Electron density in JOREK unit
+       ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
+       ! Too small rho_1 will cause a problem
+       if (ne_SI < 1.d16) ne_SI = 1.d16
+  
+       ! Calculate the effective charge of all species
+       Z_eff          = 0.
+       dZ_eff_dT      = 0.
+       dZ_eff_dr0     = 0.
+       dZ_eff_drimp0  = 0.
+  
+       Z_eff_imp    = 0.
+       dZ_eff_imp_dT= 0.
+  
+       ! First get the value of Z_eff
+       Z_eff        = r0_corr - rimp0_corr
+       do ion_i=1, imp_adas(1)%n_Z
+          Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
+          Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
+          dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2 ! Its temperature gradient
+       end do
+       Z_eff        = Z_eff / ne_JOREK
+       if (Z_eff < 1.) Z_eff = 1.
+       if (Z_eff > (imp_adas(1)%n_Z)**2) Z_eff = (imp_adas(1)%n_Z)**2
+  
+       ! Then three(!) gradients
+       if (Z_eff >= 1.) then
+          do ion_i=1, imp_adas(1)%n_Z
+             dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rimp0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
+          end do
+          dZ_eff_dT    = dZ_eff_dT / ne_JOREK
+          dZ_eff_dT    = dZ_eff_dT - Z_eff * dalpha_e_dT * rimp0_corr / ne_JOREK
+  
+          dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
+  
+          dZ_eff_drimp0  = dZ_eff_drimp0 - 1.
+          do ion_i=1, imp_adas(1)%n_Z
+             dZ_eff_drimp0= dZ_eff_drimp0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
+          end do
+          dZ_eff_drimp0  = dZ_eff_drimp0 / ne_JOREK
+          dZ_eff_drimp0  = dZ_eff_drimp0 - Z_eff * alpha_e / ne_JOREK
+       else
+          Z_eff        = 1.
+       end if
+       
+    else
+       
+       select case ( trim(imp_type) )
+       case('D2')
+          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
+       case('Ar')
+          m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
+       case('Ne')
+          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
+       case default
+          write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+          write(*,*) '=> We assume the gas is D2.'
+          m_i_over_m_imp = central_mass/2.
+       end select
+  
+       Z_imp = 0.
+       dZ_imp_dT = 0.
+       d2Z_imp_dT2 = 0.
+  
+       ! Te in eV:
+       Te_corr_eV      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       dTe_corr_eV_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+  
+       ! We get the charge state distribution assuming n_e=10^20/m^3.
+       ! Later maybe we should implement an iterative method.
+  
+       if (allocated(imp_adas(1)%ionisation_energy)) then
+  
+          if (allocated(P_imp)) deallocate(P_imp)
+          if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+  
+          allocate(P_imp(0:imp_adas(1)%n_Z))
+          allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+  
+          !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),           &
+          !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT, &
+          !                              z_TeTe_out=d2Z_imp_dT2)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+               p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT, &
+               z_avg_TeTe=d2Z_imp_dT2)
+  
+          ! Ionization potential energy
+          E_ion     = 0.
+          dE_ion_dT = 0.
+          E_ion_bg  = 13.6 ! (Note: H and D have a different ionization energy, 
+          !  but the difference is small.)
+  
+          ! In eV
+          do ion_i=1, imp_adas(1)%n_Z
+             do ion_k=1, ion_i
+                E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+                dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+             end do
+          end do
+  
+          ! Convert from eV to JOREK units
+          E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+          dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+          E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
+          ! Convert E_ion gradient wrt. T from 1/K into 1/(JOREK units)
+          dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
+  
+       else
+  
+          if (allocated(P_imp)) deallocate(P_imp)
+          if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+  
+          allocate(P_imp(0:imp_adas(1)%n_Z))
+          allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+  
+          !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+          !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
+          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+               p_out=P_imp,p_Te_out=dP_imp_dT,                          &
+               z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
+  
+          E_ion     = 0.
+          dE_ion_dT = 0.
+          E_ion_bg  = 0.
+       end if
+  
+       ! Convert Z_imp gradient wrt. T from 1/K into 1/eV
+       dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
+       ! ...and now from 1/eV into 1/(JOREK units)
+       dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       dZ_imp_dT = dZ_imp_dT * dT0_corr_dT                      ! Account for the temperature correction
+  
+       if (Te_corr_eV < 0.1) then
+          Z_imp = 0.
+          dZ_imp_dT = 0.
+          d2Z_imp_dT2 = 0.
+       endif
+  
+       if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
+          write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
+          write(*,*) "Te_corr_eV =", Te_corr_eV
+          stop
+       end if
+  
+       if (dZ_imp_dT < 0) then
+          write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
+          write(*,*) "Z_imp, T_e", Z_imp, Te_corr_eV, T0
+          stop
+       end if
+  
+       alpha_i       = m_i_over_m_imp - 1.
+       dalpha_i_dT   = 0.
+       d2alpha_i_dT2 = 0.
+  
+       alpha_e       = m_i_over_m_imp*Z_imp - 1.
+       dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
+       d2alpha_e_dT2 = m_i_over_m_imp*d2Z_imp_dT2
+       alpha_e_bis   = alpha_e + dalpha_e_dT*Te0
+       alpha_e_tri   = 2. * dalpha_e_dT + d2alpha_e_dT2 * Te0
+  
+       alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+       dalpha_imp_dT   = 0.5*m_i_over_m_imp*dZ_imp_dT
+       d2alpha_imp_dT2 = 0.5*m_i_over_m_imp*d2Z_imp_dT2
+       alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
+       alpha_imp_tri   = 2. * dalpha_imp_dT + d2alpha_imp_dT2 * T0
+  
+       beta_imp     = m_i_over_m_imp*Z_imp - 1.
+       dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
+  
+       ne_SI       = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
+       ne_JOREK     = r0_corr + beta_imp * rimp0_corr ! Electron density in JOREK unit
+       ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
+       ! Too small rho_1 will cause a problem
+  
+       ! Calculate the effective charge of all species
+       Z_eff        = 0.
+       dZ_eff_dT    = 0.
+       dZ_eff_dr0   = 0.
+       dZ_eff_drimp0= 0.
+  
+       ! First get the value of Z_eff
+       Z_eff        = r0_corr - rimp0_corr
+       do ion_i=1, imp_adas(1)%n_Z
+          Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
+       end do
+       Z_eff        = Z_eff / ne_JOREK
+       if (Z_eff < 1.) Z_eff = 1.
+       if (Z_eff > (imp_adas(1)%n_Z)**2) Z_eff = (imp_adas(1)%n_Z)**2
+  
+       ! Then three(!) gradients
+       if (Z_eff >= 1.) then
+          do ion_i=1, imp_adas(1)%n_Z
+             dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rimp0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
+          end do
+          dZ_eff_dT    = dZ_eff_dT / ne_JOREK
+          dZ_eff_dT    = dZ_eff_dT - Z_eff * dbeta_imp_dT * rimp0_corr / ne_JOREK
+  
+          dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
+  
+          dZ_eff_drimp0  = dZ_eff_drimp0 - 1.
+          do ion_i=1, imp_adas(1)%n_Z
+             dZ_eff_drimp0= dZ_eff_drimp0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
+          end do
+          dZ_eff_drimp0  = dZ_eff_drimp0 / ne_JOREK
+          dZ_eff_drimp0  = dZ_eff_drimp0 - Z_eff * beta_imp / ne_JOREK
+       else
+          Z_eff        = 1.
+       end if
+    end if
+  
+  end subroutine construct_imp_charge_states
+  
+  subroutine construct_thermalization_terms()
+    
+    implicit none
+  
+    if (with_impurities) then
+       if (Te_corr_eV < 10.*Z_imp**2) then
+          lambda_e_imp = 23. - log((ne_SI*1.d-6)**0.5*Z_imp*Te_corr_eV**(-1.5))
+       else
+          lambda_e_imp = 24. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.0))
+       endif
+       if (Te_corr_eV < 10.) then
+          lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
+       else
+          lambda_e_bg  = 24. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.0))
+       endif
+       nu_e_imp     = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
+            * Z_eff_imp * (1.d14*central_density*rimp0_corr*m_i_over_m_imp) * lambda_e_imp &
+            / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
+            / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
+       nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
+            * (1.d14*central_density*(r0_corr-rimp0_corr)) * lambda_e_bg &
+            / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
+            / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
+  
+       if (nu_e_imp < 0.) nu_e_imp = 0.
+       if (nu_e_bg < 0.)  nu_e_bg  = 0.
+  
+       !Converting the energy transfer rate from s^-1 to JOREK unit
+       t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+       nu_e_imp = nu_e_imp * t_norm
+       nu_e_bg  = nu_e_bg * t_norm
+  
+       dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rimp0_corr)
+       dTi_e    = -dTe_i
+  
+       !Calculating the density and temperature derivative for amats
+       !We negelect the coulomb log's dericatives due to their smallness
+       dnu_e_imp_dTi   = -1.5*MASS_ELECTRON*nu_e_imp*dTi0_corr_dT &
+            / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr)
+       dnu_e_imp_dTe   = -1.5*MASS_PROTON*m_imp*nu_e_imp*dTe0_corr_dT &
+            / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr) &
+            + 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
+            * dZ_eff_imp_dT*(1.d14*central_density*rimp0_corr*m_i_over_m_imp)*lambda_e_imp &
+            / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
+            / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
+  
+       dnu_e_imp_drhoimp = nu_e_imp * drimp0_corr_dn / rimp0_corr
+       dnu_e_imp_drho    = 0.
+  
+       dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT &
+            / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+       dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
+            / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+       if (r0_corr-rimp0_corr <= 0.) then
+          dnu_e_bg_drhoimp = 0.
+          dnu_e_bg_drho    = 0.
+       else
+          dnu_e_bg_drhoimp = -nu_e_bg * drimp0_corr_dn / (r0_corr-rimp0_corr)
+          dnu_e_bg_drho    = nu_e_bg * dr0_corr_dn / (r0_corr-rimp0_corr)
+       end if
+  
+       ddTe_i_dTi      = (dnu_e_imp_dTi+dnu_e_bg_dTi)*(Ti0_corr-Te0_corr)*(r0_corr+alpha_e*rimp0_corr)&
+            + (nu_e_imp + nu_e_bg) * dTi0_corr_dT * (r0_corr + alpha_e*rimp0_corr)
+       ddTe_i_dTe      = (dnu_e_imp_dTe+dnu_e_bg_dTe)*(Ti0_corr-Te0_corr)*(r0_corr + alpha_e*rimp0_corr)&
+            - (nu_e_imp + nu_e_bg) * dTe0_corr_dT * (r0_corr + alpha_e*rimp0_corr)        &
+            - (nu_e_imp + nu_e_bg) * Te0_corr     * dalpha_e_dT * rimp0_corr
+       ddTe_i_drhoimp  = (dnu_e_imp_drhoimp+dnu_e_bg_drhoimp)*(Ti0_corr-Te0_corr)*(r0_corr+alpha_e*rimp0_corr)&
+            +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * alpha_e * drimp0_corr_dn
+       ddTe_i_drho     = (dnu_e_imp_drho+dnu_e_bg_drho)*(Ti0_corr-Te0_corr)*(r0_corr + alpha_e*rimp0_corr)&
+            +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * dr0_corr_dn
+  
+       ddTi_e_dTi      = -ddTe_i_dTi
+       ddTi_e_dTe      = -ddTe_i_dTe
+       ddTi_e_drhoimp  = -ddTe_i_drhoimp
+       ddTi_e_drho     = -ddTe_i_drho
+  
+       if (r0_corr+alpha_e*rimp0_corr < 0.) then
+          dTi_e         = 0.
+          ddTi_e_dTi    = 0.
+          ddTe_i_dTe    = 0.
+          ddTi_e_drhoimp= 0.
+          ddTi_e_drho   = 0.
+       end if
+    else
+       Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+       dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
+  
+       ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
+       if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
+  
+       lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
+       nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
+            * (1.d14*central_density*r0_corr) * lambda_e_bg &
+            / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
+            / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
+  
+       if (nu_e_bg < 0.)  nu_e_bg  = 0.
+  
+       !Converting the energy transfer rate from s^-1 to JOREK unit
+       t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+       nu_e_bg  = nu_e_bg * t_norm    
+  
+       dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
+       dTi_e    = -dTe_i
+  
+       !Calculating the density and temperature derivative for amats
+       !We negelect the coulomb log's dericatives due to their smallness
+  
+       dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+       dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
+            / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
+  
+       dnu_e_bg_drho   = nu_e_bg * dr0_corr_dn / r0_corr
+  
+       ddTe_i_dTi      = dnu_e_bg_dTi  * (Ti0_corr - Te0_corr) + nu_e_bg
+       ddTe_i_dTe      = dnu_e_bg_dTe  * (Ti0_corr - Te0_corr) - nu_e_bg
+       ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
+  
+       ddTi_e_dTi      = -ddTe_i_dTi
+       ddTi_e_dTe      = -ddTe_i_dTe
+       ddTi_e_drho     = -ddTe_i_drho
+    endif
+    
+  end subroutine construc_thermalization_terms
+  
+  subroutine construct_pressure()
+  
+    implicit none
+    
+    if (with_impurities) then
+       
+       Pi0    = (r0+rimp0*alpha_i) * Ti0
+       Pi0_x  = (r0_x+rimp0_x*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_x
+       Pi0_y  = (r0_y+rimp0_y*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_y
+       Pi0_s  = (r0_s+rimp0_s*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_s
+       Pi0_t  = (r0_t+rimp0_t*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_t
+       Pi0_p  = (r0_p+rimp0_p*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_p
+       Pi0_ss = (r0_ss+rimp0_ss*alpha_i) * Ti0 + 2.d0 * (r0_s+rimp0_s*alpha_i) * Ti0_s + (r0+rimp0*alpha_i) * Ti0_ss
+       Pi0_tt = (r0_tt+rimp0_tt*alpha_i) * Ti0 + 2.d0 * (r0_t+rimp0_t*alpha_i) * Ti0_t + (r0+rimp0*alpha_i) * Ti0_tt
+       Pi0_st = (r0_st+rimp0_st*alpha_i) * Ti0 + (r0_t+rimp0_t*alpha_i) * Ti0_s + (r0_s+rimp0_s*alpha_i) * Ti0_t               &
+            + (r0+rimp0*alpha_i) * Ti0_st
+       Pi0_xx = (r0_xx+rimp0_xx*alpha_i) * Ti0 + 2.d0 * (r0_x+rimp0_x*alpha_i) * Ti0_x + (r0+rimp0*alpha_i) * Ti0_xx
+       Pi0_yy = (r0_yy+rimp0_yy*alpha_i) * Ti0 + 2.d0 * (r0_y+rimp0_y*alpha_i) * Ti0_y + (r0+rimp0*alpha_i) * Ti0_yy
+       Pi0_xy = (r0_xy+rimp0_xy*alpha_i) * Ti0 + (r0_y+rimp0_y*alpha_i) * Ti0_x + (r0_x+rimp0_x*alpha_i) * Ti0_y               &
+            + (r0+rimp0*alpha_i) * Ti0_xy
+  
+       Pe0    = (r0+rimp0*alpha_e) * Te0
+       Pe0_x  = (r0_x+rimp0_x*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_x
+       Pe0_y  = (r0_y+rimp0_y*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_y
+       Pe0_s  = (r0_s+rimp0_s*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_s
+       Pe0_t  = (r0_t+rimp0_t*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_t
+       Pe0_p  = (r0_p+rimp0_p*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_p
+       Pe0_ss = (r0_ss+rimp0_ss*alpha_e) * Te0 + 2.d0 * (r0_s+rimp0_s*alpha_e_bis) * Te0_s + (r0+rimp0*alpha_e_bis) * Te0_ss &
+            + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_s)**2.d0
+       Pe0_tt = (r0_tt+rimp0_tt*alpha_e) * Te0 + 2.d0 * (r0_t+rimp0_t*alpha_e_bis) * Te0_t + (r0+rimp0*alpha_e_bis) * Te0_tt &
+            + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_t)**2.d0
+       Pe0_st = (r0_st+rimp0_st*alpha_e) * Te0 + (r0_t+rimp0_t*alpha_e_bis) * Te0_s + (r0_s+rimp0_s*alpha_e_bis) * Te0_t     &
+            + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_s * Te0_t + (r0+rimp0*alpha_e_bis) * Te0_st
+       Pe0_xx = (r0_xx+rimp0_xx*alpha_e) * Te0 + 2.d0 * (r0_x+rimp0_x*alpha_e_bis) * Te0_x + (r0+rimp0*alpha_e_bis) * Te0_xx &
+            + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_x)**2.d0
+       Pe0_yy = (r0_yy+rimp0_yy*alpha_e) * Te0 + 2.d0 * (r0_y+rimp0_y*alpha_e_bis) * Te0_y + (r0+rimp0*alpha_e_bis) * Te0_yy &
+            + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_y)**2.d0
+       Pe0_xy = (r0_xy+rimp0_xy*alpha_e) * Te0 + (r0_y+rimp0_y*alpha_e_bis) * Te0_x + (r0_x+rimp0_x*alpha_e_bis) * Te0_y     &
+            + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_x * Te0_y + (r0+rimp0*alpha_e_bis) * Te0_xy
+  
+       P0     = Pi0 + Pe0
+       P0_x   = Pi0_x + Pe0_x
+       P0_y   = Pi0_y + Pe0_y
+       P0_s   = Pi0_s + Pe0_s
+       P0_t   = Pi0_t + Pe0_t
+       P0_p   = Pi0_p + Pe0_p
+       P0_ss  = Pi0_ss + Pe0_ss
+       P0_tt  = Pi0_tt + Pe0_tt
+       P0_st  = Pi0_st + Pe0_st
+       P0_xx  = Pi0_xx + Pe0_xx
+       P0_yy  = Pi0_yy + Pe0_yy
+       P0_xy  = Pi0_xy + Pe0_xy
+  
+    else
+       
+       Pi0    = r0    * Ti0
+       Pi0_x  = r0_x  * Ti0 + r0 * Ti0_x
+       Pi0_y  = r0_y  * Ti0 + r0 * Ti0_y
+       Pi0_s  = r0_s  * Ti0 + r0 * Ti0_s
+       Pi0_t  = r0_t  * Ti0 + r0 * Ti0_t
+       Pi0_p  = r0_p  * Ti0 + r0 * Ti0_p
+       Pi0_ss = r0_ss * Ti0 + 2.d0 * r0_s * Ti0_s + r0 * Ti0_ss
+       Pi0_tt = r0_tt * Ti0 + 2.d0 * r0_t * Ti0_t + r0 * Ti0_tt
+       Pi0_st = r0_st * Ti0 + r0_s * Ti0_t + r0_t * Ti0_s + r0 * Ti0_st
+  
+       Pe0    = r0    * Te0
+       Pe0_x  = r0_x  * Te0 + r0 * Te0_x
+       Pe0_y  = r0_y  * Te0 + r0 * Te0_y
+       Pe0_s  = r0_s  * Te0 + r0 * Te0_s
+       Pe0_t  = r0_t  * Te0 + r0 * Te0_t
+       Pe0_p  = r0_p  * Te0 + r0 * Te0_p
+       Pe0_ss = r0_ss * Te0 + 2.d0 * r0_s * Te0_s + r0 * Te0_ss
+       Pe0_tt = r0_tt * Te0 + 2.d0 * r0_t * Te0_t + r0 * Te0_tt
+       Pe0_st = r0_st * Te0 + r0_s * Te0_t + r0_t * Te0_s + r0 * Te0_st
+  
+       P0     = Pi0   + Pe0
+       P0_s   = Pi0_s + Pe0_s
+       P0_t   = Pi0_t + Pe0_t
+       P0_p   = Pi0_p + Pe0_p
+       P0_x   = Pi0_x + Pe0_x
+       P0_y   = Pi0_y + Pe0_y
+       
+  end subroutine construct_pressure
+    
+  
+  subroutine construct_radiation_parameters()
+  
+    implicit none
+  
+    if (with_neutrals) then
+       
+      ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      if (with_TiTe) then 
+         T_rad =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+      else
+         T_rad = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+      endif
+  
+      if (use_imp_adas) then  ! use open adas by default
+         r_imp_bg = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
+         if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
+            ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+            coef_rad_1 = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                 *(central_density*1.d20)**2.5d0
+  
+            Lrad_imp_bg = 0.0
+            dLrad_imp_bg_dT = 0.0
+  
+            call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp_bg,dLrad_imp_bg_dT)
+            Lrad_imp_bg = Lrad_imp_bg * coef_rad_1
+  
+            ! Convert gradient wrt. to T from 1/K into 1/eV
+            dLrad_imp_bg_dT = dLrad_imp_bg_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
+            ! ...and now from 1/eV into 1/(JOREK units)
+            dLrad_imp_bg_dT = dLrad_imp_bg_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+            dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT            
+  
+             if (Lrad_imp_bg < 0.) then
+                Lrad_imp_bg = 0.
+                dLrad_imp_bg_dT = 0.
+             end if
+          else     
+             Lrad_imp_bg = 0.
+             dLrad_imp_bg_dT = 0.
+          end if
+  
+          ! This is to detect N/A
+          if (Lrad_imp_bg/=Lrad_imp_bg .or. dLrad_imp_bg_dT/=dLrad_imp_bg_dT) then
+             write(*,*) "WARNING: Lrad_imp_bg, dLrad_imp_bg_dT ", Lrad_imp_bg, dLrad_imp_bg_dT
+             stop
+          end if
+  
+          frad_bg = r_imp_bg * Lrad_imp_bg
+          dfrad_bg_dT = r_imp_bg * dLrad_imp_bg_dT 
+  
+       else 
+  
+          if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+             Arad_bg = 2.4d-31
+             Brad_bg = 20.
+             Crad_bg = 0.8
+  
+             frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
+                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+  
+             dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
+                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+          else
+             write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+             stop
+          end if
+  
+       end if
+  
+       if (with_TiTe) then            
+          dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
+       endif
+    end if
+    
+    if (with_impurities) then
+       
+      ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      if (with_TiTe) then 
+         T_rad =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+      else
+         T_rad = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+      endif
+  
+      if (use_imp_adas) then  ! use open adas by default
+         r_imp_bg = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
+         if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
+            ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+            coef_rad_1 = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+                 *(central_density*1.d20)**2.5d0
+  
+            Lrad_imp_bg = 0.0
+            dLrad_imp_bg_dT = 0.0
+  
+            call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp_bg,dLrad_imp_bg_dT)
+            Lrad_imp_bg = Lrad_imp_bg * coef_rad_1
+  
+            ! Convert gradient wrt. to T from 1/K into 1/eV
+            dLrad_imp_bg_dT = dLrad_imp_bg_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
+            ! ...and now from 1/eV into 1/(JOREK units)
+            dLrad_imp_bg_dT = dLrad_imp_bg_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+            dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT            
+  
+             if (Lrad_imp_bg < 0.) then
+                Lrad_imp_bg = 0.
+                dLrad_imp_bg_dT = 0.
+             end if
+          else     
+             Lrad_imp_bg = 0.
+             dLrad_imp_bg_dT = 0.
+          end if
+  
+          Lrad     = Lrad_imp_bg
+          dLrad_dT = dLrad_imp_bg_dT
+      
+          ! This is to detect N/A
+          if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
+             write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ",&
+                  Lrad, dLrad_dT, E_ion, dE_ion_dT
+             stop
+          end if
+  
+          frad_bg = r_imp_bg * Lrad_imp_bg
+          dfrad_bg_dT = r_imp_bg * dLrad_imp_bg_dT 
+  
+       else 
+  
+          if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+             Arad_bg = 2.4d-31
+             Brad_bg = 20.
+             Crad_bg = 0.8
+  
+             frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
+                  *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+  
+             dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
+                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+          else
+             write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+             stop
+          end if
+  
+       end if
+  
+       if (with_TiTe) then            
+          dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
+       endif
+    end if
+    
+  end subroutine construct_radiation_parameters
+
 return
 end subroutine element_matrix_fft
 
@@ -3574,750 +4266,4 @@ enddo
 
 return
 end subroutine my_fft
-
-subroutine chargestatedistribution(m_i_over_m_imp, m_imp, Te_corr_eV, dTe_corr_eV_dT, Te_eV, Te0, Te0_corr, dTe0_corr_dT, T0, T0_corr, dT0_corr_dT, dP_imp_dT, P_imp, E_ion, dE_ion_dT, E_ion_bg, Z_imp, dZ_imp_dT, d2Z_imp_dT2, Z_eff, dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, Z_eff_imp, dZ_eff_imp_dT, alpha_i, dalpha_i_dT, d2alpha_i_dT2, alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis, alpha_e_tri, alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_imp_tri, beta_imp, dbeta_imp_dT, ne_SI, ne_JOREK, rimp0_corr, r0_corr)
-
-  implicit none
-
-  real*8     :: m_i_over_m_imp, m_imp
-  real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Temperature used in radiation rate
-  real*8     :: Te_eV, Te0, T0                                       ! Uncorrected temperature
-  real*8     :: Te0_corr, dTe0_corr_dT, T0_corr, dT0_corr_dT
-    !   -Temporary variable for charge state distribution
-  real*8, allocatable :: dP_imp_dT(:), P_imp(:)
-  real*8     :: E_ion, dE_ion_dT, E_ion_bg
-  !   -Mean impurity ionization state
-  real*8     :: Z_imp, dZ_imp_dT, d2Z_imp_dT2, Z_eff, dZ_eff_dT
-  real*8     :: dZ_eff_dr0, dZ_eff_drimp0, Z_eff_imp, dZ_eff_imp_dT
-  !   -Coefficients related to Z_imp (with_TiTe)
-  real*8     :: alpha_i, dalpha_i_dT, d2alpha_i_dT2
-  real*8     :: alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis, alpha_e_tri
-  !   -Coefficients related to Z_imp (! with_TiTe)
-  real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_imp_tri
-  real*8     :: beta_imp, dbeta_imp_dT 
-  real*8     :: ne_SI                                          ! Electron density used in radiation rate
-  real*8     :: ne_JOREK                                        ! Electron density in JOREK unit 
-  real*8     :: rimp0_corr, r0_corr 
-
-  if (with_TiTe) then
-
-     select case ( trim(imp_type) )
-     case('D2')
-        m_i_over_m_imp = central_mass/2.
-        m_imp          = 2.
-     case('Ar')
-        m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
-        m_imp          = 40.
-     case('Ne')
-        m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
-        m_imp          = 20.
-     case default
-        write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in inj_source.f90) !!'
-        write(*,*) '=> We assume the gas is D2.'
-        m_i_over_m_imp = central_mass/2.
-        m_imp          = 2.
-     end select
-
-     Z_imp = 0.
-     dZ_imp_dT = 0.
-     d2Z_imp_dT2 = 0.
-
-     ! Te in eV:
-     Te_corr_eV = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-     dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
-     Te_eV = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
-
-     ! We estimate the effective charge by a test density 10^20/m^3
-     ! Later maybe we should implement a iterative method
-
-     if (allocated(imp_adas(1)%ionisation_energy)) then
-
-        if (allocated(P_imp)) deallocate(P_imp)
-        if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-        allocate(P_imp(0:imp_adas(1)%n_Z))
-        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
-
-        !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-        !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
-        !                              z_TeTe_out=d2Z_imp_dT2)
-        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-             p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,&
-             z_avg_TeTe=d2Z_imp_dT2)
-
-
-        ! Calculate the ionization potential energy and its derivative wrt. temperature
-        E_ion     = 0.
-        dE_ion_dT = 0.
-        E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
-        ! but the difference is of the next order.
-
-        do ion_i=1, imp_adas(1)%n_Z
-           do ion_k=1, ion_i
-              E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-              dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-           end do
-        end do
-        ! Convert from eV to JOREK unit
-        E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
-        dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
-        E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
-        ! Convert the gradient in K to gradient in JOREK unit
-        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
-
-     else
-
-        if (allocated(P_imp)) deallocate(P_imp)
-        if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-        allocate(P_imp(0:imp_adas(1)%n_Z))
-        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
-
-        !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-        !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
-        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-             p_out=P_imp,p_Te_out=dP_imp_dT,                          &
-             z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
-
-        E_ion     = 0.
-        dE_ion_dT = 0.
-        E_ion_bg  = 0.
-     end if
-
-     ! Convert gradient in T(K) in to gradient in T (eV)
-     dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
-     ! Derivative wrt to T, with T in JOREK units
-     dZ_imp_dT = dZ_imp_dT / (EL_CHG*MU_ZERO*central_density*1.d20)
-     dZ_imp_dT = dZ_imp_dT * dTe0_corr_dT
-
-     if (Te_corr_eV < 0.1) then
-        Z_imp = 0.
-        dZ_imp_dT = 0.
-        d2Z_imp_dT2 = 0.
-     endif
-
-     if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
-        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
-        write(*,*) "Te_corr_eV =", Te_corr_eV
-        stop
-     end if
-
-     if (dZ_imp_dT < 0) then
-        write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
-        write(*,*) "Z_imp, T_e", Z_imp, Te_corr_eV, Te0
-        stop
-     end if
-
-     alpha_i       = m_i_over_m_imp - 1.
-     dalpha_i_dT   = 0.
-     d2alpha_i_dT2 = 0.
-
-     alpha_e       = m_i_over_m_imp*Z_imp - 1.
-     dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
-     d2alpha_e_dT2 = m_i_over_m_imp*d2Z_imp_dT2
-     alpha_e_bis   = alpha_e + dalpha_e_dT*Te0
-     alpha_e_tri   = 2. * dalpha_e_dT + d2alpha_e_dT2 * Te0
-
-     ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
-     ne_JOREK     = r0_corr + alpha_e * rimp0_corr ! Electron density in JOREK unit
-     ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
-     ! Too small rho_1 will cause a problem
-     if (ne_SI < 1.d16) ne_SI = 1.d16
-
-     ! Calculate the effective charge of all species
-     Z_eff          = 0.
-     dZ_eff_dT      = 0.
-     dZ_eff_dr0     = 0.
-     dZ_eff_drimp0  = 0.
-
-     Z_eff_imp    = 0.
-     dZ_eff_imp_dT= 0.
-
-     ! First get the value of Z_eff
-     Z_eff        = r0_corr - rimp0_corr
-     do ion_i=1, imp_adas(1)%n_Z
-        Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
-        Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
-        dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2 ! Its temperature gradient
-     end do
-     Z_eff        = Z_eff / ne_JOREK
-     if (Z_eff < 1.) Z_eff = 1.
-     if (Z_eff > (imp_adas(1)%n_Z)**2) Z_eff = (imp_adas(1)%n_Z)**2
-
-     ! Then three(!) gradients
-     if (Z_eff >= 1.) then
-        do ion_i=1, imp_adas(1)%n_Z
-           dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rimp0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
-        end do
-        dZ_eff_dT    = dZ_eff_dT / ne_JOREK
-        dZ_eff_dT    = dZ_eff_dT - Z_eff * dalpha_e_dT * rimp0_corr / ne_JOREK
-
-        dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
-
-        dZ_eff_drimp0  = dZ_eff_drimp0 - 1.
-        do ion_i=1, imp_adas(1)%n_Z
-           dZ_eff_drimp0= dZ_eff_drimp0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
-        end do
-        dZ_eff_drimp0  = dZ_eff_drimp0 / ne_JOREK
-        dZ_eff_drimp0  = dZ_eff_drimp0 - Z_eff * alpha_e / ne_JOREK
-     else
-        Z_eff        = 1.
-     end if
-     
-  else
-     
-     select case ( trim(imp_type) )
-     case('D2')
-        m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
-     case('Ar')
-        m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u
-     case('Ne')
-        m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
-     case default
-        write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
-        write(*,*) '=> We assume the gas is D2.'
-        m_i_over_m_imp = central_mass/2.
-     end select
-
-     Z_imp = 0.
-     dZ_imp_dT = 0.
-     d2Z_imp_dT2 = 0.
-
-     ! Te in eV:
-     Te_corr_eV      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     dTe_corr_eV_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-
-     ! We get the charge state distribution assuming n_e=10^20/m^3.
-     ! Later maybe we should implement an iterative method.
-
-     if (allocated(imp_adas(1)%ionisation_energy)) then
-
-        if (allocated(P_imp)) deallocate(P_imp)
-        if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-        allocate(P_imp(0:imp_adas(1)%n_Z))
-        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
-
-        !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),           &
-        !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT, &
-        !                              z_TeTe_out=d2Z_imp_dT2)
-        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-             p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT, &
-             z_avg_TeTe=d2Z_imp_dT2)
-
-        ! Ionization potential energy
-        E_ion     = 0.
-        dE_ion_dT = 0.
-        E_ion_bg  = 13.6 ! (Note: H and D have a different ionization energy, 
-        !  but the difference is small.)
-
-        ! In eV
-        do ion_i=1, imp_adas(1)%n_Z
-           do ion_k=1, ion_i
-              E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-              dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
-           end do
-        end do
-
-        ! Convert from eV to JOREK units
-        E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
-        dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
-        E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
-        ! Convert E_ion gradient wrt. T from 1/K into 1/(JOREK units)
-        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
-
-     else
-
-        if (allocated(P_imp)) deallocate(P_imp)
-        if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-        allocate(P_imp(0:imp_adas(1)%n_Z))
-        allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
-
-        !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-        !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
-        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-             p_out=P_imp,p_Te_out=dP_imp_dT,                          &
-             z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
-
-        E_ion     = 0.
-        dE_ion_dT = 0.
-        E_ion_bg  = 0.
-     end if
-
-     ! Convert Z_imp gradient wrt. T from 1/K into 1/eV
-     dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
-     ! ...and now from 1/eV into 1/(JOREK units)
-     dZ_imp_dT = dZ_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-     dZ_imp_dT = dZ_imp_dT * dT0_corr_dT                      ! Account for the temperature correction
-
-     if (Te_corr_eV < 0.1) then
-        Z_imp = 0.
-        dZ_imp_dT = 0.
-        d2Z_imp_dT2 = 0.
-     endif
-
-     if (Z_imp /= Z_imp .or. dZ_imp_dT /= dZ_imp_dT) then
-        write(*,*) "WARNING!!! Z_imp:", Z_imp, dZ_imp_dT
-        write(*,*) "Te_corr_eV =", Te_corr_eV
-        stop
-     end if
-
-     if (dZ_imp_dT < 0) then
-        write(*,*) "WARNING, ERROR with dZ_imp_dT = ", dZ_imp_dT
-        write(*,*) "Z_imp, T_e", Z_imp, Te_corr_eV, T0
-        stop
-     end if
-
-     alpha_i       = m_i_over_m_imp - 1.
-     dalpha_i_dT   = 0.
-     d2alpha_i_dT2 = 0.
-
-     alpha_e       = m_i_over_m_imp*Z_imp - 1.
-     dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
-     d2alpha_e_dT2 = m_i_over_m_imp*d2Z_imp_dT2
-     alpha_e_bis   = alpha_e + dalpha_e_dT*Te0
-     alpha_e_tri   = 2. * dalpha_e_dT + d2alpha_e_dT2 * Te0
-
-     alpha_imp       = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
-     dalpha_imp_dT   = 0.5*m_i_over_m_imp*dZ_imp_dT
-     d2alpha_imp_dT2 = 0.5*m_i_over_m_imp*d2Z_imp_dT2
-     alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
-     alpha_imp_tri   = 2. * dalpha_imp_dT + d2alpha_imp_dT2 * T0
-
-     beta_imp     = m_i_over_m_imp*Z_imp - 1.
-     dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
-
-     ne_SI       = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
-     ne_JOREK     = r0_corr + beta_imp * rimp0_corr ! Electron density in JOREK unit
-     ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
-     ! Too small rho_1 will cause a problem
-
-     ! Calculate the effective charge of all species
-     Z_eff        = 0.
-     dZ_eff_dT    = 0.
-     dZ_eff_dr0   = 0.
-     dZ_eff_drimp0= 0.
-
-     ! First get the value of Z_eff
-     Z_eff        = r0_corr - rimp0_corr
-     do ion_i=1, imp_adas(1)%n_Z
-        Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
-     end do
-     Z_eff        = Z_eff / ne_JOREK
-     if (Z_eff < 1.) Z_eff = 1.
-     if (Z_eff > (imp_adas(1)%n_Z)**2) Z_eff = (imp_adas(1)%n_Z)**2
-
-     ! Then three(!) gradients
-     if (Z_eff >= 1.) then
-        do ion_i=1, imp_adas(1)%n_Z
-           dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rimp0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
-        end do
-        dZ_eff_dT    = dZ_eff_dT / ne_JOREK
-        dZ_eff_dT    = dZ_eff_dT - Z_eff * dbeta_imp_dT * rimp0_corr / ne_JOREK
-
-        dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
-
-        dZ_eff_drimp0  = dZ_eff_drimp0 - 1.
-        do ion_i=1, imp_adas(1)%n_Z
-           dZ_eff_drimp0= dZ_eff_drimp0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
-        end do
-        dZ_eff_drimp0  = dZ_eff_drimp0 / ne_JOREK
-        dZ_eff_drimp0  = dZ_eff_drimp0 - Z_eff * beta_imp / ne_JOREK
-     else
-        Z_eff        = 1.
-     end if
-  end if
-
-end subroutine chargestatedistribution
-
-subroutine thermalization(Te_corr_eV, Te0_corr, dTe0_corr_dT, Ti0_corr, dTi0_corr_dT, Z_imp, ne_SI, alpha_e, m_imp, m_i_over_m_imp, rimp0_corr, drimp0_corr_dn, r0_corr, dr0_corr_dn, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i, dnu_e_imp_dTi, dnu_e_imp_dTe, dnu_e_bg_dTi, dnu_e_bg_dTe, dnu_e_imp_drho, dnu_e_imp_drhoimp, dnu_e_bg_drho, dnu_e_bg_drhoimp, ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhoimp, ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhoimp)
-  
-  implicit none
-
-  real*8     :: Te_corr_eV, Te0_corr, dTe0_corr_dT, Ti0_corr, dTi0_corr_dT, Z_imp, ne_SI
-  real*8     :: t_norm, alpha_e, m_imp, m_i_over_m_imp
-  real*8     :: rimp0_corr, drimp0_corr_dn, r0_corr, dr0_corr_dn
-  !   -Ion-electron energy transfer
-  real*8     :: nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i
-  real*8     :: dnu_e_imp_dTi, dnu_e_imp_dTe, dnu_e_bg_dTi, dnu_e_bg_dTe
-  real*8     :: dnu_e_imp_drho, dnu_e_imp_drhoimp, dnu_e_bg_drho, dnu_e_bg_drhoimp
-  real*8     :: ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhoimp
-  real*8     :: ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhoimp
-
-  
-  if (with_impurities) then
-     if (Te_corr_eV < 10.*Z_imp**2) then
-        lambda_e_imp = 23. - log((ne_SI*1.d-6)**0.5*Z_imp*Te_corr_eV**(-1.5))
-     else
-        lambda_e_imp = 24. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.0))
-     endif
-     if (Te_corr_eV < 10.) then
-        lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
-     else
-        lambda_e_bg  = 24. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.0))
-     endif
-     nu_e_imp     = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
-          * Z_eff_imp * (1.d14*central_density*rimp0_corr*m_i_over_m_imp) * lambda_e_imp &
-          / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
-          / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
-     nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
-          * (1.d14*central_density*(r0_corr-rimp0_corr)) * lambda_e_bg &
-          / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
-          / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
-
-     if (nu_e_imp < 0.) nu_e_imp = 0.
-     if (nu_e_bg < 0.)  nu_e_bg  = 0.
-
-     !Converting the energy transfer rate from s^-1 to JOREK unit
-     t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-     nu_e_imp = nu_e_imp * t_norm
-     nu_e_bg  = nu_e_bg * t_norm
-
-     dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rimp0_corr)
-     dTi_e    = -dTe_i
-
-     !Calculating the density and temperature derivative for amats
-     !We negelect the coulomb log's dericatives due to their smallness
-     dnu_e_imp_dTi   = -1.5*MASS_ELECTRON*nu_e_imp*dTi0_corr_dT &
-          / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr)
-     dnu_e_imp_dTe   = -1.5*MASS_PROTON*m_imp*nu_e_imp*dTe0_corr_dT &
-          / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr) &
-          + 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
-          * dZ_eff_imp_dT*(1.d14*central_density*rimp0_corr*m_i_over_m_imp)*lambda_e_imp &
-          / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
-          / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
-
-     dnu_e_imp_drhoimp = nu_e_imp * drimp0_corr_dn / rimp0_corr
-     dnu_e_imp_drho    = 0.
-
-     dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT &
-          / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-     dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
-          / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-     if (r0_corr-rimp0_corr <= 0.) then
-        dnu_e_bg_drhoimp = 0.
-        dnu_e_bg_drho    = 0.
-     else
-        dnu_e_bg_drhoimp = -nu_e_bg * drimp0_corr_dn / (r0_corr-rimp0_corr)
-        dnu_e_bg_drho    = nu_e_bg * dr0_corr_dn / (r0_corr-rimp0_corr)
-     end if
-
-     ddTe_i_dTi      = (dnu_e_imp_dTi+dnu_e_bg_dTi)*(Ti0_corr-Te0_corr)*(r0_corr+alpha_e*rimp0_corr)&
-          + (nu_e_imp + nu_e_bg) * dTi0_corr_dT * (r0_corr + alpha_e*rimp0_corr)
-     ddTe_i_dTe      = (dnu_e_imp_dTe+dnu_e_bg_dTe)*(Ti0_corr-Te0_corr)*(r0_corr + alpha_e*rimp0_corr)&
-          - (nu_e_imp + nu_e_bg) * dTe0_corr_dT * (r0_corr + alpha_e*rimp0_corr)        &
-          - (nu_e_imp + nu_e_bg) * Te0_corr     * dalpha_e_dT * rimp0_corr
-     ddTe_i_drhoimp  = (dnu_e_imp_drhoimp+dnu_e_bg_drhoimp)*(Ti0_corr-Te0_corr)*(r0_corr+alpha_e*rimp0_corr)&
-          +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * alpha_e * drimp0_corr_dn
-     ddTe_i_drho     = (dnu_e_imp_drho+dnu_e_bg_drho)*(Ti0_corr-Te0_corr)*(r0_corr + alpha_e*rimp0_corr)&
-          +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * dr0_corr_dn
-
-     ddTi_e_dTi      = -ddTe_i_dTi
-     ddTi_e_dTe      = -ddTe_i_dTe
-     ddTi_e_drhoimp  = -ddTe_i_drhoimp
-     ddTi_e_drho     = -ddTe_i_drho
-
-     if (r0_corr+alpha_e*rimp0_corr < 0.) then
-        dTi_e         = 0.
-        ddTi_e_dTi    = 0.
-        ddTe_i_dTe    = 0.
-        ddTi_e_drhoimp= 0.
-        ddTi_e_drho   = 0.
-     end if
-  else
-     Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-     dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
-
-     ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
-     if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
-
-     lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
-     nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
-          * (1.d14*central_density*r0_corr) * lambda_e_bg &
-          / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
-          / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
-
-     if (nu_e_bg < 0.)  nu_e_bg  = 0.
-
-     !Converting the energy transfer rate from s^-1 to JOREK unit
-     t_norm   = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
-     nu_e_bg  = nu_e_bg * t_norm    
-
-     dTe_i    = nu_e_bg * (Ti0_corr - Te0_corr)
-     dTi_e    = -dTe_i
-
-     !Calculating the density and temperature derivative for amats
-     !We negelect the coulomb log's dericatives due to their smallness
-
-     dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-     dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
-          / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
-
-     dnu_e_bg_drho   = nu_e_bg * dr0_corr_dn / r0_corr
-
-     ddTe_i_dTi      = dnu_e_bg_dTi  * (Ti0_corr - Te0_corr) + nu_e_bg
-     ddTe_i_dTe      = dnu_e_bg_dTe  * (Ti0_corr - Te0_corr) - nu_e_bg
-     ddTe_i_drho     = dnu_e_bg_drho * (Ti0_corr - Te0_corr)
-
-     ddTi_e_dTi      = -ddTe_i_dTi
-     ddTi_e_dTe      = -ddTe_i_dTe
-     ddTi_e_drho     = -ddTe_i_drho
-  endif
-  
-end subroutine thermalization
-
-subroutine pressure(Pi0, Pi0_x, Pi0_y, Pi0_s, Pi0_t, Pi0_p, Pi0_ss, Pi0_tt, Pi0_st, Pi0_xx, Pi0_yy, Pi0_xy, Ti0, Ti0_x, Ti0_y, Ti0_s, Ti0_t, Ti0_p, Ti0_ss, Ti0_tt, Ti0_st, Ti0_xx, Ti0_yy, Ti0_xy, Pe0, Pe0_x, Pe0_y, Pe0_s, Pe0_t, Pe0_p, Pe0_ss, Pe0_tt, Pe0_st, Pe0_xx, Pe0_yy, Pe0_xy, Te0, Te0_x, Te0_y, Te0_s, Te0_t, Te0_p, Te0_ss, Te0_tt, Te0_st, Te0_xx, Te0_yy, Te0_xy, P0, P0_x, P0_y, P0_s, P0_t, P0_p, P0_ss, P0_tt, P0_st, P0_xx, P0_yy, P0_xy, alpha_i, alpha_e, alpha_e_bis, dalpha_e_dT, d2alpha_e_dT2, r0, r0_x, r0_y, r0_s, r0_t, r0_p, r0_ss, r0_tt, r0_st, r0_xx, r0_yy, r0_xy, rimp0, rimp0_x, rimp0_y, rimp0_s, rimp0_t, rimp0_p, rimp0_ss, rimp0_tt, rimp0_st, rimp0_xx, rimp0_yy, rimp0_xy)
-
-  implicit none
-  
-  real*8     :: Pi0, Pi0_x, Pi0_y, Pi0_s, Pi0_t, Pi0_p, Pi0_ss, Pi0_tt, Pi0_st, Pi0_xx, Pi0_yy, Pi0_xy
-  real*8     :: Ti0, Ti0_x, Ti0_y, Ti0_s, Ti0_t, Ti0_p, Ti0_ss, Ti0_tt, Ti0_st, Ti0_xx, Ti0_yy, Ti0_xy
-  real*8     :: Pe0, Pe0_x, Pe0_y, Pe0_s, Pe0_t, Pe0_p, Pe0_ss, Pe0_tt, Pe0_st, Pe0_xx, Pe0_yy, Pe0_xy
-  real*8     :: Te0, Te0_x, Te0_y, Te0_s, Te0_t, Te0_p, Te0_ss, Te0_tt, Te0_st, Te0_xx, Te0_yy, Te0_xy
-  real*8     :: P0, P0_x, P0_y, P0_s, P0_t, P0_p, P0_ss, P0_tt, P0_st, P0_xx, P0_yy, P0_xy
-  real*8     :: alpha_i, alpha_e, alpha_e_bis, dalpha_e_dT, d2alpha_e_dT2
-  real*8     :: r0, r0_x, r0_y, r0_s, r0_t, r0_p, r0_ss, r0_tt, r0_st, r0_xx, r0_yy, r0_xy
-  real*8     :: rimp0, rimp0_x, rimp0_y, rimp0_s, rimp0_t, rimp0_p, rimp0_ss, rimp0_tt, rimp0_st, rimp0_xx, rimp0_yy, rimp0_xy
-  
-  if (with_impurities) then
-     
-     Pi0    = (r0+rimp0*alpha_i) * Ti0
-     Pi0_x  = (r0_x+rimp0_x*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_x
-     Pi0_y  = (r0_y+rimp0_y*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_y
-     Pi0_s  = (r0_s+rimp0_s*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_s
-     Pi0_t  = (r0_t+rimp0_t*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_t
-     Pi0_p  = (r0_p+rimp0_p*alpha_i) * Ti0 + (r0+rimp0*alpha_i) * Ti0_p
-     Pi0_ss = (r0_ss+rimp0_ss*alpha_i) * Ti0 + 2.d0 * (r0_s+rimp0_s*alpha_i) * Ti0_s + (r0+rimp0*alpha_i) * Ti0_ss
-     Pi0_tt = (r0_tt+rimp0_tt*alpha_i) * Ti0 + 2.d0 * (r0_t+rimp0_t*alpha_i) * Ti0_t + (r0+rimp0*alpha_i) * Ti0_tt
-     Pi0_st = (r0_st+rimp0_st*alpha_i) * Ti0 + (r0_t+rimp0_t*alpha_i) * Ti0_s + (r0_s+rimp0_s*alpha_i) * Ti0_t               &
-          + (r0+rimp0*alpha_i) * Ti0_st
-     Pi0_xx = (r0_xx+rimp0_xx*alpha_i) * Ti0 + 2.d0 * (r0_x+rimp0_x*alpha_i) * Ti0_x + (r0+rimp0*alpha_i) * Ti0_xx
-     Pi0_yy = (r0_yy+rimp0_yy*alpha_i) * Ti0 + 2.d0 * (r0_y+rimp0_y*alpha_i) * Ti0_y + (r0+rimp0*alpha_i) * Ti0_yy
-     Pi0_xy = (r0_xy+rimp0_xy*alpha_i) * Ti0 + (r0_y+rimp0_y*alpha_i) * Ti0_x + (r0_x+rimp0_x*alpha_i) * Ti0_y               &
-          + (r0+rimp0*alpha_i) * Ti0_xy
-
-     Pe0    = (r0+rimp0*alpha_e) * Te0
-     Pe0_x  = (r0_x+rimp0_x*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_x
-     Pe0_y  = (r0_y+rimp0_y*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_y
-     Pe0_s  = (r0_s+rimp0_s*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_s
-     Pe0_t  = (r0_t+rimp0_t*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_t
-     Pe0_p  = (r0_p+rimp0_p*alpha_e) * Te0 + (r0+rimp0*alpha_e_bis) * Te0_p
-     Pe0_ss = (r0_ss+rimp0_ss*alpha_e) * Te0 + 2.d0 * (r0_s+rimp0_s*alpha_e_bis) * Te0_s + (r0+rimp0*alpha_e_bis) * Te0_ss &
-          + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_s)**2.d0
-     Pe0_tt = (r0_tt+rimp0_tt*alpha_e) * Te0 + 2.d0 * (r0_t+rimp0_t*alpha_e_bis) * Te0_t + (r0+rimp0*alpha_e_bis) * Te0_tt &
-          + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_t)**2.d0
-     Pe0_st = (r0_st+rimp0_st*alpha_e) * Te0 + (r0_t+rimp0_t*alpha_e_bis) * Te0_s + (r0_s+rimp0_s*alpha_e_bis) * Te0_t     &
-          + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_s * Te0_t + (r0+rimp0*alpha_e_bis) * Te0_st
-     Pe0_xx = (r0_xx+rimp0_xx*alpha_e) * Te0 + 2.d0 * (r0_x+rimp0_x*alpha_e_bis) * Te0_x + (r0+rimp0*alpha_e_bis) * Te0_xx &
-          + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_x)**2.d0
-     Pe0_yy = (r0_yy+rimp0_yy*alpha_e) * Te0 + 2.d0 * (r0_y+rimp0_y*alpha_e_bis) * Te0_y + (r0+rimp0*alpha_e_bis) * Te0_yy &
-          + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * (Te0_y)**2.d0
-     Pe0_xy = (r0_xy+rimp0_xy*alpha_e) * Te0 + (r0_y+rimp0_y*alpha_e_bis) * Te0_x + (r0_x+rimp0_x*alpha_e_bis) * Te0_y     &
-          + rimp0 * (2.d0*dalpha_e_dT + d2alpha_e_dT2*Te0) * Te0_x * Te0_y + (r0+rimp0*alpha_e_bis) * Te0_xy
-
-     P0     = Pi0 + Pe0
-     P0_x   = Pi0_x + Pe0_x
-     P0_y   = Pi0_y + Pe0_y
-     P0_s   = Pi0_s + Pe0_s
-     P0_t   = Pi0_t + Pe0_t
-     P0_p   = Pi0_p + Pe0_p
-     P0_ss  = Pi0_ss + Pe0_ss
-     P0_tt  = Pi0_tt + Pe0_tt
-     P0_st  = Pi0_st + Pe0_st
-     P0_xx  = Pi0_xx + Pe0_xx
-     P0_yy  = Pi0_yy + Pe0_yy
-     P0_xy  = Pi0_xy + Pe0_xy
-
-  else
-     
-     Pi0    = r0    * Ti0
-     Pi0_x  = r0_x  * Ti0 + r0 * Ti0_x
-     Pi0_y  = r0_y  * Ti0 + r0 * Ti0_y
-     Pi0_s  = r0_s  * Ti0 + r0 * Ti0_s
-     Pi0_t  = r0_t  * Ti0 + r0 * Ti0_t
-     Pi0_p  = r0_p  * Ti0 + r0 * Ti0_p
-     Pi0_ss = r0_ss * Ti0 + 2.d0 * r0_s * Ti0_s + r0 * Ti0_ss
-     Pi0_tt = r0_tt * Ti0 + 2.d0 * r0_t * Ti0_t + r0 * Ti0_tt
-     Pi0_st = r0_st * Ti0 + r0_s * Ti0_t + r0_t * Ti0_s + r0 * Ti0_st
-
-     Pe0    = r0    * Te0
-     Pe0_x  = r0_x  * Te0 + r0 * Te0_x
-     Pe0_y  = r0_y  * Te0 + r0 * Te0_y
-     Pe0_s  = r0_s  * Te0 + r0 * Te0_s
-     Pe0_t  = r0_t  * Te0 + r0 * Te0_t
-     Pe0_p  = r0_p  * Te0 + r0 * Te0_p
-     Pe0_ss = r0_ss * Te0 + 2.d0 * r0_s * Te0_s + r0 * Te0_ss
-     Pe0_tt = r0_tt * Te0 + 2.d0 * r0_t * Te0_t + r0 * Te0_tt
-     Pe0_st = r0_st * Te0 + r0_s * Te0_t + r0_t * Te0_s + r0 * Te0_st
-
-     P0     = Pi0   + Pe0
-     P0_s   = Pi0_s + Pe0_s
-     P0_t   = Pi0_t + Pe0_t
-     P0_p   = Pi0_p + Pe0_p
-     P0_x   = Pi0_x + Pe0_x
-     P0_y   = Pi0_y + Pe0_y
-     
-end subroutine pressure
-  
-
-subroutine radiation(ne_SI_min, T_rad, Te0_corr, T0_corr, Te_eV_min, r_imp_bg, nimp_bg, Lrad_imp_bg, Lrad, dLrad_imp_bg_dT, dLrad_dT, frad_bg, dfrad_bg_dT, r0_corr)
-
-  implicit none
-
-  real*8     :: ne_SI, ne_SI_min
-  real*8     :: T_rad, Te0_corr, T0_corr, Te_eV_min
-  real*8     :: r_imp_bg, nimp_bg, Lrad_imp_bg, Lrad, dLrad_imp_bg_dT, dLrad_dT, frad_bg, dfrad_bg_dT
-  real*8     :: r0_corr
-  real*8     :: coeff_rad_1
-
-  if (with_neutrals) then
-     
-    ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-    if (with_TiTe) then 
-       T_rad =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-    else
-       T_rad = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-    endif
-
-    if (use_imp_adas) then  ! use open adas by default
-       r_imp_bg = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
-       if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
-          ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-          coef_rad_1 = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-               *(central_density*1.d20)**2.5d0
-
-          Lrad_imp_bg = 0.0
-          dLrad_imp_bg_dT = 0.0
-
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp_bg,dLrad_imp_bg_dT)
-          Lrad_imp_bg = Lrad_imp_bg * coef_rad_1
-
-          ! Convert gradient wrt. to T from 1/K into 1/eV
-          dLrad_imp_bg_dT = dLrad_imp_bg_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
-          ! ...and now from 1/eV into 1/(JOREK units)
-          dLrad_imp_bg_dT = dLrad_imp_bg_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-          dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT            
-
-           if (Lrad_imp_bg < 0.) then
-              Lrad_imp_bg = 0.
-              dLrad_imp_bg_dT = 0.
-           end if
-        else     
-           Lrad_imp_bg = 0.
-           dLrad_imp_bg_dT = 0.
-        end if
-
-        ! This is to detect N/A
-        if (Lrad_imp_bg/=Lrad_imp_bg .or. dLrad_imp_bg_dT/=dLrad_imp_bg_dT) then
-           write(*,*) "WARNING: Lrad_imp_bg, dLrad_imp_bg_dT ", Lrad_imp_bg, dLrad_imp_bg_dT
-           stop
-        end if
-
-        frad_bg = r_imp_bg * Lrad_imp_bg
-        dfrad_bg_dT = r_imp_bg * dLrad_imp_bg_dT 
-
-     else 
-
-        if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
-           Arad_bg = 2.4d-31
-           Brad_bg = 20.
-           Crad_bg = 0.8
-
-           frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
-                *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-           dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
-                *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-        else
-           write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
-           stop
-        end if
-
-     end if
-
-     if (with_TiTe) then            
-        dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
-     endif
-  end if
-  
-  if (with_impurities) then
-     
-    ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-    if (with_TiTe) then 
-       T_rad =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-    else
-       T_rad = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-    endif
-
-    if (use_imp_adas) then  ! use open adas by default
-       r_imp_bg = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
-       if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
-          ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-          coef_rad_1 = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-               *(central_density*1.d20)**2.5d0
-
-          Lrad_imp_bg = 0.0
-          dLrad_imp_bg_dT = 0.0
-
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp_bg,dLrad_imp_bg_dT)
-          Lrad_imp_bg = Lrad_imp_bg * coef_rad_1
-
-          ! Convert gradient wrt. to T from 1/K into 1/eV
-          dLrad_imp_bg_dT = dLrad_imp_bg_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
-          ! ...and now from 1/eV into 1/(JOREK units)
-          dLrad_imp_bg_dT = dLrad_imp_bg_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-          dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT            
-
-           if (Lrad_imp_bg < 0.) then
-              Lrad_imp_bg = 0.
-              dLrad_imp_bg_dT = 0.
-           end if
-        else     
-           Lrad_imp_bg = 0.
-           dLrad_imp_bg_dT = 0.
-        end if
-
-        Lrad     = Lrad_imp_bg
-        dLrad_dT = dLrad_imp_bg_dT
-    
-        ! This is to detect N/A
-        if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
-           write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ",&
-                Lrad, dLrad_dT, E_ion, dE_ion_dT
-           stop
-        end if
-
-        frad_bg = r_imp_bg * Lrad_imp_bg
-        dfrad_bg_dT = r_imp_bg * dLrad_imp_bg_dT 
-
-     else 
-
-        if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
-           Arad_bg = 2.4d-31
-           Brad_bg = 20.
-           Crad_bg = 0.8
-
-           frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
-                *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-
-           dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
-                *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
-        else
-           write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
-           stop
-        end if
-
-     end if
-
-     if (with_TiTe) then            
-        dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
-     endif
-  end if
-  
-     
-
-end subroutine radiation
-
 end module mod_elt_matrix_fft

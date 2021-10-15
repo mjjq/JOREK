@@ -4,8 +4,9 @@ module mod_elt_matrix_fft
 
 contains
 
-subroutine element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid,&
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
+                              ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt,               &
+                              delta_g, delta_s, delta_t, i_tor_min, i_tor_max, aux_nodes)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -27,8 +28,9 @@ use mod_sources
 
 implicit none
 
-type (type_element)   :: element
-type (type_node)      :: nodes(n_vertex_max)
+type (type_element)        :: element
+type (type_node)           :: nodes(n_vertex_max)
+type (type_node), optional :: aux_nodes(n_vertex_max)
 
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 
@@ -1753,6 +1755,15 @@ do ms=1, n_gauss
              rho_x_hat = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x
              rho_y_hat = BigR**2 * rho_y
 
+             Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
+             Bgrad_rho_psi      = ( r0_x * psi_y - r0_y * psi_x ) / BigR
+             Bgrad_rhon_psi     = ( rn0_x * psi_y - rn0_y * psi_x ) / BigR
+             Bgrad_rho_rho      = ( rho_x * ps0_y - rho_y * ps0_x ) / BigR
+             Bgrad_rho_rhon     = ( rhon_x * ps0_y - rhon_y * ps0_x ) / BigR
+             Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
+             Bgrad_rho_rhon_n    = ( F0 / BigR * rhon_p ) / BigR
+             BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+
              Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 	         rhon_hat   = BigR**2 * rhon                                     
              rhon_x_hat = 2.d0 * BigR * BigR_x  * rhon + BigR**2 * rhon_x    
@@ -1766,7 +1777,9 @@ do ms=1, n_gauss
 
              amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                              &
                      - v * (psi_s * u0_t - psi_t * u0_s)                                  * theta * tstep &
-                     + v * tauIC/(r0*BB2) * F0**2/BigR**2 * (psi_s * pi0_t - psi_t * pi0_s) * theta * tstep 
+                     + v * tauIC/(r0*BB2) * F0**2/BigR**2 * (psi_s * pi0_t - psi_t * pi0_s) * theta * tstep & 
+                     - v * tauIC/(r0_corr*BB2**2) * BB2_psi * F0**2/BigR**2 * (ps0_x*p0_y - ps0_y*p0_x) * xjac * theta * tstep &
+                     + v * tauIC/(r0_corr*BB2**2) * BB2_psi * F0**3/BigR**3 * p0_p           * xjac * theta * tstep 
 
              amat_12 = -  v * (ps0_s * u_t - ps0_t * u_s)                             * theta * tstep
 
@@ -1954,15 +1967,6 @@ do ms=1, n_gauss
 !###################################################################################################
 !#  equation 5   (density equation)                                                                #
 !###################################################################################################
-             Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
-             Bgrad_rho_psi      = ( r0_x * psi_y - r0_y * psi_x ) / BigR
-             Bgrad_rhon_psi     = ( rn0_x * psi_y - rn0_y * psi_x ) / BigR
-             Bgrad_rho_rho      = ( rho_x * ps0_y - rho_y * ps0_x ) / BigR
-             Bgrad_rho_rhon     = ( rhon_x * ps0_y - rhon_y * ps0_x ) / BigR
-             Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
-             Bgrad_rho_rhon_n    = ( F0 / BigR * rhon_p ) / BigR
-             BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
-
 
              amat_51 = &
                        - (D_par-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star     * (Bgrad_rho-Bgrad_rhon) * xjac * theta * tstep &
@@ -2386,14 +2390,21 @@ do ms=1, n_gauss
 
              amat_71 =   v * r0 * vpar0 / BigR * (ps0_x * psi_x + ps0_y * psi_y) * xjac * (1.d0 + zeta) &
 
-	               + v * (P0_s * psi_t - P0_t * psi_s)                                       * theta * tstep &
-                       + 0.5d0 * r0 * vpar0**2 * BB2 * (psi_s * v_t - psi_t * v_s)               * theta * tstep &
-                       + 0.5d0 * v  * vpar0**2 * BB2 * (psi_s * r0_t - psi_t * r0_s)             * theta * tstep &
+                       + v * (P0_s * psi_t - P0_t * psi_s)                                       * theta * tstep &
+                       + 0.5d0 * r0 * vpar0**2 * BB2     * (psi_x * v_y  - psi_y * v_x)   * xjac * theta * tstep &
+                       + 0.5d0 * r0 * vpar0**2 * BB2_psi * (ps0_x * v_y  - ps0_y * v_x)   * xjac * theta * tstep &
+                       + 0.5d0 * v  * vpar0**2 * BB2     * (psi_x * r0_y - psi_y * r0_x)  * xjac * theta * tstep &
+                       + 0.5d0 * v  * vpar0**2 * BB2_psi * (ps0_x * r0_y - ps0_y * r0_x)  * xjac * theta * tstep &
+                       - 0.5d0 * v  * vpar0**2 * BB2_psi * F0 / BigR * r0_p               * xjac * theta * tstep &
 
                        ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
                        ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
                        + v * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) * vpar0 * BB2 * xjac * theta * tstep  &
                        + v * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * vpar0 * BB2 * xjac * theta * tstep  &
+                       - v * (r0_x_hat * u0_y - r0_y_hat * u0_x)      * vpar0 * BB2_psi * xjac * theta * tstep &
+                       + v * F0 / BigR * (r0 * vpar0_p + r0_p * vpar0)* vpar0 * BB2_psi * xjac * theta * tstep &
+                       + v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * vpar0 * BB2_psi * xjac * theta * tstep &
+                       + v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * vpar0 * BB2_psi * xjac * theta * tstep &
 
                       ! Old term (not to be included anymore due to implementations of terms above):
                       !+ v * (particle_source(ms,mt) + source_pellet) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &

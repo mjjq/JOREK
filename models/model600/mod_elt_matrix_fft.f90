@@ -4006,7 +4006,7 @@ contains
        ddTi_e_drho     = -ddTe_i_drho
     endif
     
-  end subroutine construc_thermalization_terms
+  end subroutine construct_thermalization_terms
   
   subroutine construct_pressure()
   
@@ -4083,12 +4083,19 @@ contains
        Pe0_tt = r0_tt * Te0 + 2.d0 * r0_t * Te0_t + r0 * Te0_tt
        Pe0_st = r0_st * Te0 + r0_s * Te0_t + r0_t * Te0_s + r0 * Te0_st
   
-       P0     = Pi0   + Pe0
+       P0     = Pi0 + Pe0
+       P0_x   = Pi0_x + Pe0_x
+       P0_y   = Pi0_y + Pe0_y
        P0_s   = Pi0_s + Pe0_s
        P0_t   = Pi0_t + Pe0_t
        P0_p   = Pi0_p + Pe0_p
-       P0_x   = Pi0_x + Pe0_x
-       P0_y   = Pi0_y + Pe0_y
+       P0_ss  = Pi0_ss + Pe0_ss
+       P0_tt  = Pi0_tt + Pe0_tt
+       P0_st  = Pi0_st + Pe0_st
+       P0_xx  = Pi0_xx + Pe0_xx
+       P0_yy  = Pi0_yy + Pe0_yy
+       P0_xy  = Pi0_xy + Pe0_xy
+    end if
        
   end subroutine construct_pressure
     

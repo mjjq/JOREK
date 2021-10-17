@@ -487,6 +487,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   end if
   write(*,REAL_FMT) 'tgnum_vpar            ', tgnum_vpar
   write(*,REAL_FMT) 'tgnum_rhon            ', tgnum_rhon
+  write(*,REAL_FMT) 'tgnum_rhoimp          ', tgnum_rhoimp
   write(*,REAL_FMT) 'tgnum_nre             ', tgnum_nre 
   write(*,REAL_FMT) 'tgnum_AR              ', tgnum_AR  
   write(*,REAL_FMT) 'tgnum_AZ              ', tgnum_AZ  

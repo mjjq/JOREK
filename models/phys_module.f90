@@ -735,6 +735,7 @@ module phys_module
   real*8              :: tgnum_Te     
   real*8              :: tgnum_vpar   
   real*8              :: tgnum_rhon   
+  real*8              :: tgnum_rhoimp 
   real*8              :: tgnum_nre    
   real*8              :: tgnum_AR     
   real*8              :: tgnum_AZ    

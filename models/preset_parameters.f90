@@ -515,6 +515,7 @@ subroutine preset_parameters
   tgnum_Te           = 0.d0
   tgnum_vpar         = 0.d0
   tgnum_rhon         = 0.d0
+  tgnum_rhoimp       = 0.d0
   tgnum_nre          = 0.d0
   tgnum_AR           = 0.d0
   tgnum_AZ           = 0.d0

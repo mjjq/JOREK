@@ -4249,7 +4249,7 @@ contains
     end if
   end subroutine construct_radiation_parameters
 
-!!return
+!!return               ! This return seems to be in conflict with the contains above
 end subroutine element_matrix_fft
 
 subroutine my_fft(in_fft,out_fft,n)

@@ -238,8 +238,8 @@ integer                         :: iz
 p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
 dp_dT = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z_1T(:,:,:),density,temperature)
 
-if (present(p_out))    p_out    = p
-if (present(p_Te_out)) p_Te_out = dp_dT
+if (present(p_out))    p_out    = p/sum(p)
+if (present(p_Te_out)) p_Te_out = dp_dT/sum(p)
 if (present(z_avg)) then
   z_avg = L2Dinterp(cor%density,cor%temperature,cor%Z_avg_CE(:,:),density,temperature)
 endif
@@ -350,7 +350,7 @@ if (present(p_out) .or. present(p_Te_out) .or. present(p_Ne_out)) then
   p_Ne = p_Ne / (log(10.d0)*10.d0**density)
   p_TeTe = p_TeTe / (log(10.d0)**2 * 10.d0**(2.d0*temperature)) - p_Te/(10.d0**temperature)
 
-  if (present(p_out))    p_out    = p
+  if (present(p_out))    p_out    = p/sum(p)
   if (present(p_Te_out)) p_Te_out = p_Te/sum(p)
   if (present(p_Ne_out)) p_Ne_out = p_Ne/sum(p)
 
@@ -363,7 +363,7 @@ if (present(z_out) .or. present(z_Te_out) .or. present(z_TeTe_out) .or. present(
     do iz=0,cor%n_Z
       Z_p(iz) = real(iz,8)
     enddo
-    z        =  dot_product(p,Z_p)
+    z        =  dot_product(p/sum(p),Z_p)
     z_Te     =  dot_product(p_Te/sum(p),Z_p)
     z_Ne     =  dot_product(p_Ne/sum(p),Z_p)
     Z_TeTe   =  dot_product(p_TeTe/sum(p),Z_p)

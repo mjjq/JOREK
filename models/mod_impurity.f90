@@ -130,7 +130,7 @@ module mod_impurity
     use phys_module
     use mod_openadas
     use mod_coronal
-    use mod_interp_splinear
+    use mod_interp_splinear 
 
     implicit none
 
@@ -169,10 +169,9 @@ module mod_impurity
 
     !---------------------------------------------------------------------------                  
     ! --- Some post-processing to convert units, check NaNs, etc, before output
-    !---------------------------------------------------------------------------
-   
+    !---------------------------------------------------------------------------  
     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-    coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
+    coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0 &
                        *(central_density*1.d20)**2.5d0
 
     if (opt_ju) then !Convert to JOREK units
@@ -182,7 +181,6 @@ module mod_impurity
         dLrad_dTe = dLrad_dTe * coef_rad_imp *  EL_CHG / K_BOLTZ 
         ! ...and now from 1/eV into 1/(JOREK units)
         dLrad_dTe = dLrad_dTe / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-      !  dLrad_dTe = dLrad_dTe * dT0_corr_dT            
       end if
     end if
     if (Lrad < 0.) then
@@ -197,7 +195,6 @@ module mod_impurity
       write(*,*) "WARNING: dLrad_dTe ", dLrad_dTe
       stop
     end if
-
   end subroutine radiation_function_linear
 
 end module mod_impurity

@@ -199,8 +199,6 @@ real*8     :: Lrad_imp
 integer*8  :: i_phi
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
 integer    :: i_imp                                           ! Loop for more than one impurity
-
-
 #endif
 
 #ifndef NOMPIVERSION
@@ -637,7 +635,7 @@ do ife = ife_min, ife_max
         ! Get coefficient:  Prad,SI = coef_prad_si * Prad,jorek
         coef_prad_si = 1./((GAMMA-1)*MU_ZERO*(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**0.5) 
       
-        ksiion = central_density * 1.d20 * ksi_ion   !Normalisation of the ionization energy cost for Deuterium
+        ksiion = central_density * 1.d20 * ksi_ion   ! Normalisation of the ionization energy cost for Deuterium
       
         ! --- Radiation from background impurity
         ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)

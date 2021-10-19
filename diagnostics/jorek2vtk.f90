@@ -1240,19 +1240,17 @@ enddo  ! n_elements
           end if
           frad_bg = frad_bg + r_imp * Lrad_imp
         end do
-
       else
         if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
 
           Arad_bg = 2.4d-31
           Brad_bg = 20.
           Crad_bg = 0.8
-
           frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))                               &
                      *((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0)) &
                      *nimp_bg(1)* Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
         else
-          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ",use open adas instead!"
+          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
           stop
         end if
       end if   

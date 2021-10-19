@@ -180,7 +180,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs,                          &
-                min_sheath_angle      
+                min_sheath_angle, bcs      
 
 if (my_id .eq. 0) then
 

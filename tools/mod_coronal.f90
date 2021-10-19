@@ -240,7 +240,7 @@ dp_dT = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z_1T(:,:,:),density
 
 if (abs(sum(p)-1.)>1.d-3) then
   write(*,*) "WARNING: Interpolation returns non-unity total fractional abundance, probably approaching ADAS parameter boundary!"
-  write(*,*) "sum(p)=",sum(p),", T_e=",temperature,", n_e=",density
+  write(*,*) "sum(p)=",sum(p),", log10(T_e(K))=",temperature,", log10(n_e(m^-3))=",density
 endif
 
 if (present(p_out))    p_out    = p/sum(p)
@@ -301,7 +301,7 @@ p_Ne = p_Ne / (log(10.d0)*10.d0**density)
 
 if (abs(sum(p)-1.)>1.d-3) then
   write(*,*) "WARNING: Interpolation returns non-unity total fractional abundance, probably approaching ADAS parameter boundary!"
-  write(*,*) "sum(p)=",sum(p),", T_e=",temperature,", n_e=",density
+  write(*,*) "sum(p)=",sum(p),", log10(T_e(K))=",temperature,", log10(n_e(m^-3))=",density
 endif
 
 if (present(p_Te_out)) then
@@ -362,7 +362,7 @@ if (present(p_out) .or. present(p_Te_out) .or. present(p_Ne_out)) then
 
   if (abs(sum(p)-1.)>1.d-3) then
     write(*,*) "WARNING: Interpolation returns non-unity total fractional abundance, probably approaching ADAS parameter boundary!"
-    write(*,*) "sum(p)=",sum(p),", T_e=",temperature,", n_e=",density
+    write(*,*) "sum(p)=",sum(p),", log10(T_e(K))=",temperature,", log10(n_e(m^-3))=",density
   endif
 
   if (present(p_out))    p_out    = p/sum(p)

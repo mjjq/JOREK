@@ -198,7 +198,7 @@ real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg              ! Retain hard-code
 real*8     :: Lrad_imp
 integer*8  :: i_phi
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
-integer    :: i_imp                                           ! Loop for more than one impurity
+integer    :: i_imp                                           ! Loop for more than one background impurity
 #endif
 
 #ifndef NOMPIVERSION

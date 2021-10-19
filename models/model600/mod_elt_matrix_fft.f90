@@ -129,7 +129,7 @@ real*8     :: T_rad                                           ! Temperature used
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT ! Retain the hard-coded fitting for argon
 real*8     :: Lrad_imp, dLrad_imp_dT                          ! Radiation rate and its derivative wrt. temperature
 real*8     :: r_imp                                           ! Background impurity density in JOREK unit
-integer    :: i_imp                                           ! Loop for more than one impurity
+integer    :: i_imp                                           ! Loop for more than one background impurity
 
 
 real*8     :: in_fft(1:n_plane)

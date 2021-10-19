@@ -257,8 +257,8 @@ if (my_id .eq. 0) then
     end if
   end do 
 
- if ((n_adas > n_imp_max) .or. (n_adas > n_imp_max)) then 
-    write(*,*) "ERROR: imp_type and nimp_bg should be no more than n_imp_max, EXITING!"
+ if (n_adas > n_imp_max) then 
+    write(*,*) "ERROR: n_adas should be no larger than n_imp_max, EXITING!"
     stop
   end if
 

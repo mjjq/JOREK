@@ -238,6 +238,11 @@ integer                         :: iz
 p = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z(:,:,:),density,temperature)
 dp_dT = L2D2interp(cor%density,cor%temperature,cor%n_Z+1,cor%Z_1T(:,:,:),density,temperature)
 
+if (abs(sum(p)-1.)>1.d-3) then
+  write(*,*) "WARNING: Interpolation returns non-unity total fractional abundance, probably approaching ADAS parameter boundary!"
+  write(*,*) "sum(p)=",sum(p),", T_e=",temperature,", n_e=",density
+endif
+
 if (present(p_out))    p_out    = p/sum(p)
 if (present(p_Te_out)) p_Te_out = dp_dT/sum(p)
 if (present(z_avg)) then
@@ -294,6 +299,11 @@ end do
 p_Te = p_Te / (log(10.d0)*10.d0**temperature)
 p_Ne = p_Ne / (log(10.d0)*10.d0**density)
 
+if (abs(sum(p)-1.)>1.d-3) then
+  write(*,*) "WARNING: Interpolation returns non-unity total fractional abundance, probably approaching ADAS parameter boundary!"
+  write(*,*) "sum(p)=",sum(p),", T_e=",temperature,", n_e=",density
+endif
+
 if (present(p_Te_out)) then
   p_Te_out = p_Te/sum(p)
 endif
@@ -349,6 +359,11 @@ if (present(p_out) .or. present(p_Te_out) .or. present(p_Ne_out)) then
   p_Te = p_Te / (log(10.d0)*10.d0**temperature)
   p_Ne = p_Ne / (log(10.d0)*10.d0**density)
   p_TeTe = p_TeTe / (log(10.d0)**2 * 10.d0**(2.d0*temperature)) - p_Te/(10.d0**temperature)
+
+  if (abs(sum(p)-1.)>1.d-3) then
+    write(*,*) "WARNING: Interpolation returns non-unity total fractional abundance, probably approaching ADAS parameter boundary!"
+    write(*,*) "sum(p)=",sum(p),", T_e=",temperature,", n_e=",density
+  endif
 
   if (present(p_out))    p_out    = p/sum(p)
   if (present(p_Te_out)) p_Te_out = p_Te/sum(p)

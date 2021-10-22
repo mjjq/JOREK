@@ -1231,10 +1231,10 @@ enddo  ! n_elements
         frad_bg = 0. 
         do i_imp =1, n_adas
           r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
-          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+          if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. r_imp > 0) then
             Lrad_imp = 0.0
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
-                                           log10(Te_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)           
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)    
           else     
             Lrad_imp = 0.
           end if
@@ -1242,7 +1242,6 @@ enddo  ! n_elements
         end do
       else
         if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
-
           Arad_bg = 2.4d-31
           Brad_bg = 20.
           Crad_bg = 0.8
@@ -1351,13 +1350,13 @@ enddo  ! n_elements
   ! --- Radiative function, using interpolation
   ! ------------------------------------------
 
-     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
+     if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
 
        Lrad = 0.0
        
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will be needed
-       !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+
        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad)
        Lrad = Lrad * m_i_over_m_imp
 
@@ -1559,10 +1558,10 @@ if (SI_units) then
         ! Use radiation coefficients from ADAS
         frad_bg = 0. 
         do i_imp =1, n_adas   
-          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
+          if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
             Lrad_imp = 0.0
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
-                                           log10(Te_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)           
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)  
           else     
             Lrad_imp = 0.
           end if

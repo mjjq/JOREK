@@ -898,7 +898,7 @@ do ms=1, n_gauss
   ! --- Radiative function using interpolation
   ! ------------------------------------------
 
-     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+     if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. rn0 > rn0_min) then
 
        Lrad = 0.0
        dLrad_dT = 0.0

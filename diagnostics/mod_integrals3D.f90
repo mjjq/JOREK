@@ -150,7 +150,7 @@ real*8  :: source_bg, source_imp
 real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion, local_P_ei, total_P_ei
 real*8  :: local_P_ion, total_P_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
-real*8  :: ne_SI, Te_eV, Ti_eV
+real*8  :: ne_SI, Te_eV, Te_corr_eV, Ti_eV
 #endif
 
 ! Additional diagnostic variables for impurity model
@@ -163,7 +163,7 @@ real*8  :: m_i_over_m_imp, m_imp
 real*8  :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
 real*8  :: Z_eff_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: Te_corr_eV,  dT0e_corr_dT, Ti_corr_eV
+real*8  :: dT0e_corr_dT, Ti_corr_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -348,13 +348,13 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           eta_T_ohm,                                                              &
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-!$omp           rn0, rn0_corr,                                                                 &
+!$omp           rn0, rn0_corr, Te_corr_eV, Te_eV, ne_SI, Ti_eV,                                &
 #endif
 #ifdef WITH_Impurities
 !$omp           source_bg, source_imp,                                                         &
 !$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp,                  &
-!$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
-!$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV, Ti_eV,                          &
+!$omp           ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,                                 &
+!$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV,                                 &
 #endif
 #if (defined WITH_Impurities) && (defined WITH_TiTe)
 !$omp           alpha_i, alpha_e, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i,  &
@@ -365,7 +365,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
-!$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
+!$omp           LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,                        &
 !$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
 !$omp           Lrad_imp, coef_prad_si, i_imp,                                                 &
 #endif
@@ -639,16 +639,16 @@ do ife = ife_min, ife_max
       
         ! --- Radiation from background impurity
         ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-        Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+        Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
 
         if (use_imp_adas) then  ! use open adas by default  
           ! Use radiation coefficients from ADAS
           frad_bg = 0. 
           do i_imp = 1, n_adas     
-            if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
+            if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
               Lrad_imp = 0.0
               call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
-                                           log10(Te_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)           
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)           
             else     
               Lrad_imp = 0.
             end if
@@ -669,7 +669,7 @@ do ife = ife_min, ife_max
             Brad_bg = 20.
             Crad_bg = 0.8
             frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                            *nimp_bg(1)*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                            *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
                     
             local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
                                        + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
@@ -781,7 +781,7 @@ do ife = ife_min, ife_max
           eta_T_ohm    = eta_T_ohm * eta_coef
         endif
 
-        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+        if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
           !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
           call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad)

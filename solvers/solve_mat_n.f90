@@ -942,7 +942,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
       endif
       
-      !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)      
+      if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)      
 
       call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,&
                 MPI_COMM_N,UPDATE=spss_analyzed,DISTRIBUTED=.not.centralize_harm_mat,EQUILIBRIUM=.false.)      
@@ -1063,10 +1063,12 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     logical, intent(in) :: solve_only
 
     integer               :: my_id_n, n_cpu_n, ierr, block_size, indexing=1
-    integer(kind=int_all) :: i, j, k
+    integer(kind=int_all) :: i, j, k, jmin, jmax, n_d
     type(clcktype)        :: t_itstart, t0, t1, t2, t3
     real*8                :: tsecond
-    real*8, allocatable   :: RHS_tmp(:)
+    real*8, allocatable   :: RHS_tmp(:), loc_col_scaling(:)
+    
+    integer(kind=int_all), allocatable :: rcounts(:), displs(:)
 
     !Split broadcast
     character*8 :: type
@@ -1104,16 +1106,14 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       if (.not. spm_initialized) then
         call pastix_init(MPI_COMM_N)
         spm_initialized = .true.
-      endif     
+      endif
 
       if (centralize_harm_mat) then
-        ! --- Column scaling ----! Should be adopted for pre-distributed matrix
         if (my_id_n .eq. 0) then
           if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
           call tr_allocate(column_scaling,Int1,mumps_par%n,"column_scaling",CAT_DMATRIX)
-  
           column_scaling = 1.d-20
-
+    
           do k=1,mumps_par%nz
             j = mumps_par%jcn(k)
             column_scaling(j) = min(max(column_scaling(j),abs(mumps_par%A(k))),1d20)
@@ -1122,10 +1122,8 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
           do k=1,mumps_par%nz
             j = mumps_par%jcn(k)
             mumps_par%A(k) = mumps_par%A(k) / column_scaling(j)
-          enddo
-        
+          enddo      
         endif
-        ! --- End column scaling -----
       
         ! broadcast centralized matrix
         if (my_id_n.gt.0) then
@@ -1144,9 +1142,43 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
         call split_broadcast(type,MPI_COMM_N)
         type='double'
         call split_broadcast(type,MPI_COMM_N)
+      else
+        
+        if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+        call tr_allocate(column_scaling,Int1,mumps_par%n,"column_scaling",CAT_DMATRIX)
+      
+      ! calculate local column scaling and gather the result to the zero MPI rank
+        jmin = minval(mumps_par%jcn(1:nnz))
+        jmax = maxval(mumps_par%jcn(1:nnz))
+        n_d = jmax - jmin + 1
+        allocate(loc_col_scaling(n_d))
+        loc_col_scaling(1:n_d) = 1.d-20
+        do k=1,mumps_par%nz
+          j = mumps_par%jcn(k) - jmin + 1
+          loc_col_scaling(j) = min(max(loc_col_scaling(j),abs(mumps_par%A(k))),1d20)
+        enddo          
+        do k=1,mumps_par%nz
+          j = mumps_par%jcn(k) - jmin + 1
+          mumps_par%A(k) = mumps_par%A(k)/loc_col_scaling(j)
+        enddo
+        allocate(rcounts(n_cpu_n),displs(n_cpu_n)); rcounts = 0
+        rcounts(my_id_n + 1) = n_d
+        call MPI_AllReduce(MPI_IN_PLACE, rcounts, n_cpu_n, MPI_INTEGER_ALL, MPI_SUM, MPI_COMM_N, ierr)
+  
+        displs(1) = 0
+        do i = 2, n_cpu_n
+          displs(i) = displs(i-1) + rcounts(i-1)
+        enddo
+        call MPI_Gatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, column_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, 0, MPI_COMM_N, ierr)
+        
+        deallocate(rcounts, displs, loc_col_scaling)
+        if (my_id_n.ne.0) then
+          if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+        endif
+        
       endif
       
-      !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
+      if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
         
       call pastix_set_mat(n, nnz, mumps_par%irn, mumps_par%jcn, mumps_par%a, block_size, MPI_COMM_N,&
                 UPDATE=spm_analyzed, DISTRIBUTED=.not.centralize_harm_mat, EQUILIBRIUM=.false.)

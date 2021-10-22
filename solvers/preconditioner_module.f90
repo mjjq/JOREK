@@ -270,7 +270,7 @@ module preconditioner_module
 
     if ((.not.use_strumpack).and.(.not.centralize_harm_mat)) then
       if (my_id.eq.0) write(*,*) "Warning: PC matrix distribution is only supported by STRUMPACK"
-      centralize_harm_mat = .true.
+      !centralize_harm_mat = .true. !!! temporary to test Pastix 6.2
     elseif ((use_strumpack).and.(centralize_harm_mat)) then
       if (my_id.eq.0) write(*,*) "Warning: centralization of PC matrix is not advized when using STRUMPACK"
     endif

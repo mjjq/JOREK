@@ -60,7 +60,7 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-s", "--shot", type=int, default=1,
                         help="Shot number")
-    parser.add_argument("-r", "--run", type=int, default=6,
+    parser.add_argument("-r", "--run", type=int, default=7,
                         help="Run number")
     parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                         help="Location of ~$USER/public/imasdb")
@@ -68,8 +68,8 @@ if __name__ == "__main__":
                         help="Database name under public/imasdb/")
     parser.add_argument("-o", "--occurrence", type=int, default=0,
                         help="Occurrence number")
-    parser.add_argument("-b", "--backend", type=int, default=imasdef.MDSPLUS_BACKEND,
-                        help="Backend")
+    parser.add_argument("-f", "--backend", type=int, default=imasdef.MDSPLUS_BACKEND,
+                        help="Database format: 12=MDSPLUS, 13=HDF5")
     parser.add_argument("hdf5files", metavar='jorek?????.h5', nargs='*',
                         help="JOREK HDF5 file(s)", default=["/tmp/jorek_restart.h5"])
 
@@ -80,6 +80,8 @@ if __name__ == "__main__":
     np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
 
     logger.info("PREPARING IDS")
+    b_ids = basicIDS(args.shot, args.run, args.user, args.database)
+    b_ids.createNewIMASdatabase()
     w_ids = writeIDS(args.shot, args.run, args.user, args.database, args.backend)
     comment = "Written results of multiple JOREK output HDF5 files/timeslices."
     # w_ids.createDatasetDescriptionIDS(user = 'penkod',
@@ -181,26 +183,31 @@ if __name__ == "__main__":
                                    s=2,
                                    label='JOREK output HDF5 file grid with quantities')
 
-            w_ids.grid_ggd.array[0].space.resize(2)
-            path = w_ids.grid_ggd.array[0].space[1]
-            path.geometry_type.index = n_period
-            path.identifier.description = "toroidal space"
-            path.objects_per_dimension = np.array([i + 1 for i in range(n_tor)])
-            gr2d = w_ids.grid_ggd[0].space[0]
-            gr2d.objects_per_dimension.resize(2)
-            x_shape = np.shape(x)[2]
-            gr2d.objects_per_dimension[0].object.resize(x_shape)
+            # w_ids.grid_ggd.array[0].space.resize(2)  # Assure second space is allocated
+            toroidal_space = w_ids.grid_ggd[0].space[1]  # TODO multiple time slices
+            toroidal_space.coordinates_type.resize(1)  # One dimensional (toroidal) space
+            toroidal_space.coordinates_type[0] = 5  # Toroidal angle (phi) in radians
+            toroidal_space.geometry_type.index = n_period  # Fourier with periodicity
+            toroidal_space.identifier.description = "Toroidal space"
 
-            #coordinate and derivates (s, t, mixed)
+            toroidal_space.objects_per_dimension.resize(1)  # We have only one dimension of
+            toroidal_space.objects_per_dimension[0].object.resize(n_tor)  # toroidal harmonics
+
+            for tor in range(n_tor):
+                toroidal_space.objects_per_dimension[0].object[tor].geometry = np.array([tor+1])
+
+            gr2d = w_ids.grid_ggd[0].space[0]
+            gr2d.geometry_type.index = 0  # Standard geometry (non Fourier)
+            x_shape = np.shape(x)[2]
+            # coordinate and derivates (s, t, mixed)
             for j in range(x_shape):
                 gr2d.objects_per_dimension[0].object[j].geometry_2d = x[:, :, j]
 
-            #size 1, d_{uk}, d_{vk}, d{uv}d{vk} as in Daan Van Vugt thesis
+            # size 1, d_{uk}, d_{vk}, d{uv}d{vk} as in Daan Van Vugt thesis
             size_shape = np.shape(size)[2]
-            gr2d.objects_per_dimension[1].object.resize(size_shape)
             for i in range(size_shape):
-                gr2d.objects_per_dimension[1].object[i].geometry_2d = size[:, :, i]
-            gr2d.geometry_type.index = 1
+                gr2d.objects_per_dimension[2].object[i].geometry_2d = size[:, :, i]
+
             
         quantity_names_list = ["psi", "u", "j", "w", "rho", "T", "v_par"]
         quantities_array = val

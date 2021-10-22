@@ -75,13 +75,13 @@ class basicIDS(object):
             self.data_entry = imas.DBEntry(self.backend, self.device, self.shot, self.run, user_name=self.user)
             status, self.idx = self.data_entry.open()
             if status == 0:
-                logger.info('Creation of data entry OK!')
+                self.logger.info('Creation of data entry OK!')
             else:
-                logger.info('Creation of data entry FAILED! Exiting.')
+                self.logger.info('Creation of data entry FAILED! Exiting.')
                 self.state = False
                 sys.exit(-1)
         except Exception as e:
-            logger.info('Failed to open IMAS database. The specified IMAS ' + \
+            self.logger.info('Failed to open IMAS database. The specified IMAS ' + \
                   'database does not exist! Exiting.')
             self.state = False
             sys.exit(-1)
@@ -151,7 +151,7 @@ class readIDS(basicIDS):
                   'not exist')
            self.grid_ggd = None
 
-        ids = data_entry.get(IDSName)
+        ids = self.data_entry.get(IDSName)
 
         # Define self.grid_ggd
         if IDSName == 'edge-profiles':

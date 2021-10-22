@@ -5,6 +5,7 @@ import vtk
 
 from vtk.util import numpy_support as npvtk
 from idsUtilities import basicIDS, readIDS
+from imas import imasdef
 
 prec=np.float32
 vtk_prec=vtk.VTK_FLOAT
@@ -13,11 +14,13 @@ vtk_prec=vtk.VTK_FLOAT
 parser = argparse.ArgumentParser(description="Convert IMAS MHD IDS to VTK file",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-s", "--shot", type=int, default=1, help="Shot number")
-parser.add_argument("-r", "--run", type=int, default=6, help="Run number")
+parser.add_argument("-r", "--run", type=int, default=7, help="Run number")
 parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")
 parser.add_argument("-d", "--database", type=str, default="smiter", help="Database name under public/imasdb/")
 parser.add_argument("-o", "--occurrence", type=int, default=0, help="Occurrence number")
+parser.add_argument("-f", "--backend", type=int, default=imasdef.MDSPLUS_BACKEND,
+                    help="Database format: 12=MDSPLUS, 13=HDF5")
 parser.add_argument("vtkfile", metavar='jorek.vtk', nargs='?', help="Resulting VTK filename", default="jorek_ids.vtu")
 parser.add_argument("-p", "--phi", type=list, default=[0, 90], help="Phi coordinate")
 parser.add_argument("-n", "--n_plane", type=int, default=3, help="Number of planes")
@@ -25,10 +28,8 @@ parser.add_argument("-b", "--bezier", type=bool, default=True, help="Bezier grid
 
 args = parser.parse_args()
 
-b_ids = basicIDS(args.shot, args.run, args.user, args.database)
-r_ids = readIDS(args.shot, args.run, args.user, args.database)
+r_ids = readIDS(args.shot, args.run, args.user, args.database, args.backend)
 r_ids.getGGD("mhd")
-print("a")
 
 def visualise():
     if not(args.bezier):
@@ -71,14 +72,14 @@ def visualise():
         exit(0)
 
     else:
-        #excavating data from IDS file
-        xyz0 = r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[0].object.array
-        ien0 = np.array(r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
+        # excavating data from IDS file
+        gr2d = r_ids.grid_ggd[0].space[0]
+        xyz0 = gr2d.objects_per_dimension[0].object.array
+        ien0 = np.array(gr2d.objects_per_dimension[2].object.array)
 
-        n_period = r_ids.grid_ggd.array[0].space.array[1].geometry_type.index
+        n_period = r_ids.grid_ggd[0].space[1].geometry_type.index
 
         x = np.zeros((2, 4, len(xyz0)))
-        gr2d = r_ids.grid_ggd.array[0].space.array[0]
         for j in range(np.shape(x)[2]):
             x[:, :, j] = gr2d.objects_per_dimension.array[0].object.array[j].geometry_2d
 

@@ -77,11 +77,10 @@ if __name__ == "__main__":
 
     logging.config.fileConfig(fname='log.conf')
     logger = logging.getLogger('JOREK_HDF5_2_IDS')
-    np.set_printoptions(formatter={'float': '{: 0.3f}'.format})
+    np.set_printoptions(
+        formatter={'float': '{: 0.3f}'.format})
 
     logger.info("PREPARING IDS")
-    b_ids = basicIDS(args.shot, args.run, args.user, args.database)
-    b_ids.createNewIMASdatabase()
     w_ids = writeIDS(args.shot, args.run, args.user, args.database, args.backend)
     comment = "Written results of multiple JOREK output HDF5 files/timeslices."
     # w_ids.createDatasetDescriptionIDS(user = 'penkod',

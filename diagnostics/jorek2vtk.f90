@@ -1226,12 +1226,13 @@ enddo  ! n_elements
       r0_corr   = corr_neg_dens(r0_real8)
 
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      Te_eV   = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) !Te in eV
 
       if (use_imp_adas) then  ! use open adas by default
         frad_bg = 0. 
         do i_imp =1, n_adas
-          r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
-          if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. r_imp > 0) then
+          r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU 
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
             Lrad_imp = 0.0
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
                                            log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)    
@@ -1350,7 +1351,7 @@ enddo  ! n_elements
   ! --- Radiative function, using interpolation
   ! ------------------------------------------
 
-     if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
+     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
 
        Lrad = 0.0
        
@@ -1553,15 +1554,16 @@ if (SI_units) then
       r0_real8  = scalars(i,5) / central_density ! Back to JU first
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      Te_eV   = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) !Te in eV
 
       if (use_imp_adas) then  ! use open adas by default
         ! Use radiation coefficients from ADAS
         frad_bg = 0. 
-        do i_imp =1, n_adas   
-          if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
+        do i_imp =1, n_adas  
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
             Lrad_imp = 0.0
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
-                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)  
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp) 
           else     
             Lrad_imp = 0.
           end if

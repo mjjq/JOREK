@@ -123,7 +123,6 @@ real*8     :: coef_rec_1                                      ! Recombination ra
 !   -Radiation from injected gas/impurities
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
-real*8     :: Te_eV, Te_corr_eV                               ! Temperature used in radiation rate
 
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT ! Retain the hard-coded fitting for argon
@@ -144,7 +143,7 @@ real*8     :: dnu_e_bg_dTi, dnu_e_bg_dTe
 real*8     :: dnu_e_bg_drho, dnu_e_bg_drhon
 real*8     :: ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhon
 real*8     :: ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhon
-real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Electron temperature in eV
+real*8     :: Te_eV, Te_corr_eV, dTe_corr_eV_dT              ! Electron temperature in eV
 real*8     :: ne_SI                                          ! Electron density in SI unit
 real*8     :: dr0_corr_dn
 

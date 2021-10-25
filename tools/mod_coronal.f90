@@ -419,6 +419,7 @@ end subroutine interpolate_coronal_spl
 !> set logscale y
 !> p for [i=2:20] 'charge_distribution.dat' u 1:i t ''.(i-2) w l
 subroutine output_coronal(cor,i_imp)
+use phys_module, only: imp_type
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
 integer, intent(in)             :: i_imp !< Coronal equilibrium type
 

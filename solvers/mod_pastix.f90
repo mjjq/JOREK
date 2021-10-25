@@ -143,7 +143,7 @@ module mod_pastix
       integer(kind=C_INT) :: indexing=1, block_size
       integer(kind=C_INT) :: n, n_d, nnz, nnz_d, jmin, jmax, i
 
-      integer :: my_id_n, ncpu_n, ierr, comm
+      integer :: my_id_n, n_cpu_n, ierr, comm
 
       integer(kind=C_INT), dimension(:), allocatable :: iwk
 
@@ -192,6 +192,8 @@ module mod_pastix
         enddo
 
       endif
+      
+      if (.not.eql) call do_column_scaling(n,nnz_d,irn,jcn,val,comm)
 
 
       !call MPI_Comm_rank(MPI_COMM_WORLD, my_id_n, ierr)
@@ -303,23 +305,23 @@ module mod_pastix
 
       integer(kind=C_INT), dimension(:), pointer :: irn_d, jcn_d
       real(kind=C_DOUBLE), dimension(:), pointer :: val_d
-      integer :: ncpu_n, my_id_n, comm, ierr
+      integer :: n_cpu_n, my_id_n, comm, ierr
       integer :: i, j, indx
 
       integer(kind=C_INT), allocatable :: dist(:), myelm(:)
 
       call MPI_Comm_rank(comm, my_id_n, ierr)
-      call MPI_Comm_size(comm, ncpu_n, ierr)
+      call MPI_Comm_size(comm, n_cpu_n, ierr)
 
       if (allocated(dist)) deallocate(dist)
-      allocate(dist(ncpu_n+1))
+      allocate(dist(n_cpu_n+1))
 
       ! number of rows/columns per cpu with the last one getting extra
-      dist(2:ncpu_n+1) = block_size*((n/block_size)/ncpu_n)
-      dist(ncpu_n+1) = dist(ncpu_n+1) + (n - sum(dist(2:ncpu_n+1)))
+      dist(2:n_cpu_n+1) = block_size*((n/block_size)/n_cpu_n)
+      dist(n_cpu_n+1) = dist(n_cpu_n+1) + (n - sum(dist(2:n_cpu_n+1)))
 
       dist(1) = indexing
-      do i=2, ncpu_n+1
+      do i=2, n_cpu_n+1
         dist(i)= dist(i) + dist(i-1)
       enddo
 
@@ -376,6 +378,65 @@ module mod_pastix
       return
 
     end subroutine distribute_matrix
+    
+    !> Perform column scaling after column-wise distribution
+    !! n - global number of rows
+    !! nnz - number of nnz in the local set of columns
+    !! the column_scaling array is defined externally
+    subroutine do_column_scaling(n,nnz,irn,jcn,val,comm)
+      use mod_integer_types
+      use global_distributed_matrix, only: column_scaling
+      use iso_c_binding
+      use tr_module
+  
+      implicit none
+      
+      integer(kind=int_all) :: n, nnz
+      integer(kind=C_INT), dimension(:), pointer :: irn, jcn
+      real(kind=C_DOUBLE), dimension(:), pointer :: val
+      
+      integer(kind=int_all) :: i, j, k, jmin, jmax, n_d
+      integer(kind=int_all), allocatable :: rcounts(:), displs(:)
+      real(kind=C_DOUBLE), allocatable   :: loc_col_scaling(:)
+      integer :: n_cpu_n, my_id_n, comm, ierr
+      integer(kind=int_all), parameter   :: Int1=1
+      
+      call MPI_Comm_rank(comm, my_id_n, ierr)
+      call MPI_Comm_size(comm, n_cpu_n, ierr)
+    
+      if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+      call tr_allocate(column_scaling,Int1,n,"column_scaling",CAT_DMATRIX)
+    
+    ! calculate local column scaling and gather the result to the zero MPI rank
+      jmin = minval(jcn(1:nnz))
+      jmax = maxval(jcn(1:nnz))
+      n_d = jmax - jmin + 1
+      allocate(loc_col_scaling(n_d))
+      loc_col_scaling(1:n_d) = 1.d-20
+      do k=1,nnz
+        j = jcn(k) - jmin + 1
+        loc_col_scaling(j) = min(max(loc_col_scaling(j),abs(val(k))),1d20)
+      enddo          
+      do k=1,nnz
+        j = jcn(k) - jmin + 1
+        val(k) = val(k)/loc_col_scaling(j)
+      enddo
+      allocate(rcounts(n_cpu_n),displs(n_cpu_n)); rcounts = 0
+      rcounts(my_id_n + 1) = n_d
+      call MPI_AllReduce(MPI_IN_PLACE, rcounts, n_cpu_n, MPI_INTEGER_ALL, MPI_SUM, comm, ierr)
+
+      displs(1) = 0
+      do i = 2, n_cpu_n
+        displs(i) = displs(i-1) + rcounts(i-1)
+      enddo
+      call MPI_Gatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, column_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      
+      deallocate(rcounts, displs, loc_col_scaling)
+      if (my_id_n.ne.0) then
+        if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+      endif    
+    
+    end subroutine do_column_scaling
 
 #endif
 end module mod_pastix

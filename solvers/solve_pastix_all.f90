@@ -513,31 +513,6 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
   
-  !----------------------colunm scaling of global distributed matrix
-  call clck_time(t0)
-  
-  if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
-  if (allocated(column_local))    call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
-  call tr_allocate(column_scaling,Int1,mumps_par%N,"column_scaling",CAT_DMATRIX)
-  call tr_allocate(column_local,Int1,mumps_par%N,"column_local",CAT_DMATRIX)
-  
-  column_local = 1.d-20;   column_scaling = 1.d-20
-  do k=1,nz_glob
-    j = jcn_glob(k)
-    column_local(j) = max(column_local(j),abs(A_glob(k)))
-  enddo
-  
-  call MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
-  
-  do k = 1, nz_glob
-    j = jcn_glob(k)
-    A_glob(k) = A_glob(k) / column_scaling(j)
-  enddo
-  
-  call clck_time(t1)
-  call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time scale :', tsecond
-  
   call clck_time(t0)
   
   if (.not. spm_initialized) then
@@ -564,7 +539,13 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
  
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond  
+  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond
+  
+  if (my_id.ne.0) then
+    if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
+    call tr_allocate(column_scaling,Int1,mumps_par%N,"column_scaling",CAT_DMATRIX)
+  endif
+  call MPI_Bcast(column_scaling,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
      
   do k=1,mumps_par%n
     deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)

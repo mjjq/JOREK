@@ -535,20 +535,16 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   call clck_time(t0)
 
   call pastix_factorize()   
-  call pastix_solve(mumps_par%rhs,REFINE=.true.)
+  call pastix_solve(mumps_par%n,mumps_par%rhs,REFINE=.true.)
  
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond
-    
-  do k=1,mumps_par%n
-    deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
-  enddo
 
-  if (allocated(column_local))  call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
+  deltas(1:mumps_par%n) =  mumps_par%rhs(1:mumps_par%n)
+
   if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
   if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)  
-  
   
   return
 end subroutine solve_pastix_all

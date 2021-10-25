@@ -178,7 +178,7 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 #ifdef WITH_PASTIX62
   if (use_pastix) then
     call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
-    call pastix_solve(mumps_par%rhs)
+    call pastix_solve(mumps_par%n,mumps_par%rhs)
   endif
 #endif
 
@@ -197,9 +197,11 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
         endif
       enddo
 #endif
+#ifndef WITH_PASTIX62
       do i=1,mumps_par%n
         mumps_par%rhs(i) =  mumps_par%rhs(i) / column_scaling(i)
       enddo
+#endif
     endif
 
     allocate(y_dum(ndof_glob))

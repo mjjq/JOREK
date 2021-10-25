@@ -1178,7 +1178,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     
     call MPI_Barrier(MPI_COMM_N,ierr)
     if (my_id_n.eq.0) call timestamp("Solve",my_id)
-    call pastix_solve(mumps_par%rhs)
+    call pastix_solve(mumps_par%n, mumps_par%rhs)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end
        call MPI_Barrier(MPI_COMM_MASTER,ierr)
@@ -1198,11 +1198,11 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
      
       rhs_tmp = 0.d0
       do i = 1, mumps_par%n
-        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor/column_scaling(i)
+        rhs_tmp(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor
       enddo
       write(*,*) my_id, "solution", mumps_par%rhs(1), mumps_par%rhs(mumps_par%n)
 
-      call MPI_AllReduce(RHS_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
+      call MPI_AllReduce(rhs_tmp,deltas,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
       call tr_deallocate(rhs_tmp,"rhs_tmp",CAT_PRECOND)
 
       call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)

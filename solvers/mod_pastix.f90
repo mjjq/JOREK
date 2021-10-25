@@ -10,7 +10,8 @@ module mod_pastix
   type(C_PTR) :: iparm, dparm
 
   integer(kind=C_INT), dimension(:), pointer :: loc2glob, glob2loc  ! mapping for column distribution
-  logical :: spm_initialized, spm_analyzed
+  real(kind=C_DOUBLE), allocatable   :: col_scaling(:)
+  logical :: spm_initialized, spm_analyzed, spm_scaled
 
   private
   public :: pastix_init, pastix_set_mat, pastix_analyze, &
@@ -155,10 +156,12 @@ module mod_pastix
       upd = .false.
       dflag = .false.
       eql = .false.
+      spm_scaled = .false.
 
       if(present(update)) upd = update
       if(present(distributed)) dflag = distributed
       if(present(equilibrium)) eql = equilibrium
+      
 
       ! if not already distributed distribute matrix column-wise
       ! add n_cpu>1
@@ -197,7 +200,10 @@ module mod_pastix
 
       endif
       
-      if (.not.eql) call do_column_scaling(n,nnz_d,irn,jcn,val,comm)
+      if (.not.eql) then
+        call do_column_scaling(n,nnz_d,irn,jcn,val,comm)
+        spm_scaled = .true.
+      endif
 
 
       !call MPI_Comm_rank(MPI_COMM_WORLD, my_id_n, ierr)
@@ -268,7 +274,7 @@ module mod_pastix
 
 !> Calculate the solution
 !! solution is placed into the rhs
-    subroutine pastix_solve(rhs, refine) bind(C)
+    subroutine pastix_solve(n, rhs, refine) bind(C)
 
       use iso_c_binding
       implicit none
@@ -276,6 +282,8 @@ module mod_pastix
       real(kind=C_DOUBLE), pointer, intent(inout) :: rhs(:)
       logical, intent(in), optional :: refine
       type(C_PTR) :: rhsc
+      integer, intent(in) :: n
+      integer :: i
 
       logical :: ref
       ref = .false.
@@ -285,6 +293,12 @@ module mod_pastix
       rhsc = c_loc(rhs)
 
       call ptx_solve(pastix_data, spm, rhsc, ref)
+      
+      if (spm_scaled) then
+        do i = 1, n
+          rhs(i) =  rhs(i)/col_scaling(i)
+        enddo
+      endif
 
     end subroutine pastix_solve
 
@@ -295,6 +309,7 @@ module mod_pastix
 
       call ptx_finalize(pastix_data, spm,  iparm, dparm)
       deallocate(loc2glob, glob2loc)
+      if (allocated(col_scaling))  deallocate(col_scaling)
 
     end subroutine pastix_finalize
 
@@ -394,7 +409,6 @@ module mod_pastix
 !! the column_scaling array is defined externally
     subroutine do_column_scaling(n,nnz,irn,jcn,val,comm)
       use mod_integer_types
-      use global_distributed_matrix, only: column_scaling
       use iso_c_binding
       use tr_module
   
@@ -412,9 +426,6 @@ module mod_pastix
       
       call MPI_Comm_rank(comm, my_id_n, ierr)
       call MPI_Comm_size(comm, n_cpu_n, ierr)
-    
-      if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
-      call tr_allocate(column_scaling,Int1,n,"column_scaling",CAT_DMATRIX)
     
     ! calculate local column scaling and gather the results to all ranks
       jmin = minval(jcn(1:nnz))
@@ -438,7 +449,10 @@ module mod_pastix
       do i = 2, n_cpu_n
         displs(i) = displs(i-1) + rcounts(i-1)
       enddo
-      call MPI_Allgatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, column_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, comm, ierr)
+      if (allocated(col_scaling))  deallocate(col_scaling)
+      allocate(col_scaling(n))
+      call MPI_Allgatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, col_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, comm, ierr)
+      deallocate(rcounts,displs,loc_col_scaling)
     
     end subroutine do_column_scaling
 

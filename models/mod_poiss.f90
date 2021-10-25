@@ -466,7 +466,7 @@ if (my_id == 0) then
                         MPI_COMM_SELF,UPDATE=.false.,DISTRIBUTED=.false.,EQUILIBRIUM=.true.)
     call pastix_analyze()    
     call pastix_factorize()
-    call pastix_solve(mumps_par%rhs,REFINE=.true.)
+    call pastix_solve(mumps_par%n,mumps_par%rhs,REFINE=.true.)
     call pastix_finalize() 
   endif  
 #endif

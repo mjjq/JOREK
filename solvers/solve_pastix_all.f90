@@ -540,13 +540,7 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond
-  
-  if (my_id.ne.0) then
-    if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
-    call tr_allocate(column_scaling,Int1,mumps_par%N,"column_scaling",CAT_DMATRIX)
-  endif
-  call MPI_Bcast(column_scaling,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
-     
+    
   do k=1,mumps_par%n
     deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
   enddo

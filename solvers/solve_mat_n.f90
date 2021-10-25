@@ -942,8 +942,8 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
       endif
       
-      if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)      
-
+      !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)      
+      if (my_id_n.eq.0) call timestamp("Set mat",my_id)
       call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,&
                 MPI_COMM_N,UPDATE=spss_analyzed,DISTRIBUTED=.not.centralize_harm_mat,EQUILIBRIUM=.false.)      
 
@@ -957,7 +957,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
           call clck_time(t0)
         endif
               
-        !if (my_id_n.eq.0) call timestamp("Reorder",my_id)
+        if (my_id_n.eq.0) call timestamp("Reorder",my_id)
         call strumpack_analyze(MPI_COMM_N)
         spss_analyzed = .true.
         if (my_id_n .eq.0) then                  ! elapsed time reorder end
@@ -972,7 +972,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       call MPI_Barrier(MPI_COMM_MASTER,ierr)
           call clck_time(t0)
         endif      
-      !if (my_id_n.eq.0) call timestamp("Factorize",my_id)
+      if (my_id_n.eq.0) call timestamp("Factorize",my_id)
       call strumpack_factorize(MPI_COMM_N)
       
       if (my_id_n.eq.0) then                   ! elapsed time facto end
@@ -997,7 +997,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
-    !if (my_id_n.eq.0) call timestamp("Solve",my_id)
+    if (my_id_n.eq.0) call timestamp("Solve",my_id)
     call strumpack_solve(n,mumps_par%rhs,MPI_COMM_N)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end
@@ -1051,7 +1051,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
     use mod_pastix, only: spm_initialized, spm_analyzed, pastix_init, pastix_set_mat, pastix_analyze, &
             pastix_factorize, pastix_solve, pastix_finalize
-    use matio_module, only :  save_mat_h5
+    use matio_module, only :  save_mat_h5, timestamp
     use mod_integer_types
   
     implicit none
@@ -1127,7 +1127,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       endif
       
       !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)
-        
+      if (my_id_n.eq.0) call timestamp("Set mat",my_id)
       call pastix_set_mat(n, nnz, mumps_par%irn, mumps_par%jcn, mumps_par%a, block_size, MPI_COMM_N,&
                 UPDATE=spm_analyzed, DISTRIBUTED=.not.centralize_harm_mat, EQUILIBRIUM=.false.)
                 
@@ -1137,7 +1137,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
           call clck_time(t0)
         endif
               
-        !if (my_id_n.eq.0) call timestamp("Reorder",my_id)
+        if (my_id_n.eq.0) call timestamp("Reorder",my_id)
         call pastix_analyze()
         spm_analyzed = .true.
         if (my_id_n .eq.0) then                  ! elapsed time reorder end
@@ -1152,7 +1152,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
       call MPI_Barrier(MPI_COMM_MASTER,ierr)
           call clck_time(t0)
         endif      
-      !if (my_id_n.eq.0) call timestamp("Factorize",my_id)
+      if (my_id_n.eq.0) call timestamp("Factorize",my_id)
       call pastix_factorize()
       
       if (my_id_n.eq.0) then                   ! elapsed time facto end
@@ -1177,7 +1177,7 @@ subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     endif    
     
     call MPI_Barrier(MPI_COMM_N,ierr)
-    !if (my_id_n.eq.0) call timestamp("Solve",my_id)
+    if (my_id_n.eq.0) call timestamp("Solve",my_id)
     call pastix_solve(mumps_par%rhs)
     
     if (my_id_n .eq.0) then                            ! elapsed time solve end

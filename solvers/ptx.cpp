@@ -181,6 +181,7 @@ extern "C" void ptx_solve(pastix_data_t **pastix_data_p, spmatrix_t **spm_p, dou
       (*rhs_p)[spm->loc2glob[i] - spm->baseval] = ((double *)x)[i];
     }
 
+    // the solution becomes available to all ranks
     MPI_Allreduce(MPI_IN_PLACE, (*rhs_p), spm->gN, MPI_DOUBLE, MPI_SUM, spm->comm);
 
     free(x);

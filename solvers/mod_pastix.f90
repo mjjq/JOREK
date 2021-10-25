@@ -113,6 +113,7 @@ module mod_pastix
   end interface
 
   contains
+!> Initialize PaStiX solver instance
     subroutine pastix_init(comm) bind(C)
         use, intrinsic :: iso_c_binding
         use mpi
@@ -126,11 +127,14 @@ module mod_pastix
         return
     end subroutine pastix_init
 
-!    subroutine pastix_set_mat(indexing, n, nnz, n_d, nnz_d, rptr, cptr, values, loc2glob, comm, update) bind(C)
+!> Prepare sparse matrix for pastix solver
+!! Matrix is distributed column-wise among MPI processes in comm
+!! The values are scaled such that the largest value in each column is 1
+!! The matrix is converted to CSC format as required by distributed PaStiX
     subroutine pastix_set_mat(n, nnz, irn, jcn, val, block_size, comm, &
                 update,distributed,equilibrium) bind(C)
 
-      use iso_c_binding
+      use, intrinsic :: iso_c_binding
       use mod_coicsr, only: coicsr
       use sorting_module, only: remove_duplicates, convert2csr
       implicit none
@@ -242,6 +246,7 @@ module mod_pastix
 
     end subroutine pastix_set_mat
 
+!> Perform matrix analysis/reordering
     subroutine pastix_analyze() bind(C)
 
       use iso_c_binding
@@ -251,6 +256,7 @@ module mod_pastix
 
     end subroutine pastix_analyze
 
+!> Perform numerical LU factorization
     subroutine pastix_factorize() bind(C)
 
       use iso_c_binding
@@ -260,6 +266,8 @@ module mod_pastix
 
     end subroutine pastix_factorize
 
+!> Calculate the solution
+!! solution is placed into the rhs
     subroutine pastix_solve(rhs, refine) bind(C)
 
       use iso_c_binding
@@ -280,8 +288,8 @@ module mod_pastix
 
     end subroutine pastix_solve
 
+!> Finalize PaStiX solver instance
     subroutine pastix_finalize() bind(C)
-
       use iso_c_binding
       implicit none
 
@@ -290,8 +298,9 @@ module mod_pastix
 
     end subroutine pastix_finalize
 
+!> Distribute matrix by the first array (irn or jcn) among MPI processes in comm
     subroutine distribute_matrix(indexing,block_size,n,nnz,n_d,nnz_d,irn,jcn,val,loc2glob,glob2loc,comm)
-    ! distibute by the first array (irn or jcn)
+      use iso_c_binding
       implicit none
 
       integer(kind=C_INT), dimension(:), pointer :: irn, jcn
@@ -379,10 +388,10 @@ module mod_pastix
 
     end subroutine distribute_matrix
     
-    !> Perform column scaling after column-wise distribution
-    !! n - global number of rows
-    !! nnz - number of nnz in the local set of columns
-    !! the column_scaling array is defined externally
+!> Perform column scaling after column-wise distribution
+!! n - global number of rows
+!! nnz - number of nnz in the local set of columns
+!! the column_scaling array is defined externally
     subroutine do_column_scaling(n,nnz,irn,jcn,val,comm)
       use mod_integer_types
       use global_distributed_matrix, only: column_scaling
@@ -407,7 +416,7 @@ module mod_pastix
       if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
       call tr_allocate(column_scaling,Int1,n,"column_scaling",CAT_DMATRIX)
     
-    ! calculate local column scaling and gather the result to the zero MPI rank
+    ! calculate local column scaling and gather the results to all ranks
       jmin = minval(jcn(1:nnz))
       jmax = maxval(jcn(1:nnz))
       n_d = jmax - jmin + 1
@@ -429,12 +438,7 @@ module mod_pastix
       do i = 2, n_cpu_n
         displs(i) = displs(i-1) + rcounts(i-1)
       enddo
-      call MPI_Gatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, column_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      
-      deallocate(rcounts, displs, loc_col_scaling)
-      if (my_id_n.ne.0) then
-        if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
-      endif    
+      call MPI_Allgatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, column_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, comm, ierr)
     
     end subroutine do_column_scaling
 

@@ -223,15 +223,13 @@ module pellet_module
     !   -Mean impurity ionization state and related quantities
     real*8  :: Z_imp, beta_imp, mu_imp
 
-    integer :: i_main_imp 
- 
     integer, intent(in) :: i_inj
     integer, intent(in) :: n_spi_begin
   
     i_main_imp = 0
     do i_main_imp=1,n_adas
       if (main_imp(i_main_imp) == 1) exit
-      if ((i_main_imp == n_adas) .and. with_impurity) then
+      if ((i_main_imp == n_adas) .and. with_impurities) then
         write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
         write(*,*) "ERROR: main_imp array:", main_imp
         stop
@@ -637,7 +635,7 @@ module pellet_module
     i_main_imp = 0
     do i_main_imp=1,n_adas
       if (main_imp(i_main_imp) == 1) exit
-      if ((i_main_imp == n_adas) .and. with_impurity) then
+      if ((i_main_imp == n_adas) .and. with_impurities) then
         write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
         write(*,*) "ERROR: main_imp array:", main_imp
         stop
@@ -927,6 +925,8 @@ module pellet_module
     real*8              :: real_spi_quantity(2)
 
     integer             :: i, i_p
+    integer             :: i_main_imp 
+ 
     logical             :: ferr
 
     ! variables related to check whether the shards data file is in its format
@@ -948,7 +948,7 @@ module pellet_module
     i_main_imp = 0
     do i_main_imp=1,n_adas
       if (main_imp(i_main_imp) == 1) exit
-      if ((i_main_imp == n_adas) .and. with_impurity) then
+      if ((i_main_imp == n_adas) .and. with_impurities) then
         write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
         write(*,*) "ERROR: main_imp array:", main_imp
         stop

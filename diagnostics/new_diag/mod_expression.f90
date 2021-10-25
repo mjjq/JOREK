@@ -599,6 +599,7 @@ module mod_expression
     real*8  :: coef_rad_1, Te_eV
     real*8  :: T0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
+    integer :: i_main_imp
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
     real*8  :: m_i_over_m_imp
     !   -Mean impurity ionization state
@@ -642,7 +643,16 @@ module mod_expression
     end if
 
 #ifdef WITH_Impurities
-     select case ( trim(imp_type(1)) )
+     i_main_imp = 0
+     do i_main_imp=1,n_adas
+       if (main_imp(i_main_imp) == 1) exit
+       if ((i_main_imp == n_adas) .and. with_impurity) then
+         write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
+         write(*,*) "ERROR: main_imp array:", main_imp
+         stop
+       endif
+     enddo
+     select case ( trim(imp_type(i_main_imp)) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
@@ -1540,7 +1550,7 @@ module mod_expression
           Te_corr_eV   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
           Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
   
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
+          call imp_cor(i_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
 	  
           alpha_imp = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
           beta_imp  = m_i_over_m_imp*Z_imp - 1.
@@ -1554,7 +1564,7 @@ module mod_expression
   
           if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
             Lrad = 0.
-            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+            call radiation_function(imp_adas(i_main_imp),imp_cor(i_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
             Lrad = Lrad * coef_rad_1
           else
             Lrad = 0.

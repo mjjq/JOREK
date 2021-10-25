@@ -157,6 +157,7 @@ real*8  :: ne_SI, Te_eV, Ti_eV
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
 #ifdef WITH_Impurities
 ! Atomic physics coefficients:
+integer :: i_main_imp
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp, m_imp
 !   -Mean impurity ionization state
@@ -292,6 +293,19 @@ local_E_ion           = 0.d0
 local_P_ei            = 0.d0
 local_P_ion           = 0.d0
 #endif
+#ifdef WITH_Impurities
+!=========imp_type======================
+i_main_imp = 0
+do i_main_imp=1,n_adas
+  if (main_imp(i_main_imp) == 1) exit
+  if ((i_main_imp == n_adas) .and. with_impurity) then
+    write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
+    write(*,*) "ERROR: main_imp array:", main_imp
+    stop
+  endif
+enddo
+!===========end=========================
+#endif
 
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
 
@@ -311,7 +325,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min,       &
 !$omp          ne_SI_min, Te_eV_min, rn0_min, P_e_tot, P_i_tot, P_e_int, P_i_int, P_e_ext, P_i_ext, &
-!$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
+!$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, i_main_imp,           &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
@@ -692,7 +706,7 @@ do ife = ife_min, ife_max
         ! Atomic physics parameters for Impurities
         !-------------------------------------------
 
-        select case ( trim(imp_type(1)) )
+        select case ( trim(imp_type(i_main_imp)) )
           case('D2')
             m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
             m_imp          = 2.
@@ -703,7 +717,7 @@ do ife = ife_min, ife_max
             m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
             m_imp          = 20.
           case default
-            write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
+            write(*,*) '!! Gas type "', trim(imp_type(i_main_imp)), '" unknown (in mod_injection_source.f90) !!'
             write(*,*) '=> We assume the gas is D2.'
             m_i_over_m_imp = central_mass/2.
             m_imp          = 2.
@@ -718,18 +732,18 @@ do ife = ife_min, ife_max
         Ti_eV = T0i/(EL_CHG*MU_ZERO*central_density*1.d20)
 
         if (allocated(P_imp)) deallocate(P_imp)
-        allocate(P_imp(0:imp_adas(1)%n_Z))
-        call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+        allocate(P_imp(0:imp_adas(i_main_imp)%n_Z))
+        call imp_cor(i_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                       p_out=P_imp,z_avg=Z_imp, z_avg_Te=dZ_imp_dT)
 
-        if (allocated(imp_adas(1)%ionisation_energy)) then
+        if (allocated(imp_adas(i_main_imp)%ionisation_energy)) then
    
           ! Calculate the ionization potential energy and its derivative wrt. temperature
           E_ion     = 0.
           E_ion_bg  = 13.6
-          do ion_i=1, imp_adas(1)%n_Z
+          do ion_i=1, imp_adas(i_main_imp)%n_Z
             do ion_k=1, ion_i
-              E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+              E_ion     = E_ion + P_imp(ion_i)*imp_adas(i_main_imp)%ionisation_energy(ion_k)
             end do
           end do
           ! Convert from eV to SI unit
@@ -765,7 +779,7 @@ do ife = ife_min, ife_max
    
         ! First get the value of Z_eff
         Z_eff        = r0_corr - rn0_corr
-        do ion_i=1, imp_adas(1)%n_Z
+        do ion_i=1, imp_adas(i_main_imp)%n_Z
           Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
           Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
         end do
@@ -783,8 +797,8 @@ do ife = ife_min, ife_max
 
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
-          !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad)
+          !call radiation_function(imp_adas(i_main_imp),imp_cor(i_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
+          call radiation_function_linear(imp_adas(i_main_imp),imp_cor(i_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad)
         else
           Lrad = 0.
         end if
@@ -940,7 +954,7 @@ do ife = ife_min, ife_max
         source_imp = 0.d0
         source_bg  = 0.d0
 
-        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
+        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp,i_main_imp)
 
         ! Frictional heat source
         fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&
@@ -1272,7 +1286,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ! Atomic physics parameters for Impurities
       !-------------------------------------------
 
-      select case ( trim(imp_type(1)) )
+      select case ( trim(imp_type(i_main_imp)) )
         case('D2')
           m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
         case('Ar')
@@ -1280,7 +1294,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         case('Ne')
           m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
         case default
-          write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
+          write(*,*) '!! Gas type "', trim(imp_type(i_main_imp)), '" unknown (in mod_injection_source.f90) !!'
           write(*,*) '=> We assume the gas is D2.'
           m_i_over_m_imp = central_mass/2.
       end select
@@ -1291,8 +1305,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
    
       if (allocated(P_imp)) deallocate(P_imp)
-      allocate(P_imp(0:imp_adas(1)%n_Z))
-      call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+      allocate(P_imp(0:imp_adas(i_main_imp)%n_Z))
+      call imp_cor(i_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                     p_out=P_imp,z_avg=Z_imp,z_avg_Te=dZ_imp_dT)
       ! Convert gradient in T(K) in to gradient in T (eV)
       dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
@@ -1327,7 +1341,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
       ! First get the value of Z_eff
       Z_eff        = r0_corr - rn0_corr
-      do ion_i=1, imp_adas(1)%n_Z
+      do ion_i=1, imp_adas(i_main_imp)%n_Z
         Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
       end do
       Z_eff        = Z_eff / ne_JOREK

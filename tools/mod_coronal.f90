@@ -418,16 +418,20 @@ end subroutine interpolate_coronal_spl
 !> 
 !> set logscale y
 !> p for [i=2:20] 'charge_distribution.dat' u 1:i t ''.(i-2) w l
-subroutine output_coronal(cor)
+subroutine output_coronal(cor,i_imp)
 class(coronal), intent(in)      :: cor !< Coronal equilibrium type
+integer, intent(in)             :: i_imp !< Coronal equilibrium type
 
 ! Temporary variable for charge state distribution
 integer             :: i_T, i_ion
 real*8, allocatable :: P_imp(:)
 real*8              :: Te_eV, Lrad
 real*8              :: Z_eff
+character(len=256)  :: filename
 
-open(20,file="charge_distribution.dat")
+
+write (filename,'(a,a)') trim(imp_type(i_imp)), "_charge_distribution.dat"
+open(20,file=trim(filename))
 
 write(20,'(4A22)',advance='no') 'temperature (log10(K))', 'charge states', 'summation', 'effective charge'
 write(20,'(A22)') 'radiation function'

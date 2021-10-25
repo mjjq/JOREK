@@ -771,6 +771,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,INTG_FMT) 'n_adas              ',  n_adas
      do i = 1, n_adas
        write(*,CHAR_FMT2) 'imp_type(',i,')    ', trim(imp_type(i))
+       write(*,INTG_FMT)  'main_imp(',i,')    ', main_imp(i)
      end do
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
      write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start

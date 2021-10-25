@@ -67,7 +67,7 @@ module mod_impurity
         
         ! This is to output a coronal equilibrium charge distribution as a
         ! function of temperature assuming constant density
-        if (my_id == 0) call output_coronal(imp_cor(i))
+        if (my_id == 0) call output_coronal(imp_cor(i),i)
       end do
     end if
 

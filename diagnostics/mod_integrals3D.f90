@@ -325,7 +325,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min,       &
 !$omp          ne_SI_min, Te_eV_min, rn0_min, P_e_tot, P_i_tot, P_e_int, P_i_int, P_e_ext, P_i_ext, &
-!$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, i_main_imp,           &
+!$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
@@ -341,6 +341,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp          nimp_bg, ksi_ion, GAMMA, use_imp_adas,                                          &
+#endif
+#if (defined WITH_Impurities)
+!$omp          i_main_imp,                                                                     &
 #endif
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
 !$omp          wgauss_copy, varmin, varmax)                                                    &

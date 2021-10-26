@@ -209,8 +209,8 @@ subroutine preset_parameters
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
-  T_min              = 1.0d-20
-  rho_min            = 1.0d-20
+  T_min              = 4.02d-4! 2.01d-5*central_density*Tmin_ev (cd = 1, 20 eV)
+  rho_min            = 1.d-3 !1.0d-20
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)

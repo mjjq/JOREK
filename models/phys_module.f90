@@ -756,7 +756,7 @@ module phys_module
   real*8              :: D_imp_extra_p           !< Additional impurity diffusivity in phi-direction
   real*8              :: D_imp_extra_neg         !< Additional impurity diffusion coefficient in regions with negative impurity density
   real*8              :: D_imp_extra_neg_thresh  !< D_imp_extra_neg becomes effective if rho_imp < D_imp_extra_neg_thresh
-  real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
+  real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.) value in jorek units: 2.01d-5*central_density*Tmin_ev (preset central_density = 1, 20 eV)
   real*8              :: rho_min            !< minimum density
 
   real*8              :: ne_SI_min          !< minimum e density (in SI unit) below which we cut-off the radiation loss

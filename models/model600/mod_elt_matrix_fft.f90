@@ -1249,7 +1249,7 @@ do i=1,n_vertex_max
                          - tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep       &
 !====================================New TG_num terms=================================
-                         - tgnum_u * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                         - tgnum_u * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep             &
 !===============================End of NewTG_num terms==============================
 
@@ -1859,10 +1859,10 @@ do i=1,n_vertex_max
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)                                         &
                                       * ( v_x * u_y - v_y * u_x)                                                 * xjac * theta * tstep * tstep &
 !====================================New TG_num terms=================================
-                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u_y - r0_y * u_x) &
+                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u_y - r0_y_hat * u_x) &
                                               * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep &
               
-                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
                                               * ( v_x * u_y - v_y * u_x) * theta * xjac * tstep * tstep & 
 
 !===============================End of NewTG_num terms==============================
@@ -1895,7 +1895,7 @@ do i=1,n_vertex_max
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w_x * u0_y - w_y * u0_x)                                      &
                                             * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
 !====================================New TG_num terms=================================
-                                    + tgnum_u * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                    + tgnum_u * 0.25d0 * w * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
                                               * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep 
 
 !===============================End of NewTG_num terms==============================
@@ -1925,7 +1925,7 @@ do i=1,n_vertex_max
                                       + tgnum_u * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)                                            &
                                       * ( v_x * u0_y - v_y * u0_x)                                           * xjac * theta * tstep * tstep     &
 !====================================New TG_num terms=================================
-                                      + tgnum_u * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                                      + tgnum_u * 0.25d0 * w0 * BigR**3 * (rho_x_hat * u0_y - rho_y_hat * u0_x) &
                                                 * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep &
 
 !===============================End of NewTG_num terms==============================
@@ -2224,6 +2224,7 @@ do i=1,n_vertex_max
                     endif
   
                     amat_k(var_vpar,var_psi) = - 0.5d0 * r0 * vpar0**2 * BB2_psi * F0 / BigR * v_p    * xjac * theta * tstep 
+                    amat(var_vpar,var_u) = 0.d0
 
                     !---------------------------------------- NEO
                     if ( NEO ) then

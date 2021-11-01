@@ -137,6 +137,7 @@ real*8     :: alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis, alpha_e_tri
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: Lrad_imp_bg, dLrad_imp_bg_dT                    ! Radiation rate and its derivative wrt. temperature
+real*8     :: r_imp                                           ! Background impurity density in JOREK unit
 real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Temperature used in radiation rate
 real*8     :: Te_eV                                           ! Uncorrected temperature
 real*8     :: ne_SI                                           ! Electron density used in radiation rate

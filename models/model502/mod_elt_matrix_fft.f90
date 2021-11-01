@@ -1079,7 +1079,7 @@ do ms=1, n_gauss
         dLrad_imp_bg_dT = 0.0
         call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    &
                                        log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp_bg,dLrad_imp_bg_dT)
-        dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT
+        dLrad_imp_bg_dT = dLrad_imp_bg_dT * dTe0_corr_dT
       else
         Lrad_imp_bg = 0.
         dLrad_imp_bg_dT = 0.

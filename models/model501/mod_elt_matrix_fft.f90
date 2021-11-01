@@ -128,7 +128,7 @@ real*8     :: t_norm
 real*8     :: Dn0x, Dn0y, Dn0p
 
 ! Atomic physics coefficients:
-integer    :: i_main_imp
+integer    :: i_main_imp, i_imp
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp
 !   -Mean impurity ionization state
@@ -139,6 +139,7 @@ real*8     :: alpha_imp, dalpha_imp_dT, d2alpha_imp_dT2, alpha_imp_bis, alpha_im
 real*8     :: beta_imp, dbeta_imp_dT
 !   -Radiation from injected impurities
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
+real*8     :: Lrad_imp_bg, dLrad_imp_bg_dT                    ! Radiation rate and its derivative wrt. temperature
 real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Temperature used in radiation rate
 real*8     :: Te_eV                                           ! Uncorrected temperature
 real*8     :: ne_SI                                           ! Electron density used in radiation rate
@@ -965,15 +966,30 @@ do ms=1, n_gauss
    ! --- Radiation from background impurity
    !--------------------------------------------------------
 
-    Arad_bg = 2.4d-31
-    Brad_bg = 20.
-    Crad_bg = 0.8
+    frad_bg = 0. 
+    dfrad_bg_dT = 0.
+    do i_imp =1, n_adas
+      if (i_imp == i_main_imp) cycle
+      r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
+      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+        Lrad_imp_bg = 0.0
+        dLrad_imp_bg_dT = 0.0
+        call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                       log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp_bg,dLrad_imp_bg_dT)
+        dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT            
+      else     
+        Lrad_imp_bg = 0.
+        dLrad_imp_bg_dT = 0.
+      end if
+      if (dLrad_imp_bg_dT/=dLrad_imp_bg_dT) then
+        write(*,*) "WARNING: dLrad_imp_bg_dT ", dLrad_imp_bg_dT
+        stop
+      end if
 
-    frad_bg     = (GAMMA-1.d0)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+      frad_bg = frad_bg + r_imp * Lrad_imp_bg
+      dfrad_bg_dT =  dfrad_bg_dT + r_imp * dLrad_imp_bg_dT 
 
-    dfrad_bg_dT = -(GAMMA-1.d0)/2.d0*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+    end do
 
 !--------------------------------------------------------
 
@@ -1253,7 +1269,7 @@ do ms=1, n_gauss
 
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
                     - v * BigR * (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad         * xjac * tstep  &
-                    - v * BigR * r0_corr * frad_bg                                     * xjac * tstep  
+                    - v * BigR * (r0_corr+beta_imp*rn0_corr) * frad_bg                 * xjac * tstep  
 
          rhs_ij_6_k =  - (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T * xjac * tstep  &
                        - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )   * xjac * tstep  &
@@ -2043,7 +2059,8 @@ do ms=1, n_gauss
                            - v * BigR * T * (GAMMA - 1.) * deta_dT_ohm * (zj0/BigR)**2                            * xjac * theta * tstep  &
                            + v * BigR * T * (r0 + beta_imp*rn0) * rn0 * dLrad_dT                                  * xjac * theta * tstep  &
                            + v * BigR * T * dbeta_imp_dT * rn0**2 * Lrad                                          * xjac * theta * tstep  &
-                           + v * BigR * T * r0 * dfrad_bg_dT                                                      * xjac * theta * tstep
+                           + v * BigR * T * (r0 + beta_imp*rn0) * dfrad_bg_dT                                     * xjac * theta * tstep  &
+                           + v * BigR * T * dbeta_imp_dT * rn0 * frad_bg                                          * xjac * theta * tstep
  
              amat_66_k = + (ZKpar_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T    * xjac * theta * tstep &
 
@@ -2189,7 +2206,8 @@ do ms=1, n_gauss
                        + v * alpha_imp * rhon * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
                        + v * alpha_imp * rhon * GAMMA * T0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
 
-                       + v * BigR * rhon * (r0 + 2*beta_imp*rn0) * Lrad                          * xjac * theta * tstep
+                       + v * BigR * rhon * (r0 + 2*beta_imp*rn0) * Lrad                          * xjac * theta * tstep &
+                       + v * BigR * rhon * beta_imp * frad_bg                                    * xjac * theta * tstep
 
              amat_68_n = v * alpha_imp * T0 * F0 / BigR * Vpar0 * rhon_p               * xjac * theta * tstep &
 !=============== The ionization potential energy term=========================

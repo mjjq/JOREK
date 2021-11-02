@@ -589,15 +589,15 @@ module mod_expression
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
     real*8  :: ne_SI                              ! Electron density used in radiation rate
+    real*8  :: Lrad_imp, r_imp, i_imp, frad_bg
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg
-    real*8  :: Lrad_imp, r_imp, i_imp
+    real*8  :: Arad_bg, Brad_bg, Crad_bg
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
     real*8  :: coef_rad_1, Te_eV
-    real*8  :: T0_corr, r0_corr, rn0_corr
+    real*8  :: Te0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
     integer :: i_main_imp
     !   -Mass ratio between main ions and impurites (m_i/m_imp)

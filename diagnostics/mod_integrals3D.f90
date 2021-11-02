@@ -168,7 +168,7 @@ real*8  :: Te_corr_eV,  dT0e_corr_dT, Ti_corr_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
-integer*8  :: ion_i, ion_k, i_phi
+integer*8  :: ion_i, ion_k, i_phi, i_imp, Lrad_imp, frad_bg
 #endif
 #ifdef WITH_Impurities
 #ifdef WITH_TiTe

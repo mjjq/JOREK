@@ -385,7 +385,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
 !$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
 !$omp           Arad_bg, Brad_bg, Crad_bg,                                                     &
-!$omp           Lrad_imp, coef_prad_si,                                                        &
+!$omp           coef_prad_si,                                                                  &
 #endif
 !$omp           omp_nthreads,omp_tid)
 

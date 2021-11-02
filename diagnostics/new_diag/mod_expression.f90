@@ -1496,7 +1496,7 @@ module mod_expression
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 
-   Te_corr_eV = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+   Te_corr_eV = corr_neg_temp(Te0)/(EL_CHG*MU_ZERO*central_density * 1.d20)
 
    if (use_imp_adas) then
      call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
@@ -1546,9 +1546,9 @@ module mod_expression
 
 #ifdef WITH_Impurities
 
-          T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
-          Te_corr_eV   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-          Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+          Te0_corr = corr_neg_temp(Te0,(/5.d-1,5.d-1/))
+          Te_corr_eV   = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV = Te0/(EL_CHG*MU_ZERO*central_density * 1.d20)
   
           call imp_cor(i_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
 	  
@@ -1571,6 +1571,26 @@ module mod_expression
           end if
   
           ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
+          frad_bg = 0.
+          do i_imp = 1, n_adas
+            if (i_imp == i_main_imp) cycle
+            r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
+            if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+              Lrad_imp = 0.0
+              if ( units == SI_UNITS ) then
+                call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
+                                               log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)
+                frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
+              else if ( units == JOREK_UNITS ) then
+                call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
+                                               log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
+                frad_bg = frad_bg + r_imp * Lrad_imp 
+              endif
+            else     
+              Lrad_imp = 0.
+              frad_bg = frad_bg
+            end if   
+          end do 
   
 #endif
 
@@ -1965,7 +1985,7 @@ module mod_expression
 #endif
 #ifdef WITH_Impurities
               case ( 'radiation' )
-                res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad
+                res = (r0_corr + beta_imp*rn0_corr) * (rn0_corr * Lrad + frad_bg) * fact_rad
 #endif
 
               case default

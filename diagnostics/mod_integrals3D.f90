@@ -337,10 +337,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          ns_phi, ns_radius, ns_deltaphi, ns_tor_norm, spi_tor_rot, local_E_ion,          &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI, local_P_ion,&
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type, local_P_ei,  &
-!$omp          n_adas,                                                                         &
+!$omp          n_adas, nimp_bg,                                                                &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-!$omp          nimp_bg, ksi_ion, GAMMA, use_imp_adas,                                          &
+!$omp          ksi_ion, GAMMA, use_imp_adas,                                                   &
 #endif
 #if (defined WITH_Impurities)
 !$omp          i_main_imp,                                                                     &
@@ -365,7 +365,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           eta_T_ohm,                                                              &
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-!$omp           rn0, rn0_corr,                                                                 &
+!$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp,                                       &
 #endif
 #ifdef WITH_Impurities
 !$omp           source_bg, source_imp,                                                         &
@@ -383,8 +383,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
 !$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
-!$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
-!$omp           Lrad_imp, coef_prad_si, i_imp,                                                 &
+!$omp           Arad_bg, Brad_bg, Crad_bg,                                                     &
+!$omp           Lrad_imp, coef_prad_si,                                                        &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -809,9 +809,24 @@ do ife = ife_min, ife_max
         Lrad = Lrad * m_i_over_m_imp
         E_ion = E_ion * m_i_over_m_imp
 
-        local_radiation_phi(mp) = local_radiation_phi(mp) + ne_SI * rn0_corr * central_density * 1.d20 * Lrad &
-                          * bigR * xjac * wst * delta_phi        
-        local_radiation = local_radiation + ne_SI * rn0_corr * central_density * 1.d20 * Lrad &
+        frad_bg = 0. 
+        do i_imp = 1, n_adas     
+          if (i_imp == i_main_imp) cycle
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
+            Lrad_imp = 0.0
+            call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                         log10(Te_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)           
+          else     
+            Lrad_imp = 0.
+          end if
+          frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
+        end do
+
+        local_radiation_phi(mp) = local_radiation_phi(mp) &
+                                  + ne_SI * (rn0_corr * central_density * 1.d20 * Lrad + frad_bg)&
+                                  * bigR * xjac * wst * delta_phi        
+        local_radiation = local_radiation &
+                          + ne_SI * (rn0_corr * central_density * 1.d20 * Lrad + frad_bg)&
                           * bigR * xjac * wst * delta_phi 
         local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
                           * bigR * xjac * wst * delta_phi

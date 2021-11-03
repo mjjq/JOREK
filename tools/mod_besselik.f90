@@ -10,11 +10,12 @@
 ! publications integrating using the Gauss-Laguerre integration method.
 ! At the moment, only methods for variable x>0 and order nu>0 are implemented.
 module mod_besselik
-use constants,only : PI
+use constants,only: PI
 implicit none
 
 private
 public besselk_posxnu
+public split_array_value
 
 ! module variables
 real*8,parameter :: fp_min=1.d-30  !< value near the minimum floating point value
@@ -70,7 +71,7 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
 
   ! separate variables in larger and smaller than x_val_min
   mu=nu-int(nu+5.d-1)
-  call  split_array_value(Nx,x,x_val_min,N_lt_minx,N_ge_minx,x_lt_minx,x_ge_minx)
+  !call  split_array_value(Nx,x,x_val_min,N_lt_minx,N_ge_minx,x_lt_minx,x_ge_minx)
   ! compute the modified bessel function 2nd kind for x<x_val_min
   ! compute the modified bessel function 2nd kind for x>=x_val_min
 
@@ -88,11 +89,11 @@ N_ge_minx,x_lt_minx,x_ge_minx)
   integer,intent(out) :: N_lt_minx,N_ge_minx
   real*8,dimension(Nx),intent(out) :: x_lt_minx,x_ge_minx
 
-  N_lt_minx = count(x.lt.x_val_min)
+  N_lt_minx = count(x.lt.x_val)
   N_ge_minx = Nx-N_lt_minx
-  where(x.lt.x_val_min)
+  where(x.lt.x_val)
     x_lt_minx(1:N_lt_minx) = x
-  elsewhere
+  elsewhere(x.ge.x_val)
     x_ge_minx(1:N_ge_minx) = x
   endwhere
 

@@ -20,7 +20,7 @@ public split_array_value
 ! module variables
 real*8,parameter :: fp_min=1.d-30  !< value near the minimum floating point value
 real*8,parameter :: x_val_min=2.d0 !< x value smaller than which the small x 
-                                !< approximation of the bessel function is used
+                                   !< approximation of the bessel function is used
 
 contains
 
@@ -50,11 +50,12 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
 	real*8,dimension(Nx),intent(out) :: Knu,dKnu
   integer                          :: ierr
   ! internal variables
-  integer                         :: ii,it,max_it
-  integer                         :: N_ge_minx,N_lt_minx !< N of x larger and smaller than x_val_min
-  real*8                          :: err,tol
-  real*8                          :: mu !< order of the recurrence
-  real*8,dimension(Nx)            :: x_ge_minx,x_lt_minx !< values larger and smaller than x_val_min
+  integer               :: max_it
+  integer               :: N_ge_minx,N_lt_minx     !< N of x larger and smaller than x_val_min
+  integer,dimension(Nx) :: ids_ge_minx,ids_lt_minx !< x-ids for array reconstruction
+  real*8                :: err,tol
+  real*8                :: mu                      !< order of the recurrence
+  real*8,dimension(Nx)  :: x_ge_minx,x_lt_minx     !< values larger and smaller than x_val_min
 
   ! check inputs
   max_it = 100000; tol = 1.d-16;
@@ -71,14 +72,27 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
 
   ! separate variables in larger and smaller than x_val_min
   mu=nu-int(nu+5.d-1)
-  !call  split_array_value(Nx,x,x_val_min,N_lt_minx,N_ge_minx,x_lt_minx,x_ge_minx)
+  call  split_array_value(Nx,x,x_val_min,N_lt_minx,N_ge_minx,&
+	x_lt_minx,x_ge_minx,ids_lt_minx,ids_ge_minx)
   ! compute the modified bessel function 2nd kind for x<x_val_min
   ! compute the modified bessel function 2nd kind for x>=x_val_min
 
 end subroutine besselk_posxnu
 
+! This procedure split an array into two different arrays
+! containing x values below and above a threshold value.
+! The element ids in the original array are returned as well.
+! There is probably a much better way for doing it!!!!
+! inputs:
+! outputs:
+!   N_lt_minx:   (integer) number of x below threshold
+!   N_ge_minx:   (integer) number of x above threshold
+!   x_lt_minx:   (double)(Nx) array containing x below threshold
+!   x_ge_minx:   (double)(Nx) array containing x above threshold
+!   ids_lt_minx: (integer)(Nx) x-ids of x below threshold
+!   ids_ge_minx: (integer)(Nx) x-ids of x above threshold
 pure subroutine split_array_value(Nx,x,x_val,N_lt_minx,&
-N_ge_minx,x_lt_minx,x_ge_minx)
+N_ge_minx,x_lt_minx,x_ge_minx,ids_lt_minx,ids_ge_minx)
   implicit none
   
   ! inputs
@@ -88,15 +102,27 @@ N_ge_minx,x_lt_minx,x_ge_minx)
   ! outputs
   integer,intent(out) :: N_lt_minx,N_ge_minx
   real*8,dimension(Nx),intent(out) :: x_lt_minx,x_ge_minx
+  integer,dimension(Nx),intent(out) :: ids_lt_minx,ids_ge_minx
+	! variables
+	integer :: ii,it1,it2
+	logical,dimension(Nx) :: mask_lt_minx
 
-  N_lt_minx = count(x.lt.x_val)
-  N_ge_minx = Nx-N_lt_minx
-  where(x.lt.x_val)
-    x_lt_minx(1:N_lt_minx) = x
-  elsewhere(x.ge.x_val)
-    x_ge_minx(1:N_ge_minx) = x
-  endwhere
-
+  ! extract in two different arrays x values abobe
+	! and below the threshold, store their ids as well
+  mask_lt_minx = (x.lt.x_val)
+  N_lt_minx = 0; N_ge_minx = 0;
+	do ii=1,Nx
+	  if(mask_lt_minx(ii)) then
+		  N_lt_minx = N_lt_minx + 1
+			ids_lt_minx(N_lt_minx) = ii
+		  x_lt_minx(N_lt_minx) = x(ii)
+		else
+		  N_ge_minx = N_ge_minx + 1
+			ids_ge_minx(N_ge_minx) = ii
+			x_ge_minx(N_ge_minx) = x(ii)
+		endif
+	enddo
+  
 end subroutine split_array_value
 
 end module mod_besselik

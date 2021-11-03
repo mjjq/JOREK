@@ -5,23 +5,44 @@ use fruit
 implicit none
 
 !> variables common to all tests
-integer,parameter :: max_it=1000000 !< maximum number of iterations
-real*8,parameter :: eps=1.d-10
-real*8,parameter :: tol=1.d-16 !< tolerance for success
-integer :: Nx,Nx_lt_minx,Nx_ge_minx
-real*8 :: x_thre
-real*8,dimension(:),allocatable :: x,x_lt_minx,x_ge_minx
+integer,parameter               :: max_it=1000000 !< maximum number of iterations
+real*8,parameter                :: eps=1.d-10     !< variation values
+real*8,parameter                :: tol=1.d-16     !< tolerance for success
+integer                         :: Nx             !< number of elements
+real*8                          :: x_thre         !< threshold value
+real*8,dimension(:),allocatable :: x              !< input array x
 
+! routines for checking and allocating arrays
+interface allocate_check
+  module procedure allocate_check_integer
+	module procedure allocate_check_double
+end interface
+
+! routines for checking and deallocating arrays
+interface deallocate_check
+  module procedure deallocate_check_integer
+	module procedure deallocate_check_double
+end interface
 contains
 
-!> This function initialise the module variables
+! This function initialise the module variables
+! inputs:
+!   Nx_val:    (integer)(optional) size of the x array
+!   Nx_lt_val: (integer)(optional) number of x lower than threshold
+!   Nx_ge_val: (integer)(optional) number of x higher than threshold
+!   x_val:     (double)(optional) threshold value
+!   x_min:     (double)(optional) lower bound of x
+!   x_max:     (double)(optional) upper bound of x
 subroutine setup(Nx_val,Nx_lt_val,Nx_ge_val,x_val,x_min,x_max)
   implicit none
-
+  
+	! inputs
   integer,intent(in),optional :: Nx_val,Nx_lt_val,Nx_ge_val
   real*8,intent(in),optional :: x_val,x_min,x_max
-	integer :: Nx_lt_ge
+	! variables
+	integer :: Nx_lt_ge,Nx_lt_minx,Nx_ge_minx
 	integer,dimension(:),allocatable :: ids
+	real*8,dimension(:),allocatable  :: rnd
 	real*8 :: x_val_loc,x_min_loc,x_max_loc
 
   ! set default inputs
@@ -42,24 +63,21 @@ subroutine setup(Nx_val,Nx_lt_val,Nx_ge_val,x_val,x_min,x_max)
   Nx_lt_ge = Nx_lt_minx+Nx_ge_minx
 
 	! allocate arrays for tests
-	call allocate_check_double(Nx,x)
-	call allocate_check_double(Nx,x_lt_minx)
-  call allocate_check_double(Nx,x_ge_minx)
+	call allocate_check(Nx_lt_ge,ids)
+	call allocate_check(Nx,x)
+	call allocate_check(Nx,rnd)
   ! allocate internal arrays
-	allocate(ids(Nx_lt_ge))
-	x=0.d0; x_lt_minx=0.d0; x_ge_minx=0.d0;
+	x=0.d0; rnd=0.d0;
+
 	! generate random sequences of xs and ids (we use gnu rng for the tests)
   call generate_int_rnd_array(Nx_lt_ge,1,Nx,ids)
-	call random_number(x_lt_minx(1:Nx_lt_minx))
-  x(ids(1:Nx_lt_minx)) = x_min_loc + (x_thre-eps-x_min_loc)*x_lt_minx(1:Nx_lt_minx)
-	call random_number(x_ge_minx(1:Nx_ge_minx))
-	x(ids(Nx_lt_minx+1:Nx_lt_ge)) = x_thre + (x_max_loc-x_thre)*x_ge_minx(1:Nx_ge_minx)
-	! reorder arrays for comparison
-	x_lt_minx = 0.d0; x_ge_minx=0.d0
-	x_lt_minx(ids(1:Nx_lt_minx)) = x(ids(1:Nx_lt_minx))
-	x_ge_minx(ids(Nx_lt_minx+1:Nx_ge_minx)) = x(ids(Nx_lt_minx+1:Nx_lt_ge))
-	! deallocate internal arrays
-  deallocate(ids)
+	call random_number(rnd)
+  x(ids(1:Nx_lt_minx)) = x_min_loc + (x_thre-eps-x_min_loc)*rnd(1:Nx_lt_minx)
+	x(ids(Nx_lt_minx+1:Nx_lt_ge)) = x_thre + (x_max_loc-x_thre)*rnd(Nx_lt_minx+1:Nx_lt_ge)
+
+	! deallocate arrays
+	call deallocate_check(ids)
+	call deallocate_check(rnd)
 
 end subroutine setup
 
@@ -67,8 +85,6 @@ end subroutine setup
 subroutine teardown()
   implicit none
 	call deallocate_check_double(x)
-  call deallocate_check_double(x_lt_minx)
-	call deallocate_check_double(x_ge_minx)
 end subroutine teardown
 
 ! This function testst the split_array_value routine
@@ -78,39 +94,53 @@ use fruit
   implicit none
 
 	! variable for running the test
-	integer :: ii,N_zeros,Nx_lt_minx_sol,Nx_ge_minx_sol !< values from routine
-	real*8,dimension(Nx) :: x_lt_minx_sol,x_ge_minx_sol !< solution from routine
-
-  ! init array
+	integer :: Nx_lt_minx_sol,Nx_ge_minx_sol !< values from routine
+	real*8,dimension(Nx) :: x_sol,x_lt_minx_sol,x_ge_minx_sol !< solution from routine
+  integer,dimension(Nx) :: ids_lt_minx_sol,ids_ge_minx_sol
+  
+	! init array
 	x_lt_minx_sol=0.d0; x_ge_minx_sol=0.d0
   ! apply solution
 	call split_array_value(Nx,x,x_thre,Nx_lt_minx_sol,&
-	Nx_ge_minx_sol,x_lt_minx_sol,x_ge_minx_sol)
-  N_zeros = count(x.eq.0.d0)
-	if(0.d0.lt.x_thre) then
-	  Nx_lt_minx = Nx_lt_minx+N_zeros
-	else
-	  Nx_ge_minx = Nx_ge_minx+N_zeros
-	endif
+	Nx_ge_minx_sol,x_lt_minx_sol,x_ge_minx_sol,&
+	ids_lt_minx_sol,ids_ge_minx_sol)
+	
+	! reconstruct solution
+	x_sol(ids_lt_minx_sol) = x_lt_minx_sol(1:Nx_lt_minx_sol)
+	x_sol(ids_ge_minx_sol) = x_ge_minx_sol(1:Nx_ge_minx_sol)
+
 	! check results
-	call assert_equals(Nx_lt_minx_sol,Nx_lt_minx,&
-	"Number of x-values smaller than x_threshold must be the same")
-	call assert_equals(Nx_ge_minx_sol,Nx_ge_minx,&
-	"Number of x-values greater than x_threshold must be the same")
-	call assert_equals(x_lt_minx_sol,x_lt_minx,Nx,tol,&
-	"x-values smaller than x_threshold must be the same")
-	call assert_equals(x_ge_minx_sol,x_ge_minx,Nx,tol,&
-	"x-values grater than x_threshold must be the same")
+	call assert_true(all(x_lt_minx_sol(Nx_lt_minx_sol+1:Nx).le.tol),&
+	"Error in x_lt_minx order: non-zero values found in tail")
+	call assert_true(all((x_ge_minx_sol(Nx_ge_minx_sol+1:Nx)).le.tol),&
+	"Error in x_lt_minx order: non-zero values found in tail")
+	call assert_equals(x_sol,x,Nx,tol,&
+	"Constructed and reconstructed x array must be the same")
 
 end subroutine test_split_array_value
 
-! allocate array if not allocated
+! allocate integer array if not allocated
+subroutine allocate_check_integer(N,array)
+  implicit none
+	integer,intent(in) :: N
+	integer,dimension(:),allocatable,intent(inout) :: array
+	if(.not.allocated(array)) allocate(array(N))
+end subroutine allocate_check_integer
+
+! allocate double array if not allocated
 subroutine allocate_check_double(N,array)
   implicit none
 	integer,intent(in) :: N
 	real*8,dimension(:),allocatable,intent(inout) :: array
 	if(.not.allocated(array)) allocate(array(N))
 end subroutine allocate_check_double
+
+! deallocate integer array if allocated
+subroutine deallocate_check_integer(array)
+  implicit none
+	integer,dimension(:),allocatable,intent(inout) :: array
+  if(allocated(array)) deallocate(array)
+end subroutine deallocate_check_integer
 
 ! deallocate array if allocated
 subroutine deallocate_check_double(array)

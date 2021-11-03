@@ -10,15 +10,15 @@
 ! publications integrating using the Gauss-Laguerre integration method.
 ! At the moment, only methods for variable x>0 and order nu>0 are implemented.
 module mod_besselik
-use constants,only :: PI
+use constants,only : PI
 implicit none
 
 private
-public besselik
+public besselk_posxnu
 
 ! module variables
-real,constant :: fp_min=1.d-30  !< value near the minimum floating point value
-real,constant :: x_val_min=2.d0 !< x value smaller than which the small x 
+real*8,parameter :: fp_min=1.d-30  !< value near the minimum floating point value
+real*8,parameter :: x_val_min=2.d0 !< x value smaller than which the small x 
                                 !< approximation of the bessel function is used
 
 contains
@@ -37,7 +37,6 @@ contains
 !   ierr: (integer) error code, 0: success, 1: wrong inputs
 !                   2: Lentz's algorithm did not converge
 subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
-  use constants,only :: PI
   implicit none
 
   ! inputs
@@ -50,21 +49,21 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
 	real*8,dimension(Nx),intent(out) :: Knu,dKnu
   integer                          :: ierr
   ! internal variables
-  integer                         :: ii,it
+  integer                         :: ii,it,max_it
   integer                         :: N_ge_minx,N_lt_minx !< N of x larger and smaller than x_val_min
-  real*8                          :: err
+  real*8                          :: err,tol
   real*8                          :: mu !< order of the recurrence
   real*8,dimension(Nx)            :: x_ge_minx,x_lt_minx !< values larger and smaller than x_val_min
 
   ! check inputs
-  max_it = 100000; tol_in = 1.d-16;
+  max_it = 100000; tol = 1.d-16;
   if(present(max_it_in)) max_it = max_it_in
   if(present(tol_in)) tol = tol_in
-  if(any(x.le.0.d0)) then
+  if(any(x.le.(0.d0))) then
     ierr = 1
     return
   endif
-  if(any(nu.lt.0.d0)) then
+  if(nu.lt.0.d0) then
     ierr = 1
     return
   endif 
@@ -75,7 +74,7 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
   ! compute the modified bessel function 2nd kind for x<x_val_min
   ! compute the modified bessel function 2nd kind for x>=x_val_min
 
-end subroutine besselik_posxnu
+end subroutine besselk_posxnu
 
 pure subroutine split_array_value(Nx,x,x_val,N_lt_minx,&
 N_ge_minx,x_lt_minx,x_ge_minx)
@@ -99,4 +98,4 @@ N_ge_minx,x_lt_minx,x_ge_minx)
 
 end subroutine split_array_value
 
-end module mod_besselik_posxnu
+end module mod_besselik

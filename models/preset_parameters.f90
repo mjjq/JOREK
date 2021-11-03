@@ -30,6 +30,7 @@ subroutine preset_parameters
 
   eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.
+  add_sources_in_sc     = .false.
 
   eta           = 1.d-5
   T_max_eta     = 1.d3
@@ -223,6 +224,7 @@ subroutine preset_parameters
   ZK_i_perp_num = 0.d0
   ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
+  sc_num        = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7

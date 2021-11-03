@@ -169,7 +169,9 @@ real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 !  --- For shock capturing stabilization
 real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
 real*8     :: len1, len2, h_e
-real*8     :: f_p, d_p, sc_const, tau_sc, R_rho, R_Ti, R_Te, R_T, my_zero = 0.d0
+real*8     :: Ptot, Ptot_x,  Ptot_y,  Ptot_p
+real*8     :: f_p, d_p, tau_sc, R_rho, R_pi, R_pe, R_p, R_rhon, my_zero = 0.d0
+real*8     :: s_p, src_rho, src_p, src_pi, src_pe, src_rhon
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -1191,6 +1193,147 @@ do i=1,n_vertex_max
             dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
           endif
   
+         !###################################################################################################
+         !#  for shock Capturing stabilization terms                                                        #
+         !###################################################################################################
+
+         ! Define total pressure as (assuming neutrals are at same Temperature as ions)
+         ! P_tot = r0 * (Ti0 + Te0) + rn0 * Ti0         and   r0 * T0 + rn0 * T0
+
+         if ( with_TiTe ) then 
+           Ptot     = Pi0   + Pe0    + rn0 * Ti0
+           Ptot_p   = Pi0_p + Pe0_p  + rn0 * Ti0_p + rn0_p * Ti0
+           Ptot_x   = Pi0_x + Pe0_x  + rn0 * Ti0_x + rn0_x * Ti0
+           Ptot_y   = Pi0_y + Pe0_y  + rn0 * Ti0_y + rn0_y * Ti0
+         else
+           Ptot     = P0    + rn0 * T0
+           Ptot_p   = P0_p  + rn0 * T0_p + rn0_p * T0
+           Ptot_x   = P0_x  + rn0 * T0_x + rn0_x * T0
+           Ptot_y   = P0_y  + rn0 * T0_y + rn0_y * T0
+         endif
+
+         d_p = 0.d0
+
+         ! approximate residual in density equation: \nabla \cdot (\rho \boldsymbol{v})
+         R_rho = + BigR**2 * ( r0_x * u0_y - r0_y * u0_x) &
+                 + 2.d0 * BigR * r0 * u0_y                &
+                 - F0 / BigR * Vpar0 * r0_p               &
+                 - Vpar0 * (r0_x * ps0_y - r0_y * ps0_x)  &
+                 - F0 / BigR * r0 * vpar0_p               &
+                 - r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x)
+
+         R_rhon =  delta_n_convection*( &
+                + v * BigR**2 * ( rn0_x * u0_y - rn0_y * u0_x)  &
+                + v * 2.d0 * BigR * rn0 * u0_y                  &
+                - v * rn0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) &
+                - v * Vpar0 * (rn0_x * ps0_y - rn0_y * ps0_x)   &
+                - v * F0 / BigR * Vpar0 * rn0_p                 &
+                - v * F0 / BigR * rn0 * vpar0_p )
+
+         ! approximate residual in pressure equations: \boldsymbol{v} \cdot \nabla p + \gamma p \nabla \boldsymbol{v}
+         if ( with_TiTe ) then ! (with_TiTe)
+
+           R_pi = + r0 * BigR**2 * ( Ti0_x * u0_y - Ti0_y * u0_x)                       &
+                  + Ti0 * BigR**2 * ( r0_x * u0_y - r0_y * u0_x)                        &
+                  
+                  + r0 * Ti0 * 2.d0* GAMMA * BigR * u0_y                                &
+                  
+                  - r0 * F0 / BigR * Vpar0 * Ti0_p                                      &
+                  - Ti0 * F0 / BigR * Vpar0 * r0_p                                      &
+                  
+                  - r0 * Vpar0 * (Ti0_x * ps0_y - Ti0_y * ps0_x)                        &
+                  - Ti0 * Vpar0 * (r0_x * ps0_y - r0_y * ps0_y)                         &
+                  
+                  - r0 * Ti0 * GAMMA * (vpar0_x * ps0_y - vpar0_y * ps0_x)              &
+                  - r0 * Ti0 * GAMMA * F0 / BigR * vpar0_p
+
+           R_pe = + r0 * BigR**2  * (Te0_x * u0_y - Te0_y * u0_x)                       &
+                  + Te0 * BigR**2 * ( r0_x * u0_y -  r0_y * u0_x)                       &
+                                                                                 
+                  + r0 * Te0 * 2.d0* GAMMA * BigR * u0_y                                &
+                                                                                 
+                  - r0 * F0 / BigR * Vpar0 * Te0_p                                      &
+                  - Te0 * F0 / BigR * Vpar0 * r0_p                                      &
+                                                                                 
+                  - r0 * Vpar0 * (Te0_x * ps0_y - Te0_y * ps0_x)                        &
+                  - Te0 * Vpar0 * (r0_x * ps0_y - r0_y * ps0_x)                         &
+                                                                                 
+                  - r0 * Te0 * GAMMA * (vpar0_x * ps0_y - vpar0_y * ps0_x)              &
+                  - r0 * Te0 * GAMMA * F0 / BigR * vpar0_p 
+                                                                      
+           ! 1/BigR removes the factor R from the integrand in (R dR)                 
+           d_p = (Ti0 + Te0) * R_rho / BigR +  (R_pi + R_pe) / BigR  + Ti0 * R_rhon / BigR
+
+         else
+
+           R_p = + r0 * BigR**2 * (T0_x  * u0_y - T0_y * u0_x)                          &
+                 + T0 * BigR**2 * ( r0_x * u0_y - r0_y * u0_x)                          &
+                                                                            
+                 + r0 * T0 * 2.d0* GAMMA * BigR * u0_y                                  &
+                 
+                 - r0 * F0 / BigR * Vpar0 * T0_p                                        &
+                 - T0 * F0 / BigR * Vpar0 * r0_p                                        &
+                 
+                 - r0 * Vpar0 * (T0_x * ps0_y - T0_y * ps0_x)                           &
+                 - T0 * Vpar0 * (r0_x * ps0_y - r0_y * ps0_x)                           &
+                                                                             
+                 - r0 * T0 * GAMMA * (vpar0_x * ps0_y - vpar0_y * ps0_x)                &
+                 - r0 * T0 * GAMMA * F0 / BigR * vpar0_p
+                         
+           ! 1/BigR removes the factor R from the integrand in (R dR)
+           d_p = T0 * R_rho / BigR + R_p / BigR + T0 * R_rhon / BigR
+
+         endif
+
+         f_p = dsqrt( Ptot_x*Ptot_x + Ptot_y*Ptot_y + Ptot_p*Ptot_p/ (BigR*BigR) ) / Ptot * h_e
+
+         ! This term is added into diffusivities to locally add a stabilization.
+         tau_sc = sc_num * h_e * h_e * abs(d_p) / Ptot * f_p
+
+         if(add_sources_in_sc)then
+
+           src_rho = (particle_source(ms,mt) + source_pellet) &
+                   + r0_corr * rn0_corr * Sion_T              &
+                   - r0_corr * r0_corr  * Srec_T
+
+           src_rhon = - r0_corr * rn0_corr * Sion_T      &
+                    + r0_corr * r0_corr  * Srec_T        &
+                    + source_neutral
+
+           if ( with_TiTe ) then ! (with_TiTe)
+
+             src_pi  = heat_source_i(ms,mt)                                      &
+                     + ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rn0*Sion_T) &
+                     + ((GAMMA - 1.)/2.) * vv2 * ((r0_corr*rn0*Sion_T))
+
+             src_pe  = heat_source_e(ms,mt)                           &
+                      + (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0 &
+                      - ksiion  * r0_corr * rn0_corr * Sion_T         &
+                      - r0_corr * rn0_corr * LradDrays_T              &
+                      - r0_corr * r0_corr  * LradDcont_T              &
+                      - r0_corr * frad_bg
+                     
+             s_p = (Ti0 + Te_0) * src_rho + (src_pi + src_pe) + Ti0 * src_rhon
+
+           else
+
+             src_p   =  heat_source(ms,mt)                                         &
+                     +  (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0              &
+                     +  ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rn0*Sion_T)  &
+                     +  ((GAMMA - 1.)/2.) * vv2 * ((r0_corr*rn0*Sion_T))           &
+                     -  ksiion  * r0_corr * rn0_corr * Sion_T                      &
+                     -  r0_corr * rn0_corr * LradDrays_T                           &
+                     -  r0_corr * r0_corr  * LradDcont_T                           &
+                     -  r0_corr * frad_bg
+
+             s_p = T0 * src_rho + src_p + T0 * src_rhon
+
+           endif
+
+           tau_sc = sc_num * h_e * h_e * (abs(s_p) + abs(d_p)) / Ptot * f_p
+
+         endif
+
 
 !--------------------------------------------------------
 
@@ -1240,79 +1383,6 @@ do i=1,n_vertex_max
 
             v_ps0_x  = v_xx  * ps0_y - v_xy  * ps0_x + v_x  * ps0_xy - v_y * ps0_xx
             v_ps0_y  = v_xy  * ps0_y - v_yy  * ps0_x + v_x  * ps0_yy - v_y * ps0_xy
-
-            !###################################################################################################
-            !#  for shock Capturing stabilization terms                                                        #
-            !###################################################################################################
-
-            d_p = 0.d0
-
-            ! approximate residual in density equation: \nabla \cdot (\rho \boldsymbol{v})
-            R_rho = + BigR**2 * ( r0_x * u0_y - r0_y * u0_x) &
-                    + 2.d0 * BigR * r0 * u0_y                &
-
-                    - F0 / BigR * Vpar0 * r0_p               &
-                    - Vpar0 * (r0_x * ps0_y - r0_y * ps0_x)  &
-                    - F0 / BigR * r0 * vpar0_p               &
-                    - r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x)
-
-            ! approximate residual in pressure equations: \boldsymbol{v} \cdot \nabla p + \gamma p \nabla \boldsymbol{v}
-            if ( with_TiTe ) then ! (with_TiTe)
-
-              R_Ti = + r0 * BigR**2 * ( Ti0_x * u0_y - Ti0_y * u0_x)                       &
-                     + Ti0 * BigR**2 * ( r0_x * u0_y - r0_y * u0_x)                        &
-                     
-                     + r0 * Ti0 * 2.d0* GAMMA * BigR * u0_y                                &
-                     
-                     - r0 * F0 / BigR * Vpar0 * Ti0_p                                      &
-                     - Ti0 * F0 / BigR * Vpar0 * r0_p                                      &
-                     
-                     - r0 * Vpar0 * (Ti0_x * ps0_y - Ti0_y * ps0_x)                        &
-                     - Ti0 * Vpar0 * (r0_x * ps0_y - r0_y * ps0_y)                         &
-                     
-                     - r0 * Ti0 * GAMMA * (vpar0_x * ps0_y - vpar0_y * ps0_x)              &
-                     - r0 * Ti0 * GAMMA * F0 / BigR * vpar0_p
- 
-              R_Te = + r0 * BigR**2  * (Te0_x * u0_y - Te0_y * u0_x)                       &
-                     + Te0 * BigR**2 * ( r0_x * u0_y -  r0_y * u0_x)                       &
-                                                                                    
-                     + r0 * Te0 * 2.d0* GAMMA * BigR * u0_y                                &
-                                                                                    
-                     - r0 * F0 / BigR * Vpar0 * Te0_p                                      &
-                     - Te0 * F0 / BigR * Vpar0 * r0_p                                      &
-                                                                                    
-                     - r0 * Vpar0 * (Te0_x * ps0_y - Te0_y * ps0_x)                        &
-                     - Te0 * Vpar0 * (r0_x * ps0_y - r0_y * ps0_x)                         &
-                                                                                    
-                     - r0 * Te0 * GAMMA * (vpar0_x * ps0_y - vpar0_y * ps0_x)              &
-                     - r0 * Te0 * GAMMA * F0 / BigR * vpar0_p 
-                                                                                                 
-              d_p = (Ti0 + Te0) * R_rho / BigR +  r0 * (R_Ti + R_Te) / BigR
-
-            else
-
-              R_T = + r0 * BigR**2 * (T0_x  * u0_y - T0_y * u0_x)                          &
-                    + T0 * BigR**2 * ( r0_x * u0_y - r0_y * u0_x)                          &
-                                                                               
-                    + r0 * T0 * 2.d0* GAMMA * BigR * u0_y                                  &
-                    
-                    - r0 * F0 / BigR * Vpar0 * T0_p                                        &
-                    - T0 * F0 / BigR * Vpar0 * r0_p                                        &
-                    
-                    - r0 * Vpar0 * (T0_x * ps0_y - T0_y * ps0_x)                           &
-                    - T0 * Vpar0 * (r0_x * ps0_y - r0_y * ps0_x)                           &
-                                                                                
-                    - r0 * T0 * GAMMA * (vpar0_x * ps0_y - vpar0_y * ps0_x)                &
-                    - r0 * T0 * GAMMA * F0 / BigR * vpar0_p
-                            
-              d_p = T0 * R_rho / BigR + r0 * R_T / BigR
-
-            endif
-
-            f_p = dsqrt( P0_x*P0_x + P0_y*P0_y + P0_p*P0_p/ (BigR*BigR) ) / P0 * h_e
-            sc_const = 1.d1    ! set shock capturing stabilization coefficient here
-
-            tau_sc = sc_const * h_e * h_e * abs(d_p) / P0 * f_p
 
             !###################################################################################################
             !#  Induction Equation                                                                             #

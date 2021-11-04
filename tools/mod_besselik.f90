@@ -52,7 +52,7 @@ subroutine besselk(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
 	real*8,dimension(Nx),intent(in) :: x
 	real*8,intent(in)               :: nu
 	real*8,intent(in),optional      :: tol_in
-  integer*8,intent(in),optional   :: max_it_in
+  integer,intent(in),optional     :: max_it_in
   ! outputs
 	real*8,dimension(Nx),intent(out) :: Knu,dKnu
   integer                          :: ierr
@@ -61,13 +61,13 @@ subroutine besselk(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
 	real*8  :: tol
 
   ! check inputs
-  max_it = 100000; tol = 1.d-16;
+  max_it = 1000000; tol = 1.d-16;
   if(present(max_it_in)) max_it = max_it_in
   if(present(tol_in)) tol = tol_in
 
   ! compute bessel function of the 2nd kind for x>0 and nu>0
 	if((any(x.gt.0.d0)).and.(nu.gt.0)) then
-	  call besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
+	  call besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
 	else
 	  ierr = 1
     write(*,*) "Error besselk for x<=0 or nu<=0 not implemented yet"
@@ -88,24 +88,22 @@ end subroutine besselk
 !		dKnu:	(real8)(Nx) derivative of the modified bessel function 2nd kind
 !   ierr: (integer) error code, 0: success, 1: wrong inputs
 !                   2: Lentz's algorithm did not converge
-subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
+subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
   implicit none
 
   ! inputs
   integer,intent(in)              :: Nx
 	real*8,dimension(Nx),intent(in) :: x
 	real*8,intent(in)               :: nu
-	real*8,intent(in),optional      :: tol_in
-  integer*8,intent(in),optional   :: max_it_in
+	real*8,intent(in)               :: tol
+  integer,intent(in)              :: max_it
   ! outputs
 	real*8,dimension(Nx),intent(out) :: Knu,dKnu
   integer                          :: ierr
   ! internal variables
-  integer               :: max_it !< maximum number of iterations
 	integer               :: N_rec  !< number of downward recursions
   integer               :: Nx_ge_minx,Nx_lt_minx   !< N of x larger and smaller than x_val_min
   integer,dimension(Nx) :: ids_ge_minx,ids_lt_minx !< x-ids for array reconstruction
-  real*8                :: err,tol
   real*8                :: mu                      !< order of the recurrence
   real*8,dimension(Nx)  :: xi,x_ge_minx,x_lt_minx  !< values larger and smaller than x_val_min
   real*8,dimension(Nx)  :: kmu,k1,kmu_ge_minx
@@ -155,7 +153,7 @@ subroutine comp_besselk_posxnu(N_rec,Nx,mu,nu,xi,kmu,k1,knu,dknu)
 	! compute the modified bessel function 2nd kind
   kmup = mu*xi*kmu-k1
 	do ii=1,N_rec
-	  ktemp = (mu+ii)*xi*xi*k1 + kmu
+	  ktemp = 2.d0*(mu+ii)*xi*k1 + kmu
 		kmu = k1 
 		k1 = ktemp
 	enddo
@@ -188,7 +186,7 @@ subroutine besselk_posxnu_ge_xval(Nx_ge,x_ge,mu,kmu,k1,tol,max_it,ierr)
 	h = delh; q1 = 0.d0; q2 = 1.d0; c = 2.5d-1 - mu*mu;
 	q = c; a = -c; s = 1.d0 + q*delh; ii = 2; dels = 1.d10;
 	! compute the fractional equation (as in numerical recipes)
-	do while((maxval(abs(dels/s)).lt.tol).and.(ii.le.max_it))
+	do while((maxval(abs(dels/s)).ge.tol).and.(ii.le.max_it))
 	  a = a - 2.d0*(ii-1)
 		c = -a*c/ii
 		qnew = (q1-q2)/a

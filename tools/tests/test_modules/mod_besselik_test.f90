@@ -19,8 +19,8 @@ real*8,dimension(10),parameter :: x_ge_2=(/7.12d0,8.17d0,2.22d0,19.2d0,&
 integer                             :: Nx_lt_2=10
 real*8,dimension(10),parameter :: x_lt_2=(/1.d-4,1.82d0,0.36d0,5.28d-3,&
                                        2.9d-6,0.27d0,1.74d0,1.d0,1.d-8,1.99d0/)
-! values of the bessel function 2nd kind for x_ge_2 and nu=1/3,2/3,5/2
-! as computed by matlab (mat) and python (py)
+! values of the bessel function 2nd kind and its derivatives for x_ge_2 and 
+! nu=1/3,2/3,5/2 as computed by matlab (mat) and python (py)
 real*8,dimension(30),parameter :: knu_ge_2_mat = (/&
      (/3.764170850828786d-4,1.231043600701636d-4,8.899156804745512d-2,&
      1.307444784232888d-9,9.879203508537923d-3,1.584159892509702d-2,&
@@ -43,8 +43,8 @@ real*8,dimension(30),parameter :: knu_ge_2_py = (/&
        1.4358594190471018d-4,1.4591021359702089d-1,1.3990114324259808d-9,&
        1.3194976194295318d-2,2.1784148798281056d-2,1.4574555516104425d-3,&
        1.8283543591878372d-10,2.0039379835370282d-7,1.9977091295491711d-1/)/)
-! values of the bessel function 2nd kind for x_lt_2 and nu=1/3,2/3,5/2
-! as computed by matlab (mat) and python (py)
+! values of the bessel function 2nd kind and its derivatives for x_lt_2
+! and nu=1/3,2/3,5/2 as computed by matlab (mat) and python (py)
 real*8,dimension(30),parameter :: knu_lt_2_mat = (/&
      (/3.628396070100760d1,1.459197599310183d-1,1.313842449151210d0,&
      9.411032704078833d0,1.183202403880544d2,1.626582338799409d0,&
@@ -146,8 +146,47 @@ subroutine teardown()
 	call deallocate_check_double(x)
 end subroutine teardown
 
+! test_besselk_ge_xval tests the computation of the modified 
+! bessel function of the second kind and fractional order 
+! for x>x_val=2. Default values are used for tol and max_it.
+subroutine test_besselk_ge_xval()
+  use mod_besselik, only: besselik
+  implicit none
+
+	! variables
+	integer :: ii,ierr
+	real*8,dimension(Nx_ge_2*N_nu) :: knu_sol,dknu_sol
+
+	! TEST TEST TEST
+	integer :: jj
+
+	! compute modified bessel function for multiple nu
+	do ii=1,N_nu
+	  call besselik(Nx_ge_2,x_ge_2,nu(ii),&
+		knu_sol((ii-1)*Nx_ge_2+1:ii*Nx_ge_2),&
+		dknu_sol((ii-1)*Nx_ge_2+1:ii*Nx_ge_2),ierr)
+	enddo
+
+  ! check solution 
+	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged")
+	call assert_equals(knu_sol/knu_ge_2_mat,knu_ge_2_mat/knu_ge_2_mat,Nx_ge_2,tol,&
+	"Error: no match between MatLab and JOREK modified bessel function 2nd kind")
+	call assert_equals(knu_sol/knu_ge_2_py,knu_ge_2_py/knu_ge_2_py,Nx_ge_2,tol,&
+	"Error: no match between Python and JOREK modified bessel function 2nd kind")
+
+	! TEST TEST TEST
+	do jj=1,N_nu
+	  print*,""
+	  do ii=1,Nx_ge_2
+		  print*,"J: ",knu_sol((jj-1)*Nx_ge_2+ii)," M: ",knu_ge_2_mat((jj-1)*Nx_ge_2+ii),&
+			" diff: ",abs((knu_sol((jj-1)*Nx_ge_2+ii)-knu_ge_2_mat((jj-1)*Nx_ge_2+ii))/knu_sol((jj-1)*Nx_ge_2+ii))
+		enddo
+	enddo
+
+end subroutine test_besselk_ge_xval
+
 ! test_split_array tests the split_array_value routine
-subroutine test_split_array_value
+subroutine test_split_array_value()
 use mod_besselik, only: split_array_value
 use fruit
   implicit none

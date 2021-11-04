@@ -1220,15 +1220,15 @@ enddo  ! n_elements
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                               *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
-      scalars(i,s_radiation+1) = ksiion * scalars(i,5) * scalars(i,8) * Sion_T
-      scalars(i,s_radiation+2) = scalars(i,5) * scalars(i,8) * LradDrays_T
-      scalars(i,s_radiation+3) = LradDcont_T * scalars(i,5)**2.d0
-      scalars(i,s_radiation+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+      scalars(i,s_radiation+1) = ksiion * scalars(i,var_rho) * scalars(i,var_rhon) * Sion_T
+      scalars(i,s_radiation+2) = scalars(i,var_rho) * scalars(i,var_rhon) * LradDrays_T
+      scalars(i,s_radiation+3) = LradDcont_T * scalars(i,var_rho)**2.d0
+      scalars(i,s_radiation+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,var_zj)**2.d0
 
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------   
-      r0_real8  = scalars(i,5)
+      r0_real8  = scalars(i,var_rho)
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
    
@@ -1259,7 +1259,7 @@ enddo  ! n_elements
         end if
       end if   
 
-      scalars(i,s_radiation+5) = scalars(i,5) * frad_bg
+      scalars(i,s_radiation+5) = scalars(i,var_rho) * frad_bg
 
     enddo
   endif
@@ -1300,8 +1300,8 @@ enddo  ! n_elements
      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
-     r0_real8 = scalars(i,5)
-     rn0_real8 = scalars(i,8)
+     r0_real8 = scalars(i,var_rho)
+     rn0_real8 = scalars(i,var_rhon)
 
      r0_corr = corr_neg_dens(r0_real8,(/1.d-9,1.d-5/),1.d-3)
      rn0_corr = corr_neg_dens(rn0_real8,(/1.d-9,1.d-5/),1.d-3)
@@ -1335,14 +1335,14 @@ enddo  ! n_elements
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
 
      ne_SI       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-     scalars(i,5) = (r0_corr + beta_imp * rn0_corr)                           ! electron density (JOREK units)
+     scalars(i,var_rho) = (r0_corr + beta_imp * rn0_corr)                           ! electron density (JOREK units)
 
      !Calculate the Z_eff, as it is done in mod_elt_matrix
      Z_eff = r0_corr - rn0_corr
      do ion_i=1, imp_adas(1)%n_Z
        Z_eff = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
      end do
-     Z_eff = Z_eff / scalars(i,5)  
+     Z_eff = Z_eff / scalars(i,var_rho)  
      scalars(inode,s_radiation+5) = Z_eff
 
      ! This is to represent the dependence on Z_eff in resistivity
@@ -1370,9 +1370,9 @@ enddo  ! n_elements
        E_ion = 0.
      end if
 
-     scalars(i,s_radiation+1) = (2./3.) * scalars(i,8) * E_ion
+     scalars(i,s_radiation+1) = (2./3.) * scalars(i,var_rhon) * E_ion
      scalars(i,s_radiation+2) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad
-     scalars(i,s_radiation+3) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,3)**2.d0
+     scalars(i,s_radiation+3) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,var_zj)**2.d0
      scalars(i,s_radiation+4) = Z_imp
      scalars(i,s_radiation+5) = Z_eff
 
@@ -1385,7 +1385,7 @@ enddo  ! n_elements
 
     do i=1,nnos
 
-      r0_real8  = scalars(i,5)
+      r0_real8  = scalars(i,var_rho)
 
       if ( with_TiTe ) then
         T_real8 = scalars(i,var_Te)
@@ -1397,7 +1397,7 @@ enddo  ! n_elements
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_real8 )
       endif
 
-      rn0_real8 = scalars(i,8)
+      rn0_real8 = scalars(i,var_rhon)
 
       r0_corr   = corr_neg_dens(r0_real8)
       rn0_corr  = corr_neg_dens(rn0_real8, (/ 0.d-5, 1.d-5 /))
@@ -1551,18 +1551,18 @@ if (SI_units) then
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0)
   
       scalars(i,s_radiation+1) = ksiion* (1.5d0)/(MU_zero*central_density*1.d20)      &
-                                          * scalars(i,5) * 1.d20 * scalars(i,8) * 1.d20 * Sion_T / coef_ion_1
+                                          * scalars(i,var_rho) * 1.d20 * scalars(i,var_rhon) * 1.d20 * Sion_T / coef_ion_1
 
-      scalars(i,s_radiation+2) = scalars(i,5)* 1.d20 * scalars(i,8) * 1.d20 * LradDrays_T/ coef_rad_1
+      scalars(i,s_radiation+2) = scalars(i,var_rho)* 1.d20 * scalars(i,var_rhon) * 1.d20 * LradDrays_T/ coef_rad_1
 
-      scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,5)*1.d20)**2.d0 / coef_rad_1
+      scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,var_rho)*1.d20)**2.d0 / coef_rad_1
 
-      scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,3))**2.d0
+      scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,var_zj))**2.d0
 
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------
-      r0_real8  = scalars(i,5) / central_density ! Back to JU first
+      r0_real8  = scalars(i,var_rho) / central_density ! Back to JU first
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
 
@@ -1590,7 +1590,7 @@ if (SI_units) then
           stop
         end if
       end if
-      scalars(i,s_radiation+5) = scalars(i,5)*1.d20 * frad_bg
+      scalars(i,s_radiation+5) = scalars(i,var_rho)*1.d20 * frad_bg
     endif
 #endif /* WITH_Neutrals but not WITH_Impurities */
 

@@ -104,7 +104,7 @@ logical               :: include_radiation
 integer               :: n_radiation,s_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg
 real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp
-real*8                :: T_corr, Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, Tion, LradDcont_T
+real*8                :: Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
 real*8                :: T0_corr, r0_corr, rn0_corr
@@ -1203,13 +1203,19 @@ enddo  ! n_elements
 
       ksiion = ksi_ion * central_density * 1.d20
 
-      T_real8 = scalars(i,6)
-      T_corr  = corr_neg_temp(T_real8)
-      Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
-      Te_corr_eV   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-
-      call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) !< add scalars(i,5) as last optional parameter for density dependence
+      if ( with_TiTe ) then
+        T_real8 = scalars(i,var_Te)
+        Te_corr_eV = corr_neg_temp(T_real8)/(EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
+        call atomic_coeff_deuterium(T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) !< add scalars(i,var_rho) as last optional parameter for density dependence
+      else
+        T_real8 = scalars(i,var_T)
+        Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+      endif
 
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                               *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
@@ -1224,10 +1230,8 @@ enddo  ! n_elements
       !--------------------------------------------------------   
       r0_real8  = scalars(i,5)
       r0_corr   = corr_neg_dens(r0_real8)
-
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-      Te_eV   = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) !Te in eV
-
+   
       if (use_imp_adas) then  ! use open adas by default
         frad_bg = 0. 
         do i_imp =1, n_adas
@@ -1381,14 +1385,17 @@ enddo  ! n_elements
 
     do i=1,nnos
 
-      T_real8 = scalars(i,6)
-      T_corr  = corr_neg_temp(T_real8)
-      Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
-      
       r0_real8  = scalars(i,5)
 
-      call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+      if ( with_TiTe ) then
+        T_real8 = scalars(i,var_Te)
+        call atomic_coeff_deuterium(T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_real8 )
+      else
+        T_real8 = scalars(i,var_T)
+        call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_real8 )
+      endif
 
       rn0_real8 = scalars(i,8)
 
@@ -1526,16 +1533,20 @@ if (SI_units) then
       coef_rad_1 = (gamma-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
       ksiion = ksi_ion * central_density * 1.d20
-  
-      T_real8 = scalars(i,6)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
-      ! ======= T_real8 in JOREK units
 
-      Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
-
-      Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
-
-      call atomic_coeff_deuterium(0.5d0*scalars(i,6), Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+      if ( with_TiTe ) then ! ======= T_real8 back to JOREK units
+        T_real8 = scalars(i,var_Te)*1.e3*EL_CHG*MU_zero*(central_density * 1.d20)
+        Te_corr_eV = corr_neg_temp(T_real8)/(EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
+        call atomic_coeff_deuterium(T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT )  ! T should be in JOREK unit here
+      else
+        T_real8 = scalars(i,var_T)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
+        Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+      endif
 
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0)
   
@@ -1554,7 +1565,6 @@ if (SI_units) then
       r0_real8  = scalars(i,5) / central_density ! Back to JU first
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-      Te_eV   = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) !Te in eV
 
       if (use_imp_adas) then  ! use open adas by default
         ! Use radiation coefficients from ADAS

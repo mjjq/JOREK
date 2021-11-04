@@ -628,8 +628,8 @@ do ife = ife_min, ife_max
 ! ------------------------------------------
 #if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
         ! --- Get ionization, recombination and radiation coefficients for Deuterium 
-        call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                            LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
+        call atomic_coeff_deuterium(T0e_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                           LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
       
       
         ! Get coefficient:  Prad,SI = coef_prad_si * Prad,jorek
@@ -639,8 +639,8 @@ do ife = ife_min, ife_max
       
         ! --- Radiation from background impurity
         ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-        Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
-        Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV, uncorrected
+        Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+        Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV, uncorrected
 
         if (use_imp_adas) then  ! use open adas by default  
           ! Use radiation coefficients from ADAS

@@ -205,6 +205,7 @@ subroutine besselk_posxnu_ge_xval(Nx_ge,x_ge,mu,kmu,k1,tol,max_it,ierr)
 		write(*,*) "Error fractional continuous solver for x>=x_val: not converged! "
 	endif
 	! compute the contribution to the modified bessel function 2nd kind
+	! omit the exp(-x) to scale all returned values by exp(x)
 	kmu = sqrt(PI/(2.d0*x_ge))*exp(-x_ge)/s
 	k1 = kmu*(mu+x_ge+5.d-1-(2.5d-1 - mu*mu)*h)/x_ge
 end subroutine besselk_posxnu_ge_xval

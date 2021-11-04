@@ -16,6 +16,8 @@ subroutine run_all_besselik_tests()
 	call setup !< setup test variables
   write(*,'(/A)') "  ... running: besselik tests"
 	call test_split_array_value
+  call test_besselk_lt_xval
+	call test_besselk_ge_xval
   write(*,'(/A)') "  ... tearing-down: besselik tests" 
 	call teardown !< cleanup test variables
 

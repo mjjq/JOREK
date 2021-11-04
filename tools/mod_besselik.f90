@@ -116,9 +116,11 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
 	x_lt_minx,x_ge_minx,ids_lt_minx,ids_ge_minx)
   ! compute the modified bessel function 2nd kind for x<x_val_min
 	if(Nx_lt_minx.gt.0) then
-	  !TODO
-	  !kmu(ids_lt_minx(1:Nx_lt_minx)) = kmu_lt_minx(1:Nx_lt_minx)
-		!k1(ids_lt_minx(1:Nx_lt_minx)) = k1_lt_minx(1:Nx_lt_minx)
+	  call besselk_posxnu_lt_xval(Nx_lt_minx,x_lt_minx,mu,&
+		kmu_lt_minx(1:Nx_lt_minx),k1_lt_minx(1:Nx_lt_minx),&
+		tol,max_it,ierr)
+	  kmu(ids_lt_minx(1:Nx_lt_minx)) = kmu_lt_minx(1:Nx_lt_minx)
+		k1(ids_lt_minx(1:Nx_lt_minx)) = k1_lt_minx(1:Nx_lt_minx)
 	endif
   ! compute the modified bessel function 2nd kind for x>=x_val_min
 	if(Nx_ge_minx.gt.0) then
@@ -161,6 +163,61 @@ subroutine comp_besselk_posxnu(N_rec,Nx,mu,nu,xi,kmu,k1,knu,dknu)
 	dknu = nu*xi*kmu-k1
 
 end subroutine comp_besselk_posxnu
+
+! bessekl_posxnu_lt_val computes the continuous fractional equation
+! of the modified bessel function for the branch x<xval_min
+subroutine besselk_posxnu_lt_xval(Nx_lt,x_lt,mu,kmu,k1,tol,max_it,ierr)
+  implicit none
+	
+	! inputs
+	integer,intent(in) :: Nx_lt,max_it
+	real*8,dimension(Nx_lt),intent(in) :: x_lt
+	real*8,intent(in) :: mu,tol
+	! outputs
+	integer,intent(out) :: ierr
+	real*8,dimension(Nx_lt),intent(out) :: kmu,k1
+	! variables
+	integer :: ii
+  real*8 :: fact,gam1,gam2,gampl,gammi
+	real*8,dimension(Nx_lt) :: c,d,e,p,q,ff,fact2,summ,summ1
+  real*8,dimension(Nx_lt) :: del,del1
+	
+  ! evaluation of Gamm1 and Gamm2
+	gammi = 1.d0/gamma(1-mu)
+	gampl = 1.d0/gamma(1+mu)
+	gam1 = 5.d-1*(gammi-gampl)/mu
+	gam2 = 5.d-1*(gammi+gampl)
+
+	! initialize the variables for the recurrent fraction solver
+	fact = 1.d0
+	if((PI*mu).lt.tol) fact = PI*mu/sin(PI*mu)
+  d=-log(5.d-1*x_lt); e = mu*d;
+	fact2 =1.d0
+	where(abs(e).lt.tol) fact2 = sinh(e)/e
+  ff = fact*(gam1*cosh(e)+gam2*fact2*d); 
+	summ = ff; e = exp(e); d = 2.5d-1*x_lt*x_lt;
+	p = 5.d-1*e/gampl; q = 5.d-1/(e*gammi);
+	c = 1.d0; summ1 = p; ii=1; del=1.d10;
+
+	! compute the recurrent fraction
+	do while((maxval(abs(del)).ge.(maxval(abs(summ))*tol)).and.(ii.le.max_it))
+	  ff = (ii*ff+q+p)/(ii*ii-mu*mu)
+		c = c*d/ii; p=p/(ii-mu); q=q/(ii+mu);
+		del = c*ff; summ = summ + del;
+		del1 = c*(p-ii*ff); summ1 = summ1+del1;
+		ii = ii+1;
+	enddo
+  ! check for convergence
+	if(ii.gt.max_it) then
+	  ierr = 1
+		write(*,*) "Error fractional continuous solver for x<x_val: not converged! "
+	endif
+
+	! comput kmu and its derivatives
+	kmu = summ;
+	k1 = 2.d0*summ1/x_lt;
+
+end subroutine besselk_posxnu_lt_xval
 
 ! bessekl_posxnu_ge_xval computes the continuous fractional equation 
 ! of the modified bessel function for the branch x>=xval_min

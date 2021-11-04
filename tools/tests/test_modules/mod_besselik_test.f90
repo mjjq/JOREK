@@ -146,9 +146,36 @@ subroutine teardown()
 	call deallocate_check_double(x)
 end subroutine teardown
 
+! test_besselk_lt_xval tests the computation of the modified 
+! bessel function of the second kind and fractional order 
+! for x<x_val=2. Default values are used for tol and max_it.
+subroutine test_besselk_lt_xval()
+  use mod_besselik, only: besselik
+  implicit none
+
+	! variables
+	integer :: ii,ierr
+	real*8,dimension(Nx_lt_2*N_nu) :: knu_sol,dknu_sol
+
+	! compute modified bessel function for multiple nu
+	do ii=1,N_nu
+	  call besselik(Nx_lt_2,x_lt_2,nu(ii),&
+		knu_sol((ii-1)*Nx_lt_2+1:ii*Nx_lt_2),&
+		dknu_sol((ii-1)*Nx_lt_2+1:ii*Nx_lt_2),ierr)
+	enddo
+
+  ! check solution 
+	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged for x<x_val")
+	call assert_equals(knu_sol/knu_lt_2_mat,knu_lt_2_mat/knu_lt_2_mat,Nx_lt_2,tol,&
+	"Error: no match between MatLab and JOREK modified bessel function 2nd kind for x<x_val")
+	call assert_equals(knu_sol/knu_lt_2_py,knu_lt_2_py/knu_lt_2_py,Nx_lt_2,tol,&
+	"Error: no match between Python and JOREK modified bessel function 2nd kind for x<x_val")
+
+end subroutine test_besselk_lt_xval
+
 ! test_besselk_ge_xval tests the computation of the modified 
 ! bessel function of the second kind and fractional order 
-! for x>x_val=2. Default values are used for tol and max_it.
+! for x>=x_val=2. Default values are used for tol and max_it.
 subroutine test_besselk_ge_xval()
   use mod_besselik, only: besselik
   implicit none
@@ -156,9 +183,6 @@ subroutine test_besselk_ge_xval()
 	! variables
 	integer :: ii,ierr
 	real*8,dimension(Nx_ge_2*N_nu) :: knu_sol,dknu_sol
-
-	! TEST TEST TEST
-	integer :: jj
 
 	! compute modified bessel function for multiple nu
 	do ii=1,N_nu
@@ -168,20 +192,11 @@ subroutine test_besselk_ge_xval()
 	enddo
 
   ! check solution 
-	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged")
+	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged for x>=x_val")
 	call assert_equals(knu_sol/knu_ge_2_mat,knu_ge_2_mat/knu_ge_2_mat,Nx_ge_2,tol,&
-	"Error: no match between MatLab and JOREK modified bessel function 2nd kind")
+	"Error: no match between MatLab and JOREK modified bessel function 2nd kind for x>=x_val")
 	call assert_equals(knu_sol/knu_ge_2_py,knu_ge_2_py/knu_ge_2_py,Nx_ge_2,tol,&
-	"Error: no match between Python and JOREK modified bessel function 2nd kind")
-
-	! TEST TEST TEST
-	do jj=1,N_nu
-	  print*,""
-	  do ii=1,Nx_ge_2
-		  print*,"J: ",knu_sol((jj-1)*Nx_ge_2+ii)," M: ",knu_ge_2_mat((jj-1)*Nx_ge_2+ii),&
-			" diff: ",abs((knu_sol((jj-1)*Nx_ge_2+ii)-knu_ge_2_mat((jj-1)*Nx_ge_2+ii))/knu_sol((jj-1)*Nx_ge_2+ii))
-		enddo
-	enddo
+	"Error: no match between Python and JOREK modified bessel function 2nd kind for x>=x_val")
 
 end subroutine test_besselk_ge_xval
 

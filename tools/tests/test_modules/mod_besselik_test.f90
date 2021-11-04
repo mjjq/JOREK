@@ -12,20 +12,20 @@ integer                         :: Nx             !< number of elements
 real*8                          :: x_thre         !< threshold value
 real*8,dimension(:),allocatable :: x              !< input array x
 
-! routines for checking and allocating arrays
+! procedures for checking and allocating arrays
 interface allocate_check
   module procedure allocate_check_integer
 	module procedure allocate_check_double
 end interface
 
-! routines for checking and deallocating arrays
+! procedures for checking and deallocating arrays
 interface deallocate_check
   module procedure deallocate_check_integer
 	module procedure deallocate_check_double
 end interface
 contains
 
-! This function initialise the module variables
+! setup initialise the module variables
 ! inputs:
 !   Nx_val:    (integer)(optional) size of the x array
 !   Nx_lt_val: (integer)(optional) number of x lower than threshold
@@ -81,13 +81,13 @@ subroutine setup(Nx_val,Nx_lt_val,Nx_ge_val,x_val,x_min,x_max)
 
 end subroutine setup
 
-! Teardown of the unit tests
+! teardown of the unit tests
 subroutine teardown()
   implicit none
 	call deallocate_check_double(x)
 end subroutine teardown
 
-! This function testst the split_array_value routine
+! test_split_array tests the split_array_value routine
 subroutine test_split_array_value
 use mod_besselik, only: split_array_value
 use fruit
@@ -149,8 +149,8 @@ subroutine deallocate_check_double(array)
   if(allocated(array)) deallocate(array)
 end subroutine deallocate_check_double
 
-! This function generates an array of random integer number
-! without repetitions within an interval.
+! generate_int_rnd_array generates an array of random
+! integer number without repetitions within an interval.
 ! inputs:
 !   N: (integer) number of elements
 !   n_min: (integer) minimum value

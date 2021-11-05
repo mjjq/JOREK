@@ -35,5 +35,9 @@ https://git.iter.org/projects/BND/repos/smiter or ParaView/5.8.0+
     mypy/bin/pip install --upgrade pip
     mypy/bin/pip install h5py
     mypy/bin/python jorekHDF5toIDS.py -h
+    cp jorek00000.h5 /tmp/jorek_restart.h5
+    mypy/bin/python jorekHDF5toIDS.py
+    mypy/bin/python IDS_to_VTK.py
+    
      
  

@@ -58,7 +58,7 @@ class basicIDS(object):
         self.idx = None
         
         logging.config.fileConfig(fname='log.conf')
-        self.logger = logging.getLogger('JOREK_HDF5_2_IDS')
+        self.logger = logging.getLogger('jorekHDF5toIDS')
 
     def openIMASdatabase(self):
         """Open IMAS database.

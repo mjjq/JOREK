@@ -76,7 +76,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logging.config.fileConfig(fname='log.conf')
-    logger = logging.getLogger('JOREK_HDF5_2_IDS')
+    logger = logging.getLogger('jorekHDF5toIDS')
     np.set_printoptions(
         formatter={'float': '{: 0.3f}'.format})
 

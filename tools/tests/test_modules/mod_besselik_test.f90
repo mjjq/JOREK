@@ -7,7 +7,7 @@ implicit none
 !> variables common to all tests
 integer,parameter               :: max_it=1000000  !< maximum number of iterations
 real*8,parameter                :: eps=1.d-10      !< variation values
-real*8,parameter                :: test_tol=5.d-14 !< tolerance for success
+real*8,parameter                :: test_tol=1.d-14 !< tolerance for success
 ! order of the bessel function for testing
 integer :: N_nu=3
 real*8,dimension(3),parameter :: nu=(/1.d0/3.d0,2.d0/3.d0,5.d0/3.d0/)
@@ -67,9 +67,11 @@ real*8,dimension(30),parameter :: knu_lt_2_py = (/&
      2.6107971621235415d-1,7.5348967958552855d0,8.9507100359444867d3,&
      2.4299009262145467d9,1.2391382463436482d1,2.9514712025858114d-1,&
      1.0977307162471459d0,3.0873454738434148d13,2.0270842654721480d-1/)/)
-integer                         :: Nx             !< number of elements
-real*8                          :: x_thre         !< threshold value
-real*8,dimension(:),allocatable :: x              !< input array x
+integer                          :: Nx,Nx_nu       !< number of elements
+integer,dimension(:),allocatable :: ids_nu         !< index of the element x
+real*8                           :: x_thre         !< threshold value
+real*8,dimension(:),allocatable  :: x,x_nu         !< input array x
+real*8,dimension(:),allocatable  :: knu_mat,knu_py !< shuffled matlab/python solutions
 
 ! procedures for checking and allocating arrays
 interface allocate_check
@@ -99,7 +101,7 @@ subroutine setup(Nx_val,Nx_lt_val,Nx_ge_val,x_val,x_min,x_max)
   integer,intent(in),optional :: Nx_val,Nx_lt_val,Nx_ge_val
   real*8,intent(in),optional :: x_val,x_min,x_max
 	! variables
-	integer :: Nx_lt_ge,Nx_lt_minx,Nx_ge_minx
+	integer :: base_id,ii,Nx_lt_ge,Nx_lt_minx,Nx_ge_minx
 	integer,dimension(:),allocatable :: ids
 	real*8,dimension(:),allocatable  :: rnd
 	real*8 :: x_val_loc,x_min_loc,x_max_loc
@@ -120,11 +122,16 @@ subroutine setup(Nx_val,Nx_lt_val,Nx_ge_val,x_val,x_min,x_max)
 	if(present(x_min)) x_min_loc = x_min
 	if(present(x_max)) x_max_loc = x_max
   Nx_lt_ge = Nx_lt_minx+Nx_ge_minx
+	Nx_nu = Nx_ge_2 + Nx_lt_2
 
 	! allocate arrays for tests
 	call allocate_check(Nx_lt_ge,ids)
+	call allocate_check(Nx_nu,ids_nu)
 	call allocate_check(Nx,x)
 	call allocate_check(Nx,rnd)
+	call allocate_check(N_nu*Nx_nu,x_nu)
+	call allocate_check(N_nu*Nx_nu,knu_mat)
+	call allocate_check(N_nu*Nx_nu,knu_py)
   ! allocate internal arrays
 	x=0.d0; rnd=0.d0;
 
@@ -134,9 +141,23 @@ subroutine setup(Nx_val,Nx_lt_val,Nx_ge_val,x_val,x_min,x_max)
   x(ids(1:Nx_lt_minx)) = x_min_loc + (x_thre-eps-x_min_loc)*rnd(1:Nx_lt_minx)
 	x(ids(Nx_lt_minx+1:Nx_lt_ge)) = x_thre + (x_max_loc-x_thre)*rnd(Nx_lt_minx+1:Nx_lt_ge)
 
+  ! randomize matlab and python solutions for testing
+	!call generate_int_rnd_array(Nx_nu*N_nu,1,Nx_nu,ids_nu)
+	!do ii=1,N_nu
+	!  base_id = (ii-1)*Nx_nu
+!		x_nu(ids_nu(base_id+1:base_id+Nx_lt_2)) = x_lt_2
+!	  x_nu(ids_nu(base_id+Nx_lt_2+1:base_id+Nx_nu)) = x_ge_2
+!		knu_mat(ids_nu(base_id+1:base_id+Nx_lt_2)) = knu_lt_2_mat((ii-1)*Nx_lt_2+1:ii*Nx_lt_2)
+!		knu_mat(ids_nu(base_id+Nx_lt_2+1:base_id+Nx_nu)) = knu_ge_2_mat((ii-1)*Nx_ge_2+1:ii*Nx_ge_2)
+!		knu_py(ids_nu(base_id+1:base_id+Nx_lt_2)) = knu_lt_2_py((ii-1)*Nx_lt_2+1:ii*Nx_lt_2)
+!		knu_py(ids_nu(base_id+Nx_lt_2+1:base_id+Nx_nu)) = knu_ge_2_py((ii-1)*Nx_ge_2+1:ii*Nx_ge_2)
+!	enddo
+
+
 	! deallocate arrays
 	call deallocate_check(ids)
 	call deallocate_check(rnd)
+	call deallocate_check(ids_nu)
 
 end subroutine setup
 
@@ -144,7 +165,40 @@ end subroutine setup
 subroutine teardown()
   implicit none
 	call deallocate_check_double(x)
+	call deallocate_check(x_nu)
+	call deallocate_check(knu_mat)
+	call deallocate_check(knu_py)
 end subroutine teardown
+
+! test_besselk tests the computation of the modified bessel
+! function of the second kind and fractional order using
+! randomized matlab and python solutions
+subroutine test_besselk()
+  use mod_besselik, only: besselik
+	implicit none
+
+	! variables
+	integer :: ii,ierr
+	real*8,dimension(Nx_nu*N_nu) :: knu_sol,dknu_sol
+
+	! initialization
+	ierr = 0
+
+	! compute modified bessel function for multiple nu
+	do ii=1,N_nu
+	  call besselik(Nx_nu,x_nu((ii-1)*Nx_nu+1:ii*Nx_nu),&
+		nu(ii),knu_sol((ii-1)*Nx_nu+1:ii*Nx_nu),&
+		dknu_sol((ii-1)*Nx_nu+1:ii*Nx_nu),ierr)
+	enddo
+
+	! check solution
+	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged")
+	call assert_equals(knu_sol/knu_mat,knu_mat/knu_mat,N_nu*Nx_nu,test_tol,&
+	"Error: no match between Matlab and JOREK modified bessel function 2nd kind")
+	call assert_equals(knu_sol/knu_py,knu_py/knu_py,N_nu*Nx_nu,test_tol,&
+	"Error: no match between Python and JOREK modified bessel function 2nd")
+
+end subroutine test_besselk
 
 ! test_besselk_lt_xval tests the computation of the modified 
 ! bessel function of the second kind and fractional order 
@@ -155,9 +209,10 @@ subroutine test_besselk_lt_xval()
 
 	! variables
 	integer :: ii,ierr
-	real*8,dimension(Nx_lt_2*N_nu) :: knu_sol,dknu_sol
+	real*8  :: max_err_mat,max_err_py
+	real*8,dimension(Nx_lt_2*N_nu) :: knu_sol,dknu_sol,err_mat,err_py
 
-  ! initialization
+! initialization
 	ierr = 0
 
 	! compute modified bessel function for multiple nu
@@ -167,11 +222,17 @@ subroutine test_besselk_lt_xval()
 		dknu_sol((ii-1)*Nx_lt_2+1:ii*Nx_lt_2),ierr)
 	enddo
 
+  ! compute error
+	err_mat = abs((knu_sol-knu_lt_2_mat)/knu_lt_2_mat)
+	err_py  = abs((knu_sol-knu_lt_2_py)/knu_lt_2_py)
+	max_err_mat = maxval(err_mat)
+	max_err_py  = maxval(err_py)
+	
   ! check solution 
 	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged for x<x_val")
-	call assert_equals(knu_sol/knu_lt_2_mat,knu_lt_2_mat/knu_lt_2_mat,Nx_lt_2,test_tol,&
+	call assert_true(max_err_mat.lt.test_tol,&
 	"Error: no match between MatLab and JOREK modified bessel function 2nd kind for x<x_val")
-	call assert_equals(knu_sol/knu_lt_2_py,knu_lt_2_py/knu_lt_2_py,Nx_lt_2,test_tol,&
+	call assert_true(max_err_py.lt.test_tol,&
 	"Error: no match between Python and JOREK modified bessel function 2nd kind for x<x_val")
 
 end subroutine test_besselk_lt_xval
@@ -185,7 +246,8 @@ subroutine test_besselk_ge_xval()
 
 	! variables
 	integer :: ii,ierr
-	real*8,dimension(Nx_ge_2*N_nu) :: knu_sol,dknu_sol
+	real*8  :: max_err_mat,max_err_py
+	real*8,dimension(Nx_ge_2*N_nu) :: knu_sol,dknu_sol,err_mat,err_py
 
   ! initialization
   ierr = 0
@@ -197,11 +259,17 @@ subroutine test_besselk_ge_xval()
 		dknu_sol((ii-1)*Nx_ge_2+1:ii*Nx_ge_2),ierr)
 	enddo
 
+	! compute error
+  err_mat = (knu_sol-knu_ge_2_mat)/knu_ge_2_mat
+	err_py = (knu_sol-knu_ge_2_mat)/knu_ge_2_mat
+	max_err_mat = maxval(abs(err_mat))
+	max_err_py  = maxval(abs(err_py))
+
   ! check solution 
 	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged for x>=x_val")
-	call assert_equals(knu_sol/knu_ge_2_mat,knu_ge_2_mat/knu_ge_2_mat,Nx_ge_2,test_tol,&
+	call assert_true(max_err_mat.lt.test_tol,&
 	"Error: no match between MatLab and JOREK modified bessel function 2nd kind for x>=x_val")
-	call assert_equals(knu_sol/knu_ge_2_py,knu_ge_2_py/knu_ge_2_py,Nx_ge_2,test_tol,&
+	call assert_true(max_err_py.lt.test_tol,&
 	"Error: no match between Python and JOREK modified bessel function 2nd kind for x>=x_val")
 
 end subroutine test_besselk_ge_xval

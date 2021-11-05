@@ -120,13 +120,13 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
   integer               :: Nx_ge_minx,Nx_lt_minx   !< N of x larger and smaller than x_val_min
   integer,dimension(Nx) :: ids_ge_minx,ids_lt_minx !< x-ids for array reconstruction
   real*8                :: mu                      !< order of the recurrence
-  real*8,dimension(Nx)  :: xi,x_ge_minx,x_lt_minx  !< values larger and smaller than x_val_min
+  real*8,dimension(Nx)  :: x_ge_minx,x_lt_minx  !< values larger and smaller than x_val_min
   real*8,dimension(Nx)  :: kmu,k1,kmu_ge_minx
 	real*8,dimension(Nx)  :: k1_ge_minx,kmu_lt_minx
 	real*8,dimension(Nx)  :: k1_lt_minx
 
   ! separate variables in larger and smaller than x_val_min
-  N_rec=floor(nu+5.d-1); mu=nu-N_rec; xi = 1.d0/x;
+  N_rec=floor(nu+5.d-1); mu=nu-N_rec;
   call  split_array_value(Nx,x,x_val_min,Nx_lt_minx,Nx_ge_minx,&
 	x_lt_minx,x_ge_minx,ids_lt_minx,ids_ge_minx)
   ! compute the modified bessel function 2nd kind for x<x_val_min
@@ -146,7 +146,7 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
 		k1(ids_ge_minx(1:Nx_ge_minx)) = k1_ge_minx(1:Nx_ge_minx)
 	endif
 	! compute the modified bessel function of the 2nd kind
-	call comp_besselk_posxnu(N_rec,Nx,mu,nu,xi,kmu,k1,knu,dknu)
+	call comp_besselk_posxnu(N_rec,Nx,mu,nu,1.d0/x,kmu,k1,knu,dknu)
 
 end subroutine besselk_posxnu
 
@@ -179,7 +179,6 @@ subroutine comp_besselk_posxnu(N_rec,Nx,mu,nu,xi,kmu,k1,knu,dknu)
 	real*8,dimension(Nx) :: kmup,ktemp
 
 	! compute the modified bessel function 2nd kind
-  kmup = mu*xi*kmu-k1
 	do ii=1,N_rec
 	  ktemp = 2.d0*(mu+ii)*xi*k1 + kmu
 		kmu = k1 
@@ -220,8 +219,8 @@ subroutine besselk_posxnu_lt_xval(Nx_lt,x_lt,mu,kmu,k1,tol,max_it,ierr)
   real*8,dimension(Nx_lt) :: del,del1
 	
   ! evaluation of Gamm1 and Gamm2
-	gammi = 1.d0/gamma(1-mu)
-	gampl = 1.d0/gamma(1+mu)
+	gammi = 1.d0/gamma(1.d0-mu)
+	gampl = 1.d0/gamma(1.d0+mu)
 	gam1 = 5.d-1*(gammi-gampl)/mu
 	gam2 = 5.d-1*(gammi+gampl)
 
@@ -237,9 +236,9 @@ subroutine besselk_posxnu_lt_xval(Nx_lt,x_lt,mu,kmu,k1,tol,max_it,ierr)
 	c = 1.d0; summ1 = p; ii=1; del=1.d10;
 
 	! compute the recurrent fraction
-	do while((maxval(abs(del)).ge.(maxval(abs(summ))*tol)).and.(ii.le.max_it))
+  do while((maxval(abs(del)).ge.(maxval(abs(summ))*tol)).and.(ii.le.max_it))
 	  ff = (ii*ff+q+p)/(ii*ii-mu*mu)
-		c = c*d/ii; p=p/(ii-mu); q=q/(ii+mu);
+		c = c*d/real(ii); p=p/(ii-mu); q=q/(ii+mu);
 		del = c*ff; summ = summ + del;
 		del1 = c*(p-ii*ff); summ1 = summ1+del1;
 		ii = ii+1;
@@ -344,6 +343,7 @@ N_ge_minx,x_lt_minx,x_ge_minx,ids_lt_minx,ids_ge_minx)
 	! and below the threshold, store their ids as well
   mask_lt_minx = (x.lt.x_val)
   N_lt_minx = 0; N_ge_minx = 0;
+	ids_lt_minx = -1; ids_ge_minx = -1;
 	do ii=1,Nx
 	  if(mask_lt_minx(ii)) then
 		  N_lt_minx = N_lt_minx + 1

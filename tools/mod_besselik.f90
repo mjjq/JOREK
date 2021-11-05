@@ -9,6 +9,19 @@
 ! tables, National Bureau of Standards, 10th Ed, 1972 and in further
 ! publications integrating using the Gauss-Laguerre integration method.
 ! At the moment, only methods for variable x>0 and order nu>0 are implemented.
+! Other effective methods using recursive fractional equations are reported in:
+! B.R. Fabijonas et al. J. Comp. App. Math., vol.161, p. 179, 2003
+! J. Rappoport, Mathematical Software for Modified Bessel Functions, in
+! Mathematical Software - ICMS 2014, p. 352, Springer, 2014
+! I.J. Thompson & A.R. Barnett, Comp. Phys. Comm., vol.47, p. 245, 1987
+! N.M. Temme, J. Comp. Phys. vol.19, p.324, 1975
+! W.J. Lentz, App. Optics, vol.15, p.668, 1976
+! T. Takekawa, ArXiv: 2108.11560v2,  2021
+! D.E. Amos, ACM. Trans. Math. Soft., vol.12, p.265, 1986
+! D.E. Amos, ACM. Trans. Math. Soft., vol.21, p.388, 1995
+! Other possibilities which my improve performance is to use external libraries:
+! BOOST C++: www.boost.org <- requires isobinding between C++ and F90
+! ALGORITHM 644: www.netlib.org/amos <- implement D.E. Amos in F77
 module mod_besselik
 use constants, only: PI
 implicit none
@@ -39,6 +52,8 @@ contains
 !		nu:			   (real8) bessel function order
 !		tol_in:		 (real8) stop tolerance: default 1.e-16
 !		max_it_in: (int) maximum number of iterations (default: 100000)
+!   ierr: (integer) error code, 0: success, 1: wrong inputs
+!                   2: Lentz's algorithm did not converge
 ! outputs:
 !		Knu:	(real8)(Nx) modified bessel function of the 2nd kind
 !		dKnu:	(real8)(Nx) derivative of the modified bessel function 2nd kind
@@ -55,7 +70,7 @@ subroutine besselk(Nx,x,nu,Knu,dKnu,ierr,tol_in,max_it_in)
   integer,intent(in),optional     :: max_it_in
   ! outputs
 	real*8,dimension(Nx),intent(out) :: Knu,dKnu
-  integer                          :: ierr
+  integer,intent(inout)            :: ierr
 	! variables
 	integer :: max_it
 	real*8  :: tol
@@ -83,11 +98,11 @@ end subroutine besselk
 !		nu:			   (real8) bessel function order
 !		tol_in:		 (real8) stop tolerance: default 1.e-16
 !		max_it_in: (int) maximum number of iterations (default: 100000)
+!   ierr: (integer) error code, 0: success, 2: Lentz's algorithm did not converge
 ! outputs:
 !		Knu:	(real8)(Nx) modified bessel function of the 2nd kind
 !		dKnu:	(real8)(Nx) derivative of the modified bessel function 2nd kind
-!   ierr: (integer) error code, 0: success, 1: wrong inputs
-!                   2: Lentz's algorithm did not converge
+!   ierr: (integer) error code, 0: success, 2: Lentz's algorithm did not converge
 subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
   implicit none
 
@@ -99,7 +114,7 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
   integer,intent(in)              :: max_it
   ! outputs
 	real*8,dimension(Nx),intent(out) :: Knu,dKnu
-  integer                          :: ierr
+  integer,intent(inout)            :: ierr
   ! internal variables
 	integer               :: N_rec  !< number of downward recursions
   integer               :: Nx_ge_minx,Nx_lt_minx   !< N of x larger and smaller than x_val_min
@@ -111,7 +126,7 @@ subroutine besselk_posxnu(Nx,x,nu,Knu,dKnu,ierr,tol,max_it)
 	real*8,dimension(Nx)  :: k1_lt_minx
 
   ! separate variables in larger and smaller than x_val_min
-  N_rec=int(nu+5.d-1); mu=nu-N_rec; xi = 1.d0/x;
+  N_rec=floor(nu+5.d-1); mu=nu-N_rec; xi = 1.d0/x;
   call  split_array_value(Nx,x,x_val_min,Nx_lt_minx,Nx_ge_minx,&
 	x_lt_minx,x_ge_minx,ids_lt_minx,ids_ge_minx)
   ! compute the modified bessel function 2nd kind for x<x_val_min
@@ -137,6 +152,17 @@ end subroutine besselk_posxnu
 
 ! comp_besselk_posxnu computes the modified bessel function of the
 ! 2nd kind after having resolved the continuous fractional equation
+! inputs:
+!   N_rec: (integer) number of recursion
+!   Nx:    (integer) number of x-values
+!   mu:    (real8) fractional part of the bessel function order
+!   nu:    (real8) bessel function order
+!   xi:    (real8)(Nx) inverse of the vector x: 1/x
+!   kmu:   (real8)(Nx) modfied bessel fct. 2nd kind at order mu
+!   k1:    (real8)(Nx) derivative modified bessel fct 2nd kind order mu
+! outputs:
+!   knu:    (real8)(Nx) modified bessel fct 2nd kind order nu
+!   dknu:   (real8)(Nx) derivative modified bessel fct 2nd kind order nu
 subroutine comp_besselk_posxnu(N_rec,Nx,mu,nu,xi,kmu,k1,knu,dknu)
   implicit none
 
@@ -166,6 +192,17 @@ end subroutine comp_besselk_posxnu
 
 ! bessekl_posxnu_lt_val computes the continuous fractional equation
 ! of the modified bessel function for the branch x<xval_min
+! inputs:
+!   Nx_lt:  (integer) number of x elements < x_val
+!   x_lt:   (real8)(Nx) x values < x_val
+!   mu:     (real8) fractional part of the bessel function order
+!   tol:    (real8) tolerance for convergence
+!   max_it: (integer) maximum number of iterations
+!   ierr: (integer) error code, 0: success, 2: Lentz's algorithm did not converge
+! outputs:
+!   kmu:   (real8)(Nx) modfied bessel fct. 2nd kind at order mu
+!   k1:    (real8)(Nx) derivative modified bessel fct 2nd kind order mu
+!   ierr:  (integer) error code, 0: success, 2: Lentz's algorithm did not converge! 
 subroutine besselk_posxnu_lt_xval(Nx_lt,x_lt,mu,kmu,k1,tol,max_it,ierr)
   implicit none
 	
@@ -174,7 +211,7 @@ subroutine besselk_posxnu_lt_xval(Nx_lt,x_lt,mu,kmu,k1,tol,max_it,ierr)
 	real*8,dimension(Nx_lt),intent(in) :: x_lt
 	real*8,intent(in) :: mu,tol
 	! outputs
-	integer,intent(out) :: ierr
+	integer,intent(inout) :: ierr
 	real*8,dimension(Nx_lt),intent(out) :: kmu,k1
 	! variables
 	integer :: ii
@@ -190,10 +227,10 @@ subroutine besselk_posxnu_lt_xval(Nx_lt,x_lt,mu,kmu,k1,tol,max_it,ierr)
 
 	! initialize the variables for the recurrent fraction solver
 	fact = 1.d0
-	if((PI*mu).lt.tol) fact = PI*mu/sin(PI*mu)
+	if((PI*mu).ge.tol) fact = PI*mu/sin(PI*mu)
   d=-log(5.d-1*x_lt); e = mu*d;
 	fact2 =1.d0
-	where(abs(e).lt.tol) fact2 = sinh(e)/e
+	where(abs(e).ge.tol) fact2 = sinh(e)/e
   ff = fact*(gam1*cosh(e)+gam2*fact2*d); 
 	summ = ff; e = exp(e); d = 2.5d-1*x_lt*x_lt;
 	p = 5.d-1*e/gampl; q = 5.d-1/(e*gammi);
@@ -209,7 +246,7 @@ subroutine besselk_posxnu_lt_xval(Nx_lt,x_lt,mu,kmu,k1,tol,max_it,ierr)
 	enddo
   ! check for convergence
 	if(ii.gt.max_it) then
-	  ierr = 1
+	  ierr = 2
 		write(*,*) "Error fractional continuous solver for x<x_val: not converged! "
 	endif
 
@@ -221,6 +258,17 @@ end subroutine besselk_posxnu_lt_xval
 
 ! bessekl_posxnu_ge_xval computes the continuous fractional equation 
 ! of the modified bessel function for the branch x>=xval_min
+! inputs:
+!   Nx_ge:  (integer) number of x elements >= x_val
+!   x_ge:   (real8)(Nx) x values >= x_val
+!   mu:     (real8) fractional part of the bessel function order
+!   tol:    (real8) tolerance for convergence
+!   max_it: (integer) maximum number of iterations
+!   ierr: (integer) error code, 0: success, 2: Lentz's algorithm did not converge
+! outputs:
+!   kmu:   (real8)(Nx) modfied bessel fct. 2nd kind at order mu
+!   k1:    (real8)(Nx) derivative modified bessel fct 2nd kind order mu
+!   ierr:  (integer) error code, 0: success, 2: Lentz's algorithm did not converge!
 subroutine besselk_posxnu_ge_xval(Nx_ge,x_ge,mu,kmu,k1,tol,max_it,ierr)
   implicit none
 
@@ -229,7 +277,7 @@ subroutine besselk_posxnu_ge_xval(Nx_ge,x_ge,mu,kmu,k1,tol,max_it,ierr)
 	real*8,dimension(Nx_ge),intent(in) :: x_ge
 	real*8,intent(in) :: mu,tol
 	! outputs
-	integer,intent(out) :: ierr
+	integer,intent(inout) :: ierr
 	real*8,dimension(Nx_ge),intent(out) :: kmu,k1
 	! variables
 	integer :: ii
@@ -237,7 +285,6 @@ subroutine besselk_posxnu_ge_xval(Nx_ge,x_ge,mu,kmu,k1,tol,max_it,ierr)
 	real*8,dimension(Nx_ge) :: q,q1,q2,qnew,s
 	real*8,dimension(Nx_ge) :: delh,dels
 
-  ierr = 0
 	! init the continuous fractional solver
 	b = 2.d0*(1.d0+x_ge); d = 1.d0/b; delh = d;
 	h = delh; q1 = 0.d0; q2 = 1.d0; c = 2.5d-1 - mu*mu;
@@ -246,7 +293,7 @@ subroutine besselk_posxnu_ge_xval(Nx_ge,x_ge,mu,kmu,k1,tol,max_it,ierr)
 	do while((maxval(abs(dels/s)).ge.tol).and.(ii.le.max_it))
 	  a = a - 2.d0*(ii-1)
 		c = -a*c/ii
-		qnew = (q1-q2)/a
+		qnew = (q1-b*q2)/a
 		q1 = q2; q2 = qnew;
 		q = q + c*qnew; b = b + 2.d0
 		d = 1.d0/(b + a*d)
@@ -256,7 +303,7 @@ subroutine besselk_posxnu_ge_xval(Nx_ge,x_ge,mu,kmu,k1,tol,max_it,ierr)
 	enddo
 	! check for convergence
 	if(ii.gt.max_it) then
-	  ierr = 1
+	  ierr = 2
 		write(*,*) "Error fractional continuous solver for x>=x_val: not converged! "
 	endif
 	! compute the contribution to the modified bessel function 2nd kind

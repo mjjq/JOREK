@@ -5,9 +5,9 @@ use fruit
 implicit none
 
 !> variables common to all tests
-integer,parameter               :: max_it=1000000 !< maximum number of iterations
-real*8,parameter                :: eps=1.d-10     !< variation values
-real*8,parameter                :: tol=1.d-16     !< tolerance for success
+integer,parameter               :: max_it=1000000  !< maximum number of iterations
+real*8,parameter                :: eps=1.d-10      !< variation values
+real*8,parameter                :: test_tol=5.d-14 !< tolerance for success
 ! order of the bessel function for testing
 integer :: N_nu=3
 real*8,dimension(3),parameter :: nu=(/1.d0/3.d0,2.d0/3.d0,5.d0/3.d0/)
@@ -52,7 +52,7 @@ real*8,dimension(30),parameter :: knu_lt_2_mat = (/&
      1.179972353239948d-1/),(/4.988585910043111d2,1.571933403240230d-1,&
      1.679684673610099d0,3.540754405283199d1,5.285034257170110d3,&
      2.179872025239006d0,1.744438023694717d-1,4.944750621042081d-1,&
-     2.315509105323807d5,1.264314529006558d-1/),(/6.651484164018186d+6,&
+     2.315509105323807d5,1.264314529006558d-1/),(/6.651484164018186d6,&
      2.610797162123548d-1,7.534896795855283d0,8.950710035944485d3,&
      2.429900926214546d9,1.239138246343648d1,2.951471202585817d-1,&
      1.097730716247145d0,3.087345473843414d13,2.027084265472155d-1/)/)
@@ -157,6 +157,9 @@ subroutine test_besselk_lt_xval()
 	integer :: ii,ierr
 	real*8,dimension(Nx_lt_2*N_nu) :: knu_sol,dknu_sol
 
+  ! initialization
+	ierr = 0
+
 	! compute modified bessel function for multiple nu
 	do ii=1,N_nu
 	  call besselik(Nx_lt_2,x_lt_2,nu(ii),&
@@ -166,9 +169,9 @@ subroutine test_besselk_lt_xval()
 
   ! check solution 
 	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged for x<x_val")
-	call assert_equals(knu_sol/knu_lt_2_mat,knu_lt_2_mat/knu_lt_2_mat,Nx_lt_2,tol,&
+	call assert_equals(knu_sol/knu_lt_2_mat,knu_lt_2_mat/knu_lt_2_mat,Nx_lt_2,test_tol,&
 	"Error: no match between MatLab and JOREK modified bessel function 2nd kind for x<x_val")
-	call assert_equals(knu_sol/knu_lt_2_py,knu_lt_2_py/knu_lt_2_py,Nx_lt_2,tol,&
+	call assert_equals(knu_sol/knu_lt_2_py,knu_lt_2_py/knu_lt_2_py,Nx_lt_2,test_tol,&
 	"Error: no match between Python and JOREK modified bessel function 2nd kind for x<x_val")
 
 end subroutine test_besselk_lt_xval
@@ -184,6 +187,9 @@ subroutine test_besselk_ge_xval()
 	integer :: ii,ierr
 	real*8,dimension(Nx_ge_2*N_nu) :: knu_sol,dknu_sol
 
+  ! initialization
+  ierr = 0
+
 	! compute modified bessel function for multiple nu
 	do ii=1,N_nu
 	  call besselik(Nx_ge_2,x_ge_2,nu(ii),&
@@ -193,9 +199,9 @@ subroutine test_besselk_ge_xval()
 
   ! check solution 
 	call assert_true(ierr==0,"Error: JOREK modified bessel function 2nd kind did not converged for x>=x_val")
-	call assert_equals(knu_sol/knu_ge_2_mat,knu_ge_2_mat/knu_ge_2_mat,Nx_ge_2,tol,&
+	call assert_equals(knu_sol/knu_ge_2_mat,knu_ge_2_mat/knu_ge_2_mat,Nx_ge_2,test_tol,&
 	"Error: no match between MatLab and JOREK modified bessel function 2nd kind for x>=x_val")
-	call assert_equals(knu_sol/knu_ge_2_py,knu_ge_2_py/knu_ge_2_py,Nx_ge_2,tol,&
+	call assert_equals(knu_sol/knu_ge_2_py,knu_ge_2_py/knu_ge_2_py,Nx_ge_2,test_tol,&
 	"Error: no match between Python and JOREK modified bessel function 2nd kind for x>=x_val")
 
 end subroutine test_besselk_ge_xval
@@ -223,11 +229,11 @@ use fruit
 	x_sol(ids_ge_minx_sol) = x_ge_minx_sol(1:Nx_ge_minx_sol)
 
 	! check results
-	call assert_true(all(x_lt_minx_sol(Nx_lt_minx_sol+1:Nx).le.tol),&
+	call assert_true(all(x_lt_minx_sol(Nx_lt_minx_sol+1:Nx).le.test_tol),&
 	"Error in x_lt_minx order: non-zero values found in tail")
-	call assert_true(all((x_ge_minx_sol(Nx_ge_minx_sol+1:Nx)).le.tol),&
+	call assert_true(all((x_ge_minx_sol(Nx_ge_minx_sol+1:Nx)).le.test_tol),&
 	"Error in x_lt_minx order: non-zero values found in tail")
-	call assert_equals(x_sol,x,Nx,tol,&
+	call assert_equals(x_sol,x,Nx,test_tol,&
 	"Constructed and reconstructed x array must be the same")
 
 end subroutine test_split_array_value

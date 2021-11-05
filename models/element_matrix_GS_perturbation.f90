@@ -152,7 +152,9 @@ do ms=1, n_gauss
 
         rhs_ij =  zFFprime / x_g(ms,mt) - (zn * dT_dpsi + dn_dpsi * zT) * x_g(ms,mt) * pprime_fact
 
-        ! --- Add the contribution of extra PF coils for fixed boundary (not coming from STARWALL or COIL_FIELD) 
+        ! --- Add the contribution of extra PF coil currents inside the JOREK domain
+        ! --- This is useful to compute a fluxmap to build afterwards an X-point grid
+        ! --- PLEASE DON'T DELETE IT, Otherwise you will suffer the full wrath of Stan !
         if ((.not. restart) .and. (n_pfc .ne. 0)) then
           do nc=1,n_pfc
             if (  (x_g(ms,mt) .lt. Rmax_pfc(nc)) .and. (x_g(ms,mt) .gt. Rmin_pfc(nc)) &

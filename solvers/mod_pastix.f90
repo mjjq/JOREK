@@ -102,15 +102,6 @@ module mod_pastix
 
     end subroutine get_residual
 
-    !subroutine free_double(val) bind(C)
-    !  use iso_c_binding
-    !  implicit none
-    !
-    !  !real(kind=C_DOUBLE), pointer :: val
-    !  type(C_PTR), intent(inout) :: val
-    !end subroutine free_double
-
-
   end interface
 
   contains
@@ -145,8 +136,8 @@ module mod_pastix
 
       logical,intent(in),optional :: update, distributed, equilibrium
 
-      integer(kind=C_INT) :: indexing=1, block_size
-      integer(kind=C_INT) :: n, n_d, nnz, nnz_d, jmin, jmax, i
+      integer(kind=C_INT) :: indexing=1, block_size, block_size2
+      integer(kind=C_INT) :: n, n_d, nnz, nnz_d, jmin, jmax, i, n_block, nnz_block
 
       integer :: my_id_n, n_cpu_n, ierr, comm
 
@@ -166,66 +157,44 @@ module mod_pastix
       ! if not already distributed distribute matrix column-wise
       ! add n_cpu>1
       if (.not.dflag) then
-
-        call distribute_matrix(indexing, block_size, n, nnz, n_d, nnz_d, jcn, irn, val, loc2glob, glob2loc, comm)
-
+        call distribute_matrix(indexing, block_size, n, nnz, jmin, jmax, nnz_d, jcn, irn, val, comm)
       elseif (dflag) then
       ! already distributed; set loc2glob and glob2loc
         call MPI_Comm_rank(comm, my_id_n, ierr)
 
         jmin = minval(jcn(1:nnz))
         jmax = maxval(jcn(1:nnz))
-        n_d = jmax - jmin + 1
         nnz_d = nnz
 
         jcn(1:nnz_d) = jcn(1:nnz_d) - jmin + indexing
-
-        allocate(loc2glob(n_d))
-        do i = 1, n_d
-          loc2glob(i) = i - 1 + jmin;
-        enddo
-
-        allocate(glob2loc(n))
-        glob2loc = 0
-
-        do i = 1, n_d
-          glob2loc(loc2glob(i) + 1 - indexing)= - my_id_n - 1;
-        enddo
-
-        call MPI_Allreduce(MPI_IN_PLACE, glob2loc, n, MPI_INTEGER, MPI_SUM, comm, ierr)
-
-        do i = 1, n_d
-          glob2loc(loc2glob(i) + 1 - indexing)= loc2glob(i) - loc2glob(1)
-        enddo
-
       endif
+      
+      n_d = jmax - jmin + 1
+      allocate(loc2glob(n_d))
+      do i = 1, n_d
+        loc2glob(i) = i - 1 + jmin;
+      enddo
+
+      allocate(glob2loc(n)); glob2loc(1:n) = 0
+
+      do i = 1, n_d
+        glob2loc(loc2glob(i) + 1 - indexing)= - my_id_n - 1;
+      enddo
+
+      call MPI_Allreduce(MPI_IN_PLACE, glob2loc, n, MPI_INTEGER, MPI_SUM, comm, ierr)
+
+      do i = 1, n_d
+        glob2loc(loc2glob(i) + 1 - indexing)= loc2glob(i) - loc2glob(1)
+      enddo      
       
       if (.not.eql) then
         call do_column_scaling(n,nnz_d,irn,jcn,val,comm)
         spm_scaled = .true.
       endif
 
-
       !call MPI_Comm_rank(MPI_COMM_WORLD, my_id_n, ierr)
       !write(*,*) my_id_n, nnz_d, n_d
       !write(*,*) my_id_n, loc2glob(1), loc2glob(n_d)
-
-      ! Prepare matrix for using block-structure
-      !block_size2 = block_size**2
-      !n_block   = n_d/block_size
-      !nnz_block = nnz_d/block_size2
-
-      !if (block_size>1) then
-      !  do i=1,nnz_block
-      !    irn(i) = (irn((i-1)*block_size2+1) - 1)/block_size + 1
-      !    jcn(i) = (jcn((i-1)*block_size2+1) - 1)/block_size + 1
-      !  enddo
-      !endif
-
-      !if (allocated(iwk)) deallocate(iwk)
-      !allocate(iwk(n_block+1))
-      !call coicsr2(n_block,nnz_block,val,irn(1:nnz_block),jcn(1:nnz_block),block_size,iwk)
-      !deallocate(iwk)
 
       ! allocating local arrays to be used to store matrix in csc format
       !allocate(rptr(nnz_d),cptr(n_d+1),values(nnz_d))
@@ -242,6 +211,21 @@ module mod_pastix
         allocate(iwk(n+1))
         call coicsr(n,nnz_d,1,val,irn,jcn,iwk)
         deallocate(iwk)
+!#if (defined(USE_BLOCK))
+!        n_block   = n/block_size
+!        block_size2 = block_size*block_size
+!        nnz_block = nnz_d/block_size2
+!        if (block_size>1) then
+!          do i=1,nnz_block
+!            irn(i) = (irn((i-1)*block_size2+1) - 1)/block_size + 1
+!            jcn(i) = (jcn((i-1)*block_size2+1) - 1)/block_size + 1
+!          enddo
+!        endif
+!        if (allocated(iwk)) deallocate(iwk)
+!        allocate(iwk(n_block+1))
+!        call coicsr2(n_block,nnz_block,val,irn(1:nnz_block),jcn(1:nnz_block),block_size,iwk)
+!        deallocate(iwk)
+!#ednif
       endif
 
       call MPI_Barrier(comm,ierr)
@@ -314,18 +298,16 @@ module mod_pastix
     end subroutine pastix_finalize
 
 !> Distribute matrix by the first array (irn or jcn) among MPI processes in comm
-    subroutine distribute_matrix(indexing,block_size,n,nnz,n_d,nnz_d,irn,jcn,val,loc2glob,glob2loc,comm)
+    subroutine distribute_matrix(indexing,block_size,n,nnz,imin,imax,nnz_d,irn,jcn,val,comm)
       use iso_c_binding
       implicit none
 
       integer(kind=C_INT), dimension(:), pointer :: irn, jcn
       real(kind=C_DOUBLE), dimension(:), pointer :: val
-      integer(kind=C_INT), dimension(:), pointer :: loc2glob, glob2loc
-
 
       integer, intent(in):: indexing, block_size
       integer, intent(in) :: n, nnz
-      integer, intent(out) :: n_d, nnz_d
+      integer, intent(out) :: nnz_d, imin, imax
 
       integer(kind=C_INT), dimension(:), pointer :: irn_d, jcn_d
       real(kind=C_DOUBLE), dimension(:), pointer :: val_d
@@ -346,31 +328,29 @@ module mod_pastix
 
       dist(1) = indexing
       do i=2, n_cpu_n+1
-        dist(i)= dist(i) + dist(i-1)
+        dist(i) = dist(i) + dist(i-1)
       enddo
+      
+      imin = dist(my_id_n + 1)
+      imax = dist(my_id_n + 2) - 1
 
       allocate(myelm(nnz))
       j = 1
       do i=1, nnz
-        if ((irn(i)>= dist(my_id_n+1)).and.(irn(i)<=(dist(my_id_n+2)-1))) then
+        if ((irn(i)>= imin).and.(irn(i)<=imax)) then
           myelm(j) = i
           j = j + 1
         endif
       enddo
 
       nnz_d = j - 1
-      n_d = dist(my_id_n+2) - dist(my_id_n+1)
 
-      allocate(irn_d(nnz_d),jcn_d(nnz_d),val_d(nnz_d),loc2glob(n_d))
+      allocate(irn_d(nnz_d),jcn_d(nnz_d),val_d(nnz_d))
 
       do i = 1, nnz_d
-        irn_d(i) = irn(myelm(i)) - dist(my_id_n+1) + indexing
+        irn_d(i) = irn(myelm(i)) - dist(my_id_n + 1) + indexing
         jcn_d(i) = jcn(myelm(i))
         val_d(i) = val(myelm(i))
-      enddo
-
-      do i = 1, n_d
-        loc2glob(i) = i - 1 + dist(my_id_n + 1);
       enddo
 
       deallocate(myelm,dist)
@@ -379,26 +359,6 @@ module mod_pastix
       irn => irn_d
       jcn => jcn_d
       val => val_d
-
-      allocate(glob2loc(n))
-      glob2loc = 0
-
-      if (indexing == 0) then
-        indx = 1
-      else
-        indx = 0
-      endif
-
-      do i = 1, n_d
-        glob2loc(loc2glob(i) + indx)= - my_id_n - 1;
-      enddo
-
-      call MPI_Allreduce(MPI_IN_PLACE, glob2loc, n, MPI_INTEGER, MPI_SUM, comm, ierr)
-
-      do i = 1, n_d
-        glob2loc(loc2glob(i) + indx)= loc2glob(i) - loc2glob(1)
-      enddo
-
       return
 
     end subroutine distribute_matrix
@@ -449,7 +409,7 @@ module mod_pastix
       do i = 2, n_cpu_n
         displs(i) = displs(i-1) + rcounts(i-1)
       enddo
-      if (allocated(col_scaling))  deallocate(col_scaling)
+      if (allocated(col_scaling)) deallocate(col_scaling)
       allocate(col_scaling(n))
       call MPI_Allgatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, col_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, comm, ierr)
       deallocate(rcounts,displs,loc_col_scaling)

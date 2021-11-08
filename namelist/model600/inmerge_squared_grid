@@ -109,6 +109,31 @@ current_jropes(2) = -1.0 ! 0.8d6 * 4.0 * 3.1415d-7
  rho_coef(4)  = 1.d-2
  rho_coef(5)  = 1.d+3
 											    
+ eta            = 1.d-5
+ visco          = 1.d-5
+ visco_par      = 1.d-5
+
+ D_par          = 0.d0
+ D_perp(1)      = 1.d-6
+ D_perp(2)      = 0.9d0
+ D_perp(3)      = 0.13d0
+ D_perp(4)      = 1.d-2
+ D_perp(5)      = 1.d+3
+
+ ZK_par         = 0.d+3
+ ZK_perp(1)     = 1.d-6
+ ZK_perp(2)     = 0.9d0
+ ZK_perp(3)     = 0.08d0
+ ZK_perp(4)     = 1.d-2
+ ZK_perp(5)     = 1.d+3
+
+ eta_num        = 1.d-14
+ visco_num      = 1.d-15
+ D_perp_num     = 1.d-15
+ ZK_perp_num    = 0.d-15
+
+ heatsource     = 0.d0
+ particlesource = 0.d0
  
  /											    
 											    

@@ -1932,7 +1932,7 @@ do i=1,n_vertex_max
                                 + aki_neo_prof(ms,mt) *tauIC*2. * r0 *(ps0_x*T_x + ps0_y*T_y)) * BigR * xjac * theta * tstep
 
                       if ( with_vpar ) &
-                      amat(var_u,var_vpar) = amat(var_u,var_vpar) + amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
+                      amat(var_u,var_vpar) =  amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
                                 * BigR * xjac * tstep * theta
                     endif
 

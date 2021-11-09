@@ -1,15 +1,15 @@
 # Configuration file for jorek
 # model directory
-MODEL = model502
+MODEL = model600
 
 # Fortran compiler 
 FC     = mpif90
 CC     = mpicc 
 CXX    = mpicxx 
 
-FFLAGS_OMP       = -fopenmp 
-FFLAGS           = -fdefault-real-8 -fdefault-double-8 -DUSE_BLOCK -DFUNNELED -DWORLDWAR2 #-DCOMPARE_ELEMENT_MATRIX
-FFLAGS          := $(FFLAGS) -O3 -msse2 -march=native
+FFLAGS_OMP       = -qopenmp 
+FFLAGS           = -r8 -i4 -DUSE_BLOCK -DFUNNELED -DWORLDWAR2 #-DCOMPARE_ELEMENT_MATRIX
+FFLAGS          := $(FFLAGS) -xHost -O2 -fp-model fast=2
 
 # --- DEBUGGING
 #   --- Debug symbols for debuggers
@@ -28,10 +28,11 @@ USE_HIPS   = 0
 USE_PASTIX = 1
 USE_PASTIX_MURGE = 0
 USE_PASTIX6 = 0
-USE_MUMPS = 1
+USE_MUMPS = 0
 USE_WSMP   = 0
 USE_FFTW = 1
 USE_HDF5 = 1
+USE_BOOST = 1
 
 #Scotch library
 SCOTCH_HOME  = $(SCOTCH_ROOT)
@@ -65,11 +66,16 @@ LIB_PASTIX6       = -L$(PASTIX6_HOME)/lib -lpastixf -lspmf -lpastix -lspm -lpast
 LIB_PASTIX6_BLAS  = 
 INC_PASTIX6       = $(PASTIX6_HOME)/include $(INC_SCOTCH)
 
-#HIPS
+# BOOST
+BOOST_HOME = $(BOOST_ROOT)
+LIB_BOOST  = -L$(BOOST_HOME)/lib -lboost_math_tr1
+INC_BOOST  = -I(BOOST_HOME)/include
+
+# HIPS
 #LIBHIPS   = -L$(HOME)/hips_trunk/trunk/LIB -lhips -lio $(LIBSCOTCH)
 #INCHIPS   = -I$(HOME)/hips_trunk/trunk/LIB
 
-#WSMP
+# WSMP
 #LIB_WSMP = -L$(WSMP_HOME) -lpwsmp64
 
 # LIBFFTW

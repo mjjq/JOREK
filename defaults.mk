@@ -263,6 +263,12 @@ ifeq (1, $(USE_STRUMPACK))
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
 endif
 
+ifeq (1, $(USE_BOOST))
+  DEFINES := $(DEFINES) -DUSE_BOOST
+  LIBS    := $(LIBS) $(LIB_BOOST)
+  INCLUDES := $(INCLUDES) $(INC_BOOST)
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++17
+endif
 
 # Do not check to make these files to speed up and clean -d output
 Makefile: ;

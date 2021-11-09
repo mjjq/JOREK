@@ -6,7 +6,6 @@
 ! WARNING: cyl_bessel_k(nu,x) accept only scalal
 !          inputs
 module mod_boost_besselk
-
 implicit none
 
 private
@@ -15,12 +14,12 @@ public ::  besselk
 #ifdef USE_BOOST
 ! binding interface to the boost cyl_bessel_k
 interface 
-  function besselk_cpp(nu,x) bind(C,name="boost_besselk_cpp")
+  function boost_besselk_cpp(nu,x) bind(C,name="boost_besselk_cpp")
     use iso_c_binding, only: c_double
     implicit none
-    real(c_double) :: besselk_cpp
+    real(c_double) :: boost_besselk_cpp
     real(c_double) :: nu,x
-  end function besselk_cpp
+  end function boost_besselk_cpp
 end interface
 #endif
 
@@ -37,14 +36,14 @@ contains
 #ifndef USE_BOOST
   ! dummy function in case the compilation occurred 
   ! without USE_BOOST
-  real*8 function besselk_cpp(nu,x)
+  real*8 function boost_besselk_cpp(nu,x)
     implicit none
     real*8,intent(in) :: nu,x
     besselk_cpp = 0.d0
     write(*,*) "Required BOOST besselk but BOOST not linked!"
     write(*,*) "Link BOOST library and recompile with USE_BOOST=1"
     write(*,*) "BOOST Besselk: return zero"
-  end function besselk_cpp
+  end function boost_besselk_cpp
 #endif
 
 ! besselk is a specialization of the cyl_bessel_k
@@ -60,7 +59,7 @@ subroutine besselk_single_cpp(nu,x,bknu)
   real*8, intent(in) :: nu,x
   ! outputs
   real*8,intent(out) :: bknu
-  bknu = besselk_cpp(nu,x)
+  bknu = boost_besselk_cpp(nu,x)
 end subroutine besselk_single_cpp
 
 ! besselk_x_array computes the modified bessel
@@ -83,7 +82,7 @@ subroutine besselk_x_array_cpp(Nx,nu,x,bknu)
   integer :: ii
 
   do ii=1,Nx
-    bknu(ii) = besselk_cpp(nu,x(ii))
+    bknu(ii) = boost_besselk_cpp(nu,x(ii))
   enddo
 end subroutine besselk_x_array_cpp
 
@@ -108,7 +107,7 @@ subroutine besselk_nu_array_cpp(Nnu,nu,x,bknu)
   integer :: ii
 
   do ii=1,Nnu
-    bknu(ii) = besselk_cpp(nu(ii),x)
+    bknu(ii) = boost_besselk_cpp(nu(ii),x)
   enddo
 end subroutine besselk_nu_array_cpp
 
@@ -135,7 +134,7 @@ subroutine besselk_x_nu_array_cpp(Nx,Nnu,nu,x,bknu)
 
   do jj=1,Nnu
     do ii=1,Nx
-      bknu(ii,jj) = besselk_cpp(nu(jj),x(ii))
+      bknu(ii,jj) = boost_besselk_cpp(nu(jj),x(ii))
     enddo
   enddo
 

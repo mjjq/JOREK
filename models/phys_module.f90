@@ -456,7 +456,7 @@ module phys_module
   real*8  :: R_end             !< Right boundary of grid in R-direction (for rectangular grid)
   real*8  :: Z_begin           !< Lower boundary of grid in Z-direction (for rectangular grid)
   real*8  :: Z_end             !< Upper boundary of grid in Z-direction (for rectangular grid)
-  real*8  :: rect_grid_vac_psi !< Use a vacuum psi-bnd condition for squared-grid, ie. (rect_grid_vac_psi * R**2)
+  real*8  :: rect_grid_vac_psi !< Use a constant vacuum vertical field initial condition for squared-grid, ie. psi varies as (rect_grid_vac_psi * R**2)
 
   
   !> @name Polar Grid

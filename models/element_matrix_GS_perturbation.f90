@@ -152,6 +152,18 @@ do ms=1, n_gauss
 
         rhs_ij =  zFFprime / x_g(ms,mt) - (zn * dT_dpsi + dn_dpsi * zT) * x_g(ms,mt) * pprime_fact
 
+        ! --- Add the contribution of extra PF coil currents inside the JOREK domain
+        ! --- This is not the same as free-boundary, but when doing GS inside a RZpsi-contour
+        ! --- that includes PF-coils, these must be included in the equilibrium.
+        if ((.not. restart) .and. (n_pfc .ne. 0)) then
+          do nc=1,n_pfc
+            if (  (x_g(ms,mt) .lt. Rmax_pfc(nc)) .and. (x_g(ms,mt) .gt. Rmin_pfc(nc)) &
+            .and. (y_g(ms,mt) .lt. Zmax_pfc(nc)) .and. (y_g(ms,mt) .gt. Zmin_pfc(nc)) )  then
+              rhs_ij = rhs_ij + current_pfc(nc)
+            endif
+          enddo
+        endif
+
         RHS(index_ij) = RHS(index_ij) + v * rhs_ij  * xjac * wst
 
         RHS(index_ij) = RHS(index_ij) + (v_x * ps0_x + v_y * ps0_y) * factor(ms,mt) * xjac * wst    ! solve for perturbation only

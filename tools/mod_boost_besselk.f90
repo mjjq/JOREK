@@ -39,7 +39,7 @@ contains
   real*8 function boost_besselk_cpp(nu,x)
     implicit none
     real*8,intent(in) :: nu,x
-    besselk_cpp = 0.d0
+    boost_besselk_cpp = 0.d0
     write(*,*) "Required BOOST besselk but BOOST not linked!"
     write(*,*) "Link BOOST library and recompile with USE_BOOST=1"
     write(*,*) "BOOST Besselk: return zero"

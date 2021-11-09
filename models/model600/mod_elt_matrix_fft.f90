@@ -1927,17 +1927,17 @@ do i=1,n_vertex_max
 
 
                     if ( NEO ) then
-                      amat(var_u,var_T) = amat(var_u,var_T) - amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x + ps0_y*v_y) &
+                      amat(var_u,var_T) = amat(var_u,var_T) + amat(var_u,var_T) - amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x + ps0_y*v_y) &
                                 * (tauIC*2.*(ps0_x*(r0_x*T+r0*T_x) + ps0_y*(r0_y*T+r0*T_y))                       &
                                 + aki_neo_prof(ms,mt) *tauIC*2. * r0 *(ps0_x*T_x + ps0_y*T_y)) * BigR * xjac * theta * tstep
 
                       if ( with_vpar ) &
-                      amat(var_u,var_vpar) = amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
+                      amat(var_u,var_vpar) = amat(var_u,var_vpar) + amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
                                 * BigR * xjac * tstep * theta
                     endif
 
 
-                    amat(var_u,var_T) = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)           * theta * tstep  &
+                    amat(var_u,var_T) = amat(var_u,var_T) - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)           * theta * tstep  &
                                         - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)         * theta * tstep  &
 
                                 + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep  &

@@ -176,7 +176,6 @@ do ms=1, n_gauss
           enddo
         endif
 
-
         RHS(index_ij) = RHS(index_ij) + v * rhs_ij  * xjac * wst
 
         RHS(index_ij) = RHS(index_ij) + (v_x * ps0_x + v_y * ps0_y) * factor(ms,mt) * xjac * wst    ! solve for perturbation only

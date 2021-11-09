@@ -2,7 +2,10 @@
 the boost_besselk_cpp function */
 #ifndef BOOST_BESSELK_CPP_H
 #define BOOST_BESSELK_CPP_H
-  # ifdef __cplusplus
+  #ifdef USE_BOOST
+    #include <boost/math/special_functions/bessel.hpp>
+  #endif
+  #ifdef __cplusplus
     extern "C" {
   #endif
 
@@ -10,7 +13,7 @@ the boost_besselk_cpp function */
       2nd kind and with fractional order */
   double boost_besselk_cpp(double const &nu, double const &x);
   
-  # ifdef __cplusplus
+  #ifdef __cplusplus
     }
   #endif
 #endif

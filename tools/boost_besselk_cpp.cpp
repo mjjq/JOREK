@@ -3,7 +3,6 @@
  and fixing its template variables.
  WARNING: the boost cyl_bessel_k function
           accepts only scalar variables */
-#include <boost/math/special_functions/bessel.hpp>
 #include "boost_besselk_cpp.h"
 /*BOOST modified bessel function of the second kind
   with fractional order
@@ -15,5 +14,9 @@
                        function of the 2nd kind at x
                        and of order nu */
 double boost_besselk_cpp(double const  &nu, double const &x){
-  return boost::math::cyl_bessel_k(nu,x);
+  #ifdef USE_BOOST
+    return boost::math::cyl_bessel_k(nu,x);
+  #else
+    return 0.e0;
+  #endif
 }

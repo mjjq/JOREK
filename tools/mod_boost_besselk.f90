@@ -10,8 +10,9 @@ module mod_boost_besselk
 implicit none
 
 private
-public ::  boost_besselk
+public ::  besselk
 
+#ifdef USE_BOOST
 ! binding interface to the boost cyl_bessel_k
 interface 
   function besselk_cpp(nu,x) bind(C,name="boost_besselk_cpp")
@@ -21,14 +22,30 @@ interface
     real(c_double) :: nu,x
   end function besselk_cpp
 end interface
+#endif
 
 ! interface for the different procedure in the module
-interface boost_besselk
-    module procedure besselk, besselk_x_array, &
-    besselk_nu_array, besselk_x_nu_array
-end interface boost_besselk
+interface besselk
+    module procedure besselk_single_cpp 
+    module procedure besselk_x_array_cpp
+    module procedure besselk_nu_array_cpp
+    module procedure besselk_x_nu_array_cpp
+end interface besselk
 
 contains
+
+#ifndef USE_BOOST
+  ! dummy function in case the compilation occurred 
+  ! without USE_BOOST
+  real*8 function besselk_cpp(nu,x)
+    implicit none
+    real*8,intent(in) :: nu,x
+    besselk_cpp = 0.d0
+    write(*,*) "Required BOOST besselk but BOOST not linked!"
+    write(*,*) "Link BOOST library and recompile with USE_BOOST=1"
+    write(*,*) "BOOST Besselk: return zero"
+  end function besselk_cpp
+#endif
 
 ! besselk is a specialization of the cyl_bessel_k
 ! function of boost to double datatypes
@@ -38,13 +55,13 @@ contains
 !       is computed
 ! outputs:
 !   bknu: (real8) value of the bessel functions
-subroutine besselk(nu,x,bknu)
+subroutine besselk_single_cpp(nu,x,bknu)
   implicit none 
   real*8, intent(in) :: nu,x
   ! outputs
   real*8,intent(out) :: bknu
   bknu = besselk_cpp(nu,x)
-end subroutine besselk
+end subroutine besselk_single_cpp
 
 ! besselk_x_array computes the modified bessel
 ! function of the second kind for an array of x
@@ -54,7 +71,7 @@ end subroutine besselk
 !   x:  (real8)(Nx) array of x values
 ! outputs:
 !   bknu: (real8)(Nx) array of bessel functions
-subroutine besselk_x_array(Nx,nu,x,bknu)
+subroutine besselk_x_array_cpp(Nx,nu,x,bknu)
   implicit none
   ! inputs
   integer,intent(in)              :: Nx
@@ -68,7 +85,7 @@ subroutine besselk_x_array(Nx,nu,x,bknu)
   do ii=1,Nx
     bknu(ii) = besselk_cpp(nu,x(ii))
   enddo
-end subroutine besselk_x_array
+end subroutine besselk_x_array_cpp
 
 ! besselk_nu_array computes the modified bessel
 ! function of the second kind for an array of nu
@@ -79,7 +96,7 @@ end subroutine besselk_x_array
 !        is computed
 ! outputs:
 !   bknu: (real8)(Nu) array of bessel functions
-subroutine besselk_nu_array(Nnu,nu,x,bknu)
+subroutine besselk_nu_array_cpp(Nnu,nu,x,bknu)
   implicit none
   ! inputs
   integer,intent(in)               :: Nnu
@@ -93,7 +110,7 @@ subroutine besselk_nu_array(Nnu,nu,x,bknu)
   do ii=1,Nnu
     bknu(ii) = besselk_cpp(nu(ii),x)
   enddo
-end subroutine besselk_nu_array
+end subroutine besselk_nu_array_cpp
 
 ! besselk_x_nu_array computes the modified bessel
 ! function of the second kind for an array of x
@@ -105,7 +122,7 @@ end subroutine besselk_nu_array
 !   x:   (real8)(Nx) array of x values
 ! outputs:
 !   bknu: (real8)(Nx,Nu) array of bessel functions
-subroutine besselk_x_nu_array(Nx,Nnu,nu,x,bknu)
+subroutine besselk_x_nu_array_cpp(Nx,Nnu,nu,x,bknu)
   implicit none
   ! inputs
   integer,intent(in)               :: Nx,Nnu
@@ -122,6 +139,6 @@ subroutine besselk_x_nu_array(Nx,Nnu,nu,x,bknu)
     enddo
   enddo
 
-end subroutine besselk_x_nu_array
+end subroutine besselk_x_nu_array_cpp
 
 end module mod_boost_besselk

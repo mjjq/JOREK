@@ -181,7 +181,7 @@ end subroutine teardown
 ! function of the second kind and fractional order using
 ! randomized matlab and python solutions
 subroutine test_boost_besselk()
-  use mod_boost_besselk, only: boost_besselk
+  use mod_boost_besselk, only: besselk
   implicit none
 
   ! variables
@@ -201,8 +201,8 @@ subroutine test_boost_besselk()
   bknu_ref_py = (/bknu_py(ids(1),idnu(1)),bknu_py(ids(2),idnu(2))/);
 
   ! compute modified bessel function for multiple nu
-  call boost_besselk(nu_1,x_1,bknu_1)
-  call boost_besselk(nu_2,x_2,bknu_2)
+  call besselk(nu_1,x_1,bknu_1)
+  call besselk(nu_2,x_2,bknu_2)
 
   ! check solution
   call assert_equals(bknu_1/bknu_ref_mat(1),1.d0,test_tol,&
@@ -220,7 +220,7 @@ end subroutine test_boost_besselk
 ! bessel function of the second kind and fractional order when 
 ! applied to arrays of x
 subroutine test_boost_besselk_x_array()
-  use mod_boost_besselk, only: boost_besselk
+  use mod_boost_besselk, only: besselk
   implicit none
   
   ! variables
@@ -238,7 +238,7 @@ subroutine test_boost_besselk_x_array()
     x_loc = x_all(:,idnu(ii))
     bknu_mat_loc((ii-1)*Nx+1:ii*Nx) = bknu_mat(:,idnu(ii))
     bknu_py_loc((ii-1)*Nx+1:ii*Nx) = bknu_py(:,idnu(ii))
-    call boost_besselk(Nx,nu_loc,x_loc,bknu((ii-1)*Nx+1:ii*Nx))
+    call besselk(Nx,nu_loc,x_loc,bknu((ii-1)*Nx+1:ii*Nx))
   enddo
 
   ! check solution
@@ -253,7 +253,7 @@ end subroutine test_boost_besselk_x_array
 ! bessel function of the second kind and fractional order when 
 ! applied to arrays of nu
 subroutine test_boost_besselk_nu_array()
-  use mod_boost_besselk, only: boost_besselk
+  use mod_boost_besselk, only: besselk
   implicit none
 
   ! variables
@@ -267,7 +267,7 @@ subroutine test_boost_besselk_nu_array()
   ! compute solution
   do ii=1,Nnu
      x_loc = x_all(id,ii)
-     call boost_besselk(Nnu,nu,x_loc,bknu_loc)
+     call besselk(Nnu,nu,x_loc,bknu_loc)
      bknu(ii) = bknu_loc(ii)
   enddo
 
@@ -283,7 +283,7 @@ end subroutine test_boost_besselk_nu_array
 ! bessel function of the second kind and fractional order when 
 ! applied to arrays of x and nu
 subroutine test_boost_besselk_x_nu_array()
-  use mod_boost_besselk, only: boost_besselk
+  use mod_boost_besselk, only: besselk
   implicit none
 
   ! variables
@@ -292,7 +292,7 @@ subroutine test_boost_besselk_x_nu_array()
   
   ! compute solution
   do ii=1,Nnu
-    call boost_besselk(Nx,Nnu,nu,x_all(:,ii),bknu_loc)
+    call besselk(Nx,Nnu,nu,x_all(:,ii),bknu_loc)
     bknu(:,ii) = bknu_loc(:,ii)
   enddo
 

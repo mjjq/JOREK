@@ -1915,10 +1915,16 @@ do i=1,n_vertex_max
                                                                 - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))                    &
                                                       - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy))  &
                                                     * xjac * theta * tstep                                                  &
- 
+
+                              + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y )         * BigR * xjac * theta * tstep  &
+
+                              ! --- Contributions of the diamagnetic viscosity 
                               - dvisco_dT     * bigR * W_dia_Ti * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
                               - visco_T       * bigR * W_dia_Ti * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
                               - dvisco_dT     * bigR * W_dia    * (v_x*T_x  + v_y*T_y )    * xjac * theta * tstep  &
+
+                              - d2visco_dT2*T * bigR * W_dia    * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
+                              - dvisco_dT*T   * bigR * W_dia    * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
 
                            + (1 - delta_n_convection) * (  &
                            - BigR**3 * (r0_corr * rn0_corr * dSion_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
@@ -1937,13 +1943,6 @@ do i=1,n_vertex_max
                     endif
 
 
-                    amat(var_u,var_T) = amat(var_u,var_T) - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)           * theta * tstep  &
-                                        - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)         * theta * tstep  &
-
-                                + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep  &
- 
-                                - d2visco_dT2*T * bigR * W_dia   * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
-                                - dvisco_dT*T   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep
                   end if ! (with_TiTe) *************************************************************
 
                   if (with_neutrals) then

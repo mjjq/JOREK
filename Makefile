@@ -72,6 +72,8 @@ DIRS := diagnostics			\
 	tools				\
 	tools/rng                       \
 	tools/fruit                     \
+  tools/tests                     \
+  tools/tests/drivers             \
 	non_regression_tests/unit_tests \
 	datatypes			\
 	benchmarks                      \

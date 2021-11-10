@@ -321,6 +321,8 @@ module phys_module
   real*8  :: Z_jropes(10)      !< Z centre of rope
   real*8  :: w_jropes(10)      !< width of rope
   real*8  :: current_jropes(10)!< Current inside the rope
+  real*8  :: rho_jropes(10)    !< Density inside the rope
+  real*8  :: T_jropes(10)      !< Temperature inside the rope
   
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
@@ -456,7 +458,7 @@ module phys_module
   real*8  :: R_end             !< Right boundary of grid in R-direction (for rectangular grid)
   real*8  :: Z_begin           !< Lower boundary of grid in Z-direction (for rectangular grid)
   real*8  :: Z_end             !< Upper boundary of grid in Z-direction (for rectangular grid)
-  real*8  :: rect_grid_vac_psi !< Use a constant vacuum vertical field initial condition for squared-grid, ie. psi varies as (rect_grid_vac_psi * R**2)
+  real*8  :: rect_grid_vac_psi !< Use a vacuum psi-bnd condition for squared-grid, ie. (rect_grid_vac_psi * R**2)
 
   
   !> @name Polar Grid

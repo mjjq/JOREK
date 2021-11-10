@@ -728,6 +728,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,REA3_FMT) 'Z_jropes              ', Z_jropes(1:n_jropes)
     write(*,REA3_FMT) 'w_jropes              ', w_jropes(1:n_jropes)
     write(*,REA3_FMT) 'current_jropes        ', current_jropes(1:n_jropes)
+    write(*,REA3_FMT) 'rho_jropes            ', rho_jropes(1:n_jropes)
+    write(*,REA3_FMT) 'T_jropes              ', T_jropes(1:n_jropes)
   end if
 
   write(*,LOGI_FMT) 'RMP_on                ', RMP_on

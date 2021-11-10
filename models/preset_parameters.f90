@@ -163,6 +163,8 @@ subroutine preset_parameters
   Z_jropes       = 0.d0
   w_jropes       = 0.d0
   current_jropes = 0.d0
+  rho_jropes     = 0.d0
+  T_jropes       = 0.d0
 
   bootstrap = .false.
 

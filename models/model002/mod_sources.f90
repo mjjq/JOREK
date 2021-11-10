@@ -1,0 +1,40 @@
+module mod_sources
+
+
+
+implicit none
+
+
+
+contains
+
+
+
+!> Determine the heat and particle sources at a given position.
+subroutine sources(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particle_source, heat_source)
+
+use phys_module
+
+implicit none
+
+! --- Routine parameters.
+logical, intent(in)   :: xpoint2
+integer, intent(in)   :: xcase2
+real*8,  intent(in)   :: Z
+real*8,  intent(in)   :: Z_xpoint(2)
+real*8,  intent(in)   :: psi
+real*8,  intent(in)   :: psi_axis
+real*8,  intent(in)   :: psi_bnd
+real*8,  intent(out)  :: particle_source
+real*8,  intent(out)  :: heat_source
+
+
+particle_source = particlesource
+heat_source = 0.d0
+
+return
+end subroutine sources
+
+
+
+end module mod_sources

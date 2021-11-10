@@ -38,11 +38,17 @@ if (my_id .eq. 0) then
     R   = node_list%node(i)%x(1,1,1)
     Z   = node_list%node(i)%x(1,1,2)
 
-    ! --- Density background
-    node_list%node(i)%values(1,1,var_rho) = rho_1
-    node_list%node(i)%values(1,2,var_rho) = 0.d0
-    node_list%node(i)%values(1,3,var_rho) = 0.d0
-    node_list%node(i)%values(1,4,var_rho) = 0.d0
+    ! --- Density background: profile is made using R instead of psi
+    call density    (xpoint2, xcase2, Z, ES%Z_xpoint, R,R_begin,R_end,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+                                                                      dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+    node_list%node(i)%values(1,1,var_rho) = zn
+    node_list%node(i)%values(1,2,var_rho) = dn_dpsi    * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(1,2,2)
+    node_list%node(i)%values(1,3,var_rho) = dn_dpsi    * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(1,3,2)
+    node_list%node(i)%values(1,4,var_rho) = dn_dpsi    * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(1,4,2) &
+                                    + dn_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dn_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(1,2,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(1,3,2)      
 
     ! --- Use current ropes to define density blobs
     do nj=1,n_jropes

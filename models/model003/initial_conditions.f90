@@ -17,7 +17,8 @@ type (type_bnd_element_list) :: bnd_elm_list
 
 integer    :: my_id, i, in, mm, i_elm, ifail, xcase2
 real*8     :: amplitude, psi, psi_n, theta
-real*8     :: zn,  dn_dpsi,  dn_dpsi2,  dn_dz,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi2_dz,  dn_dpsi_dz2
+real*8     :: zn, dn_dpsi, dn_dpsi2, dn_dz, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi2_dz, dn_dpsi_dz2
+real*8     :: zT, dT_dpsi, dT_dpsi2, dT_dz, dT_dz2, dT_dpsi_dz, dT_dpsi3, dT_dpsi2_dz, dT_dpsi_dz2
 real*8     :: R, Z, BigR, BigR_s
 real*8     :: p_s, p_t, R_s, R_t, Z_s, Z_t, xjac, direction
 integer    :: nj
@@ -39,17 +40,29 @@ if (my_id .eq. 0) then
     R   = node_list%node(i)%x(1,1,1)
     Z   = node_list%node(i)%x(1,1,2)
 
-    ! --- Density background
-    node_list%node(i)%values(1,1,var_rho) = rho_1
-    node_list%node(i)%values(1,2,var_rho) = 0.d0
-    node_list%node(i)%values(1,3,var_rho) = 0.d0
-    node_list%node(i)%values(1,4,var_rho) = 0.d0
+    ! --- Density background: profile is made using R instead of psi
+    call density    (xpoint2, xcase2, Z, ES%Z_xpoint, R,R_begin,R_end,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
+                                                                      dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
+    node_list%node(i)%values(1,1,var_rho) = zn
+    node_list%node(i)%values(1,2,var_rho) = dn_dpsi    * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(1,2,2)
+    node_list%node(i)%values(1,3,var_rho) = dn_dpsi    * node_list%node(i)%values(1,3,1) + dn_dz * node_list%node(i)%x(1,3,2)
+    node_list%node(i)%values(1,4,var_rho) = dn_dpsi    * node_list%node(i)%values(1,4,1) + dn_dz * node_list%node(i)%x(1,4,2) &
+                                    + dn_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dn_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(1,2,2)         &
+                                    + dn_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(1,3,2)      
 
-    ! --- Temperature background
-    node_list%node(i)%values(1,1,var_T) = T_1
-    node_list%node(i)%values(1,2,var_T) = 0.d0
-    node_list%node(i)%values(1,3,var_T) = 0.d0
-    node_list%node(i)%values(1,4,var_T) = 0.d0
+    ! --- Temperature background: profile is made using R instead of psi
+    call temperature(xpoint2, xcase2, Z, ES%Z_xpoint, R,R_begin,R_end,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,             &
+                                                                      dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
+    node_list%node(i)%values(1,1,var_T) = zT
+    node_list%node(i)%values(1,2,var_T) = dT_dpsi    * node_list%node(i)%values(1,2,1) + dT_dz * node_list%node(i)%x(1,2,2)
+    node_list%node(i)%values(1,3,var_T) = dT_dpsi    * node_list%node(i)%values(1,3,1) + dT_dz * node_list%node(i)%x(1,3,2)
+    node_list%node(i)%values(1,4,var_T) = dT_dpsi    * node_list%node(i)%values(1,4,1) + dT_dz * node_list%node(i)%x(1,4,2) &
+                                    + dT_dpsi2   * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                    + dT_dz2     * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)         &
+                                    + dT_dpsi_dz * node_list%node(i)%values(1,3,1) * node_list%node(i)%x(1,2,2)         &
+                                    + dT_dpsi_dz * node_list%node(i)%values(1,2,1) * node_list%node(i)%x(1,3,2)      
 
     ! --- Use current ropes to define density blobs
     do nj=1,n_jropes

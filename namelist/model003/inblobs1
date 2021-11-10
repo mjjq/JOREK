@@ -53,10 +53,20 @@
 
  particlesource = 0.d0
 
- rho_0 = 0.05
- rho_1 = 0.05
+ rho_0        = 0.05
+ rho_1        = 0.05
+ rho_coef(1)  = 0.0
+ rho_coef(2)  = 0.0
+ rho_coef(3)  = 0.0
+ rho_coef(4)  = 0.1
+ rho_coef(5)  = 2.0
 
- T_0 = 0.05
- T_1 = 0.05
+ T_0       = 0.05
+ T_1       = 0.05
+ T_coef(1) = 0.0
+ T_coef(2) = 0.0
+ T_coef(3) = 0.0
+ T_coef(4) = 0.1
+ T_coef(5) = 2.0
 
 /

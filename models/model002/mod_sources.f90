@@ -28,8 +28,15 @@ real*8,  intent(in)   :: psi_bnd
 real*8,  intent(out)  :: particle_source
 real*8,  intent(out)  :: heat_source
 
+! --- Local variables
+real*8 :: psi_n
 
-particle_source = particlesource
+psi_n = (psi - psi_axis) / (psi_bnd - psi_axis)
+
+particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_psin)/particlesource_sig)) &
+     + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))&
+     + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
+
 heat_source = 0.d0
 
 return

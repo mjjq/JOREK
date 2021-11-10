@@ -222,7 +222,8 @@ delta_t = delta_t * tstep / tstep_prev
 do ms=1, n_gauss
   do mt=1, n_gauss
 
-    call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,var_psi,ms,mt),psi_axis,psi_bnd, &
+    ! --- The sources are made with R instead of psi
+    call sources(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, x_g(ms,mt),R_begin,R_end, &
                  particle_source(ms,mt),heat_source(ms,mt))
 
   enddo

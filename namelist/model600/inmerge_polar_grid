@@ -3,6 +3,9 @@
  ! Special equilibrium for merging plasma ropes based on MAST experiments
  ! Based on equilibrium from
  ! http://dx.doi.org/10.1063/1.4830104
+ ! The Pprime and FFprime are zero, and hence the current ropes
+ ! result in a JxB force that causes them to collapse together.
+ ! In other words, this equilibrium does not have a Grad(p) = JxB force balance.
 
  restart = .f.
  regrid  = .f.

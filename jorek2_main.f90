@@ -53,7 +53,7 @@ program JOREK2
   use mod_openadas, only : read_adf11
   use mod_atomic_coeff_deuterium, only: ad_deuterium 
 #ifdef USE_STRUMPACK
-  use strumpack_module, only: strumpack_finalize
+  use strumpack_module
 #endif
 #ifdef WITH_PASTIX62
   use mod_pastix, only: pastix_finalize

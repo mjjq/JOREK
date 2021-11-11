@@ -550,7 +550,7 @@ contains
               pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
 !              pastix_iparm(IPARM_BINDTHRD)   = API_NO
-              !if (my_id_n.eq.0) call timestamp("Reorder",my_id)
+              if (my_id_n.eq.0) call timestamp("Reorder",my_id)
 #ifdef USE_BLOCK
 #ifndef USE_COMPLEX_PRECOND
               call pastix_fortran(pastix_data,MPI_COMM_N, n_block, &
@@ -635,7 +635,7 @@ contains
           pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
           pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK)   = API_TASK_NUMFACT
-          !if (my_id_n.eq.0) call timestamp("Factorize",my_id)
+          if (my_id_n.eq.0) call timestamp("Factorize",my_id)
 #if defined(WORLDWAR2) && defined(CORES_PER_NODE)
           pastix_iparm(IPARM_BINDTHRD)   = API_BIND_TAB
 #endif
@@ -747,7 +747,7 @@ contains
         pastix_iparm(IPARM_START_TASK) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
 !        pastix_iparm(IPARM_BINDTHRD)   = API_NO
-        !if (my_id_n.eq.0) call timestamp("Solve",my_id)
+        if (my_id_n.eq.0) call timestamp("Solve",my_id)
 #ifdef USE_BLOCK
 #ifndef USE_COMPLEX_PRECOND
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                &
@@ -942,7 +942,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
       endif
       
-      !if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)      
+      if (my_id_n.eq.0) call save_mat_h5(my_id,n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,mumps_par%rhs)      
       if (my_id_n.eq.0) call timestamp("Set mat",my_id)
       call strumpack_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,block_size,&
                 MPI_COMM_N,UPDATE=spss_analyzed,DISTRIBUTED=.not.centralize_harm_mat,EQUILIBRIUM=.false.)      
@@ -1038,7 +1038,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #endif
 
 #if defined(WITH_PASTIX62)
-
+! > Solve the preconditioner system using PaStiX 6.2
 subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use tr_module
     use iso_c_binding

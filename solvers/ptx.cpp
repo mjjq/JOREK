@@ -9,6 +9,7 @@
 
 #include <mkl_spblas.h>
 #include <mkl.h>
+#include <omp.h>
 
 extern "C" void ptx(void) {}
 
@@ -38,23 +39,56 @@ extern "C" void ptx_init(pastix_data_t **pastix_data_p,
     dparm[DPARM_RELATIVE_ERROR] = 1e-8;
     dparm[DPARM_EPSILON_REFINEMENT] = 1e-12;
     iparm[IPARM_ITERMAX] = 40;
-    dparm[DPARM_EPSILON_MAGN_CTRL] = 1e-12;
+    dparm[DPARM_EPSILON_MAGN_CTRL] = 1e-24;
     
-    pastixInit(pastix_data_p, pastix_comm, iparm, dparm);
+    int pastix_nthrd = 1;
 
+#ifdef _OPENMP
+#pragma omp parallel
+  {
+    #pragma omp master
+    {
+      pastix_nthrd = omp_get_num_threads();
+    }
+  }
+#endif   
+
+/*    
+    if (pastix_nthrd>1){
+      
+      int procpernode, packsize, pe;
+      MPI_Comm_rank(pastix_comm, &pe);
+      
+      std::cout<<"pastix_nthrd = "<<pastix_nthrd<<std::endl;
+      iparm[IPARM_THREAD_NBR] = pastix_nthrd;
+    
+      int *bindtab = new int[iparm[IPARM_THREAD_NBR]];
+      for(int i=0; i<iparm[IPARM_THREAD_NBR]; i++ ) {
+        bindtab[i] = pe%pastix_nthrd + i;
+      }
+      pastixInitWithAffinity(pastix_data_p, pastix_comm, iparm, dparm, bindtab);
+      delete [](bindtab);   
+    }
+    else{
+
+      pastixInit(pastix_data_p, pastix_comm, iparm, dparm);
+    }
+*/
+    if (pastix_nthrd>1){iparm[IPARM_THREAD_NBR] = pastix_nthrd;}
+    pastixInit(pastix_data_p, pastix_comm, iparm, dparm);
 
     return;
 }
 
 
-extern "C" void ptx_set_mat(spmatrix_t **spm_, int *indx, int *n_p, int *nnz_p, int *nd_p, int *nnzd_p,
+extern "C" void ptx_set_mat(spmatrix_t **spm_, int *indx, int *n_p, int *nnz_p, int *nd_p, int *nnzd_p, int *dof_p,
                                int **rptr, int **cptr, double **values, int **loc2glob, int **glob2loc,
                                MPI_Fint *comm_, bool *update, bool *check)
 {
 
     spmatrix_t *spm = *spm_;
     int n_d = *nd_p; int nnz_d = *nnzd_p;
-    int gN = *n_p;  int gnnz = *nnz_p;
+    int gN = *n_p;  int gnnz = *nnz_p; int dof = *dof_p;
     int pe, npe;
     int rc = 0;
     
@@ -77,14 +111,13 @@ extern "C" void ptx_set_mat(spmatrix_t **spm_, int *indx, int *n_p, int *nnz_p, 
       spm->n       = n_d;
       spm->nnz     = nnz_d;
       spm->layout  = SpmColMajor;
-    //spm->layout  = SpmRowMajor;
-      spm->dof     = 1;
+      spm->dof     = dof;
 
       spm->rowptr  = *rptr;
       spm->colptr  = *cptr;
       spm->values  = *values;
 
-      spm->gN = gN; // should be after setting n_d, nnz_d
+      spm->gN = gN;
       spm->gnnz = gnnz;
       spm->gNexp = gN;
       spm->gnnzexp = gnnz;
@@ -175,7 +208,7 @@ extern "C" void ptx_solve(pastix_data_t **pastix_data_p, spmatrix_t **spm_p, dou
     //rc = spmCheckAxb(1e-6, nrhs, spm, x0, spm->n, rhs_d, spm->n, x, spm->n);    
    
     for (int i=0; i<(spm->gN); i++) {(*rhs_p)[i]=0.0;}; // prepare rhs to store the solution
-      
+#pragma omp for      
     for (int i=0; i<(spm->n); i++)
     {
       (*rhs_p)[spm->loc2glob[i] - spm->baseval] = ((double *)x)[i];
@@ -248,18 +281,5 @@ extern "C" void get_residual(int *n_p, int *nnz_p,
   std::cout<<"Relative error: "<<sqrt(rnorm/bnorm)<<std::endl;
   return;
 }
-
-extern "C" void free_double(double **val)
-{
-  std::cout<<*val<<std::endl;
-  *val = NULL;
-  //delete [] *val;
-}
-
-
-//extern "C" void print_ptr(void **val)
-//{
-//  std::cout<<*val<<std::endl;
-//}
 
 #endif

@@ -34,7 +34,7 @@ module mod_pastix
 
     end subroutine ptx_init
 
-    subroutine ptx_set_mat(spm, indx, n, nnz, n_d, nnz_d, rptr, cptr, values, &
+    subroutine ptx_set_mat(spm, indx, n, nnz, n_d, nnz_d, dof, rptr, cptr, values, &
                loc2glob, glob2loc, comm, update, check) bind(C)
 
       use iso_c_binding
@@ -42,7 +42,7 @@ module mod_pastix
 
       type(C_PTR), intent(inout) :: spm
       integer(kind=C_INT) :: indx, comm
-      integer(kind=C_INT) :: n, n_d, nnz, nnz_d
+      integer(kind=C_INT) :: n, n_d, nnz, nnz_d, dof
 
       !type(C_PTR), intent(inout) :: rptr, cptr, values, loc2glob
 
@@ -127,7 +127,7 @@ module mod_pastix
                 update,distributed,equilibrium) bind(C)
 
       use, intrinsic :: iso_c_binding
-      use mod_coicsr, only: coicsr
+      use mod_coicsr, only: coicsr, coicsr2
       use sorting_module, only: remove_duplicates, convert2csr
       implicit none
 
@@ -136,7 +136,7 @@ module mod_pastix
 
       logical,intent(in),optional :: update, distributed, equilibrium
 
-      integer(kind=C_INT) :: indexing=1, block_size, block_size2
+      integer(kind=C_INT) :: indexing=1, block_size, block_size2, dof
       integer(kind=C_INT) :: n, n_d, nnz, nnz_d, jmin, jmax, i, n_block, nnz_block
 
       integer :: my_id_n, n_cpu_n, ierr, comm
@@ -144,6 +144,7 @@ module mod_pastix
       integer(kind=C_INT), dimension(:), allocatable :: iwk
 
       logical :: upd, dflag, eql
+      
       upd = .false.
       dflag = .false.
       eql = .false.
@@ -153,21 +154,42 @@ module mod_pastix
       if(present(distributed)) dflag = distributed
       if(present(equilibrium)) eql = equilibrium
       
+      call MPI_Comm_rank(comm, my_id_n, ierr)
 
       ! if not already distributed distribute matrix column-wise
-      ! add n_cpu>1
       if (.not.dflag) then
         call distribute_matrix(indexing, block_size, n, nnz, jmin, jmax, nnz_d, jcn, irn, val, comm)
       elseif (dflag) then
-      ! already distributed; set loc2glob and glob2loc
-        call MPI_Comm_rank(comm, my_id_n, ierr)
-
+      ! already distributed;
         jmin = minval(jcn(1:nnz))
         jmax = maxval(jcn(1:nnz))
         nnz_d = nnz
-
         jcn(1:nnz_d) = jcn(1:nnz_d) - jmin + indexing
       endif
+      
+      if (.not.eql) then
+        call do_column_scaling(n,nnz_d,irn,jcn,val,comm)
+        spm_scaled = .true.
+      endif      
+      
+      dof = 1
+!#if (defined(USE_BLOCK))
+!      if (.not.eql) then
+!        n_block   = n/block_size
+!        block_size2 = block_size*block_size
+!        nnz_block = nnz_d/block_size2
+!        if (block_size>1) then
+!          do i=1,nnz_block
+!            irn(i) = (irn((i-1)*block_size2 + 1) - 1)/block_size + 1
+!            jcn(i) = (jcn((i-1)*block_size2 + 1) - 1)/block_size + 1
+!          enddo
+!        endif
+!        jmin = minval(jcn(1:nnz_block))
+!        jmax = maxval(jcn(1:nnz_block))
+!        n = n_block
+!        dof = block_size
+!      endif
+!#endif      
       
       n_d = jmax - jmin + 1
       allocate(loc2glob(n_d))
@@ -185,19 +207,7 @@ module mod_pastix
 
       do i = 1, n_d
         glob2loc(loc2glob(i) + 1 - indexing)= loc2glob(i) - loc2glob(1)
-      enddo      
-      
-      if (.not.eql) then
-        call do_column_scaling(n,nnz_d,irn,jcn,val,comm)
-        spm_scaled = .true.
-      endif
-
-      !call MPI_Comm_rank(MPI_COMM_WORLD, my_id_n, ierr)
-      !write(*,*) my_id_n, nnz_d, n_d
-      !write(*,*) my_id_n, loc2glob(1), loc2glob(n_d)
-
-      ! allocating local arrays to be used to store matrix in csc format
-      !allocate(rptr(nnz_d),cptr(n_d+1),values(nnz_d))
+      enddo    
 
       if (eql) then
 #if (defined(USEMKL))
@@ -208,29 +218,18 @@ module mod_pastix
 #endif
       else
         if (allocated(iwk)) deallocate(iwk)
-        allocate(iwk(n+1))
-        call coicsr(n,nnz_d,1,val,irn,jcn,iwk)
-        deallocate(iwk)
+        allocate(iwk(n + 1))
 !#if (defined(USE_BLOCK))
-!        n_block   = n/block_size
-!        block_size2 = block_size*block_size
-!        nnz_block = nnz_d/block_size2
-!        if (block_size>1) then
-!          do i=1,nnz_block
-!            irn(i) = (irn((i-1)*block_size2+1) - 1)/block_size + 1
-!            jcn(i) = (jcn((i-1)*block_size2+1) - 1)/block_size + 1
-!          enddo
-!        endif
-!        if (allocated(iwk)) deallocate(iwk)
-!        allocate(iwk(n_block+1))
-!        call coicsr2(n_block,nnz_block,val,irn(1:nnz_block),jcn(1:nnz_block),block_size,iwk)
-!        deallocate(iwk)
-!#ednif
+!        call coicsr2(n,nnz_block,val,irn(1:nnz_block),jcn(1:nnz_block),block_size,iwk)
+!#else
+        call coicsr(n,nnz_d,1,val,irn,jcn,iwk)
+!#endif
+        deallocate(iwk)
       endif
 
       call MPI_Barrier(comm,ierr)
 
-      call ptx_set_mat(spm, indexing, n, nnz, n_d, nnz_d, irn, jcn, val, loc2glob, glob2loc, comm, upd, eql)
+      call ptx_set_mat(spm, indexing, n, nnz, n_d, nnz_d, dof, irn, jcn, val, loc2glob, glob2loc, comm, upd, eql)
 
       return
 

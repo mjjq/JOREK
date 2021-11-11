@@ -53,7 +53,10 @@ program JOREK2
   use mod_openadas, only : read_adf11
   use mod_atomic_coeff_deuterium, only: ad_deuterium 
 #ifdef USE_STRUMPACK
-  use strumpack_module
+  use strumpack_module, only: strumpack_finalize
+#endif
+#ifdef WITH_PASTIX62
+  use mod_pastix, only: pastix_finalize
 #endif
   use preconditioner_module
   use mod_distribute_preconditioner
@@ -1382,6 +1385,12 @@ required = 0
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
       call strumpack_finalize(MPI_COMM_WORLD)
+    endif
+#endif
+
+#ifdef WITH_PASTIX62
+    if (use_pastix) then
+      call pastix_finalize()
     endif
 #endif
 

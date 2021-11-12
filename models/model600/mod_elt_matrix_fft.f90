@@ -1964,7 +1964,7 @@ do i=1,n_vertex_max
                   ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
                   amat_n(var_u,var_rho) = - BigR * vpar0 * F0 * rho_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep * fact_conservative_u
 
-                  amat(var_u,var_vpar) = 0.d0
+                  if (with_vpar) amat(var_u,var_vpar) = 0.d0
 
                   if ( with_TiTe ) then ! (with_TiTe) **********************************************
                     amat(var_u,var_Ti) = - BigR**2 * (v_s * r0_t * Ti   - v_t * r0_s * Ti)           * theta * tstep  &
@@ -2042,19 +2042,19 @@ do i=1,n_vertex_max
 
                   end if ! (with_TiTe) *************************************************************
 
-                    if (with_vpar) then
-                       ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
-                       ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	     	    	     	  
-                      amat(var_u,var_vpar) =   amat(var_u,var_vpar)   &
-                            + fact_conservative_u * ( & 
-                                - BigR * vpar * F0 * r0_p                          * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                                - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                                - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                                                     )
+                  if (with_vpar) then
+                    ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                    ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	     	    	     	  
+                    amat(var_u,var_vpar) =   amat(var_u,var_vpar)   &
+                          + fact_conservative_u * ( & 
+                              - BigR * vpar * F0 * r0_p                          * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                              - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                              - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                                   )
 
-                     ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
-                     ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
-                     amat_n(var_u,var_vpar) = - BigR * r0 * F0 * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep * fact_conservative_u
+                    ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                    ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
+                    amat_n(var_u,var_vpar) = - BigR * r0 * F0 * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep * fact_conservative_u
                   endif ! /with_vpar
 
                   if (with_neutrals) then

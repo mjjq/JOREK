@@ -1,7 +1,9 @@
-! This module contains procedures for testing procedured
+! mod_boost_besselk_test contains procedures for testing procedured
 ! computing the modified bessel functions of fractional order
 module mod_boost_besselk_test
 use fruit 
+use mod_dynamic_array_tools, only: allocate_check
+use mod_dynamic_array_tools, only: deallocate_check
 implicit none
 
 private
@@ -72,20 +74,6 @@ real*8,dimension(30),parameter :: bknu_lt_2_py = (/&
 integer                           :: Nx ! size of the x array
 real*8,dimension(:,:),allocatable :: x_all            !< input array x
 real*8,dimension(:,:),allocatable :: bknu_mat,bknu_py !< shuffled matlab/python solutions
-
-! procedures for checking and allocating arrays
-interface allocate_check
-  module procedure allocate_check_integer
-  module procedure allocate_check_double
-  module procedure allocate_check_double_2d
-end interface
-
-! procedures for checking and deallocating arrays
-interface deallocate_check
-  module procedure deallocate_check_integer
-  module procedure deallocate_check_double
-  module procedure deallocate_check_double_2d
-end interface
 
 ! procedures for generading random integer
 interface compute_rnd_int
@@ -298,53 +286,6 @@ subroutine test_boost_besselk_x_nu_array()
   "Error: no match between Python and JOREK modified bessel function 2nd kind (x-nu-arrays)")
 
 end subroutine test_boost_besselk_x_nu_array
-
-! Memory procedures ------------------------------------------------
-
-! allocate integer array if not allocated
-subroutine allocate_check_integer(N,array)
-  implicit none
-  integer,intent(in) :: N
-  integer,dimension(:),allocatable,intent(inout) :: array
-  if(.not.allocated(array)) allocate(array(N))
-end subroutine allocate_check_integer
-
-! allocate double array if not allocated
-subroutine allocate_check_double(N,array)
-  implicit none
-  integer,intent(in) :: N
-  real*8,dimension(:),allocatable,intent(inout) :: array
-  if(.not.allocated(array)) allocate(array(N))
-end subroutine allocate_check_double
-
-! allocate double 2D-array if not allocated
-subroutine allocate_check_double_2d(N1,N2,array)
-  implicit none
-  integer,intent(in) :: N1,N2
-  real*8,dimension(:,:),allocatable,intent(inout) :: array
-  if(.not.allocated(array)) allocate(array(N1,N2))
-end subroutine allocate_check_double_2d
-
-! deallocate integer array if allocated
-subroutine deallocate_check_integer(array)
-  implicit none
-  integer,dimension(:),allocatable,intent(inout) :: array
-  if(allocated(array)) deallocate(array)
-end subroutine deallocate_check_integer
-
-! deallocate double array if allocated
-subroutine deallocate_check_double(array)
-  implicit none
-  real*8,dimension(:),allocatable,intent(inout) :: array
-  if(allocated(array)) deallocate(array)
-end subroutine deallocate_check_double
-
-! deallocate double 2D array if allocated
-subroutine deallocate_check_double_2d(array)
-  implicit none
-  real*8,dimension(:,:),allocatable,intent(inout) :: array
-  if(allocated(array)) deallocate(array)
-end subroutine deallocate_check_double_2d
 
 ! Tools procedures -------------------------------------------------
 

@@ -96,15 +96,10 @@ contains
 
 ! Tests baskets -----------------------------------------------------
 
-subroutine run_fruit_boost_besselk()
-  implicit none
-  call boost_besselk_basket()
-end subroutine run_fruit_boost_besselk
-
-! run_all_basselik_tests performs the setup,
+! run_fruit_boost_besselk performs the setup,
 ! run the tests and performs the teardown of
 ! the boost besselk functions
-subroutine boost_besselk_basket()
+subroutine run_fruit_boost_besselk()
   implicit none
 
   write(*,'(/A)') "  ... set-up: boost besselk tests" 
@@ -117,7 +112,7 @@ subroutine boost_besselk_basket()
   write(*,'(/A)') "  ... tearing-down: boost besselk tests" 
   call teardown !< cleanup test variables  
   
-end subroutine boost_besselk_basket
+end subroutine run_fruit_boost_besselk
 
 ! Set-up and tear-down ---------------------------------------------
 

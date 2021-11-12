@@ -1208,8 +1208,11 @@ enddo  ! n_elements
       Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
       Te_corr_eV   = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
 
+      r0_real8  = scalars(i,5)
+      rn0_real8 = scalars(i,8)
+
       call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) !< add scalars(i,5) as last optional parameter for density dependence
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT,r0_real8,rn0_real8,.true. ) !< add scalars(i,5) as last optional parameter for density dependence
 
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
                               *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
@@ -1222,7 +1225,6 @@ enddo  ! n_elements
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------   
-      r0_real8  = scalars(i,5)
       r0_corr   = corr_neg_dens(r0_real8)
 
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
@@ -1386,11 +1388,10 @@ enddo  ! n_elements
       Tion    = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
       
       r0_real8  = scalars(i,5)
+      rn0_real8 = scalars(i,8)
 
       call atomic_coeff_deuterium(0.5d0*T_real8, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_real8 )
-
-      rn0_real8 = scalars(i,8)
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_real8, rn0_real8, .true. )
 
       r0_corr   = corr_neg_dens(r0_real8)
       rn0_corr  = corr_neg_dens(rn0_real8, (/ 0.d-5, 1.d-5 /))
@@ -1533,9 +1534,11 @@ if (SI_units) then
       Tion = corr_neg_temp(T_real8,(/1.d-5,0.3/))/(2.d0)
 
       Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_zero*central_density*1.d20)
+      r0_real8  = scalars(i,5)
+      rn0_real8 = scalars(i,8)
 
       call atomic_coeff_deuterium(0.5d0*scalars(i,6), Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT ) 
+                                  LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0_real8,rn0_real8,.true. ) 
 
       eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0)
   

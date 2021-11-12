@@ -90,7 +90,7 @@ contains
 subroutine run_fruit_boost_besselk()
   implicit none
 
-  write(*,'(/A)') "  ... set-up: boost besselk tests" 
+  write(*,'(/A)') "  ... setting-up: boost besselk tests" 
   call setup !< setup test variables
   write(*,'(/A)') "  ... running: boost besselk tests"
   call test_boost_besselk

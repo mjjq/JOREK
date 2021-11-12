@@ -104,12 +104,12 @@ end subroutine run_fruit_boost_besselk
 
 ! Set-up and tear-down ---------------------------------------------
 
-! setup initialise the module variables
+! setup initialises the module variables
 ! inputs:
 !   Nx_val:    (integer)(optional) size of the x array
 !   Nx_lt_val: (integer)(optional) number of x lower than threshold
 !   Nx_ge_val: (integer)(optional) number of x higher than threshold
-!   x_val:     (double)(optional) threshold value
+!   x_val:     (doiuble)(optional) threshold value
 !   x_min:     (double)(optional) lower bound of x
 !   x_max:     (double)(optional) upper bound of x
 subroutine setup()
@@ -150,7 +150,7 @@ subroutine setup()
 
 end subroutine setup
 
-! teardown of the unit tests
+! teardown cleans-up the unit tests
 subroutine teardown()
   implicit none
   call deallocate_check(x_all)

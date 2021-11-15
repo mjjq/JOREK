@@ -12,7 +12,7 @@ module mod_tiles
 implicit none
 private 
 public :: tile_int_1d, tile_int_2d
-!public :: tile_real8_1d, tile_real8_2d
+public :: tile_real8_1d, tile_real8_2d
 
 ! Types definitions -----------------------------------------------
 

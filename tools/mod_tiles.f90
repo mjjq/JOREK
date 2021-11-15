@@ -12,7 +12,9 @@ module mod_tiles
 implicit none
 private 
 public :: tile_int_1d, tile_int_2d
-public :: tile_real8_1d, tile_real8_2d
+!public :: tile_real8_1d, tile_real8_2d
+
+! Types definitions -----------------------------------------------
 
 ! definition of tile types integer_1D, integer_2D, 
 ! double_1D and double_2D tile types
@@ -20,43 +22,42 @@ public :: tile_real8_1d, tile_real8_2d
 ! Attributes are:
 !   data_array: (integer/real8)(N_rows/N_rows*N_columns) tile array
 !               in which data are stored 
-
 !> define 1D intger tile array
-type, extends(tile) :: tile_int_1d
+type :: tile_int_1d
   integer,dimension(:),allocatable :: data_array
 contains
-  procedure :: allocate_tile   => allocate_int_tile_1d
-  procedure :: deallocate_tile => deallocate_int_tile_1d
-  procedure :: resize_tile     => resize_int_tile_1D
-end type tile_integer_1D
+  !procedure(alloc_int_tile_1d),deferred :: allocate_tile => allocate_int_tile_1d
+  procedure,pass(tile) :: allocate_tile   => allocate_int_tile_1d
+  procedure,pass(tile) :: deallocate_tile => deallocate_int_tile_1d
+  procedure,pass(tile) :: resize_tile     => resize_int_tile_1d 
+end type tile_int_1d
 
 !> define 2D integer tile array
-type, extends(tile) :: tile_int_2d
+type :: tile_int_2d
   integer,dimension(:,:),allocatable :: data_array
 contains
-  procedure :: allocate_tile   => allocate_int_tile_2d
-  procedure :: deallocate_tile => deallocate_int_tile_2d
-  procedure :: resize_tile     => resize_int_tile_2d
-end type tile_integer_2D
+  procedure,pass(tile) :: allocate_tile   => allocate_int_tile_2d
+  procedure,pass(tile) :: deallocate_tile => deallocate_int_tile_2d
+  procedure,pass(tile) :: resize_tile     => resize_int_tile_2d
+end type tile_int_2d
 
 !> define 1D double array
-type,extends(tile) :: tile_real8_1d 
-  real*8,dimension(:,:),allocatable :: data_array
+type :: tile_real8_1d 
+  real*8,dimension(:),allocatable :: data_array
 contains
-  procedure :: allocate_tile   => allocate_real8_tile_1d
-  procedure :: deallocate_tile => deallocate_real8_1d
-  procedure :: resize_tile     => resize_real8_tile_1d
-end type tile_double_1D
+  procedure,pass(tile) :: allocate_tile   => allocate_real8_tile_1d
+  procedure,pass(tile) :: deallocate_tile => deallocate_real8_tile_1d
+  procedure,pass(tile) :: resize_tile     => resize_real8_tile_1d
+end type tile_real8_1d
 
 !> define 2D double array
-type,extends(tile) :: tile_real8_2d
+type :: tile_real8_2d
   real*8,dimension(:,:),allocatable :: data_array
 contains
-  procedure :: allocate_tile   => allocate_real8_tile_2d
-  procedure :: deallocate_tile => deallocate_real8_tile_2d
-  procedure :: resize_tile     => resize_real8_tile_2d
-end type_double_2D
-
+  procedure,pass(tile) :: allocate_tile   => allocate_real8_tile_2d
+  procedure,pass(tile) :: deallocate_tile => deallocate_real8_tile_2d
+  procedure,pass(tile) :: resize_tile     => resize_real8_tile_2d
+end type tile_real8_2d
 
 contains
 
@@ -80,9 +81,9 @@ subroutine allocate_int_tile_1d(tile,N_rows,dat)
 
   if(.not.allocated(tile%data_array)) allocate(tile%data_array(N_rows))
   if(present(dat)) then
-    tile%dat_array = dat
+    tile%data_array = dat
   else
-    tile%dat_array = 0
+    tile%data_array = 0
   endif
 end subroutine allocate_int_tile_1d
 
@@ -96,7 +97,7 @@ end subroutine allocate_int_tile_1d
 ! outputs:
 !   tile:   (tile_int_2d) the allocated tile
 subroutine allocate_int_tile_2d(tile,N_rows,N_cols,dat)
-  implicit none
+!  implicit none
   ! inputs-outputs
   class(tile_int_2d),intent(inout) :: tile
   ! inputs
@@ -107,7 +108,7 @@ subroutine allocate_int_tile_2d(tile,N_rows,N_cols,dat)
   if(present(dat)) then
     tile%data_array = dat
   else
-    tilde%dat_array = 0
+    tile%data_array = 0
   endif
 
 end subroutine allocate_int_tile_2d
@@ -134,7 +135,7 @@ subroutine allocate_real8_tile_1d(tile,N_rows,dat)
   else
     tile%data_array = 0.d0
   endif
-end subroutine allocate_reral8_tile_1d
+end subroutine allocate_real8_tile_1d
 
 ! The allocate_real8_tile_2d procedure allocate an integer 1d tile
 ! If present, tile array is initilized to dat, to 0 otherwise
@@ -150,7 +151,7 @@ subroutine allocate_real8_tile_2d(tile,N_rows,N_cols,dat)
   ! inputs-outputs
   class(tile_real8_2d),intent(inout) :: tile
   ! inputs
-  integer,intent(in) :: N_rows
+  integer,intent(in) :: N_rows,N_cols
   real*8,dimension(N_rows,N_cols),intent(in),optional :: dat
 
   if(.not.allocated(tile%data_array)) allocate(tile%data_array(N_rows,N_cols))
@@ -222,7 +223,7 @@ end subroutine deallocate_real8_tile_2d
 
 ! Resize tile -----------------------------------------------------
 
-! resize_int_1d resizes a integer 1d data_array of a tile
+! resize_int_tile_1d resizes a integer 1d data_array of a tile
 ! preserving the data
 ! inputs:
 !   tile:       (tile_int_1d) the tile to resize
@@ -230,7 +231,7 @@ end subroutine deallocate_real8_tile_2d
 !   N_data:     (integer) number of stored data
 ! outputs:
 !  tile: (tile_int_1d) the resized tile
-subroutine resize_int_1d(tile,N_rows_new)
+subroutine resize_int_tile_1d(tile,N_rows_new,N_data)
   implicit none
   ! inputs-outputs:
   class(tile_int_1d),intent(inout) :: tile
@@ -251,9 +252,9 @@ subroutine resize_int_1d(tile,N_rows_new)
   call tile%allocate_tile(N_rows_new)
   tile%data_array(1:N_data) = tmp_data
   
-end subroutine resize_int_1d
+end subroutine resize_int_tile_1d
 
-! resize_int_2d resizes a integer 2d data_array of a tile
+! resize_int_tile_2d resizes a integer 2d data_array of a tile
 ! preserving the data
 ! inputs:
 !   tile:        (tile_int_2d) the tile to resize
@@ -263,7 +264,7 @@ end subroutine resize_int_1d
 !   N_data_cols: (integer) number of stored data columns
 ! outputs:
 !  tile: (tile_int_2d) the resized tile
-subroutine resize_int_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
+subroutine resize_int_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
   implicit none
   ! inputs-outputs:
   class(tile_int_2d),intent(inout) :: tile
@@ -287,9 +288,9 @@ subroutine resize_int_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
   tmp_data = tile%data_array(1:N_data_rows,1:N_data_cols)
   call tile%deallocate_tile()
   call tile%allocate_tile(N_rows_new,N_cols_new)
-  tile%data_array(1:N_data_rows,N_data_cols) = tmp_data
+  tile%data_array(1:N_data_rows,1:N_data_cols) = tmp_data
   
-end subroutine resize_int_2d
+end subroutine resize_int_tile_2d
 
 ! resize_real8_1d resizes a double 1d data_array of a tile
 ! preserving the data
@@ -299,14 +300,14 @@ end subroutine resize_int_2d
 !   N_data:     (integer) number of stored data
 ! outputs:
 !  tile: (tile_real8_1d) the resized tile
-subroutine resize_real8_1d(tile,N_rows_new)
+subroutine resize_real8_tile_1d(tile,N_rows_new,N_data)
   implicit none
   ! inputs-outputs:
   class(tile_real8_1d),intent(inout) :: tile
   ! inputs:
   integer,intent(in) :: N_rows_new,N_data
   ! variables
-  integer,dimension(N_data) :: tmp_data !< temporary data array
+  real*8,dimension(N_data) :: tmp_data !< temporary data array
 
   ! initialization
   if(N_data.gt.N_rows_new) then
@@ -320,7 +321,7 @@ subroutine resize_real8_1d(tile,N_rows_new)
   call tile%allocate_tile(N_rows_new)
   tile%data_array(1:N_data) = tmp_data
   
-end subroutine resize_real8_1d
+end subroutine resize_real8_tile_1d
 
 ! resize_real8_2d resizes a double 2d data_array of a tile
 ! preserving the data
@@ -332,7 +333,7 @@ end subroutine resize_real8_1d
 !   N_data_cols: (integer) number of stored data columns
 ! outputs:
 !  tile: (tile_real8_2d) the resized tile
-subroutine resize_real8_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
+subroutine resize_real8_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
   implicit none
   ! inputs-outputs:
   class(tile_real8_2d),intent(inout) :: tile
@@ -340,7 +341,7 @@ subroutine resize_real8_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
   integer,intent(in) :: N_rows_new,N_cols_new
   integer,intent(in) :: N_data_rows,N_data_cols
   ! variables
-  integer,dimension(N_data_rows,N_data_cols) :: tmp_data !< temporary data array
+  real*8,dimension(N_data_rows,N_data_cols) :: tmp_data !< temporary data array
 
   ! initialization
   if(N_data_rows.gt.N_rows_new) then
@@ -356,9 +357,9 @@ subroutine resize_real8_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
   tmp_data = tile%data_array(1:N_data_rows,1:N_data_cols)
   call tile%deallocate_tile()
   call tile%allocate_tile(N_rows_new,N_cols_new)
-  tile%data_array(1:N_data_rows,N_data_cols) = tmp_data
+  tile%data_array(1:N_data_rows,1:N_data_cols) = tmp_data
   
-end subroutine resize_real8_2d
+end subroutine resize_real8_tile_2d
 
 !------------------------------------------------------------------
 

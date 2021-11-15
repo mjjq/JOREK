@@ -75,11 +75,6 @@ integer                           :: Nx ! size of the x array
 real*8,dimension(:,:),allocatable :: x_all            !< input array x
 real*8,dimension(:,:),allocatable :: bknu_mat,bknu_py !< shuffled matlab/python solutions
 
-! procedures for generading random integer
-interface compute_rnd_int
-  module procedure compute_rnd_int_single
-  module procedure compute_rnd_int_array1d
-end interface
 contains
 
 ! Tests baskets -----------------------------------------------------
@@ -113,14 +108,16 @@ end subroutine run_fruit_boost_besselk
 !   x_min:     (double)(optional) lower bound of x
 !   x_max:     (double)(optional) upper bound of x
 subroutine setup()
+  use mod_gnu_rng, only: gnu_rng_array_norep
   implicit none
 
   ! variables
-  integer :: ii
+  integer :: ii,ierr
   integer,dimension(:),allocatable :: ids
   real*8,dimension(:),allocatable  :: rnd
 
   ! set default inputs
+  ierr = 0
   Nx = Nx_ge_2 + Nx_lt_2
 
   ! allocate arrays for tests
@@ -134,7 +131,9 @@ subroutine setup()
 
   ! randomize matlab and python solutions for testing
   do ii=1,Nnu
-    call generate_int_rnd_array(Nx,1,Nx,ids)
+    call gnu_rng_array_norep(Nx,(/1,Nx/),ids,ierr,max_it)
+    call assert_equals(ierr,0,&
+    "Error, setup: generate random indices failed reached max_it")
     x_all(ids(1:Nx_lt_2),ii)    = x_lt_2
     x_all(ids(Nx_lt_2+1:Nx),ii) = x_ge_2
     bknu_mat(ids(1:Nx_lt_2),ii)    = bknu_lt_2_mat((ii-1)*Nx_lt_2+1:ii*Nx_lt_2)
@@ -164,6 +163,7 @@ end subroutine teardown
 ! function of the second kind and fractional order using
 ! randomized matlab and python solutions
 subroutine test_boost_besselk()
+  use mod_gnu_rng, only: gnu_rng_interval
   use mod_boost_besselk, only: besselk
   implicit none
 
@@ -177,7 +177,7 @@ subroutine test_boost_besselk()
   real*8,dimension(2) :: bknu_ref_py
 
   ! initialisation
-  call compute_rnd_int(2,1,Nx,ids)
+  call gnu_rng_interval(2,(/1,Nx/),ids)
   x_1 = x_all(ids(1),idnu(1)); x_2 = x_all(ids(2),idnu(2));
   nu_1 = nu(idnu(1)); nu_2 = nu(idnu(2));
   bknu_ref_mat = (/bknu_mat(ids(1),idnu(1)),bknu_mat(ids(2),idnu(2))/);
@@ -236,6 +236,7 @@ end subroutine test_boost_besselk_x_array
 ! bessel function of the second kind and fractional order when 
 ! applied to arrays of nu
 subroutine test_boost_besselk_nu_array()
+  use mod_gnu_rng, only: gnu_rng_interval
   use mod_boost_besselk, only: besselk
   implicit none
 
@@ -245,7 +246,7 @@ subroutine test_boost_besselk_nu_array()
   real*8,dimension(Nnu) :: bknu,bknu_loc
 
   ! initialization
-  call compute_rnd_int(1,Nx,id)
+  call gnu_rng_interval((/1,Nx/),id)
   
   ! compute solution
   do ii=1,Nnu
@@ -286,86 +287,5 @@ subroutine test_boost_besselk_x_nu_array()
   "Error: no match between Python and JOREK modified bessel function 2nd kind (x-nu-arrays)")
 
 end subroutine test_boost_besselk_x_nu_array
-
-! Tools procedures -------------------------------------------------
-
-! compute_rnd_int_single computes a random integer
-! from uniform distribution
-! inputs:
-!   n_min: (integer) minimum index
-!   n_max: (integer) maximum index
-! outputs:
-!   id: (index) index
-subroutine compute_rnd_int_single(n_min,n_max,id)
-  implicit none
-
-  ! inputs
-  integer,intent(in) :: n_min,n_max
-  ! outputs
-  integer,intent(out) :: id
-  ! variables
-  real*8 :: rnd
-
-   ! compute random integer 
-   call random_number(rnd)
-   id = floor(n_min+(n_max-n_min+1)*rnd)
-
-end subroutine compute_rnd_int_single
-
-! compute_rnd_int computes an array of random
-! integers from a uniform distribution
-! inputs:
-!   N:     (intrger) length of the array
-!   n_min: (integer) minimum index
-!   n_max: (integer) maximum index
-! outputs:
-!   ids: (index)(N) array of random integers
-subroutine compute_rnd_int_array1d(N,n_min,n_max,ids)
-  implicit none
-
-  ! inputs
-  integer,intent(in) :: N,n_min,n_max
-  ! outputs
-  integer,dimension(N),intent(out) :: ids
-  ! variables
-  real*8,dimension(N) :: rnds
-
-  ! compute random integer
-  call random_number(rnds)
-  ids = floor(n_min+(n_max-n_min+1)*rnds)
-end subroutine compute_rnd_int_array1d
-
-! generate_int_rnd_array generates an array of random
-! integer number without repetitions within an interval.
-! inputs:
-!   N: (integer) number of elements
-!   n_min: (integer) minimum value
-!   n_max: (integer) maximum value
-! outputs:
-!   ids:   (integer)(N) array of non repeated random integers
-subroutine generate_int_rnd_array(N,n_min,n_max,ids)
-  implicit none
-
-  ! inputs
-  integer,intent(in) :: N,n_min,n_max
-  ! outputs
-  integer,dimension(N),intent(out) :: ids
-  ! variables
-  integer :: ii,jj
-  real*8 :: rnd
-  
-  ! generate sequence of random numbers
-  call compute_rnd_int_array1d(N,n_min,n_max,ids)
-  ! try to correct for repeated ids
-  do jj=1,N
-      ii=1
-      do while((count(ids==ids(jj)).gt.1).and.(ii.le.max_it))
-      call random_number(rnd)
-      ids(jj) = floor(n_min+(n_max-n_min+1)*rnd)
-      ii=ii+1
-    enddo
-    call assert_false(ii.gt.max_it,'Failed to generate unique index array')
-  enddo
-end subroutine generate_int_rnd_array
 
 end module mod_boost_besselk_test

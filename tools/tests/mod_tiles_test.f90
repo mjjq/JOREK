@@ -34,7 +34,8 @@ subroutine run_fruit_tiles()
   write(*,'(/A)') "  ... setting-up: tiles tests"
   call setup 
   write(*,'(/A)') "  ... running: tiles tests"
-  call test_alloc_dealloc_noinit !< test tile de-allocation
+  call test_alloc_dealloc_noinit !< test tile de-allocation, init=0
+  call test_alloc_dealloc_init   !< test tile de-allocation, init=data
   write(*,'(/A)') "  ... tearing-down: tiles test"
   call teardown
 
@@ -95,7 +96,8 @@ end subroutine teardown
 ! test allocation and deallocation of every type of tiles
 ! initialization is set to zero
 subroutine test_alloc_dealloc_noinit()
-  use mod_tiles
+  use mod_tiles,only: tile_int_1d,tile_int_2d
+  use mod_tiles,only: tile_real8_1d,tile_real8_2d
   implicit none
 
   ! variables
@@ -131,20 +133,63 @@ subroutine test_alloc_dealloc_noinit()
   "Error: deallocation of tile integer-2D failed!")
   !> real8_tile_1d
   call real8_tile_1d%allocate_tile(N_rows)
-  call assert_equals(real8_zero_array_1d,real8_zero_array_1d,N_rows,&
+  call assert_equals(real8_tile_1d%data_array,real8_zero_array_1d,N_rows,&
   tol_real8,"Error: allocation and real8 to 0 of tile real8-1D failed!")
   call real8_tile_1d%deallocate_tile()
   call assert_false(allocated(real8_tile_1d%data_array),&
   "Error: deallocation of tile real8-1D failed!")
   !> real8_tile_2d
   call real8_tile_2d%allocate_tile(N_rows,N_cols)
-  call assert_equals(real8_zero_array_2d,real8_zero_array_2d,N_rows,N_cols,&
+  call assert_equals(real8_tile_2d%data_array,real8_zero_array_2d,N_rows,N_cols,&
   tol_real8,"Error: allocation and real8 to 0 of tile real8-1D failed!")
   call real8_tile_2d%deallocate_tile
   call assert_false(allocated(real8_tile_2d%data_array),&
   "Error: deallocation of tile real8-2D failed!")
 
 end subroutine test_alloc_dealloc_noinit
+
+!> test allocation and deallocation of tiles with value initialisation
+subroutine test_alloc_dealloc_init()
+  use mod_tiles,only: tile_int_1d,tile_int_2d
+  use mod_tiles,only: tile_real8_1d,tile_real8_2d
+  implicit none
+
+  ! variables
+  type(tile_int_1d)   :: int_tile_1d
+  type(tile_int_2d)   :: int_tile_2d
+  type(tile_real8_1d) :: real8_tile_1d
+  type(tile_real8_2d) :: real8_tile_2d
+
+  ! check allocation with data initialisation and deallocation
+  !> int_tile_1d
+  call int_tile_1d%allocate_tile(N_rows,data_int_1d_1)
+  call assert_equals(int_tile_1d%data_array,data_int_1d_1,N_rows,&
+  "Error: allocation and init to data of tile interger-1D failed!")
+  call int_tile_1d%deallocate_tile()
+  call assert_false(allocated(int_tile_2d%data_array),&
+  "Error: deallocation of tile integer-1D failed!")
+  !> int_tile_2d
+  call int_tile_2d%allocate_tile(N_rows,N_cols,data_int_2d_1)
+  call assert_equals(int_tile_2d%data_array,data_int_2d_1,N_rows,&
+  N_cols,"Error: allocation and init to data of tile interger-1D failed!")
+  call int_tile_2d%deallocate_tile()
+  call assert_false(allocated(int_tile_2d%data_array),&
+  "Error: deallocation of tile integer-2D failed!")
+  !> real8_tile_1d
+  call real8_tile_1d%allocate_tile(N_rows,data_real8_1d_1)
+  call assert_equals(real8_tile_1d%data_array,data_real8_1d_1,N_rows,&
+  tol_real8,"Error: allocation and real8 to data of tile real8-1D failed!")
+  call real8_tile_1d%deallocate_tile()
+  call assert_false(allocated(real8_tile_1d%data_array),&
+  "Error: deallocation of tile real8-1D failed!")
+  !> real8_tile_2d
+  call real8_tile_2d%allocate_tile(N_rows,N_cols,data_real8_2d_1)
+  call assert_equals(real8_tile_2d%data_array,data_real8_2d_1,N_rows,N_cols,&
+  tol_real8,"Error: allocation and real8 to data of tile real8-1D failed!")
+  call real8_tile_2d%deallocate_tile
+  call assert_false(allocated(real8_tile_2d%data_array),&
+  "Error: deallocation of tile real8-2D failed!")
+end subroutine test_alloc_dealloc_init
 
 !------------------------------------------------------------------
 !------------------------------------------------------------------

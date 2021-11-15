@@ -12,6 +12,7 @@ public :: gnu_rng_array_norep
 interface gnu_rng_interval
   module procedure gnu_rng_int_interval_single
   module procedure gnu_rng_int_interval_1d
+  module procedure gnu_rng_int_interval_2d
   module procedure gnu_rng_real8_interval_1d
   module procedure gnu_rng_real8_interval_2d
 end interface gnu_rng_interval
@@ -49,7 +50,7 @@ subroutine gnu_rng_int_interval_single(interval,id)
 
 end subroutine gnu_rng_int_interval_single
 
-! gnu_rng_int_interval_1dcomputes an array of
+! gnu_rng_int_interval_1d computes an array of
 ! random integers from a uniform distribution
 ! inputs:
 !   N:        (intrger) length of the array
@@ -71,6 +72,30 @@ subroutine gnu_rng_int_interval_1d(N,interval,ids)
   call random_number(rnds)
   ids = floor(interval(1)+(interval(2)-interval(1)+1)*rnds)
 end subroutine gnu_rng_int_interval_1d
+
+! gnu_rng_int_interval_2d computes a 2D-array of
+! random integers from a uniform distribution
+! inputs:
+!   N_rows:   (intrger) N# of array rows
+!   N_cols:   (integer) N# of array columns
+!   interval: (integer)(2) minimum and maximum values
+! outputs:
+!   ids: (index)(N_rows,N_cols) array of random integers
+subroutine gnu_rng_int_interval_2d(N_rows,N_cols,interval,ids)
+  implicit none
+
+  ! inputs
+  integer,intent(in) :: N_rows,N_cols
+  integer,dimension(2),intent(in) :: interval
+  ! outputs
+  integer,dimension(N_rows,N_cols),intent(out) :: ids
+  ! variables
+  real*8,dimension(N_rows,N_cols) :: rnds
+
+  ! compute random integer
+  call random_number(rnds)
+  ids = floor(interval(1)+(interval(2)-interval(1)+1)*rnds)
+end subroutine gnu_rng_int_interval_2d
 
 ! gnu_rng_interval_1d generates a 1D random number array
 ! using the gnu-fortran intrinsic function within a 

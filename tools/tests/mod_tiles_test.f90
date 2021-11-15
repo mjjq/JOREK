@@ -8,10 +8,12 @@ private
 public :: run_fruit_tiles
 
 ! Module variables ------------------------------------------------
-integer,parameter :: N_rows=100 !< number of tile rows
-integer,parameter :: N_cols=100 !< number of tile columns
-real*8,dimension(2) :: interval_real8_1d_1=(/-1.d2,1.d2/)
-real*8,dimension(2) :: interval_real8_1d_2=(/1.5d2,3.d3/)
+integer,parameter    :: N_rows=100 !< number of tile rows
+integer,parameter    :: N_cols=100 !< number of tile columns
+integer,dimension(2) :: interval_int_1d_1=(/-1000,1000/)
+integer,dimension(2) :: interval_int_1d_2=(/7500,50000/)
+real*8,dimension(2)  :: interval_real8_1d_1=(/-1.d2,1.d2/)
+real*8,dimension(2)  :: interval_real8_1d_2=(/1.5d2,3.d3/)
 ! define interger/double 1d and 2d test arrays
 integer,dimension(:),allocatable   :: data_int_1d_1,data_int_1d_2
 integer,dimension(:,:),allocatable :: data_int_2d_1,data_int_2d_2
@@ -56,7 +58,10 @@ subroutine setup()
   call allocate_check(N_rows,N_cols,data_real8_2d_2)
 
   ! generate integer random number within range
-
+  call gnu_rng_interval(N_rows,interval_int_1d_1,data_int_1d_1)
+  call gnu_rng_interval(N_rows,interval_int_1d_2,data_int_1d_2)
+  call gnu_rng_interval(N_rows,N_cols,interval_int_1d_1,data_int_2d_1)
+  call gnu_rng_interval(N_rows,N_cols,interval_int_1d_2,data_int_2d_2)
   ! generate double random number within range
   call gnu_rng_interval(N_rows,interval_real8_1d_1,data_real8_1d_1)
   call gnu_rng_interval(N_rows,interval_real8_1d_2,data_real8_1d_2)

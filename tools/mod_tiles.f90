@@ -324,6 +324,7 @@ subroutine resize_int_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
   else
     offset = 0
   endif
+  if((offset+N_data).gt.tile%N_rows) offset = max(0,tile%N_rows-N_data)
   if((offset+N_data).gt.N_rows_new) then
     ierr = 1
     return
@@ -377,6 +378,8 @@ ierr,offset_rows_in,offset_cols_in)
   else
     offset_cols = 0
   endif
+  if((offset_rows+N_data_rows).gt.tile%N_rows) offset_rows = max(0,tile%N_rows-N_data_rows)
+  if((offset_cols+N_data_cols).gt.tile%N_cols) offset_cols = max(0,tile%N_cols-N_data_cols)
   if((offset_rows+N_data_rows).gt.N_rows_new) then
     ierr = 1
     return
@@ -426,6 +429,7 @@ subroutine resize_real8_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
   else
     offset = 0
   endif
+  if((offset+N_data).gt.tile%N_rows) offset = max(0,tile%N_rows-N_data)
   if((offset+N_data).gt.N_rows_new) then
     ierr = 1
     return
@@ -479,6 +483,8 @@ ierr,offset_rows_in,offset_cols_in)
   else
     offset_cols = 0
   endif
+  if((offset_rows+N_data_rows).gt.tile%N_rows) offset_rows = max(0,tile%N_rows-N_data_rows)
+  if((offset_cols+N_data_cols).gt.tile%N_cols) offset_cols = max(0,tile%N_cols-N_data_cols)
   if((offset_rows+N_data_rows).gt.N_rows_new) then
     ierr = 1
     return

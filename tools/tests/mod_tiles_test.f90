@@ -154,7 +154,7 @@ subroutine test_alloc_dealloc_noinit()
   call int_tile_1d%allocate_tile(N_rows,ierr)
   call assert_equals(int_tile_1d%N_rows,N_rows,&
   "Error: allocation of tile interger-1D N_rows does not match!")
-  call assert_equals(int_tile_1d%data_array,data_int_1d,N_rows,&
+  call assert_equals(int_tile_1d%data_array,int_zero_array_1d,N_rows,&
   "Error: allocation of tile interger-1D failed!")
   call int_tile_1d%deallocate_tile(ierr)
   call assert_equals(int_tile_1d%N_rows,0,&
@@ -167,7 +167,7 @@ subroutine test_alloc_dealloc_noinit()
   "Error: allocation of tile interger-2D N_rows does not match!")
   call assert_equals(int_tile_2d%N_cols,N_cols,&
   "Error: allocation of tile interger-1D N_cols does not match!")
-  call assert_equals(int_tile_2d%data_array,data_int_2d,N_rows,&
+  call assert_equals(int_tile_2d%data_array,int_zero_array_2d,N_rows,&
   N_cols,"Error: allocation and init to data of tile interger-1D failed!")
   call int_tile_2d%deallocate_tile(ierr)
   call assert_false(allocated(int_tile_2d%data_array),&
@@ -180,8 +180,8 @@ subroutine test_alloc_dealloc_noinit()
   call real8_tile_1d%allocate_tile(N_rows,ierr)
   call assert_equals(real8_tile_1d%N_rows,N_rows,&
   "Error: allocation of tile double-1D N_rows does not match!")
-  call assert_equals(real8_tile_1d%data_array,data_real8_1d,N_rows,&
-  tol_real8,"Error: allocation of tile double-1D failed!")
+  call assert_equals(real8_tile_1d%data_array,real8_zero_array_1d,&
+  N_rows,tol_real8,"Error: allocation of tile double-1D failed!")
   call real8_tile_1d%deallocate_tile(ierr)
   call assert_equals(real8_tile_1d%N_rows,0,&
   "Error: deallocation of tile interger-1D N_rows is not 0!")
@@ -193,7 +193,7 @@ subroutine test_alloc_dealloc_noinit()
   "Error: allocation of tile double-2D N_rows does not match!")
   call assert_equals(real8_tile_2d%N_cols,N_cols,&
   "Error: allocation of tile double-2D N_cols does not match!")
-  call assert_equals(real8_tile_2d%data_array,data_real8_2d,N_rows,N_cols,&
+  call assert_equals(real8_tile_2d%data_array,real8_zero_array_2d,N_rows,N_cols,&
   tol_real8,"Error: allocation and double to data of tile double-1D failed!")
   call real8_tile_2d%deallocate_tile(ierr)
   call assert_false(allocated(real8_tile_2d%data_array),&

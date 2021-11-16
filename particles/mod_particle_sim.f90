@@ -35,6 +35,8 @@ type :: particle_sim
 contains
   procedure :: finalize
   procedure :: initialize
+  procedure :: set_t_norm  !< set the jorek time unit
+  procedure :: set_mpi_var !< set the mpi variables of sim
 end type particle_sim
 
 contains
@@ -42,12 +44,11 @@ contains
 subroutine initialize(sim, num_groups, skip_jorek2help)
   use mpi
   use mod_parameters, only: n_tor, n_period
-  use phys_module, only: mode, central_mass, central_density
+  use phys_module, only: mode
   use basis_at_gaussian, only: initialise_basis
-  use constants, only: MU_ZERO, MASS_PROTON
   use data_structure, only: init_threads, nbthreads
   !$ use omp_lib
-  class(particle_sim), intent(inout) :: sim !< why is this class() and not type()?
+  class(particle_sim), intent(inout) :: sim
   integer, intent(in) :: num_groups
   logical, optional :: skip_jorek2help
   integer :: required, provided, ierr, i_tor
@@ -92,7 +93,7 @@ subroutine initialize(sim, num_groups, skip_jorek2help)
   call broadcast_phys(sim%my_id)
 
   ! Set up normalisation factors
-  sim%t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+  call sim%set_t_norm()
 
   ! Initialise the gaussian points at basis functions
   call initialise_basis
@@ -101,7 +102,7 @@ end subroutine
 !> Actions to perform when stopping the simulation.
 subroutine finalize(sim)
   use mod_startup_teardown, only: jorek_finalize => finalize
-  class(particle_sim), intent(in) :: sim !< why is this class() and not type()?
+  class(particle_sim), intent(in) :: sim
   integer :: ierr
   if (sim%stop_now) then
     write(*,"(A,g14.6,A)") "INFO: Stop requested at ", sim%time, " , exiting"
@@ -110,4 +111,36 @@ subroutine finalize(sim)
   end if
   call MPI_Finalize(ierr)
 end subroutine
+
+!> set the t_norm value
+!> inputs:
+!>   sim: (particle_sim) the particle simulation
+!> outputs:
+!>   sim: (particle_sim) the particle simulation
+subroutine set_t_norm(sim)
+  use phys_module, only: central_mass, central_density
+  use constants, only: MU_ZERO, MASS_PROTON
+  implicit none
+  ! input-outputs
+  class(particle_sim), intent(inout) :: sim
+  sim%t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
+end subroutine set_t_norm
+
+!> set the mpi variables n_cpus and my_id for external mpi initialisation
+!> inputs:
+!    my_id:  (integer) MPI task rank
+!>   n_cpus: (integer) number of MPI tasks
+!>   sim:    (particle_sim) the particle simulation
+!> outputs:
+!>   sim: (particle_sim) the particle simulation
+subroutine set_mpi_var(sim,my_id,n_cpus)
+  implicit none
+  !> inputs
+  integer,intent(in) :: my_id,n_cpus
+  !> inputs-outpus
+  class(particle_sim), intent(inout) :: sim
+  sim%my_id = my_id
+  sim%n_cpu = n_cpus
+end subroutine set_mpi_var
+
 end module mod_particle_sim

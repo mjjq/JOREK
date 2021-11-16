@@ -20,10 +20,15 @@ public :: tile_real8_1d, tile_real8_2d
 ! double_1D and double_2D tile types
 ! WARNING: data in the tile must be stored with increasing index
 ! Attributes are:
+!   N_rows:     (integer) number of rows of the data_array
+!   N_cols:     (integer) number fo columns of the data array
 !   data_array: (integer/real8)(N_rows/N_rows*N_columns) tile array
 !               in which data are stored 
+type,abstract :: tile_base
+  integer :: N_rows
+end type tile_base
 !> define 1D intger tile array
-type :: tile_int_1d
+type,extends(tile_base) :: tile_int_1d
   integer,dimension(:),allocatable :: data_array
 contains
   !procedure(alloc_int_tile_1d),deferred :: allocate_tile => allocate_int_tile_1d
@@ -33,7 +38,8 @@ contains
 end type tile_int_1d
 
 !> define 2D integer tile array
-type :: tile_int_2d
+type,extends(tile_base) :: tile_int_2d
+  integer :: N_cols
   integer,dimension(:,:),allocatable :: data_array
 contains
   procedure,pass(tile) :: allocate_tile   => allocate_int_tile_2d
@@ -42,7 +48,7 @@ contains
 end type tile_int_2d
 
 !> define 1D double array
-type :: tile_real8_1d 
+type,extends(tile_base) :: tile_real8_1d 
   real*8,dimension(:),allocatable :: data_array
 contains
   procedure,pass(tile) :: allocate_tile   => allocate_real8_tile_1d
@@ -51,7 +57,8 @@ contains
 end type tile_real8_1d
 
 !> define 2D double array
-type :: tile_real8_2d
+type,extends(tile_base) :: tile_real8_2d
+  integer :: N_cols
   real*8,dimension(:,:),allocatable :: data_array
 contains
   procedure,pass(tile) :: allocate_tile   => allocate_real8_tile_2d
@@ -68,18 +75,26 @@ contains
 ! inputs:
 !   tile:   (tile_int_1d) the tile to be allocated
 !   N_rows: (integer) number of tile rows
+!   ierr:   (integer) if 1 and error occurred
 !   dat:    (double)(N_rows,N_cols)(optional) data array for initialisation
 ! outputs:
-!   tile:   (tile_int_1d) the allocated tile
-subroutine allocate_int_tile_1d(tile,N_rows,dat)
+!   tile: (tile_int_1d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine allocate_int_tile_1d(tile,N_rows,ierr,dat)
   implicit none
   ! inputs-outputs
+  integer,intent(inout)            :: ierr
   class(tile_int_1d),intent(inout) :: tile
   ! inputs
   integer,intent(in) :: N_rows
   integer,dimension(N_rows),intent(in),optional :: dat
 
-  if(.not.allocated(tile%data_array)) allocate(tile%data_array(N_rows))
+  if(.not.allocated(tile%data_array)) then
+     tile%N_rows = N_rows; allocate(tile%data_array(N_rows));
+  else
+     ierr = 1
+     return
+  endif
   if(present(dat)) then
     tile%data_array = dat
   else
@@ -93,18 +108,27 @@ end subroutine allocate_int_tile_1d
 !   tile:   (tile_int_2d) the tile to be allocated
 !   N_rows: (integer) number of tile rows
 !   N_cols: (integer) number of tile columns
+!   ierr:   (integer) if 1 and error occurred
 !   dat:    (double)(N_rows,N_cols)(optional) data array for initialisation
 ! outputs:
-!   tile:   (tile_int_2d) the allocated tile
-subroutine allocate_int_tile_2d(tile,N_rows,N_cols,dat)
+!   tile: (tile_int_2d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine allocate_int_tile_2d(tile,N_rows,N_cols,ierr,dat)
 !  implicit none
   ! inputs-outputs
+  integer,intent(inout)            :: ierr 
   class(tile_int_2d),intent(inout) :: tile
   ! inputs
   integer,intent(in) :: N_rows,N_cols
   integer,dimension(N_rows,N_cols),intent(in),optional :: dat
 
-  if(.not.allocated(tile%data_array)) allocate(tile%data_array(N_rows,N_cols))
+  if(.not.allocated(tile%data_array)) then
+    tile%N_rows = N_rows; tile%N_cols = N_cols
+    allocate(tile%data_array(N_rows,N_cols))
+  else
+    ierr = 1
+    return
+  endif
   if(present(dat)) then
     tile%data_array = dat
   else
@@ -118,18 +142,26 @@ end subroutine allocate_int_tile_2d
 ! inputs:
 !   tile:   (tile_real8_1d) the tile to be allocated
 !   N_rows: (integer) number of tile rows
+!   ierr:   (integer) if 1 and error occurred
 !   dat:    (double)(N_rows,N_cols)(optional) data array for initialisation
 ! outputs:
-!   tile:   (tile_real8_1d) the allocated tile
-subroutine allocate_real8_tile_1d(tile,N_rows,dat)
+!   tile: (tile_real8_1d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine allocate_real8_tile_1d(tile,N_rows,ierr,dat)
   implicit none
   ! inputs-outputs
+  integer,intent(inout)              :: ierr
   class(tile_real8_1d),intent(inout) :: tile
   ! inputs
   integer,intent(in) :: N_rows
   real*8,dimension(N_rows),intent(in),optional :: dat
 
-  if(.not.allocated(tile%data_array)) allocate(tile%data_array(N_rows))
+  if(.not.allocated(tile%data_array)) then
+    tile%N_rows = N_rows; allocate(tile%data_array(N_rows))
+  else
+    ierr = 1
+    return
+  endif
   if(present(dat)) then
     tile%data_array = dat
   else
@@ -143,18 +175,27 @@ end subroutine allocate_real8_tile_1d
 !   tile:   (tile_real8_2d) the tile to be allocated
 !   N_rows: (integer) number of tile rows
 !   N_cols: (integer) number of tile columns
+!   ierr:   (integer) if 1 and error occurred
 !   dat:    (double)(N_rows,N_cols)(optional) data array for initialisation
 ! outputs:
-!   tile:   (tile_real8_2d) the allocated tile
-subroutine allocate_real8_tile_2d(tile,N_rows,N_cols,dat)
+!   tile: (tile_real8_2d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine allocate_real8_tile_2d(tile,N_rows,N_cols,ierr,dat)
   implicit none
   ! inputs-outputs
+  integer,intent(inout)              :: ierr
   class(tile_real8_2d),intent(inout) :: tile
   ! inputs
   integer,intent(in) :: N_rows,N_cols
   real*8,dimension(N_rows,N_cols),intent(in),optional :: dat
 
-  if(.not.allocated(tile%data_array)) allocate(tile%data_array(N_rows,N_cols))
+  if(.not.allocated(tile%data_array)) then
+    tile%N_rows = N_rows; tile%N_cols = N_cols;
+    allocate(tile%data_array(N_rows,N_cols))
+  else
+    ierr = 1
+    return
+  endif
   if(present(dat)) then
      tile%data_array = dat
   else
@@ -167,57 +208,87 @@ end subroutine allocate_real8_tile_2d
 
 ! Deallocate tile_int_1d data array
 ! inputs:
-!   tile:   (tile_int_1d) the allocated tile
+!   tile: (tile_int_1d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
 ! outputs:
-!   tile:   (tile_int_1d) the deallocated tile
-subroutine deallocate_int_tile_1d(tile)
+!   tile: (tile_int_1d) the deallocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine deallocate_int_tile_1d(tile,ierr)
   implicit none
   ! inputs-outputs
   class(tile_int_1d),intent(inout) :: tile
+  integer,intent(inout)            :: ierr
   
-  if(allocated(tile%data_array)) deallocate(tile%data_array)
+  if(allocated(tile%data_array)) then
+    tile%N_rows = 0; deallocate(tile%data_array);
+  else
+    ierr = 1
+  endif
 
 end subroutine deallocate_int_tile_1d
 
 ! Deallocate tile_int_2d data array
 ! inputs:
-!   tile:   (tile_int_2d) the allocated tile
+!   tile: (tile_int_2d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
 ! outputs:
-!   tile:   (tile_int_2d) the deallocated tile
-subroutine deallocate_int_tile_2d(tile)
+!   tile: (tile_int_2d) the deallocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine deallocate_int_tile_2d(tile,ierr)
   implicit none
   ! inputs-outputs
   class(tile_int_2d),intent(inout) :: tile
+  integer,intent(inout)            :: ierr
   
-  if(allocated(tile%data_array)) deallocate(tile%data_array)
+  if(allocated(tile%data_array)) then
+    tile%N_rows = 0; tile%N_cols = 0;
+    deallocate(tile%data_array)
+  else
+    ierr = 1
+  endif
 
 end subroutine deallocate_int_tile_2d
 
 ! Deallocate tile_int_1d data array
 ! inputs:
-!   tile:   (tile_real8_1d) the allocated tile
+!   tile: (tile_real8_1d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
 ! outputs:
-!   tile:   (tile_real8_1d) the deallocated tile
-subroutine deallocate_real8_tile_1d(tile)
+!   tile: (tile_real8_1d) the deallocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine deallocate_real8_tile_1d(tile,ierr)
   implicit none
   ! inputs-outputs
   class(tile_real8_1d),intent(inout) :: tile
+  integer,intent(inout)              :: ierr
   
-  if(allocated(tile%data_array)) deallocate(tile%data_array)
+  if(allocated(tile%data_array)) then
+    tile%N_rows = 0;  deallocate(tile%data_array);
+  else
+    ierr = 1
+  endif
 
 end subroutine deallocate_real8_tile_1d
 
 ! Deallocate tile_int_1d data array
 ! inputs:
-!   tile:   (tile_real8_2d) the allocated tile
+!   tile: (tile_real8_2d) the allocated tile
+!   ierr: (integer) if 1 and error occurred
 ! outputs:
-!   tile:   (tile_real8_2d) the deallocated tile
-subroutine deallocate_real8_tile_2d(tile)
+!   tile: (tile_real8_2d) the deallocated tile
+!   ierr: (integer) if 1 and error occurred
+subroutine deallocate_real8_tile_2d(tile,ierr)
   implicit none
   ! inputs-outputs
   class(tile_real8_2d),intent(inout) :: tile
+  integer,intent(inout)              :: ierr
   
-  if(allocated(tile%data_array)) deallocate(tile%data_array)
+  if(allocated(tile%data_array)) then
+    tile%N_rows = 0; tile%N_cols = 0;
+    deallocate(tile%data_array)
+  else
+    ierr = 1
+  endif
 
 end subroutine deallocate_real8_tile_2d
 
@@ -233,8 +304,8 @@ end subroutine deallocate_real8_tile_2d
 !   ierr:       (integer) if 1 and error occurred
 !   offset_in:  (integer)(optional) initial index for storing data
 ! outputs:
-!  tile: (tile_int_1d) the resized tile
-!  ierr:       (integer) if 1 and error occurred
+!   tile: (tile_int_1d) the resized tile
+!   ierr: (integer) if 1 and error occurred
 subroutine resize_int_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
   implicit none
   ! inputs-outputs:
@@ -260,8 +331,8 @@ subroutine resize_int_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
 
   ! resizing
   tmp_data = tile%data_array(offset+1:offset+N_data)
-  call tile%deallocate_tile()
-  call tile%allocate_tile(N_rows_new)
+  call tile%deallocate_tile(ierr)
+  call tile%allocate_tile(N_rows_new,ierr)
   tile%data_array(offset+1:offset+N_data) = tmp_data
   
 end subroutine resize_int_tile_1d
@@ -279,8 +350,8 @@ end subroutine resize_int_tile_1d
 !   offset_rows_in: (integer)(optional) initial row index for storing data
 !   offset_cols_in: (integer)(optional) initial columns index for storing data
 ! outputs:
-!  tile: (tile_int_2d) the resized tile
-!  ierr:       (integer) if 1 and error occurred
+!   tile: (tile_int_2d) the resized tile
+!   ierr: (integer) if 1 and error occurred
 subroutine resize_int_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols,&
 ierr,offset_rows_in,offset_cols_in)
   implicit none
@@ -318,8 +389,8 @@ ierr,offset_rows_in,offset_cols_in)
   ! resizing
   tmp_data = &
   tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols)
-  call tile%deallocate_tile()
-  call tile%allocate_tile(N_rows_new,N_cols_new)
+  call tile%deallocate_tile(ierr)
+  call tile%allocate_tile(N_rows_new,N_cols_new,ierr)
   tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols) = &
   tmp_data
   
@@ -335,8 +406,8 @@ end subroutine resize_int_tile_2d
 !   ierr:       (integer) if 1 and error occurred
 !   offset_in:  (integer)(optional) initial index for storing data
 ! outputs:
-!  tile: (tile_real8_1d) the resized tile
-!  ierr:       (integer) if 1 and error occurred
+!   tile: (tile_real8_1d) the resized tile
+!   ierr: (integer) if 1 and error occurred
 subroutine resize_real8_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
   implicit none
   ! inputs-outputs:
@@ -362,8 +433,8 @@ subroutine resize_real8_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
 
   ! resizing
   tmp_data = tile%data_array(offset+1:offset+N_data)
-  call tile%deallocate_tile()
-  call tile%allocate_tile(N_rows_new)
+  call tile%deallocate_tile(ierr)
+  call tile%allocate_tile(N_rows_new,ierr)
   tile%data_array(offset+1:offset+N_data) = tmp_data
   
 end subroutine resize_real8_tile_1d
@@ -381,8 +452,8 @@ end subroutine resize_real8_tile_1d
 !   offset_rows_in: (integer)(optional) initial row index for storing data
 !   offset_cols_in: (integer)(optional) initial columns index for storing dat
 ! outputs:
-!  tile: (tile_real8_2d) the resized tile
-!  ierr:       (integer) if 1 and error occurred
+!   tile: (tile_real8_2d) the resized tile
+!   ierr: (integer) if 1 and error occurred
 subroutine resize_real8_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols,&
 ierr,offset_rows_in,offset_cols_in)
   implicit none
@@ -420,8 +491,8 @@ ierr,offset_rows_in,offset_cols_in)
   ! resizing
   tmp_data = &
   tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols)
-  call tile%deallocate_tile()
-  call tile%allocate_tile(N_rows_new,N_cols_new)
+  call tile%deallocate_tile(ierr)
+  call tile%allocate_tile(N_rows_new,N_cols_new,ierr)
   tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols) = &
   tmp_data
   

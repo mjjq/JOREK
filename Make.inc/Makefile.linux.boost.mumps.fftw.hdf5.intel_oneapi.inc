@@ -36,7 +36,7 @@ USE_BOOST = 1
 
 #Scotch library
 SCOTCH_HOME  = $(SCOTCH_ROOT)
-LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptscotcherrexit -lptscotcherr -lscotcherrexit -lscotcherr -lptesmumps -lptscotch -lesmumps -lscotch
+LIB_SCOTCH   = -L$(SCOTCH_HOME)/lib -lptesmumps -lptscotch -lesmumps -lscotch -lptscotcherrexit -lptscotcherr -lscotcherrexit -lscotcherr
 INC_SCOTCH   = -I$(SCOTCH_HOME)/include
 
 # METIS

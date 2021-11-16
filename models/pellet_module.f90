@@ -141,12 +141,16 @@ module pellet_module
     real*8  :: psi_axis, psi_bnd
     integer             :: ierr, i_elm, ifail
     real*8  :: V_normalisation, density, density_in, density_out, pressure, pressure_in, pressure_out
+    real*8  :: kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out
+
     
     real*8  :: R_out, Z_out, s_out, t_out, P0_s,P0_t,P0_st,P0_ss,P0_tt
     
     if (pellet_amplitude .gt. 0) return
     
-    call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+          call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out, &
+                                                          kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
+                                                          
     V_normalisation = 1.d0 / sqrt(central_density * 1d20 * mass_proton * central_mass * MU_ZERO)
     
     pellet_R = pellet_R + pellet_velocity_R * tstep / V_normalisation
@@ -360,7 +364,7 @@ module pellet_module
             write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
           end if
         else if (spi_abl_model == 2) then
-          select case ( trim(imp_type) )
+          select case ( trim(imp_type(1)) )
             case('D2')
               ne_SI   = n_SI
               ! The scaling law is in gauss unit
@@ -411,7 +415,7 @@ module pellet_module
                                        * ((ne_SI*1.d-6)**0.455) * (T_eV**1.679)
               end if
             case default
-              write(*,*) '!! Gas type "', trim(imp_type), '" unknown !!'
+              write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown !!'
               write(*,*) '=> We assume the gas is D2.'
               pellets(i_p)%spi_abl = 3.9d14 * ((pellets(i_p)%spi_radius*1.d2)**1.455) &
                                      * ((n_SI*1.d-6)**0.455) * (T_eV**1.679)
@@ -420,7 +424,7 @@ module pellet_module
             write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
           end if
         else if (spi_abl_model == 3) then
-          select case ( trim(imp_type) )
+          select case ( trim(imp_type(1)) )
             case('D2') ! We temporarily wusing D2 ablation rate for H2 ablation here
               pellets(i_p)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((pellets(i_p)%spi_radius*1.d2 / 0.2)**(4./3.)) &
                                      * ((n_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) / 4.0282
@@ -463,7 +467,7 @@ module pellet_module
                                        * ((ne_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) &
                                        / (20.183*pellets(i_p)%spi_species + 2.0141*(1.-pellets(i_p)%spi_species)) 
             case default
-              write(*,*) '!! Gas type "', trim(imp_type), '" unknown !!'
+              write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown !!'
               write(*,*) '=> We assume the gas is D2.'
               pellets(i_p)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((pellets(i_p)%spi_radius*1.d2 / 0.2)**(4./3.)) &
                                      * ((n_SI*1.d-20)**(1./3.)) * ((T_eV/2.d3)**(5./3.)) / 4.0282
@@ -667,7 +671,7 @@ module pellet_module
         stop
       end if
 
-      select case ( trim(imp_type) ) 
+      select case ( trim(imp_type(1)) ) 
         case('D2')
           write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
@@ -719,7 +723,7 @@ module pellet_module
             N_shard_norm = N_shard_norm + (4./3.) * PI * (shard_size(i)**3) * spi_density_tmp *1.d20
           end do
         case default
-          write(*,*) '!! Gas type "', trim(imp_type), '" unknown !!'
+          write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown !!'
           write(*,*) '=> We assume the gas is D2.'
           write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
@@ -1078,7 +1082,7 @@ module pellet_module
 
       real_spi_quantity = 0.d0
 
-      select case ( trim(imp_type) )
+      select case ( trim(imp_type(1)) )
         case('D2')
           write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
@@ -1136,7 +1140,7 @@ module pellet_module
             end if
           end do
         case default
-          write(*,*) '!! Gas type "', trim(imp_type), '" unknown !!'
+          write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown !!'
           write(*,*) '=> We assume the gas is D2.'
           write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop

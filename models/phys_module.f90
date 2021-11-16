@@ -102,6 +102,51 @@ module phys_module
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
   real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
 
+  ! ------------------------------------------------
+  ! --- Structures to implement BCs in model600
+  ! ------------------------------------------------
+  ! --- For more info see  https://www.jorek.eu/wiki/doku.php?id=choose_boundary_conditions
+  integer, parameter :: max_bnd_types=30
+
+  type type_dirichlet_bc                           
+    logical :: psi  
+    logical :: u    
+    logical :: zj   
+    logical :: w    
+    logical :: rho  
+    logical :: T    
+    logical :: Ti   
+    logical :: Te   
+    logical :: Vpar 
+    logical :: rhon 
+    logical :: rho_imp 
+    logical :: nre  
+    logical :: AR   
+    logical :: AZ   
+    logical :: A3  
+  end type type_dirichlet_bc
+
+  type type_natural_bc                           
+    logical :: rho  
+    logical :: T    
+    logical :: Ti   
+    logical :: Te   
+    logical :: Vpar 
+    logical :: rhon 
+    logical :: rho_imp 
+    logical :: nre  
+  end type type_natural_bc
+
+  type type_bcs                           
+    type (type_dirichlet_bc) :: dirichlet
+    type (type_natural_bc)   :: natural
+    logical                  :: mach1 
+  end type type_bcs
+
+  type (type_bcs), dimension(max_bnd_types) :: bcs   
+  ! ------------------------------------------------
+
+
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
   ! Identity of the processor
@@ -269,6 +314,16 @@ module phys_module
   real*8  :: Zmax_pfc(40)     !< Maximum Z of coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
   real*8  :: current_pfc(40)  !< Current density in the coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
   
+  !> @name current ropes definition for initial equilibrium (eg. merging flux ropes)
+  !! Numerical definition of current ropes for initial equilibrium (eg. merging flux ropes)
+  integer :: n_jropes          !< Number of ropes, 
+  real*8  :: R_jropes(10)      !< R centre of rope
+  real*8  :: Z_jropes(10)      !< Z centre of rope
+  real*8  :: w_jropes(10)      !< width of rope
+  real*8  :: current_jropes(10)!< Current inside the rope
+  real*8  :: rho_jropes(10)    !< Density inside the rope
+  real*8  :: T_jropes(10)      !< Temperature inside the rope
+  
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
   real*8  :: pellet_R          !< major radius position pellet
@@ -290,6 +345,7 @@ module phys_module
 
   !> @name shared between MGI and SPI applications
   integer, parameter :: n_inj_max = 10 ! The hard coded maximum number of injections
+  integer, parameter :: n_imp_max = 5  ! The hard coded maximum number of impurity species
 
   real*8  :: t_ns(n_inj_max)   !< MGI onset time (JOREK units)
   real*8  :: ns_amplitude(n_inj_max)  !< Amplitude of gas source
@@ -300,7 +356,7 @@ module phys_module
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
   real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
 
-  character(len=80) :: imp_type !< Type of injected material or background impurity species: Argon, neon, ...
+  character(len=80) :: imp_type(n_imp_max) !< Type of injected material or background impurity species: Argon, neon, ...
   logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
 
   !> @name Massive gas injection-related input parameters
@@ -314,8 +370,8 @@ module phys_module
   real*8  :: L_tube            !< Pipe length
   real*8  :: ksi_ion            !< Energy cost of each ionization
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
-  real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
- 
+  real*8  :: nimp_bg(n_imp_max) !< Density of background impurities (in \f$m^{-3}\f$)
+
   !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
@@ -364,7 +420,7 @@ module phys_module
   character(len=256) :: spi_plume_file(n_inj_max)!< The name of the shard information datafile (array)
   logical            :: spi_plume_hdf5           !< if 'spi_plume_file' is in HDF5format?
 
-  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
+  integer :: n_adas             !< Number of species to be traced by ADAS
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
@@ -402,6 +458,7 @@ module phys_module
   real*8  :: R_end             !< Right boundary of grid in R-direction (for rectangular grid)
   real*8  :: Z_begin           !< Lower boundary of grid in Z-direction (for rectangular grid)
   real*8  :: Z_end             !< Upper boundary of grid in Z-direction (for rectangular grid)
+  real*8  :: rect_grid_vac_psi !< Use a vacuum psi-bnd condition for squared-grid, ie. (rect_grid_vac_psi * R**2)
 
   
   !> @name Polar Grid
@@ -412,10 +469,13 @@ module phys_module
   real*8  :: R_geo             	    !< Center of the grid (for polar grid)
   real*8  :: Z_geo             	    !< Center of the grid (for polar grid)
   real*8  :: psi_axis_init     	    !< Initial guess for Psi at the magnetic axis (for polar grid)
-  real*8  :: XR_r(2)           	    !< Psi_N position of radial grid accumulation (two positions) (for polar grid)
-  real*8  :: SIG_r(2)          	    !< Width of grid accumulation (two positions) (for polar grid)
+  real*8  :: XR_r(2)           	    !< Psi_N position of radial grid accumulation (two positions) (for polar grid) (also used for R-position in square-grid)
+  real*8  :: SIG_r(2)          	    !< Width of grid accumulation (two positions) (for polar grid) (also used for R-width in square-grid)
   real*8  :: XR_tht(2)         	    !< Position of poloidal grid accumulation (0...1, two positions) (for polar grid)
   real*8  :: SIG_tht(2)        	    !< Width of grid accumulation (two positions) (for polar grid)
+  real*8  :: XR_z(2)           	    !< Z-position of square grid accumulation (two positions) (for square grid)
+  real*8  :: SIG_z(2)          	    !< Z-Width of grid accumulation (two positions) (for square grid)
+  real*8  :: bgf_r, bgf_z           !< Background for meshac distribution or R and Z accumulation (only for square grid!)
   
   !> @name Flux surface grid
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.
@@ -738,6 +798,25 @@ module phys_module
   !> @name (Currently unused)
   real*8  :: zjz_0, zjz_1,  zj_coef(10)
   real*8  :: D_neutral
+
+  !> @name Particles-related input parameters
+  logical :: restart_particles
+  logical :: use_ncs          ! use neutral particles
+  logical :: use_ccs          ! use current coupling scheme for fast particles
+  logical :: use_pcs          ! use pressure coupling scheme for fast particles
+  logical :: use_cx           ! switch on sputtering         (in particle module)
+  logical :: use_sputtering   ! switch on charge-exchange    (in particle module)
+  logical :: use_ionisation   ! switch on ionisation         (in particle module)
+  real*8  :: n_particles      ! the number of particles (real on purpose)
+  real*8  :: tstep_particles  ! the time step for the particles
+  integer :: nstep_particles  ! the number of particle time steps
+  integer :: nsubstep_particles ! the number of particles substeps (without projection)
+  real*8  :: filter_perp      ! particle projection smoothing parameter, poloidal plane
+  real*8  :: filter_hyper     ! particle projection smoothing parameter, poloidal plane
+  real*8  :: filter_par       ! particle projection smoothing parameter, parallel direction
+  real*8  :: filter_perp_n0   ! particle projection smoothing parameter, poloidal plane (n=0)
+  real*8  :: filter_hyper_n0  ! particle projection smoothing parameter, poloidal plane (n=0)
+  real*8  :: filter_par_n0    ! particle projection smoothing parameter, parallel direction (n=0)
   
   !> @name Mode families preconditioner parameters
   integer, parameter :: n_fam_max = 100               !< maximum number of families

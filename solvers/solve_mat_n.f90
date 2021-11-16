@@ -6,7 +6,6 @@
 !!   - The LU factorized matrix stored internally by the solvers is re-used in gmres_precondition
 !! * Supports the following solver libraries:
 !!   - PaSTiX 5.x (real or complex)
-!!   - PaStiX 6.x (without MPI parallelization)
 !!   - MUMPS
 !!   - WSMP (not tested for a while)
 !!   - STRUMPACK
@@ -24,56 +23,46 @@ module solve_mat_n
 contains
 
   !> Routine for the binding of threads to cores in PaStiX
-#ifndef USE_PASTIX6
-  subroutine pastix_bind_threads(my_id) ! For PaStiX before version 6.x
-#else
-  subroutine pastix_bind_threads(my_id, thread_map) ! For PaStiX 6.x
-#endif
+  subroutine pastix_bind_threads(my_id)
+
     use pastix_module
    
     implicit none
 
-#ifndef USE_PASTIX6
 #ifdef USE_PASTIX
 #include "pastix_fortran.h"
 #else
 #include "no_pastix_fortran.h"
 #endif
-#endif /* ifndef USE_PASTIX6 */
+
 
     integer, intent(in) :: my_id
-#ifndef USE_PASTIX6
-    ! -- For PaStiX solver before version 6.x
+
     integer*4, dimension(1:pastix_nthrd) :: thread_map
-#else
-    ! -- For PaStiX solver version 6.x
-    integer(kind=c_int)    , dimension(1:pastix_nthrd), intent(out)   :: thread_map
-#endif /* ifndef USE_PASTIX6 */
+
     integer*4 k, packsize, procpernode
 
-#if (defined(WORLDWAR2) || defined(USE_PASTIX6)) && defined(CORES_PER_NODE)
+#if defined(WORLDWAR2) && defined(CORES_PER_NODE)
     procpernode = CORES_PER_NODE/pastix_nthrd
     packsize = CORES_PER_NODE/procpernode 
 !    if (my_id .eq. 0) print *, "packsize", packsize, "procpernode", procpernode
-    Do k = 1, pastix_nthrd
+    do k = 1, pastix_nthrd
       thread_map(k) = mod(my_id * packsize,CORES_PER_NODE) + k-1
     end do
-#ifndef USE_PASTIX6
-    ! -- For PaStiX solver before version 6.x
+
     call pastix_fortran_bindthreads(pastix_data, pastix_nthrd, thread_map(1:))
-#endif
+
 #endif
   end subroutine pastix_bind_threads
   
   
-#if defined(USE_PASTIX) || defined(USE_PASTIX6) || defined(USE_MUMPS)    
+#if defined(USE_PASTIX) || defined(USE_MUMPS)    
   !> Solves the system of equation for each harmonic using mumps, pastix, or wsmp
   subroutine solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
 #ifdef USE_COMPLEX_PRECOND
     use real2complex_mod
 #endif
-
     use tr_module
     use mod_parameters
     use mumps_module
@@ -84,23 +73,13 @@ contains
     use mod_clock
     use phys_module, only : index_now, use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
     use mod_coicsr
-
     use mod_integer_types
- 
-#ifdef USE_PASTIX6
-    use iso_c_binding
-    use pastixf
-    use pastix_enums
-    use spmf
-#endif
    
     implicit none
 
-#ifndef USE_PASTIX6
 #ifdef USE_PASTIX
 #include "pastix_fortran.h"
 #endif
-#endif /* ifndef USE_PASTIX6 */
 
 #include "r3_info.h"
     
@@ -122,14 +101,6 @@ contains
     integer(kind=int_all) :: DUMMY_INT (1:1)
     integer(kind=int_all), parameter   :: Int1=1
     CHARACTER(LEN=128) :: fname
-#ifdef USE_PASTIX6
-    integer(c_int)     :: pastix_info
-    type(c_ptr)        :: pastix_rhs_ptr
-    integer(kind=spm_int_t), dimension(:), pointer     :: pastix_colptr
-    integer(kind=spm_int_t), dimension(:), pointer     :: pastix_rowptr
-    real(kind=c_double)    , dimension(:), pointer     :: pastix_values
-    integer(kind=c_int)    , dimension(1:pastix_nthrd) :: thread_map
-#endif /* ifdef USE_PASTIX6 */
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
     call tr_print_memsize("BeforeSolveN")
@@ -363,32 +334,6 @@ contains
           call split_broadcast(type,MPI_COMM_N)
 #endif /* ifdef USE_COMPLEX_PRECOND */
 
-#ifdef USE_PASTIX6
-          ! -- For PaStiX solver version 6.x
-          allocate(pastix_spm) ! Replace by tr_allocate etc.?!
-          call spmInit(pastix_spm)
-
-#ifdef USE_BLOCK
-          pastix_spm%n           =  n_block
-          pastix_spm%nnz         =  nnz_block
-          pastix_spm%dof         =  block_size
-#else
-          pastix_spm%n           =  mumps_par%n
-          pastix_spm%nnz         =  mumps_par%nz
-          pastix_spm%dof         =  1
-#endif /* ifdef USE_BLOCK */
-          call spmUpdateComputedFields(pastix_spm)
-          call spmAlloc(pastix_spm)
-
-          call c_f_pointer(pastix_spm%colptr,pastix_colptr, [pastix_spm%n+1])
-          call c_f_pointer(pastix_spm%rowptr,pastix_rowptr, [pastix_spm%nnz])
-          call c_f_pointer(pastix_spm%values,pastix_values, [mumps_par%nz])
-              
-          pastix_colptr      = mumps_par%jcn(1:pastix_spm%n+1)
-          pastix_rowptr      = mumps_par%irn(1:pastix_spm%nnz)
-          pastix_values      = mumps_par%A(1:mumps_par%nz)
-#endif /* ifdef USE_BLOCK */
-
         endif
         ! --- End distribute data to the MPI "slave" tasks (>0) ------------------------------------
         
@@ -403,15 +348,9 @@ contains
 
               call pastix_init_num_threads(my_id)
 
-#ifndef USE_PASTIX6
-              ! -- For PaStiX solver before version 6.x
               pastix_iparm(IPARM_MODIFY_PARAMETER) = API_NO         ! insert default values
               pastix_iparm(IPARM_START_TASK)       = API_TASK_INIT  ! initializse
               pastix_iparm(IPARM_END_TASK)         = API_TASK_INIT
-#else
-              ! -- For PaStiX solver version 6.x
-              call pastixInitParam(pastix_iparm, pastix_dparm)
-#endif /* ifndef USE_PASTIX6 */
 
 #ifndef USE_COMPLEX_PRECOND 
               if (.not. pastix_smp_only) call MPI_BCAST(mumps_par%n,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
@@ -419,8 +358,6 @@ contains
               if (.not. pastix_smp_only) call MPI_BCAST(n_cmplx,1,MPI_INTEGER_ALL,0,MPI_COMM_N,ierr)
 #endif
 
-#ifndef USE_PASTIX6
-              ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
               call tr_allocate(pastix_perm_vars,Int1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
               call tr_allocate(pastix_iperm_vars,Int1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
@@ -448,7 +385,7 @@ contains
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #endif /* ifdef USE_BLOCK */
-#endif /* ifndef USE_PASTIX6 */
+
 
               ! pastix input parameters working in Pastix5 and Pastix6
               pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
@@ -466,10 +403,6 @@ contains
               pastix_iparm(IPARM_DOF_NBR)               = 1
 #endif
 
-
-
-#ifndef USE_PASTIX6
-              ! -- For PaStiX solver before version 6.x
               pastix_iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
               pastix_iparm(IPARM_SYM)                   = pastix_sym
               pastix_iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
@@ -481,50 +414,6 @@ contains
 #endif
 #endif /* ifdef WORLDWAR2 */
 
-              ! -- Begin PaStiX6.x
-#else /* ifndef USE_PASTIX 6 */
-              ! -- For PaStiX solver version 6.x
-              pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
-              pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
-
-! TEMPORARY: not yet relevant for Pastix6 as MPI parallelisation is not implemented
-!#ifdef FUNNELED
-!              pastix_iparm(IPARM_THREAD_COMM_MODE)      = PastixThreadFunneled
-!#else
-!              pastix_iparm(IPARM_THREAD_COMM_MODE)      = PastixThreadMultiple
-!#endif
-              ! BLR Compression
-              if (use_BLR_compression) then
-                if (just_in_time_BLR) then
-                  pastix_iparm(IPARM_COMPRESS_WHEN)     = PastixCompressWhenEnd ! Just-in-Time (speed optimal)
-                else 
-                  pastix_iparm(IPARM_COMPRESS_WHEN)     = PastixCompressWhenBegin ! Minimal-memory (default)
-                endif
-                if (pastix_blr_abs_tol) then
-                  pastix_iparm(IPARM_COMPRESS_RELTOL)     = 0
-                else
-                  pastix_iparm(IPARM_COMPRESS_RELTOL)     = 1
-                end if
-                pastix_dparm(DPARM_COMPRESS_TOLERANCE)  = epsilon_BLR
-
-!!               Additional PaStiX compression parameters (currently set to their default values)
-!                pastix_iparm(IPARM_COMPRESS_ORTHO)      = PastixCompressOrthoCGS
-!                pastix_iparm(IPARM_COMPRESS_METHOD)     = PastixCompressMethodPQRCP
-!                pastix_iparm(IPARM_COMPRESS_MIN_WIDTH)  = 120
-!                pastix_iparm(IPARM_COMPRESS_MIN_HEIGHT) = 20
-!                pastix_dparm(DPARM_COMPRESS_MIN_RATIO)  = 1.0
-              endif
-
-              ! initialise PaStiX (and bind threads if desired, else automatic binding)
-#ifdef CORES_PER_NODE
-              call pastix_bind_threads(my_id, thread_map)
-              call pastixInitWithAffinity(pastix_data, 0, pastix_iparm, pastix_dparm, thread_map)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
-#else
-              call pastixInit(pastix_data, 0, pastix_iparm, pastix_dparm)    ! TEMPORARY: 0 should be pastix_comm but pastix6 is not yet MPI parallelised!
-#endif /* ifdef CORES_PER_NODE */
-
-#endif /* ifndef USE_PASTIX 6 */
-              ! -- End PaStiX6.x
 
              else if (use_wsmp) then
 #ifdef USE_WSMP
@@ -544,8 +433,7 @@ contains
           if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
             if (use_pastix) then
-#ifndef USE_PASTIX6
-              ! -- For PaStiX solver before version 6.x
+
               pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
               pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
               pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
@@ -571,37 +459,12 @@ contains
 #endif /* ifndef USE_COMPLEX_PRECOND */
 #endif /* ifdef USE_BLOCK */
 
-#else /* ifndef USE_PASTIX6 */
-              ! -- For PaStiX solver version 6.x
-#ifdef USE_BLOCK
-! ############################################################################
-! ####### these lines can be replaced by pastix_task_analyze in the future,
-! ####### as soon as PaStiX 6 supports multiple dofs in all solver steps.
-! ############################################################################
-              call pastix_subtask_order(pastix_data,pastix_spm,pastix_myorder,pastix_info)
-              call pastix_subtask_symbfact(pastix_data,pastix_info)
-              call pastix_subtask_reordering(pastix_data,pastix_info)
-
-              ! Expand spm matrix and pastix analysis substructures because rest of Pastix6 cannot handle multiple dofs (yet)
-              call pastixExpand(pastix_data,pastix_spm)
-             
-              call pastix_subtask_blend(pastix_data,pastix_info)
-! ############################################################################
-! ####### end these lines can be replaced...
-! ############################################################################
-#else /* ifdef USE_BLOCK */
-              call pastix_task_analyze(pastix_data,pastix_spm,pastix_info)
-#endif /* ifdef USE_BLOCK */
-#endif /* ifndef USE_PASTIX6 */
             else if (use_wsmp) then
               ! do nothing
             endif
 
             pastix_analysed = .true.
-#if (defined(USE_PASTIX6) && defined(USE_BLOCK))
-            pastix_analysed = .false. ! Necessary for now such that the spm expansion is done every time step. 
-                                      ! Can be removed once the PaStiX team has implemented multi-dof for all pastix_subtasks.
-#endif
+
           endif
         endif ! .not. pastix_analysed
         ! --- End analyze the matrix -------------------------------------------------------------------
@@ -630,8 +493,6 @@ contains
 
         if (use_pastix) then
 
-#ifndef USE_PASTIX6
-          ! -- For PaStiX solver before version 6.x
           pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
           pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
           pastix_iparm(IPARM_END_TASK)   = API_TASK_NUMFACT
@@ -664,14 +525,6 @@ contains
 #endif /* ifndef USE_COMPLEX_PRECOND */
 
 #endif /* ifdef USE_BLOCK */
-
-#else /* ifndef USE_PASTIX6 */
-          ! -- For PaStiX solver version 6.x
-          call pastix_task_numfact(pastix_data,pastix_spm,pastix_info)
-
-          call spmExit(pastix_spm)
-          deallocate(pastix_spm)
-#endif /* ifndef USE_PASTIX6 */
 
         else if (use_wsmp) then
 #ifdef USE_WSMP
@@ -740,9 +593,6 @@ contains
         call tr_locvnorms_cmplx("smn_rhs",rhs_cmplx_guess,n_cmplx)
 #endif
 
-
-#ifndef USE_PASTIX6
-        ! -- For PaStiX solver before version 6.x
         pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
         pastix_iparm(IPARM_START_TASK) = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
@@ -771,18 +621,7 @@ contains
           DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
           pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_guess,Int1,pastix_iparm,pastix_dparm)
 #endif /* ifndef USE_COMPLEX_PRECOND */
-
 #endif /* ifdef USE_BLOCK */
-
-#else /* ifndef USE_PASTIX6 */
-       ! -- For PaStiX solver version 6.x
-       pastix_rhs_ptr = c_loc(mumps_par%rhs)
-#ifdef USE_BLOCK
-       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,n_block,pastix_info)
-#else /* ifdef USE_BLOCK */
-       call pastix_task_solve(pastix_data,1,pastix_rhs_ptr,mumps_par%n,pastix_info)
-#endif /* ifdef USE_BLOCK */
-#endif /* ifndef USE_PASTIX6 */
 
       else if (use_wsmp) then
 #ifdef USE_WSMP
@@ -840,18 +679,17 @@ contains
       call tr_locvnorms("smn_res",mumps_par%rhs,mumps_par%n)
       call tr_locvnorms("smn_delta",deltas,ndof_glob)
     endif
-#ifndef USE_PASTIX6
+
     ! -- For PaStiX solver before version 6.x
     call tr_set_precondmem(pastix_dparm(2)) ! DPARM_MEM_MAX DEPRECATED IN PASTIX6: how to change this?
     ! ############### This should be looked at at some point
-#endif
+
     call tr_print_memsize("AfterSolveN")
     call r3_info_end (r3_info_index_0)         ! timing
     return
  
   end subroutine solve_matrix_n
-#endif
-!defined(USE_PASTIX) || defined(USE_PASTIX6)     
+#endif /* defined(USE_PASTIX) */
 
 ! > Solve the harmonic matrix system using STRUMPACK
 #ifdef USE_STRUMPACK  

@@ -16,12 +16,6 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   use preconditioner_module, only: my_row_index, my_row_factor
   use mod_integer_types
 
-#ifdef USE_PASTIX6
-! -- For PaStiX solver version 6.x
-  use pastixf
-  use pastix_enums
-  use spmf
-#endif
 #if USE_PASTIX
 #include "pastix_fortran.h"
 #endif
@@ -47,12 +41,6 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   real*8                :: DUMMY_REAL(1:1)
   integer(kind=int_all) :: DUMMY_INT (1:1)
 
-#ifdef USE_PASTIX6
-! -- For PaStiX solver version 6.x
-  integer(c_int)     :: pastix_info
-  type(c_ptr)        :: pastix_rhs_ptr
-#endif
-
   if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
   call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
@@ -71,7 +59,7 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   endif
 #endif
 
-#if defined(USE_PASTIX)||defined(USE_PASTIX6)
+#if defined(USE_PASTIX)
   if (use_pastix) then
     if ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0)) ) then
 
@@ -104,26 +92,14 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
         pastix_iparm(IPARM_DOF_NBR)               = 1
 #endif
 
-
-#ifndef USE_PASTIX6
-        ! -- For PaStiX solver before version 6.x
         pastix_iparm(IPARM_START_TASK)            = API_TASK_SOLVE
         pastix_iparm(IPARM_END_TASK)              = pastix_endsolve
         pastix_iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
         pastix_iparm(IPARM_SYM)                   = pastix_sym
         pastix_iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
 
-#else
-        ! -- For PaStiX solver version 6.x
-        pastix_iparm(IPARM_MTX_TYPE)              = pastix_sym
-        pastix_iparm(IPARM_AMALGAMATION_LVLCBLK)  = pastix_amalg
-#endif
-
-#ifndef USE_PASTIX6
-        ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
-
-#ifndef USE_COMPLEX_PRECOND
+#if !defined(USE_COMPLEX_PRECOND) 
         call pastix_fortran(pastix_data,MPI_COMM_N, n_block,                        &
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
@@ -133,33 +109,21 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
              !mumps_par%jcn,mumps_par%irn,mumps_par%A, &
                    DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
                       pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,Int1,pastix_iparm,pastix_dparm)
-#endif
+#endif /* !defined(USE_COMPLEX_PRECOND)  */
 
-#else
-
-#ifndef USE_COMPLEX_PRECOND
+#else /* USE_BLOCK */
+#if !defined(USE_COMPLEX_PRECOND)
         call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #else
         call pastix_fortran(pastix_data,MPI_COMM_N,n_cmplx, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
              pastix_perm_vars,pastix_iperm_vars,rhs_cmplx_sol,Int1,pastix_iparm,pastix_dparm)
-#endif
+#endif /* !defined(USE_COMPLEX_PRECOND)  */
+#endif /* USE_BLOCK */
 
-#endif
-
-#else
-         ! -- For PaStiX solver version 6.x
-         pastix_rhs_ptr = c_loc(mumps_par%rhs)
-#ifdef USE_BLOCK
-         call pastix_task_solve(pastix_data,Int1,pastix_rhs_ptr,n_block,pastix_info)
-#else
-         call pastix_task_solve(pastix_data,Int1,pastix_rhs_ptr,mumps_par%n,pastix_info)
-#endif
-
-#endif
     endif
   endif ! use_pastix
-#endif /* defined(USE_PASTIX)||defined(USE_PASTIX6) */
+#endif /* defined(USE_PASTIX) */
 
 #ifdef USE_WSMP
   if (use_wsmp) then
@@ -197,7 +161,7 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
         endif
       enddo
 #endif
-#ifndef WITH_PASTIX62
+#if !defined(WITH_PASTIX62)
       do i=1,mumps_par%n
         mumps_par%rhs(i) =  mumps_par%rhs(i) / column_scaling(i)
       enddo

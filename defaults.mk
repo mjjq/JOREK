@@ -209,12 +209,6 @@ else
   DEFINES += -Dpastix_fortran=fake_pastix_fortran
 endif
 
-ifeq (1, $(USE_PASTIX6))
-  DEFINES  := $(DEFINES) -DUSE_PASTIX6
-  LIBS     := $(LIBS) $(LIB_PASTIX6)  $(LIB_PASTIX6_BLAS)
-  INCLUDES := $(INCLUDES) $(INC_PASTIX6)
-endif
-
 ifeq (1, $(WITH_PASTIX62))
   DEFINES  := $(DEFINES) -DWITH_PASTIX62
   LIBS     := $(LIBS) $(LIB_PASTIX)

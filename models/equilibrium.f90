@@ -64,7 +64,6 @@ if (my_id .eq. 0) then
   write(*,*) '   Xcase        : ',xcase2
 
   if ((newton_GS_fixbnd .or. newton_GS_freebnd) .and. (use_pastix_eq)) then
-#ifndef USE_PASTIX6
     write(*,*) ' '
     write(*,*) ' WARNING: PASTIX 5 IS NOT EFFICIENT FOR THE GRAD-SHAFRANOV SOLVER'
     write(*,*) '           WITH THE NEWTON METHOD. PLEASE USE PASTIX 6,          '
@@ -72,7 +71,6 @@ if (my_id .eq. 0) then
     write(*,*) '           (add use_mumps_eq=.t. to namelist and  USE_MUMPS = 1  '
     write(*,*) '           in Makefile.inc)                                      '
     write(*,*) ' '
-#endif
   endif
 
   if ((newton_GS_fixbnd .or. newton_GS_freebnd) .and. (.not. xpoint2)) then

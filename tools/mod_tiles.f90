@@ -224,140 +224,206 @@ end subroutine deallocate_real8_tile_2d
 ! Resize tile -----------------------------------------------------
 
 ! resize_int_tile_1d resizes a integer 1d data_array of a tile
-! preserving the data
+! preserving the data within the offset and offset+N_data
+! data are stored in offset:offset+N_data
 ! inputs:
 !   tile:       (tile_int_1d) the tile to resize
 !   N_rows_new: (integer) desired size tile
 !   N_data:     (integer) number of stored data
+!   ierr:       (integer) if 1 and error occurred
+!   offset_in:  (integer)(optional) initial index for storing data
 ! outputs:
 !  tile: (tile_int_1d) the resized tile
-subroutine resize_int_tile_1d(tile,N_rows_new,N_data)
+!  ierr:       (integer) if 1 and error occurred
+subroutine resize_int_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
   implicit none
   ! inputs-outputs:
   class(tile_int_1d),intent(inout) :: tile
+  integer,intent(inout)            :: ierr
   ! inputs:
-  integer,intent(in) :: N_rows_new,N_data
+  integer,intent(in)          :: N_rows_new,N_data
+  integer,intent(in),optional :: offset_in
   ! variables
+  integer                   :: offset
   integer,dimension(N_data) :: tmp_data !< temporary data array
 
   ! initialization
-  if(N_data.gt.N_rows_new) then
-    write(*,*) "Warning tile: number of data larger than number of rows: skip resizing"
+  if(present(offset_in)) then
+    offset = offset_in
+  else
+    offset = 0
+  endif
+  if((offset+N_data).gt.N_rows_new) then
+    ierr = 1
     return
   endif
 
   ! resizing
-  tmp_data = tile%data_array(1:N_data)
+  tmp_data = tile%data_array(offset+1:offset+N_data)
   call tile%deallocate_tile()
   call tile%allocate_tile(N_rows_new)
-  tile%data_array(1:N_data) = tmp_data
+  tile%data_array(offset+1:offset+N_data) = tmp_data
   
 end subroutine resize_int_tile_1d
 
 ! resize_int_tile_2d resizes a integer 2d data_array of a tile
-! preserving the data
+! preserving the data vwithin the offset and offset+N_data
+! data are stored in offset:offset+N_data
 ! inputs:
-!   tile:        (tile_int_2d) the tile to resize
-!   N_rows_new:  (integer) desired number of rows
-!   N_cols_new:  (integer) desired number of columns
-!   N_data_rows: (integer) number of stored data rows
-!   N_data_cols: (integer) number of stored data columns
+!   tile:           (tile_int_2d) the tile to resize
+!   N_rows_new:     (integer) desired number of rows
+!   N_cols_new:     (integer) desired number of columns
+!   N_data_rows:    (integer) number of stored data rows
+!   N_data_cols:    (integer) number of stored data columns
+!   ierr:           (integer) if 1 and error occurred
+!   offset_rows_in: (integer)(optional) initial row index for storing data
+!   offset_cols_in: (integer)(optional) initial columns index for storing data
 ! outputs:
 !  tile: (tile_int_2d) the resized tile
-subroutine resize_int_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
+!  ierr:       (integer) if 1 and error occurred
+subroutine resize_int_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols,&
+ierr,offset_rows_in,offset_cols_in)
   implicit none
   ! inputs-outputs:
   class(tile_int_2d),intent(inout) :: tile
+  integer,intent(inout)            :: ierr
   ! inputs:
   integer,intent(in) :: N_rows_new,N_cols_new
   integer,intent(in) :: N_data_rows,N_data_cols
+  integer,intent(in),optional :: offset_rows_in,offset_cols_in
   ! variables
+  integer :: offset_rows,offset_cols
   integer,dimension(N_data_rows,N_data_cols) :: tmp_data !< temporary data array
 
   ! initialization
-  if(N_data_rows.gt.N_rows_new) then
-    write(*,*) "Warning tile: number of data rows larger than number of rows: skip resizing"
+  if(present(offset_rows_in)) then
+    offset_rows = offset_rows_in
+  else
+    offset_rows = 0
+  endif
+  if(present(offset_cols_in)) then
+    offset_cols = offset_cols_in
+  else
+    offset_cols = 0
+  endif
+  if((offset_rows+N_data_rows).gt.N_rows_new) then
+    ierr = 1
     return
   endif
-  if(N_data_cols.gt.N_cols_new) then
-    write(*,*) "Warning tile: number of data columns larger than number of rows: skip resizing"
+  if((offset_cols+N_data_cols).gt.N_cols_new) then
+    ierr = 1
     return
   endif
 
   ! resizing
-  tmp_data = tile%data_array(1:N_data_rows,1:N_data_cols)
+  tmp_data = &
+  tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols)
   call tile%deallocate_tile()
   call tile%allocate_tile(N_rows_new,N_cols_new)
-  tile%data_array(1:N_data_rows,1:N_data_cols) = tmp_data
+  tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols) = &
+  tmp_data
   
 end subroutine resize_int_tile_2d
 
 ! resize_real8_1d resizes a double 1d data_array of a tile
-! preserving the data
+! preserving the data within the offset and offset+N_data
+! data are stored in offset:offset+N_data
 ! inputs:
 !   tile:       (tile_real8_1d) the tile to resize
 !   N_rows_new: (integer) desired size tile
 !   N_data:     (integer) number of stored data
+!   ierr:       (integer) if 1 and error occurred
+!   offset_in:  (integer)(optional) initial index for storing data
 ! outputs:
 !  tile: (tile_real8_1d) the resized tile
-subroutine resize_real8_tile_1d(tile,N_rows_new,N_data)
+!  ierr:       (integer) if 1 and error occurred
+subroutine resize_real8_tile_1d(tile,N_rows_new,N_data,ierr,offset_in)
   implicit none
   ! inputs-outputs:
   class(tile_real8_1d),intent(inout) :: tile
+  integer,intent(inout)              :: ierr
   ! inputs:
-  integer,intent(in) :: N_rows_new,N_data
+  integer,intent(in)          :: N_rows_new,N_data
+  integer,intent(in),optional :: offset_in
   ! variables
+  integer :: offset
   real*8,dimension(N_data) :: tmp_data !< temporary data array
 
   ! initialization
-  if(N_data.gt.N_rows_new) then
-    write(*,*) "Warning tile: number of data larger than number of rows: skip resizing"
+  if(present(offset_in)) then
+    offset = offset_in
+  else
+    offset = 0
+  endif
+  if((offset+N_data).gt.N_rows_new) then
+    ierr = 1
     return
   endif
 
   ! resizing
-  tmp_data = tile%data_array(1:N_data)
+  tmp_data = tile%data_array(offset+1:offset+N_data)
   call tile%deallocate_tile()
   call tile%allocate_tile(N_rows_new)
-  tile%data_array(1:N_data) = tmp_data
+  tile%data_array(offset+1:offset+N_data) = tmp_data
   
 end subroutine resize_real8_tile_1d
 
 ! resize_real8_2d resizes a double 2d data_array of a tile
-! preserving the data
+! preserving the data vwithin the offset and offset+N_data
+! data are stored in offset:offset+N_data
 ! inputs:
-!   tile:        (tile_real8_2d) the tile to resize
-!   N_rows_new:  (integer) desired number of rows
-!   N_cols_new:  (integer) desired number of columns
-!   N_data_rows: (integer) number of stored data rows
-!   N_data_cols: (integer) number of stored data columns
+!   tile:           (tile_real8_2d) the tile to resize
+!   N_rows_new:     (integer) desired number of rows
+!   N_cols_new:     (integer) desired number of columns
+!   N_data_rows:    (integer) number of stored data rows
+!   N_data_cols:    (integer) number of stored data columns
+!   ierr:           (integer) if 1 and error occurred
+!   offset_rows_in: (integer)(optional) initial row index for storing data
+!   offset_cols_in: (integer)(optional) initial columns index for storing dat
 ! outputs:
 !  tile: (tile_real8_2d) the resized tile
-subroutine resize_real8_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols)
+!  ierr:       (integer) if 1 and error occurred
+subroutine resize_real8_tile_2d(tile,N_rows_new,N_cols_new,N_data_rows,N_data_cols,&
+ierr,offset_rows_in,offset_cols_in)
   implicit none
   ! inputs-outputs:
   class(tile_real8_2d),intent(inout) :: tile
+  integer,intent(inout)              :: ierr 
   ! inputs:
-  integer,intent(in) :: N_rows_new,N_cols_new
-  integer,intent(in) :: N_data_rows,N_data_cols
+  integer,intent(in)          :: N_rows_new,N_cols_new
+  integer,intent(in)          :: N_data_rows,N_data_cols
+  integer,intent(in),optional :: offset_rows_in,offset_cols_in
   ! variables
+  integer :: offset_rows,offset_cols
   real*8,dimension(N_data_rows,N_data_cols) :: tmp_data !< temporary data array
 
   ! initialization
-  if(N_data_rows.gt.N_rows_new) then
-    write(*,*) "Warning tile: number of data rows larger than number of rows: skip resizing"
+  if(present(offset_rows_in)) then
+    offset_rows = offset_rows_in
+  else
+    offset_rows = 0
+  endif
+  if(present(offset_cols_in)) then
+    offset_cols = offset_cols_in
+  else
+    offset_cols = 0
+  endif
+  if((offset_rows+N_data_rows).gt.N_rows_new) then
+    ierr = 1
     return
   endif
-  if(N_data_cols.gt.N_cols_new) then
-    write(*,*) "Warning tile: number of data columns larger than number of rows: skip resizing"
+  if((offset_cols+N_data_cols).gt.N_cols_new) then
+    ierr = 1
     return
   endif
 
   ! resizing
-  tmp_data = tile%data_array(1:N_data_rows,1:N_data_cols)
+  tmp_data = &
+  tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols)
   call tile%deallocate_tile()
   call tile%allocate_tile(N_rows_new,N_cols_new)
-  tile%data_array(1:N_data_rows,1:N_data_cols) = tmp_data
+  tile%data_array(offset_rows+1:offset_rows+N_data_rows,offset_cols+1:offset_cols+N_data_cols) = &
+  tmp_data
   
 end subroutine resize_real8_tile_2d
 

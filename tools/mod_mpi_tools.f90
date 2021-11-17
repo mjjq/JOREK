@@ -1,15 +1,10 @@
 ! The module mod_mpi_tools contains general pourposes mpi
 ! variables and procedures
 module mod_mpi_tools
-use mpi
 implicit none
 
 private
 public :: init_mpi_threads
-
-! Variables --------------------------------------------------
-integer :: result_length
-character(len=MPI_MAX_PROCESSOR_NAME) :: proc_name
 
 contains
 
@@ -23,6 +18,7 @@ contains
 !   ierr:           (integer) =0 : success
 !   start_time_out: (real8)(optional) start time
 subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
+  use mpi
   implicit none
   ! outputs:
   integer,intent(out)         :: my_id,n_tasks,ierr
@@ -31,6 +27,8 @@ subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
   logical :: initialised
   integer :: required,provided
   real*8 :: start_time
+  integer :: result_length
+  character(len=MPI_MAX_PROCESSOR_NAME) :: proc_name
 
   ! set type of MPI thread from macro
 #ifdef FUNNELED

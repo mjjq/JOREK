@@ -36,7 +36,6 @@ contains
   procedure :: finalize
   procedure :: initialize
   procedure :: set_t_norm  !< set the jorek time unit
-  procedure :: set_mpi_var !< set the mpi variables of sim
 end type particle_sim
 
 contains

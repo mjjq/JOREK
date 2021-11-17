@@ -484,9 +484,13 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   if (.not. gmres) then
     if (use_mumps) then
+#ifdef USE_MUMPS    
       call solve_mumps_all(sim%my_id)
+#endif      
     else
+#if defined(USE_PASTIX) || defined(WITH_PASTIX62)    
       call solve_pastix_all(sim%n_cpu,sim%my_id,this%index_min(sim%my_id+1),this%index_max(sim%my_id+1))
+#endif      
     endif
   else
     call clck_time(t0)

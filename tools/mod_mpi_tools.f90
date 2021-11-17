@@ -33,6 +33,8 @@ subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
   ! set type of MPI thread from macro
 #ifdef FUNNELED
     required = MPI_THREAD_FUNNELED
+#elif SERIALIZED
+    required = MPI_THREAD_SERIALIZED
 #else
     required = MPI_THREAD_MULTIPLE
 #endif

@@ -110,21 +110,4 @@ subroutine set_t_norm(sim)
   sim%t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 end subroutine set_t_norm
 
-!> set the mpi variables n_cpus and my_id for external mpi initialisation
-!> inputs:
-!    my_id:  (integer) MPI task rank
-!>   n_cpus: (integer) number of MPI tasks
-!>   sim:    (particle_sim) the particle simulation
-!> outputs:
-!>   sim: (particle_sim) the particle simulation
-subroutine set_mpi_var(sim,my_id,n_cpus)
-  implicit none
-  !> inputs
-  integer,intent(in) :: my_id,n_cpus
-  !> inputs-outpus
-  class(particle_sim), intent(inout) :: sim
-  sim%my_id = my_id
-  sim%n_cpu = n_cpus
-end subroutine set_mpi_var
-
 end module mod_particle_sim

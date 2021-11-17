@@ -8,7 +8,7 @@ use mod_boost_besselk_test, only: run_fruit_boost_besselk
   call init_fruit
   call init_fruit_xml
 
-  ! run then boost_besselk test basket
+  ! run the boost_besselk test basket
   call run_fruit_boost_besselk
 
   ! write test summary and finilize test suit

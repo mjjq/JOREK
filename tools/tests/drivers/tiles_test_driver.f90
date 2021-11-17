@@ -1,4 +1,4 @@
-! This program is the driver of the boost besselk tests
+! This program is the driver of the tiles tests
 program tiles_test_driver
 use fruit
 use mod_tiles_test, only: run_fruit_tiles
@@ -8,7 +8,7 @@ use mod_tiles_test, only: run_fruit_tiles
   call init_fruit
   call init_fruit_xml
 
-  ! run then boost_besselk test basket
+  ! run the tiles test basket
   call run_fruit_tiles
 
   ! write test summary and finilize test suit

@@ -47,6 +47,7 @@ subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
   call MPI_Comm_rank(MPI_COMM_WORLD,my_id,ierr)
   call MPI_Comm_size(MPI_COMM_WORLD,n_tasks,ierr)
   ! Synchronise all tasks
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
   ! Extract wall time: accurate up to network latency 
   !(fine for time measured in seconds)
   start_time = MPI_Wtime()

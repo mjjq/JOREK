@@ -42,7 +42,7 @@ end type particle_sim
 contains
 !> Actions to perform when setting up a simulation
 subroutine initialize(sim, num_groups, skip_jorek2help)
-  use mpi
+  use mod_mpi_tools, only: init_mpi_threads
   use mod_parameters, only: n_tor, n_period
   use phys_module, only: mode
   use basis_at_gaussian, only: initialise_basis
@@ -51,29 +51,13 @@ subroutine initialize(sim, num_groups, skip_jorek2help)
   class(particle_sim), intent(inout) :: sim
   integer, intent(in) :: num_groups
   logical, optional :: skip_jorek2help
-  integer :: required, provided, ierr, i_tor
-  character(len=MPI_MAX_PROCESSOR_NAME) :: name
-  integer :: resultlength, nthreads
+  integer :: ierr, i_tor,nthreads
   logical :: my_skip_help
 
-#ifdef FUNNELED
-  required = MPI_THREAD_FUNNELED
-#else
-  required = MPI_THREAD_MULTIPLE
-#endif
-
-  call MPI_Init_thread(required, provided, ierr)
-  if (ierr .ne. 0) write(*,*) "Error ", ierr, " in MPI_Init_thread"
-  call MPI_COMM_RANK(MPI_COMM_WORLD, sim%my_id, ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, sim%n_cpu, ierr)
-  ! Synchronize clocks
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  sim%wtime_start = MPI_Wtime() ! accurate up to the network latency (fine for times measured in seconds)
-
-  if (provided .ne. required .and. sim%my_id .eq. 0) write(*,*) "WARNING: provided(", provided, ") != required(", required, ")"
+  !> initialise the mpi comm world with threads
+  call init_mpi_threads(sim%my_id,sim%n_cpu,ierr,sim%wtime_start)
+  !> allocate the simulation particle groups
   allocate(sim%groups(num_groups))
-  call MPI_GET_PROCESSOR_NAME(name,resultlength,ierr)
-  write(*,'(A,I5,2A)') '#MPI id, ProcessorName ', sim%my_id, ': ', name
   
   call init_threads()
 

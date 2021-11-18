@@ -941,8 +941,8 @@ required = 0
 
     ! ---- For now running the jorek2_main should not include aux inputs
     do i = 1, aux_node_list%n_nodes
-      aux_nodes_list%nodes(i)%values = 0.d0
-      aux_nodes_list%nodes(i)%deltas = 0.d0
+      aux_node_list%node(i)%values = 0.d0
+      aux_node_list%node(i)%deltas = 0.d0
     enddo
 
     if ( my_id == 0 ) then

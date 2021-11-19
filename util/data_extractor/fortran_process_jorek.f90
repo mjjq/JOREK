@@ -626,17 +626,22 @@ program process_hdf5_jorek
     
     ! --- Get axis, bnd, density and field
     call HDF5_integer_reading(file_id,index_now,'index_now')
-    if (allocated(psi_axis_t)) deallocate(psi_axis_t)
-    if (allocated(psi_bnd_t )) deallocate(psi_bnd_t)
-    if (allocated(Z_xpoint_t)) deallocate(Z_xpoint_t)
-    allocate(psi_axis_t(index_now), psi_bnd_t(index_now), Z_xpoint_t(index_now,2))
-    call HDF5_array1D_reading(file_id,psi_axis_t, 'psi_axis_t')
-    ! these are not available in old MAST-U data files, but don't need them it's just for psi_n
-    !call HDF5_array1D_reading(file_id,psi_bnd_t, 'psi_bnd_t')
-    !call HDF5_array2D_reading(file_id,Z_xpoint_t, 'Z_xpoint_t')
-    psi_axis = -0.10334!psi_axis_t(index_now)
-    psi_bnd  = -0.01259!psi_bnd_t(index_now)
-    Z_xpoint(1:2) = (/ -1.25928 , 1.19057 /)!Z_xpoint_t(index_now,1:2)
+    if (index_now .gt. 0) then
+      if (allocated(psi_axis_t)) deallocate(psi_axis_t)
+      if (allocated(psi_bnd_t )) deallocate(psi_bnd_t)
+      if (allocated(Z_xpoint_t)) deallocate(Z_xpoint_t)
+      allocate(psi_axis_t(index_now), psi_bnd_t(index_now), Z_xpoint_t(index_now,2))
+      call HDF5_array1D_reading(file_id,psi_axis_t, 'psi_axis_t')
+      call HDF5_array1D_reading(file_id,psi_bnd_t, 'psi_bnd_t')
+      call HDF5_array2D_reading(file_id,Z_xpoint_t, 'Z_xpoint_t')
+      psi_axis = psi_axis_t(index_now)
+      psi_bnd  = psi_bnd_t(index_now)
+      Z_xpoint(1:2) = Z_xpoint_t(index_now,1:2)
+    else
+      psi_axis = 0.d0
+      psi_bnd  = 1.d0
+      Z_xpoint(1:2) = (/-99.0,+99.0/)
+    endif
     if (psi_axis .eq. psi_bnd) then
       psi_axis = 0.d0
       psi_bnd  = 1.d0
@@ -652,11 +657,14 @@ program process_hdf5_jorek
     eV2Joules = 1.602176487d-19
     
     ! --- Get JOREK time and normalise it
-    call HDF5_integer_reading(file_id,index_now,      'index_now')
-    if (allocated(time)) deallocate(time)
-    allocate(time(index_now))
-    call HDF5_array1D_reading(file_id,time,           'xtime')
-    time_now = time(index_now) * t_norm
+    if (index_now .gt. 0) then
+      if (allocated(time)) deallocate(time)
+      allocate(time(index_now))
+      call HDF5_array1D_reading(file_id,time,           'xtime')
+      time_now = time(index_now) * t_norm
+    else
+      time_now = 0.d0
+    endif
   
     ! --- Close the JOREK data file.
     call MPI_Barrier(MPI_COMM_WORLD,ierr)

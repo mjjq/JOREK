@@ -156,18 +156,31 @@ end subroutine set_uniform_spectrum
 !> inputs:
 !>   spectrum: (spectrum_rng_uniform) generates and integrates 
 !>             variables along a uniform spectral distribution
-!>   n_rng:
-!>   rng:      (type_rng)(n_rng) random number generators
+!>   rngs:     (type_rng)(n_spectra,n_omp_threads) &
+!>             random number generators
 !> outputs:
 !>   spectrum: (spectrum_rng_uniform) generates and integrates 
 !>             variables along a uniform spectral distribution
-subroutine generate_uniform_rng_spectrum(spcetrum,n_rng,rng)
+subroutine generate_uniform_rng_spectrum(spcetrum,rng)
   use mod_rng
   implicit none
   !> inputs-outpus
-  class(spectrum_rng_uniform),intent(inout) :: spectrum
-  !> inputs
-  type(type_rng)
+  class(spectrum_rng_uniform),intent(inout)   :: spectrum
+  type(type_rng),dimension(:,:),allocatable,intent(inout) :: rngs
+  !> variables
+  integer :: ii,jj,thread_id
+  real*8 :: rand
+  !> generate spectrum from uniform random number distribution
+  thread_id = 0
+  !$ omp parallel do default(private) shared(spectrum,rngs) collapse(2)
+  !$ thread_id = omp_get_thread_num()
+  do jj=1,spectrum%n_spectra
+    do ii=1,spectrum%n_points
+      call rngs(jj,thread_id+1)%next(rand)
+      spectrum%points(ii,jj) = spectrum%min_wlen(jj)+spectrum%i_pdf(jj)*rand
+    enddo
+  enddo
+  !$omp end parallel do
   
 end subroutine generate_uniform_rng_spectrum
 

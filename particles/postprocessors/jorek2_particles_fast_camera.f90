@@ -62,8 +62,7 @@ subroutine initialise_lights(kinetic_sim,num_sims,num_kin_groups,filenames,skip_
 
   ! loop on the simulations
   loop_over_sims:do i=1,num_sims
-    call read_simulation_hdf5(kinetic_sim,trim(filenames(:,i)))
-    call 
+    call read_simulation_hdf5(kinetic_sim,trim(filenames(:,i))) 
   end do loop_over_sims
   
 

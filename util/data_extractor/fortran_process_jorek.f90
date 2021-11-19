@@ -223,6 +223,7 @@ program process_hdf5_jorek
   ! --- If using a list of files, set the internal flag
   if ( (filename_min .ne. -1) .and. (filename_max .ne. -1) ) then
     filename_list = .true.
+    save_pixels   = .true.
   endif
 
   ! --- If not using a list of files, we make a list with one entry only

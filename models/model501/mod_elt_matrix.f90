@@ -4,7 +4,8 @@ module mod_elt_matrix
 
 contains
 
-subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM,RHS, tid, i_tor_min, i_tor_max)
+subroutine element_matrix(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+                          ELM, RHS, tid, i_tor_min, i_tor_max, aux_nodes)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -22,11 +23,13 @@ use mod_impurity
 use mod_coronal
 use mod_bootstrap_functions
 use equil_info, only : get_psi_n
+use mod_sources
 
 implicit none
 
-type (type_element)   :: element
-type (type_node)      :: nodes(n_vertex_max)
+type (type_element)                      :: element
+type (type_node)                         :: nodes(n_vertex_max)
+type (type_node), optional               :: aux_nodes(n_vertex_max)
 
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
@@ -125,7 +128,7 @@ real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Temperature used
 real*8     :: Te_eV                                           ! Uncorrected temperature
 real*8     :: ne_SI                                           ! Electron density used in radiation rate
 real*8     :: ne_JOREK                                        ! Electron density in JOREK unit 
-real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
+real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
 
 !   -Radiation from background impurities
@@ -174,7 +177,9 @@ TG_num8    = TGNUM(8)
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
-zeta  = time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
@@ -693,7 +698,7 @@ do ms=1, n_gauss
      ! --- Impurity related things
      ! -------------------------------
 
-     select case ( trim(imp_type) )
+     select case ( trim(imp_type(1)) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
@@ -701,7 +706,7 @@ do ms=1, n_gauss
        case('Ne')
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
        case default
-         write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
      end select
@@ -872,31 +877,16 @@ do ms=1, n_gauss
   !-------------------------------------------
   ! --- Radiative function using interpolation
   ! ------------------------------------------
-
-     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-     coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                  *(central_density*1.d20)**2.5d0*m_i_over_m_imp
-
      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
 
        Lrad = 0.0
        dLrad_dT = 0.0
 
        !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
-       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
 
-       Lrad = Lrad * coef_rad_1
-
-       ! Convert gradient wrt. to T from 1/K into 1/eV
-       dLrad_dT = dLrad_dT * coef_rad_1 * EL_CHG / K_BOLTZ
-       ! ...and now from 1/eV into 1/(JOREK units)
-       dLrad_dT = dLrad_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-       dLrad_dT = dLrad_dT * dT0_corr_dT
-
-       if (Lrad < 0.) then
-         Lrad = 0.
-         dLrad_dT = 0.
-       end if
+       Lrad = Lrad * m_i_over_m_imp 
+       dLrad_dT = dLrad_dT * m_i_over_m_imp * dT0_corr_dT 
 
      else
 
@@ -946,11 +936,11 @@ do ms=1, n_gauss
     Brad_bg = 20.
     Crad_bg = 0.8
 
-    frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+    frad_bg     = (GAMMA-1.d0)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
+                  *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
-    dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+    dfrad_bg_dT = -(GAMMA-1.d0)/2.d0*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
+                  *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
 !--------------------------------------------------------
 
@@ -1391,7 +1381,15 @@ do ms=1, n_gauss
                  rho_hat   = BigR**2 * rho
                  rho_x_hat = 2.d0 * BigR * BigR_x  * rho + BigR**2 * rho_x
                  rho_y_hat = BigR**2 * rho_y
-                  Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+
+                 Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
+                 Bgrad_rho_psi      = ( r0_x * psi_y - r0_y * psi_x ) / BigR
+                 Bgrad_rhon_psi     = ( rn0_x * psi_y - rn0_y * psi_x ) / BigR
+                 Bgrad_rho_rho      = ( F0 / BigR * rho_p +  rho_x * ps0_y - rho_y * ps0_x ) / BigR
+                 Bgrad_rho_rhon     = ( F0 / BigR * rhon_p +  rhon_x * ps0_y - rhon_y * ps0_x ) / BigR
+                 BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
+
+                 Btheta2_psi  = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
                  rhon_hat   = BigR**2 * rhon                                     
                  rhon_x_hat = 2.d0 * BigR * BigR_x  * rhon + BigR**2 * rhon_x    
                  rhon_y_hat = BigR**2 * rhon_y                                   
@@ -1405,7 +1403,9 @@ do ms=1, n_gauss
                  amat_11 = v * psi / BigR * xjac * (1.d0 + zeta)                                     &
                          - v * (psi_s * u0_t - psi_t * u0_s)                        * theta * tstep  &
 
-                          + v * tauIC/(r0_corr*BB2)*F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep 
+                          + v * tauIC/(r0_corr*BB2)*F0**2/BigR**2 * (psi_s * p0_t - psi_t * p0_s) * theta * tstep &
+                          - v * tauIC/(r0_corr*BB2**2) * BB2_psi * F0**2/BigR**2 * (ps0_x*p0_y - ps0_y*p0_x) * xjac * theta * tstep &
+                          + v * tauIC/(r0_corr*BB2**2) * BB2_psi * F0**3/BigR**3 * p0_p           * xjac * theta * tstep 
  
                  ! term with BB2 still missing
 
@@ -1594,13 +1594,6 @@ do ms=1, n_gauss
 !###################################################################################################
 !#  equation 5    continuity equation (total density)                                              #
 !###################################################################################################
-
-                 Bgrad_rho_star_psi = ( v_x  * psi_y - v_y  * psi_x ) / BigR
-                 Bgrad_rho_psi      = ( r0_x * psi_y - r0_y * psi_x ) / BigR
-                 Bgrad_rhon_psi     = ( rn0_x * psi_y - rn0_y * psi_x ) / BigR
-                 Bgrad_rho_rho      = ( F0 / BigR * rho_p +  rho_x * ps0_y - rho_y * ps0_x ) / BigR
-                 Bgrad_rho_rhon     = ( F0 / BigR * rhon_p +  rhon_x * ps0_y - rhon_y * ps0_x ) / BigR
-                 BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
 
                  ! New impurity diffusion scheme
                  amat_51 = &!- (D_par-D_prof) * BigR * BB2_psi / BB2**2 * Bgrad_rho_star * (Bgrad_rho)                     * xjac * theta * tstep &
@@ -1996,14 +1989,21 @@ do ms=1, n_gauss
 
              amat_71 = v * r0 * vpar0 / BigR * (ps0_x * psi_x + ps0_y * psi_y) * xjac * (1.d0 + zeta) &
 
-			 + v * (P0_s * psi_t - P0_t * psi_s)                                            * theta * tstep &
-                         + 0.5d0 * r0 * vpar0**2 * BB2 * (psi_s * v_t - psi_t * v_s)                    * theta * tstep &
-                         + 0.5d0 * v  * vpar0**2 * BB2 * (psi_s * r0_t - psi_t * r0_s)                  * theta * tstep &
+                         + v * (P0_s * psi_t - P0_t * psi_s)                                            * theta * tstep &
+                         + 0.5d0 * r0 * vpar0**2 * BB2     * (psi_x * v_y  - psi_y * v_x)   * xjac * theta * tstep &
+                         + 0.5d0 * r0 * vpar0**2 * BB2_psi * (ps0_x * v_y  - ps0_y * v_x)   * xjac * theta * tstep &
+                         + 0.5d0 * v  * vpar0**2 * BB2     * (psi_x * r0_y - psi_y * r0_x)  * xjac * theta * tstep &
+                         + 0.5d0 * v  * vpar0**2 * BB2_psi * (ps0_x * r0_y - ps0_y * r0_x)  * xjac * theta * tstep &
+                         - 0.5d0 * v  * vpar0**2 * BB2_psi * F0 / BigR * r0_p               * xjac * theta * tstep &
 
                       ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
                       ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
                       + v * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) * vpar0 * BB2 * xjac * theta * tstep  &
                       + v * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * vpar0 * BB2 * xjac * theta * tstep  &
+                      - v * (r0_x_hat * u0_y - r0_y_hat * u0_x)      * vpar0 * BB2_psi * xjac * theta * tstep &
+                      + v * F0 / BigR * (r0 * vpar0_p + r0_p * vpar0)* vpar0 * BB2_psi * xjac * theta * tstep &
+                      + v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * vpar0 * BB2_psi * xjac * theta * tstep &
+                      + v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * vpar0 * BB2_psi * xjac * theta * tstep &
 
                       ! Old term (not to be included anymore due to implementations of terms above):
                       !+ v * particle_source(ms,mt) * vpar0 * BB2_psi * BigR * xjac * theta * tstep &

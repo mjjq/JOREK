@@ -6,8 +6,10 @@ contains
 
 #include "corr_neg_include.f90"
 
-subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+                              ELM, RHS, tid, ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,                               &
+                              eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t,                 &
+                              i_tor_min, i_tor_max, aux_nodes)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -25,11 +27,13 @@ use mod_neutral_source
 use mod_bootstrap_functions
 use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_impurity, only: radiation_function, radiation_function_linear
+use mod_sources
 
 implicit none
 
-type (type_element)   :: element
-type (type_node)      :: nodes(n_vertex_max)
+type (type_element)       :: element 
+type (type_node)          :: nodes(n_vertex_max)     ! fluid variables
+type (type_node),optional :: aux_nodes(n_vertex_max) ! particle moments
 
 #define DIM0 n_tor*n_vertex_max*(n_degrees)*n_var
 
@@ -110,14 +114,14 @@ real*8     :: coef_rec_1                                      ! Recombination ra
 !   -Radiation from injected gas/impurities
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
-real*8     :: T_rad                                           ! Temperature used in radiation rate
-real*8     :: coef_rad_1                                      ! Radiation rate parameters
+real*8     :: Te_corr_eV, Te_eV                               ! Temperature used in radiation rate
 real*8     :: ne_SI                                           ! Electron density used in radiation rate
 
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT ! Retain the hard-coded fitting for argon
 real*8     :: Lrad_imp, dLrad_imp_dT                          ! Radiation rate and its derivative wrt. temperature
 real*8     :: r_imp                                           ! Background impurity density in JOREK unit
+integer    :: i_imp                                           ! Loop for more than one background impurity
 
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
@@ -755,60 +759,49 @@ do i=1,n_vertex_max
          !-----------------------------------------------------------------
          ! --- Radiation from background impurity, using ADAS (by default)
          !-----------------------------------------------------------------
+
           ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-          T_rad = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_corr_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+
+          Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
 
           if (use_imp_adas) then  ! use open adas by default
-            r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
-            if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
-              ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-              coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                    *(central_density*1.d20)**2.5d0
-
-              Lrad_imp = 0.0
-              dLrad_imp_dT = 0.0
-
-              call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp,dLrad_imp_dT)
-              Lrad_imp = Lrad_imp * coef_rad_1
-
-              ! Convert gradient wrt. to T from 1/K into 1/eV
-              dLrad_imp_dT = dLrad_imp_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
-              ! ...and now from 1/eV into 1/(JOREK units)
-              dLrad_imp_dT = dLrad_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-              dLrad_imp_dT = dLrad_imp_dT * dT0_corr_dT            
-
-              if (Lrad_imp < 0.) then
+            frad_bg = 0. 
+            dfrad_bg_dT = 0.
+            do i_imp =1, n_adas
+              r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
+              if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+                Lrad_imp = 0.0
+                dLrad_imp_dT = 0.0
+                call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   & 
+                                               log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp,dLrad_imp_dT)
+                dLrad_imp_dT = dLrad_imp_dT * dT0_corr_dT            
+              else     
                 Lrad_imp = 0.
                 dLrad_imp_dT = 0.
               end if
-            else     
-              Lrad_imp = 0.
-              dLrad_imp_dT = 0.
-            end if
-   
-            ! This is to detect N/A
-            if (Lrad_imp/=Lrad_imp .or. dLrad_imp_dT/=dLrad_imp_dT) then
-              write(*,*) "WARNING: Lrad_imp, dLrad_imp_dT ", Lrad_imp, dLrad_imp_dT
-              stop
-            end if
+              if (dLrad_imp_dT/=dLrad_imp_dT) then
+                write(*,*) "WARNING: dLrad_imp_dT ", dLrad_imp_dT
+                stop
+              end if
 
-            frad_bg = r_imp * Lrad_imp
-            dfrad_bg_dT = r_imp * dLrad_imp_dT 
+              frad_bg = frad_bg + r_imp * Lrad_imp
+              dfrad_bg_dT =  dfrad_bg_dT + r_imp * dLrad_imp_dT 
 
+            end do
           else 
-
-            if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+            if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
               Arad_bg = 2.4d-31
               Brad_bg = 20.
               Crad_bg = 0.8
       
               frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
-                            *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                            *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
       
               dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
-                            *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                            *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
             else
-              write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+              write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
               stop
             end if 
 
@@ -949,7 +942,7 @@ do i=1,n_vertex_max
 
                        + v * 2.d0 * tauIC * p0_y * BigR                                           * xjac * tstep &
 
-                       + v * r0_corr * rn0      * BigR * Sion_T                                   * xjac * tstep &
+                       + v * r0_corr * rn0_corr * BigR * Sion_T                                   * xjac * tstep &
                        - v * r0_corr * r0_corr  * BigR * Srec_T                                   * xjac * tstep &
                        
                        + zeta * v * delta_g(mp,5,ms,mt) * BigR                                    * xjac         &

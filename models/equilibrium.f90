@@ -54,6 +54,8 @@ real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
 real*8, allocatable     :: density_profile(:)
+integer    :: nj
+real*8     :: rr,ww, drr_dR, drr_dZ, drr_dR2, drr_dZ2, drr_dRdZ
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -350,6 +352,10 @@ if (freeboundary_equil) then
   if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
     n_limiter = 1  ! set found limiter (defined inside iterate2area)
   endif
+
+else
+  
+  psi_offset_freeb = 0.d0
   
 endif
 
@@ -401,7 +407,7 @@ if (my_id == 0) then
   !------------------------------- end of equilibrium, start filling data
   psi_axis = psi_axis - psi_offset_freeb
   psi_bnd  = psi_bnd  - psi_offset_freeb
-  
+
   do i=1,node_list%n_nodes
   
     node_list%node(i)%values(1,1,1) = node_list%node(i)%values(1,1,1) - psi_offset_freeb
@@ -495,7 +501,60 @@ if (my_id == 0) then
                                                  + node_list%node(i)%x(1,3,1) * node_list%node(i)%values(1,2,1) ) &
                                     + dj_dZ_dpsi*( node_list%node(i)%x(1,2,2) * node_list%node(i)%values(1,3,1)   &
                                                  + node_list%node(i)%x(1,3,2) * node_list%node(i)%values(1,2,1) )
-  
+
+    ! --- Add contribution of current ropes
+    if ((.not. restart) .and. (n_jropes .ne. 0)) then
+      do nj=1,n_jropes
+        rr = sqrt((R-R_jropes(nj))**2 + (Z-Z_jropes(nj))**2)
+        drr_dR   = (R-R_jropes(nj)) / rr
+        drr_dZ   = (Z-Z_jropes(nj)) / rr
+        drr_dR2  = 1./rr - (R-R_jropes(nj)) / rr**2 * drr_dR
+        drr_dZ2  = 1./rr - (Z-Z_jropes(nj)) / rr**2 * drr_dZ
+        drr_dRdZ = - (R-R_jropes(nj)) / rr**2 * drr_dZ
+        ww = w_jropes(nj)
+        zjz        = 0.d0
+        dj_dR      = 0.d0
+        dj_dZ      = 0.d0
+        dj_dR_dR   = 0.d0
+        dj_dZ_dZ   = 0.d0
+        dj_dR_dZ   = 0.d0
+        if (rr .le. ww) then
+          zjz        = current_jropes(nj) * (1.0 - (rr/ww)**2 )**2 * R
+          dj_dR      = -4. * current_jropes(nj) * rr / ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR * R + zjz / R
+          dj_dZ      = -4. * current_jropes(nj) * rr / ww**2 * (1.0 - (rr/ww)**2 ) * drr_dZ * R
+          dj_dR_dR   = - zjz/R**2 + dj_dR/R - 4.  * current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR    & 
+                                            - 4.*R* current_jropes(nj)        /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR**2 & 
+                                            - 4.*R* current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR2   & 
+                                            + 8.*R* current_jropes(nj) * rr**2/ww**4                       * drr_dR**2 
+          dj_dZ_dZ   = - 4.*R* current_jropes(nj)        /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dZ**2 & 
+                       - 4.*R* current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dZ2   & 
+                       + 8.*R* current_jropes(nj) * rr**2/ww**4                       * drr_dZ**2 
+          dj_dR_dZ   = dj_dZ / R                                                                  &
+                       - 4.*R* current_jropes(nj)        /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR*drr_dZ & 
+                       - 4.*R* current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dRdZ      & 
+                       + 8.*R* current_jropes(nj) * rr**2/ww**4                       * drr_dR*drr_dZ 
+        endif
+       
+        node_list%node(i)%values(1,1,3) = node_list%node(i)%values(1,1,3) + zjz
+       
+        node_list%node(i)%values(1,2,3) = node_list%node(i)%values(1,2,3)      &
+                                        + dj_dR   * node_list%node(i)%x(1,2,1) &
+                                        + dj_dZ   * node_list%node(i)%x(1,2,2)
+       
+        node_list%node(i)%values(1,3,3) = node_list%node(i)%values(1,3,3)      &
+                                        + dj_dR   * node_list%node(i)%x(1,3,1) &
+                                        + dj_dZ   * node_list%node(i)%x(1,3,2)
+       
+        node_list%node(i)%values(1,4,3) = node_list%node(i)%values(1,4,3)       &
+                                        + dj_dR    * node_list%node(i)%x(1,4,1) &
+                                        + dj_dZ    * node_list%node(i)%x(1,4,2) &
+                                        + dj_dR_dR * node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,1)    &
+                                        + dj_dZ_dZ * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)    &
+                                        + dj_dR_dZ * ( node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,2)  &
+                                                     + node_list%node(i)%x(1,3,1) * node_list%node(i)%x(1,2,2) )
+      enddo
+    endif
+
   enddo
   
   ! --- Variable projection is better at higher order...

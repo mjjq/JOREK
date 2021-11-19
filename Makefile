@@ -60,6 +60,10 @@ DIRS := diagnostics			\
 	particles/examples 		\
 	particles/diagnostics 		\
 	particles/tests 		\
+  particles/tests/drivers \
+  particles/postprocessors \
+  particles/postprocessors/tests \
+  particles/postprocessors/tests/drivers \
 	particles/projection_functions  \
 	particles/benchmarks/pusher_cartesian \
 	particles/benchmarks/pusher	\

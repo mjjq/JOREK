@@ -585,7 +585,7 @@ module mod_expression
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-    real*8  :: Te_corr_eV
+    real*8  :: Te_corr_eV, Te_eV
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
     real*8  :: ne_SI                              ! Electron density used in radiation rate
@@ -596,7 +596,7 @@ module mod_expression
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
-    real*8  :: coef_rad_1, Te_eV
+    real*8  :: coef_rad_1
     real*8  :: T0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
@@ -1487,20 +1487,21 @@ module mod_expression
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 
    Te_corr_eV = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+   Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
 
    if (use_imp_adas) then
      call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
+                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0, rn0, .true. ) 
      ! Note the input Te0 for atomic_coeff_deuterium should be in JOREK units!!!
 
     !--------------------------------------------------------
     ! --- Radiation from background impurity
     !--------------------------------------------------------
-      ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)
+      ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)    
       frad_bg = 0.
       do i_imp = 1, n_adas
         r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
-        if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. r_imp > 0) then
+        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
           Lrad_imp = 0.0
           if ( units == SI_UNITS ) then
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &

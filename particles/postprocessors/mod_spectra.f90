@@ -4,7 +4,7 @@ module mod_spectra
 implicit none
 
 private
-public :: spectrum
+public :: spectrum_base,spectrum_rng_uniform
 
 !> Variable and type definitions ---------------------
 !> spectrum: abstract class containing the basic types
@@ -14,9 +14,6 @@ type,abstract :: spectrum_base
   integer :: n_spectra !< number of wave length or color intervals
   !> wave lengths or colors
   real*8,dimension(:,:),allocatable :: points
-  contains
-  procedure,pass(spectrum_base) :: allocate_spectrum   => allocate_spectrum_base
-  procedure,pass(spectrum_base) :: deallocate_spectrum => deallocate_spectrum_base
 end type spectrum_base
 
 !> generate a set of spectral points for integration
@@ -25,17 +22,14 @@ type,extends(spectrum_base) :: spectrum_rng_uniform
   real*8,dimension(:),allocatable :: min_wlen !< lower wavelenght of the interval
   real*8,dimension(:),allocatable :: i_pdf !< 1 over probability density function
   contains
-  procedure,pass(spectrum_rng_uniform) :: allocate_spectrum      => allocate_spectrum_rng_uniform
-  procedure,pass(spectrum_rng_uniform) :: set_spectrum_variables => set_uniform_spectrum
-  procedure,pass(spectrum_rng_uniform) :: generate_spectrum      => generate_uniform_rng_spectrum
-  procedure,pass(spectrum_rng_uniform) :: integrate_data         => integrate_rng_uniform
-  procedure,pass(spectrum_rng_uniform) :: deallocate_spectrum    => deallocate_spectrum_rng_uniform
+  procedure,pass(spectrum) :: allocate_spectrum      => allocate_spectrum_rng_uniform
+  procedure,pass(spectrum) :: set_spectrum_variables => set_uniform_spectrum
+  procedure,pass(spectrum) :: generate_spectrum      => generate_uniform_rng_spectrum
+  procedure,pass(spectrum) :: integrate_data         => integrate_rng_uniform
+  procedure,pass(spectrum) :: deallocate_spectrum    => deallocate_spectrum_rng_uniform
 end type spectrum_rng_uniform
 
 !> Interfaces ---------------------------------------
-interface spectrum_base
-  module procedure construct_spectrum_base
-end interface
 
 interface spectrum_rng_uniform
   module procedure construct_spectrum_rng_uniform
@@ -43,14 +37,6 @@ end interface
 
 contains
 !> Constructors -------------------------------------
-function construct_spectrum_base(n_points,n_spectra) &
-result(spectrum)
-  implicit none
-  integer,intent(in) :: n_points
-  class(spectrum_base) :: spectrum
-  call spectrum%allocate_spectrum(n_points,n_spectra)
-end function construct_spectrum_base
-
 !> construct a uniform random spectrum
 !> inputs:
 !>   n_points:  (integer) number of discrete random variables
@@ -63,10 +49,16 @@ function construct_spectrum_rng_uniform(n_points,n_spectra,&
 min_wlen,max_wlen) result(spectrum)
   implicit none
   integer,intent(in)                     :: n_points,n_spectra
-  real*8,dimension(n_spectra),intent(in) :: min_wlen,max_wlen
-  class(spectrum_rng_uniform)            :: spectrum 
-  call spectrum%allocate_spectrum(n_points,n_spectra,&
-  min_wlen,max_wlen)
+  real*8,dimension(n_spectra),optional,intent(in) :: min_wlen,max_wlen
+  type(spectrum_rng_uniform),target      :: spectrum
+  real*8,dimension(2*n_spectra)          :: real8_param 
+  if(present(min_wlen).and.present(max_wlen)) then
+    real8_param(1:n_spectra) = min_wlen
+    real8_param(n_spectra+1:2*n_spectra) = max_wlen
+    call spectrum%allocate_spectrum(n_points,n_spectra,real8_param)
+  else
+    call spectrum%allocate_spectrum(n_points,n_spectra)
+  endif
 end function construct_spectrum_rng_uniform
 
 !> Procedures spectrum base -------------------------
@@ -92,7 +84,7 @@ subroutine deallocate_spectrum_base(spectrum)
   !> cleanup
   if(allocated(spectrum%points)) deallocate(spectrum%points)
   spectrum%n_points  = -1
-  spectrum&n_spectra = -1
+  spectrum%n_spectra = -1
 end subroutine deallocate_spectrum_base
 
 !> Procedures spectrum rng uniform ------------------
@@ -103,22 +95,27 @@ end subroutine deallocate_spectrum_base
 !>              variables along a uniform spectral distribution
 !>   n_points:  (integer) number of spectral points
 !>   n_spectra: (integer) number of spectral intervals
-!>   min_wlen:  (real8)(n_spectra) minimum wavelength
-!>   max_wlen:  (real8)(n_spectra) maximum wavelength
+!>   real8_param: (real8)(2*n_spectra),optional minimum:
+!>                1:n_spectral-> minimum wavelengths
+!>                n_spectra+1:2*n_spectra->maximum wavelengths
+!>   max_wlen:  (real8)(n_spectra),optional maximum wavelength
 !> outputs:
 !>   spectrum: (spectrum_rng_uniform) generates and integrates
 !>             variables along a uniform spectral distribution
 subroutine allocate_spectrum_rng_uniform(spectrum,n_points,&
-n_spectra,min_wlen,max_wlen)
+n_spectra,real8_param,int_param)
   implicit none
   !> inputs
   integer,intent(in) :: n_points,n_spectra
-  real*8,dimension(n_spectra) :: min_wlen,max_wlen
+  real*8,dimension(2:n_spectra),intent(in),optional  :: real8_param
+  integer,dimension(0),intent(in),optional :: int_param
   !> inputs-outputs
-  class(spectrum_rng_uniform) :: spectrum
+  class(spectrum_rng_uniform),intent(inout) :: spectrum
   !> allocated all variables
-  call allocate_spectrum_base(spectrum,n_poins,n_spectra)
-  call spectrum%set_uniform_spectrum(n_spectra,min_wlen,max_wlen)
+  call allocate_spectrum_base(spectrum,n_points,n_spectra)
+  if(present(real8_param)) &
+  call spectrum%set_spectrum_variables(n_spectra,real8_param(1:n_spectra),&
+  real8_param(n_spectra+1:2*n_spectra))
 end subroutine allocate_spectrum_rng_uniform
 
 !> set the spectrum properties
@@ -140,11 +137,11 @@ subroutine set_uniform_spectrum(spectrum,n_spectra,min_wlen,max_wlen)
   real*8,dimension(n_spectra),intent(in) :: min_wlen,max_wlen
   !> set values
   if(.not.allocated(spectrum%min_wlen)) allocate(spectrum%min_wlen(n_spectra))
-  if(.not.allocated(spectrum%i_pdf))    allocate(spectrum%i_pdf)
+  if(.not.allocated(spectrum%i_pdf))    allocate(spectrum%i_pdf(n_spectra))
   if(spectrum%n_spectra.ne.n_spectra) then
-    deallocate(spectrum%min_wlen); deallocate(specrun%i_pdf);
-    allocate(spectrum%min_wlen(n_spectrum))
-    allocate(spectrum%i_pdf(n_spectrum))
+    deallocate(spectrum%min_wlen); deallocate(spectrum%i_pdf);
+    allocate(spectrum%min_wlen(n_spectra))
+    allocate(spectrum%i_pdf(n_spectra))
     spectrum%n_spectra = n_spectra
     write(*,*) 'WARNING: n_spectra is changed: regenerate spectrum points!'
   endif
@@ -161,23 +158,23 @@ end subroutine set_uniform_spectrum
 !> outputs:
 !>   spectrum: (spectrum_rng_uniform) generates and integrates 
 !>             variables along a uniform spectral distribution
-subroutine generate_uniform_rng_spectrum(spcetrum,rng)
+subroutine generate_uniform_rng_spectrum(spectrum,rngs)
   use mod_rng
   implicit none
   !> inputs-outpus
   class(spectrum_rng_uniform),intent(inout)   :: spectrum
-  type(type_rng),dimension(:,:),allocatable,intent(inout) :: rngs
+  class(type_rng),dimension(:,:),allocatable,intent(inout) :: rngs
   !> variables
   integer :: ii,jj,thread_id
-  real*8 :: rand
+  real*8,dimension(1) :: rand
   !> generate spectrum from uniform random number distribution
   thread_id = 0
-  !$ omp parallel do default(private) shared(spectrum,rngs) collapse(2)
-  !$ thread_id = omp_get_thread_num()
+  !$omp parallel do default(private) shared(spectrum,rngs) collapse(2)
+  !$thread_id = omp_get_thread_num()
   do jj=1,spectrum%n_spectra
     do ii=1,spectrum%n_points
       call rngs(jj,thread_id+1)%next(rand)
-      spectrum%points(ii,jj) = spectrum%min_wlen(jj)+spectrum%i_pdf(jj)*rand
+      spectrum%points(ii,jj) = spectrum%min_wlen(jj)+spectrum%i_pdf(jj)*rand(1)
     enddo
   enddo
   !$omp end parallel do
@@ -197,7 +194,7 @@ end subroutine generate_uniform_rng_spectrum
 subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
   implicit none
   !> inputs-outputs
-  class(spectrum_uniform_rng),intent(inout) :: spectrum
+  class(spectrum_rng_uniform),intent(inout) :: spectrum
   !> inputs
   real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(in) :: uniform_data
   !> outputs

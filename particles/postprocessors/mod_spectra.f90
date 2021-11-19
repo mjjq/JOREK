@@ -23,7 +23,7 @@ type,extends(spectrum_base) :: spectrum_rng_uniform
   real*8,dimension(:),allocatable :: i_pdf !< 1 over probability density function
   contains
   procedure,pass(spectrum) :: allocate_spectrum      => allocate_spectrum_rng_uniform
-  procedure,pass(spectrum) :: set_spectrum_variables => set_uniform_spectrum
+  procedure,pass(spectrum) :: set_spectrum_interval  => set_uniform_spectrum_interval
   procedure,pass(spectrum) :: generate_spectrum      => generate_uniform_rng_spectrum
   procedure,pass(spectrum) :: integrate_data         => integrate_rng_uniform
   procedure,pass(spectrum) :: deallocate_spectrum    => deallocate_spectrum_rng_uniform
@@ -95,10 +95,10 @@ end subroutine deallocate_spectrum_base
 !>              variables along a uniform spectral distribution
 !>   n_points:  (integer) number of spectral points
 !>   n_spectra: (integer) number of spectral intervals
-!>   real8_param: (real8)(2*n_spectra),optional minimum:
+!>   real8_param: (real8)(2*n_spectra)(optional) minimum:
 !>                1:n_spectral-> minimum wavelengths
 !>                n_spectra+1:2*n_spectra->maximum wavelengths
-!>   max_wlen:  (real8)(n_spectra),optional maximum wavelength
+!>   max_wlen:  (integer)(0)(optional) maximum wavelength
 !> outputs:
 !>   spectrum: (spectrum_rng_uniform) generates and integrates
 !>             variables along a uniform spectral distribution
@@ -107,14 +107,14 @@ n_spectra,real8_param,int_param)
   implicit none
   !> inputs
   integer,intent(in) :: n_points,n_spectra
-  real*8,dimension(2:n_spectra),intent(in),optional  :: real8_param
+  real*8,dimension(2*n_spectra),intent(in),optional  :: real8_param
   integer,dimension(0),intent(in),optional :: int_param
   !> inputs-outputs
   class(spectrum_rng_uniform),intent(inout) :: spectrum
   !> allocated all variables
   call allocate_spectrum_base(spectrum,n_points,n_spectra)
   if(present(real8_param)) &
-  call spectrum%set_spectrum_variables(n_spectra,real8_param(1:n_spectra),&
+  call spectrum%set_spectrum_interval(n_spectra,real8_param(1:n_spectra),&
   real8_param(n_spectra+1:2*n_spectra))
 end subroutine allocate_spectrum_rng_uniform
 
@@ -128,7 +128,7 @@ end subroutine allocate_spectrum_rng_uniform
 !> outputs:
 !>   spectrum: (spectrum_rng_uniform) generates and integrates
 !>             variables along a uniform spectral distribution
-subroutine set_uniform_spectrum(spectrum,n_spectra,min_wlen,max_wlen)
+subroutine set_uniform_spectrum_interval(spectrum,n_spectra,min_wlen,max_wlen)
   implicit none
   !> inputs-outputs
   class(spectrum_rng_uniform),intent(inout) :: spectrum
@@ -147,7 +147,7 @@ subroutine set_uniform_spectrum(spectrum,n_spectra,min_wlen,max_wlen)
   endif
   spectrum%min_wlen = min_wlen
   spectrum%i_pdf = max_wlen - min_wlen
-end subroutine set_uniform_spectrum
+end subroutine set_uniform_spectrum_interval
 
 !> generate uniform random spectrum
 !> inputs:

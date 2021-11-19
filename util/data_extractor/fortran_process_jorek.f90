@@ -1104,11 +1104,11 @@ program process_hdf5_jorek
                 enddo
                 PEC_index = (PEC_index_Ne-1)*PEC_size + PEC_index_Te
                 ! --- Integrate Emissivity
-                !my_var(i,j,k_tor,k) = rho_n*rho*PEC(PEC_index)
+                my_var(i,j,k_tor,k) = rho_n*rho*PEC(PEC_index)
                 !my_var(i,j,k_tor,k) = rho * Te**2 * rho_n * (0.5 - 0.5*tanh(-(psi_norm-0.97)/0.001) )
                 !my_var(i,j,k_tor,k) = rho**2 * Te**2 * rho_n * (0.5 - 0.5*tanh(-(psi_norm-0.90)/0.03) ) 
-                my_var(i,j,k_tor,k) = rho * Ti * max(0.0005,rho_n/1.d20) * (0.5 - 0.5 * tanh(-(psi_norm-0.95)/0.05) ) * (1.0+abs(Z_out)) * R_out
-                my_var(i,j,k_tor,k) = min(D_alpha_thresh,my_var(i,j,k_tor,k) / D_alpha_norm)
+                !my_var(i,j,k_tor,k) = rho * Ti * max(0.0005,rho_n/1.d20) * (0.5 - 0.5 * tanh(-(psi_norm-0.95)/0.05) ) * (1.0+abs(Z_out)) * R_out
+                !my_var(i,j,k_tor,k) = min(D_alpha_thresh,my_var(i,j,k_tor,k) / D_alpha_norm)
               endif
               if (trim(variable_names(i_var(k))) .eq. 'custom'  ) then
                 custom_mu  = 0.97

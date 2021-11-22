@@ -12,7 +12,9 @@ public :: run_fruit_spectra_uniform_rng_test
 !> Variables -----------------------------------------------------------------
 integer,parameter :: n_points=1000000
 integer,parameter :: n_spectra=2
+integer,parameter :: n_bins=500 !< number of bins for histograms
 real*8,parameter  :: tol_real8=1.d-16 !< tolerance for assert
+real*8,parameter  :: tol_updf=5.d-4   !< tolerance on the uniform probability
 real*8,dimension(2),parameter :: min_wlen=(/3.d-6,3.0d-7/) !< minimum wavelength
 real*8,dimension(2),parameter :: max_wlen=(/3.5d-6,4.d-7/) !< maximum wavelength
 class(type_rng),dimension(:),allocatable :: rngs !< random number generators
@@ -201,9 +203,13 @@ subroutine test_spectrum_generation_rng_uniform()
   implicit none
   !> variables
   type(spectrum_rng_uniform) :: spectrum
-  integer :: ii
+  integer :: ii,jj
+  integer,dimension(n_bins,n_spectra) :: histogram
+  real*8 :: min_w,delta_bin_w
+  real*8,dimension(n_spectra) :: max_variation
 
-  !> construct the spectrum class
+
+  !> initialise and construct the spectrum class
   spectrum = spectrum_rng_uniform(n_points,n_spectra,min_wlen,max_wlen)
   !> generate new random spectra, check intervals bounds
   call spectrum%generate_spectrum(rngs)
@@ -213,6 +219,23 @@ subroutine test_spectrum_generation_rng_uniform()
     call assert_true(maxval(spectrum%points(:,ii)).le.max_wlen(ii),&
     "Error generate uniform random spectrum: maximum point value out-of-bound")
   enddo
+  !> generating histograms for checking pdf, if the probability is uniform
+  !> then for a very large number of realization the histograms of all bins
+  !> are almost equal. We admit a difference between the number of points
+  !> in each bin < tol_var for success
+  do jj=1,n_spectra
+    delta_bin_w = spectrum%i_pdf(jj)/n_bins
+    min_w = spectrum%min_wlen(jj)
+    do ii=1,n_bins
+      histogram(ii,jj) = count((spectrum%points(:,jj).ge.min_w).and.&
+      (spectrum%points(:,jj).lt.(min_w+delta_bin_w)))
+      min_w = min_w + delta_bin_w  
+    enddo
+      max_variation(jj) = real((maxval(histogram(:,jj))-minval(histogram(:,jj))),kind=8)/&
+      real(spectrum%n_points,kind=8)
+  enddo
+  call assert_true(all(max_variation.le.tol_updf),&
+  "Error generate uniform random spectrum: probability density not uniform!")
   !> clean-up the spectrum class
   call spectrum%deallocate_spectrum
 

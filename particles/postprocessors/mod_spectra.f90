@@ -203,10 +203,22 @@ subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
   integer :: ii
+!$ integer :: jj
   !> integrate
+#ifdef _OPENMP
+  !$omp parallel do default(private) shared(spectrum,uniform_data) &
+  !$omp collapse(2) reduction(+:integrals)
+  do jj=1,spectrum%n_spectra
+    do ii=1,spectrum%n_points
+      integrals(jj) = integrals(jj) + uniform_data(ii,jj)
+    enddo
+  enddo
+  !$omp end parallel do
+#else
   do ii=1,spectrum%n_spectra
     integrals(ii) = sum(uniform_data(:,ii))
   enddo
+#endif
   integrals = integrals*spectrum%i_pdf/spectrum%n_points
 end subroutine integrate_rng_uniform
 

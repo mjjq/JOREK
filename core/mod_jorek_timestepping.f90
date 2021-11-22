@@ -488,7 +488,7 @@ subroutine do_jorek_timestep(this, sim, ev)
       call solve_mumps_all(sim%my_id)
 #endif      
     else
-#if defined(USE_PASTIX) || defined(WITH_PASTIX62)    
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)    
       call solve_pastix_all(sim%n_cpu,sim%my_id,this%index_min(sim%my_id+1),this%index_max(sim%my_id+1))
 #endif      
     endif

@@ -209,8 +209,8 @@ else
   DEFINES += -Dpastix_fortran=fake_pastix_fortran
 endif
 
-ifeq (1, $(WITH_PASTIX62))
-  DEFINES  := $(DEFINES) -DWITH_PASTIX62
+ifeq (1, $(USE_PASTIX6))
+  DEFINES  := $(DEFINES) -DUSE_PASTIX6
   LIBS     := $(LIBS) $(LIB_PASTIX)
   INCLUDES := $(INCLUDES) $(INC_PASTIX)
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14

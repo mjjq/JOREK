@@ -55,7 +55,7 @@ program JOREK2
 #ifdef USE_STRUMPACK
   use strumpack_module
 #endif
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
   use mod_pastix, only: pastix_finalize
 #endif
   use preconditioner_module
@@ -274,9 +274,9 @@ required = 0
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 
-#if (!defined(USE_PASTIX))&&(!defined(WITH_PASTIX62))
+#if (!defined(USE_PASTIX))&&(!defined(USE_PASTIX6))
   if (use_pastix.or.use_pastix_eq) then
-    write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or WITH_PASTIX62'
+    write(*,*) ' FATAL : use_pastix requires defined USE_PASTIX or USE_PASTIX6'
     call MPI_Abort(MPI_COMM_WORLD, 3, ierr)
     stop
   endif
@@ -1019,7 +1019,7 @@ required = 0
         call solve_strumpack_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
 #endif
       elseif (use_pastix) then
-#if defined(USE_PASTIX) || defined(WITH_PASTIX62)     
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)     
          call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
 #endif
       endif
@@ -1084,7 +1084,7 @@ required = 0
 #if defined(USE_PASTIX) || defined(USE_MUMPS)
         call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
 #endif
-#if defined(WITH_PASTIX62)
+#if defined(USE_PASTIX6)
         call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 #endif
       endif
@@ -1366,7 +1366,7 @@ required = 0
     endif
 #endif
 
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
     if (use_pastix) then
       call pastix_finalize()
     endif

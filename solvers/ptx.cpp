@@ -1,4 +1,4 @@
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
 
 #include <unistd.h>
 #include <iostream>

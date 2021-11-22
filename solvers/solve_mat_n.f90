@@ -875,7 +875,7 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
   end subroutine solve_matrix_n_spk
 #endif
 
-#if defined(WITH_PASTIX62)
+#if defined(USE_PASTIX6)
 ! > Solve the preconditioner system using PaStiX 6.2
 subroutine solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
     use tr_module

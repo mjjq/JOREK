@@ -1,5 +1,5 @@
 module mod_pastix
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
 
   use iso_c_binding
   use mpi

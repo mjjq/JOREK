@@ -23,7 +23,7 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
 #ifdef USE_STRUMPACK
   use strumpack_module
 #endif
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
   use mod_pastix, only: pastix_solve
 #endif
 
@@ -139,7 +139,7 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
   endif
 #endif
 
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
   if (use_pastix) then
     call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
     call pastix_solve(mumps_par%n,mumps_par%rhs)
@@ -161,7 +161,7 @@ subroutine gmres_precondition(x,y,my_id,my_id_n,MPI_COMM_MASTER,MPI_COMM_N)
         endif
       enddo
 #endif
-#if !defined(WITH_PASTIX62)
+#if !defined(USE_PASTIX6)
       do i=1,mumps_par%n
         mumps_par%rhs(i) =  mumps_par%rhs(i) / column_scaling(i)
       enddo

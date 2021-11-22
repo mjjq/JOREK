@@ -190,7 +190,7 @@ contains
               nr = ranks_per_family(j)
 #ifdef USE_STRUMPACK              
               ji =  ji + min((irn_glob(i)-Int1)/n_per_rank(j), nr-1) ! row bin index for j-th family
-#elif WITH_PASTIX62
+#elif USE_PASTIX6
               ji =  ji + min((jcn_glob(i)-Int1)/n_per_rank(j), nr-1) ! column bin index for j-th family
 #endif
             endif
@@ -220,7 +220,7 @@ contains
                     nr = ranks_per_family(j)
 #ifdef USE_STRUMPACK
                     ji =  ji + min((irn_glob(i)-1)/n_per_rank(j), nr-1) ! row bin index for j-th family
-#elif WITH_PASTIX62
+#elif USE_PASTIX6
                     ji =  ji + min((jcn_glob(i)-1)/n_per_rank(j), nr-1) ! row bin index for j-th family
 #endif                          
                   endif
@@ -363,7 +363,7 @@ contains
                 nr = ranks_per_family(j)
 #ifdef USE_STRUMPACK
                 ji =  ji + min((irn_glob(i)-Int1)/n_per_rank(j), nr-1) ! row bin index for j-th family
-#elif WITH_PASTIX62
+#elif USE_PASTIX6
                 ji =  ji + min((jcn_glob(i)-Int1)/n_per_rank(j), nr-1) ! column bin index for j-th family
 #endif                
               endif

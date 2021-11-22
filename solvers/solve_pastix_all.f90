@@ -290,7 +290,7 @@ end
 #endif
 
 
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
 !> subroutine solves the complete system of equation using PaStiX 6.2
 subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   use mod_pastix

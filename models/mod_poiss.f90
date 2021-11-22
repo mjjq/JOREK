@@ -23,7 +23,7 @@ use mod_basisfunctions
 #ifdef USE_STRUMPACK
 use strumpack_module
 #endif
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
 use mod_pastix
 #endif
 
@@ -441,7 +441,7 @@ if (my_id == 0) then
   endif  
 #endif
 
-#ifdef WITH_PASTIX62
+#ifdef USE_PASTIX6
   if (use_pastix_eq) then
     call pastix_init(MPI_COMM_SELF)
     call pastix_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,1,&

@@ -268,7 +268,7 @@ module preconditioner_module
       endif
     endif
 
-#ifndef WITH_PASTIX62
+#ifndef USE_PASTIX6
     if ((.not.use_strumpack).and.(.not.centralize_harm_mat)) then
       if (my_id.eq.0) write(*,*) "Warning: PC matrix distribution is only supported by STRUMPACK"      
       centralize_harm_mat = .true.

@@ -43,30 +43,30 @@ end program jorek2_particles_radiation
 !>   skip_jorek2help: (logical,optional) if present and .false. jorek2help is displayed
 !> outputs: 
 !>   kinetic_sims: (array(particle_sim)) array containing the kinetic simulations
-subroutine initialise_lights(kinetic_sim,num_sims,num_kin_groups,filenames,skip_jorek2help)
-  use mod_particle_sim
-  use mod_particle_io, only: read_simulation_hdf5,get_simulation_hdf5_time
-  implicit none
-  contains
+!subroutine initialise_lights(kinetic_sim,num_sims,num_kin_groups,filenames,skip_jorek2help)
+!  use mod_particle_sim
+!  use mod_particle_io, only: read_simulation_hdf5,get_simulation_hdf5_time
+!  implicit none
+!  contains
 
   ! Variable declarations -------------!
-  class(particle_sim),intent(inout) ::     kinetic_sims
-  integer,intent(in) ::                    num_sims
-  integer,intent(in) ::                    num_kin_groups
-  character,allocatable(:,:),intent(in) :: filenames
-  logical,optional,intent(in) ::           skip_jorek2help
-  integer ::                               i,j,k
+!  class(particle_sim),intent(inout) ::     kinetic_sims
+!  integer,intent(in) ::                    num_sims
+!  integer,intent(in) ::                    num_kin_groups
+!  character,allocatable(:,:),intent(in) :: filenames
+!  logical,optional,intent(in) ::           skip_jorek2help
+!  integer ::                               i,j,k
   ! -----------------------------------!
 
   ! Initialisations -------------------!
-  call kinetic_sim%initialize(num_kin_groups, skip_jorek2help)
+!  call kinetic_sim%initialize(num_kin_groups, skip_jorek2help)
   ! -----------------------------------!
 
   ! loop on the simulations
-  loop_over_sims:do i=1,num_sims
-    call read_simulation_hdf5(kinetic_sim,trim(filenames(:,i))) 
-  end do loop_over_sims
+!  loop_over_sims:do i=1,num_sims
+!    call read_simulation_hdf5(kinetic_sim,trim(filenames(:,i))) 
+!  end do loop_over_sims
   
 
-end subroutine read_kinetic_sims
+!end subroutine read_kinetic_sims
 !> -------------------------------------------------------------------------------------------!

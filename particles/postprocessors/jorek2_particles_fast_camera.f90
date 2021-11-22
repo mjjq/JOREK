@@ -10,29 +10,25 @@
 !> The lightsource models currently implemented are:
 !>	-> runaway electron synchrotron emission [J. Schwinger,Phys.Rev.,vol.75,p.1912,1949]
 !> -------------------------------------------------------------------------------------------!
-program jorek2_particles_radiation
+program jorek2_particles_fast_camera
   use mod_particle_sim 
   implicit none
 
   ! Variable declarations -------------!
-  class(particle_sim) ::   kinetic_sim             !< the particle simulation
+  type(particle_sim) ::   kinetic_sim             !< the particle simulation
   integer ::               num_sims,num_kin_groups !< total number of simulations and groups
 
-  contains
-
-  ! -----------------------------------!
-
-  ! Hard-coded values -----------------!
-  ! -----------------------------------!
+  ! ------------------------------------!
+  write(*,*) "TODO"
 
   ! Initialise ------------------------!
   ! -----------------------------------!
 
   ! Finalise --------------------------!
-  call kinetic_sim%finalize()
+  !call kinetic_sim%finalize()
   ! -----------------------------------!
 
-end program jorek2_particles_radiation
+contains
 
 !> Compute and store the ligth soutce properties ---------------------------------------------!
 !> inputs:
@@ -70,3 +66,5 @@ end program jorek2_particles_radiation
 
 !end subroutine read_kinetic_sims
 !> -------------------------------------------------------------------------------------------!
+
+end program jorek2_particles_fast_camera

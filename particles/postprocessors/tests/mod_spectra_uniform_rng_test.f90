@@ -10,17 +10,31 @@ private
 public :: run_fruit_spectra_uniform_rng_test
 
 !> Variables -----------------------------------------------------------------
-integer,parameter :: n_points=1000000
+integer,parameter :: n_convergence=6
+integer,parameter :: n_points=500000
 integer,parameter :: n_spectra=2
 integer,parameter :: n_bins=500 !< number of bins for histograms
 real*8,parameter  :: tol_real8=1.d-16 !< tolerance for assert
 real*8,parameter  :: tol_updf=5.d-4   !< tolerance on the uniform probability
+!> n_points for convergence study
+integer,dimension(n_convergence),parameter :: n_points_conv=(/5,50,500,5000,50000,500000/)
 real*8,dimension(2),parameter :: min_wlen=(/3.d-6,3.0d-7/) !< minimum wavelength
 real*8,dimension(2),parameter :: max_wlen=(/3.5d-6,4.d-7/) !< maximum wavelength
+real*8,dimension(2),parameter :: min_angle=(/6.d-1,2.3d0/) !< minimum angle for integration
+real*8,dimension(2),parameter :: max_angle=(/3.6d0,3.4d0/) !< maximum angle for integration
 class(type_rng),dimension(:),allocatable :: rngs !< random number generators
-integer                                    :: n_threads,thread_id !< N# and id omp threads
-real*8,dimension(2)                        :: i_pdf !< 1/pdf=min_wlen,max_wlen
-!>----------------------------------------------------------------------------
+integer                                  :: n_threads,thread_id !< N# and id omp threads
+real*8,dimension(2)                      :: i_pdf !< 1/pdf=min_wlen,max_wlen
+
+!> Interfaces ----------------------------------------------------------------
+
+interface sin2x
+  module procedure sin2x_serial,sin2x_vector
+end interface
+
+interface int_sin2x
+  module procedure int_sin2x_serial,int_sin2x_vector
+end interface
 
 contains
 !> Test basket ---------------------------------------------------------------
@@ -34,6 +48,7 @@ implicit none
   call test_set_uniform_spectrum_interval
   call test_spectrum_rng_uniform_construction_init
   call test_spectrum_generation_rng_uniform
+  call test_spectrum_integration_rng_uniform
   write(*,'(/A)') "  ... tearing-down: spectra uniform rng tests"
   call teardown
 end subroutine run_fruit_spectra_uniform_rng_test
@@ -242,8 +257,113 @@ subroutine test_spectrum_generation_rng_uniform()
 end subroutine test_spectrum_generation_rng_uniform
 
 !> test the integration via Monte-Carlo method (uniform distribution)
+subroutine test_spectrum_integration_rng_uniform()
+  use mod_spectra, only: spectrum_rng_uniform
+  implicit none
+  !> variables
+  type(spectrum_rng_uniform) :: spectrum
+  integer :: ii,kk
+  !$ integer :: jj
+  real*8,dimension(:,:),allocatable :: integrands
+  real*8,dimension(n_spectra) :: integrals
+  real*8,dimension(n_spectra,n_convergence) :: int_error
+
+  !> loop on the number of convergence points
+  do kk=1,n_convergence
+    !> initialise structure and grid
+    allocate(integrands(n_points_conv(kk),n_spectra))
+    spectrum = spectrum_rng_uniform(n_points_conv(kk),n_spectra,min_angle,max_angle)
+    call spectrum%generate_spectrum(rngs)
+#ifdef _OPENMP
+    !$omp parallel do default(private) shared(spectrum,integrands,integrals) collapse(2)
+     do jj=1,spectrum%n_spectra
+       do ii=1,spectrum%n_points
+         integrands(ii,jj) = sin2x(spectrum%points(ii,jj))
+       enddo
+     enddo
+    !$omp end parallel do
+#else
+    do ii=1,spectrum%n_spectra
+      integrands(:,ii) = sin2x(spectrum%n_points,spectrum%points(:,ii))
+    enddo
+#endif
+  !> integrate  and compute error
+    call spectrum%integrate_data(integrands,integrals)
+    int_error(:,kk) = abs(integrals-(int_sin2x(n_spectra,max_angle)-&
+    int_sin2x(n_spectra,min_angle)))
+    !> clean up everything
+    deallocate(integrands)
+    call spectrum%deallocate_spectrum
+  enddo
+  do jj=1,n_convergence
+    write(*,*) "jj: ",jj," error: ",int_error(:,jj)
+  enddo
+
+end subroutine test_spectrum_integration_rng_uniform
+
+!> Tools ---------------------------------------------------------------------
+
+!> method for computing the standard deviation of a pupulation of random variables
+subroutine compute_stddeviation_1d_arg2d(N1,N2,val,mean,stddev)
+  implicit none
+  !> inputs:
+  integer,intent(in) :: N1,N2
+  real*8,dimension(N2),intent(in) :: mean
+  real*8,dimension(N1,N2),intent(in) :: val
+  !> outputs:
+  real*8,dimension(N2),intent(out) :: stddev
+  !> variables
+  integer :: ii,jj
+#ifdef _OPENMP
+  !$omp parallel do default(private) shared(N1,N2,mean,val) &
+  !$omp reduction(+:stddev) collapse(2)
+  do ii=1,N2
+    do jj=1,N1
+      stddev(jj) = stddev(jj) + val(ii,jj)*val(ii,jj)
+   enddo
+  enddo
+  !$omp end parallel do
+#else
+#endif
+
+  stddev = (sqrt(stddev/N1 - mean*mean))
+
+end subroutine compute_stddeviation_1d_arg2d
+
+!> sin^2(x) function
+function sin2x_serial(x)
+  implicit none
+  real*8,intent(in) :: x
+  real*8 :: sin2x_serial
+  sin2x_serial = sin(x)*sin(x)
+end function sin2x_serial
+
+!> integral of the sin^2(x) function
+function int_sin2x_serial(x)
+  implicit none
+  real*8,intent(in) :: x
+  real*8 :: int_sin2x_serial
+  int_sin2x_serial = 5.d-1*(x-sin(x)*cos(x))
+end function int_sin2x_serial
+
+!> sin^2(x) function
+function sin2x_vector(N,x)
+  implicit none
+  integer,intent(in) :: N
+  real*8,dimension(N),intent(in) :: x
+  real*8,dimension(N) :: sin2x_vector
+  sin2x_vector = sin(x)*sin(x)
+end function sin2x_vector
+
+!> integral of the sin^2(x) function
+function int_sin2x_vector(N,x)
+  implicit none
+  integer,intent(in) :: N
+  real*8,dimension(N),intent(in) :: x
+  real*8,dimension(N) :: int_sin2x_vector
+  int_sin2x_vector = 5.d-1*(x-sin(x)*cos(x))
+end function int_sin2x_vector
 
 !>----------------------------------------------------------------------------
-
 
 end module mod_spectra_uniform_rng_test

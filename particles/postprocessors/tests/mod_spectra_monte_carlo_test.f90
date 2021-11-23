@@ -35,15 +35,15 @@ contains
 !> test basket for executing the simulation set-up, tests and tear-down
 subroutine run_fruit_spectra_monte_carlo_test()
 implicit none
-  write(*,'(/A)') "  ... settin-up: spectra uniform rng tests"
+  write(*,'(/A)') "  ... setting-up: spectra Monte-Carlo tests"
   call setup
-  write(*,'(/A)') "  ... running: spectra uniform rng tests"
+  write(*,'(/A)') "  ... running: spectra Monte-Carlo tests"
   call test_spectrum_rng_uniform_construction_noinit
   call test_set_uniform_spectrum_interval
   call test_spectrum_rng_uniform_construction_init
   call test_spectrum_generation_rng_uniform
   call test_spectrum_integration_rng_uniform
-  write(*,'(/A)') "  ... tearing-down: spectra uniform rng tests"
+  write(*,'(/A)') "  ... tearing-down: spectra Monte-Carlo tests"
   call teardown
 end subroutine run_fruit_spectra_monte_carlo_test
 

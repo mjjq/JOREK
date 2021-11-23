@@ -6,7 +6,7 @@ use mod_spectra, only: spectrum_base
 implicit none
 
 private
-public spectrum_rng_uniform
+public :: spectrum_rng_uniform
 
 !> generate a set of spectral points for integration
 !> using a uniform distribution

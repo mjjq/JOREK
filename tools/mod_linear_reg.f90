@@ -33,7 +33,7 @@ subroutine linear_regression_1d(N,x,y,coeff)
 
   !> compute averages
   sum_x = sum(x); sum_x2 = sum(x*x);
-  sum_xy = sum(x*y); sum_y = sum(y);
+  sum_xy = sum(x*y); sum_y = sum(y); 
 
   !> compute coefficients
   coeff = (/N*sum_xy-sum_x*sum_y,&

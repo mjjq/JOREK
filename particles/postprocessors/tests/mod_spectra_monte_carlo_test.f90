@@ -269,12 +269,13 @@ subroutine test_spectrum_integration_rng_uniform()
   type(spectrum_rng_uniform) :: spectrum
   integer :: ii,kk,pp
   !$ integer :: jj
-  real*8,dimension(2) :: std_conv_coeff
-  real*8,dimension(n_spectra) :: integral
+  real*8,dimension(2) :: std_conv_coeff   !< linear regression coeff. of the std deviation
+  real*8,dimension(n_spectra) :: integral !< required for avoiding wrong memory accesses
   real*8,dimension(:,:),allocatable :: integrands
   real*8,dimension(n_spectra,n_trials) :: integrals
-  real*8,dimension(n_spectra,n_convergence) :: avg_integrals
-  real*8,dimension(n_spectra,n_convergence) :: std_dev,int_error
+  real*8,dimension(n_spectra,n_convergence) :: avg_integrals !< average value of the integrals
+  real*8,dimension(n_spectra,n_convergence) :: std_dev       !< integral std deviation
+  real*8,dimension(n_spectra,n_convergence) :: int_error     !< integral error
 
   !> initialisation
   std_dev = 0.d0

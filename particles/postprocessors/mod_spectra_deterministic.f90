@@ -6,7 +6,7 @@ use mod_spectra, only: spectrum_base
 implicit none
 
 private
-public :: spectrum_integarator_1st
+public :: spectrum_integrator_1st
 
 !> Variables and type definitions -------------------------------
 !> type generating and integrating data on spectra using
@@ -19,11 +19,11 @@ type,extends(spectrum_base) :: spectrum_integrator_1st
   procedure,pass(spectrum) :: set_spectrum_interval => set_spectrum_int_1st_properties
   procedure,pass(spectrum) :: generate_spectrum     => generate_midpoint_spectra 
   procedure,pass(spectrum) :: integrate_data        => integrate_spectrum_rectangle
-  procedure,pass(spectrum) :: deallocate_spectrum   => allocate_spectrum_integrator_1st
+  procedure,pass(spectrum) :: deallocate_spectrum   => deallocate_spectrum_integrator_1st
 end type spectrum_integrator_1st
 
 !> Interfaces----------------------------------------------------
-interface spectrum_integarator_1st
+interface spectrum_integrator_1st
   module procedure construct_spectrum_integarator_1st
 end interface
 
@@ -46,7 +46,7 @@ min_wlen,max_wlen) result(spectrum)
   integer,intent(in) :: n_points,n_spectra
   real*8,dimension(n_spectra),intent(in),optional :: min_wlen,max_wlen
   !> outputs
-  class(spectrum_integrator_1st),target :: spectrum
+  type(spectrum_integrator_1st),target :: spectrum
   !> variables
   real*8,dimension(2*n_spectra) :: real8_param
   if(present(min_wlen).and.present(max_wlen)) then
@@ -86,7 +86,7 @@ n_spectra,real8_param,int_param)
   call spectrum%allocate_spectrum_base(n_points,n_spectra)
   if(present(real8_param)) call spectrum%set_spectrum_interval(&
   n_spectra,real8_param(1:n_spectra),&
-  real8_param(n_spectra+1:2*n_spectra)
+  real8_param(n_spectra+1:2*n_spectra))
 end subroutine allocate_spectrum_integrator_1st
 
 !> set the spectrum integrator 1st order properties
@@ -109,13 +109,13 @@ min_wlen,max_wlen)
   class(spectrum_integrator_1st),intent(inout) :: spectrum
   !> set values
   if(spectrum%n_spectra.ne.n_spectra) then
-    if(allocated(spectrum%min_wlen)) deallocate(spectrum%min_wlen)
-    if(allocated(spectrum%wbin_size) deallocate(spectrum%wbin_size))
+    if(allocated(spectrum%min_wlen))  deallocate(spectrum%min_wlen)
+    if(allocated(spectrum%wbin_size)) deallocate(spectrum%wbin_size)
     spectrum%n_spectra = n_spectra
     write(*,*) 'WARNING: n_spectra is changed -> regenerate spectrum points!'
   endif
-  if(.not.allocated(spectrum%min_wlen)) allocate(spectrum%min_wlen(n_spectra))
-  if(.not.allocated(spectrum%wbin_size) allocate(spectrum%wbin_size(n_spectra)))
+  if(.not.allocated(spectrum%min_wlen))  allocate(spectrum%min_wlen(n_spectra))
+  if(.not.allocated(spectrum%wbin_size)) allocate(spectrum%wbin_size(n_spectra))
   spectrum%min_wlen = min_wlen
   spectrum%wbin_size = (max_wlen-min_wlen)/spectrum%n_points
 end subroutine set_spectrum_int_1st_properties
@@ -163,20 +163,20 @@ subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
   integer :: ii
-  !$ integr :: jj
+  !$ integer :: jj
 #ifdef _OPENMP
-  integral = 0.d0
+  integrals = 0.d0
   !$omp parallel do default(private) shared(spectrum,midpoint_data) &
   !$omp reduction(+:integrals) collapse(2)
   do jj=1,spectrum%n_spectra
     do ii=1,spectrum%n_points
-      integrals(ii,jj) = integrals(ii,jj) + midpoint_data(ii,jj)
+      integrals(jj) = integrals(jj) + midpoint_data(ii,jj)
     enddo
   enddo
-  !$omp end paralle do
+  !$omp end parallel do
 #else
   do ii=1,spectrum%n_spectra
-    integrals(:,jj) = sum(uniform_data,dim=1)
+    integrals(jj) = sum(uniform_data,dim=1)
   enddo
 #endif
   integrals = integrals*spectrum%wbin_size
@@ -190,17 +190,17 @@ end subroutine integrate_spectrum_rectangle
 !> outputs:
 !>   spectrum: (spectrum_integrator_1st) generate and integrated
 !>             variables using the central point rule
-subroutine allocate_spectrum_integrator_1st(spectrum)
+subroutine deallocate_spectrum_integrator_1st(spectrum)
   implicit none
   !> inputs-outputs
   class(spectrum_integrator_1st),intent(inout) :: spectrum
 
   !> deallocate everything and set variables to default
   call spectrum%deallocate_spectrum_base
-  if(allocated(spectrum%min_wlen)) deallocate(spectrum&min_wlen)
+  if(allocated(spectrum%min_wlen))  deallocate(spectrum%min_wlen)
   if(allocated(spectrum%wbin_size)) deallocate(spectrum%wbin_size)
 
-end subroutine allocate_spectrum_integrator_1st
+end subroutine deallocate_spectrum_integrator_1st
 
 !>---------------------------------------------------------------
 

@@ -19,7 +19,7 @@ real*8,parameter  :: tol_real8=1.d-16 !< tolerance for assert
 real*8,parameter  :: tol_updf=5.d-4   !< tolerance on the uniform probability
 real*8,parameter  :: expected_std_conv_coeff=-5.d-1 !< expected std convergence rate
 real*8,parameter  :: tol_std_conv_coeff=5.d-2       !< tolerance on the convergence rate
-real*8,parameter  :: tol_min_int_error=5.d-4        !< tolerance on the minimum int error
+real*8,parameter  :: tol_min_int_error=7.5d-4       !< tolerance on the minimum int error
 !> n_points for convergence study
 integer,dimension(n_convergence),parameter :: n_points_conv=(/1000,10000,100000,1000000,10000000/)
 real*8,dimension(2),parameter :: min_wlen=(/3.d-6,3.0d-7/) !< minimum wavelength
@@ -28,7 +28,7 @@ real*8,dimension(2),parameter :: min_angle=(/6.d-1,2.3d0/) !< minimum angle for 
 real*8,dimension(2),parameter :: max_angle=(/3.6d0,3.4d0/) !< maximum angle for integration
 class(type_rng),dimension(:),allocatable :: rngs !< random number generators
 integer                                  :: n_threads,thread_id !< N# and id omp threads
-real*8,dimension(2)                      :: i_pdf !< 1/pdf=min_wlen,max_wlen
+real*8,dimension(n_spectra)              :: i_pdf !< 1/pdf=min_wlen,max_wlen
 
 contains
 !> Test basket ---------------------------------------------------------------

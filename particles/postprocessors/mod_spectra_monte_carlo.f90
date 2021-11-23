@@ -185,7 +185,7 @@ subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
   !$omp end parallel do
 #else
   do ii=1,spectrum%n_spectra
-    integrals(ii) = sum(uniform_data(:,ii))
+    integrals(ii) = sum(uniform_data,dim=1)
   enddo
 #endif
   integrals = integrals*spectrum%i_pdf/spectrum%n_points

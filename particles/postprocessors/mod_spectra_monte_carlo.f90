@@ -22,12 +22,12 @@ type,extends(spectrum_base) :: spectrum_rng_uniform
 end type spectrum_rng_uniform
 
 !> Interfaces ---------------------------------------
-
 interface spectrum_rng_uniform
   module procedure construct_spectrum_rng_uniform
 end interface
 
 contains
+
 !> Constructors -------------------------------------
 !> construct a uniform random spectrum
 !> inputs:
@@ -40,10 +40,13 @@ contains
 function construct_spectrum_rng_uniform(n_points,n_spectra,&
 min_wlen,max_wlen) result(spectrum)
   implicit none
-  integer,intent(in)                     :: n_points,n_spectra
-  real*8,dimension(n_spectra),optional,intent(in) :: min_wlen,max_wlen
-  type(spectrum_rng_uniform),target      :: spectrum
-  real*8,dimension(2*n_spectra)          :: real8_param 
+  !> inputs
+  integer,intent(in) :: n_points,n_spectra
+  real*8,dimension(n_spectra),intent(in),optional :: min_wlen,max_wlen
+  !> outputs
+  type(spectrum_rng_uniform),target :: spectrum
+  !> variables
+  real*8,dimension(2*n_spectra) :: real8_param 
   if(present(min_wlen).and.present(max_wlen)) then
     real8_param(1:n_spectra) = min_wlen
     real8_param(n_spectra+1:2*n_spectra) = max_wlen
@@ -54,17 +57,16 @@ min_wlen,max_wlen) result(spectrum)
 end function construct_spectrum_rng_uniform
 
 !> Procedures spectrum rng uniform ------------------
-
 !> allocate the spectrum_rng_uniform datatype
 !> inputs:
-!>   spectrum:  (spectrum_rng_uniform) generates and integrates
-!>              variables along a uniform spectral distribution
-!>   n_points:  (integer) number of spectral points
-!>   n_spectra: (integer) number of spectral intervals
-!>   real8_param: (real8)(2*n_spectra)(optional) minimum:
-!>                1:n_spectral-> minimum wavelengths
-!>                n_spectra+1:2*n_spectra->maximum wavelengths
-!>   max_wlen:  (integer)(0)(optional) maximum wavelength
+!>   spectrum:    (spectrum_rng_uniform) generates and integrates
+!>                variables along a uniform spectral distribution
+!>   n_points:    (integer) number of spectral points
+!>   n_spectra:   (integer) number of spectral intervals
+!>   real8_param: (real8)(2*n_spectra)(optional) double parameters:
+!>                1:n_spectral            -> minimum wavelengths
+!>                n_spectra+1:2*n_spectra ->maximum wavelengths
+!>   int_param:   (integer)(0)(optional) integer parameters
 !> outputs:
 !>   spectrum: (spectrum_rng_uniform) generates and integrates
 !>             variables along a uniform spectral distribution
@@ -109,7 +111,7 @@ subroutine set_uniform_spectrum_interval(spectrum,n_spectra,min_wlen,max_wlen)
     allocate(spectrum%min_wlen(n_spectra))
     allocate(spectrum%i_pdf(n_spectra))
     spectrum%n_spectra = n_spectra
-    write(*,*) 'WARNING: n_spectra is changed: regenerate spectrum points!'
+    write(*,*) 'WARNING: n_spectra is changed -> regenerate spectrum points!'
   endif
   spectrum%min_wlen = min_wlen
   spectrum%i_pdf = max_wlen - min_wlen
@@ -172,6 +174,7 @@ subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
 !$ integer :: jj
   !> integrate
 #ifdef _OPENMP
+  integrals = 0.d0
   !$omp parallel do default(private) shared(spectrum,uniform_data) &
   !$omp collapse(2) reduction(+:integrals)
   do jj=1,spectrum%n_spectra

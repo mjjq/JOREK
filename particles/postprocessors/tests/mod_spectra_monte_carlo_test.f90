@@ -19,7 +19,7 @@ real*8,parameter  :: tol_real8=1.d-16 !< tolerance for assert
 real*8,parameter  :: tol_updf=5.d-4   !< tolerance on the uniform probability
 real*8,parameter  :: expected_std_conv_coeff=-5.d-1 !< expected std convergence rate
 real*8,parameter  :: tol_std_conv_coeff=5.d-2       !< tolerance on the convergence rate
-real*8,parameter  :: tol_min_int_error=7.d-5       !< tolerance on the minimum int error
+real*8,parameter  :: tol_min_int_error=5.d-4        !< tolerance on the minimum int error
 !> n_points for convergence study
 integer,dimension(n_convergence),parameter :: n_points_conv=(/1000,10000,100000,1000000,10000000/)
 real*8,dimension(2),parameter :: min_wlen=(/3.d-6,3.0d-7/) !< minimum wavelength
@@ -252,6 +252,7 @@ end subroutine test_spectrum_generation_rng_uniform
 
 !> test the integration via Monte-Carlo method (uniform distribution)
 subroutine test_spectrum_integration_rng_uniform()
+  use constants,               only: PI
   use mod_test_functions,      only: sin2x,int_sin2x
   use mod_linear_reg,          only: linear_regression
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
@@ -275,7 +276,7 @@ subroutine test_spectrum_integration_rng_uniform()
   do kk=1,n_convergence
     !> initialise structures and grids
     allocate(integrands(n_points_conv(kk),n_spectra))
-    spectrum = spectrum_rng_uniform(n_points_conv(kk),n_spectra,min_angle,max_angle)
+    spectrum = spectrum_rng_uniform(n_points_conv(kk),n_spectra,PI*min_angle,PI*max_angle)
     do pp=1,n_trials
       call spectrum%generate_spectrum(rngs)
 #ifdef _OPENMP
@@ -302,8 +303,8 @@ subroutine test_spectrum_integration_rng_uniform()
       std_dev(:,kk) = std_dev(:,kk) + ((integrals(:,jj)-avg_integrals(:,kk))*&
       (integrals(:,jj)-avg_integrals(:,kk)))
     enddo
-    int_error(:,kk) = abs(avg_integrals(:,kk)-(int_sin2x(n_spectra,max_angle)-&
-    int_sin2x(n_spectra,min_angle)))
+    int_error(:,kk) = abs(avg_integrals(:,kk)-(int_sin2x(n_spectra,PI*max_angle)-&
+    int_sin2x(n_spectra,PI*min_angle)))
 
     !> clean up everything
     deallocate(integrands)
@@ -319,7 +320,7 @@ subroutine test_spectrum_integration_rng_uniform()
     call assert_equals(std_conv_coeff(1),expected_std_conv_coeff,tol_std_conv_coeff,&
     "Error integrate uniform random spectrum: std convergence rate is not 1/2!")
     call assert_true(int_error(ii,n_convergence).lt.tol_min_int_error,&
-    "Error integrate uniform random spectrum: minimum error larger than expected!")
+    "Error integrate uniform random spectrum: minimum error larger than expected!") 
   enddo
 
 end subroutine test_spectrum_integration_rng_uniform

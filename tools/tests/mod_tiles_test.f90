@@ -41,7 +41,7 @@ subroutine run_fruit_tiles()
   call test_tile_resize_offsets       !< test resize tile array with offset
   call test_tile_resize_fail          !< test resize tile array fail
   call test_tile_resize_fail_offsets  !< test resize tile array fail with offset
-  write(*,'(/A)') "  ... tearing-down: tiles test"
+  write(*,'(/A)') "  ... tearing-down: tiles tests"
   call teardown
 
 end subroutine run_fruit_tiles

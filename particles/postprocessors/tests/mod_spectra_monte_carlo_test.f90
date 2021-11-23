@@ -30,16 +30,6 @@ class(type_rng),dimension(:),allocatable :: rngs !< random number generators
 integer                                  :: n_threads,thread_id !< N# and id omp threads
 real*8,dimension(2)                      :: i_pdf !< 1/pdf=min_wlen,max_wlen
 
-!> Interfaces ----------------------------------------------------------------
-
-interface sin2x
-  module procedure sin2x_serial,sin2x_vector
-end interface
-
-interface int_sin2x
-  module procedure int_sin2x_serial,int_sin2x_vector
-end interface
-
 contains
 !> Test basket ---------------------------------------------------------------
 !> test basket for executing the simulation set-up, tests and tear-down
@@ -262,6 +252,7 @@ end subroutine test_spectrum_generation_rng_uniform
 
 !> test the integration via Monte-Carlo method (uniform distribution)
 subroutine test_spectrum_integration_rng_uniform()
+  use mod_test_functions,      only: sin2x,int_sin2x
   use mod_linear_reg,          only: linear_regression
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
   implicit none
@@ -332,42 +323,6 @@ subroutine test_spectrum_integration_rng_uniform()
   enddo
 
 end subroutine test_spectrum_integration_rng_uniform
-
-!> Tools ---------------------------------------------------------------------
-
-!> sin^2(x) function
-function sin2x_serial(x)
-  implicit none
-  real*8,intent(in) :: x
-  real*8 :: sin2x_serial
-  sin2x_serial = sin(x)*sin(x)
-end function sin2x_serial
-
-!> integral of the sin^2(x) function
-function int_sin2x_serial(x)
-  implicit none
-  real*8,intent(in) :: x
-  real*8 :: int_sin2x_serial
-  int_sin2x_serial = 5.d-1*(x-sin(x)*cos(x))
-end function int_sin2x_serial
-
-!> sin^2(x) function
-function sin2x_vector(N,x)
-  implicit none
-  integer,intent(in) :: N
-  real*8,dimension(N),intent(in) :: x
-  real*8,dimension(N) :: sin2x_vector
-  sin2x_vector = sin(x)*sin(x)
-end function sin2x_vector
-
-!> integral of the sin^2(x) function
-function int_sin2x_vector(N,x)
-  implicit none
-  integer,intent(in) :: N
-  real*8,dimension(N),intent(in) :: x
-  real*8,dimension(N) :: int_sin2x_vector
-  int_sin2x_vector = 5.d-1*(x-sin(x)*cos(x))
-end function int_sin2x_vector
 
 !>----------------------------------------------------------------------------
 

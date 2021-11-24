@@ -162,6 +162,7 @@ end subroutine generate_uniform_rng_spectrum
 !>              variables along a uniform spectral distribution
 !>   integrals: (n_spectra) integrals of uniform_data for each spectrum
 subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
+  !$ use omp_lib
   implicit none
   !> inputs-outputs
   class(spectrum_rng_uniform),intent(inout) :: spectrum
@@ -170,24 +171,42 @@ subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
   !> outputs
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
-  integer :: ii
+  integer :: ii,thread_id,n_threads,n_points_per_thread,residual_id
 !$ integer :: jj
   !> integrate
-#ifdef _OPENMP
-  integrals = 0.d0
-  !$omp parallel do default(private) shared(spectrum,uniform_data) &
-  !$omp collapse(2) reduction(+:integrals)
-  do jj=1,spectrum%n_spectra
-    do ii=1,spectrum%n_points
-      integrals(jj) = integrals(jj) + uniform_data(ii,jj)
-    enddo
-  enddo
-  !$omp end parallel do
-#else
+  thread_id = 0
+  n_threads = 1
+  !$omp parallel default(private) shared(spectrum,uniform_data,residual_id) &
+  !$omp reduction(+:integrals)
+  !$ thread_id = omp_get_thread_num()
+  !$ n_threads = omp_get_num_threads()
+  n_points_per_thread = thread_id/n_threads
+  residual_id = n_points_per_thread*n_threads
   do ii=1,spectrum%n_spectra
-    integrals(ii) = sum(uniform_data,dim=1)
-  enddo
-#endif
+    integrals(ii) = integrals(ii) + sum(uniform_data(&
+    thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
+  enddo 
+  !$omp end parallel
+  if(residual_id.lt.spectrum%n_points) then
+    do ii=1,spectrum%n_spectra
+      integrals(ii) = integrals(ii) + sum(uniform_data(residual_id+1:spectrum%n_points,ii))
+    enddo
+  endif
+!#ifdef _OPENMP
+!  integrals = 0.d0
+!  !$omp parallel do default(private) shared(spectrum,uniform_data) &
+!  !$omp collapse(2) reduction(+:integrals)
+!  do jj=1,spectrum%n_spectra
+!    do ii=1,spectrum%n_points
+!      integrals(jj) = integrals(jj) + uniform_data(ii,jj)
+!    enddo
+!  enddo
+!  !$omp end parallel do
+!#else
+!  do ii=1,spectrum%n_spectra
+!    integrals(ii) = sum(uniform_data,dim=1)
+!  enddo
+!#endif
   integrals = integrals*spectrum%i_pdf/spectrum%n_points
 end subroutine integrate_rng_uniform
 

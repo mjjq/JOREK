@@ -8,16 +8,19 @@ private
 public :: run_fruit_spectra_deterministic_test
 
 !> Variables --------------------------------------------------------
-integer,parameter :: n_convergence=5 !< number of points for convergence
-integer,parameter :: n_points=512437 !< number of points
-integer,parameter :: n_spectra=2     !< number of spectra
-real*8,parameter  :: tol_grid=3.d-16 !< tolerance for grid check
+integer,parameter :: n_convergence=5      !< number of points for convergence
+integer,parameter :: n_points=512437      !< number of points
+integer,parameter :: n_spectra=2          !< number of spectra
+real*8,parameter  :: tol_grid=3.d-16      !< tolerance for grid check
+real*8,parameter  :: accuracy_order=-2.d0  !< accuracy order
+real*8,parameter  :: tol_accuracy=5.d-2   !< tolerance on the accuray order
+real*8,parameter  :: tol_int_error=5.d-12 !< tolerance on the minim integratio error
 !> n_points for convergence study
-integer,dimension(n_convergence) :: n_points_conv=(/997,100725,100000,1003757,10023947/)
+integer,dimension(n_convergence) :: n_points_conv=(/997,10725,100000,1003757,10023947/)
 real*8,dimension(2),parameter :: min_wlen=(/3.0d-6,3.0d-7/) !< minimum wavelength
 real*8,dimension(2),parameter :: max_wlen=(/3.5d-6,4.0d-7/) !< maximum wavelength
-real*8,dimension(2),parameter :: min_angle=(/6.0d-1,2.3d0/) !< minimum angle for integration
-real*8,dimension(2),parameter :: max_angle=(/3.6d0,3.4d0/) !< maximum angle for integration
+real*8,dimension(2),parameter :: min_angle=(/1.75d-1,8.4d1/) !< minimum angle for integration
+real*8,dimension(2),parameter :: max_angle=(/3.25d1,1.75d2/) !< maximum angle for integration
 real*8,dimension(n_spectra)   :: wbin_size !> size of the wavelength integration interval
 
 !> Interfaces -------------------------------------------------------
@@ -36,6 +39,7 @@ subroutine run_fruit_spectra_deterministic_test()
   call test_deterministic_allocation_init
   call test_set_spectrum_int_1st_properties
   call test_generate_midpoint_spectra
+  call test_1st_order_rectangle_integrator
   write(*,'(/A)') "  ... tearing-down: spectra deterministic integrator tests"
   call teardown
 end subroutine run_fruit_spectra_deterministic_test
@@ -158,8 +162,8 @@ subroutine test_set_spectrum_int_1st_properties()
   type(spectrum_integrator_1st) :: spectrum
   real*8,dimension(n_spectra),parameter :: min_wlen_2=(/1.d-5,5.d-9/)
   real*8,dimension(n_spectra),parameter :: max_wlen_2=(/7.4d-5,1.25d-8/)
-  real*8,dimension(n_spectra) :: wbin_size_2
-  real*8,dimension(2*n_spectra) :: min_wlen_3,max_wlen_3,wbin_size_3
+  real*8,dimension(n_spectra)           :: wbin_size_2
+  real*8,dimension(2*n_spectra)         :: min_wlen_3,max_wlen_3,wbin_size_3
 
   !> initialisation
   wbin_size_2 = (max_wlen_2-min_wlen_2)/n_points
@@ -214,7 +218,7 @@ subroutine test_generate_midpoint_spectra()
   call spectrum%generate_spectrum
   do jj=1,spectrum%n_spectra
     do ii=1,spectrum%n_points+1
-      interval_nodes(ii) = min_wlen(jj) + wbin_size(jj)*real(ii-1,kind=8)
+      interval_nodes(ii) = min_wlen(jj) +  wbin_size(jj)*real(ii-1,kind=8)
     enddo
     grid_nodes(1:n_points) = (spectrum%points(:,jj)-5.d-1*spectrum%wbin_size(jj))
     grid_nodes(n_points+1) = (spectrum%points(n_points,jj)+5.d-1*spectrum%wbin_size(jj))
@@ -228,4 +232,62 @@ subroutine test_generate_midpoint_spectra()
 
 end subroutine test_generate_midpoint_spectra
 
+!> test the 1st order rectangle method integrator. The reltive error 
+!> is used due to the large value of the integral.
+subroutine test_1st_order_rectangle_integrator()
+  use omp_lib
+  use constants,                 only: PI
+  use mod_test_functions,        only: expxsin2x,int_expxsin2x
+  use mod_linear_reg,            only: linear_regression
+  use mod_spectra_deterministic, only: spectrum_integrator_1st 
+  implicit none
+  !> variables
+  type(spectrum_integrator_1st) :: spectrum
+  integer                       :: ii,kk
+  !$ integer                    :: jj
+  real*8,dimension(2)           :: conv_coeff !< convergence coeff. from linear regression
+  real*8,dimension(n_spectra)   :: integral
+  real*8,dimension(:,:),allocatable         :: integrands
+  real*8,dimension(n_spectra,n_convergence) :: rel_int_error !< integretion error
+
+  !> convergence loop
+  do kk=1,n_convergence
+    !> initialise
+    allocate(integrands(n_points_conv(kk),n_spectra))
+    spectrum = spectrum_integrator_1st(n_points_conv(kk),n_spectra,min_angle,max_angle)
+    call spectrum%generate_spectrum
+#ifdef _OPENMP
+   !$omp parallel do default(private) shared(spectrum,integrands) collapse(2)
+   do jj=1,spectrum%n_spectra
+     do ii=1,spectrum%n_points
+       integrands(ii,jj) = expxsin2x(spectrum%points(ii,jj))
+     enddo
+   enddo
+   !$omp end parallel do
+#else
+    do ii=1,spectrum%n_spectra
+      integrands(:,ii) = expxsin2x(spectrum%n_points,spectrum%points(:,ii))
+    enddo
+#endif
+    call spectrum%integrate_data(integrands,integral) !< integrate values
+    rel_int_error(:,kk) = abs((integral - (int_expxsin2x(n_spectra,max_angle)-&
+    int_expxsin2x(n_spectra,min_angle)))/(int_expxsin2x(n_spectra,max_angle)-&
+    int_expxsin2x(n_spectra,min_angle))) !< compute the error  
+    deallocate(integrands)
+    call spectrum%deallocate_spectrum
+  enddo
+
+  !> compute convergence rate and check for error
+  do ii=1,n_spectra
+    call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
+    log10(rel_int_error(ii,:)),conv_coeff)
+    call assert_equals(conv_coeff(1),accuracy_order,tol_accuracy,&
+    "Error spectrum integration: expected accuracy order not matched!")
+    call assert_true(rel_int_error(ii,n_convergence).lt.tol_int_error,&
+    "Error spectrum integration: expected minimum error not achieved!")
+  enddo
+end subroutine test_1st_order_rectangle_integrator
+
+
+!>-------------------------------------------------------------------
 end module mod_spectra_deterministic_test

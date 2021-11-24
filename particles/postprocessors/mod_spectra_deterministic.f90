@@ -140,6 +140,7 @@ subroutine generate_midpoint_spectra(spectrum)
       (real(ii,kind=8)-5.d-1)*spectrum%wbin_size(jj)
     enddo
   enddo
+  !$omp end parallel do
 end subroutine generate_midpoint_spectra
 
 !> integrate data on the spectrum interval using the rectangle rule
@@ -169,6 +170,8 @@ subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
   integrals = 0.d0
   !$omp parallel default(private) shared(spectrum,midpoint_data,residual_id) &
   !$omp reduction(+:integrals)
+  !$ n_threads = omp_get_num_threads()
+  !$ thread_id = omp_get_thread_num()
   n_points_per_thread = spectrum%n_points/n_threads
   residual_id = spectrum%n_points - n_points_per_thread*n_threads
   do ii=1,spectrum%n_spectra
@@ -176,10 +179,10 @@ subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
     thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
   enddo
   !$omp end parallel
-  if(residual_id.lt.spectrum%n_points) then
+  if(residual_id.gt.0) then
     do ii=1,spectrum%n_spectra
       integrals(ii) = integrals(ii) + sum(midpoint_data(&
-      residual_id+1:spectrum%n_points,ii))
+      spectrum%n_points-residual_id+1:spectrum%n_points,ii))
     enddo
   endif
   integrals = integrals*spectrum%wbin_size

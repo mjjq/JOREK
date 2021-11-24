@@ -21,7 +21,7 @@ real*8,parameter  :: expected_std_conv_coeff=-5.d-1 !< expected std convergence 
 real*8,parameter  :: tol_std_conv_coeff=5.d-2       !< tolerance on the convergence rate
 real*8,parameter  :: tol_min_int_error=7.5d-4       !< tolerance on the minimum int error
 !> n_points for convergence study
-integer,dimension(n_convergence),parameter :: n_points_conv=(/1000,10000,100000,1000000,10000000/)
+integer,dimension(n_convergence),parameter :: n_points_conv=(/997,100725,100000,1003757,10023947/)
 real*8,dimension(2),parameter :: min_wlen=(/3.d-6,3.0d-7/) !< minimum wavelength
 real*8,dimension(2),parameter :: max_wlen=(/3.5d-6,4.d-7/) !< maximum wavelength
 real*8,dimension(2),parameter :: min_angle=(/6.d-1,2.3d0/) !< minimum angle for integration

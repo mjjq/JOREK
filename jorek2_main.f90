@@ -79,6 +79,9 @@ program JOREK2
 #endif
   use mpi_mod
   use mod_impurity, only: init_imp_adas
+#ifdef USE_BICGSTAB
+  use mod_bicgstab, only: bicgstab_solve
+#endif  
 
 
   use, intrinsic :: iso_c_binding

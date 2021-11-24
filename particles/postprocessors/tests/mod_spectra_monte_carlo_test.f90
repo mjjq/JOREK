@@ -119,7 +119,7 @@ subroutine test_set_uniform_spectrum_interval()
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
   implicit none
   !> variables
-  type(spectrum_rng_uniform) :: spectrum
+  type(spectrum_rng_uniform)            :: spectrum
   real*8,dimension(n_spectra),parameter :: min_wlen_2=(/1.d-5,5.d-9/)
   real*8,dimension(n_spectra),parameter :: max_wlen_2=(7.4d-5,1.25d-8)
   real*8,dimension(2*n_spectra)         :: min_wlen_3,max_wlen_3
@@ -160,7 +160,7 @@ subroutine test_spectrum_rng_uniform_construction_init()
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
   implicit none
   !> variables
-  type(spectrum_rng_uniform) :: spectrum
+  type(spectrum_rng_uniform)    :: spectrum
   real*8,dimension(2*n_spectra) :: real8_param
 
   !> test allocation with initialisation
@@ -205,11 +205,11 @@ subroutine test_spectrum_generation_rng_uniform()
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
   implicit none
   !> variables
-  type(spectrum_rng_uniform) :: spectrum
-  integer :: ii,jj
+  type(spectrum_rng_uniform)          :: spectrum
+  integer                             :: ii,jj
   integer,dimension(n_bins,n_spectra) :: histogram
-  real*8 :: min_w,delta_bin_w
-  real*8,dimension(n_spectra) :: max_variation
+  real*8                              :: min_w,delta_bin_w
+  real*8,dimension(n_spectra)         :: max_variation
 
 
   !> initialise and construct the spectrum class
@@ -252,13 +252,13 @@ subroutine test_spectrum_integration_rng_uniform()
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
   implicit none
   !> variables
-  type(spectrum_rng_uniform) :: spectrum
-  integer :: ii,kk,pp
-  !$ integer :: jj
-  real*8,dimension(2) :: std_conv_coeff   !< linear regression coeff. of the std deviation
-  real*8,dimension(n_spectra) :: integral !< required for avoiding wrong memory accesses
-  real*8,dimension(:,:),allocatable :: integrands
-  real*8,dimension(n_spectra,n_trials) :: integrals
+  type(spectrum_rng_uniform)  :: spectrum
+  integer                     :: ii,kk,pp
+  !$ integer                  :: jj
+  real*8,dimension(2)         :: std_conv_coeff !< linear regression coeff. of the std deviation
+  real*8,dimension(n_spectra) :: integral       !< required for avoiding wrong memory accesses
+  real*8,dimension(:,:),allocatable         :: integrands
+  real*8,dimension(n_spectra,n_trials)      :: integrals
   real*8,dimension(n_spectra,n_convergence) :: avg_integrals !< average value of the integrals
   real*8,dimension(n_spectra,n_convergence) :: std_dev       !< integral std deviation
   real*8,dimension(n_spectra,n_convergence) :: int_error     !< integral error

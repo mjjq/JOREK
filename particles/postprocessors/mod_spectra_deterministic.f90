@@ -132,15 +132,14 @@ subroutine generate_midpoint_spectra(spectrum)
   !> inputs-outputs
   class(spectrum_integrator_1st),intent(inout) :: spectrum
   !> variables
-  integer :: ii
-  real*8,dimension(spectrum%n_spectra,spectrum%n_points) :: local_points
-  !$omp parallel do default(private) shared(spectrum,local_points)
-  do ii=1,spectrum%n_points
-    spectrum%points(:,ii) = spectrum%min_wlen + &
-    (real(ii,kind=8)-5.d-1)*spectrum%wbin_size
+  integer :: ii,jj
+  !$omp parallel do default(private) shared(spectrum) collapse(2)
+  do jj=1,spectrum%n_spectra
+    do ii=1,spectrum%n_points
+      spectrum%points(ii,jj) = spectrum%min_wlen(jj) + &
+      (real(ii,kind=8)-5.d-1)*spectrum%wbin_size(jj)
+    enddo
   enddo
-  !$omp end parallel do
-  spectrum%points = transpose(local_points)
 end subroutine generate_midpoint_spectra
 
 !> integrate data on the spectrum interval using the rectangle rule
@@ -154,6 +153,7 @@ end subroutine generate_midpoint_spectra
 !>              variables using the central point rule
 !>   integrals: (real8)(n_spectra) integrals of midpoint data for each spectrum
 subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
+  !$ use omp_lib
   implicit none
   !> input-outputs
   class(spectrum_integrator_1st),intent(inout) :: spectrum
@@ -162,25 +162,27 @@ subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
   !> outputs
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
-  integer :: ii
-  !$ integer :: jj
-#ifdef _OPENMP
+  integer :: ii,thread_id,n_threads,n_points_per_thread,residual_id
+  !> integration
+  thread_id = 0
+  n_threads = 1
   integrals = 0.d0
-  !$omp parallel do default(private) shared(spectrum,midpoint_data) &
-  !$omp reduction(+:integrals) collapse(2)
-  do jj=1,spectrum%n_spectra
-    do ii=1,spectrum%n_points
-      integrals(jj) = integrals(jj) + midpoint_data(ii,jj)
-    enddo
-  enddo
-  !$omp end parallel do
-#else
+  !$omp parallel default(private) shared(spectrum,midpoint_data,residual_id) &
+  !$omp reduction(+:integrals)
+  n_points_per_thread = spectrum%n_points/n_threads
+  residual_id = spectrum%n_points - n_points_per_thread*n_threads
   do ii=1,spectrum%n_spectra
-    integrals(jj) = sum(uniform_data,dim=1)
+    integrals(ii) = integrals(ii) + sum(midpoint_data(&
+    thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
   enddo
-#endif
+  !$omp end parallel
+  if(residual_id.lt.spectrum%n_points) then
+    do ii=1,spectrum%n_spectra
+      integrals(ii) = integrals(ii) + sum(midpoint_data(&
+      residual_id+1:spectrum%n_points,ii))
+    enddo
+  endif
   integrals = integrals*spectrum%wbin_size
-
 end subroutine integrate_spectrum_rectangle
 
 !> deallocate spectrum intgrator 1st order datatype

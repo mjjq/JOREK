@@ -6,7 +6,7 @@ module mod_bicgstab
   !use mod_settings, only: n_tor
   use mod_parameters, only : n_tor, n_var
   use phys_module, only: use_pastix, use_mumps, use_strumpack
-  use global_distributed_matrix, only: ndof_glob, nz_glob, local_index_start
+  use global_distributed_matrix, only: ndof_glob, nz_glob, local_index_start, local_index_end
 
 
   implicit none
@@ -21,7 +21,7 @@ module mod_bicgstab
 
   type(SPARSE_MATRIX_T)          :: cooA
 
-  integer                        :: my_id, my_id_n
+  integer                        :: my_id, my_id_n, n_cpu
   integer                        :: MPI_GLOB, MPI_COMM_N, MPI_COMM_MASTER
 
 
@@ -61,6 +61,7 @@ module mod_bicgstab
     MPI_COMM_N = comm_n
     MPI_COMM_MASTER = comm_master
     call MPI_COMM_RANK(MPI_GLOB, my_id, ierr)
+    call MPI_COMM_SIZE(MPI_GLOB, n_cpu, ierr)
     call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)
 
     cooA%irn => irn
@@ -158,44 +159,60 @@ module mod_bicgstab
     real(kind=C_DOUBLE), allocatable  :: x(:), b(:)
     integer                           :: i, j, ir, jc
     integer                           :: ierr
-    integer                           :: iA_start, ix_start, iy_start, index_offset
+    integer                           :: iA_start, ix_start, iy_start, index_offset, ndof_local
     integer                           :: n_blocksize, n_blocks
     real(kind=C_DOUBLE)               :: b_tmp_block(n_tor*n_var)
+    real(kind=C_DOUBLE), allocatable  :: y_tmp(:)
+    integer, allocatable              :: rcv_c(:), rcv_d(:)
 
-    b = 0.0
+    b = 0.d0
 
-    do i=1,cooA%nnz
-      ir = cooA%irn(i)
-      jc = cooA%jcn(i)
-      b(ir) = b(ir) + cooA%val(i) * x(jc)
+    !do i=1,cooA%nnz
+    !  ir = cooA%irn(i)
+    !  jc = cooA%jcn(i)
+    !  b(ir) = b(ir) + cooA%val(i) * x(jc)
+    !enddo
+    !call MPI_AllReduce(MPI_IN_PLACE,b,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
+
+    n_blocksize  = n_tor * n_var
+    n_blocks     = nz_glob/(n_blocksize*n_blocksize)
+    index_offset = (local_index_start(my_id + 1) - 1) * n_blocksize
+    ndof_local   = (local_index_end(my_id + 1) - local_index_start(my_id + 1) + 1)*n_blocksize
+    allocate(y_tmp(ndof_local)); y_tmp = 0.d0
+
+!$omp parallel default(none)                                      &
+!$omp shared(cooA, x, n_blocks, n_blocksize, index_offset)        &
+!$omp private(i,iA_start,ix_start, iy_start, b_tmp_block) &
+!$omp reduction(+:y_tmp)
+
+!$omp do schedule(guided)
+    do i = 1, n_blocks
+
+      iA_start = (i - 1)*n_blocksize*n_blocksize
+      ix_start = cooA%jcn(iA_start + 1)
+      iy_start = cooA%irn(iA_start + 1) - index_offset
+
+      call dgemv('T',n_blocksize,n_blocksize,1.d0,cooA%val(iA_start + 1),n_blocksize,x(ix_start),1,0.d0,b_tmp_block,1)
+
+      y_tmp(iy_start:iy_start + n_blocksize - 1) = y_tmp(iy_start:iy_start + n_blocksize - 1) + b_tmp_block(1:n_blocksize)
+
+    enddo
+!$omp end do
+!$omp end parallel
+
+    allocate(rcv_c(n_cpu),rcv_d(n_cpu))
+
+    do i = 1, n_cpu
+      rcv_c(i) = (local_index_end(i) - local_index_start(i) + 1) * n_blocksize
     enddo
 
-!    n_blocksize  = n_tor * n_var
-!    n_blocks     = nz_glob/(n_blocksize*n_blocksize)
-!    index_offset = (local_index_start(my_id+1)-1) * n_blocksize
-!
-!!$omp parallel default(none)                                      &
-!!$omp shared(cooA, x, n_blocks, n_blocksize, index_offset)        &
-!!$omp private(i,iA_start,ix_start, iy_start, b_tmp_block) &
-!!$omp reduction(+:b)
-!
-!!$omp do schedule(guided)
-!    do i = 1, n_blocks
-!
-!      iA_start = (i - 1)*n_blocksize*n_blocksize
-!      ix_start = cooA%jcn(iA_start + 1)
-!      iy_start = cooA%irn(iA_start + 1) - index_offset
-!
-!      call dgemv('T',n_blocksize,n_blocksize,1.d0,cooA%val(iA_start + 1),n_blocksize,x(ix_start),1,0.d0,b_tmp_block,1)
-!
-!      b(iy_start:iy_start + n_blocksize - 1) = b(iy_start:iy_start + n_blocksize - 1) + b_tmp_block(1:n_blocksize)
-!
-!    enddo
-!!$omp end do
-!!$omp end parallel
+    rcv_d(1) = 0
+    do i = 2, n_cpu
+      rcv_d(i) = rcv_d(i-1) + rcv_c(i-1)
+    enddo
+    call MPI_Allgatherv(y_tmp,ndof_local,MPI_DOUBLE_PRECISION,b,rcv_c,rcv_d,MPI_DOUBLE_PRECISION,MPI_GLOB,ierr)
 
-    call MPI_AllReduce(MPI_IN_PLACE,b,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
-
+    deallocate(y_tmp,rcv_c,rcv_d)
 
   end subroutine matv
 

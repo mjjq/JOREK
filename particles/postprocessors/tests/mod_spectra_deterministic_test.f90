@@ -11,6 +11,7 @@ public :: run_fruit_spectra_deterministic_test
 integer,parameter :: n_convergence=5 !< number of points for convergence
 integer,parameter :: n_points=512437 !< number of points
 integer,parameter :: n_spectra=2     !< number of spectra
+real*8,parameter  :: tol_grid=3.d-16 !< tolerance for grid check
 !> n_points for convergence study
 integer,dimension(n_convergence) :: n_points_conv=(/997,100725,100000,1003757,10023947/)
 real*8,dimension(2),parameter :: min_wlen=(/3.0d-6,3.0d-7/) !< minimum wavelength
@@ -33,6 +34,8 @@ subroutine run_fruit_spectra_deterministic_test()
   write(*,'(/A)') "  ... running: spectra deterministic integrator tests"
   call test_deterministic_allocation_noinit
   call test_deterministic_allocation_init
+  call test_set_spectrum_int_1st_properties
+  call test_generate_midpoint_spectra
   write(*,'(/A)') "  ... tearing-down: spectra deterministic integrator tests"
   call teardown
 end subroutine run_fruit_spectra_deterministic_test
@@ -195,5 +198,34 @@ subroutine test_set_spectrum_int_1st_properties()
   !> cleanup
   call spectrum%deallocate_spectrum
 end subroutine test_set_spectrum_int_1st_properties
+
+!> test the generation of midpoint grids
+subroutine test_generate_midpoint_spectra()
+  use mod_spectra_deterministic, only: spectrum_integrator_1st
+  implicit none
+  !> variables
+  type(spectrum_integrator_1st) :: spectrum
+  integer :: ii,jj
+  real*8,dimension(n_points+1) :: interval_nodes,grid_nodes
+
+  !> initialise variables
+  spectrum = spectrum_integrator_1st(n_points,n_spectra,min_wlen,max_wlen)
+  !> generate grids and check correctness
+  call spectrum%generate_spectrum
+  do jj=1,spectrum%n_spectra
+    do ii=1,spectrum%n_points+1
+      interval_nodes(ii) = min_wlen(jj) + wbin_size(jj)*real(ii-1,kind=8)
+    enddo
+    grid_nodes(1:n_points) = (spectrum%points(:,jj)-5.d-1*spectrum%wbin_size(jj))
+    grid_nodes(n_points+1) = (spectrum%points(n_points,jj)+5.d-1*spectrum%wbin_size(jj))
+    grid_nodes = grid_nodes/interval_nodes
+    interval_nodes = 1.d0
+    call assert_equals(grid_nodes,interval_nodes,n_points,tol_grid,&
+    "Error spectrum integration generate spectrum: spectral grid mismatch!")
+  enddo
+  !> cleanaup
+  call spectrum%deallocate_spectrum
+
+end subroutine test_generate_midpoint_spectra
 
 end module mod_spectra_deterministic_test

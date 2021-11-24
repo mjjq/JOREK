@@ -2,7 +2,8 @@
 !!
 !! This module contains operators for relativistic particle and guiding center
 !! to take into account the radiation reaction force. This is only relevant
-!! for relativistic electrons.
+!! for relativistic electrons and, hence, this module assumes the test particle is
+!! an electron.
 !!
 !! The implemented operators are taken from here:
 !! https://arxiv.org/pdf/1412.1966.pdf
@@ -44,30 +45,30 @@ contains
     real(kind=8), intent(in)       :: t      !< Current time
     real(kind=8), intent(in)       :: dt     !< Time step
     real(kind=8), intent(in)       :: mass   !< Particle mass [AMU]
-    type(particle_kinetic_relativistic), intent(inout) :: particle !< Particle to be operated
+    type(particle_kinetic_relativistic), intent(inout) :: particle !< Particle to be operated on
 
-    real*8 :: tau
-    real*8 :: pperp(3), p(3) !< Perpendicular and total momentum in cartesian coordinates
+    real*8 :: pperp(3), p(3) !< Perpendicular and total momentum in SI units and in cartesian coordinates
 
-    real*8 :: E(3), B(3), Bxyz(3), psi, U
-    real*8 :: tau, Bnorm, ppar, mu, gamma
+    real*8 :: E(3), B(3), Bxyz(3), psi, U, Bnorm ! Field quantities
+    real*8 :: tau, gamma, m ! Characteristic time, Lorentz factor, mass in SI units
 
     ! Convert to SI units
-    mass = mass * ATOMIC_MASS_UNIT
-    p    = particle%p * ATOMIC_MASS_UNIT
+    m = mass * ATOMIC_MASS_UNIT
+    p = particle%p * ATOMIC_MASS_UNIT
 
-    ! Calculate the characteristic time and pperp
+    ! Field evaluation - the most CPU intensive part here
     call fields%calc_EBpsiU(t, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
-
     Bxyz  = vector_cylindrical_to_cartesian(particle%x(3), B)
     Bnorm = norm2(B)
-    gamma = sqrt(1.0 + ( norm2(p) / ( mass * SPEED_OF_LIGHT ) )**2 )
-    tau   = radreactforce_chartime(B, gamma)
-    pperp = p * ( 1.0 - dot_product(Bxyz,p) / ( Bnorm * norm2(p) ) )
+
+    ! Calculate the characteristic time and pperp
+    gamma = sqrt(1.0 + ( norm2(p) / ( m * SPEED_OF_LIGHT ) )**2 )
+    tau   = radreactforce_chartime(Bnorm, gamma)
+    pperp = p - Bxyz * dot_product(Bxyz,p) / Bnorm**2
 
     ! Apply RR-force and convert back to JOREK units
-    particle%p = -dt * ( pperp + p * norm2(pperp)**2 / ( mass * SPEED_OF_LIGHT )**2 ) / tau
-    particle%p = particle%p / ATOMIC_MASS_UNIT
+    p = p - dt * ( pperp + p * norm2(pperp)**2 / ( m * SPEED_OF_LIGHT )**2 ) / tau
+    particle%p = p / ATOMIC_MASS_UNIT
 
   end subroutine radreactforce_kinetic
 
@@ -86,10 +87,10 @@ contains
     type(particle_gc_relativistic), intent(inout) :: particle !< Particle to be operated
     
     real*8 :: E(3), B(3), psi, U
-    real*8 :: tau, Bnorm, ppar, mu, gamma
+    real*8 :: tau, Bnorm, ppar, mu, gamma, m
 
     ! Convert to SI units
-    mass = mass * ATOMIC_MASS_UNIT
+    m    = mass * ATOMIC_MASS_UNIT
     ppar = particle%p(1) * ATOMIC_MASS_UNIT
     mu   = particle%p(2) * ATOMIC_MASS_UNIT
 
@@ -97,12 +98,12 @@ contains
     call fields%calc_EBpsiU(t, particle%i_elm, particle%st, particle%x(3), E, B, psi, U)
 
     Bnorm = norm2(B)
-    gamma = sqrt( 1.0 + ppar**2 / ( mass * SPEED_OF_LIGHT )**2 + 2 * Bnorm * mass * mu )
+    gamma = sqrt( 1.0 + ( ppar / ( m * SPEED_OF_LIGHT ) )**2 + 2 * Bnorm * m * mu / ( m * SPEED_OF_LIGHT )**2 )
     tau   = radreactforce_chartime(Bnorm, gamma)
 
     ! Apply RR-force
-    particle%p(1) = ppar - dt * 2 * ppar * mu * Bnorm / ( mass * SPEED_OF_LIGHT**2 * tau )
-    particle%p(2) = mu - dt * 2 * mu * ( 1.0 + 2 * mu * Bnorm / ( mass * SPEED_OF_LIGHT**2 ) ) / tau
+    particle%p(1) = ppar - dt * 2 * ppar * mu * Bnorm / ( m * SPEED_OF_LIGHT**2 * tau )
+    particle%p(2) = mu - dt * 2 * mu * ( 1.0 + 2 * mu * Bnorm / ( m * SPEED_OF_LIGHT**2 ) ) / tau
 
     ! Convert back to JOREK units
     particle%p(1) = particle%p(1) / ATOMIC_MASS_UNIT

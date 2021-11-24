@@ -30,6 +30,7 @@ character(len=512), parameter :: REA3_FMT = "(1X,A, ' = ', 9ES12.4, '     ...')"
 character(len=512), parameter :: VARI_FMT = "(3x,I3,': ',A)"
 character(len=512), parameter :: MODE_FMT = "(3x,I3,': ',A,'(',A,'*phi)')"
 character(len=512), parameter :: CHAR_FMT = "(1X,A, ' = ""', A, '""')"
+character(len=512), parameter :: CHAR_FMT2 = "(1X,A,I2,A,' = ""',A,'""')"
 
 ! --- Local variables
 integer           :: ivar, itor
@@ -232,6 +233,10 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,REAL_FMT) 'sig_r                 ', sig_r(:)
     write(*,REAL_FMT) 'xr_tht                ', xr_tht(:)
     write(*,REAL_FMT) 'sig_tht               ', sig_tht(:)
+    write(*,REAL_FMT) 'xr_z                  ', xr_z(:)
+    write(*,REAL_FMT) 'sig_z                 ', sig_z(:)
+    write(*,REAL_FMT) 'bgf_r                 ', bgf_r
+    write(*,REAL_FMT) 'bgf_z                 ', bgf_z
   end if
 
   write(*,INTG_FMT) 'n_tht                 ', n_tht
@@ -308,6 +313,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'R_end                 ', R_end
   write(*,REAL_FMT) 'Z_begin               ', Z_begin
   write(*,REAL_FMT) 'Z_end                 ', Z_end
+  write(*,REAL_FMT) 'rect_grid_vac_psi     ', rect_grid_vac_psi
   write(*,REAL_FMT) 'R_geo                 ', R_geo
   write(*,REAL_FMT) 'Z_geo                 ', Z_geo
   write(*,REAL_FMT) 'amin                  ', amin
@@ -569,7 +575,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
       write(*,REAL_FMT2) 'wall_resistivity      ', wall_resistivity, ' (used only if STARWALL response file_version==1)'
       write(*,REAL_FMT2) 'wall_resistivity_fact ', wall_resistivity_fact, ' (used only if STARWALL response file_version>=2)'
     end if
-    write(*,REAL_FMT) 'PF_pert_start_time    ', PF_pert_start_time 
     write(*,REAL_FMT) 'start_VFB_ts          ', start_VFB_ts
     write(*,REAL_FMT) 'vert_FB_gain          ', vert_FB_gain(:)
     write(*,REAL_FMT) 'vert_FB_amp_ts        ', vert_FB_amp_ts(1:n_pf_coils)
@@ -652,6 +657,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   if ( vpar_smoothing ) then
     write(*,REAL_FMT) 'vpar_smoothing_coef   ', vpar_smoothing_coef(:)
   end if
+  write(*,REAL_FMT) 'min_sheath_angle      ', min_sheath_angle     
+
   write(*,LOGI_FMT) 'bc_natural_open       ', bc_natural_open
   write(*,LOGI_FMT) 'produce_live_data     ', produce_live_data
   write(*,LOGI_FMT) 'export_for_nemec      ', export_for_nemec
@@ -715,6 +722,16 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
     write(*,REA3_FMT) 'current_pfc           ', current_pfc(1:min(9,n_pfc))
   end if
 
+  write(*,INTG_FMT) 'n_jropes              ', n_jropes
+  if ( n_jropes > 0 ) then
+    write(*,REA3_FMT) 'R_jropes              ', R_jropes(1:n_jropes)
+    write(*,REA3_FMT) 'Z_jropes              ', Z_jropes(1:n_jropes)
+    write(*,REA3_FMT) 'w_jropes              ', w_jropes(1:n_jropes)
+    write(*,REA3_FMT) 'current_jropes        ', current_jropes(1:n_jropes)
+    write(*,REA3_FMT) 'rho_jropes            ', rho_jropes(1:n_jropes)
+    write(*,REA3_FMT) 'T_jropes              ', T_jropes(1:n_jropes)
+  end if
+
   write(*,LOGI_FMT) 'RMP_on                ', RMP_on
   if (RMP_on) then
      write(*,CHAR_FMT) 'RMP_psi_cos_file      ', trim(RMP_psi_cos_file)
@@ -766,7 +783,10 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 't_ns                ',  t_ns
      write(*,REAL_FMT) 'delta_n_convection  ',  delta_n_convection
      write(*,REAL_FMT) 'nimp_bg             ',  nimp_bg
-     write(*,CHAR_FMT) 'imp_type            ',  trim(imp_type)
+     write(*,INTG_FMT) 'n_adas              ',  n_adas
+     do i = 1, n_adas
+       write(*,CHAR_FMT2) 'imp_type(',i,')    ', trim(imp_type(i))
+     end do
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
      write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
      write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start
@@ -776,7 +796,6 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'imp_reflection      ', imp_reflection
      write(*,LOGI_FMT) 'output_prad_phi     ', output_prad_phi
      write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
-     write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,LOGI_FMT) 'use_imp_adas        ',  use_imp_adas
 
      !< Additional log for SPI model
@@ -788,9 +807,15 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,INTG_FMT) 'n_spi_tot           ',  n_spi_tot
      write(*,INTG_FMT) 'n_inj               ',  n_inj
+     do i = 1,n_inj
+       write(*,CHAR_FMT2) 'spi_plume_file(',i,')    ',  trim(spi_plume_file(i))
+     end do
+     write(*,LOGI_FMT) 'spi_plume_hdf5      ',  spi_plume_hdf5
      write(*,INTG_FMT) 'spi_rnd_seed        ',  spi_rnd_seed
      write(*,INTG_FMT) 'spi_abl_model       ',  spi_abl_model
-     write(*,CHAR_FMT) 'spi_shard_file      ',  trim(spi_shard_file)
+     do i = 1,n_inj
+       write(*,CHAR_FMT2) 'spi_shard_file(',i,')    ',  trim(spi_shard_file(i))
+     end do
      write(*,REAL_FMT) 'spi_Vel_Rref        ',  spi_Vel_Rref
      write(*,REAL_FMT) 'spi_Vel_Zref        ',  spi_Vel_Zref
      write(*,REAL_FMT) 'spi_Vel_RxZref      ',  spi_Vel_RxZref

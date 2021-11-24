@@ -259,6 +259,10 @@ required = 0
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
   ! --- Read ADAS data and generate coronal equilibrium if needed
   call init_imp_adas(my_id)
+#else
+  if (use_imp_adas .and. (nimp_bg(1) > 0.d0)) then
+    call init_imp_adas(my_id)
+  endif
 #endif
 
   ! --- Write out all parameters defined in parameters and the namelist input file.
@@ -935,6 +939,12 @@ required = 0
     
     if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
 
+    ! ---- For now running the jorek2_main should not include aux inputs
+    do i = 1, aux_node_list%n_nodes
+      aux_node_list%node(i)%values = 0.d0
+      aux_node_list%node(i)%deltas = 0.d0
+    enddo
+
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'
       write(*,'(A17,3i7,2f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,tstep_prev,'  *'
@@ -1231,9 +1241,17 @@ required = 0
        Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
        if (index_now > index_start+1) then
          Growth_mag  = 0.5d0*log(abs(energies(n_tor,1,index_now)/energies(n_tor,1,index_now-1)))/ tstep
-         Growth_kin  = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+         if (energies(n_tor,2,index_now-1) .gt. 0.d0) then
+           Growth_kin = 0.5d0*log(abs(energies(n_tor,2,index_now)/energies(n_tor,2,index_now-1)))/ tstep
+         else
+           Growth_kin = 0.d0
+         endif
          Growth_mag0 = 0.5d0*log(abs(energies(1,1,index_now)/energies(1,1,index_now-1)))/ tstep
-         Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
+         if (energies(1,2,index_now-1) .gt. 0.d0) then
+           Growth_kin0 = 0.5d0*log(abs(energies(1,2,index_now)/energies(1,2,index_now-1)))/ tstep
+         else
+           Growth_kin0 = 0.d0
+         endif
          write(*,131) 'Growth_mag,_kin =', Growth_mag0, Growth_mag, Growth_kin0, Growth_kin
        endif
        write(*,132)

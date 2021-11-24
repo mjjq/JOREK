@@ -147,4 +147,53 @@ subroutine test_deterministic_allocation_init()
   call spectrum%deallocate_spectrum
 end subroutine test_deterministic_allocation_init
 
+!> test set properties deterministic integrator 1st order 
+subroutine test_set_spectrum_int_1st_properties()
+  use mod_spectra_deterministic, only: spectrum_integrator_1st
+  implicit none
+  !> variables
+  type(spectrum_integrator_1st) :: spectrum
+  real*8,dimension(n_spectra),parameter :: min_wlen_2=(/1.d-5,5.d-9/)
+  real*8,dimension(n_spectra),parameter :: max_wlen_2=(/7.4d-5,1.25d-8/)
+  real*8,dimension(n_spectra) :: wbin_size_2
+  real*8,dimension(2*n_spectra) :: min_wlen_3,max_wlen_3,wbin_size_3
+
+  !> initialisation
+  wbin_size_2 = (max_wlen_2-min_wlen_2)/n_points
+  min_wlen_3(1:n_spectra) = min_wlen; min_wlen_3(n_spectra+1:2*n_spectra) = min_wlen_2;
+  max_wlen_3(1:n_spectra) = max_wlen; max_wlen_3(n_spectra+1:2*n_spectra) = max_wlen_2;
+  wbin_size_3 = (max_wlen_3-min_wlen_3)/n_points
+
+  !> test settings on unallocated properties
+  spectrum = spectrum_integrator_1st(n_points,n_spectra)
+  call spectrum%set_spectrum_interval(n_spectra,min_wlen,max_wlen)
+  call assert_equals(spectrum%n_spectra,n_spectra,&
+  "Error spectrum integration set interval not allocated: n_spectra do not match!")
+  call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,&
+  "Error spectrum integration set interval not allocated: min_wlen mismatch!")
+  call assert_equals(spectrum%wbin_size,wbin_size,n_spectra,&
+  "Error spectrum integration set interval not allocated: wbin_size mismatch!")
+
+  !> Test change of interval alrady allocated
+  call spectrum%set_spectrum_interval(n_spectra,min_wlen_2,max_wlen_2)
+  call assert_equals(spectrum%n_spectra,n_spectra,&
+  "Error spectrum integration set interval allocated: n_spectra do not match!")
+  call assert_equals(spectrum%min_wlen,min_wlen_2,n_spectra,&
+  "Error spectrum integration set interval allocated: min_wlen mismatch!")
+  call assert_equals(spectrum%wbin_size,wbin_size_2,n_spectra,&
+  "Error spectrum integration set interval allocated: wbin_size mismatch!")
+
+  !> Test change of interval alrady with re-allocated
+  call spectrum%set_spectrum_interval(2*n_spectra,min_wlen_3,max_wlen_3)
+  call assert_equals(spectrum%n_spectra,2*n_spectra,&
+  "Error spectrum integration set interval reallocated: n_spectra do not match!")
+  call assert_equals(spectrum%min_wlen,min_wlen_3,2*n_spectra,&
+  "Error spectrum integration set interval reallocated: min_wlen mismatch!")
+  call assert_equals(spectrum%wbin_size,wbin_size_3,2*n_spectra,&
+  "Error spectrum integration set interval reallocated: wbin_size mismatch!")
+
+  !> cleanup
+  call spectrum%deallocate_spectrum
+end subroutine test_set_spectrum_int_1st_properties
+
 end module mod_spectra_deterministic_test

@@ -37,9 +37,9 @@ subroutine run_fruit_spectra_deterministic_test()
   write(*,'(/A)') "  ... running: spectra deterministic integrator tests"
   call test_deterministic_allocation_noinit
   call test_deterministic_allocation_init
-  call test_set_spectrum_int_1st_properties
+  call test_set_spectrum_int_2nd_properties
   call test_generate_midpoint_spectra
-  call test_1st_order_rectangle_integrator
+  call test_2nd_order_rectangle_integrator
   write(*,'(/A)') "  ... tearing-down: spectra deterministic integrator tests"
   call teardown
 end subroutine run_fruit_spectra_deterministic_test
@@ -60,52 +60,52 @@ end subroutine teardown
 
 !> Tests ------------------------------------------------------------
 !> test the allocation, deallocation and construction of the
-!> spectrum_integrator_1st without initialisation
+!> spectrum_integrator_2nd without initialisation
 subroutine test_deterministic_allocation_noinit()
-  use mod_spectra_deterministic, only: spectrum_integrator_1st
+  use mod_spectra_deterministic, only: spectrum_integrator_2nd
   implicit none
   !> variables
-  type(spectrum_integrator_1st) :: spectrum
+  type(spectrum_integrator_2nd) :: spectrum
 
   !> test allocation and deallocation
   call spectrum%allocate_spectrum(n_points,n_spectra)
   call assert_equals(spectrum%n_points,n_points,&
-  "Error spectrum integration 1st allocation: n_points do not match!")
+  "Error spectrum integration 2nd allocation: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
-  "Error spectrum integration 1st allocation: n_spectra do not match!")
+  "Error spectrum integration 2nd allocation: n_spectra do not match!")
   call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 1st allocation: points not allocated!")
+  "Error spectrum integration 2nd allocation: points not allocated!")
   call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 1st allocation: points size mismatch!")
+  "Error spectrum integration 2nd allocation: points size mismatch!")
   call spectrum%deallocate_spectrum
   call assert_equals(spectrum%n_points,-1,&
-  "Error spectrum integration 1st deallocation: n_points not set to default!")
+  "Error spectrum integration 2nd deallocation: n_points not set to default!")
   call assert_equals(spectrum%n_spectra,-1,&
-  "Error spectrum integration 1st deallocation: n_spectra not set to default!")
+  "Error spectrum integration 2nd deallocation: n_spectra not set to default!")
   call assert_false(allocated(spectrum%points),&
-  "Error spectrum integration 1st deallocation: points not deallocated!")
+  "Error spectrum integration 2nd deallocation: points not deallocated!")
 
   !> test constructor
-  spectrum = spectrum_integrator_1st(n_points,n_spectra)
+  spectrum = spectrum_integrator_2nd(n_points,n_spectra)
    call assert_equals(spectrum%n_points,n_points,&
-  "Error spectrum integration 1st construction: n_points do not match!")
+  "Error spectrum integration 2nd construction: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
-  "Error spectrum integration 1st construction: n_spectra do not match!")
+  "Error spectrum integration 2nd construction: n_spectra do not match!")
   call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 1st construction: points not allocated!") 
+  "Error spectrum integration 2nd construction: points not allocated!") 
   call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 1st construction: points size mismatch!")
+  "Error spectrum integration 2nd construction: points size mismatch!")
   call spectrum%deallocate_spectrum
 
 end subroutine test_deterministic_allocation_noinit
 
 !> test allocation, deallocation and construction of the
-!> spectrum_integrator_1st with initialisation
+!> spectrum_integrator_2nd with initialisation
 subroutine test_deterministic_allocation_init()
-  use mod_spectra_deterministic, only: spectrum_integrator_1st
+  use mod_spectra_deterministic, only: spectrum_integrator_2nd
   implicit none
   !> variables
-  type(spectrum_integrator_1st) :: spectrum
+  type(spectrum_integrator_2nd) :: spectrum
   real*8,dimension(2*n_spectra) :: real8_param
 
   !> initialisation
@@ -114,52 +114,52 @@ subroutine test_deterministic_allocation_init()
   !> test allocation and deallocation with initialisation
   call spectrum%allocate_spectrum(n_points,n_spectra,real8_param)
   call assert_equals(spectrum%n_points,n_points,&
-  "Error spectrum integration 1st allocation init: n_points do not match!")
+  "Error spectrum integration 2nd allocation init: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
-  "Error spectrum integration 1st allocation init: n_spectra do not match!")
+  "Error spectrum integration 2nd allocation init: n_spectra do not match!")
   call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,&
-  "Error spectrum integration 1st allocation init: min wavelengths do not match!")
+  "Error spectrum integration 2nd allocation init: min wavelengths do not match!")
   call assert_equals(spectrum%wbin_size,wbin_size,n_spectra,&
-  "Error spectrum integration 1st allocation init: wavelengths bin size do not match!")
+  "Error spectrum integration 2nd allocation init: wavelengths bin size do not match!")
   call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 1st allocation init: points not allocated!") 
+  "Error spectrum integration 2nd allocation init: points not allocated!") 
   call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 1st allocation init: points size mismatch!")
+  "Error spectrum integration 2nd allocation init: points size mismatch!")
   call spectrum%deallocate_spectrum
   call assert_equals(spectrum%n_points,-1,&
-  "Error spectrum integration 1st deallocation init: n_points not set to default!")
+  "Error spectrum integration 2nd deallocation init: n_points not set to default!")
   call assert_equals(spectrum%n_spectra,-1,&
-  "Error spectrum integration 1st deallocation init: n_spectra not set to default!")
+  "Error spectrum integration 2nd deallocation init: n_spectra not set to default!")
   call assert_false(allocated(spectrum%points),&
-  "Error spectrum integration 1st deallocation init: points not deallocated!")
+  "Error spectrum integration 2nd deallocation init: points not deallocated!")
   call assert_false(allocated(spectrum%min_wlen),&
-  "Error spectrum integration 1st deallocation init: min_wlen not deallocated!")
+  "Error spectrum integration 2nd deallocation init: min_wlen not deallocated!")
   call assert_false(allocated(spectrum%wbin_size),&
-  "Error spectrum integration 1st deallocation init: wbin_size not deallocated!")
+  "Error spectrum integration 2nd deallocation init: wbin_size not deallocated!")
 
   !> test construction with initialisation
-  spectrum = spectrum_integrator_1st(n_points,n_spectra,min_wlen,max_wlen)
+  spectrum = spectrum_integrator_2nd(n_points,n_spectra,min_wlen,max_wlen)
   call assert_equals(spectrum%n_points,n_points,&
-  "Error spectrum integration 1st construction init: n_points do not match!")
+  "Error spectrum integration 2nd construction init: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
-  "Error spectrum integration 1st construction init: n_spectra do not match!")
+  "Error spectrum integration 2nd construction init: n_spectra do not match!")
   call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,&
-  "Error spectrum integration 1st construction init: min wavelengths do not match!")
+  "Error spectrum integration 2nd construction init: min wavelengths do not match!")
   call assert_equals(spectrum%wbin_size,wbin_size,n_spectra,&
-  "Error spectrum integration 1st construction init: wavelengths bin size do not match!")
+  "Error spectrum integration 2nd construction init: wavelengths bin size do not match!")
   call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 1st construction init: points not allocated!") 
+  "Error spectrum integration 2nd construction init: points not allocated!") 
   call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 1st construction init: points size mismatch!")
+  "Error spectrum integration 2nd construction init: points size mismatch!")
   call spectrum%deallocate_spectrum
 end subroutine test_deterministic_allocation_init
 
-!> test set properties deterministic integrator 1st order 
-subroutine test_set_spectrum_int_1st_properties()
-  use mod_spectra_deterministic, only: spectrum_integrator_1st
+!> test set properties deterministic integrator 2nd order 
+subroutine test_set_spectrum_int_2nd_properties()
+  use mod_spectra_deterministic, only: spectrum_integrator_2nd
   implicit none
   !> variables
-  type(spectrum_integrator_1st) :: spectrum
+  type(spectrum_integrator_2nd) :: spectrum
   real*8,dimension(n_spectra),parameter :: min_wlen_2=(/1.d-5,5.d-9/)
   real*8,dimension(n_spectra),parameter :: max_wlen_2=(/7.4d-5,1.25d-8/)
   real*8,dimension(n_spectra)           :: wbin_size_2
@@ -172,7 +172,7 @@ subroutine test_set_spectrum_int_1st_properties()
   wbin_size_3 = (max_wlen_3-min_wlen_3)/n_points
 
   !> test settings on unallocated properties
-  spectrum = spectrum_integrator_1st(n_points,n_spectra)
+  spectrum = spectrum_integrator_2nd(n_points,n_spectra)
   call spectrum%set_spectrum_interval(n_spectra,min_wlen,max_wlen)
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum integration set interval not allocated: n_spectra do not match!")
@@ -201,19 +201,19 @@ subroutine test_set_spectrum_int_1st_properties()
 
   !> cleanup
   call spectrum%deallocate_spectrum
-end subroutine test_set_spectrum_int_1st_properties
+end subroutine test_set_spectrum_int_2nd_properties
 
 !> test the generation of midpoint grids
 subroutine test_generate_midpoint_spectra()
-  use mod_spectra_deterministic, only: spectrum_integrator_1st
+  use mod_spectra_deterministic, only: spectrum_integrator_2nd
   implicit none
   !> variables
-  type(spectrum_integrator_1st) :: spectrum
+  type(spectrum_integrator_2nd) :: spectrum
   integer :: ii,jj
   real*8,dimension(n_points+1) :: interval_nodes,grid_nodes
 
   !> initialise variables
-  spectrum = spectrum_integrator_1st(n_points,n_spectra,min_wlen,max_wlen)
+  spectrum = spectrum_integrator_2nd(n_points,n_spectra,min_wlen,max_wlen)
   !> generate grids and check correctness
   call spectrum%generate_spectrum
   do jj=1,spectrum%n_spectra
@@ -232,17 +232,17 @@ subroutine test_generate_midpoint_spectra()
 
 end subroutine test_generate_midpoint_spectra
 
-!> test the 1st order rectangle method integrator. The reltive error 
+!> test the 2nd order rectangle method integrator. The reltive error 
 !> is used due to the large value of the integral.
-subroutine test_1st_order_rectangle_integrator()
+subroutine test_2nd_order_rectangle_integrator()
   use omp_lib
   use constants,                 only: PI
   use mod_test_functions,        only: expxsin2x,int_expxsin2x
   use mod_linear_reg,            only: linear_regression
-  use mod_spectra_deterministic, only: spectrum_integrator_1st 
+  use mod_spectra_deterministic, only: spectrum_integrator_2nd 
   implicit none
   !> variables
-  type(spectrum_integrator_1st) :: spectrum
+  type(spectrum_integrator_2nd) :: spectrum
   integer                       :: ii,kk
   !$ integer                    :: jj
   real*8,dimension(2)           :: conv_coeff !< convergence coeff. from linear regression
@@ -254,7 +254,7 @@ subroutine test_1st_order_rectangle_integrator()
   do kk=1,n_convergence
     !> initialise
     allocate(integrands(n_points_conv(kk),n_spectra))
-    spectrum = spectrum_integrator_1st(n_points_conv(kk),n_spectra,min_angle,max_angle)
+    spectrum = spectrum_integrator_2nd(n_points_conv(kk),n_spectra,min_angle,max_angle)
     call spectrum%generate_spectrum
 #ifdef _OPENMP
    !$omp parallel do default(private) shared(spectrum,integrands) collapse(2)
@@ -286,7 +286,7 @@ subroutine test_1st_order_rectangle_integrator()
     call assert_true(rel_int_error(ii,n_convergence).lt.tol_int_error,&
     "Error spectrum integration: expected minimum error not achieved!")
   enddo
-end subroutine test_1st_order_rectangle_integrator
+end subroutine test_2nd_order_rectangle_integrator
 
 
 !>-------------------------------------------------------------------

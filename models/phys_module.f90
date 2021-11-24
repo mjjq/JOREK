@@ -51,6 +51,7 @@ module phys_module
   logical :: mach_one_bnd_integral!< use a boundary integral (boundary_matrix_open) to implement Mach=one boundary condition
   logical :: vpar_smoothing       !< apply a smoothing function to smooth jumps in Vpar at B.n=0
   real*8  :: vpar_smoothing_coef(3) !< coefficients for the smoothing profile of the parallel velocity
+  real*8  :: min_sheath_angle     !< For sheath boundary conditions: Minimum incident angle for heat and particle fluxes (in degrees)
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
@@ -99,6 +100,52 @@ module phys_module
   logical :: use_strumpack_eq     !< Use Strumpack equilibrium solver  
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
+  real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
+
+  ! ------------------------------------------------
+  ! --- Structures to implement BCs in model600
+  ! ------------------------------------------------
+  ! --- For more info see  https://www.jorek.eu/wiki/doku.php?id=choose_boundary_conditions
+  integer, parameter :: max_bnd_types=30
+
+  type type_dirichlet_bc                           
+    logical :: psi  
+    logical :: u    
+    logical :: zj   
+    logical :: w    
+    logical :: rho  
+    logical :: T    
+    logical :: Ti   
+    logical :: Te   
+    logical :: Vpar 
+    logical :: rhon 
+    logical :: rho_imp 
+    logical :: nre  
+    logical :: AR   
+    logical :: AZ   
+    logical :: A3  
+  end type type_dirichlet_bc
+
+  type type_natural_bc                           
+    logical :: rho  
+    logical :: T    
+    logical :: Ti   
+    logical :: Te   
+    logical :: Vpar 
+    logical :: rhon 
+    logical :: rho_imp 
+    logical :: nre  
+  end type type_natural_bc
+
+  type type_bcs                           
+    type (type_dirichlet_bc) :: dirichlet
+    type (type_natural_bc)   :: natural
+    logical                  :: mach1 
+  end type type_bcs
+
+  type (type_bcs), dimension(max_bnd_types) :: bcs   
+  ! ------------------------------------------------
+
 
   character(20)       :: numfmt     = "'_d',i5.5"
   character(20)       :: numfmt_rst = "'_r',i3.3"
@@ -267,6 +314,16 @@ module phys_module
   real*8  :: Zmax_pfc(40)     !< Maximum Z of coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
   real*8  :: current_pfc(40)  !< Current density in the coil, (OLD. for MAST...) use JOREK-STARWALL for coils instead [[jorek-starwall|JOREK-STARWALL]]
   
+  !> @name current ropes definition for initial equilibrium (eg. merging flux ropes)
+  !! Numerical definition of current ropes for initial equilibrium (eg. merging flux ropes)
+  integer :: n_jropes          !< Number of ropes, 
+  real*8  :: R_jropes(10)      !< R centre of rope
+  real*8  :: Z_jropes(10)      !< Z centre of rope
+  real*8  :: w_jropes(10)      !< width of rope
+  real*8  :: current_jropes(10)!< Current inside the rope
+  real*8  :: rho_jropes(10)    !< Density inside the rope
+  real*8  :: T_jropes(10)      !< Temperature inside the rope
+  
   !> @name Pellet-related input parameters
   real*8  :: pellet_amplitude  !< amplitude of density source (when pellet modelled as density source)
   real*8  :: pellet_R          !< major radius position pellet
@@ -288,6 +345,7 @@ module phys_module
 
   !> @name shared between MGI and SPI applications
   integer, parameter :: n_inj_max = 10 ! The hard coded maximum number of injections
+  integer, parameter :: n_imp_max = 5  ! The hard coded maximum number of impurity species
 
   real*8  :: t_ns(n_inj_max)   !< MGI onset time (JOREK units)
   real*8  :: ns_amplitude(n_inj_max)  !< Amplitude of gas source
@@ -298,7 +356,7 @@ module phys_module
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
   real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
 
-  character(len=80) :: imp_type !< Type of injected material or background impurity species: Argon, neon, ...
+  character(len=80) :: imp_type(n_imp_max) !< Type of injected material or background impurity species: Argon, neon, ...
   logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
 
   !> @name Massive gas injection-related input parameters
@@ -312,8 +370,8 @@ module phys_module
   real*8  :: L_tube            !< Pipe length
   real*8  :: ksi_ion            !< Energy cost of each ionization
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
-  real*8  :: nimp_bg            !< Density of background impurity (in \f$m^{-3}\f$)
- 
+  real*8  :: nimp_bg(n_imp_max) !< Density of background impurities (in \f$m^{-3}\f$)
+
   !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
@@ -358,9 +416,11 @@ module phys_module
                                 !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
-  character(len=256) :: spi_shard_file !< The name of the shard size file
+  character(len=256) :: spi_shard_file(n_inj_max)!< The name of the shard size file
+  character(len=256) :: spi_plume_file(n_inj_max)!< The name of the shard information datafile (array)
+  logical            :: spi_plume_hdf5           !< if 'spi_plume_file' is in HDF5format?
 
-  integer :: n_adas             !< Number of species to be traced by ADAS, for future development only
+  integer :: n_adas             !< Number of species to be traced by ADAS
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
 
@@ -398,6 +458,7 @@ module phys_module
   real*8  :: R_end             !< Right boundary of grid in R-direction (for rectangular grid)
   real*8  :: Z_begin           !< Lower boundary of grid in Z-direction (for rectangular grid)
   real*8  :: Z_end             !< Upper boundary of grid in Z-direction (for rectangular grid)
+  real*8  :: rect_grid_vac_psi !< Use a vacuum psi-bnd condition for squared-grid, ie. (rect_grid_vac_psi * R**2)
 
   
   !> @name Polar Grid
@@ -408,10 +469,13 @@ module phys_module
   real*8  :: R_geo             	    !< Center of the grid (for polar grid)
   real*8  :: Z_geo             	    !< Center of the grid (for polar grid)
   real*8  :: psi_axis_init     	    !< Initial guess for Psi at the magnetic axis (for polar grid)
-  real*8  :: XR_r(2)           	    !< Psi_N position of radial grid accumulation (two positions) (for polar grid)
-  real*8  :: SIG_r(2)          	    !< Width of grid accumulation (two positions) (for polar grid)
+  real*8  :: XR_r(2)           	    !< Psi_N position of radial grid accumulation (two positions) (for polar grid) (also used for R-position in square-grid)
+  real*8  :: SIG_r(2)          	    !< Width of grid accumulation (two positions) (for polar grid) (also used for R-width in square-grid)
   real*8  :: XR_tht(2)         	    !< Position of poloidal grid accumulation (0...1, two positions) (for polar grid)
   real*8  :: SIG_tht(2)        	    !< Width of grid accumulation (two positions) (for polar grid)
+  real*8  :: XR_z(2)           	    !< Z-position of square grid accumulation (two positions) (for square grid)
+  real*8  :: SIG_z(2)          	    !< Z-Width of grid accumulation (two positions) (for square grid)
+  real*8  :: bgf_r, bgf_z           !< Background for meshac distribution or R and Z accumulation (only for square grid!)
   
   !> @name Flux surface grid
   !! Parameters defining a flux-aligned grid without X-point in the poloidal plane.

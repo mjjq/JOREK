@@ -121,9 +121,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_L_inj, spi_L_inj_diff,                          &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
-                imp_type, delta_n_convection, nimp_bg,              &
+                imp_type, delta_n_convection, nimp_bg, n_adas,      &
                 adas_dir, output_prad_phi,                          &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
+                spi_plume_file, spi_plume_hdf5,                     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
@@ -134,7 +135,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
                 n_iter_freeb, n_pf_coils, pf_coils,                 &
-                axis_srch_radius, PF_pert_start_time,               &
+                axis_srch_radius,                                   &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
@@ -254,7 +255,12 @@ if (my_id .eq. 0) then
       write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!", n_spi, n_inj
       stop
     end if
-  end do
+  end do 
+
+ if (n_adas > n_imp_max) then 
+    write(*,*) "ERROR: n_adas should be no larger than n_imp_max, EXITING!"
+    stop
+  end if
 
   if (using_spi) call init_spi_all()
 end if

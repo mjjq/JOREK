@@ -12,7 +12,7 @@ public :: run_fruit_spectra_monte_carlo_test
 !> Variables -----------------------------------------------------------------
 integer,parameter :: n_trials=50      !< number of trials for computing std deviation
 integer,parameter :: n_convergence=5  !< number of points for convergence
-integer,parameter :: n_points=500000  !< number of points
+integer,parameter :: n_points=5512437 !< number of points
 integer,parameter :: n_spectra=2      !< number of spectra
 integer,parameter :: n_bins=500       !< number of bins for histograms
 real*8,parameter  :: tol_real8=1.d-16 !< tolerance for assert
@@ -50,25 +50,19 @@ end subroutine run_fruit_spectra_monte_carlo_test
 !> Set-up and tear-down ------------------------------------------------------
 !> Set-up test variables
 subroutine setup()
-  use mod_random_seed,only: random_seed
   use mod_pcg32_rng,  only: pcg32_rng
   !$ use omp_lib
   implicit none
   !> variables
-  integer :: n_streams,thread_id,ifail
+  integer :: n_threads
 
   !> set the inverse of the pdf
   i_pdf = max_wlen-min_wlen
   !> initialise the rngs using the pcg32
   n_threads = 1
-  thread_id = 1
   !$ n_threads = omp_get_max_threads()
   allocate(pcg32_rng::rngs(n_threads))
-  !$omp parallel default(private) shared(rngs,n_threads,ifail)
-  !$ thread_id = omp_get_thread_num()+1
-  call rngs(thread_id)%initialize(n_dims=n_spectra,seed=random_seed(),&
-  n_streams=n_threads*n_spectra,i_stream=thread_id,ierr=ifail)
-  !$omp end parallel 
+  call omp_initialize_rngs(n_points)
 end subroutine setup
 
 !> clean up all test variables
@@ -276,6 +270,7 @@ subroutine test_spectrum_integration_rng_uniform()
   do kk=1,n_convergence
     !> initialise structures and grids
     allocate(integrands(n_points_conv(kk),n_spectra))
+    call omp_initialize_rngs(n_points_conv(kk)) !< change the size of the rng output
     spectrum = spectrum_rng_uniform(n_points_conv(kk),n_spectra,PI*min_angle,PI*max_angle)
     do pp=1,n_trials
       call spectrum%generate_spectrum(rngs)
@@ -324,6 +319,30 @@ subroutine test_spectrum_integration_rng_uniform()
   enddo
 
 end subroutine test_spectrum_integration_rng_uniform
+
+!> Tools ---------------------------------------------------------------------
+!> initialise the random number generators in omp loops
+!> inputs:
+!>   n_points_loc: (integer) number of points for rngs init
+subroutine omp_initialize_rngs(n_points_loc)
+  use mod_random_seed,only: random_seed
+  !$ use omp_lib
+  implicit none
+  !> inputs
+  integer,intent(in) :: n_points_loc
+  !> variables
+  integer :: n_threads,n_points_per_thread,thread_id,ifail
+  !> initialise the rngs using the pcg32
+  n_threads = 1
+  thread_id = 1
+  !$omp parallel default(private) shared(rngs,n_threads,ifail)
+  !$ thread_id = omp_get_thread_num()+1
+  !$ n_threads = omp_get_num_threads()
+  n_points_per_thread = n_points_loc/n_threads
+  call rngs(thread_id)%initialize(n_dims=n_points_per_thread,&
+  seed=random_seed(),n_streams=n_threads,i_stream=thread_id,ierr=ifail)
+  !$omp end parallel 
+end subroutine omp_initialize_rngs
 
 !>----------------------------------------------------------------------------
 

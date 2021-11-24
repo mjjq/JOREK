@@ -71,7 +71,7 @@ subroutine test_deterministic_allocation_noinit()
   "Error spectrum integration 1st deallocation: n_points not set to default!")
   call assert_equals(spectrum%n_spectra,-1,&
   "Error spectrum integration 1st deallocation: n_spectra not set to default!")
-  call assert_fail(allocated(spectrum%points),&
+  call assert_falseallocated(spectrum%points),&
   "Error spectrum integration 1st allocation: points not deallocated!")
 
   !> test constructor

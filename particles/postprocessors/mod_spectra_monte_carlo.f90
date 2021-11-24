@@ -133,21 +133,35 @@ subroutine generate_uniform_rng_spectrum(spectrum,rngs)
   class(spectrum_rng_uniform),intent(inout)   :: spectrum
   class(type_rng),dimension(:),allocatable,intent(inout) :: rngs
   !> variables
-  integer :: ii,thread_id
-  real*8,dimension(spectrum%n_spectra) :: rands
-  real*8,dimension(spectrum%n_spectra,spectrum%n_points) :: local_points
+  integer :: ii,n_threads,n_points_per_thread,n_residual,thread_id
+  real*8,dimension(:),allocatable :: rands
   !> generate spectrum from uniform random number distribution
   thread_id = 0
-  !$omp parallel default(private) shared(spectrum,rngs,local_points)
+  n_threads = 1
+  !
+  !$omp parallel default(private) shared(spectrum,rngs,n_points_per_thread,n_residual)
   !$ thread_id = omp_get_thread_num()
-  !$omp do
-  do ii=1,spectrum%n_points
+  !$ n_threads = omp_get_num_threads()
+  n_points_per_thread = spectrum%n_points/n_threads
+  n_residual = spectrum%n_points-n_points_per_thread*n_threads
+  allocate(rands(n_points_per_thread))
+  do ii=1,spectrum%n_spectra
     call rngs(thread_id+1)%next(rands)
-    local_points(:,ii) = spectrum%min_wlen+spectrum%i_pdf*rands
+    spectrum%points(thread_id*n_points_per_thread+1:&
+    (thread_id+1)*n_points_per_thread,ii) = spectrum%min_wlen(ii) + &
+    spectrum%i_pdf(ii)*rands
   enddo
-  !$omp end do
+  deallocate(rands)
   !$omp end parallel
-  spectrum%points = transpose(local_points)
+  if(n_residual.gt.0) then
+    allocate(rands(n_points_per_thread))
+    call rngs(thread_id+1)%next(rands)
+    do ii=1,spectrum%n_spectra
+      spectrum%points(spectrum%n_points-n_residual+1:spectrum%n_points,ii) = &
+      spectrum%min_wlen(ii) + spectrum%i_pdf(ii)*rands(1:n_residual)
+    enddo
+    deallocate(rands)
+  endif
   
 end subroutine generate_uniform_rng_spectrum
 

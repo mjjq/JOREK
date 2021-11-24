@@ -275,7 +275,7 @@ subroutine test_spectrum_integration_rng_uniform()
     do pp=1,n_trials
       call spectrum%generate_spectrum(rngs)
 #ifdef _OPENMP
-      !$omp parallel do default(private) shared(spectrum,integrands,integrals) collapse(2)
+      !$omp parallel do default(private) shared(spectrum,integrands) collapse(2)
       do jj=1,spectrum%n_spectra
         do ii=1,spectrum%n_points
           integrands(ii,jj) = sin2x(spectrum%points(ii,jj))

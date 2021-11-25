@@ -1,13 +1,15 @@
 module mod_bicgstab
+!     Details of this algorithm are described in "Templates for the
+!     Solution of Linear Systems: Building Blocks for Iterative
+!     Methods", Barrett, Berry, Chan, Demmel, Donato, Dongarra,
+!     Eijkhout, Pozo, Romine, and van der Vorst, SIAM Publications,
+!     1993. (ftp netlib2.cs.utk.edu; cd linalg; get templates.ps).
+!     http://www.netlib.org/templates/matlab/bicgstab.m
 #ifdef USE_BICGSTAB
   use iso_c_binding
   use mpi
   use mumps_module, only: mumps_par
-  !use mod_settings, only: n_tor
-  use mod_parameters, only : n_tor, n_var
   use phys_module, only: use_pastix, use_mumps, use_strumpack
-  use global_distributed_matrix, only: ndof_glob, nz_glob, local_index_start, local_index_end
-
 
   implicit none
 
@@ -21,12 +23,21 @@ module mod_bicgstab
 
   type(SPARSE_MATRIX_T)          :: cooA
 
+  ! MPI related
   integer                        :: my_id, my_id_n, n_cpu
   integer                        :: MPI_GLOB, MPI_COMM_N, MPI_COMM_MASTER
 
+  ! Global-matrix related
+  integer                           :: blocksize, blocksize2
+  integer                           :: n_blocks, n_glob, nnz, index_offset, n_local
+  real(kind=C_DOUBLE), allocatable  :: b_tmp(:)
+  integer, allocatable              :: rcv_c(:), rcv_d(:)
+
+  logical                        :: bicgstab_initialized = .false.
+
 
   private
-  public :: bicgstab_driver
+  public :: bicgstab_driver, bicgstab_finalize
 
   contains
 
@@ -41,22 +52,16 @@ module mod_bicgstab
     real(kind=C_DOUBLE), pointer, intent(in)    :: val(:)
     real(kind=C_DOUBLE), allocatable            :: b(:)
     real(kind=C_DOUBLE), allocatable            :: x(:)
-    !real(kind=8), allocatable, intent(inout)    :: sol(:)
     integer, intent(in)                         :: comm_glob, comm_n, comm_master
     integer, intent(inout)                      :: max_it
 
-    !real(kind=C_DOUBLE), allocatable :: x(:) ! local copy of sol, not necessary, but sol is not a pointer
     real(kind=C_DOUBLE), allocatable, target :: r(:), r_tld(:), s(:), s_hat(:), tmp(:), p(:), p_hat(:), v(:), t(:)
     integer                          :: iter, flag
     integer                          :: ierr
     real(kind=C_DOUBLE)              :: tol, error, alpha, beta, omega, bnrm2, rho, rho_1, resid, snrm2
-    integer                          :: n, nnz
 
-    real(kind=C_DOUBLE), external :: dnrm2, ddot
+    real(kind=C_DOUBLE), external :: dnrm2, ddot ! 2-norm and dot product functions from BLAS
 
-    ! set module values
-    n = ndof_glob
-    nnz = nz_glob
     MPI_GLOB = comm_glob
     MPI_COMM_N = comm_n
     MPI_COMM_MASTER = comm_master
@@ -64,52 +69,60 @@ module mod_bicgstab
     call MPI_COMM_SIZE(MPI_GLOB, n_cpu, ierr)
     call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)
 
+    if (.not.bicgstab_initialized) then
+      call bicgstab_init()
+      bicgstab_initialized = .true.
+    endif
+
     cooA%irn => irn
     cooA%jcn => jcn
     cooA%val => val
     cooA%indexing = 1
-    cooA%n = n
+    cooA%n = n_glob
     cooA%nnz = nnz
+
+    call MPI_BARRIER(MPI_GLOB, ierr)
 
     iter = 0
     flag = 0
 
-    allocate(r(n), r_tld(n), s(n), s_hat(n), tmp(n), p(n), p_hat(n), v(n), t(n))
+    allocate(r(n_glob), r_tld(n_glob), s(n_glob), s_hat(n_glob), &
+             tmp(n_glob), p(n_glob), p_hat(n_glob), v(n_glob), t(n_glob))
 
-    bnrm2 = dnrm2(n, b, 1)
+    bnrm2 = dnrm2(n_glob, b, 1)
 
     if (bnrm2 == 0.0) bnrm2 = 1.0
 
     call matv(x,tmp)
     r = b - tmp
 
-    error = dnrm2(n, r, 1)/bnrm2;
+    error = dnrm2(n_glob, r, 1)/bnrm2;
     if (error < tol) then
-      if (my_id.eq.0) write(*,*) "bicgstab exiting, initial relative error:", error
-      max_it = 1
-      return
+      !if (my_id.eq.0) write(*,*) "bicgstab exiting, initial relative error:", error
+      max_it = 0
     endif
 
     omega  = 1.0
     r_tld = r
 
     do iter = 1, max_it
-      rho = ddot(n,r_tld,1,r,1)
+      rho = ddot(n_glob,r_tld,1,r,1) ! direction vector
 
-      if (rho == 0.0 ) exit
+      if (rho == 0.0) exit
 
-      if ( iter > 1 ) then
+      if (iter > 1) then
         beta  = (rho/rho_1)*(alpha/omega)
         p = r + beta*(p - omega*v)
       else
         p = r
       endif
 
-      call pc(p,p_hat)
+      call prec(p,p_hat)
       call matv(p_hat,v)
-      alpha = rho/ddot(n,r_tld,1,v,1)
+
+      alpha = rho/ddot(n_glob,r_tld,1,v,1)
       s = r - alpha*v
-      snrm2 = dnrm2(n, s, 1)
+      snrm2 = dnrm2(n_glob, s, 1)
 
       if (snrm2 < tol) then
         x = x + alpha*p_hat
@@ -117,12 +130,13 @@ module mod_bicgstab
         exit
       endif
 
-      call pc(s,s_hat)
+      call prec(s,s_hat) ! stabilizer
       call matv(s_hat,t)
-      omega = ddot(n,t,1,s,1)/ddot(n,t,1,t,1)
-      x = x + alpha*p_hat + omega*s_hat
+
+      omega = ddot(n_glob,t,1,s,1)/ddot(n_glob,t,1,t,1)
+      x = x + alpha*p_hat + omega*s_hat ! update approximation
       r = s - omega*t
-      error = dnrm2(n, r, 1)/bnrm2
+      error = dnrm2(n_glob, r, 1)/bnrm2
 
       if (error <= tol) exit
       if (omega == 0.0) exit
@@ -130,10 +144,12 @@ module mod_bicgstab
       rho_1 = rho
     enddo
 
+    max_it = iter - 1 ! actual number of iterations
+
     if ((error <= tol).or.(snrm2 <= tol)) then ! converged
-     if ( snrm2 <= tol ) error = snrm2/bnrm2;
-     flag =  0
-     if (my_id.eq.0) write(*,*) "bicgstab completed successfully with n_iter: ", iter
+     if (snrm2 <= tol) error = snrm2/bnrm2;
+     flag = 0
+     if (my_id.eq.0) write(*,*) "bicgstab completed successfully with n_iter: ", max_it
     elseif (omega == 0.0) then ! breakdown
      flag = -2
      if (my_id.eq.0) write(*,*) "bicgstab fails, flag: ", flag
@@ -145,8 +161,6 @@ module mod_bicgstab
      if (my_id.eq.0) write(*,*) "bicgstab failed to converge, relative error: ", error
     endif
 
-    !write(*,*) "solution", x(1), x(n)
-    max_it = iter - 1
 
     deallocate(r, r_tld, s, s_hat, tmp, p, p_hat, v, t)
 
@@ -159,65 +173,45 @@ module mod_bicgstab
     real(kind=C_DOUBLE), allocatable  :: x(:), b(:)
     integer                           :: i, j, ir, jc
     integer                           :: ierr
-    integer                           :: iA_start, ix_start, iy_start, index_offset, ndof_local
-    integer                           :: n_blocksize, n_blocks
-    real(kind=C_DOUBLE)               :: b_tmp_block(n_tor*n_var)
-    real(kind=C_DOUBLE), allocatable  :: y_tmp(:)
-    integer, allocatable              :: rcv_c(:), rcv_d(:)
+    integer                           :: iA_start, ix_start, iy_start
+    real(kind=C_DOUBLE)               :: b_tmp_block(blocksize)
 
-    b = 0.d0
+    !b = 0.d0
 
     !do i=1,cooA%nnz
     !  ir = cooA%irn(i)
     !  jc = cooA%jcn(i)
     !  b(ir) = b(ir) + cooA%val(i) * x(jc)
     !enddo
-    !call MPI_AllReduce(MPI_IN_PLACE,b,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
+    !call MPI_AllReduce(MPI_IN_PLACE,b,n_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
 
-    n_blocksize  = n_tor * n_var
-    n_blocks     = nz_glob/(n_blocksize*n_blocksize)
-    index_offset = (local_index_start(my_id + 1) - 1) * n_blocksize
-    ndof_local   = (local_index_end(my_id + 1) - local_index_start(my_id + 1) + 1)*n_blocksize
-    allocate(y_tmp(ndof_local)); y_tmp = 0.d0
+    b_tmp = 0.d0
 
 !$omp parallel default(none)                                      &
-!$omp shared(cooA, x, n_blocks, n_blocksize, index_offset)        &
-!$omp private(i,iA_start,ix_start, iy_start, b_tmp_block) &
-!$omp reduction(+:y_tmp)
-
+!$omp shared(cooA,x,n_blocks,blocksize,blocksize2,index_offset)   &
+!$omp private(i,iA_start,ix_start,iy_start,b_tmp_block)           &
+!$omp reduction(+:b_tmp)
 !$omp do schedule(guided)
     do i = 1, n_blocks
 
-      iA_start = (i - 1)*n_blocksize*n_blocksize
+      iA_start = (i - 1)*blocksize2
       ix_start = cooA%jcn(iA_start + 1)
       iy_start = cooA%irn(iA_start + 1) - index_offset
 
-      call dgemv('T',n_blocksize,n_blocksize,1.d0,cooA%val(iA_start + 1),n_blocksize,x(ix_start),1,0.d0,b_tmp_block,1)
+      call dgemv('T',blocksize,blocksize,1.d0,cooA%val(iA_start + 1),blocksize,x(ix_start),1,0.d0,b_tmp_block,1)
 
-      y_tmp(iy_start:iy_start + n_blocksize - 1) = y_tmp(iy_start:iy_start + n_blocksize - 1) + b_tmp_block(1:n_blocksize)
+      b_tmp(iy_start:iy_start + blocksize - 1) = b_tmp(iy_start:iy_start + blocksize - 1) + b_tmp_block(1:blocksize)
 
     enddo
 !$omp end do
 !$omp end parallel
 
-    allocate(rcv_c(n_cpu),rcv_d(n_cpu))
-
-    do i = 1, n_cpu
-      rcv_c(i) = (local_index_end(i) - local_index_start(i) + 1) * n_blocksize
-    enddo
-
-    rcv_d(1) = 0
-    do i = 2, n_cpu
-      rcv_d(i) = rcv_d(i-1) + rcv_c(i-1)
-    enddo
-    call MPI_Allgatherv(y_tmp,ndof_local,MPI_DOUBLE_PRECISION,b,rcv_c,rcv_d,MPI_DOUBLE_PRECISION,MPI_GLOB,ierr)
-
-    deallocate(y_tmp,rcv_c,rcv_d)
+    call MPI_Allgatherv(b_tmp,n_local,MPI_DOUBLE_PRECISION,b,rcv_c,rcv_d,MPI_DOUBLE_PRECISION,MPI_GLOB,ierr)
 
   end subroutine matv
 
 !> apply preconditioner b = M\x
-  subroutine pc(x,b)
+  subroutine prec(x,b)
     use preconditioner_module, only: my_row_index, my_row_factor
 #ifdef USE_STRUMPACK
     use strumpack_module, only: strumpack_solve
@@ -228,32 +222,66 @@ module mod_bicgstab
     integer :: i
     integer :: ierr
 
-    if (my_id_n.eq.0) then
-      call MPI_BCAST(x,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_MASTER,ierr)
-      do i = 1, mumps_par%n
-        mumps_par%rhs(i) = x(my_row_index(i))
-      enddo
-    endif
+    do i = 1, mumps_par%n
+      mumps_par%rhs(i) = x(my_row_index(i))
+    enddo
 
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
-      call MPI_BCAST(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
       call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
     endif
 #endif
 
+    b = 0.d0
     if (my_id_n.eq.0) then
-      b = 0.0
       do i = 1, mumps_par%n
         b(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor
       enddo
-      call MPI_AllReduce(MPI_IN_PLACE,b,ndof_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_MASTER,ierr)
-      ! now all my_id_n==0 ranks have the global solution vector
     endif
-    call MPI_BCAST(b,ndof_glob,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+    call MPI_AllReduce(MPI_IN_PLACE,b,n_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
     ! now all ranks have the global solution vector
 
-  end subroutine pc
+  end subroutine prec
+
+!> initialize local module variables
+  subroutine bicgstab_init()
+    use mod_parameters, only : n_tor, n_var
+    use global_distributed_matrix, only: ndof_glob, nz_glob, local_index_start, local_index_end
+    implicit none
+
+    integer :: i
+
+    ! set module values
+    n_glob = ndof_glob ! rank of global sparse matrix
+    nnz = nz_glob ! number of nonzero entries in the local piece of global sparse matrix
+    blocksize = n_tor*n_var ! should try n_tor*n_var*ndof in case of force_central_mode
+    blocksize2 = blocksize*blocksize
+    n_blocks = nz_glob/blocksize2
+
+    index_offset = (local_index_start(my_id + 1) - 1)*blocksize
+    n_local   = (local_index_end(my_id + 1) - local_index_start(my_id + 1) + 1)*blocksize
+
+    allocate(b_tmp(n_local))
+    allocate(rcv_c(n_cpu),rcv_d(n_cpu))
+
+    do i = 1, n_cpu
+      rcv_c(i) = (local_index_end(i) - local_index_start(i) + 1)*blocksize
+    enddo
+
+    rcv_d(1) = 0
+    do i = 2, n_cpu
+      rcv_d(i) = rcv_d(i-1) + rcv_c(i-1)
+    enddo
+
+  end subroutine bicgstab_init
+
+!> clean-up local module variables
+  subroutine bicgstab_finalize()
+    implicit none
+
+    deallocate(rcv_c,rcv_d)
+    deallocate(b_tmp)
+  end subroutine bicgstab_finalize
 
 #endif
 end module mod_bicgstab

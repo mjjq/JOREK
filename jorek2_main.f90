@@ -80,7 +80,7 @@ program JOREK2
   use mpi_mod
   use mod_impurity, only: init_imp_adas
 #ifdef USE_BICGSTAB
-  use mod_bicgstab, only: bicgstab_driver
+  use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
 #endif  
 
 
@@ -1371,6 +1371,10 @@ required = 0
     if (use_strumpack) then
       call strumpack_finalize(MPI_COMM_WORLD)
     endif
+#endif
+
+#ifdef USE_BICGSTAB
+    call bicgstab_finalize()
 #endif
 
 #if defined(USE_PASTIX)||defined(USE_PASTIX6)

@@ -155,7 +155,7 @@ contains
     real*4,dimension(3) :: x
 
     x = origin + rpsichi(1)*(cos(rpsichi(2))*&
-    (cos(rpsichi(3))+sin(rpsichi(3)))+sin(rpsichi(2)))
+    (T*cos(rpsichi(3))+N*sin(rpsichi(3)))+B*sin(rpsichi(2)))
   end function spherical_latitude_to_cartesian_real4
 
   !> Transform the position in the spherical coordinate (latitude) system of the 
@@ -174,7 +174,7 @@ contains
     real*8,dimension(3) :: x
 
     x = origin + rpsichi(1)*(cos(rpsichi(2))*&
-    (cos(rpsichi(3))+sin(rpsichi(3)))+sin(rpsichi(2)))
+    (T*cos(rpsichi(3))+N*sin(rpsichi(3)))+B*sin(rpsichi(2)))
   end function spherical_latitude_to_cartesian_real8
 
   pure function vector_cartesian_to_cylindrical(phi,a) result(b)

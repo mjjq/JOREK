@@ -13,8 +13,10 @@ interface gnu_rng_interval
   module procedure gnu_rng_int_interval_single
   module procedure gnu_rng_int_interval_1d
   module procedure gnu_rng_int_interval_2d
+  module procedure gnu_rng_real8_interval_single 
   module procedure gnu_rng_real8_interval_1d
   module procedure gnu_rng_real8_interval_2d
+  module procedure gnu_rng_interval_1d_val_1d
 end interface gnu_rng_interval
 
 ! gnu_rng_array_norep: template function for 
@@ -97,6 +99,26 @@ subroutine gnu_rng_int_interval_2d(N_rows,N_cols,interval,ids)
   ids = floor(interval(1)+(interval(2)-interval(1)+1)*rnds)
 end subroutine gnu_rng_int_interval_2d
 
+! gnu_rng_rng_interval_single computes a
+! random double from uniform distribution
+! inputs:
+!   interval: (2)(real8) minimum and maximum values
+! outputs:
+!   rng_0d: (index) index
+subroutine gnu_rng_real8_interval_single(interval,rng_0d)
+  implicit none
+
+  ! inputs
+  real*8,dimension(2),intent(in) :: interval
+  ! outputs
+  real*8,intent(out) :: rng_0d
+
+   ! compute random integer 
+   call random_number(rng_0d)
+   rng_0d = interval(1)+(interval(2)-interval(1))*rng_0d
+
+end subroutine gnu_rng_real8_interval_single
+
 ! gnu_rng_interval_1d generates a 1D random number array
 ! using the gnu-fortran intrinsic function within a 
 ! predefined interval (uniform distribution)
@@ -155,6 +177,36 @@ subroutine gnu_rng_real8_interval_2d(N_rows,N_cols,interval,rng_array_2d)
   interval(1))*rng_array_2d
 
 end subroutine gnu_rng_real8_interval_2d
+
+! gnu_rng_interval_1d_val_1d generates a 1D random number array
+! using the gnu-fortran intrinsic function within a 
+! predefined set of intervals (uniform distribution)
+! inputs:
+!   N:               (integer) array length
+!   interval_lowbnd: (N)(real8) interval lower bounds
+!   interval_uppbnd: (N)(real8) interval upper bounds
+!   rng_array_1d:    (N)(real8) 1D array of uniform random
+!                               numbers within an intervals
+! outputs:
+!   rng_array_1d:    (N)(real8) 1D array of uniform random
+!                               numbers within an intervals
+subroutine gnu_rng_interval_1d_val_1d(N,interval_lowbnd,&
+interval_uppbnd,rng_array_1d)
+  implicit none
+
+  ! inputs
+  integer,intent(in)                :: N
+  real*8,dimension(N),intent(in)    :: interval_lowbnd
+  real*8,dimension(N),intent(in)    :: interval_uppbnd
+  ! inputs-outputs:
+  real*8,dimension(N),intent(inout) :: rng_array_1d
+
+  ! generate random number array
+  call random_number(rng_array_1d)
+  rng_array_1d = interval_lowbnd + (interval_uppbnd-&
+  interval_lowbnd)*rng_array_1d
+
+end subroutine gnu_rng_interval_1d_val_1d
 
 ! Additional tools -------------------------------------------
 

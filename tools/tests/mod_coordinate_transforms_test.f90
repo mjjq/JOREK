@@ -13,8 +13,13 @@ integer,parameter :: n_points=4                !< number of test positions
 integer,parameter :: n_origins=4               !< number of sphere origins
 real*8,parameter  :: tol_r8=1.d-14             !< tolerance double
 real*4,parameter  :: tol_r4=real(1.d-6,kind=4) !< tolerance float
+!> tolerance for calculatons
+real*4,parameter  :: tol_calc_r4=real(5.d-5,kind=4)
+real*8,parameter  :: tol_calc_r8=7.5d-14
 real*4,parameter  :: zero_r4=real(0.d0,kind=4)
 real*4,parameter  :: one_r4=real(1.d0,kind=4)
+real*4,dimension(3),parameter :: zeros_r4=real((/0.d0,0.d0,0.d0/),kind=4)
+real*8,dimension(3),parameter :: zeros_r8=(/0.d0,0.d0,0.d0/)
 !> intervals for randomly chosing the first, second and third
 !> position components
 real*8,dimension(3),parameter :: x_lowbnd=(/-2.3d1,-3.2d2,-9.d-1/)
@@ -46,6 +51,7 @@ subroutine run_fruit_coordinate_transforms()
   write(*,'(/A)') "  ... setting-up: coordinate transfroms tests"
   call setup
   write(*,'(/A)') "  ... running: coordinate transforms tests"
+  call test_cartisian_tofrom_cylindrical_transform
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -100,6 +106,33 @@ subroutine teardown()
   T_r8 = 0.d0; N_r8 = 0.d0; B_r8 = 0.d0;
 end subroutine teardown
 !> Tests -----------------------------------------------
+!> Test cartesian to cylindrical and cylindrical to 
+!> cartesian transformations for single and double
+!> precision function
+subroutine test_cartisian_tofrom_cylindrical_transform()
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian
+  implicit none
+  !> variables
+  integer             :: ii
+  real*4,dimension(3) :: x_cart_new_r4,x_cyl_r4
+  real*8,dimension(3) :: x_cart_new_r8,x_cyl_r8
+  !> test single procision
+  do ii=1,n_points
+    x_cyl_r4 = cartesian_to_cylindrical(x_r4(:,ii))
+    x_cart_new_r4 = cylindrical_to_cartesian(x_cyl_r4)   
+    call assert_equals(x_r4(:,ii)-x_cart_new_r4,zeros_r4,3,tol_calc_r4,&
+    "Error test cartesian to cylindrical (float): x-cartesian mismatch!")
+  enddo
+  !> test double procision
+  do ii=1,n_points
+    x_cyl_r8 = cartesian_to_cylindrical(x_r8(:,ii))
+    x_cart_new_r8 = cylindrical_to_cartesian(x_cyl_r8)
+    call assert_equals(x_r8(:,ii)-x_cart_new_r8,zeros_r8,3,tol_calc_r8,&
+    "Error test cartesian to cylindrical (double): x-cartesian mismatch!")
+  enddo
+end subroutine test_cartisian_tofrom_cylindrical_transform
+
 !> Tools -----------------------------------------------
 !> method for testing the orthonormality 
 !> of a basis function. Single precision.

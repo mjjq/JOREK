@@ -16,6 +16,11 @@ module mod_coordinate_transforms
   public :: transform_second_derivatives_st_to_RZ
 
   !> interfaces
+  interface cartesian_to_cylindrical
+    module procedure cartesian_to_cylindrical_r4
+    module procedure cartesian_to_cylindrical_r8
+  end interface cartesian_to_cylindrical
+
   interface cylindrical_to_cartesian
     module procedure cylindrical_to_cartesian_real8
     module procedure cylindrical_to_cartesian_real4
@@ -47,14 +52,24 @@ module mod_coordinate_transforms
 
 contains
   !> convert a position in xyz coordinates to RZPhi coordinates
-  pure function cartesian_to_cylindrical(xyz) result(cyl)
+  pure function cartesian_to_cylindrical_r4(xyz) result(cyl)
+    real*4, intent(in)           :: xyz(3) !< The position in xyz coordinates
+    real*4                       :: cyl(3) !< The position in RZPhi coordinates
+
+    cyl(1) = sqrt(xyz(1)*xyz(1) + xyz(2)*xyz(2))
+    cyl(2) = xyz(3)
+    cyl(3) = atan2(-xyz(2), xyz(1))
+  end function cartesian_to_cylindrical_r4
+
+  !> convert a position in xyz coordinates to RZPhi coordinates
+  pure function cartesian_to_cylindrical_r8(xyz) result(cyl)
     real*8, intent(in)           :: xyz(3) !< The position in xyz coordinates
     real*8                       :: cyl(3) !< The position in RZPhi coordinates
 
     cyl(1) = sqrt(xyz(1)*xyz(1) + xyz(2)*xyz(2))
     cyl(2) = xyz(3)
     cyl(3) = atan2(-xyz(2), xyz(1))
-  end function cartesian_to_cylindrical
+  end function cartesian_to_cylindrical_r8
 
  !> converts a position in RZPhi coordinates to xyz coordinates
   pure function cylindrical_to_cartesian_real8(cyl) result(xyz)

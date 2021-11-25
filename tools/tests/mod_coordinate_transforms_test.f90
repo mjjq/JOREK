@@ -11,11 +11,11 @@ public :: run_fruit_coordinate_transforms
 !> Variables--------------------------------------------
 integer,parameter :: n_points=4                !< number of test positions
 integer,parameter :: n_origins=4               !< number of sphere origins
-real*8,parameter  :: tol_r8=1.d-14             !< tolerance double
+real*8,parameter  :: tol_r8=2.5d-14            !< tolerance double
 real*4,parameter  :: tol_r4=real(1.d-6,kind=4) !< tolerance float
 !> tolerance for calculatons
-real*4,parameter  :: tol_calc_r4=real(5.d-5,kind=4)
-real*8,parameter  :: tol_calc_r8=7.5d-14
+real*4,parameter  :: tol_calc_r4=real(5.0d-4,kind=4)
+real*8,parameter  :: tol_calc_r8=5.0d-12
 real*4,parameter  :: zero_r4=real(0.d0,kind=4)
 real*4,parameter  :: one_r4=real(1.d0,kind=4)
 real*4,dimension(3),parameter :: zeros_r4=real((/0.d0,0.d0,0.d0/),kind=4)
@@ -51,7 +51,8 @@ subroutine run_fruit_coordinate_transforms()
   write(*,'(/A)') "  ... setting-up: coordinate transfroms tests"
   call setup
   write(*,'(/A)') "  ... running: coordinate transforms tests"
-  call test_cartisian_tofrom_cylindrical_transform
+  call test_cartesian_tofrom_cylindrical_transform
+  call test_cartesian_tofrom_spherical_latitude_transform
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -108,8 +109,8 @@ end subroutine teardown
 !> Tests -----------------------------------------------
 !> Test cartesian to cylindrical and cylindrical to 
 !> cartesian transformations for single and double
-!> precision function
-subroutine test_cartisian_tofrom_cylindrical_transform()
+!> precision functions
+subroutine test_cartesian_tofrom_cylindrical_transform()
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
   use mod_coordinate_transforms, only: cylindrical_to_cartesian
   implicit none
@@ -122,16 +123,51 @@ subroutine test_cartisian_tofrom_cylindrical_transform()
     x_cyl_r4 = cartesian_to_cylindrical(x_r4(:,ii))
     x_cart_new_r4 = cylindrical_to_cartesian(x_cyl_r4)   
     call assert_equals(x_r4(:,ii)-x_cart_new_r4,zeros_r4,3,tol_calc_r4,&
-    "Error test cartesian to cylindrical (float): x-cartesian mismatch!")
+    "Error test cartesian to/from cylindrical (float): x-cartesian mismatch!")
   enddo
   !> test double procision
   do ii=1,n_points
     x_cyl_r8 = cartesian_to_cylindrical(x_r8(:,ii))
     x_cart_new_r8 = cylindrical_to_cartesian(x_cyl_r8)
     call assert_equals(x_r8(:,ii)-x_cart_new_r8,zeros_r8,3,tol_calc_r8,&
-    "Error test cartesian to cylindrical (double): x-cartesian mismatch!")
+    "Error test cartesian to/from cylindrical (double): x-cartesian mismatch!")
   enddo
-end subroutine test_cartisian_tofrom_cylindrical_transform
+end subroutine test_cartesian_tofrom_cylindrical_transform
+
+!> Test cartesian to spherical (latitude) and spherical
+!> (latitude) transformations for single and double
+!> precision functions
+subroutine test_cartesian_tofrom_spherical_latitude_transform()
+  use mod_coordinate_transforms, only: cartesian_to_spherical_latitude
+  use mod_coordinate_transforms, only: spherical_latitude_to_cartesian
+  implicit none
+  !> variables
+  integer             :: ii,jj
+  real*4,dimension(3) :: x_cart_new_r4,rpsichi_r4
+  real*8,dimension(3) :: x_cart_new_r8,rpsichi_r8
+  !> test single precision
+  do jj=1,n_origins
+    do ii=1,n_points
+      rpsichi_r4 = cartesian_to_spherical_latitude(x_r4(:,ii),&
+      origin_r4(:,jj),T_r4(:,jj),N_r4(:,jj),B_r4(:,jj))
+      x_cart_new_r4 = spherical_latitude_to_cartesian(rpsichi_r4,&
+      origin_r4(:,jj),T_r4(:,jj),N_r4(:,jj),B_r4(:,jj))
+      call assert_equals(x_r4(:,ii)-x_cart_new_r4,zeros_r4,3,tol_calc_r4,&
+      "Error test cartesian to/from spherical-latitude (float): x-cartesian mismatch!") 
+    enddo
+  end do
+  !> test double precision
+  do jj=1,n_origins
+    do ii=1,n_points
+      rpsichi_r8 = cartesian_to_spherical_latitude(x_r8(:,ii),&
+      origin_r8(:,jj),T_r8(:,jj),N_r8(:,jj),B_r8(:,jj))
+      x_cart_new_r8 = spherical_latitude_to_cartesian(rpsichi_r8,&
+      origin_r8(:,jj),T_r8(:,jj),N_r8(:,jj),B_r8(:,jj))
+      call assert_equals(x_r8(:,ii)-x_cart_new_r8,zeros_r8,3,tol_calc_r8,&
+      "Error test cartesian to/from spherical-latitude (double): x-cartesian mismatch!") 
+    enddo
+  end do
+end subroutine test_cartesian_tofrom_spherical_latitude_transform
 
 !> Tools -----------------------------------------------
 !> method for testing the orthonormality 

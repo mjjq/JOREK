@@ -2,20 +2,36 @@
 module mod_coordinate_transforms
   implicit none
   private
-  public cartesian_to_cylindrical
-  public cylindrical_to_cartesian
-  public vector_cartesian_to_cylindrical
-  public vector_cylindrical_to_cartesian
-  public vector_rotation
-  public cartesian_velocity_to_cylindrical
-  public transform_derivatives_st_to_RZ, transform_derivatives_RZ_to_st
-  public transform_first_derivatives_st_to_RZ
-  public transform_second_derivatives_st_to_RZ
+  public :: cartesian_to_cylindrical
+  public :: cylindrical_to_cartesian
+  public :: cartesian_to_spherical_latitude
+  public :: spherical_latitude_to_cartesian
+  public :: vector_cartesian_to_cylindrical
+  public :: vector_cylindrical_to_cartesian
+  public :: vector_rotation
+  public :: cartesian_velocity_to_cylindrical
+  public :: transform_derivatives_st_to_RZ
+  public :: transform_derivatives_RZ_to_st
+  public :: transform_first_derivatives_st_to_RZ
+  public :: transform_second_derivatives_st_to_RZ
+
   !> interfaces
   interface cylindrical_to_cartesian
     module procedure cylindrical_to_cartesian_real8
     module procedure cylindrical_to_cartesian_real4
   end interface cylindrical_to_cartesian
+
+  !> overload speherical (latitude) to cartesian coordinate transform
+  interface cartesian_to_spherical_latitude
+    module procedure cartesian_to_spherical_latitude_real4
+    module procedure cartesian_to_spherical_latitude_real8
+  end interface cartesian_to_spherical_latitude
+
+  !> overload cartesian to spherical coordinates (latitude) transform
+  interface spherical_latitude_to_cartesian
+    module procedure spherical_latitude_to_cartesian_real4
+    module procedure spherical_latitude_to_cartesian_real8
+  end interface spherical_latitude_to_cartesian
 
   !> overload transform derivatives from local to global coordinates
   interface transform_derivatives_st_to_RZ
@@ -59,6 +75,92 @@ contains
     xyz(2) = cyl(1)*sin(-cyl(3))
     xyz(3) = cyl(2)
   end function cylindrical_to_cartesian_real4
+
+  !> return the spherical coordinates in terms of the latitude and azimutal angles
+  !> (rPsiChi) given the center and the orientation of the sphere. The sphere
+  !> orientation is defined by the vectors T,N,B. Single precision is used.
+  !> inputs:
+  !>   x:      (real4)(3) point position in cartesian coord.
+  !>   origin: (real4)(3) position of the sphere origin in cartesian coord.
+  !>   T:      (real4)(3) direction defining the azimuthal angle chi
+  !>   N:      (real4)(3) normal direction to T
+  !>   B:      (real4)(3) direction defining the latitude angle psi
+  !> outputs:
+  !>   rpsichi: (real4)(3) distance of x from the origin, latitude and azimuthal angles
+  pure function cartesian_to_spherical_latitude_real4(x,origin,T,N,B) result(rpsichi)
+    implicit none
+    real*4,dimension(3),intent(in) :: x,origin,T,N,B
+    real*4,dimension(3)            :: rpsichi
+    real*4                         :: r_norm
+    real*4,dimension(3)            :: r
+    
+    r = x-origin 
+    r_norm = norm2(r)
+    rpsichi = (/r_norm,asin(dot_product(r,B)/r_norm),&
+    atan2(dot_product(r,N),dot_product(r,T))/)
+  end function cartesian_to_spherical_latitude_real4
+
+  !> return the spherical coordinates in terms of the latitude and azimutal angles
+  !> (rPsiChi) given the center and the orientation of the sphere. The sphere
+  !> orientation is defined by the vectors T,N,B. Double precision is used.
+  !> inputs:
+  !>   x:      (real8)(3) point position in cartesian coord.
+  !>   origin: (real8)(3) position of the sphere origin in cartesian coord.
+  !>   T:      (real8)(3) direction defining the azimuthal angle chi
+  !>   N:      (real8)(3) normal direction to T
+  !>   B:      (real8)(3) direction defining the latitude angle psi
+  !> outputs:
+  !>   rpsichi: (real8)(3) distance of x from the origin, latitude and azimuthal angles
+  pure function cartesian_to_spherical_latitude_real8(x,origin,T,N,B) result(rpsichi)
+    implicit none
+    real*8,dimension(3),intent(in) :: x,origin,T,N,B
+    real*8,dimension(3)            :: rpsichi
+    real*8                         :: r_norm
+    real*8,dimension(3)            :: r
+    
+    r = x-origin 
+    r_norm = norm2(r)
+    rpsichi = (/r_norm,asin(dot_product(r,B)/r_norm),&
+    atan2(dot_product(r,N),dot_product(r,T))/)
+  end function cartesian_to_spherical_latitude_real8
+
+  !> Transform the position in the spherical coordinate (latitude) system of the 
+  !> sphere with origin at 'origin' into global cartesian coordinates. 
+  !> Single precision is used.
+  !> inputs:
+  !>   rpsichi: (real4)(3) distance of x from the origin, latitude and azimuthal angles
+  !>   origin:  (real4)(3) position of the sphere origin in cartesian coord.
+  !>   T:       (real4)(3) direction defining the azimuthal angle chi
+  !>   N:       (real4)(3) normal direction to T 
+  !> outputs:
+  !>   x: (real8)(3) point position in cartesian coordinates
+  pure function spherical_latitude_to_cartesian_real4(rpsichi,origin,T,N,B) result(x)
+    implicit none
+    real*4,dimension(3),intent(in) :: rpsichi,origin,T,N,B
+    real*4,dimension(3) :: x
+
+    x = origin + rpsichi(1)*(cos(rpsichi(2))*&
+    (cos(rpsichi(3))+sin(rpsichi(3)))+sin(rpsichi(2)))
+  end function spherical_latitude_to_cartesian_real4
+
+  !> Transform the position in the spherical coordinate (latitude) system of the 
+  !> sphere with origin at 'origin' into global cartesian coordinates. 
+  !> Double precision is used.
+  !> inputs:
+  !>   rpsichi: (real8)(3) distance of x from the origin, latitude and azimuthal angles
+  !>   origin:  (real8)(3) position of the sphere origin in cartesian coord.
+  !>   T:       (real8)(3) direction defining the azimuthal angle chi
+  !>   N:       (real8)(3) normal direction to T 
+  !> outputs:
+  !>   x: (real8)(3) point position in cartesian coordinates
+  pure function spherical_latitude_to_cartesian_real8(rpsichi,origin,T,N,B) result(x)
+    implicit none
+    real*8,dimension(3),intent(in) :: rpsichi,origin,T,N,B
+    real*8,dimension(3) :: x
+
+    x = origin + rpsichi(1)*(cos(rpsichi(2))*&
+    (cos(rpsichi(3))+sin(rpsichi(3)))+sin(rpsichi(2)))
+  end function spherical_latitude_to_cartesian_real8
 
   pure function vector_cartesian_to_cylindrical(phi,a) result(b)
     real*8, intent(in)               :: phi !< The local toroidal angle

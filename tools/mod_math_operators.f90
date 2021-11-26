@@ -3,7 +3,7 @@ module mod_math_operators
 
   implicit none
   private
-  public cross_product
+  public :: cross_product
   
 contains
   

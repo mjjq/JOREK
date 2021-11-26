@@ -2,6 +2,7 @@
 !> procedures for testing the mod_coordinate_transforms
 !> module procedures
 module mod_coordinate_transforms_test
+use constants, only: PI
 use fruit
 implicit none
 
@@ -24,6 +25,7 @@ real*8,dimension(3),parameter :: zeros_r8=(/0.d0,0.d0,0.d0/)
 !> position components
 real*8,dimension(3),parameter :: x_lowbnd=(/-2.3d1,-3.2d2,-9.d-1/)
 real*8,dimension(3),parameter :: x_uppbnd=(/4.23d2,1.45d1,7.50d1/)
+real*8,dimension(2),parameter :: phi_interval=(/0.d0,2.d0*PI/)
 !> intervals for randomly chosing the first, second and third
 !> vector components
 real*8,dimension(3),parameter :: a_lowbnd=(/-3.41d2,-4.67d1,-9.35d1/)
@@ -32,6 +34,7 @@ real*4,dimension(3,n_points)  :: x_r4           !< set o positions
 real*4,dimension(3,n_origins) :: origin_r4      !< set of origins
 real*4,dimension(3,n_origins) :: T_r4,N_r4,B_r4 !< sphere directions
 real*8,dimension(3,n_points)  :: x_r8           !< set o positions
+real*8,dimension(n_points)    :: phi_r8         !< set of toroidal angles
 real*8,dimension(3,n_origins) :: origin_r8      !< set of origins
 real*8,dimension(3,n_origins) :: T_r8,N_r8,B_r8 !< sphere directions
 
@@ -53,6 +56,7 @@ subroutine run_fruit_coordinate_transforms()
   write(*,'(/A)') "  ... running: coordinate transforms tests"
   call test_cartesian_tofrom_cylindrical_transform
   call test_cartesian_tofrom_spherical_latitude_transform
+  call cartesian_tofrom_cylindrical_vector_rotation
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -66,6 +70,8 @@ subroutine setup()
   !> variables
   integer :: ii
   
+  !> generate set of random toroidal angles
+  call gnu_rng_interval(n_points,phi_interval,phi_r8)
   !> generate random positions (assume cartesian coord.)
   do ii=1,n_points
     call gnu_rng_interval(n_points,x_lowbnd,x_uppbnd,x_r8(:,ii))
@@ -105,6 +111,7 @@ subroutine teardown()
   T_r4 = zero_r4; N_r4 = zero_r4; B_r4 = zero_r4;
   x_r8 = 0.d0; origin_r8 = 0.d0;
   T_r8 = 0.d0; N_r8 = 0.d0; B_r8 = 0.d0;
+  phi_r8 = 0.d0
 end subroutine teardown
 !> Tests -----------------------------------------------
 !> Test cartesian to cylindrical and cylindrical to 
@@ -168,6 +175,68 @@ subroutine test_cartesian_tofrom_spherical_latitude_transform()
     enddo
   end do
 end subroutine test_cartesian_tofrom_spherical_latitude_transform
+
+!> Test vector transformation from cartesian to cylindrical and back
+subroutine cartesian_tofrom_cylindrical_vector_rotation()
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  implicit none
+  integer :: ii,jj
+  real*8,dimension(3) :: T_cyl_r8,N_cyl_r8,B_cyl_r8
+  real*8,dimension(3) :: T_cart_r8,N_cart_r8,B_cart_r8
+
+  do jj=1,n_origins
+    do ii=1,n_points
+      !> transform cartesian basis to cylindrical 
+      !> and check that it is still a basis
+      T_cyl_r8 = vector_cartesian_to_cylindrical(phi_r8(ii),T_r8(:,jj))
+      N_cyl_r8 = vector_cartesian_to_cylindrical(phi_r8(ii),N_r8(:,jj))
+      B_cyl_r8 = vector_cartesian_to_cylindrical(phi_r8(ii),B_r8(:,jj))
+      call test_orthonormality_basis(T_cyl_r8,N_cyl_r8,B_cyl_r8)
+      !> transform back and check consistency
+      T_cart_r8 = vector_cylindrical_to_cartesian(phi_r8(ii),T_cyl_r8)
+      N_cart_r8 = vector_cylindrical_to_cartesian(phi_r8(ii),N_cyl_r8)
+      B_cart_r8 = vector_cylindrical_to_cartesian(phi_r8(ii),B_cyl_r8)
+      !> check correctness
+      call assert_equals(T_cart_r8,T_r8(:,jj),3,tol_r8,&
+      "Error test vector cartesian to/from cylindrical: T vector mismatch!")
+      call assert_equals(N_cart_r8,N_r8(:,jj),3,tol_r8,&
+      "Error test vector cartesian to/from cylindrical: N vector mismatch!")
+      call assert_equals(B_cart_r8,B_r8(:,jj),3,tol_r8,&
+      "Error test vector cartesian to/from cylindrical: B vector mismatch!")
+    enddo
+  enddo
+end subroutine cartesian_tofrom_cylindrical_vector_rotation
+
+!> test vector rotation of a toroidal angle
+subroutine test_vector_rotation_toroidal_angle()
+  use mod_coordinate_transforms, only: vector_rotation
+  use mod_coordinate_transforms, only: cartesian_velocity_to_cylindrical
+  implicit none
+  integer :: ii,jj
+  real*8,dimension(3) :: T_rot_fwd_r8,N_rot_fwd_r8,B_rot_fwd_r8
+  real*8,dimension(3) :: T_rot_bck_r8,N_rot_bck_r8,B_rot_bck_r8
+
+  do jj=1,n_origins
+    do ii=1,n_points
+      !> forward rotation of a toroidal angle phi and check orthonormality
+      T_rot_fwd_r8 = vector_rotation(T_r8(:,jj),phi_r8(ii))
+      N_rot_fwd_r8 = vector_rotation(N_r8(:,jj),phi_r8(ii))
+      B_rot_fwd_r8 = vector_rotation(B_r8(:,jj),phi_r8(ii))
+      call test_orthonormality_basis(T_rot_fwd_r8,N_rot_fwd_r8,B_rot_fwd_r8)
+      !> backward rotation and check
+      T_rot_bck_r8 = cartesian_velocity_to_cylindrical(T_rot_fwd_r8,phi_r8(ii))
+      N_rot_bck_r8 = cartesian_velocity_to_cylindrical(N_rot_fwd_r8,phi_r8(ii))
+      B_rot_bck_r8 = cartesian_velocity_to_cylindrical(B_rot_fwd_r8,phi_r8(ii))
+      call assert_equals(T_rot_bck_r8,T_r8(:,jj),3,tol_r8,&
+      "Error test vector rotation (toroidal): T vector mismatch!")
+      call assert_equals(N_rot_bck_r8,N_r8(:,jj),3,tol_r8,&
+      "Error test vector rotation (toroidal): N vector mismatch!")
+      call assert_equals(B_rot_bck_r8,B_r8(:,jj),3,tol_r8,&
+      "Error test vector rotation (toroidal): B vector mismatch!")
+    enddo
+  enddo
+end subroutine test_vector_rotation_toroidal_angle
 
 !> Tools -----------------------------------------------
 !> method for testing the orthonormality 

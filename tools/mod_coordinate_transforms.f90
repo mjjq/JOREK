@@ -14,6 +14,7 @@ module mod_coordinate_transforms
   public :: transform_derivatives_RZ_to_st
   public :: transform_first_derivatives_st_to_RZ
   public :: transform_second_derivatives_st_to_RZ
+  public :: vectors_to_orthonormal_basis
 
   !> interfaces
   interface cartesian_to_cylindrical
@@ -49,6 +50,12 @@ module mod_coordinate_transforms
      module procedure transform_first_derivatives_RZ_to_st, &
        transform_second_derivatives_RZ_to_st
   end interface transform_derivatives_RZ_to_st
+
+  !> overload generation of orthonormal basis
+  interface vectors_to_orthonormal_basis
+    module procedure vectors_to_orthonormal_basis_3d_r4
+    module procedure vectors_to_orthonormal_basis_3d_r8
+  end interface vectors_to_orthonormal_basis
 
 contains
   !> convert a position in xyz coordinates to RZPhi coordinates
@@ -225,6 +232,50 @@ contains
     out(2) = in(3)
     out(3) = -sin(phi) * in(1) + cos(phi) * in(2)
   end function cartesian_velocity_to_cylindrical
+
+  !> Compute an orthonormal basis give two non-parallel vectors in 3D cartesian
+  !> space and for real4 functions.
+  !> inputs:
+  !>   v1: (real4)(3) first vector
+  !>   v2: (real4)(3) second vector non-parallel to v1
+  !> outputs:
+  !>   T: (real4)(3) first basis v1/||v1||
+  !>   N: (real4)(3) second basis v2-T*(v2*T)
+  !>   B: (real4)(3) third basis  T x N
+  subroutine vectors_to_orthonormal_basis_3d_r4(v1,v2,T,N,B)
+    use mod_math_operators, only: cross_product
+    implicit none
+    real*4,dimension(3),intent(in) :: v1,v2
+    real*4,dimension(3),intent(out) :: T,N,B
+    !> compute orthogonal basis
+    T = v1/norm2(v1)
+    N = v1 - T*(v2(1)*T(1)+v2(2)*T(2)+v2(3)*T(3))
+    N = N/norm2(N)
+    B = cross_product(T,N)
+    B = norm2(B)
+  end subroutine vectors_to_orthonormal_basis_3d_r4
+
+  !> Compute an orthonormal basis give two non-parallel vectors in 3D cartesian
+  !> space and for real8 functions.
+  !> inputs:
+  !>   v1: (real8)(3) first vector
+  !>   v2: (real8)(3) second vector non-parallel to v1
+  !> outputs:
+  !>   T: (real8)(3) first basis v1/||v1||
+  !>   N: (real8)(3) second basis v2-T*(v2*T)
+  !>   B: (real8)(3) third basis  T x N
+  subroutine vectors_to_orthonormal_basis_3d_r8(v1,v2,T,N,B)
+    use mod_math_operators, only: cross_product
+    implicit none
+    real*8,dimension(3),intent(in) :: v1,v2
+    real*8,dimension(3),intent(out) :: T,N,B
+    !> compute orthogonal basis
+    T = v1/norm2(v1)
+    N = v1 - T*(v2(1)*T(1)+v2(2)*T(2)+v2(3)*T(3))
+    N = N/norm2(N)
+    B = cross_product(T,N)
+    B = norm2(B)
+  end subroutine vectors_to_orthonormal_basis_3d_r8
 
 !--------------------------------------------------------------------------
 !> This procedure expresses first order derivatives from the local (s,t)

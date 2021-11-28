@@ -32,11 +32,13 @@ real*8,dimension(3),parameter :: a_lowbnd=(/-3.41d2,-4.67d1,-9.35d1/)
 real*8,dimension(3),parameter :: a_uppbnd=(/6.75d1,8.70d1,2.43d2/)
 real*4,dimension(3,n_points)  :: x_r4           !< set o positions
 real*4,dimension(3,n_origins) :: origin_r4      !< set of origins
+real*4,dimension(3,n_origins) :: v1_r4,v2_r4    !< random vectors
 real*4,dimension(3,n_origins) :: T_r4,N_r4,B_r4 !< sphere directions
 real*8,dimension(3,n_points)  :: x_r8           !< set o positions
 real*8,dimension(n_points)    :: phi_r8         !< set of toroidal angles
 real*8,dimension(3,n_origins) :: origin_r8      !< set of origins
-real*8,dimension(3,n_origins) :: T_r8,N_r8,B_r8 !< sphere directions
+real*8,dimension(3,n_origins)  :: v1_r8,v2_r8    !< random vectors
+real*8,dimension(3,n_origins) :: T_r8,N_r8,B_r8 !< sphere directioins
 
 !> Interfaces ------------------------------------------
 !> function for testing basis orthonormality
@@ -56,7 +58,7 @@ subroutine run_fruit_coordinate_transforms()
   write(*,'(/A)') "  ... running: coordinate transforms tests"
   call test_cartesian_tofrom_cylindrical_transform
   call test_cartesian_tofrom_spherical_latitude_transform
-  call cartesian_tofrom_cylindrical_vector_rotation
+  call test_cartesian_tofrom_cylindrical_vector_rotation
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -83,8 +85,10 @@ subroutine setup()
     call gnu_rng_interval(n_points,a_lowbnd,a_uppbnd,T_r8(:,ii))
     call gnu_rng_interval(n_points,a_lowbnd,a_uppbnd,N_r8(:,ii))
     !> compute the vector for the ith origin
-    T_r8(:,ii) = T_r8(:,ii)-origin_r8(:,ii)
-    N_r8(:,ii) = N_r8(:,ii)-origin_r8(:,ii)
+    T_r8(:,ii)  = T_r8(:,ii)-origin_r8(:,ii)
+    N_r8(:,ii)  = N_r8(:,ii)-origin_r8(:,ii)
+    v1_r8(:,ii) = T_r8(:,ii)
+    v2_r8(:,ii) = N_r8(:,ii)
     !> compute basis
     T_r8(:,ii) = T_r8(:,ii)/norm2(T_r8(:,ii))
     N_r8(:,ii) = N_r8(:,ii) - (dot_product(T_r8(:,ii),N_r8(:,ii)))*T_r8(:,ii)
@@ -97,7 +101,8 @@ subroutine setup()
 
   !> convert to float precision
   x_r4 = real(x_r8,kind=4); origin_r4 = real(origin_r8,kind=8); 
-  T_r4 = real(T_r8,kind=4); N_r4 = real(N_r8,kind=4); B_r4 = real(B_r8,kind=4);
+  v1_r4 = real(v1_r8,kind=4); v2_r4 = real(v2_r4,kind=4); T_r4 = real(T_r8,kind=4); 
+  N_r4 = real(N_r8,kind=4); B_r4 = real(B_r8,kind=4);
   do ii=1,n_origins
     call test_orthonormality_basis(T_r4(:,ii),N_r4(:,ii),B_r4(:,ii))
   enddo
@@ -176,8 +181,41 @@ subroutine test_cartesian_tofrom_spherical_latitude_transform()
   end do
 end subroutine test_cartesian_tofrom_spherical_latitude_transform
 
+!> test generation of orthonormal basis for 3d cartesian coordinates
+subroutine test_vectors_to_orthonormal_basis()
+  use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
+  implicit none
+  integer :: ii
+  real*4,dimension(3) :: T_new_r4,N_new_r4,B_new_r4
+  real*8,dimension(3) :: T_new_r8,N_new_r8,B_new_r8
+
+  !> test orthonormal basis single precision
+  do ii=1,n_origins
+    call vectors_to_orthonormal_basis(v1_r4(:,ii),v2_r4(:,ii),T_new_r4,N_new_r4,B_new_r4)
+    call test_orthonormality_basis(T_new_r4,N_new_r4,B_new_r4)
+    call assert_equals(T_r4(:,ii),T_new_r4,n_origins,tol_r4,&
+    "Error vectors to orhtonormal basis (float): T basis mismatch!)")
+    call assert_equals(N_r4(:,ii),N_new_r4,n_origins,tol_r4,&
+    "Error vectors to orhtonormal basis (float): T basis mismatch!)")
+    call assert_equals(B_r4(:,ii),B_new_r4,n_origins,tol_r4,&
+    "Error vectors to orhtonormal basis (float): B basis mismatch!)")
+  enddo
+  !> test orthonormal basis double precision
+  do ii=1,n_origins
+    call vectors_to_orthonormal_basis(v1_r8(:,ii),v2_r8(:,ii),T_new_r8,N_new_r8,B_new_r8)
+    call test_orthonormality_basis(T_new_r8,N_new_r8,B_new_r8)
+    call assert_equals(T_r8(:,ii),T_new_r8,n_origins,tol_r8,&
+    "Error vectors to orhtonormal basis (double): T basis mismatch!)")
+    call assert_equals(N_r8(:,ii),N_new_r8,n_origins,tol_r8,&
+    "Error vectors to orhtonormal basis (double): T basis mismatch!)")
+    call assert_equals(B_r8(:,ii),B_new_r8,n_origins,tol_r8,&
+    "Error vectors to orhtonormal basis (double): B basis mismatch!)")
+  enddo 
+
+end subroutine test_vectors_to_orthonormal_basis
+
 !> Test vector transformation from cartesian to cylindrical and back
-subroutine cartesian_tofrom_cylindrical_vector_rotation()
+subroutine test_cartesian_tofrom_cylindrical_vector_rotation()
   use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   implicit none
@@ -206,7 +244,7 @@ subroutine cartesian_tofrom_cylindrical_vector_rotation()
       "Error test vector cartesian to/from cylindrical: B vector mismatch!")
     enddo
   enddo
-end subroutine cartesian_tofrom_cylindrical_vector_rotation
+end subroutine test_cartesian_tofrom_cylindrical_vector_rotation
 
 !> test vector rotation of a toroidal angle
 subroutine test_vector_rotation_toroidal_angle()

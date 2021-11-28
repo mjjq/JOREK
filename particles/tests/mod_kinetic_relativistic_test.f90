@@ -11,7 +11,7 @@ public :: run_fruit_kinetic_relativistic
 
 !> Variables ------------------------------------------
 integer*1,parameter :: q=-1                  !< electron charge in [A]
-real*8,parameter    :: tol_basis=5.d-15      !< tolerance for success orbital basis
+real*8,parameter    :: tol_basis=7.5d-15      !< tolerance for success orbital basis
 real*8,parameter    :: mass=5.48579909065d-4 !< mass in AMU
 real*8,parameter    :: E_kin=1.d1            !< kinetic energy MeV
 real*8,parameter    :: I_E=1.25              !< E-field intensity [V/m]

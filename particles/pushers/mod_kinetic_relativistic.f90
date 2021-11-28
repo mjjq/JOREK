@@ -753,7 +753,7 @@ mass,E_field_cart,B_field_cart,T_cart,N_cart,B_cart)
   !> variables
   real*8 :: gam
 
-  !> compute the velocity vector
+  !> compute the relativistic factor
   gam = sqrt(1.d0+((particle%p(1)*particle%p(1)+particle%p(2)*particle%p(2)+&
   particle%p(3)*particle%p(3))/(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT)))
   !> compute orbital basis

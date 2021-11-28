@@ -742,6 +742,7 @@ end function gc_to_relativistic_kinetic
 subroutine compute_relativistic_kinetic_orbital_basis_cartesian(particle,&
 mass,E_field_cart,B_field_cart,T_cart,N_cart,B_cart)
   use mod_math_operators, only: cross_product
+  use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
   implicit none
   !> inputs
   type(particle_kinetic_relativistic),intent(in) :: particle
@@ -752,17 +753,12 @@ mass,E_field_cart,B_field_cart,T_cart,N_cart,B_cart)
   !> variables
   real*8 :: gam
 
-  !> compute relativistic factor
+  !> compute the velocity vector
   gam = sqrt(1.d0+((particle%p(1)*particle%p(1)+particle%p(2)*particle%p(2)+&
   particle%p(3)*particle%p(3))/(mass*mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT)))
   !> compute orbital basis
-  T_cart = particle%p/norm2(particle%p)
-  N_cart = cross_product(particle%p/(mass*gam),B_field_cart) + E_field_cart - &
-  T_cart*dot_product(E_field_cart,T_cart)!(T_cart(1)*E_field_cart(1)+T_cart(2)*E_field_cart(2)+&
-  !T_cart(3)*E_field_cart(3))
-  N_cart = N_cart/norm2(N_cart)
-  B_cart = cross_product(T_cart,N_cart)
-  B_cart = B_cart/norm2(B_cart)
+  call vectors_to_orthonormal_basis(particle%p,cross_product(particle%p/(mass*gam),&
+  B_field_cart)+E_field_cart,T_cart,N_cart,B_cart)
 end subroutine compute_relativistic_kinetic_orbital_basis_cartesian
 
 !---------------------------------------------------------------------------

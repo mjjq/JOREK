@@ -249,10 +249,10 @@ contains
     real*4,dimension(3),intent(out) :: T,N,B
     !> compute orthogonal basis
     T = v1/norm2(v1)
-    N = v1 - T*(v2(1)*T(1)+v2(2)*T(2)+v2(3)*T(3))
+    N = v2 - T*(v2(1)*T(1)+v2(2)*T(2)+v2(3)*T(3))
     N = N/norm2(N)
     B = cross_product(T,N)
-    B = norm2(B)
+    B = B/norm2(B)
   end subroutine vectors_to_orthonormal_basis_3d_r4
 
   !> Compute an orthonormal basis give two non-parallel vectors in 3D cartesian
@@ -271,10 +271,10 @@ contains
     real*8,dimension(3),intent(out) :: T,N,B
     !> compute orthogonal basis
     T = v1/norm2(v1)
-    N = v1 - T*(v2(1)*T(1)+v2(2)*T(2)+v2(3)*T(3))
+    N = v2 - T*(v2(1)*T(1)+v2(2)*T(2)+v2(3)*T(3))
     N = N/norm2(N)
     B = cross_product(T,N)
-    B = norm2(B)
+    B = B/norm2(B)
   end subroutine vectors_to_orthonormal_basis_3d_r8
 
 !--------------------------------------------------------------------------

@@ -13,7 +13,7 @@ public :: run_fruit_coordinate_transforms
 integer,parameter :: n_points=4                !< number of test positions
 integer,parameter :: n_origins=4               !< number of sphere origins
 real*8,parameter  :: tol_r8=2.5d-14            !< tolerance double
-real*4,parameter  :: tol_r4=real(1.d-6,kind=4) !< tolerance float
+real*4,parameter  :: tol_r4=real(7.5d-6,kind=4) !< tolerance float
 !> tolerance for calculatons
 real*4,parameter  :: tol_calc_r4=real(5.0d-4,kind=4)
 real*8,parameter  :: tol_calc_r8=5.0d-12
@@ -59,6 +59,7 @@ subroutine run_fruit_coordinate_transforms()
   call test_cartesian_tofrom_cylindrical_transform
   call test_cartesian_tofrom_spherical_latitude_transform
   call test_cartesian_tofrom_cylindrical_vector_rotation
+  call test_vectors_to_orthonormal_basis
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -82,16 +83,14 @@ subroutine setup()
   do ii=1,n_origins
     call gnu_rng_interval(n_points,x_lowbnd,x_uppbnd,origin_r8(:,ii))
     !> generate random orthonormal directions (assume cartesian coord.)
-    call gnu_rng_interval(n_points,a_lowbnd,a_uppbnd,T_r8(:,ii))
-    call gnu_rng_interval(n_points,a_lowbnd,a_uppbnd,N_r8(:,ii))
+    call gnu_rng_interval(n_points,a_lowbnd,a_uppbnd,v1_r8(:,ii))
+    call gnu_rng_interval(n_points,a_lowbnd,a_uppbnd,v2_r8(:,ii))
     !> compute the vector for the ith origin
-    T_r8(:,ii)  = T_r8(:,ii)-origin_r8(:,ii)
-    N_r8(:,ii)  = N_r8(:,ii)-origin_r8(:,ii)
-    v1_r8(:,ii) = T_r8(:,ii)
-    v2_r8(:,ii) = N_r8(:,ii)
+    v1_r8(:,ii) = v1_r8(:,ii)-origin_r8(:,ii)
+    v2_r8(:,ii) = v2_r8(:,ii)-origin_r8(:,ii)
     !> compute basis
-    T_r8(:,ii) = T_r8(:,ii)/norm2(T_r8(:,ii))
-    N_r8(:,ii) = N_r8(:,ii) - (dot_product(T_r8(:,ii),N_r8(:,ii)))*T_r8(:,ii)
+    T_r8(:,ii) = v1_r8(:,ii)/norm2(v1_r8(:,ii))
+    N_r8(:,ii) = v2_r8(:,ii) - (dot_product(T_r8(:,ii),v2_r8(:,ii)))*T_r8(:,ii)
     N_r8(:,ii) = N_r8(:,ii)/norm2(N_r8(:,ii))
     B_r8(:,ii) = cross_product(T_r8(:,ii),N_r8(:,ii))
     B_r8(:,ii) = B_r8(:,ii)/norm2(B_r8(:,ii))
@@ -101,7 +100,7 @@ subroutine setup()
 
   !> convert to float precision
   x_r4 = real(x_r8,kind=4); origin_r4 = real(origin_r8,kind=8); 
-  v1_r4 = real(v1_r8,kind=4); v2_r4 = real(v2_r4,kind=4); T_r4 = real(T_r8,kind=4); 
+  v1_r4 = real(v1_r8,kind=4); v2_r4 = real(v2_r8,kind=4); T_r4 = real(T_r8,kind=4); 
   N_r4 = real(N_r8,kind=4); B_r4 = real(B_r8,kind=4);
   do ii=1,n_origins
     call test_orthonormality_basis(T_r4(:,ii),N_r4(:,ii),B_r4(:,ii))
@@ -112,9 +111,9 @@ end subroutine setup
 subroutine teardown()
   implicit none
   !> set all variables to 0
-  x_r4 = zero_r4; origin_r4 = zero_r4;
-  T_r4 = zero_r4; N_r4 = zero_r4; B_r4 = zero_r4;
-  x_r8 = 0.d0; origin_r8 = 0.d0;
+  x_r4 = zero_r4; origin_r4 = zero_r4; v1_r4 = zero_r4;
+  v2_r4 = zero_r4; T_r4 = zero_r4; N_r4 = zero_r4; B_r4 = zero_r4;
+  x_r8 = 0.d0; origin_r8 = 0.d0; v1_r8 = 0.d0; v2_r8 = 0.e0;
   T_r8 = 0.d0; N_r8 = 0.d0; B_r8 = 0.d0;
   phi_r8 = 0.d0
 end subroutine teardown
@@ -193,22 +192,22 @@ subroutine test_vectors_to_orthonormal_basis()
   do ii=1,n_origins
     call vectors_to_orthonormal_basis(v1_r4(:,ii),v2_r4(:,ii),T_new_r4,N_new_r4,B_new_r4)
     call test_orthonormality_basis(T_new_r4,N_new_r4,B_new_r4)
-    call assert_equals(T_r4(:,ii),T_new_r4,n_origins,tol_r4,&
+    call assert_equals(T_r4(:,ii),T_new_r4,3,tol_r4,&
     "Error vectors to orhtonormal basis (float): T basis mismatch!)")
-    call assert_equals(N_r4(:,ii),N_new_r4,n_origins,tol_r4,&
+    call assert_equals(N_r4(:,ii),N_new_r4,3,tol_r4,&
     "Error vectors to orhtonormal basis (float): T basis mismatch!)")
-    call assert_equals(B_r4(:,ii),B_new_r4,n_origins,tol_r4,&
+    call assert_equals(B_r4(:,ii),B_new_r4,3,tol_r4,&
     "Error vectors to orhtonormal basis (float): B basis mismatch!)")
   enddo
   !> test orthonormal basis double precision
   do ii=1,n_origins
     call vectors_to_orthonormal_basis(v1_r8(:,ii),v2_r8(:,ii),T_new_r8,N_new_r8,B_new_r8)
     call test_orthonormality_basis(T_new_r8,N_new_r8,B_new_r8)
-    call assert_equals(T_r8(:,ii),T_new_r8,n_origins,tol_r8,&
+    call assert_equals(T_r8(:,ii),T_new_r8,3,tol_r8,&
     "Error vectors to orhtonormal basis (double): T basis mismatch!)")
-    call assert_equals(N_r8(:,ii),N_new_r8,n_origins,tol_r8,&
+    call assert_equals(N_r8(:,ii),N_new_r8,3,tol_r8,&
     "Error vectors to orhtonormal basis (double): T basis mismatch!)")
-    call assert_equals(B_r8(:,ii),B_new_r8,n_origins,tol_r8,&
+    call assert_equals(B_r8(:,ii),B_new_r8,3,tol_r8,&
     "Error vectors to orhtonormal basis (double): B basis mismatch!)")
   enddo 
 

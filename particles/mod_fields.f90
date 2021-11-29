@@ -133,9 +133,6 @@ subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
   
   B=[(A3_Z-AZ_p)*R_inv, (AR_p-A3_R)*R_inv, AZ_R-AR_Z + Fprof*R_inv]
   E=[-AR_t, -AZ_t, -R_inv*A3_t]
-  
-  !write(*,*) "particle at", R,Z, phi,"temp fields", E(1),E(2),E(3),B(1),B(2),B(3)
-  
 #else
   call fields%interp_PRZ(time, i_elm, i_var, 2, st(1), st(2), phi, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
   ! Calculate the derivatives to R and Z
@@ -162,13 +159,13 @@ subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
   ! See http://jorek.eu/wiki/doku.php?id=u_phi
   E     = [-F0*U_R, -F0*U_Z, -F0*U_phi*R_inv]/t_norm
   E(3)  = E(3) - R_inv*P_time(1) ! because this is not normalized with t_norm
-  !write(*,*) "particle at", R,Z, phi,"temp fields", E(1),E(2),E(3),B(1),B(2),B(3)
+  
 #endif
   
   
   end subroutine calc_EBpsiU
   
-  subroutine calc_F_profile(fields,i_elm,s,t,phi,Fprof)
+subroutine calc_F_profile(fields,i_elm,s,t,phi,Fprof)
     use data_structure
     use phys_module, only : mode, F0
     use mod_basisfunctions
@@ -192,10 +189,10 @@ subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
     enddo  !number of vertices
     Fprof=Fprof_temp
 #else
-    Fprof=F0
+    Fprof=F0 !In reduced MHD, there is no F profile. 
 #endif
   
-  end subroutine calc_F_profile
+end subroutine calc_F_profile
 
 pure subroutine calc_NeTe(fields, time, i_elm, st, phi, n_e, T_e, grad_T_e)
 use phys_module, only: central_density

@@ -4382,56 +4382,36 @@ contains
         Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
         Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
       endif
-      if (use_imp_adas) then  ! use open adas by default
-        frad_bg = 0. 
-        dfrad_bg_dT = 0.
-        do i_imp =1, n_adas
-          r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
-          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
-            Lrad_imp = 0.0
-            dLrad_imp_dT = 0.0
-            call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
-                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp,dLrad_imp_dT)
-            dLrad_imp_dT = dLrad_imp_dT * dT0_corr_dT            
-          else     
-            Lrad_imp = 0.
-            dLrad_imp_dT = 0.
-          end if
-          if (dLrad_imp_dT/=dLrad_imp_dT) then
-            write(*,*) "WARNING: dLrad_imp_dT ", dLrad_imp_dT
-            stop
-          end if
 
-          frad_bg = frad_bg + r_imp * Lrad_imp
-          dfrad_bg_dT =  dfrad_bg_dT + r_imp * dLrad_imp_dT 
-
-        end do
-
-      else 
-
-        if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
-          Arad_bg = 2.4d-31
-          Brad_bg = 20.
-          Crad_bg = 0.8
-      
-          frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
-                        *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
-      
-          dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
-                        *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+      frad_bg = 0.
+      dfrad_bg_dT = 0.
+      do i_imp =1, n_adas
+        if (i_imp == i_main_imp) cycle
+        r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
+        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+          Lrad_imp_bg = 0.0
+          dLrad_imp_bg_dT = 0.0
+          call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    &
+                                         log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp_bg,dLrad_imp_bg_dT)
+          dLrad_imp_bg_dT = dLrad_imp_bg_dT * dTe0_corr_dT
         else
-          write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
+          Lrad_imp_bg = 0.
+          dLrad_imp_bg_dT = 0.
+        end if
+        if (dLrad_imp_bg_dT/=dLrad_imp_bg_dT) then
+          write(*,*) "WARNING: dLrad_imp_bg_dT ", dLrad_imp_bg_dT
           stop
-        end if 
-      ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-      if (with_TiTe) then 
-        Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-        Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-      else
-        Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-        Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-      endif
+        end if
   
+        frad_bg = frad_bg + r_imp * Lrad_imp_bg
+        dfrad_bg_dT =  dfrad_bg_dT + r_imp * dLrad_imp_bg_dT
+  
+      end do
+  
+      if (with_TiTe) then            
+        dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
+      endif
+
     end if
   end subroutine construct_radiation_parameters
 

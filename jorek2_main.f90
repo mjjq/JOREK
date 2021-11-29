@@ -260,7 +260,7 @@ required = 0
     ! --- Read ADAS data and generate coronal equilibrium if needed
     call init_imp_adas(my_id)
   elseif (with_neutrals) then
-    if (use_imp_adas .and. (nimp_bg > 0.d0)) then
+    if (use_imp_adas .and. (nimp_bg(1) > 0.d0)) then
       call init_imp_adas(my_id)
     endif
   endif
@@ -939,6 +939,12 @@ required = 0
     if ( index_now <= 1 ) tstep_prev = tstep
     
     if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
+
+    ! ---- For now running the jorek2_main should not include aux inputs
+    do i = 1, aux_node_list%n_nodes
+      aux_node_list%node(i)%values = 0.d0
+      aux_node_list%node(i)%deltas = 0.d0
+    enddo
 
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'

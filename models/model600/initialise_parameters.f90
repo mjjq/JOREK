@@ -30,6 +30,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
                 n_tht_equidistant,                                  &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
+                XR_z, SIG_z, bgf_r, bgf_z,                          &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
                 SIG_up_leg_0, SIG_up_leg_1, SIG_up_priv,            &
@@ -37,12 +38,15 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 dPSI_outer, dPSI_inner, dPSI_up_priv,               &
                 nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
+                rect_grid_vac_psi,                                  &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 R_Z_psi_bnd_file,                                   &
-                force_horizontal_Xline,                            &
+                force_horizontal_Xline,                             &
                 n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
+                n_jropes,                                           &
+                R_jropes, Z_jropes, w_jropes, current_jropes,       &
                 extend_existing_grid, no_mach1_bc,                  &
                 grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
                 RZ_grid_jump_thres,                                 &
@@ -153,7 +157,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
-                RMP_har_sin_spectrum, imp_type, adas_dir,           &
+                RMP_har_sin_spectrum, imp_type, adas_dir, n_adas,   &
                 amix, amix_freeb, equil_accuracy, use_imp_adas,     &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -292,6 +296,16 @@ if ( my_id == 0 ) then
       stop
     end if
   end do 
+  
+  if (n_adas > n_imp_max) then 
+    write(*,*) "ERROR: n_adas should be no larger than n_imp_max, EXITING!"
+    stop
+  end if
+
+  if (n_adas > 1 .and. (.not. use_imp_adas)) then
+    write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
+    stop
+  end if
 
   if (using_spi) call init_spi_all()
 

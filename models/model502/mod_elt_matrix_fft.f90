@@ -152,9 +152,9 @@ real*8     :: alpha_e, dalpha_e_dT, d2alpha_e_dT2, alpha_e_bis, alpha_e_tri
 real*8     :: Lrad, dLrad_dT                                  ! Radiation rate and its derivative wrt. temperature
 real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Temperature used in radiation rate
 real*8     :: Te_eV                                           ! Uncorrected temperature
-real*8     :: ne_SI                                          ! Electron density used in radiation rate
+real*8     :: ne_SI                                           ! Electron density used in radiation rate
 real*8     :: ne_JOREK                                        ! Electron density in JOREK unit 
-real*8     :: coef_rad_1, A0_rad, A1_rad, T1_rad, sig1_rad    ! Radiation rate parameters
+real*8     :: A0_rad, A1_rad, T1_rad, sig1_rad                ! Radiation rate parameters
 real*8     :: A2_rad, T2_rad, sig2_rad
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
@@ -806,7 +806,7 @@ do ms=1, n_gauss
   ! Atomic physics parameters for Argon
   !-------------------------------------------
 
-     select case ( trim(imp_type) )
+     select case ( trim(imp_type(1)) )
        case('D2')
          m_i_over_m_imp = central_mass/2.
          m_imp          = 2.
@@ -817,7 +817,7 @@ do ms=1, n_gauss
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
          m_imp          = 20.
        case default
-         write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in inj_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in inj_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
          m_imp          = 2.
@@ -995,10 +995,6 @@ do ms=1, n_gauss
   ! --- Radiative function, using interpolation
   ! ------------------------------------------
 
-     ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-     coef_rad_1 = (GAMMA-1.)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                  *(central_density*1.d20)**2.5d0*m_i_over_m_imp
-
      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
 
        Lrad = 0.0
@@ -1007,22 +1003,12 @@ do ms=1, n_gauss
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will is needed
 !       call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
-       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
-
-       Lrad = Lrad * coef_rad_1
-
-       ! Convert gradient in T(K) in to gradient in T (eV)
-       dLrad_dT = dLrad_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
-       ! Derivative wrt to T, with T in JOREK units
-       dLrad_dT = dLrad_dT / (EL_CHG*MU_ZERO*central_density*1.d20)
-       dLrad_dT = dLrad_dT * dTe0_corr_dT            
-
-       if (Lrad < 0.) then
-         Lrad = 0.
-         dLrad_dT = 0.
-       end if
+       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
+       Lrad = Lrad * m_i_over_m_imp
+       dLrad_dT = dLrad_dT * m_i_over_m_imp * dTe0_corr_dT            
 
      else
+
        Lrad = 0.
        dLrad_dT = 0.
 
@@ -1075,10 +1061,10 @@ do ms=1, n_gauss
     Crad_bg = 0.8
 
     frad_bg     = (GAMMA-1.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                  *nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
     dfrad_bg_dT = -(GAMMA-1.d0)/2.d0*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                  *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                  *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
 
 
    !--------------------------------------------------------
@@ -1296,7 +1282,7 @@ do ms=1, n_gauss
                                 * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep &
 
 !====================================New TG_num terms=================================
-                      - TG_num2 * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                      - TG_num2 * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
                                 * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep &
 !===============================End of NewTG_num terms==============================
 
@@ -1848,10 +1834,10 @@ do ms=1, n_gauss
                                  * ( v_x * u_y - v_y * u_x)   * xjac * theta * tstep * tstep   &
 
 !====================================New TG_num terms=================================
-                      + TG_num2 * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u_y - r0_y * u_x) &
+                      + TG_num2 * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u_y - r0_y_hat * u_x) &
                                 * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep &
 
-                      + TG_num2 * 0.25d0 * w0 * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                      + TG_num2 * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
                                 * ( v_x * u_y - v_y * u_x) * theta * xjac * tstep * tstep 
 
 !===============================End of NewTG_num terms==============================
@@ -1871,7 +1857,7 @@ do ms=1, n_gauss
                                * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
 
 !====================================New TG_num terms=================================
-                      + TG_num2 * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                      + TG_num2 * 0.25d0 * w * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
                                 * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep 
 
 !===============================End of NewTG_num terms==============================
@@ -1901,7 +1887,7 @@ do ms=1, n_gauss
                                  * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep        &
 
 !====================================New TG_num terms=================================
-                      + TG_num2 * 0.25d0 * w * BigR**3 * BigR**2 * (r0_x * u0_y - r0_y * u0_x) &
+                      + TG_num2 * 0.25d0 * w0 * BigR**3 * (rho_x_hat * u0_y - rho_y_hat * u0_x) &
                                 * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep
 
 !===============================End of NewTG_num terms==============================

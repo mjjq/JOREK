@@ -162,34 +162,33 @@ subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
   
 #endif
   
-  
-  end subroutine calc_EBpsiU
+end subroutine calc_EBpsiU
   
 subroutine calc_F_profile(fields,i_elm,s,t,phi,Fprof)
-    use data_structure
-    use phys_module, only : mode, F0
-    use mod_basisfunctions
-    class(fields_base),         intent(in)     :: fields
-    integer,                    intent(in)     :: i_elm
-    real*8,                     intent(in)     :: s,t, phi
-    real*8,                     intent(out)    :: Fprof
-    !Internal variables
-    integer           :: i,j,i_tor, iv, i_harm
-    real*8            :: Fprof_temp
-    real*8            :: H(4,4), H_s(4,4),H_t(4,4),ss
+  use data_structure
+  use phys_module, only : mode, F0
+  use mod_basisfunctions
+  class(fields_base),         intent(in)     :: fields
+  integer,                    intent(in)     :: i_elm
+  real*8,                     intent(in)     :: s,t, phi
+  real*8,                     intent(out)    :: Fprof
+  !Internal variables
+  integer           :: i,j,i_tor, iv, i_harm
+  real*8            :: Fprof_temp
+  real*8            :: H(4,4), H_s(4,4),H_t(4,4),ss
 #ifdef fullmhd
-    Fprof_temp=0.d0
-    call basisfunctions3(s,t,H,H_s,H_t)
-    do i = 1, n_vertex_max
-       iv=fields%element_list%element(i_elm)%vertex(i)
-       do j=1, n_order+1
-          ss=fields%element_list%element(i_elm)%size(i,j)
-          Fprof_temp = Fprof_temp +fields%node_list%node(iv)%Fprof_eq(j)*ss*H(i,j)
-       enddo!order
-    enddo  !number of vertices
-    Fprof=Fprof_temp
+  Fprof_temp=0.d0
+  call basisfunctions3(s,t,H,H_s,H_t)
+  do i = 1, n_vertex_max
+     iv=fields%element_list%element(i_elm)%vertex(i)
+     do j=1, n_order+1
+        ss=fields%element_list%element(i_elm)%size(i,j)
+        Fprof_temp = Fprof_temp +fields%node_list%node(iv)%Fprof_eq(j)*ss*H(i,j)
+     enddo!order
+  enddo  !number of vertices
+  Fprof=Fprof_temp
 #else
-    Fprof=F0 !In reduced MHD, there is no F profile. 
+  Fprof=F0 !In reduced MHD, there is no F profile. 
 #endif
   
 end subroutine calc_F_profile

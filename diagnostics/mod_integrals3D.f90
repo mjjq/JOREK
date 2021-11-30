@@ -161,7 +161,7 @@ integer :: i_main_imp
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp, m_imp
 !   -Mean impurity ionization state
-real*8  :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
+real*8  :: Z_imp, dZ_imp_dT, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
 real*8  :: Z_eff_imp
 !   -Corrected plasma temperature and density for radiation calculation
 real*8  :: dT0e_corr_dT, Ti_corr_eV
@@ -370,7 +370,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #ifdef WITH_Impurities
 !$omp           source_bg, source_imp,                                                         &
-!$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp,                  &
+!$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT,                                       &
 !$omp           ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,                                 &
 !$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV,                                 &
 #endif
@@ -383,9 +383,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
-!$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
-!$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
-!$omp           coef_prad_si, coef_prad_si, i_imp,                                             &
+!$omp           LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
+!$omp           Arad_bg, Brad_bg, Crad_bg,                                                     &
+!$omp           coef_prad_si,                                                                  &
 #endif
 !$omp           omp_nthreads,omp_tid)
 

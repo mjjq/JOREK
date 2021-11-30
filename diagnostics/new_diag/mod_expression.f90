@@ -588,7 +588,7 @@ module mod_expression
     real*8  :: Te_corr_eV, Te_eV
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
-    real*8  :: ne_SI                              ! Electron density used in radiation rate
+    real*8  :: ne_SI, ne_JOREK                              ! Electron density used in radiation rate
     real*8  :: Lrad_imp, r_imp, i_imp, frad_bg
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
@@ -596,7 +596,6 @@ module mod_expression
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
-    real*8  :: coef_rad_1, Te_eV
     real*8  :: Te0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
     integer :: i_main_imp
@@ -1560,38 +1559,29 @@ module mod_expression
           rn0_corr = corr_neg_dens(rn0,(/1.d-9,1.d-5 /),1.d-3)
           ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
   
-          ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-          coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
-  
           if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
             Lrad = 0.
-            call radiation_function(imp_adas(i_main_imp),imp_cor(i_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-            Lrad = Lrad * coef_rad_1
+            call radiation_function_linear(imp_adas(i_main_imp),imp_cor(i_main_imp),log10(ne_SI),   &
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad)
           else
             Lrad = 0.
           end if
   
-          ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
           frad_bg = 0.
           do i_imp = 1, n_adas
             if (i_imp == i_main_imp) cycle
             r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
             if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
               Lrad_imp = 0.0
-              if ( units == SI_UNITS ) then
-                call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
-                                               log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)
-                frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
-              else if ( units == JOREK_UNITS ) then
-                call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
-                                               log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
-                frad_bg = frad_bg + r_imp * Lrad_imp 
-              endif
+              call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
+                                             log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
+              frad_bg = frad_bg + r_imp * Lrad_imp 
             else     
               Lrad_imp = 0.
               frad_bg = frad_bg
             end if   
           end do 
+          ne_JOREK = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
   
 #endif
 
@@ -1692,7 +1682,7 @@ module mod_expression
                 
               case ( 'ne' )
 #ifdef WITH_Impurities
-                res = ne_SI * fact_ne 
+                res = ne_JOREK * fact_ne 
 #else
                 res = r0 * fact_ne
 #endif

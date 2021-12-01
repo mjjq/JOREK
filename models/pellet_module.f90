@@ -235,7 +235,7 @@ module pellet_module
             kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
        if (my_id .eq. 0) then
           do i=1, n_spi_tot
-             write(*,'(A,4e14.6)') ' source volume (numerical,analytical)  : ', pellets(i_p)%spi_vol, PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
+             write(*,'(A,4e14.6)') ' source volume (numerical,analytical)  : ', pellets(i)%spi_vol, PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
           enddo
     
        endif

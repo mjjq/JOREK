@@ -343,7 +343,8 @@ module vacuum_equilibrium
 
    integer  :: i
    
-    if (my_id == 0) write(*,*) ' vertical_FB = ', vertical_FB
+   if (my_id == 0) write(*,*) ' vertical_FB = ', vertical_FB
+    if (my_id == 0) write(*,*) ' vertical_FB = ', radial_FB
    
    do i=1, n_pf_coils
      if( abs(vert_FB_amp(i)) .gt. 1.d-6 ) then
@@ -351,7 +352,9 @@ module vacuum_equilibrium
        if (my_id == 0) write(*,'(a,I7,a,1es12.4)') 'FB coil ==> I_coil(', i, ') = ', I_coils(i)
      endif
    enddo
-    
+   I_coils(5) =  pf_coils(5)%current * (1 +  radial_FB )
+   I_coils(6) =  pf_coils(6)%current * (1 +  radial_FB )
+   
   end subroutine equilibrium_VFB
 
 

@@ -325,7 +325,7 @@ if (freeboundary_equil) then
       R_axis_old = ES%R_axis
        
     end if ! my_id == 0
-    
+    if (R_axis_ref<0) radial_FB=0.d0
     call MPI_bcast(vertical_FB, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
     call MPI_bcast(radial_FB, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
   

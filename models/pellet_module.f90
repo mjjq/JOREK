@@ -20,6 +20,9 @@ module pellet_module
   real*8, allocatable  :: xtime_pellet_psi(:)
   real*8, allocatable  :: xtime_pellet_particles(:)
   real*8, allocatable  :: xtime_phys_ablation(:)
+
+  real*8, allocatable  :: total_V_ns(:) ! numerically integrated volume of the gas source from each shard in this timestep
+  real*8, allocatable  :: analytical_V_ns(:) ! analytical volume of the gas source from each shard in this timestep
   
   contains
   
@@ -206,6 +209,7 @@ module pellet_module
   
     ! --- Local variables
     real*8  :: V_normalisation, density, density_in, density_out, pressure,pressure_in,pressure_out
+    real*8  :: kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out
     
     real*8  :: R_out, Z_out
     integer :: i_elm, ifail, i, ierr, i_p
@@ -225,6 +229,21 @@ module pellet_module
     integer, intent(in) :: i_inj
     integer, intent(in) :: n_spi_begin
   
+    ! spi_update is called with i_inj=0 for computing the volume of the gas sources
+    if (i_inj .eq. 0) then
+       call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out, &
+            kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
+       if (my_id .eq. 0) then
+          do i=1, n_spi_tot
+             write(*,'(A,4e14.6)') ' source volume (numerical,analytical)  : ', pellets(i_p)%spi_vol, PI * pellets(i_p)%spi_R * ns_tor_norm * ng_radius_min**2.d0
+          enddo
+    
+       endif
+
+       return
+
+    endif
+
     spi_delta_phi   = 0.
     spi_Vel_R_tmp   = 0.
     spi_Vel_phi_tmp = 0.
@@ -832,6 +851,7 @@ module pellet_module
         pellets(i_p)%spi_Vel_Z   = spi_Vel_Z_tmp
         pellets(i_p)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
         pellets(i_p)%spi_abl     = 0.0
+        pellets(i_p)%spi_vol     = 0.d0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -1164,6 +1184,7 @@ module pellet_module
         pellets(i_p)%spi_Vel_RxZ = - spi_Vel_phi_tmp(i)
         pellets(i_p)%spi_radius  =   spi_radius_tmp(i)
         pellets(i_p)%spi_abl     =   0.d0
+        pellets(i_p)%spi_vol     =   0.d0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius

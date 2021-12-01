@@ -129,6 +129,8 @@ module data_structure
     real*8  :: spi_species           !< Fraction of impurity atoms relative to the total number of atoms (model501)
                                      !! 0.: pure background species
                                      !! 1.: pure impurity shard
+    real*8  :: spi_vol               !< Numerically integrated volume of the gas source from the shard
+
   end type type_SPI
  
   integer                                         , public :: nbthreads

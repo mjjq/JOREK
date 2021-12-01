@@ -19,6 +19,7 @@ use equil_info, only : get_psi_n, ES
 #endif
 #ifdef WITH_Impurities
   use mod_impurity
+  use mod_injection_source
 #endif
 use mod_sources
 
@@ -60,9 +61,18 @@ real*8  :: source_volume, source_pellet, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, source_neutral, rn0, rho_bar
 
-integer    :: spi_i
-real*8     :: ng_radius
+! Temporary variables serving the SPI module
+integer    :: spi_i, i_inj,  n_spi_tmp
+    
+real*8     :: spi_R_tmp
+real*8     :: spi_Z_tmp
+real*8     :: spi_phi_tmp
+real*8     :: spi_abl_tmp
+real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
+real*8     :: source_tmp
+real*8     :: integrand_source_volume ! variable used in inj_source for numerical integration of source volume (used here in the call to inj_source)
 
+real*8, allocatable :: local_source_volume(:)
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
 
@@ -118,6 +128,20 @@ local_n_particles_inj = 0.d0
 local_n_particles     = 0.d0
 #endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+if (using_spi) then
+   if (allocated(local_source_volume)) then
+      deallocate(local_source_volume)
+   end if
+
+   allocate (local_source_volume(n_spi_tot))
+
+   do spi_i=1, n_spi_tot
+      local_source_volume(spi_i)      = 0.d0
+   end do
+end if
+#endif
+
 Bgeo = F0 / R_geo
 
 delta_phi = 2.d0 * PI / float(n_plane) / float(n_period)
@@ -151,6 +175,14 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_mass, pellets, tor_frequency,                                           &
 !$omp          ng_radius_ratio, ng_radius_min, ng_radius, spi_shard_file,                      &
 #endif
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+!$omp          local_source_volume,                                                            &
+!$omp          using_spi, n_spi_tot, n_inj, n_spi,                                             &
+!$omp          ns_deltaphi, ns_tor_norm,                                                       &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, JET_MGI,ASDEX_MGI,                     &
+!$omp          central_mass, pellets,                                                          &
+!$omp          ng_radius_ratio, ng_radius_min,                                                 &    
+#endif
 !$omp          wgauss_copy)                                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i,                       &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, eq_g, eq_s, eq_t, eq_p,                    &
@@ -163,6 +195,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           r0_corr, T0_corr,                                                              &
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           rn0, source_neutral,                                                           &
+#endif
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp, ng_radius,                     &
+!$omp           n_spi_tmp, source_tmp, integrand_source_volume,                                &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -178,6 +214,9 @@ omp_tid      = 0
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
 #ifdef WITH_Neutrals
 !$omp                local_n_particles_inj,  local_n_particles,                               &
+#endif
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+!$omp                local_source_volume,                                                     &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                TVP_int, TVP_ext, TVP_tot, VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
@@ -375,6 +414,51 @@ do ife = ife_min, ife_max
 
 #endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+        if (using_spi) then
+
+           JET_MGI = .false.
+           ASDEX_MGI = .false.
+
+           do spi_i=1, n_spi_tot
+
+              source_tmp = 0.d0
+
+              if (pellets(spi_i)%spi_radius > 0.0) then
+                 spi_R_tmp   = pellets(spi_i)%spi_R
+                 spi_Z_tmp   = pellets(spi_i)%spi_Z
+                 spi_phi_tmp = pellets(spi_i)%spi_phi
+                 spi_abl_tmp = pellets(spi_i)%spi_abl
+                 
+                 ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+
+                 if (ng_radius < ng_radius_min) then
+                    ng_radius = ng_radius_min
+                 end if
+          
+                 n_spi_tmp = 0
+                 do i_inj = 1, n_inj
+                    n_spi_tmp = n_spi_tmp + n_spi(i_inj)
+                    if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+                 end do
+
+                 call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp, &
+                      ng_radius,ns_deltaphi, ns_tor_norm, &
+                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., &
+                      x_g(ms,mt),y_g(ms,mt),phi, &
+                      source_tmp,t_now,JET_MGI,ASDEX_MGI, &
+                      central_density,central_mass, &
+                      integrand_source_volume)
+
+                 local_source_volume(spi_i) = local_source_volume(spi_i) &
+                      + integrand_source_volume * bigR * xjac * wst * delta_phi
+
+             end if
+
+          end do
+       end if
+#endif
+
         if (in_plasma(node_list,element_list,x_g(ms,mt),y_g(ms,mt),ps0,xpoint,xcase,ES%R_xpoint,ES%Z_xpoint,ES%psi_xpoint,psi_limit,ES%R_axis, ES%Z_axis,ES%psi_axis)) then
 
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
@@ -454,6 +538,14 @@ endif
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #endif
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+  if (using_spi) then   
+     do spi_i=1, n_spi_tot
+        call MPI_AllReduce(local_source_volume(spi_i),pellets(spi_i)%spi_vol,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+     end do
+  end if
+#endif
+
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27
 t_norm   = sqrt(MU_zero*rho_norm)
 
@@ -524,6 +616,12 @@ if (my_id .eq. 0) then
 #endif
 
 endif
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+if (using_spi) then
+   deallocate(local_source_volume)
+end if
+#endif
 
 return
 

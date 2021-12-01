@@ -1141,7 +1141,7 @@ required = 0
            if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
            n_spi_begin = n_spi_begin + n_spi(i)
          end do
-!         call update_spi(my_id,node_list,element_list,0,0) ! to compute the volume of the gas sources
+         call update_spi(my_id,node_list,element_list,0,0) ! to compute the volume of the gas sources
        end if
 #endif
 

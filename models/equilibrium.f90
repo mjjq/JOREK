@@ -301,7 +301,7 @@ if (freeboundary_equil) then
       
       !Vertical feedback - needed for vertically unstable plasmas        
       Z_axis_int = Z_axis_int + (ES%Z_axis - Z_axis_ref)
-      R_axis_int = Z_axis_int + (ES%R_axis - R_axis_ref)
+      R_axis_int = R_axis_int + (ES%R_axis - R_axis_ref)
       if (iter .eq. 1) then
         dZ_axis = 0.d0
         dR_axis = 0.d0

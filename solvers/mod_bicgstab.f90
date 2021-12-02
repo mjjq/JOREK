@@ -161,7 +161,7 @@ module mod_bicgstab
       rho_1 = rho
     enddo
 
-    max_it = iter - 1 ! actual number of iterations
+    max_it = iter! - 1 ! actual number of iterations
 
     if ((error <= tol).or.(snrm2 <= tol)) then ! converged
      if (snrm2 <= tol) error = snrm2/bnrm2;
@@ -243,10 +243,14 @@ module mod_bicgstab
     real :: t0, t1, t2
     
     t0 = get_time()
-
-    do i = 1, mumps_par%n
-      mumps_par%rhs(i) = x(my_row_index(i))
-    enddo
+    
+    if (my_id_n.eq.0) then
+      do i = 1, mumps_par%n
+        mumps_par%rhs(i) = x(my_row_index(i))
+      enddo
+    endif
+    call MPI_Bcast(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
+    
     t1 = get_time()
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
@@ -261,6 +265,7 @@ module mod_bicgstab
         b(my_row_index(i)) = mumps_par%rhs(i)*my_row_factor
       enddo
     endif
+    call MPI_BARRIER(MPI_GLOB,ierr)
     call MPI_AllReduce(MPI_IN_PLACE,b,n_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
     ! now all ranks have the global solution vector
 

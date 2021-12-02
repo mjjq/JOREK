@@ -40,30 +40,42 @@ end type particle_sim
 
 contains
 !> Actions to perform when setting up a simulation
-subroutine initialize(sim, num_groups, skip_jorek2help)
-  use mod_mpi_tools, only: init_mpi_threads
-  use mod_parameters, only: n_tor, n_period
-  use phys_module, only: mode
+!> inputs:
+!>   sim:           (particle_sim) the particle simulation
+!>   num_groups:    (integer) number of particle groups
+!>   do_jorek2help: (logical)(optional) call jorek2help if true
+!>   my_id:         (integer)(optional) mpi rank
+!>   n_cpu:         (integer)(optional) number of mpi tasks in the commworld
+!> outputs:
+!>   sim: (particle_sim) the particle simulation
+subroutine initialize(sim,num_groups,do_jorek2help,my_id,n_cpu)
+  use mod_mpi_tools,     only: init_mpi_threads
+  use mod_mpi_tools,     only: get_mpi_wtime
+  use mod_parameters,    only: n_tor, n_period
+  use phys_module,       only: mode
   use basis_at_gaussian, only: initialise_basis
-  use data_structure, only: init_threads, nbthreads
+  use data_structure,    only: init_threads, nbthreads
   !$ use omp_lib
   class(particle_sim), intent(inout) :: sim
   integer, intent(in) :: num_groups
-  logical, optional :: skip_jorek2help
+  logical,intent(in), optional :: do_jorek2help
+  integer,intent(in),optional :: my_id,n_cpu
   integer :: ierr, i_tor,nthreads
-  logical :: my_skip_help
 
-  !> initialise the mpi comm world with threads
-  call init_mpi_threads(sim%my_id,sim%n_cpu,ierr,sim%wtime_start)
+  !> initialise the mpi comm world with threads if required
+  if(present(my_id).and.present(n_cpu)) then
+    sim%my_id = my_id; sim%n_cpu = n_cpu;
+    sim%wtime_start = get_mpi_wtime()
+  else
+    call init_mpi_threads(sim%my_id,sim%n_cpu,ierr,sim%wtime_start)
+  endif
   !> allocate the simulation particle groups
   allocate(sim%groups(num_groups))
   
   call init_threads()
 
-  if (present(skip_jorek2help)) then
-    if (sim%my_id .eq. 0 .and. .not. skip_jorek2help) call jorek2help(sim%n_cpu, nbthreads)
-  else
-    if (sim%my_id .eq. 0) call jorek2help(sim%n_cpu, nbthreads)
+  if (present(do_jorek2help)) then
+    if (sim%my_id .eq. 0 .and. do_jorek2help) call jorek2help(sim%n_cpu, nbthreads)
   end if
 
   ! Initialise mode numbers
@@ -84,6 +96,7 @@ end subroutine
 
 !> Actions to perform when stopping the simulation.
 subroutine finalize(sim)
+  use mod_mpi_tools, only: finalize_mpi_threads
   use mod_startup_teardown, only: jorek_finalize => finalize
   class(particle_sim), intent(in) :: sim
   integer :: ierr
@@ -92,7 +105,7 @@ subroutine finalize(sim)
   else
     write(*,"(A,g14.6,A)") "INFO: End of events at ", sim%time, " , exiting"
   end if
-  call MPI_Finalize(ierr)
+  call finalize_mpi_threads(ierr)
 end subroutine
 
 !> set the t_norm value

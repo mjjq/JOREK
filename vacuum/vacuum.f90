@@ -68,7 +68,7 @@ module vacuum
   real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
-  real*8              :: R_axis_ref=-99                  !< Target magnetic axis vertical position (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: R_axis_ref                      !< Optional target magnetic axis radial position (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
@@ -425,6 +425,7 @@ module vacuum
     n_feedback_current   = 2
         
     Z_axis_ref           = 1.d22
+    R_axis_ref           = -99.d0
     FB_Zaxis_position    = 1.d0
     FB_Zaxis_derivative  = 0.d0
     FB_Zaxis_integral    = 0.d0

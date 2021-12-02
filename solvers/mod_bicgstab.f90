@@ -135,13 +135,13 @@ module mod_bicgstab
 
       alpha = rho/ddot(n_glob,r_tld,1,v,1)
       s = r - alpha*v
-      snrm2 = dnrm2(n_glob, s, 1)
+      !snrm2 = dnrm2(n_glob, s, 1)
 
-      if (snrm2 < tol) then
-        x = x + alpha*p_hat
-        resid = snrm2/bnrm2
-        exit
-      endif
+      !if (snrm2 < tol) then
+      !  x = x + alpha*p_hat
+      !  resid = snrm2/bnrm2
+      !  exit
+      !endif
 
       t0 = get_time()
       call prec(s,s_hat) ! stabilizer
@@ -163,8 +163,8 @@ module mod_bicgstab
 
     max_it = iter! - 1 ! actual number of iterations
 
-    if ((error <= tol).or.(snrm2 <= tol)) then ! converged
-     if (snrm2 <= tol) error = snrm2/bnrm2;
+    if ((error <= tol)) then ! converged
+     !if (snrm2 <= tol) error = snrm2/bnrm2;
      flag = 0
      if (my_id.eq.0) write(*,*) "bicgstab completed successfully with n_iter: ", max_it
     elseif (omega == 0.0) then ! breakdown
@@ -252,13 +252,13 @@ module mod_bicgstab
     endif
     call MPI_Bcast(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
     
-    t1 = get_time()
+    !t1 = get_time()
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
       call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
     endif
 #endif
-    if (my_id_n.eq.0) write(*,*) my_id, "bicgstab pc solve time", get_time() - t1
+    !if (my_id_n.eq.0) write(*,*) my_id, "bicgstab pc solve time", get_time() - t1
 
     b = 0.d0
     if (my_id_n.eq.0) then

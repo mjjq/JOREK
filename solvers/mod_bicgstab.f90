@@ -61,6 +61,7 @@ module mod_bicgstab
     real(kind=C_DOUBLE)              :: tol, error, alpha, beta, omega, bnrm2, rho, rho_1, resid, snrm2
 
     real(kind=C_DOUBLE), external :: dnrm2, ddot ! 2-norm and dot product functions from BLAS
+    real :: t0, t1, t2
 
     MPI_GLOB = comm_glob
     MPI_COMM_N = comm_n
@@ -105,6 +106,8 @@ module mod_bicgstab
     omega  = 1.0
     r_tld = r
 
+    t1 = 0; t2 = 0;
+
     do iter = 1, max_it
       rho = ddot(n_glob,r_tld,1,r,1) ! direction vector
 
@@ -117,8 +120,15 @@ module mod_bicgstab
         p = r
       endif
 
+      t0 = get_time()
       call prec(p,p_hat)
+      t1 = t1 + get_time() - t0
+      t0 = get_time()
       call matv(p_hat,v)
+      t2 = t2 + get_time() - t0
+
+      if (my_id.eq.0) write(*,*) ""
+
 
       alpha = rho/ddot(n_glob,r_tld,1,v,1)
       s = r - alpha*v
@@ -130,8 +140,12 @@ module mod_bicgstab
         exit
       endif
 
+      t0 = get_time()
       call prec(s,s_hat) ! stabilizer
+      t1 = t1 + get_time() - t0
+      t0 = get_time()
       call matv(s_hat,t)
+      t2 = t2 + get_time() - t0
 
       omega = ddot(n_glob,t,1,s,1)/ddot(n_glob,t,1,t,1)
       x = x + alpha*p_hat + omega*s_hat ! update approximation
@@ -160,6 +174,8 @@ module mod_bicgstab
      flag = 1
      if (my_id.eq.0) write(*,*) "bicgstab failed to converge, relative error: ", error
     endif
+
+    if (my_id.eq.0) write(*,*) "bicgstab times:", t1, t2
 
 
     deallocate(r, r_tld, s, s_hat, tmp, p, p_hat, v, t)
@@ -221,16 +237,20 @@ module mod_bicgstab
     real(kind=C_DOUBLE), allocatable, target :: x(:), b(:)
     integer :: i
     integer :: ierr
+    real :: t0, t1, t2
+    
+    t0 = get_time()
 
     do i = 1, mumps_par%n
       mumps_par%rhs(i) = x(my_row_index(i))
     enddo
-
+    t1 = get_time()
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
       call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
     endif
 #endif
+    if (my_id_n.eq.0) write(*,*) my_id, "bicgstab pc solve time", get_time() - t1
 
     b = 0.d0
     if (my_id_n.eq.0) then
@@ -240,6 +260,8 @@ module mod_bicgstab
     endif
     call MPI_AllReduce(MPI_IN_PLACE,b,n_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
     ! now all ranks have the global solution vector
+
+    if (my_id_n.eq.0) write(*,*) my_id, "bicgstab pc time", get_time() - t0
 
   end subroutine prec
 
@@ -254,7 +276,7 @@ module mod_bicgstab
     ! set module values
     n_glob = ndof_glob ! rank of global sparse matrix
     nnz = nz_glob ! number of nonzero entries in the local piece of global sparse matrix
-    blocksize = n_tor*n_var ! should try n_tor*n_var*ndof in case of force_central_mode
+    blocksize = n_tor*n_var
     blocksize2 = blocksize*blocksize
     n_blocks = nz_glob/blocksize2
 
@@ -282,6 +304,14 @@ module mod_bicgstab
     deallocate(rcv_c,rcv_d)
     deallocate(b_tmp)
   end subroutine bicgstab_finalize
+
+  real function get_time()
+    implicit none
+    integer :: cc, cr
+
+    call system_clock(count=cc, count_rate=cr)
+    get_time =  real(cc)/cr
+  end function get_time
 
 #endif
 end module mod_bicgstab

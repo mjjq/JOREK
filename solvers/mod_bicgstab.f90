@@ -178,7 +178,8 @@ module mod_bicgstab
      if (my_id.eq.0) write(*,*) "bicgstab failed to converge, relative error: ", error
     endif
 
-    if (my_id.eq.0) write(*,*) "bicgstab times:", t1, t2
+    if (my_id.eq.0) write(*,*) "bicgstab times (prec, matv):", t1, t2
+    if (my_id.eq.0) write(*,*) "bicgstab final relative error:", error
 
 
     deallocate(r, r_tld, s, s_hat, tmp, p, p_hat, v, t)
@@ -242,7 +243,7 @@ module mod_bicgstab
     integer :: ierr
     real :: t0, t1, t2
     
-    t0 = get_time()
+    !t0 = get_time()
     
     if (my_id_n.eq.0) then
       do i = 1, mumps_par%n
@@ -269,7 +270,7 @@ module mod_bicgstab
     call MPI_AllReduce(MPI_IN_PLACE,b,n_glob,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_GLOB,ierr)
     ! now all ranks have the global solution vector
 
-    if (my_id_n.eq.0) write(*,*) my_id, "bicgstab pc time", get_time() - t0
+    !if (my_id_n.eq.0) write(*,*) my_id, "bicgstab pc time", get_time() - t0
 
   end subroutine prec
 

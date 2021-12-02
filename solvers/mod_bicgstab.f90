@@ -99,7 +99,7 @@ module mod_bicgstab
     r = b - tmp
 
     error = dnrm2(n_glob, r, 1)/bnrm2;
-    if (error < tol) then
+    if (error <= tol) then
       !if (my_id.eq.0) write(*,*) "bicgstab exiting, initial relative error:", error
       max_it = 0
     endif
@@ -129,9 +129,6 @@ module mod_bicgstab
       t0 = get_time()
       call matv(p_hat,v)
       t2 = t2 + get_time() - t0
-
-      if (my_id.eq.0) write(*,*) ""
-
 
       alpha = rho/ddot(n_glob,r_tld,1,v,1)
       s = r - alpha*v
@@ -163,8 +160,7 @@ module mod_bicgstab
 
     max_it = iter! - 1 ! actual number of iterations
 
-    if ((error <= tol)) then ! converged
-     !if (snrm2 <= tol) error = snrm2/bnrm2;
+    if (error <= tol) then ! converged
      flag = 0
      if (my_id.eq.0) write(*,*) "bicgstab completed successfully with n_iter: ", max_it
     elseif (omega == 0.0) then ! breakdown

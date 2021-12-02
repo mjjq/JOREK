@@ -75,7 +75,7 @@ subroutine initialize(sim,num_groups,skip_jorek2help,my_id,n_cpu)
   call init_threads()
 
   if (present(skip_jorek2help)) then
-    if (sim%my_id .eq. 0 .and. .not. do_jorek2help) call jorek2help(sim%n_cpu, nbthreads)
+    if (sim%my_id .eq. 0 .and. .not. skip_jorek2help) call jorek2help(sim%n_cpu, nbthreads)
   end if
 
   ! Initialise mode numbers

@@ -5,6 +5,8 @@ implicit none
 
 private
 public :: init_mpi_threads
+public :: finalize_mpi_threads
+public :: get_mpi_wtime
 
 contains
 
@@ -26,7 +28,7 @@ subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
   ! variables
   logical :: initialised
   integer :: required,provided
-  real*8 :: start_time
+  real*8  :: start_time
   integer :: result_length
   character(len=MPI_MAX_PROCESSOR_NAME) :: proc_name
 
@@ -58,6 +60,33 @@ subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
   write(*,'(A,I5,A,2A)') "MPI ID: ",my_id," Processor name: ",proc_name
   
 end subroutine init_mpi_threads
+
+!> Finilize MPI threads and return time if required
+!> inputs
+!>   ierr: (integer) if !=0 an error occurred
+!> outptus:
+!>   ierr: (integer) if !=0 an error occurred
+!>   final_time_out: (real8)(optional) process time before finalizing
+subroutine finalize_mpi_threads(ierr,final_time_out)
+  use mpi
+  implicit none
+  integer,intent(inout)       :: ierr
+  real*8,intent(out),optional :: final_time_out
+  logical                     :: initialised
+  call MPI_Initialized(initialised,ierr)
+  if(initialised) then
+    if(present(final_time_out)) final_time_out = MPI_Wtime()
+    call MPI_Finalize(ierr)  
+  endif
+end subroutine finalize_mpi_threads
+
+!> return the mpi elapsed time on the calling task
+function get_mpi_wtime()
+  use mpi
+  implicit none
+  real*8 :: get_mpi_wtime
+  get_mpi_wtime = MPI_Wtime()
+end function get_mpi_wtime
 
 !------------------------------------------------------------
 end module mod_mpi_tools

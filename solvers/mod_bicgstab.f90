@@ -82,8 +82,9 @@ module mod_bicgstab
     cooA%n = n_glob
     cooA%nnz = nnz
 
-    call MPI_BARRIER(MPI_GLOB, ierr)
-
+    call MPI_Bcast(b,n_glob,MPI_DOUBLE_PRECISION,0,MPI_GLOB,ierr)
+    call MPI_Bcast(x,n_glob,MPI_DOUBLE_PRECISION,0,MPI_GLOB,ierr)
+    
     iter = 0
     flag = 0
 
@@ -107,6 +108,8 @@ module mod_bicgstab
     r_tld = r
 
     t1 = 0; t2 = 0;
+    
+    if (my_id.eq.0) write(*,*) "bicgstab initial relative error:", error
 
     do iter = 1, max_it
       rho = ddot(n_glob,r_tld,1,r,1) ! direction vector

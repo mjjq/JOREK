@@ -44,12 +44,13 @@ contains
 subroutine set_seed_sys_time_novar_1d(interval)
   implicit none
   integer,dimension(2),intent(in) :: interval
-  integer                         :: n_seeds
+  integer                         :: n_seeds,time
   integer,dimension(:),allocatable :: seed
   call random_seed(size=n_seeds)
   allocate(seed(n_seeds))
   call gnu_rng_interval(n_seeds,interval,seed)
-  seed = seed*time()
+  call system_clock(time)
+  seed = seed*time
   call random_seed(put=seed)
   deallocate(seed)
 end subroutine set_seed_sys_time_novar_1d
@@ -68,12 +69,13 @@ subroutine set_seed_sys_time_1var_1d(interval,var)
   implicit none
   integer,intent(in)               :: var
   integer,dimension(2),intent(in)  :: interval
-  integer                          :: n_seeds
+  integer                          :: n_seeds,time
   integer,dimension(:),allocatable :: seed
   call random_seed(size=n_seeds) 
   allocate(seed(n_seeds))
   call gnu_rng_interval(n_seeds,interval,seed)
-  seed = sign(1,var)*(abs(var)+1)*seed*time()
+  call system_clock(time)
+  seed = sign(1,var)*(abs(var)+1)*seed*time
   call random_seed(put=seed)
   deallocate(seed)
 end subroutine set_seed_sys_time_1var_1d
@@ -94,12 +96,13 @@ subroutine set_seed_sys_time_2vars_1d(interval,var1,var2)
   implicit none
   integer,dimension(2),intent(in) :: interval
   integer,intent(in)              :: var1,var2
-  integer                         :: n_seeds
+  integer                         :: n_seeds,time
   integer,dimension(:),allocatable :: seed
   call random_seed(size=n_seeds) 
   allocate(seed(n_seeds))
   call gnu_rng_interval(n_seeds,interval,seed)
-  seed = sign(1,var2)*sign(1,var1)*(abs(var1)+1)*(abs(var2)+1)*seed*time()
+  call system_clock(time)
+  seed = sign(1,var2)*sign(1,var1)*(abs(var1)+1)*(abs(var2)+1)*seed*time
   call random_seed(put=seed)
   deallocate(seed)
 end subroutine set_seed_sys_time_2vars_1d

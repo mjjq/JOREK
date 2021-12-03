@@ -1748,18 +1748,6 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 #endif
       end if
 
-      call H5Lexists_f(file_id,"spi_phi_init_arr",flag_exists,err_exists)
-      if (flag_exists .and. err_exists == 0) then
-        call HDF5_array1D_reading(file_id,spi_phi_init_arr,"spi_phi_init_arr")
-      else
-        n_spi_begin = 1
-        do i_inj = 1, n_inj
-          if(n_spi(i_inj)>0) spi_phi_init_arr(n_spi_begin:(n_spi_begin+n_spi(i_inj)-1)) = ns_phi(i_inj)
-          n_spi_begin = n_spi_begin + n_spi(i_inj)
-        end do
-        write(*,*)"Backward Compatibility: No spi_phi_init location found, assuming to be ns_phi."
-      end if
-
       call H5Lexists_f(file_id,"spi_vol_arr",flag_exists,err_exists)
       if (flag_exists .and. err_exists == 0) then
         call HDF5_array1D_reading(file_id,spi_vol_arr,"spi_vol_arr")

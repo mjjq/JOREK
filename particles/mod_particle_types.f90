@@ -5,12 +5,14 @@
 module mod_particle_types
   implicit none
   private
-  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline
-  public particle_kinetic_relativistic, particle_gc_relativistic, particle_gc_vpar, particle_gc_Qin
-  public particle_get_q
-  public copy_particle
-  public copy_particle_base
-  public copy_particle_kinetic_leapfrog
+  public :: particle_base, particle_kinetic, particle_kinetic_leapfrog
+  public :: particle_gc, particle_fieldline
+  public :: particle_kinetic_relativistic, particle_gc_relativistic
+  public :: particle_gc_vpar, particle_gc_Qin
+  public :: particle_get_q
+  public :: copy_particle
+  public :: copy_particle_base
+  public :: copy_particle_kinetic_leapfrog
 
 
   !> The base type for all other particles. Includes only the position and weight elements

@@ -15,6 +15,15 @@ type(particle_sim) :: sim_particles
 !> of particle types for testing all of them
 integer,parameter :: n_groups=8
 integer,parameter :: n_particles=5 !< N# of particles per group per task
+!> intervals for random number generation
+integer*1,dimension(2),parameter :: q_interval=(/1,10/)
+integer,dimension(2),parameter   :: i_elm_interval=(/1,1000000/)
+integer,dimension(2),parameter   :: i_life_interval=(/1,1000000/)
+real*8,dimension(3),parameter    :: x_lowbnd=(/-5.d2,-1.d2,1.d0/)
+real*8,dimension(3),parameter    :: x_uppbnd=(/7.d2,2.d2,4.d2/)
+real*8,dimension(3),parameter    :: st_interval=(/0.d0,1.d0/)
+real*8,dimension(3),parameter    :: weight_interval=(/0.d0,1.d3/)
+
 !> Interfaces -------------------------------------------
 contains
 

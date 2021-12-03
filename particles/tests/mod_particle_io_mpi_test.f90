@@ -16,14 +16,24 @@ type(particle_sim) :: sim_particles
 integer,parameter :: n_groups=8
 integer,parameter :: n_particles=5 !< N# of particles per group per task
 !> intervals for random number generation
-integer*1,dimension(2),parameter :: q_interval=(/1,10/)
+integer,dimension(2),parameter   :: rng_seed_interval=(/-1234,9876/)
+integer,dimension(2),parameter   :: q_interval=(/1,10/)
 integer,dimension(2),parameter   :: i_elm_interval=(/1,1000000/)
 integer,dimension(2),parameter   :: i_life_interval=(/1,1000000/)
+real*8,dimension(2),parameter    :: st_interval=(/0.d0,1.d0/)
+real*8,dimension(2),parameter    :: dt_interval=(/1.d-12,1.d-2/)
+real*8,dimension(2),parameter    :: mass_interval=(/5.485d-4,124.d0/)
+real*8,dimension(2),parameter    :: v_interval=(/-6.75d3,8.45d3/)
+real*8,dimension(2),parameter    :: Ekin_interval=(/0.d0,1.d7/)
+real*8,dimension(2),parameter    :: mu_interval=(/0.d0,1.d-5/)
+real*8,dimension(2),parameter    :: Bnorm_interval=(/0.d0,1.4d1/)
+real*8,dimension(2),parameter    :: weight_interval=(/0.d0,1.d3/)
 real*8,dimension(3),parameter    :: x_lowbnd=(/-5.d2,-1.d2,1.d0/)
 real*8,dimension(3),parameter    :: x_uppbnd=(/7.d2,2.d2,4.d2/)
-real*8,dimension(3),parameter    :: st_interval=(/0.d0,1.d0/)
-real*8,dimension(3),parameter    :: weight_interval=(/0.d0,1.d3/)
-
+real*8,dimension(3),parameter    :: vp3d_lowbnd=(/-1.25d3,-7.5d2,-8.d1/)
+real*8,dimension(3),parameter    :: vp3d_uppbnd=(/7.5d1,2.35d2,4.85d3/)
+real*8,dimension(3),parameter    :: ABE_lowbnd=(/-2.67d0,-9.85d0,0.35d0/)
+real*8,dimension(3),parameter    :: ABE_uppbnd=(/0.78d0,2.35d0,5.67d0/)
 !> Interfaces -------------------------------------------
 contains
 
@@ -58,14 +68,50 @@ end subroutine run_fruit_particle_io_mpi
 !> outputs:
 !>   ifail:   (integer) 0 if success
 subroutine setup(rank,n_tasks,ifail)
+  use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
+  use mod_particle_types, only: particle_gc,particle_fieldline
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_particle_types, only: particle_gc_relativistic
+  use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin
+  use mod_gnu_rng,        only: gnu_rng_interval
+  use mod_gnu_rng,        only: set_seed_sys_time
+  !$ use omp_lib
   implicit none
   !> inputs
   integer,intent(in) :: rank,n_tasks
   !> inputs-outputs
   integer,intent(inout) :: ifail
+  !> variables
+  integer :: ii,jj
+  integer,dimension(2),parameter :: rng_interval=(/-2000,2000/)
 
   !> initialize the particle simulation (requires jorek inputfile)
   call sim_particles%initialize(n_groups,.false.,rank,n_tasks)
+
+  !> initialise random number generator. We have to ensure that rngs of 
+  !> different threads and different tasks have a different seed
+
+  !> allocate particle lists for different particle types
+  allocate(particle_kinetic::sim_particles%groups(1)%particles(n_particles))
+  allocate(particle_kinetic_leapfrog::sim_particles%groups(2)%particles(n_particles))
+  allocate(particle_gc::sim_particles%groups(3)%particles(n_particles))
+  allocate(particle_fieldline::sim_particles%groups(4)%particles(n_particles))
+  allocate(particle_kinetic_relativistic::sim_particles%groups(5)%particles(n_particles))
+  allocate(particle_gc_relativistic::sim_particles%groups(6)%particles(n_particles))
+  allocate(particle_gc_vpar::sim_particles%groups(7)%particles(n_particles))
+  allocate(particle_gc_Qin::sim_particles%groups(8)%particles(n_particles))
+
+  !> fill-up group variables
+  !do jj=1,n_groups
+  !enddo
+
+  !> fill-up the particle_base variables for all particles and all groups
+  !do jj=1,n_groups
+    !do ii=1,n_particles
+    !enddo
+  !enddo
+
+  !> fill-up the variables for each specific species
 
 end subroutine setup
 

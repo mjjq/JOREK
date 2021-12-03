@@ -90,7 +90,7 @@ module mod_injection_source
     real*8              :: DMV_inj_frac
     logical, intent(in) :: JET_MGI
     logical, intent(in) :: ASDEX_MGI
-    real*8, intent(out) :: rhon_source  ! This is in number desntiy
+    real*8, intent(out) :: rhon_source  ! This is in number density
     real*8, intent(in)  :: ns_tor_norm
     real*8, intent(out) :: integrand_source_volume ! variable used for numerical integration of source volume
 

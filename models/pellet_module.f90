@@ -21,9 +21,6 @@ module pellet_module
   real*8, allocatable  :: xtime_pellet_particles(:)
   real*8, allocatable  :: xtime_phys_ablation(:)
 
-  real*8, allocatable  :: total_V_ns(:) ! numerically integrated volume of the gas source from each shard in this timestep
-  real*8, allocatable  :: analytical_V_ns(:) ! analytical volume of the gas source from each shard in this timestep
-  
   contains
   
   subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
@@ -233,13 +230,6 @@ module pellet_module
     if (i_inj .eq. 0) then
        call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out, &
             kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
-       if (my_id .eq. 0) then
-          do i=1, n_spi_tot
-             write(*,'(A,4e14.6)') ' source volume (numerical,analytical)  : ', pellets(i)%spi_vol, PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
-          enddo
-    
-       endif
-
        return
 
     endif
@@ -269,7 +259,7 @@ module pellet_module
       spi_Vel_phi_tmp          = pellets(i_p)%spi_Vel_RxZ * cos(spi_delta_phi) &
                                  - pellets(i_p)%spi_Vel_R * sin(spi_delta_phi)
       spi_Vel_phi_tmp          = spi_Vel_phi_tmp / pellets(i_p)%spi_R
-  
+
       pellets(i_p)%spi_R       = pellets(i_p)%spi_R + spi_Vel_R_tmp * tstep / V_normalisation
       pellets(i_p)%spi_Z       = pellets(i_p)%spi_Z + pellets(i_p)%spi_Vel_Z * tstep / V_normalisation
       pellets(i_p)%spi_phi     = pellets(i_p)%spi_phi + spi_Vel_phi_tmp * tstep / V_normalisation
@@ -520,7 +510,7 @@ module pellet_module
   
     if (my_id == 0 .and. mod(index_now,20) == 0) then
   
-      do i=1, 20 !n_spi
+      do i=1, 20 !n_spi(i_inj)
         i_p = i - 1 + n_spi_begin
         if (pellets(i_p)%spi_radius > 0.0) then
           write(*,*) "Pellet number: ", i_p
@@ -529,7 +519,8 @@ module pellet_module
                                                      pellets(i_p)%spi_Vel_RxZ
           write(*,*) "Pellet ablation (radius,abl) = ", pellets(i_p)%spi_radius, pellets(i_p)%spi_abl
           write(*,*) "Pellet species = ", pellets(i_p)%spi_species
-        end if
+          write(*,*) "Source volume (numerical,analytical) = ", pellets(i)%spi_vol, PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
+        endif
       end do
     end if
 
@@ -851,7 +842,7 @@ module pellet_module
         pellets(i_p)%spi_Vel_Z   = spi_Vel_Z_tmp
         pellets(i_p)%spi_Vel_RxZ = spi_Vel_RxZ_tmp
         pellets(i_p)%spi_abl     = 0.0
-        pellets(i_p)%spi_vol     = 0.d0
+        pellets(i_p)%spi_vol     = 0.0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -1227,11 +1218,12 @@ module pellet_module
     integer, save         :: dtype
     logical, save         :: dtype_set = .false.
   
-    integer :: len(10) = (/1,1,1,1,1,1,1,1,1,1/), t(10) = (/ &
+    integer :: len(11) = (/1,1,1,1,1,1,1,1,1,1,1/), t(11) = (/ &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-      MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+      MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
+      MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
   
-    integer(kind=MPI_ADDRESS_KIND) :: base, disp(10)
+    integer(kind=MPI_ADDRESS_KIND) :: base, disp(11)
     type(type_SPI) :: sample_pellet
   
     dtype_out = dtype
@@ -1249,12 +1241,13 @@ module pellet_module
     call MPI_Get_address(sample_pellet%spi_radius,  disp(8), ierr)
     call MPI_Get_address(sample_pellet%spi_abl,     disp(9), ierr)
     call MPI_Get_address(sample_pellet%spi_species, disp(10),ierr)
+    call MPI_Get_address(sample_pellet%spi_vol,     disp(11),ierr)
   
     ! Rebase to particle memory beginning
     disp = disp - base
   
     ! Commit the structured type
-    call MPI_Type_create_struct(10, len, disp, t, dtype, ierr)
+    call MPI_Type_create_struct(11, len, disp, t, dtype, ierr)
     call MPI_Type_commit(dtype, ierr)
   
     ! Set the save bit

@@ -394,7 +394,7 @@ subroutine fill_particle_kinetic_leapfrog(rank,particles)
   implicit none
   !> inputs
   integer,intent(in) :: rank
-  class(particle_base),dimension(n_particles),intent(in) :: particles
+  class(particle_base),dimension(n_particles),intent(inout) :: particles
   !> variables
   integer :: ii,rn_integer
   !$ integer :: thread_id
@@ -428,7 +428,7 @@ subroutine fill_particle_kinetic_relativistic(rank,particles)
   implicit none
   !> inputs
   integer,intent(in) :: rank
-  class(particle_base),dimension(n_particles),intent(in) :: particles
+  class(particle_base),dimension(n_particles),intent(inout) :: particles
   !> variables
   integer :: ii,rn_integer
   !$ integer :: thread_id
@@ -462,7 +462,7 @@ subroutine fill_particle_gc_relativistic(rank,particles)
   implicit none
   !> inputs
   integer,intent(in) :: rank
-  class(particle_base),dimension(n_particles),intent(in) :: particles
+  class(particle_base),dimension(n_particles),intent(inout) :: particles
   !> variables
   integer :: ii,rn_integer
   !$ integer :: thread_id

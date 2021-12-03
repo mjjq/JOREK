@@ -6,6 +6,7 @@ implicit none
 private
 public :: gnu_rng_interval
 public :: gnu_rng_array_norep
+public :: set_seed_sys_time
 
 ! gnu_rng_interval: template interface for the
 ! gnu_rng_interval implementation
@@ -26,7 +27,84 @@ interface gnu_rng_array_norep
   module procedure gnu_rng_int_array_1d_norep
 end interface
 
+interface set_seed_sys_time
+  module procedure set_seed_sys_time_novar_1d
+  module procedure set_seed_sys_time_1var_1d
+  module procedure set_seed_sys_time_2vars_1d
+end interface set_seed_sys_time
+
 contains
+
+! Methods for settings RNGs seeds ----------------------------
+!> set a different seed based on the system time
+!>   rn_size:  (integer) size of the random number vector
+!>   interval: (integer)(2) interval for random integer generation
+!> outputs
+!>   seed_out: (integer*8)(optional) the set rng seed
+subroutine set_seed_sys_time_novar_1d(interval)
+  implicit none
+  integer,dimension(2),intent(in) :: interval
+  integer                         :: n_seeds
+  integer,dimension(:),allocatable :: seed
+  call random_seed(size=n_seeds)
+  allocate(seed(n_seeds))
+  call gnu_rng_interval(n_seeds,interval,seed)
+  seed = seed*time()
+  call random_seed(put=seed)
+  deallocate(seed)
+end subroutine set_seed_sys_time_novar_1d
+
+!> set a different seed based on the system time
+!> for one variable (mpi rand or thread id)
+!> inputs:
+!>   rn_size:  (integer) size of the random number vector
+!>   n_var:    (integer) number of variables
+!>   interval: (integer)(2) interval for random integer generation
+!>   var:      (integer) variable for setting the seed
+!> outputs:
+!>   n_seed_out: (integer) size of the random seed
+!>   seed_out:  (integer)(n_seed_out)(optional) the set rng seed
+subroutine set_seed_sys_time_1var_1d(interval,var)
+  implicit none
+  integer,intent(in)               :: var
+  integer,dimension(2),intent(in)  :: interval
+  integer                          :: n_seeds
+  integer,dimension(:),allocatable :: seed
+  call random_seed(size=n_seeds) 
+  allocate(seed(n_seeds))
+  call gnu_rng_interval(n_seeds,interval,seed)
+  seed = sign(1,var)*(abs(var)+1)*seed*time()
+  call random_seed(put=seed)
+  deallocate(seed)
+end subroutine set_seed_sys_time_1var_1d
+
+!> set a different seed based on the system time
+!> for two variables (e.g. mpi rank and thread)
+!> inputs:
+!>   rn_size:  (integer) size of the random number vector
+!>   n_var_1:  (integer) number of variables 1
+!>   n_var_2   (integer) number of variables 2
+!>   interval: (integer)(2) interval for random integer generation
+!>   var1:     (integer) first variable setting rng
+!>   var2:     (integer) second variable setting rng
+!> outputs:
+!>   n_seed_out: (integer)(optional) size of the random seed
+!>   seed_out:   (integer)(n_seed_out)(optional) the set rng seed
+subroutine set_seed_sys_time_2vars_1d(interval,var1,var2)
+  implicit none
+  integer,dimension(2),intent(in) :: interval
+  integer,intent(in)              :: var1,var2
+  integer                         :: n_seeds
+  integer,dimension(:),allocatable :: seed
+  call random_seed(size=n_seeds) 
+  allocate(seed(n_seeds))
+  call gnu_rng_interval(n_seeds,interval,seed)
+  seed = sign(1,var2)*sign(1,var1)*(abs(var1)+1)*(abs(var2)+1)*seed*time()
+  write(*,*) "var1: ",var1," var2: ",var2," seed: ",seed
+  call random_seed(put=seed)
+  deallocate(seed)
+end subroutine set_seed_sys_time_2vars_1d
+
 
 ! Uniform RNG ------------------------------------------------
 

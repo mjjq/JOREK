@@ -74,20 +74,12 @@ subroutine setup(rank,n_tasks,ifail)
   use mod_particle_types, only: particle_kinetic_relativistic
   use mod_particle_types, only: particle_gc_relativistic
   use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin
-  use mod_gnu_rng,        only: gnu_rng_interval
-  use mod_gnu_rng,        only: set_seed_sys_time
-  !$ use omp_lib
   implicit none
   !> inputs
   integer,intent(in) :: rank,n_tasks
-  !$ integer :: thread_id
+
   !> inputs-outputs
   integer,intent(inout) :: ifail
-  !> variables
-  integer :: ii,jj,rng_integer
-  real*8              :: rng_real
-  real*8,dimension(2) :: rng_real_size2
-  real*8,dimension(3) :: rng_real_size3
 
   !> initialize the particle simulation (requires jorek inputfile)
   call sim_particles%initialize(n_groups,.false.,rank,n_tasks)
@@ -101,6 +93,43 @@ subroutine setup(rank,n_tasks,ifail)
   allocate(particle_gc_relativistic::sim_particles%groups(6)%particles(n_particles))
   allocate(particle_gc_vpar::sim_particles%groups(7)%particles(n_particles))
   allocate(particle_gc_Qin::sim_particles%groups(8)%particles(n_particles))
+
+  !> fill-up the variables for each specific species
+  call init_particle_base(rank)
+
+end subroutine setup
+
+!> tear-down the test simulation features
+!> inputs:
+!>   rank:    (integer) mpi task rank
+!>   n_tasks: (integer) number of tasks in the commworld
+!>   ifail:   (integer) 0 if success
+!> outputs:
+!>   ifail:   (integer) 0 if success
+subroutine teardown(rank,n_tasks,ifail)
+  implicit none
+  !> inputs
+  integer,intent(in) :: rank,n_tasks
+  !> inputs-outputs
+  integer,intent(inout) :: ifail
+
+  !> deallocate sim_particles and all structures in it
+end subroutine teardown
+!> Tests ------------------------------------------------
+!> Tools ------------------------------------------------
+subroutine init_particle_base(rank)
+  use mod_gnu_rng,        only: gnu_rng_interval
+  use mod_gnu_rng,        only: set_seed_sys_time
+  !$ use omp_lib
+  implicit none
+  !> inputs
+  integer,intent(in) :: rank
+  !> variables
+  integer :: ii,jj,rng_integer
+  !$ integer :: thread_id
+  real*8              :: rng_real
+  real*8,dimension(2) :: rng_real_size2
+  real*8,dimension(3) :: rng_real_size3
 
   !> fill-up the particle_base variables for all particles and all groups
   !$omp parallel default(shared) private(ii,jj,rank,rng_integer,rng_real,&
@@ -127,28 +156,6 @@ subroutine setup(rank,n_tasks,ifail)
   enddo
   !$omp end do
   !$omp end parallel
-
-  !> fill-up the variables for each specific species
-
-end subroutine setup
-
-!> tear-down the test simulation features
-!> inputs:
-!>   rank:    (integer) mpi task rank
-!>   n_tasks: (integer) number of tasks in the commworld
-!>   ifail:   (integer) 0 if success
-!> outputs:
-!>   ifail:   (integer) 0 if success
-subroutine teardown(rank,n_tasks,ifail)
-  implicit none
-  !> inputs
-  integer,intent(in) :: rank,n_tasks
-  !> inputs-outputs
-  integer,intent(inout) :: ifail
-
-  !> deallocate sim_particles and all structures in it
-end subroutine teardown
-!> Tests ------------------------------------------------
-!> Tools ------------------------------------------------
+end subroutine init_particle_base
 !>-------------------------------------------------------
 end module mod_particle_io_mpi_test

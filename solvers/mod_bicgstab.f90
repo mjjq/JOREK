@@ -84,7 +84,7 @@ module mod_bicgstab
 
     call MPI_Bcast(b,n_glob,MPI_DOUBLE_PRECISION,0,MPI_GLOB,ierr)
     call MPI_Bcast(x,n_glob,MPI_DOUBLE_PRECISION,0,MPI_GLOB,ierr)
-    
+
     iter = 0
     flag = 0
 
@@ -108,7 +108,7 @@ module mod_bicgstab
     r_tld = r
 
     t1 = 0; t2 = 0;
-    
+
     if (my_id.eq.0) write(*,*) "bicgstab initial relative error:", error
 
     do iter = 1, max_it
@@ -238,22 +238,29 @@ module mod_bicgstab
     integer :: i
     integer :: ierr
     real :: t0, t1, t2
-    
+
     !t0 = get_time()
-    
+
+    if (.not.associated(mumps_par%rhs)) allocate(mumps_par%rhs(mumps_par%n))
+
     if (my_id_n.eq.0) then
       do i = 1, mumps_par%n
         mumps_par%rhs(i) = x(my_row_index(i))
       enddo
     endif
     call MPI_Bcast(mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,0,MPI_COMM_N,ierr)
-    
+
     !t1 = get_time()
-#ifdef USE_STRUMPACK
     if (use_strumpack) then
+#ifdef USE_STRUMPACK
       call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
-    endif
 #endif
+    elseif (use_pastix) then
+#ifdef USE_PASTIX
+      call pastix_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
+#endif
+    endif
+
     !if (my_id_n.eq.0) write(*,*) my_id, "bicgstab pc solve time", get_time() - t1
 
     b = 0.d0
@@ -281,7 +288,9 @@ module mod_bicgstab
     ! set module values
     n_glob = ndof_glob ! rank of global sparse matrix
     nnz = nz_glob ! number of nonzero entries in the local piece of global sparse matrix
+
     blocksize = n_tor*n_var
+
     blocksize2 = blocksize*blocksize
     n_blocks = nz_glob/blocksize2
 
@@ -317,6 +326,44 @@ module mod_bicgstab
     call system_clock(count=cc, count_rate=cr)
     get_time =  real(cc)/cr
   end function get_time
+
+#ifdef USE_PASTIX
+!> call PaStiX solver
+  subroutine pastix_solve(n, rhs, comm)
+#include "pastix_fortran.h"
+    use pastix_module
+    use global_distributed_matrix, only: column_scaling
+    implicit none
+
+    real(kind=C_DOUBLE), dimension(:), pointer :: rhs
+    integer(kind=C_INT_ALL), intent(in) :: n
+    integer, intent(in) :: comm
+
+    integer :: ierr
+    integer :: i, n_blocks_loc, blocksize_loc
+    real*8  :: DUMMY_REAL(1:1)
+    integer :: DUMMY_INT (1:1)
+
+    pastix_iparm(IPARM_START_TASK) = API_TASK_SOLVE
+    pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
+    pastix_iparm(IPARM_RHS_MAKING) = pastix_rhs
+
+    blocksize_loc = pastix_iparm(IPARM_DOF_NBR)
+    n_blocks_loc = n/blocksize_loc
+
+    call pastix_fortran(pastix_data,comm, n_blocks_loc, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
+                        pastix_perm_vars, pastix_iperm_vars, rhs, 1, pastix_iparm, pastix_dparm)
+
+    if (my_id_n.eq.0) then
+      do i = 1, n
+        rhs(i) = rhs(i)/column_scaling(i)
+      enddo
+    endif
+
+    call MPI_BARRIER(comm,ierr)
+
+  end subroutine pastix_solve
+#endif
 
 #endif
 end module mod_bicgstab

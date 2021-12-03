@@ -2,6 +2,7 @@
 !> for testing the writing and the reading of particles
 !> data to/from HDF5 files (MPI enables).
 module mod_particle_io_mpi_test
+use fruit
 use mpi
 use mod_particle_sim, only: particle_sim
 implicit none
@@ -10,16 +11,19 @@ private
 public :: run_fruit_particle_io_mpi
 
 !> Variables --------------------------------------------
-type(particle_sim) :: sim_particles
+type(particle_sim)          :: sim_particles
+character(len=28),parameter :: test_filename="test_particle_io_mpi_hdf5.h5"
 !> the number of particle groups is set equal to the number
 !> of particle types for testing all of them
 integer,parameter :: n_groups=8
 integer,parameter :: n_particles=5 !< N# of particles per group per task
+real*8,parameter :: tol_real8=1.d-15
 !> intervals for random number generation
 integer,dimension(2),parameter   :: rng_seed_interval=(/-1234,9876/)
 integer,dimension(2),parameter   :: q_interval=(/1,100/)
 integer,dimension(2),parameter   :: i_elm_interval=(/1,1000000/)
 integer,dimension(2),parameter   :: i_life_interval=(/1,1000000/)
+real*8,dimension(2),parameter    :: sim_time_interval=(/0.d0,1.d3/)
 real*8,dimension(2),parameter    :: t_birth_interval=(/0.d0,3.45d4/)
 real*8,dimension(2),parameter    :: st_interval=(/0.d0,1.d0/)
 real*8,dimension(2),parameter    :: dt_interval=(/1.d-12,1.d-2/)
@@ -56,6 +60,7 @@ subroutine run_fruit_particle_io_mpi(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... setting-up: particle io mpi tests"
   call setup(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... running: particle io mpi tests"
+  call test_particle_mpi_io(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... tearing-down: particle io mpi tests"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_particle_io_mpi
@@ -74,6 +79,8 @@ subroutine setup(rank,n_tasks,ifail)
   use mod_particle_types, only: particle_kinetic_relativistic
   use mod_particle_types, only: particle_gc_relativistic
   use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin
+  use mod_particle_io,    only: write_simulation_hdf5
+  use mod_gnu_rng,        only: gnu_rng_interval
   implicit none
   !> inputs
   integer,intent(in) :: rank,n_tasks
@@ -85,6 +92,12 @@ subroutine setup(rank,n_tasks,ifail)
 
   !> initialize the particle simulation (requires jorek inputfile)
   call sim_particles%initialize(n_groups,.false.,rank,n_tasks)
+
+  !> set and broadcast simulation time
+  if(rank.eq.0) then
+    call gnu_rng_interval(sim_time_interval,sim_particles%time)
+  endif
+  call MPI_Bcast(sim_particles%time,1,MPI_REAL8,0,MPI_COMM_WORLD)
 
   !> allocate particle lists for different particle types
   allocate(particle_fieldline::sim_particles%groups(1)%particles(n_particles))
@@ -110,6 +123,9 @@ subroutine setup(rank,n_tasks,ifail)
   call fill_particle_kinetic_relativistic(rank,sim_particles%groups(7)%particles)
   call fill_particle_gc_relativistic(rank,sim_particles%groups(8)%particles)
 
+  !> write default simulation in file and read it in new simulation
+  call write_simulation_hdf5(sim_particles,trim(test_filename))
+
 end subroutine setup
 
 !> tear-down the test simulation features
@@ -126,9 +142,45 @@ subroutine teardown(rank,n_tasks,ifail)
   !> inputs-outputs
   integer,intent(inout) :: ifail
 
-  !> deallocate sim_particles and all structures in it
+  !> remove test file
+  call system("rm "//test_filename)
 end subroutine teardown
 !> Tests ------------------------------------------------
+!> procedure for testing the particle io
+subroutine test_particle_mpi_io(rank,n_tasks,ifail)
+  use mod_particle_assert_equal, only: assert_equal_particle
+  use mod_particle_sim,          only: particle_sim
+  use mod_particle_io,           only: read_simulation_hdf5
+  implicit none
+  !> inputs
+  integer,intent(in) :: rank,n_tasks
+  !> inputs-outputs
+  integer,intent(inout) :: ifail
+  !> variables
+  type(particle_sim) :: sim_particles_new
+  integer :: ii
+
+  !> initialize the new particle simulation (requires jorek inputfile)
+  call sim_particles_new%initialize(n_groups,.false.,rank,n_tasks)
+
+  !> read default simulation from file and store in new sim
+  call read_simulation_hdf5(sim_particles_new,trim(test_filename))
+
+  !> check simulation 
+  call assert_equals(sim_particles_new%time,sim_particles%time,tol_real8,&
+  "Error writing/reading particle simulation: time mismatch!")
+  !> check groups
+  do ii=1,n_groups
+    call assert_equals(sim_particles_new%groups(ii)%mass,sim_particles%groups(ii)%mass,&
+    tol_real8,"Error writing/reading particle simulation: mass mismatch!")
+    call assert_equals(sim_particles_new%groups(ii)%dt,sim_particles%groups(ii)%dt,&
+    tol_real8,"Error writing/reading particle simulation: dt mismatch!")
+    call assert_equal_particle(n_particles,sim_particles_new%groups(ii)%particles,&
+    sim_particles%groups(ii)%particles)
+  enddo
+
+end subroutine test_particle_mpi_io
+
 !> Tools ------------------------------------------------
 !> generate random values for filling the groups type
 subroutine fill_sim_groups(rank)
@@ -339,11 +391,17 @@ subroutine fill_particle_gc_Qin(rank,particles)
       call gnu_rng_interval(3,ABE_lowbnd,ABE_uppbnd,rn_real_size3)
       p%Bnorm_k = rn_real_size3   !< Bnorm_l
       call gnu_rng_interval(3,ABE_lowbnd,ABE_uppbnd,rn_real_size3)
-      p%E_k = rn_real_size3  !< E_k
+      p%E_k = rn_real_size3       !< E_k
       call gnu_rng_interval(v_interval,rn_real)
       p%vpar_m = rn_real          !< vpar_m
       call gnu_rng_interval(Bnorm_interval,rn_real)
       p%Bn_k = rn_real            !< Bn_k
+      call gnu_rng_interval(v_interval,rn_real)
+      p%vpar = rn_real            !< vpar
+      call gnu_rng_interval(v_interval,rn_real)
+      p%mu = rn_real              !< mu
+      call gnu_rng_interval(q_interval,rn_integer)
+      p%q = int(rn_integer,kind=1)
     end select
   enddo
   !$omp end do

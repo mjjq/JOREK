@@ -20,6 +20,7 @@ integer,dimension(2),parameter   :: rng_seed_interval=(/-1234,9876/)
 integer,dimension(2),parameter   :: q_interval=(/1,10/)
 integer,dimension(2),parameter   :: i_elm_interval=(/1,1000000/)
 integer,dimension(2),parameter   :: i_life_interval=(/1,1000000/)
+real*8,dimension(2),parameter    :: t_birth_interval=(/0.d0,3.45d4/)
 real*8,dimension(2),parameter    :: st_interval=(/0.d0,1.d0/)
 real*8,dimension(2),parameter    :: dt_interval=(/1.d-12,1.d-2/)
 real*8,dimension(2),parameter    :: mass_interval=(/5.485d-4,124.d0/)
@@ -79,17 +80,17 @@ subroutine setup(rank,n_tasks,ifail)
   implicit none
   !> inputs
   integer,intent(in) :: rank,n_tasks
+  !$ integer :: thread_id
   !> inputs-outputs
   integer,intent(inout) :: ifail
   !> variables
-  integer :: ii,jj
-  integer,dimension(2),parameter :: rng_interval=(/-2000,2000/)
+  integer :: ii,jj,rng_integer
+  real*8              :: rng_real
+  real*8,dimension(2) :: rng_real_size2
+  real*8,dimension(3) :: rng_real_size3
 
   !> initialize the particle simulation (requires jorek inputfile)
   call sim_particles%initialize(n_groups,.false.,rank,n_tasks)
-
-  !> initialise random number generator. We have to ensure that rngs of 
-  !> different threads and different tasks have a different seed
 
   !> allocate particle lists for different particle types
   allocate(particle_kinetic::sim_particles%groups(1)%particles(n_particles))
@@ -101,15 +102,31 @@ subroutine setup(rank,n_tasks,ifail)
   allocate(particle_gc_vpar::sim_particles%groups(7)%particles(n_particles))
   allocate(particle_gc_Qin::sim_particles%groups(8)%particles(n_particles))
 
-  !> fill-up group variables
-  !do jj=1,n_groups
-  !enddo
-
   !> fill-up the particle_base variables for all particles and all groups
-  !do jj=1,n_groups
-    !do ii=1,n_particles
-    !enddo
-  !enddo
+  !$omp parallel default(shared) private(ii,jj,rank,rng_integer,rng_real,&
+  !$omp rng_real_size2,rng_real_size3,thread_id)
+  thread_id = 1
+  !$ thread_id = omp_get_thread_num()
+  call set_seed_sys_time(rng_seed_interval,rank,thread_id)
+  !$omp do collapse(2)
+  do jj=1,n_groups
+    do ii=1,n_particles
+      call gnu_rng_interval(weight_interval,rng_real)
+      call gnu_rng_interval(2,st_interval,rng_real_size2)
+      call gnu_rng_interval(3,x_lowbnd,x_uppbnd,rng_real_size3)
+      sim_particles%groups(jj)%particles(ii)%x       = rng_real_size3
+      sim_particles%groups(jj)%particles(ii)%st      = rng_real_size2
+      sim_particles%groups(jj)%particles(ii)%weight  = rng_real
+      call gnu_rng_interval(t_birth_interval,rng_real)
+      sim_particles%groups(jj)%particles(ii)%t_birth = real(rng_real,kind=4)
+      call gnu_rng_interval(i_elm_interval,rng_integer)
+      sim_particles%groups(jj)%particles(ii)%i_elm   = rng_integer
+      call gnu_rng_interval(i_life_interval,rng_integer)
+      sim_particles%groups(jj)%particles(ii)%i_life  = rng_integer 
+    enddo
+  enddo
+  !$omp end do
+  !$omp end parallel
 
   !> fill-up the variables for each specific species
 

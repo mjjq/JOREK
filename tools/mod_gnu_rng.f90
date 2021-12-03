@@ -100,7 +100,6 @@ subroutine set_seed_sys_time_2vars_1d(interval,var1,var2)
   allocate(seed(n_seeds))
   call gnu_rng_interval(n_seeds,interval,seed)
   seed = sign(1,var2)*sign(1,var1)*(abs(var1)+1)*(abs(var2)+1)*seed*time()
-  write(*,*) "var1: ",var1," var2: ",var2," seed: ",seed
   call random_seed(put=seed)
   deallocate(seed)
 end subroutine set_seed_sys_time_2vars_1d

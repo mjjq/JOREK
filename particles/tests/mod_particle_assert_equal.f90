@@ -10,7 +10,8 @@ public :: assert_equal_particle
 
 !> Variables ------------------------------------------------------
 real*4,parameter :: tol_real4=real(1.d-5,kind=4)
-real*8,parameter :: tol_real8=1.e-15
+real*8,parameter :: tol_real8=1.d-15
+real*8,parameter :: tol_large_real8=5.d-5
 
 !> Interfaces -----------------------------------------------------
 
@@ -237,6 +238,7 @@ subroutine assert_equal_particle_fieldline(particle_1,particle_2,lfail)
     type is (particle_fieldline)
     select type (p_2=>particle_2)
       type is (particle_fieldline)
+      !> B_hat is not stored in HDF5
       call assert_equals(p_1%B_hat_prev,p_2%B_hat_prev,3,&
       tol_real8,"Error particle fieldline: B_hat_prev mistmatch!")
       call assert_equals(p_1%v,p_2%v,tol_real8,&
@@ -256,7 +258,7 @@ subroutine assert_equal_particle_base(particle_1,particle_2)
  "Error particle base: x position mistmatch!")
  call assert_equals(particle_1%st,particle_2%st,2,tol_real8,&
  "Error particle base: st position mistmatch!")
- call assert_equals(particle_1%weight,particle_2%weight,tol_real8,&
+ call assert_equals(particle_1%weight,particle_2%weight,tol_large_real8,&
  "Error particle base: weight mistmatch!")
  call assert_equals(particle_1%i_elm,particle_2%i_elm,&
  "Error particle base: i_elm element index mistmatch!")

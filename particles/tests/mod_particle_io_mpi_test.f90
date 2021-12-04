@@ -62,6 +62,7 @@ subroutine run_fruit_particle_io_mpi(rank,n_tasks,ifail)
   call setup(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... running: particle io mpi tests"
   call test_particle_mpi_io(rank,n_tasks,ifail)
+  call test_get_simulation_hdf5_time()
   if(rank.eq.0) write(*,'(/A)') "  ... tearing-down: particle io mpi tests"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_particle_io_mpi
@@ -185,6 +186,16 @@ subroutine test_particle_mpi_io(rank,n_tasks,ifail)
   enddo
 end subroutine test_particle_mpi_io
 
+!> subroutine for testing the reading of simulation time
+subroutine test_get_simulation_hdf5_time()
+  use mod_particle_io, only: get_simulation_hdf5_time
+  implicit none
+  real*8 :: time_new
+  time_new = get_simulation_hdf5_time(test_filename)
+  call assert_equals(time_new,sim_particles%time,tol_real8,&
+  "Error get simulation time hdf5: time mismatch!")
+end subroutine test_get_simulation_hdf5_time
+
 !> Tools ------------------------------------------------
 !> copy fieldlines B_hat between two simulations 
 !> used for IO because it is not stored in hdf5
@@ -210,7 +221,6 @@ subroutine copy_sim_fieldline_B_hat_prev(sim_in,sim_out)
     !$omp end do
   enddo
   !$omp end parallel
-
 end subroutine copy_sim_fieldline_B_hat_prev
 
 !> generate random values for filling the groups type

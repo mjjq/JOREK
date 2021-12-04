@@ -61,6 +61,8 @@ subroutine run_fruit_particle_io_mpi(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... setting-up: particle io mpi tests"
   call setup(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... running: particle io mpi tests"
+  !> TODO verify why the accuracy on the particle weight I/O
+  !> TODO seems to be single precision rather than double precision 
   call test_particle_mpi_io(rank,n_tasks,ifail)
   call test_get_simulation_hdf5_time()
   if(rank.eq.0) write(*,'(/A)') "  ... tearing-down: particle io mpi tests"

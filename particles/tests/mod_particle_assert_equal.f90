@@ -11,7 +11,6 @@ public :: assert_equal_particle
 !> Variables ------------------------------------------------------
 real*4,parameter :: tol_real4=real(1.d-5,kind=4)
 real*8,parameter :: tol_real8=1.d-15
-real*8,parameter :: tol_large_real8=5.d-5
 
 !> Interfaces -----------------------------------------------------
 
@@ -258,7 +257,7 @@ subroutine assert_equal_particle_base(particle_1,particle_2)
  "Error particle base: x position mistmatch!")
  call assert_equals(particle_1%st,particle_2%st,2,tol_real8,&
  "Error particle base: st position mistmatch!")
- call assert_equals(particle_1%weight,particle_2%weight,tol_large_real8,&
+ call assert_equals(particle_1%weight,particle_2%weight,tol_real8,&
  "Error particle base: weight mistmatch!")
  call assert_equals(particle_1%i_elm,particle_2%i_elm,&
  "Error particle base: i_elm element index mistmatch!")

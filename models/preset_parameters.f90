@@ -224,7 +224,19 @@ subroutine preset_parameters
   ZK_i_perp_num = 0.d0
   ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
-  sc_num        = 0.d0
+
+  visco_sc_num     = 0.d0
+  D_perp_sc_num    = 0.d0
+  D_par_sc_num     = 0.d0
+  ZK_perp_sc_num   = 0.d0
+  ZK_par_sc_num    = 0.d0
+  ZK_i_perp_sc_num = 0.d0
+  ZK_i_par_sc_num  = 0.d0
+  ZK_e_perp_sc_num = 0.d0
+  ZK_e_par_sc_num  = 0.d0
+  visco_par_sc_num = 0.d0
+  Dn_perp_sc_num   = 0.d0
+  Dn_par_sc_num    = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7

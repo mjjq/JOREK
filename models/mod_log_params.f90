@@ -466,7 +466,20 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
-  write(*,REAL_FMT) 'sc_num                ', sc_num
+
+  write(*,REAL_FMT) 'visco_sc_num          ', visco_sc_num
+  write(*,REAL_FMT) 'D_perp_sc_num         ', D_perp_sc_num
+  write(*,REAL_FMT) 'D_par_sc_num          ', D_par_sc_num
+  write(*,REAL_FMT) 'ZK_perp_sc_num        ', ZK_perp_sc_num
+  write(*,REAL_FMT) 'ZK_par_sc_num         ', ZK_par_sc_num
+  write(*,REAL_FMT) 'ZK_i_perp_sc_num      ', ZK_i_perp_sc_num
+  write(*,REAL_FMT) 'ZK_i_par_sc_num       ', ZK_i_par_sc_num
+  write(*,REAL_FMT) 'ZK_e_perp_sc_num      ', ZK_e_perp_sc_num
+  write(*,REAL_FMT) 'ZK_e_par_sc_num       ', ZK_e_par_sc_num
+  write(*,REAL_FMT) 'visco_par_sc_num      ', visco_par_sc_num
+  write(*,REAL_FMT) 'Dn_perp_sc_num        ', Dn_perp_sc_num
+  write(*,REAL_FMT) 'Dn_par_sc_num         ', Dn_par_sc_num
+
   write(*,LOGI_FMT) 'add_sources_in_sc     ', add_sources_in_sc
   if (with_TiTe) then
     write(*,REAL_FMT) 'ZK_i_perp_num         ', ZK_i_perp_num

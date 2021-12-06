@@ -54,6 +54,8 @@ y_tmp        = 0.d0
 ! --- The actual matrix vector multiplication uses dense matrix-vector products for the small
 !     dense blocks within our sparse matrix. The size of these blocks depends on n_tor. Depending on
 !     this block size (so depending on n_tor), two slightly different kernels are implemented.
+!     Warning: this simply seg-faults with long-integers.
+#ifndef INTSIZE64
 if ( n_tor <= 7 ) then
   
   !$omp parallel default(none)                                                                     &
@@ -77,6 +79,7 @@ if ( n_tor <= 7 ) then
   !$omp end parallel
 
 else ! ... so in case n_tor is larger than 7
+#endif
   
   !$omp parallel default(none)                                                                     &
   !$omp   shared(y_tmp, A_glob, jcn_glob, irn_glob, x, n_blocks, n_blocksize, index_offset)        &
@@ -99,8 +102,10 @@ else ! ... so in case n_tor is larger than 7
   !$omp end do
   !$omp end parallel
 
+#ifndef INTSIZE64
 end if
 ! --- End: Two different kernels for matrix-vector multiplication depending on n_tor
+#endif
 
 ! --- The unparallelized and unoptimized alternative for reference
 !do i=1,nz_glob

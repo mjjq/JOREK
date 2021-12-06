@@ -1389,7 +1389,7 @@ required = 0
     endif
 #endif
 
-#ifdef(USE_PASTIX)
+#if defined(USE_PASTIX)
     if (use_pastix) then
       ! -- For PaStiX solver before version 6.x
       pastix_iparm(2)     = 7                       ! Clean-up

@@ -1037,16 +1037,15 @@ required = 0
          call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
       endif
 
-    else ! gmres
+    else
 
       if (.not. solve_only) then
+
 #ifndef DIRECT_CONSTRUCTION
         call clck_time(t0)
          ! --- Extract harmonic matrix from global matrix via MPI communication
         call distribute_harmonics(my_id,my_id_n,n_cpu)
-        if (my_id_n .eq. 0) then
-          call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-        endif
+        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
         call MPI_Barrier(MPI_COMM_WORLD,ierr)
         call clck_time_barrier(t1)
         call clck_ldiff(t0,t1,tsecond)
@@ -1054,9 +1053,10 @@ required = 0
           write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
         end if
 #else 
-        call clck_time_barrier(t0) 
-        ! --- Direct construction of harmonic matrix
-        call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
+
+         call clck_time_barrier(t0) 
+         ! --- Direct construction of harmonic matrix
+         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
               node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, restart, freeboundary, .true.)
         call MPI_Barrier(MPI_COMM_WORLD,ierr)
         call clck_time_barrier(t1) 
@@ -1077,17 +1077,18 @@ required = 0
           call clck_ldiff(t0,t1,tsecond)
           write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
         endif     
+
 #endif
-      else ! solve_only
-        if (my_id_n .eq. 0) then
-          call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-        endif
-      endif ! solve_only
 
-      ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
-      call del_thread_buffers()
+      else
 
-      call clck_time(t0)
+        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+      endif
+
+       ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
+       call del_thread_buffers()
+
+       call clck_time(t0)
       if (use_strumpack) then 
 #ifdef USE_STRUMPACK
         call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
@@ -1095,6 +1096,7 @@ required = 0
       else
         call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
       endif
+
 
       call clck_time_barrier(t1)
       call clck_ldiff(t0,t1,tsecond)
@@ -1137,15 +1139,18 @@ required = 0
         endif
 
       endif
+
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-      if (using_spi) then
-        n_spi_begin = 1
-        do i = 1, n_inj !< Do one update for each injection location
-          if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
-          n_spi_begin = n_spi_begin + n_spi(i)
-        enddo
-      endif
+       if (using_spi) then
+         n_spi_begin = 1
+         do i = 1, n_inj !< Do one update for each injection location
+           if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
+           n_spi_begin = n_spi_begin + n_spi(i)
+         end do
+       end if
 #endif
+
+
       call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
       call update_deltas(my_id,node_list)
  
@@ -1154,7 +1159,8 @@ required = 0
       ! save previous time step
       tstep_prev = tstep
 
-    else ! gmres
+
+    else
       if ( my_id == 0 ) then
         write(*,*)
         write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
@@ -1162,8 +1168,7 @@ required = 0
       end if
       index_now = index_now - 1 ! Undo the time step
       exit jstep_loop
-    end if !gmres
-    
+    end if
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then

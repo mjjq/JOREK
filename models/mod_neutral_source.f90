@@ -26,6 +26,11 @@ module mod_neutral_source
     real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
+    real*8, intent(inout) :: source_volume
+! the variable source_volume is used:
+! when this routine is called by integrals_3D, as output containing the integrand of the gas source volume
+! when this routine is called by total_neutral_source, as input containing the numerically integrated gas source volume (if larger than 0.)
+
 
     ! --- Local variables
     real*8  :: c0_D, radius, ns_tor_shape, ns_pol_shape, dphi, V_ns, f_Nbar, f_dNbar_dt
@@ -45,7 +50,17 @@ module mod_neutral_source
     if (dphi .gt. PI) dphi = 2*PI - dphi  
     ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
 
-    V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+    ! Volume used for normalization, which corresponds to the integration in space 
+    ! of the product of the above shape functions
+    if (source_volume .gt. 0.) then
+       V_ns = source_volume
+    else
+       V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+    endif
+    ! ===================================================================
+
+    ! Variable used for numerical integration of source volume
+    source_volume = ns_pol_shape * ns_tor_shape
 
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20) ! Time normalization factor
 
@@ -147,6 +162,7 @@ module mod_neutral_source
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
     use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
+    use phys_module, only: spi_num_vol
 
     implicit none
 
@@ -164,6 +180,7 @@ module mod_neutral_source
     real*8     :: spi_abl_tmp
     real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_neutral_tmp
+    real*8     :: spi_vol_tmp !< Numerically integrated gas source volume
 
     if (using_spi) then
 
@@ -172,6 +189,12 @@ module mod_neutral_source
         source_neutral_tmp = 0.d0 
 
         if (pellets(spi_i)%spi_radius > 0.0) then
+
+          if (spi_num_vol) then
+             spi_vol_tmp = pellets(spi_i)%spi_vol
+          else
+             spi_vol_tmp = 0.d0
+          endif
 
           ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
@@ -187,7 +210,7 @@ module mod_neutral_source
 
           call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
                         ng_radius,ns_deltaphi,ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,R,Z,     &
-                        phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                        phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
 
         end if
 
@@ -199,10 +222,11 @@ module mod_neutral_source
 
       do i_inj = 1, n_inj
         source_neutral_tmp = 0.d0
+        spi_vol_tmp = 0.d0
         call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj), &
                       ns_radius,ns_deltaphi,ns_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_neutral,t_now, &
-                      JET_MGI,ASDEX_MGI,central_density,central_mass)
+                      JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
         source_neutral = source_neutral + source_neutral_tmp
       end do
     end if

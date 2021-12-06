@@ -423,6 +423,7 @@ module phys_module
   integer :: n_adas             !< Number of species to be traced by ADAS
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
+  logical :: spi_num_vol        !< Flag to turn on numerical integration of the gas source volumes from SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
 

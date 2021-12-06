@@ -219,6 +219,7 @@ module pellet_module
     real*8  :: t_norm, B0, nu
     real*8  :: spi_delta_phi, spi_Vel_R_tmp, spi_Vel_phi_tmp, spi_phi_inj
     real*8  :: spi_density_tmp
+    real*8  :: V_ns
     
     !   -Mean impurity ionization state and related quantities
     real*8     :: Z_imp, beta_imp, mu_imp
@@ -231,7 +232,26 @@ module pellet_module
        call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out, &
             kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
        return
+    endif
 
+    ! if n_spi_begin is set to zero in the call, diagnostic messages for all injectio positions are printed (every i_inj times for every i_inj shards)
+    if (n_spi_begin .eq. 0) then
+       do i = 1, n_spi_tot
+          if (my_id == 0 .and. mod(index_now,i_inj) == 0 .and. mod(i,i_inj) == 0) then
+             if (pellets(i)%spi_radius > 0. .and. pellets(i)%spi_abl > 0.) then
+                write(*,*) "Pellet number: ", i
+                write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
+                write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
+                     pellets(i)%spi_Vel_RxZ
+                write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
+                write(*,*) "Pellet species = ", pellets(i)%spi_species
+                V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
+                write(*,*) "Source volume (numerical,analytical,diff %) = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
+                if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
+             endif
+          end if
+       end do
+       return
     endif
 
     spi_delta_phi   = 0.
@@ -508,22 +528,6 @@ module pellet_module
       ns_phi_rotate  = ns_phi_rotate + tor_frequency * 2. * PI * tstep / V_normalisation
     end if
   
-    if (my_id == 0 .and. mod(index_now,20) == 0) then
-  
-      do i=1, 20 !n_spi(i_inj)
-        i_p = i - 1 + n_spi_begin
-        if (pellets(i_p)%spi_radius > 0.0) then
-          write(*,*) "Pellet number: ", i_p
-          write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i_p)%spi_R, pellets(i_p)%spi_Z, pellets(i_p)%spi_phi
-          write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, &
-                                                     pellets(i_p)%spi_Vel_RxZ
-          write(*,*) "Pellet ablation (radius,abl) = ", pellets(i_p)%spi_radius, pellets(i_p)%spi_abl
-          write(*,*) "Pellet species = ", pellets(i_p)%spi_species
-          write(*,*) "Source volume (numerical,analytical) = ", pellets(i)%spi_vol, PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
-        endif
-      end do
-    end if
-
   return  
   end subroutine update_spi
 

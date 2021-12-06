@@ -73,7 +73,7 @@ real*8     :: spi_phi_tmp
 real*8     :: spi_abl_tmp
 real*8     :: ng_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
 real*8     :: source_tmp
-real*8     :: integrand_source_volume ! variable used in inj_source for numerical integration of source volume (used here in the call to inj_source)
+real*8     :: integrand_source_volume ! variable for numerical integration of source volume
 
 real*8, allocatable :: local_source_volume(:)
 
@@ -434,6 +434,7 @@ do ife = ife_min, ife_max
               if (t_now >= t_ns(i_inj)) then
 
                  source_tmp = 0.d0
+                 integrand_source_volume = 0.d0
 
                  spi_R_tmp   = pellets(spi_i)%spi_R
                  spi_Z_tmp   = pellets(spi_i)%spi_Z

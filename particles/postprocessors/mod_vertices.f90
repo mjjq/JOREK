@@ -21,7 +21,11 @@ type,abstract :: vertices
   real*8,dimension(:,:,:) :: properties      !< properties of the vertices
   contains
   !> type procedures
+  procedure,pass(vertices) :: allocate_time_vector
+  procedure,pass(vertices) :: allocate_x_properties
   procedure,pass(vertices) :: allocate_vertices
+  procedure,pass(vertices) :: deallocate_time_vector
+  procedure,pass(vertices) :: deallocate_x_properties
   procedure,pass(vertices) :: deallocate_vertices
   procedure,pass(vertices) :: resize_vertices_noloss
   procedure,pass(vertices) :: fit_tables_to_active_vertices
@@ -30,8 +34,51 @@ end type vertices
 contains
 
 !> Procedures -------------------------------------------------------------
-!> allocate vertex tables and initilise them to 0. Data loss is expected
-!> for preallocated tables
+!> allocate time vector and number of active vertices
+!> inputs:
+!>   vert_inout: (vertices) vertices to be allocated
+!>   n_times:    (integer) number of times
+!> outputs:
+!>   n_vertices:  integer) number of vertices
+subroutine allocate_time_vector(vert_inout,n_times)
+  implicit none
+  !> inputs-outputs:
+  class(vertices),intent(inout) :: vert_inout
+  !> inputs:
+  integer,intent(in) :: n_times
+  if(allocated(vert_inout%n_active_vertices)) deallocate(vert_inout%n_active_vertices)
+  if(allocated(vert_inout%times)) deallocate(vert_inout%times)
+  allocate(vert_inout%n_active_vertices(n_times))
+  allocate(vert_inout%times(n_times))
+  vert_inout%n_active_vertices = 0; vert_inout%times = 0.d0;
+  vert_inout%n_times = n_times;
+end subroutine allocate_time_vector
+
+!> allocate x and properties tables and initilise them to 0.
+!> Data loss is expected for preallocated tables
+!> inputs:
+!>   vert_inout:        (vertices) vertices to be allocated
+!>   n_times:           (integer) number of times
+!>   n_vertices:        (integer) number of vertices
+!> outputs:
+!>   vert_inout: (vertices) allocated vertices
+subroutine allocate_x_properties(vert_inout,n_vertices)
+  implicit none
+  !> inputs
+  integer,intent(in) :: n_vertices
+  !> inputs-outputs
+  class(vertices),intent(inout) :: vert_inout
+  !> check,allocate and initialize to 0 x and properties array
+  if(allocated(vert_inout%x)) deallocate(vert_inout%x)
+  if(allocated(vert_inout%properties)) deallocate(vert_inout%properties)
+  allocate(vert_inout%x(vert_inout%n_x,n_vertices,vert_inout%n_times))
+  allocate(vert_inout%properties(vert_inout%n_property_vertex,n_vertices,vert_inout%n_times))
+  vert_inout%x = 0.d0; vert_inout%properties = 0.d0;
+  vert_inout%n_vertices = n_vertice;
+end subroutine allocate_x_properties
+
+!> allocate all vertices and initialise them to zero
+!> Data loss is expected for preallocated tables
 !> inputs:
 !>   vert_inout:        (vertices) vertices to be allocated
 !>   n_times:           (integer) number of times
@@ -41,24 +88,42 @@ contains
 subroutine allocate_vertices(vert_inout,n_times,n_vertices)
   implicit none
   !> inputs
-  integer,intent(in) :: n_vertices,n_time
+  integer,intent(in) :: n_times,n_vertices
   !> inputs-outputs
   class(vertices),intent(inout) :: vert_inout
-  !> check,allocate and initialize to 0 x and properties array
-  if(allocated(vert_inout%n_active_vertices)) deallocate(vert_inout%n_active_vertices)
+  call vert_inout%allocate_time_vector(n_times)
+  call vert_inout%allocate_x_properties(n_vertices)
+end subroutine allocate_vartices
+
+!> deallocate time vector tables. Data loss is expected
+!> inputs:
+!>   vert_inout: (vertices) allocated vertices
+!> outputs:
+!>   vert_inout: (vertices) deallocated vertices
+subroutine deallocate_time_vector(vert_inout)
+  implicit none
+  !> input-outputs
+  class(vertices),intent(inout) :: vert_inout
+  if(allocated(vert_inout%n_active_vertices) deallocate(vert_inout%n_active_vertices))
   if(allocated(vert_inout%times)) deallocate(vert_inout%times)
+  vert_inout%n_times = 0
+end subroutine deallocate_time_vector
+
+!> deallocate x and properties tables. Data loss is expected
+!> inputs:
+!>   vert_inout: (vertices) allocated vertices
+!> outputs:
+!>   vert_inout: (vertices) deallocated vertices
+subroutine deallocate_x_properties(vert_inout)
+  implicit none
+  !> input-outputs
+  class(vertices),intent(inout) :: vert_inout
   if(allocated(vert_inout%x)) deallocate(vert_inout%x)
   if(allocated(vert_inout%properties)) deallocate(vert_inout%properties)
-  allocate(vert_inout%n_active_vertices(n_times))
-  allocate(vert_inout%times(n_times))
-  allocate(vert_inout%x(vert_inout%n_x,n_vertices,n_times))
-  allocate(vert_inout%properties(vert_inout%n_property_vertex,n_vertices,n_times))
-  vert_inout%n_active_vertices = 0; vert_inout%times = 0.d0;
-  vert_inout%x = 0.d0; vert_inout%properties = 0.d0;
-  vert_inout%n_vertices = n_vertice; svert_inout%n_times = n_times;
-end subroutine allocate_vertices
+  vert_inout%n_vertices = 0
+end subroutine deallocate_x_properties
 
-!> deallocate vertex tables. Data loss is expected
+!> deallocate vertices tables. Data loss is expected
 !> inputs:
 !>   vert_inout: (vertices) allocated vertices
 !> outputs:
@@ -67,11 +132,8 @@ subroutine deallocate_vertices(vert_inout)
   implicit none
   !> input-outputs
   class(vertices),intent(inout) :: vert_inout
-  if(allocated(vert_inout%n_active_vertices) deallocate(vert_inout%n_active_vertices))
-  if(allocated(vert_inout%times)) deallocate(vert_inout%times)
-  if(allocated(vert_inout%x)) deallocate(vert_inout%x)
-  if(allocated(vert_inout%properties)) deallocate(vert_inout%properties)
-  vert_inout%n_vertices = 0
+  call vert_inout%deallocate_time_vector()
+  call vert_inout%deallocate_x_properties()
 end subroutine deallocate_vertices
 
 !> resize the vertex tables without loss of data. This operation can be
@@ -119,7 +181,7 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
   enddo
   !$omp end do
   !$omp single
-  call vert_inout%allocate_vertices(vert_inout%n_times,n_vertex_new)
+  call vert_inout%allocate_x_properties(n_vertex_new)
   !$omp end single
   !$omp do collapse(2)
   do ii=1,vert_inout%n_times
@@ -137,7 +199,7 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
     property_table(:,1:vert_inout%n_active_vertices(ii),ii) = &
     vert_inout%properties(:,1:vert_inout%n_active_vertices(ii),ii)
   enddo
-  call vert_inout%allocate_vertices(vert_inout%n_times,n_vertex_new)
+  call vert_inout%allocate_x_properties(n_vertex_new)
   do ii=1,vert_inout%n_times
     vert_inout%x(:,1:vert_inout%n_active_vertices(ii),ii) = &
     x_table(:,1:vert_inout%n_active_vertices(ii),ii)

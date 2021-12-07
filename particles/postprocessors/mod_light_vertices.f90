@@ -11,27 +11,42 @@ public :: light_vertices
 !> Variables --------------------------------------------
 type,abstract,extends(vertices) :: light_vertices
   contains
-  procedure,pass(light_vertices)                              :: store_light_x_from_particle_id
+  procedure,pass(light_vertices)                              :: fill_time_vector
+  procedure,pass(light_vertices)                              :: extract_n_groups_all_particle_sims 
+  procedure,pass(light_vertices)                              :: extract_n_particles_all_particle_sims
+  procedure,pass(light_vertices)                              :: extract_particle_types_all_particle_sims
+  procedure,pass(light_vertices)                              :: store_light_x_from_id
   procedure(init_lights_parts),deferred,pass(light_vertices)  :: init_lights_from_particles
   procedure(direct_funct),deferred,pass(light_vertices)       :: directionality_funct
 end type light_vertices
 
 !> Interfaces -------------------------------------------
+!> module procedure
+interface fill_time_vector
+  module procedure fill_time_vector_particle_sim
+interface fill_time_vector
+
+interface store_x_from_id
+  module procedure store_light_x_from_particle_id
+end interface store_x_from_id
+
 interface
   !> computes and store the coordinates and properties of 
   !> lights from particle simulations
   !> inputs:
-  !>   light_vert:   (light_vertices) empty light vertices
-  !>   sim_particle: (particle_sim) initialised particle simulation
+  !>   light_vert:     (light_vertices) empty light vertices
+  !>   n_times:        (integer) number of times
+  !>   sims_particles: (particle_sim)(n_times) array of particle simulations
   !> outputs:
   !>   light_vert: (light_vertices) filled light vertices
-  subroutine init_lights_parts(light_vert,sim_particle)
+  subroutine init_lights_parts(light_vert,sims_particles)
     use mod_particle_sim, only: particle_sim
     implicit none
     !> inputs-outputs
     class(light_vertices),intent(inout) :: light_vert
     !> inputs
-    class(particle_sim),intent(in) :: sim_particle
+    type(particle_sim),dimension(n_times),intent(in) :: sims_particles
+    integer,intent(in) :: n_times
   end subroutine init_lights_parts
 
   !> computes the directionality function for a given point
@@ -47,15 +62,15 @@ interface
   !>   light_dstb: (real8)(n_points,n_spectra) light intensity distribution
   !>               from the light_id light to the x_shaded point for all
   !>               spectra points and all spectra
-  subroutine direct_funct(light_vert,spectra,light_id,x_shaded,light_dstb)
+  subroutine direct_funct(light_vert,spectra,time_id,light_id,x_shaded,light_dstb)
     use mod_spectra,      only: spectrum_base
     use mod_particle_sim, only: particle_sim
     implicit none
     !> inputs-outpus
     class(light_vertices),intent(inout) :: light_vert
     !> inputs
-    class(spectrym_base),intent(in) :: spectra
-    integer,intent(in) :: light_id
+    class(spectrym_base),intent(in)             :: spectra
+    integer,intent(in)                          :: time_id,light_id
     real*8,dimension(light_vert%n_x),intent(in) :: x_shaded
     !> outputs
     real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_dstb
@@ -65,6 +80,111 @@ end interface
 contains
 
 !> Procedures -------------------------------------------
+!> fill the time vector from particle simulations
+!> inputs:
+!>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
+!> outputs:
+!>   light_vert:     (light_vertices) light vertices type
+subroutine fill_time_vector_particle_sims(light_vert,sims_particles)
+  use mod_particle_sim, only: particle_sim
+  implicit none
+  !> inputs-outputs
+  class(light_vert),intent(inout) :: light_vert
+  !> inputs
+  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
+  !> variables
+  integer :: ii
+  do ii=1,light_vert%n_times
+    light_vert%times(ii) = sims_particles(ii)%time
+  enddo
+end subroutine fill_time_vector_particle_sims
+
+!> Extract the number of groups for all times (simulations)
+!> inputs:
+!>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
+!> outputs:
+!>   n_groups:       (integer)(n_times) number of groups
+subroutine extract_n_groups_all_particle_sims(light_vert,sims_particles,n_groups)
+  use mod_particle_sim, only: particle_sim
+  implicit none
+  !> inputs:
+  class(light_vert),intent(in)                                :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
+  !> outouts:
+  integer,dimension(light_vert%n_times),intent(out) :: n_groups
+  !> variables
+  integer :: ii
+  !> extract number of groups for all simulations
+  n_groups = 0
+  do ii=1,n_groups
+    n_groups(ii) = sims_particles(ii)%compute_group_size()
+  enddo
+end subroutine extract_n_groups_all_particle_sims
+
+!> extract the number of particles for all groups and times (simulations)
+!> inputs:
+!>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
+!>   n_groups_max:   (integer) maximum number of among all simulations
+!>   n_groups:       (integer)(n_times) number of groups per simulation
+!> outputs:
+!>   n_particles:    (integer)(n_groups_max,n_times) number of particles
+!>                   per group and per simulation
+subroutine extract_n_particles_all_particle_sims(light_vert,sims_particles,&
+n_groups_max,n_particles)
+  use mod_particle_sim, only: particle_sim
+  implicit none
+  !> inputs:
+  class(light_vert),intent(in)                                :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
+  integer,intent(in)                                          :: n_groups_max
+  !> outouts:
+  integer,dimension(n_groups_max,light_vert%n_times),intent(out) :: n_particles
+  !> variables
+  integer :: ii
+  !> extract number of particles
+  n_particles = 0
+  do ii=1,light_vert%n_times
+    call sims_particles(ii)%compute_particle_sizes(n_groups_max,n_particles(:,ii))
+  enddo
+end subroutine extract_n_particles_all_particle_sims
+
+!> extract the particle types for all groups and simulations
+!> inputs:
+!>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
+!>   n_groups_max:   (integer) maximum number of among all simulations
+!> outputs:
+!>   particle_types: (integer)(n_groups_max,n_times) particle types
+!>                   per group and per simulation. CODEX:
+!>                   1 -> particle_fieldline
+!>                   2 -> particle_gc
+!>                   3 -> particle_gc_vpar
+!>                   4 -> particle_gc_Qin
+!>                   5 -> particle_kinetic
+!>                   6 -> particle_kinetic_leapfrog
+!>                   7 -> particle_kinetic_relativistic
+!>                   8 -> particle_gc_relativistic
+subroutine extract_particle_types_all_particle_sims(light_vert,sims_particles,&
+n_groups_max,particle_types)
+  use mod_particle_sim, only: particle_sim
+  implicit none
+  !> inputs:
+  class(light_vert),intent(in)                                :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
+  integer,intent(in)                                          :: n_groups_max
+  !> outputs:
+  integer,dimension(n_groups_max,light_vert%n_times),intent(out) :: particle_types
+  !> variables
+  integer :: ii
+  particle_types = 0
+  do ii=1,light_vert%n_times
+    call sims_particles(ii)%find_particle_types(n_groups_max,particle_types(:,ii))
+  enddo
+end subroutine extract_particle_types_all_particle_sims
+
 !> store the light position in cartesian coordinate give a particle,
 !> the light and time index
 !> inputs:
@@ -87,5 +207,6 @@ subroutine store_light_x_from_particle_id(light_vert,light_id,time_id,particle)
 end subroutine store_light_x_from_particle_id
 
 !> Tools ------------------------------------------------
-!>-------------------------------------------------------
+!> compute particle array size per requested type
+
 end module mod_light_vertices

@@ -11,6 +11,7 @@ public :: light_vertices
 !> Variables --------------------------------------------
 type,abstract,extends(vertices) :: light_vertices
   contains
+  procedure,pass(light_vertices)                              :: store_light_x_from_particle_id
   procedure(init_lights_parts),deferred,pass(light_vertices)  :: init_lights_from_particles
   procedure(direct_funct),deferred,pass(light_vertices)       :: directionality_funct
 end type light_vertices
@@ -64,6 +65,26 @@ end interface
 contains
 
 !> Procedures -------------------------------------------
+!> store the light position in cartesian coordinate give a particle,
+!> the light and time index
+!> inputs:
+!>   light_vert: (light_vertices) light vertices structure
+!>   light_id:   (integer) index of the light in the x table
+!>   time_id:    (integer) index of the time in the x table
+!>   particle:   (particle_base) particle structure
+!> outputs:
+!>   light_vert: (light_vertices) light vertices with new x entry
+subroutine store_light_x_from_particle_id(light_vert,light_id,time_id,particle)
+  use mod_particle_types,       only: particle_base
+  use mod_coordinate_transform, only: cylindrical_to_cartesian
+  implicit none
+  !> inputs-outputs
+  class(light_vertices),intent(inout) :: light_vertices
+  !> inputs
+  class(particle_base),intent(in) :: particle
+  integer,intent(in)              :: light_id,time_id
+  light_vert%x(:,light_id,time_id) = cylindrical_to_cartesian(particle%x)
+end subroutine store_light_x_from_particle_id
 
 !> Tools ------------------------------------------------
 !>-------------------------------------------------------

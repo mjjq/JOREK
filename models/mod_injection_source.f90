@@ -138,8 +138,11 @@ module mod_injection_source
     if (dphi .gt. PI) dphi = 2*PI - dphi  
     ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
 
-    ! Volume used for normalization, which corresponds to the integration in space 
-    ! of the product of the above shape functions
+    ! Volume used for normalization:
+    ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
+    ! otherwise, the analytical value corresponding to the integration in space of the product of the above shape functions will be used
+    ! The agreement between the two is very good unless the shard is just marginally inside the domain:
+    ! in this case the numerical integral will be smaller than the analytical one, and the resulting total source will correctly reflect the ablation rate (although the local source will be overestimated)
     if (source_volume .gt. 0.) then
        V_ns = source_volume
     else
@@ -148,6 +151,7 @@ module mod_injection_source
     ! ===================================================================
 
     ! Variable used for numerical integration of source volume
+    ! to be provided as output to integrals_3D 
     source_volume = ns_pol_shape * ns_tor_shape
 
    !==================================================================================================
@@ -340,7 +344,7 @@ module mod_injection_source
 
           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_deltaphi,&
                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., R, Z,    &
-                        phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass, spi_vol_tmp)
+                        phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
         end if
 
         ! Converting number density into mass density for each species respectively

@@ -16,7 +16,7 @@ module mod_neutral_source
   !> Calculates the neutral source
   subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,ns_tor_norm, &
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,               &
-                              JET_MGI,ASDEX_MGI,central_density,central_mass)
+                              JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
 
     implicit none
 
@@ -26,7 +26,7 @@ module mod_neutral_source
     real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
-    real*8, intent(inout) :: source_volume
+    real*8,  intent(inout) :: source_volume
 ! the variable source_volume is used:
 ! when this routine is called by integrals_3D, as output containing the integrand of the gas source volume
 ! when this routine is called by total_neutral_source, as input containing the numerically integrated gas source volume (if larger than 0.)
@@ -50,8 +50,11 @@ module mod_neutral_source
     if (dphi .gt. PI) dphi = 2*PI - dphi  
     ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
 
-    ! Volume used for normalization, which corresponds to the integration in space 
-    ! of the product of the above shape functions
+    ! Volume used for normalization:
+    ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
+    ! otherwise, the analytical value corresponding to the integration in space of the product of the above shape functions will be used
+    ! The agreement between the two is very good unless the shard is just marginally inside the domain:
+    ! in this case the numerical integral will be smaller than the analytical one, and the resulting total source will correctly reflect the ablation rate (although the local source will be overestimated)
     if (source_volume .gt. 0.) then
        V_ns = source_volume
     else
@@ -60,6 +63,7 @@ module mod_neutral_source
     ! ===================================================================
 
     ! Variable used for numerical integration of source volume
+    ! to be provided as output to integrals_3D 
     source_volume = ns_pol_shape * ns_tor_shape
 
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20) ! Time normalization factor

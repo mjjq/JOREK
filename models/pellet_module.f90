@@ -246,9 +246,11 @@ module pellet_module
                 write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
                 write(*,*) "Pellet species = ", pellets(i)%spi_species
                 V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
-                write(*,*) "Source volume (numerical,analytical,diff %) = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
-                if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
-             endif
+                if (spi_num_vol) then
+                   write(*,*) "Source volume (numerical,analytical,diff %) = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
+                   if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
+                end if
+             end if
           end if
        end do
        return

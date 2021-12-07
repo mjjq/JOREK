@@ -16,7 +16,6 @@ use equil_info, only : get_psi_n, ES
 !$ use omp_lib
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source
-  use mod_injection_source, only: inj_source
 #endif
 #if (defined WITH_Impurities)
   use mod_impurity
@@ -447,6 +446,15 @@ do ife = ife_min, ife_max
                     ng_radius_tmp = ng_radius_min
                  end if
 
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+                 call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp, &
+                      ng_radius_tmp,ns_deltaphi, ns_tor_norm, &
+                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., &
+                      x_g(ms,mt),y_g(ms,mt),phi, &
+                      source_tmp,t_now,JET_MGI,ASDEX_MGI, &
+                      central_density,central_mass, &
+                      integrand_source_volume)
+#else
                  call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp, &
                       ng_radius_tmp,ns_deltaphi, ns_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., &
@@ -454,6 +462,7 @@ do ife = ife_min, ife_max
                       source_tmp,t_now,JET_MGI,ASDEX_MGI, &
                       central_density,central_mass, &
                       integrand_source_volume)
+#endif
 
                  local_source_volume(spi_i) = local_source_volume(spi_i) &
                       + integrand_source_volume * bigR * xjac * wst * delta_phi

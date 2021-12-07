@@ -130,6 +130,8 @@ module data_structure
                                      !! 0.: pure background species
                                      !! 1.: pure impurity shard
     real*8  :: spi_vol               !< Numerically integrated volume of the gas source from the shard
+    real*8  :: spi_psi               !< Psi value at the shard position
+    real*8  :: spi_grad_psi          !< Value of grad(Psi)=sqrt(PSI_R * PSI_R + PSI_Z * PSI_Z) at the shard position
 
   end type type_SPI
  

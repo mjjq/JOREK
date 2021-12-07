@@ -17,7 +17,7 @@ use equil_info, only : get_psi_n, ES
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   use mod_neutral_source
 #endif
-#if (defined WITH_Impurities)
+#ifdef WITH_Impurities
   use mod_impurity
   use mod_injection_source
 #endif

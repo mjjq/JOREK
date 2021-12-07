@@ -5,6 +5,10 @@
 module mod_particle_types
   implicit none
   private
+  public :: particle_base_id,particle_fieldline_id,particle_gc_id
+  public :: particle_gc_vpar_id,particle_gc_Qin_id,particle_kinetic_id
+  public :: particle_kinetic_leapfrog_id,particle_kinetic_relativistic_id
+  public :: particle_gc_relativistic_id
   public :: particle_base, particle_kinetic, particle_kinetic_leapfrog
   public :: particle_gc, particle_fieldline
   public :: particle_kinetic_relativistic, particle_gc_relativistic
@@ -14,6 +18,14 @@ module mod_particle_types
   public :: copy_particle_base
   public :: copy_particle_kinetic_leapfrog
   public :: codify_particle_type
+
+  !> enumerator of the particle type 
+  enum, bind(C)
+  enumerator :: particle_base_id=0,particle_fieldline_id,particle_gc_id,&
+                particle_gc_vpar_id,particle_gc_Qin_id,particle_kinetic_id,&
+                particle_kinetic_leapfrog_id,particle_kinetic_relativistic_id,&
+                particle_gc_relativistic_id
+  endenum
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -249,21 +261,21 @@ contains
     p_type = 0
     select type (p=>particle)
       type is (particle_fieldline)
-      p_type = 1
+      p_type = particle_fieldline_id
       type is (particle_gc)
-      p_type = 2
+      p_type = particle_gc_id
       type is (particle_gc_vpar)
-      p_type = 3
+      p_type = particle_gc_vpar_id
       type is (particle_gc_Qin)
-      p_type = 4
+      p_type = particle_gc_Qin_id
       type is (particle_kinetic)
-      p_type = 5
+      p_type = particle_kinetic_id
       type is (particle_kinetic_leapfrog)
-      p_type = 6
+      p_type = particle_kinetic_leapfrog_id
       type is (particle_kinetic_relativistic)
-      p_type = 7
+      p_type = particle_kinetic_relativistic_id
       type is (particle_gc_relativistic)
-      p_type = 8
+      p_type = particle_gc_relativistic_id
     end select
   end function codify_single_particle_type
  
@@ -284,21 +296,21 @@ contains
     p_type = 0
     select type (p=>particle_list)
       type is (particle_fieldline)
-      p_type = 1
+      p_type = particle_fieldline_id
       type is (particle_gc)
-      p_type = 2
+      p_type = particle_gc_id
       type is (particle_gc_vpar)
-      p_type = 3
+      p_type = particle_gc_vpar_id
       type is (particle_gc_Qin)
-      p_type = 4
+      p_type = particle_gc_Qin_id
       type is (particle_kinetic)
-      p_type = 5
+      p_type = particle_kinetic_id
       type is (particle_kinetic_leapfrog)
-      p_type = 6
+      p_type = particle_kinetic_leapfrog_id
       type is (particle_kinetic_relativistic)
-      p_type = 7
+      p_type = particle_kinetic_relativistic_id
       type is (particle_gc_relativistic)
-      p_type = 8
+      p_type = particle_gc_relativistic_id
     end select
   end function codify_particle_list_alloc_type
 

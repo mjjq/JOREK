@@ -33,9 +33,12 @@ type :: particle_sim
   integer :: n_cpu = 1 ! if not initialized, act as if there is no mpi
   real*8  :: wtime_start !< Clock time at the start of the program
 contains
-  procedure :: finalize
-  procedure :: initialize
-  procedure :: set_t_norm  !< set the jorek time unit
+  procedure,pass(sim) :: finalize
+  procedure,pass(sim) :: initialize
+  procedure,pass(sim) :: set_t_norm  !< set the jorek time unit
+  procedure,pass(sim) :: compute_group_size
+  procedure,pass(sim) :: compute_particle_sizes
+  procedure,pass(sim) :: find_particle_types
 end type particle_sim
 
 contains
@@ -121,5 +124,51 @@ subroutine set_t_norm(sim)
   class(particle_sim), intent(inout) :: sim
   sim%t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20)
 end subroutine set_t_norm
+
+!> this function returns the size of the particle group
+function compute_group_size(sim) result(n_groups)
+  implicit none
+  class(particle_sim),intent(inout) :: sim
+  integer :: n_groups
+  n_groups = size(sim%groups)
+end function compute_group_size
+
+!> return the particle sizes
+subroutine compute_particle_sizes(sim,n_groups_in,n_particles)
+  implicit none
+  class(particle_sim),intent(inout) :: sim
+  integer,intent(inout) :: n_groups_in
+  integer,dimension(n_groups_in),intent(out) :: n_particles
+  integer :: ii,n_groups
+  n_groups = min(sim%compute_group_size(),n_groups_in)
+  n_particles = 0
+  do ii=1,n_groups
+    n_particles(ii) = size(sim%groups(ii)%particles)
+  enddo
+end subroutine compute_particle_sizes
+
+!> return the codified particle type of the particle list
+!> Codification:
+!>   0 -> default
+!>   1 -> particle_fieldline
+!>   2 -> particle_gc
+!>   3 -> particle_gc_vpar
+!>   4 -> particle_gc_Qin
+!>   5 -> particle_kinetic
+!>   6 -> particle_kinetic_leapfrog
+!>   7 -> particle_realtivistic_kinetic
+!>   8 -> particle_gc_relativistic
+subroutine find_particle_types(sim,n_groups_in,p_types)
+  use mod_particle_types, only: codify_particle_type
+  implicit none
+  class(particle_sim),intent(inout) :: sim
+  integer,intent(in)                :: n_groups_in
+  integer,dimension(n_groups_in),intent(out) :: p_types
+  integer :: ii,n_groups
+  n_groups = min(sim%compute_group_size(),n_groups_in)
+  do ii=1,n_groups
+    p_types(ii) = codify_particle_type(sim%groups(ii)%particles)
+  enddo
+end subroutine find_particle_types
 
 end module mod_particle_sim

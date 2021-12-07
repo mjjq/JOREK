@@ -13,7 +13,7 @@ module mod_particle_types
   public :: copy_particle
   public :: copy_particle_base
   public :: copy_particle_kinetic_leapfrog
-
+  public :: codify_particle_type
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -91,6 +91,13 @@ module mod_particle_types
     real(kind=8), dimension(2) :: p  !< 1: parallel momentum [AMU m/s], 2: magnetic moment [(AMU*m**2)/(T*s**2)]
     integer(kind=1) :: q !< charge [e]
  end type particle_gc_relativistic
+
+!> interfaces ------------------------------------------------------------------------------
+interface codify_particle_type
+  module procedure codify_single_particle_type
+  module procedure codify_particle_list_alloc_type
+end interface codify_particle_type
+
 contains
   !> Convenience function to obtain q if it exists, or 0 otherwise
   !> Here also because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82064
@@ -223,5 +230,76 @@ contains
       end select
     end select
   end subroutine copy_particle
+
+  !> this function returns a codified particle type for a particle
+  !> condification:
+  !>   0 -> default
+  !>   1 -> particle_fieldline
+  !>   2 -> particle_gc
+  !>   3 -> particle_gc_vpar
+  !>   4 -> particle_gc_Qin
+  !>   5 -> particle_kinetic
+  !>   6 -> particle_kinetic_leapfrog
+  !>   7 -> particle_kinetic_relativistic
+  !>   8 -> particle_gc_relativistic
+  function codify_single_particle_type(particle) result(p_type)
+    implicit none
+    class(particle_base),intent(in) :: particle
+    integer :: p_type
+    p_type = 0
+    select type (p=>particle)
+      type is (particle_fieldline)
+      p_type = 1
+      type is (particle_gc)
+      p_type = 2
+      type is (particle_gc_vpar)
+      p_type = 3
+      type is (particle_gc_Qin)
+      p_type = 4
+      type is (particle_kinetic)
+      p_type = 5
+      type is (particle_kinetic_leapfrog)
+      p_type = 6
+      type is (particle_kinetic_relativistic)
+      p_type = 7
+      type is (particle_gc_relativistic)
+      p_type = 8
+    end select
+  end function codify_single_particle_type
+ 
+  !> this function returns a codified particle type for a particle list
+  !> condification:
+  !>   1 -> particle_fieldline
+  !>   2 -> particle_gc
+  !>   3 -> particle_gc_vpar
+  !>   4 -> particle_gc_Qin
+  !>   5 -> particle_kinetic
+  !>   6 -> particle_kinetic_leapfrog
+  !>   7 -> particle_kinetic_relativistic
+  !>   8 -> particle_gc_relativistic
+  function codify_particle_list_alloc_type(particle_list) result(p_type)
+    implicit none
+    class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
+    integer :: p_type
+    p_type = 0
+    select type (p=>particle_list)
+      type is (particle_fieldline)
+      p_type = 1
+      type is (particle_gc)
+      p_type = 2
+      type is (particle_gc_vpar)
+      p_type = 3
+      type is (particle_gc_Qin)
+      p_type = 4
+      type is (particle_kinetic)
+      p_type = 5
+      type is (particle_kinetic_leapfrog)
+      p_type = 6
+      type is (particle_kinetic_relativistic)
+      p_type = 7
+      type is (particle_gc_relativistic)
+      p_type = 8
+    end select
+  end function codify_particle_list_alloc_type
 
 end module mod_particle_types

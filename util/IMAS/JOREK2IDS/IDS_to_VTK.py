@@ -4,8 +4,11 @@ import argparse
 import vtk
 
 from vtk.util import numpy_support as npvtk
-from idsUtilities import basicIDS, readIDS
 from imas import imasdef
+import imas
+
+import logging
+import sys
 
 prec=np.float32
 vtk_prec=vtk.VTK_FLOAT
@@ -28,25 +31,34 @@ parser.add_argument("-b", "--bezier", type=bool, default=True, help="Bezier grid
 
 args = parser.parse_args()
 
-r_ids = readIDS(args.shot, args.run, args.user, args.database, args.backend)
-r_ids.getGGD("mhd")
+# Open IMAS DB entry
+data_entry = imas.DBEntry(args.backend, args.database, args.shot, args.run,
+                          user_name=args.user)
+status, idx = data_entry.open()
+if status != 0:
+    logging.info('Creation of data entry FAILED! Exiting.')
+    sys.exit(-1)
+else:
+    logging.info('Creation of data entry Ok!')
+
+ids = data_entry.get("mhd")
 
 def visualise():
     if not(args.bezier):
-        xyz0 = r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[0].object.array
+        xyz0 = ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[0].object.array
         xyz = np.empty((len(xyz0), 3))
         for i in range(len(xyz0)):
             xyz[i, :] = xyz0[i].geometry
 
-        ien0 = np.array(r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
+        ien0 = np.array(ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
         ien = np.empty((np.shape(ien0)[0], np.shape(ien0[0].nodes)[0]))
         for i in range(np.shape(ien0)[0]):
             ien[i, :] = np.array(ien0[i].nodes) - 1
         ien = np.insert(ien, 0, np.shape(ien0[0].nodes)[0], axis=1)
 
         v = []
-        if r_ids.ggd.array[0].electrons.temperature.array != []:
-            v = np.array(r_ids.ggd.array[0].electrons.temperature.array[0].values)
+        if ids.ggd.array[0].electrons.temperature.array != []:
+            v = np.array(ids.ggd.array[0].electrons.temperature.array[0].values)
 
         etype = vtk.VTK_QUAD
         output = vtk.vtkUnstructuredGrid()
@@ -73,11 +85,11 @@ def visualise():
 
     else:
         # excavating data from IDS file
-        gr2d = r_ids.grid_ggd[0].space[0]
+        gr2d = ids.grid_ggd[0].space[0]
         xyz0 = gr2d.objects_per_dimension[0].object.array
         ien0 = np.array(gr2d.objects_per_dimension[2].object.array)
 
-        n_period = r_ids.grid_ggd[0].space[1].geometry_type.index
+        n_period = ids.grid_ggd[0].space[1].geometry_type.index
 
         x = np.zeros((2, 4, len(xyz0)))
         for j in range(np.shape(x)[2]):
@@ -89,20 +101,20 @@ def visualise():
             size[:, :, i] = gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d
 
         #values
-        val_tor = r_ids.ggd.array[0].electrons.temperature.array[0].coefficients
+        val_tor = ids.ggd.array[0].electrons.temperature.array[0].coefficients
         a = np.shape(val_tor)
         n_tor = a[0]
         temp = np.reshape(val_tor, (n_tor, 4, len(xyz0)))
         temp = np.swapaxes(temp, 0, 1)
         values = np.array([temp])
 
-        val_tor1 = np.array([r_ids.ggd.array[0].psi.array[0].coefficients,
-                             r_ids.ggd.array[0].phi_potential.array[0].coefficients,
-                             r_ids.ggd.array[0].j_tor.array[0].coefficients,
-                             r_ids.ggd.array[0].vorticity.array[0].coefficients,
-                             r_ids.ggd.array[0].mass_density.array[0].coefficients,
-                             r_ids.ggd.array[0].electrons.temperature.array[0].coefficients,
-                             r_ids.ggd.array[0].velocity_parallel.array[0].coefficients])
+        val_tor1 = np.array([ids.ggd.array[0].psi.array[0].coefficients,
+                             ids.ggd.array[0].phi_potential.array[0].coefficients,
+                             ids.ggd.array[0].j_tor.array[0].coefficients,
+                             ids.ggd.array[0].vorticity.array[0].coefficients,
+                             ids.ggd.array[0].mass_density.array[0].coefficients,
+                             ids.ggd.array[0].electrons.temperature.array[0].coefficients,
+                             ids.ggd.array[0].velocity_parallel.array[0].coefficients])
         a = np.shape(val_tor1)
         n_tor = a[1]
         valu = np.reshape(val_tor1, (7, n_tor, 4, len(xyz0)))
@@ -111,7 +123,7 @@ def visualise():
 
 
         #vertex
-        ien0 = np.array(r_ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
+        ien0 = np.array(ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
         ver = np.empty((np.shape(ien0)[0], np.shape(ien0[0].nodes)[0]))
         for i in range(np.shape(ien0)[0]):
             ver[i, :] = np.array(ien0[i].nodes)

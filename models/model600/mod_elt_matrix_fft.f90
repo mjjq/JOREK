@@ -7,7 +7,8 @@ contains
 #include "corr_neg_include.f90"
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
+                              ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, &
+                              i_tor_min, i_tor_max, aux_nodes)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -29,8 +30,9 @@ use mod_sources
 
 implicit none
 
-type (type_element)   :: element
-type (type_node)      :: nodes(n_vertex_max)
+type (type_element)       :: element
+type (type_node)          :: nodes(n_vertex_max)
+type (type_node),optional :: aux_nodes(n_vertex_max)
 
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 
@@ -121,13 +123,13 @@ real*8     :: coef_rec_1                                      ! Recombination ra
 !   -Radiation from injected gas/impurities
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
-real*8     :: T_rad                                           ! Temperature used in radiation rate
-real*8     :: coef_rad_1                                      ! Radiation rate parameters
 
 !   -Radiation from background impurities
 real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT ! Retain the hard-coded fitting for argon
 real*8     :: Lrad_imp, dLrad_imp_dT                          ! Radiation rate and its derivative wrt. temperature
 real*8     :: r_imp                                           ! Background impurity density in JOREK unit
+integer    :: i_imp                                           ! Loop for more than one background impurity
+
 
 real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
@@ -141,12 +143,15 @@ real*8     :: dnu_e_bg_dTi, dnu_e_bg_dTe
 real*8     :: dnu_e_bg_drho, dnu_e_bg_drhon
 real*8     :: ddTi_e_dTi, ddTi_e_dTe, ddTi_e_drho, ddTi_e_drhon
 real*8     :: ddTe_i_dTi, ddTe_i_dTe, ddTe_i_drho, ddTe_i_drhon
-real*8     :: Te_corr_eV, dTe_corr_eV_dT                      ! Electron temperature in eV
+real*8     :: Te_eV, Te_corr_eV, dTe_corr_eV_dT              ! Electron temperature in eV
 real*8     :: ne_SI                                          ! Electron density in SI unit
 real*8     :: dr0_corr_dn
 
 ! --- General T for T-denpendent functions
 real*8     :: T_or_Te, T_or_Te_corr, T_or_Te_0, dT_or_Te_corr_dT
+
+! --- Factor to use the conservative form or not of the momentum equation
+real*8     :: fact_conservative_u = 1.d0
 
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*(n_order+1)
@@ -185,6 +190,10 @@ ELM   = 0.d0
 RHS   = 0.d0
 
 epsil=1.d-3
+
+! --- Decide whether or not use the conservative form of the momentum equation
+! --- (conservative form not ready yet with diamagnetic flows)
+if (tauIC > 0.d0) fact_conservative_u = 0.d0
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
@@ -1091,7 +1100,7 @@ do i=1,n_vertex_max
             !-------------------------------------------------------------------------------
 
             call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                        LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 )
+                                        LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0, rn0, .true. )
 
             if (.not. with_TiTe) then
               ! --- Transform derivatives on Te to derivatives in total T
@@ -1100,8 +1109,7 @@ do i=1,n_vertex_max
               dLradDrays_dT = dLradDrays_dT / 2.d0
               dLradDcont_dT = dLradDcont_dT / 2.d0
             endif
-
-     
+    
             !--------------------------------------------------------
             ! --- Source of neutrals, e.g. from MGI/SPI
             !--------------------------------------------------------
@@ -1130,62 +1138,51 @@ do i=1,n_vertex_max
           !-----------------------------------------------------------------
           ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
           if (with_TiTe) then 
-            T_rad =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+            Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+            Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
           else
-            T_rad = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+            Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+            Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
           endif
-
           if (use_imp_adas) then  ! use open adas by default
-            r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
-            if (ne_SI > ne_SI_min .and. T_rad > Te_eV_min .and. nimp_bg > 0) then
-              ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-              coef_rad_1 = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                    *(central_density*1.d20)**2.5d0
-
-              Lrad_imp = 0.0
-              dLrad_imp_dT = 0.0
-
-              call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(T_rad*EL_CHG/K_BOLTZ),Lrad_imp,dLrad_imp_dT)
-              Lrad_imp = Lrad_imp * coef_rad_1
-
-              ! Convert gradient wrt. to T from 1/K into 1/eV
-              dLrad_imp_dT = dLrad_imp_dT * coef_rad_1 *  EL_CHG / K_BOLTZ 
-              ! ...and now from 1/eV into 1/(JOREK units)
-              dLrad_imp_dT = dLrad_imp_dT / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-              dLrad_imp_dT = dLrad_imp_dT * dT0_corr_dT            
-
-              if (Lrad_imp < 0.) then
+            frad_bg = 0. 
+            dfrad_bg_dT = 0.
+            do i_imp =1, n_adas
+              r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
+              if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+                Lrad_imp = 0.0
+                dLrad_imp_dT = 0.0
+                call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                               log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp,dLrad_imp_dT)
+                dLrad_imp_dT = dLrad_imp_dT * dT0_corr_dT            
+              else     
                 Lrad_imp = 0.
                 dLrad_imp_dT = 0.
               end if
-            else     
-              Lrad_imp = 0.
-              dLrad_imp_dT = 0.
-            end if
-   
-            ! This is to detect N/A
-            if (Lrad_imp/=Lrad_imp .or. dLrad_imp_dT/=dLrad_imp_dT) then
-              write(*,*) "WARNING: Lrad_imp, dLrad_imp_dT ", Lrad_imp, dLrad_imp_dT
-              stop
-            end if
+              if (dLrad_imp_dT/=dLrad_imp_dT) then
+                write(*,*) "WARNING: dLrad_imp_dT ", dLrad_imp_dT
+                stop
+              end if
 
-            frad_bg = r_imp * Lrad_imp
-            dfrad_bg_dT = r_imp * dLrad_imp_dT 
+              frad_bg = frad_bg + r_imp * Lrad_imp
+              dfrad_bg_dT =  dfrad_bg_dT + r_imp * dLrad_imp_dT 
+
+            end do
 
           else 
 
-            if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+            if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
               Arad_bg = 2.4d-31
               Brad_bg = 20.
               Crad_bg = 0.8
       
               frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
-                            *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                            *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
       
               dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
-                            *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                            *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
             else
-              write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+              write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
               stop
             end if 
 
@@ -1423,6 +1420,10 @@ do i=1,n_vertex_max
 
                          - tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep       &
+!====================================New TG_num terms=================================
+                         - tgnum_u * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
+                                   * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep * fact_conservative_u            &
+!===============================End of NewTG_num terms==============================
 
                          - v * tauIC*2. * BigR**4 * (Pi0_s * w0_t - Pi0_t * w0_s)                                  * tstep &
 
@@ -1434,10 +1435,22 @@ do i=1,n_vertex_max
                          + dvisco_dT * bigR * W_dia * (v_x*Ti0_x + v_y*Ti0_y)                               * xjac * tstep &
                          + visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy)                              * xjac * tstep &
 
-                         + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep &
-                     
-                         - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac
+                        - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac                    &
+
+                         ! Not to be included in conservative form
+                         + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep  &
+                                   * (1.d0 - fact_conservative_u)  &          
  
+                         ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                         ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):		      
+                         + fact_conservative_u * (                                                                           &
+                             - zeta * BigR * BigR**2 * delta_g(mp,var_rho,ms,mt) * (v_x * u0_x + v_y * u0_y)  * xjac         &
+                             - BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x) * (v_x * u0_x + v_y * u0_y)      * xjac * tstep &
+                             + BigR * F0 * (r0 * vpar0_p + vpar0 * r0_p) * (v_x * u0_x + v_y * u0_y)          * xjac * tstep &
+                             + BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * tstep &
+                             + BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u0_x + v_y * u0_y) * xjac * tstep &
+                           )    
+            
             !------------------------------------------------------------------------ NEO
             if (NEO) then
               rhs_ij(var_u) = rhs_ij(var_u)  + amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)     &
@@ -1479,10 +1492,8 @@ do i=1,n_vertex_max
 
                        + v * 2.d0 * tauIC*2. * Pi0_y * BigR                                          * xjac * tstep &
 
-                      ! suggested by Eric
-                      !+ v * r0_corr * rn0      * BigR * Sion_T                                   * xjac * tstep &
-                       + v * r0_corr * rn0_corr * BigR * Sion_T                                   * xjac * tstep &
-                       - v * r0_corr * r0_corr  * BigR * Srec_T                                   * xjac * tstep &
+                       + v * r0 * rn0 * BigR * Sion_T                                             * xjac * tstep &
+                       - v * r0 * r0  * BigR * Srec_T                                             * xjac * tstep &
                        
                        + zeta * v * delta_g(mp,var_rho,ms,mt) * BigR                              * xjac         &
 
@@ -1509,8 +1520,10 @@ do i=1,n_vertex_max
               rhs_ij(var_vpar) = - v * F0 / BigR * P0_p                                                                 * xjac * tstep &
                                  - v * (P0_s * ps0_t - P0_t * ps0_s)                                                           * tstep &
                                                                                                                         
+                                ! Not to be included in the conservative form
                                  - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR                    * xjac * tstep &
-                                                                                                                        
+                                     * (1.d0 - fact_conservative_u)  &          
+                                                                                                                       
                                  - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                                   * tstep &
                                  - 0.5d0 * v  * vpar0**2 * BB2 * (ps0_s * r0_t - ps0_t * r0_s)                                 * tstep &
                                  + 0.5d0 * v  * vpar0**2 * BB2 * F0 / BigR * r0_p                                       * xjac * tstep &
@@ -1519,17 +1532,32 @@ do i=1,n_vertex_max
                                  
                                  + zeta * v * delta_g(mp,var_vpar,ms,mt) * r0_corr * F0**2 / BigR                       * xjac         &
                                  + zeta * v * r0_corr * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR        * xjac         &
-  
+
+                                 ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                 ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                                 + fact_conservative_u * (                                                 &
+                                     + zeta * v * delta_g(mp,var_rho,ms,mt) * vpar0 * F0**2 / BigR * xjac  &
+                                     + v * (r0_x_hat * u0_y - r0_y_hat * u0_x)       * vpar0 * BB2 * xjac * tstep &
+                                     - v * F0 / BigR * (r0 * vpar0_p + r0_p * vpar0) * vpar0 * BB2 * xjac * tstep &
+                                     - v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x)  * vpar0 * BB2 * xjac * tstep &
+                                     - v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)     * vpar0 * BB2 * xjac * tstep &
+                                                          ) &
+
                            - tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2                                                                 &
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                        &
                                      * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac                      )        * xjac * tstep * tstep &
-                           - tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2                                                                 &
+                           - tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2 * (1.d0 - fact_conservative_u)                                  &
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                        &
                                      * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)           * xjac * tstep * tstep &
+!=============================== New TG_num terms==================================
+                           - tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u            &
+                                     * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR     &
+                                     * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * tstep * tstep &
+!===============================End of new TG_num terms============================
                  
                                  + (1.d0 - delta_n_convection) * (     &
-                                   - v *(r0_corr * rn0_corr * Sion_T) * vpar0 * BB2 * BigR                              * xjac * tstep &
-                                   + v *(r0_corr * r0_corr  * Srec_T) * vpar0 * BB2 * BigR                              * xjac * tstep &
+                                   - v *(r0 * rn0 * Sion_T) * vpar0 * BB2 * BigR                                * xjac * tstep &
+                                   + v *(r0 * r0  * Srec_T) * vpar0 * BB2 * BigR                                * xjac * tstep &
                                    )
                     
               if (normalized_velocity_profile) then
@@ -1550,7 +1578,14 @@ do i=1,n_vertex_max
   
                  - tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
                            * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep 
+                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep & 
+!=============================== New TG_num terms==================================
+
+                 - tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
+                           * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR  &
+                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep
+
+!===============================End of new TG_num terms============================
             end if ! (with_vpar)
 
 
@@ -1594,8 +1629,8 @@ do i=1,n_vertex_max
                                    * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep &
 
                             !===================== Additional terms from friction terms============
-                            + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rn0*Sion_T) * xjac * tstep &
-                            + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0_corr*rn0*Sion_T))          * xjac * tstep &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)      * xjac * tstep &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))               * xjac * tstep &
                             !==============================End of friction terms=================
   
                          + zeta * v * r0_corr  * delta_g(mp,var_Ti,ms,mt) * BigR                 * xjac         &
@@ -1643,7 +1678,7 @@ do i=1,n_vertex_max
 
                               + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep &
   
-                              - v * BigR * ksiion  * r0_corr * rn0_corr * Sion_T                 * xjac * tstep &
+                              - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep &
                               - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep &
                               - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep &
                               - v * BigR * r0_corr * frad_bg                                     * xjac * tstep &
@@ -1709,11 +1744,11 @@ do i=1,n_vertex_max
                              + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep &
 
                              !===================== Additional terms from friction terms============
-                             + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rn0*Sion_T) * xjac * tstep &
-                             + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0_corr*rn0*Sion_T))          * xjac * tstep &
+                             + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)  * xjac * tstep &
+                             + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))           * xjac * tstep &
                              !==============================End of friction terms=================
 
-                             - v * BigR * ksiion  * r0_corr * rn0_corr * Sion_T                 * xjac * tstep &
+                             - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep &
                              - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep &
                              - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep &
                              - v * BigR * r0_corr * frad_bg                                     * xjac * tstep &
@@ -1766,8 +1801,8 @@ do i=1,n_vertex_max
                         - v * F0 / BigR * rn0 * vpar0_p                                      * xjac * tstep &
                         )                                                                                   &
 
-                    - BigR * v * r0_corr * rn0_corr * Sion_T                                 * xjac * tstep &  
-                    + BigR * v * r0_corr * r0_corr  * Srec_T                                 * xjac * tstep &
+                    - BigR * v * r0 * rn0 * Sion_T                                           * xjac * tstep &  
+                    + BigR * v * r0 * r0  * Srec_T                                           * xjac * tstep &
                     + BigR * v * source_neutral                                              * xjac * tstep &
                     - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy)  * BigR * xjac * tstep &
 
@@ -1972,7 +2007,14 @@ do i=1,n_vertex_max
                   !#  Perpendicular Momentum Equation                                                                #
                   !###################################################################################################
 
-                  amat(var_u,var_psi) = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep
+                  amat(var_u,var_psi) = - v * (psi_s * zj0_t - psi_t * zj0_s)                          * theta * tstep &
+
+                                        ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                        ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                                        + fact_conservative_u * ( &
+                                        - BigR**2 * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                        - BigR**2 * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                                                 )
 
                   ! ------------------------------------------------------ NEO
                   if (NEO) then
@@ -2001,17 +2043,36 @@ do i=1,n_vertex_max
 
                                     + v * tauIC*2. * BigR**4 * (u_xy * (Pi0_xx - Pi0_yy) - Pi0_xy * (u_xx - u_yy)) * xjac * theta * tstep &
 
+                                    ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                    ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                                    + fact_conservative_u * ( &
+                                        + BigR**2 * (r0_x_hat * u0_y - r0_y_hat * u0_x)      * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                                        + BigR**2 * (r0_x_hat * u_y  - r0_y_hat * u_x)       * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                        - BigR * F0 * (r0 * vpar0_p + vpar0 * r0_p)          * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                                        - BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u_x  + v_y * u_y)  * xjac * theta * tstep &
+                                        - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
+                                                            ) &
+                                    ! Not to be included in conservative form
                                     - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
+                                              * (1.d0 - fact_conservative_u) &
 
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)                                 &
                                               * ( v_x * u0_y - v_y * u0_x)                             * xjac * theta * tstep * tstep &
 
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)                                         &
                                       * ( v_x * u_y - v_y * u_x)                                                 * xjac * theta * tstep * tstep &
+!====================================New TG_num terms=================================
+                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u_y - r0_y_hat * u_x) &
+                                              * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep * fact_conservative_u &
+              
+                                    + tgnum_u * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
+                                              * ( v_x * u_y - v_y * u_x) * theta * xjac * tstep * tstep   * fact_conservative_u & 
+
+!===============================End of NewTG_num terms==============================
                   
                                     + (1.d0 - delta_n_convection) * (  &
-                                    - BigR**3 * (r0_corr*rn0_corr*Sion_T) * (v_x * u_x + v_y * u_y)              * xjac * theta * tstep &
-                                    + BigR**3 * (r0_corr* r0_corr*Srec_T) * (v_x * u_x + v_y * u_y)              * xjac * theta * tstep &
+                                    - BigR**3 * (r0*rn0*Sion_T) * (v_x * u_x + v_y * u_y)                        * xjac * theta * tstep &
+                                    + BigR**3 * (r0* r0*Srec_T) * (v_x * u_x + v_y * u_y)                        * xjac * theta * tstep &
                                     )
 
                   if ( NEO ) then
@@ -2032,13 +2093,28 @@ do i=1,n_vertex_max
                                     + visco_num_T * (v_xx + v_x/BigR + v_yy)*(w_xx + w_x/BigR + w_yy)               * xjac * theta * tstep &
                                                                                                                     
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w_x * u0_y - w_y * u0_x)                                      &
-                                            * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep
+                                            * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep &
+!====================================New TG_num terms=================================
+                                    + tgnum_u * 0.25d0 * w * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
+                                              * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep * fact_conservative_u 
+
+!===============================End of NewTG_num terms==============================
 
                   amat(var_u,var_rho) = + 0.5d0 * vv2 * (v_x * rho_y_hat - v_y * rho_x_hat)                         * xjac * theta * tstep &
                                       + rho_hat * BigR**2 * w0 * (v_s * u0_t   - v_t * u0_s)                               * theta * tstep &
                                       - BigR**2 * (v_s * rho_t * (Ti0+Te0)     - v_t * rho_s * (Ti0+Te0))                  * theta * tstep &
                                       - BigR**2 * (v_s * rho   * (Ti0_t+Te0_t) - v_t * rho   * (Ti0_s+Te0_s))              * theta * tstep &
-                                                                                                                           
+
+                                      ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                                      ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	     	    	     
+                                      + fact_conservative_u *( &
+                                          - BigR**3 * rho * (v_x * u0_x + v_y * u0_y) * xjac  * (1.d0 + zeta)          &
+                                          + BigR**2 * (rho_x_hat * u0_y - rho_y_hat * u0_x)     * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                          - BigR * rho * F0 * vpar0_p                           * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                          - BigR**2 * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                          - BigR**2 * vpar0 * (rho_x * ps0_y - rho_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                                             ) &
+
                                       + v * tauIC*2. * BigR**4 * Ti0  * (rho_s * w0_t - rho_t * w0_s)                      * theta * tstep &
                                       + v * tauIC*2. * BigR**4 * rho * (Ti0_s  * w0_t - Ti0_t  * w0_s)                     * theta * tstep &
                                       + tauIC*2. * BigR**3 * (Ti0_y * rho + Ti0 * rho_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
@@ -2051,10 +2127,15 @@ do i=1,n_vertex_max
 
                                       + tgnum_u * 0.25d0 * rho_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x)                                            &
                                       * ( v_x * u0_y - v_y * u0_x)                                           * xjac * theta * tstep * tstep     &
+!====================================New TG_num terms=================================
+                                      + tgnum_u * 0.25d0 * w0 * BigR**3 * (rho_x_hat * u0_y - rho_y_hat * u0_x) &
+                                                * ( v_x * u0_y - v_y * u0_x) * theta * xjac * tstep * tstep * fact_conservative_u &
+
+!===============================End of NewTG_num terms==============================
 
                                       + (1.d0 - delta_n_convection) * (                                                                &
-                                        - BigR**3 * (rho* rn0_corr * Sion_T)        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                                        + BigR**3 * (rho * 2.d0 * r0_corr * Srec_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                        - BigR**3 * (rho* rn0 * Sion_T)        * (v_x * u0_x + v_y * u0_y)   * xjac * theta * tstep &
+                                        + BigR**3 * (rho * 2.d0 * r0 * Srec_T) * (v_x * u0_x + v_y * u0_y)   * xjac * theta * tstep &
                                         )
 
                   if ( NEO ) then
@@ -2063,6 +2144,12 @@ do i=1,n_vertex_max
                          + tauIC*2. * (ps0_x*(rho_x*Ti0 + rho*Ti0_x) + ps0_y*(rho_y*Ti0 + rho*Ti0_y))                                   &
                          + aki_neo_prof(ms,mt) * tauIC*2. * rho * (ps0_x*Ti0_x + ps0_y*Ti0_y) - rho * Vpar0 * Btheta2) * BigR * xjac * tstep * theta
                   endif
+
+                  ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                  ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
+                  amat_n(var_u,var_rho) = - BigR * vpar0 * F0 * rho_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep * fact_conservative_u
+
+                  if (with_vpar) amat(var_u,var_vpar) = 0.d0
 
                   if ( with_TiTe ) then ! (with_TiTe) **********************************************
                     amat(var_u,var_Ti) = - BigR**2 * (v_s * r0_t * Ti   - v_t * r0_s * Ti)           * theta * tstep  &
@@ -2086,7 +2173,7 @@ do i=1,n_vertex_max
                                 + aki_neo_prof(ms,mt) *tauIC*2. * r0 *(ps0_x*Ti_x + ps0_y*Ti_y)) * BigR * xjac * theta * tstep 
 
                       if ( with_vpar ) &
-                      amat(var_u,var_vpar) = amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
+                      amat(var_u,var_vpar) =  amat(var_u,var_vpar) + amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
                                 * BigR * xjac * tstep * theta
                     endif
 
@@ -2111,14 +2198,20 @@ do i=1,n_vertex_max
                                                                 - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))                    &
                                                       - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy))  &
                                                     * xjac * theta * tstep                                                  &
- 
+
+                              + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y )         * BigR * xjac * theta * tstep  &
+
+                              ! --- Contributions of the diamagnetic viscosity 
                               - dvisco_dT     * bigR * W_dia_Ti * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
                               - visco_T       * bigR * W_dia_Ti * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
                               - dvisco_dT     * bigR * W_dia    * (v_x*T_x  + v_y*T_y )    * xjac * theta * tstep  &
 
+                              - d2visco_dT2*T * bigR * W_dia    * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
+                              - dvisco_dT*T   * bigR * W_dia    * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
+
                            + (1 - delta_n_convection) * (  &
-                           - BigR**3 * (r0_corr * rn0_corr * dSion_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                           + BigR**3 * (r0_corr * r0_corr  * dSrec_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
+                           - BigR**3 * (r0 * rn0 * dSion_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
+                           + BigR**3 * (r0 * r0  * dSrec_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
                            )
 
 
@@ -2128,19 +2221,26 @@ do i=1,n_vertex_max
                                 + aki_neo_prof(ms,mt) *tauIC*2. * r0 *(ps0_x*T_x + ps0_y*T_y)) * BigR * xjac * theta * tstep
 
                       if ( with_vpar ) &
-                      amat(var_u,var_vpar) = amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
+                      amat(var_u,var_vpar) = amat(var_u,var_vpar) + amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
                                 * BigR * xjac * tstep * theta
                     endif
 
-
-                    amat(var_u,var_T) = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)           * theta * tstep  &
-                                        - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)         * theta * tstep  &
-
-                                + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR * xjac * theta * tstep  &
- 
-                                - d2visco_dT2*T * bigR * W_dia   * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
-                                - dvisco_dT*T   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep
                   end if ! (with_TiTe) *************************************************************
+
+                  if (with_vpar) then
+                    ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                    ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	     	    	     	  
+                    amat(var_u,var_vpar) =   amat(var_u,var_vpar)   &
+                          + fact_conservative_u * ( & 
+                              - BigR * vpar * F0 * r0_p                          * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                              - BigR**2 * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                              - BigR**2 * vpar * (r0_x * ps0_y - r0_y * ps0_x)   * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                                                   )
+
+                    ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                    ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
+                    amat_n(var_u,var_vpar) = - BigR * r0 * F0 * vpar_p * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep * fact_conservative_u
+                  endif ! /with_vpar
 
                   if (with_neutrals) then
                     amat(var_u,var_rhon) = -(1.d0 - delta_n_convection) * BigR**3 * (r0 * rhon * Sion_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep 
@@ -2206,8 +2306,8 @@ do i=1,n_vertex_max
 
                           - v * 2.d0 * tauIC*2. * (rho_y * Ti0 + rho*Ti0_y) * BigR                         * xjac * theta * tstep &
 
-                          - v * rho * rn0_corr       * BigR * Sion_T                                    * xjac * theta * tstep &
-                          + v * rho * 2.d0 * r0_corr * BigR * Srec_T                                    * xjac * theta * tstep &
+                          - v * rho * rn0       * BigR * Sion_T                                         * xjac * theta * tstep &
+                          + v * rho * 2.d0 * r0 * BigR * Srec_T                                         * xjac * theta * tstep &
 
                           + D_perp_num * (v_xx + v_x/BigR + v_yy)*(rho_xx + rho_x/BigR + rho_yy)  * BigR * xjac * theta * tstep &
 
@@ -2240,12 +2340,12 @@ do i=1,n_vertex_max
 
                   if ( with_TiTe ) then
                     amat(var_rho,var_Ti) = - v * 2.d0 * tauIC*2. * (Ti_y * r0 + Ti*r0_y) * BigR * xjac * theta * tstep
-                    amat(var_rho,var_Te) = - v * BigR * r0_corr * rn0_corr * dSion_dT * Te   * xjac * theta * tstep &
-                                           + v * BigR * r0_corr * r0_corr *  dSrec_dT * Te   * xjac * theta * tstep
+                    amat(var_rho,var_Te) = - v * BigR * r0 * rn0 * dSion_dT * Te   * xjac * theta * tstep &
+                                           + v * BigR * r0 * r0 *  dSrec_dT * Te   * xjac * theta * tstep
                   else ! (with_TiTe)
                     amat(var_rho,var_T)  = - v * 2.d0 * tauIC*2. * (T_y  * r0 + T *r0_y) * BigR * xjac * theta * tstep &
-                                           - v * BigR * r0_corr * rn0_corr * dSion_dT * T    * xjac * theta * tstep &
-                                           + v * BigR * r0_corr * r0_corr *  dSrec_dT * T    * xjac * theta * tstep 
+                                           - v * BigR * r0 * rn0 * dSion_dT * T    * xjac * theta * tstep &
+                                           + v * BigR * r0 * r0 *  dSrec_dT * T    * xjac * theta * tstep 
                   end if ! (with_TiTe)
 
                   if ( with_vpar ) then
@@ -2265,7 +2365,7 @@ do i=1,n_vertex_max
                   end if ! (with_vpar)
 
                   if (with_neutrals) then
-                    amat(var_rho,var_rhon) = - BigR * v * r0_corr * Sion_T * rhon            * xjac * theta * tstep
+                    amat(var_rho,var_rhon) = - BigR * v * r0 * Sion_T * rhon            * xjac * theta * tstep
                   endif
 
                   !###################################################################################################
@@ -2283,12 +2383,25 @@ do i=1,n_vertex_max
                               + 0.5d0 * v  * vpar0**2 * BB2     * (psi_x * r0_y - psi_y * r0_x)  * xjac * theta * tstep &
                               + 0.5d0 * v  * vpar0**2 * BB2_psi * (ps0_x * r0_y - ps0_y * r0_x)  * xjac * theta * tstep &
                               - 0.5d0 * v  * vpar0**2 * BB2_psi * F0 / BigR * r0_p               * xjac * theta * tstep &
+
+                             ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                             ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                              + fact_conservative_u * ( & 
+                                  + v * r0 * (vpar0_x * psi_y - vpar0_y * psi_x) * vpar0 * BB2     * xjac * theta * tstep &
+                                  + v * vpar0 * (r0_x * psi_y - r0_y * psi_x)    * vpar0 * BB2     * xjac * theta * tstep &
+                                  - v * (r0_x_hat * u0_y - r0_y_hat * u0_x)      * vpar0 * BB2_psi * xjac * theta * tstep &
+                                  + v * F0 / BigR * (r0 * vpar0_p + r0_p * vpar0)* vpar0 * BB2_psi * xjac * theta * tstep &
+                                  + v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * vpar0 * BB2_psi * xjac * theta * tstep &
+                                  + v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * vpar0 * BB2_psi * xjac * theta * tstep &
+                                                        ) &
   
+                              ! Not to be included in conservative form
                               + v*(particle_source(ms,mt) + source_pellet)*vpar0* BB2_psi * BigR * xjac * theta * tstep &
-    
+                                 * (1.d0 - fact_conservative_u)  &
+
                               + (1.d0 - delta_n_convection) * (  &  
-                                + v *(r0_corr * rn0_corr * Sion_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
-                                - v *(r0_corr * r0_corr  * Srec_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
+                                + v *(r0 * rn0 * Sion_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
+                                - v *(r0 * r0  * Srec_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
                                 ) &
 
                               + tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
@@ -2299,13 +2412,23 @@ do i=1,n_vertex_max
                                         * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
                                         * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * theta * tstep*tstep &
   
-                              + tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2 &
+                              + tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2 * (1.d0 - fact_conservative_u) &
                                         * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac) / BigR  &
                                         * (-(psi_s * r0_t    - psi_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep &
   
-                              + tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2 &
+                              + tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2 * (1.d0 - fact_conservative_u) &
                                         * (-(psi_s * vpar0_t - psi_t * vpar0_s)/xjac) / BigR  &
-                                        * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep 
+                                        * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac)  * xjac * theta * tstep*tstep & 
+
+!=============================== New TG_num terms==================================
+                               + tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
+                                         * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac) / BigR  &
+                                         * (-(psi_s * v_t     - psi_t * v_s)    /xjac) * xjac * theta * tstep*tstep &
+        
+                               + tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
+                                         * (-(psi_s * r0_t - psi_t * r0_s)/xjac) / BigR  &
+                                         * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac) * xjac * theta * tstep*tstep
+!===============================End of new TG_num terms============================
   
                     if (normalized_velocity_profile) then
                       amat(var_vpar,var_psi) = amat(var_vpar,var_psi)  - (visco_par + visco_par_sc_num * tau_sc) * (v_x * Vt_x_psi   + v_y * Vt_y_psi) * BigR * xjac * theta * tstep      
@@ -2314,9 +2437,8 @@ do i=1,n_vertex_max
                     endif
   
                     amat_k(var_vpar,var_psi) = - 0.5d0 * r0 * vpar0**2 * BB2_psi * F0 / BigR * v_p    * xjac * theta * tstep 
-
                     amat(var_vpar,var_u) = 0.d0
-  
+
                     !---------------------------------------- NEO
                     if ( NEO ) then
                       amat(var_vpar,var_psi) = amat(var_vpar,var_psi) &
@@ -2331,6 +2453,10 @@ do i=1,n_vertex_max
                     endif
                     !---------------------------------------- NEO
   
+                    ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                    ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                    amat(var_vpar,var_u) = amat(var_vpar,var_u) - v * (r0_x_hat * u_y - r0_y_hat * u_x) * vpar0 * BB2 * theta * xjac * tstep * fact_conservative_u
+  
                     amat(var_vpar,var_rho) = + v * (rho_s * (Ti0+Te0)     * ps0_t - rho_t * (Ti0+Te0)     * ps0_s) * theta * tstep &
                                 + v * (rho   * (Ti0_s+Te0_s) * ps0_t - rho   * (Ti0_t+Te0_t) * ps0_s) * theta * tstep &
                                 + v * F0 / BigR * rho * (Ti0_p+Te0_p)                          * xjac * theta * tstep &
@@ -2338,33 +2464,75 @@ do i=1,n_vertex_max
                               + 0.5d0 * rho * vpar0**2 * BB2 * (ps0_s * v_t   - ps0_t * v_s)    * theta * tstep &
                               + 0.5d0 * v   * vpar0**2 * BB2 * (ps0_s * rho_t - ps0_t * rho_s)  * theta * tstep &
   
+                       ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                       ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                              + fact_conservative_u * ( & 
+                                  + v * rho * vpar0 * F0**2 / BigR * xjac * (1.d0 + zeta)  &
+                                  - v * (rho_x_hat * u0_y - rho_y_hat * u0_x)       * vpar0 * BB2 * theta * xjac * tstep &   
+                                  + v * F0 / BigR * rho * vpar0_p                   * vpar0 * BB2 * theta * xjac * tstep &
+                                  + v * rho * (vpar0_x * ps0_y - vpar0_y * ps0_x)   * vpar0 * BB2 * theta * xjac * tstep &
+                                  + v * vpar0 * (rho_x * ps0_y - rho_y * ps0_x)     * vpar0 * BB2 * theta * xjac * tstep &
+                                                        ) &
+
                               + (1.d0 - delta_n_convection) * (  &
 
-                              + v *(rho * rn0_corr       * Sion_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
-                              - v *(2.d0 * r0_corr * rho * Srec_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
+                              + v *(rho * rn0       * Sion_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
+                              - v *(2.d0 * r0 * rho * Srec_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
                               ) &
 
                               + tgnum_vpar * 0.25d0 * rho * Vpar0**2 * BB2 &
                                         * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
                                         * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac          )  * xjac * theta * tstep*tstep &
   
-                              + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 &
+                              + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 * (1.d0-fact_conservative_u) &
                                         * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                                        * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac           ) * xjac * theta * tstep*tstep
+                                        * (-(ps0_s * rho_t   - ps0_t * rho_s)  /xjac           ) * xjac * theta *tstep*tstep &
+!=============================== New TG_num terms==================================
+
+                               + tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
+                                         * (-(ps0_s * rho_t - ps0_t * rho_s)/xjac                          ) / BigR  &
+                                         * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * theta * tstep*tstep
+
+!===============================End of new TG_num terms============================
   
                     amat_k(var_vpar,var_rho) = - 0.5d0 * rho * vpar0**2 * BB2 * F0 / BigR * v_p       * xjac * theta * tstep &
   
                                 + tgnum_vpar * 0.25d0 * rho * Vpar0**2 * BB2 &
                                           * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                                          * (                                          + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
+                                          * (                                          + F0 / BigR * v_p)  *  xjac * theta * tstep * tstep &
+!=============================== New TG_num terms==================================
+
+                                + tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
+                                          * (-(ps0_s * rho_t - ps0_t * rho_s)/xjac) / BigR  &
+                                          * (+ F0 / BigR * v_p) * xjac * theta * tstep*tstep
+
+!===============================End of new TG_num terms============================
   
                     amat_n(var_vpar,var_rho) = + v * F0 / BigR * rho_p * (Ti0+Te0)                    * xjac * theta * tstep &
                                 - 0.5d0 * v   * vpar0**2 * BB2 * F0 / BigR * rho_p       * xjac * theta * tstep &
+                         ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                         ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	 
+                                + v * vpar0 * F0 / BigR * rho_p * vpar0 * BB2          * theta * xjac * tstep * fact_conservative_u & 
   
-                                + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 &
+                                + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 * (1.d0-fact_conservative_u) &
                                           * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                                          * (                                          + F0 / BigR * rho_p)* xjac * theta * tstep*tstep
+                                          * (                                          + F0 / BigR * rho_p)* xjac * theta * tstep*tstep &
+!=============================== New TG_num terms==================================
+
+                                + tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
+                                          * (+ F0 / BigR * rho_p) / BigR  &
+                                          * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac) * xjac * theta * tstep*tstep
+
+!===============================End of new TG_num terms============================
                     
+!=============================== New TG_num terms==================================
+
+                      amat_kn(var_vpar,var_rho) = + tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
+                                          * (+ F0 / BigR * rho_p) / BigR  &
+                                          * (+ F0 / BigR * v_p) * xjac * theta * tstep*tstep
+
+!===============================End of new TG_num terms============================
+
                     if ( with_TiTe ) then ! (with_TiTe) ********************************************
                       amat(var_vpar,var_Ti)   = + v * (Ti_s * r0   * ps0_t - Ti_t * r0   * ps0_s)        * theta * tstep &
                                                 + v * (Ti   * r0_s * ps0_t - Ti   * r0_t * ps0_s)        * theta * tstep &
@@ -2377,8 +2545,8 @@ do i=1,n_vertex_max
                                                 + v * F0 / BigR * Te * r0_p                       * xjac * theta * tstep  &
 
                                                 + (1.d0 - delta_n_convection) * (  &
-                                                  + v *(r0_corr * rn0_corr * dSion_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
-                                                  - v *(r0_corr * r0_corr  * dSrec_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  + v *(r0 * rn0 * dSion_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  - v *(r0 * r0  * dSrec_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
                                                   )                                               
     
 
@@ -2389,8 +2557,8 @@ do i=1,n_vertex_max
                                                 + v * F0 / BigR * T  * r0_p                       * xjac * theta * tstep  &
 
                                                 + (1.d0 - delta_n_convection) * (  &
-                                                  + v *(r0_corr * rn0_corr * dSion_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
-                                                  - v *(r0_corr * r0_corr  * dSrec_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  + v *(r0 * rn0 * dSion_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  - v *(r0 * r0  * dSrec_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
                                                   )  
 
                       amat_n(var_vpar,var_T)  = + v * F0 / BigR * T_p  * r0                       * xjac * theta * tstep
@@ -2399,7 +2567,20 @@ do i=1,n_vertex_max
  
                     amat(var_vpar,var_vpar) = v * Vpar * r0_corr * F0**2 / BigR * xjac * (1.d0 + zeta) &
   
+                       ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                       ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
+                            + fact_conservative_u * ( & 
+                                - v * (r0_x_hat * u0_y - r0_y_hat * u0_x) * vpar         * BB2 * xjac * theta * tstep &
+                                + 2.0 * v * vpar0 * F0 / BigR * r0_p      * vpar         * BB2 * xjac * theta * tstep &
+                                + v * r0 * F0 /BigR * vpar0_p             * vpar         * BB2 * xjac * theta * tstep & 
+                                + v * r0 * (vpar_x * ps0_y - vpar_y * ps0_x) * vpar0     * BB2 * xjac * theta * tstep &
+                                + v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * vpar    * BB2 * xjac * theta * tstep &
+                                + 2.0 * v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x) * vpar * BB2 * xjac * theta * tstep &
+                                                    ) &
+
+                             ! Not to be included in conservative form
                             + v*(particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR * xjac * theta * tstep &
+                               *(1.d0 - fact_conservative_u) &
   
                             + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)             * theta * tstep &
                             + v  * vpar0 * vpar * BB2 * (ps0_s * r0_t - ps0_t * r0_s)           * theta * tstep &
@@ -2407,8 +2588,8 @@ do i=1,n_vertex_max
   
                             + (1.d0 - delta_n_convection) * (  &
 
-                              + v *(r0_corr * rn0_corr * Sion_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
-                              - v *(r0_corr * r0_corr  * Srec_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
+                              + v *(r0 * rn0 * Sion_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
+                              - v *(r0 * r0  * Srec_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
                               ) &
 
                             + visco_par_num * (v_xx + v_x/BigR + v_yy)*(vpar_xx + vpar_x/BigR + vpar_yy) * BigR * xjac * theta * tstep&
@@ -2416,15 +2597,22 @@ do i=1,n_vertex_max
                             + tgnum_vpar * 0.5d0 * r0 * Vpar * Vpar0 * BB2 &
                                       * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                      &
                                       * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac                      )  * xjac * theta * tstep*tstep  &
-                            + tgnum_vpar * 0.5d0 * v * Vpar * Vpar0 * BB2 &
+                            + tgnum_vpar * 0.5d0 * v * Vpar * Vpar0 * BB2 * (1.d0 - fact_conservative_u) &
                                       * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                      &
                                       * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep  &
                             + tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
                                       * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac                   ) / BigR                           &
                                       * (-(ps0_s * v_t    - ps0_t * v_s)   /xjac                   )  * xjac * theta * tstep*tstep    &
-                            + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 &
+                            + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 * (1.d0 - fact_conservative_u) &
                                       * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac                   ) / BigR                           &
-                                      * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep 
+                                      * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep    & 
+!=============================== New TG_num terms==================================
+
+                            + tgnum_vpar * 0.75d0 * Vpar * Vpar0**2 * BB2 * fact_conservative_u &
+                                      * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR             &
+                                      * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac )  * xjac * theta * tstep*tstep  
+
+!===============================End of new TG_num terms============================
   
                     if (normalized_velocity_profile) then
                       amat(var_vpar,var_vpar) = amat(var_vpar,var_vpar) + (visco_par + visco_par_sc_num * tau_sc) * (v_x * Vpar_x + v_y * Vpar_y) * BigR        * xjac  * theta * tstep 
@@ -2439,14 +2627,24 @@ do i=1,n_vertex_max
                                         * (                                          + F0 / BigR * v_p)  * xjac * theta * tstep*tstep  &
                               + tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
                                         * (-(ps0_s * vpar_t - ps0_t * vpar_s)/xjac                  ) / BigR                           &
-                                        * (                                        + F0 / BigR * v_p)  * xjac * theta * tstep*tstep
+                                        * (                      + F0 / BigR * v_p)  * xjac * theta * tstep*tstep    &
+!=============================== New TG_num terms==================================
+
+                              + tgnum_vpar * 0.75d0 * Vpar * Vpar0**2 * BB2 * fact_conservative_u &
+                                        * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR             &
+                                        * (+ F0 / BigR * v_p)  * xjac * theta * tstep*tstep  
+
+!===============================End of new TG_num terms============================
   
                     amat_n(var_vpar,var_vpar) = &
+                        ! New term coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
+                        ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):	    
+                              + v * r0 * F0 /BigR * vpar_p * vpar0 * BB2 * xjac * theta * tstep * fact_conservative_u &
   
-                              + tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
+                              + tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2  &
                                         * (                                        + F0 / BigR * vpar_p) / BigR                        &
                                         * (-(ps0_s * v_t    - ps0_t * v_s)   /xjac                     )  * xjac * theta * tstep*tstep &
-                              + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 &
+                              + tgnum_vpar * 0.25d0 * v * Vpar0**2 * BB2 * (1.d0 - fact_conservative_u) &
                                         * (                                        + F0 / BigR * vpar_p) / BigR                        &
                                         * (-(ps0_s * r0_t   - ps0_t * r0_s)  /xjac + F0 / BigR * r0_p)  * xjac * theta * tstep*tstep 
   
@@ -2474,7 +2672,7 @@ do i=1,n_vertex_max
                     endif
 
                     if (with_neutrals) then
-                      amat(var_vpar,var_rhon) = (1.d0 - delta_n_convection) * v *(r0_corr * rhon * Sion_T) * vpar0 * BB2 * BigR * xjac * theta * tstep
+                      amat(var_vpar,var_rhon) = (1.d0 - delta_n_convection) * v *(r0 * rhon * Sion_T) * vpar0 * BB2 * BigR * xjac * theta * tstep
                     endif
 
                   end if ! (with_vpar)
@@ -2499,7 +2697,7 @@ do i=1,n_vertex_max
   
                               !===================== Additional terms from friction terms============
                               - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)&
-                                  * (r0_corr*rn0*Sion_T)                                                    * xjac * theta * tstep &
+                                  * (r0*rn0*Sion_T)                                                    * xjac * theta * tstep &
                               !==============================End of friction terms=================
  
                            + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                         &
@@ -2532,7 +2730,7 @@ do i=1,n_vertex_max
   
                                !===================== Additional terms from friction terms============
                                 - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
-                                    * (r0_corr*rn0*Sion_T)                                * xjac * theta * tstep &
+                                    * (r0*rn0*Sion_T)                                * xjac * theta * tstep &
                                !==============================End of friction terms===================
 
                            + tgnum_Ti* 0.25d0 * BigR**2 * Ti0* (r0_x * u_y - r0_y * u_x)                &
@@ -2665,7 +2863,7 @@ do i=1,n_vertex_max
                                 + v * r0 * GAMMA * Ti0 * (vpar_s * ps0_t - vpar_t * ps0_s)              * theta * tstep &
 
                                !===================== Additional terms from friction terms============
-                                - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (r0_corr*rn0*Sion_T) * xjac * theta * tstep &
+                                - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (r0*rn0*Sion_T) * xjac * theta * tstep &
                                !==============================End of friction terms=================
  
                                 + tgnum_Ti* 0.25d0 / BigR * 2.d0 * vpar0*vpar &
@@ -2690,15 +2888,15 @@ do i=1,n_vertex_max
 
                                           !===================== Additional terms from friction terms============
                                           - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 &
-                                              * (r0_corr*rn0*dSion_dT) * Te * xjac * theta * tstep &
+                                              * (r0*rn0*dSion_dT) * Te * xjac * theta * tstep &
                                           - v * BigR * ((GAMMA - 1.)/2.) * vv2 &
-                                              * (r0_corr*rn0*dSion_dT) * Te * xjac * theta * tstep 
+                                              * (r0*rn0*dSion_dT) * Te * xjac * theta * tstep 
                                           !==============================End of friction terms=================
 
                     if (with_neutrals) then
                       !===================== Additional terms from friction terms============
-                      amat(var_Ti,var_rhon) = - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rhon*Sion_T) * xjac * theta * tstep &
-                                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (r0_corr*rhon*Sion_T) * xjac * theta * tstep 
+                      amat(var_Ti,var_rhon) = - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rhon*Sion_T) * xjac * theta * tstep &
+                                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (r0*rhon*Sion_T) * xjac * theta * tstep 
                       !==============================End of friction terms=================
 
                     endif
@@ -2773,7 +2971,7 @@ do i=1,n_vertex_max
                               ! Energy exchange term
                               - v * BigR * ddTe_i_drho * rho                                * xjac * theta * tstep &
 
-                              + v * BigR * rho * rn0_corr * ksiion * Sion_T                        * xjac * theta * tstep &
+                              + v * BigR * rho * rn0 * ksiion * Sion_T                             * xjac * theta * tstep &
                               + v * BigR * rho * rn0_corr * LradDrays_T                            * xjac * theta * tstep &
                               + v * BigR * rho * 2d0 * r0_corr * LradDcont_T                       * xjac * theta * tstep &
                               + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &  
@@ -2835,7 +3033,7 @@ do i=1,n_vertex_max
   
                               - v * Te * (gamma-1.d0) * deta_dT_ohm * (zj0 / BigR)**2.d0 * BigR * xjac * theta * tstep &
 
-                              + v * BigR * r0_corr * rn0_corr * ksiion * dSion_dT * T         * xjac * theta * tstep &
+                              + v * BigR * r0 * rn0 * ksiion * dSion_dT * T                   * xjac * theta * tstep &
                               + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT             * xjac * theta * tstep &
                               + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT             * xjac * theta * tstep &
                               + v * BigR * T * r0_corr * dfrad_bg_dT                          * xjac * theta * tstep &
@@ -2902,8 +3100,8 @@ do i=1,n_vertex_max
                       amat_n(var_Te,var_vpar) = + v * r0 * GAMMA * Te0 * F0 / BigR * vpar_p          * xjac * theta * tstep
                     end if ! (with_vpar)
                     if (with_neutrals) then
-                      amat(var_Te,var_rhon) = + v * BigR * r0_corr * rhon * ksiion * Sion_T          * xjac * theta * tstep &
-                                              + v * BigR * rhon * r0_corr * LradDrays_T              * xjac * theta * tstep 
+                      amat(var_Te,var_rhon) = + v * BigR * r0 * rhon * ksiion * Sion_T               * xjac * theta * tstep &
+                                              + v * BigR * rhon * r0 * LradDrays_T                   * xjac * theta * tstep 
                     endif
                     
                   else ! (with_TiTe), i.e. with single temperature *********************************
@@ -2926,7 +3124,7 @@ do i=1,n_vertex_max
                                           + v * r0  * GAMMA * T0 * (vpar0_s * psi_t - vpar0_t * psi_s)                           * theta * tstep &
                                          !===================== Additional terms from friction terms============
                                           - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)&
-                                              * (r0_corr*rn0*Sion_T)                                                    * xjac * theta * tstep &
+                                              * (r0*rn0*Sion_T)                                                           * xjac * theta * tstep &
                                          !==============================End of friction terms=================
   
                           + tgnum_T * 0.25d0 / BigR * vpar0**2                                                        &
@@ -2958,7 +3156,7 @@ do i=1,n_vertex_max
                                         - v * r0 * 2.d0* GAMMA * BigR * T0 * u_y                  * xjac * theta * tstep &
                                        !===================== Additional terms from friction terms============
                                         - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
-                                            * (r0_corr*rn0*Sion_T)                                * xjac * theta * tstep &
+                                            * (r0*rn0*Sion_T)                                     * xjac * theta * tstep &
                                        !==============================End of friction terms===================
   
                           + tgnum_T * 0.25d0 * BigR**2 * T0* (r0_x * u_y - r0_y * u_x)                                &
@@ -2984,7 +3182,7 @@ do i=1,n_vertex_max
                                           + v * rho * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                * theta * tstep &
                                           + v * rho * GAMMA * T0 * F0 / BigR * vpar0_p                         * xjac * theta * tstep &
   
-                                          + v * BigR * rho * rn0_corr * ksiion * Sion_T                        * xjac * theta * tstep &
+                                          + v * BigR * rho * rn0 * ksiion * Sion_T                             * xjac * theta * tstep &
                                           + v * BigR * rho * rn0_corr * LradDrays_T                            * xjac * theta * tstep &
                                           + v * BigR * rho * 2d0 * r0_corr * LradDcont_T                       * xjac * theta * tstep &
                                           + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
@@ -3047,16 +3245,16 @@ do i=1,n_vertex_max
                                       
                                       - v * T * (gamma-1.d0) * deta_dT_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * theta * tstep &
   
-                                      + v * BigR * r0_corr * rn0_corr * ksiion * dSion_dT * T  * xjac * theta * tstep &
+                                      + v * BigR * r0 * rn0           * ksiion * dSion_dT * T  * xjac * theta * tstep &
                                       + v * BigR * T * r0_corr * rn0_corr * dLradDrays_dT      * xjac * theta * tstep &
                                       + v * BigR * T * r0_corr * r0_corr  * dLradDcont_dT      * xjac * theta * tstep &
                                       + v * BigR * T * r0_corr * dfrad_bg_dT                   * xjac * theta * tstep &
 
                                      !===================== Additional terms from friction terms============
                                       - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 &
-                                          * (r0_corr*rn0*dSion_dT) * T * xjac * theta * tstep &
+                                          * (r0*rn0*dSion_dT) * T * xjac * theta * tstep &
                                       - v * BigR * ((GAMMA - 1.)/2.) * vv2 &
-                                          * (r0_corr*rn0*dSion_dT) * T * xjac * theta * tstep &
+                                          * (r0*rn0*dSion_dT) * T * xjac * theta * tstep &
                                      !==============================End of friction terms=================
 
                           + tgnum_T * 0.25d0 * BigR**2 * T* (r0_x * u0_y - r0_y * u0_x)                               &
@@ -3103,7 +3301,7 @@ do i=1,n_vertex_max
                                              + v * r0 * GAMMA * T0 * (vpar_s * ps0_t - vpar_t * ps0_s)             * theta * tstep &
 
                             !===================== Additional terms from friction terms============
-                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (r0_corr*rn0*Sion_T) * xjac * theta * tstep &
+                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (r0*rn0*Sion_T) * xjac * theta * tstep &
                             !==============================End of friction terms=================
       
                           + tgnum_T * 0.25d0 / BigR * 2.d0 * vpar0*vpar                                               &
@@ -3124,11 +3322,11 @@ do i=1,n_vertex_max
                       amat_n(var_T,var_vpar) = + v * r0 * GAMMA * T0 * F0 / BigR * vpar_p          * xjac * theta * tstep
 
                       if (with_neutrals) then
-                        amat(var_T,var_rhon) = + v * BigR * r0_corr * rhon * ksiion * Sion_T         * xjac * theta * tstep &
+                        amat(var_T,var_rhon) = + v * BigR * r0 * rhon * ksiion * Sion_T              * xjac * theta * tstep &
                                                + v * BigR * rhon * r0_corr * LradDrays_T             * xjac * theta * tstep &
                               !===================== Additional terms from friction terms============
-                              - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rhon*Sion_T) * xjac * theta * tstep &
-                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (r0_corr*rhon*Sion_T) * xjac * theta * tstep 
+                              - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rhon*Sion_T)     * xjac * theta * tstep &
+                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (r0*rhon*Sion_T)     * xjac * theta * tstep 
                               !==============================End of friction terms=================
 
                       endif
@@ -3158,18 +3356,18 @@ do i=1,n_vertex_max
                                   + v * BigR**2 * ( rn0_s * u_t - rn0_t * u_s)                         * theta * tstep &
                                   + v * 2.d0 * BigR * rn0 * u_y                                 * xjac * theta * tstep )
 
-                    amat(var_rhon,var_rho) = + BigR * v * rn0_corr * Sion_T * rho               * xjac * theta * tstep &
-                                - BigR * v * 2d0 * r0_corr * rho * Srec_T                       * xjac * theta * tstep 
+                    amat(var_rhon,var_rho) = + BigR * v * rn0 * Sion_T * rho                    * xjac * theta * tstep &
+                                - BigR * v * 2d0 * r0 * rho * Srec_T                            * xjac * theta * tstep 
 
                  ! We do not include the term coming from div(rhon * v_star_i) because they are prop. to rho_n/rho, because they may cause problems
                  ! in areas where rho is small.   
               
                     if (with_TiTe) then
-                      amat(var_rhon,var_Te) = + BigR * v * r0_corr * rn0_corr * dSion_dT * Te   * xjac * theta * tstep &
-                                              - BigR * v * r0_corr * r0_corr  * dSrec_dT * Te   * xjac * theta * tstep       
+                      amat(var_rhon,var_Te) = + BigR * v * r0 * rn0 * dSion_dT * Te   * xjac * theta * tstep &
+                                              - BigR * v * r0 * r0  * dSrec_dT * Te   * xjac * theta * tstep       
                     else
-                      amat(var_rhon,var_T) = + BigR * v * r0_corr * rn0_corr * dSion_dT * T     * xjac * theta * tstep &
-                                             - BigR * v * r0_corr * r0_corr  * dSrec_dT * T     * xjac * theta * tstep       
+                      amat(var_rhon,var_T) = + BigR * v * r0 * rn0 * dSion_dT * T     * xjac * theta * tstep &
+                                             - BigR * v * r0 * r0  * dSrec_dT * T     * xjac * theta * tstep       
                     endif  ! with_TiTe
 
                     if (with_vpar) then 

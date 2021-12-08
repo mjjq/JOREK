@@ -18,6 +18,7 @@ type,abstract,extends(vertices) :: light_vertices
   procedure,pass(light_vertices)                              :: store_light_x_from_id
   procedure(init_lights_parts),deferred,pass(light_vertices)  :: init_lights_from_particles
   procedure(direct_funct),deferred,pass(light_vertices)       :: directionality_funct
+  procedure(spect_irradiance),deferred,pass(light_vertices)   :: spectral_irradiance
 end type light_vertices
 
 !> Interfaces -------------------------------------------
@@ -50,8 +51,8 @@ interface
   end subroutine init_lights_parts
 
   !> computes the directionality function for a given point
-  !> in space (cartesian coordinate) and a given light for
-  !> all spectra wavelengths
+  !> in space (cartesian coordinate)-time and a given light
+  !> for all spectra wavelengths
   !> inputs:
   !>   light_vert: (light_vertices) initialised light vertices
   !>   spectra:    (spectrum_base) initilises spectra
@@ -63,8 +64,7 @@ interface
   !>               from the light_id light to the x_shaded point for all
   !>               spectra points and all spectra
   subroutine direct_funct(light_vert,spectra,time_id,light_id,x_shaded,light_dstb)
-    use mod_spectra,      only: spectrum_base
-    use mod_particle_sim, only: particle_sim
+    use mod_spectra, only: spectrum_base
     implicit none
     !> inputs-outpus
     class(light_vertices),intent(inout) :: light_vert
@@ -75,6 +75,32 @@ interface
     !> outputs
     real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_dstb
   end subroutine direct_funct
+
+  !> compute the spectral irradiance of a light source for a given point
+  !> in spae (cartesian coordinates)-time and a given light source
+  !> for all wavelengths and spectra 
+  !> inputs:
+  !>   light_vert: (light_vertices) initialised light vertices
+  !>   spectra:    (spectrum_base) initilises spectra
+  !>   light_id:   (integer) id of the light to use
+  !>   x_shaded:   (real8)(n_x) point illuminated by the light
+  !> outputs:
+  !>   light_vert: (light_vertices) initialised light vertices
+  !>   light_spec_irradiance: (real8)(n_points,n_spectra) spectral irradiance
+  !>                          from the light_id light at ethe time time_id to 
+  !>                          the x_shaded point for all spectra points and all spectra
+  subroutine spect_irradiance(light_vert,spectra,time_id,light_id,x_shaded,light_spec_irradiance)
+    use mod_spectra, only: spectrum_base
+    implicit none
+    !> inputs-outpus
+    class(light_vertices),intent(inout) :: light_vert
+    !> inputs
+    class(spectrym_base),intent(in)             :: spectra
+    integer,intent(in)                          :: time_id,light_id
+    real*8,dimension(light_vert%n_x),intent(in) :: x_shaded
+    !> outputs
+    real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
+  end subroutine sepct_irradiance
 end interface
 
 contains

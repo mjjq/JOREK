@@ -13,10 +13,12 @@ real*8,parameter :: twothirds=2.d0/3.d0
 real*8,parameter :: sqrt3=sqrt(3.d0)
 type,extends(light_vertices) :: synchrotron_light_vertices
   contains
-  procedure,pass(snchrt_light_vertices) :: init_lights_from_particles =>&
+  procedure,pass(sync_light_vertices) :: init_lights_from_particles =>&
                                            init_synchrotron_light_from_particles
-  procedure,pass(snchrt_light_vertices) :: directionality_funct => &
+  procedure,pass(sync_light_vertices) :: directionality_funct => &
                                            synchrotron_directionality_funct
+  procedure,pass(sync_light_vertices) :: spectral_irradiance => &
+                                           synchrotron_spectral_irradiance
 end type synchrotron_light_vertices
 !> Interfaces --------------------------------------
 
@@ -90,16 +92,25 @@ end subroutine init_synchrotron_lights_from_particles
 !> for synchrotron lights which is the full angular-spectral distribution
 !> divided by the total synchrotron radiation (L. Carbajal, PPCF, 2017)
 !> inputs:
-!>   
+!>   sync_lights: (synchrotron_light vertices) synchrotron light sources
+!>   spectra:     (spectrum_base) spectral intervals and integrators
+!>   time_id:     (integer) the time index
+!>   light_id:    (integer) the light index
+!>   x_shaded:    (real8)(3) shaded point position in cartesian coord
 !> outputs: 
-subroutine synchrotron_directionality_funct(synch_lights,spectra,time_id,&
-light_time,x_shaded,light_dstb)
+!>   sync_lights: (synchrotron_light vertices) synchrotron light sources
+!>   light_dstb:  (real*8)(n_points,n_intervals) synchrotron full spectral
+!>                angular distribution per unit of total power at the
+!>                at the point x-direction
+subroutine synchrotron_directionality_funct(sync_lights,spectra,time_id,&
+light_id,x_shaded,light_dstb)
   use constants,               only: PI,SPEED_OF_LIGHT
   use mod_boost_bessek,        only: besselk
   use mod_coordinate_transform,only: cartesian_to_spherical_latitude
+  use mod_spectra,             only: spectra_base
   implicit none
   !> inputs:
-  type(synchrotron_light_vertices),intent(inout) :: synch_lights
+  type(synchrotron_light_vertices),intent(inout) :: sync_lights
   class(spectrum_base),intent(in)                :: spectra
   integer,intent(in)                             :: time_id,light_id
   real*8,dimension(synch_lights%n_x),intent(in)  :: x_shaded
@@ -112,17 +123,22 @@ light_time,x_shaded,light_dstb)
   real*8  :: zeta,one_over_gamma,z_value,factor_1,factor_2,z_cos
 
   !> compute the spherical coordinates of the light-point ray
-  light_properties = synch_lights%properties(:,light_id,time_id)
-  rpsichi = cartesian_to_sphetical_latitude(x_shaded,synch_lights%x(:,light_id,time_id),&
+  light_properties = sync_lights%properties(:,light_id,time_id)
+  rpsichi = cartesian_to_sphetical_latitude(x_shaded,sync_lights%x(:,light_id,time_id),&
   light_properties(1:3,light_properties(4:6),light_properties(7:9))
   !> compute the factors and the value of z
-  one_over_gamma = 1.d0/light_properties(11)
-  factor_2 = light_properties(11)*light_properties(11)*rpsichi(2)*rpsichi(2)
-  factor_1 = 1.d0+factor_2
-  factor_2 = factor_2/factor_1
-  z_value = (light_properties(11)*rpsichi(3))/sqrt(factor_1)
-  z_cos = 1.5d0*z_value*(1.d0+z_value*z_value/3.d0)
-  z_value = 5.d-1**(1.d0+z_value*z_value)
+  one_over_gamma = 1.d0/light_properties(11) !< 1/gamma
+  factor_2 = light_properties(11)*light_properties(11)*rpsichi(2)*rpsichi(2) !< gamma**2 * psi**2
+  factor_1 = 1.d0+factor_2 !< 1 + gamma**2 * psi**2
+  factor_2 = factor_2/factor_1 !< (gamma**2 * psi**2) / (1 + gamma**2 * psi**2)
+  !> z = gamma*chi / sqrt(1 + gamma**2 * psi**2)
+  z_value = (light_properties(11)*rpsichi(3))/sqrt(factor_1) 
+  z_cos = 1.5d0*z_value*(1.d0+z_value*z_value/3.d0) !< z_cos = (3/2)*z*(1 + (z**2)/3)
+  z_value = 5.d-1**(1.d0+z_value*z_value) !< z = 0.5*(1+z**2)
+  !> I = Power*( 1 + gamma**2 * psi**2)**2 / Power_tot = 
+  !> (6*PI / (sqrt(3)) * beta**4 * gamma**8 * kappa**3 )*( 1 + gamma**2 * psi**2)**2
+  !> beta = v/c; kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
+  !> Power_tot = (q**2/(6*PI*eps0*c**3))*gamma**4 * v**4 * kappa**2
   factor_1 = factor_1*factor_1*((6.d0*PI)/(sqrt3*(properties(10)**4.d0)*&
   (properties(11)**8.d0)*(properties(12)**3.d0)))
   !$omp parallel do default(private) shared(spectra,light_dstb,&
@@ -130,8 +146,11 @@ light_time,x_shaded,light_dstb)
   !$omp z_value,z_cos) collapse(2)
   do ii=1,spectra%n_spectra
     do jj=1,spectra%n_points
+      !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
       zeta = 2.d0*PI*((one_over_gamma*one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
       (3.d0*spectra%points(jj,ii)*light_properties(12))
+      !> K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
+      !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos)
       light_dstb(jj,ii) = besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z_value)+&
       besselk(twothirds,zeta)*sin(zeta*z_cos)
       light_dstb(jj,ii) = fact_1*light_dstb(jj,ii)/&
@@ -140,6 +159,26 @@ light_time,x_shaded,light_dstb)
   enddo
   !$end omp parallel do
 end subroutine synchrotron_directionality_funct
+
+subroutine synchrotron_spectral_irradiance(sync_lights,spectra,time_id,&
+light_id,x_shaded,light_spec_irradiance)
+  use mod_spectra, only: spectra_base
+  implicit none
+  !> inputs:
+  type(synchrotron_light_vertices),intent(inout) :: sync_lights
+  class(spectrum_base),intent(in)                :: spectra
+  integer,intent(in)                             :: time_id,light_id
+  real*8,dimension(synch_lights%n_x),intent(in)  :: x_shaded
+  !> outputs:
+  real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
+
+  !> compute the directionality function
+  call sync_lights%directionality_funct(sync_lights,spectra,time_id,&
+  light_id,x_shaded,light_spec_irradiance)
+  !> multiply the directionality function by the total synchrotron power
+  light_spec_irradiance = light_spec_irradiance*sync_lights%properties(13,light_id,time_id)
+subroutine synchrotron_spectral_irradiance
+
 
 !> Tools ------------------------------------------
 !> fill_synchrotron_lights_from_particles_serial fill the
@@ -214,12 +253,17 @@ end subroutine fill_synchrotron_lights_from_particles_serial
 !> outputs:
 !>   sync_properties: (real8)(property_size) synchrotron radiation properties
 !>                    1:3 -> component of the velocity direction (cartesian)
-!>                    4:6 -> second orthonormal basis
-!>                    7:9 -> components of the third orthonormal basis
-!>                    10  -> beta -> velocity/speed of light
-!>                    11  -> relativistic factor
+!>                        -> T = v/||v||
+!>                    4:6 -> second orthonormal basis cartesian coordinates
+!>                        -> N = E + v X B - v*E
+!>                    7:9 -> components of the third orthonormal basis (cartesian)
+!>                        -> B = T X N
+!>                    10  -> beta -> velocity/speed of light = v/c
+!>                    11  -> relativistic factor gamma = sqrt(1+(p/(mass*c))**2)
 !>                    12  -> orbit curvature (L. Carbakal, PPCF, 2017)
-!>                    13  -> total radiation power (L. Carbajal, PPCF, 2017)
+!>                        -> kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
+!>                    13  -> total radiation power (L. Carbajal, PPCF, 2017)i
+!>                        -> P_tot = (q**2/(6*PI*eps0*c**3))*gamma**4 * v**4 * kappa**2
 subroutine compute_synchrotron_light_properties(field_size,property_size,particle_in,&
 ,mass,E_field_cart,B_field_cart,snchrt_properties)
   use constants,                 only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT

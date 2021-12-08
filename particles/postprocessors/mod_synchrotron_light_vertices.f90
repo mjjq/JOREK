@@ -81,9 +81,13 @@ sims_particles,n_sync_lights_in)
   call sync_lights%allocate_x_properties(n_sync_lights)
 
   !> if no omp fill the synchrotron lights sequentially
+#ifdef _OPENMP
+  call fill_synchrotron_lights_from_particles_openmp(sync_lights,sims_particles,&
+  n_groups_max,n_groups,n_particles)
+#else
   call fill_synchrotron_lights_from_particles_serial(sync_lights,sims_particles,&
   n_groups_max,n_groups,n_particles)
-
+#endif
   !> cleanup 
   deallocate(n_particles); deallocate(particle_types);
 end subroutine init_synchrotron_lights_from_particles
@@ -245,10 +249,11 @@ sync_lights,sims_particles,n_groups_max,n_groups,n_particles)
           sims_particles(ii)%groups(jj)%mass,&
           vector_cylindrical_to_cartesian(p_list(kk)%x(3),E_field),&
           vector_cylindrical_to_cartesian(p_list(kk)%x(3),B_field),&
-          synch_lights%properties(:,pp,ii))
-        enddo
+          sync_lights%properties(:,pp,ii))
+        enddo 
       end select
     enddo
+    sync_lights%n_active_vertices(ii) = pp
   enddo
 end subroutine fill_synchrotron_lights_from_particles_serial
 
@@ -266,9 +271,11 @@ end subroutine fill_synchrotron_lights_from_particles_serial
 !>   sync_lights: (synchrotron_light_vertices) initialised synchrotron lights
 subroutine fill_synchrotron_lights_from_particles_openmp(&
 sync_lights,sims_particles,n_groups_max,n_groups,n_particles)
-  use mod_particle_sim,   only: particle_sim
-  use mod_particle_types, only: particle_kinetic_relativistic
+!$ use omp_lib
+  use mod_array_tools,           only: compact_array_empty_end_sectors
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_particle_sim,          only: particle_sim
+  use mod_particle_types,        only: particle_kinetic_relativistic
   implicit none
   !> inputs-outputs
   class(synchrotron_light_vertices),intent(inout) :: sync_lights
@@ -277,7 +284,73 @@ sync_lights,sims_particles,n_groups_max,n_groups,n_particles)
   integer,intent(in)                                             :: n_groups_max
   integer,dimension(sync_lights%n_times),intent(in)              :: n_groups
   integer,dimension(n_groups_max,sync_lights%n_times),intent(in) :: n_particles
-  !TODO parallel fill synchrotron lights sources
+  !> variables
+  integer :: ii,jj,kk,light_id
+  integer :: thread_id,thread_num,n_max_thread_num
+  integer :: start_id,n_particles_time,n_particles_thread
+  integer :: sum_active_particles
+  integer,dimension(:),allocatable: n_active_particles_thread
+  real*8  :: psi,U
+  real*8,dimension(sync_lights%n_x) :: E_field,B_field
+
+  !> the idea is that each thread elaborate a set of particles and
+  !> store them in an allocate memory window of the global array
+  !> indentified by thread_id. The procedure causes a non contiguous
+  !> write operation in memory to be fixed in the next step.
+  n_max_thread_num = 1
+  !$  n_max_thread_num = omp_get_max_threads()
+  allocate(n_active_particles_thread(n_max_thread_num))
+  n_active_particles_thread = 0
+  !$omp parallel defautl(private) shared(sync_lights,sims_particles,&
+  !$omp n_groups,n_particles,n_active_particles_thread,base_light_id)
+  thread_id = 1; thread_num = 1;
+  !$ thread_num = omp_get_num_threads()
+  !$ thread_id  = omp_get_thread_num() + 1
+  do ii=1,sync_lights%n_times
+    !$omp single
+    sync_lights%n_active_vertices(ii) = 0
+    !$omp end single
+    do jj=1,n_groups(ii)
+      select type (p_list=>sims_particles(ii)%groups(jj)%particles)
+        type is (particle_kinetic_relativistic)
+        !> split the number of particles among all threads
+        n_particles_thread = floor(n_particles(jj,ii)/thread_num)
+        start_id = n_particles_thread*(thread_id-1)+1
+        !> the last thread executes also the remaining particles
+        if(thread_id.eq.thread_num) n_particles = n_particles(jj,ii) - &
+        n_particles_thread*(thread_num-1)
+        do kk=start_id,n_particles_thread
+          if(p_lis(kk)%i_elm.lt.1) cycle !< avoid treating unvalid particles
+          n_active_particles_thread(thread_id)= n_active_particles_thread(thread_id)+1
+          light_id = sync_lights%n_active_vertices(ii) + n_active_particles_thread
+          !> compute and store light position
+          call sync_lights%store_light_x_from_particle_id(light_id,ii,p_list(kk))
+          !> compute E,B field
+          call sims_particles(ii)%fields%calc_EBpsiU(sync_lights%times(ii),&
+          p_list(kk)%i_elm,p_list(kk)%st,p_list(kk)%x(3),E_field,B_field,psi,U)
+          !> compute light properties
+          call compute_synchrotron_light_properties(&
+          sync_lights%n_x,sync_lights%n_property_vertex,p_list(kk),&
+          sims_particles(ii)%groups(jj)%mass,&
+          vector_cylindrical_to_cartesian(p_list(kk)%x(3),E_field),&
+          vector_cylindrical_to_cartesian(p_list(kk)%x(3),B_field),&
+          sync_lights%properties(:,light_id,ii))
+        enddo 
+        !$omp barrier
+        !$omp single
+        !> compct position and propeties arrays
+        call compact_array_empty_end_sectors(sync_lights%n_x,sync_lights%n_vertices,&
+        thread_num,n_active_particle_thread(1:thread_num),sync_lights%x(:,:,ii))
+        call compact_array_empty_end_sectors(sync_lights%n_property_vertex,&
+        sync_lights%n_vertices,thread_num,n_active_particle_thread(1:thread_num),&
+        sync_lights%properties(:,:,ii))
+        sync_lights%n_active_vertices(ii) = sync_lights%n_active_vertices(ii) + &
+        sum(n_active_particles_thread)
+        !$omp end single
+      end select
+    enddo
+  enddo
+  !$omp end parallel
 end subroutine fill_synchrotron_lights_from_particles_openmp
 
 !> compute_synchrotron_light_properties computes the

@@ -169,7 +169,7 @@ real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 !  --- For shock capturing stabilization
 real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
 real*8     :: len1, len2, h_e
-real*8     :: Ptot, Ptot_x,  Ptot_y,  Ptot_p
+real*8     :: Ptot, Ptot_x,  Ptot_y,  Ptot_p, Ptot_corr
 real*8     :: f_p, d_p, tau_sc, R_rho, R_pi, R_pe, R_p, R_rhon, my_zero = 0.d0
 real*8     :: s_p, src_rho, src_p, src_pi, src_pe, src_rhon
 real*8     :: Bgrad_rhon_star, Bgrad_rhon, Bgrad_rhon_star_psi, Bgrad_rhon_psi, Bgrad_rhon_rhon 
@@ -1213,6 +1213,7 @@ do i=1,n_vertex_max
            Ptot_x   = P0_x  + rn0 * T0_x + rn0_x * T0
            Ptot_y   = P0_y  + rn0 * T0_y + rn0_y * T0
          endif
+         Ptot_corr = max(Ptot, 1.d-8)
 
          d_p = 0.d0
 
@@ -1287,10 +1288,10 @@ do i=1,n_vertex_max
 
          endif
 
-         f_p = dsqrt( Ptot_x*Ptot_x + Ptot_y*Ptot_y + Ptot_p*Ptot_p/ (BigR*BigR) ) / max(Ptot, 1.d-8) * h_e
+         f_p = dsqrt( Ptot_x*Ptot_x + Ptot_y*Ptot_y + Ptot_p*Ptot_p/ (BigR*BigR) ) / Ptot_corr * h_e
 
          ! This term is added into diffusivities to locally add a stabilization.
-         tau_sc = h_e * h_e * abs(d_p) / Ptot * f_p
+         tau_sc = h_e * h_e * abs(d_p) / Ptot_corr * f_p
 
          if(add_sources_in_sc)then
 
@@ -1332,7 +1333,7 @@ do i=1,n_vertex_max
 
            endif
 
-           tau_sc = h_e * h_e * (abs(s_p) + abs(d_p)) / max(Ptot, 1.d-8) * f_p
+           tau_sc = h_e * h_e * (abs(s_p) + abs(d_p)) / Ptot_corr * f_p
 
          endif
 

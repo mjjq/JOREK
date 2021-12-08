@@ -192,7 +192,7 @@ light_id,x_shaded,light_spec_irradiance)
   light_id,x_shaded,light_spec_irradiance)
   !> multiply the directionality function by the total synchrotron power
   light_spec_irradiance = light_spec_irradiance*sync_lights%properties(13,light_id,time_id)
-subroutine synchrotron_spectral_irradiance
+end subroutine synchrotron_spectral_irradiance
 
 
 !> Tools ------------------------------------------
@@ -250,8 +250,35 @@ sync_lights,sims_particles,n_groups_max,n_groups,n_particles)
       end select
     enddo
   enddo
-
 end subroutine fill_synchrotron_lights_from_particles_serial
+
+!> fill_synchrotron_lights_from_particles_openmp fill the
+!> x and properties array of synchrotron light from
+!> particle list parallelised by openmp
+!> inputs:
+!>   sync_lights:      (synchrotron_light_vertices) empty synchrotron lights
+!>   sims_particles:   (particle_sim)(n_times) array of particle simulations
+!>   n_groups_max:     (integer) maximum size of groups
+!>   n_groups:         (integer)(n_times) size of each group 
+!>   n_particles:      (integer)(n_group_max,n_times) size of the particle list
+!>                     for each group and for each time
+!> outputs:
+!>   sync_lights: (synchrotron_light_vertices) initialised synchrotron lights
+subroutine fill_synchrotron_lights_from_particles_openmp(&
+sync_lights,sims_particles,n_groups_max,n_groups,n_particles)
+  use mod_particle_sim,   only: particle_sim
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  implicit none
+  !> inputs-outputs
+  class(synchrotron_light_vertices),intent(inout) :: sync_lights
+  !> inputs:
+  type(particle_sim),dimension(sync_lights%n_times),intent(in)   :: sims_particles
+  integer,intent(in)                                             :: n_groups_max
+  integer,dimension(sync_lights%n_times),intent(in)              :: n_groups
+  integer,dimension(n_groups_max,sync_lights%n_times),intent(in) :: n_particles
+  !TODO parallel fill synchrotron lights sources
+end subroutine fill_synchrotron_lights_from_particles_openmp
 
 !> compute_synchrotron_light_properties computes the
 !> synchrotron radiation properties from a

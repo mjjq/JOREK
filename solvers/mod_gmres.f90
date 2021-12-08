@@ -199,6 +199,7 @@ module mod_gmres
 
 #ifdef USE_COMPLEX_PRECOND
     use real2complex_mod
+    use global_distributed_matrix, only: rhs_cmplx_sol, n_cmplx
 #endif
     use pastix_module
     use wsmp_module
@@ -377,10 +378,6 @@ module mod_gmres
 !!
 !! result (y) is only known on id=0
   subroutine gmres_matrix_vector(size_x, x, size_y, y, my_id)
-
-!    use mod_parameters
-!    use global_distributed_matrix
-!    use mpi_mod
 
     implicit none
 

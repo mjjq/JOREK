@@ -100,8 +100,8 @@ end subroutine init_synchrotron_lights_from_particles
 !> outputs: 
 !>   sync_lights: (synchrotron_light vertices) synchrotron light sources
 !>   light_dstb:  (real*8)(n_points,n_intervals) synchrotron full spectral
-!>                angular distribution per unit of total power at the
-!>                at the point x-direction
+!>                angular distribution per unit of total power towards
+!>                the shaded point x_shaded
 subroutine synchrotron_directionality_funct(sync_lights,spectra,time_id,&
 light_id,x_shaded,light_dstb)
   use constants,               only: PI,SPEED_OF_LIGHT
@@ -149,10 +149,11 @@ light_id,x_shaded,light_dstb)
       !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
       zeta = 2.d0*PI*((one_over_gamma*one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
       (3.d0*spectra%points(jj,ii)*light_properties(12))
-      !> K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
+      !> funct = K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
       !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos)
       light_dstb(jj,ii) = besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z_value)+&
       besselk(twothirds,zeta)*sin(zeta*z_cos)
+      !> SAD/P_tot = I*funct/lambda**4
       light_dstb(jj,ii) = fact_1*light_dstb(jj,ii)/&
       (spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii))
     enddo
@@ -160,6 +161,20 @@ light_id,x_shaded,light_dstb)
   !$end omp parallel do
 end subroutine synchrotron_directionality_funct
 
+!> synchrotron_spectral_irradiance computes the full power spectral angular
+!> angular distribution for synchrotron lights which (L. Carbajal, PPCF, 2017)
+!> emitted towards the shaded point x_shaded
+!> inputs:
+!>   sync_lights: (synchrotron_light vertices) synchrotron light sources
+!>   spectra:     (spectrum_base) spectral intervals and integrators
+!>   time_id:     (integer) the time index
+!>   light_id:    (integer) the light index
+!>   x_shaded:    (real8)(3) shaded point position in cartesian coord
+!> outputs: 
+!>   sync_lights:            (synchrotron_light vertices) synchrotron light sources
+!>   light_spec_irradiance:  (real*8)(n_points,n_intervals) synchrotron full spectral
+!>                           angular distribution per unit of total power at the
+!>                           at the shaded point x_shaded
 subroutine synchrotron_spectral_irradiance(sync_lights,spectra,time_id,&
 light_id,x_shaded,light_spec_irradiance)
   use mod_spectra, only: spectra_base

@@ -37,19 +37,17 @@
 #
 # *****************************************************************************
 
-from os import listdir, getenv
-from os.path import isfile, join
 import numpy as np
 import sys
 import getpass
 import argparse
+
 import h5py
 import vtk
 
 import imas
 from imas import imasdef
 import logging, logging.config
-from idsUtilities import basicIDS, writeIDS
 
 prec=np.float32
 vtk_prec=vtk.VTK_FLOAT
@@ -81,18 +79,30 @@ if __name__ == "__main__":
         formatter={'float': '{: 0.3f}'.format})
 
     logger.info("PREPARING IDS")
-    w_ids = writeIDS(args.shot, args.run, args.user, args.database, args.backend)
-    comment = "Written results of multiple JOREK output HDF5 files/timeslices."
-    # w_ids.createDatasetDescriptionIDS(user = 'penkod',
-    #                                   source = 'JOREK',
-    #                                   comment = '')
-    w_ids.createGridGGD('mhd', 1)
 
+    # Open Database entry
+    data_entry = imas.DBEntry(args.backend, args.database, args.shot, args.run,
+                              user_name=args.user)
+    status, idx = data_entry.create()
+    if status != 0:
+        logger.info("Creation of data entry FAILED!")
+        sys.exit(-1)
+    else:
+        logger.info("Creation of data entry Ok!")
+
+    comment = "Written results of multiple JOREK output HDF5 files/timeslices."
+    # Create Grid GGD
+    mhd_ids = imas.mhd()
+    mhd_ids.ids_properties.homogeneous_time = 1
+    mhd_ids.time.resize(1)
+    mhd_ids.time = np.array([0.0])
+    mhd_ids.grid_ggd.resize(1)
+    mhd_grid_ggd = mhd_ids.grid_ggd
     # w_ids.data_entry.mhd.time.resize(len(filePathList))
     allTimeValues = np.array([0]*len(args.hdf5files))
 
     # Resize GGD to the number of timeslices
-    w_ids.ids.ggd.resize(len(args.hdf5files))
+    mhd_ids.ggd.resize(len(args.hdf5files))
 
     logger.info("WRITING TO IDS")
 
@@ -119,7 +129,6 @@ if __name__ == "__main__":
         logger.info("Time step: %d", tstep)
         logger.info("Time: %d", t_now)
         logger.info("n_period = %d", n_period)
-
         # Grid geometry is taken only from the first time slice. All other
         # time slices share the same geometry. No need to write the same grid
         # multiple times as all of them have the same.
@@ -141,11 +150,11 @@ if __name__ == "__main__":
             quad_conn_array = ien
 
             #xyz for quad
-            x0 = x[0, 0]
-            y0 = x[1, 0]
-            xyz = np.zeros((np.shape(x0)[0], 3))
-            xyz[:, 0] = x0
-            xyz[:, 1] = y0
+            r0 = x[0, 0]
+            z0 = x[1, 0]
+            rz = np.zeros((np.shape(r0)[0], 2))
+            rz[:, 0] = r0
+            rz[:, 1] = z0
             
 
             #val for quad
@@ -157,9 +166,9 @@ if __name__ == "__main__":
             logger.info(vtk_quad_conn_array)
             logger.info ("* vtk_quad_conn_array.shape:")
             logger.info (vtk_quad_conn_array.shape)
-            logger.info("* len(f.xyz): %d", len(xyz))
+            logger.info("* len(f.xyz): %d", len(rz))
             logger.info ("* f.xyz:")
-            logger.info (xyz)
+            logger.info (rz)
             # print("num_coord: ", len(f.xyz))
             # print("x_coord: ", x_coord)
             # print("y_coord: ", y_coord)
@@ -172,18 +181,92 @@ if __name__ == "__main__":
             obj_2D_list_f90 = np.array(quad_conn_array)
             obj_2D_list_f90 = obj_2D_list_f90 + 1
 
-            # Write grid geometry
-            w_ids.writeMeshToSlice(points_geo=xyz[:, :],
-                                   obj_0D_list=[],
-                                   obj_1D_list=[],
-                                   obj_2D_list=obj_2D_list_f90,
-                                   obj_3D_list=[],
-                                   n=0,
-                                   s=2,
-                                   label='JOREK output HDF5 file grid with quantities')
+            mhd_grid_ggd = mhd_ids.grid_ggd
 
+            # Write grid geometry
+            mhd_grid_ggd[0].space.resize(2)
+            mhd_grid_ggd[0].space[0].objects_per_dimension.resize(4)
+
+            mhd_grid_ggd[0].space[0].coordinates_type.resize(2)
+            # Set coordinates type to [R, Z]
+            mhd_grid_ggd[0].space[0].coordinates_type = np.array([4, 3])
+            # mhd_grid_ggd[0].space[0].coordinates_type = np.array([1, 2, 3])
+
+            mhd_grid_ggd[0].identifier.description = "Mesh JOREK output HDF5 file grid with quantities"
+            mhd_grid_ggd[0].identifier.name = "JOREK output HDF5 file grid with quantities"
+            mhd_grid_ggd[0].identifier.index = 1
+
+            # Writing nodes
+            points = rz[:, :]
+            num_points = len(points)
+            ids_space = mhd_grid_ggd[0].space[0]
+            ids_space.objects_per_dimension[0].object.resize(num_points)
+
+            # For nodes
+            ids_dim_0D = ids_space.objects_per_dimension[0]
+            # For edges. No edges, so we create a dummy object...
+            ids_dim_1D = ids_space.objects_per_dimension[1]
+            # For cells
+            ids_dim_2D = ids_space.objects_per_dimension[2]
+
+            for i in range(num_points):
+                ids_dim_0D.object[i].geometry.resize(2)
+                ids_dim_0D.object[i].geometry = points[i]
+
+            # Now to write dummy 1D object
+            ids_dim_1D.object.resize(1)
+            ids_dim_1D.object[0].nodes.resize(1)
+            ids_dim_1D.object[0].nodes[0] = 0
+
+            # Writing cells
+            num_obj_2D = len(obj_2D_list_f90)
+            ids_dim_2D.object.resize(num_obj_2D)
+            cell_size = len(obj_2D_list_f90[0])
+            for i in range(num_obj_2D):
+                ids_dim_2D.object[i].nodes.resize(cell_size)
+                for j in range(cell_size):
+                    ids_dim_2D.object[i].nodes[j] = obj_2D_list_f90[i][j]
+
+
+            # Writing grid_subsets
+            num_grid_subset = 2 # points, 0D, 2D
+            mhd_grid_ggd[0].grid_subset.resize(num_grid_subset)
+            gs_index = 0
+
+            # First for points
+            gs = mhd_grid_ggd[0].grid_subset[gs_index]
+            gs.identifier.name = "Nodes "
+            gs.identifier.index = gs_index + 1 # Fortran notation
+            gs.identifier.description = """All points/nodes/vertices/0D
+                                      objects in the domain."""
+            gs.dimension = 1
+            gs.element.resize(num_points)
+            for j in range(num_points):
+                gs.element[j].object.resize(1)
+                # Write in Fortran notation (!)
+                gs.element[j].object[0].space = 1
+                gs.element[j].object[0].index = j + 1 # Fortran notation
+                gs.element[j].object[0].dimension = 1
+
+            gs_index += 1
+
+            # Now for cells
+            gs = mhd_grid_ggd[0].grid_subset[gs_index]
+            gs.identifier.name = "2D cells"
+            gs.identifier.index = gs_index + 1 # Fortran notation
+            gs.identifier.description = "All 2D cells/2D objects in the domain."
+            gs.dimension = 3
+            gs.element.resize(num_obj_2D)
+            for j in range(num_obj_2D):
+                gs.element[j].object.resize(1)
+                # Write in Fortran notation (!)
+                gs.element[j].object[0].space = 1
+                gs.element[j].object[0].index = j + 1 # Fortran notation
+                gs.element[j].object[0].dimension = 3
+
+            mhd_grid_ggd = mhd_ids.grid_ggd
             # w_ids.grid_ggd.array[0].space.resize(2)  # Assure second space is allocated
-            toroidal_space = w_ids.grid_ggd[0].space[1]  # TODO multiple time slices
+            toroidal_space = mhd_grid_ggd[0].space[1]  # TODO multiple time slices
             toroidal_space.coordinates_type.resize(1)  # One dimensional (toroidal) space
             toroidal_space.coordinates_type[0] = 5  # Toroidal angle (phi) in radians
             toroidal_space.geometry_type.index = n_period  # Fourier with periodicity
@@ -195,7 +278,7 @@ if __name__ == "__main__":
             for tor in range(n_tor):
                 toroidal_space.objects_per_dimension[0].object[tor].geometry = np.array([tor+1])
 
-            gr2d = w_ids.grid_ggd[0].space[0]
+            gr2d = mhd_grid_ggd[0].space[0]
             gr2d.geometry_type.index = 0  # Standard geometry (non Fourier)
             x_shape = np.shape(x)[2]
             # coordinate and derivates (s, t, mixed)
@@ -207,6 +290,8 @@ if __name__ == "__main__":
             for i in range(size_shape):
                 gr2d.objects_per_dimension[2].object[i].geometry_2d = size[:, :, i]
 
+
+
             
         quantity_names_list = ["psi", "u", "j", "w", "rho", "T", "v_par"]
         quantities_array = val
@@ -217,133 +302,62 @@ if __name__ == "__main__":
         IDSQuantityPath = None
 
         # Set time
-        w_ids.ids.ggd[i_slice].time = t_now
+        mhd_ids.ggd[i_slice].time = t_now
         # Add to array of all time values of all time slices
         allTimeValues[i_slice] = t_now
-
-        #w_ids.ids.put()
-        #w_ids.idsClose()
-        #exit(0)
 
         logger.info("Array of quantity labels: ")
         logger.info(quantity_names_list)
         for i in range(len(quantity_names_list)):
             label = quantity_names_list[i]
-            logger.info("Current quantity array: %s", label)
-            if label == 'psi':  # Flux / poloidal magnetic flux
-                logger.info("Writing quantity array: %s", label)
-                # Resize/Allocate
-                w_ids.ids.ggd[i_slice].psi.resize(1)
-                # Set IDS path
-                IDSQuantityPath = w_ids.ids.ggd[i_slice].psi[0]
-                # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+            logger.info(f"Current quantity array: {label}")
+            if label == 'psi': # Flux / poloidal magnetic flux
+                mhd_ids.ggd[i_slice].psi.resize(1)
+                IDSQuantityPath = mhd_ids.ggd[i_slice].psi[0]
+                arr = values[0, :, :, :]
+                # Swap axes
+            elif label == 'u': # Potential / electric potential
+                mhd_ids.ggd[i_slice].phi_potential.resize(1)
+                IDSQuantityPath = mhd_ids.ggd[i_slice].phi_potential[0]
+                arr = values[1, :, :, :]
+            elif label == 'j': # Current / toroidal current density
+                mhd_ids.ggd[i_slice].j_tor.resize(1)
+                IDSQuantityPath = mhd_ids.ggd[i_slice].j_tor[0]
+                arr = values[2, :, :, :]
+            elif label == 'w': # Vorticity
+                mhd_ids.ggd[i_slice].vorticity.resize(1)
+                IDSQuantityPath = mhd_ids.ggd[i_slice].vorticity[0]
+                arr = values[3, :, :, :]
+            elif label == 'rho': # Mass density
+                mhd_ids.ggd[i_slice].mass_density.resize(1)
+                IDSQuantityPath = mhd_ids.ggd[i_slice].mass_density[0]
+                arr = values[4, :, :, :]
+            elif label == 'T': # Current / toroidal current density
+                mhd_ids.ggd[i_slice].electrons.temperature.resize(1)
+                IDSQuantityPath = mhd_ids.ggd[i_slice].electrons.temperature[0]
+                arr = values[5, :, :, :]
+            elif label == 'v_par': # Current / toroidal current density
+                mhd_ids.ggd[i_slice].velocity_parallel.resize(1)
+                IDSQuantityPath = mhd_ids.ggd[i_slice].velocity_parallel[0]
+                arr = values[6, :, :, :]
+            else:
+                print(f"Unknown label: {label}")
+                continue
 
-                val_tor = w_ids.ids.ggd[i_slice].psi
-                psi = values[0, :, :, :]
-                psi = np.swapaxes(psi, 0, 1)
-                a = np.shape(psi)
-                psi1 = np.reshape(psi, (a[0], a[1] * a[2]))
-                val_tor[0].coefficients = psi1
-            elif label == 'u':  # Potential / electric potential
-                logger.info("Writing quantity array: %s", label)
-                # Resize/Allocate
-                w_ids.ids.ggd[i_slice].phi_potential.resize(1)
-                # Set IDS path
-                IDSQuantityPath = w_ids.ids.ggd[i_slice].phi_potential[0]
-                # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+            # Swap and correct axes
+            arr = np.swapaxes(arr, 0, 1)
+            shape = np.shape(arr)
+            reshape_arr = np.reshape(arr, (shape[0], shape[1] * shape[2]))
 
-                val_tor = w_ids.ids.ggd[i_slice].phi_potential
-                u = values[1, :, :, :]
-                u = np.swapaxes(u, 0, 1)
-                a = np.shape(u)
-                u1 = np.reshape(u, (a[0], a[1] * a[2]))
-                val_tor[0].coefficients = u1
-            elif label == 'j':  # Current / toroidal current density
-                logger.info("Writing quantity array: %s", label)
-                # Resize/Allocate
-                w_ids.ids.ggd[i_slice].j_tor.resize(1)
-                # Set IDS path
-                IDSQuantityPath = w_ids.ids.ggd[i_slice].j_tor[0]
-                # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
 
-                val_tor = w_ids.ids.ggd[i_slice].j_tor
-                j = values[2, :, :, :]
-                j = np.swapaxes(j, 0, 1)
-                a = np.shape(j)
-                j1 = np.reshape(j, (a[0], a[1] * a[2]))
-                val_tor[0].coefficients = j1
-            elif label == 'w':  # Vorticity
-                logger.info("Writing quantity array: %s", label)
-                # Resize/Allocate
-                w_ids.ids.ggd[i_slice].vorticity.resize(1)
-                # Set IDS path
-                IDSQuantityPath = w_ids.ids.ggd[i_slice].vorticity[0]
-                # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+            IDSQuantityPath.grid_index = 1
+            IDSQuantityPath.grid_subset_index = 1
+            IDSQuantityPath.values = val[i, :]
+            IDSQuantityPath.coefficients = reshape_arr
 
-                val_tor = w_ids.ids.ggd[i_slice].vorticity
-                w = values[3, :, :, :]
-                w = np.swapaxes(w, 0, 1)
-                a = np.shape(w)
-                w1 = np.reshape(w, (a[0], a[1] * a[2]))
-                val_tor[0].coefficients = w1
-                
-            elif label == 'rho':  # Mass Density
-                logger.info("Writing quantity array: %s", label)
-                # Resize/Allocate
-                w_ids.ids.ggd[i_slice].mass_density.resize(1)
-                # Set IDS path
-                IDSQuantityPath = w_ids.ids.ggd[i_slice].mass_density[0]
-                # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i,:], 1)
-                
-                val_tor = w_ids.ids.ggd[i_slice].mass_density
-                rho = values[4, :, :, :]
-                rho = np.swapaxes(rho, 0, 1)
-                a = np.shape(rho)
-                rho1 = np.reshape(rho, (a[0], a[1] * a[2]))
-                val_tor[0].coefficients = rho1
-                pass
-            elif label == 'T':  # Temperature / total temperature
-                logger.info("Writing quantity array: %s", label)
-                # Resize/Allocate
-                w_ids.ids.ggd[i_slice].electrons.temperature.resize(1)
-                # Set IDS path
-                IDSQuantityPath = w_ids.ids.ggd[i_slice].electrons.temperature[0]
-                # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
+            logger.info(f"Writing quantity array: {label}")
 
-                #adding values and derivates for each Fourier harmonic
-                #caution for adding toroidal coordinate we must resize ...temperature to n_tor
-                val_tor = w_ids.ids.ggd[i_slice].electrons.temperature
-                temp = values[5, :, :, :]
-                temp = np.swapaxes(temp, 0, 1)
-                a = np.shape(temp)
-                temp1 = np.reshape(temp, (a[0], a[1] * a[2]))
-                val_tor[0].coefficients = temp1
-
-            elif label == 'v_par':  # V_parallel / parallel velocity
-                logger.info("Writing quantity array: %s", label)
-                # Resize/Allocate
-                w_ids.ids.ggd[i_slice].velocity_parallel.resize(1)
-                # Set IDS path
-                IDSQuantityPath = w_ids.ids.ggd[i_slice].velocity_parallel[0]
-                # Write quantities
-                w_ids.ggdWriteQuantityArray(IDSQuantityPath, val[i, :], 1)
-
-                logger.info("v_par max value:")
-                logger.info(max(val[i, :]))
-                val_tor = w_ids.ids.ggd[i_slice].velocity_parallel
-                vp = values[6, :, :, :]
-                vp = np.swapaxes(vp, 0, 1)
-                a = np.shape(vp)
-                vp1 = np.reshape(vp, (a[0], a[1] * a[2]))
-                val_tor[0].coefficients = vp1
-        w_ids.data_entry.put(w_ids.ids)
-        w_ids.idsClose()
-
+    data_entry.put(mhd_ids)
     # Set time array
-    w_ids.ids.time = allTimeValues
+    mhd_ids.time = allTimeValues
+    # data_entry.close()

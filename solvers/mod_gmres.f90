@@ -18,6 +18,7 @@ module mod_gmres
   subroutine gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
 
     use phys_module,  only : gmres_4, gmres_tol, gmres_m, index_now
+    use mod_dpackgmres, only: init_dgmres, drive_dgmres
 
     implicit none
 #include "r3_info.h"

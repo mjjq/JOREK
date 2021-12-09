@@ -483,8 +483,8 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,REAL_FMT) 'ZK_e_perp_sc_num      ', ZK_e_perp_sc_num
   write(*,REAL_FMT) 'ZK_e_par_sc_num       ', ZK_e_par_sc_num
   write(*,REAL_FMT) 'visco_par_sc_num      ', visco_par_sc_num
-  write(*,REAL_FMT) 'Dn_perp_sc_num        ', Dn_perp_sc_num
-  write(*,REAL_FMT) 'Dn_par_sc_num         ', Dn_par_sc_num
+  write(*,REAL_FMT) 'Dn_pol_sc_num         ', Dn_pol_sc_num
+  write(*,REAL_FMT) 'Dn_p_sc_num           ', Dn_p_sc_num
 
   write(*,LOGI_FMT) 'add_sources_in_sc     ', add_sources_in_sc
   if (with_TiTe) then

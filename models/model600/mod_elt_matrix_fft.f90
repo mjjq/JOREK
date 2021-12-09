@@ -1201,16 +1201,17 @@ do i=1,n_vertex_max
 
          if ( with_TiTe ) then 
            Ptot     = Pi0   + Pe0    + rn0 * Ti0
+           Ptot_corr= r0_corr * (Ti0_corr + Te0_corr) + rn0_corr * Ti0_corr
            Ptot_p   = Pi0_p + Pe0_p  + rn0 * Ti0_p + rn0_p * Ti0
            Ptot_x   = Pi0_x + Pe0_x  + rn0 * Ti0_x + rn0_x * Ti0
            Ptot_y   = Pi0_y + Pe0_y  + rn0 * Ti0_y + rn0_y * Ti0
          else
            Ptot     = P0    + rn0 * T0
+           Ptot_corr=  r0_corr * T0_corr + rn0_corr * T0_corr
            Ptot_p   = P0_p  + rn0 * T0_p + rn0_p * T0
            Ptot_x   = P0_x  + rn0 * T0_x + rn0_x * T0
            Ptot_y   = P0_y  + rn0 * T0_y + rn0_y * T0
          endif
-         Ptot_corr = max(Ptot, 1.d-8)
 
          d_p = 0.d0
 
@@ -3390,7 +3391,7 @@ do i=1,n_vertex_max
                                 + v * F0 / BigR * rhon * vpar0_p                                * xjac * theta * tstep ) &
                                    
                      + BigR * ( Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                       * xjac * theta * tstep &   
-                     + BigR * v * r0_corr * rhon* Sion_T                                        * xjac * theta * tstep &
+                     + BigR * v * r0 * rhon* Sion_T                                              * xjac * theta * tstep &
                      + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy) * BigR * xjac * theta * tstep &
                           + (Dn_par_sc_num - Dn_perp_sc_num) * tau_sc * BigR / BB2 * Bgrad_rhon_star * Bgrad_rhon_rhon     * xjac * theta * tstep &
                           + Dn_perp_sc_num * tau_sc * BigR  * (v_x*rhon_x + v_y*rhon_y )                                   * xjac * theta * tstep

@@ -95,7 +95,7 @@ interface
     !> inputs-outpus
     class(light_vertices),intent(inout) :: light_vert
     !> inputs
-    class(spectrym_base),intent(in)             :: spectra
+    class(spectrum_base),intent(in)             :: spectra
     integer,intent(in)                          :: time_id,light_id
     real*8,dimension(light_vert%n_x),intent(in) :: x_shaded
     !> outputs
@@ -106,6 +106,54 @@ end interface
 contains
 
 !> Procedures -------------------------------------------
+!> find active particles for all particle lists, particle
+!> groups and simulation times
+!> inputs:
+!>   light_vert: (light_vertices) initialised light vertices
+!>   n_groups_max: (integer) maximum number of groups
+!>   n_particles_max: (integer) maximum number of particles
+!>   n_groups:        (integer)(n_times) number of groups per time
+!>   n_particles:     (integer)(n_groups,n_times) number of particles
+!>                    per group per time
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
+!> outputs:
+!>   light_vert: (light_vertices) initialised light vertices
+!>   n_active_particles: (integer)(n_groups,n_times) number of active
+!>                       particles for each group and time
+!>   active_particle_id: (integer)(n_particles_max,n_groups_max,n_times)
+!>                       particle list index of active particles
+subroutine find_active_particles_time(light_vert,n_groups_max,n_particles_max,&
+n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type)
+  use mod_particle_sim,only: particle_sim
+  implicit none
+  !> inputs-outputs
+  class(light_vertices),intent(inout) :: light_vert
+  !> inputs
+  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
+  integer,intent(in) :: n_groups_max,n_particles_max
+  integer,dimension(light_vert%n_times),intent(in) :: n_groups
+  integer,dimension(n_groups_max,light_vert%n_times),intent(in) :: n_particles
+  integer,intent(in),optional :: p_type
+  !> outputs
+  integer,dimension(n_groups_max,light_vert%n_times),intent(out) :: n_active_particles
+  integer,dimension(n_particles_max,n_groups_max,light_vert%n_times),intent(out)::active_particle_id
+  !> variables
+  integer :: ii
+  if(present(p_types)) then
+    do ii=1,light_vert%n_times
+      call sims_particles(ii)%find_active_particle_groups(n_groups(ii),n_particles_max,&
+      n_particles(:,ii,n_active_particles(:,ii),active_particle_id(:,:,ii),p_type)
+      light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))
+    enddo
+  else
+    do ii=1,light_vert%n_times
+      call sims_particles(ii)%find_active_particle_groups(n_groups(ii),n_particles_max,&
+      n_particles(:,ii,n_active_particles(:,ii),active_particle_id(:,:,ii))
+      light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))    
+    enddo
+  endif
+end subroutine find_active_particles_time
+
 !> fill the time vector from particle simulations
 !> inputs:
 !>   light_vert:     (light_vertices) light vertices type

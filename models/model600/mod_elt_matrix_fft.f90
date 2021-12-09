@@ -177,8 +177,6 @@ real*8     :: len1, len2, h_e
 real*8     :: Ptot, Ptot_x,  Ptot_y,  Ptot_p, Ptot_corr
 real*8     :: f_p, d_p, tau_sc, R_rho, R_pi, R_pe, R_p, R_rhon, my_zero = 0.d0
 real*8     :: s_p, src_rho, src_p, src_pi, src_pe, src_rhon
-real*8     :: Bgrad_rhon_star, Bgrad_rhon, Bgrad_rhon_star_psi, Bgrad_rhon_psi, Bgrad_rhon_rhon 
-real*8     :: Bgrad_rhon_k_star, Bgrad_rhon_rhon_n
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -1288,7 +1286,7 @@ do i=1,n_vertex_max
 
          f_p = dsqrt( Ptot_x*Ptot_x + Ptot_y*Ptot_y + Ptot_p*Ptot_p/ (BigR*BigR) ) / Ptot_corr * h_e
 
-         ! This term is added into diffusivities to locally add a stabilization.
+         ! This term is added into diffusivities to locally add numerical stabilization.
          tau_sc = h_e * h_e * abs(d_p) / Ptot_corr * f_p
 
          if(add_sources_in_sc)then
@@ -1393,10 +1391,6 @@ do i=1,n_vertex_max
             Bgrad_Te          = ( F0 / BigR * Te0_p +  Te0_x * ps0_y - Te0_y * ps0_x ) / BigR
             Bgrad_T           = ( F0 / BigR * T0_p  +  T0_x  * ps0_y - T0_y  * ps0_x ) / BigR
 
-            Bgrad_rhon_star   = ( v_x  * ps0_y - v_y  * ps0_x ) / BigR
-            Bgrad_rhon_k_star = ( F0 / BigR * v_p )           / BigR
-            Bgrad_rhon        = ( F0 / BigR * rn0_p +  rn0_x * ps0_y - rn0_y * ps0_x ) / BigR
-
             BB2              = (F0*F0 + ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
             Btheta2          = (ps0_x * ps0_x + ps0_y * ps0_y )/BigR**2
 
@@ -1497,8 +1491,8 @@ do i=1,n_vertex_max
                        + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &
                        + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep &
 
-                       - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep &
-                       -  D_prof * BigR  * (v_x*r0_x + v_y*r0_y       )                           * xjac * tstep &
+                       - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rho * xjac * tstep &
+                       -  D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                 ) * xjac * tstep &
 
                        - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
                        - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
@@ -1520,8 +1514,8 @@ do i=1,n_vertex_max
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                                  * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep
 
-            rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho            * xjac * tstep &
-                       - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep &
+            rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho * xjac * tstep &
+                          - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep &
 
                        - tgnum_rho * 0.25d0 / BigR * vpar0**2 &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
@@ -1653,8 +1647,6 @@ do i=1,n_vertex_max
                          ! Energy exchange term
                          + v * BigR * dTi_e                                                      * xjac * tstep                       
   
-                         ! --- Shock-capturing stabilization           
-  
               rhs_ij_k(var_Ti) = - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Ti * xjac * tstep &
                                  - ZKi_prof * BigR * (                + v_p*Ti0_p /BigR**2 )     * xjac * tstep &
   
@@ -1664,7 +1656,6 @@ do i=1,n_vertex_max
                            - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
                                    * r0 * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                       &
                                    * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep
-                         ! --- Shock-capturing stabilization           
   
               !###################################################################################################
               !#  Electron Energy Equation                                                                       #
@@ -1715,8 +1706,6 @@ do i=1,n_vertex_max
                          ! Energy exchange term
                          + v * BigR * dTe_i                                                      * xjac * tstep
   
-                         ! --- Shock-capturing stabilization           
-  
               rhs_ij_k(var_Te) = - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Te * xjac * tstep &
                                  - ZKe_prof * BigR * (                + v_p*Te0_p /BigR**2 )     * xjac * tstep &
   
@@ -1726,8 +1715,6 @@ do i=1,n_vertex_max
                            - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
                                    * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                       &
                                    * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep
-
-                         ! --- Shock-capturing stabilization           
 
             else ! (with_TiTe), i.e. with single temperature ***************************************
   
@@ -1783,8 +1770,6 @@ do i=1,n_vertex_max
                              + zeta * v * r0_corr * delta_g(mp,var_T,ms,mt)   * BigR            * xjac &
                              + zeta * v * T0_corr * delta_g(mp,var_rho,ms,mt) * BigR            * xjac
 
-                         ! --- Shock-capturing stabilization           
-  
               rhs_ij_k(var_T) = - (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T    * xjac * tstep &
                                 - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )       * xjac * tstep &
   
@@ -1794,8 +1779,6 @@ do i=1,n_vertex_max
                              - tgnum_T * 0.25d0 / BigR * vpar0**2                                                      &
                                      * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                           &
                                      * (                                   + F0 / BigR * v_p)   * xjac * tstep * tstep
-
-                         ! --- Shock-capturing stabilization           
 
             end if ! (with_TiTe) *******************************************************************
 
@@ -1821,9 +1804,9 @@ do i=1,n_vertex_max
                     + BigR * v * source_neutral                                              * xjac * tstep &
                     - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy)  * BigR * xjac * tstep &
 
-                    + v * delta_g(mp,var_rhon,ms,mt) * BigR * xjac * zeta 
+                    + v * delta_g(mp,var_rhon,ms,mt) * BigR * xjac * zeta
 
-              rhs_ij_k(var_rhon) = BigR * ( - Dn0p * rn0_p * v_p/BigR**2)   * xjac * tstep      
+              rhs_ij_k(var_rhon) = BigR * ( - Dn0p * rn0_p * v_p/BigR**2)   * xjac * tstep                              
 
             endif ! with_neutrals
 
@@ -1928,11 +1911,6 @@ do i=1,n_vertex_max
                   Bgrad_rho_rho      = ( rho_x * ps0_y - rho_y * ps0_x ) / BigR
                   Bgrad_rho_rho_n    = ( F0 / BigR * rho_p ) / BigR
                   BB2_psi            = 2.d0 * (psi_x * ps0_x + psi_y * ps0_y ) /BigR**2
-
-                  Bgrad_rhon_star_psi = ( v_x   * psi_y  - v_y    * psi_x ) / BigR
-                  Bgrad_rhon_psi      = ( rn0_x  * psi_y - rn0_y  * psi_x ) / BigR
-                  Bgrad_rhon_rhon     = ( rhon_x * ps0_y - rhon_y * ps0_x ) / BigR
-                  Bgrad_rhon_rhon_n   = ( F0 / BigR * rhon_p ) / BigR
 
                   Pi0_x_rho  = rho_x  * Ti0 +       rho   * Ti0_x
                   Pi0_xx_rho = rho_xx * Ti0 + 2.0 * rho_x * Ti0_x  + rho   * Ti0_xx
@@ -2096,7 +2074,7 @@ do i=1,n_vertex_max
                   amat_n(var_u,var_zj) = + F0 / BigR * v * zj_p  * xjac                                                    * theta * tstep
                                                                                                                     
                   amat(var_u,var_w) = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)                                   * theta * tstep &
-                                    + BigR * ( v_x * w_x + v_y * w_y) * visco_T                           * xjac           * theta * tstep &
+                                    + BigR * ( v_x * w_x + v_y * w_y) * visco_T * xjac                                     * theta * tstep &
                                     + v * tauIC*2. * BigR**4 * (Pi0_s * w_t - Pi0_t * w_s)                                 * theta * tstep &
                                                                                                                     
                                     + visco_num_T * (v_xx + v_x/BigR + v_yy)*(w_xx + w_x/BigR + w_yy)               * xjac * theta * tstep &
@@ -2294,7 +2272,6 @@ do i=1,n_vertex_max
                                           + tgnum_rho * 0.25d0 / BigR * vpar0**2                                                                        &
                                                   * (r0_x * psi_y - r0_y * psi_x)                                                                     &
                                                   * (                            + F0 / BigR * v_p)                    * xjac * theta * tstep * tstep
-
 
                   amat(var_rho,var_u) =- v * BigR**2 * ( r0_s * u_t - r0_t * u_s)                                        * theta * tstep &
                                        - v * 2.d0 * BigR * r0 * u_y                                               * xjac * theta * tstep &
@@ -3391,15 +3368,14 @@ do i=1,n_vertex_max
                                 + v * Vpar0 * (rhon_s * ps0_t - rhon_t * ps0_s)                        * theta * tstep &
                                 + v * F0 / BigR * rhon * vpar0_p                                * xjac * theta * tstep ) &
                                    
-                     + BigR * ( Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                       * xjac * theta * tstep &   
-                     + BigR * v * r0 * rhon* Sion_T                                              * xjac * theta * tstep &
+                     + BigR * ( Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                      * xjac * theta * tstep &   
+                     + BigR * v * r0 * rhon* Sion_T                                             * xjac * theta * tstep &
                      + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy) * BigR * xjac * theta * tstep
 
                      amat_n(var_rhon,var_rhon)  = + delta_n_convection*(                                                             &
                                                   + v * F0 / BigR * Vpar0 * rhon_p                                * xjac * theta * tstep )
 
-                     amat_kn(var_rhon,var_rhon) = + BigR * ( + Dn0p * rhon_p * v_p/BigR**2)                       * xjac * theta * tstep 
-
+                     amat_kn(var_rhon,var_rhon) = + BigR * ( + Dn0p * rhon_p * v_p/BigR**2)                       * xjac * theta * tstep    
                   endif ! with_neutrals 
  
                   !###################################################################################################

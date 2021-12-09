@@ -330,7 +330,7 @@ n_groups,n_particles,n_active_particles,active_particle_id)
         !> compute the base id for storage
         if(jj.gt.1) base_id = sum(n_active_particles(1:jj-1,ii))
         !> split the number of particles among all threads
-        n_particles_thread = floor(n_active_particles(jj,ii)/thread_num)
+        n_particles_thread = n_active_particles(jj,ii)/thread_num
         start_id = n_particles_thread*(thread_id-1)
         !> one thread elaborates the remaining particles
         !$omp single nowait

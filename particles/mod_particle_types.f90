@@ -19,8 +19,14 @@ module mod_particle_types
   public :: copy_particle_kinetic_leapfrog
   public :: codify_particle_type
   public :: find_active_particle_id
+  !> WARNING: PUBLIC ONLY FOR TESTING
+  public :: find_active_particle_id_type
+  public :: find_active_particle_id_base
+  public :: find_active_particle_id_seq
+  public :: find_active_particle_id_openmp
 
   !> enumerator of the particle type 
+  integer,parameter :: n_particle_types=8
   enum, bind(C)
   enumerator :: particle_base_id=0,particle_fieldline_id,particle_gc_id,&
                 particle_gc_vpar_id,particle_gc_Qin_id,particle_kinetic_id,&
@@ -346,7 +352,7 @@ contains
     integer,dimension(n_particles),intent(out) :: active_particle_id
     !> use select type as if condition, ok it is ugly ...
     n_active_particles = 0; active_particle_id = 0;
-    select type (p_list=>particle)
+    select type (p_list=>particle_list)
       type is (particle_fieldline)
         if(particle_code.eq.particle_fieldline_id) &
           call find_active_particle_id_base(n_particles,particle_list,&
@@ -403,10 +409,10 @@ contains
     integer,dimension(n_particles),intent(out) :: active_particle_id
 #ifdef _OPENMP
     call find_active_particle_id_openmp(n_particles,particle_list,&
-  n_active_particles,active_particle_id)
+    n_active_particles,active_particle_id)
 #else
     call find_active_particle_id_seq(n_particles,particle_list,&
-  n_active_particles,active_particle_id)
+    n_active_particles,active_particle_id)
 #endif
   end subroutine find_active_particle_id_base
 
@@ -433,7 +439,7 @@ contains
     integer :: ii
     n_active_particles = 0; active_particle_id = 0;
     do ii=1,n_particles
-      if(particle_list%i_elm.lt.1) cycle !< skip invalid particle
+      if(particle_list(ii)%i_elm.lt.1) cycle !< skip invalid particle
        n_active_particles = n_active_particles + 1
        active_particle_id(n_active_particles) = ii
     enddo
@@ -460,8 +466,9 @@ contains
     integer,dimension(n_particles),intent(out) :: active_particle_id
     !> variables
     integer :: ii,jj,start_id
-    integer :: thread_id,max_num_thread,thread_num
-    integer,dimension(:),allocatable :: particle_id_thread,n_active_particle_thread
+    integer :: thread_id,max_num_thread,thread_num,n_particles_thread
+    integer,dimension(:),allocatable :: n_active_particle_thread
+    integer,dimension(:,:),allocatable :: particle_id_thread
     max_num_thread = 1
     !> allocate thread private arrays
     !$max_num_thread = omp_get_max_threads()
@@ -479,10 +486,10 @@ contains
     thread_id = 1; thread_num = 1;
     !$ thread_id = omp_get_thread_num() + 1
     !$ thread_num = omp_get_num_threads()
-    n_particles_thread = floor(n_particles/thread_num)
+    n_particles_thread = n_particles/thread_num
     start_id = n_particles*(thread_id-1)
-    !$omp single nowait
-    n_particles_thread = n_particles - n_particles_thread(thread_num-1)
+    !$omp single
+    n_particles_thread = n_particles - n_particles_thread*(thread_num-1)
     !$omp end single
     do ii=start_id+1,start_id+n_particles_thread
       if(particle_list(ii)%i_elm.lt.1) cycle !< skip invalid particle
@@ -492,9 +499,9 @@ contains
     !$omp end parallel
     !> assemble the particle id array
     do ii=1,thread_num
-      particle_id(n_active_particle+1:n_active_particle+n_active_particle_thread(ii)) = &
+      active_particle_id(n_active_particles+1:n_active_particles+n_active_particle_thread(ii)) = &
       particle_id_thread(1:n_active_particle_thread(ii),ii)
-      n_active_particle = n_active_particle + n_active_particle_thread(thread_id)
+      n_active_particles = n_active_particles + n_active_particle_thread(thread_id)
     enddo
 
     !> cleanup

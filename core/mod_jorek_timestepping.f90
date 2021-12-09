@@ -359,7 +359,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   use vacuum
   use vacuum_response,         only: update_response
   use mod_fields_linear
-  use mod_gmres_driver
+  use mod_gmres,               only: gmres_driver
   use mod_expression,          only: exprs_all_int, init_expr
   use mod_integrals3D
 

@@ -268,6 +268,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(ns_phi,         n_inj_max,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ns_radius,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ns_deltaphi,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_deltaminrad,         1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ns_tor_norm,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 !==========================Added input for SPI model===========================================
@@ -973,6 +974,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,ns_phi,         n_inj_max,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ns_radius,              1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ns_deltaphi,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_deltaminrad,         1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ns_tor_norm,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
 !==========================Added input for SPI model===========================================

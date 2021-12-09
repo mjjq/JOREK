@@ -857,7 +857,7 @@ module pellet_module
         pellets(i_p)%spi_abl     = 0.0
         pellets(i_p)%spi_vol     = 0.0
         pellets(i_p)%spi_psi     = 0.0
-        pellets(i_p)%spi_grad_psi= 1.0
+        pellets(i_p)%spi_grad_psi= 0.0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -1192,7 +1192,7 @@ module pellet_module
         pellets(i_p)%spi_abl     =   0.d0
         pellets(i_p)%spi_vol     =   0.d0
         pellets(i_p)%spi_psi     =   0.d0
-        pellets(i_p)%spi_grad_psi=   1.d0
+        pellets(i_p)%spi_grad_psi=   0.d0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius

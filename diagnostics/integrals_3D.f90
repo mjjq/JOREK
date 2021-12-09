@@ -70,6 +70,8 @@ real*8     :: spi_R_tmp
 real*8     :: spi_Z_tmp
 real*8     :: spi_phi_tmp
 real*8     :: spi_abl_tmp
+real*8     :: spi_psi_tmp
+real*8     :: spi_grad_psi_tmp
 real*8     :: ng_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
 real*8     :: source_tmp
 real*8     :: integrand_source_volume ! variable for numerical integration of source volume
@@ -177,7 +179,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          local_source_volume,                                                            &
 !$omp          using_spi, n_spi_tot, n_inj, n_spi,                                             &
-!$omp          ns_deltaphi, ns_tor_norm, spi_tor_rot,                                          &
+!$omp          ns_deltaphi, ns_deltaminrad, ns_tor_norm, spi_tor_rot,                          &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
 !$omp          central_mass, pellets, tor_frequency,                                           &
 !$omp          ng_radius_ratio, ng_radius_min, spi_shard_file,                                 &
@@ -197,6 +199,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp, ng_radius_tmp,                 &
+!$omp           spi_psi_tmp, spi_grad_psi_tmp,                                                 &
 !$omp           n_spi_tmp, source_tmp, integrand_source_volume,                                &
 #endif
 !$omp           omp_nthreads,omp_tid)
@@ -439,6 +442,9 @@ do ife = ife_min, ife_max
                  spi_Z_tmp   = pellets(spi_i)%spi_Z
                  spi_phi_tmp = pellets(spi_i)%spi_phi
                  spi_abl_tmp = pellets(spi_i)%spi_abl
+
+                 spi_psi_tmp = pellets(spi_i)%spi_psi
+                 spi_grad_psi_tmp = pellets(spi_i)%spi_grad_psi
                  
                  ng_radius_tmp   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
@@ -447,18 +453,18 @@ do ife = ife_min, ife_max
                  end if
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-                 call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp, &
-                      ng_radius_tmp,ns_deltaphi, ns_tor_norm, &
+                 call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,spi_psi_tmp,spi_grad_psi_tmp, &
+                      ng_radius_tmp,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., &
-                      x_g(ms,mt),y_g(ms,mt),phi, &
+                      x_g(ms,mt),y_g(ms,mt),phi,ps0, &
                       source_tmp,t_now,JET_MGI,ASDEX_MGI, &
                       central_density,central_mass, &
                       integrand_source_volume)
 #else
-                 call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp, &
-                      ng_radius_tmp,ns_deltaphi, ns_tor_norm, &
+                 call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,spi_psi_tmp,spi_grad_psi_tmp, &
+                      ng_radius_tmp,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., &
-                      x_g(ms,mt),y_g(ms,mt),phi, &
+                      x_g(ms,mt),y_g(ms,mt),phi,ps0, &
                       source_tmp,t_now,JET_MGI,ASDEX_MGI, &
                       central_density,central_mass, &
                       integrand_source_volume)

@@ -28,8 +28,8 @@ module mod_injection_source
 
 
 
-  subroutine inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,ns_tor_norm,  &
-                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,                  &
+  subroutine inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm,  &
+                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
 
   !=================================================================================
@@ -52,7 +52,9 @@ module mod_injection_source
     real*8 :: radius
     real*8 :: ns_tor_shape
     real*8 :: ns_pol_shape
+    real*8 :: ns_minrad_shape
     real*8 :: dphi
+    real*8 :: dminrad
     real*8 :: V_ns
     real*8 :: f_Nbar
     real*8 :: f_dNbar_dt
@@ -72,6 +74,7 @@ module mod_injection_source
     real*8, intent(in)  :: R
     real*8, intent(in)  :: Z
     real*8, intent(in)  :: phi
+    real*8, intent(in)  :: psi
     real*8, intent(in)  :: A_Dmv
     real*8, intent(in)  :: K_Dmv
     real*8, intent(in)  :: V_Dmv
@@ -82,8 +85,11 @@ module mod_injection_source
     real*8, intent(in)  :: ns_R
     real*8, intent(in)  :: ns_Z
     real*8, intent(in)  :: ns_phi
+    real*8, intent(in)  :: ns_psi
+    real*8, intent(in)  :: ns_grad_psi
     real*8, intent(in)  :: ns_radius
     real*8, intent(in)  :: ns_deltaphi
+    real*8, intent(in)  :: ns_deltaminrad
     real*8, intent(in)  :: L_tube
     real*8, intent(in)  :: central_density
     real*8, intent(in)  :: central_mass
@@ -138,6 +144,14 @@ module mod_injection_source
     if (dphi .gt. PI) dphi = 2*PI - dphi  
     ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
 
+    ! A gaussian shape is chosen in the minor radius direction
+    if (ns_deltaminrad .gt. 0.) then
+       dminrad = abs(psi-ns_psi)/ns_grad_psi
+       ns_minrad_shape = exp(-(dminrad/ns_deltaminrad)**2.d0)  
+    else
+       ns_minrad_shape = 1.d0
+    endif
+
     ! Volume used for normalization:
     ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
     ! otherwise, the analytical value corresponding to the integration in space of the product of the above shape functions will be used
@@ -152,7 +166,7 @@ module mod_injection_source
 
     ! Variable used for numerical integration of source volume
     ! to be provided as output to integrals_3D 
-    source_volume = ns_pol_shape * ns_tor_shape
+    source_volume = ns_pol_shape * ns_tor_shape * ns_minrad_shape
 
    !==================================================================================================
    ! A shifted time is used in order to start injected gas as soon as t_now = t_ns 
@@ -275,19 +289,20 @@ module mod_injection_source
   return
   end subroutine inj_source
 
-  subroutine total_imp_source(R,Z,phi,source_background,source_impurity,mass_ratio) 
+  subroutine total_imp_source(R,Z,phi,psi,source_background,source_impurity,mass_ratio) 
 
     use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
     use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
-    use phys_module, only: spi_num_vol
+    use phys_module, only: spi_num_vol, ns_deltaminrad
 
     implicit none
 
     real*8, intent(in)   :: R
     real*8, intent(in)   :: Z
     real*8, intent(in)   :: phi
+    real*8, intent(in)   :: psi
     real*8, intent(out)  :: source_background
     real*8, intent(out)  :: source_impurity
     real*8, intent(in)   :: mass_ratio
@@ -299,6 +314,8 @@ module mod_injection_source
     real*8     :: spi_Z_tmp
     real*8     :: spi_phi_tmp
     real*8     :: spi_abl_tmp
+    real*8     :: spi_psi_tmp
+    real*8     :: spi_grad_psi_tmp
     real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_tmp
     real*8     :: spi_vol_tmp !< Numerically integrated gas source volume
@@ -324,6 +341,9 @@ module mod_injection_source
           spi_phi_tmp = pellets(spi_i)%spi_phi
           spi_abl_tmp = pellets(spi_i)%spi_abl
 
+          spi_psi_tmp = pellets(spi_i)%spi_psi
+          spi_grad_psi_tmp = pellets(spi_i)%spi_grad_psi
+
           if (spi_num_vol) then
              spi_vol_tmp = pellets(spi_i)%spi_vol
           else
@@ -342,9 +362,10 @@ module mod_injection_source
             if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
           end do
 
-          call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_deltaphi,&
-                        ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., R, Z,    &
-                        phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
+          call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,spi_psi_tmp,spi_grad_psi_tmp, &
+                        ng_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
+                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., R, Z, phi, psi, &
+                        source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
         end if
 
         ! Converting number density into mass density for each species respectively
@@ -358,10 +379,13 @@ module mod_injection_source
       do i_inj = 1, n_inj
         source_tmp = 0.d0
         spi_vol_tmp = 0.d0
-        call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
-                        ns_radius,ns_deltaphi,ns_tor_norm, &
-                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_impurity,&
-                        t_now, JET_MGI,ASDEX_MGI,central_density,central_mass, spi_vol_tmp)
+        spi_psi_tmp = 0.d0
+        spi_grad_psi_tmp = 0.d0
+
+        call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),spi_psi_tmp,spi_grad_psi_tmp, &
+                        ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
+                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,psi, &
+                        source_impurity, t_now, JET_MGI,ASDEX_MGI,central_density,central_mass, spi_vol_tmp)
 
         source_impurity = source_impurity + source_tmp
       end do

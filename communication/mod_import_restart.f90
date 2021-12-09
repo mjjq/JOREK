@@ -1782,8 +1782,8 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       if (flag_exists .and. err_exists == 0) then
         call HDF5_array1D_reading(file_id,spi_grad_psi_arr,"spi_grad_psi_arr")
       else
-        spi_grad_psi_arr = 1.0
-        write(*,*)"Backward Compatibility: No spi_grad_psi found, assuming to be 1."
+        spi_grad_psi_arr = 0.0
+        write(*,*)"Backward Compatibility: No spi_grad_psi found, assuming to be 0."
       end if
 
       do i=1, n_spi_tot

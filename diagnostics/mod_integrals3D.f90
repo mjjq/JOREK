@@ -320,7 +320,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
-!$omp          ns_phi, ns_radius, ns_deltaphi, ns_tor_norm, spi_tor_rot, local_E_ion,          &
+!$omp          ns_phi, ns_radius, ns_deltaphi, ns_deltaminrad, ns_tor_norm, spi_tor_rot, local_E_ion,          &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI, local_P_ion,&
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type, local_P_ei,  &
 !$omp          n_adas,                                                                         &
@@ -945,7 +945,7 @@ do ife = ife_min, ife_max
         source_imp = 0.d0
         source_bg  = 0.d0
 
-        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,source_bg,source_imp,m_i_over_m_imp)
+        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp)
 
         ! Frictional heat source
         fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&

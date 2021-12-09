@@ -772,6 +772,7 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
      write(*,REAL_FMT) 'ns_radius           ',  ns_radius
      write(*,REAL_FMT) 'ng_radius_min       ',  ng_radius_min
      write(*,REAL_FMT) 'ns_deltaphi         ',  ns_deltaphi
+     write(*,REAL_FMT) 'ns_deltaminrad      ',  ns_deltaminrad
      write(*,REAL_FMT) 'ns_tor_norm         ',  ns_tor_norm
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI

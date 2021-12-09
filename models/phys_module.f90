@@ -354,6 +354,7 @@ module phys_module
   real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
   real*8  :: ns_radius         !< Poloidal radius of gas source
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
+  real*8  :: ns_deltaminrad    !< Extension of gas source in the minor radial direction (if greater than 0.)
   real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
 
   character(len=80) :: imp_type(n_imp_max) !< Type of injected material or background impurity species: Argon, neon, ...

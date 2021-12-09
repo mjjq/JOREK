@@ -1191,7 +1191,7 @@ do i=1,n_vertex_max
           endif
   
          !###################################################################################################
-         !#  for shock Capturing stabilization terms                                                        #
+         !#  For shock capturing stabilization                                                              #
          !###################################################################################################
 
          ! Define total pressure as (assuming neutrals are at same Temperature as ions)
@@ -1213,7 +1213,7 @@ do i=1,n_vertex_max
 
          d_p = 0.d0
 
-         ! approximate residual in density equation: \nabla \cdot (\rho \boldsymbol{v})
+         ! approximate residual in the density equation: \nabla \cdot (\rho \boldsymbol{v})
          R_rho = + BigR**2 * ( r0_x * u0_y - r0_y * u0_x) &
                  + 2.d0 * BigR * r0 * u0_y                &
                  - F0 / BigR * Vpar0 * r0_p               &
@@ -1221,6 +1221,7 @@ do i=1,n_vertex_max
                  - F0 / BigR * r0 * vpar0_p               &
                  - r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x)
 
+         ! approximate residual in the neutrals density equation: \nabla \cdot (\rho_n  \boldsymbol{v})
          R_rhon =  delta_n_convection*( &
                 +  BigR**2 * ( rn0_x * u0_y - rn0_y * u0_x)  &
                 +  2.d0 * BigR * rn0 * u0_y                  &
@@ -1229,7 +1230,7 @@ do i=1,n_vertex_max
                 -  F0 / BigR * Vpar0 * rn0_p                 &
                 -  F0 / BigR * rn0 * vpar0_p )
 
-         ! approximate residual in pressure equations: \boldsymbol{v} \cdot \nabla p + \gamma p \nabla \boldsymbol{v}
+         ! approximate residual in the pressure equations: \boldsymbol{v} \cdot \nabla p + \gamma p \nabla \boldsymbol{v}
          if ( with_TiTe ) then ! (with_TiTe)
 
            R_pi = + r0 * BigR**2 * ( Ti0_x * u0_y - Ti0_y * u0_x)                       &
@@ -1284,11 +1285,13 @@ do i=1,n_vertex_max
 
          endif
 
+         ! Shock-detector term based on the total pressure gradient
          f_p = dsqrt( Ptot_x*Ptot_x + Ptot_y*Ptot_y + Ptot_p*Ptot_p/ (BigR*BigR) ) / Ptot_corr * h_e
 
-         ! This term is added into diffusivities to locally add numerical stabilization.
+         ! Estimation of the numerical stabilization coefficient
          tau_sc = h_e * h_e * abs(d_p) / Ptot_corr * f_p
 
+         ! Use of source terms to increase the stabilization coefficients
          if(add_sources_in_sc)then
 
            src_rho = (particle_source(ms,mt) + source_pellet) &
@@ -1333,9 +1336,10 @@ do i=1,n_vertex_max
 
          endif
 
+         ! Updates in the physical diffsivities to locally add numerical stabilization.
          visco_T = visco_T + visco_sc_num  * tau_sc
          D_prof  = D_prof  + D_perp_sc_num * tau_sc
-         if ( with_TiTe ) then ! ******************************************************************
+         if ( with_TiTe ) then
            ZKi_prof  = ZKi_prof  + ZK_i_perp_sc_num * tau_sc
            ZKi_par_T = ZKi_par_T + ZK_i_par_sc_num  * tau_sc
            ZKe_prof  = ZKe_prof  + ZK_e_perp_sc_num * tau_sc
@@ -1347,6 +1351,9 @@ do i=1,n_vertex_max
          Dn0x = Dn0x + Dn_pol_sc_num * tau_sc
          Dn0y = Dn0y + Dn_pol_sc_num * tau_sc
          Dn0p = Dn0p + Dn_p_sc_num   * tau_sc
+         !###################################################################################################
+         !#  For shock capturing stabilization: end                                                         #
+         !###################################################################################################
 
 !--------------------------------------------------------
 
@@ -1492,7 +1499,7 @@ do i=1,n_vertex_max
                        + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep &
 
                        - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rho * xjac * tstep &
-                       -  D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                 ) * xjac * tstep &
+                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep &
 
                        - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
                        - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
@@ -2074,7 +2081,7 @@ do i=1,n_vertex_max
                   amat_n(var_u,var_zj) = + F0 / BigR * v * zj_p  * xjac                                                    * theta * tstep
                                                                                                                     
                   amat(var_u,var_w) = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)                                   * theta * tstep &
-                                    + BigR * ( v_x * w_x + v_y * w_y) * visco_T * xjac                                     * theta * tstep &
+                                    + BigR * ( v_x * w_x + v_y * w_y) * visco_T  * xjac                                    * theta * tstep &
                                     + v * tauIC*2. * BigR**4 * (Pi0_s * w_t - Pi0_t * w_s)                                 * theta * tstep &
                                                                                                                     
                                     + visco_num_T * (v_xx + v_x/BigR + v_yy)*(w_xx + w_x/BigR + w_yy)               * xjac * theta * tstep &
@@ -3368,14 +3375,14 @@ do i=1,n_vertex_max
                                 + v * Vpar0 * (rhon_s * ps0_t - rhon_t * ps0_s)                        * theta * tstep &
                                 + v * F0 / BigR * rhon * vpar0_p                                * xjac * theta * tstep ) &
                                    
-                     + BigR * ( Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                      * xjac * theta * tstep &   
+                     + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                       * xjac * theta * tstep &   
                      + BigR * v * r0 * rhon* Sion_T                                             * xjac * theta * tstep &
-                     + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy) * BigR * xjac * theta * tstep
+                     + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy) * BigR * xjac * theta * tstep 
 
                      amat_n(var_rhon,var_rhon)  = + delta_n_convection*(                                                             &
                                                   + v * F0 / BigR * Vpar0 * rhon_p                                * xjac * theta * tstep )
 
-                     amat_kn(var_rhon,var_rhon) = + BigR * ( + Dn0p * rhon_p * v_p/BigR**2)                       * xjac * theta * tstep    
+                     amat_kn(var_rhon,var_rhon) = + BigR * ( + Dn0p * rhon_p * v_p/BigR**2)                   * xjac * theta * tstep    
                   endif ! with_neutrals 
  
                   !###################################################################################################

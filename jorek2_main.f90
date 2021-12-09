@@ -63,6 +63,7 @@ program JOREK2
   use direct_construction_mod
   use centralization_mod
   use mod_exchange_indices
+  use mod_gmres, only: gmres_driver
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -101,12 +102,6 @@ program JOREK2
 #include "r3_info.h"
   
   interface
-
-    subroutine gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
-      integer :: my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
-      integer :: iter_gmres
-    end subroutine gmres_driver
-    
     subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2, nice_q)
       use data_structure
       integer(kind=4),             intent(in)    :: my_id

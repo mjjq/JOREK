@@ -246,7 +246,12 @@ module pellet_module
                      pellets(i)%spi_Vel_RxZ
                 write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
                 write(*,*) "Pellet species = ", pellets(i)%spi_species
-                V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
+                if (ns_deltaminrad .gt. 0.) then
+                   V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min * ns_deltaminrad
+                else
+                   V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
+                endif
+
                 if (spi_num_vol) then
                    write(*,*) "Source volume (numerical,analytical,diff %) = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
                    if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
@@ -1235,12 +1240,12 @@ module pellet_module
     integer, save         :: dtype
     logical, save         :: dtype_set = .false.
   
-    integer :: len(11) = (/1,1,1,1,1,1,1,1,1,1,1/), t(13) = (/ &
+    integer :: len(13) = (/1,1,1,1,1,1,1,1,1,1,1,1,1/), t(13) = (/ &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
       MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
   
-    integer(kind=MPI_ADDRESS_KIND) :: base, disp(11)
+    integer(kind=MPI_ADDRESS_KIND) :: base, disp(13)
     type(type_SPI) :: sample_pellet
   
     dtype_out = dtype

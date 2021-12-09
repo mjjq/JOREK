@@ -66,7 +66,11 @@ module mod_neutral_source
     if (source_volume .gt. 0.) then
        V_ns = source_volume
     else
-       V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+       if (ns_deltaminrad .gt. 0.) then
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * ns_deltaminrad
+       else
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+       endif
     endif
     ! ===================================================================
 
@@ -122,7 +126,7 @@ module mod_neutral_source
     
         ! Apply gaussian shape (toroidally and poloidally) factor (normalized so that the number of particles injected does not depend on the shape)
         ! as well as JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape * ns_minrad_shape / V_ns
 
       elseif (ASDEX_MGI) then
 
@@ -148,11 +152,11 @@ module mod_neutral_source
         ns_drhon_dt =  ns_dNinj_dt * central_mass * MASS_PROTON ! Mass density injected per unit time
 
         ! Apply JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape * ns_minrad_shape / V_ns
 
       else 
 
-        rhon_source =  ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm / (V_ns * 1.d20 * central_density)  
+        rhon_source =  ns_amplitude * ns_pol_shape * ns_tor_shape * ns_minrad_shape * t_norm / (V_ns * 1.d20 * central_density)  
 
       endif
 
@@ -168,7 +172,7 @@ module mod_neutral_source
   end subroutine neutral_source
 
 
-  subroutine total_neutral_source(R,Z,phi,source_neutral) 
+  subroutine total_neutral_source(R,Z,phi,psi,source_neutral) 
 
     use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
@@ -181,6 +185,7 @@ module mod_neutral_source
     real*8, intent(in)   :: R
     real*8, intent(in)   :: Z
     real*8, intent(in)   :: phi
+    real*8, intent(in)   :: psi
     real*8, intent(out)  :: source_neutral
 
     ! Temporary variables serving the SPI module

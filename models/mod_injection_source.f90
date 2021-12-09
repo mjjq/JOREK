@@ -160,7 +160,11 @@ module mod_injection_source
     if (source_volume .gt. 0.) then
        V_ns = source_volume
     else
-       V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+       if (ns_deltaminrad .gt. 0.) then
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * ns_deltaminrad
+       else
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+       endif
     endif
     ! ===================================================================
 
@@ -221,7 +225,7 @@ module mod_injection_source
         ns_drhon_dt = ns_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * mass_gas
     
         ! Distribute gas source in space
-        rhon_source = ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = ns_drhon_dt * ns_pol_shape * ns_tor_shape * ns_minrad_shape / V_ns
 
         ! Apply JOREK normalization
         rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * rhon_source
@@ -263,14 +267,14 @@ module mod_injection_source
     
         ! Inverse of the number of particles still in the reservoir, formulae given by G. Pautasso (ASDEX-U)
 
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*ns_drhon_dt * ns_pol_shape  * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*ns_drhon_dt * ns_pol_shape  * ns_tor_shape * ns_minrad_shape / V_ns
 
         ! Converting mass density into number density
         rhon_source = rhon_source * (central_mass * MASS_PROTON / mass_gas)
 
       else 
 
-        rhon_source = ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm &
+        rhon_source = ns_amplitude * ns_pol_shape * ns_tor_shape * ns_minrad_shape * t_norm &
                       /  (V_ns * 1.d20 * central_density)
 
       endif

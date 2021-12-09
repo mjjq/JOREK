@@ -16,7 +16,7 @@ integer,dimension(2),parameter :: i_elm_interval=(/1,10000000/)
 integer,dimension(2),parameter :: i_life_interval=(/1,10000000/)
 real*8,dimension(2),parameter  :: t_birth_interval=(/0.d0,3.45d4/)
 real*8,dimension(2),parameter  :: st_interval=(/0.d0,1.d0/)
-real*8,dimension(2),parameter  :: mass_interval(/5.485d-4,124.d0/)
+real*8,dimension(2),parameter  :: mass_interval=(/5.485d-4,124.d0/)
 real*8,dimension(2),parameter  :: v_interval=(/-6.75d3,8.45d3/)
 real*8,dimension(2),parameter  :: Ekin_interval=(/0.d0,1.d7/)
 real*8,dimension(2),parameter  :: mu_interval=(/0.d0,1.d-5/)
@@ -46,7 +46,6 @@ integer,dimension(n_particles) :: active_kinetics_leapfrog_sol
 integer,dimension(n_particles) :: active_kinetics_relativistic_sol
 integer,dimension(n_particles) :: active_gcs_relativistics_sol
 integer,dimension(n_particle_types*n_particles) :: active_particles_sol
-class(particle_base),dimension(:),allocatable :: particle_base_list
 class(particle_base),dimension(:),allocatable :: particle_fieldline_list
 class(particle_base),dimension(:),allocatable :: particle_gc_list
 class(particle_base),dimension(:),allocatable :: particle_gc_vpar_list
@@ -78,7 +77,6 @@ subroutine setup()
   implicit none
 
   !> allocate particle arrays
-  allocate(particle_base_list(n_particle_types*n_particles))
   allocate(particle_fieldline::particle_fieldline_list(n_particles))
   allocate(particle_gc::particle_gc_list(n_particles))
   allocate(particle_gc_vpar::particle_gc_vpar_list(n_particles))
@@ -94,7 +92,6 @@ end subroutine setup
 subroutine teardown()
   implicit none
   !> deallocate particle arrays
-  deallocate(particle_base_list)
   deallocate(particle_fieldline_list)
   deallocate(particle_gc_list)
   deallocate(particle_gc_vpar_list)

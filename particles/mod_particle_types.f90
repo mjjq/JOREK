@@ -5,6 +5,7 @@
 module mod_particle_types
   implicit none
   private
+  public :: n_particle_types
   public :: particle_base_id,particle_fieldline_id,particle_gc_id
   public :: particle_gc_vpar_id,particle_gc_Qin_id,particle_kinetic_id
   public :: particle_kinetic_leapfrog_id,particle_kinetic_relativistic_id
@@ -346,7 +347,7 @@ contains
     implicit none
     !> inputs
     integer,intent(in) :: particle_code,n_particles
-    class(particle_base),dimension(n_particles),intent(in) :: particle_list
+    class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
     !> outputs
     integer,intent(out) :: n_active_particles
     integer,dimension(n_particles),intent(out) :: active_particle_id
@@ -403,7 +404,7 @@ contains
     implicit none
     !> inputs
     integer,intent(in) :: n_particles
-    class(particle_base),dimension(n_particles),intent(in) :: particle_list
+    class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
     !> outputs
     integer,intent(out) :: n_active_particles
     integer,dimension(n_particles),intent(out) :: active_particle_id
@@ -431,7 +432,7 @@ contains
     implicit none
     !> inputs
     integer,intent(in) :: n_particles
-    class(particle_base),dimension(n_particles),intent(in) :: particle_list
+    class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
     !> outputs
     integer,intent(out) :: n_active_particles
     integer,dimension(n_particles),intent(out) :: active_particle_id
@@ -460,7 +461,7 @@ contains
     implicit none
     !> inputs
     integer,intent(in) :: n_particles
-    class(particle_base),dimension(n_particles),intent(in) :: particle_list
+    class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
     !> outputs
     integer,intent(out) :: n_active_particles
     integer,dimension(n_particles),intent(out) :: active_particle_id
@@ -473,8 +474,8 @@ contains
     !> allocate thread private arrays
     !$max_num_thread = omp_get_max_threads()
     allocate(n_active_particle_thread(max_num_thread)); 
-    !> assume heuristically that the actual number of particles per thread is not
-    !> larger than 25% of the number of particles per thread computed using max_num_thread
+   !> assume heuristically that the actual number of particles per thread is not
+   !> larger than 25% of the number of particles per thread computed using max_num_thread
     allocate(particle_id_thread(floor(1.25d0*real(n_particles/&
     max_num_thread,kind=8))+1,max_num_thread));
     n_active_particles = 0; active_particle_id = 0;

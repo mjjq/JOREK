@@ -121,28 +121,30 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 ng_radius_ratio, ng_radius_min, spi_angle,          &
-                spi_L_inj, K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,      &
+                spi_L_inj, spi_L_inj_diff,                          &
+                K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg, output_prad_phi,       &
-                RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
+                spi_shard_file, spi_plume_file, spi_plume_hdf5,     &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
-                RMP_har_sin_spectrum, imp_type, adas_dir,           &
+                RMP_har_sin_spectrum, imp_type, adas_dir, n_adas,   &
                 amix, amix_freeb, equil_accuracy, use_imp_adas,     &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_pf_coils, pf_coils,                 &
-                axis_srch_radius, PF_pert_start_time,               &
+                n_iter_freeb, n_pf_coils, pf_coils, R_axis_ref,     &
+                axis_srch_radius,                                   &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
                 pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                vert_FB_tact, start_VFB_ts, I_coils_max, rad_FB_amp,&
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
@@ -172,8 +174,8 @@ if (my_id .eq. 0) then
   endif
   
   if ( old_deuterium_atomic ) then
-    write(*,*) 'WARNING: You use the old fit of deuterium atomic coefficients that is known '      &
-    // 'to be inaccurate and has only been kept such that old simulation cases can be repeated!'
+    write(*,*) 'WARNING: You use the old fit of deuterium atomic coefficients that is known to be'
+    write(*,*) 'inaccurate and has only been kept such that old simulation cases can be repeated!'
     write(*,*) 'You should either use the more accurate fit or the ADAS based implementation.'
   end if
 
@@ -238,6 +240,11 @@ call read_num_profiles(my_id)
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
 
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+spi_quantity_bg   = spi_quantity
+pellet_density_bg = pellet_density
+#endif
+
 if ( my_id == 0 ) then
   if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
     write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
@@ -259,6 +266,16 @@ if ( my_id == 0 ) then
       stop
     end if
   end do 
+
+  if (n_adas > n_imp_max) then 
+    write(*,*) "ERROR: n_adas should be no larger than n_imp_max, EXITING!"
+    stop
+  end if
+
+  if (n_adas > 1 .and. (.not. use_imp_adas)) then
+    write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
+    stop
+  end if
 
   if (using_spi) call init_spi_all()
 

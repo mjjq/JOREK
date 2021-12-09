@@ -200,7 +200,11 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) index_start
   read(21) t_start
   
+  write(*,*) 'CHECK (1): allocating energies in import_restart : ',index_start,index_start+nstep
+
   if (index_start .ge. 1) then
+
+    write(*,*) 'CHECK (2): allocating energies in import_restart : ',index_start,index_start+nstep
 
     if (allocated(xtime)) call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)
     call tr_allocate(xtime,1,index_start+nstep,"xtime",CAT_UNKNOWN)
@@ -459,10 +463,11 @@ endif
   call import_restart_vacuum(21, freeboundary, resistive_wall)  
   
   !--- Some parameters need to be scaled when importing a free-boundary equilibrium
-  T_0  = T_0 * current_FB_fact
-  T_1  = T_1 * current_FB_fact
-  FF_0 = FF_0 * current_FB_fact
-  FF_1 = FF_1 * current_FB_fact
+  T_0  = T_0  * current_FB_fact / prev_FB_fact
+  T_1  = T_1  * current_FB_fact / prev_FB_fact
+  FF_0 = FF_0 * current_FB_fact / prev_FB_fact
+  FF_1 = FF_1 * current_FB_fact / prev_FB_fact
+  prev_FB_fact = current_FB_fact
 
   if (use_pellet) then
     if (index_start .ge. 1) then
@@ -1558,10 +1563,11 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call import_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
   
   !--- Some parameters need to be scaled when importing a free-boundary equilibrium
-  T_0  = T_0 * current_FB_fact
-  T_1  = T_1 * current_FB_fact
-  FF_0 = FF_0 * current_FB_fact
-  FF_1 = FF_1 * current_FB_fact
+  T_0  = T_0  * current_FB_fact / prev_FB_fact
+  T_1  = T_1  * current_FB_fact / prev_FB_fact
+  FF_0 = FF_0 * current_FB_fact / prev_FB_fact
+  FF_1 = FF_1 * current_FB_fact / prev_FB_fact
+  prev_FB_fact = current_FB_fact
   
   if (use_pellet) then
      if (index_start .ge. 1) then

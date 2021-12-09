@@ -28,6 +28,7 @@ module mod_integrals3D
   use mod_impurity, only: radiation_function, radiation_function_linear
   use equil_info, only : get_psi_n, ES
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
+  use mod_sources
 
   implicit none
   
@@ -136,6 +137,7 @@ real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: u0_x, u0_y
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
+real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
@@ -148,7 +150,7 @@ real*8  :: source_bg, source_imp
 real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion, local_P_ei, total_P_ei
 real*8  :: local_P_ion, total_P_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
-real*8  :: ne_SI, Te_eV, Ti_eV
+real*8  :: ne_SI, Te_eV, Te_corr_eV, Ti_eV
 #endif
 
 ! Additional diagnostic variables for impurity model
@@ -161,7 +163,7 @@ real*8  :: m_i_over_m_imp, m_imp
 real*8  :: Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
 real*8  :: Z_eff_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: Te_corr_eV,  dT0e_corr_dT, Ti_corr_eV
+real*8  :: dT0e_corr_dT, Ti_corr_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
@@ -176,7 +178,7 @@ real*8  :: alpha_i, alpha_e, dalpha_e_dT
 real*8     :: nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i
 #else /* WITH_TiTe */
 !   -Coefficients related to Z_imp
-real*8  :: alpha_imp, beta_imp, dbeta_imp_dT
+real*8  :: alpha_imp, dalpha_imp_dT, beta_imp, dbeta_imp_dT
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
 
@@ -196,7 +198,7 @@ real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg              ! Retain hard-code
 real*8     :: Lrad_imp
 integer*8  :: i_phi
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
-
+integer    :: i_imp                                           ! Loop for more than one background impurity
 #endif
 
 #ifndef NOMPIVERSION
@@ -267,6 +269,8 @@ mag_wk_tot   = 0.d0
 mag_src_tot  = 0.d0
 varmin   = +1.d99
 varmax   = -1.d99
+R2curr_tmp = 0.d0
+Zcurr_tmp  = 0.d0
 
 Dpar_part_flux   = 0.d0 
 Dperp_part_flux  = 0.d0
@@ -313,12 +317,13 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
 !$omp          mag_wk_tot, vpar_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
-!$omp          eta_ohmic, central_mass,                                                        &
+!$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
 !$omp          ns_phi, ns_radius, ns_deltaphi, ns_tor_norm, spi_tor_rot, local_E_ion,          &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI, local_P_ion,&
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type, local_P_ei,  &
+!$omp          n_adas,                                                                         &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp          nimp_bg, ksi_ion, GAMMA, use_imp_adas,                                          &
@@ -343,25 +348,26 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           eta_T_ohm,                                                              &
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-!$omp           rn0, rn0_corr,                                                                 &
+!$omp           rn0, rn0_corr, Te_corr_eV, Te_eV, ne_SI, Ti_eV,                                &
 #endif
 #ifdef WITH_Impurities
 !$omp           source_bg, source_imp,                                                         &
-!$omp           m_i_over_m_imp, m_imp, Z_imp, T0_Zimp, alpha_Zimp,                             &
-!$omp           Te_corr_eV, Te_eV, ne_SI, ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,       &
-!$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV, Ti_eV,                          &
+!$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT, T0_Zimp, alpha_Zimp,                  &
+!$omp           ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,                                 &
+!$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV,                                 &
 #endif
 #if (defined WITH_Impurities) && (defined WITH_TiTe)
 !$omp           alpha_i, alpha_e, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i,  &
+!$omp           dalpha_e_dT,                                                                   &
 #endif
 #if (defined WITH_Impurities) && (!defined WITH_TiTe) 
-!$omp           alpha_imp, beta_imp,                                                           &
+!$omp           alpha_imp, beta_imp, dalpha_imp_dT,                                            &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
-!$omp           Te_eV, ne_SI, LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
+!$omp           LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,                        &
 !$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
-!$omp           Lrad_imp, coef_prad_si,                                                        &
+!$omp           Lrad_imp, coef_prad_si, i_imp,                                                 &
 #endif
 !$omp           omp_nthreads,omp_tid)
 
@@ -384,7 +390,7 @@ omp_tid      = 0
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
 !$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1, mag_src_tot,     &
-!$omp                fric_disp_tot)
+!$omp                fric_disp_tot, R2curr_tmp, Zcurr_tmp)
 
 do ife = ife_min, ife_max
 
@@ -526,9 +532,6 @@ do ife = ife_min, ife_max
         u0_p   = eq_p(mp,var_u,ms,mt)
         u0_x   = (   y_t(ms,mt) * eq_s(mp,var_u,ms,mt) - y_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
         u0_y   = ( - x_t(ms,mt) * eq_s(mp,var_u,ms,mt) + x_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
-        p0_s   = r0*eq_s(mp,var_T,ms,mt) + T0 * eq_s(mp,var_rho,ms,mt) 
-        p0_t   = r0*eq_t(mp,var_T,ms,mt) + T0 * eq_t(mp,var_rho,ms,mt) 
-        p0_p   = r0*eq_p(mp,var_T,ms,mt) + T0 * eq_p(mp,var_rho,ms,mt) 
 
         vpar0   = eq_g(mp,var_Vpar,ms,mt)
         vpar_s  = eq_s(mp,var_Vpar,ms,mt)
@@ -605,12 +608,6 @@ do ife = ife_min, ife_max
         !dPdx = r0 * dTdx + T0 * drhodx
         !dPdy = r0 * dTdy + T0 * drhody
 
-        hel1       = F0* ( (ps0 - psi_off) - y_g(ms,mt)*dpsidy) / (BigR**2.d0)
-        thm_wk     = vpar0 * (p0_s*ps0_t - p0_t*ps0_s) + vpar0 * F0/BigR*p0_p*xjac 
-        mag_wk     = - (ps0_s*u0_t - ps0_t*u0_s) / xjac * zj0 / BigR  &
-                     + F0 * zj0 * u0_p / (BigR**2.d0)
-        vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
-
 #ifdef WITH_TiTe
         call sources(xpoint, xcase, y_g(ms,mt), Z_xpoint, ps0, psi_axis, psi_bnd, &
                      particle_source,heat_source_i,heat_source_e)
@@ -631,48 +628,53 @@ do ife = ife_min, ife_max
 ! ------------------------------------------
 #if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
         ! --- Get ionization, recombination and radiation coefficients for Deuterium 
-        call atomic_coeff_deuterium(0.5d0*T0_corr, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                            LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
-      
-      
+#ifdef WITH_TiTe
+        call atomic_coeff_deuterium  (   T0e, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                            LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0, rn0, .true. ) 
+#else
+        call atomic_coeff_deuterium(0.5d0*T0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+                                            LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0, rn0, .true. ) 
+#endif
+     
         ! Get coefficient:  Prad,SI = coef_prad_si * Prad,jorek
         coef_prad_si = 1./((GAMMA-1)*MU_ZERO*(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**0.5) 
       
-        ksiion = central_density * 1.d20 * ksi_ion   !Normalisation of the ionization energy cost for Deuterium
+        ksiion = central_density * 1.d20 * ksi_ion   ! Normalisation of the ionization energy cost for Deuterium
       
         ! --- Radiation from background impurity
         ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-        Te_eV = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
-      
+        Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
+        Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV, uncorrected
+
         if (use_imp_adas) then  ! use open adas by default  
           ! Use radiation coefficients from ADAS
-          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg > 0) then
-            Lrad_imp = 0.0
-            call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_eV*EL_CHG/K_BOLTZ),Lrad_imp)
-            if (Lrad_imp < 0.) Lrad_imp = 0.
-          else
-            Lrad_imp = 0.
-          end if
-          ! This is to detect N/A
-          if (Lrad_imp/=Lrad_imp) then
-            write(*,*) "WARNING: Lrad_imp ", Lrad_imp
-            stop
-          end if
+          frad_bg = 0. 
+          do i_imp = 1, n_adas     
+            if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. nimp_bg(i_imp) > 0) then
+              Lrad_imp = 0.0
+              call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)           
+            else     
+              Lrad_imp = 0.
+            end if
+            frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
+          end do
+
           local_radiation_phi(mp) = local_radiation_phi(mp) + ( (r0_corr * rn0_corr  * LradDrays_T    &
                                      + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
-                                     + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi  
+                                     + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi  
           local_radiation         = local_radiation + ( (r0_corr * rn0_corr  * LradDrays_T            &
                                      + r0_corr ** 2 * LradDcont_T) * coef_prad_si                     & 
-                                     + ne_SI * nimp_bg * Lrad_imp) * bigR * xjac * wst * delta_phi 
+                                     + ne_SI * frad_bg) * bigR * xjac * wst * delta_phi 
           local_P_ion             = local_P_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
                                    * bigR * xjac * wst * delta_phi
         else
-          if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+          if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
             Arad_bg = 2.4d-31 
             Brad_bg = 20.
             Crad_bg = 0.8
             frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                            *nimp_bg*Arad_bg*exp(-((log(Te_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+                            *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
                     
             local_radiation_phi(mp) = local_radiation_phi(mp) + (r0_corr * rn0_corr  * LradDrays_T &
                                        + r0_corr ** 2 * LradDcont_T + r0_corr * frad_bg) * coef_prad_si & 
@@ -683,7 +685,7 @@ do ife = ife_min, ife_max
             local_P_ion             = local_P_ion + ksiion * r0_corr * rn0_corr * Sion_T * coef_prad_si &
                                        * bigR * xjac * wst * delta_phi
           else
-            write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+            write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
             stop
           end if
         end if
@@ -695,7 +697,7 @@ do ife = ife_min, ife_max
         ! Atomic physics parameters for Impurities
         !-------------------------------------------
 
-        select case ( trim(imp_type) )
+        select case ( trim(imp_type(1)) )
           case('D2')
             m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
             m_imp          = 2.
@@ -706,7 +708,7 @@ do ife = ife_min, ife_max
             m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
             m_imp          = 20.
           case default
-            write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+            write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
             write(*,*) '=> We assume the gas is D2.'
             m_i_over_m_imp = central_mass/2.
             m_imp          = 2.
@@ -723,7 +725,7 @@ do ife = ife_min, ife_max
         if (allocated(P_imp)) deallocate(P_imp)
         allocate(P_imp(0:imp_adas(1)%n_Z))
         call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-                                      p_out=P_imp,z_avg=Z_imp)
+                                      p_out=P_imp,z_avg=Z_imp, z_avg_Te=dZ_imp_dT)
 
         if (allocated(imp_adas(1)%ionisation_energy)) then
    
@@ -739,7 +741,6 @@ do ife = ife_min, ife_max
           E_ion     = E_ion * EL_CHG
           E_ion_bg  = E_ion_bg * EL_CHG
         else
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
           E_ion     = 0.
           E_ion_bg  = 0.
         end if
@@ -747,6 +748,7 @@ do ife = ife_min, ife_max
 #ifdef WITH_TiTe
         alpha_i       = m_i_over_m_imp - 1.
         alpha_e       = m_i_over_m_imp*Z_imp - 1.
+        dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
   
         ne_SI        = (r0_corr + alpha_e * rn0_corr) * 1.d20 * central_density ! electron density (SI)
         ne_JOREK     = r0_corr + alpha_e * rn0_corr ! Electron density in JOREK unit
@@ -754,6 +756,7 @@ do ife = ife_min, ife_max
                                                             ! Too small rho_1 will cause a problem
 #else /* WITH_TiTe */
         alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
+        dalpha_imp_dT= 0.5*m_i_over_m_imp*dZ_imp_dT
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
         ne_SI        = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
         ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
@@ -786,8 +789,7 @@ do ife = ife_min, ife_max
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
           Lrad = 0.0
           !call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-          if (Lrad < 0.) Lrad = 0.
+          call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad)
         else
           Lrad = 0.
         end if
@@ -839,10 +841,30 @@ do ife = ife_min, ife_max
         P_e_tot = P_e_tot + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
         P_i_tot = P_i_tot + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi
         P_tot   = P_e_tot + P_i_tot
+
+        p0_s   = (r0+alpha_i*rn0)*eq_s(mp,var_Ti,ms,mt) &
+                 + T0i * (eq_s(mp,var_rho,ms,mt)+alpha_i*eq_s(mp,var_rhon,ms,mt))&
+                 + (r0+alpha_e*rn0+dalpha_e_dT*rn0*T0e)*eq_s(mp,var_Te,ms,mt)&
+                 + T0e * (eq_s(mp,var_rho,ms,mt)+alpha_e*eq_s(mp,var_rhon,ms,mt))
+        p0_t   = (r0+alpha_i*rn0)*eq_t(mp,var_Ti,ms,mt) &
+                 + T0i * (eq_t(mp,var_rho,ms,mt)+alpha_i*eq_t(mp,var_rhon,ms,mt))&
+                 + (r0+alpha_e*rn0+dalpha_e_dT*rn0*T0e)*eq_t(mp,var_Te,ms,mt)&
+                 + T0e * (eq_t(mp,var_rho,ms,mt)+alpha_e*eq_t(mp,var_rhon,ms,mt))
+        p0_p   = (r0+alpha_i*rn0)*eq_p(mp,var_Ti,ms,mt) &
+                 + T0i * (eq_p(mp,var_rho,ms,mt)+alpha_i*eq_p(mp,var_rhon,ms,mt))&
+                 + (r0+alpha_e*rn0+dalpha_e_dT*rn0*T0e)*eq_p(mp,var_Te,ms,mt)&
+                 + T0e * (eq_p(mp,var_rho,ms,mt)+alpha_e*eq_p(mp,var_rhon,ms,mt))
 #else /* WITH_TiTe */
         P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi
         P_e_tot = P_tot / 2.
         P_i_tot = P_e_tot
+
+        p0_s   = (r0+alpha_imp*rn0+dalpha_imp_dT*rn0*T0)*eq_s(mp,var_T,ms,mt) &
+                 + T0 * (eq_s(mp,var_rho,ms,mt)+alpha_imp*eq_s(mp,var_rhon,ms,mt))
+        p0_t   = (r0+alpha_imp*rn0+dalpha_imp_dT*rn0*T0)*eq_t(mp,var_T,ms,mt) &
+                 + T0 * (eq_t(mp,var_rho,ms,mt)+alpha_imp*eq_t(mp,var_rhon,ms,mt))
+        p0_p   = (r0+alpha_imp*rn0+dalpha_imp_dT*rn0*T0)*eq_p(mp,var_T,ms,mt) &
+                 + T0 * (eq_p(mp,var_rho,ms,mt)+alpha_imp*eq_p(mp,var_rhon,ms,mt))
 #endif /* WITH_TiTe */
 #else /* WITH_Impurities */
         D_tot  = D_tot  + r0       * xjac * BigR * wst * delta_phi
@@ -850,12 +872,29 @@ do ife = ife_min, ife_max
         P_e_tot = P_e_tot + r0 * T0e * xjac * BigR * wst * delta_phi
         P_i_tot = P_i_tot + r0 * T0i * xjac * BigR * wst * delta_phi
         P_tot   = P_e_tot + P_i_tot
+
+        p0_s   = r0*eq_s(mp,var_Te,ms,mt) + T0e * eq_s(mp,var_rho,ms,mt) &
+                 +r0*eq_s(mp,var_Ti,ms,mt) + T0i * eq_s(mp,var_rho,ms,mt)
+        p0_t   = r0*eq_t(mp,var_Te,ms,mt) + T0e * eq_t(mp,var_rho,ms,mt) &
+                 +r0*eq_t(mp,var_Ti,ms,mt) + T0i * eq_t(mp,var_rho,ms,mt)
+        p0_p   = r0*eq_p(mp,var_Te,ms,mt) + T0e * eq_p(mp,var_rho,ms,mt) &
+                 +r0*eq_p(mp,var_Ti,ms,mt) + T0i * eq_p(mp,var_rho,ms,mt)
 #else /* WITH_TiTe */
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
         P_e_tot = P_tot / 2.
         P_i_tot = P_e_tot
+
+        p0_s   = r0*eq_s(mp,var_T,ms,mt) + T0 * eq_s(mp,var_rho,ms,mt) 
+        p0_t   = r0*eq_t(mp,var_T,ms,mt) + T0 * eq_t(mp,var_rho,ms,mt) 
+        p0_p   = r0*eq_p(mp,var_T,ms,mt) + T0 * eq_p(mp,var_rho,ms,mt) 
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
+
+        thm_wk     = vpar0 * (p0_s*ps0_t - p0_t*ps0_s) + vpar0 * F0/BigR*p0_p*xjac 
+        hel1       = F0* ( (ps0 - psi_off) - y_g(ms,mt)*dpsidy) / (BigR**2.d0)
+        mag_wk     = - (ps0_s*u0_t - ps0_t*u0_s) / xjac * zj0 / BigR  &
+                     + F0 * zj0 * u0_p / (BigR**2.d0)
+        vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
@@ -869,6 +908,8 @@ do ife = ife_min, ife_max
         thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
         vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi
 
+        R2curr_tmp    = R2curr_tmp - x_g(ms,mt)**2.0 * zj0 /BigR * xjac * wst * delta_phi    
+        Zcurr_tmp     = Zcurr_tmp  - y_g(ms,mt)      * zj0 /BigR * xjac * wst * delta_phi    
 
         if (use_pellet) then
           call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
@@ -1236,7 +1277,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ! Atomic physics parameters for Impurities
       !-------------------------------------------
 
-      select case ( trim(imp_type) )
+      select case ( trim(imp_type(1)) )
         case('D2')
           m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
         case('Ar')
@@ -1244,7 +1285,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         case('Ne')
           m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
         case default
-          write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+          write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
           write(*,*) '=> We assume the gas is D2.'
           m_i_over_m_imp = central_mass/2.
       end select
@@ -1382,6 +1423,8 @@ call MPI_AllReduce(P_i_int,pressure_i_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM
 call MPI_AllReduce(P_i_ext,pressure_i_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(C_intern,current_in,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(C_ext,current_out,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(R2curr_tmp,      R2curr,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(Zcurr_tmp , Z_curr_cent,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(Vol,Volume,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(area1,area,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(D_tot,density_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1431,6 +1474,8 @@ pressure_i_in        = P_i_int
 pressure_i_out       = P_i_ext
 current_in           = C_intern
 current_out          = C_ext
+R2curr               = R2curr_tmp
+Z_curr_cent          = Zcurr_tmp
 Volume               = Vol
 area                 = area1
 density_tot          = D_tot
@@ -1515,6 +1560,8 @@ endif
 ! --- Volume integrals
 current_in           = n_period * current_in  * fact_mu0  / (2.d0 * PI)
 current_out          = n_period * current_out * fact_mu0  / (2.d0 * PI)
+R2curr               = n_period * R2curr      * fact_mu0  / (2.d0 * PI)
+Z_curr_cent          = n_period * Z_curr_cent * fact_mu0  / (2.d0 * PI)
 pressure             = n_period * pressure    * fact_mu0  / (GAMMA-1.d0)
 pressure_in          = n_period * pressure_in * fact_mu0  / (GAMMA-1.d0)
 pressure_out         = n_period * pressure_out* fact_mu0  / (GAMMA-1.d0)
@@ -1589,6 +1636,9 @@ beta_n       = 100.d0 * beta_t * Bgeo/current_MA * sqrt(area/PI)
 li3          = 2.d0 * mag_in /0.5  /( current_in**2 * R_geo ) * fact_mu0
 li3_tot      = 2.d0 * mag_tot/0.5  /(current_tot**2 * R_geo ) * fact_mu0
 sheath_heatflux =  gamma_stangeby * (gamma-1)/(2.d0*gamma) * vn_p0 ! the factor comes to obtain n T_e v from vn_p0
+R_curr_cent  = sqrt(R2curr / current_tot) 
+Z_curr_cent  = Z_curr_cent / current_tot 
+
 
 ! --- Externally calculated quantities
 ! --- Halo currents
@@ -1638,6 +1688,12 @@ if (my_id .eq. 0) then
 
       case ( 'Z_axis' )
         res(iexpr+1) = ES%Z_axis
+
+      case ( 'R_curr_cent' )
+        res(iexpr+1) = R_curr_cent 
+
+      case ( 'Z_curr_cent' )
+        res(iexpr+1) = Z_curr_cent
 
       case ( 'psi_bnd' )
         res(iexpr+1) = ES%psi_bnd 

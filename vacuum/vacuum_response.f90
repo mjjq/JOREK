@@ -480,6 +480,9 @@ module vacuum_response
   !! file_version 1: Original
   !! file_version 2: Includes eta_thin_w
   !! file_version 3: Includes additional coil information
+  !! file_version 4: Includes coil names                                    
+  !! file_version 5: Includes additional information on wall resolution, wall net potentials, control surface
+  !! file_version 6: Coil and wall currents sign reversed to follow JOREK coordinate system
   subroutine read_starwall_response(my_id, sr, filename, n_bnd)
 
     use constants
@@ -535,10 +538,16 @@ module vacuum_response
       disp = disp + sizeof(comment)
 
       sr%file_version = read_intparam_parallel(filehandle, 'file_version', disp)
-      if ( sr%file_version > 5 ) then
+      if ( sr%file_version > 6 ) then
         write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
         stop
       end if
+
+      if ( sr%file_version < 6 ) then
+        write(*,*) 'WARNING: You are using an old STARWALL file version and the wall and coil currents    '
+        write(*,*) '         sign do not follow the JOREK phi direction (positive means -phi direction)   '
+      end if
+
 
       sr%n_bnd  = read_intparam_parallel(filehandle, 'n_bnd' , disp)
       if ( n_bnd /= sr%n_bnd ) then
@@ -1846,8 +1855,8 @@ module vacuum_response
             if ( (l_index < index_min) .or. (l_index > index_max) ) cycle ! This MPI proc responsible?
 
             ! --- Determine the row in the main matrix.
-            l_row_psi = det_row_col(l_index, ivar_psi, l_tor, i_tor_min, i_tor_max)
-            l_row_j   = det_row_col(l_index, ivar_j,   l_tor, i_tor_min, i_tor_max)
+            l_row_psi = det_row_col(l_index, var_psi, l_tor, i_tor_min, i_tor_max)
+            l_row_j   = det_row_col(l_index, var_zj,  l_tor, i_tor_min, i_tor_max)
 
             ! --- Sum over boundary dofs at which response is calculated
             L_IV: do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
@@ -1933,7 +1942,7 @@ module vacuum_response
                         if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
 
                         ! --- Determine the column in the main matrix
-                        j_col_psi = det_row_col(j_index, ivar_psi, j_tor, i_tor_min, i_tor_max)
+                        j_col_psi = det_row_col(j_index, var_psi, j_tor, i_tor_min, i_tor_max)
 
                         ! --- Determine the position in the sparse matrix data structure
                         !     which corresponds to the matrix entry at  l_row_j, j_col_psi.
@@ -2088,8 +2097,8 @@ module vacuum_response
 !          if (j_resp_old .ne. j_resp) write(*,'(A4i5)') 'PANIC jresp: ',j_resp_old,j_resp, &
 !           bnd_node_list%bnd_node(jnode)%index_starwall(1), bnd_node_list%bnd_node(jnode)%index_starwall(jbas)
 
-          psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, ivar_psi)
-          dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, ivar_psi)
+          psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, var_psi)
+          dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, var_psi)
 
           if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) .and. (.not. starwall_equil_coils) ) then
             j_resp_0 = 2*(jnode-1) + jbas
@@ -2256,9 +2265,7 @@ module vacuum_response
       allocate(delta_Icoils_0(n_coils))
       delta_Icoils_0 = 0.d0
       do i=1, n_coils
-        if ((vert_FB_amp(i) /= 0.d0) .or. (vert_FB_amp_ts(i)/=0.d0) ) then
           delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now)
-        end if
       end do
       initialized = .true.
     end if

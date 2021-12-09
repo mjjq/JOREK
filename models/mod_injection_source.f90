@@ -93,7 +93,7 @@ module mod_injection_source
     real*8, intent(out) :: rhon_source  ! This is in number desntiy
     real*8, intent(in)  :: ns_tor_norm
 
-    select case ( trim(imp_type) )
+    select case ( trim(imp_type(1)) )
       case('D2')
         n_gas  = 5
         A_gas  = 4.
@@ -113,7 +113,7 @@ module mod_injection_source
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
       case default
-        write(*,*) '!! Gas type "', trim(imp_type), '" unknown (in mod_injection_source.f90) !!'
+        write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
         write(*,*) '=> We assume the gas is D2.'
         n_gas  = 5
         A_gas  = 4.
@@ -285,6 +285,9 @@ module mod_injection_source
     real*8     :: spi_abl_tmp
     real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_tmp
+
+    source_background = 0.d0
+    source_impurity   = 0.d0
 
     if (using_spi) then
 

@@ -852,7 +852,12 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
     else
       blocksize_tmp=blocksize
     endif
-
+    
+    !If initializatin on a set of phi planes, make blocksize a multiple of the amount of phi planes
+    if(init_phiplanes) then 
+      blocksize_tmp=blocksize_tmp+(n_phi_planes-modulo(blocksize_tmp,n_phi_planes))
+      !Add instead of subtract to have enough towards end of the loop
+    endif 
 #ifdef __GFORTRAN__
     !$omp parallel do default(shared) &
 #else

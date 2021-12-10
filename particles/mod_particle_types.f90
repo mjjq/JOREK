@@ -5,7 +5,6 @@
 module mod_particle_types
   implicit none
   private
-  public :: n_particle_types
   public :: particle_base_id,particle_fieldline_id,particle_gc_id
   public :: particle_gc_vpar_id,particle_gc_Qin_id,particle_kinetic_id
   public :: particle_kinetic_leapfrog_id,particle_kinetic_relativistic_id
@@ -27,7 +26,6 @@ module mod_particle_types
   public :: find_active_particle_id_openmp
 
   !> enumerator of the particle type 
-  integer,parameter :: n_particle_types=8
   enum, bind(C)
   enumerator :: particle_base_id=0,particle_fieldline_id,particle_gc_id,&
                 particle_gc_vpar_id,particle_gc_Qin_id,particle_kinetic_id,&

@@ -176,10 +176,10 @@ end subroutine find_particle_types
 !> and for a specific type of particle (encoded)
 subroutine find_active_particles_groups(sim,n_groups,n_particles_max,&
 n_particles,n_active_particles,active_particle_id,p_type)
-  use mod_particles, only: find_active_particle_id
+  use mod_particle_types, only: find_active_particle_id
   implicit none
   !> inputs-outputs
-  type(particle_sim),intent(inout) :: sim
+  class(particle_sim),intent(inout) :: sim
   !> inputs
   integer,intent(in) :: n_groups,n_particles_max
   integer,dimension(n_groups),intent(in) :: n_particles
@@ -188,7 +188,7 @@ n_particles,n_active_particles,active_particle_id,p_type)
   integer,dimension(n_groups),intent(out) :: n_active_particles
   integer,dimension(n_particles_max,n_groups),intent(out) :: active_particle_id
   !> variables
-  integer :: ii,n_particles_max
+  integer :: ii
   n_active_particles = 0; active_particle_id = 0;
   if(present(p_type)) then
     do ii=1,n_groups
@@ -204,3 +204,4 @@ n_particles,n_active_particles,active_particle_id,p_type)
     enddo
   endif
 end subroutine find_active_particles_groups
+end module mod_particle_sim

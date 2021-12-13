@@ -2658,9 +2658,11 @@ module exec_commands
 
     use mod_vtk
     use mod_elt_matrix_fft
+    use mumps_module
     use mod_clock
     use omp_lib
     use basis_at_gaussian 
+    use mpi_mod
  
     implicit none
   
@@ -2684,16 +2686,19 @@ module exec_commands
     real*4,allocatable   :: xyz (:,:), scalars(:,:), scalars_o(:,:)
     character*36, allocatable :: scalar_names(:), scalar_names_o(:)
   
-    integer :: my_id, k_tor, i, j, k, l, n(4), ife, iv, inode, index_node, index_total
+    integer  :: n_AA, nz_AA, index_RHS0
+    integer :: k_tor, i, j, k, l, n(4), ife, iv, inode, index_node, index_total
     integer :: omp_nthreads, omp_tid, n_tor_local, i_order, index_large_i, index_ij
     integer :: index_RHS, k_var, i_tor, i_term, term_count, nsub, nnos, ielm, it_o
     integer :: i_bs, j_bs, ms, mt, n_basis, info
+    integer ::  i_elm, in, im, mp, index_kl, ilarge, in_index, knode, im_index, index_large_k 
     integer, allocatable :: ipiv(:)
     logical :: get_terms 
     real*8,   allocatable :: result(:,:,:,:), res2d(:,:,:)
     real*8,   allocatable :: rhs(:,:), BSmat(:,:), BSmat_elm(:,:), BSmat_tmp(:,:)
     real*8  :: rhs_term(n_vertex_max*(n_order+1))
-    real*8  :: wst
+    real*8  :: wst, wgauss2(n_gauss)
+    real*8, allocatable      :: ELM(:,:), A_tmp(:)
     integer :: dim0, dim1, dim2, only_itor
     character(len=64)       :: file_name, label 
     integer   :: required,provided,StatInfo
@@ -2704,12 +2709,34 @@ module exec_commands
     real*8 :: tsecond, sum_rhs, ftor 
     type(clcktype)           :: t_itstart, t0, t1
     TYPE(type_thread_buffer), dimension(:), allocatable :: test_struct 
+  integer   :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
+  integer   :: my_id, my_id_n, my_id_master
+  integer   :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
+  integer*4 :: rank, comm_size 
     
     ! --- Initialize FFTW
 #ifdef USE_FFTW
     call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,in_fft,out_fft,FFTW_PATIENT)
 #endif
-    
+
+#ifdef FUNNELED
+  required = MPI_THREAD_FUNNELED
+#else
+  required = MPI_THREAD_MULTIPLE
+#endif
+
+  call MPI_Init_thread(required, provided, StatInfo)
+
+  ! --- Determine number of MPI procs
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
+  n_cpu = comm_size
+  
+  ! --- Determine ID of each MPI proc
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+  my_id = rank
+  
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
     ! --- Some checks
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);            if ( ierr /= 0 ) return
@@ -2738,6 +2765,9 @@ module exec_commands
 
     call init_threads()  ! for OMP threads
 
+    ! --- Build Bezier projection matrix (to obtain RHS terms)
+
+
     ! --- Allocate and initialize thread structure for calling elm_matrix
     if (allocated(test_struct))  deallocate(test_struct)
     allocate(test_struct(nbthreads))
@@ -2745,7 +2775,7 @@ module exec_commands
     dim0 = n_tor*n_vertex_max*(n_order+1)*n_var
     dim1 = n_plane
     dim2 = n_vertex_max*n_var*(n_order+1)
-  
+ 
     do i = 1, nbthreads
   
       allocate(test_struct(i)%ELM_p( dim1, dim2, dim2) )
@@ -2791,35 +2821,6 @@ module exec_commands
       test_struct(i)%delta_t = 0.d0
     end do
 
-    ! --- Calculate integrated basis functions matrix ------------------------------
-    BSmat = 0.d0
-
-    ! --- Basis row
-    do i=1,n_vertex_max
-      do j=1,n_order+1
-
-        i_bs = (i-1)*n_vertex_max + j  ! basis function index
-
-        ! --- Basis column
-        do k=1,n_vertex_max
-          do l=1,n_order+1
-
-            j_bs = (k-1)*n_vertex_max + l  ! basis function index
-
-            do ms=1, n_gauss
-              do mt=1, n_gauss
-        
-                wst = wgauss(ms)*wgauss(mt)
-                BSmat(i_bs, j_bs) = BSmat(i_bs, j_bs) + wst * H(i,j,ms,mt) * H(k,l,ms,mt)
-    
-              enddo
-            enddo
-            
-          enddo
-        enddo
-      enddo
-    enddo
-    ! --------------------------------------------------------------------------
   
     write(*,*) '******************************************************'
     write(*,*) '**** RHS diagnostic for term visualization in vtk ****'
@@ -2888,6 +2889,7 @@ module exec_commands
     enddo
   
   
+  allocate(ELM(2*n_vertex_max*(n_order+1),2*n_vertex_max*(n_order+1)))
     rhs = 0.0d0 
   
     call clck_time_barrier(t0)
@@ -2922,25 +2924,6 @@ module exec_commands
         nodes(iv) = node_list%node(inode)
       enddo
 
-      ! --- Multiply integrated basis functions matrix by element sizes --------------------------
-      do i=1,n_vertex_max
-        do j=1,n_order+1
-  
-          i_bs = (i-1)*n_vertex_max + j  ! basis function index
-  
-          ! --- Basis column
-          do k=1,n_vertex_max
-            do l=1,n_order+1
-  
-              j_bs = (k-1)*n_vertex_max + l  ! basis function index
-  
-              BSmat_elm(i_bs, j_bs) = BSmat(i_bs, j_bs) * element%size(i,j) * element%size(k,l)
-            enddo
-          enddo
-
-        enddo
-      enddo
-      ! ----------------------------------------------------------------------------------------
 
 #if (JOREK_MODEL == 500)    
       call element_matrix_fft(element,nodes, xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd,   &
@@ -2954,53 +2937,187 @@ module exec_commands
 #endif
 
       do i_term=1, max_terms
-        do k_var=1, n_var 
-          do i_tor = 1, n_tor
-
-            ! --- For Fourier transform
-            if (i_tor>1) then
-              ftor=2.d0
-            else
-              ftor=1.d0
-            endif
-
-            ! collect element RHS of a given term and harmonic 
-            do i=1,n_vertex_max
-              do j=1,n_order+1
-                index_ij       = n_tor * n_var * ( (n_order+1)*(i-1) + (j-1) ) + n_tor*(k_var-1) + i_tor
-                i_bs           = (i-1)*n_vertex_max + j 
-                rhs_term(i_bs) = test_struct(omp_tid)%ELM(i_term, index_ij) * ftor 
-              enddo
-            enddo   
- 
-            ! get Bezier coefficients at the nodes 
-            !$omp critical
-            BSmat_tmp = BSmat_elm
-            call dgesv( n_basis, 1, BSmat_tmp, n_basis, ipiv, rhs_term, n_basis, info )
-            !$omp end critical
-            do iv=1,n_vertex_max
-        
-              inode = element%vertex(iv)
-        
-              do i_order = 1, n_order+1
-         
-                i_bs          = (iv-1)*n_vertex_max + i_order 
-                index_node    = node_list%node(inode)%index(i_order)
-                
-                index_large_i = n_tor * n_var * (index_node - 1) + n_tor*(k_var-1) + i_tor
-                !$omp critical
-                rhs(i_term, index_large_i) = rhs_term(i_bs) 
-                !$omp end critical
-              enddo ! dofs
-            enddo ! vertices
-          enddo ! modes
-        enddo ! equations
+  
+        do iv=1,n_vertex_max
+      
+          inode = element%vertex(iv)
+      
+          do i_order = 1, n_order+1
+      
+            index_node = node_list%node(inode)%index(i_order)
+      
+            index_large_i = n_tor * n_var * (index_node - 1)
+      
+            do j = 1, n_var * n_tor
+      
+              index_ij = n_tor * n_var * (n_order+1) * (iv-1) + n_tor * n_var * (i_order-1) + j   ! index in the ELM matrix
+              
+             !$omp atomic
+              rhs(i_term, index_large_i+j) = rhs(i_term, index_large_i+j) + test_struct(omp_tid)%ELM(i_term, index_ij) 
+             !$omp end atomic
+            enddo 
+      
+          enddo ! order
+        enddo ! vertex
+  
       enddo ! terms
     
     enddo ! --- elements
     !$omp end do
     !$omp end parallel
-   
+
+
+    ! create mumps structure and solve -------------
+    call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
+    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
+    call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
+    if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
+
+!    wokrikng mumps test
+!    nz_AA = 3!4 * element_list%n_elements * (n_vertex_max * (n_order+1))**2
+!    n_AA  = 3!2 * maxval(node_list%node(1:node_list%n_nodes)%index(4))
+!
+!    write(*,*) associated(mumps_par%A)
+!
+!    if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
+!    if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
+!    if (.not. associated(mumps_par%irn))   call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
+!    if (.not. associated(mumps_par%jcn))   call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
+! 
+!    mumps_par%n  = n_AA
+!    mumps_par%nz = nz_AA
+!  
+!    mumps_par%JOB = 6
+!    mumps_par%SYM = 0
+!    mumps_par%icntl(7) = 4
+!  
+!    mumps_par%irn = 0
+!    mumps_par%jcn = 0
+!    mumps_par%A   = 0.d0
+!    mumps_par%RHS = 0.d0
+!
+!    mumps_par%irn(1) = 1
+!    mumps_par%jcn(1) = 1
+!    mumps_par%A(1)   = 1.0
+!    mumps_par%RHS(1) = 1.0
+!
+!
+!    mumps_par%irn(2) = 2
+!    mumps_par%jcn(2) = 2
+!    mumps_par%A(2)   = 1.0
+!    mumps_par%RHS(2) = 2.0
+!
+!    mumps_par%irn(3) = 3
+!    mumps_par%jcn(3) = 3
+!    mumps_par%A(3)   = 1.0
+!    mumps_par%RHS(3) = 3.0
+! 
+!    call DMUMPS(mumps_par)
+!
+!    write(*,*) 'Mumps test'
+!    write(*,*)  mumps_par%rhs(:)
+
+    nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
+    n_AA  = maxval(node_list%node(1:node_list%n_nodes)%index(4))
+
+    if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
+    if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
+    if (.not. associated(mumps_par%irn))   call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
+    if (.not. associated(mumps_par%jcn))   call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
+ 
+    mumps_par%n  = n_AA
+    mumps_par%nz = nz_AA
+  
+    mumps_par%JOB = 6
+    mumps_par%SYM = 0
+    mumps_par%icntl(7) = 4
+  
+    mumps_par%irn = 0
+    mumps_par%jcn = 0
+    mumps_par%A   = 0.d0
+    mumps_par%RHS = 0.d0
+
+ 
+    wgauss2 = wgauss
+
+!    !$omp parallel do default(none) &
+!    !$omp shared(element_list, node_list,           &
+!    !$omp        H, mumps_par, wgauss2         )    &
+!    !$omp private(ELM, i_elm, element, i, j, k, l, ms, mt, in, im, mp,  wst,  &
+!    !$omp         index_ij, index_kl, ilarge, in_index, im_index,  &
+!    !$omp         inode, index_large_i, knode, index_large_k)                &
+!    !$omp schedule(static)
+
+    ilarge = 0
+
+    do i_elm=1,element_list%n_elements
+      
+      ELM = 0.d0
+      element = element_list%element(i_elm)
+    
+      do ms=1, n_gauss
+        do mt=1, n_gauss
+    
+          wst = wgauss2(ms)*wgauss2(mt)
+    
+          do i=1,n_vertex_max
+            do j=1,n_order+1
+    
+              index_ij = (n_order+1)*(i-1) + (j-1) + 1   ! index in the ELM matrix
+    
+              do k=1,n_vertex_max
+                do l=1,n_order+1
+    
+                  index_kl = (n_order+1)*(k-1) + (l-1) + 1   ! index in the ELM matrix
+    
+                  ELM(index_ij,index_kl) = ELM(index_ij,index_kl)    &
+                                         + H(i,j,ms,mt) * h(k,l,ms,mt) * element%size(i,j)*element%size(k,l) * wst 
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+    
+      ! Save contribution of this element in MUMPS format
+      do i=1,n_vertex_max
+    
+        inode = element_list%element(i_elm)%vertex(i)
+      
+        do j=1,n_order+1
+            
+            index_ij = (n_order+1)*(i-1) +  (j-1) + 1   ! index in the ELM matrix
+    
+            index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
+    
+            do k=1,n_vertex_max
+          
+              knode = element_list%element(i_elm)%vertex(k)
+            
+              do l=1,n_order+1
+                
+                  index_kl = (n_order+1)*(k-1) + (l-1) + 1   ! index in the ELM matrix
+    
+                  index_large_k = node_list%node(knode)%index(l)   ! base index in the main matrix
+    
+                  ilarge = ilarge + 1
+    
+                  mumps_par%irn(ilarge) = index_large_i
+                  mumps_par%jcn(ilarge) = index_large_k
+                  mumps_par%A(ilarge)   = ELM(index_ij,index_kl) 
+    
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+ !   !$omp end parallel do
+
+    allocate(A_tmp(nz_AA))
+    A_tmp = mumps_par%A
+ 
+    ! ----------------------------------------
+
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     write(*,*) ''
@@ -3025,34 +3142,56 @@ module exec_commands
         if (trim(term_names(k_var, i_term))=='') cycle
 
         sum_rhs = 0.d0
-  
-        ! --- Replace node psi values in pol_pos_list by RHS
-        do i = 1, pol_pos_list%n_pos(1)
-  
+
+        do i = 1, pol_pos_list%n_pos(1)    
           do iv=1, n_vertex_max
-  
-            pol_pos_list%pos(i,1)%nodes(iv)%values(:,:,1)  = 0.d0 
-
-            do i_order=1, n_order+1
-            
-              index_node = pol_pos_list%pos(i,1)%nodes(iv)%index(i_order)
-    
-              do i_tor=1, n_tor
-
-                if (only_itor >= 0) then
-                  if (only_itor /= i_tor) cycle
-                endif
-     
-                index_RHS = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
-          
-                pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1)  = rhs(i_term, index_RHS) / n_plane 
-    
-                sum_rhs = sum_rhs + abs(rhs(i_term, index_RHS))
-              enddo 
-            enddo
+            pol_pos_list%pos(i,1)%nodes(iv)%values(:,:,1)  = 0.d0
           enddo
         enddo
+ 
+        ! get RHS of individual harmonics for each term
+        do i_tor=1, n_tor
+
+          if (only_itor >= 0) then
+            if (only_itor /= i_tor) cycle
+          endif
+
+          ! --- Collect RHS for a single harmonic
+          do inode=1,node_list%n_nodes
+            do i_order=1, n_order+1
+              index_node = node_list%node(inode)%index(i_order)
+              index_RHS  = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
+              index_RHS0 = index_node 
+              mumps_par%RHS(index_RHS0) = rhs(i_term, index_RHS) / n_plane
+            enddo
+          enddo
+        
+          mumps_par%A = A_tmp
+          
+          ! --- Solve and find node values
+          call DMUMPS(mumps_par)
+
+          do i = 1, pol_pos_list%n_pos(1)
+    
+            do iv=1, n_vertex_max
+    
   
+              do i_order=1, n_order+1
+              
+                index_node = pol_pos_list%pos(i,1)%nodes(iv)%index(i_order)
+       
+                index_RHS0 = (index_node - 1) + 1
+            
+                pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1)  = mumps_par%RHS(index_RHS0) 
+      
+                sum_rhs = sum_rhs + abs(mumps_par%RHS(index_RHS0))
+              enddo
+            enddo
+          enddo
+ 
+        enddo ! n_tor 
+ 
+ 
         if (sum_rhs < 1.d-30) cycle
  
         term_count = term_count + 1

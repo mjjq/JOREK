@@ -227,35 +227,6 @@ module pellet_module
     integer, intent(in) :: i_inj
     integer, intent(in) :: n_spi_begin
   
-    ! spi_update is called with i_inj=0 for computing the volume of the gas sources
-    if (i_inj .eq. 0) then
-       call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out, &
-            kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
-       return
-    endif
-
-    ! if n_spi_begin is set to zero in the call, diagnostic messages for all injectio positions are printed (every i_inj times for every i_inj shards)
-    if (n_spi_begin .eq. 0) then
-       do i = 1, n_spi_tot
-          if (my_id == 0 .and. mod(index_now,i_inj) == 0 .and. mod(i,i_inj) == 0) then
-             if (pellets(i)%spi_radius > 0. .and. pellets(i)%spi_abl > 0.) then
-                write(*,*) "Pellet number: ", i
-                write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
-                write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
-                     pellets(i)%spi_Vel_RxZ
-                write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
-                write(*,*) "Pellet species = ", pellets(i)%spi_species
-                V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
-                if (spi_num_vol) then
-                   write(*,*) "Source volume (numerical,analytical,diff %) = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
-                   if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
-                end if
-             end if
-          end if
-       end do
-       return
-    endif
-
     spi_delta_phi   = 0.
     spi_Vel_R_tmp   = 0.
     spi_Vel_phi_tmp = 0.

@@ -8,7 +8,7 @@ contains
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
                               ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, &
-                              i_tor_min, i_tor_max, aux_nodes)
+                              i_tor_min, i_tor_max, aux_nodes, get_terms)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -27,6 +27,7 @@ use mod_bootstrap_functions
 use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_impurity, only: radiation_function, radiation_function_linear
 use mod_sources
+use mod_model_settings
 
 implicit none
 
@@ -41,6 +42,8 @@ integer, intent(in)            :: i_tor_min, i_tor_max
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
+
+logical, intent(in), optional  :: get_terms 
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, index_k, index_m, m, ik, xcase2
 integer    :: n_tor_start, n_tor_end, n_tor_local, n_tor_loop
@@ -135,6 +138,9 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 integer*8  :: plan
 
+integer    :: max_terms_loop, i_term
+real*8     :: factor(n_var,max_terms)
+
 integer    :: i_v, i_loc, j_loc
 
 !   -Ion-electron energy transfer
@@ -171,6 +177,11 @@ real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: delta_g, delta_s, delta_t
 
 real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 
+if (present(get_terms)) then
+  max_terms_loop = max_terms
+else
+  max_terms_loop = 1
+endif
 
 ELM_p = 0.d0
 ELM_n = 0.d0
@@ -361,10 +372,12 @@ enddo
 do i=1,n_vertex_max
   do j=1,n_order+1
 
-    ELM_p(:,:,1:n_var)  = 0
-    ELM_n(:,:,1:n_var)  = 0
-    ELM_k(:,:,1:n_var)  = 0
-    ELM_kn(:,:,1:n_var) = 0
+    if (.not. present(get_terms)) then
+      ELM_p(:,:,1:n_var)  = 0
+      ELM_n(:,:,1:n_var)  = 0
+      ELM_k(:,:,1:n_var)  = 0
+      ELM_kn(:,:,1:n_var) = 0
+    endif
 
     do ms=1, n_gauss
       do mt=1, n_gauss
@@ -1223,57 +1236,66 @@ do i=1,n_vertex_max
             v_ps0_x  = v_xx  * ps0_y - v_xy  * ps0_x + v_x  * ps0_xy - v_y * ps0_xx
             v_ps0_y  = v_xy  * ps0_y - v_yy  * ps0_x + v_x  * ps0_yy - v_y * ps0_xy
 
+            do i_term=1, max_terms_loop
+
+            if (present(get_terms)) then
+              factor          = 0.d0
+              factor(:,i_term) = 1.d0 / (tstep * xjac * BigR)
+            else
+              factor          = 1.d0
+            endif
+
             !###################################################################################################
             !#  Induction Equation                                                                             #
             !###################################################################################################
 
-            rhs_ij(var_psi) = v * eta_T  * (zj0 - current_source(ms,mt) - Jb)/ BigR           * xjac * tstep &
-                      + v * (ps0_s * u0_t - ps0_t * u0_s)                                            * tstep &
-                      - v * F0 / BigR  * u0_p                                                 * xjac * tstep &
-                      + eta_num_T * (v_x * zj0_x + v_y * zj0_y)                               * xjac * tstep &
+            rhs_ij(var_psi) = v * eta_T  * (zj0 - current_source(ms,mt) - Jb)/ BigR           * xjac * tstep * factor(var_psi,1) &
+                      + v * (ps0_s * u0_t - ps0_t * u0_s)                                            * tstep * factor(var_psi,2) &
+                      - v * F0 / BigR  * u0_p                                                 * xjac * tstep * factor(var_psi,2) &
+                      + eta_num_T * (v_x * zj0_x + v_y * zj0_y)                               * xjac * tstep * factor(var_psi,3) &
 
-                      - v * tauIC*2./(r0_corr*BB2) * F0**2/BigR**2 * (ps0_s * Pe0_t - ps0_t * Pe0_s) * tstep &
-                      + v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * Pe0_p                    * xjac * tstep &
+                      - v * tauIC*2./(r0_corr*BB2) * F0**2/BigR**2 * (ps0_s * Pe0_t - ps0_t * Pe0_s) * tstep * factor(var_psi,4) &
+                      + v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * Pe0_p                    * xjac * tstep * factor(var_psi,4) &
 
-                      + zeta * v * delta_g(mp,var_psi,ms,mt) / BigR                           * xjac
+                      + zeta * v * delta_g(mp,var_psi,ms,mt) / BigR                           * xjac * factor(var_psi,5)
 
 
             !###################################################################################################
             !#  Perpendicular Momentum Equation                                                                #
             !###################################################################################################
 
-            rhs_ij(var_u) =  - 0.5d0 * vv2 * (v_x * r0_y_hat - v_y * r0_x_hat)                              * xjac * tstep &
-                         - r0_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)                                       * tstep &
-                         + v * (ps0_s * zj0_t - ps0_t * zj0_s )                                                    * tstep &
+            rhs_ij(var_u) =  - 0.5d0 * vv2 * (v_x * r0_y_hat - v_y * r0_x_hat)                              * xjac * tstep * factor(var_u,1) &
+                         - r0_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)                                       * tstep * factor(var_u,1) &
+                         + v * (ps0_s * zj0_t - ps0_t * zj0_s )                                                    * tstep * factor(var_u,2) &
 
-                         - visco_T * BigR * (v_x * w0_x + v_y * w0_y)                                       * xjac * tstep &
+                         - visco_T * BigR * (v_x * w0_x + v_y * w0_y)                                       * xjac * tstep * factor(var_u,3) &
 
-                         - v * F0 / BigR * zj0_p                                                            * xjac * tstep &
-                         + BigR**2 * (v_s * p0_t - v_t * p0_s)                                                     * tstep &
+                         - v * F0 / BigR * zj0_p                                                            * xjac * tstep * factor(var_u,2) &
+                         + BigR**2 * (v_s * p0_t - v_t * p0_s)                                                     * tstep * factor(var_u,4) &
 
-                         - visco_num_T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy) * xjac * tstep &
+                         - visco_num_T * (v_xx + v_x/Bigr + v_yy)*(w0_xx + w0_x/Bigr + w0_yy)               * xjac * tstep * factor(var_u,5) &
 
                          - tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u0_y - w0_y * u0_x) &
-                                   * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep       &
+                                   * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep * factor(var_u,6)    &
 !====================================New TG_num terms=================================
                          - tgnum_u * 0.25d0 * w0 * BigR**3 * (r0_x_hat * u0_y - r0_y_hat * u0_x) &
-                                   * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep * fact_conservative_u            &
+                                   * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep * fact_conservative_u * factor(var_u,6) &
 !===============================End of NewTG_num terms==============================
 
-                         - v * tauIC*2. * BigR**4 * (Pi0_s * w0_t - Pi0_t * w0_s)                                  * tstep &
+                         - v * tauIC*2. * BigR**4 * (Pi0_s * w0_t - Pi0_t * w0_s)                                  * tstep * factor(var_u,7) &
 
-                         - tauIC*2. * BigR**3 * Pi0_y * (v_x* u0_x + v_y * u0_y)                            * xjac * tstep &
+                         - tauIC*2. * BigR**3 * Pi0_y * (v_x* u0_x + v_y * u0_y)                            * xjac * tstep * factor(var_u,7) &
 
-                         - v * tauIC*2. * BigR**4 * (u0_xy * (Pi0_xx - Pi0_yy) - Pi0_xy * (u0_xx - u0_yy) ) * xjac * tstep &
+                         - v * tauIC*2. * BigR**4 * (u0_xy * (Pi0_xx - Pi0_yy) - Pi0_xy * (u0_xx - u0_yy) ) * xjac * tstep * factor(var_u,7) &
 
                          ! --- Diamagnetic viscosity
-                         + dvisco_dT * bigR * W_dia * (v_x*Ti0_x + v_y*Ti0_y)                               * xjac * tstep &
-                         + visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy)                              * xjac * tstep &
+                         + dvisco_dT * bigR * W_dia * (v_x*Ti0_x + v_y*Ti0_y)                               * xjac * tstep * factor(var_u,8) &
+                         + visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy)                              * xjac * tstep * factor(var_u,8) &
 
-                        - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac                    &
+                        - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac * factor(var_u,9)      &
 
                          ! Not to be included in conservative form
-                         + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep  &
+                         + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep* factor(var_u,10)  &
                                    * (1.d0 - fact_conservative_u)  &          
  
                          ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
@@ -1284,7 +1306,7 @@ do i=1,n_vertex_max
                              + BigR * F0 * (r0 * vpar0_p + vpar0 * r0_p) * (v_x * u0_x + v_y * u0_y)          * xjac * tstep &
                              + BigR**2 * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x) * (v_x * u0_x + v_y * u0_y) * xjac * tstep &
                              + BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u0_x + v_y * u0_y) * xjac * tstep &
-                           )    
+                           ) * factor(var_u,10)   
             
             !------------------------------------------------------------------------ NEO
             if (NEO) then
@@ -1293,7 +1315,7 @@ do i=1,n_vertex_max
                           ( r0 * (ps0_x * u0_x + ps0_y * u0_y)                                  &
                             + tauIC*2. * (ps0_x * Pi0_x + ps0_y * Pi0_y)                        &
                             + aki_neo_prof(ms,mt) * tauIC*2. * r0 * (ps0_x*Ti0_x + ps0_y*Ti0_y) &
-                            - r0 * Vpar0 * Btheta2)     * xjac * tstep * BigR 
+                            - r0 * Vpar0 * Btheta2)     * xjac * tstep * BigR * factor(var_u,11)
             endif
             !------------------------------------------------------------------------ NEO
 
@@ -1301,125 +1323,125 @@ do i=1,n_vertex_max
             !#  Current Definition Equation                                                                    #
             !###################################################################################################
 
-            rhs_ij(var_zj) = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac
+            rhs_ij(var_zj) = - ( v_x * ps0_x  + v_y * ps0_y + v*zj0) / BigR * xjac * factor(var_zj,1)
 
             !###################################################################################################
             !#  Vorticity Definition Equation                                                                  #
             !###################################################################################################
 
-            rhs_ij(var_w) = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac 
+            rhs_ij(var_w) = - ( v_x * u0_x   + v_y * u0_y  + v*w0)  * BigR * xjac * factor(var_w,1)
 
             !###################################################################################################
             !#  Density Equation                                                                               #
             !###################################################################################################
 
-            rhs_ij(var_rho)  = v * BigR * (particle_source(ms,mt) + source_pellet)                * xjac * tstep &
-                       + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep &
-                       + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep &
+            rhs_ij(var_rho)  = v * BigR * (particle_source(ms,mt) + source_pellet)                * xjac * tstep * factor(var_rho,1) &
+                       + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep * factor(var_rho,2) &
+                       + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep * factor(var_rho,3) &
 
-                       - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep &
-                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep &
+                       - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep * factor(var_rho,4) &
+                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep * factor(var_rho,5) &
 
-                       - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep &
-                       - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep &
-                       - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep &
-                       - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                    * tstep &
+                       - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep * factor(var_rho,6) &
+                       - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep * factor(var_rho,6) &
+                       - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep * factor(var_rho,3) &
+                       - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                    * tstep * factor(var_rho,3) &
 
-                       + v * 2.d0 * tauIC*2. * Pi0_y * BigR                                          * xjac * tstep &
+                       + v * 2.d0 * tauIC*2. * Pi0_y * BigR                                       * xjac * tstep * factor(var_rho,7) &
 
-                       + v * r0 * rn0 * BigR * Sion_T                                             * xjac * tstep &
-                       - v * r0 * r0  * BigR * Srec_T                                             * xjac * tstep &
+                       + v * r0 * rn0 * BigR * Sion_T                                             * xjac * tstep * factor(var_rho,8) &
+                       - v * r0 * r0  * BigR * Srec_T                                             * xjac * tstep * factor(var_rho,9) &
                        
-                       + zeta * v * delta_g(mp,var_rho,ms,mt) * BigR                              * xjac         &
+                       + zeta * v * delta_g(mp,var_rho,ms,mt) * BigR                              * xjac         * factor(var_rho,10)&
 
-                       - D_perp_num * (v_xx + v_x/Bigr + v_yy)*(r0_xx + r0_x/Bigr + r0_yy) * BigR * xjac * tstep &
+                       - D_perp_num * (v_xx + v_x/Bigr + v_yy)*(r0_xx + r0_x/Bigr + r0_yy) * BigR * xjac * tstep * factor(var_rho,11)&
 
                        - tgnum_rho * 0.25d0 * BigR**3 * (r0_x * u0_y - r0_y * u0_x)                              &
-                                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep          &
+                                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep          * factor(var_rho,12)&
                        - tgnum_rho * 0.25d0 / BigR * vpar0**2                                                    &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
-                                 * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep
+                                 * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep       * factor(var_rho,12)
 
 
-            rhs_ij_k(var_rho) = - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho            * xjac * tstep &
-                          - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep &
+            rhs_ij_k(var_rho) = - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho      * xjac * tstep * factor(var_rho,4) &
+                          - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep * factor(var_rho,5) &
 
                        - tgnum_rho * 0.25d0 / BigR * vpar0**2 &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
-                                 * (                            + F0 / BigR * v_p) * xjac * tstep * tstep
+                                 * (                            + F0 / BigR * v_p) * xjac * tstep * tstep        * factor(var_rho,12)
 
             !###################################################################################################
             !#  Parallel Velocity Equation                                                                     #
             !###################################################################################################
 
             if ( with_vpar ) then
-              rhs_ij(var_vpar) = - v * F0 / BigR * P0_p                                                                 * xjac * tstep &
-                                 - v * (P0_s * ps0_t - P0_t * ps0_s)                                                           * tstep &
+              rhs_ij(var_vpar) = - v * F0 / BigR * P0_p                                                                 * xjac * tstep * factor(var_vpar,1) &
+                                 - v * (P0_s * ps0_t - P0_t * ps0_s)                                                           * tstep * factor(var_vpar,1) &
                                                                                                                         
                                 ! Not to be included in the conservative form
-                                 - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR                    * xjac * tstep &
+                                 - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR                    * xjac * tstep * factor(var_vpar,2) &
                                      * (1.d0 - fact_conservative_u)  &          
                                                                                                                        
-                                 - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                                   * tstep &
-                                 - 0.5d0 * v  * vpar0**2 * BB2 * (ps0_s * r0_t - ps0_t * r0_s)                                 * tstep &
-                                 + 0.5d0 * v  * vpar0**2 * BB2 * F0 / BigR * r0_p                                       * xjac * tstep &
+                                 - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                                   * tstep * factor(var_vpar,3) &
+                                 - 0.5d0 * v  * vpar0**2 * BB2 * (ps0_s * r0_t - ps0_t * r0_s)                                 * tstep * factor(var_vpar,3) &
+                                 + 0.5d0 * v  * vpar0**2 * BB2 * F0 / BigR * r0_p                                       * xjac * tstep * factor(var_vpar,3) &
                                  
-                                 - visco_par_num * (v_xx + v_x/Bigr + v_yy)*(vpar0_xx + vpar0_x/Bigr + vpar0_yy) * BigR * xjac * tstep &
+                                 - visco_par_num * (v_xx + v_x/Bigr + v_yy)*(vpar0_xx + vpar0_x/Bigr + vpar0_yy) * BigR * xjac * tstep * factor(var_vpar,4) &
                                  
-                                 + zeta * v * delta_g(mp,var_vpar,ms,mt) * r0_corr * F0**2 / BigR                       * xjac         &
-                                 + zeta * v * r0_corr * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR        * xjac         &
+                                 + zeta * v * delta_g(mp,var_vpar,ms,mt) * r0_corr * F0**2 / BigR                       * xjac         * factor(var_vpar,5) &
+                                 + zeta * v * r0_corr * vpar0 * (ps0_x * delta_ps_x + ps0_y * delta_ps_y) / BigR        * xjac         * factor(var_vpar,5) &
 
                                  ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
                                  ! (see wiki: https://www.jorek.eu/wiki/doku.php?id=model500_501_555#equations):
                                  + fact_conservative_u * (                                                 &
                                      + zeta * v * delta_g(mp,var_rho,ms,mt) * vpar0 * F0**2 / BigR * xjac  &
-                                     + v * (r0_x_hat * u0_y - r0_y_hat * u0_x)       * vpar0 * BB2 * xjac * tstep &
-                                     - v * F0 / BigR * (r0 * vpar0_p + r0_p * vpar0) * vpar0 * BB2 * xjac * tstep &
-                                     - v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x)  * vpar0 * BB2 * xjac * tstep &
-                                     - v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)     * vpar0 * BB2 * xjac * tstep &
-                                                          ) &
+                                     + v * (r0_x_hat * u0_y - r0_y_hat * u0_x)       * vpar0 * BB2 * xjac * tstep  &
+                                     - v * F0 / BigR * (r0 * vpar0_p + r0_p * vpar0) * vpar0 * BB2 * xjac * tstep  &
+                                     - v * r0 * (vpar0_x * ps0_y - vpar0_y * ps0_x)  * vpar0 * BB2 * xjac * tstep  &
+                                     - v * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)     * vpar0 * BB2 * xjac * tstep  &
+                                                          ) * factor(var_vpar,2)&
 
                            - tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2                                                                 &
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                        &
-                                     * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac                      )        * xjac * tstep * tstep &
+                                     * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac                      )        * xjac * tstep * tstep * factor(var_vpar,6)&
                            - tgnum_vpar * 0.25d0 * v  * Vpar0**2 * BB2 * (1.d0 - fact_conservative_u)                                  &
                                      * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR                        &
-                                     * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)           * xjac * tstep * tstep &
+                                     * (-(ps0_s * r0_t    - ps0_t * r0_s)   /xjac + F0 / BigR * r0_p)           * xjac * tstep * tstep * factor(var_vpar,6)&
 !=============================== New TG_num terms==================================
                            - tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u            &
                                      * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR     &
-                                     * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * tstep * tstep &
+                                     * (-(ps0_s * v_t     - ps0_t * v_s)    /xjac)  * xjac * tstep * tstep * factor(var_vpar,6)&
 !===============================End of new TG_num terms============================
                  
                                  + (1.d0 - delta_n_convection) * (     &
-                                   - v *(r0 * rn0 * Sion_T) * vpar0 * BB2 * BigR                                * xjac * tstep &
-                                   + v *(r0 * r0  * Srec_T) * vpar0 * BB2 * BigR                                * xjac * tstep &
-                                   )
+                                   - v *(r0 * rn0 * Sion_T) * vpar0 * BB2 * BigR                                * xjac * tstep * factor(var_vpar,7)&
+                                   + v *(r0 * r0  * Srec_T) * vpar0 * BB2 * BigR                                * xjac * tstep * factor(var_vpar,8)&
+                                   ) 
                     
               if (normalized_velocity_profile) then
-                rhs_ij(var_vpar) = rhs_ij(var_vpar) - visco_par * (v_x * (vpar0_x-Vt0_x) + v_y * (vpar0_y-Vt0_y)) * BigR* xjac * tstep 
+                rhs_ij(var_vpar) = rhs_ij(var_vpar) - visco_par * (v_x * (vpar0_x-Vt0_x) + v_y * (vpar0_y-Vt0_y)) * BigR* xjac * tstep * factor(var_vpar,9 ) 
               else
                 rhs_ij(var_vpar) = rhs_ij(var_vpar) - visco_par * (v_x * (vpar0_x * F0**2 / BigR**2 - 2.d0 * vpar0 * F0**2 / BigR**3  - 2.d0 * PI * F0 * Omega_tor0_x ) & 
-                                                   + v_y * (vpar0_y * F0**2 / BigR**2 - 2.d0 * PI * F0 * Omega_tor0_y) ) * BigR* xjac * tstep 
+                                                   + v_y * (vpar0_y * F0**2 / BigR**2 - 2.d0 * PI * F0 * Omega_tor0_y) ) * BigR* xjac * tstep * factor(var_vpar,9 ) 
               endif
    
               if (NEO) then
                 rhs_ij(var_vpar) =  rhs_ij(var_vpar)  + amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)  &
                           * v * ( r0 * (ps0_x * u0_x + ps0_y * u0_y)                             &
                                 + tauIC*2.   * (ps0_x * Pi0_x + ps0_y * Pi0_y)                   &
-                                + aki_neo_prof(ms,mt) * tauIC*2. * r0 * (ps0_x * Ti0_x + ps0_y * Ti0_y) - r0 * Vpar0 * Btheta2) * xjac * tstep * BigR
+                                + aki_neo_prof(ms,mt) * tauIC*2. * r0 * (ps0_x * Ti0_x + ps0_y * Ti0_y) - r0 * Vpar0 * Btheta2) * xjac * tstep * factor(var_vpar,10) * BigR
               endif
    
-              rhs_ij_k(var_vpar) = + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                 * xjac * tstep &
+              rhs_ij_k(var_vpar) = + 0.5d0 * r0 * vpar0**2 * BB2 * F0 / BigR * v_p                 * xjac * tstep * factor(var_vpar,3) &
   
                  - tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
                            * (-(ps0_s * vpar0_t - ps0_t * vpar0_s)/xjac + F0 / BigR * vpar0_p) / BigR  &
-                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep & 
+                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep * factor(var_vpar,6)& 
 !=============================== New TG_num terms==================================
 
                  - tgnum_vpar * 0.25d0 * vpar0 * Vpar0**2 * BB2 * fact_conservative_u &
                            * (-(ps0_s * r0_t - ps0_t * r0_s)/xjac + F0 / BigR * r0_p) / BigR  &
-                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep
+                           * (                                          + F0 / BigR * v_p)  * xjac * tstep * tstep * factor(var_vpar,6)
 
 !===============================End of new TG_num terms============================
             end if ! (with_vpar)
@@ -1431,119 +1453,119 @@ do i=1,n_vertex_max
               !#  Ion Energy Equation                                                                            #
               !###################################################################################################
   
-              rhs_ij(var_Ti) =  v * BigR * heat_source_i(ms,mt)                                  * xjac * tstep &
+              rhs_ij(var_Ti) =  v * BigR * heat_source_i(ms,mt)                                  * xjac * tstep * factor(var_Ti,1) &
               
-                              + v * r0 * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                       * tstep &
-                              + v * Ti0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * tstep &
+                              + v * r0 * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                       * tstep * factor(var_Ti,2) &
+                              + v * Ti0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * tstep * factor(var_Ti,2) &
                               
-                              + v * r0 * Ti0 * 2.d0* GAMMA * BigR * u0_y                         * xjac * tstep &
+                              + v * r0 * Ti0 * 2.d0* GAMMA * BigR * u0_y                         * xjac * tstep * factor(var_Ti,3) &
                               
-                              - v * r0 * F0 / BigR * Vpar0 * Ti0_p                               * xjac * tstep &
-                              - v * Ti0 * F0 / BigR * Vpar0 * r0_p                               * xjac * tstep &
+                              - v * r0 * F0 / BigR * Vpar0 * Ti0_p                               * xjac * tstep * factor(var_Ti,4) &
+                              - v * Ti0 * F0 / BigR * Vpar0 * r0_p                               * xjac * tstep * factor(var_Ti,4) &
                               
-                              - v * r0 * Vpar0 * (Ti0_s * ps0_t - Ti0_t * ps0_s)                        * tstep &
-                              - v * Ti0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * tstep &
+                              - v * r0 * Vpar0 * (Ti0_s * ps0_t - Ti0_t * ps0_s)                        * tstep * factor(var_Ti,4) &
+                              - v * Ti0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * tstep * factor(var_Ti,4) &
                               
-                              - v * r0 * Ti0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * tstep &
-                              - v * r0 * Ti0 * GAMMA * F0 / BigR * vpar0_p                       * xjac * tstep &
+                              - v * r0 * Ti0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * tstep * factor(var_Ti,3) &
+                              - v * r0 * Ti0 * GAMMA * F0 / BigR * vpar0_p                       * xjac * tstep * factor(var_Ti,3) &
                               
-                              - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Ti      * xjac * tstep &
-                              - ZKi_prof * BigR * (v_x*Ti0_x + v_y*Ti0_y                   )     * xjac * tstep &
+                              - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Ti      * xjac * tstep * factor(var_Ti,5) &
+                              - ZKi_prof * BigR * (v_x*Ti0_x + v_y*Ti0_y                   )     * xjac * tstep * factor(var_Ti,6) &
                               
-                              - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(Ti0_xx + Ti0_x/Bigr + Ti0_yy) * BigR * xjac * tstep &
+                              - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(Ti0_xx + Ti0_x/Bigr + Ti0_yy) * BigR * xjac * tstep * factor(var_Ti,7) &
   
                          - tgnum_Ti* 0.25d0 * BigR**3 * Ti0 * (r0_x * u0_y - r0_y * u0_x)                         &
-                                            * ( v_x * u0_y - v_y * u0_x)                  * xjac * tstep * tstep  &
+                                            * ( v_x * u0_y - v_y * u0_x)                  * xjac * tstep * tstep  * factor(var_Ti,8)&
                          - tgnum_Ti* 0.25d0 * BigR**3 * r0 * (Ti0_x * u0_y - Ti0_y * u0_x)                        &
-                                            * ( v_x * u0_y - v_y * u0_x)                  * xjac * tstep * tstep  &
+                                            * ( v_x * u0_y - v_y * u0_x)                  * xjac * tstep * tstep  * factor(var_Ti,8)&
   
                          - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
                                    * Ti0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                       &
-                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep &
+                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Ti,8)&
                          - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
                                    * r0 * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                     &
-                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep &
+                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Ti,8)&
 
                             !===================== Additional terms from friction terms============
-                            + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)      * xjac * tstep &
-                            + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))               * xjac * tstep &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)      * xjac * tstep * factor(var_Ti,10) &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))               * xjac * tstep * factor(var_Ti,10) &
                             !==============================End of friction terms=================
   
-                         + zeta * v * r0_corr  * delta_g(mp,var_Ti,ms,mt) * BigR                 * xjac         &
-                         + zeta * v * Ti0_corr * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         &
+                         + zeta * v * r0_corr  * delta_g(mp,var_Ti,ms,mt) * BigR                 * xjac         * factor(var_Ti,9)   &
+                         + zeta * v * Ti0_corr * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Ti,9)   &
                          ! Energy exchange term
-                         + v * BigR * dTi_e                                                      * xjac * tstep                       
+                         + v * BigR * dTi_e                                                      * xjac * tstep * factor(var_Ti,11)                       
   
   
-              rhs_ij_k(var_Ti) = - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Ti * xjac * tstep &
-                                 - ZKi_prof * BigR * (                + v_p*Ti0_p /BigR**2 )     * xjac * tstep &
+              rhs_ij_k(var_Ti) = - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Ti * xjac * tstep * factor(var_Ti,5) &
+                                 - ZKi_prof * BigR * (                + v_p*Ti0_p /BigR**2 )     * xjac * tstep * factor(var_Ti,6) &
   
                            - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
                                    * Ti0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                         &
-                                   * (                                  + F0 / BigR * v_p)  * xjac * tstep * tstep  &
+                                   * (                                  + F0 / BigR * v_p)  * xjac * tstep * tstep  * factor(var_Ti,8)&
                            - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
                                    * r0 * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                       &
-                                   * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep
+                                   * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep  * factor(var_Ti,8)
   
               !###################################################################################################
               !#  Electron Energy Equation                                                                       #
               !###################################################################################################
   
-              rhs_ij(var_Te) =  v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep &
+              rhs_ij(var_Te) =  v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep * factor(var_Te,1 ) &
                                                                                                  
-                              + v * r0 * BigR**2  * (Te0_s * u0_t - Te0_t * u0_s)                       * tstep &
-                              + v * Te0 * BigR**2 * ( r0_s * u0_t -  r0_t * u0_s)                       * tstep &
+                              + v * r0 * BigR**2  * (Te0_s * u0_t - Te0_t * u0_s)                       * tstep * factor(var_Te,2 ) &
+                              + v * Te0 * BigR**2 * ( r0_s * u0_t -  r0_t * u0_s)                       * tstep * factor(var_Te,2 ) &
                                                                                                  
-                              + v * r0 * Te0 * 2.d0* GAMMA * BigR * u0_y                         * xjac * tstep &
+                              + v * r0 * Te0 * 2.d0* GAMMA * BigR * u0_y                         * xjac * tstep * factor(var_Te,3 ) &
                                                                                                  
-                              - v * r0 * F0 / BigR * Vpar0 * Te0_p                               * xjac * tstep &
-                              - v * Te0 * F0 / BigR * Vpar0 * r0_p                               * xjac * tstep &
+                              - v * r0 * F0 / BigR * Vpar0 * Te0_p                               * xjac * tstep * factor(var_Te,4 ) &
+                              - v * Te0 * F0 / BigR * Vpar0 * r0_p                               * xjac * tstep * factor(var_Te,4 ) &
                                                                                                  
-                              - v * r0 * Vpar0 * (Te0_s * ps0_t - Te0_t * ps0_s)                        * tstep &
-                              - v * Te0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * tstep &
+                              - v * r0 * Vpar0 * (Te0_s * ps0_t - Te0_t * ps0_s)                        * tstep * factor(var_Te,4 ) &
+                              - v * Te0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * tstep * factor(var_Te,4 ) &
                                                                                                  
-                              - v * r0 * Te0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * tstep &
-                              - v * r0 * Te0 * GAMMA * F0 / BigR * vpar0_p                       * xjac * tstep &
+                              - v * r0 * Te0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * tstep * factor(var_Te,3 ) &
+                              - v * r0 * Te0 * GAMMA * F0 / BigR * vpar0_p                       * xjac * tstep * factor(var_Te,3 ) &
                                                                                                  
-                              - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Te      * xjac * tstep &
-                              - ZKe_prof * BigR * (v_x*Te0_x + v_y*Te0_y                   )     * xjac * tstep &
+                              - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Te      * xjac * tstep * factor(var_Te,5 ) &
+                              - ZKe_prof * BigR * (v_x*Te0_x + v_y*Te0_y                   )     * xjac * tstep * factor(var_Te,6 ) &
                               
-                              - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(Te0_xx + Te0_x/Bigr + Te0_yy) * BigR * xjac * tstep &
+                              - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(Te0_xx + Te0_x/Bigr + Te0_yy) * BigR * xjac * tstep * factor(var_Te,7 ) &
 
-                              + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep &
+                              + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep * factor(var_Te,9 ) &
   
-                              - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep &
-                              - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep &
-                              - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep &
-                              - v * BigR * r0_corr * frad_bg                                     * xjac * tstep &
+                              - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep * factor(var_Te,12) &
+                              - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep * factor(var_Te,13) &
+                              - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep * factor(var_Te,14) &
+                              - v * BigR * r0_corr * frad_bg                                     * xjac * tstep * factor(var_Te,15) &
   
                          - tgnum_Te * 0.25d0 * BigR**3 * Te0 * (r0_x * u0_y - r0_y * u0_x)                         &
-                                            * ( v_x * u0_y - v_y * u0_x)                   * xjac * tstep * tstep &
+                                            * ( v_x * u0_y - v_y * u0_x)                   * xjac * tstep * tstep * factor(var_Te,8 )&
                          - tgnum_Te * 0.25d0 * BigR**3 * r0 * (Te0_x * u0_y - Te0_y * u0_x)                       &
-                                            * ( v_x * u0_y - v_y * u0_x)                   * xjac * tstep * tstep &
+                                            * ( v_x * u0_y - v_y * u0_x)                   * xjac * tstep * tstep * factor(var_Te,8 )&
   
                          - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
                                    * Te0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                       &
-                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep &
+                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Te,8 )&
                          - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
                                    * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                     &
-                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep &
+                                   * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Te,8 )&
   
-                         + zeta * v * r0_corr  * delta_g(mp,var_Te,ms,mt)  * BigR                * xjac         &
-                         + zeta * v * Te0_corr * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         &
+                         + zeta * v * r0_corr  * delta_g(mp,var_Te,ms,mt)  * BigR                * xjac         * factor(var_Te,10)  &
+                         + zeta * v * Te0_corr * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Te,10)  &
                          ! Energy exchange term
-                         + v * BigR * dTe_i                                                      * xjac * tstep
+                         + v * BigR * dTe_i                                                      * xjac * tstep * factor(var_Te,11)
   
   
-              rhs_ij_k(var_Te) = - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Te * xjac * tstep &
-                                 - ZKe_prof * BigR * (                + v_p*Te0_p /BigR**2 )     * xjac * tstep &
+              rhs_ij_k(var_Te) = - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Te * xjac * tstep * factor(var_Te,5 ) &
+                                 - ZKe_prof * BigR * (                + v_p*Te0_p /BigR**2 )     * xjac * tstep * factor(var_Te,6 ) &
   
                            - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
                                    * Te0 * (r0_x * ps0_y - r0_y * ps0_x  + F0 / BigR * r0_p)                        &
-                                   * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep  &
+                                   * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep * factor(var_Te,8 ) &
                            - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
                                    * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                       &
-                                   * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep
+                                   * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep * factor(var_Te,8 )
 
             else ! (with_TiTe), i.e. with single temperature ***************************************
   
@@ -1551,63 +1573,63 @@ do i=1,n_vertex_max
               !#  Electron + Ion Energy Equation                                                                 #
               !###################################################################################################
   
-              rhs_ij(var_T) =  v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
+              rhs_ij(var_T) =  v * BigR * heat_source(ms,mt)                                    * xjac * tstep * factor(var_T,1 ) &
               
-                             + v * r0 * BigR**2 * (T0_s  * u0_t - T0_t * u0_s)                         * tstep &
-                             + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep &
+                             + v * r0 * BigR**2 * (T0_s  * u0_t - T0_t * u0_s)                         * tstep * factor(var_T,2 ) &
+                             + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep * factor(var_T,2 ) &
                                                                                             
-                             + v * r0 * T0 * 2.d0* GAMMA * BigR * u0_y                          * xjac * tstep &
+                             + v * r0 * T0 * 2.d0* GAMMA * BigR * u0_y                          * xjac * tstep * factor(var_T,3 ) &
                             
-                             - v * r0 * F0 / BigR * Vpar0 * T0_p                                * xjac * tstep &
-                             - v * T0 * F0 / BigR * Vpar0 * r0_p                                * xjac * tstep &
+                             - v * r0 * F0 / BigR * Vpar0 * T0_p                                * xjac * tstep * factor(var_T,4 ) &
+                             - v * T0 * F0 / BigR * Vpar0 * r0_p                                * xjac * tstep * factor(var_T,4 ) &
                             
-                             - v * r0 * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)                          * tstep &
-                             - v * T0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                          * tstep &
+                             - v * r0 * Vpar0 * (T0_s * ps0_t - T0_t * ps0_s)                          * tstep * factor(var_T,4 ) &
+                             - v * T0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                          * tstep * factor(var_T,4 ) &
                                                                                              
-                             - v * r0 * T0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * tstep &
-                             - v * r0 * T0 * GAMMA * F0 / BigR * vpar0_p                        * xjac * tstep &
+                             - v * r0 * T0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)               * tstep * factor(var_T,3 ) &
+                             - v * r0 * T0 * GAMMA * F0 / BigR * vpar0_p                        * xjac * tstep * factor(var_T,3 ) &
                             
-                             - (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T         * xjac * tstep &
-                             - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y                   )        * xjac * tstep &
+                             - (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_T         * xjac * tstep * factor(var_T,5 ) &
+                             - ZK_prof * BigR * (v_x*T0_x + v_y*T0_y                   )        * xjac * tstep * factor(var_T,6 ) &
                             
-                             - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(T0_xx + T0_x/Bigr + T0_yy) * BigR * xjac * tstep &
+                             - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(T0_xx + T0_x/Bigr + T0_yy) * BigR * xjac * tstep * factor(var_T,7 ) &
                             
-                             + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep &
+                             + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep * factor(var_T,9 ) &
 
                              !===================== Additional terms from friction terms============
-                             + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)  * xjac * tstep &
-                             + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))           * xjac * tstep &
+                             + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)  * xjac * tstep * factor(var_T,11) &
+                             + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))           * xjac * tstep * factor(var_T,11) &
                              !==============================End of friction terms=================
 
-                             - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep &
-                             - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep &
-                             - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep &
-                             - v * BigR * r0_corr * frad_bg                                     * xjac * tstep &
+                             - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep * factor(var_T,12) &
+                             - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep * factor(var_T,13) &
+                             - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep * factor(var_T,14) &
+                             - v * BigR * r0_corr * frad_bg                                     * xjac * tstep * factor(var_T,15) &
                             
                              - tgnum_T * 0.25d0 * BigR**3 * T0 * (r0_x * u0_y - r0_y * u0_x)                           &
-                                                * ( v_x * u0_y - v_y * u0_x)                    * xjac * tstep * tstep &
+                                                * ( v_x * u0_y - v_y * u0_x)                    * xjac * tstep * tstep * factor(var_T,8 )&
                              - tgnum_T * 0.25d0 * BigR**3 * r0 * (T0_x * u0_y - T0_y * u0_x)                           &
-                                                * ( v_x * u0_y - v_y * u0_x)                    * xjac * tstep * tstep &
+                                                * ( v_x * u0_y - v_y * u0_x)                    * xjac * tstep * tstep * factor(var_T,8 )&
                             
                              - tgnum_T * 0.25d0 / BigR * vpar0**2                                                      &
                                        * T0 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                         &
-                                       * ( v_x * ps0_y -  v_y * ps0_x                        )  * xjac * tstep * tstep &
+                                       * ( v_x * ps0_y -  v_y * ps0_x                        )  * xjac * tstep * tstep * factor(var_T,8 )&
                              - tgnum_T * 0.25d0 / BigR * vpar0**2                                                      &
                                        * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                         &
-                                       * ( v_x * ps0_y -  v_y * ps0_x                        )  * xjac * tstep * tstep &
+                                       * ( v_x * ps0_y -  v_y * ps0_x                        )  * xjac * tstep * tstep * factor(var_T,8 )&
                             
-                             + zeta * v * r0_corr * delta_g(mp,var_T,ms,mt)   * BigR            * xjac &
-                             + zeta * v * T0_corr * delta_g(mp,var_rho,ms,mt) * BigR            * xjac
+                             + zeta * v * r0_corr * delta_g(mp,var_T,ms,mt)   * BigR            * xjac * factor(var_T,10)&
+                             + zeta * v * T0_corr * delta_g(mp,var_rho,ms,mt) * BigR            * xjac * factor(var_T,10)
   
-              rhs_ij_k(var_T) = - (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T    * xjac * tstep &
-                                - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )       * xjac * tstep &
+              rhs_ij_k(var_T) = - (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T    * xjac * tstep * factor(var_T,5 ) &
+                                - ZK_prof * BigR * (                + v_p*T0_p /BigR**2 )       * xjac * tstep * factor(var_T,6 ) &
   
                              - tgnum_T * 0.25d0 / BigR * vpar0**2                                                      &
                                      * T0 * (r0_x * ps0_y - r0_y * ps0_x  + F0 / BigR * r0_p)                          &
-                                     * (                                   + F0 / BigR * v_p)   * xjac * tstep * tstep &
+                                     * (                                   + F0 / BigR * v_p)   * xjac * tstep * tstep * factor(var_T,8 )&
                              - tgnum_T * 0.25d0 / BigR * vpar0**2                                                      &
                                      * r0 * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                           &
-                                     * (                                   + F0 / BigR * v_p)   * xjac * tstep * tstep
+                                     * (                                   + F0 / BigR * v_p)   * xjac * tstep * tstep * factor(var_T,8 )
 
             end if ! (with_TiTe) *******************************************************************
 
@@ -1617,7 +1639,7 @@ do i=1,n_vertex_max
 
             if (with_neutrals) then
              
-              rhs_ij(var_rhon) = BigR * (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y )   * xjac * tstep             &         
+              rhs_ij(var_rhon) = BigR * (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y )   * xjac * tstep * factor(var_rhon,1)  &         
                       
                         + delta_n_convection*(                                                              &
                         + v * BigR**2 * ( rn0_s * u0_t - rn0_t * u0_s)                              * tstep &
@@ -1626,16 +1648,16 @@ do i=1,n_vertex_max
                         - v * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)                        * tstep &
                         - v * F0 / BigR * Vpar0 * rn0_p                                      * xjac * tstep &
                         - v * F0 / BigR * rn0 * vpar0_p                                      * xjac * tstep &
-                        )                                                                                   &
+                        ) * factor(var_rhon,2)                                                              &
 
-                    - BigR * v * r0 * rn0 * Sion_T                                           * xjac * tstep &  
-                    + BigR * v * r0 * r0  * Srec_T                                           * xjac * tstep &
-                    + BigR * v * source_neutral                                              * xjac * tstep &
-                    - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy)  * BigR * xjac * tstep &
+                    - BigR * v * r0 * rn0 * Sion_T                                           * xjac * tstep * factor(var_rhon,3)&  
+                    + BigR * v * r0 * r0  * Srec_T                                           * xjac * tstep * factor(var_rhon,4)&
+                    + BigR * v * source_neutral                                              * xjac * tstep * factor(var_rhon,5)&
+                    - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy)  * BigR * xjac * tstep * factor(var_rhon,6)&
 
-                    + v * delta_g(mp,var_rhon,ms,mt) * BigR * xjac * zeta
+                    + v * delta_g(mp,var_rhon,ms,mt) * BigR * xjac * zeta * factor(var_rhon,7)
 
-              rhs_ij_k(var_rhon) = BigR * ( - Dn0p * rn0_p * v_p/BigR**2)   * xjac * tstep                              
+              rhs_ij_k(var_rhon) = BigR * ( - Dn0p * rn0_p * v_p/BigR**2)   * xjac * tstep * factor(var_rhon,1)                             
 
             endif ! with_neutrals
 
@@ -1658,14 +1680,35 @@ do i=1,n_vertex_max
                 RHS_k(mp,index_ij+ij-1) = RHS_k(mp,index_ij+ij-1) + rhs_ij_k(ij) * wst
               enddo
 
+              !--- THIS IS ONLY USED FOR DIAGNOSTIC PURPOSES-------------------------
+              !--- ELM structures are re-used to plot separate terms in vtk ---------
+              if ( present(get_terms) ) then
+                do ij = 1, n_var
+                  ELM_p(mp,i_term,index_ij+ij-1) = ELM_p(mp,i_term,index_ij+ij-1) + rhs_ij(ij)   * wst
+                  ELM_k(mp,i_term,index_ij+ij-1) = ELM_k(mp,i_term,index_ij+ij-1) + rhs_ij_k(ij) * wst
+                enddo
+              endif 
+
             else
 
               do ij = 1, n_var
                 RHS(index_ij+(ij-1)*(n_tor_local)) = RHS(index_ij+(ij-1)*(n_tor_local)) &
                                                    + (rhs_ij(ij) + rhs_ij_k(ij)) * wst
               enddo
+              !--- THIS IS ONLY USED FOR DIAGNOSTIC PURPOSES-------------------------
+              !--- ELM structures are re-used to plot separate terms in vtk ---------
+              if ( present(get_terms) ) then
+                do ij = 1, n_var
+                  ELM(i_term,index_ij+(ij-1)*(n_tor_local)) = ELM(i_term,index_ij+(ij-1)*(n_tor_local)) &
+                                                            + (rhs_ij(ij) + rhs_ij_k(ij)) * wst
+                enddo
+              endif 
 
-            endif
+            endif ! --- FFT
+
+            enddo ! max_terms_loop for diagnostic purposes
+
+            if ( present(get_terms) ) cycle
 
             do k=1,n_vertex_max
 

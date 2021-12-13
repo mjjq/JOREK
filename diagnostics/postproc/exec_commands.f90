@@ -2662,7 +2662,10 @@ module exec_commands
     use mod_clock
     use omp_lib
     use basis_at_gaussian 
+    use mod_openadas, only : read_adf11
+    use mod_atomic_coeff_deuterium, only: ad_deuterium 
     use mpi_mod
+    use mod_impurity, only: init_imp_adas
  
     implicit none
   
@@ -2744,10 +2747,20 @@ module exec_commands
     nsub      = get_int_setting('nsub_vtk' , ierr);  if ( ierr /= 0 ) return
     only_itor = get_int_setting('only_itor', ierr);  if ( ierr /= 0 ) return
 
-    if (jorek_model/=500) then
-      write(*,*) 'Sorry RHS diagnostic is only available for model 500!'
+    if ((jorek_model/=500) .and. (jorek_model/=600)) then
+      write(*,*) 'Sorry RHS diagnostic is only available for models 500 and 600!'
       stop
     endif
+
+    ! --- Initialize ADAS
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+    ! --- Read ADAS data and generate coronal equilibrium if needed
+    call init_imp_adas(my_id)
+#else
+    if (use_imp_adas .and. (nimp_bg(1) > 0.d0)) then
+      call init_imp_adas(my_id)
+    endif
+#endif
 
     if (command%n_args > 0) then    
       eq_index  = to_int(command%args(1), ierr); 
@@ -2924,7 +2937,7 @@ module exec_commands
       enddo
 
 
-#if (JOREK_MODEL == 500)    
+#if (JOREK_MODEL == 500) || (JOREK_MODEL==600)    
       call element_matrix_fft(element,nodes, xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd,   &
        ES%R_xpoint, ES%Z_xpoint, test_struct(omp_tid)%ELM, test_struct(omp_tid)%RHS, omp_tid,       &
        test_struct(omp_tid)%ELM_p, test_struct(omp_tid)%ELM_n, test_struct(omp_tid)%ELM_k,  &

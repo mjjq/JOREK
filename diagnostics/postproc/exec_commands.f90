@@ -2698,7 +2698,7 @@ module exec_commands
     real*8,   allocatable :: rhs(:,:), BSmat(:,:), BSmat_elm(:,:), BSmat_tmp(:,:)
     real*8  :: rhs_term(n_vertex_max*(n_order+1))
     real*8  :: wst, wgauss2(n_gauss)
-    real*8, allocatable      :: ELM(:,:), A_tmp(:)
+    real*8, allocatable     :: ELM(:,:), A_tmp(:)
     integer :: dim0, dim1, dim2, only_itor
     character(len=64)       :: file_name, label 
     integer   :: required,provided,StatInfo
@@ -2720,22 +2720,22 @@ module exec_commands
 #endif
 
 #ifdef FUNNELED
-  required = MPI_THREAD_FUNNELED
+    required = MPI_THREAD_FUNNELED
 #else
-  required = MPI_THREAD_MULTIPLE
+    required = MPI_THREAD_MULTIPLE
 #endif
 
-  call MPI_Init_thread(required, provided, StatInfo)
+    call MPI_Init_thread(required, provided, StatInfo)
 
-  ! --- Determine number of MPI procs
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
-  n_cpu = comm_size
+    ! --- Determine number of MPI procs
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
+    n_cpu = comm_size
   
-  ! --- Determine ID of each MPI proc
-  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
-  my_id = rank
+    ! --- Determine ID of each MPI proc
+    call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+    my_id = rank
   
-  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
     ! --- Some checks
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
@@ -2764,9 +2764,6 @@ module exec_commands
     call r3_info_init ()
 
     call init_threads()  ! for OMP threads
-
-    ! --- Build Bezier projection matrix (to obtain RHS terms)
-
 
     ! --- Allocate and initialize thread structure for calling elm_matrix
     if (allocated(test_struct))  deallocate(test_struct)
@@ -2888,8 +2885,10 @@ module exec_commands
       enddo
     enddo
   
-  
-  allocate(ELM(2*n_vertex_max*(n_order+1),2*n_vertex_max*(n_order+1)))
+    ! ------------------------- 
+    ! --- Collect RHS terms ---
+    ! -------------------------
+
     rhs = 0.0d0 
   
     call clck_time_barrier(t0)
@@ -2965,57 +2964,23 @@ module exec_commands
     enddo ! --- elements
     !$omp end do
     !$omp end parallel
+    ! ----------------------------- 
+    ! --- End collect RHS terms ---
+    ! -----------------------------
 
+    call clck_time_barrier(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    write(*,*) ''
+    write(*,*) '  Element loop finished in ', tsecond, ' s'
+    write(*,*) ''
+ 
 
-    ! create mumps structure and solve -------------
+    ! ---- Solver preparation (to obtain node coefficients from the RHS) -------------
+
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
     call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
     call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
     if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
-
-!    wokrikng mumps test
-!    nz_AA = 3!4 * element_list%n_elements * (n_vertex_max * (n_order+1))**2
-!    n_AA  = 3!2 * maxval(node_list%node(1:node_list%n_nodes)%index(4))
-!
-!    write(*,*) associated(mumps_par%A)
-!
-!    if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
-!    if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
-!    if (.not. associated(mumps_par%irn))   call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
-!    if (.not. associated(mumps_par%jcn))   call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
-! 
-!    mumps_par%n  = n_AA
-!    mumps_par%nz = nz_AA
-!  
-!    mumps_par%JOB = 6
-!    mumps_par%SYM = 0
-!    mumps_par%icntl(7) = 4
-!  
-!    mumps_par%irn = 0
-!    mumps_par%jcn = 0
-!    mumps_par%A   = 0.d0
-!    mumps_par%RHS = 0.d0
-!
-!    mumps_par%irn(1) = 1
-!    mumps_par%jcn(1) = 1
-!    mumps_par%A(1)   = 1.0
-!    mumps_par%RHS(1) = 1.0
-!
-!
-!    mumps_par%irn(2) = 2
-!    mumps_par%jcn(2) = 2
-!    mumps_par%A(2)   = 1.0
-!    mumps_par%RHS(2) = 2.0
-!
-!    mumps_par%irn(3) = 3
-!    mumps_par%jcn(3) = 3
-!    mumps_par%A(3)   = 1.0
-!    mumps_par%RHS(3) = 3.0
-! 
-!    call DMUMPS(mumps_par)
-!
-!    write(*,*) 'Mumps test'
-!    write(*,*)  mumps_par%rhs(:)
 
     nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
     n_AA  = maxval(node_list%node(1:node_list%n_nodes)%index(4))
@@ -3037,18 +3002,13 @@ module exec_commands
     mumps_par%A   = 0.d0
     mumps_par%RHS = 0.d0
 
- 
+    ! ----- End solver preparation 
+
+    ! --- Obtain A matrix used to find node coefficients 
     wgauss2 = wgauss
+    ilarge  = 0
 
-!    !$omp parallel do default(none) &
-!    !$omp shared(element_list, node_list,           &
-!    !$omp        H, mumps_par, wgauss2         )    &
-!    !$omp private(ELM, i_elm, element, i, j, k, l, ms, mt, in, im, mp,  wst,  &
-!    !$omp         index_ij, index_kl, ilarge, in_index, im_index,  &
-!    !$omp         inode, index_large_i, knode, index_large_k)                &
-!    !$omp schedule(static)
-
-    ilarge = 0
+    allocate(ELM(n_vertex_max*(n_order+1), n_vertex_max*(n_order+1)))
 
     do i_elm=1,element_list%n_elements
       
@@ -3063,12 +3023,12 @@ module exec_commands
           do i=1,n_vertex_max
             do j=1,n_order+1
     
-              index_ij = (n_order+1)*(i-1) + (j-1) + 1   ! index in the ELM matrix
+              index_ij = (n_order+1)*(i-1) + j   ! index in the ELM matrix
     
               do k=1,n_vertex_max
                 do l=1,n_order+1
     
-                  index_kl = (n_order+1)*(k-1) + (l-1) + 1   ! index in the ELM matrix
+                  index_kl = (n_order+1)*(k-1) + l   ! index in the ELM matrix
     
                   ELM(index_ij,index_kl) = ELM(index_ij,index_kl)    &
                                          + H(i,j,ms,mt) * h(k,l,ms,mt) * element%size(i,j)*element%size(k,l) * wst 
@@ -3079,14 +3039,14 @@ module exec_commands
         enddo
       enddo
     
-      ! Save contribution of this element in MUMPS format
+      ! Save contribution of this element in solver (MUMPS) format
       do i=1,n_vertex_max
     
         inode = element_list%element(i_elm)%vertex(i)
       
         do j=1,n_order+1
             
-            index_ij = (n_order+1)*(i-1) +  (j-1) + 1   ! index in the ELM matrix
+            index_ij = (n_order+1)*(i-1) + j    ! index in the ELM matrix
     
             index_large_i = node_list%node(inode)%index(j)  ! base index in the main matrix
     
@@ -3096,7 +3056,7 @@ module exec_commands
             
               do l=1,n_order+1
                 
-                  index_kl = (n_order+1)*(k-1) + (l-1) + 1   ! index in the ELM matrix
+                  index_kl = (n_order+1)*(k-1) + l    ! index in the ELM matrix
     
                   index_large_k = node_list%node(knode)%index(l)   ! base index in the main matrix
     
@@ -3111,18 +3071,11 @@ module exec_commands
         enddo
       enddo
     enddo
- !   !$omp end parallel do
-
+    ! --- End obtain A matrix to find node coefficients
+ 
     allocate(A_tmp(nz_AA))
     A_tmp = mumps_par%A
  
-    ! ----------------------------------------
-
-    call clck_time_barrier(t1)
-    call clck_ldiff(t0,t1,tsecond)
-    write(*,*) ''
-    write(*,*) '  Element loop finished in ', tsecond, ' s'
-    write(*,*) ''
   
     term_count = 0  ! Counts terms with non-zero RHS
   
@@ -3142,12 +3095,6 @@ module exec_commands
         if (trim(term_names(k_var, i_term))=='') cycle
 
         sum_rhs = 0.d0
-
-        do i = 1, pol_pos_list%n_pos(1)    
-          do iv=1, n_vertex_max
-            pol_pos_list%pos(i,1)%nodes(iv)%values(:,:,1)  = 0.d0
-          enddo
-        enddo
  
         ! get RHS of individual harmonics for each term
         do i_tor=1, n_tor
@@ -3156,31 +3103,36 @@ module exec_commands
             if (only_itor /= i_tor) cycle
           endif
 
+          ! --- Factor coming from Fourier transform
+          if (i_tor>1) then
+            ftor=2.d0
+          else
+            ftor=1.d0
+          endif
+
           ! --- Collect RHS for a single harmonic
           do inode=1,node_list%n_nodes
             do i_order=1, n_order+1
               index_node = node_list%node(inode)%index(i_order)
               index_RHS  = n_tor*n_var*(index_node - 1) + n_tor*(k_var-1) + i_tor 
               index_RHS0 = index_node 
-              mumps_par%RHS(index_RHS0) = rhs(i_term, index_RHS) / n_plane
+              mumps_par%RHS(index_RHS0) = rhs(i_term, index_RHS) / n_plane * ftor
             enddo
           enddo
-        
+
+          ! --- Find node values        
           mumps_par%A = A_tmp
-          
-          ! --- Solve and find node values
           call DMUMPS(mumps_par)
 
           do i = 1, pol_pos_list%n_pos(1)
     
             do iv=1, n_vertex_max
     
-  
               do i_order=1, n_order+1
               
                 index_node = pol_pos_list%pos(i,1)%nodes(iv)%index(i_order)
        
-                index_RHS0 = (index_node - 1) + 1
+                index_RHS0 = index_node
             
                 pol_pos_list%pos(i,1)%nodes(iv)%values(i_tor, i_order, 1)  = mumps_par%RHS(index_RHS0) 
       

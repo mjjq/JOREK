@@ -2716,6 +2716,14 @@ module exec_commands
   integer   :: my_id, my_id_n, my_id_master
   integer   :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer*4 :: rank, comm_size 
+
+
+  if ((jorek_model/=500) .and. (jorek_model/=600)) then
+    write(*,*) 'Sorry RHS diagnostic is only available for models 500 and 600!'
+    stop
+  endif
+
+#if (JOREK_MODEL == 500) || (JOREK_MODEL==600)    
     
     ! --- Initialize FFTW
 #ifdef USE_FFTW
@@ -2746,11 +2754,6 @@ module exec_commands
 
     nsub      = get_int_setting('nsub_vtk' , ierr);  if ( ierr /= 0 ) return
     only_itor = get_int_setting('only_itor', ierr);  if ( ierr /= 0 ) return
-
-    if ((jorek_model/=500) .and. (jorek_model/=600)) then
-      write(*,*) 'Sorry RHS diagnostic is only available for models 500 and 600!'
-      stop
-    endif
 
     ! --- Initialize ADAS
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -2936,8 +2939,6 @@ module exec_commands
         nodes(iv) = node_list%node(inode)
       enddo
 
-
-#if (JOREK_MODEL == 500) || (JOREK_MODEL==600)    
       call element_matrix_fft(element,nodes, xpoint, xcase, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd,   &
        ES%R_xpoint, ES%Z_xpoint, test_struct(omp_tid)%ELM, test_struct(omp_tid)%RHS, omp_tid,       &
        test_struct(omp_tid)%ELM_p, test_struct(omp_tid)%ELM_n, test_struct(omp_tid)%ELM_k,  &
@@ -2946,7 +2947,6 @@ module exec_commands
        test_struct(omp_tid)%eq_p, test_struct(omp_tid)%eq_ss, test_struct(omp_tid)%eq_st,   &
        test_struct(omp_tid)%eq_tt, test_struct(omp_tid)%delta_g,                              &
        test_struct(omp_tid)%delta_s, test_struct(omp_tid)%delta_t, 1, n_tor, get_terms=get_terms)
-#endif
 
       do i_term=1, max_terms
   
@@ -3214,6 +3214,8 @@ module exec_commands
     call dfftw_destroy_plan(fftw_plan)
 #endif
     
+#endif  ! allowed models
+
   end subroutine RHS_terms_vtk   
   
 

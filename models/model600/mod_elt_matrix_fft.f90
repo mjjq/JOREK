@@ -1195,7 +1195,7 @@ do i=1,n_vertex_max
          !###################################################################################################
 
          ! Define total pressure as (assuming neutrals are at same Temperature as ions)
-         ! P_tot = r0 * (Ti0 + Te0) + rn0 * Ti0         and   r0 * T0 + rn0 * T0
+         ! P_tot = r0 * (Ti0 + Te0) + rn0 * Ti0         and   r0 * T0 + 0.5d0 * rn0 * T0
 
          if ( with_TiTe ) then 
            Ptot     = Pi0   + Pe0    + rn0 * Ti0
@@ -1204,11 +1204,11 @@ do i=1,n_vertex_max
            Ptot_x   = Pi0_x + Pe0_x  + rn0 * Ti0_x + rn0_x * Ti0
            Ptot_y   = Pi0_y + Pe0_y  + rn0 * Ti0_y + rn0_y * Ti0
          else
-           Ptot     = P0    + rn0 * T0
-           Ptot_corr=  r0_corr * T0_corr + rn0_corr * T0_corr
-           Ptot_p   = P0_p  + rn0 * T0_p + rn0_p * T0
-           Ptot_x   = P0_x  + rn0 * T0_x + rn0_x * T0
-           Ptot_y   = P0_y  + rn0 * T0_y + rn0_y * T0
+           Ptot     = P0    + 0.5d0 * rn0 * T0
+           Ptot_corr=  r0_corr * T0_corr + 0.5d0 * rn0_corr * T0_corr
+           Ptot_p   = P0_p  + 0.5d0 * (rn0 * T0_p + rn0_p * T0)
+           Ptot_x   = P0_x  + 0.5d0 * (rn0 * T0_x + rn0_x * T0)
+           Ptot_y   = P0_y  + 0.5d0 * (rn0 * T0_y + rn0_y * T0)
          endif
 
          d_p = 0.d0
@@ -1287,13 +1287,11 @@ do i=1,n_vertex_max
 
          ! Shock-detector term based on the total pressure gradient
          f_p = dsqrt( Ptot_x*Ptot_x + Ptot_y*Ptot_y + Ptot_p*Ptot_p/ (BigR*BigR) ) / Ptot_corr * h_e
-
          ! Estimation of the numerical stabilization coefficient
          tau_sc = h_e * h_e * abs(d_p) / Ptot_corr * f_p
 
          ! Use of source terms to increase the stabilization coefficients
          if(add_sources_in_sc)then
-
            src_rho = (particle_source(ms,mt) + source_pellet) &
                    + r0_corr * rn0_corr * Sion_T              &
                    - r0_corr * r0_corr  * Srec_T
@@ -1303,7 +1301,6 @@ do i=1,n_vertex_max
                     + source_neutral
 
            if ( with_TiTe ) then ! (with_TiTe)
-
              src_pi  = heat_source_i(ms,mt)                                      &
                      + ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rn0*Sion_T) &
                      + ((GAMMA - 1.)/2.) * vv2 * ((r0_corr*rn0*Sion_T))
@@ -1316,9 +1313,7 @@ do i=1,n_vertex_max
                       - r0_corr * frad_bg
                      
              s_p = (Ti0 + Te_0) * src_rho + (src_pi + src_pe) + Ti0 * src_rhon
-
            else
-
              src_p   =  heat_source(ms,mt)                                         &
                      +  (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0              &
                      +  ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0_corr*rn0*Sion_T)  &
@@ -1329,7 +1324,6 @@ do i=1,n_vertex_max
                      -  r0_corr * frad_bg
 
              s_p = T0 * src_rho + src_p + T0 * src_rhon
-
            endif
 
            tau_sc = h_e * h_e * (abs(s_p) + abs(d_p)) / Ptot_corr * f_p

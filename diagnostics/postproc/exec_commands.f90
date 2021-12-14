@@ -2996,6 +2996,13 @@ module exec_commands
  
 
     ! ---- Solver preparation (to obtain node coefficients from the RHS) -------------
+#if USE_MUMPS
+    call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
+    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
+    call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
+    if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
+#endif
+
 
 #if defined(USE_PASTIX) || defined(USE_MUMPS)
     nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
@@ -3015,11 +3022,6 @@ module exec_commands
     mumps_par%RHS = 0.d0
 
 #if USE_MUMPS
-    call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
-    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
-    call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
-    if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
-
  
     mumps_par%JOB = 6
     mumps_par%SYM = 0

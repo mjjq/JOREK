@@ -3521,50 +3521,104 @@ do i=1,n_vertex_max
 enddo ! i loop (n_vertex)
 
 if (.NOT. use_fft) return
+!--- THIS IS ONLY USED FOR DIAGNOSTIC PURPOSES-------------------------
+!--- ELM structure is re-used to plot separate terms in vtk ----------- 
+if (present(get_terms)) then
 
-ELM = 0.5d0 * ELM
+  do i_term=1, max_terms
 
-do j=1, n_vertex_max*n_var*(n_order+1)
-
-  in_fft = RHS_p(1:n_plane,j)
+    do j=1, n_vertex_max*n_var*(n_order+1)
+    
+      in_fft = ELM_p(1:n_plane,i_term, j)
 #ifdef USE_FFTW
-  call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+      call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
 #else
-  call my_fft(in_fft, out_fft, n_plane)
+      call my_fft(in_fft, out_fft, n_plane)
+#endif
+        
+      index = n_tor*(j-1) + 1
+      ELM(i_term,index) = real(out_fft(1))
+    
+      do k=2,(n_tor+1)/2
+        index = n_tor*(j-1) + 2*(k-1)
+        ELM(i_term,index)   =   real(out_fft(k))
+        ELM(i_term,index+1) = - imag(out_fft(k))
+      enddo
+    
+    enddo
+    
+    do j=1, n_vertex_max*n_var*(n_order+1)
+    
+      in_fft = ELM_k(1:n_plane,i_term,j)
+#ifdef USE_FFTW
+      call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+      call my_fft(in_fft, out_fft, n_plane)
+#endif
+      
+      index = n_tor*(j-1) + 1
+      ik    = 1
+      ELM(i_term,index) = ELM(i_term,index) + imag(out_fft(1)) * float(mode(ik))
+    
+      do k=2,(n_tor+1)/2
+        ik    = max(2*(k-1),1)
+        index = n_tor*(j-1) + 2*(k-1)
+        ELM(i_term,index)   = ELM(i_term,index)   + imag(out_fft(k)) * float(mode(ik))
+        ELM(i_term,index+1) = ELM(i_term,index+1) + real(out_fft(k)) * float(mode(ik))
+      enddo
+    
+    enddo
+
+  enddo ! maxterms
+!----------------------------------------------------------------------
+
+else
+
+  ELM = 0.5d0 * ELM
+  
+  do j=1, n_vertex_max*n_var*(n_order+1)
+  
+    in_fft = RHS_p(1:n_plane,j)
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
+#endif
+      
+    index = n_tor*(j-1) + 1
+    RHS(index) = real(out_fft(1))
+  
+    do k=2,(n_tor+1)/2
+      index = n_tor*(j-1) + 2*(k-1)
+      RHS(index)   =   real(out_fft(k))
+      RHS(index+1) = - imag(out_fft(k))
+    enddo
+  
+  enddo
+  
+  do j=1, n_vertex_max*n_var*(n_order+1)
+  
+    in_fft = RHS_k(1:n_plane,j)
+#ifdef USE_FFTW
+    call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+    call my_fft(in_fft, out_fft, n_plane)
 #endif
     
-  index = n_tor*(j-1) + 1
-  RHS(index) = real(out_fft(1))
-
-  do k=2,(n_tor+1)/2
-    index = n_tor*(j-1) + 2*(k-1)
-    RHS(index)   =   real(out_fft(k))
-    RHS(index+1) = - imag(out_fft(k))
-  enddo
-
-enddo
-
-do j=1, n_vertex_max*n_var*(n_order+1)
-
-  in_fft = RHS_k(1:n_plane,j)
-#ifdef USE_FFTW
-  call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
-#else
-  call my_fft(in_fft, out_fft, n_plane)
-#endif
+    index = n_tor*(j-1) + 1
+    ik    = 1
+    RHS(index) = RHS(index) + imag(out_fft(1)) * float(mode(ik))
   
-  index = n_tor*(j-1) + 1
-  ik    = 1
-  RHS(index) = RHS(index) + imag(out_fft(1)) * float(mode(ik))
-
-  do k=2,(n_tor+1)/2
-    ik    = max(2*(k-1),1)
-    index = n_tor*(j-1) + 2*(k-1)
-    RHS(index)   = RHS(index)   + imag(out_fft(k)) * float(mode(ik))
-    RHS(index+1) = RHS(index+1) + real(out_fft(k)) * float(mode(ik))
+    do k=2,(n_tor+1)/2
+      ik    = max(2*(k-1),1)
+      index = n_tor*(j-1) + 2*(k-1)
+      RHS(index)   = RHS(index)   + imag(out_fft(k)) * float(mode(ik))
+      RHS(index+1) = RHS(index+1) + real(out_fft(k)) * float(mode(ik))
+    enddo
+  
   enddo
 
-enddo
+endif !--- get terms
 
 return
 end subroutine element_matrix_fft

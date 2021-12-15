@@ -2017,7 +2017,14 @@ if (my_id .eq. 0) then
                pellets(i)%spi_Vel_RxZ
           write(*,'(A,3es14.6)')"Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
           write(*,'(A,f14.6)')  "Pellet species               = ", pellets(i)%spi_species
-          V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
+
+          ng_radius_tmp   = pellets(i)%spi_radius * ng_radius_ratio
+
+          if (ng_radius_tmp < ng_radius_min) then
+             ng_radius_tmp = ng_radius_min
+          end if
+          
+          V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp**2.d0
           write(*,'(A,2es14.6,f14.6)') "Source vol (num,an,diff %)   = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
           if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
        end if

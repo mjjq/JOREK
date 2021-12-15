@@ -31,12 +31,10 @@ module mod_neutral_source
     real*8,  intent(in)  :: source_volume ! numerically integrated gas source volume (if larger than 0.)
 
     ! --- Local variables
-    real*8  :: c0_D, radius, ns_shape, dphi, V_ns, f_Nbar, f_dNbar_dt
+    real*8  :: c0_D, ns_shape, V_ns, f_Nbar, f_dNbar_dt
     real*8  :: ns_dNinj_dt, ns_drhon_dt, t_loc, t_norm, prof_temp, R_Asdex, mnum, kst, yy, gam
     real*8  :: dt_open, N_barlitre, DMV_inj_frac
     integer :: k
-
-    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
 
     c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed of Deuterium
 

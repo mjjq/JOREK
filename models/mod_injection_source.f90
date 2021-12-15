@@ -50,9 +50,7 @@ module mod_injection_source
     real*8 :: A_gas                    ! Atomic number of gas particles
     real*8 :: mass_gas                 ! Mass of a gas particles
     real*8 :: mol_atom                 ! Number of atoms in a molecular
-    real*8 :: radius
     real*8 :: ns_shape
-    real*8 :: dphi
     real*8 :: V_ns
     real*8 :: f_Nbar
     real*8 :: f_dNbar_dt

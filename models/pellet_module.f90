@@ -22,6 +22,33 @@ module pellet_module
   real*8, allocatable  :: xtime_phys_ablation(:)
 
   contains
+
+  !> Determine source shape
+  pure function source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi)
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
+    implicit none
+    
+    real*8, intent(in)  :: R, Z, phi                 ! position where the source is calculated
+    real*8, intent(in)  :: ns_R, ns_Z, ns_phi        ! position of the shard
+    real*8, intent(in)  :: ns_radius, ns_deltaphi    ! extent of the ablation cloud
+    real*8              :: source_shape
+    real*8              :: radius, ns_pol_shape
+    real*8              :: dphi,   ns_tor_shape
+
+   ! A gaussian shape is chosen poloidally
+    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
+    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
+
+    ! A gaussian shape is chosen toroidally
+    dphi = abs(phi - ns_phi)
+    if (dphi .gt. PI) dphi = 2*PI - dphi  
+    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
+
+    source_shape = ns_pol_shape * ns_tor_shape
+
+  end function source_shape
   
   subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                             pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
@@ -228,40 +255,6 @@ module pellet_module
     integer, intent(in) :: i_inj
     integer, intent(in) :: n_spi_begin
   
-    ! spi_update is called with i_inj=0 for computing the volume of the gas sources
-    if (i_inj .eq. 0) then
-       call Integrals_3D(my_id, node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out, &
-            kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
-       return
-    endif
-
-    ! if n_spi_begin is set to zero in the call, diagnostic messages for all injectio positions are printed (every i_inj times for every i_inj shards)
-    if (n_spi_begin .eq. 0) then
-       do i = 1, n_spi_tot
-          if (my_id == 0 .and. mod(index_now,i_inj) == 0 .and. mod(i,i_inj) == 0) then
-             if (pellets(i)%spi_radius > 0. .and. pellets(i)%spi_abl > 0.) then
-                write(*,*) "Pellet number: ", i
-                write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
-                write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
-                     pellets(i)%spi_Vel_RxZ
-                write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
-                write(*,*) "Pellet species = ", pellets(i)%spi_species
-                if (ns_deltaminrad .gt. 0.) then
-                   V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min * ns_deltaminrad
-                else
-                   V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
-                endif
-
-                if (spi_num_vol) then
-                   write(*,*) "Source volume (numerical,analytical,diff %) = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
-                   if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
-                end if
-             end if
-          end if
-       end do
-       return
-    endif
-
     spi_delta_phi   = 0.
     spi_Vel_R_tmp   = 0.
     spi_Vel_phi_tmp = 0.

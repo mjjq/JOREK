@@ -18,6 +18,8 @@ module mod_neutral_source
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,               &
                               JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
 
+    use pellet_module, only: source_shape
+
     implicit none
 
     ! --- Routine parameters
@@ -26,11 +28,7 @@ module mod_neutral_source
     real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
-    real*8,  intent(inout) :: source_volume
-! the variable source_volume is used:
-! when this routine is called by integrals_3D, as output containing the integrand of the gas source volume
-! when this routine is called by total_neutral_source, as input containing the numerically integrated gas source volume (if larger than 0.)
-
+    real*8,  intent(in)  :: source_volume ! numerically integrated gas source volume (if larger than 0.)
 
     ! --- Local variables
     real*8  :: c0_D, radius, ns_tor_shape, ns_pol_shape, ns_minrad_shape, dphi, dminrad, V_ns, f_Nbar, f_dNbar_dt
@@ -38,17 +36,9 @@ module mod_neutral_source
     real*8  :: dt_open, N_barlitre, DMV_inj_frac
     integer :: k
 
-    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
-
     c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed of Deuterium
 
-    ! Poloidal gaussian shape factor
-    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
-
-    ! Toroidal gaussian shape factor
-    dphi = abs(phi - ns_phi)
-    if (dphi .gt. PI) dphi = 2*PI - dphi  
-    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
+    ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi)
 
     ! A gaussian shape is chosen in the minor radius direction
     if (ns_deltaminrad .gt. 0.) then
@@ -73,10 +63,6 @@ module mod_neutral_source
        endif
     endif
     ! ===================================================================
-
-    ! Variable used for numerical integration of source volume
-    ! to be provided as output to integrals_3D 
-    source_volume = ns_pol_shape * ns_tor_shape * ns_minrad_shape
 
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20) ! Time normalization factor
 
@@ -126,7 +112,7 @@ module mod_neutral_source
     
         ! Apply gaussian shape (toroidally and poloidally) factor (normalized so that the number of particles injected does not depend on the shape)
         ! as well as JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape * ns_minrad_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_shape / V_ns
 
       elseif (ASDEX_MGI) then
 
@@ -152,11 +138,11 @@ module mod_neutral_source
         ns_drhon_dt =  ns_dNinj_dt * central_mass * MASS_PROTON ! Mass density injected per unit time
 
         ! Apply JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape * ns_minrad_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_shape / V_ns
 
       else 
 
-        rhon_source =  ns_amplitude * ns_pol_shape * ns_tor_shape * ns_minrad_shape * t_norm / (V_ns * 1.d20 * central_density)  
+        rhon_source =  ns_amplitude * ns_shape * t_norm / (V_ns * 1.d20 * central_density)  
 
       endif
 
@@ -250,7 +236,7 @@ module mod_neutral_source
         call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),spi_psi_tmp,spi_grad_psi_tmp, &
                       ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi, &
-                      source_neutral,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
+                      source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
         source_neutral = source_neutral + source_neutral_tmp
       end do
     end if

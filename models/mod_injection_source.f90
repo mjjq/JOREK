@@ -128,15 +128,9 @@ module mod_injection_source
     ! ===================================================================
     ! Parameters related to the spatial distribution of the gas source:
 
-    ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi)
-
-    ! A gaussian shape is chosen in the minor radius direction
-    if (ns_deltaminrad .gt. 0.) then
-       dminrad = abs(psi-ns_psi)/ns_grad_psi
-       ns_minrad_shape = exp(-(dminrad/ns_deltaminrad)**2.d0)  
-    else
-       ns_minrad_shape = 1.d0
-    endif
+    ! Compute the source shape
+    ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,&
+         psi,ns_psi,ns_grad_psi,ns_deltaminrad)
 
     ! Volume used for normalization:
     ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
@@ -146,9 +140,9 @@ module mod_injection_source
     if (source_volume .gt. 0.) then
        V_ns = source_volume
     else
-       if (ns_deltaminrad .gt. 0.) then
+       if (ns_deltaminrad .gt. 0.) then ! in this case the analytical formula is approximate
           V_ns  = PI * ns_R * ns_tor_norm * ns_radius * ns_deltaminrad
-       else
+       else ! exact analytical formula as derived by E. Nardon
           V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
        endif
     endif

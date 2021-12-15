@@ -2037,6 +2037,7 @@ if (my_id .eq. 0) then
           else ! exact analytical formula as derived by E. Nardon
              V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp**2.d0
           endif
+          
           write(*,'(A,2es14.6,f14.6)') "Source vol (num,an,diff %)   = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
           if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
        end if

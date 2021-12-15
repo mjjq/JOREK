@@ -142,7 +142,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 corr_neg_temp_coef,                                 &
                 corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,        &  
                 ZK_par_neg,                                         & 
-                ns_deltaphi, ksi_ion, spi_rnd_seed,                 &
+                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &

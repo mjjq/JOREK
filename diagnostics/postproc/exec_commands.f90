@@ -2702,7 +2702,7 @@ module exec_commands
     real*8,   allocatable :: result(:,:,:,:), res2d(:,:,:)
     real*8,   allocatable :: rhs(:,:), BSmat(:,:), BSmat_elm(:,:), BSmat_tmp(:,:)
     real*8  :: rhs_term(n_vertex_max*(n_order+1))
-    real*8  :: wst, wgauss2(n_gauss)
+    real*8  :: wst, wgauss2(n_gauss), phi_val
     real*8, allocatable     :: ELM(:,:), A_tmp(:), rhs_save(:)
     integer :: dim0, dim1, dim2, only_itor
     character(len=64)       :: file_name, label 
@@ -2760,8 +2760,9 @@ module exec_commands
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return
     call check_step_imported(ierr);            if ( ierr /= 0 ) return
 
-    nsub      = get_int_setting('nsub_vtk' , ierr);  if ( ierr /= 0 ) return
-    only_itor = get_int_setting('only_itor', ierr);  if ( ierr /= 0 ) return
+    nsub      = get_int_setting('nsub_vtk'      , ierr);  if ( ierr /= 0 ) return
+    phi_val   = get_int_setting('vtk_phi_value' , ierr);  if ( ierr /= 0 ) return
+    only_itor = get_int_setting('only_itor'     , ierr);  if ( ierr /= 0 ) return
 
     if (first_step) then
       ! --- Initialize ADAS
@@ -2878,7 +2879,7 @@ module exec_commands
   
   
     call create_pol_pos(pol_pos_list, ierr, node_list, element_list, ES, grid=.true., nsub=nsub)
-    call create_tor_pos(tor_pos_list, ierr, nphi=1)
+    call create_tor_pos(tor_pos_list, ierr, nphi=1, phi=phi_val)
   
     do i = 1, pol_pos_list%n_pos(1)
       do j = 1, pol_pos_list%n_pos(2)

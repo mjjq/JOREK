@@ -18,6 +18,8 @@ module mod_neutral_source
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,               &
                               JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
 
+    use pellet_module, only: source_shape
+
     implicit none
 
     ! --- Routine parameters
@@ -26,14 +28,10 @@ module mod_neutral_source
     real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
-    real*8,  intent(inout) :: source_volume
-! the variable source_volume is used:
-! when this routine is called by integrals_3D, as output containing the integrand of the gas source volume
-! when this routine is called by total_neutral_source, as input containing the numerically integrated gas source volume (if larger than 0.)
-
+    real*8,  intent(in)  :: source_volume ! numerically integrated gas source volume (if larger than 0.)
 
     ! --- Local variables
-    real*8  :: c0_D, radius, ns_tor_shape, ns_pol_shape, dphi, V_ns, f_Nbar, f_dNbar_dt
+    real*8  :: c0_D, radius, ns_shape, dphi, V_ns, f_Nbar, f_dNbar_dt
     real*8  :: ns_dNinj_dt, ns_drhon_dt, t_loc, t_norm, prof_temp, R_Asdex, mnum, kst, yy, gam
     real*8  :: dt_open, N_barlitre, DMV_inj_frac
     integer :: k
@@ -42,13 +40,7 @@ module mod_neutral_source
 
     c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed of Deuterium
 
-    ! Poloidal gaussian shape factor
-    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
-
-    ! Toroidal gaussian shape factor
-    dphi = abs(phi - ns_phi)
-    if (dphi .gt. PI) dphi = 2*PI - dphi  
-    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
+    ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi)
 
     ! Volume used for normalization:
     ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
@@ -61,10 +53,6 @@ module mod_neutral_source
        V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
     endif
     ! ===================================================================
-
-    ! Variable used for numerical integration of source volume
-    ! to be provided as output to integrals_3D 
-    source_volume = ns_pol_shape * ns_tor_shape
 
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20) ! Time normalization factor
 
@@ -114,7 +102,7 @@ module mod_neutral_source
     
         ! Apply gaussian shape (toroidally and poloidally) factor (normalized so that the number of particles injected does not depend on the shape)
         ! as well as JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_shape / V_ns
 
       elseif (ASDEX_MGI) then
 
@@ -140,11 +128,11 @@ module mod_neutral_source
         ns_drhon_dt =  ns_dNinj_dt * central_mass * MASS_PROTON ! Mass density injected per unit time
 
         ! Apply JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_shape / V_ns
 
       else 
 
-        rhon_source =  ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm / (V_ns * 1.d20 * central_density)  
+        rhon_source =  ns_amplitude * ns_shape * t_norm / (V_ns * 1.d20 * central_density)  
 
       endif
 

@@ -41,6 +41,7 @@ module mod_injection_source
   !=================================================================================
 
     use phys_module, only: imp_type
+    use pellet_module, only: source_shape
 
     implicit none
 
@@ -50,8 +51,7 @@ module mod_injection_source
     real*8 :: mass_gas                 ! Mass of a gas particles
     real*8 :: mol_atom                 ! Number of atoms in a molecular
     real*8 :: radius
-    real*8 :: ns_tor_shape
-    real*8 :: ns_pol_shape
+    real*8 :: ns_shape
     real*8 :: dphi
     real*8 :: V_ns
     real*8 :: f_Nbar
@@ -92,10 +92,7 @@ module mod_injection_source
     logical, intent(in) :: ASDEX_MGI
     real*8, intent(out) :: rhon_source  ! This is in number density
     real*8, intent(in)  :: ns_tor_norm
-    real*8, intent(inout) :: source_volume
-! the variable source_volume is used:
-! when this routine is called by integrals_3D, as output containing the integrand of the gas source volume
-! when this routine is called by total_imp_source, as input containing the numerically integrated gas source volume (if larger than 0.)
+    real*8, intent(in)  :: source_volume ! numerically integrated gas source volume (if larger than 0.)
 
     select case ( trim(imp_type(1)) )
       case('D2')
@@ -129,14 +126,7 @@ module mod_injection_source
     ! ===================================================================
     ! Parameters related to the spatial distribution of the gas source:
 
-    ! A gaussian shape is chosen poloidally
-    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
-    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
-
-    ! A gaussian shape is chosen toroidally
-    dphi = abs(phi - ns_phi)
-    if (dphi .gt. PI) dphi = 2*PI - dphi  
-    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
+    ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi)
 
     ! Volume used for normalization:
     ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
@@ -149,10 +139,6 @@ module mod_injection_source
        V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
     endif
     ! ===================================================================
-
-    ! Variable used for numerical integration of source volume
-    ! to be provided as output to integrals_3D 
-    source_volume = ns_pol_shape * ns_tor_shape
 
    !==================================================================================================
    ! A shifted time is used in order to start injected gas as soon as t_now = t_ns 
@@ -207,7 +193,7 @@ module mod_injection_source
         ns_drhon_dt = ns_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * mass_gas
     
         ! Distribute gas source in space
-        rhon_source = ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = ns_drhon_dt * ns_shape / V_ns
 
         ! Apply JOREK normalization
         rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * rhon_source
@@ -249,14 +235,14 @@ module mod_injection_source
     
         ! Inverse of the number of particles still in the reservoir, formulae given by G. Pautasso (ASDEX-U)
 
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*ns_drhon_dt * ns_pol_shape  * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*ns_drhon_dt * ns_shape / V_ns
 
         ! Converting mass density into number density
         rhon_source = rhon_source * (central_mass * MASS_PROTON / mass_gas)
 
       else 
 
-        rhon_source = ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm &
+        rhon_source = ns_amplitude * ns_shape * t_norm &
                       /  (V_ns * 1.d20 * central_density)
 
       endif

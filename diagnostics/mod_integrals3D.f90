@@ -20,10 +20,10 @@ module mod_integrals3D
   use corr_neg
   use pellet_module
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source, only: neutral_source, total_neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
+  use mod_neutral_source, only: total_neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
 #endif
 #ifdef WITH_Impurities
-  use mod_injection_source, only: inj_source, total_imp_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
+  use mod_injection_source, only: total_imp_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
 #endif
   use mod_impurity, only: radiation_function, radiation_function_linear
   use equil_info, only : get_psi_n, ES
@@ -161,7 +161,7 @@ real*8     :: spi_phi_tmp
 real*8     :: spi_abl_tmp
 real*8     :: ng_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
 real*8     :: source_tmp
-real*8     :: integrand_source_volume ! variable for numerical integration of source volume
+real*8     :: ns_shape ! variable for numerical integration of source volume
 real*8     :: V_ns
 real*8, allocatable :: local_source_volume(:)
 
@@ -380,7 +380,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           rn0, rn0_corr, Te_corr_eV, Te_eV, ne_SI, Ti_eV,                                &
 !$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp, ng_radius_tmp,                 &
-!$omp           n_spi_tmp, source_tmp, integrand_source_volume,                                &
+!$omp           n_spi_tmp, source_tmp, ns_shape,                                               &
 #endif
 #ifdef WITH_Impurities
 !$omp           source_bg, source_imp,                                                         &
@@ -975,7 +975,7 @@ do ife = ife_min, ife_max
               if (t_now >= t_ns(i_inj)) then
 
                  source_tmp = 0.d0
-                 integrand_source_volume = 0.d0
+                 ns_shape = 0.d0
 
                  spi_R_tmp   = pellets(spi_i)%spi_R
                  spi_Z_tmp   = pellets(spi_i)%spi_Z
@@ -988,26 +988,12 @@ do ife = ife_min, ife_max
                     ng_radius_tmp = ng_radius_min
                  end if
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-                 call neutral_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp, &
-                      ng_radius_tmp,ns_deltaphi, ns_tor_norm, &
-                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., &
-                      x_g(ms,mt),y_g(ms,mt),phi, &
-                      source_tmp,t_now,JET_MGI,ASDEX_MGI, &
-                      central_density,central_mass, &
-                      integrand_source_volume)
-#else
-                 call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp, &
-                      ng_radius_tmp,ns_deltaphi, ns_tor_norm, &
-                      A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., &
-                      x_g(ms,mt),y_g(ms,mt),phi, &
-                      source_tmp,t_now,JET_MGI,ASDEX_MGI, &
-                      central_density,central_mass, &
-                      integrand_source_volume)
-#endif
+                 ns_shape = source_shape(x_g(ms,mt),y_g(ms,mt),phi, &
+                      spi_R_tmp,spi_Z_tmp,spi_phi_tmp,                  &
+                      ng_radius_tmp,ns_deltaphi)
 
                  local_source_volume(spi_i) = local_source_volume(spi_i) &
-                      + integrand_source_volume * bigR * xjac * wst * delta_phi
+                      + ns_shape * bigR * xjac * wst * delta_phi
 
               end if
 
@@ -2025,14 +2011,14 @@ if (my_id .eq. 0) then
     write(*,'(A)')   ' Integrals_3D, SPI               : '
     do i = 1, n_spi_tot
        if (pellets(i)%spi_radius > 0. .and. pellets(i)%spi_abl > 0.) then
-          write(*,*) "Pellet number: ", i
-          write(*,*) "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
-          write(*,*) "Pellet velocity (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
+          write(*,'(A,i14)')    "Pellet number                = ", i
+          write(*,'(A,3f14.6)') "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
+          write(*,'(A,3f14.6)') "Pellet velocity    (R,Z,phi) = ", pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, &
                pellets(i)%spi_Vel_RxZ
-          write(*,*) "Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
-          write(*,*) "Pellet species = ", pellets(i)%spi_species
+          write(*,'(A,3es14.6)')"Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
+          write(*,'(A,f14.6)')  "Pellet species               = ", pellets(i)%spi_species
           V_ns = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_min**2.d0
-          write(*,*) "Source volume (numerical,analytical,diff %) = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
+          write(*,'(A,2es14.6,f14.6)') "Source vol (num,an,diff %)   = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
           if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
        end if
     end do

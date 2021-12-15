@@ -2742,8 +2742,9 @@ module exec_commands
 #else
     required = MPI_THREAD_MULTIPLE
 #endif
-
-    call MPI_Init_thread(required, provided, StatInfo)
+    if (first_step) then
+      call MPI_Init_thread(required, provided, StatInfo)
+    endif
 
     ! --- Determine number of MPI procs
     call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
@@ -2762,15 +2763,17 @@ module exec_commands
     nsub      = get_int_setting('nsub_vtk' , ierr);  if ( ierr /= 0 ) return
     only_itor = get_int_setting('only_itor', ierr);  if ( ierr /= 0 ) return
 
-    ! --- Initialize ADAS
+    if (first_step) then
+      ! --- Initialize ADAS
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-    ! --- Read ADAS data and generate coronal equilibrium if needed
-    call init_imp_adas(my_id)
-#else
-    if (use_imp_adas .and. (nimp_bg(1) > 0.d0)) then
+      ! --- Read ADAS data and generate coronal equilibrium if needed
       call init_imp_adas(my_id)
-    endif
+#else
+      if (use_imp_adas .and. (nimp_bg(1) > 0.d0)) then
+        call init_imp_adas(my_id)
+      endif
 #endif
+    endif 
 
     if (command%n_args > 0) then    
       eq_index  = to_int(command%args(1), ierr); 
@@ -3000,7 +3003,9 @@ module exec_commands
     call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
     call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
     call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
-    if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
+    if (first_step) then
+      if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
+    endif
 #endif
 
 
@@ -3008,10 +3013,15 @@ module exec_commands
     nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
     n_AA  = maxval(node_list%node(1:node_list%n_nodes)%index(4))
 
-    if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
-    if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
-    if (.not. associated(mumps_par%irn))   call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
-    if (.not. associated(mumps_par%jcn))   call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
+    if (associated(mumps_par%A))     call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+    if (associated(mumps_par%rhs))   call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+    if (associated(mumps_par%irn))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+    if (associated(mumps_par%jcn))   call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
+ 
+    call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
  
     mumps_par%n  = n_AA
     mumps_par%nz = nz_AA
@@ -3021,8 +3031,7 @@ module exec_commands
     mumps_par%A   = 0.d0
     mumps_par%RHS = 0.d0
 
-#if USE_MUMPS
- 
+#if USE_MUMPS 
     mumps_par%JOB = 6
     mumps_par%SYM = 0
     mumps_par%icntl(7) = 4  
@@ -3157,113 +3166,116 @@ module exec_commands
           call DMUMPS(mumps_par)
 #elif USE_PASTIX
 
-    nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
-    n_AA  = maxval(node_list%node(1:node_list%n_nodes)%index(4))
-
-    call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
-    call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
-    call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
-    call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
-
-    if (.not. associated(mumps_par%A))     call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
-    if (.not. associated(mumps_par%rhs))   call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
-    if (.not. associated(mumps_par%irn))   call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
-    if (.not. associated(mumps_par%jcn))   call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
- 
-    mumps_par%n  = n_AA
-    mumps_par%nz = nz_AA
-
-    mumps_par%irn = 0
-    mumps_par%jcn = 0
-    mumps_par%A   = 0.d0
-    mumps_par%RHS = 0.d0
-
-    mumps_par%A   = A_tmp 
-    mumps_par%irn = irn_tmp 
-    mumps_par%jcn = jcn_tmp 
-    mumps_par%RHS = rhs_save 
-
-    pastix_initialised = .false.
-    pastix_analysed    = .false.
-    if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
-    if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
-
-    if (allocated(sparskit_work)) deallocate(sparskit_work)
-    allocate(sparskit_work(mumps_par%N + 1))
-    call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
-    if (allocated(sparskit_work)) deallocate(sparskit_work)
-     
-    nnz = mumps_par%JCN(mumps_par%N+1) - 1
-
-  ! -- For PaStiX solver before version 6.x
-    call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
-       Int1, pastix_sym, Int1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -Int1, Int1)
-
-    mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
-
-    if (mumps_par%NZ /= nnz ) then
-       write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
-       if (associated (mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
-       if (associated (mumps_par%A)  ) call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
-       call tr_allocatep(mumps_par%IRN,Int1,mumps_par%NZ,"mumps_par%IRN",CAT_DMATRIX)
-       call tr_allocatep(mumps_par%A,Int1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
-       call pastix_fortran_checkmatrix_end(check_data, &
-          Int1, mumps_par%IRN,mumps_par%A, Int1)
-    endif
-  
-    if (   allocated(pastix_perm_vars) .and.     &
-         & size(pastix_perm_vars) /= mumps_par%N) then 
-       call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
-    end if
-    
-    if (   allocated(pastix_iperm_vars) .and.     &
-         & size(pastix_iperm_vars) /= mumps_par%N) then 
-       call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
-    end if
-
-    if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
-    if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
-
-    pastix_nthrd     = nbthreads
-
-    ! -- For PaStiX solver before version 6.x
-    pastix_iparm(1)  = 0          ! insert default values
-    pastix_iparm(2)  = 0          ! initializse
-    pastix_iparm(3)  = 0
+          nz_AA = element_list%n_elements * (n_vertex_max * (n_order+1))**2
+          n_AA  = maxval(node_list%node(1:node_list%n_nodes)%index(4))
+      
+          if (associated(mumps_par%A))     call tr_deallocatep(mumps_par%irn,"mumps_par%irn",CAT_DMATRIX)
+          if (associated(mumps_par%rhs))   call tr_deallocatep(mumps_par%jcn,"mumps_par%jcn",CAT_DMATRIX)
+          if (associated(mumps_par%irn))   call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+          if (associated(mumps_par%jcn))   call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
+      
+          call tr_allocatep(mumps_par%A,1,nz_AA,"mumps_par%A",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%rhs,1,n_AA,"mumps_par%rhs",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%irn,1,nz_AA,"mumps_par%irn",CAT_DMATRIX)
+          call tr_allocatep(mumps_par%jcn,1,nz_AA,"mumps_par%jcn",CAT_DMATRIX)
+       
+          mumps_par%n  = n_AA
+          mumps_par%nz = nz_AA
+      
+          mumps_par%irn = 0
+          mumps_par%jcn = 0
+          mumps_par%A   = 0.d0
+          mumps_par%RHS = 0.d0
+      
+          mumps_par%A   = A_tmp 
+          mumps_par%irn = irn_tmp 
+          mumps_par%jcn = jcn_tmp 
+          mumps_par%RHS = rhs_save 
+      
+          if (first_step) then
+            pastix_initialised = .false.
+            pastix_analysed    = .false.
+          endif
+      
+          if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
+          if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
+      
+          if (allocated(sparskit_work)) deallocate(sparskit_work)
+          allocate(sparskit_work(mumps_par%N + 1))
+          call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+          if (allocated(sparskit_work)) deallocate(sparskit_work)
+           
+          nnz = mumps_par%JCN(mumps_par%N+1) - 1
+      
+        ! -- For PaStiX solver before version 6.x
+          call pastix_fortran_checkmatrix(check_data, MPI_COMM_SELF, &
+             Int1, pastix_sym, Int1, mumps_par%N, mumps_par%JCN, mumps_par%IRN, mumps_par%A, -Int1, Int1)
+      
+          mumps_par%NZ = mumps_par%JCN(mumps_par%N+1) - 1
+      
+          if (mumps_par%NZ /= nnz ) then
+             write (*,*) "associated (mumps_par%IRN)", associated (mumps_par%IRN)
+             if (associated (mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
+             if (associated (mumps_par%A)  ) call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
+             call tr_allocatep(mumps_par%IRN,Int1,mumps_par%NZ,"mumps_par%IRN",CAT_DMATRIX)
+             call tr_allocatep(mumps_par%A,Int1,mumps_par%NZ,"mumps_par%A",CAT_DMATRIX)
+             call pastix_fortran_checkmatrix_end(check_data, &
+                Int1, mumps_par%IRN,mumps_par%A, Int1)
+          endif
+        
+          if (   allocated(pastix_perm_vars) .and.     &
+               & size(pastix_perm_vars) /= mumps_par%N) then 
+             call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
+          end if
+          
+          if (   allocated(pastix_iperm_vars) .and.     &
+               & size(pastix_iperm_vars) /= mumps_par%N) then 
+             call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
+          end if
+      
+          if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
+          if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
+      
+          pastix_nthrd     = nbthreads
+      
+          ! -- For PaStiX solver before version 6.x
+          pastix_iparm(1)  = 0          ! insert default values
+          pastix_iparm(2)  = 0          ! initializse
+          pastix_iparm(3)  = 0
 #ifdef FUNNELED
-    pastix_iparm(52) = 2
+          pastix_iparm(52) = 2
 #endif
-  
-    pastix_data = 0
-
-    call pastix_fortran(pastix_data,MPI_COMM_SELF,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
-  
-    pastix_iparm(2) = 1
-    pastix_iparm(3) = 7
-    pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
-  
-    pastix_iparm(7)  = 1                    ! force check
-  
-    pastix_iparm(31) = pastix_facto
-    pastix_iparm(35) = pastix_nthrd         ! numthreads : number of threads
-    pastix_iparm(39) = pastix_rhs           ! right hand side (0 : use RHS)
-    pastix_iparm(37) = pastix_iluk 
-    pastix_iparm(41) = pastix_sym
-  
-    pastix_iparm(42) = pastix_ricar
-    pastix_iparm(14) = pastix_amalg
-  
+        
+          pastix_data = 0
+      
+          call pastix_fortran(pastix_data,MPI_COMM_SELF,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
+             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+        
+          pastix_iparm(2) = 1
+          pastix_iparm(3) = 7
+          pastix_iparm(6) = pastix_iter           ! refinement : max number of iterations
+        
+          pastix_iparm(7)  = 1                    ! force check
+        
+          pastix_iparm(31) = pastix_facto
+          pastix_iparm(35) = pastix_nthrd         ! numthreads : number of threads
+          pastix_iparm(39) = pastix_rhs           ! right hand side (0 : use RHS)
+          pastix_iparm(37) = pastix_iluk 
+          pastix_iparm(41) = pastix_sym
+        
+          pastix_iparm(42) = pastix_ricar
+          pastix_iparm(14) = pastix_amalg
+        
 #ifdef FUNNELED
-    pastix_iparm(52) = 2
+          pastix_iparm(52) = 2
 #endif
-  
-    pastix_dparm(6)  = pastix_epsilon    ! error level refinement
-    pastix_dparm(11) = pastix_pivot      ! pivot threshold?
-  
-    ! -- For PaStiX solver before version 6.x
-    call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
-       pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+        
+          pastix_dparm(6)  = pastix_epsilon    ! error level refinement
+          pastix_dparm(11) = pastix_pivot      ! pivot threshold?
+        
+          ! -- For PaStiX solver before version 6.x
+          call pastix_fortran(pastix_data,MPI_COMM_SELF, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
+             pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
 #endif
 
           do i = 1, pol_pos_list%n_pos(1)

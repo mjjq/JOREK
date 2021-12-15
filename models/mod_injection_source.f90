@@ -346,8 +346,8 @@ module mod_injection_source
         spi_vol_tmp = 0.d0
         call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
                         ns_radius,ns_deltaphi,ns_tor_norm, &
-                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_impurity,&
-                        t_now, JET_MGI,ASDEX_MGI,central_density,central_mass, spi_vol_tmp)
+                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_tmp,&
+                        t_now, JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
 
         source_impurity = source_impurity + source_tmp
       end do

@@ -30,7 +30,7 @@ module mod_injection_source
 
   subroutine inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,ns_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,                  &
-                        JET_MGI,ASDEX_MGI,central_density,central_mass)
+                        JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
 
   !=================================================================================
   !  This subroutine computes the atom/ion number density source for a realistic Deuterium
@@ -41,6 +41,7 @@ module mod_injection_source
   !=================================================================================
 
     use phys_module, only: imp_type
+    use pellet_module, only: source_shape
 
     implicit none
 
@@ -49,10 +50,7 @@ module mod_injection_source
     real*8 :: A_gas                    ! Atomic number of gas particles
     real*8 :: mass_gas                 ! Mass of a gas particles
     real*8 :: mol_atom                 ! Number of atoms in a molecular
-    real*8 :: radius
-    real*8 :: ns_tor_shape
-    real*8 :: ns_pol_shape
-    real*8 :: dphi
+    real*8 :: ns_shape
     real*8 :: V_ns
     real*8 :: f_Nbar
     real*8 :: f_dNbar_dt
@@ -90,8 +88,9 @@ module mod_injection_source
     real*8              :: DMV_inj_frac
     logical, intent(in) :: JET_MGI
     logical, intent(in) :: ASDEX_MGI
-    real*8, intent(out) :: rhon_source  ! This is in number desntiy
+    real*8, intent(out) :: rhon_source  ! This is in number density
     real*8, intent(in)  :: ns_tor_norm
+    real*8, intent(in)  :: source_volume ! numerically integrated gas source volume (if larger than 0.)
 
     select case ( trim(imp_type(1)) )
       case('D2')
@@ -125,18 +124,18 @@ module mod_injection_source
     ! ===================================================================
     ! Parameters related to the spatial distribution of the gas source:
 
-    ! A gaussian shape is chosen poloidally
-    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
-    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
+    ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi)
 
-    ! A gaussian shape is chosen toroidally
-    dphi = abs(phi - ns_phi)
-    if (dphi .gt. PI) dphi = 2*PI - dphi  
-    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
-
-    ! Volume used for normalization, which corresponds to the integration in space 
-    ! of the product of the above shape functions
-    V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+    ! Volume used for normalization:
+    ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
+    ! otherwise, the analytical value corresponding to the integration in space of the product of the above shape functions will be used
+    ! The agreement between the two is very good unless the shard is just marginally inside the domain:
+    ! in this case the numerical integral will be smaller than the analytical one, and the resulting total source will correctly reflect the ablation rate (although the local source will be overestimated)
+    if (source_volume .gt. 0.) then
+       V_ns = source_volume
+    else
+       V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+    endif
     ! ===================================================================
 
    !==================================================================================================
@@ -192,7 +191,7 @@ module mod_injection_source
         ns_drhon_dt = ns_dNinj_dt * (P_Dmv * 1.d5/(K_BOLTZ * 293)) * V_Dmv * mass_gas
     
         ! Distribute gas source in space
-        rhon_source = ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = ns_drhon_dt * ns_shape / V_ns
 
         ! Apply JOREK normalization
         rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * rhon_source
@@ -234,14 +233,14 @@ module mod_injection_source
     
         ! Inverse of the number of particles still in the reservoir, formulae given by G. Pautasso (ASDEX-U)
 
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*ns_drhon_dt * ns_pol_shape  * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0)*ns_drhon_dt * ns_shape / V_ns
 
         ! Converting mass density into number density
         rhon_source = rhon_source * (central_mass * MASS_PROTON / mass_gas)
 
       else 
 
-        rhon_source = ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm &
+        rhon_source = ns_amplitude * ns_shape * t_norm &
                       /  (V_ns * 1.d20 * central_density)
 
       endif
@@ -266,6 +265,7 @@ module mod_injection_source
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
     use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
+    use phys_module, only: spi_num_vol
 
     implicit none
 
@@ -285,6 +285,7 @@ module mod_injection_source
     real*8     :: spi_abl_tmp
     real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_tmp
+    real*8     :: spi_vol_tmp !< Numerically integrated gas source volume
 
     source_background = 0.d0
     source_impurity   = 0.d0
@@ -307,6 +308,12 @@ module mod_injection_source
           spi_phi_tmp = pellets(spi_i)%spi_phi
           spi_abl_tmp = pellets(spi_i)%spi_abl
 
+          if (spi_num_vol) then
+             spi_vol_tmp = pellets(spi_i)%spi_vol
+          else
+             spi_vol_tmp = 0.d0
+          endif
+
           ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
           if (ng_radius < ng_radius_min) then
@@ -321,7 +328,7 @@ module mod_injection_source
 
           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,ng_radius,ns_deltaphi,&
                         ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., R, Z,    &
-                        phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                        phi,source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
         end if
 
         ! Converting number density into mass density for each species respectively
@@ -334,10 +341,11 @@ module mod_injection_source
 
       do i_inj = 1, n_inj
         source_tmp = 0.d0
+        spi_vol_tmp = 0.d0
         call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),   &
                         ns_radius,ns_deltaphi,ns_tor_norm, &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_tmp,&
-                        t_now, JET_MGI,ASDEX_MGI,central_density,central_mass)
+                        t_now, JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
 
         source_impurity = source_impurity + source_tmp
       end do

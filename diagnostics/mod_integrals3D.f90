@@ -2033,9 +2033,13 @@ if (my_id .eq. 0) then
              ng_radius_tmp = ng_radius_min
           end if
 
-          if (ns_deltaminrad .gt. 0.) then ! in this case the analytical formula is approximate
+          if (ns_deltaminrad .gt. 0.) then
+             ! i.e., with poloidally elongated ablation cloud
+             ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
              V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp * ns_deltaminrad
-          else ! exact analytical formula as derived by E. Nardon
+          else
+             ! i.e., standard case with circular ablation cloud in the poloidal plane
+             ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon
              V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp**2.d0
           endif
           

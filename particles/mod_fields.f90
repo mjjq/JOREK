@@ -68,7 +68,7 @@ end interface
 contains
 !> Calculates the electric and magnetic fields at a specific position
 !> in the jorek element `i_elm` at `st`.
-subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
+pure subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
   use phys_module, only: F0, mode, central_mass, central_density
   use constants, only: mu_zero, mass_proton
   use mod_coordinate_transforms, only: transform_derivatives_st_to_RZ
@@ -164,7 +164,7 @@ subroutine calc_EBpsiU(fields, time, i_elm, st, phi, E, B, psi, U)
   
 end subroutine calc_EBpsiU
   
-subroutine calc_F_profile(fields,i_elm,s,t,phi,Fprof)
+pure subroutine calc_F_profile(fields,i_elm,s,t,phi,Fprof)
   use data_structure
   use phys_module, only : mode, F0
   use mod_basisfunctions

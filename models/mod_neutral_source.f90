@@ -54,7 +54,7 @@ module mod_neutral_source
        if (ns_deltaminrad .gt. 0.) then
     ! i.e., with poloidally elongated ablation cloud
     ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
-          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * ns_deltaminrad
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * min(ns_deltaminrad,ns_radius)
        else
     ! i.e., standard case with circular ablation cloud in the poloidal plane
     ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon

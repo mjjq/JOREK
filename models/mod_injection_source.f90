@@ -134,7 +134,7 @@ module mod_injection_source
 
     ! Volume used for normalization:
     ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
-    ! otherwise, the analytical value corresponding to the integration in space of the product of the above shape functions will be used
+    ! otherwise, the analytical value corresponding to the integration in space of the product of the above shape function will be used
     ! In the standard case with circular ablation cloud in the poloidal plane,
     ! the agreement between the two is very good unless the shard is just marginally inside the domain:
     ! in this case the numerical integral will be smaller than the analytical one, and the resulting total source will correctly reflect the ablation rate (although the local source will be overestimated)
@@ -144,7 +144,7 @@ module mod_injection_source
        if (ns_deltaminrad .gt. 0.) then
     ! i.e., with poloidally elongated ablation cloud
     ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
-          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * ns_deltaminrad
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * min(ns_deltaminrad,ns_radius)
        else
     ! i.e., standard case with circular ablation cloud in the poloidal plane
     ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon

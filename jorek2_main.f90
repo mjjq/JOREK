@@ -83,6 +83,9 @@ program JOREK2
 #endif
   use mpi_mod
   use mod_impurity, only: init_imp_adas
+#ifdef USE_BICGSTAB
+  use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
+#endif  
 
 
   use, intrinsic :: iso_c_binding
@@ -1103,7 +1106,11 @@ required = 0
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
 
+#ifdef USE_BICGSTAB
+      call bicgstab_driver(irn_glob, jcn_glob, a_glob, deltas, rhs_glob, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
+#else
       call gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+#endif
 
     endif
     call clck_time_barrier(t1)
@@ -1365,6 +1372,10 @@ required = 0
     if (use_strumpack) then
       call strumpack_finalize(MPI_COMM_WORLD)
     endif
+#endif
+
+#ifdef USE_BICGSTAB
+    call bicgstab_finalize()
 #endif
 
 #ifdef USE_PASTIX6

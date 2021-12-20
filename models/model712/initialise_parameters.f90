@@ -110,7 +110,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 wall_file,                                          &
                 first_target_point, last_target_point,              &
                 n_limiter, R_limiter, Z_limiter,                    &
-                spi_tor_rot, tor_frequency,                         &
+                spi_tor_rot, tor_frequency, spi_num_vol,            &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection,                                 &

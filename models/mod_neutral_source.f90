@@ -16,7 +16,9 @@ module mod_neutral_source
   !> Calculates the neutral source
   subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,ns_tor_norm, &
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,rhon_source,t_now,               &
-                              JET_MGI,ASDEX_MGI,central_density,central_mass)
+                              JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
+
+    use pellet_module, only: source_shape
 
     implicit none
 
@@ -26,26 +28,29 @@ module mod_neutral_source
     real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
+    real*8,  intent(in)  :: source_volume ! numerically integrated gas source volume (if larger than 0.)
 
     ! --- Local variables
-    real*8  :: c0_D, radius, ns_tor_shape, ns_pol_shape, dphi, V_ns, f_Nbar, f_dNbar_dt
+    real*8  :: c0_D, ns_shape, V_ns, f_Nbar, f_dNbar_dt
     real*8  :: ns_dNinj_dt, ns_drhon_dt, t_loc, t_norm, prof_temp, R_Asdex, mnum, kst, yy, gam
     real*8  :: dt_open, N_barlitre, DMV_inj_frac
     integer :: k
 
-    radius = sqrt((R-ns_R)**2 + (Z-ns_Z)**2)
-
     c0_D = sqrt(8.3145d0*293.d0/4.d-3*(7.d0/5.d0))  ! Sound speed of Deuterium
 
-    ! Poloidal gaussian shape factor
-    ns_pol_shape = exp(-(radius/ns_radius)**2.d0)  
+    ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi)
 
-    ! Toroidal gaussian shape factor
-    dphi = abs(phi - ns_phi)
-    if (dphi .gt. PI) dphi = 2*PI - dphi  
-    ns_tor_shape = exp(-(dphi/ns_deltaphi)**2.d0)
-
-    V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+    ! Volume used for normalization:
+    ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
+    ! otherwise, the analytical value corresponding to the integration in space of the product of the above shape functions will be used
+    ! The agreement between the two is very good unless the shard is just marginally inside the domain:
+    ! in this case the numerical integral will be smaller than the analytical one, and the resulting total source will correctly reflect the ablation rate (although the local source will be overestimated)
+    if (source_volume .gt. 0.) then
+       V_ns = source_volume
+    else
+       V_ns  = PI * ns_R * ns_tor_norm * ns_radius**2.d0
+    endif
+    ! ===================================================================
 
     t_norm = sqrt(MU_ZERO * central_mass * MASS_PROTON * central_density * 1.d20) ! Time normalization factor
 
@@ -95,7 +100,7 @@ module mod_neutral_source
     
         ! Apply gaussian shape (toroidally and poloidally) factor (normalized so that the number of particles injected does not depend on the shape)
         ! as well as JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_shape / V_ns
 
       elseif (ASDEX_MGI) then
 
@@ -121,11 +126,11 @@ module mod_neutral_source
         ns_drhon_dt =  ns_dNinj_dt * central_mass * MASS_PROTON ! Mass density injected per unit time
 
         ! Apply JOREK normalization
-        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_pol_shape * ns_tor_shape / V_ns
+        rhon_source = (MU_ZERO)**(0.5d0)*(central_mass*MASS_PROTON*central_density*1.d20)**(-0.5d0) * ns_drhon_dt * ns_shape / V_ns
 
       else 
 
-        rhon_source =  ns_amplitude * ns_pol_shape * ns_tor_shape * t_norm / (V_ns * 1.d20 * central_density)  
+        rhon_source =  ns_amplitude * ns_shape * t_norm / (V_ns * 1.d20 * central_density)  
 
       endif
 
@@ -147,6 +152,7 @@ module mod_neutral_source
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
     use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
+    use phys_module, only: spi_num_vol
 
     implicit none
 
@@ -164,6 +170,7 @@ module mod_neutral_source
     real*8     :: spi_abl_tmp
     real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_neutral_tmp
+    real*8     :: spi_vol_tmp !< Numerically integrated gas source volume
 
     if (using_spi) then
 
@@ -172,6 +179,12 @@ module mod_neutral_source
         source_neutral_tmp = 0.d0 
 
         if (pellets(spi_i)%spi_radius > 0.0) then
+
+          if (spi_num_vol) then
+             spi_vol_tmp = pellets(spi_i)%spi_vol
+          else
+             spi_vol_tmp = 0.d0
+          endif
 
           ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
@@ -187,7 +200,7 @@ module mod_neutral_source
 
           call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
                         ng_radius,ns_deltaphi,ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,R,Z,     &
-                        phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
+                        phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
 
         end if
 
@@ -199,10 +212,11 @@ module mod_neutral_source
 
       do i_inj = 1, n_inj
         source_neutral_tmp = 0.d0
+        spi_vol_tmp = 0.d0
         call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj), &
                       ns_radius,ns_deltaphi,ns_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,source_neutral_tmp,t_now, &
-                      JET_MGI,ASDEX_MGI,central_density,central_mass)
+                      JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
         source_neutral = source_neutral + source_neutral_tmp
       end do
     end if

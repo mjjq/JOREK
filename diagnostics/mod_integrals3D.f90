@@ -2046,8 +2046,8 @@ if (my_id .eq. 0) then
           write(*,'(A,2es14.6,f14.6)') "Source vol (num,an,diff %)   = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
           if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
 
-          ! recommended ablation source radius from ng_radius / (R*ns_deltaphi) = B_pol/B_tor
-          write(*,'(A,2f14.6)') "Source pol rad (actual,recom)= ", ng_radius_min,pellets(i)%spi_R * ns_deltaphi * pellets(i)%spi_grad_psi / abs(F0)
+          ! recommended ablation source radius in the poloidal direction from ng_radius / (R*ns_deltaphi) = B_pol/B_tor
+          write(*,'(A,2f14.6)') "Source pol rad (actual,recom)= ", ng_radius_tmp, pellets(i)%spi_R * ns_deltaphi * pellets(i)%spi_grad_psi / abs(F0)
 
        end if
     end do

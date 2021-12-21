@@ -41,7 +41,7 @@ module mod_injection_source
   !=================================================================================
 
     use phys_module, only: imp_type
-    use pellet_module, only: source_shape
+    use mod_source_shape, only: source_shape
 
     implicit none
 

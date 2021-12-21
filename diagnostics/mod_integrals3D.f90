@@ -20,10 +20,12 @@ module mod_integrals3D
   use corr_neg
   use pellet_module
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  use mod_neutral_source, only: total_neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all 
+  use mod_neutral_source, only: total_neutral_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
+  use mod_source_shape, only: source_shape
 #endif
 #ifdef WITH_Impurities
   use mod_injection_source, only: total_imp_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
+  use mod_source_shape, only: source_shape
 #endif
   use mod_impurity, only: radiation_function, radiation_function_linear
   use equil_info, only : get_psi_n, ES

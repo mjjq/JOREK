@@ -2,6 +2,7 @@
 module mod_neutral_source
 
   use constants
+  use mod_source_shape
 
   implicit none
 
@@ -18,7 +19,7 @@ module mod_neutral_source
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,               &
                               JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
 
-    use pellet_module, only: source_shape
+    use mod_source_shape, only: source_shape
 
     implicit none
 

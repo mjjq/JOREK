@@ -20,7 +20,7 @@ module pellet_module
   real*8, allocatable  :: xtime_pellet_psi(:)
   real*8, allocatable  :: xtime_pellet_particles(:)
   real*8, allocatable  :: xtime_phys_ablation(:)
-  
+
   contains
 
   subroutine pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &

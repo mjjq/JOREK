@@ -2,7 +2,6 @@
 module mod_neutral_source
 
   use constants
-  use mod_source_shape
 
   implicit none
 

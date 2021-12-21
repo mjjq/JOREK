@@ -932,6 +932,7 @@ required = 0
     if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
 
     ! ---- For now running the jorek2_main should not include aux inputs
+    aux_node_list%n_nodes = 0
     do i = 1, size(aux_node_list%node, 1)
       aux_node_list%node(i)%values = 0.d0
       aux_node_list%node(i)%deltas = 0.d0

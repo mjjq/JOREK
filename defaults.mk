@@ -271,6 +271,10 @@ ifeq (1, $(USE_BOOST))
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++17
 endif
 
+ifeq (1, $(USE_BICGSTAB))
+  DEFINES  := $(DEFINES) -DUSE_BICGSTAB
+endif
+
 # Do not check to make these files to speed up and clean -d output
 Makefile: ;
 Makefile.inc: ;

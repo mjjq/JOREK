@@ -170,8 +170,8 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
 
 #ifdef _OPENMP
   !> copy data and resize tables
-  !$omp parallel default(private) shared(vert_inout,n_vertex_new,&
-  !$omp x_table,property_table)
+  !$omp parallel default(private) firstprivate(n_vertex_new) &
+  !$omp shared(vert_inout,x_table,property_table)
   !$omp do
   do ii=1,vert_inout%n_times
     do jj=1,n_active_vertices_max

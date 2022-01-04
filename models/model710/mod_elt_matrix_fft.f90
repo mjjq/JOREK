@@ -404,6 +404,10 @@ Pvec_prev = 0.d0
 Qvec_p    = 0.d0
 Qvec_k    = 0.d0
 
+!Pressure coupling should be 0
+aux_divPIR_perp = 0.d0 
+aux_divPIZ_perp = 0.d0     
+aux_divPIp_perp = 0.d0
 ! --- Implicit scheme
 theta = time_evol_theta
 !zeta  = time_evol_zeta

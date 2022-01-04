@@ -13,12 +13,12 @@ real*8,parameter :: twothirds=2.d0/3.d0
 real*8,parameter :: sqrt3=sqrt(3.d0)
 type,extends(light_vertices) :: synchrotron_light_vertices
   contains
-  procedure,pass(sync_light_vertices) :: init_lights_from_particles =>&
-                                           init_synchrotron_light_from_particles
-  procedure,pass(sync_light_vertices) :: directionality_funct => &
-                                           synchrotron_directionality_funct
-  procedure,pass(sync_light_vertices) :: spectral_irradiance => &
-                                           synchrotron_spectral_irradiance
+  procedure,pass(sync_lights) :: init_lights_from_particles => &
+                                 init_synchrotron_light_from_particles
+  procedure,pass(sync_lights) :: directionality_funct => &
+                                 synchrotron_directionality_funct
+  procedure,pass(sync_lights) :: spectral_irradiance => &
+                                 synchrotron_spectral_irradiance
 end type synchrotron_light_vertices
 !> Interfaces --------------------------------------
 
@@ -115,7 +115,7 @@ end subroutine init_synchrotron_lights_from_particles
 subroutine synchrotron_directionality_funct(sync_lights,spectra,time_id,&
 light_id,x_shaded,light_dstb)
   use constants,               only: PI,SPEED_OF_LIGHT
-  use mod_boost_bessek,        only: besselk
+  use mod_boost_besselk,       only: besselk
   use mod_coordinate_transform,only: cartesian_to_spherical_latitude
   use mod_spectra,             only: spectra_base
   implicit none

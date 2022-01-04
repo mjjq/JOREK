@@ -11,14 +11,14 @@ public :: light_vertices
 !> Variables --------------------------------------------
 type,abstract,extends(vertices) :: light_vertices
   contains
-  procedure,pass(light_vertices)                              :: fill_time_vector
-  procedure,pass(light_vertices)                              :: extract_n_groups_all_particle_sims 
-  procedure,pass(light_vertices)                              :: extract_n_particles_all_particle_sims
-  procedure,pass(light_vertices)                              :: extract_particle_types_all_particle_sims
-  procedure,pass(light_vertices)                              :: store_light_x_from_id
-  procedure(init_lights_parts),deferred,pass(light_vertices)  :: init_lights_from_particles
-  procedure(direct_funct),deferred,pass(light_vertices)       :: directionality_funct
-  procedure(spect_irradiance),deferred,pass(light_vertices)   :: spectral_irradiance
+  procedure,pass(light_vert)                              :: fill_time_vector
+  procedure,pass(light_vert)                              :: extract_n_groups_all_particle_sims 
+  procedure,pass(light_vert)                              :: extract_n_particles_all_particle_sims
+  procedure,pass(light_vert)                              :: extract_particle_types_all_particle_sims
+  procedure,pass(light_vertices)                          :: store_light_x_from_id
+  procedure(init_lights_parts),deferred,pass(light_vert)  :: init_lights_from_particles
+  procedure(direct_funct),deferred,pass(light_vert)       :: directionality_funct
+  procedure(spect_irradiance),deferred,pass(light_vert)   :: spectral_irradiance
 end type light_vertices
 
 !> Interfaces -------------------------------------------
@@ -273,7 +273,7 @@ subroutine store_light_x_from_particle_id(light_vert,light_id,time_id,particle)
   use mod_coordinate_transforms, only: cylindrical_to_cartesian
   implicit none
   !> inputs-outputs
-  class(light_vertices),intent(inout) :: light_vertices
+  class(light_vertices),intent(inout) :: light_vert
   !> inputs
   class(particle_base),intent(in) :: particle
   integer,intent(in)              :: light_id,time_id

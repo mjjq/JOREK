@@ -75,7 +75,7 @@ subroutine allocate_x_properties(vert_inout,n_vertices)
   allocate(vert_inout%x(n_x,n_vertices,vert_inout%n_times))
   allocate(vert_inout%properties(vert_inout%n_property_vertex,n_vertices,vert_inout%n_times))
   vert_inout%x = 0.d0; vert_inout%properties = 0.d0;
-  vert_inout%n_vertices = n_vertice;
+  vert_inout%n_vertices = n_vertices;
 end subroutine allocate_x_properties
 
 !> allocate all vertices and initialise them to zero
@@ -94,7 +94,7 @@ subroutine allocate_vertices(vert_inout,n_times,n_vertices)
   class(vertices),intent(inout) :: vert_inout
   call vert_inout%allocate_time_vector(n_times)
   call vert_inout%allocate_x_properties(n_vertices)
-end subroutine allocate_vartices
+end subroutine allocate_vertices
 
 !> deallocate time vector tables. Data loss is expected
 !> inputs:
@@ -161,7 +161,7 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
   !> initialisation
   n_active_vertices_max = maxval(vert_inout%n_active_vertices)
   !> check for possible data losses
-  if(n_vertex.lt.n_active_vertices_max) then
+  if(n_vertex_new.lt.n_active_vertices_max) then
     write(*,*) "Try to resize vertex tables but possible data loss detected!"
     ifail = 11
     return

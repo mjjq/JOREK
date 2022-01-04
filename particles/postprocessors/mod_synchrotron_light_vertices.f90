@@ -114,10 +114,10 @@ end subroutine init_synchrotron_lights_from_particles
 !>                the shaded point x_shaded
 subroutine synchrotron_directionality_funct(sync_lights,spectra,time_id,&
 light_id,x_shaded,light_dstb)
-  use constants,               only: PI,SPEED_OF_LIGHT
-  use mod_boost_besselk,       only: besselk
-  use mod_coordinate_transform,only: cartesian_to_spherical_latitude
-  use mod_spectra,             only: spectra_base
+  use constants,                only: PI,SPEED_OF_LIGHT
+  use mod_boost_besselk,        only: besselk
+  use mod_coordinate_transforms,only: cartesian_to_spherical_latitude
+  use mod_spectra,              only: spectra_base
   implicit none
   !> inputs:
   type(synchrotron_light_vertices),intent(inout) :: sync_lights

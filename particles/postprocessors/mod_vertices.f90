@@ -22,14 +22,14 @@ type,abstract :: vertices
   real*8,dimension(:,:,:),allocatable :: properties        !< properties of the vertices
   contains
   !> type procedures
-  procedure,pass(vertices) :: allocate_time_vector
-  procedure,pass(vertices) :: allocate_x_properties
-  procedure,pass(vertices) :: allocate_vertices
-  procedure,pass(vertices) :: deallocate_time_vector
-  procedure,pass(vertices) :: deallocate_x_properties
-  procedure,pass(vertices) :: deallocate_vertices
-  procedure,pass(vertices) :: resize_vertices_noloss
-  procedure,pass(vertices) :: fit_tables_to_active_vertices
+  procedure,pass(vert_inout) :: allocate_time_vector
+  procedure,pass(vert_inout) :: allocate_x_properties
+  procedure,pass(vert_inout) :: allocate_vertices
+  procedure,pass(vert_inout) :: deallocate_time_vector
+  procedure,pass(vert_inout) :: deallocate_x_properties
+  procedure,pass(vert_inout) :: deallocate_vertices
+  procedure,pass(vert_inout) :: resize_vertices_noloss
+  procedure,pass(vert_inout) :: fit_tables_to_active_vertices
 end type vertices
 !> Interfaces -------------------------------------------------------------
 contains

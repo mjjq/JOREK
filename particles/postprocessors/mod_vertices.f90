@@ -105,7 +105,7 @@ subroutine deallocate_time_vector(vert_inout)
   implicit none
   !> input-outputs
   class(vertices),intent(inout) :: vert_inout
-  if(allocated(vert_inout%n_active_vertices) deallocate(vert_inout%n_active_vertices)
+  if(allocated(vert_inout%n_active_vertices)) deallocate(vert_inout%n_active_vertices)
   if(allocated(vert_inout%times)) deallocate(vert_inout%times)
   vert_inout%n_times = 0
 end subroutine deallocate_time_vector

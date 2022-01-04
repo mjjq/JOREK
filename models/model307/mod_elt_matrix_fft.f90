@@ -91,6 +91,17 @@ real*8     :: Btheta2, epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 real*8     :: aux_rho0, aux_T0, aux_Vpar0
 real*8     :: aux_P0, aux_P0_s,  aux_P0_t, aux_P0_p, aux_q0, aux_jx0, aux_jy0, aux_jz0, aux_jz0_pcs 
+
+!Full pressure tensor terms 
+real*8     :: aux_PIRR, aux_PIRR_s, aux_PIRR_t, aux_PIRR_R, aux_PIRR_Z,aux_PIRR_p
+real*8     :: aux_PIZZ, aux_PIZZ_s, aux_PIZZ_t, aux_PIZZ_R, aux_PIZZ_Z,aux_PIZZ_p
+real*8     :: aux_PIPP, aux_PIPP_s, aux_PIPP_t, aux_PIPP_R, aux_PIPP_Z,aux_PIPP_p
+real*8     :: aux_PIZR, aux_PIZR_s, aux_PIZR_t, aux_PIZR_R, aux_PIZR_Z,aux_PIZR_p
+real*8     :: aux_PIRP, aux_PIRP_s, aux_PIRP_t, aux_PIRP_R, aux_PIRP_Z,aux_PIRP_p
+real*8     :: aux_PIZP, aux_PIZP_s, aux_PIZP_t, aux_PIZP_R, aux_PIZP_Z,aux_PIZP_p
+real*8     :: aux_divPIR_perp, aux_divPIZ_perp,     aux_divPIp_perp
+real*8     :: aux_divPIR,      aux_divPIZ,          aux_divPIp
+real*8     :: aux_BdivPI,aux_BB2
 ! time normalisation
 real*8     :: t_norm
 ! Temporary variables serving the SPI module
@@ -210,6 +221,7 @@ eq_zTe          = 0.d0
 aux_rho0  = 0.d0; aux_T0    = 0.d0; aux_Vpar0 = 0.d0
 aux_P0    = 0.d0; aux_P0_s  = 0.d0; aux_P0_t  = 0.d0; aux_P0_p  = 0.d0
 aux_q0    = 0.d0; aux_jx0   = 0.d0; aux_jy0   = 0.d0; aux_jz0   = 0.d0; aux_jz0_pcs = 0.d0
+aux_divPIR_perp = 0.d0; aux_divPIZ_perp=0.d0; aux_divPIp_perp=0.d0;
 
 amu_neo_prof   = 0.d0
 aki_neo_prof   = 0.d0
@@ -434,6 +446,65 @@ do i=1,n_vertex_max
           elseif (use_pcs) then
             aux_P0      = eq_aux_g(mp,1,ms,mt)
             aux_jz0_pcs = 0.d0 !eq_aux_g(mp,5,ms,mt)
+          elseif(use_pcs_full) then 
+            aux_PIRR    = eq_aux_g(mp,1,ms,mt);
+            aux_PIRR_s  = eq_aux_s(mp,1,ms,mt);
+            aux_PIRR_t  = eq_aux_t(mp,1,ms,mt);
+            aux_PIRR_R  = (   y_t(ms,mt) * aux_PIRR_s - y_s(ms,mt) * aux_PIRR_t ) / xjac
+            aux_PIRR_Z  = ( - x_t(ms,mt) * aux_PIRR_s + x_s(ms,mt) * aux_PIRR_t ) / xjac
+            aux_PIRR_p  = eq_aux_p(mp,1,ms,mt);
+
+            aux_PIZZ    = eq_aux_g(mp,2,ms,mt);
+            aux_PIZZ_s  = eq_aux_s(mp,2,ms,mt);
+            aux_PIZZ_t  = eq_aux_t(mp,2,ms,mt);
+            aux_PIZZ_R  = (   y_t(ms,mt) * aux_PIZZ_s - y_s(ms,mt) * aux_PIZZ_t ) / xjac
+            aux_PIZZ_Z  = ( - x_t(ms,mt) * aux_PIZZ_s + x_s(ms,mt) * aux_PIZZ_t ) / xjac
+            aux_PIZZ_p  = eq_aux_p(mp,2,ms,mt);
+            
+            aux_PIPP    = eq_aux_g(mp,3,ms,mt);
+            aux_PIPP_s  = eq_aux_s(mp,3,ms,mt);
+            aux_PIPP_t  = eq_aux_t(mp,3,ms,mt);
+            aux_PIPP_R  = (   y_t(ms,mt) * aux_PIPP_s - y_s(ms,mt) * aux_PIPP_t ) / xjac
+            aux_PIPP_Z  = ( - x_t(ms,mt) * aux_PIPP_s + x_s(ms,mt) * aux_PIPP_t ) / xjac
+            aux_PIPP_p  = eq_aux_p(mp,3,ms,mt);             
+
+            aux_PIZR    = eq_aux_g(mp,4,ms,mt);
+            aux_PIZR_s  = eq_aux_s(mp,4,ms,mt);
+            aux_PIZR_t  = eq_aux_t(mp,4,ms,mt);
+            aux_PIZR_R  = (   y_t(ms,mt) * aux_PIZR_s - y_s(ms,mt) * aux_PIZR_t ) / xjac
+            aux_PIZR_Z  = ( - x_t(ms,mt) * aux_PIZR_s + x_s(ms,mt) * aux_PIZR_t ) / xjac
+            aux_PIZR_p  = eq_aux_p(mp,4,ms,mt);             
+
+            aux_PIRP    = eq_aux_g(mp,5,ms,mt);
+            aux_PIRP_s  = eq_aux_s(mp,5,ms,mt);
+            aux_PIRP_t  = eq_aux_t(mp,5,ms,mt);
+            aux_PIRP_R  = (   y_t(ms,mt) * aux_PIRP_s - y_s(ms,mt) * aux_PIRP_t ) / xjac
+            aux_PIRP_Z  = ( - x_t(ms,mt) * aux_PIRP_s + x_s(ms,mt) * aux_PIRP_t ) / xjac
+            aux_PIRP_p  = eq_aux_p(mp,5,ms,mt);             
+
+            aux_PIZP    = eq_aux_g(mp,6,ms,mt);
+            aux_PIZP_s  = eq_aux_s(mp,6,ms,mt);
+            aux_PIZP_t  = eq_aux_t(mp,6,ms,mt);
+            aux_PIZP_R  = (   y_t(ms,mt) * aux_PIZP_s - y_s(ms,mt) * aux_PIZP_t ) / xjac
+            aux_PIZP_Z  = ( - x_t(ms,mt) * aux_PIZP_s + x_s(ms,mt) * aux_PIZP_t ) / xjac
+            aux_PIZP_p  = eq_aux_p(mp,6,ms,mt);
+
+            !See https://www.jorek.eu/wiki/doku.php?id=coordinates, div Pi (tensor)
+            !in physical components
+            !These calculations are the same in reduced MHD. Only the way in which these terms enter
+            !the projected equations differs.
+            aux_divPIR  = aux_PIRR_R + aux_PIZR_Z + (aux_PIRP_p + aux_PIRR - aux_PIPP) / BigR
+            aux_divPIZ  = aux_PIZZ_Z + aux_PIZR_R + (aux_PIZP_p + aux_PIZR) / BigR
+            aux_divPIp  = aux_PIPP_p / BigR + aux_PIRP_R + aux_PIZP_Z + 2.d0 / BigR * aux_PIRP
+ 
+            ! B. div P
+            aux_BdivPI      = ps0_y/BigR * aux_divPIR + -ps0_x/BigR * aux_divPIZ + F0/BigR * aux_divPIp
+            ! Ensuring B. div P is perpendicular to B.
+            aux_BB2= (ps0_y / BigR)**2 + (-ps0_x / BigR)**2 + (F0 / BigR)**2
+            aux_divPIR_perp = aux_divPIR - ps0_y / BigR / aux_BB2 * aux_BdivPI
+            aux_divPIZ_perp = aux_divPIZ + ps0_x / BigR / aux_BB2 * aux_BdivPI
+            aux_divPIp_perp = aux_divPIp - F0 / BigR / aux_BB2 * aux_BdivPI
+    
           endif
 
           P0    = r0 * T0
@@ -521,9 +592,9 @@ do i=1,n_vertex_max
                     - xjac_y * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) ) / xjac**2
 
           vpar0_xy = (- vpar0_ss * y_t(ms,mt)*x_t(ms,mt) - vpar0_tt * x_s(ms,mt)*y_s(ms,mt)                       &
-                      + vpar0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                             &
+                      + vpar0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )        ========================================                     &
                       - vpar0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                             &
-                      - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               &
+                      - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )   ======================================== xjac**2               &
                       - xjac_x * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) )   / xjac**2
 
 
@@ -780,6 +851,7 @@ do i=1,n_vertex_max
                          + BigR**2 * (v_s * p0_t - v_t * p0_s)                      * tstep &
 
                          + aux_p0 * 2.d0 * BigR * v_y                        * xjac * tstep &
+                         + BigR**2 * ( -aux_divPIR_perp*v_y + aux_divPIZ_perp*v_x)*xjac * tstep & 
                          - BigR**2 * (v_s * u0_t - v_t * u0_s) * F0 * aux_q0        * tstep &
                          - BigR * F0 * (v_x * aux_jx0 + v_y * aux_jy0)       * xjac * tstep &
 

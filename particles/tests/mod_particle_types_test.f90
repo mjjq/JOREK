@@ -11,6 +11,7 @@ public :: run_fruit_particle_types
 
 !> Variables ------------------------------------
 integer,parameter :: n_particles=1000
+integer,parameter :: n_particle_types=8
 integer,dimension(2),parameter :: q_interval=(/1,100/)
 integer,dimension(2),parameter :: i_elm_interval=(/1,10000000/)
 integer,dimension(2),parameter :: i_life_interval=(/1,10000000/)
@@ -28,6 +29,24 @@ real*8,dimension(3),parameter  :: vp3d_lowbnd=(/-1.25d3,-7.5d2,-8.d1/)
 real*8,dimension(3),parameter  :: vp3d_uppbnd=(/7.5d1,2.35d2,4.85d3/)
 real*8,dimension(3),parameter  :: ABE_lowbnd=(/-2.67d0,-9.85d0,3.5d-1/)
 real*8,dimension(3),parameter  :: ABE_uppbnd=(/7.8d-1,2.35d0,5.67d0/)
+integer :: n_active_fieldlines_sol
+integer :: n_active_gcs_sol
+integer :: n_active_gcs_vpar_sol
+integer :: n_active_gcs_Qin_sol
+integer :: n_active_kinetics_sol
+integer :: n_active_kinetics_leapfrog_sol
+integer :: n_active_kinetics_relativistic_sol
+integer :: n_active_gcs_relativistic_sol
+integer :: n_active_particles_sol
+integer,dimension(n_particles) :: active_fieldlines_sol
+integer,dimension(n_particles) :: active_gcs_sol
+integer,dimension(n_particles) :: active_gcs_vpar_sol
+integer,dimension(n_particles) :: active_gcs_Qin_sol
+integer,dimension(n_particles) :: active_kinetics_sol
+integer,dimension(n_particles) :: active_kinetics_leapfrog_sol
+integer,dimension(n_particles) :: active_kinetics_relativistic_sol
+integer,dimension(n_particles) :: active_gcs_relativistics_sol
+integer,dimension(n_particle_types*n_particles) :: active_particles_sol
 class(particle_base),dimension(:),allocatable :: particle_fieldline_list
 class(particle_base),dimension(:),allocatable :: particle_gc_list
 class(particle_base),dimension(:),allocatable :: particle_gc_vpar_list

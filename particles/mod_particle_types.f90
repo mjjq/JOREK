@@ -22,6 +22,8 @@ module mod_particle_types
   !> WARNING: PUBLIC ONLY FOR TESTING
   public :: find_active_particle_id_type
   public :: find_active_particle_id_base
+  public :: find_active_particle_id_seq
+  public :: find_active_particle_id_openmp
 
   !> enumerator of the particle type 
   enum, bind(C)
@@ -385,9 +387,10 @@ contains
     end select
   end subroutine find_active_particle_id_type
 
-  !> find_active_particle_id_seq returns the number 
+  !> find_active_particle_id_base returns the number 
   !> and index of acitve particles withing a list
   !> active particles are particles having i_elm>0
+  !> interface for the sequential and openmp versions
   !> inputs:
   !>   n_particles:   (integer) number of particles
   !>   particle_list: (particle_base)(n_particles) particle list
@@ -395,6 +398,34 @@ contains
   !>   n_active_particles: (integer) number of active particles
   !>   active_particle_id: (integer)(n_particles) active particle indices
   subroutine find_active_particle_id_base(n_particles,particle_list,&
+  n_active_particles,active_particle_id)
+    implicit none
+    !> inputs
+    integer,intent(in) :: n_particles
+    class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
+    !> outputs
+    integer,intent(out) :: n_active_particles
+    integer,dimension(n_particles),intent(out) :: active_particle_id
+#ifdef _OPENMP
+    call find_active_particle_id_openmp(n_particles,particle_list,&
+    n_active_particles,active_particle_id)
+#else
+    call find_active_particle_id_seq(n_particles,particle_list,&
+    n_active_particles,active_particle_id)
+#endif
+  end subroutine find_active_particle_id_base
+
+  !> find_active_particle_id_seq returns the number 
+  !> and index of acitve particles withing a list
+  !> active particles are particles having i_elm>0
+  !> sequential version
+  !> inputs:
+  !>   n_particles:   (integer) number of particles
+  !>   particle_list: (particle_base)(n_particles) particle list
+  !> outputs:
+  !>   n_active_particles: (integer) number of active particles
+  !>   active_particle_id: (integer)(n_particles) active particle indices
+  subroutine find_active_particle_id_seq(n_particles,particle_list,&
   n_active_particles,active_particle_id)
     implicit none
     !> inputs
@@ -411,6 +442,70 @@ contains
        n_active_particles = n_active_particles + 1
        active_particle_id(n_active_particles) = ii
     enddo
-  end subroutine find_active_particle_id_base
+  end subroutine find_active_particle_id_seq
+  !> find_active_particle_id_openmp returns the number 
+  !> and index of acitve particles withing a list
+  !> active particles are particles having i_elm>0
+  !> openmp enabled version
+  !> inputs:
+  !>   n_particles:   (integer) number of particles
+  !>   particle_list: (particle_base)(n_particles) particle list
+  !> outputs:
+  !>   n_active_particles: (integer) number of active particles
+  !>   active_particle_id: (integer)(n_particles) active particle indices
+  subroutine find_active_particle_id_openmp(n_particles,particle_list,&
+  n_active_particles,active_particle_id)
+    !$ use omp_lib
+    implicit none
+    !> inputs
+    integer,intent(in) :: n_particles
+    class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
+    !> outputs
+    integer,intent(out) :: n_active_particles
+    integer,dimension(n_particles),intent(out) :: active_particle_id
+    !> variables
+    integer :: ii,jj,start_id
+    integer :: thread_id,max_num_thread,thread_num,n_particles_thread
+    integer,dimension(:),allocatable :: n_active_particle_thread
+    integer,dimension(:,:),allocatable :: particle_id_thread
+    max_num_thread = 1
+    !> allocate thread private arrays
+    !$max_num_thread = omp_get_max_threads()
+    allocate(n_active_particle_thread(max_num_thread)); 
+   !> assume heuristically that the actual number of particles per thread is not
+   !> larger than 25% of the number of particles per thread computed using max_num_thread
+    allocate(particle_id_thread(floor(1.25d0*real(n_particles/&
+    max_num_thread,kind=8))+1,max_num_thread));
+    n_active_particles = 0; active_particle_id = 0;
+    n_active_particle_thread = 0
+
+    !> find active particles and store their index for each thread
+    !$omp parallel default(private) shared(n_particles,particle_list,&
+    !$omp n_active_particle_thread,particle_id_thread)
+    thread_id = 1; thread_num = 1;
+    !$ thread_id = omp_get_thread_num() + 1
+    !$ thread_num = omp_get_num_threads()
+    n_particles_thread = n_particles/thread_num
+    start_id = n_particles*(thread_id-1)
+    !$omp single
+    n_particles_thread = n_particles - n_particles_thread*(thread_num-1)
+    !$omp end single
+    do ii=start_id+1,start_id+n_particles_thread
+      if(particle_list(ii)%i_elm.lt.1) cycle !< skip invalid particle
+      n_active_particle_thread(thread_id) = n_active_particle_thread(thread_id) + 1
+      particle_id_thread(n_active_particle_thread(thread_id),thread_id) = ii
+    enddo
+    !$omp end parallel
+    !> assemble the particle id array
+    do ii=1,thread_num
+      active_particle_id(n_active_particles+1:n_active_particles+n_active_particle_thread(ii)) = &
+      particle_id_thread(1:n_active_particle_thread(ii),ii)
+      n_active_particles = n_active_particles + n_active_particle_thread(thread_id)
+    enddo
+
+    !> cleanup
+    deallocate(n_active_particle_thread)
+    deallocate(particle_id_thread)
+  end subroutine find_active_particle_id_openmp
 
 end module mod_particle_types

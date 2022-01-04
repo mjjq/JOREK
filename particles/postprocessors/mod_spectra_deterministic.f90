@@ -169,7 +169,8 @@ subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
   n_threads = 1
   integrals = 0.d0
   !$omp parallel default(private) shared(spectrum,midpoint_data,residual_id) &
-  !$omp reduction(+:integrals)
+  !$omp firstprivate(n_threads) reduction(+:integrals)
+  ! !$omp firstprivate(n_threads) lastprivate(residual_id) reduction(+:integrals)
   !$ n_threads = omp_get_num_threads()
   !$ thread_id = omp_get_thread_num()
   n_points_per_thread = spectrum%n_points/n_threads

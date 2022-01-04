@@ -139,7 +139,8 @@ subroutine generate_uniform_rng_spectrum(spectrum,rngs)
   thread_id = 0
   n_threads = 1
   !
-  !$omp parallel default(private) shared(spectrum,rngs,n_points_per_thread,n_residual)
+  !$omp parallel default(private) shared(spectrum,rngs,n_residual) &
+  !$omp firstprivate(n_threads)
   !$ thread_id = omp_get_thread_num()
   !$ n_threads = omp_get_num_threads()
   n_points_per_thread = spectrum%n_points/n_threads
@@ -190,7 +191,7 @@ subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
   thread_id = 0
   n_threads = 1
   !$omp parallel default(private) shared(spectrum,uniform_data,residual_id) &
-  !$omp reduction(+:integrals)
+  !$omp firstprivate(n_threads) reduction(+:integrals)
   !$ thread_id = omp_get_thread_num()
   !$ n_threads = omp_get_num_threads()
   n_points_per_thread = spectrum%n_points/n_threads

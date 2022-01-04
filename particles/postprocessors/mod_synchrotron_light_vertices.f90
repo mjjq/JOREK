@@ -49,8 +49,7 @@ sims_particles,n_sync_lights_in)
   !> variables
   integer :: n_sync_lights,n_groups_max,n_particles_max
   integer,dimension(n_times)           :: n_groups,n_particle_relativistics
-  integer,dimension(:,:),allocatable   :: n_particles,particle_types,n_active_particles
-  integer,dimension(:,:,:),allocatable :: active_particle_id
+  integer,dimension(:,:),allocatable   :: n_particles,particle_types
 
   sync_lights%n_property_vertex = 13 !< set number of synchrotron vertex properties
   !> initialise time vector
@@ -79,28 +78,17 @@ sims_particles,n_sync_lights_in)
     endif
     n_sync_lights = n_particles_max
   endif
-  !> allocate active particle arrays
-  allocate(n_active_particles(n_groups_max,sync_vert%n_lights)); 
-  allocate(active_particle_id(n_particles_max,n_group_max,sync_vert%n_lights));
+
   !> allocate vertices
   call sync_lights%allocate_x_properties(n_sync_lights)
 
-  !> find active particles for all groups and times
-  call sync_lights%find_active_particles_grouprs(n_groups_max,n_particles_max,&
-  n_groups,n_particles,sims_particles,n_active_particles,active_particle_id)
-  !> if no omp fill the synchrotron lights sequentially
-#ifdef _OPENMP
-  call fill_synchrotron_lights_from_particles_openmp(&
-  sync_lights,sims_particles,n_groups_max,n_particles_max,&
-  n_groups,n_particles,n_active_particles,active_particle_id)
-#else
-  call fill_synchrotron_lights_from_particles_openmp(&
-sync_lights,sims_particles,n_groups_max,n_particles_max,&
-n_groups,n_particles,n_active_particles,active_particle_id) 
-#endif
+  !> fill the synchrotron lights
+  call fill_synchrotron_lights_from_particles(sync_lights,&
+  sims_particles,n_groups_max,n_particles_max,n_groups,n_particles)
+
   !> cleanup 
   deallocate(n_particles); deallocate(particle_types);
-  deallocate(n_active_particles); deallocate(active_particle_id)
+
 end subroutine init_synchrotron_lights_from_particles
 
 !> synchrotron_directionality_funct computes the directionaliy function
@@ -211,9 +199,8 @@ end subroutine synchrotron_spectral_irradiance
 
 
 !> Tools ------------------------------------------
-!> fill_synchrotron_lights_from_particles_serial fill the
-!> x and properties array of synchrotron light from
-!> particle list sequentially
+!> fill_synchrotron_lights_from_particles_serial fill the x and
+!> the properties array of synchrotron light from particle list
 !> inputs:
 !>   sync_lights:        (synchrotron_light_vertices) empty synchrotron lights
 !>   sims_particles:     (particle_sim)(n_times) array of particle simulations
@@ -226,9 +213,8 @@ end subroutine synchrotron_spectral_irradiance
 !>                       of the active particles
 !> outputs:
 !>   sync_lights: (synchrotron_light_vertices) initialised synchrotron lights
-subroutine fill_synchrotron_lights_from_particles_serial(&
-sync_lights,sims_particles,n_groups_max,n_particles_max,&
-n_groups,n_active_particles,active_particle_id)
+subroutine fill_synchrotron_lights_from_particles(sync_lights,&
+sims_particles,n_groups_max,n_particles_max,n_groups,n_particles)
   use mod_particle_sim,   only: particle_sim
   use mod_particle_types, only: particle_kinetic_relativistic
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
@@ -240,8 +226,6 @@ n_groups,n_active_particles,active_particle_id)
   integer,intent(in)                                             :: n_groups_max
   integer,intent(in)                                             :: n_particles_max
   integer,dimension(sync_lights%n_times),intent(in)              :: n_groups
-  integer,dimension(n_groups_max,sync_lights%n_times),intent(in) :: n_active_particles
-  integer,dimension(n_particles_max,n_groups_max,sync_lights%n_times),intent(in)::active_particles_id
   !> variables
   type(particle_kinetic_relativistic) :: particle
   integer :: ii,jj,kk,pp
@@ -249,18 +233,32 @@ n_groups,n_active_particles,active_particle_id)
   real*8,dimension(sync_lights%n_x) :: E_field,B_field
 
   !> compute synchrotron light properties from particle simulations
+  !$omp parallel default(private) firstprivate(n_groups,n_particles) &
+  !$omp shared(sync_lights,sims_particles,pp)
+  !$omp single
   do ii=1,sync_lights%n_times
+    !$omp task depend(out:pp)
     pp = 0
+    !$omp end task
     do jj=1,n_groups(ii)
       select type (p_list=>sims_particles(ii)%groups(jj)%particles)
         type is (particle_kinetic_relativistic)
-        do kk=1,n_active_particles(jj,ii)
+        do kk=1,n_particles(jj,ii)
+          !$omp task depend(in:p_list,kk,jj,ii) depend(out:particle) depend(inout:pp)
+          if(p_list(kk,jj,ii)%i_elm.le.0) cycle
+          particle = p_list(kk,jj,ii) !< copy active particle
           pp = pp+1
-          particle = p_list(active_particles_id(kk,jj,ii)) !< copy active particle
+          !$omp end task
+          !$omp task depend(in:pp,ii,particle) depend(out:sync_light) &
           call sync_lights%store_light_x_from_particle_id(pp,ii,particle) !< store position
+          !$omp end task
+          !$omp task depend(in:sims_particles,particle,ii) depend(out:E_field,B_field)
           !> compute E,B fields
           call sims_particles(ii)%fields%calc_EBpsiU(sync_lights%times(ii),&
           particle%i_elm,particle%st,particle%x(3),E_field,B_field,psi,U)
+          !$omp end task
+          !$omp task depend(in:particle,sim_particles,E_field,B_field,pp,ii,jj) &
+          !$omp  depend(inout:sync_lights)
           !> compute synchrotron light properties
           call compute_synchrotron_light_properties(&
           sync_lights%n_x,sync_lights%n_property_vertex,particle,&
@@ -268,94 +266,14 @@ n_groups,n_active_particles,active_particle_id)
           vector_cylindrical_to_cartesian(particle%x(3),E_field),&
           vector_cylindrical_to_cartesian(particle%x(3),B_field),&
           sync_lights%properties(:,pp,ii))
+          !$omp end task
         enddo 
       end select
     enddo
   enddo
-end subroutine fill_synchrotron_lights_from_particles_serial
-
-!> fill_synchrotron_lights_from_particles_openmp fill the
-!> x and properties array of synchrotron light from
-!> particle list parallelised by openmp
-!> inputs:
-!>   sync_lights:        (synchrotron_light_vertices) empty synchrotron lights
-!>   sims_particles:     (particle_sim)(n_times) array of particle simulations
-!>   n_groups_max:       (integer) maximum size of groups
-!>   n_particles_max:    (integer) maximum number of particles
-!>   n_groups:           (integer)(n_times) size of each group 
-!>   n_active_particles: (integer)(n_group_max,n_times) number of active particles
-!>                       per group and per time
-!>   active_particle_id: (integer)(n_particle_max,n_group_max,n_times) indices
-!>                       of the active particles
-!> outputs:
-!>   sync_lights: (synchrotron_light_vertices) initialised synchrotron lights
-subroutine fill_synchrotron_lights_from_particles_openmp(&
-sync_lights,sims_particles,n_groups_max,n_particles_max,&
-n_groups,n_particles,n_active_particles,active_particle_id)
-!$ use omp_lib
-  use mod_array_tools,           only: compact_array_empty_end_sectors
-  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
-  use mod_particle_sim,          only: particle_sim
-  use mod_particle_types,        only: particle_kinetic_relativistic
-  implicit none
-  !> inputs-outputs
-  class(synchrotron_light_vertices),intent(inout) :: sync_lights
-  !> inputs:
-  type(particle_sim),dimension(sync_lights%n_times),intent(in)   :: sims_particles
-  integer,intent(in)                                             :: n_groups_max
-  integer,intent(in)                                             :: n_particles_max
-  integer,dimension(sync_lights%n_times),intent(in)              :: n_groups
-  integer,dimension(n_groups_max,sync_lights%n_times),intent(in) :: n_active_particles
-  integer,dimension(n_particles_max,n_groups_max,sync_lights%n_times),intent(in)::active_particles_id
-  !> variables
-  type(particle_kinetic_relativistic) :: particle
-  integer :: ii,jj,kk,base_id,start_id
-  integer :: thread_id,thread_num
-  real*8,dimension(sync_lights%n_x) :: E_field,B_field
-
-  !> the idea is that each thread elaborate a set of particles and
-  !> store them in an allocate memory window of the global array
-  !> indentified by thread_id. The procedure causes a non contiguous
-  !> write operation in memory to be fixed in the next step.
-  !$omp parallel defautl(private) shared(sync_lights,sims_particles,&
-  !$omp n_groups,n_particles,n_active_particles)
-  thread_id = 1; thread_num = 1;
-  !$ thread_num = omp_get_num_threads()
-  !$ thread_id  = omp_get_thread_num() + 1
-  do ii=1,sync_lights%n_times
-    base_id = 0
-    do jj=1,n_groups(ii)
-      select type (p_list=>sims_particles(ii)%groups(jj)%particles)
-        type is (particle_kinetic_relativistic)
-        !> compute the base id for storage
-        if(jj.gt.1) base_id = sum(n_active_particles(1:jj-1,ii))
-        !> split the number of particles among all threads
-        n_particles_thread = n_active_particles(jj,ii)/thread_num
-        start_id = n_particles_thread*(thread_id-1)
-        !> one thread elaborates the remaining particles
-        !$omp single nowait
-        n_particles_thread = n_active_particles(jj,ii) - n_particles_thread*(thread_num-1)
-        !$omp end single
-        do kk=start_id+1,start_id+n_particles_thread
-          particle = p_list(kk) !< copy particle to elaborate
-          !> compute and store light position
-          call sync_lights%store_light_x_from_particle_id(base_id+kk,ii,particle)
-          !> compute E,B field
-          call sims_particles(ii)%fields%calc_EBpsiU(sync_lights%times(ii),&
-          particle%i_elm,particle%st,particle%x(3),E_field,B_field,psi,U)
-          !> compute light properties
-          call compute_synchrotron_light_properties(&
-          sync_lights%n_x,sync_lights%n_property_vertex,particle,&
-          sims_particles(ii)%groups(jj)%mass,&
-          vector_cylindrical_to_cartesian(particle%x(3),E_field),&
-          vector_cylindrical_to_cartesian(particle%x(3),B_field),&
-          sync_lights%properties(:,base_id+kk,ii))
-        enddo 
-      end select
-    enddo
-  enddo
+  !$omp end single
   !$omp end parallel
-end subroutine fill_synchrotron_lights_from_particles_openmp
+end subroutine fill_synchrotron_lights_from_particle
 
 !> compute_synchrotron_light_properties computes the
 !> synchrotron radiation properties from a

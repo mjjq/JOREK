@@ -357,18 +357,17 @@ subroutine do_read(this, sim, ev)
         end if
         f%time_now = t_start * sim%t_norm
         t_now = t_start
-        !Simulation time is not set. This can lead to issues.
+        !Simulation time is now set
         sim%time=t_now*sim%t_norm
 
         if(this%mode_divisor .ne. 1.d0) then
            write(*,"(A,3e14.6)") "mod_fields_linear : Importing mode structure divided by", this%mode_divisor
-       !$omp parallel do default(shared) private(i_nodes)
-        do i_nodes=1,f%node_list%n_nodes
-           !values(n_tor,n_order,n_vertex)
-           f%node_list%node(i_nodes)%values(2:n_tor,:,:)= f%node_list%node(i_nodes)%values(2:n_tor,:,:)/100
-           f%node_list%node(i_nodes)%deltas= f%node_list%node(i_nodes)%deltas/100
-        enddo
-       !$omp end parallel do
+           !$omp parallel do default(shared) private(i_nodes)
+           do i_nodes=1,f%node_list%n_nodes
+             f%node_list%node(i_nodes)%values(2:n_tor,:,:)= f%node_list%node(i_nodes)%values(2:n_tor,:,:)/100
+             f%node_list%node(i_nodes)%deltas= f%node_list%node(i_nodes)%deltas/100
+           enddo
+           !$omp end parallel do
         endif !<mode_divisor != 1
   
     

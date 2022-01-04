@@ -39,6 +39,7 @@ contains
   procedure,pass(sim) :: compute_group_size
   procedure,pass(sim) :: compute_particle_sizes
   procedure,pass(sim) :: find_particle_types
+  procedure,pass(sim) :: find_active_particles_groups
 end type particle_sim
 
 contains
@@ -171,4 +172,36 @@ subroutine find_particle_types(sim,n_groups_in,p_types)
   enddo
 end subroutine find_particle_types
 
+!> returns number and ids of active particles for all groups
+!> and for a specific type of particle (encoded)
+subroutine find_active_particles_groups(sim,n_groups,n_particles_max,&
+n_particles,n_active_particles,active_particle_id,p_type)
+  use mod_particle_types, only: find_active_particle_id
+  implicit none
+  !> inputs-outputs
+  class(particle_sim),intent(inout) :: sim
+  !> inputs
+  integer,intent(in) :: n_groups,n_particles_max
+  integer,dimension(n_groups),intent(in) :: n_particles
+  integer,intent(in),optional :: p_type
+  !> outputs
+  integer,dimension(n_groups),intent(out) :: n_active_particles
+  integer,dimension(n_particles_max,n_groups),intent(out) :: active_particle_id
+  !> variables
+  integer :: ii
+  n_active_particles = 0; active_particle_id = 0;
+  if(present(p_type)) then
+    do ii=1,n_groups
+      call find_active_particle_id(p_type,n_particles(ii),&
+      sim%groups(ii)%particles(1:n_particles(ii)),&
+      n_active_particles(ii),active_particle_id(1:n_particles(ii),ii))
+    enddo
+  else
+    do ii=1,n_groups
+      call find_active_particle_id(n_particles(ii),&
+      sim%groups(ii)%particles(1:n_particles(ii)),&
+      n_active_particles(ii),active_particle_id(1:n_particles(ii),ii))
+    enddo
+  endif
+end subroutine find_active_particles_groups
 end module mod_particle_sim

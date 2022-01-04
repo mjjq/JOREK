@@ -7,18 +7,19 @@ private
 public :: vertices
 
 !> Variable and type definitions ------------------------------------------
+integer,parameter     :: n_x=3 !< number of coordinates
+
 !> vertices: abstract class containing the basic types and procedures
 !> defining light or gather points.
 type,abstract :: vertices
   !> type variables
-  integer,parameter     :: n_x=3             !< number of coordinates
   integer               :: n_times           !< number of time slices
   integer               :: n_vertices        !< total number of vertices equals per all time
   integer               :: n_property_vertex !< total number of properties per vertex
-  integer,dimension(:)  :: n_active_vertices !< total number of active vertices per time
-  real*8,dimension(:)   :: times             !< time of the time slices
-  real*8,dimension(:,:,:) :: x               !< position of the point (cartesian)
-  real*8,dimension(:,:,:) :: properties      !< properties of the vertices
+  integer,dimension(:),allocatable    :: n_active_vertices !< total number of active vertices per time
+  real*8,dimension(:),allocatable     :: times             !< time of the time slices
+  real*8,dimension(:,:,:),allocatable :: x                 !< position of the point (cartesian)
+  real*8,dimension(:,:,:),allocatable :: properties        !< properties of the vertices
   contains
   !> type procedures
   procedure,pass(vertices) :: allocate_time_vector
@@ -71,7 +72,7 @@ subroutine allocate_x_properties(vert_inout,n_vertices)
   !> check,allocate and initialize to 0 x and properties array
   if(allocated(vert_inout%x)) deallocate(vert_inout%x)
   if(allocated(vert_inout%properties)) deallocate(vert_inout%properties)
-  allocate(vert_inout%x(vert_inout%n_x,n_vertices,vert_inout%n_times))
+  allocate(vert_inout%x(n_x,n_vertices,vert_inout%n_times))
   allocate(vert_inout%properties(vert_inout%n_property_vertex,n_vertices,vert_inout%n_times))
   vert_inout%x = 0.d0; vert_inout%properties = 0.d0;
   vert_inout%n_vertices = n_vertice;
@@ -104,7 +105,7 @@ subroutine deallocate_time_vector(vert_inout)
   implicit none
   !> input-outputs
   class(vertices),intent(inout) :: vert_inout
-  if(allocated(vert_inout%n_active_vertices) deallocate(vert_inout%n_active_vertices))
+  if(allocated(vert_inout%n_active_vertices) deallocate(vert_inout%n_active_vertices)
   if(allocated(vert_inout%times)) deallocate(vert_inout%times)
   vert_inout%n_times = 0
 end subroutine deallocate_time_vector
@@ -165,7 +166,7 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
     ifail = 11
     return
   endif
-  allocate(x_table(vert_inout%n_x,n_active_vertices_max,vert_inout%n_times))
+  allocate(x_table(n_x,n_active_vertices_max,vert_inout%n_times))
   allocate(property_table(vert_inout%n_property_vertex,n_active_vertices_max,vert_inout%n_times))
 
 #ifdef _OPENMP

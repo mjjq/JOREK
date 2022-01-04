@@ -54,9 +54,9 @@ subroutine copy_sim_fieldline_B_hat_prev(n_groups,n_particles,sim_in,sim_out)
   type(particle_sim),intent(inout) :: sim_out
   integer,intent(in) :: n_groups,n_particles
   integer :: ii,jj
-  !$omp parallel default(private) shared(n_groups,n_particles,sim_in,sim_out)
+  !$omp parallel do default(private) firstprivate(n_groups,n_particles) &
+  !$omp shared(sim_in,sim_out) collapse(2)
   do ii=1,n_groups
-    !$omp do
     do jj=1,n_particles
       select type (p_out=>sim_out%groups(ii)%particles(jj))
       type is (particle_fieldline)
@@ -66,9 +66,8 @@ subroutine copy_sim_fieldline_B_hat_prev(n_groups,n_particles,sim_in,sim_out)
         end select
       end select
     enddo
-    !$omp end do
   enddo
-  !$omp end parallel
+  !$omp end parallel do
 end subroutine copy_sim_fieldline_B_hat_prev
 
 !> generate random values for filling the groups type
@@ -184,10 +183,10 @@ subroutine fill_particle_base(n_groups,n_particles,sim_particles,rank_in)
   real*8,dimension(3) :: rn_real_size3
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !> fill-up the particle_base variables for all particles and all groups
-  !$omp parallel default(shared) private(ii,jj,rank,rn_integer,rn_real,&
-  !$omp rn_real_size2,rn_real_size3,thread_id)
   thread_id = 0
+  !> fill-up the particle_base variables for all particles and all groups
+  !$omp parallel default(shared) firstprivate(n_groups,n_particles) &
+  !$omp private(ii,jj,rank,rn_integer,rn_real,rn_real_size2,rn_real_size3,thread_id)
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
   !$omp do collapse(2)
@@ -229,8 +228,8 @@ subroutine fill_particle_fieldline(n_particles,particles,rank_in)
   real*8,dimension(3) :: rn_real_size3
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) shared(n_particles,particles)
   thread_id = 0
+  !$omp parallel default(private) firstprivate(n_particles,particles)
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
   !$omp do
@@ -261,8 +260,8 @@ subroutine fill_particle_gc(n_particles,particles,rank_in)
   real*8 :: rn_real
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) shared(n_particles,particles)
   thread_id = 0
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
   !$omp do
@@ -295,7 +294,7 @@ subroutine fill_particle_gc_vpar(n_particles,particles,rank_in)
   real*8 :: rn_real
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) shared(n_particles,particles)
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
   thread_id = 0
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
@@ -331,7 +330,7 @@ subroutine fill_particle_gc_Qin(n_particles,particles,rank_in)
   real*8,dimension(3,3) :: rn_real_size33
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) shared(n_particles,particles)
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
   thread_id = 0
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
@@ -385,7 +384,7 @@ subroutine fill_particle_kinetic(n_particles,particles,rank_in)
   real*8,dimension(3) :: rn_real_size3
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) private(n_particles,particles)
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
   thread_id = 0
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
@@ -417,7 +416,7 @@ subroutine fill_particle_kinetic_leapfrog(n_particles,particles,rank_in)
   real*8,dimension(3) :: rn_real_size3
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) private(n_particles,particles)
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
   thread_id = 0
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
@@ -449,7 +448,7 @@ subroutine fill_particle_kinetic_relativistic(n_particles,particles,rank_in)
   real*8,dimension(3) :: rn_real_size3
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) shared(n_particles,particles)
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
   thread_id = 0
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
@@ -481,7 +480,7 @@ subroutine fill_particle_gc_relativistic(n_particles,particles,rank_in)
   real*8,dimension(2) :: rn_real_size2
   rank = 1
   if(present(rank_in)) rank=rank_in
-  !$omp parallel default(private) shared(n_particles,particles)
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
   thread_id = 0
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)

@@ -270,7 +270,7 @@ end subroutine extract_particle_types_all_particle_sims
 !>   light_vert: (light_vertices) light vertices with new x entry
 subroutine store_light_x_from_particle_id(light_vert,light_id,time_id,particle)
   use mod_particle_types,       only: particle_base
-  use mod_coordinate_transform, only: cylindrical_to_cartesian
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian
   implicit none
   !> inputs-outputs
   class(light_vertices),intent(inout) :: light_vertices

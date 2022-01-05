@@ -251,7 +251,8 @@ n_groups,n_active_particles,active_particle_id)
         !$omp parallel do default(private) firstprivate(ii,jj,pp,n_active_particles) &
         !$omp shared(sims_particles,active_particles_id,sync_lights)
         do kk=1,n_active_particles(jj,ii)
-          select type (particle=>sims_particles(ii)%groups(jj)%particles(active_particles_id(kk,jj,ii)))
+          select type (particle=>sims_particles(ii)%groups(jj)%particles(&
+            active_particles_id(kk,jj,ii)))
             type is (particle_kinetic_relativistic)
             call sync_lights%store_light_x_from_particle_id(pp+kk,ii,particle) !< store position
             !> compute E,B fields
@@ -270,6 +271,7 @@ n_groups,n_active_particles,active_particle_id)
         pp = pp + n_active_particles(jj,ii) 
       end select
     enddo
+      sync_lights%n_active_vertices(ii) = pp !< store number of activer vertices
   enddo
 end subroutine fill_synchrotron_lights_from_particles
 

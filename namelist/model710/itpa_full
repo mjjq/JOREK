@@ -26,7 +26,7 @@
 
  linear_run = .true.
 
- nout = 1
+ nout = 10
 
  use_mumps_eq  = .true.
  use_pastix_eq = .false.

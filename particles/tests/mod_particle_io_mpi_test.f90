@@ -95,9 +95,9 @@ subroutine setup(rank,n_tasks,ifail)
   allocate(particle_gc_relativistic::sim_particles%groups(7)%particles(n_particles))
   !allocate(particle_gc_Qin::sim_particles%groups(8)%particles(n_particles)) !< IO not implemented
 
-  !> fill-up the groupd and particle base variables
-  call fill_sim_groups(n_groups,sim_particles,rank,ifail)
-  call fill_particles(n_groups,n_particles,sim_particles,rank)
+  !> fill-up the group and particle base variables
+  call fill_sim_groups(n_groups,sim_particles%groups,rank,ifail)
+  call fill_particles(n_groups,n_particles,sim_particles%groups,rank)
 
   !> write default simulation in file and read it in new simulation
   call write_simulation_hdf5(sim_particles,trim(test_filename))
@@ -146,7 +146,8 @@ subroutine test_particle_mpi_io(rank,n_tasks,ifail)
   call read_simulation_hdf5(sim_particles_new,trim(test_filename))
 
   !> compu variables which are not read from hdf5
-  call copy_sim_fieldline_B_hat_prev(n_groups,n_particles,sim_particles,sim_particles_new)
+  call copy_sim_fieldline_B_hat_prev(n_groups,n_particles,&
+  sim_particles%groups,sim_particles_new%groups)
 
   !> check simulation 
   call assert_equals(sim_particles_new%time,sim_particles%time,tol_real8,&

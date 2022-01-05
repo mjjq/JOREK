@@ -9,11 +9,12 @@ public :: q_interval,i_elm_interval,i_life_interval,sim_time_interval
 public :: t_birth_interval,st_interval,mass_interval,v_interval
 public :: Ekin_interval,mu_interval,Bnorm_interval,weight_interval
 public :: x_lowbnd,x_uppbnd,vp3d_lowbnd,vp3d_uppbnd,ABE_lowbnd,ABE_uppbnd
-public :: fill_particles
+public :: fill_particles,invalidate_particles,obtain_active_particle_ids
 public :: fill_sim_groups,fill_particle_base,fill_particle_fieldline
 public :: fill_particle_gc,fill_particle_gc_vpar,fill_particle_gc_Qin
 public :: fill_particle_kinetic,fill_particle_kinetic_leapfrog
 public :: fill_particle_kinetic_relativistic,fill_particle_gc_relativistic
+public :: obtain_particle_charges,allocate_one_particle_list_type
 
 !> Variables --------------------------------------------------
 integer,parameter :: n_particle_types=8
@@ -44,23 +45,169 @@ interface fill_sim_groups
 end interface fill_sim_groups
 contains
 !> Procedures -------------------------------------------------
+!> allocate one particle list per type
+subroutine allocate_one_particle_list_type(n_groups,n_particles,groups,ifail)
+  use mod_particle_sim,   only: particle_group
+  use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
+  use mod_particle_types, only: particle_gc,particle_fieldline
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_particle_types, only: particle_gc_relativistic
+  use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin 
+  implicit none
+  !> inputs
+  integer,intent(in) :: n_groups,n_particles
+  !> inputs-outputs
+  integer,intent(inout) :: ifail
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
+  if(n_groups.lt.n_particle_types) then
+    write(*,'(/A)') "allocate one particle list per type failed!"
+    ifail = 1
+    return
+  endif
+  allocate(particle_fieldline::groups(1)%particles(n_particles))
+  allocate(particle_gc::groups(2)%particles(n_particles))
+  allocate(particle_gc_vpar::groups(3)%particles(n_particles))
+  allocate(particle_kinetic::groups(4)%particles(n_particles))
+  allocate(particle_kinetic_leapfrog::groups(5)%particles(n_particles))
+  allocate(particle_kinetic_relativistic::groups(6)%particles(n_particles))
+  allocate(particle_gc_relativistic::groups(7)%particles(n_particles))
+  allocate(particle_gc_Qin::groups(8)%particles(n_particles))
+end subroutine allocate_one_particle_list_type
+
+!> obtain charges from all particles in a simulation 
+subroutine obtain_particle_charges(n_groups,n_particles,charge_list,groups)
+  use mod_particle_sim,   only: particle_group
+  use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
+  use mod_particle_types, only: particle_gc
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_particle_types, only: particle_gc_relativistic
+  use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin 
+  implicit none
+  !> inputs
+  integer,intent(in) :: n_groups,n_particles
+  !> inputs-outputs
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
+  !> outputs
+  integer*1,dimension(n_particles,n_groups),intent(out) :: charge_list
+  !> variables
+  integer :: ii,jj
+
+  !> initialisation
+  charge_list = 0
+  !> extract charges
+  !$omp parallel do default(shared) firstprivate(n_groups,n_particles) &
+  !$omp private(ii,jj) collapse(2)
+  do jj=1,n_groups
+    do ii=1,n_particles
+      select type (p=>groups(jj)%particles(ii))
+        type is (particle_kinetic)
+        charge_list(ii,jj) = p%q
+        type is (particle_kinetic_leapfrog)
+        charge_list(ii,jj) = p%q
+        type is (particle_gc)
+        charge_list(ii,jj) = p%q
+        type is (particle_kinetic_relativistic)
+        charge_list(ii,jj) = p%q
+        type is (particle_gc_relativistic)
+        charge_list(ii,jj) = p%q
+        type is (particle_gc_vpar)
+        charge_list(ii,jj) = p%q
+        type is (particle_gc_Qin)
+        charge_list(ii,jj) = p%q
+      end select
+    enddo
+  enddo
+  !$omp end parallel do
+end subroutine obtain_particle_charges
+
+!> extract the index of valid particles in a simulatiion
+subroutine obtain_active_particle_ids(n_groups,n_particles,&
+active_particle_ids,groups)
+  use mod_particle_sim, only: particle_group
+  implicit none
+  !> inputs
+  integer,intent(in) :: n_groups,n_particles
+  !> inputs-outputs
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
+  !> outputs:
+  integer,dimension(n_particles,n_groups),intent(out) :: active_particle_ids
+  !> variables
+  integer :: ii,jj,counter
+  do jj=1,n_groups
+    counter = 0
+    do ii=1,n_particles
+      if(groups(jj)%particles(ii)%i_elm.gt.0) then
+        counter = counter + 1
+        active_particle_ids(counter,jj) = ii
+      endif
+    enddo
+  enddo
+end subroutine obtain_active_particle_ids
+
+!> invalidate some of the particles in the particle groups of a
+!> simulation as a function of a survival probability
+subroutine invalidate_particles(n_groups,n_particles,&
+  survival_prob_in,n_active_particles,groups,rank_in)
+  !$ use omp_lib
+  use mod_particle_sim, only: particle_group
+  use mod_gnu_rng, only: gnu_rng_interval
+  use mod_gnu_rng, only: set_seed_sys_time 
+  implicit none
+  !> inputs
+  integer,intent(in) :: n_groups,n_particles
+  real*8,intent(in)  :: survival_prob_in
+  integer,intent(in),optional :: rank_in
+  !> inputs-outputs
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
+  !> outputs
+  integer,dimension(n_groups),intent(out) :: n_active_particles
+  !> variables
+  integer :: ii,jj,rank,thread_id
+  real*8  :: survival_prob
+  real*8,dimension(n_particles,n_groups) :: survival_array
+  !> initialisation
+  rank = 1; if(present(rank_in)) rank=rank_in;
+  survival_prob = abs(survival_prob_in)
+  if(abs(survival_prob).gt.1.d0) survival_prob = survival_prob - floor(survival_prob)
+  n_active_particles = 0
+  !$omp parallel default(shared) private(thread_id)
+  !$ thread_id = omp_get_thread_num()
+  call set_seed_sys_time(rng_seed_interval,rank,thread_id)
+  !$omp end parallel
+  
+  !> generate survival probability
+  call gnu_rng_interval(n_particles,n_groups,(/0.d0,1.d0/),survival_array)
+  do ii=1,n_groups
+    n_active_particles(ii) = count(survival_array.ge.survival_prob)
+  enddo
+  !> invalidate particles
+  !$omp parallel do default(shared) firstprivate(n_particles,n_groups,survival_prob) &
+  !$omp private(ii,jj) collapse(2)
+  do jj=1,n_groups
+    do ii=1,n_particles
+      if(survival_array(ii,jj).lt.survival_prob) groups(jj)%particles(ii)%i_elm = 0
+    enddo
+  enddo 
+  !$omp end parallel do
+end subroutine invalidate_particles
+
 !> copy fieldlines B_hat between two simulations 
 !> used for IO because it is not stored in hdf5
-subroutine copy_sim_fieldline_B_hat_prev(n_groups,n_particles,sim_in,sim_out)
+subroutine copy_sim_fieldline_B_hat_prev(n_groups,n_particles,groups_in,groups_out)
   use mod_particle_types, only: particle_fieldline
-  use mod_particle_sim,   only: particle_sim
+  use mod_particle_sim,   only: particle_group
   implicit none
-  type(particle_sim),intent(in)    :: sim_in
-  type(particle_sim),intent(inout) :: sim_out
   integer,intent(in) :: n_groups,n_particles
+  type(particle_group),dimension(n_groups),intent(in)    :: groups_in
+  type(particle_group),dimension(n_groups),intent(inout) :: groups_out
   integer :: ii,jj
   !$omp parallel do default(private) firstprivate(n_groups,n_particles) &
-  !$omp shared(sim_in,sim_out) collapse(2)
+  !$omp shared(groups_in,groups_out) collapse(2)
   do ii=1,n_groups
     do jj=1,n_particles
-      select type (p_out=>sim_out%groups(ii)%particles(jj))
+      select type (p_out=>groups_out(ii)%particles(jj))
       type is (particle_fieldline)
-        select type (p_in=>sim_in%groups(ii)%particles(jj))
+        select type (p_in=>groups_in(ii)%particles(jj))
           type is (particle_fieldline)
           p_out%B_hat_prev = p_in%B_hat_prev
         end select
@@ -72,35 +219,35 @@ end subroutine copy_sim_fieldline_B_hat_prev
 
 !> generate random values for filling the groups type
 !> Sequential version
-subroutine fill_sim_groups_seq(n_groups,sim_particles)
-  use mod_particle_sim, only: particle_sim
+subroutine fill_sim_groups_seq(n_groups,groups)
+  use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_gnu_rng, only: set_seed_sys_time
   implicit none
   integer,intent(in) :: n_groups
-  type(particle_sim),intent(inout) :: sim_particles
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
   !> variables
   integer :: ii
   real*8 :: rn_real
   call set_seed_sys_time(rng_seed_interval,1)
   do ii=1,n_groups
     call gnu_rng_interval(mass_interval,rn_real)
-    sim_particles%groups(ii)%mass = rn_real
+    groups(ii)%mass = rn_real
   enddo
 end subroutine fill_sim_groups_seq
 
 !> generate random values for filling the groups type
 !> we do not create random mass for all groups because
 !> it seems that only rank 0 is saved in hdf5
-subroutine fill_sim_groups_mpi(n_groups,sim_particles,rank,ifail)
+subroutine fill_sim_groups_mpi(n_groups,groups,rank,ifail)
   use mpi
-  use mod_particle_sim, only: particle_sim
+  use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_gnu_rng, only: set_seed_sys_time
   implicit none
   !> inputs
-  type(particle_sim),intent(inout) :: sim_particles
   integer,intent(in) :: n_groups,rank
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
   !> input-outputs
   integer,intent(inout) :: ifail
   !> variables
@@ -111,38 +258,38 @@ subroutine fill_sim_groups_mpi(n_groups,sim_particles,rank,ifail)
     call set_seed_sys_time(rng_seed_interval,rank)
     do ii=1,n_groups
       call gnu_rng_interval(mass_interval,rn_real)
-      sim_particles%groups(ii)%mass = rn_real
-      val_to_bcst(ii) = sim_particles%groups(ii)%mass
+      groups(ii)%mass = rn_real
+      val_to_bcst(ii) = groups(ii)%mass
     enddo
   endif
   call MPI_Bcast(val_to_bcst,n_groups,MPI_REAL8,0,MPI_COMM_WORLD,ifail)
   if(rank.ne.0) then
     do ii=1,n_groups
-      sim_particles%groups(ii)%mass = val_to_bcst(ii)
+      groups(ii)%mass = val_to_bcst(ii)
     enddo
   endif
 end subroutine fill_sim_groups_mpi
 
 !> fills particle list of each groups with random data
-subroutine fill_particles(n_groups,n_particles,sim_particles,rank_in)
-  use mod_particle_sim,   only: particle_sim
+subroutine fill_particles(n_groups,n_particles,groups,rank_in)
+  use mod_particle_sim,   only: particle_group
   use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
   use mod_particle_types, only: particle_gc,particle_fieldline
   use mod_particle_types, only: particle_kinetic_relativistic
   use mod_particle_types, only: particle_gc_relativistic
   use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin
   implicit none
-  type(particle_sim),intent(inout) :: sim_particles
   integer,intent(in) :: n_groups,n_particles
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
   integer,intent(in),optional :: rank_in
   integer :: rank,jj
   rank = 1
   if(present(rank_in)) rank = rank_in
   !> fill particle basic type
-  call fill_particle_base(n_groups,n_particles,sim_particles,rank)
+  call fill_particle_base(n_groups,n_particles,groups,rank)
   !> fill particle specific types
   do jj=1,n_groups
-    select type (p_list=>sim_particles%groups(jj)%particles)
+    select type (p_list=>groups(jj)%particles)
     type is(particle_fieldline)
     call fill_particle_fieldline(n_particles,p_list,rank)
     type is(particle_gc)
@@ -164,17 +311,17 @@ subroutine fill_particles(n_groups,n_particles,sim_particles,rank_in)
 end subroutine fill_particles
 
 !> generate random values for filling the particle base type
-subroutine fill_particle_base(n_groups,n_particles,sim_particles,rank_in)
-  use mod_particle_sim, only: particle_sim
+subroutine fill_particle_base(n_groups,n_particles,groups,rank_in)
+  use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_gnu_rng, only: set_seed_sys_time
   !$ use omp_lib
   implicit none
-  !> inputs-outputs:
-  type(particle_sim),intent(inout) :: sim_particles
   !> inputs
   integer,intent(in) :: n_groups,n_particles
   integer,intent(in),optional :: rank_in
+  !> inputs-outputs:
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
   !> variables
   integer :: ii,jj,rn_integer,rank
   !$ integer :: thread_id
@@ -195,15 +342,15 @@ subroutine fill_particle_base(n_groups,n_particles,sim_particles,rank_in)
       call gnu_rng_interval(weight_interval,rn_real)
       call gnu_rng_interval(2,st_interval,rn_real_size2)
       call gnu_rng_interval(3,x_lowbnd,x_uppbnd,rn_real_size3)
-      sim_particles%groups(jj)%particles(ii)%x       = rn_real_size3
-      sim_particles%groups(jj)%particles(ii)%st      = rn_real_size2
-      sim_particles%groups(jj)%particles(ii)%weight  = rn_real
+      groups(jj)%particles(ii)%x       = rn_real_size3
+      groups(jj)%particles(ii)%st      = rn_real_size2
+      groups(jj)%particles(ii)%weight  = rn_real
       call gnu_rng_interval(t_birth_interval,rn_real)
-      sim_particles%groups(jj)%particles(ii)%t_birth = real(rn_real,kind=4)
+      groups(jj)%particles(ii)%t_birth = real(rn_real,kind=4)
       call gnu_rng_interval(i_elm_interval,rn_integer)
-      sim_particles%groups(jj)%particles(ii)%i_elm   = rn_integer
+      groups(jj)%particles(ii)%i_elm   = rn_integer
       call gnu_rng_interval(i_life_interval,rn_integer)
-      sim_particles%groups(jj)%particles(ii)%i_life  = rn_integer 
+      groups(jj)%particles(ii)%i_life  = rn_integer 
     enddo
   enddo
   !$omp end do

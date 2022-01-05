@@ -193,14 +193,14 @@ n_particles,n_active_particles,active_particle_id,p_type)
   if(present(p_type)) then
     do ii=1,n_groups
       call find_active_particle_id(p_type,n_particles(ii),&
-      sim%groups(ii)%particles(1:n_particles(ii)),&
-      n_active_particles(ii),active_particle_id(1:n_particles(ii),ii))
+      sim%groups(ii)%particles,n_active_particles(ii),&
+      active_particle_id(1:n_particles(ii),ii))
     enddo
   else
     do ii=1,n_groups
       call find_active_particle_id(n_particles(ii),&
-      sim%groups(ii)%particles(1:n_particles(ii)),&
-      n_active_particles(ii),active_particle_id(1:n_particles(ii),ii))
+      sim%groups(ii)%particles,n_active_particles(ii),&
+      active_particle_id(1:n_particles(ii),ii))
     enddo
   endif
 end subroutine find_active_particles_groups

@@ -16,19 +16,19 @@ module mod_fields
     type(type_element_list), pointer     :: element_list => null() !< Current element list
     logical                              :: static=.false. !< if true do not time interpolate
     logical                              :: flag_zero_dpsidt=.false. !< if true, P_time(1) = dpsi/dt = 0
-contains
-procedure(interp_PRZ), deferred, public   :: interp_PRZ
-procedure(interp_PRZ_2), deferred, public :: interp_PRZ_2
-procedure, public :: calc_NeTe
-procedure, public :: calc_EBpsiU
-procedure, public :: calc_F_profile
-procedure, public :: calc_gyro_average_E
-procedure, public :: calc_Qin, calc_Qin_analytic, check_consistency_Qin
-procedure, public :: calc_rk4, calc_RK4_analytic, check_consistency_RK4
-procedure, public :: calc_EBNormBGradBCurlbDbdt
-procedure, public :: calc_analytical_EBpsiU
-procedure, public :: calc_analytical_EBNormBGradBCurlbDbdt
-procedure, public :: set_flag_dpsidt
+  contains
+    procedure(interp_PRZ), deferred, public   :: interp_PRZ
+    procedure(interp_PRZ_2), deferred, public :: interp_PRZ_2
+    procedure, public :: calc_NeTe
+    procedure, public :: calc_EBpsiU
+    procedure, public :: calc_F_profile
+    procedure, public :: calc_gyro_average_E
+    procedure, public :: calc_Qin, calc_Qin_analytic, check_consistency_Qin
+    procedure, public :: calc_rk4, calc_RK4_analytic, check_consistency_RK4
+    procedure, public :: calc_EBNormBGradBCurlbDbdt
+    procedure, public :: calc_analytical_EBpsiU
+    procedure, public :: calc_analytical_EBNormBGradBCurlbDbdt
+    procedure, public :: set_flag_dpsidt
   end type fields_base
 
   interface

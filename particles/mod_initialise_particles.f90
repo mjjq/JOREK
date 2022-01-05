@@ -688,7 +688,6 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
 #else 
   real*8, dimension(1)                :: P, P_s, P_t, P_phi
 #endif
-  real*8, dimension(1)                :: P, P_s, P_t, P_phi
   real*8, dimension(:), allocatable   :: P2
   real*8, dimension(:,:), allocatable :: grad_P2
   real*8  :: R_s, R_t, Z_s, Z_t, R_i, Z_i, xjac

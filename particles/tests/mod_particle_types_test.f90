@@ -74,6 +74,7 @@ subroutine setup()
 end subroutine setup
 
 !> Tests ----------------------------------------
+!> test particle copy function
 subroutine test_particle_copy()
   use mod_particle_sim, only: particle_group
   use mod_particle_assert_equal, only: assert_equal_particle
@@ -100,6 +101,23 @@ subroutine test_particle_copy()
   enddo
 end subroutine test_particle_copy
 
+!> test return charge function
+subroutine test_particle_get_q()
+  implicit none
+  !> variables
+  integer :: ii,jj
+  integer*1,dimension(n_particles,n_particle_types) :: q_array
+  !> extract particle charge and test
+  !$omp parallel do default(shared) private(ii,jj) collapse(2)
+  do jj=1,n_particle_types
+    do ii=1,n_particles
+      q_array(ii,jj) = particle_get_q(groups_sol(jj)%particles(ii))
+    enddo
+  enddo
+  !$omp end parallel do
+  call assert_equals(int(q_array),int(particle_charge_list_sol),n_particles,&
+  n_particle_types,"Errpr particle_type test get q: particle charge mismatch!")
+end subroutine test_particle_get_q
 !> Tools ----------------------------------------
 !>-----------------------------------------------
 end module mod_particle_types_test

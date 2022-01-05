@@ -186,10 +186,12 @@ contains
     class(particle_base), intent(out) :: particle_out !< Particle to copy attributes into
     class(particle_base), intent(in)  :: particle_in  !< Particle to copy attributes from
 
-    particle_out%x      = particle_in%x
-    particle_out%st     = particle_in%st
-    particle_out%weight = particle_in%weight
-    particle_out%i_elm  = particle_in%i_elm
+    particle_out%x        = particle_in%x
+    particle_out%st       = particle_in%st
+    particle_out%weight   = particle_in%weight
+    particle_out%i_elm    = particle_in%i_elm
+    particle_out%i_life   = particle_in%i_life  !< to be checked
+    particle_out%t_birth  = particle_in%t_birth !< to be checked
 
     select type (p_out => particle_out)
     type is (particle_fieldline)
@@ -214,6 +216,46 @@ contains
         p_out%mu = 0.d0
         p_out%q  = 0
       end select
+    type is (particle_gc_vpar)
+      select type (p_in => particle_in)
+      type is (particle_gc_vpar)
+        p_out%vpar = p_in%vpar
+        p_out%mu   = p_in%mu
+        p_out%q    = p_in%q
+      class default
+        p_out%vpar = 0.d0
+        p_out%mu   = 0.d0
+        p_out%q    = 0
+      end select
+    type is (particle_gc_Qin)
+    select type (p_in => particle_in)
+    type is (particle_gc_Qin)
+      p_out%vpar     = p_in%vpar
+      p_out%mu       = p_in%mu
+      p_out%q        = p_in%q
+      p_out%x_m      = p_in%x_m
+      p_out%vpar_m   = p_in%vpar_m
+      p_out%Astar_m  = p_in%Astar_m
+      p_out%Astar_k  = p_in%Astar_k
+      p_out%dAstar_k = p_in%dAstar_k
+      p_out%Bn_k     = p_in%Bn_k
+      p_out%dBn_k    = p_in%dBn_k
+      p_out%Bnorm_k  = p_in%Bnorm_k
+      p_out%E_k      = p_in%E_k
+    class default
+      p_out%vpar     = 0.d0
+      p_out%mu       = 0.d0
+      p_out%q        = 0
+      p_out%x_m      = 0.d0
+      p_out%vpar_m   = 0.d0
+      p_out%Astar_m  = 0.d0
+      p_out%Astar_k  = 0.d0
+      p_out%dAstar_k = 0.d0
+      p_out%Bn_k     = 0.d0
+      p_out%dBn_k    = 0.d0
+      p_out%Bnorm_k  = 0.d0
+      p_out%E_k      = 0.d0
+    end select
     type is (particle_kinetic)
       select type (p_in => particle_in)
       type is (particle_kinetic)

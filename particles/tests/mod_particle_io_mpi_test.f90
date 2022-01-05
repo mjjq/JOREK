@@ -125,7 +125,7 @@ end subroutine teardown
 !> Tests ------------------------------------------------
 !> procedure for testing the particle io
 subroutine test_particle_mpi_io(rank,n_tasks,ifail)
-  use mod_particle_common_test_tools, only: copy_sim_fieldline_B_hat_prev
+  use mod_particle_common_test_tools, only: copy_group_fieldline_B_hat_prev
   use mod_particle_assert_equal,      only: assert_equal_particle
   use mod_particle_sim,               only: particle_sim
   use mod_particle_io,                only: read_simulation_hdf5
@@ -146,7 +146,7 @@ subroutine test_particle_mpi_io(rank,n_tasks,ifail)
   call read_simulation_hdf5(sim_particles_new,trim(test_filename))
 
   !> compu variables which are not read from hdf5
-  call copy_sim_fieldline_B_hat_prev(n_groups,n_particles,&
+  call copy_group_fieldline_B_hat_prev(n_groups,n_particles,&
   sim_particles%groups,sim_particles_new%groups)
 
   !> check simulation 

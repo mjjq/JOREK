@@ -4,6 +4,7 @@
 module mod_particle_common_test_tools
 implicit none
 
+private
 public :: n_particle_types
 public :: q_interval,i_elm_interval,i_life_interval,sim_time_interval
 public :: t_birth_interval,st_interval,mass_interval,v_interval
@@ -15,6 +16,7 @@ public :: fill_particle_gc,fill_particle_gc_vpar,fill_particle_gc_Qin
 public :: fill_particle_kinetic,fill_particle_kinetic_leapfrog
 public :: fill_particle_kinetic_relativistic,fill_particle_gc_relativistic
 public :: obtain_particle_charges,allocate_one_particle_list_type
+public :: copy_group_fieldline_B_hat_prev
 
 !> Variables --------------------------------------------------
 integer,parameter :: n_particle_types=8
@@ -193,7 +195,7 @@ end subroutine invalidate_particles
 
 !> copy fieldlines B_hat between two simulations 
 !> used for IO because it is not stored in hdf5
-subroutine copy_sim_fieldline_B_hat_prev(n_groups,n_particles,groups_in,groups_out)
+subroutine copy_group_fieldline_B_hat_prev(n_groups,n_particles,groups_in,groups_out)
   use mod_particle_types, only: particle_fieldline
   use mod_particle_sim,   only: particle_group
   implicit none
@@ -215,7 +217,7 @@ subroutine copy_sim_fieldline_B_hat_prev(n_groups,n_particles,groups_in,groups_o
     enddo
   enddo
   !$omp end parallel do
-end subroutine copy_sim_fieldline_B_hat_prev
+end subroutine copy_group_fieldline_B_hat_prev
 
 !> generate random values for filling the groups type
 !> Sequential version

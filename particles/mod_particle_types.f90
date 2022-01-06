@@ -490,7 +490,9 @@ contains
   !> find_active_particle_id_openmp returns the number 
   !> and index of acitve particles withing a list
   !> active particles are particles having i_elm>0
-  !> openmp enabled version
+  !> openmp enabled version.
+  !> Note: the proposed openmp version is suboptimal and
+  !>       hence, it must be improved in future
   !> inputs:
   !>   n_particles:   (integer) number of particles
   !>   particle_list: (particle_base)(n_particles) particle list
@@ -509,12 +511,12 @@ contains
     integer,dimension(n_particles),intent(out) :: active_particle_id
     !> variables
     integer :: ii,jj,start_id
-    integer :: thread_id,max_num_thread,thread_num,n_particles_thread
+    integer :: thread_id,max_num_thread,thread_num,n_particles_thread,thread_num_out
     integer,dimension(:),allocatable :: n_active_particle_thread
     integer,dimension(:,:),allocatable :: particle_id_thread
     max_num_thread = 1
     !> allocate thread private arrays
-    !$max_num_thread = omp_get_max_threads()
+    !$ max_num_thread = omp_get_max_threads()
     allocate(n_active_particle_thread(max_num_thread)); 
    !> assume heuristically that the actual number of particles per thread is not
    !> larger than 25% of the number of particles per thread computed using max_num_thread
@@ -525,15 +527,16 @@ contains
 
     !> find active particles and store their index for each thread
     !$omp parallel default(private) shared(n_particles,particle_list,&
-    !$omp n_active_particle_thread,particle_id_thread)
+    !$omp n_active_particle_thread,particle_id_thread,thread_num_out)
     thread_id = 1; thread_num = 1;
     !$ thread_id = omp_get_thread_num() + 1
     !$ thread_num = omp_get_num_threads()
     n_particles_thread = n_particles/thread_num
-    start_id = n_particles*(thread_id-1)
-    !$omp single
-    n_particles_thread = n_particles - n_particles_thread*(thread_num-1)
-    !$omp end single
+    start_id = n_particles_thread*(thread_id-1)
+    if(thread_id.eq.thread_num) n_particles_thread = n_particles - n_particles_thread*(thread_num-1)
+    !$omp master
+    thread_num_out = thread_num !< use additional variable because lastprivate not supported
+    !$omp end master
     do ii=start_id+1,start_id+n_particles_thread
       if(particle_list(ii)%i_elm.lt.1) cycle !< skip invalid particle
       n_active_particle_thread(thread_id) = n_active_particle_thread(thread_id) + 1
@@ -541,10 +544,10 @@ contains
     enddo
     !$omp end parallel
     !> assemble the particle id array
-    do ii=1,thread_num
+    do ii=1,thread_num_out
       active_particle_id(n_active_particles+1:n_active_particles+n_active_particle_thread(ii)) = &
       particle_id_thread(1:n_active_particle_thread(ii),ii)
-      n_active_particles = n_active_particles + n_active_particle_thread(thread_id)
+      n_active_particles = n_active_particles + n_active_particle_thread(ii)
     enddo
 
     !> cleanup

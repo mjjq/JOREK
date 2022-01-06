@@ -36,6 +36,7 @@ subroutine run_fruit_particle_types()
   call test_codify_single_particle_type
   call test_codify_particle_list
   call test_find_active_particle_id_seq
+  call test_find_active_particle_id_omp
   write(*,'(/A)') "  ... tearing-up: particle types tests"
 end subroutine run_fruit_particle_types
 
@@ -176,10 +177,29 @@ subroutine test_find_active_particle_id_seq()
   call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
   "Error particle_types find active particle sequential: n_active_particles mismatch!")
   call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
-  "Error particle_types find active particle sequential: n_active_particles mismatch!")
+  "Error particle_types find active particle sequential: active_particle_ids mismatch!")
 end subroutine test_find_active_particle_id_seq
 
 !> test find active particle id, parallel version
+subroutine test_find_active_particle_id_omp()
+  implicit none
+  !> variables
+  integer :: ii
+  integer,dimension(n_particle_types) :: n_active_particles
+  integer,dimension(n_particles,n_particle_types) :: active_particle_ids
+
+  !> compute active particles and their id
+  n_active_particles = -1; active_particle_ids = -1;
+  do ii=1,n_particle_types
+    call find_active_particle_id_openmp(n_particles,groups_sol(ii)%particles,&
+    n_active_particles(ii),active_particle_ids(:,ii))
+  enddo 
+  !> check results
+  call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
+  "Error particle_types find active particle openmp: n_active_particles mismatch!")
+  call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
+  "Error particle_types find active particle openmp: active_particle_ids mismatch!")
+end subroutine test_find_active_particle_id_omp
 
 !> Tools ----------------------------------------
 !>-----------------------------------------------

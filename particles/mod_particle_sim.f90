@@ -36,6 +36,7 @@ contains
   procedure,pass(sim) :: finalize
   procedure,pass(sim) :: initialize
   procedure,pass(sim) :: set_t_norm  !< set the jorek time unit
+  procedure,pass(sim) :: allocate_groups
   procedure,pass(sim) :: compute_group_size
   procedure,pass(sim) :: compute_particle_sizes
   procedure,pass(sim) :: find_particle_types
@@ -74,7 +75,7 @@ subroutine initialize(sim,num_groups,skip_jorek2help,my_id,n_cpu)
     call init_mpi_threads(sim%my_id,sim%n_cpu,ierr,sim%wtime_start)
   endif
   !> allocate the simulation particle groups
-  allocate(sim%groups(num_groups))
+  call sim%allocate_groups(num_groups)
   
   call init_threads()
 
@@ -147,6 +148,21 @@ subroutine compute_particle_sizes(sim,n_groups_in,n_particles)
     n_particles(ii) = size(sim%groups(ii)%particles)
   enddo
 end subroutine compute_particle_sizes
+
+!> allocate groups, if allocated, deallocate groups first
+!> except is there is not changes in the group size
+subroutine allocate_groups(sim,n_groups)
+  implicit none
+  !> inputs-outpus
+  class(particle_sim),intent(inout) :: sim
+  !> inputs
+  integer,intent(in) :: n_groups
+  if(.not.allocated(sim%groups)) then
+    allocate(sim%groups(n_groups))
+  elseif(size(sim%groups).ne.n_groups) then
+    deallocate(sim%groups); allocate(sim%groups(n_groups));
+  endif
+end subroutine allocate_groups
 
 !> return the codified particle type of the particle list
 !> Codification:

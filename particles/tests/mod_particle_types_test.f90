@@ -38,7 +38,7 @@ end subroutine run_fruit_particle_types
 !> set-up particle types test features
 subroutine setup()
   use mod_particle_common_test_tools, only: fill_particles
-  use mod_particle_common_test_tools, only: fill_sim_groups
+  use mod_particle_common_test_tools, only: fill_groups
   use mod_particle_common_test_tools, only: obtain_particle_charges
   use mod_particle_common_test_tools, only: allocate_one_particle_list_type
   implicit none

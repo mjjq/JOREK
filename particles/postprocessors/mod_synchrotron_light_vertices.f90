@@ -271,7 +271,6 @@ n_groups,n_active_particles,active_particle_id)
         pp = pp + n_active_particles(jj,ii) 
       end select
     enddo
-      sync_lights%n_active_vertices(ii) = pp !< store number of activer vertices
   enddo
 end subroutine fill_synchrotron_lights_from_particles
 

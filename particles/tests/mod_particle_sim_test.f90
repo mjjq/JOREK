@@ -53,7 +53,7 @@ subroutine setup()
   use mod_particle_types, only: particle_kinetic_relativistic_id,particle_gc_relativistic_id
   use mod_particle_types, only: particle_gc_Qin_id
   use mod_particle_common_test_tools, only: fill_particles
-  use mod_particle_common_test_tools, only: fill_sim_groups
+  use mod_particle_common_test_tools, only: fill_groups
   use mod_particle_common_test_tools, only: invalidate_particles
   use mod_particle_common_test_tools, only: obtain_active_particle_ids
   use mod_particle_common_test_tools, only: obtain_particle_charges
@@ -71,7 +71,7 @@ subroutine setup()
   call assert_true(ifail.eq.0,"Error particle_sim test setup: particle list not allocated!")
 
   !> fill-up the group and particle base variables
-  call fill_sim_groups(n_particle_types,sim_sol%groups)
+  call fill_groups(n_particle_types,sim_sol%groups)
   call fill_particles(n_particle_types,n_particles,sim_sol%groups)
 
   !> invalidate particles in particle lists

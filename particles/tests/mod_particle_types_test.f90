@@ -47,7 +47,7 @@ end subroutine run_fruit_particle_types
 !> set-up particle types test features
 subroutine setup()
   use mod_particle_common_test_tools, only: fill_particles
-  use mod_particle_common_test_tools, only: fill_sim_groups
+  use mod_particle_common_test_tools, only: fill_groups
   use mod_particle_common_test_tools, only: invalidate_particles
   use mod_particle_common_test_tools, only: obtain_active_particle_ids
   use mod_particle_common_test_tools, only: obtain_particle_charges
@@ -62,7 +62,7 @@ subroutine setup()
   call assert_true(ifail.eq.0,"Error particle_types test setup: particle list not allocated!")
 
   !> fill-up the group and particle base variables
-  call fill_sim_groups(n_particle_types,groups_sol)
+  call fill_groups(n_particle_types,groups_sol)
   call fill_particles(n_particle_types,n_particles,groups_sol)
 
   !> invalidate particles in particle lists

@@ -59,7 +59,7 @@ end subroutine run_fruit_particle_io_mpi
 subroutine setup(rank,n_tasks,ifail)
   use mod_particle_common_test_tools, only: fill_particles
   use mod_particle_common_test_tools, only: sim_time_interval
-  use mod_particle_common_test_tools, only: fill_sim_groups
+  use mod_particle_common_test_tools, only: fill_groups
   use mod_particle_types,           only: particle_kinetic,particle_kinetic_leapfrog
   use mod_particle_types,           only: particle_gc,particle_fieldline
   use mod_particle_types,           only: particle_kinetic_relativistic
@@ -96,7 +96,7 @@ subroutine setup(rank,n_tasks,ifail)
   !allocate(particle_gc_Qin::sim_particles%groups(8)%particles(n_particles)) !< IO not implemented
 
   !> fill-up the group and particle base variables
-  call fill_sim_groups(n_groups,sim_particles%groups,rank,ifail)
+  call fill_groups(n_groups,sim_particles%groups,rank,ifail)
   call fill_particles(n_groups,n_particles,sim_particles%groups,rank)
 
   !> write default simulation in file and read it in new simulation

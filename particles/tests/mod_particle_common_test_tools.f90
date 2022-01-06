@@ -11,7 +11,7 @@ public :: t_birth_interval,st_interval,mass_interval,v_interval
 public :: Ekin_interval,mu_interval,Bnorm_interval,weight_interval
 public :: x_lowbnd,x_uppbnd,vp3d_lowbnd,vp3d_uppbnd,ABE_lowbnd,ABE_uppbnd
 public :: fill_particles,invalidate_particles,obtain_active_particle_ids
-public :: fill_sim_groups,fill_particle_base,fill_particle_fieldline
+public :: fill_groups,fill_particle_base,fill_particle_fieldline
 public :: fill_particle_gc,fill_particle_gc_vpar,fill_particle_gc_Qin
 public :: fill_particle_kinetic,fill_particle_kinetic_leapfrog
 public :: fill_particle_kinetic_relativistic,fill_particle_gc_relativistic
@@ -41,10 +41,10 @@ real*8,dimension(3),parameter    :: ABE_lowbnd=(/-2.67d0,-9.85d0,0.35d0/)
 real*8,dimension(3),parameter    :: ABE_uppbnd=(/0.78d0,2.35d0,5.67d0/)
 
 !> Interfaces -------------------------------------------------
-interface fill_sim_groups
-  module procedure fill_sim_groups_seq
-  module procedure fill_sim_groups_mpi
-end interface fill_sim_groups
+interface fill_groups
+  module procedure fill_groups_seq
+  module procedure fill_groups_mpi
+end interface fill_groups
 contains
 !> Procedures -------------------------------------------------
 !> allocate one particle list per type
@@ -221,7 +221,7 @@ end subroutine copy_group_fieldline_B_hat_prev
 
 !> generate random values for filling the groups type
 !> Sequential version
-subroutine fill_sim_groups_seq(n_groups,groups)
+subroutine fill_groups_seq(n_groups,groups)
   use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_gnu_rng, only: set_seed_sys_time
@@ -236,12 +236,12 @@ subroutine fill_sim_groups_seq(n_groups,groups)
     call gnu_rng_interval(mass_interval,rn_real)
     groups(ii)%mass = rn_real
   enddo
-end subroutine fill_sim_groups_seq
+end subroutine fill_groups_seq
 
 !> generate random values for filling the groups type
 !> we do not create random mass for all groups because
 !> it seems that only rank 0 is saved in hdf5
-subroutine fill_sim_groups_mpi(n_groups,groups,rank,ifail)
+subroutine fill_groups_mpi(n_groups,groups,rank,ifail)
   use mpi
   use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
@@ -270,7 +270,7 @@ subroutine fill_sim_groups_mpi(n_groups,groups,rank,ifail)
       groups(ii)%mass = val_to_bcst(ii)
     enddo
   endif
-end subroutine fill_sim_groups_mpi
+end subroutine fill_groups_mpi
 
 !> fills particle list of each groups with random data
 subroutine fill_particles(n_groups,n_particles,groups,rank_in)

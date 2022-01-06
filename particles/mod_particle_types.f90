@@ -19,13 +19,11 @@ module mod_particle_types
   public :: copy_particle_kinetic_leapfrog
   public :: codify_particle_type
   public :: find_active_particle_id
-  !> WARNING: PUBLIC ONLY FOR TESTING
-  public :: codify_single_particle_type
-  public :: codify_particle_list_alloc_type
-  public :: find_active_particle_id_type
-  public :: find_active_particle_id_base
+  !> publicity only for unit testing
+#ifdef UNIT_TESTS
   public :: find_active_particle_id_seq
   public :: find_active_particle_id_openmp
+#endif
 
   !> enumerator of the particle type 
   enum, bind(C)

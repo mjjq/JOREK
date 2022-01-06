@@ -32,11 +32,14 @@ subroutine run_fruit_particle_types()
   call setup
   write(*,'(/A)') "  ... running: particle types tests"
   call test_particle_copy
+  call test_individual_particle_copy
   call test_particle_get_q
   call test_codify_single_particle_type
   call test_codify_particle_list
   call test_find_active_particle_id_seq
   call test_find_active_particle_id_omp
+  call test_find_active_particle_id
+  call test_find_active_particle_id_type
   write(*,'(/A)') "  ... tearing-up: particle types tests"
 end subroutine run_fruit_particle_types
 
@@ -106,6 +109,31 @@ subroutine test_particle_copy()
   enddo
 end subroutine test_particle_copy
 
+!> test indiviual particle copy functions
+!> it assumes that the standard particle
+!> copy function works
+subroutine test_individual_particle_copy()
+  use mod_particle_assert_equal, only: assert_equal_particle
+  implicit none
+  type(particle_kinetic_leapfrog) :: p_leapfrog_in,p_leapfrog_out
+  integer :: ii
+
+  !> initialise particle in
+  !> copy particle types assuming that the standard particle copy function works
+  do ii=1,n_particle_types
+    select type (p_in=>groups_sol(ii)%particles(1))
+    type is (particle_kinetic_leapfrog)
+      p_leapfrog_in = p_in
+    end select
+  enddo
+  
+  !> apply individual copy function
+  call copy_particle_kinetic_leapfrog(p_leapfrog_in,p_leapfrog_out)
+
+  !> test equality
+  call assert_equal_particle(p_leapfrog_in,p_leapfrog_out)
+end subroutine test_individual_particle_copy
+
 !> test return charge function
 subroutine test_particle_get_q()
   implicit none
@@ -136,7 +164,7 @@ subroutine test_codify_single_particle_type()
     particle_code = -1
     !$omp parallel do default(shared) firstprivate(jj) private(ii)
     do ii=1,n_particles
-      particle_code(ii) = codify_single_particle_type(groups_sol(jj)%particles(ii))
+      particle_code(ii) = codify_particle_type(groups_sol(jj)%particles(ii))
     enddo
     !$omp end parallel do
     call assert_true(all(particle_code.eq.particle_type_list_sol(jj)),&
@@ -153,7 +181,7 @@ subroutine test_codify_particle_list()
 
   !> extract particle list code 
   do ii=1,n_particle_types
-    list_code(ii) = codify_particle_list_alloc_type(groups_sol(ii)%particles)
+    list_code(ii) = codify_particle_type(groups_sol(ii)%particles)
   enddo
   call assert_equals(list_code,particle_type_list_sol,n_particle_types,&
   "Error in particle_types codify particle list type: list types mismatch!")
@@ -201,6 +229,49 @@ subroutine test_find_active_particle_id_omp()
   "Error particle_types find active particle openmp: active_particle_ids mismatch!")
 end subroutine test_find_active_particle_id_omp
 
-!> Tools ----------------------------------------
+!> test find active particle id interface notype
+subroutine test_find_active_particle_id()
+  implicit none
+  !> variables
+  integer :: ii
+  integer,dimension(n_particle_types) :: n_active_particles
+  integer,dimension(n_particles,n_particle_types) :: active_particle_ids
+
+  !> compute active particles and their id
+  n_active_particles = -1; active_particle_ids = -1;
+  do ii=1,n_particle_types
+    call find_active_particle_id(n_particles,groups_sol(ii)%particles,&
+    n_active_particles(ii),active_particle_ids(:,ii))
+  enddo 
+  !> check results
+  call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
+  "Error particle_types find active particle notype: n_active_particles mismatch!")
+  call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
+  "Error particle_types find active particle notype: active_particle_ids mismatch!")
+end subroutine test_find_active_particle_id
+
+!> test find active particle id interface notype
+subroutine test_find_active_particle_id_type()
+  implicit none
+  !> variables
+  integer :: ii
+  integer,dimension(n_particle_types) :: n_active_particles
+  integer,dimension(n_particles,n_particle_types) :: active_particle_ids
+
+  !> compute active particles and their id
+  n_active_particles = -1; active_particle_ids = -1;
+  do ii=1,n_particle_types
+    call find_active_particle_id(particle_type_list_sol(ii),&
+    n_particles,groups_sol(ii)%particles,&
+    n_active_particles(ii),active_particle_ids(:,ii))
+  enddo 
+  !> check results
+  call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
+  "Error particle_types find active particle type: n_active_particles mismatch!")
+  call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
+  "Error particle_types find active particle type: active_particle_ids mismatch!")
+end subroutine test_find_active_particle_id_type
+
 !>-----------------------------------------------
+
 end module mod_particle_types_test

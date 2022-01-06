@@ -52,7 +52,6 @@ subroutine setup()
   use mod_particle_common_test_tools, only: obtain_active_particle_ids
   use mod_particle_common_test_tools, only: obtain_particle_charges
   use mod_particle_common_test_tools, only: allocate_one_particle_list_type
-  use mod_gnu_rng, only: gnu_rng_interval
   implicit none
   !> variables
   integer :: ifail

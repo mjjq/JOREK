@@ -40,7 +40,7 @@ subroutine run_fruit_particle_types()
   call test_find_active_particle_id_omp
   call test_find_active_particle_id
   call test_find_active_particle_id_type
-  write(*,'(/A)') "  ... tearing-up: particle types tests"
+  write(*,'(/A)') "  ... tearing-down: particle types tests"
 end subroutine run_fruit_particle_types
 
 !> Set-up and tear-down -------------------------

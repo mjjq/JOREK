@@ -40,7 +40,7 @@ subroutine run_fruit_particle_sim()
   call test_codify_particle_sim
   call test_find_active_particle_id
   call test_find_active_particle_id_type
-  write(*,'(/A)') "  ... tearing-up: particle sim tests"
+  write(*,'(/A)') "  ... tearing-down: particle sim tests"
   call teardown
 end subroutine run_fruit_particle_sim
 

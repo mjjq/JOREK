@@ -35,6 +35,7 @@ subroutine run_fruit_particle_types()
   call test_particle_get_q
   call test_codify_single_particle_type
   call test_codify_particle_list
+  call test_find_active_particle_id_seq
   write(*,'(/A)') "  ... tearing-up: particle types tests"
 end subroutine run_fruit_particle_types
 
@@ -132,9 +133,11 @@ subroutine test_codify_single_particle_type()
   !> extract the particle code for every particle and test it
   do jj=1,n_particle_types 
     particle_code = -1
+    !$omp parallel do default(shared) firstprivate(jj) private(ii)
     do ii=1,n_particles
       particle_code(ii) = codify_single_particle_type(groups_sol(jj)%particles(ii))
     enddo
+    !$omp end parallel do
     call assert_true(all(particle_code.eq.particle_type_list_sol(jj)),&
     "Error in particle_types codify single particle type: particle types mismatch!")
   enddo
@@ -155,6 +158,28 @@ subroutine test_codify_particle_list()
   "Error in particle_types codify particle list type: list types mismatch!")
 end subroutine test_codify_particle_list
 
+!> test find active particle id, sequential version
+subroutine test_find_active_particle_id_seq()
+  implicit none
+  !> variables
+  integer :: ii
+  integer,dimension(n_particle_types) :: n_active_particles
+  integer,dimension(n_particles,n_particle_types) :: active_particle_ids
+  
+  !> compute active particles and their id
+  n_active_particles = -1; active_particle_ids = -1;
+  do ii=1,n_particle_types
+    call find_active_particle_id_seq(n_particles,groups_sol(ii)%particles,&
+    n_active_particles(ii),active_particle_ids(:,ii))
+  enddo
+  !> check results
+  call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
+  "Error particle_types find active particle sequential: n_active_particles mismatch!")
+  call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
+  "Error particle_types find active particle sequential: n_active_particles mismatch!")
+end subroutine test_find_active_particle_id_seq
+
+!> test find active particle id, parallel version
 
 !> Tools ----------------------------------------
 !>-----------------------------------------------

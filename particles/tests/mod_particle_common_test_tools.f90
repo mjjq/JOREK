@@ -180,7 +180,7 @@ subroutine invalidate_particles(n_groups,n_particles,&
   !> generate survival probability
   call gnu_rng_interval(n_particles,n_groups,(/0.d0,1.d0/),survival_array)
   do ii=1,n_groups
-    n_active_particles(ii) = count(survival_array.ge.survival_prob)
+    n_active_particles(ii) = count(survival_array(:,ii).ge.survival_prob)
   enddo
   !> invalidate particles
   !$omp parallel do default(shared) firstprivate(n_particles,n_groups,survival_prob) &

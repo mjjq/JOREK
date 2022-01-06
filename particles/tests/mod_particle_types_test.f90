@@ -32,6 +32,9 @@ subroutine run_fruit_particle_types()
   call setup
   write(*,'(/A)') "  ... running: particle types tests"
   call test_particle_copy
+  call test_particle_get_q
+  call test_codify_single_particle_type
+  call test_codify_particle_list
   write(*,'(/A)') "  ... tearing-up: particle types tests"
 end subroutine run_fruit_particle_types
 
@@ -118,6 +121,41 @@ subroutine test_particle_get_q()
   call assert_equals(int(q_array),int(particle_charge_list_sol),n_particles,&
   n_particle_types,"Errpr particle_type test get q: particle charge mismatch!")
 end subroutine test_particle_get_q
+
+!> test return particle type code for each single particle
+subroutine test_codify_single_particle_type()
+  implicit none
+  !> variables
+  integer :: ii,jj
+  integer,dimension(n_particles) :: particle_code
+
+  !> extract the particle code for every particle and test it
+  do jj=1,n_particle_types 
+    particle_code = -1
+    do ii=1,n_particles
+      particle_code(ii) = codify_single_particle_type(groups_sol(jj)%particles(ii))
+    enddo
+    call assert_true(all(particle_code.eq.particle_type_list_sol(jj)),&
+    "Error in particle_types codify single particle type: particle types mismatch!")
+  enddo
+end subroutine test_codify_single_particle_type
+
+!> test return particle type code for the whole particle list
+subroutine test_codify_particle_list()
+  implicit none
+  !> variables
+  integer :: ii
+  integer,dimension(n_particle_types) :: list_code
+
+  !> extract particle list code 
+  do ii=1,n_particle_types
+    list_code(ii) = codify_particle_list_alloc_type(groups_sol(ii)%particles)
+  enddo
+  call assert_equals(list_code,particle_type_list_sol,n_particle_types,&
+  "Error in particle_types codify particle list type: list types mismatch!")
+end subroutine test_codify_particle_list
+
+
 !> Tools ----------------------------------------
 !>-----------------------------------------------
 end module mod_particle_types_test

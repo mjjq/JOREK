@@ -20,6 +20,8 @@ module mod_particle_types
   public :: codify_particle_type
   public :: find_active_particle_id
   !> WARNING: PUBLIC ONLY FOR TESTING
+  public :: codify_single_particle_type
+  public :: codify_particle_list_alloc_type
   public :: find_active_particle_id_type
   public :: find_active_particle_id_base
   public :: find_active_particle_id_seq

@@ -4,7 +4,7 @@ module mod_vertices
 implicit none
 
 private
-public :: vertices
+public :: n_x,vertices
 
 !> Variable and type definitions ------------------------------------------
 integer,parameter     :: n_x=3 !< number of coordinates

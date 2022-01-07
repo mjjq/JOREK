@@ -76,7 +76,7 @@ interface
     implicit none
     !> inputs-outpus
     class(light_vertices),intent(inout) :: light_vert
-    class(spectrum_base),intent(in)     :: spectra
+    class(spectrum_base),intent(inout)  :: spectra
     !> inputs
     integer,intent(in)                  :: time_id,light_id
     real*8,dimension(n_x),intent(in)    :: x_shaded

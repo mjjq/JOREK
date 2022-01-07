@@ -16,6 +16,7 @@ type,abstract,extends(vertices) :: light_vertices
   procedure,pass(light_vert)                              :: extract_n_particles_all_particle_sims
   procedure,pass(light_vert)                              :: extract_particle_types_all_particle_sims
   procedure,pass(light_vert)                              :: store_light_x_from_particle_id
+  procedure,pass(light_vert)                              :: find_active_particles_id_time
   procedure(init_lights_parts),deferred,pass(light_vert)  :: init_lights_from_particles
   procedure(direct_funct),deferred,pass(light_vert)       :: directionality_funct
   procedure(spect_irradiance),deferred,pass(light_vert)   :: spectral_irradiance
@@ -133,7 +134,7 @@ contains
 !>                       particles for each group and time
 !>   active_particle_id: (integer)(n_particles_max,n_groups_max,n_times)
 !>                       particle list index of active particles
-subroutine find_active_particles_time(light_vert,n_groups_max,n_particles_max,&
+subroutine find_active_particles_id_time(light_vert,n_groups_max,n_particles_max,&
 n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type)
   use mod_particle_sim,only: particle_sim
   implicit none
@@ -163,7 +164,7 @@ n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type
       light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))    
     enddo
   endif
-end subroutine find_active_particles_time
+end subroutine find_active_particles_id_time
 
 !> fill the time vector from particle simulations
 !> inputs:

@@ -11,11 +11,11 @@ public :: light_vertices
 !> Variables --------------------------------------------
 type,abstract,extends(vertices) :: light_vertices
   contains
-  procedure,pass(light_vert)                              :: fill_time_vector
+  procedure,pass(light_vert)                              :: fill_time_vector_particle_sims
   procedure,pass(light_vert)                              :: extract_n_groups_all_particle_sims 
   procedure,pass(light_vert)                              :: extract_n_particles_all_particle_sims
   procedure,pass(light_vert)                              :: extract_particle_types_all_particle_sims
-  procedure,pass(light_vertices)                          :: store_light_x_from_id
+  procedure,pass(light_vert)                              :: store_light_x_from_particle_id
   procedure(init_lights_parts),deferred,pass(light_vert)  :: init_lights_from_particles
   procedure(direct_funct),deferred,pass(light_vert)       :: directionality_funct
   procedure(spect_irradiance),deferred,pass(light_vert)   :: spectral_irradiance
@@ -23,9 +23,9 @@ end type light_vertices
 
 !> Interfaces -------------------------------------------
 !> module procedure
-interface fill_time_vector
-  module procedure fill_time_vector_particle_sim
-end interface fill_time_vector
+!interface fill_time_vector
+!  module procedure fill_time_vector_particle_sims
+!end interface fill_time_vector
 
 interface store_x_from_id
   module procedure store_light_x_from_particle_id
@@ -35,20 +35,23 @@ interface
   !> computes and store the coordinates and properties of 
   !> lights from particle simulations
   !> inputs:
-  !>   light_vert:     (light_vertices) empty light vertices
-  !>   n_times:        (integer) number of times
-  !>   sims_particles: (particle_sim)(n_times) array of particle simulations
+  !>   light_vert:      (light_vertices) empty light vertices
+  !>   n_times:         (integer) number of times
+  !>   sims_particles:  (particle_sim)(n_times) array of particle simulations
+  !>   n_sync_light_in: (integer)(optional) number of requested synchrotron lights
   !> outputs:
-  !>   light_vert: (light_vertices) filled light vertices
-  subroutine init_lights_parts(light_vert,sims_particles)
+  !>   light_vert:     (light_vertices) filled light vertices
+  !>   sims_particles: (particle_sim)(n_times) array of particle simulations
+  subroutine init_lights_parts(light_vert,n_times,sims_particles,n_sync_light_in)
     use mod_particle_sim, only: particle_sim
     IMPORT :: light_vertices
     implicit none
     !> inputs-outputs
     class(light_vertices),intent(inout) :: light_vert
+    type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
     !> inputs
     integer,intent(in) :: n_times
-    type(particle_sim),dimension(n_times),intent(in) :: sims_particles
+    integer,intent(in),optional :: n_sync_light_in
   end subroutine init_lights_parts
 
   !> computes the directionality function for a given point
@@ -61,6 +64,7 @@ interface
   !>   x_shaded:   (real8)(n_x) point illuminated by the light
   !> outputs:
   !>   light_vert: (light_vertices) initialised light vertices
+  !>   spectra:    (spectrum_base) initilises spectra
   !>   light_dstb: (real8)(n_points,n_spectra) light intensity distribution
   !>               from the light_id light to the x_shaded point for all
   !>               spectra points and all spectra
@@ -71,8 +75,8 @@ interface
     implicit none
     !> inputs-outpus
     class(light_vertices),intent(inout) :: light_vert
+    class(spectrum_base),intent(in)     :: spectra
     !> inputs
-    type(spectrum_base),intent(in)      :: spectra
     integer,intent(in)                  :: time_id,light_id
     real*8,dimension(n_x),intent(in)    :: x_shaded
     !> outputs
@@ -89,6 +93,7 @@ interface
   !>   x_shaded:   (real8)(n_x) point illuminated by the light
   !> outputs:
   !>   light_vert: (light_vertices) initialised light vertices
+  !>   spectra:    (spectrum_base) initilises spectra
   !>   light_spec_irradiance: (real8)(n_points,n_spectra) spectral irradiance
   !>                          from the light_id light at ethe time time_id to 
   !>                          the x_shaded point for all spectra points and all spectra
@@ -99,8 +104,8 @@ interface
     implicit none
     !> inputs-outpus
     class(light_vertices),intent(inout) :: light_vert
+    class(spectrum_base),intent(inout)  :: spectra
     !> inputs
-    type(spectrum_base),intent(in)      :: spectra
     integer,intent(in)                  :: time_id,light_id
     real*8,dimension(n_x),intent(in)    :: x_shaded
     !> outputs
@@ -120,9 +125,10 @@ contains
 !>   n_groups:        (integer)(n_times) number of groups per time
 !>   n_particles:     (integer)(n_groups,n_times) number of particles
 !>                    per group per time
-!>   sims_particles: (particle_sim)(n_times) array of particle simulations
+!>   sims_particles:  (particle_sim)(n_times) array of particle simulations
 !> outputs:
-!>   light_vert: (light_vertices) initialised light vertices
+!>   light_vert:         (light_vertices) initialised light vertices
+!>   sims_particles:     (particle_sim)(n_times) array of particle simulations
 !>   n_active_particles: (integer)(n_groups,n_times) number of active
 !>                       particles for each group and time
 !>   active_particle_id: (integer)(n_particles_max,n_groups_max,n_times)
@@ -133,8 +139,8 @@ n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type
   implicit none
   !> inputs-outputs
   class(light_vertices),intent(inout) :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(inout) :: sims_particles
   !> inputs
-  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
   integer,intent(in) :: n_groups_max,n_particles_max
   integer,dimension(light_vert%n_times),intent(in) :: n_groups
   integer,dimension(n_groups_max,light_vert%n_times),intent(in) :: n_particles
@@ -144,7 +150,7 @@ n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type
   integer,dimension(n_particles_max,n_groups_max,light_vert%n_times),intent(out)::active_particle_id
   !> variables
   integer :: ii
-  if(present(p_types)) then
+  if(present(p_type)) then
     do ii=1,light_vert%n_times
       call sims_particles(ii)%find_active_particles_groups(n_groups(ii),n_particles_max,&
       n_particles(:,ii),n_active_particles(:,ii),active_particle_id(:,:,ii),p_type)
@@ -165,13 +171,13 @@ end subroutine find_active_particles_time
 !>   sims_particles: (particle_sim)(n_times) array of particle simulations
 !> outputs:
 !>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
 subroutine fill_time_vector_particle_sims(light_vert,sims_particles)
   use mod_particle_sim, only: particle_sim
   implicit none
   !> inputs-outputs
-  class(light_vertices),intent(inout)                         :: light_vert
-  !> inputs
-  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
+  class(light_vertices),intent(inout)                            :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(inout) :: sims_particles
   !> variables
   integer :: ii
   do ii=1,light_vert%n_times
@@ -184,20 +190,22 @@ end subroutine fill_time_vector_particle_sims
 !>   light_vert:     (light_vertices) light vertices type
 !>   sims_particles: (particle_sim)(n_times) array of particle simulations
 !> outputs:
+!>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
 !>   n_groups:       (integer)(n_times) number of groups
 subroutine extract_n_groups_all_particle_sims(light_vert,sims_particles,n_groups)
   use mod_particle_sim, only: particle_sim
   implicit none
-  !> inputs:
-  class(light_vertices),intent(in)                            :: light_vert
-  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
-  !> outouts:
+  !> inputs-outpus:
+  class(light_vertices),intent(inout)                            :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(inout) :: sims_particles
+  !> outputs:
   integer,dimension(light_vert%n_times),intent(out) :: n_groups
   !> variables
   integer :: ii
   !> extract number of groups for all simulations
   n_groups = 0
-  do ii=1,n_groups
+  do ii=1,light_vert%n_times
     n_groups(ii) = sims_particles(ii)%compute_group_size()
   enddo
 end subroutine extract_n_groups_all_particle_sims
@@ -209,24 +217,27 @@ end subroutine extract_n_groups_all_particle_sims
 !>   n_groups_max:   (integer) maximum number of among all simulations
 !>   n_groups:       (integer)(n_times) number of groups per simulation
 !> outputs:
+!>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
 !>   n_particles:    (integer)(n_groups_max,n_times) number of particles
 !>                   per group and per simulation
 subroutine extract_n_particles_all_particle_sims(light_vert,sims_particles,&
 n_groups_max,n_particles)
   use mod_particle_sim, only: particle_sim
   implicit none
+  !> inputs-ouputs:
+  class(light_vertices),intent(inout)                            :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(inout) :: sims_particles
   !> inputs:
-  class(light_vertices),intent(in)                            :: light_vert
-  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
-  integer,intent(in)                                          :: n_groups_max
+  integer,intent(in)                                             :: n_groups_max
   !> outouts:
   integer,dimension(n_groups_max,light_vert%n_times),intent(out) :: n_particles
   !> variables
-  integer :: ii
+  integer :: ii,n_groups
   !> extract number of particles
-  n_particles = 0
+  n_particles = 0; n_groups = n_groups_max;
   do ii=1,light_vert%n_times
-    call sims_particles(ii)%compute_particle_sizes(n_groups_max,n_particles(:,ii))
+    call sims_particles(ii)%compute_particle_sizes(n_groups,n_particles(:,ii))
   enddo
 end subroutine extract_n_particles_all_particle_sims
 
@@ -236,6 +247,8 @@ end subroutine extract_n_particles_all_particle_sims
 !>   sims_particles: (particle_sim)(n_times) array of particle simulations
 !>   n_groups_max:   (integer) maximum number of among all simulations
 !> outputs:
+!>   light_vert:     (light_vertices) light vertices type
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
 !>   particle_types: (integer)(n_groups_max,n_times) particle types
 !>                   per group and per simulation. CODEX:
 !>                   1 -> particle_fieldline
@@ -250,17 +263,18 @@ subroutine extract_particle_types_all_particle_sims(light_vert,sims_particles,&
 n_groups_max,particle_types)
   use mod_particle_sim, only: particle_sim
   implicit none
+  !> inputs-outputs:
+  class(light_vertices),intent(inout)                            :: light_vert
+  type(particle_sim),dimension(light_vert%n_times),intent(inout) :: sims_particles
   !> inputs:
-  class(light_vertices),intent(in)                            :: light_vert
-  type(particle_sim),dimension(light_vert%n_times),intent(in) :: sims_particles
   integer,intent(in)                                          :: n_groups_max
   !> outputs:
   integer,dimension(n_groups_max,light_vert%n_times),intent(out) :: particle_types
   !> variables
-  integer :: ii
-  particle_types = 0
+  integer :: ii,n_groups
+  particle_types = 0; n_groups = n_groups_max;
   do ii=1,light_vert%n_times
-    call sims_particles(ii)%find_particle_types(n_groups_max,particle_types(:,ii))
+    call sims_particles(ii)%find_particle_types(n_groups,particle_types(:,ii))
   enddo
 end subroutine extract_particle_types_all_particle_sims
 

@@ -34,6 +34,7 @@ public projection
 public new_projection !< The constructor function is also public since it provides better error handling than the real constructor
 public proj_f
 public proj_f_interface, proj_one, proj_q, proj_vR, proj_vZ, proj_vPhi, proj_Ekin, proj_Ekin_keV, proj_jR, proj_jZ, proj_jPhi
+public proj_R, proj_min_rad, proj_Z,proj_v,proj_vpar,proj_mu,proj_pow
 public write_particle_distribution_to_vtk, write_particle_distribution_to_h5 !< public for testing reasons, please don't use directly
 public prepare_mumps_par, prepare_mumps_par_n0, sample_rhs !< public for testing reasons
 public DMUMPS_STRUC
@@ -140,6 +141,135 @@ pure function proj_one(sim, group, particle)
   real*8 :: proj_one
   proj_one = 1.d0
 end function proj_one
+
+pure function proj_R(sim,group,particle)
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  real*8 :: proj_R
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+      proj_R = p%x(1)
+    class default
+      proj_R = 0.d0
+  end select
+end function proj_R
+
+pure function proj_min_rad(sim,group,particle)
+  use equil_info, only : ES
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  real*8 :: proj_min_rad
+  
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+      
+      proj_min_rad = sqrt((p%x(1)-ES%R_axis)**2+p%x(2)**2) !Small r 
+    class default
+      proj_min_rad = 0.d0
+  end select
+end function proj_min_rad
+
+pure function proj_Z(sim,group,particle)
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  real*8 :: proj_Z
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+      proj_Z = p%x(2)
+
+    class default
+      proj_Z = 0.d0
+  end select
+end function proj_Z
+
+pure function proj_phi(sim,group,particle)
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  real*8 :: proj_phi
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+      proj_phi = p%x(3)
+
+    class default
+      proj_phi = 0.d0
+  end select
+end function proj_phi
+
+! Debatable how accurate this is. kinetic_to_gc is not exact.
+function proj_mu(sim,group,particle)
+  use mod_particle_types
+  use mod_boris
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  type(particle_gc)    :: particle_gc_tmp
+  real*8 :: proj_mu,E(3),B(3),psi,U,mass
+  mass=sim%groups(1)%mass
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+      call sim%fields%calc_EBpsiU(sim%time,p%i_elm,p%st,p%x(3),E,B,psi,U)
+      particle_gc_tmp=kinetic_to_gc(sim%fields%node_list, sim%fields%element_list, kinetic_leapfrog_to_kinetic(p, E, B, mass, 0.d0), B, mass)
+      proj_mu = abs(particle_gc_tmp%mu)
+    class default
+      proj_mu = 0.d0
+  end select
+end function proj_mu
+
+function proj_vpar(sim,group,particle)
+  use mod_particle_types, only: particle_kinetic_leapfrog
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  type(particle_gc)    :: particle_gc_tmp
+  real*8 :: proj_vpar,E(3),B(3),psi,U
+
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+
+      call sim%fields%calc_EBpsiU(sim%time,p%i_elm,p%st,p%x(3),E,B,psi,U)
+
+      proj_vpar = dot_product(p%v,B)/sqrt(dot_product(B,B))
+    class default
+      proj_vpar = 0.d0
+  end select
+end function proj_vpar
+
+function proj_pow(sim,group,particle)
+  use mod_particle_types, only: particle_kinetic_leapfrog
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  real*8 :: proj_pow,E(3),B(3),psi,U
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+
+      call sim%fields%calc_EBpsiU(sim%time,p%i_elm,p%st,p%x(3),E,B,psi,U)
+      proj_pow = p%q*EL_CHG*dot_product(p%v,E)
+
+
+
+    class default
+      proj_pow = 0.d0
+  end select
+end function proj_pow
+
+pure function proj_v(sim,group,particle)
+  use mod_particle_types, only: particle_kinetic_leapfrog
+  type(particle_sim), intent(in) :: sim
+  integer, intent(in) :: group
+  class(particle_base), intent(in) :: particle
+  real*8 :: proj_v
+  select type (p => particle)
+    type is (particle_kinetic_leapfrog)
+      proj_v = sqrt(dot_product(p%v,p%v))
+    class default
+      proj_v = 0.d0
+  end select
+end function proj_v
 
 pure function proj_vR(sim, group, particle)
   use mod_particle_types, only: particle_kinetic_leapfrog

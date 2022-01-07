@@ -13,9 +13,12 @@ real*8,parameter :: twothirds=2.d0/3.d0
 real*8,parameter :: sqrt3=sqrt(3.d0)
 type,extends(light_vertices) :: synchrotron_light_vertices
   contains
-  procedure :: init_lights_from_particles=>init_synchrotron_light_from_particles
-  procedure :: directionality_funct=>synchrotron_directionality_funct
-  procedure :: spectral_irradiance=>synchrotron_spectral_irradiance
+  procedure,pass(light_vert) :: init_lights_from_particles => &
+                                init_synchrotron_lights_from_particles
+  procedure,pass(light_vert) :: directionality_funct => &
+                                synchrotron_directionality_funct
+  procedure,pass(light_vert) :: spectral_irradiance => &
+                                synchrotron_spectral_irradiance
   procedure,pass(sync_lights),private :: fill_synchrotron_lights_from_particles
 end type synchrotron_light_vertices
 !> Interfaces --------------------------------------
@@ -27,24 +30,24 @@ contains
 !> of the synchrotron light for each particle and stores them 
 !> in the proprerties array
 !> inputs:
-!>   sync_lights:      (synchrotron_light_vertices) empty synchrotron lights
+!>   light_vert:       (synchrotron_light_vertices) empty synchrotron lights
 !>   n_times:          (integer) number of simulation times
 !>   sims_particles:   (particle_sim)(n_times) array of particle simulations
 !>   n_sync_lights_in: (integer)(optional) number of requested synchrotron lights
 !> outputs:
-!>   sync_lights: (synchrotron_light_vertices) initialised synchrotron lights
-!>   sims_particles:   (particle_sim)(n_times) array of particle simulations
-subroutine init_synchrotron_lights_from_particles(sync_lights,n_times,&
-sims_particles,n_sync_lights_in)
+!>   light_vert: (synchrotron_light_vertices) initialised synchrotron lights
+!>   sims_particles: (particle_sim)(n_times) array of particle simulations
+subroutine init_synchrotron_lights_from_particles(light_vert,n_times,&
+sims_particles,n_sync_light_in)
   use mod_particle_types,        only: particle_kinetic_relativistic_id
   use mod_particle_sim,          only: particle_sim
   implicit none
   !> inputs-outputs
-  class(synchrotron_light_vertices),intent(inout)     :: sync_lights
+  class(synchrotron_light_vertices),intent(inout)     :: light_vert
   type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
   !> inputs
   integer,intent(in)                              :: n_times
-  integer,intent(in),optional                     :: n_sync_lights_in
+  integer,intent(in),optional                     :: n_sync_light_in
   !> variables
   integer :: ii
   integer :: n_sync_lights,n_groups_max,n_particles_max
@@ -52,44 +55,44 @@ sims_particles,n_sync_lights_in)
   integer,dimension(:,:),allocatable   :: n_particles,particle_types,n_active_particles
   integer,dimension(:,:,:),allocatable :: active_particle_id
 
-  sync_lights%n_property_vertex = 13 !< set number of synchrotron vertex properties
+  light_vert%n_property_vertex = 13 !< set number of synchrotron vertex properties
   !> initialise time vector
-  call sync_lights%allocate_time_vector(n_times)
-  call sync_lights%fill_time_vector_particle_sims(sims_particles)
+  call light_vert%allocate_time_vector(n_times)
+  call light_vert%fill_time_vector_particle_sims(sims_particles)
   !> allocate extract number of particles and particles type
-  call sync_lights%extract_n_groups_all_particle_sims(sims_particles,n_groups)
+  call light_vert%extract_n_groups_all_particle_sims(sims_particles,n_groups)
   n_groups_max = maxval(n_groups)
-  allocate(n_particles(n_groups_max,sync_lights%n_times)) 
-  allocate(particle_types(n_groups_max,sync_lights%n_times))
-  call sync_lights%extract_n_particles_all_particle_sims(sims_particles,&
+  allocate(n_particles(n_groups_max,light_vert%n_times)) 
+  allocate(particle_types(n_groups_max,light_vert%n_times))
+  call light_vert%extract_n_particles_all_particle_sims(sims_particles,&
   n_groups_max,n_particles)
-  call sync_lights%extract_particle_types_all_particle_sims(sims_particles,&
+  call light_vert%extract_particle_types_all_particle_sims(sims_particles,&
   n_groups_max,particle_types)
   !> compute the number of relativistic particles per each time
-  do ii=1,sync_lights%n_times
+  do ii=1,light_vert%n_times
     n_particle_relativistics(ii) = sum(n_particles(:,ii),&
     mask=particle_types(:,ii)==particle_kinetic_relativistic_id)
   enddo
   n_particles_max = maxval(n_particle_relativistics)
   n_sync_lights = n_particles_max
-  if(present(n_sync_lights_in)) then
-    if(n_sync_lights.lt.n_sync_lights_in) then
+  if(present(n_sync_light_in)) then
+    if(n_sync_lights.lt.n_sync_light_in) then
       write(*,*) "Error initialise synchrotron lights from particles"
       write(*,*) "Requested number of lights < number of particles,use: ",n_sync_lights
     endif
     n_sync_lights = n_particles_max
   endif
   !> allocate active particle arrays
-  allocate(n_active_particles(n_groups_max,sync_lights%n_vertices)); 
-  allocate(active_particle_id(n_particles_max,n_groups_max,sync_lights%n_vertices));
+  allocate(n_active_particles(n_groups_max,light_vert%n_vertices)); 
+  allocate(active_particle_id(n_particles_max,n_groups_max,light_vert%n_vertices));
   !> allocate vertices
-  call sync_lights%allocate_x_properties(n_sync_lights)
+  call light_vert%allocate_x_properties(n_sync_lights)
 
   !> find active particles for all groups and times
-  call sync_lights%find_active_particles_id_time(n_groups_max,n_particles_max,&
+  call light_vert%find_active_particles_id_time(n_groups_max,n_particles_max,&
   n_groups,n_particles,sims_particles,n_active_particles,active_particle_id)
   !> fill the synchrotron lights
-  call sync_lights%fill_synchrotron_lights_from_particles(&
+  call light_vert%fill_synchrotron_lights_from_particles(&
   sims_particles,n_groups_max,n_particles_max,n_groups,&
   n_active_particles,active_particle_id)
   
@@ -102,18 +105,18 @@ end subroutine init_synchrotron_lights_from_particles
 !> for synchrotron lights which is the full angular-spectral distribution
 !> divided by the total synchrotron radiation (L. Carbajal, PPCF, 2017)
 !> inputs:
-!>   sync_lights: (synchrotron_light vertices) synchrotron light sources
+!>   light_vert: (synchrotron_light vertices) synchrotron light sources
 !>   spectra:     (spectrum_base) spectral intervals and integrators
 !>   time_id:     (integer) the time index
 !>   light_id:    (integer) the light index
 !>   x_shaded:    (real8)(3) shaded point position in cartesian coord
 !> outputs: 
-!>   sync_lights: (synchrotron_light vertices) synchrotron light sources
+!>   light_vert: (synchrotron_light vertices) synchrotron light sources
 !>   spectra:     (spectrum_base) spectral intervals and integrators
 !>   light_dstb:  (real*8)(n_points,n_intervals) synchrotron full spectral
 !>                angular distribution per unit of total power towards
 !>                the shaded point x_shaded
-subroutine synchrotron_directionality_funct(sync_lights,spectra,time_id,&
+subroutine synchrotron_directionality_funct(light_vert,spectra,time_id,&
 light_id,x_shaded,light_dstb)
   use mod_vertices,             only: n_x
   use constants,                only: PI,SPEED_OF_LIGHT
@@ -122,8 +125,8 @@ light_id,x_shaded,light_dstb)
   use mod_spectra,              only: spectrum_base
   implicit none
   !> inputs-outputs:
-  class(synchrotron_light_vertices),intent(inout) :: sync_lights
-  class(spectrum_base),intent(inout)             :: spectra
+  class(synchrotron_light_vertices),intent(inout) :: light_vert
+  class(spectrum_base),intent(inout)              :: spectra
   !> inputs:
   integer,intent(in)                :: time_id,light_id
   real*8,dimension(n_x),intent(in)  :: x_shaded
@@ -132,12 +135,12 @@ light_id,x_shaded,light_dstb)
   !> variables
   real*8,dimension(3) :: rpsichi !< spherical coordinates
   integer :: ii,jj
-  real*8,dimension(sync_lights%n_property_vertex) :: light_properties
+  real*8,dimension(light_vert%n_property_vertex) :: light_properties
   real*8  :: zeta,one_over_gamma,z_value,factor_1,factor_2,z_cos
 
   !> compute the spherical coordinates of the light-point ray
-  light_properties = sync_lights%properties(:,light_id,time_id)
-  rpsichi = cartesian_to_spherical_latitude(x_shaded,sync_lights%x(:,light_id,time_id),&
+  light_properties = light_vert%properties(:,light_id,time_id)
+  rpsichi = cartesian_to_spherical_latitude(x_shaded,light_vert%x(:,light_id,time_id),&
   light_properties(1:3),light_properties(4:6),light_properties(7:9))
   !> compute the factors and the value of z
   one_over_gamma = 1.d0/light_properties(11) !< 1/gamma
@@ -178,24 +181,24 @@ end subroutine synchrotron_directionality_funct
 !> angular distribution for synchrotron lights which (L. Carbajal, PPCF, 2017)
 !> emitted towards the shaded point x_shaded
 !> inputs:
-!>   sync_lights: (synchrotron_light vertices) synchrotron light sources
-!>   spectra:     (spectrum_base) spectral intervals and integrators
-!>   time_id:     (integer) the time index
-!>   light_id:    (integer) the light index
-!>   x_shaded:    (real8)(3) shaded point position in cartesian coord
+!>   light_vert: (synchrotron_light vertices) synchrotron light sources
+!>   spectra:    (spectrum_base) spectral intervals and integrators
+!>   time_id:    (integer) the time index
+!>   light_id:   (integer) the light index
+!>   x_shaded:   (real8)(3) shaded point position in cartesian coord
 !> outputs: 
-!>   sync_lights:            (synchrotron_light vertices) synchrotron light sources
-!>   spectra:     (spectrum_base) spectral intervals and integrators
+!>   light_vert: (synchrotron_light vertices) synchrotron light sources
+!>   spectra:    (spectrum_base) spectral intervals and integrators
 !>   light_spec_irradiance:  (real*8)(n_points,n_intervals) synchrotron full spectral
 !>                           angular distribution per unit of total power at the
 !>                           at the shaded point x_shaded
-subroutine synchrotron_spectral_irradiance(sync_lights,spectra,time_id,&
+subroutine synchrotron_spectral_irradiance(light_vert,spectra,time_id,&
 light_id,x_shaded,light_spec_irradiance)
   use mod_vertices, only: n_x
   use mod_spectra,  only: spectrum_base
   implicit none
   !> inputs-outputs:
-  class(synchrotron_light_vertices),intent(inout) :: sync_lights
+  class(synchrotron_light_vertices),intent(inout) :: light_vert
   class(spectrum_base),intent(inout)             :: spectra
   !> inputs:
   integer,intent(in)                :: time_id,light_id
@@ -204,10 +207,9 @@ light_id,x_shaded,light_spec_irradiance)
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
 
   !> compute the directionality function
-  call sync_lights%directionality_funct(sync_lights,spectra,time_id,&
-  light_id,x_shaded,light_spec_irradiance)
+  call light_vert%directionality_funct(spectra,time_id,light_id,x_shaded,light_spec_irradiance)
   !> multiply the directionality function by the total synchrotron power
-  light_spec_irradiance = light_spec_irradiance*sync_lights%properties(13,light_id,time_id)
+  light_spec_irradiance = light_spec_irradiance*light_vert%properties(13,light_id,time_id)
 end subroutine synchrotron_spectral_irradiance
 
 

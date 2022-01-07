@@ -9,7 +9,7 @@ module mod_boost_besselk
 implicit none
 
 private
-public ::  besselk
+public ::  f_besselk,besselk
 
 #ifdef USE_BOOST
 ! binding interface to the boost cyl_bessel_k
@@ -24,6 +24,10 @@ end interface
 #endif
 
 ! interface for the different procedure in the module
+interface f_besselk    
+  module procedure f_besselk_single_cpp
+end interface f_besselk
+
 interface besselk
     module procedure besselk_single_cpp 
     module procedure besselk_x_array_cpp
@@ -45,6 +49,22 @@ contains
     write(*,*) "BOOST Besselk: return zero"
   end function boost_besselk_cpp
 #endif
+
+! besselk is a specialization of the cyl_bessel_k
+! function of boost to double datatypes
+! inputs:
+!   nu: (real8) bessel function fractional order
+!   x:  (real8) value at which the bessel function
+!       is computed
+! outputs:
+!   bknu: (real8) value of the bessel functions
+function f_besselk_single_cpp(nu,x) result(bknu)
+  implicit none 
+  real*8, intent(in) :: nu,x
+  ! outputs
+  real*8 :: bknu
+  bknu = boost_besselk_cpp(nu,x)
+end function f_besselk_single_cpp
 
 ! besselk is a specialization of the cyl_bessel_k
 ! function of boost to double datatypes

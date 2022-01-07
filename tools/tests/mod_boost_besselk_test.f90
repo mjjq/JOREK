@@ -88,6 +88,7 @@ subroutine run_fruit_boost_besselk()
   write(*,'(/A)') "  ... setting-up: boost besselk tests" 
   call setup !< setup test variables
   write(*,'(/A)') "  ... running: boost besselk tests"
+  call test_f_boost_besselk
   call test_boost_besselk
   call test_boost_besselk_x_array
   call test_boost_besselk_nu_array
@@ -158,10 +159,49 @@ subroutine teardown()
 end subroutine teardown
 
 ! Tests ------------------------------------------------------------
+! test_besselk tests the computation of the modified bessel
+! function of the second kind and fractional order using
+! randomized matlab and python solutions. Test the function.
+subroutine test_f_boost_besselk()
+  use mod_gnu_rng, only: gnu_rng_interval
+  use mod_boost_besselk, only: f_besselk
+  implicit none
+
+  ! variables
+  integer,parameter :: idnu(2)=(/1,2/)
+  integer,dimension(2) :: ids
+  real*8  :: bknu_1,bknu_2
+  real*8  :: nu_1,nu_2
+  real*8  :: x_1,x_2
+  real*8,dimension(2) :: bknu_ref_mat
+  real*8,dimension(2) :: bknu_ref_py
+
+  ! initialisation
+  call gnu_rng_interval(2,(/1,Nx/),ids)
+  x_1 = x_all(ids(1),idnu(1)); x_2 = x_all(ids(2),idnu(2));
+  nu_1 = nu(idnu(1)); nu_2 = nu(idnu(2));
+  bknu_ref_mat = (/bknu_mat(ids(1),idnu(1)),bknu_mat(ids(2),idnu(2))/);
+  bknu_ref_py = (/bknu_py(ids(1),idnu(1)),bknu_py(ids(2),idnu(2))/);
+
+  ! compute modified bessel function for multiple nu
+  bknu_1 = f_besselk(nu_1,x_1)
+  bknu_2 = f_besselk(nu_2,x_2)
+
+  ! check solution
+  call assert_equals(bknu_1/bknu_ref_mat(1),1.d0,test_tol,&
+  "Error: no match between Matlab and JOREK modified bessel function 2nd kind (function)")
+  call assert_equals(bknu_1/bknu_ref_py(1),1.d0,test_tol,&
+  "Error: no match between Python and JOREK modified bessel function 2nd kind (function)")
+  call assert_equals(bknu_2/bknu_ref_mat(2),1.d0,test_tol,&
+  "Error: no match between Matlab and JOREK modified bessel function 2nd kind (function)")
+  call assert_equals(bknu_2/bknu_ref_py(2),1.d0,test_tol,&
+  "Error: no match between Python and JOREK modified bessel function 2nd kind (function)")
+
+end subroutine test_f_boost_besselk
 
 ! test_besselk tests the computation of the modified bessel
 ! function of the second kind and fractional order using
-! randomized matlab and python solutions
+! randomized matlab and python solutions. Test the subroutine.
 subroutine test_boost_besselk()
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_boost_besselk, only: besselk
@@ -189,13 +229,13 @@ subroutine test_boost_besselk()
 
   ! check solution
   call assert_equals(bknu_1/bknu_ref_mat(1),1.d0,test_tol,&
-  "Error: no match between Matlab and JOREK modified bessel function 2nd kind")
+  "Error: no match between Matlab and JOREK modified bessel function 2nd kind (subroutine)")
   call assert_equals(bknu_1/bknu_ref_py(1),1.d0,test_tol,&
-  "Error: no match between Python and JOREK modified bessel function 2nd kind")
+  "Error: no match between Python and JOREK modified bessel function 2nd kind (subroutine)")
   call assert_equals(bknu_2/bknu_ref_mat(2),1.d0,test_tol,&
-  "Error: no match between Matlab and JOREK modified bessel function 2nd kind")
+  "Error: no match between Matlab and JOREK modified bessel function 2nd kind (subroutine)")
   call assert_equals(bknu_2/bknu_ref_py(2),1.d0,test_tol,&
-  "Error: no match between Python and JOREK modified bessel function 2nd kind")
+  "Error: no match between Python and JOREK modified bessel function 2nd kind (subroutine)")
 
 end subroutine test_boost_besselk
 

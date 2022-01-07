@@ -498,7 +498,7 @@ do i=1,n_vertex_max
             aux_divPIp  = aux_PIPP_p / BigR + aux_PIRP_R + aux_PIZP_Z + 2.d0 / BigR * aux_PIRP
  
             ! B. div P
-            aux_BdivPI      = ps0_y/BigR * aux_divPIR + -ps0_x/BigR * aux_divPIZ + F0/BigR * aux_divPIp
+            aux_BdivPI      = ps0_y/BigR * aux_divPIR  - ps0_x/BigR * aux_divPIZ + F0/BigR * aux_divPIp
             ! Ensuring B. div P is perpendicular to B.
             aux_BB2= (ps0_y / BigR)**2 + (-ps0_x / BigR)**2 + (F0 / BigR)**2
             aux_divPIR_perp = aux_divPIR - ps0_y / BigR / aux_BB2 * aux_BdivPI

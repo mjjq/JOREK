@@ -13,12 +13,9 @@ real*8,parameter :: twothirds=2.d0/3.d0
 real*8,parameter :: sqrt3=sqrt(3.d0)
 type,extends(light_vertices) :: synchrotron_light_vertices
   contains
-  procedure,pass(sync_lights) :: init_lights_from_particles => &
-                                 init_synchrotron_light_from_particles
-  procedure,pass(sync_lights) :: directionality_funct => &
-                                 synchrotron_directionality_funct
-  procedure,pass(sync_lights) :: spectral_irradiance => &
-                                 synchrotron_spectral_irradiance
+  procedure :: init_lights_from_particles=>init_synchrotron_light_from_particles
+  procedure :: directionality_funct=>synchrotron_directionality_funct
+  procedure :: spectral_irradiance=>synchrotron_spectral_irradiance
   procedure,pass(sync_lights),private :: fill_synchrotron_lights_from_particles
 end type synchrotron_light_vertices
 !> Interfaces --------------------------------------
@@ -43,12 +40,13 @@ sims_particles,n_sync_lights_in)
   use mod_particle_sim,          only: particle_sim
   implicit none
   !> inputs-outputs
-  type(synchrotron_light_vertices),intent(inout)     :: sync_lights
+  class(synchrotron_light_vertices),intent(inout)     :: sync_lights
   type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
   !> inputs
   integer,intent(in)                              :: n_times
   integer,intent(in),optional                     :: n_sync_lights_in
   !> variables
+  integer :: ii
   integer :: n_sync_lights,n_groups_max,n_particles_max
   integer,dimension(n_times)           :: n_groups,n_particle_relativistics
   integer,dimension(:,:),allocatable   :: n_particles,particle_types,n_active_particles
@@ -83,7 +81,7 @@ sims_particles,n_sync_lights_in)
   endif
   !> allocate active particle arrays
   allocate(n_active_particles(n_groups_max,sync_lights%n_vertices)); 
-  allocate(active_particle_id(n_particles_max,n_group_max,sync_lights%n_vertices));
+  allocate(active_particle_id(n_particles_max,n_groups_max,sync_lights%n_vertices));
   !> allocate vertices
   call sync_lights%allocate_x_properties(n_sync_lights)
 
@@ -93,8 +91,8 @@ sims_particles,n_sync_lights_in)
   !> fill the synchrotron lights
   call sync_lights%fill_synchrotron_lights_from_particles(&
   sims_particles,n_groups_max,n_particles_max,n_groups,&
-  n_particles,n_active_particles,active_particle_id)
-
+  n_active_particles,active_particle_id)
+  
   !> cleanup 
   deallocate(n_particles); deallocate(particle_types);
   deallocate(n_active_particles); deallocate(active_particle_id)
@@ -119,12 +117,12 @@ subroutine synchrotron_directionality_funct(sync_lights,spectra,time_id,&
 light_id,x_shaded,light_dstb)
   use mod_vertices,             only: n_x
   use constants,                only: PI,SPEED_OF_LIGHT
-  use mod_boost_besselk,        only: besselk
+  use mod_boost_besselk,        only: f_besselk
   use mod_coordinate_transforms,only: cartesian_to_spherical_latitude
   use mod_spectra,              only: spectrum_base
   implicit none
   !> inputs-outputs:
-  type(synchrotron_light_vertices),intent(inout) :: sync_lights
+  class(synchrotron_light_vertices),intent(inout) :: sync_lights
   class(spectrum_base),intent(inout)             :: spectra
   !> inputs:
   integer,intent(in)                :: time_id,light_id
@@ -139,7 +137,7 @@ light_id,x_shaded,light_dstb)
 
   !> compute the spherical coordinates of the light-point ray
   light_properties = sync_lights%properties(:,light_id,time_id)
-  rpsichi = cartesian_to_sphetical_latitude(x_shaded,sync_lights%x(:,light_id,time_id),&
+  rpsichi = cartesian_to_spherical_latitude(x_shaded,sync_lights%x(:,light_id,time_id),&
   light_properties(1:3),light_properties(4:6),light_properties(7:9))
   !> compute the factors and the value of z
   one_over_gamma = 1.d0/light_properties(11) !< 1/gamma
@@ -154,11 +152,11 @@ light_id,x_shaded,light_dstb)
   !> (6*PI / (sqrt(3)) * beta**4 * gamma**8 * kappa**3 )*( 1 + gamma**2 * psi**2)**2
   !> beta = v/c; kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
   !> Power_tot = (q**2/(6*PI*eps0*c**3))*gamma**4 * v**4 * kappa**2
-  factor_1 = factor_1*factor_1*((6.d0*PI)/(sqrt3*(properties(10)**4.d0)*&
-  (properties(11)**8.d0)*(properties(12)**3.d0)))
+  factor_1 = factor_1*factor_1*((6.d0*PI)/(sqrt3*(light_properties(10)**4.d0)*&
+  (light_properties(11)**8.d0)*(light_properties(12)**3.d0)))
   !$omp parallel do default(shared) private(ii,jj,zeta) &
   !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&
-  !$omp factor_2,z_value,fact_1) collapse(2)
+  !$omp factor_2,z_value,factor_1) collapse(2)
   do ii=1,spectra%n_spectra
     do jj=1,spectra%n_points
       !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
@@ -166,10 +164,10 @@ light_id,x_shaded,light_dstb)
       (3.d0*spectra%points(jj,ii)*light_properties(12))
       !> funct = K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
       !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos)
-      light_dstb(jj,ii) = besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z_value)+&
-      besselk(twothirds,zeta)*sin(zeta*z_cos)
+      light_dstb(jj,ii) = f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z_value)+&
+      f_besselk(twothirds,zeta)*sin(zeta*z_cos)
       !> SAD/P_tot = I*funct/lambda**4
-      light_dstb(jj,ii) = fact_1*light_dstb(jj,ii)/&
+      light_dstb(jj,ii) = factor_1*light_dstb(jj,ii)/&
       (spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii))
     enddo
   enddo
@@ -197,7 +195,7 @@ light_id,x_shaded,light_spec_irradiance)
   use mod_spectra,  only: spectrum_base
   implicit none
   !> inputs-outputs:
-  type(synchrotron_light_vertices),intent(inout) :: sync_lights
+  class(synchrotron_light_vertices),intent(inout) :: sync_lights
   class(spectrum_base),intent(inout)             :: spectra
   !> inputs:
   integer,intent(in)                :: time_id,light_id
@@ -231,7 +229,7 @@ end subroutine synchrotron_spectral_irradiance
 !>   sync_lights: (synchrotron_light_vertices) initialised synchrotron lights
 subroutine fill_synchrotron_lights_from_particles(sync_lights,&
 sims_particles,n_groups_max,n_particles_max,&
-n_groups,n_active_particles,active_particle_id)
+n_groups,n_active_particles,active_particles_id)
   use mod_vertices,       only: n_x
   use mod_particle_sim,   only: particle_sim
   use mod_particle_types, only: particle_kinetic_relativistic
@@ -331,17 +329,17 @@ mass,E_field,B_field,sync_properties)
               particle_in%x(2)*particle_in%x(2)+&
               particle_in%x(3)*particle_in%x(3)) 
   sync_properties(1:3) = particle_in%p/velocity
-  sync_properties(10)   = velocity/SPEEF_OF_LIGHT
+  sync_properties(10)   = velocity/SPEED_OF_LIGHT
   sync_properties(11)   = sqrt(1.d0 + (sync_properties(10)*sync_properties(10))/(mass*mass))
   sync_properties(10)   = sync_properties(10)/(mass*sync_properties(11))
   !> compute orbit curvature
   sync_properties(4:6) = E_field+cross_product(particle_in%p/(mass*sync_properties(8)),B_field)
-  vector_1d_3(4:6) = cross_product(sync_properties(1:3),sync_properties(4:6))
+  vector_1d_3 = cross_product(sync_properties(1:3),sync_properties(4:6))
   sync_properties(9) = (abs(real(particle_in%q,kind=8))*EL_CHG*&
                        sqrt(vector_1d_3(1)*vector_1d_3(1)+&
                        vector_1d_3(2)*vector_1d_3(2)+&
                        vector_1d_3(3)*vector_1d_3(3)))/&
-                       (sync_properties(11)*mass*ATOMI_MASS_UNIT*&
+                       (sync_properties(11)*mass*ATOMIC_MASS_UNIT*&
                        sync_properties(10)*sync_properties(7)*&
                        SPEED_OF_LIGHT*SPEED_OF_LIGHT)
   !> compute total synchrotron power

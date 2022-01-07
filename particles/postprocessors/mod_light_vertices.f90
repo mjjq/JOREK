@@ -17,9 +17,9 @@ type,abstract,extends(vertices) :: light_vertices
   procedure,pass(light_vert)                              :: extract_particle_types_all_particle_sims
   procedure,pass(light_vert)                              :: store_light_x_from_particle_id
   procedure,pass(light_vert)                              :: find_active_particles_id_time
-  procedure(init_lights_parts),deferred,pass(light_vert)  :: init_lights_from_particles
-  procedure(direct_funct),deferred,pass(light_vert)       :: directionality_funct
-  procedure(spect_irradiance),deferred,pass(light_vert)   :: spectral_irradiance
+  procedure(init_lights_parts),deferred  :: init_lights_from_particles
+  procedure(direct_funct),deferred       :: directionality_funct
+  procedure(spect_irradiance),deferred   :: spectral_irradiance
 end type light_vertices
 
 !> Interfaces -------------------------------------------

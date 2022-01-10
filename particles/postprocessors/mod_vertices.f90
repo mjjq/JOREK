@@ -5,6 +5,11 @@ implicit none
 
 private
 public :: n_x,vertices
+!> public procedure only for unit testing
+#ifdef UNIT_TESTS
+public :: resize_vertices_noloss_seq
+public :: resize_vertices_noloss_omp
+#endif
 
 !> Variable and type definitions ------------------------------------------
 integer,parameter     :: n_x=3 !< number of coordinates
@@ -138,7 +143,8 @@ subroutine deallocate_vertices(vert_inout)
 end subroutine deallocate_vertices
 
 !> resize the vertex tables without loss of data. This operation can be
-!> very slow because it requires a copy of all tables data
+!> very slow because it requires a copy of all tables data.
+!> Sequetinal implementation.
 !> inputs:
 !>   vert_inout:   (vertices) vertex table with old sizes
 !>   n_vertex_new: (integer) new size of vertex tables
@@ -158,6 +164,37 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
   real*8,dimension(:,:,:),allocatable :: x_table
   real*8,dimension(:,:,:),allocatable :: property_table
 
+  !> call sequential or openmp vertion of the function 
+#ifdef _OPENMP
+  call resize_vertices_noloss_omp(vert_inout,n_vertex_new,ifail)
+#else
+  call resize_vertices_noloss_seq(vert_inout,n_vertex_new,ifail)
+#endif
+
+end subroutine resize_vertices_noloss
+
+!> resize the vertex tables without loss of data. This operation can be
+!> very slow because it requires a copy of all tables data.
+!> Sequetinal implementation.
+!> inputs:
+!>   vert_inout:   (vertices) vertex table with old sizes
+!>   n_vertex_new: (integer) new size of vertex tables
+!>   ifail:        (integer) failed to resize tables if =11
+!> outputs:
+!>  vert_inout:    (vertices) resized vertex tables
+!>  ifail:         (integer) failed to resize if =11
+subroutine resize_vertices_noloss_seq(vert_inout,n_vertex_new,ifail)
+  implicit none
+  !> inputs-outputs
+  class(vertices),intent(inout) :: vert_inout
+  integer,intent(inout)         :: ifail
+  !> inputs
+  integer,intent(in)            :: n_vertex_new 
+  !> variables
+  integer :: ii,jj,n_active_vertices_max
+  real*8,dimension(:,:,:),allocatable :: x_table
+  real*8,dimension(:,:,:),allocatable :: property_table
+
   !> initialisation
   n_active_vertices_max = maxval(vert_inout%n_active_vertices)
   !> check for possible data losses
@@ -166,14 +203,66 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
     ifail = 11
     return
   endif
+  vert_inout%n_vertices = n_vertex_new
   allocate(x_table(n_x,n_active_vertices_max,vert_inout%n_times))
   allocate(property_table(vert_inout%n_property_vertex,n_active_vertices_max,vert_inout%n_times))
 
-#ifdef _OPENMP
   !> copy data and resize tables
-  !$omp parallel default(private) firstprivate(n_vertex_new) &
-  !$omp shared(vert_inout,x_table,property_table)
-  !$omp do
+  do ii=1,vert_inout%n_times
+    x_table(:,1:vert_inout%n_active_vertices(ii),ii) = &
+    vert_inout%x(:,1:vert_inout%n_active_vertices(ii),ii)
+    property_table(:,1:vert_inout%n_active_vertices(ii),ii) = &
+    vert_inout%properties(:,1:vert_inout%n_active_vertices(ii),ii)
+  enddo
+  call vert_inout%allocate_x_properties(n_vertex_new)
+  do ii=1,vert_inout%n_times
+    vert_inout%x(:,1:vert_inout%n_active_vertices(ii),ii) = &
+    x_table(:,1:vert_inout%n_active_vertices(ii),ii)
+    vert_inout%properties(:,1:vert_inout%n_active_vertices(ii),ii) = &
+    property_table(:,1:vert_inout%n_active_vertices(ii),ii)
+  enddo
+
+  !> cleanup
+  deallocate(x_table); deallocate(property_table)
+end subroutine resize_vertices_noloss_seq
+
+!> resize the vertex tables without loss of data. This operation can be
+!> very slow because it requires a copy of all tables data.
+!> parallel implementation.
+!> inputs:
+!>   vert_inout:   (vertices) vertex table with old sizes
+!>   n_vertex_new: (integer) new size of vertex tables
+!>   ifail:        (integer) failed to resize tables if =11
+!> outputs:
+!>  vert_inout:    (vertices) resized vertex tables
+!>  ifail:         (integer) failed to resize if =11
+subroutine resize_vertices_noloss_omp(vert_inout,n_vertex_new,ifail)
+  implicit none
+  !> inputs-outputs
+  class(vertices),intent(inout) :: vert_inout
+  integer,intent(inout)         :: ifail
+  !> inputs
+  integer,intent(in)            :: n_vertex_new 
+  !> variables
+  integer :: ii,jj,n_active_vertices_max
+  real*8,dimension(:,:,:),allocatable :: x_table
+  real*8,dimension(:,:,:),allocatable :: property_table
+
+  !> initialisation
+  n_active_vertices_max = maxval(vert_inout%n_active_vertices)
+  !> check for possible data losses
+  if(n_vertex_new.lt.n_active_vertices_max) then
+    write(*,*) "Try to resize vertex tables but possible data loss detected!"
+    ifail = 11
+    return
+  endif
+  vert_inout%n_vertices = n_vertex_new
+  allocate(x_table(n_x,n_active_vertices_max,vert_inout%n_times))
+  allocate(property_table(vert_inout%n_property_vertex,n_active_vertices_max,vert_inout%n_times))
+
+  !> copy data and resize tables
+  !$omp parallel default(shared) firstprivate(n_vertex_new) shared(ii,jj)
+  !$omp do collapse(2)
   do ii=1,vert_inout%n_times
     do jj=1,n_active_vertices_max
       x_table(:,jj,ii) = vert_inout%x(:,jj,ii)
@@ -193,25 +282,10 @@ subroutine resize_vertices_noloss(vert_inout,n_vertex_new,ifail)
   enddo
   !$omp end do
   !$omp end parallel
-#else
-  do ii=1,vert_inout%n_times
-    x_table(:,1:vert_inout%n_active_vertices(ii),ii) = &
-    vert_inout%x(:,1:vert_inout%n_active_vertices(ii),ii)
-    property_table(:,1:vert_inout%n_active_vertices(ii),ii) = &
-    vert_inout%properties(:,1:vert_inout%n_active_vertices(ii),ii)
-  enddo
-  call vert_inout%allocate_x_properties(n_vertex_new)
-  do ii=1,vert_inout%n_times
-    vert_inout%x(:,1:vert_inout%n_active_vertices(ii),ii) = &
-    x_table(:,1:vert_inout%n_active_vertices(ii),ii)
-    vert_inout%properties(:,1:vert_inout%n_active_vertices(ii),ii) = &
-    property_table(:,1:vert_inout%n_active_vertices(ii),ii)
-  enddo
-#endif
 
   !> cleanup
   deallocate(x_table); deallocate(property_table)
-end subroutine resize_vertices_noloss
+end subroutine resize_vertices_noloss_omp
 
 !> fit the vertices table to the number of active tables.
 !> This operation can be very slow because it requires 

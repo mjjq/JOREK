@@ -41,14 +41,65 @@ real*8,dimension(3),parameter    :: ABE_lowbnd=(/-2.67d0,-9.85d0,0.35d0/)
 real*8,dimension(3),parameter    :: ABE_uppbnd=(/0.78d0,2.35d0,5.67d0/)
 
 !> Interfaces -------------------------------------------------
+interface allocate_one_particle_list_type
+  module procedure allocate_one_particle_list_all_types
+  module procedure allocate_one_particle_list_from_types
+end interface allocate_one_particle_list_type
+
 interface fill_groups
   module procedure fill_groups_seq
   module procedure fill_groups_mpi
 end interface fill_groups
+
 contains
 !> Procedures -------------------------------------------------
+!> allocate particle list as a function of the particle type
+subroutine allocate_one_particle_list_from_types(n_groups,n_particles,p_types,groups,ifail)
+  use mod_particle_sim,   only: particle_group
+  use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
+  use mod_particle_types, only: particle_gc,particle_fieldline
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_particle_types, only: particle_gc_relativistic
+  use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin 
+  use mod_particle_types, only: particle_kinetic_id,particle_kinetic_leapfrog_id
+  use mod_particle_types, only: particle_gc_id,particle_fieldline_id
+  use mod_particle_types, only: particle_kinetic_relativistic_id
+  use mod_particle_types, only: particle_gc_relativistic_id
+  use mod_particle_types, only: particle_gc_vpar_id,particle_gc_Qin_id
+  implicit none
+  !> inputs
+  integer,intent(in) :: n_groups
+  integer,dimension(n_groups),intent(in) :: p_types,n_particles
+  !> inputs-outputs
+  integer,intent(inout) :: ifail
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
+  !> variables
+  integer :: ii
+  
+  !> initialize the particle as a function of the type
+  do ii=1,n_groups
+    if(p_types(ii).eq.particle_fieldline_id) then
+      allocate(particle_fieldline::groups(ii)%particles(n_particles(ii)))
+    elseif(p_types(ii).eq.particle_gc_id) then
+      allocate(particle_gc::groups(ii)%particles(n_particles(ii)))
+    elseif(p_types(ii).eq.particle_gc_vpar_id) then
+      allocate(particle_gc_vpar::groups(ii)%particles(n_particles(ii)))
+    elseif(p_types(ii).eq.particle_kinetic_id) then
+      allocate(particle_kinetic::groups(ii)%particles(n_particles(ii)))
+    elseif(p_types(ii).eq.particle_kinetic_leapfrog_id) then
+      allocate(particle_kinetic_leapfrog::groups(ii)%particles(n_particles(ii)))
+    elseif(p_types(ii).eq.particle_gc_relativistic_id) then
+      allocate(particle_kinetic_relativistic::groups(ii)%particles(n_particles(ii)))
+    elseif(p_types(ii).eq.particle_kinetic_relativistic_id) then 
+      allocate(particle_gc_relativistic::groups(ii)%particles(n_particles(ii)))
+    elseif(p_types(ii).eq.particle_gc_Qin_id) then
+      allocate(particle_gc_Qin::groups(ii)%particles(n_particles(ii)))
+    endif 
+  enddo  
+end subroutine allocate_one_particle_list_from_types
+
 !> allocate one particle list per type
-subroutine allocate_one_particle_list_type(n_groups,n_particles,groups,ifail)
+subroutine allocate_one_particle_list_all_types(n_groups,n_particles,groups,ifail)
   use mod_particle_sim,   only: particle_group
   use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
   use mod_particle_types, only: particle_gc,particle_fieldline
@@ -74,7 +125,7 @@ subroutine allocate_one_particle_list_type(n_groups,n_particles,groups,ifail)
   allocate(particle_kinetic_relativistic::groups(6)%particles(n_particles))
   allocate(particle_gc_relativistic::groups(7)%particles(n_particles))
   allocate(particle_gc_Qin::groups(8)%particles(n_particles))
-end subroutine allocate_one_particle_list_type
+end subroutine allocate_one_particle_list_all_types
 
 !> obtain charges from all particles in a simulation 
 subroutine obtain_particle_charges(n_groups,n_particles,charge_list,groups)

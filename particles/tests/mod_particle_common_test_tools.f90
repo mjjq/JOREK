@@ -94,6 +94,9 @@ subroutine allocate_one_particle_list_from_types(n_groups,n_particles,p_types,gr
       allocate(particle_gc_relativistic::groups(ii)%particles(n_particles(ii)))
     elseif(p_types(ii).eq.particle_gc_Qin_id) then
       allocate(particle_gc_Qin::groups(ii)%particles(n_particles(ii)))
+    else
+      write(*,'(/A)') "allocate one particle list from type failed!"
+      ifail = 1
     endif 
   enddo  
 end subroutine allocate_one_particle_list_from_types
@@ -113,7 +116,7 @@ subroutine allocate_one_particle_list_all_types(n_groups,n_particles,groups,ifai
   integer,intent(inout) :: ifail
   type(particle_group),dimension(n_groups),intent(inout) :: groups
   if(n_groups.lt.n_particle_types) then
-    write(*,'(/A)') "allocate one particle list per type failed!"
+    write(*,'(/A)') "allocate one particle list for all types failed!"
     ifail = 1
     return
   endif
@@ -128,7 +131,7 @@ subroutine allocate_one_particle_list_all_types(n_groups,n_particles,groups,ifai
 end subroutine allocate_one_particle_list_all_types
 
 !> obtain charges from all particles in a simulation 
-subroutine obtain_particle_charges(n_groups,n_particles,charge_list,groups)
+subroutine obtain_particle_charges(n_groups,n_particles_max,charge_list,groups)
   use mod_particle_sim,   only: particle_group
   use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
   use mod_particle_types, only: particle_gc
@@ -137,21 +140,22 @@ subroutine obtain_particle_charges(n_groups,n_particles,charge_list,groups)
   use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin 
   implicit none
   !> inputs
-  integer,intent(in) :: n_groups,n_particles
+  integer,intent(in) :: n_groups,n_particles_max
   !> inputs-outputs
   type(particle_group),dimension(n_groups),intent(inout) :: groups
   !> outputs
-  integer*1,dimension(n_particles,n_groups),intent(out) :: charge_list
+  integer*1,dimension(n_particles_max,n_groups),intent(out) :: charge_list
   !> variables
   integer :: ii,jj
 
   !> initialisation
   charge_list = 0
   !> extract charges
-  !$omp parallel do default(shared) firstprivate(n_groups,n_particles) &
-  !$omp private(ii,jj) collapse(2)
+  !$omp parallel default(shared) firstprivate(n_groups) &
+  !$omp private(ii,jj)
   do jj=1,n_groups
-    do ii=1,n_particles
+    !$omp do
+    do ii=1,size(groups(jj)%particles)
       select type (p=>groups(jj)%particles(ii))
         type is (particle_kinetic)
         charge_list(ii,jj) = p%q
@@ -169,26 +173,27 @@ subroutine obtain_particle_charges(n_groups,n_particles,charge_list,groups)
         charge_list(ii,jj) = p%q
       end select
     enddo
+    !$omp end do
   enddo
-  !$omp end parallel do
+  !$omp end parallel
 end subroutine obtain_particle_charges
 
 !> extract the index of valid particles in a simulatiion
-subroutine obtain_active_particle_ids(n_groups,n_particles,&
+subroutine obtain_active_particle_ids(n_groups,n_particles_max,&
 active_particle_ids,groups)
   use mod_particle_sim, only: particle_group
   implicit none
   !> inputs
-  integer,intent(in) :: n_groups,n_particles
+  integer,intent(in) :: n_groups,n_particles_max
   !> inputs-outputs
   type(particle_group),dimension(n_groups),intent(inout) :: groups
   !> outputs:
-  integer,dimension(n_particles,n_groups),intent(out) :: active_particle_ids
+  integer,dimension(n_particles_max,n_groups),intent(out) :: active_particle_ids
   !> variables
   integer :: ii,jj,counter
   do jj=1,n_groups
     counter = 0
-    do ii=1,n_particles
+    do ii=1,size(groups(jj)%particles)
       if(groups(jj)%particles(ii)%i_elm.gt.0) then
         counter = counter + 1
         active_particle_ids(counter,jj) = ii
@@ -199,15 +204,15 @@ end subroutine obtain_active_particle_ids
 
 !> invalidate some of the particles in the particle groups of a
 !> simulation as a function of a survival probability
-subroutine invalidate_particles(n_groups,n_particles,&
-  survival_prob_in,n_active_particles,groups,rank_in)
+subroutine invalidate_particles(n_groups,n_particles_max,survival_prob_in,&
+n_active_particles,groups,rank_in)
   !$ use omp_lib
   use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_gnu_rng, only: set_seed_sys_time 
   implicit none
   !> inputs
-  integer,intent(in) :: n_groups,n_particles
+  integer,intent(in) :: n_groups,n_particles_max
   real*8,intent(in)  :: survival_prob_in
   integer,intent(in),optional :: rank_in
   !> inputs-outputs
@@ -217,9 +222,10 @@ subroutine invalidate_particles(n_groups,n_particles,&
   !> variables
   integer :: ii,jj,rank,thread_id
   real*8  :: survival_prob
-  real*8,dimension(n_particles,n_groups) :: survival_array
+  real*8,dimension(n_particles_max,n_groups) :: survival_array
+  integer,dimension(n_groups) :: n_particles
   !> initialisation
-  rank = 1; if(present(rank_in)) rank=rank_in;
+  rank = 1; n_particles=0; if(present(rank_in)) rank=rank_in;
   survival_prob = abs(survival_prob_in)
   if(abs(survival_prob).gt.1.d0) survival_prob = survival_prob - floor(survival_prob)
   n_active_particles = 0
@@ -229,35 +235,39 @@ subroutine invalidate_particles(n_groups,n_particles,&
   !$omp end parallel
   
   !> generate survival probability
-  call gnu_rng_interval(n_particles,n_groups,(/0.d0,1.d0/),survival_array)
+  call gnu_rng_interval(n_particles_max,n_groups,(/0.d0,1.d0/),survival_array)
   do ii=1,n_groups
-    n_active_particles(ii) = count(survival_array(:,ii).ge.survival_prob)
+    n_particles(ii) = size(groups(ii)%particles)
+    n_active_particles(ii) = count(survival_array(1:n_particles(ii),ii).ge.survival_prob)
   enddo
   !> invalidate particles
-  !$omp parallel do default(shared) firstprivate(n_particles,n_groups,survival_prob) &
-  !$omp private(ii,jj) collapse(2)
+  !$omp parallel default(shared) firstprivate(n_groups,n_particles,survival_prob) &
+  !$omp private(ii,jj)
   do jj=1,n_groups
-    do ii=1,n_particles
+    !$omp do
+    do ii=1,n_particles(jj)
       if(survival_array(ii,jj).lt.survival_prob) groups(jj)%particles(ii)%i_elm = 0
     enddo
+    !$omp end do
   enddo 
-  !$omp end parallel do
+  !$omp end parallel
 end subroutine invalidate_particles
 
 !> copy fieldlines B_hat between two simulations 
 !> used for IO because it is not stored in hdf5
-subroutine copy_group_fieldline_B_hat_prev(n_groups,n_particles,groups_in,groups_out)
+subroutine copy_group_fieldline_B_hat_prev(n_groups,groups_in,groups_out)
   use mod_particle_types, only: particle_fieldline
   use mod_particle_sim,   only: particle_group
   implicit none
-  integer,intent(in) :: n_groups,n_particles
+  integer,intent(in) :: n_groups
   type(particle_group),dimension(n_groups),intent(in)    :: groups_in
   type(particle_group),dimension(n_groups),intent(inout) :: groups_out
   integer :: ii,jj
-  !$omp parallel do default(private) firstprivate(n_groups,n_particles) &
-  !$omp shared(groups_in,groups_out) collapse(2)
+  !$omp parallel default(private) firstprivate(n_groups) &
+  !$omp shared(groups_in,groups_out)
   do ii=1,n_groups
-    do jj=1,n_particles
+    !$omp do
+    do jj=1,size(groups_out(ii)%particles)
       select type (p_out=>groups_out(ii)%particles(jj))
       type is (particle_fieldline)
         select type (p_in=>groups_in(ii)%particles(jj))
@@ -266,8 +276,9 @@ subroutine copy_group_fieldline_B_hat_prev(n_groups,n_particles,groups_in,groups
         end select
       end select
     enddo
+    !$omp end do
   enddo
-  !$omp end parallel do
+  !$omp end parallel
 end subroutine copy_group_fieldline_B_hat_prev
 
 !> generate random values for filling the groups type
@@ -324,7 +335,7 @@ subroutine fill_groups_mpi(n_groups,groups,rank,ifail)
 end subroutine fill_groups_mpi
 
 !> fills particle list of each groups with random data
-subroutine fill_particles(n_groups,n_particles,groups,rank_in)
+subroutine fill_particles(n_groups,groups,rank_in)
   use mod_particle_sim,   only: particle_group
   use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
   use mod_particle_types, only: particle_gc,particle_fieldline
@@ -332,16 +343,17 @@ subroutine fill_particles(n_groups,n_particles,groups,rank_in)
   use mod_particle_types, only: particle_gc_relativistic
   use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin
   implicit none
-  integer,intent(in) :: n_groups,n_particles
+  integer,intent(in) :: n_groups
   type(particle_group),dimension(n_groups),intent(inout) :: groups
   integer,intent(in),optional :: rank_in
-  integer :: rank,jj
+  integer :: rank,jj,n_particles
   rank = 1
   if(present(rank_in)) rank = rank_in
-  !> fill particle basic type
-  call fill_particle_base(n_groups,n_particles,groups,rank)
   !> fill particle specific types
   do jj=1,n_groups
+    n_particles = size(groups(jj)%particles)
+    !> fill particle basic type
+    call fill_particle_base(n_groups,n_particles,groups,rank)
     select type (p_list=>groups(jj)%particles)
     type is(particle_fieldline)
     call fill_particle_fieldline(n_particles,p_list,rank)

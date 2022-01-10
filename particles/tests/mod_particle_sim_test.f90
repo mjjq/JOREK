@@ -72,7 +72,7 @@ subroutine setup()
 
   !> fill-up the group and particle base variables
   call fill_groups(n_particle_types,sim_sol%groups)
-  call fill_particles(n_particle_types,n_particles,sim_sol%groups)
+  call fill_particles(n_particle_types,sim_sol%groups)
 
   !> invalidate particles in particle lists
   call invalidate_particles(n_particle_types,n_particles,survival_prob,&

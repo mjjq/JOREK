@@ -97,7 +97,7 @@ subroutine setup(rank,n_tasks,ifail)
 
   !> fill-up the group and particle base variables
   call fill_groups(n_groups,sim_particles%groups,rank,ifail)
-  call fill_particles(n_groups,n_particles,sim_particles%groups,rank)
+  call fill_particles(n_groups,sim_particles%groups,rank)
 
   !> write default simulation in file and read it in new simulation
   call write_simulation_hdf5(sim_particles,trim(test_filename))

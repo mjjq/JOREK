@@ -349,11 +349,11 @@ subroutine fill_particles(n_groups,groups,rank_in)
   integer :: rank,jj,n_particles
   rank = 1
   if(present(rank_in)) rank = rank_in
+  !> fill particle basic type
+  call fill_particle_base(n_groups,groups,rank)
   !> fill particle specific types
   do jj=1,n_groups
     n_particles = size(groups(jj)%particles)
-    !> fill particle basic type
-    call fill_particle_base(n_groups,n_particles,groups,rank)
     select type (p_list=>groups(jj)%particles)
     type is(particle_fieldline)
     call fill_particle_fieldline(n_particles,p_list,rank)
@@ -376,14 +376,14 @@ subroutine fill_particles(n_groups,groups,rank_in)
 end subroutine fill_particles
 
 !> generate random values for filling the particle base type
-subroutine fill_particle_base(n_groups,n_particles,groups,rank_in)
+subroutine fill_particle_base(n_groups,groups,rank_in)
   use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_gnu_rng, only: set_seed_sys_time
   !$ use omp_lib
   implicit none
   !> inputs
-  integer,intent(in) :: n_groups,n_particles
+  integer,intent(in) :: n_groups
   integer,intent(in),optional :: rank_in
   !> inputs-outputs:
   type(particle_group),dimension(n_groups),intent(inout) :: groups
@@ -397,13 +397,13 @@ subroutine fill_particle_base(n_groups,n_particles,groups,rank_in)
   if(present(rank_in)) rank=rank_in
   thread_id = 0
   !> fill-up the particle_base variables for all particles and all groups
-  !$omp parallel default(shared) firstprivate(n_groups,n_particles) &
+  !$omp parallel default(shared) firstprivate(n_groups) &
   !$omp private(ii,jj,rank,rn_integer,rn_real,rn_real_size2,rn_real_size3,thread_id)
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
-  !$omp do collapse(2)
   do jj=1,n_groups
-    do ii=1,n_particles
+    !$omp do
+    do ii=1,size(groups(jj)%particles)
       call gnu_rng_interval(weight_interval,rn_real)
       call gnu_rng_interval(2,st_interval,rn_real_size2)
       call gnu_rng_interval(3,x_lowbnd,x_uppbnd,rn_real_size3)
@@ -417,8 +417,8 @@ subroutine fill_particle_base(n_groups,n_particles,groups,rank_in)
       call gnu_rng_interval(i_life_interval,rn_integer)
       groups(jj)%particles(ii)%i_life  = rn_integer 
     enddo
+    !$omp end do
   enddo
-  !$omp end do
   !$omp end parallel
 end subroutine fill_particle_base
 

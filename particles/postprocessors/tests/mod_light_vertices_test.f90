@@ -35,6 +35,7 @@ integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types_sol=&
         shape(particle_types_sol))
 integer,parameter                          :: n_particles_max=maxval(n_particles_per_group)
 real*8,parameter                           :: survival_threshold=0.21
+real*8,parameter                           :: tol_real8=5.d-16
 type(synchrotron_light_vertices)                                :: vertex_sol
 type(particle_sim),dimension(n_times_sol)                       :: sims_particles
 integer,dimension(n_times_sol)                                  :: n_active_vertices_sol
@@ -54,6 +55,7 @@ subroutine run_fruit_light_vertices()
   write(*,*) "  ... running: light vertices tests"
   call test_find_all_active_particles_ids
   call test_find_all_active_particles_ids_types
+  call test_store_light_from_particle_id
   write(*,*) "  ... tearing-down: light vertices tests"
   call teardown()
 end subroutine run_fruit_light_vertices
@@ -129,7 +131,6 @@ end subroutine test_find_all_active_particles_ids
 
 !> procedure for testing the find active particles for all particle types
 subroutine test_find_all_active_particles_ids_types()
-  use mod_particle_types, only: particle_kinetic_relativistic
   implicit none
   integer :: ii,jj,kk,pp,p_type
   integer,dimension(n_times_sol)              :: n_active_vertices_loc
@@ -166,6 +167,28 @@ subroutine test_find_all_active_particles_ids_types()
     enddo
   enddo
 end subroutine test_find_all_active_particles_ids_types
+
+!> test store light from particle id
+subroutine test_store_light_from_particle_id()
+  implicit none
+  integer :: kk,jj,ii,counter
+  !> loop for storing the particles
+  do kk = 1,n_times_sol
+    counter = 0
+    do jj = 1,n_groups_per_sim(kk)
+      do ii=1,n_particles_per_group(jj,kk)
+        counter = counter + 1
+        call vertex_sol%store_light_x_from_particle_id(counter,kk,&
+        sims_particles(kk)%groups(jj)%particles(ii))
+      enddo
+    enddo
+  enddo
+  !> check solution
+  do ii=1,n_times_sol
+    call assert_equals(vertex_sol%x(:,:,ii),x_cart_sol(:,:,ii),n_particles_max,n_groups_max,&
+    tol_real8,"Error light vertices store light x from particles: positions mismatch!")
+  enddo
+end subroutine test_store_light_from_particle_id
 
 !> Tools -------------------------------------------------------------
   

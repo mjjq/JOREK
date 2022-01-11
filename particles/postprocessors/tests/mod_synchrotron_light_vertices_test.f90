@@ -12,6 +12,7 @@ private
 public :: run_fruit_synchrotron_light_vertices
 
 !> Variables ---------------------------------------------------------
+integer,parameter :: fill_type_base=1 !< use cylindrical initialisation
 integer,parameter :: n_times_sol=2
 integer,dimension(n_times_sol),parameter :: n_groups_per_sim=(/3,2/)
 integer,parameter                        :: n_groups_max=maxval(n_groups_per_sim)
@@ -73,7 +74,7 @@ subroutine setup()
     call allocate_one_particle_list_type(n_groups_per_sim(ii),&
     n_particles_per_group(1:n_groups_per_sim(ii),ii),&
     particle_types(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups,ifail)
-    call fill_particles(n_groups_per_sim(ii),sims_particles(ii)%groups)
+    call fill_particles(n_groups_per_sim(ii),sims_particles(ii)%groups,fill_type_base)
     call invalidate_particles(n_groups_per_sim(ii),n_particles_max,survival_threshold,&
     n_active_particles_sol(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
     call obtain_active_particle_ids(n_groups_per_sim(ii),n_particles_max,&

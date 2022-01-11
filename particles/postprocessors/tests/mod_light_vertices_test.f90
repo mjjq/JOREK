@@ -56,6 +56,10 @@ subroutine run_fruit_light_vertices()
   call test_find_all_active_particles_ids
   call test_find_all_active_particles_ids_types
   call test_store_light_from_particle_id
+  call test_extract_all_particle_types
+  call test_extract_all_n_particles
+  call test_extract_all_n_groups
+  call test_fill_time_vector
   write(*,*) "  ... tearing-down: light vertices tests"
   call teardown()
 end subroutine run_fruit_light_vertices
@@ -72,7 +76,6 @@ subroutine setup()
   use mod_light_vertices_common_test_tools, only: compute_x_cart_particles
   implicit none
   integer :: ii,ifail
-  real*8,dimension(n_times_sol) :: time_vector_sol
   !> initialisation
   ifail = 0; n_active_particles_sol = 0
   call gnu_rng_interval(n_times_sol,sim_time_interval,time_vector_sol)
@@ -190,7 +193,42 @@ subroutine test_store_light_from_particle_id()
   enddo
 end subroutine test_store_light_from_particle_id
 
+!> test extract all particle types
+subroutine test_extract_all_particle_types()
+  implicit none
+  integer,dimension(n_groups_max,n_times_sol) :: particle_types
+  call vertex_sol%extract_particle_types_all_particle_sims(&
+  sims_particles,n_groups_max,particle_types)
+  call assert_equals(particle_types,particle_types_sol,n_groups_max,n_times_sol,&
+  "Error light vertices extract all particle types: particle types mismatch!")
+end subroutine test_extract_all_particle_types
+
+!> test extract all number of particles
+subroutine test_extract_all_n_particles()
+  implicit none
+  integer,dimension(n_groups_max,n_times_sol) :: n_particles
+  call vertex_sol%extract_n_particles_all_particle_sims(sims_particles,n_groups_max,n_particles)
+  call assert_equals(n_particles,n_particles_per_group,n_groups_max,n_times_sol,&
+  "Error light vertices extract all particle numbers: N particles mismatch!")
+end subroutine test_extract_all_n_particles
+
+!> test extract all number of groups
+subroutine test_extract_all_n_groups()
+  implicit none
+  integer,dimension(n_times_sol) :: n_groups
+  call vertex_sol%extract_n_groups_all_particle_sims(sims_particles,n_groups)
+  call assert_equals(n_groups,n_groups_per_sim,n_times_sol,&
+  "Error light vertices extract all group numbers: N groups mismatch!")
+end subroutine test_extract_all_n_groups
+
+!> test fill time vector
+subroutine test_fill_time_vector()
+  implicit none
+  call vertex_sol%fill_time_vector_particle_sims(sims_particles)
+  call assert_equals(vertex_sol%times,time_vector_sol,n_times_sol,tol_real8,&
+  "Error light vertices fill time vector: time vector mismatch!")
+end subroutine test_fill_time_vector
+
 !> Tools -------------------------------------------------------------
-  
 !>--------------------------------------------------------------------
 end module mod_light_vertices_test

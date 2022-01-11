@@ -49,6 +49,8 @@ real*8,parameter :: B0=3.5d0 !< toroidal magnetic field on axis
 real*8,parameter :: R0=3.d0  !< axis major radius
 real*8,parameter :: Z0=1.d-1 !< axis vertical position
 real*8,parameter :: E0=5.3d0 !< toroidal electric field on axis
+real*8,parameter,dimension(3) :: EThetaChi_RE_lowbnd=(/1.d5,0.d0,0.d0/) !< for RE
+real*8,parameter,dimension(3) :: EThetaChi_RE_uppbnd=(/5.d7,PI,2.d0*PI/) !< for RE
 !> Interfaces -------------------------------------------------
 interface allocate_one_particle_list_type
   module procedure allocate_one_particle_list_all_types
@@ -63,6 +65,10 @@ end interface fill_groups
 interface compute_test_E_B_fields
   module procedure compute_test_E_B_fields_parabolic
 end interface compute_test_E_B_fields
+
+interface compute_test_gradpsi
+  module procedure compute_test_gradpsi_parabolic
+end interface compute_test_gradpsi
 
 contains
 !> Procedures -------------------------------------------------
@@ -86,6 +92,23 @@ subroutine compute_test_E_B_fields_parabolic(x,E_field,B_field)
   B_field = B0*(/x(2)-Z0,R0-x(1),R0/)/x(1)
   E_field = (/0.d0,0.d0,-E0*R0/x(1)/)
 end subroutine compute_test_E_B_fields_parabolic
+
+!> compute test gradient of the poloidal flux
+!> a parabolic poloidal flux:
+!> psi = B0*((R-R0)**2+(Z-Z0)**2)/2
+!> inputs:
+!>   x: (real8)(3) position in cylindrical coord. (R,Z,phi)
+!> outpus:
+!>   gradpsi: (real8)(3) grad poloidal flux
+subroutine compute_test_gradpsi_parabolic(x,gradpsi)
+  implicit none
+  !> inputs:
+  real*8,dimension(3),intent(in) :: x
+  !> outputs:
+  real*8,dimension(3),intent(out) :: gradpsi
+  !> compute the grad psi
+  gradpsi = B0*(/x(1)-R0,x(2)-Z0,0.d0/)
+end subroutine compute_test_gradpsi_parabolic
 
 !> allocate particle list as a function of the particle type
 subroutine allocate_one_particle_list_from_types(n_groups,n_particles,p_types,groups,ifail)
@@ -794,6 +817,53 @@ subroutine fill_particle_gc_relativistic(n_particles,particles,rank_in)
   !$omp end do
   !$omp end parallel
 end subroutine fill_particle_gc_relativistic
+
+!> fill up particle_kinetic_relativistic as runaway electrons
+!> the particle position must be provided in cylindrical coord.
+subroutine fill_particle_kinetic_relativistic_RE(n_particles,particles,rank_in)
+  use mod_particle_types,        only: particle_kinetic_relativistic
+  use mod_gnu_rng,               only: gnu_rng_interval
+  use mod_gnu_rng,               only: set_seed_sys_time
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_math_operators,        only: cross_product
+  use constants,                 only: SPEED_OF_LIGHT
+  !$ use omp_lib
+  implicit none
+  !> inputs
+  real*8,parameter :: E0=0.51099895 !< electron rest energy in MV
+  real*8,parameter :: mass=5.48579909065d-4 !< electron mass in AMU
+  integer,intent(in) :: n_particles
+  integer,intent(in),optional :: rank_in
+  type(particle_kinetic_relativistic),dimension(n_particles),intent(inout) :: particles
+  !> variables
+  integer :: ii,rank
+  !$ integer :: thread_id
+  real*8 :: p_tot
+  real*8,dimension(3) :: rn_real_size3,B_field,E_field,gradpsi,binorm
+  rank = 1; if(present(rank_in)) rank=rank_in;
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
+  thread_id = 0
+  !$ thread_id = omp_get_thread_num()
+  call set_seed_sys_time(rng_seed_interval,rank,thread_id) 
+  !$omp do
+  do ii=1,n_particles
+    !> create orthonormal basis
+    call compute_test_E_B_fields(particles(ii)%x,B_field,E_field); B_field = B_field/norm2(B_field) 
+    call compute_test_gradpsi(particles(ii)%x,gradpsi); gradpsi = gradpsi/norm2(gradpsi)
+    binorm = cross_product(B_field,gradpsi); binorm = binorm/norm2(binorm)
+    !> compute particle momentum cartesian coord
+    call gnu_rng_interval(3,EThetaChi_RE_lowbnd,EThetaChi_RE_uppbnd,rn_real_size3)
+    p_tot = sqrt((rn_real_size3(1)/E0)**2.d0 - 1.d0)
+    particles(ii)%p = p_tot*(B_field*cos(rn_real_size3(2))+sin(rn_real_size3(2))*(&
+    cos(rn_real_size3(3))*gradpsi+sin(rn_real_size3(3))*binorm))
+    particles(ii)%p = vector_cylindrical_to_cartesian(particles(ii)%x(3),particles(ii)%p)
+    !> store electric charge
+    particles(ii)%q = int(-1,kind=1)
+  enddo 
+  !$omp end do
+  !$omp end parallel
+end subroutine fill_particle_kinetic_relativistic_RE
+ 
 
 !>-------------------------------------------------------------
 end module mod_particle_common_test_tools

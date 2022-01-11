@@ -151,6 +151,7 @@ n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type
   integer,dimension(n_particles_max,n_groups_max,light_vert%n_times),intent(out)::active_particle_id
   !> variables
   integer :: ii
+  n_active_particles = 0; active_particle_id = 0;
   if(present(p_type)) then
     do ii=1,light_vert%n_times
       call sims_particles(ii)%find_active_particles_groups(n_groups(ii),n_particles_max,&

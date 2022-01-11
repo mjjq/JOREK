@@ -20,24 +20,28 @@ public :: run_fruit_light_vertices
 
 !> Variables ---------------------------------------------------------
 integer,parameter                         :: n_properties_sol=11
+integer,parameter                         :: n_particle_types=2
 integer,parameter                         :: n_times_sol=3
 integer,dimension(n_times_sol),parameter  :: n_groups_per_sim=(/3,1,2/)
 integer,parameter                         :: n_groups_max=maxval(n_groups_per_sim)
+integer,dimension(n_particle_types)       :: particle_types_to_test=(/&
+        particle_kinetic_relativistic_id,particle_kinetic_leapfrog_id/)
 integer,dimension(n_groups_max,n_times_sol),parameter :: n_particles_per_group=&
-        reshape((/55,30,44,27,0,0,37,51,0/),shape(n_particles_per_group))
+        reshape((/55,30,44,27,0,0,37,27,0/),shape(n_particles_per_group))
 integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types_sol=&
         reshape((/particle_gc_vpar_id,particle_kinetic_relativistic_id,&
         particle_kinetic_relativistic_id,particle_kinetic_relativistic_id,0,0,&
         particle_kinetic_leapfrog_id,particle_kinetic_relativistic_id,0/),&
         shape(particle_types_sol))
-real*8,parameter                            :: survival_threshold=0.21
-type(synchrotron_light_vertices)            :: vertex_sol
-type(particle_sim),dimension(n_times_sol)   :: sims_particles
-integer                                     :: n_particles_max
-integer,dimension(n_groups_max,n_times_sol) :: n_active_particles_sol
-integer,dimension(:,:,:),allocatable        :: active_particle_ids_sol
-real*8,dimension(n_times_sol)               :: time_vector_sol
-real*8,dimension(:,:,:),allocatable         :: x_cart_sol
+integer,parameter                          :: n_particles_max=maxval(n_particles_per_group)
+real*8,parameter                           :: survival_threshold=0.21
+type(synchrotron_light_vertices)                                :: vertex_sol
+type(particle_sim),dimension(n_times_sol)                       :: sims_particles
+integer,dimension(n_times_sol)                                  :: n_active_vertices_sol
+integer,dimension(n_groups_max,n_times_sol)                     :: n_active_particles_sol
+integer,dimension(n_particles_max,n_groups_max,n_times_sol)     :: active_particle_ids_sol
+real*8,dimension(n_times_sol)                                   :: time_vector_sol
+real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol)  :: x_cart_sol
 
 !> Interfaces --------------------------------------------------------
 contains
@@ -48,6 +52,8 @@ subroutine run_fruit_light_vertices()
   write(*,*) "  ... setting-up: light vertices tests"
   call setup()
   write(*,*) "  ... running: light vertices tests"
+  call test_find_all_active_particles_ids
+  call test_find_all_active_particles_ids_types
   write(*,*) "  ... tearing-down: light vertices tests"
   call teardown()
 end subroutine run_fruit_light_vertices
@@ -61,17 +67,17 @@ subroutine setup()
   use mod_particle_common_test_tools,       only: fill_particles
   use mod_particle_common_test_tools,       only: invalidate_particles
   use mod_particle_common_test_tools,       only: obtain_active_particle_ids
-  use mod_light_vertices_common_test_tools, only: compute_store_x_cart_particles
+  use mod_light_vertices_common_test_tools, only: compute_x_cart_particles
   implicit none
   integer :: ii,ifail
   real*8,dimension(n_times_sol) :: time_vector_sol
   !> initialisation
-  ifail = 0; n_particles_max = 0; n_particles_max = maxval(n_particles_per_group); 
-  n_active_particles_sol = 0
+  ifail = 0; n_active_particles_sol = 0
   call gnu_rng_interval(n_times_sol,sim_time_interval,time_vector_sol)
+  vertex_sol%n_property_vertex = n_properties_sol; 
+  call vertex_sol%allocate_vertices(n_times_sol,n_particles_max*n_groups_max)
 
   !> allocate and initialise particle lists
-  allocate(active_particle_ids_sol(1:n_particles_max,n_groups_max,n_times_sol))
   active_particle_ids_sol = 0;
   do ii=1,n_times_sol
     sims_particles(ii)%time = time_vector_sol(ii)
@@ -84,24 +90,82 @@ subroutine setup()
     n_active_particles_sol(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
     call obtain_active_particle_ids(n_groups_per_sim(ii),n_particles_max,&
     active_particle_ids_sol(:,1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
+    n_active_vertices_sol(ii) = sum(n_active_particles_sol(:,ii))
   enddo
 
-  !> initialise and allocate vertices
-  vertex_sol%n_property_vertex = n_properties_sol; 
-  call vertex_sol%allocate_vertices(n_times_sol,n_particles_max*n_groups_max)
   !> compute and store the cartesian particle position for all particles
-  allocate(x_cart_sol(n_x,n_groups_max*n_particles_max,n_times_sol))
-  call compute_store_x_cart_particles(n_times_sol,n_groups_max,n_particles_max,&
+  call compute_x_cart_particles(n_times_sol,n_groups_max,n_particles_max,&
   sims_particles,x_cart_sol)
 end subroutine setup
 
 subroutine teardown()
   implicit none
-  vertex_sol%n_property_vertex=0; deallocate(active_particle_ids_sol); 
-  deallocate(x_cart_sol)
+  vertex_sol%n_property_vertex=0
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> procedure for testing the find active particles for all particle types
+subroutine test_find_all_active_particles_ids()
+  implicit none
+  !> variables
+  integer :: ii
+  integer,dimension(n_groups_max,n_times_sol) :: n_active_particles
+  integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_ids
+  !> find active particles
+  call vertex_sol%find_active_particles_id_time(n_groups_max,n_particles_max,&
+  n_groups_per_sim,n_particles_per_group,sims_particles,n_active_particles,&
+  active_particle_ids)
+  !> check solutions
+  call assert_equals(n_active_particles,n_active_particles_sol,n_groups_max,n_times_sol,&
+  "Error light vertices find all active particle ids: N active particles mismatch!")
+  call assert_equals(vertex_sol%n_active_vertices,n_active_vertices_sol,n_times_sol,&
+  "Error light vertices find all active particle ids: N active vertices mismatch!")
+  do ii=1,n_times_sol
+    call assert_equals(active_particle_ids(:,:,ii),active_particle_ids_sol(:,:,ii),&
+    n_particles_max,n_groups_max,&
+    "Error light vertices find all active particle ids: active particle ids mismatch!")
+  enddo
+end subroutine test_find_all_active_particles_ids
+
+!> procedure for testing the find active particles for all particle types
+subroutine test_find_all_active_particles_ids_types()
+  use mod_particle_types, only: particle_kinetic_relativistic
+  implicit none
+  integer :: ii,jj,kk,pp,p_type
+  integer,dimension(n_times_sol)              :: n_active_vertices_loc
+  integer,dimension(n_groups_max,n_times_sol) :: n_active_particles_loc,n_active_particles
+  integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_ids_loc,active_particle_ids
+
+ do kk=1,n_particle_types
+    !> extract solution for a specific particle type
+    p_type = particle_types_to_test(kk)
+    n_active_vertices_loc   = 0
+    n_active_particles_loc  = 0
+    active_ids_loc          = 0
+    do jj=1,n_times_sol
+      do ii=1,n_groups_per_sim(jj)
+        if(p_type.ne.particle_types_sol(ii,jj)) cycle
+        n_active_particles_loc(ii,jj) = n_active_particles_sol(ii,jj)
+        active_ids_loc(:,ii,jj) = active_particle_ids_sol(:,ii,jj)
+      enddo
+     n_active_vertices_loc(jj) = sum(n_active_particles_loc(:,jj)) 
+    enddo
+    !> find active particle for a specific type
+    call vertex_sol%find_active_particles_id_time(n_groups_max,n_particles_max,&
+    n_groups_per_sim,n_particles_per_group,sims_particles,n_active_particles,&
+    active_particle_ids,p_type)
+    !> check solutions
+    call assert_equals(n_active_particles,n_active_particles_loc,n_groups_max,n_times_sol,&
+    "Error light vertices find active particle ids type: N active particles mismatch!")
+    call assert_equals(vertex_sol%n_active_vertices,n_active_vertices_loc,n_times_sol,&
+    "Error light vertices find active particle ids type: N active vertices mismatch!")
+    do jj=1,n_times_sol
+      call assert_equals(active_particle_ids(:,:,jj),active_ids_loc(:,:,jj),&
+      n_particles_max,n_groups_max,&
+      "Error light vertices find active particle ids type: active particle ids mismatch!")
+    enddo
+  enddo
+end subroutine test_find_all_active_particles_ids_types
 
 !> Tools -------------------------------------------------------------
   

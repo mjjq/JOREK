@@ -1021,25 +1021,23 @@ do i=1,n_vertex_max
           end if
 
           ! --- Increase diffusivity if very small density/temperature
-          if (xpoint2) then
-            if (r0 .lt. D_prof_neg_thresh)  then
-              D_prof  = D_prof_neg
-            endif
-
-            if ( with_TiTe ) then ! (with_TiTe) ****************************************************
-              if (Te0 .lt. ZK_prof_neg_thresh) then
-                ZKe_prof = ZK_prof_neg
-              endif
-              if (Ti0 .lt. ZK_prof_neg_thresh) then
-                ZKi_prof = ZK_prof_neg
-              endif
-            else ! (with_TiTe), i.e. with single temperature ***************************************
-              if (T0 .lt. ZK_prof_neg_thresh) then
-                ZK_prof = ZK_prof_neg
-              endif
-            endif ! (with_TiTe) ********************************************************************
-
+          if (r0 .lt. D_prof_neg_thresh)  then
+            D_prof  = D_prof_neg
           endif
+
+          if ( with_TiTe ) then ! (with_TiTe) ****************************************************
+            if (Te0 .lt. ZK_prof_neg_thresh) then
+              ZKe_prof = ZK_prof_neg
+            endif
+            if (Ti0 .lt. ZK_prof_neg_thresh) then
+              ZKi_prof = ZK_prof_neg
+            endif
+          else ! (with_TiTe), i.e. with single temperature ***************************************
+            if (T0 .lt. ZK_prof_neg_thresh) then
+              ZK_prof = ZK_prof_neg
+            endif
+          endif ! (with_TiTe) ********************************************************************
+
 
           phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
           delta_phi = 2.d0*PI/float(n_plane) / float(n_period)

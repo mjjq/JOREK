@@ -418,39 +418,63 @@ subroutine fill_particle_base(n_groups,groups,rank_in)
   !> inputs-outputs:
   type(particle_group),dimension(n_groups),intent(inout) :: groups
   !> variables
-  integer :: ii,jj,rn_integer,rank
+  integer :: ii,jj,rank
   !$ integer :: thread_id
-  real*8              :: rn_real
-  real*8,dimension(2) :: rn_real_size2
-  real*8,dimension(3) :: rn_real_size3
   rank = 1
   if(present(rank_in)) rank=rank_in
   thread_id = 0
   !> fill-up the particle_base variables for all particles and all groups
   !$omp parallel default(shared) firstprivate(n_groups) &
-  !$omp private(ii,jj,rank,rn_integer,rn_real,rn_real_size2,rn_real_size3,thread_id)
+  !$omp private(ii,jj,rank,thread_id)
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
   do jj=1,n_groups
     !$omp do
     do ii=1,size(groups(jj)%particles)
-      call gnu_rng_interval(weight_interval,rn_real)
-      call gnu_rng_interval(2,st_interval,rn_real_size2)
-      call gnu_rng_interval(3,x_lowbnd,x_uppbnd,rn_real_size3)
-      groups(jj)%particles(ii)%x       = rn_real_size3
-      groups(jj)%particles(ii)%st      = rn_real_size2
-      groups(jj)%particles(ii)%weight  = rn_real
-      call gnu_rng_interval(t_birth_interval,rn_real)
-      groups(jj)%particles(ii)%t_birth = real(rn_real,kind=4)
-      call gnu_rng_interval(i_elm_interval,rn_integer)
-      groups(jj)%particles(ii)%i_elm   = rn_integer
-      call gnu_rng_interval(i_life_interval,rn_integer)
-      groups(jj)%particles(ii)%i_life  = rn_integer 
+      call fill_particle_base_pos_cart(groups(jj)%particles(ii))
+      call fill_particle_base_nopos(groups(jj)%particles(ii))
     enddo
     !$omp end do
   enddo
   !$omp end parallel
 end subroutine fill_particle_base
+
+!> generate particle position in cartesian coordinates
+subroutine fill_particle_base_pos_cart(particle)
+  use mod_particle_types, only: particle_base
+  use mod_gnu_rng,        only: gnu_rng_interval
+  implicit none
+  !> inputs-outpus
+  class(particle_base),intent(inout) :: particle
+  !> variables
+  real*8,dimension(3) :: rn_real_size3
+  call gnu_rng_interval(3,x_lowbnd,x_uppbnd,rn_real_size3)
+  particle%x = rn_real_size3
+end subroutine fill_particle_base_pos_cart
+
+!> generate random values for particles without position
+subroutine fill_particle_base_nopos(particle)
+  use mod_particle_types, only: particle_base
+  use mod_gnu_rng,        only: gnu_rng_interval
+  implicit none
+  !> inputs-outpus
+  class(particle_base),intent(inout) :: particle
+  !> variables
+  integer             :: rn_integer
+  real*8              :: rn_real
+  real*8,dimension(2) :: rn_real_size2
+  !> fill particle fields
+  call gnu_rng_interval(weight_interval,rn_real)
+  call gnu_rng_interval(2,st_interval,rn_real_size2)
+  particle%st      = rn_real_size2
+  particle%weight  = rn_real
+  call gnu_rng_interval(t_birth_interval,rn_real)
+  particle%t_birth = real(rn_real,kind=4)
+  call gnu_rng_interval(i_elm_interval,rn_integer)
+  particle%i_elm   = rn_integer
+  call gnu_rng_interval(i_life_interval,rn_integer)
+  particle%i_life  = rn_integer  
+end subroutine fill_particle_base_nopos
 
 !> fill up particle_fieldline with random numbers
 subroutine fill_particle_fieldline(n_particles,particles,rank_in)

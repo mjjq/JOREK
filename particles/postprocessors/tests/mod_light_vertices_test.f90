@@ -50,9 +50,9 @@ contains
 !> fruit basket containing all set-up, test and tear-down methods
 subroutine run_fruit_light_vertices()
   implicit none
-  write(*,*) "  ... setting-up: light vertices tests"
+  write(*,'(/A)') "  ... setting-up: light vertices tests"
   call setup()
-  write(*,*) "  ... running: light vertices tests"
+  write(*,'(/A)') "  ... running: light vertices tests"
   call test_find_all_active_particles_ids
   call test_find_all_active_particles_ids_types
   call test_store_light_from_particle_id
@@ -60,7 +60,7 @@ subroutine run_fruit_light_vertices()
   call test_extract_all_n_particles
   call test_extract_all_n_groups
   call test_fill_time_vector
-  write(*,*) "  ... tearing-down: light vertices tests"
+  write(*,'(/A)') "  ... tearing-down: light vertices tests"
   call teardown()
 end subroutine run_fruit_light_vertices
 

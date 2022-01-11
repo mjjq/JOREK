@@ -6,11 +6,17 @@ implicit none
 
 private
 public :: synchrotron_light_vertices
+#ifdef UNIT_TESTS
+public :: n_properties
+public :: fill_synchrotron_lights_from_particles
+public :: compute_synchrotron_light_properties
+#endif
 
 !> Variables ---------------------------------------
-real*8,parameter :: onethird=1.d0/3.d0
-real*8,parameter :: twothirds=2.d0/3.d0
-real*8,parameter :: sqrt3=sqrt(3.d0)
+integer,parameter :: n_properties=13 !< set number of synchrotron vertex properties
+real*8,parameter  :: onethird=1.d0/3.d0
+real*8,parameter  :: twothirds=2.d0/3.d0
+real*8,parameter  :: sqrt3=sqrt(3.d0)
 type,extends(light_vertices) :: synchrotron_light_vertices
   contains
   procedure,pass(light_vert) :: init_lights_from_particles => &
@@ -55,7 +61,7 @@ sims_particles,n_sync_light_in)
   integer,dimension(:,:),allocatable   :: n_particles,particle_types,n_active_particles
   integer,dimension(:,:,:),allocatable :: active_particle_id
 
-  light_vert%n_property_vertex = 13 !< set number of synchrotron vertex properties
+  light_vert%n_property_vertex = n_properties 
   !> initialise time vector
   call light_vert%allocate_time_vector(n_times)
   call light_vert%fill_time_vector_particle_sims(sims_particles)

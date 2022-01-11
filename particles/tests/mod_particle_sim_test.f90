@@ -12,7 +12,7 @@ public :: run_fruit_particle_sim
 
 !> Variables ------------------------------------
 integer,parameter :: n_particles=1000
-real*8,parameter  :: survival_prob=6.25d-1
+real*8,parameter  :: survival_threshold=3.25d-1
 real*8,parameter  :: tol_real8=5.d-16
 real*8,parameter  :: central_mass_test=2.d0
 real*8,parameter  :: central_density_test=1.5d-1
@@ -75,7 +75,7 @@ subroutine setup()
   call fill_particles(n_particle_types,sim_sol%groups)
 
   !> invalidate particles in particle lists
-  call invalidate_particles(n_particle_types,n_particles,survival_prob,&
+  call invalidate_particles(n_particle_types,n_particles,survival_threshold,&
   n_active_particles_sol,sim_sol%groups)
   call obtain_active_particle_ids(n_particle_types,n_particles,&
   active_particle_ids_sol,sim_sol%groups)

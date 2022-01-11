@@ -204,7 +204,7 @@ end subroutine obtain_active_particle_ids
 
 !> invalidate some of the particles in the particle groups of a
 !> simulation as a function of a survival probability
-subroutine invalidate_particles(n_groups,n_particles_max,survival_prob_in,&
+subroutine invalidate_particles(n_groups,n_particles_max,survival_threshold_in,&
 n_active_particles,groups,rank_in)
   !$ use omp_lib
   use mod_particle_sim, only: particle_group
@@ -213,7 +213,7 @@ n_active_particles,groups,rank_in)
   implicit none
   !> inputs
   integer,intent(in) :: n_groups,n_particles_max
-  real*8,intent(in)  :: survival_prob_in
+  real*8,intent(in)  :: survival_threshold_in
   integer,intent(in),optional :: rank_in
   !> inputs-outputs
   type(particle_group),dimension(n_groups),intent(inout) :: groups
@@ -221,13 +221,13 @@ n_active_particles,groups,rank_in)
   integer,dimension(n_groups),intent(out) :: n_active_particles
   !> variables
   integer :: ii,jj,rank,thread_id
-  real*8  :: survival_prob
+  real*8  :: survival_threshold
   real*8,dimension(n_particles_max,n_groups) :: survival_array
   integer,dimension(n_groups) :: n_particles
   !> initialisation
   rank = 1; n_particles=0; if(present(rank_in)) rank=rank_in;
-  survival_prob = abs(survival_prob_in)
-  if(abs(survival_prob).gt.1.d0) survival_prob = survival_prob - floor(survival_prob)
+  survival_threshold = abs(survival_threshold_in)
+  if(abs(survival_threshold).gt.1.d0) survival_threshold = survival_threshold - floor(survival_threshold)
   n_active_particles = 0
   !$omp parallel default(shared) private(thread_id)
   !$ thread_id = omp_get_thread_num()
@@ -238,15 +238,15 @@ n_active_particles,groups,rank_in)
   call gnu_rng_interval(n_particles_max,n_groups,(/0.d0,1.d0/),survival_array)
   do ii=1,n_groups
     n_particles(ii) = size(groups(ii)%particles)
-    n_active_particles(ii) = count(survival_array(1:n_particles(ii),ii).ge.survival_prob)
+    n_active_particles(ii) = count(survival_array(1:n_particles(ii),ii).ge.survival_threshold)
   enddo
   !> invalidate particles
-  !$omp parallel default(shared) firstprivate(n_groups,n_particles,survival_prob) &
+  !$omp parallel default(shared) firstprivate(n_groups,n_particles,survival_threshold) &
   !$omp private(ii,jj)
   do jj=1,n_groups
     !$omp do
     do ii=1,n_particles(jj)
-      if(survival_array(ii,jj).lt.survival_prob) groups(jj)%particles(ii)%i_elm = 0
+      if(survival_array(ii,jj).lt.survival_threshold) groups(jj)%particles(ii)%i_elm = 0
     enddo
     !$omp end do
   enddo 

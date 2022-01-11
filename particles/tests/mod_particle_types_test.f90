@@ -13,7 +13,7 @@ public :: run_fruit_particle_types
 
 !> Variables ------------------------------------
 integer,parameter :: n_particles=1000
-real*8,parameter  :: survival_prob=6.25d-1
+real*8,parameter  :: survival_threshold=3.25d-1
 integer,dimension(n_particle_types) :: n_active_particles_sol
 integer,dimension(n_particle_types) :: particle_type_list_sol
 integer*1,dimension(n_particles,n_particle_types) :: particle_charge_list_sol
@@ -66,7 +66,7 @@ subroutine setup()
   call fill_particles(n_particle_types,groups_sol)
 
   !> invalidate particles in particle lists
-  call invalidate_particles(n_particle_types,n_particles,survival_prob,&
+  call invalidate_particles(n_particle_types,n_particles,survival_threshold,&
   n_active_particles_sol,groups_sol)
   call obtain_active_particle_ids(n_particle_types,n_particles,&
   active_particle_ids_sol,groups_sol)

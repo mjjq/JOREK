@@ -17,6 +17,7 @@ public :: fill_particle_kinetic,fill_particle_kinetic_leapfrog
 public :: fill_particle_kinetic_relativistic,fill_particle_gc_relativistic
 public :: obtain_particle_charges,allocate_one_particle_list_type
 public :: copy_group_fieldline_B_hat_prev
+public :: compute_test_E_B_fields
 
 !> Variables --------------------------------------------------
 integer,parameter :: n_particle_types=8
@@ -39,7 +40,11 @@ real*8,dimension(3),parameter    :: vp3d_lowbnd=(/-1.25d3,-7.5d2,-8.d1/)
 real*8,dimension(3),parameter    :: vp3d_uppbnd=(/7.5d1,2.35d2,4.85d3/)
 real*8,dimension(3),parameter    :: ABE_lowbnd=(/-2.67d0,-9.85d0,0.35d0/)
 real*8,dimension(3),parameter    :: ABE_uppbnd=(/0.78d0,2.35d0,5.67d0/)
-
+!> parameter for tets electric and magnetic fields
+real*8,parameter :: B0=3.5d0 !< toroidal magnetic field on axis
+real*8,parameter :: R0=3.d0  !< axis major radius
+real*8,parameter :: Z0=1.d-1 !< axis vertical position
+real*8,parameter :: E0=5.3d0 !< toroidal electric field on axis
 !> Interfaces -------------------------------------------------
 interface allocate_one_particle_list_type
   module procedure allocate_one_particle_list_all_types
@@ -51,8 +56,33 @@ interface fill_groups
   module procedure fill_groups_mpi
 end interface fill_groups
 
+interface compute_test_E_B_fields
+  module procedure compute_test_E_B_fields_parabolic
+end interface compute_test_E_B_fields
+
 contains
 !> Procedures -------------------------------------------------
+!> compute test electric and magnetic fields using
+!> a parabolic poloidal flux:
+!> psi = B0*((R-R0)**2+(Z-Z0)**2)/2
+!> and a radially dependent toroidal magnetic/electric fields
+!> inputs:
+!>   x: (real8)(3) position in cylindrical coord. (R,Z,phi)
+!> outpus:
+!>   E_field: (real8)(3) electric field cylindrical coord.
+!>   B_field: (real8)(3) magnetic field cylindrical coord.
+subroutine compute_test_E_B_fields_parabolic(x,E_field,B_field)
+  implicit none
+  !> inputs:
+  real*8,dimension(3),intent(in) :: x
+  !> outputs:
+  real*8,dimension(3),intent(out) :: E_field,B_field
+  !> compute magnetic field
+  !> compute the electric field
+  B_field = B0*(/x(2)-Z0,R0-x(1),R0/)/x(1)
+  E_field = (/0.d0,0.d0,-E0*R0/x(1)/)
+end subroutine compute_test_E_B_fields_parabolic
+
 !> allocate particle list as a function of the particle type
 subroutine allocate_one_particle_list_from_types(n_groups,n_particles,p_types,groups,ifail)
   use mod_particle_sim,   only: particle_group

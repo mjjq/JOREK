@@ -2,6 +2,7 @@
 !> procedure used for initialising and finalising particle data
 !> for unit testing
 module mod_particle_common_test_tools
+use constants, only: PI
 implicit none
 
 private
@@ -40,6 +41,9 @@ real*8,dimension(3),parameter    :: vp3d_lowbnd=(/-1.25d3,-7.5d2,-8.d1/)
 real*8,dimension(3),parameter    :: vp3d_uppbnd=(/7.5d1,2.35d2,4.85d3/)
 real*8,dimension(3),parameter    :: ABE_lowbnd=(/-2.67d0,-9.85d0,0.35d0/)
 real*8,dimension(3),parameter    :: ABE_uppbnd=(/0.78d0,2.35d0,5.67d0/)
+real*8,dimension(3),parameter    :: RZPhi_lowbnd=(/0.d0,-1.5d0,0.d0/)
+real*8,dimension(3),parameter    :: RZPhi_uppbnd=(/1.d0,1.5d0,2.d0*PI/)
+real*8,dimension(2),parameter    :: Rminmax=(/2.5d0,3.8d0/)
 !> parameter for tets electric and magnetic fields
 real*8,parameter :: B0=3.5d0 !< toroidal magnetic field on axis
 real*8,parameter :: R0=3.d0  !< axis major radius
@@ -365,7 +369,7 @@ subroutine fill_groups_mpi(n_groups,groups,rank,ifail)
 end subroutine fill_groups_mpi
 
 !> fills particle list of each groups with random data
-subroutine fill_particles(n_groups,groups,rank_in)
+subroutine fill_particles(n_groups,groups,fill_particle_in,rank_in)
   use mod_particle_sim,   only: particle_group
   use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
   use mod_particle_types, only: particle_gc,particle_fieldline
@@ -375,12 +379,13 @@ subroutine fill_particles(n_groups,groups,rank_in)
   implicit none
   integer,intent(in) :: n_groups
   type(particle_group),dimension(n_groups),intent(inout) :: groups
-  integer,intent(in),optional :: rank_in
-  integer :: rank,jj,n_particles
-  rank = 1
+  integer,intent(in),optional :: fill_particle_in,rank_in
+  integer :: fill_particle,rank,jj,n_particles
+  fill_particle = -1; rank = 1;
   if(present(rank_in)) rank = rank_in
+  if(present(fill_particle_in)) fill_particle = fill_particle_in
   !> fill particle basic type
-  call fill_particle_base(n_groups,groups,rank)
+  call fill_particle_base(n_groups,fill_particle,groups,rank)
   !> fill particle specific types
   do jj=1,n_groups
     n_particles = size(groups(jj)%particles)
@@ -406,14 +411,16 @@ subroutine fill_particles(n_groups,groups,rank_in)
 end subroutine fill_particles
 
 !> generate random values for filling the particle base type
-subroutine fill_particle_base(n_groups,groups,rank_in)
+!> parameter fill_type: default: fill particle in cartesian coordinates
+!>                      1) fill particle base using cylindrical coordinates
+subroutine fill_particle_base(n_groups,fill_type,groups,rank_in)
   use mod_particle_sim, only: particle_group
   use mod_gnu_rng, only: gnu_rng_interval
   use mod_gnu_rng, only: set_seed_sys_time
   !$ use omp_lib
   implicit none
   !> inputs
-  integer,intent(in) :: n_groups
+  integer,intent(in) :: n_groups,fill_type
   integer,intent(in),optional :: rank_in
   !> inputs-outputs:
   type(particle_group),dimension(n_groups),intent(inout) :: groups
@@ -428,19 +435,45 @@ subroutine fill_particle_base(n_groups,groups,rank_in)
   !$omp private(ii,jj,rank,thread_id)
   !$ thread_id = omp_get_thread_num()
   call set_seed_sys_time(rng_seed_interval,rank,thread_id)
-  do jj=1,n_groups
-    !$omp do
-    do ii=1,size(groups(jj)%particles)
-      call fill_particle_base_pos_cart(groups(jj)%particles(ii))
-      call fill_particle_base_nopos(groups(jj)%particles(ii))
+  if(fill_type.eq.1) then
+    do jj=1,n_groups
+      !$omp do
+      do ii=1,size(groups(jj)%particles)
+        call fill_particle_base_cyl(groups(jj)%particles(ii))
+      enddo
+      !$omp end do
     enddo
-    !$omp end do
-  enddo
+  else
+    do jj=1,n_groups
+      !$omp do
+      do ii=1,size(groups(jj)%particles)
+        call fill_particle_base_cart(groups(jj)%particles(ii))
+      enddo
+      !$omp end do
+    enddo
+  endif
   !$omp end parallel
 end subroutine fill_particle_base
 
-!> generate particle position in cartesian coordinates
-subroutine fill_particle_base_pos_cart(particle)
+!> generate particle position in cylindrical coordinates
+subroutine fill_particle_base_cyl(particle)
+  use mod_particle_types, only: particle_base
+  use mod_gnu_rng,        only: gnu_rng_interval
+  implicit none
+  class(particle_base),intent(inout) :: particle
+  !> variables
+  real*8,dimension(3) :: rn_real_size3
+  !> generate random numbers
+  call gnu_rng_interval(3,RZPhi_lowbnd,RZPhi_uppbnd,rn_real_size3)
+  !> compute number major radius
+  rn_real_size3(1) = sqrt(Rminmax(1)**2 + (Rminmax(2)**2 - &
+  Rminmax(1)**2)*rn_real_size3(1))
+  particle%x = rn_real_size3
+  call fill_particle_base_nopos(particle)
+end subroutine fill_particle_base_cyl
+
+!> generate particle base in cartesian coordinates
+subroutine fill_particle_base_cart(particle)
   use mod_particle_types, only: particle_base
   use mod_gnu_rng,        only: gnu_rng_interval
   implicit none
@@ -450,7 +483,8 @@ subroutine fill_particle_base_pos_cart(particle)
   real*8,dimension(3) :: rn_real_size3
   call gnu_rng_interval(3,x_lowbnd,x_uppbnd,rn_real_size3)
   particle%x = rn_real_size3
-end subroutine fill_particle_base_pos_cart
+  call fill_particle_base_nopos(particle)
+end subroutine fill_particle_base_cart
 
 !> generate random values for particles without position
 subroutine fill_particle_base_nopos(particle)

@@ -17,9 +17,10 @@ character(len=28),parameter :: test_filename="test_particle_io_mpi_hdf5.h5"
 !> of particle types for testing all of them
 !> particle_gc_Qin is commented because the I/O for particle_gc_Qin
 !> has not been implemented yet
+integer,parameter :: fillt_type=-1
 integer,parameter :: n_groups=7!8
 integer,parameter :: n_particles=5 !< N# of particles per group per task
-real*8,parameter :: tol_real8=1.d-15
+real*8,parameter  :: tol_real8=1.d-15
 
 !> Interfaces -------------------------------------------
 contains
@@ -97,7 +98,7 @@ subroutine setup(rank,n_tasks,ifail)
 
   !> fill-up the group and particle base variables
   call fill_groups(n_groups,sim_particles%groups,rank,ifail)
-  call fill_particles(n_groups,sim_particles%groups,rank)
+  call fill_particles(n_groups,sim_particles%groups,fill_type,rank)
 
   !> write default simulation in file and read it in new simulation
   call write_simulation_hdf5(sim_particles,trim(test_filename))

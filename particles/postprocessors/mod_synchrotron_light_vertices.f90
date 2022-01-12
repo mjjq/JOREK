@@ -330,7 +330,7 @@ mass,E_field,B_field,sync_properties)
   real*8,dimension(property_size),intent(out) :: sync_properties
   !> variables
   real*8 :: velocity
-  real*8,dimension(3) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
+  real*8,dimension(field_size) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
 
   !> compute velocity, velocity direction and relativistic factor
   velocity =  sqrt(particle_in%p(1)*particle_in%p(1)+&

@@ -51,7 +51,7 @@ subroutine setup()
   use mod_gnu_rng,                          only: gnu_rng_interval
   use mod_particle_common_test_tools,       only: sim_time_interval
   use mod_particle_common_test_tools,       only: allocate_one_particle_list_type 
-  use mod_particle_common_test_tools,       only: fill_particles
+  use mod_particle_common_test_tools,       only: fill_particles_tokamak
   use mod_particle_common_test_tools,       only: invalidate_particles
   use mod_particle_common_test_tools,       only: obtain_active_particle_ids
   use mod_light_vertices_common_test_tools, only: compute_x_cart_particles 
@@ -74,7 +74,7 @@ subroutine setup()
     call allocate_one_particle_list_type(n_groups_per_sim(ii),&
     n_particles_per_group(1:n_groups_per_sim(ii),ii),&
     particle_types(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups,ifail)
-    call fill_particles(n_groups_per_sim(ii),sims_particles(ii)%groups,fill_type_base)
+    call fill_particles_tokamak(n_groups_per_sim(ii),sims_particles(ii)%groups,fill_type_base)
     call invalidate_particles(n_groups_per_sim(ii),n_particles_max,survival_threshold,&
     n_active_particles_sol(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
     call obtain_active_particle_ids(n_groups_per_sim(ii),n_particles_max,&

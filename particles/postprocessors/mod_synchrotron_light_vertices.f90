@@ -333,22 +333,22 @@ mass,E_field,B_field,sync_properties)
   real*8,dimension(3) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
 
   !> compute velocity, velocity direction and relativistic factor
-  velocity =  sqrt(particle_in%x(1)*particle_in%x(1)+&
-              particle_in%x(2)*particle_in%x(2)+&
-              particle_in%x(3)*particle_in%x(3)) 
+  velocity =  sqrt(particle_in%p(1)*particle_in%p(1)+&
+              particle_in%p(2)*particle_in%p(2)+&
+              particle_in%p(3)*particle_in%p(3)) 
   sync_properties(1:3) = particle_in%p/velocity
   sync_properties(10)   = velocity/SPEED_OF_LIGHT
   sync_properties(11)   = sqrt(1.d0 + (sync_properties(10)*sync_properties(10))/(mass*mass))
   sync_properties(10)   = sync_properties(10)/(mass*sync_properties(11))
   !> compute orbit curvature
-  sync_properties(4:6) = E_field+cross_product(particle_in%p/(mass*sync_properties(8)),B_field)
+  sync_properties(4:6) = E_field+cross_product(particle_in%p/(mass*sync_properties(11)),B_field)
   vector_1d_3 = cross_product(sync_properties(1:3),sync_properties(4:6))
   sync_properties(12) = (abs(real(particle_in%q,kind=8))*EL_CHG*&
                        sqrt(vector_1d_3(1)*vector_1d_3(1)+&
                        vector_1d_3(2)*vector_1d_3(2)+&
                        vector_1d_3(3)*vector_1d_3(3)))/&
                        (sync_properties(11)*mass*ATOMIC_MASS_UNIT*&
-                       sync_properties(10)*sync_properties(7)*&
+                       sync_properties(10)*sync_properties(10)*&
                        SPEED_OF_LIGHT*SPEED_OF_LIGHT)
   !> compute total synchrotron power
   sync_properties(13) = (real(particle_in%q*particle_in%q,kind=8)*&

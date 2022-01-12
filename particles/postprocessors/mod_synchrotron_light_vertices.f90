@@ -343,7 +343,7 @@ mass,E_field,B_field,sync_properties)
   !> compute orbit curvature
   sync_properties(4:6) = E_field+cross_product(particle_in%p/(mass*sync_properties(8)),B_field)
   vector_1d_3 = cross_product(sync_properties(1:3),sync_properties(4:6))
-  sync_properties(9) = (abs(real(particle_in%q,kind=8))*EL_CHG*&
+  sync_properties(12) = (abs(real(particle_in%q,kind=8))*EL_CHG*&
                        sqrt(vector_1d_3(1)*vector_1d_3(1)+&
                        vector_1d_3(2)*vector_1d_3(2)+&
                        vector_1d_3(3)*vector_1d_3(3)))/&

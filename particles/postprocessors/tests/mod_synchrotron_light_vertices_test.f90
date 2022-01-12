@@ -21,6 +21,7 @@ integer,dimension(n_groups_max,n_times_sol),parameter :: n_particles_per_group=&
 integer,parameter                        :: n_particles_max=maxval(n_particles_per_group)
 real*8,parameter                         :: survival_threshold=0.33
 real*8,parameter                         :: tol_real8=5.d-16
+real*8,parameter                         :: mass_RE=5.48579909065d-4
 type(synchrotron_light_vertices)            :: vertex_sol
 type(particle_sim),dimension(n_times_sol)   :: sims_particles
 integer,dimension(n_times_sol)              :: n_active_vertices_sol
@@ -51,6 +52,7 @@ subroutine setup()
   use mod_gnu_rng,                          only: gnu_rng_interval
   use mod_particle_common_test_tools,       only: sim_time_interval
   use mod_particle_common_test_tools,       only: allocate_one_particle_list_type 
+  use mod_particle_common_test_tools,       only: fill_groups,fill_mass_RE
   use mod_particle_common_test_tools,       only: fill_particles_tokamak
   use mod_particle_common_test_tools,       only: invalidate_particles
   use mod_particle_common_test_tools,       only: obtain_active_particle_ids
@@ -74,6 +76,8 @@ subroutine setup()
     call allocate_one_particle_list_type(n_groups_per_sim(ii),&
     n_particles_per_group(1:n_groups_per_sim(ii),ii),&
     particle_types(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups,ifail)
+    call fill_groups(n_groups_per_sim(ii),sims_particles(ii)%groups)
+    call fill_mass_RE(n_groups_per_sim(ii),sims_particles(ii)%groups)
     call fill_particles_tokamak(n_groups_per_sim(ii),sims_particles(ii)%groups,fill_type_base)
     call invalidate_particles(n_groups_per_sim(ii),n_particles_max,survival_threshold,&
     n_active_particles_sol(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)

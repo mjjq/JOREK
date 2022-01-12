@@ -20,7 +20,7 @@ public :: obtain_particle_charges,allocate_one_particle_list_type
 public :: copy_group_fieldline_B_hat_prev
 public :: compute_test_E_B_fields
 public :: fill_particle_kinetic_relativistic_RE,fill_particle_gc_relativistic_RE
-public :: fill_particles_tokamak
+public :: fill_particles_tokamak,fill_mass_RE
 
 !> Variables --------------------------------------------------
 integer,parameter :: n_particle_types=8
@@ -392,6 +392,32 @@ subroutine fill_groups_mpi(n_groups,groups,rank,ifail)
     enddo
   endif
 end subroutine fill_groups_mpi
+
+!> fill the group mass with the electron mass in AMU is particle
+!> is of a relativistic type
+subroutine fill_mass_RE(n_groups,groups)
+  use mod_particle_sim,   only: particle_group
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_particle_types, only: particle_gc_relativistic
+  implicit none
+  !> parameters
+  real*8,parameter   :: mass_RE=5.48579909065d-4
+  !> inputs
+  integer,intent(in) :: n_groups
+  !> inputs-outputs
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
+  !> variables
+  integer :: ii
+  !> fill particle mass
+  do ii=1,n_groups
+    select type(p_list=>groups(ii)%particles)
+      type is(particle_kinetic_relativistic)
+      groups(ii)%mass = mass_re
+      type is(particle_gc_relativistic)
+      groups(ii)%mass = mass_re
+    end select
+  enddo
+end subroutine fill_mass_RE
 
 !> fill particle list with runaways electron as relativistic partices
 !> or using the standard particle fill for all other types unless

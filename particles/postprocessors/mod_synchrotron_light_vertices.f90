@@ -238,10 +238,13 @@ end subroutine synchrotron_spectral_irradiance
 subroutine fill_synchrotron_lights_from_particles(sync_lights,&
 sims_particles,n_groups_max,n_particles_max,&
 n_groups,n_active_particles,active_particles_id)
-  use mod_vertices,       only: n_x
-  use mod_particle_sim,   only: particle_sim
-  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_vertices,              only: n_x
+  use mod_particle_sim,          only: particle_sim
+  use mod_particle_types,        only: particle_kinetic_relativistic
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+#ifdef UNIT_TESTS_AFIELDS
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields
+#endif
   implicit none
   !> inputs-outputs
   class(synchrotron_light_vertices),intent(inout) :: sync_lights
@@ -271,8 +274,13 @@ n_groups,n_active_particles,active_particles_id)
             type is (particle_kinetic_relativistic)
             call sync_lights%store_light_x_from_particle_id(pp+kk,ii,particle) !< store position
             !> compute E,B fields
+#ifndef UNIT_TESTS_AFIELDS
             call sims_particles(ii)%fields%calc_EBpsiU(sync_lights%times(ii),&
             particle%i_elm,particle%st,particle%x(3),E_field,B_field,psi,U)
+#else
+            !> analytical fields only for unit testing
+            call compute_test_E_B_fields(particle%x,E_field,B_field)
+#endif
             !> compute synchrotron light properties
             call compute_synchrotron_light_properties(n_x,sync_lights%n_property_vertex,&
             particle,sims_particles(ii)%groups(jj)%mass,&

@@ -92,6 +92,7 @@ end subroutine setup
 !> Tests -------------------------------------------------------------
 !> test the property function of synchrotron light properties
 subroutine test_compute_synchrotron_light_properties()
+  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
   use mod_particle_types,             only: particle_kinetic_relativistic
   use mod_synchrotron_light_vertices, only: compute_synchrotron_light_properties
   use mod_particle_common_test_tools, only: compute_test_E_B_fields 
@@ -112,6 +113,8 @@ subroutine test_compute_synchrotron_light_properties()
           if(p_list(ii)%i_elm.le.0) cycle
           counter = counter + 1
           call compute_test_E_B_fields(p_list(ii)%x,E_field,B_field)
+          B_field = vector_cylindrical_to_cartesian(p_list(ii)%x(3),B_field)
+          E_field = vector_cylindrical_to_cartesian(p_list(ii)%x(3),E_field)
           call compute_synchrotron_light_properties(3,n_properties,&
           p_list(ii),sims_particles(kk)%groups(jj)%mass,E_field,B_field,properties)
           error(:,counter) = abs((properties - propeties_sol(:,counter,kk))/&
@@ -145,7 +148,7 @@ subroutine compute_synch_x_properties_ana()
           if(p_list(ii)%i_elm.le.0) cycle
           counter = counter + 1
           x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
-          call compute_synch_properties_ana_1p(&
+          call compute_synch_properties_ana_1p(p_list(ii)%x(3),&
           sims_particles(kk)%groups(jj)%mass,p_list(ii),&
           propeties_sol(:,counter,kk))
         enddo
@@ -156,17 +159,18 @@ end subroutine compute_synch_x_properties_ana
 
 !> compute synchrotron electron properties using the analytical
 !> tokamak like electric and magnetic fields for one particle
-subroutine compute_synch_properties_ana_1p(mass,particle,property)
+subroutine compute_synch_properties_ana_1p(phi,mass,particle,property)
   use constants,                      only: PI,EL_CHG,ATOMIC_MASS_UNIT
   use constants,                      only: SPEED_OF_LIGHT,EPS_ZERO
   use mod_math_operators,             only: cross_product
+  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
   use mod_particle_types,             only: particle_kinetic_relativistic
   use mod_particle_common_test_tools, only: compute_test_E_B_fields 
   implicit none
   !> inputs-outputs
   type(particle_kinetic_relativistic),intent(inout) :: particle
   !> inputs
-  real*8,intent(in) :: mass
+  real*8,intent(in) :: mass,phi
   !> outputs
   real*8,dimension(n_properties),intent(out) :: property
   !> variables
@@ -182,6 +186,8 @@ subroutine compute_synch_properties_ana_1p(mass,particle,property)
   T_vec   = vel_vec/velocity
   !> compute electric and magnetic field
   call compute_test_E_B_fields(particle%x,E_field,B_field)
+  B_field = vector_cylindrical_to_cartesian(phi,B_field)
+  E_field = vector_cylindrical_to_cartesian(phi,E_field)
   !> compute normal and binormal vectors
   N_vec = E_field + cross_product(vel_vec,B_field) - dot_product(T_vec,E_field)*T_vec
   N_vec = N_vec/norm2(N_vec)

@@ -44,7 +44,7 @@ contains
 !>   light_vert: (synchrotron_light_vertices) initialised synchrotron lights
 !>   sims_particles: (particle_sim)(n_times) array of particle simulations
 subroutine init_synchrotron_lights_from_particles(light_vert,n_times,&
-sims_particles,n_sync_light_in)
+sims_particles,n_sync_lights_in)
   use mod_particle_types,        only: particle_kinetic_relativistic_id
   use mod_particle_sim,          only: particle_sim
   implicit none
@@ -53,7 +53,7 @@ sims_particles,n_sync_light_in)
   type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
   !> inputs
   integer,intent(in)                              :: n_times
-  integer,intent(in),optional                     :: n_sync_light_in
+  integer,intent(in),optional                     :: n_sync_lights_in
   !> variables
   integer :: ii
   integer :: n_sync_lights,n_groups_max,n_particles_max
@@ -81,8 +81,8 @@ sims_particles,n_sync_light_in)
   enddo
   n_particles_max = maxval(n_particle_relativistics)
   n_sync_lights = n_particles_max
-  if(present(n_sync_light_in)) then
-    if(n_sync_lights.lt.n_sync_light_in) then
+  if(present(n_sync_lights_in)) then
+    if(n_sync_lights.lt.n_sync_lights_in) then
       n_sync_lights =  n_sync_lights_in   
     else
       write(*,*) "Error initialise synchrotron lights from particles"

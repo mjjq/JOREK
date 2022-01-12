@@ -36,14 +36,14 @@ interface
   !> computes and store the coordinates and properties of 
   !> lights from particle simulations
   !> inputs:
-  !>   light_vert:      (light_vertices) empty light vertices
-  !>   n_times:         (integer) number of times
-  !>   sims_particles:  (particle_sim)(n_times) array of particle simulations
-  !>   n_sync_light_in: (integer)(optional) number of requested synchrotron lights
+  !>   light_vert:       (light_vertices) empty light vertices
+  !>   n_times:          (integer) number of times
+  !>   sims_particles:   (particle_sim)(n_times) array of particle simulations
+  !>   n_sync_lights_in: (integer)(optional) number of requested synchrotron lights
   !> outputs:
   !>   light_vert:     (light_vertices) filled light vertices
   !>   sims_particles: (particle_sim)(n_times) array of particle simulations
-  subroutine init_lights_parts(light_vert,n_times,sims_particles,n_sync_light_in)
+  subroutine init_lights_parts(light_vert,n_times,sims_particles,n_sync_lights_in)
     use mod_particle_sim, only: particle_sim
     IMPORT :: light_vertices
     implicit none
@@ -52,7 +52,7 @@ interface
     type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
     !> inputs
     integer,intent(in) :: n_times
-    integer,intent(in),optional :: n_sync_light_in
+    integer,intent(in),optional :: n_sync_lights_in
   end subroutine init_lights_parts
 
   !> computes the directionality function for a given point

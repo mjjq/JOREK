@@ -19,6 +19,8 @@ public :: fill_particle_kinetic_relativistic,fill_particle_gc_relativistic
 public :: obtain_particle_charges,allocate_one_particle_list_type
 public :: copy_group_fieldline_B_hat_prev
 public :: compute_test_E_B_fields
+public :: fill_particle_kinetic_relativistic_RE,fill_particle_gc_relativistic_RE
+public :: fill_particles_tokamak
 
 !> Variables --------------------------------------------------
 integer,parameter :: n_particle_types=8
@@ -390,6 +392,50 @@ subroutine fill_groups_mpi(n_groups,groups,rank,ifail)
     enddo
   endif
 end subroutine fill_groups_mpi
+
+!> fill particle list with runaways electron as relativistic partices
+!> or using the standard particle fill for all other types unless
+!> a specific type implementation is provided
+subroutine fill_particles_tokamak(n_groups,groups,fill_particle_in,rank_in)
+  use mod_particle_sim,   only: particle_group
+  use mod_particle_types, only: particle_kinetic,particle_kinetic_leapfrog
+  use mod_particle_types, only: particle_gc,particle_fieldline
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_particle_types, only: particle_gc_relativistic
+  use mod_particle_types, only: particle_gc_vpar,particle_gc_Qin
+  implicit none
+  integer,intent(in) :: n_groups
+  type(particle_group),dimension(n_groups),intent(inout) :: groups
+  integer,intent(in),optional :: fill_particle_in,rank_in
+  integer :: fill_particle,rank,ii,n_particles
+  fill_particle = 1; rank = 1;
+  if(present(fill_particle_in)) fill_particle=fill_particle_in
+  if(present(rank_in)) rank = rank_in
+  !> fill particle type base
+  call fill_particle_base(n_groups,fill_particle,groups,rank)
+  !> fiil particle types 
+  do ii=1,n_groups
+    n_particles = size(groups(ii)%particles)
+    select type (p_list=>groups(ii)%particles)
+    type is(particle_fieldline)
+    call fill_particle_fieldline(n_particles,p_list,rank)
+    type is(particle_gc)
+    call fill_particle_gc(n_particles,p_list,rank)
+    type is(particle_gc_vpar)
+    call fill_particle_gc_vpar(n_particles,p_list,rank)
+    type is(particle_gc_Qin)
+    call fill_particle_gc_Qin(n_particles,p_list,rank)
+    type is(particle_kinetic)
+    call fill_particle_kinetic(n_particles,p_list,rank)
+    type is(particle_kinetic_leapfrog)
+    call fill_particle_kinetic_leapfrog(n_particles,p_list,rank)
+    type is(particle_kinetic_relativistic)
+    call fill_particle_kinetic_relativistic_RE(n_particles,p_list,rank)
+    type is(particle_gc_relativistic)
+    call fill_particle_gc_relativistic_RE(n_particles,p_list,rank)
+    end select
+  enddo
+end subroutine fill_particles_tokamak
 
 !> fills particle list of each groups with random data
 subroutine fill_particles(n_groups,groups,fill_particle_in,rank_in)
@@ -829,9 +875,10 @@ subroutine fill_particle_kinetic_relativistic_RE(n_particles,particles,rank_in)
   use constants,                 only: SPEED_OF_LIGHT
   !$ use omp_lib
   implicit none
-  !> inputs
-  real*8,parameter :: E0=0.51099895 !< electron rest energy in MV
+  !> parameters
+  real*8,parameter :: E0=5.1099895d5 !< electron rest energy in MV
   real*8,parameter :: mass=5.48579909065d-4 !< electron mass in AMU
+  !> inputs
   integer,intent(in) :: n_particles
   integer,intent(in),optional :: rank_in
   type(particle_kinetic_relativistic),dimension(n_particles),intent(inout) :: particles
@@ -853,7 +900,7 @@ subroutine fill_particle_kinetic_relativistic_RE(n_particles,particles,rank_in)
     binorm = cross_product(B_field,gradpsi); binorm = binorm/norm2(binorm)
     !> compute particle momentum cartesian coord
     call gnu_rng_interval(3,EThetaChi_RE_lowbnd,EThetaChi_RE_uppbnd,rn_real_size3)
-    p_tot = sqrt((rn_real_size3(1)/E0)**2.d0 - 1.d0)
+    p_tot = mass*SPEED_OF_LIGHT*sqrt(((rn_real_size3(1)/E0)+1.d0)**2.d0 - 1.d0)
     particles(ii)%p = p_tot*(B_field*cos(rn_real_size3(2))+sin(rn_real_size3(2))*(&
     cos(rn_real_size3(3))*gradpsi+sin(rn_real_size3(3))*binorm))
     particles(ii)%p = vector_cylindrical_to_cartesian(particles(ii)%x(3),particles(ii)%p)
@@ -864,6 +911,49 @@ subroutine fill_particle_kinetic_relativistic_RE(n_particles,particles,rank_in)
   !$omp end parallel
 end subroutine fill_particle_kinetic_relativistic_RE
  
+!> fill up particle_kinetic_relativistic as runaway electrons
+subroutine fill_particle_gc_relativistic_RE(n_particles,particles,rank_in)
+  use mod_particle_types,        only: particle_gc_relativistic
+  use mod_gnu_rng,               only: gnu_rng_interval
+  use mod_gnu_rng,               only: set_seed_sys_time
+  use constants,                 only: SPEED_OF_LIGHT
+  !$ use omp_lib
+  implicit none
+  !> parameters
+  real*8,parameter :: E0=5.1099895d5 !< electron rest energy in MV
+  real*8,parameter :: mass=5.48579909065d-4 !< electron mass in AMU
+  !> inputs
+  integer,intent(in) :: n_particles
+  integer,intent(in),optional :: rank_in
+  type(particle_gc_relativistic),dimension(n_particles),intent(inout) :: particles
+  !> variables
+  integer :: ii,rn_integer,rank
+  !$ integer :: thread_id
+  real*8              :: p_tot,B_intensity
+  real*8,dimension(2) :: rn_real_size2
+  real*8,dimension(3) :: B_field,E_field
+  rank = 1
+  if(present(rank_in)) rank=rank_in
+  !$omp parallel default(private) firstprivate(n_particles) shared(particles)
+  thread_id = 0
+  !$ thread_id = omp_get_thread_num()
+  call set_seed_sys_time(rng_seed_interval,rank,thread_id)
+  !$omp do
+  do ii=1,n_particles
+    !> computing the magnetic field
+    call compute_test_E_B_fields(particles(ii)%x,B_field,E_field); 
+    B_intensity = norm2(B_field); B_field = B_field/B_intensity;
+    !> computing and storing the parallel momentum and magnetic moment
+    call gnu_rng_interval(2,EThetaChi_RE_lowbnd(1:2),EThetaChi_RE_uppbnd(1:2),rn_real_size2)
+    p_tot = mass*SPEED_OF_LIGHT*sqrt(((rn_real_size2(1)/E0)+1.d0)**2.d0 - 1.d0)
+    particles(ii)%p(1) = p_tot*cos(rn_real_size2(2))
+    particles(ii)%p(2) = (p_tot*p_tot-particles(ii)%p(1)*particles(ii)%p(1))/(2.d0*mass*B_intensity)
+    !> store the electron charge    
+    particles(ii)%q = int(-1,kind=1)
+  enddo
+  !$omp end do
+  !$omp end parallel
+end subroutine fill_particle_gc_relativistic_RE 
 
 !>-------------------------------------------------------------
 end module mod_particle_common_test_tools

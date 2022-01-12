@@ -99,6 +99,7 @@ subroutine test_fill_synchrotron_lights_from_particles()
   integer :: ii
   real*8,dimension(n_x,n_particles_max*n_groups_max)          :: error_x,zeros_x
   real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error_p,zeros_p
+  zeros_x = 0.d0; zeros_p = 0.d0; 
   !> fill synchrotron lights from particles
   call fill_synchrotron_lights_from_particles(vertex_sol,sims_particles,&
   n_groups_max,n_particles_max,n_groups_per_sim,n_active_particles_sol,&

@@ -41,6 +41,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   call setup
   write(*,'(/A)') "  ... running: synchrotron light vertices tests"
   call test_compute_synchrotron_light_properties
+  call test_fill_synchrotron_lights_from_particles
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
 end subroutine run_fruit_synchrotron_light_vertices
 
@@ -90,6 +91,31 @@ subroutine setup()
 end subroutine setup
 
 !> Tests -------------------------------------------------------------
+!> test fill synchrotron lights from particles
+subroutine test_fill_synchrotron_lights_from_particles()
+  use mod_synchrotron_light_vertices, only: fill_synchrotron_lights_from_particles
+  implicit none
+  !> variables
+  integer :: ii
+  real*8,dimension(n_x,n_particles_max*n_groups_max)          :: error_x,zeros_x
+  real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error_p,zeros_p
+  !> fill synchrotron lights from particles
+  call fill_synchrotron_lights_from_particles(vertex_sol,sims_particles,&
+  n_groups_max,n_particles_max,n_groups_per_sim,n_active_particles_sol,&
+  active_particle_ids_sol)
+  !> test fill positions and properties
+  do ii=1,n_times_sol
+    error_x = 0.d0; error_x = vertex_sol%x(:,:,ii)-x_cart_sol(:,:,ii)
+    where(x_cart_sol(:,:,ii).ne.0.d0) error_x = abs(error_x/x_cart_sol(:,:,ii))
+    error_p = 0.d0; error_p = vertex_sol%properties(:,:,ii) - propeties_sol(:,:,ii)
+    where(propeties_sol(:,:,ii).ne.0.d0) error_p = abs(error_p/propeties_sol(:,:,ii))
+    call assert_equals(error_x,zeros_x,n_x,n_particles_max*n_groups_max,tol_real8,&
+    "Error fill synchrotron lights from particles: x errors too large!")
+    call assert_equals(error_p,zeros_p,n_properties,n_particles_max*n_groups_max,&
+    tol_real8,"Error fill synchrotron lights from particles: properties errors too large!")
+  enddo
+end subroutine test_fill_synchrotron_lights_from_particles
+
 !> test the property function of synchrotron light properties
 subroutine test_compute_synchrotron_light_properties()
   use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian

@@ -85,13 +85,84 @@ subroutine setup()
     active_particle_ids_sol(:,1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
     n_active_vertices_sol(ii) = sum(n_active_particles_sol(:,ii))
   enddo
-
   !> initialise positions and properties tables
-  call compute_x_cart_particles(n_times_sol,n_groups_max,n_particles_max,&
-  sims_particles,x_cart_sol)
+  call compute_synch_x_properties_ana()
 end subroutine setup
 
 !> Tests -------------------------------------------------------------
 !> Tools -------------------------------------------------------------
+!> compute and fill particle positions and properties for RE
+subroutine compute_synch_x_properties_ana()
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian
+  use mod_particle_types,        only: particle_kinetic_relativistic
+  implicit none
+  !> variables
+  integer :: ii,jj,kk,counter
+  !> initialise positions and properties arrays
+  x_cart_sol = 0.d0; propeties_sol = 0.d0;
+  !> fill property table
+  do kk=1,n_times_sol
+    counter = 0
+    do jj=1,n_groups_per_sim(kk)
+      select type(p_list=>sims_particles(kk)%groups(jj)%particles)
+      type is(particle_kinetic_relativistic)
+        do ii=1,n_particles_per_group(jj,kk)
+          if(p_list(ii)%i_elm.le.0) cycle
+          counter = counter + 1
+          x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
+          call compute_synch_properties_ana_1p(&
+          sims_particles(kk)%groups(jj)%mass,p_list(ii),&
+          propeties_sol(:,counter,kk))
+        enddo
+      end select
+    enddo
+  enddo
+end subroutine compute_synch_x_properties_ana
+
+!> compute synchrotron electron properties using the analytical
+!> tokamak like electric and magnetic fields for one particle
+subroutine compute_synch_properties_ana_1p(mass,particle,property)
+  use constants,                      only: PI,EL_CHG
+  use constants,                      only: SPEED_OF_LIGHT,EPS_ZERO
+  use mod_math_operators,             only: cross_product
+  use mod_particle_types,             only: particle_kinetic_relativistic
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields 
+  implicit none
+  !> inputs-outputs
+  type(particle_kinetic_relativistic),intent(inout) :: particle
+  !> inputs
+  real*8,intent(in) :: mass
+  !> outputs
+  real*8,dimension(n_properties),intent(out) :: property
+  !> variables
+  real*8 :: velocity,beta,rel_fact,kappa,P_rad
+  real*8,dimension(3) :: vel_vec,E_field,B_field,T_vec,N_vec,B_vec
+  real*8,dimension(3) :: vec_real_size3
+  !> compute relativistic factor, velocity and beta
+  rel_fact = sqrt(1.d0+(dot_product(particle%p,particle%p)/&
+             (SPEED_OF_LIGHT*SPEED_OF_LIGHT*mass*mass)))
+  vel_vec = particle%p/(mass*rel_fact)
+  velocity = norm2(vel_vec)
+  beta     =  velocity/SPEED_OF_LIGHT
+  T_vec   = vel_vec/velocity
+  !> compute electric and magnetic field
+  call compute_test_E_B_fields(particle%x,E_field,B_field)
+  !> compute normal and binormal vectors
+  N_vec = E_field + cross_product(vel_vec,B_field) - dot_product(T_vec,E_field)*T_vec
+  N_vec = N_vec/norm2(N_vec)
+  B_vec = cross_product(T_vec,N_vec); B_vec = B_vec/norm2(B_vec);
+  !> compute orbit curvature (L. Carbajal, PPCF, 2017)
+  vec_real_size3 = E_field + cross_product(vel_vec,B_field)
+  vec_real_size3 = cross_product(vel_vec,vec_real_size3)
+  kappa = (norm2(vec_real_size3)*EL_CHG*abs(real(particle%q,kind=8)))/(rel_fact*mass*velocity**3.d0)
+  !> compute total radiated power (L. Carbajal, PPCF, 2017)
+  P_rad = (((rel_fact*velocity)**4.d0)*((kappa*EL_CHG*real(particle%q,kind=8))**2.d0))/&
+  (6.d0*PI*EPS_ZERO*(SPEED_OF_LIGHT**3.d0))
+  !> Store all values in the array
+  property(1:3) = T_vec; property(4:6) = N_vec; property(7:9) = B_vec;
+  property(10) = beta; property(11) = rel_fact; property(12) = kappa;
+  property(13) = P_rad;
+end subroutine compute_synch_properties_ana_1p
+
 !>--------------------------------------------------------------------
 end module mod_synchrotron_light_vertices_test

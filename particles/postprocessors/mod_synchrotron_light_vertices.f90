@@ -77,7 +77,7 @@ sims_particles,n_sync_lights_in)
   !> compute the number of relativistic particles per each time
   do ii=1,light_vert%n_times
     n_particle_relativistics(ii) = sum(n_particles(:,ii),&
-    mask=particle_types(:,ii)==particle_kinetic_relativistic_id)
+    mask=particle_types(:,ii).eq.particle_kinetic_relativistic_id)
   enddo
   n_particles_max = maxval(n_particle_relativistics)
   n_sync_lights = n_particles_max
@@ -97,7 +97,8 @@ sims_particles,n_sync_lights_in)
 
   !> find active particles for all groups and times
   call light_vert%find_active_particles_id_time(n_groups_max,n_particles_max,&
-  n_groups,n_particles,sims_particles,n_active_particles,active_particle_id)
+  n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,&
+  particle_kinetic_relativistic_id)
   !> fill the synchrotron lights
   call light_vert%fill_synchrotron_lights_from_particles(&
   sims_particles,n_groups_max,n_particles_max,n_groups,&
@@ -265,34 +266,34 @@ n_groups,n_active_particles,active_particles_id)
   do ii=1,sync_lights%n_times
     pp = 0
     do jj=1,n_groups(ii)
-      select type (p_list=>sims_particles(ii)%groups(jj)%particles)
-        type is (particle_kinetic_relativistic) !< just use it for cycling
-        !$omp parallel do default(private) firstprivate(ii,jj,pp,n_active_particles) &
+        !$omp parallel default(private) firstprivate(ii,jj,pp,n_active_particles) &
         !$omp shared(sims_particles,active_particles_id,sync_lights)
-        do kk=1,n_active_particles(jj,ii)
-          select type (particle=>sims_particles(ii)%groups(jj)%particles(&
-            active_particles_id(kk,jj,ii)))
-            type is (particle_kinetic_relativistic)
-            call sync_lights%store_light_x_from_particle_id(pp+kk,ii,particle) !< store position
+        select type (p_list=>sims_particles(ii)%groups(jj)%particles)
+          type is (particle_kinetic_relativistic)
+          !$omp do
+          do kk=1,n_active_particles(jj,ii)
+            call sync_lights%store_light_x_from_particle_id(pp+kk,ii,&
+            p_list(active_particles_id(kk,jj,ii))) !< store position
             !> compute E,B fields
 #ifndef UNIT_TESTS_AFIELDS
             call sims_particles(ii)%fields%calc_EBpsiU(sync_lights%times(ii),&
-            particle%i_elm,particle%st,particle%x(3),E_field,B_field,psi,U)
+            particle%i_elm,particle%st,p_list(active_particles_id(kk,jj,ii))%x(3),&
+            E_field,B_field,psi,U)
 #else
             !> analytical fields only for unit testing
-            call compute_test_E_B_fields(particle%x,E_field,B_field)
+            call compute_test_E_B_fields(p_list(active_particles_id(kk,jj,ii))%x,E_field,B_field)
 #endif
             !> compute synchrotron light properties
             call compute_synchrotron_light_properties(n_x,sync_lights%n_property_vertex,&
-            particle,sims_particles(ii)%groups(jj)%mass,&
-            vector_cylindrical_to_cartesian(particle%x(3),E_field),&
-            vector_cylindrical_to_cartesian(particle%x(3),B_field),&
+            p_list(active_particles_id(kk,jj,ii)),sims_particles(ii)%groups(jj)%mass,&
+            vector_cylindrical_to_cartesian(p_list(active_particles_id(kk,jj,ii))%x(3),E_field),&
+            vector_cylindrical_to_cartesian(p_list(active_particles_id(kk,jj,ii))%x(3),B_field),&
             sync_lights%properties(:,pp+kk,ii))
-          end select
         enddo
-        !$omp end parallel do 
+        !$omp end do
+        end select
+        !$omp end parallel
         pp = pp + n_active_particles(jj,ii) 
-      end select
     enddo
   enddo
 end subroutine fill_synchrotron_lights_from_particles

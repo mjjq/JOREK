@@ -289,7 +289,7 @@ n_groups,n_active_particles,active_particles_id)
             sync_lights%properties(:,pp+kk,ii))
           end select
         enddo
-        !$omp end parallel do
+        !$omp end parallel do 
         pp = pp + n_active_particles(jj,ii) 
       end select
     enddo

@@ -66,7 +66,7 @@ subroutine setup()
   particle_kinetic_relativistic_id,-1/),shape(particle_types))
   integer :: ii,ifail
   !> initialisation
-  ifail = 0; n_active_particles_sol = 0;
+  vertex_sol%n_property_vertex = n_properties; ifail = 0; n_active_particles_sol = 0;
   call gnu_rng_interval(n_times_sol,sim_time_interval,time_vector_sol)
   call vertex_sol%allocate_vertices(n_times_sol,n_particles_max*n_groups_max)
 

@@ -20,7 +20,7 @@ integer,dimension(n_groups_max,n_times_sol),parameter :: n_particles_per_group=&
            reshape((/135,247,512,367,413,0/),shape(n_particles_per_group))
 integer,parameter                        :: n_particles_max=maxval(n_particles_per_group)
 real*8,parameter                         :: survival_threshold=0.33
-real*8,parameter                         :: tol_real8=5.d-16
+real*8,parameter                         :: tol_real8=2.5d-11
 real*8,parameter                         :: mass_RE=5.48579909065d-4
 type(synchrotron_light_vertices)            :: vertex_sol
 type(particle_sim),dimension(n_times_sol)   :: sims_particles
@@ -40,6 +40,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   write(*,'(/A)') "  ... setting-up: synchrotron light vertices tests"
   call setup
   write(*,'(/A)') "  ... running: synchrotron light vertices tests"
+  call test_compute_synchrotron_light_properties
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
 end subroutine run_fruit_synchrotron_light_vertices
 
@@ -56,7 +57,6 @@ subroutine setup()
   use mod_particle_common_test_tools,       only: fill_particles_tokamak
   use mod_particle_common_test_tools,       only: invalidate_particles
   use mod_particle_common_test_tools,       only: obtain_active_particle_ids
-  use mod_light_vertices_common_test_tools, only: compute_x_cart_particles 
   implicit none
   !> variables
   integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types=&
@@ -90,6 +90,41 @@ subroutine setup()
 end subroutine setup
 
 !> Tests -------------------------------------------------------------
+!> test the property function of synchrotron light properties
+subroutine test_compute_synchrotron_light_properties()
+  use mod_particle_types,             only: particle_kinetic_relativistic
+  use mod_synchrotron_light_vertices, only: compute_synchrotron_light_properties
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields 
+  implicit none
+  !> variables
+  integer :: ii,jj,kk,counter
+  real*8,dimension(3) :: E_field,B_field
+  real*8,dimension(n_properties) :: properties
+  real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
+  !> loop for computing the properties and testing
+  zeros = 0.d0
+  do kk=1,n_times_sol
+    counter = 0; error = 0.d0;
+    do jj=1,n_groups_per_sim(kk)
+      select type(p_list=>sims_particles(kk)%groups(jj)%particles)
+        type is(particle_kinetic_relativistic)
+        do ii=1,n_particles_per_group(jj,kk)
+          if(p_list(ii)%i_elm.le.0) cycle
+          counter = counter + 1
+          call compute_test_E_B_fields(p_list(ii)%x,E_field,B_field)
+          call compute_synchrotron_light_properties(3,n_properties,&
+          p_list(ii),sims_particles(kk)%groups(jj)%mass,E_field,B_field,properties)
+          error(:,counter) = abs((properties - propeties_sol(:,counter,kk))/&
+          propeties_sol(:,counter,kk))
+        enddo
+      end select
+    enddo
+    !> check if the properties arrays are equal
+    call assert_equals(error,zeros,n_properties,n_particles_max*n_groups_max,&
+    tol_real8,"Error synchrotron light compute properties: too large errors!")
+  enddo
+end subroutine test_compute_synchrotron_light_properties
+
 !> Tools -------------------------------------------------------------
 !> compute and fill particle positions and properties for RE
 subroutine compute_synch_x_properties_ana()
@@ -122,7 +157,7 @@ end subroutine compute_synch_x_properties_ana
 !> compute synchrotron electron properties using the analytical
 !> tokamak like electric and magnetic fields for one particle
 subroutine compute_synch_properties_ana_1p(mass,particle,property)
-  use constants,                      only: PI,EL_CHG
+  use constants,                      only: PI,EL_CHG,ATOMIC_MASS_UNIT
   use constants,                      only: SPEED_OF_LIGHT,EPS_ZERO
   use mod_math_operators,             only: cross_product
   use mod_particle_types,             only: particle_kinetic_relativistic
@@ -154,7 +189,8 @@ subroutine compute_synch_properties_ana_1p(mass,particle,property)
   !> compute orbit curvature (L. Carbajal, PPCF, 2017)
   vec_real_size3 = E_field + cross_product(vel_vec,B_field)
   vec_real_size3 = cross_product(vel_vec,vec_real_size3)
-  kappa = (norm2(vec_real_size3)*EL_CHG*abs(real(particle%q,kind=8)))/(rel_fact*mass*velocity**3.d0)
+  kappa = (norm2(vec_real_size3)*EL_CHG*abs(real(particle%q,kind=8)))/&
+  (rel_fact*mass*ATOMIC_MASS_UNIT*velocity**3.d0)
   !> compute total radiated power (L. Carbajal, PPCF, 2017)
   P_rad = (((rel_fact*velocity)**4.d0)*((kappa*EL_CHG*real(particle%q,kind=8))**2.d0))/&
   (6.d0*PI*EPS_ZERO*(SPEED_OF_LIGHT**3.d0))

@@ -29,7 +29,7 @@ integer,dimension(n_groups_max,n_times_sol) :: n_active_particles_sol
 integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_ids_sol
 real*8,dimension(n_times_sol)               :: time_vector_sol
 real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol) :: x_cart_sol
-real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: propeties_sol
+real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: properties_sol
 
 !> Interfaces --------------------------------------------------------
 contains
@@ -93,28 +93,20 @@ end subroutine setup
 !> Tests -------------------------------------------------------------
 !> test fill synchrotron lights from particles
 subroutine test_fill_synchrotron_lights_from_particles()
+  use mod_assert_equals_tools,        only: assert_equals_rel_error
   use mod_synchrotron_light_vertices, only: fill_synchrotron_lights_from_particles
   implicit none
   !> variables
-  integer :: ii
-  real*8,dimension(n_x,n_particles_max*n_groups_max)          :: error_x,zeros_x
-  real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error_p,zeros_p
-  zeros_x = 0.d0; zeros_p = 0.d0; 
   !> fill synchrotron lights from particles
   call fill_synchrotron_lights_from_particles(vertex_sol,sims_particles,&
   n_groups_max,n_particles_max,n_groups_per_sim,n_active_particles_sol,&
   active_particle_ids_sol)
-  !> test fill positions and properties
-  do ii=1,n_times_sol
-    error_x = 0.d0; error_x = vertex_sol%x(:,:,ii)-x_cart_sol(:,:,ii)
-    where(x_cart_sol(:,:,ii).ne.0.d0) error_x = abs(error_x/x_cart_sol(:,:,ii))
-    error_p = 0.d0; error_p = vertex_sol%properties(:,:,ii) - propeties_sol(:,:,ii)
-    where(propeties_sol(:,:,ii).ne.0.d0) error_p = abs(error_p/propeties_sol(:,:,ii))
-    call assert_equals(error_x,zeros_x,n_x,n_particles_max*n_groups_max,tol_real8,&
-    "Error fill synchrotron lights from particles: x errors too large!")
-    call assert_equals(error_p,zeros_p,n_properties,n_particles_max*n_groups_max,&
-    tol_real8,"Error fill synchrotron lights from particles: properties errors too large!")
-  enddo
+  call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
+  vertex_sol%x,x_cart_sol,tol_real8,&
+  "Error fill synchrotron lights from particles: properties errors too large!")
+  call assert_equals_rel_error(n_properties,n_particles_max*n_groups_max,&
+  n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
+  "Error fill synchrotron lights from particles: properties errors too large!")
 end subroutine test_fill_synchrotron_lights_from_particles
 
 !> test the property function of synchrotron light properties
@@ -144,8 +136,8 @@ subroutine test_compute_synchrotron_light_properties()
           E_field = vector_cylindrical_to_cartesian(p_list(ii)%x(3),E_field)
           call compute_synchrotron_light_properties(3,n_properties,&
           p_list(ii),sims_particles(kk)%groups(jj)%mass,E_field,B_field,properties)
-          error(:,counter) = abs((properties - propeties_sol(:,counter,kk))/&
-          propeties_sol(:,counter,kk))
+          error(:,counter) = abs((properties - properties_sol(:,counter,kk))/&
+          properties_sol(:,counter,kk))
         enddo
       end select
     enddo
@@ -164,7 +156,7 @@ subroutine compute_synch_x_properties_ana()
   !> variables
   integer :: ii,jj,kk,counter
   !> initialise positions and properties arrays
-  x_cart_sol = 0.d0; propeties_sol = 0.d0;
+  x_cart_sol = 0.d0; properties_sol = 0.d0;
   !> fill property table
   do kk=1,n_times_sol
     counter = 0
@@ -177,7 +169,7 @@ subroutine compute_synch_x_properties_ana()
           x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
           call compute_synch_properties_ana_1p(p_list(ii)%x(3),&
           sims_particles(kk)%groups(jj)%mass,p_list(ii),&
-          propeties_sol(:,counter,kk))
+          properties_sol(:,counter,kk))
         enddo
       end select
     enddo

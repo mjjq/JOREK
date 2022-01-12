@@ -86,7 +86,6 @@ sims_particles,n_sync_light_in)
       write(*,*) "Error initialise synchrotron lights from particles"
       write(*,*) "Requested number of lights < number of particles,use: ",n_sync_lights
     endif
-    n_sync_lights = n_particles_max
   endif
   !> allocate active particle arrays
   allocate(n_active_particles(n_groups_max,light_vert%n_vertices)); 

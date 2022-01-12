@@ -83,6 +83,8 @@ sims_particles,n_sync_light_in)
   n_sync_lights = n_particles_max
   if(present(n_sync_light_in)) then
     if(n_sync_lights.lt.n_sync_light_in) then
+      n_sync_lights =  n_sync_lights_in   
+    else
       write(*,*) "Error initialise synchrotron lights from particles"
       write(*,*) "Requested number of lights < number of particles,use: ",n_sync_lights
     endif

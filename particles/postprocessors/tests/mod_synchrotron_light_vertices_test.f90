@@ -24,6 +24,7 @@ real*8,parameter                         :: tol_real8=2.5d-11
 real*8,parameter                         :: mass_RE=5.48579909065d-4
 type(synchrotron_light_vertices)            :: vertex_sol
 type(particle_sim),dimension(n_times_sol)   :: sims_particles
+integer                                     :: n_particles_RE_max
 integer,dimension(n_times_sol)              :: n_active_vertices_sol
 integer,dimension(n_groups_max,n_times_sol) :: n_active_particles_sol
 integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_ids_sol
@@ -42,6 +43,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   write(*,'(/A)') "  ... running: synchrotron light vertices tests"
   call test_compute_synchrotron_light_properties
   call test_fill_synchrotron_lights_from_particles
+  call test_init_synchrotron_lights_from_particles
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
 end subroutine run_fruit_synchrotron_light_vertices
 
@@ -63,10 +65,11 @@ subroutine setup()
   integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types=&
   reshape((/particle_kinetic_relativistic_id,particle_gc_vpar_id,&
   particle_kinetic_relativistic_id,particle_kinetic_id,&
-  particle_kinetic_relativistic_id,-1/),shape(particle_types))
-  integer :: ii,ifail
+  particle_kinetic_relativistic_id,0/),shape(particle_types))
+  integer :: ii,jj,ifail,n_particles_RE_max_loc
   !> initialisation
-  vertex_sol%n_property_vertex = n_properties; ifail = 0; n_active_particles_sol = 0;
+  vertex_sol%n_property_vertex = n_properties; ifail = 0; 
+  n_particles_RE_max = 0; n_active_particles_sol = 0;
   call gnu_rng_interval(n_times_sol,sim_time_interval,time_vector_sol)
   call vertex_sol%allocate_vertices(n_times_sol,n_particles_max*n_groups_max)
 
@@ -85,12 +88,73 @@ subroutine setup()
     call obtain_active_particle_ids(n_groups_per_sim(ii),n_particles_max,&
     active_particle_ids_sol(:,1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
     n_active_vertices_sol(ii) = sum(n_active_particles_sol(:,ii))
+    !> set to zero if particles are not kinetic relativistic
+    where(particle_types(:,ii).ne.particle_kinetic_relativistic_id) n_active_particles_sol(:,ii)=0
+    n_particles_RE_max_loc = 0
+    do jj=1,n_groups_per_sim(ii)
+      if(particle_types(jj,ii).ne.particle_kinetic_relativistic_id) cycle
+      n_particles_RE_max_loc = n_particles_RE_max_loc + n_particles_per_group(jj,ii)
+    enddo
+    n_particles_RE_max = max(n_particles_RE_max,n_particles_RE_max_loc)
   enddo
   !> initialise positions and properties tables
   call compute_synch_x_properties_ana()
 end subroutine setup
 
 !> Tests -------------------------------------------------------------
+!> test the initialisation of synchrotron lights from particles
+subroutine test_init_synchrotron_lights_from_particles()
+  use mod_assert_equals_tools, only: assert_equals_rel_error
+  implicit none
+  !> variables
+  integer,parameter                                             :: n_sync_fail=1
+  integer :: ii,n_particles_time
+  real*8,dimension(n_x,n_particles_RE_max,n_times_sol)          :: x_cart_loc
+  real*8,dimension(n_properties,n_particles_RE_max,n_times_sol) :: properties_loc
+  !> test light structure initialisation with given size
+  call vertex_sol%init_lights_from_particles(n_times_sol,&
+  sims_particles,n_particles_max*n_groups_max)
+  call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
+  vertex_sol%x,x_cart_sol,tol_real8,&
+  "Error init synchrotron lights from particles set n lights large: positions errors too large!")
+  call assert_equals_rel_error(n_properties,n_particles_max*n_groups_max,&
+  n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
+  "Error init synchrotron lights from particles set n lights large: properties errors too large!")
+
+  !> copy valued of x and properties
+  x_cart_loc = 0.d0; properties_loc = 0.d0;
+  do ii=1,n_times_sol
+    n_particles_time = sum(n_active_particles_sol(:,ii))
+    x_cart_loc(:,1:n_particles_time,ii) = x_cart_sol(:,1:n_particles_time,ii)
+    properties_loc(:,1:n_particles_time,ii) = properties_sol(:,1:n_particles_time,ii)   
+  enddo
+  !> test vertices initialisation no inputs
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
+  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  "Error init synchrotron lights from particles: positions shape mismatch!")
+  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  "Error init synchrotron lights from particles: properties shape mismatch!")
+  call assert_equals_rel_error(n_x,n_particles_RE_max,n_times_sol,&
+  vertex_sol%x,x_cart_loc,tol_real8,&
+  "Error init synchrotron lights from particles: positions errors too large!")
+  call assert_equals_rel_error(n_properties,n_particles_RE_max,&
+  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  "Error init synchrotron lights from particles: properties errors too large!")
+
+  !> test vertices initilisation with too small number of lights
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles,n_sync_fail)
+  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  "Error init synchrotron lights from particles set n lights small: positions shape mismatch!")
+  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  "Error init synchrotron lights from particles set n lights small: properties shape mismatch!")
+  call assert_equals_rel_error(n_x,n_particles_RE_max,n_times_sol,&
+  vertex_sol%x,x_cart_loc,tol_real8,&
+  "Error init synchrotron lights from particles set n lights small: positions errors too large!")
+  call assert_equals_rel_error(n_properties,n_particles_RE_max,&
+  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  "Error init synchrotron lights from particles set n lights small: properties errors too large!")
+end subroutine test_init_synchrotron_lights_from_particles 
+
 !> test fill synchrotron lights from particles
 subroutine test_fill_synchrotron_lights_from_particles()
   use mod_assert_equals_tools,        only: assert_equals_rel_error
@@ -103,7 +167,7 @@ subroutine test_fill_synchrotron_lights_from_particles()
   active_particle_ids_sol)
   call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
   vertex_sol%x,x_cart_sol,tol_real8,&
-  "Error fill synchrotron lights from particles: properties errors too large!")
+  "Error fill synchrotron lights from particles: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_particles_max*n_groups_max,&
   n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
   "Error fill synchrotron lights from particles: properties errors too large!")

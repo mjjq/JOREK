@@ -466,7 +466,7 @@ contains
   function sample_uniform_direction_length_cone(cos_half_angle,u,dir,&
   origin,len_int) result(ray)
     implicit none
-    real*8,intent(in)              :: cos_half_angles
+    real*8,intent(in)              :: cos_half_angle
     real*8,dimension(2),intent(in) :: len_int
     real*8,dimension(3),intent(in) :: u,dir,origin
     real*8,dimension(3)            :: ray
@@ -478,7 +478,7 @@ contains
     length = len_int(1) + (len_int(2)-len_int(1))*u(3)
     delta = ray-origin
     ray = origin + (delta/sqrt(delta(1)*delta(1)+delta(2)*delta(2)+&
-    delta(3)*delta(3)+))*length
+    delta(3)*delta(3)))*length
  end function sample_uniform_direction_length_cone
 
 
@@ -493,24 +493,26 @@ contains
   !>   ray: (real8)(3) point on the directional unit cone
   function sample_uniform_direction_cone(cos_half_angle,u,dir,origin) result(ray)
     implicit none
-    real*8,intent(in) :: cos_half_angles
+    real*8,intent(in) :: cos_half_angle
     real*8,dimension(2),intent(in) :: u
-    real*8,dimension(3),intent(in) :: dir
+    real*8,dimension(3),intent(in) :: dir,origin
     real*8,dimension(3)            :: ray
     real*8                         :: cos_alpha,cos_beta !< spherical coord.
     real*8                         :: sin_alpha,sin_beta               
     real*8,dimension(3)            :: t_vec 
+    real*8,dimension(3,3)          :: rot_matrix
     !> compute 
     t_vec = dir/sqrt(dir(1)*dir(1)+dir(2)*dir(2)+dir(3)*dir(3))
-    cos_alpha = acos(t(3));     cos_beta = atan2(t_vec(2),t_vec(1));
+    cos_alpha = acos(t_vec(3)); cos_beta = atan2(t_vec(2),t_vec(1));
     sin_alpha = sin(cos_alpha); sin_beta = sin(cos_beta);
     cos_alpha = cos(cos_alpha); cos_beta = cos(cos_beta);
     !> compute random points on the standard sphere
     ray = sample_uniform_standard_cone(cos_half_angle,u)
     !> rotate the array along the dir direction
-    ray = matmul((/(/-sin_beta,cos_beta*cos_alpha,cos_beta*sin_alpha/),&
-    (/cos_beta,cos_beta*cos_alpha,sin_beta*sin_alpha/),&
-    (/0.d0,-sin_alpha,cos_alpha/)/),ray)
+    rot_matrix(:,1) = (/-sin_beta,cos_beta,0.d0/)
+    rot_matrix(:,2) = (/cos_beta*cos_alpha,sin_beta*cos_alpha,-sin_alpha/)
+    rot_matrix(:,3) = (/cos_beta*sin_alpha,sin_beta*sin_alpha,cos_alpha/)
+    ray = matmul(rot_matrix,ray)
     !> modify cone origin
     ray = origin + ray
   end function sample_uniform_direction_cone 
@@ -524,14 +526,17 @@ contains
   !> outputs
   !>   ray: (real8)(3) point on the standard unit cone
   function sample_uniform_standard_cone(cos_half_angle,u) result(ray)
+    use constants, only: TWOPI
     implicit none
     real*8,intent(in)              :: cos_half_angle
     real*8,dimension(2),intent(in) :: u
     real*8,dimension(3)            :: ray
     real*8                         :: z2
     real*8 ,dimension(2)           :: zphi
-    zphi = (/2.d0*PI,cos_hal_angle+(1.d0-cos_half_angle)/)*u
-    z2 = sqrt(1.d0-z(2)*z(2))
+    !zphi =(/0.d0,cos_half_angle/) + (/TWOPI,1.d0-cos_half_angle/)*u
+    zphi(1) = TWOPI*u(1)
+    zphi(2) = cos_half_angle + (1.d0-cos_half_angle)*u(2)
+    z2 = sqrt(1.d0-zphi(2)*zphi(2))
     ray = (/z2*cos(zphi(1)),z2*sin(zphi(1)),zphi(2)/)
   end function sample_uniform_standard_cone
 

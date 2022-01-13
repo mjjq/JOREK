@@ -3,6 +3,7 @@
 module mod_synchrotron_light_vertices_test
 use fruit
 use mod_particle_sim,               only: particle_sim
+use mod_spectra_monte_carlo,        only: spectrum_rng_uniform
 use mod_vertices,                   only: n_x
 use mod_synchrotron_light_vertices, only: n_properties
 use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
@@ -12,16 +13,24 @@ private
 public :: run_fruit_synchrotron_light_vertices
 
 !> Variables ---------------------------------------------------------
+!> general parameters
+real*8,parameter                            :: tol_real8=2.5d-11
+real*8,parameter                            :: mass_RE=5.48579909065d-4
+!> parameters for generating synhrotron lights
 integer,parameter :: fill_type_base=1 !< use cylindrical initialisation
 integer,parameter :: n_times_sol=2
-integer,dimension(n_times_sol),parameter :: n_groups_per_sim=(/3,2/)
-integer,parameter                        :: n_groups_max=maxval(n_groups_per_sim)
+integer,dimension(n_times_sol),parameter    :: n_groups_per_sim=(/3,2/)
+integer,parameter                           :: n_groups_max=maxval(n_groups_per_sim)
 integer,dimension(n_groups_max,n_times_sol),parameter :: n_particles_per_group=&
            reshape((/135,247,512,367,413,0/),shape(n_particles_per_group))
-integer,parameter                        :: n_particles_max=maxval(n_particles_per_group)
-real*8,parameter                         :: survival_threshold=0.33
-real*8,parameter                         :: tol_real8=2.5d-11
-real*8,parameter                         :: mass_RE=5.48579909065d-4
+integer,parameter                           :: n_particles_max=maxval(n_particles_per_group)
+real*8,parameter                            :: survival_threshold=0.33
+!> parameters for generating spectra
+integer,parameter                           :: n_spectra=2
+integer,parameter                           :: n_lines_per_spectrum=53
+real*8,dimension(n_spectra),parameter       :: min_wlen=(/3.0d-6,2.5d-7/)
+real*8,dimension(n_spectra),parameter       :: max_wlen=(/3.5d-6,4.2d-7/)
+!> variables for generating synchrotron lights
 type(synchrotron_light_vertices)            :: vertex_sol
 type(particle_sim),dimension(n_times_sol)   :: sims_particles
 integer                                     :: n_particles_RE_max
@@ -31,6 +40,8 @@ integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_i
 real*8,dimension(n_times_sol)               :: time_vector_sol
 real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol) :: x_cart_sol
 real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: properties_sol
+!> variables for generating spectra
+type(spectrum_rng_uniform)                  :: spectrum
 
 !> Interfaces --------------------------------------------------------
 contains
@@ -45,6 +56,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   call test_fill_synchrotron_lights_from_particles
   call test_init_synchrotron_lights_from_particles
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
+  call teardown
 end subroutine run_fruit_synchrotron_light_vertices
 
 !> Set-up and tear-down procedures------------------------------------
@@ -99,7 +111,16 @@ subroutine setup()
   enddo
   !> initialise positions and properties tables
   call compute_synch_x_properties_ana()
+
+  !> initialise monte-carlo spectra
+  spectrum = spectrum_rng_uniform(n_lines_per_spectrum,n_spectra,min_wlen,max_wlen)
 end subroutine setup
+
+!> destroy all test features
+subroutine teardown()
+  implicit none
+  call vertex_sol%deallocate_vertices; call spectrum%deallocate_spectrum;
+end subroutine teardown
 
 !> Tests -------------------------------------------------------------
 !> test the initialisation of synchrotron lights from particles

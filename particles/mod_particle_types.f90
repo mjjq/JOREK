@@ -489,6 +489,14 @@ contains
   !> and index of acitve particles withing a list
   !> active particles are particles having i_elm>0
   !> openmp enabled version.
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> TODO: for improving load balance split the particle 
+  !> in multiple sub-arrays called tiles and execute a 
+  !> omp parallel do on the number of tiles instead of
+  !> just splitting the array in a number of arrays equal
+  !> to the number of threads. In this way the load is more
+  !> balanced among threads
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Note: the proposed openmp version is suboptimal and
   !>       hence, it must be improved in future
   !> inputs:

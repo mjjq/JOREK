@@ -32,12 +32,18 @@ module mod_sampling
   public :: sample_discrete
   public :: sample_piecewise_linear
   public :: cross_product
-
+  public :: sample_uniform_cone
   !> Switch here which procedure to use by default. The other ones can be found
   !> by their name
   interface normal_vectors
     module procedure normal_vectors_frisvad
   end interface normal_vectors
+
+  interface sample_uniform_cone
+    module procedure sample_uniform_standard_cone
+    module procedure sample_uniform_direction_cone
+    module procedure sample_uniform_direction_length_cone
+  end interface sample_uniform_cone
 
   !> The Thompson distribution with parameters E_b and n
   type, extends(ddfun) :: thompson_dist
@@ -447,6 +453,87 @@ contains
       end if
     end do
   end function sample_piecewise_linear
+
+  !> uniform sampling of the oriented cone modifing the ray length
+  !> inputs:
+  !>   cos_half_angle: (real8) cosinus of the cone half angle 
+  !>   u:              (real8)(2) random numbers
+  !>   dir:            (real8)(3) vector providing the direction
+  !>   origin:         (real8)(3) new cone origin
+  !>   len_int:        (real8)(2) length interval
+  !> outputs:
+  !>   ray: (real8)(3) point on the directional unit cone
+  function sample_uniform_direction_length_cone(cos_half_angle,u,dir,&
+  origin,len_int) result(ray)
+    implicit none
+    real*8,intent(in)              :: cos_half_angles
+    real*8,dimension(2),intent(in) :: len_int
+    real*8,dimension(3),intent(in) :: u,dir,origin
+    real*8,dimension(3)            :: ray
+    real*8                         :: length
+    real*8,dimension(3)            :: delta
+    !> compute oriented cone
+    ray = sample_uniform_direction_cone(cos_half_angle,u(1:2),dir,origin)
+    !> modify ray length
+    length = len_int(1) + (len_int(2)-len_int(1))*u(3)
+    delta = ray-origin
+    ray = origin + (delta/sqrt(delta(1)*delta(1)+delta(2)*delta(2)+&
+    delta(3)*delta(3)+))*length
+ end function sample_uniform_direction_length_cone
+
+
+  !> uniform sampling of the oriented cone given its half aperture angle
+  !> and a direction. Possible to modify the cone origin has well
+  !> inputs:
+  !>   cos_half_angle: (real8) cosinus of the cone half angle 
+  !>   u:              (real8)(2) random numbers
+  !>   dir:            (real8)(3) vector providing the direction
+  !>   origin:         (real8)(3) new cone origin
+  !> outputs:
+  !>   ray: (real8)(3) point on the directional unit cone
+  function sample_uniform_direction_cone(cos_half_angle,u,dir,origin) result(ray)
+    implicit none
+    real*8,intent(in) :: cos_half_angles
+    real*8,dimension(2),intent(in) :: u
+    real*8,dimension(3),intent(in) :: dir
+    real*8,dimension(3)            :: ray
+    real*8                         :: cos_alpha,cos_beta !< spherical coord.
+    real*8                         :: sin_alpha,sin_beta               
+    real*8,dimension(3)            :: t_vec 
+    !> compute 
+    t_vec = dir/sqrt(dir(1)*dir(1)+dir(2)*dir(2)+dir(3)*dir(3))
+    cos_alpha = acos(t(3));     cos_beta = atan2(t_vec(2),t_vec(1));
+    sin_alpha = sin(cos_alpha); sin_beta = sin(cos_beta);
+    cos_alpha = cos(cos_alpha); cos_beta = cos(cos_beta);
+    !> compute random points on the standard sphere
+    ray = sample_uniform_standard_cone(cos_half_angle,u)
+    !> rotate the array along the dir direction
+    ray = matmul((/(/-sin_beta,cos_beta*cos_alpha,cos_beta*sin_alpha/),&
+    (/cos_beta,cos_beta*cos_alpha,sin_beta*sin_alpha/),&
+    (/0.d0,-sin_alpha,cos_alpha/)/),ray)
+    !> modify cone origin
+    ray = origin + ray
+  end function sample_uniform_direction_cone 
+
+  !> uniform sampling of the standard cone given its half aperture angle
+  !> the cone axis is assumed to be along the unit sphere north pole
+  !> the direction is given in cartesian coordinates
+  !> inputs:
+  !>   cos_half_angle: (real8) cosinus of the half angle
+  !>   u:              (real8)(2) random number uniformly distributed
+  !> outputs
+  !>   ray: (real8)(3) point on the standard unit cone
+  function sample_uniform_standard_cone(cos_half_angle,u) result(ray)
+    implicit none
+    real*8,intent(in)              :: cos_half_angle
+    real*8,dimension(2),intent(in) :: u
+    real*8,dimension(3)            :: ray
+    real*8                         :: z2
+    real*8 ,dimension(2)           :: zphi
+    zphi = (/2.d0*PI,cos_hal_angle+(1.d0-cos_half_angle)/)*u
+    z2 = sqrt(1.d0-z(2)*z(2))
+    ray = (/z2*cos(zphi(1)),z2*sin(zphi(1)),zphi(2)/)
+  end function sample_uniform_standard_cone
 
 pure function cross_product(a, b)
   real*8, dimension(3) :: cross_product

@@ -13,7 +13,7 @@ module mod_phase_space_project
   implicit none
   private
   public phase_space_projection
-  public new_phase_space_projection, output_phase_project,calc_index_val_phaseproj, calc_index_shaped_part
+  public new_phase_space_projection, output_phase_project,calc_index_val_phaseproj, calc_index_shaped_part, calc_index_shaped_part_x
 
   ! A type to project particle quantities on arbitrary coordinates. Examples include projecting on
   ! invariant phase-space coordinates (E, \lambda, P_\phi) or real-space 1D histograms of initialization
@@ -474,6 +474,120 @@ subroutine calc_index_shaped_part(this, particle_in,index_val,val_val,sim)
 
 
 end subroutine calc_index_shaped_part
+
+! Same as previous subroutine, but with the option of providing the x_in on the grids.
+! This can be quite useful if the x calculation involves interpolating some quantity that is 
+! already known at the moment this function is called
+subroutine calc_index_shaped_part_x(this, particle_in,index_val,val_val,sim,x_in)
+  type(particle_kinetic_leapfrog),intent(in)       :: particle_in
+  class(phase_space_projection),  intent(in)       :: this
+  real*8,                         intent(in)       :: x_in(this%ndim)
+  type(particle_sim)                               :: sim
+  real*8                                           :: value
+  real*8                                           :: x,dx, minx, maxx, xmin,xmain,distance
+  real*8                                           :: bandwidths(this%ndim)
+  integer                                          :: index_arr(this%ndim),totsupp,index_supp(this%sumsupport),i,j, main_ind, min_ind,ind_mesh_tmp(this%ndim)
+  integer                                          :: mesh_tmp,mesh_tmp2, indices_phase_grids_tmp(this%ndim)
+  integer,                        intent(out)      :: index_val(this%totsupport)
+  real*8,                         intent(out)      :: val_val(this%totsupport)
+  real*8                                           :: supp_weight(this%sumsupport),val_phase_grids_tmp
+
+  ! Initialize with 0 and -1 values and indices respectively.
+  index_val=-1
+  val_val= 0.d0
+  supp_weight=0.d0
+  index_supp=-1
+  
+  do i=1, this%ndim
+    dx=this%grids(this%previndex(i)+2)-this%grids(this%previndex(i)+1)
+
+    minx=this%grids(this%previndex(i)+1)
+
+    maxx=this%grids(this%previndex(i)+this%res(i))
+    if (particle_in%i_elm > 0) then
+      x = x_in(i)
+      
+      ! Not test if main x is in grid yet in order for particles outside the considered grid to
+      ! contribute with their support (i.e. considering R=9.5-10.0, particle at 9.45 with 0.1 
+      ! bandwidth will still contribute slightly)
+
+      ! Calculate minimum index (will be < 0 if particle outside of grid, but will be tested later)
+      ! Correct for even/uneven support
+      if (mod(this%support(i),2).eq. 0 ) then 
+        main_ind=nint((x-minx)/dx)+1
+        min_ind = main_ind - (this%support(i)-1)/2-1
+      else 
+        main_ind=ceiling((x-minx)/dx)+1
+        min_ind = main_ind - this%support(i)/2-1
+      endif
+      
+      !Now, we add all the grid points in the particles shape into the grids
+      do j=1,this%support(i)
+        ! Only calculate weight if it makes sense wrt the grid
+        if(min_ind+j>0 .and. min_ind+j < this%res(i)+1) then
+          
+          ! Distance w.r.t particle centre.
+          distance=abs((x-this%grids(this%previndex(i)+min_ind+j))/this%bandwidths(i)*2.d0)
+    
+          if (distance > 1.d0) then 
+            supp_weight(j+this%prevsupp(i))=0.d0
+          else
+
+            ! This is the kernel, i.e. https://en.wikipedia.org/wiki/Kernel_(statistics)
+            ! but we can only use finite support ones naturally (i.e. no Gaussian)
+
+            !Epachnikov
+            !supp_weight(j+this%prevsupp(i))=3.d0/4.d0*(1-distance**2)
+
+            !Triweight (preffered by me due to C1 continuity)
+            supp_weight(j+this%prevsupp(i))=35.d0/32.d0*(1-distance**2)**3
+
+          endif ! distance < 1.0
+
+          index_supp(j+this%prevsupp(i))=min_ind+j
+          
+        endif ! min_ind+j > 0 && min_ind+j < this%res(i)+1
+      enddo !support points
+
+      
+    endif ! particle elm > 0
+    
+  enddo   ! ndim
+  ! At this point we have the same situation as outputting grids (1D supports and values). For every point in totsupport we have to find 
+  ! the indices in the main value array.
+  do i=1,this%totsupport
+    
+    !Calculate meshgrid indices
+    mesh_tmp=i-1
+    
+    do j=1,this%ndim
+      
+      ind_mesh_tmp(j)=floor(real(mesh_tmp)/real(this%multsupp(j)))+1
+      mesh_tmp= modulo(mesh_tmp, this%multsupp(j)) !Remainder after subtracting first stride.
+      
+    enddo
+    val_phase_grids_tmp=1.d0
+
+    do j=1,this%ndim
+        
+       indices_phase_grids_tmp(j)=index_supp(ind_mesh_tmp(j)+this%prevsupp(j)) 
+       ! Scale the values by 1/bandwidth to be able to compare units w/ different bandwidths in each dimension
+       val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(ind_mesh_tmp(j)+this%prevsupp(j))*1/this%bandwidths(j) 
+       
+    enddo
+    
+    ! Again, if any index of the grids of this specific support point is less than 0, the particle is not considered.
+    if (minval(indices_phase_grids_tmp)> 0) then
+      index_val(i)=calc_index_phase_proj(this,indices_phase_grids_tmp)
+      
+      val_val(i)=val_phase_grids_tmp
+      
+    endif
+  enddo ! support points
+
+
+end subroutine calc_index_shaped_part_x
+
 
 ! Nearest neighbour projection of whole particle sim
 subroutine project_linear(sim,this,index_arr,weight_arr,val_arr)

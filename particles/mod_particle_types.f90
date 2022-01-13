@@ -436,6 +436,8 @@ contains
   !> inputs:
   !>   n_particles:   (integer) number of particles
   !>   particle_list: (particle_base)(n_particles) particle list
+  !>   n_particles_per_tile_in: (integer)(optional) number of
+  !>                            particles per tile
   !> outputs:
   !>   n_active_particles: (integer) number of active particles
   !>   active_particle_id: (integer)(n_particles) active particle indices
@@ -489,76 +491,70 @@ contains
   !> and index of acitve particles withing a list
   !> active particles are particles having i_elm>0
   !> openmp enabled version.
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> TODO: for improving load balance split the particle 
-  !> in multiple sub-arrays called tiles and execute a 
-  !> omp parallel do on the number of tiles instead of
-  !> just splitting the array in a number of arrays equal
-  !> to the number of threads. In this way the load is more
-  !> balanced among threads
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> Note: the proposed openmp version is suboptimal and
   !>       hence, it must be improved in future
   !> inputs:
   !>   n_particles:   (integer) number of particles
   !>   particle_list: (particle_base)(n_particles) particle list
+  !>   n_particles_per_tile_in: (integer)(optional) number of
+  !>                            particles per tile (default: 25)
   !> outputs:
   !>   n_active_particles: (integer) number of active particles
   !>   active_particle_id: (integer)(n_particles) active particle indices
   subroutine find_active_particle_id_openmp(n_particles,particle_list,&
   n_active_particles,active_particle_id)
+    use mod_particle_parameters, only: n_particles_per_tile
     !$ use omp_lib
     implicit none
     !> inputs
-    integer,intent(in) :: n_particles
+    integer,intent(in)          :: n_particles
     class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
     !> outputs
     integer,intent(out) :: n_active_particles
     integer,dimension(n_particles),intent(out) :: active_particle_id
     !> variables
-    integer :: ii,jj,start_id
-    integer :: thread_id,max_num_thread,thread_num,n_particles_thread,thread_num_out
-    integer,dimension(:),allocatable :: n_active_particle_thread
-    integer,dimension(:,:),allocatable :: particle_id_thread
-    max_num_thread = 1
-    !> allocate thread private arrays
-    !$ max_num_thread = omp_get_max_threads()
-    allocate(n_active_particle_thread(max_num_thread)); 
-   !> assume heuristically that the actual number of particles per thread is not
-   !> larger than 25% of the number of particles per thread computed using max_num_thread
-    allocate(particle_id_thread(floor(1.25d0*real(n_particles/&
-    max_num_thread,kind=8))+1,max_num_thread));
-    n_active_particles = 0; active_particle_id = 0;
-    n_active_particle_thread = 0
+    integer :: ii,jj,n_tiles
+    integer,dimension(:),allocatable :: start_id,end_id,n_active_particle_tile
+    integer,dimension(:,:),allocatable :: particle_id_tile
+
+     !> initialisation
+     n_active_particles=0; active_particle_id=0;
+     !> compute the number of tiles given an expected number of tiles
+     n_tiles = 1+(n_particles/n_particles_per_tile)
+     !> allocate arrays and initialise them if needed
+     allocate(start_id(n_tiles)); allocate(end_id(n_tiles));
+     allocate(n_active_particle_tile(n_tiles)); n_active_particle_tile=0;
+     allocate(particle_id_tile(n_particles_per_tile,n_tiles)); particle_id_tile=0;
+     !> compute start and end id
+     !$omp parallel do default(shared) firstprivate(n_tiles) private(ii)
+     do ii=1,n_tiles
+       start_id(ii) = n_particles_per_tile*(ii-1)+1
+       end_id(ii) = ii*n_particles_per_tile
+     enddo
+     !$omp end parallel do
+     end_id(n_tiles) = n_particles
 
     !> find active particles and store their index for each thread
-    !$omp parallel default(private) shared(n_particles,particle_list,&
-    !$omp n_active_particle_thread,particle_id_thread,thread_num_out)
-    thread_id = 1; thread_num = 1;
-    !$ thread_id = omp_get_thread_num() + 1
-    !$ thread_num = omp_get_num_threads()
-    n_particles_thread = n_particles/thread_num
-    start_id = n_particles_thread*(thread_id-1)
-    if(thread_id.eq.thread_num) n_particles_thread = n_particles - n_particles_thread*(thread_num-1)
-    !$omp master
-    thread_num_out = thread_num !< use additional variable because lastprivate not supported
-    !$omp end master
-    do ii=start_id+1,start_id+n_particles_thread
-      if(particle_list(ii)%i_elm.lt.1) cycle !< skip invalid particle
-      n_active_particle_thread(thread_id) = n_active_particle_thread(thread_id) + 1
-      particle_id_thread(n_active_particle_thread(thread_id),thread_id) = ii
+    !$omp parallel do default(shared) firstprivate(n_tiles) &
+    !$omp private(ii,jj) schedule(dynamic)
+    do ii=1,n_tiles
+      do jj=start_id(ii),end_id(ii)
+        if(particle_list(jj)%i_elm.lt.1) cycle !< skip invalid particle
+        n_active_particle_tile(ii) = n_active_particle_tile(ii) + 1
+        particle_id_tile(n_active_particle_tile(ii),ii) = jj
+      enddo
     enddo
-    !$omp end parallel
+    !$omp end parallel do
     !> assemble the particle id array
-    do ii=1,thread_num_out
-      active_particle_id(n_active_particles+1:n_active_particles+n_active_particle_thread(ii)) = &
-      particle_id_thread(1:n_active_particle_thread(ii),ii)
-      n_active_particles = n_active_particles + n_active_particle_thread(ii)
+    do ii=1,n_tiles
+      active_particle_id(n_active_particles+1:n_active_particles+n_active_particle_tile(ii)) = &
+      particle_id_tile(1:n_active_particle_tile(ii),ii)
+      n_active_particles = n_active_particles + n_active_particle_tile(ii)
     enddo
 
     !> cleanup
-    deallocate(n_active_particle_thread)
-    deallocate(particle_id_thread)
+    deallocate(start_id); deallocate(end_id);
+    deallocate(n_active_particle_tile); deallocate(particle_id_tile);
   end subroutine find_active_particle_id_openmp
 
 end module mod_particle_types

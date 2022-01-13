@@ -27,9 +27,12 @@ integer,parameter                           :: n_particles_max=maxval(n_particle
 real*8,parameter                            :: survival_threshold=0.33
 !> parameters for generating spectra
 integer,parameter                           :: n_spectra=2
-integer,parameter                           :: n_lines_per_spectrum=53
+integer,parameter                           :: n_lines_per_spectrum=13
 real*8,dimension(n_spectra),parameter       :: min_wlen=(/3.0d-6,2.5d-7/)
 real*8,dimension(n_spectra),parameter       :: max_wlen=(/3.5d-6,4.2d-7/)
+!> parameters for generating shadowed points
+integer,parameter                           :: n_shadowed_per_particle=7
+real*8,dimension(2),parameter               :: length_shadowed=(/2.d-1,7.d0/)
 !> variables for generating synchrotron lights
 type(synchrotron_light_vertices)            :: vertex_sol
 type(particle_sim),dimension(n_times_sol)   :: sims_particles
@@ -42,6 +45,8 @@ real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol) :: x_cart_sol
 real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: properties_sol
 !> variables for generating spectra
 type(spectrum_rng_uniform)                  :: spectrum
+!> variables for generating shadowed points
+real*8,dimension(:,:,:,:),allocatable       :: x_shadowed
 
 !> Interfaces --------------------------------------------------------
 contains
@@ -114,12 +119,17 @@ subroutine setup()
 
   !> initialise monte-carlo spectra
   spectrum = spectrum_rng_uniform(n_lines_per_spectrum,n_spectra,min_wlen,max_wlen)
+
+  !> generate shadowed points positions
+  allocate(x_shadowed(n_x,n_shadowed_per_particle,n_particles_RE_max,n_times_sol))
+  call compute_x_shadowed_particles() 
 end subroutine setup
 
 !> destroy all test features
 subroutine teardown()
   implicit none
   call vertex_sol%deallocate_vertices; call spectrum%deallocate_spectrum;
+  deallocate(x_shadowed);
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
@@ -233,6 +243,35 @@ subroutine test_compute_synchrotron_light_properties()
 end subroutine test_compute_synchrotron_light_properties
 
 !> Tools -------------------------------------------------------------
+!> compute the positions of points shadowed by particle lights.
+!> The shadowed positions are taken within the synchrotron emission
+!> cone of each relativistic particle. It is assumed that 
+!> the half cone of radiation emission is 1/(2.0*gamma) 
+!> gamma = sqrt(1+(p/m*c)**2) = relativistic factor
+subroutine compute_x_shadowed_particles()
+  use mod_gnu_rng,  only: gnu_rng_interval
+  use mod_sampling, only: sample_uniform_cone
+  implicit none
+  !> variables 
+  integer             :: ii,jj,kk,n_particles_time
+  real*8              :: cos_half_angle
+  real*8,dimension(3) :: p_dir,x_part,rng
+  !> generate shadowed particle positions
+  do kk=1,n_times_sol
+    n_particles_time = sum(n_active_particles_sol(:,kk))
+    do jj=1,n_particles_time
+      x_part = x_cart_sol(:,jj,kk)
+      p_dir = properties_sol(1:3,jj,kk)
+      cos_half_angle = cos(1.d0/(2.d0*properties_sol(11,jj,kk)))
+      do ii=1,n_shadowed_per_particle
+        call random_number(rng)
+        x_shadowed(:,ii,jj,kk) = sample_uniform_cone(cos_half_angle,&
+        rng,p_dir,x_part,length_shadowed)
+      enddo
+    enddo
+  enddo 
+end subroutine compute_x_shadowed_particles
+
 !> compute and fill particle positions and properties for RE
 subroutine compute_synch_x_properties_ana()
   use mod_coordinate_transforms, only: cylindrical_to_cartesian

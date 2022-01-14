@@ -112,6 +112,12 @@ end subroutine init_synchrotron_lights_from_particles
 !> synchrotron_directionality_funct computes the directionaliy function
 !> for synchrotron lights which is the full angular-spectral distribution
 !> divided by the total synchrotron radiation (L. Carbajal, PPCF, 2017)
+!> !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> WARNING: the current implementation is prone to roundoff
+!> error due to large differences in the terms exponents 
+!> TODO: find a more performant normalisation for the 
+!> TODO: full spectral-angular power distribution
+!> !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> inputs:
 !>   light_vert: (synchrotron_light vertices) synchrotron light sources
 !>   spectra:     (spectrum_base) spectral intervals and integrators
@@ -127,7 +133,7 @@ end subroutine init_synchrotron_lights_from_particles
 subroutine synchrotron_directionality_funct(light_vert,spectra,time_id,&
 light_id,x_shaded,light_dstb)
   use mod_vertices,             only: n_x
-  use constants,                only: PI,SPEED_OF_LIGHT
+  use constants,                only: TWOPI,SPEED_OF_LIGHT
   use mod_boost_besselk,        only: f_besselk
   use mod_coordinate_transforms,only: cartesian_to_spherical_latitude
   use mod_spectra,              only: spectrum_base
@@ -151,27 +157,27 @@ light_id,x_shaded,light_dstb)
   rpsichi = cartesian_to_spherical_latitude(x_shaded,light_vert%x(:,light_id,time_id),&
   light_properties(1:3),light_properties(4:6),light_properties(7:9))
   !> compute the factors and the value of z
-  one_over_gamma = 1.d0/light_properties(11) !< 1/gamma
+  one_over_gamma = 1.d0/(light_properties(11)*light_properties(11)) !< 1/gamma
   factor_2 = light_properties(11)*light_properties(11)*rpsichi(2)*rpsichi(2) !< gamma**2 * psi**2
   factor_1 = 1.d0+factor_2 !< 1 + gamma**2 * psi**2
   factor_2 = factor_2/factor_1 !< (gamma**2 * psi**2) / (1 + gamma**2 * psi**2)
   !> z = gamma*chi / sqrt(1 + gamma**2 * psi**2)
   z_value = (light_properties(11)*rpsichi(3))/sqrt(factor_1) !< chi*gamma/sqrt(1+gamma**2 * psi**2)
-  z_cos = 1.5d0*z_value*(1.d0+z_value*z_value/3.d0) !< z_cos = (3/2)*z*(1 + (z**2)/3)
+  z_cos = 1.5d0*z_value*(1.d0+((z_value*z_value)/3.d0)) !< z_cos = (3/2)*z*(1 + (z**2)/3)
   z2_value = 5.d-1*(1.d0+z_value*z_value) !< z = 0.5*(1+z**2)
   !> I = Power*( 1 + gamma**2 * psi**2)**2 / Power_tot = 
   !> (6*PI / (sqrt(3)) * beta**4 * gamma**8 * kappa**3 )*( 1 + gamma**2 * psi**2)**2
   !> beta = v/c; kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
-  !> Power_tot = (q**2/(6*PI*eps0*c**3))*gamma**4 * v**4 * kappa**2
-  factor_1 = factor_1*factor_1*((6.d0*PI)/(sqrt3*(light_properties(10)**4.d0)*&
+  !> Power_tot = (q**2/(6*PI*eps0i*c**3))*gamma**4 * v**4 * kappa**2
+  factor_1 = factor_1*factor_1*((3.d0*TWOPI)/(sqrt3*(light_properties(10)**4.d0)*&
   (light_properties(11)**8.d0)*(light_properties(12)**3.d0)))
   !$omp parallel do default(shared) private(ii,jj,zeta) &
   !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&
-  !$omp factor_2,z_value,factor_1) collapse(2)
+  !$omp factor_2,z_value,z2_value,factor_1) collapse(2)
   do ii=1,spectra%n_spectra
     do jj=1,spectra%n_points
       !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
-      zeta = 2.d0*PI*((one_over_gamma*one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
+      zeta = TWOPI*((one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
       (3.d0*spectra%points(jj,ii)*light_properties(12))
       !> funct = I*(K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
       !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos))/lambda**4

@@ -487,6 +487,7 @@ contains
        active_particle_id(n_active_particles) = ii
     enddo
   end subroutine find_active_particle_id_seq
+
   !> find_active_particle_id_openmp returns the number 
   !> and index of acitve particles withing a list
   !> active particles are particles having i_elm>0

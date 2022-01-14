@@ -133,38 +133,37 @@ subroutine generate_uniform_rng_spectrum(spectrum,rngs)
   class(spectrum_rng_uniform),intent(inout)   :: spectrum
   class(type_rng),dimension(:),allocatable,intent(inout) :: rngs
   !> variables
-  integer :: ii,n_threads,n_points_per_thread,n_residual,thread_id
+  integer :: n_points_per_tile=25
+  integer :: ii,jj,n_tiles,n_residual,thread_id
   real*8,dimension(:),allocatable :: rands
   !> generate spectrum from uniform random number distribution
-  thread_id = 0
-  n_threads = 1
-  !
-  !$omp parallel default(private) shared(spectrum,rngs,n_residual) &
-  !$omp firstprivate(n_threads)
-  !$ thread_id = omp_get_thread_num()
-  !$ n_threads = omp_get_num_threads()
-  n_points_per_thread = spectrum%n_points/n_threads
-  n_residual = spectrum%n_points-n_points_per_thread*n_threads
-  allocate(rands(n_points_per_thread))
+  thread_id = 1
+  n_tiles = int(spectrum%n_points/n_points_per_tile)
+  allocate(rands(n_points_per_tile)); rands=0.d0;
+  !$omp parallel default(private) shared(spectrum,rngs) &
+  !$omp firstprivate(n_tiles,n_points_per_tile)
+  !$ thread_id = omp_get_thread_num()+1
+  !$omp do collapse(2)
   do ii=1,spectrum%n_spectra
-    call rngs(thread_id+1)%next(rands)
-    spectrum%points(thread_id*n_points_per_thread+1:&
-    (thread_id+1)*n_points_per_thread,ii) = spectrum%min_wlen(ii) + &
-    spectrum%i_pdf(ii)*rands
+    do jj=1,n_tiles
+      call rngs(thread_id)%next(rands)
+      spectrum%points((jj-1)*n_points_per_tile+1:&
+      jj*n_points_per_tile,ii) = spectrum%min_wlen(ii) + &
+      spectrum%i_pdf(ii)*rands
+    enddo
   enddo
-  deallocate(rands)
+  !$omp end do
   !$omp end parallel
-  if(n_residual.gt.0) then
-    allocate(rands(n_points_per_thread))
-    call rngs(thread_id+1)%next(rands)
+  n_residual = spectrum%n_points-n_tiles*n_points_per_tile
+  if(n_residual.gt.0.d0) then
     do ii=1,spectrum%n_spectra
-      spectrum%points(spectrum%n_points-n_residual+1:spectrum%n_points,ii) = &
+      call rngs(ii)%next(rands(1:n_residual))
+      spectrum%points(n_tiles*n_points_per_tile+1:spectrum%n_points,ii) = &
       spectrum%min_wlen(ii) + spectrum%i_pdf(ii)*rands(1:n_residual)
     enddo
-    deallocate(rands)
   endif
-  
-end subroutine generate_uniform_rng_spectrum
+  deallocate(rands)
+  end subroutine generate_uniform_rng_spectrum
 
 !> integrate data computed using uniformly distributed spectra
 !> inputs:

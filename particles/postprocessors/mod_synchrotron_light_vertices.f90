@@ -144,7 +144,7 @@ light_id,x_shaded,light_dstb)
   real*8,dimension(n_x) :: rpsichi !< spherical coordinates
   integer :: ii,jj
   real*8,dimension(light_vert%n_property_vertex) :: light_properties
-  real*8  :: zeta,one_over_gamma,z_value,factor_1,factor_2,z_cos
+  real*8  :: zeta,one_over_gamma,z_value,z2_value,factor_1,factor_2,z_cos
 
   !> compute the spherical coordinates of the light-point ray
   light_properties = light_vert%properties(:,light_id,time_id)
@@ -156,9 +156,9 @@ light_id,x_shaded,light_dstb)
   factor_1 = 1.d0+factor_2 !< 1 + gamma**2 * psi**2
   factor_2 = factor_2/factor_1 !< (gamma**2 * psi**2) / (1 + gamma**2 * psi**2)
   !> z = gamma*chi / sqrt(1 + gamma**2 * psi**2)
-  z_value = (light_properties(11)*rpsichi(3))/sqrt(factor_1) 
+  z_value = (light_properties(11)*rpsichi(3))/sqrt(factor_1) !< chi*gamma/sqrt(1+gamma**2 * psi**2)
   z_cos = 1.5d0*z_value*(1.d0+z_value*z_value/3.d0) !< z_cos = (3/2)*z*(1 + (z**2)/3)
-  z_value = 5.d-1**(1.d0+z_value*z_value) !< z = 0.5*(1+z**2)
+  z2_value = 5.d-1*(1.d0+z_value*z_value) !< z = 0.5*(1+z**2)
   !> I = Power*( 1 + gamma**2 * psi**2)**2 / Power_tot = 
   !> (6*PI / (sqrt(3)) * beta**4 * gamma**8 * kappa**3 )*( 1 + gamma**2 * psi**2)**2
   !> beta = v/c; kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
@@ -175,8 +175,8 @@ light_id,x_shaded,light_dstb)
       (3.d0*spectra%points(jj,ii)*light_properties(12))
       !> funct = K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
       !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos)
-      light_dstb(jj,ii) = f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z_value)+&
-      f_besselk(twothirds,zeta)*sin(zeta*z_cos)
+      light_dstb(jj,ii) = f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z2_value)+&
+      f_besselk(twothirds,zeta)*z_value*sin(zeta*z_cos)
       !> SAD/P_tot = I*funct/lambda**4
       light_dstb(jj,ii) = factor_1*light_dstb(jj,ii)/&
       (spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii))

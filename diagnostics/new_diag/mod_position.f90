@@ -216,10 +216,12 @@ module mod_position
     ! --- Local variables
     type(t_theta_mapping) :: mapping
     type(t_pol_pos), pointer :: pos
+    type(type_node)          :: node
     real*8  :: R_out, Z_out, hh, gx, gy, gg, ax, ay, full_length
-    integer :: i, j, k, nsub_loc, inode
+    real*8  :: s_tmp, t_tmp, xjac
+    integer :: i, j, k, nsub_loc, inode, iv
     real*8, allocatable :: surface(:) !< Poloidal surface inside flux surface (for r_minor)
-    
+   
     ierr = 0
     
     ! --- Single position given by R and Z.
@@ -246,8 +248,8 @@ module mod_position
     ! --- Subdivde the grid into several points
     else if ( present(grid) .and. present(nsub) ) then
 
-      if (nsub < 1) then
-        write(*,*) 'FATAL error: nsub must be bigger than 0 '
+      if (nsub < 2) then
+        write(*,*) 'FATAL error: nsub must be bigger than 1 '
         stop
       endif
 
@@ -255,20 +257,45 @@ module mod_position
       call alloc_pol_pos( pos_list, (/element_list%n_elements*nsub*nsub, 1 /) )
 
       inode = 0
-     
+
       do i=1, element_list%n_elements
+
         do j=1, nsub
           do k=1, nsub
             inode    = inode + 1
             pos      => pos_list%pos(inode, 1)
             pos%ielm = i
-            pos%s    = float(j-1)/float(nsub-1)  
-            pos%t    = float(k-1)/float(nsub-1) 
+            s_tmp    = float(j-1)/float(nsub-1)
+            t_tmp    = float(k-1)/float(nsub-1)
+            call interp_RZ(node_list, element_list, i, s_tmp, t_tmp, pos%R, pos%R_s, pos%R_t, pos%Z, pos%Z_s, pos%Z_t)
+
+            xjac     = pos%R_s*pos%Z_t - pos%R_t*pos%Z_s
+
+            ! ---Avoids locations with vanishing jacobian
+            if (abs(xjac) < 1.d-8) then
+              if( (pos%R_s**2 + pos%Z_s**2) < (pos%R_t**2 + pos%Z_t**2) ) then
+                if (k==1) then
+                  t_tmp = t_tmp + 0.5/float(nsub-1)
+                else
+                  t_tmp = t_tmp - 0.5/float(nsub-1)
+                endif
+              else
+                if (j==1) then
+                  s_tmp = s_tmp + 0.5/float(nsub-1)
+                else
+                  s_tmp = s_tmp - 0.5/float(nsub-1)
+                endif
+              endif
+            endif
+
+            pos%s    = s_tmp
+            pos%t    = t_tmp
             call fill_pol_pos(pos, node_list, element_list)
-         enddo
+          enddo
         enddo
+
       enddo
-      
+     
     ! --- Rectangular array of positions in R and Z.
     else if ( present(Rmin) .and. present(Rmax) .and. present(nR) .and. present(Zmin) .and.        &
       present(Zmax) .and. present(nZ) ) then

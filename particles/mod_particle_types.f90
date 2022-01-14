@@ -190,8 +190,8 @@ contains
     particle_out%st       = particle_in%st
     particle_out%weight   = particle_in%weight
     particle_out%i_elm    = particle_in%i_elm
-    particle_out%i_life   = particle_in%i_life  !< to be checked
-    particle_out%t_birth  = particle_in%t_birth !< to be checked
+    particle_out%i_life   = particle_in%i_life
+    particle_out%t_birth  = particle_in%t_birth
 
     select type (p_out => particle_out)
     type is (particle_fieldline)

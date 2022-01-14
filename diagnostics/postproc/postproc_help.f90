@@ -568,7 +568,7 @@ module postproc_help
         write(*,*) 'If the equation index is not provided, the terms of all equations are plotted'
         write(*,*) 'Use nsub_vtk to select the number of element subdivisions for the vtks'
         write(*,*) 'Use vtk_phi_value to select the toroidal angle at which the vtk is computed'
-        write(*,*) 'Use only_itor to select a single harmonic (all included in not specified'
+        write(*,*) 'Use only_itor to select a single harmonic (all included if not specified)'
         write(*,*) ''
         write(*,*) ' IMPORTANT: This command needs to be run with MPI!'
         write(*,*) '            you cant run interactively, use a similar script to the example'

@@ -60,6 +60,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   call test_compute_synchrotron_light_properties
   call test_fill_synchrotron_lights_from_particles
   call test_init_synchrotron_lights_from_particles
+  call test_synchrotron_irradiance_directional_func
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_synchrotron_light_vertices
@@ -133,13 +134,53 @@ subroutine teardown()
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> test the synchrotron light irradiance and directional functions
+subroutine test_synchrotron_irradiance_directional_func()
+  use mod_assert_equals_tools, only: assert_equals_rel_error
+  implicit none
+  !> variables
+  integer :: ii,jj,kk,pp
+  integer,dimension(n_times_sol) :: n_particles_time
+  real*8,dimension(n_x,n_particles_RE_max,n_times_sol)          :: x_cart_loc
+  real*8,dimension(n_properties,n_particles_RE_max,n_times_sol) :: properties_loc
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra)        :: dir_fun,irradiance
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra)        :: dir_fun_sol,irradiance_sol
+  !> initialise the synchrotron lights (for safety)
+   x_cart_loc = 0.d0; properties_loc = 0.d0; n_particles_time = 0;
+   do ii=1,n_times_sol
+    n_particles_time(ii) = sum(n_active_particles_sol(:,ii))
+    x_cart_loc(:,1:n_particles_time(ii),ii) = x_cart_sol(:,1:n_particles_time(ii),ii)
+    properties_loc(:,1:n_particles_time(ii),ii) = properties_sol(:,1:n_particles_time(ii),ii)   
+  enddo 
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
+
+  !> compute the irradiance and directionality function
+  do kk=1,n_times_sol
+    do jj=1,n_particles_time(kk)
+      do ii=1,n_shadowed_per_particle
+        call compute_synch_directionality_irradiance(x_shadowed(:,ii,jj,kk),&
+        x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol,irradiance_sol)
+        call vertex_sol%directionality_funct(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),dir_fun)
+        call vertex_sol%spectral_irradiance(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),irradiance)
+        !> check the solution via relative error
+        call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+        dir_fun,dir_fun_sol,tol_real8,&
+        "Error synchrotron directionality function: directionality function mismatch!")
+        call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+        irradiance,irradiance_sol,tol_real8,&
+        "Error synchrotron irradiance: irradiance mismatch!")
+      enddo
+    enddo
+  enddo
+end subroutine test_synchrotron_irradiance_directional_func
+
 !> test the initialisation of synchrotron lights from particles
 subroutine test_init_synchrotron_lights_from_particles()
   use mod_assert_equals_tools, only: assert_equals_rel_error
   implicit none
   !> variables
   integer,parameter                                             :: n_sync_fail=1
-  integer :: ii,n_particles_time
+  integer                                                       :: ii,n_particles_time
   real*8,dimension(n_x,n_particles_RE_max,n_times_sol)          :: x_cart_loc
   real*8,dimension(n_properties,n_particles_RE_max,n_times_sol) :: properties_loc
   !> test light structure initialisation with given size
@@ -301,14 +342,14 @@ subroutine compute_synch_x_properties_ana()
 end subroutine compute_synch_x_properties_ana
 
 !> compute the synchrotron lights directionaly function and irradiance
-subroutine compute_synch_directionality_irradiance(x_shadowed,&
+subroutine compute_synch_directionality_irradiance(x_illum,&
 x_light,property,dir_func,irradiance)
   use constants,                 only: PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
   use mod_boost_besselk,         only: besselk
   use mod_coordinate_transforms, only: cartesian_to_spherical_latitude
   implicit none
   !> inputs
-  real*8,dimension(n_x),intent(in)          :: x_shadowed,x_light
+  real*8,dimension(n_x),intent(in)          :: x_illum,x_light
   real*8,dimension(n_properties),intent(in) :: property
   !> outputs
   real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(out) :: dir_func,irradiance
@@ -321,7 +362,7 @@ x_light,property,dir_func,irradiance)
   real*8,dimension(n_x) :: rpsichi
 
   !> compute the spherical coordinate variables
-  rpsichi = cartesian_to_spherical_latitude(x_shadowed,x_light,&
+  rpsichi = cartesian_to_spherical_latitude(x_illum,x_light,&
   property(1:3),property(4:6),property(7:9))
   !> compute the particle dependent variables
   z = (property(11)*rpsichi(3))/sqrt(1.d0+(property(11)*rpsichi(2))**2.d0)
@@ -330,6 +371,8 @@ x_light,property,dir_func,irradiance)
   factor = (1.d0+(property(11)*rpsichi(2))**2.d0)**2.d0
   factor = (factor*SPEED_OF_LIGHT*(EL_CHG**2.d0))/&
            (sqrt(3.d0)*EPS_ZERO*property(12)*(property(11)**4.d0))
+  !> compute the irradiance
+  !> compute the directionaly function
   do ii=1,spectrum%n_spectra
     do jj=1,spectrum%n_points
       zeta = 2.d0*PI*(((1.d0/property(11)**2.d0)+rpsichi(2)**2.d0)**1.5d0)/&
@@ -337,12 +380,10 @@ x_light,property,dir_func,irradiance)
       call besselk(onethird,zeta,besselk13)
       call besselk(twothird,zeta,besselk23)
       irradiance(jj,ii) = factor*((factor_2-one_z2)*besselk13*cos(zeta*z_z3)+&
-      besselk23*z*sin(zeta*z_z3))/(spectrum%points(jj,11)**4.d0)
+      besselk23*z*sin(zeta*z_z3))/(spectrum%points(jj,ii)**4.d0)
       dir_func(jj,ii) = irradiance(jj,ii)/property(13)
     enddo
   enddo
-  !> compute the irradiance
-  !> compute the directionaly function
 end subroutine compute_synch_directionality_irradiance
 
 !> compute synchrotron electron properties using the analytical

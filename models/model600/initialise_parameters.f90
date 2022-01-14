@@ -185,7 +185,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs,                          &
                 min_sheath_angle, bcs,                              &
-                add_sources_in_sc, visco_sc_num,                    &
+                use_sc, add_sources_in_sc, visco_sc_num,            &
                 D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
                 ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&

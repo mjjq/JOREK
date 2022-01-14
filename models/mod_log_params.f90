@@ -480,6 +480,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
 
+  write(*,LOGI_FMT) 'use_sc                ', use_sc
   write(*,REAL_FMT) 'visco_sc_num          ', visco_sc_num
   write(*,REAL_FMT) 'D_perp_sc_num         ', D_perp_sc_num
   write(*,REAL_FMT) 'D_par_sc_num          ', D_par_sc_num

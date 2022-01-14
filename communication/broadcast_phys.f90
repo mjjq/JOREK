@@ -160,6 +160,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(ZK_i_perp_num,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ZK_e_perp_num,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+  call MPI_PACK(use_sc,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(visco_sc_num,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(D_perp_sc_num,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(D_par_sc_num,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -883,6 +884,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,ZK_i_perp_num,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ZK_e_perp_num,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
+  call MPI_UNPACK(buffer,bufsize,position,use_sc,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,visco_sc_num,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,D_perp_sc_num,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,D_par_sc_num,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)

@@ -496,14 +496,11 @@ contains
   !> inputs:
   !>   n_particles:   (integer) number of particles
   !>   particle_list: (particle_base)(n_particles) particle list
-  !>   n_particles_per_tile_in: (integer)(optional) number of
-  !>                            particles per tile (default: 25)
   !> outputs:
   !>   n_active_particles: (integer) number of active particles
-  !>   active_particle_id: (integer)(n_particles) active particle indices
+  !>   active_particle_ids: (integer)(n_particles) active particle indices
   subroutine find_active_particle_id_openmp(n_particles,particle_list,&
-  n_active_particles,active_particle_id)
-    use mod_particle_parameters, only: n_particles_per_tile
+  n_active_particles,active_particle_ids)
     !$ use omp_lib
     implicit none
     !> inputs
@@ -511,50 +508,49 @@ contains
     class(particle_base),dimension(:),allocatable,intent(in) :: particle_list
     !> outputs
     integer,intent(out) :: n_active_particles
-    integer,dimension(n_particles),intent(out) :: active_particle_id
+    integer,dimension(n_particles),intent(out) :: active_particle_ids
     !> variables
     integer :: ii,jj,n_tiles
-    integer,dimension(:),allocatable :: start_id,end_id,n_active_particle_tile
-    integer,dimension(:,:),allocatable :: particle_id_tile
+    integer :: n_particles_per_tile=25
+    integer,dimension(:),allocatable :: n_active_particles_tile
+    integer,dimension(:,:),allocatable :: particle_ids_tile
 
      !> initialisation
-     n_active_particles=0; active_particle_id=0;
+     n_active_particles=0; active_particle_ids=0;
      !> compute the number of tiles given an expected number of tiles
      n_tiles = 1+(n_particles/n_particles_per_tile)
      !> allocate arrays and initialise them if needed
-     allocate(start_id(n_tiles)); allocate(end_id(n_tiles));
-     allocate(n_active_particle_tile(n_tiles)); n_active_particle_tile=0;
-     allocate(particle_id_tile(n_particles_per_tile,n_tiles)); particle_id_tile=0;
-     !> compute start and end id
-     !$omp parallel do default(shared) firstprivate(n_tiles) private(ii)
-     do ii=1,n_tiles
-       start_id(ii) = n_particles_per_tile*(ii-1)+1
-       end_id(ii) = ii*n_particles_per_tile
-     enddo
-     !$omp end parallel do
-     end_id(n_tiles) = n_particles
+     !allocate(start_id(n_tiles)); allocate(end_id(n_tiles));
+     allocate(n_active_particles_tile(n_tiles)); n_active_particles_tile=0;
+     allocate(particle_ids_tile(n_particles_per_tile,n_tiles)); particle_ids_tile=0;
 
     !> find active particles and store their index for each thread
-    !$omp parallel do default(shared) firstprivate(n_tiles) &
-    !$omp private(ii,jj) schedule(dynamic)
-    do ii=1,n_tiles
-      do jj=start_id(ii),end_id(ii)
+    !$omp parallel do default(private) firstprivate(n_tiles,n_particles_per_tile) &
+    !$omp shared(particle_list,n_active_particles_tile,particle_ids_tile) &
+    !$omp schedule(dynamic)
+    do ii=1,n_tiles-1
+      do jj=n_particles_per_tile*(ii-1)+1,n_particles_per_tile*ii
         if(particle_list(jj)%i_elm.lt.1) cycle !< skip invalid particle
-        n_active_particle_tile(ii) = n_active_particle_tile(ii) + 1
-        particle_id_tile(n_active_particle_tile(ii),ii) = jj
+        n_active_particles_tile(ii) = n_active_particles_tile(ii) + 1
+        particle_ids_tile(n_active_particles_tile(ii),ii) = jj
       enddo
     enddo
     !$omp end parallel do
+    !> do remaining particles
+    do jj=n_particles_per_tile*n_tiles,n_particles
+      if(particle_list(jj)%i_elm.lt.1) cycle !< skip invalid particle
+      n_active_particles_tile(n_tiles) = n_active_particles_tile(n_tiles) + 1
+      particle_ids_tile(n_active_particles_tile(n_tiles),n_tiles) = jj
+    enddo
     !> assemble the particle id array
     do ii=1,n_tiles
-      active_particle_id(n_active_particles+1:n_active_particles+n_active_particle_tile(ii)) = &
-      particle_id_tile(1:n_active_particle_tile(ii),ii)
-      n_active_particles = n_active_particles + n_active_particle_tile(ii)
+      active_particle_ids(n_active_particles+1:n_active_particles+n_active_particles_tile(ii)) = &
+      particle_ids_tile(1:n_active_particles_tile(ii),ii)
+      n_active_particles = n_active_particles + n_active_particles_tile(ii)
     enddo
 
     !> cleanup
-    deallocate(start_id); deallocate(end_id);
-    deallocate(n_active_particle_tile); deallocate(particle_id_tile);
+    deallocate(n_active_particles_tile); deallocate(particle_ids_tile);
   end subroutine find_active_particle_id_openmp
 
 end module mod_particle_types

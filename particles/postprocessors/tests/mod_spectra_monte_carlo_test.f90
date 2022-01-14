@@ -50,6 +50,7 @@ end subroutine run_fruit_spectra_monte_carlo_test
 !> Set-up and tear-down ------------------------------------------------------
 !> Set-up test variables
 subroutine setup()
+  use mod_common_test_tools, only: omp_initialize_rngs
   use mod_pcg32_rng,  only: pcg32_rng
   !$ use omp_lib
   implicit none
@@ -62,7 +63,7 @@ subroutine setup()
   n_threads = 1
   !$ n_threads = omp_get_max_threads()
   allocate(pcg32_rng::rngs(n_threads))
-  call omp_initialize_rngs(n_points)
+  call omp_initialize_rngs(n_points,n_threads,rngs)
 end subroutine setup
 
 !> clean up all test variables
@@ -248,12 +249,14 @@ end subroutine test_spectrum_generation_rng_uniform
 subroutine test_spectrum_integration_rng_uniform()
   use constants,               only: PI
   use mod_test_functions,      only: sin2x,int_sin2x
+  use mod_common_test_tools,   only: omp_initialize_rngs
   use mod_linear_reg,          only: linear_regression
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
+  !$ use omp_lib
   implicit none
   !> variables
   type(spectrum_rng_uniform)  :: spectrum
-  integer                     :: ii,kk,pp
+  integer                     :: ii,kk,pp,n_threads
   !$ integer                  :: jj
   real*8,dimension(2)         :: std_conv_coeff !< linear regression coeff. of the std deviation
   real*8,dimension(n_spectra) :: integral       !< required for avoiding wrong memory accesses
@@ -264,13 +267,13 @@ subroutine test_spectrum_integration_rng_uniform()
   real*8,dimension(n_spectra,n_convergence) :: int_error     !< integral error
 
   !> initialisation
-  std_dev = 0.d0
-
+  std_dev = 0.d0; n_threads = 1;
+  !$ n_threads = omp_get_max_threads()
   !> loop on the number of convergence points
   do kk=1,n_convergence
     !> initialise structures and grids
     allocate(integrands(n_points_conv(kk),n_spectra))
-    call omp_initialize_rngs(n_points_conv(kk)) !< change the size of the rng output
+    call omp_initialize_rngs(n_points_conv(kk),n_threads,rngs)!< change the size of the rng output
     spectrum = spectrum_rng_uniform(n_points_conv(kk),n_spectra,PI*min_angle,PI*max_angle)
     do pp=1,n_trials
       call spectrum%generate_spectrum(rngs)
@@ -321,29 +324,5 @@ subroutine test_spectrum_integration_rng_uniform()
 end subroutine test_spectrum_integration_rng_uniform
 
 !> Tools ---------------------------------------------------------------------
-!> initialise the random number generators in omp loops
-!> inputs:
-!>   n_points_loc: (integer) number of points for rngs init
-subroutine omp_initialize_rngs(n_points_loc)
-  use mod_random_seed,only: random_seed
-  !$ use omp_lib
-  implicit none
-  !> inputs
-  integer,intent(in) :: n_points_loc
-  !> variables
-  integer :: n_threads,n_points_per_thread,thread_id,ifail
-  !> initialise the rngs using the pcg32
-  n_threads = 1
-  thread_id = 1
-  !$omp parallel default(private) shared(rngs,n_threads,ifail)
-  !$ thread_id = omp_get_thread_num()+1
-  !$ n_threads = omp_get_num_threads()
-  n_points_per_thread = n_points_loc/n_threads
-  call rngs(thread_id)%initialize(n_dims=n_points_per_thread,&
-  seed=random_seed(),n_streams=n_threads,i_stream=thread_id,ierr=ifail)
-  !$omp end parallel 
-end subroutine omp_initialize_rngs
-
 !>----------------------------------------------------------------------------
-
 end module mod_spectra_monte_carlo_test

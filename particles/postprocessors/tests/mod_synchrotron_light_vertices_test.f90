@@ -301,22 +301,46 @@ subroutine compute_synch_x_properties_ana()
 end subroutine compute_synch_x_properties_ana
 
 !> compute the synchrotron lights directionaly function and irradiance
-subroutine compute_synch_directionality_irradiance(time_id,light_id,&
-  x_shadowed,dir_func,irradiance)
+subroutine compute_synch_directionality_irradiance(x_shadowed,&
+x_light,property,dir_func,irradiance)
+  use constants,                 only: PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
   use mod_boost_besselk,         only: besselk
   use mod_coordinate_transforms, only: cartesian_to_spherical_latitude
   implicit none
-  real*8,parameter :: onethird=1.d0/3.d0
-  real*8,parameter :: twothird=2.d0/3.d0
   !> inputs
-  integer,intent(in) :: time_id,light_id
-  real*8,dimension(n_x) :: x_shadowed
+  real*8,dimension(n_x),intent(in)          :: x_shadowed,x_light
+  real*8,dimension(n_properties),intent(in) :: property
+  !> outputs
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(out) :: dir_func,irradiance
   !> variables
+  integer               :: ii,jj
+  real*8                :: onethird=1.d0/3.d0
+  real*8                :: twothird=2.d0/3.d0
+  real*8                :: z,zeta,besselk13,besselk23
+  real*8                :: one_z2,z_z3,factor,factor_2
   real*8,dimension(n_x) :: rpsichi
-  real*8,dimension(n_lines_per_spectrum,n_spectra) :: dir_func,irradiance
 
   !> compute the spherical coordinate variables
+  rpsichi = cartesian_to_spherical_latitude(x_shadowed,x_light,&
+  property(1:3),property(4:6),property(7:9))
   !> compute the particle dependent variables
+  z = (property(11)*rpsichi(3))/sqrt(1.d0+(property(11)*rpsichi(2))**2.d0)
+  one_z2 = 5.d-1*(1.d0+z*z); z_z3 = 1.5d0*(z+((z**3.d0)/3.d0))
+  factor_2 = ((property(11)*rpsichi(2))**2.d0)/(1.d0+(property(11)*rpsichi(2))**2.d0)
+  factor = (1.d0+(property(11)*rpsichi(2))**2.d0)**2.d0
+  factor = (factor*SPEED_OF_LIGHT*(EL_CHG**2.d0))/&
+           (sqrt(3.d0)*EPS_ZERO*property(12)*(property(11)**4.d0))
+  do ii=1,spectrum%n_spectra
+    do jj=1,spectrum%n_points
+      zeta = 2.d0*PI*(((1.d0/property(11)**2.d0)+rpsichi(2)**2.d0)**1.5d0)/&
+      (3.d0*spectrum%points(jj,ii)*property(12))
+      call besselk(onethird,zeta,besselk13)
+      call besselk(twothird,zeta,besselk23)
+      irradiance(jj,ii) = factor*((factor_2-one_z2)*besselk13*cos(zeta*z_z3)+&
+      besselk23*z*sin(zeta*z_z3))/(spectrum%points(jj,11)**4.d0)
+      dir_func(jj,ii) = irradiance(jj,ii)/property(13)
+    enddo
+  enddo
   !> compute the irradiance
   !> compute the directionaly function
 end subroutine compute_synch_directionality_irradiance

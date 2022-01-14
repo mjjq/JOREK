@@ -15,9 +15,9 @@ public :: run_fruit_synchrotron_light_vertices
 !> Variables ---------------------------------------------------------
 !> general parameters
 real*8,parameter                            :: tol_real8=2.5d-11
-real*8,parameter                            :: tol2_real8=5.d-11!2.0d-9
+real*8,parameter                            :: tol2_real8=3.5d-8
 real*8,parameter                            :: mass_RE=5.48579909065d-4
-real*8,parameter                            :: exclusion_values=1.d0!1.d-10
+real*8,parameter                            :: exclusion_values=1.d-100
 !> parameters for generating synhrotron lights
 integer,parameter :: fill_type_base=1 !< use cylindrical initialisation
 integer,parameter :: n_times_sol=2
@@ -366,7 +366,7 @@ end subroutine compute_synch_x_properties_ana
 !> compute the synchrotron lights directionaly function and irradiance
 subroutine compute_synch_directionality_irradiance(x_illum,&
 x_light,property,dir_func,irradiance)
-  use constants,                 only: PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
+  use constants,                 only: TWOPI,PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
   use mod_boost_besselk,         only: besselk
   use mod_coordinate_transforms, only: cartesian_to_spherical_latitude
   implicit none
@@ -397,7 +397,7 @@ x_light,property,dir_func,irradiance)
   !> compute the directionaly function
   do ii=1,spectrum%n_spectra
     do jj=1,spectrum%n_points
-      zeta = 2.d0*PI*(((1.d0/property(11)**2.d0)+rpsichi(2)**2.d0)**1.5d0)/&
+      zeta = TWOPI*(((1.d0/property(11)**2.d0)+rpsichi(2)**2.d0)**1.5d0)/&
       (3.d0*spectrum%points(jj,ii)*property(12))
       call besselk(onethird,zeta,besselk13)
       call besselk(twothird,zeta,besselk23)

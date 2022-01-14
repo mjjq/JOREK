@@ -537,7 +537,7 @@ contains
     enddo
     !$omp end parallel do
     !> do remaining particles
-    do jj=n_particles_per_tile*n_tiles,n_particles
+    do jj=n_particles_per_tile*(n_tiles-1)+1,n_particles
       if(particle_list(jj)%i_elm.lt.1) cycle !< skip invalid particle
       n_active_particles_tile(n_tiles) = n_active_particles_tile(n_tiles) + 1
       particle_ids_tile(n_active_particles_tile(n_tiles),n_tiles) = jj

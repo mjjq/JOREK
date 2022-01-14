@@ -309,10 +309,9 @@ subroutine compute_synch_directionality_irradiance(time_id,light_id,&
   real*8,parameter :: onethird=1.d0/3.d0
   real*8,parameter :: twothird=2.d0/3.d0
   !> inputs
-  integer :: time_id,light_id
+  integer,intent(in) :: time_id,light_id
   real*8,dimension(n_x) :: x_shadowed
   !> variables
-  integer :: light_id,time_id
   real*8,dimension(n_x) :: rpsichi
   real*8,dimension(n_lines_per_spectrum,n_spectra) :: dir_func,irradiance
 

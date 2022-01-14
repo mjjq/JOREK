@@ -173,12 +173,10 @@ light_id,x_shaded,light_dstb)
       !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
       zeta = 2.d0*PI*((one_over_gamma*one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
       (3.d0*spectra%points(jj,ii)*light_properties(12))
-      !> funct = K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
-      !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos)
-      light_dstb(jj,ii) = f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z2_value)+&
-      f_besselk(twothirds,zeta)*z_value*sin(zeta*z_cos)
-      !> SAD/P_tot = I*funct/lambda**4
-      light_dstb(jj,ii) = factor_1*light_dstb(jj,ii)/&
+      !> funct = I*(K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
+      !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos))/lambda**4
+      light_dstb(jj,ii) = factor_1*(f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z2_value)+&
+      f_besselk(twothirds,zeta)*z_value*sin(zeta*z_cos))/&
       (spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii))
     enddo
   enddo

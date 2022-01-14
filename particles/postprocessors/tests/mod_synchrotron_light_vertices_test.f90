@@ -15,7 +15,9 @@ public :: run_fruit_synchrotron_light_vertices
 !> Variables ---------------------------------------------------------
 !> general parameters
 real*8,parameter                            :: tol_real8=2.5d-11
+real*8,parameter                            :: tol2_real8=5.d-11!2.0d-9
 real*8,parameter                            :: mass_RE=5.48579909065d-4
+real*8,parameter                            :: exclusion_values=1.d0!1.d-10
 !> parameters for generating synhrotron lights
 integer,parameter :: fill_type_base=1 !< use cylindrical initialisation
 integer,parameter :: n_times_sol=2
@@ -114,7 +116,9 @@ subroutine setup()
     active_particle_ids_sol(:,1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
     n_active_vertices_sol(ii) = sum(n_active_particles_sol(:,ii))
     !> set to zero if particles are not kinetic relativistic
-    where(particle_types(:,ii).ne.particle_kinetic_relativistic_id) n_active_particles_sol(:,ii)=0
+    where(particle_types(:,ii).ne.particle_kinetic_relativistic_id) 
+      n_active_particles_sol(:,ii)=0
+    endwhere
     n_particles_RE_max_loc = 0
     do jj=1,n_groups_per_sim(ii)
       if(particle_types(jj,ii).ne.particle_kinetic_relativistic_id) cycle
@@ -150,7 +154,7 @@ subroutine test_synchrotron_irradiance_directional_func()
   use mod_assert_equals_tools, only: assert_equals_rel_error
   implicit none
   !> variables
-  integer :: ii,jj,kk,pp
+  integer :: ii,jj,kk
   integer,dimension(n_times_sol) :: n_particles_time
   real*8,dimension(n_x,n_particles_RE_max,n_times_sol)          :: x_cart_loc
   real*8,dimension(n_properties,n_particles_RE_max,n_times_sol) :: properties_loc
@@ -158,7 +162,7 @@ subroutine test_synchrotron_irradiance_directional_func()
   real*8,dimension(spectrum%n_points,spectrum%n_spectra)        :: dir_fun_sol,irradiance_sol
   !> initialise the synchrotron lights (for safety)
    x_cart_loc = 0.d0; properties_loc = 0.d0; n_particles_time = 0;
-   do ii=1,n_times_sol
+  do ii=1,n_times_sol
     n_particles_time(ii) = sum(n_active_particles_sol(:,ii))
     x_cart_loc(:,1:n_particles_time(ii),ii) = x_cart_sol(:,1:n_particles_time(ii),ii)
     properties_loc(:,1:n_particles_time(ii),ii) = properties_sol(:,1:n_particles_time(ii),ii)   
@@ -173,12 +177,19 @@ subroutine test_synchrotron_irradiance_directional_func()
         x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol,irradiance_sol)
         call vertex_sol%directionality_funct(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),dir_fun)
         call vertex_sol%spectral_irradiance(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),irradiance)
+        !> set to 1 values which are too small 
+        where(abs(irradiance).lt.exclusion_values)     
+          irradiance = 1.d0; irradiance_sol = 1.d0;
+        endwhere
+        where(abs(dir_fun).lt.exclusion_values)        
+          dir_fun = 1.d0; dir_fun_sol = 1.d0;
+        endwhere
         !> check the solution via relative error
         call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-        dir_fun,dir_fun_sol,tol_real8,&
+        dir_fun,dir_fun_sol,tol2_real8,&
         "Error synchrotron directionality function: directionality function mismatch!")
         call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-        irradiance,irradiance_sol,tol_real8,&
+        irradiance,irradiance_sol,tol2_real8,&
         "Error synchrotron irradiance: irradiance mismatch!")
       enddo
     enddo

@@ -68,26 +68,33 @@ end subroutine run_fruit_synchrotron_light_vertices
 !> Set-up and tear-down procedures------------------------------------
 !> allocate and initialise the unit test features
 subroutine setup()
+  use mod_rng,                              only: type_rng
+  use mod_pcg32_rng,                        only: pcg32_rng
   use mod_particle_types,                   only: particle_gc_vpar_id
   use mod_particle_types,                   only: particle_kinetic_id
   use mod_particle_types,                   only: particle_kinetic_relativistic_id
   use mod_gnu_rng,                          only: gnu_rng_interval
+  use mod_common_test_tools,       only: omp_initialize_rngs
   use mod_particle_common_test_tools,       only: sim_time_interval
   use mod_particle_common_test_tools,       only: allocate_one_particle_list_type 
   use mod_particle_common_test_tools,       only: fill_groups,fill_mass_RE
   use mod_particle_common_test_tools,       only: fill_particles_tokamak
   use mod_particle_common_test_tools,       only: invalidate_particles
   use mod_particle_common_test_tools,       only: obtain_active_particle_ids
+  !$ use omp_lib
   implicit none
   !> variables
   integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types=&
   reshape((/particle_kinetic_relativistic_id,particle_gc_vpar_id,&
   particle_kinetic_relativistic_id,particle_kinetic_id,&
   particle_kinetic_relativistic_id,0/),shape(particle_types))
-  integer :: ii,jj,ifail,n_particles_RE_max_loc
+  integer :: ii,jj,ifail,n_particles_RE_max_loc,n_threads
+  class(type_rng),dimension(:),allocatable :: rngs
   !> initialisation
   vertex_sol%n_property_vertex = n_properties; ifail = 0; 
   n_particles_RE_max = 0; n_active_particles_sol = 0;
+  n_threads = 1
+  !$ n_threads = omp_get_max_threads()
   call gnu_rng_interval(n_times_sol,sim_time_interval,time_vector_sol)
   call vertex_sol%allocate_vertices(n_times_sol,n_particles_max*n_groups_max)
 
@@ -119,7 +126,11 @@ subroutine setup()
   call compute_synch_x_properties_ana()
 
   !> initialise monte-carlo spectra
+  allocate(pcg32_rng::rngs(n_threads))
+  call omp_initialize_rngs(n_lines_per_spectrum,n_threads,rngs)
   spectrum = spectrum_rng_uniform(n_lines_per_spectrum,n_spectra,min_wlen,max_wlen)
+  call spectrum%generate_spectrum(rngs)
+  deallocate(rngs)
 
   !> generate shadowed points positions
   allocate(x_shadowed(n_x,n_shadowed_per_particle,n_particles_RE_max,n_times_sol))

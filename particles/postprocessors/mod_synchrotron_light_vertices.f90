@@ -244,9 +244,9 @@ n_groups,n_active_particles,active_particles_id)
   use mod_particle_sim,          only: particle_sim
   use mod_particle_types,        only: particle_kinetic_relativistic
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
-#ifdef UNIT_TESTS_AFIELDS
+  !> used only for unit testing but required for compilation
   use mod_particle_common_test_tools, only: compute_test_E_B_fields
-#endif
+  
   implicit none
   !> inputs-outputs
   class(synchrotron_light_vertices),intent(inout) :: sync_lights

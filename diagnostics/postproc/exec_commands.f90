@@ -2753,8 +2753,6 @@ module exec_commands
     ! --- Determine ID of each MPI proc
     call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
     my_id = rank
-  
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
     ! --- Some checks
     call check_args(command%n_args,ierr,0,1);  if ( ierr /= 0 ) return

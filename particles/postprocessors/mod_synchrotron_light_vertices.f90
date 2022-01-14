@@ -141,7 +141,7 @@ light_id,x_shaded,light_dstb)
   !> outputs:
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_dstb
   !> variables
-  real*8,dimension(3) :: rpsichi !< spherical coordinates
+  real*8,dimension(n_x) :: rpsichi !< spherical coordinates
   integer :: ii,jj
   real*8,dimension(light_vert%n_property_vertex) :: light_properties
   real*8  :: zeta,one_over_gamma,z_value,factor_1,factor_2,z_cos

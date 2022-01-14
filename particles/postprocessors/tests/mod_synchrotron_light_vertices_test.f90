@@ -255,7 +255,7 @@ subroutine compute_x_shadowed_particles()
   !> variables 
   integer             :: ii,jj,kk,n_particles_time
   real*8              :: cos_half_angle
-  real*8,dimension(3) :: p_dir,x_part,rng
+  real*8,dimension(n_x) :: p_dir,x_part,rng
   !> generate shadowed particle positions
   do kk=1,n_times_sol
     n_particles_time = sum(n_active_particles_sol(:,kk))
@@ -299,6 +299,28 @@ subroutine compute_synch_x_properties_ana()
     enddo
   enddo
 end subroutine compute_synch_x_properties_ana
+
+!> compute the synchrotron lights directionaly function and irradiance
+subroutine compute_synch_directionality_irradiance(time_id,light_id,&
+  x_shadowed,dir_func,irradiance)
+  use mod_boost_besselk,         only: besselk
+  use mod_coordinate_transforms, only: cartesian_to_spherical_latitude
+  implicit none
+  real*8,parameter :: onethird=1.d0/3.d0
+  real*8,parameter :: twothird=2.d0/3.d0
+  !> inputs
+  integer :: time_id,light_id
+  real*8,dimension(n_x) :: x_shadowed
+  !> variables
+  integer :: light_id,time_id
+  real*8,dimension(n_x) :: rpsichi
+  real*8,dimension(n_lines_per_spectrum,n_spectra) :: dir_func,irradiance
+
+  !> compute the spherical coordinate variables
+  !> compute the particle dependent variables
+  !> compute the irradiance
+  !> compute the directionaly function
+end subroutine compute_synch_directionality_irradiance
 
 !> compute synchrotron electron properties using the analytical
 !> tokamak like electric and magnetic fields for one particle

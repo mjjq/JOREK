@@ -1240,7 +1240,7 @@ do i=1,n_vertex_max
 
             if (present(get_terms)) then
               factor          = 0.d0
-              factor(:,i_term) = 1.d0 / (tstep * xjac * BigR)
+              factor(:,i_term) = 1.d0 / tstep
             else
               factor          = 1.d0
             endif

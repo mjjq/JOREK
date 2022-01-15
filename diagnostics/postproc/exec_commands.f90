@@ -2692,7 +2692,7 @@ module exec_commands
     character*36, allocatable :: scalar_names(:), scalar_names_o(:)
   
     integer  :: n_AA, nz_AA, index_RHS0
-    integer :: k_tor, i, j, k, l, n(4), ife, iv, inode, index_node, index_total
+    integer :: k_tor, i, j, k, l, n(4), ife, m, iv, inode, index_node, index_total
     integer :: omp_nthreads, omp_tid, n_tor_local, i_order, index_large_i, index_ij
     integer :: index_RHS, k_var, i_tor, i_term, term_count, nsub, nnos, ielm, it_o
     integer :: i_bs, j_bs, ms, mt, n_basis, info
@@ -2702,8 +2702,10 @@ module exec_commands
     real*8,   allocatable :: result(:,:,:,:), res2d(:,:,:)
     real*8,   allocatable :: rhs(:,:), BSmat(:,:), BSmat_elm(:,:), BSmat_tmp(:,:)
     real*8  :: rhs_term(n_vertex_max*(n_order+1))
-    real*8  :: wst, wgauss2(n_gauss), phi_val
+    real*8  :: wst, wgauss2(n_gauss), phi_val, xjac
     real*8, allocatable     :: ELM(:,:), A_tmp(:), rhs_save(:)
+    real*8, dimension(n_gauss,n_gauss) :: x_g,   x_s,   x_t,   x_ss,   x_tt,   x_st
+    real*8, dimension(n_gauss,n_gauss) :: y_g,   y_s,   y_t,   y_ss,   y_tt,   y_st
     integer :: dim0, dim1, dim2, only_itor
     character(len=64)       :: file_name, label 
     integer   :: required,provided,StatInfo
@@ -3049,12 +3051,45 @@ module exec_commands
       
       ELM = 0.d0
       element = element_list%element(i_elm)
+
+      do m=1,n_vertex_max
+        nodes(m) = node_list%node(element%vertex(m))
+      enddo
+
+      x_g = 0.d0;   x_s = 0.d0;   x_t = 0.d0;   x_ss = 0.d0;   x_st = 0.d0;   x_tt = 0.d0
+      y_g = 0.d0;   y_s = 0.d0;   y_t = 0.d0;   y_ss = 0.d0;   y_st = 0.d0;   y_tt = 0.d0
+ 
+      do i=1,n_vertex_max
+        do j=1,n_order+1
+          do ms=1, n_gauss
+            do mt=1, n_gauss
+              x_g(ms,mt)  = x_g(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H(i,j,ms,mt)
+              x_s(ms,mt)  = x_s(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+              x_t(ms,mt)  = x_t(ms,mt)  + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
     
+              x_ss(ms,mt) = x_ss(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_ss(i,j,ms,mt)
+              x_st(ms,mt) = x_st(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_st(i,j,ms,mt)
+              x_tt(ms,mt) = x_tt(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_tt(i,j,ms,mt)
+    
+              y_g(ms,mt)  = y_g(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H(i,j,ms,mt)
+              y_s(ms,mt)  = y_s(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+              y_t(ms,mt)  = y_t(ms,mt)  + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+    
+              y_ss(ms,mt) = y_ss(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_ss(i,j,ms,mt)
+              y_st(ms,mt) = y_st(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_st(i,j,ms,mt)
+              y_tt(ms,mt) = y_tt(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_tt(i,j,ms,mt)
+            enddo
+          enddo
+        enddo
+      enddo
+
+   
       do ms=1, n_gauss
         do mt=1, n_gauss
     
-          wst = wgauss2(ms)*wgauss2(mt)
-    
+          wst  = wgauss2(ms)*wgauss2(mt)
+          xjac =  x_s(ms,mt)*y_t(ms,mt) - x_t(ms,mt)*y_s(ms,mt)
+   
           do i=1,n_vertex_max
             do j=1,n_order+1
     
@@ -3066,7 +3101,7 @@ module exec_commands
                   index_kl = (n_order+1)*(k-1) + l   ! index in the ELM matrix
     
                   ELM(index_ij,index_kl) = ELM(index_ij,index_kl)    &
-                                         + H(i,j,ms,mt) * h(k,l,ms,mt) * element%size(i,j)*element%size(k,l) * wst 
+                                         + xjac*x_g(ms,mt)*H(i,j,ms,mt) * h(k,l,ms,mt) * element%size(i,j)*element%size(k,l) * wst 
                 enddo
               enddo
             enddo

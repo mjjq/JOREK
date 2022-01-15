@@ -563,6 +563,8 @@ module postproc_help
         write(*,*) 'Usage:'
         write(*,*) '  RHS_terms_vtk equation_index'
         write(*,*) ''
+        write(*,*) 'See more documentation in the wiki:'
+        write(*,*) '  https://www.jorek.eu/wiki/doku.php?id=plot_rhs_terms'
         write(*,*) ''
         write(*,*) 'Writes individual terms into vtk from the RHS of elm_matrix_fft of a given equation'
         write(*,*) 'If the equation index is not provided, the terms of all equations are plotted'

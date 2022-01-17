@@ -581,7 +581,7 @@ module postproc_help
         write(*,*) 'Script-example:'
         write(*,*) '  set nsub_vtk 4'
         write(*,*) '  set vtk_phi_value 3.14'
-        write(*,*) '  set only_tor 2'
+        write(*,*) '  set only_itor 2'
         write(*,*) '  for step 0 to 100 do'
         write(*,*) '    RHS_terms_vtk 5'
         write(*,*) '  done'

@@ -917,20 +917,20 @@ do i=1,n_vertex_max
                          - v * tauIC * BigR**4 * (u0_xy * (p0_xx - p0_yy) - p0_xy * (u0_xx - u0_yy) ) * xjac * tstep * factor(2,7) &
 
                          ! --- Diamagnetic viscosity
-                         + dvisco_dT * bigR * W_dia * (v_x*T0_x + v_y*T0_y)    * xjac * tstep  * factor(2,7) &
-                         + visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy) * xjac * tstep  * factor(2,7) &
+                         + dvisco_dT * bigR * W_dia * (v_x*T0_x + v_y*T0_y)    * xjac * tstep  * factor(2,8) &
+                         + visco_T   * bigR * W_dia * (v_xx + v_x/bigR + v_yy) * xjac * tstep  * factor(2,8) &
 
-                         + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep * factor(2,8) & ! External density source
+                         + BigR**3 * (particle_source(ms,mt) + source_pellet) * (v_x * u0_x + v_y * u0_y) * xjac* tstep * factor(2,9) & ! External density source
                      
                          + (1.d0 - delta_n_convection) * (   &
-                               + BigR**3*(r0_corr*rn0_corr*Sion_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep * factor(2,9) & ! Density source from ionization
-                               - BigR**3*(r0_corr*r0_corr *Srec_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep * factor(2,10) & ! Density sink by recombination
+                               + BigR**3*(r0_corr*rn0_corr*Sion_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep * factor(2,10) & ! Density source from ionization
+                               - BigR**3*(r0_corr*r0_corr *Srec_T)*(v_x * u0_x + v_y * u0_y)  * xjac * tstep * factor(2,11) & ! Density sink by recombination
                            )  &
 
-                         - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac* factor(2,11) ! Variation
+                         - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac* factor(2,12) ! Variation
             
             if (NEO) then
-              rhs_ij(2) = rhs_ij(2)  + amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)   * factor(2,12)        & ! Neoclassical
+              rhs_ij(2) = rhs_ij(2)  + amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)   * factor(2,13)        & ! Neoclassical
                         * (ps0_x * v_x + ps0_y * v_y) *                                      &  
                           ( r0 * (ps0_x * u0_x + ps0_y * u0_y)                               &
                             + tauIC * (ps0_x * P0_x + ps0_y * P0_y)                          &
@@ -956,34 +956,34 @@ do i=1,n_vertex_max
 
             rhs_ij(5)  = v * BigR * (particle_source(ms,mt) + source_pellet)                      * xjac * tstep * factor(5,1) & ! External density source
                        + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep * factor(5,2) & ! Convection perp.
-                       + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep * factor(5,2) & 
-                       - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep * factor(5,3) & ! Diffusion paral.
-                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep * factor(5,4) & ! Diffusion perp.
-                       - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep * factor(5,5) & ! Convection paral.
-                       - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep * factor(5,5) &
-                       - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep * factor(5,5) &
-                       - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                    * tstep * factor(5,5) &
+                       + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep * factor(5,3) & 
+                       - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rho                 * xjac * tstep * factor(5,4) & ! Diffusion paral.
+                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep * factor(5,5) & ! Diffusion perp.
+                       - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep * factor(5,6) & ! Convection paral.
+                       - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep * factor(5,6) &
+                       - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep * factor(5,3) &
+                       - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                    * tstep * factor(5,3) &
 
-                       + v * 2.d0 * tauIC * p0_y * BigR                                           * xjac * tstep * factor(5,6) & ! Diamagnetic
+                       + v * 2.d0 * tauIC * p0_y * BigR                                           * xjac * tstep * factor(5,7) & ! Diamagnetic
 
-                       + v * r0_corr * rn0_corr * BigR * Sion_T                                   * xjac * tstep * factor(5,7) & ! Source from ionization
-                       - v * r0_corr * r0_corr  * BigR * Srec_T                                   * xjac * tstep * factor(5,8) & ! Sink by recombination
+                       + v * r0_corr * rn0_corr * BigR * Sion_T                                   * xjac * tstep * factor(5,8) & ! Source from ionization
+                       - v * r0_corr * r0_corr  * BigR * Srec_T                                   * xjac * tstep * factor(5,9) & ! Sink by recombination
                        
-                       + zeta * v * delta_g(mp,5,ms,mt) * BigR                                    * xjac       * factor(5,9)   & ! Variation
+                       + zeta * v * delta_g(mp,5,ms,mt) * BigR                                    * xjac         * factor(5,10)   & ! Variation
 
-                       - D_perp_num * (v_xx + v_x/Bigr + v_yy)*(r0_xx + r0_x/Bigr + r0_yy) * BigR * xjac * tstep * factor(5,10) & !Hyper particle diffusitivity
+                       - D_perp_num * (v_xx + v_x/Bigr + v_yy)*(r0_xx + r0_x/Bigr + r0_yy) * BigR * xjac * tstep * factor(5,11) & !Hyper particle diffusitivity
 
                        - TG_num5 * 0.25d0 * BigR**3 * (r0_x * u0_y - r0_y * u0_x)                                               & 
-                                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep          * factor(5,11) & ! TG stabilization
+                                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep          * factor(5,12) & ! TG stabilization
                        - TG_num5 * 0.25d0 / BigR * vpar0**2                                                                     &
-                                 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              * factor(5,11) &
+                                 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              * factor(5,12) &
                                  * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep 
 
 
-            rhs_ij_k(5) = - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho            * xjac * tstep * factor(5,3) &
-                          - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep * factor(5,4) &
+            rhs_ij_k(5) = - (D_par-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho            * xjac * tstep * factor(5,4) &
+                          - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep * factor(5,5) &
 
-                       - TG_num5 * 0.25d0 / BigR * vpar0**2 * factor(5,11) &
+                       - TG_num5 * 0.25d0 / BigR * vpar0**2 * factor(5,12) &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                                            &
                                  * (                            + F0 / BigR * v_p) * xjac * tstep * tstep 
 

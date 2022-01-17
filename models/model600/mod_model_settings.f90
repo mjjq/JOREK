@@ -177,13 +177,13 @@ character*36, dimension(n_terms_Te),    parameter :: Te_term_names=  &
 character*36, dimension(n_terms_vpar),  parameter :: vpar_term_names=  &
                                               (/ 'vpar_Eq__B.grad_P         ', &  !  1:
                                                  'vpar_Eq__ext_part_source  ', &  !  2: 
-                                                 'vpar_Eq__rho_v.grad_v     ', &  !  3:
+                                                 'vpar_Eq__B._rho_v.grad_v  ', &  !  3:
                                                  'vpar_Eq__viscopar_num_term', &  !  4:
                                                  'vpar_Eq__zeta_timevol_term', &  !  5:
                                                  'vpar_Eq__tg_num_terms     ', &  !  6:
                                                  'vpar_Eq__ionization_term  ', &  !  7:
                                                  'vpar_Eq__recombin_term    ', &  !  8:
-                                                 'vpar_Eq__viscopar         ', &  !  9:
+                                                 'vpar_Eq__viscopar_term    ', &  !  9:
                                                  'vpar_Eq__neoclassical_term'/)   ! 10:
 
  character*36, dimension(n_terms_rhon), parameter :: rhon_term_names=  &

@@ -50,10 +50,10 @@ module mod_model_settings
   !> parameters for naming equation terms in the RHS diagnostic 
   integer,  parameter :: max_terms    = 20
   integer,  parameter :: n_terms_psi  = 5
-  integer,  parameter :: n_terms_u    = 12
+  integer,  parameter :: n_terms_u    = 13 
   integer,  parameter :: n_terms_zj   = 1
   integer,  parameter :: n_terms_w    = 1
-  integer,  parameter :: n_terms_rho  = 11
+  integer,  parameter :: n_terms_rho  = 12
   integer,  parameter :: n_terms_T    = 17
   integer,  parameter :: n_terms_vpar = 10
   integer,  parameter :: n_terms_rhon = 7
@@ -74,11 +74,12 @@ module mod_model_settings
                                                    'u_Eq__visco_num_term   ', &  !  5:
                                                    'u_Eq__tg_num_term      ', &  !  6:
                                                    'u_Eq__diamag_term      ', &  !  7:
-                                                   'u_Eq__ext_dens_source  ', &  !  8:
-                                                   'u_Eq__ionization_term  ', &  !  9:
-                                                   'u_Eq__recombin_term    ', &  ! 10:
-                                                   'u_Eq__zeta_timevol_term', &  ! 11:
-                                                   'u_Eq__neoclassical_term'/)   ! 12:
+                                                   'u_Eq__diamag_visco     ', &  !  8:
+                                                   'u_Eq__ext_dens_source  ', &  !  9:
+                                                   'u_Eq__ionization_term  ', &  ! 10:
+                                                   'u_Eq__recombin_term    ', &  ! 11:
+                                                   'u_Eq__zeta_timevol_term', &  ! 12:
+                                                   'u_Eq__neoclassical_term'/)   ! 13:
 
    character*36, dimension(n_terms_zj),   parameter :: zj_term_names=  &
                                                 (/ 'zj_Eq__DeltaStar_Psi   '/)  !  1:
@@ -89,15 +90,16 @@ module mod_model_settings
    character*36, dimension(n_terms_rho),  parameter :: rho_term_names=  &
                                                 (/ 'rho_Eq__ext_dens_source  ', &  !  1:
                                                    'rho_Eq__perp_convection  ', &  !  2: 
-                                                   'rho_Eq__parallel_diffus  ', &  !  3:
-                                                   'rho_Eq__perp_diffusion   ', &  !  4:
-                                                   'rho_Eq__parallel_convect ', &  !  5:
-                                                   'rho_Eq__diamag_term      ', &  !  6:
-                                                   'rho_Eq__ionization_source', &  !  7:
-                                                   'rho_Eq__recombination    ', &  !  8:
-                                                   'rho_Eq__zeta_time_evol   ', &  !  9:
-                                                   'rho_Eq__Dperp_num_term   ', &  ! 10:
-                                                   'rho_Eq__tg_num_term      '/)   ! 11:
+                                                   'rho_Eq__divergence_v     ', &  !  3: 
+                                                   'rho_Eq__parallel_diffus  ', &  !  4:
+                                                   'rho_Eq__perp_diffusion   ', &  !  5:
+                                                   'rho_Eq__parallel_convect ', &  !  6:
+                                                   'rho_Eq__diamag_term      ', &  !  7:
+                                                   'rho_Eq__ionization_source', &  !  8:
+                                                   'rho_Eq__recombination    ', &  !  9:
+                                                   'rho_Eq__zeta_time_evol   ', &  ! 10:
+                                                   'rho_Eq__Dperp_num_term   ', &  ! 11:
+                                                   'rho_Eq__tg_num_term      '/)   ! 12:
 
   character*36, dimension(n_terms_T),     parameter :: T_term_names=  &
                                                 (/ 'T_Eq__ext_heat_source  ', &  !  1:
@@ -121,13 +123,13 @@ module mod_model_settings
   character*36, dimension(n_terms_vpar),  parameter :: vpar_term_names=  &
                                                 (/ 'vpar_Eq__B.grad_P         ', &  !  1:
                                                    'vpar_Eq__ext_part_source  ', &  !  2: 
-                                                   'vpar_Eq__rho_v.grad_v     ', &  !  3:
+                                                   'vpar_Eq__B._rho_v.grad_v  ', &  !  3:
                                                    'vpar_Eq__viscopar_num_term', &  !  4:
                                                    'vpar_Eq__zeta_timevol_term', &  !  5:
                                                    'vpar_Eq__tg_num_terms     ', &  !  6:
                                                    'vpar_Eq__ionization_term  ', &  !  7:
                                                    'vpar_Eq__recombin_term    ', &  !  8:
-                                                   'vpar_Eq__vpar_ext_source  ', &  !  9:
+                                                   'vpar_Eq__viscopar_term    ', &  !  9:
                                                    'vpar_Eq__neoclassical_term'/)   ! 10:
 
    character*36, dimension(n_terms_rhon), parameter :: rhon_term_names=  &

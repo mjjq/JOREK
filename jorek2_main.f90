@@ -63,6 +63,7 @@ program JOREK2
   use direct_construction_mod
   use centralization_mod
   use mod_exchange_indices
+  use mod_gmres, only: gmres_driver
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -82,6 +83,9 @@ program JOREK2
 #endif
   use mpi_mod
   use mod_impurity, only: init_imp_adas
+#ifdef USE_BICGSTAB
+  use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
+#endif  
 
 
   use, intrinsic :: iso_c_binding
@@ -98,12 +102,6 @@ program JOREK2
 #include "r3_info.h"
   
   interface
-
-    subroutine gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
-      integer :: my_id, my_id_n, MPI_COMM_N, MPI_COMM_MASTER
-      integer :: iter_gmres
-    end subroutine gmres_driver
-    
     subroutine equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2, nice_q)
       use data_structure
       integer(kind=4),             intent(in)    :: my_id
@@ -934,7 +932,8 @@ required = 0
     if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
 
     ! ---- For now running the jorek2_main should not include aux inputs
-    do i = 1, aux_node_list%n_nodes
+    aux_node_list%n_nodes = 0
+    do i = 1, size(aux_node_list%node, 1)
       aux_node_list%node(i)%values = 0.d0
       aux_node_list%node(i)%deltas = 0.d0
     enddo
@@ -1108,7 +1107,11 @@ required = 0
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
 
+#ifdef USE_BICGSTAB
+      call bicgstab_driver(irn_glob, jcn_glob, a_glob, deltas, rhs_glob, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
+#else
       call gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+#endif
 
     endif
     call clck_time_barrier(t1)
@@ -1370,6 +1373,10 @@ required = 0
     if (use_strumpack) then
       call strumpack_finalize(MPI_COMM_WORLD)
     endif
+#endif
+
+#ifdef USE_BICGSTAB
+    call bicgstab_finalize()
 #endif
 
 #ifdef USE_PASTIX6

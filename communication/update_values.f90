@@ -4,8 +4,9 @@ subroutine update_values(my_id,element_list,node_list,RHS)
 !-----------------------------------------------------------------------
 
 use data_structure
-use phys_module, only: keep_n0_const
+use phys_module, only: keep_n0_const, treat_axis
 use mod_basisfunctions
+use mod_axis_treatment
 
 implicit none
 
@@ -25,12 +26,23 @@ integer, dimension(n_vertex_max)  :: Pr
 integer, dimension(2)    :: parent
 integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
+integer :: i_v(n_var), i_harm(n_tor)
 
 i_tor_min = 1
 if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
 
 if (my_id .eq. 0) then
 
+  !if(treat_axis) then
+  !  do i = 1, n_var
+  !     i_v(i) = i
+  !  enddo
+  !  do i = 1, n_tor
+  !     i_harm(i) = i
+  !  enddo
+  !  call transform_back_nodelist(node_list, i_v, n_var, i_harm, n_tor, .true.)
+  !endif
+        
   do i = 1, node_list%n_nodes
    if((.not. node_list%node(i)%constrained) ) then 
     do j=1,n_order+1

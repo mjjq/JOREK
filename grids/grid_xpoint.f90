@@ -801,6 +801,7 @@ do i=1,n_flux-1                 !------------------------ the closed field lines
     if (i .eq. 1) then   !------------------------------------ magnetic axis : special case
       newnode_list%node(index)%x(1,3,:) = 0.d0
       newnode_list%node(index)%x(1,4,:) = 0.d0
+      if(treat_axis) newnode_list%node(index)%x(1,4,:) = 1.d0
     else
       newnode_list%node(index)%x(1,3,:) = (/ -PSI_Z, +PSI_R /) / sqrt(PSI_R**2 + PSI_Z**2)
       newnode_list%node(index)%x(1,4,:) = 0.d0

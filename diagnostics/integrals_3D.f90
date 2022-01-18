@@ -182,15 +182,15 @@ do ife = ife_min, ife_max
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-    if(treat_axis .and. nodes(iv)%axis_node) then
-       do i = 1, n_var
-          i_v(i) = i
-       enddo
-       do i = 1, n_tor
-          i_harm(i) = i
-       enddo
-       call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
-    endif    
+    !if(treat_axis .and. nodes(iv)%axis_node) then
+    !   do i = 1, n_var
+    !      i_v(i) = i
+    !   enddo
+    !   do i = 1, n_tor
+    !      i_harm(i) = i
+    !   enddo
+    !   call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
+    !endif    
   enddo
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;

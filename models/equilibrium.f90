@@ -15,6 +15,8 @@ use vacuum
 use mpi_mod
 use mod_interp, only: interp
 use mod_F_profile
+use mod_axis_treatment
+
 implicit none
 
           
@@ -354,6 +356,7 @@ if (freeboundary_equil) then
 endif
 
 if (my_id == 0) then
+        
   ! Update psi axis and boundary with new values from the last iteration of equilibrium solvers 
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
         
@@ -473,12 +476,6 @@ if (my_id == 0) then
                                             + dn_dpsi2    * dT_dz + zn    * dT_dpsi2_dz  + 2.d0 * dn_dpsi    * dT_dpsi_dz)
   
   
-    if(treat_axis .and. node_list%node(i)%axis_node)then
-      node_list%node(i)%values(1,1,3) = zjz
-      node_list%node(i)%values(1,2,3) = dj_dR
-      node_list%node(i)%values(1,3,3) = 0.d0
-      node_list%node(i)%values(1,4,3) = dj_dZ
-    endif                                
     node_list%node(i)%values(1,1,3) = zjz
   
     node_list%node(i)%values(1,2,3) = dj_dpsi * node_list%node(i)%values(1,2,1) &

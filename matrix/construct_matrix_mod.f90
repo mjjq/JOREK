@@ -458,7 +458,19 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   omp_tid      = 1
 #endif
  
-  n_tor_local = i_tor_max - i_tor_min + 1 
+  n_tor_local = i_tor_max - i_tor_min + 1
+
+  if(treat_axis) then
+     do i = 1, n_var
+        i_v(i) = i
+     enddo
+     if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))
+     do i = i_tor_min, i_tor_max
+        i_harm(i) = i
+     enddo
+     call transform_nodelist(node_list, i_v, n_var, i_harm, n_tor_local, .true.)
+  endif
+  
 ! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife = 1, n_local_elms
@@ -486,17 +498,17 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
        inode   = element%vertex(iv)
        nodes(iv) = node_list%node(inode)
 
-       if(treat_axis .and. nodes(iv)%axis_node) then
-         do i = 1, n_var
-            i_v(i) = i
-         enddo
-         if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))         
-         do i = i_tor_min, i_tor_max
-            i_harm(i) = i
-         enddo
-         call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor_local, .true.)
-         deallocate(i_harm)
-       endif
+       !if(treat_axis .and. nodes(iv)%axis_node) then
+       !  do i = 1, n_var
+       !     i_v(i) = i
+       !  enddo
+       !  if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))         
+       !  do i = i_tor_min, i_tor_max
+       !     i_harm(i) = i
+       !  enddo
+       !  call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor_local, .true.)
+       !  deallocate(i_harm)
+       !endif
 
       enddo
 
@@ -506,9 +518,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
       psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max)
 
     if(treat_axis .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
-
-      call transform_basis_for_axis_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
-
+      call transform_basis_for_axis_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_v, n_var, i_harm, n_tor_local)
     endif
 
 #ifdef PRINT_ELM_RHS
@@ -709,7 +719,14 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     end if
 
   end do
+
   !$omp end do
+
+  if(treat_axis) then
+    call transform_back_nodelist(node_list, i_v, n_var, i_harm, n_tor, .true.)
+    deallocate(i_harm)    
+  endif
+  
   !$omp end parallel
  
   ! --- Memory tracking

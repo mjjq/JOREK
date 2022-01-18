@@ -24,7 +24,7 @@ end interface
 
 ! --- Routine parameters
 integer,                 intent(in)  :: my_id        !< MPI proc number
-type(type_node_list),    intent(in)  :: node_list    !< List of grid nodes
+type(type_node_list), intent(inout)  :: node_list    !< List of grid nodes
 type(type_element_list), intent(in)  :: element_list !< List of grid elements
 real*8,                  intent(out) :: psi_axis     !< Poloidal flux at axis
 real*8,                  intent(out) :: R_axis       !< R-position of axis
@@ -37,13 +37,12 @@ integer,                 intent(out) :: ifail        !< Error code
 ! --- Local variables
 real*8  :: ps_x, ps_y, ps_s, ps_t, xjac
 real*8  :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, P, P_s, P_t, P_st, P_ss, P_tt
-integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indices(3), inode
+integer :: ij_axis(2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_elm_axis_init, min_indices(3)
 real*8  :: x(2), s, t, xerr, ferr, s_axis_init, t_axis_init
 real*8  :: R0, Z0, search_radius
 logical :: found_axis, axis_in_rst_file
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt(:,:,:)
-type (type_node)     :: nodes(n_vertex_max)
 
 if (my_id .eq. 0) then
   write(*,*) '*********************************'
@@ -84,17 +83,10 @@ else
   Z0 = Z_geo
 endif
 
+if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 ! save |grad_psi| at gaussian points of all elements
 do i=1,element_list%n_elements   ! --- loop over elements
-
-  do iv = 1, n_vertex_max
-    inode     = element_list%element(i)%vertex(iv)
-    nodes(iv) = node_list%node(inode)
-    if(treat_axis .and. nodes(iv)%axis_node) then
-       call transform_dofs_for_axis_node(nodes(iv), (/1/), 1, (/1/), 1, .false.)
-    endif
-  enddo
 
   do ms = 1, 4           ! 4 Gaussian points
     do mt = 1, 4         ! 4 Gaussian points
@@ -113,8 +105,8 @@ do i=1,element_list%n_elements   ! --- loop over elements
 
           iv = element_list%element(i)%vertex(kv)
 
-          ps_s = ps_s + nodes(kv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
-          ps_t = ps_t + nodes(kv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
+          ps_s = ps_s + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
+          ps_t = ps_t + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
 
           R   = R   + node_list%node(iv)%x(1,kf,1) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
           Z   = Z   + node_list%node(iv)%x(1,kf,2) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
@@ -141,6 +133,7 @@ do i=1,element_list%n_elements   ! --- loop over elements
 
 enddo   ! --- end loop over elements
 
+if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 do i_tries=1,  n_tries  ! --- start attempts to find the axis
 

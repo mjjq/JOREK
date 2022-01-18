@@ -29,6 +29,16 @@ integer    :: i_v(n_var), i_harm(n_tor)
 W_mag = 0.d0
 W_kin = 0.d0
 
+if(treat_axis) then
+  do i = 1, n_var
+    i_v(i) = i
+  enddo
+  do i = 1, n_tor
+    i_harm(i) = i
+  enddo
+  call transform_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
+endif
+
 do ife =1,  element_list%n_elements
 
   element = element_list%element(ife)
@@ -36,15 +46,15 @@ do ife =1,  element_list%n_elements
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-    if(treat_axis .and. nodes(iv)%axis_node) then
-       do i = 1, n_var
-          i_v(i) = i
-       enddo     
-       do i = 1, n_tor 
-          i_harm(i) = i
-       enddo            
-       call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
-    endif
+    !if(treat_axis .and. nodes(iv)%axis_node) then
+    !   do i = 1, n_var
+    !      i_v(i) = i
+    !   enddo     
+    !   do i = 1, n_tor 
+    !      i_harm(i) = i
+    !   enddo            
+    !   call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
+    !endif
   enddo
 
   x_g(:,:) = 0.d0;    x_s(:,:) = 0.d0;    x_t(:,:) = 0.d0;
@@ -171,6 +181,8 @@ do ife =1,  element_list%n_elements
   enddo
 
 enddo
+
+if(treat_axis) call transform_back_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
 
 do in=1,n_tor
   if (mode(in) .ne. 0) then

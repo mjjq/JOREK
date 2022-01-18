@@ -3,9 +3,8 @@ module mod_interp
 use data_structure
 use mod_basisfunctions
 use mod_parameters, only: n_period, n_tor
-use phys_module, only: treat_axis
-use mod_axis_treatment, only: transform_dofs_for_axis_node
-
+use phys_module
+use mod_axis_treatment
 implicit none
 private
 public :: interp !< interp a specific harmonic in finite elements
@@ -44,7 +43,6 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
-type (type_node) :: nodes(n_vertex_max)
 integer :: i_harm(n_tor)
 
 call basisfunctions(s,t,H)
@@ -58,18 +56,17 @@ if (present(deltas)) then
   if (deltas) my_deltas = .true.
 end if
 
+!if(treat_axis) then
+!  do i = 1, n_tor
+!     i_harm(i) = i
+!  enddo      
+!  call transform_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
+!endif
+
 ! Preload values and premultiply with sizes(:,kv)
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)
   sizes(:) = element_list%element(i_elm)%size(kv,:)
-
-  nodes(kv) = node_list%node(iv)
-  if(treat_axis .and. nodes(kv)%axis_node) then
-    do i = 1, n_tor
-       i_harm(i) = i
-    enddo
-    call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, i_harm, n_tor, my_deltas)
-  endif
 
   if (my_deltas) then
     do i = 1, n_v
@@ -101,6 +98,8 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
+
+!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
 end subroutine interp_PRZ_0
 
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
@@ -121,7 +120,6 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
-type (type_node) :: nodes(n_vertex_max)
 integer :: i_harm(n_tor)
 
 ! 7% exec time
@@ -137,20 +135,18 @@ if (present(deltas)) then
   if (deltas) my_deltas = .true.
 end if
 
+!if(treat_axis) then
+!  do i = 1, n_tor
+!     i_harm(i) = i
+!  enddo
+!  call transform_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
+!endif
 ! 30% exec time
 ! Preload values and premultiply with sizes(:,kv)
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)
   sizes(:) = element_list%element(i_elm)%size(kv,:)
 
-  nodes(kv) = node_list%node(iv)
-  if(treat_axis .and. nodes(kv)%axis_node) then
-    do i = 1, n_tor
-       i_harm(i) = i
-    enddo          
-    call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, i_harm, n_tor, my_deltas)
-  endif
-  
   if (my_deltas) then
     do i = 1, n_v
       do kf=1,n_order+1
@@ -189,6 +185,9 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
+
+!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
+
 end subroutine interp_PRZ_1
 
 
@@ -213,7 +212,6 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp, vpp
 logical :: my_deltas
-type (type_node) :: nodes(n_vertex_max)
 integer :: i_harm(n_tor)
 
 call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
@@ -231,19 +229,17 @@ if (present(deltas)) then
   if (deltas) my_deltas = .true.
 end if
 
+!if(treat_axis) then
+!  do i = 1, n_tor
+!     i_harm(i) = i
+!  enddo
+!  call transform_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
+!endif
 ! Preload values and premultiply with sizes(:,kv)
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)
   sizes(:) = element_list%element(i_elm)%size(kv,:)
 
-  nodes(kv) = node_list%node(iv)
-  if(treat_axis .and. nodes(kv)%axis_node)then
-    do i = 1, n_tor
-       i_harm(i) = i
-    enddo
-    call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, i_harm, n_tor, my_deltas)
-  endif
-  
   if (my_deltas) then
     do i = 1, n_v
       do kf=1,n_order+1
@@ -295,6 +291,9 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
+
+!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
+
 end subroutine interp_PRZ_2
 
 ! Apply De Moivre formula to calculate the series of sines.
@@ -374,48 +373,48 @@ real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
 ! --- Local variables
 real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
 integer :: kv, iv, kf 
-type (type_node)         :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
+
+!if(treat_axis) call transform_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .false.)
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-  nodes(kv) = node_list%node(iv)
-
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), (/i_var/), 1, (/i_harm/), 1, .false.)
-  
   do kf = 1, n_order+1       ! 4 basis functions
 
 #ifdef fullmhd
     if (i_var == 710) then
-      P    = P    + nodes(kv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + nodes(kv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + nodes(kv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + nodes(kv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + nodes(kv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + nodes(kv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+      P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
     elseif (i_var == 711) then
-      P    = P    + nodes(kv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + nodes(kv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + nodes(kv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + nodes(kv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + nodes(kv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + nodes(kv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+      P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
     else
 #endif
-      P    = P    + nodes(kv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + nodes(kv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + nodes(kv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + nodes(kv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + nodes(kv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + nodes(kv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+      P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+      P_st = P_st + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
+      P_ss = P_ss + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
+      P_tt = P_tt + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
 #ifdef fullmhd
     endif
 #endif
   end do
 end do
+
+!if(treat_axis) call transform_back_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .false.)
+
 end subroutine interp
 
 
@@ -434,27 +433,27 @@ real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
 ! --- Local variables
 real*8 :: G(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
 integer :: kv, iv, kf 
-type (type_node)         :: nodes(n_vertex_max)
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
+
+!if(treat_axis) call transform_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .true.)
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-  nodes(kv) = node_list%node(iv)
-
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), (/i_var/), 1, (/i_harm/), 1, .true.)
-
   do kf = 1, n_order+1       ! 4 basis functions
-    P    = P    + nodes(kv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-    P_s  = P_s  + nodes(kv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-    P_t  = P_t  + nodes(kv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-    P_st = P_st + nodes(kv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-    P_ss = P_ss + nodes(kv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-    P_tt = P_tt + nodes(kv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
+    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+    P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+    P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+    P_st = P_st + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
+    P_ss = P_ss + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
+    P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
   end do
 end do
+
+!if(treat_axis) call transform_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .true.)
+
 end subroutine interp_delta
 
 
@@ -469,31 +468,37 @@ real*8,                   intent(out) :: P(n_v)
 
 real*8  :: H(4,4), ss, mode
 integer :: kv, iv, kf, m, i, i_harm, i_tor
-type (type_node)         :: nodes(n_vertex_max)
+integer :: i_n(n_tor)
 
 call basisfunctions(s,t,H)
+
+!if(treat_axis) then
+!  do i = 1, n_tor
+!     i_n(i) = i
+!  enddo
+!  call transform_nodelist(node_list, i_v, n_v, i_n, n_tor, .false.) 
+!endif
 
 P = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-  nodes(kv) = node_list%node(iv)
-
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, (/1/), 1, .false.)
-  
   do kf = 1, n_order+1       ! 4 basis functions
     ss  = element_list%element(i_elm)%size(kv,kf)
     do i = 1, n_v
-      P(i)    = P(i)   + nodes(kv)%values(1,kf,i_v(i)) * ss * H(kv,kf)
+      P(i)    = P(i)   + node_list%node(iv)%values(1,kf,i_v(i)) * ss * H(kv,kf)
       do i_tor = 1, (n_tor-1)/2
         i_harm = 2*i_tor
         mode = i_tor * n_period
-        P(i)    = P(i)   + nodes(kv)%values(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode*phi)
-        P(i)    = P(i)   + nodes(kv)%values(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%values(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%values(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode*phi)
       end do
     end do
   end do
 end do
+
+!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_n, n_tor, .false.)
+
 end subroutine interp_0
 
 
@@ -510,31 +515,36 @@ real*8,                   intent(out) :: P(n_v)
 
 real*8  :: H(4,4), ss, mode
 integer :: kv, iv, kf, m, i, i_harm, i_tor
-type (type_node)         :: nodes(n_vertex_max)
+integer :: i_n(n_tor)
 
 call basisfunctions(s,t,H)
+
+!if(treat_axis) then
+!  do i = 1, n_tor
+!     i_n(i) = i
+!  enddo
+!  call transform_nodelist(node_list, i_v, n_v, i_n, n_tor, .true.)
+!endif
 
 P = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-  nodes(kv) = node_list%node(iv)
-
-  if(treat_axis .and. nodes(kv)%axis_node) call transform_dofs_for_axis_node(nodes(kv), i_v, n_v, (/1/), 1, .true.)
-  
   do kf = 1, n_order+1       ! 4 basis functions
     ss  = element_list%element(i_elm)%size(kv,kf)
     do i = 1, n_v
-      P(i)    = P(i)   + nodes(kv)%deltas(1,kf,i_v(i)) * ss * H(kv,kf)
+      P(i)    = P(i)   + node_list%node(iv)%deltas(1,kf,i_v(i)) * ss * H(kv,kf)
       do i_tor = 1, (n_tor-1)/2
         i_harm = 2*i_tor
         mode = i_tor * n_period
-        P(i)    = P(i)   + nodes(kv)%deltas(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode*phi)
-        P(i)    = P(i)   + nodes(kv)%deltas(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm,kf,i_v(i))   * ss * H(kv,kf)   * cos(mode*phi)
+        P(i)    = P(i)   + node_list%node(iv)%deltas(i_harm+1,kf,i_v(i)) * ss * H(kv,kf)   * sin(mode*phi)
       end do
     end do
   end do
 end do
+
+!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_n, n_tor, .true.)
 end subroutine interp_0_delta
 
 

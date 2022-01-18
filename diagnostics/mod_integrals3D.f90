@@ -45,7 +45,7 @@ subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list
  
 implicit none
 
-type (type_node_list),        intent(in)    :: node_list
+type (type_node_list),     intent(inout)    :: node_list
 type (type_element_list),     intent(in)    :: element_list   
 type (type_bnd_node_list),    intent(in)    :: bnd_node_list
 type (type_bnd_element_list), intent(in)    :: bnd_elm_list   
@@ -350,6 +350,16 @@ omp_nthreads = 1
 omp_tid      = 0
 #endif
 
+if(treat_axis) then
+  do i = 1, n_var
+    i_v(i) = i
+  enddo
+  do i = 1, n_tor
+    i_harm(i) = i
+  enddo
+  call transform_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
+endif
+
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
@@ -367,15 +377,15 @@ do ife = ife_min, ife_max
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-    if(treat_axis .and. nodes(iv)%axis_node) then
-       do i = 1, n_var
-          i_v(i) = i
-       enddo     
-       do i = 1, n_tor     
-          i_harm(i) = i
-       enddo                
-       call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
-    endif    
+    !if(treat_axis .and. nodes(iv)%axis_node) then
+    !   do i = 1, n_var
+    !      i_v(i) = i
+    !   enddo     
+    !   do i = 1, n_tor     
+    !      i_harm(i) = i
+    !   enddo                
+    !   call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
+    !endif    
   enddo
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0; x_ss(:,:)    = 0.d0; x_tt(:,:)    = 0.d0; x_st(:,:)    = 0.d0;
@@ -932,6 +942,7 @@ do ife = ife_min, ife_max
 
 enddo
 !$omp end do
+if(treat_axis) call transform_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
 !$omp end parallel
 
 !------ Calculate boundary fluxes --------------------------------------------------------

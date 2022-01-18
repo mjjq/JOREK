@@ -200,6 +200,8 @@ if (my_id == 0) then
   
   endif   !--- end type -1 (GS equilibrium)
   
+  if(treat_axis) call transform_nodelist(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
+
   do ife =1, element_list%n_elements
   
     element = element_list%element(ife)
@@ -226,9 +228,9 @@ if (my_id == 0) then
     do iv = 1, n_vertex_max
       inode     = element%vertex(iv)
       nodes(iv) = node_list%node(inode)
-      if(treat_axis .and. nodes(iv)%axis_node ) then
-        call transform_dofs_for_axis_node(nodes(iv), (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .false.)
-      endif      
+      !if(treat_axis .and. nodes(iv)%axis_node ) then
+      !  call transform_dofs_for_axis_node(nodes(iv), (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .false.)
+      !endif      
     enddo
   
     if (itype .eq. -1) then
@@ -254,7 +256,7 @@ if (my_id == 0) then
   
     endif  
 
-    if(treat_axis .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
+    if( (treat_axis) .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
       call transform_basis_for_axis_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
     endif
     
@@ -648,6 +650,8 @@ if (my_id == 0) then
   
   call tr_debug_write("mumps_par%N",int(mumps_par%N))
   call tr_debug_write("mumps_par%NZ",int(mumps_par%NZ))
+  
+  if(treat_axis) call transform_back_nodelist(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
   
   do i=1,node_list%n_nodes
   

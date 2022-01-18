@@ -157,14 +157,15 @@ end subroutine transform_basis_for_axis_element_poisson
 
 ! This subroutine transforms basis functions in RHS and ELM for grid-axis-elements.
 ! This is done to achieve C1 continuity in (R, Z)-plane.
-subroutine transform_basis_for_axis_element(nodes, ELM, RHS, n_tor_start, n_tor_end)
+subroutine transform_basis_for_axis_element(nodes, ELM, RHS, i_v, n_v, i_n, n_harm)
 use data_structure
 use phys_module
 implicit none
 type(type_node),       intent(inout) :: nodes(n_vertex_max)
-real*8,   :: ELM(1:n_tor*n_vertex_max*(n_order+1)*n_var, 1:n_tor*n_vertex_max*(n_order+1)*n_var)
-real*8,   :: RHS(1:n_tor*n_vertex_max*(n_order+1)*n_var)
-integer ,        intent(in)    :: n_tor_start, n_tor_end
+real*8   :: ELM(1:n_tor*n_vertex_max*(n_order+1)*n_var, 1:n_tor*n_vertex_max*(n_order+1)*n_var)
+real*8   :: RHS(1:n_tor*n_vertex_max*(n_order+1)*n_var)
+integer,         intent(in)    :: n_v, i_v(n_v), n_harm, i_n(n_harm)
+
 ! --- routine parameters
 integer :: axis_vertex1, axis_vertex4, dof1, dof2, dof3, dof4
 integer :: iv, io, jv, jo, index_iv_io, index_jv_jo
@@ -174,7 +175,7 @@ real*8  :: Ptrans(1:4, 1:4), Pmat(1:4, 1:4), rhs_i(1:4), elm_ij(1:4, 1:4)
 axis_vertex1 = 1 ; axis_vertex4 = 4
 dof1 = 1 ; dof2 = 2 ; dof3 = 3 ; dof4 = 4
 
-n_tor_local = n_tor_end - n_tor_start +1
+n_tor_local = i_n(n_harm) - i_n(1) +1
 
 do iv = 1, n_vertex_max
 
@@ -191,18 +192,18 @@ do iv = 1, n_vertex_max
     Ptrans(dof4,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof4,dof4) = nodes(iv)%x(1,dof4,2)
   endif
 
-  do ivar = 1, n_var
-  do im   = n_tor_start, n_tor_end
+  do ivar = 1, n_v
+  do im   = 1, n_harm
     ! Extract RHS associated with a vertex iv: rhs_iv
     do io = 1, n_order+1
-      index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (im-n_tor_start+1) + (ivar-1)*n_tor_local
+      index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (i_n(im)-i_n(1)+1) + (i_v(ivar)-1)*n_tor_local
       rhs_i(io)   = RHS(index_iv_io)
     enddo
     ! transform test functions for rhs_v
     rhs_i = matmul( Ptrans, rhs_i)
     ! fill the updated entries in RHS vector
     do io = 1, n_order+1
-      index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (im-n_tor_start+1) + (ivar-1)*n_tor_local
+      index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (i_n(im)-i_n(1)+1) + (i_v(ivar)-1)*n_tor_local
       RHS(index_iv_io) = rhs_i(io)
     enddo
   enddo ! loop over im
@@ -225,15 +226,15 @@ do iv = 1, n_vertex_max
 
     ! Extract ELM associated with a vertex iv and jv: elm_iv_jv
     do ivar = 1, n_var
-    do im   = n_tor_start, n_tor_end
+    do im   = 1, n_harm
     
     do jvar = 1, n_var
-    do in   = n_tor_start, n_tor_end
+    do in   = 1, n_harm
     
        do io = 1, n_order+1
-          index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (im-n_tor_start+1) + (ivar-1)*n_tor_local
+          index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (i_n(im)-i_n(1)+1) + (i_v(ivar)-1)*n_tor_local
           do jo = 1, n_order+1
-             index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + (in-n_tor_start+1) + (jvar-1)*n_tor_local
+             index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + (i_n(in)-i_n(1)+1) + (i_v(jvar)-1)*n_tor_local
              elm_ij(io, jo) =  ELM(index_iv_io, index_jv_jo)
           enddo
        enddo
@@ -241,9 +242,9 @@ do iv = 1, n_vertex_max
        elm_ij = matmul(matmul(PTrans, elm_ij), Pmat)
        ! fill the updated entries in ELM matrix
        do io = 1, n_order+1
-          index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (im-n_tor_start+1) + (ivar-1)*n_tor_local
+          index_iv_io = n_tor_local*n_var*(n_order+1)*(iv-1) + n_tor_local*n_var*(io-1) + (i_n(im)-i_n(1)+1) + (i_v(ivar)-1)*n_tor_local       
           do jo = 1, n_order+1
-             index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + (in-n_tor_start+1) + (jvar-1)*n_tor_local
+             index_jv_jo = n_tor_local*n_var*(n_order+1)*(jv-1) + n_tor_local*n_var*(jo-1) + (i_n(in)-i_n(1)+1) + (i_v(jvar)-1)*n_tor_local
              ELM(index_iv_io, index_jv_jo) = elm_ij(io, jo)
           enddo
        enddo
@@ -338,134 +339,177 @@ end subroutine transform_basis_for_axis_element
 ! grid_xpoint subroutine 3rd and 4rth DoF for grid is set to zero: [x(1,3:4,:) = 0].
 ! Because of this back transformation is not invertible.
 
-!subroutine transform_nodelist(node_list, i_tor_min, i_tor_max)
-!use data_structure
-!use phys_module
-!implicit none
-!integer :: vg, dof2, dof4, in, ivar
-!type(type_node_list),  intent(inout) :: node_list
-!integer ,              intent(in)    :: i_tor_min, i_tor_max
-!real*8  :: Pmat(2,2), vec(2)
-!
-!dof2 = 2 ; dof4 = 4
-!
-!do vg = 1, node_list%n_nodes
-!
-!  if ( node_list%node(vg)%axis_node ) then
-!
-!    Pmat(1,1) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(1,2) = node_list%node(vg)%x(1,dof2,2)
-!    Pmat(2,1) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(2,2) = node_list%node(vg)%x(1,dof4,2)
-!
-!!#if fullmhd
-!!    vec(1) = node_list%node(vg)%Fprof_eq(dof2)
-!!    vec(2) = node_list%node(vg)%Fprof_eq(dof4)
-!!    vec    = matmul(Pmat, vec)
-!!    node_list%node(vg)%Fprof_eq(dof2) = vec(1)
-!!    node_list%node(vg)%Fprof_eq(dof4) = vec(2) 
-!!
-!!    vec(1) = node_list%node(vg)%psi_eq(dof2)
-!!    vec(2) = node_list%node(vg)%psi_eq(dof4)
-!!    vec    = matmul(Pmat, vec)
-!!    node_list%node(vg)%psi_eq(dof2) = vec(1)
-!!    node_list%node(vg)%psi_eq(dof4) = vec(2)
-!!#elif altcs
-!!    vec(1) = node_list%node(vg)%psi_eq(dof2)
-!!    vec(2) = node_list%node(vg)%psi_eq(dof4)
-!!    vec    = matmul(Pmat, vec)
-!!    node_list%node(vg)%psi_eq(dof2) = vec(1)
-!!    node_list%node(vg)%psi_eq(dof4) = vec(2)    
-!!#endif
-!
-!    do in = i_tor_min, i_tor_max
-!    do ivar = 1, n_var
-!
-!       vec(1) = node_list%node(vg)%values(in,dof2,ivar)
-!       vec(2) = node_list%node(vg)%values(in,dof4,ivar)
-!       vec    = matmul(Pmat, vec)
-!    
-!       node_list%node(vg)%values(in,dof2,ivar) = vec(1)
-!       node_list%node(vg)%values(in,dof4,ivar) = vec(2)
-!
-!       vec(1) = node_list%node(vg)%deltas(in,dof2,ivar)
-!       vec(2) = node_list%node(vg)%deltas(in,dof4,ivar)
-!       vec    = matmul(Pmat, vec)
-!
-!       node_list%node(vg)%deltas(in,dof2,ivar) = vec(1)
-!       node_list%node(vg)%deltas(in,dof4,ivar) = vec(2)
-!
-!    enddo
-!    enddo
-!
-!  endif
-!
-!enddo
-!end subroutine transform_nodelist
-!
-!subroutine transform_back_nodelist(node_list, i_tor_min, i_tor_max)
-!use data_structure
-!use phys_module
-!implicit none
-!integer :: vg, dof2, dof4, in, ivar
-!type(type_node_list),    intent(inout) :: node_list
-!integer ,              intent(in)    ::  i_tor_min, i_tor_max
-!real*8  :: Pmat(2,2), vec(2), aa, bb, cc, dd
-!
-!dof2 = 2 ; dof4 = 4
-!
-!do vg = 1, node_list%n_nodes
-!
-!  if ( node_list%node(vg)%axis_node ) then
-!
-!    aa = node_list%node(vg)%x(1,dof2,1)  ;  bb = node_list%node(vg)%x(1,dof2,2)
-!    cc = node_list%node(vg)%x(1,dof4,1)  ;  dd = node_list%node(vg)%x(1,dof4,2)
-!          
-!    Pmat(1,1) =  dd  ;  Pmat(1,2) = -bb
-!    Pmat(2,1) = -cc  ;  Pmat(2,2) =  aa
-!
-!    Pmat = Pmat / (aa*dd - bb*cc)
-!!#if fullmhd
-!!    vec(1) = node_list%node(vg)%Fprof_eq(dof2)
-!!    vec(2) = node_list%node(vg)%Fprof_eq(dof4)
-!!    vec    = matmul(Pmat, vec)
-!!    node_list%node(vg)%Fprof_eq(dof2) = vec(1)
-!!    node_list%node(vg)%Fprof_eq(dof4) = vec(2) 
-!!
-!!    vec(1) = node_list%node(vg)%psi_eq(dof2)
-!!    vec(2) = node_list%node(vg)%psi_eq(dof4)
-!!    vec    = matmul(Pmat, vec)
-!!    node_list%node(vg)%psi_eq(dof2) = vec(1)
-!!    node_list%node(vg)%psi_eq(dof4) = vec(2)    
-!!#elif altcs
-!!    vec(1) = node_list%node(vg)%psi_eq(dof2)
-!!    vec(2) = node_list%node(vg)%psi_eq(dof4)
-!!    vec    = matmul(Pmat, vec)
-!!    node_list%node(vg)%psi_eq(dof2) = vec(1)
-!!    node_list%node(vg)%psi_eq(dof4) = vec(2)
-!!#endif
-!
-!    do in = i_tor_min, i_tor_max
-!    do ivar = 1, n_var
-!
-!       vec(1) = node_list%node(vg)%values(in,dof2,ivar)
-!       vec(2) = node_list%node(vg)%values(in,dof4,ivar)
-!       vec    = matmul(Pmat, vec)
-!    
-!       node_list%node(vg)%values(in,dof2,ivar) = vec(1)
-!       node_list%node(vg)%values(in,dof4,ivar) = vec(2)
-!
-!       vec(1) = node_list%node(vg)%deltas(in,dof2,ivar)
-!       vec(2) = node_list%node(vg)%deltas(in,dof4,ivar)
-!       vec    = matmul(Pmat, vec)
-!
-!       node_list%node(vg)%deltas(in,dof2,ivar) = vec(1)
-!       node_list%node(vg)%deltas(in,dof4,ivar) = vec(2)
-!
-!    enddo
-!    enddo
-!
-!  endif
-!
-!enddo
-!end subroutine transform_back_nodelist
+subroutine transform_nodelist(node_list, i_v, n_v, i_n, n_harm, transform_deltas)
+use data_structure
+use phys_module
+implicit none
+type(type_node_list),    intent(inout) :: node_list
+integer,         intent(in)    :: n_v, i_v(n_v), n_harm, i_n(n_harm)
+logical,         intent(in)    :: transform_deltas
+
+integer :: vg, dof2, dof4, in, ivar
+real*8  :: Pmat(2,2), vec(2)
+
+dof2 = 2 ; dof4 = 4
+
+do vg = 1, node_list%n_nodes
+
+  if ( node_list%node(vg)%axis_node ) then
+
+    Pmat(1,1) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(1,2) = node_list%node(vg)%x(1,dof2,2)
+    Pmat(2,1) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(2,2) = node_list%node(vg)%x(1,dof4,2)
+
+#if fullmhd
+    vec(1) = node_list%node(vg)%Fprof_eq(dof2)
+    vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%Fprof_eq(dof2) = vec(1)
+    node_list%node(vg)%Fprof_eq(dof4) = vec(2) 
+
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)
+#elif altcs
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)    
+#endif
+
+    do ivar = 1, n_v
+
+#if fullmhd    
+      if(i_v(ivar) == 710)then
+        vec(1) = node_list%node(vg)%Fprof_eq(dof2)
+        vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+        vec    = matmul(Pmat, vec)
+        node_list%node(vg)%Fprof_eq(dof2) = vec(1)
+        node_list%node(vg)%Fprof_eq(dof4) = vec(2)
+      elseif(i_v(ivar) == 711)then
+        vec(1) = node_list%node(vg)%psi_eq(dof2)
+        vec(2) = node_list%node(vg)%psi_eq(dof4)
+        vec    = matmul(Pmat, vec)
+        node_list%node(vg)%psi_eq(dof2) = vec(1)
+        node_list%node(vg)%psi_eq(dof4) = vec(2)
+      endif
+#endif
+
+    do in = 1, n_harm
+       vec(1) = node_list%node(vg)%values(i_n(in),dof2,i_v(ivar))
+       vec(2) = node_list%node(vg)%values(i_n(in),dof4,i_v(ivar))
+       vec    = matmul(Pmat, vec)
+       node_list%node(vg)%values(i_n(in),dof2,i_v(ivar)) = vec(1)
+       node_list%node(vg)%values(i_n(in),dof4,i_v(ivar)) = vec(2)
+    enddo
+    enddo
+
+    if(transform_deltas)then
+    do ivar = 1, n_v
+    do in = 1, n_harm            
+       vec(1) = node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar))
+       vec(2) = node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar))
+       vec    = matmul(Pmat, vec)
+       node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar)) = vec(1)
+       node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar)) = vec(2)
+    enddo
+    enddo
+    endif
+
+  endif
+
+enddo
+end subroutine transform_nodelist
+
+subroutine transform_back_nodelist(node_list, i_v, n_v, i_n, n_harm, transform_deltas)
+use data_structure
+use phys_module
+implicit none
+type(type_node_list),    intent(inout) :: node_list
+integer,         intent(in)    :: n_v, i_v(n_v), n_harm, i_n(n_harm)
+logical,         intent(in)    :: transform_deltas
+
+integer :: vg, dof2, dof4, in, ivar
+real*8  :: Pmat(2,2), vec(2), aa, bb, cc, dd
+
+dof2 = 2 ; dof4 = 4
+
+do vg = 1, node_list%n_nodes
+
+  if ( node_list%node(vg)%axis_node ) then
+
+    aa = node_list%node(vg)%x(1,dof2,1)  ;  bb = node_list%node(vg)%x(1,dof2,2)
+    cc = node_list%node(vg)%x(1,dof4,1)  ;  dd = node_list%node(vg)%x(1,dof4,2)
+          
+    Pmat(1,1) =  dd  ;  Pmat(1,2) = -bb
+    Pmat(2,1) = -cc  ;  Pmat(2,2) =  aa
+
+    Pmat = Pmat / (aa*dd - bb*cc)
+    
+#if fullmhd
+    vec(1) = node_list%node(vg)%Fprof_eq(dof2)
+    vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%Fprof_eq(dof2) = vec(1)
+    node_list%node(vg)%Fprof_eq(dof4) = vec(2) 
+
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)
+#elif altcs
+    vec(1) = node_list%node(vg)%psi_eq(dof2)
+    vec(2) = node_list%node(vg)%psi_eq(dof4)
+    vec    = matmul(Pmat, vec)
+    node_list%node(vg)%psi_eq(dof2) = vec(1)
+    node_list%node(vg)%psi_eq(dof4) = vec(2)
+#endif
+
+    do ivar = 1, n_v
+
+#if fullmhd
+      if(i_v(ivar) == 710)then
+        vec(1) = node_list%node(vg)%Fprof_eq(dof2)
+        vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+        vec    = matmul(Pmat, vec)
+        node_list%node(vg)%Fprof_eq(dof2) = vec(1)
+        node_list%node(vg)%Fprof_eq(dof4) = vec(2)
+      elseif(i_v(ivar) == 711)then
+        vec(1) = node_list%node(vg)%psi_eq(dof2)
+        vec(2) = node_list%node(vg)%psi_eq(dof4)
+        vec    = matmul(Pmat, vec)
+        node_list%node(vg)%psi_eq(dof2) = vec(1)
+        node_list%node(vg)%psi_eq(dof4) = vec(2)
+     endif
+#endif
+    
+    do in = 1, n_harm
+       vec(1) = node_list%node(vg)%values(i_n(in),dof2,i_v(ivar))
+       vec(2) = node_list%node(vg)%values(i_n(in),dof4,i_v(ivar))
+       vec    = matmul(Pmat, vec)
+       node_list%node(vg)%values(i_n(in),dof2,i_v(ivar)) = vec(1)
+       node_list%node(vg)%values(i_n(in),dof4,i_v(ivar)) = vec(2)
+    enddo
+    enddo
+
+    if(transform_deltas)then
+    do ivar = 1, n_v       
+    do in = 1, n_harm
+       vec(1) = node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar))
+       vec(2) = node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar))
+       vec    = matmul(Pmat, vec)
+       node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar)) = vec(1)
+       node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar)) = vec(2)
+    enddo
+    enddo
+    endif
+
+  endif
+
+enddo
+end subroutine transform_back_nodelist
 
 end module mod_axis_treatment

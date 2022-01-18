@@ -32,6 +32,8 @@ logical    :: xpoint2
 
 current = 0.d0
 
+if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
+
 do ife =1,  element_list%n_elements
 
   element = element_list%element(ife)
@@ -39,9 +41,6 @@ do ife =1,  element_list%n_elements
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-    if(treat_axis .and. nodes(iv)%axis_node) then
-       call transform_dofs_for_axis_node(nodes(iv), (/1/), 1,(/1/), 1, .false.)
-    endif     
   enddo
 
   x_g(:,:)   = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;
@@ -108,6 +107,8 @@ do ife =1,  element_list%n_elements
     enddo
   enddo
 enddo
+
+if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 current = current / (4.d-7 * PI)
 

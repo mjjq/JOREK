@@ -22,11 +22,13 @@ use mod_log_params
 use diagnostics, only: axis_is_psi_minimum
 use mod_boundary, only: boundary_from_grid
 use mod_element_rtree
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (JOREK_MODEL == 500)
   use mod_neutral_source
 #endif
-#ifdef WITH_Impurities
+#if (JOREK_MODEL == 500 || JOREK_MODEL == 710)
+#ifdef fmhdspi
   use mod_injection_source
+#endif
 #endif
 use mod_integrals3D
 use mod_expression, only: exprs_all_int, init_expr, t_expr_list
@@ -260,15 +262,15 @@ if (using_spi) then
 
 endif
 
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 710)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   call init_imp_adas(my_id)
-  if (output_prad_phi) then
+  !if (output_prad_phi) then
     ! --- Determine boundary information from the grid
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
     call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
-  endif
+  !endif
 #endif
 !if (use_pellet) then
 !   pellet_volume = total_pellet_volume

@@ -12,7 +12,7 @@ implicit none
 
 ! --- Routine parameters
 integer,                  intent(in)    :: my_id
-type (type_node_list),    intent(in)    :: node_list
+type (type_node_list), intent(inout)    :: node_list
 type (type_element_list), intent(in)    :: element_list
 real*8,                   intent(out)   :: psi_xpoint(2)
 real*8,                   intent(out)   :: R_xpoint(2)
@@ -27,12 +27,11 @@ integer,                  intent(out)   :: ifail
 real*8  :: ps_s, ps_t, ps_x, ps_y, xjac
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: x(2), s, t, xerr, ferr, s_xp_init(2), t_xp_init(2)
-integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries, inode
+integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries
 integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
 logical :: found_upper, found_lower
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt_lw(:,:,:), include_pt_up(:,:,:)
-type (type_node)     :: nodes(n_vertex_max)
 
 if (my_id .eq. 0) then
   write(*,*) '*********************************'
@@ -58,17 +57,10 @@ include_pt_up = .false.
 found_upper = .false. 
 found_lower = .false.
 
+if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 do i=1,element_list%n_elements    ! --- loop over elements
- 
-  do iv = 1, n_vertex_max
-    inode     = element_list%element(i)%vertex(iv)
-    nodes(iv) = node_list%node(inode)
-    if(treat_axis .and. nodes(iv)%axis_node) then
-       call transform_dofs_for_axis_node(nodes(iv), (/1/), 1, (/1/), 1, .false.)
-    endif
-  enddo
-
+  
   do ms = 1, 4           ! 4 Gaussian points
     do mt = 1, 4         ! 4 Gaussian points
 
@@ -86,8 +78,8 @@ do i=1,element_list%n_elements    ! --- loop over elements
 
           iv = element_list%element(i)%vertex(kv)
 
-          ps_s = ps_s + nodes(kv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
-          ps_t = ps_t + nodes(kv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
+          ps_s = ps_s + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_s(kv,kf,ms,mt)
+          ps_t = ps_t + node_list%node(iv)%values(1,kf,1) * element_list%element(i)%size(kv,kf) * H_t(kv,kf,ms,mt)
 
           R   = R   + node_list%node(iv)%x(1,kf,1) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
           Z   = Z   + node_list%node(iv)%x(1,kf,2) * element_list%element(i)%size(kv,kf) * H(kv,kf,ms,mt)
@@ -128,6 +120,7 @@ do i=1,element_list%n_elements    ! --- loop over elements
 
 enddo    ! --- end loop over elements
 
+if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 if(xcase .ne. 2) then
   do i_tries=1,  n_tries  ! --- start attempts to find the lower x-point

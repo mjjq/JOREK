@@ -35,7 +35,9 @@ type,abstract :: vertices
   procedure,pass(vert_inout) :: deallocate_vertices
   procedure,pass(vert_inout) :: resize_vertices_noloss
   procedure,pass(vert_inout) :: fit_tables_to_active_vertices
+  procedure,pass(vert_1)     :: visibility_geometry_funct
 end type vertices
+
 !> Interfaces -------------------------------------------------------------
 contains
 
@@ -302,6 +304,38 @@ subroutine fit_tables_to_active_vertices(vert_inout,ifail)
   integer,intent(inout)         :: ifail
   call vert_inout%resize_vertices_noloss(maxval(vert_inout%n_active_vertices),ifail)
 end subroutine fit_tables_to_active_vertices
+
+!> compute the visibility and the geometry function in the case there
+!> are no surfaces. Because there are no suraces implied, the returned
+!> visibility function is always 0
+!> inputs:
+!>   vert_1:    (vertices) first vertex class
+!>   vert_2:    (vertices) second vertex classs
+!>   time_id_1: (integer) time index of the first vertex
+!>   time_id_1: (integer) time index of the second vertex
+!>   v_id_1:    (integer) first vertex index
+!>   v_id_2:    (integer) second vertex index
+!> outputs:
+!>   vert_1:     (vertices) first vertex class
+!>   visibility: (real8) visibility function always equal 1 for this case
+!>   geometry:   (real8) geometry function equal to the distance between two vertices
+subroutine visibility_geometry_funct(vert_1,vert_2,time_id_1,time_id_2,&
+v_id_1,v_id_2,visibility,geometry)
+  implicit none
+  class(vertices),intent(inout) :: vert_1
+  class(vertices),intent(in)    :: vert_2
+  integer,intent(in)            :: time_id_1,time_id_2,v_id_1,v_id_2
+  real*8,intent(out)            :: visibility,geometry
+
+  !> return the visibility function equal to 1
+  visibility = 1.d0;
+  geometry = sqrt((vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2))*&
+             (vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2)) + &
+             (vert_1%x(2,v_id_1,time_id_1)-vert_2%x(2,v_id_2,time_id_2)) * &
+             (vert_1%x(2,v_id_1,time_id_1)-vert_2%x(2,v_id_2,time_id_2)) + &
+             (vert_1%x(3,v_id_1,time_id_1)-vert_2%x(3,v_id_2,time_id_2)) * &
+             (vert_1%x(3,v_id_1,time_id_1)-vert_2%x(3,v_id_2,time_id_2)))
+end subroutine visibility_geometry_funct
 
 !>-------------------------------------------------------------------------
 end module mod_vertices

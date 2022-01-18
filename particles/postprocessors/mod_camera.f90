@@ -23,7 +23,7 @@ type,abstract,extends(vertices) :: camera
    real*8,dimension(:,:,:),allocatable :: pixel_intensities
   contains
    procedure,pass(camera_inout) :: allocate_camera
-   procedure,pass(camera_inout) :: allocate_camera 
+   procedure,pass(camera_inout) :: deallocate_camera 
 end type camera
 
 !> Interfaces ------------------------------------------------------
@@ -71,7 +71,7 @@ subroutine deallocate_camera(camera_inout)
   !> deallocare everything and reset counters
   if(allocated(camera_inout%pixel_intensities)) &
   deallocate(camera_inout%pixel_intensities)
-  camera%n_pixels_spectra = 0; camera%exposure_time = 0.d0;
+  camera_inout%n_pixels_spectra = 0; camera_inout%exposure_time = 0.d0;
 end subroutine deallocate_camera
 
 !>------------------------------------------------------------------

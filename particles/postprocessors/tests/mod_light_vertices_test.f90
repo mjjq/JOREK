@@ -5,7 +5,6 @@
 !> type is used instead.
 module mod_light_vertices_test
 use fruit
-use mod_vertices, only: n_x
 use mod_particle_sim, only: particle_sim
 use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
 use mod_particle_types, only: particle_fieldline_id,particle_gc_id
@@ -19,6 +18,7 @@ private
 public :: run_fruit_light_vertices
 
 !> Variables ---------------------------------------------------------
+integer,parameter                         :: n_x=3
 integer,parameter                         :: n_properties_sol=11
 integer,parameter                         :: n_particle_types=2
 integer,parameter                         :: n_times_sol=3

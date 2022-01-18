@@ -4,8 +4,6 @@ module mod_synchrotron_light_vertices_test
 use fruit
 use mod_particle_sim,               only: particle_sim
 use mod_spectra_monte_carlo,        only: spectrum_rng_uniform
-use mod_vertices,                   only: n_x
-use mod_synchrotron_light_vertices, only: n_properties
 use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
 implicit none
 
@@ -19,6 +17,8 @@ real*8,parameter                            :: tol2_real8=3.5d-8
 real*8,parameter                            :: mass_RE=5.48579909065d-4
 real*8,parameter                            :: exclusion_values=1.d-100
 !> parameters for generating synhrotron lights
+integer,parameter :: n_x=3
+integer,parameter :: n_properties=13
 integer,parameter :: fill_type_base=1 !< use cylindrical initialisation
 integer,parameter :: n_times_sol=2
 integer,dimension(n_times_sol),parameter    :: n_groups_per_sim=(/3,2/)

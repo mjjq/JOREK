@@ -5,7 +5,6 @@
 !> is used instead
 module mod_vertices_test
 use fruit
-use mod_vertices, only: n_x
 use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
 implicit none
 
@@ -13,6 +12,7 @@ private
 public :: run_fruit_vertices
 
 !> Variables ---------------------------------------------------------
+integer,parameter :: n_x=3
 integer,parameter :: code_resize_fail=11
 integer,parameter :: n_times_sol=3
 integer,parameter :: n_times_2_sol=5

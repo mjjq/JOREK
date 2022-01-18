@@ -4,7 +4,7 @@ module mod_vertices
 implicit none
 
 private
-public :: n_x,vertices
+public :: vertices
 !> public procedure only for unit testing
 #ifdef UNIT_TESTS
 public :: resize_vertices_noloss_seq
@@ -18,6 +18,7 @@ integer,parameter     :: n_x=3 !< number of coordinates
 !> defining light or gather points.
 type,abstract :: vertices
   !> type variables
+  integer               :: n_x=3             !< number of values of position vector 
   integer               :: n_times           !< number of time slices
   integer               :: n_vertices        !< total number of vertices equals per all time
   integer               :: n_property_vertex !< total number of properties per vertex
@@ -79,7 +80,7 @@ subroutine allocate_x_properties(vert_inout,n_vertices)
   !> check,allocate and initialize to 0 x and properties array
   if(allocated(vert_inout%x)) deallocate(vert_inout%x)
   if(allocated(vert_inout%properties)) deallocate(vert_inout%properties)
-  allocate(vert_inout%x(n_x,n_vertices,vert_inout%n_times))
+  allocate(vert_inout%x(vert_inout%n_x,n_vertices,vert_inout%n_times))
   allocate(vert_inout%properties(vert_inout%n_property_vertex,n_vertices,vert_inout%n_times))
   vert_inout%x = 0.d0; vert_inout%properties = 0.d0;
   vert_inout%n_vertices = n_vertices;
@@ -206,7 +207,7 @@ subroutine resize_vertices_noloss_seq(vert_inout,n_vertex_new,ifail)
     return
   endif
   vert_inout%n_vertices = n_vertex_new
-  allocate(x_table(n_x,n_active_vertices_max,vert_inout%n_times))
+  allocate(x_table(vert_inout%n_x,n_active_vertices_max,vert_inout%n_times))
   allocate(property_table(vert_inout%n_property_vertex,n_active_vertices_max,vert_inout%n_times))
 
   !> copy data and resize tables
@@ -259,7 +260,7 @@ subroutine resize_vertices_noloss_omp(vert_inout,n_vertex_new,ifail)
     return
   endif
   vert_inout%n_vertices = n_vertex_new
-  allocate(x_table(n_x,n_active_vertices_max,vert_inout%n_times))
+  allocate(x_table(vert_inout%n_x,n_active_vertices_max,vert_inout%n_times))
   allocate(property_table(vert_inout%n_property_vertex,n_active_vertices_max,vert_inout%n_times))
 
   !> copy data and resize tables

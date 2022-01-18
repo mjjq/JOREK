@@ -70,7 +70,6 @@ interface
   !>               from the light_id light to the x_shaded point for all
   !>               spectra points and all spectra
   subroutine direct_funct(light_vert,spectra,time_id,light_id,x_shaded,light_dstb)
-    use mod_vertices, only: n_x
     use mod_spectra,  only: spectrum_base
     IMPORT :: light_vertices
     implicit none
@@ -79,7 +78,7 @@ interface
     class(spectrum_base),intent(inout)  :: spectra
     !> inputs
     integer,intent(in)                  :: time_id,light_id
-    real*8,dimension(n_x),intent(in)    :: x_shaded
+    real*8,dimension(light_vert%n_x),intent(in)    :: x_shaded
     !> outputs
     real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_dstb
   end subroutine direct_funct
@@ -99,7 +98,6 @@ interface
   !>                          from the light_id light at ethe time time_id to 
   !>                          the x_shaded point for all spectra points and all spectra
   subroutine spect_irradiance(light_vert,spectra,time_id,light_id,x_shaded,light_spec_irradiance)
-    use mod_vertices, only: n_x
     use mod_spectra,  only: spectrum_base
     IMPORT :: light_vertices
     implicit none
@@ -108,7 +106,7 @@ interface
     class(spectrum_base),intent(inout)  :: spectra
     !> inputs
     integer,intent(in)                  :: time_id,light_id
-    real*8,dimension(n_x),intent(in)    :: x_shaded
+    real*8,dimension(light_vert%n_x),intent(in)    :: x_shaded
     !> outputs
     real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
   end subroutine spect_irradiance

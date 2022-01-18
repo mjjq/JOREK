@@ -17,7 +17,7 @@ character(len=28),parameter :: test_filename="test_particle_io_mpi_hdf5.h5"
 !> of particle types for testing all of them
 !> particle_gc_Qin is commented because the I/O for particle_gc_Qin
 !> has not been implemented yet
-integer,parameter :: fillt_type=-1
+integer,parameter :: fill_type=-1
 integer,parameter :: n_groups=7!8
 integer,parameter :: n_particles=5 !< N# of particles per group per task
 real*8,parameter  :: tol_real8=1.d-15
@@ -147,7 +147,7 @@ subroutine test_particle_mpi_io(rank,n_tasks,ifail)
   call read_simulation_hdf5(sim_particles_new,trim(test_filename))
 
   !> compu variables which are not read from hdf5
-  call copy_group_fieldline_B_hat_prev(n_groups,n_particles,&
+  call copy_group_fieldline_B_hat_prev(n_groups,&
   sim_particles%groups,sim_particles_new%groups)
 
   !> check simulation 

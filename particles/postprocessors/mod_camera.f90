@@ -5,7 +5,7 @@
 !> multiple pupils with multiple visual planes must be
 !> simulated as different synthetic cameras
 module mod_camera
-use mod_vertices, only: n_x, vertices
+use mod_vertices, only: vertices
 implicit none
 
 private
@@ -22,7 +22,7 @@ type,abstract,extends(vertices) :: camera
    !> array containing the pixel intensity per each time
    real*8,dimension(:,:,:),allocatable :: pixel_intensities
   contains
-   procedure,pass(camera_inout) :: initialise_camera
+   procedure,pass(camera_inout) :: allocate_camera
    procedure,pass(camera_inout) :: allocate_camera 
 end type camera
 
@@ -56,7 +56,7 @@ n_spectra,n_pixels_x,n_pixels_y)
   allocate(camera_inout%pixel_intensities(n_spectra,&
   n_pixels_x*n_pixels_y,n_times))
   camera_inout%pixel_intensities = 0.d0;
-  camera_inout%n_pixels_camera = (/n_spectra,n_pixels_x,n_pixels_y/)
+  camera_inout%n_pixels_spectra = (/n_spectra,n_pixels_x,n_pixels_y/)
 end subroutine allocate_camera
 
 !> deallocate camera arrays and reset counters to 0
@@ -73,5 +73,6 @@ subroutine deallocate_camera(camera_inout)
   deallocate(camera_inout%pixel_intensities)
   camera%n_pixels_spectra = 0; camera%exposure_time = 0.d0;
 end subroutine deallocate_camera
+
 !>------------------------------------------------------------------
 end module mod_camera

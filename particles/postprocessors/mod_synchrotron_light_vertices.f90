@@ -281,7 +281,9 @@ n_groups,n_active_particles,active_particles_id)
             !> compute E,B fields
 #ifndef UNIT_TESTS_AFIELDS
             call sims_particles(ii)%fields%calc_EBpsiU(sync_lights%times(ii),&
-            particle%i_elm,particle%st,p_list(active_particles_id(kk,jj,ii))%x(3),&
+            p_list(active_particles_id(kk,jj,ii))%i_elm,&
+            p_list(active_particles_id(kk,jj,ii))%st,&
+            p_list(active_particles_id(kk,jj,ii))%x(3),&
             E_field,B_field,psi,U)
 #else
             !> analytical fields only for unit testing

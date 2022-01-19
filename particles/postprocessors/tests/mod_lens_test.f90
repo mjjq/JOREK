@@ -3,7 +3,6 @@
 !> abstract class, the pinhole_lens class instead
 module mod_lens_test
   use fruit
-  use mod_pinhole_lens, only: pinhole_lens
   implicit none
 
   private

@@ -267,27 +267,6 @@ module mod_position
             pos%ielm = i
             s_tmp    = float(j-1)/float(nsub-1)
             t_tmp    = float(k-1)/float(nsub-1)
-            call interp_RZ(node_list, element_list, i, s_tmp, t_tmp, pos%R, pos%R_s, pos%R_t, pos%Z, pos%Z_s, pos%Z_t)
-
-            xjac     = pos%R_s*pos%Z_t - pos%R_t*pos%Z_s
-
-            ! ---Avoids locations with vanishing jacobian
-            if (abs(xjac) < 1.d-8) then
-              if( (pos%R_s**2 + pos%Z_s**2) < (pos%R_t**2 + pos%Z_t**2) ) then
-                if (k==1) then
-                  t_tmp = t_tmp + 0.5/float(nsub-1)
-                else
-                  t_tmp = t_tmp - 0.5/float(nsub-1)
-                endif
-              else
-                if (j==1) then
-                  s_tmp = s_tmp + 0.5/float(nsub-1)
-                else
-                  s_tmp = s_tmp - 0.5/float(nsub-1)
-                endif
-              endif
-            endif
-
             pos%s    = s_tmp
             pos%t    = t_tmp
             call fill_pol_pos(pos, node_list, element_list)

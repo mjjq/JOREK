@@ -64,6 +64,7 @@ DIRS := diagnostics			\
   particles/postprocessors \
   particles/postprocessors/spectra \
   particles/postprocessors/lights \
+  particles/postprocessors/lens \
   particles/postprocessors/camera \
   particles/postprocessors/tests \
   particles/postprocessors/tests/drivers \

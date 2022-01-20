@@ -58,6 +58,7 @@ subroutine run_fruit_coordinate_transforms()
   write(*,'(/A)') "  ... running: coordinate transforms tests"
   call test_cartesian_tofrom_cylindrical_transform
   call test_cartesian_tofrom_spherical_latitude_transform
+  call test_cartesian_tofrom_spherical_colatitude_std_transform
   call test_cartesian_tofrom_cylindrical_vector_rotation
   call test_vectors_to_orthonormal_basis
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
@@ -179,6 +180,37 @@ subroutine test_cartesian_tofrom_spherical_latitude_transform()
     enddo
   end do
 end subroutine test_cartesian_tofrom_spherical_latitude_transform
+
+!> Test cartesian to spherical (colatitude) and spherical
+!> (latitude) transformations for single and double
+!> precision functions. Standard direction version
+subroutine test_cartesian_tofrom_spherical_colatitude_std_transform()
+  use mod_coordinate_transforms, only: cartesian_to_spherical_colatitude
+  use mod_coordinate_transforms, only: spherical_colatitude_to_cartesian
+  implicit none
+  !> variables
+  integer             :: ii,jj
+  real*4,dimension(3) :: x_cart_new_r4,rthetachi_r4
+  real*8,dimension(3) :: x_cart_new_r8,rthetachi_r8
+  !> test single precision
+  do jj=1,n_origins
+    do ii=1,n_points
+      rthetachi_r4 = cartesian_to_spherical_colatitude(x_r4(:,ii),origin_r4(:,jj))
+      x_cart_new_r4 = spherical_colatitude_to_cartesian(rthetachi_r4,origin_r4(:,jj))
+      call assert_equals(x_r4(:,ii)-x_cart_new_r4,zeros_r4,3,tol_calc_r4,&
+      "Error test cartesian to/from spherical-colatitude standard (float): x-cartesian mismatch!") 
+    enddo
+  end do
+  !> test double precision
+  do jj=1,n_origins
+    do ii=1,n_points
+      rthetachi_r8 = cartesian_to_spherical_colatitude(x_r8(:,ii),origin_r8(:,jj))
+      x_cart_new_r8 = spherical_colatitude_to_cartesian(rthetachi_r8,origin_r8(:,jj))
+      call assert_equals(x_r8(:,ii)-x_cart_new_r8,zeros_r8,3,tol_calc_r8,&
+      "Error test cartesian to/from spherical-colatitude standard (double): x-cartesian mismatch!") 
+    enddo
+  end do
+end subroutine test_cartesian_tofrom_spherical_colatitude_std_transform
 
 !> test generation of orthonormal basis for 3d cartesian coordinates
 subroutine test_vectors_to_orthonormal_basis()

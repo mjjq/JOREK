@@ -205,7 +205,7 @@ subroutine test_define_direction_plane_from_half_angle()
   do ii=1,n_planes
     normal = spherical_colatitude_to_cartesian(rthetaphi_sol(:,ii),origin)
     distance_loc(:,ii) = rthetaphi_sol(1,ii)
-    call define_plane_from_half_angles(half_angles_sol(:,ii),plane)
+    call define_plane_from_half_angles(half_angles_sol(:,ii),rthetaphi_sol(:,ii),plane)
     call extract_values_for_plane_definition_test(normal,origin,&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
     distance_loc(:,ii),orthogonal(:,ii))
@@ -242,7 +242,8 @@ subroutine test_define_direction_plane_from_half_angle_origin()
     origin = origins_sol(:,ii)
     normal = spherical_colatitude_to_cartesian(rthetaphi_sol(:,ii),origin)
     distance_loc(:,ii) = rthetaphi_sol(1,ii)
-    call define_plane_from_half_angles(half_angles_sol(:,ii),plane)
+    call define_plane_from_half_angles(half_angles_sol(:,ii),rthetaphi_sol(:,ii),&
+    origin,plane)
     call extract_values_for_plane_definition_test(normal,origin,&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
     distance_loc(:,ii),orthogonal(:,ii))
@@ -283,7 +284,7 @@ plane,half_height_angle,half_width_angle,distance,orthogonal)
   !> initialise data
   normal = n_vector - origin
   norm_n_origin_vector = norm2(normal)
-  normal = n_vector/norm_n_origin_vector
+  normal = normal/norm_n_origin_vector
   P4 = compute_global_cart_coord_plane_points(plane,(/1.d0,1.d0/))
   A1 = 5.d-1*(plane(:,2)+plane(:,1));
   A2 = 5.d-1*(P4+plane(:,3))
@@ -300,11 +301,11 @@ plane,half_height_angle,half_width_angle,distance,orthogonal)
   distance(3) = dot_product(B1-origin,normal)
   distance(4) = dot_product(B2-origin,normal) 
   !> extract orthogonality
-  orthogonal(1) = dot_product(A1-n_vector,normal)
-  orthogonal(2) = dot_product(A2-n_vector,normal)
-  orthogonal(3) = dot_product(B1-n_vector,normal)
-  orthogonal(4) = dot_product(B2-n_vector,normal)
-  orthogonal(5) = dot_product(B2-B1,A2-A1)
+  orthogonal(1) = dot_product((A1-n_vector)/norm2(A1-n_vector),normal)
+  orthogonal(2) = dot_product((A2-n_vector)/norm2(A2-n_vector),normal)
+  orthogonal(3) = dot_product((B1-n_vector)/norm2(B1-n_vector),normal)
+  orthogonal(4) = dot_product((B2-n_vector)/norm2(B2-n_vector),normal)
+  orthogonal(5) = dot_product((B2-B1)/norm2(B2-B1),(A2-A1)/norm2(A2-A1))
 end subroutine extract_values_for_plane_definition_test
 
 !>---------------------------------------------------------

@@ -54,6 +54,8 @@ subroutine run_fruit_geometry()
   write(*,'(/A)') "  ... running: geometry tests"
   call test_compute_test_line_intersect_cart_points
   call test_define_standard_plane_from_half_angle
+  call test_define_direction_plane_from_half_angle
+  call test_define_direction_plane_from_half_angle_origin
   write(*,'(/A)') "  ... tearing-down: geometry tests"
 end subroutine run_fruit_geometry
 
@@ -182,8 +184,83 @@ subroutine test_define_standard_plane_from_half_angle()
   call assert_equals(distance_loc,ones_4Xn_planes_r8,4,n_planes,&
   tol_real8,"Error define standard plane from half angles: distance is not unity!")
   call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
-  tol_real8,"Error define standard plane from half angles: axis not orthogonal!!")
+  tol_real8,"Error define standard plane from half angles: axis not orthogonal!")
 end subroutine test_define_standard_plane_from_half_angle
+
+!> Test define plane from half angles with direction and distance
+subroutine test_define_direction_plane_from_half_angle()
+  use mod_coordinate_transforms, only: spherical_colatitude_to_cartesian
+  use mod_geometry,              only: define_plane_from_half_angles
+  implicit none
+  !> variables
+  integer :: ii
+  real*8,dimension(3)            :: normal,origin
+  real*8,dimension(4,n_planes)   :: distance_loc
+  real*8,dimension(2,n_planes)   :: half_width_angle_loc,half_height_angle_loc
+  real*8,dimension(5,n_planes)   :: orthogonal
+  real*8,dimension(3,3)          :: plane
+  !> initialise quantities
+  origin = (/0.d0,0.d0,0.d0/);
+  !> compute plane and quantities to test
+  do ii=1,n_planes
+    normal = spherical_colatitude_to_cartesian(rthetaphi_sol(:,ii),origin)
+    distance_loc(:,ii) = rthetaphi_sol(1,ii)
+    call define_plane_from_half_angles(half_angles_sol(:,ii),plane)
+    call extract_values_for_plane_definition_test(normal,origin,&
+    plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
+    distance_loc(:,ii),orthogonal(:,ii))
+  enddo
+  !> check values 
+  call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles: width angle 1 mismatch!")
+  call assert_equals(half_width_angle_loc(2,:),half_angles_sol(1,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles: width angle 2 mismatch!")
+  call assert_equals(half_height_angle_loc(1,:),half_angles_sol(2,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles: height angle 1 mismatch!")
+  call assert_equals(half_height_angle_loc(2,:),half_angles_sol(2,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles: height angle 2 mismatch!")
+  call assert_equals(distance_loc,distance_loc,4,n_planes,&
+  tol_real8,"Error define direction plane from half angles: distance is not unity!")
+  call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
+  tol_real8,"Error define direction plane from half angles: axis not orthogonal!")
+end subroutine test_define_direction_plane_from_half_angle
+
+!> Test define plane from half angles with direction, distance and origin
+subroutine test_define_direction_plane_from_half_angle_origin()
+  use mod_coordinate_transforms, only: spherical_colatitude_to_cartesian
+  use mod_geometry,              only: define_plane_from_half_angles
+  implicit none
+  !> variables
+  integer :: ii
+  real*8,dimension(3)            :: normal,origin
+  real*8,dimension(4,n_planes)   :: distance_loc
+  real*8,dimension(2,n_planes)   :: half_width_angle_loc,half_height_angle_loc
+  real*8,dimension(5,n_planes)   :: orthogonal
+  real*8,dimension(3,3)          :: plane
+  !> compute plane and quantities to test
+  do ii=1,n_planes
+    origin = origins_sol(:,ii)
+    normal = spherical_colatitude_to_cartesian(rthetaphi_sol(:,ii),origin)
+    distance_loc(:,ii) = rthetaphi_sol(1,ii)
+    call define_plane_from_half_angles(half_angles_sol(:,ii),plane)
+    call extract_values_for_plane_definition_test(normal,origin,&
+    plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
+    distance_loc(:,ii),orthogonal(:,ii))
+  enddo
+  !> check values 
+  call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles origin: width angle 1 mismatch!")
+  call assert_equals(half_width_angle_loc(2,:),half_angles_sol(1,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles origin: width angle 2 mismatch!")
+  call assert_equals(half_height_angle_loc(1,:),half_angles_sol(2,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles origin: height angle 1 mismatch!")
+  call assert_equals(half_height_angle_loc(2,:),half_angles_sol(2,:),n_planes,&
+  tol_real8,"Error define direction plane from half angles origin: height angle 2 mismatch!")
+  call assert_equals(distance_loc,distance_loc,4,n_planes,&
+  tol_real8,"Error define direction plane from half angles origin: distance is not unity!")
+  call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
+  tol_real8,"Error define direction plane from half angles origin: axis not orthogonal!")
+end subroutine test_define_direction_plane_from_half_angle_origin
 
 !> Tools --------------------------------------------------
 !> extract values for testing the definition of plane

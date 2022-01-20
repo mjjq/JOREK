@@ -33,6 +33,7 @@ module mod_sampling
   public :: sample_piecewise_linear
   public :: cross_product
   public :: sample_uniform_cone
+  public :: sample_uniform_sphere
   !> Switch here which procedure to use by default. The other ones can be found
   !> by their name
   interface normal_vectors
@@ -87,7 +88,6 @@ contains
     end do
   end function boxmueller_transform
 
-
   !> Transform a uniformly distributed number u on [0,1] into a normally distributed
   !> number by inverse transform sampling (slow!)
   !> It is much better to use box-muller or something else
@@ -108,7 +108,6 @@ contains
                        y0=u, x0=x0, x=x, ierr=ierr)
     ! Dangerous: ignore ierr for now
   end function sample_gaussian
-
 
   !> Sample from a Knudsen cosine distribution, representing well the angle
   !> of sputtered particles
@@ -248,9 +247,6 @@ contains
     P = sign((1-abs(x))*exp(-abs(x)*0.5d0)/(2.d0*sqrt(2.d0*PI*abs(x))), x)
   end function PDF_prime_chi_squared_3
 
-
-
-
   !> PDF of a gaussian (normal) distribution with sigma = 1 and mu = 0
   pure function PDF_gaussian(x) result(P)
     use constants, only: PI
@@ -273,8 +269,6 @@ contains
     real*8             :: P
     P = 0.5d0*(1.d0 + erf(x/sqrt(2.d0)))
   end function CDF_gaussian
-
-
 
   !> ---- Thompson distribution sampling functions (CDF, PDF, PDF')
   !> \( \mathrm{CDF}(x) = \left[ 1 - E_b^{n-1} \frac{E_b + n x}{(E_b + x)^n} \right] \)
@@ -306,7 +300,6 @@ contains
         (this%E_b - real(this%n,8)*abs(x))/((abs(x) + this%E_b)**(this%n+2))
     DPDF_thompson = sign(1.d0, x)*DPDF_thompson ! if x < 0 inverse the result
   end function DPDF_thompson
-
 
   !> We make a very shitty estimate of this function from some scaling arguments
   !> We could do much better by minimizing the integral of some parametrized
@@ -341,9 +334,6 @@ contains
     end select
   end function guess_inverse_CDF_thompson
 
-
-
-
   !> Transform a uniformly distributed number u on [0,1) into a number distributed
   !> with the passed dist by inverse transform sampling.
   function sample_dist(dist, u) result(x)
@@ -364,7 +354,6 @@ contains
       write(*,*) "Guess quality", dist%inverse_f(u), x
     end if
   end function sample_dist
-
 
   !> Sample from a discrete distribution, i.e. a list of probabilities.
   !> This is done by calculating the cumulative sum array and bisecting it with our
@@ -404,8 +393,6 @@ contains
     end do
     i_out = size(p,1) ! it must be the last one?
   end function sample_discrete
-
-
 
   !> Sample from a linearly interpolated probability density
   !> This is done by calculating the cumulative sum array and bisecting it with our
@@ -481,7 +468,6 @@ contains
     delta(3)*delta(3)))*length
  end function sample_uniform_direction_length_cone
 
-
   !> uniform sampling of the oriented cone given its half aperture angle
   !> and a direction. Possible to modify the cone origin has well
   !> inputs:
@@ -540,12 +526,34 @@ contains
     ray = (/z2*cos(zphi(1)),z2*sin(zphi(1)),zphi(2)/)
   end function sample_uniform_standard_cone
 
-pure function cross_product(a, b)
-  real*8, dimension(3) :: cross_product
-  real*8, dimension(3), intent(in) :: a, b
+  !> uniform sampling in a sphere volume
+  !> inputs:
+  !>   u:         (real8)(3) uniform random numbers
+  !>   R:         (real8) sphere radius
+  !>   cos_theta: (real8)(2) interval of thecosinus of the colatitude  in [-1,1]
+  !>   phi:       (real8)(2) azimuth interval
+  !> outputs: 
+  !>   RThetaPhi: (real8)(3) random R,theta,phi coordinates
+  function sample_uniform_sphere(R,cos_theta,phi,u) result(RThetaPhi)
+    implicit none
+    !> inputs:
+    real*8,intent(in) :: R
+    real*8,dimension(2),intent(in) :: cos_theta,phi
+    real*8,dimension(3),intent(in) :: u
+    !> outputs:
+    real*8,dimension(3) :: RThetaPhi
+    !> compute uniform samples
+    RThetaPhi = (/R*(u(1)**(1.d0/3.d0)),&
+                acos((cos_theta(2)-cos_theta(1))*u(2)+cos_theta(1)),&
+                phi(1)+(phi(2)-phi(1))*u(3)/)
+  end function sample_uniform_sphere 
 
-  cross_product(1) = a(2) * b(3) - a(3) * b(2)
-  cross_product(2) = a(3) * b(1) - a(1) * b(3)
-  cross_product(3) = a(1) * b(2) - a(2) * b(1)
-end function cross_product
+  pure function cross_product(a, b)
+    real*8, dimension(3) :: cross_product
+    real*8, dimension(3), intent(in) :: a, b
+
+    cross_product(1) = a(2) * b(3) - a(3) * b(2)
+    cross_product(2) = a(3) * b(1) - a(1) * b(3)
+    cross_product(3) = a(1) * b(2) - a(2) * b(1)
+  end function cross_product
 end module mod_sampling

@@ -101,51 +101,37 @@ end subroutine teardown
 !> Tests -------------------------------------------------------------
 !> test allocate and deallocate time vector
 subroutine test_de_allocate_time_vector()
+   use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
   !> test allocate time vector from unallocated from allocated vector
   call vertex_sol%allocate_time_vector(n_times_sol)
   call assert_equals(vertex_sol%n_times,n_times_sol,&
   "Error allocate vertices time vector from unallocated: n_times mismatch!")
-  call assert_true(allocated(vertex_sol%n_active_vertices),&
-  "Error allocate vertices time vector from unallocated: n_active_vertices not allocated!")
-  call assert_true(allocated(vertex_sol%times),&
-  "Error allocate vertices time vector from unallocated: times not allocated!")
-  call assert_equals(size(vertex_sol%n_active_vertices),n_times_sol,&
-  "Error allocate vertices time vector from unallocated: n_active_vertices size mismatch!")
-  call assert_equals(size(vertex_sol%times),n_times_sol,&
-  "Error allocate vertices time vector from unallocated: times size mismatch!")
-  call assert_true(all(vertex_sol%n_active_vertices.eq.0),&
-  "Error allocate vertices time vector from unallocated: n_active_vertices not zero!")
-  call assert_true(all(vertex_sol%times.eq.0.d0),&
-  "Error allocate vertices time vector from unallocated: times not zero!")
+  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%n_active_vertices,0,&
+  "Error allocate vertices time vector from unallocated: n_active_vertices")
+  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%times,0.d0,&
+  "Error allocate vertices time vector from unallocated: times")
   !> test allocated time vector from allocated vector
   call vertex_sol%allocate_time_vector(n_times_2_sol) 
   call assert_equals(vertex_sol%n_times,n_times_2_sol,&
   "Error allocate vertices time vector from allocated: n_times mismatch!")
-  call assert_true(allocated(vertex_sol%n_active_vertices),&
-  "Error allocate vertices time vector from allocated: n_active_vertices not allocated!")
-  call assert_true(allocated(vertex_sol%times),&
-  "Error allocate vertices time vector from allocated: times not allocated!")
-  call assert_equals(size(vertex_sol%n_active_vertices),n_times_2_sol,&
-  "Error allocate vertices time vector from allocated: n_active_vertices size mismatch!")
-  call assert_equals(size(vertex_sol%times),n_times_2_sol,&
-  "Error allocate vertices time vector from allocated: times size mismatch!")
-  call assert_true(all(vertex_sol%n_active_vertices.eq.0),&
-  "Error allocate vertices time vector from allocated: n_active_vertices not zero!")
-  call assert_true(all(vertex_sol%times.eq.0.d0),&
-  "Error allocate vertices time vector from allocated: times not zero!")
+  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%n_active_vertices,0,&
+  "Error allocate vertices time vector from allocated: n_active_vertices")
+  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%times,0.d0,&
+  "Error allocate vertices time vector from allocated: times")
   !> test deallocate time vector
   call vertex_sol%deallocate_time_vector
   call assert_equals(vertex_sol%n_times,0,&
   "Error deallocate vertices time vector: n_times not reset!")
-  call assert_true(.not.allocated(vertex_sol%n_active_vertices),&
+  call assert_false(allocated(vertex_sol%n_active_vertices),&
   "Error deallocate vertices time vector: n_active_vertices allocated!")
-  call assert_true(.not.allocated(vertex_sol%times),&
+  call assert_false(allocated(vertex_sol%times),&
   "Error deallocate vertices time vector: times allocated!")
 end subroutine test_de_allocate_time_vector
 
 !> test the allocation / deallocation of vertex position and properties
 subroutine test_de_allocates_vertex_x_properties()
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
   !> initialise the time structure first
   call vertex_sol%allocate_time_vector(n_times_sol) 
@@ -153,92 +139,77 @@ subroutine test_de_allocates_vertex_x_properties()
   call vertex_sol%allocate_x_properties(n_vertices_sol)
   call assert_equals(vertex_sol%n_vertices,n_vertices_sol,&
   "Error allocate vertices x-property vector from unallocated: n_vertices mismatch!")
-  call assert_true(allocated(vertex_sol%x),&
-  "Error allocate vertices  x-property vector from unallocated: x not allocated!")
-  call assert_true(allocated(vertex_sol%properties),&
-  "Error allocate vertices x-property vector from unallocated: properties not allocated!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_vertices_sol,n_times_sol/),3,&
-  "Error allocate vertices x-property vectior from unallocated: x size mismatch!")
-  call assert_equals(shape(vertex_sol%properties),&
-  (/n_properties_sol,n_vertices_sol,n_times_sol/),3,&
-  "Error allocate vertices x-property vector from unallocated: properties size mismatch!")
-  call assert_true(all(vertex_sol%x.eq.0),&
-  "Error allocate vertices x-property vector from unallocated: x not zero!")
-  call assert_true(all(vertex_sol%properties.eq.0.d0),&
-  "Error allocate vertices x-property vector from unallocated: properties not zero!")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_sol,n_times_sol,vertex_sol%x,&
+  0.d0,"Error allocate vertices  x-property vector from unallocated: x")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_sol,n_times_sol,&
+  vertex_sol%properties,0.d0,&
+  "Error allocate vertices  x-property vector from unallocated: properties")
   !> allocate x and properties from allocated vertes
   call vertex_sol%allocate_x_properties(n_vertices_2_sol)
   call assert_equals(vertex_sol%n_vertices,n_vertices_2_sol,&
   "Error allocate vertices x-property vector from allocated: n_vertices mismatch!")
-  call assert_true(allocated(vertex_sol%x),&
-  "Error allocate vertices  x-property vector from allocated: x not allocated!")
-  call assert_true(allocated(vertex_sol%properties),&
-  "Error allocate vertices x-property vector from allocated: properties not allocated!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_vertices_2_sol,n_times_sol/),3,&
-  "Error allocate vertices x-property vector from allocated: x size mismatch!")
-  call assert_equals(shape(vertex_sol%properties),&
-  (/n_properties_sol,n_vertices_2_sol,n_times_sol/),3,&
-  "Error allocate vertices x-property vector from allocated: properties size mismatch!")
-  call assert_true(all(vertex_sol%x.eq.0),&
-  "Error allocate vertices x-property vector from allocated: x not zero!")
-  call assert_true(all(vertex_sol%properties.eq.0.d0),&
-  "Error allocate vertices x-property vector from allocated: properties not zero!")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_2_sol,n_times_sol,vertex_sol%x,&
+  0.d0,"Error allocate vertices  x-property vector from allocated: x")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_2_sol,n_times_sol,&
+  vertex_sol%properties,0.d0,&
+  "Error allocate vertices  x-property vector from allocated: properties")
   !> deallocate x and properties
   call vertex_sol%deallocate_x_properties
   call assert_equals(vertex_sol%n_vertices,0,&
   "Error deallocate vertices x-property vector: n_vertices not reset!")
-  call assert_true(.not.allocated(vertex_sol%x),&
+  call assert_false(allocated(vertex_sol%x),&
   "Error deallocate vertices x-property vector: x allocated!")
-  call assert_true(.not.allocated(vertex_sol%properties),&
+  call assert_false(allocated(vertex_sol%properties),&
   "Error deallocate vertices x-property vector: properties allocated!") 
 end subroutine test_de_allocates_vertex_x_properties
 
 !> check allocation and deallocation of vertices
 subroutine test_de_allocates_vertices()
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
-
   !> test vertex allocation from unallocated
   call vertex_sol%allocate_vertices(n_times_sol,n_vertices_sol)
   call assert_equals(vertex_sol%n_times,n_times_sol,&
   "Error allocate vertices from unallocated: n_times mismatch!")
   call assert_equals(vertex_sol%n_vertices,n_vertices_sol,&
   "Error allocate vertices from unallocated: n_vertices mismatch!")
-  call assert_equals(size(vertex_sol%n_active_vertices),n_times_sol,&
-  "Error allocate vertices from unallocated: n_active_vertices size mismatch!")
-  call assert_equals(size(vertex_sol%times),n_times_sol,&
-  "Error allocate vertices from unallocated: times size mismatch!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_vertices_sol,n_times_sol/),3,&
-  "Error allocate vertices from unallocated: x size mismatch!")
-  call assert_equals(shape(vertex_sol%properties),(/n_properties_sol,n_vertices_sol,n_times_sol/),3,&
-  "Error allocate vertices from unallocated: properties size mismatch!")
+  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%n_active_vertices,&
+  0,"Error allocate vertices from unallocated: n_active_vertices")
+  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%times,&
+  0.d0,"Error allocate vertices from unallocated: times")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_sol,n_times_sol,vertex_sol%x,&
+  0.d0,"Error allocate vertices from unallocated: x size")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_sol,n_times_sol,&
+  vertex_sol%properties,0.d0,&
+  "Error allocate vertices from unallocated: properties size")
   !> test vertex allocation from allocated
   call vertex_sol%allocate_vertices(n_times_2_sol,n_vertices_2_sol)
   call assert_equals(vertex_sol%n_times,n_times_2_sol,&
   "Error allocate vertices from allocated: n_times mismatch!")
   call assert_equals(vertex_sol%n_vertices,n_vertices_2_sol,&
   "Error allocate vertices from allocated: n_vertices mismatch!")
-  call assert_equals(size(vertex_sol%n_active_vertices),n_times_2_sol,&
-  "Error allocate vertices from allocated: n_active_vertices size mismatch!")
-  call assert_equals(size(vertex_sol%times),n_times_2_sol,&
-  "Error allocate vertices from allocated: times size mismatch!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_vertices_2_sol,n_times_2_sol/),3,&
-  "Error allocate vertices from allocated: x size mismatch!")
-  call assert_equals(shape(vertex_sol%properties),&
-  (/n_properties_sol,n_vertices_2_sol,n_times_2_sol/),3,&
-  "Error allocate vertices from allocated: properties size mismatch!")
+  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%n_active_vertices,&
+  0,"Error allocate vertices from allocated: n_active_vertices")
+  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%times,&
+  0.d0,"Error allocate vertices from allocated: times")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_2_sol,n_times_2_sol,vertex_sol%x,&
+  0.d0,"Error allocate vertices from allocated: x size")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_2_sol,n_times_2_sol,&
+  vertex_sol%properties,0.d0,&
+  "Error allocate vertices from allocated: properties size")
   !> test vertex deallocation
   call vertex_sol%deallocate_vertices
   call assert_equals(vertex_sol%n_times,0,&
   "Error deallocate vertices: n_times not reset!")
   call assert_equals(vertex_sol%n_vertices,0,&
   "Error deallocate vertices: n_vertices not reset!")
-  call assert_true(.not.allocated(vertex_sol%n_active_vertices),&
+  call assert_false(allocated(vertex_sol%n_active_vertices),&
   "Error deallocate vertices: n_active_vertices allocated!")
-  call assert_true(.not.allocated(vertex_sol%times),&
+  call assert_false(allocated(vertex_sol%times),&
   "Error deallocate vertices: times allocated!")
-  call assert_true(.not.allocated(vertex_sol%x),&
+  call assert_false(allocated(vertex_sol%x),&
   "Error deallocate vertices: x allocated!")
-  call assert_true(.not.allocated(vertex_sol%properties),&
+  call assert_false(allocated(vertex_sol%properties),&
   "Error deallocate vertices: properties allocated!")
 end subroutine test_de_allocates_vertices
 

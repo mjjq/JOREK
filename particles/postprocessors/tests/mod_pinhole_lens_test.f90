@@ -63,6 +63,7 @@ subroutine test_pinhole_initialisation()
   "Error pinhole lens initialisation: n_x mismatch!")
   call assert_true(allocated(pinhole%center),&
   "Error pinhole lens initialisation: center not allocated!")
+  if(allocated(pinhole%center)) &
   call assert_equals(pinhole%center,center_sol,n_x,tol_r8,&
   "Error pinhole lens initialisation: center mismatch!")
   call pinhole%deallocate_lens

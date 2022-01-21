@@ -11,7 +11,6 @@ module mod_lens_test
 !> Variables --------------------------------------------------
 integer,parameter :: n_x=3
 real*8,parameter :: tol_r8=5.d-16
-real*8,dimension(n_x),parameter :: zeros_r8=0.d0
 real*8,dimension(n_x),parameter :: center_uppbnd=(/4.5d3,4.67d2,-2.34d-1/)
 real*8,dimension(n_x),parameter :: center_lowbnd=(/-1.d2,2.45d1,-2.3d2/)
 real*8,dimension(n_x) :: center_sol
@@ -48,7 +47,8 @@ end subroutine teardown
 !> Tests ------------------------------------------------------
 !> test the lens allocation and deallocation
 subroutine test_lens_allocation_deallocation()
-  use mod_pinhole_lens, only: pinhole_lens
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
+  use mod_pinhole_lens,        only: pinhole_lens
   implicit none
   !> variables
   type(pinhole_lens) :: lens_loc
@@ -56,15 +56,13 @@ subroutine test_lens_allocation_deallocation()
   call lens_loc%allocate_lens(n_x)
   call assert_equals(lens_loc%n_x,n_x,&
   "Error lens allocation to zero: n_x mismatch!")
-  call assert_true(allocated(lens_loc%center),&
+  call assert_equals_allocatable_arrays(n_x,lens_loc%center,0.d0,&
   "Error lens allocation to zero: center array not allocated!")
-  call assert_equals(lens_loc%center,zeros_r8,n_x,tol_r8,&
-  "Error lens allocation to zero: center array not at zero!")
   !> deallocate lens
   call lens_loc%deallocate_lens()
   call assert_equals(lens_loc%n_x,0,&
   "Error lens deallocation: n_x not to zero!")
-  call assert_true(.not.allocated(lens_loc%center),&
+  call assert_false(allocated(lens_loc%center),&
   "Error lens deallocation: center not deallocated!")
   !> allocate lens with initialisation
   call lens_loc%allocate_lens(n_x,center_sol)
@@ -72,13 +70,14 @@ subroutine test_lens_allocation_deallocation()
   "Error lens allocation to value: n_x mismatch!")
   call assert_true(allocated(lens_loc%center),&
   "Error lens allocation to value: center array not allocated!")
+  if(allocated(lens_loc%center)) &
   call assert_equals(lens_loc%center,center_sol,n_x,tol_r8,&
   "Error lens allocation to value: center array mismatch!")
   !> deallocate lens
   call lens_loc%deallocate_lens()
   call assert_equals(lens_loc%n_x,0,&
   "Error lens deallocation: n_x not to zero!")
-  call assert_true(.not.allocated(lens_loc%center),&
+  call assert_false(allocated(lens_loc%center),&
   "Error lens deallocation: center not deallocated!")
 end subroutine test_lens_allocation_deallocation
 

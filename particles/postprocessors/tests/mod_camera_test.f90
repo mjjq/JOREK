@@ -54,6 +54,7 @@ end subroutine teardown
 !> Tests ------------------------------------------------------------
 !> test allocation and deallocation of the camera classes
 subroutine test_de_allocate_camera()
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
   !> test allocation from allocated
   call camera_sol%allocate_camera(n_times_sol,n_vertices_sol,&
@@ -64,27 +65,19 @@ subroutine test_de_allocate_camera()
   "Error allocate camera from unallocated: n_vertices mismatch!")
   call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra_sol,n_pixels_x_sol,&
   n_pixels_y_sol/),3,"Error allocate camera from unallocated: n_pixels_spectra mismatch!")
-  call assert_equals(size(camera_sol%n_active_vertices),n_times_sol,&
-  "Error allocate camera from unallocated: n_active_vertices size mismatch!")
-  call assert_equals(size(camera_sol%times),n_times_sol,&
-  "Error allocate camera from unallocated: times size mismatch!")
-  call assert_equals(shape(camera_sol%x),(/n_x_sol,n_vertices_sol,n_times_sol/),3,&
-  "Error allocate camera from unallocated: x shape mismatch!")
-  call assert_equals(shape(camera_sol%properties),(/n_properties_sol,n_vertices_sol,&
-  n_times_sol/),3,"Error allocate camera from unallocated: properties shape mismatch!")
-  call assert_equals(shape(camera_sol%pixel_intensities),(/n_spectra_sol,n_pixels_x_sol,&
-  n_pixels_y_sol,n_times_sol/),4,&
-  "Error allocate camera from unallocated: pixel intensities shape mismatch!")
-  call assert_true(all(camera_sol%times.eq.0.d0),&
-  "Error allocate camera from unallocated: pixel intensities not zero!")
-  call assert_true(all(camera_sol%x.eq.0.d0),&
-  "Error allocate camera from unallocated: x not zero!")
-  call assert_true(all(camera_sol%properties.eq.0.d0),&
-  "Error allocate camera from unallocated: properties not zero!")
+  call assert_equals_allocatable_arrays(n_times_sol,camera_sol%n_active_vertices,0,&
+  "Error allocate camera from unallocated: n_active_vertices")  
+  call assert_equals_allocatable_arrays(n_times_sol,camera_sol%times,0.d0,&
+  "Error allocate camera from unallocated: times") 
+  call assert_equals_allocatable_arrays(n_x_sol,n_vertices_sol,n_times_sol,&
+  camera_sol%x,0.d0,"Error allocate camera from unallocated: x")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_sol,n_times_sol,&
+  camera_sol%properties,0.d0,"Error allocate camera from unallocated: properties")
+  call assert_equals_allocatable_arrays(n_spectra_sol,n_pixels_x_sol,n_pixels_y_sol,&
+  n_times_sol,camera_sol%pixel_intensities,0.d0,&
+  "Error allocate camera from unallocated: pixel intensities")
   call assert_true(camera_sol%exposure_time.eq.0.d0,&
   "Error allocate camera from unallocated: exposure time not zero!")
-  call assert_true(all(camera_sol%pixel_intensities.eq.0.d0),&
-  "Error allocate camera from unallocated: pixel intensities not zero!")
   !> test allocation from allocated
   call camera_sol%allocate_camera(n_times_2_sol,n_vertices_2_sol,&
   n_spectra_2_sol,n_pixels_x_2_sol,n_pixels_y_2_sol)
@@ -94,17 +87,17 @@ subroutine test_de_allocate_camera()
   "Error allocate camera from allocated: n_vertices mismatch!")
   call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra_2_sol,n_pixels_x_2_sol,&
   n_pixels_y_2_sol/),3,"Error allocate camera from allocated: n_pixels_spectra mismatch!")
-  call assert_equals(size(camera_sol%n_active_vertices),n_times_2_sol,&
-  "Error allocate camera from allocated: n_active_vertices size mismatch!")
-  call assert_equals(size(camera_sol%times),n_times_2_sol,&
-  "Error allocate camera from allocated: times size mismatch!")
-  call assert_equals(shape(camera_sol%x),(/n_x_sol,n_vertices_2_sol,n_times_2_sol/),3,&
-  "Error allocate camera from allocated: x shape mismatch!")
-  call assert_equals(shape(camera_sol%properties),(/n_properties_sol,n_vertices_2_sol,&
-  n_times_2_sol/),3,"Error allocate camera from allocated: properties shape mismatch!")
-  call assert_equals(shape(camera_sol%pixel_intensities),(/n_spectra_2_sol,n_pixels_x_2_sol,&
-  n_pixels_y_2_sol,n_times_2_sol/),4,&
-  "Error allocate camera from allocated: pixel intensities shape mismatch!")
+  call assert_equals_allocatable_arrays(n_times_2_sol,camera_sol%n_active_vertices,0,&
+  "Error allocate camera from unallocated: n_active_vertices")  
+  call assert_equals_allocatable_arrays(n_times_2_sol,camera_sol%times,0.d0,&
+  "Error allocate camera from unallocated: times") 
+  call assert_equals_allocatable_arrays(n_x_sol,n_vertices_2_sol,n_times_2_sol,&
+  camera_sol%x,0.d0,"Error allocate camera from unallocated: x")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_2_sol,n_times_2_sol,&
+  camera_sol%properties,0.d0,"Error allocate camera from unallocated: properties")
+  call assert_equals_allocatable_arrays(n_spectra_2_sol,n_pixels_x_2_sol,n_pixels_y_2_sol,&
+  n_times_2_sol,camera_sol%pixel_intensities,0.d0,&
+  "Error allocate camera from unallocated: pixel intensities")
   !> test deallocation
   call camera_sol%deallocate_camera
   call assert_equals(camera_sol%n_times,0,&
@@ -113,15 +106,15 @@ subroutine test_de_allocate_camera()
   "Error deallocate camera: n_vertices not zero!")
   call assert_equals(camera_sol%n_pixels_spectra,(/0,0,0/),3,&
   "Error deallocate camera: n_pixels_spectra not zero!")
-  call assert_true(.not.allocated(camera_sol%n_active_vertices),&
+  call assert_false(allocated(camera_sol%n_active_vertices),&
   "Error deallocate camera: n_active_vertices allocated!")
-  call assert_true(.not.allocated(camera_sol%times),&
+  call assert_false(allocated(camera_sol%times),&
   "Error deallocate camera: times size allocated!")
-  call assert_true(.not.allocated(camera_sol%x),&
+  call assert_false(allocated(camera_sol%x),&
   "Error deallocate camera: x allocated!")
-  call assert_true(.not.allocated(camera_sol%properties),&
+  call assert_false(allocated(camera_sol%properties),&
   "Error deallocate camera: properties allocated!")
-  call assert_true(.not.allocated(camera_sol%pixel_intensities),&
+  call assert_false(allocated(camera_sol%pixel_intensities),&
   "Error deallocate camera: pixel intensities allocated!") 
    call assert_true(camera_sol%exposure_time.eq.0.d0,&
   "Error deallocate camera: exposure time not zero!")

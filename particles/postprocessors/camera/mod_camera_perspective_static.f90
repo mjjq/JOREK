@@ -2,16 +2,16 @@
 !> procedures defining a perspective camera which does not
 !> vary with time (static)
 module mod_camera_perspective_static
-use mod_camera_static, only: camera_static
+use mod_camera, only: camera
 implicit none
   
 private
 public :: camera_perspective_static
 
 !> Variables and type definitions ----------------------------
-type,extends(camera_static) :: camera_perspective_static
+type,extends(camera) :: camera_perspective_static
   real*8,dimension(:,:),allocatable :: points_on_lens
-  real*8,dimension(:),allocatable   :: points_on_lens_pdf 
+  real*8,dimension(:),allocatable   :: pdf_points_on_lens
   contains
   procedure,pass(camera_inout) :: init_camera => init_camera_perspective_static
   procedure,pass(camera_inout) :: generate_points_on_lens_pdf => &
@@ -23,12 +23,11 @@ contains
 !> Procedures ------------------------------------------------
 subroutine init_camera_perspective_static(camera_inout,lens_inout,&
 n_int_param,n_real_param,int_param,real_param)
-  use mod_camera,   only: camera
   use mod_geometry, only: define_plane_from_half_angles
   use mod_lens,     only: lens
   implicit none
   !> inputs-outputs:
-  class(camera),intent(inout) :: camera_inout
+  class(camera_perspective_static),intent(inout) :: camera_inout
   class(lens),intent(inout)   :: lens_inout
   !> inputs:
   integer,intent(in)                          :: n_int_param,n_real_param
@@ -36,13 +35,16 @@ n_int_param,n_real_param,int_param,real_param)
   real*8,dimension(:),allocatable,intent(in)  :: real_param
 
   !> initialise variables
+  !> sample the lens
+  call camera_inout%generate_points_on_lens_pdf(lens_inout,int_param(1))
 end subroutine init_camera_perspective_static
 
 !> generate points on lens and retrive their pdf
 !> inputs:
 !>   camera_inout: (camera) camera with initialised points on lens
 !>   lens_inout:   (lens) lens model for generating points
-!>   n_points_in:  (integer),optional
+!>   n_points_in:  (integer)(optional) number of points to sample
+!>                                     default: 1000, pinhole: 1
 !> outputs:
 !>   camera_out:   (camera) camera with initialised points on lens
 subroutine generate_points_on_lens_static_perspective(camera_inout,&
@@ -51,14 +53,34 @@ lens_inout,n_points_in)
   use mod_pinhole_lens, only: pinhole_lens
   implicit none
   !> inputs-outputs:
-  class(camera),intent(inout) :: camera_inout
-  class(lens),intent(inout)   :: lens_inout
-  !> sample the lens
-  select type (cam=>camera_inout)
-    type is(camera_perspective_static)
-    call lens%sampling(cam%n_points_on_lens,cam%points_on_lens)
-    call lens%pdf(cam%n_points_on_lens,cam%pdf_points_on_lens)
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  class(lens),intent(inout)                      :: lens_inout
+  !> inputs:
+  integer,intent(in),optional                    :: n_points_in
+  !> initialisations
+  camera_inout%n_points_on_lens = 1000
+  if(present(n_points_in)) camera_inout%n_points_on_lens = n_points_in
+  !> check if the lens is a pinhole, overwrite n_points_lens
+  select type(ln=>lens_inout)
+    type is(pinhole_lens)
+    camera_inout%n_points_on_lens = 1
   end select
+  !> sample the lens
+  if(allocated(camera_inout%points_on_lens)) then
+    if(camera_inout%n_points_on_lens.ne.size(camera_inout%points_on_lens,dim=2)) &
+    deallocate(camera_inout%points_on_lens)
+  endif
+  if(allocated(camera_inout%pdf_points_on_lens)) then
+    if(camera_inout%n_points_on_lens.ne.size(camera_inout%pdf_points_on_lens)) &
+    deallocate(camera_inout%pdf_points_on_lens)
+  endif
+  if(.not.allocated(camera_inout%points_on_lens)) &
+  allocate(camera_inout%points_on_lens(camera_inout%n_x,camera_inout%n_points_on_lens))
+  if(.not.allocated(camera_inout%pdf_points_on_lens)) &
+  allocate(camera_inout%pdf_points_on_lens(camera_inout%n_points_on_lens))
+  call lens_inout%sampling(camera_inout%n_points_on_lens,camera_inout%points_on_lens)
+  call lens_inout%pdf(camera_inout%n_points_on_lens,camera_inout%points_on_lens,&
+  camera_inout%pdf_points_on_lens)
 end subroutine generate_points_on_lens_static_perspective
 
 !>------------------------------------------------------------

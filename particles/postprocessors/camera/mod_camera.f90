@@ -16,15 +16,14 @@ type,abstract,extends(vertices) :: camera
    !> the x variables contains the global position of the 
    !> visual points on the lens / film for each frame
    !> number of spectra and pixels
-   integer              :: size_point_on_lens_pdf !< size a point on a lens
-   integer              :: n_points_on_lens_pdf !< size and number of points on a lens
+   integer              :: n_points_on_lens !< size and number of points on a lens
    integer,dimension(3) :: n_pixels_spectra
-   real*8  :: exposure_time !< exposure time for each camera frame
+   real*8               :: exposure_time !< exposure time for each camera frame
    !> array containing the pixel intensity per each time
-   real*8,dimension(:,:,:),allocatable :: pixel_intensities
+   real*8,dimension(:,:,:,:),allocatable :: pixel_intensities
   contains
    procedure(int_init_camera),pass(camera_inout),deferred     :: init_camera
-   procedure(int_gen_points_lens),pass(camera_inout),deferred :: generate_points_on_lens
+   procedure(int_gen_points_lens),pass(camera_inout),deferred :: generate_points_on_lens_pdf
    procedure,pass(camera_inout)                               :: allocate_camera
    procedure,pass(camera_inout)                               :: deallocate_camera 
 end type camera
@@ -45,6 +44,7 @@ interface
   subroutine int_init_camera(camera_inout,lens_inout,n_int_param,&
   n_real_param,int_param,real_param)
     use mod_lens, only: lens
+    IMPORT :: camera
     implicit none
     !> inputs-outputs
     class(camera),intent(inout) :: camera_inout
@@ -59,15 +59,20 @@ interface
   !> inputs:
   !>   camera_inout: (camera) camera model used for sampling
   !>   lens_inout:   (lens) lens from which points are sampled
+  !>   n_points_in:  (integer)(optional) number of points to sample
+  !>                                     default: 1000, pinhole: 1
   !> outputs:
   !>   camera_inout: (camera) camera with sampled points on lens
   !>   lens_inout:   (lens) lens from which points are sampled
-  subroutine int_gen_points_lens,pass(camera_inout,lens_inout)
+  subroutine int_gen_points_lens(camera_inout,lens_inout,n_points_in)
     use mod_lens, only: lens
+    IMPORT :: camera
     implicit none
     !> inputs-outputs:
     class(camera),intent(inout) :: camera_inout
     class(lens),intent(inout)   :: lens_inout
+    !> inputs:
+    integer,intent(in),optional :: n_points_in
   end subroutine int_gen_points_lens
 end interface
 
@@ -98,8 +103,8 @@ n_spectra,n_pixels_x,n_pixels_y)
   if(allocated(camera_inout%pixel_intensities)) &
   deallocate(camera_inout%pixel_intensities)
   allocate(camera_inout%pixel_intensities(n_spectra,&
-  n_pixels_x*n_pixels_y,n_times))
-  camera_inout%pixel_intensities = 0.d0;
+  n_pixels_x,n_pixels_y,n_times))
+  camera_inout%pixel_intensities = 0.d0; camera_inout%exposure_time=0.d0;
   camera_inout%n_pixels_spectra = (/n_spectra,n_pixels_x,n_pixels_y/)
 end subroutine allocate_camera
 
@@ -112,7 +117,8 @@ subroutine deallocate_camera(camera_inout)
   implicit none
   !> inputs-outputs
   class(camera),intent(inout) :: camera_inout
-  !> deallocare everything and reset counters
+  !> deallocate everything and reset counters
+  call camera_inout%deallocate_vertices
   if(allocated(camera_inout%pixel_intensities)) &
   deallocate(camera_inout%pixel_intensities)
   camera_inout%n_pixels_spectra = 0; camera_inout%exposure_time = 0.d0;

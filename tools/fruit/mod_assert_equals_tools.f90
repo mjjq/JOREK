@@ -6,6 +6,7 @@ implicit none
 
 private
 public :: assert_equals_rel_error
+public :: assert_equals_allocatable_arrays
 
 !> Variables -----------------------------------------------------
 !> Interfaces ----------------------------------------------------
@@ -15,6 +16,11 @@ interface assert_equals_rel_error
   module procedure assert_equals_rel_error_2d_r8
   module procedure assert_equals_rel_error_3d_r8
 end interface assert_equals_rel_error
+
+interface assert_equals_allocatable_arrays
+  module procedure assert_equals_allocatable_arrays_1d_r8
+  module procedure assert_equals_allocatable_arrays_2d_r8
+end interface assert_equals_allocatable_arrays
 
 contains
 
@@ -89,6 +95,43 @@ arr_1,arr_2,tol,message)
     call assert_equals(error,zeros,size_1,size_2,tol,message)
   enddo
 end subroutine assert_equals_rel_error_3d_r8
+
+!> assert equals allocatable arrays 1d real 8
+subroutine assert_equals_allocatable_arrays_1d_r8(n_values,&
+array_test,array_sol,tol,message)
+  implicit none
+  !> inputs:
+  integer,intent(in)                         :: n_values
+  real*8,intent(in)                          :: tol
+  real*8,dimension(:),allocatable,intent(in) :: array_test
+  real*8,dimension(n_values),intent(in)      :: array_sol
+  character(len=*),intent(in)                :: message
+  !> tests
+  call assert_true(allocated(array_test),trim(message//" not allocated"))
+  call assert_equals(size(array_test),n_values,trim(message//" size mismatch!"))
+  if(allocated(array_test)) &
+  call assert_equals(array_test,array_sol,n_values,tol,&
+  trim(message//" mismatch!"))
+end subroutine assert_equals_allocatable_arrays_1d_r8
+
+!> assert equals allocatble array 2d real 8
+subroutine assert_equals_allocatable_arrays_2d_r8(n_values_1,&
+n_values_2,array_test,array_sol,tol,message) 
+  implicit none
+  !> inputs:
+  integer,intent(in)                                 :: n_values_1,n_values_2
+  real*8,intent(in)                                  :: tol
+  real*8,dimension(:,:),allocatable,intent(in)       :: array_test
+  real*8,dimension(n_values_1,n_values_2),intent(in) :: array_sol
+  character(len=*),intent(in)                        :: message
+  !> tests
+  call assert_true(allocated(array_test),trim(message//" not allocated"))
+  call assert_equals(shape(array_test),(/n_values_1,n_values_2/),&
+  2,trim(message//" size mismatch!"))
+  if(allocated(array_test)) &
+  call assert_equals(array_test,array_sol,n_values_1,n_values_2,tol,&
+  trim(message//" mismatch!"))
+end subroutine assert_equals_allocatable_arrays_2d_r8
 
 !>----------------------------------------------------------------
 end module mod_assert_equals_tools

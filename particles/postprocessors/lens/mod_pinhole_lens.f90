@@ -11,8 +11,8 @@ public :: pinhole_lens
 type,extends(lens) :: pinhole_lens
   contains
   procedure,pass(lens_inout) :: init_pinhole
-  procedure,pass(lens_inout) :: lens_sampling => pinhole_sampling
-  procedure,pass(lens_inout) :: lens_pdf      => pinhole_pdf
+  procedure,pass(lens_inout) :: sampling => pinhole_sampling
+  procedure,pass(lens_inout) :: pdf      => pinhole_pdf
 end type pinhole_lens
 
 !> Interfaces ---------------------------------------------------------

@@ -13,8 +13,8 @@ type,abstract :: lens
   contains
   procedure,pass(lens_inout) :: allocate_lens
   procedure,pass(lens_inout) :: deallocate_lens
-  procedure(lens_sampling_int),pass(lens_inout),deferred :: lens_sampling
-  procedure(lens_pdf_int),pass(lens_inout),deferred      :: lens_pdf
+  procedure(lens_sampling_int),pass(lens_inout),deferred :: sampling
+  procedure(lens_pdf_int),pass(lens_inout),deferred      :: pdf
 end type lens
 
 !> Interfaces -----------------------------------------------------

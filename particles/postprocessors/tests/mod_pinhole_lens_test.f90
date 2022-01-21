@@ -75,7 +75,7 @@ subroutine test_pinhole_lens_sampling()
   type(pinhole_lens)  :: pinhole
   real*8,dimension(n_x,n_samples) :: x_loc
   call pinhole%init_pinhole(n_x,center_sol)
-  call pinhole%lens_sampling(n_samples,x_loc)
+  call pinhole%sampling(n_samples,x_loc)
   call assert_equals(x_loc,x_sol,n_x,n_samples,tol_r8,&
   "Error pinhole lens sampling: positions mismatch!")
   call pinhole%deallocate_lens
@@ -88,7 +88,7 @@ subroutine test_pinhole_lens_pdf()
   type(pinhole_lens)  :: pinhole
   real*8,dimension(n_samples) :: pdf_loc
   call pinhole%init_pinhole(n_x,center_sol)
-  call pinhole%lens_pdf(n_samples,x_sol,pdf_loc)
+  call pinhole%pdf(n_samples,x_sol,pdf_loc)
   call assert_equals(pdf_loc,ones_r8,n_samples,tol_r8,&
   "Error pinhole lens sampling: positions mismatch!")
   call pinhole%deallocate_lens

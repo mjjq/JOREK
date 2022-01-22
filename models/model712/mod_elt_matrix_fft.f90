@@ -4,9 +4,11 @@ contains
 
 #include "corr_neg_include.f90"
 
-subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-                              ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, & 
-                              i_tor_min, i_tor_max)
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+                              ELM, RHS, tid, ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,                               &
+                              eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t,                 & 
+                              i_tor_min, i_tor_max, aux_nodes)
+
 ! NOT YET IMPLEMENTED
 
 use mod_parameters
@@ -20,12 +22,15 @@ use mod_F_profile
 use mod_bootstrap_functions
 use pellet_module
 use mod_neutral_source
+use mod_impurity, only: radiation_function, radiation_function_linear
+use mod_sources
 
 implicit none
 
 ! --- Input Variables
 type (type_element)   :: element
 type (type_node)      :: nodes(n_vertex_max)
+type (type_node),optional :: aux_nodes(n_vertex_max)      
 
 logical, intent(in)    :: xpoint2
 integer, intent(in)    :: xcase2
@@ -1162,9 +1167,9 @@ do i=1,n_vertex_max
           Brad_bg = 20.
           Crad_bg = 0.8
           frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))                &
-                        *nimp_bg*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                        *nimp_bg(1)*Arad_bg*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
           dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                                   &
-                        *2.*(nimp_bg*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
+                        *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(T_rad)-log(Brad_bg))*(1./T_rad)*exp(-((log(T_rad)-log(Brad_bg))**2.)/Crad_bg**2.)
 
           ! --- Pellet source
           phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
@@ -1181,26 +1186,7 @@ do i=1,n_vertex_max
 
           ! --- Source of neutrals, e.g. from MGI/SPI
           source_neutral = 0.d0
-          if (using_spi) then
-            do spi_i=1, n_spi
-              source_neutral_tmp = 0.d0
-              if (pellets(spi_i)%spi_radius > 0.0) then
-                ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
-                if (ng_radius < ng_radius_min) then
-                  ng_radius = ng_radius_min
-                end if
-                call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi,&
-                              ng_radius,ns_sig,ns_deltaphi,&
-                              ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,0.,R,Z,     &
-                              phi,source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass)
-              end if
-              source_neutral = source_neutral + source_neutral_tmp
-            end do
-          else
-            call neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_radius,ns_sig,ns_deltaphi,ns_tor_norm, &
-                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,source_neutral,t_now, &
-                          JET_MGI,ASDEX_MGI,central_density,central_mass)
-          end if
+          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,A30,source_neutral)
           source_neutral = max(source_neutral,0.) + source_pellet
 
           !--------------------------------------------------------

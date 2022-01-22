@@ -13,6 +13,7 @@ program jorek2_poincare
   use equil_info
   use mod_element_rtree
   use mpi
+  use equil_info
   
   implicit none
   
@@ -28,40 +29,38 @@ program jorek2_poincare
   real*8,allocatable    :: T_turn(:,:), PSI_turn(:,:), ZN_turn(:,:)
   
   ! --- Extra data
-  integer               :: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
-  integer               :: elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
-  integer               :: i_elm_half, cpu_fraction
-  integer               :: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
-  integer               :: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m, ns, nt
-  integer               :: i_elm, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_elm_tmp,i_steps, n_turn_max(2)
-  real*8                :: R_start, Z_start, P_start
-  real*8                :: R_line, Z_line, s_line, t_line, p_line
-  real*8                :: Zjac
-  real*8                :: s_mid, t_mid, p_mid
-  real*8                :: s_ini, t_ini
-  real*8                :: s_out, t_out
-  real*8                :: R, R_s, R_t, R_st, R_ss, R_tt, R_in, R_out, R_keep, Rmid, Rmid_s, Rmid_t
-  real*8                :: Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, Z_in, Z_out, Z_keep, Zmid, Zmid_s, Zmid_t
-  real*8                :: P, P_s, P_t, P_st, P_ss, P_tt
-  real*8                :: psi_s, psi_t
-  real*8                :: Rmin, Rmax
-  real*8                :: Zmin, Zmax
-  real*8                :: delta_phi, delta_phi_local, delta_phi_step, total_phi
-  real*8                :: delta_s, small_delta_s
-  real*8                :: delta_t, small_delta_t
-  real*8                :: small_delta, dl2, total_length, length_max
-  real*8                :: zl1, zl2, partial(2)
-  integer               :: i_elm_xpoint,i_elm_axis
-  real*8                :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_bnd, psi_bnd2
-  real*8                :: psi_axis,R_axis,Z_axis,s_axis,t_axis
-  integer               :: bnd_tmp, bnd_tmp_opp
-  real*8                :: s_tmp,   s_tmp_opp
-  real*8                :: t_tmp,   t_tmp_opp
-  real*8                :: value_out
-  real*4,allocatable    :: RZkeep(:,:),scalars(:,:)
-  real*4                :: ZERO
-  integer               :: status(MPI_STATUS_SIZE)
-  character             :: buffer*80, lf*1, str1*12, str2*12
+  integer		:: my_id, ikeep, n_cpu, ierr, nsend, nrecv, ikeep0, inode1, inode2, i_line0
+  integer		:: elm_start, elm_end, elm_delta, local_elm_start, local_elm_end
+  integer		:: i_elm_half, cpu_fraction
+  integer		:: nnos, n_scalars, ivtk, i_var, i_strike, i_strike0
+  integer		:: i, j, iside_i, iside_j, ip, i_line, n_lines, i_tor, i_harm, i_var_psi, i_dir, k, m, ns, nt
+  integer		:: i_elm, ifail, i_phi, n_phi, i_turn, n_turns, i_elm_out, i_elm_prev, i_elm_tmp,i_steps, n_turn_max(2)
+  real*8		:: R_start, Z_start, P_start
+  real*8		:: R_line, Z_line, s_line, t_line, p_line
+  real*8		:: Zjac
+  real*8		:: s_mid, t_mid, p_mid
+  real*8		:: s_ini, t_ini
+  real*8		:: s_out, t_out
+  real*8		:: R, R_s, R_t, R_st, R_ss, R_tt, R_in, R_out, R_keep, Rmid, Rmid_s, Rmid_t
+  real*8		:: Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, Z_in, Z_out, Z_keep, Zmid, Zmid_s, Zmid_t
+  real*8		:: P, P_s, P_t, P_st, P_ss, P_tt
+  real*8		:: tol, psi_s, psi_t
+  real*8		:: Rmin, Rmax
+  real*8		:: Zmin, Zmax
+  real*8		:: delta_phi, delta_phi_local, delta_phi_step, total_phi
+  real*8		:: delta_s, small_delta_s
+  real*8		:: delta_t, small_delta_t
+  real*8		:: small_delta, dl2, total_length, length_max
+  real*8		:: zl1, zl2, partial(2)
+  real*8		:: psi_bnd, psi_bnd2
+  integer		:: bnd_tmp, bnd_tmp_opp
+  real*8		:: s_tmp,   s_tmp_opp
+  real*8		:: t_tmp,   t_tmp_opp
+  real*8		:: value_out
+  real*4,allocatable	:: RZkeep(:,:),scalars(:,:)
+  real*4		:: ZERO
+  integer		:: status(MPI_STATUS_SIZE)
+  character		:: buffer*80, lf*1, str1*12, str2*12
   character*12, allocatable :: scalar_names(:)
   integer               :: count_lines, count_lines_tot
   real*8                :: C_average,   C_average_tot
@@ -182,16 +181,14 @@ program jorek2_poincare
   enddo
   
   ! --- find x-point(s)
-  call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
   if (xpoint) then
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
-    psi_bnd  = psi_xpoint(1)
-    psi_bnd2 = psi_xpoint(2)
-    if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
-      psi_bnd  = psi_xpoint(2)
-      psi_bnd2 = psi_xpoint(1)
+    psi_bnd  = ES%psi_xpoint(1)
+    psi_bnd2 = ES%psi_xpoint(2)
+    if( ES%active_xpoint .eq. UPPER_XPOINT ) then
+      psi_bnd  = ES%psi_xpoint(2)
+      psi_bnd2 = ES%psi_xpoint(1)
     endif
-    if (xcase .eq. 1) psi_bnd2 = psi_bnd
+    if (xcase .eq. LOWER_XPOINT) psi_bnd2 = psi_bnd
   else
     psi_bnd  = 0.d0
     psi_bnd2 = 0.d0
@@ -467,6 +464,170 @@ program jorek2_poincare
 
   end do
 
+  		      else ! crossing an outer boundary
+  
+  			R_strike(i_strike) = R_in
+  			Z_strike(i_strike) = Z_in
+  			P_strike(i_strike) = p_line
+  			C_strike(i_strike) = total_length + sqrt(abs(dl2))
+  
+  			call var_value(i_elm_prev,6,s_line,t_line,p_line,T_strike(i_strike))
+  			call var_value(i_elm_prev,5,s_line,t_line,p_line,ZN_strike(i_strike))
+  
+  			inode1 = element_list%element(i_elm_prev)%vertex(1)
+  			inode2 = element_list%element(i_elm_prev)%vertex(2)
+  
+  			if ((node_list%node(inode1)%boundary .ne. 0) .and. (node_list%node(inode2)%boundary .ne. 0)) then
+  			  B_strike(i_strike) = min(node_list%node(inode1)%boundary,node_list%node(inode2)%boundary)
+  			else
+  			  write(*,*) 'error : leaving domain but not at a boundary (t=0)!',inode1,inode2,R_in,Z_in
+  			endif
+  
+  		      endif
+  
+  		    endif
+  
+  		  endif
+  
+  		else  ! this step remains within the element
+  
+  		  s_line = s_line + delta_s
+  		  t_line = t_line + delta_t
+  		  p_line = p_line + delta_phi_step
+  
+  		  dl2 = (Rmid_s**2 + Zmid_s**2)*delta_s**2 + (Rmid_t**2 + Zmid_t**2)*delta_t**2 + Rmid**2 * delta_phi_step**2
+  
+  		  small_delta = 1.d0
+  
+  		  call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,R_s,R_t,R_st,R_ss,R_tt,Z_in,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+  
+  		endif
+  
+  		! --- Reset the toroial step
+		delta_phi_local = delta_phi_local + small_delta * delta_phi_step
+  
+  		! --- Record total lengths
+  		total_length = total_length + sqrt(abs(dl2))
+  		total_phi    = total_phi    + small_delta * delta_phi_step
+  
+  		! --- Exit if we stepped out of domain
+  		if (i_elm .eq. 0) exit
+  
+  	      enddo  ! end of loop over steps within one element
+  
+              ! --- Exit if we stepped out of domain
+  	      if (i_elm .eq. 0) exit
+  
+  	    enddo    ! end of a 2Pi turn (or before if end of open field line)
+  
+            ! --- Exit if we stepped out of domain
+  	    if (i_elm .eq. 0) exit
+  
+  	    ! --- Record Poincare point
+	    call interp_RZ(node_list,element_list,i_elm,s_line,t_line,R_in,R_s,R_t,R_st,R_ss,R_tt,Z_in,Z_s,Z_t,Z_st,Z_ss,Z_tt)
+  	    R_turn(i_turn+1,(i_dir+1)/2+1) = R_in
+  	    Z_turn(i_turn+1,(i_dir+1)/2+1) = Z_in
+  	    C_turn_tmp(i_turn+1,(i_dir+1)/2+1) = total_length
+  	    call var_value(i_elm, 6, s_line,t_line,p_line, T_turn  (i_turn+1,(i_dir+1)/2+1) )
+  	    call var_value(i_elm, 1, s_line,t_line,p_line, PSI_turn(i_turn+1,(i_dir+1)/2+1) )
+  	    call var_value(i_elm, 5, s_line,t_line,p_line, ZN_turn (i_turn+1,(i_dir+1)/2+1) )
+  
+  	  enddo  ! end of loop over toroidal turns
+  
+  	  ! --- Field line still in domain, after n_turn turns
+	  if (i_elm .ne. 0) then
+  	    R_strike(i_strike) = R_in
+  	    Z_strike(i_strike) = Z_in
+  	    P_strike(i_strike) = p_line
+  	    C_strike(i_strike) = 0.d0	       ! to be done (total_length needs correction)
+  	    B_strike(i_strike) = 0
+  	    call var_value(i_elm,6,s_line,t_line,p_line,T_strike(i_strike))
+  	    call var_value(i_elm,5,s_line,t_line,p_line,ZN_strike(i_strike))
+  	  endif
+  
+  	  ! --- Record connection length
+  	  if (i_dir .eq. -1) then  
+  	    C_all(i_line)   = total_length
+  	    C_minus(i_line) = total_length
+  	    C_all_4(i_line) = total_length
+  	    partial(1)      = total_length
+  	  else
+            C_all(i_line)   = C_all(i_line)+total_length!min(C_all(i_line),total_length)
+  	    C_plus(i_line)  = total_length
+  	    C_all_4(i_line) = C_all_4(i_line)+total_length
+  	    partial(2)      = total_length
+  	  endif
+  
+  	enddo  ! end of two directions
+  
+        ! -----------------------------------
+	! --- Record what we want in vtk file
+        ! -----------------------------------
+	
+        ! --- Reverse connection length (not from plasma to position, but from target to position)
+	do i_dir=1,2
+  	  do i_turn = 1, n_turn_max(i_dir)
+  	    C_turn(i_turn,i_dir) = partial(i_dir) - c_turn_tmp(i_turn,i_dir)
+  	  enddo
+  	enddo
+  
+        ! --- Keep only field lines starting inside the plasma
+  	if ( (PSI_turn(1,1) .lt. psi_bnd2) &
+	     .and. (    ((n_turn_max(1) .lt. n_turns) .and. (n_turn_max(2) .lt. n_turns)) &
+	            .or. Rtheta_plot ) &
+  	     .and. (	( (xcase .eq. LOWER_XPOINT) .and. (Z_turn(1,1) .gt. ES%Z_xpoint(1)) ) &
+  	  	    .or.( (xcase .eq. UPPER_XPOINT) .and. (Z_turn(1,1) .lt. ES%Z_xpoint(2)) ) &
+  	  	    .or.( (xcase .eq. DOUBLE_NULL ) .and. (Z_turn(1,1) .gt. ES%Z_xpoint(1)) .and. (Z_turn(1,1) .lt. ES%Z_xpoint(2)) ) ) ) then
+  
+          ! --- Compute averaged connection length
+	  count_lines = count_lines + 1
+	  C_average = C_average + C_all(i_line)
+	  
+	  ! --- Do both directions
+	  do i_dir=1,2
+  
+            ! --- Do all turns
+  	    do i_turn=1,n_turn_max(i_dir)+1
+  
+  	      if (R_turn(i_turn,i_dir) .gt. 0.d0) then
+  
+  	  	! --- Connection lengths in both directions
+	  	zl1 = C_turn(i_turn,i_dir)
+  	  	zl2 = C_turn(1,1) + C_turn(1,2) - C_turn(i_turn,i_dir)
+  
+  	  	ikeep = ikeep + 1
+		small_r   = sqrt( (R_turn(i_turn,i_dir)-ES%R_axis)**2 + (Z_turn(i_turn,i_dir)-ES%Z_axis)**2 )
+		theta_pol = atan2(Z_turn(i_turn,i_dir)-ES%Z_axis,R_turn(i_turn,i_dir)-ES%R_axis)
+		if (theta_pol .lt. 0.d0) theta_pol = theta_pol + 2.d0*PI
+  	  	if (ikeep .le. n_points_max) then
+		  if (Rtheta_plot) then
+                    call find_RZ(node_list,element_list,R_turn(i_turn,i_dir),Z_turn(i_turn,i_dir),R_tmp,Z_tmp,ielm_tmp,s_tmp,t_tmp,ifail)
+                    call interp(node_list,element_list,ielm_tmp,1,1,s_tmp,t_tmp,psi_tmp,P0_s,P0_t,P0_st,P0_ss,P0_tt)
+		    RZkeep(1,ikeep)	     = (psi_tmp-ES%psi_axis)/(psi_bnd-ES%psi_axis)!small_r
+  	  	    RZkeep(2,ikeep)	     = theta_pol / (2.d0*PI)
+		  else
+		    RZkeep(1,ikeep)	     = R_turn(i_turn,i_dir)
+  	  	    RZkeep(2,ikeep)	     = Z_turn(i_turn,i_dir)
+		  endif
+          	  !scalars(ikeep,1:n_scalars) = (/ min(zl1,zl2),T_turn(1,i_dir) /)
+  	  	  !scalars(ikeep,1:n_scalars) = (/ C_all_4(i_line),C_minus(i_line),C_plus(i_line),T_turn(1,i_dir) /)
+		  scalars(ikeep,1:n_scalars) = (/ C_all(i_line),min(zl1,zl2),PSI_turn(1,i_dir),T_turn(1,i_dir) /)
+		else
+		  write(*,*) 'Warning! Exceeded maximum number of points',n_points_max
+		endif
+  
+  	      endif
+  	    enddo
+  	  
+	  enddo ! end recording in both directions
+  
+        endif
+  
+      enddo  ! end over loop over starting points within one element ( ns)
+    enddo    ! end over loop over starting points within one element ( nt)
+  
+  
+  enddo ! end of loop over elements
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   write(*,*)'Finished loop!!!'

@@ -395,6 +395,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   use mod_gc_relativistic, only: relativistic_gc_to_particle
   use mod_fields_linear
   use domains
+  use equil_info
   class(fields_base), intent(in)                               :: fields
   real*8, intent(in)                                           :: time
   class(particle_base), intent(in), dimension(:)               :: particles
@@ -423,7 +424,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   if (xpoint) then
     call find_xpoint(1,fields%node_list,fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
     psi_limit  = psi_xpoint(1)
-    if((xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)))) then ! less than? assumption on current direction?
+    if(ES%active_xpoint .eq. UPPER_XPOINT) then
       psi_limit = psi_xpoint(2)
     endif
   else
@@ -442,9 +443,13 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   real8_stats = 0.d0
   real4_stats = 0.d0
   int_stats  = 0
-  !$omp parallel do default(shared) & ! for gcc particle types are not in the omp region. reset to none to debug
-  !$omp shared(particles, fields, int_stats, real4_stats, real8_stats, mask, time, f0, mass, &
-  !$omp xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
+#ifdef __GFORTRAN__
+  !$omp parallel do default(shared) &
+#else
+  !$omp parallel do default(none) &
+  !$omp shared(particles, fields, int_stats, real4_stats, real8_stats, mask, time, f0, mass, dt, &
+  !$omp        xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, R_axis, Z_axis, psi_axis) &
+#endif
   !$omp private(E, B, psi, U, particle, v_par, domain, particle_centered, real_stats_tmp, i_real8, i_real4, i_tmp, j)
   do i=1,size(particles,1)
     int_stats(i,4) = particles(i)%i_elm
@@ -572,6 +577,7 @@ end subroutine calculate_particle_diagnostics
 !> Regions are: DOMAIN_PLASMA, DOMAIN_SOL, DOMAIN_OUTER_SOL,
 !> DOMAIN_UPPER_PRIVATE, DOMAIN_LOWER_PRIVATE
 function particles_in_regions(node_list, element_list, particles)
+  use constants
   use data_structure
   use phys_module, only: DOMAIN_PLASMA, DOMAIN_SOL, DOMAIN_OUTER_SOL, DOMAIN_UPPER_PRIVATE,        &
       DOMAIN_LOWER_PRIVATE, xpoint, xcase
@@ -579,6 +585,7 @@ function particles_in_regions(node_list, element_list, particles)
   use domains
   use mpi
   use mod_interp, only: interp
+  use equil_info
   implicit none
 
   type(type_node_list), intent(in)     :: node_list
@@ -599,7 +606,7 @@ function particles_in_regions(node_list, element_list, particles)
   if (xpoint) then
     call find_xpoint(1,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
     psi_limit  = psi_xpoint(1)
-    if( (xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+    if(ES%active_xpoint .eq. UPPER_XPOINT) then
       psi_limit = psi_xpoint(2)
     endif
   else
@@ -613,9 +620,13 @@ function particles_in_regions(node_list, element_list, particles)
       R_axis, Z_axis, psi_axis)
 
   tmp = 0
-  !$omp parallel do default(none) &
+#ifdef __GFORTRAN__
+  !$omp parallel do default(shared) & 
+#else
+  !$omp parallel do default(none)   &
   !$omp shared(node_list, element_list, particles, xpoint, xcase, R_xpoint, Z_xpoint, psi_xpoint, psi_limit, &
-  !$omp     R_axis, Z_axis, psi_axis) &
+  !$omp        R_axis, Z_axis, psi_axis) &
+#endif
   !$omp private(domain, psi, psi_s, psi_t, psi_st, psi_ss, psi_tt) &
   !$omp reduction(+:tmp)
   do i=1,size(particles,1)

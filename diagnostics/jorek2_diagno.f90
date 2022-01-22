@@ -16,12 +16,7 @@ use basis_at_gaussian
 use pellet_module
 use mpi_mod
 use mod_import_restart
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-   use mod_neutral_source
-#endif
-#if (!defined WITH_Neutrals) && (defined WITH_Impurities)
-   use mod_injection_source
-#endif
+use mod_impurity
 
 implicit none
 
@@ -29,6 +24,7 @@ type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 integer :: i, in, i_tor
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
+real*8  :: kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out
 real*8  :: Rplot(2), Zplot(2)
 real*8  :: psi_axis,R_axis,Z_axis,s_axis,t_axis
 integer :: ifail, my_id, ierr, i_elm_axis
@@ -100,7 +96,8 @@ endif
 #endif
 
 
-call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out)
+call Integrals_3D(my_id,node_list,element_list,density,density_in,density_out,pressure,pressure_in,pressure_out, &
+                                               kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
 
 if (use_pellet) then
    pellet_volume = total_pellet_volume

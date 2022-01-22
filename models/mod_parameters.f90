@@ -86,6 +86,9 @@ else if ( i_var == var_rho ) then
 else if ( i_var == var_T  ) then
   name  = 'Temperature'
   descr = 'Temperature'
+else
+  write(name, "(I4)") i_var
+  descr = "Please check implementation"
 end if
 
 if ( .not. long2 ) then

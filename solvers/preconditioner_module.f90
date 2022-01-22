@@ -229,8 +229,6 @@ module preconditioner_module
     call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 
-    if (autodistribute_modes) n_mode_families = (n_tor+1)/2
-
     if (n_mode_families.gt.n_cpu) then
       if (my_id.eq.0) write(*,*) "Error: number of cpu must be >= number of mode families", n_mode_families
       call MPI_Abort(MPI_COMM_WORLD, 0, ierr)
@@ -270,10 +268,14 @@ module preconditioner_module
       endif
     endif
 
+#ifndef USE_PASTIX6
     if ((.not.use_strumpack).and.(.not.centralize_harm_mat)) then
-      if (my_id.eq.0) write(*,*) "Warning: PC matrix distribution is only supported by STRUMPACK"
+      if (my_id.eq.0) write(*,*) "Warning: PC matrix distribution is only supported by STRUMPACK"      
       centralize_harm_mat = .true.
-    elseif ((use_strumpack).and.(centralize_harm_mat)) then
+    endif
+#endif
+    
+    if ((use_strumpack).and.(centralize_harm_mat)) then
       if (my_id.eq.0) write(*,*) "Warning: centralization of PC matrix is not advized when using STRUMPACK"
     endif
 

@@ -6,8 +6,10 @@ contains
 
 #include "corr_neg_include.f90"
 
-subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
-  ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t, i_tor_min, i_tor_max)
+subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
+                              ELM, RHS, tid, ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,                               &
+                              eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t,                 &
+                              i_tor_min, i_tor_max, aux_nodes)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -21,11 +23,14 @@ use pellet_module
 use diffusivities, only: get_dperp, get_zkperp
 use equil_info, only : get_psi_n
 use mod_bootstrap_functions
+use mod_sources
 
 implicit none
 
-type (type_element)   :: element
-type (type_node)      :: nodes(n_vertex_max)
+type (type_element)        :: element                 ! finite element
+type (type_node)           :: nodes(n_vertex_max)     ! fluid variables
+type (type_node), optional :: aux_nodes(n_vertex_max) ! moments of particles
+
 
 #define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
 
@@ -69,7 +74,7 @@ real*8     :: P0, P0_s, P0_t, P0_x, P0_y, P0_p, P0_ss, P0_st, P0_tt, P0_xx, P0_x
 real*8     :: P0_x_rho, P0_xx_rho, P0_y_rho, P0_yy_rho, P0_xy_rho
 real*8     :: P0_x_T,   P0_xx_T,   P0_y_T,   P0_yy_T,   P0_xy_T
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
-real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_T
+real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, dvisco_num_dT, eta_num_T, deta_num_dT, W_dia, W_dia_rho, W_dia_T
 real*8     :: eta_T_ohm, deta_dT_ohm
 real*8     :: ZK_par_num, T0_ps0_x, T_ps0_x, T0_psi_x, T0_ps0_y, T_ps0_y, T0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: amat_11, amat_12, amat_13, amat_14, amat_15, amat_16, amat_17
@@ -667,9 +672,32 @@ do i=1,n_vertex_max
           else
             W_dia = 0.d0
           endif
+          
+          ! --- Temperature dependent hyper-resistivity. There is no physical
+          ! reason for this dependence whatsoever, this is just to keep a constant
+          ! ratio between the resistivity and hyper-resistivity.
+          if ( eta_num_T_dependent .and. T0_corr <= T_max_eta) then
+             eta_num_T = eta_num * (T0_corr/T_0)**(-1.5d0)
+             deta_num_dT =  - eta_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
+          else if (eta_num_T_dependent .and. T0_corr > T_max_eta) then
+             eta_num_T = eta_num * (T_max_eta/T_0)**(-1.5d0)
+             deta_num_dT = 0.
+          else
+             eta_num_T = eta_num
+             deta_num_dT = 0.
+          end if
 
-          eta_num_T   = eta_num                         ! hyperresistivity
-          visco_num_T = visco_num                       ! hyperviscosity
+          ! --- Same for the hyper-viscosity.
+          if ( visco_num_T_dependent .and. T0_corr <= T_max_eta) then
+             visco_num_T = visco_num * (T0_corr/T_0)**(-1.5d0)
+             dvisco_num_dT =  - visco_num * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0) 
+          else if (visco_num_T_dependent .and. T0_corr > T_max_eta) then
+             visco_num_T = visco_num * (T_max_eta/T_0)**(-1.5d0)
+             dvisco_num_dT = 0.
+          else
+             visco_num_T = visco_num
+             dvisco_num_dT = 0.
+          end if
 
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
 

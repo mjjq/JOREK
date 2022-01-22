@@ -49,13 +49,15 @@ real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
-real*8     :: sigmas(16), dZ_axis, Z_axis_int, Z_axis_old, area_ref
-integer    :: n_grids(10)
+real*8     :: sigmas(16), dZ_axis, dR_axis, Z_axis_int, Z_axis_old, R_axis_old, R_axis_int, area_ref
+integer    :: n_grids(12)
 logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
 real*8, allocatable     :: T_profile(:)
 real*8     :: density_prof
 real*8, allocatable     :: density_profile(:)
+integer    :: nj
+real*8     :: rr,ww, drr_dR, drr_dZ, drr_dR2, drr_dZ2, drr_dRdZ
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -66,7 +68,6 @@ if (my_id .eq. 0) then
   write(*,*) '   Xcase        : ',xcase2
 
   if ((newton_GS_fixbnd .or. newton_GS_freebnd) .and. (use_pastix_eq)) then
-#ifndef USE_PASTIX6
     write(*,*) ' '
     write(*,*) ' WARNING: PASTIX 5 IS NOT EFFICIENT FOR THE GRAD-SHAFRANOV SOLVER'
     write(*,*) '           WITH THE NEWTON METHOD. PLEASE USE PASTIX 6,          '
@@ -74,7 +75,6 @@ if (my_id .eq. 0) then
     write(*,*) '           (add use_mumps_eq=.t. to namelist and  USE_MUMPS = 1  '
     write(*,*) '           in Makefile.inc)                                      '
     write(*,*) ' '
-#endif
   endif
 
   if ((newton_GS_fixbnd .or. newton_GS_freebnd) .and. (.not. xpoint2)) then
@@ -122,7 +122,7 @@ if (my_id == 0) then
     if (xpoint2) then
       if (ES%ifail_xpoint == 0) then ! (otherwise, keep the values of the previous iteration as a reasonable guess)
         ES%psi_bnd  = ES%psi_xpoint(1)
-        if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (ES%psi_xpoint(2) .lt. ES%psi_xpoint(1))) ) then
+        if( (xcase2 .eq. UPPER_XPOINT) .or. ((xcase2 .eq. DOUBLE_NULL) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
           ES%psi_bnd = ES%psi_xpoint(2)
         endif
         psi_bnd     = ES%psi_bnd
@@ -130,8 +130,8 @@ if (my_id == 0) then
         Z_xpoint(1) = ES%Z_xpoint(1)
         R_xpoint(2) = ES%R_xpoint(2)
         Z_xpoint(2) = ES%Z_xpoint(2)
-        if(xcase2 .eq. 1) ES%Z_xpoint(2) = +99.d0
-        if(xcase2 .eq. 2) ES%Z_xpoint(1) = -99.d0
+        if(xcase2 .eq. LOWER_XPOINT) ES%Z_xpoint(2) = +99.d0
+        if(xcase2 .eq. UPPER_XPOINT) ES%Z_xpoint(1) = -99.d0
       else
         ES%R_xpoint = R_xpoint
         ES%Z_xpoint = Z_xpoint
@@ -154,8 +154,8 @@ if (my_id == 0) then
       endif
     endif
   
-    if(xcase2 .eq. 1) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(1),ES%ifail_xpoint
-    if(xcase2 .eq. 2) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(2),ES%ifail_xpoint
+    if(xcase2 .eq. LOWER_XPOINT) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(1),ES%ifail_xpoint
+    if(xcase2 .eq. UPPER_XPOINT) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(2),ES%ifail_xpoint
 
     write(*,'(A,1f14.8)')                       ' PSI_BND - PSI_AXIS : ', ES%psi_bnd-ES%psi_axis 
   
@@ -185,7 +185,7 @@ end if ! my_id == 0
 !--------------------------------------- freeboundary equilibrium
 freeboundary_equil = freeboundary_equil2
 
-current_int = 0.d0; Z_axis_int = 0.d0
+current_int = 0.d0; Z_axis_int = 0.d0; R_axis_int = 0.d0
  
 T_0_old = T_0;  FF_0_old = FF_0;  T_1_old = T_1;  FF_1_old = FF_1
 
@@ -252,11 +252,11 @@ if (freeboundary_equil) then
       if (xpoint2) then
         if (ES%ifail_xpoint .ne. 1) then      
           ES%psi_bnd  = ES%psi_xpoint(1)
-          if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (ES%psi_xpoint(2) .lt. ES%psi_xpoint(1))) ) then
+          if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(ES%psi_xpoint(2)-ES%psi_axis) .lt. abs(ES%psi_xpoint(1)-ES%psi_axis))) ) then
             ES%psi_bnd = ES%psi_xpoint(2)
           endif
-          if(xcase2 .eq. 1) ES%Z_xpoint(2) = +99.d0
-          if(xcase2 .eq. 2) ES%Z_xpoint(1) = -99.d0
+          if(xcase2 .eq. LOWER_XPOINT) ES%Z_xpoint(2) = +99.d0
+          if(xcase2 .eq. UPPER_XPOINT) ES%Z_xpoint(1) = -99.d0
         else
           ES%Z_xpoint(1) = -99.d0 
           ES%Z_xpoint(2) = +99.d0
@@ -303,23 +303,34 @@ if (freeboundary_equil) then
       
       !Vertical feedback - needed for vertically unstable plasmas        
       Z_axis_int = Z_axis_int + (ES%Z_axis - Z_axis_ref)
+      R_axis_int = R_axis_int + (ES%R_axis - R_axis_ref)
       if (iter .eq. 1) then
         dZ_axis = 0.d0
+        dR_axis = 0.d0
       else
         dZ_axis = ES%Z_axis - Z_axis_old
+        dR_axis = ES%R_axis - R_axis_old
       end if
+
     
       if ((mod(iter,n_feedback_vertical) .eq. 0) .and. (iter .ge. start_VFB) .and. (.not. newton_GS_freebnd) ) then
         vertical_FB = FB_Zaxis_position   * (ES%Z_axis-Z_axis_ref) &   ! vertical_FB is used in vacuum_equilibrium.f90 to modify the coils current
                     + FB_Zaxis_integral   * Z_axis_int          &   
                     + FB_Zaxis_derivative * dZ_axis
+        radial_FB = FB_Zaxis_position   * (ES%R_axis-R_axis_ref) &   ! radial_FB is used in vacuum_equilibrium.f90 to modify the coils current
+                    + FB_Zaxis_integral   * R_axis_int          &   
+                    + FB_Zaxis_derivative * dR_axis
+
       endif
         
-        Z_axis_old = ES%Z_axis
+      Z_axis_old = ES%Z_axis
+      R_axis_old = ES%R_axis
        
     end if ! my_id == 0
     
+    if (R_axis_ref<0) radial_FB=0.d0
     call MPI_bcast(vertical_FB, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
+    call MPI_bcast(radial_FB, 1, MPI_DOUBLE_PRECISION,  0, MPI_COMM_WORLD,ierr)
   
     ! --- Iterate equation
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
@@ -352,6 +363,10 @@ if (freeboundary_equil) then
   if (freeb_equil_iterate_area .and. (.not. xpoint2)) then
     n_limiter = 1  ! set found limiter (defined inside iterate2area)
   endif
+
+else
+  
+  psi_offset_freeb = 0.d0
   
 endif
 
@@ -374,11 +389,11 @@ if (my_id == 0) then
     call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
     if (ifail .ne. 1) then      
       psi_bnd  = psi_xpoint(1)
-      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) ) then
+      if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
         psi_bnd = psi_xpoint(2)
       endif
-      if(xcase2 .eq. 1) Z_xpoint(2) = +99.d0
-      if(xcase2 .eq. 2) Z_xpoint(1) = -99.d0
+      if(xcase2 .eq. LOWER_XPOINT) Z_xpoint(2) = +99.d0
+      if(xcase2 .eq. UPPER_XPOINT) Z_xpoint(1) = -99.d0
     else
       Z_xpoint(1) = -99.d0 
       Z_xpoint(2) = +99.d0
@@ -404,7 +419,7 @@ if (my_id == 0) then
   !------------------------------- end of equilibrium, start filling data
   psi_axis = psi_axis - psi_offset_freeb
   psi_bnd  = psi_bnd  - psi_offset_freeb
-  
+
   do i=1,node_list%n_nodes
   
     node_list%node(i)%values(1,1,1) = node_list%node(i)%values(1,1,1) - psi_offset_freeb
@@ -498,7 +513,60 @@ if (my_id == 0) then
                                                  + node_list%node(i)%x(1,3,1) * node_list%node(i)%values(1,2,1) ) &
                                     + dj_dZ_dpsi*( node_list%node(i)%x(1,2,2) * node_list%node(i)%values(1,3,1)   &
                                                  + node_list%node(i)%x(1,3,2) * node_list%node(i)%values(1,2,1) )
-  
+
+    ! --- Add contribution of current ropes
+    if ((.not. restart) .and. (n_jropes .ne. 0)) then
+      do nj=1,n_jropes
+        rr = sqrt((R-R_jropes(nj))**2 + (Z-Z_jropes(nj))**2)
+        drr_dR   = (R-R_jropes(nj)) / rr
+        drr_dZ   = (Z-Z_jropes(nj)) / rr
+        drr_dR2  = 1./rr - (R-R_jropes(nj)) / rr**2 * drr_dR
+        drr_dZ2  = 1./rr - (Z-Z_jropes(nj)) / rr**2 * drr_dZ
+        drr_dRdZ = - (R-R_jropes(nj)) / rr**2 * drr_dZ
+        ww = w_jropes(nj)
+        zjz        = 0.d0
+        dj_dR      = 0.d0
+        dj_dZ      = 0.d0
+        dj_dR_dR   = 0.d0
+        dj_dZ_dZ   = 0.d0
+        dj_dR_dZ   = 0.d0
+        if (rr .le. ww) then
+          zjz        = current_jropes(nj) * (1.0 - (rr/ww)**2 )**2 * R
+          dj_dR      = -4. * current_jropes(nj) * rr / ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR * R + zjz / R
+          dj_dZ      = -4. * current_jropes(nj) * rr / ww**2 * (1.0 - (rr/ww)**2 ) * drr_dZ * R
+          dj_dR_dR   = - zjz/R**2 + dj_dR/R - 4.  * current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR    & 
+                                            - 4.*R* current_jropes(nj)        /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR**2 & 
+                                            - 4.*R* current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR2   & 
+                                            + 8.*R* current_jropes(nj) * rr**2/ww**4                       * drr_dR**2 
+          dj_dZ_dZ   = - 4.*R* current_jropes(nj)        /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dZ**2 & 
+                       - 4.*R* current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dZ2   & 
+                       + 8.*R* current_jropes(nj) * rr**2/ww**4                       * drr_dZ**2 
+          dj_dR_dZ   = dj_dZ / R                                                                  &
+                       - 4.*R* current_jropes(nj)        /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dR*drr_dZ & 
+                       - 4.*R* current_jropes(nj) * rr   /ww**2 * (1.0 - (rr/ww)**2 ) * drr_dRdZ      & 
+                       + 8.*R* current_jropes(nj) * rr**2/ww**4                       * drr_dR*drr_dZ 
+        endif
+       
+        node_list%node(i)%values(1,1,3) = node_list%node(i)%values(1,1,3) + zjz
+       
+        node_list%node(i)%values(1,2,3) = node_list%node(i)%values(1,2,3)      &
+                                        + dj_dR   * node_list%node(i)%x(1,2,1) &
+                                        + dj_dZ   * node_list%node(i)%x(1,2,2)
+       
+        node_list%node(i)%values(1,3,3) = node_list%node(i)%values(1,3,3)      &
+                                        + dj_dR   * node_list%node(i)%x(1,3,1) &
+                                        + dj_dZ   * node_list%node(i)%x(1,3,2)
+       
+        node_list%node(i)%values(1,4,3) = node_list%node(i)%values(1,4,3)       &
+                                        + dj_dR    * node_list%node(i)%x(1,4,1) &
+                                        + dj_dZ    * node_list%node(i)%x(1,4,2) &
+                                        + dj_dR_dR * node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,1)    &
+                                        + dj_dZ_dZ * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)    &
+                                        + dj_dR_dZ * ( node_list%node(i)%x(1,2,1) * node_list%node(i)%x(1,3,2)  &
+                                                     + node_list%node(i)%x(1,3,1) * node_list%node(i)%x(1,2,2) )
+      enddo
+    endif
+
   enddo
 
   ! --- Find flux surfaces and plot them; determine the q-profile.  
@@ -523,13 +591,13 @@ if (my_id == 0) then
     n_grids(3) = 2*n_open   ; n_grids(4) = 2*n_outer  ; n_grids(5) = 2*n_inner
     n_grids(6) = 2*n_private; n_grids(7) = 2*n_up_priv
     n_grids(8) = n_leg      ; n_grids(9) = n_up_leg
-    if (xcase .eq. 1) then
+    if (xcase .eq. LOWER_XPOINT) then
       n_grids(4) = 0
       n_grids(5) = 0
       n_grids(7) = 0
       n_grids(9) = 0
     endif
-    if (xcase .eq. 2) then
+    if (xcase .eq. UPPER_XPOINT) then
       n_grids(4) = 0
       n_grids(5) = 0
       n_grids(6) = 0
@@ -537,22 +605,21 @@ if (my_id == 0) then
     endif
   
     ! Allocate surface_list structure (that's for plotting only)
-    if (xcase2 .eq. 1) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_private
-    if (xcase2 .eq. 2) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_up_priv
-    if (xcase2 .eq. 3) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_outer + 2*n_inner + 2*n_private + 2*n_up_priv
+    if (xcase2 .eq. LOWER_XPOINT) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_private
+    if (xcase2 .eq. UPPER_XPOINT) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_up_priv
+    if (xcase2 .eq. DOUBLE_NULL ) surface_list%n_psi = 2*n_flux + 2*n_open + 2*n_outer + 2*n_inner + 2*n_private + 2*n_up_priv
     if (allocated(surface_list%psi_values)) call tr_deallocate(surface_list%psi_values,"surface_list%psi_values",CAT_GRID)
     call tr_allocate(surface_list%psi_values,1,surface_list%n_psi,"surface_list%psi_values",CAT_GRID)
     
     ! Allocate sep_list structure (that's for plotting only)  
     sep_list%n_psi =3
-    if(xcase .eq. 3) sep_list%n_psi =6
+    if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
     if (allocated(sep_list%psi_values)) call tr_deallocate(sep_list%psi_values,"sep_list%psi_values",CAT_GRID)
     call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
     
     ! Define the flux values to be plotted...
     psi_axis = psi_axis+0.01 !Just offset a little, because finding surfaces along the side of an element (on the xpoint grid) can be hard...
-    call define_flux_values(node_list, element_list, surface_list, sep_list, &
-                            xcase2, R_xpoint, Z_xpoint, psi_xpoint, psi_axis, n_grids, sigmas)
+    call define_flux_values(node_list, element_list, surface_list, sep_list, xcase2, psi_xpoint, n_grids, sigmas)
     psi_axis = psi_axis-0.01 !Put it back, it's not used anyway, but just for principle!
     
   else
@@ -576,19 +643,19 @@ if (my_id == 0) then
   
   if (freeboundary_equil) then
     !call plot_coils(.true.)
-    call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,surface_list,.false.,4,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
   
-    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,surface_list,.true.,4,xpoint2,xcase2)
+    call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
     !call plot_coils(.false.)
   else
     if (xpoint2 .and. (n_flux .gt. 1)) then
-      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
-      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,xpoint2,xcase2)
+      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
     else
-      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,psi_xpoint,R_xpoint,Z_xpoint,.false.,0)
-      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,psi_xpoint,R_xpoint,Z_xpoint,xpoint2,xcase2)
+      call plot_flux_surfaces(node_list,element_list,surface_list,.true.,1,.false.,0)
+      call plot_flux_surfaces(node_list,element_list,sep_list,.false.,1,xpoint2,xcase2)
     endif
   endif
   

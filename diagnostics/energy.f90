@@ -1,4 +1,4 @@
-subroutine energy(node_list,element_list,W_mag,W_kin)
+subroutine energy(W_mag,W_kin)
 !---------------------------------------------------------------
 !
 !---------------------------------------------------------------
@@ -7,11 +7,10 @@ use gauss
 use basis_at_gaussian
 use phys_module
 use mod_axis_treatment
+use nodes_elements
 
 implicit none
 
-type (type_node_list)    :: node_list
-type (type_element_list) :: element_list
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
 
@@ -190,6 +189,5 @@ do in=1,n_tor
     W_kin(in) = 0.5d0 * W_kin(in)
   endif
 enddo
-
 return
 end

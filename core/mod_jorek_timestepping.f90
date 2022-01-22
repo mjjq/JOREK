@@ -359,7 +359,10 @@ subroutine do_jorek_timestep(this, sim, ev)
   use vacuum
   use vacuum_response,         only: update_response
   use mod_fields_linear
-  use mod_gmres_driver
+  use mod_gmres,               only: gmres_driver
+#ifdef USE_BICGSTAB
+  use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
+#endif
   use mod_expression,          only: exprs_all_int, init_expr
   use mod_integrals3D
 
@@ -484,9 +487,13 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   if (.not. gmres) then
     if (use_mumps) then
+#ifdef USE_MUMPS    
       call solve_mumps_all(sim%my_id)
+#endif      
     else
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)    
       call solve_pastix_all(sim%n_cpu,sim%my_id,this%index_min(sim%my_id+1),this%index_max(sim%my_id+1))
+#endif      
     endif
   else
     call clck_time(t0)
@@ -511,8 +518,13 @@ subroutine do_jorek_timestep(this, sim, ev)
   if (gmres) then
     this%iter_prev = this%iter_gmres
     this%iter_gmres = gmres_max_iter
-  
+ 
+#ifdef USE_BICGSTAB
+    call bicgstab_driver(irn_glob, jcn_glob, a_glob, deltas, rhs_glob, &
+                     this%iter_gmres, gmres_tol, MPI_COMM_WORLD, this%MPI_COMM_N, this%MPI_COMM_MASTER)
+#else 
     call gmres_driver(sim%my_id,this%my_id_n,this%MPI_COMM_N,this%MPI_COMM_MASTER,this%iter_gmres)
+#endif
 
   endif
   call clck_time_barrier(t1)

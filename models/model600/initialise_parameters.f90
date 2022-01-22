@@ -312,13 +312,13 @@ if ( my_id == 0 ) then
     stop
   end if
 
- if (any(main_imp > 1) .or. any(main_imp < 0)) then 
-    write(*,*) "ERROR: Illegal value of main_imp array, EXITING!"
-    write(*,*) "ERROR: main_imp array:", main_imp
+ if (any(is_main_imp > 1) .or. any(is_main_imp < 0)) then 
+    write(*,*) "ERROR: Illegal value of is_main_imp array, EXITING!"
+    write(*,*) "ERROR: is_main_imp array:", is_main_imp
     stop
- else if ((sum(main_imp) .ne. 1) .and. with_impurities) then 
+ else if ((sum(is_main_imp) .ne. 1) .and. with_impurities) then 
     write(*,*) "ERROR: Currently admiting one and only one main impurity species when with_impurities, EXITING!"
-    write(*,*) "ERROR: main_imp array:", main_imp
+    write(*,*) "ERROR: is_main_imp array:", is_main_imp
     stop
  end if
 

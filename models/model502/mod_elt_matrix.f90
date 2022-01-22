@@ -2533,8 +2533,8 @@ do ms=1, n_gauss
                               * rho * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                      &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 
-                           + v * BigR * rho * rn0_corr * Lrad                                   * xjac * theta * tstep &
-                           + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
+                           + v * BigR * rho * dr0_corr_dn * rn0_corr * Lrad                     * xjac * theta * tstep &
+                           + v * BigR * rho * dr0_corr_dn * frad_bg                             * xjac * theta * tstep &
                         ! New term from Z_eff
                            - v * BigR * rho * ((GAMMA-1.)/BigR**2) * deta_dr0_ohm * zj0**2      * xjac * theta * tstep &
 !=============== The ionization potential energy term=========================
@@ -2647,8 +2647,8 @@ do ms=1, n_gauss
                            ! Energy exchange term
                            - v * BigR * ddTe_i_drhon * rhon                                         * xjac * theta * tstep & 
 
-                           + v * BigR * rhon * (r0_corr + 2.*alpha_e*rn0_corr) * Lrad               * xjac * theta * tstep &
-                           + v * BigR * rhon * alpha_e * frad_bg                                    * xjac * theta * tstep
+                           + v * BigR * rhon * drn0_corr_dn * (r0_corr + 2.*alpha_e*rn0_corr) * Lrad* xjac * theta * tstep &
+                           + v * BigR * rhon * drn0_corr_dn * alpha_e * frad_bg                     * xjac * theta * tstep
 
 
                  amat_99 =   v * (r0 + rn0 * alpha_e_bis) * Te * BigR * xjac * (1.d0 + zeta)                     &

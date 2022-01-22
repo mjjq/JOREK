@@ -1826,8 +1826,8 @@ do ms=1, n_gauss
                               * rho * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                        &
                               * ( v_x * ps0_y -  v_y * ps0_x + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
 
-                           + v * BigR * rho * rn0_corr * Lrad                                   * xjac * theta * tstep &
-                           + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
+                           + v * BigR * rho * dr0_corr_dn * rn0_corr * Lrad                     * xjac * theta * tstep &
+                           + v * BigR * rho * dr0_corr_dn * frad_bg                             * xjac * theta * tstep &
                         ! New term from Z_eff
                            - v * BigR * rho * (GAMMA - 1.) * deta_dr0_ohm * (zj0/BigR)**2    * xjac * theta * tstep &
 !=============== The ionization potential energy term=========================
@@ -1913,7 +1913,7 @@ do ms=1, n_gauss
                            - v * BigR * T * (GAMMA - 1.) * deta_dT_ohm * (zj0/BigR)**2        * xjac * theta * tstep  &
                            + v * BigR * T * (r0_corr + beta_imp*rn0_corr) * rn0_corr * dLrad_dT  * xjac * theta * tstep  &
                            + v * BigR * T * dbeta_imp_dT * rn0_corr**2 * Lrad                    * xjac * theta * tstep  &
-                           + v * BigR * T * (r0 + beta_imp*rn0) * dfrad_bg_dT                    * xjac * theta * tstep  &
+                           + v * BigR * T * (r0_corr + beta_imp*rn0_corr) * dfrad_bg_dT                    * xjac * theta * tstep  &
                            + v * BigR * T * dbeta_imp_dT * rn0 * frad_bg                         * xjac * theta * tstep
 
                  amat_67 = + v * (r0 + rn0 * alpha_imp_bis) * F0 / BigR * Vpar * T0_p       * xjac * theta * tstep &
@@ -2010,8 +2010,8 @@ do ms=1, n_gauss
                            + v * alpha_imp * rhon * GAMMA * T0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)        * theta * tstep &
                            + v * alpha_imp * rhon * GAMMA * T0 * F0 / BigR * vpar0_p                 * xjac * theta * tstep &
 
-                           + v * BigR * rhon * (r0_corr + 2*beta_imp*rn0_corr) * Lrad                          * xjac * theta * tstep &
-                           + v * BigR * rhon * beta_imp * frad_bg                                              * xjac * theta * tstep
+                           + v * BigR * rhon * drn0_corr_dn * (r0_corr + 2*beta_imp*rn0_corr) * Lrad * xjac * theta * tstep &
+                           + v * BigR * rhon * drn0_corr_dn * beta_imp * frad_bg                     * xjac * theta * tstep
 
 !###################################################################################################
 !#  equation 7   parallel velocity equation                                                        #

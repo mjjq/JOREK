@@ -231,10 +231,10 @@ module pellet_module
   
     i_main_imp = 0
     do i_main_imp=1,n_adas
-      if (main_imp(i_main_imp) == 1) exit
+      if (is_main_imp(i_main_imp) == 1) exit
       if ((i_main_imp == n_adas) .and. with_impurities) then
-        write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
-        write(*,*) "ERROR: main_imp array:", main_imp
+        write(*,*) "ERROR, searched through is_main_imp and didn't find any while with_impurities=.t., EXITING!!!"
+        write(*,*) "ERROR: is_main_imp array:", is_main_imp
         stop
       endif
     enddo
@@ -628,10 +628,10 @@ module pellet_module
 
     i_main_imp = 0
     do i_main_imp=1,n_adas
-      if (main_imp(i_main_imp) == 1) exit
+      if (is_main_imp(i_main_imp) == 1) exit
       if ((i_main_imp == n_adas) .and. with_impurities) then
-        write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
-        write(*,*) "ERROR: main_imp array:", main_imp
+        write(*,*) "ERROR, searched through is_main_imp and didn't find any while with_impurities=.t., EXITING!!!"
+        write(*,*) "ERROR: is_main_imp array:", is_main_imp
         stop
       endif
     enddo
@@ -944,10 +944,10 @@ module pellet_module
 
     i_main_imp = 0
     do i_main_imp=1,n_adas
-      if (main_imp(i_main_imp) == 1) exit
+      if (is_main_imp(i_main_imp) == 1) exit
       if ((i_main_imp == n_adas) .and. with_impurities) then
-        write(*,*) "ERROR, searched through main_imp and didn't find any while with_impurities=.t., EXITING!!!"
-        write(*,*) "ERROR: main_imp array:", main_imp
+        write(*,*) "ERROR, searched through is_main_imp and didn't find any while with_impurities=.t., EXITING!!!"
+        write(*,*) "ERROR: is_main_imp array:", is_main_imp
         stop
       endif
     enddo

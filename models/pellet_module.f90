@@ -194,7 +194,7 @@ module pellet_module
     use phys_module, only: pellets, imp_type, central_density, central_mass, spi_abl_model, spi_tor_rot,      &
                            ns_phi_rotate, tor_frequency, tstep, pellet_density, pellet_density_bg,            &
                            index_now, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
-                           xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor, main_imp, n_adas
+                           xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor, is_main_imp, n_adas
     use mpi_mod
     use corr_neg
     
@@ -582,7 +582,7 @@ module pellet_module
     use data_structure
     use phys_module, only: pellets, imp_type, central_density, central_mass, pellet_density, pellet_density_bg,&
                            spi_rnd_seed, spi_angle, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
-                           xtime_spi_ablation_bg_rate, nstep, spi_shard_file, spi_abl_model, n_spi_tot, main_imp,&
+                           xtime_spi_ablation_bg_rate, nstep, spi_shard_file, spi_abl_model, n_spi_tot, is_main_imp,&
                            n_adas
     use mpi_mod
     use corr_neg
@@ -896,7 +896,7 @@ module pellet_module
     use data_structure
     use phys_module, only: pellets, imp_type, pellet_density, pellet_density_bg,  xtime_spi_ablation,           &
                            xtime_spi_ablation_bg, xtime_spi_ablation_rate, xtime_spi_ablation_bg_rate, nstep,   &
-                           spi_plume_file, spi_plume_hdf5, spi_abl_model, n_spi_tot, n_adas, main_imp,          &
+                           spi_plume_file, spi_plume_hdf5, spi_abl_model, n_spi_tot, n_adas, is_main_imp,       &
                            spi_tor_rot, ns_phi_rotate, tor_frequency
     use mpi_mod
 #ifdef USE_HDF5

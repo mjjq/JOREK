@@ -178,6 +178,8 @@ program JOREK2
   integer :: nsolvers=0
   logical :: solvers(4), solvers_eq(3)
  
+  integer :: i_v(n_var), i_harm(n_tor)
+  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   

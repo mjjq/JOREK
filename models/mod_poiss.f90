@@ -185,7 +185,7 @@ if (my_id == 0) then
   
   endif   !--- end type -1 (GS equilibrium)
   
-  if(treat_axis) call transform_nodelist(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
+  if(treat_axis) call new_to_old_dof_on_the_axis(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
 
   do ife =1, element_list%n_elements
   
@@ -213,9 +213,6 @@ if (my_id == 0) then
     do iv = 1, n_vertex_max
       inode     = element%vertex(iv)
       nodes(iv) = node_list%node(inode)
-      !if(treat_axis .and. nodes(iv)%axis_node ) then
-      !  call transform_dofs_for_axis_node(nodes(iv), (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .false.)
-      !endif      
     enddo
   
     if (itype .eq. -1) then
@@ -570,8 +567,6 @@ if (my_id == 0) then
   call tr_debug_write("mumps_par%N",int(mumps_par%N))
   call tr_debug_write("mumps_par%NZ",int(mumps_par%NZ))
   
-  if(treat_axis) call transform_back_nodelist(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
-  
   do i=1,node_list%n_nodes
   
     if ((.not. refinement) .or. (refinement .and. (.not. node_list%node(i)%constrained)) ) then
@@ -600,6 +595,8 @@ if (my_id == 0) then
       enddo    ! order
     endif      ! refinement, constrained
   enddo        ! nodes
+  
+  if(treat_axis) call new_to_old_dof_on_the_axis(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
   
   !*************************************************************************
   ! Solutions at constrained nodes                                         *

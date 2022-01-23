@@ -33,16 +33,6 @@ if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
 
 if (my_id .eq. 0) then
 
-  !if(treat_axis) then
-  !  do i = 1, n_var
-  !     i_v(i) = i
-  !  enddo
-  !  do i = 1, n_tor
-  !     i_harm(i) = i
-  !  enddo
-  !  call transform_back_nodelist(node_list, i_v, n_var, i_harm, n_tor, .true.)
-  !endif
-        
   do i = 1, node_list%n_nodes
    if((.not. node_list%node(i)%constrained) ) then 
     do j=1,n_order+1
@@ -306,6 +296,19 @@ if (my_id .eq. 0) then
   
 enddo !(i)
 
+endif
+
+! n_tor_local = i_tor_max - i_tor_min + 1
+if(treat_axis) then
+   do i = 1, n_var
+      i_v(i) = i
+   enddo
+   !if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))
+   do i = 1, n_tor ! i_tor_max
+      i_harm(i) = i
+   enddo
+   !call new_to_old_dof_on_the_axis(node_list, i_v, n_var, i_harm, n_tor_local, .true.)
+   call new_to_old_dof_on_the_axis(node_list, i_v, n_var, i_harm, n_tor, .true.)
 endif
 
 call broadcast_nodes(my_id,node_list)

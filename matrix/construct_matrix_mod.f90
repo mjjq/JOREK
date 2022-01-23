@@ -404,7 +404,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   call tr_allocate(rhs_local, Int1,ndof,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
-  
+ 
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list, aux_node_list,                                &
@@ -429,6 +429,17 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   omp_tid      = 1
 #endif
  
+  n_tor_local = i_tor_max - i_tor_min + 1
+  if(treat_axis) then
+     do i = 1, n_var
+       i_v(i) = i
+     enddo
+     if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))
+     do i = i_tor_min, i_tor_max
+       i_harm(i) = i
+     enddo
+  endif
+  
 ! --- Loop over local elements
   !$omp do schedule(runtime)
   do ife = 1, n_local_elms
@@ -463,9 +474,9 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis,        &
       psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max, aux_nodes)
 
-    !if(treat_axis .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
-    !  call transform_basis_for_axis_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_v, n_var, i_harm, n_tor_local)
-    !endif
+    if(treat_axis .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
+      call transform_basis_for_axis_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_v, n_var, i_harm, n_tor_local)
+    endif
 
 #ifdef PRINT_ELM_RHS
     if (.not. harmonic_matrix) then

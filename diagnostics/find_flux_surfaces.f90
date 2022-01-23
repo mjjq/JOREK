@@ -6,8 +6,6 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only:   SDN_threshold, treat_axis
-use mod_axis_treatment
 use phys_module, only:   SDN_threshold
 use equil_info
 
@@ -17,7 +15,7 @@ implicit none
 integer,                  intent(in)     :: my_id        !< MPI proc number
 logical,                  intent(in)     :: xpoint
 integer,                  intent(in)     :: xcase
-type (type_node_list)   , intent(inout)  :: node_list
+type (type_node_list)   , intent(in)     :: node_list
 type (type_element_list), intent(in)     :: element_list
 type (type_surface_list), intent(inout)  :: surface_list
 
@@ -73,7 +71,6 @@ if (xpoint) then
   endif
 endif
 
-if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 do i=1, element_list%n_elements
        
@@ -348,8 +345,6 @@ do i=1, element_list%n_elements
   enddo
 
 enddo
-
-if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 return
 end

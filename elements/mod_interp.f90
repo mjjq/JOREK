@@ -3,8 +3,6 @@ module mod_interp
 use data_structure
 use mod_basisfunctions
 use mod_parameters, only: n_period, n_tor
-use phys_module
-use mod_axis_treatment
 implicit none
 private
 public :: interp !< interp a specific harmonic in finite elements
@@ -43,7 +41,6 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
-integer :: i_harm(n_tor)
 
 call basisfunctions(s,t,H)
 H = transpose(H)
@@ -55,13 +52,6 @@ my_deltas = .false.
 if (present(deltas)) then
   if (deltas) my_deltas = .true.
 end if
-
-!if(treat_axis) then
-!  do i = 1, n_tor
-!     i_harm(i) = i
-!  enddo      
-!  call transform_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
-!endif
 
 ! Preload values and premultiply with sizes(:,kv)
 do kv = 1,n_vertex_max  ! 4 vertices
@@ -98,8 +88,6 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
-
-!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
 end subroutine interp_PRZ_0
 
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
@@ -120,7 +108,6 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp
 logical :: my_deltas
-integer :: i_harm(n_tor)
 
 ! 7% exec time
 call basisfunctions_T(s,t,H,H_s,H_t)
@@ -135,12 +122,6 @@ if (present(deltas)) then
   if (deltas) my_deltas = .true.
 end if
 
-!if(treat_axis) then
-!  do i = 1, n_tor
-!     i_harm(i) = i
-!  enddo
-!  call transform_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
-!endif
 ! 30% exec time
 ! Preload values and premultiply with sizes(:,kv)
 do kv = 1,n_vertex_max  ! 4 vertices
@@ -185,9 +166,6 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
-
-!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
-
 end subroutine interp_PRZ_1
 
 
@@ -212,7 +190,6 @@ real*8  :: values(n_tor,n_order+1,n_v,n_vertex_max)
 real*8  :: xR(n_order+1,n_vertex_max), xZ(n_order+1,n_vertex_max)
 real*8  :: sizes(n_order+1), v, vp, vpp
 logical :: my_deltas
-integer :: i_harm(n_tor)
 
 call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
 
@@ -229,12 +206,6 @@ if (present(deltas)) then
   if (deltas) my_deltas = .true.
 end if
 
-!if(treat_axis) then
-!  do i = 1, n_tor
-!     i_harm(i) = i
-!  enddo
-!  call transform_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
-!endif
 ! Preload values and premultiply with sizes(:,kv)
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)
@@ -291,9 +262,6 @@ do kv = 1, n_vertex_max
     enddo
   enddo
 enddo
-
-!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_harm, n_tor, my_deltas)
-
 end subroutine interp_PRZ_2
 
 ! Apply De Moivre formula to calculate the series of sines.
@@ -384,8 +352,6 @@ integer :: kv, iv, kf
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
 
-!if(treat_axis) call transform_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .false.)
-
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
@@ -420,9 +386,6 @@ do kv = 1,n_vertex_max  ! 4 vertices
 #endif
   end do
 end do
-
-!if(treat_axis) call transform_back_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .false.)
-
 end subroutine interp
 
 
@@ -444,8 +407,6 @@ integer :: kv, iv, kf
 
 call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
 
-!if(treat_axis) call transform_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .true.)
-
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
 
 do kv = 1,n_vertex_max  ! 4 vertices
@@ -459,9 +420,6 @@ do kv = 1,n_vertex_max  ! 4 vertices
     P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
   end do
 end do
-
-!if(treat_axis) call transform_nodelist(node_list, (/i_var/), 1, (/i_harm/), 1, .true.)
-
 end subroutine interp_delta
 
 
@@ -476,16 +434,8 @@ real*8,                   intent(out) :: P(n_v)
 
 real*8  :: H(4,4), ss, mode
 integer :: kv, iv, kf, m, i, i_harm, i_tor
-integer :: i_n(n_tor)
 
 call basisfunctions(s,t,H)
-
-!if(treat_axis) then
-!  do i = 1, n_tor
-!     i_n(i) = i
-!  enddo
-!  call transform_nodelist(node_list, i_v, n_v, i_n, n_tor, .false.) 
-!endif
 
 P = 0.d0
 
@@ -504,9 +454,6 @@ do kv = 1,n_vertex_max  ! 4 vertices
     end do
   end do
 end do
-
-!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_n, n_tor, .false.)
-
 end subroutine interp_0
 
 
@@ -523,16 +470,8 @@ real*8,                   intent(out) :: P(n_v)
 
 real*8  :: H(4,4), ss, mode
 integer :: kv, iv, kf, m, i, i_harm, i_tor
-integer :: i_n(n_tor)
 
 call basisfunctions(s,t,H)
-
-!if(treat_axis) then
-!  do i = 1, n_tor
-!     i_n(i) = i
-!  enddo
-!  call transform_nodelist(node_list, i_v, n_v, i_n, n_tor, .true.)
-!endif
 
 P = 0.d0
 
@@ -551,8 +490,6 @@ do kv = 1,n_vertex_max  ! 4 vertices
     end do
   end do
 end do
-
-!if(treat_axis) call transform_back_nodelist(node_list, i_v, n_v, i_n, n_tor, .true.)
 end subroutine interp_0_delta
 
 

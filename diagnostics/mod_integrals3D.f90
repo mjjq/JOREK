@@ -30,7 +30,6 @@ module mod_integrals3D
   use mod_impurity, only: radiation_function, radiation_function_linear
   use equil_info, only : get_psi_n, ES
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
-  use mod_axis_treatment
   use mod_sources
 
   implicit none
@@ -48,7 +47,7 @@ subroutine int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list
  
 implicit none
 
-type (type_node_list),     intent(inout)    :: node_list
+type (type_node_list),        intent(in)    :: node_list
 type (type_element_list),     intent(in)    :: element_list   
 type (type_bnd_node_list),    intent(in)    :: bnd_node_list
 type (type_bnd_element_list), intent(in)    :: bnd_elm_list   
@@ -219,7 +218,6 @@ integer*8  :: i_phi
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
 integer    :: i_imp                                           ! Loop for more than one background impurity
 #endif
-integer    :: i_v(n_var), i_harm(n_tor)
 
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -408,7 +406,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           Arad_bg, Brad_bg, Crad_bg, frad_bg,                                            &
 !$omp           Lrad_imp, coef_prad_si, i_imp,                                                 &
 #endif
-!$omp           omp_nthreads,omp_tid,treat_axis,i_v,i_harm)
+!$omp           omp_nthreads,omp_tid)
 
 
 #ifdef OPENMP
@@ -418,16 +416,6 @@ omp_tid      = omp_get_thread_num()
 omp_nthreads = 1
 omp_tid      = 0
 #endif
-
-if(treat_axis) then
-  do i = 1, n_var
-    i_v(i) = i
-  enddo
-  do i = 1, n_tor
-    i_harm(i) = i
-  enddo
-  call transform_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
-endif
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -449,15 +437,6 @@ do ife = ife_min, ife_max
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-    !if(treat_axis .and. nodes(iv)%axis_node) then
-    !   do i = 1, n_var
-    !      i_v(i) = i
-    !   enddo     
-    !   do i = 1, n_tor     
-    !      i_harm(i) = i
-    !   enddo                
-    !   call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
-    !endif    
   enddo
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0; x_ss(:,:)    = 0.d0; x_tt(:,:)    = 0.d0; x_st(:,:)    = 0.d0;
@@ -1140,7 +1119,6 @@ do ife = ife_min, ife_max
 
 enddo
 !$omp end do
-if(treat_axis) call transform_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
 !$omp end parallel
 
 !------ Calculate boundary fluxes --------------------------------------------------------

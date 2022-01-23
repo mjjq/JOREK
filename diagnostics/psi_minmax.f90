@@ -1,8 +1,7 @@
 subroutine psi_minmax(node_list,element_list,i_elm,psimin,psimax)
 
 use data_structure
-use phys_module, only: treat_axis
-use mod_axis_treatment
+
 implicit none
 
 type (type_node_list)    :: node_list
@@ -18,8 +17,6 @@ integer :: k
 
 psimin = 1d10
 psimax =-1d10
-
-!if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 do iv= 1, n_vertex_max
 
@@ -66,8 +63,6 @@ do iv= 1, n_vertex_max
   psimax = max(psimax,psma)
 
 ENDDO
-
-!if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 RETURN
 END

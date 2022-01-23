@@ -6,9 +6,8 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use equil_info,  only: ES
-use phys_module, only: R_geo, Z_geo, axis_srch_radius, R_axis_t, Z_axis_t, index_start, treat_axis
+use phys_module, only: R_geo, Z_geo, axis_srch_radius, R_axis_t, Z_axis_t, index_start  
 use mod_interp
-use mod_axis_treatment
 
 implicit none
 
@@ -24,7 +23,7 @@ end interface
 
 ! --- Routine parameters
 integer,                 intent(in)  :: my_id        !< MPI proc number
-type(type_node_list), intent(inout)  :: node_list    !< List of grid nodes
+type(type_node_list),    intent(in)  :: node_list    !< List of grid nodes
 type(type_element_list), intent(in)  :: element_list !< List of grid elements
 real*8,                  intent(out) :: psi_axis     !< Poloidal flux at axis
 real*8,                  intent(out) :: R_axis       !< R-position of axis
@@ -83,7 +82,6 @@ else
   Z0 = Z_geo
 endif
 
-if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 ! save |grad_psi| at gaussian points of all elements
 do i=1,element_list%n_elements   ! --- loop over elements
@@ -133,7 +131,6 @@ do i=1,element_list%n_elements   ! --- loop over elements
 
 enddo   ! --- end loop over elements
 
-if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 do i_tries=1,  n_tries  ! --- start attempts to find the axis
 

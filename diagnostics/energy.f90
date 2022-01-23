@@ -6,7 +6,6 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use mod_axis_treatment
 use nodes_elements
 
 implicit none
@@ -23,20 +22,9 @@ real*8     :: AR0_p(n_gauss,n_gauss), AZ0_p(n_gauss,n_gauss), AR0_Z, AZ0_R, A30_
 integer    :: i, j, k, in, ms, mt, iv, inode, ife, n_elements
 real*8     :: W_kin(n_tor), W_mag(n_tor), xjac, BigR, wst
 real*8     :: ps0_x, ps0_y, u0_x, u0_y
-integer    :: i_v(n_var), i_harm(n_tor)
 
 W_mag = 0.d0
 W_kin = 0.d0
-
-if(treat_axis) then
-  do i = 1, n_var
-    i_v(i) = i
-  enddo
-  do i = 1, n_tor
-    i_harm(i) = i
-  enddo
-  call transform_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
-endif
 
 do ife =1,  element_list%n_elements
 
@@ -45,15 +33,6 @@ do ife =1,  element_list%n_elements
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-    !if(treat_axis .and. nodes(iv)%axis_node) then
-    !   do i = 1, n_var
-    !      i_v(i) = i
-    !   enddo     
-    !   do i = 1, n_tor 
-    !      i_harm(i) = i
-    !   enddo            
-    !   call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, i_harm, n_tor, .false.)
-    !endif
   enddo
 
   x_g(:,:) = 0.d0;    x_s(:,:) = 0.d0;    x_t(:,:) = 0.d0;
@@ -180,8 +159,6 @@ do ife =1,  element_list%n_elements
   enddo
 
 enddo
-
-if(treat_axis) call transform_back_nodelist(node_list, i_v, n_var, i_harm, n_tor, .false.)
 
 do in=1,n_tor
   if (mode(in) .ne. 0) then

@@ -17,8 +17,8 @@ use corr_neg
   use mod_injection_source, only: inj_source, total_n_particles, total_n_particles_inj, total_n_particles_inj_all
   use mod_impurity, only: radiation_function, radiation_function_linear
 #endif
-use mod_axis_treatment
 use mod_sources
+
 
 implicit none
 
@@ -81,7 +81,6 @@ real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
 integer*8  :: ion_i, ion_k, i_phi
 #endif
-integer    :: i_v(n_var), i_harm(n_tor)
 
 write(*,*) '***************************************'
 write(*,*) '* Integrals                           *'
@@ -115,12 +114,6 @@ do ife =1, element_list%n_elements
   do iv = 1, n_vertex_max
     inode     = element%vertex(iv)
     nodes(iv) = node_list%node(inode)
-    if(treat_axis .and. nodes(iv)%axis_node) then
-       do i = 1, n_var
-          i_v(i) = i
-       enddo     
-       call transform_dofs_for_axis_node(nodes(iv), i_v, n_var, (/1/), 1, .false.)
-    endif      
   enddo
 
   x_g(:,:)    = 0.d0; x_s(:,:)    = 0.d0; x_t(:,:)    = 0.d0;

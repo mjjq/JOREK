@@ -5,15 +5,14 @@ use constants
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: tokamak_device, treat_axis
+use phys_module, only: tokamak_device
 use mod_interp
-use mod_axis_treatment
 
 implicit none
 
 ! --- Routine parameters
 integer,                  intent(in)    :: my_id
-type (type_node_list), intent(inout)    :: node_list
+type (type_node_list),    intent(in)    :: node_list
 type (type_element_list), intent(in)    :: element_list
 real*8,                   intent(out)   :: psi_xpoint(2)
 real*8,                   intent(out)   :: R_xpoint(2)
@@ -58,7 +57,6 @@ include_pt_up = .false.
 found_upper = .false. 
 found_lower = .false.
 
-if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 do i=1,element_list%n_elements    ! --- loop over elements
   
@@ -121,7 +119,6 @@ do i=1,element_list%n_elements    ! --- loop over elements
 
 enddo    ! --- end loop over elements
 
-if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 if(xcase .ne. UPPER_XPOINT) then
   do i_tries=1,  n_tries  ! --- start attempts to find the lower x-point

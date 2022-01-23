@@ -8,7 +8,6 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
-use mod_axis_treatment
 
 implicit none
 
@@ -31,8 +30,6 @@ real*8     :: current, xjac, BigR, Z_xpoint(2), psi_axis, psi_bnd, wst
 logical    :: xpoint2
 
 current = 0.d0
-
-if(treat_axis) call transform_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 do ife =1,  element_list%n_elements
 
@@ -107,8 +104,6 @@ do ife =1,  element_list%n_elements
     enddo
   enddo
 enddo
-
-if(treat_axis) call transform_back_nodelist(node_list, (/1/), 1, (/1/), 1, .false.)
 
 current = current / (4.d-7 * PI)
 

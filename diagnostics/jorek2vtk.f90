@@ -185,7 +185,7 @@ my_id     = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 
 ! --- Preset parameters
-nsub                   = 20       ! Number of subdivisions of the cubic finite elements into linear pieces
+nsub                   = 5       ! Number of subdivisions of the cubic finite elements into linear pieces
 i_tor                  = -1      ! If i_tor > 0, only this mode will be included in the vtk file...
 i_plane                = 1       ! ... otherwise, all modes will be summed up at the toroidal plane i_plane
 without_n0_mode        = .false. ! If true, do not include the n=0 mode (i_tor=1)
@@ -545,7 +545,7 @@ do i=1,element_list%n_elements
         call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
 
         if (with_Vpar) then
-          call interp(node_list,element_list,i,7,i_tor,s,t,V0,V0_s,V0_t,V0_st,V0_ss,V0_tt)
+          call interp(node_list,element_list,i,var_Vpar,i_tor,s,t,V0,V0_s,V0_t,V0_st,V0_ss,V0_tt)
         else
           V0=0; V0_s=0; V0_t=0; V0_st=0; V0_ss=0; V0_tt=0
         end if
@@ -668,7 +668,6 @@ do i=1,element_list%n_elements
         currdens(inode) = -scalars(inode,3)/BigR
 
         if ((xjac .gt. 1.d-6)) then
-
 #ifndef fullmhd
           call interp(node_list,element_list,i,var_psi,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
           call interp(node_list,element_list,i,var_u,  i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
@@ -677,7 +676,7 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,var_rho,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
           call interp(node_list,element_list,i,var_T,  i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
           if (with_Vpar) then
-            call interp(node_list,element_list,i,7,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
+            call interp(node_list,element_list,i,var_Vpar,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
           else
             V=0; V_s=0; V_t=0; V_st=0; V_ss=0; V_tt=0
           end if

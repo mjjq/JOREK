@@ -17,19 +17,6 @@ use pellet_module
 use mpi_mod
 use mod_boundary, only: boundary_from_grid 
 use mod_import_restart
-use domains
-use mod_log_params
-use diagnostics, only: axis_is_psi_minimum
-use mod_boundary, only: boundary_from_grid
-use mod_element_rtree
-#if (JOREK_MODEL == 500)
-  use mod_neutral_source
-#endif
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 710)
-#ifdef fmhdspi
-  use mod_injection_source
-#endif
-#endif
 use mod_impurity
 use mod_integrals3D
 use mod_expression, only: exprs_all_int, init_expr, t_expr_list
@@ -179,7 +166,7 @@ if (using_spi) then
 
 endif
 
-#if (JOREK_MODEL == 500) || (JOREK_MODEL == 501) || (JOREK_MODEL == 710)
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
   ! --- Read ADAS data and generate coronal equilibrium is needed
   call init_imp_adas(0)
   if (output_prad_phi) then

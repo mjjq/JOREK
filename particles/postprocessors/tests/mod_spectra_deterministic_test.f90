@@ -62,6 +62,7 @@ end subroutine teardown
 !> test the allocation, deallocation and construction of the
 !> spectrum_integrator_2nd without initialisation
 subroutine test_deterministic_allocation_noinit()
+  use mod_assert_equals_tools,   only: assert_equals_allocatable_arrays
   use mod_spectra_deterministic, only: spectrum_integrator_2nd
   implicit none
   !> variables
@@ -73,10 +74,8 @@ subroutine test_deterministic_allocation_noinit()
   "Error spectrum integration 2nd allocation: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum integration 2nd allocation: n_spectra do not match!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 2nd allocation: points not allocated!")
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 2nd allocation: points size mismatch!")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,spectrum%points,&
+  "Error spectrum integration 2nd allocation: points")
   call spectrum%deallocate_spectrum
   call assert_equals(spectrum%n_points,-1,&
   "Error spectrum integration 2nd deallocation: n_points not set to default!")
@@ -87,14 +86,12 @@ subroutine test_deterministic_allocation_noinit()
 
   !> test constructor
   spectrum = spectrum_integrator_2nd(n_points,n_spectra)
-   call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(spectrum%n_points,n_points,&
   "Error spectrum integration 2nd construction: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum integration 2nd construction: n_spectra do not match!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 2nd construction: points not allocated!") 
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 2nd construction: points size mismatch!")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,spectrum%points,&
+  "Error spectrum integration 2nd construction: points")
   call spectrum%deallocate_spectrum
 
 end subroutine test_deterministic_allocation_noinit
@@ -102,6 +99,7 @@ end subroutine test_deterministic_allocation_noinit
 !> test allocation, deallocation and construction of the
 !> spectrum_integrator_2nd with initialisation
 subroutine test_deterministic_allocation_init()
+  use mod_assert_equals_tools,   only: assert_equals_allocatable_arrays
   use mod_spectra_deterministic, only: spectrum_integrator_2nd
   implicit none
   !> variables
@@ -117,14 +115,12 @@ subroutine test_deterministic_allocation_init()
   "Error spectrum integration 2nd allocation init: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum integration 2nd allocation init: n_spectra do not match!")
-  call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,&
-  "Error spectrum integration 2nd allocation init: min wavelengths do not match!")
-  call assert_equals(spectrum%wbin_size,wbin_size,n_spectra,&
-  "Error spectrum integration 2nd allocation init: wavelengths bin size do not match!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 2nd allocation init: points not allocated!") 
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 2nd allocation init: points size mismatch!")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,min_wlen,&
+  tol_grid,"Error spectrum integration 2nd allocation init: min wavelengths")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%wbin_size,&
+  "Error spectrum integration 2nd allocation init: wavelengths bin size")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,spectrum%points,&
+  "Error spectrum integration 2nd allocation init: points")
   call spectrum%deallocate_spectrum
   call assert_equals(spectrum%n_points,-1,&
   "Error spectrum integration 2nd deallocation init: n_points not set to default!")
@@ -143,14 +139,12 @@ subroutine test_deterministic_allocation_init()
   "Error spectrum integration 2nd construction init: n_points do not match!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum integration 2nd construction init: n_spectra do not match!")
-  call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,&
-  "Error spectrum integration 2nd construction init: min wavelengths do not match!")
-  call assert_equals(spectrum%wbin_size,wbin_size,n_spectra,&
-  "Error spectrum integration 2nd construction init: wavelengths bin size do not match!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum integration 2nd construction init: points not allocated!") 
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum integration 2nd construction init: points size mismatch!")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,min_wlen,&
+  tol_grid,"Error spectrum integration 2nd construction init: min wavelengths")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%wbin_size,&
+  "Error spectrum integration 2nd construction init: wavelengths bin size")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,spectrum%points,&
+  "Error spectrum integration 2nd construction init: points")
   call spectrum%deallocate_spectrum
 end subroutine test_deterministic_allocation_init
 

@@ -76,6 +76,7 @@ end subroutine teardown
 !> Tests ---------------------------------------------------------------------
 !> test allocation, deallocation and construction of spectrum_base class
 subroutine test_spectrum_rng_uniform_construction_noinit()
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
   implicit none
   !> variables 
@@ -87,10 +88,8 @@ subroutine test_spectrum_rng_uniform_construction_noinit()
   "Error spectrum base allocation: n_points mismatch!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum base allocation: n_spectra mismatch!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum base allocation: points not allocated!")
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum base allocation: points array shape mismatch!")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,&
+  spectrum%points,"Error spectrum base allocation: points")
 
   !> try deallocate
   call spectrum%deallocate_spectrum
@@ -107,10 +106,8 @@ subroutine test_spectrum_rng_uniform_construction_noinit()
   "Error spectrum base construction: n_points mismatch!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum base construction: n_spectra mismatch!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum base construction: points not allocated!")
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum base construction: points array shape mismatch!")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,&
+  spectrum%points,"Error spectrum base construction: points")
   call spectrum%deallocate_spectrum
   
 end subroutine test_spectrum_rng_uniform_construction_noinit
@@ -158,6 +155,7 @@ end subroutine test_set_uniform_spectrum_interval
 
 !> test allocation and construction with initialisation
 subroutine test_spectrum_rng_uniform_construction_init()
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   use mod_spectra_monte_carlo, only: spectrum_rng_uniform
   implicit none
   !> variables
@@ -173,14 +171,12 @@ subroutine test_spectrum_rng_uniform_construction_init()
   "Error spectrum rng uniform allocation: n_points mismatch!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum rng uniform allocation: n_spectra mismatch!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum rng uniform allocation: points not allocated!")
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum rng uniform allocation: points array shape mismatch!")
-  call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,tol_real8,&
-  "Error spectrum rng uniform allocation: min_wlen mismatch")
-  call assert_equals(spectrum%i_pdf,i_pdf,n_spectra,tol_real8,&
-  "Error spectrum rng uniform allocation: i_pdf mismatch")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,&
+  spectrum%points,"Error spectrum rng uniform allocation: points")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,&
+  min_wlen,tol_real8,"Error spectrum rng uniform allocation: min_wlen")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%i_pdf,&
+  i_pdf,tol_real8,"Error spectrum rng uniform allocation: i_pdf")
   call spectrum%deallocate_spectrum
 
   !> test constructor with initialisation
@@ -189,14 +185,12 @@ subroutine test_spectrum_rng_uniform_construction_init()
   "Error spectrum rng uniform constructor: n_points mismatch!")
   call assert_equals(spectrum%n_spectra,n_spectra,&
   "Error spectrum rng uniform constructor: n_spectra mismatch!")
-  call assert_true(allocated(spectrum%points),&
-  "Error spectrum rng uniform constructor: points not allocated!")
-  call assert_equals(shape(spectrum%points),(/n_points,n_spectra/),2,&
-  "Error spectrum rng uniform constructor: points array shape mismatch!")
-  call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,tol_real8,&
-  "Error spectrum rng uniform constructor: min_wlen mismatch")
-  call assert_equals(spectrum%i_pdf,i_pdf,n_spectra,tol_real8,&
-  "Error spectrum rng uniform constructor: i_pdf mismatch")
+  call assert_equals_allocatable_arrays(n_points,n_spectra,&
+  spectrum%points,"Error spectrum rng uniform constructor: points")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,&
+  min_wlen,tol_real8,"Error spectrum rng uniform constructor: min_wlen")
+  call assert_equals_allocatable_arrays(n_spectra,spectrum%i_pdf,&
+  i_pdf,tol_real8,"Error spectrum rng uniform constructor: i_pdf")
   call spectrum%deallocate_spectrum
 
 end subroutine test_spectrum_rng_uniform_construction_init

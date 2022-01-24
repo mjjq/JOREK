@@ -11,13 +11,14 @@ private
 public :: run_fruit_camera_perspective_static
 
 !> Variable and data types -------------------------
+integer,parameter :: n_properties=1
 integer,parameter :: n_x_sol=3
 integer,parameter :: n_points_on_lens_sol=2345
 real*8,parameter  :: tol_real8=5.d-16 
 real*8,dimension(3),parameter :: center_pos_lowbnd=(/-2.d-1,4.d1,-7.d0/)
 real*8,dimension(3),parameter :: center_pos_uppbnd=(/3.4d1,3.d2,5.d0/)
-real*8,dimension(:,:),allocatable :: points_on_lens
-real*8,dimension(:),allocatable   :: pdf_points_on_lens
+real*8,dimension(:,:,:),allocatable :: points_on_lens
+real*8,dimension(:,:,:),allocatable :: pdf_points_on_lens
 type(pinhole_lens) :: pinhole
 !> Interfaces --------------------------------------
 contains
@@ -62,31 +63,35 @@ subroutine test_points_on_lens_pdf_pinhole()
   !> variables
   type(camera_perspective_static) :: camera
   !> allocate and initialise variables
-  allocate(points_on_lens(n_x_sol,1))
-  allocate(pdf_points_on_lens(1))
+  camera%n_property_vertex = n_properties
+  call camera%allocate_vertices(1,1)
+  allocate(points_on_lens(n_x_sol,1,1))
+  allocate(pdf_points_on_lens(1,1,1))
   call pinhole%sampling(1,points_on_lens)
-  call pinhole%pdf(1,points_on_lens,pdf_points_on_lens)
+  call pinhole%pdf(1,points_on_lens(:,:,1),pdf_points_on_lens(:,1,1))
   !> test generation without input number of points
   call camera%generate_points_on_lens_pdf(pinhole)
-  call assert_equals(camera%n_points_on_lens,1,&
-  "Error camera perspective static generate points on pinhole: n points not 1!")
-  call assert_equals_allocatable_arrays(n_x_sol,1,camera%points_on_lens,points_on_lens,&
-  tol_real8,"Error camera perspective static generate points on pinhole: points on lens")
-  call assert_equals_allocatable_arrays(1,camera%pdf_points_on_lens,pdf_points_on_lens,tol_real8,&
+  call assert_equals(camera%n_vertices,1,&
+  "Error camera perspective static generate points on pinhole: n vertices not 1!")
+  call assert_equals_allocatable_arrays(n_x_sol,camera%n_vertices,&
+  camera%n_times,camera%x,points_on_lens,tol_real8,&
+  "Error camera perspective static generate points on pinhole: x")
+  call assert_equals_allocatable_arrays(n_properties,camera%n_vertices,&
+  camera%n_times,camera%properties,pdf_points_on_lens,tol_real8,&
   "Error camera perspective static generate points on pinhole: pdf points on lens")
   !> test generation with input number points
   call camera%generate_points_on_lens_pdf(pinhole,n_points_on_lens_sol)
-  call assert_equals(camera%n_points_on_lens,1,&
-  "Error camera perspective static generate points on pinhole: n points not 1!")
-   call assert_equals(camera%n_points_on_lens,1,&
-  "Error camera perspective static generate points on pinhole: n points not 1!")
-  call assert_equals_allocatable_arrays(n_x_sol,1,camera%points_on_lens,points_on_lens,&
-  tol_real8,"Error camera perspective static generate points on pinhole: points on lens")
-  call assert_equals_allocatable_arrays(1,camera%pdf_points_on_lens,pdf_points_on_lens,tol_real8,&
+  call assert_equals(camera%n_vertices,1,&
+  "Error camera perspective static generate points on pinhole: n vertices not 1!")
+  call assert_equals_allocatable_arrays(n_x_sol,camera%n_vertices,&
+  camera%n_times,camera%x,points_on_lens,tol_real8,&
+  "Error camera perspective static generate points on pinhole: points on lens")
+  call assert_equals_allocatable_arrays(n_properties,camera%n_vertices,&
+  camera%n_times,camera%properties,pdf_points_on_lens,tol_real8,&
   "Error camera perspective static generate points on pinhole: pdf points on lens") 
   !> deallocate variable
-  deallocate(points_on_lens)
-  deallocate(pdf_points_on_lens)
+  call camera%deallocate_vertices
+  deallocate(points_on_lens); deallocate(pdf_points_on_lens);
 end subroutine test_points_on_lens_pdf_pinhole
 
 !> Tools -------------------------------------------

@@ -33,22 +33,25 @@ interface
   !> interface of the deferred procedure init_camera which initialises a 
   !> camera type.
   !> inputs:
-  !>   camera_inout: (camera) camera to be initialised
-  !>   lens_inout:   (lens)   the lens to be used for the camera
-  !>   n_int_param:  (integer) number of integer parameters to be passed
-  !>   n_real_param: (integer) number of real parameters to be passed
-  !>   int_param:    (integer)(n_int_param) integer parameter array
-  !>   real_param:   (real8)(n_real_param) real parameter array
+  !>   camera_inout:  (camera) camera to be initialised
+  !>   lens_inout:    (lens) the lens to be used for the camera
+  !>   spectrum_inout (spectrum base) camera sensitivity spectra
+  !>   n_int_param:   (integer) number of integer parameters to be passed
+  !>   n_real_param:  (integer) number of real parameters to be passed
+  !>   int_param:     (integer)(n_int_param) integer parameter array
+  !>   real_param:    (real8)(n_real_param) real parameter array
   !> outputs:
-  !>   camera_inout: (camera) initialised camera
-  subroutine int_init_camera(camera_inout,lens_inout,n_int_param,&
-  n_real_param,int_param,real_param)
-    use mod_lens, only: lens
+  !>   camera_inout:  (camera) initialised camera
+  subroutine int_init_camera(camera_inout,lens_inout,spectrum_inout,&
+  n_int_param,n_real_param,int_param,real_param)
+    use mod_spectra, only: spectrum_base
+    use mod_lens,    only: lens
     IMPORT :: camera
     implicit none
     !> inputs-outputs
-    class(camera),intent(inout) :: camera_inout
-    class(lens),intent(inout)   :: lens_inout
+    class(camera),intent(inout)        :: camera_inout
+    class(lens),intent(inout)          :: lens_inout
+    class(spectrum_base),intent(inout) :: spectrum_inout
     !> inputs
     integer,intent(in)                          :: n_int_param,n_real_param
     integer,dimension(:),allocatable,intent(in) :: int_param
@@ -83,13 +86,13 @@ contains
 !>   camera_inout: (camera) camera to be allocated
 !>   n_times:      (integer) number of times
 !>   n_vertices:   (integer) number of vertices
-!>   n_spectra:    (integer) number of spectrum intervals
 !>   n_pixels_x:   (integer) number of pixels in the x-direction
 !>   n_pixels_y:   (integer) number of pixels in the y-direction
+!>   n_spectra:    (integer) number of spectrum intervals
 !> outputs:
 !>   camera_inout: (camera) allocated camera
 subroutine allocate_camera(camera_inout,n_times,n_vertices,&
-n_spectra,n_pixels_x,n_pixels_y)
+n_pixels_x,n_pixels_y,n_spectra)
   implicit none
   !> inputs-outputs:
   class(camera),intent(inout) :: camera_inout

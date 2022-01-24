@@ -68,11 +68,8 @@ subroutine test_lens_allocation_deallocation()
   call lens_loc%allocate_lens(n_x,center_sol)
   call assert_equals(lens_loc%n_x,n_x,&
   "Error lens allocation to value: n_x mismatch!")
-  call assert_true(allocated(lens_loc%center),&
-  "Error lens allocation to value: center array not allocated!")
-  if(allocated(lens_loc%center)) &
-  call assert_equals(lens_loc%center,center_sol,n_x,tol_r8,&
-  "Error lens allocation to value: center array mismatch!")
+  call assert_equals_allocatable_arrays(n_x,lens_loc%center,&
+  center_sol,tol_r8,"Error lens allocation to value: center array")
   !> deallocate lens
   call lens_loc%deallocate_lens()
   call assert_equals(lens_loc%n_x,0,&

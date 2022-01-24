@@ -215,7 +215,8 @@ end subroutine test_de_allocates_vertices
 
 !> test vertex resize without data losses: sequential
 subroutine test_vertices_resize_nodataloss_seq
-  use mod_vertices, only: resize_vertices_noloss_seq 
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
+  use mod_vertices,            only: resize_vertices_noloss_seq 
   implicit none
   !> variables
   integer :: ii
@@ -232,10 +233,10 @@ subroutine test_vertices_resize_nodataloss_seq
   call resize_vertices_noloss_seq(vertex_sol,n_new_vertex_success,ifail)
   call assert_equals(vertex_sol%n_vertices,n_new_vertex_success,&
   "Error resize vertices seq: n_vertices mismatch!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_new_vertex_success,n_times_sol/),3,&
-   "Error resize vertices seq: unexpected positions shape!")
-  call assert_equals(shape(vertex_sol%properties),(/n_properties_sol,n_new_vertex_success,n_times_sol/),&
-  3,"Error resize vertices seq: unexpected properties shape!")
+  call assert_equals_allocatable_arrays(n_x,n_new_vertex_success,n_times_sol,vertex_sol%x,&
+  "Error resize vertices seq: unexpected positions") 
+  call assert_equals_allocatable_arrays(n_properties_sol,n_new_vertex_success,n_times_sol,&
+  vertex_sol%properties,"Error resize vertices seq: unexpected properties")
   do ii=1,n_times_sol
     call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_new_vertex_success,ii),n_x,&
     n_new_vertex_success,tol_real8, "Error resize vertices seq: positions are not the same!")
@@ -249,7 +250,8 @@ end subroutine test_vertices_resize_nodataloss_seq
 
 !> test vertex resize without data losses: parallel openmp
 subroutine test_vertices_resize_nodataloss_omp
-  use mod_vertices, only: resize_vertices_noloss_omp 
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
+  use mod_vertices,            only: resize_vertices_noloss_omp 
   implicit none
   !> variables
   integer :: ii
@@ -266,10 +268,10 @@ subroutine test_vertices_resize_nodataloss_omp
   call resize_vertices_noloss_omp(vertex_sol,n_new_vertex_success,ifail)
   call assert_equals(vertex_sol%n_vertices,n_new_vertex_success,&
   "Error resize vertices omp: n_vertices mismatch!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_new_vertex_success,n_times_sol/),3,&
-   "Error resize vertices omp: unexpected positions shape!")
-  call assert_equals(shape(vertex_sol%properties),(/n_properties_sol,n_new_vertex_success,n_times_sol/),&
-  3,"Error resize vertices omp: unexpected properties shape!")
+  call assert_equals_allocatable_arrays(n_x,n_new_vertex_success,n_times_sol,&
+  vertex_sol%x,"Error resize vertices omp: unexpected positions")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_new_vertex_success,n_times_sol,&
+  vertex_sol%properties,"Error resize vertices omp: unexpected properties")
   do ii=1,n_times_sol
     call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_new_vertex_success,ii),n_x,&
     n_new_vertex_success,tol_real8, "Error resize vertices omp: positions are not the same!")
@@ -283,6 +285,7 @@ end subroutine test_vertices_resize_nodataloss_omp
 
 !> test vertex resize without data losses: interface
 subroutine test_vertices_resize_nodataloss
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
   !> variables
   integer :: ii
@@ -299,10 +302,10 @@ subroutine test_vertices_resize_nodataloss
   call vertex_sol%resize_vertices_noloss(n_new_vertex_success,ifail)
   call assert_equals(vertex_sol%n_vertices,n_new_vertex_success,&
   "Error resize vertices: n_vertices mismatch!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_new_vertex_success,n_times_sol/),3,&
-   "Error resize vertices: unexpected positions shape!")
-  call assert_equals(shape(vertex_sol%properties),(/n_properties_sol,n_new_vertex_success,n_times_sol/),&
-  3,"Error resize vertices: unexpected properties shape!")
+  call assert_equals_allocatable_arrays(n_x,n_new_vertex_success,n_times_sol,&
+  vertex_sol%x,"Error resize vertices: unexpected positions")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_new_vertex_success,n_times_sol,&
+  vertex_sol%properties,"Error resize vertices: unexpected properties")
   do ii=1,n_times_sol
     call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_new_vertex_success,ii),n_x,&
     n_new_vertex_success,tol_real8, "Error resize vertices: positions are not the same!")
@@ -316,6 +319,7 @@ end subroutine test_vertices_resize_nodataloss
 
 !> test fit table to active vertices
 subroutine test_fit_tables_to_active_vertices
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
   !> variables
   integer :: ii,n_vertices_expected
@@ -329,10 +333,10 @@ subroutine test_fit_tables_to_active_vertices
   call assert_equals(ifail,0,"Error fit table to active vertices: unexpected failure!")
   call assert_equals(vertex_sol%n_vertices,n_vertices_expected,&
   "Error fit table to active vertices: n_vertices mismatch!")
-  call assert_equals(shape(vertex_sol%x),(/n_x,n_vertices_expected,n_times_sol/),3,&
-   "Error fit table to active vertices: unexpected positions shape!")
-  call assert_equals(shape(vertex_sol%properties),(/n_properties_sol,n_vertices_expected,n_times_sol/),&
-  3,"Error fit table to active vertices: unexpected properties shape!")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_expected,n_times_sol,&
+  vertex_sol%x,"Error fit table to active vertices: unexpected positions")
+  call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_expected,n_times_sol,&
+  vertex_sol%properties,"Error fit table to active vertices: unexpected properties")
   do ii=1,n_times_sol
     call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_vertices_expected,ii),n_x,&
     n_vertices_expected,tol_real8, "Error fit table to active vertices: positions are not the same!")

@@ -10,15 +10,39 @@ public :: camera_perspective_static
 
 !> Variables and type definitions ----------------------------
 type,extends(camera) :: camera_perspective_static
+  integer :: n_plane_points !< number of points of a plane
+  real*8,dimension(:,:),allocatable :: image_plane !< vertices of the image plane
   contains
   procedure,pass(camera_inout) :: init_camera => init_camera_perspective_static
   procedure,pass(camera_inout) :: generate_points_on_lens_pdf => &
   generate_points_on_lens_static_perspective
+  procedure,pass(camera_inout) :: allocate_camera_perspective_static
+  procedure,pass(camera_inout) :: deallocate_camera_perspective_static
 end type camera_perspective_static
 
 !> Interfaces ------------------------------------------------
 contains
 !> Procedures ------------------------------------------------
+!> inputs:
+!>   camera_inout:   (camera) unallocated camera
+!>   lens_inout:     (lens) camera lens object
+!>   spectrum_inout: (spectrum_inout) camera spectrum object
+!>   n_int_param:    (integer) number of integer parameter: 3
+!>   n_real_param:   (integer) number of real parameter: 8
+!>   int_praram:     (integer)(n_int_param) integer parameters:
+!>                            1) number of lens samples
+!>                            2) number of pixels in the x-direction
+!>                            3) number of pixels in the y-direction
+!>  real_param:      (real8)(n_int_param) real parameters:
+!>                            1:2) image plane half widht and half
+!>                                 height angles in the focal reference
+!>                            3:5) distance betweem the image plane
+!>                                 and the camera focal point
+!>                            6:8) camera focal point position
+!> outputs:
+!>   camera_inout:   (camera) allocated camera
+!>   lens_inout:     (lens) camera lens object
+!>   spectrum_inout: (spectrum_inout) camera spectrum object
 subroutine init_camera_perspective_static(camera_inout,lens_inout,&
 spectrum_inout,n_int_param,n_real_param,int_param,real_param)
   use mod_spectra,  only: spectrum_base
@@ -31,18 +55,70 @@ spectrum_inout,n_int_param,n_real_param,int_param,real_param)
   class(spectrum_base),intent(inout)             :: spectrum_inout
   !> inputs:
   integer,intent(in)                          :: n_int_param,n_real_param
-  integer,dimension(:),allocatable,intent(in) :: int_param
-  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  integer,dimension(n_int_param),intent(in)  :: int_param
+  real*8,dimension(n_real_param),intent(in)  :: real_param
 
-  !> initialise variables
+  !> set variables
+  camera_inout%n_property_vertex=1; camera_inout%n_plane_points=3;
+  !> initialise attributes
   !> lens samples are stored as x positions of the
   !> vertices while their pdfs as property
-  camera_inout%n_property_vertex=1;
-  call camera_inout%allocate_camera(1,int_param(1),&
-  int_param(2),int_param(3),spectrum_inout%n_spectra)
+  call camera_inout%allocate_camera_perspective_static(spectrum_inout,&
+  n_int_param,int_param)
   !> sample the lens
   call camera_inout%generate_points_on_lens_pdf(lens_inout,int_param(1))
+  !> initialise the image plane vertices
+  call define_plane_from_half_angles(real_param(1:2),real_param(3:5),&
+  real_param(6:8),camera_inout%image_plane)
 end subroutine init_camera_perspective_static
+
+!> procedure used for allocating all attributes of camera perspective static
+!> inputs:
+!>   camera_inout:   (camera) unallocated camera
+!>   spectrum_inout: (spectrum_inout) camera spectrum object
+!>   n_int_param:    (integer) number of integer parameter: 3
+!>   int_praram:     (integer)(n_int_param) integer parameters:
+!>                            1) number of lens samples
+!>                            2) number of pixels in the x-direction
+!>                            3) number of pixels in the y-direction
+!> outputs:
+!>   camera_inout:   (camera) allocated camera
+!>   spectrum_inout: (spectrum_inout) camera spectrum object
+subroutine allocate_camera_perspective_static(camera_inout,&
+spectrum_inout,n_int_param,int_param)
+  use mod_spectra, only: spectrum_base
+  implicit none
+  !> inputs-outputs
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  class(spectrum_base),intent(inout)             :: spectrum_inout
+  !> inputs
+  integer,intent(in)                        :: n_int_param
+  integer,dimension(n_int_param),intent(in) :: int_param
+  !> allocate camera base type
+  call camera_inout%allocate_camera(1,int_param(1),&
+  int_param(2),int_param(3),spectrum_inout%n_spectra)
+  !> allocate attributes specific to camera_perspective_static
+  if(allocated(camera_inout%image_plane)) then
+    if(size(camera_inout%image_plane,2).ne.camera_inout%n_plane_points) &
+    deallocate(camera_inout%image_plane)
+  endif
+  allocate(camera_inout%image_plane(camera_inout%n_x,&
+  camera_inout%n_plane_points))
+end subroutine allocate_camera_perspective_static
+
+!> procedure used for deallocating all attributes of camera perspective static
+!> inputs:
+!>   camera_inout: (camera) allocated camera
+!> outputs:
+!>   camera_inout: (camera) deallocated camera
+subroutine deallocate_camera_perspective_static(camera_inout)
+  implicit none
+  !> inputs-outputs
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> deallocate variables
+  call camera_inout%deallocate_camera
+  if(allocated(camera_inout%image_plane)) deallocate(camera_inout%image_plane)
+end subroutine deallocate_camera_perspective_static
 
 !> generate points on lens and retrive their pdf
 !> inputs:

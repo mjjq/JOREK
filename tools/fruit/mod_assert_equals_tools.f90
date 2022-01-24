@@ -18,6 +18,7 @@ interface assert_equals_rel_error
 end interface assert_equals_rel_error
 
 interface assert_equals_allocatable_arrays
+  module procedure assert_equals_allocatable_arrays_1d_int_shape
   module procedure assert_equals_allocatable_arrays_1d_r8_shape
   module procedure assert_equals_allocatable_arrays_2d_r8_shape
   module procedure assert_equals_allocatable_arrays_3d_r8_shape
@@ -106,6 +107,20 @@ arr_1,arr_2,tol,message)
     call assert_equals(error,zeros,size_1,size_2,tol,message)
   enddo
 end subroutine assert_equals_rel_error_3d_r8
+
+!> assert equals_allocatable array 1d int allocation/shape only
+subroutine assert_equals_allocatable_arrays_1d_int_shape(n_values,&
+array_test,message)
+  implicit none
+  !> inputs:
+  integer,intent(in)                          :: n_values
+  integer,dimension(:),allocatable,intent(in) :: array_test
+  character(len=*),intent(in)                 :: message
+  !> tests
+  call assert_true(allocated(array_test),trim(message//" not allocated!"))
+  if(allocated(array_test)) &
+  call assert_equals(size(array_test),n_values,trim(message//" size mismatch!"))
+end subroutine assert_equals_allocatable_arrays_1d_int_shape
 
 !> assert equals_allocatable array 1d real8 allocation/shape only
 subroutine assert_equals_allocatable_arrays_1d_r8_shape(n_values,&

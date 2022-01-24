@@ -53,9 +53,9 @@ interface
     class(lens),intent(inout)          :: lens_inout
     class(spectrum_base),intent(inout) :: spectrum_inout
     !> inputs
-    integer,intent(in)                          :: n_int_param,n_real_param
-    integer,dimension(:),allocatable,intent(in) :: int_param
-    real*8,dimension(:),allocatable,intent(in)  :: real_param
+    integer,intent(in)                        :: n_int_param,n_real_param
+    integer,dimension(n_int_param),intent(in) :: int_param
+    real*8,dimension(n_real_param),intent(in) :: real_param
   end subroutine int_init_camera
 
   !> generate a set of points on a lens

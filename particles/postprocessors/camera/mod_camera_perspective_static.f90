@@ -11,6 +11,7 @@ public :: camera_perspective_static
 !> Variables and type definitions ----------------------------
 type,extends(camera) :: camera_perspective_static
   integer :: n_plane_points !< number of points of a plane
+  real*8,dimension(2) :: pixel_size !< width and height of a pixel
   real*8,dimension(:,:),allocatable :: image_plane !< vertices of the image plane
   contains
   procedure,pass(camera_inout) :: init_camera => init_camera_perspective_static
@@ -18,6 +19,7 @@ type,extends(camera) :: camera_perspective_static
   generate_points_on_lens_static_perspective
   procedure,pass(camera_inout) :: allocate_camera_perspective_static
   procedure,pass(camera_inout) :: deallocate_camera_perspective_static
+  procedure,pass(camera_inout) :: define_image_plane_pixel_size
 end type camera_perspective_static
 
 !> Interfaces ------------------------------------------------
@@ -65,6 +67,8 @@ spectrum_inout,n_int_param,n_real_param,int_param,real_param)
   !> vertices while their pdfs as property
   call camera_inout%allocate_camera_perspective_static(spectrum_inout,&
   n_int_param,int_param)
+  !> define the image plane characteristics
+  call camera_inout%define_image_plane_pixel_size(n_real_param,real_param)
   !> sample the lens
   call camera_inout%generate_points_on_lens_pdf(lens_inout,int_param(1))
   !> initialise the image plane vertices
@@ -164,6 +168,35 @@ lens_inout,n_points_in)
   call lens_inout%pdf(camera_inout%n_vertices,camera_inout%x(:,:,1),&
   camera_inout%properties(1,:,1))
 end subroutine generate_points_on_lens_static_perspective
+
+!> generate the image plane points and compute the pixel width and height
+!> inputs:
+!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
+!>  n_real_param: (integer) number of real parameters
+!>  real_param:   (real8)(n_real_param) real parameters, order:
+!>                1:2) plane width and height half angles
+!>                3:5) plane position w.r.t. the pupil in spherical coordinates
+!>                6:8) position of the pupil in cartesian coordinates
+!> outputs:
+!>  camera_inout: (camera_perspective_static) camera with defined image plane
+subroutine define_image_plane_pixel_size(camera_inout,n_real_param,real_param)
+  use mod_geometry, only: define_plane_from_half_angles
+  implicit none
+  !> inputs-outputs:
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> inputs:
+  integer,intent(in)                             :: n_real_param
+  real*8,dimension(n_real_param),intent(in)      :: real_param
+  !> define the plane from the width/height half angles, the distance
+  !> from the pupil and the pupil position
+  call define_plane_from_half_angles(real_param(1:2),real_param(3:5),&
+  real_param(6:8),camera_inout%image_plane)
+  !> compute the pixel width and heigh
+  camera_inout%pixel_size(1) = norm2(camera_inout%image_plane(:,2)-&
+  camera_inout%image_plane(:,1))/real(camera_inout%n_pixels_spectra(2),kind=8)
+  camera_inout%pixel_size(2) = norm2(camera_inout%image_plane(:,3)-&
+  camera_inout%image_plane(:,1))/real(camera_inout%n_pixels_spectra(3),kind=8)
+end subroutine define_image_plane_pixel_size
 
 !>------------------------------------------------------------
 end module mod_camera_perspective_static

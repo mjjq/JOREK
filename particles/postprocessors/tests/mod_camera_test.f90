@@ -58,7 +58,7 @@ subroutine test_de_allocate_camera()
   implicit none
   !> test allocation from allocated
   call camera_sol%allocate_camera(n_times_sol,n_vertices_sol,&
-  n_spectra_sol,n_pixels_x_sol,n_pixels_y_sol)
+  n_pixels_x_sol,n_pixels_y_sol,n_spectra_sol)
   call assert_equals(camera_sol%n_times,n_times_sol,&
   "Error allocate camera from unallocated: n_times mismatch!")
   call assert_equals(camera_sol%n_vertices,n_vertices_sol,&
@@ -80,7 +80,7 @@ subroutine test_de_allocate_camera()
   "Error allocate camera from unallocated: exposure time not zero!")
   !> test allocation from allocated
   call camera_sol%allocate_camera(n_times_2_sol,n_vertices_2_sol,&
-  n_spectra_2_sol,n_pixels_x_2_sol,n_pixels_y_2_sol)
+  n_pixels_x_2_sol,n_pixels_y_2_sol,n_spectra_2_sol)
   call assert_equals(camera_sol%n_times,n_times_2_sol,&
   "Error allocate camera from allocated: n_times mismatch!")
   call assert_equals(camera_sol%n_vertices,n_vertices_2_sol,&

@@ -272,5 +272,4 @@ subroutine test_find_active_particle_id_type()
 end subroutine test_find_active_particle_id_type
 
 !>-----------------------------------------------
-
 end module mod_particle_types_test

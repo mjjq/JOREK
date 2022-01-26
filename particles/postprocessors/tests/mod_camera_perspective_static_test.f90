@@ -64,6 +64,7 @@ subroutine run_fruit_camera_perspective_static
   call test_de_allocation_camera_perspective_static
   call test_image_plane_pixel_size_definitions
   call test_computation_pixel_ids_st_plane_point
+  call test_init_camera_perspective_static_pinhole
   write(*,'(/A)') "  ... tearing-up: camera perspective static tests"
   call teardown
 end subroutine run_fruit_camera_perspective_static
@@ -102,10 +103,71 @@ subroutine teardown()
 end subroutine teardown
 
 !> Tests -------------------------------------------
+!> test the initialisation camera perspective static
+subroutine test_init_camera_perspective_static_pinhole()
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
+  use mod_geometry, only: define_plane_from_half_angles
+  implicit none
+  !> variables
+  integer,parameter                        :: n_int_param=3
+  integer,parameter                        :: n_real_param=8
+  integer,dimension(n_int_param)           :: int_param
+  real*8,dimension(n_real_param)           :: real_param
+  real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_sol
+  !> initialisation, only one image plane is considered
+  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/)
+  real_param(1:2) = half_angle_sol(:,1)
+  real_param(3:5) = image_plane_coords(:,1)
+  real_param(6:8) = pupil_positions(:,1)
+  allocate(points_on_lens(n_x_sol,1,1))
+  allocate(pdf_points_on_lens(1,1,1))
+  call pinhole_sol%sampling(1,points_on_lens)
+  call pinhole_sol%pdf(1,points_on_lens(:,:,1),pdf_points_on_lens(:,1,1))
+  !> initialise the camera perspective static
+  call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
+  n_int_param,n_real_param,int_param,real_param)
+  !> perform tests
+  call assert_equals(camera_sol%n_vertices,1,&
+  "Error init camera perspective static pinhole: n vertices is not 1")
+  call assert_equals_allocatable_arrays(n_times_sol,camera_sol%n_active_vertices,&
+  "Error init camera perspective static pinhole: n active vertices")
+  call assert_equals_allocatable_arrays(n_times_sol,camera_sol%times,&
+  "Error init camera perspective static pinhole: times")
+  call assert_equals_allocatable_arrays(n_x_sol,1,&
+  n_times_sol,camera_sol%x,"Error init camera perspective static pinhole: x")
+  call assert_equals_allocatable_arrays(n_properties,1,n_times_sol,&
+  camera_sol%properties,"Error init camera perspective static pinhole: properties")
+  call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra,n_pixels_x,n_pixels_y/),&
+  3,"Error init camera perspective static pinhole: n pixels / spectra")
+  call assert_equals_allocatable_arrays(spectrum_sol%n_spectra,n_pixels_x,&
+  n_pixels_y,n_times_sol,camera_sol%pixel_intensities,&
+  "Error init camera perspective static pinhole: pixel intensities")
+  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
+  camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
+  ":Error init camera perspective static pinhole: points on lens")
+  call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
+  camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
+  "Error init camera perspective static pinhole: pdf points on lens") 
+  call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,&
+  camera_sol%image_plane,"Error init camera perspective static pinhole: image plane")
+  if(allocated(camera_sol%image_plane)) then
+    call define_plane_from_half_angles(half_angle_sol(:,1),&
+    image_plane_coords(:,1),pupil_positions(:,1),image_plane_sol)
+    call assert_equals(camera_sol%image_plane,image_plane_sol,n_x_sol,&
+    n_plane_vertices,tol_real8,&
+    "Error init camera perspective static pinhole: image plane mismatch!")
+  endif
+  call assert_equals(camera_sol%pixel_size,pixel_size_sol,2,tol_real8,&
+  "Error init camera perspective static pinhole: pixel size mismatch!")
+  !> clean up
+  deallocate(points_on_lens); deallocate(pdf_points_on_lens);
+  call camera_sol%deallocate_camera_perspective_static
+end subroutine test_init_camera_perspective_static_pinhole
+
 !> test allocation and deallocation of camera_perspective_static
 !> attributs (only)
 subroutine test_de_allocation_camera_perspective_static()
-  use mod_assert_equals_tools,       only: assert_equals_allocatable_arrays
+  use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
   !> allocate camera perspective static
   call camera_sol%allocate_camera_perspective_static(spectrum_sol,3,&

@@ -27,6 +27,7 @@ integer,parameter :: n_points_on_lens_sol=2345
 integer,parameter :: n_lines_per_spectrum=13
 integer,parameter :: n_spectra=2
 real*8,parameter  :: tol_real8=5.d-16 
+real*8,parameter  :: tol_real8_rel=3.d-6
 real*8,parameter  :: plane_distance=2.5d1
 real*8,dimension(2),parameter :: costheta_interval=(/-1.d0,1.d0/)
 real*8,dimension(2),parameter :: phi_interval=(/0.d0,TWOPI/)
@@ -241,8 +242,8 @@ subroutine test_computation_pixel_ids_st_plane_point()
       do kk=1,n_points_per_pixel
         pixel_ids_sol(:,kk,jj,ii) = (/jj,ii/)
         call random_number(st_point_on_pixels_sol(:,kk,jj,ii))
-        st_plane = st_point_on_pixels_sol(:,kk,jj,ii) + &
-        real(pixel_ids_sol(:,kk,jj,ii)-1,kind=8)*pixel_size_sol
+        st_plane = (st_point_on_pixels_sol(:,kk,jj,ii) + &
+        real(pixel_ids_sol(:,kk,jj,ii)-1,kind=8))*pixel_size_sol
         call camera_sol%plane_to_pixel_local_coord(st_plane,&
         pixel_ids(:,kk,jj,ii),st_point_on_pixels(:,kk,jj,ii))
       enddo
@@ -253,7 +254,7 @@ subroutine test_computation_pixel_ids_st_plane_point()
   n_pixels_y,pixel_ids,pixel_ids_sol,&
   "Error computation position in pixel coordinates: pixel ids mismatch!")
   call assert_equals_rel_error(n_st_sol,n_points_per_pixel,n_pixels_x,&
-  n_pixels_y,st_point_on_pixels,st_point_on_pixels_sol,tol_real8,&
+  n_pixels_y,st_point_on_pixels,st_point_on_pixels_sol,tol_real8_rel,&
   "Error computation position in pixel coordinates: pixel coords. mismatch!")
   !> cleanup
   camera_sol%pixel_size = 0.d0

@@ -215,8 +215,9 @@ subroutine plane_to_pixel_local_coord(camera_inout,st_plane,i_pixel,st_pixel)
   integer,dimension(2),intent(out) :: i_pixel
   real*8,dimension(2),intent(out)  :: st_pixel
   !> find the local pixel coordinates and find the position in the pixel local coordinates
-  i_pixel = floor(st_plane/camera_inout%pixel_size)
-  st_pixel = st_plane - real(i_pixel,kind=8)*camera_inout%pixel_size
+  st_pixel = st_plane/camera_inout%pixel_size
+  i_pixel = floor(st_pixel)
+  st_pixel = st_pixel - real(i_pixel,kind=8)
   i_pixel = i_pixel + 1
 end subroutine plane_to_pixel_local_coord
 

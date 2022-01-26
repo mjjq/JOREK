@@ -14,8 +14,10 @@ private
 public :: run_fruit_camera_perspective_static
 
 !> Variable and data types -------------------------
+integer,parameter :: n_points_per_pixel=11
 integer,parameter :: n_planes=11
 integer,parameter :: n_properties=1
+integer,parameter :: n_st_sol=2
 integer,parameter :: n_x_sol=3
 integer,parameter :: n_times_sol=1
 integer,parameter :: n_plane_vertices=3
@@ -34,11 +36,16 @@ real*8,dimension(3),parameter :: center_pos_lowbnd=(/-2.d-1,4.d1,-7.d0/)
 real*8,dimension(3),parameter :: center_pos_uppbnd=(/3.4d1,3.d2,5.d0/)
 real*8,dimension(n_spectra),parameter :: min_wlen=(/3.d0-6,2.5d-7/)
 real*8,dimension(n_spectra),parameter :: max_wlen=(/3.5d0-6,4.2d-7/)
-real*8,dimension(2,n_planes)        :: half_angle_sol
-real*8,dimension(n_x_sol,n_planes)  :: image_plane_coords
-real*8,dimension(n_x_sol,n_planes)  :: pupil_positions
-real*8,dimension(:,:,:),allocatable :: points_on_lens
-real*8,dimension(:,:,:),allocatable :: pdf_points_on_lens
+integer,dimension(:,:,:,:),allocatable :: pixel_ids
+integer,dimension(:,:,:,:),allocatable :: pixel_ids_sol
+real*8,dimension(n_st_sol)             :: pixel_size_sol
+real*8,dimension(2,n_planes)           :: half_angle_sol
+real*8,dimension(n_x_sol,n_planes)     :: image_plane_coords
+real*8,dimension(n_x_sol,n_planes)     :: pupil_positions
+real*8,dimension(:,:,:),allocatable    :: points_on_lens
+real*8,dimension(:,:,:),allocatable    :: pdf_points_on_lens
+real*8,dimension(:,:,:,:),allocatable  :: st_point_on_pixels
+real*8,dimension(:,:,:,:),allocatable  :: st_point_on_pixels_sol
 type(camera_perspective_static) :: camera_sol
 type(pinhole_lens)              :: pinhole_sol
 type(spectrum_integrator_2nd)   :: spectrum_sol
@@ -55,6 +62,7 @@ subroutine run_fruit_camera_perspective_static
   call test_points_on_lens_pdf_pinhole
   call test_de_allocation_camera_perspective_static
   call test_image_plane_pixel_size_definitions
+  call test_computation_pixel_ids_st_plane_point
   write(*,'(/A)') "  ... tearing-up: camera perspective static tests"
   call teardown
 end subroutine run_fruit_camera_perspective_static
@@ -65,6 +73,8 @@ subroutine setup()
   use mod_gnu_rng, only: gnu_rng_interval
   implicit none
   real*8,dimension(3) :: center
+  !> compute the solution pixel size
+  pixel_size_sol = (/1.d0,1.d0/)/real((/n_pixels_x,n_pixels_y/),kind=8)
   !> initialise the pinhole lens
   call gnu_rng_interval(3,center_pos_lowbnd,center_pos_uppbnd,center)
   call pinhole_sol%init_pinhole(n_x_sol,center)
@@ -80,9 +90,14 @@ end subroutine setup
 !> tearing-down unit test features
 subroutine teardown()
   implicit none
+  pixel_size_sol = 0.d0
   call pinhole_sol%deallocate_lens; call spectrum_sol%deallocate_spectrum;
-  if(allocated(points_on_lens)) deallocate(points_on_lens)
+  if(allocated(points_on_lens))     deallocate(points_on_lens)
   if(allocated(pdf_points_on_lens)) deallocate(pdf_points_on_lens)
+  if(allocated(pixel_ids))          deallocate(pixel_ids)
+  if(allocated(pixel_ids_sol))      deallocate(pixel_ids_sol)
+  if(allocated(st_point_on_pixels)) deallocate(st_point_on_pixels)
+  if(allocated(st_point_on_pixels)) deallocate(st_point_on_pixels_sol)
 end subroutine teardown
 
 !> Tests -------------------------------------------
@@ -175,7 +190,6 @@ subroutine test_image_plane_pixel_size_definitions()
   !> variables
   integer,parameter                          :: n_real_param=8
   integer                                    :: ii
-  real*8,dimension(2)                        :: pixel_size_sol
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_sol
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_std_sol
   real*8,dimension(n_real_param)             :: real_param
@@ -195,8 +209,6 @@ subroutine test_image_plane_pixel_size_definitions()
     image_plane_coords(:,ii),pupil_positions(:,ii),image_plane_sol)
     call define_plane_from_half_angles(half_angle_sol(:,ii),&
     image_plane_coords(:,ii),image_plane_std_sol)
-    !> compute the solution pixel size
-    pixel_size_sol = (/1.d0,1.d0/)/real((/n_pixels_x,n_pixels_y/),kind=8)
     !> test plane and pixel size
     call assert_equals(camera_sol%image_plane,image_plane_sol,n_x_sol,&
     n_plane_vertices,tol_real8,&
@@ -208,6 +220,46 @@ subroutine test_image_plane_pixel_size_definitions()
   call camera_sol%deallocate_camera_perspective_static
 end subroutine test_image_plane_pixel_size_definitions
 
+!> test the calculation of the calculation of the position of a point on
+!> a plane in the pixel coordinate system
+subroutine test_computation_pixel_ids_st_plane_point()
+  use mod_assert_equals_tools, only: assert_equals_extended
+  use mod_assert_equals_tools, only: assert_equals_rel_error
+  implicit none
+  !> variables
+  integer :: ii,jj,kk
+  real*8,dimension(n_st_sol) :: st_plane
+  !> initialisations
+  camera_sol%pixel_size = pixel_size_sol
+  allocate(st_point_on_pixels_sol(n_st_sol,n_points_per_pixel,n_pixels_x,n_pixels_y))
+  allocate(st_point_on_pixels(n_st_sol,n_points_per_pixel,n_pixels_x,n_pixels_y))
+  allocate(pixel_ids(n_st_sol,n_points_per_pixel,n_pixels_x,n_pixels_y))
+  allocate(pixel_ids_sol(n_st_sol,n_points_per_pixel,n_pixels_x,n_pixels_y))
+  !> compute local and global coordinates of the points
+  do ii=1,n_pixels_y
+    do jj=1,n_pixels_x
+      do kk=1,n_points_per_pixel
+        pixel_ids_sol(:,kk,jj,ii) = (/jj,ii/)
+        call random_number(st_point_on_pixels_sol(:,kk,jj,ii))
+        st_plane = st_point_on_pixels_sol(:,kk,jj,ii) + &
+        real(pixel_ids_sol(:,kk,jj,ii)-1,kind=8)*pixel_size_sol
+        call camera_sol%plane_to_pixel_local_coord(st_plane,&
+        pixel_ids(:,kk,jj,ii),st_point_on_pixels(:,kk,jj,ii))
+      enddo
+    enddo
+  enddo
+  !> test solutions
+  call assert_equals_extended(n_st_sol,n_points_per_pixel,n_pixels_x,&
+  n_pixels_y,pixel_ids,pixel_ids_sol,&
+  "Error computation position in pixel coordinates: pixel ids mismatch!")
+  call assert_equals_rel_error(n_st_sol,n_points_per_pixel,n_pixels_x,&
+  n_pixels_y,st_point_on_pixels,st_point_on_pixels_sol,tol_real8,&
+  "Error computation position in pixel coordinates: pixel coords. mismatch!")
+  !> cleanup
+  camera_sol%pixel_size = 0.d0
+  deallocate(st_point_on_pixels); deallocate(pixel_ids_sol);
+  deallocate(st_point_on_pixels_sol); deallocate(pixel_ids);
+end subroutine test_computation_pixel_ids_st_plane_point
 
 !> Tools -------------------------------------------
 !> sample the image plane variables

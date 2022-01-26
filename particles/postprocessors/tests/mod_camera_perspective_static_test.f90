@@ -196,9 +196,7 @@ subroutine test_image_plane_pixel_size_definitions()
     call define_plane_from_half_angles(half_angle_sol(:,ii),&
     image_plane_coords(:,ii),image_plane_std_sol)
     !> compute the solution pixel size
-    pixel_size_sol = (/norm2(image_plane_std_sol(:,2)-image_plane_std_sol(:,1)),&
-    norm2(image_plane_std_sol(:,3)-image_plane_std_sol(:,1))/)/&
-    (/n_pixels_x,n_pixels_y/)
+    pixel_size_sol = (/1.d0,1.d0/)/real((/n_pixels_x,n_pixels_y/),kind=8)
     !> test plane and pixel size
     call assert_equals(camera_sol%image_plane,image_plane_sol,n_x_sol,&
     n_plane_vertices,tol_real8,&

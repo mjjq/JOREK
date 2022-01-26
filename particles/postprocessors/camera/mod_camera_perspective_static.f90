@@ -20,6 +20,7 @@ type,extends(camera) :: camera_perspective_static
   procedure,pass(camera_inout) :: allocate_camera_perspective_static
   procedure,pass(camera_inout) :: deallocate_camera_perspective_static
   procedure,pass(camera_inout) :: define_image_plane_pixel_size
+  procedure,pass(camera_inout) :: plane_to_pixel_local_coord
 end type camera_perspective_static
 
 !> Interfaces ------------------------------------------------
@@ -191,12 +192,33 @@ subroutine define_image_plane_pixel_size(camera_inout,n_real_param,real_param)
   !> from the pupil and the pupil position
   call define_plane_from_half_angles(real_param(1:2),real_param(3:5),&
   real_param(6:8),camera_inout%image_plane)
-  !> compute the pixel width and heigh
-  camera_inout%pixel_size(1) = norm2(camera_inout%image_plane(:,2)-&
-  camera_inout%image_plane(:,1))/real(camera_inout%n_pixels_spectra(2),kind=8)
-  camera_inout%pixel_size(2) = norm2(camera_inout%image_plane(:,3)-&
-  camera_inout%image_plane(:,1))/real(camera_inout%n_pixels_spectra(3),kind=8)
+  !> compute the pixel width and heigh in the pixel reference system
+  camera_inout%pixel_size = (/1.d0,1.d0/)/real(camera_inout%n_pixels_spectra(2:3),kind=8)
 end subroutine define_image_plane_pixel_size
+
+!> compute the pixel number and the position in the pixel local coordinates
+!> of a point on the image plane (in the plane local coordinates)
+!> inputs:
+!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
+!>  st_plane:     (real8)(2) position in the plane local coordinates
+!> outputs:
+!>  camera_inout: (camera_perspective_static) camera with defined image plane
+!>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
+!>  st_pixel:     (real8)(2) position in the pixel local coordinates
+subroutine plane_to_pixel_local_coord(camera_inout,st_plane,i_pixel,st_pixel)
+  implicit none
+  !> inputs-outputs
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> inputs
+  real*8,dimension(2),intent(in)   :: st_plane
+  !> outputs
+  integer,dimension(2),intent(out) :: i_pixel
+  real*8,dimension(2),intent(out)  :: st_pixel
+  !> find the local pixel coordinates and find the position in the pixel local coordinates
+  i_pixel = floor(st_plane/camera_inout%pixel_size)
+  st_pixel = st_plane - i_pixel*camera_inout%pixel_size
+  i_pixel = i_pixel + 1
+end subroutine plane_to_pixel_local_coord
 
 !>------------------------------------------------------------
 end module mod_camera_perspective_static

@@ -164,7 +164,7 @@ lens_inout,n_points_in)
   if(.not.allocated(camera_inout%x)) &
   allocate(camera_inout%x(camera_inout%n_x,camera_inout%n_vertices,1))
   if(.not.allocated(camera_inout%properties)) &
-  allocate(camera_inout%properties(camera_inout%n_property_vertex,camera_inout%n_points_on_lens,1))
+  allocate(camera_inout%properties(camera_inout%n_property_vertex,camera_inout%n_vertices,1))
   call lens_inout%sampling(camera_inout%n_vertices,camera_inout%x(:,:,1))
   call lens_inout%pdf(camera_inout%n_vertices,camera_inout%x(:,:,1),&
   camera_inout%properties(1,:,1))

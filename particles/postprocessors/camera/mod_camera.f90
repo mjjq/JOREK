@@ -16,7 +16,6 @@ type,abstract,extends(vertices) :: camera
    !> the x variables contains the global position of the 
    !> visual points on the lens / film for each frame
    !> number of spectra and pixels
-   integer              :: n_points_on_lens !< size and number of points on a lens
    integer,dimension(3) :: n_pixels_spectra
    real*8               :: exposure_time !< exposure time for each camera frame
    !> array containing the pixel intensity per each time

@@ -47,46 +47,47 @@ doc docs:
 
 
 # Directories containing sources, ordered by number of files
-DIRS := diagnostics			\
-	models				\
-	communication			\
-	grids/grid_utils		\
-	solvers				\
-	models/$(MODEL)			\
-	refinement			\
-	matrix				\
-	particles 			\
-	particles/pushers 		\
-	particles/examples 		\
-	particles/diagnostics 		\
-	particles/tests 		\
-  particles/tests/drivers \
-  particles/postprocessors \
-  particles/postprocessors/spectra \
-  particles/postprocessors/lights \
-  particles/postprocessors/lens \
-  particles/postprocessors/camera \
-  particles/postprocessors/tests \
-  particles/postprocessors/tests/drivers \
-	particles/projection_functions  \
-	particles/benchmarks/pusher_cartesian \
-	particles/benchmarks/pusher	\
-	particles/benchmarks/projection \
-	elements			\
-	grids				\
-	plots				\
-	diagnostics/new_diag		\
-	diagnostics/postproc		\
-	tools				\
-	tools/rng                       \
-	tools/fruit                     \
-  tools/tests                     \
-  tools/tests/drivers             \
-	non_regression_tests/unit_tests \
-	datatypes			\
-	benchmarks                      \
-	core                            \
-	.				\
+DIRS := diagnostics			       \
+	models				       \
+	communication			       \
+	grids/grid_utils		       \
+	solvers				       \
+	models/$(MODEL)			       \
+	refinement			       \
+	matrix				       \
+	particles 			       \
+	particles/pushers 	               \
+	particles/examples 		       \
+	particles/diagnostics 		       \
+	particles/tests 		       \
+        particles/tests/drivers                \
+        particles/postprocessors               \
+        particles/postprocessors/spectra       \
+        particles/postprocessors/lights        \
+        particles/postprocessors/lens          \
+        particles/postprocessors/filters       \
+        particles/postprocessors/camera        \
+        particles/postprocessors/tests         \
+        particles/postprocessors/tests/drivers \
+	particles/projection_functions         \
+	particles/benchmarks/pusher_cartesian  \
+	particles/benchmarks/pusher            \
+	particles/benchmarks/projection        \
+	elements			       \
+	grids				       \
+	plots				       \
+	diagnostics/new_diag	               \
+	diagnostics/postproc		       \
+	tools				       \
+	tools/rng                              \
+	tools/fruit                            \
+        tools/tests                            \
+        tools/tests/drivers                    \
+	non_regression_tests/unit_tests        \
+	datatypes			       \
+	benchmarks                             \
+	core                                   \
+	.				       \
 	vacuum
 DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline
 

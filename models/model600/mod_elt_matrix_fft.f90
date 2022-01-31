@@ -1885,11 +1885,11 @@ do i=1,n_vertex_max
                   else ! (with_TiTe), i.e. with single temperature *********************************
                     amat(var_psi,var_T) = - deta_dT * v * T * (zj0 - current_source(ms,mt) - Jb)/ BigR    * xjac * theta * tstep &
                                    - deta_num_dT * T * (v_x * zj0_x + v_y * zj0_y)                        * xjac * theta * tstep &
-                              + v * tauIC*2./(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s)   * theta * tstep &
-                              + v * tauIC*2./(r0_corr*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)  * theta * tstep &
-                              - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * T  * r0_p                    * xjac * theta * tstep
+                              + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * r0 * (ps0_s * T_t  - ps0_t * T_s)   * theta * tstep &
+                              + v * tauIC/(r0_corr*BB2) * F0**2/BigR**2 * T  * (ps0_s * r0_t - ps0_t * r0_s)  * theta * tstep &
+                              - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * T  * r0_p                    * xjac * theta * tstep
 
-                    amat_n(var_psi,var_T) = - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * r0 * T_p       * xjac * theta * tstep
+                    amat_n(var_psi,var_T) = - v * tauIC/(r0_corr*BB2) * F0**3/BigR**3 * r0 * T_p       * xjac * theta * tstep
                   end if ! (with_TiTe) *************************************************************
 
                   !###################################################################################################
@@ -2080,10 +2080,10 @@ do i=1,n_vertex_max
                     amat(var_u,var_T) = - BigR**2 * (v_s * r0_t * T   - v_t * r0_s * T)           * theta * tstep  &
                                         - BigR**2 * (v_s * r0   * T_t - v_t * r0   * T_s)         * theta * tstep  &
 
-                              + v * tauIC*2. * BigR**4 * r0 * (T_s  * w0_t - T_t  * w0_s)                      * theta * tstep &
-                              + v * tauIC*2. * BigR**4 * T  * (r0_s * w0_t - r0_t * w0_s)                     * theta * tstep &
-                              + tauIC*2. * BigR**3 * (r0_y * T + r0 * T_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
-                              + v * tauIC*2. * BigR**4 * ( (u0_xy * (T_xx*r0 + 2.d0*T_x*r0_x + T*r0_xx                      &
+                              + v * tauIC * BigR**4 * r0 * (T_s  * w0_t - T_t  * w0_s)                      * theta * tstep &
+                              + v * tauIC * BigR**4 * T  * (r0_s * w0_t - r0_t * w0_s)                     * theta * tstep &
+                              + tauIC * BigR**3 * (r0_y * T + r0 * T_y) * (v_x* u0_x + v_y * u0_y) * xjac * theta * tstep &
+                              + v * tauIC * BigR**4 * ( (u0_xy * (T_xx*r0 + 2.d0*T_x*r0_x + T*r0_xx                      &
                                                                 - T_yy*r0 - 2.d0*T_y*r0_y - T*r0_yy))                    &
                                                       - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy))  &
                                                     * xjac * theta * tstep                                                  &
@@ -2106,8 +2106,8 @@ do i=1,n_vertex_max
 
                     if ( NEO ) then
                       amat(var_u,var_T) = amat(var_u,var_T) - amu_neo_prof(ms,mt)*BB2/((Btheta2+epsil)**2)*(ps0_x*v_x + ps0_y*v_y) &
-                                * (tauIC*2.*(ps0_x*(r0_x*T+r0*T_x) + ps0_y*(r0_y*T+r0*T_y))                       &
-                                + aki_neo_prof(ms,mt) *tauIC*2. * r0 *(ps0_x*T_x + ps0_y*T_y)) * BigR * xjac * theta * tstep
+                                * (tauIC*(ps0_x*(r0_x*T+r0*T_x) + ps0_y*(r0_y*T+r0*T_y))                       &
+                                + aki_neo_prof(ms,mt) *tauIC * r0 *(ps0_x*T_x + ps0_y*T_y)) * BigR * xjac * theta * tstep
 
                       if ( with_vpar ) &
                       amat(var_u,var_vpar) = amat(var_u,var_vpar) + amu_neo_prof(ms,mt)*BB2 * Btheta2 /((Btheta2+epsil)**2)*r0*vpar*(ps0_x*v_x+ps0_y*v_y) &
@@ -2231,7 +2231,7 @@ do i=1,n_vertex_max
                     amat(var_rho,var_Te) = - v * BigR * r0 * rn0 * dSion_dT * Te   * xjac * theta * tstep &
                                            + v * BigR * r0 * r0 *  dSrec_dT * Te   * xjac * theta * tstep
                   else ! (with_TiTe)
-                    amat(var_rho,var_T)  = - v * 2.d0 * tauIC*2. * (T_y  * r0 + T *r0_y) * BigR * xjac * theta * tstep &
+                    amat(var_rho,var_T)  = - v * 2.d0 * tauIC * (T_y  * r0 + T *r0_y) * BigR * xjac * theta * tstep &
                                            - v * BigR * r0 * rn0 * dSion_dT * T    * xjac * theta * tstep &
                                            + v * BigR * r0 * r0 *  dSrec_dT * T    * xjac * theta * tstep 
                   end if ! (with_TiTe)
@@ -2552,8 +2552,8 @@ do i=1,n_vertex_max
                                   + aki_neo_prof(ms,mt) * tauIC*2. * r0 * (ps0_x*Ti_x + ps0_y*Ti_y)) * BigR * xjac * tstep * theta
                       else ! (with_TiTe), i.e. with single temperature *****************************
                         amat(var_vpar,var_T)  = amat(var_vpar,var_T)  -v*amu_neo_prof(ms,mt)*BB2/(Btheta2+epsil)           &
-                                  * (tauIC*2. * (ps0_x * (r0_x*T  + r0*T_x ) + ps0_y*(r0_y*T  + r0*T_y )) &
-                                  + aki_neo_prof(ms,mt) * tauIC*2. * r0 * (ps0_x*T_x  + ps0_y*T_y )) * BigR * xjac * tstep * theta
+                                  * (tauIC * (ps0_x * (r0_x*T  + r0*T_x ) + ps0_y*(r0_y*T  + r0*T_y )) &
+                                  + aki_neo_prof(ms,mt) * tauIC * r0 * (ps0_x*T_x  + ps0_y*T_y )) * BigR * xjac * tstep * theta
                       end if ! (with_TiTe) *********************************************************
                     
                       amat(var_vpar,var_vpar) = amat(var_vpar,var_vpar) + v * amu_neo_prof(ms,mt) * BB2 * Btheta2/(Btheta2+epsil) * r0 * vpar * BigR * xjac * tstep * theta 

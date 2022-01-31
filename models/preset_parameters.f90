@@ -744,6 +744,7 @@ restart_particles  = .false.
 use_ncs            = .false.
 use_ccs            = .false.
 use_pcs            = .false.
+use_pcs_full       = .false.
 use_ionisation     = .true.
 use_sputtering     = .false.
 use_cx             = .true.

@@ -112,6 +112,7 @@ subroutine test_init_camera_perspective_static_pinhole()
   integer,parameter                        :: n_int_param=3
   integer,parameter                        :: n_real_param=8
   integer,dimension(n_int_param)           :: int_param
+  real*8,dimension(n_x_sol)                :: direction_sol,direction_test
   real*8,dimension(n_real_param)           :: real_param
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_sol
   !> initialisation, only one image plane is considered
@@ -148,6 +149,16 @@ subroutine test_init_camera_perspective_static_pinhole()
   call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
   camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
   "Error init camera perspective static pinhole: pdf points on lens") 
+  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%image_plane_direction,&
+  "Error init camera perspective static pinhole: image plane direction")
+  if(allocated(camera_sol%image_plane_direction)) then
+    direction_test = (/1.d0,acos(camera_sol%image_plane_direction(3)),&
+    atan2(camera_sol%image_plane_direction(2),camera_sol%image_plane_direction(1))/)
+    if(direction_test(3).lt.0.d0) direction_test(3) = TWOPI + direction_test(3)
+    direction_sol = (/1.d0,image_plane_coords(2,1),image_plane_coords(3,1)/)
+    call assert_equals(direction_test,direction_sol,n_x_sol,tol_real8,&
+    "Error init camera perspective static pinhole: image plane mismatch!")
+  endif
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,&
   camera_sol%image_plane,"Error init camera perspective static pinhole: image plane")
   if(allocated(camera_sol%image_plane)) then
@@ -188,6 +199,8 @@ subroutine test_de_allocation_camera_perspective_static()
   call assert_equals_allocatable_arrays(spectrum_sol%n_spectra,n_pixels_x,&
   n_pixels_y,n_times_sol,camera_sol%pixel_intensities,&
   "Error allocate camera perspective static: pixel intensities")
+  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%image_plane_direction,&
+  "Error allocate_camera perspective static: image plane direction")
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,&
   camera_sol%image_plane,"Error allocate_camera perspective static: image plane") 
   !> deallocate camera perspective static
@@ -206,6 +219,8 @@ subroutine test_de_allocation_camera_perspective_static()
   "Error deallocate camera perspective static: properties not deallocated")
   call assert_false(allocated(camera_sol%pixel_intensities),&
   "Error deallocate camera perspective static: pixel intensities not deallocated")
+  call assert_false(allocated(camera_sol%image_plane_direction),&
+  "Error deallocate camera perspective static: image plane direction not deallocated")
   call assert_false(allocated(camera_sol%image_plane),&
   "Error deallocate camera perspective static: image plane not deallocated")
 end subroutine test_de_allocation_camera_perspective_static
@@ -248,11 +263,13 @@ end subroutine test_points_on_lens_pdf_pinhole
 
 !> test the generation of image planes and the calculation of the pixel size
 subroutine test_image_plane_pixel_size_definitions()
+  use constants,    only: TWOPI
   use mod_geometry, only: define_plane_from_half_angles
   implicit none
   !> variables
   integer,parameter                          :: n_real_param=8
   integer                                    :: ii
+  real*8,dimension(n_x_sol)                  :: direction_sol,direction_test
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_sol
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_std_sol
   real*8,dimension(n_real_param)             :: real_param
@@ -272,7 +289,13 @@ subroutine test_image_plane_pixel_size_definitions()
     image_plane_coords(:,ii),pupil_positions(:,ii),image_plane_sol)
     call define_plane_from_half_angles(half_angle_sol(:,ii),&
     image_plane_coords(:,ii),image_plane_std_sol)
+    direction_test = (/1.d0,acos(camera_sol%image_plane_direction(3)),&
+    atan2(camera_sol%image_plane_direction(2),camera_sol%image_plane_direction(1))/)
+    if(direction_test(3).lt.0.d0) direction_test(3) = TWOPI + direction_test(3)
+    direction_sol = (/1.d0,real_param(4),real_param(5)/)
     !> test plane and pixel size
+    call assert_equals(direction_test,direction_sol,n_x_sol,tol_real8,&
+    "Error camera perspective static define image plane: image plane direction mismatch!")
     call assert_equals(camera_sol%image_plane,image_plane_sol,n_x_sol,&
     n_plane_vertices,tol_real8,&
     "Error camera perspective static define image plane: image plane mismatch!")

@@ -13,6 +13,7 @@ type,extends(camera) :: camera_perspective_static
   integer :: n_plane_points !< number of points of a plane
   real*8,dimension(2) :: pixel_size !< width and height of a pixel
   real*8,dimension(:,:),allocatable :: image_plane !< vertices of the image plane
+  real*8,dimension(:),allocatable   :: image_plane_direction
   contains
   procedure,pass(camera_inout) :: init_camera => init_camera_perspective_static
   procedure,pass(camera_inout) :: generate_points_on_lens_pdf => &
@@ -139,10 +140,12 @@ spectrum_inout,n_int_param,int_param)
   call camera_inout%allocate_camera(1,int_param(1),&
   int_param(2),int_param(3),spectrum_inout%n_spectra)
   !> allocate attributes specific to camera_perspective_static
+  if(allocated(camera_inout%image_plane_direction)) deallocate(camera_inout%image_plane_direction)
   if(allocated(camera_inout%image_plane)) then
     if(size(camera_inout%image_plane,2).ne.camera_inout%n_plane_points) &
     deallocate(camera_inout%image_plane)
   endif
+  allocate(camera_inout%image_plane_direction(camera_inout%n_x))
   allocate(camera_inout%image_plane(camera_inout%n_x,&
   camera_inout%n_plane_points))
 end subroutine allocate_camera_perspective_static
@@ -158,6 +161,7 @@ subroutine deallocate_camera_perspective_static(camera_inout)
   class(camera_perspective_static),intent(inout) :: camera_inout
   !> deallocate variables
   call camera_inout%deallocate_camera
+  if(allocated(camera_inout%image_plane_direction)) deallocate(camera_inout%image_plane_direction)
   if(allocated(camera_inout%image_plane)) deallocate(camera_inout%image_plane)
 end subroutine deallocate_camera_perspective_static
 
@@ -206,7 +210,7 @@ lens_inout,n_points_in)
   camera_inout%properties(1,:,1))
 end subroutine generate_points_on_lens_static_perspective
 
-!> generate the image plane points and compute the pixel width and height
+!> generate the image plane direction, vertices and compute the pixel width and height
 !> inputs:
 !>  camera_inout: (camera_perspective_static) camera with unallocated image plane
 !>  n_real_param: (integer) number of real parameters
@@ -217,6 +221,7 @@ end subroutine generate_points_on_lens_static_perspective
 !> outputs:
 !>  camera_inout: (camera_perspective_static) camera with defined image plane
 subroutine define_image_plane_pixel_size(camera_inout,n_real_param,real_param)
+  use mod_geometry, only: define_vertex_spherical_coord
   use mod_geometry, only: define_plane_from_half_angles
   implicit none
   !> inputs-outputs:
@@ -224,6 +229,9 @@ subroutine define_image_plane_pixel_size(camera_inout,n_real_param,real_param)
   !> inputs:
   integer,intent(in)                             :: n_real_param
   real*8,dimension(n_real_param),intent(in)      :: real_param
+  !> define the image plane direction and store it
+  call define_vertex_spherical_coord((/1.d0,real_param(4),real_param(5)/),&
+  camera_inout%image_plane_direction)
   !> define the plane from the width/height half angles, the distance
   !> from the pupil and the pupil position
   call define_plane_from_half_angles(real_param(1:2),real_param(3:5),&

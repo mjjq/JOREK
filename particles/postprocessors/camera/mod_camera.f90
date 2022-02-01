@@ -21,11 +21,12 @@ type,abstract,extends(vertices) :: camera
    !> array containing the pixel intensity per each time
    real*8,dimension(:,:,:,:),allocatable :: pixel_intensities
   contains
-   procedure(int_init_camera),pass(camera_inout),deferred      :: init_camera
-   procedure(int_gen_points_lens),pass(camera_inout),deferred  :: generate_points_on_lens_pdf
-   procedure(int_reduce_light_img),pass(camera_inout),deferred :: reduce_light_image
-   procedure,pass(camera_inout)                                :: allocate_camera
-   procedure,pass(camera_inout)                                :: deallocate_camera 
+   procedure(int_init_camera),pass(camera_inout),deferred       :: init_camera
+   procedure(int_gen_points_lens),pass(camera_inout),deferred   :: generate_points_on_lens_pdf
+   procedure(int_reduce_light_img),pass(camera_inout),deferred  :: reduce_light_image
+   procedure(int_phys_struct_funct),pass(camera_inout),deferred :: physical_structure_funct
+   procedure,pass(camera_inout)                                 :: allocate_camera
+   procedure,pass(camera_inout)                                 :: deallocate_camera
 end type camera
 
 !> Interfaces ------------------------------------------------------
@@ -108,6 +109,29 @@ interface
   class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
   class(filter),intent(inout)                                    :: filter_time_inout
   end subroutine int_reduce_light_img
+
+  !> structure function: it returns the physical camera importance normalised to 1
+  !> inputs:
+  !>   camera_inout:   (camera) camera with reduced light
+  !>   x_pos:          (real8)(3) position used for defining the importance ray
+  !>   x_lesn_id:      (integer) index of points on the lens
+  !>   time_id_in:     (integer)(optional) index of the treated time
+  !> outputs:
+  !>   camera_inout:   (camera) camera with reduced light
+  !>   material_value: (real8) physical camera physical importance
+  subroutine int_phys_struct_funct(camera_inout,x_pos,x_lens_id,&
+  material_value,time_id_in)
+    IMPORT :: camera
+    implicit none
+    !> inputs-outputs:
+    class(camera),intent(inout)                   :: camera_inout
+    !> inputs:
+    integer,intent(in)                            :: x_lens_id
+    integer,intent(in),optional                   :: time_id_in
+    real*8,dimension(camera_inout%n_x),intent(in) :: x_pos
+    !> outputs:
+    real*8,intent(out)                            :: material_value
+  end subroutine int_phys_struct_funct
 end interface
 
 contains

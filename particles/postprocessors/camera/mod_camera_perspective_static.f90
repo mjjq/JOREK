@@ -20,10 +20,13 @@ type,extends(camera) :: camera_perspective_static
   generate_points_on_lens_static_perspective
   procedure,pass(camera_inout) :: reduce_light_image => &
   reduce_particle_light_image_static
+  procedure,pass(camera_inout) :: physical_structure_funct => &
+  physical_structure_funct_perspective_static
   procedure,pass(camera_inout) :: allocate_camera_perspective_static
   procedure,pass(camera_inout) :: deallocate_camera_perspective_static
   procedure,pass(camera_inout) :: define_image_plane_pixel_size
   procedure,pass(camera_inout) :: plane_to_pixel_local_coord
+  procedure,pass(camera_inout) :: cos_view_angle_static
 end type camera_perspective_static
 
 !> Interfaces ------------------------------------------------
@@ -264,6 +267,62 @@ subroutine plane_to_pixel_local_coord(camera_inout,st_plane,i_pixel,st_pixel)
   st_pixel = st_pixel - real(i_pixel,kind=8)
   i_pixel = i_pixel + 1
 end subroutine plane_to_pixel_local_coord
+
+!> compute the physical importance function for the camera perspective static
+!> inputs:
+!>   camera_inout:   (camera_perspective_static) initialised camera object
+!>   x_pos:          (real8)(3) coordinated of the point defining a ray
+!>   x_lens_id:      (integer) index of the point on lens to be treated
+!>   time_id_in:     (integer)(optional) time index (not used)
+!> outputs:
+!>   camera_inout:   (camera_perspective_static) camera object
+!>   material_value: (real8) camera physical importance
+subroutine physical_structure_funct_perspective_static(camera_inout,x_pos,x_lens_id,&
+material_value,time_id_in)
+  implicit none
+  !> inputs-outputs:
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> inputs:
+  integer,intent(in)                            :: x_lens_id
+  integer,intent(in),optional                   :: time_id_in
+  real*8,dimension(camera_inout%n_x),intent(in) :: x_pos
+  !> outputs
+  real*8,intent(out)                            :: material_value
+  !> compute the physical material function which at the moment it is 
+  !> only the cosinus of the view angle
+  call camera_inout%cos_view_angle_static(x_pos,x_lens_id,material_value)
+end subroutine physical_structure_funct_perspective_static
+
+!> compute the cosinus of the view angle for static cameras.
+!> the cosinus of the view angle is defined as the scalar product between
+!> a ray and the lens-image plane vector. The ray is defined by a position
+!> on the lens and a given position in the space
+!> inputs:
+!>   camera_inout: (camera_perspective_static) initialised camera object
+!>   x_pos:     (real8)(3) coordinated of the point defining a ray
+!>   x_lens_id: (integer) index of the point on lens to be treated
+!> outputs:
+!>   camera_inout:   (camera_perspective_static) camera object
+!>   cos_view_angle: (real8) cosinus of the view angle. Negative values mean
+!>                           that the point is behind the lens
+subroutine cos_view_angle_static(camera_inout,x_pos,x_lens_id,cos_view_angle)
+  implicit none
+  !> inputs-outputs
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> inputs
+  integer,intent(in)                             :: x_lens_id
+  real*8,dimension(camera_inout%n_x),intent(in)  :: x_pos
+  !> outputs
+  real*8,intent(out)                             :: cos_view_angle
+  !> variables
+  real*8,dimension(camera_inout%n_x)             :: ray
+  !> compute the cosinus of the view angle
+  ray = x_pos - camera_inout%x(:,x_lens_id,1)
+  ray = ray/sqrt(ray(1)*ray(1)+ray(2)*ray(2)+ray(3)*ray(3))
+  cos_view_angle = ray(1)*camera_inout%image_plane_direction(1) + &
+                   ray(2)*camera_inout%image_plane_direction(2) + &
+                   ray(3)*camera_inout%image_plane_direction(3)
+end subroutine cos_view_angle_static
 
 !>------------------------------------------------------------
 end module mod_camera_perspective_static

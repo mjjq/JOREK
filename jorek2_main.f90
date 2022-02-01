@@ -253,9 +253,9 @@ required = 0
   if(treat_axis .and. (fix_axis_nodes .or. force_central_node))then
     write(*,*) 'WARNING :'
     write(*,*) 'If using treat_axis = .true. then'
-    write(*,*) 'fix_axis_nodes and force_central_nodes both MUST be .false.'
-    write(*,*) 'Setting fix_axis_nodes and force_central_nodes to .false.'    
-    force_central_nodes = .false.
+    write(*,*) 'fix_axis_nodes and force_central_node both MUST be .false.'
+    write(*,*) 'Setting fix_axis_nodes and force_central_node to .false.'    
+    force_central_node  = .false.
     fix_axis_nodes      = .false.
   endif
 

@@ -270,8 +270,11 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3)
 #ifdef fullmhd
   real*8    :: A3, AR, AZ, A3_R, A3_Z, AR_Z, AR_p, AZ_R, AZ_P, Fprof
-#endif
+  real*8, dimension(3)                :: P, P_s, P_t, P_phi
+#else 
   real*8, dimension(1)                :: P, P_s, P_t, P_phi
+#endif
+  
   real*8, dimension(:), allocatable   :: P2
   real*8, dimension(:,:), allocatable :: grad_P2
   real*8  :: R_s, R_t, Z_s, Z_t, R_i, Z_i, xjac
@@ -506,7 +509,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
         ! 1. Get B at this position
 #ifdef fullmhd
         call interp_PRZ(fields%node_list, fields%element_list,i_elm,[var_A3,var_AR,var_AZ],3,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-        call fields%calc_F_profile(i_elm,s,s,phi,Fprof)
+        call fields%calc_F_profile(i_elm,s,t,phi,Fprof)
         inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
         A3=P(1)
         AR=P(2)
@@ -681,8 +684,10 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
   real*8  :: R, Z, inv_st_jac, psi_r, psi_z, B(3)
 #ifdef fullmhd
   real*8    :: A3, AR, AZ, A3_R, A3_Z, AR_Z, AR_p, AZ_R, AZ_P, Fprof
-#endif
+  real*8, dimension(3)                :: P, P_s, P_t, P_phi
+#else 
   real*8, dimension(1)                :: P, P_s, P_t, P_phi
+#endif
   real*8, dimension(:), allocatable   :: P2
   real*8, dimension(:,:), allocatable :: grad_P2
   real*8  :: R_s, R_t, Z_s, Z_t, R_i, Z_i, xjac
@@ -855,8 +860,8 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
     
     !If initializatin on a set of phi planes, make blocksize a multiple of the amount of phi planes
     if(init_phiplanes) then 
-      blocksize_tmp=blocksize_tmp+(n_phi_planes-modulo(blocksize_tmp,n_phi_planes))
-      !Add instead of subtract to have enough towards end of the loop
+      blocksize_tmp=blocksize_tmp-modulo(blocksize_tmp,n_phi_planes)
+      !Subtract as to keep within the bound of the blocksize array
     endif 
 #ifdef __GFORTRAN__
     !$omp parallel do default(shared) &
@@ -964,7 +969,7 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
         !fluid states, these corrections are needed.
 #ifdef fullmhd
         call interp_PRZ(fields%node_list, fields%element_list,i_elm,[var_A3,var_AR,var_AZ],3,s,t,phi,P, P_s, P_t, P_phi, R,R_s,R_t,Z,Z_s,Z_t)
-        call fields%calc_F_profile(i_elm,s,s,phi,Fprof)
+        call fields%calc_F_profile(i_elm,s,t,phi,Fprof)
         inv_st_jac = 1.d0/(R_s * Z_t - R_t * Z_s)
         A3=P(1)
         AR=P(2)

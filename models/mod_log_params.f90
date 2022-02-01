@@ -350,6 +350,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REAL_FMT) 'rho_coef              ', rho_coef(1:5)
   else
     write(*,CHAR_FMT) 'rho_file              ', trim(rho_file)
+    write(*,REAL_FMT) 'rho_0                 ', rho_0
+    write(*,REAL_FMT) 'rho_1                 ', rho_1
   end if
 
   if (with_neutrals) then
@@ -382,6 +384,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
       write(*,REAL_FMT) 'Te_coef                ', Te_coef(1:5)
     else
       write(*,CHAR_FMT) 'Te_file                ', trim(Te_file)
+      write(*,REAL_FMT) 'Te_0                   ', Te_0
+      write(*,REAL_FMT) 'Te_1                   ', Te_1
     end if
     if ( .not. num_Ti ) then
       write(*,REAL_FMT) 'Ti_0                   ', Ti_0
@@ -389,6 +393,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
       write(*,REAL_FMT) 'Ti_coef                ', Ti_coef(1:5)
     else
       write(*,CHAR_FMT) 'Ti_file                ', trim(Ti_file)
+      write(*,REAL_FMT) 'Ti_0                   ', Ti_0
+      write(*,REAL_FMT) 'Ti_1                   ', Ti_1
     end if
     if ( .not. num_zk_e_perp ) then
       write(*,REAL_FMT) 'ZK_e_perp             ', ZK_e_perp(1:6)
@@ -428,6 +434,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
       write(*,REAL_FMT) 'T_coef                ', T_coef(1:5)
     else
       write(*,CHAR_FMT) 'T_file                ', trim(T_file)
+      write(*,REAL_FMT) 'T_0                   ', T_0
+      write(*,REAL_FMT) 'T_1                   ', T_1
     end if
     if ( .not. num_zk_perp ) then
       write(*,REAL_FMT) 'ZK_perp               ', ZK_perp(1:6)
@@ -633,6 +641,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
     write(*,REAL_FMT) 'current_ref           ', current_ref
+    write(*,REAL_FMT) 'cte_current_FB_fact   ', cte_current_FB_fact
     write(*,REAL_FMT) 'psi_offset_freeb      ', psi_offset_freeb
     write(*,REAL_FMT) 'FB_Ip_position        ', FB_Ip_position
     write(*,REAL_FMT) 'FB_Ip_integral        ', FB_Ip_integral

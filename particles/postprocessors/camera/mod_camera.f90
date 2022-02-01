@@ -21,10 +21,11 @@ type,abstract,extends(vertices) :: camera
    !> array containing the pixel intensity per each time
    real*8,dimension(:,:,:,:),allocatable :: pixel_intensities
   contains
-   procedure(int_init_camera),pass(camera_inout),deferred     :: init_camera
-   procedure(int_gen_points_lens),pass(camera_inout),deferred :: generate_points_on_lens_pdf
-   procedure,pass(camera_inout)                               :: allocate_camera
-   procedure,pass(camera_inout)                               :: deallocate_camera 
+   procedure(int_init_camera),pass(camera_inout),deferred      :: init_camera
+   procedure(int_gen_points_lens),pass(camera_inout),deferred  :: generate_points_on_lens_pdf
+   procedure(int_reduce_light_img),pass(camera_inout),deferred :: reduce_light_image
+   procedure,pass(camera_inout)                                :: allocate_camera
+   procedure,pass(camera_inout)                                :: deallocate_camera 
 end type camera
 
 !> Interfaces ------------------------------------------------------
@@ -76,6 +77,37 @@ interface
     !> inputs:
     integer,intent(in),optional :: n_points_in
   end subroutine int_gen_points_lens
+
+  !> reduce the particle lights on the image plane
+  !> inputs:
+  !>   camera_inout:         (camera) initialised camera
+  !>   light_inout:          (light_vertices) initialised particle light vertices
+  !>   spectra_inout:        (spectrum_base) camera spectrum object
+  !>   filter_image_inout:   (filter) 2d image plane filter
+  !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filter
+  !>   filter_time_inout:    (filter) filter in time
+  !> outputs:
+  !>   camera_inout:         (camera) camera with reduced light
+  !>   light_inout:          (light_vertices) initialised particle light vertices
+  !>   spectra_inout:        (spectrum_base) camera spectrum object
+  !>   filter_image_inout:   (filter) 2d image plane filter
+  !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filter
+  !>   filter_time_inout:    (filter) filter in time
+  subroutine int_reduce_light_img(camera_inout,light_inout,spectra_inout,&
+  filter_image_inout,filter_spectra_inout,filter_time_inout)
+  use mod_light_vertices, only: light_vertices
+  use mod_spectra,        only: spectrum_base
+  use mod_filter,         only: filter
+  IMPORT :: camera
+  implicit none
+  !> imputs-outputs
+  class(camera),intent(inout)                                    :: camera_inout
+  class(light_vertices),intent(inout)                            :: light_inout
+  class(spectrum_base),intent(inout)                             :: spectra_inout
+  class(filter),intent(inout)                                    :: filter_image_inout
+  class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
+  class(filter),intent(inout)                                    :: filter_time_inout
+  end subroutine int_reduce_light_img
 end interface
 
 contains

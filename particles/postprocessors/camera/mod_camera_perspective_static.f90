@@ -17,6 +17,8 @@ type,extends(camera) :: camera_perspective_static
   procedure,pass(camera_inout) :: init_camera => init_camera_perspective_static
   procedure,pass(camera_inout) :: generate_points_on_lens_pdf => &
   generate_points_on_lens_static_perspective
+  procedure,pass(camera_inout) :: reduce_light_image => &
+  reduce_particle_light_image_static
   procedure,pass(camera_inout) :: allocate_camera_perspective_static
   procedure,pass(camera_inout) :: deallocate_camera_perspective_static
   procedure,pass(camera_inout) :: define_image_plane_pixel_size
@@ -26,6 +28,40 @@ end type camera_perspective_static
 !> Interfaces ------------------------------------------------
 contains
 !> Procedures ------------------------------------------------
+!> reduce the direct illumination, geometric and structural term 
+!> from a set of particles in physical units.
+!> inputs:
+!>   camera_inout:         (camera) initialised camera perspective static
+!>   light_inout:          (light_vertices) initialised particle light vertices
+!>   spectra_inout:        (spectrum_inout) camera spectrum object
+!>   filter_image_inout:   (filter) 2d image plane filter
+!>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filters
+!>   filter_time_inout:    (filter) filter in time
+!> outputs:
+!>   camera_inout:         (camera) camera perspective static with reduced light
+!>   light_inout:          (light_vertices) initialised particle light vertices
+!>   spectra_inout:        (spectrum_inout) camera spectrum object
+!>   filter_image_inout:   (filter) 2d image plane filter
+!>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filters
+!>   filter_time_inout:     (filter) filter in time
+subroutine reduce_particle_light_image_static(camera_inout,light_inout,&
+spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
+  use mod_light_vertices, only: light_vertices
+  use mod_spectra,        only: spectrum_base
+  use mod_filter,         only: filter
+  implicit none
+  !> inputs-outputs:
+  class(camera_perspective_static),intent(inout)                 :: camera_inout
+  class(light_vertices),intent(inout)                            :: light_inout
+  class(spectrum_base),intent(inout)                             :: spectra_inout
+  class(filter),intent(inout)                                    :: filter_image_inout
+  class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
+  class(filter),intent(inout)                                    :: filter_time_inout
+  !> TODO
+  write(*,*) "TODO"
+end subroutine reduce_particle_light_image_static
+
+!> procedure used for initialising a static perspective camera
 !> inputs:
 !>   camera_inout:   (camera) unallocated camera
 !>   lens_inout:     (lens) camera lens object

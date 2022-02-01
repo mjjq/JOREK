@@ -26,7 +26,6 @@ integer, dimension(n_vertex_max)  :: Pr
 integer, dimension(2)    :: parent
 integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
-integer :: i_v(n_var), i_harm(n_tor)
 
 ! Since the axis treatment solves for new degrees of freedom, we need to 
 ! transforms degrees of freedom to old ones.

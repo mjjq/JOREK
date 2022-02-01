@@ -1420,7 +1420,6 @@ do i=1,newnode_list%n_nodes
   enddo
   
   newnode_list%node(i)%constrained = .false.
-
 enddo
 
 if (fix_axis_nodes) then

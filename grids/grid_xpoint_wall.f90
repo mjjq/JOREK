@@ -14,7 +14,6 @@ use basis_at_gaussian
 use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node, treat_axis
 use mod_neighbours, only: update_neighbours
 use mod_interp
-use mod_axis_treatment
 
 implicit none
 
@@ -1738,113 +1737,58 @@ call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,xpoint,xcase)
 !*             fill in the values into the new grid                    *
 !***********************************************************************
 
-! Share 4 DoFs of all nodes on the grid axis
-if(treat_axis)then
+index = 0
+do i=1,newnode_list%n_nodes
 
-  do i=1, n_tht - 1
-    newnode_list%node(i)%index(1) = 1
-    newnode_list%node(i)%index(2) = 2
-    newnode_list%node(i)%index(3) = 3
-    newnode_list%node(i)%index(4) = 4
-    newnode_list%node(i)%axis_node = .true.
+  newnode_list%node(i)%axis_node = .false.
+  if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
+  if ( treat_axis .and. (i .lt. n_tht) ) newnode_list%node(i)%axis_node = .true.
 
-    newnode_list%node(i)%constrained = .false.
+  do k=1,n_order+1
+
+    index = index + 1
+    newnode_list%node(i)%index(k) = index
+
+    if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
+      index = index - 1
+    endif
+    if ((treat_axis) .and. (i .gt. 1) .and. (i .lt. n_tht) .and. (k.le.n_order+1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
+      index = index - 1
+    endif    
+    if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. index_xpoint+1).and.(k.eq.3)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. index_xpoint+2).and.(k.eq.1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. index_xpoint+2).and.(k.eq.2)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. index_xpoint+3).and.(k.eq.1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. index_xpoint+3).and.(k.eq.2)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
+      index = index - 1
+    endif
+    if ((i .eq. index_xpoint+3).and.(k.eq.3)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
+      index = index - 1
+    endif
   enddo
 
-  index = 4
-
-  do i=n_tht, newnode_list%n_nodes
-
-    newnode_list%node(i)%axis_node = .false.
-
-    do k=1,n_order+1
-
-      index = index + 1
-      newnode_list%node(i)%index(k) = index
-      if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+1).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+2).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+2).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+3).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+3).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+3).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
-        index = index - 1
-      endif
-    enddo
-
-    newnode_list%node(i)%constrained = .false.
-  enddo
-
-else
-
-  index = 0
-  do i=1,newnode_list%n_nodes
-
-    newnode_list%node(i)%axis_node = .false.
-    if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
-
-    do k=1,n_order+1
-
-      index = index + 1
-      newnode_list%node(i)%index(k) = index
-
-      if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+1).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+1).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+2).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+2).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+3).and.(k.eq.1)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+3).and.(k.eq.2)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
-        index = index - 1
-      endif
-      if ((i .eq. index_xpoint+3).and.(k.eq.3)) then
-        newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
-        index = index - 1
-      endif
-    enddo
-
-    newnode_list%node(i)%constrained = .false.
-  enddo
-
-endif
+  newnode_list%node(i)%constrained = .false.
+enddo
 
 if (fix_axis_nodes) then
   do k=1, newelement_list%n_elements
@@ -1888,14 +1832,9 @@ newnode_list%node(index_xpoint+1)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+2)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+3)%values(1,2:4,1) = 0.d0
 
-if(treat_axis)then
-  ! do nothing here. For axis treatment it is not necessory
-  ! that 2nd and 4th DoF should be zero.
-else
-  do j=1,n_tht - 1
-    newnode_list%node(i)%values(1,2:4,1) = 0.d0
-  enddo
-endif
+do j=1,n_tht - 1
+  newnode_list%node(i)%values(1,2:4,1) = 0.d0
+enddo
 
 n_remove_elements = 0
 n_remove_nodes    = 0

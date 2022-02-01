@@ -31,6 +31,7 @@ subroutine run_fruit_filter()
   call test_filter_allocation_deallocation
   call test_initialisation_filter_unity
   call test_compute_weights_filter_unity
+  call test_compute_weights_filter_unity_vectorial
   write(*,*) "  ... tearing-down: filter tests"
 end subroutine run_fruit_filter
 
@@ -106,6 +107,23 @@ subroutine test_compute_weights_filter_unity()
   !> deallocation
   call filter_test%deallocate_filter
 end subroutine test_compute_weights_filter_unity
+
+!> test compute weights filter unity: vectorial version
+subroutine test_compute_weights_filter_unity_vectorial()
+  use mod_filter_unity, only: filter_unity
+  implicit none
+  !> variables
+  real*8,dimension(n_positions_sol) :: weights
+  type(filter_unity) :: filter_test
+  !> initialisation
+  call filter_test%init_filter(n_dimensions_sol)
+  !> test
+  call filter_test%compute_filter_from_position_vectorial(n_positions_sol,positions_sol,weights)
+  call assert_equals(weights,weights_sol,n_positions_sol,tol_real8,&
+  "Error filter unity compute filter form positions (vectorial): filter weights mistmatch!")
+  !> deallocation
+  call filter_test%deallocate_filter
+end subroutine test_compute_weights_filter_unity_vectorial
 
 !> Tools ------------------------------------------------------
 !>-------------------------------------------------------------

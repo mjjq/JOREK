@@ -15,6 +15,7 @@ type,abstract :: filter
   procedure,pass(filter_inout)     :: deallocate_filter
   procedure(int_init_filter),pass(filter_inout),deferred  :: init_filter
   procedure(int_comp_fil_pos),pass(filter_inout),deferred :: compute_filter_from_position
+  procedure(int_comp_fil_pos_vect),pass(filter_inout),deferred :: compute_filter_from_position_vectorial 
 end type filter
 
 !> Interfaces ----------------------------------------------
@@ -36,11 +37,11 @@ interface
     integer,dimension(n_dimensions),intent(in),optional :: stencil_shape_in
   end subroutine int_init_filter
 
-  !> compute_filter_2d_from_position compute the value of the filter
+  !> compute_filter_from_position compute the value of the filter
   !> given a normalised position
   !> inputs:
-  !>   filter_inout: (filter) filter type
-  !>   pos:          (real8)(n_dimension) position where the filter value is computed
+  !>   filter_inout:  (filter) filter type
+  !>   pos:           (real8)(n_dimension) position where the filter weight is computed
   !> outputs:
   !>   filter_inout:  (filter) filter type
   !>   weight:        (real8) filter weight
@@ -54,6 +55,28 @@ interface
     !> outputs:
     real*8,intent(out) :: weight
   end subroutine int_comp_fil_pos
+
+  !> compute_filter_from_position compute the value of the filter
+  !> given a normalised position: vectorial version.
+  !> inputs:
+  !>   filter_inout:  (filter) filter type
+  !>   n_positions:   (integer) number of positions
+  !>   pos:           (real8)(n_dimension,n_positions) positions where 
+  !>                         the filter weights are computed
+  !> outputs:
+  !>   filter_inout:  (filter) filter type
+  !>   weights:       (real8)(n_positions) filter weights
+  subroutine int_comp_fil_pos_vect(filter_inout,n_positions,pos,weights)
+    IMPORT :: filter
+    implicit none
+    !> inputs-outputs
+    class(filter),intent(inout) :: filter_inout
+    !> inputs
+    integer,intent(in) :: n_positions
+    real*8,dimension(filter_inout%n_dimensions,n_positions),intent(in) :: pos
+    !> outputs:
+    real*8,dimension(n_positions),intent(out) :: weights
+  end subroutine int_comp_fil_pos_vect
 end interface
 
 contains

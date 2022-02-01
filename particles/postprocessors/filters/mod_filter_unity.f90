@@ -13,6 +13,8 @@ type,extends(filter) :: filter_unity
   contains
   procedure,pass(filter_inout) :: init_filter => init_filter_unity
   procedure,pass(filter_inout) :: compute_filter_from_position => compute_filter_unity_position
+  procedure,pass(filter_inout) :: compute_filter_from_position_vectorial => &
+  compute_filter_unity_position_vectorial
 end type filter_unity
 
 contains
@@ -35,8 +37,7 @@ end subroutine init_filter_unity
 !> return the unity filter value or 1
 !> inputs:
 !>   filter_inout: (filter_unity) unity filter
-!>   n_positions:  (integer) number of positions
-!>   pos:          (real8)(n_dimensions) position where the filter value is computed
+!>   pos:          (real8)(n_dimensions) position where the filter weight is computed
 !> outputs:
 !>   filter_inout: (filter_unity) unity filter
 !>   weight:       (real8) filter weight = 1
@@ -51,6 +52,26 @@ subroutine compute_filter_unity_position(filter_inout,pos,weight)
   weight = 1.d0
 end subroutine compute_filter_unity_position
 
+!> return the unity filter value or 1: vectorial version
+!> inputs:
+!>   filter_inout: (filter_unity) unity filter
+!>   n_positions:  (integer) number of positions
+!>   pos:          (real8)(n_dimensions,n_positions) positions where the 
+!>                        filter weights are computed
+!> outputs:
+!>   filter_inout: (filter_unity) unity filter
+!>   weights:      (real8)(n_positions) filter weight = 1
+subroutine compute_filter_unity_position_vectorial(filter_inout,n_positions,pos,weights)
+  implicit none
+  !> inputs-outputs:
+  class(filter_unity),intent(inout) :: filter_inout
+  !> inputs:
+  integer,intent(in) :: n_positions
+  real*8,dimension(filter_inout%n_dimensions,n_positions),intent(in) :: pos
+  !> outputs:
+  real*8,dimension(n_positions),intent(out) :: weights
+  weights = 1.d0
+end subroutine compute_filter_unity_position_vectorial
 !>---------------------------------------------------------
 end module mod_filter_unity
 

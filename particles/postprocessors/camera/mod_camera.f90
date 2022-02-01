@@ -24,7 +24,7 @@ type,abstract,extends(vertices) :: camera
    procedure(int_init_camera),pass(camera_inout),deferred       :: init_camera
    procedure(int_gen_points_lens),pass(camera_inout),deferred   :: generate_points_on_lens_pdf
    procedure(int_reduce_light_img),pass(camera_inout),deferred  :: reduce_light_image
-   procedure(int_phys_struct_funct),pass(camera_inout),deferred :: physical_structure_funct
+   procedure(int_phys_mat_funct),pass(camera_inout),deferred    :: physical_material_funct
    procedure,pass(camera_inout)                                 :: allocate_camera
    procedure,pass(camera_inout)                                 :: deallocate_camera
 end type camera
@@ -119,7 +119,7 @@ interface
   !> outputs:
   !>   camera_inout:   (camera) camera with reduced light
   !>   material_value: (real8) physical camera physical importance
-  subroutine int_phys_struct_funct(camera_inout,x_pos,x_lens_id,&
+  subroutine int_phys_mat_funct(camera_inout,x_pos,x_lens_id,&
   material_value,time_id_in)
     IMPORT :: camera
     implicit none
@@ -131,7 +131,7 @@ interface
     real*8,dimension(camera_inout%n_x),intent(in) :: x_pos
     !> outputs:
     real*8,intent(out)                            :: material_value
-  end subroutine int_phys_struct_funct
+  end subroutine int_phys_mat_funct
 end interface
 
 contains

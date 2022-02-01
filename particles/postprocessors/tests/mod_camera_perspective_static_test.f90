@@ -14,6 +14,8 @@ private
 public :: run_fruit_camera_perspective_static
 
 !> Variable and data types -------------------------
+integer,parameter :: n_int_param=3
+integer,parameter :: n_real_param=8
 integer,parameter :: n_points_per_pixel=11
 integer,parameter :: n_planes=11
 integer,parameter :: n_properties=1
@@ -26,7 +28,7 @@ integer,parameter :: n_pixels_y=512
 integer,parameter :: n_points_on_lens_sol=2345
 integer,parameter :: n_lines_per_spectrum=13
 integer,parameter :: n_spectra=2
-real*8,parameter  :: tol_real8=5.d-16 
+real*8,parameter  :: tol_real8=5.d-15 
 real*8,parameter  :: tol_real8_rel=3.d-6
 real*8,parameter  :: plane_distance=2.5d1
 real*8,dimension(2),parameter :: costheta_interval=(/-1.d0,1.d0/)
@@ -35,6 +37,8 @@ real*8,dimension(2),parameter :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0/)
 real*8,dimension(2),parameter :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0/)
 real*8,dimension(3),parameter :: center_pos_lowbnd=(/-2.d-1,4.d1,-7.d0/)
 real*8,dimension(3),parameter :: center_pos_uppbnd=(/3.4d1,3.d2,5.d0/)
+real*8,dimension(3),parameter :: test_points_lowbnd=(/-7.4d-1,2.9d1,-5.d0/)
+real*8,dimension(3),parameter :: test_points_uppbnd=(/1.4d1,4.5d2,9.d0/)
 real*8,dimension(n_spectra),parameter :: min_wlen=(/3.d0-6,2.5d-7/)
 real*8,dimension(n_spectra),parameter :: max_wlen=(/3.5d0-6,4.2d-7/)
 integer,dimension(:,:,:,:),allocatable :: pixel_ids
@@ -43,6 +47,7 @@ real*8,dimension(n_st_sol)             :: pixel_size_sol
 real*8,dimension(2,n_planes)           :: half_angle_sol
 real*8,dimension(n_x_sol,n_planes)     :: image_plane_coords
 real*8,dimension(n_x_sol,n_planes)     :: pupil_positions
+real*8,dimension(n_x_sol,n_planes)     :: test_points
 real*8,dimension(:,:,:),allocatable    :: points_on_lens
 real*8,dimension(:,:,:),allocatable    :: pdf_points_on_lens
 real*8,dimension(:,:,:,:),allocatable  :: st_point_on_pixels
@@ -50,7 +55,12 @@ real*8,dimension(:,:,:,:),allocatable  :: st_point_on_pixels_sol
 type(camera_perspective_static) :: camera_sol
 type(pinhole_lens)              :: pinhole_sol
 type(spectrum_integrator_2nd)   :: spectrum_sol
+
 !> Interfaces --------------------------------------
+interface compute_cos_angle_two_vectors
+  module procedure compute_cos_angle_two_vectors_origin_points
+end interface compute_cos_angle_two_vectors
+
 contains
 !> Fruit basket ------------------------------------
 !> fruit basket executes all set-up, test and 
@@ -65,6 +75,8 @@ subroutine run_fruit_camera_perspective_static
   call test_image_plane_pixel_size_definitions
   call test_computation_pixel_ids_st_plane_point
   call test_init_camera_perspective_static_pinhole
+  call test_cosine_view_angle_static
+  call test_material_funct_perspective_static
   write(*,'(/A)') "  ... tearing-up: camera perspective static tests"
   call teardown
 end subroutine run_fruit_camera_perspective_static
@@ -74,6 +86,7 @@ end subroutine run_fruit_camera_perspective_static
 subroutine setup()
   use mod_gnu_rng, only: gnu_rng_interval
   implicit none
+  integer :: ii
   real*8,dimension(3) :: center
   !> compute the solution pixel size
   pixel_size_sol = (/1.d0,1.d0/)/real((/n_pixels_x,n_pixels_y/),kind=8)
@@ -87,6 +100,11 @@ subroutine setup()
   call generate_image_planes_variables()
   !> initialise camera
   camera_sol%n_plane_points = n_plane_vertices
+  !> initialise the test points
+  do ii=1,n_planes
+    call gnu_rng_interval(n_x_sol,test_points_lowbnd,&
+    test_points_uppbnd,test_points(:,ii))
+  enddo
 end subroutine setup
 
 !> tearing-down unit test features
@@ -109,8 +127,6 @@ subroutine test_init_camera_perspective_static_pinhole()
   use mod_geometry, only: define_plane_from_half_angles
   implicit none
   !> variables
-  integer,parameter                        :: n_int_param=3
-  integer,parameter                        :: n_real_param=8
   integer,dimension(n_int_param)           :: int_param
   real*8,dimension(n_x_sol)                :: direction_sol,direction_test
   real*8,dimension(n_real_param)           :: real_param
@@ -267,7 +283,6 @@ subroutine test_image_plane_pixel_size_definitions()
   use mod_geometry, only: define_plane_from_half_angles
   implicit none
   !> variables
-  integer,parameter                          :: n_real_param=8
   integer                                    :: ii
   real*8,dimension(n_x_sol)                  :: direction_sol,direction_test
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_sol
@@ -347,6 +362,88 @@ subroutine test_computation_pixel_ids_st_plane_point()
   deallocate(st_point_on_pixels_sol); deallocate(pixel_ids);
 end subroutine test_computation_pixel_ids_st_plane_point
 
+!> test the calculation of the cosinus between the image plane direction and a ray
+subroutine test_cosine_view_angle_static()
+  use mod_geometry,     only: define_vertex_spherical_coord
+  use mod_pinhole_lens, only: pinhole_lens
+  implicit none
+  !> variables
+  type(pinhole_lens)             :: pinhole
+  integer :: ii
+  integer,dimension(n_int_param) :: int_param
+  real*8,dimension(n_x_sol)      :: vertex_1
+  real*8,dimension(n_real_param) :: real_param
+  real*8,dimension(n_planes)     :: cos_view_angle_sol
+  real*8,dimension(n_planes)     :: cos_view_angle_test
+  !> initialisation
+  camera_sol%n_property_vertex = n_properties;
+  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/)
+  call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
+  n_int_param,n_real_param,int_param,real_param)
+  !> test the calculation of the view angle cosinus
+  do ii=1,n_planes
+    !> store plane value in parameters
+    real_param(1:2) = half_angle_sol(:,ii)
+    real_param(3:5) = image_plane_coords(:,ii)
+    real_param(6:8) = pupil_positions(:,ii)
+    !> compute solution
+    call define_vertex_spherical_coord(real_param(3:5),real_param(6:8),vertex_1)
+    call compute_cos_angle_two_vectors(real_param(6:8),vertex_1,test_points(:,ii),cos_view_angle_sol(ii))
+    !> compute test value
+    call pinhole%init_pinhole(n_x_sol,real_param(6:8))
+    call camera_sol%generate_points_on_lens_pdf(pinhole)
+    call camera_sol%define_image_plane_pixel_size(n_real_param,real_param)
+    call camera_sol%cos_view_angle_static(test_points(:,ii),1,cos_view_angle_test(ii))
+  enddo
+  !> check solutions
+  call assert_equals(cos_view_angle_test,cos_view_angle_sol,n_planes,tol_real8,&
+  "Error computation cosine view angle perspective static: cosine view angles mismatch!")
+  !> deallocate camera perspective static
+  call pinhole%deallocate_lens
+  call camera_sol%deallocate_camera_perspective_static
+end subroutine test_cosine_view_angle_static 
+
+!> test the calculation of the physical material function for the perspective static camera
+subroutine test_material_funct_perspective_static()
+  use mod_geometry,     only: define_vertex_spherical_coord
+  use mod_pinhole_lens, only: pinhole_lens
+  implicit none
+  !> variables
+  type(pinhole_lens)             :: pinhole
+  integer :: ii
+  integer,dimension(n_int_param) :: int_param
+  real*8,dimension(n_x_sol)      :: vertex_1
+  real*8,dimension(n_real_param) :: real_param
+  real*8,dimension(n_planes)     :: material_sol
+  real*8,dimension(n_planes)     :: material_test
+  !> initialisation
+  camera_sol%n_property_vertex = n_properties;
+  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/)
+  call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
+  n_int_param,n_real_param,int_param,real_param)
+  !> test the calculation of the view angle cosinus
+  do ii=1,n_planes
+    !> store plane value in parameters
+    real_param(1:2) = half_angle_sol(:,ii)
+    real_param(3:5) = image_plane_coords(:,ii)
+    real_param(6:8) = pupil_positions(:,ii)
+    !> compute solution
+    call define_vertex_spherical_coord(real_param(3:5),real_param(6:8),vertex_1)
+    call compute_cos_angle_two_vectors(real_param(6:8),vertex_1,test_points(:,ii),material_sol(ii))
+    !> compute test value
+    call pinhole%init_pinhole(n_x_sol,real_param(6:8))
+    call camera_sol%generate_points_on_lens_pdf(pinhole)
+    call camera_sol%define_image_plane_pixel_size(n_real_param,real_param)
+    call camera_sol%physical_material_funct(test_points(:,ii),1,material_test(ii),1)
+  enddo
+  !> check solutions
+  call assert_equals(material_test,material_sol,n_planes,tol_real8,&
+  "Error computation physical material funct perspective static: cosine view angles mismatch!")
+  !> deallocate camera perspective static
+  call pinhole%deallocate_lens
+  call camera_sol%deallocate_camera_perspective_static
+end subroutine test_material_funct_perspective_static
+
 !> Tools -------------------------------------------
 !> sample the image plane variables
 subroutine generate_image_planes_variables()
@@ -367,6 +464,19 @@ subroutine generate_image_planes_variables()
     center_pos_uppbnd,pupil_positions(:,ii))
   enddo
 end subroutine generate_image_planes_variables
+
+!> compute angle between two vectors with same origin
+subroutine compute_cos_angle_two_vectors_origin_points(&
+origin,vertex_1,vertex_2,cos_angle)
+  implicit none
+  !> inputs:
+  real*8,dimension(n_x_sol) :: origin,vertex_1,vertex_2
+  !> outputs:
+  real*8 :: cos_angle
+  !> comput angle
+  cos_angle = dot_product(vertex_2-origin,vertex_1-origin)
+  cos_angle = cos_angle/(norm2(vertex_2-origin)*norm2(vertex_1-origin))
+end subroutine compute_cos_angle_two_vectors_origin_points
 
 !>--------------------------------------------------
 end module mod_camera_perspective_static_test

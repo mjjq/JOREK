@@ -7,7 +7,7 @@ use constants
 use tr_module 
 use data_structure
 use grid_xpoint_data
-use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint, n_pol
+use phys_module, only: xcase, RZ_grid_inside_wall, force_central_node, fix_axis_nodes, R_geo, Z_geo, xpoint, n_pol, treat_axis
 use mod_eqdsk_tools
 use mod_interp, only: interp_RZ, interp
 use mod_element_rtree
@@ -250,21 +250,26 @@ if (include_xpoint) then
 endif
 
 !-------------------------------- Empty Axis
-if (include_axis) then
-  if (include_xpoint) then
-    if (xcase .ne. DOUBLE_NULL) then
-      do j=5,4+n_tht-1
-        newnode_list%node(j)%values(1,2:4,1) = 0.d0
-      enddo
+if(treat_axis)then
+  ! do nothing here. For axis treatment it is not necessory
+  ! that 2nd and 4th DoF should be zero.
+else
+  if (include_axis) then
+    if (include_xpoint) then
+      if (xcase .ne. DOUBLE_NULL) then
+        do j=5,4+n_tht-1
+          newnode_list%node(j)%values(1,2:4,1) = 0.d0
+        enddo
+      else
+        do j=9,8+n_tht-2
+          newnode_list%node(j)%values(1,2:4,1) = 0.d0
+        enddo
+      endif
     else
-      do j=9,8+n_tht-2
+      do j=2,n_tht
         newnode_list%node(j)%values(1,2:4,1) = 0.d0
       enddo
     endif
-  else
-    do j=2,n_tht
-      newnode_list%node(j)%values(1,2:4,1) = 0.d0
-    enddo
   endif
 endif
 
@@ -357,7 +362,7 @@ index = 0
 do i=1,node_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
-  if (fix_axis_nodes .and. include_axis) then
+  if ((fix_axis_nodes .or. treat_axis) .and. include_axis) then
     if (include_xpoint) then
       if (xcase .ne. DOUBLE_NULL) then
         if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
@@ -392,6 +397,28 @@ do i=1,node_list%n_nodes
       else
         if ((i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(1)%index(1)
+          index = index - 1
+        endif
+      endif
+    endif
+    
+    ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes.    
+    if (treat_axis .and. include_axis) then
+      if (include_xpoint) then
+        if (xcase .ne. DOUBLE_NULL) then
+          if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.le.n_order+1)) then
+            node_list%node(i)%index(k) = node_list%node(5)%index(k)
+            index = index - 1
+          endif
+        else
+          if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.le.n_order+1)) then
+            node_list%node(i)%index(k) = node_list%node(9)%index(k)
+            index = index - 1
+          endif
+        endif
+      else
+        if ((i .gt. 1) .and. (i .le. n_tht) .and. (k.le.n_order+1)) then
+          node_list%node(i)%index(k) = node_list%node(1)%index(k)
           index = index - 1
         endif
       endif

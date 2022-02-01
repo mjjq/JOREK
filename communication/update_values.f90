@@ -14,7 +14,7 @@ implicit none
 integer,                  intent(in)    :: my_id
 type (type_element_list), intent(inout) :: element_list
 type (type_node_list),    intent(inout) :: node_list
-real*8,                   intent(in)    :: RHS(*)
+real*8,                   intent(inout) :: RHS(*)
 
 ! --- local variables
 real*8, dimension(4,4)	 :: H, H_s, H_t, H_st
@@ -27,6 +27,10 @@ integer, dimension(2)    :: parent
 integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
 integer :: i_v(n_var), i_harm(n_tor)
+
+! Since the axis treatment solves for new degrees of freedom, we need to 
+! transforms degrees of freedom to old ones.
+if(treat_axis) call new_to_old_dofs_on_the_axis(node_list, RHS)
 
 i_tor_min = 1
 if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
@@ -296,19 +300,6 @@ if (my_id .eq. 0) then
   
 enddo !(i)
 
-endif
-
-! n_tor_local = i_tor_max - i_tor_min + 1
-if(treat_axis) then
-   do i = 1, n_var
-      i_v(i) = i
-   enddo
-   !if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))
-   do i = 1, n_tor ! i_tor_max
-      i_harm(i) = i
-   enddo
-   !call new_to_old_dof_on_the_axis(node_list, i_v, n_var, i_harm, n_tor_local, .true.)
-   call new_to_old_dof_on_the_axis(node_list, i_v, n_var, i_harm, n_tor, .true.)
 endif
 
 call broadcast_nodes(my_id,node_list)

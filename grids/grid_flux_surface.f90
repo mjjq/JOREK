@@ -9,7 +9,6 @@ use mod_neighbours, only: update_neighbours
 use mod_interp
 use phys_module, only: force_central_node, fix_axis_nodes, treat_axis
 use equil_info
-use mod_axis_treatment
 
 implicit none
 
@@ -452,7 +451,7 @@ do i=1,nrnew
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    
-      ! Share 4 DoFs of all nodes on the grid axis and flag axis nodes
+      ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes.
       if(treat_axis)then
 
          if(i.eq.1)then

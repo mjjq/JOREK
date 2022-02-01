@@ -185,8 +185,6 @@ if (my_id == 0) then
   
   endif   !--- end type -1 (GS equilibrium)
   
-  if(treat_axis) call new_to_old_dof_on_the_axis(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
-
   do ife =1, element_list%n_elements
   
     element = element_list%element(ife)
@@ -238,6 +236,7 @@ if (my_id == 0) then
   
     endif  
 
+    ! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.    
     if( (treat_axis) .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
       call transform_basis_for_axis_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
     endif
@@ -567,6 +566,10 @@ if (my_id == 0) then
   call tr_debug_write("mumps_par%N",int(mumps_par%N))
   call tr_debug_write("mumps_par%NZ",int(mumps_par%NZ))
   
+  ! Since the axis treatment solves for new degrees of freedom, we need to
+  ! transforms degrees of freedom to old ones.
+  if(treat_axis) call new_to_old_dofs_poisson_on_the_axis(node_list, mumps_par%RHS)
+ 
   do i=1,node_list%n_nodes
   
     if ((.not. refinement) .or. (refinement .and. (.not. node_list%node(i)%constrained)) ) then
@@ -595,8 +598,6 @@ if (my_id == 0) then
       enddo    ! order
     endif      ! refinement, constrained
   enddo        ! nodes
-  
-  if(treat_axis) call new_to_old_dof_on_the_axis(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1, .true.)
   
   !*************************************************************************
   ! Solutions at constrained nodes                                         *

@@ -254,7 +254,9 @@ required = 0
     write(*,*) 'WARNING :'
     write(*,*) 'If using treat_axis = .true. then'
     write(*,*) 'fix_axis_nodes and force_central_nodes both MUST be .false.'
-    stop
+    write(*,*) 'Setting fix_axis_nodes and force_central_nodes to .false.'    
+    force_central_nodes = .false.
+    fix_axis_nodes      = .false.
   endif
 
   ! --- Initialize the vacuum part.
@@ -636,14 +638,6 @@ required = 0
 
       if (my_id == 0) then
 
-        ! WARNING for axis treatment
-        if(treat_axis.and. (grid_to_wall .or. (xcase .ge. 2)))then
-          write(*,*) 'Grid axis treatment has not yet implemented for'
-          write(*,*) 'grid_to_wall and/or more than one xpoint grids.'
-          write(*,*) 'Aborting...'
-          stop
-        endif
-        
         if (xpoint)  then
 
           if ( (xcase .ge. UPPER_XPOINT) .or. (grid_to_wall .and. (n_wall_blocks .gt. 0)) .or. RZ_grid_inside_wall ) then

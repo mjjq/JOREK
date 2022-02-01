@@ -8,7 +8,6 @@ use mod_parameters
 use data_structure
 use mod_neighbours, only: update_neighbours
 use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node, treat_axis, n_flux
-use mod_axis_treatment
 
 implicit none
 
@@ -302,8 +301,7 @@ do i=1,nr
    node_list%node(index)%axis_node = .false.
    if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
 
-   ! Share 4 DoFs of all nodes on the grid axis and flag axis nodes. This should done only if non-flux aligned
-   ! grid to be used for simulations e.g. VDEs
+   ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes. 
    if(treat_axis .and. (.not. doing_polar_square) .and. (n_flux .le. 1))then
 
       if(i.eq.1)then

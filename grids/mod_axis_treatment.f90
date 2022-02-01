@@ -2,8 +2,7 @@ module mod_axis_treatment
 
 contains
 
-! This subroutine transforms basis functions in RHS and ELM for grid-axis-elements.
-! This is done to achieve C1 continuity in (R, Z)-plane.
+! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.
 subroutine transform_basis_for_axis_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
 use data_structure
 use phys_module
@@ -88,8 +87,7 @@ enddo ! loop over iv
 
 end subroutine transform_basis_for_axis_element_poisson
 
-! This subroutine transforms basis functions in RHS and ELM for grid-axis-elements.
-! This is done to achieve C1 continuity in (R, Z)-plane.
+! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.
 subroutine transform_basis_for_axis_element(nodes, ELM, RHS, i_v, n_v, i_n, n_harm)
 use data_structure
 use phys_module
@@ -194,88 +192,76 @@ enddo ! loop over iv
 
 end subroutine transform_basis_for_axis_element
 
-subroutine new_to_old_dof_on_the_axis(node_list, i_v, n_v, i_n, n_harm, transform_deltas)
+! Since the axis treatment solves for new degrees of freedom, we need to
+! transforms degrees of freedom to old ones.
+subroutine new_to_old_dofs_poisson_on_the_axis(node_list, RHS)
 use data_structure
 use phys_module
 implicit none
-type(type_node_list),    intent(inout) :: node_list
-integer,         intent(in)    :: n_v, i_v(n_v), n_harm, i_n(n_harm)
-logical,         intent(in)    :: transform_deltas
-
-integer :: vg, dof2, dof4, in, ivar
+type(type_node_list),    intent(in) :: node_list
+real*8,            intent(inout)    :: RHS(*)
+integer :: i, k, in
+integer :: dof2, dof4
+integer :: index2, index4
 real*8  :: Pmat(2,2), vec(2)
 
 dof2 = 2 ; dof4 = 4
 
-do vg = 1, node_list%n_nodes
+do i = 1, node_list%n_nodes
+  if ( node_list%node(i)%axis_node ) then
 
-  if ( node_list%node(vg)%axis_node ) then
+    Pmat(1,1) = node_list%node(i)%x(1,dof2,1)  ;  Pmat(1,2) = node_list%node(i)%x(1,dof2,2)
+    Pmat(2,1) = node_list%node(i)%x(1,dof4,1)  ;  Pmat(2,2) = node_list%node(i)%x(1,dof4,2)
 
-    Pmat(1,1) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(1,2) = node_list%node(vg)%x(1,dof2,2)
-    Pmat(2,1) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(2,2) = node_list%node(vg)%x(1,dof4,2)
+    index2 = node_list%node(i)%index(dof2)
+    index4 = node_list%node(i)%index(dof4)
 
-#if fullmhd
-    vec(1) = node_list%node(vg)%Fprof_eq(dof2)
-    vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+    vec(1) = RHS(index2)
+    vec(2) = RHS(index4)
     vec    = matmul(Pmat, vec)
-    node_list%node(vg)%Fprof_eq(dof2) = vec(1)
-    node_list%node(vg)%Fprof_eq(dof4) = vec(2) 
-
-    vec(1) = node_list%node(vg)%psi_eq(dof2)
-    vec(2) = node_list%node(vg)%psi_eq(dof4)
-    vec    = matmul(Pmat, vec)
-    node_list%node(vg)%psi_eq(dof2) = vec(1)
-    node_list%node(vg)%psi_eq(dof4) = vec(2)
-#elif altcs
-    vec(1) = node_list%node(vg)%psi_eq(dof2)
-    vec(2) = node_list%node(vg)%psi_eq(dof4)
-    vec    = matmul(Pmat, vec)
-    node_list%node(vg)%psi_eq(dof2) = vec(1)
-    node_list%node(vg)%psi_eq(dof4) = vec(2)    
-#endif
-
-    do ivar = 1, n_v
-
-#if fullmhd    
-      if(i_v(ivar) == 710)then
-        vec(1) = node_list%node(vg)%Fprof_eq(dof2)
-        vec(2) = node_list%node(vg)%Fprof_eq(dof4)
-        vec    = matmul(Pmat, vec)
-        node_list%node(vg)%Fprof_eq(dof2) = vec(1)
-        node_list%node(vg)%Fprof_eq(dof4) = vec(2)
-      elseif(i_v(ivar) == 711)then
-        vec(1) = node_list%node(vg)%psi_eq(dof2)
-        vec(2) = node_list%node(vg)%psi_eq(dof4)
-        vec    = matmul(Pmat, vec)
-        node_list%node(vg)%psi_eq(dof2) = vec(1)
-        node_list%node(vg)%psi_eq(dof4) = vec(2)
-      endif
-#endif
-
-    do in = 1, n_harm
-       vec(1) = node_list%node(vg)%values(i_n(in),dof2,i_v(ivar))
-       vec(2) = node_list%node(vg)%values(i_n(in),dof4,i_v(ivar))
-       vec    = matmul(Pmat, vec)
-       node_list%node(vg)%values(i_n(in),dof2,i_v(ivar)) = vec(1)
-       node_list%node(vg)%values(i_n(in),dof4,i_v(ivar)) = vec(2)
-    enddo
-    enddo
-
-    if(transform_deltas)then
-    do ivar = 1, n_v
-    do in = 1, n_harm            
-       vec(1) = node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar))
-       vec(2) = node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar))
-       vec    = matmul(Pmat, vec)
-       node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar)) = vec(1)
-       node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar)) = vec(2)
-    enddo
-    enddo
-    endif
+    RHS(index2) = vec(1)
+    RHS(index4) = vec(2)
 
   endif
-
 enddo
-end subroutine new_to_old_dof_on_the_axis
+end subroutine new_to_old_dofs_poisson_on_the_axis
+
+! Since the axis treatment solves for new degrees of freedom, we need to
+! transforms degrees of freedom to old ones.
+subroutine new_to_old_dofs_on_the_axis(node_list, RHS)
+use data_structure
+use phys_module
+implicit none
+type(type_node_list),    intent(in) :: node_list
+real*8,            intent(inout)    :: RHS(*)
+integer :: i, k, in
+integer :: dof2, dof4
+integer :: index_node2, index_node4, index2, index4
+real*8  :: Pmat(2,2), vec(2)
+
+dof2 = 2 ; dof4 = 4
+do i = 1, node_list%n_nodes
+  if ( node_list%node(i)%axis_node ) then
+    Pmat(1,1) = node_list%node(i)%x(1,dof2,1)  ;  Pmat(1,2) = node_list%node(i)%x(1,dof2,2)
+    Pmat(2,1) = node_list%node(i)%x(1,dof4,1)  ;  Pmat(2,2) = node_list%node(i)%x(1,dof4,2)
+    !do j=1,n_order+1
+    index_node2 = node_list%node(i)%index(dof2)
+    index_node4 = node_list%node(i)%index(dof4)    
+    do k=1,n_var
+      do in=1,n_tor
+        index2 = n_tor*n_var * (index_node2 - 1) + n_tor*(k-1) + in
+        index4 = n_tor*n_var * (index_node4 - 1) + n_tor*(k-1) + in         
+        vec(1) = RHS(index2)
+        vec(2) = RHS(index4)
+        vec    = matmul(Pmat, vec)
+        RHS(index2) = vec(1)
+        RHS(index4) = vec(2)
+      enddo
+    enddo
+    !enddo
+  endif
+enddo
+end subroutine new_to_old_dofs_on_the_axis
+
 
 end module mod_axis_treatment

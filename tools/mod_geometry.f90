@@ -7,6 +7,7 @@ private
 public :: compute_global_cart_coord_plane_points
 public :: compute_plane_line_intersection_cart
 public :: define_plane_from_half_angles
+public :: define_vertex_spherical_coord
 
 !> Interfaces -------------------------------------------------
 interface compute_global_cart_coord_plane_points
@@ -22,6 +23,11 @@ interface define_plane_from_half_angles
   module procedure define_direction_plane_from_half_angles
   module procedure define_standard_plane_from_half_angles
 end interface define_plane_from_half_angles
+
+interface define_vertex_spherical_coord
+  module procedure define_vertex_spherical_coord_standard
+  module procedure define_vertex_spherical_coord_origin
+end interface define_vertex_spherical_coord
 
 contains
 !> Procedures -------------------------------------------------
@@ -202,6 +208,45 @@ subroutine define_standard_plane_from_half_angles(half_angles,pp)
   pp(:,2) = (/tan_angles(1),tan_angles(2),1.d0/)
   pp(:,3) = (/-tan_angles(1),-tan_angles(2),1.d0/)
 end subroutine define_standard_plane_from_half_angles
+
+!> define vertex given its spherical coordinates and an origin
+!> inputs:
+!>   rthetaphi:   (real8)(3) spherical coordinates of the
+!>                plane midpoin: rthetaphi(1): distance
+!>                               rthetaphi(2): colatitude
+!>                               rthetaphi(3): azimuth
+!>   origin:      (real8)(3) position of the sphere origin
+!> outputs: 
+!>   vertex:      (real8)(3) vertex
+subroutine define_vertex_spherical_coord_origin(rthetaphi,origin,vertex)
+  implicit none
+  !> inputs:
+  real*8,dimension(3),intent(in)  :: rthetaphi,origin
+  !> outputs:
+  real*8,dimension(3),intent(out) :: vertex
+  !> compute vertex
+  call define_vertex_spherical_coord_standard(rthetaphi,vertex)
+  vertex = origin + vertex
+end subroutine define_vertex_spherical_coord_origin
+
+!> define vertex its the spherical coordinates
+!> inputs:
+!>   rthetaphi:   (real8)(3) spherical coordinates of the
+!>                plane midpoin: rthetaphi(1): distance
+!>                               rthetaphi(2): colatitude
+!>                               rthetaphi(3): azimuth
+!> outputs: 
+!>   vertex:      (real8)(3) vertex
+subroutine define_vertex_spherical_coord_standard(rthetaphi,vertex)
+  implicit none
+  !> inputs:
+  real*8,dimension(3),intent(in)  :: rthetaphi
+  !> outputs:
+  real*8,dimension(3),intent(out) :: vertex
+  !> compute vertex
+  vertex = rthetaphi(1)*(/cos(rthetaphi(3)),sin(rthetaphi(3)),cos(rthetaphi(2))/)
+  vertex(1:2) = vertex(1:2)*sin(rthetaphi(2))
+end subroutine define_vertex_spherical_coord_standard
 
 !>-------------------------------------------------------------
 end module mod_geometry

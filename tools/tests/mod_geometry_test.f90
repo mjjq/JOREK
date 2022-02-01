@@ -56,6 +56,8 @@ subroutine run_fruit_geometry()
   call test_define_standard_plane_from_half_angle
   call test_define_direction_plane_from_half_angle
   call test_define_direction_plane_from_half_angle_origin
+  call test_vertex_spherical_coord_standard
+  call test_vertex_spherical_coord_origin
   write(*,'(/A)') "  ... tearing-down: geometry tests"
 end subroutine run_fruit_geometry
 
@@ -123,6 +125,50 @@ subroutine setup_plane_definition_from_half_angle()
 end subroutine setup_plane_definition_from_half_angle
 
 !> Tests --------------------------------------------------
+!> test the procedure for computing vertex given some spherical
+!> coordinates
+subroutine test_vertex_spherical_coord_standard()
+  use constants,    only: TWOPI
+  use mod_geometry, only: define_vertex_spherical_coord
+  implicit none
+  !> variables
+  integer :: ii
+  real*8,dimension(3)          :: vertex_test
+  real*8,dimension(3,n_planes) :: rthetaphi_test
+  !> execute tests
+  do ii=1,n_planes
+    call define_vertex_spherical_coord(rthetaphi_sol(:,ii),vertex_test)
+    rthetaphi_test(1,ii) = norm2(vertex_test)
+    rthetaphi_test(2:3,ii) = (/acos(vertex_test(3)/rthetaphi_test(1,ii)),&
+    atan2(vertex_test(2),vertex_test(1))/)
+  enddo
+  where(rthetaphi_test(3,:).lt.0.d0) rthetaphi_test(3,:) = TWOPI + rthetaphi_test(3,:)
+  call assert_equals(rthetaphi_test,rthetaphi_sol,3,n_planes,tol_real8,&
+  "Error vertex spherical coordinates standard: spherical coord. mismatch!")
+end subroutine test_vertex_spherical_coord_standard
+
+!> test the procedure for computing the vertex give some spherical
+!> coordinates and origin vertices
+subroutine test_vertex_spherical_coord_origin()
+  use mod_geometry, only: define_vertex_spherical_coord
+  implicit none
+  !> variables
+  integer :: ii
+  real*8,dimension(3)          :: vertex_test
+  real*8,dimension(3,n_planes) :: rthetaphi_test
+  !> execute tests
+  do ii=1,n_planes
+    call define_vertex_spherical_coord(rthetaphi_sol(:,ii),origins_sol(:,ii),vertex_test)
+    vertex_test = vertex_test - origins_sol(:,ii)
+    rthetaphi_test(1,ii) = norm2(vertex_test)
+    rthetaphi_test(2:3,ii) = (/acos(vertex_test(3)/rthetaphi_test(1,ii)),&
+    atan2(vertex_test(2),vertex_test(1))/)
+  enddo
+  where(rthetaphi_test(3,:).lt.0.d0) rthetaphi_test(3,:) = TWOPI + rthetaphi_test(3,:)
+  call assert_equals(rthetaphi_test,rthetaphi_sol,3,n_planes,tol_real8,&
+  "Error vertex spherical coordinates origins: spherical coord. mismatch!")
+end subroutine test_vertex_spherical_coord_origin
+
 !> test the procedure for finding the intersection between
 !> a line and a plane
 subroutine test_compute_test_line_intersect_cart_points()

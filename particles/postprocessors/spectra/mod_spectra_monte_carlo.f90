@@ -169,19 +169,19 @@ subroutine generate_uniform_rng_spectrum(spectrum,rngs)
 !> inputs:
 !>   spectrum:     (spectrum_rng_uniform) generates and integrates 
 !>                 variables along a uniform spectral distribution
-!>   uniform_data: (real8)(n_points,n_spectra) data obtained from
+!>   dat:          (real8)(n_points,n_spectra) data obtained from
 !>                 a uniform spectral distribution
 !> outputs:
 !>   spectrum:  (spectrum_rng_uniform) generates and integrates 
 !>              variables along a uniform spectral distribution
 !>   integrals: (n_spectra) integrals of uniform_data for each spectrum
-subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
+subroutine integrate_rng_uniform(spectrum,dat,integrals)
   !$ use omp_lib
   implicit none
   !> inputs-outputs
   class(spectrum_rng_uniform),intent(inout) :: spectrum
   !> inputs
-  real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(in) :: uniform_data
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(in) :: dat
   !> outputs
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
@@ -189,20 +189,20 @@ subroutine integrate_rng_uniform(spectrum,uniform_data,integrals)
   !> integrate
   thread_id = 0
   n_threads = 1
-  !$omp parallel default(private) shared(spectrum,uniform_data,residual_id) &
+  !$omp parallel default(private) shared(spectrum,dat,residual_id) &
   !$omp firstprivate(n_threads) reduction(+:integrals)
   !$ thread_id = omp_get_thread_num()
   !$ n_threads = omp_get_num_threads()
   n_points_per_thread = spectrum%n_points/n_threads
   residual_id = n_points_per_thread*n_threads
   do ii=1,spectrum%n_spectra
-    integrals(ii) = integrals(ii) + sum(uniform_data(&
+    integrals(ii) = integrals(ii) + sum(dat(&
     thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
   enddo 
   !$omp end parallel
   if(residual_id.lt.spectrum%n_points) then
     do ii=1,spectrum%n_spectra
-      integrals(ii) = integrals(ii) + sum(uniform_data(residual_id+1:spectrum%n_points,ii))
+      integrals(ii) = integrals(ii) + sum(dat(residual_id+1:spectrum%n_points,ii))
     enddo
   endif
   integrals = integrals*spectrum%i_pdf/spectrum%n_points

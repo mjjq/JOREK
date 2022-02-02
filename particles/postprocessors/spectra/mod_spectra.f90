@@ -15,9 +15,31 @@ type,abstract :: spectrum_base
   !> wave lengths or colors
   real*8,dimension(:,:),allocatable :: points
   contains
-  procedure,pass(spectrum) :: allocate_spectrum_base
-  procedure,pass(spectrum) :: deallocate_spectrum_base
+  procedure(int_integral),pass(spectrum),deferred :: integrate_data
+  procedure,pass(spectrum)                        :: allocate_spectrum_base
+  procedure,pass(spectrum)                        :: deallocate_spectrum_base
 end type spectrum_base
+
+!> Interfaces ---------------------------------------
+interface
+  !> interface of the procedure used for integrating spectral data
+  !> inputs:
+  !>   spectrum: (spectrum_base) spectrum object
+  !>   dat:      (n_points,n_intervals) spectral data to be integrated
+  !> outputs:
+  !>   spectrum:  (spectrum_base) spectrum object
+  !>   integrals: (n_spectra) integral value
+  subroutine int_integral(spectrum,dat,integrals)
+  IMPORT :: spectrum_base
+  implicit none
+  !> inputs-outputs
+  class(spectrum_base),intent(inout) :: spectrum
+  !> inputs:
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(in) :: dat
+  !> outputs:
+  real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
+  end subroutine int_integral
+end interface
 
 contains
 !> Procedures spectrum base -------------------------

@@ -147,19 +147,19 @@ end subroutine generate_midpoint_spectra
 !> inputs:
 !>   spectrum: (spectrum_integrator_2nd) generate and integrated
 !>             variables using the central point rule
-!>   midpoint: (real8)(n_points,n_spectra) integrand values evaluated
+!>   dat:      (real8)(n_points,n_spectra) integrand values evaluated
 !>             at the mid-point of each interval
 !> outputs:
 !>   spectrum:  (spectrum_integrator_2nd) generate and integrated
 !>              variables using the central point rule
 !>   integrals: (real8)(n_spectra) integrals of midpoint data for each spectrum
-subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
+subroutine integrate_spectrum_rectangle(spectrum,dat,integrals)
   !$ use omp_lib
   implicit none
   !> input-outputs
   class(spectrum_integrator_2nd),intent(inout) :: spectrum
   !> inputs
-  real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(in) :: midpoint_data
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(in) :: dat
   !> outputs
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
@@ -168,21 +168,20 @@ subroutine integrate_spectrum_rectangle(spectrum,midpoint_data,integrals)
   thread_id = 0
   n_threads = 1
   integrals = 0.d0
-  !$omp parallel default(private) shared(spectrum,midpoint_data,residual_id) &
+  !$omp parallel default(private) shared(spectrum,dat,residual_id) &
   !$omp firstprivate(n_threads) reduction(+:integrals)
-  ! !$omp firstprivate(n_threads) lastprivate(residual_id) reduction(+:integrals)
   !$ n_threads = omp_get_num_threads()
   !$ thread_id = omp_get_thread_num()
   n_points_per_thread = spectrum%n_points/n_threads
   residual_id = spectrum%n_points - n_points_per_thread*n_threads
   do ii=1,spectrum%n_spectra
-    integrals(ii) = integrals(ii) + sum(midpoint_data(&
+    integrals(ii) = integrals(ii) + sum(dat(&
     thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
   enddo
   !$omp end parallel
   if(residual_id.gt.0) then
     do ii=1,spectrum%n_spectra
-      integrals(ii) = integrals(ii) + sum(midpoint_data(&
+      integrals(ii) = integrals(ii) + sum(dat(&
       spectrum%n_points-residual_id+1:spectrum%n_points,ii))
     enddo
   endif

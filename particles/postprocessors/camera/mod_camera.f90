@@ -28,6 +28,7 @@ type,abstract,extends(vertices) :: camera
    procedure(int_ray_plane_inter),pass(camera_inout),deferred   :: find_ray_image_plane_intersection
    procedure,pass(camera_inout)                                 :: allocate_camera
    procedure,pass(camera_inout)                                 :: deallocate_camera
+   procedure,pass(camera_inout)                                 :: compute_images
 end type camera
 
 !> Interfaces ------------------------------------------------------
@@ -213,5 +214,53 @@ subroutine deallocate_camera(camera_inout)
   camera_inout%n_pixels_spectra = 0; camera_inout%exposure_time = 0.d0;
 end subroutine deallocate_camera
 
+!> procedure used for the rendering of images
+!> inputs:
+!>   camera_inout:         (camera) initialised camera perspective static
+!>   light_inout:          (light_vertices) initialised particle light vertices
+!>   spectra_inout:        (spectrum_inout) camera spectrum object
+!>   filter_image_inout:   (filter) 2d image plane filter
+!>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filters
+!>   filter_time_inout:    (filter) filter in time
+!>   rank:                 (integer) mpi rank
+!>   ierr:                 (integer) error for the mpi procedures
+!> outputs:
+!>   camera_inout:         (camera) camera perspective static with reduced light
+!>   light_inout:          (light_vertices) initialised particle light vertices
+!>   spectra_inout:        (spectrum_inout) camera spectrum object
+!>   filter_image_inout:   (filter) 2d image plane filter
+!>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filters
+!>   filter_time_inout:    (filter) filter in time
+!>   images:
+!>   ierr:                 (integer) error for the mpi procedures
+subroutine compute_images(camera_inout,light_inout,spectra_inout,&
+  filter_image_inout,filter_spectra_inout,filter_time_inout,rank,&
+  images,ierr)
+  use mod_light_vertices, only: light_vertices
+  use mod_spectra,        only: spectrum_base
+  use mod_filter,         only: filter
+  implicit none
+  !> inputs-outputs:
+  class(camera),intent(inout)                                    :: camera_inout
+  class(light_vertices),intent(inout)                            :: light_inout
+  class(spectrum_base),intent(inout)                             :: spectra_inout
+  class(filter),intent(inout)                                    :: filter_image_inout
+  class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
+  class(filter),intent(inout)                                    :: filter_time_inout
+  integer,intent(inout)                                          :: ierr
+  !> inputs:
+  integer,intent(in) :: rank
+  !> outputs:
+  real*8,dimension(camera_inout%n_pixels_spectra(1),&
+  camera_inout%n_pixels_spectra(2),camera_inout%n_pixels_spectra(3),&
+  camera_inout%n_times),intent(out) :: images
+
+  !> reduce all lights contribution
+  call camera_inout%reduce_light_image(light_inout,spectra_inout,&
+  filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ierr)
+  !> generate images
+  if(rank.eq.0) &
+  images = camera_inout%pixel_intensities(:,1,:,:,:)/camera_inout%pixel_intensities(:,2,:,:,:)
+end subroutine compute_images
 !>------------------------------------------------------------------
 end module mod_camera

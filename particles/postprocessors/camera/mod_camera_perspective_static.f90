@@ -64,9 +64,15 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
   class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
   class(filter),intent(inout)                                    :: filter_time_inout
   !> variables
+  logical :: intersect
   integer :: ii,jj,kk,pp,qq
-  real*8 :: material_value
+  integer,dimension(2) :: i_pixel
+  real*8  :: material_value,pixel_filter_weight,visibility,geometry
+  real*8,dimension(2) :: pixel_coords
+  real*8,dimension(3) :: plane_line_coords
   real*8,dimension(light_inout%n_times) :: light_time_weights !< time filter
+  real*8,dimension(spectra_inout%n_spectra) :: integrated_irradiance
+  real*8,dimension(spectra_inout%n_spectra) :: integral_spectral_weights
   real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_weights !< spectral filter
   real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
 
@@ -77,6 +83,7 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
   do ii=1,spectra_inout%n_spectra
     call filter_spectra_inout(ii)%compute_filter_from_position_vectorial(&
     spectra_inout%n_points,spectra_inout%points(:,ii),spectral_weights(:,ii))
+    call spectra_inout%integrate_data(spectral_weights(:,ii),integral_spectral_weights(ii))
   enddo
 
   !> loop on the points on lens
@@ -89,16 +96,29 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
         call camera_inout%physical_material_funct(light_inout%x(:,kk,jj),ii,material_value)
         if(material_value.le.0.d0) cycle
         !> compute the intersection of the camera-light ray with the image plane 
-
+        call camera_inout%find_ray_image_plane_intersection(light_inout%x(:,kk,jj),ii,&
+        intersect,plane_line_coords)
+        if(.not.intersect) cycle
         !> compute the intersection point pixel coordinates
-        !> compute the geometry and visibility functions
+        call camera_inout%plane_to_pixel_local_coord(plane_line_coords(1:2),&
+        i_pixel,pixel_coords)
         !> compute the pixel filter weight
+        call filter_image_inout%compute_filter_from_position(pixel_coords,pixel_filter_weight)
+        !> compute the geometry and visibility functions
+        call camera_inout%visibility_geometry_funct(light_inout,1,jj,ii,kk,visibility,geometry)
         !> compute the spectral irradiance
         call light_inout%spectral_irradiance(spectra_inout,jj,kk,camera_inout%x(:,ii,1),&
         spectral_irradiance)
         !> integrate the weighted spectral irradiance for each spectral interval
+        call spectra_inout%integrate_data(spectral_weights*spectral_irradiance,integrated_irradiance)
         !> accumulate the irradiance of the pixel
+        camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) = &
+        camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) + &
+        light_time_weights(jj)*pixel_filter_weight*integrated_irradiance
         !> accumulate the overall filter functions of the pixel
+        camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) = &
+        camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) + &
+        light_time_weights(jj)*pixel_filter_weight*integral_spectral_weights(ii)
       enddo
     enddo
   enddo

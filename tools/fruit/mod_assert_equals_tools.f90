@@ -519,7 +519,7 @@ n_values_2,n_values_3,n_values_4,n_values_5,array_test,value_sol,message)
   !> inputs:
   integer,intent(in) :: n_values_1,n_values_2,n_values_3,n_values_4,n_values_5
   real*8,intent(in) :: value_sol
-  real*8,dimension(:,:,:,:),allocatable,intent(in) :: array_test
+  real*8,dimension(:,:,:,:,:),allocatable,intent(in) :: array_test
   character(len=*),intent(in) :: message
   !> test
   call assert_true(allocated(array_test),trim(message//" not allocated!"))

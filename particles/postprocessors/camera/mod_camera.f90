@@ -18,8 +18,8 @@ type,abstract,extends(vertices) :: camera
    !> number of spectra and pixels
    integer,dimension(3) :: n_pixels_spectra
    real*8               :: exposure_time !< exposure time for each camera frame
-   !> array containing the pixel intensity per each time
-   real*8,dimension(:,:,:,:),allocatable :: pixel_intensities
+   !> array containing the pixel intensity and filter values per each time
+   real*8,dimension(:,:,:,:,:),allocatable :: pixel_intensities
   contains
    procedure(int_init_camera),pass(camera_inout),deferred       :: init_camera
    procedure(int_gen_points_lens),pass(camera_inout),deferred   :: generate_points_on_lens_pdf
@@ -185,7 +185,7 @@ n_pixels_x,n_pixels_y,n_spectra)
   !> allocate camera
   if(allocated(camera_inout%pixel_intensities)) &
   deallocate(camera_inout%pixel_intensities)
-  allocate(camera_inout%pixel_intensities(n_spectra,&
+  allocate(camera_inout%pixel_intensities(n_spectra,2,&
   n_pixels_x,n_pixels_y,n_times))
   camera_inout%pixel_intensities = 0.d0; camera_inout%exposure_time=0.d0;
   camera_inout%n_pixels_spectra = (/n_spectra,n_pixels_x,n_pixels_y/)

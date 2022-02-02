@@ -88,6 +88,8 @@ interface
   !>   filter_image_inout:   (filter) 2d image plane filter
   !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filter
   !>   filter_time_inout:    (filter) filter in time
+  !>   rank:                 (integer) mpi rank
+  !>   ierr:                 (integer) error for the mpi procedures
   !> outputs:
   !>   camera_inout:         (camera) camera with reduced light
   !>   light_inout:          (light_vertices) initialised particle light vertices
@@ -95,8 +97,9 @@ interface
   !>   filter_image_inout:   (filter) 2d image plane filter
   !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filter
   !>   filter_time_inout:    (filter) filter in time
+  !>   ierr:                 (integer) error for the mpi procedures
   subroutine int_reduce_light_img(camera_inout,light_inout,spectra_inout,&
-  filter_image_inout,filter_spectra_inout,filter_time_inout)
+  filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ierr)
   use mod_light_vertices, only: light_vertices
   use mod_spectra,        only: spectrum_base
   use mod_filter,         only: filter
@@ -109,6 +112,9 @@ interface
   class(filter),intent(inout)                                    :: filter_image_inout
   class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
   class(filter),intent(inout)                                    :: filter_time_inout
+  integer,intent(inout)                                          :: ierr
+  !> inputs:
+  integer,intent(in) :: rank
   end subroutine int_reduce_light_img
 
   !> structure function: it returns the physical camera importance normalised to 1

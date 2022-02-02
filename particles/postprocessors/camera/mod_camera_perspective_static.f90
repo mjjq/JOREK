@@ -43,15 +43,19 @@ contains
 !>   filter_image_inout:   (filter) 2d image plane filter
 !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filters
 !>   filter_time_inout:    (filter) filter in time
+!>   rank:                 (integer) mpi rank
+!>   ierr:                 (integer) error for the mpi procedures
 !> outputs:
 !>   camera_inout:         (camera) camera perspective static with reduced light
 !>   light_inout:          (light_vertices) initialised particle light vertices
 !>   spectra_inout:        (spectrum_inout) camera spectrum object
 !>   filter_image_inout:   (filter) 2d image plane filter
 !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filters
-!>   filter_time_inout:     (filter) filter in time
+!>   filter_time_inout:    (filter) filter in time
+!>   ierr:                 (integer) error for the mpi procedures
 subroutine reduce_particle_light_image_static(camera_inout,light_inout,&
-spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
+spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ierr)
+  use mpi
   use mod_light_vertices, only: light_vertices
   use mod_spectra,        only: spectrum_base
   use mod_filter,         only: filter
@@ -63,9 +67,12 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
   class(filter),intent(inout)                                    :: filter_image_inout
   class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
   class(filter),intent(inout)                                    :: filter_time_inout
+  integer,intent(inout)                                          :: ierr
+  !> inputs:
+  integer,intent(in) :: rank
   !> variables
   logical :: intersect
-  integer :: ii,jj,kk,pp,qq
+  integer :: ii,jj,kk
   integer,dimension(2) :: i_pixel
   real*8  :: material_value,pixel_filter_weight,visibility,geometry
   real*8,dimension(2) :: pixel_coords
@@ -122,6 +129,15 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
       enddo
     enddo
   enddo
+
+  !> reduce all mpi images into the root image
+  if(rank.eq.0) then
+    call MPI_Reduce(MPI_IN_PLACE,camera_inout%pixel_intensities,&
+    size(camera_inout%pixel_intensities),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  else
+    call MPI_Reduce(camera_inout%pixel_intensities,camera_inout%pixel_intensities,&
+    size(camera_inout%pixel_intensities),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+  endif
 end subroutine reduce_particle_light_image_static
 
 !> procedure used for initialising a static perspective camera

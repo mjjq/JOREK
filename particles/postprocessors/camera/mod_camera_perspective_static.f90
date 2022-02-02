@@ -74,7 +74,7 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
   logical :: intersect
   integer :: ii,jj,kk
   integer,dimension(2) :: i_pixel
-  real*8  :: material_value,pixel_filter_weight,visibility,geometry
+  real*8  :: material_value,pixel_filter_weight,visibility_geometry
   real*8,dimension(2) :: pixel_coords
   real*8,dimension(3) :: plane_line_coords
   real*8,dimension(light_inout%n_times) :: light_time_weights !< time filter
@@ -112,7 +112,7 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
         !> compute the pixel filter weight
         call filter_image_inout%compute_filter_from_position(pixel_coords,pixel_filter_weight)
         !> compute the geometry and visibility functions
-        call camera_inout%visibility_geometry_funct(light_inout,1,jj,ii,kk,visibility,geometry)
+        call camera_inout%visibility_geometry_funct(light_inout,1,jj,ii,kk,visibility_geometry)
         !> compute the spectral irradiance
         call light_inout%spectral_irradiance(spectra_inout,jj,kk,camera_inout%x(:,ii,1),&
         spectral_irradiance)
@@ -121,7 +121,8 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
         !> accumulate the irradiance of the pixel
         camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) = &
         camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) + &
-        light_time_weights(jj)*pixel_filter_weight*integrated_irradiance
+        (light_time_weights(jj)*pixel_filter_weight*integrated_irradiance*&
+        visibility_geometry*material_value)
         !> accumulate the overall filter functions of the pixel
         camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) = &
         camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) + &

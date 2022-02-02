@@ -32,8 +32,8 @@ integer                          :: n_distances,ifail
 real*8,dimension(n_x,n_vertices_sol,n_times_sol)              :: x_sol
 real*8,dimension(n_x,n_vertices_2_sol,n_times_2_sol)          :: x_2_sol
 real*8,dimension(n_properties_sol,n_vertices_sol,n_times_sol) :: properties_sol
-real*8,dimension(:),allocatable                               :: distances,visibility
-real*8,dimension(:),allocatable                               :: distances_sol,visibility_sol
+real*8,dimension(:),allocatable                               :: visibilitty_distances
+real*8,dimension(:),allocatable                               :: visibility_distances_sol
 !> Interfaces --------------------------------------------------------
 
 contains
@@ -66,8 +66,7 @@ subroutine setup()
   !> allocate arrays
   n_distances = sum(n_active_vertices_sol)*&
   sum(n_active_vertices_2_sol)*n_times_sol*n_times_2_sol
-  allocate(distances(n_distances)); allocate(visibility(n_distances));
-  allocate(distances_sol(n_distances)); allocate(visibility_sol(n_distances));
+  allocate(visibility_distances(n_distances)); allocate(visibility_distances_sol(n_distances));
   !> initialize test variables
   ifail = 0
   vertex_sol%n_property_vertex = n_properties_sol !< set "fake" number of properties
@@ -94,8 +93,7 @@ subroutine teardown()
   implicit none
   !> reset test variables
   ifail = 0; vertex_sol%n_property_vertex = 0;
-  deallocate(distances); deallocate(visibility);
-  deallocate(distances_sol); deallocate(visibility_sol);
+  deallocate(visibility_distances); deallocate(visibility_distances_sol);
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
@@ -364,18 +362,16 @@ subroutine test_visibility_geometry_funct_nosurfaces()
     do jj=1,vertex_sol%n_active_vertices(ii)
       do kk=1,vertex_2_sol%n_times
         do pp=1,vertex_2_sol%n_active_vertices(kk)
-          distances_sol(counter) = norm2(vertex_sol%x(:,jj,ii)-vertex_2_sol%x(:,pp,kk))
+          visibility_distances_sol(counter) = 1.d0/norm2(vertex_sol%x(:,jj,ii)-vertex_2_sol%x(:,pp,kk))
           call vertex_sol%visibility_geometry_funct(vertex_2_sol,ii,kk,jj,pp,&
-          visibility(counter),distances(counter))
+          visibility_distances(counter))
         enddo
       enddo
     enddo
   enddo
   !> check solution
-  call assert_equals(distances,distances_sol,n_distances,tol_real8,&
-  "Error compute visibility geometry funct no surfaces: distances mismatch!")
-  call assert_equals(visibility,visibility_sol,n_distances,tol_real8,&
-  "Error compute visibility geometry funct no surfaces: visibility mismatch!")
+  call assert_equals(visibility_distances,visibility_distances_sol,n_distances,tol_real8,&
+  "Error compute visibility visibility/geometry funct no surfaces: visibility/geometry mismatch!")
   !> deallocate everything
   call vertex_sol%deallocate_vertices; call vertex_2_sol%deallocate_vertices; 
 end subroutine test_visibility_geometry_funct_nosurfaces

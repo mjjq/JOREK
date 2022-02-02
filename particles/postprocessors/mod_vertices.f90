@@ -317,20 +317,21 @@ end subroutine fit_tables_to_active_vertices
 !>   v_id_1:    (integer) first vertex index
 !>   v_id_2:    (integer) second vertex index
 !> outputs:
-!>   vert_1:     (vertices) first vertex class
-!>   visibility: (real8) visibility function always equal 1 for this case
-!>   geometry:   (real8) geometry function equal to the distance between two vertices
+!>   vert_1:              (vertices) first vertex class
+!>   visibility_geometry: (real8) visibility function always equal 1 divied by the
+!>                        geometry function equal to the distance between two vertices
 subroutine visibility_geometry_funct(vert_1,vert_2,time_id_1,time_id_2,&
-v_id_1,v_id_2,visibility,geometry)
+v_id_1,v_id_2,visibility_geometry)
   implicit none
   class(vertices),intent(inout) :: vert_1
   class(vertices),intent(in)    :: vert_2
   integer,intent(in)            :: time_id_1,time_id_2,v_id_1,v_id_2
-  real*8,intent(out)            :: visibility,geometry
+  real*8,intent(out)            :: visibility_geometry
 
   !> return the visibility function equal to 1
-  visibility = 1.d0;
-  geometry = sqrt((vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2))*&
+  visibility_geometry = 1.d0;
+  visibility_geometry = visibility_geometry/&
+             sqrt((vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2))*&
              (vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2)) + &
              (vert_1%x(2,v_id_1,time_id_1)-vert_2%x(2,v_id_2,time_id_2)) * &
              (vert_1%x(2,v_id_1,time_id_1)-vert_2%x(2,v_id_2,time_id_2)) + &

@@ -16,6 +16,7 @@ type,abstract :: filter
   procedure(int_init_filter),pass(filter_inout),deferred  :: init_filter
   procedure(int_comp_fil_pos),pass(filter_inout),deferred :: compute_filter_from_position
   procedure(int_comp_fil_pos_vect),pass(filter_inout),deferred :: compute_filter_from_position_vectorial 
+  procedure(int_comp_fil_pos_matrix),pass(filter_inout),deferred :: compute_filter_from_position_matrix 
 end type filter
 
 !> Interfaces ----------------------------------------------
@@ -77,6 +78,29 @@ interface
     !> outputs:
     real*8,dimension(n_positions),intent(out) :: weights
   end subroutine int_comp_fil_pos_vect
+
+  !> compute_filter_from_position compute the value of the filter
+  !> given a normalised position: matrix version.
+  !> inputs:
+  !>   filter_inout:  (filter) filter type
+  !>   n_intervals:   (integer) number of intervals
+  !>   n_positions:   (integer) number of positions
+  !>   pos:           (real8)(n_dimension,n_positions,n_intervals) 
+  !>                         positions where the filter weights are computed
+  !> outputs:
+  !>   filter_inout:  (filter) filter type
+  !>   weights:       (real8)(n_positions,n_intervals) filter weights
+  subroutine int_comp_fil_pos_matrix(filter_inout,n_intervals,n_positions,pos,weights)
+    IMPORT :: filter
+    implicit none
+    !> inputs-outputs
+    class(filter),intent(inout) :: filter_inout
+    !> inputs
+    integer,intent(in) :: n_positions,n_intervals
+    real*8,dimension(filter_inout%n_dimensions,n_positions,n_intervals),intent(in) :: pos
+    !> outputs:
+    real*8,dimension(n_positions,n_intervals),intent(out) :: weights
+  end subroutine int_comp_fil_pos_matrix
 end interface
 
 contains

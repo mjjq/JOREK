@@ -15,6 +15,8 @@ type,extends(filter) :: filter_unity
   procedure,pass(filter_inout) :: compute_filter_from_position => compute_filter_unity_position
   procedure,pass(filter_inout) :: compute_filter_from_position_vectorial => &
   compute_filter_unity_position_vectorial
+  procedure,pass(filter_inout) :: compute_filter_from_position_matrix => &
+  compute_filter_unity_position_matrix
 end type filter_unity
 
 contains
@@ -72,6 +74,28 @@ subroutine compute_filter_unity_position_vectorial(filter_inout,n_positions,pos,
   real*8,dimension(n_positions),intent(out) :: weights
   weights = 1.d0
 end subroutine compute_filter_unity_position_vectorial
+
+!> return the unity filter value or 1: matrix version
+!> inputs:
+!>   filter_inout: (filter_unity) unity filter
+!>   n_positions:  (integer) number of positions
+!>   pos:          (real8)(n_dimensions,n_positions,n_intervals) 
+!>                        positions where the filter weights are computed
+!> outputs:
+!>   filter_inout: (filter_unity) unity filter
+!>   weights:      (real8)(n_positions,n_intervals) filter weight = 1
+subroutine compute_filter_unity_position_matrix(filter_inout,n_intervals,n_positions,pos,weights)
+  implicit none
+  !> inputs-outputs:
+  class(filter_unity),intent(inout) :: filter_inout
+  !> inputs:
+  integer,intent(in) :: n_positions,n_intervals
+  real*8,dimension(filter_inout%n_dimensions,n_positions,n_intervals),intent(in) :: pos
+  !> outputs:
+  real*8,dimension(n_positions,n_intervals),intent(out) :: weights
+  weights = 1.d0
+end subroutine compute_filter_unity_position_matrix
+
 !>---------------------------------------------------------
 end module mod_filter_unity
 

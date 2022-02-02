@@ -9,14 +9,17 @@ private
 public :: run_fruit_filter
 
 !> Variables and and parameters -------------------------------
-integer,parameter                                  :: n_dimensions_sol=2
-integer,parameter                                  :: n_positions_sol=13
-real*8,parameter                                   :: tol_real8=5.d-16
-integer,dimension(n_dimensions_sol),parameter      :: filter_shape_sol=(/5,10/)
-real*8,dimension(n_dimensions_sol),parameter       :: pos_lowbnd=(/-3.d1,1.d-2/)
-real*8,dimension(n_dimensions_sol),parameter       :: pos_uppbnd=(/3.d1,5.d0/)
-real*8,dimension(n_dimensions_sol,n_positions_sol) :: positions_sol
-real*8,dimension(n_positions_sol)                  :: weights_sol
+integer,parameter                                                  :: n_dimensions_sol=2
+integer,parameter                                                  :: n_intervals_sol=3
+integer,parameter                                                  :: n_positions_sol=13
+real*8,parameter                                                   :: tol_real8=5.d-16
+integer,dimension(n_dimensions_sol),parameter                      :: filter_shape_sol=(/5,10/)
+real*8,dimension(n_dimensions_sol),parameter                       :: pos_lowbnd=(/-3.d1,1.d-2/)
+real*8,dimension(n_dimensions_sol),parameter                       :: pos_uppbnd=(/3.d1,5.d0/)
+real*8,dimension(n_dimensions_sol,n_positions_sol)                 :: positions_sol
+real*8,dimension(n_dimensions_sol,n_positions_sol,n_intervals_sol) :: positions_2d_sol
+real*8,dimension(n_positions_sol)                                  :: weights_sol
+real*8,dimension(n_positions_sol,n_intervals_sol)                  :: weights_2d_sol
 
 !> Interfaces -------------------------------------------------
 contains
@@ -32,6 +35,7 @@ subroutine run_fruit_filter()
   call test_initialisation_filter_unity
   call test_compute_weights_filter_unity
   call test_compute_weights_filter_unity_vectorial
+  call test_compute_weights_filter_unity_matrix
   write(*,*) "  ... tearing-down: filter tests"
 end subroutine run_fruit_filter
 
@@ -41,12 +45,17 @@ subroutine setup()
   use mod_gnu_rng, only: gnu_rng_interval
   implicit none
   !> variables
-  integer :: ii
+  integer :: ii,jj
   !> initilaise positions and weights
   do ii=1,n_positions_sol
     call gnu_rng_interval(n_dimensions_sol,pos_lowbnd,pos_uppbnd,positions_sol(:,ii))
   enddo 
-  weights_sol = 1.d0
+  do jj=1,n_intervals_sol
+    do ii=1,n_positions_sol
+      call gnu_rng_interval(n_dimensions_sol,pos_lowbnd,pos_uppbnd,positions_2d_sol(:,ii,jj))
+    enddo
+  enddo
+  weights_sol = 1.d0;  weights_2d_sol = 1.d0;
 end subroutine setup
 
 !> Tests ------------------------------------------------------
@@ -124,6 +133,24 @@ subroutine test_compute_weights_filter_unity_vectorial()
   !> deallocation
   call filter_test%deallocate_filter
 end subroutine test_compute_weights_filter_unity_vectorial
+
+!> test compute weights filter unity: matrix version
+subroutine test_compute_weights_filter_unity_matrix()
+  use mod_filter_unity, only: filter_unity
+  implicit none
+  !> variables
+  real*8,dimension(n_positions_sol,n_intervals_sol) :: weights_2d
+  type(filter_unity) :: filter_test
+  !> initialisation
+  call filter_test%init_filter(n_dimensions_sol)
+  !> test
+  call filter_test%compute_filter_from_position_matrix(n_positions_sol,n_intervals_sol,&
+  positions_2d_sol,weights_2d)
+  call assert_equals(weights_2d,weights_2d_sol,n_positions_sol,n_intervals_sol,tol_real8,&
+  "Error filter unity compute filter form positions (matrix): filter weights mistmatch!")
+  !> deallocation
+  call filter_test%deallocate_filter
+end subroutine test_compute_weights_filter_unity_matrix
 
 !> Tools ------------------------------------------------------
 !>-------------------------------------------------------------

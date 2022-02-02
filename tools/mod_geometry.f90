@@ -84,7 +84,7 @@ end function compute_global_cart_coord_plane_points_r8
 !>                                 pl(:,2) -> q=1 node
 !> outputs:
 !>   intersect: (bool) if true intersection found
-!>   stq:       (real8)(3) plane(s,t) and line (1) local
+!>   stq:       (real8)(3) plane(s,t) and line (q) local
 !>              coordinates of the intersection
 subroutine compute_plane_line_intersect_cart_points_r8(pp,pl,&
 intersect,stq)

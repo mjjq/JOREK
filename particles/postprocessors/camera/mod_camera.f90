@@ -25,6 +25,7 @@ type,abstract,extends(vertices) :: camera
    procedure(int_gen_points_lens),pass(camera_inout),deferred   :: generate_points_on_lens_pdf
    procedure(int_reduce_light_img),pass(camera_inout),deferred  :: reduce_light_image
    procedure(int_phys_mat_funct),pass(camera_inout),deferred    :: physical_material_funct
+   procedure(int_ray_plane_inter),pass(camera_inout),deferred   :: find_ray_image_plane_intersection
    procedure,pass(camera_inout)                                 :: allocate_camera
    procedure,pass(camera_inout)                                 :: deallocate_camera
 end type camera
@@ -132,6 +133,30 @@ interface
     !> outputs:
     real*8,intent(out)                            :: material_value
   end subroutine int_phys_mat_funct
+
+  !> find the intersection between a camera ray and the image plane
+  !> inputs:
+  !>   camera_inout: (camera) camera object
+  !> outputs:
+  !>   camera_inout: (camera) camera object
+  !>   intersect:    (bool) if true an intersection is found
+  !>   local_coords: (real8)(3) plane (s,t) and ray (q) local
+  !>                            coordinates of the intersection
+  subroutine int_ray_plane_inter(camera_inout,x_pos,&
+  x_lens_id,intersect,local_coords,time_id_in)
+    use mod_geometry, only: compute_plane_line_intersection_cart
+    IMPORT :: camera
+    implicit none
+    !> inputs-outputs:
+    class(camera),intent(inout)                   :: camera_inout
+    !> inputs:
+    integer,intent(in)                            :: x_lens_id
+    real*8,dimension(camera_inout%n_x),intent(in) :: x_pos
+    integer,intent(in),optional                   :: time_id_in
+    !> outputs:
+    logical,intent(out)                           :: intersect
+    real*8,dimension(3),intent(out)               :: local_coords
+  end subroutine int_ray_plane_inter
 end interface
 
 contains

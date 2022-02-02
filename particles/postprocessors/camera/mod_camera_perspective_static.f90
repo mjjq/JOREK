@@ -22,6 +22,8 @@ type,extends(camera) :: camera_perspective_static
   reduce_particle_light_image_static
   procedure,pass(camera_inout) :: physical_material_funct => &
   physical_material_funct_perspective_static
+  procedure,pass(camera_inout) :: find_ray_image_plane_intersection => &
+  find_ray_image_plane_intersection_static
   procedure,pass(camera_inout) :: allocate_camera_perspective_static
   procedure,pass(camera_inout) :: deallocate_camera_perspective_static
   procedure,pass(camera_inout) :: define_image_plane_pixel_size
@@ -61,8 +63,45 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout)
   class(filter),intent(inout)                                    :: filter_image_inout
   class(filter),dimension(spectra_inout%n_spectra),intent(inout) :: filter_spectra_inout
   class(filter),intent(inout)                                    :: filter_time_inout
-  !> TODO
-  write(*,*) "TODO"
+  !> variables
+  integer :: ii,jj,kk,pp,qq
+  real*8 :: material_value
+  real*8,dimension(light_inout%n_times) :: light_time_weights !< time filter
+  real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_weights !< spectral filter
+  real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
+
+  !> compute the time filter weights
+  call filter_time_inout%compute_filter_from_position_vectorial(light_inout%n_times,&
+  light_inout%times,light_time_weights)
+  !> compute the spectral filter weights
+  do ii=1,spectra_inout%n_spectra
+    call filter_spectra_inout(ii)%compute_filter_from_position_vectorial(&
+    spectra_inout%n_points,spectra_inout%points(:,ii),spectral_weights(:,ii))
+  enddo
+
+  !> loop on the points on lens
+  do ii=1,camera_inout%n_vertices
+    !> loop on the light times
+    do jj=1,light_inout%n_times
+      !> loop on the active lights per time
+      do kk=1,light_inout%n_active_vertices(jj)
+        !> compute the physical material function (skip if negative because light behind camera)
+        call camera_inout%physical_material_funct(light_inout%x(:,kk,jj),ii,material_value)
+        if(material_value.le.0.d0) cycle
+        !> compute the intersection of the camera-light ray with the image plane 
+
+        !> compute the intersection point pixel coordinates
+        !> compute the geometry and visibility functions
+        !> compute the pixel filter weight
+        !> compute the spectral irradiance
+        call light_inout%spectral_irradiance(spectra_inout,jj,kk,camera_inout%x(:,ii,1),&
+        spectral_irradiance)
+        !> integrate the weighted spectral irradiance for each spectral interval
+        !> accumulate the irradiance of the pixel
+        !> accumulate the overall filter functions of the pixel
+      enddo
+    enddo
+  enddo
 end subroutine reduce_particle_light_image_static
 
 !> procedure used for initialising a static perspective camera
@@ -323,6 +362,40 @@ subroutine cos_view_angle_static(camera_inout,x_pos,x_lens_id,cos_view_angle)
                    ray(2)*camera_inout%image_plane_direction(2) + &
                    ray(3)*camera_inout%image_plane_direction(3)
 end subroutine cos_view_angle_static
+
+!> find intersection between a camera ray and the image plane
+!> inputs:
+!>   camera_inout: (camera_perspective_static) initialised camera object
+!>   x_pos:        (real8)(3) coordinated of the point defining a ray
+!>   x_lens_id:    (integer) index of the point on lens to be treated
+!>   time_id_in:   (integer)(optional) time index (not used)
+!> outputs:
+!>   camera_inout: (camera_perspective_static) initialised camera object
+!>   intersect:    (bool) if true an intersection is found
+!>   local_coords: (real8)(3) plane (s,t) and ray (q) local 
+!>                            coordinates of the intersection
+subroutine find_ray_image_plane_intersection_static(camera_inout,&
+x_pos,x_lens_id,intersect,local_coords,time_id_in)
+  use mod_geometry, only: compute_plane_line_intersection_cart
+  implicit none
+  !> inputs-outpus:
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> inputs:
+  integer,intent(in)                             :: x_lens_id
+  real*8,dimension(camera_inout%n_x),intent(in)  :: x_pos
+  integer,intent(in),optional                    :: time_id_in
+  !> outputs:
+  logical,intent(out)                            :: intersect
+  real*8,dimension(3),intent(out)                :: local_coords
+  !> variables
+  real*8,dimension(camera_inout%n_x,3)           :: plane
+  real*8,dimension(camera_inout%n_x,2)           :: ray
+  !> compute intersection between the ray and the image plane
+  ray(:,1) = camera_inout%x(:,x_lens_id,1); ray(:,2) = x_pos;
+  call compute_plane_line_intersection_cart(camera_inout%image_plane,&
+  ray,intersect,local_coords)
+end subroutine find_ray_image_plane_intersection_static
+
 
 !>------------------------------------------------------------
 end module mod_camera_perspective_static

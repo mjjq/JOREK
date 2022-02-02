@@ -32,7 +32,7 @@ integer                          :: n_distances,ifail
 real*8,dimension(n_x,n_vertices_sol,n_times_sol)              :: x_sol
 real*8,dimension(n_x,n_vertices_2_sol,n_times_2_sol)          :: x_2_sol
 real*8,dimension(n_properties_sol,n_vertices_sol,n_times_sol) :: properties_sol
-real*8,dimension(:),allocatable                               :: visibilitty_distances
+real*8,dimension(:),allocatable                               :: visibility_distances
 real*8,dimension(:),allocatable                               :: visibility_distances_sol
 !> Interfaces --------------------------------------------------------
 
@@ -357,7 +357,6 @@ subroutine test_visibility_geometry_funct_nosurfaces()
   vertex_sol%n_active_vertices=n_active_vertices_sol; vertex_sol%x=x_sol;
   vertex_2_sol%n_active_vertices=n_active_vertices_2_sol; vertex_2_sol%x=x_2_sol;
   !> compute the visibilit and geometry functions
-  visibility_sol = 1.d0
   do ii=1,vertex_sol%n_times
     do jj=1,vertex_sol%n_active_vertices(ii)
       do kk=1,vertex_2_sol%n_times

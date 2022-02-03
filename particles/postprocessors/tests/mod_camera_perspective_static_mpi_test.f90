@@ -21,7 +21,8 @@ integer,parameter                           :: n_lines_per_spectrum_sol=53
 integer,parameter                           :: n_times=3
 integer,parameter                           :: n_pixels_x=64
 integer,parameter                           :: n_pixels_y=32
-integer,parameter                           :: n_particles_time=1345
+integer,parameter                           :: n_groups=2
+integer,parameter                           :: n_particles_time_rank=345
 real*8                                      :: plane_distance_sol=4.23d0
 real*8,dimension(2),parameter               :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0/)
 real*8,dimension(2),parameter               :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0/)
@@ -36,14 +37,16 @@ type(filter_unity)                          :: filter_time_sol
 type(spectrum_integrator_2nd)               :: spectra_sol
 type(pinhole_lens)                          :: pinhole_sol
 type(camera_perspective_static)             :: camera_sol
-type(omnidirectional_gaussian_lights)       :: lights_sol
+type(omnidirectional_gaussian_lights)       :: lights_sol,light_test
 type(filter_unity),dimension(n_spectra_sol) :: filter_spectra_sol
+integer :: n_particles_time
 
 !> Interfaces ----------------------------------------------------------------
 contains
 !> Fruit basket --------------------------------------------------------------
 !> fruit basket executes all set-up, test and tear-down procedures
 subroutine run_fruit_camera_perspective_static_mpi(rank,n_tasks,ifail)
+  use mpi
   implicit none
   !> inputs-outputs:
   integer,intent(inout) :: ifail
@@ -52,8 +55,11 @@ subroutine run_fruit_camera_perspective_static_mpi(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,*) "  ... setting-up: camera perspective static mpi tests"
   call setup_spectra_filters(rank,n_tasks,ifail)
   call setup_camera(rank,n_tasks,ifail)
+  call setup_lights(rank,n_tasks,ifail)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
   if(rank.eq.0) write(*,*) "  ... running: camera perspective static mpi tests"
   if(rank.eq.0) write(*,*) "  ... tearing-down: camera perspective static mpi tests"
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_camera_perspective_static_mpi
 
@@ -118,7 +124,55 @@ subroutine setup_camera(rank,n_tasks,ifail)
   if(allocated(int_param))  deallocate(int_param)
   if(allocated(real_param)) deallocate(real_param)
 end subroutine setup_camera
-!> set-up the particles features
+
+!> set-up the light features
+subroutine setup_lights(rank,n_tasks,ifail)
+  use mpi
+  use mod_gnu_rng,                    only: gnu_rng_interval
+  use mod_particle_common_test_tools, only: allocate_one_particle_list_type
+  use mod_particle_common_test_tools, only: sim_time_interval
+  use mod_particle_types,             only: particle_kinetic_relativistic_id
+  use mod_particle_sim,               only: particle_sim
+  implicit none
+  !> inputs-outputs:
+  integer,intent(inout) :: ifail
+  !> inputs:
+  integer,intent(in)    :: rank,n_tasks
+  !> variables: 
+  type(particle_sim),dimension(n_times) :: sims_particle_rank
+  type(particle_sim),dimension(n_times) :: sims_particle_global
+  integer                               :: ii
+  integer,dimension(n_groups)           :: p_types,n_particles
+  real*8,dimension(n_times)             :: sim_times
+
+  !> initialisation
+  p_types = particle_kinetic_relativistic_id
+  n_particles=n_particles_time_rank
+  !> initialise the particle simulations
+  if(rank.eq.0) then
+    call gnu_rng_interval(n_times,sim_time_interval,sim_times)
+    do ii=1,n_times
+      call sims_particle_global(ii)%initialize(n_groups,.false.,rank,n_tasks)
+      sims_particle_global(ii)%time = sim_times(ii)
+    enddo
+  endif
+  call MPI_Bcast(sim_times,n_times,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
+  do ii=1,n_times
+    call sims_particle_rank(ii)%initialize(n_groups,.false.,rank,n_tasks)
+    sims_particle_rank(ii)%time = sim_times(ii)
+  enddo
+  !> allocate particle simulation memory
+  if(rank.eq.0) then
+    do ii=1,n_times
+     call allocate_one_particle_list_type(n_groups,n_tasks*n_particles,&
+     p_types,sims_particle_global(ii)%groups,ifail)
+    enddo
+  endif
+  do ii=1,n_times
+    call allocate_one_particle_list_type(n_groups,n_particles,&
+    p_types,sims_particle_rank(ii)%groups,ifail)
+  enddo
+end subroutine setup_lights
 
 !> tear-down all test features
 subroutine teardown(rank,n_tasks,ifail)

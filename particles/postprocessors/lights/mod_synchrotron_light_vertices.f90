@@ -50,8 +50,8 @@ sims_particles,n_lights_in)
   class(synchrotron_light_vertices),intent(inout)     :: light_vert
   type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
   !> inputs
-  integer,intent(in)                              :: n_times
-  integer,intent(in),optional                     :: n_lights_in
+  integer,intent(in)                                  :: n_times
+  integer,intent(in),optional                         :: n_lights_in
   !> variables
   integer :: ii
   integer :: n_sync_lights,n_groups_max,n_particles_max

@@ -198,7 +198,7 @@ end subroutine synchrotron_directionality_funct
 !> outputs: 
 !>   light_vert: (synchrotron_light vertices) synchrotron light sources
 !>   spectra:    (spectrum_base) spectral intervals and integrators
-!>   light_spec_irradiance:  (real*8)(n_points,n_intervals) synchrotron full spectral
+!>   light_spec_irradiance:  (real8)(n_points,n_spectra) synchrotron full spectral
 !>                           angular distribution per unit of total power at the
 !>                           at the shaded point x_shaded
 subroutine synchrotron_spectral_irradiance(light_vert,spectra,time_id,&
@@ -207,10 +207,10 @@ light_id,x_shaded,light_spec_irradiance)
   implicit none
   !> inputs-outputs:
   class(synchrotron_light_vertices),intent(inout) :: light_vert
-  class(spectrum_base),intent(inout)             :: spectra
+  class(spectrum_base),intent(inout)              :: spectra
   !> inputs:
-  integer,intent(in)                :: time_id,light_id
-  real*8,dimension(light_vert%n_x),intent(in)  :: x_shaded
+  integer,intent(in)                              :: time_id,light_id
+  real*8,dimension(light_vert%n_x),intent(in)     :: x_shaded
   !> outputs:
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
 

@@ -186,8 +186,8 @@ light_id,x_shaded,light_dstb)
   !$omp end parallel do
 end subroutine synchrotron_directionality_funct
 
-!> synchrotron_spectral_irradiance computes the full power spectral angular
-!> angular distribution for synchrotron lights which (L. Carbajal, PPCF, 2017)
+!> synchrotron_spectral_irradiance computes the full spectral angular
+!> power distribution for synchrotron lights which (L. Carbajal, PPCF, 2017)
 !> emitted towards the shaded point x_shaded
 !> inputs:
 !>   light_vert: (synchrotron_light vertices) synchrotron light sources
@@ -223,8 +223,8 @@ end subroutine synchrotron_spectral_irradiance
 
 !> Tools ------------------------------------------
 !> fill_synchrotron_lights_from_particles_serial fill the
-!> x and properties array of synchrotron light from
-!> particle list (basic and simple openmp parallelisation)
+!> x and properties arrays of synchrotron lights from
+!> particle lists (basic and simple openmp parallelisation)
 !> inputs:
 !>   sync_lights:        (synchrotron_light_vertices) empty synchrotron lights
 !>   sims_particles:     (particle_sim)(n_times) array of particle simulations

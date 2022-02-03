@@ -74,15 +74,20 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
   logical :: intersect
   integer :: ii,jj,kk
   integer,dimension(2) :: i_pixel
-  real*8  :: material_value,pixel_filter_weight,visibility_geometry
+  real*8  :: material_value,pixel_filter_weight,visibility_geometry,pixel_area
   real*8,dimension(2) :: pixel_coords
   real*8,dimension(3) :: plane_line_coords
   real*8,dimension(light_inout%n_times) :: light_time_weights !< time filter
   real*8,dimension(spectra_inout%n_spectra) :: integrated_irradiance
-  real*8,dimension(spectra_inout%n_spectra) :: integral_spectral_weights
   real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_weights !< spectral filter
   real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
 
+  !> compute and store the exposure time and the pixel area
+  camera_inout%exposure_time = light_inout%times(light_inout%n_times) - light_inout%times(1)
+  if(camera_inout%exposure_time.le.0.d0) camera_inout%exposure_time = 1.d0
+  pixel_area = (norm2(camera_inout%image_plane(:,2)-camera_inout%image_plane(:,1))*&
+               norm2(camera_inout%image_plane(:,3)-camera_inout%image_plane(:,1)))/&
+               (real(camera_inout%n_pixels_spectra(2)*camera_inout%n_pixels_spectra(3),kind=8))
   !> compute the time filter weights
   call filter_time_inout%compute_filter_from_position_vectorial(light_inout%n_times,&
   light_inout%times,light_time_weights)
@@ -90,7 +95,6 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
   do ii=1,spectra_inout%n_spectra
     call filter_spectra_inout(ii)%compute_filter_from_position_vectorial(&
     spectra_inout%n_points,spectra_inout%points(:,ii),spectral_weights(:,ii))
-    call spectra_inout%integrate_data(spectral_weights(:,ii),integral_spectral_weights(ii))
   enddo
 
   !> loop on the points on lens
@@ -122,11 +126,11 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
         camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) = &
         camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) + &
         (light_time_weights(jj)*pixel_filter_weight*integrated_irradiance*&
-        visibility_geometry*material_value)
-        !> accumulate the overall filter functions of the pixel
+        visibility_geometry*material_value*pixel_area*camera_inout%exposure_time)
+        !> accumulate the overall filter functions of the pixel (E.Veach, PhD thesis, 1997)
         camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) = &
         camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) + &
-        light_time_weights(jj)*pixel_filter_weight*integral_spectral_weights(ii)
+        light_time_weights(jj)*pixel_filter_weight
       enddo
     enddo
   enddo

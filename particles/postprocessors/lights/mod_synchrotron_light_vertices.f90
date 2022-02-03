@@ -1,4 +1,4 @@
-!> the mod_synchrotron_light implements variable and
+!> the mod_synchrotron_light implements variables and
 !> procedures defining a synchrotron light source
 module mod_synchrotron_light_vertices
 use mod_light_vertices, only: light_vertices

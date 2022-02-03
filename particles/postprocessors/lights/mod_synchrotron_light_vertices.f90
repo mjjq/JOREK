@@ -30,7 +30,7 @@ end type synchrotron_light_vertices
 contains
 
 !> Procedures --------------------------------------
-!> init_synchrotron_light_from_particles initilises compute the properties
+!> init_synchrotron_light_from_particles computes the properties
 !> of the synchrotron light for each particle and stores them 
 !> in the proprerties array
 !> inputs:

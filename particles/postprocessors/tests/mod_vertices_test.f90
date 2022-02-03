@@ -361,7 +361,8 @@ subroutine test_visibility_geometry_funct_nosurfaces()
     do jj=1,vertex_sol%n_active_vertices(ii)
       do kk=1,vertex_2_sol%n_times
         do pp=1,vertex_2_sol%n_active_vertices(kk)
-          visibility_distances_sol(counter) = 1.d0/norm2(vertex_sol%x(:,jj,ii)-vertex_2_sol%x(:,pp,kk))
+          visibility_distances_sol(counter) = 1.d0/dot_product(vertex_sol%x(:,jj,ii)-&
+          vertex_2_sol%x(:,pp,kk),vertex_sol%x(:,jj,ii)-vertex_2_sol%x(:,pp,kk))
           call vertex_sol%visibility_geometry_funct(vertex_2_sol,ii,kk,jj,pp,&
           visibility_distances(counter))
         enddo

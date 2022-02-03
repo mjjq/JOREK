@@ -331,7 +331,7 @@ v_id_1,v_id_2,visibility_geometry)
   !> return the visibility function equal to 1
   visibility_geometry = 1.d0;
   visibility_geometry = visibility_geometry/&
-             sqrt((vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2))*&
+             ((vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2))*&
              (vert_1%x(1,v_id_1,time_id_1)-vert_2%x(1,v_id_2,time_id_2)) + &
              (vert_1%x(2,v_id_1,time_id_1)-vert_2%x(2,v_id_2,time_id_2)) * &
              (vert_1%x(2,v_id_1,time_id_1)-vert_2%x(2,v_id_2,time_id_2)) + &

@@ -9,6 +9,10 @@ module mod_particle_types
   public :: particle_gc_vpar_id,particle_gc_Qin_id,particle_kinetic_id
   public :: particle_kinetic_leapfrog_id,particle_kinetic_relativistic_id
   public :: particle_gc_relativistic_id
+  public :: particle_base_size,particle_fieldline_size,particle_gc_size
+  public :: particle_gc_vpar_size,particle_gc_Qin_size,particle_kinetic_size
+  public :: particle_kinetic_leapfrog_size,particle_kinetic_relativistic_size
+  public :: particle_gc_relativistic_size
   public :: particle_base, particle_kinetic, particle_kinetic_leapfrog
   public :: particle_gc, particle_fieldline
   public :: particle_kinetic_relativistic, particle_gc_relativistic
@@ -25,6 +29,16 @@ module mod_particle_types
   public :: find_active_particle_id_openmp
 #endif
 
+  !> buffer size in bits for each particle type
+  integer,parameter :: particle_base_size                 = 480
+  integer,parameter :: particle_fieldline_size            = 736
+  integer,parameter :: particle_gc_size                   = 640
+  integer,parameter :: particle_gc_vpar_size              = 640
+  integer,parameter :: particle_gc_Qin_size               = 2496
+  integer,parameter :: particle_kinetic_size              = 704
+  integer,parameter :: particle_kinetic_leapfrog_size     = 704
+  integer,parameter :: particle_kinetic_relativistic_size = 704
+  integer,parameter :: particle_gc_relativistic_size      = 640
   !> enumerator of the particle type 
   enum, bind(C)
   enumerator :: particle_base_id=0,particle_fieldline_id,particle_gc_id,&
@@ -554,4 +568,42 @@ contains
     deallocate(n_active_particles_tile); deallocate(particle_ids_tile);
   end subroutine find_active_particle_id_openmp
 
+  !> routines used for packing and unpacking particle types in MPI buffers
+  !> pack the particle_base_type
+  subroutine mpi_pack_particle_base(p_in,buffer,buff_position,ierr)
+    use mpi
+    implicit none
+    !> inputs-outputs:
+    integer,intent(inout) :: buff_position,ierr
+    !> inputs:
+    class(particle_base),intent(in) :: p_in
+    !> outputs:
+    character(len=particle_base_size),intent(out) :: buffer
+    !> pack datatype
+    call MPI_PACK(p_in%x,3,MPI_DOUBLE_PRECISION,buffer,particle_base_size,buff_position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(p_in%st,2,MPI_DOUBLE_PRECISION,buffer,particle_base_size,buff_position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(p_in%weight,1,MPI_DOUBLE_PRECISION,buffer,particle_base_size,buff_position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(p_in%i_elm,1,MPI_INTEGER,buffer,particle_base_size,buff_position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(p_in%i_life,1,MPI_INTEGER,buffer,particle_base_size,buff_position,MPI_COMM_WORLD,ierr)
+    call MPI_PACK(p_in%t_birth,1,MPI_REAL,buffer,particle_base_size,buff_position,MPI_COMM_WORLD,ierr)
+  end subroutine mpi_pack_particle_base
+
+  !> unpack the particle base type
+  subroutine mpi_unpack_particle_base(buffer,p_out,buff_position,ierr)
+    use mpi
+    implicit none
+    !> inputs-outputs
+    integer,intent(inout) :: buff_position,ierr
+    !> input
+    character(len=particle_base_size),intent(in) :: buffer
+    !> outputs:
+    class(particle_base),intent(out) :: p_out
+    !> unpack datatype
+    call MPI_UNPACK(buffer,particle_base_size,buff_position,p_out%x,3,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,particle_base_size,buff_position,p_out%st,2,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,particle_base_size,buff_position,p_out%weight,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,particle_base_size,buff_position,p_out%i_elm,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,particle_base_size,buff_position,p_out%i_life,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+    call MPI_UNPACK(buffer,particle_base_size,buff_position,p_out%t_birth,1,MPI_REAL,MPI_COMM_WORLD,ierr)
+  end subroutine mpi_unpack_particle_base
 end module mod_particle_types

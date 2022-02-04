@@ -147,6 +147,17 @@ subroutine setup_lights(rank,n_tasks,ifail)
   !> initialise the particle simulations for all task
   call fill_particle_simulations_no_init(sims_particle_rank,n_times,n_groups,&
   n_particles,p_types,ifail,rank,n_tasks)
+  !> initialise particle positions inside and outside the camera view angle
+  !> initialise rank omnidirectional gaussian spectrum light sources
+  !> initialise the global particle simulation (only for master)
+  if(rank.eq.0) then
+    write(*,*) "TODO"
+  endif
+  !> retrive particles from all simulation task into the global simulation
+  !> initialise global omnidirectional gaussian spectrum light sources
+  if(rank.eq.0) then
+    write(*,*) "TODO"
+  endif
 end subroutine setup_lights
 
 !> tear-down all test features

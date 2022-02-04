@@ -128,9 +128,7 @@ end subroutine setup_camera
 !> set-up the light features
 subroutine setup_lights(rank,n_tasks,ifail)
   use mpi
-  use mod_gnu_rng,                    only: gnu_rng_interval
-  use mod_particle_common_test_tools, only: allocate_one_particle_list_type
-  use mod_particle_common_test_tools, only: sim_time_interval
+  use mod_particle_common_test_tools, only: fill_particle_simulations_no_init
   use mod_particle_types,             only: particle_kinetic_relativistic_id
   use mod_particle_sim,               only: particle_sim
   implicit none
@@ -141,37 +139,14 @@ subroutine setup_lights(rank,n_tasks,ifail)
   !> variables: 
   type(particle_sim),dimension(n_times) :: sims_particle_rank
   type(particle_sim),dimension(n_times) :: sims_particle_global
-  integer                               :: ii
   integer,dimension(n_groups)           :: p_types,n_particles
-  real*8,dimension(n_times)             :: sim_times
 
   !> initialisation
   p_types = particle_kinetic_relativistic_id
   n_particles=n_particles_time_rank
-  !> initialise the particle simulations
-  if(rank.eq.0) then
-    call gnu_rng_interval(n_times,sim_time_interval,sim_times)
-    do ii=1,n_times
-      call sims_particle_global(ii)%initialize(n_groups,.false.,rank,n_tasks)
-      sims_particle_global(ii)%time = sim_times(ii)
-    enddo
-  endif
-  call MPI_Bcast(sim_times,n_times,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
-  do ii=1,n_times
-    call sims_particle_rank(ii)%initialize(n_groups,.false.,rank,n_tasks)
-    sims_particle_rank(ii)%time = sim_times(ii)
-  enddo
-  !> allocate particle simulation memory
-  if(rank.eq.0) then
-    do ii=1,n_times
-     call allocate_one_particle_list_type(n_groups,n_tasks*n_particles,&
-     p_types,sims_particle_global(ii)%groups,ifail)
-    enddo
-  endif
-  do ii=1,n_times
-    call allocate_one_particle_list_type(n_groups,n_particles,&
-    p_types,sims_particle_rank(ii)%groups,ifail)
-  enddo
+  !> initialise the particle simulations for all task
+  call fill_particle_simulations_no_init(sims_particle_rank,n_times,n_groups,&
+  n_particles,p_types,ifail,rank,n_tasks)
 end subroutine setup_lights
 
 !> tear-down all test features

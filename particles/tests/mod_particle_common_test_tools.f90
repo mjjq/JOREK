@@ -21,6 +21,7 @@ public :: copy_group_fieldline_B_hat_prev
 public :: compute_test_E_B_fields
 public :: fill_particle_kinetic_relativistic_RE,fill_particle_gc_relativistic_RE
 public :: fill_particles_tokamak,fill_mass_RE
+public :: fill_particle_simulations_no_init
 
 !> Variables --------------------------------------------------
 integer,parameter :: n_particle_types=8
@@ -111,6 +112,53 @@ subroutine compute_test_gradpsi_parabolic(x,gradpsi)
   !> compute the grad psi
   gradpsi = B0*(/x(1)-R0,x(2)-Z0,0.d0/)
 end subroutine compute_test_gradpsi_parabolic
+
+!> fill particle simulations without direct initialisation
+!> if fill_particle_in = 1 -> cylindrical initialisation is used
+!>                       cartesian otherwise
+subroutine fill_particle_simulations_no_init(sims_particles,n_times,n_groups,&
+n_particles,p_types,ifail,rank_in,n_tasks_in,fill_particle_in)
+  use mpi
+  use mod_gnu_rng,      only: gnu_rng_interval
+  use mod_particle_sim, only: particle_sim
+  implicit none
+  !> inputs-outputs:
+  type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
+  integer,intent(inout) :: ifail
+  !> inputs:
+  integer,intent(in) :: n_times,n_groups
+  integer,dimension(n_groups),intent(in) :: n_particles,p_types
+  integer,intent(in),optional :: rank_in,n_tasks_in,fill_particle_in
+  !> variables:
+  integer :: ii,jj,rank,n_tasks,fill_particle
+  real*8,dimension(n_times*(n_groups+1)) :: sims_real8
+  !> initialisation
+  rank = 0; if(present(rank_in)) rank = rank_in;
+  n_tasks = 1; if(present(n_tasks_in)) n_tasks = n_tasks_in;
+  fill_particle = 1; if(present(fill_particle_in)) fill_particle = fill_particle_in;
+  !> fill the simulations without fields
+  if(rank.eq.0) then 
+    call gnu_rng_interval(n_times,sim_time_interval,sims_real8(1:n_times))
+    call gnu_rng_interval(n_groups*n_times,mass_interval,sims_real8(n_times+1:n_times*(n_groups+1)))
+  endif
+  call MPI_Bcast(sims_real8,n_times*(n_groups+1),MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
+  do ii=1,n_times
+    sims_particles(ii)%my_id = rank; sims_particles(ii)%n_cpu = n_tasks;
+    sims_particles(ii)%wtime_start = MPI_Wtime()
+    sims_particles(ii)%time = sims_real8(ii)
+    call sims_particles(ii)%set_t_norm
+    !> allocate and initialise groups
+    call sims_particles(ii)%allocate_groups(n_groups)
+    do jj=1,n_groups
+      sims_particles(ii)%groups(jj)%mass = sims_real8((ii-1)*n_groups+jj+n_times)
+    enddo
+    call fill_mass_RE(n_groups,sims_particles(ii)%groups)
+    !> allocate and initialise particles
+    call allocate_one_particle_list_type(n_groups,n_particles,p_types,&
+    sims_particles(ii)%groups,ifail)
+    call fill_particles_tokamak(n_groups,sims_particles(ii)%groups,fill_particle,rank)
+  enddo
+end subroutine fill_particle_simulations_no_init
 
 !> allocate particle list as a function of the particle type
 subroutine allocate_one_particle_list_from_types(n_groups,n_particles,p_types,groups,ifail)

@@ -364,6 +364,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp          ksi_ion, GAMMA, use_imp_adas,                                                   &
 #endif
+#if (defined WITH_Impurities)
+!$omp          index_main_imp,                                                                 &
+#endif
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &

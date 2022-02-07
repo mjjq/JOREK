@@ -123,7 +123,7 @@ real*8     :: t_norm
 real*8     :: Dn0x, Dn0y, Dn0p
 
 ! Atomic physics coefficients:
-integer    :: i_main_imp, i_imp
+integer    :: i_imp
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8     :: m_i_over_m_imp, m_imp
 !   -Mean impurity ionization state
@@ -219,18 +219,6 @@ dV_dz_source=0.d0
 eq_zne          = 0.d0
 eq_zTe          = 0.d0         
 eq_zTi          = 0.d0
-
-!=========imp_type======================
-i_main_imp = 0
-do i_main_imp=1,n_adas
-  if (is_main_imp(i_main_imp) == 1) exit
-  if ((i_main_imp == n_adas) .and. with_impurities) then
-    write(*,*) "ERROR, searched through is_main_imp and didn't find any while with_impurities=.t., EXITING!!!"
-    write(*,*) "ERROR: is_main_imp array:", is_main_imp
-    stop
-  endif
-enddo
-!===========end=========================
 
 do i=1,n_vertex_max
  do j=1,n_order+1
@@ -811,7 +799,7 @@ do ms=1, n_gauss
   ! Atomic physics parameters for Argon
   !-------------------------------------------
 
-     select case ( trim(imp_type(i_main_imp)) )
+     select case ( trim(imp_type(index_main_imp)) )
        case('D2')
          m_i_over_m_imp = central_mass/2.
          m_imp          = 2.
@@ -822,7 +810,7 @@ do ms=1, n_gauss
          m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
          m_imp          = 20.
        case default
-         write(*,*) '!! Gas type "', trim(imp_type(i_main_imp)), '" unknown (in inj_source.f90) !!'
+         write(*,*) '!! Gas type "', trim(imp_type(index_main_imp)), '" unknown (in inj_source.f90) !!'
          write(*,*) '=> We assume the gas is D2.'
          m_i_over_m_imp = central_mass/2.
          m_imp          = 2.
@@ -839,18 +827,18 @@ do ms=1, n_gauss
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
 
-     if (allocated(imp_adas(i_main_imp)%ionisation_energy)) then
+     if (allocated(imp_adas(index_main_imp)%ionisation_energy)) then
 
        if (allocated(P_imp)) deallocate(P_imp)
        if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
 
-       allocate(P_imp(0:imp_adas(i_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(i_main_imp)%n_Z))
+       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
+       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
 
-!       call imp_cor(i_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+!       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
 !                              z_TeTe_out=d2Z_imp_dT2)
-       call imp_cor(i_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+       call imp_cor(index_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                               p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,&
                               z_avg_TeTe=d2Z_imp_dT2)
 
@@ -860,10 +848,10 @@ do ms=1, n_gauss
        E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
                         ! but the difference is of the next order.
 
-       do ion_i=1, imp_adas(i_main_imp)%n_Z
+       do ion_i=1, imp_adas(index_main_imp)%n_Z
          do ion_k=1, ion_i
-           E_ion     = E_ion + P_imp(ion_i)*imp_adas(i_main_imp)%ionisation_energy(ion_k)
-           dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(i_main_imp)%ionisation_energy(ion_k)
+           E_ion     = E_ion + P_imp(ion_i)*imp_adas(index_main_imp)%ionisation_energy(ion_k)
+           dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(index_main_imp)%ionisation_energy(ion_k)
          end do
        end do
        ! Convert from eV to JOREK unit
@@ -878,12 +866,12 @@ do ms=1, n_gauss
        if (allocated(P_imp)) deallocate(P_imp)
        if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
 
-       allocate(P_imp(0:imp_adas(i_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(i_main_imp)%n_Z))
+       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
+       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
 
-!       call imp_cor(i_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+!       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
-       call imp_cor(i_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+       call imp_cor(index_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                      p_out=P_imp,p_Te_out=dP_imp_dT,                          &
                                      z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
        E_ion     = 0.
@@ -942,7 +930,7 @@ do ms=1, n_gauss
 
      ! First get the value of Z_eff
      Z_eff        = r0_corr - rn0_corr
-     do ion_i=1, imp_adas(i_main_imp)%n_Z
+     do ion_i=1, imp_adas(index_main_imp)%n_Z
        Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
        Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
        dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2 ! Its temperature gradient
@@ -950,11 +938,11 @@ do ms=1, n_gauss
      Z_eff        = Z_eff / ne_JOREK
     
      if (Z_eff < 1.) Z_eff = 1.
-     if (Z_eff > (imp_adas(i_main_imp)%n_Z)**2) Z_eff = (imp_adas(i_main_imp)%n_Z)**2
+     if (Z_eff > (imp_adas(index_main_imp)%n_Z)**2) Z_eff = (imp_adas(index_main_imp)%n_Z)**2
  
      ! Then three(!) gradients
      if (Z_eff >= 1.) then
-       do ion_i=1, imp_adas(i_main_imp)%n_Z
+       do ion_i=1, imp_adas(index_main_imp)%n_Z
          dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rn0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
        end do
        dZ_eff_dT    = dZ_eff_dT / ne_JOREK
@@ -963,7 +951,7 @@ do ms=1, n_gauss
        dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
   
        dZ_eff_drn0  = dZ_eff_drn0 - 1.
-       do ion_i=1, imp_adas(i_main_imp)%n_Z
+       do ion_i=1, imp_adas(index_main_imp)%n_Z
          dZ_eff_drn0= dZ_eff_drn0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
        end do
        dZ_eff_drn0  = dZ_eff_drn0 / ne_JOREK
@@ -1009,8 +997,8 @@ do ms=1, n_gauss
 
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will is needed
-!       call radiation_function(imp_adas(i_main_imp),imp_cor(i_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
-       call radiation_function_linear(imp_adas(i_main_imp),imp_cor(i_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
+!       call radiation_function(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad,dLrad_dT)
+       call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
 
        Lrad = Lrad * m_i_over_m_imp
        dLrad_dT = dLrad_dT * m_i_over_m_imp * dTe0_corr_dT
@@ -1037,7 +1025,7 @@ do ms=1, n_gauss
      source_imp = 0.d0                    
      source_bg  = 0.d0
 
-     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,i_main_imp)
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
 
      if (source_imp .lt. 0.d0) then
       source_imp = 0.d0
@@ -1053,7 +1041,7 @@ do ms=1, n_gauss
     frad_bg = 0.
     dfrad_bg_dT = 0.
     do i_imp =1, n_adas
-      if (i_imp == i_main_imp) cycle
+      if (i_imp == index_main_imp) cycle
       r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
       if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
         Lrad_imp_bg = 0.0

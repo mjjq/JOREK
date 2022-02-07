@@ -125,7 +125,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 imp_type, delta_n_convection, nimp_bg,              &
-                is_main_imp,                                        &
+                index_main_imp,                                     &
                 adas_dir, output_prad_phi, n_adas,                  &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 spi_plume_file, spi_plume_hdf5,                     &
@@ -271,13 +271,9 @@ if (my_id .eq. 0) then
     stop
   end if
 
- if (any(is_main_imp > 1) .or. any(is_main_imp < 0)) then 
-    write(*,*) "ERROR: Illegal value of is_main_imp array, EXITING!"
-    write(*,*) "ERROR: is_main_imp array:", is_main_imp
-    stop
- else if ((sum(is_main_imp) .ne. 1) .and. with_impurities) then 
-    write(*,*) "ERROR: Currently admiting one and only one main impurity species when with_impurities, EXITING!"
-    write(*,*) "ERROR: is_main_imp array:", is_main_imp
+ if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
+    write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
+    write(*,*) "ERROR: index_main_imp:", index_main_imp
     stop
  end if
 

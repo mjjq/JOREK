@@ -823,8 +823,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
      write(*,INTG_FMT) 'n_adas              ',  n_adas
      do i = 1, n_adas
        write(*,CHAR_FMT2) 'imp_type(',i,')    ', trim(imp_type(i))
-       write(*,INTG_FMT2) 'is_main_imp(',i,') ', is_main_imp(i)
      end do
+     write(*,INTG_FMT) 'index_main_imp      ', index_main_imp
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
      write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
      write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start

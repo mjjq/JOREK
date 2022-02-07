@@ -119,12 +119,12 @@ x_shaded,light_spec_irradiance)
   integer :: ii,jj
   real*8,dimension(spectra%n_spectra) :: spectra_midpoint
   !> initialisation
-  spectra_midpoint = 5.d-1*(spectra%points(spectra%n_points,:)-spectra%points(spectra%n_points,:))
+  spectra_midpoint = 5.d-1*(spectra%points(spectra%n_points,:)-spectra%points(1,:))
   !> compute irradiance
   !$omp parallel do default(shared) private(ii,jj) collapse(2)
   do ii=1,spectra%n_spectra
     do jj=1,spectra%n_points
-      light_spec_irradiance(ii,jj) = exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
+      light_spec_irradiance(jj,ii) = exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
       (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*light_vert%properties(1,light_id,time_id)))
     enddo
   enddo

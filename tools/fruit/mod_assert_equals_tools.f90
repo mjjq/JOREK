@@ -16,6 +16,7 @@ interface assert_equals_extended
   module procedure assert_equals_extended_4d_int
   module procedure assert_equals_extended_3d_r8
   module procedure assert_equals_extended_4d_r8
+  module procedure assert_equals_extended_5d_r8
 end interface assert_equals_extended
 
 interface assert_equals_rel_error
@@ -24,6 +25,7 @@ interface assert_equals_rel_error
   module procedure assert_equals_rel_error_2d_r8
   module procedure assert_equals_rel_error_3d_r8
   module procedure assert_equals_rel_error_4d_r8
+  module procedure assert_equals_rel_error_5d_r8
 end interface assert_equals_rel_error
 
 interface assert_equals_allocatable_arrays
@@ -119,6 +121,27 @@ size_4,arr_1,arr_2,tol,message)
   enddo
 end subroutine assert_equals_extended_4d_r8
 
+!> extension of the assert equals to double 5D arrays
+subroutine assert_equals_extended_5d_r8(size_1,size_2,size_3,&
+size_4,size_5,arr_1,arr_2,tol,message)
+  implicit none
+  !> inputs
+  integer,intent(in) :: size_1,size_2,size_3,size_4,size_5
+  real*8,dimension(size_1,size_2,size_3,size_4,size_5),intent(in) :: arr_1
+  real*8,dimension(size_1,size_2,size_3,size_4,size_5),intent(in) :: arr_2
+  real*8,intent(in) :: tol
+  character(len=*),intent(in) :: message
+  !> variables
+  integer :: ii,jj,kk
+  do kk=1,size_5
+    do jj=1,size_4
+      do ii=1,size_3
+        call assert_equals(arr_1(:,:,ii,jj,kk),arr_2(:,:,ii,jj,kk),size_1,size_2,tol,message)
+      enddo
+    enddo
+  enddo
+end subroutine assert_equals_extended_5d_r8
+
 !> assert equals for 0D-real8 arrays with relative error
 subroutine assert_equals_rel_error_r8(val_1,val_2,tol,message)
   implicit none
@@ -213,6 +236,32 @@ size_4,arr_1,arr_2,tol,message)
     enddo
   enddo
 end subroutine assert_equals_rel_error_4d_r8
+
+!> assert equals for 5D-real8 arrays with relative error
+subroutine assert_equals_rel_error_5d_r8(size_1,size_2,size_3,&
+size_4,size_5,arr_1,arr_2,tol,message)
+  implicit none
+  !> inputs
+  integer,intent(in) :: size_1,size_2,size_3,size_4,size_5
+  real*8,intent(in) :: tol
+  real*8,dimension(size_1,size_2,size_3,size_4,size_5),intent(in) :: arr_1
+  real*8,dimension(size_1,size_2,size_3,size_4,size_5),intent(in) :: arr_2
+  character(len=*),intent(in) :: message
+  !> variables
+  integer :: ii,jj,kk
+  real*8,dimension(size_1,size_2) :: error,zeros
+  !> compare with relative error
+  zeros = 0.d0
+  do kk=1,size_5
+    do jj=1,size_4
+      do ii=1,size_3
+        error = 0.d0; error = arr_1(:,:,ii,jj,kk)-arr_2(:,:,ii,jj,kk);
+        where(arr_2(:,:,ii,jj,kk).ne.0.d0) error = abs(error/arr_2(:,:,ii,jj,kk))
+        call assert_equals(error,zeros,size_1,size_2,tol,message)
+      enddo
+    enddo
+  enddo
+end subroutine assert_equals_rel_error_5d_r8
 
 !> assert equals_allocatable array 1d int allocation/shape only
 subroutine assert_equals_allocatable_arrays_1d_int_shape(n_values,&

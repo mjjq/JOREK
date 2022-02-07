@@ -12,9 +12,11 @@ module mod_gc_relativistic
   !> declare public procedures and variables
   public relativistic_gc_to_particle
   public gc_to_relativistic_gc
+  public compute_relativistic_factor
   public relativistic_gc_to_relativistic_kinetic
   public relativistic_gc_momenta_from_E_cospitch
   public runge_kutta_fixed_dt_gc_push_jorek
+  public runge_kutta_fixed_dt_gc_push_jorek_radreact
   public runge_kutta_fixed_dt_gc_push
   public runge_kutta_adapt_dt_gc_push_jorek
   public runge_kutta_error_control_dt_gc_push_jorek
@@ -222,19 +224,17 @@ contains
    end function adapt_time_step_gradB_curlb_dbdt
 
   !> This subroutine pushes a relativistic guiding center in JOREK fields
-  !> using a standard Runge-Kutta integrator without time step control. This pusher
-  !> takes into account the radiation reaction force.
+  !> using a standard Runge-Kutta integrator without time step control.
   !> inputs:
   !>   fields:   (fields_base) JOREK fields
   !>   t:        (real8) current time
   !>   dt:       (real8) time step
   !>   mass:     (real8) GC mass in AMU
   !>   particle: (particle_gc_relativistic) GC to be pushed
-  !>   radreactforce: (int4) flag for including synchrotron losses, off by default
   !> outputs:
   !>   t:        (real8) new time 
   !>   particle: (particle_gc_relativistic) pushed GC
-  subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt,mass,particle,radreactforce)
+  subroutine runge_kutta_fixed_dt_gc_push_jorek(fields,t,dt,mass,particle)
     !> modules
     use mod_fields, only: fields_base
     use mod_find_rz_nearby
@@ -246,60 +246,88 @@ contains
     !> input variables
     class(fields_base), intent(in) :: fields
     real(kind=8), intent(in)       :: dt, mass
-    integer(kind=4), intent(in), optional    :: radreactforce
     !> internal variables
     integer                    :: ifail, i_elm_new 
-    integer(kind=4)            :: include_radreactforce
     real(kind=8), dimension(2) :: st_new
     !> global coordinates used during RK integration: 1:R, 2:Z, 3:phi, 4:p_parallel
     real(kind=8), dimension(4) :: solution_new
     !> global coordinates when RR is included includes also 5:mu
     real(kind=8), dimension(5) :: solution_new_rr
 
-    include_radreactforce = 0
-    if(present(radreactforce)) include_radreactforce = radreactforce
+    call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek, &
+         fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
+         particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),   &
+         particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
 
-    !> compute Runge-Kutta differentials
-    if (include_radreactforce .eq. 1) then
-       call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek_radreactionforce, &
-            fields,5,2,3,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
-            particle%p(1),particle%p(2)],[particle%i_elm,int(particle%q)],[particle%st(1),   &
-            particle%st(2),mass],solution_new_rr,i_elm_new)
-       
-       !> compute the new local coordinates
-       if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list, &
-            fields%element_list,particle%x(1),particle%x(2),       &
-            particle%st(1),particle%st(2),particle%i_elm,          &
-            solution_new_rr(1),solution_new_rr(2),st_new(1),st_new(2),   &
-            i_elm_new,ifail)
+    !> compute the new local coordinates
+    if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list, &
+         fields%element_list,particle%x(1),particle%x(2),       &
+         particle%st(1),particle%st(2),particle%i_elm,          &
+         solution_new(1),solution_new(2),st_new(1),st_new(2),   &
+         i_elm_new,ifail)
     
-       !> overwrite GC fields
-       particle%x     = solution_new_rr(1:3)
-       particle%p(1)  = solution_new_rr(4)
-       particle%p(2)  = solution_new_rr(5)
-       particle%st    = st_new
-       particle%i_elm = i_elm_new
-    else
-       call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek, &
-            fields,4,2,4,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
-            particle%p(1)],[particle%i_elm,int(particle%q)],[particle%st(1),   &
-            particle%st(2),mass,particle%p(2)],solution_new,i_elm_new)
-
-        !> compute the new local coordinates
-       if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list, &
-            fields%element_list,particle%x(1),particle%x(2),       &
-            particle%st(1),particle%st(2),particle%i_elm,          &
-            solution_new(1),solution_new(2),st_new(1),st_new(2),   &
-            i_elm_new,ifail)
-    
-       !> overwrite GC fields
-       particle%x     = solution_new(1:3)
-       particle%p(1)  = solution_new(4)
-       particle%st    = st_new
-       particle%i_elm = i_elm_new
-    end if
+    !> overwrite GC fields
+    particle%x     = solution_new(1:3)
+    particle%p(1)  = solution_new(4)
+    particle%st    = st_new
+    particle%i_elm = i_elm_new
     
   end subroutine runge_kutta_fixed_dt_gc_push_jorek
+
+
+  !> This subroutine pushes a relativistic guiding center in JOREK fields
+  !> using a standard Runge-Kutta integrator without time step control. This pusher
+  !> takes into account the radiation reaction force.
+  !> inputs:
+  !>   fields:   (fields_base) JOREK fields
+  !>   t:        (real8) current time
+  !>   dt:       (real8) time step
+  !>   mass:     (real8) GC mass in AMU
+  !>   particle: (particle_gc_relativistic) GC to be pushed
+  !> outputs:
+  !>   t:        (real8) new time 
+  !>   particle: (particle_gc_relativistic) pushed GC
+  subroutine runge_kutta_fixed_dt_gc_push_jorek_radreact(fields,t,dt,mass,particle)
+    !> modules
+    use mod_fields, only: fields_base
+    use mod_find_rz_nearby
+    use mod_runge_kutta, only: runge_kutta_fixed_dt
+    implicit none
+    !> input/output variables
+    type(particle_gc_relativistic), intent(inout) :: particle
+    real(kind=8), intent(inout)                   :: t
+    !> input variables
+    class(fields_base), intent(in) :: fields
+    real(kind=8), intent(in)       :: dt, mass
+    !> internal variables
+    integer                    :: ifail, i_elm_new 
+    real(kind=8), dimension(2) :: st_new
+    !> global coordinates used during RK integration: 1:R, 2:Z, 3:phi, 4:p_parallel
+    real(kind=8), dimension(4) :: solution_new
+    !> global coordinates when RR is included includes also 5:mu
+    real(kind=8), dimension(5) :: solution_new_rr
+
+    !> compute Runge-Kutta differentials
+    call runge_kutta_fixed_dt(compute_relativistic_gc_derivatives_jorek_radreactionforce, &
+         fields,5,2,3,t,dt,[particle%x(1),particle%x(2),particle%x(3),      &
+         particle%p(1),particle%p(2)],[particle%i_elm,int(particle%q)],[particle%st(1),   &
+         particle%st(2),mass],solution_new_rr,i_elm_new)
+       
+    !> compute the new local coordinates
+    if(i_elm_new.ne.0) call find_rz_nearby(fields%node_list, &
+         fields%element_list,particle%x(1),particle%x(2),       &
+         particle%st(1),particle%st(2),particle%i_elm,          &
+         solution_new_rr(1),solution_new_rr(2),st_new(1),st_new(2),   &
+         i_elm_new,ifail)
+    
+    !> overwrite GC fields
+    particle%x     = solution_new_rr(1:3)
+    particle%p(1)  = solution_new_rr(4)
+    particle%p(2)  = solution_new_rr(5)
+    particle%st    = st_new
+    particle%i_elm = i_elm_new
+    
+  end subroutine runge_kutta_fixed_dt_gc_push_jorek_radreact
 
   !> This procedure pushes a relativistic guiding center in analytical fields
   !> using a standard Runge-Kutta integrator without time step control
@@ -445,6 +473,7 @@ contains
     real(kind=8)               :: normB, gamma !< magnetic field intensity and relativistic factor
     real(kind=8), dimension(2) :: st_new !< local GC postion at current RK step
     real(kind=8), dimension(2) :: derivatives_rr !< derivatives from radiation reaction force (ppardot, mudot)
+    real(kind=8), dimension(4) :: derivatives_h  !< derivatives from Hamiltonian motion (Rdot,zdor,phidot,ppardot)
     !> fields required to push the relativistic GC
     real(kind=8), dimension(3) :: E, b, gradB, curlb, dbdt, B_star
 
@@ -459,14 +488,16 @@ contains
       solution(3),E,b,normB,gradB,curlb,dbdt)
 
     !> compute RHS of GC evolution (Cary-Brizard) equations
-    derivatives = compute_relativistic_gc_rhs(int_parameters(2), &
+    derivatives_h = compute_relativistic_gc_rhs(int_parameters(2), &
       real_parameters(3),solution(5),solution(1),         &
       solution(4),normB,E,b,gradB,curlb,dbdt)
 
     !> compute RHS of radiation reaction force and add it to the Hamiltonian  motion
-    call radreactforce_gc_rhs(B, real_parameters(3), int_parameters(2), (/solution(5), solution(4)/), derivatives_rr)
-    derivatives(4) = derivatives(4) + derivatives_rr(1)
-    derivatives(5) = derivatives(5) + derivatives_rr(2)
+    call radreactforce_gc_rhs(B*normB, real_parameters(3), int_parameters(2), (/solution(4), solution(5)/), derivatives_rr)
+
+    derivatives(1:3) = derivatives_h(1:3)
+    derivatives(4)   = derivatives_h(4) + derivatives_rr(1)
+    derivatives(5)   = derivatives_rr(2)
 
   end subroutine compute_relativistic_gc_derivatives_jorek_radreactionforce
 
@@ -763,6 +794,17 @@ contains
     !> Parallel momentum [AMU m/s]
     rel_gc_out%p(1) = sqrt(p_norm_sq)*ksi/ATOMIC_MASS_UNIT		       
   end function relativistic_gc_momenta_from_E_cospitch
+
+  !> Compute relativistic factor from guiding center momentum
+  function compute_relativistic_factor(gc, mass, Bnorm) result(gamma)
+    type(particle_gc_relativistic), intent(in) :: gc
+    real*8, intent(in) :: mass, Bnorm !< mass [amu], B-field magnitude [T]
+    real*8 :: gamma
+
+    gamma = sqrt( 1.d0 + ( gc%p(1) / ( mass * SPEED_OF_LIGHT ) )**2 &
+                       + 2.d0 * Bnorm * gc%p(2) / ( mass * SPEED_OF_LIGHT**2 ) )
+  end function compute_relativistic_factor
+
 
 end module mod_gc_relativistic
 

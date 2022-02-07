@@ -133,7 +133,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 first_target_point, last_target_point,		    &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                spi_tor_rot, tor_frequency,                         &
+                spi_tor_rot, tor_frequency, spi_num_vol,            &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
@@ -142,7 +142,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 corr_neg_temp_coef,                                 &
                 corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,        &  
                 ZK_par_neg,                                         & 
-                ns_deltaphi, ksi_ion, spi_rnd_seed,                 &
+                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
@@ -162,7 +162,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_pf_coils, pf_coils,                 &
+                n_iter_freeb, n_pf_coils, pf_coils, R_axis_ref,     &
                 axis_srch_radius,                                   &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
@@ -170,7 +170,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
                 pastix_maxthrd, eta_ohmic, centralize_harm_mat,     &
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                vert_FB_tact, start_VFB_ts, I_coils_max, rad_FB_amp,&
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
@@ -184,8 +184,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs,                          &
-                min_sheath_angle, bcs      
-
+                min_sheath_angle, bcs,                              &
+                use_sc, add_sources_in_sc, visco_sc_num,            &
+                D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
+                ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
+                ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
+                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact
+      
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.

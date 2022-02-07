@@ -34,7 +34,7 @@ integer,allocatable   :: ien (:,:)
 integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
 integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node, my_id
 character             :: buffer*80, lf*1, str1*12, str2*12
-character*12, allocatable :: scalar_names(:), vector_names(:)
+character*36, allocatable :: scalar_names(:), vector_names(:)
 real*8                :: s, t
 real*8                :: P,P_s,P_t,P_st,P_ss,P_tt
 real*8                :: R,R_s,R_t,R_st,R_ss,R_tt
@@ -536,6 +536,7 @@ do i=1,element_list%n_elements
       ! compute all derivatives, as in loop below
       if ( (xjac .gt. 1.d-6) .and. (jorek_model .ge. 100) ) then
 
+#ifndef fullmhd
         call interp(node_list,element_list,i,var_psi,i_tor,s,t,Ps0,Ps0_s,Ps0_t,Ps0_st,Ps0_ss,Ps0_tt)
         call interp(node_list,element_list,i,var_u,  i_tor,s,t,U0, U0_s, U0_t, U0_st, U0_ss, U0_tt)
         call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ0,ZJ0_s,ZJ0_t,ZJ0_st,ZJ0_ss,ZJ0_tt)
@@ -563,10 +564,10 @@ do i=1,element_list%n_elements
 
         zn0_x  = (   Z_t * zn0_s - Z_s * zn0_t ) / xjac
         zn0_y  = ( - R_t * zn0_s + R_s * zn0_t ) / xjac
-
+#endif
         if (include_neo) then
 
-#ifdef fullmhd
+#ifdef fullmhd 
           ! not yet implemented in model710
           scalars(inode,s_neo+1) = Er
           scalars(inode,s_neo+2) = Vtheta
@@ -667,7 +668,7 @@ do i=1,element_list%n_elements
         currdens(inode) = -scalars(inode,3)/BigR
 
         if ((xjac .gt. 1.d-6)) then
-
+#ifndef fullmhd
           call interp(node_list,element_list,i,var_psi,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
           call interp(node_list,element_list,i,var_u,  i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
           call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
@@ -698,7 +699,7 @@ do i=1,element_list%n_elements
           psi_J = (Ps_s * ZJ_t - PS_t * ZJ_s ) / xjac
           R_p   = (2.d0 * R * (R_s * (RHO_t * TT + RHO * TT_t) - R_t * (RHO_s * TT + RHO * TT_s) )) / xjac
           error = psi_J - R_p  ! "error" in Grad_Shafranov equilibrium force balance
-
+#endif
         endif  ! xjac check
 
       else  ! i_tor

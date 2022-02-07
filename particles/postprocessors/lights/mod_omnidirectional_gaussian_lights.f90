@@ -10,6 +10,7 @@ public :: omnidirectional_gaussian_lights
 
 !> Variables ----------------------------------------------------
 type,extends(light_vertices) :: omnidirectional_gaussian_lights
+  real*8 :: light_intensity=1.d0
   contains
   procedure,pass(light_vert) :: init_lights_from_particles => &
                                 init_omnidir_gaussian_lights_from_particles
@@ -54,7 +55,7 @@ n_times,sims_particles,n_lights_in)
   integer,dimension(:,:,:),allocatable :: active_particle_ids
 
   !> initialisations
-  light_vert%n_property_vertex = 2
+  light_vert%n_property_vertex = 3
   call light_vert%allocate_time_vector(n_times)
   call light_vert%fill_time_vector_particle_sims(sims_particles)
   !> allocate number of particles and particle types
@@ -117,15 +118,18 @@ x_shaded,light_spec_irradiance)
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
   !> variables
   integer :: ii,jj
-  real*8,dimension(spectra%n_spectra) :: spectra_midpoint
+  real*8,dimension(spectra%n_spectra) :: spectra_midpoint,spectra_bin
   !> initialisation
-  spectra_midpoint = 5.d-1*(spectra%points(spectra%n_points,:)-spectra%points(1,:))
+  spectra_bin = (spectra%points(spectra%n_points,:)-spectra%points(1,:))
+  spectra_midpoint = spectra%points(1,:)+5.d-1*spectra_bin
   !> compute irradiance
   !$omp parallel do default(shared) private(ii,jj) collapse(2)
   do ii=1,spectra%n_spectra
     do jj=1,spectra%n_points
-      light_spec_irradiance(jj,ii) = exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
-      (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*light_vert%properties(1,light_id,time_id)))
+      light_spec_irradiance(jj,ii) = light_vert%light_intensity*&
+      exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
+      (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*&
+      spectra_bin(ii)*light_vert%properties(1,light_id,time_id)))
     enddo
   enddo
   !$omp end parallel do
@@ -158,7 +162,7 @@ x_shaded,light_dstb)
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_dstb
   !> compute the directionality function
   call light_vert%spectral_irradiance(spectra,time_id,light_id,x_shaded,light_dstb)
-  light_dstb = light_dstb/light_vert%properties(2,light_id,time_id)
+  light_dstb = light_dstb/(light_vert%properties(2,light_id,time_id)*light_vert%light_intensity)
 end subroutine omnidir_gaussian_directionality_funct
 
 !> Tools --------------------------------------------------------

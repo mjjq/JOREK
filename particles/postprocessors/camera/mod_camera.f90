@@ -259,8 +259,11 @@ subroutine compute_images(camera_inout,light_inout,spectra_inout,&
   call camera_inout%reduce_light_image(light_inout,spectra_inout,&
   filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ierr)
   !> generate images
-  if(rank.eq.0) &
-  images = camera_inout%pixel_intensities(:,1,:,:,:)/camera_inout%pixel_intensities(:,2,:,:,:)
+  if(rank.eq.0) then
+    images = 0.d0
+    where(camera_inout%pixel_intensities(:,2,:,:,:).ne.0.d0) images = &
+    camera_inout%pixel_intensities(:,1,:,:,:)/camera_inout%pixel_intensities(:,2,:,:,:)
+  endif
 end subroutine compute_images
 !>------------------------------------------------------------------
 end module mod_camera

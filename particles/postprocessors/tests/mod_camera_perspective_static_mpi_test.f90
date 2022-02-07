@@ -25,14 +25,15 @@ integer,parameter                           :: n_pixels_x=64
 integer,parameter                           :: n_pixels_y=32
 integer,parameter                           :: n_active_light_time_rank=345
 integer,dimension(2),parameter              :: rng_seed_interval=(/642,12456324/)
-real*8,parameter                            :: accept_threshold=5.d-1
+real*8,parameter                            :: accept_threshold=1.5d-1
 real*8,parameter                            :: plane_distance_sol=4.23d0
 real*8,parameter                            :: dt_sol=1.d-2
-real*8,parameter                            :: tol_real8_rel=5.d-16
+real*8,parameter                            :: tol_real8_rel=5.d-15
+real*8,parameter                            :: light_intensity=1.d13
 real*8,dimension(2),parameter               :: st_outbnd=(/-2.d2,5.d3/)
-real*8,dimension(2),parameter               :: q_interval=(/-3.1d-1,9.5d-1/)
-real*8,dimension(2),parameter               :: property_interval=(/5.d-1,5.d1/)
-real*8,dimension(2),parameter               :: width_gaussian=(/5.d-1,5.d1/)
+real*8,dimension(2),parameter               :: q_interval=(/-3.1d-1,2.5d-1/)
+real*8,dimension(2),parameter               :: property_interval=(/5.d-10,5.d-8/)
+real*8,dimension(2),parameter               :: width_gaussian=(/5.d-5,5.d-1/)
 real*8,dimension(2),parameter               :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0/)
 real*8,dimension(2),parameter               :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0/)
 real*8,dimension(2),parameter               :: costheta_interval=(/-1.d0,1.d0/)
@@ -76,6 +77,7 @@ subroutine run_fruit_camera_perspective_static_mpi(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   if(rank.eq.0) write(*,*) "  ... running: camera perspective static mpi tests"
   call test_reduct_particle_light_image_static(rank,n_tasks,ifail)
+  call reset_camera_pixel_intensities(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call test_compute_images(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,*) "  ... tearing-down: camera perspective static mpi tests"
@@ -97,6 +99,7 @@ subroutine setup_spectra_filters(rank,n_tasks,ifail)
   n_1d = 1; n_2d = 2;
   spectra_sol = spectrum_integrator_2nd(n_lines_per_spectrum_sol,&
   n_spectra_sol,min_wlen,max_wlen)
+  call spectra_sol%generate_spectrum
   call filter_time_sol%init_filter(n_1d)
   call filter_pixel_sol%init_filter(n_2d)
   do ii=1,n_spectra_sol
@@ -165,6 +168,7 @@ subroutine setup_lights(rank,n_tasks,ifail)
 
   !> allocate light properties
   lights_rank%n_property_vertex = n_property_light
+  lights_rank%light_intensity = light_intensity
   call lights_rank%allocate_vertices(n_times,n_active_light_time_rank)
   lights_rank%n_active_vertices = n_active_light_time_rank
   if(rank.eq.0) then
@@ -174,7 +178,7 @@ subroutine setup_lights(rank,n_tasks,ifail)
   endif
   call MPI_Bcast(lights_rank%times,n_times,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
   !> compute and store the exposure time
-  camera_sol%exposure_time = camera_sol%times(n_times)-camera_sol%times(n_times)
+  camera_sol%exposure_time = lights_rank%times(n_times)-lights_rank%times(1)
   call fill_omnidirectional_light(rank,n_tasks,ifail) !< prepare particle lights
 end subroutine setup_lights
 
@@ -198,6 +202,16 @@ subroutine setup_image(rank,n_tasks,ifail)
   call compute_solution_image(rank,n_tasks,ifail)
 end subroutine setup_image
 
+!> rest the camera pixel_intensities field
+subroutine reset_camera_pixel_intensities(rank,n_tasks,ifail)
+  implicit none
+  !> inputs-outputs:
+  integer,intent(inout) :: ifail
+  !> inputs:
+  integer,intent(in) :: rank,n_tasks
+  camera_sol%pixel_intensities = 0.d0
+end subroutine reset_camera_pixel_intensities
+ 
 !> tear-down all test features
 subroutine teardown(rank,n_tasks,ifail)
   implicit none
@@ -229,6 +243,8 @@ subroutine test_reduct_particle_light_image_static(rank,n_tasks,ifail)
   integer,intent(inout) :: ifail
   !> inputs:
   integer,intent(in) :: rank,n_tasks
+  real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: error
+  error = 0.d0
   !> execute reduce particle using omnidirectional light sources
   call camera_sol%reduce_light_image(lights_rank,spectra_sol,filter_pixel_sol,&
   filter_spectra_sol,filter_time_sol,rank,ifail)
@@ -247,8 +263,10 @@ subroutine test_compute_images(rank,n_tasks,ifail)
   !> inputs:
   integer,intent(in) :: rank,n_tasks
   !> variables
-  real*8,dimension(n_spectra_sol,n_pixels_x,n_pixels_y,1) :: test_image
+  real*8,dimension(n_spectra_sol,n_pixels_x,n_pixels_y,1) :: test_image,error
+  error = 0.d0
   !> generate image from distribution of omnidirectional light sources
+  camera_sol%pixel_intensities = 0.d0
   call camera_sol%compute_images(lights_rank,spectra_sol,filter_pixel_sol,&
   filter_spectra_sol,filter_time_sol,rank,test_image,ifail)
   if(rank.eq.0) call assert_equals_rel_error(n_spectra_sol,n_pixels_x,n_pixels_y,1,&
@@ -389,7 +407,6 @@ subroutine compute_solution_image(rank,n_tasks,ifail)
     where(image_filter_sol(:,2,:,:,:).ne.0.d0) &
     image_sol = image_filter_sol(:,1,:,:,:)/image_filter_sol(:,2,:,:,:)
   endif
-  if(allocated(image_buffer)) deallocate(image_buffer)
 end subroutine compute_solution_image
 
 !>----------------------------------------------------------------------------

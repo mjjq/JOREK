@@ -1048,10 +1048,18 @@ do i=1,n_vertex_max
           BB2 = Bp0**2 + BR0**2 + BZ0**2
 
           ! --- RESISTIVITY SWITCHES FOR AR AND AZ EQUATIONS
-          ! --- eta_ARAZ_const is to use a constant resistivity for AR&AZ, it can only be non-zero if eta_ARAZ_on=.false. 
-          ! --- (ie. do not use Spitzer AND constant eta at the same time)
-          ! --- eta_ARAZ_simple removes the Fprof dependence of Bphi in the resistive term and the current term for AR&AZ
-          ! --- because these should cancel anyway, but they seem to be numerically unstable...
+          ! --- 1.
+          ! --- Default set-up is eta_ARAZ_on = .true.
+          ! --- In this case, the same resistivity is used for all AR,AZ,A3 components
+          ! --- 2.
+          ! --- If (eta_ARAZ_on = .true.) and (eta_ARAZ_simple = .true.), then the Fprof component of Bphi is removed from the resistive term.
+          ! --- Note that in a stationary equilibrium, the Fprof component of Bphi from the current and the current source should exactly cancel anyway.
+          ! --- However, this Fprof component can lead to strong noise at high resistivity, so it is often better to remove it.
+          ! --- 3.
+          ! --- If (eta_ARAZ_on = .false.), then resistivity is switched off by default for the AR and AZ equations.
+          ! --- However, regardless of which eta-model is used for A3, (ie. eta_T_dependent or not), you can still set eta_ARAZ_const 
+          ! --- which will use a constant resistivity at the level eta_ARAZ_const.
+          ! --- 4.
 
           ! --- Toroidal magnetic field without F contribution (for eta_ARAZ_simple)
           Bp00 = Bp0

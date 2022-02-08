@@ -77,7 +77,15 @@ module phys_module
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
-  logical :: eta_ARAZ_on          !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  ! --- RESISTIVITY SWITCHES FOR AR AND AZ EQUATIONS
+  ! --- eta_ARAZ_const is to use a constant resistivity for AR&AZ, it can only be non-zero if eta_ARAZ_on=.false. 
+  ! --- (ie. do not use Spitzer AND constant eta at the same time)
+  ! --- eta_ARAZ_simple removes the Fprof dependence of Bphi in the resistive term and the current term for AR&AZ
+  ! --- because these should cancel anyway, but they seem to be numerically unstable...
+  real*8  :: eta_ARAZ_const       !< Use uniform resistivity for AR and AZ equations, used only if eta_ARAZ_on=.false.
+  logical :: eta_ARAZ_on          !< Full-MHD: to switch on/off resistive terms for AR and AZ equations
+  logical :: eta_ARAZ_simple      !< Full-MHD: remove the Fprof dependence of Bphi in the resistive terms for AR and AZ (which should be compensated by current source anyway)
+
   logical :: tauIC_ARAZ_on        !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver

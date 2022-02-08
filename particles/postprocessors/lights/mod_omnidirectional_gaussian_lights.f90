@@ -107,6 +107,7 @@ end subroutine init_omnidir_gaussian_lights_from_particles
 subroutine omnidir_gaussian_spectral_irradiance(light_vert,spectra,time_id,light_id,&
 x_shaded,light_spec_irradiance)
   use mod_spectra, only: spectrum_base
+  !$ use omp_lib
   implicit none
   !> inputs-outputs:
   class(omnidirectional_gaussian_lights),intent(inout) :: light_vert
@@ -117,22 +118,38 @@ x_shaded,light_spec_irradiance)
   !> outputs:
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
   !> variables
+  logical :: in_parallel
   integer :: ii,jj
   real*8,dimension(spectra%n_spectra) :: spectra_midpoint,spectra_bin
   !> initialisation
+  in_parallel = .false.
+  !$ in_parallel = omp_in_parallel()
   spectra_bin = (spectra%points(spectra%n_points,:)-spectra%points(1,:))
   spectra_midpoint = spectra%points(1,:)+5.d-1*spectra_bin
   !> compute irradiance
-  !$omp parallel do default(shared) private(ii,jj) collapse(2)
-  do ii=1,spectra%n_spectra
-    do jj=1,spectra%n_points
-      light_spec_irradiance(jj,ii) = light_vert%light_intensity*&
-      exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
-      (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*&
-      spectra_bin(ii)*light_vert%properties(1,light_id,time_id)))
+  if(in_parallel) then
+    !$omp taskloop default(shared) private(ii,jj) collapse(2)
+    do ii=1,spectra%n_spectra
+      do jj=1,spectra%n_points
+        light_spec_irradiance(jj,ii) = light_vert%light_intensity*&
+        exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
+        (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*&
+        spectra_bin(ii)*light_vert%properties(1,light_id,time_id)))
+      enddo
     enddo
-  enddo
-  !$omp end parallel do
+    !$omp end taskloop
+  else
+    !$omp parallel do default(shared) private(ii,jj) collapse(2)
+    do ii=1,spectra%n_spectra
+      do jj=1,spectra%n_points
+        light_spec_irradiance(jj,ii) = light_vert%light_intensity*&
+        exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
+        (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*&
+        spectra_bin(ii)*light_vert%properties(1,light_id,time_id)))
+      enddo
+    enddo
+    !$omp end parallel do
+  endif
 end subroutine omnidir_gaussian_spectral_irradiance
 
 !> omnidir_gaussian_directionality_funct computes the directionality function

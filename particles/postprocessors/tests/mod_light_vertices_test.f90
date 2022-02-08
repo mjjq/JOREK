@@ -18,10 +18,15 @@ private
 public :: run_fruit_light_vertices
 
 !> Variables ---------------------------------------------------------
+character(len=12),parameter               :: input_file='light_inputs'
+integer,parameter                         :: n_int_param_sol=2
+integer,parameter                         :: n_real_param_sol=0
+integer,parameter                         :: read_unit=43
 integer,parameter                         :: n_x=3
 integer,parameter                         :: n_properties_sol=11
 integer,parameter                         :: n_particle_types=2
 integer,parameter                         :: n_times_sol=3
+integer,parameter                         :: n_lights_sol=1242
 integer,dimension(n_times_sol),parameter  :: n_groups_per_sim=(/3,1,2/)
 integer,parameter                         :: n_groups_max=maxval(n_groups_per_sim)
 integer,dimension(n_particle_types)       :: particle_types_to_test=(/&
@@ -51,8 +56,10 @@ contains
 subroutine run_fruit_light_vertices()
   implicit none
   write(*,'(/A)') "  ... setting-up: light vertices tests"
-  call setup()
+  call prepare_input_file
+  call setup
   write(*,'(/A)') "  ... running: light vertices tests"
+  call test_ligth_read_inputs
   call test_find_all_active_particles_ids
   call test_find_all_active_particles_ids_types
   call test_store_light_from_particle_id
@@ -61,10 +68,24 @@ subroutine run_fruit_light_vertices()
   call test_extract_all_n_groups
   call test_fill_time_vector
   write(*,'(/A)') "  ... tearing-down: light vertices tests"
-  call teardown()
+  call teardown
 end subroutine run_fruit_light_vertices
 
 !> Set-up and teard-down ---------------------------------------------
+!> create an input file for testing the reading procedure
+subroutine prepare_input_file()
+  implicit none
+  !> variables
+  integer :: ifail
+  !> write the file
+  open(read_unit,file=input_file,status='new',action='write',iostat=ifail)
+  write(read_unit,'(/A)') '&light_in'
+  write(read_unit,'(/A,I6)') 'n_times = ',n_times_sol
+  write(read_unit,'(/A,I6)') 'n_lights = ',n_lights_sol
+  write(read_unit,'(/A)') '/'
+  close(read_unit)
+end subroutine prepare_input_file
+
 !> set-up features common to all unit test
 subroutine setup()
   use mod_gnu_rng,                          only: gnu_rng_interval
@@ -106,9 +127,36 @@ end subroutine setup
 subroutine teardown()
   implicit none
   vertex_sol%n_property_vertex=0
+  !> remove input file
+  call system("rm "//input_file)
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> test the procedure used for reading light input files
+subroutine test_ligth_read_inputs()
+  implicit none
+  !> variables
+  integer :: rank,n_int_param,n_real_param,ifail
+  integer,dimension(:),allocatable :: int_param
+  real*8,dimension(:),allocatable :: real_param
+  !> initialisation 
+  rank = 0
+  !> read input file
+  open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
+  call vertex_sol%read_light_inputs(rank,read_unit,n_int_param,&
+  n_real_param,int_param,real_param)
+  close(read_unit)
+  !> checks
+  call assert_equals(n_int_param,n_int_param_sol,&
+  "Error light read inputs: N# integer parameters mismatch!")
+  call assert_equals(n_real_param,n_real_param_sol,&
+  "Error light read inputs: N# real parameters mismatch!")
+  call assert_equals(int_param,(/n_times_sol,n_lights_sol/),2,&
+  "Error light read inputs: int parameters mismatch!")
+  call assert_false(allocated(real_param),&
+  "Error light read inputs: real parameters allocated!")
+end subroutine test_ligth_read_inputs
+
 !> procedure for testing the find active particles for all particle types
 subroutine test_find_all_active_particles_ids()
   implicit none

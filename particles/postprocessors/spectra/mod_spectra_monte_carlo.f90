@@ -186,24 +186,37 @@ subroutine integrate_rng_uniform(spectrum,dat,integrals)
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
   integer :: ii,thread_id,n_threads,n_points_per_thread,residual_id
+  logical :: in_parallel
   !> integrate
+  in_parallel = .true.
   thread_id = 0
   n_threads = 1
-  !$omp parallel default(private) shared(spectrum,dat,residual_id) &
-  !$omp firstprivate(n_threads) reduction(+:integrals)
-  !$ thread_id = omp_get_thread_num()
-  !$ n_threads = omp_get_num_threads()
-  n_points_per_thread = spectrum%n_points/n_threads
-  residual_id = n_points_per_thread*n_threads
-  do ii=1,spectrum%n_spectra
-    integrals(ii) = integrals(ii) + sum(dat(&
-    thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
-  enddo 
-  !$omp end parallel
-  if(residual_id.lt.spectrum%n_points) then
+  !$ in_parallel = omp_in_parallel()
+  if(in_parallel) then
+    !> Not all compilers support reduction clauses with taskloop
+    !> hence only the outer loop is parallelised
+    !$omp taskloop default(private) shared(spectrum,dat,integrals)
     do ii=1,spectrum%n_spectra
-      integrals(ii) = integrals(ii) + sum(dat(residual_id+1:spectrum%n_points,ii))
+      integrals(ii) = sum(dat(:,ii))
     enddo
+    !$omp end taskloop
+  else
+    !$omp parallel default(private) shared(spectrum,dat,residual_id) &
+    !$omp firstprivate(n_threads) reduction(+:integrals)
+    !$ thread_id = omp_get_thread_num()
+    !$ n_threads = omp_get_num_threads()
+    n_points_per_thread = spectrum%n_points/n_threads
+    residual_id = n_points_per_thread*n_threads
+    do ii=1,spectrum%n_spectra
+      integrals(ii) = integrals(ii) + sum(dat(&
+      thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
+    enddo 
+    !$omp end parallel
+    if(residual_id.lt.spectrum%n_points) then
+      do ii=1,spectrum%n_spectra
+        integrals(ii) = integrals(ii) + sum(dat(residual_id+1:spectrum%n_points,ii))
+      enddo
+    endif  
   endif
   integrals = integrals*spectrum%i_pdf/spectrum%n_points
 end subroutine integrate_rng_uniform

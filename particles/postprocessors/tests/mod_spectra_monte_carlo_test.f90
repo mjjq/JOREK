@@ -252,13 +252,14 @@ subroutine test_spectrum_integration_rng_uniform()
   type(spectrum_rng_uniform)  :: spectrum
   integer                     :: ii,kk,pp,n_threads
   !$ integer                  :: jj
-  real*8,dimension(2)         :: std_conv_coeff !< linear regression coeff. of the std deviation
-  real*8,dimension(n_spectra) :: integral       !< required for avoiding wrong memory accesses
+  real*8,dimension(2)         :: std_conv_coeff    !< linear regression coeff. of the std deviation
+  real*8,dimension(n_spectra) :: integral,solution !< required for avoiding wrong memory accesses
   real*8,dimension(:,:),allocatable         :: integrands
-  real*8,dimension(n_spectra,n_trials)      :: integrals
-  real*8,dimension(n_spectra,n_convergence) :: avg_integrals !< average value of the integrals
-  real*8,dimension(n_spectra,n_convergence) :: std_dev       !< integral std deviation
-  real*8,dimension(n_spectra,n_convergence) :: int_error     !< integral error
+  real*8,dimension(n_spectra,n_trials)      :: integrals,integrals_taskloop
+  real*8,dimension(n_spectra,n_convergence) :: avg_integrals,&
+  avg_integrals_taskloop !< average value of the integrals
+  real*8,dimension(n_spectra,n_convergence) :: std_dev,std_dev_taskloop !< integral std deviation
+  real*8,dimension(n_spectra,n_convergence) :: int_error,int_error_taskloop !< integral error
 
   !> initialisation
   std_dev = 0.d0; n_threads = 1;
@@ -287,16 +288,21 @@ subroutine test_spectrum_integration_rng_uniform()
       !> integrate  and compute error
       call spectrum%integrate_data(integrands,integral)
       integrals(:,pp) = integral
+      !> integrate using the taskloop parallelism
+      !$omp parallel default(private) shared(spectrum,integrands,integral)
+      !$omp single
+      call spectrum%integrate_data(integrands,integral)
+      !$omp end single
+      !$omp end parallel
+      integrals_taskloop(:,pp) = integral
     enddo
 
     !> compute integrand standard deviation and error
-    avg_integrals(:,kk) = sum(integrals,dim=2)/real(n_trials,kind=8)
-    do jj=1,n_trials
-      std_dev(:,kk) = std_dev(:,kk) + ((integrals(:,jj)-avg_integrals(:,kk))*&
-      (integrals(:,jj)-avg_integrals(:,kk)))
-    enddo
-    int_error(:,kk) = abs(avg_integrals(:,kk)-(int_sin2x(n_spectra,PI*max_angle)-&
-    int_sin2x(n_spectra,PI*min_angle)))
+    solution = int_sin2x(n_spectra,PI*max_angle)-int_sin2x(n_spectra,PI*min_angle)
+    call compute_average_std_dev_error(n_spectra,n_trials,integrals,solution,&
+    avg_integrals(:,kk),std_dev(:,kk),int_error(:,kk))
+    call compute_average_std_dev_error(n_spectra,n_trials,integrals_taskloop,solution,&
+    avg_integrals_taskloop(:,kk),std_dev_taskloop(:,kk),int_error_taskloop(:,kk))
 
     !> clean up everything
     deallocate(integrands)
@@ -305,6 +311,7 @@ subroutine test_spectrum_integration_rng_uniform()
 
   !> compute the comvergence rate of the standard deviation
   std_dev = sqrt(std_dev/real(n_trials,kind=8))
+  std_dev_taskloop = sqrt(std_dev_taskloop/real(n_trials,kind=8))
   do ii=1,n_spectra
     call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
     log10(std_dev(ii,:)),std_conv_coeff)
@@ -313,10 +320,39 @@ subroutine test_spectrum_integration_rng_uniform()
     "Error integrate uniform random spectrum: std convergence rate is not 1/2!")
     call assert_true(int_error(ii,n_convergence).lt.tol_min_int_error,&
     "Error integrate uniform random spectrum: minimum error larger than expected!") 
+    call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
+    log10(std_dev_taskloop(ii,:)),std_conv_coeff)
+    !> check that the convergence coefficient of the standard deviation ~0.5
+    call assert_equals(std_conv_coeff(1),expected_std_conv_coeff,tol_std_conv_coeff,&
+    "Error integrate uniform random spectrum taskloop: std convergence rate is not 1/2!")
+    call assert_true(int_error_taskloop(ii,n_convergence).lt.tol_min_int_error,&
+    "Error integrate uniform random spectrum taskloop: minimum error larger than expected!") 
   enddo
 
 end subroutine test_spectrum_integration_rng_uniform
 
 !> Tools ---------------------------------------------------------------------
+!> method for computing averages, standard deviatons and error
+subroutine compute_average_std_dev_error(n_values,n_trials,integrals,solution,&
+avg_integrals,std_dev,error)
+  implicit none
+  !> inputs:
+  integer,intent(in)                             :: n_values,n_trials
+  real*8,dimension(n_values),intent(in)          :: solution
+  real*8,dimension(n_values,n_trials),intent(in) :: integrals
+  !> outputs:
+  real*8,dimension(n_values),intent(out) :: avg_integrals,std_dev,error
+  !> variables
+  integer :: jj
+  !> compute the average solution
+  avg_integrals = sum(integrals,dim=2)/real(n_trials,kind=8)
+  !> compute standard deviation
+  do jj=1,n_trials
+    std_dev = std_dev + ((integrals(:,jj)-avg_integrals)*&
+    (integrals(:,jj)-avg_integrals))
+  enddo
+  !> compute error
+  error = abs(avg_integrals-solution)
+end subroutine compute_average_std_dev_error
 !>----------------------------------------------------------------------------
 end module mod_spectra_monte_carlo_test

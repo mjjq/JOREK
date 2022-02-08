@@ -164,26 +164,39 @@ subroutine integrate_spectrum_rectangle(spectrum,dat,integrals)
   real*8,dimension(spectrum%n_spectra),intent(out) :: integrals
   !> variables
   integer :: ii,thread_id,n_threads,n_points_per_thread,residual_id
+  logical :: in_parallel
   !> integration
+  in_parallel = .true.
   thread_id = 0
   n_threads = 1
   integrals = 0.d0
-  !$omp parallel default(private) shared(spectrum,dat,residual_id) &
-  !$omp firstprivate(n_threads) reduction(+:integrals)
-  !$ n_threads = omp_get_num_threads()
-  !$ thread_id = omp_get_thread_num()
-  n_points_per_thread = spectrum%n_points/n_threads
-  residual_id = spectrum%n_points - n_points_per_thread*n_threads
-  do ii=1,spectrum%n_spectra
-    integrals(ii) = integrals(ii) + sum(dat(&
-    thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
-  enddo
-  !$omp end parallel
-  if(residual_id.gt.0) then
+  !$ in_parallel = omp_in_parallel()
+  if(in_parallel) then
+    !> reduction clause in taskloop seems not to be supported by all compilers
+    !> so a single loop is implemented with no parallelization on the summatory
+    !$omp taskloop private(ii) shared(spectrum,dat,integrals) !nogroup
+    do ii=1,spectrum%n_spectra
+      integrals(ii) = sum(dat(:,ii))
+    enddo
+    !$omp end taskloop
+  else
+    !$omp parallel default(private) shared(spectrum,dat,residual_id) &
+    !$omp firstprivate(n_threads) reduction(+:integrals)
+    !$ n_threads = omp_get_num_threads()
+    !$ thread_id = omp_get_thread_num()
+    n_points_per_thread = spectrum%n_points/n_threads
+    residual_id = spectrum%n_points - n_points_per_thread*n_threads
     do ii=1,spectrum%n_spectra
       integrals(ii) = integrals(ii) + sum(dat(&
-      spectrum%n_points-residual_id+1:spectrum%n_points,ii))
+      thread_id*n_points_per_thread+1:(thread_id+1)*n_points_per_thread,ii))
     enddo
+    !$omp end parallel
+    if(residual_id.gt.0) then
+      do ii=1,spectrum%n_spectra
+        integrals(ii) = integrals(ii) + sum(dat(&
+        spectrum%n_points-residual_id+1:spectrum%n_points,ii))
+      enddo
+    endif
   endif
   integrals = integrals*spectrum%wbin_size
 end subroutine integrate_spectrum_rectangle

@@ -240,10 +240,10 @@ subroutine test_2nd_order_rectangle_integrator()
   integer                       :: ii,kk
   !$ integer                    :: jj
   real*8,dimension(2)           :: conv_coeff !< convergence coeff. from linear regression
-  real*8,dimension(n_spectra)   :: integral
+  real*8,dimension(n_spectra)   :: integral,integral_taskloop,solution
   real*8,dimension(:,:),allocatable         :: integrands
   real*8,dimension(n_spectra,n_convergence) :: rel_int_error !< integretion error
-
+  real*8,dimension(n_spectra,n_convergence) :: rel_int_error_taskloop !< integretion error
   !> convergence loop
   do kk=1,n_convergence
     !> initialise
@@ -264,9 +264,15 @@ subroutine test_2nd_order_rectangle_integrator()
     enddo
 #endif
     call spectrum%integrate_data(integrands,integral) !< integrate values
-    rel_int_error(:,kk) = abs((integral - (int_expxsin2x(n_spectra,max_angle)-&
-    int_expxsin2x(n_spectra,min_angle)))/(int_expxsin2x(n_spectra,max_angle)-&
-    int_expxsin2x(n_spectra,min_angle))) !< compute the error  
+    !> integral values in taskloop
+    !$omp parallel default(private) shared(spectrum,integrands,integral_taskloop)
+    !$omp single
+    call spectrum%integrate_data(integrands,integral_taskloop)
+    !$omp end single
+    !$omp end parallel
+    solution = int_expxsin2x(n_spectra,max_angle)-int_expxsin2x(n_spectra,min_angle)
+    rel_int_error(:,kk) = abs((integral-solution)/solution)!< compute the error  
+    rel_int_error_taskloop(:,kk) = abs((integral_taskloop-solution)/solution)!< compute the error  
     deallocate(integrands)
     call spectrum%deallocate_spectrum
   enddo
@@ -279,6 +285,12 @@ subroutine test_2nd_order_rectangle_integrator()
     "Error spectrum integration: expected accuracy order not matched!")
     call assert_true(rel_int_error(ii,n_convergence).lt.tol_int_error,&
     "Error spectrum integration: expected minimum error not achieved!")
+    call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
+    log10(rel_int_error_taskloop(ii,:)),conv_coeff)
+    call assert_equals(conv_coeff(1),accuracy_order,tol_accuracy,&
+    "Error spectrum integration taskloop: expected accuracy order not matched!")
+    call assert_true(rel_int_error_taskloop(ii,n_convergence).lt.tol_int_error,&
+    "Error spectrum integration taskloop: expected minimum error not achieved!")
   enddo
 end subroutine test_2nd_order_rectangle_integrator
 

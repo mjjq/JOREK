@@ -134,21 +134,26 @@ light_id,x_shaded,light_dstb)
   use mod_boost_besselk,        only: f_besselk
   use mod_coordinate_transforms,only: cartesian_to_spherical_latitude
   use mod_spectra,              only: spectrum_base
+  !$ use omp_lib
   implicit none
   !> inputs-outputs:
   class(synchrotron_light_vertices),intent(inout) :: light_vert
   class(spectrum_base),intent(inout)              :: spectra
   !> inputs:
-  integer,intent(in)                :: time_id,light_id
+  integer,intent(in)                           :: time_id,light_id
   real*8,dimension(light_vert%n_x),intent(in)  :: x_shaded
   !> outputs:
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_dstb
   !> variables
-  real*8,dimension(light_vert%n_x) :: rpsichi !< spherical coordinates
-  integer :: ii,jj
-  real*8,dimension(light_vert%n_property_vertex) :: light_properties
+  logical :: in_parallel
+  integer :: ii,jj 
   real*8  :: zeta,one_over_gamma,z_value,z2_value,factor_1,factor_2,z_cos
+  real*8,dimension(light_vert%n_x) :: rpsichi !< spherical coordinates
+  real*8,dimension(light_vert%n_property_vertex) :: light_properties
 
+  !> initialisations
+  in_parallel = .false.
+  !$ in_parallel = omp_in_parallel()
   !> compute the spherical coordinates of the light-point ray
   light_properties = light_vert%properties(:,light_id,time_id)
   rpsichi = cartesian_to_spherical_latitude(x_shaded,light_vert%x(:,light_id,time_id),&
@@ -168,22 +173,31 @@ light_id,x_shaded,light_dstb)
   !> Power_tot = (q**2/(6*PI*eps0i*c**3))*gamma**4 * v**4 * kappa**2
   factor_1 = factor_1*factor_1*((3.d0*TWOPI)/(sqrt3*(light_properties(10)**4.d0)*&
   (light_properties(11)**8.d0)*(light_properties(12)**3.d0)))
-  !$omp parallel do default(shared) private(ii,jj,zeta) &
-  !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&
-  !$omp factor_2,z_value,z2_value,factor_1) collapse(2)
-  do ii=1,spectra%n_spectra
-    do jj=1,spectra%n_points
-      !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
-      zeta = TWOPI*((one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
-      (3.d0*spectra%points(jj,ii)*light_properties(12))
-      !> funct = I*(K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
-      !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos))/lambda**4
-      light_dstb(jj,ii) = factor_1*(f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z2_value)+&
-      f_besselk(twothirds,zeta)*z_value*sin(zeta*z_cos))/&
-      (spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii)*spectra%points(jj,ii))
+  if(in_parallel) then
+    !$omp taskloop default(shared) private(ii,jj) &
+    !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&
+    !$omp factor_2,z_value,z2_value,factor_1) collapse(2)
+    do ii=1,spectra%n_spectra
+      do jj=1,spectra%n_points
+        call compute_synchrotron_directionality_funct(light_vert%n_x,&
+        spectra%points(jj,ii),light_properties(12), one_over_gamma,rpsichi,&
+        z_cos,factor_2,z_value,z2_value,factor_1,light_dstb(jj,ii))
+      enddo
     enddo
-  enddo
-  !$omp end parallel do
+    !$omp end taskloop
+  else
+    !$omp parallel do default(shared) private(ii,jj) &
+    !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&
+    !$omp factor_2,z_value,z2_value,factor_1) collapse(2)
+    do ii=1,spectra%n_spectra
+      do jj=1,spectra%n_points
+        call compute_synchrotron_directionality_funct(light_vert%n_x,&
+        spectra%points(jj,ii),light_properties(12),one_over_gamma,rpsichi,&
+        z_cos,factor_2,z_value,z2_value,factor_1,light_dstb(jj,ii))
+      enddo
+    enddo
+    !$omp end parallel do
+  endif
 end subroutine synchrotron_directionality_funct
 
 !> synchrotron_spectral_irradiance computes the full spectral angular
@@ -222,6 +236,34 @@ end subroutine synchrotron_spectral_irradiance
 
 
 !> Tools ------------------------------------------
+!> compute the synchrotron radiation directionality function
+subroutine compute_synchrotron_directionality_funct(n_x,&
+wavelength,orbit_curvature,one_over_gamma,rpsichi,z_cos,&
+factor_2,z_value,z2_value,factor_1,dir_funct)
+  use constants,         only: TWOPI
+  use mod_boost_besselk, only: f_besselk
+  implicit none
+  !> inputs:
+  integer,intent(in)               :: n_x
+  real*8,intent(in)                :: one_over_gamma,z_value,z2_value
+  real*8,intent(in)                :: wavelength,orbit_curvature,factor_1
+  real*8,intent(in)                :: factor_2,z_cos
+  real*8,dimension(n_x),intent(in) :: rpsichi
+  !> outputs:
+  real*8,intent(out) :: dir_funct
+  !> variables:
+  real*8 :: zeta
+  !> compute the directionality function
+  !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
+  zeta = TWOPI*((one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
+  (3.d0*wavelength*orbit_curvature)
+  !> funct = I*(K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
+  !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos))/lambda**4
+  dir_funct = factor_1*(f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z2_value)+&
+  f_besselk(twothirds,zeta)*z_value*sin(zeta*z_cos))/&
+  (wavelength*wavelength*wavelength*wavelength)
+end subroutine compute_synchrotron_directionality_funct
+
 !> fill_synchrotron_lights_from_particles_serial fill the
 !> x and properties arrays of synchrotron lights from
 !> particle lists (basic and simple openmp parallelisation)

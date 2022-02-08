@@ -63,6 +63,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   call test_fill_synchrotron_lights_from_particles
   call test_init_synchrotron_lights_from_particles
   call test_synchrotron_irradiance_directional_func
+  call test_synchrotron_irradiance_directional_func_taskloop
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_synchrotron_light_vertices
@@ -149,6 +150,58 @@ subroutine teardown()
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> test the synchrotron light irradiance and directional functions
+!> taskloop based parallelisation
+subroutine test_synchrotron_irradiance_directional_func_taskloop()
+  use mod_assert_equals_tools, only: assert_equals_rel_error
+  implicit none
+  !> variables
+  integer :: ii,jj,kk
+  integer,dimension(n_times_sol) :: n_particles_time
+  real*8,dimension(n_x,n_particles_RE_max,n_times_sol)          :: x_cart_loc
+  real*8,dimension(n_properties,n_particles_RE_max,n_times_sol) :: properties_loc
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra)        :: dir_fun,irradiance
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra)        :: dir_fun_sol,irradiance_sol
+  !> initialise the synchrotron lights (for safety)
+   x_cart_loc = 0.d0; properties_loc = 0.d0; n_particles_time = 0;
+  do ii=1,n_times_sol
+    n_particles_time(ii) = sum(n_active_particles_sol(:,ii))
+    x_cart_loc(:,1:n_particles_time(ii),ii) = x_cart_sol(:,1:n_particles_time(ii),ii)
+    properties_loc(:,1:n_particles_time(ii),ii) = properties_sol(:,1:n_particles_time(ii),ii)   
+  enddo 
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
+
+  !> compute the irradiance and directionality function
+  do kk=1,n_times_sol
+    do jj=1,n_particles_time(kk)
+      do ii=1,n_shadowed_per_particle
+        call compute_synch_directionality_irradiance(x_shadowed(:,ii,jj,kk),&
+        x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol,irradiance_sol)
+        !$omp parallel default(shared) firstprivate(ii,kk,jj)
+        !$omp single
+        call vertex_sol%directionality_funct(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),dir_fun)
+        call vertex_sol%spectral_irradiance(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),irradiance)
+        !$omp end single
+        !$omp end parallel
+        !> set to 1 values which are too small 
+        where(abs(irradiance).lt.exclusion_values)     
+          irradiance = 1.d0; irradiance_sol = 1.d0;
+        endwhere
+        where(abs(dir_fun).lt.exclusion_values)        
+          dir_fun = 1.d0; dir_fun_sol = 1.d0;
+        endwhere
+        !> check the solution via relative error
+        call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+        dir_fun,dir_fun_sol,tol2_real8,&
+        "Error synchrotron directionality function taskloop: directionality function mismatch!")
+        call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+        irradiance,irradiance_sol,tol2_real8,&
+        "Error synchrotron irradiance taskloop: irradiance mismatch!")
+      enddo
+    enddo
+  enddo
+end subroutine test_synchrotron_irradiance_directional_func_taskloop
+
 !> test the synchrotron light irradiance and directional functions
 subroutine test_synchrotron_irradiance_directional_func()
   use mod_assert_equals_tools, only: assert_equals_rel_error

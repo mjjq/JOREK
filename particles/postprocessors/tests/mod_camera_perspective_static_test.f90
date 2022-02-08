@@ -171,9 +171,6 @@ subroutine test_init_camera_perspective_static_pinhole()
   camera_sol%properties,"Error init camera perspective static pinhole: properties")
   call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra,n_pixels_x,n_pixels_y/),&
   3,"Error init camera perspective static pinhole: n pixels / spectra")
-  call assert_equals_allocatable_arrays(spectrum_sol%n_spectra,2,n_pixels_x,&
-  n_pixels_y,n_times_sol,camera_sol%pixel_intensities,&
-  "Error init camera perspective static pinhole: pixel intensities")
   call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
   camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
   ":Error init camera perspective static pinhole: points on lens")
@@ -227,9 +224,6 @@ subroutine test_de_allocation_camera_perspective_static()
   camera_sol%properties,"Error allocate camera perspective static: properties")
   call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra,n_pixels_x,n_pixels_y/),&
   3,"Error allocate camera perspective static: n pixels / spectra")
-  call assert_equals_allocatable_arrays(spectrum_sol%n_spectra,2,n_pixels_x,&
-  n_pixels_y,n_times_sol,camera_sol%pixel_intensities,&
-  "Error allocate camera perspective static: pixel intensities")
   call assert_equals_allocatable_arrays(n_x_sol,camera_sol%image_plane_direction,&
   "Error allocate_camera perspective static: image plane direction")
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,&
@@ -248,8 +242,6 @@ subroutine test_de_allocation_camera_perspective_static()
   "Error deallocate camera perspective static: x not deallocated!")
   call assert_false(allocated(camera_sol%properties),&
   "Error deallocate camera perspective static: properties not deallocated!")
-  call assert_false(allocated(camera_sol%pixel_intensities),&
-  "Error deallocate camera perspective static: pixel intensities not deallocated!")
   call assert_false(allocated(camera_sol%image_plane_direction),&
   "Error deallocate camera perspective static: image plane direction not deallocated!")
   call assert_false(allocated(camera_sol%image_plane),&

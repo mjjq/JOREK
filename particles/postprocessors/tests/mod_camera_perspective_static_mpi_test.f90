@@ -77,8 +77,6 @@ subroutine run_fruit_camera_perspective_static_mpi(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   if(rank.eq.0) write(*,*) "  ... running: camera perspective static mpi tests"
   call test_reduct_particle_light_image_static(rank,n_tasks,ifail)
-  call reset_camera_pixel_intensities(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call test_compute_images(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,*) "  ... tearing-down: camera perspective static mpi tests"
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
@@ -201,16 +199,6 @@ subroutine setup_image(rank,n_tasks,ifail)
   endif
   call compute_solution_image(rank,n_tasks,ifail)
 end subroutine setup_image
-
-!> rest the camera pixel_intensities field
-subroutine reset_camera_pixel_intensities(rank,n_tasks,ifail)
-  implicit none
-  !> inputs-outputs:
-  integer,intent(inout) :: ifail
-  !> inputs:
-  integer,intent(in) :: rank,n_tasks
-  camera_sol%pixel_intensities = 0.d0
-end subroutine reset_camera_pixel_intensities
  
 !> tear-down all test features
 subroutine teardown(rank,n_tasks,ifail)
@@ -244,14 +232,17 @@ subroutine test_reduct_particle_light_image_static(rank,n_tasks,ifail)
   !> inputs:
   integer,intent(in) :: rank,n_tasks
   real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: error
+  real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: pixel_intensities_test
   error = 0.d0
   !> execute reduce particle using omnidirectional light sources
   call camera_sol%reduce_light_image(lights_rank,spectra_sol,filter_pixel_sol,&
-  filter_spectra_sol,filter_time_sol,rank,ifail)
+  filter_spectra_sol,filter_time_sol,rank,pixel_intensities_test,ifail)
   !> test reduction
-  if(rank.eq.0) call assert_equals_rel_error(n_spectra_sol,2,n_pixels_x,n_pixels_y,1,&
-  camera_sol%pixel_intensities,image_filter_sol,tol_real8_rel,&
+  if(rank.eq.0) then
+  call assert_equals_rel_error(n_spectra_sol,2,n_pixels_x,n_pixels_y,1,&
+  pixel_intensities_test,image_filter_sol,tol_real8_rel,&
   "Error camera reduction particle light image static: pixel intensity mismatch!")
+  endif
 end subroutine test_reduct_particle_light_image_static
 
 !> test image generation
@@ -266,7 +257,6 @@ subroutine test_compute_images(rank,n_tasks,ifail)
   real*8,dimension(n_spectra_sol,n_pixels_x,n_pixels_y,1) :: test_image,error
   error = 0.d0
   !> generate image from distribution of omnidirectional light sources
-  camera_sol%pixel_intensities = 0.d0
   call camera_sol%compute_images(lights_rank,spectra_sol,filter_pixel_sol,&
   filter_spectra_sol,filter_time_sol,rank,test_image,ifail)
   if(rank.eq.0) call assert_equals_rel_error(n_spectra_sol,n_pixels_x,n_pixels_y,1,&

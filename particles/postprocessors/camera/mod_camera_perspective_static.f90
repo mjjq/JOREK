@@ -52,9 +52,13 @@ contains
 !>   filter_image_inout:   (filter) 2d image plane filter
 !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filters
 !>   filter_time_inout:    (filter) filter in time
+!>   pixel_intensities:    (real8)(n_spectra,2,n_pixels_x,n_pixels_y,n_times) array
+!>                         containing the reduction of the pixel intensities (:,1,:,:,:)
+!>                         and the reduction of the filter values (:,2,:,:,:)
 !>   ierr:                 (integer) error for the mpi procedures
 subroutine reduce_particle_light_image_static(camera_inout,light_inout,&
-spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ierr)
+spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,&
+pixel_intensities,ierr)
   use mpi
   use mod_light_vertices, only: light_vertices
   use mod_spectra,        only: spectrum_base
@@ -70,6 +74,9 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
   integer,intent(inout)                                          :: ierr
   !> inputs:
   integer,intent(in) :: rank
+  !> outputs:
+  real*8,dimension(camera_inout%n_pixels_spectra(1),2,camera_inout%n_pixels_spectra(2),&
+  camera_inout%n_pixels_spectra(3),camera_inout%n_times),intent(out) :: pixel_intensities
   !> variables
   logical :: intersect
   integer :: ii,jj,kk
@@ -83,6 +90,7 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
   real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
 
   !> compute and store the exposure time and the pixel area
+  pixel_intensities = 0.d0
   camera_inout%exposure_time = light_inout%times(light_inout%n_times) - light_inout%times(1)
   if(camera_inout%exposure_time.le.0.d0) camera_inout%exposure_time = 1.d0
   pixel_area = (norm2(camera_inout%image_plane(:,2)-camera_inout%image_plane(:,1))*&
@@ -97,10 +105,15 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
     spectra_inout%n_points,spectra_inout%points(:,ii),spectral_weights(:,ii))
   enddo
 
-  !> loop on the points on lens
-  do ii=1,camera_inout%n_vertices
-    !> loop on the light times
-    do jj=1,light_inout%n_times
+  !> loop on the light times
+  do jj=1,light_inout%n_times
+    !$omp parallel do default(private) firstprivate(jj,pixel_area,&
+    !$omp light_time_weights,spectral_weights) &
+    !$omp shared(light_inout,camera_inout,spectra_inout,&
+    !$omp filter_image_inout,filter_spectra_inout,filter_time_inout) &
+    !$omp reduction(+:pixel_intensities)
+    !> loop on the points on lens
+    do ii=1,camera_inout%n_vertices
       !> loop on the active lights per time
       do kk=1,light_inout%n_active_vertices(jj)
         !> compute the physical material function (skip if negative because light behind camera)
@@ -123,25 +136,25 @@ spectra_inout,filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ier
         !> integrate the weighted spectral irradiance for each spectral interval
         call spectra_inout%integrate_data(spectral_weights*spectral_irradiance,integrated_irradiance)
         !> accumulate the irradiance of the pixel
-        camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) = &
-        camera_inout%pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) + &
+        pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) = &
+        pixel_intensities(:,1,i_pixel(1),i_pixel(2),1) + &
         (light_time_weights(jj)*pixel_filter_weight*integrated_irradiance*&
         visibility_geometry*material_value*pixel_area*camera_inout%exposure_time)
         !> accumulate the overall filter functions of the pixel (E.Veach, PhD thesis, 1997)
-        camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) = &
-        camera_inout%pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) + &
+        pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) = &
+        pixel_intensities(:,2,i_pixel(1),i_pixel(2),1) + &
         light_time_weights(jj)*pixel_filter_weight
       enddo
     enddo
+    !$omp end parallel do
   enddo
-
   !> reduce all mpi images into the root image
   if(rank.eq.0) then
-    call MPI_Reduce(MPI_IN_PLACE,camera_inout%pixel_intensities,&
-    size(camera_inout%pixel_intensities),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    call MPI_Reduce(MPI_IN_PLACE,pixel_intensities,&
+    size(pixel_intensities),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   else
-    call MPI_Reduce(camera_inout%pixel_intensities,camera_inout%pixel_intensities,&
-    size(camera_inout%pixel_intensities),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    call MPI_Reduce(pixel_intensities,pixel_intensities,&
+    size(pixel_intensities),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   endif
 end subroutine reduce_particle_light_image_static
 

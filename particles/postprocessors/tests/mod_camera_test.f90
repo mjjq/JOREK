@@ -73,9 +73,6 @@ subroutine test_de_allocate_camera()
   camera_sol%x,0.d0,"Error allocate camera from unallocated: x")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_sol,n_times_sol,&
   camera_sol%properties,0.d0,"Error allocate camera from unallocated: properties")
-  call assert_equals_allocatable_arrays(n_spectra_sol,2,n_pixels_x_sol,n_pixels_y_sol,&
-  n_times_sol,camera_sol%pixel_intensities,0.d0,&
-  "Error allocate camera from unallocated: pixel intensities")
   call assert_true(camera_sol%exposure_time.eq.0.d0,&
   "Error allocate camera from unallocated: exposure time not zero!")
   !> test allocation from allocated
@@ -95,9 +92,6 @@ subroutine test_de_allocate_camera()
   camera_sol%x,0.d0,"Error allocate camera from unallocated: x")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_2_sol,n_times_2_sol,&
   camera_sol%properties,0.d0,"Error allocate camera from unallocated: properties")
-  call assert_equals_allocatable_arrays(n_spectra_2_sol,2,n_pixels_x_2_sol,n_pixels_y_2_sol,&
-  n_times_2_sol,camera_sol%pixel_intensities,0.d0,&
-  "Error allocate camera from unallocated: pixel intensities")
   !> test deallocation
   call camera_sol%deallocate_camera
   call assert_equals(camera_sol%n_times,0,&
@@ -114,8 +108,6 @@ subroutine test_de_allocate_camera()
   "Error deallocate camera: x allocated!")
   call assert_false(allocated(camera_sol%properties),&
   "Error deallocate camera: properties allocated!")
-  call assert_false(allocated(camera_sol%pixel_intensities),&
-  "Error deallocate camera: pixel intensities allocated!")
   call assert_true(camera_sol%exposure_time.eq.0.d0,&
   "Error deallocate camera: exposure time not zero!")
 end subroutine test_de_allocate_camera

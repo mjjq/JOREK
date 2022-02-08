@@ -18,8 +18,6 @@ type,abstract,extends(vertices) :: camera
    !> number of spectra and pixels
    integer,dimension(3) :: n_pixels_spectra
    real*8               :: exposure_time !< exposure time for each camera frame
-   !> array containing the pixel intensity and filter values per each time
-   real*8,dimension(:,:,:,:,:),allocatable :: pixel_intensities
   contains
    procedure(int_init_camera),pass(camera_inout),deferred       :: init_camera
    procedure(int_gen_points_lens),pass(camera_inout),deferred   :: generate_points_on_lens_pdf
@@ -98,9 +96,12 @@ interface
   !>   filter_image_inout:   (filter) 2d image plane filter
   !>   filter_spectra_inout: (filter)(n_spectra) set of 1d spectral filter
   !>   filter_time_inout:    (filter) filter in time
+  !>   pixel_intensities:    (real8)(n_spectra,2,n_pixels_x,n_pixels_y,n_times) array
+  !>                         containing the reduction of the pixel intensities (:,1,:,:,:)
+  !>                         and the reduction of the filter values (:,2,:,:,:)
   !>   ierr:                 (integer) error for the mpi procedures
   subroutine int_reduce_light_img(camera_inout,light_inout,spectra_inout,&
-  filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ierr)
+  filter_image_inout,filter_spectra_inout,filter_time_inout,rank,pixel_intensities,ierr)
   use mod_light_vertices, only: light_vertices
   use mod_spectra,        only: spectrum_base
   use mod_filter,         only: filter
@@ -116,6 +117,10 @@ interface
   integer,intent(inout)                                          :: ierr
   !> inputs:
   integer,intent(in) :: rank
+  !> outputs:
+  real*8,dimension(camera_inout%n_pixels_spectra(1),2,&
+  camera_inout%n_pixels_spectra(2),camera_inout%n_pixels_spectra(3),&
+  camera_inout%n_times),intent(out) :: pixel_intensities
   end subroutine int_reduce_light_img
 
   !> structure function: it returns the physical camera importance normalised to 1
@@ -190,11 +195,7 @@ n_pixels_x,n_pixels_y,n_spectra)
   !> allocate vertices
   call camera_inout%allocate_vertices(n_times,n_vertices)
   !> allocate camera
-  if(allocated(camera_inout%pixel_intensities)) &
-  deallocate(camera_inout%pixel_intensities)
-  allocate(camera_inout%pixel_intensities(n_spectra,2,&
-  n_pixels_x,n_pixels_y,n_times))
-  camera_inout%pixel_intensities = 0.d0; camera_inout%exposure_time=0.d0;
+  camera_inout%exposure_time=0.d0;
   camera_inout%n_pixels_spectra = (/n_spectra,n_pixels_x,n_pixels_y/)
 end subroutine allocate_camera
 
@@ -209,8 +210,6 @@ subroutine deallocate_camera(camera_inout)
   class(camera),intent(inout) :: camera_inout
   !> deallocate everything and reset counters
   call camera_inout%deallocate_vertices
-  if(allocated(camera_inout%pixel_intensities)) &
-  deallocate(camera_inout%pixel_intensities)
   camera_inout%n_pixels_spectra = 0; camera_inout%exposure_time = 0.d0;
 end subroutine deallocate_camera
 
@@ -254,15 +253,20 @@ subroutine compute_images(camera_inout,light_inout,spectra_inout,&
   real*8,dimension(camera_inout%n_pixels_spectra(1),&
   camera_inout%n_pixels_spectra(2),camera_inout%n_pixels_spectra(3),&
   camera_inout%n_times),intent(out) :: images
+  !> variables:
+  real*8,dimension(camera_inout%n_pixels_spectra(1),2,&
+  camera_inout%n_pixels_spectra(2),camera_inout%n_pixels_spectra(3),&
+  camera_inout%n_times) :: pixel_intensities
 
   !> reduce all lights contribution
   call camera_inout%reduce_light_image(light_inout,spectra_inout,&
-  filter_image_inout,filter_spectra_inout,filter_time_inout,rank,ierr)
+  filter_image_inout,filter_spectra_inout,filter_time_inout,rank,&
+  pixel_intensities,ierr)
   !> generate images
   if(rank.eq.0) then
     images = 0.d0
-    where(camera_inout%pixel_intensities(:,2,:,:,:).ne.0.d0) images = &
-    camera_inout%pixel_intensities(:,1,:,:,:)/camera_inout%pixel_intensities(:,2,:,:,:)
+    where(pixel_intensities(:,2,:,:,:).ne.0.d0) images = &
+    pixel_intensities(:,1,:,:,:)/pixel_intensities(:,2,:,:,:)
   endif
 end subroutine compute_images
 !>------------------------------------------------------------------

@@ -28,9 +28,10 @@ module mod_injection_source
 
 
 
-  subroutine inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm,  &
+  subroutine inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi,&
+                        ns_deltaminrad,ns_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,                  &
-                        JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
+                        JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume, i_main_imp)
 
   !=================================================================================
   !  This subroutine computes the atom/ion number density source for a realistic Deuterium
@@ -95,8 +96,9 @@ module mod_injection_source
     real*8, intent(out) :: rhon_source  ! This is in number density
     real*8, intent(in)  :: ns_tor_norm
     real*8, intent(in)  :: source_volume ! numerically integrated gas source volume (if larger than 0.)
+    integer, intent(in) :: i_main_imp
 
-    select case ( trim(imp_type(1)) )
+    select case ( trim(imp_type(i_main_imp)) )
       case('D2')
         n_gas  = 5
         A_gas  = 4.
@@ -116,7 +118,7 @@ module mod_injection_source
         mass_gas = A_gas*MASS_PROTON
         c0_gas = sqrt(8.3145d0*293.d0/(A_gas*1.d-3)*(5.d0/3.d0))
       case default
-        write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
+        write(*,*) '!! Gas type "', trim(imp_type(i_main_imp)), '" unknown (in mod_injection_source.f90) !!'
         write(*,*) '=> We assume the gas is D2.'
         n_gas  = 5
         A_gas  = 4.
@@ -274,7 +276,7 @@ module mod_injection_source
   return
   end subroutine inj_source
 
-  subroutine total_imp_source(R,Z,phi,psi,source_background,source_impurity,mass_ratio) 
+  subroutine total_imp_source(R,Z,phi,psi,source_background,source_impurity,mass_ratio,i_main_imp) 
 
     use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
@@ -291,6 +293,7 @@ module mod_injection_source
     real*8, intent(out)  :: source_background
     real*8, intent(out)  :: source_impurity
     real*8, intent(in)   :: mass_ratio
+    integer, intent(in)  :: i_main_imp
 
     ! Temporary variables serving the SPI module
     integer    :: spi_i, i_inj,  n_spi_tmp
@@ -350,7 +353,7 @@ module mod_injection_source
           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,spi_psi_tmp,spi_grad_psi_tmp, &
                         ng_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., R, Z, phi, psi, &
-                        source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
+                        source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp,i_main_imp)
         end if
 
         ! Converting number density into mass density for each species respectively
@@ -370,7 +373,7 @@ module mod_injection_source
         call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),spi_psi_tmp,spi_grad_psi_tmp, &
                         ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,psi, &
-                        source_tmp, t_now, JET_MGI,ASDEX_MGI,central_density,central_mass, spi_vol_tmp)
+                        source_tmp, t_now, JET_MGI,ASDEX_MGI,central_density,central_mass, spi_vol_tmp,i_main_imp)
 
         source_impurity = source_impurity + source_tmp
       end do

@@ -662,6 +662,8 @@ subroutine preset_parameters
   n_adas = 1
   adas_dir = ' '
   imp_type = ' '
+  index_main_imp = 0
+  if (with_impurities) index_main_imp = 1
   use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
 
   !====== JET DMV-2 parameters

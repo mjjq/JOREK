@@ -19,14 +19,13 @@ public :: run_fruit_light_vertices
 
 !> Variables ---------------------------------------------------------
 character(len=12),parameter               :: input_file='light_inputs'
-integer,parameter                         :: n_int_param_sol=2
-integer,parameter                         :: n_real_param_sol=0
 integer,parameter                         :: read_unit=43
 integer,parameter                         :: n_x=3
 integer,parameter                         :: n_properties_sol=11
 integer,parameter                         :: n_particle_types=2
 integer,parameter                         :: n_times_sol=3
 integer,parameter                         :: n_lights_sol=1242
+integer,dimension(2),parameter            :: n_input_params_sol=(/2,0/)
 integer,dimension(n_times_sol),parameter  :: n_groups_per_sim=(/3,1,2/)
 integer,parameter                         :: n_groups_max=maxval(n_groups_per_sim)
 integer,dimension(n_particle_types)       :: particle_types_to_test=(/&
@@ -136,21 +135,20 @@ end subroutine teardown
 subroutine test_ligth_read_inputs()
   implicit none
   !> variables
-  integer :: rank,n_int_param,n_real_param,ifail
+  integer :: rank,ifail
+  integer,dimension(2) :: n_input_params
   integer,dimension(:),allocatable :: int_param
   real*8,dimension(:),allocatable :: real_param
   !> initialisation 
   rank = 0
   !> read input file
+  n_input_params = vertex_sol%return_n_light_inputs()
   open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
-  call vertex_sol%read_light_inputs(rank,read_unit,n_int_param,&
-  n_real_param,int_param,real_param)
+  call vertex_sol%read_light_inputs(rank,read_unit,int_param,real_param)
   close(read_unit)
   !> checks
-  call assert_equals(n_int_param,n_int_param_sol,&
-  "Error light read inputs: N# integer parameters mismatch!")
-  call assert_equals(n_real_param,n_real_param_sol,&
-  "Error light read inputs: N# real parameters mismatch!")
+  call assert_equals(n_input_params,n_input_params_sol,2,&
+  "Error light read inputs: N# input parameters mismatch!")
   call assert_equals(int_param,(/n_times_sol,n_lights_sol/),2,&
   "Error light read inputs: int parameters mismatch!")
   call assert_false(allocated(real_param),&

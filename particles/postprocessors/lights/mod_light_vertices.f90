@@ -11,13 +11,14 @@ public :: light_vertices
 !> Variables --------------------------------------------
 type,abstract,extends(vertices) :: light_vertices
   contains
+  procedure,pass(light_vert)                              :: return_n_light_inputs
+  procedure,pass(light_vert)                              :: read_light_inputs
   procedure,pass(light_vert)                              :: fill_time_vector_particle_sims
   procedure,pass(light_vert)                              :: extract_n_groups_all_particle_sims 
   procedure,pass(light_vert)                              :: extract_n_particles_all_particle_sims
   procedure,pass(light_vert)                              :: extract_particle_types_all_particle_sims
   procedure,pass(light_vert)                              :: store_light_x_from_particle_id
   procedure,pass(light_vert)                              :: find_active_particles_id_time
-  procedure,pass(light_vert)                              :: read_light_inputs
   procedure(init_lights_parts),pass(light_vert),deferred  :: init_lights_from_particles
   procedure(direct_funct),pass(light_vert),deferred       :: directionality_funct
   procedure(spect_irradiance),pass(light_vert),deferred   :: spectral_irradiance
@@ -118,30 +119,43 @@ contains
 !> Procedures -------------------------------------------
 !> read_light_inputs read all the inputs required
 !> for initialising lights from a opened file
-subroutine read_light_inputs(light_vert,my_id,&
-r_unit,n_int_param,n_real_param,int_param,real_param)
+!> inputs:
+!> outputs:
+subroutine read_light_inputs(light_vert,my_id,r_unit,&
+int_param,real_param)
   implicit none
-  !> inputs-outputs:
+  !> inputs-outpus
   class(light_vertices),intent(inout) :: light_vert
   !> inputs:
   integer,intent(in) :: my_id,r_unit
   !> outputs:
-  integer,intent(out) :: n_int_param,n_real_param
   integer,dimension(:),allocatable,intent(out) :: int_param
   real*8,dimension(:),allocatable,intent(out)  :: real_param
   !> variables
   integer :: n_times,n_lights
+  integer,dimension(2) :: n_params
   !> definition and initialisation
   namelist /light_in/ n_times, n_lights
-  n_int_param = 0; n_real_param = 0
+  n_params = light_vert%return_n_light_inputs()
   !> if master, read the input file
   if(my_id.eq.0) then
-    n_int_param = 2
-    if(.not.allocated(int_param)) allocate(int_param(n_int_param))
+    if(.not.allocated(int_param)) allocate(int_param(n_params(1)))
     read(r_unit,light_in); close(r_unit);
     int_param = (/n_times,n_lights/)
   endif
 end subroutine read_light_inputs
+
+!> return the size of the integer and real parameters to be read
+!> inputs:
+!> outputs:
+function return_n_light_inputs(light_vert) result(n_inputs)
+  implicit none
+  !> inputs
+  class(light_vertices),intent(in) :: light_vert
+  !> outputs:
+  real*8,dimension(2) :: n_inputs
+  n_inputs = (/2,0/)
+end function return_n_light_inputs
 
 !> find active particles for all particle lists, particle
 !> groups and simulation times

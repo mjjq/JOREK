@@ -158,6 +158,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
                 RMP_har_sin_spectrum, imp_type, adas_dir, n_adas,   &
+                index_main_imp,                                     &
                 amix, amix_freeb, equil_accuracy, use_imp_adas,     &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -311,6 +312,12 @@ if ( my_id == 0 ) then
     write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
     stop
   end if
+
+ if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
+    write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
+    write(*,*) "ERROR: index_main_imp:", index_main_imp
+    stop
+ end if
 
   if (using_spi) call init_spi_all()
 

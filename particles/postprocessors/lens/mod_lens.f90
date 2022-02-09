@@ -13,12 +13,54 @@ type,abstract :: lens
   contains
   procedure,pass(lens_inout) :: allocate_lens
   procedure,pass(lens_inout) :: deallocate_lens
-  procedure(lens_sampling_int),pass(lens_inout),deferred :: sampling
-  procedure(lens_pdf_int),pass(lens_inout),deferred      :: pdf
+  procedure(ret_n_lens_inps_int),pass(lens_in),deferred   :: return_n_lens_inputs
+  procedure(read_lens_inps_int),pass(lens_inout),deferred :: read_lens_inputs
+  procedure(lens_sampling_int),pass(lens_inout),deferred  :: sampling
+  procedure(lens_pdf_int),pass(lens_inout),deferred       :: pdf
 end type lens
 
 !> Interfaces -----------------------------------------------------
 interface
+  !> interface of the function reading the lens inputs
+  !> inputs:
+  !>   lens_inout: (lens) lens class
+  !>   my_id:      (integer) MPI rank
+  !>   r_unit:     (integer) read unit id
+  !>   n_inputs:   (integer)(2) number of integer and real inputs
+  !> outputs:
+  !>   lens_inout: (lens) lens class
+  !>   n_inputs:   (integer)(2) number of integer and real inputs
+  !>   int_param:  (integer)(:) integer input parameters
+  !>   real_param: (real8)(:) real8 input parameters
+  subroutine read_lens_inps_int(lens_inout,my_id,r_unit,&
+  n_inputs,int_param,real_param)
+    IMPORT :: lens
+    implicit none
+    !> inputs-outputs:
+    class(lens),intent(inout)          :: lens_inout
+    integer,dimension(2),intent(inout) :: n_inputs
+    !> inputs:
+    integer,intent(in) :: r_unit,my_id
+    !> outputs:
+    integer,dimension(:),allocatable,intent(out) :: int_param
+    real*8,dimension(:),allocatable,intent(out)  :: real_param
+  end subroutine read_lens_inps_int
+
+  !> interface of the function returning the number of
+  !> integer and real8 inputs
+  !> inputs:
+  !>   lens_in:  (lens) lens class
+  !> outputs:
+  !>   n_inputs: (integer)(2) number of integer and real inputs
+  function ret_n_lens_inps_int(lens_in) result(n_inputs)
+    IMPORT :: lens
+    implicit none
+    !> inputs:
+    class(lens),intent(in) :: lens_in
+    !> outputs:
+    integer,dimension(2) :: n_inputs
+  end function ret_n_lens_inps_int
+
   !> interface for the lens sampling procedure
   !> inputs:
   !>   lens_inout: (lens) lens class

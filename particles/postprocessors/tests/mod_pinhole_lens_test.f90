@@ -8,6 +8,8 @@ module mod_pinhole_lens_test
   public :: run_fruit_pinhole_lens
 
 !> Variables --------------------------------------------------
+character(len=19),parameter :: input_file='pinhole_lens_inputs'
+integer,parameter :: read_unit=43
 integer,parameter :: n_x=3
 integer,parameter :: n_samples=12453
 real*8,parameter  :: tol_r8=5.d-16
@@ -25,7 +27,9 @@ subroutine run_fruit_pinhole_lens()
   implicit none
   write(*,'(/A)') "  ... setting-up: lens tests"
   call setup
+  call write_pinhole_lens_inputs
   write(*,'(/A)') "  ... running: lens tests"
+  call test_pinhole_lens_inputs
   call test_pinhole_lens_sampling
   call test_pinhole_initialisation
   call test_pinhole_lens_pdf
@@ -46,13 +50,58 @@ subroutine setup()
   enddo
 end subroutine setup
 
+!> write input file for testing
+subroutine write_pinhole_lens_inputs()
+  implicit none
+  integer :: ifail
+  open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail)
+  write(read_unit,'(/A)') '&pinhole_in'
+  write(read_unit,'(/A,I10)') 'n_x = ',n_x
+  write(read_unit,'(/A)') '/'
+  write(read_unit,'(/A)') '&center_in'
+  write(read_unit,'(/A,F28.16)') 'pinhole_center(1) = ', center_sol(1)
+  write(read_unit,'(/A,F28.16)') 'pinhole_center(2) = ', center_sol(2)
+  write(read_unit,'(/A,F28.16)') 'pinhole_center(3) = ', center_sol(3)
+  write(read_unit,'(/A)') '/'
+  close(read_unit)
+end subroutine write_pinhole_lens_inputs
+
 !> tear-down test features
 subroutine teardown()
   implicit none
   center_sol = 0.d0; x_sol = 0.d0;
+  call system("rm "//input_file)
 end subroutine teardown
 
 !> Tests ------------------------------------------------------
+!> test the input file readre
+subroutine test_pinhole_lens_inputs()
+  use mod_pinhole_lens, only: pinhole_lens
+  implicit none
+  !> variables
+  type(pinhole_lens) :: pinhole
+  integer :: rank,ifail
+  integer,dimension(2) :: n_inputs
+  integer,dimension(:),allocatable :: int_param
+  real*8,dimension(:),allocatable  :: real_param
+  !> initialisations
+  rank = 0
+  !> read data
+  open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
+  call pinhole%read_lens_inputs(rank,read_unit,n_inputs,int_param,real_param)
+  close(read_unit)
+  !> checks
+  call assert_equals(n_inputs,(/1,3/),2,&
+  "Error pinhole lens read inputs: N# inputs mismatch!")
+  call assert_equals(int_param,(/n_x/),1,&
+  "Error pinhole lens read inputs: integer parameters mismatch!")
+  call assert_equals(real_param,center_sol,n_x,tol_r8,&
+  "Error pinhole lens read inputs: real parameters mismatch!")
+  !> cleanup
+  if(allocated(int_param)) deallocate(int_param)
+  if(allocated(real_param)) deallocate(real_param)
+end subroutine test_pinhole_lens_inputs
+
 !> Test pinhole initialisation
 subroutine test_pinhole_initialisation()
   use mod_pinhole_lens, only: pinhole_lens

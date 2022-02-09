@@ -11,6 +11,8 @@ public :: pinhole_lens
 type,extends(lens) :: pinhole_lens
   contains
   procedure,pass(lens_inout) :: init_pinhole
+  procedure,pass(lens_in)    :: return_n_lens_inputs => return_n_pinhole_inputs
+  procedure,pass(lens_inout) :: read_lens_inputs => read_pinhole_inputs
   procedure,pass(lens_inout) :: sampling => pinhole_sampling
   procedure,pass(lens_inout) :: pdf      => pinhole_pdf
 end type pinhole_lens
@@ -19,6 +21,68 @@ end type pinhole_lens
 contains
 
 !> Procedures ---------------------------------------------------------
+
+!> read the number pinhole lens inputs
+!> procedure for reading the pinhole lens input parameters
+!> inputs:
+!>   lens_inout: (pinhole_lens) pinhole lens
+!>   my_id:      (integer) mpi rank
+!>   r_unit:     (integer) read unit id
+!>   n_inputs:   (integer) number of integer and real input arrays
+!> outputs:
+!>   lens_inout: (pinhole_lens) pinhole lens
+!>   n_inputs:   (integer) number of integer and real input arrays
+!>   int_param:  (integer)(:) inputs parameters
+!>   real_param: (real8)(:) integer parameters
+subroutine read_pinhole_inputs(lens_inout,my_id,r_unit,n_inputs,&
+int_param,real_param)
+  implicit none
+  !> inputs-outputs:
+  class(pinhole_lens),intent(inout)  :: lens_inout
+  integer,dimension(2),intent(inout) :: n_inputs
+  !> inputs:
+  integer,intent(in) :: my_id,r_unit
+  !> outputs:
+  integer,dimension(:),allocatable,intent(out) :: int_param
+  real*8,dimension(:),allocatable,intent(out)  :: real_param
+  !> variables:
+  integer :: n_x
+  real*8,dimension(:),allocatable :: pinhole_center
+  !> initialisations and definitions
+  namelist /pinhole_in/ n_x
+  namelist /center_in/ pinhole_center
+  !> read data
+  if(my_id.eq.0) then
+    n_inputs = lens_inout%return_n_lens_inputs()
+    if(allocated(int_param)) deallocate(int_param)
+    allocate(int_param(n_inputs(1)))
+    read(r_unit,pinhole_in); 
+    int_param(1) = n_x; n_inputs(2) = n_x;
+    allocate(pinhole_center(n_x))
+    read(r_unit,center_in)
+    if(allocated(real_param)) deallocate(real_param)
+    allocate(real_param(n_x)); real_param = pinhole_center;
+  endif
+  !> cleanup
+  if(allocated(pinhole_center)) deallocate(pinhole_center)
+end subroutine read_pinhole_inputs
+
+!> return the number of integer and real parameters
+!> inputs:
+!>   lens_in:  (pinhole_lens) pinhole lens
+!> outputs:
+!>   n_inputs: (integer) number of integer and real input 
+!>             arrays, -1 means that the number is defined
+!>             by the inputs
+function return_n_pinhole_inputs(lens_in) result(n_inputs)
+  implicit none
+  !> inputs:
+  class(pinhole_lens),intent(in) :: lens_in
+  !> outputs:
+  integer,dimension(2) :: n_inputs
+  n_inputs = (/1,-1/)
+end function return_n_pinhole_inputs
+
 !> initialise the pinhole camera
 !> inputs:
 !>   lens_inout:     (pinhole_lens) pinhole lens to be initialised

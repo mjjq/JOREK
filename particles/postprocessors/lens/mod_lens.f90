@@ -21,7 +21,7 @@ end type lens
 
 !> Interfaces -----------------------------------------------------
 interface
-  !> interface of the function reading the lens inputs
+  !> interface of the procedure for reading the lens inputs
   !> inputs:
   !>   lens_inout: (lens) lens class
   !>   my_id:      (integer) MPI rank

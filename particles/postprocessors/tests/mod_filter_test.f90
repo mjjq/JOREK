@@ -9,6 +9,8 @@ private
 public :: run_fruit_filter
 
 !> Variables and and parameters -------------------------------
+character(len=13),parameter                                        :: input_file='filter_inputs'
+integer,parameter                                                  :: read_unit=43
 integer,parameter                                                  :: n_dimensions_sol=2
 integer,parameter                                                  :: n_intervals_sol=3
 integer,parameter                                                  :: n_positions_sol=13
@@ -30,13 +32,16 @@ subroutine run_fruit_filter()
   implicit none
   write(*,*) "  ... setting-up filter tests"
   call setup
+  call write_filter_input_file
   write(*,*) "  ... running: filter tests"
+  call test_read_filter_inputs
   call test_filter_allocation_deallocation
   call test_initialisation_filter_unity
   call test_compute_weights_filter_unity
   call test_compute_weights_filter_unity_vectorial
   call test_compute_weights_filter_unity_matrix
   write(*,*) "  ... tearing-down: filter tests"
+  call teardown
 end subroutine run_fruit_filter
 
 !> Set-up and tear-down ---------------------------------------
@@ -58,7 +63,62 @@ subroutine setup()
   weights_sol = 1.d0;  weights_2d_sol = 1.d0;
 end subroutine setup
 
+!> method used for generating an input file
+subroutine write_filter_input_file()
+  implicit none
+  !> variables
+  integer :: ifail
+  !> write file
+  open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail)
+  write(read_unit,'(/A)') '&filter_in'
+  write(read_unit,'(/A,I10)') 'n_dimensions = ',n_dimensions_sol
+  write(read_unit,'(/A)') '/'
+  write(read_unit,'(/A)') '&filter_stencil_in'
+  write(read_unit,'(/A,I10)') 'stencil_shape(1) = ',filter_shape_sol(1)
+  write(read_unit,'(/A,I10)') 'stencil_shape(2) = ',filter_shape_sol(2)
+  write(read_unit,'(/A)') '/'
+  close(read_unit)
+end subroutine write_filter_input_file
+
+!> tear down test features
+subroutine teardown()
+  implicit none
+  call system('rm '//input_file)
+end subroutine teardown
+
 !> Tests ------------------------------------------------------
+!> test read filter from output procedures
+subroutine test_read_filter_inputs()
+  use mod_filter_unity, only: filter_unity
+  implicit none
+  !> variables
+  type(filter_unity)                    :: filter_test
+  integer                               :: rank,ifail
+  integer,dimension(2)                  :: n_inputs
+  integer,dimension(1+n_dimensions_sol) :: int_param_sol
+  integer,dimension(:),allocatable      :: int_param
+  real*8,dimension(:),allocatable       :: real_param
+  !> initialisationsi
+  rank = 0; int_param_sol(1) = n_dimensions_sol;
+  int_param_sol(2:n_dimensions_sol+1) = filter_shape_sol
+  n_inputs = filter_test%return_n_filter_inputs()
+  !> read data
+  open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
+  call filter_test%read_filter_inputs(rank,read_unit,n_inputs,&
+  int_param,real_param)
+  close(read_unit)
+  !> checks
+  call assert_equals(n_inputs,(/n_dimensions_sol+1,0/),2,&
+  "Error filter unity read inputs: N# inputs mismatch!")
+  call assert_equals(int_param,int_param_sol,1+n_dimensions_sol,&
+  "Error filter unity read inputs: integer inputs mismatch!")
+  call assert_false(allocated(real_param),&
+  "Error filter unity read inputs: real input array allocated!")
+  !> cleanup
+  if(allocated(int_param)) deallocate(int_param)
+  if(allocated(real_param)) deallocate(real_param)
+end subroutine test_read_filter_inputs
+
 !> test the filter allocation and deallocation methods
 subroutine test_filter_allocation_deallocation()
   use mod_assert_equals_tools, only: assert_equals_allocatable_arrays

@@ -15,6 +15,10 @@ type,extends(camera) :: camera_perspective_static
   real*8,dimension(:,:),allocatable :: image_plane !< vertices of the image plane
   real*8,dimension(:),allocatable   :: image_plane_direction
   contains
+  procedure,pass(camera_in)    :: return_n_camera_inputs => &
+  return_n_camera_perspective_static_inputs
+  procedure,pass(camera_inout) :: read_camera_inputs => &
+  read_camera_perspective_static_inputs
   procedure,pass(camera_inout) :: init_camera => init_camera_perspective_static
   procedure,pass(camera_inout) :: generate_points_on_lens_pdf => &
   generate_points_on_lens_static_perspective
@@ -157,6 +161,62 @@ pixel_intensities,ierr)
     size(pixel_intensities),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD,ierr)
   endif
 end subroutine reduce_particle_light_image_static
+
+subroutine read_camera_perspective_static_inputs(camera_inout,&
+my_id,r_unit,int_param,real_param)
+  implicit none
+  !> inputs-outputs:
+  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> inputs:
+  integer,intent(in) :: my_id,r_unit
+  !> outputs:
+  integer,dimension(:),allocatable,intent(out) :: int_param
+  real*8,dimension(:),allocatable,intent(out)  :: real_param
+  !> variables:
+  integer :: n_lens_samples,n_pixels_x,n_pixels_y
+  integer,dimension(2) :: n_inputs
+  real*8  :: image_plane_half_width,image_plane_half_height
+  real*8  :: image_plane_focal_point_distance
+  real*8  :: image_plane_colatitude,image_plane_azimuth
+  real*8  :: focal_point_x_pos,focal_point_y_pos,focal_point_z_pos
+  !> definitions and initialisations
+  namelist /camera_in/ n_lens_samples,n_pixels_x,n_pixels_y,&
+                       image_plane_half_width,image_plane_half_height,&
+                       image_plane_focal_point_distance,&
+                       image_plane_colatitude,image_plane_azimuth,&
+                       focal_point_x_pos,focal_point_y_pos,focal_point_z_pos
+
+  !> if master, read input file
+  if(my_id.eq.0) then
+    n_inputs = camera_inout%return_n_camera_inputs()
+    if(allocated(int_param)) deallocate(int_param)
+    allocate(int_param(n_inputs(1)))
+    if(allocated(real_param)) deallocate(real_param)
+    allocate(real_param(n_inputs(2)))
+    read(r_unit,camera_in)
+    int_param = (/n_lens_samples,n_pixels_x,n_pixels_y/)
+    real_param = (/image_plane_half_width,image_plane_half_height,&
+    image_plane_focal_point_distance,image_plane_colatitude,&
+    image_plane_azimuth,focal_point_x_pos,focal_point_y_pos,&
+    focal_point_z_pos/)
+  endif
+end subroutine read_camera_perspective_static_inputs
+
+!> return the input array size
+!> inputs:
+!>   camera_in: (camera_perspective_static) camera object 
+!> outputs:
+!>   n_inputs: (integer)(2) size of the integer 
+!>             and real input arrays
+function return_n_camera_perspective_static_inputs(&
+camera_in) result(n_inputs)
+  implicit none
+  !> inputs:
+  class(camera_perspective_static),intent(in) :: camera_in
+  !> outputs:
+  integer,dimension(2) :: n_inputs
+  n_inputs = (/3,8/)
+end function return_n_camera_perspective_static_inputs
 
 !> procedure used for initialising a static perspective camera
 !> inputs:

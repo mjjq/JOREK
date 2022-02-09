@@ -15,6 +15,8 @@ private
 public :: run_fruit_camera_perspective_static_mpi
 
 !> Variable and data types ---------------------------------------------------
+character(len=32),parameter                 :: input_file='camera_perspective_static_inputs'
+integer,parameter                           :: read_unit=43
 integer,parameter                           :: n_st_sol=2
 integer,parameter                           :: n_x_sol=3
 integer,parameter                           :: n_property_light=2
@@ -25,9 +27,11 @@ integer,parameter                           :: n_pixels_x=64
 integer,parameter                           :: n_pixels_y=32
 integer,parameter                           :: n_active_light_time_rank=345
 integer,dimension(2),parameter              :: rng_seed_interval=(/642,12456324/)
+integer,dimension(2),parameter              :: n_inputs_sol=(/3,8/)
 real*8,parameter                            :: accept_threshold=1.5d-1
 real*8,parameter                            :: plane_distance_sol=4.23d0
 real*8,parameter                            :: dt_sol=1.d-2
+real*8,parameter                            :: tol_real8=5.d-16
 real*8,parameter                            :: tol_real8_rel=5.d-15
 real*8,parameter                            :: light_intensity=1.d13
 real*8,dimension(2),parameter               :: st_outbnd=(/-2.d2,5.d3/)
@@ -50,7 +54,9 @@ type(camera_perspective_static)             :: camera_sol
 type(omnidirectional_gaussian_lights)       :: lights_rank
 type(filter_unity),dimension(n_spectra_sol) :: filter_spectra_sol
 integer                                     :: n_particles_time
+integer,dimension(3)                        :: int_param_sol
 real*8                                      :: pixel_area_sol
+real*8,dimension(8)                         :: real_param_sol
 real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: image_filter_rank
 real*8,dimension(:,:,:,:),allocatable       :: image_sol
 real*8,dimension(:,:,:,:,:),allocatable     :: image_filter_sol
@@ -70,12 +76,15 @@ subroutine run_fruit_camera_perspective_static_mpi(rank,n_tasks,ifail)
   call setup_spectra_filters(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call setup_camera(rank,n_tasks,ifail)
+  call write_camera_input_file(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call setup_lights(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call setup_image(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   if(rank.eq.0) write(*,*) "  ... running: camera perspective static mpi tests"
+  call test_camera_perspective_static_inputs(rank,n_tasks,ifail)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call test_reduct_particle_light_image_static(rank,n_tasks,ifail)
   call test_compute_images(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,*) "  ... tearing-down: camera perspective static mpi tests"
@@ -130,13 +139,13 @@ subroutine setup_camera(rank,n_tasks,ifail)
   call MPI_Bcast(center,n_x_sol,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
   call pinhole_sol%init_pinhole(n_x_sol,center)
   !> initialise camera object
-  int_param = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y/)
+  int_param_sol = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y/)
   if(rank.eq.0) then
-    call gnu_rng_interval(2,half_angle_lowbnd,half_angle_uppbnd,real_param(1:2))
-    call random_number(real_param(3:5))
-    real_param(3:5) = sample_uniform_sphere(plane_distance_sol,&
-    costheta_interval,phi_interval,real_param(3:5))
-    call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,real_param(6:8))
+    call gnu_rng_interval(2,half_angle_lowbnd,half_angle_uppbnd,real_param_sol(1:2))
+    call random_number(real_param_sol(3:5))
+    real_param_sol(3:5) = sample_uniform_sphere(plane_distance_sol,&
+    costheta_interval,phi_interval,real_param_sol(3:5))
+    call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,real_param_sol(6:8))
   endif
   call MPI_Bcast(real_param,n_real_param,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
   call camera_sol%init_camera(pinhole_sol,spectra_sol,n_int_param,&
@@ -148,6 +157,32 @@ subroutine setup_camera(rank,n_tasks,ifail)
   if(allocated(int_param))  deallocate(int_param)
   if(allocated(real_param)) deallocate(real_param)
 end subroutine setup_camera
+
+!> write the camera input file
+subroutine write_camera_input_file(rank,n_tasks,ifail)
+  implicit none
+  !> inputs-outputs:
+  integer,intent(inout) :: ifail
+  !> inputs:
+  integer,intent(in)    :: rank,n_tasks
+  if(rank.eq.0) then
+    open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail)
+    write(read_unit,'(/A)') '&camera_in'
+    write(read_unit,'(/A,I10)') 'n_lens_samples = ',                     int_param_sol(1)
+    write(read_unit,'(/A,I10)') 'n_pixels_x = ',                         int_param_sol(2)
+    write(read_unit,'(/A,I10)') 'n_pixels_y = ',                         int_param_sol(3)
+    write(read_unit,'(/A,F20.16)') 'image_plane_half_width = ',          real_param_sol(1)
+    write(read_unit,'(/A,F20.16)') 'image_plane_half_height = ',         real_param_sol(2)
+    write(read_unit,'(/A,F20.16)') 'image_plane_focal_point_distance = ',real_param_sol(3) 
+    write(read_unit,'(/A,F20.16)') 'image_plane_colatitude = ',          real_param_sol(4)
+    write(read_unit,'(/A,F20.16)') 'image_plane_azimuth = ',             real_param_sol(5)
+    write(read_unit,'(/A,F20.16)') 'focal_point_x_pos = ',               real_param_sol(6)
+    write(read_unit,'(/A,F20.16)') 'focal_point_y_pos = ',               real_param_sol(7)
+    write(read_unit,'(/A,F20.16)') 'focal_point_z_pos = ',               real_param_sol(8)
+    write(read_unit,'(/A)') '/'
+    close(read_unit)
+  endif
+end subroutine write_camera_input_file
 
 !> set-up the light features
 subroutine setup_lights(rank,n_tasks,ifail)
@@ -220,9 +255,43 @@ subroutine teardown(rank,n_tasks,ifail)
   call camera_sol%deallocate_camera_perspective_static
   if(allocated(image_sol)) deallocate(image_sol)
   if(allocated(image_filter_sol)) deallocate(image_filter_sol)
+  if(rank.eq.0) call system("rm "//input_file)
 end subroutine teardown
 
 !> Tests ---------------------------------------------------------------------
+!> test the procedure used for reading lght input files
+subroutine test_camera_perspective_static_inputs(rank,n_tasks,ifail)
+  implicit none
+  !> inputs-outputs:
+  integer,intent(inout) :: ifail
+  !> inputs:
+  integer,intent(in) :: rank,n_tasks
+  !> variables
+  integer,dimension(2) :: n_inputs
+  integer,dimension(:),allocatable :: int_param
+  real*8,dimension(:),allocatable  :: real_param
+  !> read values
+  if(rank.eq.0) then
+    n_inputs = camera_sol%return_n_camera_inputs()
+    open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
+    call camera_sol%read_camera_inputs(rank,read_unit,int_param,real_param)
+    close(read_unit)
+  else
+    n_inputs = n_inputs_sol; int_param = int_param_sol;
+    real_param = real_param_sol
+  endif
+  !> checks
+  call assert_equals(n_inputs,n_inputs_sol,2,&
+  "Error read input camera perspective: N# of inputs mismatch!")
+  call assert_equals(int_param,int_param_sol,n_inputs_sol(1),&
+  "Error read input camera perspective: integer inputs mismatch!")
+  call assert_equals(real_param,real_param_sol,n_inputs_sol(2),tol_real8,&
+  "Error read input camera perspective: real inputs mismatch!")
+  !> cleanup
+  if(allocated(int_param))  deallocate(int_param)
+  if(allocated(real_param)) deallocate(real_param)
+end subroutine test_camera_perspective_static_inputs 
+
 !> test the reduction of all light sources and filters on image plane
 subroutine test_reduct_particle_light_image_static(rank,n_tasks,ifail)
   use mod_assert_equals_tools, only: assert_equals_rel_error

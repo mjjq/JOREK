@@ -120,7 +120,13 @@ contains
 !> read_light_inputs read all the inputs required
 !> for initialising lights from a opened file
 !> inputs:
+!>   light_vert: (light_vertices) light vertices
+!>   my_id:      (integer) mpi rank
+!>   r_unit:     (integer) reading unit id
 !> outputs:
+!>   light_vert: (light_vertices) light vertices
+!>   int_param:  (integer)(:) integer input parameters
+!>   real_param: (real8)(:) real8 input parameters
 subroutine read_light_inputs(light_vert,my_id,r_unit,&
 int_param,real_param)
   implicit none
@@ -136,17 +142,18 @@ int_param,real_param)
   integer,dimension(2) :: n_params
   !> definition and initialisation
   namelist /light_in/ n_times, n_lights
-  n_params = light_vert%return_n_light_inputs()
   !> if master, read the input file
   if(my_id.eq.0) then
-    if(.not.allocated(int_param)) allocate(int_param(n_params(1)))
-    read(r_unit,light_in); close(r_unit);
-    int_param = (/n_times,n_lights/)
+    n_params = light_vert%return_n_light_inputs()
+    if(allocated(int_param)) deallocate(int_param)
+    allocate(int_param(n_params(1)))
+    read(r_unit,light_in); int_param = (/n_times,n_lights/)
   endif
 end subroutine read_light_inputs
 
 !> return the size of the integer and real parameters to be read
 !> inputs:
+!>   light_vert: (light_vertices) light vertices
 !> outputs:
 function return_n_light_inputs(light_vert) result(n_inputs)
   implicit none

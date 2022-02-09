@@ -19,6 +19,8 @@ type,abstract,extends(vertices) :: camera
    integer,dimension(3) :: n_pixels_spectra
    real*8               :: exposure_time !< exposure time for each camera frame
   contains
+   procedure(int_ret_n_cam_inps),pass(camera_in),deferred       :: return_n_camera_inputs
+   procedure(int_read_cam_inps),pass(camera_inout),deferred     :: read_camera_inputs
    procedure(int_init_camera),pass(camera_inout),deferred       :: init_camera
    procedure(int_gen_points_lens),pass(camera_inout),deferred   :: generate_points_on_lens_pdf
    procedure(int_reduce_light_img),pass(camera_inout),deferred  :: reduce_light_image
@@ -31,6 +33,43 @@ end type camera
 
 !> Interfaces ------------------------------------------------------
 interface
+  !> interfarce for function used for reading the camera inputs
+  !> inputs:
+  !>   camera_inout: (camera) camera object
+  !>   my_id:        (integer) mpi rank
+  !>   r_unit:       (integer) file unit id
+  !> outputs:
+  !>   camera_inout: (camera) camera object
+  !>   int_param:    (integer)(:) integer input parameters
+  !>   real_param:   (real8)(:) real input parameters
+  subroutine int_read_cam_inps(camera_inout,my_id,r_unit,&
+  int_param,real_param)
+  IMPORT :: camera
+  implicit none
+  !> inputs-outputs:
+  class(camera),intent(inout) :: camera_inout
+  !> inputs:
+  integer,intent(in) :: my_id,r_unit
+  !> outputs:
+  integer,dimension(:),allocatable,intent(out) :: int_param
+  real*8,dimension(:),allocatable,intent(out)  :: real_param
+  end subroutine int_read_cam_inps
+
+  !> interface of the function used for returning the input
+  !> array size
+  !> inputs:
+  !>   camera_in: (camera) input camera object
+  !> outputs:
+  !>   n_inputs:  (integer)(2) size of the integer and real
+  !>              input arrays
+  function int_ret_n_cam_inps(camera_in) result(n_inputs)
+    IMPORT :: camera
+    !> inputs:
+    class(camera),intent(in) :: camera_in
+    !> outputs:
+    integer,dimension(2) :: n_inputs
+  end function int_ret_n_cam_inps
+
   !> interface of the deferred procedure init_camera which initialises a 
   !> camera type.
   !> inputs:

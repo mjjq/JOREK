@@ -77,7 +77,7 @@ subroutine prepare_input_file()
   !> variables
   integer :: ifail
   !> write the file
-  open(read_unit,file=input_file,status='new',action='write',iostat=ifail)
+  open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail)
   write(read_unit,'(/A)') '&light_in'
   write(read_unit,'(/A,I6)') 'n_times = ',n_times_sol
   write(read_unit,'(/A,I6)') 'n_lights = ',n_lights_sol
@@ -138,7 +138,7 @@ subroutine test_ligth_read_inputs()
   integer :: rank,ifail
   integer,dimension(2) :: n_input_params
   integer,dimension(:),allocatable :: int_param
-  real*8,dimension(:),allocatable :: real_param
+  real*8,dimension(:),allocatable  :: real_param
   !> initialisation 
   rank = 0
   !> read input file
@@ -153,6 +153,9 @@ subroutine test_ligth_read_inputs()
   "Error light read inputs: int parameters mismatch!")
   call assert_false(allocated(real_param),&
   "Error light read inputs: real parameters allocated!")
+  !> cleanup
+  if(allocated(int_param))  deallocate(int_param)
+  if(allocated(real_param)) deallocate(real_param)
 end subroutine test_ligth_read_inputs
 
 !> procedure for testing the find active particles for all particle types

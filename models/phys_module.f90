@@ -247,9 +247,17 @@ module phys_module
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num, Zk_i_perp_num, Zk_e_perp_num
+
+  !> @name Shock-capturing terms
+  logical :: use_sc  !< Use shock-capturing stabilization
+  real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num
+  real*8  :: ZK_perp_sc_num, ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num, ZK_e_perp_sc_num, ZK_e_par_sc_num
+  real*8  :: visco_sc_num, visco_par_sc_num
+
   logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
   logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
-  
+  logical :: add_sources_in_sc    !< Whether to add effect of sources in shock-capturing stabilization or not
+
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)
   real*8  :: tstep_prev                 !< Previous time-step if using variable dt Gears
@@ -354,6 +362,7 @@ module phys_module
   real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
   real*8  :: ns_radius         !< Poloidal radius of gas source
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
+  real*8  :: ns_deltaminrad    !< Extension of gas source in the minor radial direction (if greater than 0.)
   real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
 
   character(len=80) :: imp_type(n_imp_max) !< Type of injected material or background impurity species: Argon, neon, ...
@@ -423,6 +432,7 @@ module phys_module
   integer :: n_adas             !< Number of species to be traced by ADAS
 
   logical :: spi_tor_rot        !< Flag to turn on a rigid body toroidal plasma rotation for SPI
+  logical :: spi_num_vol        !< Flag to turn on numerical integration of the gas source volumes from SPI
 
   type (type_SPI), allocatable :: pellets(:) !< Each element corresponds to one injected pellet (shard)
 
@@ -805,6 +815,7 @@ module phys_module
   logical :: use_ncs          ! use neutral particles
   logical :: use_ccs          ! use current coupling scheme for fast particles
   logical :: use_pcs          ! use pressure coupling scheme for fast particles
+  logical :: use_pcs_full     ! use full tensor pressure coupling scheme for fast particles
   logical :: use_cx           ! switch on sputtering         (in particle module)
   logical :: use_sputtering   ! switch on charge-exchange    (in particle module)
   logical :: use_ionisation   ! switch on ionisation         (in particle module)

@@ -30,6 +30,7 @@ subroutine preset_parameters
 
   eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.
+  add_sources_in_sc     = .false.
 
   eta           = 1.d-5
   T_max_eta     = 1.d3
@@ -237,6 +238,20 @@ subroutine preset_parameters
   ZK_i_perp_num = 0.d0
   ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
+
+  use_sc = .false.
+  visco_sc_num     = 0.d0
+  D_perp_sc_num    = 0.d0
+  D_par_sc_num     = 0.d0
+  ZK_perp_sc_num   = 0.d0
+  ZK_par_sc_num    = 0.d0
+  ZK_i_perp_sc_num = 0.d0
+  ZK_i_par_sc_num  = 0.d0
+  ZK_e_perp_sc_num = 0.d0
+  ZK_e_par_sc_num  = 0.d0
+  visco_par_sc_num = 0.d0
+  Dn_pol_sc_num    = 0.d0
+  Dn_p_sc_num      = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7
@@ -635,6 +650,7 @@ subroutine preset_parameters
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
   ns_deltaphi =  0.5
+  ns_deltaminrad = 0.d0
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
   D_neutral_x = 1.d-5
@@ -676,6 +692,7 @@ subroutine preset_parameters
   spi_plume_file(:) = 'none'
   spi_plume_hdf5  = .false.
   spi_tor_rot     = .false.
+  spi_num_vol     = .true.
   using_spi       = .false.
 
   output_prad_phi = .false.
@@ -728,6 +745,7 @@ restart_particles  = .false.
 use_ncs            = .false.
 use_ccs            = .false.
 use_pcs            = .false.
+use_pcs_full       = .false.
 use_ionisation     = .true.
 use_sputtering     = .false.
 use_cx             = .true.

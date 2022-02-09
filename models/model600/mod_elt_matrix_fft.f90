@@ -940,34 +940,24 @@ do i=1,n_vertex_max
            
             ! --- Impurity atomic parameters
 
-            if (with_impurities) then
+            if (with_impurities) call construct_imp_charge_states()
                
-              call construct_imp_charge_states()
-              
-              if (thermalization) call construct_thermalization_terms()
-
-              call construct_pressure()
-
+            ! --- Ion-electron energy transfer
+            if (thermalization) then
+              ! Te in eV:
+              call construct_thermalization_terms()
             else
+              dTe_i = 0.
+              dTi_e = 0.
+              ddTe_i_dTi = 0.
+              ddTe_i_dTe = 0.
+              ddTe_i_drho = 0.
+              ddTi_e_dTi = 0.
+              ddTi_e_dTe = 0.
+              ddTi_e_drho = 0.
+            endif
 
-              ! --- Ion-electron energy transfer
-              if (thermalization) then
-                ! Te in eV:
-                call construct_thermalization_terms()
-              else
-                dTe_i = 0.
-                dTi_e = 0.
-                ddTe_i_dTi = 0.
-                ddTe_i_dTe = 0.
-                ddTe_i_drho = 0.
-                ddTi_e_dTi = 0.
-                ddTi_e_dTe = 0.
-                ddTi_e_drho = 0.
-              endif
-
-              call construct_pressure()
-
-            endif       ! with_impurities
+            call construct_pressure()
  
             ! ---Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = Te0
@@ -1274,6 +1264,20 @@ do i=1,n_vertex_max
             dLradDrays_dT = 0.d0
 
           endif  ! with_neutrals
+
+          if (with_impurities) then
+            source_imp = 0.d0
+            source_bg  = 0.d0
+            call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
+            ! This is to detect N/A
+            if (source_imp /= source_imp .or. source_bg /= source_bg) then
+              write(*,*) "WARNING: source_imp = ", source_imp
+              write(*,*) "WARNING: source_bg = ", source_bg
+              stop
+            end if
+            source_imp = max(source_imp,0.d0)
+            source_bg  = max(source_bg,0.d0)
+          endif
       
           !-----------------------------------------------------------------
           ! --- Radiation from background impurity, using ADAS (by default)
@@ -4649,6 +4653,38 @@ subroutine construct_radiation_parameters()
       Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
       Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
     endif
+
+  !------------------------------------------------------------------
+  ! --- Radiative function for the main impurity, using interpolation
+  ! -----------------------------------------------------------------
+    if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+
+      Lrad = 0.0
+      dLrad_dT = 0.0
+
+      ! Here we are temperarily only considering one impurity species, in the
+      ! future maybe a do loop will is needed
+      call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
+      Lrad = Lrad * m_i_over_m_imp
+      dLrad_dT = dLrad_dT * m_i_over_m_imp * dTe0_corr_dT
+
+    else
+
+      Lrad = 0.
+      dLrad_dT = 0.
+
+    end if
+
+    ! This is to detect N/A
+    if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
+      write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ",&
+                           Lrad, dLrad_dT, E_ion, dE_ion_dT
+      stop
+    end if
+
+   !--------------------------------------------------------
+   ! --- Radiation from background impurity
+   !--------------------------------------------------------
 
     frad_bg = 0.
     dfrad_bg_dT = 0.

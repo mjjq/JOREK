@@ -8,11 +8,13 @@ private
 public :: run_fruit_spectra_deterministic_test
 
 !> Variables --------------------------------------------------------
+character(len=33),parameter :: input_file='spectrum_deterministic_2nd_inputs'
+integer,parameter :: read_unit=43         !< file read unit
 integer,parameter :: n_convergence=5      !< number of points for convergence
 integer,parameter :: n_points=512437      !< number of points
 integer,parameter :: n_spectra=2          !< number of spectra
 real*8,parameter  :: tol_grid=3.d-16      !< tolerance for grid check
-real*8,parameter  :: accuracy_order=-2.d0  !< accuracy order
+real*8,parameter  :: accuracy_order=-2.d0 !< accuracy order
 real*8,parameter  :: tol_accuracy=5.d-2   !< tolerance on the accuray order
 real*8,parameter  :: tol_int_error=5.d-12 !< tolerance on the minim integratio error
 !> n_points for convergence study
@@ -34,7 +36,9 @@ subroutine run_fruit_spectra_deterministic_test()
   implicit none
   write(*,'(/A)') "  ... setting-up: spectra deterministic integrator tests"
   call setup
+  call write_spectrum_inputs
   write(*,'(/A)') "  ... running: spectra deterministic integrator tests"
+  call test_spectrum_input_reader
   call test_deterministic_allocation_noinit
   call test_deterministic_allocation_init
   call test_set_spectrum_int_2nd_properties
@@ -52,13 +56,62 @@ subroutine setup()
   wbin_size = (max_wlen-min_wlen)/n_points
 end subroutine setup
 
+!> write an input for testing the reading routines
+subroutine write_spectrum_inputs()
+  implicit none
+  !> variables
+  integer :: ifail
+  open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail)
+  write(read_unit,'(/A)') '&spectrum_in'
+  write(read_unit,'(/A,I10)') 'n_points = ',n_points
+  write(read_unit,'(/A,I10)') 'n_spectra = ',n_spectra
+  write(read_unit,'(/A)') '/'
+  write(read_unit,'(/A)') '&wavelength_in'
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(1) = ',min_wlen(1)
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(2) = ',min_wlen(2)
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(3) = ',max_wlen(1)
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(4) = ',max_wlen(2)
+  write(read_unit,'(/A)') '/'
+  close(read_unit)
+end subroutine write_spectrum_inputs
+
 !> Tear-down the test variables
 subroutine teardown()
   implicit none
   wbin_size = 0.d0
+  call system("rm "//input_file)
 end subroutine teardown
 
 !> Tests ------------------------------------------------------------
+!> test input reading parameters
+subroutine test_spectrum_input_reader()
+  use mod_spectra_deterministic, only: spectrum_integrator_2nd
+  implicit none 
+  !> variables
+  type(spectrum_integrator_2nd) :: spectrum
+  integer :: rank,ifail
+  integer,dimension(2)             :: n_inputs
+  integer,dimension(:),allocatable :: int_param
+  real*8,dimension(:),allocatable  :: real_param
+  !> initialisation
+  rank = 0
+  !> read parameters from file
+  open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
+  call spectrum%read_spectrum_inputs(rank,read_unit,n_inputs,&
+  int_param,real_param)
+  close(read_unit)
+  !> checks
+  call assert_equals(n_inputs,(/2,2*n_spectra/),2,&
+  "Error spectrum deterministic 2nd input reader: N# inputs mismatch!")
+  call assert_equals(int_param,(/n_points,n_spectra/),2,&
+  "Error spectrum deterministic 2nd input reader: N# integer parameters mismatch!")
+  call assert_equals(real_param,(/min_wlen(1),min_wlen(2),max_wlen(1),max_wlen(2)/),4,&
+  "Error spectrum deterministic 2nd input reader: N# real parameters mismatch!")
+  !> cleanup
+  if(allocated(int_param)) deallocate(int_param)
+  if(allocated(real_param)) deallocate(real_param)
+end subroutine test_spectrum_input_reader
+
 !> test the allocation, deallocation and construction of the
 !> spectrum_integrator_2nd without initialisation
 subroutine test_deterministic_allocation_noinit()

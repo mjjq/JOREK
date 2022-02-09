@@ -33,7 +33,7 @@ end type camera
 
 !> Interfaces ------------------------------------------------------
 interface
-  !> interfarce for function used for reading the camera inputs
+  !> interfarce for procedure used for reading the camera inputs
   !> inputs:
   !>   camera_inout: (camera) camera object
   !>   my_id:        (integer) mpi rank

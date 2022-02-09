@@ -162,6 +162,15 @@ pixel_intensities,ierr)
   endif
 end subroutine reduce_particle_light_image_static
 
+!> procedure use for reading the camera perspective static inputs
+!> inputs:
+!>   camera_inout: (camera_perspective_static) camera object
+!>   my_id:        (integer) mpi rank
+!>   r_unit:       (integer) file unit id
+!> outputs:
+!>   camera_inout: (camera_perspective_static) camera object
+!>   int_param:    (integer)(:) integer input parameters
+!>   real_param:    (real8)(:) real input parameters
 subroutine read_camera_perspective_static_inputs(camera_inout,&
 my_id,r_unit,int_param,real_param)
   implicit none

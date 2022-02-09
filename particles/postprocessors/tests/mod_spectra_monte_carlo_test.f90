@@ -10,6 +10,8 @@ private
 public :: run_fruit_spectra_monte_carlo_test
 
 !> Variables -----------------------------------------------------------------
+character(len=33),parameter :: input_file='spectrum_deterministic_2nd_inputs'
+integer,parameter :: read_unit=43     !< file read unit
 integer,parameter :: n_trials=50      !< number of trials for computing std deviation
 integer,parameter :: n_convergence=5  !< number of points for convergence
 integer,parameter :: n_points=5512437 !< number of points
@@ -37,7 +39,9 @@ subroutine run_fruit_spectra_monte_carlo_test()
 implicit none
   write(*,'(/A)') "  ... setting-up: spectra Monte-Carlo tests"
   call setup
+  call write_spectrum_inputs
   write(*,'(/A)') "  ... running: spectra Monte-Carlo tests"
+  call test_spectrum_input_reader
   call test_spectrum_rng_uniform_construction_noinit
   call test_set_uniform_spectrum_interval
   call test_spectrum_rng_uniform_construction_init
@@ -66,14 +70,63 @@ subroutine setup()
   call omp_initialize_rngs(n_points,n_threads,rngs)
 end subroutine setup
 
+!> write an input for testing the reading routines
+subroutine write_spectrum_inputs()
+  implicit none
+  !> variables
+  integer :: ifail
+  open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail)
+  write(read_unit,'(/A)') '&spectrum_in'
+  write(read_unit,'(/A,I10)') 'n_points = ',n_points
+  write(read_unit,'(/A,I10)') 'n_spectra = ',n_spectra
+  write(read_unit,'(/A)') '/'
+  write(read_unit,'(/A)') '&wavelength_in'
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(1) = ',min_wlen(1)
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(2) = ',min_wlen(2)
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(3) = ',max_wlen(1)
+  write(read_unit,'(/A,F20.16)') 'min_max_wavelength(4) = ',max_wlen(2)
+  write(read_unit,'(/A)') '/'
+  close(read_unit)
+end subroutine write_spectrum_inputs
+
 !> clean up all test variables
 subroutine teardown()
   implicit none
   i_pdf = 0.d0
   deallocate(rngs)
+  call system("rm "//input_file)
 end subroutine teardown
 
 !> Tests ---------------------------------------------------------------------
+!> test input reading parameters
+subroutine test_spectrum_input_reader()
+  use mod_spectra_monte_carlo, only: spectrum_rng_uniform
+  implicit none 
+  !> variables
+  type(spectrum_rng_uniform) :: spectrum
+  integer :: rank,ifail
+  integer,dimension(2)             :: n_inputs
+  integer,dimension(:),allocatable :: int_param
+  real*8,dimension(:),allocatable  :: real_param
+  !> initialisation
+  rank = 0
+  !> read parameters from file
+  open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
+  call spectrum%read_spectrum_inputs(rank,read_unit,n_inputs,&
+  int_param,real_param)
+  close(read_unit)
+  !> checks
+  call assert_equals(n_inputs,(/2,2*n_spectra/),2,&
+  "Error spectrum monte carlo uniform input reader: N# inputs mismatch!")
+  call assert_equals(int_param,(/n_points,n_spectra/),2,&
+  "Error spectrum monte carlo uniform input reader: N# integer parameters mismatch!")
+  call assert_equals(real_param,(/min_wlen(1),min_wlen(2),max_wlen(1),max_wlen(2)/),4,&
+  "Error spectrum monte carlo uniform input reader: N# real parameters mismatch!")
+  !> cleanup
+  if(allocated(int_param)) deallocate(int_param)
+  if(allocated(real_param)) deallocate(real_param)
+end subroutine test_spectrum_input_reader
+
 !> test allocation, deallocation and construction of spectrum_base class
 subroutine test_spectrum_rng_uniform_construction_noinit()
   use mod_assert_equals_tools, only: assert_equals_allocatable_arrays

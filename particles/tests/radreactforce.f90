@@ -79,12 +79,11 @@ contains
     
     ! Check RHS routine as well
     call momentum_prt_and_gc(energy, pitch, mass, norm2(B), prt, gc)
-    call radreactforce_gc_rhs(B, mass, gc%q, gc%p, yout)
+    call radreactforce_gc_rhs(B, mass, int(gc%q), gc%p, yout)
     gc%p = gc%p + dt * yout
     p_gc = gc2momentum(gc, mass, norm2(B))
 
-    predefval = 457450.d0!
-    !write(*,*) p_gc, p0_gc, norm2(p0_prt)
+    predefval = 457450.d0
     call assert_equals(0.d0, (p0_gc - norm2(p0_prt)) / p0_gc, 1.d-6, "GC == PRT")
     call assert_equals(0.d0, (p0_gc - p_gc) / p0_gc, 1.d-6, "GC == GC_RHS")
     call assert_equals(0.d0, (p0_gc - predefval) / p0_gc, 1.d-5, "Regression test")

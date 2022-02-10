@@ -459,7 +459,7 @@ subroutine calc_index_shaped_part(this, particle_in,index_val,val_val,sim)
         
        indices_phase_grids_tmp(j)=index_supp(ind_mesh_tmp(j)+this%prevsupp(j)) 
        ! Scale the values by 1/bandwidth to be able to compare units w/ different bandwidths in each dimension
-       val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(ind_mesh_tmp(j)+this%prevsupp(j))*1/this%bandwidths(j) 
+       val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(ind_mesh_tmp(j)+this%prevsupp(j))*1/this%bandwidths(j) *2.d0 !Bandwidth = 2*bandwidth_wiki
        
     enddo
     
@@ -572,7 +572,7 @@ subroutine calc_index_shaped_part_x(this, particle_in,index_val,val_val,sim,x_in
         
        indices_phase_grids_tmp(j)=index_supp(ind_mesh_tmp(j)+this%prevsupp(j)) 
        ! Scale the values by 1/bandwidth to be able to compare units w/ different bandwidths in each dimension
-       val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(ind_mesh_tmp(j)+this%prevsupp(j))*1/this%bandwidths(j) 
+       val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(ind_mesh_tmp(j)+this%prevsupp(j))*1/this%bandwidths(j)*2.d0 !Bandwidth = 2*bandwidth_wiki
        
     enddo
     

@@ -66,7 +66,7 @@ program tae_loop
   call sim%initialize(num_groups=1)
 
   rho_part    = 1.195d19 !(corrected value to obtain density=1.441e17 (as in benchmark, for original profile with toroidal flux)
-
+  rho_part = n_particles
   n_particles_local = int(n_particles/sim%n_cpu)
   timesteps         = tstep_particles
 
@@ -111,9 +111,9 @@ program tae_loop
     allocate(particle_kinetic_leapfrog::sim%groups(1)%particles(n_particles_local))
 
     !< If projecting phase space, it is vital to use a by construction $phi$ independent initial distribtuion, i.e. phi planes.
-    call initialise_particles_H_mu_psi_phiplanes(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &
+    call initialise_particles_H_mu_psi(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &
          uniform_space=.true., uniform_space_rej_f=f_toroidal_flux, &
-         uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5, n_phi_planes_in=12)
+         uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5)
 
 
     call adjust_particle_weights(sim%groups(1)%particles, rho_part)
@@ -154,8 +154,8 @@ program tae_loop
   !                                        f_grids= [proj_f(proj_R,group =1 ),proj_f(proj_Z,group=1)],bandwidths=[0.5,0.5])
   ! Power versus minor radius (f_proj is not relevant, as we fill the value arrays manually by averaging over particle orbits.)
   ! If you want to use this, you'll have to use a restart file with some mode structure (i.e. a linear-phase TAE mode from previous simulations)
-  test_phase = new_phase_space_projection(sim,ndim=1,res=[200],start=[0.d0],end=[1.d0],f_proj=proj_f(proj_one, group = 1),&
-                                         f_grids= [proj_f(proj_min_rad,group = 1 )],bandwidths=[0.05])
+  test_phase = new_phase_space_projection(sim,ndim=2,res=[200,200],start=[9.d0,-1.d0],end=[11.d0,1.d0],f_proj=proj_f(proj_one, group = 1),&
+                                         f_grids= [proj_f(proj_R,group = 1 ),proj_f(proj_Z,group = 1 )],bandwidths=[0.3,0.3])
   ! Initial density of mu 
   !test_phase = new_phase_space_projection(sim,ndim=1,res=[200],start=[0.d0],end=[1.d6],f_proj=proj_f(proj_one, group = 1),&
   !                                         f_grids= [proj_f(proj_mu,group = 1 )],bandwidths=[0.05d6])
@@ -221,7 +221,7 @@ program tae_loop
 
     ! If e.g. <100 timesteps, you will see initial power exchange (linear) while for longer 
     ! the flattening of the distribution will be seen.
-    call loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, 10, particle_start_time,test_phase)
+    call loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, 2000 , particle_start_time,test_phase)
     call output_phase_project(test_phase)
 
     ! Output 2D pressure projection as well for completeness (& verify the initialization worked, to_vtk = .true.)
@@ -266,8 +266,8 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   real*8, intent(in)     :: timesteps, particle_start_time
   real*8    :: n_norm, rho_norm, t_norm, v_norm, E_norm, M_norm
   real*8    :: t, E(3), B(3), psi, U, n_e, T_e, rz_old(2), st_old(2),rzp_old(3),vcart_old(3),vcart_new(3)
-  real*8    :: v_temp(3), T_eV, K_eV, v_kin_temp, B_norm(3), v
-  real*8    :: R_g, Z_g, R_s, R_t, Z_s, Z_t, xjac, HZ(n_tor), HH(4,4), HH_s(4,4), HH_t(4,4)
+  real*8    :: v_temp(3), T_eV, K_eV, v_kin_temp, B_norm(3), v,E_diff
+  real*8    :: R_g, Z_g, R_s, R_t, Z_s, Z_t, xjac, HZ(n_tor), HH(4,4), HH_s(4,4), HH_t(4,4), E_tot,E_tot_red, E_after, E_after_red
   real*8    :: b_norm_r, b_norm_z, b_norm_phi, vr_tilde,vz_tilde,v_par, p_par, p_perp, p_atrop,val_tmp(test_phase%totsupport),val_tmp2
 !$ real*8 :: w0, w1, mmm(3)
 
@@ -297,6 +297,20 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   feedback_rhs       = 0.d0
 
   call with(sim, counter)
+  E_tot = 0.d0
+  E_tot_red=0.d0
+  E_after =0.d0
+  E_after_red = 0.d0
+  select type (particles => sim%groups(1)%particles)
+    type is (particle_kinetic_leapfrog)
+      do j=1,size(particles,1)
+        E_tot = E_tot + 0.5d0*particles(j)%weight*sim%groups(1)%mass*mass_proton*dot_product(particles(j)%v, particles(j)%v)
+      enddo
+  end select
+  call MPI_REDUCE(E_tot,E_tot_red,1,MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  write(*,*) "On process", sim%my_id, "tot energy: ", E_tot
+  if(sim%my_id .eq. 0 ) write(*,*) "Total energy:", E_tot_red
+  
 
   select type (particles => sim%groups(1)%particles)
     type is (particle_kinetic_leapfrog)
@@ -310,7 +324,7 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
 #endif
       !$omp private(particle_tmp, i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old, index_phase_tmp,  val_tmp, i_phase, index_phase_tmp2,val_tmp2, &
       !$omp i_elm_old, i_elm, n_e, T_e, b_norm_r, b_norm_z,b_norm_phi, vr_tilde, vz_tilde,v_par, p_par, p_perp, p_atrop,&
-      !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, ifail, v,rzp_old,vcart_old,vcart_new) &
+      !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, ifail, v,rzp_old,vcart_old,vcart_new,E_diff) &
       !$omp schedule(dynamic,10) &
       !$omp reduction(+:feedback_rhs)&
       !$omp reduction(+:phase_proj)
@@ -328,7 +342,7 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
           t = particle_start_time + (k-1)*timesteps
 
           call sim%fields%calc_EBpsiU(t, particle_tmp%i_elm, particle_tmp%st, particle_tmp%x(3), E, B, psi, U)
-
+         
           rz_old    = particle_tmp%x(1:2)
           rzp_old   = particle_tmp%x
           vcart_old = particle_tmp%v !(If time permits, I will use this to average v(t+1/2) & v(t-1/2), you have to do this cartesian as reference frame changes!)
@@ -338,12 +352,6 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
 
           if (particle_tmp%i_elm .gt. 0) then
             ! Do phase space projection before pushing
-            call calc_index_shaped_part(test_phase,particle_tmp,index_phase_tmp, val_tmp,sim)                        
-            do i_phase=1, test_phase%totsupport
-              if(index_phase_tmp(i_phase) > 0)then
-                phase_proj(index_phase_tmp(i_phase))=phase_proj(index_phase_tmp(i_phase))+1.d0/real(n_steps)*particle_tmp%weight*val_tmp(i_phase)*dot_product(vcart_old,E)
-              endif
-            enddo
             ! For completeness, this is the nearest neighbour implementation.
             ! call calc_index_val_phaseproj(test_phase,particle_tmp,index_phase_tmp2,sim)
             ! if(index_phase_tmp2 > 0) then
@@ -351,10 +359,19 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
             ! endif
  
             ! Push the particle and determine its new location.
+            E_diff = particle_tmp%weight*0.5d0*sim%groups(1)%mass*MASS_PROTON*dot_product(particle_tmp%v,particle_tmp%v)
             call boris_push_cylindrical(particle_tmp, sim%groups(1)%mass, E, B, timesteps)
 
             call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
                      particle_tmp%x(1), particle_tmp%x(2), particle_tmp%st(1), particle_tmp%st(2), particle_tmp%i_elm, ifail)
+            E_diff =-E_diff+ particle_tmp%weight*0.5d0*sim%groups(1)%mass*MASS_PROTON*dot_product(particle_tmp%v,particle_tmp%v)
+          
+            call calc_index_shaped_part(test_phase,particle_tmp,index_phase_tmp, val_tmp,sim)                        
+              do i_phase=1, test_phase%totsupport
+                if(index_phase_tmp(i_phase) > 0)then
+                  phase_proj(index_phase_tmp(i_phase))=phase_proj(index_phase_tmp(i_phase))+1.d0*particle_tmp%weight*val_tmp(i_phase)*E_diff
+                endif
+            enddo
             if(particle_tmp%i_elm .gt.0) then
               
 
@@ -447,7 +464,15 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
 
 
   end select
-
+  select type(particles => sim%groups(1)%particles)
+    type is (particle_kinetic_leapfrog)
+      do j=1,size(particles,1)
+        E_after = E_after + 0.5d0*particles(j)%weight*sim%groups(1)%mass*mass_proton*dot_product(particles(j)%v, particles(j)%v)
+      enddo
+  end select
+  call MPI_REDUCE(E_after,E_after_red,1,MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+  write(*,*) "On process", sim%my_id, "tot energy after: ", E_tot
+  if(sim%my_id .eq. 0 ) write(*,*) "Total energy after:", E_after_red, " Energy diff = ", E_after_red - E_tot_red
   jorek_feedback%rhs = feedback_rhs/n_steps
   test_phase%values=test_phase%values+phase_proj
   deallocate(feedback_rhs)

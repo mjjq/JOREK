@@ -5,10 +5,14 @@
 module mod_particle_types
   implicit none
   private
-  public particle_base, particle_kinetic, particle_kinetic_leapfrog, particle_gc, particle_fieldline
-  public particle_kinetic_relativistic, particle_gc_relativistic
-  public particle_get_q
-  public copy_particle
+  public :: particle_base, particle_kinetic, particle_kinetic_leapfrog
+  public :: particle_gc, particle_fieldline
+  public :: particle_kinetic_relativistic, particle_gc_relativistic
+  public :: particle_gc_vpar, particle_gc_Qin
+  public :: particle_get_q
+  public :: copy_particle
+  public :: copy_particle_base
+  public :: copy_particle_kinetic_leapfrog
 
   !> The base type for all other particles. Includes only the position and weight elements
   !> Integration in a 2D finite element method is included in the form of 2 coordinates
@@ -16,8 +20,11 @@ module mod_particle_types
   type, abstract :: particle_base
     real*8    :: x(3)             !< particle position in real space
     real*8    :: st(2)            !< particle position in the element
-    real*4    :: weight = 1.0     !< weight (i.e. number of particles)
-    integer*4 :: i_elm            !< index in element_list
+    real*8    :: weight = 1.0     !< weight (i.e. number of particles)
+    integer*4 :: i_elm = 0        !< index in element_list. Negative indices indicate lost particles on the edge of - that element.
+    integer*4 :: i_life = 0       !< particle lifetime index (i.e. is this still the same particle?)
+    real*4    :: t_birth = 0.0    !< birth time of this particle
+    !< zero means lost without location specification.
   contains
     procedure :: copy => copy_particle
     generic :: assignment(=) => copy
@@ -25,29 +32,49 @@ module mod_particle_types
 
   !> A simple type just for fieldline tracing in two-step methods (Adams Bashforth) or for forward euler
   type, extends(particle_base) :: particle_fieldline
-    real*8    :: B_hat_prev(3) !< Field direction at previous timestep
-    real*8    :: v !< Parallel velocity along the fieldline
+    real*8    :: B_hat_prev(3) = 0.d0 !< Field direction at previous timestep
+    real*8    :: v = 0.d0 !< Parallel velocity along the fieldline
   end type particle_fieldline
 
   !> A simple guiding-center particle type.
   type, extends(particle_base) :: particle_gc
-    real*8    :: E !< The particle energy [eV]
-    real*8    :: mu !< The magnetic moment [eV/T]. Sign determines sign of v_par
-    integer*1 :: q !< Charge [e]
+    real*8    :: E  = 0.d0 !< The particle energy [eV]
+    real*8    :: mu = 0.d0 !< The magnetic moment [eV/T]. Sign determines sign of v_par
+    integer*1 :: q  = 0_1  !< Charge [e]
   end type particle_gc
+
+  !> A simple guiding-center particle type.
+  type, extends(particle_base) :: particle_gc_vpar
+    real*8    :: vpar = 0.d0 !< Guiding centre parallel velocity [m/s]
+    real*8    :: mu   = 0.d0 !< The magnetic moment [eV/T] 
+    integer*1 :: q    = 0_1  !< Charge [e]
+  end type particle_gc_vpar
+
+  !> A simple guiding-center particle type.
+  type, extends(particle_gc_vpar) :: particle_gc_Qin
+    real*8    :: x_m(3)        !< position (previous step)
+    real*8    :: vpar_m        !< parallel velocity (previous step)
+    real*8    :: Astar_m(3)    !< A* (previous step)
+    real*8    :: Astar_k(3)    !< A*  (current step)
+    real*8    :: dAstar_k(3,3) !< dA* (current step)
+    real*8    :: Bn_k          !< B   (amplitude, current step)
+    real*8    :: dBn_k(3)      !< dB  (derivatives of Bn, current step)
+    real*8    :: Bnorm_k(3)    !< normalised B (current step)
+    real*8    :: E_k(3)        !< electric field (current step)
+  end type particle_gc_Qin
 
   !> For most kinetic methods the velocity is required at time \(t\)
   type, extends(particle_base) :: particle_kinetic
-    real*8, dimension(3) :: v !< Velocity [m/s]
-    integer*1            :: q !< charge [e]
+    real*8, dimension(3) :: v = 0.d0 !< Velocity [m/s]
+    integer*1            :: q = 0_1 !< charge [e]
   end type particle_kinetic
 
   !> Leapfrog methods define the particle velocity at time \(t^{n-1/2}\)
   !> and are therefore incompatible with normal kinetic methods (but a conversion
   !> function should not be too difficult)
   type, extends(particle_base) :: particle_kinetic_leapfrog
-    real*8, dimension(3) :: v !< Velocity [m/s] at t=t^(n-1/2) (where the position is known at t^n)
-    integer*1            :: q !< charge [e]
+    real*8, dimension(3) :: v = 0.d0 !< Velocity [m/s] at t=t^(n-1/2) (where the position is known at t^n)
+    integer*1            :: q = 0_1 !< charge [e]
   end type particle_kinetic_leapfrog
 
   !> This particle type is used for computing the full orbit trajectory
@@ -63,6 +90,7 @@ module mod_particle_types
     real(kind=8), dimension(2) :: p  !< 1: parallel momentum [AMU m/s], 2: magnetic moment [(AMU*m**2)/(T*s**2)]
     integer(kind=1) :: q !< charge [e]
  end type particle_gc_relativistic
+
 contains
   !> Convenience function to obtain q if it exists, or 0 otherwise
   !> Here also because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82064
@@ -78,6 +106,10 @@ contains
       q = p%q
     type is (particle_gc)
       q = p%q
+    type is (particle_gc_vpar)
+      q = p%q
+    type is (particle_gc_Qin)
+      q = p%q
     type is (particle_kinetic_relativistic)
       q = p%q
     type is (particle_gc_relativistic)
@@ -86,6 +118,32 @@ contains
       q = 0
     end select
   end function particle_get_q
+  !> Copy the base variables from one particle of class(particle_base) to another
+  
+  pure subroutine copy_particle_base(in, out)
+    class(particle_base), intent(in)    :: in
+    class(particle_base), intent(inout) :: out
+    out%x      = in%x
+    out%st     = in%st
+    out%weight = in%weight
+    out%i_elm  = in%i_elm
+    out%i_life = in%i_life
+    out%t_birth= in%t_birth
+  end subroutine copy_particle_base
+
+  !> Copy one particle of a type kinetic_leapfrog to another
+  pure subroutine copy_particle_kinetic_leapfrog(in, out)
+    type(particle_kinetic_leapfrog), intent(in)    :: in
+    type(particle_kinetic_leapfrog), intent(inout) :: out
+    out%x       = in%x
+    out%st      = in%st
+    out%weight  = in%weight
+    out%i_elm   = in%i_elm
+    out%i_life  = in%i_life
+    out%t_birth = in%t_birth
+    out%v       = in%v
+    out%q       = in%q
+  end subroutine copy_particle_kinetic_leapfrog
 
   !> Copy a descendant of particle_base into another descendant of particle_base
   !> as requested by the types of the input and output parameters.
@@ -98,10 +156,12 @@ contains
     class(particle_base), intent(out) :: particle_out !< Particle to copy attributes into
     class(particle_base), intent(in)  :: particle_in  !< Particle to copy attributes from
 
-    particle_out%x      = particle_in%x
-    particle_out%st     = particle_in%st
-    particle_out%weight = particle_in%weight
-    particle_out%i_elm  = particle_in%i_elm
+    particle_out%x        = particle_in%x
+    particle_out%st       = particle_in%st
+    particle_out%weight   = particle_in%weight
+    particle_out%i_elm    = particle_in%i_elm
+    particle_out%i_life   = particle_in%i_life
+    particle_out%t_birth  = particle_in%t_birth
 
     select type (p_out => particle_out)
     type is (particle_fieldline)
@@ -126,6 +186,46 @@ contains
         p_out%mu = 0.d0
         p_out%q  = 0
       end select
+    type is (particle_gc_vpar)
+      select type (p_in => particle_in)
+      type is (particle_gc_vpar)
+        p_out%vpar = p_in%vpar
+        p_out%mu   = p_in%mu
+        p_out%q    = p_in%q
+      class default
+        p_out%vpar = 0.d0
+        p_out%mu   = 0.d0
+        p_out%q    = 0
+      end select
+    type is (particle_gc_Qin)
+    select type (p_in => particle_in)
+    type is (particle_gc_Qin)
+      p_out%vpar     = p_in%vpar
+      p_out%mu       = p_in%mu
+      p_out%q        = p_in%q
+      p_out%x_m      = p_in%x_m
+      p_out%vpar_m   = p_in%vpar_m
+      p_out%Astar_m  = p_in%Astar_m
+      p_out%Astar_k  = p_in%Astar_k
+      p_out%dAstar_k = p_in%dAstar_k
+      p_out%Bn_k     = p_in%Bn_k
+      p_out%dBn_k    = p_in%dBn_k
+      p_out%Bnorm_k  = p_in%Bnorm_k
+      p_out%E_k      = p_in%E_k
+    class default
+      p_out%vpar     = 0.d0
+      p_out%mu       = 0.d0
+      p_out%q        = 0
+      p_out%x_m      = 0.d0
+      p_out%vpar_m   = 0.d0
+      p_out%Astar_m  = 0.d0
+      p_out%Astar_k  = 0.d0
+      p_out%dAstar_k = 0.d0
+      p_out%Bn_k     = 0.d0
+      p_out%dBn_k    = 0.d0
+      p_out%Bnorm_k  = 0.d0
+      p_out%E_k      = 0.d0
+    end select
     type is (particle_kinetic)
       select type (p_in => particle_in)
       type is (particle_kinetic)

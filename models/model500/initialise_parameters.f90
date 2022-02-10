@@ -109,14 +109,15 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_limiter, R_limiter, Z_limiter,                    &
                 first_target_point, last_target_point,              &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
-                spi_tor_rot, tor_frequency, ZK_par_neg_thresh,      &
+                spi_tor_rot, tor_frequency, spi_num_vol,            &
+                ZK_par_neg_thresh,                                  &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection, rho_min,                        &
-                ns_deltaphi, ksi_ion, spi_rnd_seed,                 &
+                ns_deltaphi, ns_deltaminrad,ksi_ion, spi_rnd_seed,  &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
@@ -125,29 +126,30 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg, output_prad_phi,       &
-                RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
+                spi_shard_file, spi_plume_file, spi_plume_hdf5,     &
+                RMP_on, RMP_har_cos,RMP_har_sin,                    &
                 RMP_growth_rate, RMP_ramp_up_time,                  &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
-                RMP_har_sin_spectrum, imp_type, adas_dir,           &
+                RMP_har_sin_spectrum, imp_type, adas_dir, n_adas,   &
                 amix, amix_freeb, equil_accuracy, use_imp_adas,     &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_pf_coils, pf_coils,                 &
-                axis_srch_radius, PF_pert_start_time,               &
+                n_iter_freeb, n_pf_coils, pf_coils, R_axis_ref,     &
+                axis_srch_radius,                                   &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
                 pastix_maxthrd, eta_ohmic, centralize_harm_mat,     & 
                 vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
-                vert_FB_tact, start_VFB_ts, I_coils_max,            &
+                vert_FB_tact, start_VFB_ts, I_coils_max, rad_FB_amp,&
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family
+                ranks_per_family, cte_current_FB_fact
 
 if (my_id .eq. 0) then
 
@@ -265,6 +267,16 @@ if ( my_id == 0 ) then
       stop
     end if
   end do 
+
+  if (n_adas > n_imp_max) then 
+    write(*,*) "ERROR: n_adas should be no larger than n_imp_max, EXITING!"
+    stop
+  end if
+
+  if (n_adas > 1 .and. (.not. use_imp_adas)) then
+    write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
+    stop
+  end if
 
   if (using_spi) call init_spi_all()
 

@@ -57,6 +57,7 @@ module vacuum
   real*8, allocatable :: I_coils(:)                      !< coil currents
   real*8, allocatable :: Y_coils0(:)                     !< imposed STARWALL coil currents source
   real*8              :: vertical_FB                     !< a variable for the feedback control of the plasma's vertical position
+  real*8              :: radial_FB                       !< a variable for the feedback control of the plasma's radial position   (during equilibrium)
   real*8, allocatable :: bext_tan(:,:)                   !< external tangential field
   real*8, allocatable :: bext_nor(:,:)                   !< external normal field
   real*8, allocatable :: bext_psi(:,:)                   !< external poloidal flux      
@@ -67,17 +68,16 @@ module vacuum
   real*8              :: FB_Ip_position                  !< Amplification factor for Ip feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Ip_integral                  !< Amplification factor for Ip feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: Z_axis_ref                      !< Target magnetic axis vertical position (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: R_axis_ref                      !< Optional target magnetic axis radial position (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Zaxis_position               !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Zaxis_derivative             !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   real*8              :: FB_Zaxis_integral               !< Amplification factor for Zaxis feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
+  real*8              :: cte_current_FB_fact             !< Constant factor that scales FF'& T profiles before freebnd GS iterations (switches off current FB) 
   integer             :: start_VFB                       !< Iteration for starting vertical feedback (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   integer             :: n_feedback_current              !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   integer             :: n_feedback_vertical             !< Feedback will be performed each n_... iterations (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
   integer             :: n_iter_freeb                    !< Number of iterations for freeboundary equilibirum (see [[jorek-starwall-faqs|fbnd_eq_FAQs]])
 
-  !> @name Time-evolution PF coils parameters
-  real*8              :: PF_pert_start_time              !< Time to start a perturbation to speed-up VDEs
-  
   
   ! ### various variables, some need to be removed
   real*8, allocatable :: R_coils(:), Z_coils(:)          ! ### old
@@ -153,8 +153,8 @@ module vacuum
   type :: t_coil_curr_input
     real*8             :: current   = 0.d0  !< Current of the coil in Ampere*Turns
     real*8             :: pert      = 0.d0  !< Pert. of coil current in Ampere*Turns to speed-up VDE.
-    real*8             :: pert_start_time  = 0.d0   !< Starting time of pert. of coil current in JOREK_time.
-    real*8             :: pert_growth_time = 1.d-12 !< Ramp-up time of pert. of coil current in JOREK_time.
+    real*8             :: pert_start_time  = 1.d33   !< Starting time of pert. of coil current in JOREK_time.
+    real*8             :: pert_growth_time = 1.d-12  !< Ramp-up time of pert. of coil current in JOREK_time.
     character(len=256) :: curr_file = 'none'!< Ascii file with coil current time trace.
     real*8             :: time_shift    = 0.d0  !< Shift time of time trace.
     real*8             :: time_scale    = 1.d0  !< Scale time of time trace.
@@ -175,6 +175,7 @@ module vacuum
   type(t_coil_curr_input), target :: pf_coils(MAX_COILS)      ! see [[jorek-starwall-faqs|jorek_starwall_FAQs]]
   type(t_coil_curr_time_trace)    :: coil_curr_time_trace(4*MAX_COILS)
   real*8 :: vert_FB_amp(MAX_COILS) = 0.d0 !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
+  real*8 :: rad_FB_amp(MAX_COILS) = 0.d0  !< Tune direction and magnitude of vert feedback for each poloidal field coil ([[jorek-starwall-faqs|eq_FAQs]])
   
   ! --- Parameters for the feedback on the vertical position during timestepping (VFB), see ([[active_controller_model_for_vertical_stabilization|documentation]])
   character(len=256)  :: vert_pos_file = 'none'
@@ -287,10 +288,10 @@ module vacuum
         allocate(coil_curr_time_trace(i)%curr(4) )
         coil_curr_time_trace(i)%len = 4
         
-        coil_curr_time_trace(i)%time(1)   = -1.d12
+        coil_curr_time_trace(i)%time(1)   = -1.d50
         coil_curr_time_trace(i)%time(2)   = coil_curr_input%pert_start_time
         coil_curr_time_trace(i)%time(3)   = coil_curr_input%pert_start_time + coil_curr_input%pert_growth_time
-        coil_curr_time_trace(i)%time(4)   = 1.d12
+        coil_curr_time_trace(i)%time(4)   = 1.d50
         
         coil_curr_time_trace(i)%curr(1:2) = coil_curr_input%current
         coil_curr_time_trace(i)%curr(3:4) = coil_curr_input%current + coil_curr_input%pert
@@ -420,11 +421,13 @@ module vacuum
     wall_resistivity_fact= 1.d0
         
     current_ref          = 1.d22
+    cte_current_FB_fact  = -1d99
     FB_Ip_position       = 0.2d0
     FB_Ip_integral       = 0.01d0
     n_feedback_current   = 2
         
     Z_axis_ref           = 1.d22
+    R_axis_ref           = -99.d0
     FB_Zaxis_position    = 1.d0
     FB_Zaxis_derivative  = 0.d0
     FB_Zaxis_integral    = 0.d0
@@ -433,7 +436,6 @@ module vacuum
     
     n_iter_freeb         = 900
     
-    PF_pert_start_time   = 1.d99
     psi_offset_freeb     = 0.d0
 
   ! ---- Parameters for vertical feedback (VFB)
@@ -452,6 +454,8 @@ module vacuum
     
     integer, intent(in)    :: my_id
     logical, intent(inout) :: freeboundary_equil, freeboundary, resistive_wall
+
+    integer  :: i
     
     ! --- Make input parameters consistent.
     freeboundary   = freeboundary .or. freeboundary_equil
@@ -466,10 +470,12 @@ module vacuum
     sr%ntri_w = 0
     sr%n_tor  = 0
     sr%n_tor0 = 0
-    
-    if ( (my_id == 0) .and. (sum(pf_coils%pert) > 0) .and. (PF_pert_start_time>1.d30) ) then
-       write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since PF_pert_start_time was not set to a reasonable value.'
-    end if
+
+    do i=1, MAX_COILS
+      if ( (my_id == 0) .and. (pf_coils(i)%pert > 0) .and. ( pf_coils(i)%pert_start_time>1.d30 ) ) then
+        write(*,*) 'WARNING: Poloidal field coil perturbation pf_coils%pert has been set by the user, but will not be applied since pert_start_time was not set to a reasonable value.'
+     end if
+   end do
     
   end subroutine vacuum_init
   
@@ -646,7 +652,7 @@ module vacuum
         allocate( old_dpsibnd_vec(n_dof_starwall) )
         old_dpsibnd_vec(:) = 0.d0
         call HDF5_array1D_reading(file_id,old_dpsibnd_vec,"old_dpsibnd_vec")
-        
+        call HDF5_integer_reading(file_id,n_coils,"n_coils")
         if ( index_start > 1 ) then
 
           if ( allocated(diag_coil_curr) ) deallocate(diag_coil_curr)
@@ -751,7 +757,7 @@ module vacuum
       
       call HDF5_real_reading(file_id,current_FB_fact,'current_FB_fact')
       call HDF5_real_reading(file_id,dZ_axis_integral,'dZ_axis_integral')
-      call HDF5_integer_reading(file_id,n_coils,"n_coils")
+
       if ( n_coils /= 0 ) then
         if ( allocated(I_coils) ) deallocate(I_coils)
         allocate( I_coils(n_coils) )
@@ -913,14 +919,14 @@ module vacuum
      end if !--- resistive wall
 
       call HDF5_array1D_saving(file_id,old_dpsibnd_vec,n_dof_starwall,"old_dpsibnd_vec"//char(0))
-      
+      call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))      
       call HDF5_real_saving(file_id,current_FB_fact,'current_FB_fact'//char(0))
       call HDF5_real_saving(file_id,dZ_axis_integral,'dZ_axis_integral'//char(0))
       if ( (n_coils/=0) .and. (.not. allocated(I_coils)) )  then
         write(*,*) 'ERROR in mod_vacuum.f90:export_restart_vacuum: I_coils not allocated.'
         stop
       end if
-      call HDF5_integer_saving(file_id,n_coils,"n_coils"//char(0))
+
       if ( n_coils /= 0 ) call HDF5_array1D_saving(file_id,I_coils,n_coils,"I_coils"//char(0))
     end if
     

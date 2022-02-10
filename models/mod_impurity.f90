@@ -23,8 +23,6 @@ module mod_impurity
     real*8, allocatable :: dP_imp_dT(:), P_imp(:)
     real*8              :: Z_imp
 
-    n_adas = 1 ! For now we only trace one species, in the future probably more 
-
     if (allocated(imp_adas)) then
       deallocate(imp_adas)
     end if
@@ -36,9 +34,9 @@ module mod_impurity
     end if
 
     allocate (imp_cor(n_adas))  !< Dynamically allocate memeries for adas data
-    if (nimp_bg .gt. 0 .or. with_impurities) then
+    if (nimp_bg(1) .gt. 0 .or. with_impurities) then
       do i=1, n_adas
-        select case ( trim(imp_type) )
+        select case ( trim(imp_type(i)) )
           case('C')
             adas_suffix = '96_c'
           case('H')
@@ -69,7 +67,7 @@ module mod_impurity
         
         ! This is to output a coronal equilibrium charge distribution as a
         ! function of temperature assuming constant density
-        if (my_id == 0) call output_coronal(imp_cor(i))
+        if (my_id == 0) call output_coronal(imp_cor(i),i)
       end do
     end if
 
@@ -125,12 +123,12 @@ module mod_impurity
 
   end subroutine radiation_function
 
-  subroutine radiation_function_linear(ad,cor, density, temperature, Lrad, dLrad_dTe)
+  subroutine radiation_function_linear(ad,cor, density, temperature, opt_ju, Lrad, dLrad_dTe)
 
     use phys_module
     use mod_openadas
     use mod_coronal
-    use mod_interp_splinear
+    use mod_interp_splinear 
 
     implicit none
 
@@ -138,6 +136,7 @@ module mod_impurity
     type(coronal), intent(in)   :: cor
     real*8, intent(in)          :: density !< log10 density in m^-3
     real*8, intent(in)          :: temperature !< log10 electron temperature in K
+    logical, intent(in)         :: opt_ju !Convert outputs into jorek units if .true.
 
     real*8, intent(out)         :: Lrad ! value of radiation function
     real*8, intent(out), optional :: dLrad_dTe ! derivatives of radiation functioni
@@ -148,6 +147,7 @@ module mod_impurity
     real*8, dimension(0:cor%n_Z):: p          !< charge state distribution
     real*8, dimension(0:cor%n_Z):: p_Te       !< gradient of distribution of charge states (sum = 1) to Te and Ne
     integer :: iz
+    real*8                      :: coef_rad_imp ! coefficient to transform Lrad from SI to JU 
     
     call cor%interp_linear(density,temperature,rad_out=rad)
     Lrad = rad / (10.0**density) ! This is to recover the radiation coefficient
@@ -161,10 +161,88 @@ module mod_impurity
         rad_p(iz)   = radRB + radLT
         drad_dT(iz) = dradRB_dT(iz) * radRB / (10.0**temperature) &
                       + dradLT_dT(iz) * radLT / (10.0**temperature) ! Convert to normal gradient
-      enddo ! radiation emitted by atoms at level iz
+      enddo ! radiation emitted by atoms at level iz     
       if (present(dLrad_dTe)) dLrad_dTe = dot_product(p_Te,rad_p) + dot_product(p,drad_dT)
     end if
 
+    !---------------------------------------------------------------------------                  
+    ! --- Some post-processing to convert units, check NaNs, etc, before output
+    !---------------------------------------------------------------------------  
+    ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
+    coef_rad_imp = (GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0 &
+                       *(central_density*1.d20)**2.5d0
+
+    if (opt_ju) then !Convert to JOREK units
+      Lrad = Lrad * coef_rad_imp
+      if (present(dLrad_dTe)) then
+        ! Convert gradient wrt. to T from 1/K into 1/eV
+        dLrad_dTe = dLrad_dTe * coef_rad_imp *  EL_CHG / K_BOLTZ 
+        ! ...and now from 1/eV into 1/(JOREK units)
+        if (with_TiTe) then
+          dLrad_dTe = dLrad_dTe / (EL_CHG*MU_ZERO*central_density*1.d20)
+        else
+          dLrad_dTe = dLrad_dTe / (2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        endif
+      end if
+    end if
+    if (Lrad < 0.) then
+      Lrad = 0.
+      if (present(dLrad_dTe)) dLrad_dTe = 0.
+    end if  
+    if (Lrad/=Lrad) then
+      write(*,*) "WARNING: Lrad ", Lrad
+      stop
+    end if
+    if (present(dLrad_dTe) .and. dLrad_dTe/=dLrad_dTe) then
+      write(*,*) "WARNING: dLrad_dTe ", dLrad_dTe
+      stop
+    end if
   end subroutine radiation_function_linear
 
+  !> This is to output a coronal equilibrium charge distribution as a
+  !> function of temperature assuming constant density 10^20/m^3
+  !> to a file charge_distribution.dat
+  !> plot with gnuplot like
+  !> 
+  !> set logscale y
+  !> p for [i=2:20] 'charge_distribution.dat' u 1:i t ''.(i-2) w l
+  subroutine output_coronal(cor,i_imp)
+  use phys_module, only: imp_type
+  use mod_coronal
+  class(coronal), intent(in)      :: cor !< Coronal equilibrium type
+  integer, intent(in)             :: i_imp !< Coronal equilibrium type
+  
+  ! Temporary variable for charge state distribution
+  integer             :: i_T, i_ion
+  real*8, allocatable :: P_imp(:)
+  real*8              :: Te_eV, Lrad
+  real*8              :: Z_eff
+  character(len=256)  :: filename
+  
+  
+  write (filename,'(a,a)') trim(imp_type(i_imp)), "_charge_distribution.dat"
+  open(20,file=trim(filename))
+  
+  write(20,'(4A22)',advance='no') 'temperature (log10(K))', 'charge states', 'summation', 'effective charge'
+  write(20,'(A22)') 'radiation function'
+  
+  do i_T = 1, size(cor%temperature,1)
+    Te_eV = cor%temperature(i_T)
+  
+    if (allocated(P_imp)) deallocate(P_imp)
+  
+    allocate(P_imp(0:cor%n_Z))
+    call cor%interp(density=20.d0,temperature=Te_eV,p_out=P_imp,z_out=Z_eff,rad_out=Lrad)
+    Lrad = Lrad / (1.d20) ! This is to recover the radiation coefficient
+    write(20,'(f12.3)',advance='no') Te_eV
+    do i_ion = 0, cor%n_Z
+      write(20,'(f12.5)',advance='no') P_imp(i_ion)
+    end do
+    write(20,'(f12.5)',advance='no') sum(P_imp)
+    write(20,'(f12.5)',advance='no') Z_eff
+    write(20,'(e14.6)') Lrad
+  end do
+  close (20)
+
+end subroutine output_coronal
 end module mod_impurity

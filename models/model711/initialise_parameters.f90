@@ -107,8 +107,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_pf_coils, pf_coils,                 &
-                axis_srch_radius, PF_pert_start_time,               &
+                n_iter_freeb, n_pf_coils, pf_coils, R_axis_ref,     &
+                axis_srch_radius, rad_FB_amp,                       &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
@@ -117,7 +117,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family
+                ranks_per_family,                                   &
+                n_particles, tstep_particles, nstep_particles,      & !Particles extension
+                nsubstep_particles, restart_particles,              &
+                filter_perp,    filter_hyper,    filter_par,        &
+                filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
+                use_cx, use_sputtering, use_ionisation,             &
+                use_ncs, use_pcs, use_ccs, cte_current_FB_fact
 
 if (my_id .eq. 0) then
 

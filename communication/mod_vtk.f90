@@ -24,6 +24,8 @@ contains
     integer, intent(in)                 :: nsub !< Number of subdivisions of each element
     type(vtk_grid)                      :: grid
 
+    grid%nsub = nsub
+
     call prepare_vtk_grid(node_list, element_list, nsub, grid%xyz, grid%ien)
   end function new_vtk_grid
 
@@ -44,7 +46,7 @@ contains
     integer :: nnos, nnoel, nel, i, j, ielm, inode, k
     real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
 
-    nnos = nsub*nsub*node_list%n_nodes
+    nnos = nsub*nsub*element_list%n_elements
     allocate(xyz(3,nnos))
 
     nnoel = 4
@@ -92,7 +94,7 @@ contains
     real*4,        intent(in) :: xyz(:,:) !< Point positions
     integer,       intent(in), optional :: ien(:,:) !< Element list ien(number of basis functions, element index)
     integer,       intent(in), optional :: cell_type !< Type of interpolation (vtk param)
-    character*12,  intent(in), optional :: scalar_names(:), vector_names(:)
+    character*36,  intent(in), optional :: scalar_names(:), vector_names(:)
     real*4,        intent(in), optional :: scalars(:,:), vectors(:,:,:) !< scalars(nnos, num_scalars)
 
     !> Parameters
@@ -165,7 +167,7 @@ contains
           write(str1(1:12),'(i12)') i_var
           buffer = lf//lf//'VECTORS '//str1//' float'//lf ; write(ivtk) trim(buffer)
         endif
-        write(ivtk) ((real(vectors(j,i,i_var),4),i=1,3),j=1,size(scalars,1))
+        write(ivtk) ((real(vectors(j,i,i_var),4),i=1,3),j=1,size(vectors,1))
       enddo
     endif
     close(ivtk)

@@ -30,6 +30,7 @@ subroutine preset_parameters
 
   eta_num_T_dependent   = .false.
   visco_num_T_dependent = .false.
+  add_sources_in_sc     = .false.
 
   eta           = 1.d-5
   T_max_eta     = 1.d3
@@ -73,6 +74,7 @@ subroutine preset_parameters
   mach_one_bnd_integral = .false. ! implement Mach one condition as boundary integral
   Vpar_smoothing        = .false. ! smooth the transitions of Vpar positive/negavtive at B.n
   Vpar_smoothing_coef   = (/0.01d0, 0.d0, 0.d0 /) !(/ 0.01d0, 0.016d0, 0.00575446347d0/)
+  min_sheath_angle      = 1.d0   ! 1 degree (not in radians)
 
   amix                 = 0.d0
   amix_freeb           = 0.85d0
@@ -110,6 +112,10 @@ subroutine preset_parameters
   SIG_r(:)      = 999.d0
   XR_tht(:)     = 999.d0
   SIG_tht(:)    = 999.d0
+  XR_z(:)       = 999.d0
+  SIG_z(:)      = 999.d0
+  bgf_r         = 0.7
+  bgf_z         = 0.7
 
   SIG_closed  = 0.1d0
   SIG_open    = 0.1d0
@@ -153,6 +159,14 @@ subroutine preset_parameters
   Zmax_pfc    = 0.d0
   current_pfc = 0.d0
 
+  n_jropes       = 0
+  R_jropes       = 0.d0
+  Z_jropes       = 0.d0
+  w_jropes       = 0.d0
+  current_jropes = 0.d0
+  rho_jropes     = 0.d0
+  T_jropes       = 0.d0
+
   bootstrap = .false.
 
   ellip  = 1.d0
@@ -179,6 +193,8 @@ subroutine preset_parameters
   R_end   =  0.1d0
   Z_begin = -0.1d0
   Z_end   = 0.1d0
+
+  rect_grid_vac_psi = 0.d0
   
   ZK_perp(1:5)   = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
   ZK_i_perp(1:5) = (/ 1.d-5, 0.d0, 0.d0, 99.d0, 99.d0 /)
@@ -223,6 +239,20 @@ subroutine preset_parameters
   ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
 
+  use_sc = .false.
+  visco_sc_num     = 0.d0
+  D_perp_sc_num    = 0.d0
+  D_par_sc_num     = 0.d0
+  ZK_perp_sc_num   = 0.d0
+  ZK_par_sc_num    = 0.d0
+  ZK_i_perp_sc_num = 0.d0
+  ZK_i_par_sc_num  = 0.d0
+  ZK_e_perp_sc_num = 0.d0
+  ZK_e_par_sc_num  = 0.d0
+  visco_par_sc_num = 0.d0
+  Dn_pol_sc_num    = 0.d0
+  Dn_p_sc_num      = 0.d0
+
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7
   heatsource_i        = 0.5e-7
@@ -255,6 +285,144 @@ subroutine preset_parameters
   neutral_line_Z_start      = 1.d20
   neutral_line_R_end        = 2.d20
   neutral_line_Z_end        = 2.d20
+
+  ! ------------------------------------------
+  ! --- Default boundary conditions ----------
+  ! ------------------------------------------
+
+  ! --- Dirichlet
+  bcs(:)%dirichlet%psi     = .true.
+  bcs(:)%dirichlet%u       = .true.
+  bcs(:)%dirichlet%zj      = .true.
+  bcs(:)%dirichlet%w       = .true.
+  bcs(:)%dirichlet%rho     = .true.
+  bcs(:)%dirichlet%T       = .true.
+  bcs(:)%dirichlet%Ti      = .true.
+  bcs(:)%dirichlet%Te      = .true.
+  bcs(:)%dirichlet%Vpar    = .true.
+  bcs(:)%dirichlet%rhon    = .true.
+  bcs(:)%dirichlet%rho_imp = .true.
+  bcs(:)%dirichlet%nre     = .true.
+  bcs(:)%dirichlet%AR      = .true.
+  bcs(:)%dirichlet%AZ      = .true.
+  bcs(:)%dirichlet%A3      = .true.
+
+  bcs(  1)%dirichlet%rho   = .false.
+  bcs(4:5)%dirichlet%rho   = .false.
+  bcs(  9)%dirichlet%rho   = .false.
+  bcs( 11)%dirichlet%rho   = .false.
+  bcs( 15)%dirichlet%rho   = .false.
+  bcs( 19)%dirichlet%rho   = .false.
+
+  bcs(  1)%dirichlet%T     = .false.
+  bcs(4:5)%dirichlet%T     = .false.
+  bcs(  9)%dirichlet%T     = .false.
+  bcs( 11)%dirichlet%T     = .false.
+  bcs( 15)%dirichlet%T     = .false.
+  bcs( 19)%dirichlet%T     = .false.
+
+  bcs(  1)%dirichlet%Te    = .false.
+  bcs(4:5)%dirichlet%Te    = .false.
+  bcs(  9)%dirichlet%Te    = .false.
+  bcs( 11)%dirichlet%Te    = .false.
+  bcs( 15)%dirichlet%Te    = .false.
+  bcs( 19)%dirichlet%Te    = .false.
+
+  bcs(  1)%dirichlet%Ti    = .false.
+  bcs(4:5)%dirichlet%Ti    = .false.
+  bcs(  9)%dirichlet%Ti    = .false.
+  bcs( 11)%dirichlet%Ti    = .false.
+  bcs( 15)%dirichlet%Ti    = .false.
+  bcs( 19)%dirichlet%Ti    = .false.
+
+  bcs(  1)%dirichlet%vpar  = .false.
+  bcs(4:5)%dirichlet%vpar  = .false.
+  bcs(  9)%dirichlet%vpar  = .false.
+  bcs( 11)%dirichlet%vpar  = .false.
+  bcs( 15)%dirichlet%vpar  = .false.
+  bcs( 19)%dirichlet%vpar  = .false.
+
+  bcs(  1)%dirichlet%rhon  = .false.
+  bcs(4:5)%dirichlet%rhon  = .false.
+  bcs(  9)%dirichlet%rhon  = .false.
+  bcs( 11)%dirichlet%rhon  = .false.
+  bcs( 15)%dirichlet%rhon  = .false.
+  bcs( 19)%dirichlet%rhon  = .false.
+
+  bcs(  1)%dirichlet%rho_imp  = .false.
+  bcs(4:5)%dirichlet%rho_imp  = .false.
+  bcs(  9)%dirichlet%rho_imp  = .false.
+  bcs( 11)%dirichlet%rho_imp  = .false.
+  bcs( 15)%dirichlet%rho_imp  = .false.
+  bcs( 19)%dirichlet%rho_imp  = .false.
+
+  ! --- Mach 1
+  bcs(:)%mach1   = .false.
+
+  bcs(  1)%mach1 = .true.
+  bcs(3:5)%mach1 = .true.
+  bcs(  9)%mach1 = .true.
+  bcs( 11)%mach1 = .true.
+  bcs( 15)%mach1 = .true.
+  bcs( 19)%mach1 = .true.
+
+  ! --- Natural BCs
+  bcs(:)%natural%rho     = .false.
+  bcs(:)%natural%T       = .false.
+  bcs(:)%natural%Ti      = .false.
+  bcs(:)%natural%Te      = .false.
+  bcs(:)%natural%Vpar    = .false.
+  bcs(:)%natural%rhon    = .false.
+
+  bcs(  1)%natural%rho   = .true.
+  bcs(4:5)%natural%rho   = .true.
+  bcs(  9)%natural%rho   = .true.
+  bcs( 11)%natural%rho   = .true.
+  bcs( 15)%natural%rho   = .true.
+  bcs( 19)%natural%rho   = .true.
+
+  bcs(  1)%natural%T     = .true.
+  bcs(4:5)%natural%T     = .true.
+  bcs(  9)%natural%T     = .true.
+  bcs( 11)%natural%T     = .true.
+  bcs( 15)%natural%T     = .true.
+  bcs( 19)%natural%T     = .true.
+
+  bcs(  1)%natural%Te    = .true.
+  bcs(4:5)%natural%Te    = .true.
+  bcs(  9)%natural%Te    = .true.
+  bcs( 11)%natural%Te    = .true.
+  bcs( 15)%natural%Te    = .true.
+  bcs( 19)%natural%Te    = .true.
+
+  bcs(  1)%natural%Ti    = .true.
+  bcs(4:5)%natural%Ti    = .true.
+  bcs(  9)%natural%Ti    = .true.
+  bcs( 11)%natural%Ti    = .true.
+  bcs( 15)%natural%Ti    = .true.
+  bcs( 19)%natural%Ti    = .true.
+
+  bcs(  1)%natural%vpar  = .true.
+  bcs(4:5)%natural%vpar  = .true.
+  bcs(  9)%natural%vpar  = .true.
+  bcs( 11)%natural%vpar  = .true.
+  bcs( 15)%natural%vpar  = .true.
+  bcs( 19)%natural%vpar  = .true.
+
+  bcs(  1)%natural%rhon  = .true.
+  bcs(4:5)%natural%rhon  = .true.
+  bcs(  9)%natural%rhon  = .true.
+  bcs( 11)%natural%rhon  = .true.
+  bcs( 15)%natural%rhon  = .true.
+  bcs( 19)%natural%rhon  = .true.
+
+  bcs(  1)%natural%rho_imp  = .true.
+  bcs(4:5)%natural%rho_imp  = .true.
+  bcs(  9)%natural%rho_imp  = .true.
+  bcs( 11)%natural%rho_imp  = .true.
+  bcs( 15)%natural%rho_imp  = .true.
+  bcs( 19)%natural%rho_imp  = .true.
+  ! -------------------------------------------
 
   
   U_sheath = .false.
@@ -358,7 +526,7 @@ subroutine preset_parameters
   gmres_m            = 20                   ! gmres restart parameter
   iter_precon        = 10                   ! redo preconditioner when gmres iterations > iter_precon
   max_steps_noUpdate = 10000000             ! redo preconditioner when steps without preconditioning matrix update > max_steps_noUpdate
-  centralize_harm_mat= .false.              ! centralize harmonic matrices on toroidal master rank 
+  centralize_harm_mat= .true.              ! centralize harmonic matrices on toroidal master rank 
   
   ! --- deprecated, code will stop if these parameters are set to .true. ---
   use_murge          = .false.
@@ -481,6 +649,7 @@ subroutine preset_parameters
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
   ns_deltaphi =  0.5
+  ns_deltaminrad = 0.d0
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
   D_neutral_x = 1.d-5
@@ -488,9 +657,11 @@ subroutine preset_parameters
   D_neutral_p = 1.d-5
   delta_n_convection = 0
   nimp_bg = 0.
-  n_adas = 0
+  n_adas = 1
   adas_dir = ' '
   imp_type = ' '
+  index_main_imp = 0
+  if (with_impurities) index_main_imp = 1
   use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
 
   !====== JET DMV-2 parameters
@@ -518,8 +689,11 @@ subroutine preset_parameters
   n_inj           = 1
   spi_rnd_seed    = 0
   spi_abl_model   = 0
-  spi_shard_file  = 'none'
+  spi_shard_file(:) = 'none'
+  spi_plume_file(:) = 'none'
+  spi_plume_hdf5  = .false.
   spi_tor_rot     = .false.
+  spi_num_vol     = .true.
   using_spi       = .false.
 
   output_prad_phi = .false.
@@ -552,5 +726,29 @@ subroutine preset_parameters
 !===================== Thermalization flag========
 
   thermalization = .false.
+
+!===================== not used?
+  Q_bar = 0.d0
+  Sigma = 0.d0
+
+!===================== particle input values
+n_particles        = 0
+nstep_particles    = 0
+nsubstep_particles = 1
+tstep_particles    = 1d-9
+filter_perp        = 0.d0
+filter_hyper       = 1.d-10
+filter_par         = 0.d0
+filter_perp_n0     = 0.d0
+filter_hyper_n0    = 1.d-10
+filter_par_n0      = 0.d0
+restart_particles  = .false.
+use_ncs            = .false.
+use_ccs            = .false.
+use_pcs            = .false.
+use_pcs_full       = .false.
+use_ionisation     = .true.
+use_sputtering     = .false.
+use_cx             = .true.
 
 end subroutine preset_parameters

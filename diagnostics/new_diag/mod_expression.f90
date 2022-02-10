@@ -585,19 +585,18 @@ module mod_expression
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-    real*8  :: Te_corr_eV
+    real*8  :: Te_corr_eV, Te_eV
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
-    real*8  :: ne_SI                              ! Electron density used in radiation rate
+    real*8  :: ne_SI, ne_JOREK                              ! Electron density used in radiation rate
+    real*8  :: Lrad_imp, r_imp, i_imp, frad_bg
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-    real*8  :: Arad_bg, Brad_bg, Crad_bg, frad_bg
-    real*8  :: Lrad_imp, r_imp, coef_rad_imp
+    real*8  :: Arad_bg, Brad_bg, Crad_bg
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
-    real*8  :: coef_rad_1, Te_eV
-    real*8  :: T0_corr, r0_corr, rn0_corr
+    real*8  :: Te0_corr, r0_corr, rn0_corr
     ! Atomic physics coefficients:
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
     real*8  :: m_i_over_m_imp
@@ -642,7 +641,7 @@ module mod_expression
     end if
 
 #ifdef WITH_Impurities
-     select case ( trim(imp_type) )
+     select case ( trim(imp_type(index_main_imp)) )
        case('D2')
          m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
        case('Ar')
@@ -702,6 +701,8 @@ module mod_expression
         
         ! --- 2D Jacobian
         xjac   = R_s * Z_t - R_t * Z_s
+        if ( abs(xjac) < 1d-10) xjac = 1.d-10*sign(1.d0,xjac)
+
         xjac_R = ( R_ss * Z_t**2 - 2*R_st * Z_s*Z_t + R_tt * Z_s**2 + R_s * (Z_st*Z_t - Z_tt*Z_s )   &
                  + R_t * (Z_st*Z_s - Z_ss*Z_t ) ) / xjac
         xjac_Z = ( Z_ss * R_t**2 - 2*Z_st * R_s*R_t + Z_tt * R_s**2 + Z_s * (R_st*R_t - R_tt*R_s )   &
@@ -1486,49 +1487,49 @@ module mod_expression
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 
-   Te_corr_eV = corr_neg_temp(T0)/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+   Te_corr_eV = corr_neg_temp(Te0)/(EL_CHG*MU_ZERO*central_density * 1.d20)
+   Te_eV = Te0/(EL_CHG*MU_ZERO*central_density * 1.d20)
 
    if (use_imp_adas) then
      call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
-                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0 ) 
+                                LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0, rn0, .true. ) 
      ! Note the input Te0 for atomic_coeff_deuterium should be in JOREK units!!!
 
     !--------------------------------------------------------
     ! --- Radiation from background impurity
     !--------------------------------------------------------
-      ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)
-      r_imp = nimp_bg / (1.d20 * central_density)  ! Background impurity density in JU     
-
-      if (ne_SI > ne_SI_min .and. Te_corr_eV > Te_eV_min .and. nimp_bg > 0) then
-        ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-        coef_rad_imp = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0&
-                     *(central_density*1.d20)**2.5d0
-        Lrad_imp = 0.0
-        call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad_imp)         
-        if (Lrad_imp < 0.) then
+      ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)    
+      frad_bg = 0.
+      do i_imp = 1, n_adas
+        r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
+        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+          Lrad_imp = 0.0
+          if ( units == SI_UNITS ) then
+            call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad_imp)
+            frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
+          else if ( units == JOREK_UNITS ) then
+            call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
+            frad_bg = frad_bg + r_imp * Lrad_imp 
+          endif
+        else     
           Lrad_imp = 0.
-        end if
-        if ( units == SI_UNITS ) then
-          frad_bg = nimp_bg * Lrad_imp
-        else if ( units == JOREK_UNITS ) then
-          frad_bg = r_imp * Lrad_imp * coef_rad_imp 
-        endif
-      else     
-        Lrad_imp = 0.
-        frad_bg = 0.
-      end if   
+          frad_bg = frad_bg
+        end if   
+      end do 
     else
-      if ( trim(imp_type) == 'Ar') then ! Hard-coded fitting exists for argon
+      if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
         Arad_bg = 2.4d-31
         Brad_bg = 20.
         Crad_bg = 0.8
         if ( units == SI_UNITS ) then
-          frad_bg = nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+          frad_bg = nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
         else if ( units == JOREK_UNITS ) then
-          frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+          frad_bg = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))*nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
         end if
       else
-        write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type), ",use open adas instead!"
+        write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
         stop
       end if      
     end if  
@@ -1537,11 +1538,11 @@ module mod_expression
 
 #ifdef WITH_Impurities
 
-          T0_corr = corr_neg_temp(T0,(/5.d-1,5.d-1/))
-          Te_corr_eV   = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-          Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density * 1.d20)
+          Te0_corr = corr_neg_temp(Te0,(/5.d-1,5.d-1/))
+          Te_corr_eV   = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV = Te0/(EL_CHG*MU_ZERO*central_density * 1.d20)
   
-          call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
+          call imp_cor(index_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
 	  
           alpha_imp = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
           beta_imp  = m_i_over_m_imp*Z_imp - 1.
@@ -1550,18 +1551,29 @@ module mod_expression
           rn0_corr = corr_neg_dens(rn0,(/1.d-9,1.d-5 /),1.d-3)
           ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
   
-          ! Normalization coefficient for radiation rate from SI units (W.m^3) to JOREK units:
-          coef_rad_1 = 2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0*m_i_over_m_imp
-  
           if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
             Lrad = 0.
-            call radiation_function(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
-            Lrad = Lrad * coef_rad_1
+            call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),   &
+                                           log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad)
           else
             Lrad = 0.
           end if
   
-          ne_SI = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
+          frad_bg = 0.
+          do i_imp = 1, n_adas
+            if (i_imp == index_main_imp) cycle
+            r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
+            if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+              Lrad_imp = 0.0
+              call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
+                                             log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
+              frad_bg = frad_bg + r_imp * Lrad_imp 
+            else     
+              Lrad_imp = 0.
+              frad_bg = frad_bg
+            end if   
+          end do 
+          ne_JOREK = ne_SI / 1.d20 / central_density ! Put ne_SI back to JOREK units to have consistent fact_ne factor with other models (see below)
   
 #endif
 
@@ -1662,7 +1674,7 @@ module mod_expression
                 
               case ( 'ne' )
 #ifdef WITH_Impurities
-                res = ne_SI * fact_ne 
+                res = ne_JOREK * fact_ne 
 #else
                 res = r0 * fact_ne
 #endif
@@ -1956,7 +1968,7 @@ module mod_expression
 #endif
 #ifdef WITH_Impurities
               case ( 'radiation' )
-                res = (r0_corr + beta_imp*rn0_corr) * rn0_corr * Lrad * fact_rad
+                res = (r0_corr + beta_imp*rn0_corr) * (rn0_corr * Lrad + frad_bg) * fact_rad
 #endif
 
               case default

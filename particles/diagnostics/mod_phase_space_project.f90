@@ -204,10 +204,12 @@ end subroutine project_phase_space
 
 ! Output to h5 file. Structure: /values for the meshgrid-evaluated values. /grids/grid_i for 1D grids /grids/mgrid_i for ndim meshgrids
 ! (can be immediately plotted using these meshgrids)
-subroutine output_phase_project(this)
+subroutine output_phase_project(this,ino)
   class(phase_space_projection), intent(inout)     :: this
+  integer, intent(in)                              :: ino
   real*8, dimension(:), allocatable                :: val_output
   real*8, dimension(:,:), allocatable                :: grid_mesh
+  character(len=1024)                              :: filename
   integer                                          :: my_id, ierr,i,index_arr_tmp(this%ndim)
   integer(HID_T)                                   :: file_id, group_id_grid,dspace,dset_id
   integer                                          :: ierrhdf5
@@ -261,7 +263,8 @@ subroutine output_phase_project(this)
 
     ! HDF5 file creation
     call h5open_f(ierrhdf5)
-    call H5Fcreate_f("test.h5",H5F_ACC_TRUNC_F, file_id, ierrhdf5)
+    write(filename,"(A5,I4,A3)") "proj_" ,ino, ".h5"
+    call H5Fcreate_f(filename,H5F_ACC_TRUNC_F, file_id, ierrhdf5)
     call h5gcreate_f(file_id, "grids", group_id_grid, ierrhdf5)
 
 

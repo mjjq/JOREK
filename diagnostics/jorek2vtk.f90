@@ -1281,7 +1281,7 @@ enddo  ! n_elements
   ! Atomic physics parameters for Impurities
   !-------------------------------------------
 
-   select case ( trim(imp_type(1)) )
+   select case ( trim(imp_type(index_main_imp)) )
      case('D2')
        m_i_over_m_imp = central_mass/2.  ! Deuterium mass = 2 u
      case('Ar')
@@ -1289,7 +1289,7 @@ enddo  ! n_elements
      case('Ne')
        m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u
      case default
-       write(*,*) '!! Gas type "', trim(imp_type(1)), '" unknown (in mod_injection_source.f90) !!'
+       write(*,*) '!! Gas type "', trim(imp_type(index_main_imp)), '" unknown (in mod_injection_source.f90) !!'
        write(*,*) '=> We assume the gas is D2.'
        m_i_over_m_imp = central_mass/2.
    end select
@@ -1317,25 +1317,25 @@ enddo  ! n_elements
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
 
-     if (allocated(imp_adas(1)%ionisation_energy)) then
+     if (allocated(imp_adas(index_main_imp)%ionisation_energy)) then
        if (allocated(P_imp)) deallocate(P_imp)
-       allocate(P_imp(0:imp_adas(1)%n_Z))
+       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
 
-       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
+       call imp_cor(index_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
                                      p_out=P_imp,z_avg=Z_imp)
 
        ! Calculate the ionization potential energy and derivative wrt. temperature
        E_ion     = 0.
 
-       do ion_i=1, imp_adas(1)%n_Z
+       do ion_i=1, imp_adas(index_main_imp)%n_Z
          do ion_k=1, ion_i
-           E_ion     = E_ion + P_imp(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
+           E_ion     = E_ion + P_imp(ion_i)*imp_adas(index_main_imp)%ionisation_energy(ion_k)
          end do
        end do
      ! Convert from eV to JOREK unit
        E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20
      else
-       call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
+       call imp_cor(index_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
        E_ion     = 0.
      end if
 
@@ -1347,7 +1347,7 @@ enddo  ! n_elements
 
      !Calculate the Z_eff, as it is done in mod_elt_matrix
      Z_eff = r0_corr - rn0_corr
-     do ion_i=1, imp_adas(1)%n_Z
+     do ion_i=1, imp_adas(index_main_imp)%n_Z
        Z_eff = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
      end do
      Z_eff = Z_eff / scalars(i,var_rho)  
@@ -1369,14 +1369,27 @@ enddo  ! n_elements
        
        ! Here we are temperarily only considering one impurity species, in the
        ! future maybe a do loop will be needed
-
-       call radiation_function_linear(imp_adas(1),imp_cor(1),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad)
+       call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad)
        Lrad = Lrad * m_i_over_m_imp
 
      else
        Lrad = 0.
        E_ion = 0.
      end if
+
+     frad_bg = 0. 
+     do i_imp =1, n_adas
+       if (i_imp == index_main_imp) cycle
+       r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
+       if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+         Lrad_imp = 0.0
+         call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                        log10(Te_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)           
+       else     
+         Lrad_imp = 0.
+       end if
+       frad_bg = frad_bg + r_imp * Lrad_imp
+     end do
 
      scalars(i,s_radiation+1) = (2./3.) * scalars(i,var_rhon) * E_ion
      scalars(i,s_radiation+2) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad

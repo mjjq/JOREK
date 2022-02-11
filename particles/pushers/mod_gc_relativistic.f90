@@ -375,16 +375,16 @@ contains
   !>   n_int_parameters:  (integer) number of integer parameters = 2
   !>   n_real_parameters: (integer) number of real parameters = 4
   !>   t:                 (real8) time at the current RK step
-  !>   solution_old:     (real8)(n_variables) GC at previous time step:
-  !>                     1:R, 2:Z, 3:phi, 4:parallel momentum
-  !>   solution:         (real8)(n_variables) GC at current Runge-Kutta step
-  !>   int_parameters:   (integer)(n_int_parameters) integer parameters
-  !>                     1:old i_elm, 2:charge
-  !>   real_parameters:  (real8)(n_real_parameters) real parameters:
-  !>                     1:s_old, 2:t_old, 3:mass, 4:magnetic moment
+  !>   solution_old:      (real8)(n_variables) GC at previous time step:
+  !>                      1:R, 2:Z, 3:phi, 4:parallel momentum
+  !>   solution:          (real8)(n_variables) GC at current Runge-Kutta step
+  !>   int_parameters:    (integer)(n_int_parameters) integer parameters
+  !>                      1:old i_elm, 2:charge
+  !>   real_parameters:   (real8)(n_real_parameters) real parameters:
+  !>                      1:s_old, 2:t_old, 3:mass, 4:magnetic moment
   !> outputs:
-  !>   derivatives:      (real8)(n_variables) Runge-Kutta derivatives
-  !>   ifail:            (integer) if 0 calculation failed
+  !>   derivatives:       (real8)(n_variables) Runge-Kutta derivatives
+  !>   ifail:             (integer) if 0 calculation failed
   subroutine compute_relativistic_gc_derivatives_jorek(fields,n_variables, &
     n_int_parameters,n_real_parameters,t,solution_old,solution,            &
     int_parameters,real_parameters,derivatives,ifail)
@@ -439,16 +439,16 @@ contains
   !>   n_int_parameters:  (integer) number of integer parameters = 2
   !>   n_real_parameters: (integer) number of real parameters = 3
   !>   t:                 (real8) time at the current RK step
-  !>   solution_old:     (real8)(n_variables) GC at previous time step:
-  !>                     1:R, 2:Z, 3:phi, 4:parallel momentum, 5:magnetic moment
-  !>   solution:         (real8)(n_variables) GC at current Runge-Kutta step
-  !>   int_parameters:   (integer)(n_int_parameters) integer parameters
-  !>                     1:old i_elm, 2:charge
-  !>   real_parameters:  (real8)(n_real_parameters) real parameters:
-  !>                     1:s_old, 2:t_old, 3:mass
+  !>   solution_old:      (real8)(n_variables) GC at previous time step:
+  !>                      1:R, 2:Z, 3:phi, 4:parallel momentum, 5:magnetic moment
+  !>   solution:          (real8)(n_variables) GC at current Runge-Kutta step
+  !>   int_parameters:    (integer)(n_int_parameters) integer parameters
+  !>                      1:old i_elm, 2:charge
+  !>   real_parameters:   (real8)(n_real_parameters) real parameters:
+  !>                      1:s_old, 2:t_old, 3:mass
   !> outputs:
-  !>   derivatives:      (real8)(n_variables) Runge-Kutta derivatives
-  !>   ifail:            (integer) if 0 calculation failed
+  !>   derivatives:       (real8)(n_variables) Runge-Kutta derivatives
+  !>   ifail:             (integer) if 0 calculation failed
   subroutine compute_relativistic_gc_derivatives_jorek_radreactionforce(fields,n_variables, &
     n_int_parameters,n_real_parameters,t,solution_old,solution,            &
     int_parameters,real_parameters,derivatives,ifail)

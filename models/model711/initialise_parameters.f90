@@ -206,6 +206,14 @@ if (my_id .eq. 0) then
     nstep_n    = 0
     nstep_n(1) = nstep
   endif
+
+  ! --- Checking consistency of eta_ARAZ parameters
+  if (eta_ARAZ_on == .true.) then
+     if (eta_ARAZ_const .ne. 0) then
+        write(*,*) 'One should not use both eta_ARAZ_on and eta_ARAZ_const simultaneously, to avoid double-counting. Please use eta_ARAZ_on = .t. with eta_ARAZ_const = 0.d0, or eta_ARAZ_on = .f. with eta_ARAZ_const .ne. 0'
+        stop
+     endif
+  endif
   
   call allocate_live_data()
 

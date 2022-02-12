@@ -1273,10 +1273,10 @@ do i=1,n_vertex_max
           !-----------------------------------------------------------------
 
           call construct_radiation_parameters()
-  
-          ! For shock capturing stabilization
-          tau_sc = 0.d0
-          if (use_sc) call calculate_sc_quantities()
+
+         ! For shock capturing stabilization
+         tau_sc = 0.d0
+         if (use_sc) call calculate_sc_quantities()
 
 !--------------------------------------------------------
 

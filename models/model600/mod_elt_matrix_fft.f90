@@ -1070,10 +1070,10 @@ do i=1,n_vertex_max
               ZKe_par_T = ZK_e_par_neg
             endif
           else ! (with_TiTe), i.e. with single temperature ***************************************
-            if (Te0 .lt. ZK_prof_neg_thresh) then
+            if (T0 .lt. ZK_prof_neg_thresh) then
               ZK_prof = ZK_prof_neg
             end if
-            if (Te0 .lt. ZK_par_neg_thresh) then
+            if (T0 .lt. ZK_par_neg_thresh) then
               ZK_par_T = ZK_par_neg
             endif
           endif ! (with_TiTe) ********************************************************************

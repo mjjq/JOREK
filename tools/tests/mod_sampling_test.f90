@@ -15,16 +15,22 @@ integer,parameter :: n_cos_half_angle=6
 integer,parameter :: n_directions=4
 integer,parameter :: n_origins=5
 integer,parameter :: n_rays=21
+integer,parameter :: n_samples=156
 real*8,parameter  :: tol_real8=5.d-15
 real*8,dimension(2),parameter :: colat_int=(/-PI,PI/)
 real*8,dimension(2),parameter :: azimuth_int=(/0.d0,TWOPI/)
-real*8,dimension(3),parameter :: origin_min=(/-1.d0,2.d0,-7.d0/)
-real*8,dimension(3),parameter :: origin_max=(/2.d0,5.d0,2.5d0/)
 real*8,dimension(2),parameter :: half_angle_int=(/TWOPI/2.3d2,TWOPI/5.3d0/)
 real*8,dimension(2),parameter :: length_int=(/1.d-1,3.5d1/)
-real*8,dimension(n_cos_half_angle)        :: cos_half_angle_sol
-real*8,dimension(n_x,n_directions)        :: directions
-real*8,dimension(n_x,n_origins)           :: origins
+real*8,dimension(2),parameter :: colat_sphere_int=(/PI/6.d0,2.d0*PI/3.d0/)
+real*8,dimension(2),parameter :: azimuth_sphere_int=(/PI/1.1d1,TWOPI/1.5d0/)
+real*8,dimension(2),parameter :: R_sphere_int=(/1.d0,3.2d2/)
+real*8,dimension(3),parameter :: origin_min=(/-1.d0,2.d0,-7.d0/)
+real*8,dimension(3),parameter :: origin_max=(/2.d0,5.d0,2.5d0/)
+real*8,dimension(n_cos_half_angle) :: cos_half_angle_sol
+real*8,dimension(n_x,n_directions) :: directions
+real*8,dimension(n_x,n_origins)    :: origins
+real*8,dimension(n_x,n_samples)    :: rand_sol
+
 !> Interfaces ----------------------------------------
 
 contains
@@ -34,17 +40,21 @@ contains
 subroutine run_fruit_sampling()
   implicit none
   write(*,*) "  ... setting-up: sampling tests"
-  call setup()
+  call setup_cone
+  call setup_sphere
   write(*,*) "  ... running: sampling tests"
   call test_sample_uniform_standard_cone
   call test_sample_uniform_direction_cone
   call test_sample_uniform_direction_length_cone
+  call test_sample_uniform_sphere
+  call test_sample_uniform_sphere_corona_rthetaphi
+  call test_sample_uniform_sphere_corona_rcosphi
   write(*,*) "  ... tearing-down: sampling tests"
 end subroutine run_fruit_sampling
 
 !> Set-up and tear-down ------------------------------
-!> set up tests parameters
-subroutine setup()
+!> set up parameters for cone testing
+subroutine setup_cone()
   use mod_gnu_rng, only: gnu_rng_interval
   implicit none
   integer :: ii
@@ -66,7 +76,16 @@ subroutine setup()
   do ii=1,n_directions
     directions(:,ii) = lengths(ii)*directions(:,ii)
   enddo
-end subroutine setup
+end subroutine setup_cone
+
+!> set up parameters for sphere testing
+subroutine setup_sphere()
+  use mod_gnu_rng, only: gnu_rng_interval
+  implicit none
+  !> variables
+  !> generate set of random numbers
+  call random_number(rand_sol)
+end subroutine setup_sphere
 
 !> Tests ---------------------------------------------
 !> test the generation of random rays within a cone given
@@ -157,6 +176,77 @@ subroutine test_sample_uniform_standard_cone()
     "Error uniform sampling standard cone: rays length not unitary!")
   enddo
 end subroutine test_sample_uniform_standard_cone
+
+!> test random sphere coordinates
+subroutine test_sample_uniform_sphere()
+  use mod_sampling, only: sample_uniform_sphere
+  implicit none
+  integer                         :: ii
+  real*8,dimension(2)             :: cos_theta
+  real*8,dimension(n_x)           :: RThetaPhi
+  real*8,dimension(n_x,n_samples) :: rand_test
+  !> initialisation
+  cos_theta = cos(colat_sphere_int)
+  !> sampling the sphere and recompute the uniform random number
+  do ii=1,n_samples
+    RThetaPhi = sample_uniform_sphere(R_sphere_int(2),&
+    cos_theta,azimuth_sphere_int,rand_sol(:,ii))
+    rand_test(:,ii) = (/(RThetaPhi(1)/R_sphere_int(2))**3.d0,&
+    (cos(RThetaPhi(2))-cos_theta(1))/(cos_theta(2)-cos_theta(1)),&
+    (RThetaPhi(3)-azimuth_sphere_int(1))/(azimuth_sphere_int(2)-azimuth_sphere_int(1))/)
+  enddo
+  !> checks
+  call assert_equals(rand_test,rand_sol,n_x,n_samples,tol_real8,&
+  "Error uniform sampling sphere: random number mismatch!")
+end subroutine test_sample_uniform_sphere
+
+!> test random sphere corona angular coordinates
+subroutine test_sample_uniform_sphere_corona_rthetaphi()
+  use mod_sampling, only: sample_uniform_sphere_corona_rthetaphi
+  implicit none
+  !> variables
+  integer                         :: ii
+  real*8,dimension(2)             :: R_cube,cos_theta
+  real*8,dimension(n_x)           :: RThetaPhi
+  real*8,dimension(n_x,n_samples) :: rand_test
+  !> initialisation
+  cos_theta = cos(colat_sphere_int); R_cube = R_sphere_int**3.d0;
+  !> sampling the sphere corona angular coordinates and recompute the random number
+  do ii=1,n_samples
+    RThetaPhi = sample_uniform_sphere_corona_rthetaphi(R_cube,cos_theta,&
+    azimuth_sphere_int,rand_sol(:,ii))
+    rand_test(:,ii) = (/(RThetaPhi(1)**3.d0-R_cube(1))/(R_cube(2)-R_cube(1)),&
+    (cos(RThetaPhi(2))-cos_theta(1))/(cos_theta(2)-cos_theta(1)),&
+    (RThetaPhi(3)-azimuth_sphere_int(1))/(azimuth_sphere_int(2)-azimuth_sphere_int(1))/)
+  enddo
+  !> checks
+  call assert_equals(rand_test,rand_sol,n_x,n_samples,tol_real8,&
+  "Error uniform sampling sphere corona angles: random number mismatch!")
+end subroutine test_sample_uniform_sphere_corona_rthetaphi
+
+!> test random sphere corona cosinus coordinates
+subroutine test_sample_uniform_sphere_corona_rcosphi()
+  use mod_sampling, only: sample_uniform_sphere_corona_rcosphi
+  implicit none
+  integer                         :: ii
+  real*8,dimension(2)             :: R_cube,cos_theta
+  real*8,dimension(n_x)           :: RCosPhi
+  real*8,dimension(n_x,n_samples) :: rand_test
+  !> initialisation
+  cos_theta = cos(colat_sphere_int); R_cube = R_sphere_int**3.d0;
+  !> sampling the sphere corona cosine coordinates and recompute random number
+  do ii=1,n_samples
+    RCosPhi = sample_uniform_sphere_corona_rcosphi(R_cube,cos_theta,&
+    azimuth_sphere_int,rand_sol(:,ii))
+    rand_test(:,ii) = (/(RCosPhi(1)**3.d0-R_cube(1))/(R_cube(2)-R_cube(1)),&
+    (RCosPhi(2)-cos_theta(1))/(cos_theta(2)-cos_theta(1)),&
+    (RCosPhi(3)-azimuth_sphere_int(1))/(azimuth_sphere_int(2)-azimuth_sphere_int(1))/)
+  enddo
+  !> checks
+  call assert_equals(rand_test,rand_sol,n_x,n_samples,tol_real8,&
+  "Error uniform sampling sphere corona cosine: random number mismatch!")
+end subroutine test_sample_uniform_sphere_corona_rcosphi
+
 !> Tools ---------------------------------------------
 !>----------------------------------------------------
 end module mod_sampling_test

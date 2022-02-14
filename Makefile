@@ -88,7 +88,7 @@ DIRS := diagnostics			       \
 	benchmarks                             \
 	core                                   \
 	.				       \
-	vacuum
+
 DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline
 
 # All .f90 files we should generate .d dependency files for

@@ -34,6 +34,8 @@ module mod_sampling
   public :: cross_product
   public :: sample_uniform_cone
   public :: sample_uniform_sphere
+  public :: sample_uniform_sphere_corona_rthetaphi
+  public :: sample_uniform_sphere_corona_rcosphi
   !> Switch here which procedure to use by default. The other ones can be found
   !> by their name
   interface normal_vectors
@@ -45,6 +47,14 @@ module mod_sampling
     module procedure sample_uniform_direction_cone
     module procedure sample_uniform_direction_length_cone
   end interface sample_uniform_cone
+
+  interface sample_uniform_sphere_corona_rthetaphi
+    module procedure sample_uniform_sphere_corona_rthetaphi_r8
+  end interface sample_uniform_sphere_corona_rthetaphi
+
+  interface sample_uniform_sphere_corona_rcosphi
+    module procedure sample_uniform_sphere_corona_rcosphi_r8
+  end interface sample_uniform_sphere_corona_rcosphi
 
   !> The Thompson distribution with parameters E_b and n
   type, extends(ddfun) :: thompson_dist
@@ -530,8 +540,8 @@ contains
   !> inputs:
   !>   u:         (real8)(3) uniform random numbers
   !>   R:         (real8) sphere radius
-  !>   cos_theta: (real8)(2) interval of thecosinus of the colatitude  in [-1,1]
-  !>   phi:       (real8)(2) azimuth interval
+  !>   cos_theta: (real8)(2) interval of the cosinus of the colatitude  in [-1,1]
+  !>   phi:       (real8)(2) azimuth interval in [0,2*pi]
   !> outputs: 
   !>   RThetaPhi: (real8)(3) random R,theta,phi coordinates
   function sample_uniform_sphere(R,cos_theta,phi,u) result(RThetaPhi)
@@ -547,6 +557,48 @@ contains
                 acos((cos_theta(2)-cos_theta(1))*u(2)+cos_theta(1)),&
                 phi(1)+(phi(2)-phi(1))*u(3)/)
   end function sample_uniform_sphere 
+
+  !> sampling sphere corona using angles coordinates
+  !> inputs:
+  !>   R_cube:    (real8)(2) cube of the sphere radius interval
+  !>   cos_theta: (real8)(2) interval of the cosinus of the colatitude in [-1,1]
+  !>   phi:       (real8)(2) azimuth interval in [0,2*pi]
+  !>   u:         (real8)(3) uniform random numbers in [0,1]
+  !> outputs:
+  !>   RThetaPhi: (real8)(3) radom radius, colatitude and azimuth
+  function sample_uniform_sphere_corona_rthetaphi_r8(R_cube,cos_theta,phi,u) result(RThetaPhi)
+    implicit none
+    !> inputs:
+    real*8,dimension(2),intent(in) :: R_cube,cos_theta,phi
+    real*8,dimension(3),intent(in) :: u
+    !> outputs:
+    real*8,dimension(3) :: RThetaPhi
+    !> compute uniform samples
+    RThetaPhi = (/(R_cube(1)+(R_cube(2)-R_cube(1))*u(1))**(1.d0/3.d0),&
+    acos(cos_theta(1) + (cos_theta(2)-cos_theta(1))*u(2)),&
+    phi(1) + (phi(2)-phi(1))*u(3)/)
+  end function sample_uniform_sphere_corona_rthetaphi_r8
+
+  !> sampling sphere corona using R, cosinus, azimuth coordinates
+  !> inputs:
+  !>   R_cube:    (real8)(2) cube of the sphere radius interval
+  !>   cos_theta: (real8)(2) interval of the cosinus of the colatitude in [-1,1]
+  !>   phi:       (real8)(2) azimuth interval in [0,2*pi]
+  !>   u:         (real8)(3) uniform random numbers in [0,1]
+  !> outputs:
+  !>   RCosPhi: (real8)(3) radom radius, cosinus of the colatitude and azimuth
+  function sample_uniform_sphere_corona_rcosphi_r8(R_cube,cos_theta,phi,u) result(RCosPhi)
+    implicit none
+    !> inputs:
+    real*8,dimension(2),intent(in) :: R_cube,cos_theta,phi
+    real*8,dimension(3),intent(in) :: u
+    !> outputs:
+    real*8,dimension(3) :: RCosPhi
+    !> compute uniform samples
+    RCosPhi = (/(R_cube(1)+(R_cube(2)-R_cube(1))*u(1))**(1.d0/3.d0),&
+    cos_theta(1) + (cos_theta(2)-cos_theta(1))*u(2),&
+    phi(1) + (phi(2)-phi(1))*u(3)/)
+  end function sample_uniform_sphere_corona_rcosphi_r8
 
   pure function cross_product(a, b)
     real*8, dimension(3) :: cross_product

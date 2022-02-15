@@ -362,7 +362,7 @@ index = 0
 do i=1,node_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
-  if ((fix_axis_nodes .or. treat_axis) .and. include_axis) then
+  if (include_axis) then
     if (include_xpoint) then
       if (xcase .ne. DOUBLE_NULL) then
         if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.

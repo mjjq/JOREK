@@ -447,7 +447,7 @@ do i=1,nrnew
     if (i .eq. nrnew) node_list%node(index)%boundary = 2
 
     node_list%node(index)%axis_node = .false.
-    if ( fix_axis_nodes .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
+    if (i .eq. 1) node_list%node(index)%axis_node = .true.
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
    

@@ -1245,12 +1245,10 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
-  if (fix_axis_nodes .or. treat_axis) then
-    if (xcase .ne. DOUBLE_NULL) then
-      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
-    else
-      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
-    endif
+  if (xcase .ne. DOUBLE_NULL) then
+    if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
+  else
+    if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
   endif
 
   do k=1,n_order+1

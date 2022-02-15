@@ -299,7 +299,7 @@ do i=1,nr
    if (i .eq. nr) node_list%node(index)%boundary = 2
 
    node_list%node(index)%axis_node = .false.
-   if ( fix_axis_nodes .and. (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
+   if ( (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
 
    ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes. 
    if(treat_axis .and. (.not. doing_polar_square) .and. (n_flux .le. 1))then

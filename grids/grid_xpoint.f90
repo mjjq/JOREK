@@ -1371,7 +1371,7 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   newnode_list%node(i)%axis_node = .false.
-  if ( (fix_axis_nodes .or. treat_axis) .and. (i .lt. n_tht) ) newnode_list%node(i)%axis_node = .true.
+  if (i .lt. n_tht) newnode_list%node(i)%axis_node = .true.
 
   do k=1,n_order+1
 

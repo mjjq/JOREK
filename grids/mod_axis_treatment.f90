@@ -1,3 +1,10 @@
+!> Functionality for improving numerical stability at the grid center.
+!! - Switched on by the logical namelist parameter treat_axis.
+!! - When used, the dofs of all axis nodes are replaced by the following:
+!! 1: value
+!! 2: d/dR
+!! 3: d^2/dRdZ (actually not used!)
+!! 4: d/dZ
 module mod_axis_treatment
 
 contains

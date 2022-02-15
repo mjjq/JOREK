@@ -28,7 +28,7 @@ integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
 
 ! Since the axis treatment solves for new degrees of freedom, we need to 
-! transforms degrees of freedom to old ones.
+! transform the degrees of freedom back to the original ones
 if(treat_axis) call new_to_old_dofs_on_the_axis(node_list, RHS)
 
 i_tor_min = 1

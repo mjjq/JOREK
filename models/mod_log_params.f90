@@ -24,6 +24,7 @@ logical, optional             :: short !< commandline short version or run long 
 character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 99ES12.4)"
 character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
 character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 100I12)"
+character(len=512), parameter :: INTG_FMT2 = "(1X,A, ' = ', I12, A)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
 character(len=512), parameter :: REA2_FMT = "(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)"
 character(len=512), parameter :: REA3_FMT = "(1X,A, ' = ', 9ES12.4, '     ...')"
@@ -733,7 +734,9 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
 
 #ifdef fullmhd
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
+    write(*,REA3_FMT) 'eta_ARAZ_const        ', eta_ARAZ_const
     write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
+    write(*,LOGI_FMT) 'eta_ARAZ_simple       ', eta_ARAZ_simple
     write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
 #endif
 
@@ -826,6 +829,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
      do i = 1, n_adas
        write(*,CHAR_FMT2) 'imp_type(',i,')    ', trim(imp_type(i))
      end do
+     write(*,INTG_FMT) 'index_main_imp      ', index_main_imp
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
      write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
      write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start

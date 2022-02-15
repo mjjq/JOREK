@@ -98,9 +98,6 @@ if (sim%my_id .eq. 0) then
   write(*,'(A,e14.6)') ' E_norm   : ',E_norm
 endif
 #ifdef __GFORTRAN__
-   !$omp parallel do default(shared) & 
-#else
-#ifdef __GFORTRAN__
    !$omp parallel do default(shared) &
    !$omp shared(sim, n_steps, timesteps, rng, particle_start_time, &
 #else

@@ -144,7 +144,6 @@ contains
           elseif (  ((bnd1 .eq. 2) .or. (bnd1 .eq. 3)) .and. ((bnd2 .eq. 2) .or. (bnd2 .eq. 3)) ) then
             
             direction = (/  1, 3  /)
-            cycle
             
           else
             write(*,'(A,4i8)') 'WARNING: boundary_matrix_open, boundary element not included ',&
@@ -155,45 +154,14 @@ contains
           
 
         ! --- Build matrix elements for boundary
-    	call boundary_matrix_open(vertex, direction, element, nodes, & 
+        call boundary_matrix_open(vertex, direction, element, nodes, & 
                                   xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
                                   thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_tor_min, i_tor_max)
        
       enddo
     endif
     
-    ! --- Apply boundary conditions for flux surface boundaries (2 and 3)
-    if (bc_natural_flux) then
-      ! --- Loop over the 4 nodes
-      do iv = 1, n_vertex_max
-
-        iv2  = mod(iv, n_vertex_max) + 1
-        inode1 = element%vertex(iv)
-        inode2 = element%vertex(iv2)
-
-        ! --- The target has boundary 1 or 3
-        if (      ((node_list%node(inode1)%boundary .eq. 2) .or.(node_list%node(inode1)%boundary .eq. 3)) &
-            .and. ((node_list%node(inode2)%boundary .eq. 2) .or.(node_list%node(inode2)%boundary .eq. 3)) ) then
-
-          nodes(1)  = node_list%node(inode1)
-          nodes(2)  = node_list%node(inode2)
-          
-          vertex    = (/ iv, iv2 /)
-          direction = (/  1, 2   /)
-
-          iv3 = mod(iv2, n_vertex_max) + 1
-          iv4 = mod(iv3, n_vertex_max) + 1
-
-          nodes(3) = node_list%node(element%vertex(iv3))
-          nodes(4) = node_list%node(element%vertex(iv4))
-
-          ! --- Build matrix elements for boundary
-          !call boundary_matrix(vertex, direction, element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS)
-        endif
-       
-      enddo
-    endif
-    
+   
     n_tor_local = i_tor_max - i_tor_min + 1
     ! --- If keep_n0_const then the n0 component should be frozen = diagonal entries high
     if ( keep_n0_const ) then
@@ -213,7 +181,13 @@ contains
     if (ife .eq. n_local_elms/2) then
 
       ! --- Call both routines
-      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) ) n_tor_fft_thresh = 1
+      if (     (jorek_model .eq. 303) &
+          .or. (jorek_model .eq. 333) &
+          .or. (jorek_model .eq. 500) &
+          .or. (jorek_model .eq. 710) &
+          .or. (jorek_model .eq. 711) &
+          .or. (jorek_model .eq. 712) &
+         ) n_tor_fft_thresh = 1
       call element_matrix_fft(element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM2, thread_struct(omp_tid)%RHS2, omp_tid, &
         thread_struct(omp_tid)%ELM_p, thread_struct(omp_tid)%ELM_n, thread_struct(omp_tid)%ELM_k, thread_struct(omp_tid)%ELM_kn, &
@@ -221,7 +195,13 @@ contains
         thread_struct(omp_tid)%eq_t, thread_struct(omp_tid)%eq_p, thread_struct(omp_tid)%eq_ss, thread_struct(omp_tid)%eq_st, &
         thread_struct(omp_tid)%eq_tt, thread_struct(omp_tid)%delta_g, thread_struct(omp_tid)%delta_s, &
         thread_struct(omp_tid)%delta_t, i_tor_min, i_tor_max)
-      if ( (jorek_model .eq. 303) .or. (jorek_model .eq. 333) .or. (jorek_model .eq. 710) ) n_tor_fft_thresh = 300
+      if (     (jorek_model .eq. 303) &
+          .or. (jorek_model .eq. 333) &
+          .or. (jorek_model .eq. 500) &
+          .or. (jorek_model .eq. 710) &
+          .or. (jorek_model .eq. 711) &
+          .or. (jorek_model .eq. 712) &
+         ) n_tor_fft_thresh = 300
       call element_matrix    (element,nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
         thread_struct(omp_tid)%ELM,  thread_struct(omp_tid)%RHS,  omp_tid, i_tor_min, i_tor_max)
       
@@ -332,7 +312,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer(kind=int_all), intent(in) :: n
   integer(kind=int_all), intent(in) :: nz
   integer(kind=int_all), intent(in) :: ndof
-  integer,               intent(in) :: n_matrix_block_size
+  integer(kind=int_all), intent(in) :: n_matrix_block_size
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable :: A_mat(:)
   real*8,                intent(inout), allocatable :: rhs(:)
@@ -493,8 +473,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
         write(388, "( '#', A17, 4A4)" ), 'RHS', 'v1', 'i', 'j', 'im'
       
         n_var_reduced = n_var
-#if (JOREK_MODEL == 400)
-        n_var_reduced = 7
+#ifdef WITH_TiTe
+        n_var_reduced = n_var - 1
 #endif
       
         do v1 = 1, n_var_reduced
@@ -523,18 +503,18 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
                       
                         ! --- Indices for T_e (model400)
                         index_ij_model400_e = n_tor_local * n_var * (n_order+1) * (i-1) &
-                                            + n_tor_local * n_var * (j-1) + n_tor_local * (8 -1) + im
+                                            + n_tor_local * n_var * (j-1) + n_tor_local * (var_Te -1) + im
                         index_kl_model400_e = n_tor_local * n_var * (n_order+1) * (k-1) &
-                                            + n_tor_local * n_var * (l-1) + n_tor_local * (8 -1) + in
+                                            + n_tor_local * n_var * (l-1) + n_tor_local * (var_Te -1) + in
 
                         !--- RHS: simple output of vector element
                         if ( (k==1) .and. (l==1) .and. (v2==1) .and. (in==1) ) then
                         
                           tmp_rhs = thread_struct(omp_tid)%RHS(index_ij)
                         
-#if (JOREK_MODEL == 400)
+#ifdef WITH_TiTe
                           !--- RHS: for model400, add T_e (v1=8) to T_i (v1=6)
-                          if (v1 == 6) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
+                          if (v1 == var_Ti) tmp_rhs = tmp_rhs + thread_struct(omp_tid)%RHS(index_ij_model400_e)
 #endif
                         
                           write(388, "( E18.6, 4I4 )" ) tmp_rhs, v1, i, j, im
@@ -552,15 +532,15 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
                         ! --- for model400, when v1==6, add the ELM(v1=8, v2) contribution to ELM(v1=6, v2), for both tmp_elm and tmp_elm_v2_8
 
-#if (JOREK_MODEL == 400)
-                        if (v2 == 6 ) then
+#ifdef WITH_TiTe
+                        if (v2 == var_Ti ) then
                           tmp_elm_v2_8 = thread_struct(omp_tid)%ELM(index_ij, index_kl_model400_e) 
-                          if (v1 == 6) then
+                          if (v1 == var_Ti) then
                             tmp_elm_v2_8 = tmp_elm_v2_8 + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl_model400_e) 
                           end if
                         end if
                       
-                        if (v1 == 6) then
+                        if (v1 == var_Ti) then
                           tmp_elm = tmp_elm + thread_struct(omp_tid)%ELM(index_ij_model400_e, index_kl)
                         end if
 #endif
@@ -795,3 +775,4 @@ end subroutine decrypt_index
 
 
 end module construct_matrix_mod
+

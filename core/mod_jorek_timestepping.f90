@@ -10,23 +10,17 @@ use mumps_module
 use pastix_module
 use wsmp_module
 
+#ifdef USE_STRUMPACK
+use strumpack_module
+#endif
+use preconditioner_module
+use mod_distribute_preconditioner
+use direct_construction_mod
+use centralization_mod
+
 use equil_info
 
 implicit none
-
-interface
-
-  subroutine distribute_vector(my_id,rhs,rhs_dis,again)
-    real*8  :: rhs(:), rhs_dis(:)
-    integer :: my_id
-    logical :: again
-  end subroutine distribute_vector
-
-  subroutine distribute_harmonics(my_id,my_id_n,n_cpu)
-    integer :: my_id, my_id_n,n_cpu
-  end subroutine distribute_harmonics
-
-end interface
 
 private
 public jorek_timestep_action, new_jorek_timestep_action
@@ -86,7 +80,7 @@ contains
 function new_jorek_timestep_action(auxiliary_node_list) result(new)
   type(jorek_timestep_action) :: new
   type(type_node_list), intent(in), target,  optional :: auxiliary_node_list
-  if (present(auxiliary_node_list)) new%auxiliary_node_list => auxiliary_node_list
+!  if (present(auxiliary_node_list)) new%auxiliary_node_list => auxiliary_node_list
   new%istep = 1
   new%name = "JOREK timestep"
   new%log = .true.
@@ -123,7 +117,7 @@ subroutine setup_solvers(this, sim)
   real*8 :: psi_lim, R_lim, Z_lim
 
   integer :: index_size, id_elements !< number of elements locally
-  integer :: inode, ierr, i, block_size
+  integer :: inode, ierr, i, block_size, n_masters
 
   write(*,*) 'setting up the solvers'
   call tr_meminit(sim%my_id, sim%n_cpu)
@@ -137,13 +131,15 @@ subroutine setup_solvers(this, sim)
   call det_modes()
 
   ! Initialise the data writing 
-  call init_live_data()
+  if (sim%my_id .eq. 0) then
+    call init_live_data()
 
-  if (restart) then
-     do i = 1, index_start
-        call write_live_data_all(i)
+    if (restart) then
+      do i = 1, index_start
+       call write_live_data_all(i)
 !      call write_live_data_vacuum(index_now, diag_coil_curr)
-     end do
+      end do
+    endif
   endif
 
   ! --- Preset some solver variables
@@ -166,6 +162,7 @@ subroutine setup_solvers(this, sim)
 
   ! Warn on doing stupid stuff
   call sanity_checks(sim%my_id, sim%n_cpu)
+  if (nstep .gt. 0)   call check_preconditioner_consistency
 
   ! Initialise the boundary element and node list
   if (sim%my_id .eq. 0) then
@@ -223,12 +220,18 @@ subroutine setup_solvers(this, sim)
   call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,this%in_fft,this%out_fft,FFTW_PATIENT)
 #endif
 
+  n_masters = (n_tor+1)/2
   if (gmres) then
     ! setup per-harmonic and transverse communicators
-    call gmres_setup_jorek(sim%my_id, sim%n_cpu, this%i_tor, this%my_id_n, this%n_cpu_n, &
-                           this%my_id_trans, this%n_cpu_trans, this%my_id_master,        &
-                           this%MPI_COMM_N, this%MPI_COMM_TRANS, this%MPI_COMM_MASTER,   &
-                           this%MPI_GROUP_MASTER, this%MPI_GROUP_WORLD)
+    !call gmres_setup_jorek(sim%my_id, sim%n_cpu, this%i_tor, this%my_id_n, this%n_cpu_n, &
+    !                       this%my_id_trans, this%n_cpu_trans, this%my_id_master,        &
+    !                       this%MPI_COMM_N, this%MPI_COMM_TRANS, this%MPI_COMM_MASTER,   &
+    !                       this%MPI_GROUP_MASTER, this%MPI_GROUP_WORLD, my_family_id)
+    
+    call create_communicators(this%my_id_n, this%n_cpu_n, this%MPI_COMM_N, this%my_id_master, n_masters, &
+                             this%MPI_COMM_MASTER, this%MPI_COMM_TRANS)
+
+    call distribute_modes                       
                       
   else
      this%my_id_n    = sim%my_id
@@ -245,34 +248,35 @@ subroutine setup_solvers(this, sim)
   call tr_allocate(this%local_elms,1,sim%fields%element_list%n_elements,"local_elms",CAT_FEM)
   call tr_allocate(this%index_min,1,index_size,"index_min",CAT_FEM)
   call tr_allocate(this%index_max,1,index_size,"index_max",CAT_FEM)
-  !
+  call tr_allocate(local_index_start,1,sim%n_cpu,"local_index_start",CAT_FEM)
+  call tr_allocate(local_index_end,1,sim%n_cpu,"local_index_end",CAT_FEM)
+ !
   ! Construct index_min, index_max and local_elems
   !
   call distribute_nodes_elements(id_elements,this%n_cpu_n,index_size,sim%fields%node_list,sim%fields%element_list, .false., &
-                                 this%local_elms, this%n_local_elms, ndof_glob, this%index_min, this%index_max)
-                        
+                                 this%local_elms, this%n_local_elms, ndof_glob, this%index_min, this%index_max, restart, freeboundary)
+                                          
   sim%fields%node_list%n_dof = ndof_glob
-  
-  call update_deltas(sim%my_id, sim%fields%node_list) ! create list of delta values in local_matrix module
-  
-  ! Build ijA_index, ijA_size and irn_jcn
-  call tr_allocate(local_index_start,1,sim%n_cpu,"local_index_start",CAT_FEM)
-  call tr_allocate(local_index_end,1,sim%n_cpu,"local_index_end",CAT_FEM)
- 
   local_index_start = this%index_min
   local_index_end   = this%index_max
-
+ 
+  call update_deltas(sim%my_id, sim%fields%node_list) ! create list of delta values in local_matrix module
+  
+   ! Build ijA_index, ijA_size and irn_jcn
+ 
   block_size = n_tor*n_var
 
   call global_matrix_structure(sim%my_id,this%my_id_n, sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
                                this%local_elms,this%n_local_elms,this%index_min(id_elements+1),this%index_max(id_elements+1),      &
-                               ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor, n_glob, nz_glob, ndof_glob, block_size)
+                               ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor, n_glob, nz_glob, ndof_glob, n_matrix_block_size)                      
 
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%index_min(sim%my_id+1), &
-                                        this%index_max(sim%my_id+1), 1, n_tor, irn_glob, jcn_glob, block_size, &
-                                        ijA_index, ijA_size, irn_jcn) 
+    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%index_min(sim%my_id+1), this%index_max(sim%my_id+1), &
+                                        1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
   endif
+  
+  if ((gmres) .and. (this%my_id_n .eq. 0)) call map_row_index(ndof_glob)
+
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   if (use_mumps) then
@@ -287,6 +291,8 @@ subroutine setup_solvers(this, sim)
   this%iter_prev   = 0
 
   this%setup_done = .true.
+
+  if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list
 
 end subroutine setup_solvers
 
@@ -349,17 +355,24 @@ subroutine do_jorek_timestep(this, sim, ev)
   use mod_export_restart
   use construct_matrix_mod
   use solve_mat_n
-  use pellet_module,           only: pellet_volume
+  use pellet_module
   use vacuum
   use vacuum_response,         only: update_response
   use mod_fields_linear
-  use mod_gmres_driver
+  use mod_gmres,               only: gmres_driver
+#ifdef USE_BICGSTAB
+  use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
+#endif
   use mod_expression,          only: exprs_all_int, init_expr
   use mod_integrals3D
 
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-  use pellet_module,           only: update_spi
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+  use mod_neutral_source
 #endif
+#ifdef WITH_Impurities
+  use mod_injection_source
+#endif
+
   class(jorek_timestep_action), intent(inout) :: this
   type(particle_sim), intent(inout)           :: sim
   type(event), intent(inout), optional        :: ev
@@ -371,11 +384,13 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   real*8         :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
   real*8         :: density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
+  real*8         :: kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out
   real*8, allocatable :: res(:)
 
   real*8         :: mindelta, maxdelta, sum_deltas
   character*8    :: label, itlabel
   character*14   :: fileout
+  integer        :: i, n_spi_begin
 
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -389,6 +404,14 @@ subroutine do_jorek_timestep(this, sim, ev)
     return
   end if
   tstep = dt_jorek !< Update the jorek timestep for use in mod_elt_matrix
+  !< Update the jorek previous timestep for use in mod_elt_matrix. 
+  !< If ommited, certain models (e.g. 710+) will divide by zero. Not fully tested.
+  if ( this%istep -1 > 0) then
+    tstep_prev = get_tstep_n(this%istep-1) 
+  else
+    tstep_prev = tstep
+    write(*,*) "INFO: tstep_prev set to tstep at first iteration"
+  endif
   dt = dt_jorek * sim%t_norm
 
   if (.not. this%setup_done) then
@@ -448,16 +471,18 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   if (use_pellet) then            ! calculating the pellet_volume (total_pellet_volume)
     pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
-    call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out)
+    call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out, &
+                                                                                kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
+    
   endif
 
 
   call construct_matrix(sim%my_id, this%MPI_COMM_N, this%my_id_n, this%MPI_COMM_MASTER, this%my_id_master,               &
                         this%local_elms, this%n_local_elms, this%index_min(sim%my_id+1),                                 &
                         this%index_max(sim%my_id+1), xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis,    &
-                        this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint,                         &
-                        1, n_tor, n_glob, nz_glob, ndof_glob, block_size, A_glob, rhs_glob, irn_glob, jcn_glob,          &
-                        ijA_index, ijA_size, irn_jcn, .false.)
+                        this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint, 1, n_tor,               &
+                        n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size, &
+                        irn_jcn,  harmonic_matrix=.false.)                    
   
   ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
   call del_thread_buffers()
@@ -470,23 +495,28 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   if (.not. gmres) then
     if (use_mumps) then
+#ifdef USE_MUMPS    
       call solve_mumps_all(sim%my_id)
+#endif      
     else
+#if defined(USE_PASTIX) || defined(USE_PASTIX6)    
       call solve_pastix_all(sim%n_cpu,sim%my_id,this%index_min(sim%my_id+1),this%index_max(sim%my_id+1))
+#endif      
     endif
   else
     call clck_time(t0)
     if (.not. solve_only) then
       call distribute_harmonics(sim%my_id,this%my_id_n,sim%n_cpu)
-    else
-      call distribute_vector(sim%my_id,rhs_glob,mumps_par%rhs,.true.)          
     endif
+    if(this%my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,this%MPI_COMM_MASTER)
+    
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (sim%my_id .eq. 0) write(*,FMT_TIMING) sim%my_id, '# Elapsed time distribute :',tsecond
 
     call clck_time(t0)
-    call solve_matrix_n(sim%my_id,this%i_tor,this%MPI_COMM_N,this%MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+    call solve_matrix_n(sim%my_id,this%MPI_COMM_N,this%MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
+      
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (sim%my_id .eq. 0) write(*,FMT_TIMING) sim%my_id, '# Elapsed time first solve :',tsecond
@@ -496,7 +526,14 @@ subroutine do_jorek_timestep(this, sim, ev)
   if (gmres) then
     this%iter_prev = this%iter_gmres
     this%iter_gmres = gmres_max_iter
-    call gmres_driver(sim%my_id,this%my_id_n,this%i_tor, n_tor,this%MPI_COMM_N,this%MPI_COMM_MASTER,this%iter_gmres)
+ 
+#ifdef USE_BICGSTAB
+    call bicgstab_driver(irn_glob, jcn_glob, a_glob, deltas, rhs_glob, &
+                     this%iter_gmres, gmres_tol, MPI_COMM_WORLD, this%MPI_COMM_N, this%MPI_COMM_MASTER)
+#else 
+    call gmres_driver(sim%my_id,this%my_id_n,this%MPI_COMM_N,this%MPI_COMM_MASTER,this%iter_gmres)
+#endif
+
   endif
   call clck_time_barrier(t1)
   call clck_ldiff(t0,t1,tsecond)
@@ -506,9 +543,16 @@ subroutine do_jorek_timestep(this, sim, ev)
   if ( (gmres .and. (this%iter_gmres .lt. gmres_max_iter)) .or. (.not. gmres) ) then
 
     ! TODO add if use_pellet
-#if (JOREK_MODEL == 500 || JOREK_MODEL == 555)
-    call update_mgi(sim%my_id, sim%fields%node_list, sim%fields%element_list)
-#endif
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+    if (using_spi) then
+      n_spi_begin = 1
+      do i = 1, n_inj !< Do one update for each injection location
+        if (t_now >= t_ns(i)) call update_spi(sim%my_id,sim%fields%node_list,sim%fields%element_list,i,n_spi_begin)
+        n_spi_begin = n_spi_begin + n_spi(i)
+      end do
+    end if
+#endif    
 
     call update_values(sim%my_id, sim%fields%element_list, sim%fields%node_list, deltas)         ! add solution to node values
     call update_deltas(sim%my_id, sim%fields%node_list)
@@ -593,7 +637,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   if (sim%my_id .eq. 0 ) then
     ! --- Output energies and growth_rates to text files during the code run
     call write_live_data(index_now)
-    call write_live_data_vacuum(index_now, diag_coil_curr, pf_coil_curr, rmp_coil_curr, net_tor_wall_curr)
+    call write_live_data_vacuum(index_now)
   endif
 
   call clck_time_barrier(t1)

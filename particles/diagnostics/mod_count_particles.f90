@@ -232,7 +232,7 @@ integer, intent(in) :: ien(:,:)
 integer :: nnos, i, j, k, l, m, inode, ivar, ielm, i_elm
 real*4, allocatable :: scalars(:,:), vectors(:,:,:)
 integer :: n_scalars, n_vectors = 0
-character*12, allocatable :: vector_names(:), scalar_names(:)
+character*36, allocatable :: vector_names(:), scalar_names(:)
 type(type_element) :: element
 type(type_node)    :: nodes(4)
 real*8, dimension(n_gauss,n_gauss) :: x_s, x_t, y_s, y_t
@@ -273,11 +273,11 @@ do i_elm=1,element_list%n_elements
     do j=1,n_order+1
       do ms=1, n_gauss
         do mt=1, n_gauss
-          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_s(i,j,ms,mt)
-          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(j,1) * element%size(i,j) * H_t(i,j,ms,mt)
+          x_s(ms,mt) = x_s(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_s(i,j,ms,mt)
+          x_t(ms,mt) = x_t(ms,mt) + nodes(i)%x(1,j,1) * element%size(i,j) * H_t(i,j,ms,mt)
 
-          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_s(i,j,ms,mt)
-          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(j,2) * element%size(i,j) * H_t(i,j,ms,mt)
+          y_s(ms,mt) = y_s(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_s(i,j,ms,mt)
+          y_t(ms,mt) = y_t(ms,mt) + nodes(i)%x(1,j,2) * element%size(i,j) * H_t(i,j,ms,mt)
         enddo
       enddo
     enddo

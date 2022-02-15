@@ -1,11 +1,12 @@
 !> Module containing functions to determine particle and heat diffusivities
 module diffusivities
-  
+
+  use constants  
   use mod_parameters,  only: jorek_model
   use phys_module, only: num_d_perp, D_perp, num_d_perp_x, num_d_perp_y, num_d_perp_len,           &
                          num_zk_perp, num_zk_e_perp, num_zk_i_perp, ZK_perp, ZK_e_perp, ZK_i_perp, num_zk_perp_x, num_zk_perp_y, num_zk_perp_len,      &
                          num_zk_e_perp_x, num_zk_i_perp_x, num_zk_e_perp_y, num_zk_i_perp_y, num_zk_e_perp_len, num_zk_i_perp_len,     &
-       xpoint, xcase, rho_0, rho_coef, T_coef
+       xpoint, xcase, rho_0, rho_coef, T_coef, Ti_coef, Te_coef
   use profiles,    only: interpolProf
     
   implicit none
@@ -18,6 +19,8 @@ module diffusivities
   interface get_dperp
     module procedure get_dperp1
     module procedure get_dperp2
+    module procedure get_dperp3
+    module procedure get_dperp4
   end interface get_dperp
   
   interface get_zkperp
@@ -36,8 +39,6 @@ module diffusivities
   end interface get_zk_eperp
   
   contains
-  
-  
   
   !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
   real*8 function get_dperp1(psin)
@@ -66,10 +67,46 @@ module diffusivities
       
     end if
     
-  end function get_dperp1
+  end function get_dperp1  
   
+  !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
+  real*8 function get_dperp3(psin,D_perp_sp)
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
+    implicit none
+    
+    real*8, intent(in)                     :: psin
+    real*8, intent(in)                     :: D_perp_sp(10)
+
+    get_dperp3 = D_perp_sp(1) * ( (1.d0-D_perp_sp(2)) +  &
+      D_perp_sp(2)*(0.5d0 - 0.5d0*tanh((psin-D_perp_sp(5))/D_perp_sp(4))) )
+      
+    if ( jorek_model >= 300 ) then
+        
+      get_dperp3 = get_dperp3 + D_perp_sp(6)*D_perp_sp(2) *   &
+        ((0.5d0 - 0.5d0*tanh((-psin+D_perp_sp(5)+D_perp_sp(3)) /D_perp_sp(4))))
+
+    end if
+        
+  end function get_dperp3
   
-  
+  !> Determine perpendicular particle diffusivity, D_perp, as a function of Psi_N
+  real*8 function get_dperp4(psin,num_d_prof_x,num_d_prof_y,num_d_prof_len)
+#if _OPENMP >= 201511
+    !$omp declare simd
+#endif
+    implicit none
+    
+    real*8, intent(in)                     :: psin
+    real*8, intent(in), allocatable        :: num_d_prof_x(:) !<Given numerical profile
+    real*8, intent(in), allocatable        :: num_d_prof_y(:) !<Given numerical profile
+    integer, intent(in)                    :: num_d_prof_len  !<Length of given numerical profile
+
+    get_dperp4 = interpolProf(num_d_prof_x, num_d_prof_y, num_d_prof_len, psin)
+    
+  end function get_dperp4
+
   !> Determine perpendicular heat diffusivity, ZK_perp, as a function of Psi_N
   real*8 function get_zkperp1(psin)
 #if _OPENMP >= 201511
@@ -225,8 +262,8 @@ module diffusivities
         endif
         
         if (psi_norm .lt. 0.5d0) psi_D = 0.5d0
-        if (xcase .ne. 2)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
-        if (xcase .ne. 1)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
+        if (xcase .ne. UPPER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
+        if (xcase .ne. LOWER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
         
         ! --- The tanh part of the initial profile and its derivative 
         atn_D   = 0.5d0 - 0.5d0 * tanh((psi_D-Diff(5))/Diff(4))
@@ -315,8 +352,8 @@ module diffusivities
         endif
         
         if (psi_norm .lt. 0.5d0) psi_D = 0.5d0
-        if (xcase .ne. 2)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
-        if (xcase .ne. 1)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
+        if (xcase .ne. UPPER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
+        if (xcase .ne. LOWER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
         
         ! --- The tanh part of the initial profile and its derivative 
         atn_D   = 0.5d0 - 0.5d0 * tanh((psi_D-Diff(5))/Diff(4))
@@ -379,11 +416,11 @@ module diffusivities
       else
         
         ! --- Take values from input file (rho_coef, T_coef...) 
-        Diff(1) = T_coef(1)
-        Diff(2) = T_coef(2)
-        Diff(3) = T_coef(3)
-        Diff(4) = T_coef(4)
-        Diff(5) = T_coef(5)
+        Diff(1) = Ti_coef(1)
+        Diff(2) = Ti_coef(2)
+        Diff(3) = Ti_coef(3)
+        Diff(4) = Ti_coef(4)
+        Diff(5) = Ti_coef(5)
         
         ! --- Correct for hollow profiles (otherwise D_perp > infinity)
         if (Diff(1) .ge. 0.d0) Diff(1) = -0.1d0
@@ -411,8 +448,8 @@ module diffusivities
         endif
         
         if (psi_norm .lt. 0.5d0) psi_D = 0.5d0
-        if (xcase .ne. 2)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
-        if (xcase .ne. 1)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
+        if (xcase .ne. UPPER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
+        if (xcase .ne. LOWER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
         
         ! --- The tanh part of the initial profile and its derivative 
         atn_D   = 0.5d0 - 0.5d0 * tanh((psi_D-Diff(5))/Diff(4))
@@ -475,11 +512,11 @@ module diffusivities
       else
         
         ! --- Take values from input file (rho_coef, T_coef...) 
-        Diff(1) = T_coef(1)
-        Diff(2) = T_coef(2)
-        Diff(3) = T_coef(3)
-        Diff(4) = T_coef(4)
-        Diff(5) = T_coef(5)
+        Diff(1) = Te_coef(1)
+        Diff(2) = Te_coef(2)
+        Diff(3) = Te_coef(3)
+        Diff(4) = Te_coef(4)
+        Diff(5) = Te_coef(5)
         
         ! --- Correct for hollow profiles (otherwise D_perp > infinity)
         if (Diff(1) .ge. 0.d0) Diff(1) = -0.1d0
@@ -507,8 +544,8 @@ module diffusivities
         endif
         
         if (psi_norm .lt. 0.5d0) psi_D = 0.5d0
-        if (xcase .ne. 2)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
-        if (xcase .ne. 1)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
+        if (xcase .ne. UPPER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z_xpoint(1)-Z)/0.1d0))
+        if (xcase .ne. LOWER_XPOINT)  psi_D = psi_D * (0.5d0 - 0.5d0 * tanh((Z-Z_xpoint(2))/0.1d0))
         
         ! --- The tanh part of the initial profile and its derivative 
         atn_D   = 0.5d0 - 0.5d0 * tanh((psi_D-Diff(5))/Diff(4))

@@ -71,8 +71,8 @@ do kv = 1,n_vertex_max  ! 4 vertices
       end do
     end do
   end if
-  xR(:,kv) = node_list%node(iv)%x(:,1) * sizes(:)
-  xZ(:,kv) = node_list%node(iv)%x(:,2) * sizes(:)
+  xR(:,kv) = node_list%node(iv)%x(1,:,1) * sizes(:)
+  xZ(:,kv) = node_list%node(iv)%x(1,:,2) * sizes(:)
 end do
 
 ! together 7%
@@ -141,8 +141,8 @@ do kv = 1,n_vertex_max  ! 4 vertices
       end do
     end do
   end if
-  xR(:,kv) = node_list%node(iv)%x(:,1) * sizes(:)
-  xZ(:,kv) = node_list%node(iv)%x(:,2) * sizes(:)
+  xR(:,kv) = node_list%node(iv)%x(1,:,1) * sizes(:)
+  xZ(:,kv) = node_list%node(iv)%x(1,:,2) * sizes(:)
 end do
 
 ! together 7%
@@ -194,7 +194,7 @@ logical :: my_deltas
 call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
 
 P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
-P_sphi = 0.d0; P_tphi = 0.d0; P_phiphi = 0.d0
+P_phi = 0.d0; P_sphi = 0.d0; P_tphi = 0.d0; P_phiphi = 0.d0
 
 call sincosperiod_moivre(phi, HZ, dHZ)
 do i=1,n_tor
@@ -224,8 +224,8 @@ do kv = 1,n_vertex_max  ! 4 vertices
       end do
     end do
   end if
-  xR(:,kv) = node_list%node(iv)%x(:,1) * sizes(:)
-  xZ(:,kv) = node_list%node(iv)%x(:,2) * sizes(:)
+  xR(:,kv) = node_list%node(iv)%x(1,:,1) * sizes(:)
+  xZ(:,kv) = node_list%node(iv)%x(1,:,2) * sizes(:)
 end do
 
 R    = sum(xR*H)
@@ -270,33 +270,31 @@ end subroutine interp_PRZ_2
 ! and cosines (even when that is vectorized). Perhaps that changes for n_tor >> 10
 ! I tested n_tor = 17.
 pure subroutine sincosperiod_moivre(phi,HZ,dHZ)
-  integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
-  real*8, intent(in) :: phi
+  integer, parameter  :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
+  real*8, intent(in)  :: phi
   real*8, intent(out) :: HZ(n_tor), dHZ(n_tor)
 
-  integer :: i
+  integer    :: i
+  real*8     :: phase
+  complex*16 :: H_complex
+
   HZ(1) = 1.d0
   dHZ(1) = 0.d0
-  if (n_mode .gt. 0) then
-    HZ(2) = cos(n_period*phi)
-    HZ(3) = sin(n_period*phi)
-    dHZ(2) = HZ(3)*(-n_period)
-    dHZ(3) = HZ(2)*(n_period)
+  
+  do i=1,n_mode
+    phase      = real(n_period*i,8)*phi
+    H_complex  = exp(cmplx(0.d0,1.d0)*phase)
+    HZ(2*i)    = real(H_complex)
+    HZ(2*i+1)  = aimag(H_complex)
+    dHZ(2*i)   = HZ(2*i+1)*(-n_period*i)
+    dHZ(2*i+1) = HZ(2*i)  *( n_period*i)
+  end do
 
-    do i=2,n_mode
-
-      call moivre(HZ(2),HZ(3), HZ(2*i-2),HZ(2*i-1), HZ(2*i),HZ(2*i+1))
-
-      dHZ(2*i)   = HZ(2*i+1)*(-n_period*i)
-      dHZ(2*i+1) = HZ(2*i)*(n_period*i)
-
-    end do
-  end if
 end subroutine sincosperiod_moivre
 
 pure subroutine moivre(ar,ai,br,bi,or,oi)
-  real*8, intent(in) :: ar, ai !< real and imag part of e^(i x)
-  real*8, intent(in) :: br, bi !< real and imag part of e^(i y)
+  real*8, intent(in)  :: ar, ai !< real and imag part of e^(i x)
+  real*8, intent(in)  :: br, bi !< real and imag part of e^(i y)
   real*8, intent(out) :: or, oi !< real and imag part of e^(i (x+y))
   or = ar*br - ai*bi
   oi = ai*br + ar*bi
@@ -307,21 +305,31 @@ end subroutine moivre
 ! This is roughly 3-4 times faster in my tests than just calculating the sines
 ! and cosines (even when that is vectorized).
 pure subroutine mode_moivre(phi,HZ)
-  integer, parameter :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
-  real*8, intent(in) :: phi
+  integer, parameter  :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
+  real*8, intent(in)  :: phi
   real*8, intent(out) :: HZ(n_tor)
 
-  integer :: i
-  HZ(1) = 1.d0
-  if (n_mode .gt. 0) then
-  
-    HZ(2) = cos(n_period*phi)
-    HZ(3) = sin(n_period*phi)
+  real*8     :: phase
+  complex*16 :: H_complex
+  integer    :: i
 
-    do i=2,n_mode
-      call moivre(HZ(2),HZ(3), HZ(2*i-2),HZ(2*i-1), HZ(2*i),HZ(2*i+1))
-    end do
-  end if
+  HZ(1) = 1.d0
+  
+  do i=1, n_mode
+    phase     = real(n_period*i,8)*phi
+    H_complex = exp(cmplx(0.d0,1.d0)*phase)
+    HZ(2*i)   = real(H_complex)
+    HZ(2*i+1) = aimag(H_complex)
+  enddo
+
+!  if (n_mode .gt. 0) then
+!    HZ(2) = cos(n_period*phi)
+!    HZ(3) = sin(n_period*phi)  
+!!DIR$ NOVECTOR
+!    do i=2,n_mode
+!      call moivre(HZ(2),HZ(3), HZ(2*i-2),HZ(2*i-1), HZ(2*i),HZ(2*i+1))
+!    end do
+!  end if
 end subroutine mode_moivre
 
 
@@ -507,8 +515,8 @@ R = 0.d0; Z = 0.d0
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)  ! the node number
   do kf = 1, n_order+1       ! 4 basis functions
-    xx1 = node_list%node(iv)%x(kf,1)
-    xx2 = node_list%node(iv)%x(kf,2)
+    xx1 = node_list%node(iv)%x(1,kf,1)
+    xx2 = node_list%node(iv)%x(1,kf,2)
     ss  = element_list%element(i_elm)%size(kv,kf)
     
     R    = R    + xx1 * ss * G(kv,kf)
@@ -540,8 +548,8 @@ call basisfunctions_T(s,t,H,H_s,H_t)
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)
   sizes(:) = element_list%element(i_elm)%size(kv,:)
-  xR(:,kv) = node_list%node(iv)%x(:,1) * sizes(:)
-  xZ(:,kv) = node_list%node(iv)%x(:,2) * sizes(:)
+  xR(:,kv) = node_list%node(iv)%x(1,:,1) * sizes(:)
+  xZ(:,kv) = node_list%node(iv)%x(1,:,2) * sizes(:)
 end do
 
 R   = sum(xR*H)
@@ -575,8 +583,8 @@ call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
 do kv = 1,n_vertex_max  ! 4 vertices
   iv = element_list%element(i_elm)%vertex(kv)
   sizes(:) = element_list%element(i_elm)%size(kv,:)
-  xR(:,kv) = node_list%node(iv)%x(:,1) * sizes(:)
-  xZ(:,kv) = node_list%node(iv)%x(:,2) * sizes(:)
+  xR(:,kv) = node_list%node(iv)%x(1,:,1) * sizes(:)
+  xZ(:,kv) = node_list%node(iv)%x(1,:,2) * sizes(:)
 end do
 
 R    = sum(xR*H)

@@ -43,7 +43,9 @@ logical    :: xpoint2
 !theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
 
 theta=time_evol_theta
-zeta=time_evol_zeta
+!zeta  = time_evol_zeta
+! change zeta for variable dt
+zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
@@ -58,11 +60,11 @@ do i=1,2
 
     do ms=1, n_gauss
 
-      x_g(ms)  = x_g(ms)  + nodes(i)%x(j,1) * element%size(i,j) * H1(i,j,ms)
-      x_s(ms)  = x_s(ms)  + nodes(i)%x(j,1) * element%size(i,j) * H1_s(i,j,ms)
+      x_g(ms)  = x_g(ms)  + nodes(i)%x(1,j,1) * element%size(i,j) * H1(i,j,ms)
+      x_s(ms)  = x_s(ms)  + nodes(i)%x(1,j,1) * element%size(i,j) * H1_s(i,j,ms)
 
-      y_g(ms)  = y_g(ms)  + nodes(i)%x(j,2) * element%size(i,j) * H1(i,j,ms)
-      y_s(ms)  = y_s(ms)  + nodes(i)%x(j,2) * element%size(i,j) * H1_s(i,j,ms)
+      y_g(ms)  = y_g(ms)  + nodes(i)%x(1,j,2) * element%size(i,j) * H1(i,j,ms)
+      y_s(ms)  = y_s(ms)  + nodes(i)%x(1,j,2) * element%size(i,j) * H1_s(i,j,ms)
 
       do mp=1,n_plane
 
@@ -89,6 +91,9 @@ do i=1,2
   enddo
 enddo
 
+! changes deltas for variable time steps
+delta_g = delta_g * tstep / tstep_prev
+delta_s = delta_s * tstep / tstep_prev
 
 !gamma_sheeth = -3.d0
 
@@ -108,10 +113,10 @@ do ms=1, n_gauss
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms) .lt. Z_xpoint(1)) .and. (xcase2 .ne. 2)) then
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms) .lt. Z_xpoint(1)) .and. (xcase2 .ne. UPPER_XPOINT)) then
          psi_norm = 2.d0 - psi_norm
        endif
-       if ((psi_norm .lt. 1.d0) .and. (y_g(ms) .gt. Z_xpoint(2)) .and. (xcase2 .ne. 1)) then
+       if ((psi_norm .lt. 1.d0) .and. (y_g(ms) .gt. Z_xpoint(2)) .and. (xcase2 .ne. LOWER_XPOINT)) then
          psi_norm = 2.d0 - psi_norm
        endif
      endif

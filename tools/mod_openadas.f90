@@ -34,11 +34,8 @@ type ADF11_all
   type(ADF11) :: PRB !< Continuum and line power driven by recombination and bremsstrahlung of dominant ions
   type(ADF11) :: PRC !< Line power due to charge transfer from thermal neutral hydrogen to dominant ions
   real*8, dimension(:), allocatable :: ionisation_energy !< energy in eV required to ionize to a level, indexed by the new charge state (i.e. 1 to 74 for W), no interpolation needed
-  !< state (i.e. 1 to 74 for W)
   character(len=8) :: suffix = '' !< The dataset name (like 50_w)
 end type ADF11_all
-!< Recombination data is given as recombining FROM (Z=1 to Z=74)
-!< Ionisation data is given as ionising TO (Z=1 up to Z=74)
 contains
 
 !> Read ADF11 data files and import them into a type_ADF11
@@ -75,12 +72,12 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
   if (present(directory)) filename = trim(directory) // trim(filename)
   inquire(file=trim(filename), exist=file_exists)
   if (.not. file_exists) then
-    write(*,*) "File not found for", trim(filename)
+    write(*,*) "File not found for", filename
     cycle ! Skip this type of data
   end if
 
   if (my_id .eq. 0) write(*,"(A,A)",advance="no") "Reading data from ", trim(filename)
-  open(10,file=trim(filename),status="old",iostat=ierr, action="read")
+  open(10,file=trim(filename),action="read",status="old",iostat=ierr)
   if (ierr .ne. 0) then
     write(*,*) my_id, " failed with code ", ierr
     cycle
@@ -93,7 +90,7 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
     case (3); a => ad%CCD; write(*,*) "Warning: CCD not implemented correctly yet"; recombining=.true.
     case (4); a => ad%PLT; recombining=.false.
     case (5); a => ad%PRB; recombining=.true.
-    case (6); a => ad%PRC; write(*,*) "Warning: PRC not implemented correctly yet"; recombining=.true.! see coronal model
+    case (6); a => ad%PRC; write(*,*) "Warning: PRC not implemented correctly yet"; recombining=.true. ! see coronal model
   end select
 
   read(10,*)  a%n_z, n_d, n_T, a%izmin, a%izmax
@@ -120,31 +117,30 @@ do i_ADF11 = 1,size(ADF11_filenames,1)
     do i = a%izmin, a%izmax ! 1 to n_z
       read(10,*)
       read(10,*) a%GRC(:,:,i)
-    enddo
+    end do
   else
-    do i = a%izmin-1, a%izmax-1 ! 0 to n_z - 1
+    do i = a%izmin-1, a%izmax-1 ! 0 to n-z - 1
       read(10,*)
       read(10,*) a%GRC(:,:,i)
-    enddo
+    end do
   end if
   close(10)
 
   ! Convert GRC coefficients from cm to m
   a%GRC = a%GRC - 6.d0 ! because it is a logarithm. Conversion: /100.d0**3 (cm3s-1 => m3s-1)
 
-  ! Construct splines
-  do i=a%izmin-1, a%izmax
+  ! Allocate and construct the splines
+  do i = 0, a%n_z
     call AllocFspline(a%GRCFspline(i),n_T,n_d)
 
     a%GRCFspline(i)%xspline = a%temperature
     a%GRCFspline(i)%ylinear = a%density
 
     call ConstructFspline(a%GRCFspline(i),a%GRC(:,:,i))
-  enddo
+  end do   
+
+  if (my_id .eq. 0) write(*,"(A)") " succeeded"
 enddo
-
-
-
 
 ! Test if ACD and SCD were loaded at least
 if (.not. (allocated(ad%ACD%density) .and. allocated(ad%SCD%density))) then
@@ -176,9 +172,16 @@ do i=1,3,2 ! full, strip
           stop 1
         end if
       end do
+      write(*,*) "Read ionisation energies from ", trim(filename)
+      close(10)
+      exit ! the loop, we have found a file
+    endif
+  else
+    if (i .eq. 3) then
+      write(*,*) "Cannot find ionisation data file ", trim(filename), "not loading ionisation energies"
     end if
-  endif
-enddo
+  end if
+end do
 end function read_adf11
 
 
@@ -189,12 +192,15 @@ function dGRC_dT(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
-real*8, dimension(a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
+real*8, dimension(0:a%n_Z) :: dGRC_dT !< Generalized Radiational Coefficient at this density and temperature
 integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,0:a%n_Z),density,temperature,1)
+  dGRC_dT = L2D2interp_grad(a%density,a%temperature,a%n_Z+1,a%GRC(:,:,0:a%n_Z),density,temperature,1)
+!  do i_z = 0, a%n_z
+!    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dx=dGRC_dT(i_z))
+!  end do
 else
   dGRC_dT = 0.d0
 endif
@@ -206,39 +212,46 @@ function dGRC_dn(a, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)       :: density     !< log10 density in m^-3
 real*8, intent(in)       :: temperature !< log10 temperature in K
-real*8, dimension(a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
+real*8, dimension(0:a%n_Z) :: dGRC_dn !< Generalized Radiational Coefficient at this density and temperature
 integer                  :: i_z     !< Index of charge state
 
 ! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC)) then
-  dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z,a%GRC(:,:,0:a%n_Z),density,temperature,2)
+  dGRC_dn = L2D2interp_grad(a%density,a%temperature,a%n_Z+1,a%GRC(:,:,0:a%n_Z),density,temperature,2)
+!  do i_z = 0, a%n_z
+!    call SL2Dinterp(a%GRCFspline(i_z),temperature,density,dfout_dy=dGRC_dn(i_z))
+!  end do
 else
   dGRC_dn = 0.d0
 endif
 end function dGRC_dn
 
 !> interpolation of log10 values of GRC in density and temperature
-subroutine GRC(a, z, density, temperature, GRC_out)
+function GRC(a, z, density, temperature)
 class(ADF11), intent(in) :: a           !< ADF11 datatype
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
 integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
-real*8 :: GRC_out !< Generalized Radiational Coefficient at this density and temperature
+real*8 :: GRC !< Generalized Radiational Coefficient at this density and temperature
+real*8 :: GRC_out
 
-! If GRC exists and z is in the bounds
+! If GRC exists and we are looking for a Z that is nonzero
 if (allocated(a%GRC) .and. z .le. ubound(a%GRC,3) .and. z .ge. lbound(a%GRC,3)) then
   GRC_out = 10.d0**L2Dinterp(a%density,a%temperature,a%GRC(:,:,z),density,temperature)
+  !call SL2Dinterp(a%GRCFspline(z),temperature,density,fout=GRC)
+  !GRC = 10.d0**GRC
 else
   GRC_out = 0.d0
 endif
-end subroutine GRC
+GRC = GRC_out
+end function GRC
 
 !> interpolation of log10 values of GRC in density and temperature
 subroutine GRC_spl(a, z, density, temperature, GRC_out, dGRC_dT_out, dGRC_dn_out)
 class(ADF11), intent(in)      :: a           !< ADF11 datatype
 real*8, intent(in)            :: density     !< log10 density in m^-3
 real*8, intent(in)            :: temperature !< log10 temperature in K
-integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level or ionisation level - 1, 1:n_z)
+integer, intent(in)           :: z !< index in a%GRC(:,:,z) (is ionisation level, 0:n_z)
 real*8, intent(out), optional :: GRC_out !< Generalized Radiational Coefficient at this density and temperature
 real*8, intent(out), optional :: dGRC_dT_out !< Temperature gradient of GRC
 real*8, intent(out), optional :: dGRC_dn_out !< Density gradient of GRC

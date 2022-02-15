@@ -67,10 +67,10 @@ subroutine boundary_check(my_id)
     m_elm     = bnd_elm_list%bnd_element(m_bndelem)%element
     mv1       = bnd_elm_list%bnd_element(m_bndelem)%side
 
-    R1 = node_list%node(bndelem_m%vertex(1))%x(1,1)
-    Z1 = node_list%node(bndelem_m%vertex(1))%x(1,2)
-    R2 = node_list%node(bndelem_m%vertex(2))%x(1,1)
-    Z2 = node_list%node(bndelem_m%vertex(2))%x(1,2)
+    R1 = node_list%node(bndelem_m%vertex(1))%x(1,1,1)
+    Z1 = node_list%node(bndelem_m%vertex(1))%x(1,1,2)
+    R2 = node_list%node(bndelem_m%vertex(2))%x(1,1,1)
+    Z2 = node_list%node(bndelem_m%vertex(2))%x(1,1,2)
 
     ! --- For several points in the boundary element, do...
     L_MP: do m_pt = 1, N_POINTS
@@ -230,7 +230,7 @@ subroutine boundary_check(my_id)
   end do L_MB
   
   if ( (minval(abs(val_integral)) /= 0.d0) .and. (my_id == 0) ) then
-    write(*,'(1x,A,20ES15.5)') 'Relative errors in harmonics:', err_integral(:) / val_integral(:), err_integral(:), val_integral(:)
+    write(*,'(1x,A,99ES15.5)') 'Relative errors in harmonics:', err_integral(:) / val_integral(:), err_integral(:), val_integral(:)
   end if
 
   ! --- Debugging output

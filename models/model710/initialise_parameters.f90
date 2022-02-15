@@ -24,7 +24,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 restart, regrid, write_ps, time_evol_theta,         &
                 time_evol_zeta, force_horizontal_Xline,             &
                 Mach1_openBC,                                       &
-                eta_ARAZ_on, tauIC_ARAZ_on,                         &
+                eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       &
+                tauIC_ARAZ_on,                                      &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
@@ -40,6 +41,14 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
+                extend_existing_grid, no_mach1_bc,                  &
+                grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
+                RZ_grid_jump_thres,                                 &
+                n_wall_blocks, n_ext_block, corner_block,           &
+                n_block_points_left,  n_block_points_right,         &
+                R_block_points_left,  R_block_points_right,         &
+                Z_block_points_left,  Z_block_points_right,         &
+                use_simple_bnd_types,                               &
                 tokamak_device, manipulate_psi_map,                 &
                 F0, gamma, gamma_stangeby,                          &
                 zjz_0, zjz_1, zj_coef,                              &
@@ -47,8 +56,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 T_0,   T_1,   T_coef, T_min,                        &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
-                ZK_par, ZK_perp, D_par, D_perp,                     &
-                eta, visco, visco_par,                              &
+                ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
+                eta, visco, visco_par, ZK_perp_num,                 &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 particlesource, heatsource, tauIC,                  &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
@@ -75,6 +84,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 particlesource_psin, particlesource_sig,            &
                 edgeparticlesource, edgeparticlesource_psin,        &
                 edgeparticlesource_sig,                             &
+                particlesource_gauss, heatsource_gauss,             &
+                heatsource_gauss_psin, heatsource_gauss_sig,        &
+                particlesource_gauss_psin, particlesource_gauss_sig,&
+                particlesource, heatsource, tauIC,                  &
                 produce_live_data, gmres, gmres_max_iter,           &
                 iter_precon, gmres_4, gmres_m, gmres_tol,           &
                 max_steps_noUpdate,                                 &
@@ -89,12 +102,27 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
                 FB_Zaxis_derivative,FB_Zaxis_integral, start_VFB,   &
                 n_feedback_current, n_feedback_vertical,            &
-                n_iter_freeb, n_pf_coils, pf_coils,                 &
-                axis_srch_radius, PF_pert_start_time,               &
+                n_iter_freeb, n_pf_coils, pf_coils, R_axis_ref,     &
+                axis_srch_radius,                                   &
                 starwall_equil_coils, freeb_equil_iterate_area,     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
-                pastix_maxthrd, centralize_harm_mat
+                delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
+                pastix_maxthrd, centralize_harm_mat,                & 
+                vert_FB_amp_ts, vert_FB_gain, vert_pos_file,        & 
+                vert_FB_tact, start_VFB_ts, I_coils_max, rad_FB_amp,&
+                autodistribute_modes, modes_per_family,             &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks,           &
+                ranks_per_family,                                   &
+                n_particles, tstep_particles, nstep_particles,      & !Particles extension
+                nsubstep_particles, restart_particles,              &
+                filter_perp,    filter_hyper,    filter_par,        &
+                filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
+                use_cx, use_sputtering, use_ionisation,             &
+                use_ncs, use_pcs, use_ccs, use_pcs_full,            &
+                cte_current_FB_fact
+
 
 if (my_id .eq. 0) then
 
@@ -167,6 +195,14 @@ if (my_id .eq. 0) then
     tstep_n(1) = tstep
     nstep_n    = 0
     nstep_n(1) = nstep
+  endif
+
+  ! --- Checking consistency of eta_ARAZ parameters
+  if (eta_ARAZ_on == .true.) then
+     if (eta_ARAZ_const .ne. 0) then
+        write(*,*) 'One should not use both eta_ARAZ_on and eta_ARAZ_const simultaneously, to avoid double-counting. Please use eta_ARAZ_on = .t. with eta_ARAZ_const = 0.d0, or eta_ARAZ_on = .f. with eta_ARAZ_const .ne. 0'
+        stop
+     endif
   endif
   
   call allocate_live_data()

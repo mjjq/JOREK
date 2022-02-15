@@ -326,8 +326,9 @@ do m=1, n_plane
 
         enddo
 
-      elseif ((node_list%node(inode1)%boundary .ne. 0) .and. (node_list%node(inode2)%boundary .ne. 0)) then
-        write(*,*) 'problem : ',inode1,inode2,node_list%node(inode1)%boundary,node_list%node(inode2)%boundary
+      else if ((node_list%node(inode1)%boundary .ne. 0) .and. (node_list%node(inode2)%boundary .ne. 0)) then
+        write(*,*) 'Error : ',inode1,inode2,node_list%node(inode1)%boundary,node_list%node(inode2)%boundary
+        stop
       endif
 
     enddo

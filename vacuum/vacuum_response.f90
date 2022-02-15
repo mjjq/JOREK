@@ -480,6 +480,9 @@ module vacuum_response
   !! file_version 1: Original
   !! file_version 2: Includes eta_thin_w
   !! file_version 3: Includes additional coil information
+  !! file_version 4: Includes coil names                                    
+  !! file_version 5: Includes additional information on wall resolution, wall net potentials, control surface
+  !! file_version 6: Coil and wall currents sign reversed to follow JOREK coordinate system
   subroutine read_starwall_response(my_id, sr, filename, n_bnd)
 
     use constants
@@ -535,10 +538,16 @@ module vacuum_response
       disp = disp + sizeof(comment)
 
       sr%file_version = read_intparam_parallel(filehandle, 'file_version', disp)
-      if ( sr%file_version > 4 ) then
+      if ( sr%file_version > 6 ) then
         write(*,*) 'ERROR: STARWALL response file version ', sr%file_version, ' is not supported.'
         stop
       end if
+
+      if ( sr%file_version < 6 ) then
+        write(*,*) 'WARNING: You are using an old STARWALL file version and the wall and coil currents    '
+        write(*,*) '         sign do not follow the JOREK phi direction (positive means -phi direction)   '
+      end if
+
 
       sr%n_bnd  = read_intparam_parallel(filehandle, 'n_bnd' , disp)
       if ( n_bnd /= sr%n_bnd ) then
@@ -547,10 +556,32 @@ module vacuum_response
       end if
       
       sr%nd_bez = read_intparam_parallel(filehandle, 'nd_bez', disp)
+
+      if ( sr%file_version >= 5 ) then
+        sr%nv       = read_intparam_parallel(filehandle, 'nv',        disp)
+        sr%n_points = read_intparam_parallel(filehandle, 'n_points',  disp)
+      endif
+
       sr%ncoil  = read_intparam_parallel(filehandle, 'ncoil' , disp)
       sr%npot_w = read_intparam_parallel(filehandle, 'npot_w', disp)
       sr%n_w    = read_intparam_parallel(filehandle, 'n_w'   , disp)
       sr%ntri_w = read_intparam_parallel(filehandle, 'ntri_w', disp)
+
+      if ( sr%file_version >= 5 ) then
+        sr%iwall    = read_intparam_parallel(filehandle, 'iwall',    disp)
+        sr%nwu      = read_intparam_parallel(filehandle, 'nwu',      disp)
+        sr%nwv      = read_intparam_parallel(filehandle, 'nwv' ,     disp)
+        sr%mn_w     = read_intparam_parallel(filehandle, 'mn_w',     disp)
+        sr%max_mn_w = read_intparam_parallel(filehandle, 'MAX_MN_W', disp)
+
+        call read_array_not_distr(filehandle, 'm_w',         (/sr%max_mn_w,0/),  disp,  int1d=sr%m_w)
+        call read_array_not_distr(filehandle, 'n_w_fourier', (/sr%max_mn_w,0/),  disp,  int1d=sr%n_w_fourier)
+        call read_array_not_distr(filehandle, 'rc_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%rc_w)
+        call read_array_not_distr(filehandle, 'rs_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%rs_w)
+        call read_array_not_distr(filehandle, 'zc_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%zc_w)
+        call read_array_not_distr(filehandle, 'zs_w',        (/sr%max_mn_w,0/),  disp,  float1d=sr%zs_w)
+      endif
+
       sr%n_tor  = read_intparam_parallel(filehandle, 'n_tor' , disp)
       sr%n_tor0 = sr%n_tor
 
@@ -643,6 +674,9 @@ module vacuum_response
     if(my_id == 0) then
       call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
       call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
+      if ( sr%file_version >= 5 ) then
+        call read_array_not_distr(filehandle, 'phi0_w',   (/sr%ntri_w,3/), disp, float2d=sr%phi0_w)
+      endif
     end if
 
     call MPI_FILE_CLOSE(filehandle, err)
@@ -914,6 +948,15 @@ module vacuum_response
     call MPI_bcast(sr%ntri_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_tor0,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+
+    call MPI_bcast(sr%nv,                      1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%n_points,                1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%iwall,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nwu,                     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%nwv,                     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%mn_w,                    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+    call MPI_bcast(sr%max_mn_w,                1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
+
     call MPI_bcast(sr%ntri_c,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_pol_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_rmp_coils,             1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -928,12 +971,25 @@ module vacuum_response
     n_dof_starwall = sr%nd_bez
     n_wall_curr    = sr%n_w
     
-    ! --- Allocate matrics.
+    ! --- Allocate matrices.
     if ( my_id /= 0 ) then
       if (allocated(sr%i_tor)   ) deallocate(sr%i_tor);    allocate(sr%i_tor(sr%n_tor))
       if (allocated(sr%d_yy)    ) deallocate(sr%d_yy);     allocate(sr%d_yy(sr%n_w))
       if (allocated(sr%xyzpot_w)) deallocate(sr%xyzpot_w); allocate(sr%xyzpot_w(sr%npot_w,3))
       if (allocated(sr%jpot_w)  ) deallocate(sr%jpot_w);   allocate(sr%jpot_w(sr%ntri_w,3))
+
+      if ( sr%file_version>=5 ) then 
+        if (allocated(sr%m_w)        ) deallocate(sr%m_w);          allocate(        sr%m_w(sr%max_mn_w))
+        if (allocated(sr%n_w_fourier)) deallocate(sr%n_w_fourier);  allocate(sr%n_w_fourier(sr%max_mn_w))
+
+        if (allocated(sr%rc_w)       ) deallocate(sr%rc_w);         allocate(sr%rc_w(sr%max_mn_w))
+        if (allocated(sr%rs_w)       ) deallocate(sr%rs_w);         allocate(sr%rs_w(sr%max_mn_w))
+        if (allocated(sr%zc_w)       ) deallocate(sr%zc_w);         allocate(sr%zc_w(sr%max_mn_w))
+        if (allocated(sr%zs_w)       ) deallocate(sr%zs_w);         allocate(sr%zs_w(sr%max_mn_w))
+        if (allocated(sr%phi0_w)     ) deallocate(sr%phi0_w);       allocate(sr%phi0_w(sr%ntri_w,3))
+      endif
+
+        
       if ( sr%ncoil > 0 ) then
         if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
         if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
@@ -951,6 +1007,17 @@ module vacuum_response
     call MPI_bcast(sr%d_yy,     sr%n_w,                  MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%xyzpot_w, sr%npot_w*3,             MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%jpot_w,   sr%ntri_w*3,             MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+
+    if ( sr%file_version>=5 ) then 
+      call MPI_bcast(sr%m_w,            sr%max_mn_w,     MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%n_w_fourier,    sr%max_mn_w,     MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%rc_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%rs_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%zc_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%zs_w,           sr%max_mn_w,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+      call MPI_bcast(sr%phi0_w,         sr%ntri_w*3,     MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    endif
+
     if ( sr%ncoil > 0 ) then
       call MPI_bcast(sr%jtri_c,   sr%ncoil,              MPI_INTEGER,          0, MPI_COMM_WORLD, ierr)
       call MPI_bcast(sr%x_coil,   sr%ntri_c*3,           MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
@@ -1022,10 +1089,17 @@ module vacuum_response
        write(*,33) 'file_version            =', sr%file_version
        write(*,33) 'n_bnd                   =', sr%n_bnd
        write(*,33) 'nd_bez                  =', sr%nd_bez
+       write(*,33) 'nv                      =', sr%nv    
+       write(*,33) 'n_points                =', sr%n_points
        write(*,33) 'ncoil                   =', sr%ncoil
        write(*,33) 'npot_w                  =', sr%npot_w
        write(*,33) 'n_w                     =', sr%n_w
        write(*,33) 'ntri_w                  =', sr%ntri_w
+       write(*,33) 'iwall                   =', sr%iwall  
+       write(*,33) 'nwu                     =', sr%nwu    
+       write(*,33) 'nwv                     =', sr%nwv    
+       write(*,33) 'mn_w                    =', sr%mn_w   
+       write(*,33) 'max_mn_w                =', sr%max_mn_w   
        write(*,33) 'n_tor                   =', sr%n_tor
        write(*,33) 'n_tor0                  =', sr%n_tor0
        write(*,33) 'n_pol_coils             =', sr%n_pol_coils
@@ -1155,10 +1229,11 @@ module vacuum_response
     real*8              :: ephi12(3),ephi13(3),ephi23(3), jsides(3)
     real*8              :: pol13(3), pol32(3), pol21(3)
     real*8              :: mid12(3), mid23(3), mid13(3), angle12, angle13, angle23
+    real*8              :: Iw_net_tor 
     integer             :: filehandle = 60, i, maxcurr_pos
     logical             :: Iphi_max, Ipol_max, jphi_lin, jpol_lin
     character(len=18)   :: filename
-    real*8, allocatable :: tripot_w(:)
+    real*8, allocatable :: tripot_w(:), dtripot_w(:)
     integer :: ierr
 
     if ( mod(index,nout) /= 0 ) return
@@ -1168,7 +1243,7 @@ module vacuum_response
       
       ! --- Preset values
       Iphi_max = .false.
-      jphi_lin = .true.
+      jphi_lin = .false.
       Ipol_max = .false.
       jpol_lin = .false.    
       
@@ -1203,7 +1278,7 @@ module vacuum_response
       write(filehandle,140) 'LOOKUP_TABLE default'
     end if
     
-    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
+    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
 
     if(my_id == 0) then
       do i = 1, sr%npot_w
@@ -1215,13 +1290,15 @@ module vacuum_response
       write(filehandle,140) 'LOOKUP_TABLE default'
     end if
 
-    call reconstruct_triangle_potentials(tripot_w, dwall_curr, my_id)
+    call reconstruct_triangle_potentials(dtripot_w, dwall_curr, my_id)
 
     if(my_id == 0) then
   
       do i = 1, sr%npot_w
-        write(filehandle,142) tripot_w(i)
+        write(filehandle,142) dtripot_w(i)
       end do
+
+      deallocate(dtripot_w)
       
       ! --- Cell data variables
       write(filehandle,141) 'CELL_DATA', sr%ntri_w
@@ -1530,16 +1607,10 @@ module vacuum_response
         
         end do
       end if
-        
-      ! --- Total wall current vectors
-      write(filehandle,140) 'VECTORS jsurf_w(MA/m) float'
-  
-    end if
+      
+      ! --- Current density: Contribution of single valued potentials  
+      write(filehandle,140) 'VECTORS jw_single_val(MA/m) float'
 
-    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
-
-    if (my_id == 0) then
-  
       do i = 1, sr%ntri_w
         ! --- Wall potential at triangle nodes
         phi1   = tripot_w(sr%jpot_w(i,1))
@@ -1558,12 +1629,61 @@ module vacuum_response
         write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
                               / mu_zero * 1.d-6
       end do
+
+      if (sr%file_version >= 5) then
+
+        ! --- Current density: Contribution of net wall potential 
+        write(filehandle,140) 'VECTORS jw_net(MA/m) float'
+  
+        do i = 1, sr%ntri_w
+          ! --- Wall potential at triangle nodes
+          phi1   = Iw_net_tor * sr%phi0_w(i,1) 
+          phi2   = Iw_net_tor * sr%phi0_w(i,2) 
+          phi3   = Iw_net_tor * sr%phi0_w(i,3)
+          ! --- Position of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
+            
+          ! Exports the linear wall density current in MA/m  
+          write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
+                                / mu_zero * 1.d-6
+        end do
+
+        ! --- Total wall current density
+        write(filehandle,140) 'VECTORS jw_tot(MA/m) float'
+  
+        do i = 1, sr%ntri_w
+          ! --- Wall potential at triangle nodes
+          phi1   = Iw_net_tor * sr%phi0_w(i,1) + tripot_w(sr%jpot_w(i,1)) 
+          phi2   = Iw_net_tor * sr%phi0_w(i,2) + tripot_w(sr%jpot_w(i,2))
+          phi3   = Iw_net_tor * sr%phi0_w(i,3) + tripot_w(sr%jpot_w(i,3))
+          ! --- Position of triangle nodes
+          r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+          r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+          r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+          r21(:) = r1(:)-r2(:)
+          r32(:) = r2(:)-r3(:)
+          r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+            r21(1)*r32(2) - r21(2)*r32(1) /)
+            
+          ! Exports the linear wall density current in MA/m  
+          write(filehandle,142) ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2)) &
+                                / mu_zero * 1.d-6
+        end do
+      endif    ! file version 5
+
       
       ! --- Close file, clean up
-      if ( allocated(tripot_w) ) deallocate( tripot_w )
       close(filehandle)
   
-    end if
+    end if  ! my_id==0
+
+    if ( allocated(tripot_w) ) deallocate( tripot_w )
 
   end subroutine write_wall_vtk
   
@@ -1587,27 +1707,28 @@ module vacuum_response
     use basis_at_gaussian, only: H1, H1_s, HZ
     use phys_module, only: t_now, t_start
     use mpi_mod
+    use mod_integer_types
 
     implicit none
 
     ! --- Routine parameters
-    integer,                     intent(in)    :: my_id                !< MPI process ID
-    type(type_node_list),        intent(in)    :: node_list            !< List of grid nodes
-    type(type_bnd_node_list),    intent(in)    :: bnd_node_list        !< List of boundary grid nodes
-    type(type_bnd_element_list), intent(in)    :: bnd_elm_list         !< List of boundary elements
-    logical,                     intent(in)    :: freeboundary_equil   !< Use free boundary equilibrium?
-    logical,                     intent(in)    :: resistive_wall       !< Resistive or ideal wall?
-    integer,                     intent(in)    :: index_min, index_max !< Responsibility of MPI proc
-    real*8,                      intent(inout) :: rhs_loc(:)           !< Part of RHS of MPI proc 
-    real*8,  allocatable,      intent(inout)   :: A_mat(:)             !< Distributed global or harmonic matrix 
-    real*8,                      intent(in)    :: tstep                !< delta t, timestep
-    integer,                     intent(in)    :: index_now            !< Current timestep index
-    integer,                     intent(in)    :: i_tor_min, i_tor_max !< Toroidal harmonics 
-    integer, allocatable,        intent(inout) :: irn(:), jcn(:)  
-    integer,                     intent(in)    :: n_matrix_block_size
-    integer, allocatable,        intent(in)    :: ijA_index(:,:)
-    integer, allocatable,        intent(in)    :: ijA_size(:)
-    integer, allocatable,        intent(in)    :: irn_jcn(:,:)
+    integer,                            intent(in)    :: my_id                !< MPI process ID
+    type(type_node_list),               intent(in)    :: node_list            !< List of grid nodes
+    type(type_bnd_node_list),           intent(in)    :: bnd_node_list        !< List of boundary grid nodes
+    type(type_bnd_element_list),        intent(in)    :: bnd_elm_list         !< List of boundary elements
+    logical,                            intent(in)    :: freeboundary_equil   !< Use free boundary equilibrium?
+    logical,                            intent(in)    :: resistive_wall       !< Resistive or ideal wall?
+    integer,                            intent(in)    :: index_min, index_max !< Responsibility of MPI proc
+    real*8,                             intent(inout) :: rhs_loc(:)           !< Part of RHS of MPI proc 
+    real*8,                allocatable, intent(inout) :: A_mat(:)             !< Distributed global or harmonic matrix 
+    real*8,                             intent(in)    :: tstep                !< delta t, timestep
+    integer,                            intent(in)    :: index_now            !< Current timestep index
+    integer,                            intent(in)    :: i_tor_min, i_tor_max !< Toroidal harmonics 
+    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:)  
+    integer(kind=int_all),              intent(in)    :: n_matrix_block_size
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:)
+    integer(kind=int_all), allocatable, intent(in)    :: ijA_size(:)
+    integer(kind=int_all), allocatable, intent(in)    :: irn_jcn(:,:)
 
     ! --- Local variables
     real*8, allocatable :: psibnd_vec(:)    ! Vector of the values of Psi at the boundary
@@ -1641,7 +1762,7 @@ module vacuum_response
 #ifdef __GFORTRAN__
     real*8 :: wgauss_copy(4)
 #endif
-    !integer :: rate, t0, t1 !### timing ###
+    real*8 :: t_elaps_start, t_elaps_end !### timing ###
     logical, save  :: PF_perturbation = .true.
     integer  :: ierr,i
     real*8, allocatable :: rhs_contrib_arr(:)
@@ -1650,6 +1771,8 @@ module vacuum_response
       write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
       return
     end if
+    
+    if ( vacuum_debug ) t_elaps_start = MPI_WTIME()  ! for timing
 
     if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)),sum(abs(A_mat))
 
@@ -1710,166 +1833,163 @@ module vacuum_response
     !$omp   i_tor, i_resp, i_resp_old, i_resp_0, basfunc_i, j_node_bnd, j_dof, j_node, j_dir,                 &
     !$omp   j_index, j_starwall, j_tor, j_resp, j_col_psi, sparsepos_jp, sparsepos_pp,                        &
     !$omp   amat_contrib, rhs_contrib, blockpos_jp, blockpos_pp, ierr     )                                   &
-    !$omp schedule(dynamic,1)
+    !$omp schedule(dynamic,1) collapse(4)
     L_MB: do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
-      bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
-
-      ! --- Determine the values of R,s and Z,s at the Gaussian points.
-      call det_coord_bnd(bndelem_m, node_list, R_S=x_s, Z_S=y_s)
-
       ! --- Select a test function (the weak form equation must hold for every test function)
-      L_LV: do l_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
+      L_LS: do l_tor = i_tor_min, i_tor_max ! (loop over toroidal harmonics)
+        L_LV: do l_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
+          L_LD: do l_dof = 1, 2 ! (loop over node dofs)
 
-        L_LD: do l_dof = 1, 2 ! (loop over node dofs)
+            bndelem_m = bnd_elm_list%bnd_element(m_bndelem)
 
-          l_node      = bndelem_m%vertex(l_vertex)
-          l_dir       = bndelem_m%direction(l_vertex,l_dof)
-          l_node_bnd  = bndelem_m%bnd_vertex(l_vertex)
-          l_index     = node_list%node(l_node)%index(l_dir)
-          l_size      = bndelem_m%size(l_vertex,l_dof)
+            ! --- Determine the values of R,s and Z,s at the Gaussian points.
+            call det_coord_bnd(bndelem_m, node_list, R_S=x_s, Z_S=y_s)
 
-          if ( (l_index < index_min) .or. (l_index > index_max) ) cycle ! This MPI proc responsible?
+            l_node      = bndelem_m%vertex(l_vertex)
+            l_dir       = bndelem_m%direction(l_vertex,l_dof)
+            l_node_bnd  = bndelem_m%bnd_vertex(l_vertex)
+            l_index     = node_list%node(l_node)%index(l_dir)
+            l_size      = bndelem_m%size(l_vertex,l_dof)
 
-          L_LS: do l_tor = i_tor_min, i_tor_max ! (loop over toroidal harmonics)
+            if ( (l_index < index_min) .or. (l_index > index_max) ) cycle ! This MPI proc responsible?
 
             ! --- Determine the row in the main matrix.
-            l_row_psi = det_row_col(l_index, ivar_psi, l_tor, i_tor_min, i_tor_max)
-            l_row_j   = det_row_col(l_index, ivar_j,   l_tor, i_tor_min, i_tor_max)
+            l_row_psi = det_row_col(l_index, var_psi, l_tor, i_tor_min, i_tor_max)
+            l_row_j   = det_row_col(l_index, var_zj,  l_tor, i_tor_min, i_tor_max)
 
-                ! --- Sum over boundary dofs at which response is calculated
-                L_IV: do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
+            ! --- Sum over boundary dofs at which response is calculated
+            L_IV: do i_vertex = 1, 2 ! (loop over nodes in element m_bndelem)
 
-                  i_node      = bndelem_m%vertex(i_vertex)
-                  i_node_bnd  = bndelem_m%bnd_vertex(i_vertex)
+              i_node      = bndelem_m%vertex(i_vertex)
+              i_node_bnd  = bndelem_m%bnd_vertex(i_vertex)
 
-                  L_ID: do i_dof = 1, 2 ! (loop over node dofs)
+              L_ID: do i_dof = 1, 2 ! (loop over node dofs)
 
-                    i_dir       = bndelem_m%direction(i_vertex,i_dof)
-                    i_index     = node_list%node(i_node)%index(i_dir)
-                    i_size      = bndelem_m%size(i_vertex,i_dof)
+                i_dir       = bndelem_m%direction(i_vertex,i_dof)
+                i_index     = node_list%node(i_node)%index(i_dir)
+                i_size      = bndelem_m%size(i_vertex,i_dof)
 
-                    L_IS: do i_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
+                L_IS: do i_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
 
-                      i_tor    = sr%i_tor(i_starwall)
+                  i_tor    = sr%i_tor(i_starwall)
 
-                      if ( (i_tor < i_tor_min) .or. (i_tor > i_tor_max) ) cycle    
+                  if ( (i_tor < i_tor_min) .or. (i_tor > i_tor_max) ) cycle    
 
-                      i_resp_old   = response_index(i_node_bnd,i_starwall,i_dof)
+                  i_resp_old   = response_index(i_node_bnd,i_starwall,i_dof)
 
-                      i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
-                               + bnd_node_list%bnd_node(i_node_bnd)%n_dof*(i_starwall-1)              &
-                               + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)             &
-                               - bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
+                  i_resp   = (bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
+                           + bnd_node_list%bnd_node(i_node_bnd)%n_dof*(i_starwall-1)              &
+                           + bnd_node_list%bnd_node(i_node_bnd)%index_starwall(i_dof)             &
+                           - bnd_node_list%bnd_node(i_node_bnd)%index_starwall(1) + 1
 
-!                      if (i_resp_old .ne. i_resp) write(*,'(A,8i5)') 'PANIC! : ',i_node, i_starwall, &
-!                      i_dof,bnd_node_list%bnd_node(i_node_bnd)%index_starwall,i_resp_old, i_resp
+!                  if (i_resp_old .ne. i_resp) write(*,'(A,8i5)') 'PANIC! : ',i_node, i_starwall, &
+!                  i_dof,bnd_node_list%bnd_node(i_node_bnd)%index_starwall,i_resp_old, i_resp
 
-                      i_resp_0 = response_index_eq(i_node_bnd,i_dof)
+                  i_resp_0 = response_index_eq(i_node_bnd,i_dof)
 
-                      ! --- Loop over Gaussian points -- integration in s-direction
-                      common_prefactor = 0.
-                      L_MS: do ms = 1, n_gauss
+                  ! --- Loop over Gaussian points -- integration in s-direction
+                  common_prefactor = 0.
+                  L_MS: do ms = 1, n_gauss
 
-                        ! --- Integration factor from the definition of dA:
-                        !     int dA = sum_{m_bndelem} int ds int dphi  sqrt{(R,s)^2 + (Z,s)^2}
-                        dA = sqrt(x_s(ms)**2 + y_s(ms)**2)
+                    ! --- Integration factor from the definition of dA:
+                    !     int dA = sum_{m_bndelem} int ds int dphi  sqrt{(R,s)^2 + (Z,s)^2}
+                    dA = sqrt(x_s(ms)**2 + y_s(ms)**2)
 
-                        ! --- Loop over toroidal planes -- integration in phi-direction
-                        L_MP: do m_plane = 1, n_plane
+                    ! --- Loop over toroidal planes -- integration in phi-direction
+                    L_MP: do m_plane = 1, n_plane
 
-                          ! --- Evaluate test function at current position
-                          testfunc_l = H1(l_vertex,l_dof,ms) * l_size * HZ(l_tor,m_plane)
+                      ! --- Evaluate test function at current position
+                      testfunc_l = H1(l_vertex,l_dof,ms) * l_size * HZ(l_tor,m_plane)
 
-                          ! --- Determine basis function
-                          basfunc_i = H1(i_vertex,i_dof,ms) * i_size * HZ(i_tor,m_plane)
+                      ! --- Determine basis function
+                      basfunc_i = H1(i_vertex,i_dof,ms) * i_size * HZ(i_tor,m_plane)
 
 #ifdef __GFORTRAN__
-                          common_prefactor = common_prefactor + wgauss_copy(ms) * dA * testfunc_l * basfunc_i
+                      common_prefactor = common_prefactor + wgauss_copy(ms) * dA * testfunc_l * basfunc_i
 #else
-                          common_prefactor = common_prefactor + wgauss(ms) * dA * testfunc_l * basfunc_i
+                      common_prefactor = common_prefactor + wgauss(ms) * dA * testfunc_l * basfunc_i
 #endif
 
-                        end do L_MP
+                    end do L_MP
 
-                      end do L_MS
+                  end do L_MS
 
-                      ! --- Sum over boundary dofs contributing to the response
-                      L_JB: do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
+                  ! --- Sum over boundary dofs contributing to the response
+                  L_JB: do j_node_bnd = 1, bnd_node_list%n_bnd_nodes ! (loop over boundary nodes)
 
-                        j_node      = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
+                    j_node      = bnd_node_list%bnd_node(j_node_bnd)%index_jorek
 
-                        L_JD: do j_dof = 1, 2 ! (loop over node dofs)
+                    L_JD: do j_dof = 1, 2 ! (loop over node dofs)
 
-                          j_dir       = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
-                          j_index     = node_list%node(j_node)%index(j_dir)
+                      j_dir       = bnd_node_list%bnd_node(j_node_bnd)%direction(j_dof)
+                      j_index     = node_list%node(j_node)%index(j_dir)
 
-                          L_JS: do j_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
+                      L_JS: do j_starwall = 1, sr%n_tor ! (loop over STARWALL harmonics)
 
-                            j_tor  = sr%i_tor(j_starwall)
-                      
-                            if ( (j_tor < i_tor_min) .or. (j_tor > i_tor_max) ) cycle    
+                        j_tor  = sr%i_tor(j_starwall)
+                  
+                        if ( (j_tor < i_tor_min) .or. (j_tor > i_tor_max) ) cycle    
 
-                            j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
-                                     + bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1)              &
-                                     + bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)             &
-                                     - bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
-
-
-
-                            ! --- Option to switch off mode coupling due to a 3D  wall
-                            if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
-
-                            ! --- Determine the column in the main matrix
-                            j_col_psi = det_row_col(j_index, ivar_psi, j_tor, i_tor_min, i_tor_max)
-
-                            ! --- Determine the position in the sparse matrix data structure
-                            !     which corresponds to the matrix entry at  l_row_j, j_col_psi.
-                            sparsepos_jp = det_sparse_pos(l_row_j,   j_col_psi, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
-                            sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
-
-                            ! --- Vacuum response contribution to the lhs of the current equation
-                            amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
-                            !$omp atomic
-                            A_mat(sparsepos_jp) = A_mat(sparsepos_jp) + amat_contrib
-
-                          end do L_JS
-                        end do L_JD
-                      end do L_JB
-
-                      ! --- Contribution of vacuum response to the rhs of the current equation
-
-                      rhs_contrib = sum( response_m_h(i_resp,:) * psibnd_vec(:))                     &
-                                  + sum( response_m_j(i_resp,:) * dpsibnd_vec(:))
-
-                      if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils)) &
-                        rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )        &
-                                    - sum( response_m_h(i_resp,:) *   psibnd_coils(:) )
-
-                      if ( resistive_wall )rhs_contrib=rhs_contrib+rhs_contrib_arr(i_resp)
-
-                      rhs_contrib = rhs_contrib * common_prefactor
-                      !$omp atomic
-                      rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
-
-                    end do L_IS
-                  end do L_ID
-                end do L_IV
+                        j_resp   = (bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) - 1)*sr%n_tor0 &
+                                 + bnd_node_list%bnd_node(j_node_bnd)%n_dof*(j_starwall-1)              &
+                                 + bnd_node_list%bnd_node(j_node_bnd)%index_starwall(j_dof)             &
+                                 - bnd_node_list%bnd_node(j_node_bnd)%index_starwall(1) + 1
 
 
-          end do L_LS
-        end do L_LD
-      end do L_LV
+
+                        ! --- Option to switch off mode coupling due to a 3D  wall
+                        if ( vacuum_decouple_modes .and. (j_tor /= i_tor) ) cycle
+
+                        ! --- Determine the column in the main matrix
+                        j_col_psi = det_row_col(j_index, var_psi, j_tor, i_tor_min, i_tor_max)
+
+                        ! --- Determine the position in the sparse matrix data structure
+                        !     which corresponds to the matrix entry at  l_row_j, j_col_psi.
+                        sparsepos_jp = det_sparse_pos(l_row_j,   j_col_psi, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
+                        sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
+
+                        ! --- Vacuum response contribution to the lhs of the current equation
+                        amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
+                        !$omp atomic
+                        A_mat(sparsepos_jp) = A_mat(sparsepos_jp) + amat_contrib
+
+                      end do L_JS
+                    end do L_JD
+                  end do L_JB
+
+                  ! --- Contribution of vacuum response to the rhs of the current equation
+
+                  rhs_contrib = sum( response_m_h(i_resp,:) * psibnd_vec(:))                     &
+                              + sum( response_m_j(i_resp,:) * dpsibnd_vec(:))
+
+                  if ( (l_tor == 1) .and. (sr%i_tor(1) == 1) .and. (.not. starwall_equil_coils)) &
+                    rhs_contrib = rhs_contrib - sum( bext_tan(i_resp_0, :) * I_coils(:) )        &
+                                - sum( response_m_h(i_resp,:) *   psibnd_coils(:) )
+
+                  if ( resistive_wall )rhs_contrib=rhs_contrib+rhs_contrib_arr(i_resp)
+
+                  rhs_contrib = rhs_contrib * common_prefactor
+                  !$omp atomic
+                  rhs_loc(l_row_j) = rhs_loc(l_row_j) + rhs_contrib
+
+                end do L_IS
+              end do L_ID
+            end do L_IV
+
+          end do L_LD
+        end do L_LV
+      end do L_LS
 
     end do L_MB
     !$omp end parallel do
 
-    !### timing ###
-    !call system_clock(count=t1)
-    !write(*,*) 'vacuum_boundary_integral main loop:', real(t1 - t0 ) / real(rate), 's'
-    !write(68+my_id,*) real(t1 - t0 ) / real(rate)
-    !###
-
+    ! --- timing
+    if ( vacuum_debug ) then
+      t_elaps_end = MPI_WTIME()
+      write(*,'(I4,A,F10.7,A)') my_id, '  Elapsed time vacuum_boundary_integral', t_elaps_end - t_elaps_start, ' s'
+    end if
+    
     if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)),sum(abs(A_mat))
 
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
@@ -1913,10 +2033,10 @@ module vacuum_response
         k_dir       = bndelem%direction(k_vertex,k_dof)
         k_size      = bndelem%size(k_vertex,k_dof)
         node_k      = node_list%node(k_node)
-        if ( present(R  ) ) R  (:)  = R  (:)  + node_k%x(k_dir,1) * k_size * H1  (k_vertex,k_dof,:)
-        if ( present(Z  ) ) Z  (:)  = Z  (:)  + node_k%x(k_dir,2) * k_size * H1  (k_vertex,k_dof,:)
-        if ( present(R_s) ) R_s(:)  = R_s(:)  + node_k%x(k_dir,1) * k_size * H1_s(k_vertex,k_dof,:)
-        if ( present(Z_s) ) Z_s(:)  = Z_s(:)  + node_k%x(k_dir,2) * k_size * H1_s(k_vertex,k_dof,:)
+        if ( present(R  ) ) R  (:)  = R  (:)  + node_k%x(1,k_dir,1) * k_size * H1  (k_vertex,k_dof,:)
+        if ( present(Z  ) ) Z  (:)  = Z  (:)  + node_k%x(1,k_dir,2) * k_size * H1  (k_vertex,k_dof,:)
+        if ( present(R_s) ) R_s(:)  = R_s(:)  + node_k%x(1,k_dir,1) * k_size * H1_s(k_vertex,k_dof,:)
+        if ( present(Z_s) ) Z_s(:)  = Z_s(:)  + node_k%x(1,k_dir,2) * k_size * H1_s(k_vertex,k_dof,:)
       end do
     end do
     
@@ -1977,8 +2097,8 @@ module vacuum_response
 !          if (j_resp_old .ne. j_resp) write(*,'(A4i5)') 'PANIC jresp: ',j_resp_old,j_resp, &
 !           bnd_node_list%bnd_node(jnode)%index_starwall(1), bnd_node_list%bnd_node(jnode)%index_starwall(jbas)
 
-          psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, ivar_psi)
-          dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, ivar_psi)
+          psibnd_vec ( j_resp ) = node_list%node(jnode_glob)%values(jtor, jdir, var_psi)
+          dpsibnd_vec( j_resp ) = node_list%node(jnode_glob)%deltas(jtor, jdir, var_psi)
 
           if ( (present(psibnd_coils)) .and. (allocated(I_coils)) .and. (jtor==1) .and. (.not. starwall_equil_coils) ) then
             j_resp_0 = 2*(jnode-1) + jbas
@@ -2121,7 +2241,8 @@ module vacuum_response
   subroutine coil_current_source(my_id)
     
     use constants
-    use phys_module, only: t_now
+    use phys_module, only: t_now, index_now, tstep, nstep, index_start
+    use equil_info, only: ES
     use profiles
     use mpi_mod    
 
@@ -2132,8 +2253,9 @@ module vacuum_response
     integer                   :: i, ierr
     real*8, allocatable       :: potentials_real_0(:)
     real*8, save, allocatable :: delta_Icoils_0(:)
+    real*8, save              :: t_last, Z_p = 1.d10
     logical, save             :: initialized=.false.
-
+    real*8                    :: z_ref_inter, Z_n
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
 
     ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
@@ -2143,21 +2265,54 @@ module vacuum_response
       allocate(delta_Icoils_0(n_coils))
       delta_Icoils_0 = 0.d0
       do i=1, n_coils
-        if (vert_FB_amp(i) /= 0.d0) then
           delta_Icoils_0(i) = I_coils(i) - interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now)
-        end if
       end do
       initialized = .true.
     end if
-
-    if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
-    if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
+    
 
     ! --- Calculate the specified coil currents at present time 
     do i=1, n_coils
-      I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) + delta_Icoils_0(i)
+      I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) 
     end do
 
+    ! -- During timestepping apply vertical feedback by the PF coils which were activated
+    ! Add the feedback current to the difference from the restart file
+    if (.not. allocated(vert_FB_response) .and. index_start+nstep>0) then
+      allocate(vert_FB_response(index_start+nstep,4))
+      vert_FB_response = 0.d0
+    endif
+    z_ref_inter = interpolProf(Z_axis_ref_ts%time, Z_axis_ref_ts%position ,  Z_axis_ref_ts%len, t_now)
+    vert_FB_response(index_now,4) = z_ref_inter
+    if ( t_now>start_VFB_ts .and. sum( abs(vert_FB_amp_ts(1:n_pf_coils)) )>1.e-6 .and. sr%i_tor(1) ==  1 ) then
+      Z_n = ES%Z_axis
+      if ( Z_p > 1.d9 ) Z_p = Z_n
+      dZ_axis_integral = dZ_axis_integral + ( Z_n - z_ref_inter )*tstep
+      if ( (t_now-t_last)>vert_FB_tact ) then 
+        if (my_id==0) write(*,*) 'Vertical feedback active'
+        t_last = t_now
+        vert_FB_response(index_now,1:3) =  &
+            (/  1.d3  * vert_FB_gain(1)* (Z_n - z_ref_inter), &
+                1.d5  * vert_FB_gain(2)* (Z_n - Z_p )/ tstep, &
+                1.d-3 * vert_FB_gain(3)* dZ_axis_integral /)
+        delta_Icoils_0(1:n_pf_coils) = delta_Icoils_0(1:n_pf_coils) +  sum(vert_FB_response(index_now,1:3))*vert_FB_amp_ts(1:n_pf_coils)
+      endif
+      Z_p = Z_n
+    endif
+
+    
+
+    ! -- Apply coil current limits
+    do i=1, n_coils
+      if ( abs( I_coils(i) + delta_Icoils_0(i)) .gt. I_coils_max(i) ) &
+          delta_Icoils_0(i) = ( I_coils(i) + delta_Icoils_0(i) ) / abs( I_coils(i) + delta_Icoils_0(i))&
+                                  *I_coils_max(i) - ( I_coils(i) + delta_Icoils_0(i) )
+      I_coils(i) = I_coils(i)  + delta_Icoils_0(i)
+    end do
+
+
+    if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
+    if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
     ! --- Transform real currents into starwall currents
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
@@ -2310,11 +2465,11 @@ module vacuum_response
   !! The physical wall potentials include different types of potentials,
   !! and the way they are ordered in the array is
   !!
-  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net, Potw_1, Potw_2, ..., Potw_npotw-1)
+  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net_tor, Potw_1, Potw_2, ..., Potw_npotw-1)
   !!  
   !! where I_coil are the coil currents, Iw_net is the net wall current
   !! and Potw are the single valued wall potentials.  
-  subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id)
+  subroutine reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
     
     use mpi_mod
 
@@ -2324,6 +2479,7 @@ module vacuum_response
     real*8, allocatable, intent(inout) :: tripot_w(:)
     real*8, allocatable, intent(in)    :: wall_curr(:)
     integer,             intent(in)    :: my_id
+    real*8,  optional,   intent(inout) :: Iw_net_tor 
 
     ! --- Local variables
     integer              :: i, j, ierr, global_index, ntasks
@@ -2350,6 +2506,10 @@ module vacuum_response
 
     call MPI_AllREDUCE(MPI_IN_PLACE,pot_tmp,size(pot_tmp),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
+    if (present(Iw_net_tor)) then
+      Iw_net_tor = pot_tmp(1)
+    endif
+
     ! --- Correct indexing (1st potential is the net curret potential)
     ! --- Shift indexing so 1st wall node corresponds to 1st single valued potential (and so on)
     do i = 1, sr%npot_w-1
@@ -2363,8 +2523,62 @@ module vacuum_response
 
   end subroutine reconstruct_triangle_potentials
   
+
+
+
+
+
+  !> Reconstruct the coil potentials
+  !!
+  !! To reconstruct the physical potentials from the ones we work 
+  !! with we need to muliply them by the similarity transform matrix.
+  !! The physicall potentials include different types of potentials,
+  !! and the way they are ordered in the wall_curr array is
+  !!
+  !!   (I_coil_1, I_coil_2, ..., I_coil_ncoil, Iw_net_tor, Potw_1, Potw_2, ..., Potw_npotw-1)
+  !!  
+  !! where I_coil are the coil currents, Iw_net is the net wall current
+  !! and Potw are the single valued wall potentials.  
+  subroutine reconstruct_coil_potentials(pot_c, wall_curr, my_id)
+    
+    use mpi_mod
+
+    implicit none
+    
+    ! --- Routine parameters
+    real*8, allocatable, intent(inout) :: pot_c(:)
+    real*8, allocatable, intent(in)    :: wall_curr(:)
+    integer,             intent(in)    :: my_id
+
+    ! --- Local variables
+    integer              :: i, j, ierr, global_index, ntasks
+    integer              :: count=1
+
+    if (sr%ncoil < 1 ) return
+
+    if ( allocated(pot_c) ) deallocate(pot_c); allocate( pot_c(sr%ncoil) )    
+    pot_c = 0.d0
+
+    ! --- multiply by the similarity transform matrix to get the physical wall potentials
+    if ( allocated(wall_curr) ) then
+      global_index = my_id*sr%s_ww%step
+
+      do i = 1, sr%ncoil
+        if ( (i >= sr%s_ww%ind_start) .and. (i <= sr%s_ww%ind_end) ) then
+          pot_c(i) = sum(sr%s_ww%loc_mat(i - global_index,:) * wall_curr(:))
+        end if  
+      end do
+     
+    end if
+
+    call MPI_AllREDUCE(MPI_IN_PLACE,pot_c,size(pot_c),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+
+  end subroutine reconstruct_coil_potentials
   
   
+
+
+
   
   !> Write wall current potentials to logfile.
   subroutine log_wall_curr(my_id)

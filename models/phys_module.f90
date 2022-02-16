@@ -268,7 +268,7 @@ module phys_module
 
   !> @name Shock-capturing terms
   logical :: use_sc  !< Use shock-capturing stabilization
-  real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num
+  real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num, D_perp_imp_sc_num, D_par_imp_sc_num
   real*8  :: ZK_perp_sc_num, ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num, ZK_e_perp_sc_num, ZK_e_par_sc_num
   real*8  :: visco_sc_num, visco_par_sc_num
 

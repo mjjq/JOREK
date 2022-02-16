@@ -194,7 +194,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
                 ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
-                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact
+                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact,    &
+                D_perp_imp_sc_num, D_par_imp_sc_num
       
 if (my_id .eq. 0) then
 

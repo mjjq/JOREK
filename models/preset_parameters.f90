@@ -260,6 +260,8 @@ subroutine preset_parameters
   visco_par_sc_num = 0.d0
   Dn_pol_sc_num    = 0.d0
   Dn_p_sc_num      = 0.d0
+  D_perp_imp_sc_num= 0.d0
+  D_par_imp_sc_num = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7

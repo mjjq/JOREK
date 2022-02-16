@@ -23,6 +23,7 @@ use diffusivities, only: get_dperp, get_zkperp, get_zk_iperp, get_zk_eperp
 use equil_info, only : get_psi_n
 use corr_neg
 use mod_neutral_source
+use mod_injection_source
 use mod_bootstrap_functions
 use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_impurity, only: radiation_function, radiation_function_linear

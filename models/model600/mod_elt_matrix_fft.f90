@@ -1389,52 +1389,38 @@ do i=1,n_vertex_max
             !#  Density Equation                                                                               #
             !###################################################################################################
 
-            rhs_ij(var_rho)  = v * BigR * (particle_source(ms,mt) + source_pellet)                * xjac * tstep * factor(var_rho,1) &
-                       + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep * factor(var_rho,2) &
-                       + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep * factor(var_rho,3) &
-                       - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep * factor(var_rho,6) &
-                       - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep * factor(var_rho,6) &
-                       - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep * factor(var_rho,3) &
-                       - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                    * tstep * factor(var_rho,3) &
-
-                       + v * 2.d0 * tauIC*2. * Pi0_y * BigR                                       * xjac * tstep * factor(var_rho,7) &
-
-                       + v * r0 * rn0 * BigR * Sion_T                                             * xjac * tstep * factor(var_rho,8) &
-                       - v * r0 * r0  * BigR * Srec_T                                             * xjac * tstep * factor(var_rho,9) &
-                       
-                       + zeta * v * delta_g(mp,var_rho,ms,mt) * BigR                              * xjac         * factor(var_rho,10)&
-
-                       - D_perp_num * (v_xx + v_x/Bigr + v_yy)*(r0_xx + r0_x/Bigr + r0_yy) * BigR * xjac * tstep * factor(var_rho,11)&
-
-                       - tgnum_rho * 0.25d0 * BigR**3 * (r0_x * u0_y - r0_y * u0_x)                              &
-                                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep          * factor(var_rho,12)&
-                       - tgnum_rho * 0.25d0 / BigR * vpar0**2                                                    &
-                                 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
-                                 * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep       * factor(var_rho,12)
-
-            if (with_impurities) then
-              rhs_ij(var_rho)  = rhs_ij(var_rho) + &
+            rhs_ij(var_rho)  = v * BigR * (particle_source(ms,mt) + source_pellet)                                        * xjac * tstep * factor(var_rho,1) &
+                       + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                                              * tstep * factor(var_rho,2) &
+                       + v * 2.d0 * BigR * r0 * u0_y                                                                      * xjac * tstep * factor(var_rho,3) &
                        - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
                        - ((D_par_imp+D_par_imp_sc_num*tau_sc) - D_prof_imp)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp * xjac * tstep * factor(var_rho,4) &
                        - D_prof * BigR  * (v_x*(r0_x-rimp0_x) + v_y*(r0_x-rimp0_x)                  )                     * xjac * tstep * factor(var_rho,5) &
-                       - D_prof_imp * BigR  * (v_x*rimp0_x + v_y*rimp0_y                            )                     * xjac * tstep * factor(var_rho,5) 
-            else
-              rhs_ij(var_rho)  = rhs_ij(var_rho) + &
-                       - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rho * xjac * tstep * factor(var_rho,4) &
-                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep * factor(var_rho,5) 
-            endif
+                       - D_prof_imp * BigR  * (v_x*rimp0_x + v_y*rimp0_y                            )                     * xjac * tstep * factor(var_rho,5) & 
+                       - v * F0 / BigR * Vpar0 * r0_p                                                                     * xjac * tstep * factor(var_rho,6) &
+                       - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                                               * tstep * factor(var_rho,6) &
+                       - v * F0 / BigR * r0 * vpar0_p                                                                     * xjac * tstep * factor(var_rho,3) &
+                       - v * r0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                                            * tstep * factor(var_rho,3) &
 
-            if (with_impurities) then
-              rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
-                            - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp       * xjac * tstep * factor(var_rho,4) &
+                       + v * 2.d0 * tauIC*2. * Pi0_y * BigR                                                               * xjac * tstep * factor(var_rho,7) &
+
+                       + v * r0 * rn0 * BigR * Sion_T                                                                     * xjac * tstep * factor(var_rho,8) &
+                       - v * r0 * r0  * BigR * Srec_T                                                                     * xjac * tstep * factor(var_rho,9) &
+                       
+                       + zeta * v * delta_g(mp,var_rho,ms,mt) * BigR                                                      * xjac         * factor(var_rho,10)&
+
+                       - D_perp_num * (v_xx + v_x/Bigr + v_yy)*(r0_xx + r0_x/Bigr + r0_yy) * BigR                         * xjac * tstep * factor(var_rho,11)&
+
+                       - tgnum_rho * 0.25d0 * BigR**3 * (r0_x * u0_y - r0_y * u0_x)                              &
+                                                    * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep                                  * factor(var_rho,12)&
+                       - tgnum_rho * 0.25d0 / BigR * vpar0**2                                                    &
+                                 * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
+                                 * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep                               * factor(var_rho,12)
+
+
+            rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
+                            - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp     * xjac * tstep * factor(var_rho,4) &
                             - D_prof * BigR  * (                  v_p*(r0_p-rimp0_p) /BigR**2 )     * xjac * tstep * factor(var_rho,5) &
-                            - D_prof_imp * BigR  * (                  v_p*rimp0_p /BigR**2 )        * xjac * tstep * factor(var_rho,5)
-            else
-              rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho * xjac * tstep * factor(var_rho,4) &
-                            - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep * factor(var_rho,5)
-            endif
-
-            rhs_ij_k(var_rho) = rhs_ij_k(var_rho) + &
+                            - D_prof_imp * BigR  * (                  v_p*rimp0_p /BigR**2 )        * xjac * tstep * factor(var_rho,5) &
                        - tgnum_rho * 0.25d0 / BigR * vpar0**2 &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                                  * (                            + F0 / BigR * v_p) * xjac * tstep * tstep        * factor(var_rho,12)
@@ -1734,40 +1720,40 @@ do i=1,n_vertex_max
             
             if (with_impurities) then
                
-               rhs_ij(var_rhoimp) = BigR* (- Dn0x * rn0_x * v_x - Dn0y * rn0_y * v_y)                                          * xjac * tstep &              
+               rhs_ij(var_rhoimp) = & 
                                 ! The new diffusion scheme for the impurities
-                    - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhoimp) * xjac * tstep &
+                    - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhoimp) * xjac * tstep &
                                 ! The new diffusion scheme for the impurities
-                    - D_prof_imp * BigR  * (v_x*(rn0_x) + v_y*(rn0_y)              )  * xjac * tstep &
+                    - D_prof_imp * BigR  * (v_x*(rimp0_x) + v_y*(rimp0_y)              )  * xjac * tstep &
                     
                     
-                    + v * BigR**2 * ( rn0_s * u0_t - rn0_t * u0_s)                                                    * tstep &
-                    + v * 2.d0 * BigR * rn0 * u0_y                                                             * xjac * tstep &
-                    - v * F0 / BigR * Vpar0 * rn0_p                                                            * xjac * tstep &
-                    - v * Vpar0 * (rn0_s * ps0_t - rn0_t * ps0_s)                                                     * tstep &
-                    - v * F0 / BigR * rn0 * vpar0_p                                                            * xjac * tstep &
-                    - v * rn0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                                   * tstep &
+                    + v * BigR**2 * ( rimp0_s * u0_t - rimp0_t * u0_s)                                                    * tstep &
+                    + v * 2.d0 * BigR * rimp0 * u0_y                                                             * xjac * tstep &
+                    - v * F0 / BigR * Vpar0 * rimp0_p                                                            * xjac * tstep &
+                    - v * Vpar0 * (rimp0_s * ps0_t - rimp0_t * ps0_s)                                                     * tstep &
+                    - v * F0 / BigR * rimp0 * vpar0_p                                                            * xjac * tstep &
+                    - v * rimp0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                                   * tstep &
                     
-                    - tgnum_rhoimp * 0.25d0 * BigR**3 * (rn0_x * u0_y - rn0_y * u0_x)                                              &
+                    - tgnum_rhoimp * 0.25d0 * BigR**3 * (rimp0_x * u0_y - rimp0_y * u0_x)                                              &
                     * ( v_x * u0_y - v_y * u0_x) * xjac * tstep * tstep                            &
                     - tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                                      &
-                    * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                             &
+                    * (rimp0_x * ps0_y - rimp0_y * ps0_x + F0 / BigR * rimp0_p)                                             &
                     * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep                         &
                     
                     + BigR * v * source_imp                                    * xjac * tstep                                 &
                     
-                    + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta                          &
-                    - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy) &
+                    + v * delta_g(mp,var_rhoimp,ms,mt) * BigR * xjac * zeta                       &
+                    - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rimp0_xx + rimp0_x/Bigr + rimp0_yy) &
                     * BigR * xjac * tstep
 
 
-               rhs_ij_k(var_rhoimp) =  BigR* ( - Dn0p * rn0_p * v_p /BigR**2)                             * xjac * tstep	        & 
+               rhs_ij_k(var_rhoimp) =  & 
                                 ! The new diffusion scheme for the impurities
                     - (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rhoimp)             * xjac * tstep &
-                    - D_prof_imp * BigR  * (            v_p * rn0_p /BigR**2)                             * xjac * tstep &
+                    - D_prof_imp * BigR  * (            v_p * rimp0_p /BigR**2)                             * xjac * tstep &
                     
                     - tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                                    &
-                    * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                             &
+                    * (rimp0_x * ps0_y - rimp0_y * ps0_x + F0 / BigR * rimp0_p)                                             &
                     * (                            + F0 / BigR * v_p) * xjac * tstep * tstep 
 
 
@@ -2242,10 +2228,13 @@ do i=1,n_vertex_max
                   !#  Density Equation                                                                               #
                   !###################################################################################################
 
+                  amat(var_rho,var_psi) =-((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star     * (Bgrad_rho-Bgrad_rhoimp) * xjac * theta * tstep &
+                                        + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2             * Bgrad_rho_star_psi * (Bgrad_rho-Bgrad_rhoimp) * xjac * theta * tstep &
+                                        + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2         * Bgrad_rho_star * (Bgrad_rho_psi-Bgrad_rhoimp_psi) * xjac * theta * tstep &
+                                        - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star     * Bgrad_rhoimp * xjac * theta * tstep &
+                                        + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2             * Bgrad_rho_star_psi * Bgrad_rhoimp * xjac * theta * tstep &
+                                        + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2             * Bgrad_rho_star * Bgrad_rhoimp_psi * xjac * theta * tstep
 
-                  amat(var_rho,var_psi) =-((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star     * Bgrad_rho     * xjac * theta * tstep &
-                                        + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2             * Bgrad_rho_star_psi * Bgrad_rho     * xjac * theta * tstep &
-                                        + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2             * Bgrad_rho_star     * Bgrad_rho_psi * xjac * theta * tstep &
                                         + v * Vpar0 * (r0_s * psi_t - r0_t * psi_s)                                           * theta * tstep &
                                         + v * r0 * (vpar0_s * psi_t - vpar0_t * psi_s)                                        * theta * tstep &
              
@@ -2256,9 +2245,10 @@ do i=1,n_vertex_max
                                                   * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                                                  &
                                                   * ( v_x * psi_y -  v_y * psi_x                   )                   * xjac * theta * tstep * tstep
 
-
-                  amat_k(var_rho,var_psi) =-((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_k_star * Bgrad_rho     * xjac * theta * tstep &
-                                          + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2             * Bgrad_rho_k_star * Bgrad_rho_psi * xjac * theta * tstep &
+                  amat_k(var_rho,var_psi) =-((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_k_star * (Bgrad_rho-Bgrad_rhoimp)         * xjac * theta * tstep &
+                                          + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2             * Bgrad_rho_k_star * (Bgrad_rho_psi-Bgrad_rhoimp_psi) * xjac * theta * tstep &
+                                          - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_k_star * Bgrad_rhoimp         * xjac * theta * tstep &
+                                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2             * Bgrad_rho_k_star * Bgrad_rhoimp_psi     * xjac * theta * tstep &
 
                                           + tgnum_rho * 0.25d0 / BigR * vpar0**2                                                                        &
                                                   * (r0_x * psi_y - r0_y * psi_x)                                                                     &
@@ -2344,6 +2334,28 @@ do i=1,n_vertex_max
                   if (with_neutrals) then
                     amat(var_rho,var_rhon) = - BigR * v * r0 * Sion_T * rhon            * xjac * theta * tstep
                   endif
+
+                  if (with_impurities) then
+                    amat(var_rho,var_rhoimp) = &
+                          - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp_rhoimp             * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp_rhoimp * xjac * theta * tstep &
+                          - D_prof * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y )                         * xjac * theta * tstep &
+                          + D_prof_imp * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y )                     * xjac * theta * tstep
+                    amat_k(var_rho,var_rhoimp) = &
+                          - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp             * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp * xjac * theta * tstep
+
+                    amat_n(var_rho,var_rhoimp) = &
+                          - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_star   * Bgrad_rhoimp_rhoimp_n           * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp_rhoimp_n * xjac * theta * tstep
+
+                    amat_kn(var_rho,var_rhoimp) = &
+                          - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp_n             * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp_n * xjac * theta * tstep &
+                          - D_prof * BigR  * ( v_p * rhoimp_p / BigR**2 )                   * xjac * theta * tstep &
+                          + D_prof_imp * BigR  * ( v_p * rhoimp_p / BigR**2 )               * xjac * theta * tstep
+                  endif
+
 
                   !###################################################################################################
                   !#  Parallel Velocity Equation                                                                     #
@@ -3381,34 +3393,34 @@ do i=1,n_vertex_max
                      
                      amat(var_rhoimp,var_psi) = &
                                 !New diffusion scheme for impurities
-                          - (D_par_imp-D_prof_imp) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star * (Bgrad_rhoimp)   * xjac * theta * tstep &
-                          + (D_par_imp-D_prof_imp) * BigR / BB2             * Bgrad_rho_star_psi * (Bgrad_rhoimp) * xjac * theta * tstep &
-                          + (D_par_imp-D_prof_imp) * BigR / BB2             * Bgrad_rho_star     * (Bgrad_rhoimp_psi) * xjac * theta * tstep &
+                          - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_star * (Bgrad_rhoimp)   * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2             * Bgrad_rho_star_psi * (Bgrad_rhoimp) * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2             * Bgrad_rho_star     * (Bgrad_rhoimp_psi) * xjac * theta * tstep &
                           
                           
-                          + v * Vpar0 * (rn0_s * psi_t - rn0_t * psi_s)                                      * theta * tstep &
-                          + v * rn0 * (vpar0_s * psi_t - vpar0_t * psi_s)                                    * theta * tstep &
+                          + v * Vpar0 * (rimp0_s * psi_t - rimp0_t * psi_s)                                    * theta * tstep &
+                          + v * rimp0 * (vpar0_s * psi_t - vpar0_t * psi_s)                                    * theta * tstep &
                           
                           + tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                           &
-                          * (rn0_x * psi_y - rn0_y * psi_x)                                                    &
+                          * (rimp0_x * psi_y - rimp0_y * psi_x)                                                &
                           * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * theta * tstep * tstep    &
                           + tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                           &
-                          * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                &
+                          * (rimp0_x * ps0_y - rimp0_y * ps0_x + F0 / BigR * rimp0_p)                          &
                           * ( v_x * psi_y -  v_y * psi_x                   ) * xjac * theta * tstep * tstep
 
                      amat_k(var_rhoimp,var_psi) =  &
-                          - (D_par_imp-D_prof_imp) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_k_star * (Bgrad_rhoimp) * xjac * theta * tstep &
-                          + (D_par_imp-D_prof_imp) * BigR / BB2             * Bgrad_rho_k_star * (Bgrad_rhoimp_psi) * xjac * theta * tstep &
+                          - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR * BB2_psi/ BB2**2 * Bgrad_rho_k_star * (Bgrad_rhoimp) * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2             * Bgrad_rho_k_star * (Bgrad_rhoimp_psi) * xjac * theta * tstep &
                           
                           + tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                               &
-                          * (rn0_x * psi_y - rn0_y * psi_x)                                                    &
+                          * (rimp0_x * psi_y - rimp0_y * psi_x)                                                &
                           * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-                     amat(var_rhoimp,var_u) = - v * BigR**2 * ( rn0_s * u_t - rn0_t * u_s)                                       * theta * tstep &
-                          - v * 2.d0 * BigR * rn0 * u_y                                               * xjac * theta * tstep &
-                          + tgnum_rhoimp * 0.25d0 * BigR**3 * (rn0_x * u_y  - rn0_y * u_x)                                        &
+                     amat(var_rhoimp,var_u) = - v * BigR**2 * ( rimp0_s * u_t - rimp0_t * u_s)               * theta * tstep &
+                          - v * 2.d0 * BigR * rimp0 * u_y                                             * xjac * theta * tstep &
+                          + tgnum_rhoimp * 0.25d0 * BigR**3 * (rimp0_x * u_y  - rimp0_y * u_x)                                    &
                           * ( v_x * u0_y - v_y  * u0_x) * xjac * theta * tstep * tstep     &
-                          + tgnum_rhoimp * 0.25d0 * BigR**3 * (rn0_x * u0_y - rn0_y * u0_x)                                       &
+                          + tgnum_rhoimp * 0.25d0 * BigR**3 * (rimp0_x * u0_y - rimp0_y * u0_x)                                   &
                           * ( v_x * u_y  - v_y  * u_x)  * xjac * theta * tstep * tstep 
 
                      amat(var_rhoimp,var_rho) = 0      ! amat_85 = 0 ! Place holder    
@@ -3418,61 +3430,60 @@ do i=1,n_vertex_max
                         amat(var_rhoimp,var_T) = 0
                      endif
 
-                     amat(var_rhoimp,var_vpar) = + v * F0 / BigR * Vpar * rn0_p                                             *  xjac * theta * tstep &
-                          + v * Vpar * (rn0_s * ps0_t - rn0_t * ps0_s)                                       * theta * tstep &
-                          + v * rn0 * (vpar_s * ps0_t - vpar_t * ps0_s)                                      * theta * tstep &
+                     amat(var_rhoimp,var_vpar) = + v * F0 / BigR * Vpar * rimp0_p                    *  xjac * theta * tstep &
+                          + v * Vpar * (rimp0_s * ps0_t - rimp0_t * ps0_s)                                   * theta * tstep &
+                          + v * rimp0 * (vpar_s * ps0_t - vpar_t * ps0_s)                                    * theta * tstep &
                           
                           + tgnum_rhoimp * 0.25d0 / BigR * 2.d0*vpar0*vpar                                                        &
-                          * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                   &
+                          * (rimp0_x * ps0_y - rimp0_y * ps0_x + F0 / BigR * rimp0_p)                            &
                           * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * theta * tstep * tstep 
 
                      amat_k(var_rhoimp,var_vpar) = + tgnum_rhoimp * 0.25d0 / BigR * 2.d0*vpar0*vpar                                                      &
-                          * (rn0_x * ps0_y - rn0_y * ps0_x + F0 / BigR * rn0_p)                                   &
+                          * (rimp0_x * ps0_y - rimp0_y * ps0_x + F0 / BigR * rimp0_p)                            &
                           * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
 
-                     amat_n(var_rhoimp,var_vpar) = + v * rn0 * F0 / BigR * vpar_p                         * xjac * theta * tstep 
+                     amat_n(var_rhoimp,var_vpar) = + v * rimp0 * F0 / BigR * vpar_p                   * xjac * theta * tstep 
 
-                     amat(var_rhoimp,var_rhoimp)  = + v * rhon * BigR * xjac * (1.d0 + zeta)                                                          &
-                          - v * BigR**2 * ( rhon_s * u0_t - rhon_t * u0_s)                                  * theta * tstep &
-                          - v * 2.d0 * BigR * rhon * u0_y                                            * xjac * theta * tstep &
-                          + v * Vpar0 * (rhon_s * ps0_t - rhon_t * ps0_s)                                   * theta * tstep &
-                          + v * rhon * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                  * theta * tstep &
-                          + v * F0 / BigR * rhon * vpar0_p                                           * xjac * theta * tstep &
+                     amat(var_rhoimp,var_rhoimp)  = + v * rhoimp * BigR * xjac * (1.d0 + zeta)                                                          &
+                          - v * BigR**2 * ( rhoimp_s * u0_t - rhoimp_t * u0_s)                                  * theta * tstep &
+                          - v * 2.d0 * BigR * rhoimp * u0_y                                            * xjac * theta * tstep &
+                          + v * Vpar0 * (rhoimp_s * ps0_t - rhoimp_t * ps0_s)                                   * theta * tstep &
+                          + v * rhoimp * (vpar0_s * ps0_t - vpar0_t * ps0_s)                                  * theta * tstep &
+                          + v * F0 / BigR * rhoimp * vpar0_p                                           * xjac * theta * tstep &
                                 ! New diffusion scheme for impurities
-                          + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp_rhoimp  * xjac * theta * tstep &
-                          + D_prof_imp * BigR  * (v_x*rhon_x + v_y*rhon_y ) * xjac * theta * tstep &
-                          + tgnum_rhoimp * 0.25d0 * BigR**3 * (rhon_x * u0_y - rhon_y * u0_x)                                    &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp_rhoimp  * xjac * theta * tstep &
+                          + D_prof_imp * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y ) * xjac * theta * tstep &
+                          + tgnum_rhoimp * 0.25d0 * BigR**3 * (rhoimp_x * u0_y - rhoimp_y * u0_x)                                    &
                           * ( v_x  * u0_y - v_y   * u0_x) * xjac * theta * tstep * tstep      &
                           
                           + tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                              &
-                          * (rhon_x * ps0_y - rhon_y * ps0_x )                                                   &
+                          * (rhoimp_x * ps0_y - rhoimp_y * ps0_x )                                                   &
                           * ( v_x * ps0_y -  v_y * ps0_x   ) * xjac * theta * tstep * tstep                      &
-                          + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                        * xjac * theta * tstep  &
-                          + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy)  * BigR * xjac * theta * tstep 
+                          + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhoimp_xx + rhoimp_x/BigR + rhoimp_yy)  * BigR * xjac * theta * tstep 
 
 
                      amat_k(var_rhoimp,var_rhoimp) = &
                                 ! New diffusion scheme for impurities
-                          + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp   * xjac * theta * tstep &
                           
                           + tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                             &
-                          * (rhon_x * ps0_y - rhon_y * ps0_x                  )                                  &
+                          * (rhoimp_x * ps0_y - rhoimp_y * ps0_x                  )                                  &
                           * (                              + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
-                     amat_n(var_rhoimp,var_rhoimp) = + v * F0 / BigR * Vpar0 * rhon_p                      * xjac * theta * tstep                     &
+                     amat_n(var_rhoimp,var_rhoimp) = + v * F0 / BigR * Vpar0 * rhoimp_p                      * xjac * theta * tstep                     &
                                 ! New diffusion scheme for impurities
-                          + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_star   * Bgrad_rhoimp_rhoimp_n     * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_star   * Bgrad_rhoimp_rhoimp_n * xjac * theta * tstep &
                           + tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                             &
-                          * (                              + F0 / BigR * rhon_p)                                 &
+                          * (                              + F0 / BigR * rhoimp_p)                                 &
                           * ( v_x * ps0_y -  v_y * ps0_x                      ) * xjac * theta * tstep * tstep
 
 
-                     amat_kn(var_rhoimp,var_rhoimp) = + Dn0p * rhon_p * v_p/BigR * xjac * theta * tstep                                    &
+                     amat_kn(var_rhoimp,var_rhoimp) = &
                                 ! New diffusion scheme for impurities
-                          + (D_par_imp-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp_n     * xjac * theta * tstep &
-                          + D_prof_imp * BigR  * ( v_p*rhon_p /BigR**2 )         * xjac * theta * tstep &
+                          + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp_n * xjac * theta * tstep &
+                          + D_prof_imp * BigR  * ( v_p*rhoimp_p /BigR**2 )         * xjac * theta * tstep &
                           + tgnum_rhoimp * 0.25d0 / BigR * vpar0**2                                                            &
-                          * ( + F0 / BigR * rhon_p)                                                              &
+                          * ( + F0 / BigR * rhoimp_p)                                                              &
                           * ( + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
                   endif

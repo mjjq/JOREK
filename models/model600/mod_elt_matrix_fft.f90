@@ -1269,14 +1269,14 @@ do i=1,n_vertex_max
           endif
       
           !-----------------------------------------------------------------
-          ! --- Radiation from background impurity, using ADAS (by default)
+          ! --- Construction of radiative terms, using ADAS (by default)
           !-----------------------------------------------------------------
 
           call construct_radiation_parameters()
 
-         ! For shock capturing stabilization
-         tau_sc = 0.d0
-         if (use_sc) call calculate_sc_quantities()
+          ! For shock capturing stabilization
+          tau_sc = 0.d0
+          if (use_sc) call calculate_sc_quantities()
 
 !--------------------------------------------------------
 

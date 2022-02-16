@@ -1,10 +1,11 @@
 !> Functionality for improving numerical stability at the grid center.
 !! - Switched on by the logical namelist parameter treat_axis.
 !! - When used, the dofs of all axis nodes are replaced by the following:
-!! 1: value
-!! 2: d/dR
-!! 3: d^2/dRdZ (actually not used!)
-!! 4: d/dZ
+!!   1: value
+!!   2: d/dR
+!!   3: d^2/dRdZ (actually not used!)
+!!   4: d/dZ
+!! - For further details, refer to the JOREK wiki at https://www.jorek.eu/wiki/doku.php?id=grid-axis
 module mod_axis_treatment
 
 contains

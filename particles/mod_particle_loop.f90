@@ -103,7 +103,6 @@ endif
 #else
    !$omp parallel do default(none) &
    !$omp shared(sim, particles, n_steps, timesteps, rng, particle_start_time, &
-#endif
    !$omp        rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm, &
    !$omp        use_cx, use_ionisation, use_sputtering, use_ncs, use_ccs, use_pcs, &
    !$omp        jorek_feedback, CENTRAL_DENSITY, CENTRAL_MASS) &

@@ -717,35 +717,6 @@ do i=1,n_vertex_max
           rimp0_x_hat = 2.d0 * BigR * BigR_x  * rimp0 + BigR**2 * rimp0_x                             
           rimp0_y_hat = BigR**2 * rimp0_y                                                            
 
-          if (.not. with_impurities) then
-            Pi0    = r0    * Ti0
-            Pi0_x  = r0_x  * Ti0 + r0 * Ti0_x
-            Pi0_y  = r0_y  * Ti0 + r0 * Ti0_y
-            Pi0_s  = r0_s  * Ti0 + r0 * Ti0_s
-            Pi0_t  = r0_t  * Ti0 + r0 * Ti0_t
-            Pi0_p  = r0_p  * Ti0 + r0 * Ti0_p
-            Pi0_ss = r0_ss * Ti0 + 2.d0 * r0_s * Ti0_s + r0 * Ti0_ss
-            Pi0_tt = r0_tt * Ti0 + 2.d0 * r0_t * Ti0_t + r0 * Ti0_tt
-            Pi0_st = r0_st * Ti0 + r0_s * Ti0_t + r0_t * Ti0_s + r0 * Ti0_st
-  
-            Pe0    = r0    * Te0
-            Pe0_x  = r0_x  * Te0 + r0 * Te0_x
-            Pe0_y  = r0_y  * Te0 + r0 * Te0_y
-            Pe0_s  = r0_s  * Te0 + r0 * Te0_s
-            Pe0_t  = r0_t  * Te0 + r0 * Te0_t
-            Pe0_p  = r0_p  * Te0 + r0 * Te0_p
-            Pe0_ss = r0_ss * Te0 + 2.d0 * r0_s * Te0_s + r0 * Te0_ss
-            Pe0_tt = r0_tt * Te0 + 2.d0 * r0_t * Te0_t + r0 * Te0_tt
-            Pe0_st = r0_st * Te0 + r0_s * Te0_t + r0_t * Te0_s + r0 * Te0_st
-  
-            P0     = Pi0   + Pe0
-            P0_s   = Pi0_s + Pe0_s
-            P0_t   = Pi0_t + Pe0_t
-            P0_p   = Pi0_p + Pe0_p
-            P0_x   = Pi0_x + Pe0_x
-            P0_y   = Pi0_y + Pe0_y
-          endif
-
           ps0_xx = (ps0_ss * y_t(ms,mt)**2 - 2.d0*ps0_st * y_s(ms,mt)*y_t(ms,mt) + ps0_tt * y_s(ms,mt)**2 &
                   + ps0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
                   + ps0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2             &
@@ -857,16 +828,6 @@ do i=1,n_vertex_max
                       - vpar0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                             &
                       - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               &
                       - xjac_x * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) )   / xjac**2
-
-          if (.not. with_impurities) then
-            Pi0_xx = r0_xx * Ti0 + 2.d0 * r0_x * Ti0_x + r0 * Ti0_xx
-            Pi0_yy = r0_yy * Ti0 + 2.d0 * r0_y * Ti0_y + r0 * Ti0_yy
-            Pi0_xy = r0_xy * Ti0 + r0_x * Ti0_y + r0_y * Ti0_x + r0 * Ti0_xy
-  
-            Pe0_xx = r0_xx * Te0 + 2.d0 * r0_x * Te0_x + r0 * Te0_xx
-            Pe0_yy = r0_yy * Te0 + 2.d0 * r0_y * Te0_y + r0 * Te0_yy
-            Pe0_xy = r0_xy * Te0 + r0_x * Te0_y + r0_y * Te0_x + r0 * Te0_xy
-          endif
 
           Ti0_ps0_x = Ti0_xx * ps0_y - Ti0_xy * ps0_x + Ti0_x * ps0_xy - Ti0_y * ps0_xx
           Ti0_ps0_y = Ti0_xy * ps0_y - Ti0_yy * ps0_x + Ti0_x * ps0_yy - Ti0_y * ps0_xy
@@ -4540,6 +4501,9 @@ subroutine construct_pressure()
      Pi0_ss = r0_ss * Ti0 + 2.d0 * r0_s * Ti0_s + r0 * Ti0_ss
      Pi0_tt = r0_tt * Ti0 + 2.d0 * r0_t * Ti0_t + r0 * Ti0_tt
      Pi0_st = r0_st * Ti0 + r0_s * Ti0_t + r0_t * Ti0_s + r0 * Ti0_st
+     Pi0_xx = r0_xx * Ti0 + 2.d0 * r0_x * Ti0_x + r0 * Ti0_xx
+     Pi0_yy = r0_yy * Ti0 + 2.d0 * r0_y * Ti0_y + r0 * Ti0_yy
+     Pi0_xy = r0_xy * Ti0 + r0_x * Ti0_y + r0_y * Ti0_x + r0 * Ti0_xy
 
      Pe0    = r0    * Te0
      Pe0_x  = r0_x  * Te0 + r0 * Te0_x
@@ -4550,6 +4514,10 @@ subroutine construct_pressure()
      Pe0_ss = r0_ss * Te0 + 2.d0 * r0_s * Te0_s + r0 * Te0_ss
      Pe0_tt = r0_tt * Te0 + 2.d0 * r0_t * Te0_t + r0 * Te0_tt
      Pe0_st = r0_st * Te0 + r0_s * Te0_t + r0_t * Te0_s + r0 * Te0_st
+     Pe0_xx = r0_xx * Te0 + 2.d0 * r0_x * Te0_x + r0 * Te0_xx
+     Pe0_yy = r0_yy * Te0 + 2.d0 * r0_y * Te0_y + r0 * Te0_yy
+     Pe0_xy = r0_xy * Te0 + r0_x * Te0_y + r0_y * Te0_x + r0 * Te0_xy
+
 
      P0     = Pi0 + Pe0
      P0_x   = Pi0_x + Pe0_x

@@ -1392,10 +1392,6 @@ do i=1,n_vertex_max
             rhs_ij(var_rho)  = v * BigR * (particle_source(ms,mt) + source_pellet)                * xjac * tstep * factor(var_rho,1) &
                        + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                      * tstep * factor(var_rho,2) &
                        + v * 2.d0 * BigR * r0 * u0_y                                              * xjac * tstep * factor(var_rho,3) &
-
-                       - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rho * xjac * tstep * factor(var_rho,4) &
-                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep * factor(var_rho,5) &
-
                        - v * F0 / BigR * Vpar0 * r0_p                                             * xjac * tstep * factor(var_rho,6) &
                        - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                       * tstep * factor(var_rho,6) &
                        - v * F0 / BigR * r0 * vpar0_p                                             * xjac * tstep * factor(var_rho,3) &
@@ -1416,9 +1412,29 @@ do i=1,n_vertex_max
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                                  * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep       * factor(var_rho,12)
 
-            rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho * xjac * tstep * factor(var_rho,4) &
-                          - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep * factor(var_rho,5) &
+            if (with_impurities) then
+              rhs_ij(var_rho)  = rhs_ij(var_rho) + &
+                       - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
+                       - ((D_par_imp+D_par_imp_sc_num*tau_sc) - D_prof_imp)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp * xjac * tstep * factor(var_rho,4) &
+                       - D_prof * BigR  * (v_x*(r0_x-rimp0_x) + v_y*(r0_x-rimp0_x)                  )                     * xjac * tstep * factor(var_rho,5) &
+                       - D_prof_imp * BigR  * (v_x*rimp0_x + v_y*rimp0_y                            )                     * xjac * tstep * factor(var_rho,5) 
+            else
+              rhs_ij(var_rho)  = rhs_ij(var_rho) + &
+                       - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rho * xjac * tstep * factor(var_rho,4) &
+                       - D_prof * BigR  * (v_x*r0_x + v_y*r0_y                                  ) * xjac * tstep * factor(var_rho,5) 
+            endif
 
+            if (with_impurities) then
+              rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
+                            - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp       * xjac * tstep * factor(var_rho,4) &
+                            - D_prof * BigR  * (                  v_p*(r0_p-rimp0_p) /BigR**2 )     * xjac * tstep * factor(var_rho,5) &
+                            - D_prof_imp * BigR  * (                  v_p*rimp0_p /BigR**2 )        * xjac * tstep * factor(var_rho,5)
+            else
+              rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho * xjac * tstep * factor(var_rho,4) &
+                            - D_prof * BigR  * (                  v_p*r0_p /BigR**2 )               * xjac * tstep * factor(var_rho,5)
+            endif
+
+            rhs_ij_k(var_rho) = rhs_ij_k(var_rho) + &
                        - tgnum_rho * 0.25d0 / BigR * vpar0**2 &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                                  * (                            + F0 / BigR * v_p) * xjac * tstep * tstep        * factor(var_rho,12)
@@ -3975,6 +3991,7 @@ endif
 ! Updates in the physical diffsivities to locally add numerical stabilization.
 visco_T = visco_T + visco_sc_num  * tau_sc
 D_prof  = D_prof  + D_perp_sc_num * tau_sc
+D_prof_imp  = D_prof_imp  + D_perp_imp_sc_num * tau_sc
 if ( with_TiTe ) then
   ZKi_prof  = ZKi_prof  + ZK_i_perp_sc_num * tau_sc
   ZKi_par_T = ZKi_par_T + ZK_i_par_sc_num  * tau_sc

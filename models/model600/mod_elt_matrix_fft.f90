@@ -4626,10 +4626,6 @@ subroutine construct_radiation_parameters()
 
     end if
 
-    if (with_TiTe) then            
-      dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
-    endif
-
   end if
   
   if (with_impurities) then
@@ -4699,10 +4695,6 @@ subroutine construct_radiation_parameters()
       dfrad_bg_dT =  dfrad_bg_dT + r_imp_bg * dLrad_imp_bg_dT
 
     end do
-
-    if (with_TiTe) then            
-      dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
-    endif
 
   end if
 end subroutine construct_radiation_parameters

@@ -203,6 +203,9 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) index_start
   read(21) t_start
   
+  ! Status of the axis treatment
+  read(21) treat_axis
+ 
   write(*,*) 'CHECK (1): allocating energies in import_restart : ',index_start,index_start+nstep
 
   if (index_start .ge. 1) then
@@ -848,7 +851,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:), new_mode(:)
   real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
-  character*50         :: version_control, version_control_tmp
+  character*50         :: version_control, version_control_tmp, t_treat_axis
   logical              :: kept, modes_changed, import_3xx_4xx
   
 #ifdef USE_HDF5
@@ -1176,7 +1179,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     element_list%element(i)%contain_node = t_contain_node(i,:)
     element_list%element(i)%nref	 = t_nref(i)
   end do
- 
+   
   call HDF5_real_reading(file_id,tstep,'tstep')
   call HDF5_real_reading(file_id,eta_rst,'eta')
   call HDF5_real_reading(file_id,visco_rst,'visco')
@@ -1828,6 +1831,14 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     end if
   end if
 
+  ! Status of the axis treatment
+  call HDF5_char_reading(file_id,t_treat_axis,"treat_axis")
+  if (trim(t_treat_axis) .eq. 'T') then
+    treat_axis = .true.
+  else
+    treat_axis = .false.
+  endif
+  
   call HDF5_close(file_id)
  
   write(*,*) '************* restart ******************'

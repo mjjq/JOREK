@@ -177,7 +177,9 @@ program JOREK2
 
   integer :: nsolvers=0
   logical :: solvers(4), solvers_eq(3)
- 
+
+  logical :: input_treat_axis
+  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -472,6 +474,8 @@ required = 0
   !*                  read restart file                                  *
   !***********************************************************************
   
+  input_treat_axis = treat_axis   ! store the value from the input file
+
   if ( restart .and. (my_id == 0) ) then
     
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
@@ -483,6 +487,15 @@ required = 0
     else
       tstep_prev = xtime(index_start) - xtime(index_start-1)
     end if
+
+    ! check consistency for axis treatment with restart file
+    if (input_treat_axis .neqv. treat_axis) then
+      write(*,*) 'WARNING: Axis treatments set via input file is not the same as that in the restart file.'
+      write(*,*) 'You are trying to restart the simulation with treat_axis = ', input_treat_axis
+      write(*,*) 'Earlier treat_axis was set to = ', treat_axis
+      write(*,*) 'STOP' 
+      stop      
+    endif
 
     ! --- Write live data for previous time-steps
     if ( .not. bench_without_plot ) then

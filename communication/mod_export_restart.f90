@@ -101,6 +101,9 @@ subroutine export_binary_restart(node_list,element_list,filename)
   write(21) index_now
   write(21) t_now
 
+  ! save axis treatment
+  write(21) treat_axis
+  
   if (index_now .gt. 0) then
      write(21) xtime(1:index_now)
      write(21) energies(:,:,1:index_now)
@@ -297,6 +300,9 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   integer,     allocatable :: t_contain_node(:,:)          ! 5
   integer,     allocatable :: t_nref(:)
 
+  ! for axis treatment setting
+  character(len=50)        :: t_treat_axis
+  
   ! local variables
   real*8, allocatable :: spi_R_arr (:)
   real*8, allocatable :: spi_Z_arr (:)
@@ -534,6 +540,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
        element_list%n_elements,5,'contain_node'//char(0))
   call HDF5_array1D_saving_int(file_id,t_nref, &
        element_list%n_elements,'nref'//char(0))
+
   call HDF5_real_saving(file_id,tstep,'tstep'//char(0))
   call HDF5_real_saving(file_id,eta,'eta'//char(0))
   call HDF5_real_saving(file_id,visco,'visco'//char(0))
@@ -752,6 +759,12 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     call HDF5_integer_saving(file_id,n_spi_tot,"n_spi_tot"//char(0))
   end if
 
+  ! -> Save status of the axis treatment
+  t_treat_axis = 'F'
+  if(treat_axis) t_treat_axis = 'T'
+  write(t_treat_axis,'(A)') trim(adjustl(t_treat_axis))
+  call HDF5_char_saving(file_id,t_treat_axis,"treat_axis"//char(0))
+  
   ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
 

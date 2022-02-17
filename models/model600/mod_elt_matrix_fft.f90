@@ -829,6 +829,7 @@ do i=1,n_vertex_max
                       - vpar0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2               &
                       - xjac_x * (- vpar0_s * x_t(ms,mt) + vpar0_t * x_s(ms,mt) )   / xjac**2
 
+
           Ti0_ps0_x = Ti0_xx * ps0_y - Ti0_xy * ps0_x + Ti0_x * ps0_xy - Ti0_y * ps0_xx
           Ti0_ps0_y = Ti0_xy * ps0_y - Ti0_yy * ps0_x + Ti0_x * ps0_yy - Ti0_y * ps0_xy
           Te0_ps0_x = Te0_xx * ps0_y - Te0_xy * ps0_x + Te0_x * ps0_xy - Te0_y * ps0_xx
@@ -888,11 +889,10 @@ do i=1,n_vertex_max
               ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
               dZKe_par_dT = 0.d0
             endif
-           
             ! --- Impurity atomic parameters
 
             if (with_impurities) call construct_imp_charge_states()
-               
+                          
             ! --- Ion-electron energy transfer
             if (thermalization) then
               ! Te in eV:
@@ -909,7 +909,6 @@ do i=1,n_vertex_max
             endif
 
             call construct_pressure()
- 
             ! ---Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = Te0
             T_or_Te_corr     = Te0_corr
@@ -938,7 +937,7 @@ do i=1,n_vertex_max
             if (with_impurities) call construct_imp_charge_states()
                
             call construct_pressure()
-            
+           
             ! --- Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = T0
             T_or_Te_corr     = T0_corr
@@ -1104,6 +1103,12 @@ do i=1,n_vertex_max
 
 
           D_prof   = get_dperp (psi_norm)
+          if (with_impurities) then
+            D_prof_imp = 0.  ! NEEEEEEEEEDS TO BE CHAAAAAAANGEDDDD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          else
+            D_prof_imp = 0.
+          endif
+
           if ( with_TiTe ) then
             ZKi_prof = get_zk_iperp(psi_norm)
             ZKe_prof = get_zk_eperp(psi_norm)
@@ -1114,8 +1119,8 @@ do i=1,n_vertex_max
           ! --- Increase diffusivity if very small density/temperature
           if (r0 .lt. D_prof_neg_thresh)  then
             D_prof  = D_prof_neg
-            D_par   = D_prof_neg
             if (with_impurities) then
+              D_par      = D_prof_neg  ! --- out of with_impurities? put here due to backward compatibility
               D_prof_imp = D_prof_neg
               D_par_imp  = D_prof_neg
             endif
@@ -1394,7 +1399,7 @@ do i=1,n_vertex_max
                        + v * 2.d0 * BigR * r0 * u0_y                                                                      * xjac * tstep * factor(var_rho,3) &
                        - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
                        - ((D_par_imp+D_par_imp_sc_num*tau_sc) - D_prof_imp)  * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp * xjac * tstep * factor(var_rho,4) &
-                       - D_prof * BigR  * (v_x*(r0_x-rimp0_x) + v_y*(r0_x-rimp0_x)                  )                     * xjac * tstep * factor(var_rho,5) &
+                       - D_prof * BigR  * (v_x*(r0_x-rimp0_x) + v_y*(r0_y-rimp0_x)                  )                     * xjac * tstep * factor(var_rho,5) &
                        - D_prof_imp * BigR  * (v_x*rimp0_x + v_y*rimp0_y                            )                     * xjac * tstep * factor(var_rho,5) & 
                        - v * F0 / BigR * Vpar0 * r0_p                                                                     * xjac * tstep * factor(var_rho,6) &
                        - v * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                                                               * tstep * factor(var_rho,6) &
@@ -1415,7 +1420,6 @@ do i=1,n_vertex_max
                        - tgnum_rho * 0.25d0 / BigR * vpar0**2                                                    &
                                  * (r0_x * ps0_y - r0_y * ps0_x + F0 / BigR * r0_p)                              &
                                  * ( v_x * ps0_y -  v_y * ps0_x                   ) * xjac * tstep * tstep                               * factor(var_rho,12)
-
 
             rhs_ij_k(var_rho) = - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
                             - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp     * xjac * tstep * factor(var_rho,4) &
@@ -4568,62 +4572,59 @@ subroutine construct_radiation_parameters()
 
   implicit none
 
-  if (with_neutrals) then
-
-    ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-    if (with_TiTe) then 
-      Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-      Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-    else
-      Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-      Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-    endif
-    if (use_imp_adas) then  ! use open adas by default
-      frad_bg = 0. 
-      dfrad_bg_dT = 0.
-      do i_imp =1, n_adas
-        if (i_imp == index_main_imp) cycle
-        r_imp_bg = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
-        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp_bg > 0) then
-          Lrad_imp_bg = 0.0
-          dLrad_imp_bg_dT = 0.0
-          call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
-                                         log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp_bg,dLrad_imp_bg_dT)
-          dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT            
-        else     
-          Lrad_imp_bg = 0.
-          dLrad_imp_bg_dT = 0.
-        end if
-        if (dLrad_imp_bg_dT/=dLrad_imp_bg_dT) then
-          write(*,*) "WARNING: dLrad_imp_bg_dT ", dLrad_imp_bg_dT
-          stop
-        end if
-
-        frad_bg = frad_bg + r_imp_bg * Lrad_imp_bg
-        dfrad_bg_dT =  dfrad_bg_dT + r_imp_bg * dLrad_imp_bg_dT 
-
-      end do
-
-    else 
-
-      if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
-        Arad_bg = 2.4d-31
-        Brad_bg = 20.
-        Crad_bg = 0.8
-    
-        frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
-                      *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
-    
-        dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
-                      *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
-      else
-        write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
+  ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+  if (with_TiTe) then 
+    Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+    Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+  else
+    Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+    Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+  endif
+  if (use_imp_adas) then  ! use open adas by default
+    frad_bg = 0. 
+    dfrad_bg_dT = 0.
+    do i_imp =1, n_adas
+      if (i_imp == index_main_imp) cycle
+      r_imp_bg = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
+      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp_bg > 0) then
+        Lrad_imp_bg = 0.0
+        dLrad_imp_bg_dT = 0.0
+        call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
+                                       log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp_bg,dLrad_imp_bg_dT)
+        dLrad_imp_bg_dT = dLrad_imp_bg_dT * dT0_corr_dT            
+      else     
+        Lrad_imp_bg = 0.
+        dLrad_imp_bg_dT = 0.
+      end if
+      if (dLrad_imp_bg_dT/=dLrad_imp_bg_dT) then
+        write(*,*) "WARNING: dLrad_imp_bg_dT ", dLrad_imp_bg_dT
         stop
-      end if 
+      end if
 
-    end if
+      frad_bg = frad_bg + r_imp_bg * Lrad_imp_bg
+      dfrad_bg_dT =  dfrad_bg_dT + r_imp_bg * dLrad_imp_bg_dT 
+
+    end do
+
+  else 
+
+    if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
+      Arad_bg = 2.4d-31
+      Brad_bg = 20.
+      Crad_bg = 0.8
+    
+      frad_bg     = (2./3.)*(1./(central_mass*MASS_PROTON))*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(1.5d0))            &
+                    *nimp_bg(1)*Arad_bg*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+    
+      dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
+                    *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
+    else
+      write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
+      stop
+    end if 
 
   end if
+
   
   if (with_impurities) then
      

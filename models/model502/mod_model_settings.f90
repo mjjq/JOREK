@@ -42,6 +42,7 @@ module mod_model_settings
   integer, parameter :: var_jec  = 0                       ! place of variable ECCD current                (jec)
   integer, parameter :: var_jec1 = 0                       ! place of variable ECCD current #1             (jec1)
   integer, parameter :: var_jec2 = 0                       ! place of variable ECCD current #2             (jec2)
+  integer, parameter :: var_rhoimp = 0                     ! place of variable for impurity density        (rhoimp)
 
 !  integer, parameter :: n_var          = 9         !< number of variables
 !  integer, parameter :: n_dim          = 2         !< number of dimensions

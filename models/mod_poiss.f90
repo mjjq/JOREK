@@ -348,8 +348,8 @@ elseif (itype .ne. 710) then        ! apply fixed boundary conditions
       if (node_list%node(i)%axis_node) then
       
         if (treat_axis) then
-          ! penalize 3rd DoF to enforce C0 continuity at the grid center        
-          index_i = node_list%node(i)%index(3)  ! base index in the main matrix
+          ! penalize 4th DoF to enforce C0 continuity at the grid center        
+          index_i = node_list%node(i)%index(4)  ! base index in the main matrix
           mumps_par%irn(ilarge+1) = index_i
           mumps_par%jcn(ilarge+1) = index_i
           mumps_par%A(ilarge+1)   = zbig

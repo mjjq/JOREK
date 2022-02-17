@@ -38,8 +38,9 @@ do iv = 1, n_vertex_max
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
     Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
+    Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
     Ptrans(dof3,dof3) = 0.d0
-    Ptrans(dof4,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof4,dof4) = nodes(iv)%x(1,dof4,2)
+    Ptrans(dof4,dof4) = 0.d0
   endif
 
   ! Extract RHS associated with a vertex iv: rhs_iv
@@ -65,9 +66,10 @@ do iv = 1, n_vertex_max
 
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
-      Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof4) = nodes(jv)%x(1,dof2,2)
+      Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
+      Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
       Pmat(dof3,dof3)  = 0.d0
-      Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof4) = nodes(jv)%x(1,dof4,2)
+      Pmat(dof4,dof4)  = 0.d0
     endif
 
     ! Extract ELM associated with a vertex iv and jv: elm_iv_jv
@@ -127,8 +129,9 @@ do iv = 1, n_vertex_max
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
     Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
-    Ptrans(dof3,dof3) = 0.d0    
-    Ptrans(dof4,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof4,dof4) = nodes(iv)%x(1,dof4,2)
+    Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
+    Ptrans(dof3,dof3) = 0.d0
+    Ptrans(dof4,dof4) = 0.d0
   endif
 
   do ivar = 1, n_v
@@ -158,9 +161,10 @@ do iv = 1, n_vertex_max
 
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
-      Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof4) = nodes(jv)%x(1,dof2,2)
-      Pmat(dof3,dof3)  = 0.d0      
-      Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof4) = nodes(jv)%x(1,dof4,2)
+      Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
+      Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
+      Pmat(dof3,dof3)  = 0.d0
+      Pmat(dof4,dof4)  = 0.d0
     endif
 
     ! Extract ELM associated with a vertex iv and jv: elm_iv_jv
@@ -224,24 +228,24 @@ do vg = 1, node_list%n_nodes
 #if fullmhd    
       if(i_v(ivar) == 710)then
         vec(1) = node_list%node(vg)%Fprof_eq(dof2)
-        vec(2) = node_list%node(vg)%Fprof_eq(dof4)
+        vec(2) = node_list%node(vg)%Fprof_eq(dof3)
         vec    = matmul(Pmat, vec)
         node_list%node(vg)%Fprof_eq(dof2) = vec(1)
-        node_list%node(vg)%Fprof_eq(dof4) = vec(2)
+        node_list%node(vg)%Fprof_eq(dof3) = vec(2)
       endif
 #endif    
       do in = 1, n_harm
         vec(1) = node_list%node(vg)%values(i_n(in),dof2,i_v(ivar))
-        vec(2) = node_list%node(vg)%values(i_n(in),dof4,i_v(ivar))
+        vec(2) = node_list%node(vg)%values(i_n(in),dof3,i_v(ivar))
         vec    = matmul(Pmat, vec)
         node_list%node(vg)%values(i_n(in),dof2,i_v(ivar)) = vec(1)
-        node_list%node(vg)%values(i_n(in),dof4,i_v(ivar)) = vec(2)
+        node_list%node(vg)%values(i_n(in),dof3,i_v(ivar)) = vec(2)
 
         vec(1) = node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar))
-        vec(2) = node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar))
+        vec(2) = node_list%node(vg)%deltas(i_n(in),dof3,i_v(ivar))
         vec    = matmul(Pmat, vec)
         node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar)) = vec(1)
-        node_list%node(vg)%deltas(i_n(in),dof4,i_v(ivar)) = vec(2)
+        node_list%node(vg)%deltas(i_n(in),dof3,i_v(ivar)) = vec(2)
       enddo
     enddo
 

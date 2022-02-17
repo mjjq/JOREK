@@ -26,10 +26,7 @@ integer, dimension(n_vertex_max)  :: Pr
 integer, dimension(2)    :: parent
 integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
-
-! Since the axis treatment solves for new degrees of freedom, we need to 
-! transform the degrees of freedom back to the original ones
-if(treat_axis) call new_to_old_dofs_on_the_axis(node_list, RHS)
+integer :: i_v(n_var), i_harm(n_tor)
 
 i_tor_min = 1
 if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
@@ -298,6 +295,18 @@ if (my_id .eq. 0) then
  endif
   
 enddo !(i)
+
+! Since the axis treatment solves for the new degrees of freedom, we need to
+! transform the degrees of freedom back to the original ones
+if(treat_axis) then
+  do i = 1, n_var
+    i_v(i) = i
+  enddo
+  do i = i_tor_min, n_tor
+    i_harm(i) = i
+  enddo
+  call new_to_old_dofs_on_the_axis(node_list, i_v, n_var, i_harm(i_tor_min:n_tor), n_tor-i_tor_min+1)
+endif
 
 endif
 

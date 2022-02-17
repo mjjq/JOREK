@@ -80,7 +80,6 @@ character*8 :: type
 integer(kind=int_all), parameter   :: Int0=0
 integer(kind=int_all), parameter   :: Int1=1
 
-
 if (my_id == 0) then
   write(*,*) '**************************************'
   write(*,*) '*            Poisson                 *'
@@ -566,10 +565,6 @@ if (my_id == 0) then
   call tr_debug_write("mumps_par%N",int(mumps_par%N))
   call tr_debug_write("mumps_par%NZ",int(mumps_par%NZ))
   
-  ! Since the axis treatment solves for new degrees of freedom, we need to
-  ! transforms degrees of freedom to old ones.
-  if(treat_axis) call new_to_old_dofs_poisson_on_the_axis(node_list, mumps_par%RHS)
- 
   do i=1,node_list%n_nodes
   
     if ((.not. refinement) .or. (refinement .and. (.not. node_list%node(i)%constrained)) ) then
@@ -598,6 +593,9 @@ if (my_id == 0) then
       enddo    ! order
     endif      ! refinement, constrained
   enddo        ! nodes
+  ! Since the axis treatment solves for new degrees of freedom, we need to
+  ! transforms degrees of freedom to old ones.
+  if(treat_axis) call new_to_old_dofs_on_the_axis(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1)
   
   !*************************************************************************
   ! Solutions at constrained nodes                                         *

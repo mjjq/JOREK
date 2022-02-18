@@ -2856,13 +2856,16 @@ do i=1,n_vertex_max
                                 + (ZKi_par_T-ZKi_prof) * BigR / BB2              * Bgrad_T_star_psi * Bgrad_Ti     * xjac * theta * tstep &
                                 + (ZKi_par_T-ZKi_prof) * BigR / BB2              * Bgrad_T_star     * Bgrad_Ti_psi * xjac * theta * tstep &
   
-                              + v * r0  * Vpar0 * (Ti0_s * psi_t - Ti0_t * psi_s)                                   * theta * tstep &
+                              + v * (r0 + rimp0*alpha_i) * Vpar0 * (Ti0_s * psi_t - Ti0_t * psi_s)                  * theta * tstep &
                               + v * Ti0 * Vpar0 * (r0_s * psi_t - r0_t * psi_s)                                     * theta * tstep &
-                              + v * r0  * GAMMA * Ti0 * (vpar0_s * psi_t - vpar0_t * psi_s)                         * theta * tstep &
+                              + v * Ti0 * Vpar0 * alpha_i * (rimp0_s * psi_t - rimp0_t * psi_s)                     * theta * tstep &
+                              + v * (r0+rimp0*alpha_i) * GAMMA * Ti0 * (vpar0_s * psi_t - vpar0_t * psi_s)          * theta * tstep &
   
                               !===================== Additional terms from friction terms============
                               - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)&
-                                  * (r0*rn0*Sion_T)                                                    * xjac * theta * tstep &
+                                  * ((r0+alpha_e*rimp0)*rn0*Sion_T)                                          * xjac * theta * tstep &
+                              - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)&
+                                  * (source_bg + source_imp)                                                 * xjac * theta * tstep &
                               !==============================End of friction terms=================
  
                            + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                         &
@@ -2889,13 +2892,16 @@ do i=1,n_vertex_max
                                     * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep
   
   
-                    amat(var_Ti,var_u) = - v * r0 * BigR**2  * ( Ti0_x * u_y - Ti0_y * u_x)         * xjac * theta * tstep &
-                                - v * Ti0 * BigR**2 * ( r0_x * u_y - r0_y * u_x)           * xjac * theta * tstep &
-                                - v * r0 * 2.d0* GAMMA * BigR * Ti0 * u_y                  * xjac * theta * tstep &
+                    amat(var_Ti,var_u) = - v * (r0 + rimp0*alpha_i) * BigR**2 * (Ti0_x * u_y - Ti0_y * u_x) * xjac * theta * tstep &
+                                - v * Ti0 * BigR**2 * (r0_x * u_y - r0_y * u_x)                             * xjac * theta * tstep &
+                                - v * alpha_i * Ti0 * BigR**2 * (rimp0_x * u_y - rimp0_y * u_x)             * xjac * theta * tstep &
+                                - v * (r0 + rimp0*alpha_i) * 2.d0 * GAMMA * BigR * Ti0 * u_y                * xjac * theta * tstep &
   
                                !===================== Additional terms from friction terms============
                                 - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
-                                    * (r0*rn0*Sion_T)                                * xjac * theta * tstep &
+                                    * ((r0+alpha_e*rimp0)*rn0*Sion_T)                                       * xjac * theta * tstep &
+                                - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
+                                    * (source_bg + source_imp)                                              * xjac * theta * tstep &
                                !==============================End of friction terms===================
 
                            + tgnum_Ti* 0.25d0 * BigR**2 * Ti0* (r0_x * u_y - r0_y * u_x)                &
@@ -2958,22 +2964,24 @@ do i=1,n_vertex_max
                                      * (      + F0 / BigR * v_p) * xjac * theta * tstep * tstep
   
   
-                    amat(var_Ti,var_Ti) = v * r0_corr * Ti  * BigR * xjac * (1.d0 + zeta)     &
-                              - v * r0 * BigR**2  * ( Ti_s  * u0_t - Ti_t  * u0_s)             * theta * tstep &
-                              - v * Ti  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)               * theta * tstep &
+                    amat(var_Ti,var_Ti) = v * (r0_corr + rimp0_corr*alpha_i) * Ti  * BigR * xjac * (1.d0 + zeta)&
+                              - v * (r0 + rimp0*alpha_i) * BigR**2  * (Ti_s  * u0_t - Ti_t  * u0_s) * theta * tstep &
+                              - v * Ti  * BigR**2 * (r0_s * u0_t - r0_t * u0_s)                     * theta * tstep &
+                              - v * alpha_i * Ti * BigR**2 * (rimp0_s * u0_t - rimp0_t * u0_s)      * theta * tstep &
   
-                              - v * r0 * 2.d0* GAMMA * BigR * Ti * u0_y                 * xjac * theta * tstep &
+                              - v * (r0 + rimp0*alpha_i) * 2.d0* GAMMA * BigR * Ti * u0_y    * xjac * theta * tstep &
   
-                              + v * r0 * Vpar0 * (Ti_s  * ps0_t - Ti_t  * ps0_s)               * theta * tstep &
-                              + v * Ti * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                 * theta * tstep & 
+                              + v * (r0 + rimp0*alpha_i) * Vpar0 * (Ti_s  * ps0_t - Ti_t  * ps0_s)  * theta * tstep &
+                              + v * Ti * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                      * theta * tstep & 
+                              + v * Ti * Vpar0 * alpha_i * (rimp0_s * ps0_t - rimp0_t * ps0_s)      * theta * tstep & 
   
-                              + v * r0 * GAMMA * Ti * (vpar0_s * ps0_t - vpar0_t * ps0_s)      * theta * tstep &
-                              + v * r0 * GAMMA * Ti * F0 / BigR * vpar0_p               * xjac * theta * tstep &
+                              + v * (r0 + rimp0*alpha_i) * GAMMA * Ti * (vpar0_s * ps0_t - vpar0_t * ps0_s)      * theta * tstep &
+                              + v * (r0 + rimp0*alpha_i) * GAMMA * Ti * F0 / BigR * vpar0_p               * xjac * theta * tstep &
   
                               ! Energy exchange term
                               - v * BigR * ddTi_e_dTi * Ti                              * xjac * theta * tstep &
   
-                              + v * Ti * F0 / BigR * Vpar0 * r0_p                       * xjac * theta * tstep &
+                              + v * Ti * F0 / BigR * Vpar0 * (r0_p + alpha_i * rimp0_p) * xjac * theta * tstep &
   
                               + (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Ti_Ti * xjac * theta * tstep &
                               + ZKi_prof * BigR * ( v_x*Ti_x + v_y*Ti_y )                      * xjac * theta * tstep &
@@ -3007,7 +3015,7 @@ do i=1,n_vertex_max
   
                     amat_n(var_Ti,var_Ti) = + (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_star   * Bgrad_Ti_Ti_n  * xjac * theta * tstep &
   
-                                + v * r0 * F0 / BigR * Vpar0 * Ti_p                               * xjac * theta * tstep &
+                                + v * (r0 + rimp0*alpha_i) * F0 / BigR * Vpar0 * Ti_p                             * xjac * theta * tstep &
     
                                 + tgnum_Ti* 0.25d0 / BigR * vpar0**2                       & 
                                   * r0 * ( + F0 / BigR * Ti_p) * ( v_x * ps0_y -  v_y * ps0_x ) * xjac * theta * tstep * tstep
@@ -3019,16 +3027,18 @@ do i=1,n_vertex_max
                                   * r0 * ( + F0 / BigR * Ti_p) * ( + F0 / BigR * v_p)          * xjac * theta * tstep * tstep
   
                     if ( with_vpar ) then
-                      amat(var_Ti,var_vpar) = + v * r0 * F0 / BigR * Vpar * Ti0_p                            * xjac * theta * tstep &
-                                + v * Ti0 * F0 / BigR * Vpar * r0_p                              * xjac * theta * tstep &
+                      amat(var_Ti,var_vpar) = + v * (r0 + rimp0*alpha_i) * F0 / BigR * Vpar * Ti0_p     * xjac * theta * tstep &
+                                + v * Ti0 * F0 / BigR * Vpar * (r0_p + alpha_i * rimp0_p)               * xjac * theta * tstep &
     
-                                + v * r0  * Vpar * (Ti0_s * ps0_t - Ti0_t * ps0_s)                      * theta * tstep &
-                                + v * Ti0 * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                        * theta * tstep & 
+                                + v * (r0 + rimp0*alpha_i) * Vpar * (Ti0_s * ps0_t - Ti0_t * ps0_s)            * theta * tstep &
+                                + v * Ti0 * Vpar * (r0_s * ps0_t - r0_t * ps0_s)                               * theta * tstep & 
+                                + v * Ti0 * Vpar * alpha_i * (rimp0_s * ps0_t - rimp0_t * ps0_s)               * theta * tstep & 
     
-                                + v * r0 * GAMMA * Ti0 * (vpar_s * ps0_t - vpar_t * ps0_s)              * theta * tstep &
+                                + v * (r0 + rimp0*alpha_i) * GAMMA * Ti0 * (vpar_s * ps0_t - vpar_t * ps0_s)   * theta * tstep &
 
                                !===================== Additional terms from friction terms============
-                                - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (r0*rn0*Sion_T) * xjac * theta * tstep &
+                                - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * ((r0+rimp0*alpha_i)*rn0*Sion_T) * xjac * theta * tstep &
+                                - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp)        * xjac * theta * tstep &
                                !==============================End of friction terms=================
  
                                 + tgnum_Ti* 0.25d0 / BigR * 2.d0 * vpar0*vpar &
@@ -3046,24 +3056,44 @@ do i=1,n_vertex_max
                                       * r0 * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                          &
                                       * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep 
     
-                      amat_n(var_Ti,var_vpar) = + v * r0 * GAMMA * Ti0 * F0 / BigR * vpar_p          * xjac * theta * tstep
+                      amat_n(var_Ti,var_vpar) = + v * (r0+rimp0*alpha_i) * GAMMA * Ti0 * F0 / BigR * vpar_p * xjac * theta * tstep
                     end if ! (with_vpar)
   
                     amat(var_Ti,var_Te) = - v * BigR * ddTi_e_dTe * Te                           * xjac * theta * tstep &
 
                                           !===================== Additional terms from friction terms============
                                           - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 &
-                                              * (r0*rn0*dSion_dT) * Te * xjac * theta * tstep &
+                                              * ((r0+rimp0*alpha_i)*rn0*dSion_dT) * Te * xjac * theta * tstep &
                                           - v * BigR * ((GAMMA - 1.)/2.) * vv2 &
-                                              * (r0*rn0*dSion_dT) * Te * xjac * theta * tstep 
+                                              * ((r0+rimp0*alpha_i)*rn0*dSion_dT) * Te * xjac * theta * tstep 
                                           !==============================End of friction terms=================
 
                     if (with_neutrals) then
                       !===================== Additional terms from friction terms============
-                      amat(var_Ti,var_rhon) = - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rhon*Sion_T) * xjac * theta * tstep &
-                                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (r0*rhon*Sion_T) * xjac * theta * tstep 
+                      amat(var_Ti,var_rhon) = - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * ((r0+rimp0*alpha_i)*rhon*Sion_T) * xjac * theta * tstep &
+                                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * ((r0+rimp0*alpha_i)*rhon*Sion_T) * xjac * theta * tstep 
                       !==============================End of friction terms=================
 
+                    endif
+                    if (with_impurities) then
+                      amat(var_Ti,var_rhoimp) = v * rhoimp * alpha_i * Ti0 * BigR * xjac * (1.d0 + zeta)     &
+                       - v * rhoimp * BigR**2 * alpha_i * (Ti0_s * u0_t - Ti0_t * u0_s)       * theta * tstep &
+                       - v * alpha_i * Ti0 * BigR**2 * (rhoimp_s * u0_t - rhoimp_t * u0_s)    * theta * tstep &
+                       + v * rhoimp * F0 / BigR * Vpar0 * alpha_i * Ti0_p              * xjac * theta * tstep &
+                       + v * rhoimp * Vpar0 * alpha_i * (Ti0_s * ps0_t - Ti0_t * ps0_s)       * theta * tstep &
+                       + v * alpha_i * Ti0 * Vpar0 * (rhoimp_s * ps0_t - rhoimp_t * ps0_s)    * theta * tstep &
+
+                       - v * alpha_i * rhoimp * 2.d0* GAMMA * BigR * Ti0 * u0_y        * xjac * theta * tstep &
+                       + v * alpha_i * rhoimp * GAMMA * Ti0 * (vpar0_s * ps0_t - vpar0_t * ps0_s) * theta * tstep &
+                       + v * alpha_i * rhoimp * GAMMA * Ti0 * F0 / BigR * vpar0_p      * xjac * theta * tstep &
+                       ! Energy exchange term
+                       - v * BigR * ddTi_e_drhoimp * rhoimp                            * xjac * theta * tstep
+
+                      amat_k(var_Ti,var_rhoimp) = 0.0 !Placeholder
+
+                      amat_n(var_Ti,var_rhoimp) = + v * alpha_i * Ti0 * F0 / BigR * Vpar0 * rhoimp_p * xjac * theta * tstep
+
+                      amat_kn(var_Ti,var_rhoimp) = 0.0 !Placeholder
                     endif
   
                     !###################################################################################################

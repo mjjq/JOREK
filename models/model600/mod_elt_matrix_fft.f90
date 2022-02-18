@@ -2437,7 +2437,7 @@ do i=1,n_vertex_max
                           - v * 2.d0 * tauIC*2. * (rho_y * Ti0 + rho*Ti0_y) * BigR                         * xjac * theta * tstep &
 
                           - v * rho * rn0       * BigR * Sion_T                                         * xjac * theta * tstep &
-                          + v * rho * 2.d0 * r0 * BigR * Srec_T                                         * xjac * theta * tstep &
+                          + v * rho * (2.d0*r0 +(alpha_e-1.)*rimp0) * BigR * Srec_T                     * xjac * theta * tstep &
 
                           + D_perp_num * (v_xx + v_x/BigR + v_yy)*(rho_xx + rho_x/BigR + rho_yy)  * BigR * xjac * theta * tstep &
 
@@ -2469,13 +2469,13 @@ do i=1,n_vertex_max
                                     * ( + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
                   if ( with_TiTe ) then
-                    amat(var_rho,var_Ti) = - v * 2.d0 * tauIC*2. * (Ti_y * r0 + Ti*r0_y) * BigR * xjac * theta * tstep
-                    amat(var_rho,var_Te) = - v * BigR * r0 * rn0 * dSion_dT * Te   * xjac * theta * tstep &
-                                           + v * BigR * r0 * r0 *  dSrec_dT * Te   * xjac * theta * tstep
+                    amat(var_rho,var_Ti) = - v * 2.d0 * tauIC*2. * (Ti_y * r0 + Ti*r0_y) * BigR         * xjac * theta * tstep
+                    amat(var_rho,var_Te) = - v * BigR * (r0+alpha_e*rimp0) * rn0 * dSion_dT * Te        * xjac * theta * tstep &
+                                           + v * BigR * (r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT * Te * xjac * theta * tstep
                   else ! (with_TiTe)
-                    amat(var_rho,var_T)  = - v * 2.d0 * tauIC * (T_y  * r0 + T *r0_y) * BigR * xjac * theta * tstep &
-                                           - v * BigR * r0 * rn0 * dSion_dT * T    * xjac * theta * tstep &
-                                           + v * BigR * r0 * r0 *  dSrec_dT * T    * xjac * theta * tstep 
+                    amat(var_rho,var_T)  = - v * 2.d0 * tauIC * (T_y  * r0 + T *r0_y) * BigR            * xjac * theta * tstep &
+                                           - v * BigR * (r0+alpha_e*rimp0) * rn0 * dSion_dT * T         * xjac * theta * tstep &
+                                           + v * BigR * (r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT * T  * xjac * theta * tstep 
                   end if ! (with_TiTe)
 
                   if ( with_vpar ) then
@@ -2495,7 +2495,7 @@ do i=1,n_vertex_max
                   end if ! (with_vpar)
 
                   if (with_neutrals) then
-                    amat(var_rho,var_rhon) = - BigR * v * r0 * Sion_T * rhon            * xjac * theta * tstep
+                    amat(var_rho,var_rhon) = - BigR * v * (r0+alpha_e*rimp0) * Sion_T * rhon * xjac * theta * tstep
                   endif
 
                   if (with_impurities) then
@@ -2503,7 +2503,10 @@ do i=1,n_vertex_max
                           - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp_rhoimp             * xjac * theta * tstep &
                           + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * Bgrad_rhoimp_rhoimp * xjac * theta * tstep &
                           - D_prof * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y )                         * xjac * theta * tstep &
-                          + D_prof_imp * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y )                     * xjac * theta * tstep
+                          + D_prof_imp * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y )                     * xjac * theta * tstep &
+                          - BigR * v * alpha_e * rn0 * Sion_T * rhoimp                              * xjac * theta * tstep &
+                          + v * rhoimp * (-2.d0*rimp0 +(alpha_e-1.)*r0) * BigR * Srec_T             * xjac * theta * tstep &
+                          
                     amat_k(var_rho,var_rhoimp) = &
                           - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp             * xjac * theta * tstep &
                           + ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp * xjac * theta * tstep

@@ -79,7 +79,7 @@ integer,  parameter :: n_terms_u    = 11
 integer,  parameter :: n_terms_zj   = 1
 integer,  parameter :: n_terms_w    = 1
 integer,  parameter :: n_terms_rho  = 12
-integer,  parameter :: n_terms_T    = 15
+integer,  parameter :: n_terms_T    = 17
 integer,  parameter :: n_terms_Te   = 17
 integer,  parameter :: n_terms_Ti   = 11
 integer,  parameter :: n_terms_vpar = 10
@@ -141,7 +141,9 @@ character*36, dimension(n_terms_T),     parameter :: T_term_names=  &
                                                  'T_Eq__ionization_sink  ', &  ! 12:
                                                  'T_Eq__line_radiation   ', &  ! 13:
                                                  'T_Eq__Brems_radiation  ', &  ! 14:
-                                                 'T_Eq__backg_imp_radiat '/)   ! 15:
+                                                 'T_Eq__backg_imp_radiat ', &  ! 15:
+                                                 'T_Eq__main_imp_radiat  ', &  ! 16:
+                                                 'T_Eq__imp_ionization   '/)   ! 17:
 
 character*36, dimension(n_terms_Ti),    parameter :: Ti_term_names=  &
                                               (/ 'Ti_Eq__ext_heat_source ', &  !  1:

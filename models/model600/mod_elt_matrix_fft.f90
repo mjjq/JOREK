@@ -1104,7 +1104,12 @@ do i=1,n_vertex_max
 
           D_prof   = get_dperp (psi_norm)
           if (with_impurities) then
-            D_prof_imp = 0.  ! NEEEEEEEEEDS TO BE CHAAAAAAANGEDDDD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if (num_d_perp_imp) then
+              D_prof_imp = get_dperp(psi_norm,num_d_prof_x=num_d_perp_x_imp,&
+                                     num_d_prof_y=num_d_perp_y_imp,num_d_prof_len=num_d_perp_len_imp)
+            else
+              D_prof_imp = get_dperp(psi_norm,D_perp_sp=D_perp_imp)
+            end if        
           else
             D_prof_imp = 0.
           endif

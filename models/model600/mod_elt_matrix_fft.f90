@@ -2180,7 +2180,7 @@ do i=1,n_vertex_max
                                         - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
                                                             ) &
                                     ! Not to be included in conservative form
-                                    - BigR**3 * (particle_source(ms,mt)+source_pellet) * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
+                                    - BigR**3 * (particle_source(ms,mt)+source_pellet+source_bg+source_imp) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
                                               * (1.d0 - fact_conservative_u) &
 
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)                                 &
@@ -2505,7 +2505,7 @@ do i=1,n_vertex_max
                           - D_prof * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y )                         * xjac * theta * tstep &
                           + D_prof_imp * BigR  * (v_x*rhoimp_x + v_y*rhoimp_y )                     * xjac * theta * tstep &
                           - BigR * v * alpha_e * rn0 * Sion_T * rhoimp                              * xjac * theta * tstep &
-                          + v * rhoimp * (-2.d0*rimp0 +(alpha_e-1.)*r0) * BigR * Srec_T             * xjac * theta * tstep &
+                          + v * rhoimp * (-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * BigR * Srec_T     * xjac * theta * tstep &
                           
                     amat_k(var_rho,var_rhoimp) = &
                           - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rhoimp_rhoimp             * xjac * theta * tstep &
@@ -2551,11 +2551,11 @@ do i=1,n_vertex_max
                                                         ) &
   
                               ! Not to be included in conservative form
-                              + v*(particle_source(ms,mt) + source_pellet)*vpar0* BB2_psi * BigR * xjac * theta * tstep &
+                              + v*(particle_source(ms,mt)+source_pellet+source_bg+source_imp)*vpar0* BB2_psi * BigR * xjac * theta * tstep &
                                  * (1.d0 - fact_conservative_u)  &
 
                               + (1.d0 - delta_n_convection) * (  &  
-                                + v *(r0 * rn0 * Sion_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
+                                + v *( * rn0 * Sion_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
                                 - v *(r0 * r0  * Srec_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
                                 ) &
 
@@ -2734,7 +2734,7 @@ do i=1,n_vertex_max
                                                     ) &
 
                              ! Not to be included in conservative form
-                            + v*(particle_source(ms,mt) + source_pellet)*vpar*BB2 * BigR * xjac * theta * tstep &
+                            + v*(particle_source(ms,mt)+source_pellet+source_bg+source_imp)*vpar*BB2 * BigR * xjac * theta * tstep &
                                *(1.d0 - fact_conservative_u) &
   
                             + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)             * theta * tstep &
@@ -2743,8 +2743,8 @@ do i=1,n_vertex_max
   
                             + (1.d0 - delta_n_convection) * (  &
 
-                              + v *(r0 * rn0 * Sion_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
-                              - v *(r0 * r0  * Srec_T) * vpar * BB2 * BigR               * xjac * theta * tstep   &
+                              + v *((r0+alpha_e*rimp0)*rn0 * Sion_T) * vpar * BB2 * BigR        * xjac * theta * tstep   &
+                              - v *((r0+alpha_e*rimp0)*(r0-rimp0) * Srec_T) * vpar * BB2 * BigR * xjac * theta * tstep   &
                               ) &
 
                             + visco_par_num * (v_xx + v_x/BigR + v_yy)*(vpar_xx + vpar_x/BigR + vpar_yy) * BigR * xjac * theta * tstep&
@@ -2827,7 +2827,12 @@ do i=1,n_vertex_max
                     endif
 
                     if (with_neutrals) then
-                      amat(var_vpar,var_rhon) = (1.d0 - delta_n_convection) * v *(r0 * rhon * Sion_T) * vpar0 * BB2 * BigR * xjac * theta * tstep
+                      amat(var_vpar,var_rhon) = (1.d0 - delta_n_convection) * v *((r0+alpha_e*rimp0) * rhon * Sion_T) * vpar0 * BB2 * BigR * xjac * theta * tstep
+                    endif
+                    if (with_impurities) then
+                      amat(var_vpar,var_rhoimp) = (1.d0 - delta_n_convection) * (&
+                                  + v *(alpha_e * rn0 * rhoimp  * Sion_T) * vpar0 * BB2 * BigR                        * xjac * theta * tstep &
+                                  - v *(rhoimp * (-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * Srec_T) * vpar * BB2 * BigR * xjac * theta * tstep )
                     endif
 
                   end if ! (with_vpar)

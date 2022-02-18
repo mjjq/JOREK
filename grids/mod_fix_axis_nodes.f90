@@ -84,7 +84,7 @@ end subroutine fix_nodes_on_axis
 
 !> Add condition for the axis directly in the matrix.
 !! - This aims to apply C0 continuity on the grid axis and is used only when treat_aixs=.t.
-!! - The third dof penalized corresponds to d^2/dRdZ when the treat_axis option is used.
+!! - The fourth dof is penalized (d^2/dRdZ) when the treat_axis option is used.
 subroutine penalize_dof_on_axis(node_list, dof, element_list, local_elms, n_local_elms, index_min, index_max, &
   ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 

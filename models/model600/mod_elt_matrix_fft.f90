@@ -890,6 +890,23 @@ do i=1,n_vertex_max
               dZKe_par_dT = 0.d0
             endif
             ! --- Impurity atomic parameters
+            alpha_i         = 0.d0
+            dalpha_i_dT     = 0.d0
+            d2alpha_i_dT2   = 0.d0
+
+            alpha_e         = 0.d0
+            dalpha_e_dT     = 0.d0
+            d2alpha_e_dT2   = 0.d0
+            alpha_e_bis     = 0.d0
+            alpha_e_tri     = 0.d0
+
+            Z_imp = 0.
+            dZ_imp_dT = 0.
+            d2Z_imp_dT2 = 0.
+
+            E_ion     = 0.
+            dE_ion_dT = 0.
+            E_ion_bg  = 0. 
 
             if (with_impurities) call construct_imp_charge_states()
                           
@@ -933,6 +950,33 @@ do i=1,n_vertex_max
               ZK_par_T   = ZK_par                                            ! parallel conductivity
               dZK_par_dT = 0.d0
             endif
+
+            alpha_i         = 0.d0
+            dalpha_i_dT     = 0.d0
+            d2alpha_i_dT2   = 0.d0
+
+            alpha_e         = 0.d0
+            dalpha_e_dT     = 0.d0
+            d2alpha_e_dT2   = 0.d0
+            alpha_e_bis     = 0.d0
+            alpha_e_tri     = 0.d0
+
+            alpha_imp       = 0.d0
+            dalpha_imp_dT   = 0.d0
+            d2alpha_imp_dT2 = 0.d0
+            alpha_imp_bis   = 0.d0
+            alpha_imp_tri   = 0.d0
+
+            beta_imp        = 0.d0 
+            dbeta_imp_dT    = 0.d0 
+
+            Z_imp = 0.
+            dZ_imp_dT = 0.
+            d2Z_imp_dT2 = 0.
+
+            E_ion     = 0.
+            dE_ion_dT = 0.
+            E_ion_bg  = 0. 
 
             if (with_impurities) call construct_imp_charge_states()
                
@@ -1226,9 +1270,9 @@ do i=1,n_vertex_max
 
           endif  ! with_neutrals
 
+          source_imp = 0.d0
+          source_bg  = 0.d0
           if (with_impurities) then
-            source_imp = 0.d0
-            source_bg  = 0.d0
             call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
             ! This is to detect N/A
             if (source_imp /= source_imp .or. source_bg /= source_bg) then
@@ -1441,7 +1485,7 @@ do i=1,n_vertex_max
             if ( with_vpar ) then
               rhs_ij(var_vpar) = - v * F0 / BigR * P0_p                                                                 * xjac * tstep * factor(var_vpar,1) &
                                  - v * (P0_s * ps0_t - P0_t * ps0_s)                                                           * tstep * factor(var_vpar,1) &
-                                                                                                                        
+
                                 ! Not to be included in the conservative form
                                  - v*(particle_source(ms,mt) + source_pellet) * vpar0 * BB2   * BigR                    * xjac * tstep * factor(var_vpar,2) &
                                      * (1.d0 - fact_conservative_u)  &          
@@ -1519,19 +1563,21 @@ do i=1,n_vertex_max
   
               rhs_ij(var_Ti) =  v * BigR * heat_source_i(ms,mt)                                  * xjac * tstep * factor(var_Ti,1) &
               
-                              + v * r0 * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                       * tstep * factor(var_Ti,2) &
+                              + v * (r0 + rimp0*alpha_i) * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)     * tstep * factor(var_Ti,2) &
                               + v * Ti0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * tstep * factor(var_Ti,2) &
+                              + v * alpha_i * Ti0 * BigR**2 * (rimp0_s * u0_t - rimp0_t * u0_s)         * tstep * factor(var_Ti,2) &
                               
-                              + v * r0 * Ti0 * 2.d0* GAMMA * BigR * u0_y                         * xjac * tstep * factor(var_Ti,3) &
+                              + v * (r0 + rimp0*alpha_i) * Ti0 * 2.d0* GAMMA * BigR * u0_y       * xjac * tstep * factor(var_Ti,3) &
                               
-                              - v * r0 * F0 / BigR * Vpar0 * Ti0_p                               * xjac * tstep * factor(var_Ti,4) &
-                              - v * Ti0 * F0 / BigR * Vpar0 * r0_p                               * xjac * tstep * factor(var_Ti,4) &
+                              - v * (r0 + rimp0*alpha_i) * F0 / BigR * Vpar0 * Ti0_p             * xjac * tstep * factor(var_Ti,4) &
+                              - v * Ti0 * F0 / BigR * Vpar0 * (r0_p + alpha_i * rimp0_p)         * xjac * tstep * factor(var_Ti,4) &
                               
-                              - v * r0 * Vpar0 * (Ti0_s * ps0_t - Ti0_t * ps0_s)                        * tstep * factor(var_Ti,4) &
+                              - v * (r0 + rimp0*alpha_i) * Vpar0 * (Ti0_s * ps0_t - Ti0_t * ps0_s)      * tstep * factor(var_Ti,4) &
                               - v * Ti0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * tstep * factor(var_Ti,4) &
+                              - v * Ti0 * Vpar0 * alpha_i * (rimp0_s * ps0_t - rimp0_t * ps0_s)         * tstep * factor(var_Ti,4) &
                               
-                              - v * r0 * Ti0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * tstep * factor(var_Ti,3) &
-                              - v * r0 * Ti0 * GAMMA * F0 / BigR * vpar0_p                       * xjac * tstep * factor(var_Ti,3) &
+                              - v * (r0+rimp0*alpha_i) * Ti0 * GAMMA * (vpar0_s*ps0_t - vpar0_t*ps0_s)  * tstep * factor(var_Ti,3) &
+                              - v * (r0+rimp0*alpha_i) * Ti0 * GAMMA * F0 / BigR * vpar0_p       * xjac * tstep * factor(var_Ti,3) &
                               
                               - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Ti      * xjac * tstep * factor(var_Ti,5) &
                               - ZKi_prof * BigR * (v_x*Ti0_x + v_y*Ti0_y                   )     * xjac * tstep * factor(var_Ti,6) &
@@ -1550,16 +1596,27 @@ do i=1,n_vertex_max
                                    * r0 * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                     &
                                    * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Ti,8)&
 
+                            !=====================Placeholder for future parallel viscous terms============
+
+                            !=========================End of the parallel viscous terms============
                             !===================== Additional terms from friction terms============
-                            + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)      * xjac * tstep * factor(var_Ti,10) &
-                            + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))               * xjac * tstep * factor(var_Ti,10) &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (r0*rn0*Sion_T)          * xjac * tstep * factor(var_Ti,10) &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vv2 * ((r0*rn0*Sion_T))                   * xjac * tstep * factor(var_Ti,10) &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp) * xjac * tstep * factor(var_Ti,10) &
+                            + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep * factor(var_Ti,10) &
                             !==============================End of friction terms=================
   
-                         + zeta * v * r0_corr  * delta_g(mp,var_Ti,ms,mt) * BigR                 * xjac         * factor(var_Ti,9)   &
-                         + zeta * v * Ti0_corr * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Ti,9)   &
+                         + zeta * v * (r0_corr + rimp0_corr*alpha_i) * delta_g(mp,var_Ti,ms,mt) * BigR * xjac         * factor(var_Ti,9)   &
+                         + zeta * v * Ti0_corr * delta_g(mp,var_rho,ms,mt) * BigR                      * xjac         * factor(var_Ti,9)   &
                          ! Energy exchange term
-                         + v * BigR * dTi_e                                                      * xjac * tstep * factor(var_Ti,11)                       
+                         + v * BigR * dTi_e                                                            * xjac * tstep * factor(var_Ti,11)  
   
+              if (with_impurities) then
+                rhs_ij(var_Ti) = rhs_ij(var_Ti) + &
+                         + zeta * v * alpha_i * Ti0 * delta_g(mp,var_rhoimp,ms,mt) * BigR              * xjac         * factor(var_Ti,9)
+              endif
+
+
               rhs_ij_k(var_Ti) = - (ZKi_par_T-ZKi_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Ti * xjac * tstep * factor(var_Ti,5) &
                                  - ZKi_prof * BigR * (                + v_p*Ti0_p /BigR**2 )     * xjac * tstep * factor(var_Ti,6) &
   
@@ -1576,31 +1633,34 @@ do i=1,n_vertex_max
   
               rhs_ij(var_Te) =  v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep * factor(var_Te,1 ) &
                                                                                                  
-                              + v * r0 * BigR**2  * (Te0_s * u0_t - Te0_t * u0_s)                       * tstep * factor(var_Te,2 ) &
+                              + v * (r0 + rimp0*alpha_e_bis) * BigR**2  * (Te0_s * u0_t - Te0_t * u0_s) * tstep * factor(var_Te,2 ) &
                               + v * Te0 * BigR**2 * ( r0_s * u0_t -  r0_t * u0_s)                       * tstep * factor(var_Te,2 ) &
+                              + v * alpha_e * Te0 * BigR**2 * (rimp0_s * u0_t - rimp0_t * u0_s)         * tstep * factor(var_Te,2 ) &
                                                                                                  
-                              + v * r0 * Te0 * 2.d0* GAMMA * BigR * u0_y                         * xjac * tstep * factor(var_Te,3 ) &
+                              + v * (r0 + rimp0*alpha_e) * Te0 * 2.d0* GAMMA * BigR * u0_y       * xjac * tstep * factor(var_Te,3 ) &
                                                                                                  
-                              - v * r0 * F0 / BigR * Vpar0 * Te0_p                               * xjac * tstep * factor(var_Te,4 ) &
-                              - v * Te0 * F0 / BigR * Vpar0 * r0_p                               * xjac * tstep * factor(var_Te,4 ) &
+                              - v * (r0 + rimp0*alpha_e_bis) * F0 / BigR * Vpar0 * Te0_p         * xjac * tstep * factor(var_Te,4 ) &
+                              - v * Te0 * F0 / BigR * Vpar0 * (r0_p + alpha_e * rimp0_p)         * xjac * tstep * factor(var_Te,4 ) &
                                                                                                  
-                              - v * r0 * Vpar0 * (Te0_s * ps0_t - Te0_t * ps0_s)                        * tstep * factor(var_Te,4 ) &
+                              - v * (r0 + rn0*alpha_e_bis) * Vpar0 * (Te0_s * ps0_t - Te0_t * ps0_s)    * tstep * factor(var_Te,4 ) &
                               - v * Te0 * Vpar0 * (r0_s * ps0_t - r0_t * ps0_s)                         * tstep * factor(var_Te,4 ) &
+                              - v * Te0 * Vpar0 * alpha_e * (rimp0_s * ps0_t - rimp0_t * ps0_s)         * tstep * factor(var_Te,4 ) &
                                                                                                  
-                              - v * r0 * Te0 * GAMMA * (vpar0_s * ps0_t - vpar0_t * ps0_s)              * tstep * factor(var_Te,3 ) &
-                              - v * r0 * Te0 * GAMMA * F0 / BigR * vpar0_p                       * xjac * tstep * factor(var_Te,3 ) &
+                              - v * (r0+rimp0*alpha_e) * Te0 * GAMMA * (vpar0_s*ps0_t - vpar0_t*ps0_s)  * tstep * factor(var_Te,3 ) &
+                              - v * (r0 + rimp0*alpha_e) * Te0 * GAMMA * F0 / BigR * vpar0_p     * xjac * tstep * factor(var_Te,3 ) &
                                                                                                  
                               - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_star * Bgrad_Te      * xjac * tstep * factor(var_Te,5 ) &
                               - ZKe_prof * BigR * (v_x*Te0_x + v_y*Te0_y                   )     * xjac * tstep * factor(var_Te,6 ) &
                               
                               - ZK_perp_num  *  (v_xx + v_x/Bigr + v_yy)*(Te0_xx + Te0_x/Bigr + Te0_yy) * BigR * xjac * tstep * factor(var_Te,7 ) &
 
-                              + v * (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep * factor(var_Te,9 ) &
+                              + v * (GAMMA-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0         * BigR * xjac * tstep * factor(var_Te,9 ) &
   
                               - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep * factor(var_Te,12) &
                               - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep * factor(var_Te,13) &
                               - v * BigR * r0_corr * r0_corr  * LradDcont_T                      * xjac * tstep * factor(var_Te,14) &
-                              - v * BigR * r0_corr * frad_bg                                     * xjac * tstep * factor(var_Te,15) &
+                              - v * BigR * (r0_corr+alpha_e*rimp0_corr) * frad_bg                * xjac * tstep * factor(var_Te,15) &
+                              - v * BigR * (r0_corr+alpha_e*rimp0_corr) * rimp0_corr * Lrad      * xjac * tstep * factor(var_Te,16) &
   
                          - tgnum_Te * 0.25d0 * BigR**3 * Te0 * (r0_x * u0_y - r0_y * u0_x)                         &
                                             * ( v_x * u0_y - v_y * u0_x)                   * xjac * tstep * tstep * factor(var_Te,8 )&
@@ -1614,10 +1674,45 @@ do i=1,n_vertex_max
                                    * r0 * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                     &
                                    * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Te,8 )&
   
-                         + zeta * v * r0_corr  * delta_g(mp,var_Te,ms,mt)  * BigR                * xjac         * factor(var_Te,10)  &
-                         + zeta * v * Te0_corr * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Te,10)  &
+                         + zeta * v * (r0_corr+rimp0_corr*alpha_e_bis) * delta_g(mp,var_Te,ms,mt)* BigR  * xjac         * factor(var_Te,10)  &
+                         + zeta * v * Te0_corr * delta_g(mp,var_rho,ms,mt) * BigR                        * xjac         * factor(var_Te,10)  &
                          ! Energy exchange term
                          + v * BigR * dTe_i                                                      * xjac * tstep * factor(var_Te,11)
+              if (with_impurities) then
+                rhs_ij(var_Te) = rhs_ij(var_Te) + &
+!===================== Additional terms from ionization energy terms============
+                         + (GAMMA-1.) * zeta * v * E_ion * delta_g(mp,var_rhoimp,ms,mt) *BigR            * xjac * factor(var_Te,10) &
+                         + (GAMMA-1.) * zeta * v * dE_ion_dT * rimp0 * delta_g(mp,var_Te,ms,mt) *BigR    * xjac * factor(var_Te,10) &
+                         + (GAMMA-1.) * zeta * v * E_ion_bg * (delta_g(mp,var_rho,ms,mt) - delta_g(mp,var_rhoimp,ms,mt))*BigR * xjac * factor(var_Te,10) &
+
+                         + (GAMMA-1.) * v * rimp0 * dE_ion_dT * BigR**2 * ( Te0_s * u0_t - Te0_t * u0_s) * tstep * factor(var_Te,17)&
+                         + (GAMMA-1.) * v * E_ion * BigR**2 * (rimp0_s * u0_t - rimp0_t * u0_s)          * tstep * factor(var_Te,17)&
+                         + (GAMMA-1.) * v * E_ion_bg * BigR**2*((r0_s-rimp0_s)*u0_t - (r0_t-rimp0_t)*u0_s) * tstep * factor(var_Te,17)&
+
+                         - (GAMMA-1.) * v * rimp0 * dE_ion_dT * F0 / BigR * Vpar0 * Te0_p         * xjac * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion * F0 / BigR * Vpar0 * rimp0_p                   * xjac * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion_bg * F0 / BigR * Vpar0 * (r0_p - rimp0_p)       * xjac * tstep * factor(var_Te,17)&
+
+                         - (GAMMA-1.) * v * rimp0 * dE_ion_dT * Vpar0 * (Te0_s * ps0_t - Te0_t * ps0_s)  * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion * Vpar0 * (rimp0_s * ps0_t - rimp0_t * ps0_s)          * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion_bg*Vpar0*((r0_s-rimp0_s)*ps0_t-(r0_t-rimp0_t)*ps0_s)   * tstep * factor(var_Te,17)&
+
+                         + (GAMMA-1.) * v * E_ion * rimp0 * 2.d0 * BigR * u0_y                    * xjac * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion * rimp0 * (vpar0_s * ps0_t - vpar0_t * ps0_s)          * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion * rimp0 * F0 / BigR * vpar0_p                   * xjac * tstep * factor(var_Te,17)&
+
+                         + (GAMMA-1.) * v * E_ion_bg * (r0-rimp0) * 2.d0 * BigR * u0_y            * xjac * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion_bg * (r0-rimp0) * (vpar0_s * ps0_t - vpar0_t * ps0_s)  * tstep * factor(var_Te,17)&
+                         - (GAMMA-1.) * v * E_ion_bg * (r0-rimp0) * F0 / BigR * vpar0_p           * xjac * tstep * factor(var_Te,17)&
+
+                           ! New diffusive flux of the ionization potential energy for impurities
+                         - (GAMMA - 1.) * E_ion * ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rhoimp) * xjac * tstep * factor(var_Te,17)&
+                         - (GAMMA - 1.) * E_ion * D_prof_imp * BigR  * (v_x*(rimp0_x) + v_y*(rimp0_y)                                     )       * xjac * tstep * factor(var_Te,17)&
+                         - (GAMMA - 1.) * E_ion_bg * ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhoimp)* xjac * tstep * factor(var_Te,17)&
+                         - (GAMMA - 1.) * E_ion_bg * D_prof * BigR  * (v_x*(r0_x-rimp0_x) + v_y*(r0_y-rimp0_y)                                 )  * xjac * tstep * factor(var_Te,17)&
+!==============================End of ionization energy terms=================
+                         + zeta * v * alpha_e * Te0 * delta_g(mp,var_rhoimp,ms,mt) * BigR        * xjac         * factor(var_Te,10)
+              endif ! (with_impurities)
   
               rhs_ij_k(var_Te) = - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Te * xjac * tstep * factor(var_Te,5) &
                                  - ZKe_prof * BigR * (                + v_p*Te0_p /BigR**2 )     * xjac * tstep * factor(var_Te,6) &
@@ -4050,10 +4145,6 @@ subroutine construct_imp_charge_states()
      m_imp          = 2.
   end select
 
-  Z_imp = 0.
-  dZ_imp_dT = 0.
-  d2Z_imp_dT2 = 0.
-
   if (with_TiTe) then
 
     ! Te in eV:
@@ -4198,7 +4289,7 @@ subroutine construct_imp_charge_states()
        Z_eff        = 1.
     end if
     
-  else
+  else !(with_TiTe)
      
     ! Te in eV:
     Te_corr_eV      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)

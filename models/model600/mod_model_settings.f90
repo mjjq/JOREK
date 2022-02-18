@@ -80,7 +80,7 @@ integer,  parameter :: n_terms_zj   = 1
 integer,  parameter :: n_terms_w    = 1
 integer,  parameter :: n_terms_rho  = 12
 integer,  parameter :: n_terms_T    = 15
-integer,  parameter :: n_terms_Te   = 15
+integer,  parameter :: n_terms_Te   = 17
 integer,  parameter :: n_terms_Ti   = 11
 integer,  parameter :: n_terms_vpar = 10
 integer,  parameter :: n_terms_rhon = 7
@@ -171,7 +171,9 @@ character*36, dimension(n_terms_Te),    parameter :: Te_term_names=  &
                                                  'Te_Eq__ionization_sink ', &  ! 12:
                                                  'Te_Eq__line_radiation  ', &  ! 13:
                                                  'Te_Eq__Brems_radiation ', &  ! 14:
-                                                 'Te_Eq__backg_imp_radiat'/)   ! 15:
+                                                 'Te_Eq__backg_imp_radiat', &  ! 15:
+                                                 'Te_Eq__main_imp_radiat ', &  ! 16:
+                                                 'Te_Eq__imp_ionization  '/)   ! 17:
 
 
 character*36, dimension(n_terms_vpar),  parameter :: vpar_term_names=  &

@@ -85,7 +85,7 @@ program JOREK2
   use mod_impurity, only: init_imp_adas
 #ifdef USE_BICGSTAB
   use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
-#endif  
+#endif
 
 
   use, intrinsic :: iso_c_binding

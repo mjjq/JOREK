@@ -4580,7 +4580,12 @@ subroutine construct_radiation_parameters()
     Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
     Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
   endif
-  if (use_imp_adas) then  ! use open adas by default
+
+   !--------------------------------------------------------
+   ! --- Radiation from background impurity
+   !--------------------------------------------------------
+
+  if (use_imp_adas .or. with_impurities) then  ! use open adas by default
     frad_bg = 0. 
     dfrad_bg_dT = 0.
     do i_imp =1, n_adas
@@ -4626,36 +4631,20 @@ subroutine construct_radiation_parameters()
   end if
 
   
-  if (with_impurities) then
-     
-    ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-    if (with_TiTe) then 
-      Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-      Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-    else
-      Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-      Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-    endif
-
   !------------------------------------------------------------------
   ! --- Radiative function for the main impurity, using interpolation
   ! -----------------------------------------------------------------
+  if (with_impurities) then
+     
+    Lrad = 0.
+    dLrad_dT = 0.
+
     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
-
-      Lrad = 0.0
-      dLrad_dT = 0.0
-
       ! Here we are temperarily only considering one impurity species, in the
       ! future maybe a do loop will is needed
       call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
       Lrad = Lrad * m_i_over_m_imp
       dLrad_dT = dLrad_dT * m_i_over_m_imp * dTe0_corr_dT
-
-    else
-
-      Lrad = 0.
-      dLrad_dT = 0.
-
     end if
 
     ! This is to detect N/A
@@ -4664,36 +4653,6 @@ subroutine construct_radiation_parameters()
                            Lrad, dLrad_dT, E_ion, dE_ion_dT
       stop
     end if
-
-   !--------------------------------------------------------
-   ! --- Radiation from background impurity
-   !--------------------------------------------------------
-
-    frad_bg = 0.
-    dfrad_bg_dT = 0.
-    do i_imp =1, n_adas
-      if (i_imp == index_main_imp) cycle
-      r_imp_bg = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
-      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp_bg > 0) then
-        Lrad_imp_bg = 0.0
-        dLrad_imp_bg_dT = 0.0
-        call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    &
-                                       log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp_bg,dLrad_imp_bg_dT)
-        dLrad_imp_bg_dT = dLrad_imp_bg_dT * dTe0_corr_dT
-      else
-        Lrad_imp_bg = 0.
-        dLrad_imp_bg_dT = 0.
-      end if
-      if (dLrad_imp_bg_dT/=dLrad_imp_bg_dT) then
-        write(*,*) "WARNING: dLrad_imp_bg_dT ", dLrad_imp_bg_dT
-        stop
-      end if
-
-      frad_bg = frad_bg + r_imp_bg * Lrad_imp_bg
-      dfrad_bg_dT =  dfrad_bg_dT + r_imp_bg * dLrad_imp_bg_dT
-
-    end do
-
   end if
 end subroutine construct_radiation_parameters
 end subroutine element_matrix_fft

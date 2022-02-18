@@ -84,6 +84,7 @@ integer,  parameter :: n_terms_Te   = 17
 integer,  parameter :: n_terms_Ti   = 11
 integer,  parameter :: n_terms_vpar = 10
 integer,  parameter :: n_terms_rhon = 7
+integer,  parameter :: n_terms_rhoimp = 10
 
 character*36, dimension(n_var, max_terms) :: term_names
 character*36, dimension(n_terms_psi),  parameter :: Psi_term_names=  &
@@ -199,6 +200,17 @@ character*36, dimension(n_terms_vpar),  parameter :: vpar_term_names=  &
                                                  'rhon_Eq__Dn_perp_num_term ', &  !  6:
                                                  'rhon_Eq__zeta_timevol_term'/)   !  7:
 
+ character*36, dimension(n_terms_rhoimp), parameter :: rhoimp_term_names=  &
+                                              (/ 'rhoimp_Eq__parallel_diffus ', &  !  1:
+                                                 'rhoimp_Eq__perp_diffusion  ', &  !  2: 
+                                                 'rhoimp_Eq__perp_convection ', &  !  3: 
+                                                 'rhoimp_Eq__divergence_v    ', &  !  4: 
+                                                 'rhoimp_Eq__parallel_convect', &  !  5:
+                                                 'rhoimp_Eq__diamag_term     ', &  !  6:
+                                                 'rhoimp_Eq__tg_num_term     ', &  !  7:
+                                                 'rhoimp_Eq__ext_dens_source ', &  !  8:
+                                                 'rhoimp_Eq__zeta_time_evol  ', &  !  9:
+                                                 'rhoimp_Eq__Dn_perp_num_term'/)   ! 10:
 
 contains
 
@@ -230,6 +242,8 @@ subroutine assign_term_names()
       term_names(k_var, 1:n_terms_vpar) = vpar_term_names(:)
     else if (k_var == var_rhon) then
       term_names(k_var, 1:n_terms_rhon) = rhon_term_names(:)
+    else if (k_var == var_rhoimp) then
+      term_names(k_var, 1:n_terms_rhoimp) = rhoimp_term_names(:)
     endif
 
   enddo

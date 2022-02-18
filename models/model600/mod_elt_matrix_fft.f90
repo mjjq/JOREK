@@ -2555,8 +2555,8 @@ do i=1,n_vertex_max
                                  * (1.d0 - fact_conservative_u)  &
 
                               + (1.d0 - delta_n_convection) * (  &  
-                                + v *( * rn0 * Sion_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
-                                - v *(r0 * r0  * Srec_T) * vpar0 * BB2_psi * BigR      * xjac * theta * tstep &
+                                + v *((r0+alpha_e*rimp0) * rn0 * Sion_T) * vpar0 * BB2_psi * BigR                   * xjac * theta * tstep &
+                                - v *((r0+alpha_e*rimp0) * (r0-rimp0) * Srec_T) * vpar0 * BB2_psi * BigR            * xjac * theta * tstep &
                                 ) &
 
                               + tgnum_vpar * 0.25d0 * r0 * Vpar0**2 * BB2 &
@@ -2631,8 +2631,8 @@ do i=1,n_vertex_max
 
                               + (1.d0 - delta_n_convection) * (  &
 
-                              + v *(rho * rn0       * Sion_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
-                              - v *(2.d0 * r0 * rho * Srec_T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
+                              + v *(rho * rn0       * Sion_T) * vpar0 * BB2 * BigR                        * xjac * theta * tstep &
+                              - v *(rho * (2.d0*r0 +(alpha_e-1.)*rimp0) * Srec_T) * vpar0 * BB2 * BigR    * xjac * theta * tstep &
                               ) &
 
                               + tgnum_vpar * 0.25d0 * rho * Vpar0**2 * BB2 &
@@ -2700,8 +2700,8 @@ do i=1,n_vertex_max
                                                 + v * F0 / BigR * Te * r0_p                       * xjac * theta * tstep  &
 
                                                 + (1.d0 - delta_n_convection) * (  &
-                                                  + v *(r0 * rn0 * dSion_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
-                                                  - v *(r0 * r0  * dSrec_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  + v *((r0+alpha_e*rimp0) * rn0 * dSion_dT *Te) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
+                                                  - v *((r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
                                                   )                                               
     
 
@@ -2712,8 +2712,8 @@ do i=1,n_vertex_max
                                                 + v * F0 / BigR * T  * r0_p                       * xjac * theta * tstep  &
 
                                                 + (1.d0 - delta_n_convection) * (  &
-                                                  + v *(r0 * rn0 * dSion_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
-                                                  - v *(r0 * r0  * dSrec_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  + v *((r0+alpha_e*rimp0) * rn0 * dSion_dT * T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
+                                                  - v *((r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
                                                   )  
 
                       amat_n(var_vpar,var_T)  = + v * F0 / BigR * T_p  * r0                       * xjac * theta * tstep

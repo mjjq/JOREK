@@ -2198,8 +2198,8 @@ do i=1,n_vertex_max
 !===============================End of NewTG_num terms==============================
                   
                                     + (1.d0 - delta_n_convection) * (  &
-                                    - BigR**3 * (r0*rn0*Sion_T) * (v_x * u_x + v_y * u_y)                        * xjac * theta * tstep &
-                                    + BigR**3 * (r0* r0*Srec_T) * (v_x * u_x + v_y * u_y)                        * xjac * theta * tstep &
+                                    - BigR**3 * ((r0+alpha_e*rimp0)*rn0*Sion_T) * (v_x * u_x + v_y * u_y)        * xjac * theta * tstep &
+                                    + BigR**3 * ((r0+alpha_e*rimp0)*(r0-rimp0)*Srec_T) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
                                     )
 
                   if ( NEO ) then
@@ -2261,8 +2261,8 @@ do i=1,n_vertex_max
 !===============================End of NewTG_num terms==============================
 
                                       + (1.d0 - delta_n_convection) * (                                                                &
-                                        - BigR**3 * (rho* rn0 * Sion_T)        * (v_x * u0_x + v_y * u0_y)   * xjac * theta * tstep &
-                                        + BigR**3 * (rho * 2.d0 * r0 * Srec_T) * (v_x * u0_x + v_y * u0_y)   * xjac * theta * tstep &
+                                        - BigR**3 * (rho* rn0 * Sion_T)                            * (v_x * u0_x + v_y * u0_y)   * xjac * theta * tstep &
+                                        + BigR**3 * (rho * (2.d0*r0 +(alpha_e-1.)*rimp0) * Srec_T) * (v_x * u0_x + v_y * u0_y)   * xjac * theta * tstep &
                                         )
 
                   if ( NEO ) then
@@ -2337,8 +2337,8 @@ do i=1,n_vertex_max
                               - dvisco_dT*T   * bigR * W_dia    * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep  &
 
                            + (1 - delta_n_convection) * (  &
-                           - BigR**3 * (r0 * rn0 * dSion_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
-                           + BigR**3 * (r0 * r0  * dSrec_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
+                           - BigR**3 * ((r0+alpha_e*rimp0) * rn0 * dSion_dT * T)        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
+                           + BigR**3 * ((r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
                            )
 
 
@@ -2370,7 +2370,12 @@ do i=1,n_vertex_max
                   endif ! /with_vpar
 
                   if (with_neutrals) then
-                    amat(var_u,var_rhon) = -(1.d0 - delta_n_convection) * BigR**3 * (r0 * rhon * Sion_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep 
+                    amat(var_u,var_rhon) = -(1.d0 - delta_n_convection) * BigR**3 * ((r0+alpha_e*rimp0) * rhon * Sion_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep 
+                  endif
+                  if (with_impurities) then
+                    amat(var_u,var_rhoimp) = -(1.d0 - delta_n_convection) * BigR**3 * (&
+                              +(alpha_e * rn0 * rhoimp * Sion_T)                          * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
+                              -((-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * rhoimp * Sion_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep )
                   endif
 
                   !###################################################################################################
@@ -3510,14 +3515,14 @@ do i=1,n_vertex_max
                                   + v * 2.d0 * BigR * rn0 * u_y                                 * xjac * theta * tstep )
 
                     amat(var_rhon,var_rho) = + BigR * v * rn0 * Sion_T * rho                    * xjac * theta * tstep &
-                                - BigR * v * 2d0 * r0 * rho * Srec_T                            * xjac * theta * tstep 
+                                - BigR * v * (2.d0*r0 +(alpha_e-1.)*rimp0) * rho * Srec_T       * xjac * theta * tstep 
 
                  ! We do not include the term coming from div(rhon * v_star_i) because they are prop. to rho_n/rho, because they may cause problems
                  ! in areas where rho is small.   
               
                     if (with_TiTe) then
-                      amat(var_rhon,var_Te) = + BigR * v * r0 * rn0 * dSion_dT * Te   * xjac * theta * tstep &
-                                              - BigR * v * r0 * r0  * dSrec_dT * Te   * xjac * theta * tstep       
+                      amat(var_rhon,var_Te) = + BigR * v * (r0+alpha_e*rimp0) * rn0 * dSion_dT * Te        * xjac * theta * tstep &
+                                              - BigR * v * (r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT * Te * xjac * theta * tstep       
                     else
                       amat(var_rhon,var_T) = + BigR * v * r0 * rn0 * dSion_dT * T     * xjac * theta * tstep &
                                              - BigR * v * r0 * r0  * dSrec_dT * T     * xjac * theta * tstep       
@@ -3543,13 +3548,20 @@ do i=1,n_vertex_max
                                 + v * F0 / BigR * rhon * vpar0_p                                * xjac * theta * tstep ) &
                                    
                      + BigR * (Dn0x * rhon_x * v_x + Dn0y * rhon_y * v_y)                       * xjac * theta * tstep &   
-                     + BigR * v * r0 * rhon* Sion_T                                             * xjac * theta * tstep &
+                     + BigR * v * (r0+alpha_e*rimp0) * rhon* Sion_T                             * xjac * theta * tstep &
                      + Dn_perp_num * (v_xx + v_x/BigR + v_yy)*(rhon_xx + rhon_x/BigR + rhon_yy) * BigR * xjac * theta * tstep 
 
-                     amat_n(var_rhon,var_rhon)  = + delta_n_convection*(                                                             &
+                    amat_n(var_rhon,var_rhon)  = + delta_n_convection*(                                                             &
                                                   + v * F0 / BigR * Vpar0 * rhon_p                                * xjac * theta * tstep )
 
-                     amat_kn(var_rhon,var_rhon) = + BigR * ( + Dn0p * rhon_p * v_p/BigR**2)                   * xjac * theta * tstep    
+                    amat_kn(var_rhon,var_rhon) = + BigR * ( + Dn0p * rhon_p * v_p/BigR**2)                   * xjac * theta * tstep    
+
+                    if (with_impurities) then
+                      amat(var_rhon,var_rhoimp) = &
+                                                  + BigR * v * alpha_e * rn0 * rhoimp * Sion_T                          * xjac * theta * tstep &
+                                                  - v * rhoimp * (-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * BigR * Srec_T * xjac * theta * tstep
+                    endif 
+
                   endif ! with_neutrals 
                   
                   
@@ -3597,6 +3609,7 @@ do i=1,n_vertex_max
                      amat(var_rhoimp,var_rho) = 0      ! amat_85 = 0 ! Place holder    
                      if (with_TiTe) then
                         amat(var_rhoimp,var_Ti) = 0    ! amat_86 = 0 ! Place holder
+                        amat(var_rhoimp,var_Te) = 0    ! amat_89 = 0 ! Place holder
                      else
                         amat(var_rhoimp,var_T) = 0
                      endif

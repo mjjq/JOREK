@@ -3086,6 +3086,10 @@ do i=1,n_vertex_max
                        - v * alpha_i * rhoimp * 2.d0* GAMMA * BigR * Ti0 * u0_y        * xjac * theta * tstep &
                        + v * alpha_i * rhoimp * GAMMA * Ti0 * (vpar0_s * ps0_t - vpar0_t * ps0_s) * theta * tstep &
                        + v * alpha_i * rhoimp * GAMMA * Ti0 * F0 / BigR * vpar0_p      * xjac * theta * tstep &
+                      !===================== Additional terms from friction terms============
+                       - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (rn0*alpha_i)*rhoimp*Sion_T * xjac * theta * tstep &
+                       - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (rn0*alpha_i)*rhoimp*Sion_T * xjac * theta * tstep 
+                      !==============================End of friction terms=================
                        ! Energy exchange term
                        - v * BigR * ddTi_e_drhoimp * rhoimp                            * xjac * theta * tstep
 

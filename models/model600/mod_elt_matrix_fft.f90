@@ -3619,7 +3619,7 @@ do i=1,n_vertex_max
   
                                           + v * BigR * rho * rn0 * ksiion * Sion_T                             * xjac * theta * tstep &
                                           + v * BigR * rho * rn0_corr * LradDrays_T                            * xjac * theta * tstep &
-                                          + v * BigR * rho * (2.d0*r0_corr+(alpha_e-1.)*rimp0_corr) LradDcont_T* xjac * theta * tstep &
+                                          + v * BigR * rho * (2.d0*r0_corr+(alpha_e-1.)*rimp0_corr)*LradDcont_T* xjac * theta * tstep &
                                           + v * BigR * rho * frad_bg                                           * xjac * theta * tstep &
                                           + v * BigR * rho * rimp0_corr * Lrad                                 * xjac * theta * tstep &
                                           ! New term from Z_eff

@@ -3265,7 +3265,7 @@ do i=1,n_vertex_max
 !=============== The ionization potential energy term=========================
                                 ! New diffusive ionization energy flux term
                                 + (GAMMA - 1.) * E_ion_bg * ((D_par+D_par_sc_num*tau_sc)-D_prof) * BigR / BB2 * Bgrad_rho_k_star * Bgrad_rho_rho_n            * xjac * theta * tstep &
-                                + (GAMMA - 1.) * E_ion_bg * D_prof * BigR  * (                                            + v_p*rho_p * eps_cyl**2 /BigR**2 ) * xjac * theta * tstep &
+                                + (GAMMA - 1.) * E_ion_bg * D_prof * BigR  * (                                            + v_p*rho_p              /BigR**2 ) * xjac * theta * tstep &
 
 !================= End ionization potential energy ===========================
                                 + tgnum_Te * 0.25d0 / BigR * vpar0**2                 &

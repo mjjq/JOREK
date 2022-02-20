@@ -3580,7 +3580,7 @@ do i=1,n_vertex_max
   
   
                     amat(var_T,var_u) = - v * (r0 + rimp0 * alpha_imp_bis) * BigR**2 * ( T0_x * u_y - T0_y * u_x)           * xjac * theta * tstep &
-                                        - v * T0 * BigR**2 * ((r0_s+rimp0_s*alpha_imp)*u_t - (r0_t+rimp0_t*alpha_imp)*u_s)  * xjac * theta * tstep &
+                                        - v * T0 * BigR**2 * ((r0_x+rimp0_x*alpha_imp)*u_y - (r0_y+rimp0_y*alpha_imp)*u_x)  * xjac * theta * tstep &
                                         - v * (r0 + rn0 * alpha_imp) * 2.d0* GAMMA * BigR * T0 * u_y                        * xjac * theta * tstep &
 !=============== The ionization potential energy term=========================
                                         - (GAMMA - 1.) * v * rimp0 * dE_ion_dT * BigR**2 * ( T0_s * u_t - T0_t * u_s)              * theta * tstep &
@@ -3783,9 +3783,9 @@ do i=1,n_vertex_max
 !================= End ionization potential energy ===========================
     
                           + tgnum_T * 0.25d0 / BigR * vpar0**2                                                        &
-                                    * r0 * ( + F0 / BigR * T_p) * ( v_x * ps0_y - v_y * ps0_x ) * xjac * theta * tstep * tstep
-  
-                    amat_kn(var_T,var_T) = + (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T_n * xjac * theta * tstep &
+                          * r0 * ( + F0 / BigR * T_p) * ( v_x * ps0_y - v_y * ps0_x ) * xjac * theta * tstep * tstep
+
+                          amat_kn(var_T,var_T) = + (ZK_par_T-ZK_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_T_T_n * xjac * theta * tstep &
                                            + ZK_prof * BigR   * (v_p*T_p /BigR**2 )                         * xjac * theta * tstep &
   
                           + tgnum_T * 0.25d0 / BigR * vpar0**2                                                        &

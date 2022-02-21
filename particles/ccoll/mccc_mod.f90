@@ -319,7 +319,7 @@ contains
   !> real*8  uout(3)   -- normalized test particle momentum u=p/mc after collisions [1]
   !> integer err       -- error flag, negative indicates something went wrong
   !<
-  subroutine mccc_push(dat,ma,qa,clogab,mb,qb,nb,thb,dt,rnd,uin,uout,err)
+  subroutine mccc_push(dat,ma,qa,clogab,mb,qb,nb,thb,dt,rnd,uin,uout)
     implicit none
     type(mccc_special), intent(in) :: dat 
     real*8, intent(in) :: ma, qa         
@@ -329,7 +329,7 @@ contains
     real*8, intent(in) :: uin(3)  
     
     real*8, intent(out)  :: uout(3)
-    integer, intent(out) :: err
+    !integer, intent(out) :: err
     
 
     real*8 :: K,Dpar,Dperp,Kb,Dparb,Dperpb ! the fokker-planck coefficients
@@ -338,7 +338,7 @@ contains
     real*8 :: u                           ! absolute value of particle momentum normalized to mc
     integer  :: i, nspecies                ! for iterating over plasma species
 
-    err = 0
+    !err = 0
 
     ! Wiener process for this step
     dW=sqrt(dt)*rnd
@@ -362,7 +362,7 @@ contains
     ! Use Euler-Maruyama method to get pout
     uout = uin+K*uhat*dt+sqrt(2*Dpar)*dot_product(uhat,dW)*uhat+sqrt(2*Dperp)*(dW-dot_product(uhat,dW)*uhat)
 
-    if(any(isnan(uout))) err = MCCC_NANRESULT
+    !if(any(isnan(uout))) err = MCCC_NANRESULT
 
   end subroutine mccc_push
 

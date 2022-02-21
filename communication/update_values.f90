@@ -26,7 +26,8 @@ integer, dimension(n_vertex_max)  :: Pr
 integer, dimension(2)    :: parent
 integer :: index_elm,l,i_tor,ivar
 integer :: i, j, k, in, index_node, index, i_tor_min
-integer :: i_v(n_var), i_harm(n_tor)
+integer :: id
+real*8  :: stored_dofs(1:(n_order+1)*n_var*n_tor), new_dofs(1:4), old_dofs(1:4)
 
 i_tor_min = 1
 if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
@@ -34,7 +35,32 @@ if ( keep_n0_const ) i_tor_min = 2 ! Keep equilibrium unchanged during the run
 if (my_id .eq. 0) then
 
   do i = 1, node_list%n_nodes
-   if((.not. node_list%node(i)%constrained) ) then 
+   if((.not. node_list%node(i)%constrained) ) then
+
+    ! We need to transform the new dof to old ones on the axis.
+    ! The respective RHS entries on the axis (which are shared)
+    ! are updated during the transformation. At the end of the loop,
+    ! we recover RHS entries so that they same can be used for all the axis nodes.
+    if(treat_axis .and. node_list%node(i)%axis_node)then
+      do k=1,n_var
+      do in=1,n_tor
+        do j=1,n_order+1
+           index_node = node_list%node(i)%index(j)
+           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
+           new_dofs(j) = RHS(index)
+           id = (n_order+1)*(n_tor)*(k-1) + (n_order+1)*(in-1) + j
+           stored_dofs(id) = RHS(index)
+        enddo
+        call new_to_old_dofs_on_the_axis(node_list, i, new_dofs, old_dofs)
+        do j=1,n_order+1
+           index_node = node_list%node(i)%index(j)
+           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
+           RHS(index) = old_dofs(j)
+        enddo
+      enddo
+      enddo
+    endif       
+
     do j=1,n_order+1
 
       index_node = node_list%node(i)%index(j)
@@ -73,6 +99,20 @@ if (my_id .eq. 0) then
 #endif
     enddo
    
+    ! recover RHS entries.
+    if(treat_axis .and. node_list%node(i)%axis_node)then
+      do k=1,n_var
+      do in=i_tor_min,n_tor
+        do j=1,n_order+1
+           index_node = node_list%node(i)%index(j)
+           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
+           id = (n_order+1)*(n_tor)*(k-1) + (n_order+1)*(in-1) + j
+           RHS(index) = stored_dofs(id)
+        enddo
+      enddo
+      enddo
+    endif
+    
    endif
 !   write(*,'(i5,20e12.4)') i,node_list%node(i)%values(1,:,2),node_list%node(i)%values(2,:,2)
 
@@ -295,18 +335,6 @@ if (my_id .eq. 0) then
  endif
   
 enddo !(i)
-
-! Since the axis treatment solves for the new degrees of freedom, we need to
-! transform the degrees of freedom back to the original ones
-if(treat_axis) then
-  do i = 1, n_var
-    i_v(i) = i
-  enddo
-  do i = i_tor_min, n_tor
-    i_harm(i) = i
-  enddo
-  call new_to_old_dofs_on_the_axis(node_list, i_v, n_var, i_harm(i_tor_min:n_tor), n_tor-i_tor_min+1)
-endif
 
 endif
 

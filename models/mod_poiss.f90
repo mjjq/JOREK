@@ -80,6 +80,8 @@ character*8 :: type
 integer(kind=int_all), parameter   :: Int0=0
 integer(kind=int_all), parameter   :: Int1=1
 
+real*8 :: new_dofs(1:4), old_dofs(1:4)
+
 if (my_id == 0) then
   write(*,*) '**************************************'
   write(*,*) '*            Poisson                 *'
@@ -568,7 +570,23 @@ if (my_id == 0) then
   do i=1,node_list%n_nodes
   
     if ((.not. refinement) .or. (refinement .and. (.not. node_list%node(i)%constrained)) ) then
-  
+ 
+      ! We need to transform the new dof to old ones on the axis.
+      ! The respective RHS entries on the axis (which are shared)
+      ! are updated during the transformation. At the end of the loop,
+      ! we recover RHS entries so that they same can be used for all the axis nodes.            
+      if(treat_axis .and. node_list%node(i)%axis_node)then
+        do k=1,n_order+1
+          index = node_list%node(i)%index(k)
+          new_dofs(k) = mumps_par%RHS(index)
+        enddo
+        call new_to_old_dofs_on_the_axis(node_list, i, new_dofs, old_dofs)
+        do k=1,n_order+1
+          index = node_list%node(i)%index(k)
+          mumps_par%RHS(index) = old_dofs(k)
+        enddo
+      endif
+            
       do k=1,n_order+1
   
         index = node_list%node(i)%index(k)
@@ -591,12 +609,19 @@ if (my_id == 0) then
         endif
         
       enddo    ! order
+
+      ! recover RHS entries.
+      if(treat_axis .and. node_list%node(i)%axis_node)then
+        do k=1,n_order+1
+          index = node_list%node(i)%index(k)
+          mumps_par%RHS(index) = new_dofs(k)
+        enddo
+      endif
+      
     endif      ! refinement, constrained
   enddo        ! nodes
-  ! Since the axis treatment solves for new degrees of freedom, we need to
-  ! transforms degrees of freedom to old ones.
-  if(treat_axis) call new_to_old_dofs_on_the_axis(node_list, (/ivar_in, ivar_out/), 2, (/i_harm/), 1)
   
+  !if(treat_axis) call new_to_old_dofs_on_the_axis(node_list, (/ivar_out/), 1, (/i_harm/), 1)  
   !*************************************************************************
   ! Solutions at constrained nodes                                         *
   !*************************************************************************

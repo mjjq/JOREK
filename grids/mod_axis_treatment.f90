@@ -206,52 +206,28 @@ end subroutine transform_basis_for_axis_element
 
 ! Since the axis treatment solves for new degrees of freedom, we need to
 ! transforms degrees of freedom to old ones.
-subroutine new_to_old_dofs_on_the_axis(node_list, i_v, n_v, i_n, n_harm)
+subroutine new_to_old_dofs_on_the_axis(node_list, vg, new_dofs, old_dofs)
 use data_structure
 use phys_module
 implicit none
 type(type_node_list),    intent(inout) :: node_list
-integer,         intent(in)    :: n_v, i_v(n_v), n_harm, i_n(n_harm)
-integer :: vg, dof2, dof3, dof4, in, ivar
-real*8  :: Pmat(2,2), vec(2)
+integer,   intent(in) :: vg
+real*8,    intent(in) :: new_dofs(4)
+real*8,    intent(out):: old_dofs(4)
+integer :: dof1, dof2, dof3, dof4
+real*8  :: Pmat(4,4)
 
-dof2 = 2 ; dof3 = 3 ; dof4 = 4
+dof1 = 1 ; dof2 = 2 ; dof3 = 3 ; dof4 = 4
+Pmat = 0.d0
+Pmat(dof1,dof1) = 1.d0      
+Pmat(dof2,dof2) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(dof2,dof3) = node_list%node(vg)%x(1,dof2,2)
+Pmat(dof4,dof2) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(dof4,dof3) = node_list%node(vg)%x(1,dof4,2)
+Pmat(dof3,dof3) = 0.d0
+Pmat(dof4,dof4) = 0.d0
 
-do vg = 1, node_list%n_nodes
+old_dofs = matmul(Pmat, new_dofs)
 
-  if ( node_list%node(vg)%axis_node ) then
-
-    Pmat(1,1) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(1,2) = node_list%node(vg)%x(1,dof2,2)
-    Pmat(2,1) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(2,2) = node_list%node(vg)%x(1,dof4,2)
-
-    do ivar = 1, n_v
-#if fullmhd    
-      if(i_v(ivar) == 710)then
-        vec(1) = node_list%node(vg)%Fprof_eq(dof2)
-        vec(2) = node_list%node(vg)%Fprof_eq(dof3)
-        vec    = matmul(Pmat, vec)
-        node_list%node(vg)%Fprof_eq(dof2) = vec(1)
-        node_list%node(vg)%Fprof_eq(dof3) = vec(2)
-      endif
-#endif    
-      do in = 1, n_harm
-        vec(1) = node_list%node(vg)%values(i_n(in),dof2,i_v(ivar))
-        vec(2) = node_list%node(vg)%values(i_n(in),dof3,i_v(ivar))
-        vec    = matmul(Pmat, vec)
-        node_list%node(vg)%values(i_n(in),dof2,i_v(ivar)) = vec(1)
-        node_list%node(vg)%values(i_n(in),dof3,i_v(ivar)) = vec(2)
-
-        vec(1) = node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar))
-        vec(2) = node_list%node(vg)%deltas(i_n(in),dof3,i_v(ivar))
-        vec    = matmul(Pmat, vec)
-        node_list%node(vg)%deltas(i_n(in),dof2,i_v(ivar)) = vec(1)
-        node_list%node(vg)%deltas(i_n(in),dof3,i_v(ivar)) = vec(2)
-      enddo
-    enddo
-
-  endif
-
-enddo
 end subroutine new_to_old_dofs_on_the_axis
+
 
 end module mod_axis_treatment

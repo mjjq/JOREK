@@ -3411,8 +3411,8 @@ do i=1,n_vertex_max
                             + (GAMMA-1.) * v * E_ion_bg * (r0-rimp0) * F0 / BigR * vpar_p              * xjac * theta * tstep
                     end if ! (with_vpar)
                     if (with_neutrals) then
-                      amat(var_Te,var_rhon) = + v * BigR * (r0 + rimp0 * alpha_e) * rhon * ksiion * Sion_T       * xjac * theta * tstep &
-                                              + v * BigR * rhon * (r0_corr + rimp0_corr * alpha_e) * LradDrays_T * xjac * theta * tstep 
+                      amat(var_Te,var_rhon) = + v * BigR * (r0 + rimp0 * alpha_e) * rhon * ksiion * Sion_T * xjac * theta * tstep &
+                                              + v * BigR * rhon * (r0 + rimp0 * alpha_e) * LradDrays_T     * xjac * theta * tstep 
                     endif
                     if (with_impurities) then
                       amat(var_Te,var_rhoimp) = v * rhoimp * alpha_e * Te0 * BigR * xjac * (1.d0 + zeta)          &

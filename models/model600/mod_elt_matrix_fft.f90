@@ -3367,7 +3367,7 @@ do i=1,n_vertex_max
                                         * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
                               + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                       &
                                         * (r0+alpha_e_bis*rimp0) * (Te_x * ps0_y - Te_y * ps0_x             )                                &
-                                        * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep 
+                                        * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep & 
                               + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                       &
                                         * (alpha_e_tri*rimp0)* Te * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)&
                                         * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep 
@@ -3387,7 +3387,7 @@ do i=1,n_vertex_max
                                     * (                                 + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                                 + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                      &
                                     * (r0+alpha_e_bis*rimp0) * (Te_x * ps0_y - Te_y * ps0_x                  )                                &
-                                    * (                                + F0 / BigR * v_p) * xjac * theta * tstep * tstep
+                                    * (                                + F0 / BigR * v_p) * xjac * theta * tstep * tstep   &
                                 + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                      &
                                     * (alpha_e_tri*rimp0)* Te * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)&
                                     * (                                + F0 / BigR * v_p) * xjac * theta * tstep * tstep

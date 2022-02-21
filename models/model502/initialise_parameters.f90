@@ -107,11 +107,12 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 first_target_point, last_target_point,              &
                 R_Z_psi_bnd_file, wall_file,time_evol_scheme,       &
                 spi_tor_rot, tor_frequency, spi_num_vol,            &
-                ZK_par_neg_thresh,                                  &
+                ZK_e_par_neg_thresh, ZK_i_par_neg_thresh,           &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
-                D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
-                D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
-                ne_SI_min, Te_eV_min, rn0_min,                      &
+                D_prof_neg, ZK_i_prof_neg, ZK_i_par_neg,            &
+                ZK_e_prof_neg, ZK_e_par_neg,                        &
+                D_prof_neg_thresh, ZK_e_prof_neg_thresh, T_min,     &
+                ne_SI_min, Te_eV_min, rn0_min, ZK_i_prof_neg_thresh,&
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &
                 imp_reflection, neutral_reflection, rho_min,        &
@@ -125,6 +126,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 imp_type, delta_n_convection, nimp_bg,              &
+                index_main_imp,                                     &
                 adas_dir, output_prad_phi, n_adas,                  &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 spi_plume_file, spi_plume_hdf5,                     &
@@ -149,7 +151,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family
+                ranks_per_family, cte_current_FB_fact
 
 if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.
@@ -269,6 +271,12 @@ if (my_id .eq. 0) then
     write(*,*) "ERROR: n_adas should be no larger than n_imp_max, EXITING!"
     stop
   end if
+
+ if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
+    write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
+    write(*,*) "ERROR: index_main_imp:", index_main_imp
+    stop
+ end if
 
   !if (using_spi) call init_spi()
   if (using_spi) call init_spi_all()

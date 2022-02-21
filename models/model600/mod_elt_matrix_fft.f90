@@ -1057,15 +1057,24 @@ do i=1,n_vertex_max
           endif
 
           if ( with_TiTe ) then ! (with_TiTe) ****************************************************
-            if (Te0 .lt. ZK_prof_neg_thresh) then
-              ZKe_prof = ZK_prof_neg
+            if (Ti0 .lt. ZK_i_prof_neg_thresh) then
+              ZKi_prof = ZK_i_prof_neg
+            end if
+            if (Ti0 .lt. ZK_i_par_neg_thresh) then
+              ZKi_par_T = ZK_i_par_neg
             endif
-            if (Ti0 .lt. ZK_prof_neg_thresh) then
-              ZKi_prof = ZK_prof_neg
+            if (Te0 .lt. ZK_e_prof_neg_thresh) then
+              ZKe_prof = ZK_e_prof_neg
+            end if
+            if (Te0 .lt. ZK_e_par_neg_thresh) then
+              ZKe_par_T = ZK_e_par_neg
             endif
           else ! (with_TiTe), i.e. with single temperature ***************************************
             if (T0 .lt. ZK_prof_neg_thresh) then
               ZK_prof = ZK_prof_neg
+            end if
+            if (T0 .lt. ZK_par_neg_thresh) then
+              ZK_par_T = ZK_par_neg
             endif
           endif ! (with_TiTe) ********************************************************************
 
@@ -1158,6 +1167,7 @@ do i=1,n_vertex_max
             frad_bg = 0. 
             dfrad_bg_dT = 0.
             do i_imp =1, n_adas
+              if (i_imp == index_main_imp) cycle
               r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
               if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
                 Lrad_imp = 0.0
@@ -1198,10 +1208,6 @@ do i=1,n_vertex_max
 
           end if
 
-          if (with_TiTe) then            
-            dfrad_bg_dT      = dfrad_bg_dT * 2.d0  ! --- Transform derivatives on T to Te
-          endif
-  
          ! For shock capturing stabilization
          tau_sc = 0.d0
          if (use_sc) call calculate_sc_quantities()

@@ -24,6 +24,7 @@ logical, optional             :: short !< commandline short version or run long 
 character(len=512), parameter :: REAL_FMT = "(1X,A, ' = ', 99ES12.4)"
 character(len=512), parameter :: REAL_FMT2 = "(1X,A, ' = ', ES12.4, A)"
 character(len=512), parameter :: INTG_FMT = "(1X,A, ' = ', 100I12)"
+character(len=512), parameter :: INTG_FMT2 = "(1X,A, ' = ', I12, A)"
 character(len=512), parameter :: LOGI_FMT = "(1X,A, ' = ', 10L12)"
 character(len=512), parameter :: REA2_FMT = "(1X,A, ' = ', 4ES12.4, '     ...    ', 4ES12.4)"
 character(len=512), parameter :: REA3_FMT = "(1X,A, ' = ', 9ES12.4, '     ...')"
@@ -350,6 +351,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REAL_FMT) 'rho_coef              ', rho_coef(1:5)
   else
     write(*,CHAR_FMT) 'rho_file              ', trim(rho_file)
+    write(*,REAL_FMT) 'rho_0                 ', rho_0
+    write(*,REAL_FMT) 'rho_1                 ', rho_1
   end if
 
   if (with_neutrals) then
@@ -382,6 +385,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
       write(*,REAL_FMT) 'Te_coef                ', Te_coef(1:5)
     else
       write(*,CHAR_FMT) 'Te_file                ', trim(Te_file)
+      write(*,REAL_FMT) 'Te_0                   ', Te_0
+      write(*,REAL_FMT) 'Te_1                   ', Te_1
     end if
     if ( .not. num_Ti ) then
       write(*,REAL_FMT) 'Ti_0                   ', Ti_0
@@ -389,6 +394,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
       write(*,REAL_FMT) 'Ti_coef                ', Ti_coef(1:5)
     else
       write(*,CHAR_FMT) 'Ti_file                ', trim(Ti_file)
+      write(*,REAL_FMT) 'Ti_0                   ', Ti_0
+      write(*,REAL_FMT) 'Ti_1                   ', Ti_1
     end if
     if ( .not. num_zk_e_perp ) then
       write(*,REAL_FMT) 'ZK_e_perp             ', ZK_e_perp(1:6)
@@ -428,6 +435,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
       write(*,REAL_FMT) 'T_coef                ', T_coef(1:5)
     else
       write(*,CHAR_FMT) 'T_file                ', trim(T_file)
+      write(*,REAL_FMT) 'T_0                   ', T_0
+      write(*,REAL_FMT) 'T_1                   ', T_1
     end if
     if ( .not. num_zk_perp ) then
       write(*,REAL_FMT) 'ZK_perp               ', ZK_perp(1:6)
@@ -526,10 +535,21 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
-  write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
-  write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
-  write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
-  write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
+  if (with_TiTe) then
+    write(*,REAL_FMT) 'ZK_e_prof_neg           ', ZK_e_prof_neg
+    write(*,REAL_FMT) 'ZK_e_par_neg            ', ZK_e_par_neg
+    write(*,REAL_FMT) 'ZK_e_prof_neg_thresh    ', ZK_e_prof_neg_thresh
+    write(*,REAL_FMT) 'ZK_e_par_neg_thresh     ', ZK_e_par_neg_thresh
+    write(*,REAL_FMT) 'ZK_i_prof_neg           ', ZK_i_prof_neg
+    write(*,REAL_FMT) 'ZK_i_par_neg            ', ZK_i_par_neg
+    write(*,REAL_FMT) 'ZK_i_prof_neg_thresh    ', ZK_i_prof_neg_thresh
+    write(*,REAL_FMT) 'ZK_i_par_neg_thresh     ', ZK_i_par_neg_thresh
+  else
+    write(*,REAL_FMT) 'ZK_prof_neg           ', ZK_prof_neg
+    write(*,REAL_FMT) 'ZK_par_neg            ', ZK_par_neg
+    write(*,REAL_FMT) 'ZK_prof_neg_thresh    ', ZK_prof_neg_thresh
+    write(*,REAL_FMT) 'ZK_par_neg_thresh     ', ZK_par_neg_thresh
+  endif
   write(*,REAL_FMT) 'D_imp_extra_R         ', D_imp_extra_R
   write(*,REAL_FMT) 'D_imp_extra_Z         ', D_imp_extra_Z
   write(*,REAL_FMT) 'D_imp_extra_p         ', D_imp_extra_p
@@ -633,6 +653,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REAL_FMT) 'amix_freeb            ', amix_freeb   
     write(*,REAL_FMT) 'equil_accuracy_freeb  ', equil_accuracy_freeb
     write(*,REAL_FMT) 'current_ref           ', current_ref
+    write(*,REAL_FMT) 'cte_current_FB_fact   ', cte_current_FB_fact
     write(*,REAL_FMT) 'psi_offset_freeb      ', psi_offset_freeb
     write(*,REAL_FMT) 'FB_Ip_position        ', FB_Ip_position
     write(*,REAL_FMT) 'FB_Ip_integral        ', FB_Ip_integral
@@ -724,7 +745,9 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
 
 #ifdef fullmhd
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
+    write(*,REA3_FMT) 'eta_ARAZ_const        ', eta_ARAZ_const
     write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
+    write(*,LOGI_FMT) 'eta_ARAZ_simple       ', eta_ARAZ_simple
     write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
 #endif
 
@@ -814,6 +837,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
      do i = 1, n_adas
        write(*,CHAR_FMT2) 'imp_type(',i,')    ', trim(imp_type(i))
      end do
+     write(*,INTG_FMT) 'index_main_imp      ', index_main_imp
      write(*,REAL_FMT) 'neutral_line_source ', neutral_line_source
      write(*,REAL_FMT) 'neutral_line_R_start', neutral_line_R_start
      write(*,REAL_FMT) 'neutral_line_Z_start', neutral_line_Z_start

@@ -220,6 +220,14 @@ subroutine preset_parameters
   ZK_par_neg         = 1.d-3
   ZK_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
   ZK_par_neg_thresh  = 0.d0
+  ZK_e_prof_neg        = 1.d-5
+  ZK_e_par_neg         = 1.d-3
+  ZK_e_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  ZK_e_par_neg_thresh  = 0.d0
+  ZK_i_prof_neg        = 1.d-5
+  ZK_i_par_neg         = 1.d-3
+  ZK_i_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
+  ZK_i_par_neg_thresh  = 0.d0
 
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
@@ -583,7 +591,9 @@ subroutine preset_parameters
 
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
 
+  eta_ARAZ_const     = 0.d0                 !< Use uniform resistivity for AR and AZ equations, used only if eta_ARAZ_on=.false.
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+  eta_ARAZ_simple    = .false.              !< Full-MHD: remove the Fprof dependence of Bphi in the resistive terms for AR and AZ (which should be compensated by current source anyway)
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
@@ -660,6 +670,8 @@ subroutine preset_parameters
   n_adas = 1
   adas_dir = ' '
   imp_type = ' '
+  index_main_imp = 0
+  if (with_impurities) index_main_imp = 1
   use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
 
   !====== JET DMV-2 parameters

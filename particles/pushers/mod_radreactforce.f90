@@ -22,7 +22,7 @@ contains
     real*8, intent(in) :: B     !< Magnetic field strength [T]
     real*8, intent(in) :: gamma !< Particle Lorentz factor
     real*8, intent(in) :: mass  !< Particle mass [kg]
-    integer*1, intent(in) :: charge !< Particle charge [e]
+    integer, intent(in) :: charge !< Particle charge [e]
 
     radreactforce_chartime = 6 * PI * EPS_ZERO * gamma * ( mass * SPEED_OF_LIGHT )**3 &
                            / ( (charge * EL_CHG)**4 * B**2 )
@@ -57,7 +57,7 @@ contains
 
     ! Calculate the characteristic time and pperp
     gamma = sqrt(1.0 + ( norm2(p) / ( m * SPEED_OF_LIGHT ) )**2 )
-    tau   = radreactforce_chartime(Bnorm, gamma, m, particle%q)
+    tau   = radreactforce_chartime(Bnorm, gamma, m, int(particle%q))
     pperp = p - Bxyz * dot_product(Bxyz,p) / Bnorm**2
 
     ! Apply RR-force and convert back to JOREK units
@@ -88,7 +88,7 @@ contains
     ! Calculate the characteristic time
     Bnorm = norm2(B)
     gamma = sqrt( 1.0 + ( ppar / ( m * SPEED_OF_LIGHT ) )**2 + 2 * Bnorm * m * mu / ( m * SPEED_OF_LIGHT )**2 )
-    tau   = radreactforce_chartime(Bnorm, gamma, m, particle%q)
+    tau   = radreactforce_chartime(Bnorm, gamma, m, int(particle%q))
 
     ! Apply RR-force
     particle%p(1) = ppar - dt * 2 * ppar * mu * Bnorm / ( m * SPEED_OF_LIGHT**2 * tau )
@@ -106,7 +106,7 @@ contains
 
     real(kind=8), intent(in)       :: B(3)    !< Magnetic field vector
     real(kind=8), intent(in)       :: mass    !< Particle mass [AMU]
-    integer*1,    intent(in)       :: charge  !< Particle charge [e]
+    integer,      intent(in)       :: charge  !< Particle charge [e]
     real(kind=8), intent(in)       :: p(2)    !< Guiding center ppar and mu
     real(kind=8), intent(inout)    :: yout(2) !< [dppar / dt, dmu / dt]
 

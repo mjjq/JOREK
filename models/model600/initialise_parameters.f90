@@ -141,7 +141,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 neutral_reflection, rho_min,                        &
                 corr_neg_temp_coef,                                 &
                 corr_neg_dens_coef, D_prof_neg, ZK_prof_neg,        &  
-                ZK_par_neg,                                         & 
+                ZK_par_neg, ZK_par_neg_thresh,                      & 
+                ZK_e_par_neg, ZK_i_par_neg, ZK_e_prof_neg, ZK_i_prof_neg,   &
+                ZK_e_prof_neg_thresh, ZK_i_prof_neg_thresh,         &
+                ZK_e_par_neg_thresh, ZK_i_par_neg_thresh,           &
                 ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
@@ -157,6 +160,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 RMP_psi_cos_file, RMP_psi_sin_file,                 &
                 Number_RMP_harmonics,RMP_har_cos_spectrum,          &
                 RMP_har_sin_spectrum, imp_type, adas_dir, n_adas,   &
+                index_main_imp,                                     &
                 amix, amix_freeb, equil_accuracy, use_imp_adas,     &
                 equil_accuracy_freeb, current_ref, FB_Ip_position,  &
                 FB_Ip_integral, Z_axis_ref, FB_Zaxis_position,      &
@@ -189,7 +193,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
                 ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
-                Dn_pol_sc_num, Dn_p_sc_num
+                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact
       
 if (my_id .eq. 0) then
 
@@ -310,6 +314,12 @@ if ( my_id == 0 ) then
     write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
     stop
   end if
+
+ if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
+    write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
+    write(*,*) "ERROR: index_main_imp:", index_main_imp
+    stop
+ end if
 
   if (using_spi) call init_spi_all()
 

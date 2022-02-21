@@ -77,7 +77,25 @@ module phys_module
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
-  logical :: eta_ARAZ_on          !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
+
+  ! --- RESISTIVITY SWITCHES FOR AR AND AZ EQUATIONS
+  ! --- 1.
+  ! --- Default set-up is eta_ARAZ_on = .true.
+  ! --- In this case, the same resistivity is used for all AR,AZ,A3 components
+  ! --- 2.
+  ! --- If (eta_ARAZ_on = .true.) and (eta_ARAZ_simple = .true.), then the Fprof component of Bphi is removed from the resistive term.
+  ! --- Note that in a stationary equilibrium, the Fprof component of Bphi from the current and the current source should exactly cancel anyway.
+  ! --- However, this Fprof component can lead to strong noise at high resistivity, so it is often better to remove it.
+  ! --- 3.
+  ! --- If (eta_ARAZ_on = .false.), then resistivity is switched off by default for the AR and AZ equations.
+  ! --- However, regardless of which eta-model is used for A3, (ie. eta_T_dependent or not), you can still set eta_ARAZ_const 
+  ! --- which will use a constant resistivity at the level eta_ARAZ_const.
+  ! --- 4.
+  ! --- Here again, setting (eta_ARAZ_simple = .true.) with eta_ARAZ_const removes the Fprof dependence of Bphi in the resistive term and the current term for AR&AZ
+  real*8  :: eta_ARAZ_const       !< Use uniform resistivity for AR and AZ equations, used only if eta_ARAZ_on=.false.
+  logical :: eta_ARAZ_on          !< Full-MHD: to switch on/off resistive terms for AR and AZ equations
+  logical :: eta_ARAZ_simple      !< Full-MHD: remove the Fprof dependence of Bphi in the resistive terms for AR and AZ (which should be compensated by current source anyway)
+
   logical :: tauIC_ARAZ_on        !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
@@ -380,7 +398,8 @@ module phys_module
   real*8  :: ksi_ion            !< Energy cost of each ionization
   real*8  :: delta_n_convection !< Switch to activate the convection term for neutrals (at the plasma velocity)
   real*8  :: nimp_bg(n_imp_max) !< Density of background impurities (in \f$m^{-3}\f$)
-
+  integer :: index_main_imp     !< Index of the main impurity species (in imp_type and nimp_bg) solved with continuity equation
+                               
   !> @name Shattered Pellet Injection related input parameters
   ! Note that the SPI share many of the MGI parameters. The code should return to simple MGI upon using_spi = false
   ! The reference spatial coordinate for shattered pellets are calculated using ns_R etc. 
@@ -775,6 +794,14 @@ module phys_module
   real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
   real*8              :: ZK_par_neg_thresh  !< ZK_par_neg becomes effective if T < ZK_par_neg_thresh
+  real*8              :: ZK_e_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_e_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_e_prof_neg_thresh !< ZK_e_prof_neg becomes effective if T < ZK_e_prof_neg_thresh
+  real*8              :: ZK_e_par_neg_thresh  !< ZK_e_par_neg becomes effective if T < ZK_e_par_neg_thresh
+  real*8              :: ZK_i_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_i_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
+  real*8              :: ZK_i_prof_neg_thresh !< ZK_i_prof_neg becomes effective if T < ZK_i_prof_neg_thresh
+  real*8              :: ZK_i_par_neg_thresh  !< ZK_i_par_neg becomes effective if T < ZK_i_par_neg_thresh
   real*8              :: D_imp_extra_R           !< Additional impurity diffusivity in R-direction
   real*8              :: D_imp_extra_Z           !< Additional impurity diffusivity in Z-direction
   real*8              :: D_imp_extra_p           !< Additional impurity diffusivity in phi-direction

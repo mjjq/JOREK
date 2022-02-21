@@ -3817,7 +3817,7 @@ do i=1,n_vertex_max
                             - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * ((r0+alpha_e*rimp0)*rn0*Sion_T+source_bg + source_imp) * xjac * theta * tstep &
                             !==============================End of friction terms=================
                             !===================== Placeholder for the parallel viscous term ============
-                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * ((r0+alpha_e*rimp0)*rn0*Sion_T+source_bg + source_imp) * xjac * theta * tstep &
+
                             !==============================End of parallel viscous terms=================
       
                           + tgnum_T * 0.25d0 / BigR * 2.d0 * vpar0*vpar                                               &

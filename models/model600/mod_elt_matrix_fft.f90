@@ -1586,7 +1586,7 @@ do i=1,n_vertex_max
                                             * ( v_x * u0_y - v_y * u0_x)                  * xjac * tstep * tstep  * factor(var_Ti,8)&
   
                          - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
-                                   * Ti0 * ((r0_x+alpha_i*rimp0_x) * ps0_y - (r0_y+alpha_i*rimp0_y) * ps0_x + F0 / BigR * r0_p)                       &
+                                   * Ti0 * ((r0_x+alpha_i*rimp0_x) * ps0_y - (r0_y+alpha_i*rimp0_y) * ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))   &
                                    * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Ti,8)&
                          - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
                                    * (r0+alpha_i*rimp0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                     &
@@ -1617,7 +1617,7 @@ do i=1,n_vertex_max
                                  - ZKi_prof * BigR * (                + v_p*Ti0_p /BigR**2 )     * xjac * tstep * factor(var_Ti,6) &
   
                            - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
-                                   * Ti0 * ((r0_x+alpha_i*rimp0_x) * ps0_y - (r0_y+alpha_i*rimp0_y) * ps0_x + F0 / BigR * r0_p)                         &
+                                   * Ti0 * ((r0_x+alpha_i*rimp0_x) * ps0_y - (r0_y+alpha_i*rimp0_y) * ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))     &
                                    * (                                  + F0 / BigR * v_p)  * xjac * tstep * tstep  * factor(var_Ti,8)&
                            - tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                     &
                                    * (r0+alpha_i*rimp0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                       &
@@ -1664,7 +1664,7 @@ do i=1,n_vertex_max
                                             * ( v_x * u0_y - v_y * u0_x)                   * xjac * tstep * tstep * factor(var_Te,8 )&
   
                          - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
-                                   * Te0 * ((r0_x+alpha_e*rimp0_x) * ps0_y - (r0_y+alpha_e*rimp0_y) * ps0_x + F0 / BigR * r0_p)                       &
+                                   * Te0 * ((r0_x+alpha_e*rimp0_x) * ps0_y - (r0_y+alpha_e*rimp0_y) * ps0_x + F0 / BigR * (r0_p+alpha_e*rimp0_p))                       &
                                    * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Te,8 )&
                          - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
                                    * (r0+alpha_e_bis*rimp0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                     &
@@ -1713,7 +1713,7 @@ do i=1,n_vertex_max
               rhs_ij_k(var_Te) = - (ZKe_par_T-ZKe_prof) * BigR / BB2 * Bgrad_T_k_star * Bgrad_Te * xjac * tstep * factor(var_Te,5) &
                                  - ZKe_prof * BigR * (                + v_p*Te0_p /BigR**2 )     * xjac * tstep * factor(var_Te,6) &
                            - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
-                                   * Te0 * ((r0_x+alpha_e*rimp0_x) * ps0_y - (r0_y+alpha_e*rimp0_y) * ps0_x  + F0 / BigR * r0_p)                        &
+                                   * Te0 * ((r0_x+alpha_e*rimp0_x) * ps0_y - (r0_y+alpha_e*rimp0_y) * ps0_x  + F0 / BigR * (r0_p+alpha_e*rimp0_p))                        &
                                    * (                                   + F0 / BigR * v_p) * xjac * tstep * tstep * factor(var_Te,8 ) &
                            - tgnum_Te * 0.25d0 / BigR * vpar0**2                                                    &
                                    * (r0+alpha_e_bis*rimp0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                       &
@@ -2875,7 +2875,7 @@ do i=1,n_vertex_max
                                      * (r0+alpha_i*rimp0) * (Ti0_x * psi_y - Ti0_y * psi_x)                                             &
                                      * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep   & 
                            + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                         &
-                                     * Ti0 * ((r0_x+alpha_i*rimp0_x) * ps0_y - (r0_y+alpha_i*rimp0_y) * ps0_x + F0 / BigR * r0_p)                           &
+                                     * Ti0 * ((r0_x+alpha_i*rimp0_x) * ps0_y - (r0_y+alpha_i*rimp0_y) * ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))     &
                                      * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep                    &
                            + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                         &
                                      * (r0+alpha_i*rimp0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                         &
@@ -2997,7 +2997,7 @@ do i=1,n_vertex_max
                               + tgnum_Ti* 0.25d0 * BigR**2 * (r0+alpha_i*rimp0) * (Ti_x * u0_y - Ti_y * u0_x)         &
                                         * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep  &
                               + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                       &
-                                        * Ti * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * r0_p)                          &
+                                        * Ti * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))    &
                                         * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
                               + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                       &
                                         * (r0+alpha_i*rimp0) * (Ti_x * ps0_y - Ti_y * ps0_x             )                                &
@@ -3007,7 +3007,7 @@ do i=1,n_vertex_max
                                   + dZKi_par_dT * Ti     * BigR / BB2 * Bgrad_T_k_star * Bgrad_Ti    * xjac * theta * tstep  &
   
                                 + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                      &
-                                    * Ti * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * r0_p)                               &
+                                    * Ti * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))                               &
                                     * (                                 + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                                 + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                      &
                                     * (r0+alpha_i*rimp0) * (Ti_x * ps0_y - Ti_y * ps0_x                  )                                &
@@ -3042,7 +3042,7 @@ do i=1,n_vertex_max
                                !==============================End of friction terms=================
  
                                 + tgnum_Ti* 0.25d0 / BigR * 2.d0 * vpar0*vpar &
-                                      * Ti0 * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * r0_p)                               &
+                                      * Ti0 * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))                               &
                                       * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * theta * tstep * tstep &
                                 + tgnum_Ti* 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                       *  (r0+alpha_i*rimp0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                             &
@@ -3050,7 +3050,7 @@ do i=1,n_vertex_max
     
                       amat_k(var_Ti,var_vpar) =  &
                             + tgnum_Ti* 0.25d0 / BigR * 2.d0 * vpar0*vpar &
-                                      * Ti0 * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * r0_p)                          &
+                                      * Ti0 * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))                          &
                                       * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                             + tgnum_Ti* 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                       * (r0+alpha_i*rimp0) * (Ti0_x * ps0_y - Ti0_y * ps0_x + F0 / BigR * Ti0_p)                          &
@@ -3168,7 +3168,7 @@ do i=1,n_vertex_max
                                      * (r0+alpha_e_bis*rimp0) * (Te0_x * psi_y - Te0_y * psi_x)                                             &
                                      * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep   & 
                            + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                         &
-                                     * Te0 * ((r0_x+alpha_e*rimp0_x) * ps0_y - (r0_y+alpha_e*rimp0_y) * ps0_x)                           &
+                                     * Te0 * ((r0_x+alpha_e*rimp0_x) * ps0_y - (r0_y+alpha_e*rimp0_y) * ps0_x + F0 / BigR * (r0_p+alpha_e*rimp0_p))                           &
                                      * ( v_x * psi_y -  v_y * psi_x ) * xjac * theta * tstep * tstep                    &
                            + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                         &
                                      * (r0+alpha_e_bis*rimp0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                         &
@@ -3209,7 +3209,7 @@ do i=1,n_vertex_max
                                               * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
                            + tgnum_Te * 0.25d0 * BigR**2 * (r0+alpha_e_bis*rimp0) * (Te0_x * u_y - Te0_y * u_x)              &
                                               * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
-                           + tgnum_Te * 0.25d0 * BigR**2 * Te0* ((r0_x+alpha_e*rimp0_x) * u_y - (r0_y+alpha_e*rimp0_y) * u_x)             &
+                           + tgnum_Te * 0.25d0 * BigR**2 * Te0* ((r0_x+alpha_e*rimp0_x) * u0_y - (r0_y+alpha_e*rimp0_y) * u0_x)             &
                                               * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep    &
                            + tgnum_Te * 0.25d0 * BigR**2 * (r0+alpha_e_bis*rimp0) * (Te0_x * u0_y - Te0_y * u0_x)            &
                                               * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
@@ -3363,7 +3363,7 @@ do i=1,n_vertex_max
                               + tgnum_Te * 0.25d0 * BigR**2 * (alpha_e_tri*rimp0)*Te* (Te0_x* u0_y - Te0_y* u0_x)         &
                                         * ( v_x * u0_y - v_y * u0_x) * xjac * theta * tstep * tstep  &
                               + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                       &
-                                        * Te * ((r0_x+alpha_e_bis*rimp0_x)*ps0_y - (r0_y+alpha_e_bis*rimp0_y)*ps0_x + F0 / BigR * r0_p)                          &
+                                        * Te * ((r0_x+alpha_e_bis*rimp0_x)*ps0_y - (r0_y+alpha_e_bis*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_e*rimp0_p))                          &
                                         * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
                               + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                       &
                                         * (r0+alpha_e_bis*rimp0) * (Te_x * ps0_y - Te_y * ps0_x             )                                &
@@ -3383,7 +3383,7 @@ do i=1,n_vertex_max
 !================= End ionization potential energy ===========================
 
                                 + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                      &
-                                    * Te * ((r0_x+alpha_e_bis*rimp0_x)*ps0_y - (r0_y+alpha_e_bis*rimp0_y)*ps0_x)                               &
+                                    * Te * ((r0_x+alpha_e_bis*rimp0_x)*ps0_y - (r0_y+alpha_e_bis*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_e_bis*rimp0_p))   &
                                     * (                                 + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                                 + tgnum_Te * 0.25d0 / BigR * vpar0**2                                                      &
                                     * (r0+alpha_e_bis*rimp0) * (Te_x * ps0_y - Te_y * ps0_x                  )                                &
@@ -3429,7 +3429,7 @@ do i=1,n_vertex_max
 !================= End ionization potential energy ===========================
       
                                   + tgnum_Te * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
-                                      * Te0 * ((r0_x+alpha_e*rimp0_x)*ps0_y - (r0_y+alpha_e*rimp0_y)*ps0_x + F0 / BigR * r0_p)                               &
+                                      * Te0 * ((r0_x+alpha_e*rimp0_x)*ps0_y - (r0_y+alpha_e*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_e*rimp0_p)) &
                                       * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * theta * tstep * tstep &
                                   + tgnum_Te * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                       * (r0+alpha_e_bis*rimp0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                             &

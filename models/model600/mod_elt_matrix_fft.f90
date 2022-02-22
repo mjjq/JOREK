@@ -3437,7 +3437,7 @@ do i=1,n_vertex_max
     
                       amat_k(var_Te,var_vpar) =  &
                             + tgnum_Te * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
-                                      * Te0 * ((r0_x+alpha_e*rimp0_x)*ps0_y - (r0_y+alpha_e*rimp0_y)*ps0_x)                          &
+                                      * Te0 * ((r0_x+alpha_e*rimp0_x)*ps0_y - (r0_y+alpha_e*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_e*rimp0_p)) &
                                       * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                             + tgnum_Te * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                       * (r0+alpha_e_bis*rimp0) * (Te0_x * ps0_y - Te0_y * ps0_x + F0 / BigR * Te0_p)                          &

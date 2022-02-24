@@ -1,129 +1,96 @@
 !  -*-f90-*-  (for emacs)    vim:set filetype=fortran:  (for vim)
 !
-!> (M)onte-(C)arlo (C)oulomb (C)ollisions. Computes the test-particle Monte Carlo
-!> coefficients and advances the related stochastic differential equations.
-!> The maximum accepted normalized temperature of the background species is set to 
-!> Theta=T/mc^2=0.1. This covers every  Tokamak and stellarator.
+!> Coulomb collisions for (relativistic) test particles.
 !<
-module mod_mccc
-  use special_mod, only : special_L0L1, special_besk0exp, special_besk1exp, special_besk2exp
+module mod_ccoll_relativistic
+  use mod_bessel, only : special_L0L1, special_besk0exp, special_besk1exp, special_besk2exp
   implicit none
   
   private
-  real*8, parameter :: pi = 4.D0*atan(1.D0) 
-  real*8, parameter :: eps0 = 8.854187817D-12 ![F/m]
-  real*8, parameter :: c = 299792458.D0 ![m/s]
-  real*8, parameter :: elemCharge = 1.60217662D-19 ![C]
-  real*8, parameter :: hbar = 1.05457180D-34
-
-  real*8, parameter, private :: MCCC_NANRESULT = -3
   
-  type mccc_special
+  type ccoll_tabulatedL0L1
      real*8, allocatable, dimension(:)   :: u
      real*8, allocatable, dimension(:)   :: theta
      real*8, allocatable, dimension(:,:) :: L0
      real*8, allocatable, dimension(:,:) :: L1
-  end type mccc_special
+  end type ccoll_tabulatedL0L1
 
-  type mcccgc_coefstruct
-     real*8 :: kappa  = 0.D0
-     real*8 :: dkappa = 0.D0
-     real*8 :: Dpar   = 0.D0
-     real*8 :: dDpar  = 0.D0
-     real*8 :: Dperp  = 0.D0
-     real*8 :: dDperp = 0.D0
-     real*8 :: gx     = 0.D0
-     real*8 :: nu     = 0.D0
-  end type mcccgc_coefstruct
-
-  public :: mccc_special, mccc_init, mccc_uninit, mccc_readdat, mccc_writedat, &
-       mccc_push, mccc_clog, mccc_coeffs, mccc_testCoeff, mcccgc_coefstruct, mcccgc_push, mcccgc_evalcoefs
+  public :: ccoll_tabulatedL0L1, ccoll_compute_L0L1table, ccoll_free_L0L1table, &
+       ccoll_read_L0L1table, ccoll_write_L0L1table, &
+       ccoll_kinetic_relativistic_push, ccoll_clog, ccoll_coeffs, ccoll_gc_relativistic_push
   
 contains
 
   !> Initializes the mccc_special struct that stores the data required for
   !> interpolating integrals L0 and L1. The interpolation grid is
   !> logarithmic and uses linear interpolation. Deallocate with mccc_uninit().
-  !>
-  !> input:
-  !>
-  !> real*8  uminxp      -- defines minimum u as umin=10^uminxp
-  !> real*8  umaxxp      -- defines maximum u as umax=10^umaxxp
-  !> real*8  thminxp     -- defines minimum theta as thmin=10^thminxp
-  !> real*8  thmaxxp     -- defines maximum theta as thmax=10^thmaxxp
-  !> integer nu          -- number of u grid points
-  !> integer nth         -- number of theta grid points
-  !> real*8  L0L1_eps    -- (optional) 
-  !> real*8  L0L1_cutoff -- (optional) 
-  !>
-  !> output:
-  !> 
-  !> mccc_special        -- interpolation data
-  !<
-  type(mccc_special) function mccc_init(uminxp,umaxxp,thminxp,thmaxxp,nu,nth,&
+  type(ccoll_tabulatedL0L1) function ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth,&
        L0L1_eps,L0L1_cutoff)
     implicit none
-    real*8, intent(in)  :: uminxp,umaxxp,thminxp,thmaxxp     
-    integer, intent(in) :: nu,nth        
-    real*8, intent(inout), optional :: L0L1_eps, L0L1_cutoff
+
+    real*8, intent(in)  :: uminxp  !> minimum u as umin=10^uminxp 
+    real*8, intent(in)  :: umaxxp  !> maximum u as umax=10^umaxxp
+    real*8, intent(in)  :: thminxp !> minimum theta as thmin=10^thminxp
+    real*8, intent(in)  :: thmaxxp !> maximum theta as thmax=10^thmaxxp
+    integer, intent(in) :: nu      !> number of u grid points
+    integer, intent(in) :: nth     !> number of theta grid points
+    real*8, intent(inout), optional :: L0L1_eps    !> 
+    real*8, intent(inout), optional :: L0L1_cutoff !> 
 
     integer :: i, j
+    type(ccoll_tabulatedL0L1) :: ccoll_tabulatedL0L1
     
-    allocate(mccc_init%u(nu),mccc_init%theta(nth),mccc_init%L0(nu,nth),mccc_init%L1(nu,nth))
+    allocate(ccoll_tabulatedL0L1%u(nu), &
+         ccoll_tabulatedL0L1%theta(nth),&
+         ccoll_tabulatedL0L1%L0(nu,nth),&
+         ccoll_tabulatedL0L1%L1(nu,nth))
 
-    mccc_init%u=10**(uminxp + (/ ( (i-1)*(umaxxp-uminxp)/(nu-1), i=1,nu) /) )
-    mccc_init%theta=10**(thminxp + (/ ( (i-1)*(thmaxxp-thminxp)/(nth-1), i=1,nth) /))
+    ccoll_tabulatedL0L1%u     = 10**( uminxp  + (/ ( ( i - 1 ) * ( umaxxp  - uminxp  ) / ( nu  - 1 ), i=1,nu)  /) )
+    ccoll_tabulatedL0L1%theta = 10**( thminxp + (/ ( ( i - 1 ) * ( thmaxxp - thminxp ) / ( nth - 1 ), i=1,nth) /) )
 
     do i=1,nu
        do j=1,nth
           if(present(L0L1_eps) .and. present(L0L1_cutoff)) then
-             call special_L0L1(mccc_init%u(i),mccc_init%theta(j),mccc_init%L0(i,j),mccc_init%L1(i,j),&
+             call special_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
+                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j),&
                   L0L1_eps=L0L1_eps,L0L1_cutoff=L0L1_cutoff)
           elseif(present(L0L1_eps)) then
-             call special_L0L1(mccc_init%u(i),mccc_init%theta(j),mccc_init%L0(i,j),mccc_init%L1(i,j),&
+             call special_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
+                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j),&
                   L0L1_eps=L0L1_eps)
           elseif(present(L0L1_cutoff)) then
-             call special_L0L1(mccc_init%u(i),mccc_init%theta(j),mccc_init%L0(i,j),mccc_init%L1(i,j),&
+             call special_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
+                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j),&
                   L0L1_cutoff=L0L1_cutoff)
           else
-             call special_L0L1(mccc_init%u(i),mccc_init%theta(j),mccc_init%L0(i,j),mccc_init%L1(i,j))
+             call special_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
+                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j))
           end if
        end do
        write(*,*) "done: ",i,"/",nu
     end do
+
+    ccoll_computeL0L1table = ccoll_tabulatedL0L1
     
-  end function mccc_init
+  end function ccoll_compute_L0L1table
+
 
   !> Deinitializes the mccc_special struct.
-  !>
-  !> input:
-  !>
-  !> mccc_special dat -- interpolation data
   !<
-  integer function mccc_uninit(dat)
+  subroutine ccoll_free_L0L1table(dat)
     implicit none
-    type(mccc_special), intent(inout) :: dat
+    type(ccoll_tabulatedL0L1), intent(inout) :: dat ! data to be deinitialized
    
     deallocate(dat%u,dat%theta,dat%L0,dat%L1)
 
-    mccc_uninit = 0
-  end function mccc_uninit
+  end subroutine ccoll_free_L0L1table
+
 
   !> Writes the mccc_special struct to a file.
-  !>
-  !> input:
-  !>
-  !> mccc_special dat      -- interpolation data
-  !> character(len=*) fn   -- output filename
-  !>
-  !> output:
-  !>
-  !> integer mccc_writedat -- negative if there was an error
-  !<
-  integer function mccc_writedat(dat,fn)
+  subroutine ccoll_write_L0L1table(dat,fn)
     implicit none
-    type(mccc_special), intent(in)     :: dat
-    character(len=*), intent(in) :: fn
+    type(ccoll_tabulatedL0L1), intent(in) :: dat ! data to be written
+    character(len=*), intent(in) :: fn           ! output filename
 
     integer :: chn=989
     integer :: nu,nth
@@ -141,23 +108,12 @@ contains
     write(chn,*) dat%L0
     write(chn,*) dat%L1
     close(chn, err=100)
-
-    100 mccc_writedat = -1
     
-  end function mccc_writedat
+  end subroutine ccoll_write_L0L1table
 
   !> Reads the mccc_special struct from a file.
-  !>
-  !> input:
-  !>
-  !> character(len=*) fn -- input filename
-  !>
-  !> output
-  !>
-  !> mccc_special        -- interpolation data
-  !<
-  type(mccc_special) function mccc_readdat(fn)
-    character(len=*), intent(in) :: fn
+  type(ccoll_tabulatedL0L1) function ccoll_read_L0L1table(fn)
+    character(len=*), intent(in) :: fn !< input filename
 
     integer :: chn=989
     integer :: nu,nth
@@ -165,15 +121,15 @@ contains
     open(unit=chn,file=fn,action='read')
     read(chn,*) nu
     read(chn,*) nth
-    allocate(mccc_readdat%u(nu),mccc_readdat%theta(nth),&
-         mccc_readdat%L0(nu,nth),mccc_readdat%L1(nu,nth))
-    read(chn,*) mccc_readdat%u
-    read(chn,*) mccc_readdat%theta
-    read(chn,*) mccc_readdat%L0
-    read(chn,*) mccc_readdat%L1
+    allocate(ccoll_read_L0L1table%u(nu), ccoll_read_L0L1table%theta(nth),&
+         ccoll_read_L0L1table%L0(nu,nth), ccoll_read_L0L1table%L1(nu,nth))
+    read(chn,*) ccoll_read_L0L1table%u
+    read(chn,*) ccoll_read_L0L1table%theta
+    read(chn,*) ccoll_read_L0L1table%L0
+    read(chn,*) ccoll_read_L0L1table%L1
     close(chn)
     
-  end function mccc_readdat
+  end function ccoll_read_L0L1table
 
   !> Computes Coulomb logarithm for a given test particle and plasma species.
   !> The logarithm is estimated as ln{lambda_D/min{bqm,bcl}} where lambda_D is
@@ -196,7 +152,7 @@ contains
   !>
   !> real*8 clogab(:) -- list of Coulomb logarithms for species a colliding with b [1] 
   !<
-  subroutine mccc_clog(ma,qa,mb,qb,nb,thb,u,clog)
+  subroutine ccoll_clog(ma,qa,mb,qb,nb,thb,u,clog)
     implicit none
     real*8, intent(in)  :: ma, qa, u
     real*8, intent(in)  :: mb(:), qb(:)
@@ -222,7 +178,7 @@ contains
        clog(i) = log(debyeLength/max(bcl,bqm))
     end do
 
-  end subroutine mccc_clog
+  end subroutine ccoll_clog
 
   !> Computes requested collision coefficients and respective derivatives
   !> for a given test particle and background species.
@@ -250,10 +206,10 @@ contains
   !> real*8 kappa     -- (optional) guiding center friction coefficient [1/s]
   !> real*8 dkappa    -- (optional) derivative of kappa with respect to u [1/s]
   !<
-  subroutine mccc_coeffs(dat,ma,qa,clogab,mb,qb,nb,thb,u,&
+  subroutine ccoll_coeffs(dat,ma,qa,clogab,mb,qb,nb,thb,u,&
        K,dK,Dpar,dDpar,Dperp,dDperp,kappa,dkappa)
     implicit none
-    type(mccc_special), intent(in) :: dat
+    type(ccoll_tabulatedL0L1), intent(in) :: dat
     real*8, intent(in) :: ma, qa, u
     real*8, intent(in) :: mb, qb,clogab, nb, thb
     real*8, intent(out), optional :: K,Dpar,Dperp, kappa
@@ -302,7 +258,7 @@ contains
        dkappa=-Gab*(ma/mb)*(dmu1-2*mu1/u)/u2
     end if
 
-  end subroutine mccc_coeffs
+  end subroutine ccoll_coeffs
   
   !> Computes the value for particle momentum after collisions with
   !> background species using Euler-Maruyama method with a fixed time step.
@@ -326,87 +282,56 @@ contains
   !> real*8  uout(3)   -- normalized test particle momentum u=p/mc after collisions [1]
   !> integer err       -- error flag, negative indicates something went wrong
   !<
-  subroutine mccc_push(dat,ma,qa,clogab,mb,qb,nb,thb,dt,rnd,uin,uout)
+  subroutine ccoll_kinetic_relativistic_push(dat,ma,qa,mb,qb,nb,thb,dt,rnd,uin,uout)
     implicit none
-    type(mccc_special), intent(in) :: dat 
+    type(ccoll_tabulatedL0L1), intent(in) :: dat 
     real*8, intent(in) :: ma, qa         
-    real*8, intent(in) :: mb(:), qb(:), nb(:), thb(:), clogab(:)    
+    real*8, intent(in) :: mb(:), qb(:), nb(:), thb(:)
     real*8, intent(in) :: dt       
     real*8, intent(in) :: rnd(3)    
     real*8, intent(in) :: uin(3)  
     
     real*8, intent(out)  :: uout(3)
-    !integer, intent(out) :: err
-    
 
+    real*8, allocatable :: clogab(:)
     real*8 :: K,Dpar,Dperp,Kb,Dparb,Dperpb ! the fokker-planck coefficients
     real*8 :: dW(3)                        ! the change in the Wiener process during dt
     real*8 :: uhat(3)                      ! a unit vector parallel to pin
-    real*8 :: u                           ! absolute value of particle momentum normalized to mc
+    real*8 :: u                            ! absolute value of particle momentum normalized to mc
     integer  :: i, nspecies                ! for iterating over plasma species
 
-    !err = 0
-
     ! Wiener process for this step
-    dW=sqrt(dt)*rnd
+    dW = sqrt(dt)*rnd
 
-    ! Magnitude and unit vector of p
-    u=norm2(uin)
-    uhat=uin/u
+    u = norm2(uin)
+    uhat = uin / u
+    nspecies = size(mb)
+    allocate(clogab(nspecies))
+    call ccoll_clog(ma,qa,mb,qb,nb,thb,u,clogab)
     
     ! Evaluate and sum Fokker-Planck coefficients
-    K=0.D0
-    Dpar=0.D0
-    Dperp=0.D0
-    nspecies = size(clogab)
+    K        = 0.D0
+    Dpar     = 0.D0
+    Dperp    = 0.D0
     do i = 1,nspecies
-       call mccc_coeffs(dat,ma,qa,clogab(i),mb(i),qb(i),nb(i),thb(i),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
-       K=K+Kb
-       Dpar=Dpar+Dparb
-       Dperp=Dperp+Dperpb
+       call ccoll_coeffs(dat,ma,qa,clogab(i),mb(i),qb(i),nb(i),thb(i),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
+       K     = K     + Kb
+       Dpar  = Dpar  + Dparb
+       Dperp = Dperp + Dperpb
     end do
+    deallocate(clogab)
 
-    ! Use Euler-Maruyama method to get pout
-    uout = uin+K*uhat*dt+sqrt(2*Dpar)*dot_product(uhat,dW)*uhat+sqrt(2*Dperp)*(dW-dot_product(uhat,dW)*uhat)
+    ! Use Euler-Maruyama method to get uout
+    uout = uin + K * uhat * dt + sqrt( 2 * Dpar ) * dot_product( uhat, dW ) * uhat &
+         + sqrt( 2 * Dperp ) * ( dW - dot_product( uhat, dW ) * uhat )
 
-    !if(any(isnan(uout))) err = MCCC_NANRESULT
+  end subroutine ccoll_kinetic_relativistic_push
 
-  end subroutine mccc_push
-
-
-  subroutine mcccgc_evalCoefs(dat,ma,qa,clogab,mb,qb,nb,thb,u,xi,coefs)
-    type(mccc_special), intent(in) :: dat
-    real*8, intent(in) :: ma,qa,u,xi
-    real*8, intent(in) :: clogab(:),mb(:),qb(:),nb(:),thb(:) 
-
-    type(mcccgc_coefstruct), intent(out) :: coefs
-
-    real*8 :: kappab,dkappab,Dparb,dDparb,Dperpb,dDperpb ! Coefficients for species-wise collisions       
-
-    integer :: nspecies,i
-
-    nspecies = size(clogab)
-    coefs%kappa  = 0
-    coefs%Dpar   = 0
-    coefs%dDpar  = 0
-    coefs%Dperp  = 0
-    coefs%dDperp = 0
-    do i = 1,nspecies
-       call mccc_coeffs(dat, ma, qa, clogab(i), mb(i), qb(i), nb(i), thb(i), u, &
-            kappa  = kappab,   Dpar = Dparb,   Dperp = Dperpb, dDpar = dDparb)
-
-       coefs%kappa  = coefs%kappa  + kappab
-       coefs%Dpar   = coefs%Dpar   + Dparb
-       coefs%dDpar  = coefs%dDpar  + dDparb
-       coefs%Dperp  = coefs%Dperp  + Dperpb
-    end do
-
-    coefs%nu = 2 * coefs%Dperp / u**2
-  end subroutine mcccgc_evalCoefs
-
-
-  subroutine mcccgc_push(coefs,cutoff,uin,uout,xiin,xiout,dtin,rnd)
-    type(mcccgc_coefstruct), intent(in) :: coefs
+  ! Apply Coulomb collisions for guiding center
+  subroutine ccoll_gc_relativistic_push(dat,ma,qa,mb,qb,nb,thb,uin,uout,xiin,xiout,dtin,rnd,cutoff)
+    type(ccoll_tabulatedL0L1), intent(in) :: dat
+    real*8, intent(in) :: ma,qa
+    real*8, intent(in) :: mb(:),qb(:),nb(:),thb(:)
 
     real*8, intent(in) :: dtin ! time step length [s]
     real*8, intent(in) :: uin ! p/mc test particle momentum vector (px,py,pz) before collision, normalized to mc
@@ -417,19 +342,36 @@ contains
     real*8, intent(out) :: uout 
     real*8, intent(out) :: xiout
 
-    real*8 :: time
-    real*8 :: bhat(3)
-    real*8 :: F, gu, gxi
-    real*8 :: kappa_k, kappa_d(2), erru, gx
-    real*8 :: dWopt(2),dti,alpha
-    integer :: i, windex,tindex, ki,kmax
-    logical rejected
+    real*8, allocatable :: clogab(:)
+    real*8 :: kappa, Dpar, dDpar, Dperp, nu ! Collision coefficients
+    real*8 :: kappab, Dparb, dDparb, Dperpb ! Coll. coefficients species-wise
+    integer :: i, nspecies
 
-    F   = coefs%kappa+coefs%dDpar+2*coefs%Dpar/uin
+    nspecies = size(mb)
+    allocate(clogab(nspecies))
+    call ccoll_clog(ma,qa,mb,qb,nb,thb,uin,clogab)
 
-    uout  = uin + ( coefs%kappa + coefs%dDpar + 2 * coefs%Dpar / uin ) * dtin &
-                + sqrt( 2 * coefs%Dpar * dtin ) * rnd(1)
-    xiout = xiin - xiin * coefs%nu * dtin + sqrt( ( 1.0 - xiin**2 ) * coefs%nu * dtin) * rnd(2)
+    kappa  = 0
+    Dpar   = 0
+    dDpar  = 0
+    Dperp  = 0
+    do i = 1,nspecies
+
+       call ccoll_coeffs(dat, ma, qa, clogab(i), mb(i), qb(i), nb(i), thb(i), uin, &
+            kappa  = kappab,   Dpar = Dparb,   Dperp = Dperpb, dDpar = dDparb)
+
+       kappa  = kappa  + kappab
+       Dpar   = Dpar   + Dparb
+       dDpar  = dDpar  + dDparb
+       Dperp  = Dperp  + Dperpb
+    end do
+
+    nu = 2 * Dperp / uin**2
+    deallocate(clogab)
+
+    uout  = uin + ( kappa + dDpar + 2 * Dpar / uin ) * dtin &
+                + sqrt( 2 * Dpar * dtin ) * rnd(1)
+    xiout = xiin - xiin * nu * dtin + sqrt( ( 1.0 - xiin**2 ) * nu * dtin) * rnd(2)
 
     ! Reflect uout if uout is below the cutoff value
     if(uout .lt. cutoff) then
@@ -448,10 +390,10 @@ contains
        end if
     end if
 
-  end subroutine mcccgc_push
+  end subroutine ccoll_gc_relativistic_push
 
-    !> Evaluates the mu functions
-    subroutine mccc_mufuncs(u,th,data,mu0,mu1,mu2,dmu0,dmu1,dmu2)
+  !> Evaluates the mu functions
+  subroutine ccoll_mufuncs(u,th,data,mu0,mu1,mu2,dmu0,dmu1,dmu2)
     implicit none
     real*8, intent(in) :: u, th
     type(mccc_special), intent(in) :: data
@@ -470,6 +412,7 @@ contains
     mu0=(gammasq*L0-th*L1+(th-gamma)*u*expgammatheta)/expBessel2
     mu1=(gammasq*L1-th*L0+(th*gamma-1)*u*expgammatheta)/expBessel2
     mu2=(2*tg*L1+(1+2*th2)*u*expgammatheta)/(th*expBessel2)
+    !write(*,*) "mu1", mu1
 
     if(present(dmu0) .or. present(dmu1) .or. present(dmu2)) then
        u2=u**2
@@ -486,13 +429,13 @@ contains
        end if
     end if
     
-  end subroutine mccc_mufuncs
+  end subroutine ccoll_mufuncs
 
 
   !> Evaluates the special functions L0 and L1
   !> Approximations are used outside the tabulated domain.
-  subroutine mccc_L0L1(u,theta,data,L0,L1)
-    type(mccc_special), intent(in) :: data
+  subroutine eval_L0L1(u,theta,data,L0,L1)
+    type(ccoll_tabulatedL0L1), intent(in) :: data
     real*8, intent(in) :: u,theta
     real*8, intent(out) :: L0,L1
     real*8 :: th
@@ -513,36 +456,38 @@ contains
        L1=special_besk1exp(1.D0/th)
     else
        if( (u.gt.data%u(1)) .and. (th.gt.data%theta(1)) ) then
-          L0 = interp2(data%u,data%theta,data%L0,u,th)!,nu,nth) 
-          L1 = interp2(data%u,data%theta,data%L1,u,th)!,nu,nth) 
+          
+          L0 = interp2(log10(data%u),log10(data%theta),data%L0,log10(u),log10(th)) 
+          L1 = interp2(log10(data%u),log10(data%theta),data%L1,log10(u),log10(th))
        else
           L0 = sqrt(pi*theta/2)*erf(u/sqrt(2*theta))
           L1=L0
        end if
     end if
     
-  end subroutine mccc_L0L1
+  end subroutine eval_L0L1
 
+  !> Bilinear interpolation for interpolating tabulated L0 and L1 values
   real(kind=8) function interp2(x, y, f, xq, yq)
     implicit none
     
-    real*8, intent(in) :: x(:), y(:)
-    real*8, intent(in) :: f(:,:)
-    real*8, intent(in) :: xq, yq
+    real*8, intent(in) :: x(:), y(:) !< abscissae
+    real*8, intent(in) :: f(:,:)     !< function values
+    real*8, intent(in) :: xq, yq     !< queried point
 
     real*8  :: dx, dy
-    integer :: iy, ix
+    integer :: ix, iy
 
     dx = x(2) - x(1)
     dy = y(2) - y(1)
     
-    ix = floor(xq/dx)
-    iy = floor(yq/dy)
+    ix = floor( ( xq - x(1) ) / dx ) + 1
+    iy = floor( ( yq - y(1) ) / dy ) + 1
 
     interp2 = ( f(ix, iy)         * ( x(ix + 1) - xq ) * ( y(iy + 1) - yq ) &
-              + f(ix + 1, iy)     * ( x(ix) - xq )     * ( y(iy + 1) - yq ) &
-              + f(ix, iy + 1)     * ( x(ix + 1) - xq ) * ( y(iy) - yq )     &
-              + f(ix + 1, iy + 1) * ( x(ix) - xq )     * ( y(iy) - yq )     &
+              + f(ix + 1, iy)     * ( xq - x(ix) )     * ( y(iy + 1) - yq ) &
+              + f(ix, iy + 1)     * ( x(ix + 1) - xq ) * ( yq - y(iy) )     &
+              + f(ix + 1, iy + 1) * ( xq - x(ix) )     * ( yq - y(iy) )     &
               ) / ( dx * dy )
     
   end function interp2
@@ -553,18 +498,18 @@ contains
   !> theta is background normalized temperature T_b/(m_b*c^2) and u is normalized
   !> test particle momentum p/mc. The results are then written in mccc_coefficients.out
   !<
-  subroutine mccc_testCoeff
+  subroutine ccoll_testCoeff
     implicit none
 
-    real*8, parameter :: uminxp = -3.D0
-    real*8, parameter :: umaxxp = 2.D0
+    real*8, parameter :: uminxp  = -3.D0
+    real*8, parameter :: umaxxp  = 2.D0
     real*8, parameter :: thminxp = -3.D0
     real*8, parameter :: thmaxxp = -1.D0 
-    integer, parameter :: nu = 401
-    integer, parameter :: nth = 201
+    integer, parameter :: nu     = 401
+    integer, parameter :: nth    = 201
 
     integer, parameter :: nspec=1
-    type(mccc_special) :: dat    
+    type(ccoll_tabulatedL0L1) :: dat    
     real*8 :: clogab(nspec) ! [1]
     real*8 :: mb(nspec) ! [kg]
     real*8 :: qb(nspec) ! [C]
@@ -610,10 +555,10 @@ contains
     write(*,*) 'Initializing look-up tables...'
     inquire(file=storage_file,exist=storage_file_on_disk)
     if(storage_file_on_disk) then
-       dat = mccc_readdat(storage_file)
+       dat = ccoll_read_L0L1table(storage_file)
     else
-       dat = mccc_init(uminxp,umaxxp,thminxp,thmaxxp,nu,nth)
-       err = mccc_writedat(dat,storage_file)
+       dat = ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth)
+       err = ccoll_write_L0L1table(dat,storage_file)
     end if
     print*,'Done!'
 
@@ -632,7 +577,7 @@ contains
        kappa=0.D0
        dkappa=0.D0
        do i = 1,nspec
-          call mccc_coeffs(dat,m,q,clogab(i),mb(i),qb(i),nb(i),thb(i),xmin+j*dx,&
+          call ccoll_coeffs(dat,m,q,clogab(i),mb(i),qb(i),nb(i),thb(i),xmin+j*dx,&
                K=Kb,Dpar=Dparb,Dperp=Dperpb,dK=dKb,dDpar=dDparb,dDperp=dDperpb,&
                kappa=kappab,dkappa=dkappab)
           K=K+Kb
@@ -651,6 +596,6 @@ contains
     close(999)
     err = mccc_uninit(dat)
     
-  end subroutine mccc_testCoeff
+  end subroutine ccoll_testCoeff
 
-end module mod_mccc
+end module mod_ccoll_relativistic

@@ -32,7 +32,7 @@ module simpson_mod
      end function func_real8_1D
   end interface
   
-  public :: simpson_adaptive, simpson_test
+  public :: simpson_adaptive, simpson_test, func_real8_1D
 
   private
   

@@ -5,8 +5,7 @@
 !> The maximum accepted normalized temperature of the background species is set to 
 !> Theta=T/mc^2=0.1. This covers every  Tokamak and stellarator.
 !<
-module mccc_mod
-  use interpN, only: interp2
+module mod_mccc
   use special_mod, only : special_L0L1, special_besk0exp, special_besk1exp, special_besk2exp
   implicit none
   
@@ -26,8 +25,19 @@ module mccc_mod
      real*8, allocatable, dimension(:,:) :: L1
   end type mccc_special
 
+  type mcccgc_coefstruct
+     real*8 :: kappa  = 0.D0
+     real*8 :: dkappa = 0.D0
+     real*8 :: Dpar   = 0.D0
+     real*8 :: dDpar  = 0.D0
+     real*8 :: Dperp  = 0.D0
+     real*8 :: dDperp = 0.D0
+     real*8 :: gx     = 0.D0
+     real*8 :: nu     = 0.D0
+  end type mcccgc_coefstruct
+
   public :: mccc_special, mccc_init, mccc_uninit, mccc_readdat, mccc_writedat, &
-       mccc_push, mccc_clog, mccc_coeffs, mccc_error, mccc_testCoeff
+       mccc_push, mccc_clog, mccc_coeffs, mccc_testCoeff, mcccgc_coefstruct, mcccgc_push, mcccgc_evalcoefs
   
 contains
 
@@ -269,9 +279,6 @@ contains
     if(present(K)) then
        K=-Gab*(mu0/gamma+(ma/mb)*mu1)/u2
     end if
-    if(present(dK)) then
-       dK=(Gab/u3)*(2*(mu0/gamma+(ma/mb)*mu1)-u*(dmu0/gamma+(ma/mb)*dmu1)+u2*mu0/gamma**3)
-    end if
 
     if(present(Dpar)) then
        Dpar=Gab*gamma*thb*mu1/u3
@@ -366,28 +373,85 @@ contains
 
   end subroutine mccc_push
 
-  !> Prints error diagnosis if an error has occurred.
-  !>
-  !> input:
-  !>
-  !> integer err -- error flag, negative indicates something went wrong
-  !<
-  subroutine mccc_error(err)
-    implicit none
-    integer, intent(in) :: err
 
-    if(err .ge. 0) then
-       return
-    elseif(err .eq. MCCC_NANRESULT) then
-       print*, 'Error: Result is NaN.'
-    else
-       print*, 'Error: Unknown error.'
+  subroutine mcccgc_evalCoefs(dat,ma,qa,clogab,mb,qb,nb,thb,u,xi,coefs)
+    type(mccc_special), intent(in) :: dat
+    real*8, intent(in) :: ma,qa,u,xi
+    real*8, intent(in) :: clogab(:),mb(:),qb(:),nb(:),thb(:) 
+
+    type(mcccgc_coefstruct), intent(out) :: coefs
+
+    real*8 :: kappab,dkappab,Dparb,dDparb,Dperpb,dDperpb ! Coefficients for species-wise collisions       
+
+    integer :: nspecies,i
+
+    nspecies = size(clogab)
+    coefs%kappa  = 0
+    coefs%Dpar   = 0
+    coefs%dDpar  = 0
+    coefs%Dperp  = 0
+    coefs%dDperp = 0
+    do i = 1,nspecies
+       call mccc_coeffs(dat, ma, qa, clogab(i), mb(i), qb(i), nb(i), thb(i), u, &
+            kappa  = kappab,   Dpar = Dparb,   Dperp = Dperpb, dDpar = dDparb)
+
+       coefs%kappa  = coefs%kappa  + kappab
+       coefs%Dpar   = coefs%Dpar   + Dparb
+       coefs%dDpar  = coefs%dDpar  + dDparb
+       coefs%Dperp  = coefs%Dperp  + Dperpb
+    end do
+
+    coefs%nu = 2 * coefs%Dperp / u**2
+  end subroutine mcccgc_evalCoefs
+
+
+  subroutine mcccgc_push(coefs,cutoff,uin,uout,xiin,xiout,dtin,rnd)
+    type(mcccgc_coefstruct), intent(in) :: coefs
+
+    real*8, intent(in) :: dtin ! time step length [s]
+    real*8, intent(in) :: uin ! p/mc test particle momentum vector (px,py,pz) before collision, normalized to mc
+    real*8, intent(in) :: xiin !
+    real*8, intent(in) :: cutoff
+    real*8, intent(in) :: rnd(2)
+
+    real*8, intent(out) :: uout 
+    real*8, intent(out) :: xiout
+
+    real*8 :: time
+    real*8 :: bhat(3)
+    real*8 :: F, gu, gxi
+    real*8 :: kappa_k, kappa_d(2), erru, gx
+    real*8 :: dWopt(2),dti,alpha
+    integer :: i, windex,tindex, ki,kmax
+    logical rejected
+
+    F   = coefs%kappa+coefs%dDpar+2*coefs%Dpar/uin
+
+    uout  = uin + ( coefs%kappa + coefs%dDpar + 2 * coefs%Dpar / uin ) * dtin &
+                + sqrt( 2 * coefs%Dpar * dtin ) * rnd(1)
+    xiout = xiin - xiin * coefs%nu * dtin + sqrt( ( 1.0 - xiin**2 ) * coefs%nu * dtin) * rnd(2)
+
+    ! Reflect uout if uout is below the cutoff value
+    if(uout .lt. cutoff) then
+       uout = 2*cutoff-uout
     end if
 
-  end subroutine mccc_error
+    ! Reflect pitch if xiout is outside the interval [-1, 1]
+    if(abs(xiout) .gt. 1.D0) then
+       ! First make sure xiout is between the interval [-2, 2]. Physics-wise what we do here is not justified,
+       ! but neither is having |xiout| > 2 (one should decrease time step if this happens).
+       xiout = modulo( xiout, 2.0 )
 
-  !> Evaluates the mu functions
-  subroutine mccc_mufuncs(u,th,data,mu0,mu1,mu2,dmu0,dmu1,dmu2)
+       ! Reflect (this part is ok physics-wise)
+       if(abs(xiout) .gt. 1.D0) then
+          xiout = sign(2.D0-abs(xiout), xiout)
+       end if
+    end if
+
+  end subroutine mcccgc_push
+
+    !> Evaluates the mu functions
+    subroutine mccc_mufuncs(u,th,data,mu0,mu1,mu2,dmu0,dmu1,dmu2)
     implicit none
     real*8, intent(in) :: u, th
     type(mccc_special), intent(in) :: data
@@ -426,9 +490,7 @@ contains
 
 
   !> Evaluates the special functions L0 and L1
-  !> using approximations outside the tabulated domain
-  !> if theta>10**thetamaxXponent is requested, uses
-  !> theta = 10**thetamaxXponent, and gives a warning
+  !> Approximations are used outside the tabulated domain.
   subroutine mccc_L0L1(u,theta,data,L0,L1)
     type(mccc_special), intent(in) :: data
     real*8, intent(in) :: u,theta
@@ -451,8 +513,8 @@ contains
        L1=special_besk1exp(1.D0/th)
     else
        if( (u.gt.data%u(1)) .and. (th.gt.data%theta(1)) ) then
-          L0 = interp2(data%u,data%theta,data%L0,u,th,nu,nth) 
-          L1 = interp2(data%u,data%theta,data%L1,u,th,nu,nth) 
+          L0 = interp2(data%u,data%theta,data%L0,u,th)!,nu,nth) 
+          L1 = interp2(data%u,data%theta,data%L1,u,th)!,nu,nth) 
        else
           L0 = sqrt(pi*theta/2)*erf(u/sqrt(2*theta))
           L1=L0
@@ -460,6 +522,31 @@ contains
     end if
     
   end subroutine mccc_L0L1
+
+  real(kind=8) function interp2(x, y, f, xq, yq)
+    implicit none
+    
+    real*8, intent(in) :: x(:), y(:)
+    real*8, intent(in) :: f(:,:)
+    real*8, intent(in) :: xq, yq
+
+    real*8  :: dx, dy
+    integer :: iy, ix
+
+    dx = x(2) - x(1)
+    dy = y(2) - y(1)
+    
+    ix = floor(xq/dx)
+    iy = floor(yq/dy)
+
+    interp2 = ( f(ix, iy)         * ( x(ix + 1) - xq ) * ( y(iy + 1) - yq ) &
+              + f(ix + 1, iy)     * ( x(ix) - xq )     * ( y(iy + 1) - yq ) &
+              + f(ix, iy + 1)     * ( x(ix + 1) - xq ) * ( y(iy) - yq )     &
+              + f(ix + 1, iy + 1) * ( x(ix) - xq )     * ( y(iy) - yq )     &
+              ) / ( dx * dy )
+    
+  end function interp2
+
 
   !> This test program evaluates Fokker-Planck coefficients and respective derivatives
   !> (analytically) for some theta and a range of u values.
@@ -566,4 +653,4 @@ contains
     
   end subroutine mccc_testCoeff
 
-end module mccc_mod
+end module mod_mccc

@@ -10,8 +10,8 @@
 !> \f$ exp(x)K_2(x) \f$
 !<
 module special_mod 
-  use func_mod, only : func_real8_1d
-  use simpson_mod, only : simpson_adaptive
+!  use func_mod, only : func_real8_1d
+  use simpson_mod!, only : simpson_adaptive
   implicit none
   
   private
@@ -137,7 +137,6 @@ contains
   !
   !    Output, real ( kind = 8 ) BESK0, the value of the function.
   !
-
   function special_besk0exp ( x )
 
     implicit none

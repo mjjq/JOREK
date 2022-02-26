@@ -316,11 +316,16 @@ if ( my_id == 0 ) then
     stop
   end if
 
- if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
+  if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
     write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
     write(*,*) "ERROR: index_main_imp:", index_main_imp
     stop
- end if
+  end if
+
+  if (drift_distance < 0.d0 .or. energy_teleported < 0.d0) then 
+    write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
+    stop
+  end if
 
   if (using_spi) call init_spi_all()
 

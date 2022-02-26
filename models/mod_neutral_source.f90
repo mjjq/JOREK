@@ -178,10 +178,6 @@ module mod_neutral_source
     ! Temporary variables serving the SPI module
     integer    :: spi_i, i_inj,  n_spi_tmp
     
-    real*8     :: spi_R_tmp
-    real*8     :: spi_Z_tmp
-    real*8     :: spi_phi_tmp
-    real*8     :: spi_abl_tmp
     real*8     :: spi_psi_tmp
     real*8     :: spi_grad_psi_tmp
     real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation

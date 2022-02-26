@@ -161,7 +161,6 @@ integer    :: i_inj,  n_spi_tmp
 real*8     :: spi_R_tmp
 real*8     :: spi_Z_tmp
 real*8     :: spi_phi_tmp
-real*8     :: spi_abl_tmp
 real*8     :: spi_psi_tmp
 real*8     :: spi_grad_psi_tmp
 real*8     :: ng_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
@@ -393,7 +392,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,      &
-!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, spi_abl_tmp, ng_radius_tmp,                 &
+!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ng_radius_tmp,                              &
 !$omp           spi_psi_tmp, spi_grad_psi_tmp,                                                 &
 !$omp           n_spi_tmp, source_tmp, ns_shape,                                               &
 #endif
@@ -1010,7 +1009,6 @@ do ife = ife_min, ife_max
                  spi_R_tmp   = pellets(spi_i)%spi_R
                  spi_Z_tmp   = pellets(spi_i)%spi_Z
                  spi_phi_tmp = pellets(spi_i)%spi_phi
-                 spi_abl_tmp = pellets(spi_i)%spi_abl
 
                  spi_psi_tmp = pellets(spi_i)%spi_psi
                  spi_grad_psi_tmp = pellets(spi_i)%spi_grad_psi

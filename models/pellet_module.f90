@@ -40,7 +40,7 @@ module pellet_module
     real*8, intent(in)  :: T0, r0                    ! local temperature and mass density (JOREK normalised)
     real*8, intent(in)  :: central_density           !< central plasma density (in units 10^20 m^-3)
     real*8, intent(inout)  :: pellet_particles       !< total number of particles in the pellet
-    real*8, intent(in)  :: pellet_density            !< pellet density (units 10^20 m^-3)
+    real*8, intent(in)  ::  pellet_density            !< pellet density (units 10^20 m^-3)
     real*8, intent(in)  :: pellet_amplitude          !< amplitude of paricle source (when not using ablation model)
     real*8, intent(in)  :: pellet_R, pellet_Z        !< position of the pellet in R,Z
     real*8, intent(in)  :: pellet_phi                !< toroidal position of the pellet

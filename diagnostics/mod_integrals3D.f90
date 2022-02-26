@@ -168,7 +168,7 @@ real*8     :: ng_radius_tmp !< Radius of neutral gas cloud as a result of the ab
 real*8     :: source_tmp
 real*8     :: ns_shape ! variable for numerical integration of source volume
 real*8     :: V_ns
-real*8, allocatable :: local_source_volume(:)
+real*8, allocatable :: local_source_volume(:), local_source_volume_drift(:)
 
 #endif
 
@@ -316,11 +316,16 @@ if (using_spi) then
    if (allocated(local_source_volume)) then
       deallocate(local_source_volume)
    end if
+   if (allocated(local_source_volume_drift)) then
+      deallocate(local_source_volume_drift)
+   end if
 
    allocate (local_source_volume(n_spi_tot))
+   allocate (local_source_volume_drift(n_spi_tot))
 
    do spi_i=1, n_spi_tot
-      local_source_volume(spi_i)      = 0.d0
+      local_source_volume(spi_i)            = 0.d0
+      local_source_volume_drift(spi_i)      = 0.d0
    end do
 end if
 
@@ -352,7 +357,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          mag_wk_tot, vpar_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
 !$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-!$omp          spi_num_vol, local_source_volume,                                               &
+!$omp          spi_num_vol, local_source_volume, local_source_volume_drift,                    &
 !$omp          using_spi, n_spi_tot, n_inj, n_spi,                                             &
 !$omp          pellets, ng_radius_ratio, ng_radius_min,                                        &
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
@@ -426,7 +431,7 @@ omp_tid      = 0
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 !$omp                local_radiation, local_radiation_phi, local_E_ion, local_P_ei, local_P_ion, &
-!$omp                local_source_volume,                                                     &
+!$omp                local_source_volume, local_source_volume_drift,                          &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                P_e_int, P_i_int, P_e_ext, P_i_ext, P_e_tot, P_i_tot,                    &
@@ -1024,6 +1029,18 @@ do ife = ife_min, ife_max
 
                  local_source_volume(spi_i) = local_source_volume(spi_i) &
                       + ns_shape * bigR * xjac * wst * delta_phi
+
+                 if (drift_distance /= 0) then ! Get the volume at the post-drift location (for normalization)
+                   ns_shape = source_shape(x_g(ms,mt),y_g(ms,mt),phi,     &
+                        spi_R_tmp+drift_distance,spi_Z_tmp,spi_phi_tmp,   &
+                        ng_radius_tmp,ns_deltaphi,                        &
+                        ps0,pellets(spi_i)%spi_psi_drift,                 &
+                        pellets(spi_i)%spi_grad_psi_drift,                &
+                        ns_deltaminrad)
+
+                   local_source_volume_drift(spi_i) = local_source_volume_drift(spi_i) &
+                        + ns_shape * bigR * xjac * wst * delta_phi
+                 end if
 
               end if
 
@@ -1645,11 +1662,14 @@ if (using_spi) then
    do spi_i=1, n_spi_tot
 #ifndef NOMPIVERSION
       call MPI_AllReduce(local_source_volume(spi_i),pellets(spi_i)%spi_vol,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      call MPI_AllReduce(local_source_volume_drift(spi_i),pellets(spi_i)%spi_vol_drift,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #else /* NOMPIVERSION */
       pellets(spi_i)%spi_vol = local_source_volume(spi_i)
+      pellets(spi_i)%spi_vol_drift = local_source_volume_drift(spi_i)
 #endif /* NOMPIVERSION */
    end do
    deallocate(local_source_volume)
+   deallocate(local_source_volume_drift)
 end if
 #endif
 

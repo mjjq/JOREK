@@ -9,8 +9,6 @@ module mod_ccoll_relativistic
   use mod_bessel, only : bessel_k2exp, bessel_k1exp, bessel_k0exp
   use mod_simpson, only : simpson_adaptive, func_real8_1D
   implicit none
-  
-  private
 
   real*8, parameter :: DEFAULT_L0L1_eps    = 1.D-8 !< default tolerance in eval_L0L1
   real*8, parameter :: DEFAULT_L0L1_cutoff = 1.D-7 !< default cutoff in evalL0L1
@@ -26,6 +24,8 @@ module mod_ccoll_relativistic
   public :: ccoll_tabulatedL0L1, ccoll_compute_L0L1table, ccoll_free_L0L1table, &
        ccoll_read_L0L1table, ccoll_write_L0L1table, &
        ccoll_kinetic_relativistic_push, ccoll_clog, ccoll_coeffs, ccoll_gc_relativistic_push
+
+  private
 
 contains
 

@@ -142,7 +142,7 @@ character*36, dimension(n_terms_T),     parameter :: T_term_names=  &
                                                  'T_Eq__line_radiation   ', &  ! 13:
                                                  'T_Eq__Brems_radiation  ', &  ! 14:
                                                  'T_Eq__backg_imp_radiat ', &  ! 15:
-                                                 'T_Eq__power_teleported'/)    ! 16:
+                                                 'T_Eq__power_teleported '/)   ! 16:
 
 character*36, dimension(n_terms_Ti),    parameter :: Ti_term_names=  &
                                               (/ 'Ti_Eq__ext_heat_source ', &  !  1:

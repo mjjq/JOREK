@@ -356,7 +356,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          mag_wk_tot, vpar_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
 !$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-!$omp          spi_num_vol, local_source_volume, local_source_volume_drift,                    &
+!$omp          spi_num_vol, local_source_volume, local_source_volume_drift, drift_distance,    &
 !$omp          using_spi, n_spi_tot, n_inj, n_spi,                                             &
 !$omp          pellets, ng_radius_ratio, ng_radius_min,                                        &
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &

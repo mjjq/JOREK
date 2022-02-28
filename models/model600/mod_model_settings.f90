@@ -224,6 +224,10 @@ subroutine assign_term_names()
       term_names(k_var, 1:n_terms_rho ) = rho_term_names(:) 
     else if (k_var == var_T   ) then
       term_names(k_var, 1:n_terms_T   ) = T_term_names(:) 
+    else if (k_var == var_Ti  ) then
+      term_names(k_var, 1:n_terms_Ti  ) = Ti_term_names(:)
+    else if (k_var == var_Te  ) then
+      term_names(k_var, 1:n_terms_Te  ) = Te_term_names(:)
     else if (k_var == var_vpar) then
       term_names(k_var, 1:n_terms_vpar) = vpar_term_names(:)
     else if (k_var == var_rhon) then

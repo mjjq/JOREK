@@ -359,12 +359,12 @@ contains
   subroutine ccoll_gc_relativistic_push(dat,ma,qa,mb,qb,nb,thb,uin,uout,xiin,xiout,dt,rnd,cutoff)
     
     type(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
-    real*8, intent(in) :: ma      !< test particle mass [kg]
-    real*8, intent(in) :: qa      !< test particle charge [C]
-    real*8, intent(in) :: mb(:)   !< list of background species masses [kg]
-    real*8, intent(in) :: qb(:)   !< list of background species charges [C]
-    real*8, intent(in) :: nb(:)   !< list of background densities [1/m^3]
-    real*8, intent(in) :: thb(:)  !< list of normalized background temperatures [T_b/(m_b*c^2)]
+    real*8, intent(in) :: ma     !< test particle mass [kg]
+    real*8, intent(in) :: qa     !< test particle charge [C]
+    real*8, intent(in) :: mb(:)  !< list of background species masses [kg]
+    real*8, intent(in) :: qb(:)  !< list of background species charges [C]
+    real*8, intent(in) :: nb(:)  !< list of background densities [1/m^3]
+    real*8, intent(in) :: thb(:) !< list of normalized background temperatures [T_b/(m_b*c^2)]
     real*8, intent(in) :: dt     !< time step length [s]
     real*8, intent(in) :: uin    !< test particle momentum  [p/mc]
     real*8, intent(in) :: xiin   !< test particle pitch [ppar/p]

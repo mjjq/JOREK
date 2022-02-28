@@ -1,9 +1,10 @@
 !  -*-f90-*-  (for emacs)    vim:set filetype=fortran:  (for vim)
 !
-!> @brief
 !> A module for evaluating specific Bessel functions.
-!>
-!<
+!> Source: http://people.sc.fsu.edu/~jburkardt/f_src/specfun/specfun.f90
+!> 
+!> NOTE: output of functions bessel_k0, bessel_k1,  and bessel_k2 is scaled
+!> by scalar e^(x), i.e., f_scaled = e^(x)*f_exact  to avoid under & overflow issues.
 module mod_bessel
   implicit none
   
@@ -14,17 +15,9 @@ module mod_bessel
 contains
 
 
-  !> Few functions for evaluating modified Bessel function of second type
-  !> Source: http://people.sc.fsu.edu/~jburkardt/f_src/specfun/specfun.f90
-  !> besk2 evaluates function K2. Higher order functions could be evaluated
+ 
+  !> Evaluates function K2. Higher order functions could be evaluated
   !> easily by implementing this function recursively.
-  !> 
-  !> NOTE: output of functions special_besk0, special_besk1,
-  !> and special_besk2 is scaled
-  !> by scalar e^(x), i.e., f_scaled = e^(x)*f_exact 
-  !> to avoid under & overflow
-  !> issues.
-  !<
   function bessel_k2exp(x) result(out)
 
     implicit none

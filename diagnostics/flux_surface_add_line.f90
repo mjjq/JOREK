@@ -13,6 +13,7 @@ real*8  :: psi_value, r_psi(*), s_psi(*), dpsi_dr(*), dpsi_ds(*)
 real*8  :: rr1, rr2, ss1, ss2,sgn, drs, xl1 ,xl2, drr1, drr2, dss1, dss2, t
 real*8  :: ri, si, dri, dsi, delta_ri, delta_si,psi_test, psi_test2, dl1, dl2
 real*8  :: psi_r, psi_s, dummy1, dummy2, dummy3, dummy4, dummy5, dummy6, error_psi
+real*8  :: drr1_save, dss1_save, drr2_save, dss2_save
 
 rr1  = r_psi(1)
 rr2  = r_psi(2)
@@ -41,6 +42,11 @@ drr1 =   xl1 * dpsi_ds(1)
 drr2 =   xl2 * dpsi_ds(2)
 dss1 = - xl1 * dpsi_dr(1)
 dss2 = - xl2 * dpsi_dr(2)
+
+drr1_save = drr1
+dss1_save = dss1
+drr2_save = drr2
+dss2_save = dss2
 
 !------------------------------------------- attempt a correction step to correct drr1,drr2,dss1,dss2
 !
@@ -90,6 +96,11 @@ do iter=1, n_iter
 
 !  endif
 
+  if (iter .eq. n_iter) then
+!      write(*,'(A,i3,3e16.8)') ' WARNING : IMPROVEMENT FAILED TO CONVERGE ',iter,surface_list%psi_values(j),psi_test,psi_test2
+    ifail = 98
+  endif
+
 enddo
 
 if (ifail .ne. 0) then
@@ -97,6 +108,10 @@ if (ifail .ne. 0) then
   r_psi(2) = rr2
   s_psi(1) = ss1
   s_psi(2) = ss2
+  drr1 = drr1_save
+  dss1 = dss1_save
+  drr2 = drr2_save
+  dss2 = dss2_save
 endif
 
 surface_list%flux_surfaces(j)%n_pieces                                      = surface_list%flux_surfaces(j)%n_pieces + 1

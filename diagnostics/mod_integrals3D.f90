@@ -322,15 +322,8 @@ if (using_spi) then
    do spi_i=1, n_spi_tot
       local_source_volume(spi_i)      = 0.d0
    end do
-else ! Allocate a dummy array
-   if (allocated(local_source_volume)) then
-      deallocate(local_source_volume)
-   end if
-
-   allocate (local_source_volume(1))
-
-   local_source_volume(1)      = 0.d0
 end if
+if (.not. allocated(local_source_volume)) allocate (local_source_volume(1)) ! Allocate a dummy array for omp
 
 #endif
 
@@ -1658,9 +1651,8 @@ if (using_spi) then
 #endif /* NOMPIVERSION */
    end do
    deallocate(local_source_volume)
-else
-   deallocate(local_source_volume)
 end if
+if (allocated(local_source_volume)) deallocate(local_source_volume) !In case of dummy array
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)

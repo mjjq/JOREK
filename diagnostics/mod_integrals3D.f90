@@ -322,6 +322,14 @@ if (using_spi) then
    do spi_i=1, n_spi_tot
       local_source_volume(spi_i)      = 0.d0
    end do
+else ! Allocate a dummy array
+   if (allocated(local_source_volume)) then
+      deallocate(local_source_volume)
+   end if
+
+   allocate (local_source_volume(1))
+
+   local_source_volume(1)      = 0.d0
 end if
 
 #endif
@@ -1649,6 +1657,8 @@ if (using_spi) then
       pellets(spi_i)%spi_vol = local_source_volume(spi_i)
 #endif /* NOMPIVERSION */
    end do
+   deallocate(local_source_volume)
+else
    deallocate(local_source_volume)
 end if
 #endif

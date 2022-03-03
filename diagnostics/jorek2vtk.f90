@@ -1217,8 +1217,6 @@ enddo  ! n_elements
   if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h') !< for both include_radiation and include_neutral_dens
   if (include_radiation) then
     do i=1,nnos
-      r0_real8  = scalars(i,var_rho)
-
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
@@ -1227,6 +1225,7 @@ enddo  ! n_elements
       S_ion_puiss = 3.9d-1
 
       ksiion = ksi_ion * central_density * 1.d20
+      r0_real8  = scalars(i,var_rho)
       rn0_real8 = scalars(i,var_rhon)
 
       if ( with_TiTe ) then
@@ -1256,7 +1255,7 @@ enddo  ! n_elements
       ! --- Radiation from background impurity
       !--------------------------------------------------------
 #endif
-
+      r0_real8  = scalars(i,var_rho)
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
       if ( with_TiTe ) then
@@ -1577,8 +1576,9 @@ if (SI_units) then
  
     !========================================================
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+
     if (include_radiation) then
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)
       coef_rad_1 = (gamma-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
@@ -1611,13 +1611,22 @@ if (SI_units) then
       scalars(i,s_radiation+3) = LradDcont_T * (scalars(i,var_rho)*1.d20)**2.d0 / coef_rad_1
 
       scalars(i,s_radiation+4) = eta_Sp * (1.d6*scalars(i,var_zj))**2.d0
-
+#endif /* WITH_Neutrals but not WITH_Impurities */
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------
       r0_real8  = scalars(i,var_rho) / central_density ! Back to JU first
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      if ( with_TiTe ) then
+        T_real8 = scalars(i,var_Te)*1.e3*EL_CHG*MU_zero*(central_density * 1.d20) ! T_real8 back to JOREK units
+        Te_corr_eV = corr_neg_temp(T_real8)/(EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
+      else
+        T_real8 = scalars(i,var_T)*1.e3*2.*EL_CHG*MU_zero*(central_density * 1.d20)
+        Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+      endif
 
       if (use_imp_adas) then  ! use open adas by default
         ! Use radiation coefficients from ADAS
@@ -1643,9 +1652,9 @@ if (SI_units) then
           stop
         end if
       end if
-      scalars(i,s_radiation+5) = scalars(i,var_rho)*1.d20 * frad_bg
+      scalars(i,s_radiation+offset_bgimp) = scalars(i,var_rho)*1.d20 * frad_bg
     endif
-#endif /* WITH_Neutrals but not WITH_Impurities */
+
 
 #ifdef WITH_Impurities
   if (include_radiation) then

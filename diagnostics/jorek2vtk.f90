@@ -108,7 +108,8 @@ real*8                :: Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, LradDco
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
 real*8                :: T0_corr, r0_corr, rn0_corr
-integer               :: i_imp     ! Loop for more than one background impurity
+integer               :: i_imp, offset_bgimp     ! Loop for more than one background impurity
+
 
 #ifdef WITH_Impurities
 ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
@@ -205,6 +206,11 @@ include_radiation = .true.
 include_neutral_dens = .true.
 ! --- Read ADAS data and generate coronal equilibrium if needed
 call init_imp_adas(my_id)
+#else
+if (use_imp_adas .and. (nimp_bg(1) > 0.d0)) then
+  call init_imp_adas(my_id)
+  include_radiation = .true.
+endif
 #endif
 
 ! --- Read parameters from namelist file 'vtk.nml' if it exists
@@ -306,14 +312,22 @@ endif
     n_radiation = 5
     s_radiation = n_scalars
     n_scalars   = n_scalars + n_radiation
- endif
-
+    offset_bgimp=5
+  endif
+  
     n_rn0 = 0
  if (include_neutral_dens) then
     n_rn0       = 2
     s_rn0       = n_scalars
     n_scalars   = n_scalars + n_rn0
- endif
+  endif
+#else
+  if (include_radiation) then
+    n_radiation = 1
+    s_radiation = n_scalars
+    n_scalars   = n_scalars + n_radiation
+    offset_bgimp=1
+  end if
 #endif
 
 #ifdef WITH_Impurities
@@ -424,7 +438,11 @@ endif
                   = (/ 'IonN_s-1     ', 'RecN_s-1     '/)
 
  endif
-
+#else
+ if (include_radiation) then
+   scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
+                  = (/  'Imp_bg_Wm-3 '/)
+ endif
 #endif
 #ifdef WITH_Impurities
  if (include_radiation) then
@@ -1195,19 +1213,20 @@ do i=1,element_list%n_elements
 
 enddo  ! n_elements
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+
   if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h') !< for both include_radiation and include_neutral_dens
   if (include_radiation) then
     do i=1,nnos
+      r0_real8  = scalars(i,var_rho)
 
+
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
       coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
       coef_ion_2 = 0.232d0
       coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
       S_ion_puiss = 3.9d-1
 
       ksiion = ksi_ion * central_density * 1.d20
-
-      r0_real8  = scalars(i,var_rho)
       rn0_real8 = scalars(i,var_rhon)
 
       if ( with_TiTe ) then
@@ -1235,10 +1254,20 @@ enddo  ! n_elements
 
       !--------------------------------------------------------
       ! --- Radiation from background impurity
-      !--------------------------------------------------------   
+      !--------------------------------------------------------
+#endif
 
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
+      if ( with_TiTe ) then
+        T_real8 = scalars(i,var_Te)
+        Te_corr_eV = corr_neg_temp(T_real8)/(EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
+      else
+        T_real8 = scalars(i,var_T)
+        Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+      endif
    
       if (use_imp_adas) then  ! use open adas by default
         frad_bg = 0. 
@@ -1267,11 +1296,12 @@ enddo  ! n_elements
         end if
       end if   
 
-      scalars(i,s_radiation+5) = scalars(i,var_rho) * frad_bg
 
+      scalars(i,s_radiation+offset_bgimp) = scalars(i,var_rho) * frad_bg
+   
     enddo
   endif
-#endif /* WITH_Neutrals but not WITH_Impurities */
+
 
 #ifdef WITH_Impurities
 

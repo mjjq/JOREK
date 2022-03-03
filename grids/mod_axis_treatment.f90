@@ -37,10 +37,17 @@ do iv = 1, n_vertex_max
 
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
-    Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
-    Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
-    Ptrans(dof3,dof3) = 0.d0
-    Ptrans(dof4,dof4) = 0.d0
+    if (xpoint) then      
+      Ptrans(dof2,dof3) = nodes(iv)%x(1,dof3,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
+      Ptrans(dof3,dof3) = nodes(iv)%x(1,dof3,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
+      Ptrans(dof2,dof2) = 0.d0
+      Ptrans(dof4,dof4) = 0.d0
+    else
+      Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
+      Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
+      Ptrans(dof3,dof3) = 0.d0
+      Ptrans(dof4,dof4) = 0.d0
+    endif
   endif
 
   ! Extract RHS associated with a vertex iv: rhs_iv
@@ -66,10 +73,17 @@ do iv = 1, n_vertex_max
 
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
-      Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
-      Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
-      Pmat(dof3,dof3)  = 0.d0
-      Pmat(dof4,dof4)  = 0.d0
+      if(xpoint)then     
+        Pmat(dof3,dof2)  = nodes(jv)%x(1,dof3,1) ; Pmat(dof3,dof3) = nodes(jv)%x(1,dof3,2)
+        Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
+        Pmat(dof2,dof2)  = 0.d0
+        Pmat(dof4,dof4)  = 0.d0 
+      else
+        Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
+        Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
+        Pmat(dof3,dof3)  = 0.d0
+        Pmat(dof4,dof4)  = 0.d0
+      endif
     endif
 
     ! Extract ELM associated with a vertex iv and jv: elm_iv_jv
@@ -128,10 +142,17 @@ do iv = 1, n_vertex_max
 
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
-    Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
-    Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
-    Ptrans(dof3,dof3) = 0.d0
-    Ptrans(dof4,dof4) = 0.d0
+    if (xpoint) then    
+      Ptrans(dof2,dof3) = nodes(iv)%x(1,dof3,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
+      Ptrans(dof3,dof3) = nodes(iv)%x(1,dof3,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
+      Ptrans(dof2,dof2) = 0.d0
+      Ptrans(dof4,dof4) = 0.d0
+    else
+      Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
+      Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
+      Ptrans(dof3,dof3) = 0.d0
+      Ptrans(dof4,dof4) = 0.d0
+    endif          
   endif
 
   do ivar = 1, n_v
@@ -161,10 +182,17 @@ do iv = 1, n_vertex_max
 
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
-      Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
-      Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
-      Pmat(dof3,dof3)  = 0.d0
-      Pmat(dof4,dof4)  = 0.d0
+      if(xpoint)then      
+        Pmat(dof3,dof2)  = nodes(jv)%x(1,dof3,1) ; Pmat(dof3,dof3) = nodes(jv)%x(1,dof3,2)
+        Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
+        Pmat(dof2,dof2)  = 0.d0
+        Pmat(dof4,dof4)  = 0.d0
+      else
+        Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
+        Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
+        Pmat(dof3,dof3)  = 0.d0
+        Pmat(dof4,dof4)  = 0.d0
+      endif            
     endif
 
     ! Extract ELM associated with a vertex iv and jv: elm_iv_jv
@@ -219,11 +247,19 @@ real*8  :: Pmat(4,4)
 
 dof1 = 1 ; dof2 = 2 ; dof3 = 3 ; dof4 = 4
 Pmat = 0.d0
-Pmat(dof1,dof1) = 1.d0      
-Pmat(dof2,dof2) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(dof2,dof3) = node_list%node(vg)%x(1,dof2,2)
-Pmat(dof4,dof2) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(dof4,dof3) = node_list%node(vg)%x(1,dof4,2)
-Pmat(dof3,dof3) = 0.d0
-Pmat(dof4,dof4) = 0.d0
+if(xpoint)then
+  Pmat(dof1,dof1) = 1.d0
+  Pmat(dof2,dof2) = 0.d0
+  Pmat(dof3,dof2) = node_list%node(vg)%x(1,dof3,1)  ;  Pmat(dof3,dof3) = node_list%node(vg)%x(1,dof3,2)
+  Pmat(dof4,dof2) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(dof4,dof3) = node_list%node(vg)%x(1,dof4,2)
+  Pmat(dof4,dof4) = 0.d0
+else
+  Pmat(dof1,dof1) = 1.d0      
+  Pmat(dof2,dof2) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(dof2,dof3) = node_list%node(vg)%x(1,dof2,2)
+  Pmat(dof4,dof2) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(dof4,dof3) = node_list%node(vg)%x(1,dof4,2)
+  Pmat(dof3,dof3) = 0.d0
+  Pmat(dof4,dof4) = 0.d0
+endif
 
 old_dofs = matmul(Pmat, new_dofs)
 

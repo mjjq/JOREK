@@ -309,10 +309,10 @@ endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     n_radiation = 0
  if (include_radiation) then
-    n_radiation = 5
+    n_radiation = 5 + n_adas
     s_radiation = n_scalars
     n_scalars   = n_scalars + n_radiation
-    offset_bgimp=5
+    offset_bgimp = s_radiation+5 ! offset for plotting single bgimp species
   endif
   
     n_rn0 = 0
@@ -323,19 +323,19 @@ endif
   endif
 #else
   if (include_radiation) then
-    n_radiation = 1
+    n_radiation = 1 + n_adas
     s_radiation = n_scalars
     n_scalars   = n_scalars + n_radiation
-    offset_bgimp=1
+    offset_bgimp = s_radiation+1 ! offset for plotting single bgimp species
   end if
 #endif
 
 #ifdef WITH_Impurities
  n_radiation = 0
  if (include_radiation) then
-    n_radiation = 5
-    s_radiation = n_scalars
-    n_scalars   = n_scalars + n_radiation
+    n_radiation  = 5
+    s_radiation  = n_scalars
+    n_scalars    = n_scalars + n_radiation
  endif
 #endif
 
@@ -429,8 +429,12 @@ endif
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
  if (include_radiation) then
-   scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
-                  = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
+  
+   scalar_names(s_radiation+1:s_radiation+n_radiation-n_adas)                                   &
+       = (/ 'Ionis_Wm-3  ', 'Lin_radWm-3 ', 'Brems_Wm-3  ', 'Joule_Wm-3  ', 'Imp_bg_Wm-3 '/)
+   do i = 1,n_adas
+     scalar_names(offset_bgimp + i) = 'Imp_bg_'//trim(imp_type(i))//'_Wm-3'
+   end do
  endif
 
  if (include_neutral_dens) then
@@ -441,7 +445,11 @@ endif
 #else
  if (include_radiation) then
    scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
-                  = (/  'Imp_bg_Wm-3 '/)
+       = (/  'Imp_bg_Wm-3 '/)
+   do i = 1,n_adas
+     scalar_names(offset_bgimp + i) = 'Imp_bg_'//trim(imp_type(i))//'_Wm-3'
+   end do
+
  endif
 #endif
 #ifdef WITH_Impurities
@@ -1280,6 +1288,7 @@ enddo  ! n_elements
             Lrad_imp = 0.
           end if
           frad_bg = frad_bg + r_imp * Lrad_imp
+          scalars(i,offset_bgimp + i_imp) = r_imp * Lrad_imp * scalars(i,var_rho)
         end do
       else
         if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
@@ -1296,7 +1305,7 @@ enddo  ! n_elements
       end if   
 
 
-      scalars(i,s_radiation+offset_bgimp) = scalars(i,var_rho) * frad_bg
+      scalars(i,s_radiation+n_radiation-n_adas) = scalars(i,var_rho) * frad_bg
    
     enddo
   endif
@@ -1639,6 +1648,7 @@ if (SI_units) then
           else     
             Lrad_imp = 0.
           end if
+          scalars(i,offset_bgimp + i_imp) = 1.d20 * scalars(i,var_rho) * nimp_bg(i_imp) * Lrad_imp 
           frad_bg = frad_bg + nimp_bg(i_imp) * Lrad_imp
         end do
       else
@@ -1652,7 +1662,7 @@ if (SI_units) then
           stop
         end if
       end if
-      scalars(i,s_radiation+offset_bgimp) = scalars(i,var_rho)*1.d20 * frad_bg
+      scalars(i,s_radiation+n_radiation-n_adas) = scalars(i,var_rho)*1.d20 * frad_bg
     endif
 
 

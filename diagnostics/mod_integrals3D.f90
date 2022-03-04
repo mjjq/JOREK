@@ -166,7 +166,7 @@ real*8     :: spi_grad_psi_tmp
 real*8     :: ng_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
 real*8     :: source_tmp
 real*8     :: ns_shape ! variable for numerical integration of source volume
-real*8     :: V_ns
+real*8     :: V_ns, V_ns_drift
 real*8, allocatable :: local_source_volume(:), local_source_volume_drift(:)
 
 #endif
@@ -328,7 +328,7 @@ if (using_spi) then
    end do
 end if
 if (.not. allocated(local_source_volume)) allocate (local_source_volume(1)) ! Allocate a dummy array for omp
-
+if (.not. allocated(local_source_volume_drift)) allocate (local_source_volume_drift(1)) 
 #endif
 
 delta_phi     = 2.d0 * PI / float(n_plane) / float(n_period)
@@ -1671,6 +1671,7 @@ if (using_spi) then
    deallocate(local_source_volume_drift)
 end if
 if (allocated(local_source_volume)) deallocate(local_source_volume) !In case of dummy array
+if (allocated(local_source_volume_drift)) deallocate(local_source_volume_drift)
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -2099,18 +2100,31 @@ if (my_id .eq. 0) then
              ! i.e., with poloidally elongated ablation cloud
              ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
              V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp * min(ns_deltaminrad,ng_radius_tmp)
+             if (drift_distance /= 0.d0) then
+               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ng_radius_tmp * min(ns_deltaminrad,ng_radius_tmp)
+             end if
           else
              ! i.e., standard case with circular ablation cloud in the poloidal plane
              ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon
              V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp**2.d0
+             if (drift_distance /= 0.d0) then
+               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ng_radius_tmp**2.d0
+             end if
           endif
           
           write(*,'(A,2es14.6,f14.6)') "Source vol (num,an,diff %)   = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
           if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
 
+          if (drift_distance /= 0.d0) then 
+            write(*,'(A,2es14.6,f14.6)') "Drifted source vol (num,an,diff %)   = ", pellets(i)%spi_vol_drift, V_ns_drift, 1d2*(pellets(i)%spi_vol_drift - V_ns_drift)/V_ns_drift
+            if (abs((pellets(i)%spi_vol_drift - V_ns_drift)/V_ns_drift) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
+          end if
+
           ! recommended ablation source radius in the poloidal direction from ng_radius / (R*ns_deltaphi) = B_pol/B_tor
           write(*,'(A,2f14.6)') "Source pol rad (actual,recom)= ", ng_radius_tmp, pellets(i)%spi_R * ns_deltaphi * pellets(i)%spi_grad_psi / abs(F0)
-
+          if (drift_distance /= 0.d0) then 
+            write(*,'(A,2f14.6)') "Drifted source pol rad (actual,recom)= ", ng_radius_tmp, (pellets(i)%spi_R + drift_distance) * ns_deltaphi * pellets(i)%spi_grad_psi_drift / abs(F0)
+          end if
        end if
     end do
   endif

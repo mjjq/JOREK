@@ -333,7 +333,7 @@ endif
 #ifdef WITH_Impurities
  n_radiation = 0
  if (include_radiation) then
-    n_radiation  = 5
+    n_radiation  = 6
     s_radiation  = n_scalars
     n_scalars    = n_scalars + n_radiation
   endif
@@ -455,7 +455,7 @@ endif
 #ifdef WITH_Impurities
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &
-                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp   ', 'Z_eff       '/)
+                  = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp   ', 'Z_eff       ','Imp_bg_Wm-3 '/)
  endif
 #endif
 
@@ -1428,6 +1428,7 @@ enddo  ! n_elements
      scalars(i,s_radiation+3) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,var_zj)**2.d0
      scalars(i,s_radiation+4) = Z_imp
      scalars(i,s_radiation+5) = Z_eff
+     scalars(i,s_radiation+6) =  scalars(i,var_rho) * r_imp * Lrad_imp
 
    end do
  endif
@@ -1659,6 +1660,7 @@ if (SI_units) then
    scalars(i,s_radiation+2) = scalars(i,s_radiation+2)/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
    scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
    scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
+   scalars(i,s_radiation+6) = scalars(i,s_radiation+6) * 1.d20
   end if
 #endif /* WITH_Impurities */
 #endif /* end of non-full-MHD part*/

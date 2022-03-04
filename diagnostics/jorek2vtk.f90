@@ -321,7 +321,7 @@ endif
     s_rn0       = n_scalars
     n_scalars   = n_scalars + n_rn0
   endif
-#elseif (!defined WITH_Impurities)
+#elif (!defined WITH_Impurities)
   if (include_radiation) then
     n_radiation = 1 + n_adas
     s_radiation = n_scalars
@@ -331,7 +331,7 @@ endif
 #endif
 
 #ifdef WITH_Impurities
- n_radiation = 0
+  n_radiation = 0
  if (include_radiation) then
     n_radiation  = 6 + n_adas-1 !(main impurity is not in background)
     s_radiation  = n_scalars
@@ -443,7 +443,7 @@ endif
                   = (/ 'IonN_s-1     ', 'RecN_s-1     '/)
 
  endif
-#elseif (!defined WITH_Impurities)
+#elif (!defined WITH_Impurities)
  if (include_radiation) then
    scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
        = (/  'Imp_bg_Wm-3 '/)
@@ -453,6 +453,7 @@ endif
 
  endif
 #endif
+
 #ifdef WITH_Impurities
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &

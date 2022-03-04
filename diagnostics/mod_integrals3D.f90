@@ -327,6 +327,7 @@ if (using_spi) then
       local_source_volume_drift(spi_i)      = 0.d0
    end do
 end if
+if (.not. allocated(local_source_volume)) allocate (local_source_volume(1)) ! Allocate a dummy array for omp
 
 #endif
 
@@ -1669,6 +1670,7 @@ if (using_spi) then
    deallocate(local_source_volume)
    deallocate(local_source_volume_drift)
 end if
+if (allocated(local_source_volume)) deallocate(local_source_volume) !In case of dummy array
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)

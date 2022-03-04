@@ -108,7 +108,7 @@ real*8                :: Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, LradDco
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
 real*8                :: T0_corr, r0_corr, rn0_corr
-integer               :: i_imp, offset_bgimp     ! Loop for more than one background impurity
+integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 
 
 #ifdef WITH_Impurities
@@ -321,7 +321,7 @@ endif
     s_rn0       = n_scalars
     n_scalars   = n_scalars + n_rn0
   endif
-#else
+#elseif (!defined WITH_Impurities)
   if (include_radiation) then
     n_radiation = 1 + n_adas
     s_radiation = n_scalars
@@ -333,9 +333,10 @@ endif
 #ifdef WITH_Impurities
  n_radiation = 0
  if (include_radiation) then
-    n_radiation  = 6
+    n_radiation  = 6 + n_adas-1 !(main impurity is not in background)
     s_radiation  = n_scalars
     n_scalars    = n_scalars + n_radiation
+    offset_bgimp = s_radiation+6
   endif
 #endif
 
@@ -442,7 +443,7 @@ endif
                   = (/ 'IonN_s-1     ', 'RecN_s-1     '/)
 
  endif
-#else
+#elseif (!defined WITH_Impurities)
  if (include_radiation) then
    scalar_names(s_radiation+1:s_radiation+n_radiation)                                   &
        = (/  'Imp_bg_Wm-3 '/)
@@ -456,7 +457,14 @@ endif
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &
                   = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp   ', 'Z_eff       ','Imp_bg_Wm-3 '/)
- endif
+   endif
+   i_bg=1
+   do i = 1,n_adas
+     if (i == index_main_imp) cycle
+     scalar_names(offset_bgimp + i_bg) = 'Imp_bg_'//trim(imp_type(i))//'_Wm-3'
+     i_bg=i_bg+1
+   end do
+
 #endif
 
 #ifdef fullmhd
@@ -1221,7 +1229,7 @@ do i=1,element_list%n_elements
 
 enddo  ! n_elements
 
-
+#if (!defined WITH_Impurities)
   if (deuterium_adas)  ad_deuterium =  read_adf11(0,'96_h') !< for both include_radiation and include_neutral_dens
   if (include_radiation) then
     do i=1,nnos
@@ -1236,7 +1244,7 @@ enddo  ! n_elements
         Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
       endif
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (defined WITH_Neutrals) 
       coef_ion_3 = 27.2d0*EL_CHG*MU_ZERO*central_density*1.d20
       coef_ion_2 = 0.232d0
       coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*0.2917d-13*(central_density*1.d20)**(1.5d0)
@@ -1303,7 +1311,7 @@ enddo  ! n_elements
    
     enddo
   endif
-
+#endif /* (.not. with_impurities) */
 
 #ifdef WITH_Impurities
 
@@ -1394,7 +1402,6 @@ enddo  ! n_elements
   !-------------------------------------------
   ! --- Radiative function, using interpolation
   ! ------------------------------------------
-
      if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
 
        Lrad = 0.0
@@ -1409,9 +1416,11 @@ enddo  ! n_elements
        E_ion = 0.
      end if
 
-     frad_bg = 0. 
+     frad_bg = 0.
+     i_bg = 1
      do i_imp =1, n_adas
        if (i_imp == index_main_imp) cycle
+
        r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
          Lrad_imp = 0.0
@@ -1421,14 +1430,15 @@ enddo  ! n_elements
          Lrad_imp = 0.
        end if
        frad_bg = frad_bg + r_imp * Lrad_imp
+       scalars(i,offset_bgimp+i_bg) = scalars(i,var_rho) * r_imp * Lrad_imp
+       i_bg = i_bg+1
      end do
-
      scalars(i,s_radiation+1) = (2./3.) * scalars(i,var_rhon) * E_ion
      scalars(i,s_radiation+2) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad
      scalars(i,s_radiation+3) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,var_zj)**2.d0
      scalars(i,s_radiation+4) = Z_imp
      scalars(i,s_radiation+5) = Z_eff
-     scalars(i,s_radiation+6) =  scalars(i,var_rho) * r_imp * Lrad_imp
+     scalars(i,s_radiation+6) = scalars(i,var_rho) * frad_bg
 
    end do
  endif
@@ -1580,7 +1590,7 @@ if (SI_units) then
  
     !========================================================
 
-
+#if (!defined WITH_Impurities)
     if (include_radiation) then
       r0_real8  = scalars(i,var_rho)/central_density ! Back to JOREK unit for calling atomic_coeff_deuterium
       if ( with_TiTe ) then
@@ -1593,7 +1603,7 @@ if (SI_units) then
         Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
       endif
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (defined WITH_Neutrals) 
       coef_ion_1 = (MU_ZERO*central_mass*MASS_PROTON)**(0.5d0)*(central_density*1.d20)**(1.5d0)
       coef_rad_1 = (gamma-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0
 
@@ -1652,7 +1662,7 @@ if (SI_units) then
       end if
       scalars(i,s_radiation+n_radiation-n_adas) = scalars(i,var_rho)*1.d20 * frad_bg
     endif
-
+#endif /*(.not. with_Impurities)*/
 
 #ifdef WITH_Impurities
   if (include_radiation) then

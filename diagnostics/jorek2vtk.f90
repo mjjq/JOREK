@@ -458,14 +458,13 @@ endif
  if (include_radiation) then
      scalar_names(s_radiation+1:s_radiation+n_radiation) &
                   = (/ 'Ionis_Jm-3  ', 'Coronal_radWm-3 ', 'Joule_Wm-3  ', 'Z_imp   ', 'Z_eff       ','Imp_bg_Wm-3 '/)
-   endif
    i_bg=1
    do i = 1,n_adas
      if (i == index_main_imp) cycle
      scalar_names(offset_bgimp + i_bg) = 'Imp_bg_'//trim(imp_type(i))//'_Wm-3'
      i_bg=i_bg+1
    end do
-
+ endif
 #endif
 
 #ifdef fullmhd
@@ -1270,11 +1269,12 @@ enddo  ! n_elements
       scalars(i,s_radiation+2) = scalars(i,var_rho) * scalars(i,var_rhon) * LradDrays_T
       scalars(i,s_radiation+3) = LradDcont_T * scalars(i,var_rho)**2.d0
       scalars(i,s_radiation+4) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,var_zj)**2.d0
-
+#endif /* with neutrals */
+      
       !--------------------------------------------------------
       ! --- Radiation from background impurity
       !--------------------------------------------------------
-#endif
+
 
       r0_corr   = corr_neg_dens(r0_real8)
       ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)

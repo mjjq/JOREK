@@ -299,6 +299,8 @@ do i=1,nr
    if (i .eq. nr) node_list%node(index)%boundary = 2
 
    node_list%node(index)%axis_node = .false.
+   node_list%node(index)%axis_dof  = 0    
+   
    if ( (.not. doing_polar_square) .and. (i .eq. 1) ) node_list%node(index)%axis_node = .true.
 
    ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes. 
@@ -312,6 +314,7 @@ do i=1,nr
         n_index_start = 4
         node_list%node(index)%X(1,3,:) = 0.d0
         node_list%node(index)%axis_node = .true.
+        node_list%node(index)%axis_dof  = 3
 
       else
         do k=1,n_order+1

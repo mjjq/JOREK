@@ -447,6 +447,8 @@ do i=1,nrnew
     if (i .eq. nrnew) node_list%node(index)%boundary = 2
 
     node_list%node(index)%axis_node = .false.
+    node_list%node(index)%axis_dof  = 0    
+
     if (i .eq. 1) node_list%node(index)%axis_node = .true.
 
     if (.not. refinement) then       ! keep original formulation if not using refinement
@@ -461,6 +463,7 @@ do i=1,nrnew
            node_list%node(index)%index(4) = 4
            n_index_start = 4
            node_list%node(index)%axis_node = .true.
+           node_list%node(index)%axis_dof  = 2
 
          else
            do k=1,n_order+1

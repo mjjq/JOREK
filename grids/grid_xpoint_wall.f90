@@ -1741,7 +1741,12 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   newnode_list%node(i)%axis_node = .false.
-  if (i .lt. n_tht) newnode_list%node(i)%axis_node = .true.
+  newnode_list%node(i)%axis_dof  = 0
+
+  if (i .lt. n_tht) then 
+    newnode_list%node(i)%axis_node = .true.
+    newnode_list%node(i)%axis_dof  = 2
+  endif
 
   do k=1,n_order+1
 

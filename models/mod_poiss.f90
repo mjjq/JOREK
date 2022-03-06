@@ -621,7 +621,6 @@ if (my_id == 0) then
     endif      ! refinement, constrained
   enddo        ! nodes
   
-  !if(treat_axis) call new_to_old_dofs_on_the_axis(node_list, (/ivar_out/), 1, (/i_harm/), 1)  
   !*************************************************************************
   ! Solutions at constrained nodes                                         *
   !*************************************************************************

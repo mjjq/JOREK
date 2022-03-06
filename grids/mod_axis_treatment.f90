@@ -37,16 +37,21 @@ do iv = 1, n_vertex_max
 
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
-    if (xpoint) then      
+    if(nodes(iv)%axis_dof == dof2) then      
       Ptrans(dof2,dof3) = nodes(iv)%x(1,dof3,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
       Ptrans(dof3,dof3) = nodes(iv)%x(1,dof3,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
       Ptrans(dof2,dof2) = 0.d0
       Ptrans(dof4,dof4) = 0.d0
-    else
+    elseif(nodes(iv)%axis_dof == dof3)then
       Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
       Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
       Ptrans(dof3,dof3) = 0.d0
       Ptrans(dof4,dof4) = 0.d0
+    else
+      Ptrans = 0.d0
+      do io = 1, n_order+1
+        Ptrans(io, io) = 1.d0
+      enddo
     endif
   endif
 
@@ -73,16 +78,21 @@ do iv = 1, n_vertex_max
 
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
-      if(xpoint)then     
+      if(nodes(jv)%axis_dof == dof2)then
         Pmat(dof3,dof2)  = nodes(jv)%x(1,dof3,1) ; Pmat(dof3,dof3) = nodes(jv)%x(1,dof3,2)
         Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
         Pmat(dof2,dof2)  = 0.d0
         Pmat(dof4,dof4)  = 0.d0 
-      else
+      elseif(nodes(jv)%axis_dof == dof3)then
         Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
         Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
         Pmat(dof3,dof3)  = 0.d0
         Pmat(dof4,dof4)  = 0.d0
+      else
+        Pmat = 0.d0
+        do jo = 1, n_order+1
+          Pmat(jo, jo) = 1.d0
+        enddo
       endif
     endif
 
@@ -142,16 +152,21 @@ do iv = 1, n_vertex_max
 
   ! determine transpose of the transformation matrix
   if(iv==axis_vertex1 .or. iv==axis_vertex4)then
-    if (xpoint) then    
+    if(nodes(iv)%axis_dof == dof2)then
       Ptrans(dof2,dof3) = nodes(iv)%x(1,dof3,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
       Ptrans(dof3,dof3) = nodes(iv)%x(1,dof3,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
       Ptrans(dof2,dof2) = 0.d0
       Ptrans(dof4,dof4) = 0.d0
-    else
+    elseif(nodes(iv)%axis_dof == dof3)then
       Ptrans(dof2,dof2) = nodes(iv)%x(1,dof2,1) ; Ptrans(dof2,dof4) = nodes(iv)%x(1,dof4,1)
       Ptrans(dof3,dof2) = nodes(iv)%x(1,dof2,2) ; Ptrans(dof3,dof4) = nodes(iv)%x(1,dof4,2)
       Ptrans(dof3,dof3) = 0.d0
       Ptrans(dof4,dof4) = 0.d0
+    else
+      Ptrans = 0.d0
+      do io = 1, n_order+1
+        Ptrans(io, io) = 1.d0
+      enddo      
     endif          
   endif
 
@@ -182,16 +197,21 @@ do iv = 1, n_vertex_max
 
     ! determine the transformation matrix    
     if(jv==axis_vertex1 .or. jv==axis_vertex4)then
-      if(xpoint)then      
+      if(nodes(jv)%axis_dof == dof2)then      
         Pmat(dof3,dof2)  = nodes(jv)%x(1,dof3,1) ; Pmat(dof3,dof3) = nodes(jv)%x(1,dof3,2)
         Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
         Pmat(dof2,dof2)  = 0.d0
         Pmat(dof4,dof4)  = 0.d0
-      else
+      elseif(nodes(jv)%axis_dof == dof3)then
         Pmat(dof2,dof2)  = nodes(jv)%x(1,dof2,1) ; Pmat(dof2,dof3) = nodes(jv)%x(1,dof2,2)
         Pmat(dof4,dof2)  = nodes(jv)%x(1,dof4,1) ; Pmat(dof4,dof3) = nodes(jv)%x(1,dof4,2)
         Pmat(dof3,dof3)  = 0.d0
         Pmat(dof4,dof4)  = 0.d0
+      else
+        Pmat = 0.d0
+        do jo = 1, n_order+1
+          Pmat(jo, jo) = 1.d0
+        enddo
       endif            
     endif
 
@@ -242,23 +262,28 @@ type(type_node_list),    intent(inout) :: node_list
 integer,   intent(in) :: vg
 real*8,    intent(in) :: new_dofs(4)
 real*8,    intent(out):: old_dofs(4)
-integer :: dof1, dof2, dof3, dof4
+integer :: dof1, dof2, dof3, dof4, jo
 real*8  :: Pmat(4,4)
 
 dof1 = 1 ; dof2 = 2 ; dof3 = 3 ; dof4 = 4
 Pmat = 0.d0
-if(xpoint)then
+if(node_list%node(vg)%axis_dof == dof2)then
   Pmat(dof1,dof1) = 1.d0
   Pmat(dof2,dof2) = 0.d0
   Pmat(dof3,dof2) = node_list%node(vg)%x(1,dof3,1)  ;  Pmat(dof3,dof3) = node_list%node(vg)%x(1,dof3,2)
   Pmat(dof4,dof2) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(dof4,dof3) = node_list%node(vg)%x(1,dof4,2)
   Pmat(dof4,dof4) = 0.d0
-else
+elseif(node_list%node(vg)%axis_dof == dof3)then
   Pmat(dof1,dof1) = 1.d0      
   Pmat(dof2,dof2) = node_list%node(vg)%x(1,dof2,1)  ;  Pmat(dof2,dof3) = node_list%node(vg)%x(1,dof2,2)
   Pmat(dof4,dof2) = node_list%node(vg)%x(1,dof4,1)  ;  Pmat(dof4,dof3) = node_list%node(vg)%x(1,dof4,2)
   Pmat(dof3,dof3) = 0.d0
   Pmat(dof4,dof4) = 0.d0
+else
+  Pmat = 0.d0
+  do jo = 1, n_order+1
+    Pmat(jo, jo) = 1.d0
+  enddo
 endif
 
 old_dofs = matmul(Pmat, new_dofs)

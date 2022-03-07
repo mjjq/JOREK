@@ -1671,7 +1671,11 @@ if (SI_units) then
    scalars(i,s_radiation+2) = scalars(i,s_radiation+2)/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0)
    scalars(i,s_radiation+3) = scalars(i,s_radiation+3)/(2.d0/3.d0*((central_mass*MASS_PROTON*central_density*1.d20)**0.5)*(MU_ZERO**1.5)) 
    scalars(i,s_radiation+4) = scalars(i,s_radiation+4)
-   scalars(i,s_radiation+6) = scalars(i,s_radiation+6) * 1.d20
+   scalars(i,s_radiation+6) = scalars(i,s_radiation+6) &
+       /((GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0)
+   do i_imp=1,n_adas
+     scalars(i,offets_imp+i_imp) / ((GAMMA-1.d0)*MU_ZERO**1.5d0*(central_mass*MASS_PROTON)**0.5d0*(central_density*1.d20)**2.5d0)
+   end do
   end if
 #endif /* WITH_Impurities */
 #endif /* end of non-full-MHD part*/

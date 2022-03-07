@@ -89,8 +89,8 @@ contains
   end subroutine eval_L0L1
 
   !> Allocates and initializes tables containing computed  L0 and L1 values for interpolation
-  type(ccoll_tabulatedL0L1) function ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth,&
-       eps,cutoff)
+  function ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth,&
+       eps,cutoff) result(tabulatedL0L1) 
     implicit none
 
     real*8, intent(in)  :: uminxp  !> minimum u as umin=10^uminxp 
@@ -99,47 +99,46 @@ contains
     real*8, intent(in)  :: thmaxxp !> maximum theta as thmax=10^thmaxxp
     integer, intent(in) :: nu      !> number of u grid points
     integer, intent(in) :: nth     !> number of theta grid points
-    real*8, intent(inout), optional :: eps    !> error tolerance for evaluating L0 and L1
-    real*8, intent(inout), optional :: cutoff !> cutoff value for evaluating L0 and L1
+    real*8, intent(in), optional :: eps    !> error tolerance for evaluating L0 and L1
+    real*8, intent(in), optional :: cutoff !> cutoff value for evaluating L0 and L1
+
+    type(ccoll_tabulatedL0L1) :: tabulatedL0L1
 
     integer :: i, j
-    type(ccoll_tabulatedL0L1) :: ccoll_tabulatedL0L1
     
-    allocate(ccoll_tabulatedL0L1%u(nu), &
-         ccoll_tabulatedL0L1%theta(nth),&
-         ccoll_tabulatedL0L1%L0(nu,nth),&
-         ccoll_tabulatedL0L1%L1(nu,nth))
+    allocate(tabulatedL0L1%u(nu), &
+         tabulatedL0L1%theta(nth),&
+         tabulatedL0L1%L0(nu,nth),&
+         tabulatedL0L1%L1(nu,nth))
 
     ! Set abscissae
-    ccoll_tabulatedL0L1%u     = 10**( uminxp  + (/ ( ( i - 1 ) * ( umaxxp  - uminxp  ) / ( nu  - 1 ), i=1,nu)  /) )
-    ccoll_tabulatedL0L1%theta = 10**( thminxp + (/ ( ( i - 1 ) * ( thmaxxp - thminxp ) / ( nth - 1 ), i=1,nth) /) )
+    tabulatedL0L1%u     = 10**( uminxp  + (/ ( ( i - 1 ) * ( umaxxp  - uminxp  ) / ( nu  - 1 ), i=1,nu)  /) )
+    tabulatedL0L1%theta = 10**( thminxp + (/ ( ( i - 1 ) * ( thmaxxp - thminxp ) / ( nth - 1 ), i=1,nth) /) )
 
     ! Evaluate and store values to the table
     do i=1,nu
        do j=1,nth
           if(present(eps) .and. present(cutoff)) then
-             call eval_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
-                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j),&
+             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
+                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j),&
                   eps=eps,cutoff=cutoff)
           elseif(present(eps)) then
-             call eval_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
-                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j),&
+             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
+                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j),&
                   eps=eps)
           elseif(present(cutoff)) then
-             call eval_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
-                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j),&
+             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
+                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j),&
                   cutoff=cutoff)
           else
-             call eval_L0L1(ccoll_tabulatedL0L1%u(i),ccoll_tabulatedL0L1%theta(j),&
-                  ccoll_tabulatedL0L1%L0(i,j),ccoll_tabulatedL0L1%L1(i,j))
+             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
+                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j))
           end if
        end do
        
        ! This might last some time so keep user updated on progress
        write(*,*) "done: ",i,"/",nu
     end do
-
-    ccoll_compute_L0L1table = ccoll_tabulatedL0L1
     
   end function ccoll_compute_L0L1table
 

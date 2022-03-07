@@ -157,7 +157,7 @@ contains
   !> Writes tabulated L0L1 values to a file.
   subroutine ccoll_write_L0L1table(dat,fn)
     implicit none
-    type(ccoll_tabulatedL0L1), intent(in) :: dat ! data to be written
+    class(ccoll_tabulatedL0L1), intent(in) :: dat ! data to be written
     character(len=*), intent(in) :: fn           ! output filename
 
     integer :: chn=989
@@ -240,7 +240,7 @@ contains
        K,dK,Dpar,dDpar,Dperp,dDperp,kappa,dkappa)
     implicit none
 
-    type(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
+    class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)  :: ma   !< test particle mass [kg]
     real*8, intent(in)  :: qa   !< test particle charge [C]
     real*8, intent(in)  :: clog !< Coulomb logarithm for each species
@@ -308,7 +308,7 @@ contains
   !> background species using Euler-Maruyama method with a fixed time step.
   subroutine ccoll_kinetic_relativistic_push(dat,ma,qa,mb,qb,nb,thb,dt,rnd,uin,uout)
     implicit none
-    type(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
+    class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in) :: ma      !< test particle mass [kg]
     real*8, intent(in) :: qa      !< test particle charge [C]
     real*8, intent(in) :: mb(:)   !< list of background species masses [kg]
@@ -358,7 +358,7 @@ contains
   ! Apply Coulomb collisions for guiding center
   subroutine ccoll_gc_relativistic_push(dat,ma,qa,mb,qb,nb,thb,uin,uout,xiin,xiout,dt,rnd,cutoff)
     
-    type(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
+    class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in) :: ma     !< test particle mass [kg]
     real*8, intent(in) :: qa     !< test particle charge [C]
     real*8, intent(in) :: mb(:)  !< list of background species masses [kg]
@@ -427,7 +427,7 @@ contains
   !> Evaluates the mu functions (and their derivatives if needed)
   subroutine ccoll_mufuncs(data,u,th,mu0,mu1,mu2,dmu0,dmu1,dmu2)
     implicit none
-    type(ccoll_tabulatedL0L1), intent(in) :: data !< initialized L0L1 tables
+    class(ccoll_tabulatedL0L1), intent(in) :: data !< initialized L0L1 tables
     real*8, intent(in)  :: u   !< p/mc value
     real*8, intent(in)  :: th  !< T/mc^2
     real*8, intent(out) :: mu0 !< Eq. 14 in the referece paper
@@ -473,7 +473,7 @@ contains
   !> Interpolates (bilinear) the special functions L0 and L1
   !> Approximations are used outside the tabulated domain.
   subroutine interp_L0L1(data,u,theta,L0,L1)
-    type(ccoll_tabulatedL0L1), intent(in) :: data !< tabulated L0L1 values
+    class(ccoll_tabulatedL0L1), intent(in) :: data !< tabulated L0L1 values
     real*8, intent(in)  :: u     !< queried p/mc value
     real*8, intent(in)  :: theta !< queried T/mc^2 value
     real*8, intent(out) :: L0    !< interpolated L0

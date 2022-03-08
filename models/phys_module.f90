@@ -413,7 +413,7 @@ module phys_module
   real*8  :: spi_Vel_RxZref(n_inj_max) !< Reference velocity of pellet center along RxZ direction upon injection
   real*8  :: spi_quantity(n_inj_max)   !< Total injected atom number for impurity SPI
   real*8  :: spi_quantity_bg(n_inj_max)!< Total injected atom number for background species SPI
-  real*8  :: ng_radius_ratio           !< We are assuming a constant ratio between the radius of NG clouds
+  real*8  :: ns_radius_ratio           !< We are assuming a constant ratio between the radius of NG clouds
                                        !< and that of shattered pellets
 
   real*8  :: spi_Vel_diff(n_inj_max)   !< The velocity difference from the reference velocity

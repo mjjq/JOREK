@@ -251,6 +251,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'n_tht_equidistant     ', n_tht_equidistant
   write(*,INTG_FMT) 'n_flux                ', n_flux
   write(*,LOGI_FMT) 'xpoint                ', xpoint
+  write(*,REAL_FMT) 'Z_xpoint_limit        ', Z_xpoint_limit(:)
 
   if ( xpoint ) then
     write(*,INTG_FMT) 'xcase                 ', xcase

@@ -188,6 +188,8 @@ subroutine preset_parameters
   xleft  = 0.d0
   xpoint = .false.
   force_horizontal_Xline = .false.
+  Z_xpoint_limit(1) = -0.4d0
+  Z_xpoint_limit(2) =  0.4d0
 
   xr1  = 9999.d0
   sig1 = 9999.d0

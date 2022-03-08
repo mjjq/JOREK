@@ -108,7 +108,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 max_steps_noUpdate,                                 &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 output_bnd_elements,                                &
-                wall_file,                                          &
+                wall_file, Z_xpoint_limit,                          &
                 first_target_point, last_target_point,              &
                 n_limiter, R_limiter, Z_limiter,                    &
                 spi_tor_rot, tor_frequency, spi_num_vol,            &

@@ -123,7 +123,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 imp_type, delta_n_convection, nimp_bg, n_adas,      &
-                index_main_imp,                                     &
+                index_main_imp, Z_xpoint_limit,                     &
                 adas_dir, output_prad_phi,                          &
                 RMP_on, RMP_har_cos,RMP_har_sin, spi_shard_file,    &
                 spi_plume_file, spi_plume_hdf5,                     &

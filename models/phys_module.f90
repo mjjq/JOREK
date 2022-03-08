@@ -423,7 +423,7 @@ module phys_module
   real*8  :: ns_phi_rotate             !< The toroidal position of rotated injection point
   real*8  :: tor_frequency             !< The rigid body rotation frequency
 
-  real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
+  real*8  :: ns_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
   real*8, allocatable  :: xtime_spi_ablation(:,:)         !< The time history of SPI ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:)    !< The time history of SPI ablation rate

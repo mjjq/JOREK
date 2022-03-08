@@ -694,7 +694,7 @@ subroutine preset_parameters
   spi_quantity    = 0.0
   spi_quantity_bg = 0.0
   ng_radius_ratio = 1.4d0
-  ng_radius_min   = 8.d-2
+  ns_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
   spi_angle       = 0.0
   spi_L_inj       = 0.25

@@ -161,7 +161,7 @@ module mod_neutral_source
   subroutine total_neutral_source(R,Z,phi,psi,source_neutral,source_neutral_drift) 
 
     use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
-    use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
+    use phys_module, only: ns_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
     use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
     use phys_module, only: spi_num_vol, ns_delta_minor_rad
@@ -210,8 +210,8 @@ module mod_neutral_source
 
           ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
 
-          if (ng_radius < ng_radius_min) then
-            ng_radius = ng_radius_min
+          if (ng_radius < ns_radius_min) then
+            ng_radius = ns_radius_min
           end if
 
           n_spi_tmp = 0

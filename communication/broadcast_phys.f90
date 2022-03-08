@@ -312,7 +312,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(spi_quantity_bg,n_inj_max,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(spi_angle,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(ng_radius_ratio,        1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(ng_radius_min,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(ns_radius_min,          1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
   call MPI_PACK(n_inj,                  1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(n_spi,          n_inj_max,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -1054,7 +1054,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,spi_quantity_bg,n_inj_max,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,spi_angle,              1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,ng_radius_ratio,        1,MPI_REAL8,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,ng_radius_min,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,ns_radius_min,          1,MPI_REAL8,MPI_COMM_WORLD,ierr)
 
   call MPI_UNPACK(buffer,bufsize,position,n_inj,                  1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,n_spi,          n_inj_max,MPI_INTEGER,MPI_COMM_WORLD,ierr)

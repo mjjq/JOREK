@@ -34,6 +34,7 @@ integer,                  intent(out)   :: i_elm
 real*8,                   intent(out)   :: s, t, R, Z
 
 logical, parameter :: verbose = .true.
+logical, external :: disnan
 
 ! --- Internal variables
 real*8  :: u, du, R_try, Z_try, s_out, t_out, err
@@ -228,7 +229,7 @@ do newton_iter_number = 1, newton_iter_max
   else
     out_of_domain = .false.
   end if
-  if (isnan(P(1)) .or. abs(u) .gt. 1d5 .or. abs(P(1)) .gt. 1d5) then
+  if (disnan(P(1)) .or. abs(u) .gt. 1d5 .or. abs(P(1)) .gt. 1d5) then
     if (verbose) write(*,"(A,g13.6,A,g13.6,A,3g13.6,A,g13.6,A)") "Position not found for psi=", psi, ", theta=",theta, " last guess=", u, R_try, Z_try, " (psi=",P(1),")"
     i_elm = 0
     return

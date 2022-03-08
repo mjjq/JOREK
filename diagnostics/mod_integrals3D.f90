@@ -361,7 +361,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          using_spi, n_spi_tot, n_inj, n_spi,                                             &
 !$omp          pellets, ng_radius_ratio, ng_radius_min,                                        &
 !$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
-!$omp          ns_phi, ns_radius, ns_deltaphi, ns_deltaminrad, ns_tor_norm, spi_tor_rot, local_E_ion,          &
+!$omp          ns_phi, ns_radius, ns_deltaphi, ns_delta_minor_rad, ns_tor_norm, spi_tor_rot, local_E_ion,  &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI, local_P_ion,&
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type, local_P_ei,  &
 !$omp          n_adas, nimp_bg,                                                                &
@@ -1024,7 +1024,7 @@ do ife = ife_min, ife_max
                  ns_shape = source_shape(x_g(ms,mt),y_g(ms,mt),phi, &
                       spi_R_tmp,spi_Z_tmp,spi_phi_tmp,              &
                       ng_radius_tmp,ns_deltaphi,                    &
-                      ps0,spi_psi_tmp,spi_grad_psi_tmp,ns_deltaminrad)
+                      ps0,spi_psi_tmp,spi_grad_psi_tmp,ns_delta_minor_rad)
 
                  local_source_volume(spi_i) = local_source_volume(spi_i) &
                       + ns_shape * bigR * xjac * wst * delta_phi
@@ -1035,7 +1035,7 @@ do ife = ife_min, ife_max
                         ng_radius_tmp,ns_deltaphi,                        &
                         ps0,pellets(spi_i)%spi_psi_drift,                 &
                         pellets(spi_i)%spi_grad_psi_drift,                &
-                        ns_deltaminrad)
+                        ns_delta_minor_rad)
 
                    local_source_volume_drift(spi_i) = local_source_volume_drift(spi_i) &
                         + ns_shape * bigR * xjac * wst * delta_phi
@@ -2096,12 +2096,12 @@ if (my_id .eq. 0) then
              ng_radius_tmp = ng_radius_min
           end if
 
-          if (ns_deltaminrad .gt. 0.) then
+          if (ns_delta_minor_rad .gt. 0.) then
              ! i.e., with poloidally elongated ablation cloud
              ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
-             V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp * min(ns_deltaminrad,ng_radius_tmp)
+             V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp * min(ns_delta_minor_rad,ng_radius_tmp)
              if (drift_distance /= 0.d0) then
-               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ng_radius_tmp * min(ns_deltaminrad,ng_radius_tmp)
+               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ng_radius_tmp * min(ns_delta_minor_rad,ng_radius_tmp)
              end if
           else
              ! i.e., standard case with circular ablation cloud in the poloidal plane

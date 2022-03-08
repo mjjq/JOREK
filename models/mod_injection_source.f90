@@ -29,7 +29,7 @@ module mod_injection_source
 
 
   subroutine inj_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi,&
-                        ns_deltaminrad,ns_tor_norm,  &
+                        ns_delta_minor_rad,ns_tor_norm,  &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,                  &
                         JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume, i_main_imp)
 
@@ -86,7 +86,7 @@ module mod_injection_source
     real*8, intent(in)  :: ns_grad_psi
     real*8, intent(in)  :: ns_radius
     real*8, intent(in)  :: ns_deltaphi
-    real*8, intent(in)  :: ns_deltaminrad
+    real*8, intent(in)  :: ns_delta_minor_rad
     real*8, intent(in)  :: L_tube
     real*8, intent(in)  :: central_density
     real*8, intent(in)  :: central_mass
@@ -132,7 +132,7 @@ module mod_injection_source
 
     ! Compute the source shape
     ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,&
-         psi,ns_psi,ns_grad_psi,ns_deltaminrad)
+         psi,ns_psi,ns_grad_psi,ns_delta_minor_rad)
 
     ! Volume used for normalization:
     ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
@@ -143,10 +143,10 @@ module mod_injection_source
     if (source_volume .gt. 0.) then ! i.e., when numerical integration of the ablation source volume is used
        V_ns = source_volume
     else ! i.e., when numerical integration of the ablation source volume is not used
-       if (ns_deltaminrad .gt. 0.) then
+       if (ns_delta_minor_rad .gt. 0.) then
     ! i.e., with poloidally elongated ablation cloud
     ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
-          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * min(ns_deltaminrad,ns_radius)
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * min(ns_delta_minor_rad,ns_radius)
        else
     ! i.e., standard case with circular ablation cloud in the poloidal plane
     ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon
@@ -282,7 +282,7 @@ module mod_injection_source
     use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
     use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
-    use phys_module, only: spi_num_vol, ns_deltaminrad
+    use phys_module, only: spi_num_vol, ns_delta_minor_rad
 
     implicit none
 
@@ -351,7 +351,7 @@ module mod_injection_source
           end do
 
           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,spi_psi_tmp,spi_grad_psi_tmp, &
-                        ng_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
+                        ng_radius,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., R, Z, phi, psi, &
                         source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp,i_main_imp)
         end if
@@ -371,7 +371,7 @@ module mod_injection_source
         spi_grad_psi_tmp = 0.d0
 
         call inj_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),spi_psi_tmp,spi_grad_psi_tmp, &
-                        ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
+                        ns_radius,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,psi, &
                         source_tmp, t_now, JET_MGI,ASDEX_MGI,central_density,central_mass, spi_vol_tmp,i_main_imp)
 

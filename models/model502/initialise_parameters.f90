@@ -116,7 +116,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &
                 imp_reflection, neutral_reflection, rho_min,        &
-                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
+                ns_deltaphi, ns_delta_minor_rad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &

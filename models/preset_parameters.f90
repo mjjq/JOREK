@@ -664,7 +664,7 @@ subroutine preset_parameters
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
   ns_deltaphi =  0.5
-  ns_deltaminrad = 0.d0
+  ns_delta_minor_rad = 0.d0
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
   D_neutral_x = 1.d-5

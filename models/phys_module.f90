@@ -380,7 +380,7 @@ module phys_module
   real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
   real*8  :: ns_radius         !< Poloidal radius of gas source
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
-  real*8  :: ns_deltaminrad    !< Extension of gas source in the minor radial direction (if greater than 0.)
+  real*8  :: ns_delta_minor_rad  !< Extension of gas source in the minor radial direction (if greater than 0.)
   real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
   real*8  :: drift_distance    !< Shift the R position of the neutral deposition outward by drift_distance (in meters) for plasmoid drift
   real*8  :: energy_teleported !< Energy (in eV) teleported per atom to consider plasmoid drift effects

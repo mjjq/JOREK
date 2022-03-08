@@ -115,7 +115,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection,                                 &
-                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
+                ns_deltaphi, ns_delta_minor_rad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &

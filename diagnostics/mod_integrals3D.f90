@@ -163,7 +163,7 @@ real*8     :: spi_Z_tmp
 real*8     :: spi_phi_tmp
 real*8     :: spi_psi_tmp
 real*8     :: spi_grad_psi_tmp
-real*8     :: ng_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
+real*8     :: ns_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
 real*8     :: source_tmp
 real*8     :: ns_shape ! variable for numerical integration of source volume
 real*8     :: V_ns, V_ns_drift
@@ -393,7 +393,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,      &
-!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ng_radius_tmp,                              &
+!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ns_radius_tmp,                              &
 !$omp           spi_psi_tmp, spi_grad_psi_tmp,                                                 &
 !$omp           n_spi_tmp, source_tmp, ns_shape,                                               &
 #endif
@@ -1014,16 +1014,16 @@ do ife = ife_min, ife_max
                  spi_psi_tmp = pellets(spi_i)%spi_psi
                  spi_grad_psi_tmp = pellets(spi_i)%spi_grad_psi
                  
-                 ng_radius_tmp   = pellets(spi_i)%spi_radius * ns_radius_ratio
+                 ns_radius_tmp   = pellets(spi_i)%spi_radius * ns_radius_ratio
 
-                 if (ng_radius_tmp < ns_radius_min) then
-                    ng_radius_tmp = ns_radius_min
+                 if (ns_radius_tmp < ns_radius_min) then
+                    ns_radius_tmp = ns_radius_min
                  end if
 
                  ! Compute the source shape
                  ns_shape = source_shape(x_g(ms,mt),y_g(ms,mt),phi, &
                       spi_R_tmp,spi_Z_tmp,spi_phi_tmp,              &
-                      ng_radius_tmp,ns_deltaphi,                    &
+                      ns_radius_tmp,ns_deltaphi,                    &
                       ps0,spi_psi_tmp,spi_grad_psi_tmp,ns_delta_minor_rad)
 
                  local_source_volume(spi_i) = local_source_volume(spi_i) &
@@ -1032,7 +1032,7 @@ do ife = ife_min, ife_max
                  if (drift_distance /= 0) then ! Get the volume at the post-drift location (for normalization)
                    ns_shape = source_shape(x_g(ms,mt),y_g(ms,mt),phi,     &
                         spi_R_tmp+drift_distance,spi_Z_tmp,spi_phi_tmp,   &
-                        ng_radius_tmp,ns_deltaphi,                        &
+                        ns_radius_tmp,ns_deltaphi,                        &
                         ps0,pellets(spi_i)%spi_psi_drift,                 &
                         pellets(spi_i)%spi_grad_psi_drift,                &
                         ns_delta_minor_rad)
@@ -2090,25 +2090,25 @@ if (my_id .eq. 0) then
           write(*,'(A,3es14.6)')"Pellet ablation (radius,abl) = ", pellets(i)%spi_radius, pellets(i)%spi_abl
           write(*,'(A,f14.6)')  "Pellet species               = ", pellets(i)%spi_species
 
-          ng_radius_tmp   = pellets(i)%spi_radius * ns_radius_ratio
+          ns_radius_tmp   = pellets(i)%spi_radius * ns_radius_ratio
 
-          if (ng_radius_tmp < ns_radius_min) then
-             ng_radius_tmp = ns_radius_min
+          if (ns_radius_tmp < ns_radius_min) then
+             ns_radius_tmp = ns_radius_min
           end if
 
           if (ns_delta_minor_rad .gt. 0.) then
              ! i.e., with poloidally elongated ablation cloud
              ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
-             V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp * min(ns_delta_minor_rad,ng_radius_tmp)
+             V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ns_radius_tmp * min(ns_delta_minor_rad,ns_radius_tmp)
              if (drift_distance /= 0.d0) then
-               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ng_radius_tmp * min(ns_delta_minor_rad,ng_radius_tmp)
+               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ns_radius_tmp * min(ns_delta_minor_rad,ns_radius_tmp)
              end if
           else
              ! i.e., standard case with circular ablation cloud in the poloidal plane
              ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon
-             V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ng_radius_tmp**2.d0
+             V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ns_radius_tmp**2.d0
              if (drift_distance /= 0.d0) then
-               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ng_radius_tmp**2.d0
+               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ns_radius_tmp**2.d0
              end if
           endif
           
@@ -2120,10 +2120,10 @@ if (my_id .eq. 0) then
             if (abs((pellets(i)%spi_vol_drift - V_ns_drift)/V_ns_drift) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
           end if
 
-          ! recommended ablation source radius in the poloidal direction from ng_radius / (R*ns_deltaphi) = B_pol/B_tor
-          write(*,'(A,2f14.6)') "Source pol rad (actual,recom)= ", ng_radius_tmp, pellets(i)%spi_R * ns_deltaphi * pellets(i)%spi_grad_psi / abs(F0)
+          ! recommended ablation source radius in the poloidal direction from ns_radius / (R*ns_deltaphi) = B_pol/B_tor
+          write(*,'(A,2f14.6)') "Source pol rad (actual,recom)= ", ns_radius_tmp, pellets(i)%spi_R * ns_deltaphi * pellets(i)%spi_grad_psi / abs(F0)
           if (drift_distance /= 0.d0) then 
-            write(*,'(A,2f14.6)') "Drifted source pol rad (actual,recom)= ", ng_radius_tmp, (pellets(i)%spi_R + drift_distance) * ns_deltaphi * pellets(i)%spi_grad_psi_drift / abs(F0)
+            write(*,'(A,2f14.6)') "Drifted source pol rad (actual,recom)= ", ns_radius_tmp, (pellets(i)%spi_R + drift_distance) * ns_deltaphi * pellets(i)%spi_grad_psi_drift / abs(F0)
           end if
        end if
     end do

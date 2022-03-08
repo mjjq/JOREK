@@ -14,7 +14,7 @@ module mod_neutral_source
 
 
   !> Calculates the neutral source
-  subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi,
+  subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi, &
                               ns_delta_minor_rad,ns_tor_norm,                                       &
                               A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,    &
                               JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
@@ -181,7 +181,6 @@ module mod_neutral_source
     
     real*8     :: spi_psi_tmp
     real*8     :: spi_grad_psi_tmp
-    real*8     :: ns_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_neutral_tmp
     real*8     :: spi_vol_tmp !< Numerically integrated gas source volume
 

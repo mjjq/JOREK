@@ -79,6 +79,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 eta_num_T_dependent, visco_num_T_dependent,         &
                 ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
+                ZK_i_perp_num, ZK_e_perp_num,                       &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -145,11 +146,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_e_par_neg, ZK_i_par_neg, ZK_e_prof_neg, ZK_i_prof_neg,   &
                 ZK_e_prof_neg_thresh, ZK_i_prof_neg_thresh,         &
                 ZK_e_par_neg_thresh, ZK_i_par_neg_thresh,           &
-                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
+                ns_deltaphi, ns_delta_minor_rad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
-                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                ns_radius_ratio, ns_radius_min, spi_angle,          &
                 spi_L_inj, spi_L_inj_diff,                          &
                 drift_distance, energy_teleported,                  &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &

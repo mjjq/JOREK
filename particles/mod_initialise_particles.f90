@@ -351,9 +351,9 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
 #ifdef __GFORTRAN__
     !$omp parallel do default(shared) &
 #else
-    !$omp parallel do default(none) &
-#endif
+    !$omp parallel do default(none)        &
     !$omp shared(fields,  psi_minmax_list) &
+#endif
     !$omp private(i_elm) reduction(min:psimin) &
     !$omp reduction(max:psimax)
     do i_elm=1, fields%element_list%n_elements
@@ -433,7 +433,10 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
     !$omp          my_include_vpar, central_density, init_uniform_space, Rbox, Zbox, uniform_space_rej_vars, n_geom, n_mhd) &
 #endif
     !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, &
-    !$omp           R_i, Z_i, xjac, grad_P2, u, particle_kinetic_tmp, v2, v_par, &
+    !$omp           R_i, Z_i, xjac, grad_P2, u, particle_kinetic_tmp, v2, v_par,   &
+#ifdef fullmhd
+    !$omp           A3, AR, AZ, A3_R, A3_Z, AR_Z, AR_p, AZ_R, AZ_P, Fprof,          &
+#endif
     !$omp           P, P_s, P_t, P_phi, inv_st_jac, psi_R, psi_Z, B, H, muB, chi, ran, particle, temp, ifail, DUMMY_R, DUMMY_Z)
 #endif
     do i=1,blocksize

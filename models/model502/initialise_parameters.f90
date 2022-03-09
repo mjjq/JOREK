@@ -151,7 +151,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family, cte_current_FB_fact
+                ranks_per_family, cte_current_FB_fact,              &
+                ZK_prof_neg_thresh, ZK_prof_neg, ZK_par_neg_thresh,  &
+                ZK_par_neg
 
 if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

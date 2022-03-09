@@ -1,9 +1,9 @@
 &in1
 
- restart = .t.
+ restart = .f.
  regrid  = .f.
- tstep_n = 0.1 !0.01, 0.1, 1.0, 10.0
- nstep_n = 500     !  50,  50, 100, 100
+ tstep_n = 0.1
+ nstep_n = 500
 
  nout = 1
 

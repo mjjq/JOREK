@@ -145,11 +145,13 @@ do j=1,n_Z
   enddo
 enddo
 ! --- copy node indices
+! --- right-left periodicity (comment if unwanted)
 do i=1,n_bnd(2)
   do j=1,4
     node_list%node(bnd_list(2,i))%index(j) = node_list%node(bnd_list(1,i))%index(j)
   enddo
 enddo
+! --- top-down periodicity (comment if unwanted)
 do i=1,n_bnd(4)
   do j=1,4
     node_list%node(bnd_list(4,i))%index(j) = node_list%node(bnd_list(3,i))%index(j)

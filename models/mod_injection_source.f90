@@ -297,7 +297,7 @@ module mod_injection_source
 
     ! Temporary variables serving the SPI module
     integer    :: spi_i, i_inj,  n_spi_tmp
-    
+    real*8     :: ns_radius_loc    
     real*8     :: spi_R_tmp
     real*8     :: spi_Z_tmp
     real*8     :: spi_phi_tmp
@@ -337,10 +337,10 @@ module mod_injection_source
              spi_vol_tmp = 0.d0
           endif
 
-          ns_radius   = pellets(spi_i)%spi_radius * ns_radius_ratio
+          ns_radius_loc   = pellets(spi_i)%spi_radius * ns_radius_ratio
 
-          if (ns_radius < ns_radius_min) then
-            ns_radius = ns_radius_min
+          if (ns_radius_loc < ns_radius_min) then
+            ns_radius_loc = ns_radius_min
           end if
           
           n_spi_tmp = 0
@@ -350,7 +350,7 @@ module mod_injection_source
           end do
 
           call inj_source(spi_abl_tmp,spi_R_tmp,spi_Z_tmp,spi_phi_tmp,spi_psi_tmp,spi_grad_psi_tmp, &
-                        ns_radius,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
+                        ns_radius_loc,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
                         A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0., R, Z, phi, psi, &
                         source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp,i_main_imp)
         end if

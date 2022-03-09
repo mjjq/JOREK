@@ -304,7 +304,6 @@ module mod_injection_source
     real*8     :: spi_abl_tmp
     real*8     :: spi_psi_tmp
     real*8     :: spi_grad_psi_tmp
-    real*8     :: ns_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_tmp
     real*8     :: spi_vol_tmp !< Numerically integrated gas source volume
 

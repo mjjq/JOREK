@@ -236,6 +236,10 @@ subroutine preset_parameters
   ZK_i_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
   ZK_i_par_neg_thresh  = 0.d0
 
+  HW_coef    = 0.d0
+  HW_coef(1) = 1.d-6
+  HW_coef(2) = 1.d0
+
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
@@ -666,7 +670,7 @@ subroutine preset_parameters
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
   ns_deltaphi =  0.5
-  ns_deltaminrad = 0.d0
+  ns_delta_minor_rad = 0.d0
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
   D_neutral_x = 1.d-5
@@ -695,8 +699,8 @@ subroutine preset_parameters
   spi_Vel_RxZref  = 0.0d0
   spi_quantity    = 0.0
   spi_quantity_bg = 0.0
-  ng_radius_ratio = 1.4d0
-  ng_radius_min   = 8.d-2
+  ns_radius_ratio = 1.4d0
+  ns_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
   spi_angle       = 0.0
   spi_L_inj       = 0.25

@@ -576,13 +576,25 @@ do i=1,element_list%n_elements
         call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ0,ZJ0_s,ZJ0_t,ZJ0_st,ZJ0_ss,ZJ0_tt)
         call interp(node_list,element_list,i,var_w,  i_tor,s,t,W0, W0_s, W0_t, W0_st, W0_ss, W0_tt)
         call interp(node_list,element_list,i,var_rho,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
-        call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
 
         if (with_Vpar) then
           call interp(node_list,element_list,i,var_Vpar,i_tor,s,t,V0,V0_s,V0_t,V0_st,V0_ss,V0_tt)
         else
           V0=0; V0_s=0; V0_t=0; V0_st=0; V0_ss=0; V0_tt=0
         end if
+
+        if (with_TiTe) then
+           call interp(node_list,element_list,i,var_Te,  i_tor,s,t,Te0, Te0_s, Te0_t, Te0_st, Te0_ss, Te0_tt)
+           call interp(node_list,element_list,i,var_Ti,  i_tor,s,t,Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt)
+           T0   = Ti0   + Te0
+           T0_s = Ti0_s + Te0_s
+           T0_t = Ti0_t + Te0_t
+        else
+          call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
+          Te0    = T0  /2.d0;     Ti0    = T0  /2.d0
+          Te0_s  = T0_s/2.d0;     Ti0_s  = T0_s/2.d0
+          Te0_t  = T0_t/2.d0;     Ti0_t  = T0_t/2.d0
+        endif
 
         u0_x   = (   Z_t * U0_s  - Z_s * U0_t ) / xjac
         u0_y   = ( - R_t * U0_s  + R_s * U0_t ) / xjac
@@ -708,7 +720,16 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
           call interp(node_list,element_list,i,var_w,  i_tor,s,t,W,W_s,W_t,W_st,W_ss,W_tt)
           call interp(node_list,element_list,i,var_rho,i_tor,s,t,RHO,RHO_s,RHO_t,RHO_st,RHO_ss,RHO_tt)
-          call interp(node_list,element_list,i,var_T,  i_tor,s,t,TT,TT_s,TT_t,TT_st,TT_ss,TT_tt)
+          if (with_TiTe) then
+             call interp(node_list,element_list,i,var_Ti,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
+             call interp(node_list,element_list,i,var_Te,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
+             TT   = Ti   + Te
+             TT_s = Ti_s + Te_s
+             TT_t = Ti_t + Te_t
+          else
+             call interp(node_list,element_list,i,var_T,  i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
+          endif
+ 
           if (with_Vpar) then
             call interp(node_list,element_list,i,var_Vpar,i_tor,s,t,V,V_s,V_t,V_st,V_ss,V_tt)
           else
@@ -1020,6 +1041,9 @@ do i=1,element_list%n_elements
           if (with_TiTe) then
              call interp(node_list,element_list,i,var_Ti,i_tor,s,t,Ti,Ti_s,Ti_t,Ti_st,Ti_ss,Ti_tt)
              call interp(node_list,element_list,i,var_Te,i_tor,s,t,Te,Te_s,Te_t,Te_st,Te_ss,Te_tt)
+             TT   = Ti   + Te
+             TT_s = Ti_s + Te_s
+             TT_t = Ti_t + Te_t
           else
              call interp(node_list,element_list,i,var_T,  i_tor,s,t,TT ,TT_s, TT_t, TT_st, TT_ss, TT_tt)
           endif
@@ -1378,6 +1402,8 @@ enddo  ! n_elements
      else
        call imp_cor(index_main_imp)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),z_avg=Z_imp)
        E_ion     = 0.
+       write(*,*) 'The ionization energy file of the main impuritity is required'
+       stop
      end if
 
      alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.

@@ -126,7 +126,7 @@ end function dcorr_neg_temp_dT1
 real*8 function dcorr_neg_temp_dT2(val, coef)
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
-  use phys_module, only: T_min_neg
+  use phys_module, only: T_min_neg, T_1
 
   ! --- Routine parameters
   real*8, intent(in)           :: val       !< Temperature value to be "corrected".
@@ -179,7 +179,7 @@ real*8 function d2corr_neg_temp_dT21(val)
 #if _OPENMP >= 201511
   !$omp declare simd 
 #endif
-  use phys_module, only: corr_neg_temp_coef,T_min_neg
+  use phys_module, only: corr_neg_temp_coef,T_min_neg,T_1
   
   ! --- Routine parameters
   real*8, intent(in)           :: val       !< Temperature value to be "corrected".
@@ -203,7 +203,7 @@ end function d2corr_neg_temp_dT21
 real*8 function d2corr_neg_temp_dT22(val, coef)
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
-  use phys_module, only: T_min_neg
+  use phys_module, only: T_min_neg, T_1
 
   ! --- Routine parameters
   real*8, intent(in)           :: val       !< Temperature value to be "corrected".

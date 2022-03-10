@@ -251,6 +251,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'n_tht_equidistant     ', n_tht_equidistant
   write(*,INTG_FMT) 'n_flux                ', n_flux
   write(*,LOGI_FMT) 'xpoint                ', xpoint
+  write(*,REAL_FMT) 'Z_xpoint_limit        ', Z_xpoint_limit(:)
 
   if ( xpoint ) then
     write(*,INTG_FMT) 'xcase                 ', xcase
@@ -504,6 +505,10 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'visco_par_sc_num      ', visco_par_sc_num
   write(*,REAL_FMT) 'Dn_pol_sc_num         ', Dn_pol_sc_num
   write(*,REAL_FMT) 'Dn_p_sc_num           ', Dn_p_sc_num
+
+  if(jorek_model == 004 ) then
+    write(*,REAL_FMT) 'HW_coef               ', HW_coef(1:2)
+  endif
 
   write(*,LOGI_FMT) 'add_sources_in_sc     ', add_sources_in_sc
   if (with_TiTe) then
@@ -823,9 +828,9 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
      write(*,REAL_FMT) 'ns_Z                ',  ns_Z
      write(*,REAL_FMT) 'ns_phi              ',  ns_phi
      write(*,REAL_FMT) 'ns_radius           ',  ns_radius
-     write(*,REAL_FMT) 'ng_radius_min       ',  ng_radius_min
+     write(*,REAL_FMT) 'ns_radius_min       ',  ns_radius_min
      write(*,REAL_FMT) 'ns_deltaphi         ',  ns_deltaphi
-     write(*,REAL_FMT) 'ns_deltaminrad      ',  ns_deltaminrad
+     write(*,REAL_FMT) 'ns_delta_minor_rad  ',  ns_delta_minor_rad
      write(*,REAL_FMT) 'ns_tor_norm         ',  ns_tor_norm
      write(*,REAL_FMT) 'ksi_ion             ',  ksi_ion
      write(*,LOGI_FMT) 'JET_MGI             ',  JET_MGI
@@ -850,8 +855,10 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
      write(*,REAL_FMT) 'neutral_reflection  ', neutral_reflection
      write(*,REAL_FMT) 'imp_reflection      ', imp_reflection
      write(*,LOGI_FMT) 'output_prad_phi     ', output_prad_phi
-     write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
-     write(*,LOGI_FMT) 'use_imp_adas        ',  use_imp_adas
+     write(*,CHAR_FMT) 'adas_dir            ', trim(adas_dir)
+     write(*,LOGI_FMT) 'use_imp_adas        ', use_imp_adas
+     write(*,REAL_FMT) 'drift_distance      ', drift_distance
+     write(*,REAL_FMT) 'energy_teleported   ', energy_teleported
 
      !< Additional log for SPI model
    if(using_spi) then
@@ -859,7 +866,6 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
      write(*,LOGI_FMT) 'spi_tor_rot         ',  spi_tor_rot
      write(*,LOGI_FMT) 'spi_num_vol         ',  spi_num_vol
      write(*,CHAR_FMT) 'adas_dir            ',  trim(adas_dir)
-     write(*,INTG_FMT) 'n_adas              ',  n_adas
      write(*,INTG_FMT) 'n_spi               ',  n_spi
      write(*,INTG_FMT) 'n_spi_tot           ',  n_spi_tot
      write(*,INTG_FMT) 'n_inj               ',  n_inj

@@ -79,6 +79,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 eta_num_T_dependent, visco_num_T_dependent,         &
                 ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
+                ZK_i_perp_num, ZK_e_perp_num,                       &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -145,12 +146,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_e_par_neg, ZK_i_par_neg, ZK_e_prof_neg, ZK_i_prof_neg,   &
                 ZK_e_prof_neg_thresh, ZK_i_prof_neg_thresh,         &
                 ZK_e_par_neg_thresh, ZK_i_par_neg_thresh,           &
-                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
+                ns_deltaphi, ns_delta_minor_rad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
-                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                ns_radius_ratio, ns_radius_min, spi_angle,          &
                 spi_L_inj, spi_L_inj_diff,                          &
+                drift_distance, energy_teleported,                  &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg, output_prad_phi,       &
@@ -178,7 +180,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family, treat_axis,                       &
+                ranks_per_family, treat_axis, Z_xpoint_limit,       &
                 tgnum_psi, tgnum_u, tgnum_zj, tgnum_w, tgnum_rho,   &
                 tgnum_T, tgnum_Ti, tgnum_Te, tgnum_vpar, tgnum_rhon,&
                 tgnum_nre, tgnum_AR, tgnum_AZ, tgnum_A3,            &
@@ -316,11 +318,16 @@ if ( my_id == 0 ) then
     stop
   end if
 
- if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
+  if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
     write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
     write(*,*) "ERROR: index_main_imp:", index_main_imp
     stop
- end if
+  end if
+
+  if (drift_distance < 0.d0 .or. energy_teleported < 0.d0) then 
+    write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
+    stop
+  end if
 
   if (using_spi) call init_spi_all()
 

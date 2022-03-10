@@ -54,6 +54,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 zjz_0, zjz_1, zj_coef,                              &
                 rho_0, rho_1, rho_coef, rho_min,                    &
                 T_0,   T_1,   T_coef, T_min,                        &
+				T_min_neg,rho_min_neg,                              &
 				corr_neg_temp_coef, corr_neg_dens_coef,             &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &

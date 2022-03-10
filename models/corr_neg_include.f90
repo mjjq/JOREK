@@ -48,9 +48,6 @@ real*8 function corr_neg_temp1(val)
 end function corr_neg_temp1
 
 real*8 function corr_neg_temp2(val, coef)
-#if _OPENMP >= 201511
-  !$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
   use phys_module, only: T_1, T_min_neg
@@ -61,6 +58,10 @@ real*8 function corr_neg_temp2(val, coef)
                                             !! input parameter corr_neg_temp2_coef is used instead.  
   real*8 :: L1, L2
 
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
+  
   if (T_min_neg .ge. 0.d0) then
 	L1 = T_min_neg * coef(1)
 	L2 = T_min_neg * coef(2)
@@ -75,9 +76,6 @@ real*8 function corr_neg_temp2(val, coef)
 end function corr_neg_temp2
 
 real*8 function corr_neg_temp3(val, coef, val_1)
-#if _OPENMP >= 201511
-  !$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector
 ! elements.
 ! Is this correct?
@@ -89,7 +87,9 @@ real*8 function corr_neg_temp3(val, coef, val_1)
   real*8, intent(in)           :: val_1     !< Temperature value floor
   real*8 :: L1, L2
 
-
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
 
   L1 = val_1 * coef(1)
   L2 = val_1 * coef(2)
@@ -124,9 +124,6 @@ real*8 function dcorr_neg_temp_dT1(val)
 end function dcorr_neg_temp_dT1
 
 real*8 function dcorr_neg_temp_dT2(val, coef)
-#if _OPENMP >= 201511
-  !$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
   use phys_module, only: T_min_neg
@@ -136,7 +133,11 @@ real*8 function dcorr_neg_temp_dT2(val, coef)
   real*8, intent(in) :: coef(2)   !< Optional coefficients, if not provided the
                                             !! input parameter corr_neg_temp2_coef is used instead.  
   real*8 :: L1, L2
-  
+
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif 
+ 
   if (T_min_neg .ge. 0.d0) then
 	L1 = T_min_neg * coef(1)
 	L2 = T_min_neg * coef(2)
@@ -151,9 +152,6 @@ real*8 function dcorr_neg_temp_dT2(val, coef)
 end function dcorr_neg_temp_dT2
 
 real*8 function dcorr_neg_temp_dT3(val, coef, val_1)
-#if _OPENMP >= 201511
-  !$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector
 ! elements.
 ! Is this correct?
@@ -165,6 +163,10 @@ real*8 function dcorr_neg_temp_dT3(val, coef, val_1)
   real*8, intent(in)           :: val_1     !< Temperature value floor
   real*8 :: L1, L2
 
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
+  
   L1 = val_1 * coef(1)
   L2 = val_1 * coef(2)
 
@@ -199,9 +201,6 @@ real*8 function d2corr_neg_temp_dT21(val)
 end function d2corr_neg_temp_dT21
 
 real*8 function d2corr_neg_temp_dT22(val, coef)
-#if _OPENMP >= 201511
-  !$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
   use phys_module, only: T_min_neg
@@ -213,6 +212,10 @@ real*8 function d2corr_neg_temp_dT22(val, coef)
   
   real*8 :: L1, L2
 
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
+  
   if (T_min_neg .ge. 0.d0) then
 	L1 = T_min_neg * coef(1)
 	L2 = T_min_neg * coef(2)
@@ -228,9 +231,6 @@ real*8 function d2corr_neg_temp_dT22(val, coef)
 end function d2corr_neg_temp_dT22
 
 real*8 function d2corr_neg_temp_dT23(val, coef, val_1)
-#if _OPENMP >= 201511
-  !$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector
 ! elements.
 ! Is this correct?
@@ -242,6 +242,10 @@ real*8 function d2corr_neg_temp_dT23(val, coef, val_1)
   real*8, intent(in)           :: val_1     !< Temperature value floor
   real*8 :: L1, L2
 
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
+  
   L1 = val_1 * coef(1)
   L2 = val_1 * coef(2)
 
@@ -278,9 +282,6 @@ end function corr_neg_dens1
 
 !We cannot have optional argument for a vector funct, therefore we overload it
 real*8 function corr_neg_dens2(val, coef)
-#if _OPENMP >= 201511
-!$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
   use phys_module, only: corr_neg_dens_coef, rho_min_neg, rho_1
@@ -290,6 +291,10 @@ real*8 function corr_neg_dens2(val, coef)
   real*8, intent(in) :: coef(2)   !< Optional coefficients, if not provided the
                                             !! input parameter corr_neg_temp_coef is used instead.
   real*8 :: L1, L2
+
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
   
   if (rho_min_neg .ge. 0.d0) then
 	L1 = rho_min_neg * coef(1)
@@ -306,9 +311,6 @@ real*8 function corr_neg_dens2(val, coef)
 end function corr_neg_dens2
 
 real*8 function corr_neg_dens3(val, coef, val_1)
-#if _OPENMP >= 201511
-!$omp declare simd uniform(coef)
-#endif 
 ! With uniform, we declare thet coeff should be the same for all vector
 ! elements.
 ! Is this correct?
@@ -320,6 +322,9 @@ real*8 function corr_neg_dens3(val, coef, val_1)
   real*8, intent(in)           :: val_1     !< Density value floor
   real*8 :: L1, L2
 
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif 
   
   L1 = val_1 * coef(1)
   L2 = val_1 * coef(2)
@@ -356,9 +361,6 @@ end function dcorr_neg_dens_drho1
 
 !We cannot have optional argument for a vector funct, therefore we overload it
 real*8 function dcorr_neg_dens_drho2(val, coef)
-#if _OPENMP >= 201511
-!$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector elements.
 ! Is this correct?
   use phys_module, only: corr_neg_dens_coef, rho_min_neg, rho_1
@@ -369,6 +371,9 @@ real*8 function dcorr_neg_dens_drho2(val, coef)
                                             !! input parameter corr_neg_temp_coef is used instead.
   real*8 :: L1, L2
 
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
   
   if (rho_min_neg .ge. 0.d0) then
 	L1 = rho_min_neg * coef(1)
@@ -385,9 +390,6 @@ real*8 function dcorr_neg_dens_drho2(val, coef)
 end function dcorr_neg_dens_drho2
 
 real*8 function dcorr_neg_dens_drho3(val, coef, val_1)
-#if _OPENMP >= 201511
-!$omp declare simd uniform(coef)
-#endif
 ! With uniform, we declare thet coeff should be the same for all vector
 ! elements.
 ! Is this correct?
@@ -399,7 +401,9 @@ real*8 function dcorr_neg_dens_drho3(val, coef, val_1)
   real*8, intent(in)           :: val_1     !< Density value floor
   real*8 :: L1, L2
 
-
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(coef)
+#endif
 
   L1 = val_1 * coef(1)
   L2 = val_1 * coef(2)

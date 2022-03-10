@@ -608,19 +608,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
           type is (particle_gc)
             particles_tmp(i) = particle
           type is (particle_gc_vpar)
-!          call convert_gc_to_gc_vpar(particle, norm2(B), mass, particles_tmp(i))
-             p%i_elm   = particle%i_elm
-             p%x(1)    = particle%x(1);    p%x(2)    = particle%x(2);    p%x(3) = particle%x(3)
-             p%st(1)   = particle%st(1); p%st(2) = particle%st(2)
-             p%q       = particle%q
-             p%weight  = particle%weight
-
-             v2    = 2.d0 * particle%E * EL_CHG / (mass*ATOMIC_MASS_UNIT) ![m/s]
-             v_par = sqrt(v2 - 2.d0 * abs(particle%mu) * norm2(B) * EL_CHG /  (mass * ATOMIC_MASS_UNIT))    
-
-             p%vpar   = sign(v_par, particle%mu)
-             p%mu     = abs(particle%mu) * EL_CHG / (mass*ATOMIC_MASS_UNIT)
-             p%B_norm = norm2(B)
+            call convert_gc_to_gc_vpar(particle, norm2(B), mass, p)
         end select
       else
         found(i) = .false.
@@ -1090,28 +1078,16 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
 !                [0.d0, 0.d0, 0.d0], B, mass, dt=0.d0), &
 !                p )
 
-             particles_tmp(i) = gc_to_kinetic_leapfrog(particle, fields%node_list, fields%element_list, TWOPI*REAL(i_gyro_orbit)/REAL(n_gyro_orbit)+chi, [0.d0,0.d0,0.d0], B, mass, dt=0.d0)
-
+              p = gc_to_kinetic_leapfrog(particle, fields%node_list, fields%element_list, chi, [0.d0,0.d0,0.d0], B, mass, dt=0.d0)
+  
               ! if the kinetic position is not in the grid particles(i)%i_elm the particle is lost
               found(i_gyro_temp) = .true.
-              if (particles_tmp(i)%i_elm .le. 0) found(i_gyro_temp) = .false.
+              if (p%i_elm .le. 0) found(i_gyro_temp) = .false.
 
             type is (particle_gc)
-              particles_tmp(i) = particle       
+              p = particle
             type is (particle_gc_vpar)
-!              call convert_gc_to_gc_vpar(particle, norm2(B), mass, particles_tmp(i))
-              p%i_elm   = particle%i_elm
-              p%x(1)    = particle%x(1);    p%x(2)    = particle%x(2);    p%x(3) = particle%x(3)
-              p%st(1)   = particle%st(1); p%st(2) = particle%st(2)
-              p%q       = particle%q
-              p%weight  = particle%weight
-
-              v2    = 2.d0 * particle%E * EL_CHG / (mass*ATOMIC_MASS_UNIT) ![m/s]
-              v_par = sqrt(v2 - 2.d0 * abs(particle%mu) * norm2(B) * EL_CHG /  (mass * ATOMIC_MASS_UNIT))    
-
-              p%vpar   = sign(v_par, particle%mu)
-              p%mu     = abs(particle%mu) * EL_CHG / (mass*ATOMIC_MASS_UNIT)
-              p%B_norm = norm2(B)
+              call convert_gc_to_gc_vpar(particle, norm2(B), mass, p)
           end select !particle type
         end do !n_gyro_orbit
 

@@ -112,6 +112,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_i_prof_neg, ZK_i_par_neg,            &
                 ZK_e_prof_neg, ZK_e_par_neg,                        &
                 D_prof_neg_thresh, ZK_e_prof_neg_thresh, T_min,     &
+				T_min_neg,rho_min_neg,                              &
                 ne_SI_min, Te_eV_min, rn0_min, ZK_i_prof_neg_thresh,&
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &

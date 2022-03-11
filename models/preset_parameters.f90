@@ -248,6 +248,8 @@ subroutine preset_parameters
   T_min_neg          = -1.d12 !< only used if T_min_neg>0 , 2.01d-5*central_density*Tmin_ev (cd = 1, 20 eV)
   rho_min_neg        = -1.d12
   
+  implicit_heat_source = .false.
+  
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
 

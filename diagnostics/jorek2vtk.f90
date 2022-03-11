@@ -195,6 +195,7 @@ include_bootstrap      = .false. ! include bootstrap current and averaged curren
 include_psi_norm       = .true.  ! include normalized flux
 RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
+include_radiation = .false. 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 include_radiation = .true.
 include_neutral_dens = .true.
@@ -243,14 +244,14 @@ call flush_it(6)
 
 
 ! --- Assign variable names in SI units
-allocate(variable_names_si(n_var))
+allocate(variable_names_si(0:n_var))
 do i=1, n_var
   variable_names_si(i) = variable_names(i)
 enddo
 
 if ( SI_units ) then
 #ifdef fullmhd
-   variable_names_si(var_rho)='n_e20m-3    '
+   variable_names_si(var_rho)='ne20_m-3    '
    variable_names_si(var_T  )='Te_keV      '
    variable_names_si(var_UR )='VR_km/s     '
    variable_names_si(var_UZ )='VZ_km/s     '
@@ -258,7 +259,7 @@ if ( SI_units ) then
 #else
    variable_names_si(var_u)='u_m/s       '
    variable_names_si(var_zj)='j_MA/m2     '
-   variable_names_si(var_rho)='n_e20m-3    '
+   variable_names_si(var_rho)='ne20_m-3    '
    if (with_TiTe) then
       variable_names_si(var_Ti)='Ti_keV      '
       variable_names_si(var_Te)='Te_keV      '
@@ -708,8 +709,21 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,var_uR, i_tor,s,t,VR0,VR0_s,VR0_t,VR0_st,VR0_ss,VR0_tt)
           call interp(node_list,element_list,i,var_uZ, i_tor,s,t,VZ0,VZ0_s,VZ0_t,VZ0_st,VZ0_ss,VZ0_tt)
           call interp(node_list,element_list,i,var_uP, i_tor,s,t,VP0,VP0_s,VP0_t,VP0_st,VP0_ss,VP0_tt)
-          call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0 ,T0_s, T0_t, T0_st, T0_ss, T0_tt)
           call interp(node_list,element_list,i,var_rho,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
+
+          if (with_TiTe) then
+             call interp(node_list,element_list,i,var_Te,  i_tor,s,t,Te0, Te0_s, Te0_t, Te0_st, Te0_ss, Te0_tt)
+             call interp(node_list,element_list,i,var_Ti,  i_tor,s,t,Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt)
+             T0   = Ti0   + Te0
+             T0_s = Ti0_s + Te0_s
+             T0_t = Ti0_t + Te0_t
+          else
+            call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
+            Te0    = T0  /2.d0;     Ti0    = T0  /2.d0
+            Te0_s  = T0_s/2.d0;     Ti0_s  = T0_s/2.d0
+            Te0_t  = T0_t/2.d0;     Ti0_t  = T0_t/2.d0
+          endif
+
 
           if (i_tor == 1) then
             call interp(node_list,element_list,i,710,i_tor,s,t,F_prof  ,F_prof_s  ,F_prof_t  ,W_st,W_ss,W_tt)
@@ -1209,7 +1223,11 @@ enddo  ! n_elements
       scalars(i,ineu(1)) = ksiion * scalars(i,var_rho) * scalars(i,var_rhon) * Sion_T
       scalars(i,ineu(2)) = scalars(i,var_rho) * scalars(i,var_rhon) * LradDrays_T
       scalars(i,ineu(3)) = LradDcont_T * scalars(i,var_rho)**2.d0
+#ifdef fullmhd
+      scalars(i,ineu(4)) = 0.d0   ! NEEDS BE CALCULATED FOR FULL MHD ELESEWHERE! 
+#else /* not fullmhd */ 
       scalars(i,ineu(4)) = (2/(3 * BigR**2)) * eta_Sp * scalars(i,var_zj)**2.d0
+#endif /* with neutrals */
 #endif /* with neutrals */
       
       !--------------------------------------------------------
@@ -1429,7 +1447,12 @@ if (SI_units) then
     !===========================================density in 1e20m-3
     scalars(i,var_rho) = scalars(i,var_rho) * central_density
     !===========================================electron temperature in keV
-    scalars(i,var_T  ) = scalars(i,var_T)   / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
+    if (with_TiTe) then
+      scalars(i,var_Ti ) = scalars(i,var_Ti)  / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 
+      scalars(i,var_Te ) = scalars(i,var_Te)  / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 
+    else
+      scalars(i,var_T  ) = scalars(i,var_T)   / MU_zero / (central_density * 1d20) / EL_CHG /2./1.e3 !(assumes Te=Ti=T/2)
+    endif
     !===========================================Velocity
     scalars(i,var_UR) = scalars(i,var_UR) /t_norm/1.e3
     scalars(i,var_UZ) = scalars(i,var_UZ) /t_norm/1.e3
@@ -1636,14 +1659,14 @@ contains
 
 
 
-  subroutine add_vtk_entry(name, name_si, index, counter, si_units, scalar_names)
+  subroutine add_vtk_entry(name, name_si, index, counter, si_units, names_list)
   
     implicit none
   
     !--- Routine parameters
     integer,                   intent(inout) :: index
     integer,                   intent(inout) :: counter
-    character*36, allocatable, intent(inout) :: scalar_names(:)
+    character*36, allocatable, intent(inout) :: names_list(:)
     character*12,              intent(in)    :: name, name_si           
     logical,                   intent(in)    :: si_units
     
@@ -1659,26 +1682,24 @@ contains
       final_name = name
     endif
   
-    write(*,*) allocated(scalar_names)
-  
     ! --- First added value or append
-    if (.not. allocated(scalar_names) ) then
-      allocate(scalar_names(1))
+    if (.not. allocated(names_list) ) then
+      allocate(names_list(1))
   
-      scalar_names(1) = final_name 
+      names_list(1) = final_name 
     else
   
-      n_names_old = size(scalar_names,1) 
+      n_names_old = size(names_list,1) 
       n_names = n_names_old + 1 
   
       allocate(names_tmp(n_names_old))
-      names_tmp = scalar_names
+      names_tmp = names_list
   
       !append to the old vector
-      deallocate(scalar_names)
-      allocate(scalar_names(n_names))
-      scalar_names(1:n_names_old) = names_tmp
-      scalar_names(n_names)       = final_name
+      deallocate(names_list)
+      allocate(names_list(n_names))
+      names_list(1:n_names_old) = names_tmp
+      names_list(n_names)       = final_name
       
       !clean
       deallocate(names_tmp)

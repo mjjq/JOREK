@@ -112,16 +112,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_i_prof_neg, ZK_i_par_neg,            &
                 ZK_e_prof_neg, ZK_e_par_neg,                        &
                 D_prof_neg_thresh, ZK_e_prof_neg_thresh, T_min,     &
+				T_min_neg,rho_min_neg,                              &
                 ne_SI_min, Te_eV_min, rn0_min, ZK_i_prof_neg_thresh,&
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &
                 imp_reflection, neutral_reflection, rho_min,        &
-                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
+                ns_deltaphi, ns_delta_minor_rad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
                 spi_quantity_bg, pellet_density_bg,                 &
-                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                ns_radius_ratio, ns_radius_min, spi_angle,          &
                 spi_L_inj, spi_L_inj_diff,                          &
                 drift_distance, energy_teleported,                  &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
@@ -154,7 +155,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 weights_per_family, autodistribute_ranks,           &
                 ranks_per_family, cte_current_FB_fact,              &
                 ZK_prof_neg_thresh, ZK_prof_neg, ZK_par_neg_thresh,  &
-                ZK_par_neg
+                ZK_par_neg, Z_xpoint_limit
 
 if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

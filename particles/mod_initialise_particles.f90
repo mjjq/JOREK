@@ -1078,7 +1078,7 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
 !                [0.d0, 0.d0, 0.d0], B, mass, dt=0.d0), &
 !                p )
 
-              p = gc_to_kinetic_leapfrog(particle, fields%node_list, fields%element_list, chi, [0.d0,0.d0,0.d0], B, mass, dt=0.d0)
+              particles_tmp(i_gyro_temp) = gc_to_kinetic_leapfrog(particle, fields%node_list, fields%element_list, TWOPI*REAL(i_gyro_orbit)/REAL(n_gyro_orbit)+chi, [0.d0,0.d0,0.d0], B, mass, dt=0.d0)
   
               ! if the kinetic position is not in the grid particles(i)%i_elm the particle is lost
               found(i_gyro_temp) = .true.

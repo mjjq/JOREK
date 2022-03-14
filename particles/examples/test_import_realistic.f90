@@ -34,19 +34,20 @@ program test_import_realistic
 !$ use omp_lib
   implicit none
 
-  integer :: n_particles_local,ierr
-  type(event)    :: fieldreader,partwriter
-  !real*8, allocatable :: phase_proj(:)
-  !type(phase_space_projection)                      :: test_phase
-  type(particle_kinetic_leapfrog) :: particle_tmp
-  type(projection), target                          :: jorek_feedback
-  real*8 :: timesteps,E(3),B(3),psi,U,Energy,t, rho_part
-  !real*8, dimension(:),allocatable :: val_tmp
-  !integer, dimension(:),allocatable:: index_phase_tmp
-  integer                           :: i_phase,j, i_elm,i_tor,l,m, index_lm
-  real*8,allocatable :: feedback_rhs(:,:,:,:,:)
-  real*8    :: R_g, Z_g, R_s, R_t, Z_s, Z_t, xjac, HZ(n_tor), HH(4,4), HH_s(4,4), HH_t(4,4),v
-  write(*,*) "START TEST"
+  integer                                               :: n_particles_local,ierr
+  type(event)                                           :: fieldreader,partwriter
+  !real*8, allocatable                                  :: phase_proj(:)
+  !type(phase_space_projection)                         :: test_phase
+  type(particle_kinetic_leapfrog)                       :: particle_tmp
+  type(projection), target                              :: jorek_feedback
+  real*8                                                :: timesteps,E(3),B(3),psi,U,Energy,t, rho_part
+  !real*8, dimension(:),allocatable                     :: val_tmp
+  !integer, dimension(:),allocatable                    :: index_phase_tmp
+  integer                                               :: i_phase,j, i_elm,i_tor,l,m, index_lm
+  real*8,allocatable                                    :: feedback_rhs(:,:,:,:,:)
+  real*8                                                :: R_g, Z_g, R_s, R_t, Z_s, Z_t, xjac, HZ(n_tor), HH(4,4), HH_s(4,4), HH_t(4,4),v
+  
+  write(*,*) "Starting test of importing a realistic distribution function..."
   call sim%initialize(num_groups=1)
   rho_part    = 1.195d19*2.d0
   n_particles_local = int(n_particles/sim%n_cpu)

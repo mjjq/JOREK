@@ -13,8 +13,19 @@ module mod_import_experimental_dist
   public import_particles
 
 contains
-subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_planes_in,fraction_phi_planes)!particles, node_list, element_list, &
-  !rng)
+
+! > Subroutine to import particles from a 4D distribution function:
+! >> particles:             list of particles from simulation
+! >> fields:                JOREK fields on which to initialise particles
+! >> filename:              hdf5 filename containing 4D distribution function
+! >> mass:                  mass in amu of particles
+! >> n_phi_planes:          number of times to copy particle with increasing phi (2 pi / n_phi_planes) increment,
+!                            should be chosen 2x highest toroidal harmonic if used to prevent aliasing.
+! >> fraction_phi_planes:   fraction of particles that is copied with increasing phi, e.g. 0.99d0 will ensure 99% of 
+!                            the particles are copied with increasing phi (and thus provide no toroidal harmonics).
+!                            Noise in harmonics follows n0*sqrt(1-fraction_phi_planes) dependence (n0 noise with this 0.d0)
+! For documentation of the HDF5 file: https://www.jorek.eu/wiki/doku.php?id=experimental_fast_particle
+subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_planes_in,fraction_phi_planes)
   use mpi
   use mod_sampling
   use mod_random_seed
@@ -67,114 +78,112 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
   endif
   n_phi_planes_dummy = n_phi_planes_in
   ! First read the HDF5 with one MPI task, broadcast to all other
-  if (.true.) then
-    if(my_id .eq. 0 ) then
-      call h5open_f(hdferr)
-      write(*,*) "PARTICLES: Opening '", filename, "' for initialising particles"
-      write(*,*) "PARTICLES: from realistic distribution function"
-      call h5fopen_f(filename,h5f_acc_rdonly_f,file,hdferr)
-      call h5dopen_f(file, "F0_norm", dset, hdferr)
-      call h5dget_space_f(dset, file_space, hdferr)
 
-      call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
-      ! 2 spatial (R,Z), 2 velocity space (Pitch angle & E). Gyrophase and phi are taken to be uniformly random.
-      if(rank .ne. 4 ) then
-        write(*,*) "PARTICLES: rank of realistic distribution function should be 4, while it is ", rank,"."
-        write(*,*) "PARTICLES: Aborting..."
-        call MPI_ABORT(MPI_COMM_WORLD, -1,ierr)
-      endif
+  if(my_id .eq. 0 ) then
+    call h5open_f(hdferr)
+    write(*,*) "PARTICLES: Opening '", filename, "' for initialising particles"
+    write(*,*) "PARTICLES: from realistic distribution function"
+    call h5fopen_f(filename,h5f_acc_rdonly_f,file,hdferr)
+    call h5dopen_f(file, "F0_norm", dset, hdferr)
+    call h5dget_space_f(dset, file_space, hdferr)
 
-      call h5sget_simple_extent_dims_f(file_space, arraysize, maxdims, hdferr)
-      write(*,"(A,4I4)") " PARTICLES: Dimensionality of F0 is ", arraysize
-
-      call h5sclose_f(file_space, hdferr)
-      call h5dclose_f(dset, hdferr)
+    call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
+    ! 2 spatial (R,Z), 2 velocity space (Pitch angle & E). Gyrophase and phi are taken to be uniformly random.
+    if(rank .ne. 4 ) then
+      write(*,*) "PARTICLES: rank of realistic distribution function should be 4, while it is ", rank,"."
+      write(*,*) "PARTICLES: Aborting..."
+      call MPI_ABORT(MPI_COMM_WORLD, -1,ierr)
     endif
 
-    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(arraysize,4,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
-    allocate(F0_norm(arraysize(1),arraysize(2),arraysize(3),arraysize(4)))
+    call h5sget_simple_extent_dims_f(file_space, arraysize, maxdims, hdferr)
+    write(*,"(A,4I4)") " PARTICLES: Dimensionality of F0 is ", arraysize
 
-    if (my_id .eq. 0) then
-      ! Read F0_norm
-      call HDF5_array4D_reading(file,F0_norm,"F0_norm")
+    call h5sclose_f(file_space, hdferr)
+    call h5dclose_f(dset, hdferr)
+  endif
 
-      call h5dopen_f(file, "R_1D", dset, hdferr)
-      call h5dget_space_f(dset, file_space, hdferr)
-      call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
-      call h5sget_simple_extent_dims_f(file_space, R1Dsize, tmp, hdferr)
-      call h5sclose_f(file_space, hdferr)
-      call h5dclose_f(dset, hdferr)
-      write(*,"(A,1I4)") " PARTICLES: R1D size     = ", R1Dsize
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(arraysize,4,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
+  allocate(F0_norm(arraysize(1),arraysize(2),arraysize(3),arraysize(4)))
 
-      call h5dopen_f(file, "Z_1D", dset, hdferr)
-      call h5dget_space_f(dset, file_space, hdferr)
-      call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
-      call h5sget_simple_extent_dims_f(file_space, Z1Dsize, tmp, hdferr)
-      call h5sclose_f(file_space, hdferr)
-      call h5dclose_f(dset, hdferr)
-      write(*,"(A,1I4)") " PARTICLES: Z1D size     = ", Z1Dsize
+  if (my_id .eq. 0) then
+    ! Read F0_norm
+    call HDF5_array4D_reading(file,F0_norm,"F0_norm")
 
-      call h5dopen_f(file, "Pitch_1D", dset, hdferr)
-      call h5dget_space_f(dset, file_space, hdferr)
-      call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
-      call h5sget_simple_extent_dims_f(file_space, Pitch1Dsize, tmp, hdferr)
-      call h5sclose_f(file_space, hdferr)
-      call h5dclose_f(dset, hdferr)
-      write(*,"(A,1I4)") " PARTICLES: Pitch1D size = ", Pitch1Dsize
+    call h5dopen_f(file, "R_1D", dset, hdferr)
+    call h5dget_space_f(dset, file_space, hdferr)
+    call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
+    call h5sget_simple_extent_dims_f(file_space, R1Dsize, tmp, hdferr)
+    call h5sclose_f(file_space, hdferr)
+    call h5dclose_f(dset, hdferr)
+    write(*,"(A,1I4)") " PARTICLES: R1D size     = ", R1Dsize
 
-      call h5dopen_f(file, "E_1D", dset, hdferr)
-      call h5dget_space_f(dset, file_space, hdferr)
-      call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
-      call h5sget_simple_extent_dims_f(file_space, E1Dsize, tmp, hdferr)
-      call h5sclose_f(file_space, hdferr)
-      call h5dclose_f(dset, hdferr)
-      write(*,"(A,1I4)") " PARTICLES: E1D size     = ", E1Dsize
+    call h5dopen_f(file, "Z_1D", dset, hdferr)
+    call h5dget_space_f(dset, file_space, hdferr)
+    call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
+    call h5sget_simple_extent_dims_f(file_space, Z1Dsize, tmp, hdferr)
+    call h5sclose_f(file_space, hdferr)
+    call h5dclose_f(dset, hdferr)
+    write(*,"(A,1I4)") " PARTICLES: Z1D size     = ", Z1Dsize
+
+    call h5dopen_f(file, "Pitch_1D", dset, hdferr)
+    call h5dget_space_f(dset, file_space, hdferr)
+    call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
+    call h5sget_simple_extent_dims_f(file_space, Pitch1Dsize, tmp, hdferr)
+    call h5sclose_f(file_space, hdferr)
+    call h5dclose_f(dset, hdferr)
+    write(*,"(A,1I4)") " PARTICLES: Pitch1D size = ", Pitch1Dsize
+
+    call h5dopen_f(file, "E_1D", dset, hdferr)
+    call h5dget_space_f(dset, file_space, hdferr)
+    call h5sget_simple_extent_ndims_f(file_space, rank, hdferr)
+    call h5sget_simple_extent_dims_f(file_space, E1Dsize, tmp, hdferr)
+    call h5sclose_f(file_space, hdferr)
+    call h5dclose_f(dset, hdferr)
+    write(*,"(A,1I4)") " PARTICLES: E1D size     = ", E1Dsize
+  endif
+  call MPI_BCAST(R1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(E1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(Z1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(Pitch1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
+  allocate(R1D(R1Dsize(1)))
+  allocate(Z1D(Z1Dsize(1)))
+  allocate(Pitch1D(Pitch1Dsize(1)))
+  allocate(E1D(Pitch1Dsize(1)))
+  if(my_id .eq. 0) then
+
+    call HDF5_array1D_reading(file,R1D,"R_1D")
+    call HDF5_array1D_reading(file,Z1D,"Z_1D")
+    call HDF5_array1D_reading(file,Pitch1D,"Pitch_1D")
+    call HDF5_array1D_reading(file,E1D,"E_1D")
+
+    ! Assuming the array in Python is done by R,Z,Pitch,Energy, this will be reverse here. Sanity check:
+
+    if ( R1Dsize(1) .ne. arraysize(4) .or. Z1Dsize(1) .ne. arraysize(3) .or. Pitch1Dsize(1) .ne. arraysize(2) .or. E1Dsize(1) .ne. arraysize(1)) then
+      write(*,*) "PARTICLES: Dimensions of 1D arrays and F0 do not conform."
+      write(*,*) "PARTICLES: Please check correctness of H5 file. Aborting..."
+      write(*,*) "PARTICLES: R    ", R1Dsize, arraysize(4)
+      write(*,*) "PARTICLES: Z    ", Z1Dsize, arraysize(3)
+      write(*,*) "PARTICLES: Pitch", Pitch1Dsize, arraysize(2)
+      write(*,*) "PARTICLES: E    ", E1Dsize, arraysize(1)
+      call MPI_ABORT(MPI_COMM_WORLD,10,ierr)
     endif
-    call MPI_BCAST(R1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(E1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(Z1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(Pitch1Dsize,1,MPI_INTEGER8,0,MPI_COMM_WORLD,ierr)
-    allocate(R1D(R1Dsize(1)))
-    allocate(Z1D(Z1Dsize(1)))
-    allocate(Pitch1D(Pitch1Dsize(1)))
-    allocate(E1D(Pitch1Dsize(1)))
-    if(my_id .eq. 0) then
-
-      call HDF5_array1D_reading(file,R1D,"R_1D")
-      call HDF5_array1D_reading(file,Z1D,"Z_1D")
-      call HDF5_array1D_reading(file,Pitch1D,"Pitch_1D")
-      call HDF5_array1D_reading(file,E1D,"E_1D")
-
-      ! Assuming the array in Python is done by R,Z,Pitch,Energy, this will be reverse here. Sanity check:
-
-      if ( R1Dsize(1) .ne. arraysize(4) .or. Z1Dsize(1) .ne. arraysize(3) .or. Pitch1Dsize(1) .ne. arraysize(2) .or. E1Dsize(1) .ne. arraysize(1)) then
-        write(*,*) "PARTICLES: Dimensions of 1D arrays and F0 do not conform."
-        write(*,*) "PARTICLES: Please check correctness of H5 file. Aborting..."
-        write(*,*) "PARTICLES: R    ", R1Dsize, arraysize(4)
-        write(*,*) "PARTICLES: Z    ", Z1Dsize, arraysize(3)
-        write(*,*) "PARTICLES: Pitch", Pitch1Dsize, arraysize(2)
-        write(*,*) "PARTICLES: E    ", E1Dsize, arraysize(1)
-        call MPI_ABORT(MPI_COMM_WORLD,10,ierr)
-      endif
-      call h5fclose_f(file,hdferr)
-      call h5close_f(hdferr)
-      write(*,*) "PARTICLES: Succesfully read in the realistic distribution function"
-
-    endif
-
-    write(*,"(4I4)"), R1Dsize,Z1Dsize,E1Dsize,Pitch1Dsize
-    OneD_arraysize = Z1Dsize(1)*Pitch1Dsize(1)*E1Dsize(1)*R1Dsize(1)
-    write(*,"(A,I9,A,I3)") " PARTICLES: total F0 elements = ", OneD_arraysize, " on process ",my_id
-    ! Starting broadcasting....
-    call MPI_BCAST(F0_norm,OneD_arraysize, MPI_REAL8, 0 , MPI_COMM_WORLD, ierr)
-    call MPI_BCAST(R1D,R1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(Z1D,Z1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(E1D,E1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-    call MPI_BCAST(Pitch1D,Pitch1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-    call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+    call h5fclose_f(file,hdferr)
+    call h5close_f(hdferr)
+    write(*,*) "PARTICLES: Succesfully read in the realistic distribution function"
 
   endif
+
+  write(*,"(4I4)"), R1Dsize,Z1Dsize,E1Dsize,Pitch1Dsize
+  OneD_arraysize = Z1Dsize(1)*Pitch1Dsize(1)*E1Dsize(1)*R1Dsize(1)
+  write(*,"(A,I9,A,I3)") " PARTICLES: total F0 elements = ", OneD_arraysize, " on process ",my_id
+  ! Starting broadcasting....
+  call MPI_BCAST(F0_norm,OneD_arraysize, MPI_REAL8, 0 , MPI_COMM_WORLD, ierr)
+  call MPI_BCAST(R1D,R1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(Z1D,Z1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(E1D,E1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(Pitch1D,Pitch1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+
 
 
   ! Particles.
@@ -216,13 +225,13 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
     ! Allocate temporary particle storage.
     select type (particles)
       type is (particle_kinetic)
-        write(*,*) "ERROR: particle_kinetic not supported yet for initialize_particles_H_mu_psi"
+        write(*,*) "ERROR: particle_kinetic not supported yet for import_particles"
       type is (particle_kinetic_leapfrog)
         allocate(particle_kinetic_leapfrog::particles_tmp(blocksize))
       type is (particle_gc)
         allocate(particle_gc::particles_tmp(blocksize))
       class default
-        write(*,*) "ERROR: particle type not supported yet for initialize_particles_H_mu_psi"
+        write(*,*) "ERROR: particle type not supported yet for import_particles"
         call exit(1)
     end select
     allocate(found(blocksize))
@@ -292,10 +301,9 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
     i_found=1
     do i_particle=1,size(particles_tmp)
       if(found(i_particle)) then
-        if(real(particles_done_local+i_found)/real(particles_to_do_local)>fraction_phi_planes .and. n_phi_planes_dummy .ne. 1) then 
+        if(real(particles_done_local+i_found)/real(particles_to_do_local)>fraction_phi_planes .and. n_phi_planes_dummy .ne. 1) then
           n_phi_planes_dummy = 1
           write(*,"(A,F8.1,A,I4)") " PARTICLES: Set n_phi_planes = 1 at", real(particles_done_local+i_found)/real(particles_to_do_local)*100.d0,"% at process", my_id
-          
         endif
         do i_plane = 1,n_phi_planes_dummy
           if(i_found .gt. to_find) exit
@@ -313,7 +321,6 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
                   p1 = p2
               end select
           end select
-          
           i_found=i_found+1
         enddo
       endif
@@ -334,11 +341,6 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
   deallocate(Z1D)
   deallocate(E1D)
   deallocate(Pitch1D)
-
-
-
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-  !call MPI_ABORT(MPI_COMM_WORLD,10,ierr)
 
 end subroutine import_particles
 

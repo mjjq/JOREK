@@ -45,11 +45,16 @@ real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_kn
 real*8, dimension(DIM1, DIM2),       intent(inout) :: RHS_p
 real*8, dimension(DIM1, DIM2),       intent(inout) :: RHS_k
 
+real*8, dimension(DIM1, DIM2)   :: RHS_k2
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_k2_p, ELM_k2_n, ELM_k2_n2, ELM_k_n2, ELM_p_n2
+
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_g, eq_s, eq_t
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_p
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_ss, eq_st, eq_tt
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delta_s, delta_t
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_aux_g, eq_aux_s, eq_aux_t, eq_aux_p
+
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_pp, eq_sp, eq_tp
 
 ! --- Variables outside the OMP loop
 integer    :: n_tor_start, n_tor_end, n_tor_local
@@ -88,9 +93,9 @@ real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 ! --- Variables inside the OMP loop
 integer    :: k, l, index_ij, index_kl, ij, kl
 
-real*8     :: AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, AR0_ss, AR0_tt, AR0_st, AR0_RR, AR0_ZZ, AR0_RZ, AR0_pp
-real*8     :: AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, AZ0_ss, AZ0_tt, AZ0_st, AZ0_RR, AZ0_ZZ, AZ0_RZ, AZ0_pp
-real*8     :: A30,  A30_R,  A30_Z,  A30_p,  A30_s,  A30_t, A30_ss, A30_tt, A30_st, A30_RR, A30_ZZ, A30_RZ, A30_pp
+real*8     :: AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, AR0_ss, AR0_tt, AR0_st, AR0_RR, AR0_ZZ, AR0_RZ, AR0_pp          , AR0_Rp, AR0_Zp, AR0_sp, AR0_tp
+real*8     :: AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, AZ0_ss, AZ0_tt, AZ0_st, AZ0_RR, AZ0_ZZ, AZ0_RZ, AZ0_pp          , AZ0_Rp, AZ0_Zp, AZ0_sp, AZ0_tp
+real*8     :: A30,  A30_R,  A30_Z,  A30_p,  A30_s,  A30_t, A30_ss, A30_tt, A30_st, A30_RR, A30_ZZ, A30_RZ, A30_pp          , A30_Rp, A30_Zp, A30_sp, A30_tp
 real*8     :: UR0,  UR0_R,  UR0_Z,  UR0_p,  UR0_s,  UR0_t, UR0_ss, UR0_st, UR0_tt, UR0_RR, UR0_ZZ, UR0_RZ, UR0_pp
 real*8     :: UZ0,  UZ0_R,  UZ0_Z,  UZ0_p,  UZ0_s,  UZ0_t, UZ0_ss, UZ0_st, UZ0_tt, UZ0_RR, UZ0_ZZ, UZ0_RZ, UZ0_pp
 real*8     :: Up0,  Up0_R,  Up0_Z,  Up0_p,  Up0_s,  Up0_t, Up0_ss, Up0_st, Up0_tt, Up0_RR, Up0_ZZ, Up0_RZ, Up0_pp
@@ -98,17 +103,17 @@ real*8     :: rho0, rho0_R, rho0_Z, rho0_p, rho0_s, rho0_t,rho0_ss,rho0_st,rho0_
 real*8     :: T0,   T0_R,   T0_Z,   T0_p,   T0_s,   T0_t,  T0_ss,  T0_st,  T0_tt,  T0_RR,  T0_ZZ,  T0_RZ,  T0_pp,   T0_corr
 real*8     :: p0,   p0_R,   p0_Z,   p0_p,   p0_s,   p0_t,  p0_corr
 
-real*8     :: AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t
-real*8     :: AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t
-real*8     :: A3,  A3_R,  A3_Z,  A3_p,  A3_s,  A3_t
+real*8     :: AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t         , AR_RR, AR_RZ, AR_ZZ, AR_pp, AR_Rp, AR_Zp
+real*8     :: AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t         , AZ_RR, AZ_RZ, AZ_ZZ, AZ_pp, AZ_Rp, AZ_Zp
+real*8     :: A3,  A3_R,  A3_Z,  A3_p,  A3_s,  A3_t         , A3_RR, A3_RZ, A3_ZZ, A3_pp, A3_Rp, A3_Zp
 real*8     :: UR,  UR_R,  UR_Z,  UR_p,  UR_s,  UR_t
 real*8     :: UZ,  UZ_R,  UZ_Z,  UZ_p,  UZ_s,  UZ_t
 real*8     :: Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t
 real*8     :: T,   T_R,   T_Z,   T_p,   T_s,   T_t
 real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 
-real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p,  v_ss,  v_st,  v_tt,  v_RR,  v_ZZ
-real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
+real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p,  v_ss,  v_st,  v_tt,  v_RR, v_ZZ,       v_RZ, v_pp, v_sp, v_tp, v_Rp, v_Zp
+real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ,     bf_RZ, bf_pp, bf_sp, bf_tp, bf_Rp, bf_Zp
 
 real*8     :: Fprof
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
@@ -338,7 +343,18 @@ real*8     :: VmsCoefF, VmsCoefF_T
 ! --- Matrix
 real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, QvmsF_p, QvmsF_n, QvmsF_k, QvmsF_kn
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
-real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
+real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn               
+
+real*8, dimension(n_var      )   :: Qvec_k2, rhs_k2_ij
+real*8, dimension(n_var,n_var)   :: Qjac_k2_p, Qjac_k2_n, Qjac_k2_n2, Qjac_k_n2, Qjac_p_n2
+
+! --- Ohmic heating
+real*8     :: psieq_R,  psieq_Z
+real*8 :: BR0_R, BR0_Z, BR0_p, BZ0_R, BZ0_Z, BZ0_p, Bp0_R, Bp0_Z, Bp0_p
+real*8     :: JR0 , JR0_AR__p, JR0_AR__n, JR0_AR__n2, JR0_AZ__p, JR0_AZ__n, JR0_AZ__n2, JR0_A3__p, JR0_A3__n, JR0_A3__n2
+real*8     :: JZ0 , JZ0_AR__p, JZ0_AR__n, JZ0_AR__n2, JZ0_AZ__p, JZ0_AZ__n, JZ0_AZ__n2, JZ0_A3__p, JZ0_A3__n, JZ0_A3__n2
+real*8     :: Jp0 , Jp0_AR__p, Jp0_AR__n, Jp0_AR__n2, Jp0_AZ__p, Jp0_AZ__n, Jp0_AZ__n2, Jp0_A3__p, Jp0_A3__n, Jp0_A3__n2
+real*8     :: JJ2,  JJ2_AR__p, JJ2_AR__n, JJ2_AR__n2, JJ2_AZ__p, JJ2_AZ__n, JJ2_AZ__n2, JJ2_A3__p, JJ2_A3__n, JJ2_A3__n2
 
 rho_min = 0.005 ! should be moved to namelist input
 
@@ -379,20 +395,20 @@ endif
 ELM_p  = 0.d0
 ELM_n  = 0.d0
 ELM_k  = 0.d0
-ELM_kn = 0.d0
+ELM_kn = 0.d0   ; ELM_k2_p=0.d0;ELM_k2_n=0.d0;ELM_k2_n2=0.d0;ELM_k_n2=0.d0;ELM_p_n2=0.d0
 RHS_p  = 0.d0
-RHS_k  = 0.d0
+RHS_k  = 0.d0   ; RHS_k2 = 0.d0
 ELM    = 0.d0
 RHS    = 0.d0
 
 rhs_p_ij  = 0.d0
-rhs_k_ij  = 0.d0
+rhs_k_ij  = 0.d0   ; rhs_k2_ij=0.d0
 amat      = 0.d0
 Pjac      = 0.d0
 Qjac_p    = 0.d0
 Qjac_k    = 0.d0
 Qjac_n    = 0.d0
-Qjac_kn   = 0.d0
+Qjac_kn   = 0.d0   ; Qjac_k2_p=0.d0;Qjac_k2_n=0.d0;Qjac_k2_n2=0.d0;Qjac_k_n2=0.d0;Qjac_p_n2=0.d0
 QvmsF_p   = 0.d0
 QvmsF_n   = 0.d0
 QvmsF_k   = 0.d0
@@ -403,7 +419,7 @@ QvmsAd_k  = 0.d0
 QvmsAd_kn = 0.d0
 Pvec_prev = 0.d0
 Qvec_p    = 0.d0
-Qvec_k    = 0.d0
+Qvec_k    = 0.d0    ; Qvec_k2 = 0.d0
 
 !Pressure coupling should be 0
 aux_divPIR_perp = 0.d0 
@@ -474,7 +490,7 @@ x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss = 0.d0; x_st = 0.d0; x_tt = 0.d0
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
 
 
-eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0
+eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0    ; eq_pp=0.d0;eq_sp=0.d0;eq_tp=0.d0
 eq_aux_g = 0.d0; eq_aux_s = 0.d0; eq_aux_t = 0.d0; eq_aux_p = 0.d0;
 
 psi_axisym = 0.d0 ; psi_axisym_s = 0.d0 ; psi_axisym_t = 0.d0
@@ -528,6 +544,10 @@ do i=1,n_vertex_max
               eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)* HZ(in,mp)
               eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)* HZ(in,mp)
               
+              eq_pp(mp,k,ms,mt) = eq_pp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)  * HZ_pp(in,mp)
+              eq_sp(mp,k,ms,mt) = eq_sp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ_p(in,mp)
+              eq_tp(mp,k,ms,mt) = eq_tp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ_p(in,mp)
+
               if (present(aux_nodes)) then
                 eq_aux_g(mp,k,ms,mt) =  eq_aux_g(mp,k,ms,mt) + aux_nodes(i)%values(in,j,k) * element%size(i,j) * H(i,j,ms,mt)   * HZ(in,mp)
                 eq_aux_s(mp,k,ms,mt) =  eq_aux_s(mp,k,ms,mt) + aux_nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt) * HZ(in,mp)
@@ -726,6 +746,17 @@ do i=1,n_vertex_max
                  + AR0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) ) / xjac**2             &
                  - xjac_Z * (- AR0_s * x_t(ms,mt) + AR0_t * x_s(ms,mt) )  / xjac**2
 
+          AR0_sp = eq_sp(mp,var_AR,ms,mt)
+          AR0_tp = eq_tp(mp,var_AR,ms,mt)
+          AR0_pp = eq_pp(mp,var_AR,ms,mt)
+          AR0_Rp = (   y_t(ms,mt) * AR0_sp  - y_s(ms,mt) * AR0_tp ) / xjac
+          AR0_Zp = ( - x_t(ms,mt) * AR0_sp  + x_s(ms,mt) * AR0_tp ) / xjac
+          AR0_RZ = (- AR0_ss * y_t(ms,mt)*x_t(ms,mt) - AR0_tt * x_s(ms,mt)*y_s(ms,mt) &
+                 + AR0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  ) &
+                 - AR0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) ) &
+                 - AR0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) ) / xjac**2             &
+                 - xjac_R * (- AR0_s * x_t(ms,mt) + AR0_t * x_s(ms,mt) )   / xjac**2
+
           ! --- AZ
           AZ0   = eq_g(mp,var_AZ,ms,mt)
           AZ0_p = eq_p(mp,var_AZ,ms,mt)
@@ -744,6 +775,17 @@ do i=1,n_vertex_max
                  + AZ0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) ) &
                  + AZ0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) ) / xjac**2             &
                  - xjac_Z * (- AZ0_s * x_t(ms,mt) + AZ0_t * x_s(ms,mt) )  / xjac**2
+
+          AZ0_sp = eq_sp(mp,var_AZ,ms,mt)
+          AZ0_tp = eq_tp(mp,var_AZ,ms,mt)
+          AZ0_pp = eq_pp(mp,var_AZ,ms,mt)
+          AZ0_Rp = (   y_t(ms,mt) * AZ0_sp  - y_s(ms,mt) * AZ0_tp ) / xjac
+          AZ0_Zp = ( - x_t(ms,mt) * AZ0_sp  + x_s(ms,mt) * AZ0_tp ) / xjac
+          AZ0_RZ = (- AZ0_ss * y_t(ms,mt)*x_t(ms,mt) - AZ0_tt * x_s(ms,mt)*y_s(ms,mt) &
+                 + AZ0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  ) &
+                 - AZ0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) ) &
+                 - AZ0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) ) / xjac**2             &
+                 - xjac_R * (- AZ0_s * x_t(ms,mt) + AZ0_t * x_s(ms,mt) )   / xjac**2
 
           ! --- A3:=psi is defined as: A = ... + A03 * grad(phi)
           ! --- as opposed to the magnetic and velocity fieds that are defined as
@@ -767,6 +809,17 @@ do i=1,n_vertex_max
                  + A30_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) ) / xjac**2             &
                  - xjac_Z * (- A30_s * x_t(ms,mt) + A30_t * x_s(ms,mt) )  / xjac**2
 
+          A30_sp = eq_sp(mp,var_A3,ms,mt)
+          A30_tp = eq_tp(mp,var_A3,ms,mt)
+          A30_pp = eq_pp(mp,var_A3,ms,mt)
+          A30_Rp = (   y_t(ms,mt) * A30_sp  - y_s(ms,mt) * A30_tp ) / xjac
+          A30_Zp = ( - x_t(ms,mt) * A30_sp  + x_s(ms,mt) * A30_tp ) / xjac
+          A30_RZ = (- A30_ss * y_t(ms,mt)*x_t(ms,mt) - A30_tt * x_s(ms,mt)*y_s(ms,mt)                     &
+                 + A30_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  ) &
+                 - A30_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) ) &
+                 - A30_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) ) / xjac**2             &
+                 - xjac_R * (- A30_s * x_t(ms,mt) + A30_t * x_s(ms,mt) )   / xjac**2
+
           ! --- UR
           UR0   = eq_g(mp,var_UR,ms,mt)
           UR0_p = eq_p(mp,var_UR,ms,mt)
@@ -787,6 +840,8 @@ do i=1,n_vertex_max
                       + UR0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                       + UR0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - UR0_Z * xjac_Z / xjac
+
+          UR0_pp = eq_pp(mp,var_UR,ms,mt)
 
           ! --- UZ
           UZ0   = eq_g(mp,var_UZ,ms,mt)
@@ -809,6 +864,8 @@ do i=1,n_vertex_max
                       + UZ0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - UZ0_Z * xjac_Z / xjac
 
+          UZ0_pp = eq_pp(mp,var_UZ,ms,mt)
+
           ! --- Up is defined u0_phi : V = .. + Up0 * e_phi (physical component)
           Up0   = eq_g(mp,var_Up,ms,mt)
           Up0_p = eq_p(mp,var_Up,ms,mt)
@@ -829,6 +886,8 @@ do i=1,n_vertex_max
                       + Up0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                       + Up0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - Up0_Z * xjac_Z / xjac
+
+          Up0_pp = eq_pp(mp,var_Up,ms,mt)
 
           ! --- rho
           rho0      = eq_g(mp,var_rho,ms,mt)
@@ -852,6 +911,8 @@ do i=1,n_vertex_max
                       + rho0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - rho0_Z * xjac_Z / xjac
 
+          rho0_pp   = eq_pp(mp,var_rho,ms,mt)
+
           ! --- T
           T0      = eq_g(mp,var_T,ms,mt)
           T0_corr = max(T0,1.d-12)!corr_neg_temp1(T0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
@@ -874,6 +935,8 @@ do i=1,n_vertex_max
                       + T0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - T0_Z * xjac_Z / xjac
 
+          T0_pp   = eq_pp(mp,var_T,ms,mt)
+
           ! --- P
           p0      = rho0 * T0
           p0_corr = rho0_corr * T0_corr
@@ -882,6 +945,7 @@ do i=1,n_vertex_max
           p0_s    = rho0_s * T0 + rho0 * T0_s
           p0_t    = rho0_t * T0 + rho0 * T0_t
           p0_p    = rho0_p * T0 + rho0 * T0_p
+
 
           ! --- psi_norm
           psi_norm = get_psi_n(psi_axisym(ms,mt), y_g(ms,mt))
@@ -1140,6 +1204,33 @@ do i=1,n_vertex_max
             dvisco_divV_dT  =  0.0
           end select
 
+          psieq_R = (   y_t(ms,mt) * psi_axisym_s(ms,mt)  - y_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
+          psieq_Z = ( - x_t(ms,mt) * psi_axisym_s(ms,mt)  + x_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
+
+          BR0_R = -1.0d0/R**2 * ( A30_Z - AZ0_p ) + ( A30_RZ - AZ0_Rp )/R
+          BR0_Z = ( A30_ZZ - AZ0_Zp ) / R
+          BR0_p = ( A30_Zp - AZ0_pp ) / R
+          BZ0_R = -1.0d0/R**2 * ( AR0_p - A30_R ) + ( AR0_Rp - A30_RR )/R
+          BZ0_Z = ( AR0_Zp - A30_RZ ) / R
+          BZ0_p = ( AR0_pp - A30_Rp ) / R
+          Bp0_R = ( AZ0_RR - AR0_RZ )  &
+                + (psi_bnd - psi_axis) / (ES%psi_bnd_init - ES%psi_axis_init) * psieq_R * dF_dpsi / R  &
+                - Fprofile(ms,mt)/R**2
+          Bp0_Z = ( AZ0_RZ - AR0_ZZ ) &
+                + (psi_bnd - psi_axis) / (ES%psi_bnd_init - ES%psi_axis_init) * psieq_Z * dF_dpsi / R
+          Bp0_p = ( AZ0_Rp - AR0_Zp )
+
+          JR0 = Bp0_Z - BZ0_p / R
+          JZ0 = (BR0_p - R*Bp0_R - Bp0) / R
+          Jp0 = BZ0_R - BR0_Z
+
+          if(keep_current_prof)then
+             JJ2 = (JR0-current_source_JR(ms,mt))*JR0 + (JZ0-current_source_JZ(ms,mt))*JZ0 + &
+                   (Jp0-current_source_Jp(ms,mt))*Jp0
+          else
+             JJ2 = JR0*JR0 + JZ0*JZ0 + Jp0*Jp0
+          endif
+
           do im=n_tor_start, n_tor_end
 
             ! --- test functions (V*)
@@ -1162,6 +1253,8 @@ do i=1,n_vertex_max
                   + v_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                   + v_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                   - v_Z * xjac_Z / xjac
+
+            v_pp= H(i,j,ms,mt) * element%size(i,j) * HHZ_pp(im,mp)
 
             ! --- Terms for Integration-by-parts
             BgradVstar__p = BR0 * v_R + BZ0 * v_Z
@@ -1297,12 +1390,13 @@ do i=1,n_vertex_max
             lap_T   = T0_R   / R   + T0_RR   + T0_ZZ  
 
             rhs_p_ij  = 0.d0
-            rhs_k_ij  = 0.d0
+            rhs_k_ij  = 0.d0   ; rhs_k2_ij=0.d0
             VMS__p    = 0.d0
             VMS__k    = 0.d0
             Pvec_prev = 0.d0 ! The time derivative part
             Qvec_p    = 0.d0 ! The rest of the RHS (poloidal part)
             Qvec_k    = 0.d0 ! The rest of the RHS (toroidal part that has phi-derivatives of the test-function)
+            Qvec_k2   = 0.d0
 
             !###################################################################################################
             !#  equation 1 (R component induction equation)                                                    #
@@ -1413,7 +1507,6 @@ do i=1,n_vertex_max
             Qvec_k(var_rho) = + rho0 * VdiaGradVstar__k                         &
                               - D_prof * gradRho_gradVstar__k                   &
                               - (D_par-D_prof) * BgradVstar__k * BgradRho / BB2 
-
             !###################################################################################################
             !#  equation 8 (Pressure equation)                                                                 #
             !###################################################################################################
@@ -1425,10 +1518,10 @@ do i=1,n_vertex_max
                             + v * (gamma-1.d0) * Qvisc_T                                      &
                             - ZK_prof * gradT_gradVstar__p                                    &
                             - (ZKpar_T-ZK_prof) * BgradVstar__p * BgradT / BB2                &
+                            + v * (gamma-1.0d0) * eta_T * JJ2                                 &
                             - ZK_perp_num * lap_Vstar * lap_T
             Qvec_k(var_T) = - ZK_prof * gradT_gradVstar__k                                    &
                             - (ZKpar_T-ZK_prof) * BgradVstar__k * BgradT / BB2
-
 
             !###################################################################################################
             !#  VMS STABILISATION                                                                              #
@@ -1498,19 +1591,22 @@ do i=1,n_vertex_max
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar) * tstep / tstep_prev
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
+                RHS_k2_ij(ivar) = tstep * Qvec_k2(ivar)
 
                 ij = index_ij + (ivar-1)
                 RHS_p(mp,ij)   =  RHS_p(mp,ij) + RHS_p_ij(ivar) * wst * R * xjac
                 RHS_k(mp,ij)   =  RHS_k(mp,ij) + RHS_k_ij(ivar) * wst * R * xjac
+                RHS_k2(mp,ij)   =  RHS_k2(mp,ij) + RHS_k2_ij(ivar) * wst * R * xjac
               enddo
             else
               index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local*n_var*(j-1) + im - n_tor_start +1
               do ivar= 1,n_var
                 RHS_p_ij(ivar) = tstep * Qvec_p(ivar) + zeta * Pvec_prev(ivar) * tstep / tstep_prev
                 RHS_k_ij(ivar) = tstep * Qvec_k(ivar)
+                RHS_k2_ij(ivar) = tstep * Qvec_k2(ivar)
 
                 ij = index_ij + (ivar-1)*n_tor_local
-                RHS(ij)        =  RHS(ij) + (RHS_p_ij(ivar) + RHS_k_ij(ivar)) * wst * R * xjac
+                RHS(ij)        =  RHS(ij) + (RHS_p_ij(ivar) + RHS_k_ij(ivar) + RHS_k2_ij(ivar)) * wst * R * xjac
               enddo
             endif
 
@@ -1539,6 +1635,10 @@ do i=1,n_vertex_max
                          + bf_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            & 
                          - xjac_Z * (- bf_s * x_t(ms,mt) + bf_t * x_s(ms,mt) ) / xjac**2
 
+                  bf_pp  = H(k,l,ms,mt)   * element%size(k,l) * HHZ_pp(in,mp)
+                  bf_Rp = (   y_t(ms,mt) * bf_s - y_s(ms,mt) * bf_t ) * HHZ_p(in,mp) / xjac
+                  bf_Zp = ( - x_t(ms,mt) * bf_s + x_s(ms,mt) * bf_t ) * HHZ_p(in,mp) / xjac
+
                   UR    = bf    ;  UZ    = bf    ;  Up    = bf
                   UR_R  = bf_R  ;  UZ_R  = bf_R  ;  Up_R  = bf_R
                   UR_Z  = bf_Z  ;  UZ_Z  = bf_Z  ;  Up_Z  = bf_Z
@@ -1552,6 +1652,14 @@ do i=1,n_vertex_max
                   AR_p  = bf_p  ;  AZ_p  = bf_p  ;  A3_p  = bf_p  ; T_p  = bf_p  ; rho_p  = bf_p
                   AR_s  = bf_s  ;  AZ_s  = bf_s  ;  A3_s  = bf_s  ; T_s  = bf_s  ; rho_s  = bf_s 
                   AR_t  = bf_t  ;  AZ_t  = bf_t  ;  A3_t  = bf_t  ; T_t  = bf_T  ; rho_t  = bf_T 
+
+                  AR_RR = bf_RR ; AR_RZ = bf_RZ ; AR_ZZ = bf_ZZ
+                  AZ_RR = bf_RR ; AZ_RZ = bf_RZ ; AZ_ZZ = bf_ZZ
+                  A3_RR = bf_RR ; A3_RZ = bf_RZ ; A3_ZZ = bf_ZZ
+
+                  AR_Rp = bf_Rp ; AR_Zp  = bf_Zp ; AR_pp = bf_pp
+                  AZ_Rp = bf_Rp ; AZ_Zp  = bf_Zp ; AZ_pp = bf_pp
+                  A3_Rp = bf_Rp ; A3_Zp  = bf_Zp ; A3_pp = bf_pp
 
                   ! --- Linearised quantities
                   BR0_AR    =   0.d0     ; BR0_AZ__n = - AZ_p / R ; BR0_A3 =   A3_Z / R
@@ -2020,6 +2128,92 @@ do i=1,n_vertex_max
                   eta_p_T__p = d2eta_d2T * T * T0_p
                   eta_p_T__n = deta_dT * T_p
 
+                  JR0_AR__p  = - AR_ZZ
+                  JR0_AR__n  = 0.d0
+                  JR0_AR__n2 = - AR_pp / R**2
+                  JR0_AZ__p  = AZ_RZ
+                  JR0_AZ__n  = 0.0d0
+                  JR0_AZ__n2 = 0.0d0
+                  JR0_A3__p  = 0.0d0
+                  JR0_A3__n  = A3_Rp / R**2
+                  JR0_A3__n2 = 0.d0
+
+                  JZ0_AR__p  = AR_RZ / R**2 + AR_Z / R
+                  JZ0_AR__n  = 0.0d0
+                  JZ0_AR__n2 = 0.0d0
+                  JZ0_AZ__p  = - AZ_RR - AZ_R / R
+                  JZ0_AZ__n  = 0.d0
+                  JZ0_AZ__n2 = - AZ_pp / R**2
+                  JZ0_A3__p  = 0.d0
+                  JZ0_A3__n  = A3_Zp / R**2
+                  JZ0_A3__n2 = 0.d0
+
+                  Jp0_AR__p  = 0.0d0
+                  Jp0_AR__n  = AR_Rp / R - AR_p / R**2
+                  Jp0_AR__n2 = 0.d0
+                  Jp0_AZ__p  = 0.0d0
+                  Jp0_AZ__n  = AZ_Zp / R
+                  Jp0_AZ__n2 = 0.d0
+                  Jp0_A3__p  = - A3_RR / R + A3_R / R**2 - A3_ZZ / R
+                  Jp0_A3__n  = 0.0d0
+                  Jp0_A3__n2 = 0.0d0
+
+                  if(keep_current_prof)then
+                    JJ2_AR__p = 2.0d0 *(JR0*JR0_AR__p + JZ0*JZ0_AR__p + Jp0*Jp0_AR__p)  &
+                                - (   current_source_JR(ms,mt)*JR0_AR__p &
+                                    + current_source_JZ(ms,mt)*JZ0_AR__p &
+                                    + current_source_Jp(ms,mt)*Jp0_AR__p )
+                    JJ2_AR__n = 2.0d0 *(JR0*JR0_AR__n + JZ0*JZ0_AR__n + Jp0*Jp0_AR__n)  &
+                                - (   current_source_JR(ms,mt)*JR0_AR__n &
+                                    + current_source_JZ(ms,mt)*JZ0_AR__n &
+                                    + current_source_Jp(ms,mt)*Jp0_AR__n )
+                    JJ2_AR__n2 = 2.0d0 *(JR0*JR0_AR__n2 + JZ0*JZ0_AR__n2 + Jp0*Jp0_AR__n2)  &
+                                - (   current_source_JR(ms,mt)*JR0_AR__n2 &
+                                    + current_source_JZ(ms,mt)*JZ0_AR__n2 &
+                                    + current_source_Jp(ms,mt)*Jp0_AR__n2 )
+
+                    JJ2_AZ__p = 2.0d0 *(JR0*JR0_AZ__p + JZ0*JZ0_AZ__p + Jp0*Jp0_AZ__p)  &
+                                - (   current_source_JR(ms,mt)*JR0_AZ__p &
+                                    + current_source_JZ(ms,mt)*JZ0_AZ__p &
+                                    + current_source_Jp(ms,mt)*Jp0_AZ__p )
+                    JJ2_AZ__n = 2.0d0 *(JR0*JR0_AZ__n + JZ0*JZ0_AZ__n + Jp0*Jp0_AZ__n)  &
+                                - (   current_source_JR(ms,mt)*JR0_AZ__n &
+                                    + current_source_JZ(ms,mt)*JZ0_AZ__n &
+                                    + current_source_Jp(ms,mt)*Jp0_AZ__n )
+                    JJ2_AZ__n2 = 2.0d0 *(JR0*JR0_AZ__n2 + JZ0*JZ0_AZ__n2 + Jp0*Jp0_AZ__n2)  &
+                                - (   current_source_JR(ms,mt)*JR0_AZ__n2 &
+                                    + current_source_JZ(ms,mt)*JZ0_AZ__n2 &
+                                    + current_source_Jp(ms,mt)*Jp0_AZ__n2 )
+
+                    JJ2_A3__p = 2.0d0 *(JR0*JR0_A3__p + JZ0*JZ0_A3__p + Jp0*Jp0_A3__p)  &
+                                - (   current_source_JR(ms,mt)*JR0_A3__p &
+                                    + current_source_JZ(ms,mt)*JZ0_A3__p &
+                                    + current_source_Jp(ms,mt)*Jp0_A3__p )
+                    JJ2_A3__n = 2.0d0 *(JR0*JR0_A3__n + JZ0*JZ0_A3__n + Jp0*Jp0_A3__n)  &
+                                - (   current_source_JR(ms,mt)*JR0_A3__n &
+                                    + current_source_JZ(ms,mt)*JZ0_A3__n &
+                                    + current_source_Jp(ms,mt)*Jp0_A3__n )
+                    JJ2_A3__n2 = 2.0d0 *(JR0*JR0_A3__n2 + JZ0*JZ0_A3__n2 + Jp0*Jp0_A3__n2)  &
+                                - (   current_source_JR(ms,mt)*JR0_A3__n2 &
+                                    + current_source_JZ(ms,mt)*JZ0_A3__n2 &
+                                    + current_source_Jp(ms,mt)*Jp0_A3__n2 )
+
+                  else
+
+                    JJ2_AR__p  = 2.0d0 * (JR0*JR0_AR__p  + JZ0*JZ0_AR__p  + Jp0*Jp0_AR__p) 
+                    JJ2_AR__n  = 2.0d0 * (JR0*JR0_AR__n  + JZ0*JZ0_AR__n  + Jp0*Jp0_AR__n)
+                    JJ2_AR__n2 = 2.0d0 * (JR0*JR0_AR__n2 + JZ0*JZ0_AR__n2 + Jp0*Jp0_AR__n2)
+
+                    JJ2_AZ__p  = 2.0d0 * (JR0*JR0_AZ__p  + JZ0*JZ0_AZ__p  + Jp0*Jp0_AZ__p)
+                    JJ2_AZ__n  = 2.0d0 * (JR0*JR0_AZ__n  + JZ0*JZ0_AZ__n  + Jp0*Jp0_AZ__n)
+                    JJ2_AZ__n2 = 2.0d0 * (JR0*JR0_AZ__n2 + JZ0*JZ0_AZ__n2 + Jp0*Jp0_AZ__n2)
+
+                    JJ2_A3__p  = 2.0d0 * (JR0*JR0_A3__p  + JZ0*JZ0_A3__p  + Jp0*Jp0_A3__p)
+                    JJ2_A3__n  = 2.0d0 * (JR0*JR0_A3__n  + JZ0*JZ0_A3__n  + Jp0*Jp0_A3__n)
+                    JJ2_A3__n2 = 2.0d0 * (JR0*JR0_A3__n2 + JZ0*JZ0_A3__n2 + Jp0*Jp0_A3__n2)
+
+                  endif
+
                   ! --- VMS variables
                   CvGradVj__p = CvR0 * bf_R + CvZ0 * bf_Z
                   CvGradVj__n = Cvp0 * bf_p / R
@@ -2213,6 +2407,9 @@ do i=1,n_vertex_max
                   Qjac_k    = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the test-function)
                   Qjac_n    = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the basis-functions)
                   Qjac_kn   = 0.d0 ! rest of the LHS (toroidal part with phi-derivatives of the basis-functions and the test-functions)
+
+                  Qjac_k2_p=0.d0;Qjac_k2_n=0.d0;Qjac_k2_n2=0.d0;Qjac_k_n2=0.d0;Qjac_p_n2=0.d0
+
                   QvmsF_p   = 0.d0 ! VMS terms
                   QvmsF_n   = 0.d0
                   QvmsF_k   = 0.d0
@@ -2723,34 +2920,43 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar_AR__p * BgradT       / BB2                &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AR__p / BB2                &
-                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__p
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__p &
+                                           + v * (gamma-1.0d0) * eta_T    * JJ2_AR__p
                   Qjac_n (var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar_AR__n * BgradT       / BB2                &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AR__n / BB2                &
-                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__n
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AR__n &
+                                           + v * (gamma-1.0d0) * eta_T * JJ2_AR__n
                   Qjac_k (var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar_AR__k * BgradT       / BB2                &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AR__p / BB2                &
                                            + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AR__p
                   Qjac_kn(var_T,var_AR)  = - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AR__n / BB2                &
                                            + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AR__n
+                  Qjac_p_n2(var_T,var_AR)  = v * (gamma-1.0d0) * eta_T * JJ2_AR__n2
 
                   Qjac_p (var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar_AZ__p * BgradT       / BB2                &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AZ__p / BB2                &
-                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__p
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__p &
+                                           + v * (gamma-1.0d0) * eta_T * JJ2_AZ__p
                   Qjac_n (var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar_AZ__n * BgradT       / BB2                &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_AZ__n / BB2                &
-                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__n
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT       / BB2**2 * BB2_AZ__n &
+                                           + v * (gamma-1.0d0) * eta_T * JJ2_AR__n
                   Qjac_k (var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar_AZ__k * BgradT       / BB2                &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AZ__p / BB2                &
                                            + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AZ__p
                   Qjac_kn(var_T,var_AZ)  = - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_AZ__n / BB2                &
                                            + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT       / BB2**2 * BB2_AZ__n
+                  Qjac_p_n2(var_T,var_AZ)  = v * (gamma-1.0d0) * eta_T * JJ2_AZ__n2
 
                   Qjac_p (var_T,var_A3)  = - (ZKpar_T-ZK_prof) * BgradVstar_A3__p * BgradT    / BB2             &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT_A3 / BB2             &
-                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT    / BB2**2 * BB2_A3
+                                           + (ZKpar_T-ZK_prof) * BgradVstar__p    * BgradT    / BB2**2 * BB2_A3 &
+                                           + v * (gamma-1.0d0) * eta_T * JJ2_A3__p
+                  Qjac_n (var_T,var_A3)  = + v * (gamma-1.0d0) * eta_T * JJ2_A3__n
                   Qjac_k (var_T,var_A3)  = - (ZKpar_T-ZK_prof) * BgradVstar_A3__k * BgradT    / BB2             &
                                            - (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT_A3 / BB2             &
                                            + (ZKpar_T-ZK_prof) * BgradVstar__k    * BgradT    / BB2**2 * BB2_A3
+                  Qjac_p_n2(var_T,var_A3)  = v * (gamma-1.0d0) * eta_T * JJ2_A3__n2
 
                   Qjac_p (var_T,var_UR)  = + v * ( - rho0 * UgradT_UR  -  T0 * UgradRho_UR  -  gamma * p0 * divU_UR ) &
                                            + v * (gamma-1.d0) * Qvisc_T_UR__p
@@ -3087,6 +3293,12 @@ do i=1,n_vertex_max
 
                         amat(ivar,kvar)  = - tstep * theta * Qjac_kn(ivar,kvar)
                         ELM_kn(mp,kl,ij) = ELM_kn(mp,kl,ij) +  wst * amat(ivar,kvar) * R * xjac
+
+                        amat(ivar,kvar)  = - tstep * theta * Qjac_p_n2(ivar,kvar)
+                        ELM_p_n2(mp,kl,ij) = ELM_p_n2(mp,kl,ij) +  wst * amat(ivar,kvar) * R * xjac
+
+                        amat(ivar,kvar)  = - tstep * theta * Qjac_k2_n2(ivar,kvar)
+                        ELM_k2_n2(mp,kl,ij) = ELM_k2_n2(mp,kl,ij) +  wst * amat(ivar,kvar) * R * xjac
                       enddo
                     enddo
                   else
@@ -3106,6 +3318,12 @@ do i=1,n_vertex_max
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
 
                         amat(ivar,kvar) = - tstep * theta * Qjac_kn(ivar,kvar)
+                        ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
+
+                        amat(ivar,kvar) = - tstep * theta * Qjac_p_n2(ivar,kvar)
+                        ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
+
+                        amat(ivar,kvar) = - tstep * theta * Qjac_k2_n2(ivar,kvar)
                         ELM(ij,kl)      = ELM(ij,kl) + wst * amat(ivar,kvar) * R * xjac
                       enddo
                     enddo
@@ -3331,6 +3549,62 @@ do i=1,n_vertex_max
             enddo
 
           endif
+
+          ! new, check carefully, inverted signs
+          if (maxval(abs(ELM_k2_n2(1:n_plane,j_loc, i_v))) .ne. 0.d0) then
+
+            in_fft =  ELM_k2_n2(1:n_plane,j_loc, i_v)
+
+#ifdef USE_FFTW
+            call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+            call my_fft(in_fft, out_fft, n_plane)
+#endif
+
+            do m=1,(n_tor+1)/2
+
+              im      = max(2*(m-1),1)
+              index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
+
+              do k=1,(n_tor+1)/2
+
+                ik      = max(2*(k-1),1)
+                index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
+
+                l = (k-1) + (m-1)
+
+                if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                endif
+
+                l = (k-1) - (m-1)
+
+                if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - imag(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(l+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + imag(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(abs(l)+1)) * float(mode(im)**2) * float(mode(ik)**2)
+                endif
+
+              enddo
+
+            enddo
+
+          endif
+ 
         enddo
 
       enddo
@@ -3385,6 +3659,30 @@ do j=1, n_vertex_max*n_var*(n_order+1)
   enddo
 
 enddo
+
+! check carefully
+do j=1, n_vertex_max*n_var*(n_order+1)
+
+  in_fft = RHS_k2(1:n_plane,j)
+#ifdef USE_FFTW
+  call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+  call my_fft(in_fft, out_fft, n_plane)
+#endif
+
+  index = n_tor*(j-1) + 1
+  ik    = 1
+  RHS(index) = RHS(index) - real(out_fft(1)) * float(mode(ik))**2
+
+  do k=2,(n_tor+1)/2
+    ik    = max(2*(k-1),1)
+    index = n_tor*(j-1) + 2*(k-1)
+    RHS(index)   = RHS(index)   - real(out_fft(k)) * float(mode(ik))**2
+    RHS(index+1) = RHS(index+1) + imag(out_fft(k)) * float(mode(ik))**2
+  enddo
+
+enddo
+
 
 return
 

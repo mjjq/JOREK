@@ -142,7 +142,6 @@ real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, l
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 real*8  :: heating_impl_in, heating_impl_out, H_impl_int, H_impl_ext,heating_impl_tot
-integer :: impl_heat
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 real*8  :: source_neutral
@@ -235,10 +234,6 @@ if (my_id .eq. 0) then
   !write(*,*) ' n_plane : ',n_plane
   !write(*,*) ' n_cpu   : ',n_cpu
 endif
-
-! --- implicit heat source stabilization
-impl_heat = 0
-if (implicit_heat_source) impl_heat = 1
 
 density_tot  = 0.d0
 pressure = 0.d0
@@ -356,7 +351,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
 !$omp          H_int, H_ext, S_int, S_ext,psi_xpoint,  F0, VP_tot,eta, T_0, Te_0, T_min,       &
 !$omp          ne_SI_min, Te_eV_min, rn0_min, P_e_tot, P_i_tot, P_e_int, P_i_int, P_e_ext, P_i_ext, &
-!$omp          T_min_neg, H_impl_int,H_impl_ext,impl_heat,GAMMA,                                     &
+!$omp          T_min_neg, H_impl_int,H_impl_ext,implicit_heat_source,GAMMA,                                     &
 !$omp          pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,                       &
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
@@ -1115,13 +1110,20 @@ do ife = ife_min, ife_max
           P_i_int = P_e_int
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
+#ifdef WITH_TiTe
+		  !H_impl_int Te
+          H_impl_int = H_impl_int +implicit_heat_source*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0e,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0e,T_min_neg))*xjac*BigR*wst*delta_phi
+		  !H_impl_int Ti
+		  H_impl_int = H_impl_int +implicit_heat_source*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0i,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0i,T_min_neg))*xjac*BigR*wst*delta_phi
+#else /* WITH_TiTe */
+		  !H_impl_int T0
+          H_impl_int = H_impl_int + +implicit_heat_source*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0,T_min_neg))*xjac*BigR*wst*delta_phi
+#endif /* WITH_TiTe */
           C_intern = C_intern - zj0 /BigR * xjac *        wst * delta_phi    ! 2D integral
           area1    = area1    +  xjac * wst * delta_phi         
           Vol   = Vol   +             xjac * BigR * wst * delta_phi
           H_int = H_int + heat_source     * xjac * BigR * wst * delta_phi
-		  !> should there be a delta_t in the heating term somewhere?
-		  H_impl_int = H_impl_int +real(impl_heat,8)*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0,T_min_neg))*xjac*BigR*wst*delta_phi
-          S_int = S_int + particle_source * xjac * BigR * wst * delta_phi
+		  S_int = S_int + particle_source * xjac * BigR * wst * delta_phi
           VP_int = VP_int + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_int = VK_int + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
           VM_int = VM_int + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
@@ -1150,9 +1152,17 @@ do ife = ife_min, ife_max
           P_i_ext = P_e_ext
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
+#ifdef WITH_TiTe
+		  !H_impl_ext Te
+          H_impl_ext = H_impl_ext +implicit_heat_source*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0e,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0e,T_min_neg))*xjac*BigR*wst*delta_phi
+		  !H_iml_ext Ti
+		  H_impl_ext = H_impl_ext +implicit_heat_source*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0i,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0i,T_min_neg))*xjac*BigR*wst*delta_phi
+#else /* WITH_TiTe */
+		  !H_impl_ext T0
+          H_impl_ext = H_impl_ext + +implicit_heat_source*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0,T_min_neg))*xjac*BigR*wst*delta_phi
+#endif /* WITH_TiTe */
           C_ext = C_ext - zj0 / BigR * xjac *        wst * delta_phi  ! 2D integral
           H_ext = H_ext + heat_source     * xjac * BigR * wst * delta_phi
-		  H_impl_ext = H_impl_ext + +real(impl_heat,8)*(gamma-1.d0)*(0.5d0*T_min_neg+0.5d0*T_min_neg *exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0,T_min_neg))*xjac*BigR*wst*delta_phi
           S_ext = S_ext + particle_source * xjac * BigR * wst * delta_phi
           VP_ext = VP_ext + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
           VK_ext = VK_ext + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi

@@ -160,9 +160,6 @@ real*8     :: T_or_Te, T_or_Te_corr, T_or_Te_0, dT_or_Te_corr_dT
 ! --- Factor to use the conservative form or not of the momentum equation
 real*8     :: fact_conservative_u = 1.d0
 
-! --- Implicit heat stabilization
-integer    :: impl_heat
-
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*(n_order+1)
 
@@ -208,10 +205,6 @@ epsil=1.d-3
 ! --- Decide whether or not use the conservative form of the momentum equation
 ! --- (conservative form not ready yet with diamagnetic flows)
 if (tauIC > 0.d0) fact_conservative_u = 0.d0
-
-! --- implicit heat source stabilization
-impl_heat = 0
-if (implicit_heat_source) impl_heat = 1
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta
@@ -1500,7 +1493,7 @@ do i=1,n_vertex_max
               !###################################################################################################
   
               rhs_ij(var_Ti) =  v * BigR * heat_source_i(ms,mt)                                  * xjac * tstep * factor(var_Ti,1) &
-			  +real(impl_heat,8)*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(Ti0,T_min_neg))* xjac*tstep*BigR    &
+			  +implicit_heat_source*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(Ti0,T_min_neg))* xjac*tstep*BigR    &
 			  
               
                               + v * r0 * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                       * tstep * factor(var_Ti,2) &
@@ -1559,7 +1552,7 @@ do i=1,n_vertex_max
               !###################################################################################################
   
               rhs_ij(var_Te) =  v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep * factor(var_Te,1 ) &
-			  +real(impl_heat,8)*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(Te0,T_min_neg))* xjac*tstep*BigR    &
+			  +implicit_heat_source*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(Te0,T_min_neg))* xjac*tstep*BigR    &
                                                                                                  
                               + v * r0 * BigR**2  * (Te0_s * u0_t - Te0_t * u0_s)                       * tstep * factor(var_Te,2 ) &
                               + v * Te0 * BigR**2 * ( r0_s * u0_t -  r0_t * u0_s)                       * tstep * factor(var_Te,2 ) &
@@ -1624,7 +1617,7 @@ do i=1,n_vertex_max
               !###################################################################################################
   
               rhs_ij(var_T) =  v * BigR * heat_source(ms,mt)                                    * xjac * tstep * factor(var_T,1 ) &
-			  +real(impl_heat,8)*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0,T_min_neg))* xjac*tstep*BigR    &
+			  +implicit_heat_source*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0,T_min_neg))* xjac*tstep*BigR    &
               
                              + v * r0 * BigR**2 * (T0_s  * u0_t - T0_t * u0_s)                         * tstep * factor(var_T,2 ) &
                              + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep * factor(var_T,2 ) &
@@ -2710,7 +2703,7 @@ do i=1,n_vertex_max
                               - v * r0 * BigR**2  * ( Ti_s  * u0_t - Ti_t  * u0_s)             * theta * tstep &
                               - v * Ti  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)               * theta * tstep &
 							  
-							  -real(impl_heat,8)*(gamma-1.d0)*v*(exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Ti* xjac*theta*tstep*BigR &
+							  -implicit_heat_source*(gamma-1.d0)*v*(exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Ti* xjac*theta*tstep*BigR &
   
                               - v * r0 * 2.d0* GAMMA * BigR * Ti * u0_y                 * xjac * theta * tstep &
   
@@ -2926,7 +2919,7 @@ do i=1,n_vertex_max
                               - v * r0 * BigR**2  * ( Te_s * u0_t - Te_t  * u0_s)              * theta * tstep &
                               - v * Te  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)               * theta * tstep &
 							  
-							  -real(impl_heat,8)*(gamma-1.d0)*v*(exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Te* xjac*theta*tstep*BigR &
+							  -implicit_heat_source*(gamma-1.d0)*v*(exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Te* xjac*theta*tstep*BigR &
   
                               - v * r0 * 2.d0* GAMMA * BigR * Te * u0_y                 * xjac * theta * tstep &
   
@@ -3143,7 +3136,7 @@ do i=1,n_vertex_max
                                       - v * r0 * BigR**2 * ( T_s  * u0_t - T_t  * u0_s)               * theta * tstep &
                                       - v * T  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)               * theta * tstep &
 									  
-									  -real(impl_heat,8)*(gamma-1.d0)*v*(exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*T* xjac*theta*tstep*BigR &
+									  -implicit_heat_source*(gamma-1.d0)*v*(exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*T* xjac*theta*tstep*BigR &
                                       
                                       - v * r0 * 2.d0* GAMMA * BigR * T * u0_y                 * xjac * theta * tstep &
                                       

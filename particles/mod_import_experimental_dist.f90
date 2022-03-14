@@ -149,7 +149,7 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
   allocate(R1D(R1Dsize(1)))
   allocate(Z1D(Z1Dsize(1)))
   allocate(Pitch1D(Pitch1Dsize(1)))
-  allocate(E1D(Pitch1Dsize(1)))
+  allocate(E1D(E1Dsize(1)))
   if(my_id .eq. 0) then
 
     call HDF5_array1D_reading(file,R1D,"R_1D")

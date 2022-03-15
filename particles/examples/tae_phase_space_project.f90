@@ -152,10 +152,10 @@ program tae_loop
   !                                        f_grids= [proj_f(proj_R,group =1 ),proj_f(proj_Z,group=1)],bandwidths=[0.2,0.2])
   ! Power versus minor radius (f_proj is not relevant, as we fill the value arrays manually by averaging over particle orbits.)
   ! If you want to use this, you'll have to use a restart file with some mode structure (i.e. a linear-phase TAE mode from previous simulations)
-  test_phase = new_phase_space_projection(sim,ndim=2,res=[150,150],start=[-5.d-19,-0.1d0],end=[5.d-19,1500.d0],f_proj=proj_f(proj_one, group = 1),&
-                                         f_grids= [proj_f(proj_R,group = 1 ),proj_f(proj_Z,group = 1 )],bandwidths=[1d-19,100d0])
+  test_phase = new_phase_space_projection(sim,ndim=2,res=[150,150],start=[-1d7,-0.1d6],end=[1.d7,1.d6],f_proj=proj_f(proj_one, group = 1),&
+                                         f_grids= [proj_f(proj_R,group = 1 ),proj_f(proj_Z,group = 1 )],bandwidths=[1d6,0.05d6])
 
- 
+
   ! Initial density of mu
   !test_phase = new_phase_space_projection(sim,ndim=1,res=[200],start=[0.d0],end=[1.d6],f_proj=proj_f(proj_one, group = 1),&
   !                                         f_grids= [proj_f(proj_mu,group = 1 )],bandwidths=[0.05d6])
@@ -165,7 +165,7 @@ program tae_loop
   !call output_phase_project(test_phase)
   ! This only works w/ nearest neighbour projection (not shaped kernels), so be careful! Manual filling (as in particle loop)
   ! works for both.
-  
+
   ! Full tensor + density (for density flattening was the idea)
   allocate(jorek_feedback%rhs(n_order+1, n_vertex_max, sim%fields%element_list%n_elements, n_tor, 7))
 
@@ -303,11 +303,11 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   Zephi=0.d0
   select type (particles => sim%groups(1)%particles)
     type is (particle_kinetic_leapfrog)
-       do j=1,size(particles,1)
-          if (particles(j)%i_elm > 0) then
-             call sim%fields%calc_EBpsiU(t, particles(j)%i_elm, particle_tmp%st, particle_tmp%x(3), E, B, psi, U)
-             Zephi = Zephi + particles(j)%q*particles(j)%weight*el_chg*U*F0
-          endif
+      do j=1,size(particles,1)
+        if (particles(j)%i_elm > 0) then
+          call sim%fields%calc_EBpsiU(t, particles(j)%i_elm, particle_tmp%st, particle_tmp%x(3), E, B, psi, U)
+          Zephi = Zephi + particles(j)%q*particles(j)%weight*el_chg*U*F0
+        endif
         E_tot = E_tot + 0.5d0*particles(j)%weight*sim%groups(1)%mass*mass_proton*dot_product(particles(j)%v, particles(j)%v)
       enddo
   end select
@@ -387,79 +387,81 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
 
             ! Calculating indices of the support in the values array of the test_phase, the array is the [p_phi, E] value of the particle.
             ! This is a bit trial and error to get good 'looking' bandwidths. (call loop w/ 1 step & E_diff ->pctls weight for dist function
-            call calc_index_shaped_part_x(test_phase,particle_tmp,index_phase_tmp, val_tmp,sim,[particle_tmp%q*el_chg*psi+sim%groups(1)%mass*MASS_PROTON*particle_tmp%v(3)*particle_tmp%x(1), dot_product(particle_tmp%v,particle_tmp%v)*0.5d0*sim%groups(1)%mass*MASS_PROTON/EL_CHG/1d3])
+            call calc_index_shaped_part_x(test_phase,particle_tmp,index_phase_tmp, val_tmp,sim,[dot_product(particle_tmp%v,B)/norm2(B),0.5d0*sim%groups(1)%mass*atomic_mass_unit*norm2(cross_product(particle_tmp%v,B/norm2(B)))**2/norm2(B)/el_chg])
 
             ! Adding to main test_phase array of all the particle contributions.
             do i_phase=1, test_phase%totsupport
               if(index_phase_tmp(i_phase) > 0)then
-                phase_proj(index_phase_tmp(i_phase))=phase_proj(index_phase_tmp(i_phase))+1.d0*val_tmp(i_phase)*E_diff
+                phase_proj(index_phase_tmp(i_phase))=phase_proj(index_phase_tmp(i_phase))+1.d0*val_tmp(i_phase)*particle_tmp%weight/n_steps!E_diff
               endif
             enddo
-            if(particle_tmp%i_elm .gt.0) then
+          endif
+        end do ! steps
+        if(particle_tmp%i_elm .gt.0) then
 
 
 
 
 
-              call basisfunctions(particle_tmp%st(1), particle_tmp%st(2), HH, HH_s, HH_t)
-              call mode_moivre(particle_tmp%x(3), HZ)
+          call basisfunctions(particle_tmp%st(1), particle_tmp%st(2), HH, HH_s, HH_t)
+          call mode_moivre(particle_tmp%x(3), HZ)
 
-              i_elm=particle_tmp%i_elm
+          i_elm=particle_tmp%i_elm
 
-              do l=1,n_vertex_max
-                do m=1,n_order+1
+          do l=1,n_vertex_max
+            do m=1,n_order+1
 
-                  index_lm = (l-1)*(n_order+1) + m
+              index_lm = (l-1)*(n_order+1) + m
 
-                  v = HH(l,m) * sim%fields%element_list%element(i_elm)%size(l,m)
+              v = HH(l,m) * sim%fields%element_list%element(i_elm)%size(l,m)
 
-                  do i_tor=1,n_tor
+              do i_tor=1,n_tor
 
 
-                    feedback_rhs(m,l,i_elm,i_tor,1) = feedback_rhs(m,l,i_elm,i_tor,1) &
+                feedback_rhs(m,l,i_elm,i_tor,1) = feedback_rhs(m,l,i_elm,i_tor,1) &
 
                                                            + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
 
                                                             * (p_perp+b_norm_r**2*p_atrop) * mu_zero !PI_RR
-                    feedback_rhs(m,l,i_elm,i_tor,2) = feedback_rhs(m,l,i_elm,i_tor,2) &
+                feedback_rhs(m,l,i_elm,i_tor,2) = feedback_rhs(m,l,i_elm,i_tor,2) &
 
                                                             + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
 
                                                             * ( p_perp+b_norm_z**2*p_atrop ) * mu_zero                       !PI_ZZ
-                    feedback_rhs(m,l,i_elm,i_tor,3) = feedback_rhs(m,l,i_elm,i_tor,3) &
+                feedback_rhs(m,l,i_elm,i_tor,3) = feedback_rhs(m,l,i_elm,i_tor,3) &
 
                                                             + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
 
                                                             * (p_perp+b_norm_phi**2*p_atrop) * mu_zero !PI_PHIPHI
-                    feedback_rhs(m,l,i_elm,i_tor,4) = feedback_rhs(m,l,i_elm,i_tor,4) &
+                feedback_rhs(m,l,i_elm,i_tor,4) = feedback_rhs(m,l,i_elm,i_tor,4) &
 
                                                             + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
 
                                                             * ( b_norm_r*b_norm_z*p_atrop ) * mu_zero                            !PI_RZ
-                    feedback_rhs(m,l,i_elm,i_tor,5) = feedback_rhs(m,l,i_elm,i_tor,5) &
+                feedback_rhs(m,l,i_elm,i_tor,5) = feedback_rhs(m,l,i_elm,i_tor,5) &
 
                                                            + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
 
                                                             * (b_norm_r*b_norm_phi*p_atrop ) * mu_zero !PI_RPHI
-                    feedback_rhs(m,l,i_elm,i_tor,6) = feedback_rhs(m,l,i_elm,i_tor,6) &
+                feedback_rhs(m,l,i_elm,i_tor,6) = feedback_rhs(m,l,i_elm,i_tor,6) &
 
                                                            + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
 
                                                             *(b_norm_z*b_norm_phi*p_atrop ) * mu_zero !PI_ZPHI
-                    feedback_rhs(m,l,i_elm,i_tor,7) = feedback_rhs(m,l,i_elm,i_tor,7) &
+                feedback_rhs(m,l,i_elm,i_tor,7) = feedback_rhs(m,l,i_elm,i_tor,7) &
 
                                                            + HZ(i_tor) * v * particle_tmp%weight  !Density
 
 
-                  enddo! <tor harmonic
+              enddo! <tor harmonic
 
-                enddo   !< order
-              enddo     !< vertex
+            enddo   !< order
+          enddo     !< vertex
 
-            end if !<particle_temp%i_elm gt 0 after pushing!
-          end if !<particle_temp%i_elm gt 0
+        end if !<particle_temp%i_elm gt 0 after pushing!
 
-        end do ! steps
+
+
 
         call copy_particle_kinetic_leapfrog(particle_tmp, particles(j))
 

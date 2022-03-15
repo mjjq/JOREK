@@ -178,11 +178,11 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
   OneD_arraysize = Z1Dsize(1)*Pitch1Dsize(1)*E1Dsize(1)*R1Dsize(1)
   write(*,"(A,I9,A,I3)") " PARTICLES: total F0 elements = ", OneD_arraysize, " on process ",my_id
   ! Starting broadcasting....
-  call MPI_BCAST(F0_norm,OneD_arraysize, MPI_REAL8, 0 , MPI_COMM_WORLD, ierr)
-  call MPI_BCAST(R1D,R1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Z1D,Z1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(E1D,E1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_BCAST(Pitch1D,Pitch1Dsize(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(F0_norm,int(OneD_arraysize,4), MPI_REAL8, 0 , MPI_COMM_WORLD, ierr)
+  call MPI_BCAST(R1D,int(R1Dsize(1),4),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(Z1D,int(Z1Dsize(1),4),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(E1D,int(E1Dsize(1),4),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(Pitch1D,int(Pitch1Dsize(1),4),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 
 
 

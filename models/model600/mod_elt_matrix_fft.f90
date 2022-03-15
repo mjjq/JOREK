@@ -682,7 +682,7 @@ do i=1,n_vertex_max
             rimp0_st   = eq_st(mp,var_rhoimp,ms,mt)                                                            
             rimp0_tt   = eq_tt(mp,var_rhoimp,ms,mt)  
             rimp0_corr = corr_neg_dens(rimp0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rimp0 ...
-            drimp0_corr_dn = dcorr_neg_dens_drho(rn0, (/ 1.d-9, 1.d-5 /),1.d-3)
+            drimp0_corr_dn = dcorr_neg_dens_drho(rimp0, (/ 0.d-5, 1.d-5 /))
           else
             rimp0      = 0.d0
             rimp0_x    = 0.d0  

@@ -241,9 +241,9 @@ subroutine import_particles(particles,fields,filename, rng_base,mass, n_phi_plan
     !$omp parallel do default(shared) &
 #else
     !$omp parallel do default(none) &
-#endif
     !$omp shared(blocksize,rans,Rbox,Zbox,fields,F0_norm,PitchBox, EBox,my_id,grids_start,grids_spacing,found,R1D,Z1D,&
     !$omp        Z1Dsize,R1Dsize,particles_tmp,mass)&
+#endif
     !$omp private(i,R,Z,phi,ran,dummy_R,dummy_Z,i_elm,s,t,ifail,Pitch_tmp, E_tmp,ierr,F0_value,particle,B_tmp)
     do i=1,blocksize
       ran(:) = rans(:,i)

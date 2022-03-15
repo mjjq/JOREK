@@ -98,8 +98,12 @@ program test_import_realistic
   t=0.d0
   select type(particles=> sim%groups(1)%particles)
     type is(particle_kinetic_leapfrog)
+#ifdef __GFORTRAN__
+      !$omp parallel do default(shared) & 
+#else
       !$omp parallel do default(none)&
       !$omp shared(sim,particles,t)&
+#endif
       !$omp private(j,particle_tmp,E,B,psi,U,Energy,i_elm,i_tor,l,m,index_lm,v,HH,HZ,HH_s,HH_t)&
       !$omp reduction(+:feedback_rhs)
       do j=1,size(particles)

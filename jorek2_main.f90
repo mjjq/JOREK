@@ -257,7 +257,7 @@ required = 0
     gmres     = .false. 
   end if
 
-  if ( (with_impurities) .or. (with_neutrals .and. use_imp_adas .and. (nimp_bg(1) > 0.d0))) then
+  if ( (with_impurities) .or. (with_neutrals) .or. (use_imp_adas .and. (nimp_bg(1) > 0.d0))) then
     ! --- Read ADAS data and generate coronal equilibrium if needed
     call init_imp_adas(my_id)
   endif

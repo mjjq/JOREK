@@ -2394,7 +2394,7 @@ do i=1,n_vertex_max
                   if (with_impurities) then
                     amat(var_u,var_rhoimp) = -(1.d0 - delta_n_convection) * BigR**3 * (&
                               +(alpha_e * rn0 * rhoimp * Sion_T)                          * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep &
-                              -((-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * rhoimp * Sion_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep )
+                              -((-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * rhoimp * Srec_T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep )
                   endif
 
                   !###################################################################################################
@@ -2726,6 +2726,8 @@ do i=1,n_vertex_max
                                                 + (1.d0 - delta_n_convection) * (  &
                                                   + v *((r0+alpha_e*rimp0) * rn0 * dSion_dT *Te) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
                                                   - v *((r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT *Te) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  + v *(dalpha_e_dT * rimp0 * rn0 * Sion_T *Te)  * vpar0 * BB2 * BigR         * xjac * theta * tstep &
+                                                  - v *(dalpha_e_dT * rimp0 * (r0-rimp0) * Srec_T *Te)  * vpar0 * BB2 * BigR  * xjac * theta * tstep &
                                                   )                                               
     
 
@@ -2738,6 +2740,8 @@ do i=1,n_vertex_max
                                                 + (1.d0 - delta_n_convection) * (  &
                                                   + v *((r0+alpha_e*rimp0) * rn0 * dSion_dT * T) * vpar0 * BB2 * BigR         * xjac * theta * tstep &
                                                   - v *((r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT * T) * vpar0 * BB2 * BigR  * xjac * theta * tstep &
+                                                  + v *(dalpha_e_dT * rimp0 * rn0 * Sion_T * T)  * vpar0 * BB2 * BigR         * xjac * theta * tstep &
+                                                  - v *(dalpha_e_dT * rimp0 * (r0-rimp0) * Srec_T * T)  * vpar0 * BB2 * BigR  * xjac * theta * tstep &
                                                   )  
 
                       amat_n(var_vpar,var_T)  = + v * F0 / BigR * T_p  * r0                       * xjac * theta * tstep
@@ -2855,8 +2859,8 @@ do i=1,n_vertex_max
                     endif
                     if (with_impurities) then
                       amat(var_vpar,var_rhoimp) = (1.d0 - delta_n_convection) * (&
-                                  + v *(alpha_e * rn0 * rhoimp  * Sion_T) * vpar0 * BB2 * BigR                        * xjac * theta * tstep &
-                                  - v *(rhoimp * (-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * Srec_T) * vpar * BB2 * BigR * xjac * theta * tstep )
+                                  + v *(alpha_e * rn0 * rhoimp  * Sion_T) * vpar0 * BB2 * BigR                         * xjac * theta * tstep &
+                                  - v *(rhoimp * (-2.d0*alpha_e*rimp0 +(alpha_e-1.)*r0) * Srec_T) * vpar0 * BB2 * BigR * xjac * theta * tstep )
                     endif
 
                   end if ! (with_vpar)
@@ -3082,15 +3086,19 @@ do i=1,n_vertex_max
 
                                           !===================== Additional terms from friction terms============
                                           - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 &
-                                              * ((r0+rimp0*alpha_i)*rn0*dSion_dT) * Te * xjac * theta * tstep &
+                                              * ((r0+rimp0*alpha_e)*rn0*dSion_dT) * Te * xjac * theta * tstep &
                                           - v * BigR * ((GAMMA - 1.)/2.) * vv2 &
-                                              * ((r0+rimp0*alpha_i)*rn0*dSion_dT) * Te * xjac * theta * tstep 
+                                              * ((r0+rimp0*alpha_e)*rn0*dSion_dT) * Te * xjac * theta * tstep & 
+                                          - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 &
+                                              * (rimp0*dalpha_e_dT*rn0*Sion_T)    * Te * xjac * theta * tstep &
+                                          - v * BigR * ((GAMMA - 1.)/2.) * vv2 &
+                                              * (rimp0*dalpha_e_dT*rn0*Sion_T)    * Te * xjac * theta * tstep 
                                           !==============================End of friction terms=================
 
                     if (with_neutrals) then
                       !===================== Additional terms from friction terms============
-                      amat(var_Ti,var_rhon) = - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * ((r0+rimp0*alpha_i)*rhon*Sion_T) * xjac * theta * tstep &
-                                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * ((r0+rimp0*alpha_i)*rhon*Sion_T) * xjac * theta * tstep 
+                      amat(var_Ti,var_rhon) = - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * ((r0+rimp0*alpha_e)*rhon*Sion_T) * xjac * theta * tstep &
+                                              - v * BigR * ((GAMMA - 1.)/2.) * vv2            * ((r0+rimp0*alpha_e)*rhon*Sion_T) * xjac * theta * tstep 
                       !==============================End of friction terms=================
 
                     endif

@@ -3121,8 +3121,8 @@ do i=1,n_vertex_max
                           * ( v_x * ps0_y -  v_y * ps0_x                  ) * xjac * theta * tstep * tstep &
 !===========================End of new TG_num terms===========================
                       !===================== Additional terms from friction terms============
-                       - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (rn0*alpha_i)*rhoimp*Sion_T * xjac * theta * tstep &
-                       - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (rn0*alpha_i)*rhoimp*Sion_T * xjac * theta * tstep & 
+                       - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (rn0*alpha_e)*rhoimp*Sion_T * xjac * theta * tstep &
+                       - v * BigR * ((GAMMA - 1.)/2.) * vv2            * (rn0*alpha_e)*rhoimp*Sion_T * xjac * theta * tstep & 
                       !==============================End of friction terms=================
                        ! Energy exchange term
                        - v * BigR * ddTi_e_drhoimp * rhoimp                            * xjac * theta * tstep

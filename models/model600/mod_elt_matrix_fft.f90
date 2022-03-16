@@ -2358,6 +2358,8 @@ do i=1,n_vertex_max
                            + (1 - delta_n_convection) * (  &
                            - BigR**3 * ((r0+alpha_e*rimp0) * rn0 * dSion_dT * T)        * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
                            + BigR**3 * ((r0+alpha_e*rimp0) * (r0-rimp0) * dSrec_dT * T) * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
+                           - BigR**3 * (dalpha_e_dT * rimp0 * rn0 * Sion_T * T)         * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
+                           + BigR**3 * (dalpha_e_dT * rimp0 * (r0-rimp0) * Srec_T * T)  * (v_x * u0_x + v_y * u0_y) * xjac * theta * tstep  &
                            )
 
 

@@ -132,7 +132,7 @@ real*8, allocatable :: P_imp(:)
 real*8     :: E_ion
 integer*8  :: ion_i, ion_k
 #endif
-real*8                :: T_real8, dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
+real*8                :: T_real8, dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT, rimp0_real8, rimp0_corr
 
 real*8                :: psi_equi, psi_equi_s, psi_equi_t, psi_equi_R, psi_equi_Z
 real*8                :: F_prof,   F_prof_s,   F_prof_t,   dF_dR,      dF_dZ,     dF_dpsi
@@ -272,7 +272,8 @@ if ( SI_units ) then
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-   variable_names_si(var_rhon)='N_dens_1d20  '
+   variable_names_si(var_rhon)  ='N_dens_1d20  '
+   variable_names_si(var_rhoimp)='nimp_1d20    '
 #endif
 
 endif
@@ -1309,10 +1310,10 @@ enddo  ! n_elements
                         *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
 
      r0_real8 = scalars(i,var_rho)
-     rn0_real8 = scalars(i,var_rhon)
+     rimp0_real8 = scalars(i,var_rhoimp)
 
      r0_corr = corr_neg_dens(r0_real8,(/1.d-9,1.d-5/),1.d-3)
-     rn0_corr = corr_neg_dens(rn0_real8,(/1.d-9,1.d-5/),1.d-3)
+     rimp0_corr = corr_neg_dens(rimp0_real8,(/1.d-9,1.d-5/),1.d-3)
 
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
@@ -1344,13 +1345,14 @@ enddo  ! n_elements
      alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
      beta_imp     = m_i_over_m_imp*Z_imp - 1.
 
-     ne_SI       = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-     scalars(i,var_rho) = (r0_corr + beta_imp * rn0_corr)                           ! electron density (JOREK units)
+     ne_SI       = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
+     scalars(i,var_rho) = (r0_corr + beta_imp * rimp0_corr)                           ! electron density (JOREK units)
+
 
      !Calculate the Z_eff, as it is done in mod_elt_matrix
-     Z_eff = r0_corr - rn0_corr
+     Z_eff = r0_corr - rimp0_corr
      do ion_i=1, imp_adas(index_main_imp)%n_Z
-       Z_eff = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+       Z_eff = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
      end do
      Z_eff = Z_eff / scalars(i,var_rho)  
      scalars(inode,iimp(5)) = Z_eff
@@ -1364,7 +1366,7 @@ enddo  ! n_elements
   !-------------------------------------------
   ! --- Radiative function, using interpolation
   ! ------------------------------------------
-     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0_real8 > rn0_min) then
+     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min ) then
 
        Lrad = 0.0
        
@@ -1391,8 +1393,8 @@ enddo  ! n_elements
        frad_bg = frad_bg + r_imp * Lrad_imp
        scalars(i,iibg(i_imp)) = scalars(i,var_rho) * r_imp * Lrad_imp
      end do
-     scalars(i,iimp(1)) = (2./3.) * scalars(i,var_rhon) * E_ion
-     scalars(i,iimp(2)) = (r0_corr+beta_imp*rn0_corr) * rn0_corr * Lrad
+     scalars(i,iimp(1)) = (2./3.) * scalars(i,var_rhoimp) * E_ion
+     scalars(i,iimp(2)) = (r0_corr+beta_imp*rimp0_corr) * rimp0_corr * Lrad
      scalars(i,iimp(3)) = (2./(3. * BigR**2)) * eta_Sp * scalars(i,var_zj)**2.d0
      scalars(i,iimp(4)) = Z_imp
      scalars(i,iimp(5)) = Z_eff
@@ -1517,7 +1519,7 @@ if (SI_units) then
 
 #ifdef WITH_Impurities
     !===================================== Impurity density in 1e20m-3
-    scalars(i,var_rhon) = scalars(i,var_rhon) * central_density * m_i_over_m_imp
+    scalars(i,var_rhoimp) = scalars(i,var_rhoimp) * central_density * m_i_over_m_imp
 #endif
     !=====================Pressure in kPa
     if (include_fluxes) scalars(i,i_flux(1)) = scalars(i,i_flux(1)) / MU_zero/1.e3

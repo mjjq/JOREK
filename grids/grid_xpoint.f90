@@ -1467,14 +1467,9 @@ newnode_list%node(index_xpoint+1)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+2)%values(1,2:4,1) = 0.d0
 newnode_list%node(index_xpoint+3)%values(1,2:4,1) = 0.d0
 
-if(treat_axis)then
-  ! do nothing here. For axis treatment it is not necessory 
-  ! that 2nd and 4th DoF should be zero.
-else
-  do i=1,n_tht - 1
-    newnode_list%node(i)%values(1,2:4,1) = 0.d0
-  enddo
-endif
+do i=1,n_tht - 1
+  newnode_list%node(i)%values(1,2:4,1) = 0.d0
+enddo
 
 !----------------------------- empty old nodes/elements
 do i=1,node_list%n_nodes

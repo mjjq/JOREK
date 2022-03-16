@@ -278,7 +278,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   use mod_elt_matrix_fft
   use mpi_mod
   use mod_boundary_conditions, only : boundary_conditions
-  use mod_fix_axis_nodes, only : fix_nodes_on_axis, penalize_dof_on_axis
+  use mod_fix_axis_nodes, only : fix_nodes_on_axis
   use mod_locate_irn_jcn
   use mod_integer_types
   use mod_axis_treatment

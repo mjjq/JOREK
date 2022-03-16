@@ -1167,19 +1167,14 @@ if (xcase .eq. DOUBLE_NULL) then
 endif
 
 !-------------------------------- Empty Axis
-if(treat_axis)then
-  ! do nothing here. For axis treatment it is not necessory 
-  ! that 2nd and 4th DoF should be zero.
+if (xcase .ne. DOUBLE_NULL) then
+  do j=5,4+n_tht-1
+    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+  enddo
 else
-  if (xcase .ne. DOUBLE_NULL) then
-    do j=5,4+n_tht-1
-      newnode_list%node(j)%values(1,2:4,1) = 0.d0
-    enddo
-  else
-    do j=9,8+n_tht-2
-      newnode_list%node(j)%values(1,2:4,1) = 0.d0
-    enddo
-  endif
+  do j=9,8+n_tht-2
+    newnode_list%node(j)%values(1,2:4,1) = 0.d0
+  enddo
 endif
 
 !-------------------------------- Empty old nodes/elements
@@ -1246,9 +1241,15 @@ do i=1,newnode_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
   if (xcase .ne. DOUBLE_NULL) then
-    if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
+    if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
+       node_list%node(i)%axis_node = .true.
+       node_list%node(i)%axis_dof  = 2
+    endif
   else
-    if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
+    if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
+       node_list%node(i)%axis_node = .true.
+       node_list%node(i)%axis_dof  = 2
+    endif
   endif
 
   do k=1,n_order+1

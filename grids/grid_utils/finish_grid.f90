@@ -250,26 +250,21 @@ if (include_xpoint) then
 endif
 
 !-------------------------------- Empty Axis
-if(treat_axis)then
-  ! do nothing here. For axis treatment it is not necessory
-  ! that 2nd and 4th DoF should be zero.
-else
-  if (include_axis) then
-    if (include_xpoint) then
-      if (xcase .ne. DOUBLE_NULL) then
-        do j=5,4+n_tht-1
-          newnode_list%node(j)%values(1,2:4,1) = 0.d0
-        enddo
-      else
-        do j=9,8+n_tht-2
-          newnode_list%node(j)%values(1,2:4,1) = 0.d0
-        enddo
-      endif
+if (include_axis) then
+  if (include_xpoint) then
+    if (xcase .ne. DOUBLE_NULL) then
+      do j=5,4+n_tht-1
+        newnode_list%node(j)%values(1,2:4,1) = 0.d0
+      enddo
     else
-      do j=2,n_tht
+      do j=9,8+n_tht-2
         newnode_list%node(j)%values(1,2:4,1) = 0.d0
       enddo
     endif
+  else
+    do j=2,n_tht
+      newnode_list%node(j)%values(1,2:4,1) = 0.d0
+    enddo
   endif
 endif
 
@@ -365,12 +360,21 @@ do i=1,node_list%n_nodes
   if (include_axis) then
     if (include_xpoint) then
       if (xcase .ne. DOUBLE_NULL) then
-        if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
+        if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
+           node_list%node(i)%axis_node = .true.
+           node_list%node(i)%axis_dof  = 2
+        endif
       else
-        if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
+        if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
+           node_list%node(i)%axis_node = .true.
+           node_list%node(i)%axis_dof  = 2
+         endif  
       endif
     else
-      if (i .le. n_tht) node_list%node(i)%axis_node = .true.
+      if (i .le. n_tht) then
+         node_list%node(i)%axis_node = .true.
+         node_list%node(i)%axis_dof  = 2
+      endif   
     endif
   endif
 

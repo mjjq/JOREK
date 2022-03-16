@@ -1608,6 +1608,9 @@ do i=1,n_vertex_max
                                    * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Ti,8)&
 
                             !=====================Placeholder for future parallel viscous terms============
+!============================Behold, the parallel viscous heating terms!=============
+                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y) * xjac * tstep &
+!==========================End of viscous heating terms==============================
 
                             !=========================End of the parallel viscous terms============
                             !===================== Additional terms from friction terms============
@@ -3059,6 +3062,9 @@ do i=1,n_vertex_max
                                 - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * ((r0+rimp0*alpha_i)*rn0*Sion_T) * xjac * theta * tstep &
                                 - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp)        * xjac * theta * tstep &
                                !==============================End of friction terms=================
+!============================Behold, the parallel viscous heating terms!=============
+                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
+!==========================End of viscous heating terms==============================
  
                                 + tgnum_Ti* 0.25d0 / BigR * 2.d0 * vpar0*vpar &
                                       * Ti0 * ((r0_x+alpha_i*rimp0_x)*ps0_y - (r0_y+alpha_i*rimp0_y)*ps0_x + F0 / BigR * (r0_p+alpha_i*rimp0_p))                               &

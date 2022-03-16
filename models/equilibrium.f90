@@ -371,7 +371,6 @@ else
 endif
 
 if (my_id == 0) then
-        
   ! Update psi axis and boundary with new values from the last iteration of equilibrium solvers 
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
         
@@ -568,7 +567,7 @@ if (my_id == 0) then
     endif
 
   enddo
-
+  
   ! --- Find flux surfaces and plot them; determine the q-profile.  
   if (xpoint2 .and. (n_flux .gt. 1)) then
     

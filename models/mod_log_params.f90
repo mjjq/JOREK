@@ -506,6 +506,18 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'Dn_pol_sc_num         ', Dn_pol_sc_num
   write(*,REAL_FMT) 'Dn_p_sc_num           ', Dn_p_sc_num
 
+  write(*,REAL_FMT) 'vms_coeff_AR           ', vms_coeff_AR
+  write(*,REAL_FMT) 'vms_coeff_AZ           ', vms_coeff_AZ
+  write(*,REAL_FMT) 'vms_coeff_A3           ', vms_coeff_A3
+  write(*,REAL_FMT) 'vms_coeff_UR           ', vms_coeff_UR
+  write(*,REAL_FMT) 'vms_coeff_UZ           ', vms_coeff_UZ
+  write(*,REAL_FMT) 'vms_coeff_Up           ', vms_coeff_Up
+  write(*,REAL_FMT) 'vms_coeff_rho          ', vms_coeff_rho
+  write(*,REAL_FMT) 'vms_coeff_T            ', vms_coeff_T
+  write(*,REAL_FMT) 'vms_coeff_Te           ', vms_coeff_Te
+  write(*,REAL_FMT) 'vms_coeff_Ti           ', vms_coeff_Ti
+  write(*,REAL_FMT) 'vms_coeff_rhon         ', vms_coeff_rhon
+  
   if(jorek_model == 004 ) then
     write(*,REAL_FMT) 'HW_coef               ', HW_coef(1:2)
   endif

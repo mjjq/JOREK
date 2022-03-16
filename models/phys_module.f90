@@ -277,6 +277,12 @@ module phys_module
   logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   logical :: add_sources_in_sc    !< Whether to add effect of sources in shock-capturing stabilization or not
 
+  !> @name VMS terms
+  real*8     :: vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3
+  real*8     :: vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up
+  real*8     :: vms_coeff_T, vms_coeff_Te, vms_coeff_Ti
+  real*8     :: vms_coeff_rho, vms_coeff_rhon
+  
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)
   real*8  :: tstep_prev                 !< Previous time-step if using variable dt Gears

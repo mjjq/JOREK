@@ -123,7 +123,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs, use_pcs_full,            &
-                cte_current_FB_fact, Z_xpoint_limit
+                cte_current_FB_fact, Z_xpoint_limit,                &
+                vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3,           &
+                vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up,           &
+                vms_coeff_rho, vms_coeff_T
 
 
 if (my_id .eq. 0) then

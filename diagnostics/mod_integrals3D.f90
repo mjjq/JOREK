@@ -1336,7 +1336,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         vpar_t = 0.d0
 #endif
 
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+#if (defined WITH_Neutrals)
         call interp(node_list,element_list,m_elm,var_rhon,in,sg,tg,rn,rn_s,rn_t,rn_st,rn_ss,rn_tt)
         rhon_s = rhon_s + rn_s * HZ(in,mp)
         rhon_t = rhon_t + rn_t * HZ(in,mp)

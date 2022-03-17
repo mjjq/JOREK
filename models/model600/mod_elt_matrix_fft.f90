@@ -5274,7 +5274,6 @@ subroutine construct_radiation_parameters()
 
   implicit none
 
-  ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density  !electron density (SI)
   if (with_TiTe) then 
     Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
     Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected

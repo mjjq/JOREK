@@ -1254,7 +1254,7 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    - (GAMMA - 1.) * v * BigR * vpar0*visco_par * (vpar0_xx + vpar0_x/Bigr + vpar0_yy) * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * vpar0*visco_par * (vpar0_xx + vpar0_x/Bigr + vpar0_yy) * xjac * tstep &
 !==========================End of viscous heating terms==============================
 
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
@@ -2115,8 +2115,8 @@ do ms=1, n_gauss
                        - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                       + (GAMMA - 1.) * v * BigR * vpar*visco_par*(vpar0_xx + vpar0_x/Bigr + vpar0_yy)  * xjac * theta * tstep &
-                       + (GAMMA - 1.) * v * BigR * vpar0*visco_par*(vpar_xx + vpar_x/Bigr + vpar_yy)    * xjac * theta * tstep &
+                       - (GAMMA - 1.) * v * BigR * vpar*visco_par*(vpar0_xx + vpar0_x/Bigr + vpar0_yy)  * xjac * theta * tstep &
+                       - (GAMMA - 1.) * v * BigR * vpar0*visco_par*(vpar_xx + vpar_x/Bigr + vpar_yy)    * xjac * theta * tstep &
 !==========================End of viscous heating terms==============================
  
                    + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &

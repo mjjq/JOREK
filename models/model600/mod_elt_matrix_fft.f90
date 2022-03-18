@@ -4911,6 +4911,9 @@ subroutine construct_thermalization_terms()
   
   implicit none
 
+  ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
+  if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
+
   if (with_impurities) then
      if (Te_corr_eV < 10.*Z_imp**2) then
         lambda_e_imp = 23. - log((ne_SI*1.d-6)**0.5*Z_imp*Te_corr_eV**(-1.5))
@@ -4993,9 +4996,6 @@ subroutine construct_thermalization_terms()
   else
      Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
      dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
-
-     ne_SI          = r0_corr * 1.d20 * central_density ! electron density (SI)
-     if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
 
      lambda_e_bg  = 23. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.5)) ! Assuming bg_charge is 1! 
      nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
@@ -5135,6 +5135,7 @@ subroutine construct_radiation_parameters()
 
   implicit none
 
+  ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
   if (with_TiTe) then 
     Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
     Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected

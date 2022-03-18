@@ -114,6 +114,15 @@ if (ifail .ne. 0) then
   dss2 = dss2_save
 endif
 
+! --- Derivatives are normally around 0.5 along the flux line
+! --- Refinement sometimes goes wrong and give stupid values above 1.0, even up to 3.0 or 4.0
+! --- This causes the flux surface line to wrap on itself, if this happens, use the initial guess
+! --- Use a threshold of 0.7
+if (abs(drr1) .gt. 0.7) drr1 = drr1_save
+if (abs(drr2) .gt. 0.7) drr2 = drr2_save
+if (abs(dss1) .gt. 0.7) dss1 = dss1_save
+if (abs(dss2) .gt. 0.7) dss2 = dss2_save
+
 surface_list%flux_surfaces(j)%n_pieces                                      = surface_list%flux_surfaces(j)%n_pieces + 1
 surface_list%flux_surfaces(j)%elm(surface_list%flux_surfaces(j)%n_pieces)   = i_elm
 surface_list%flux_surfaces(j)%s(1:4,surface_list%flux_surfaces(j)%n_pieces) = (/ rr1, drr1, rr2, drr2 /)

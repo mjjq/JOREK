@@ -1363,7 +1363,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         rhon_s = 0.d0
         rhon_t = 0.d0
 #endif
-#if (defined WITH_Neutrals)
+#if (defined WITH_Impurities)
         call interp(node_list,element_list,m_elm,var_rhoimp,in,sg,tg,rimp,rimp_s,rimp_t,rimp_st,rimp_ss,rimp_tt)
         rhoimp_s = rhoimp_s + rimp_s * HZ(in,mp)
         rhoimp_t = rhoimp_t + rimp_t * HZ(in,mp)

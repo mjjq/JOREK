@@ -144,9 +144,6 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-real*8  :: source_neutral
-#endif
 #ifdef WITH_Impurities
 real*8  :: source_bg, source_imp
 #endif
@@ -186,8 +183,7 @@ real*8  :: dT0e_corr_dT, Ti_corr_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
-real*8     :: Lrad_imp, frad_bg
-integer    :: ion_i, ion_k, i_phi
+integer    :: ion_i, ion_k
 #endif
 #ifdef WITH_Impurities
 #ifdef WITH_TiTe
@@ -205,6 +201,7 @@ real*8  :: alpha_imp, dalpha_imp_dT, beta_imp, dbeta_imp_dT
 
 ! Additional variables related to the radiated power
 #if (defined WITH_Neutrals)
+real*8  :: source_neutral
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
@@ -215,14 +212,13 @@ real*8     :: Srec_T, dSrec_dT                                ! Recombination ra
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
 !   -Radiation from background impurities
-real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg              ! Retain hard-coded fitting for argon
-real*8     :: Lrad_imp
-integer*8  :: i_phi
+real*8     :: Arad_bg, Brad_bg, Crad_bg                       ! Retain hard-coded fitting for argon
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
 #endif
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-integer    :: i_imp                                           ! Loop for more than one background impurity
+integer    :: i_imp, i_phi                                    ! Loop for more than one background impurity
+real*8     :: frad_bg, Lrad_imp                               ! Retain hard-coded fitting for argon
 #endif
 
 #ifndef NOMPIVERSION

@@ -187,7 +187,7 @@ real*8  :: dT0e_corr_dT, Ti_corr_eV
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
 real*8     :: Lrad_imp, frad_bg
-integer    :: ion_i, ion_k, i_phi, i_imp
+integer    :: ion_i, ion_k, i_phi
 #endif
 #ifdef WITH_Impurities
 #ifdef WITH_TiTe
@@ -204,7 +204,7 @@ real*8  :: alpha_imp, dalpha_imp_dT, beta_imp, dbeta_imp_dT
 #endif /* WITH_Impurities */
 
 ! Additional variables related to the radiated power
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (defined WITH_Neutrals)
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
@@ -219,6 +219,9 @@ real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg              ! Retain hard-code
 real*8     :: Lrad_imp
 integer*8  :: i_phi
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
+#endif
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
 integer    :: i_imp                                           ! Loop for more than one background impurity
 #endif
 

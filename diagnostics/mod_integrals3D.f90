@@ -393,13 +393,13 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           eta_T_ohm,                                                              &
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-!$omp           i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,                     &
-!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ns_radius_tmp,                              &
+!$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,      &
+!$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ns_radius_tmp, rimp0, rimp0_corr,           &
 !$omp           spi_psi_tmp, spi_grad_psi_tmp,                                                 &
 !$omp           n_spi_tmp, source_tmp, ns_shape,                                               &
 #endif
 #ifdef WITH_Impurities
-!$omp           source_bg, source_imp, rimp0, rimp0_corr,                                      &
+!$omp           source_bg, source_imp,                                                         &
 !$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT,                                       &
 !$omp           ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,                                 &
 !$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV,                                 &
@@ -412,7 +412,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           alpha_imp, beta_imp, dalpha_imp_dT,                                            &
 #endif
 #if (defined WITH_Neutrals)
-!$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral, rn0, rn0_corr,     &
+!$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
 !$omp           LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,                        &
 !$omp           Arad_bg, Brad_bg, Crad_bg,                                                     &
 !$omp           coef_prad_si,                                                                  &

@@ -1473,6 +1473,9 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       dne_JOREK_dx = drhodx + alpha_e * drhoimpdx + rimp0_corr * dalpha_e_dT * dTedx
       dne_JOREK_dy = drhody + alpha_e * drhoimpdy + rimp0_corr * dalpha_e_dT * dTedy
 #else /* WITH_TiTe */
+      alpha_i       = m_i_over_m_imp - 1.
+      alpha_e       = m_i_over_m_imp*Z_imp - 1.
+      dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
       alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
       beta_imp     = m_i_over_m_imp*Z_imp - 1.
       dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT

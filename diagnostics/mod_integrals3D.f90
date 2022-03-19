@@ -198,6 +198,7 @@ real*8  :: alpha_i, alpha_e, dalpha_e_dT
 real*8     :: nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i
 #else /* WITH_TiTe */
 !   -Coefficients related to Z_imp
+real*8  :: alpha_i, alpha_e, dalpha_e_dT
 real*8  :: alpha_imp, dalpha_imp_dT, beta_imp, dbeta_imp_dT
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */

@@ -49,6 +49,7 @@ real*8     :: normal_sign, normal_sign3
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
 real*8     :: ps0, ps0_s, ps0_t, ps0_x, ps0_y, Vpar0, r0_corr, T0_corr, Ti0_corr, Te0_corr, cs0  
 real*8     :: vpar0_s, vpar0_t, vpar0_x, vpar0_y 
+real*8     :: vpar_s, vpar_t, vpar_x, vpar_y 
 real*8     :: psi, psi_s, psi_t, vpar, T, Ti, Te, cs_T, cs_Ti, cs_Te
 real*8     :: T0,   T0_s,  T0_t, T0_p
 real*8     :: Ti0, Ti0_s, Ti0_t, Ti0_x, Ti0_y, Ti0_p

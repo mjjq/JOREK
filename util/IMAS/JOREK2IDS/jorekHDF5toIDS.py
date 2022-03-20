@@ -150,8 +150,8 @@ if __name__ == "__main__":
             quad_conn_array = ien
 
             #xyz for quad
-            r0 = x[0, 0]
-            z0 = x[1, 0]
+            r0 = x[0, 0, 0]
+            z0 = x[0, 1, 0]
             rz = np.zeros((np.shape(r0)[0], 2))
             rz[:, 0] = r0
             rz[:, 1] = z0
@@ -160,7 +160,7 @@ if __name__ == "__main__":
             #val for quad
             val0 = values[:, 0, :, :]
             tor = [1, 1, 0, 1, 0]
-            val = np.einsum('ijk,j->ik', val0, tor)
+            #val = np.einsum('ijk,j->ik', val0, tor)
             
             logger.info ("* vtk_quad_conn_array:")
             logger.info(vtk_quad_conn_array)
@@ -280,10 +280,10 @@ if __name__ == "__main__":
 
             gr2d = mhd_grid_ggd[0].space[0]
             gr2d.geometry_type.index = 0  # Standard geometry (non Fourier)
-            x_shape = np.shape(x)[2]
+            x_shape = np.shape(x)[3]
             # coordinate and derivates (s, t, mixed)
             for j in range(x_shape):
-                gr2d.objects_per_dimension[0].object[j].geometry_2d = x[:, :, j]
+                gr2d.objects_per_dimension[0].object[j].geometry_2d = x[:, :,0, j]
 
             # size 1, d_{uk}, d_{vk}, d{uv}d{vk} as in Daan Van Vugt thesis
             size_shape = np.shape(size)[2]
@@ -294,7 +294,7 @@ if __name__ == "__main__":
 
             
         quantity_names_list = ["psi", "u", "j", "w", "rho", "T", "v_par"]
-        quantities_array = val
+        #quantities_array = val
         # print("quantity_names_list: ", quantity_names_list)
         # print("quantities_array: ", quantities_array)
 
@@ -352,7 +352,7 @@ if __name__ == "__main__":
 
             IDSQuantityPath.grid_index = 1
             IDSQuantityPath.grid_subset_index = 1
-            IDSQuantityPath.values = val[i, :]
+            #IDSQuantityPath.values = val[i, :]
             IDSQuantityPath.coefficients = reshape_arr
 
             logger.info(f"Writing quantity array: {label}")

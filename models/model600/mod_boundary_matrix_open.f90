@@ -277,8 +277,8 @@ do ms=1, n_gauss
 
     if (with_vpar) then
       Vpar0   = eq_g(mp,var_vpar,ms)
-      vpar0_s = eq_s(mp,var_vpar,ms) 
-      vpar0_t = eq_t(mp,var_vpar,ms)   
+      vpar0_s = 0.d0!eq_s(mp,var_vpar,ms)  Placeholder for future implementation
+      vpar0_t = 0.d0!eq_t(mp,var_vpar,ms)   
       vpar0_x = (   y_t(ms) * vpar0_s - y_s(ms) * vpar0_t ) / xjac
       vpar0_y = ( - x_t(ms) * vpar0_s + x_s(ms) * vpar0_t ) / xjac
     else

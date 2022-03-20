@@ -37,10 +37,15 @@ real*8     :: ws, xjac,  BigR, phi, eps_cyl
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6
 real*8     :: psi_norm, theta, zeta
+real*8     :: Zbig, BB2, bdotn, gradvpar0dotn, gradvpardotn, factor, psi_ss, vpar_ss
+real*8     :: R_inside, Z_inside, R_mid, Z_mid, R_cnt, Z_cnt, normal(2), normal_direction(2)
+real*8     :: normal_sign, normal_sign3
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
 real*8     :: ps0, ps0_s, Vpar0, r0, T0  
 real*8     :: psi, psi_s, vpar, rho,  T   
+real*8     :: vpar0_s, vpar0_t, vpar0_x, vpar0_y 
+real*8     :: vpar_s, vpar_t, vpar_x, vpar_y 
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, element_size_ij, element_size_kl
 logical    :: xpoint2
 integer    :: n_tor_local
@@ -57,6 +62,13 @@ eq_g = 0.d0; eq_s = 0.d0;  eq_ss = 0.d0; eq_p = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0; 
  
+R_mid = sum(nodes(1:2)%x(1,1,1)) / 2.d0     ! mid point on boundary (approx.)
+Z_mid = sum(nodes(1:2)%x(1,1,2)) / 2.d0
+R_cnt = sum(nodes(1:4)%x(1,1,1)) / 4.d0     ! center point within element (approx.)
+Z_cnt = sum(nodes(1:4)%x(1,1,2)) / 4.d0
+
+normal_direction = (/R_mid - R_cnt, Z_mid - Z_cnt /) / norm2((/R_mid - R_cnt, Z_mid - Z_cnt /))
+
 do i=1,2
   
   do j=1,2
@@ -102,6 +114,11 @@ do ms=1, n_gauss
 
    ws = wgauss(ms)
 
+   normal_direction = (/x_g(ms) - R_cnt, y_g(ms) - Z_cnt /) / norm2((/x_g(ms) - R_cnt, y_g(ms) - Z_cnt /))
+ 
+   normal = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
+   normal = normal / norm2(normal)
+
    do mp = 1, n_plane
 
      ps0   = eq_g(mp,1,ms)
@@ -110,6 +127,12 @@ do ms=1, n_gauss
      r0    = eq_g(mp,5,ms)
      T0    = eq_g(mp,6,ms)
      Vpar0 = eq_g(mp,7,ms)
+     vpar0_s = eq_s(mp,var_vpar,ms) 
+     vpar0_t = eq_t(mp,var_vpar,ms)   
+     vpar0_x = (   y_t(ms) * vpar0_s - y_s(ms) * vpar0_t ) / xjac
+     vpar0_y = ( - x_t(ms) * vpar0_s + x_s(ms) * vpar0_t ) / xjac
+
+     gradvpar0dotn = (+ vpar0_x * normal(1) + vpar0_y * normal(2)) 
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)
      if (xpoint2) then
@@ -135,7 +158,8 @@ do ms=1, n_gauss
 
            rhs_ij_5 = + v * density_reflection * r0 * vpar0 * ps0_s * tstep            ! right hand side equation 5
 
-           rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * tstep     ! right hand side equation 6
+           rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * tstep &   ! right hand side equation 6
+                      - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn * tstep  
 
            ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
            ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
@@ -154,8 +178,16 @@ do ms=1, n_gauss
                  psi   = H1(k,l,ms)   * element_size_kl * HZ(in,mp)
 
                  psi_s = H1_s(k,l,ms) * element_size_kl * HZ(in,mp)
+                 psi_t = H1(k,l,ms)   * element_size_kl * HZ(in,mp) * element_size_perp
 
                  rho   = psi    ;    T   = psi   ;    vpar   = psi
+
+                 vpar_s = psi_s
+                 vpar_t = psi_t
+                 vpar_x = (   y_t(ms) * vpar_s - y_s(ms) * vpar_t ) / xjac
+                 vpar_y = ( - x_t(ms) * vpar_s + x_s(ms) * vpar_t ) / xjac
+
+                 gradvpardotn  = (+ vpar_x * normal(1) + vpar_y * normal(2)) 
 
                  amat_51 = - v * density_reflection * r0  * vpar0 * psi_s * theta * tstep 
                  amat_55 = - v * density_reflection * rho * vpar0 * ps0_s * theta * tstep 
@@ -164,7 +196,9 @@ do ms=1, n_gauss
                  amat_61 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar0 * psi_s * theta * tstep 
                  amat_65 = + v * (gamma_sheath-1.d0) * rho * T0 * vpar0 * ps0_s * theta * tstep 
                  amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * theta * tstep 
-                 amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * theta * tstep 
+                 amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * theta * tstep &
+                           + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn * theta * tstep &
+                           + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn * theta * tstep
 
                  index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix                
 

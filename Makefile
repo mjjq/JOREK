@@ -49,6 +49,7 @@ doc docs:
 # Directories containing sources, ordered by number of files
 DIRS := diagnostics			\
 	models				\
+	communication/IMAS		\
 	communication			\
 	grids/grid_utils		\
 	solvers				\

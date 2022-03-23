@@ -50,6 +50,7 @@ doc docs:
 DIRS := diagnostics			\
 	models				\
 	communication			\
+	communication/IMAS              \
 	grids/grid_utils		\
 	solvers				\
 	models/$(MODEL)			\

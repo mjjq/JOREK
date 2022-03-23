@@ -24,7 +24,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 restart, regrid, write_ps, time_evol_theta,         &
                 time_evol_zeta, force_horizontal_Xline,             &
                 Mach1_openBC, thermalization,                       &
-                eta_ARAZ_on, tauIC_ARAZ_on,                         &
+                eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       & 
+                tauIC_ARAZ_on,                                      &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &
@@ -52,8 +53,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 F0, gamma, gamma_stangeby,                          &
                 gamma_sheath_i, gamma_sheath_e,                     &
                 zjz_0, zjz_1, zj_coef,                              &
-                rho_0, rho_1, rho_coef,                             &
+                rho_0, rho_1, rho_coef, rho_min,                    &
                 T_0,   T_1,   T_coef, T_min,                        &
+				T_min_neg,rho_min_neg,                              &
+				corr_neg_temp_coef, corr_neg_dens_coef,             &
                 Ti_0,  Ti_1,  Ti_coef,                              &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
@@ -107,19 +110,20 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 max_steps_noUpdate,                                 &
                 keep_n0_const, linear_run, export_for_nemec,        &
                 output_bnd_elements,                                &
-                wall_file,                                          &
+                wall_file, Z_xpoint_limit,                          &
                 first_target_point, last_target_point,              &
                 n_limiter, R_limiter, Z_limiter,                    &
                 spi_tor_rot, tor_frequency, spi_num_vol,            &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection,                                 &
-                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
+                ns_deltaphi, ns_delta_minor_rad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
-                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                ns_radius_ratio, ns_radius_min, spi_angle,          &
                 spi_L_inj, spi_L_inj_diff,                          &
+                drift_distance, energy_teleported,                  &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg,                        &
@@ -221,6 +225,14 @@ if (my_id .eq. 0) then
     tstep_n(1) = tstep
     nstep_n    = 0
     nstep_n(1) = nstep
+  endif
+
+  ! --- Checking consistency of eta_ARAZ parameters
+  if (eta_ARAZ_on == .true.) then
+     if (eta_ARAZ_const .ne. 0) then
+        write(*,*) 'One should not use both eta_ARAZ_on and eta_ARAZ_const simultaneously, to avoid double-counting. Please use eta_ARAZ_on = .t. with eta_ARAZ_const = 0.d0, or eta_ARAZ_on = .f. with eta_ARAZ_const .ne. 0'
+        stop
+     endif
   endif
   
   call allocate_live_data()

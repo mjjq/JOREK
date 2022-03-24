@@ -73,6 +73,11 @@ ifeq ($(COMPILER_FAMILY), intel)
   else
     FLAGS += -openmp
   endif
+
+  ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -ge 19; echo $$?),0)
+    FFLAGS += -warn noexternal
+  endif
+
   FFLAGS += -warn all
   FFLAGS += -warn nointerfaces
   FFLAGS += -warn nounused
@@ -218,8 +223,9 @@ endif
 
 ifeq (1, $(USE_PASTIX6))
   DEFINES  := $(DEFINES) -DUSE_PASTIX6
-  LIBS     := $(LIBS) $(LIB_PASTIX6)  $(LIB_PASTIX6_BLAS)
-  INCLUDES := $(INCLUDES) $(INC_PASTIX6)
+  LIBS     := $(LIBS) $(LIB_PASTIX)
+  INCLUDES := $(INCLUDES) $(INC_PASTIX)
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
 endif
 
 ifeq (1, $(USE_WSMP))
@@ -268,6 +274,10 @@ ifeq (1, $(USE_STRUMPACK))
   LIBS     := $(LIBS) $(STRUMPACKLIB)
   INCLUDES := $(INCLUDES) $(STRUMPACKINC)
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
+endif
+
+ifeq (1, $(USE_BICGSTAB))
+  DEFINES  := $(DEFINES) -DUSE_BICGSTAB
 endif
 
 

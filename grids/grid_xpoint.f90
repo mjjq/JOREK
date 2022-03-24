@@ -1395,7 +1395,7 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   newnode_list%node(i)%axis_node = .false.
-  if ( fix_axis_nodes .and. (i .le. n_tht) ) newnode_list%node(i)%axis_node = .true.
+  if ( fix_axis_nodes .and. (i .lt. n_tht) ) newnode_list%node(i)%axis_node = .true.
 
   do k=1,n_degrees
 
@@ -1403,7 +1403,7 @@ do i=1,newnode_list%n_nodes
     newnode_list%node(i)%index(k) = index
 
     ! --- Remove Axis nodes
-    if ((force_central_node) .and. (i .gt. 1) .and. (i .le. n_tht) .and. (k.eq.1)) then
+    if ((force_central_node) .and. (i .gt. 1) .and. (i .lt. n_tht) .and. (k.eq.1)) then
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
     endif
@@ -1491,7 +1491,7 @@ newnode_list%node(index_xpoint+1)%values(1,2:n_degrees,1) = 0.d0
 newnode_list%node(index_xpoint+2)%values(1,2:n_degrees,1) = 0.d0
 newnode_list%node(index_xpoint+3)%values(1,2:n_degrees,1) = 0.d0
 
-do j=1,n_tht - 1
+do i=1,n_tht - 1
   newnode_list%node(i)%values(1,2:n_degrees,1) = 0.d0
 enddo
 

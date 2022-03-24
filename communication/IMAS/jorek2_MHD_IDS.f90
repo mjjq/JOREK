@@ -162,14 +162,14 @@ program jorek2_MHD_IDS
     endif
 
     ! --- Ion temperature
-    if (variable_names(i) == 'Ti') then      
+    if (variable_names(i) == 'T_i') then      
       allocate( mhd_ids%ggd(i_slice)%t_i_average(n_grid_sub))
       ggd_scalar => mhd_ids%ggd(i_slice)%t_i_average(grid_sub_ind)
       call fill_Bezier_coefficients( ggd_scalar, node_list, var_Ti, grid_ind, grid_sub_ind, fact_T )
     endif
 
     ! --- Electron temperature
-    if (variable_names(i) == 'Te') then      
+    if (variable_names(i) == 'T_e') then      
       allocate( mhd_ids%ggd(i_slice)%electrons%temperature(n_grid_sub))
       ggd_scalar => mhd_ids%ggd(i_slice)%electrons%temperature(grid_sub_ind)
       call fill_Bezier_coefficients( ggd_scalar, node_list, var_Te, grid_ind, grid_sub_ind, fact_T )

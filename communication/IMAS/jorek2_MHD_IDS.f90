@@ -33,7 +33,7 @@ program jorek2_MHD_IDS
   type(ids_generic_grid_aos3_root),   pointer :: grid
   
   character(len=200):: user, database
-  integer:: idx, shot_number, run_number, num_nodes
+  integer:: idx, shot_number, run_number, num_nodes, stat
   
   integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
   ! **********************************************************************************
@@ -185,7 +185,15 @@ program jorek2_MHD_IDS
   enddo
 
   ! --- Put data into local database
-  call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3') ! 3 is the database version  
+  ! --- Try to open shot and number if it exists
+  write(*,*) '  Adding MHD IDS to shot run = ', shot_number, run_number
+  call imas_open_env( 'ids', shot_number,run_number,idx,user,database,'3',stat)! 3 is the database version  
+
+  if (stat /= 0) then  ! --- Create a new shot if it doesn't exist
+    write(*,*) '  Shot/run number did not exist, creating new one...'
+    call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3') 
+  endif
+
   call ids_put(idx,'mhd',mhd_ids)
   call imas_close(idx)
 

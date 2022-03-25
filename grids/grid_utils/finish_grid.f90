@@ -357,6 +357,7 @@ index = 0
 do i=1,node_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
+  node_list%node(i)%axis_dof  = 0  
   if (include_axis) then
     if (include_xpoint) then
       if (xcase .ne. DOUBLE_NULL) then
@@ -373,7 +374,7 @@ do i=1,node_list%n_nodes
     else
       if (i .le. n_tht) then
          node_list%node(i)%axis_node = .true.
-         node_list%node(i)%axis_dof  = 2
+         node_list%node(i)%axis_dof  = 3
       endif   
     endif
   endif

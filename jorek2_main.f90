@@ -1403,7 +1403,7 @@ required = 0
 #endif
 
 #ifdef USE_BICGSTAB
-    call bicgstab_finalize()
+    if (gmres) call bicgstab_finalize()
 #endif
 
 #ifdef USE_PASTIX6

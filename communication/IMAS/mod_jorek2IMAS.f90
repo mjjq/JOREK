@@ -4,11 +4,12 @@ module mod_jorek2IMAS
 #ifdef USE_IMAS
   use ids_schemas !, only: ids_equilibrium
   use ids_routines, only: imas_open_env, &
-     imas_create_env, imas_close, ids_get, ids_put
-#endif
+     imas_create_env, imas_close, ids_get, ids_put, ids_put_slice
 
   use mod_parameters 
   use data_structure
+  use nodes_elements
+  use constants
   
   implicit none
   
@@ -17,6 +18,266 @@ module mod_jorek2IMAS
  
   contains
 
+
+  subroutine fill_mhd_IDS(first_step, idx)  
+
+    use phys_module, only : t_now, F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass
+
+    implicit none
+
+    ! --- External parameters
+    logical,            intent(in) :: first_step   ! is this the first step?
+    integer,            intent(in) :: idx          ! IMAS identifier
+
+   
+    ! --- Local parameters 
+    integer    :: i, j, k, m, etype, irst, int, i_var, i_tor, index, index_node, my_id, ierr
+    real*8     :: fact_T, fact_time, fact_v, fact_zj, fact_psi, rho0, fact_phi, fact_rho
+    
+    
+    ! **********************************************************************************
+    ! ******************************* IMAS **********************************************
+    ! **********************************************************************************
+    type(ids_mhd),                      target  :: mhd_ids
+    type(ids_generic_grid_scalar),      pointer :: ggd_scalar
+    type(ids_generic_grid_aos3_root),   pointer :: grid
+    
+    integer:: num_nodes, stat
+    
+    integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
+    ! **********************************************************************************
+  
+    ! --- Number of grids and grid subsets
+    n_grid       = 1
+    n_grid_sub   = 1
+    grid_ind     = 1  ! Index
+    grid_sub_ind = 1  ! Index
+  
+    if (first_step) then
+      ! --- Put the grid in GGD
+      allocate( mhd_ids%grid_ggd(n_grid) )
+      grid => mhd_ids%grid_ggd(grid_ind)
+      call grid2ggd( grid, node_list, element_list )
+    endif
+
+    ! --- Time parameter  
+    mhd_ids%ids_properties%homogeneous_time = 1
+ 
+    ! --- Normalization factors for IMAS
+    rho0               = central_density * 1.d20 * central_mass * mass_proton
+    sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
+    sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
+  
+    fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
+    fact_time =  sqrt_mu0_rho0 
+    fact_v    =  1.d0 /  sqrt_mu0_rho0 
+    fact_phi  =  1.d0 /  sqrt_mu0_rho0 * F0 
+    fact_zj   = -1.d0 / mu_zero * (-1.d0)   ! Last sign due to COCOS transformation
+    fact_rho  =  rho0 
+    fact_T    =  1.d0 / ( EL_CHG * mu_zero * central_density * 1.d20 )   
+  
+  
+    ! --- Set times
+    n_slice = 1  
+    i_slice = 1
+  
+    allocate(  mhd_ids%time(n_slice)  )
+    mhd_ids%time = t_now * fact_time
+ 
+    allocate( mhd_ids%ggd(n_slice) )
+
+    ! --- Fill MHD data
+    do i=1, n_var 
+  
+      ! --- Poloidal magnetic flux
+      if (variable_names(i) == 'Psi') then      
+        allocate( mhd_ids%ggd(i_slice)%psi(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%psi(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_psi, grid_ind, grid_sub_ind, fact_psi )
+      endif
+  
+      ! --- Electrostatic potential 
+      if (variable_names(i) == 'u') then      
+        allocate( mhd_ids%ggd(i_slice)%phi_potential(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%phi_potential(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_u, grid_ind, grid_sub_ind, fact_phi )
+      endif
+  
+      ! --- Toroidal current density. THIS IS NOT CORRECT!!!  A FACTOR 1/R IS MISSING!!!!!!!!!!
+      if (variable_names(i) == 'zj') then      
+        allocate( mhd_ids%ggd(i_slice)%j_tor(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%j_tor(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_zj, grid_ind, grid_sub_ind, fact_zj )
+      endif
+  
+      ! --- Toroidal vorticity  THIS IS NOT CORRECT!!!  A FACTOR R IS MISSING!!!!!!!!!!
+      if (variable_names(i) == 'omega') then      
+        allocate( mhd_ids%ggd(i_slice)%vorticity(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%vorticity(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_w, grid_ind, grid_sub_ind, fact_v )
+      endif
+  
+      ! --- Mass density
+      if (variable_names(i) == 'rho') then      
+        allocate( mhd_ids%ggd(i_slice)%mass_density(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%mass_density(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_rho, grid_ind, grid_sub_ind, fact_rho )
+      endif
+  
+      ! --- Total temperature 
+      if (variable_names(i) == 'T') then      
+        ! --- Te
+        allocate( mhd_ids%ggd(i_slice)%electrons%temperature(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%electrons%temperature(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_T, grid_ind, grid_sub_ind, fact_T*0.5d0 )
+  
+        ! --- Ti
+        allocate( mhd_ids%ggd(i_slice)%t_i_average(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%t_i_average(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_T, grid_ind, grid_sub_ind, fact_T*0.5d0 )
+      endif
+  
+      ! --- Ion temperature
+      if (variable_names(i) == 'T_i') then      
+        allocate( mhd_ids%ggd(i_slice)%t_i_average(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%t_i_average(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_Ti, grid_ind, grid_sub_ind, fact_T )
+      endif
+  
+      ! --- Electron temperature
+      if (variable_names(i) == 'T_e') then      
+        allocate( mhd_ids%ggd(i_slice)%electrons%temperature(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%electrons%temperature(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_Te, grid_ind, grid_sub_ind, fact_T )
+      endif
+  
+      ! --- Parallel velocity. NOT CORRECT!!!!!!! A FACTOR B_TOT IS MISSING!!!!!!!!!!
+      if (variable_names(i) == 'v_par') then      
+        allocate( mhd_ids%ggd(i_slice)%velocity_parallel(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%velocity_parallel(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_vpar, grid_ind, grid_sub_ind, fact_v )
+      endif
+  
+    enddo
+  
+    ! --- Put data into local database
+    if (first_step) then  
+      call ids_put(idx,'mhd',mhd_ids,stat)
+    else
+      call ids_put_slice(idx,'mhd',mhd_ids,stat)
+    endif
+
+    if (stat==0) then
+       write(*,*) '    MHD IDS exported'
+    else
+       write(*,*) '    Something went wrong writting the MHD IDS!'
+    endif
+
+  end subroutine fill_mhd_IDS
+
+ 
+
+
+
+
+
+
+  subroutine fill_radiation_IDS(first_step, idx)  
+
+    use phys_module, only : t_now, F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass, imp_type, &
+                           gamma, index_main_imp
+    implicit none
+
+    ! --- External parameters
+    logical,      intent(in) :: first_step   ! is this the first step?
+    integer,      intent(in) :: idx          ! IMAS identifier
+   
+    ! --- Local parameters 
+    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
+    real*8     :: fact_time, rho0, fact_rad
+    
+    
+    ! **********************************************************************************
+    ! ******************************* IMAS **********************************************
+    ! **********************************************************************************
+    type(ids_radiation),                target  :: radiation_ids
+    type(ids_generic_grid_scalar),      pointer :: ggd_scalar
+    type(ids_generic_grid_aos3_root),   pointer :: grid
+    
+    integer:: num_nodes, stat
+    
+    integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
+    ! **********************************************************************************
+  
+    ! --- Number of grids and grid subsets
+    n_grid       = 1
+    n_grid_sub   = 1
+    grid_ind     = 1  ! Index
+    grid_sub_ind = 1  ! Index
+  
+    if (first_step) then
+      ! --- Put the grid in GGD
+      allocate( radiation_ids%grid_ggd(n_grid) )
+      grid => radiation_ids%grid_ggd(grid_ind)
+      call grid2ggd( grid, node_list, element_list )
+    endif
+
+    ! --- Time parameter  
+    radiation_ids%ids_properties%homogeneous_time = 1
+ 
+    ! --- Normalization factors for IMAS
+    rho0               = central_density * 1.d20 * central_mass * mass_proton
+    sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
+    sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
+
+    fact_rad = 1.d0 / ( (gamma-1.d0) * MU_ZERO * sqrt_mu0_rho0 )
+    fact_time =  sqrt_mu0_rho0 
+  
+    ! --- Set times
+    n_slice = 1  
+    i_slice = 1
+    allocate(  radiation_ids%time(n_slice)  )
+    radiation_ids%time = t_now * fact_time
+ 
+    ! --- Fill radiation data 
+    var_rad = 2
+  
+    allocate( radiation_ids%process(1))   ! --- 1 type of radiation
+    allocate( radiation_ids%process(1)%ggd(n_slice) )
+    allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1))
+    allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1)%emissivity(n_grid_sub))
+    allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1)%label(1) )  
+    allocate( radiation_ids%process(1)%identifier%name(1) )
+
+    radiation_ids%process(1)%identifier%name  = "Line radiation"
+    radiation_ids%process(1)%identifier%index = 10
+
+    radiation_ids%process(1)%ggd(i_slice)%ion(1)%label = imp_type(index_main_imp) 
+  
+    ggd_scalar => radiation_ids%process(1)%ggd(i_slice)%ion(1)%emissivity(grid_sub_ind)
+    call fill_Bezier_coefficients( ggd_scalar, aux_node_list, var_rad, grid_ind, grid_sub_ind, fact_rad )
+
+    ! --- Put data into local database
+    if (first_step) then  
+      call ids_put(idx,'radiation',radiation_ids,stat)
+    else
+      call ids_put_slice(idx,'radiation',radiation_ids,stat)
+    endif
+
+    if (stat==0) then
+       write(*,*) '    Radiation IDS exported'
+    else
+       write(*,*) '    Something went wrong writting the radiation IDS!'
+    endif
+
+  end subroutine fill_radiation_IDS
+
+
+
+
+ 
 
 
   ! --- Fills Bezier coefficients in GGD
@@ -215,5 +476,29 @@ module mod_jorek2IMAS
 
 
 
+
+
+  ! --- Checks if a restart file exists in the current directory
+  logical function restart_file_exists(i_step)
+
+    use phys_module, only : rst_hdf5
+
+    implicit none
+
+    integer,  intent(in) :: i_step
+    character(len=64)    :: file_name
+
+    write(file_name,'(a,i5.5)') 'jorek', i_step
+    if ( rst_hdf5 .ne. 0 ) then
+      inquire (file=trim(file_name)//'.h5', exist=restart_file_exists)
+    else
+      inquire (file=trim(file_name)//'.rst', exist=restart_file_exists)
+    end if
+
+  end function restart_file_exists
+
+
+
+#endif
 
 end module mod_jorek2IMAS

@@ -117,6 +117,7 @@ if ( (n_flux .eq. 0) .and. (n_radial .eq. 0) ) include_axis   = .false.
 if (n_flux .eq. 0) include_xpoint = .false.
 call get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
 if ( (ier .ne. 0) .and. (n_flux .eq. 0) ) include_psi = .false.
+write(*,*)'GRID INCLUDES:',include_axis,include_xpoint,include_psi
 call finish_grid(node_list, element_list, node_list_new, element_list_new, n_grids, include_axis, include_xpoint, include_psi)
 
 call export_restart(node_list, element_list, 'jorek_grid')

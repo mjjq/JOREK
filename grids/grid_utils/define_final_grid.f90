@@ -1240,6 +1240,7 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
+  node_list%node(i)%axis_dof  = 0
   if (xcase .ne. DOUBLE_NULL) then
     if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
        node_list%node(i)%axis_node = .true.

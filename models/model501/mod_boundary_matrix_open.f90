@@ -33,7 +33,7 @@ integer,               intent(in)     :: i_tor_max
 
 integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
-real*8     :: ws, xjac,  BigR, phi, eps_cyl
+real*8     :: ws, xjac,  dl, BigR, phi, eps_cyl, Btot
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6
 real*8     :: psi_norm, theta, zeta
@@ -114,6 +114,10 @@ do ms=1, n_gauss
 
    ws = wgauss(ms)
 
+   dl   = sqrt(x_s(ms)**2 + y_s(ms)**2)
+   xjac = x_s(ms)*y_t(ms) - x_t(ms)*y_s(ms)
+   BigR = x_g(ms)
+
    normal_direction = (/x_g(ms) - R_cnt, y_g(ms) - Z_cnt /) / norm2((/x_g(ms) - R_cnt, y_g(ms) - Z_cnt /))
  
    normal = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
@@ -159,7 +163,7 @@ do ms=1, n_gauss
            rhs_ij_5 = + v * density_reflection * r0 * vpar0 * ps0_s * tstep            ! right hand side equation 5
 
            rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * tstep &   ! right hand side equation 6
-                      - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn * tstep  
+                      - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn * BigR  * dl * tstep  
 
            ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
            ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
@@ -197,8 +201,8 @@ do ms=1, n_gauss
                  amat_65 = + v * (gamma_sheath-1.d0) * rho * T0 * vpar0 * ps0_s * theta * tstep 
                  amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * theta * tstep 
                  amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * theta * tstep &
-                           + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn * theta * tstep &
-                           + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn * theta * tstep
+                           + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn * BigR  * dl * theta * tstep &
+                           + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn * BigR  * dl * theta * tstep
 
                  index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix                
 

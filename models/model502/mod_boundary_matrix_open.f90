@@ -292,7 +292,7 @@ do ms=1, n_gauss
           rhs_ij_6 = - v * (gamma_sheath_i -1.d0) * r0_corr * Ti0_corr * vpar0 * ps0_s * normal_sign3 * tstep  & ! right hand side equation 6
                      - v * (gamma_sheath_i -1.d0) * r0_corr * Ti0_corr * cs0   * BigR  * dl * c_angle * tstep  &
                      - v *                          r0_corr * Ti0_corr * BigR**2.d0    * u0_s  * normal_sign3 * tstep  &
-                     - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn * tstep  
+                     - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn  * BigR  * dl * tstep  
 
           rhs_ij_7 = - v * (vpar0 * Btot * normal_sign - cs0 * factor) * dl * Zbig                ! right hand side equation 7
 
@@ -383,8 +383,8 @@ do ms=1, n_gauss
                           + v * (gamma_sheath_i-1.d0) * r0_corr * Ti0_corr * cs_T  * BigR  * dl * c_angle * theta * tstep
 
                 amat_67 = + v * (gamma_sheath_i-1.d0) * r0_corr  * Ti0_corr * vpar  * ps0_s * normal_sign3 * theta * tstep & 
-                          + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn                * theta * tstep &
-                          + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn                * theta * tstep
+                          + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn  * BigR  * dl           * theta * tstep &
+                          + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn  * BigR  * dl           * theta * tstep
 
            
                 amat_76 =   v * ( - cs_T) * factor          * dl * Zbig

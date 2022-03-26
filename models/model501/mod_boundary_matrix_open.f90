@@ -49,6 +49,7 @@ real*8     :: ps0, ps0_s, ps0_t, ps0_x, ps0_y, Vpar0, r0_corr, rn0_corr, cs0
 real*8     :: psi, psi_s, psi_t, vpar, T, u0_s, u_s, cs_T
 real*8     :: vpar0_s, vpar0_t, vpar0_x, vpar0_y 
 real*8     :: vpar_s, vpar_t, vpar_x, vpar_y 
+real*8     :: T0, T0_s, T0_t, T0_x, T0_y, T0_p, T0_corr
 real*8     :: r0, r0_s, r0_t, r0_p, r0_x, r0_y, rho, rho_s, rho_t, rho_x, rho_y
 real*8     :: rn0, rn0_s, rn0_t, rn0_p, rn0_x, rn0_y, rhon, rhon_s, rhon_t, rhon_x, rhon_y
 real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67
@@ -147,16 +148,51 @@ do ms=1, n_gauss
    do mp = 1, n_plane
 
      ps0   = eq_g(mp,1,ms)
-     ps0_s = eq_s(mp,1,ms)             ! why not absolute value for normal orientation?
-     
+     ps0_s = eq_s(mp,1,ms) 
+     ps0_t = eq_t(mp,1,ms)   
+     ps0_x = (   y_t(ms) * ps0_s - y_s(ms) * ps0_t ) / xjac
+     ps0_y = ( - x_t(ms) * ps0_s + x_s(ms) * ps0_t ) / xjac
+ 
+     B0_R =   ps0_y / x_g(ms)
+     B0_Z = - ps0_x / x_g(ms)
+ 
      r0    = eq_g(mp,5,ms)
+     r0_s  = eq_s(mp,5,ms)
+     r0_t  = eq_t(mp,5,ms)
+     r0_p  = eq_p(mp,5,ms)
+     r0_x = (   y_t(ms) * r0_s - y_s(ms) * r0_t ) / xjac
+     r0_y = ( - x_t(ms) * r0_s + x_s(ms) * r0_t ) / xjac
+ 
+     rn0   = eq_g(mp,8,ms)
+     rn0_s = eq_s(mp,8,ms)
+     rn0_t = eq_t(mp,8,ms)
+     rn0_p = eq_p(mp,8,ms)
+     rn0_x = (   y_t(ms) * rn0_s - y_s(ms) * rn0_t ) / xjac
+     rn0_y = ( - x_t(ms) * rn0_s + x_s(ms) * rn0_t ) / xjac
+ 
      T0    = eq_g(mp,6,ms)
+     T0_s  = eq_s(mp,6,ms)
+     T0_t  = eq_t(mp,6,ms)
+     T0_p  = eq_p(mp,6,ms)
+     T0_x = (   y_t(ms) * T0_s - y_s(ms) * T0_t ) / xjac
+     T0_y = ( - x_t(ms) * T0_s + x_s(ms) * T0_t ) / xjac
+ 
+     u0_s  = eq_s(mp,2,ms)
      Vpar0 = eq_g(mp,7,ms)
      vpar0_s = eq_s(mp,var_vpar,ms) 
      vpar0_t = eq_t(mp,var_vpar,ms)   
      vpar0_x = (   y_t(ms) * vpar0_s - y_s(ms) * vpar0_t ) / xjac
      vpar0_y = ( - x_t(ms) * vpar0_s + x_s(ms) * vpar0_t ) / xjac
-
+ 
+     T0_corr = corr_neg_temp1(T0)
+     r0_corr = corr_neg_dens(r0)
+     rn0_corr = corr_neg_dens(rn0)
+ 
+     cs0      = sqrt(gamma*T0_corr/2.0)
+ 
+     Btot = sqrt(F0**2 + ps0_x**2 + ps0_y**2) / BigR
+ 
+     BB2 = Btot**2
      gradvpar0dotn = (+ vpar0_x * normal(1) + vpar0_y * normal(2)) 
 
      psi_norm = (ps0 - psi_axis)/(psi_bnd - psi_axis)

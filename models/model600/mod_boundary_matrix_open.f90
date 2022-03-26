@@ -401,8 +401,8 @@ do ms=1, n_gauss
 
                 T = psi; Ti = psi; Te = psi; vpar = psi; vpar_ss = psi_ss
 
-                vpar_s = psi_s
-                vpar_t = psi_t
+                vpar_s = 0.d0!psi_s   !Placeholder for future implementation
+                vpar_t = 0.d0!psi_t
                 vpar_x = (   y_t(ms) * vpar_s - y_s(ms) * vpar_t ) / xjac
                 vpar_y = ( - x_t(ms) * vpar_s + x_s(ms) * vpar_t ) / xjac
 

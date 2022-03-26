@@ -14,6 +14,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module
+use corr_neg
 
 implicit none
 

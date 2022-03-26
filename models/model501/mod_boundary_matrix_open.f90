@@ -20,10 +20,11 @@ implicit none
 type (type_element)   :: element
 type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
 
-real*8     :: x_g(n_gauss), x_s(n_gauss), x_ss(n_gauss)
-real*8     :: y_g(n_gauss), y_s(n_gauss), y_ss(n_gauss)
+real*8     :: x_g(n_gauss), x_s(n_gauss), x_t(n_gauss), x_ss(n_gauss)
+real*8     :: y_g(n_gauss), y_s(n_gauss), y_t(n_gauss), y_ss(n_gauss)
 
-real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_plane,n_var,n_gauss), eq_ss(n_plane,n_var,n_gauss)
+real*8     :: eq_g(n_plane,n_var,n_gauss), eq_s(n_plane,n_var,n_gauss), eq_p(n_plane,n_var,n_gauss)
+real*8     :: eq_t(n_plane,n_var,n_gauss), eq_ss(n_plane,n_var,n_gauss)
 real*8     :: delta_g(n_plane,n_var,n_gauss), delta_s(n_plane,n_var,n_gauss)
 
 real*8, dimension (:,:), allocatable  :: ELM
@@ -31,8 +32,10 @@ real*8, dimension (:)  , allocatable  :: RHS
 integer,               intent(in)     :: i_tor_min
 integer,               intent(in)     :: i_tor_max
 
-integer    :: vertex(2), direction(2), i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
-integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, kl1, kl2, kl3, kl4, kl5, kl6, kl7
+integer    :: vertex(2), direction(2), direction_perp(2)
+integer    :: i, j, j2, j3, ms, mt, mp, k, l, l2, l3, index_ij, index_kl, index, xcase2, is
+integer    :: in, im, ij1, ij2, ij3, ij4, ij5, ij6, ij7, ij8
+integer    :: kl1, kl2, kl3, kl4, kl5, kl6, kl7, kl8
 real*8     :: ws, xjac,  dl, BigR, phi, eps_cyl, Btot
 real*8     :: R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint(2), Z_xpoint(2)
 real*8     :: rhs_ij_5, rhs_ij_6
@@ -42,11 +45,15 @@ real*8     :: R_inside, Z_inside, R_mid, Z_mid, R_cnt, Z_cnt, normal(2), normal_
 real*8     :: normal_sign, normal_sign3
 
 real*8     :: v, v_x, v_y, v_s, v_p, v_ss, v_xx, v_yy, v_xs, v_ys
-real*8     :: ps0, ps0_s, Vpar0, r0, T0  
-real*8     :: psi, psi_s, vpar, rho,  T   
+real*8     :: ps0, ps0_s, ps0_t, ps0_x, ps0_y, Vpar0, r0_corr, rn0_corr, cs0  
+real*8     :: psi, psi_s, psi_t, vpar, T, u0_s, u_s, cs_T
 real*8     :: vpar0_s, vpar0_t, vpar0_x, vpar0_y 
 real*8     :: vpar_s, vpar_t, vpar_x, vpar_y 
-real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67, element_size_ij, element_size_kl
+real*8     :: r0, r0_s, r0_t, r0_p, r0_x, r0_y, rho, rho_s, rho_t, rho_x, rho_y
+real*8     :: rn0, rn0_s, rn0_t, rn0_p, rn0_x, rn0_y, rhon, rhon_s, rhon_t, rhon_x, rhon_y
+real*8     :: amat_51, amat_55, amat_57,amat_61, amat_65, amat_66, amat_67
+real*8     :: element_size_ij, element_size_kl, element_size_perp
+real*8     :: grad_t(2), B0_R, B0_Z, factor_cs_bnd_integral, neutral_source, c_angle
 logical    :: xpoint2
 integer    :: n_tor_local
 
@@ -56,9 +63,9 @@ theta = 0.5d0; zeta = 0.d0          ! Crank-Nicholson parameter
 !theta = 1.0d0   ; zeta = 0.5d0      ! BDF2 (Gears) scheme
 
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
-x_g  = 0.d0; x_s  = 0.d0;  x_ss  = 0.d0; 
-y_g  = 0.d0; y_s  = 0.d0;  y_ss  = 0.d0; 
-eq_g = 0.d0; eq_s = 0.d0;  eq_ss = 0.d0; eq_p = 0.d0;
+x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss  = 0.d0; 
+y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss  = 0.d0; 
+eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_ss = 0.d0; eq_p = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0; 
  
@@ -73,15 +80,25 @@ do i=1,2
   
   do j=1,2
 
-    element_size_ij = element%size(vertex(i),direction(j))
+    j2 = direction(j)
+    element_size_ij = element%size(vertex(i),j2)
+
+    j3 = direction_perp(j)
+    element_size_perp = - element%size(vertex(i),direction_perp(1)) * 3.d0
+
+    if ((vertex(1)*vertex(2) .eq. 2)) then
+      element_size_perp = + element%size(vertex(i),direction_perp(1)) * 3.d0
+    endif
 
     do ms=1, n_gauss
 
-      x_g(ms)  = x_g(ms)  + nodes(i)%x(1,j,1) * element_size_ij * H1(i,j,ms)
-      x_s(ms)  = x_s(ms)  + nodes(i)%x(1,j,1) * element_size_ij * H1_s(i,j,ms)
+      x_g(ms)  = x_g(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1(i,j,ms)
+      x_s(ms)  = x_s(ms)  + nodes(i)%x(1,j2,1) * element_size_ij * H1_s(i,j,ms)
+      x_t(ms)  = x_t(ms)  + nodes(i)%x(1,j3,1) * element_size_ij * H1(i,j,ms)   * element_size_perp
 
-      y_g(ms)  = y_g(ms)  + nodes(i)%x(1,j,2) * element_size_ij * H1(i,j,ms)
-      y_s(ms)  = y_s(ms)  + nodes(i)%x(1,j,2) * element_size_ij * H1_s(i,j,ms)
+      y_g(ms)  = y_g(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1(i,j,ms)
+      y_s(ms)  = y_s(ms)  + nodes(i)%x(1,j2,2) * element_size_ij * H1_s(i,j,ms)
+      y_t(ms)  = y_t(ms)  + nodes(i)%x(1,j3,2) * element_size_ij * H1(i,j,ms)   * element_size_perp
 
       do mp=1,n_plane
 
@@ -118,10 +135,14 @@ do ms=1, n_gauss
    xjac = x_s(ms)*y_t(ms) - x_t(ms)*y_s(ms)
    BigR = x_g(ms)
 
+   grad_t = (/ - y_s(ms),   x_s(ms) /) / xjac
+
    normal_direction = (/x_g(ms) - R_cnt, y_g(ms) - Z_cnt /) / norm2((/x_g(ms) - R_cnt, y_g(ms) - Z_cnt /))
  
    normal = dot_product(grad_t,normal_direction) * grad_t      ! outward pointing normal
    normal = normal / norm2(normal)
+
+   neutral_source = 0.d-0
 
    do mp = 1, n_plane
 

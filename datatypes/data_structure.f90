@@ -100,6 +100,7 @@ module data_structure
      real*8, dimension (:,:,:), allocatable:: ELM_n
      real*8, dimension (:,:,:), allocatable:: ELM_k
      real*8, dimension (:,:,:), allocatable:: ELM_kn
+     real*8, dimension (:,:,:), allocatable:: ELM_pnn
      real*8, dimension (:,:)  , allocatable:: RHS_p
      real*8, dimension (:,:)  , allocatable:: RHS_k
      real*8, dimension (:,:)  , allocatable :: ELM
@@ -170,6 +171,7 @@ contains
           call tr_allocate(thread_struct(i)%ELM_n, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1),"ELM_n",CAT_MATELEM)
           call tr_allocate(thread_struct(i)%ELM_k, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1),"ELM_k",CAT_MATELEM)
           call tr_allocate(thread_struct(i)%ELM_kn,1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1),"ELM_kn",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%ELM_pnn,1,n_plane,1,n_vertex_max*n_var*(n_order+1),1,n_vertex_max*n_var*(n_order+1),"ELM_pnn",CAT_MATELEM)
           call tr_allocate(thread_struct(i)%RHS_p, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),"RHS_p",CAT_MATELEM)                                     
           call tr_allocate(thread_struct(i)%RHS_k, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),"RHS_k",CAT_MATELEM)                                     
           call tr_allocate(thread_struct(i)%ELM,   1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM",CAT_MATELEM)       
@@ -179,6 +181,7 @@ contains
           thread_struct(i)%ELM_n   = 0.d0
           thread_struct(i)%ELM_k   = 0.d0
           thread_struct(i)%ELM_kn  = 0.d0
+          thread_struct(i)%ELM_pnn = 0.d0
           thread_struct(i)%RHS_p   = 0.d0
           thread_struct(i)%RHS_k   = 0.d0
           thread_struct(i)%ELM     = 0.d0
@@ -223,6 +226,7 @@ contains
        call tr_deallocate(thread_struct(i)%ELM_n,"ELM_n",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%ELM_k,"ELM_k",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%ELM_kn,"ELM_kn",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%ELM_pnn,"ELM_pnn",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%RHS_p,"RHS_p",CAT_MATELEM)                                     
        call tr_deallocate(thread_struct(i)%RHS_k,"RHS_k",CAT_MATELEM)                                     
        call tr_deallocate(thread_struct(i)%ELM,"ELM",CAT_MATELEM)

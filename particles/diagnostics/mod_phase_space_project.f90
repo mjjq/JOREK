@@ -57,9 +57,9 @@ contains
 !                      (only needed if you want the option to call with(sim,phase_space_proj), but this is most of the time unncessary and slow)
 !  > f_grids(ndim)    : ndim functions that calculates the positions in each dimension
 !                      (only needed if you want the option to call with(sim,phase_space_proj), but this is most of the time unncessary and slow)
-! The reasons to use the shaped particles are threefold: 
-!   1.) This will smooth the result somewhat. 
-!   2.) The particles are then kernels, which allows for integration to the exact projected quantity (e.g. for power exchange, the integrated projection is the total exchanged power). 
+! The reasons to use the shaped particles are threefold:
+!   1.) This will smooth the result somewhat.
+!   2.) The particles are then kernels, which allows for integration to the exact projected quantity (e.g. for power exchange, the integrated projection is the total exchanged power).
 !   3.) Decoupling grid and particle projection.
 ! Nearest-neighbour projection is not very accurate and smooth, but if you have large amount of particles and not too many gridpoints it can be used.
 
@@ -159,7 +159,7 @@ function new_phase_space_projection(sim,ndim,res,start,end,bandwidths,f_proj,f_g
         new%prevsupp(it)=sum(new%support(1:(it-1)))
       endif
 
-      if(new%support(it) < 3 .and. sim%my_id .eq. 0) then 
+      if(new%support(it) < 3 .and. sim%my_id .eq. 0) then
         write(*,"(A,I1,A)") " PARTICLES: Support for dimension ", it, " is very low. Will not integrate or project correctly."
       endif
       if(sim%my_id .eq. 0) then
@@ -218,9 +218,10 @@ end subroutine project_phase_space
 
 ! Output to h5 file. Structure: /values for the meshgrid-evaluated values. /grids/grid_i for 1D grids /grids/mgrid_i for ndim meshgrids
 ! (can be immediately plotted using these meshgrids)
-subroutine output_phase_project(this,ino)
+subroutine output_phase_project(this,ino,output_grids_in)
   class(phase_space_projection), intent(inout)     :: this
   integer, intent(in)                              :: ino
+  logical, intent(in), optional                    :: output_grids_in
   real*8, dimension(:), allocatable                :: val_output
   real*8, dimension(:,:), allocatable                :: grid_mesh
   character(len=1024)                              :: filename
@@ -230,18 +231,20 @@ subroutine output_phase_project(this,ino)
   integer                                          :: it,j
   CHARACTER(LEN=8)                                 :: tmp_name
   integer                                          :: res_tmp(7),order_tmp(7),res_tmp2(this%ndim) ! Change this if more dimensions needed
+  logical                                          :: output_grids
   !  but this should never come up as particles live in 7D at most.
+
+  if(present(output_grids_in)) then
+    output_grids = output_grids_in
+  else
+    output_grids=.false.
+  endif
 
   ! Output check for too large dimensional arrays for Fortran to handle.
   if (this%ndim > 7) then
-    write(*,*) "Can't output for ndim > 7, aborting."
-    call  MPI_ABORT(MPI_COMM_WORLD,-1, ierr)
+    write(*,*) "Can't output for ndim > 7, exiting output"
+    return
   endif
-  open(24,file="ree.txt")
-  do it=1, this%val_size
-    write(24,"(E11.4)") this%values(it)
-  enddo
-  close(24)
 
   ! For the reshaping of the arrays into ndim arrays. E.g. if 2D, it would look like [res1,res2,0,0,0,0,0]
   ! with HDF5 ignoring the 0 dimensions.
@@ -277,40 +280,39 @@ subroutine output_phase_project(this,ino)
 
     ! HDF5 file creation
     call h5open_f(ierrhdf5)
-    write(filename,"(A5,I4,A3)") "proj_" ,ino, ".h5"
+    write(filename,"(A5,i5.5,A)") "proj_" ,ino, ".h5"
     call H5Fcreate_f(filename,H5F_ACC_TRUNC_F, file_id, ierrhdf5)
-    call h5gcreate_f(file_id, "grids", group_id_grid, ierrhdf5)
+    if(output_grids)then
+      call h5gcreate_f(file_id, "grids", group_id_grid, ierrhdf5)
+    endif
 
 
     res_tmp2=res_tmp(1:this%ndim)
-    ! Grid output
-    do it=1,7
-      write(*,*) "RESOLUTIONS: ",res_tmp(it)
-    enddo
+    
+    if(output_grids) then
+      do it=1,this%ndim
 
-    do it=1,this%ndim
-
-      ! Output all the 1D grids in each dimensions under the /grids/ group
-      write(tmp_name,fmt="(A,I1)") "grid_",it
-      call h5screate_simple_f(1, [int(this%res(it),kind=HSIZE_T)], dspace, ierr)!, &
-      call h5dcreate_f(group_id_grid, tmp_name, H5T_NATIVE_DOUBLE, dspace, &
+        ! Output all the 1D grids in each dimensions under the /grids/ group
+        write(tmp_name,fmt="(A,I1)") "grid_",it
+        call h5screate_simple_f(1, [int(this%res(it),kind=HSIZE_T)], dspace, ierr)!, &
+        call h5dcreate_f(group_id_grid, tmp_name, H5T_NATIVE_DOUBLE, dspace, &
                        dset_id, ierrhdf5)
-      call h5dwrite_f(dset_id,H5T_NATIVE_DOUBLE,this%grids((this%previndex(it)+1):(this%previndex(it)+this%res(it))),[int(this%res(it),kind=HSIZE_T)],ierr)
-      call h5dclose_f(dset_id, ierr)
-      call h5sclose_f(dspace,ierr)
+        call h5dwrite_f(dset_id,H5T_NATIVE_DOUBLE,this%grids((this%previndex(it)+1):(this%previndex(it)+this%res(it))),[int(this%res(it),kind=HSIZE_T)],ierr)
+        call h5dclose_f(dset_id, ierr)
+        call h5sclose_f(dspace,ierr)
 
-      !Same but meshgrid
-      call h5screate_simple_f(this%ndim, int(res_tmp2,kind=HSIZE_T),dspace,ierr )
-      write(tmp_name,fmt="(A,I1)") "mgrid_",it
-      call h5dcreate_f(group_id_grid, tmp_name, H5T_NATIVE_DOUBLE, dspace, &
+        !Same but meshgrid
+        call h5screate_simple_f(this%ndim, int(res_tmp2,kind=HSIZE_T),dspace,ierr )
+        write(tmp_name,fmt="(A,I1)") "mgrid_",it
+        call h5dcreate_f(group_id_grid, tmp_name, H5T_NATIVE_DOUBLE, dspace, &
                        dset_id, ierrhdf5)
 
-      call h5dwrite_f(dset_id,H5T_NATIVE_DOUBLE,RESHAPE(grid_mesh(:,it),res_tmp),int(res_tmp2,kind=HSIZE_T),ierr)
-      call h5dclose_f(dset_id,ierr)
-      call h5sclose_f(dspace,ierr)
+        call h5dwrite_f(dset_id,H5T_NATIVE_DOUBLE,RESHAPE(grid_mesh(:,it),res_tmp),int(res_tmp2,kind=HSIZE_T),ierr)
+        call h5dclose_f(dset_id,ierr)
+        call h5sclose_f(dspace,ierr)
 
-    enddo ! dimension loop grids
-
+      enddo ! dimension loop grids
+    endif
     ! Output meshgrids of the value
     call h5screate_simple_f(this%ndim, int(res_tmp2,kind=HSIZE_T), dspace, ierr)!, &
     call h5dcreate_f(file_id,"values", H5T_NATIVE_DOUBLE, dspace, dset_id, ierrhdf5)
@@ -322,12 +324,14 @@ subroutine output_phase_project(this,ino)
 
     call h5dclose_f(dset_id,ierr)
     call h5sclose_f(dspace,ierr)
-
-    call h5gclose_f(group_id_grid, ierr)
+    if(output_grids) then
+      call h5gclose_f(group_id_grid, ierr)
+    endif
 
 
     call h5fclose_f(file_id,  ierrhdf5)
     call h5close_f(ierrhdf5)
+    write(*,* ) "PARTICLES: Written Phase Space Projection to ", trim(filename)
   endif  ! mpi
   deallocate(val_output)
   deallocate(grid_mesh)

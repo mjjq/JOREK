@@ -2936,7 +2936,7 @@ do i=1,n_vertex_max
                                             + (ZKe_par_T-ZKe_prof) * BgradVstar__k    * BgradTe       / BB2**2 * BB2_AZ__p
                   Qjac_kn(var_Te,var_AZ)  = - (ZKe_par_T-ZKe_prof) * BgradVstar__k    * BgradTe_AZ__n / BB2                &
                                             + (ZKe_par_T-ZKe_prof) * BgradVstar__k    * BgradTe       / BB2**2 * BB2_AZ__n
-                  Qjac_pnn(var_T,var_AZ)  = v * (gamma-1.0d0) * eta_T_ohm * JJ2_AZ__nn
+                  Qjac_pnn(var_Te,var_AZ) = v * (gamma-1.0d0) * eta_T_ohm * JJ2_AZ__nn
 
                   Qjac_p (var_Te,var_A3)  = - (ZKe_par_T-ZKe_prof) * BgradVstar_A3__p * BgradTe    / BB2             &
                                             - (ZKe_par_T-ZKe_prof) * BgradVstar__p    * BgradTe_A3 / BB2             &

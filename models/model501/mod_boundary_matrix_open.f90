@@ -221,7 +221,7 @@ do ms=1, n_gauss
            rhs_ij_5 = + v * density_reflection * r0 * vpar0 * ps0_s * tstep            ! right hand side equation 5
 
            rhs_ij_6 = - v * (gamma_sheath -1.d0) * r0 * T0 * vpar0 * ps0_s * tstep &   ! right hand side equation 6
-                      - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn * BigR  * dl * tstep  
+                      - v * (GAMMA - 1.d0) * vpar0 * visco_par_heating * gradvpar0dotn * BigR  * dl * tstep  
 
            ij5 = index_ij + 4*n_tor_local                                          ! local index in element matrix
            ij6 = index_ij + 5*n_tor_local                                          ! local index in element matrix
@@ -259,8 +259,8 @@ do ms=1, n_gauss
                  amat_65 = + v * (gamma_sheath-1.d0) * rho * T0 * vpar0 * ps0_s * theta * tstep 
                  amat_66 = + v * (gamma_sheath-1.d0) * r0  * T  * vpar0 * ps0_s * theta * tstep 
                  amat_67 = + v * (gamma_sheath-1.d0) * r0  * T0 * vpar  * ps0_s * theta * tstep &
-                           + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn * BigR  * dl * theta * tstep &
-                           + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn * BigR  * dl * theta * tstep
+                           + v * (GAMMA - 1.d0) * vpar * visco_par_heating * gradvpar0dotn * BigR  * dl * theta * tstep &
+                           + v * (GAMMA - 1.d0) * vpar0 * visco_par_heating * gradvpardotn * BigR  * dl * theta * tstep
 
                  index_kl = n_tor_local*n_var*(n_order+1)*(vertex(k)-1) + n_tor_local * n_var * (l-1) + in - i_tor_min + 1  ! index in the ELM matrix                
 

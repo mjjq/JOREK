@@ -277,8 +277,8 @@ do ms=1, n_gauss
 
     if (with_vpar) then
       Vpar0   = eq_g(mp,var_vpar,ms)
-      vpar0_s = 0.d0!eq_s(mp,var_vpar,ms)  Placeholder for future implementation
-      vpar0_t = 0.d0!eq_t(mp,var_vpar,ms)   
+      vpar0_s = eq_s(mp,var_vpar,ms) 
+      vpar0_t = eq_t(mp,var_vpar,ms)   
       vpar0_x = (   y_t(ms) * vpar0_s - y_s(ms) * vpar0_t ) / xjac
       vpar0_y = ( - x_t(ms) * vpar0_s + x_s(ms) * vpar0_t ) / xjac
     else
@@ -347,14 +347,14 @@ do ms=1, n_gauss
             if (with_TiTe) then
               rhs_ij(var_Ti)  = - v * (gamma_sheath_i-1.d0) * r0 * Ti0 * vpar0 * ps0_s * normal_sign3 * tstep &
                                 - v * (gamma_sheath_i-1.d0) * r0 * Ti0 * cs0    * BigR * dl * c_angle * tstep & 
-                                - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn * BigR * dl  * tstep  
+                                - v * (GAMMA - 1.d0) * vpar0 * visco_par_heating * gradvpar0dotn * BigR * dl  * tstep  
 
               rhs_ij(var_Te)  = - v * (gamma_sheath_e-1.d0) * r0 * Te0 * vpar0 * ps0_s * normal_sign3 * tstep &
                                 - v * (gamma_sheath_e-1.d0) * r0 * Te0 * cs0  * BigR * dl * c_angle   * tstep  
             else
               rhs_ij(var_T)   = - v * (gamma_sheath  -1.d0) * r0 * T0  * vpar0 * ps0_s * normal_sign3 * tstep &
                                 - v * (gamma_sheath  -1.d0) * r0 * T0  * cs0    * BigR * dl * c_angle * tstep & 
-                                - v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpar0dotn * BigR * dl  * tstep  
+                                - v * (GAMMA - 1.d0) * vpar0 * visco_par_heating * gradvpar0dotn * BigR * dl  * tstep  
             endif
 
             ! --- Mach=1 through boundary integral penalization method
@@ -446,8 +446,8 @@ do ms=1, n_gauss
                                             + v * (gamma_sheath_e-1.d0) * r0  * Te0 * cs_Te * BigR  * dl * c_angle * theta * tstep
 
                     amat(var_Ti,var_vpar) = + v * (gamma_sheath_i-1.d0) * r0  * Ti0 * vpar  * ps0_s * normal_sign3 * theta * tstep &
-                                            + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn * BigR * dl    * theta * tstep &
-                                            + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn * BigR * dl    * theta * tstep
+                                            + v * (GAMMA - 1.d0) * vpar * visco_par_heating * gradvpar0dotn * BigR * dl    * theta * tstep &
+                                            + v * (GAMMA - 1.d0) * vpar0 * visco_par_heating * gradvpardotn * BigR * dl    * theta * tstep
                     amat(var_Te,var_vpar) = + v * (gamma_sheath_e-1.d0) * r0  * Te0 * vpar  * ps0_s * normal_sign3 * theta * tstep 
                   else
                     amat(var_T,var_psi)   = + v * (gamma_sheath  -1.d0) * r0  *  T0 * vpar0 * psi_s * normal_sign3 * theta * tstep 
@@ -458,8 +458,8 @@ do ms=1, n_gauss
                                             + v * (gamma_sheath  -1.d0) * r0  *  T0 * cs_T  * BigR  * dl * c_angle * theta * tstep
 
                     amat(var_T,var_vpar)  = + v * (gamma_sheath  -1.d0) * r0  * T0  * vpar  * ps0_s * normal_sign3 * theta * tstep & 
-                                            + v * (GAMMA - 1.d0) * vpar * visco_par * gradvpar0dotn * BigR * dl    * theta * tstep &
-                                            + v * (GAMMA - 1.d0) * vpar0 * visco_par * gradvpardotn * BigR * dl    * theta * tstep
+                                            + v * (GAMMA - 1.d0) * vpar * visco_par_heating * gradvpar0dotn * BigR * dl    * theta * tstep &
+                                            + v * (GAMMA - 1.d0) * vpar0 * visco_par_heating * gradvpardotn * BigR * dl    * theta * tstep
                   endif ! with_TiTe
 
                   ! --- Mach 1 condition through penalization boundary integral method

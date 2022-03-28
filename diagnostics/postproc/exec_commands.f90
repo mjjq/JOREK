@@ -2959,8 +2959,8 @@ module exec_commands
        test_struct(omp_tid)%eq_g, test_struct(omp_tid)%eq_s, test_struct(omp_tid)%eq_t,     &
        test_struct(omp_tid)%eq_p, test_struct(omp_tid)%eq_ss, test_struct(omp_tid)%eq_st,   &
        test_struct(omp_tid)%eq_tt, test_struct(omp_tid)%delta_g,                              &
-       test_struct(omp_tid)%delta_s, test_struct(omp_tid)%delta_t, 1, n_tor, test_struct(omp_tid)%ELM_pnn, &
-       get_terms=get_terms)
+       test_struct(omp_tid)%delta_s, test_struct(omp_tid)%delta_t, 1, n_tor, nodes,         &
+       test_struct(omp_tid)%ELM_pnn, get_terms=get_terms)
 
       do i_term=1, max_terms
   

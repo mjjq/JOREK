@@ -2810,6 +2810,7 @@ module exec_commands
       allocate(test_struct(i)%RHS_k( dim1, dim2      ) )
       allocate(test_struct(i)%ELM(   dim0, dim0      ) )
       allocate(test_struct(i)%RHS(   dim0            ) )
+      allocate(test_struct(i)%ELM_pnn(dim1, dim2, dim2) )
   
       test_struct(i)%ELM_p   = 0.d0
       test_struct(i)%ELM_n   = 0.d0
@@ -2819,6 +2820,7 @@ module exec_commands
       test_struct(i)%RHS_k   = 0.d0
       test_struct(i)%ELM     = 0.d0
       test_struct(i)%RHS     = 0.d0
+      test_struct(i)%ELM_pnn = 0.d0
   
       allocate(test_struct(i)%eq_g    (n_plane,n_var,n_gauss,n_gauss) )
       allocate(test_struct(i)%eq_s    (n_plane,n_var,n_gauss,n_gauss) )

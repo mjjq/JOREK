@@ -45,15 +45,11 @@ real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_kn
 real*8, dimension(DIM1, DIM2),       intent(inout) :: RHS_p
 real*8, dimension(DIM1, DIM2),       intent(inout) :: RHS_k
 
-real*8, dimension(DIM1, DIM2, DIM2) :: ELM_pnn
-
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_g, eq_s, eq_t
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_p
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: eq_ss, eq_st, eq_tt
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss), intent(inout) :: delta_g, delta_s, delta_t
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_aux_g, eq_aux_s, eq_aux_t, eq_aux_p
-
-real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_pp, eq_sp, eq_tp
 
 ! --- Variables outside the OMP loop
 integer    :: n_tor_start, n_tor_end, n_tor_local
@@ -92,9 +88,9 @@ real*8, dimension(n_tor,n_plane) :: HHZ, HHZ_p, HHZ_pp
 ! --- Variables inside the OMP loop
 integer    :: k, l, index_ij, index_kl, ij, kl
 
-real*8     :: AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, AR0_ss, AR0_tt, AR0_st, AR0_RR, AR0_ZZ, AR0_RZ, AR0_pp          , AR0_Rp, AR0_Zp, AR0_sp, AR0_tp
-real*8     :: AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, AZ0_ss, AZ0_tt, AZ0_st, AZ0_RR, AZ0_ZZ, AZ0_RZ, AZ0_pp          , AZ0_Rp, AZ0_Zp, AZ0_sp, AZ0_tp
-real*8     :: A30,  A30_R,  A30_Z,  A30_p,  A30_s,  A30_t, A30_ss, A30_tt, A30_st, A30_RR, A30_ZZ, A30_RZ, A30_pp          , A30_Rp, A30_Zp, A30_sp, A30_tp
+real*8     :: AR0,  AR0_R,  AR0_Z,  AR0_p,  AR0_s,  AR0_t, AR0_ss, AR0_tt, AR0_st, AR0_RR, AR0_ZZ, AR0_RZ, AR0_pp
+real*8     :: AZ0,  AZ0_R,  AZ0_Z,  AZ0_p,  AZ0_s,  AZ0_t, AZ0_ss, AZ0_tt, AZ0_st, AZ0_RR, AZ0_ZZ, AZ0_RZ, AZ0_pp
+real*8     :: A30,  A30_R,  A30_Z,  A30_p,  A30_s,  A30_t, A30_ss, A30_tt, A30_st, A30_RR, A30_ZZ, A30_RZ, A30_pp
 real*8     :: UR0,  UR0_R,  UR0_Z,  UR0_p,  UR0_s,  UR0_t, UR0_ss, UR0_st, UR0_tt, UR0_RR, UR0_ZZ, UR0_RZ, UR0_pp
 real*8     :: UZ0,  UZ0_R,  UZ0_Z,  UZ0_p,  UZ0_s,  UZ0_t, UZ0_ss, UZ0_st, UZ0_tt, UZ0_RR, UZ0_ZZ, UZ0_RZ, UZ0_pp
 real*8     :: Up0,  Up0_R,  Up0_Z,  Up0_p,  Up0_s,  Up0_t, Up0_ss, Up0_st, Up0_tt, Up0_RR, Up0_ZZ, Up0_RZ, Up0_pp
@@ -102,17 +98,17 @@ real*8     :: rho0, rho0_R, rho0_Z, rho0_p, rho0_s, rho0_t,rho0_ss,rho0_st,rho0_
 real*8     :: T0,   T0_R,   T0_Z,   T0_p,   T0_s,   T0_t,  T0_ss,  T0_st,  T0_tt,  T0_RR,  T0_ZZ,  T0_RZ,  T0_pp,   T0_corr
 real*8     :: p0,   p0_R,   p0_Z,   p0_p,   p0_s,   p0_t,  p0_corr
 
-real*8     :: AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t         , AR_RR, AR_RZ, AR_ZZ, AR_pp, AR_Rp, AR_Zp
-real*8     :: AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t         , AZ_RR, AZ_RZ, AZ_ZZ, AZ_pp, AZ_Rp, AZ_Zp
-real*8     :: A3,  A3_R,  A3_Z,  A3_p,  A3_s,  A3_t         , A3_RR, A3_RZ, A3_ZZ, A3_pp, A3_Rp, A3_Zp
+real*8     :: AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t
+real*8     :: AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t
+real*8     :: A3,  A3_R,  A3_Z,  A3_p,  A3_s,  A3_t
 real*8     :: UR,  UR_R,  UR_Z,  UR_p,  UR_s,  UR_t
 real*8     :: UZ,  UZ_R,  UZ_Z,  UZ_p,  UZ_s,  UZ_t
 real*8     :: Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t
 real*8     :: T,   T_R,   T_Z,   T_p,   T_s,   T_t
 real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
 
-real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p,  v_ss,  v_st,  v_tt,  v_RR, v_ZZ
-real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ,     bf_RZ, bf_pp, bf_sp, bf_tp, bf_Rp, bf_Zp
+real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p,  v_ss,  v_st,  v_tt,  v_RR,  v_ZZ
+real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
 
 real*8     :: Fprof
 real*8     :: BR0, BR0_AR,    BR0_AZ__n, BR0_A3
@@ -239,7 +235,6 @@ real*8     :: ZK_prof, D_prof, psi_norm
 real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T, visco_divV, dvisco_divV_dT
 real*8     :: eta_num_T, eta_R, eta_Z, eta_p, Zkpar_T, dZKpar_dt
 real*8     :: eta_T_T, eta_R_T, eta_Z_T, eta_p_T__p, eta_p_T__n
-real*8     :: eta_T_ohm, deta_dT_ohm
 
 real*8     :: Qconv_UR
 real*8     :: Qconv_UR_AR__p,  Qconv_UR_AR__n
@@ -343,11 +338,20 @@ real*8     :: VmsCoefF, VmsCoefF_T
 ! --- Matrix
 real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, QvmsF_p, QvmsF_n, QvmsF_k, QvmsF_kn
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
-real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn               
-
-real*8, dimension(n_var,n_var)   :: Qjac_pnn
+real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
 ! --- Ohmic heating
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_pnn
+real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_pp, eq_sp, eq_tp
+real*8, dimension(n_var,n_var)   :: Qjac_pnn
+real*8     :: AR0_Rp, AR0_Zp, AR0_sp, AR0_tp
+real*8     :: AZ0_Rp, AZ0_Zp, AZ0_sp, AZ0_tp
+real*8     :: A30_Rp, A30_Zp, A30_sp, A30_tp
+real*8     :: bf_RZ, bf_pp, bf_sp, bf_tp, bf_Rp, bf_Zp
+real*8     :: AR_RR, AR_RZ, AR_ZZ, AR_pp, AR_Rp, AR_Zp
+real*8     :: AZ_RR, AZ_RZ, AZ_ZZ, AZ_pp, AZ_Rp, AZ_Zp
+real*8     :: A3_RR, A3_RZ, A3_ZZ, A3_pp, A3_Rp, A3_Zp
+real*8     :: eta_T_ohm, deta_dT_ohm
 real*8     :: psieq_R,  psieq_Z
 real*8     :: BR0_R, BR0_Z, BR0_p, BZ0_R, BZ0_Z, BZ0_p, Bp0_R, Bp0_Z, Bp0_p
 real*8     :: JR0 , JR0_AR__p, JR0_AR__n, JR0_AR__nn, JR0_AZ__p, JR0_AZ__n, JR0_AZ__nn, JR0_A3__p, JR0_A3__n, JR0_A3__nn
@@ -409,6 +413,7 @@ Qjac_p    = 0.d0
 Qjac_k    = 0.d0
 Qjac_n    = 0.d0
 Qjac_kn   = 0.d0
+Qjac_pnn  = 0.d0
 QvmsF_p   = 0.d0
 QvmsF_n   = 0.d0
 QvmsF_k   = 0.d0
@@ -420,7 +425,6 @@ QvmsAd_kn = 0.d0
 Pvec_prev = 0.d0
 Qvec_p    = 0.d0
 Qvec_k    = 0.d0
-Qjac_pnn = 0.d0
 
 !Pressure coupling should be 0
 aux_divPIR_perp = 0.d0 
@@ -491,8 +495,9 @@ x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_ss = 0.d0; x_st = 0.d0; x_tt = 0.d0
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss = 0.d0; y_st = 0.d0; y_tt = 0.d0
 
 
-eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0    ; eq_pp=0.d0;eq_sp=0.d0;eq_tp=0.d0
+eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_p = 0.d0; eq_ss = 0.d0; eq_st = 0.d0; eq_tt = 0.d0
 eq_aux_g = 0.d0; eq_aux_s = 0.d0; eq_aux_t = 0.d0; eq_aux_p = 0.d0;
+eq_pp    = 0.d0; eq_sp    = 0.d0; eq_tp=0.d0
 
 psi_axisym = 0.d0 ; psi_axisym_s = 0.d0 ; psi_axisym_t = 0.d0
 delta_g = 0.d0; delta_s = 0.d0; delta_t = 0.d0
@@ -842,8 +847,6 @@ do i=1,n_vertex_max
                       + UR0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - UR0_Z * xjac_Z / xjac
 
-          UR0_pp = eq_pp(mp,var_UR,ms,mt)
-
           ! --- UZ
           UZ0   = eq_g(mp,var_UZ,ms,mt)
           UZ0_p = eq_p(mp,var_UZ,ms,mt)
@@ -865,8 +868,6 @@ do i=1,n_vertex_max
                       + UZ0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - UZ0_Z * xjac_Z / xjac
 
-          UZ0_pp = eq_pp(mp,var_UZ,ms,mt)
-
           ! --- Up is defined u0_phi : V = .. + Up0 * e_phi (physical component)
           Up0   = eq_g(mp,var_Up,ms,mt)
           Up0_p = eq_p(mp,var_Up,ms,mt)
@@ -887,8 +888,6 @@ do i=1,n_vertex_max
                       + Up0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                       + Up0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - Up0_Z * xjac_Z / xjac
-
-          Up0_pp = eq_pp(mp,var_Up,ms,mt)
 
           ! --- rho
           rho0      = eq_g(mp,var_rho,ms,mt)
@@ -912,8 +911,6 @@ do i=1,n_vertex_max
                       + rho0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - rho0_Z * xjac_Z / xjac
 
-          rho0_pp   = eq_pp(mp,var_rho,ms,mt)
-
           ! --- T
           T0      = eq_g(mp,var_T,ms,mt)
           T0_corr = max(T0,1.d-12)!corr_neg_temp1(T0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
@@ -936,8 +933,6 @@ do i=1,n_vertex_max
                       + T0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - T0_Z * xjac_Z / xjac
 
-          T0_pp   = eq_pp(mp,var_T,ms,mt)
-
           ! --- P
           p0      = rho0 * T0
           p0_corr = rho0_corr * T0_corr
@@ -946,7 +941,6 @@ do i=1,n_vertex_max
           p0_s    = rho0_s * T0 + rho0 * T0_s
           p0_t    = rho0_t * T0 + rho0 * T0_t
           p0_p    = rho0_p * T0 + rho0 * T0_p
-
 
           ! --- psi_norm
           psi_norm = get_psi_n(psi_axisym(ms,mt), y_g(ms,mt))
@@ -978,7 +972,7 @@ do i=1,n_vertex_max
           eta_Z = deta_dT * T0_Z
           eta_p = deta_dT * T0_p
 
-          ! --- Resistivity for Omhic heating
+          ! --- Resistivity for Ohmic heating
           if ( eta_T_dependent .and. T0_corr <= T_max_eta) then
             eta_T_ohm   =   eta_ohmic   * (T0_corr/T_0)**(-1.5d0)
             deta_dT_ohm = - eta_ohmic   * 1.5d0  * T0_corr**(-2.5d0) * T_0**(1.5d0)
@@ -1246,8 +1240,9 @@ do i=1,n_vertex_max
           Jp0 = BZ0_R - BR0_Z
 
           if(keep_current_prof)then
-             JJ2 = (JR0-current_source_JR(ms,mt))*JR0 + (JZ0-current_source_JZ(ms,mt))*JZ0 + &
-                   (Jp0-current_source_Jp(ms,mt))*Jp0
+             JJ2 = (JR0-current_source_JR(ms,mt))*JR0 &
+                 + (JZ0-current_source_JZ(ms,mt))*JZ0 &
+                 + (Jp0-current_source_Jp(ms,mt))*Jp0
           else
              JJ2 = JR0*JR0 + JZ0*JZ0 + Jp0*Jp0
           endif

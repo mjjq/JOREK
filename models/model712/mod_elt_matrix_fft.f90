@@ -354,7 +354,7 @@ real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
 ! --- Ohmic heating
-real*8, dimension(DIM1, DIM2, DIM2) :: ELM_pnn
+real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_pnn
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_pp, eq_sp, eq_tp
 real*8, dimension(n_var,n_var)   :: Qjac_pnn
 real*8     :: AR0_Rp, AR0_Zp, AR0_sp, AR0_tp

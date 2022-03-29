@@ -5202,7 +5202,7 @@ subroutine construct_radiation_parameters()
     Lrad = 0.
     dLrad_dT = 0.
 
-    if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+    if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rimp0 > 0.d0) then
       ! Here we are temperarily only considering one impurity species, in the
       ! future maybe a do loop will is needed
       call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)

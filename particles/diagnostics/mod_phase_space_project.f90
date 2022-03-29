@@ -474,8 +474,6 @@ subroutine calc_index_shaped_part(this, particle_in,index_val,val_val,sim)
       mesh_tmp= modulo(mesh_tmp, this%multsupp(j)) !Remainder after subtracting first stride.
 
     enddo
-    ind_mesh_tmp = 1
-    mesh_tmp = 1
     val_phase_grids_tmp=1.d0
 
     do j=1,this%ndim

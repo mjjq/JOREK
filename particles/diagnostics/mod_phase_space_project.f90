@@ -13,7 +13,7 @@ module mod_phase_space_project
   implicit none
   private
   public phase_space_projection
-  public new_phase_space_projection, output_phase_project,calc_index_val_phaseproj, calc_index_shaped_part, calc_index_shaped_part_x, project_single_particle_x
+  public new_phase_space_projection, output_phase_project, calc_index_shaped_part_x, project_single_particle_x
 
   ! A type to project particle quantities on arbitrary coordinates. Examples include projecting on
   ! invariant phase-space coordinates (E, \lambda, P_\phi) or real-space 1D histograms of initialization
@@ -39,7 +39,9 @@ module mod_phase_space_project
     ! Quantities for defined particle shapes.
     integer,     dimension(:),    allocatable         :: support,prevsupp, multsupp(:)
     real*8,      dimension(:),    allocatable         :: bandwidths
-    integer                                           :: totsupport,sumsupport
+
+    integer,     dimension(:,:),  allocatable         :: totsupp_to_nD
+    integer                                           :: totsupport,sumsupport, my_id
     logical                                           :: support_present
 
 contains
@@ -72,8 +74,9 @@ function new_phase_space_projection(sim,ndim,res,start,end,bandwidths,f_proj,f_g
   real*8,                      intent(in), optional     :: bandwidths(ndim)
   type(proj_f),                intent(in), optional     :: f_proj
   type(proj_f),                intent(in), optional     :: f_grids(ndim)
-  integer                                               :: it, gridpoints, valuepoints,j,mult_tmp
-
+  integer                                               :: it, jt, gridpoints, valuepoints,j,mult_tmp, my_id
+  call MPI_COMM_RANK(MPI_COMM_WORLD,my_id,it)
+  new%my_id = my_id
   ! Allocating the members of the phase-space projection. Have to allocate here due to varying ndim.
   allocate(new%res(ndim))
   allocate(new%previndex(ndim))
@@ -150,7 +153,7 @@ function new_phase_space_projection(sim,ndim,res,start,end,bandwidths,f_proj,f_g
 
     new%prevsupp=0
     do it=1,ndim
-      new%support(it)=ceiling(bandwidths(it)/new%dx(it))!
+      new%support(it)=floor(bandwidths(it)/new%dx(it))+1!
 
 
 
@@ -173,6 +176,13 @@ function new_phase_space_projection(sim,ndim,res,start,end,bandwidths,f_proj,f_g
       mult_tmp=mult_tmp/new%support(it)
       new%multsupp(it)=mult_tmp
     enddo
+
+    allocate(new%totsupp_to_nD(new%ndim,new%totsupport))
+
+    do it=1,new%totsupport
+      new%totsupp_to_nD(:, it) = support_to_nD(new,it)
+    enddo
+    
   endif
   if((.not. new%support_present ).and. (sim%my_id .eq. 0)) then
     write(*,*)"PARTICLES: Trying to use shaped particles without initializing WILL result in undefined behaviour."
@@ -272,7 +282,7 @@ subroutine output_phase_project(this,ino,output_grids_in)
 
 
     res_tmp2=res_tmp(1:this%ndim)
-    
+
     if(output_grids) then
       do it=1,this%ndim
 
@@ -324,19 +334,23 @@ end subroutine output_phase_project
 ! Subroutine for calculating an array of indices  index_val for a single particle
 ! corresponding to their support in all dimensions. Also, the shape is
 ! calculated here in val_val
-subroutine project_single_particle_x(this,x_in,value_arr)
+! > this: phase space projection for the arrays needed to project
+! > x_in: location of particle on the dimensions to project
+! > value_arr: array to be projected on. Should be the same size as this%values
+! > value: projection value (i.e. if only particle weight, then just particle%weight)
+subroutine project_single_particle_x(this,x_in,value_arr,proj_value)
   class(phase_space_projection), intent(in)        :: this
   real*8,                        intent(in)        :: x_in(this%ndim)
   real*8,                        intent(inout)     :: value_arr(this%val_size) ! Large!
-
-  integer                                          :: i, j, main_ind, min_ind, mesh_tmp,ind_mesh_tmp(this%ndim), index_supp(this%sumsupport),i_phase
+  real*8,                        intent(in)        :: proj_value
+  integer                                          :: i, j, main_ind, min_ind,min_ind_cont(this%ndim), mesh_tmp,ind_mesh_tmp, i_phase
   integer                                          :: index_tmp, indices_phase_grids_tmp(this%ndim)
   real*8                                           :: dx, x, minx, maxx, val_phase_grids_tmp, supp_weight(this%sumsupport), distance
-  
+
   index_tmp=-1
-  
+
   supp_weight=0.d0
-  index_supp=-1
+  
   ! whole loop ~ <5% execution time
   do i=1,this%ndim
     dx = this%dx(i)
@@ -348,19 +362,13 @@ subroutine project_single_particle_x(this,x_in,value_arr)
     ! bandwidth will still contribute slightly)
 
     ! Calculate minimum index (will be < 0 if particle outside of grid, but will be tested later)
-    ! Correct for even/uneven support
-
-    if (mod(this%support(i),2).eq. 0 ) then
-      main_ind=nint((x-minx)/dx)+1
-      min_ind = main_ind - (this%support(i)-1)/2-1
-    else
-      main_ind=ceiling((x-minx)/dx)+1
-      min_ind = main_ind - this%support(i)/2-1
-    endif
+    ! 1-indexing, should be 1 higher to indicate a true minimum index in the array. But in the support loop this is taken care of.
+    min_ind = ceiling( (x-this%bandwidths(i)/2.d0-minx)/dx)
+    min_ind_cont(i)=min_ind
 
     !Now, we add all the grid points in the particles shape into the grids
     do j=1,this%support(i)
-      ! Only calculate weight if it makes sense 
+      ! Only calculate weight if it makes sense
       if(min_ind+j>0 .and. min_ind+j < this%res(i)+1) then
 
         ! Distance w.r.t particle centre.
@@ -384,10 +392,7 @@ subroutine project_single_particle_x(this,x_in,value_arr)
           !Triweight
           supp_weight(j+this%prevsupp(i))=35.d0/32.d0*(1-distance**2)**3
 
-        endif ! distance < 1.0
-
-        index_supp(j+this%prevsupp(i))=min_ind+j
-
+        endif ! distance < 1.0        
       endif ! min_ind+j > 0 && min_ind+j < this%res(i)+1
     enddo !support points
   enddo ! n_dim
@@ -396,41 +401,34 @@ subroutine project_single_particle_x(this,x_in,value_arr)
   ! the indices in the main value array.
   do i=1,this%totsupport
 
-    !Calculate meshgrid indices
-    mesh_tmp=i-1
-
-    do j=1,this%ndim
-      !
-      ind_mesh_tmp(j)=mesh_tmp/this%multsupp(j)+1
-      ! 13% execution time
-      mesh_tmp= modulo(mesh_tmp, this%multsupp(j)) !Remainder after subtracting first stride.
-
-    enddo
     val_phase_grids_tmp=1.d0
-
+    ! Total weight of the support point i is calculated by the product of the weights in all dimensions. 
     do j=1,this%ndim
-      ! 17.4% execution time ?
-      indices_phase_grids_tmp(j)=index_supp(ind_mesh_tmp(j)+this%prevsupp(j))
-      
-      ! Scale the values by 1/bandwidth to be able to compare units w/ different bandwidths in each dimension
-      ! 4% execution time
-      val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(ind_mesh_tmp(j)+this%prevsupp(j))*1/this%bandwidths(j)*2.d0 !Bandwidth = 2*bandwidth_wiki 
-
-
+      val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(this%totsupp_to_nD(j,i)+this%prevsupp(j))*1/this%bandwidths(j)*2.d0 !Bandwidth = 2*bandwidth_wiki
     enddo
-
-    ! Again, if any index of the grids of this specific support point is less than 0, the particle is not considered.
-    if (minval(indices_phase_grids_tmp)> 0) then ! 13% execution time
-      index_tmp=calc_index_phase_proj(this,indices_phase_grids_tmp)
-      if(index_tmp > 0 .and. index_tmp< this%val_size) then
-        ! 43% execution time
-         value_arr(index_tmp)=value_arr(index_tmp)+1.d0*val_phase_grids_tmp!*particle_tmp%weight !E_diff
-      endif
-    endif
-  enddo ! support points
-
   
+    ! We need to check that this point is in fact on the grids
+    if (all(this%totsupp_to_nD(:,i)+min_ind_cont >0) .and. all(this%totsupp_to_nD(:,i)+min_ind_cont < this%res+1)) then ! 13% execution time
+      index_tmp=calc_index_phase_proj(this, this%totsupp_to_nD(:,i)+min_ind_cont)
+        ! 43% execution time
+        value_arr(index_tmp)=value_arr(index_tmp)+1.d0*val_phase_grids_tmp*proj_value
+      endif
+  enddo ! support points
 end subroutine project_single_particle_x
+
+
+pure function support_to_nD(this, index_in) result(index_out)
+  class(phase_space_projection),  intent(in)       :: this
+  integer,                        intent(in)       :: index_in
+  integer                                          :: index_out(this%ndim)
+  integer                                          :: index_tmp,it
+  index_out = 0
+  index_tmp=index_in-1
+  do it=1,this%ndim
+    index_out(it) = index_tmp/this%multsupp(it)+1
+    index_tmp = modulo(index_tmp, this%multsupp(it))
+  enddo
+end function
 ! Same as previous subroutine, but with the option of providing the x_in on the grids.
 ! This can be quite useful if the x calculation involves interpolating some quantity that is
 ! already known at the moment this function is called

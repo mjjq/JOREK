@@ -1,5 +1,5 @@
 !> Testing the coupling of the projections of particles to JOREK
-program tae_loop
+program tae_phase_space_project
 
   use particle_tracer
   use mod_particle_diagnostics
@@ -45,7 +45,8 @@ program tae_loop
   type(type_edge_domain), allocatable, dimension(:) :: edge_domains
   type(edge_elements)                               :: D_edge
   type(write_particle_diagnostics)                  :: diag
-  type(phase_space_projection)                      :: test_phase
+  type(phase_space_projection)                      :: fourD_dist
+  type(phase_space_projection)                      :: power_exchange_vpar_mu
   real*8, parameter  :: binding_energy = 2.18d-18 ! ionization energy of a hydrogen atom [J] (= 13.6 eV)
   real*8    :: target_time
   real*8    :: physical_particles, weight
@@ -110,10 +111,14 @@ program tae_loop
     allocate(particle_kinetic_leapfrog::sim%groups(1)%particles(n_particles_local))
 
     !< If projecting phase space, it is vital to use a by construction phi independent initial distribtuion, i.e. phi planes.
+    !< This lowers the sampling in the other coordinates naturally, so for the example it's not done 
+    !< Example of usage is here in any case
     call initialise_particles_H_mu_psi_phiplanes(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &
          uniform_space=.true., uniform_space_rej_f=f_toroidal_flux, &
-         uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5,n_phi_planes_in=12)
-
+         uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5)   
+    !call initialise_particles_H_mu_psi_phiplanes(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &
+    !     uniform_space=.true., uniform_space_rej_f=f_toroidal_flux, &
+    !     uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5,n_phi_planes_in=12)   
 
     call adjust_particle_weights(sim%groups(1)%particles, rho_part)
     if (sim%my_id .eq. 0) write(*,*) "Particle density was adjusted to:", rho_part, sim%groups(1)%particles(1)%weight
@@ -145,27 +150,18 @@ program tae_loop
       filter_n0 = filter_perp, filter_hyper_n0 = filter_hyper, filter_parallel_n0 = filter_par_n0, &
       calc_integrals=.false., to_vtk=.true., to_h5 = .false., basename='projections')
 
-  ! A few examples of phase space projections.
-
-  ! Simple 2D density histogram
-  !test_phase = new_phase_space_projection(sim,ndim=2,res=[200,210],start=[9.d0,-1.d0],end=[11.d0,1.d0],f_proj=proj_f(proj_one, group = 1),&
-  !                                        f_grids= [proj_f(proj_R,group =1 ),proj_f(proj_Z,group=1)],bandwidths=[0.2,0.2])
-  ! Power versus minor radius (f_proj is not relevant, as we fill the value arrays manually by averaging over particle orbits.)
-  ! If you want to use this, you'll have to use a restart file with some mode structure (i.e. a linear-phase TAE mode from previous simulations)
-  test_phase = new_phase_space_projection(sim,ndim=2,res=[150,150],start=[-1d7,-0.1d6],end=[1.d7,1.d6],f_proj=proj_f(proj_one, group = 1),&
-                                         f_grids= [proj_f(proj_R,group = 1 ),proj_f(proj_Z,group = 1 )],bandwidths=[1d6,0.05d6])
+  
+  fourD_dist = new_phase_space_projection(ndim=4,res=[90,95,50,75],start=[9.d0,-1.d0,-1.1d0, -20.d0],end=[11.0,1.d0,1.1d0,1700.d0], f_proj = proj_f(proj_one,1), f_grids=proj_ndim_f(f=proj_RZPE, group=1),basename='fourD_dist')
+  call with(sim,fourD_dist)
+  
+  call output_phase_project(fourD_dist,0,output_grids_in=.true.)
+  ! The output is only done on the root process. To prevent a too big imbalance, barrier here.
+  call MPI_BARRIER(MPI_COMM_WORLD,ifail)
 
 
-  ! Initial density of mu
-  !test_phase = new_phase_space_projection(sim,ndim=1,res=[200],start=[0.d0],end=[1.d6],f_proj=proj_f(proj_one, group = 1),&
-  !                                         f_grids= [proj_f(proj_mu,group = 1 )],bandwidths=[0.05d6])
-
-  ! Example calling whole sim projection and outputting
-  !call with(sim,test_phase)
-  !call output_phase_project(test_phase)
-  ! This only works w/ nearest neighbour projection (not shaped kernels), so be careful! Manual filling (as in particle loop)
-  ! works for both.
-
+  ! Example for power exchange with custom bandwidths in particle loop
+  power_exchange_vpar_mu = new_phase_space_projection(ndim=2,res=[300,300],start=[-2.d7,-0.1d6],end=[2.d7,1.5d6],basename="power_exchange",bandwidths=[0.15d7,0.08d6])
+  
   ! Full tensor + density (for density flattening was the idea)
   allocate(jorek_feedback%rhs(n_order+1, n_vertex_max, sim%fields%element_list%n_elements, n_tor, 7))
 
@@ -222,14 +218,17 @@ program tae_loop
       write(*,*) "PARTICLE : n_steps             : ",n_steps
       write(*,*) "PARTICLE : step_rest_time      : ",step_rest_time
     endif
-    test_phase%values = 0.d0
-    call loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_steps , particle_start_time,test_phase)
-    call output_phase_project(test_phase,ino)
+    power_exchange_vpar_mu%values = 0.d0
+    call loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, 20 , particle_start_time,power_exchange_vpar_mu)
+    call output_phase_project(power_exchange_vpar_mu,ino,output_grids_in=.true.)
+    ! Aborting here so you can quickly see the phase space diagnostics. To make it run over multiple timesteps (needed for noise), set 20-> n_steps
+    ! and remove the mpi barrier and abort
+    call MPI_BARRIER(MPI_COMM_WORLD,ifail)
+    call MPI_ABORT(MPI_COMM_WORLD,1,ifail)
+    ! Will output every time step. A comulative sum of these is needed, but for now this allows you to do anything with the resulting files
     ino = ino +1
-    ! Output 2D pressure projection as well for completeness (& verify the initialization worked, to_vtk = .true.)
     sim%time = target_time
     call with(sim,events, at=sim%time)
-
   end do
 
 
@@ -266,8 +265,6 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   real*8    :: v_temp(3), T_eV, K_eV, v_kin_temp, B_norm(3), v,E_diff
   real*8    :: R_g, Z_g, R_s, R_t, Z_s, Z_t, xjac, HZ(n_tor), HH(4,4), HH_s(4,4), HH_t(4,4), E_tot,E_tot_red, E_after, E_after_red
   real*8    :: b_norm_r, b_norm_z, b_norm_phi, vr_tilde,vz_tilde,v_par, p_par, p_perp, p_atrop,val_tmp(test_phase%totsupport),val_tmp2
-  real*8    :: Zephi
-  real*8    :: Zephi_red
 !$ real*8 :: w0, w1, mmm(3)
 
 
@@ -300,23 +297,17 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   E_tot_red=0.d0
   E_after =0.d0
   E_after_red = 0.d0
-  Zephi=0.d0
+  
   select type (particles => sim%groups(1)%particles)
     type is (particle_kinetic_leapfrog)
       do j=1,size(particles,1)
-        if (particles(j)%i_elm > 0) then
-          call sim%fields%calc_EBpsiU(t, particles(j)%i_elm, particle_tmp%st, particle_tmp%x(3), E, B, psi, U)
-          Zephi = Zephi + particles(j)%q*particles(j)%weight*el_chg*U*F0
-        endif
         E_tot = E_tot + 0.5d0*particles(j)%weight*sim%groups(1)%mass*mass_proton*dot_product(particles(j)%v, particles(j)%v)
       enddo
   end select
   call MPI_REDUCE(E_tot,E_tot_red,1,MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  call MPI_REDUCE(Zephi, Zephi_red,1,MPI_REAL8, MPI_SUM,0,MPI_COMM_WORLD,ierr)
-  write(*,*) "On process", sim%my_id, "tot energy: ", E_tot
-  write(*,*) "On process", sim%my_id, "tot ezphi: ", Zephi
-  if(sim%my_id .eq. 0 ) write(*,*) "Total energy:", E_tot_red
-  if(sim%my_id .eq. 0) write(*,*) "Total ezphi:", Zephi_red
+  
+  if(sim%my_id .eq. 0 ) write(*,*) "Total energy before:", E_tot_red
+  
 
   select type (particles => sim%groups(1)%particles)
     type is (particle_kinetic_leapfrog)
@@ -385,16 +376,9 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
             p_par = v_par**2
             p_atrop = p_par-p_perp
 
-            ! Calculating indices of the support in the values array of the test_phase, the array is the [p_phi, E] value of the particle.
-            ! This is a bit trial and error to get good 'looking' bandwidths. (call loop w/ 1 step & E_diff ->pctls weight for dist function
-            call calc_index_shaped_part_x(test_phase,particle_tmp,index_phase_tmp, val_tmp,sim,[dot_product(particle_tmp%v,B)/norm2(B),0.5d0*sim%groups(1)%mass*atomic_mass_unit*norm2(cross_product(particle_tmp%v,B/norm2(B)))**2/norm2(B)/el_chg])
-
-            ! Adding to main test_phase array of all the particle contributions.
-            do i_phase=1, test_phase%totsupport
-              if(index_phase_tmp(i_phase) > 0)then
-                phase_proj(index_phase_tmp(i_phase))=phase_proj(index_phase_tmp(i_phase))+1.d0*val_tmp(i_phase)*particle_tmp%weight/n_steps!E_diff
-              endif
-            enddo
+            ! Particle projection of energy difference each timestep. 4D
+            call project_single_particle_x(test_phase,[dot_product(particle_tmp%v,B)/norm2(B),p_perp/norm2(B)/el_CHG*sim%groups(1)%mass * mass_proton],phase_proj,E_diff)
+            
           endif
         end do ! steps
         if(particle_tmp%i_elm .gt.0) then
@@ -483,8 +467,8 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
       enddo
   end select
   call MPI_REDUCE(E_after,E_after_red,1,MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-  write(*,*) "On process", sim%my_id, "tot energy after: ", E_tot
-  if(sim%my_id .eq. 0 ) write(*,*) "Total energy after:", E_after_red, " Energy diff = ", E_after_red - E_tot_red
+  
+  if(sim%my_id .eq. 0 ) write(*,"(A,E16.8,A,E16.8)") "Total energy after:", E_after_red, " Energy diff = ", E_after_red - E_tot_red
   jorek_feedback%rhs = feedback_rhs/n_steps
   test_phase%values=test_phase%values+phase_proj
   deallocate(feedback_rhs)
@@ -553,5 +537,18 @@ pure function f_toroidal_flux(n, P, grad_P) result(f)
 
 end function f_toroidal_flux
 
-end program tae_loop
+pure function proj_RZPE(ndim, sim,group, particle)
+  use mod_import_experimental_dist, only: calculate_B
+  type(particle_sim),           intent(in) :: sim
+  integer,                      intent(in) :: ndim,group
+  class(particle_base),         intent(in) :: particle
+  real*8                                   :: B_tmp(3)
+  real*8                                   :: proj_RZPE(ndim)
+  B_tmp= calculate_B(sim%fields, particle%i_elm,particle%st(1),particle%st(2),particle%x(3))
+  select type( p => particle)
+    type is (particle_kinetic_leapfrog)
+      proj_RZPE = [particle%x(1),particle%x(2),dot_product(p%v,B_tmp)/norm2(B_tmp)/norm2(p%v),0.5d0*sim%groups(1)%mass*mass_proton*dot_product(p%v, p%v)/1000.d0/el_CHG]
+end select  
+end function proj_RZPE
+end program tae_phase_space_project
 

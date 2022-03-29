@@ -1,27 +1,66 @@
 !> Module containing functions for phase-space diagnostics
-!> In usage, quite similar to particle projections, with the addition
-!> of not only value projection functions but also grid projection functions
-!> as to calculate the position of the particle on the grid & coordinates.
+!>
+!> Projecting particles on rectangular uniform grids for arbitrary grid coordinates and values
+!> Using kernels such that correct integration is guaranteed (up to discrete effects)
+!>  See https://en.wikipedia.org/wiki/Kernel_density_estimation for more information 
+!> Usage can include diagnosing 4D distribution functions (example in particles/examples/ITPA_4D.f90
+!>  with example analysis script in ....
+!> Other example is using power exchange diagnostic in vpar, mu phase space.
+!> Supports both event-based calling as the projection on the jorek grids (after having defined 
+!>  the appropriate functions to calculate the grid quantities) and a manual projection (more
+!>  useful inside an already existing particle loop)
+
+!> Interface:
+!> call with(sim,phase_space_projection) will do the projection on the grids
+!> call output_phase_project(this,ino,output_grids_in): outputting for HDF5
+!> call project_single_particle_x(this,x_in,value_arr,proj_value): projecting single particle on the values arrays
+
+
 module mod_phase_space_project
   use mod_io_actions
-  use data_structure
   use mod_particle_sim
   use mod_particle_types
-  use mod_fields
+  use mpi_mod
   use mod_project_particles
   use hdf5
   implicit none
-  private
-  public phase_space_projection
-  public new_phase_space_projection, output_phase_project, calc_index_shaped_part_x, project_single_particle_x
 
-  ! A type to project particle quantities on arbitrary coordinates. Examples include projecting on
-  ! invariant phase-space coordinates (E, \lambda, P_\phi) or real-space 1D histograms of initialization
-  ! quantities.
+  private
+  public phase_space_projection, proj_ndim_f, proj_ndim_f_interface
+  public new_phase_space_projection, output_phase_project, project_single_particle_x
+  
+! A function that will provide ndim values back. This is preferrable to a list of functions that each
+! provide one value back because in many cases an expensive interpolation has to be done which can be reused for different coordinates
+! Examples inclue a vpar, mu plot which both use the B field at the particle location. Similar to proj_f_interface in mod_project_particles
+  interface
+    function proj_ndim_f_interface(ndim, sim,group, particle)
+      import particle_sim, particle_base, phase_space_projection
+      type(particle_sim),           intent(in) :: sim
+      integer,                      intent(in) :: ndim,group
+      class(particle_base),         intent(in) :: particle
+      real*8                                   :: proj_ndim_f_interface(ndim)
+    end function proj_ndim_f_interface
+  end interface
+
+  type :: proj_ndim_f
+    procedure(proj_ndim_f_interface), nopass, pointer :: f
+    integer                                           :: group ! group to apply function to
+  end type proj_ndim_f
+
+  interface proj_ndim_f
+    module procedure new_proj_ndim_f !< The constructor for this type
+  end interface proj_ndim_f
+  
+  
+
+
+
+  ! Type definition. In principle should not be accesed outside of this module.
   type, extends(io_action) :: phase_space_projection
 
     ! As the amount of dimensions is not specified and the resolution is not necessarily the same in all directions
     ! one large 1D array will be used both for the n-dimensional grid and the meshgrid. The indices then can be calculated seperately.
+    ! where possible (and useful) the conversion is precalculated (basically mixed-radix arrays )
     real*8,       dimension(:),   allocatable         :: grids,dx
     real*8,       dimension(:),   allocatable         :: values
 
@@ -29,26 +68,52 @@ module mod_phase_space_project
     integer                                           :: ndim, val_size
     ! Resolution of each dimensions, index in grids array where the grid starts for each dimension
     ! and increments of the indices of each dimension in the values array.
-    integer,      dimension(:),   allocatable         :: res(:), previndex(:), mult_index(:)
+    integer,      dimension(:),   allocatable         :: res, previndex, mult_index
 
     ! Functions used to calculate the projected quantity and the grids/coordinates on which
     ! it is projected
     type(proj_f)                                      :: f_proj
-    type(proj_f), dimension(:),   allocatable         :: f_grids
+    type(proj_ndim_f)                                  :: f_grids
 
-    ! Quantities for defined particle shapes.
-    integer,     dimension(:),    allocatable         :: support,prevsupp, multsupp(:)
+    ! Quantities for defined particle shapes. 
+    ! support(ndim): support in number of grid points in each dimension
+    ! prevsupp(ndim): same as previndex, but for support array in calculating kernel
+    ! multsupp(ndim): same as mult_index, but for support array in calculating kernel\
+    ! bandwidths(ndim): shape of particle in each dimension
+    ! totsupport: total amount of support points
+    ! sumsupport: sum of support (again calculating kernel)
+    ! my_id: MPI ID
+    ! totsupp_to_nD(ndim,totsupport): precalculated matrix for converting total support
+    !  iteration number to ndim values for ndim indices (for calculating kernel, 20% improvement)
+    ! functions_present: describes whether functions are given for event-based calling
+    integer,     dimension(:),    allocatable         :: support,prevsupp, multsupp
     real*8,      dimension(:),    allocatable         :: bandwidths
-
-    integer,     dimension(:,:),  allocatable         :: totsupp_to_nD
     integer                                           :: totsupport,sumsupport, my_id
-    logical                                           :: support_present
+    integer,     dimension(:,:),  allocatable         :: totsupp_to_nD
+    logical                                           :: functions_present
+    !character(len=80)                                 :: basename
 
-contains
-procedure :: do => project_phase_space
+  contains
+    procedure :: do => project_phase_space
   end type phase_space_projection
 
+  
+
+
+
+
 contains
+! Constructor for the function that provides ndim values back.
+function new_proj_ndim_f(f, group)
+  type(proj_ndim_f)                                     :: new_proj_ndim_f
+  procedure(proj_ndim_f_interface), pointer, intent(in) :: f
+  integer, intent(in)                                   :: group
+  new_proj_ndim_f%f => f
+  new_proj_ndim_f%group = group
+end function new_proj_ndim_f
+
+
+
 ! Constructor of the phase-space projection.
 !  > ndim             : amount of dimensions
 !  > res(ndim)        : resolution (amount of points) of the grids in each dimension
@@ -56,52 +121,56 @@ contains
 !  > end(ndim)        : end points of each grid
 !  > bandwidths(ndim) : ndim bandwidths (shape extent) in each dimension (optional, but highly recommended. Otherwise only nearest-neighbour)
 !  > f_proj           : function that calculates the projected quantity (defined in mod_particle_projection)
-!                      (only needed if you want the option to call with(sim,phase_space_proj), but this is most of the time unncessary and slow)
-!  > f_grids(ndim)    : ndim functions that calculates the positions in each dimension
-!                      (only needed if you want the option to call with(sim,phase_space_proj), but this is most of the time unncessary and slow)
-! The reasons to use the shaped particles are threefold:
-!   1.) This will smooth the result somewhat.
-!   2.) The particles are then kernels, which allows for integration to the exact projected quantity (e.g. for power exchange, the integrated projection is the total exchanged power).
-!   3.) Decoupling grid and particle projection.
-! Nearest-neighbour projection is not very accurate and smooth, but if you have large amount of particles and not too many gridpoints it can be used.
+!  > f_grids          : function that calculates the positions in each dimension
 
-function new_phase_space_projection(sim,ndim,res,start,end,bandwidths,f_proj,f_grids) result(new)
+! it is recommended to have at least support >= 3 to have integration (it warns) reasonably correct.
+! For many dimensions discretisation errors can accumulate.
+function new_phase_space_projection(ndim,res,start,end,bandwidths,f_proj,f_grids,basename) result(new)
   type(phase_space_projection)                          :: new
-  type(particle_sim),          intent(in)               :: sim
   integer,                     intent(in)               :: ndim
   integer,                     intent(in)               :: res(ndim)
   real*8,                      intent(in)               :: start(ndim), end(ndim)
   real*8,                      intent(in), optional     :: bandwidths(ndim)
   type(proj_f),                intent(in), optional     :: f_proj
-  type(proj_f),                intent(in), optional     :: f_grids(ndim)
+  type(proj_ndim_f),           intent(in), optional     :: f_grids
+  character(len=*),            intent(in), optional      :: basename
   integer                                               :: it, jt, gridpoints, valuepoints,j,mult_tmp, my_id
+  
   call MPI_COMM_RANK(MPI_COMM_WORLD,my_id,it)
   new%my_id = my_id
+  
   ! Allocating the members of the phase-space projection. Have to allocate here due to varying ndim.
   allocate(new%res(ndim))
   allocate(new%previndex(ndim))
   allocate(new%mult_index(ndim))
   allocate(new%dx(ndim))
-  allocate(new%f_grids(ndim))
-  if(sim%my_id .eq. 0) then
-    write(*,"(A,I1,A)") " PARTICLES: Phase space projection with ",ndim, " dimensions."
+  if(present(basename))then
+    new%basename = trim(basename)//"_"
+  else
+    new%basename = "proj_"
+  endif
+  
+  if(my_id .eq. 0) then
+    write(*,"(A,I1,A)") " PARTICLES: basename: Phase space projection with ",ndim, " dimensions."
     if(ndim>7) then
       ! I cannot foresee a situation where this would come up, but for completeness sake.
       write(*,*) "PARTICLES: ", ndim, "dimensions is not supported by some compilers. "
     endif
   endif
 
-
-
-  new%support_present=.false.
+  
   new%ndim = ndim
   new%res = res
   if(present(f_proj) .and. present(f_grids)) then
     new%f_proj  = f_proj
     new%f_grids = f_grids
-    if(sim%my_id.eq. 0) write(*,*)"PARTICLES: Initialised projection functions"
+    if(my_id.eq. 0) write(*,*)"PARTICLES: Initialised projection functions"
+    new%functions_present = .true.
   else
-    if(sim%my_id.eq. 0) write(*,*)"PARTICLES: No projection function initialised. "
+    if(my_id.eq. 0) then
+      write(*,*)"PARTICLES: No projection function initialised. Disabling event-based calling..."
+    endif
+    new%functions_present = .false.
   endif
 
   ! Calculate the total values needed for each dimension
@@ -116,6 +185,7 @@ function new_phase_space_projection(sim,ndim,res,start,end,bandwidths,f_proj,f_g
   new%previndex=0
 
   ! Allocated on all mpi processes as this is not very large most of the time, reduction can be done later
+  ! For many dimensions, this can be prohibitive. E.g. a 4D grids with (90,95,50,75) is already ~256MB
   allocate(new%grids(gridpoints))
   allocate(new%values(valuepoints))
   new%values = 0.d0
@@ -141,55 +211,48 @@ function new_phase_space_projection(sim,ndim,res,start,end,bandwidths,f_proj,f_g
     new%dx(it)=new%grids(new%previndex(it)+2)-new%grids(new%previndex(it)+1)
   enddo   ! Dimension loop
 
-
+  allocate(new%bandwidths(new%ndim))
+  allocate(new%support(new%ndim))
+  allocate(new%prevsupp(new%ndim))
+  allocate(new%multsupp(new%ndim))
   if (present(bandwidths)) then
-    write(*,*) "PARTICLES: Bandwidths given, particles will now have finite shapes "
-    allocate(new%bandwidths(new%ndim))
-    allocate(new%support(new%ndim))
-    allocate(new%prevsupp(new%ndim))
-    allocate(new%multsupp(new%ndim))
-    new%support_present = .true.
-    new%bandwidths=bandwidths
-
-    new%prevsupp=0
-    do it=1,ndim
-      new%support(it)=floor(bandwidths(it)/new%dx(it))+1!
-
-
-
-
-      if (it > 1 ) then
-        new%prevsupp(it)=sum(new%support(1:(it-1)))
-      endif
-
-      if(new%support(it) < 3 .and. sim%my_id .eq. 0) then
-        write(*,"(A,I1,A)") " PARTICLES: Support for dimension ", it, " is very low. Will not integrate or project correctly."
-      endif
-      if(sim%my_id .eq. 0) then
-        write(*,"(A,I1,A,E12.4,A,I4)") " PARTICLES: In dimension ",it," the particle width is ",bandwidths(it), " giving a support of",new%support(it)
-      endif
-    enddo
-    new%totsupport = product(new%support)
-    new%sumsupport = sum(new%support)
-    mult_tmp = new%totsupport
-    do it=1,ndim
-      mult_tmp=mult_tmp/new%support(it)
-      new%multsupp(it)=mult_tmp
-    enddo
-
-    allocate(new%totsupp_to_nD(new%ndim,new%totsupport))
-
-    do it=1,new%totsupport
-      new%totsupp_to_nD(:, it) = support_to_nD(new,it)
-    enddo
-    
+    if(my_id .eq.0) write(*,*) "PARTICLES: Custom particle shape given."
+    new%bandwidths = bandwidths
+  else
+    if(my_id .eq.0) write(*,*) "PARTICLES: Bandwidths not given, using default shape of 4 grid spacings."
+    new%bandwidths = 4.d0*new%dx
   endif
-  if((.not. new%support_present ).and. (sim%my_id .eq. 0)) then
-    write(*,*)"PARTICLES: Trying to use shaped particles without initializing WILL result in undefined behaviour."
-    write(*,*) "PARTICLES: Not checked for every projection, use carefully."
-  endif
+  new%prevsupp=0
+  do it=1,ndim
+    new%support(it)=floor(new%bandwidths(it)/new%dx(it))+1!
 
-  if(sim%my_id .eq. 0 ) write(*,*) "PARTICLES: Constructed phase space projection"
+    if (it > 1 ) then
+      new%prevsupp(it)=sum(new%support(1:(it-1)))
+    endif
+
+    if(new%support(it) < 3 .and. my_id .eq. 0) then
+      write(*,"(A,I1,A)") " PARTICLES: Support for dimension ", it, " is very low. Will not integrate or project correctly."
+    endif
+    if(my_id .eq. 0) then
+      write(*,"(A,I1,A,E11.4,A,I4)") " PARTICLES: In dimension ",it," the particle width is ",new%bandwidths(it), " giving a support of",new%support(it)
+    endif
+  enddo
+  new%totsupport = product(new%support)
+  new%sumsupport = sum(new%support)
+  mult_tmp = new%totsupport
+  do it=1,ndim
+    mult_tmp=mult_tmp/new%support(it)
+    new%multsupp(it)=mult_tmp
+  enddo
+
+  allocate(new%totsupp_to_nD(new%ndim,new%totsupport))
+
+  ! Precaculating conversion between iteration of total support to ndim indices. 
+  do it=1,new%totsupport
+    new%totsupp_to_nD(:, it) = support_to_nD(new,it)
+  enddo
+
+  if(my_id .eq. 0 ) write(*,*) "PARTICLES: Constructed phase space projection"
 
 end function new_phase_space_projection
 
@@ -200,14 +263,44 @@ end function new_phase_space_projection
 ! > function, it is called if calling with(sim, phase_space_event).
 subroutine project_phase_space(this, sim, ev)
   use mod_event
-  class(phase_space_projection), intent(inout)     :: this
-  type(particle_sim), intent(inout)                :: sim
-  type(event), intent(inout), optional             :: ev
-  integer                                          :: iR
-  integer,dimension(:,:),allocatable               :: index_arr
-  real*8 ,dimension(:,:),allocatable               :: weight_arr
-  real*8 ,dimension(:),allocatable                 :: val_arr
+  class(phase_space_projection),  intent(inout)           :: this
+  type(particle_sim),             intent(inout)           :: sim
+  type(event),                    intent(inout), optional :: ev
+  real*8                                                  :: x_part(this%ndim), proj_value
+  real*8, dimension(:), allocatable                       :: val_tmp
+  integer                                                 :: i, i_group_proj, i_group_grids,ierr
 
+
+  allocate(val_tmp,source=this%values)
+  val_tmp = 0.d0
+
+  i_group_proj  = this%f_proj%group
+  i_group_grids = this%f_proj%group
+  if(i_group_proj .ne. i_group_grids) then
+    write(*,*) "PARTICLES: Error: different groups for value projection and grid projection"
+    call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+  endif
+  if(this%functions_present) then
+#ifdef __GFORTRAN__
+    !$omp parallel do default(shared) &
+#else
+    !$omp parallel do default(none) &
+    !$omp shared(sim,this,i_group_proj)    &
+#endif
+    !$omp private(x_part,proj_value,i) &
+    !$omp schedule(dynamic,10) &
+    !$omp reduction(+:val_tmp)
+    do i=1,size(sim%groups(i_group_proj)%particles,1)
+      proj_value = this%f_proj%f(sim,i_group_proj,sim%groups(i_group_proj)%particles(i))
+      x_part     = this%f_grids%f(this%ndim,sim,i_group_proj,sim%groups(i_group_proj)%particles(i))
+      call project_single_particle_x(this,x_part,val_tmp,proj_value)
+    enddo
+    !$omp end parallel do
+    this%values = val_tmp
+  else
+    if(sim%my_id .eq. 0 ) write(*,*) "PARTICLES: Phase space projection functions not given, returning 0."
+    this%values = 0.d0
+  endif
 end subroutine project_phase_space
 
 ! Output to h5 file. Structure: /values for the meshgrid-evaluated values. /grids/grid_i for 1D grids /grids/mgrid_i for ndim meshgrids
@@ -223,8 +316,8 @@ subroutine output_phase_project(this,ino,output_grids_in)
   integer(HID_T)                                   :: file_id, group_id_grid,dspace,dset_id
   integer                                          :: ierrhdf5
   integer                                          :: it,j
-  CHARACTER(LEN=8)                                 :: tmp_name
-  integer                                          :: res_tmp(7),order_tmp(7),res_tmp2(this%ndim) ! Change this if more dimensions needed
+  CHARACTER(len=8)                                 :: tmp_name
+  integer                                          :: res_tmp(7),order_tmp(7),res_tmp2(this%ndim) ! Change this if more dimensions needed...
   logical                                          :: output_grids
   !  but this should never come up as particles live in 7D at most.
 
@@ -274,7 +367,7 @@ subroutine output_phase_project(this,ino,output_grids_in)
 
     ! HDF5 file creation
     call h5open_f(ierrhdf5)
-    write(filename,"(A5,i5.5,A)") "proj_" ,ino, ".h5"
+    write(filename,"(A,i5.5,A)") trim(this%basename) ,ino, ".h5"
     call H5Fcreate_f(filename,H5F_ACC_TRUNC_F, file_id, ierrhdf5)
     if(output_grids)then
       call h5gcreate_f(file_id, "grids", group_id_grid, ierrhdf5)
@@ -308,21 +401,18 @@ subroutine output_phase_project(this,ino,output_grids_in)
       enddo ! dimension loop grids
     endif
     ! Output meshgrids of the value
-    call h5screate_simple_f(this%ndim, int(res_tmp2,kind=HSIZE_T), dspace, ierr)!, &
+    call h5screate_simple_f(this%ndim, int(res_tmp2,kind=HSIZE_T), dspace, ierr)
     call h5dcreate_f(file_id,"values", H5T_NATIVE_DOUBLE, dspace, dset_id, ierrhdf5)
 
     ! The trick to gaining arbitrary dimensional arrays into HDF5 is by using reshape immediately in the function
     ! as this saves us a maximum-dimension array allocation in the code.
     ! Beware: stack limits for reshape! set "ulimit -s unlimited"
     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE,RESHAPE(val_output(1:size(val_output)),res_tmp),int(res_tmp2,kind=HSIZE_T),ierr)
-
     call h5dclose_f(dset_id,ierr)
     call h5sclose_f(dspace,ierr)
     if(output_grids) then
       call h5gclose_f(group_id_grid, ierr)
     endif
-
-
     call h5fclose_f(file_id,  ierrhdf5)
     call h5close_f(ierrhdf5)
     write(*,* ) "PARTICLES: Written Phase Space Projection to ", trim(filename)
@@ -331,13 +421,11 @@ subroutine output_phase_project(this,ino,output_grids_in)
   deallocate(grid_mesh)
 end subroutine output_phase_project
 
-! Subroutine for calculating an array of indices  index_val for a single particle
-! corresponding to their support in all dimensions. Also, the shape is
-! calculated here in val_val
+! Subroutine for projecting one particle to the value_arr
 ! > this: phase space projection for the arrays needed to project
 ! > x_in: location of particle on the dimensions to project
 ! > value_arr: array to be projected on. Should be the same size as this%values
-! > value: projection value (i.e. if only particle weight, then just particle%weight)
+! > proj_value: projection value (i.e. if only particle weight, then just particle%weight)
 subroutine project_single_particle_x(this,x_in,value_arr,proj_value)
   class(phase_space_projection), intent(in)        :: this
   real*8,                        intent(in)        :: x_in(this%ndim)
@@ -350,7 +438,7 @@ subroutine project_single_particle_x(this,x_in,value_arr,proj_value)
   index_tmp=-1
 
   supp_weight=0.d0
-  
+
   ! whole loop ~ <5% execution time
   do i=1,this%ndim
     dx = this%dx(i)
@@ -377,42 +465,40 @@ subroutine project_single_particle_x(this,x_in,value_arr,proj_value)
         if (distance > 1.d0) then
           supp_weight(j+this%prevsupp(i))=0.d0
         else
-
           ! This is the kernel, i.e. https://en.wikipedia.org/wiki/Kernel_(statistics)
           ! but we can only use finite support ones naturally (i.e. no Gaussian)
           ! Will be scaled later to ensure integration to 1.
-          !Epachnikov
-          !supp_weight(j+this%prevsupp(i))=3.d0/4.d0*(1-distance**2.d0)
-          !Linear
-          !supp_weight(j+this%prevsupp(i))=1-abs(distance)
+          ! These are all valid kernels and there is no major difference in performance
+          ! for diagnostics most likely
           !Uniform
           !supp_weight(j+this%prevsupp(i))=0.5d0
+          !Linear
+          !supp_weight(j+this%prevsupp(i))=1-abs(distance)
+          !Epachnikov
+          !supp_weight(j+this%prevsupp(i))=3.d0/4.d0*(1-distance**2.d0)
           !Quartic
           !supp_weight(j+this%prevsupp(i))=15.d0/16.d0*(1-distance**2)**2
           !Triweight
           supp_weight(j+this%prevsupp(i))=35.d0/32.d0*(1-distance**2)**3
-
-        endif ! distance < 1.0        
+        endif ! distance < 1.0
       endif ! min_ind+j > 0 && min_ind+j < this%res(i)+1
     enddo !support points
   enddo ! n_dim
 
-  ! At this point we have the same situation as outputting grids (1D supports and values). For every point in totsupport we have to find
-  ! the indices in the main value array.
+  ! Now for every point in the total support calculate the total kernel and output that on the grids.
   do i=1,this%totsupport
 
     val_phase_grids_tmp=1.d0
-    ! Total weight of the support point i is calculated by the product of the weights in all dimensions. 
+    ! Total weight of the support point i is calculated by the product of the weights in all dimensions.
     do j=1,this%ndim
-      val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(this%totsupp_to_nD(j,i)+this%prevsupp(j))*1/this%bandwidths(j)*2.d0 !Bandwidth = 2*bandwidth_wiki
+      val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(this%totsupp_to_nD(j,i)+this%prevsupp(j))*1/this%bandwidths(j)*2.d0 !Bandwidth = 2*bandwidth_wiki !~13% execution time
     enddo
-  
     ! We need to check that this point is in fact on the grids
     if (all(this%totsupp_to_nD(:,i)+min_ind_cont >0) .and. all(this%totsupp_to_nD(:,i)+min_ind_cont < this%res+1)) then ! 13% execution time
-      index_tmp=calc_index_phase_proj(this, this%totsupp_to_nD(:,i)+min_ind_cont)
-        ! 43% execution time
-        value_arr(index_tmp)=value_arr(index_tmp)+1.d0*val_phase_grids_tmp*proj_value
-      endif
+      index_tmp=calc_index_phase_proj(this, this%totsupp_to_nD(:,i)+min_ind_cont) ! ~ 5% execution time
+      ! 43% execution time 
+      value_arr(index_tmp)=value_arr(index_tmp)+1.d0*val_phase_grids_tmp*proj_value
+    endif
   enddo ! support points
 end subroutine project_single_particle_x
 
@@ -429,118 +515,6 @@ pure function support_to_nD(this, index_in) result(index_out)
     index_tmp = modulo(index_tmp, this%multsupp(it))
   enddo
 end function
-! Same as previous subroutine, but with the option of providing the x_in on the grids.
-! This can be quite useful if the x calculation involves interpolating some quantity that is
-! already known at the moment this function is called
-subroutine calc_index_shaped_part_x(this, particle_in,index_val,val_val,sim,x_in)
-  type(particle_kinetic_leapfrog),intent(in)       :: particle_in
-  class(phase_space_projection),  intent(in)       :: this
-  real*8,                         intent(in)       :: x_in(this%ndim)
-  type(particle_sim)                               :: sim
-  real*8                                           :: value
-  real*8                                           :: x,dx, minx, maxx, xmin,xmain,distance
-  real*8                                           :: bandwidths(this%ndim)
-  integer                                          :: index_arr(this%ndim),totsupp,index_supp(this%sumsupport),i,j, main_ind, min_ind,ind_mesh_tmp(this%ndim)
-  integer                                          :: mesh_tmp,mesh_tmp2, indices_phase_grids_tmp(this%ndim)
-  integer,                        intent(out)      :: index_val(this%totsupport)
-  real*8,                         intent(out)      :: val_val(this%totsupport)
-  real*8                                           :: supp_weight(this%sumsupport),val_phase_grids_tmp
-
-  ! Initialize with 0 and -1 values and indices respectively.
-  index_val=-1
-  val_val= 0.d0
-  supp_weight=0.d0
-  index_supp=-1
-
-  do i=1, this%ndim
-    dx=this%grids(this%previndex(i)+2)-this%grids(this%previndex(i)+1)
-
-    minx=this%grids(this%previndex(i)+1)
-
-    maxx=this%grids(this%previndex(i)+this%res(i))
-    if (particle_in%i_elm > 0) then
-      x = x_in(i)
-
-      ! Not test if main x is in grid yet in order for particles outside the considered grid to
-      ! contribute with their support (i.e. considering R=9.5-10.0, particle at 9.45 with 0.1
-      ! bandwidth will still contribute slightly)
-
-      ! Calculate minimum index (will be < 0 if particle outside of grid, but will be tested later)
-      ! Correct for even/uneven support
-      if (mod(this%support(i),2).eq. 0 ) then
-        main_ind=nint((x-minx)/dx)+1
-        min_ind = main_ind - (this%support(i)-1)/2-1
-      else
-        main_ind=ceiling((x-minx)/dx)+1
-        min_ind = main_ind - this%support(i)/2-1
-      endif
-
-      !Now, we add all the grid points in the particles shape into the grids
-      do j=1,this%support(i)
-        ! Only calculate weight if it makes sense wrt the grid
-        if(min_ind+j>0 .and. min_ind+j < this%res(i)+1) then
-
-          ! Distance w.r.t particle centre.
-          distance=abs((x-this%grids(this%previndex(i)+min_ind+j))/this%bandwidths(i)*2.d0)
-
-          if (distance > 1.d0) then
-            supp_weight(j+this%prevsupp(i))=0.d0
-          else
-
-            ! This is the kernel, i.e. https://en.wikipedia.org/wiki/Kernel_(statistics)
-            ! but we can only use finite support ones naturally (i.e. no Gaussian)
-
-            !Epachnikov
-            !supp_weight(j+this%prevsupp(i))=3.d0/4.d0*(1-distance**2)
-
-            !Triweight (preffered by me due to C1 continuity)
-            supp_weight(j+this%prevsupp(i))=35.d0/32.d0*(1-distance**2)**3
-
-          endif ! distance < 1.0
-
-          index_supp(j+this%prevsupp(i))=min_ind+j
-
-        endif ! min_ind+j > 0 && min_ind+j < this%res(i)+1
-      enddo !support points
-
-
-    endif ! particle elm > 0
-
-  enddo   ! ndim
-  ! At this point we have the same situation as outputting grids (1D supports and values). For every point in totsupport we have to find
-  ! the indices in the main value array.
-  do i=1,this%totsupport
-
-    !Calculate meshgrid indices
-    mesh_tmp=i-1
-
-    do j=1,this%ndim
-
-      ind_mesh_tmp(j)=floor(real(mesh_tmp)/real(this%multsupp(j)))+1
-      mesh_tmp= modulo(mesh_tmp, this%multsupp(j)) !Remainder after subtracting first stride.
-
-    enddo
-    val_phase_grids_tmp=1.d0
-
-    do j=1,this%ndim
-
-      indices_phase_grids_tmp(j)=index_supp(ind_mesh_tmp(j)+this%prevsupp(j))
-      ! Scale the values by 1/bandwidth to be able to compare units w/ different bandwidths in each dimension
-      val_phase_grids_tmp=val_phase_grids_tmp*supp_weight(ind_mesh_tmp(j)+this%prevsupp(j))*1/this%bandwidths(j)*2.d0 !Bandwidth = 2*bandwidth_wiki
-
-    enddo
-
-    ! Again, if any index of the grids of this specific support point is less than 0, the particle is not considered.
-    if (minval(indices_phase_grids_tmp)> 0) then
-      index_val(i)=calc_index_phase_proj(this,indices_phase_grids_tmp)
-
-      val_val(i)=val_phase_grids_tmp
-
-    endif
-  enddo ! support points
-
-
-end subroutine calc_index_shaped_part_x
 ! To go from 1D large meshgrid to ndim meshgrids function
 function calc_index_phase_proj(this, index_arr) result(index_values)
   class(phase_space_projection), intent(in) :: this

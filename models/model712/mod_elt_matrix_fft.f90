@@ -66,7 +66,7 @@ real*8     :: in_fft(1:n_plane)
 complex*16 :: out_fft(1:n_plane)
 real*8     :: psi_axisym(n_gauss,n_gauss), psi_axisym_s(n_gauss,n_gauss), psi_axisym_t(n_gauss,n_gauss)
 real*8     ::                              psi_axisym_R(n_gauss,n_gauss), psi_axisym_Z(n_gauss,n_gauss)
-real*8     :: Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
+real*8     :: Fprof_time_dep,dF_dpsi(n_gauss,n_gauss)      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz
 real*8     :: zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz
 real*8     :: rho_initial(n_gauss,n_gauss),dn_dpsi, dn_dz, dn_dpsi2, dn_dz2, dn_dpsi_dz, dn_dpsi3, dn_dpsi_dz2,  dn_dpsi2_dz
 real*8     :: Ti_initial (n_gauss,n_gauss),dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz
@@ -535,6 +535,7 @@ heat_source_e     = 0.d0
 V_source          = 0.d0
 dV_dpsi_source    = 0.d0
 dV_dz_source      = 0.d0
+dF_dpsi           = 0.d0
 do ms=1, n_gauss
   do mt=1, n_gauss
     ! --- These are just temporary, only for the sources (they are recalculated afterwards at each n_plane)
@@ -550,18 +551,18 @@ do ms=1, n_gauss
     A30_t = eq_t(1,var_A3,ms,mt)
     A30_R = (   y_t(ms,mt) * A30_s  - y_s(ms,mt) * A30_t ) / xjac
     A30_Z = ( - x_t(ms,mt) * A30_s  + x_s(ms,mt) * A30_t ) / xjac
+    ! --- The dF_dpsi function calculated on time-dependent psi_norm
+    ! --- Note: Fprof is be taken from the node values (cleaner)
+    call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, &
+                   Fprof_time_dep,dF_dpsi(ms,mt) ,dF_dz      ,dF_dpsi2 ,dF_dz2      ,dF_dpsi_dz , &
+                   zFFprime ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
     if (keep_current_prof) then
-      ! --- The dF_dpsi function calculated on time-dependent psi_norm
-      ! --- Note: Fprof is be taken from the node values (cleaner)
-      call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, &
-                     Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2      ,dF_dz2      ,dF_dpsi_dz , &
-                     zFFprime      ,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
       ! --- Toroidal current source. Historically JOREK uses a negative current, so we need to reverse it.
       call current(xpoint2, xcase2, R,Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,current_source_Jp(ms,mt))
       current_source_Jp(ms,mt) = - current_source_Jp(ms,mt)
       ! --- Poloidal current sources
-      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_Z(ms,mt) * dF_dpsi / R
-      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_R(ms,mt) * dF_dpsi / R
+      current_source_JR(ms,mt) = + (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_Z(ms,mt) * dF_dpsi(ms,mt) / R
+      current_source_JZ(ms,mt) = - (ES%psi_bnd_init - ES%psi_axis_init) / (psi_bnd - psi_axis) * psi_axisym_R(ms,mt) * dF_dpsi(ms,mt) / R
       if (eta_ARAZ_simple) then
         current_source_JR(ms,mt) = 0.d0
         current_source_JZ(ms,mt) = 0.d0
@@ -1274,10 +1275,6 @@ do i=1,n_vertex_max
           psieq_R = (   y_t(ms,mt) * psi_axisym_s(ms,mt)  - y_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
           psieq_Z = ( - x_t(ms,mt) * psi_axisym_s(ms,mt)  + x_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
 
-          call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt), psi_axis, psi_bnd, &
-                         Fprof_time_dep,dF_dpsi      ,dF_dz      ,dF_dpsi2,dF_dz2 ,dF_dpsi_dz , &
-                         zFFprime,dFFprime_dpsi,dFFprime_dz,dFFprime_dpsi2,dFFprime_dz2,dFFprime_dpsi_dz)
-
           BR0_R = -1.0d0/R**2 * ( A30_Z - AZ0_p ) + ( A30_RZ - AZ0_Rp )/R
           BR0_Z = ( A30_ZZ - AZ0_Zp ) / R
           BR0_p = ( A30_Zp - AZ0_pp ) / R
@@ -1285,10 +1282,10 @@ do i=1,n_vertex_max
           BZ0_Z = ( AR0_Zp - A30_RZ ) / R
           BZ0_p = ( AR0_pp - A30_Rp ) / R
           Bp0_R = ( AZ0_RR - AR0_RZ )  &
-                + (psi_bnd - psi_axis) / (ES%psi_bnd_init - ES%psi_axis_init) * psieq_R * dF_dpsi / R  &
+                + (psi_bnd - psi_axis) / (ES%psi_bnd_init - ES%psi_axis_init) * psieq_R * dF_dpsi(ms,mt) / R  &
                 - Fprofile(ms,mt)/R**2
           Bp0_Z = ( AZ0_RZ - AR0_ZZ ) &
-                + (psi_bnd - psi_axis) / (ES%psi_bnd_init - ES%psi_axis_init) * psieq_Z * dF_dpsi / R
+                + (psi_bnd - psi_axis) / (ES%psi_bnd_init - ES%psi_axis_init) * psieq_Z * dF_dpsi(ms,mt) / R
           Bp0_p = ( AZ0_Rp - AR0_Zp )
 
           JR0 = Bp0_Z - BZ0_p / R
@@ -2131,7 +2128,7 @@ do i=1,n_vertex_max
                   JR0_AZ__p  = AZ_RZ
                   JR0_AZ__n  = 0.0d0
                   JR0_AZ__nn = 0.0d0
-                  JR0_A3__p  = dF_dpsi * A3_Z / R
+                  JR0_A3__p  = dF_dpsi(ms,mt) * A3_Z / R
                   JR0_A3__n  = A3_Rp / R**2
                   JR0_A3__nn = 0.d0
 
@@ -2141,7 +2138,7 @@ do i=1,n_vertex_max
                   JZ0_AZ__p  = - AZ_RR - AZ_R / R
                   JZ0_AZ__n  = 0.d0
                   JZ0_AZ__nn = - AZ_pp / R**2
-                  JZ0_A3__p  = - (dF_dpsi*A3_R) / R ! + Fprofile(ms,mt)/R**2 - Fprofile(ms,mt)/R**2
+                  JZ0_A3__p  = - (dF_dpsi(ms,mt) * A3_R) / R ! + Fprofile(ms,mt)/R**2 - Fprofile(ms,mt)/R**2
                   JZ0_A3__n  = A3_Zp / R**2
                   JZ0_A3__nn = 0.d0
 

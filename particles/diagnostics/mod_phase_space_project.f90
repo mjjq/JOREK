@@ -3,7 +3,7 @@
 !> Projecting particles on rectangular uniform grids for arbitrary grid coordinates and values
 !> Using kernels such that correct integration is guaranteed (up to discrete effects)
 !>  See https://en.wikipedia.org/wiki/Kernel_density_estimation for more information 
-!> Usage can include diagnosing 4D distribution functions (example in particles/examples/ITPA_4D.f90
+!> Usage can include diagnosing 4D distribution functions (example in particles/examples/tae_phase_space_project.f90
 !>  with example analysis script in ....
 !> Other example is using power exchange diagnostic in vpar, mu phase space.
 !> Supports both event-based calling as the projection on the jorek grids (after having defined 

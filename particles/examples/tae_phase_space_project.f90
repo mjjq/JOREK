@@ -97,9 +97,6 @@ program tae_phase_space_project
     write(*,*) "tstep = ", tstep_si, n_steps, timesteps
     write(*,*) "check :", n_steps, tstep_si - n_steps*timesteps
 
-    i_diagno =  sim%fields%node_list%n_nodes / 3
-    write(*,'(A,6f8.4)') ' probe at : ',sim%fields%node_list%node(i_diagno)%x(1,1,1:2)
-    open(111,file='diagno.txt')
   endif
   write(*,*) "until start phase" , sim%my_id
   if (.not. restart_particles) then
@@ -150,16 +147,24 @@ program tae_phase_space_project
       filter_n0 = filter_perp, filter_hyper_n0 = filter_hyper, filter_parallel_n0 = filter_par_n0, &
       calc_integrals=.false., to_vtk=.true., to_h5 = .false., basename='projections')
 
-  
-  fourD_dist = new_phase_space_projection(ndim=4,res=[90,95,50,75],start=[9.d0,-1.d0,-1.1d0, -20.d0],end=[11.0,1.d0,1.1d0,1700.d0], f_proj = proj_f(proj_one,1), f_grids=proj_ndim_f(f=proj_RZPE, group=1),basename='fourD_dist')
-  call with(sim,fourD_dist)
-  
-  call output_phase_project(fourD_dist,0,output_grids_in=.true.)
+  ! Be aware of OMP_STACKSIZE limits here as well. Each OMP process will create a private copy of the array on the stack (for reduction later), so for large arrays
+  ! such as this 4D array, it will be expensive. 90*95*50*75*8 ~ 256.5e6 = 256.5 MegaByte. If you run 
+  !    export OMP_STACKSIZE=256M 
+  ! the OMP stack size of each worker will be 256 MebiByte = 268 MegaByte, which barely fits this array. (also, be aware that intel OMP can overwrite this with KMP_STACKSIZE)
+  ! The default on MPCDF machines is 256M, so it will work there without further action.
+  ! Comment out these three lines if it is not needed.
+
+  !fourD_dist = new_phase_space_projection(ndim=4,res=[90,95,50,75],start=[9.d0,-1.d0,-1.1d0, -20.d0],end=[11.0,1.d0,1.1d0,1700.d0], f_proj = proj_f(proj_one,1), f_grids=proj_ndim_f(f=proj_RZPE, group=1),basename='fourD_dist')
+  !call with(sim,fourD_dist)
+  !call output_phase_project(fourD_dist,0,output_grids_in=.true.)
+
   ! The output is only done on the root process. To prevent a too big imbalance, barrier here.
   call MPI_BARRIER(MPI_COMM_WORLD,ifail)
 
 
-  ! Example for power exchange with custom bandwidths in particle loop
+  ! Example for power exchange with custom bandwidths in particle loop. Will be more useful with n_phi_planes initialisation and a restarted mode structure.
+  ! However, then during the first timesteps the energy difference is so small floating point limitations limit the accuracy of the diagnostic. It does immediately
+  ! work properly if you don't use n_phi_planes which you can use to test the diagnostic script.
   power_exchange_vpar_mu = new_phase_space_projection(ndim=2,res=[300,300],start=[-2.d7,-0.1d6],end=[2.d7,1.5d6],basename="power_exchange",bandwidths=[0.15d7,0.08d6])
   
   ! Full tensor + density (for density flattening was the idea)
@@ -219,13 +224,15 @@ program tae_phase_space_project
       write(*,*) "PARTICLE : step_rest_time      : ",step_rest_time
     endif
     power_exchange_vpar_mu%values = 0.d0
-    call loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, 20 , particle_start_time,power_exchange_vpar_mu)
+    call loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_steps , particle_start_time,power_exchange_vpar_mu)
     call output_phase_project(power_exchange_vpar_mu,ino,output_grids_in=.true.)
-    ! Aborting here so you can quickly see the phase space diagnostics. To make it run over multiple timesteps (needed for noise), set 20-> n_steps
-    ! and remove the mpi barrier and abort
+    ! Aborting here so you can quickly see the phase space diagnostics. To make it run over multiple timesteps (needed for noise)
+    ! remove mpi barrier and abort. The diagnostic will not be hard on performance as long as you do it only at the end of the loop.
     call MPI_BARRIER(MPI_COMM_WORLD,ifail)
     call MPI_ABORT(MPI_COMM_WORLD,1,ifail)
-    ! Will output every time step. A comulative sum of these is needed, but for now this allows you to do anything with the resulting files
+    ! Will output every time step. A comulative sum of these is needed, but for now this allows you to do anything with the resulting files.
+    ! You can also move the power_exchange_vpar_mu%values=0.d0 line outside the loop, at which point it will do the cumulative sum itself.
+    ! But it can be useful to have only the power exchange between steps n and n+1.
     ino = ino +1
     sim%time = target_time
     call with(sim,events, at=sim%time)
@@ -238,7 +245,7 @@ program tae_phase_space_project
 
   call sim%finalize
 
-  if (sim%my_id == 0) close(111)
+
 
 contains
 
@@ -264,7 +271,8 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   real*8    :: t, E(3), B(3), psi, U, n_e, T_e, rz_old(2), st_old(2),rzp_old(3),vcart_old(3),vcart_new(3)
   real*8    :: v_temp(3), T_eV, K_eV, v_kin_temp, B_norm(3), v,E_diff
   real*8    :: R_g, Z_g, R_s, R_t, Z_s, Z_t, xjac, HZ(n_tor), HH(4,4), HH_s(4,4), HH_t(4,4), E_tot,E_tot_red, E_after, E_after_red
-  real*8    :: b_norm_r, b_norm_z, b_norm_phi, vr_tilde,vz_tilde,v_par, p_par, p_perp, p_atrop,val_tmp(test_phase%totsupport),val_tmp2
+  real*8    :: b_norm_r, b_norm_z, b_norm_phi, vr_tilde,vz_tilde,v_par, p_par, p_perp, p_atrop, iterations
+  real*8    :: mucontainer(n_steps), vparcontainer(n_steps), bcontainer(n_steps),xcontainer(n_steps), fitsinevpar(4), fitsinemu(4), omega,mumid,vparmid
 !$ real*8 :: w0, w1, mmm(3)
 
 
@@ -272,7 +280,7 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   integer   :: i, j, k, l, m, i_elm_old, i_elm,i_phase
   integer   :: seed, i_rng, n_stream, ierr, nthreads
   integer   :: i_tor, index_lm, i_elm_temp
-  integer   :: n_particles, ifail, index_phase_tmp(test_phase%totsupport),index_phase_tmp2
+  integer   :: n_particles, ifail,proj_factor
   real*8,allocatable :: feedback_rhs(:,:,:,:,:)
   real*8, allocatable :: phase_proj(:)
 
@@ -291,13 +299,13 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
 
   jorek_feedback%rhs = 0.d0
   feedback_rhs       = 0.d0
-
+  proj_factor = 10
   call with(sim, counter)
   E_tot = 0.d0
   E_tot_red=0.d0
   E_after =0.d0
   E_after_red = 0.d0
-  
+  ! For energy conservation checks we sum op all the particle energies.
   select type (particles => sim%groups(1)%particles)
     type is (particle_kinetic_leapfrog)
       do j=1,size(particles,1)
@@ -306,9 +314,16 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   end select
   call MPI_REDUCE(E_tot,E_tot_red,1,MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   
-  if(sim%my_id .eq. 0 ) write(*,*) "Total energy before:", E_tot_red
+  if(sim%my_id .eq. 0 ) write(*,"(A,E16.8)") " PARTICLE LOOP: Total energy before:", E_tot_red
   
-
+ ! For least squares fitting
+  mucontainer=0.d0
+  vparcontainer = 0.d0
+  bcontainer = 0.d0
+  xcontainer = (/(I,I=1,n_steps)/)
+  omega = 0.d0
+  
+  
   select type (particles => sim%groups(1)%particles)
     type is (particle_kinetic_leapfrog)
 #ifdef __GFORTRAN__
@@ -316,22 +331,22 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
 #else
       !$omp parallel do default(none) &
       !$omp shared(sim, particles, n_steps, timesteps, rng, particle_start_time,        &
-      !$omp rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm,                           &
-      !$omp jorek_feedback, CENTRAL_DENSITY, CENTRAL_MASS,test_phase)                              &
+      !$omp rho_norm, t_norm, v_norm, E_norm, M_norm, N_norm, proj_factor,                           &
+      !$omp jorek_feedback, CENTRAL_DENSITY, CENTRAL_MASS,test_phase, xcontainer)                              &
 #endif
-      !$omp private(particle_tmp, i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old, index_phase_tmp,  val_tmp, i_phase, index_phase_tmp2,val_tmp2, &
-      !$omp i_elm_old, i_elm, n_e, T_e, b_norm_r, b_norm_z,b_norm_phi, vr_tilde, vz_tilde,v_par, p_par, p_perp, p_atrop,&
-      !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, ifail, v,rzp_old,vcart_old,vcart_new,E_diff) &
+      !$omp private(particle_tmp, i_rng, i,j,k,l,m, t, E, B, psi, U, rz_old, st_old, fitsinevpar,fitsinemu,  &
+      !$omp i_elm_old, i_elm, n_e, T_e, b_norm_r, b_norm_z,b_norm_phi, vr_tilde, vz_tilde,v_par, p_par, p_perp, p_atrop, omega,vparmid,mumid,&
+      !$omp R_g, R_s, R_t, Z_g, Z_s, Z_t, xjac, HH, HH_s, HH_t, HZ, index_lm, ifail, v,rzp_old,vcart_old,vcart_new,E_diff, mucontainer,vparcontainer,bcontainer) &
       !$omp schedule(dynamic,10) &
       !$omp reduction(+:feedback_rhs)&
       !$omp reduction(+:phase_proj)
       do j=1,size(particles,1)
-
+        
         call copy_particle_kinetic_leapfrog(particles(j),particle_tmp)
 
         !      i_rng = 1
 !$      i_rng = omp_get_thread_num()+1
-
+        E_diff = particle_tmp%weight*0.5d0*sim%groups(1)%mass*MASS_PROTON*dot_product(particle_tmp%v,particle_tmp%v)
         do k=1,n_steps
 
           if (particle_tmp%i_elm .le. 0) exit
@@ -345,6 +360,10 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
           st_old    = particle_tmp%st
           i_elm_old = particle_tmp%i_elm
 
+          ! For least squares fitting, arrays with all the mu & vpar
+          mucontainer(k)   = 0.5d0*sim%groups(1)%mass*ATOMIC_MASS_UNIT*norm2(cross_product(particle_tmp%v,B/norm2(B)))**2/norm2(B)/el_chg ! [eV/T]
+          vparcontainer(k) = dot_product(particle_tmp%v,B)/norm2(B)
+          bcontainer(k)    = norm2(B)
           if (particle_tmp%i_elm .gt. 0) then
             ! Do phase space projection before pushing
             ! For completeness, this is the nearest neighbour implementation.
@@ -354,12 +373,16 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
             ! endif
 
             ! Push the particle and determine its new location.
-            E_diff = particle_tmp%weight*0.5d0*sim%groups(1)%mass*MASS_PROTON*dot_product(particle_tmp%v,particle_tmp%v)
+            
             call boris_push_cylindrical(particle_tmp, sim%groups(1)%mass, E, B, timesteps)
 
             call find_RZ_nearby(sim%fields%node_list, sim%fields%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
                      particle_tmp%x(1), particle_tmp%x(2), particle_tmp%st(1), particle_tmp%st(2), particle_tmp%i_elm, ifail)
-            E_diff =-E_diff+ particle_tmp%weight*0.5d0*sim%groups(1)%mass*MASS_PROTON*dot_product(particle_tmp%v,particle_tmp%v)
+            
+            ! Particle projection of energy difference each timestep. 4D
+          endif 
+          if(particle_tmp%i_elm .gt.0 .and. mod(k,proj_factor).eq. 0) then
+
             !Particle perpendicular & parallel pressure averaging
             !Normalized b vector
             b_norm_r= B(1)/sqrt(B(1)**2+B(2)**2+B(3)**2)
@@ -369,95 +392,93 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
             vr_tilde=(-(b_norm_r)*particle_tmp%v(3)+b_norm_phi*particle_tmp%v(1))/sqrt(b_norm_phi**2+b_norm_r**2)
             vz_tilde = (particle_tmp%v(2)-b_norm_z*(b_norm_phi*particle_tmp%v(3)+b_norm_r*particle_tmp%v(1)+b_norm_z*particle_tmp%v(2)))/sqrt(b_norm_phi**2+b_norm_r**2)
             v_par= b_norm_phi*particle_tmp%v(3)+b_norm_r*particle_tmp%v(1)+b_norm_z*particle_tmp%v(2)
-            !write(*,*) v_par, dot_product(particle_tmp%v, B)/norm2(B)
-
+  
             !Parallel & perpendicular pressures
             p_perp = 1.d0/2.d0*(vr_tilde**2+vz_tilde**2)
             p_par = v_par**2
             p_atrop = p_par-p_perp
-
-            ! Particle projection of energy difference each timestep. 4D
-            call project_single_particle_x(test_phase,[dot_product(particle_tmp%v,B)/norm2(B),p_perp/norm2(B)/el_CHG*sim%groups(1)%mass * mass_proton],phase_proj,E_diff)
-            
-          endif
+  
+            call basisfunctions(particle_tmp%st(1), particle_tmp%st(2), HH, HH_s, HH_t)
+            call mode_moivre(particle_tmp%x(3), HZ)
+  
+            i_elm=particle_tmp%i_elm
+  
+            do l=1,n_vertex_max
+              do m=1,n_order+1
+  
+                index_lm = (l-1)*(n_order+1) + m
+  
+                v = HH(l,m) * sim%fields%element_list%element(i_elm)%size(l,m)
+  
+                do i_tor=1,n_tor
+  
+  
+                  feedback_rhs(m,l,i_elm,i_tor,1) = feedback_rhs(m,l,i_elm,i_tor,1) &
+  
+                                                             + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
+  
+                                                              * (p_perp+b_norm_r**2*p_atrop) * mu_zero !PI_RR
+                  feedback_rhs(m,l,i_elm,i_tor,2) = feedback_rhs(m,l,i_elm,i_tor,2) &
+  
+                                                              + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
+  
+                                                              * ( p_perp+b_norm_z**2*p_atrop ) * mu_zero                       !PI_ZZ
+                  feedback_rhs(m,l,i_elm,i_tor,3) = feedback_rhs(m,l,i_elm,i_tor,3) &
+  
+                                                              + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
+  
+                                                              * (p_perp+b_norm_phi**2*p_atrop) * mu_zero !PI_PHIPHI
+                  feedback_rhs(m,l,i_elm,i_tor,4) = feedback_rhs(m,l,i_elm,i_tor,4) &
+  
+                                                              + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
+  
+                                                              * ( b_norm_r*b_norm_z*p_atrop ) * mu_zero                            !PI_RZ
+                  feedback_rhs(m,l,i_elm,i_tor,5) = feedback_rhs(m,l,i_elm,i_tor,5) &
+  
+                                                             + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
+  
+                                                              * (b_norm_r*b_norm_phi*p_atrop ) * mu_zero !PI_RPHI
+                  feedback_rhs(m,l,i_elm,i_tor,6) = feedback_rhs(m,l,i_elm,i_tor,6) &
+  
+                                                             + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
+  
+                                                              *(b_norm_z*b_norm_phi*p_atrop ) * mu_zero !PI_ZPHI
+                  feedback_rhs(m,l,i_elm,i_tor,7) = feedback_rhs(m,l,i_elm,i_tor,7) &
+  
+                                                             + HZ(i_tor) * v * particle_tmp%weight  !Density
+  
+  
+                enddo! <tor harmonic
+  
+              enddo   !< order
+            enddo     !< vertex
+  
+          end if !<particle_temp%i_elm gt 0 after pushing and projection needed 
         end do ! steps
-        if(particle_tmp%i_elm .gt.0) then
+        
+        E_diff =-E_diff+ particle_tmp%weight*0.5d0*sim%groups(1)%mass*mass_proton*dot_product(particle_tmp%v,particle_tmp%v)
 
+        ! For the fitting, it is important to take a gyrofrequency that makes sense.
+        ! Although the average B is not expected to give the exact gyrofrequency, it is often good enough.
 
+        ! If you want to check that this is working, simply add if(sim%my_id .eq. 0 .and. j.eq.1 )statements with 
+        ! outputs into files of the vparcontainer & mucontainer & fits.
+        omega = el_chg*sum(bcontainer)/size(bcontainer)/sim%groups(1)%mass/atomic_mass_unit 
+        fitsinevpar = l2_sinfit(n_steps,xcontainer*timesteps,vparcontainer,omega)
+        fitsinemu   = l2_sinfit(n_steps,xcontainer*timesteps,mucontainer,  omega)
 
-
-
-          call basisfunctions(particle_tmp%st(1), particle_tmp%st(2), HH, HH_s, HH_t)
-          call mode_moivre(particle_tmp%x(3), HZ)
-
-          i_elm=particle_tmp%i_elm
-
-          do l=1,n_vertex_max
-            do m=1,n_order+1
-
-              index_lm = (l-1)*(n_order+1) + m
-
-              v = HH(l,m) * sim%fields%element_list%element(i_elm)%size(l,m)
-
-              do i_tor=1,n_tor
-
-
-                feedback_rhs(m,l,i_elm,i_tor,1) = feedback_rhs(m,l,i_elm,i_tor,1) &
-
-                                                           + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
-
-                                                            * (p_perp+b_norm_r**2*p_atrop) * mu_zero !PI_RR
-                feedback_rhs(m,l,i_elm,i_tor,2) = feedback_rhs(m,l,i_elm,i_tor,2) &
-
-                                                            + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
-
-                                                            * ( p_perp+b_norm_z**2*p_atrop ) * mu_zero                       !PI_ZZ
-                feedback_rhs(m,l,i_elm,i_tor,3) = feedback_rhs(m,l,i_elm,i_tor,3) &
-
-                                                            + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
-
-                                                            * (p_perp+b_norm_phi**2*p_atrop) * mu_zero !PI_PHIPHI
-                feedback_rhs(m,l,i_elm,i_tor,4) = feedback_rhs(m,l,i_elm,i_tor,4) &
-
-                                                            + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
-
-                                                            * ( b_norm_r*b_norm_z*p_atrop ) * mu_zero                            !PI_RZ
-                feedback_rhs(m,l,i_elm,i_tor,5) = feedback_rhs(m,l,i_elm,i_tor,5) &
-
-                                                           + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
-
-                                                            * (b_norm_r*b_norm_phi*p_atrop ) * mu_zero !PI_RPHI
-                feedback_rhs(m,l,i_elm,i_tor,6) = feedback_rhs(m,l,i_elm,i_tor,6) &
-
-                                                           + HZ(i_tor) * v * particle_tmp%weight * sim%groups(1)%mass * mass_proton &
-
-                                                            *(b_norm_z*b_norm_phi*p_atrop ) * mu_zero !PI_ZPHI
-                feedback_rhs(m,l,i_elm,i_tor,7) = feedback_rhs(m,l,i_elm,i_tor,7) &
-
-                                                           + HZ(i_tor) * v * particle_tmp%weight  !Density
-
-
-              enddo! <tor harmonic
-
-            enddo   !< order
-          enddo     !< vertex
-
-        end if !<particle_temp%i_elm gt 0 after pushing!
-
-
-
+        ! Projecting at the linearized part at the middle. As long as these quantities
+        ! do not vary too much over one particle loop, this is good enough.
+        ! You could improve it by also using an Econtainer and depositing at every (or every proj_factor) timestep
+        ! of the linear part of the sine fits. It is not recommended to fit this Econtainer, as this might break conservation
+        ! of energy. 
+        vparmid =  fitsinevpar(1)+fitsinevpar(2)*real(n_steps/2,8)*timesteps
+        mumid   = fitsinemu(1)+fitsinemu(2)*real(n_steps/2,8)*timesteps
+        call project_single_particle_x(test_phase,[vparmid,mumid],phase_proj,E_diff)
 
         call copy_particle_kinetic_leapfrog(particle_tmp, particles(j))
-
-
-
-
-
       end do   ! particles
       !$omp end parallel do
-
-      if (sim%my_id .eq. 0) write(*,*) "End of the particle loop"
-
 
   end select
   select type(particles => sim%groups(1)%particles)
@@ -468,53 +489,20 @@ subroutine loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_st
   end select
   call MPI_REDUCE(E_after,E_after_red,1,MPI_REAL8, MPI_SUM, 0, MPI_COMM_WORLD, ierr)
   
-  if(sim%my_id .eq. 0 ) write(*,"(A,E16.8,A,E16.8)") "Total energy after:", E_after_red, " Energy diff = ", E_after_red - E_tot_red
-  jorek_feedback%rhs = feedback_rhs/n_steps
+  if(sim%my_id .eq. 0 ) then 
+    write(*,"(A,E16.8)") " PARTICLE LOOP: Total energy after:", E_after_red
+    write(*,"(A,E16.8)") " PARTICLE LOOP: Energy difference: ", E_after_red - E_tot_red
+  endif
+  iterations = real(n_steps/proj_factor,8)
+
+  if(sim%my_id .eq.0 )write(*,"(A,I4,A,F4.0,A)") " PARTICLE LOOP: Projecting every",proj_factor," timesteps, for a total of ", iterations, " times."
+  if (sim%my_id .eq. 0) write(*,*) "PARTICLE LOOP: End of the particle loop"
+  jorek_feedback%rhs = feedback_rhs/iterations
   test_phase%values=test_phase%values+phase_proj
   deallocate(feedback_rhs)
   deallocate(phase_proj)
 
 end subroutine
-
-
-pure function f_adapted(n, P, grad_P) result(f)
-  integer, intent(in) :: n
-  real*8, intent(in) :: P(n), grad_P(3,n)
-  real*8 ::s, coeff(0:4)
-  real*4 :: f
-
-  coeff(0)=0.53
-  coeff(1)=0.3
-  coeff(2)=0.2
-  coeff(3)=0.52
-  coeff(4)=0.26
-
-  s = max((P(1) - ES%Psi_axis) / ( ES%Psi_bnd - ES%Psi_axis),0.d0)
-
-  f = coeff(3)*exp(-coeff(2)/coeff(1)*(tanh((sqrt(s)-coeff(0))/coeff(2))))
-
-  f = (f - coeff(4)) / (1.d0 - coeff(4))
-
-end function f_adapted
-
-pure function f_original(n, P, grad_P) result(f)
-  integer, intent(in) :: n
-  real*8, intent(in) :: P(n), grad_P(3,n)
-  real*8 ::s, coeff(0:3)
-  real*4 :: f
-
-  ! central densiy should be 1.44131x10^17
-
-  coeff(0)=0.49123
-  coeff(1)=0.298228
-  coeff(2)=0.198739
-  coeff(3)=0.521298
-
-  s = max((P(1) - ES%Psi_axis) / ( ES%Psi_bnd - ES%Psi_axis),0.d0)
-
-  f = coeff(3)*exp(-coeff(2)/coeff(1)*(tanh((sqrt(s)-coeff(0))/coeff(2))))
-
-end function f_original
 
 pure function f_toroidal_flux(n, P, grad_P) result(f)
   integer, intent(in) :: n
@@ -548,7 +536,63 @@ pure function proj_RZPE(ndim, sim,group, particle)
   select type( p => particle)
     type is (particle_kinetic_leapfrog)
       proj_RZPE = [particle%x(1),particle%x(2),dot_product(p%v,B_tmp)/norm2(B_tmp)/norm2(p%v),0.5d0*sim%groups(1)%mass*mass_proton*dot_product(p%v, p%v)/1000.d0/el_CHG]
-end select  
+  end select  
 end function proj_RZPE
+
+
+
+
+function l2_sinfit(n,x,y,gyro_frequency) result(xfit)
+  integer, intent(in) :: n
+  real*8, intent(in)  :: x(n),y(n),gyro_frequency !gyro_frequency in rad/timestep
+  real*8              :: xfit(4)
+  real*8              :: a11,a12,a13,a14,a22,a23,a24,a33,a34,a44, r3(n),r4(n), determinant
+  real*8              :: cofactor(4,4),XTY(4)
+  integer             :: it
+  r3 = cos(gyro_frequency*x)
+  r4 = sin(gyro_frequency*x)
+  a11=n
+  a12=sum(x)
+  a13=sum(r3)
+  a14=sum(r4)
+  a22=dot_product(x,x)
+  a23=dot_product(x,r3)
+  a24=dot_product(x,r4)
+  a33=dot_product(r3,r3)
+  a34=dot_product(r3,r4)
+  a44=dot_product(r4,r4)
+  determinant = a14**2*a23**2-2*a13*a14*a23*a24+a13**2*a24**2-a14**2*a22*a33+2*a12*a14*a24*a33-a11*a24**2*a33+2*a13*a14*a22*a34-2*a12*a14*a23*a34-2*a12*a13*a24*a34+2*a11*a23*a24*a34+a12**2*a34**2-a11*a22*a34**2-a13**2*a22*a44+2*a12*a13*a23*a44-a11*a23**2*a44-a12**2*a33*a44+a11*a22*a33*a44
+  XTY(1) = sum(y)
+  XTY(2) = dot_product(x,y)
+  XTY(3) = dot_product(r3,y)
+  XTY(4) = dot_product(r4,y)
+  cofactor(1,1) = -a24**2*a33 + 2*a23*a24*a34 - a22*a34**2 - a23**2*a44 + a22*a33*a44
+  cofactor(1,2) = a14*a24*a33 - a14*a23*a34 - a13*a24*a34 + a12*a34**2 + a13*a23*a44 - a12*a33*a44
+  cofactor(1,3) = -a14*a23*a24 + a13*a24**2 + a14*a22*a34 - a12*a24*a34 - a13*a22*a44 + a12*a23*a44
+  cofactor(1,4) = a14*a23**2 - a13*a23*a24 - a14*a22*a33 + a12*a24*a33 + a13*a22*a34 - a12*a23*a34
+  cofactor(2,1) = cofactor(1,2)
+  cofactor(2,2) = -a14**2*a33 + 2*a13*a14*a34 - a11*a34**2 - a13**2*a44 + a11*a33*a44
+  cofactor(2,3) = a14**2*a23 - a13*a14*a24 - a12*a14*a34 + a11*a24*a34 + a12*a13*a44 - a11*a23*a44
+  cofactor(2,4) = -a13*a14*a23 + a13**2*a24 + a12*a14*a33 - a11*a24*a33 - a12*a13*a34 + a11*a23*a34
+  cofactor(3,1) = cofactor(1,3)
+  cofactor(3,2) = cofactor(2,3)
+  cofactor(3,3) = -a14**2*a22 + 2*a12*a14*a24 - a11*a24**2 - a12**2*a44 + a11*a22*a44
+  cofactor(3,4) = a13*a14*a22 - a12*a14*a23 - a12*a13*a24 + a11*a23*a24 + a12**2*a34 - a11*a22*a34
+  cofactor(4,1) = cofactor(1,4)
+  cofactor(4,2) = cofactor(2,4)
+  cofactor(4,3) = cofactor(3,4)
+  cofactor(4,4) = -a13**2*a22 + 2*a12*a13*a23 - a11*a23**2 - a12**2*a33 + a11*a22*a33
+  
+  cofactor = cofactor/determinant
+  !do it=1,4
+  !  write(*,"(4E16.8)") cofactor(it,:)
+  !enddo 
+  xfit = matmul(cofactor, XTY)
+  !write(*,*) "OMEGA ", gyro_frequency
+  
+  !write(*,"(A,4E16.8)") "XFIT:", xfit
+  !write(*,"(A,4E16.8)") "XTY:", XTY
+  
+end function l2_sinfit
 end program tae_phase_space_project
 

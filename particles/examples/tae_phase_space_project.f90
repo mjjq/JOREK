@@ -107,7 +107,7 @@ program tae_phase_space_project
 
     allocate(particle_kinetic_leapfrog::sim%groups(1)%particles(n_particles_local))
 
-    !< If projecting phase space, it is vital to use a by construction phi independent initial distribtuion, i.e. phi planes.
+    !< If projecting phase space, it is vital to use a by construction phi independent initial distribution, i.e. phi planes.
     !< This lowers the sampling in the other coordinates naturally, so for the example it's not done 
     !< Example of usage is here in any case
     call initialise_particles_H_mu_psi_phiplanes(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &

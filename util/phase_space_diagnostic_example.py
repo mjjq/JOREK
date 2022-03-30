@@ -36,7 +36,7 @@ mE = np.array(b['grids/mgrid_4'])
 val = np.array(b['values'])
 RZproj = integrate.trapezoid(integrate.trapezoid(val,P1D,axis=2),E1D,axis=2)
 total = integrate.trapezoid(integrate.trapezoid(RZproj,R1D,axis=0),Z1D,axis=0)
-
+print("Total amount of particles",total)
 # %%
 
 # %%
@@ -60,13 +60,11 @@ class ModifiableF:
         Zindex=np.argmin(np.abs(Z1D-event.ydata))
         print(Rindex,Zindex)
         self.pcolormesh.set_array(self.F0[Rindex,Zindex,:,:].ravel())
-        #self.pcolormesh.axes.colorbar()
-        #self.pcolormesh.figure.canvas.draw()
         self.pl1.set_data([event.xdata],[event.ydata])
         self.pl1.figure.canvas.draw()
 Fmod = ModifiableF(val,R1D,Z1D,mP,mE,mR_red,mZ_red,RZproj)
 
 
-#cid = fig.canvas.mpl_connect('button_press_event', onclick) 
+
 plt.show()
 # %%

@@ -4,7 +4,9 @@
 !> Using kernels such that correct integration is guaranteed (up to discrete effects)
 !>  See https://en.wikipedia.org/wiki/Kernel_density_estimation for more information 
 !> Usage can include diagnosing 4D distribution functions (example in particles/examples/tae_phase_space_project.f90
-!>  with example analysis script in ....
+!>  with example analysis script in util/phase_space_diagnostic_example.py This'll plot power-exchange, integrate 
+!>  power exchange to show kernel integration, show an interactive 4D distribution function (click the poloidal plot
+!>  for local distribution function) and finally print the total amount of particles (obtained by 4D kernel integration).
 !> Other example is using power exchange diagnostic in vpar, mu phase space.
 !> Supports both event-based calling as the projection on the jorek grids (after having defined 
 !>  the appropriate functions to calculate the grid quantities) and a manual projection (more

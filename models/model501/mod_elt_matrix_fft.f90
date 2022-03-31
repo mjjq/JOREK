@@ -850,11 +850,9 @@ do ms=1, n_gauss
        Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
      end do
      Z_eff        = Z_eff / ne_JOREK
-     if (Z_eff < 1.) Z_eff = 1.
-     if (Z_eff > (imp_adas(index_main_imp)%n_Z)**2) Z_eff = (imp_adas(index_main_imp)%n_Z)**2
 
      ! Then three(!) gradients
-     if (Z_eff >= 1.) then
+     if ( (Z_eff >= 1.d0) .and. (Z_eff <= imp_adas(1)%n_Z) ) then
        do ion_i=1, imp_adas(index_main_imp)%n_Z
          dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rn0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
        end do
@@ -870,7 +868,11 @@ do ms=1, n_gauss
        dZ_eff_drn0  = dZ_eff_drn0 / ne_JOREK
        dZ_eff_drn0  = dZ_eff_drn0 - Z_eff * beta_imp / ne_JOREK
      else
-       Z_eff        = 1.
+       if (Z_eff < 1.) Z_eff = 1.
+       if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
+       dZ_eff_dT      = 0.d0 
+       dZ_eff_dr0     = 0.d0 
+       dZ_eff_drn0    = 0.d0 
      end if
 
      ! This is to represent the dependence on Z_eff in resistivity

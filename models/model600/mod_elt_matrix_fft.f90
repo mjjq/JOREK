@@ -1806,7 +1806,7 @@ do i=1,n_vertex_max
                                        * (r0+alpha_imp_bis*rimp0) * (T0_x * ps0_y - T0_y * ps0_x + F0 / BigR * T0_p)                         &
                                        * ( v_x * ps0_y -  v_y * ps0_x                        )  * xjac * tstep * tstep * factor(var_T,8 )&
                             
-                             + zeta * v * r0_corr * delta_g(mp,var_T,ms,mt)   * BigR            * xjac * factor(var_T,10) &
+                             + zeta * v * (r0_corr + rimp0_corr * alpha_imp_bis) * delta_g(mp,var_T,ms,mt)   * BigR * xjac * factor(var_T,10) &
                              + zeta * v * T0_corr * delta_g(mp,var_rho,ms,mt) * BigR            * xjac * factor(var_T,10)
               if (with_impurities) then
                 rhs_ij(var_T) = rhs_ij(var_T) + &

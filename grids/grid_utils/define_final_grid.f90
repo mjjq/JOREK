@@ -9,7 +9,7 @@ use tr_module
 use data_structure
 use grid_xpoint_data
 use mod_interp
-use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes
+use phys_module, only: write_ps, force_central_node, SDN_threshold, fix_axis_nodes, treat_axis
 use mod_grid_conversions
 use mod_poiss
 use mod_node_indices
@@ -1289,11 +1289,16 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   node_list%node(i)%axis_node = .false.
-  if (fix_axis_nodes) then
-    if (xcase .ne. DOUBLE_NULL) then
-      if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) node_list%node(i)%axis_node = .true.
-    else
-      if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) node_list%node(i)%axis_node = .true.
+  node_list%node(i)%axis_dof  = 0
+  if (xcase .ne. DOUBLE_NULL) then
+    if ((i .ge. 5) .and. (i .le. 4+n_tht-1)) then
+       node_list%node(i)%axis_node = .true.
+       node_list%node(i)%axis_dof  = 2
+    endif
+  else
+    if ((i .ge. 9) .and. (i .le. 8+n_tht-2)) then
+       node_list%node(i)%axis_node = .true.
+       node_list%node(i)%axis_dof  = 2
     endif
   endif
 
@@ -1312,6 +1317,21 @@ do i=1,newnode_list%n_nodes
       else
         if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.eq.1)) then
           node_list%node(i)%index(k) = node_list%node(9)%index(1)
+          index = index - 1
+        endif
+      endif
+    endif
+    
+    ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes.
+    if (treat_axis) then
+      if (xcase .ne. DOUBLE_NULL) then
+        if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.le.n_order+1)) then
+          node_list%node(i)%index(k) = node_list%node(5)%index(k)
+          index = index - 1
+        endif
+      else
+        if ((i .gt. 9) .and. (i .le. 8+n_tht-2) .and. (k.le.n_order+1)) then
+          node_list%node(i)%index(k) = node_list%node(9)%index(k)
           index = index - 1
         endif
       endif

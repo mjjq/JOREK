@@ -11,7 +11,7 @@ use data_structure
 use mumps_module
 use pastix_module
 use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq, &
-                                                delta_psi_GS, newton_GS_freebnd, newton_GS_fixbnd, n_limiter
+                                                delta_psi_GS, newton_GS_freebnd, newton_GS_fixbnd, n_limiter, treat_axis, fix_axis_nodes
 use equil_info,  only: ES
 use vacuum_equilibrium, only: vacuum_equil
 use mod_coicsr
@@ -24,6 +24,7 @@ use mod_node_indices
 #ifdef USE_STRUMPACK
 use strumpack_module
 #endif
+use mod_axis_treatment
 #ifdef USE_PASTIX6
 use mod_pastix
 #endif
@@ -86,6 +87,7 @@ integer :: node_indices( (n_order+1)/2, (n_order+1)/2 )
 integer(kind=int_all), parameter   :: Int0=0
 integer(kind=int_all), parameter   :: Int1=1
 
+real*8 :: new_dofs(1:4), old_dofs(1:4)
 
 if (my_id == 0) then
   write(*,*) '**************************************'
@@ -119,8 +121,13 @@ if (my_id == 0) then
   n_border = 0
   if (itype .ne. 0) then
     do i=1,node_list%n_nodes
-      ! --- t-derivatives and cross derivatives are switched off on axis, so (n_order+1)/2 are not fixed
-      if (node_list%node(i)%axis_node      ) n_border = n_border + n_degrees - (n_order+1)/2
+      if(treat_axis)then
+        ! --- Only one fixed for fixed-axis (only valid for G1-cases at the moment!!!)
+        if (node_list%node(i)%axis_node      ) n_border = n_border+1
+      else
+        ! --- t-derivatives and cross derivatives are switched off on axis, so (n_order+1)/2 are not fixed
+        if (node_list%node(i)%axis_node      ) n_border = n_border + n_degrees - (n_order+1)/2
+      endif    
       ! --- on non-corner boundaries, only tangent derivatives are fixed, ie. (n_order+1)/2
       if (node_list%node(i)%boundary .eq. 1) n_border = n_border + (n_order+1)/2
       if (node_list%node(i)%boundary .eq. 2) n_border = n_border + (n_order+1)/2
@@ -245,8 +252,13 @@ if (my_id == 0) then
   
       call element_matrix_Poisson(itype,element,nodes,ivar_in,ivar_out,i_harm,ELM,RHS)
   
+    endif  
+
+    ! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.    
+    if( (treat_axis) .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
+      call transform_basis_for_axis_element_poisson(nodes, ELM, RHS, ivar_in, ivar_out, i_harm)
     endif
-  
+    
     if (refinement) then ! Processing  "constrained nodes"
       call Chgmt_node(ife,element,nodes,element_father,nodes_father,ELM,RHS,node_out) 
     else
@@ -332,7 +344,7 @@ if (my_id == 0) then
     enddo
   
   enddo
-  
+
   nz_AA_old = nz_AA
   nz_AA = ilarge
   mumps_par%nz = nz_AA
@@ -359,16 +371,27 @@ elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for var
       ! --- On axis, we fix the t-derivatives, plus all cross-derivatives
       if (node_list%node(i)%axis_node) then
       
-        do k = 1,(n_order+1)/2
-          do l = 2,(n_order+1)/2 ! start t-index from 2 to keep only the pure s-derivatives
-            index = node_indices(k,l)
-            index_i = node_list%node(i)%index(index)  ! base index in the main matrix
-            mumps_par%irn(ilarge+1) = index_i
-            mumps_par%jcn(ilarge+1) = index_i
-            mumps_par%A(ilarge+1)   = zbig
-            ilarge = ilarge + 1
+        if (treat_axis) then ! For G1 elements only at the moment !
+          ! penalize 4th DoF to enforce C0 continuity at the grid center        
+          index_i = node_list%node(i)%index(4)  ! base index in the main matrix
+          mumps_par%irn(ilarge+1) = index_i
+          mumps_par%jcn(ilarge+1) = index_i
+          mumps_par%A(ilarge+1)   = zbig
+          ilarge = ilarge + 1
+        endif
+
+        if(fix_axis_nodes)then
+          do k = 1,(n_order+1)/2
+            do l = 2,(n_order+1)/2 ! start t-index from 2 to keep only the pure s-derivatives
+              index = node_indices(k,l)
+              index_i = node_list%node(i)%index(index)  ! base index in the main matrix
+              mumps_par%irn(ilarge+1) = index_i
+              mumps_par%jcn(ilarge+1) = index_i
+              mumps_par%A(ilarge+1)   = zbig
+              ilarge = ilarge + 1
+            enddo
           enddo
-        enddo
+        endif
 
       endif
 
@@ -576,7 +599,23 @@ if (my_id == 0) then
   do i=1,node_list%n_nodes
   
     if ((.not. refinement) .or. (refinement .and. (.not. node_list%node(i)%constrained)) ) then
-  
+ 
+      ! We need to transform the new dof to old ones on the axis.
+      ! The respective RHS entries on the axis (which are shared)
+      ! are updated during the transformation. At the end of the loop,
+      ! we recover RHS entries so that they same can be used for all the axis nodes.            
+      if(treat_axis .and. node_list%node(i)%axis_node)then
+        do k=1,n_order+1
+          index = node_list%node(i)%index(k)
+          new_dofs(k) = mumps_par%RHS(index)
+        enddo
+        call new_to_old_dofs_on_the_axis(node_list, i, new_dofs, old_dofs)
+        do k=1,n_order+1
+          index = node_list%node(i)%index(k)
+          mumps_par%RHS(index) = old_dofs(k)
+        enddo
+      endif
+            
       do k=1,n_degrees
   
         index = node_list%node(i)%index(k)
@@ -603,6 +642,15 @@ if (my_id == 0) then
         endif
         
       enddo    ! order
+
+      ! recover RHS entries.
+      if(treat_axis .and. node_list%node(i)%axis_node)then
+        do k=1,n_order+1
+          index = node_list%node(i)%index(k)
+          mumps_par%RHS(index) = new_dofs(k)
+        enddo
+      endif
+      
     endif      ! refinement, constrained
   enddo        ! nodes
   

@@ -11,7 +11,7 @@ use data_structure
 use tr_module 
 use gauss
 use basis_at_gaussian
-use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node
+use phys_module, only:   n_limiter, R_limiter, Z_limiter, write_ps, fix_axis_nodes, force_central_node, treat_axis
 use mod_neighbours, only: update_neighbours
 use mod_interp
 use mod_grid_conversions
@@ -50,7 +50,7 @@ real*8,allocatable  :: R_polar(:,:,:),Z_polar(:,:,:),xout(:),xp(:),yp(:), R_stri
 real*8              :: R_cub1d(4), Z_cub1d(4), dR_dt, dZ_dt, RZ_jac, PSI_R, PSI_Z, Rw, Rw2, Zw, Zw2, Tw, tan12
 real*8, allocatable :: RR_new(:,:),ZZ_new(:,:),s_flux(:,:),t_flux(:,:),t_tht(:,:), R_wall(:), Z_wall(:)
 integer,allocatable :: ielm_flux(:,:), k_cross(:,:), elm_left(:), elm_right(:)
-integer             :: my_id, i, j, k, l, m, n_psi, n_theta, i2, j2, n_total, n_tht_3
+integer             :: my_id, i, j, k, l, m, n_psi, n_theta, i2, j2, n_total, n_tht_3, ii, jj
 integer             :: i_surf, n_pieces, n_wall, i_flux, n_ext, j2rev
 integer             :: i_elm_axis, i_elm_xpoint(2), i_elm_find(8), i_sep, i_max, i_find, npl, ifail
 integer             :: node, index, node_start, index_xpoint, n_xpoint, j_start, j_end
@@ -1768,7 +1768,12 @@ index = 0
 do i=1,newnode_list%n_nodes
 
   newnode_list%node(i)%axis_node = .false.
-  if ( fix_axis_nodes .and. (i .lt. n_tht) ) newnode_list%node(i)%axis_node = .true.
+  newnode_list%node(i)%axis_dof  = 0
+
+  if (i .lt. n_tht) then 
+    newnode_list%node(i)%axis_node = .true.
+    newnode_list%node(i)%axis_dof  = 2
+  endif
 
   do k=1,n_degrees
 
@@ -1780,25 +1785,30 @@ do i=1,newnode_list%n_nodes
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
     endif
+    if ((treat_axis) .and. (i .gt. 1) .and. (i .lt. n_tht) .and. (k.le.n_order+1)) then
+      newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
+      index = index - 1
+    endif    
     ! --- Remove Xpoint nodes
+    call get_node_coords_from_index(node_indices, k, ii, jj)
     if (i .eq. index_xpoint+1) then
-      if ( (k.eq.1) .or. (k.eq.3) .or. (k.eq.6) ) then
+      if (ii .eq. 1) then ! t-derivatives
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
         index = index - 1
       endif
     endif
     if (i .eq. index_xpoint+2) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+      if (jj .eq. 1) then ! s-derivatives
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+1)%index(k)
         index = index - 1
       endif
     endif
     if (i .eq. index_xpoint+3) then
-      if ( (k.eq.1) .or. (k.eq.2) .or. (k.eq.5) ) then
+      if (jj .eq. 1) then ! s-derivatives
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint)%index(k)
         index = index - 1
       endif
-      if ( (k.eq.3) .or. (k.eq.6) ) then
+      if ( (ii .eq. 1) .and. (k .gt. 1) ) then ! t-derivatives (k=1 already done just above)
         newnode_list%node(i)%index(k) = newnode_list%node(index_xpoint+2)%index(k)
         index = index - 1
       endif

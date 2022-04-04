@@ -41,7 +41,7 @@ real*8, external    :: spwert
 logical             :: skip_update_neighbours
 logical             :: doing_polar_square
 
-n_max
+n_max = n_degrees
 call tr_allocate(RR,1,n_max,1,nr*np,"RR",CAT_GRID)
 call tr_allocate(ZZ,1,n_max,1,nr*np,"ZZ",CAT_GRID)
 call tr_allocate(PSI,1,n_max,1,nr*np,"PSI",CAT_GRID)

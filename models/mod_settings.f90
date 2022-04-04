@@ -21,10 +21,10 @@ integer, parameter :: n_pieces_max      = 6001   !< maximum number of line piece
 ! #SETTINGS# n_tor n_coord_tor n_period n_coord_period n_plane n_order n_nodes_max n_elements_max n_boundary_max n_pieces_max
 
 ! --- a few constants that should not be touched
-integer, parameter :: n_dim             = 2         !< number of dimensions
-integer, parameter :: n_vertex_max      = 4         !< maximum number of corners of an element
-integer, parameter :: n_degrees         = n_order+1 !< degrees of freedom per variable per node
-integer, parameter :: nref_max          = 10        !< (refinement; not presently working)
-integer, parameter :: n_ref_list        = 10        !< (refinement; not presently working)
+integer, parameter :: n_dim             = 2                !< number of dimensions
+integer, parameter :: n_vertex_max      = 4                !< maximum number of corners of an element
+integer, parameter :: n_degrees         = (n_order+1)**2/4 !< degrees of freedom per variable per node
+integer, parameter :: nref_max          = 10               !< (refinement; not presently working)
+integer, parameter :: n_ref_list        = 10               !< (refinement; not presently working)
 
 end module mod_settings

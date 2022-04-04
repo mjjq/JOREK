@@ -26,10 +26,10 @@ write(*,*) ' element_list : n_elements =',element_list%n_elements
 write(*,'(A88)') '    i,  iv1, iv2, iv3, iv4,  hu1,    hv1,    hu2,    hv2,    hu3,    hv3,    hu4,    hv4,'
 do i=1,element_list%n_elements
   write(*,'(5i5,8f12.5)') i,element_list%element(i)%vertex(1:4)   , &
-                          element_list%element(i)%size(1,2:n_order), &
-                          element_list%element(i)%size(2,2:n_order), &
-                          element_list%element(i)%size(3,2:n_order), &
-                          element_list%element(i)%size(4,2:n_order)
+                          element_list%element(i)%size(1,2:3), &
+                          element_list%element(i)%size(2,2:3), &
+                          element_list%element(i)%size(3,2:3), &
+                          element_list%element(i)%size(4,2:3)
 enddo
 
 write(*,*)

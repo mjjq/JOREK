@@ -1127,7 +1127,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   
   do i=1,node_list%n_nodes
     do j=1,n_degrees_tmp
-      node_list%node(i)%x = t_x(i,:,j,:) 
+      node_list%node(i)%x(:,j,:)  = t_x(i,:,j,:) 
     enddo
 
     node_list%node(i)%values = 0.d0 

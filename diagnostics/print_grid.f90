@@ -3,6 +3,7 @@ subroutine print_grid(node_list,element_list,boundary_list)
 ! plot the grid of finite elements with the correct curved edges
 !----------------------------------------------------------------
 use data_structure
+use mod_parameters, only :: n_order
 
 implicit none
 
@@ -14,6 +15,13 @@ integer :: i
 write(*,*) '**************************************************'
 write(*,*) '*           finite element grid                  *'
 write(*,*) '**************************************************'
+
+if (n_order .gt. 3) then
+  write(*,*)'WARNING:'
+  write(*,*)'This routine is not addapted to n_order>5'
+  write(*,*)'Please use export_restart instead.'
+  return
+endif
 
 write(*,*) ' node_list : n_nodes =',node_list%n_nodes
 write(*,'(A68)') '   i,    x,      y,      ux,     uy,     vx,     vy,     wx,     wy'

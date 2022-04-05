@@ -3,7 +3,7 @@ subroutine print_grid(node_list,element_list,boundary_list)
 ! plot the grid of finite elements with the correct curved edges
 !----------------------------------------------------------------
 use data_structure
-use mod_parameters, only :: n_order
+use mod_parameters, only : n_order
 
 implicit none
 

@@ -1127,15 +1127,15 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   
   do i=1,node_list%n_nodes
     do j=1,n_degrees_tmp
-      node_list%node(i)%x(:,j,:) = t_x(i,:,j,:) 
+      node_list%node(i)%x(:,j,:)  = t_x(i,:,j,:) 
     enddo
 
     node_list%node(i)%values = 0.d0 
     node_list%node(i)%deltas = 0.d0 
 
     do m=1,n_tor_tmp,2
-      do k=1, n_tor,2 
-        do j=1,n_degrees_tmp
+      do k=1, n_tor,2
+        do j=1,n_degrees_tmp 
           if (mode_tmp(m) .eq. mode(k)) then
             if ((m .eq. 1) .and. (k.eq.1)) then
               node_list%node(i)%values(k,j,1:n_var_tmp)   = t_values(i,m,j,1:n_var_tmp)
@@ -1147,7 +1147,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
               node_list%node(i)%deltas(k,j,1:n_var_tmp)   = t_deltas(i,m,j,1:n_var_tmp)
             end if
           end if
-        end do
+        enddo
       end do
     end do
 
@@ -1158,7 +1158,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         node_list%node(i)%deltas(:,j,var_Te) = node_list%node(i)%deltas(:,j,6) / 2.d0
         node_list%node(i)%values(:,j,var_Ti) = node_list%node(i)%values(:,j,6) / 2.d0
         node_list%node(i)%deltas(:,j,var_Ti) = node_list%node(i)%deltas(:,j,6) / 2.d0
-      end do
+      enddo
     end if
 
 
@@ -1199,15 +1199,15 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call HDF5_array1D_reading_int(file_id,t_nref,        'nref')
 
   do i=1,element_list%n_elements
-    element_list%element(i)%vertex	 = t_vertex(i,:)
-    element_list%element(i)%neighbours   = t_neighbours(i,:)
+    element_list%element(i)%vertex                  = t_vertex(i,:)
+    element_list%element(i)%neighbours              = t_neighbours(i,:)
     element_list%element(i)%size(:,1:n_degrees_tmp) = t_size(i,:,1:n_degrees_tmp)
-    element_list%element(i)%father	 = t_father(i)
-    element_list%element(i)%n_sons	 = t_n_sons(i)
-    element_list%element(i)%n_gen	 = t_n_gen(i)
-    element_list%element(i)%sons	 = t_sons(i,:)
-    element_list%element(i)%contain_node = t_contain_node(i,:)
-    element_list%element(i)%nref	 = t_nref(i)
+    element_list%element(i)%father                  = t_father(i)
+    element_list%element(i)%n_sons                  = t_n_sons(i)
+    element_list%element(i)%n_gen                   = t_n_gen(i)
+    element_list%element(i)%sons                    = t_sons(i,:)
+    element_list%element(i)%contain_node            = t_contain_node(i,:)
+    element_list%element(i)%nref                    = t_nref(i)
   end do
    
   call HDF5_real_reading(file_id,tstep,'tstep')

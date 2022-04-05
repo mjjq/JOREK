@@ -18,20 +18,20 @@ subroutine Ch_nod_rhs_elm(i_element, element,nodes,element_father,nodes_father,E
   real*8, dimension (:,:), allocatable  :: ELM
   real*8, dimension (:)  , allocatable  :: RHS
   real*8, dimension(n_vertex_max*n_var*n_degrees*n_tor,&
-		 n_vertex_max*n_var*n_degrees*n_tor)  	:: ELM_bis, ELM_tr, C_matrix
+                 n_vertex_max*n_var*n_degrees*n_tor)    :: ELM_bis, ELM_tr, C_matrix
 
-  real*8, dimension(n_vertex_max*n_var*n_degrees*n_tor)	:: RHS_bis
+  real*8, dimension(n_vertex_max*n_var*n_degrees*n_tor) :: RHS_bis
   real*8, dimension(4,n_degrees)                :: H, H_s, H_t, H_st
-  real*8, dimension(2,4) 			:: c, dc_ds, dc_dt, d2c_dsdt					   
-  real*8						:: lambda, mu,h_u,h_v,h_w						   
-						   
-  integer, dimension(n_vertex_max)		:: pr, pos_node_constrained
-  integer, dimension(n_vertex_max)               :: node_out
-  integer, dimension(2,2)			:: pos_parent, parent
-  integer					:: i_element,index_elm,my_id
-  integer			 		:: pos1, pos2, prj, n_constrained, i_constrained 					   
-  integer                                        :: i_tor,i_shift,i_var1,i_var,i_shift1,i_order,i_order1
-  integer                                        :: i,j,k,l,n,p
+  real*8, dimension(2,4)                        :: c, dc_ds, dc_dt, d2c_dsdt
+  real*8                                        :: lambda, mu,h_u,h_v,h_w
+                                            
+  integer, dimension(n_vertex_max)              :: pr, pos_node_constrained
+  integer, dimension(n_vertex_max)              :: node_out
+  integer, dimension(2,2)                       :: pos_parent, parent
+  integer                                       :: i_element,index_elm,my_id
+  integer                                       :: pos1, pos2, prj, n_constrained, i_constrained 
+  integer                                       :: i_tor,i_shift,i_var1,i_var,i_shift1,i_order,i_order1
+  integer                                       :: i,j,k,l,n,p
 
 
 

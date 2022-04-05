@@ -1412,7 +1412,7 @@ do i=1,newnode_list%n_nodes
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(1)
       index = index - 1
     endif
-    ! Share 4 degrees of freedom for all nodes on the grid axis.    
+    ! Share 4 degrees of freedom for all nodes on the grid axis.   ! ONLY for C1-elements !
     if ((treat_axis) .and. (i .gt. 1) .and. (i .lt. n_tht) .and. (k.le.n_order+1)) then
       newnode_list%node(i)%index(k) = newnode_list%node(1)%index(k)
       index = index - 1

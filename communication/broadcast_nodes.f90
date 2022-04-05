@@ -34,9 +34,9 @@ call MPI_BCAST(node_list%n_nodes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_BCAST(node_list%n_dof,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 #ifdef fullmhd
-bufsize = node_list%n_nodes * ((n_coord_tor*n_degrees*n_dim + 2*n_tor*n_degrees*n_var+2*n_degrees+2)*IDBL_EXT + (n_degrees + 1+3+1+1)*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * ((n_coord_tor*n_degrees*n_dim + 2*n_tor*n_degrees*n_var+2*n_degrees+2)*IDBL_EXT + (n_degrees +1+3+1+1)*INT_EXT + (2)*ILOG_EXT)
 #elif altcs                          
-bufsize = node_list%n_nodes * ((n_coord_tor*n_degrees*n_dim + 2*n_tor*n_degrees*n_var+2*n_degrees+2)*IDBL_EXT + (n_degrees + 1+3+1+1)*INT_EXT + (2)*ILOG_EXT)
+bufsize = node_list%n_nodes * ((n_coord_tor*n_degrees*n_dim + 2*n_tor*n_degrees*n_var+2*n_degrees+2)*IDBL_EXT + (n_degrees +1+3+1+1)*INT_EXT + (2)*ILOG_EXT)
 #else                                
 bufsize = node_list%n_nodes * ((n_coord_tor*n_degrees*n_dim + 2*n_tor*n_degrees*n_var+2)*IDBL_EXT + (n_degrees + 1+3+1+1)*INT_EXT + (2)*ILOG_EXT)
 #endif

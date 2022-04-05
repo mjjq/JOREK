@@ -17,19 +17,19 @@ implicit none
  type (type_node)      :: nodes_father(n_vertex_max)
 
  real*8, dimension(n_vertex_max*n_degrees,&
-                 n_vertex_max*n_degrees)	:: ELM, ELM_bis, ELM_tr, C_matrix
+                 n_vertex_max*n_degrees)        :: ELM, ELM_bis, ELM_tr, C_matrix
 
- real*8, dimension( n_vertex_max*n_degrees)	:: RHS,RHS_bis
+ real*8, dimension( n_vertex_max*n_degrees)     :: RHS,RHS_bis
  real*8, dimension(4,n_degrees)                 :: H, H_s, H_t, H_st
- real*8, dimension(2,4) 			:: c, dc_ds, dc_dt, d2c_dsdt					   
- real*8						:: lambda, mu						   						   
- integer, dimension(n_vertex_max)		:: pr, pos_node_constrained
+ real*8, dimension(2,4)                         :: c, dc_ds, dc_dt, d2c_dsdt
+ real*8                                         :: lambda, mu
+ integer, dimension(n_vertex_max)               :: pr, pos_node_constrained
  integer, dimension(n_vertex_max)               :: node_out
- integer, dimension(2,2)			:: pos_parent, parent
- real*8               				:: h_u, h_v,h_w
- integer					:: i_element,index_elm
- integer			 		:: pos1, pos2,n_constrained,i_constrained
- integer                                        :: i, j,k,l,n, p,prj					   
+ integer, dimension(2,2)                        :: pos_parent, parent
+ real*8                                         :: h_u, h_v,h_w
+ integer                                        :: i_element,index_elm
+ integer                                        :: pos1, pos2,n_constrained,i_constrained
+ integer                                        :: i, j,k,l,n, p,prj
  
 
 

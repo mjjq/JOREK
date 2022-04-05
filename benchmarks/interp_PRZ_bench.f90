@@ -8,6 +8,7 @@ use mpi
 use mod_pcg32_rng
 use mod_random_seed
 use mod_interp
+use mod_parameters, only: n_degrees
 use basis_at_gaussian, only: initialise_basis
 use mod_parameters, only: n_degrees
 implicit none

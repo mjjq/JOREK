@@ -523,10 +523,10 @@ do i=1,nrnew
            node_list%node(index)%axis_dof  = 2
 
          else
-           do k=1,n_order+1
+           do k=1,n_degrees
              node_list%node(index)%index(k) = n_index_start + k
            enddo
-           n_index_start = n_index_start + n_order+1
+           n_index_start = n_index_start + n_degrees
            node_list%node(index)%axis_node = .false.
          endif
 

@@ -258,6 +258,22 @@ required = 0
     force_central_node  = .false.
     fix_axis_nodes      = .false.
   endif
+  if(treat_axis .and. (n_order .gt. 3))then
+    write(*,*) 'WARNING :'
+    write(*,*) 'treat_axis = .true. is not possible'
+    write(*,*) 'at the moment with n_order>3, please use fix_axis_nodes instead.'
+    call MPI_FINALIZE(IERR) 
+    stop
+  endif
+
+  ! WARNING for freeboundary with n_order>3
+  if(freeboundary .and. (n_order .gt. 3))then
+    write(*,*) 'WARNING :'
+    write(*,*) 'freeboundary = .true. is not possible'
+    write(*,*) 'at the moment with n_order>3, aborting.'
+    call MPI_FINALIZE(IERR) 
+    stop
+  endif
 
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)

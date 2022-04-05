@@ -341,6 +341,7 @@ subroutine calc_rhs_f(node_list,element_list,f,rhs)
 
         do i=1,n_vertex_max
           do j=1,n_degrees
+
             index = 2*(nodes(i)%index(j)-1) + 1
 
             v   = h(i,j,ms,mt)  * element%size(i,j)

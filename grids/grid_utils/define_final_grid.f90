@@ -1322,7 +1322,7 @@ do i=1,newnode_list%n_nodes
       endif
     endif
     
-    ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes.
+    ! Share 4 degrees of freedom for all nodes on the grid axis and flag the axis nodes. ONLY FOR C1-elements at the moment!
     if (treat_axis) then
       if (xcase .ne. DOUBLE_NULL) then
         if ((i .gt. 5) .and. (i .le. 4+n_tht-1) .and. (k.le.n_order+1)) then

@@ -134,7 +134,7 @@ mpi_distr_count=0
 if (restart .and. freeboundary) then 
   do ib = 1, node_list%n_nodes	
     if ( node_list%node(ib)%boundary > 0 ) then
-      do ik=1, n_order+1
+      do ik=1, n_degrees
         l_index = node_list%node(ib)%index(ik)
           if ((l_index .ge. index_min(my_id+1)) .and. (l_index .le. index_max(my_id+1))) then ! This MPI proc responsible?
             mpi_distr_count=mpi_distr_count+1

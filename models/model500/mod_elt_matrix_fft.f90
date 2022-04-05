@@ -2329,7 +2329,7 @@ if (present(get_terms)) then
     
     enddo
     
-    do j=1, n_vertex_max*n_var*(n_order+1)
+    do j=1, n_vertex_max*n_var*n_degrees
     
       in_fft = ELM_k(1:n_plane,i_term,j)
 #ifdef USE_FFTW
@@ -2378,7 +2378,7 @@ else
   
   enddo
   
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
   
     in_fft = RHS_k(1:n_plane,j)
 #ifdef USE_FFTW

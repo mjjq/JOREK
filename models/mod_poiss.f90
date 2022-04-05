@@ -62,7 +62,7 @@ real*8   :: ELM(n_vertex_max*n_degrees,n_vertex_max*n_degrees), RHS(n_vertex_max
 real*8   :: ELM_axis(n_vertex_max*n_degrees,n_vertex_max*n_degrees),  ELM_bnd(n_vertex_max*n_degrees,n_vertex_max*n_degrees)
 real*8   :: zbig, Z_xpoint(2), psi_axis, psi_bnd, psi_xpoint(2), R_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8   :: R_axis, Z_axis, s_axis, t_axis
-real*8   :: psi_axis_kl(n_vertex_max,(n_order+1)), psi_bnd_kl(n_vertex_max,(n_order+1)) 
+real*8   :: psi_axis_kl(n_vertex_max,n_degrees), psi_bnd_kl(n_vertex_max,n_degrees) 
 real*8   :: G_axis(4,4), G_bnd(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
 real*8   :: amix_used
 real*8   :: psi_lim, R_lim, Z_lim, R_out, Z_out, s_bnd, t_bnd, P_s,P_t,P_st,P_ss,P_tt
@@ -71,13 +71,13 @@ integer  :: n_AA, nz_AA, nz_AA_old, n_border, ilarge, ife, iv, i,j,k,l
 integer  :: inode, index_large_i, knode, index_large_k, index_ij, index_kl, index, index_i
 logical   :: newton_method_GS
 
-real*8, dimension(4,n_degrees)	 :: H, H_s, H_t, H_st
-real*8			 :: lambda, mu	
-real*8			 :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
-real*8			 :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w
-integer			 :: inode_father, Index_elm, i_father
+real*8, dimension(4,n_degrees)   :: H, H_s, H_t, H_st
+real*8                           :: lambda, mu
+real*8                           :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
+real*8                           :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w
+integer                          :: inode_father, Index_elm, i_father
 integer, dimension(n_vertex_max) :: pr
-integer, dimension(2)		 :: parent
+integer, dimension(2)            :: parent
 integer, dimension(n_vertex_max) :: node_out
 integer:: nnz, ierr
 integer*8 :: check_data
@@ -185,7 +185,7 @@ if (my_id == 0) then
     call basisfunctions(ES%s_axis, ES%t_axis, G_axis, G_s, G_t, G_st, G_ss, G_tt)
     call basisfunctions(ES%s_bnd ,  ES%t_bnd,  G_bnd, G_s, G_t, G_st, G_ss, G_tt)
     do k=1,n_vertex_max  
-      do l=1,n_order+1
+      do l=1,n_degrees
         psi_axis_kl(k,l) =  G_axis(k,l) * element_list%element(ES%i_elm_axis)%size(k,l)  !--- matrix contributions of axis dofs
         psi_bnd_kl(k,l)  =  G_bnd(k,l)  * element_list%element(ES%i_elm_bnd)%size(k,l)   !--- matrix contributions of bnd point dofs
       enddo
@@ -303,9 +303,9 @@ if (my_id == 0) then
     
             knode = element_list%element(ES%i_elm_axis)%vertex(k)
     
-            do l=1,n_order+1
+            do l=1,n_degrees
     
-              index_kl = (k-1)*(n_order+1) + l
+              index_kl = (k-1)*n_degrees + l
     
               index_large_k = node_list%node(knode)%index(l)  ! base index in the main matrix
     
@@ -323,9 +323,9 @@ if (my_id == 0) then
     
             knode = element_list%element(ES%i_elm_bnd)%vertex(k)
     
-            do l=1,n_order+1
+            do l=1,n_degrees
     
-              index_kl = (k-1)*(n_order+1) + l
+              index_kl = (k-1)*n_degrees + l
     
               index_large_k = node_list%node(knode)%index(l)  ! base index in the main matrix
     
@@ -605,12 +605,12 @@ if (my_id == 0) then
       ! are updated during the transformation. At the end of the loop,
       ! we recover RHS entries so that they same can be used for all the axis nodes.            
       if(treat_axis .and. node_list%node(i)%axis_node)then
-        do k=1,n_order+1
+        do k=1,n_degrees
           index = node_list%node(i)%index(k)
           new_dofs(k) = mumps_par%RHS(index)
         enddo
         call new_to_old_dofs_on_the_axis(node_list, i, new_dofs, old_dofs)
-        do k=1,n_order+1
+        do k=1,n_degrees
           index = node_list%node(i)%index(k)
           mumps_par%RHS(index) = old_dofs(k)
         enddo
@@ -645,7 +645,7 @@ if (my_id == 0) then
 
       ! recover RHS entries.
       if(treat_axis .and. node_list%node(i)%axis_node)then
-        do k=1,n_order+1
+        do k=1,n_degrees
           index = node_list%node(i)%index(k)
           mumps_par%RHS(index) = new_dofs(k)
         enddo

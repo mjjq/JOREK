@@ -10,7 +10,6 @@ use mod_random_seed
 use mod_interp
 use mod_parameters, only: n_degrees
 use basis_at_gaussian, only: initialise_basis
-use mod_parameters, only: n_degrees
 implicit none
 
 integer, parameter :: n_switch = 100 !< Go to a new element every 100 steps (mimic jorek particle pattern)

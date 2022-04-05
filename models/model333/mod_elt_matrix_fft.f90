@@ -48,7 +48,7 @@ contains
     ! --- Matrix elements and toroidal functions
     integer, intent(in)        :: tid
     integer, intent(in)        :: i_tor_min, i_tor_max
-#define DIM0 n_tor*n_vertex_max*(n_degrees)*n_var
+#define DIM0 n_tor*n_vertex_max*n_degrees*n_var
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*n_degrees
 

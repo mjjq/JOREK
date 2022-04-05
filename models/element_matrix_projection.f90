@@ -22,7 +22,7 @@ real*8     :: y_g(n_gauss,n_gauss), y_s(n_gauss,n_gauss), y_t(n_gauss,n_gauss)
 real*8     :: factor(n_gauss,n_gauss)
 real*8     :: eq_g(n_gauss,n_gauss),   eq_s(n_gauss,n_gauss),   eq_t(n_gauss,n_gauss)
 real*8     :: eq2_g(n_gauss,n_gauss),  eq2_s(n_gauss,n_gauss),  eq2_t(n_gauss,n_gauss)
-real*8     :: ELM(n_vertex_max*(n_degrees),n_vertex_max*(n_degrees)), RHS(n_vertex_max*(n_degrees))
+real*8     :: ELM(n_vertex_max*n_degrees,n_vertex_max*n_degrees), RHS(n_vertex_max*n_degrees)
 
 real*8     :: xjac, wst
 real*8     :: v, psi, rhs_ij
@@ -162,7 +162,7 @@ do ms=1, n_gauss
  
       do j=1,n_degrees
  
-        index_ij = (i-1)*(n_degrees) + j
+        index_ij = (i-1)*n_degrees + j
  
         v   = h(i,j,ms,mt)  * element%size(i,j)
  
@@ -177,7 +177,7 @@ do ms=1, n_gauss
  
             psi   = h(k,l,ms,mt)  * element%size(k,l)
  
-            index_kl = (k-1)*(n_degrees) + l
+            index_kl = (k-1)*n_degrees + l
  
             ELM(index_ij,index_kl) =  ELM(index_ij,index_kl) - psi * v * factor(ms,mt) * xjac * wst
  

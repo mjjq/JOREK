@@ -145,7 +145,7 @@ do ms=1, n_gauss
 
       do j=1,n_degrees
 
-        index_ij = (i-1)*(n_degrees) + j
+        index_ij = (i-1)*n_degrees + j
 
         v   = h(i,j,ms,mt)  * element%size(i,j)
         v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
@@ -188,7 +188,7 @@ do ms=1, n_gauss
             psi_x = (   y_t(ms,mt) * h_s(k,l,ms,mt) - y_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
             psi_y = ( - x_t(ms,mt) * h_s(k,l,ms,mt) + x_s(ms,mt) * h_t(k,l,ms,mt) ) * element%size(k,l) / xjac
 
-            index_kl = (k-1)*(n_degrees) + l
+            index_kl = (k-1)*n_degrees + l
 
             ELM(index_ij,index_kl) =  ELM(index_ij,index_kl) - (psi_x * v_x + psi_y * v_y) * factor(ms,mt) * xjac * wst  &	   
 	           -  ( dFFprime_dpsi/x_g(ms,mt) - pprime_fact*(zn*ddT_dpsi + ddn_dpsi*zT + 2.*dn_dpsi*dT_dpsi)*x_g(ms,mt)  )  &

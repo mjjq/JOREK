@@ -1003,7 +1003,7 @@ call DMUMPS(mumps_par)
 call MPI_COMM_RANK(this_mpi_comm_world,  my_id, ierr)
 call MPI_COMM_RANK(mumps_par%COMM,       my_id_n, ierr)
 
-nz_AA = 4 * element_list%n_elements * (n_vertex_max * (n_degrees))**2
+nz_AA = 4 * element_list%n_elements * (n_vertex_max * n_degrees)**2
 n_AA  = 2 * maxval(node_list%node(1:node_list%n_nodes)%index(4))
 
 apply_dirichlet_condition = .true.
@@ -1023,7 +1023,7 @@ endif
 ! Only perform the construction of the matrix on the host
 if (my_id_n .eq. 0) then
 
-  allocate(ELM(2*n_vertex_max*(n_degrees),2*n_vertex_max*(n_degrees)))
+  allocate(ELM(2*n_vertex_max*n_degrees,2*n_vertex_max*n_degrees))
 
 ! Allocate space for elements
 
@@ -1134,7 +1134,7 @@ do i_elm=1,element_list%n_elements
 
               im_index = i_tor_local + im - 1   ! i_tor_local is the starting index in HZ
 
-              index_ij = 2*(n_degrees)*(i-1) + 2 * (j-1) + im   ! index in the ELM matrix
+              index_ij = 2*n_degrees*(i-1) + 2 * (j-1) + im   ! index in the ELM matrix
 
               v    = H(i,j,ms,mt)    * element%size(i,j) * HZ(im_index,mp)
               v_s  = H_s(i,j,ms,mt)  * element%size(i,j) * HZ(im_index,mp)
@@ -1170,7 +1170,7 @@ do i_elm=1,element_list%n_elements
 
                     in_index = i_tor_local + in - 1
 
-                    index_kl = 2*(n_degrees)*(k-1) + 2 * (l-1) + in   ! index in the ELM matrix
+                    index_kl = 2*n_degrees*(k-1) + 2 * (l-1) + in   ! index in the ELM matrix
 
                     p   = h(k,l,ms,mt)     * element%size(k,l) * HZ(in_index,mp)
                     p_s = h_s(k,l,ms,mt)   * element%size(k,l) * HZ(in_index,mp)
@@ -1225,7 +1225,7 @@ do i_elm=1,element_list%n_elements
 
       do im =1, n_tor_local
     
-        index_ij = 2*(n_degrees)*(i-1) + 2 * (j-1) + im   ! index in the ELM matrix
+        index_ij = 2*n_degrees*(i-1) + 2 * (j-1) + im   ! index in the ELM matrix
 
         index_large_i = 2*(node_list%node(inode)%index(j)-1) + im   ! base index in the main matrix
 
@@ -1237,21 +1237,21 @@ do i_elm=1,element_list%n_elements
 
             do in =1, n_tor_local
         
-              index_kl = 2*(n_degrees)*(k-1) + 2 * (l-1) + in   ! index in the ELM matrix
+              index_kl = 2*n_degrees*(k-1) + 2 * (l-1) + in   ! index in the ELM matrix
 
               index_large_k = 2*(node_list%node(knode)%index(l)-1) + in   ! base index in the main matrix
 
              ! Explicitly calculate the index
 
-              ilarge = in + (l-1) * 2 + (k-1)*2*(n_degrees) &
+              ilarge = in + (l-1) * 2 + (k-1)*2*n_degrees &
                       
-                     + (im-1) * 2    * n_vertex_max*(n_degrees)       &
+                     + (im-1) * 2    * n_vertex_max*n_degrees       &
                      
-                     + (j-1)  * 4 * n_vertex_max*(n_degrees)       &
+                     + (j-1)  * 4 * n_vertex_max*n_degrees       &
                      
-                     + (i-1)  * 4 * n_vertex_max*(n_degrees)**2    &
+                     + (i-1)  * 4 * n_vertex_max*n_degrees**2    &
                      
-                     + (i_elm-1)*(4 * (n_vertex_max*(n_degrees))**2 )
+                     + (i_elm-1)*(4 * (n_vertex_max*n_degrees)**2 )
 
 !$omp critical
               mumps_par%irn(ilarge) = index_large_i
@@ -1409,7 +1409,7 @@ apply_dirichlet_condition = .true.
 if (apply_zonal)  apply_dirichlet_condition = .true.
 
 
-nz_AA = 4 * element_list%n_elements * (n_vertex_max * (n_degrees))**2
+nz_AA = 4 * element_list%n_elements * (n_vertex_max * n_degrees)**2
 n_AA =  2 * maxval(node_list%node(1:node_list%n_nodes)%index(4))
 
 nz_bnd = 0
@@ -1427,7 +1427,7 @@ endif
 ! Only perform the construction of the matrix on the host
 if (my_id_n .eq. 0) then
 
-  allocate(ELM(2*n_vertex_max*(n_degrees),2*n_vertex_max*(n_degrees)))
+  allocate(ELM(2*n_vertex_max*n_degrees,2*n_vertex_max*n_degrees))
   allocate(mumps_par%A(nz_AA+nz_bnd),mumps_par%irn(nz_AA+nz_bnd),mumps_par%jcn(nz_AA+nz_bnd))
   
   mumps_par%irn = 0
@@ -1549,7 +1549,7 @@ do i_elm=1,element_list%n_elements
       do i=1,n_vertex_max
         do j=1,n_degrees
 
-          index_ij = 2*(n_degrees)*(i-1) + 2*(j-1) + 1   ! index in the ELM matrix
+          index_ij = 2*n_degrees*(i-1) + 2*(j-1) + 1   ! index in the ELM matrix
 
           v    = H(i,j,ms,mt)    * element%size(i,j) 
           v_s  = H_s(i,j,ms,mt)  * element%size(i,j)
@@ -1581,7 +1581,7 @@ do i_elm=1,element_list%n_elements
           do k=1,n_vertex_max
             do l=1,n_degrees
 
-              index_kl = 2*(n_degrees)*(k-1) + 2*(l-1) + 1   ! index in the ELM matrix
+              index_kl = 2*n_degrees*(k-1) + 2*(l-1) + 1   ! index in the ELM matrix
 
               p   = h(k,l,ms,mt)     * element%size(k,l) 
               p_s = h_s(k,l,ms,mt)   * element%size(k,l)
@@ -1662,7 +1662,7 @@ do i_elm=1,element_list%n_elements
 
       do im =1, 2
     
-        index_ij = 2*(n_degrees)*(i-1) + 2 * (j-1) + im   ! index in the ELM matrix
+        index_ij = 2*n_degrees*(i-1) + 2 * (j-1) + im   ! index in the ELM matrix
 
         index_large_i = 2*(node_list%node(inode)%index(j)-1) + im   ! base index in the main matrix
 
@@ -1674,21 +1674,21 @@ do i_elm=1,element_list%n_elements
 
             do in =1, 2
         
-              index_kl = 2*(n_degrees)*(k-1) + 2 * (l-1) + in   ! index in the ELM matrix
+              index_kl = 2*n_degrees*(k-1) + 2 * (l-1) + in   ! index in the ELM matrix
 
               index_large_k = 2*(node_list%node(knode)%index(l)-1) + in   ! base index in the main matrix
 
              ! Explicitly calculate the index
 
-              ilarge = in + 2*(l-1) + 2*(k-1)*(n_degrees) &
+              ilarge = in + 2*(l-1) + 2*(k-1)*n_degrees &
                       
-                     + 2*(im-1)* n_vertex_max*(n_degrees)       &
+                     + 2*(im-1)* n_vertex_max*n_degrees       &
                      
-                     + 4*(j-1) * n_vertex_max*(n_degrees)       &
+                     + 4*(j-1) * n_vertex_max*n_degrees       &
                      
-                     + 4*(i-1) * n_vertex_max*(n_degrees)**2    &
+                     + 4*(i-1) * n_vertex_max*n_degrees**2    &
                      
-                     + 4*(i_elm-1)*((n_vertex_max*(n_degrees))**2 )
+                     + 4*(i_elm-1)*((n_vertex_max*n_degrees)**2 )
 
               mumps_par%irn(ilarge) = index_large_i
               mumps_par%jcn(ilarge) = index_large_k

@@ -266,6 +266,15 @@ required = 0
     stop
   endif
 
+  ! WARNING for freeboundary with n_order>3
+  if(freeboundary .and. (n_order .gt. 3))then
+    write(*,*) 'WARNING :'
+    write(*,*) 'freeboundary = .true. is not possible'
+    write(*,*) 'at the moment with n_order>3, aborting.'
+    call MPI_FINALIZE(IERR) 
+    stop
+  endif
+
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
   

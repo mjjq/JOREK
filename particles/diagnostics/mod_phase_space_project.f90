@@ -1,24 +1,23 @@
 !> Module containing functions for phase-space diagnostics
-!> Wiki page with more theoretical information and examples:
-!>  https://www.jorek.eu/wiki/doku.php?id=particles_phase_space&s[]=phase&s[]=space
-
-
-!> Projecting particles on rectangular uniform grids for arbitrary grid coordinates and values
-!> Using kernels such that correct integration is guaranteed (up to discrete effects)
-!>  See https://en.wikipedia.org/wiki/Kernel_density_estimation for more information 
-!> Usage can include diagnosing 4D distribution functions (example in particles/examples/tae_phase_space_project.f90
-!>  with example analysis script in util/phase_space_diagnostic_example.py This'll plot power-exchange, integrate 
-!>  power exchange to show kernel integration, show an interactive 4D distribution function (click the poloidal plot
-!>  for local distribution function) and finally print the total amount of particles (obtained by 4D kernel integration).
-!> Other example is using power exchange diagnostic in vpar, mu phase space.
-!> Supports both event-based calling as the projection on the jorek grids (after having defined 
-!>  the appropriate functions to calculate the grid quantities) and a manual projection (more
-!>  useful inside an already existing particle loop)
-
-!> Interface:
-!> call with(sim,phase_space_projection) will do the projection on the grids
-!> call output_phase_project(this,ino,output_grids_in): outputting for HDF5
-!> call project_single_particle_x(this,x_in,value_arr,proj_value): projecting single particle on the values arrays
+!! Wiki page with more theoretical information and examples:
+!!  https://www.jorek.eu/wiki/doku.php?id=particles_phase_space&s[]=phase&s[]=space
+!!
+!! Projecting particles on rectangular uniform grids for arbitrary grid coordinates and values
+!! Using kernels such that correct integration is guaranteed (up to discrete effects)
+!!  See https://en.wikipedia.org/wiki/Kernel_density_estimation for more information 
+!! Usage can include diagnosing 4D distribution functions (example in particles/examples/tae_phase_space_project.f90
+!!  with example analysis script in util/phase_space_diagnostic_example.py This'll plot power-exchange, integrate 
+!!  power exchange to show kernel integration, show an interactive 4D distribution function (click the poloidal plot
+!!  for local distribution function) and finally print the total amount of particles (obtained by 4D kernel integration).
+!! Other example is using power exchange diagnostic in vpar, mu phase space.
+!! Supports both event-based calling as the projection on the jorek grids (after having defined 
+!!  the appropriate functions to calculate the grid quantities) and a manual projection (more
+!!  useful inside an already existing particle loop)
+!!
+!! Interface:
+!! call with(sim,phase_space_projection) will do the projection on the grids
+!! call output_phase_project(this,ino,output_grids_in): outputting for HDF5
+!! call project_single_particle_x(this,x_in,value_arr,proj_value): projecting single particle on the values arrays
 
 module mod_phase_space_project
   use mod_io_actions
@@ -33,9 +32,9 @@ module mod_phase_space_project
   public phase_space_projection, proj_ndim_f, proj_ndim_f_interface
   public new_phase_space_projection, output_phase_project, project_single_particle_x
   
-! A function that will provide ndim values back. This is preferrable to a list of functions that each
-! provide one value back because in many cases an expensive interpolation has to be done which can be reused for different coordinates
-! Examples inclue a vpar, mu plot which both use the B field at the particle location. Similar to proj_f_interface in mod_project_particles
+!> A function that will provide ndim values back. This is preferrable to a list of functions that each
+!! provide one value back because in many cases an expensive interpolation has to be done which can be reused for different coordinates
+!! Examples inclue a vpar, mu plot which both use the B field at the particle location. Similar to proj_f_interface in mod_project_particles
   interface
     function proj_ndim_f_interface(ndim, sim,group, particle)
       import particle_sim, particle_base, phase_space_projection
@@ -59,7 +58,7 @@ module mod_phase_space_project
 
 
 
-  ! Type definition. In principle should not be accesed outside of this module.
+  !> Type definition. In principle should not be accesed outside of this module.
   type, extends(io_action) :: phase_space_projection
 
     ! As the amount of dimensions is not specified and the resolution is not necessarily the same in all directions
@@ -101,13 +100,14 @@ module mod_phase_space_project
     procedure :: do => project_phase_space
   end type phase_space_projection
 
-  
-
 
 
 
 contains
-! Constructor for the function that provides ndim values back.
+
+
+
+!> Constructor for the function that provides ndim values back.
 function new_proj_ndim_f(f, group)
   type(proj_ndim_f)                                     :: new_proj_ndim_f
   procedure(proj_ndim_f_interface), pointer, intent(in) :: f
@@ -118,17 +118,17 @@ end function new_proj_ndim_f
 
 
 
-! Constructor of the phase-space projection.
-!  > ndim             : amount of dimensions
-!  > res(ndim)        : resolution (amount of points) of the grids in each dimension
-!  > start(ndim)      : starting points of each grid
-!  > end(ndim)        : end points of each grid
-!  > bandwidths(ndim) : ndim bandwidths (shape extent) in each dimension (optional, but highly recommended. Otherwise only nearest-neighbour)
-!  > f_proj           : function that calculates the projected quantity (defined in mod_particle_projection)
-!  > f_grids          : function that calculates the positions in each dimension
-
-! it is recommended to have at least support >= 3 to have integration (it warns) reasonably correct.
-! For many dimensions discretisation errors can accumulate.
+!> Constructor of the phase-space projection.
+!!   ndim             : amount of dimensions
+!!   res(ndim)        : resolution (amount of points) of the grids in each dimension
+!!   start(ndim)      : starting points of each grid
+!!   end(ndim)        : end points of each grid
+!!   bandwidths(ndim) : ndim bandwidths (shape extent) in each dimension (optional, but highly recommended. Otherwise only nearest-neighbour)
+!!   f_proj           : function that calculates the projected quantity (defined in mod_particle_projection)
+!!   f_grids          : function that calculates the positions in each dimension
+!!
+!! it is recommended to have at least support >= 3 to have integration (it warns) reasonably correct.
+!! For many dimensions discretisation errors can accumulate.
 function new_phase_space_projection(ndim,res,start,end,bandwidths,f_proj,f_grids,basename) result(new)
   type(phase_space_projection)                          :: new
   integer,                     intent(in)               :: ndim
@@ -260,11 +260,11 @@ function new_phase_space_projection(ndim,res,start,end,bandwidths,f_proj,f_grids
 
 end function new_phase_space_projection
 
-! > Subroutine for projecting the whole particle distribution
-! > on the grids. Not suitable for averaging over single particle
-! > motion. Usage can include projecting initialization quantities directly.
-! > As the do member of the io-action phase_space_projection points to this
-! > function, it is called if calling with(sim, phase_space_event).
+!> Subroutine for projecting the whole particle distribution
+!! on the grids. Not suitable for averaging over single particle
+!! motion. Usage can include projecting initialization quantities directly.
+!! As the do member of the io-action phase_space_projection points to this
+!! function, it is called if calling with(sim, phase_space_event).
 subroutine project_phase_space(this, sim, ev)
   use mod_event
   class(phase_space_projection),  intent(inout)           :: this
@@ -307,8 +307,8 @@ subroutine project_phase_space(this, sim, ev)
   endif
 end subroutine project_phase_space
 
-! Output to h5 file. Structure: /values for the meshgrid-evaluated values. /grids/grid_i for 1D grids /grids/mgrid_i for ndim meshgrids
-! (can be immediately plotted using these meshgrids)
+!> Output to h5 file. Structure: /values for the meshgrid-evaluated values. /grids/grid_i for 1D grids /grids/mgrid_i for ndim meshgrids
+!! (can be immediately plotted using these meshgrids)
 subroutine output_phase_project(this,ino,output_grids_in)
   class(phase_space_projection), intent(inout)     :: this
   integer, intent(in)                              :: ino
@@ -425,11 +425,11 @@ subroutine output_phase_project(this,ino,output_grids_in)
   deallocate(grid_mesh)
 end subroutine output_phase_project
 
-! Subroutine for projecting one particle to the value_arr
-! > this: phase space projection for the arrays needed to project
-! > x_in: location of particle on the dimensions to project
-! > value_arr: array to be projected on. Should be the same size as this%values
-! > proj_value: projection value (i.e. if only particle weight, then just particle%weight)
+!> Subroutine for projecting one particle to the value_arr
+!! this: phase space projection for the arrays needed to project
+!! x_in: location of particle on the dimensions to project
+!! value_arr: array to be projected on. Should be the same size as this%values
+!! proj_value: projection value (i.e. if only particle weight, then just particle%weight)
 subroutine project_single_particle_x(this,x_in,value_arr,proj_value)
   class(phase_space_projection), intent(in)        :: this
   real*8,                        intent(in)        :: x_in(this%ndim)
@@ -518,8 +518,8 @@ pure function support_to_nD(this, index_in) result(index_out)
     index_out(it) = index_tmp/this%multsupp(it)+1
     index_tmp = modulo(index_tmp, this%multsupp(it))
   enddo
-end function
-! To go from 1D large meshgrid to ndim meshgrids function
+end function support_to_nD
+!> To go from 1D large meshgrid to ndim meshgrids function
 function calc_index_phase_proj(this, index_arr) result(index_values)
   class(phase_space_projection), intent(in) :: this
   integer, intent(in)                       :: index_arr(this%ndim)
@@ -531,8 +531,8 @@ function calc_index_phase_proj(this, index_arr) result(index_values)
     index_tmp=index_tmp+this%mult_index(it)*(index_arr(it)-1)
   enddo
   index_values=index_tmp
-end function
-! To go from index in 1D array to ndim indices.
+end function calc_index_phase_proj
+!> To go from index in 1D array to ndim indices.
 function calc_reverse_index_phase_proj(this, index_values) result(index_arr)
   class(phase_space_projection), intent(in) :: this
   integer                                   :: index_arr(this%ndim)
@@ -549,6 +549,6 @@ function calc_reverse_index_phase_proj(this, index_values) result(index_arr)
 
   enddo
 
-end function
+end function calc_reverse_index_phase_proj
 
 end module mod_phase_space_project

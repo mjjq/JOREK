@@ -1,5 +1,8 @@
 !> Module containing functions for phase-space diagnostics
-!>
+!> Wiki page with more theoretical information and examples:
+!>  https://www.jorek.eu/wiki/doku.php?id=particles_phase_space&s[]=phase&s[]=space
+
+
 !> Projecting particles on rectangular uniform grids for arbitrary grid coordinates and values
 !> Using kernels such that correct integration is guaranteed (up to discrete effects)
 !>  See https://en.wikipedia.org/wiki/Kernel_density_estimation for more information 
@@ -17,7 +20,6 @@
 !> call output_phase_project(this,ino,output_grids_in): outputting for HDF5
 !> call project_single_particle_x(this,x_in,value_arr,proj_value): projecting single particle on the values arrays
 
-! For more information on the justification of using kernels and example results, see https://www.jorek.eu/wiki/doku.php?id=particles_phase_space
 module mod_phase_space_project
   use mod_io_actions
   use mod_particle_sim

@@ -1,4 +1,4 @@
-!> Testing the coupling of the projections of particles to JOREK
+! Example for using phase space projections
 program tae_phase_space_project
 
   use particle_tracer
@@ -18,7 +18,7 @@ program tae_phase_space_project
   use phys_module, only: CENTRAL_MASS, CENTRAL_DENSITY, xcase, xpoint,F0
   use phys_module, only: n_particles, nstep_particles, nsubstep_particles, tstep_particles
   use phys_module, only: filter_perp, filter_hyper, filter_par, filter_perp_n0, filter_hyper_n0, filter_par_n0
-  use phys_module, only: n_mode_families
+  use phys_module, only: n_mode_families, nout
 
   use constants,   only: MU_ZERO, MASS_PROTON, ATOMIC_MASS_UNIT, K_BOLTZ, EL_CHG
   use mod_math_operators, only: cross_product
@@ -69,12 +69,12 @@ program tae_phase_space_project
   rho_part    = 1.195d19 !(corrected value to obtain density=1.441e17 (as in benchmark, for original profile with toroidal flux)
   n_particles_local = int(n_particles/sim%n_cpu)
   timesteps         = tstep_particles
-  write(*,*) tstep
+
   ! Set up the field reader
   fieldreader = event(read_jorek_fields_interp_linear(basename='jorek', i=-1,mode_divisor=100))
   call with(sim, fieldreader)
 
-  write(*,*) 'main : t_start = ',t_start
+  if(sim%my_id .eq. 0 ) write(*,*) 'main : t_start = ',t_start
 
 
   if (sim%my_id .eq. 0) call boundary_from_grid(sim%fields%node_list, sim%fields%element_list, bnd_node_list, bnd_elm_list, .false.)
@@ -98,7 +98,7 @@ program tae_phase_space_project
     write(*,*) "check :", n_steps, tstep_si - n_steps*timesteps
 
   endif
-  write(*,*) "until start phase" , sim%my_id
+
   if (.not. restart_particles) then
     ! Set up particles
     sim%groups(1)%Z    = 1
@@ -110,12 +110,12 @@ program tae_phase_space_project
     !< If projecting phase space, it is vital to use a by construction phi independent initial distribution, i.e. phi planes.
     !< This lowers the sampling in the other coordinates naturally, so for the example it's not done 
     !< Example of usage is here in any case
-    call initialise_particles_H_mu_psi_phiplanes(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &
-         uniform_space=.true., uniform_space_rej_f=f_toroidal_flux, &
-         uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5)   
     !call initialise_particles_H_mu_psi_phiplanes(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &
     !     uniform_space=.true., uniform_space_rej_f=f_toroidal_flux, &
-    !     uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5,n_phi_planes_in=12)   
+    !     uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5)   
+    call initialise_particles_H_mu_psi_phiplanes(sim%groups(1)%particles, sim%fields, pcg32_rng(),sim%groups(1)%mass, &
+         uniform_space=.true., uniform_space_rej_f=f_toroidal_flux, &
+         uniform_space_rej_vars=[1], charge = 1, T_maxwell = 4d5,n_phi_planes_in=12)   
 
     call adjust_particle_weights(sim%groups(1)%particles, rho_part)
     if (sim%my_id .eq. 0) write(*,*) "Particle density was adjusted to:", rho_part, sim%groups(1)%particles(1)%weight
@@ -145,7 +145,7 @@ program tae_phase_space_project
   jorek_feedback = new_projection(sim%fields%node_list, sim%fields%element_list, &
       filter    = filter_perp, filter_hyper    = filter_hyper, filter_parallel    = filter_par, &
       filter_n0 = filter_perp, filter_hyper_n0 = filter_hyper, filter_parallel_n0 = filter_par_n0, &
-      calc_integrals=.false., to_vtk=.true., to_h5 = .false., basename='projections')
+      calc_integrals=.false., to_vtk=.false., to_h5 = .false., basename='projections')
 
   ! Be aware of OMP_STACKSIZE limits here as well. Each OMP process will create a private copy of the array on the stack (for reduction later), so for large arrays
   ! such as this 4D array, it will be expensive. 90*95*50*75*8 ~ 256.5e6 = 256.5 MegaByte. If you run 
@@ -154,9 +154,9 @@ program tae_phase_space_project
   ! The default on MPCDF machines is 256M, so it will work there without further action.
   ! Comment out these three lines if it is not needed.
 
-  !fourD_dist = new_phase_space_projection(ndim=4,res=[90,95,50,75],start=[9.d0,-1.d0,-1.1d0, -20.d0],end=[11.0,1.d0,1.1d0,1700.d0], f_proj = proj_f(proj_one,1), f_grids=proj_ndim_f(f=proj_RZPE, group=1),basename='fourD_dist')
-  !call with(sim,fourD_dist)
-  !call output_phase_project(fourD_dist,0,output_grids_in=.true.)
+  fourD_dist = new_phase_space_projection(ndim=4,res=[90,95,50,75],start=[9.d0,-1.d0,-1.1d0, -20.d0],end=[11.0,1.d0,1.1d0,1700.d0], f_proj = proj_f(proj_one,1), f_grids=proj_ndim_f(f=proj_RZPE, group=1),basename='fourD_dist')
+  call with(sim,fourD_dist)
+  call output_phase_project(fourD_dist,0,output_grids_in=.true.)
 
   ! The output is only done on the root process. To prevent a too big imbalance, barrier here.
   call MPI_BARRIER(MPI_COMM_WORLD,ifail)
@@ -225,13 +225,21 @@ program tae_phase_space_project
     endif
     power_exchange_vpar_mu%values = 0.d0
     call loop_particle_kinetic_local(sim, jorek_feedback, rng, timesteps, n_steps , particle_start_time,power_exchange_vpar_mu)
-    call output_phase_project(power_exchange_vpar_mu,ino,output_grids_in=.true.)
-    ! Aborting here so you can quickly see the phase space diagnostics. To make it run over multiple timesteps (needed for noise)
-    ! remove mpi barrier and abort. The diagnostic will not be hard on performance as long as you do it only at the end of the loop.
-    call MPI_BARRIER(MPI_COMM_WORLD,ifail)
-    call MPI_ABORT(MPI_COMM_WORLD,1,ifail)
     ! Will output every time step. A comulative sum of these is needed, but for now this allows you to do anything with the resulting files.
     ! You can also move the power_exchange_vpar_mu%values=0.d0 line outside the loop, at which point it will do the cumulative sum itself.
+    if(ino .eq.0) then
+       call output_phase_project(power_exchange_vpar_mu,ino,output_grids_in=.true.)
+    else
+       call output_phase_project(power_exchange_vpar_mu,ino,output_grids_in=.false.)
+    endif
+    ! Output a 4D distribution function each nout so we can analyuze it later
+    if(mod(ino,nout) .eq. 0) then 
+       call with(sim,fourD_dist)
+       call output_phase_project(fourD_dist,ino+1,output_grids_in=.false.)
+
+       ! The output is only done on the root process. To prevent a too big imbalance, barrier here.
+       call MPI_BARRIER(MPI_COMM_WORLD,ifail)
+    endif
     ! But it can be useful to have only the power exchange between steps n and n+1.
     ino = ino +1
     sim%time = target_time

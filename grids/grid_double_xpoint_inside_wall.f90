@@ -10,6 +10,7 @@ use data_structure
 use grid_xpoint_data
 use mod_export_restart
 use mod_eqdsk_tools
+use reorder_and_clean_flux_surfaces
 
 ! --- Input parameters
 use phys_module, only:     n_flux, n_open, n_tht, n_outer, n_inner, n_private, n_leg, n_up_priv, n_up_leg,      &

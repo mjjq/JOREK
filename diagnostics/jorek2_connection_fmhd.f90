@@ -328,8 +328,8 @@ program jorek2_poincare
             BZ = ( AR0_p - A30_R )/ R
             Bp = ( AZ0_R - AR0_Z ) + Fprof / R
             
-            R_half = R_line + delta_phi/2. / Bp * BR
-            Z_half = Z_line + delta_phi/2. / Bp * BZ
+            R_half = R_line + R*delta_phi/2. / Bp * BR
+            Z_half = Z_line + R*delta_phi/2. / Bp * BZ
           else
             cycle
           endif
@@ -369,8 +369,8 @@ program jorek2_poincare
             BZ = ( AR0_p - A30_R )/ R
             Bp = ( AZ0_R - AR0_Z ) + Fprof / R
             
-            R_line = R_line + delta_phi / Bp * BR
-            Z_line = Z_line + delta_phi / Bp * BZ
+            R_line = R_line + R*delta_phi / Bp * BR
+            Z_line = Z_line + R*delta_phi / Bp * BZ
           else
             cycle
           endif

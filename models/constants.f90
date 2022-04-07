@@ -3,7 +3,7 @@ module constants
   implicit none
   public
   
-  character(len=20), parameter :: JOREK_VERSION = 'v2.22.03.0'
+#include "version.h"
 
   ! @name Mathematical and physical constants
   real*8,  parameter :: PI            = 3.1415926535897932385d0  !< PI

@@ -177,14 +177,6 @@ contains
           call tr_allocate(thread_struct(i)%RHS_k, 1,n_plane,1,n_vertex_max*n_var*(n_order+1),"RHS_k",CAT_MATELEM)                                     
           call tr_allocate(thread_struct(i)%ELM,   1,n_tor*n_vertex_max*(n_order+1)*n_var,1,n_tor*n_vertex_max*(n_order+1)*n_var,"ELM",CAT_MATELEM)       
           call tr_allocate(thread_struct(i)%RHS,   1,n_tor*n_vertex_max*(n_order+1)*n_var,"RHS",CAT_MATELEM)
-          call tr_allocate(thread_struct(i)%ELM_p, 1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_p",CAT_MATELEM)
-          call tr_allocate(thread_struct(i)%ELM_n, 1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_n",CAT_MATELEM)
-          call tr_allocate(thread_struct(i)%ELM_k, 1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_k",CAT_MATELEM)
-          call tr_allocate(thread_struct(i)%ELM_kn,1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_kn",CAT_MATELEM)
-          call tr_allocate(thread_struct(i)%RHS_p, 1,n_plane,1,n_vertex_max*n_var*n_degrees,"RHS_p",CAT_MATELEM)                                     
-          call tr_allocate(thread_struct(i)%RHS_k, 1,n_plane,1,n_vertex_max*n_var*n_degrees,"RHS_k",CAT_MATELEM)                                     
-          call tr_allocate(thread_struct(i)%ELM,   1,n_tor*n_vertex_max*n_degrees*n_var,1,n_tor*n_vertex_max*n_degrees*n_var,"ELM",CAT_MATELEM)       
-          call tr_allocate(thread_struct(i)%RHS,   1,n_tor*n_vertex_max*n_degrees*n_var,"RHS",CAT_MATELEM)
           call tr_allocate(thread_struct(i)%synch_buff, 1,n_tor*n_var*n_tor*n_var,"synch_buff",CAT_MATELEM)
           thread_struct(i)%ELM_p   = 0.d0
           thread_struct(i)%ELM_n   = 0.d0

@@ -11,6 +11,7 @@ use phys_module, only: xpoint, xcase
 use mod_F_profile
 use mod_interp
 use nodes_elements
+use mod_sources
 
 implicit none
 

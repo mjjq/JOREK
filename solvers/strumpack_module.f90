@@ -78,9 +78,7 @@ module strumpack_module
   end interface
 
   contains
-    subroutine strumpack_init(comm) bind(C)
-        use, intrinsic :: iso_c_binding
-        use mpi
+    subroutine strumpack_init(comm)
         implicit none
 
         integer comm,ierr
@@ -91,9 +89,8 @@ module strumpack_module
         return
     end subroutine strumpack_init
 
-    subroutine strumpack_set_mat(n,nnz,irn,jcn,val,block_size,comm,update,distributed,equilibrium)! bind(C)
+    subroutine strumpack_set_mat(n,nnz,irn,jcn,val,block_size,comm,update,distributed,equilibrium)
         use, intrinsic :: iso_c_binding
-        use mpi
         use sorting_module, only : remove_duplicates, convert2csr, convert_sorting
         use mod_integer_types
 
@@ -224,9 +221,7 @@ module strumpack_module
         return
     end subroutine strumpack_set_mat
 
-    subroutine strumpack_analyze(comm) bind(C)
-        use, intrinsic :: iso_c_binding
-        use mpi
+    subroutine strumpack_analyze(comm)
         implicit none
 
         integer comm,ierr
@@ -238,8 +233,6 @@ module strumpack_module
     end subroutine strumpack_analyze
 
     subroutine strumpack_factorize(comm) bind(C)
-        use, intrinsic :: iso_c_binding
-        use mpi
         implicit none
 
         integer comm,ierr
@@ -250,9 +243,8 @@ module strumpack_module
         return
     end subroutine strumpack_factorize
 
-    subroutine strumpack_solve(n,rhs,comm) bind(C)
+    subroutine strumpack_solve(n,rhs,comm)
         use, intrinsic :: iso_c_binding
-        use mpi
         use mod_integer_types
         implicit none
 
@@ -274,9 +266,7 @@ module strumpack_module
         return
     end subroutine strumpack_solve
 
-    subroutine strumpack_finalize(comm) bind(C)
-        use, intrinsic :: iso_c_binding
-        use mpi
+    subroutine strumpack_finalize(comm)
         implicit none
 
         integer comm,ierr
@@ -289,11 +279,9 @@ module strumpack_module
         return
     end subroutine strumpack_finalize
 
-    subroutine distribute_rows(n,ncpu,block_size) bind(C)
+    subroutine distribute_rows(n,ncpu,block_size)
       !> Distribute rows between members of MPI group
-
         use, intrinsic :: iso_c_binding
-        use mpi
         use mod_integer_types
         implicit none
 

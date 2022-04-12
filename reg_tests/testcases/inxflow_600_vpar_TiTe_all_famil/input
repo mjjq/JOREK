@@ -58,14 +58,24 @@
 
  n_R      = 0
  n_Z      = 0
- n_radial = 41
- n_pol    = 64
+ n_radial = 31
+ n_pol    = 61
 
- n_flux   = 18
- n_tht    = 26
- n_open   = 6
+ n_flux   = 11
+ n_tht    = 41
+ n_open   = 4
  n_leg    = 6
- n_private = 4
+ n_private = 3
+! n_R      = 0
+! n_Z      = 0
+! n_radial = 41
+! n_pol    = 64
+!
+! n_flux   = 18
+! n_tht    = 26
+! n_open   = 6
+! n_leg    = 6
+! n_private = 4
 
  eta   = 2.d-6
  eta_ohmic = 1.d-7

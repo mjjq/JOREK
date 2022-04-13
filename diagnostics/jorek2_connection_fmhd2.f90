@@ -1,4 +1,4 @@
-program jorek2_poincare
+program jorek2_connection_fmhd2
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
@@ -43,6 +43,19 @@ program jorek2_poincare
   real*8                :: R, R_s, R_t, R_st, R_ss, R_tt, R_in, R_out, R_keep, Rmid, Rmid_s, Rmid_t
   real*8                :: Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, Z_in, Z_out, Z_keep, Zmid, Zmid_s, Zmid_t
   real*8                :: P, P_s, P_t, P_st, P_ss, P_tt
+  real*8                :: s_eval, t_eval, phi_eval
+  real*8                :: RR, RR_s, RR_t
+  real*8                :: ZZ, ZZ_s, ZZ_t
+  real*8                :: delta_x, delta_y, xjac
+  real*8                :: AR0_p, AR0_R, AR0_Z
+  real*8                :: AZ0_p, AZ0_R, AZ0_Z
+  real*8                :: A30_p, A30_R, A30_Z
+  real*8                :: AR0,AR0_s,AR0_t,AR0_st,AR0_ss,AR0_tt
+  real*8                :: AZ0,AZ0_s,AZ0_t,AZ0_st,AZ0_ss,AZ0_tt
+  real*8                :: A30,A30_s,A30_t,A30_st,A30_ss,A30_tt
+  real*8                :: Fprof,Fprof_s,Fprof_t,Fprof_st,Fprof_ss,Fprof_tt
+  real*8                :: BR, BZ, Bp
+  real*8                :: HHZ(n_tor), HHZ_p(n_tor)
   real*8                :: tol, psi_s, psi_t
   real*8                :: Rmin, Rmax
   real*8                :: Zmin, Zmax
@@ -327,13 +340,151 @@ program jorek2_poincare
             
             ! --- Find the new position after element step
             delta_phi_step = delta_phi - delta_phi_local
-            call step(i_elm,s_line,t_line,p_line,delta_phi_step, delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
+            !call step(i_elm,s_line,t_line,p_line,delta_phi_step, delta_s,delta_t,R,Z,R_s,R_t,Z_s,Z_t)
+            ! -------------------------------------------------------------------------
+            ! --- STEP FUNCTION, CANNOT BE INLINED PROPERLY AS FUNCTION WITH FORTRAN
+            ! -------------------------------------------------------------------------
+            s_eval   = s_line
+            t_eval   = t_line
+            phi_eval = p_line
+            call interp_RZ(node_list,element_list,i_elm,s_eval,t_eval,RR,RR_s,RR_t,ZZ,ZZ_s,ZZ_t)
+            xjac = (RR_s * ZZ_t - RR_t * ZZ_s)
+            R = RR ; R_s = RR_s ; R_t = RR_t
+            Z = ZZ ; Z_s = ZZ_s ; Z_t = ZZ_t
+  
+            ! --- toroidal functions
+            HHZ  (1) = 1.d0
+            HHZ_p(1) = 0.d0
+            do i_tor=1,(n_tor-1)/2
+              HHZ  (2*i_tor)   = +cos(mode(2*i_tor)   * phi_eval )
+              HHZ  (2*i_tor+1) = +sin(mode(2*i_tor+1) * phi_eval )
+              HHZ_p(2*i_tor)   = -sin(mode(2*i_tor)   * phi_eval ) * float(mode(2*i_tor))
+              HHZ_p(2*i_tor+1) = +cos(mode(2*i_tor+1) * phi_eval ) * float(mode(2*i_tor+1))
+            enddo
+
+#ifdef fullmhd
+            ! --- B-variables
+            AR0_p  = 0.d0 ; AR0_R  = 0.d0 ; AR0_Z  = 0.d0
+            AZ0_p  = 0.d0 ; AZ0_R  = 0.d0 ; AZ0_Z  = 0.d0
+            A30_p  = 0.d0 ; A30_R  = 0.d0 ; A30_Z  = 0.d0
+            do i_tor = 1, n_tor
+              call interp(node_list,element_list,i_elm,var_AR, i_tor,s_eval,t_eval,AR0,AR0_s,AR0_t,AR0_st,AR0_ss,AR0_tt)
+              call interp(node_list,element_list,i_elm,var_AZ, i_tor,s_eval,t_eval,AZ0,AZ0_s,AZ0_t,AZ0_st,AZ0_ss,AZ0_tt)
+              call interp(node_list,element_list,i_elm,var_A3, i_tor,s_eval,t_eval,A30,A30_s,A30_t,A30_st,A30_ss,A30_tt)
+              AR0_p  = AR0_p  + AR0 * HHZ_p(i_tor)
+              AZ0_p  = AZ0_p  + AZ0 * HHZ_p(i_tor)
+              A30_p  = A30_p  + A30 * HHZ_p(i_tor)
+              if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+                AR0_R  = AR0_R  + (   ZZ_t * AR0_s - ZZ_s * AR0_t ) / xjac * HHZ(i_tor)
+                AR0_Z  = AR0_Z  + ( - RR_t * AR0_s + RR_s * AR0_t ) / xjac * HHZ(i_tor)
+                AZ0_R  = AZ0_R  + (   ZZ_t * AZ0_s - ZZ_s * AZ0_t ) / xjac * HHZ(i_tor)
+                AZ0_Z  = AZ0_Z  + ( - RR_t * AZ0_s + RR_s * AZ0_t ) / xjac * HHZ(i_tor)
+                A30_R  = A30_R  + (   ZZ_t * A30_s - ZZ_s * A30_t ) / xjac * HHZ(i_tor)
+                A30_Z  = A30_Z  + ( - RR_t * A30_s + RR_s * A30_t ) / xjac * HHZ(i_tor)
+              endif
+            enddo
+
+            ! --- Magnetic field
+            call interp(node_list,element_list,i_elm,710,1,s_eval,t_eval,Fprof,Fprof_s,Fprof_t,Fprof_st,Fprof_ss,Fprof_tt)
+            BR = ( A30_Z - AZ0_p )/ RR
+            BZ = ( AR0_p - A30_R )/ RR
+            Bp = ( AZ0_R - AR0_Z ) + Fprof / RR
+
+            ! --- From RZ-coords to st-coords
+            delta_x = RR * delta_phi_step / Bp * BR
+            delta_y = RR * delta_phi_step / Bp * BZ
+            delta_s = ( + delta_x * ZZ_t - delta_y * RR_t ) / xjac
+            delta_t = ( - delta_x * ZZ_s + delta_y * RR_s ) / xjac
+
+#else
+            i_var_psi = 1
+            psi_s  = 0.d0 ; psi_t  = 0.d0
+            do i_tor = 1, n_tor
+              call interp(node_list,element_list,i_elm,var_AR, i_tor,s_eval,t_eval,ps0,ps0_s,ps0_t,ps0_st,ps0_ss,ps0_tt)
+              psi_s = psi_s + ps0_s * HHZ(i_tor)
+              psi_t = psi_t + ps0_t * HHZ(i_tor)
+            enddo
+            delta_s =   psi_t * RR / (xjac * F0) * delta_phi_step
+            delta_t = - psi_s * RR / (xjac * F0) * delta_phi_step
+#endif
+            ! -------------------------------------------------------------------------
+            ! --- STEP FUNCTION, CANNOT BE INLINED PROPERLY AS FUNCTION WITH FORTRAN END
+            ! -------------------------------------------------------------------------
   
             ! --- Take another step from middle point (ie. 1.5*step)
             s_mid = s_line + 0.5d0 * delta_s
             t_mid = t_line + 0.5d0 * delta_t
             p_mid = p_line + 0.5d0 * delta_phi_step
-            call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t,Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t)
+            !call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t,Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t)
+            ! -------------------------------------------------------------------------
+            ! --- STEP FUNCTION, CANNOT BE INLINED PROPERLY AS FUNCTION WITH FORTRAN
+            ! -------------------------------------------------------------------------
+            s_eval   = s_mid
+            t_eval   = t_mid
+            phi_eval = p_mid
+            call interp_RZ(node_list,element_list,i_elm,s_eval,t_eval,RR,RR_s,RR_t,ZZ,ZZ_s,ZZ_t)
+            xjac = (RR_s * ZZ_t - RR_t * ZZ_s)
+            Rmid = RR ; Rmid_s = RR_s ; Rmid_t = RR_t
+            Zmid = ZZ ; Zmid_s = ZZ_s ; Zmid_t = ZZ_t
+  
+            ! --- toroidal functions
+            HHZ  (1) = 1.d0
+            HHZ_p(1) = 0.d0
+            do i_tor=1,(n_tor-1)/2
+              HHZ  (2*i_tor)   = +cos(mode(2*i_tor)   * phi_eval )
+              HHZ  (2*i_tor+1) = +sin(mode(2*i_tor+1) * phi_eval )
+              HHZ_p(2*i_tor)   = -sin(mode(2*i_tor)   * phi_eval ) * float(mode(2*i_tor))
+              HHZ_p(2*i_tor+1) = +cos(mode(2*i_tor+1) * phi_eval ) * float(mode(2*i_tor+1))
+            enddo
+
+#ifdef fullmhd
+            ! --- B-variables
+            AR0_p  = 0.d0 ; AR0_R  = 0.d0 ; AR0_Z  = 0.d0
+            AZ0_p  = 0.d0 ; AZ0_R  = 0.d0 ; AZ0_Z  = 0.d0
+            A30_p  = 0.d0 ; A30_R  = 0.d0 ; A30_Z  = 0.d0
+            do i_tor = 1, n_tor
+              call interp(node_list,element_list,i_elm,var_AR, i_tor,s_eval,t_eval,AR0,AR0_s,AR0_t,AR0_st,AR0_ss,AR0_tt)
+              call interp(node_list,element_list,i_elm,var_AZ, i_tor,s_eval,t_eval,AZ0,AZ0_s,AZ0_t,AZ0_st,AZ0_ss,AZ0_tt)
+              call interp(node_list,element_list,i_elm,var_A3, i_tor,s_eval,t_eval,A30,A30_s,A30_t,A30_st,A30_ss,A30_tt)
+              AR0_p  = AR0_p  + AR0 * HHZ_p(i_tor)
+              AZ0_p  = AZ0_p  + AZ0 * HHZ_p(i_tor)
+              A30_p  = A30_p  + A30 * HHZ_p(i_tor)
+              if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+                AR0_R  = AR0_R  + (   ZZ_t * AR0_s - ZZ_s * AR0_t ) / xjac * HHZ(i_tor)
+                AR0_Z  = AR0_Z  + ( - RR_t * AR0_s + RR_s * AR0_t ) / xjac * HHZ(i_tor)
+                AZ0_R  = AZ0_R  + (   ZZ_t * AZ0_s - ZZ_s * AZ0_t ) / xjac * HHZ(i_tor)
+                AZ0_Z  = AZ0_Z  + ( - RR_t * AZ0_s + RR_s * AZ0_t ) / xjac * HHZ(i_tor)
+                A30_R  = A30_R  + (   ZZ_t * A30_s - ZZ_s * A30_t ) / xjac * HHZ(i_tor)
+                A30_Z  = A30_Z  + ( - RR_t * A30_s + RR_s * A30_t ) / xjac * HHZ(i_tor)
+              endif
+            enddo
+
+            ! --- Magnetic field
+            call interp(node_list,element_list,i_elm,710,1,s_eval,t_eval,Fprof,Fprof_s,Fprof_t,Fprof_st,Fprof_ss,Fprof_tt)
+            BR = ( A30_Z - AZ0_p )/ RR
+            BZ = ( AR0_p - A30_R )/ RR
+            Bp = ( AZ0_R - AR0_Z ) + Fprof / RR
+
+            ! --- From RZ-coords to st-coords
+            delta_x = RR * delta_phi_step / Bp * BR
+            delta_y = RR * delta_phi_step / Bp * BZ
+            delta_s = ( + delta_x * ZZ_t - delta_y * RR_t ) / xjac
+            delta_t = ( - delta_x * ZZ_s + delta_y * RR_s ) / xjac
+
+#else
+            i_var_psi = 1
+            psi_s  = 0.d0 ; psi_t  = 0.d0
+            do i_tor = 1, n_tor
+              call interp(node_list,element_list,i_elm,var_AR, i_tor,s_eval,t_eval,ps0,ps0_s,ps0_t,ps0_st,ps0_ss,ps0_tt)
+              psi_s = psi_s + ps0_s * HHZ(i_tor)
+              psi_t = psi_t + ps0_t * HHZ(i_tor)
+            enddo
+            delta_s =   psi_t * RR / (xjac * F0) * delta_phi_step
+            delta_t = - psi_s * RR / (xjac * F0) * delta_phi_step
+#endif
+            ! -------------------------------------------------------------------------
+            ! --- STEP FUNCTION, CANNOT BE INLINED PROPERLY AS FUNCTION WITH FORTRAN END
+            ! -------------------------------------------------------------------------
   
             ! --- Step to element boundary, not beyond (we do smaller steps to approach boundary)
             small_delta_s = 1.d0
@@ -354,7 +505,76 @@ program jorek2_poincare
               t_mid = t_line + 0.5d0 * small_delta * delta_t
               p_mid = p_line + 0.5d0 * small_delta * delta_phi_step
   
-              call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t,Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t)
+              !call step(i_elm,s_mid,t_mid,p_mid,delta_phi_step,delta_s,delta_t,Rmid,Zmid,Rmid_s,Rmid_t,Zmid_s,Zmid_t)
+              ! -------------------------------------------------------------------------
+              ! --- STEP FUNCTION, CANNOT BE INLINED PROPERLY AS FUNCTION WITH FORTRAN
+              ! -------------------------------------------------------------------------
+              s_eval   = s_mid
+              t_eval   = t_mid
+              phi_eval = p_mid
+              call interp_RZ(node_list,element_list,i_elm,s_eval,t_eval,RR,RR_s,RR_t,ZZ,ZZ_s,ZZ_t)
+              xjac = (RR_s * ZZ_t - RR_t * ZZ_s)
+              Rmid = RR ; Rmid_s = RR_s ; Rmid_t = RR_t
+              Zmid = ZZ ; Zmid_s = ZZ_s ; Zmid_t = ZZ_t
+    
+              ! --- toroidal functions
+              HHZ  (1) = 1.d0
+              HHZ_p(1) = 0.d0
+              do i_tor=1,(n_tor-1)/2
+                HHZ  (2*i_tor)   = +cos(mode(2*i_tor)   * phi_eval )
+                HHZ  (2*i_tor+1) = +sin(mode(2*i_tor+1) * phi_eval )
+                HHZ_p(2*i_tor)   = -sin(mode(2*i_tor)   * phi_eval ) * float(mode(2*i_tor))
+                HHZ_p(2*i_tor+1) = +cos(mode(2*i_tor+1) * phi_eval ) * float(mode(2*i_tor+1))
+              enddo
+ 
+#ifdef fullmhd
+              ! --- B-variables
+              AR0_p  = 0.d0 ; AR0_R  = 0.d0 ; AR0_Z  = 0.d0
+              AZ0_p  = 0.d0 ; AZ0_R  = 0.d0 ; AZ0_Z  = 0.d0
+              A30_p  = 0.d0 ; A30_R  = 0.d0 ; A30_Z  = 0.d0
+              do i_tor = 1, n_tor
+                call interp(node_list,element_list,i_elm,var_AR, i_tor,s_eval,t_eval,AR0,AR0_s,AR0_t,AR0_st,AR0_ss,AR0_tt)
+                call interp(node_list,element_list,i_elm,var_AZ, i_tor,s_eval,t_eval,AZ0,AZ0_s,AZ0_t,AZ0_st,AZ0_ss,AZ0_tt)
+                call interp(node_list,element_list,i_elm,var_A3, i_tor,s_eval,t_eval,A30,A30_s,A30_t,A30_st,A30_ss,A30_tt)
+                AR0_p  = AR0_p  + AR0 * HHZ_p(i_tor)
+                AZ0_p  = AZ0_p  + AZ0 * HHZ_p(i_tor)
+                A30_p  = A30_p  + A30 * HHZ_p(i_tor)
+                if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+                  AR0_R  = AR0_R  + (   ZZ_t * AR0_s - ZZ_s * AR0_t ) / xjac * HHZ(i_tor)
+                  AR0_Z  = AR0_Z  + ( - RR_t * AR0_s + RR_s * AR0_t ) / xjac * HHZ(i_tor)
+                  AZ0_R  = AZ0_R  + (   ZZ_t * AZ0_s - ZZ_s * AZ0_t ) / xjac * HHZ(i_tor)
+                  AZ0_Z  = AZ0_Z  + ( - RR_t * AZ0_s + RR_s * AZ0_t ) / xjac * HHZ(i_tor)
+                  A30_R  = A30_R  + (   ZZ_t * A30_s - ZZ_s * A30_t ) / xjac * HHZ(i_tor)
+                  A30_Z  = A30_Z  + ( - RR_t * A30_s + RR_s * A30_t ) / xjac * HHZ(i_tor)
+                endif
+              enddo
+ 
+              ! --- Magnetic field
+              call interp(node_list,element_list,i_elm,710,1,s_eval,t_eval,Fprof,Fprof_s,Fprof_t,Fprof_st,Fprof_ss,Fprof_tt)
+              BR = ( A30_Z - AZ0_p )/ RR
+              BZ = ( AR0_p - A30_R )/ RR
+              Bp = ( AZ0_R - AR0_Z ) + Fprof / RR
+ 
+              ! --- From RZ-coords to st-coords
+              delta_x = RR * delta_phi_step / Bp * BR
+              delta_y = RR * delta_phi_step / Bp * BZ
+              delta_s = ( + delta_x * ZZ_t - delta_y * RR_t ) / xjac
+              delta_t = ( - delta_x * ZZ_s + delta_y * RR_s ) / xjac
+ 
+#else
+              i_var_psi = 1
+              psi_s  = 0.d0 ; psi_t  = 0.d0
+              do i_tor = 1, n_tor
+                call interp(node_list,element_list,i_elm,var_AR, i_tor,s_eval,t_eval,ps0,ps0_s,ps0_t,ps0_st,ps0_ss,ps0_tt)
+                psi_s = psi_s + ps0_s * HHZ(i_tor)
+                psi_t = psi_t + ps0_t * HHZ(i_tor)
+              enddo
+              delta_s =   psi_t * RR / (xjac * F0) * delta_phi_step
+              delta_t = - psi_s * RR / (xjac * F0) * delta_phi_step
+#endif
+              ! -------------------------------------------------------------------------
+              ! --- STEP FUNCTION, CANNOT BE INLINED PROPERLY AS FUNCTION WITH FORTRAN END
+              ! -------------------------------------------------------------------------
   
               if (small_delta_s .lt. small_delta_t) then
   

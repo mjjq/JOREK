@@ -339,7 +339,7 @@ program jorek2_connection_fmhd
               endif
             enddo
             BR = + psi_Z / R
-            BZ = - psi_Z / R
+            BZ = - psi_R / R
             Bp = F0 / R
 #endif
             
@@ -395,7 +395,7 @@ program jorek2_connection_fmhd
               endif
             enddo
             BR = + psi_Z / R
-            BZ = - psi_Z / R
+            BZ = - psi_R / R
             Bp = F0 / R
 #endif
             

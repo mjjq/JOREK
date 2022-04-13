@@ -36,7 +36,7 @@ program jorek2_connection_fmhd
   real*8                :: R, R_s, R_t, R_st, R_ss, R_tt, R_in, R_out
   real*8                :: Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, Z_in, Z_out
   real*8                :: P, P_s, P_t, P_st, P_ss, P_tt
-  real*8                :: psi_s, psi_t
+  real*8                :: psi, psi_s, psi_t, psi_st, psi_ss, psi_tt, psi_R, psi_Z
   real*8                :: Rmin, Rmax
   real*8                :: Zmin, Zmax
   real*8                :: delta_phi
@@ -54,7 +54,7 @@ program jorek2_connection_fmhd
   logical               :: psitheta_plot
   logical               :: ignore_SOL
   integer               :: n_points_max
-  real*8                :: psi,P0_s,P0_t,P0_st,P0_ss,P0_tt
+  real*8                :: P0_s,P0_t,P0_st,P0_ss,P0_tt
   integer               :: n_points_start
   real*8                :: Rstart_min, Rstart_max
   real*8                :: Zstart_min, Zstart_max
@@ -301,6 +301,7 @@ program jorek2_connection_fmhd
             ! --- RZ-coords
             call interp_RZ(node_list,element_list,i_elm,s_out,t_out,R,R_s,R_t,Z,Z_s,Z_t)
             xjac = (R_s * Z_t - R_t * Z_s)
+#ifdef fullmhd
             ! --- B-variables
             AR0_p  = 0.d0 ; AR0_R  = 0.d0 ; AR0_Z  = 0.d0
             AZ0_p  = 0.d0 ; AZ0_R  = 0.d0 ; AZ0_Z  = 0.d0
@@ -327,6 +328,20 @@ program jorek2_connection_fmhd
             BR = ( A30_Z - AZ0_p )/ R
             BZ = ( AR0_p - A30_R )/ R
             Bp = ( AZ0_R - AR0_Z ) + Fprof / R
+! reduced-MHD
+#else
+            psi_R  = 0.d0 ; psi_Z  = 0.d0
+            do i_tor = 1, n_tor
+              call interp(node_list,element_list,i_elm,var_psi, i_tor,s_out,t_out,psi,psi_s,psi_t,psi_st,psi_ss,psi_tt)
+              if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+                psi_R  = psi_R  + (   Z_t * psi_s - Z_s * psi_t ) / xjac * HHZ(i_tor)
+                psi_Z  = psi_Z  + ( - R_t * psi_s + R_s * psi_t ) / xjac * HHZ(i_tor)
+              endif
+            enddo
+            BR = + psi_Z / R
+            BZ = - psi_Z / R
+            Bp = F0 / R
+#endif
             
             R_half = R_line + R*delta_phi/2. / Bp * BR
             Z_half = Z_line + R*delta_phi/2. / Bp * BZ
@@ -342,6 +357,7 @@ program jorek2_connection_fmhd
             ! --- RZ-coords
             call interp_RZ(node_list,element_list,i_elm,s_out,t_out,R,R_s,R_t,Z,Z_s,Z_t)
             xjac = (R_s * Z_t - R_t * Z_s)
+#ifdef fullmhd
             ! --- B-variables
             AR0_p  = 0.d0 ; AR0_R  = 0.d0 ; AR0_Z  = 0.d0
             AZ0_p  = 0.d0 ; AZ0_R  = 0.d0 ; AZ0_Z  = 0.d0
@@ -368,6 +384,20 @@ program jorek2_connection_fmhd
             BR = ( A30_Z - AZ0_p )/ R
             BZ = ( AR0_p - A30_R )/ R
             Bp = ( AZ0_R - AR0_Z ) + Fprof / R
+! reduced-MHD
+#else
+            psi_R  = 0.d0 ; psi_Z  = 0.d0
+            do i_tor = 1, n_tor
+              call interp(node_list,element_list,i_elm,var_psi, i_tor,s_out,t_out,psi,psi_s,psi_t,psi_st,psi_ss,psi_tt)
+              if ((xjac .gt. 1.d-6)) then  ! avoid the axis
+                psi_R  = psi_R  + (   Z_t * psi_s - Z_s * psi_t ) / xjac * HHZ(i_tor)
+                psi_Z  = psi_Z  + ( - R_t * psi_s + R_s * psi_t ) / xjac * HHZ(i_tor)
+              endif
+            enddo
+            BR = + psi_Z / R
+            BZ = - psi_Z / R
+            Bp = F0 / R
+#endif
             
             R_line = R_line + R*delta_phi / Bp * BR
             Z_line = Z_line + R*delta_phi / Bp * BZ

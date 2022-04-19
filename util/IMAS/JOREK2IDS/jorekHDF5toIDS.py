@@ -28,7 +28,7 @@
 #   Requirements:
 #       - h5py
 #       - IMAS
-#       - mkdir -p $HOME/public/imasdb/smiter/3/0
+#       - mkdir -p $HOME/public/imasdb/jorek/3/0
 #
 #   Author :
 #       Leon Kos and Miha Radež
@@ -58,11 +58,11 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-s", "--shot", type=int, default=1,
                         help="Shot number")
-    parser.add_argument("-r", "--run", type=int, default=7,
+    parser.add_argument("-r", "--run", type=int, default=8,
                         help="Run number")
     parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                         help="Location of ~$USER/public/imasdb")
-    parser.add_argument("-d", "--database", type=str, default="smiter",
+    parser.add_argument("-d", "--database", type=str, default="jorek",
                         help="Database name under public/imasdb/")
     parser.add_argument("-o", "--occurrence", type=int, default=0,
                         help="Occurrence number")
@@ -150,8 +150,13 @@ if __name__ == "__main__":
             quad_conn_array = ien
 
             #xyz for quad
-            r0 = x[0, 0, 0]
-            z0 = x[0, 1, 0]
+            dimensions = np.shape(x)[0]
+            if dimensions == 3: # New format 
+                r0 = x[0, 0, 0]
+                z0 = x[0, 1, 0]
+            else:
+                r0 = x[0, 0]
+                z0 = x[1, 0]
             rz = np.zeros((np.shape(r0)[0], 2))
             rz[:, 0] = r0
             rz[:, 1] = z0
@@ -280,10 +285,15 @@ if __name__ == "__main__":
 
             gr2d = mhd_grid_ggd[0].space[0]
             gr2d.geometry_type.index = 0  # Standard geometry (non Fourier)
-            x_shape = np.shape(x)[3]
+            x_shape = np.shape(x)[dimensions]
             # coordinate and derivates (s, t, mixed)
-            for j in range(x_shape):
-                gr2d.objects_per_dimension[0].object[j].geometry_2d = x[:, :,0, j]
+            if dimensions == 3:
+                for j in range(x_shape):
+                    gr2d.objects_per_dimension[0].object[j].geometry_2d = x[:, :, 0, j]
+            else:
+                for j in range(x_shape):
+                    gr2d.objects_per_dimension[0].object[j].geometry_2d = x[:, :, j]
+
 
             # size 1, d_{uk}, d_{vk}, d{uv}d{vk} as in Daan Van Vugt thesis
             size_shape = np.shape(size)[2]

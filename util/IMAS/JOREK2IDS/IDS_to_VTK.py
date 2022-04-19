@@ -17,10 +17,10 @@ vtk_prec=vtk.VTK_FLOAT
 parser = argparse.ArgumentParser(description="Convert IMAS MHD IDS to VTK file",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-s", "--shot", type=int, default=1, help="Shot number")
-parser.add_argument("-r", "--run", type=int, default=7, help="Run number")
+parser.add_argument("-r", "--run", type=int, default=8, help="Run number")
 parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")
-parser.add_argument("-d", "--database", type=str, default="smiter", help="Database name under public/imasdb/")
+parser.add_argument("-d", "--database", type=str, default="jorek", help="Database name under public/imasdb/")
 parser.add_argument("-o", "--occurrence", type=int, default=0, help="Occurrence number")
 parser.add_argument("-f", "--backend", type=int, default=imasdef.MDSPLUS_BACKEND,
                     help="Database format: 12=MDSPLUS, 13=HDF5")

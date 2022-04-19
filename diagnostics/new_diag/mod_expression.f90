@@ -596,7 +596,7 @@ module mod_expression
     real*8  :: LradDrays_T, LradDcont_T, Sion_T, Srec_T
     real*8  :: dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT
     real*8  :: ne_SI, ne_JOREK                              ! Electron density used in radiation rate
-    real*8  :: Lrad_imp, r_imp, i_imp, frad_bg
+    real*8  :: Lrad_imp, r_imp_bg, i_imp, frad_bg
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     real*8  :: Arad_bg, Brad_bg, Crad_bg
@@ -1524,8 +1524,8 @@ module mod_expression
       ne_SI = corr_neg_dens(r0) * 1.d20 * central_density !electron density (SI)    
       frad_bg = 0.
       do i_imp = 1, n_adas
-        r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
-        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+        r_imp_bg = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
+        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp_bg > 0) then
           Lrad_imp = 0.0
           if ( units == SI_UNITS ) then
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
@@ -1534,7 +1534,7 @@ module mod_expression
           else if ( units == JOREK_UNITS ) then
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
                                            log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
-            frad_bg = frad_bg + r_imp * Lrad_imp 
+            frad_bg = frad_bg + r_imp_bg * Lrad_imp 
           endif
         else     
           Lrad_imp = 0.
@@ -1585,12 +1585,12 @@ module mod_expression
           frad_bg = 0.
           do i_imp = 1, n_adas
             if (i_imp == index_main_imp) cycle
-            r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
-            if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+            r_imp_bg = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU
+            if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp_bg > 0) then
               Lrad_imp = 0.0
               call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),   &
                                              log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)
-              frad_bg = frad_bg + r_imp * Lrad_imp 
+              frad_bg = frad_bg + r_imp_bg * Lrad_imp 
             else     
               Lrad_imp = 0.
               frad_bg = frad_bg
@@ -1704,7 +1704,7 @@ module mod_expression
 
 #ifdef WITH_Impurities
               case ( 'nimp' )
-                res = rn0 * fact_ne * m_i_over_m_imp
+                res = rimp0 * fact_ne * m_i_over_m_imp
 #endif
 
               case ( 'T' )

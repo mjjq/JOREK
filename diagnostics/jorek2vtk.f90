@@ -98,7 +98,7 @@ real*8                :: angle, source_volume, local_density, local_temperature,
 
 logical               :: include_radiation
 real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg
-real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp
+real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp_bg
 real*8                :: Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
@@ -132,6 +132,7 @@ real*8, allocatable :: P_imp(:)
 real*8     :: E_ion
 integer*8  :: ion_i, ion_k
 #endif
+
 real*8                :: T_real8, dLradDrays_dT, dLradDcont_dT, dSion_dT, dSrec_dT, rimp0_real8, rimp0_corr
 
 real*8                :: psi_equi, psi_equi_s, psi_equi_t, psi_equi_R, psi_equi_Z
@@ -1242,16 +1243,16 @@ enddo  ! n_elements
       if (use_imp_adas) then  ! use open adas by default
         frad_bg = 0. 
         do i_imp =1, n_adas
-          r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU 
-          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+          r_imp_bg = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU 
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp_bg > 0) then
             Lrad_imp = 0.0
             call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
                                            log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)    
           else     
             Lrad_imp = 0.
           end if
-          frad_bg = frad_bg + r_imp * Lrad_imp
-          scalars(i,iibg(i_imp)) = r_imp * Lrad_imp * scalars(i,var_rho)
+          frad_bg = frad_bg + r_imp_bg * Lrad_imp
+          scalars(i,iibg(i_imp)) = r_imp_bg * Lrad_imp * scalars(i,var_rho)
         end do
       else
         if ( trim(imp_type(1)) == 'Ar') then ! Hard-coded fitting exists for argon
@@ -1366,7 +1367,7 @@ enddo  ! n_elements
   !-------------------------------------------
   ! --- Radiative function, using interpolation
   ! ------------------------------------------
-     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min ) then
+     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rimp0_real8 > 0.d0) then
 
        Lrad = 0.0
        
@@ -1382,16 +1383,16 @@ enddo  ! n_elements
 
      frad_bg = 0.
      do i_imp =1, n_adas
-       r_imp = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
-       if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp > 0) then
+       r_imp_bg = nimp_bg(i_imp) / (1.d20 * central_density)  ! Background impurity density in JU     
+       if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. r_imp_bg > 0) then
          Lrad_imp = 0.0
          call radiation_function_linear(imp_adas(i_imp),imp_cor(i_imp),log10(ne_SI),    & 
                                         log10(Te_eV*EL_CHG/K_BOLTZ),.true.,Lrad_imp)           
        else     
          Lrad_imp = 0.
        end if
-       frad_bg = frad_bg + r_imp * Lrad_imp
-       scalars(i,iibg(i_imp)) = scalars(i,var_rho) * r_imp * Lrad_imp
+       frad_bg = frad_bg + r_imp_bg * Lrad_imp
+       scalars(i,iibg(i_imp)) = scalars(i,var_rho) * r_imp_bg * Lrad_imp
      end do
      scalars(i,iimp(1)) = (2./3.) * scalars(i,var_rhoimp) * E_ion
      scalars(i,iimp(2)) = (r0_corr+beta_imp*rimp0_corr) * rimp0_corr * Lrad

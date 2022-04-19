@@ -589,6 +589,7 @@ module mod_expression
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
       fact_resistiv, fact_Er, fact_flux, fact_rad
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
+    real*8  :: rimp0, rimp0_s, rimp0_t, rimp0_ss, rimp0_tt, rimp0_st, rimp0_p, rimp0_pp, rimp0_R, rimp0_Z
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     real*8  :: Te_corr_eV, Te_eV
@@ -602,7 +603,7 @@ module mod_expression
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
-    real*8  :: Te0_corr, r0_corr, rn0_corr
+    real*8  :: Te0_corr, r0_corr, rimp0_corr
     ! Atomic physics coefficients:
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
     real*8  :: m_i_over_m_imp
@@ -752,6 +753,7 @@ module mod_expression
           AZ0   = 0.d0; AZ0_s   = 0.d0; AZ0_t   = 0.d0; AZ0_ss   = 0.d0; AZ0_tt   = 0.d0; AZ0_st   = 0.d0; AZ0_p   = 0.d0; AZ0_pp   = 0.d0
           A30   = 0.d0; A30_s   = 0.d0; A30_t   = 0.d0; A30_ss   = 0.d0; A30_tt   = 0.d0; A30_st   = 0.d0; A30_p   = 0.d0; A30_pp   = 0.d0
           rn0   = 0.d0; rn0_s   = 0.d0; rn0_t   = 0.d0; rn0_ss   = 0.d0; rn0_tt   = 0.d0; rn0_st   = 0.d0; rn0_p   = 0.d0; rn0_pp   = 0.d0
+          rimp0 = 0.d0; rimp0_s = 0.d0; rimp0_t = 0.d0; rimp0_ss = 0.d0; rimp0_tt = 0.d0; rimp0_st = 0.d0; rimp0_p = 0.d0; rimp0_pp = 0.d0
 
           ! Extra derivatives for current density calculation
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
@@ -867,8 +869,7 @@ module mod_expression
                 T0_p     = T0_p     + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz_p
                 T0_pp    = T0_pp    + ( vv(var_T) + vv(var_Ti) + vv(var_Te) ) * sz * hh    * hhz_pp
 
-                ! --- Parallel Velocity
-
+                ! --- Parallel velocity
                 Vpar0    = Vpar0    + vv(var_Vpar) * sz * hh    * hhz
                 Vpar0_s  = Vpar0_s  + vv(var_Vpar) * sz * hh_s  * hhz
                 Vpar0_t  = Vpar0_t  + vv(var_Vpar) * sz * hh_t  * hhz
@@ -878,6 +879,7 @@ module mod_expression
                 Vpar0_p  = Vpar0_p  + vv(var_Vpar) * sz * hh    * hhz_p
                 Vpar0_pp = Vpar0_pp + vv(var_Vpar) * sz * hh    * hhz_pp
 
+                ! --- Neutral density
                 rn0       = rn0       + vv(var_rhon) * sz * hh    * hhz
                 rn0_s     = rn0_s     + vv(var_rhon) * sz * hh_s  * hhz
                 rn0_t     = rn0_t     + vv(var_rhon) * sz * hh_t  * hhz
@@ -886,6 +888,17 @@ module mod_expression
                 rn0_st    = rn0_st    + vv(var_rhon) * sz * hh_st * hhz
                 rn0_p     = rn0_p     + vv(var_rhon) * sz * hh    * hhz_p
                 rn0_pp    = rn0_pp    + vv(var_rhon) * sz * hh    * hhz_pp
+
+                ! --- Impurity density
+                rimp0     = rimp0       + vv(var_rhoimp) * sz * hh    * hhz
+                rimp0_s   = rimp0_s     + vv(var_rhoimp) * sz * hh_s  * hhz
+                rimp0_t   = rimp0_t     + vv(var_rhoimp) * sz * hh_t  * hhz
+                rimp0_ss  = rimp0_ss    + vv(var_rhoimp) * sz * hh_ss * hhz
+                rimp0_tt  = rimp0_tt    + vv(var_rhoimp) * sz * hh_tt * hhz
+                rimp0_st  = rimp0_st    + vv(var_rhoimp) * sz * hh_st * hhz
+                rimp0_p   = rimp0_p     + vv(var_rhoimp) * sz * hh    * hhz_p
+                rimp0_pp  = rimp0_pp    + vv(var_rhoimp) * sz * hh    * hhz_pp
+
 
                 ! --- AR
                 AR0      = AR0      + vv(var_AR) * sz * hh    * hhz
@@ -1160,6 +1173,10 @@ module mod_expression
  
           rn0_R    = (   Z_t * rn0_s - Z_s * rn0_t ) / xjac
           rn0_Z    = ( - R_t * rn0_s + R_s * rn0_t ) / xjac
+
+          rimp0_R  = (   Z_t * rimp0_s - Z_s * rimp0_t ) / xjac
+          rimp0_Z  = ( - R_t * rimp0_s + R_s * rimp0_t ) / xjac
+
 
           ! --- Some things related to the magnetic field
 #ifdef fullmhd
@@ -1553,11 +1570,11 @@ module mod_expression
           alpha_imp = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
           beta_imp  = m_i_over_m_imp*Z_imp - 1.
                   
-          r0_corr  = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3)
-          rn0_corr = corr_neg_dens(rn0,(/1.d-9,1.d-5 /),1.d-3)
-          ne_SI   = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density ! electron density (SI)
+          r0_corr    = corr_neg_dens(r0,(/1.d-9,1.d-5/),1.d-3)
+          rimp0_corr = corr_neg_dens(rimp0,(/1.d-9,1.d-5 /),1.d-3)
+          ne_SI   = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
   
-          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+          if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rimp0 > 0.d0) then
             Lrad = 0.
             call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),   &
                                            log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad)
@@ -1974,7 +1991,7 @@ module mod_expression
 #endif
 #ifdef WITH_Impurities
               case ( 'radiation' )
-                res = (r0_corr + beta_imp*rn0_corr) * (rn0_corr * Lrad + frad_bg) * fact_rad
+                res = (r0_corr + beta_imp*rimp0_corr) * (rimp0_corr * Lrad + frad_bg) * fact_rad
 #endif
 
               case default

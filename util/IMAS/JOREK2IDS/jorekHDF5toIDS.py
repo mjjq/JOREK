@@ -154,7 +154,7 @@ if __name__ == "__main__":
             if dimensions == 3: # New format 
                 r0 = x[0, 0, 0]
                 z0 = x[0, 1, 0]
-            else:
+            else: # format before February 2021
                 r0 = x[0, 0]
                 z0 = x[1, 0]
             rz = np.zeros((np.shape(r0)[0], 2))

@@ -4,7 +4,7 @@ module mod_distribute_preconditioner
   implicit none
 
   logical                            :: analyzed = .false.
-  integer(kind=int_all), allocatable :: send_counts(:,:), recv_counts(:,:), send_disp(:,:), recv_disp(:,:), indx0(:)
+  integer, allocatable :: send_counts(:,:), recv_counts(:,:), send_disp(:,:), recv_disp(:,:), indx0(:)
   integer(kind=int_all), allocatable :: istart(:), ifinish(:)
   integer                            :: nsplit
 

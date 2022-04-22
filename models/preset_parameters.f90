@@ -782,5 +782,6 @@ use_pcs_full       = .false.
 use_ionisation     = .true.
 use_sputtering     = .false.
 use_cx             = .true.
+use_marker         = .false.
 
 end subroutine preset_parameters

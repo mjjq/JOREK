@@ -1,3 +1,15 @@
+module mod_flux_grid
+
+
+
+implicit none
+
+
+
+contains
+
+
+
 !< Create a grid from parameters n_flux, n_pol
 subroutine flux_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,freeb_equil2)
   use phys_module
@@ -72,3 +84,7 @@ subroutine flux_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,fre
   call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
 
 end subroutine flux_grid
+
+
+
+end module mod_flux_grid

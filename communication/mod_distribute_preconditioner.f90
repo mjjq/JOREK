@@ -4,7 +4,7 @@ module mod_distribute_preconditioner
   implicit none
 
   logical                            :: analyzed = .false.
-  integer, allocatable :: send_counts(:,:), recv_counts(:,:), send_disp(:,:), recv_disp(:,:), indx0(:)
+  integer, allocatable :: send_counts(:,:), recv_counts(:,:), send_disp(:,:), recv_disp(:,:), rank_of(:)
   integer(kind=int_all), allocatable :: istart(:), ifinish(:)
   integer                            :: nsplit
 
@@ -36,6 +36,7 @@ contains
     use phys_module, only : centralize_harm_mat, modes_per_family, mode_families_modes, n_mode_families, &
                             ranks_per_family, autodistribute_modes
     use preconditioner_module, only: my_mode_set_n, my_mode_set, mode_families_ranks, rank_range
+    !use matio_module, only:  save_mat_h5
 
     implicit none
 
@@ -67,7 +68,7 @@ contains
   INT_MAX = 1000000000 !1000000000
 #else
   ! --- If we're not using long-ints, then there is nothing to split anyway
-  INT_MAX = 2147000000
+  INT_MAX = 2147000000 ! 5000000
 #endif
 
     !call system_clock(count=cc, count_rate=cr); t0 =  real(cc)/cr
@@ -88,24 +89,24 @@ contains
 ! --- Calculate send-recv counts for each communication split and store it for the future
     if (.not.analyzed) then
 
-      allocate(indx0(n_mode_families))
-      indx0 = rank_range(1:n_mode_families) ! starting rank index for each family
+      allocate(rank_of(n_mode_families))
+      rank_of = rank_range(1:n_mode_families) ! starting rank index for each family
 
       allocate(long_send_counts(n_cpu),long_recv_counts(n_cpu))
 
       i0 = Int1; i1 = nz_glob
       call get_send_recv(my_id,n_cpu,i0,i1,long_send_counts,long_recv_counts)
 
-      mumps_par%nz = sum(long_recv_counts(1:n_cpu)) ! this uses global nnz
+      mumps_par%nz = sum(long_recv_counts(1:n_cpu)) ! summing up all recieves
 
       nsplit = maxval((/maxval(long_recv_counts),maxval(long_send_counts)/))/INT_MAX + 1
-      if ((my_id.eq.0).and.(nsplit>1)) write(*,*) "Using split communication for preconditioner construction"
+      if ((my_id.eq.0).and.(nsplit>1)) write(*,*) "Using split communication for preconditioner construction", nsplit
 
       allocate(istart(nsplit),ifinish(nsplit))
 
       ! split global nz keeping it integer of (n_var*n_tor)**2
-      block_size = n_var*n_tor_int
-      nz_split = ((nz_glob/block_size**2)/nsplit)*block_size**2
+      block_size = (4*n_var*n_tor_int)**2
+      nz_split = ((nz_glob/block_size)/nsplit)*block_size
 
       ! distribute indices for split communication
       istart(1) = 1
@@ -159,7 +160,7 @@ contains
     if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"dh_mumps_par%irn",CAT_DMATRIX)
     if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"dh_mumps_par%jcn",CAT_DMATRIX)
 
-    call tr_allocatep(mumps_par%A,Int1,mumps_par%nz,"dh_mumps_par%A",CAT_DMATRIX)
+    call tr_allocatep(mumps_par%A,  Int1,mumps_par%nz,"dh_mumps_par%A",CAT_DMATRIX)
     call tr_allocatep(mumps_par%irn,Int1,mumps_par%nz,"dh_mumps_par%irn",CAT_DMATRIX)
     call tr_allocatep(mumps_par%jcn,Int1,mumps_par%nz,"dh_mumps_par%jcn",CAT_DMATRIX)
 
@@ -191,7 +192,7 @@ contains
           n_j = (mod(jcn_glob(i)-Int1,n_tor_int) + 1) / 2
           if (n_i .eq. n_j) then
             j = n_i + 1
-            ji = indx0(j)
+            ji = rank_of(j)
             if (distribute) then
               nr = ranks_per_family(j)
 #ifdef USE_STRUMPACK
@@ -221,7 +222,7 @@ contains
               do l = 1, nm
                 lmode = mode_families_modes(j,l)
                 if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
-                  ji = indx0(j)
+                  ji = rank_of(j)
                   if (distribute) then
                     nr = ranks_per_family(j)
 #ifdef USE_STRUMPACK
@@ -255,6 +256,9 @@ contains
 
     enddo
 
+    !if (my_id_n.eq.0) call save_mat_h5(my_id,mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a)
+    !call MPI_BARRIER(MPI_COMM_WORLD,ierr); call exit(0)
+
 ! --- Change indices of the local matrices to local indices
 !$omp do private(i,j,n_i,n_j)
     do i=1,mumps_par%nz
@@ -277,6 +281,7 @@ contains
 
     !call system_clock(count=cc, count_rate=cr); t1 =  real(cc)/cr
     !if (my_id.eq.0) write(*,*) "Elapsed time distributing (total):",t1-t0
+
 
     mumps_par%n =  my_mode_set_n*ndof_glob/n_tor
 
@@ -343,33 +348,57 @@ contains
     long_send_counts = 0 ! number of elements to be sent from current rank to others
 
    ! calculate number of entries to be distributed from the current rank
-!$omp do private(i, j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j)
-    do i=i0, i1
-      n_i = mod(irn_glob(i)-Int1,n_tor_int) + 1
-      n_j = mod(jcn_glob(i)-Int1,n_tor_int) + 1
+    if (autodistribute_modes) then
 
-      do j = 1, n_mode_families
-        nm = modes_per_family(j) ! number of modes per j-th family
-        do k = 1, nm
-          kmode = mode_families_modes(j,k)
-          do l = 1, nm
-            lmode = mode_families_modes(j,l)
-            if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
-              ji = indx0(j)
-              if (distribute) then
-                nr = ranks_per_family(j)
+      do i = i0, i1
+        n_i = (mod(irn_glob(i)-Int1,n_tor_int) + 1) / 2
+        n_j = (mod(jcn_glob(i)-Int1,n_tor_int) + 1) / 2
+        if (n_i .eq. n_j) then
+          j = n_i + 1
+          ji = rank_of(j)
+          if (distribute) then
+            nr = ranks_per_family(j)
 #ifdef USE_STRUMPACK
-                ji =  ji + min((irn_glob(i)-Int1)/n_per_rank(j), nr-1) ! row bin index for j-th family
+            ji =  ji + min((irn_glob(i)-Int1)/n_per_rank(j), nr-1) ! row bin index for j-th family
 #elif USE_PASTIX6
-                ji =  ji + min((jcn_glob(i)-Int1)/n_per_rank(j), nr-1) ! column bin index for j-th family
+            ji =  ji + min((jcn_glob(i)-Int1)/n_per_rank(j), nr-1) ! column bin index for j-th family
 #endif
+          endif
+          long_send_counts(ji) = long_send_counts(ji) + 1
+        endif
+      enddo
+
+    else
+
+!$omp do private(i, j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j)
+      do i=i0, i1
+        n_i = mod(irn_glob(i)-Int1,n_tor_int) + 1
+        n_j = mod(jcn_glob(i)-Int1,n_tor_int) + 1
+
+        do j = 1, n_mode_families
+          nm = modes_per_family(j) ! number of modes per j-th family
+          do k = 1, nm
+            kmode = mode_families_modes(j,k)
+            do l = 1, nm
+              lmode = mode_families_modes(j,l)
+              if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
+                ji = rank_of(j)
+                if (distribute) then
+                  nr = ranks_per_family(j)
+#ifdef USE_STRUMPACK
+                  ji =  ji + min((irn_glob(i)-Int1)/n_per_rank(j), nr-1) ! row bin index for j-th family
+#elif USE_PASTIX6
+                  ji =  ji + min((jcn_glob(i)-Int1)/n_per_rank(j), nr-1) ! column bin index for j-th family
+#endif
+                endif
+                long_send_counts(ji) = long_send_counts(ji) + 1
               endif
-              long_send_counts(ji) = long_send_counts(ji) + 1
-            endif
+            enddo
           enddo
         enddo
       enddo
-    enddo
+
+    endif
 
     allocate(sendrecv(n_cpu*n_cpu))
     sendrecv = 0
@@ -387,6 +416,5 @@ contains
     return
 
   end subroutine get_send_recv
-
 
 end module mod_distribute_preconditioner

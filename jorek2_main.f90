@@ -65,6 +65,7 @@ program JOREK2
   use mod_exchange_indices
   use mod_gmres, only: gmres_driver
   use mod_initial_grid
+  use mod_flux_grid
 
 ! these write additional live data (global data) used when an ECCD current is applied)
 #ifdef JECCD
@@ -624,69 +625,11 @@ required = 0
       if (my_id == 0) call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
     end if ! if (equil) then
 
-  
-
-      ! --- Determine a flux surface aligned grid
+    ! --- Determine a flux surface aligned grid and re-calculate the equilibrium on it
     if (n_flux > 1) then
 
-      if (my_id == 0) then
-
-        if (xpoint)  then
-
-          if ( (xcase .ge. UPPER_XPOINT) .or. (grid_to_wall .and. (n_wall_blocks .gt. 0)) .or. RZ_grid_inside_wall ) then
-            if (grid_to_wall) then
-              call grid_double_xpoint_inside_wall(node_list, element_list)
-            else
-              call grid_double_xpoint(node_list, element_list)
-            endif
-          else
-   
-            if (.not. grid_to_wall) then
-              call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,   &
-                               SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
-            else
-!!! works only for ITER wall for the moment
- !            write(*,*) 'ITER wall started'
-              if(my_id == 0 ) call grid_xpoint_wall(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht, n_ext,  &
-                                    SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private)
-            endif !  if (.not. grid_to_wall) then
-             
-          endif !if (xcase .ge. 2) then
-                   
-            call plot_grid(node_list,element_list,bnd_elm_list,bnd_node_list,.false.,.false.,'xpoint')
-          
-        else ! (if xpoint)
-          
-          call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht,     &
-                                 xr1, sig1, xr2, sig2,refinement)
-          
-          call plot_grid(node_list, element_list, bnd_elm_list, bnd_node_list, .true., .false.,'fluxsurface')
-          
-          ! --- Refine elements (equilibrum)
-          if (refinement) then
-            n_to_be_refined=0
-            call Refine_Elem_List(node_list, element_list, list_to_be_refined, n_to_be_refined)
-            call Ref_Update_Index(element_list, node_list)
-          end if
-             
-        end if ! (if xpoint)
-
-        ! --- Optional: Add patches to an existing grid imported from restart file
-        if (extend_existing_grid) &
-            call grid_patches_on_existing_grid(node_list, element_list)
-
-        if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
-
-        ! --- Determine boundary information from the grid
-        call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
-        call export_boundary(node_list, bnd_elm_list, bnd_node_list)
-
-      endif ! if (my_id == 0) then        
-
-      ! --- Check sanity of grid
-      call check_grid(my_id, node_list, element_list)
-
-      call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list) 
+      call flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+      
       if ( freeb_equil2) then
         freeboundary_equil = .true.
         call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,  &

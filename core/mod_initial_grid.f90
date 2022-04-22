@@ -27,6 +27,7 @@ subroutine initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my
   type(type_bnd_element_list),  intent(inout) :: bnd_elm_list
   integer,                      intent(in)    :: my_id
   integer,                      intent(in)    :: n_cpu
+
   integer :: ierr
 
   element_list%n_elements      = 0

@@ -19,7 +19,7 @@ use corr_neg
 implicit none
 
 type (type_element)   :: element
-type (type_node)      :: nodes(2)        ! the two nodes containing the boundary nodes
+type (type_node)      :: nodes(n_vertex_max)        ! the two nodes containing the boundary nodes
 
 real*8     :: x_g(n_gauss), x_s(n_gauss), x_t(n_gauss), x_ss(n_gauss)
 real*8     :: y_g(n_gauss), y_s(n_gauss), y_t(n_gauss), y_ss(n_gauss)

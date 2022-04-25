@@ -150,7 +150,7 @@ if __name__ == "__main__":
             quad_conn_array = ien
 
             #xyz for quad
-            dimensions = np.shape(x)[0]
+            dimensions = np.ndim(x)-1
             if dimensions == 3: # New format 
                 r0 = x[0, 0, 0]
                 z0 = x[0, 1, 0]

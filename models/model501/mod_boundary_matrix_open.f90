@@ -70,6 +70,9 @@ y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_ss  = 0.d0;
 eq_g = 0.d0; eq_s = 0.d0; eq_t = 0.d0; eq_ss = 0.d0; eq_p = 0.d0;
 
 delta_g = 0.d0; delta_s = 0.d0; 
+
+direction_perp(1) = 6 / direction(2)     ! =3 if direction(2)=2, =2 if direction(2)=3
+direction_perp(2) = 4
  
 R_mid = sum(nodes(1:2)%x(1,1,1)) / 2.d0     ! mid point on boundary (approx.)
 Z_mid = sum(nodes(1:2)%x(1,1,2)) / 2.d0

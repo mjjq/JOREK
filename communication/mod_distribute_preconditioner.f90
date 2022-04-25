@@ -36,7 +36,6 @@ contains
     use phys_module, only : centralize_harm_mat, modes_per_family, mode_families_modes, n_mode_families, &
                             ranks_per_family, autodistribute_modes
     use preconditioner_module, only: my_mode_set_n, my_mode_set, mode_families_ranks, rank_range
-    !use matio_module, only:  save_mat_h5
 
     implicit none
 
@@ -65,10 +64,10 @@ contains
 #ifdef INTSIZE64
   ! --- Not sure why, but it seems MPI fails even with counters below the long-int limit
   ! --- Maybe MPI has some internal working arrays that need to be larger than the counters? half seems to work well...
-  INT_MAX = 1000000000 !1000000000
+  INT_MAX = 1000000000
 #else
   ! --- If we're not using long-ints, then there is nothing to split anyway
-  INT_MAX = 2147000000 ! 5000000
+  INT_MAX = 2147000000
 #endif
 
     !call system_clock(count=cc, count_rate=cr); t0 =  real(cc)/cr
@@ -255,9 +254,6 @@ contains
       call tr_deallocate(jsnd_buffer,"dh_jsnd_buffer",CAT_DMATRIX)
 
     enddo
-
-    !if (my_id_n.eq.0) call save_mat_h5(my_id,mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a)
-    !call MPI_BARRIER(MPI_COMM_WORLD,ierr); call exit(0)
 
 ! --- Change indices of the local matrices to local indices
 !$omp do private(i,j,n_i,n_j)

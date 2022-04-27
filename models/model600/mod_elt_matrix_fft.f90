@@ -988,42 +988,33 @@ do i=1,n_vertex_max
           end if ! (with_TiTe) *********************************************************************
 
           ! --- Eta
+          eta_T     = 0.d0
+          deta_dT   = 0.d0
+          d2eta_d2T = 0.d0
+          deta_dr0  = 0.d0
+          deta_drimp0 = 0.d0
           if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta) then
             eta_T     =   eta   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
             deta_dT   = - eta   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
             d2eta_d2T =   eta   * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
-            deta_dr0  = 0.
-            deta_drimp0 = 0.
           else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta) then
             eta_T     = eta   * (T_max_eta/T_or_Te_0)**(-1.5d0)
-            deta_dT   = 0.
-            d2eta_d2T = 0.     
-            deta_dr0  = 0.
-            deta_drimp0 = 0.
           else
             eta_T     = eta
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-            deta_dr0  = 0.
-            deta_drimp0 = 0.
           end if
           
           ! --- Eta for ohmic heating
+          eta_T_ohm     = 0.d0
+          deta_dT_ohm   = 0.d0
+          deta_dr0_ohm  = 0.d0
+          deta_drimp0_ohm = 0.d0
           if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
             eta_T_ohm     =   eta_ohmic   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
             deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-            deta_dr0_ohm  = 0.
-            deta_drimp0_ohm = 0.
           else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta_ohm) then
             eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = 0.    
-            deta_dr0_ohm  = 0.
-            deta_drimp0_ohm = 0.
           else
             eta_T_ohm     = eta_ohmic
-            deta_dT_ohm   = 0.d0
-            deta_dr0_ohm  = 0.
-            deta_drimp0_ohm = 0.
           end if
 
           if ( eta_T_dependent .and. (T_or_Te .lt. T_min) ) then

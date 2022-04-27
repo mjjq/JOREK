@@ -504,6 +504,7 @@ subroutine preset_parameters
   index_start = 0
 
   nout = 9999999
+  nout_projection = -1
 
   rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
 
@@ -781,5 +782,6 @@ use_pcs_full       = .false.
 use_ionisation     = .true.
 use_sputtering     = .false.
 use_cx             = .true.
+use_marker         = .false.
 
 end subroutine preset_parameters

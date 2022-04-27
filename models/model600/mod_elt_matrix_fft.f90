@@ -1285,12 +1285,12 @@ do i=1,n_vertex_max
           source_bg  = 0.d0
           if (with_impurities) then
             call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
-            ! This is to detect N/A
-            if (source_imp /= source_imp .or. source_bg /= source_bg) then
-              write(*,*) "WARNING: source_imp = ", source_imp
-              write(*,*) "WARNING: source_bg = ", source_bg
-              stop
-            end if
+!            ! This is to detect N/A
+!            if (source_imp /= source_imp .or. source_bg /= source_bg) then
+!              write(*,*) "WARNING: source_imp = ", source_imp
+!              write(*,*) "WARNING: source_bg = ", source_bg
+!              stop
+!            end if
             source_imp = max(source_imp,0.d0)
             source_bg  = max(source_bg,0.d0)
           endif

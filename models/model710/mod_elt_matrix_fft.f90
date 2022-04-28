@@ -344,8 +344,8 @@ real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 integer    :: jj
 real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
 real*8     :: len1, len2, h_e, speed(n_plane,n_gauss,n_gauss), tscale
-real*8     :: f_p, d_p, tau_sc, R_rho, R_pi, R_pe, R_p
-real*8     :: s_p, src_rho, src_p, src_pi, src_pe
+real*8     :: f_p, d_p, d_s, tau_sc
+real*8     :: R_rho, R_T, src_rho, src_T
 real*8     :: vms_AR__p(n_var), vms_AR__k(n_var)
 real*8     :: vms_AZ__p(n_var), vms_AZ__k(n_var)
 real*8     :: vms_A3__p(n_var), vms_A3__k(n_var)
@@ -3492,26 +3492,23 @@ end subroutine my_fft
 subroutine calculate_sc_quantities()
 ! The total pressure: p0 = rho0 * T0 and the derivatives are already defined
 
-d_p = 0.d0
-! approximate residual in the density equation: \nabla \cdot (\rho \boldsymbol{v})
-R_rho = UgradRho + rho0 * divU
-R_p   = T0*UgradRho + rho0*UgradT + gamma*rho0*T0*divU
-d_p   = T0 * R_rho + R_p 
-
 ! Shock-detector term based on the total pressure gradient
 f_p = dsqrt( p0_R*p0_R + p0_Z*p0_Z + p0_p*p0_p/ (R*R) ) / p0_corr * h_e
+
+! transport operators in density and temperature equations 
+R_rho = UgradRho + rho0 * divU
+R_T   = UgradT   + (gamma-1.d0)*T0*divU
+d_p   = T0 * R_rho + rho0 * R_T
+
+! sources in density and temperature equations 
+src_rho = particle_source(ms,mt)
+src_T   = (heat_source(ms,mt)) / rho0_corr
+d_s     = T0 * src_rho + rho0 * src_T
+
 ! Estimation of the numerical stabilization coefficient
-tau_sc = h_e * h_e * abs(d_p) / p0 * f_p
+tau_sc  = h_e * h_e * (abs(d_p) + abs(d_s)) / p0_corr * f_p
 
-! Use of source terms to increase the stabilization coefficients
-if(add_sources_in_sc)then
-  src_rho = particle_source(ms,mt)
-  src_p   = heat_source(ms,mt) + (gamma-1.d0) * Qvisc_T    
-  s_p     = T0 * src_rho + src_p
-  tau_sc  = h_e * h_e * (abs(s_p) + abs(d_p)) / p0 * f_p
-endif
-
-! Updates in the physical diffsivities to locally add numerical stabilization.
+! Update physical diffsivities to locally add numerical stabilization.
 visco_T  = visco_T   + visco_sc_num   * tau_sc
 D_prof   = D_prof    + D_perp_sc_num  * tau_sc
 ZK_prof  = ZK_prof   + ZK_perp_sc_num * tau_sc
@@ -3643,9 +3640,9 @@ res = 0.d0
 res(var_AR) = - (UZ0 * Bp0 - Up0 * BZ0)
 res(var_AZ) = - (Up0 * BR0 - UR0 * Bp0)
 res(var_A3) = - (UR0 * BZ0 - UZ0 * BR0) * R
-res(var_UR) =   UgradUR  - Up0 * Up0 / R + p0_R / rho0
-res(var_UZ) =   UgradUZ                  + p0_Z / rho0
-res(var_Up) =   UgradUp  + UR0 * Up0 / R + p0_p / R / rho0
+res(var_UR) =   UgradUR  - Up0 * Up0 / R + p0_R / rho0_corr
+res(var_UZ) =   UgradUZ                  + p0_Z / rho0_corr
+res(var_Up) =   UgradUp  + UR0 * Up0 / R + p0_p / R / rho0_corr
 res(var_rho)=   UgradRho + rho0 * divU
 res(var_T)  =   UgradT   + (gamma-1.0d0) * T0 * divU
 
@@ -3777,14 +3774,6 @@ res_jac__n(var_T, var_Up) =  (gamma - 1.0d0) * T0 * divU_Up__n
 
 res_jac__p(var_T, var_T) =   UR0 * T_R + UZ0 * T_Z + (gamma-1.0d0) * T * divU
 res_jac__n(var_T, var_T) =   up0 * T_p / R
-
-!for parallel projection
-!res_jac__p(var_Up,:) = BR0 * res_jac__p(var_UR,:) &
-!                     + BZ0 * res_jac__p(var_UZ,:) &
-!                     + Bp0 * res_jac__p(var_Up,:)
-!res_jac__n(var_Up,:) = BR0 * res_jac__n(var_UR,:) &
-!                     + BZ0 * res_jac__n(var_UZ,:) &
-!                     + Bp0 * res_jac__n(var_Up,:)
 
 do jj =1, n_var             
   Qjac_p (var_AR,jj)  =  Qjac_p (var_AR,jj) - vms_coeff_AR * tscale * dot_product(vms_AR__p(:) , res_jac__p(:, jj))

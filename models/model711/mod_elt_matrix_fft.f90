@@ -324,8 +324,8 @@ real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 !  --- For discontinuity/shock capturing stabilization
 real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
 real*8     :: len1, len2, h_e, speed(n_plane,n_gauss,n_gauss), tscale
-real*8     :: f_p, d_p, tau_sc, R_rho, R_pi, R_pe, R_p
-real*8     :: s_p, src_rho, src_p, src_pi, src_pe
+real*8     :: f_p, d_p, d_s, tau_sc
+real*8     :: R_rho, R_Ti, R_Te, src_rho, src_Ti, src_Te
 
 ! --- Switches for numerical stability of resistive and diamagnetic terms in AR and AZ equations
 eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
@@ -2944,28 +2944,23 @@ CONTAINS
 ! subroutine that calculates shock-capturing stabilization related terms
 subroutine calculate_sc_quantities()
 ! The total pressure: p0 = rho0 * (Ti0+Te0) and the derivatives are already defined
-
-d_p = 0.d0
-! approximate residual in the density equation: \nabla \cdot (\rho \boldsymbol{v})
-R_rho = UgradRho + rho0 * divU
-R_pi  = Ti0 * UgradRho + rho0 * UgradTi + gamma * pi0 * divU
-R_pe  = Te0 * UgradRho + rho0 * UgradTe + gamma * pe0 * divU
-
-d_p   = (Ti0 + Te0) * R_rho + R_pi + R_pe
-
 ! Shock-detector term based on the total pressure gradient
 f_p = dsqrt( p0_R*p0_R + p0_Z*p0_Z + p0_p*p0_p/ (R*R) ) / p0_corr * h_e
-! Estimation of the numerical stabilization coefficient
-tau_sc = h_e * h_e * abs(d_p) / p0_corr * f_p
 
-! Use of source terms to increase the stabilization coefficients
-if(add_sources_in_sc)then
-  src_rho = particle_source(ms,mt)
-  src_pi  = heat_source_i(ms,mt) + (gamma-1.d0) * Qvisc_T
-  src_pe  = heat_source_e(ms,mt) + (gamma-1.d0) * Qvisc_T
-  s_p     = (Ti0 + Te0) * src_rho + src_pi + src_pe
-  tau_sc  = h_e * h_e * (abs(s_p) + abs(d_p)) / p0_corr * f_p
-endif
+! transport operators in the density and temperature equations
+R_rho = UgradRho + rho0 * divU
+R_Ti  = UgradTi  + (gamma-1.d0) * Ti0 * divU
+R_Te  = UgradTe  + (gamma-1.d0) * Te0 * divU
+d_p   = (Ti0 + Te0) * R_rho + rho0 * (R_pi + R_Te)
+
+! sources in the density and temperature equations
+src_rho = particle_source(ms,mt)
+src_Ti  = heat_source_i(ms,mt) / rho0
+src_Te  = heat_source_e(ms,mt) / rho0
+d_s     = (Ti0 + Te0) * src_rho + rho0 * (src_Ti + src_pe)
+
+! Estimation of the numerical stabilization coefficient
+tau_sc  = h_e * h_e * (abs(d_p) + abs(d_s)) / p0_corr * f_p
 
 ! Updates in the physical diffsivities to locally add numerical stabilization.
 visco_T  = visco_T    + visco_sc_num     * tau_sc

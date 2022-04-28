@@ -357,8 +357,8 @@ real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
 real*8     :: len1, len2, h_e, speed(n_plane,n_gauss,n_gauss), tscale
 real*8     :: ptot, ptot_corr, ptot_R, ptot_Z, ptot_p
-real*8     :: f_p, d_p, tau_sc, R_rho, R_Ti, R_Te, R_p, R_rhon
-real*8     :: s_p, src_rho, src_p, src_Ti, src_Te, src_rhon
+real*8     :: f_p, d_p, d_s, tau_sc
+real*8     :: R_rho, R_Ti, R_Te, R_rhon, src_rho, src_Ti, src_Te, src_rhon
 
 ! --- Switches for numerical stability of resistive and diamagnetic terms in AR and AZ equations
 eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
@@ -3198,45 +3198,41 @@ CONTAINS
 ! subroutine that calculates shock-capturing stabilization related terms
 subroutine calculate_sc_quantities()
 ! Define total pressure as (assuming neutrals are at same Temperature as ions)
-! P_tot = pi0 + pe0 + rn0 * Ti0     
+! P_tot = pi0 + pe0 + rn0 * Ti0
 ptot     = pi0   + pe0    + rhon0 * Ti0
-ptot_corr= rho0_corr * (Ti0_corr + Te0_corr) + rhon0_corr * Ti0_corr
+ptot_corr= rho0_corr * (Ti0_corr + Te0_corr) + rhon0 * Ti0_corr
 ptot_p   = pi0_p + pe0_p  + rhon0 * Ti0_p + rhon0_p * Ti0
 ptot_R   = pi0_R + pe0_R  + rhon0 * Ti0_R + rhon0_R * Ti0
 ptot_Z   = pi0_Z + pe0_Z  + rhon0 * Ti0_Z + rhon0_Z * Ti0
 
-d_p = 0.d0
-! approximate residual in the density equation: \nabla \cdot (\rho \boldsymbol{v})
+
+! Shock-detector term based on the total pressure gradient
+f_p = dsqrt( ptot_R*ptot_R + ptot_Z*ptot_Z + ptot_p*ptot_p/ (R*R) ) / ptot_corr * h_e
+
+! transport operators in the density and temperature equations
 R_rho  = UgradRho + rho0 * divU
 R_Ti   = UgradTi + (gamma-1.d0) * Ti0 * divU
 R_Te   = UgradTe + (gamma-1.d0) * Te0 * divU
 R_rhon = 0.d0
 d_p    = (Ti0+Te0)*R_rho + (rho0+rhon0)*R_Ti + rho0*R_Te + Ti0*R_rhon
 
-! Shock-detector term based on the total pressure gradient
-f_p = dsqrt( ptot_R*ptot_R + ptot_Z*ptot_Z + ptot_p*ptot_p/ (R*R) ) / ptot_corr * h_e
+! sources in the density and temperature equations
+src_rho =   particle_source(ms,mt)                      &
+          - rho0_corr * rhon0      * Sion_T             &
+          + rho0_corr * rho0_corr  * Srec_T
+src_Ti  =  ( heat_source_i(ms,mt)) / rho0_corr
+src_Te  =  ( heat_source_e(ms,mt)  &
+          - ksiion * rho0_corr * rhon0_corr * Sion_T         &
+          - rho0_corr * rhon0_corr * LradDrays_T             &
+          - rho0_corr * rho0_corr  * LradDcont_T             &
+          - rho0_corr * frad_bg ) / rho0_corr
+src_rhon = source_neutral                    &
+           - rho0_corr * rhon0_corr * Sion_T &
+           + rho0_corr * rho0_corr  * Srec_T
+d_s     =   (Ti0+Te0)*src_rho + (rho0+rhon0)*src_Ti + rho0*src_Te + Ti0*src_rhon
+
 ! Estimation of the numerical stabilization coefficient
-tau_sc = h_e * h_e * abs(d_p) / ptot_corr * f_p
-
-! Use of source terms to increase the stabilization coefficients
-if(add_sources_in_sc)then
-  src_rho =   particle_source(ms,mt)                      &
-            - rho0_corr * rhon0      * Sion_T             &
-            + rho0_corr * rho0_corr  * Srec_T
-
-  src_Ti  =   (heat_source_i(ms,mt) + (gamma-1.d0) * Qvisc_T) / rho0_corr
-  src_Te  =   (heat_source_e(ms,mt) + (gamma-1.d0) * Qvisc_T   &
-            - ksiion * rho0_corr * rhon0_corr * Sion_T         &
-           !+ (gamma-1.d0) * eta_T_ohm * (zj0 / R)**2.d0 !&
-            - rho0_corr * rhon0_corr * LradDrays_T             &
-            - rho0_corr * rho0_corr  * LradDcont_T             &
-            - rho0_corr * frad_bg) / rho0_corr
-  src_rhon = - rho0_corr * rhon0_corr * Sion_T &
-             + rho0_corr * rho0_corr  * Srec_T &
-             + source_neutral 
-  s_p     =   (Ti0+Te0)*src_rho + (rho0+rhon0)*src_Ti + rho0*src_Te + Ti0*src_rhon
-  tau_sc  =   h_e * h_e * (abs(s_p) + abs(d_p)) / ptot_corr * f_p
-endif
+tau_sc  =   h_e * h_e * (abs(d_p) + abs(d_s)) / ptot_corr * f_p
 
 ! Updates in the physical diffsivities to locally add numerical stabilization.
 visco_T  = visco_T    + visco_sc_num     * tau_sc

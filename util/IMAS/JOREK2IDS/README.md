@@ -1,14 +1,12 @@
 # Writing IMAS MHD IDS
 
-PyQt5 is required for selecting input directory of HDF5 files
-
 IMAS needs to be set up with
 
-    module load IMAS
+    module load IMAS # at least 3.36 required
     imasdb jorek
     imasdb
 
-# Preparing python environment
+## Preparing python environment
 
 
 	python3 -m venv local
@@ -31,6 +29,15 @@ MHD IDS is written under `~/public/imasdb/jorek/3/0/` as
 
     ids_3030001.characteristics  ids_3030001.datafile  ids_3030001.tree
 
+## Generating VTK
+
+    local/bin/python IDS_to_VTK.py
+    module load ParaView
+    paraview jorek_ids.vtu
+
+If you start typing sub in ParaView Advanced Properties pane, the 
+`NonLinear Subdivision Level` can be increased from 1 to 3 
+to get recomputted at finer FEM.
 
 
 ## Preparing IMAS and h5py with SMITER 1.6.4

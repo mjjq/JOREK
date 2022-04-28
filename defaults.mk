@@ -67,14 +67,20 @@ endif
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
   COMPILER_MAJOR_VERSION=$(shell $(FC) -V 2>&1 | grep -o "Version [0-9]*" | cut -d' ' -f 2)
+  COMPILER_MAJOR_VERSION_ID=$(shell $(FC) -V 2>&1 | grep -o "Version [0-9]*.*" | cut -d'.' -f 2)
   FFLAGS += -align
   ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -ge 15; echo $$?),0)
     FLAGS += -qopenmp
   else
     FLAGS += -openmp
   endif
-  ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -ge 19; echo $$?),0)
-    FFLAGS += -warn noexternal
+
+  ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -gt 19; echo $$?),0)
+    FFLAGS +: -warn noexternal
+  else ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -eq 19; echo $$?),0)
+    ifeq ($(shell test $(COMPILER_MAJOR_VERSION_ID) -ge 1; echo $$?),0)
+      FFLAGS += -warn noexternal
+    endif
   endif
   FFLAGS += -warn all
   FFLAGS += -warn nointerfaces

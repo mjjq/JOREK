@@ -340,7 +340,7 @@ real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, Qvm
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
-!  --- For vms and discontinuity/shock capturing stabilization
+!  --- For vms and shock capturing stabilization
 integer    :: jj
 real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
 real*8     :: len1, len2, h_e, speed(n_plane,n_gauss,n_gauss), tscale
@@ -3557,7 +3557,7 @@ vms_uR__k(var_UR) =                 rho0 * UgradVstar__k
 
 vms_uR__p(var_Up) =   v * rho0 * up0 / R
 
-vms_uR__p(var_rho)=   T0 * rho0 * v / R + T0 * v_R + v * T0 * rho0_R / rho0
+vms_uR__p(var_rho)=   T0 * v / R + T0 * v_R + v * T0 * rho0_R / rho0
 
 vms_uR__p(var_T)  =    rho0 * v / R + rho0 * v_R + v * rho0_R
 
@@ -3575,7 +3575,7 @@ vms_up__p(var_UR) =  - v * rho0 * up0 / R
 vms_up__p(var_Up) =  v * UgradRho + rho0 * UgradVstar__p
 vms_up__k(var_Up) =                 rho0 * UgradVstar__k
 
-vms_up__p(var_rho)=    T0 * v * rho0_p / R
+vms_up__p(var_rho)=    T0 * v * rho0_p / R / rho0
 vms_up__k(var_rho)=    T0 * v_p / R
 
 vms_up__p(var_T)  =    v * rho0_p / R

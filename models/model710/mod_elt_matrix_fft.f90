@@ -340,7 +340,8 @@ real*8, dimension(n_var,n_var)   :: QvmsAd_p, QvmsAd_n, QvmsAd_k, QvmsAd_kn, Qvm
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k, VMS__p, VMS__k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
-! --- Ohmic heating
+! --- Ohmic heating, for details please see:
+! https://www.jorek.eu/wiki/doku.php?id=ohmic_heating
 real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_pnn
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_pp, eq_sp, eq_tp
 real*8, dimension(n_var,n_var)   :: Qjac_pnn
@@ -2142,47 +2143,21 @@ do i=1,n_vertex_max
                   eta_p_T__p = d2eta_d2T * T * T0_p
                   eta_p_T__n = deta_dT * T_p
 
-                  JR0_AR__p  = 0.d0
-                  JR0_AR__n  = 0.d0
-                  JR0_AR__nn = 0.d0
-                  JR0_AZ__p  = 0.d0
-                  JR0_AZ__n  = 0.d0
-                  JR0_AZ__nn = 0.d0
-                  JR0_A3__p  = 0.d0
-                  JR0_A3__n  = 0.d0
-                  JR0_A3__nn = 0.d0
+                  JR0_AR__p  = 0.d0  ; JR0_AR__n  = 0.d0  ; JR0_AR__nn = 0.d0
+                  JR0_AZ__p  = 0.d0  ; JR0_AZ__n  = 0.d0  ; JR0_AZ__nn = 0.d0
+                  JR0_A3__p  = 0.d0  ; JR0_A3__n  = 0.d0  ; JR0_A3__nn = 0.d0
 
-                  JZ0_AR__p  = 0.d0
-                  JZ0_AR__n  = 0.d0
-                  JZ0_AR__nn = 0.d0
-                  JZ0_AZ__p  = 0.d0
-                  JZ0_AZ__n  = 0.d0
-                  JZ0_AZ__nn = 0.d0
-                  JZ0_A3__p  = 0.d0
-                  JZ0_A3__n  = 0.d0
-                  JZ0_A3__nn = 0.d0
+                  JZ0_AR__p  = 0.d0  ; JZ0_AR__n  = 0.d0  ; JZ0_AR__nn = 0.d0
+                  JZ0_AZ__p  = 0.d0  ; JZ0_AZ__n  = 0.d0  ; JZ0_AZ__nn = 0.d0
+                  JZ0_A3__p  = 0.d0  ; JZ0_A3__n  = 0.d0  ; JZ0_A3__nn = 0.d0
 
-                  Jp0_AR__p  = 0.d0
-                  Jp0_AR__n  = 0.d0
-                  Jp0_AR__nn = 0.d0
-                  Jp0_AZ__p  = 0.d0
-                  Jp0_AZ__n  = 0.d0
-                  Jp0_AZ__nn = 0.d0
-                  Jp0_A3__p  = 0.d0
-                  Jp0_A3__n  = 0.d0
-                  Jp0_A3__nn = 0.d0
+                  Jp0_AR__p  = 0.d0  ; Jp0_AR__n  = 0.d0  ; Jp0_AR__nn = 0.d0
+                  Jp0_AZ__p  = 0.d0  ; Jp0_AZ__n  = 0.d0  ; Jp0_AZ__nn = 0.d0
+                  Jp0_A3__p  = 0.d0  ; Jp0_A3__n  = 0.d0  ; Jp0_A3__nn = 0.d0
 
-                  JJ2_AR__p  = 0.0d0
-                  JJ2_AR__n  = 0.0d0
-                  JJ2_AR__nn = 0.0d0
-
-                  JJ2_AZ__p  = 0.0d0
-                  JJ2_AZ__n  = 0.0d0
-                  JJ2_AZ__nn = 0.0d0
-
-                  JJ2_A3__p  = 0.0d0
-                  JJ2_A3__n  = 0.0d0
-                  JJ2_A3__nn = 0.0d0
+                  JJ2_AR__p  = 0.d0  ; JJ2_AR__n  = 0.d0  ; JJ2_AR__nn = 0.d0
+                  JJ2_AZ__p  = 0.d0  ; JJ2_AZ__n  = 0.d0  ; JJ2_AZ__nn = 0.d0
+                  JJ2_A3__p  = 0.d0  ; JJ2_A3__n  = 0.d0  ; JJ2_A3__nn = 0.d0
 
                   if(eta_ohmic .gt. 1.d-12)then
                     JR0_AR__p  = - AR_ZZ

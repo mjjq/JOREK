@@ -353,7 +353,8 @@ real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg, dfrad_bg_dT
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
 
-! --- Ohmic heating
+! --- Ohmic heating, for details please see:
+! https://www.jorek.eu/wiki/doku.php?id=ohmic_heating
 real*8, dimension(DIM1, DIM2, DIM2), intent(inout) :: ELM_pnn
 real*8, dimension(n_plane,n_var,n_gauss,n_gauss) :: eq_pp, eq_sp, eq_tp
 real*8, dimension(n_var,n_var)   :: Qjac_pnn
@@ -2122,89 +2123,108 @@ do i=1,n_vertex_max
                   eta_p_T__p = d2eta_d2T * Te * Te0_p
                   eta_p_T__n = deta_dT * Te_p
 
-                  JR0_AR__p  = - AR_ZZ
-                  JR0_AR__n  = 0.d0
-                  JR0_AR__nn = - AR_pp / R**2
-                  JR0_AZ__p  = AZ_RZ
-                  JR0_AZ__n  = 0.0d0
-                  JR0_AZ__nn = 0.0d0
-                  JR0_A3__p  = dF_dpsi(ms,mt) * A3_Z / R
-                  JR0_A3__n  = A3_Rp / R**2
-                  JR0_A3__nn = 0.d0
+                  JR0_AR__p  = 0.d0  ; JR0_AR__n  = 0.d0  ; JR0_AR__nn = 0.d0
+                  JR0_AZ__p  = 0.d0  ; JR0_AZ__n  = 0.d0  ; JR0_AZ__nn = 0.d0
+                  JR0_A3__p  = 0.d0  ; JR0_A3__n  = 0.d0  ; JR0_A3__nn = 0.d0
 
-                  JZ0_AR__p  = AR_RZ / R**2 + AR_Z / R
-                  JZ0_AR__n  = 0.0d0
-                  JZ0_AR__nn = 0.0d0
-                  JZ0_AZ__p  = - AZ_RR - AZ_R / R
-                  JZ0_AZ__n  = 0.d0
-                  JZ0_AZ__nn = - AZ_pp / R**2
-                  JZ0_A3__p  = - (dF_dpsi(ms,mt) * A3_R) / R ! + Fprofile(ms,mt)/R**2 - Fprofile(ms,mt)/R**2
-                  JZ0_A3__n  = A3_Zp / R**2
-                  JZ0_A3__nn = 0.d0
+                  JZ0_AR__p  = 0.d0  ; JZ0_AR__n  = 0.d0  ; JZ0_AR__nn = 0.d0
+                  JZ0_AZ__p  = 0.d0  ; JZ0_AZ__n  = 0.d0  ; JZ0_AZ__nn = 0.d0
+                  JZ0_A3__p  = 0.d0  ; JZ0_A3__n  = 0.d0  ; JZ0_A3__nn = 0.d0
 
-                  Jp0_AR__p  = 0.0d0
-                  Jp0_AR__n  = AR_Rp / R - AR_p / R**2
-                  Jp0_AR__nn = 0.d0
-                  Jp0_AZ__p  = 0.0d0
-                  Jp0_AZ__n  = AZ_Zp / R
-                  Jp0_AZ__nn = 0.d0
-                  Jp0_A3__p  = - A3_RR / R + A3_R / R**2 - A3_ZZ / R
-                  Jp0_A3__n  = 0.0d0
-                  Jp0_A3__nn = 0.0d0
+                  Jp0_AR__p  = 0.d0  ; Jp0_AR__n  = 0.d0  ; Jp0_AR__nn = 0.d0
+                  Jp0_AZ__p  = 0.d0  ; Jp0_AZ__n  = 0.d0  ; Jp0_AZ__nn = 0.d0
+                  Jp0_A3__p  = 0.d0  ; Jp0_A3__n  = 0.d0  ; Jp0_A3__nn = 0.d0
 
-                  if(keep_current_prof)then
-                    JJ2_AR__p = 2.0d0 *(JR0*JR0_AR__p + JZ0*JZ0_AR__p + Jp0*Jp0_AR__p)  &
-                                - (   current_source_JR(ms,mt)*JR0_AR__p &
-                                    + current_source_JZ(ms,mt)*JZ0_AR__p &
-                                    + current_source_Jp(ms,mt)*Jp0_AR__p )
-                    JJ2_AR__n = 2.0d0 *(JR0*JR0_AR__n + JZ0*JZ0_AR__n + Jp0*Jp0_AR__n)  &
-                                - (   current_source_JR(ms,mt)*JR0_AR__n &
-                                    + current_source_JZ(ms,mt)*JZ0_AR__n &
-                                    + current_source_Jp(ms,mt)*Jp0_AR__n )
-                    JJ2_AR__nn = 2.0d0 *(JR0*JR0_AR__nn + JZ0*JZ0_AR__nn + Jp0*Jp0_AR__nn)  &
-                                - (   current_source_JR(ms,mt)*JR0_AR__nn &
-                                    + current_source_JZ(ms,mt)*JZ0_AR__nn &
-                                    + current_source_Jp(ms,mt)*Jp0_AR__nn )
+                  JJ2_AR__p  = 0.d0  ; JJ2_AR__n  = 0.d0  ; JJ2_AR__nn = 0.d0
+                  JJ2_AZ__p  = 0.d0  ; JJ2_AZ__n  = 0.d0  ; JJ2_AZ__nn = 0.d0
+                  JJ2_A3__p  = 0.d0  ; JJ2_A3__n  = 0.d0  ; JJ2_A3__nn = 0.d0
 
-                    JJ2_AZ__p = 2.0d0 *(JR0*JR0_AZ__p + JZ0*JZ0_AZ__p + Jp0*Jp0_AZ__p)  &
-                                - (   current_source_JR(ms,mt)*JR0_AZ__p &
-                                    + current_source_JZ(ms,mt)*JZ0_AZ__p &
-                                    + current_source_Jp(ms,mt)*Jp0_AZ__p )
-                    JJ2_AZ__n = 2.0d0 *(JR0*JR0_AZ__n + JZ0*JZ0_AZ__n + Jp0*Jp0_AZ__n)  &
-                                - (   current_source_JR(ms,mt)*JR0_AZ__n &
-                                    + current_source_JZ(ms,mt)*JZ0_AZ__n &
-                                    + current_source_Jp(ms,mt)*Jp0_AZ__n )
-                    JJ2_AZ__nn = 2.0d0 *(JR0*JR0_AZ__nn + JZ0*JZ0_AZ__nn + Jp0*Jp0_AZ__nn)  &
-                                - (   current_source_JR(ms,mt)*JR0_AZ__nn &
-                                    + current_source_JZ(ms,mt)*JZ0_AZ__nn &
-                                    + current_source_Jp(ms,mt)*Jp0_AZ__nn )
+                  if(eta_ohmic .gt. 1.d-12)then
+                    JR0_AR__p  = - AR_ZZ
+                    JR0_AR__n  = 0.d0
+                    JR0_AR__nn = - AR_pp / R**2
+                    JR0_AZ__p  = AZ_RZ
+                    JR0_AZ__n  = 0.0d0
+                    JR0_AZ__nn = 0.0d0
+                    JR0_A3__p  = dF_dpsi(ms,mt) * A3_Z / R
+                    JR0_A3__n  = A3_Rp / R**2
+                    JR0_A3__nn = 0.d0
 
-                    JJ2_A3__p = 2.0d0 *(JR0*JR0_A3__p + JZ0*JZ0_A3__p + Jp0*Jp0_A3__p)  &
-                                - (   current_source_JR(ms,mt)*JR0_A3__p &
-                                    + current_source_JZ(ms,mt)*JZ0_A3__p &
-                                    + current_source_Jp(ms,mt)*Jp0_A3__p )
-                    JJ2_A3__n = 2.0d0 *(JR0*JR0_A3__n + JZ0*JZ0_A3__n + Jp0*Jp0_A3__n)  &
-                                - (   current_source_JR(ms,mt)*JR0_A3__n &
-                                    + current_source_JZ(ms,mt)*JZ0_A3__n &
-                                    + current_source_Jp(ms,mt)*Jp0_A3__n )
-                    JJ2_A3__nn = 2.0d0 *(JR0*JR0_A3__nn + JZ0*JZ0_A3__nn + Jp0*Jp0_A3__nn)  &
-                                - (   current_source_JR(ms,mt)*JR0_A3__nn &
-                                    + current_source_JZ(ms,mt)*JZ0_A3__nn &
-                                    + current_source_Jp(ms,mt)*Jp0_A3__nn )
+                    JZ0_AR__p  = AR_RZ / R**2 + AR_Z / R
+                    JZ0_AR__n  = 0.0d0
+                    JZ0_AR__nn = 0.0d0
+                    JZ0_AZ__p  = - AZ_RR - AZ_R / R
+                    JZ0_AZ__n  = 0.d0
+                    JZ0_AZ__nn = - AZ_pp / R**2
+                    JZ0_A3__p  = - (dF_dpsi(ms,mt) * A3_R) / R ! + Fprofile(ms,mt)/R**2 - Fprofile(ms,mt)/R**2
+                    JZ0_A3__n  = A3_Zp / R**2
+                    JZ0_A3__nn = 0.d0
 
-                  else
+                    Jp0_AR__p  = 0.0d0
+                    Jp0_AR__n  = AR_Rp / R - AR_p / R**2
+                    Jp0_AR__nn = 0.d0
+                    Jp0_AZ__p  = 0.0d0
+                    Jp0_AZ__n  = AZ_Zp / R
+                    Jp0_AZ__nn = 0.d0
+                    Jp0_A3__p  = - A3_RR / R + A3_R / R**2 - A3_ZZ / R
+                    Jp0_A3__n  = 0.0d0
+                    Jp0_A3__nn = 0.0d0
 
-                    JJ2_AR__p  = 2.0d0 * (JR0*JR0_AR__p  + JZ0*JZ0_AR__p  + Jp0*Jp0_AR__p)
-                    JJ2_AR__n  = 2.0d0 * (JR0*JR0_AR__n  + JZ0*JZ0_AR__n  + Jp0*Jp0_AR__n)
-                    JJ2_AR__nn = 2.0d0 * (JR0*JR0_AR__nn + JZ0*JZ0_AR__nn + Jp0*Jp0_AR__nn)
+                    if(keep_current_prof)then
+                      JJ2_AR__p = 2.0d0 *(JR0*JR0_AR__p + JZ0*JZ0_AR__p + Jp0*Jp0_AR__p)  &
+                                  - (   current_source_JR(ms,mt)*JR0_AR__p &
+                                      + current_source_JZ(ms,mt)*JZ0_AR__p &
+                                      + current_source_Jp(ms,mt)*Jp0_AR__p )
+                      JJ2_AR__n = 2.0d0 *(JR0*JR0_AR__n + JZ0*JZ0_AR__n + Jp0*Jp0_AR__n)  &
+                                  - (   current_source_JR(ms,mt)*JR0_AR__n &
+                                      + current_source_JZ(ms,mt)*JZ0_AR__n &
+                                      + current_source_Jp(ms,mt)*Jp0_AR__n )
+                      JJ2_AR__nn = 2.0d0 *(JR0*JR0_AR__nn + JZ0*JZ0_AR__nn + Jp0*Jp0_AR__nn)  &
+                                  - (   current_source_JR(ms,mt)*JR0_AR__nn &
+                                      + current_source_JZ(ms,mt)*JZ0_AR__nn &
+                                      + current_source_Jp(ms,mt)*Jp0_AR__nn )
 
-                    JJ2_AZ__p  = 2.0d0 * (JR0*JR0_AZ__p  + JZ0*JZ0_AZ__p  + Jp0*Jp0_AZ__p)
-                    JJ2_AZ__n  = 2.0d0 * (JR0*JR0_AZ__n  + JZ0*JZ0_AZ__n  + Jp0*Jp0_AZ__n)
-                    JJ2_AZ__nn = 2.0d0 * (JR0*JR0_AZ__nn + JZ0*JZ0_AZ__nn + Jp0*Jp0_AZ__nn)
+                      JJ2_AZ__p = 2.0d0 *(JR0*JR0_AZ__p + JZ0*JZ0_AZ__p + Jp0*Jp0_AZ__p)  &
+                                  - (   current_source_JR(ms,mt)*JR0_AZ__p &
+                                      + current_source_JZ(ms,mt)*JZ0_AZ__p &
+                                      + current_source_Jp(ms,mt)*Jp0_AZ__p )
+                      JJ2_AZ__n = 2.0d0 *(JR0*JR0_AZ__n + JZ0*JZ0_AZ__n + Jp0*Jp0_AZ__n)  &
+                                  - (   current_source_JR(ms,mt)*JR0_AZ__n &
+                                      + current_source_JZ(ms,mt)*JZ0_AZ__n &
+                                      + current_source_Jp(ms,mt)*Jp0_AZ__n )
+                      JJ2_AZ__nn = 2.0d0 *(JR0*JR0_AZ__nn + JZ0*JZ0_AZ__nn + Jp0*Jp0_AZ__nn)  &
+                                  - (   current_source_JR(ms,mt)*JR0_AZ__nn &
+                                      + current_source_JZ(ms,mt)*JZ0_AZ__nn &
+                                      + current_source_Jp(ms,mt)*Jp0_AZ__nn )
 
-                    JJ2_A3__p  = 2.0d0 * (JR0*JR0_A3__p  + JZ0*JZ0_A3__p  + Jp0*Jp0_A3__p)
-                    JJ2_A3__n  = 2.0d0 * (JR0*JR0_A3__n  + JZ0*JZ0_A3__n  + Jp0*Jp0_A3__n)
-                    JJ2_A3__nn = 2.0d0 * (JR0*JR0_A3__nn + JZ0*JZ0_A3__nn + Jp0*Jp0_A3__nn)
+                      JJ2_A3__p = 2.0d0 *(JR0*JR0_A3__p + JZ0*JZ0_A3__p + Jp0*Jp0_A3__p)  &
+                                  - (   current_source_JR(ms,mt)*JR0_A3__p &
+                                      + current_source_JZ(ms,mt)*JZ0_A3__p &
+                                      + current_source_Jp(ms,mt)*Jp0_A3__p )
+                      JJ2_A3__n = 2.0d0 *(JR0*JR0_A3__n + JZ0*JZ0_A3__n + Jp0*Jp0_A3__n)  &
+                                  - (   current_source_JR(ms,mt)*JR0_A3__n &
+                                      + current_source_JZ(ms,mt)*JZ0_A3__n &
+                                      + current_source_Jp(ms,mt)*Jp0_A3__n )
+                      JJ2_A3__nn = 2.0d0 *(JR0*JR0_A3__nn + JZ0*JZ0_A3__nn + Jp0*Jp0_A3__nn)  &
+                                  - (   current_source_JR(ms,mt)*JR0_A3__nn &
+                                      + current_source_JZ(ms,mt)*JZ0_A3__nn &
+                                      + current_source_Jp(ms,mt)*Jp0_A3__nn )
+
+                    else
+
+                      JJ2_AR__p  = 2.0d0 * (JR0*JR0_AR__p  + JZ0*JZ0_AR__p  + Jp0*Jp0_AR__p)
+                      JJ2_AR__n  = 2.0d0 * (JR0*JR0_AR__n  + JZ0*JZ0_AR__n  + Jp0*Jp0_AR__n)
+                      JJ2_AR__nn = 2.0d0 * (JR0*JR0_AR__nn + JZ0*JZ0_AR__nn + Jp0*Jp0_AR__nn)
+
+                      JJ2_AZ__p  = 2.0d0 * (JR0*JR0_AZ__p  + JZ0*JZ0_AZ__p  + Jp0*Jp0_AZ__p)
+                      JJ2_AZ__n  = 2.0d0 * (JR0*JR0_AZ__n  + JZ0*JZ0_AZ__n  + Jp0*Jp0_AZ__n)
+                      JJ2_AZ__nn = 2.0d0 * (JR0*JR0_AZ__nn + JZ0*JZ0_AZ__nn + Jp0*Jp0_AZ__nn)
+
+                      JJ2_A3__p  = 2.0d0 * (JR0*JR0_A3__p  + JZ0*JZ0_A3__p  + Jp0*Jp0_A3__p)
+                      JJ2_A3__n  = 2.0d0 * (JR0*JR0_A3__n  + JZ0*JZ0_A3__n  + Jp0*Jp0_A3__n)
+                      JJ2_A3__nn = 2.0d0 * (JR0*JR0_A3__nn + JZ0*JZ0_A3__nn + Jp0*Jp0_A3__nn)
+
+                    endif
 
                   endif
 

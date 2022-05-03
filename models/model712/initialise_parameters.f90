@@ -145,6 +145,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs, cte_current_FB_fact,     &
+                vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3,           &
+                vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up,           &
+                vms_coeff_rho, vms_coeff_Ti, vms_coeff_Te,          &
+                vms_coeff_rhon,                                     &
                 use_sc, add_sources_in_sc, visco_sc_num,            &
                 D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &

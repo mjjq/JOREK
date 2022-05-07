@@ -36,7 +36,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 SIG_up_leg_0, SIG_up_leg_1, SIG_up_priv,            &
                 SIG_outer, SIG_inner,                               &
                 dPSI_outer, dPSI_inner, dPSI_up_priv,               &
-                nout, xr1, sig1, xr2, sig2,                         &
+                nout, nout_projection, xr1, sig1, xr2, sig2,        &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_Z_psi_bnd_file,                                   &
@@ -138,7 +138,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 psi_offset_freeb, diag_coils, rmp_coils,            &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
-                pastix_maxthrd, centralize_harm_mat,                &
+                pastix_maxthrd, centralize_harm_mat, treat_axis,    &
                 n_particles, tstep_particles, nstep_particles,      & !Particles extension
                 nsubstep_particles, restart_particles,              &
                 filter_perp,    filter_hyper,    filter_par,        &
@@ -149,7 +149,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
                 ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
-                Dn_pol_sc_num, Dn_p_sc_num, force_central_node
+                Dn_pol_sc_num, Dn_p_sc_num, force_central_node,     &
+                eta_ohmic
 
 if (my_id .eq. 0) then
 

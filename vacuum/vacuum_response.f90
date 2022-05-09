@@ -2258,13 +2258,6 @@ module vacuum_response
     real*8                    :: z_ref_inter, Z_n
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
 
-
-    ! --- Calculate the specified coil currents at present time 
-    do i=1, n_coils
-      I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) 
-    end do
-
-
     ! --- Calculate the difference between the input file coil currents and the ones coming from the restart file
     ! This is used below to avoid violent jumps in I_coils that can happen when restarting from a freeboudary_equil with feedback
     if(.not. initialized) then
@@ -2277,6 +2270,11 @@ module vacuum_response
       initialized = .true.
     end if
     
+
+    ! --- Calculate the specified coil currents at present time 
+    do i=1, n_coils
+      I_coils(i) = interpolProf(coil_curr_time_trace(i)%time, coil_curr_time_trace(i)%curr, coil_curr_time_trace(i)%len, t_now) 
+    end do
 
     ! -- During timestepping apply vertical feedback by the PF coils which were activated
     ! Add the feedback current to the difference from the restart file

@@ -160,7 +160,7 @@ module vacuum_equilibrium
           
           i_start_coil = sr%ind_start_rmp_coils
           i_end_coil   = i_start_coil + sr%n_rmp_coils - 1
-          I_coils(i_start_coil:i_end_coil) =  pf_coils(1:sr%n_rmp_coils)%current 
+          I_coils(i_start_coil:i_end_coil) =  rmp_coils(1:sr%n_rmp_coils)%current 
           n_coils                   =  sr%ncoil
           write(*,*) 'I_coils allocated '            
         endif

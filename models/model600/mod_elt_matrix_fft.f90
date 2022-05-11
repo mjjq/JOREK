@@ -1156,21 +1156,19 @@ do i=1,n_vertex_max
           end if
 
           ! --- Increase diffusivity if very small density/temperature
-          if (r0 .lt. D_prof_neg_thresh)  then
-            if ((r0-rimp0) .lt. D_prof_neg_thresh) then
-              D_prof  = D_prof_neg
-              D_par   = D_prof_neg
-            endif
-            if (rimp0 .lt. D_prof_imp_neg_thresh) then
-              D_prof_imp  = D_prof_neg
-              D_par_imp   = D_prof_neg
-            endif
-            if ((r0 .lt. D_prof_tot_neg_thresh) .and. ((r0-rimp0) .ge. D_prof_neg_thresh)) then
-              D_prof  = D_prof_neg
-              D_par   = D_prof_neg
-              D_prof_imp  = D_prof_neg
-              D_par_imp   = D_prof_neg
-            endif
+          if ((r0-rimp0) .lt. D_prof_neg_thresh) then
+            D_prof  = D_prof_neg
+            D_par   = D_prof_neg
+          endif
+          if (rimp0 .lt. D_prof_imp_neg_thresh) then
+            D_prof_imp  = D_prof_neg
+            D_par_imp   = D_prof_neg
+          endif
+          if ((r0 .lt. D_prof_tot_neg_thresh) .and. ((r0-rimp0) .ge. D_prof_neg_thresh)) then
+            D_prof  = D_prof_neg
+            D_par   = D_prof_neg
+            D_prof_imp  = D_prof_neg
+            D_par_imp   = D_prof_neg
           endif
 
           if ( with_TiTe ) then ! (with_TiTe) ****************************************************

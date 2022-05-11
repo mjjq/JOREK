@@ -548,8 +548,6 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
-  write(*,REAL_FMT) 'D_prof_imp_neg_thresh ', D_prof_imp_neg_thresh
-  write(*,REAL_FMT) 'D_prof_tot_neg_thresh ', D_prof_tot_neg_thresh
   if (with_TiTe) then
     write(*,REAL_FMT) 'ZK_e_prof_neg           ', ZK_e_prof_neg
     write(*,REAL_FMT) 'ZK_e_par_neg            ', ZK_e_par_neg

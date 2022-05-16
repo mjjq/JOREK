@@ -3863,29 +3863,29 @@ vms_up__p(:) = BR0*vms_uR__p(:) + BZ0*vms_uZ__p(:) + Bp0*vms_up__p(:)
 vms_up__k(:) = BR0*vms_uR__k(:) + BZ0*vms_uZ__k(:) + Bp0*vms_up__k(:)
 
 ! update time derivatives
-Pvec_prev  (var_AR) =  Pvec_prev  (var_AR) - vms_coeff_AR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AR__p(1:n_var))
-Pvec_prev_k(var_AR) =  Pvec_prev_k(var_AR) - vms_coeff_AR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AR__k(1:n_var))
-
-Pvec_prev  (var_AZ) =  Pvec_prev  (var_AZ) - vms_coeff_AZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AZ__p(1:n_var))
-Pvec_prev_k(var_AZ) =  Pvec_prev_k(var_AZ) - vms_coeff_AZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AZ__k(1:n_var))
-
-Pvec_prev  (var_A3) =  Pvec_prev  (var_A3) - vms_coeff_A3 * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_A3__p(1:n_var))
-Pvec_prev_k(var_A3) =  Pvec_prev_k(var_A3) - vms_coeff_A3 * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_A3__k(1:n_var))
-
-Pvec_prev  (var_UR) =  Pvec_prev  (var_UR) - vms_coeff_UR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__p(1:n_var))
-Pvec_prev_k(var_UR) =  Pvec_prev_k(var_UR) - vms_coeff_UR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__k(1:n_var))
-
-Pvec_prev  (var_UZ) =  Pvec_prev  (var_UZ) - vms_coeff_UZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UZ__p(1:n_var))
-Pvec_prev_k(var_UZ) =  Pvec_prev_k(var_UZ) - vms_coeff_UZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__k(1:n_var))
-
-Pvec_prev  (var_Up) =  Pvec_prev  (var_Up) - vms_coeff_Up * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_Up__p(1:n_var))
-Pvec_prev_k(var_Up) =  Pvec_prev_k(var_Up) - vms_coeff_Up * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_Up__k(1:n_var))
-
-Pvec_prev  (var_rho)=  Pvec_prev  (var_rho)- vms_coeff_rho* tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_rho__p(1:n_var))
-Pvec_prev_k(var_rho)=  Pvec_prev_k(var_rho)- vms_coeff_rho* tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_rho__k(1:n_var))
-
-Pvec_prev  (var_T)  =  Pvec_prev  (var_T)  - vms_coeff_T  * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_T__p(1:n_var))
-Pvec_prev_k(var_T)  =  Pvec_prev_k(var_T)  - vms_coeff_T  * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_T__k(1:n_var))
+!Pvec_prev  (var_AR) =  Pvec_prev  (var_AR) - vms_coeff_AR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AR__p(1:n_var))
+!Pvec_prev_k(var_AR) =  Pvec_prev_k(var_AR) - vms_coeff_AR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AR__k(1:n_var))
+!
+!Pvec_prev  (var_AZ) =  Pvec_prev  (var_AZ) - vms_coeff_AZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AZ__p(1:n_var))
+!Pvec_prev_k(var_AZ) =  Pvec_prev_k(var_AZ) - vms_coeff_AZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AZ__k(1:n_var))
+!
+!Pvec_prev  (var_A3) =  Pvec_prev  (var_A3) - vms_coeff_A3 * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_A3__p(1:n_var))
+!Pvec_prev_k(var_A3) =  Pvec_prev_k(var_A3) - vms_coeff_A3 * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_A3__k(1:n_var))
+!
+!Pvec_prev  (var_UR) =  Pvec_prev  (var_UR) - vms_coeff_UR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__p(1:n_var))
+!Pvec_prev_k(var_UR) =  Pvec_prev_k(var_UR) - vms_coeff_UR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__k(1:n_var))
+!
+!Pvec_prev  (var_UZ) =  Pvec_prev  (var_UZ) - vms_coeff_UZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UZ__p(1:n_var))
+!Pvec_prev_k(var_UZ) =  Pvec_prev_k(var_UZ) - vms_coeff_UZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__k(1:n_var))
+!
+!Pvec_prev  (var_Up) =  Pvec_prev  (var_Up) - vms_coeff_Up * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_Up__p(1:n_var))
+!Pvec_prev_k(var_Up) =  Pvec_prev_k(var_Up) - vms_coeff_Up * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_Up__k(1:n_var))
+!
+!Pvec_prev  (var_rho)=  Pvec_prev  (var_rho)- vms_coeff_rho* tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_rho__p(1:n_var))
+!Pvec_prev_k(var_rho)=  Pvec_prev_k(var_rho)- vms_coeff_rho* tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_rho__k(1:n_var))
+!
+!Pvec_prev  (var_T)  =  Pvec_prev  (var_T)  - vms_coeff_T  * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_T__p(1:n_var))
+!Pvec_prev_k(var_T)  =  Pvec_prev_k(var_T)  - vms_coeff_T  * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_T__k(1:n_var))
 
 res = 0.d0
 res(var_AR) = - (UZ0 * Bp0 - Up0 * BZ0)
@@ -3925,29 +3925,29 @@ end subroutine add_vms_to_rhs
 
 subroutine add_vms_to_elm()
 
-Pjac  (var_AR, 1:n_var) = Pjac  (var_AR, 1:n_var) - vms_coeff_AR * tscale * vms_AR__p(1:n_var)
-Pjac_k(var_AR, 1:n_var) = Pjac_k(var_AR, 1:n_var) - vms_coeff_AR * tscale * vms_AR__k(1:n_var)
-
-Pjac  (var_AZ, 1:n_var) = Pjac  (var_AZ, 1:n_var) - vms_coeff_AZ * tscale * vms_AZ__p(1:n_var)
-Pjac_k(var_AZ, 1:n_var) = Pjac_k(var_AZ, 1:n_var) - vms_coeff_AZ * tscale * vms_AZ__k(1:n_var)
-
-Pjac  (var_A3, 1:n_var) = Pjac  (var_A3, 1:n_var) - vms_coeff_A3 * tscale * vms_A3__p(1:n_var)
-Pjac_k(var_A3, 1:n_var) = Pjac_k(var_A3, 1:n_var) - vms_coeff_A3 * tscale * vms_A3__k(1:n_var)
-
-Pjac  (var_UR, 1:n_var) = Pjac  (var_UR, 1:n_var) - vms_coeff_UR * tscale * vms_UR__p(1:n_var)
-Pjac_k(var_UR, 1:n_var) = Pjac_k(var_UR, 1:n_var) - vms_coeff_UR * tscale * vms_UR__k(1:n_var)
-
-Pjac  (var_UZ, 1:n_var) = Pjac  (var_UZ, 1:n_var) - vms_coeff_UZ * tscale * vms_UZ__p(1:n_var)
-Pjac_k(var_UZ, 1:n_var) = Pjac_k(var_UZ, 1:n_var) - vms_coeff_UZ * tscale * vms_UZ__k(1:n_var)
-
-Pjac  (var_Up, 1:n_var) = Pjac  (var_Up, 1:n_var) - vms_coeff_Up * tscale * vms_Up__p(1:n_var)
-Pjac_k(var_Up, 1:n_var) = Pjac_k(var_Up, 1:n_var) - vms_coeff_Up * tscale * vms_Up__k(1:n_var)
-
-Pjac  (var_rho, 1:n_var) = Pjac  (var_rho,1:n_var)  - vms_coeff_rho * tscale * vms_rho__p(1:n_var)
-Pjac_k(var_rho, 1:n_var) = Pjac_k(var_rho, 1:n_var) - vms_coeff_rho * tscale * vms_rho__k(1:n_var)
-
-Pjac  (var_T, 1:n_var)   = Pjac  (var_T, 1:n_var) - vms_coeff_T * tscale * vms_T__p(1:n_var)
-Pjac_k(var_T, 1:n_var)   = Pjac_k(var_T, 1:n_var) - vms_coeff_T * tscale * vms_T__k(1:n_var)
+!Pjac  (var_AR, 1:n_var) = Pjac  (var_AR, 1:n_var) - vms_coeff_AR * tscale * vms_AR__p(1:n_var)
+!Pjac_k(var_AR, 1:n_var) = Pjac_k(var_AR, 1:n_var) - vms_coeff_AR * tscale * vms_AR__k(1:n_var)
+!
+!Pjac  (var_AZ, 1:n_var) = Pjac  (var_AZ, 1:n_var) - vms_coeff_AZ * tscale * vms_AZ__p(1:n_var)
+!Pjac_k(var_AZ, 1:n_var) = Pjac_k(var_AZ, 1:n_var) - vms_coeff_AZ * tscale * vms_AZ__k(1:n_var)
+!
+!Pjac  (var_A3, 1:n_var) = Pjac  (var_A3, 1:n_var) - vms_coeff_A3 * tscale * vms_A3__p(1:n_var)
+!Pjac_k(var_A3, 1:n_var) = Pjac_k(var_A3, 1:n_var) - vms_coeff_A3 * tscale * vms_A3__k(1:n_var)
+!
+!Pjac  (var_UR, 1:n_var) = Pjac  (var_UR, 1:n_var) - vms_coeff_UR * tscale * vms_UR__p(1:n_var)
+!Pjac_k(var_UR, 1:n_var) = Pjac_k(var_UR, 1:n_var) - vms_coeff_UR * tscale * vms_UR__k(1:n_var)
+!
+!Pjac  (var_UZ, 1:n_var) = Pjac  (var_UZ, 1:n_var) - vms_coeff_UZ * tscale * vms_UZ__p(1:n_var)
+!Pjac_k(var_UZ, 1:n_var) = Pjac_k(var_UZ, 1:n_var) - vms_coeff_UZ * tscale * vms_UZ__k(1:n_var)
+!
+!Pjac  (var_Up, 1:n_var) = Pjac  (var_Up, 1:n_var) - vms_coeff_Up * tscale * vms_Up__p(1:n_var)
+!Pjac_k(var_Up, 1:n_var) = Pjac_k(var_Up, 1:n_var) - vms_coeff_Up * tscale * vms_Up__k(1:n_var)
+!
+!Pjac  (var_rho, 1:n_var) = Pjac  (var_rho,1:n_var)  - vms_coeff_rho * tscale * vms_rho__p(1:n_var)
+!Pjac_k(var_rho, 1:n_var) = Pjac_k(var_rho, 1:n_var) - vms_coeff_rho * tscale * vms_rho__k(1:n_var)
+!
+!Pjac  (var_T, 1:n_var)   = Pjac  (var_T, 1:n_var) - vms_coeff_T * tscale * vms_T__p(1:n_var)
+!Pjac_k(var_T, 1:n_var)   = Pjac_k(var_T, 1:n_var) - vms_coeff_T * tscale * vms_T__k(1:n_var)
  
 res_jac__p = 0.d0 ; res_jac__n = 0.d0
 

@@ -799,8 +799,10 @@ module phys_module
   logical             :: keep_current_prof !< Artificial current source to approximately keep the initial current profile, i.e., \f$\eta(j-j0)\f$?
   
   !> @name Numerical parameters
-  real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative density
-  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
+  real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative background species density
+  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if r0-rimp0 < D_prof_neg_thresh
+  real*8              :: D_prof_imp_neg_thresh  !< D_prof_neg becomes effective if rimp0 < D_prof_imp_neg_thresh
+  real*8              :: D_prof_tot_neg_thresh  !< D_prof_neg becomes effective if r0 < D_prof_tot_neg_thresh
   real*8              :: ZK_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
   real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!local/bin/python
 #   Name : jorekHDF5toIDS.py
 #
 #   Description :
@@ -240,7 +240,7 @@ if __name__ == "__main__":
 
             # First for points
             gs = mhd_grid_ggd[0].grid_subset[gs_index]
-            gs.identifier.name = "Nodes "
+            gs.identifier.name = "Nodes"
             gs.identifier.index = gs_index + 1 # Fortran notation
             gs.identifier.description = """All points/nodes/vertices/0D
                                       objects in the domain."""
@@ -257,7 +257,7 @@ if __name__ == "__main__":
 
             # Now for cells
             gs = mhd_grid_ggd[0].grid_subset[gs_index]
-            gs.identifier.name = "2D cells"
+            gs.identifier.name = "Cells2D"
             gs.identifier.index = gs_index + 1 # Fortran notation
             gs.identifier.description = "All 2D cells/2D objects in the domain."
             gs.dimension = 3

@@ -260,6 +260,7 @@ subroutine preset_parameters
   ZK_i_perp_num = 0.d0
   ZK_e_perp_num = 0.d0
   Dn_perp_num   = 0.d0
+  Dimp_perp_num = 0.d0
 
   use_sc = .false.
   visco_sc_num     = 0.d0

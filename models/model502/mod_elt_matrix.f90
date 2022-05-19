@@ -1103,10 +1103,7 @@ do ms=1, n_gauss
     !We negelect the coulomb log's dericatives due to their smallness
     dnu_e_imp_dTi   = -1.5*MASS_ELECTRON*nu_e_imp*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr)
     dnu_e_imp_dTe   = -1.5*MASS_PROTON*m_imp*nu_e_imp*dTe0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr) &
-                      + 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
-                        * dZ_eff_imp_dT * (1.d14*central_density*rn0_corr*m_i_over_m_imp) * lambda_e_imp &
-                        / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
-                        / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
+                      + nu_e_imp * dZ_eff_imp_dT / Z_eff_imp
 
     dnu_e_imp_drhon = nu_e_imp * drn0_corr_dn / rn0_corr 
     dnu_e_imp_drho  = 0.

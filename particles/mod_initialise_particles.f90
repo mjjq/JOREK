@@ -230,7 +230,7 @@ end subroutine initialise_particles
 !> Set Psi_transform to transform from [0,1] to your desired range
 subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_maxwell, &
   Theta_transform, Psi_transform, alpha, E_max, include_vpar, uniform_space, &
-  uniform_space_rej_f, uniform_space_rej_vars, cor, charge)
+  uniform_space_rej_f, uniform_space_rej_vars, cor, charge, normalise_uniform_space_rej_vars_in)
   use mod_rng
   use mod_fields
   use mod_random_seed
@@ -261,6 +261,8 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   type(coronal),         intent(in), optional       :: cor !< Coronal equilibrium datatype for this particle. If unset, do not alter q
   integer,               intent(in), optional       :: charge !< Use this if cor is not present
   real*8,                intent(in), optional       :: T_Maxwell !< constant Maxwellian temperature [eV]
+  !> variables for normalisation
+  logical,intent(in),optional :: normalise_uniform_space_rej_vars_in
 
   ! Internal variables
   type(particle_gc)      :: particle
@@ -293,6 +295,20 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   integer :: to_find, n_tries_now, n_found
   logical :: all_done, init_uniform_space, my_include_vpar
   real*8  :: my_alpha
+  !> variables for normalisation
+  logical :: normalise_uniform_space_rej_vars
+  real*8, dimension(:), allocatable   :: P2_norm, varmin, varmax
+  real*8, dimension(:,:), allocatable :: grad_P2_norm,varminmax
+  real*8 :: density_tot,density_in,density_out,pressure_tot
+  real*8 :: pressure_in,pressure_out,kin_par_tot,kin_par_in
+  real*8 :: kin_par_out,mom_par_tot,mom_par_in,mon_par_out
+
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
+
+  normalise_uniform_space_rej_vars = .false.
+  if(present(normalise_uniform_space_rej_vars_in)) &
+  normalise_uniform_space_rej_vars = normalise_uniform_space_rej_vars_in
 
   init_uniform_space = .false.
   if (present(uniform_space) .and. uniform_space) then
@@ -322,7 +338,24 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
     n_geom = size(uniform_space_rej_vars, 1) - n_mhd
 
     allocate(grad_P2(3,size(uniform_space_rej_vars,1)))
+    allocate(varmin(n_var)); allocate(varmax(n_var));
 
+    !> add on for finding the minimum and maximum of the mhd
+    !> variables for normalisation
+    if(normalise_uniform_space_rej_vars) then
+      allocate(P2_norm(size(P2))); P2_norm = 0.d0;
+      allocate(grad_P2_norm(size(grad_P2,1),size(grad_P2,2))); grad_P2_norm = 0.d0;
+      allocate(varminmax(2,n_mhd)); varminmax = 0.d0;
+      call Integrals_3D(my_id,fields%node_list,fields%element_list,&
+      density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,&
+      kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in,mon_par_out,&
+      varmin,varmax) !< compute MHD field min max
+      do i=1,n_mhd
+        varminmax(1,i) = varmin(uniform_space_rej_vars(i))
+        varminmax(2,i) = varmax(uniform_space_rej_vars(i))
+      enddo
+    endif
+    deallocate(varmin); deallocate(varmax);
   else
     n_mhd = 0
     n_geom = 0
@@ -339,10 +372,6 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   else
     my_alpha = 0.d0
   end if
-
-
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 
   if (.not. init_uniform_space) then
     psimin= 1d10
@@ -425,15 +454,15 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
 
 #ifndef __NVCOMPILER
 #ifdef __GFORTRAN__
-    !$omp parallel do default(shared) &
+    !$omp parallel do default(shared) firstprivate(normalise_uniform_space_rej_vars,varminmax) &
 #else
     !$omp parallel do default(none) &
     !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, T_Maxwell, &
     !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, &
     !$omp          my_include_vpar, central_density, init_uniform_space, Rbox, Zbox, uniform_space_rej_vars, n_geom, n_mhd) &
 #endif
-    !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, &
-    !$omp           R_i, Z_i, xjac, grad_P2, u, particle_kinetic_tmp, v2, v_par,   &
+    !$omp   private(i, psi, theta, phi, i_elm, s, t, R, Z, R_s, R_t, Z_s, Z_t, P2, P2_norm, &
+    !$omp           R_i, Z_i, xjac, grad_P2, grad_P2_norm, u, particle_kinetic_tmp, v2, v_par,   &
 #ifdef fullmhd
     !$omp           A3, AR, AZ, A3_R, A3_Z, AR_Z, AR_p, AZ_R, AZ_P, Fprof,          &
 #endif
@@ -483,8 +512,21 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
             end do
 
           end if
-
-          if (uniform_space_rej_f(size(uniform_space_rej_vars), P2, grad_P2) .lt. ran(7)) i_elm = 0
+          if(normalise_uniform_space_rej_vars) then
+            P2_norm = P2; grad_P2_norm = grad_P2;
+            P2_norm(n_geom+1:n_geom+n_mhd) = (P2(n_geom+1:n_geom+n_mhd)-varminmax(1,:))/&
+            (varminmax(2,:)-varminmax(1,:))
+            grad_P2_norm(1,n_geom+1:n_geom+n_mhd) = (grad_P2(1,n_geom+1:n_geom+n_mhd)-&
+            varminmax(1,:))/(varminmax(2,:)-varminmax(1,:))
+            grad_P2_norm(2,n_geom+1:n_geom+n_mhd) = (grad_P2(2,n_geom+1:n_geom+n_mhd)-&
+            varminmax(1,:))/(varminmax(2,:)-varminmax(1,:))
+            grad_P2_norm(3,n_geom+1:n_geom+n_mhd) = (grad_P2(3,n_geom+1:n_geom+n_mhd)-&
+            varminmax(1,:))/(varminmax(2,:)-varminmax(1,:))
+            if (uniform_space_rej_f(size(uniform_space_rej_vars), P2_norm, grad_P2_norm) .lt. &
+            ran(7)) i_elm = 0
+          else          
+            if (uniform_space_rej_f(size(uniform_space_rej_vars), P2, grad_P2) .lt. ran(7)) i_elm = 0
+          endif
         end if
 
       else
@@ -655,6 +697,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
       1, MPI_LOGICAL, MPI_LAND, MPI_COMM_WORLD, ierr)
 
   end do
+  if(allocated(varminmax)) deallocate(varminmax)
 end subroutine initialise_particles_H_mu_psi
 
 !> Subroutine for initialising particles in  mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.

@@ -3,6 +3,7 @@
 !> Compile: make RE_example, run with: RE_example < jorek_inputfile
 !> Specify the jorek restart to be read in the variable jorek_filename
 program RE_kinetic_example
+use constants, only: PI,TWOPI,SPEED_OF_LIGHT
 use mod_model_settings, only: n_var
 use mod_random_seed
 use particle_tracer
@@ -22,6 +23,8 @@ integer         :: n_groups,n_particles,n_mhd_fields
 integer         :: seed,thread_id,ifail
 integer,dimension(:),allocatable :: mhd_field_ids
 real*8                           :: t_step,stop_time,time,mass_e,t_target
+real*8                           :: rest_energy
+real*8,dimension(2)              :: energy_tot,pitch_angles,gyro_angles
 real*8,dimension(4)              :: rands
 real*8,dimension(:),allocatable  :: t_steps
 character(len=:),allocatable     :: jorek_filename,diag_filename
@@ -38,6 +41,7 @@ n_write_steps = 100       !< number of time steps between writien actions
 t_step = 1.d-13           !< time step
 stop_time = 1.d-9;        !< time at which the simulation is stop
 mass_e = 5.48579909065d-4 !< electron mass in AMU
+rest_energy = 0.51099895 !< electron rest energy in MeV/c^2
 q_e = -1                  !< electron charge
 !> allocate time steps
 allocate(t_steps(n_groups)); t_steps = t_step;

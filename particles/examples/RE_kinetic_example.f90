@@ -4,29 +4,38 @@
 !> Specify the jorek restart to be read in the variable jorek_filename
 program RE_kinetic_example
 use mod_model_settings, only: n_var
+use mod_random_seed
 use particle_tracer
 use mod_kinetic_relativistic
 use mod_particle_diagnostics
+!$ use omp_lib
 implicit none
 
 !> Variable declarations -----------------------------------------------
-type(event)                      :: field_reader
-type(write_particle_diagnostics) :: diag
+type(sobseq_rng),dimension(:),allocatable  :: sob_rngs !< sobolev seq. rng
+type(event)                                :: field_reader
+type(write_particle_diagnostics)           :: diag
 integer :: ii,jj,kk
-integer :: n_steps,n_write_steps
-integer :: n_groups,n_particles,ifail,n_mhd_fields
+integer :: n_steps,n_write_steps,n_max_threads
+integer :: n_groups,n_particles,n_mhd_fields
+integer :: seed,thread_id,ifail
 integer,dimension(:),allocatable :: mhd_field_ids
 real*8 :: t_step,stop_time,time,mass_e,t_target
 real*8 :: density_tot,density_in,density_out,pressure_tot
 real*8 :: pressure_in,pressure_out,kin_par_tot,kin_par_in
 real*8 :: kin_par_out,mom_par_tot,mom_par_in,mon_par_out
+real*8,dimension(7) :: rands
 real*8,dimension(n_var) :: varmin,varmax
 real*8,dimension(:),allocatable :: t_steps
 real*8,dimension(:,:),allocatable :: varminmax
 character(len=:),allocatable :: jorek_filename,diag_filename
 
-!> Define the inputs ----------------------------------------------------
+!> MPI initialization --------------------------------------------------
 n_groups = 1              !< number of particle groups
+call sim%initialize(num_groups=n_groups) !< open the MPI communicator
+
+!> Define the inputs ----------------------------------------------------
+ifail = 0
 n_particles = 1000000     !< number of particles per group
 n_mhd_fields = 1          !< number of required mhd fields for particle init
 n_write_steps = 100       !< number of time steps between writien actions
@@ -44,7 +53,15 @@ allocate(character(len=10)::diag_filename)
 diag_filename = 'RE_diag.h5'
 
 !> Initialise the simulation --------------------------------------------
-call sim%initialize(num_groups=n_groups) !< open the MPI communicator
+!> initialise sobolev sequence rng
+n_max_threads = 1; thread_id = 0;
+!$ n_max_threads = omp_get_max_threads()
+allocate(sob_rngs(0:n_max_threads-1))
+do ii=0,n_max_threads-1
+  call sob_rngs(ii)%initialize(7,random_seed(),sim%n_cpu*n_max_threads,&
+  sim%my_id*n_max_threads+ii+1,ifail)
+  if(ifail.ne.0) call MPI_ABORT(MPI_COMM_WORLD,-1,ifail)
+enddo
 !> read jorek restart field
 field_reader = event(read_jorek_fields_interp_linear(&
 basename=trim(jorek_filename),i=-1),start=0.d0) !< read the jorek fields
@@ -70,10 +87,25 @@ events = [field_reader,event(write_action(),step=t_step*real(n_write_steps,kind=
          event(diag,step=t_step*real(n_write_steps,kind=8)),&
          event(stop_action(),start=stop_time)]
 
-!> Integrate particle trajectory ---------------------------------------
+!> Initialise particle population --------------------------------------
 call check_and_fix_timesteps(t_steps,events) !< check the time step
-call with(sim,events,at=0.d0)               !< set the events
+call with(sim,events,at=0.d0)                !< set the events
+!> first dummy initialisation for checking if the integration loop makes sens
+do ii=1,size(sim%groups)
+  !$omp parallel default(private) firstprivate(ii,thread_id) shared(sim,sob_rngs)
+  !$ thread_id = omp_get_thread_num()
+  select type (particles=>sim%groups(ii)%particles)
+    type is (particle_kinetic_relativistic)
+    !$omp do
+    do jj=1,size(particles)
+      call sob_rngs(thread_id)%next(rands)
+    enddo
+    !$omp end do
+  end select
+  !$omp end parallel
+enddo
 
+!> Integrate particle trajectory ---------------------------------------
 !> loop until the simulation should stop
 do while(.not.sim%stop_now)
   t_target = next_event_at(sim,events)
@@ -103,7 +135,7 @@ enddo
 
 !> Tear down the simulation ---------------------------------------------
 deallocate(mhd_field_ids); deallocate(varminmax); deallocate(jorek_filename);
-deallocate(diag_filename);
+deallocate(diag_filename); deallocate(sob_rngs);
 call sim%finalize()
 contains
 !> ----------------------------------------------------------------------

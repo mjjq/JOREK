@@ -21,10 +21,11 @@ integer(kind=1) :: q_e
 integer         :: ii,jj,kk
 integer         :: n_steps,n_write_steps,n_max_threads
 integer         :: n_groups,n_particles,n_mhd_fields
-integer         :: seed,thread_id,ifail
+integer         :: seed,thread_id,ifail,writename_decimal_digits
+integer         :: writename_fractional_digits
 integer,dimension(:),allocatable :: mhd_field_ids
 real*8                           :: t_step,stop_time,time,mass_e,t_target
-real*8                           :: rest_energy,B_norm,psi,U
+real*8                           :: rest_energy,B_norm,psi,U,start_time
 real*8,dimension(2)              :: energy_kin,pitch_angles,gyro_angles
 real*8,dimension(2)              :: p_int,cos_pitch_int
 real*8,dimension(3)              :: rands,b,E,e1,e2
@@ -37,17 +38,20 @@ call sim%initialize(num_groups=n_groups) !< open the MPI communicator
 
 !> Define the inputs ----------------------------------------------------
 ifail = 0
-n_particles = 1000              !< number of particles per group
-n_mhd_fields = 1                !< number of required mhd fields for particle init
-n_write_steps = 100             !< number of time steps between writien actions
-t_step = 1.d-13                 !< time step
-stop_time = 1.d-9;              !< time at which the simulation is stop
-mass_e = 5.48579909065d-4       !< electron mass in AMU
-rest_energy = 0.51099895        !< electron rest energy in MeV/c^2
-energy_kin = (/2.d1,2.d1/)      !< kinetic energy in MeV
-pitch_angles  = (/PI-0.289,PI/) !< pitch angle in radians
-gyro_angles = (/0.d0,TWOPI/)    !< gyro angles in radians
-q_e = -1                        !< electron charge
+writename_decimal_digits    = 5  !< number of decimal digits of the restart file filename
+writename_fractional_digits = 13 !< number of fractional digits of the restart file filename
+n_particles = 1000               !< number of particles per group
+n_mhd_fields = 1                 !< number of required mhd fields for particle init
+n_write_steps = 100              !< number of time steps between writien actions
+t_step = 1.d-13                  !< time step
+start_time = 0.d0                !< initial simulation time
+stop_time = 1.d-9;               !< time at which the simulation is stop
+mass_e = 5.48579909065d-4        !< electron mass in AMU
+rest_energy = 0.51099895         !< electron rest energy in MeV/c^2
+energy_kin = (/2.d1,2.d1/)       !< kinetic energy in MeV
+pitch_angles  = (/PI-0.289,PI/)  !< pitch angle in radians
+gyro_angles = (/0.d0,TWOPI/)     !< gyro angles in radians
+q_e = -1                         !< electron charge
 !> allocate time steps
 allocate(t_steps(n_groups)); t_steps = t_step;
 !> allocate and set the mhd field ids
@@ -77,11 +81,15 @@ call with(sim,field_reader)
 !> write diagnostics
 diag = write_particle_diagnostics(filename=trim(diag_filename))
 !> set the events
-events = [field_reader,event(write_action(),start=0.d0,step=t_step*real(n_write_steps,kind=8)),&
-         event(diag,start=0.d0,step=t_step*real(n_write_steps,kind=8)),&
+sim%time = start_time
+events = [event(write_action(decimal_digits=writename_decimal_digits,&
+         fractional_digits=writename_fractional_digits),&
+         start=sim%time,step=t_step*real(n_write_steps,kind=8)),&
+         event(diag,start=sim%time,step=t_step*real(n_write_steps,kind=8)),&
          event(stop_action(),start=stop_time)]
 
 !> Initialise particle population --------------------------------------
+write(*,*) t_step*real(n_write_steps,kind=8)
 call check_and_fix_timesteps(t_steps,events) !< check the time step
 write(*,*) "----------------------------------"
 write(*,*) "Running particle initialisation"
@@ -117,7 +125,7 @@ do ii=1,n_groups
   end select
   !$omp end parallel 
 enddo
-call with(sim,events,at=0.d0) !< store the initialised particles
+call with(sim,events,at=sim%time) !< store the initialised particles
 write(*,*) "----------------------------------"
 write(*,*) "Terminated particle initialisation"
 write(*,*) "----------------------------------"

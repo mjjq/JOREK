@@ -445,6 +445,10 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
         allocate(particle_gc::particles_tmp(blocksize))
       type is (particle_gc_vpar)
         allocate(particle_gc_vpar::particles_tmp(blocksize))
+      type is (particle_kinetic_relativistic)
+        allocate(particle_kinetic_relativistic::particles_tmp(blocksize))
+      type is (particle_gc_relativistic)
+        allocate(particle_gc_relativistic::particles_tmp(blocksize))
       class default
         write(*,*) "ERROR: particle type not supported yet for initialize_particles_H_mu_psi"
         call exit(1)
@@ -910,6 +914,10 @@ subroutine initialise_particles_H_mu_psi_phiplanes(particles, fields, rng_base, 
         allocate(particle_kinetic_leapfrog::particles_tmp(blocksize))
       type is (particle_gc)
         allocate(particle_gc::particles_tmp(blocksize))
+      type is (particle_kinetic_relativistic)
+        allocate(particle_kinetic_relativistic::particles_tmp(blocksize))
+      type is (particle_gc_relativistic)
+        allocate(particle_gc_relativistic::particles_tmp(blocksize))
       class default
         write(*,*) "ERROR: particle type not supported yet for initialize_particles_H_mu_psi"
         call exit(1)

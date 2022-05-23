@@ -4,7 +4,7 @@
 !> Specify the jorek restart to be read in the variable jorek_filename
 program RE_kinetic_example
 use constants, only: PI,TWOPI,SPEED_OF_LIGHT
-use mod_model_settings, only: n_var
+use mod_model_settings, only: var_rho,n_var
 use mod_random_seed
 use particle_tracer
 use mod_kinetic_relativistic
@@ -51,7 +51,7 @@ q_e = -1                        !< electron charge
 !> allocate time steps
 allocate(t_steps(n_groups)); t_steps = t_step;
 !> allocate and set the mhd field ids
-allocate(mhd_field_ids(n_mhd_fields)); mhd_field_ids = (/1/);
+allocate(mhd_field_ids(n_mhd_fields)); mhd_field_ids = (/var_rho/);
 allocate(character(len=25)::jorek_filename); 
 jorek_filename = 'jorek_equilibrium';
 allocate(character(len=10)::diag_filename)
@@ -72,18 +72,20 @@ do ii=0,n_max_threads-1
 enddo
 !> read jorek restart field
 field_reader = event(read_jorek_fields_interp_linear(&
-basename=trim(jorek_filename),i=-1),start=0.d0) !< read the jorek fields
+basename=trim(jorek_filename),i=-1)) !< read the jorek fields
 call with(sim,field_reader)
 !> write diagnostics
 diag = write_particle_diagnostics(filename=trim(diag_filename))
 !> set the events
-events = [field_reader,event(write_action(),step=t_step*real(n_write_steps,kind=8)),&
-         event(diag,step=t_step*real(n_write_steps,kind=8)),&
+events = [field_reader,event(write_action(),start=0.d0,step=t_step*real(n_write_steps,kind=8)),&
+         event(diag,start=0.d0,step=t_step*real(n_write_steps,kind=8)),&
          event(stop_action(),start=stop_time)]
 
 !> Initialise particle population --------------------------------------
 call check_and_fix_timesteps(t_steps,events) !< check the time step
-call with(sim,events,at=0.d0)
+write(*,*) "----------------------------------"
+write(*,*) "Running particle initialisation"
+write(*,*) "----------------------------------"
 !> Initialise particle groups
 do ii=1,n_groups
   !> initialising runaway positions and mass
@@ -116,14 +118,22 @@ do ii=1,n_groups
   end select
   !$omp end parallel 
 enddo
+call with(sim,events,at=0.d0) !< store the initialised particles
+write(*,*) "----------------------------------"
+write(*,*) "Terminated particle initialisation"
+write(*,*) "----------------------------------"
 
 !> Integrate particle trajectory ---------------------------------------
+write(*,*) "----------------------------------"
+write(*,*) "Running particle simulation"
+write(*,*) "----------------------------------"
 !> loop until the simulation should stop
 do while(.not.sim%stop_now)
   t_target = next_event_at(sim,events)
+  write(*,*) "t_target: ",t_target
   !> loop on the groups
   do ii=1,size(sim%groups)
-    n_steps = nint((time-sim%time)/t_steps(ii));
+    n_steps = nint((t_target-sim%time)/t_steps(ii));
     !$omp parallel default(private) firstprivate(n_steps,t_steps,ii,ifail) &
     !$omp shared(sim)
     select type(particles=>sim%groups(ii)%particles)
@@ -131,7 +141,7 @@ do while(.not.sim%stop_now)
       !$omp do
       do jj=1,size(sim%groups(ii)%particles)
         do kk=1,n_steps
-          if(particles(ii)%i_elm.le.0) exit
+          if(particles(jj)%i_elm.le.0) exit
           time = sim%time + kk*t_steps(ii)
           call volume_preserving_push_jorek(particles(jj),&
           sim%fields,sim%groups(ii)%mass,time,t_steps(ii),ifail)          
@@ -144,6 +154,9 @@ do while(.not.sim%stop_now)
   sim%time = t_target
   call with(sim,events,at=sim%time)
 enddo
+write(*,*) "----------------------------------"
+write(*,*) "Particle simulation terminated"
+write(*,*) "----------------------------------"
 
 !> Tear down the simulation ---------------------------------------------
 deallocate(mhd_field_ids);  deallocate(jorek_filename);

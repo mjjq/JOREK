@@ -36,8 +36,8 @@ contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
 !> if present. See [[test_rejection_sampling]] for examples.
-subroutine initialise_particles(particles, node_list, element_list, &
-  rng, variables, transform, f, Rbound, Zbound, Phibound)
+subroutine initialise_particles(particles, node_list, element_list, rng, variables, &
+  transform, f, Rbound, Zbound, Phibound, normalise_uniform_space_rej_vars_in)
   use mpi
   use mod_sampling
   use mod_random_seed
@@ -73,11 +73,25 @@ subroutine initialise_particles(particles, node_list, element_list, &
   integer, dimension(:), allocatable :: i_to_find
   logical, dimension(:), allocatable :: not_found
 
+  !> variables for normalisation
+  logical,intent(in),optional :: normalise_uniform_space_rej_vars_in
+  logical :: success,normalise_uniform_space_rej_vars
+  real*8, dimension(:), allocatable   :: varmin, varmax
+  real*8, dimension(:,:), allocatable :: varminmax
+  real*8 :: density_tot,density_in,density_out,pressure_tot
+  real*8 :: pressure_in,pressure_out,kin_par_tot,kin_par_in
+  real*8 :: kin_par_out,mom_par_tot,mom_par_in,mon_par_out
+
   ostart = 0.d0
   oend   = 0.d0
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
+
+  normalise_uniform_space_rej_vars = .false.
+  if(present(normalise_uniform_space_rej_vars_in)) &
+  normalise_uniform_space_rej_vars = normalise_uniform_space_rej_vars_in
+
   if (present(variables)) then
     if (.not. present(transform)) then
       write(*,*) "ERROR: if variables are present in set_particle_position_rejection_sampling transform must also be present"
@@ -87,6 +101,24 @@ subroutine initialise_particles(particles, node_list, element_list, &
     allocate(P(size(variables,1)))
     n_mhd = count(variables .gt. 0)
     n_geom = size(variables, 1) - n_mhd
+    allocate(varmin(n_var)); allocate(varmax(n_var));
+
+    !> add on for finding the minimum and maximum of the mhd
+    !> variables for normalisation
+    if(normalise_uniform_space_rej_vars) then
+      allocate(varminmax(2,n_mhd)); varminmax = 0.d0;
+      call Integrals_3D(my_id,node_list,element_list,density_tot,density_in,&
+      density_out,pressure_tot,pressure_in,pressure_out,kin_par_tot,kin_par_in,&
+      kin_par_out,mom_par_tot,mom_par_in,mon_par_out,varmin,varmax) !< compute MHD field min max
+      do i=1,n_mhd
+        varminmax(1,i) = varmin(variables(i))
+        varminmax(2,i) = varmax(variables(i))
+      enddo
+    endif
+    write(*,*) "Minimum MHD field values: ",varminmax(1,:)
+    write(*,*) "Maximum MHD field values: ",varminmax(2,:)
+    if(allocated(varmin)) deallocate(varmin)
+    if(allocated(varmax)) deallocate(varmax)
   else
     n_mhd = 0
     n_geom = 0
@@ -157,9 +189,9 @@ subroutine initialise_particles(particles, node_list, element_list, &
 #else
     !$omp parallel default(none) &
 #endif
-    !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, variables, &
+    !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, varminmax, variables, &
     !$omp          rngs, n_threads, n_streams, seed, my_id, n_mhd, n_geom, i_to_find, not_found) &
-    !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL)
+    !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL, success)
     i_thread = 0
 !$  i_thread=omp_get_thread_num()
     !$omp do schedule(static)
@@ -174,7 +206,8 @@ subroutine initialise_particles(particles, node_list, element_list, &
         if (present(variables)) then
           ! Select the mhd variables requested
           if (n_mhd .ge. 1) then
-            call interp_0(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P(n_geom:n_geom+n_mhd))
+            call interp_0(node_list,element_list,i_elm,variables(n_geom+1:n_geom+n_mhd),n_mhd,&
+            s,t,phi,P(n_geom+1:n_geom+n_mhd))
           end if
           do k=1,n_geom
             select case (variables(k))
@@ -186,7 +219,14 @@ subroutine initialise_particles(particles, node_list, element_list, &
           end do
 
           if (present(transform)) then
-            if (ran(4) .lt. transform(p)) then
+            success = .false.
+            if(normalise_uniform_space_rej_vars) then
+              success = ran(4).lt.transform(n_mhd,(P(n_geom+1:n_geom+n_mhd)-varminmax(1,:))/&
+              (varminmax(2,:)-varminmax(1,:)))
+            else
+              success = ran(4).lt.transform(P)
+            endif
+            if (success) then
               particles(j)%x = [r, z, phi]
               particles(j)%i_elm = i_elm
               particles(j)%st = [s, t]
@@ -219,6 +259,7 @@ subroutine initialise_particles(particles, node_list, element_list, &
 
   call cpu_time(t1)
 !$ oend = omp_get_wtime()
+  deallocate(varminmax)
   write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize cpu/wall :',t1-t0, oend-ostart
   if (my_id .eq. 0) then
     write(*,*) '* done initialising particles    *'
@@ -355,6 +396,8 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
         varminmax(2,i) = varmax(uniform_space_rej_vars(i))
       enddo
     endif
+    write(*,*) "Minimum MHD field values: ",varminmax(1,:)
+    write(*,*) "Maximum MHD field values: ",varminmax(2,:)
     deallocate(varmin); deallocate(varmax);
   else
     n_mhd = 0

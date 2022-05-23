@@ -37,7 +37,7 @@ call sim%initialize(num_groups=n_groups) !< open the MPI communicator
 
 !> Define the inputs ----------------------------------------------------
 ifail = 0
-n_particles = 1000000           !< number of particles per group
+n_particles = 1000              !< number of particles per group
 n_mhd_fields = 1                !< number of required mhd fields for particle init
 n_write_steps = 100             !< number of time steps between writien actions
 t_step = 1.d-13                 !< time step
@@ -91,11 +91,10 @@ do ii=1,n_groups
   !> initialising runaway positions and mass
   sim%groups(ii)%mass = mass_e
   allocate(particle_kinetic_relativistic::sim%groups(ii)%particles(n_particles))
-  call initialise_particles_H_mu_psi(sim%groups(ii)%particles,&
-  sim%fields,sobseq_rng(),sim%groups(ii)%mass,uniform_space=.true.,&
-  uniform_space_rej_f=f_accept_mhd_fields_value,&
-  uniform_space_rej_vars=mhd_field_ids,charge=int(q_e),&
-  normalise_uniform_space_rej_vars_in=.true.)
+  call initialise_particles(sim%groups(ii)%particles,sim%fields%node_list,&
+  sim%fields%element_list,sobseq_rng(),variables=mhd_field_ids,&
+  transform=transform_accept_mhd_fields_value,normalise_uniform_space_rej_vars_in=.true.)
+
   !> initialise runaway electron energy
   !$omp parallel default(private) shared(sim,sob_rngs) &
   !$omp firstprivate(ii,thread_id,q_e,p_int,cos_pitch_int,gyro_angles)
@@ -183,6 +182,20 @@ u,b,e1,e2) result(pxpypz)
            sin(pthetaphi(2))*(e1*cos(pthetaphi(3)) + &
            e2*sin(pthetaphi(3))))
 end function uniform_init_kinetic_relativistic
+
+!> acceptance rejection function for particle initialisation
+!> be aware: a quick a dirty solution has been implemented 
+!> inputs:
+!>   P: (real8)(3) normalised MHD field vector
+!> outputs:
+!>   f_accept_mhd_fields_value: (real4) value of the distribution
+pure function transform_accept_mhd_fields_value(n_mhd,P) result(f_accept)
+  implicit none
+  integer,intent(in) :: n_mhd
+  real*8,dimension(n_mhd),intent(in)   :: P
+  real*8 :: f_accept
+  f_accept = max(minval(P),0.d0);
+end function transform_accept_mhd_fields_value
 
 !> acceptance rejection function for particle initialisation
 !> be aware: a quick a dirty solution has been implemented 

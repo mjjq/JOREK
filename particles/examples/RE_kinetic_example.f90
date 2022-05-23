@@ -9,6 +9,7 @@ use mod_random_seed
 use particle_tracer
 use mod_kinetic_relativistic
 use mod_particle_diagnostics
+use mod_pusher_tools, only: get_orthonormals
 !$ use omp_lib
 implicit none
 
@@ -23,9 +24,10 @@ integer         :: n_groups,n_particles,n_mhd_fields
 integer         :: seed,thread_id,ifail
 integer,dimension(:),allocatable :: mhd_field_ids
 real*8                           :: t_step,stop_time,time,mass_e,t_target
-real*8                           :: rest_energy
-real*8,dimension(2)              :: energy_tot,pitch_angles,gyro_angles
-real*8,dimension(4)              :: rands
+real*8                           :: rest_energy,B_norm,psi,U
+real*8,dimension(2)              :: energy_kin,pitch_angles,gyro_angles
+real*8,dimension(2)              :: p_int,cos_pitch_int
+real*8,dimension(3)              :: rands,b,E,e1,e2
 real*8,dimension(:),allocatable  :: t_steps
 character(len=:),allocatable     :: jorek_filename,diag_filename
 
@@ -35,14 +37,17 @@ call sim%initialize(num_groups=n_groups) !< open the MPI communicator
 
 !> Define the inputs ----------------------------------------------------
 ifail = 0
-n_particles = 1000000     !< number of particles per group
-n_mhd_fields = 1          !< number of required mhd fields for particle init
-n_write_steps = 100       !< number of time steps between writien actions
-t_step = 1.d-13           !< time step
-stop_time = 1.d-9;        !< time at which the simulation is stop
-mass_e = 5.48579909065d-4 !< electron mass in AMU
-rest_energy = 0.51099895 !< electron rest energy in MeV/c^2
-q_e = -1                  !< electron charge
+n_particles = 1000000           !< number of particles per group
+n_mhd_fields = 1                !< number of required mhd fields for particle init
+n_write_steps = 100             !< number of time steps between writien actions
+t_step = 1.d-13                 !< time step
+stop_time = 1.d-9;              !< time at which the simulation is stop
+mass_e = 5.48579909065d-4       !< electron mass in AMU
+rest_energy = 0.51099895        !< electron rest energy in MeV/c^2
+energy_kin = (/2.d1,2.d1/)      !< kinetic energy in MeV
+pitch_angles  = (/PI-0.289,PI/) !< pitch angle in radians
+gyro_angles = (/0.d0,TWOPI/)    !< gyro angles in radians
+q_e = -1                        !< electron charge
 !> allocate time steps
 allocate(t_steps(n_groups)); t_steps = t_step;
 !> allocate and set the mhd field ids
@@ -53,6 +58,9 @@ allocate(character(len=10)::diag_filename)
 diag_filename = 'RE_diag.h5'
 
 !> Initialise the simulation --------------------------------------------
+!> compute initialisation values
+p_int = mass_e*SPEED_OF_LIGHT*sqrt((((energy_kin/rest_energy)+1)**2)-1.d0)
+cos_pitch_int = cos(pitch_angles)
 !> initialise sobolev sequence rng
 n_max_threads = 1; thread_id = 0;
 !$ n_max_threads = omp_get_max_threads()
@@ -88,7 +96,7 @@ do ii=1,n_groups
   normalise_uniform_space_rej_vars_in=.true.)
   !> initialise runaway electron energy
   !$omp parallel default(private) shared(sim,sob_rngs) &
-  !$omp firstprivate(ii,thread_id,q_e)
+  !$omp firstprivate(ii,thread_id,q_e,p_int,cos_pitch_int,gyro_angles)
   !$ thread_id = omp_get_thread_num()
   select type (particles=>sim%groups(ii)%particles)
     type is (particle_kinetic_relativistic)
@@ -96,15 +104,17 @@ do ii=1,n_groups
     do jj=1,size(particles)
       if(particles(ii)%i_elm.le.0) cycle
       call sob_rngs(thread_id)%next(rands)
+      call sim%fields%calc_EBpsiU(0.d0,particles(jj)%i_elm,particles(jj)%st,&
+      particles(jj)%x(3),E,b,psi,U)
+      B_norm = norm2(b); b = b/B_norm;
+      call get_orthonormals(b,e1,e2)
+      particles(jj)%p = uniform_init_kinetic_relativistic(p_int,cos_pitch_int,&
+      gyro_angles,rands,b,e1,e2)
+      particles(jj)%q = q_e
     enddo
     !$omp end do
   end select
   !$omp end parallel 
-enddo
-
-!> first dummy initialisation for checking if the integration loop makes sens
-do ii=1,size(sim%groups)
-
 enddo
 
 !> Integrate particle trajectory ---------------------------------------
@@ -141,6 +151,26 @@ deallocate(diag_filename); deallocate(sob_rngs);
 call sim%finalize()
 contains
 !> ----------------------------------------------------------------------
+!> initialise the energy of a relativistic particle: uniform initialisation
+!> inputs:
+!> outputs:
+function uniform_init_kinetic_relativistic(p_int,cos_theta_int,phi_int,&
+u,b,e1,e2) result(pxpypz)
+  use mod_sampling, only: sample_uniform_sphere_corona_rthetaphi
+  implicit none
+  real*8,dimension(2),intent(in) :: p_int,cos_theta_int,phi_int
+  real*8,dimension(3),intent(in) :: u,b,e1,e2
+  real*8,dimension(3)            :: pxpypz
+  real*8,dimension(3)            :: pthetaphi
+
+  !> compute unifrom sample spherical coordinates  
+  pthetaphi = sample_uniform_sphere_corona_rthetaphi(p_int,cos_theta_int,phi_int,u)
+  !> compute momentum in cartesian coordinates
+  pxpypz = pthetaphi(1)*(b*cos(pthetaphi(2)) + &
+           sin(pthetaphi(2))*(e1*cos(pthetaphi(3)) + &
+           e2*sin(pthetaphi(3))))
+end function uniform_init_kinetic_relativistic
+
 !> acceptance rejection function for particle initialisation
 !> be aware: a quick a dirty solution has been implemented 
 !> inputs:

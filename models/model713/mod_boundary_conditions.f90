@@ -190,6 +190,7 @@ contains
                     xjac      = R_s*Z_t - R_t*Z_s
 
                     if(with_TiTe)then
+
                       Ti0        = node_list%node(inode)%values(1,1,var_Ti)
                       Ti0_corr   = max(Ti0, 1.d-12)
                       Ti0_s      = node_list%node(inode)%values(1,2,var_Ti)

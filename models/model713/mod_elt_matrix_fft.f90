@@ -1678,7 +1678,7 @@ do i=1,n_vertex_max
             Qvec_k    = 0.d0 ! The rest of the RHS (toroidal part that has phi-derivatives of the test-function)
 
             !###################################################################################################
-            !#  R component induction equation                                                                 #
+            !#  R component of the induction equation
             !###################################################################################################
             Pvec_prev(var_AR) =   v * delta_g(mp,var_AR,ms,mt)
 
@@ -1692,7 +1692,7 @@ do i=1,n_vertex_max
             Qvec_k(var_AR) = - eta_ARAZ * eta_T * ( + v_p * BZ0 / R)
 
             !###################################################################################################
-            !#  Z component induction equation                                                                 #
+            !#  Z component of the induction equation
             !###################################################################################################
             Pvec_prev(var_AZ) =   v * delta_g(mp,var_AZ,ms,mt) 
 
@@ -1706,7 +1706,7 @@ do i=1,n_vertex_max
             Qvec_k(var_AZ) = - eta_ARAZ * eta_T * ( - v_p * BR0 / R)
 
             !###################################################################################################
-            !#  PHI component induction equation                                                               #
+            !#  PHI component of the induction equation
             !###################################################################################################
             Pvec_prev(var_A3) =   v * delta_g(mp,var_A3,ms,mt)
 
@@ -1719,7 +1719,7 @@ do i=1,n_vertex_max
                              + eta_num * lap_Vstar * lap_A3
 
             !###################################################################################################
-            !#  R component momentum equation                                                                  #
+            !#  R component of the momentum equation
             !###################################################################################################
             Pvec_prev(var_UR) =   v * rho0_corr * delta_g(mp,var_UR, ms,mt)
                       
@@ -1743,7 +1743,7 @@ do i=1,n_vertex_max
                                - v * (source_bg + source_imp) * UR0
             endif
             !###################################################################################################
-            !#  Z component momentum equation                                                                  #
+            !#  Z component momentum of the equation
             !###################################################################################################
             Pvec_prev(var_UZ) =   v * rho0_corr * delta_g(mp,var_UZ, ms,mt)
 
@@ -1768,7 +1768,7 @@ do i=1,n_vertex_max
             endif
 
             !###################################################################################################
-            !#  Phi component momentum equation                                                                #
+            !#  Phi component of the momentum equation
             !###################################################################################################
             Pvec_prev(var_Up) = + v * rho0_corr * BR0 * delta_g(mp,var_UR, ms,mt) &
                                 + v * rho0_corr * BZ0 * delta_g(mp,var_UZ, ms,mt) &
@@ -1803,7 +1803,7 @@ do i=1,n_vertex_max
             endif
 
             !###################################################################################################
-            !# Density equation                                                                                #
+            !# density equation
             !###################################################################################################
             Pvec_prev(var_rho) =   v * delta_g(mp,var_rho,ms,mt)
 
@@ -1820,11 +1820,11 @@ do i=1,n_vertex_max
                               - (D_par-D_prof) * BgradVstar__k * BgradRho / BB2
 
             !###################################################################################################
-            !#  temperature equations                                                                          #
+            !#  temperature equations 
             !###################################################################################################
             if(with_TiTe)then
               !###################################################################################################
-              !#  ion temperature equation                                                                       #
+              !#  ion temperature equation
               !###################################################################################################
               Pvec_prev(var_Ti) =   v * rho0_corr * delta_g(mp,var_Ti, ms,mt) &
                                   + v * Ti0_corr  * delta_g(mp,var_rho,ms,mt)
@@ -1856,7 +1856,7 @@ do i=1,n_vertex_max
                               + v * (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)
               endif
               !###################################################################################################
-              !#  electron temperature equation                                                                  #
+              !#  electron temperature equation
               !###################################################################################################
               Pvec_prev(var_Te) =   v * rho0_corr * delta_g(mp,var_Te, ms,mt) &
                                   + v * Te0_corr  * delta_g(mp,var_rho,ms,mt)
@@ -1904,7 +1904,7 @@ do i=1,n_vertex_max
 
             else
               !###################################################################################################
-              !#  single temperature equation                                                                    #
+              !#  single temperature equation 
               !###################################################################################################
               Pvec_prev(var_T) =   v * rho0_corr * delta_g(mp,var_T, ms,mt) &
                                   + v * T0_corr  * delta_g(mp,var_rho,ms,mt)
@@ -1952,7 +1952,7 @@ do i=1,n_vertex_max
             endif
 
             !###################################################################################################
-            !#  Neutrals density equation                                                                      #
+            !#  neutrals density equation
             !###################################################################################################
             if(with_neutrals)then
               Pvec_prev(var_rhon) = v * delta_g(mp,var_rhon, ms,mt)
@@ -1967,7 +1967,7 @@ do i=1,n_vertex_max
             endif
 
             !###################################################################################################
-            !#  Impurity density equation                                                                      #
+            !#  impurity density equation
             !###################################################################################################
             if(with_impurities)then
               Pvec_prev(var_rhoimp) = v * delta_g(mp,var_rhoimp,ms,mt)
@@ -2836,7 +2836,7 @@ do i=1,n_vertex_max
                   Qjac_pnn  = 0.d0
 
                   !###################################################################################################
-                  !#  R component induction equation                                                                 #
+                  !#  R component of the induction equation
                   !###################################################################################################
                   Pjac   (var_AR,var_AR) =   v * AR 
 
@@ -2899,7 +2899,7 @@ do i=1,n_vertex_max
 
                   endif
                   !###################################################################################################
-                  !#  Z component induction equation                                                                 #
+                  !#  Z component of the induction equation
                   !###################################################################################################
                   Pjac   (var_AZ,var_AZ) =   v * AZ 
 
@@ -2962,7 +2962,7 @@ do i=1,n_vertex_max
 
                   endif
                   !###################################################################################################
-                  !#  Phi component induction equation                                                               #
+                  !#  Phi component of the induction equation
                   !###################################################################################################
                   Pjac   (var_A3,var_A3) =   v * A3
 
@@ -3021,7 +3021,7 @@ do i=1,n_vertex_max
                     Qjac_n (var_A3,var_T )= + v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
                   endif
                   !###################################################################################################
-                  !#  R component momentum equation                                                                  #
+                  !#  R component of the momentum equation
                   !###################################################################################################
                   Pjac(var_UR,var_UR )    =   v * rho0_corr * UR
 
@@ -3108,7 +3108,7 @@ do i=1,n_vertex_max
                   endif
 
                   !###################################################################################################
-                  !#  Z component momentum equation                                                                  #
+                  !#  Z component of the momentum equation
                   !###################################################################################################
                   Pjac(var_UZ,var_UZ)      =   v * rho0_corr * UZ
 
@@ -3208,7 +3208,7 @@ do i=1,n_vertex_max
                   endif
 
                   !###################################################################################################
-                  !#  Phi component momentum equation                                                                #
+                  !#  Phi component of the momentum equation
                   !###################################################################################################
                   Pjac(var_Up,var_UR)    = v * BR0 * rho0_corr * UR
                   Pjac(var_Up,var_UZ)    = v * BZ0 * rho0_corr * UZ
@@ -3506,7 +3506,7 @@ do i=1,n_vertex_max
                   endif
 
                   !###################################################################################################
-                  !#  Density equation                                                                               #
+                  !#  density equation
                   !###################################################################################################
                   Pjac   (var_rho,var_rho) =   v * rho
 
@@ -3588,12 +3588,12 @@ do i=1,n_vertex_max
                   Qjac_p (var_rho,var_rhon)= + v * rho0_corr * rhon      * Sion_T
 
                   !###################################################################################################
-                  !# temperature equations                                                                           #
+                  !# temperature equations
                   !###################################################################################################
                   if(with_TiTe)then
 
                     !###################################################################################################
-                    !#  ion temperature equation                                                                       # 
+                    !#  ion temperature equation
                     !###################################################################################################
 
                     Pjac   (var_Ti,var_Ti)  =   v * rho0_corr * Ti
@@ -3731,7 +3731,7 @@ do i=1,n_vertex_max
                     endif
 
                     !###################################################################################################
-                    !#  electron temperature equation                                                                  # 
+                    !#  electron temperature equation
                     !###################################################################################################
 
                     Pjac   (var_Te,var_Te)  =   v * rho0_corr * Te
@@ -3969,7 +3969,7 @@ do i=1,n_vertex_max
                   else
 
                     !###################################################################################################
-                    !#  single temperature equation                                                                    # 
+                    !#  single temperature equation
                     !###################################################################################################
 
                     Pjac   (var_T,var_T)   =   v * rho0_corr * T
@@ -4203,7 +4203,7 @@ do i=1,n_vertex_max
                   endif
 
                   !###################################################################################################
-                  !#  Neutrals density  equation                                                                     #
+                  !#  neutrals density  equation
                   !###################################################################################################
                   if(with_neutrals)then
                     Pjac   (var_rhon,var_rhon)  = v * rhon
@@ -4227,7 +4227,7 @@ do i=1,n_vertex_max
                   endif
 
                   !###################################################################################################
-                  !#  Impurities density  equation                                                                   #
+                  !#  impurities density  equation 
                   !###################################################################################################
 
                   if(with_impurities)then

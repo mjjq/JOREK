@@ -349,7 +349,14 @@ do ms=1, n_gauss
           endif
 
           ! --- Neutrals reflection
-          Qbnd(var_rhon) = + v * neutral_reflection * rho0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
+          if ( with_neutrals ) then
+            Qbnd(var_rhon) = + v * neutral_reflection * rho0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
+          endif
+
+          ! --- impurities reflection
+          if ( with_impurities ) then
+            Qbnd(var_rhoimp) = + v * imp_reflection * rho0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
+          endif
 
           ! --- Fill in RHS
           index_ij = n_tor_local*n_var*n_degrees*(vertex(i)-1) + n_tor_local * n_var * (j2-1) + im - i_tor_min +1  ! index in the ELM matrix
@@ -535,19 +542,38 @@ do ms=1, n_gauss
                 endif
 
                 ! --- Neutrals reflection
-                Qjac(var_rhon, var_AR ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
-                                          + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / sqrt(BB2)**1.5
-                Qjac(var_rhon, var_AZ ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_AZ / sqrt(BB2) &
-                                          + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AZ / sqrt(BB2)**1.5
-                Qjac(var_rhon, var_A3 ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_A3 / sqrt(BB2) &
-                                          + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / sqrt(BB2)**1.5
-                Qjac(var_rhon, var_rho) = - v * neutral_reflection * rho  * cs_direction * c_s   * B_dot_n / sqrt(BB2)
-                if(with_TiTe)then
-                  Qjac(var_rhon, var_Ti ) = - v * neutral_reflection * rho0 * cs_direction * cs_Ti * B_dot_n / sqrt(BB2)
-                  Qjac(var_rhon, var_Te ) = - v * neutral_reflection * rho0 * cs_direction * cs_Te * B_dot_n / sqrt(BB2)
-                else
-                  Qjac(var_rhon, var_T  ) = - v * neutral_reflection * rho0 * cs_direction * cs_T * B_dot_n / sqrt(BB2)
+                if(with_neutrals)then
+                  Qjac(var_rhon, var_AR ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
+                                            + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / sqrt(BB2)**1.5
+                  Qjac(var_rhon, var_AZ ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_AZ / sqrt(BB2) &
+                                            + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AZ / sqrt(BB2)**1.5
+                  Qjac(var_rhon, var_A3 ) = - v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n_A3 / sqrt(BB2) &
+                                            + v * neutral_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / sqrt(BB2)**1.5
+                  Qjac(var_rhon, var_rho) = - v * neutral_reflection * rho  * cs_direction * c_s   * B_dot_n / sqrt(BB2)
+                  if(with_TiTe)then
+                    Qjac(var_rhon, var_Ti ) = - v * neutral_reflection * rho0 * cs_direction * cs_Ti * B_dot_n / sqrt(BB2)
+                    Qjac(var_rhon, var_Te ) = - v * neutral_reflection * rho0 * cs_direction * cs_Te * B_dot_n / sqrt(BB2)
+                  else
+                    Qjac(var_rhon, var_T  ) = - v * neutral_reflection * rho0 * cs_direction * cs_T * B_dot_n / sqrt(BB2)
+                  endif
                 endif
+                ! --- Impurities reflection
+                if(with_impurities)then
+                  Qjac(var_rhoimp, var_AR ) = - v * imp_reflection * rho0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
+                                              + v * imp_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / sqrt(BB2)**1.5
+                  Qjac(var_rhoimp, var_AZ ) = - v * imp_reflection * rho0 * cs_direction * c_s   * B_dot_n_AZ / sqrt(BB2) &
+                                              + v * imp_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AZ / sqrt(BB2)**1.5
+                  Qjac(var_rhoimp, var_A3 ) = - v * imp_reflection * rho0 * cs_direction * c_s   * B_dot_n_A3 / sqrt(BB2) &
+                                              + v * imp_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / sqrt(BB2)**1.5
+                  Qjac(var_rhoimp, var_rho) = - v * imp_reflection * rho  * cs_direction * c_s   * B_dot_n / sqrt(BB2)
+                  if(with_TiTe)then
+                    Qjac(var_rhon, var_Ti ) = - v * imp_reflection * rho0 * cs_direction * cs_Ti * B_dot_n / sqrt(BB2)
+                    Qjac(var_rhon, var_Te ) = - v * imp_reflection * rho0 * cs_direction * cs_Te * B_dot_n / sqrt(BB2)
+                  else
+                    Qjac(var_rhon, var_T  ) = - v * imp_reflection * rho0 * cs_direction * cs_T * B_dot_n / sqrt(BB2)
+                  endif
+                endif
+
                 ! --- Fill-in Matrix
                 index_kl = n_tor_local*n_var*n_degrees*(vertex(k)-1) + n_tor_local * n_var * (l2-1) + in - i_tor_min +1! index in the ELM matrix 
                 do ivar= 1,n_var

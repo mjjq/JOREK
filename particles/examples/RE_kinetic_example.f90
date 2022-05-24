@@ -17,6 +17,7 @@ implicit none
 type(sobseq_rng),dimension(:),allocatable  :: sob_rngs !< sobolev seq. rng
 type(event)                                :: field_reader
 type(write_particle_diagnostics)           :: diag
+logical         :: diag_append
 integer(kind=1) :: q_e
 integer         :: ii,jj,kk
 integer         :: n_steps,n_write_steps,n_max_threads
@@ -38,6 +39,7 @@ call sim%initialize(num_groups=n_groups) !< open the MPI communicator
 
 !> Define the inputs ----------------------------------------------------
 ifail = 0
+diag_append = .true.             !< append diagnostic values
 writename_decimal_digits    = 5  !< number of decimal digits of the restart file filename
 writename_fractional_digits = 13 !< number of fractional digits of the restart file filename
 n_particles = 1000               !< number of particles per group
@@ -79,7 +81,7 @@ field_reader = event(read_jorek_fields_interp_linear(&
 basename=trim(jorek_filename),i=-1)) !< read the jorek fields
 call with(sim,field_reader)
 !> write diagnostics
-diag = write_particle_diagnostics(filename=trim(diag_filename))
+diag = write_particle_diagnostics(filename=trim(diag_filename),append=diag_append)
 !> set the events
 sim%time = start_time
 events = [event(write_action(decimal_digits=writename_decimal_digits,&

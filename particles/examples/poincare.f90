@@ -337,10 +337,20 @@ do while(finished .lt. nprt)
 
    select type (p => sim%groups(1)%particles)
    type is (particle_gc_relativistic)
+
+#ifdef __GFORTRAN__
+      !$omp parallel do default(shared) & !To avoid GNU compiler failure
+#else
       !$omp parallel do default(none) &
-      !$omp shared(sim, p, tstep, norb, ndata, mileage) &
-      !$omp shared(raxis, zaxis, ncross, nprt, finished, rvals, zvals, phivals, nextslot, pncrid) &
-      !$omp private(iprt, ifail, zprev, phiprev)
+#endif
+#ifdef __GFORTRAN__
+      !$omp shared(sim, tstep, norb, ndata, mileage) & !To avoid GNU compiler failure
+#else
+      !$omp shared(sim, tstep, norb, ndata, mileage, p) &
+#endif
+      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
+      !$omp private(iprt, ifail, zprev, phiprev) &
+      !$omp reduction(+:finished)
       do iprt=1,nprt
          if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
             zprev   = p(iprt)%x(2)
@@ -351,7 +361,6 @@ do while(finished .lt. nprt)
                  nextslot, ncross, rvals, zvals, phivals, pncrid)
             mileage(iprt) = mileage(iprt) + tstep
          else
-            !$omp atomic
             finished = finished + 1
          end if
 
@@ -359,10 +368,20 @@ do while(finished .lt. nprt)
       !$omp end parallel do
       
    type is (particle_fieldline)
+      
+#ifdef __GFORTRAN__
+      !$omp parallel do default(shared) & ! To avoid GNU compiler failure
+#else
       !$omp parallel do default(none) &
-      !$omp shared(sim, p, tstep, norb, ndata, mileage) &
-      !$omp shared(raxis, zaxis, ncross, nprt, finished, rvals, zvals, phivals, nextslot, pncrid) &
-      !$omp private(iprt, ifail, zprev, phiprev)
+#endif
+#ifdef __GFORTRAN__
+      !$omp shared(sim, tstep, norb, ndata, mileage) &
+#else
+      !$omp shared(sim, tstep, norb, ndata, mileage, p) & ! To avoid GNU compiler failure
+#endif
+      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
+      !$omp private(iprt, ifail, zprev, phiprev) &
+      !$omp reduction(+:finished)
       do iprt=1,nprt
          if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
             zprev   = p(iprt)%x(2)
@@ -372,7 +391,6 @@ do while(finished .lt. nprt)
                  nextslot, ncross, rvals, zvals, phivals, pncrid)
             mileage(iprt) = mileage(iprt) + tstep
          else
-            !$omp atomic
             finished = finished + 1
          end if
 

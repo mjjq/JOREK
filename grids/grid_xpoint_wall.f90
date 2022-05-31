@@ -16,6 +16,7 @@ use mod_neighbours, only: update_neighbours
 use mod_interp
 use mod_grid_conversions
 use mod_poiss
+use mod_node_indices
 
 implicit none
 
@@ -73,6 +74,7 @@ character*4         :: label
 integer             :: i_elm1, i_vertex1, i_node1, i_node_save, iv1, iv2, iv3, iv4
 integer             :: i_elm2, i_vertex2, i_node2
 integer             :: n_remove_elements, n_remove_nodes, remove_elements(100), remove_nodes(100), newnode_index(n_nodes_max), skip_index
+integer             :: node_indices( (n_order+1)/2, (n_order+1)/2 )
 
 xpoint = .true.
 extend = .true.;   if (n_ext .lt. 1) extend = .false.
@@ -1763,6 +1765,9 @@ call plot_flux_surfaces(node_list,element_list,flux_list,.true.,1,xpoint,xcase)
 !***********************************************************************
 !*             fill in the values into the new grid                    *
 !***********************************************************************
+
+! --- calculate node_indices
+call calculate_node_indices(node_indices)
 
 index = 0
 do i=1,newnode_list%n_nodes

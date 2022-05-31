@@ -4996,13 +4996,13 @@ subroutine construct_thermalization_terms()
       dTe_i         = 0.
       ddTe_i_dTi    = 0.
       ddTe_i_dTe    = 0.
-      ddTe_i_drhon  = 0.
+      ddTe_i_drhoimp  = 0.
       ddTe_i_drho   = 0.
     end if
     dTi_e    = -dTe_i
     ddTi_e_dTi      = -ddTe_i_dTi
     ddTi_e_dTe      = -ddTe_i_dTe
-    ddTi_e_drhon    = -ddTe_i_drhon
+    ddTi_e_drhoimp  = -ddTe_i_drhoimp
     ddTi_e_drho     = -ddTe_i_drho
   else
      Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)

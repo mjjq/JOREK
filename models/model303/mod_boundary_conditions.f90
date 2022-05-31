@@ -81,7 +81,7 @@ integer(kind=int_all), allocatable, intent(inout) :: jcn(:)
 ! Internal parameters
 real*8  :: zbig, zbig_backup,  T0, Vpar0, bigR
 real*8  :: R_s, R_t, Z, Z_s, Z_t, R_tt, Z_tt, ps0, ps0_s, ps0_t, ps0_tt, ps0_x, ps0_y, direction, xjac
-real*8  :: ps0_b, T0_b, u0_b, Vpar0_b, T0_bb, u0_bb, R_b, Z_b, R_bb, Z_bb, ps0_bb, grad_b(2)
+real*8  :: ps0_b, T0_b, u0_b, Vpar0_b, Vpar0_bb, T0_bb, u0_bb, R_b, Z_b, R_bb, Z_bb, ps0_bb, grad_b(2)
 real*8  :: Btot, grad_psi, u0_s, u0_t, u0_x, u0_y
 real*8  :: element_size_s, element_size_t, element_size_0, element_size_3
 real*8  :: H1(2,n_degrees_1d), H1_s(2,n_degrees_1d), H1_ss(2,n_degrees_1d)

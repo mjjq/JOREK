@@ -1,14 +1,208 @@
-!> Transport coefficient evaluation
+!< Program for creating Poincare plots using the particle tracer.
+!<
+!< Usage:
+!< ./poincare < input_namelist
+!<
+!< This tool uses either the field line or relativistic guiding center (RK4 in both cases) pushers to create Poincare plots.
+!< Simulation settings are given in a file named "pncr" and it should have the following format:
+!<
+!< # N_tracers
+!< 100
+!< # n_turns
+!< 200
+!< # tstep in [s] for particles and [m] for field lines
+!< 1.0e-8
+!< # mass [AMU] (use 0.0 to trace field lines)
+!< 0.00054
+!< # charge [e]
+!< -1
+!< # pitch
+!< 0.99
+!< # energy [eV]
+!< 1.0e3
+!<
+!< The Poincare data is collected using jorek_restart.h5 as the field input.
+!<
+program poincare
 
-module poincare_helpers
-  use constants
-  use particle_tracer
-  use mod_particle_io
-  use mod_particle_diagnostics
-  use mod_gc_relativistic
-  use hdf5_io_module
-  
-  implicit none
+use particle_tracer
+use mod_particle_io
+use mod_event
+use mod_fields_linear
+use mod_fieldline_euler
+use mod_gc_relativistic
+use hdf5_io_module
+
+implicit none
+
+character(len=40) :: fnout !< File where the output is written
+
+real*8, dimension(:,:), allocatable    :: rvals, zvals, phivals !< Coordinate arrays (nprt,norb).
+integer*4, dimension(:,:), allocatable :: pncrid   !< Flag indicating which plane was crossed (nprt,norb).
+integer*4, dimension(:), allocatable   :: nextslot !< Next free slot in coordinate arrays.
+integer*4, dimension(:), allocatable   :: ncross   !< Number of poloidal turns
+real*8, dimension(:), allocatable      :: mileage  !< How far marker has travelled in secons (in meters for field line)
+
+type(event)       :: fieldreader
+class(*), pointer :: p
+real*8    :: tstep
+integer*4 :: norb, ndata, nprt, finished
+integer*4 :: ifail, iprt
+real*8    :: zprev, phiprev, raxis, zaxis
+real*8    :: taxis, saxis, psiaxis, ielmaxis
+real*8    :: mass, pitch, energy
+integer*4 :: charge
+character(len=512) :: s
+
+! For CPU time
+real*8 :: t0, t1
+
+! Simulation options
+open(21, file='pncr', status='old', action='read', iostat=ifail)
+
+if ( ifail == 0 ) then ! pncr file exists, use it.
+   read(21, '(a)') s ! read comment line (ignored)
+   read(21,*) nprt
+   read(21, '(a)') s
+   read(21,*) norb
+   read(21, '(a)') s
+   read(21,*) tstep
+   read(21, '(a)') s
+   read(21,*) mass
+   read(21, '(a)') s
+   read(21,*) charge
+   read(21, '(a)') s
+   read(21,*) pitch
+   read(21, '(a)') s
+   read(21,*) energy
+   energy = energy + mass * ATOMIC_MASS_UNIT * SPEED_OF_LIGHT**2 / EL_CHG
+
+   close(21)
+else
+   write(*,*) "ERROR, could not locate pncr file"
+   stop
+end if
+
+ndata      = 2*norb*10     !< Maximum number of data points to be stored
+fnout      = "poincare.h5" !< Output file
+
+call random_seed()
+call sim%initialize(num_groups=1)
+
+if( mass .eq. 0) then
+   allocate(particle_fieldline::sim%groups(1)%particles(nprt))
+else
+   allocate(particle_gc_relativistic::sim%groups(1)%particles(nprt))
+end if
+
+! Allocate and initialize needed data arrays
+allocate ( rvals(nprt,ndata), zvals(nprt,ndata), phivals(nprt,ndata), pncrid(nprt,ndata) )
+allocate ( nextslot(nprt), ncross(nprt), mileage(nprt) )
+
+call cpu_time(t0)
+
+! Begin simulation at new time slice by initializing the field at that point
+sim%time = 0
+fieldreader = event(read_jorek_fields_interp_linear(i=-1))
+call with(sim,fieldreader)
+
+! Find the location of the magnetic axis and initialize new markers
+call find_axis(sim%my_id, sim%fields%node_list, sim%fields%element_list, &
+     psiaxis, raxis, zaxis, ielmaxis, saxis, taxis, ifail)
+call init_markers(sim, nprt, raxis, zaxis, mass, charge, pitch, energy)
+write(*,*) "Markers initialized. Begin simulation."
+
+! Init data arrays
+rvals    = 0
+zvals    = 0
+phivals  = 0
+pncrid   = 0
+nextslot = 0
+ncross   = 0
+mileage  = 0
+
+finished = 0
+do while(finished .lt. nprt)
+
+   finished = 0
+
+   select type (p => sim%groups(1)%particles)
+   type is (particle_gc_relativistic)
+
+#ifdef __GFORTRAN__
+      !$omp parallel do default(shared) & !To avoid GNU compiler failure
+#else
+      !$omp parallel do default(none) &
+#endif
+#ifdef __GFORTRAN__
+      !$omp shared(sim, tstep, norb, ndata, mileage) & !To avoid GNU compiler failure
+#else
+      !$omp shared(sim, tstep, norb, ndata, mileage, p) &
+#endif
+      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
+      !$omp private(iprt, ifail, zprev, phiprev) &
+      !$omp reduction(+:finished)
+      do iprt=1,nprt
+         if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
+            zprev   = p(iprt)%x(2)
+            phiprev = p(iprt)%x(3)
+            call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time, tstep, &
+                 sim%groups(1)%mass, p(iprt))
+            call check_and_store_crossing(iprt, p(iprt)%i_elm, p(iprt)%x, phiprev, zprev, raxis, zaxis, ndata, &
+                 nextslot, ncross, rvals, zvals, phivals, pncrid)
+            mileage(iprt) = mileage(iprt) + tstep
+         else
+            finished = finished + 1
+         end if
+
+      end do
+      !$omp end parallel do
+      
+   type is (particle_fieldline)
+      
+#ifdef __GFORTRAN__
+      !$omp parallel do default(shared) & ! To avoid GNU compiler failure
+#else
+      !$omp parallel do default(none) &
+#endif
+#ifdef __GFORTRAN__
+      !$omp shared(sim, tstep, norb, ndata, mileage) &
+#else
+      !$omp shared(sim, tstep, norb, ndata, mileage, p) & ! To avoid GNU compiler failure
+#endif
+      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
+      !$omp private(iprt, ifail, zprev, phiprev) &
+      !$omp reduction(+:finished)
+      do iprt=1,nprt
+         if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
+            zprev   = p(iprt)%x(2)
+            phiprev = p(iprt)%x(3)
+            call field_line_runge_kutta_fixed_dt_push_jorek(sim%fields, p(iprt), sim%time, tstep)
+            call check_and_store_crossing(iprt, p(iprt)%i_elm, p(iprt)%x, phiprev, zprev, raxis, zaxis, ndata, &
+                 nextslot, ncross, rvals, zvals, phivals, pncrid)
+            mileage(iprt) = mileage(iprt) + tstep
+         else
+            finished = finished + 1
+         end if
+
+      end do
+      !$omp end parallel do
+
+   end select
+
+end do
+
+call cpu_time(t1)
+write(*,*) 'CPU time: ', t1-t0
+
+! Store data
+call write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
+
+! Finalize the simulation
+deallocate ( rvals, zvals, phivals, pncrid, nextslot, ncross, mileage )
+call sim%finalize
+
+
 contains
 
 !< Initialize markers at the outer mid plane
@@ -228,187 +422,5 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
 
 end subroutine write_poincare_hdf5
 
-
-end module poincare_helpers
-
-
-
-program poincare
-
-use particle_tracer
-use mod_particle_io
-use mod_event
-use mod_fields_linear
-use mod_fieldline_euler
-use poincare_helpers
-
-implicit none
-
-character(len=40) :: fnout !< File where the output is written
-
-real*8, dimension(:,:), allocatable    :: rvals, zvals, phivals !< Coordinate arrays (nprt,norb).
-integer*4, dimension(:,:), allocatable :: pncrid   !< Flag indicating which plane was crossed (nprt,norb).
-integer*4, dimension(:), allocatable   :: nextslot !< Next free slot in coordinate arrays.
-integer*4, dimension(:), allocatable   :: ncross   !< Number of poloidal turns
-real*8, dimension(:), allocatable      :: mileage  !< How far marker has travelled in secons (in meters for field line)
-
-type(event)       :: fieldreader
-class(*), pointer :: p
-real*8    :: tstep
-integer*4 :: norb, ndata, nprt, finished
-integer*4 :: ifail, iprt
-real*8    :: zprev, phiprev, raxis, zaxis
-real*8    :: taxis, saxis, psiaxis, ielmaxis
-real*8    :: mass, pitch, energy
-integer*4 :: charge
-character(len=512) :: s
-
-! For CPU time
-real*8 :: t0, t1
-
-! Simulation options
-open(21, file='pncr', status='old', action='read', iostat=ifail)
-
-if ( ifail == 0 ) then ! pncr file exists, use it.
-   read(21, '(a)') s ! read comment line (ignored)
-   read(21,*) nprt
-   read(21, '(a)') s
-   read(21,*) norb
-   read(21, '(a)') s
-   read(21,*) tstep
-   read(21, '(a)') s
-   read(21,*) mass
-   read(21, '(a)') s
-   read(21,*) charge
-   read(21, '(a)') s
-   read(21,*) pitch
-   read(21, '(a)') s
-   read(21,*) energy
-   energy = energy + mass * ATOMIC_MASS_UNIT * SPEED_OF_LIGHT**2 / EL_CHG
-
-   close(21)
-else
-   write(*,*) "ERROR, could not locate pncr file"
-   stop
-end if
-
-ndata      = 2*norb*10     !< Maximum number of data points to be stored
-fnout      = "poincare.h5" !< Output file
-
-call random_seed()
-call sim%initialize(num_groups=1)
-
-if( mass .eq. 0) then
-   allocate(particle_fieldline::sim%groups(1)%particles(nprt))
-else
-   allocate(particle_gc_relativistic::sim%groups(1)%particles(nprt))
-end if
-
-! Allocate and initialize needed data arrays
-allocate ( rvals(nprt,ndata), zvals(nprt,ndata), phivals(nprt,ndata), pncrid(nprt,ndata) )
-allocate ( nextslot(nprt), ncross(nprt), mileage(nprt) )
-
-call cpu_time(t0)
-
-! Begin simulation at new time slice by initializing the field at that point
-sim%time = 0
-fieldreader = event(read_jorek_fields_interp_linear(i=-1))
-call with(sim,fieldreader)
-
-! Find the location of the magnetic axis and initialize new markers
-call find_axis(sim%my_id, sim%fields%node_list, sim%fields%element_list, &
-     psiaxis, raxis, zaxis, ielmaxis, saxis, taxis, ifail)
-call init_markers(sim, nprt, raxis, zaxis, mass, charge, pitch, energy)
-write(*,*) "Markers initialized. Begin simulation."
-
-! Init data arrays
-rvals    = 0
-zvals    = 0
-phivals  = 0
-pncrid   = 0
-nextslot = 0
-ncross   = 0
-mileage  = 0
-
-finished = 0
-do while(finished .lt. nprt)
-
-   finished = 0
-
-   select type (p => sim%groups(1)%particles)
-   type is (particle_gc_relativistic)
-
-#ifdef __GFORTRAN__
-      !$omp parallel do default(shared) & !To avoid GNU compiler failure
-#else
-      !$omp parallel do default(none) &
-#endif
-#ifdef __GFORTRAN__
-      !$omp shared(sim, tstep, norb, ndata, mileage) & !To avoid GNU compiler failure
-#else
-      !$omp shared(sim, tstep, norb, ndata, mileage, p) &
-#endif
-      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
-      !$omp private(iprt, ifail, zprev, phiprev) &
-      !$omp reduction(+:finished)
-      do iprt=1,nprt
-         if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
-            zprev   = p(iprt)%x(2)
-            phiprev = p(iprt)%x(3)
-            call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time, tstep, &
-                 sim%groups(1)%mass, p(iprt))
-            call check_and_store_crossing(iprt, p(iprt)%i_elm, p(iprt)%x, phiprev, zprev, raxis, zaxis, ndata, &
-                 nextslot, ncross, rvals, zvals, phivals, pncrid)
-            mileage(iprt) = mileage(iprt) + tstep
-         else
-            finished = finished + 1
-         end if
-
-      end do
-      !$omp end parallel do
-      
-   type is (particle_fieldline)
-      
-#ifdef __GFORTRAN__
-      !$omp parallel do default(shared) & ! To avoid GNU compiler failure
-#else
-      !$omp parallel do default(none) &
-#endif
-#ifdef __GFORTRAN__
-      !$omp shared(sim, tstep, norb, ndata, mileage) &
-#else
-      !$omp shared(sim, tstep, norb, ndata, mileage, p) & ! To avoid GNU compiler failure
-#endif
-      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
-      !$omp private(iprt, ifail, zprev, phiprev) &
-      !$omp reduction(+:finished)
-      do iprt=1,nprt
-         if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
-            zprev   = p(iprt)%x(2)
-            phiprev = p(iprt)%x(3)
-            call field_line_runge_kutta_fixed_dt_push_jorek(sim%fields, p(iprt), sim%time, tstep)
-            call check_and_store_crossing(iprt, p(iprt)%i_elm, p(iprt)%x, phiprev, zprev, raxis, zaxis, ndata, &
-                 nextslot, ncross, rvals, zvals, phivals, pncrid)
-            mileage(iprt) = mileage(iprt) + tstep
-         else
-            finished = finished + 1
-         end if
-
-      end do
-      !$omp end parallel do
-
-   end select
-
-end do
-
-call cpu_time(t1)
-write(*,*) 'CPU time: ', t1-t0
-
-! Store data
-call write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
-
-! Finalize the simulation
-deallocate ( rvals, zvals, phivals, pncrid, nextslot, ncross, mileage )
-call sim%finalize
 
 end program poincare

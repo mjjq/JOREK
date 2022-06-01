@@ -44,6 +44,7 @@ subroutine preset_parameters
 
   visco = 1.d-5
   visco_par = 1.d-5
+  visco_par_heating = 0.d0
   
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)
@@ -503,6 +504,7 @@ subroutine preset_parameters
   index_start = 0
 
   nout = 9999999
+  nout_projection = -1
 
   rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
 
@@ -540,7 +542,13 @@ subroutine preset_parameters
   
   export_for_nemec   = .false.
   
-  gmres              = .true.               ! Use iterative solver
+  ! Use iterative solver by default if n_tor>1.
+  if ( n_tor == 1) then
+    gmres            = .false.
+  else
+    gmres            = .true.
+  end if
+  
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
   gmres_tol          = 1.d-8                ! converge tolerance GMRES
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
@@ -780,5 +788,6 @@ use_pcs_full       = .false.
 use_ionisation     = .true.
 use_sputtering     = .false.
 use_cx             = .true.
+use_marker         = .false.
 
 end subroutine preset_parameters

@@ -270,12 +270,11 @@ module phys_module
   real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num
-             D_perp_num,                                                          &
-             D_perp_num_tanh, D_perp_num_tanh_psin, D_perp_num_tanh_sig,          &
-             ZK_perp_num, ZK_i_perp_num, ZK_e_perp_num,                           &
-             ZK_perp_num_tanh, ZK_perp_num_tanh_psin, ZK_perp_num_tanh_sig,       &
-             ZK_i_perp_num_tanh, ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig, &
+  real*8  :: eta_num, visco_num, visco_par_num,                                      &
+             D_perp_num, D_perp_num_tanh, D_perp_num_tanh_psin, D_perp_num_tanh_sig, &
+             ZK_perp_num, ZK_i_perp_num, ZK_e_perp_num,                              &
+             ZK_perp_num_tanh, ZK_perp_num_tanh_psin, ZK_perp_num_tanh_sig,          &
+             ZK_i_perp_num_tanh, ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig,    &
              ZK_e_perp_num_tanh, ZK_e_perp_num_tanh_psin, ZK_e_perp_num_tanh_sig
   real*8  :: Dn_perp_num
 

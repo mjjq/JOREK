@@ -88,7 +88,8 @@ program JOREK2
   use mod_impurity, only: init_imp_adas
 #ifdef USE_BICGSTAB
   use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
-#endif  
+#endif
+  use mod_sparse
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -180,6 +181,8 @@ program JOREK2
 
   logical :: input_treat_axis
   
+  type(type_SP_MATRIX) :: a_mat
+  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -244,7 +247,7 @@ mpi_required = 0
 #ifdef USE_STRUMPACK  
   spss_initialized = .false.
   spss_analyzed    = .false.
-#endif  
+#endif
   
   ! --- Preset input parameters to reasonable defaults, then read the input file.
   call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
@@ -740,8 +743,7 @@ mpi_required = 0
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
          n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
-         irn_jcn, harmonic_matrix=.false.)
-
+         irn_jcn, a_mat, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
@@ -750,20 +752,8 @@ mpi_required = 0
     endif     
 
     if (.not. gmres) then
-
-      if (use_mumps) then
-#ifdef USE_MUMPS
-        call solve_mumps_all(my_id)
-#endif
-      elseif (use_strumpack) then
-#ifdef USE_STRUMPACK
-        call solve_strumpack_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
-#endif
-      elseif (use_pastix) then
-#if defined(USE_PASTIX) || defined(USE_PASTIX6)     
-         call solve_pastix_all(n_cpu,my_id,index_min(my_id+1),index_max(my_id+1))
-#endif
-      endif
+  
+      call solve_sparse_system(a_mat, solve_type=MHD_DIRECT)
 
     else
 

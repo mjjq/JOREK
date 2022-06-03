@@ -10,18 +10,11 @@ module mod_bicgstab
   use mpi
   use mumps_module, only: mumps_par
   use phys_module, only: use_pastix, use_mumps, use_strumpack
+  use data_structure, only: type_PC_MATRIX
 
   implicit none
 
-  type SPARSE_MATRIX_T
-    integer(kind=C_INT), pointer :: irn(:), jcn(:)
-    real(kind=C_DOUBLE), pointer :: val(:)
-    integer                      :: indexing
-    integer(kind=C_INT)          :: n
-    integer(kind=C_INT)          :: nnz
-  end type SPARSE_MATRIX_T
-
-  type(SPARSE_MATRIX_T)          :: cooA
+  type(type_PC_MATRIX) :: cooA
 
   ! MPI related
   integer                        :: my_id, my_id_n, n_cpu

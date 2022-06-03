@@ -2,9 +2,10 @@
 !! and flux surface elements, as well as the shattered pellets
 module data_structure
   use mod_parameters
+  use mod_integer_types
   use tr_module
   use gauss
-  use ISO_C_BINDING, ONLY : C_INT
+  use ISO_C_BINDING, ONLY : C_INT, C_DOUBLE
 
   implicit none
 
@@ -140,6 +141,28 @@ module data_structure
     real*8  :: spi_grad_psi_drift    !< Value of grad(Psi)=sqrt(PSI_R * PSI_R + PSI_Z * PSI_Z) at the post-drift deposition position
 
   end type type_SPI
+  
+  !> Preconditioner matrix type
+  type type_PC_MATRIX
+    integer(kind=C_INT_ALL), pointer :: irn(:), jcn(:)
+    real(kind=C_DOUBLE), pointer     :: val(:)
+    integer                          :: indexing = 1
+    integer(kind=C_INT_ALL)          :: n
+    integer(kind=C_INT_ALL)          :: nnz
+  end type type_PC_MATRIX
+  
+  !> Global sparse matrix type
+  type type_SP_MATRIX
+    integer(kind=int_all), pointer :: irn(:), jcn(:)
+    real(kind=8), pointer          :: val(:)
+    integer                        :: indexing = 1
+    integer(kind=int_all)          :: n
+    integer(kind=int_all)          :: nnz
+    integer(kind=int_all)          :: index_min
+    integer(kind=int_all)          :: index_max
+    integer                        :: n_matrix_block_size
+    integer                        :: comm                 !< communicator over which matrix is distributed
+  end type type_SP_MATRIX    
  
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()

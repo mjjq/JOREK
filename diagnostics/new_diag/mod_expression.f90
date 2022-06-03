@@ -148,9 +148,9 @@ module mod_expression
     call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
     call add(exprs_all, 'eta_T       ', 'Resistivity                                           ')
-    call add(exprs_all, 'eta_num_T   ', 'Hyperresistivity                                      ')
+    call add(exprs_all, 'eta_num_T   ', 'Hyper-resistivity                                     ')
     call add(exprs_all, 'visco_T     ', 'Viscosity                                             ')
-    call add(exprs_all, 'visco_num_T ', 'Hyperviscosity                                        ')
+    call add(exprs_all, 'visco_num_T ', 'Hyper-viscosity                                       ')
     call add(exprs_all, 'zkpar_T     ', 'Parallel Heat Diffusivity                             ')
     call add(exprs_all, 'zkipar_T    ', 'Parallel Ion Heat Diffusivity                         ')
     call add(exprs_all, 'zkepar_T    ', 'Parallel ElectronHeat Diffusivity                     ')
@@ -1311,7 +1311,6 @@ module mod_expression
             visco_T   = visco
             dvisco_dT = 0.d0
           end if
-	  
         
           ! --- Hyper-resistivity
           if ( eta_num_psin_dependent ) then
@@ -1331,7 +1330,6 @@ module mod_expression
           else
             eta_num_T     = eta_num
           end if
-
           
           ! --- Temperature dependent hyper-viscosity
           if ( visco_num_T_dependent ) then
@@ -1349,9 +1347,6 @@ module mod_expression
           else
             visco_num_T     = visco_num
           end if
- 
-
- 
           
           if ( with_TiTe ) then ! (with_TiTe) ******************************************************
             if ( ZKpar_T_dependent ) then

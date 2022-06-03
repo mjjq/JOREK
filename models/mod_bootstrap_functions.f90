@@ -588,7 +588,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
   real*8                   :: rad(n_spline), Bmax(n_spline)
   integer                  :: i, k, ig, i_surf, i_piece, n_psi, i_elm, i_ft
   real*8                   :: psi_bnd, psi_bnd2
-  real*8                   :: sigmas(16)
+  real*8                   :: sigmas(17)
   integer                  :: n_grids(12)
   real*8                   :: rr, s, t, ds, dt, xjac, dl, sum_dl
   real*8                   :: R,  dR_ds,  dR_dt, dR_dl

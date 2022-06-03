@@ -121,11 +121,7 @@ else ! xcase == DOUBLE_NULL
     
     call tr_allocate(s_tmp,1,n_tht_mid,"s_tmp",CAT_GRID)
     s_tmp = 0
-    if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
-      call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
-    else
-      call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta_up,bgf_tht,1.0d0)
-    endif
+    call meshac2(n_tht_mid,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta_up,bgf_tht,1.0d0)
 
     do j=1,n_tht_mid
       theta_sep(j) = (tht_x1-2.d0*PI) + (tht_x2-(tht_x1-2.d0*PI)) * s_tmp(j)
@@ -137,11 +133,7 @@ else ! xcase == DOUBLE_NULL
     n_tht_mid2 = n_tht-n_tht_mid
     call tr_allocate(s_tmp,1,n_tht_mid2,"s_tmp",CAT_GRID)
     s_tmp = 0
-    if (ES%active_xpoint .eq. SYMMETRIC_XPOINT) then
-      call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta,SIG_theta,bgf_tht,1.0d0)
-    else
-      call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta_up,SIG_theta,bgf_tht,1.0d0)
-    endif
+    call meshac2(n_tht_mid2,s_tmp,0.d0,1.d0,SIG_theta_up,SIG_theta,bgf_tht,1.0d0)
 
     do j=n_tht_mid+1,n_tht
       theta_sep(j) = tht_x2 + (tht_x1-tht_x2) * s_tmp(j-n_tht_mid)

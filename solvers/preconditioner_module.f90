@@ -2,8 +2,11 @@ module preconditioner_module
   use phys_module, only: modes_per_family, mode_families_modes, autodistribute_modes, n_mode_families, weights_per_family, &
                          autodistribute_ranks, ranks_per_family, centralize_harm_mat, use_strumpack
   use mod_integer_types
+  use data_structure, only: type_PRECOND
 
   implicit none
+
+
 
   integer :: my_family_id
   integer, dimension(:), allocatable :: my_mode_set !< Mode number in local mode family used for preconditioner
@@ -20,13 +23,23 @@ module preconditioner_module
 
   contains
 
+  subroutine initialize_preconditioner(pc)
+    implicit none
+    type(type_PRECOND) :: pc
+    integer :: glob
+
+    call create_communicators_core(pc,glob)
+
+  end subroutine initialize_preconditioner
+
   !> Distribute MPI ranks among mode families
   !! i_tor(n_cpu) provides family ID for each rank within MPI_COMM_WORLD
-  subroutine distribute_ranks(n_cpu,i_tor)
+  subroutine distribute_ranks(n_cpu,i_tor,mode_families_ranks)
 
     implicit none
 
-    integer, intent(in) :: n_cpu
+    integer, allocatable, target :: mode_families_ranks(:,:)
+    integer, intent(in)  :: n_cpu
     integer, intent(out) :: i_tor(n_cpu)
     integer :: mcpu, r, i, j
 
@@ -83,6 +96,73 @@ module preconditioner_module
 
   end subroutine distribute_ranks
 
+
+  !> Distribute MPI ranks among mode families
+  !! i_tor(n_cpu) provides family ID for each rank within MPI_COMM_WORLD
+  subroutine distribute_ranks_core(n_cpu,pc)
+
+    implicit none
+
+    type(type_PRECOND) :: pc
+    integer, intent(in)  :: n_cpu
+    integer :: mcpu, r, i, j
+
+    allocate(pc%rank_range(pc%n_mode_families + 1))
+    allocate(pc%rank_id(n_cpu))
+    allocate(pc%ranks_per_family(pc%n_mode_families))
+    allocate(pc%mode_families_ranks(pc%n_mode_families,n_cpu))
+    do i = 1, pc%n_mode_families
+      do j = 1, n_cpu
+        pc%mode_families_ranks(i,j) = -1
+      enddo
+    enddo
+
+    mcpu = n_cpu/pc%n_mode_families
+    r = mod(n_cpu,pc%n_mode_families)
+
+    if (pc%autodistribute_ranks) then
+      do i=1, pc%n_mode_families
+        pc%ranks_per_family(i) = mcpu
+        if ((r.gt.0).and.(i.le.r))  pc%ranks_per_family(i) = pc%ranks_per_family(i) + 1 ! add extra rank if avaiable
+      enddo
+    endif
+
+    pc%rank_range(1) = 1
+    do i = 2, pc%n_mode_families+1
+      pc%rank_range(i) = pc%rank_range(i-1) + pc%ranks_per_family(i-1)
+    enddo
+
+    ! check for consistency
+    r = 0
+    do i= 2, pc%n_mode_families + 1
+      r = r + pc%rank_range(i) - pc%rank_range(i-1)
+    enddo
+    if (r.ne.n_cpu) then
+      write(*,*) "Error in distribution of ranks"
+      call exit(0)
+    endif
+
+    do i = 1, n_cpu
+      do j = 2, pc%n_mode_families + 1
+        if ((i.ge.pc%rank_range(j-1)).and.(i.lt.pc%rank_range(j))) then
+          pc%rank_id(i) = j - 1
+          exit
+        endif
+      enddo
+    enddo
+
+    do j=1,pc%n_mode_families
+      r = 0
+      do i = 1, n_cpu
+        if (pc%rank_id(i).eq.j) then
+          r = r + 1
+          pc%mode_families_ranks(j,r) = i - 1
+        endif
+      enddo
+    enddo
+
+  end subroutine distribute_ranks_core
+
   !> Distribute toroidal modes among mode families
   subroutine distribute_modes
 
@@ -109,7 +189,7 @@ module preconditioner_module
     my_mode_set(1:my_mode_set_n) = mode_families_modes(my_family_id,1:my_mode_set_n)
 
     write(*,*) "my_family_id:", my_family_id, "my_mode_set:", my_mode_set
- 
+
   end subroutine distribute_modes
 
   !> Set up MPI communicators for mode families and corresponding masters
@@ -133,7 +213,7 @@ module preconditioner_module
     endif
 
     allocate(i_tor(n_cpu))
-    call distribute_ranks(n_cpu,i_tor)
+    call distribute_ranks(n_cpu,i_tor,mode_families_ranks)
     if (my_id.eq.0) write(*,*) "ranks_per_family", ranks_per_family(1:n_mode_families)
 
     my_family_id = i_tor(my_id+1)
@@ -270,16 +350,77 @@ module preconditioner_module
 
 #ifndef USE_PASTIX6
     if ((.not.use_strumpack).and.(.not.centralize_harm_mat)) then
-      if (my_id.eq.0) write(*,*) "Warning: PC matrix distribution is only supported by STRUMPACK"      
+      if (my_id.eq.0) write(*,*) "Warning: PC matrix distribution is only supported by STRUMPACK"
       centralize_harm_mat = .true.
     endif
 #endif
-    
+
     if ((use_strumpack).and.(centralize_harm_mat)) then
       if (my_id.eq.0) write(*,*) "Warning: centralization of PC matrix is not advized when using STRUMPACK"
     endif
 
-
   end subroutine check_preconditioner_consistency
+
+!> Set up MPI communicators for mode families and corresponding masters
+  subroutine create_communicators_core(pc, glob)
+    use mpi
+
+    implicit none
+
+    type(type_PRECOND) :: pc
+    integer :: glob
+
+    integer, allocatable :: i_tor(:), ranks_tmp(:)
+    integer :: i, my_id, n_cpu, ierr
+
+    call MPI_COMM_RANK(glob, my_id, ierr)
+    call MPI_COMM_SIZE(glob, n_cpu, ierr)
+
+    call distribute_ranks_core(n_cpu,pc)
+
+    pc%family_id = pc%rank_id(my_id + 1)
+
+    call MPI_COMM_SPLIT(glob, pc%family_id, my_id, pc%MPI_COMM_N, ierr)
+    if (ierr.ne.0) then
+      write(*,*) "Error in creating MPI_COMM_N"
+      call MPI_Abort(MPI_COMM_WORLD, 0, ierr)
+    endif
+    call MPI_COMM_RANK(pc%MPI_COMM_N, pc%my_id_n, ierr)
+    call MPI_COMM_SIZE(pc%MPI_COMM_N, pc%n_cpu_n, ierr)
+
+    allocate(i_tor(n_cpu))
+    i_tor(my_id + 1) = pc%my_id_n
+    call MPI_Allreduce(MPI_IN_PLACE,i_tor,n_cpu,MPI_INT,MPI_SUM,glob,ierr)
+    call MPI_COMM_SPLIT(glob,i_tor(my_id+1),my_id,pc%MPI_COMM_TRANS,ierr)
+
+    pc%n_masters = pc%n_mode_families
+    allocate(ranks_tmp(pc%n_masters)); ranks_tmp=0;
+
+    if (pc%my_id_n.eq.0) ranks_tmp(pc%family_id) = my_id
+    call MPI_AllReduce(MPI_IN_PLACE,ranks_tmp,pc%n_masters,MPI_INT,MPI_SUM,MPI_COMM_WORLD,ierr)
+    call MPI_COMM_GROUP(glob,pc%MPI_GROUP_WORLD,ierr)
+    call MPI_GROUP_INCL(pc%MPI_GROUP_WORLD,pc%n_masters,ranks_tmp,pc%MPI_GROUP_MASTER,ierr)
+    call MPI_COMM_CREATE(glob,pc%MPI_GROUP_MASTER,pc%MPI_COMM_MASTER,ierr)
+
+    if (pc%my_id_n .eq. 0) then
+     call MPI_COMM_RANK(pc%MPI_COMM_MASTER, pc%my_id_master, ierr)
+    endif
+
+    if ((my_id.eq.0).and.(pc%my_id_n.ne.0)) then
+      write(*,*) "Error in creating communicators: my_id==0 must have my_id_n==0"
+      call MPI_Abort(MPI_COMM_WORLD, 0, ierr)
+    endif
+
+    deallocate(i_tor, ranks_tmp)
+
+    if (my_id.eq.0) then
+      do i=1, pc%n_mode_families
+        write(*,*) "mode_families_ranks", i, pc%mode_families_ranks(i,1:pc%ranks_per_family(i))
+      enddo
+    endif
+
+    return
+
+  end subroutine create_communicators_core
 
 end module preconditioner_module

@@ -1745,10 +1745,10 @@ module mod_expression
                 res = visco_t / fact_resistiv
                 
               case ( 'eta_num_T' )
-                res = eta_num_t 
+                res = eta_num_t * fact_resistiv
                 
               case ( 'visco_num_T' )
-                res = visco_num_t 
+                res = visco_num_t / fact_resistiv
                 
               case ( 'zkpar_T' )
                 res = zkpar_t / fact_time

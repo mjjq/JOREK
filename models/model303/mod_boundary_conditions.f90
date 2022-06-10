@@ -405,9 +405,10 @@ do i=1, n_local_elms !=== do elements
             if (s_constant_boundary .and. ((iv  .eq. 3) .or. (iv  .eq. 4))) element_size_3 = - element_size_3
           endif
           
-          index_node  = node_list%node(inode)%index(1)             ! position of value
-          index_node2 = node_list%node(inode)%index(iv_dir)        ! position of first deriative
-          index_node3 = node_list%node(inode)%index(iv_dir+3)      ! position of 2nd deriative
+          index_node    = node_list%node(inode)%index(1)             ! position of value
+          index_node2   = node_list%node(inode)%index(iv_dir)        ! position of first deriative
+          if (n_order .ge. 5) &
+            index_node3 = node_list%node(inode)%index(iv_dir+3)      ! position of 2nd deriative
 
           ! --- Determine the direction of the BCs and apply smoothing factors if requested
           ps0       = node_list%node(inode)%values(1,1,var_psi)

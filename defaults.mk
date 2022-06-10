@@ -199,8 +199,8 @@ ifeq (1, $(USE_FFTW))
 endif
 
 # polynomial order > 3 requires more Gauss points
-N_ORDER_PARAMETER = $(shell cat models/$(MODEL)/mod_parameters.f90 |grep n_order |grep -v n_degrees | awk '{print $$6}')
-ifneq ("3", $(N_ORDER_PARAMETER))
+N_ORDER_PARAMETER = $(shell cat models/mod_settings.f90 |grep n_order |grep -v n_degrees | grep -v SETTINGS | awk '{print $$6}' | bc)
+ifneq (3, $(N_ORDER_PARAMETER))
   DEFINES  := $(DEFINES) -DGAUSS_ORDER=8
 endif
 

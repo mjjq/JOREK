@@ -63,7 +63,6 @@ real*8   :: ELM_axis(n_vertex_max*n_degrees,n_vertex_max*n_degrees),  ELM_bnd(n_
 real*8   :: zbig, Z_xpoint(2), psi_axis, psi_bnd, psi_xpoint(2), R_xpoint(2), s_xpoint(2), t_xpoint(2)
 real*8   :: R_axis, Z_axis, s_axis, t_axis
 real*8   :: psi_axis_kl(n_vertex_max,n_degrees), psi_bnd_kl(n_vertex_max,n_degrees) 
-real*8   :: G_axis(4,4), G_bnd(4,4), G_s(4,4), G_t(4,4), G_st(4,4), G_ss(4,4), G_tt(4,4)
 real*8   :: amix_used
 real*8   :: psi_lim, R_lim, Z_lim, R_out, Z_out, s_bnd, t_bnd, P_s,P_t,P_st,P_ss,P_tt
 integer  :: i_elm_bnd, i_elm_axis, i_elm_xpoint(2), ifail
@@ -72,6 +71,7 @@ integer  :: inode, index_large_i, knode, index_large_k, index_ij, index_kl, inde
 logical   :: newton_method_GS
 
 real*8, dimension(4,n_degrees)   :: H, H_s, H_t, H_st
+real*8, dimension(4,n_degrees)   :: G_axis, G_bnd, G_s, G_t, G_st, G_ss, G_tt
 real*8                           :: lambda, mu
 real*8                           :: Psi,dPsi_ds,dPsi_dt,d2Psi_dsdt
 real*8                           :: dX_ds, dX_dt, dY_ds, dY_dt, d2X_dsdt, d2Y_dsdt, h_u, h_v, h_w

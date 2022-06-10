@@ -9,7 +9,6 @@ use data_structure
 use mod_neighbours, only: update_neighbours
 use phys_module, only: psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht, fix_axis_nodes, force_central_node, treat_axis, n_flux
 use mod_grid_conversions
-use mod_poiss
 use mod_node_indices
 
 implicit none
@@ -28,10 +27,6 @@ integer,                 intent(in)    :: nr             !< number of radial poi
 integer,                 intent(in)    :: np             !< number of poloidal points, np elements
 type(type_node_list),    intent(inout) :: node_list      !< list of nodes with grid information
 type(type_element_list), intent(inout) :: element_list   !< list of elements with element information
-
-! --- Unused (just for call to Poisson for psi-projection)
-type (type_bnd_node_list)    :: bnd_node_list
-type (type_bnd_element_list) :: bnd_elm_list
 
 ! --- local variables
 real*8 :: acentre2, radius2
@@ -448,14 +443,6 @@ if (n_order .ge. 5) then
     call set_high_order_sizes_on_axis(node_list,element_list)
   endif
 
-  ! --- Use Poisson to project psi variable from old grid onto new grid
-  ! --- At high order, this is the best way to do it.
-  ! --- For some reason, Poisson needs to be called with -1 first (don't understand why, but gives NaN otherwise)
-  call poisson(0,-1,node_list,element_list,bnd_node_list,bnd_elm_list, 3,1,1, &
-               0.0,1.0,.false.,0,(/-1.d10,+1.d10/),.false.,.false.,1)
-  ! --- Project variable
-  call Poisson(0,0,node_list,element_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
-               0.0,1.0,.false.,0,(/-1.d10,+1.d10/),.false.,.false.,1)
 endif
 
 if ( .not. skip_update_neighbours ) call update_neighbours(node_list,element_list, force_rtree_initialize=.true.)

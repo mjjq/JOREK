@@ -702,8 +702,14 @@ do ife = ife_min, ife_max
       
         ! --- Radiation from background impurity
         ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-        Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
-        Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV, uncorrected
+
+        if (with_TiTe) then 
+          Te_corr_eV =       T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV =       T0e/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+        else
+          Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+        endif
 
         if (use_imp_adas) then  ! use open adas by default  
           ! Use radiation coefficients from ADAS

@@ -1355,8 +1355,8 @@ enddo  ! n_elements
      r0_real8 = scalars(i,var_rho)
      rimp0_real8 = scalars(i,var_rhoimp)
 
-     r0_corr = corr_neg_dens(r0_real8,(/1.d-9,1.d-5/),1.d-3)
-     rimp0_corr = corr_neg_dens(rimp0_real8,(/1.d-9,1.d-5/),1.d-3)
+     r0_corr = corr_neg_dens(r0_real8)
+     rimp0_corr = corr_neg_dens(rimp0_real8,(/ 0.d-5, 1.d-5 /))
 
      ! We estimate the effective charge by a test density 10^20/m^3
      ! Later maybe we should implement a iterative method
@@ -1414,6 +1414,8 @@ enddo  ! n_elements
        Z_eff = Z_eff + max((r0_corr - rimp0_corr),0.)
        Z_eff = max(Z_eff / scalars(i,var_rho), 1.)
      end if
+     if (Z_eff < 1.0d0) Z_eff = 1.0d0
+     if (Z_eff > imp_adas(1)%n_Z) Z_eff = imp_adas(1)%n_Z
 
      scalars(inode,iimp(5)) = Z_eff
 

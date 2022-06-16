@@ -515,6 +515,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REAL_FMT) 'HW_coef               ', HW_coef(1:2)
   endif
 
+  write(*,REAL_FMT) 'constant_imp_source   ', constant_imp_source
   write(*,LOGI_FMT) 'add_sources_in_sc     ', add_sources_in_sc
   if (with_TiTe) then
     write(*,REAL_FMT) 'ZK_i_perp_num         ', ZK_i_perp_num

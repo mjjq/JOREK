@@ -1293,6 +1293,7 @@ do i=1,n_vertex_max
             source_bg  = max(source_bg,0.d0)
           endif
 
+          source_imp = source_imp + constant_imp_source
           !-----------------------------------------------------------------
           ! --- Construction of radiative terms, using ADAS (by default)
           !-----------------------------------------------------------------

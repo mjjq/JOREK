@@ -202,7 +202,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_perp_imp_sc_num, D_par_imp_sc_num,                &
                 eta_num_prof, eta_num_psin_dependent, D_par_imp,    &
                 D_perp_imp, spi_quantity_bg, pellet_density_bg,     &
-                visco_par_heating
+                visco_par_heating, constant_imp_source
 
 if (my_id .eq. 0) then
 

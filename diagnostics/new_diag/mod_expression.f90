@@ -307,6 +307,7 @@ module mod_expression
     call add(exprs_all_int, 'LCFS_kappa  ', 'Elongation            (as in PPCF 55 (2013) 095009)   ')
     call add(exprs_all_int, 'LCFS_deltaU ', 'Upper triangularity   (as in PPCF 55 (2013) 095009)   ')
     call add(exprs_all_int, 'LCFS_deltaL ', 'Lower triangularity   (as in PPCF 55 (2013) 095009)   ')
+    call add(exprs_all_int, 'tot_radiated', 'Total radiated power by the main impurities           ')
 
     call add(exprs_all_four, 'absolute    ', 'Absolute value of 2D Fourier analysis                 ')
     call add(exprs_all_four, 'real        ', 'Real part      of 2D Fourier analysis                 ')

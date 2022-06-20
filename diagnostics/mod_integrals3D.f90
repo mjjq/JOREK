@@ -784,8 +784,17 @@ do ife = ife_min, ife_max
         Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
    
         ! Ti in eV:
-        Ti_corr_eV = T0i_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-        Ti_eV = T0i/(EL_CHG*MU_ZERO*central_density*1.d20)
+        if (with_TiTe) then 
+          Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Ti_corr_eV = T0i_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+          Ti_eV = T0i/(EL_CHG*MU_ZERO*central_density*1.d20)
+          Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+        else
+          Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+          Ti_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Ti_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+        endif
 
         if (allocated(P_imp)) deallocate(P_imp)
         allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
@@ -1436,6 +1445,29 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         ZKpar_T = ZK_par
       endif
 #endif
+
+      if ( with_TiTe ) then ! (with_TiTe) ****************************************************
+        if (T0i .lt. ZK_i_prof_neg_thresh) then
+          ZK_i_prof = ZK_i_prof_neg
+        end if
+        if (T0i .lt. ZK_i_par_neg_thresh) then
+          ZK_i_par_T = ZK_i_par_neg
+        endif
+        if (T0e .lt. ZK_e_prof_neg_thresh) then
+          ZK_e_prof = ZK_e_prof_neg
+        end if
+        if (T0e .lt. ZK_e_par_neg_thresh) then
+          ZK_e_par_T = ZK_e_par_neg
+        endif
+      else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
+        if (T0 .lt. ZK_prof_neg_thresh) then
+          ZK_prof = ZK_prof_neg
+        end if
+        if (T0 .lt. ZK_par_neg_thresh) then
+          ZKpar_T = ZK_par_neg
+        endif
+      endif ! (with_TiTe) ********************************************************************
+
 
 #ifdef WITH_Impurities
       !-------------------------------------------

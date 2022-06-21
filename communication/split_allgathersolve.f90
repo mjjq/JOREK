@@ -1,10 +1,9 @@
-subroutine split_allgathersolve(n_cpu,my_id,counts,displacements)
+subroutine split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
 !Split MPI_ALLGATHERV if MPI counts beyond 64-int
 
-  use mumps_module
   use mpi_mod
   use mod_integer_types
-  use global_distributed_matrix
+  use data_structure, only: type_SP_MATRIX
   use tr_module
 
   implicit none
@@ -30,23 +29,25 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements)
   real*8,                allocatable :: Arecv_buffer(:)
   integer(kind=int_all), allocatable :: irecv_buffer(:), jrecv_buffer(:)
   integer(kind=int_all), allocatable :: index_buffer(:), index_target(:)
+  
+  type(type_SP_MATRIX)   :: ad_mat, ac_mat
 
   ! --- If we're using short integers, then this is just a simple wrapper, no need to split
 #ifndef INTSIZE64
-  call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%IRN, &
+  call MPI_AllgatherV(ad_mat%irn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%irn, &
                       counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-  call MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%JCN, &
+  call MPI_AllgatherV(ad_mat%jcn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%jcn, &
                       counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-  call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
-                      counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+  call MPI_AllgatherV(ad_mat%val,ad_mat%nnz,MPI_DOUBLE_PRECISION,ac_mat%val, &
+                      counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)                      
   return
-#endif
+#else
 
   ! --- Otherwise, we might need to split the MPI communications
 
   ! --- Check if we need to split
   need_to_split = .false.
-  if (mumps_par%nz .gt. INT_MAX) need_to_split = .true.
+  if (ac_mat%nnz .gt. INT_MAX) need_to_split = .true.
 
   ! --- Allocate short-integer counts and displacements for MPI calls
   ! --- Counts still need to be copied because MPI count types are always short ints
@@ -68,7 +69,7 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements)
     call tr_allocate(index_target,1,n_cpu,"SPL_GATH_index_target",CAT_DMATRIX)
 
     ! --- Split respective to the max send/recv
-    n_split = mumps_par%nz / INT_MAX + 1
+    n_split = ac_mat%nnz / INT_MAX + 1
     if (my_id .eq. 0) write(*,*) 'Warning: Splitting Main Matrix MPI centralisation',n_split
 
     !write(*,*)'******* BEFORE SPLIT:'
@@ -104,9 +105,9 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements)
 
       ! --- Copy distributed matrix into send/recv buffers
       i_cpu = my_id+1
-      isend_buffer(1:counts_int(i_cpu)) = irn_glob(index_buffer(i_cpu)+1:index_buffer(i_cpu)+counts_int(i_cpu))
-      jsend_buffer(1:counts_int(i_cpu)) = jcn_glob(index_buffer(i_cpu)+1:index_buffer(i_cpu)+counts_int(i_cpu))
-      Asend_buffer(1:counts_int(i_cpu)) = A_glob  (index_buffer(i_cpu)+1:index_buffer(i_cpu)+counts_int(i_cpu))
+      isend_buffer(1:counts_int(i_cpu)) = ad_mat%irn(index_buffer(i_cpu)+1:index_buffer(i_cpu)+counts_int(i_cpu))
+      jsend_buffer(1:counts_int(i_cpu)) = ad_mat%jcn(index_buffer(i_cpu)+1:index_buffer(i_cpu)+counts_int(i_cpu))
+      Asend_buffer(1:counts_int(i_cpu)) = ad_mat%val(index_buffer(i_cpu)+1:index_buffer(i_cpu)+counts_int(i_cpu))
 
       ! --- Gather data on buffers
       call MPI_AllgatherV(isend_buffer,counts_int(my_id+1),MPI_INTEGER_ALL,irecv_buffer, &
@@ -118,11 +119,11 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements)
 
       ! --- Copy from buffer into centralised matrix
       do i_cpu=1,n_cpu
-        mumps_par%A  (index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
+        ac_mat%val(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
           = Arecv_buffer(displacements_int(i_cpu)+1:displacements_int(i_cpu)+counts_int(i_cpu))
-        mumps_par%irn(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
+        ac_mat%irn(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
           = irecv_buffer(displacements_int(i_cpu)+1:displacements_int(i_cpu)+counts_int(i_cpu))
-        mumps_par%jcn(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
+        ac_mat%jcn(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
           = jrecv_buffer(displacements_int(i_cpu)+1:displacements_int(i_cpu)+counts_int(i_cpu))
       enddo
 
@@ -151,16 +152,18 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements)
     counts_int(:) = counts(:)
     displacements_int(:) = displacements(:)
 
-    call MPI_AllgatherV(IRN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%IRN, &
+    call MPI_AllgatherV(ad_mat%irn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%irn, &
                         counts_int,displacements_int,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-    call MPI_AllgatherV(JCN_glob,mumps_par%nz_loc,MPI_INTEGER_ALL,mumps_par%JCN, &
+    call MPI_AllgatherV(ad_mat%jcn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%jcn, &
                         counts_int,displacements_int,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-    call MPI_AllgatherV(A_glob,mumps_par%nz_loc,MPI_DOUBLE_PRECISION,mumps_par%A, &
+    call MPI_AllgatherV(ad_mat%val,ad_mat%nnz,MPI_DOUBLE_PRECISION,ac_mat%val, &
                         counts_int,displacements_int,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
   endif
 
   ! --- Deallocate short-integer counts and displacements
   call tr_deallocate(counts_int,"SPL_GATH_counts",CAT_DMATRIX)
   call tr_deallocate(displacements_int,"SPL_GATH_displacements",CAT_DMATRIX)
+  return
+#endif  
 
 end subroutine split_allgathersolve

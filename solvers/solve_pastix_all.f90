@@ -14,6 +14,7 @@ use mod_clock
 use mod_coicsr
 use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
 use mod_integer_types
+use data_structure, only: type_SP_MATRIX
  
 implicit none
 
@@ -33,6 +34,7 @@ integer                           :: i, k, j, ierr
 integer(kind=int_all)             :: m_loc
 integer(kind=int_all),allocatable :: counts(:), displacements(:)
 integer(kind=int_all), parameter  :: Int1=1
+type(type_SP_MATRIX)   :: ad_mat, ac_mat
 
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix (PastiX) *'
@@ -95,7 +97,7 @@ call tr_allocatep(mumps_par%JCN,Int1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
 call tr_allocatep(mumps_par%A,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
 call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
-call split_allgathersolve(n_cpu,my_id,counts,displacements)
+call split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
 
 call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
@@ -303,6 +305,7 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   use mpi_mod
   use mod_clock
   use mod_integer_types
+  use data_structure, only: type_SP_MATRIX  
 
 !$ use omp_lib
 
@@ -320,6 +323,7 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   integer(kind=int_all)             :: m_loc
   integer(kind=int_all),allocatable :: counts(:), displacements(:)
   integer(kind=int_all), parameter  :: Int1=1
+  type(type_SP_MATRIX)   :: ad_mat, ac_mat
   
 !write(*,*) my_id,'*****************************************'
 !write(*,*) my_id,'*  solve global matrix using PaStiX 6.2 *'
@@ -357,7 +361,7 @@ subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
   call tr_allocatep(mumps_par%a,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
   call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
-  call split_allgathersolve(n_cpu,my_id,counts,displacements)
+  call split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
 
   call MPI_AllReduce(rhs_glob,mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   

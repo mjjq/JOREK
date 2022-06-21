@@ -10,11 +10,11 @@ module mod_bicgstab
   use mpi
   use mumps_module, only: mumps_par
   use phys_module, only: use_pastix, use_mumps, use_strumpack
-  use data_structure, only: type_PC_MATRIX
+  use data_structure, only: type_SP_MATRIX
 
   implicit none
 
-  type(type_PC_MATRIX) :: cooA
+  type(type_SP_MATRIX) :: cooA
 
   ! MPI related
   integer                        :: my_id, my_id_n, n_cpu

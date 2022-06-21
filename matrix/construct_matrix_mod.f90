@@ -263,7 +263,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,& 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
-                            n, nz, ndof, n_matrix_block_size, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, global_mat, harmonic_matrix)
+                            n, nz, ndof, n_matrix_block_size, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, global_mat, global_rhs, harmonic_matrix)
   
   use mumps_module 
   use tr_module 
@@ -317,7 +317,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer(kind=int_all), intent(in) :: n_matrix_block_size
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable, target :: A_mat(:)
-  real*8,                intent(inout), allocatable :: rhs(:)
+  real*8,                intent(inout), allocatable, target :: rhs(:)
   integer(kind=int_all), intent(inout), allocatable, target :: irn(:)
   integer(kind=int_all), intent(inout), allocatable, target :: jcn(:)
   integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
@@ -345,6 +345,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   integer                           :: i_v(n_var)
   integer, allocatable              :: i_harm(:)
   type(type_SP_MATRIX)              :: global_mat
+  type(type_RHS)                    :: global_rhs
 
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
@@ -740,21 +741,20 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     if ( difference_found ) stop
 #endif
 
+    call MPI_AllReduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #ifdef NORMTRACE
     ! --- For debugging purpose
-    call MPI_Reduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+
     call tr_locvnorms("cm_Rhs",RHS,ndof)
     if (my_id .eq. 0) then
       write(fname,'(A,I6.6)')"rhs",index_now
       call tr_vdump(fname,RHS,ndof)
     end if
 #endif
-    call MPI_Reduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-
   else ! ( if harmonic_matrix)
   
     ! --- Form a global rhs from the rhss of the individual mpi tasks
-    call MPI_Reduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_N,ierr)
+    call MPI_AllReduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
 
   endif 
 
@@ -764,7 +764,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   global_mat%irn => irn
   global_mat%jcn => jcn
   global_mat%val => a_mat
-  global_mat%n   = ndof
+  global_mat%ng   = ndof
   global_mat%nnz = nz
   global_mat%index_min = index_min
   global_mat%index_max = index_max
@@ -773,6 +773,9 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   else
     global_mat%comm = MPI_COMM_WORLD
   endif
+  
+  global_rhs%val => RHS
+  global_rhs%ng = ndof
      
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)

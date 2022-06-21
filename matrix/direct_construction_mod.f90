@@ -37,6 +37,7 @@ contains
   integer                            :: i_tor_min, i_tor_max 
   integer                            :: i, ierr
   type(type_SP_MATRIX)     :: a_mat
+  type(type_RHS)     :: rhs_vec
     
   ! --- Memory allocation 
   if (allocated(local_elms_harm)) call tr_deallocate(local_elms_harm,"local_elms_harm",CAT_DMATRIX) 
@@ -79,7 +80,7 @@ contains
     local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&
     xcase2, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint,              &
     ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm, A_harm,  &
-    rhs_harm, irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, a_mat,  &
+    rhs_harm, irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, a_mat, rhs_vec,  &
     direct_construction)
 
   end subroutine direct_construction_harmonic

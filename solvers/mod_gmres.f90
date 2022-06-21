@@ -1,4 +1,5 @@
 module mod_gmres
+#ifdef USE_GMRES
 
   use tr_module
   use mod_integer_types
@@ -519,5 +520,5 @@ module mod_gmres
   end subroutine gmres_matrix_vector
 
 
-
+#endif
 end module mod_gmres

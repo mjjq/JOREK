@@ -106,7 +106,8 @@ module strumpack_module
         logical,intent(in),optional :: update, distributed, equilibrium
         
         integer :: rank, ncpu
-        integer(kind=int_all) :: nnz_d, n_d, i, j, imin, imax, indx        
+        integer :: indx
+        integer(kind=int_all) :: nnz_d, n_d, i, j, imin, imax
 
         integer(kind=C_INT_ALL), dimension(:), pointer :: myelm
         logical :: upd, dflag, eql

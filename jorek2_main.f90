@@ -58,12 +58,18 @@ program JOREK2
 #ifdef USE_PASTIX6
   use mod_pastix, only: pastix_finalize
 #endif
+
+!#ifndef TEST_CORE
   use preconditioner_module
-  use mod_distribute_preconditioner
+  use mod_distribute_preconditioner  
+!#endif
+
   use direct_construction_mod
   use centralization_mod
   use mod_exchange_indices
+#ifdef USE_GMRES
   use mod_gmres, only: gmres_driver
+#endif  
   use mod_startup_teardown
   use mod_initial_grid
   use mod_flux_grid
@@ -182,6 +188,7 @@ program JOREK2
   logical :: input_treat_axis
   
   type(type_SP_MATRIX) :: a_mat
+  type(type_RHS) :: rhs_vec
   
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -556,7 +563,6 @@ mpi_required = 0
     !*  		 (i.e id=0 from each MPI_COMM_N)   *
     !*******************************************************
     if (gmres) then
-    
        call create_communicators(my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, &
                                  MPI_COMM_MASTER, MPI_COMM_TRANS)
        m_cpu = n_cpu_n
@@ -743,19 +749,24 @@ mpi_required = 0
          n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
          n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
-         irn_jcn, a_mat, harmonic_matrix=.false.)
+         irn_jcn, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1)
     if (my_id .eq. 0) then
       call clck_ldiff(t0,t1,tsecond)
       write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
-    endif     
-
+    endif
+    
     if (.not. gmres) then
   
-      call solve_sparse_system(a_mat, solve_type=MHD_DIRECT)
+      call solve_sparse_system(a_mat, rhs_vec, solve_type=MHD_DIRECT)
 
     else
+!#ifdef TEST_CORE
+!      call solve_sparse_system(a_mat, solve_type=MHD_PRECON)
+!#else
+!#endif
+    
 
       if (.not. solve_only) then
 
@@ -832,12 +843,13 @@ mpi_required = 0
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
-
+!#ifndef TEST_CORE
 #ifdef USE_BICGSTAB
       call bicgstab_driver(irn_glob, jcn_glob, a_glob, deltas, rhs_glob, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
 #else
       call gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
 #endif
+!#endif
 
     endif
     call clck_time_barrier(t1)

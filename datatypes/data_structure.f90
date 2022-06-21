@@ -148,9 +148,9 @@ module data_structure
     real(kind=8), pointer          :: val(:)
     real(kind=8), pointer          :: column_scaling(:)
     integer                        :: indexing = 1
-    integer(kind=int_all)          :: n                    !< matrix total rank
-    integer(kind=int_all)          :: nr                   !< number of local cols
-    integer(kind=int_all)          :: nc                   !< number of local rows
+    integer(kind=int_all)          :: ng                    !< matrix total rank
+    integer(kind=int_all)          :: nr                   !< number of local rows
+    integer(kind=int_all)          :: nc                   !< number of local cols
     integer(kind=int_all)          :: nnz                  !< number of local nonzero entries
     integer(kind=int_all)          :: index_min
     integer(kind=int_all)          :: index_max
@@ -158,23 +158,33 @@ module data_structure
     integer                        :: comm                 !< communicator over which matrix is distributed
   end type type_SP_MATRIX
   
+  !> RHS vector type
+  type type_RHS
+    real(kind=8), pointer          :: val(:)
+    integer(kind=int_all)          :: ng                    !< global number of unknowns
+  end type type_RHS  
+  
   !> Preconditioner type  
   type type_PRECOND
     type(type_SP_MATRIX)           :: mat
-    real(kind=8), pointer          :: rhs
+    type(type_RHS)                 :: rhs
+    integer(kind=int_all), pointer :: row_index(:)         !< Row indices of local mode family in global RHS
+    real(kind=8)                   :: row_factor           !< Multiplying factor of local mode family in global RHS       
     integer                        :: n_mode_families      !< number of mode families
     integer                        :: family_id            !< family id
     integer                        :: mode_set_n           !< number of modes in local mode family    
     integer, pointer               :: mode_set(:)          !< Mode number in local mode family used for preconditioner
-    integer(kind=int_all), pointer :: row_index(:)         !< Row indices of local mode family in global RHS
-    real(kind=8)                   :: row_factor           !< Multiplying factor of local mode family in global RHS  - can be replaced by logical
     integer, pointer               :: mode_families_ranks(:,:)
+    integer, pointer               :: mode_families_modes(:,:)
     integer, pointer               :: rank_range(:)
     integer, pointer               :: ranks_per_family(:)
+    integer, pointer               :: modes_per_family(:)
     integer, pointer               :: rank_id(:)           !< family id for each MPI rank
     integer                        :: my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
-    logical                        :: autodistribute_modes, autodistribute_ranks
-  end type type_PRECOND     
+    logical                        :: autodistribute_modes, autodistribute_ranks, distributed
+  end type type_PRECOND
+  
+
  
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()

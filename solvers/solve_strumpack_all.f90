@@ -1,6 +1,6 @@
 #ifdef USE_STRUMPACK      
 !> subroutine solves the complete system of equation using STRUMPACK
-subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
+subroutine solve_strumpack_all(n_cpu, my_id, ad_mat, rhs_vec)
   use strumpack_module
 
   use tr_module 
@@ -10,6 +10,7 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   use mpi_mod
   use mod_clock
   use mod_integer_types
+  use data_structure, only: type_SP_MATRIX, type_RHS
 
 !$ use omp_lib
 
@@ -17,7 +18,7 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
 
 ! --- Routine parameters
   integer,               intent(in) :: n_cpu, my_id
-  integer,               intent(in) :: index_min, index_max
+  integer :: index_min, index_max
 
 ! --- Local variables
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
@@ -28,11 +29,16 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   integer(kind=int_all), parameter  :: Int1=1
   
   integer(kind=C_INT_ALL) :: n, nnz
+  
+  type(type_SP_MATRIX)    :: ad_mat, ac_mat
+  type(type_RHS)          :: rhs_vec
 
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix using STRUMPACK *'
 !write(*,*) my_id,'*********************************'
 
+  index_min = ad_mat%index_min
+  index_max = ad_mat%index_max
   m_loc = (index_max - index_min + 1) * n_tor * n_var
   mumps_par%nz_loc = nz_glob
 
@@ -62,16 +68,17 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%IRN",CAT_DMATRIX)
   if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%JCN",CAT_DMATRIX)
   if (associated(mumps_par%a) )  call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
 
   call tr_allocatep(mumps_par%irn,Int1,nnz,"mumps_par%IRN",CAT_DMATRIX)
   call tr_allocatep(mumps_par%jcn,Int1,nnz,"mumps_par%JCN",CAT_DMATRIX)
   call tr_allocatep(mumps_par%a,Int1,nnz,"mumps_par%A",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,Int1,n,"mumps_par%rhs",CAT_DMATRIX)
 
-  call split_allgathersolve(n_cpu,my_id,counts,displacements)
+  allocate(ac_mat%irn(nnz))
+  allocate(ac_mat%jcn(nnz))
+  allocate(ac_mat%val(nnz))
+  ac_mat%nnz = nnz
 
-  call MPI_AllReduce(rhs_glob,mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
   
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
@@ -82,12 +89,11 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
     spss_initialized = .true.
   endif
 
-  call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,1,MPI_COMM_WORLD,&
+  call strumpack_set_mat(n,nnz,ac_mat%irn,ac_mat%jcn,ac_mat%val,1,MPI_COMM_WORLD,&
                          UPDATE=spss_analyzed,DISTRIBUTED=.false.,EQUILIBRIUM=.false.)
-  call tr_deallocatep(mumps_par%irn,"mumps_par%IRN",CAT_DMATRIX)
-  call tr_deallocatep(mumps_par%jcn,"mumps_par%JCN",CAT_DMATRIX)
-  call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-  
+  !call strumpack_set_mat(n,nnz,mumps_par%irn,mumps_par%jcn,mumps_par%a,1,MPI_COMM_WORLD,&
+  !                       UPDATE=spss_analyzed,DISTRIBUTED=.false.,EQUILIBRIUM=.false.)                         
+
   if (.not. spss_analyzed) then
     call clck_time(t0)
     call strumpack_analyze(MPI_COMM_WORLD)    
@@ -100,18 +106,22 @@ subroutine solve_strumpack_all(n_cpu,my_id,index_min,index_max)
   call clck_time(t0)
 
   call strumpack_factorize(MPI_COMM_WORLD)   
-  call strumpack_solve(n,mumps_par%rhs,MPI_COMM_WORLD)
+  call strumpack_solve(n,rhs_vec%val,MPI_COMM_WORLD)
  
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond  
  
   do k=1,n
-    deltas(k) =  mumps_par%rhs(k)
+    deltas(k) =  rhs_vec%val(k)
   enddo
 
   if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
   if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+  
+  deallocate(ac_mat%irn)
+  deallocate(ac_mat%jcn)
+  deallocate(ac_mat%val)  
 
   return
 end subroutine solve_strumpack_all

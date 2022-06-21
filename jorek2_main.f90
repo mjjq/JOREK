@@ -760,6 +760,9 @@ mpi_required = 0
     if (.not. gmres) then
   
       call solve_sparse_system(a_mat, rhs_vec, solve_type=MHD_DIRECT)
+      do i=1,rhs_vec%ng
+        deltas(i) =  rhs_vec%val(i)
+      enddo
 
     else
 !#ifdef TEST_CORE

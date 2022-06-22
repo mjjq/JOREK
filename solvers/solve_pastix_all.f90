@@ -1,4 +1,4 @@
-#if defined(USE_PASTIX)
+#if defined(USE_PASTIX_NEW)
 subroutine solve_pastix_all(ptss, n_cpu, my_id, ad_mat, rhs_vec)
 #include "pastix_fortran.h"
   use tr_module 
@@ -44,10 +44,9 @@ subroutine solve_pastix_all(ptss, n_cpu, my_id, ad_mat, rhs_vec)
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time scale :', tsecond  
 
-  allocate(ac_mat%irn(nnz))
-  allocate(ac_mat%jcn(nnz))
-  allocate(ac_mat%val(nnz))
-  ac_mat%nnz = nnz
+  allocate(ac_mat%irn(ac_mat%nnz))
+  allocate(ac_mat%jcn(ac_mat%nnz))
+  allocate(ac_mat%val(ac_mat%nnz))
   
   call clck_time(t0)
   call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
@@ -119,15 +118,15 @@ end subroutine solve_pastix_all
 
 
 
-#ifdef USE_PASTIX_OLD
-subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
+#ifdef USE_PASTIX
+subroutine solve_pastix_all(ptss,n_cpu,my_id, ad_mat, rhs_vec)
 !---------------------------------------------------------------------
 ! subroutine solves the complete system of equation using pastix with
 ! distributed matrix on the main group mpi_comm_world
 !---------------------------------------------------------------------
 use tr_module 
 use mod_parameters
-use mumps_module
+!use mumps_module
 use pastix_module
 use global_distributed_matrix
 use mpi_mod
@@ -135,6 +134,8 @@ use mod_clock
 use mod_coicsr
 use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
 use mod_integer_types
+use data_structure, only: type_SP_MATRIX, type_RHS
+use mod_pastix, only: type_PASTIX_SOLVER, scale_by_coulmns
  
 implicit none
 
@@ -145,7 +146,7 @@ implicit none
 #endif
 
 ! --- Routine variables
-integer                           :: n_cpu, my_id, index_min, index_max       ! global index_min, index_max for this cpu
+integer                           :: n_cpu, my_id
 ! --- Local variables
 real*8,               allocatable :: column_local(:)
 type(clcktype)                    :: t_itstart, t0, t1, t2, t3
@@ -155,74 +156,43 @@ integer(kind=int_all)             :: m_loc
 integer(kind=int_all),allocatable :: counts(:), displacements(:)
 integer(kind=int_all), parameter  :: Int1=1
 
+type(type_SP_MATRIX)     :: ad_mat, ac_mat
+type(type_RHS)           :: rhs_vec
+integer                            :: index_min, index_max
+type(type_PASTIX_SOLVER) :: ptss
+integer(kind=int_all) :: n, nnz
+
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix (PastiX) *'
 !write(*,*) my_id,'*********************************'
 
+index_min = ad_mat%index_min
+index_max = ad_mat%index_max
 m_loc = (index_max - index_min + 1) * n_tor * n_var
-mumps_par%nz_loc = nz_glob
+!mumps_par%nz_loc = nz_glob
 
-call MPI_Allreduce(m_loc,mumps_par%N,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
-call MPI_Allreduce(mumps_par%NZ_loc,mumps_par%nz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_Allreduce(m_loc,n,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_Allreduce(ad_mat%nnz,nnz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-!------------------------------------------------------- colunm scaling of global distributed matrix
-call clck_time(t0)
+!mumps_par%n = n
+!mumps_par%nz = nnz
 
-if (allocated(column_scaling))  call tr_deallocate(column_scaling,"column_scaling",CAT_DMATRIX)
-if (allocated(column_local))    call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
-call tr_allocate(column_scaling,Int1,mumps_par%N,"column_scaling",CAT_DMATRIX)
-call tr_allocate(column_local,Int1,mumps_par%N,"column_local",CAT_DMATRIX)
+ac_mat%ng  = n
+ac_mat%nnz = nnz
 
-column_local = 1.d-20;   column_scaling = 1.d-20
-do k=1,nz_glob
-  j = jcn_glob(k)
-  column_local(j) = max(column_local(j),abs(A_glob(k)))
-enddo
+allocate(ac_mat%irn(ac_mat%nnz))
+allocate(ac_mat%jcn(ac_mat%nnz))
+allocate(ac_mat%val(ac_mat%nnz))
 
-call MPI_AllReduce(column_local,column_scaling,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
-
-do k = 1, nz_glob
-  j = jcn_glob(k)
-  A_glob(k) = A_glob(k) / column_scaling(j)
-enddo
-
-call clck_time(t1)
-call clck_ldiff(t0,t1,tsecond)
-if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time scale :', tsecond
+call scale_by_coulmns(ad_mat)
 
 call clck_time(t0)
 
-!------------------------------------------------------ collect the distributed matrix onto all procs
-if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
 
-call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
-call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
-
-call MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-
-displacements(1) = 0
-do i=2,n_cpu
-  displacements(i) = displacements(i-1) + counts(i-1)
-enddo
-
-if (associated(mumps_par%IRN)) call tr_deallocatep(mumps_par%IRN,"mumps_par%IRN",CAT_DMATRIX)
-if (associated(mumps_par%JCN)) call tr_deallocatep(mumps_par%JCN,"mumps_par%JCN",CAT_DMATRIX)
-if (associated(mumps_par%A) )  call tr_deallocatep(mumps_par%A,"mumps_par%A",CAT_DMATRIX)
-if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
-
-call tr_allocatep(mumps_par%IRN,Int1,mumps_par%nz,"mumps_par%IRN",CAT_DMATRIX)
-call tr_allocatep(mumps_par%JCN,Int1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
-call tr_allocatep(mumps_par%A,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
-call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
-
-call split_allgathersolve(n_cpu,my_id,counts,displacements)
-
-call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-call clck_time(t1)
-call clck_ldiff(t0,t1,tsecond)
+call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+
 call clck_time(t0)
 
 #ifdef USE_BLOCK
@@ -232,18 +202,18 @@ call clck_time(t0)
 block_size  = n_tor * n_var
 block_size2 = block_size**2
 !---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
-n_block   = mumps_par%n  / block_size
-nnz_block = mumps_par%nz / block_size2
+n_block   = ac_mat%ng/block_size
+nnz_block = ac_mat%nnz/block_size2
 
 do i=1,nnz_block  
-  mumps_par%irn(i) = (mumps_par%irn((i-1)*block_size2+1) - 1) / block_size + 1 
-  mumps_par%jcn(i) = (mumps_par%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
+  ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1) / block_size + 1 
+  ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
 enddo
 
 if (allocated(sparskit_work)) deallocate(sparskit_work)
 allocate(sparskit_work(n_block+1))
 
-call coicsr2(n_block,nnz_block,mumps_par%A,mumps_par%IRN(1:nnz_block),mumps_par%JCN(1:nnz_block),block_size,sparskit_work)
+call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),block_size,sparskit_work)
 
 ! -- For PaStiX solver before version 6.x
 if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
@@ -252,9 +222,9 @@ if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,
 #else /* USE_BLOCK */
 
 if (allocated(sparskit_work)) deallocate(sparskit_work)
-allocate(sparskit_work(mumps_par%N + 1))
+allocate(sparskit_work(ac_mat%ng + 1))
 
-call coicsr(mumps_par%N,mumps_par%NZ,1,mumps_par%A,mumps_par%IRN,mumps_par%JCN,sparskit_work)
+call coicsr(ac_mat%ng,ac_mat%nnz,1,ac_mat%val,ac_mat%irn,ac_mat%jcn,sparskit_work)
 #endif /* USE_BLOCK */
 
 if (allocated(sparskit_work)) deallocate(sparskit_work)
@@ -263,8 +233,8 @@ call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
 
 ! -- For PaStiX solver before version 6.x
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,mumps_par%n,"pastix_perm_vars",CAT_UNKNOWN)
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,mumps_par%n,"pastix_iperm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,ac_mat%ng,"pastix_perm_vars",CAT_UNKNOWN)
+if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,ac_mat%ng,"pastix_iperm_vars",CAT_UNKNOWN)
 
 call pastix_init_num_threads(my_id)
 
@@ -284,11 +254,11 @@ if (.not. pastix_initialised) then
 
   ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD,n_block,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+  call pastix_fortran(pastix_data,MPI_COMM_WORLD,n_block,ac_mat%jcn,ac_mat%irn,ac_mat%val, &
+                        pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
 #else
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,mumps_par%jcn,mumps_par%irn,mumps_par%A, &
-                        pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+  call pastix_fortran(pastix_data,MPI_COMM_WORLD,ac_mat%ng,ac_mat%jcn,ac_mat%irn,ac_mat%val, &
+                        pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
 #endif
 
   pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
@@ -339,15 +309,13 @@ if (.not. pastix_analysed) then
   ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
   
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, &
-                      mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
-                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+  call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
+                      pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
 
 #else
 
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, &
-                      mumps_par%jcn(1:mumps_par%n+1), mumps_par%irn(1:mumps_par%nz), mumps_par%A(1:mumps_par%nz), &
-                      pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+  call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
+                      pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
 
 #endif
  
@@ -383,28 +351,27 @@ endif
 
 ! -- For PaStiX solver before version 6.x
 #ifdef USE_BLOCK
-pastix_iparm(IPARM_DOF_NBR)            = block_size
+pastix_iparm(IPARM_DOF_NBR) = block_size
 
-call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block,                                                 &
-                    mumps_par%jcn(1:n_block+1), mumps_par%irn(1:nnz_block), mumps_par%A(1:mumps_par%nz), &
-                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
+                    pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
 #else
 
-call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, mumps_par%jcn, mumps_par%irn, mumps_par%A, &
-                    pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,Int1,pastix_iparm,pastix_dparm)
+call pastix_fortran(pastix_data,MPI_COMM_WORLD, ac_mat%ng, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
+                    pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
 #endif
 
 call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond
 
-do k=1,mumps_par%n
-  deltas(k) =  mumps_par%rhs(k)  / column_scaling(k)
+do k=1,ac_mat%ng
+  rhs_vec%val(k) =  rhs_vec%val(k)/ad_mat%column_scaling(k)
 enddo
 
-if (allocated(column_local))  call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
-if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+!if (allocated(column_local))  call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
+!if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
+!if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
 
 return
 end

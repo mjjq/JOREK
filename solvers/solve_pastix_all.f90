@@ -1,4 +1,4 @@
-#if defined(USE_PASTIX_NEW)
+#if defined(USE_PASTIX)
 subroutine solve_pastix_all(ptss, n_cpu, my_id, ad_mat, rhs_vec)
 #include "pastix_fortran.h"
   use tr_module 
@@ -76,7 +76,7 @@ subroutine solve_pastix_all(ptss, n_cpu, my_id, ad_mat, rhs_vec)
   allocate(sparskit_work(n_block+1))
   
   call clck_time(t0)  
-  call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),block_size,sparskit_work)
+  call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn,ac_mat%jcn,block_size,sparskit_work)
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr2 :', tsecond
   
@@ -119,7 +119,7 @@ end subroutine solve_pastix_all
 
 
 
-#ifdef USE_PASTIX
+#ifdef USE_PASTIX_OLD
 subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
 !---------------------------------------------------------------------
 ! subroutine solves the complete system of equation using pastix with

@@ -239,7 +239,7 @@ module mod_pastix
     
     type(type_SP_MATRIX)    :: a_mat
     type(type_RHS)          :: lcs     ! local column scaling
-    integer(kind=int_all)  :: j, k
+    integer(kind=int_all)   :: j, k
     integer                 :: ierr
     
     allocate(a_mat%column_scaling(a_mat%ng))

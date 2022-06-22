@@ -764,7 +764,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   global_mat%irn => irn
   global_mat%jcn => jcn
   global_mat%val => a_mat
-  global_mat%ng   = ndof
+  global_mat%ng  = ndof
   global_mat%nnz = nz
   global_mat%index_min = index_min
   global_mat%index_max = index_max
@@ -775,7 +775,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   endif
   
   global_rhs%val => RHS
-  global_rhs%ng = ndof
+  global_rhs%ng  = ndof
      
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)

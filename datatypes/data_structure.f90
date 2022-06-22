@@ -142,20 +142,23 @@ module data_structure
 
   end type type_SPI
  
-  !> Sparse matrix type
+  !> Sparse matrix type (generally distributed)
   type type_SP_MATRIX
     integer(kind=int_all), pointer :: irn(:), jcn(:)
     real(kind=8), pointer          :: val(:)
-    real(kind=8), pointer          :: column_scaling(:)
+    real(kind=8), pointer          :: column_scaling(:)    !< global column scaling, vector size of ng
     integer                        :: indexing = 1
-    integer(kind=int_all)          :: ng                    !< matrix total rank
+    integer(kind=int_all)          :: ng                   !< matrix total rank
     integer(kind=int_all)          :: nr                   !< number of local rows
     integer(kind=int_all)          :: nc                   !< number of local cols
     integer(kind=int_all)          :: nnz                  !< number of local nonzero entries
-    integer(kind=int_all)          :: index_min
-    integer(kind=int_all)          :: index_max
+    integer(kind=int_all)          :: index_min            !< minimum index in global range
+    integer(kind=int_all)          :: index_max            !< maximum index in global range
     integer                        :: n_matrix_block_size
+    integer(kind=int_all)          :: nblock
+    integer(kind=int_all)          :: nzblock
     integer                        :: comm                 !< communicator over which matrix is distributed
+    logical                        :: scaled = .false.
   end type type_SP_MATRIX
   
   !> RHS vector type
@@ -181,7 +184,9 @@ module data_structure
     integer, pointer               :: modes_per_family(:)
     integer, pointer               :: rank_id(:)           !< family id for each MPI rank
     integer                        :: my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
-    logical                        :: autodistribute_modes, autodistribute_ranks, distributed
+    logical                        :: autodistribute_modes
+    logical                        :: autodistribute_ranks
+    logical                        :: distributed
   end type type_PRECOND
   
 

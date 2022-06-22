@@ -763,6 +763,7 @@ mpi_required = 0
       do i=1,rhs_vec%ng
         deltas(i) =  rhs_vec%val(i)
       enddo
+      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
     else
 !#ifdef TEST_CORE

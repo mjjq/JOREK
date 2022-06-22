@@ -1,3 +1,126 @@
+#if defined(USE_PASTIX_NEW)
+subroutine solve_pastix_all(ptss, n_cpu, my_id, ad_mat, rhs_vec)
+#include "pastix_fortran.h"
+  use tr_module 
+  use mod_parameters, only: n_tor, n_var
+  use mpi_mod
+  use mod_clock
+  use mod_integer_types
+  use data_structure, only: type_SP_MATRIX, type_RHS
+  use mod_pastix, only: type_PASTIX_SOLVER, pastix_initialize, scale_by_coulmns, pastix_analyze, pastix_set_mat, &
+                        pastix_factorize, pastix_solve
+  use mod_coicsr
+
+  implicit none
+
+  type(type_PASTIX_SOLVER) :: ptss
+  integer                  :: my_id, n_cpu, ierr
+  integer(kind=C_INT_ALL)  :: n, nnz
+  
+  type(type_SP_MATRIX)     :: ad_mat, ac_mat
+  type(type_RHS)           :: rhs_vec
+  
+  integer                            :: index_min, index_max
+  integer(kind=int_all)              :: m_loc  
+  type(clcktype)                     :: t_itstart, t0, t1, t2, t3
+  real*8                             :: tsecond
+  integer                            :: block_size, block_size2
+  integer(kind=int_all)              :: n_block, nnz_block
+  integer(kind=int_all)              :: i
+  integer(kind=int_all), allocatable :: sparskit_work(:)
+
+  index_min = ad_mat%index_min
+  index_max = ad_mat%index_max
+  m_loc = (index_max - index_min + 1) * n_tor * n_var
+
+  call MPI_Allreduce(m_loc,ac_mat%ng,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+  
+  n = ac_mat%ng
+  nnz = ac_mat%nnz
+  
+  call clck_time(t0)
+  call scale_by_coulmns(ad_mat)
+  call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time scale :', tsecond  
+
+  allocate(ac_mat%irn(nnz))
+  allocate(ac_mat%jcn(nnz))
+  allocate(ac_mat%val(nnz))
+  ac_mat%nnz = nnz
+  
+  call clck_time(t0)
+  call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+  call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+  
+#ifdef USE_BLOCK
+  block_size  = n_tor * n_var
+#else
+  block_size  = 1
+#endif
+  block_size2 = block_size**2  
+
+  n_block   = ac_mat%ng/block_size
+  nnz_block = ac_mat%nnz/block_size2
+  ac_mat%nblock = n_block
+  ac_mat%nzblock = nnz_block  
+
+  if (block_size>1) then
+    do i=1,nnz_block  
+      ac_mat%irn(i) = (ac_mat%irn((i - 1)*block_size2 + 1) - 1)/block_size + 1 
+      ac_mat%jcn(i) = (ac_mat%jcn((i - 1)*block_size2 + 1) - 1)/block_size + 1 
+    enddo
+  endif
+
+  allocate(sparskit_work(n_block+1))
+  
+  call clck_time(t0)  
+  call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),block_size,sparskit_work)
+  call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr2 :', tsecond
+  
+  deallocate(sparskit_work)
+  
+  if (.not. ptss%initialized) then
+    call pastix_initialize(ptss,MPI_COMM_WORLD)
+  endif  
+ 
+  if (.not.ptss%analyzed) then
+! -- For PaStiX solver before version 6.x
+    allocate(ptss%perm_vars(n_block))
+    allocate(ptss%iperm_vars(n_block))
+    
+    ptss%iparm(IPARM_DOF_NBR) = block_size
+    
+    call pastix_set_mat(ptss,ac_mat,rhs_vec)
+    
+    call clck_time(t0)    
+    call pastix_analyze(ptss,ac_mat)
+    call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time reordering :', tsecond
+  endif
+  
+  call pastix_factorize(ptss,ac_mat)
+  call pastix_solve(ptss,ac_mat,rhs_vec)
+  
+  return
+  
+  
+end subroutine solve_pastix_all
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
 #if defined(USE_PASTIX)
 subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
 !---------------------------------------------------------------------

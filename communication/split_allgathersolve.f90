@@ -1,4 +1,4 @@
-subroutine split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
+subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
 !Split MPI_ALLGATHERV if MPI counts beyond 64-int
 
   use mpi_mod
@@ -10,11 +10,13 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
 
   ! --- Routine variables
   integer               :: n_cpu,my_id
-  integer(kind=int_all) :: counts(n_cpu),displacements(n_cpu)
+  !integer(kind=int_all) :: counts(n_cpu),displacements(n_cpu)
 
   ! --- Local variables
   integer               :: i, i_cpu, ierr
   integer, allocatable  :: counts_int(:),displacements_int(:)
+  integer(kind=int_all),allocatable :: counts(:), displacements(:) ! should be placed inside split_allgathersolve
+  
   integer(kind=int_all) :: i_long
 
   integer(kind=int_all)  :: INT_MAX=1000000000 ! very conservative, could be up to ~2147000000
@@ -32,6 +34,20 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
   
   type(type_SP_MATRIX)   :: ad_mat, ac_mat
 
+  
+  if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
+  if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+
+  call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
+  call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)  
+  
+  call MPI_Allgather(ad_mat%nnz,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
+
+  displacements(1) = 0
+  do i=2,n_cpu
+    displacements(i) = displacements(i-1) + counts(i-1)
+  enddo
+
   ! --- If we're using short integers, then this is just a simple wrapper, no need to split
 #ifndef INTSIZE64
   call MPI_AllgatherV(ad_mat%irn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%irn, &
@@ -39,7 +55,11 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
   call MPI_AllgatherV(ad_mat%jcn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%jcn, &
                       counts,displacements,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
   call MPI_AllgatherV(ad_mat%val,ad_mat%nnz,MPI_DOUBLE_PRECISION,ac_mat%val, &
-                      counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)                      
+                      counts,displacements,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+                      
+  call tr_deallocate(counts,"counts",CAT_DMATRIX)
+  call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+                      
   return
 #else
 
@@ -163,6 +183,9 @@ subroutine split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
   ! --- Deallocate short-integer counts and displacements
   call tr_deallocate(counts_int,"SPL_GATH_counts",CAT_DMATRIX)
   call tr_deallocate(displacements_int,"SPL_GATH_displacements",CAT_DMATRIX)
+  call tr_deallocate(counts,"counts",CAT_DMATRIX)
+  call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+  
   return
 #endif  
 

@@ -1,12 +1,11 @@
 #ifdef USE_STRUMPACK      
 !> subroutine solves the complete system of equation using STRUMPACK
+! takes distributed matrix ad_mat, centralize it and solve, placing the solution into the rhs_vec
 subroutine solve_strumpack_all(n_cpu, my_id, ad_mat, rhs_vec)
   use strumpack_module
 
   use tr_module 
-  use mod_parameters
-  !use mumps_module
-  !use global_distributed_matrix
+  use mod_parameters, only: n_tor, n_var
   use mpi_mod
   use mod_clock
   use mod_integer_types
@@ -18,13 +17,13 @@ subroutine solve_strumpack_all(n_cpu, my_id, ad_mat, rhs_vec)
 
 ! --- Routine parameters
   integer,               intent(in) :: n_cpu, my_id
-  integer :: index_min, index_max
 
 ! --- Local variables
+  integer                           :: index_min, index_max
+  integer(kind=int_all)             :: m_loc  
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
   real*8                            :: tsecond
   integer                           :: i, k, j, ierr
-  integer(kind=int_all)             :: m_loc
   integer(kind=int_all),allocatable :: counts(:), displacements(:) ! should be placed inside split_allgathersolve
   integer(kind=int_all), parameter  :: Int1=1
   
@@ -40,7 +39,6 @@ subroutine solve_strumpack_all(n_cpu, my_id, ad_mat, rhs_vec)
   index_min = ad_mat%index_min
   index_max = ad_mat%index_max
   m_loc = (index_max - index_min + 1) * n_tor * n_var
-  !mumps_par%nz_loc = nz_glob
 
   call MPI_Allreduce(m_loc,ac_mat%ng,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -50,26 +48,12 @@ subroutine solve_strumpack_all(n_cpu, my_id, ad_mat, rhs_vec)
   
   call clck_time(t0)
 
-!------------------------------------------------------ collect the distributed matrix onto all procs
-  if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-  if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
-
-  call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
-  call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
-
-  call MPI_Allgather(ad_mat%nnz,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-
-  displacements(1) = 0
-  do i=2,n_cpu
-    displacements(i) = displacements(i-1) + counts(i-1)
-  enddo
-
   allocate(ac_mat%irn(nnz))
   allocate(ac_mat%jcn(nnz))
   allocate(ac_mat%val(nnz))
   ac_mat%nnz = nnz
 
-  call split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
+  call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
@@ -100,10 +84,7 @@ subroutine solve_strumpack_all(n_cpu, my_id, ad_mat, rhs_vec)
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond  
-
-  if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-  if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
-  
+ 
   deallocate(ac_mat%irn)
   deallocate(ac_mat%jcn)
   deallocate(ac_mat%val)  

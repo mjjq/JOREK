@@ -174,22 +174,13 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
             end if ! special case of 2 expoints
           endif ! xpoint cases
 
-          ! --- Identify private regions
-          if (get_psi_n(P,Z) > 1.d0) then
-            if ((P < ES%psi_bnd) .and. (ES%axis_is_psi_minimum)) then
-              is_private = .true.
-            elseif ((P > ES%psi_bnd) .and. (.not. ES%axis_is_psi_minimum)) then
-              is_private = .true.
-            else
-              is_private = .false.
-            endif
-          else
-            is_private = .false.
-          endif
-
         endif ! xpoints and axis defined
       endif ! equil_info initialized
-      if (ES%initialized) then
+
+      ! --- If initial guess of axis and LCFS exist, try to indetify private regions
+      if (         ES%initialized  .or.   &
+           ((.not. ES%initialized) .and. (ES%xpoint .and. (ES%ifail_xpoint==0) .and. (ES%ifail_axis==0) ))   ) then
+
         if (get_psi_n(P,Z) > 1.d0) then
           if ((P < ES%psi_bnd) .and. (ES%axis_is_psi_minimum)) then
             is_private = .true.

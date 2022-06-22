@@ -119,9 +119,7 @@ end subroutine solve_pastix_all
 
 
 
-
-
-#if defined(USE_PASTIX)
+#ifdef USE_PASTIX
 subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
 !---------------------------------------------------------------------
 ! subroutine solves the complete system of equation using pastix with
@@ -137,7 +135,6 @@ use mod_clock
 use mod_coicsr
 use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
 use mod_integer_types
-use data_structure, only: type_SP_MATRIX
  
 implicit none
 
@@ -157,7 +154,6 @@ integer                           :: i, k, j, ierr
 integer(kind=int_all)             :: m_loc
 integer(kind=int_all),allocatable :: counts(:), displacements(:)
 integer(kind=int_all), parameter  :: Int1=1
-type(type_SP_MATRIX)   :: ad_mat, ac_mat
 
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix (PastiX) *'
@@ -220,7 +216,7 @@ call tr_allocatep(mumps_par%JCN,Int1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
 call tr_allocatep(mumps_par%A,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
 call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
 
-call split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
+call split_allgathersolve(n_cpu,my_id,counts,displacements)
 
 call MPI_AllReduce(RHS_glob,mumps_par%RHS,mumps_par%N,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 
@@ -413,7 +409,6 @@ if (allocated(displacements)) call tr_deallocate(displacements,"displacements",C
 return
 end
 #endif
-
 
 #ifdef USE_PASTIX6
 !> subroutine solves the complete system of equation using PaStiX 6.2

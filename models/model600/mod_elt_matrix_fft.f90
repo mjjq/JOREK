@@ -499,9 +499,9 @@ do i=1,n_vertex_max
             Ti0_ss = eq_ss(mp,var_Ti,ms,mt)
             Ti0_tt = eq_tt(mp,var_Ti,ms,mt)
             Ti0_st = eq_st(mp,var_Ti,ms,mt)
-           
-            Ti0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
-            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+                                                              ! Factors of 2 come because correction is made on total T
+            Ti0_corr     = corr_neg_temp(Ti0*2.d0) / 2.d0     ! For use in eta(T), visco(T), ...
+            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0*2.d0) / 2.d0 ! Improve the correction
            
             Te0    = eq_g(mp,var_Te,ms,mt)
             Te0_x  = (   y_t(ms,mt) * eq_s(mp,var_Te,ms,mt) - y_s(ms,mt) * eq_t(mp,var_Te,ms,mt) ) / xjac
@@ -512,9 +512,9 @@ do i=1,n_vertex_max
             Te0_ss = eq_ss(mp,var_Te,ms,mt)
             Te0_tt = eq_tt(mp,var_Te,ms,mt)
             Te0_st = eq_st(mp,var_Te,ms,mt)
-           
-            Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
-            dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
+                                                              ! Factors of 2 come because correction is made on total T
+            Te0_corr     = corr_neg_temp(Te0*2.d0) / 2.d0     ! For use in eta(T), visco(T), ...
+            dTe0_corr_dT = dcorr_neg_temp_dT(Te0*2.d0) / 2.d0 ! Improve the correction
 
             zTi   =   eq_zTi(ms,mt)
             zTi_x = dTi_dpsi(ms,mt) * ps0_x
@@ -550,8 +550,8 @@ do i=1,n_vertex_max
             Ti0_tt = T0_tt / 2.d0
             Ti0_st = T0_st / 2.d0
 
-            Ti0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
-            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+            Ti0_corr     = T0_corr / 2.d0 ! For use in eta(T), visco(T), ...
+            dTi0_corr_dT = dT0_corr_dT / 2.d0 ! Improve the correction
            
             Te0    = Ti0
             Te0_x  = Ti0_x
@@ -563,8 +563,8 @@ do i=1,n_vertex_max
             Te0_tt = Ti0_tt
             Te0_st = Ti0_st
 
-            Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
-            dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
+            Te0_corr     = T0_corr / 2.d0 ! For use in eta(T), visco(T), ...
+            dTe0_corr_dT = dT0_corr_dT / 2.d0 ! Improve the correction
 
             zTi   =   eq_zT(ms,mt)         / 2.d0
             zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.d0
@@ -1184,14 +1184,10 @@ do i=1,n_vertex_max
           !-----------------------------------------------------------------
           ! --- Radiation from background impurity, using ADAS (by default)
           !-----------------------------------------------------------------
-          ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-          if (with_TiTe) then 
-            Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-            Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-          else
-            Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-            Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-          endif
+          ne_SI      = r0_corr * 1.d20 * central_density !electron density (SI)
+          Te_eV      = Te0      /(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+          Te_corr_eV = Te0_corr /(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV corrected
+
           if (use_imp_adas) then  ! use open adas by default
             frad_bg = 0. 
             dfrad_bg_dT = 0.

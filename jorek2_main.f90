@@ -189,6 +189,7 @@ program JOREK2
   
   type(type_SP_MATRIX) :: a_mat
   type(type_RHS) :: rhs_vec
+  type(type_SP_SOLVER) :: solver
   
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -759,17 +760,13 @@ mpi_required = 0
     
     if (.not. gmres) then
   
-      call solve_sparse_system(a_mat, rhs_vec, solve_type=MHD_DIRECT)
+      call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_DIRECT)
       do i=1,rhs_vec%ng
         deltas(i) =  rhs_vec%val(i)
       enddo
       !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
     else
-!#ifdef TEST_CORE
-!      call solve_sparse_system(a_mat, solve_type=MHD_PRECON)
-!#else
-!#endif
     
 
       if (.not. solve_only) then

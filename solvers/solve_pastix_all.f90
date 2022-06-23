@@ -170,13 +170,9 @@ integer(kind=int_all),allocatable, target :: perm_vars(:), iperm_vars(:)
 index_min = ad_mat%index_min
 index_max = ad_mat%index_max
 m_loc = (index_max - index_min + 1) * n_tor * n_var
-!mumps_par%nz_loc = nz_glob
 
 call MPI_Allreduce(m_loc,n,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_Allreduce(ad_mat%nnz,nnz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-!mumps_par%n = n
-!mumps_par%nz = nnz
 
 ac_mat%ng  = n
 ac_mat%nnz = nnz
@@ -226,16 +222,16 @@ if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecon
 
 ! End of matrix preparation
 
-allocate(perm_vars(n_block)); perm_vars = 0
-allocate(iperm_vars(n_block)); iperm_vars = 0
-
-ptss%perm_vars  => perm_vars
-ptss%iperm_vars => iperm_vars
-
-call pastix_init_nthreads(ptss)
-if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ', ptss%iparm(IPARM_THREAD_NBR)
-
 if (.not. ptss%initialized) then
+
+  call pastix_init_nthreads(ptss)
+  if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ', ptss%iparm(IPARM_THREAD_NBR)
+
+  allocate(perm_vars(n_block)); perm_vars = 0
+  allocate(iperm_vars(n_block)); iperm_vars = 0
+
+  ptss%perm_vars  => perm_vars
+  ptss%iperm_vars => iperm_vars
   
   ptss%iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
   ptss%iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
@@ -243,7 +239,7 @@ if (.not. ptss%initialized) then
 
   if (my_id .eq. 0) then
     write(*,*) '***********************************'
-    write(*,*) '* initialise PastiX               *'
+    write(*,*) '* initialize PastiX               *'
     write(*,*) '***********************************'
   endif
                         
@@ -283,7 +279,7 @@ if (.not. ptss%analyzed) then
   
   if (my_id .eq. 0) then
     write(*,*) '***********************************'
-    write(*,*) '* analyse PastiX                  *'
+    write(*,*) '* analyze PastiX                  *'
     write(*,*) '***********************************'
   endif
 

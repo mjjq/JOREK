@@ -1127,22 +1127,22 @@ mpi_required = 0
     endif
 #endif
 
-#if defined(USE_PASTIX)
-    if (use_pastix) then
-      ! -- For PaStiX solver before version 6.x
-      pastix_iparm(2)     = 7                       ! Clean-up
-      pastix_iparm(3)     = 7
-
-      if (.not. gmres) then
-        call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-      elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
-        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, &
-          DUMMY_INT,DUMMY_INT,DUMMY_REAL,                       &
-          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-      endif
-    endif
-#endif
+!#if defined(USE_PASTIX)
+!    if (use_pastix) then
+!      ! -- For PaStiX solver before version 6.x
+!      pastix_iparm(2)     = 7                       ! Clean-up
+!      pastix_iparm(3)     = 7
+!
+!      if (.not. gmres) then
+!        call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
+!          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+!      elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (my_id_n .eq.0))  ) then
+!        call pastix_fortran(pastix_data,MPI_COMM_N,mumps_par%n, &
+!          DUMMY_INT,DUMMY_INT,DUMMY_REAL,                       &
+!          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
+!      endif
+!    endif
+!#endif
 
 #ifdef USE_WSMP
     if (use_wsmp) then

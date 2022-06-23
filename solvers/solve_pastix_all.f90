@@ -135,7 +135,7 @@ use mod_coicsr
 use phys_module, only: use_BLR_compression, epsilon_BLR, just_in_time_BLR, pastix_blr_abs_tol
 use mod_integer_types
 use data_structure, only: type_SP_MATRIX, type_RHS
-use mod_pastix, only: type_PASTIX_SOLVER, scale_by_coulmns
+use mod_pastix, only: type_PASTIX_SOLVER, scale_by_coulmns, pastix_init_nthreads
  
 implicit none
 
@@ -161,6 +161,7 @@ type(type_RHS)           :: rhs_vec
 integer                            :: index_min, index_max
 type(type_PASTIX_SOLVER) :: ptss
 integer(kind=int_all) :: n, nnz
+integer(kind=int_all),allocatable, target :: perm_vars(:), iperm_vars(:)
 
 !write(*,*) my_id,'*********************************'
 !write(*,*) my_id,'*  solve global matrix (PastiX) *'
@@ -196,107 +197,87 @@ if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', ts
 call clck_time(t0)
 
 #ifdef USE_BLOCK
-!---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
-!                             temporary solution before using blocks everywhere
-
 block_size  = n_tor * n_var
+#else
+block_size = 1
+#endif
 block_size2 = block_size**2
-!---------------------------- reduce IRN,JCN to make use of blocksize ntor*nvar
+
 n_block   = ac_mat%ng/block_size
 nnz_block = ac_mat%nnz/block_size2
 
-do i=1,nnz_block  
-  ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1) / block_size + 1 
-  ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
-enddo
+if (block_size > 1) then
+  do i=1,nnz_block  
+    ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1) / block_size + 1 
+    ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
+  enddo
+endif
 
 if (allocated(sparskit_work)) deallocate(sparskit_work)
 allocate(sparskit_work(n_block+1))
 
 call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),block_size,sparskit_work)
 
-! -- For PaStiX solver before version 6.x
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,n_block,"pastix_perm_vars",CAT_UNKNOWN)
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,n_block,"pastix_iperm_vars",CAT_UNKNOWN)
-
-#else /* USE_BLOCK */
-
 if (allocated(sparskit_work)) deallocate(sparskit_work)
-allocate(sparskit_work(ac_mat%ng + 1))
 
-call coicsr(ac_mat%ng,ac_mat%nnz,1,ac_mat%val,ac_mat%irn,ac_mat%jcn,sparskit_work)
-#endif /* USE_BLOCK */
-
-if (allocated(sparskit_work)) deallocate(sparskit_work)
 call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)
 if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
 
-! -- For PaStiX solver before version 6.x
-if (.not. allocated(pastix_perm_vars))  call tr_allocate(pastix_perm_vars,Int1,ac_mat%ng,"pastix_perm_vars",CAT_UNKNOWN)
-if (.not. allocated(pastix_iperm_vars)) call tr_allocate(pastix_iperm_vars,Int1,ac_mat%ng,"pastix_iperm_vars",CAT_UNKNOWN)
+! End of matrix preparation
 
-call pastix_init_num_threads(my_id)
+allocate(perm_vars(n_block)); perm_vars = 0
+allocate(iperm_vars(n_block)); iperm_vars = 0
 
-if (.not. pastix_initialised) then
+ptss%perm_vars  => perm_vars
+ptss%iperm_vars => iperm_vars
 
+call pastix_init_nthreads(ptss)
+if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ', ptss%iparm(IPARM_THREAD_NBR)
 
-  ! -- For PaStiX solver before version 6.x
-  pastix_iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
-  pastix_iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
-  pastix_iparm(IPARM_END_TASK)          = API_TASK_INIT
+if (.not. ptss%initialized) then
+  
+  ptss%iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
+  ptss%iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
+  ptss%iparm(IPARM_END_TASK)          = API_TASK_INIT  
 
   if (my_id .eq. 0) then
     write(*,*) '***********************************'
     write(*,*) '* initialise PastiX               *'
     write(*,*) '***********************************'
   endif
+                        
+  call pastix_fortran(ptss%idata,MPI_COMM_WORLD,n_block,ac_mat%jcn,ac_mat%irn,ac_mat%val, &
+                        ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,Int1,ptss%iparm,ptss%dparm)
+ 
+  ptss%iparm(IPARM_VERBOSE)               = pastix_verb              
+  ptss%iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
 
-  ! -- For PaStiX solver before version 6.x
-#ifdef USE_BLOCK
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD,n_block,ac_mat%jcn,ac_mat%irn,ac_mat%val, &
-                        pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
-#else
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD,ac_mat%ng,ac_mat%jcn,ac_mat%irn,ac_mat%val, &
-                        pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
-#endif
-
-  pastix_iparm(IPARM_VERBOSE)               = pastix_verb              
-  pastix_iparm(IPARM_ITERMAX)               = pastix_iter                ! refinement : max number of iterations
-
-  pastix_iparm(IPARM_FACTORIZATION)         = pastix_facto
-  pastix_iparm(IPARM_THREAD_NBR)            = pastix_nthrd               ! number of threads
-  pastix_iparm(IPARM_INCOMPLETE)            = pastix_ricar
-  pastix_iparm(IPARM_LEVEL_OF_FILL)         = pastix_iluk
-  pastix_dparm(DPARM_EPSILON_REFINEMENT)    = pastix_epsilon             ! error level refinement
-  pastix_dparm(DPARM_EPSILON_MAGN_CTRL)     = pastix_pivot               ! pivot threshold
-#ifdef USE_BLOCK
-  pastix_iparm(IPARM_DOF_NBR)               = block_size                 ! block size
-#else
-  pastix_iparm(IPARM_DOF_NBR)               = 1
-#endif
-
-  ! -- For PaStiX solver before version 6.x
-  pastix_iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
-  pastix_iparm(IPARM_SYM)                   = pastix_sym
-  pastix_iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
-#ifdef WORLDWAR2
+  ptss%iparm(IPARM_FACTORIZATION)         = pastix_facto
+  ptss%iparm(IPARM_THREAD_NBR)            = pastix_nthrd               ! number of threads
+  ptss%iparm(IPARM_INCOMPLETE)            = pastix_ricar
+  ptss%iparm(IPARM_LEVEL_OF_FILL)         = pastix_iluk
+  ptss%dparm(DPARM_EPSILON_REFINEMENT)    = pastix_epsilon             ! error level refinement
+  ptss%dparm(DPARM_EPSILON_MAGN_CTRL)     = pastix_pivot               ! pivot threshold
+  ptss%iparm(IPARM_DOF_NBR)               = block_size                 ! block size
+  ptss%iparm(IPARM_RHS_MAKING)            = pastix_rhs                 ! right hand side (0 : use RHS)
+  ptss%iparm(IPARM_SYM)                   = pastix_sym
+  ptss%iparm(IPARM_AMALGAMATION_LEVEL)    = pastix_amalg
 #ifdef FUNNELED
-  pastix_iparm(IPARM_THREAD_COMM_MODE)      = API_THREAD_FUNNELED
+  ptss%iparm(IPARM_THREAD_COMM_MODE)      = API_THREAD_FUNNELED
 #else
-  pastix_iparm(IPARM_THREAD_COMM_MODE)      = API_THREAD_MULTIPLE
-#endif
+  ptss%iparm(IPARM_THREAD_COMM_MODE)      = API_THREAD_MULTIPLE
 #endif
 
-  pastix_initialised = .true.
+  ptss%initialized = .true.  
+  
 endif
 
-if (.not. pastix_analysed) then
-
-  ! -- For PaStiX solver before version 6.x
-  pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
-  pastix_iparm(IPARM_START_TASK) = API_TASK_ORDERING
-  pastix_iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
+if (.not. ptss%analyzed) then
+  
+  ptss%iparm(IPARM_THREAD_NBR) = pastix_nthrd
+  ptss%iparm(IPARM_START_TASK) = API_TASK_ORDERING
+  ptss%iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
 
   call clck_time(t0)
   
@@ -306,60 +287,29 @@ if (.not. pastix_analysed) then
     write(*,*) '***********************************'
   endif
 
-  ! -- For PaStiX solver before version 6.x
-#ifdef USE_BLOCK
-  
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
-                      pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
-
-#else
-
-  call pastix_fortran(pastix_data,MPI_COMM_WORLD, mumps_par%n, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
-                      pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
-
-#endif
+  call pastix_fortran(ptss%idata,MPI_COMM_WORLD, n_block, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
+                      ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,Int1,ptss%iparm,ptss%dparm)
  
   call clck_time(t1)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond
 
-  pastix_analysed = .true.
+  ptss%analyzed = .true.
 
-endif ! .not. pastix_analysed
-
+endif
 call clck_time(t0)
 
-
-! -- For PaStiX solver before version 6.x
-pastix_iparm(IPARM_THREAD_NBR) = pastix_nthrd
-pastix_iparm(IPARM_START_TASK) = API_TASK_NUMFACT
-pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
-#ifdef WORLDWAR2
-#ifdef FUNNELED
-  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_FUNNELED
-#else
-  pastix_iparm(IPARM_THREAD_COMM_MODE)  = API_THREAD_MULTIPLE
-#endif
-#endif
+ptss%iparm(IPARM_START_TASK) = API_TASK_NUMFACT
+ptss%iparm(IPARM_END_TASK)   = pastix_endsolve
 
 if (my_id .eq. 0) then
   write(*,*) '***********************************'
-  write(*,*) '* call PastiX                     *'
+  write(*,*) '* solve PastiX                     *'
   write(*,*) '***********************************'
 endif
 
-
-! -- For PaStiX solver before version 6.x
-#ifdef USE_BLOCK
-pastix_iparm(IPARM_DOF_NBR) = block_size
-
-call pastix_fortran(pastix_data,MPI_COMM_WORLD, n_block, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
-                    pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
-#else
-
-call pastix_fortran(pastix_data,MPI_COMM_WORLD, ac_mat%ng, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
-                    pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
-#endif
+call pastix_fortran(ptss%idata,MPI_COMM_WORLD, n_block, ac_mat%jcn, ac_mat%irn, ac_mat%val, &
+                    ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,Int1,ptss%iparm,ptss%dparm)                    
 
 call clck_time(t1)
 call clck_ldiff(t0,t1,tsecond)
@@ -369,9 +319,6 @@ do k=1,ac_mat%ng
   rhs_vec%val(k) =  rhs_vec%val(k)/ad_mat%column_scaling(k)
 enddo
 
-!if (allocated(column_local))  call tr_deallocate(column_local,"column_local",CAT_DMATRIX)
-!if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-!if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
 
 return
 end

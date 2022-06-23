@@ -8,15 +8,14 @@ module mod_pastix
     integer                  :: comm
     logical                  :: initialized = .false.
     logical                  :: analyzed    = .false.
-    integer(kind=8)          :: idata
     integer(kind=int_all)    :: iparm(IPARM_SIZE)
     real*8                   :: dparm(DPARM_SIZE)
-    integer(kind=int_all)    :: sym = API_SYM_NO
     
     integer(kind=int_all), pointer :: perm_vars(:) 
     integer(kind=int_all), pointer :: iperm_vars(:)
-    
-    integer(kind=int_all)    :: nthrd    = 1
+
+    integer(kind=8)          :: idata    = 0
+    integer(kind=int_all)    :: sym      = API_SYM_NO    
     integer(kind=int_all)    :: iter     = 250
     integer(kind=int_all)    :: ricar    = 0
     integer(kind=int_all)    :: iluk     = 3
@@ -24,14 +23,14 @@ module mod_pastix
     real*8                   :: eps      = 1.d-12
     real*8                   :: pivot    = 1.d-64
     integer(kind=int_all)    :: maxthrd  = 1024
-    integer(kind=int_all)    :: verb  = API_VERBOSE_NO
-    integer(kind=int_all)    :: facto = API_FACT_LU
-    integer(kind=int_all)    :: rhs = 0
+    integer(kind=int_all)    :: verb     = API_VERBOSE_NO
+    integer(kind=int_all)    :: facto    = API_FACT_LU
+    integer(kind=int_all)    :: rhs      = 0
   end type type_PASTIX_SOLVER
 
   private
   public :: type_PASTIX_SOLVER, pastix_initialize, pastix_set_mat, pastix_analyze, pastix_factorize, pastix_solve, pastix_finalize, &
-            scale_by_coulmns
+            scale_by_coulmns, pastix_init_nthreads
 
   contains
   
@@ -55,7 +54,7 @@ module mod_pastix
     ptss%iparm(IPARM_THREAD_COMM_MODE) = API_THREAD_MULTIPLE
 #endif    
     
-    call pastix_init_num_threads(ptss)
+    call pastix_init_nthreads(ptss)
     ptss%initialized = .true.
     
     return
@@ -267,24 +266,25 @@ module mod_pastix
   end subroutine scale_by_coulmns
 
 
-
-  subroutine pastix_init_num_threads(ptss)
+  subroutine pastix_init_nthreads(ptss)
     use mpi_mod
     use omp_lib
     
     implicit none
     type(type_PASTIX_SOLVER) :: ptss
     integer :: nthrd
-!$omp parallel default(none) shared(nthrd)
-!$omp master
-      nthrd = omp_get_num_threads()    
-!$omp end master
-!$omp end parallel
+
+    !$omp parallel default(none) shared(nthrd)
+    !$omp master
+      nthrd = omp_get_num_threads()
+    !$omp end master
+    !$omp end parallel
+    
     if (nthrd * get_tasks_per_node() > ptss%maxthrd) then
       nthrd = max(ptss%maxthrd/get_tasks_per_node(), 1)
     endif
     ptss%iparm(IPARM_THREAD_NBR) = nthrd
-  end subroutine
+  end subroutine pastix_init_nthreads
 
 
 

@@ -10,10 +10,10 @@ module mod_strumpack
     type(c_ptr) :: sscp ! STRUMPACK sparse solver c pointer
     !type(c_ptr) :: distr
     integer(kind=C_INT_ALL), pointer :: distr(:)
-    logical                        :: initialized = .false.
-    logical                        :: analyzed = .false.
-    logical                        :: equilibrium = .false.
-    integer                        :: comm
+    logical                          :: initialized = .false.
+    logical                          :: analyzed = .false.
+    logical                          :: equilibrium = .false.
+    integer                          :: comm
   end type type_STRUMPACK_SOLVER
 
   private
@@ -42,7 +42,8 @@ module mod_strumpack
       integer(kind=C_INT_ALL), intent(in) :: n
       integer, intent(in) :: comm
       type(c_ptr) :: irn, jcn, val
-      integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: dist
+      type(c_ptr) :: dist
+      !integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: dist
       type(c_ptr), intent(inout) :: spss
       logical :: upd
     end subroutine spk_set_mat
@@ -70,8 +71,8 @@ module mod_strumpack
 
       integer(kind=C_INT_ALL), intent(in) :: n
       type(c_ptr), intent(inout) :: spss, rhs
-      !type(c_ptr) :: dist
-      integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: dist
+      type(c_ptr) :: dist
+      !integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: dist
       integer, intent(in) :: comm
     end subroutine spk_solve
 
@@ -124,7 +125,6 @@ module mod_strumpack
         integer(kind=C_INT_ALL), allocatable, target :: distr(:)
         
         integer :: rank, n_cpu
-        !integer :: indx
         integer(kind=int_all) :: nnz_d, n_d, i, j, imin, imax
 
         integer(kind=int_all), dimension(:), pointer :: myelm
@@ -222,19 +222,23 @@ module mod_strumpack
           a_mat%indexing = 0
         endif
         
-#if (defined(USEMKL))
-        irn_c = c_loc(a_mat%irn); jcn_c = c_loc(a_mat%jcn); val_c = c_loc(a_mat%val); dist_c = c_loc(distr)
-        call convert2csr(a_mat%indexing, n_d, a_mat%ng, nnz_d, irn_c, jcn_c, val_c)
-#else
+#if (!defined(USEMKL))
         call convert_sorting(nnz_d, a_mat%irn, a_mat%jcn, a_mat%val, a_mat%block_size, a_mat%indexing)
-        irn_c = c_loc(a_mat%irn); jcn_c = c_loc(a_mat%jcn); val_c = c_loc(a_mat%val); dist_c = c_loc(distr)
 #endif
+
+        irn_c = c_loc(a_mat%irn); jcn_c = c_loc(a_mat%jcn); val_c = c_loc(a_mat%val); dist_c = c_loc(distr)
+        
+#if (defined(USEMKL))
+        call convert2csr(a_mat%indexing, n_d, a_mat%ng, nnz_d, irn_c, jcn_c, val_c)
+#endif
+
         !spss%distr = c_loc(distr)
         
         spss%distr(1:n_cpu+1) = distr(1:n_cpu+1)
         deallocate(distr)
+        dist_c = c_loc(spss%distr)
         
-        call spk_set_mat(n_d,spss%distr,irn_c,jcn_c,val_c,spss%sscp,spss%comm,upd)
+        call spk_set_mat(n_d,dist_c,irn_c,jcn_c,val_c,spss%sscp,spss%comm,upd)
 
         call MPI_Barrier(spss%comm,ierr)
 
@@ -278,7 +282,8 @@ module mod_strumpack
         
         type(type_STRUMPACK_SOLVER)   :: spss
         type(type_RHS)                :: rhs_vec
-        type(c_ptr)                   :: rhs_c        
+        type(c_ptr)                   :: rhs_c
+        type(c_ptr)                   :: dist_c
         integer :: ierr
         integer(kind=C_INT_ALL), allocatable, target :: dist(:)
         integer :: i, n_cpu
@@ -286,8 +291,9 @@ module mod_strumpack
         call MPI_COMM_SIZE(spss%comm, n_cpu, ierr) 
 
         rhs_c = c_loc(rhs_vec%val);
+        dist_c = c_loc(spss%distr)
 
-        call spk_solve(rhs_vec%ng, spss%distr, rhs_c, spss%sscp, spss%comm)
+        call spk_solve(rhs_vec%ng, dist_c, rhs_c, spss%sscp, spss%comm)
         call MPI_Barrier(spss%comm,ierr)
 
         return

@@ -1,8 +1,7 @@
 #ifdef USE_STRUMPACK      
 !> subroutine solves the complete system of equation using STRUMPACK
 ! takes distributed matrix ad_mat, centralize it and solve, placing the solution into the rhs_vec
-subroutine solve_strumpack_all(spss1, ad_mat, rhs_vec)
-  use strumpack_module
+subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   use mod_strumpack
 
   use tr_module 
@@ -27,14 +26,14 @@ subroutine solve_strumpack_all(spss1, ad_mat, rhs_vec)
   
   type(type_SP_MATRIX)        :: ad_mat, ac_mat
   type(type_RHS)              :: rhs_vec
-  type(type_STRUMPACK_SOLVER) :: spss1
+  type(type_STRUMPACK_SOLVER) :: spss
   
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)  
 
-!write(*,*) my_id,'*********************************'
-!write(*,*) my_id,'*  solve global matrix using STRUMPACK *'
-!write(*,*) my_id,'*********************************'
+!write(*,*) my_id,'***************************************'
+!write(*,*) my_id,'* solve global matrix using STRUMPACK *'
+!write(*,*) my_id,'***************************************'
 
   index_min = ad_mat%index_min
   index_max = ad_mat%index_max
@@ -65,19 +64,19 @@ subroutine solve_strumpack_all(spss1, ad_mat, rhs_vec)
   call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
   
-  if (.not. spss1%initialized) then
-    call strumpack_init_core(spss1, MPI_COMM_WORLD)
-    spss1%initialized = .true.
-    spss1%equilibrium = .false.
+  if (.not. spss%initialized) then
+    call strumpack_init_core(spss, MPI_COMM_WORLD)
+    spss%initialized = .true.
+    spss%equilibrium = .false.
   endif
   
-  call strumpack_set_mat_core(spss1, ac_mat)
+  call strumpack_set_mat_core(spss, ac_mat)
   
-  if (.not. spss1%analyzed) then
+  if (.not. spss%analyzed) then
     call clck_time(t0)
     
-    call strumpack_analyze_core(spss1)
-    spss1%analyzed = .true.
+    call strumpack_analyze_core(spss)
+    spss%analyzed = .true.
     
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond    
@@ -85,41 +84,13 @@ subroutine solve_strumpack_all(spss1, ad_mat, rhs_vec)
   
   call clck_time(t0)
   
-  call strumpack_factorize_core(spss1)
+  call strumpack_factorize_core(spss)
   
-  call strumpack_solve_core(spss1, rhs_vec)
+  call strumpack_solve_core(spss, rhs_vec)
   
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond    
-  
-  return
-  
-  
-  if (.not. spss_initialized) then
-    call strumpack_init(MPI_COMM_WORLD)
-    spss_initialized = .true.
-  endif  
-  call strumpack_set_mat(n,nnz,ac_mat%irn,ac_mat%jcn,ac_mat%val,1, MPI_COMM_WORLD,&
-                         UPDATE=spss1%analyzed, DISTRIBUTED=.false.,EQUILIBRIUM=.false.)
 
-  if (.not. spss_analyzed) then
-    call clck_time(t0)
-    call strumpack_analyze(MPI_COMM_WORLD)    
-    spss_analyzed = .true.
-    call clck_time(t1)
-    call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond    
-  endif
-  
-  call clck_time(t0)
-
-  call strumpack_factorize(MPI_COMM_WORLD)   
-  call strumpack_solve(n,rhs_vec%val,MPI_COMM_WORLD)
- 
-  call clck_time(t1)
-  call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond  
- 
   deallocate(ac_mat%irn)
   deallocate(ac_mat%jcn)
   deallocate(ac_mat%val)  

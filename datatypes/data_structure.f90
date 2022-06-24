@@ -154,11 +154,12 @@ module data_structure
     integer(kind=int_all)          :: nnz                  !< number of local nonzero entries
     integer(kind=int_all)          :: index_min            !< minimum index in global range
     integer(kind=int_all)          :: index_max            !< maximum index in global range
-    integer                        :: n_matrix_block_size
+    integer                        :: block_size
     integer(kind=int_all)          :: nblock
     integer(kind=int_all)          :: nzblock
     integer                        :: comm                 !< communicator over which matrix is distributed
     logical                        :: scaled = .false.
+    logical                        :: row_distributed = .false.
   end type type_SP_MATRIX
   
   !> RHS vector type

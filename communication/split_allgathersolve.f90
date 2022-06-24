@@ -42,6 +42,7 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)  
   
   call MPI_Allgather(ad_mat%nnz,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
+  ac_mat%nnz = sum(counts)
 
   displacements(1) = 0
   do i=2,n_cpu

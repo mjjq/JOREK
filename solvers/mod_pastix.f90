@@ -8,6 +8,7 @@ module mod_pastix
     integer                  :: comm
     logical                  :: initialized = .false.
     logical                  :: analyzed    = .false.
+    logical                  :: equilibrium = .false.
     integer(kind=int_all)    :: iparm(IPARM_SIZE)
     real*8                   :: dparm(DPARM_SIZE)
     
@@ -93,7 +94,28 @@ module mod_pastix
     
     return
     
-  end subroutine pastix_initialize  
+  end subroutine pastix_initialize
+  
+  subroutine pastix_finalize(ptss)
+    use data_structure, only: type_SP_MATRIX, type_RHS
+    implicit none
+    
+    type(type_PASTIX_SOLVER)          :: ptss
+    type(type_SP_MATRIX)              :: a_mat
+    type(type_RHS)                    :: rhs_vec
+    
+    ptss%iparm(IPARM_START_TASK) = API_TASK_CLEAN
+    ptss%iparm(IPARM_END_TASK)   = API_TASK_CLEAN
+    
+    call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
+                        ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, 1, ptss%iparm,ptss%dparm)
+                        
+    ptss%initialized = .false.
+    ptss%analyzed = .false.
+    
+    return
+
+  end subroutine pastix_finalize
 
   
   subroutine pastix_analyze(ptss,a_mat)

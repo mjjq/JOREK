@@ -32,7 +32,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   type(type_SP_MATRIX)     :: ad_mat, ac_mat
   type(type_RHS)           :: rhs_vec
   integer                            :: index_min, index_max
-  integer                            :: block_size, block_size2
+  integer                            :: block_size2
   integer(kind=int_all)              :: n_block, nnz_block
   type(type_PASTIX_SOLVER) :: ptss
   integer(kind=int_all) :: n, nnz
@@ -72,28 +72,28 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   call clck_time(t0)
   
 #ifdef USE_BLOCK
-  block_size  = n_tor * n_var
+  ac_mat%block_size  = n_tor * n_var
 #else
-  block_size = 1
+  ac_mat%block_size = 1
 #endif
-  block_size2 = block_size**2
+  block_size2 = ac_mat%block_size**2
   
-  n_block   = ac_mat%ng/block_size
+  n_block   = ac_mat%ng/ac_mat%block_size
   nnz_block = ac_mat%nnz/block_size2
   
   ac_mat%nblock = n_block
   ac_mat%nzblock = nnz_block
   
-  if (block_size > 1) then
+  if (ac_mat%block_size > 1) then
     do i=1,nnz_block  
-      ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1) / block_size + 1 
-      ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1) / block_size + 1 
+      ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1 
+      ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1 
     enddo
   endif
   
   allocate(sparskit_work(n_block+1))
   
-  call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),block_size,sparskit_work)
+  call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),ac_mat%block_size,sparskit_work)
   
   if (allocated(sparskit_work)) deallocate(sparskit_work)
   
@@ -111,7 +111,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   
   if (.not. ptss%analyzed) then
     
-    ptss%iparm(IPARM_DOF_NBR)    = block_size
+    ptss%iparm(IPARM_DOF_NBR)    = ac_mat%block_size
     ptss%nblock = n_block
     
     call pastix_analyze(ptss,ac_mat)

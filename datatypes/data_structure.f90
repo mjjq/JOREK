@@ -173,21 +173,23 @@ module data_structure
     type(type_SP_MATRIX)           :: mat
     type(type_RHS)                 :: rhs
     integer(kind=int_all), pointer :: row_index(:)         !< Row indices of local mode family in global RHS
-    real(kind=8)                   :: row_factor           !< Multiplying factor of local mode family in global RHS       
+    real(kind=8)                   :: row_factor           !< Multiplying factor of current mode family in global RHS       
     integer                        :: n_mode_families      !< number of mode families
-    integer                        :: family_id            !< family id
-    integer                        :: mode_set_n           !< number of modes in local mode family    
-    integer, pointer               :: mode_set(:)          !< Mode number in local mode family used for preconditioner
+    integer                        :: family_id            !< family id, MPI private
+    integer                        :: mode_set_n           !< number of modes in current mode family    
+    integer, pointer               :: mode_set(:)          !< Mode number in current mode family
     integer, pointer               :: mode_families_ranks(:,:)
     integer, pointer               :: mode_families_modes(:,:)
     integer, pointer               :: rank_range(:)
     integer, pointer               :: ranks_per_family(:)
     integer, pointer               :: modes_per_family(:)
     integer, pointer               :: rank_id(:)           !< family id for each MPI rank
-    integer                        :: my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
+    integer                        :: my_id_n, n_cpu_n, MPI_COMM_N
+    integer                        :: my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
+    integer                        :: my_id, n_cpu
     logical                        :: autodistribute_modes
     logical                        :: autodistribute_ranks
-    logical                        :: distributed
+    logical                        :: initialized = .false.
   end type type_PRECOND
   
 

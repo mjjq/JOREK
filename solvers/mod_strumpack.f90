@@ -1,3 +1,4 @@
+!> New strumpack module to be used with core version
 module mod_strumpack
 #ifdef USE_STRUMPACK
   use iso_c_binding

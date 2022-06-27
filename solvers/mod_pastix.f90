@@ -1,3 +1,4 @@
+!> New pastix module to be used with core version
 module mod_pastix
 #ifdef USE_PASTIX
 #include "pastix_fortran.h"

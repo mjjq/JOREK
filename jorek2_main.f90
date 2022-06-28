@@ -767,10 +767,7 @@ mpi_required = 0
       !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
     else
-      call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_PRECON)
-      call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
     
-
       if (.not. solve_only) then
 
 #ifndef DIRECT_CONSTRUCTION
@@ -783,7 +780,16 @@ mpi_required = 0
         call clck_ldiff(t0,t1,tsecond)
         if (my_id .eq. 0) then
           write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-        end if
+        endif
+        
+        call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_PRECON)
+        
+        write(*,*) my_id, mumps_par%a(1), solver%pc%mat%val(1)
+        write(*,*) my_id, mumps_par%a(mumps_par%nz), solver%pc%mat%val(solver%pc%mat%nnz)
+        
+        
+        
+        call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)        
 #else 
 
          call clck_time_barrier(t0) 

@@ -21,7 +21,6 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   
   integer(kind=int_all) :: i_long
 
-  integer(kind=int_all)  :: INT_MAX=1000000000 ! very conservative, could be up to ~2147000000
   logical                :: need_to_split
   integer                :: n_split, i_split
   integer(kind=int_all)  :: count_split

@@ -192,6 +192,7 @@ module data_structure
     integer, pointer               :: send_disp(:,:), recv_disp(:,:)
     integer(kind=int_all), pointer :: istart(:), ifinish(:)!< starting and ending indices for split communication
     integer                        :: nsplit               !<number of split communication calls for long integer
+    integer(kind=int_all), pointer :: n_per_rank(:)        !< number of row/col per MPI rank for each family (?)    
     logical                        :: autodistribute_modes
     logical                        :: autodistribute_ranks
     logical                        :: initialized = .false.

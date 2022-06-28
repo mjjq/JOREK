@@ -45,6 +45,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   
   n = ac_mat%ng
   nnz = ac_mat%nnz
+
   
   call clck_time(t0)
 

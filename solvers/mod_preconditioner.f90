@@ -1,12 +1,12 @@
 module mod_preconditioner
 
   private
-  public initialize_preconditioner
+  public initialize_preconditioner, reset_reconditioner
   
   contains
   
   subroutine initialize_preconditioner(pc,comm_glob)
-    use phys_module, only: autodistribute_modes, n_mode_families, autodistribute_ranks
+    use phys_module, only: autodistribute_modes, n_mode_families, autodistribute_ranks, centralize_harm_mat
     use data_structure, only: type_PRECOND
     use mpi_mod
     implicit none
@@ -14,6 +14,7 @@ module mod_preconditioner
     type(type_PRECOND) :: pc
     integer            :: comm_glob, my_id, n_cpu, ierr
     integer            :: i
+    character(len=256) :: s
     
     call MPI_COMM_RANK(comm_glob, my_id, ierr)
     call MPI_COMM_SIZE(comm_glob, n_cpu, ierr)
@@ -24,6 +25,7 @@ module mod_preconditioner
     pc%n_mode_families = n_mode_families
     pc%autodistribute_ranks = autodistribute_ranks
     pc%autodistribute_modes = autodistribute_modes
+    pc%mat%row_distributed  = .not.centralize_harm_mat
     
     call distribute_ranks_core(n_cpu, pc)
     
@@ -36,10 +38,12 @@ module mod_preconditioner
     
     if (my_id.eq.0) then
       do i=1, pc%n_mode_families
-        write(*,*) "mode_family_id:", i, "MPI ranks:", pc%mode_families_ranks(i,1:pc%ranks_per_family(i))
+        write(s,'(A17,i4,A12)') " mode_family_id: ", i, " MPI ranks: "
+        write(*,*) trim(s), pc%mode_families_ranks(i,1:pc%ranks_per_family(i))
       enddo
       do i=1, pc%n_mode_families
-        write(*,*) "mode_family_id:", i, "weight:", pc%row_factor, "modes:", pc%mode_families_modes(i,1:pc%modes_per_family(i))
+        write(s,'(A17,i4,A9,f6.2)') " mode_family_id: ", i, " weight: ", pc%row_factor
+        write(*,*) trim(s), " modes:", pc%mode_families_modes(i,1:pc%modes_per_family(i))
       enddo
     endif
     
@@ -225,6 +229,54 @@ module mod_preconditioner
     return
 
   end subroutine distribute_ranks_core
+  
+!> Deallocate arrays and reset to the default values  
+  subroutine reset_reconditioner(pc)
+    use data_structure, only: type_PRECOND
+    implicit none
+    
+    type(type_PRECOND) :: pc !, pc_def
+    
+    if (.not.pc%initialized) then
+    
+      write(*,*) "Preconditioner is not initialized"
+      
+    else
+    
+      if (pc%analyzed) then
+      
+        deallocate(pc%rhs%val)
+        deallocate(pc%row_index)
+        deallocate(pc%send_counts, pc%recv_counts)
+        deallocate(pc%send_disp, pc%recv_disp)
+        deallocate(pc%istart, pc%ifinish)
+        deallocate(pc%n_per_rank)
+        
+        deallocate(pc%mat%val)
+        deallocate(pc%mat%irn)
+        deallocate(pc%mat%jcn)
+        if (pc%mat%scaled) deallocate(pc%mat%column_scaling)
+        pc%mat%scaled = .false.
+        pc%mat%row_distributed = .false.
+        pc%mat%col_distributed = .false.
+        pc%mat%indexing = 1
+        pc%analyzed = .false.
+        
+      endif
+      
+      deallocate(pc%mode_families_ranks)
+      deallocate(pc%mode_families_modes)
+      deallocate(pc%rank_id)
+      deallocate(pc%mode_set)
+      
+      pc%initialized = .false.
+    
+    endif
+    
+    return
+  
+  end subroutine reset_reconditioner
+  
   
 end module mod_preconditioner
 

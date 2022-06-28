@@ -1,7 +1,6 @@
 module mod_sparse
   use iso_c_binding
   use mpi
-  use mumps_module, only:   mumps_par
   use phys_module, only:    use_pastix, use_mumps, use_strumpack
 #ifdef USE_PASTIX
   use mod_pastix, only:     type_PASTIX_SOLVER
@@ -41,7 +40,8 @@ module mod_sparse
 #ifdef USE_PASTIX
     use mod_pastix, only: type_PASTIX_SOLVER, pastix_finalize
 #endif
-    use mod_preconditioner, only: initialize_preconditioner
+    use mod_preconditioner, only: initialize_preconditioner, reset_reconditioner
+    use mod_distribute_preconditioner_core, only: update_pc_mat, update_pc_rhs
     
     implicit none
     
@@ -83,10 +83,20 @@ module mod_sparse
       endif    
 
     elseif (solve_type.eq.MHD_PRECON) then
+    
       call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
       call MPI_COMM_RANK(a_mat%comm, my_id, ierr)    
       if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
-      call initialize_preconditioner(solver%pc,a_mat%comm)
+      
+      if (.not.solver%pc%initialized) call initialize_preconditioner(solver%pc,a_mat%comm)
+      
+      call update_pc_mat(solver%pc,a_mat)
+      
+      call update_pc_rhs(solver%pc,rhs_vec)
+      !call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs)
+      
+      !call reset_reconditioner(solver%pc)
+      
     else
       write(*,*) solve_type
     endif

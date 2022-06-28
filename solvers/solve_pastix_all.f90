@@ -13,14 +13,10 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   use mod_integer_types
   use data_structure, only: type_SP_MATRIX, type_RHS
   use mod_pastix, only:     type_PASTIX_SOLVER, scale_by_cols, pastix_solve, pastix_factorize, pastix_analyze, pastix_initialize
+  
+#include "pastix_fortran.h"  
    
   implicit none
-
-#ifdef USE_PASTIX
-#include "pastix_fortran.h"
-#else
-#include "no_pastix_fortran.h"
-#endif
 
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
   real*8                            :: tsecond

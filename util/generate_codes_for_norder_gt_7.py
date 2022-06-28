@@ -1,4 +1,4 @@
-#!/usr/bin/python
+# #!/usr/bin/python3
 import sys
 import numpy
 import pylab
@@ -26,8 +26,8 @@ vectors_like_paper = True
 
 # --- Derived sizes
 n_vertex = 4
-n_degrees = (n_order+1)**2/4
-n_vectors = (n_order+1)/2
+n_degrees = int((n_order+1)**2/4)
+n_vectors = int((n_order+1)/2)
 
 # --- This is important. In principle, we should never need basis functions derivatives
 # --- higher than _st, _ss, _tt. There is only one place: when aligning a grid to the psi-contours
@@ -198,7 +198,7 @@ def write_basis_function_1D(F_basis, deriv_min, deriv_max_tmp):
                 deriv = deriv + "s"
                 offset = offset + " "
         # --- Write basis functions for each node
-        for k in range(n_vertex/2):
+        for k in range(int(n_vertex/2)):
             if ( (d_s==0) and (d_t==0) ):
                 basis_file.write("\n  ! --- Main values on node %d" %(k+1))
             else:
@@ -246,7 +246,11 @@ def cleanup_string(basis_string):
             count = count + 1
             while(True):
                 c = basis_string[count]
-                term_tmp = term_tmp + c
+                if (count < len(basis_string) - 1): cp1 = basis_string[count+1]
+                if ( (c == ".") and (cp1 == "0") ):
+                    term_tmp = term_tmp + ".d"
+                else:
+                    term_tmp = term_tmp + c
                 count = count + 1
                 if (c == "("):
                     found_additional_parenthesis = found_additional_parenthesis + 1
@@ -261,6 +265,8 @@ def cleanup_string(basis_string):
             elif ( (c == "+") or (c == "-") ):
                 basis_terms.append(term_tmp)
                 term_tmp = "  "+c+"  "
+            elif ( (c == ".") and (cp1 == "0") ):
+                term_tmp = term_tmp + ".d"
             else:
                 term_tmp = term_tmp + c
             count = count + 1
@@ -1019,12 +1025,12 @@ def main():
     # --- Create the basis function for JOREK
     # --- with the derivatives, we need (n_order-2)**2 of them
     F_basis_1D = [[ [ sym.Symbol("") for m in range(n_deriv)] \
-                for i in range(n_degrees)] for k in range(n_vertex/2)] # the nodes and degrees
+                for i in range(n_degrees)] for k in range(int(n_vertex/2))] # the nodes and degrees
     # --- The node contributions
     for d_s in range(n_deriv):
         d_t = 0
         if (d_s + d_t > n_deriv-1): continue # only up to _ss, _tt, _st
-        for i_node in range(n_vertex/2):
+        for i_node in range(int(n_vertex/2)):
             if (i_node == 0):
                 i = 0 ; j = 0
             if (i_node == 1):
@@ -1041,7 +1047,7 @@ def main():
     for d_s in range(n_deriv):
         d_t = 0
         if (d_s + d_t > n_deriv-1): continue # only up to _ss, _tt, _st
-        for k in range(n_vertex/2):
+        for k in range(int(n_vertex/2)):
             for i in range(n_vectors):
                 j = 0
                 if ( (i==0) and (j==0) ): continue # avoid irrelevant vectors u(0)_00

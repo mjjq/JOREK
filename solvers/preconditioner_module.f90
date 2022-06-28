@@ -366,7 +366,6 @@ module preconditioner_module
 
     integer(kind=int_all), intent(in) :: ndof
     integer(kind=int_all) :: i, ndof_family
-    integer(kind=int_all), parameter   :: Int1=1
     integer :: im
 
     ndof_family = my_mode_set_n*ndof/n_tor

@@ -1,5 +1,6 @@
+!> Gather distributed matrix ad_mat into centralized matrix ac_mat
+! using split MPI_Allgatherv if MPI counts beyond 64-int
 subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
-!Split MPI_ALLGATHERV if MPI counts beyond 64-int
 
   use mpi_mod
   use mod_integer_types
@@ -24,8 +25,6 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   logical                :: need_to_split
   integer                :: n_split, i_split
   integer(kind=int_all)  :: count_split
-
-  integer(kind=int_all), parameter   :: Int1=1
 
   real*8,                allocatable :: Asend_buffer(:)
   integer(kind=int_all), allocatable :: isend_buffer(:), jsend_buffer(:)

@@ -1,5 +1,4 @@
 module mod_preconditioner
-  
 
   private
   public initialize_preconditioner

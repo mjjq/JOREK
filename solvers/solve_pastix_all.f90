@@ -1,7 +1,7 @@
 #ifdef USE_PASTIX
 !> subroutine solves the complete system of equation using pastix with
-!  distributed matrix ad_mat on the main group mpi_comm_world
-!  for pastix5 solver matrix is cetralized into ac_mat
+!  distributed matrix ad_mat on the main group mpi_comm_world.
+!  For pastix5 solver matrix is centralized into ac_mat
 subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   use tr_module 
   use mod_parameters, only: n_tor, n_var
@@ -27,10 +27,9 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   integer                           :: n_cpu, my_id, ierr, comm
   integer                           :: i, k, j
   integer(kind=int_all)             :: m_loc
-  integer(kind=int_all), parameter  :: Int1=1
-  
-  type(type_SP_MATRIX)     :: ad_mat, ac_mat
-  type(type_RHS)           :: rhs_vec
+    
+  type(type_SP_MATRIX)               :: ad_mat, ac_mat
+  type(type_RHS)                     :: rhs_vec
   integer                            :: index_min, index_max
   integer                            :: block_size2
   integer(kind=int_all)              :: n_block, nnz_block

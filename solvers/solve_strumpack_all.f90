@@ -19,7 +19,6 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
   real*8                            :: tsecond
   integer                           :: i, k, j, ierr
-  integer(kind=int_all), parameter  :: Int1=1
   integer                           :: my_id, n_cpu, comm
   
   integer(kind=C_INT_ALL)     :: n, nnz

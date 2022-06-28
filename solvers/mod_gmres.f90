@@ -228,7 +228,6 @@ module mod_gmres
     real, allocatable     :: y_tmp(:)
     integer               :: i, ierr
     real, dimension(:), allocatable :: y_dum
-    integer(kind=int_all), parameter   :: Int1=1
 
     real*8                :: DUMMY_REAL(1:1)
     integer(kind=int_all) :: DUMMY_INT (1:1)

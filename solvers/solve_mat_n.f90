@@ -99,7 +99,6 @@ contains
     character*8           :: type
     real*8                :: DUMMY_REAL(1:1)
     integer(kind=int_all) :: DUMMY_INT (1:1)
-    integer(kind=int_all), parameter   :: Int1=1
     CHARACTER(LEN=128) :: fname
 
     call r3_info_begin (r3_info_index_0, 'solve_matrix_n')                  ! timing
@@ -723,8 +722,6 @@ subroutine solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
 
     !Split broadcast
     character*8 :: type
-
-    integer(kind=int_all), parameter   :: Int1=1
     
     integer(kind=C_INT_ALL) :: n, nnz
 

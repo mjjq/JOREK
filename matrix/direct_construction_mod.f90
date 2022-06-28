@@ -29,7 +29,6 @@ contains
   logical, intent(in) :: direct_construction, xpoint2, restart, freeboundary
   
   ! --- Local variables
-  integer(kind=int_all)              :: Int1=1
   integer,               allocatable :: index_min_harm(:), index_max_harm(:)
   integer,               allocatable :: local_elms_harm(:)
   integer                            :: n_local_elms_harm

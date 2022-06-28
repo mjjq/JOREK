@@ -33,7 +33,6 @@ contains
 
     logical                            :: distribute
     integer(kind=int_all)              :: INT_MAX
-    integer(kind=int_all), parameter   :: Int1=1
 
     integer :: cc, cr
     real t0, t1
@@ -307,7 +306,6 @@ contains
 
     logical                            :: distribute
     integer(kind=int_all)              :: INT_MAX
-    integer(kind=int_all), parameter   :: Int1=1
 
     integer :: cc, cr
     real t0, t1
@@ -586,7 +584,6 @@ contains
     integer(kind=int_all), allocatable, intent(inout) :: long_recv_counts(:), long_send_counts(:)
     integer(kind=int_all), allocatable                :: sendrecv(:), n_per_rank(:)
     integer(kind=int_all)                             :: i, n_tor_int, block_size
-    integer(kind=int_all), parameter                  :: Int1=1
     integer                                           :: j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j, ierr
     logical                                           :: distribute
 

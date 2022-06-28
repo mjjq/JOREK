@@ -82,9 +82,6 @@ integer:: nnz, ierr
 integer*8 :: check_data
 character*8 :: type
 
-integer(kind=int_all), parameter   :: Int0=0
-integer(kind=int_all), parameter   :: Int1=1
-
 real*8 :: new_dofs(1:4), old_dofs(1:4)
 
 if (my_id == 0) then

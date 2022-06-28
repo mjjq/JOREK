@@ -710,7 +710,6 @@ contains
        integer(kind=int_all)  dblePrec, noPrec
        integer(kind=int_all)  iwarn, ihist
        integer(kind=int_all)  compRsd
-       integer(kind=int_all)  Int1
        double precision    beta, bn, sA, sb, sPA, sPb, bea, be, temp
        double precision    dloo, dnormw, dnormx, dnormres, trueNormRes
        double precision dVi, aux
@@ -748,7 +747,6 @@ contains
        integer retlbl
        DATA retlbl /0/
 
-       Int1 = 1
 !*
 !*       Executable statements
 !*

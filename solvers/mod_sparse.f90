@@ -69,16 +69,17 @@ module mod_sparse
       if (use_mumps) then
       
         call solve_mumps_all(my_id)
-        
+#ifdef USE_STRUMPACK        
       elseif (use_strumpack) then
       
         call solve_strumpack_all(solver%spss, a_mat, rhs_vec)
-        
+#endif
+#ifdef USE_PASTIX
       elseif (use_pastix) then
       
         call solve_pastix_all(solver%ptss, a_mat, rhs_vec)
         !call pastix_finalize(solver%ptss)
-        
+#endif        
       endif    
 
     elseif (solve_type.eq.MHD_PRECON) then

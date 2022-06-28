@@ -21,7 +21,6 @@ contains
   
   ! --- Local variables
   integer(kind=int_all), allocatable :: nz_array(:), disp_array(:)
-  integer(kind=int_all), parameter   :: Int1=1
   integer(kind=int_all)              :: nz_total, i
   integer                            :: i_cpu, ierr
   

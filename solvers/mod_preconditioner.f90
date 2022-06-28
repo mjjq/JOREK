@@ -29,6 +29,7 @@ module mod_preconditioner
     call distribute_ranks_core(n_cpu, pc)
     
     call create_communicators_core(pc, comm_glob)
+    pc%mat%comm = pc%MPI_COMM_N ! communicator for PC matrix distribution
     
     call distribute_modes_core(pc)
     
@@ -38,9 +39,6 @@ module mod_preconditioner
       do i=1, pc%n_mode_families
         write(*,*) "mode_family_id:", i, "MPI ranks:", pc%mode_families_ranks(i,1:pc%ranks_per_family(i))
       enddo
-    endif
-    call MPI_Barrier(comm_glob, ierr)
-    if (my_id.eq.0) then
       do i=1, pc%n_mode_families
         write(*,*) "mode_family_id:", i, "weight:", pc%row_factor, "modes:", pc%mode_families_modes(i,1:pc%modes_per_family(i))
       enddo

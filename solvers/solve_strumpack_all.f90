@@ -20,7 +20,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   real*8                            :: tsecond
   integer                           :: i, k, j, ierr
   integer(kind=int_all), parameter  :: Int1=1
-  integer                           :: my_id, n_cpu
+  integer                           :: my_id, n_cpu, comm
   
   integer(kind=C_INT_ALL)     :: n, nnz
   
@@ -28,8 +28,10 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   type(type_RHS)              :: rhs_vec
   type(type_STRUMPACK_SOLVER) :: spss
   
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)  
+  comm = ad_mat%comm
+  
+  call MPI_COMM_RANK(comm, my_id, ierr)
+  call MPI_COMM_SIZE(comm, n_cpu, ierr)  
 
 !write(*,*) my_id,'***************************************'
 !write(*,*) my_id,'* solve global matrix using STRUMPACK *'
@@ -39,8 +41,8 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   index_max = ad_mat%index_max
   m_loc = (index_max - index_min + 1) * n_tor * n_var
 
-  call MPI_Allreduce(m_loc,ac_mat%ng,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_Allreduce(m_loc,ac_mat%ng,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
+  call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
   
   n = ac_mat%ng
   nnz = ac_mat%nnz
@@ -65,7 +67,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
   
   if (.not. spss%initialized) then
-    call strumpack_init_core(spss, MPI_COMM_WORLD)
+    call strumpack_init_core(spss, comm)
     spss%initialized = .true.
     spss%equilibrium = .false.
   endif

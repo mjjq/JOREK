@@ -24,7 +24,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
 
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
   real*8                            :: tsecond
-  integer                           :: n_cpu, my_id, ierr
+  integer                           :: n_cpu, my_id, ierr, comm
   integer                           :: i, k, j
   integer(kind=int_all)             :: m_loc
   integer(kind=int_all), parameter  :: Int1=1
@@ -39,19 +39,21 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   
   integer(kind=int_all), allocatable         :: sparskit_work(:)
   
-  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)  
+  comm = ad_mat%comm
+  
+  call MPI_COMM_RANK(comm, my_id, ierr)
+  call MPI_COMM_SIZE(comm, n_cpu, ierr)  
 
   !write(*,*) my_id,'*********************************'
-  !write(*,*) my_id,'*  solve global matrix (PastiX) *'
+  !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
   !write(*,*) my_id,'*********************************'
   
   index_min = ad_mat%index_min
   index_max = ad_mat%index_max
   m_loc = (index_max - index_min + 1) * n_tor * n_var
   
-  call MPI_Allreduce(m_loc,n,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_Allreduce(ad_mat%nnz,nnz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_Allreduce(m_loc,n,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
+  call MPI_Allreduce(ad_mat%nnz,nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
   
   ac_mat%ng  = n
   ac_mat%nnz = nnz
@@ -105,7 +107,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   
   if (.not. ptss%initialized) then
   
-    call pastix_initialize(ptss, MPI_COMM_WORLD)
+    call pastix_initialize(ptss, comm)
     
   endif
   

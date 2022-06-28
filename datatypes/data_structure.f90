@@ -157,9 +157,10 @@ module data_structure
     integer                        :: block_size
     integer(kind=int_all)          :: nblock
     integer(kind=int_all)          :: nzblock
-    integer                        :: comm                 !< communicator over which matrix is distributed
+    integer                        :: comm                 !< communicator over which the matrix is distributed
     logical                        :: scaled = .false.
     logical                        :: row_distributed = .false.
+    logical                        :: col_distributed = .false.
   end type type_SP_MATRIX
   
   !> RHS vector type
@@ -187,9 +188,14 @@ module data_structure
     integer                        :: my_id_n, n_cpu_n, MPI_COMM_N
     integer                        :: my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
     integer                        :: my_id, n_cpu
+    integer, pointer               :: send_counts(:,:), recv_counts(:,:)
+    integer, pointer               :: send_disp(:,:), recv_disp(:,:)
+    integer(kind=int_all), pointer :: istart(:), ifinish(:)!< starting and ending indices for split communication
+    integer                        :: nsplit               !<number of split communication calls for long integer
     logical                        :: autodistribute_modes
     logical                        :: autodistribute_ranks
     logical                        :: initialized = .false.
+    logical                        :: analyzed = .false.
   end type type_PRECOND
   
 

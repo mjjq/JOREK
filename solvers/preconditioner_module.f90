@@ -291,6 +291,7 @@ module preconditioner_module
   subroutine create_communicators(my_id_n, n_cpu_n, MPI_COMM_N, my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS)
 
     use mpi
+    use mod_parameters, only: n_tor
     implicit none
 
     integer, intent(out) :: my_id_n, my_id_master, n_cpu_n, n_masters, MPI_COMM_N, MPI_COMM_MASTER, MPI_COMM_TRANS
@@ -301,6 +302,8 @@ module preconditioner_module
 
     call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
+    
+    if (autodistribute_modes) n_mode_families = (n_tor + 1)/2
 
     if (n_cpu.lt.n_mode_families) then
       write(*,*) "Error: number of ranks must be >= n_mode_families"
@@ -403,10 +406,10 @@ module preconditioner_module
     call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
 
-    if (n_mode_families.gt.n_cpu) then
-      if (my_id.eq.0) write(*,*) "Error: number of cpu must be >= number of mode families", n_mode_families
-      call MPI_Abort(MPI_COMM_WORLD, 0, ierr)
-    endif
+    !if (n_mode_families.gt.n_cpu) then
+    !  if (my_id.eq.0) write(*,*) "Error: number of cpu must be >= number of mode families", n_mode_families
+    !  call MPI_Abort(MPI_COMM_WORLD, 0, ierr)
+    !endif
 
     if (.not.autodistribute_modes) then
       ! check if mode families are specified

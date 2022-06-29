@@ -760,10 +760,15 @@ mpi_required = 0
     
     if (.not. gmres) then
   
-      call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_DIRECT)
+      !call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_DIRECT)
+      !do i=1,rhs_vec%ng
+      !  deltas(i) =  rhs_vec%val(i)
+      !enddo
+      
+      call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_PRECON)
       do i=1,rhs_vec%ng
         deltas(i) =  rhs_vec%val(i)
-      enddo
+      enddo          
       !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
     else
@@ -782,10 +787,15 @@ mpi_required = 0
           write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
         endif
         
-        call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_PRECON)
+        !call solve_sparse_system(a_mat, rhs_vec, solver, solve_type=MHD_PRECON)
+        !do i=1,rhs_vec%ng
+        !  deltas(i) =  rhs_vec%val(i)
+        !enddo        
         
         write(*,*) my_id, mumps_par%a(1), solver%pc%mat%val(1)
         write(*,*) my_id, mumps_par%a(mumps_par%nz), solver%pc%mat%val(solver%pc%mat%nnz)
+        write(*,*) my_id, mumps_par%n, solver%pc%mat%ng
+        write(*,*) my_id, mumps_par%nz, solver%pc%mat%nnz
         
         
         

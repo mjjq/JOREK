@@ -13,19 +13,16 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
 
   implicit none
 
-! --- Local variables
-  integer                           :: index_min, index_max
-  integer(kind=int_all)             :: m_loc  
-  type(clcktype)                    :: t_itstart, t0, t1, t2, t3
-  real*8                            :: tsecond
-  integer                           :: i, k, j, ierr
-  integer                           :: my_id, n_cpu, comm
-  
-  integer(kind=C_INT_ALL)     :: n, nnz
-  
   type(type_SP_MATRIX)        :: ad_mat, ac_mat
   type(type_RHS)              :: rhs_vec
   type(type_STRUMPACK_SOLVER) :: spss
+  
+  
+! --- Local variables
+  type(clcktype)              :: t_itstart, t0, t1, t2, t3
+  real*8                      :: tsecond
+  integer                     :: my_id, n_cpu, comm, ierr
+  
   
   comm = ad_mat%comm
   
@@ -33,38 +30,33 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   call MPI_COMM_SIZE(comm, n_cpu, ierr)  
 
 !write(*,*) my_id,'***************************************'
-!write(*,*) my_id,'* solve global matrix using STRUMPACK *'
+!write(*,*) my_id,'* solve sparse matrix using STRUMPACK *'
 !write(*,*) my_id,'***************************************'
 
-  index_min = ad_mat%index_min
-  index_max = ad_mat%index_max
-  m_loc = (index_max - index_min + 1) * n_tor * n_var
-
-  call MPI_Allreduce(m_loc,ac_mat%ng,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-  call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
+  if (n_cpu>1) then
+! centralize distributed matrix
   
-  n = ac_mat%ng
-  nnz = ac_mat%nnz
-
+    call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
   
-  call clck_time(t0)
-
-  allocate(ac_mat%irn(nnz))
-  allocate(ac_mat%jcn(nnz))
-  allocate(ac_mat%val(nnz))
-  ac_mat%nnz = nnz
-
-  call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+    ac_mat%ng = ad_mat%ng
+    ac_mat%block_size = ad_mat%block_size
+    ac_mat%comm = ad_mat%comm
+    
+    call clck_time(t0)
   
-#ifdef USE_BLOCK
-  ac_mat%block_size  = n_tor * n_var
-#else
-  ac_mat%block_size = 1
-#endif  
+    allocate(ac_mat%irn(ac_mat%nnz))
+    allocate(ac_mat%jcn(ac_mat%nnz))
+    allocate(ac_mat%val(ac_mat%nnz))
   
-  call clck_time(t1)
-  call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+    call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+    
+    call clck_time(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+    
+  else
+    ac_mat = ad_mat
+  endif
   
   if (.not. spss%initialized) then
     call strumpack_init_core(spss, comm)
@@ -93,9 +85,11 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond    
 
-  deallocate(ac_mat%irn)
-  deallocate(ac_mat%jcn)
-  deallocate(ac_mat%val)  
+  if (n_cpu>1) then
+    deallocate(ac_mat%irn)
+    deallocate(ac_mat%jcn)
+    deallocate(ac_mat%val)
+  endif
 
   return
 end subroutine solve_strumpack_all

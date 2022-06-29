@@ -1,12 +1,13 @@
 module mod_preconditioner
 
   private
-  public initialize_preconditioner, reset_reconditioner
+  public initialize_preconditioner, reset_preconditioner
   
   contains
   
   subroutine initialize_preconditioner(pc,comm_glob)
     use phys_module, only: autodistribute_modes, n_mode_families, autodistribute_ranks, centralize_harm_mat
+    use mod_parameters, only: n_tor
     use data_structure, only: type_PRECOND
     use mpi_mod
     implicit none
@@ -16,20 +17,28 @@ module mod_preconditioner
     integer            :: i
     character(len=256) :: s
     
-    call MPI_COMM_RANK(comm_glob, my_id, ierr)
-    call MPI_COMM_SIZE(comm_glob, n_cpu, ierr)
+    pc%comm = comm_glob
+    
+    call MPI_COMM_RANK(pc%comm, my_id, ierr)
+    call MPI_COMM_SIZE(pc%comm, n_cpu, ierr)
+    
     pc%my_id = my_id
     pc%n_cpu = n_cpu
     if (pc%my_id.eq.0) write(*,*) "Initializing preconditioner"
-    
-    pc%n_mode_families = n_mode_families
+
     pc%autodistribute_ranks = autodistribute_ranks
     pc%autodistribute_modes = autodistribute_modes
     pc%mat%row_distributed  = .not.centralize_harm_mat
     
+    if (pc%autodistribute_modes) then
+      pc%n_mode_families = (n_tor + 1)/2
+    else
+      pc%n_mode_families = n_mode_families
+    endif
+    
     call distribute_ranks_core(n_cpu, pc)
     
-    call create_communicators_core(pc, comm_glob)
+    call create_communicators_core(pc)
     pc%mat%comm = pc%MPI_COMM_N ! communicator for PC matrix distribution
     
     call distribute_modes_core(pc)
@@ -52,13 +61,12 @@ module mod_preconditioner
   end subroutine initialize_preconditioner
   
 !> Set up MPI communicators for mode families and corresponding masters
-  subroutine create_communicators_core(pc, comm_glob)
+  subroutine create_communicators_core(pc)
     use data_structure, only: type_PRECOND
     use mpi_mod
     implicit none
 
     type(type_PRECOND) :: pc
-    integer            :: comm_glob
 
     integer, allocatable :: i_tor(:), ranks_tmp(:)
     integer :: i, my_id, n_cpu, ierr
@@ -66,7 +74,7 @@ module mod_preconditioner
     my_id = pc%my_id
     n_cpu = pc%n_cpu
 
-    call MPI_COMM_SPLIT(comm_glob, pc%family_id, my_id, pc%MPI_COMM_N, ierr)
+    call MPI_COMM_SPLIT(pc%comm, pc%family_id, my_id, pc%MPI_COMM_N, ierr)
     if (ierr.ne.0) then
       write(*,*) "Error in creating MPI_COMM_N"
       call MPI_Abort(MPI_COMM_WORLD, 0, ierr)
@@ -76,17 +84,17 @@ module mod_preconditioner
 
     allocate(i_tor(n_cpu)); i_tor = 0
     i_tor(my_id + 1) = pc%my_id_n
-    call MPI_Allreduce(MPI_IN_PLACE,i_tor,n_cpu,MPI_INT,MPI_SUM,comm_glob,ierr)
-    call MPI_COMM_SPLIT(comm_glob,i_tor(my_id+1),my_id,pc%MPI_COMM_TRANS,ierr)
+    call MPI_Allreduce(MPI_IN_PLACE,i_tor,n_cpu,MPI_INT,MPI_SUM,pc%comm,ierr)
+    call MPI_COMM_SPLIT(pc%comm,i_tor(my_id+1),my_id,pc%MPI_COMM_TRANS,ierr)
 
     pc%n_masters = pc%n_mode_families
     allocate(ranks_tmp(pc%n_masters)); ranks_tmp=0;
 
     if (pc%my_id_n.eq.0) ranks_tmp(pc%family_id) = my_id
-    call MPI_AllReduce(MPI_IN_PLACE,ranks_tmp,pc%n_masters,MPI_INT,MPI_SUM,comm_glob,ierr)
-    call MPI_COMM_GROUP(comm_glob,pc%MPI_GROUP_WORLD,ierr)
+    call MPI_AllReduce(MPI_IN_PLACE,ranks_tmp,pc%n_masters,MPI_INT,MPI_SUM,pc%comm,ierr)
+    call MPI_COMM_GROUP(pc%comm,pc%MPI_GROUP_WORLD,ierr)
     call MPI_GROUP_INCL(pc%MPI_GROUP_WORLD,pc%n_masters,ranks_tmp,pc%MPI_GROUP_MASTER,ierr)
-    call MPI_COMM_CREATE(comm_glob,pc%MPI_GROUP_MASTER,pc%MPI_COMM_MASTER,ierr)
+    call MPI_COMM_CREATE(pc%comm,pc%MPI_GROUP_MASTER,pc%MPI_COMM_MASTER,ierr)
 
     if (pc%my_id_n .eq. 0) then
      call MPI_COMM_RANK(pc%MPI_COMM_MASTER, pc%my_id_master, ierr)
@@ -231,7 +239,7 @@ module mod_preconditioner
   end subroutine distribute_ranks_core
   
 !> Deallocate arrays and reset to the default values  
-  subroutine reset_reconditioner(pc)
+  subroutine reset_preconditioner(pc)
     use data_structure, only: type_PRECOND
     implicit none
     
@@ -260,6 +268,7 @@ module mod_preconditioner
         pc%mat%row_distributed = .false.
         pc%mat%col_distributed = .false.
         pc%mat%indexing = 1
+        pc%mat%block_size = 1
         pc%analyzed = .false.
         
       endif
@@ -275,7 +284,7 @@ module mod_preconditioner
     
     return
   
-  end subroutine reset_reconditioner
+  end subroutine reset_preconditioner
   
   
 end module mod_preconditioner

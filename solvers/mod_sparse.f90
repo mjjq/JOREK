@@ -19,6 +19,8 @@ module mod_sparse
 #endif
     type(type_PRECOND)          :: pc
   end type type_SP_SOLVER
+
+
   
   integer, parameter :: MHD_EQUILI = 0
   integer, parameter :: MHD_DIRECT = 1
@@ -36,12 +38,13 @@ module mod_sparse
   subroutine solve_sparse_system(a_mat, rhs_vec, solver, solve_type)
 
     use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
+    use mod_integer_types
     use mod_clock
 #ifdef USE_PASTIX
     use mod_pastix, only: type_PASTIX_SOLVER, pastix_finalize
 #endif
-    use mod_preconditioner, only: initialize_preconditioner, reset_reconditioner
-    use mod_distribute_preconditioner_core, only: update_pc_mat, update_pc_rhs
+    use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner
+    use mod_distribute_preconditioner_core, only: update_pc_mat, update_pc_rhs, gather_solution
     
     implicit none
     
@@ -53,16 +56,16 @@ module mod_sparse
     type(clcktype)           :: t_itstart, t0, t1, t2, t3
     real*8                   :: tsecond
     type(type_SP_SOLVER)     :: solver
-
+    integer(kind=int_all)    :: i
+    
+    call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
+    call MPI_COMM_RANK(a_mat%comm, my_id, ierr)    
     
     if (solve_type.eq.MHD_EQUILI) then
     
       write(*,*) solve_type
       
     elseif (solve_type.eq.MHD_DIRECT) then
-    
-      call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
-      call MPI_COMM_RANK(a_mat%comm, my_id, ierr)
       
       if (my_id.eq.0) write(*,*) "Solving MHD system using direct solver"
     
@@ -83,9 +86,7 @@ module mod_sparse
       endif    
 
     elseif (solve_type.eq.MHD_PRECON) then
-    
-      call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
-      call MPI_COMM_RANK(a_mat%comm, my_id, ierr)    
+
       if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
       
       if (.not.solver%pc%initialized) call initialize_preconditioner(solver%pc,a_mat%comm)
@@ -93,9 +94,12 @@ module mod_sparse
       call update_pc_mat(solver%pc,a_mat)
       
       call update_pc_rhs(solver%pc,rhs_vec)
-      !call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs)
       
-      !call reset_reconditioner(solver%pc)
+      call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs)
+      
+      call gather_solution(solver%pc,rhs_vec)
+      
+      !call reset_preconditioner(solver%pc)
       
     else
       write(*,*) solve_type

@@ -773,6 +773,12 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     global_mat%comm = MPI_COMM_WORLD
   endif
   
+#ifdef USE_BLOCK
+  global_mat%block_size  = n_tor * n_var
+#else
+  global_mat%block_size = 1
+#endif    
+  
   global_rhs%val => RHS
   global_rhs%ng  = ndof
      

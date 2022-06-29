@@ -154,7 +154,7 @@ module data_structure
     integer(kind=int_all)          :: nnz                  !< number of local nonzero entries
     integer(kind=int_all)          :: index_min            !< minimum index in global range
     integer(kind=int_all)          :: index_max            !< maximum index in global range
-    integer                        :: block_size
+    integer                        :: block_size = 1
     integer(kind=int_all)          :: nblock
     integer(kind=int_all)          :: nzblock
     integer                        :: comm                 !< communicator over which the matrix is distributed
@@ -185,9 +185,9 @@ module data_structure
     integer, pointer               :: ranks_per_family(:)
     integer, pointer               :: modes_per_family(:)
     integer, pointer               :: rank_id(:)           !< family id for each MPI rank
+    integer                        :: my_id, n_cpu, comm    
     integer                        :: my_id_n, n_cpu_n, MPI_COMM_N
     integer                        :: my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
-    integer                        :: my_id, n_cpu
     integer, pointer               :: send_counts(:,:), recv_counts(:,:)
     integer, pointer               :: send_disp(:,:), recv_disp(:,:)
     integer(kind=int_all), pointer :: istart(:), ifinish(:)!< starting and ending indices for split communication

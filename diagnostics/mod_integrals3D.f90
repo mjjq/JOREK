@@ -779,21 +779,17 @@ do ife = ife_min, ife_max
             m_imp          = 2.
         end select
 
-        ! Te in eV:
-        Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-        Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
-   
-        ! Ti in eV:
+        ! Temperatures in eV and corrected values:
         if (with_TiTe) then 
-          Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-          Ti_corr_eV = T0i_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-          Ti_eV = T0i/(EL_CHG*MU_ZERO*central_density*1.d20)
-          Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+          Ti_eV      = T0i          /(EL_CHG*MU_ZERO*central_density*1.d20)
+          Te_eV      = T0e          /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Ti_corr_eV = T0i_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)
+          Te_corr_eV = T0e_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)  
         else
-          Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-          Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-          Ti_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-          Ti_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+          Ti_eV      = 0.5d0*T0     /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Te_eV      = 0.5d0*T0     /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Ti_corr_eV = 0.5d0*T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Te_corr_eV = 0.5d0*T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  
         endif
 
         if (allocated(P_imp)) deallocate(P_imp)

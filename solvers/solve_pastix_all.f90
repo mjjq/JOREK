@@ -22,7 +22,6 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   real*8                            :: tsecond
   integer                           :: n_cpu, my_id, ierr, comm
   integer                           :: i, k, j
-  integer(kind=int_all)             :: m_loc
     
   type(type_SP_MATRIX)               :: ad_mat, ac_mat
   type(type_RHS)                     :: rhs_vec
@@ -30,7 +29,6 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   integer                            :: block_size2
   integer(kind=int_all)              :: n_block, nnz_block
   type(type_PASTIX_SOLVER) :: ptss
-  integer(kind=int_all) :: n, nnz
   
   integer(kind=int_all), allocatable         :: sparskit_work(:)
   
@@ -43,15 +41,11 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
   !write(*,*) my_id,'*********************************'
   
-  index_min = ad_mat%index_min
-  index_max = ad_mat%index_max
-  m_loc = (index_max - index_min + 1) * n_tor * n_var
+  call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
   
-  call MPI_Allreduce(m_loc,n,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-  call MPI_Allreduce(ad_mat%nnz,nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-  
-  ac_mat%ng  = n
-  ac_mat%nnz = nnz
+  ac_mat%ng = ad_mat%ng
+  ac_mat%block_size = ad_mat%block_size
+  ac_mat%comm = ad_mat%comm  
   
   allocate(ac_mat%irn(ac_mat%nnz))
   allocate(ac_mat%jcn(ac_mat%nnz))
@@ -67,12 +61,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
   
   call clck_time(t0)
-  
-#ifdef USE_BLOCK
-  ac_mat%block_size  = n_tor * n_var
-#else
-  ac_mat%block_size = 1
-#endif
+
   block_size2 = ac_mat%block_size**2
   
   n_block   = ac_mat%ng/ac_mat%block_size

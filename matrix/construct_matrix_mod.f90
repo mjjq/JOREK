@@ -765,8 +765,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   global_mat%val => a_mat
   global_mat%ng  = ndof
   global_mat%nnz = nz
-  global_mat%index_min = index_min
-  global_mat%index_max = index_max
+!  global_mat%index_min = index_min
+!  global_mat%index_max = index_max
   if (harmonic_matrix) then
     global_mat%comm = MPI_COMM_N
   else
@@ -774,7 +774,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   endif
   
 #ifdef USE_BLOCK
-  global_mat%block_size  = n_tor * n_var
+  global_mat%block_size  = n_tor*n_var
 #else
   global_mat%block_size = 1
 #endif    

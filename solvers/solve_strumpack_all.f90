@@ -5,7 +5,6 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec)
   use mod_strumpack
 
   use tr_module 
-  use mod_parameters, only: n_tor, n_var
   use mpi_mod
   use mod_clock
   use mod_integer_types

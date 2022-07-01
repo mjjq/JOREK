@@ -1,7 +1,7 @@
 module mod_sparse
   use iso_c_binding
   use mpi
-  use phys_module, only:    use_pastix, use_mumps, use_strumpack
+  use phys_module, only:    use_pastix, use_mumps, use_strumpack, iter_precon, gmres_max_iter
 #ifdef USE_PASTIX
   use mod_pastix, only:     type_PASTIX_SOLVER
 #endif
@@ -18,6 +18,7 @@ module mod_sparse
     type(type_STRUMPACK_SOLVER) :: spss
 #endif
     type(type_PRECOND)          :: pc
+    integer                     :: iter_prev, iter_gmres
   end type type_SP_SOLVER
 
 
@@ -35,7 +36,7 @@ module mod_sparse
 !! sol_vec contains the initial guess
 !! sol_vec, rhs_vec are broadcasted
 !! solve_type - type of system, e.g. GS equilibrium, MHD system with preconditioner, etc.
-  subroutine solve_sparse_system(a_mat, rhs_vec, solver, solve_type)
+  subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type)
 
     use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
     use mod_integer_types
@@ -45,11 +46,12 @@ module mod_sparse
 #endif
     use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner
     use mod_distribute_preconditioner_core, only: update_pc_mat, update_pc_rhs, gather_solution
+    use mod_gmres_core, only: gmres_driver
     
     implicit none
     
     type(type_SP_MATRIX)     :: a_mat
-    type(type_RHS)           :: rhs_vec
+    type(type_RHS)           :: rhs_vec, sol_vec
     integer                  :: solve_type
     integer                  :: my_id, n_cpu, ierr
     
@@ -82,12 +84,18 @@ module mod_sparse
       
         call solve_pastix_all(solver%ptss, a_mat, rhs_vec)
         !call pastix_finalize(solver%ptss)
-#endif        
-      endif    
+#endif
+      endif
+      
+      do i=1,rhs_vec%ng
+        sol_vec%val(i) =  rhs_vec%val(i)
+      enddo      
 
     elseif (solve_type.eq.MHD_PRECON) then
 
       if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
+      
+! Finding PC solution
       
       if (.not.solver%pc%initialized) call initialize_preconditioner(solver%pc,a_mat%comm)
       
@@ -99,13 +107,20 @@ module mod_sparse
       
       call gather_solution(solver%pc,rhs_vec)
       
-      !call reset_preconditioner(solver%pc)
+! iterative part
+
+      solver%iter_prev  = iter_precon
+      solver%iter_gmres = gmres_max_iter
       
-    else
-      write(*,*) solve_type
+      !call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
+      
+      !call gmres_driver(solver%pc%my_id, solver%pc%my_id_n, solver%pc%MPI_COMM_N, solver%pc%MPI_COMM_MASTER, solver%iter_gmres, a_mat, rhs_vec, sol_vec, solver)
+      
+      !call reset_preconditioner(solver%pc)
+
     endif
     
   end subroutine solve_sparse_system
-  
+ 
   
 end module mod_sparse

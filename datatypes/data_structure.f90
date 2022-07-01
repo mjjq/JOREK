@@ -6,7 +6,7 @@ module data_structure
   use tr_module
   use gauss
   use ISO_C_BINDING, ONLY : C_INT, C_DOUBLE
-
+  
   implicit none
 
   type type_node                                  !< type definition of a node (i.e. a vertex)
@@ -200,8 +200,6 @@ module data_structure
     logical                        :: initialized = .false.
     logical                        :: analyzed = .false.
   end type type_PRECOND
-  
-
  
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()

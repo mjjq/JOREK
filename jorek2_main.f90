@@ -68,7 +68,7 @@ program JOREK2
   use centralization_mod
   use mod_exchange_indices
 #ifdef USE_GMRES
-  use mod_gmres_core, only: gmres_driver
+  use mod_gmres, only: gmres_driver
 #endif  
   use mod_startup_teardown
   use mod_initial_grid
@@ -95,7 +95,8 @@ program JOREK2
 #ifdef USE_BICGSTAB
   use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
 #endif
-  use mod_sparse, only: solve_sparse_system, MHD_EQUILI, MHD_DIRECT, MHD_PRECON, type_SP_SOLVER
+  use mod_sparse, only: solve_sparse_system
+  use mod_sparse_data
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -146,8 +147,7 @@ program JOREK2
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: mpi_required,mpi_provided,StatInfo
-  integer, allocatable     :: local_elms(:)
-  integer, allocatable, target     :: index_min(:), index_max(:)  
+  integer, allocatable, target     :: local_elms(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
   logical                  :: solve_only, to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
@@ -189,7 +189,7 @@ program JOREK2
   logical :: input_treat_axis
   
   type(type_SP_MATRIX) :: a_mat
-  type(type_RHS)       :: rhs_vec, sol_vec
+  type(type_RHS) :: rhs_vec, sol_vec
   type(type_SP_SOLVER) :: solver
   
   call init_expr()
@@ -752,7 +752,6 @@ mpi_required = 0
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
          n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
          irn_jcn, a_mat, rhs_vec, harmonic_matrix=.false.)
-    
     a_mat%index_min => index_min
     a_mat%index_max => index_max
 
@@ -763,101 +762,101 @@ mpi_required = 0
     endif
     
     if (.not. gmres) then
-    
       sol_vec%val => deltas
       call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_DIRECT)
+      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
     else
     
       if (.not. solve_only) then
       
-        !sol_vec%val => deltas
-        !call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_PRECON)
-        
-        !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)         
+        sol_vec%val => deltas      
+        call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_PRECON)
+        !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)              
 
 #ifndef DIRECT_CONSTRUCTION
-        call clck_time(t0)
-         ! --- Extract harmonic matrix from global matrix via MPI communication
-        call distribute_harmonics(my_id,my_id_n,n_cpu)
-        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-        call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        call clck_time_barrier(t1)
-        call clck_ldiff(t0,t1,tsecond)
-        if (my_id .eq. 0) then
-          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-        endif
+        !call clck_time(t0)
+        ! ! --- Extract harmonic matrix from global matrix via MPI communication
+        !call distribute_harmonics(my_id,my_id_n,n_cpu)
+        !if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+        !call MPI_Barrier(MPI_COMM_WORLD,ierr)
+        !call clck_time_barrier(t1)
+        !call clck_ldiff(t0,t1,tsecond)
+        !if (my_id .eq. 0) then
+        !  write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+        !endif
 #else 
 
-        ! call clck_time_barrier(t0) 
-        ! ! --- Direct construction of harmonic matrix
-        ! call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-        !      node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, restart, freeboundary, .true.)
-        !call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        !call clck_time_barrier(t1) 
-        !
-        !if (my_id .eq. 0) then
-        !  call clck_ldiff(t0,t1,tsecond)
-        !  write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
-        !endif     
-        !
-        !call clck_time_barrier(t0) 
-        !! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
-        !call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
-        !call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        !
-        !call clck_time_barrier(t1) 
-        !
-        !if (my_id .eq. 0) then
-        !  call clck_ldiff(t0,t1,tsecond)
-        !  write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
-        !endif     
+         call clck_time_barrier(t0) 
+         ! --- Direct construction of harmonic matrix
+         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
+              node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, restart, freeboundary, .true.)
+        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+        call clck_time_barrier(t1) 
+
+        if (my_id .eq. 0) then
+          call clck_ldiff(t0,t1,tsecond)
+          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
+        endif     
+
+        call clck_time_barrier(t0) 
+        ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
+        call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  
+        call clck_time_barrier(t1) 
+
+        if (my_id .eq. 0) then
+          call clck_ldiff(t0,t1,tsecond)
+          write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
+        endif     
 
 #endif
 
       else
-      ! just update the PC RHS
-        !if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+
+        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
       endif
 
        ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
       call del_thread_buffers()
 
       call clck_time(t0)
-      if (use_strumpack) then 
-#ifdef USE_STRUMPACK
-        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-#endif
-      else
-#if defined(USE_PASTIX) || defined(USE_MUMPS)
-        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
-#endif
-#if defined(USE_PASTIX6)
-        call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-#endif
-      endif
+       
+!      if (use_strumpack) then 
+!#ifdef USE_STRUMPACK
+!        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+!#endif
+!      else
+!#if defined(USE_PASTIX) || defined(USE_MUMPS)
+!        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+!#endif
+!#if defined(USE_PASTIX6)
+!        call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+!#endif
+!      endif
+
 
       call clck_time_barrier(t1)
       call clck_ldiff(t0,t1,tsecond)
       if (my_id .eq. 0) then
         write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
-      endif
+      end if
     endif
 
     call clck_time(t0)
     if (gmres) then
       iter_prev = iter_gmres
       iter_gmres = gmres_max_iter
-#ifdef USE_BICGSTAB
-      call bicgstab_driver(irn_glob, jcn_glob, a_glob, deltas, rhs_glob, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
-#else
 
+#ifdef USE_BICGSTAB
       !sol_vec%val => deltas
-      !call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
-      
+      !call bicgstab_driver(irn_glob, jcn_glob, a_glob, sol_vec%val, rhs_vec%val, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
+#else
+      call gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
 #endif
+
     endif
-    
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
@@ -865,7 +864,7 @@ mpi_required = 0
     end if
 
     call clck_time(t0)
-    if ((gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres)) then
+    if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
 
       if (use_pellet) then
         pellet_volume = total_pellet_volume
@@ -1120,7 +1119,7 @@ mpi_required = 0
 #endif
 
 #ifdef USE_BICGSTAB
-    if (gmres) call bicgstab_finalize()
+!    if (gmres) call bicgstab_finalize()
 #endif
 
 #ifdef USE_PASTIX6

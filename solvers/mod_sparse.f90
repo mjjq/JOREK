@@ -1,34 +1,12 @@
 module mod_sparse
   use iso_c_binding
   use mpi
+  use mod_sparse_data
   use phys_module, only:    use_pastix, use_mumps, use_strumpack, iter_precon, gmres_max_iter
-#ifdef USE_PASTIX
-  use mod_pastix, only:     type_PASTIX_SOLVER
-#endif
-#ifdef USE_STRUMPACK
-  use mod_strumpack, only:  type_STRUMPACK_SOLVER
-#endif
-  use data_structure, only: type_PRECOND
-
-  type type_SP_SOLVER
-#ifdef USE_PASTIX
-    type(type_PASTIX_SOLVER)    :: ptss
-#endif
-#ifdef USE_STRUMPACK
-    type(type_STRUMPACK_SOLVER) :: spss
-#endif
-    type(type_PRECOND)          :: pc
-    integer                     :: iter_prev, iter_gmres
-  end type type_SP_SOLVER
-
-
   
-  integer, parameter :: MHD_EQUILI = 0
-  integer, parameter :: MHD_DIRECT = 1
-  integer, parameter :: MHD_PRECON = 2
-   
+
   private
-  public :: solve_sparse_system, MHD_EQUILI, MHD_DIRECT, MHD_PRECON, type_SP_SOLVER
+  public :: solve_sparse_system
 
   contains
 
@@ -41,12 +19,14 @@ module mod_sparse
     use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
     use mod_integer_types
     use mod_clock
+    use mod_sparse_data, only: type_SP_SOLVER
 #ifdef USE_PASTIX
     use mod_pastix, only: type_PASTIX_SOLVER, pastix_finalize
 #endif
     use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner
     use mod_distribute_preconditioner_core, only: update_pc_mat, update_pc_rhs, gather_solution
-    use mod_gmres_core, only: gmres_driver
+    !use mod_gmres_core, only: gmres_driver
+    use mod_bicgstab_core, only: bicgstab_driver
     
     implicit none
     
@@ -59,6 +39,8 @@ module mod_sparse
     real*8                   :: tsecond
     type(type_SP_SOLVER)     :: solver
     integer(kind=int_all)    :: i
+    integer :: max_it = 10
+    real(kind=8) :: tol = 1.e-7
     
     call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
     call MPI_COMM_RANK(a_mat%comm, my_id, ierr)    
@@ -113,9 +95,9 @@ module mod_sparse
       solver%iter_gmres = gmres_max_iter
       
       !call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
+      call bicgstab_driver(a_mat, sol_vec%val, rhs_vec%val, max_it, tol, solver%pc%comm, solver%pc%MPI_COMM_N, solver%pc%MPI_COMM_MASTER, solver)
       
-      !call gmres_driver(solver%pc%my_id, solver%pc%my_id_n, solver%pc%MPI_COMM_N, solver%pc%MPI_COMM_MASTER, solver%iter_gmres, a_mat, rhs_vec, sol_vec, solver)
-      
+     
       !call reset_preconditioner(solver%pc)
 
     endif

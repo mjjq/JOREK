@@ -23,8 +23,8 @@ module mod_bicgstab
   ! Global-matrix related
   integer                           :: blocksize, blocksize2
   integer                           :: n_blocks, n_glob, nnz, index_offset, n_local
-  real(kind=C_DOUBLE), allocatable  :: b_tmp(:)
-  integer, allocatable              :: rcv_c(:), rcv_d(:)
+  real(kind=C_DOUBLE), allocatable, target  :: b_tmp(:)
+  integer, pointer              :: rcv_c(:), rcv_d(:)
 
   logical                        :: bicgstab_initialized = .false.
 
@@ -43,12 +43,12 @@ module mod_bicgstab
 
     integer(kind=C_INT), pointer, intent(in)    :: irn(:), jcn(:)
     real(kind=C_DOUBLE), pointer, intent(in)    :: val(:)
-    real(kind=C_DOUBLE), allocatable            :: b(:)
-    real(kind=C_DOUBLE), allocatable            :: x(:)
+    real(kind=C_DOUBLE), pointer            :: b(:)
+    real(kind=C_DOUBLE), pointer            :: x(:)
     integer, intent(in)                         :: comm_glob, comm_n, comm_master
     integer, intent(inout)                      :: max_it
 
-    real(kind=C_DOUBLE), allocatable, target :: r(:), r_tld(:), s(:), s_hat(:), tmp(:), p(:), p_hat(:), v(:), t(:)
+    real(kind=C_DOUBLE), pointer     :: r(:), r_tld(:), s(:), s_hat(:), tmp(:), p(:), p_hat(:), v(:), t(:)
     integer                          :: iter, flag
     integer                          :: ierr
     real(kind=C_DOUBLE)              :: tol, error, alpha, beta, omega, bnrm2, rho, rho_1, resid, snrm2
@@ -72,7 +72,7 @@ module mod_bicgstab
     cooA%jcn => jcn
     cooA%val => val
     cooA%indexing = 1
-    cooA%n = n_glob
+    cooA%ng = n_glob
     cooA%nnz = nnz
 
     call MPI_Bcast(b,n_glob,MPI_DOUBLE_PRECISION,0,MPI_GLOB,ierr)
@@ -179,7 +179,7 @@ module mod_bicgstab
   subroutine matv(x,b)
     implicit none
 
-    real(kind=C_DOUBLE), allocatable  :: x(:), b(:)
+    real(kind=C_DOUBLE), pointer  :: x(:), b(:)
     integer                           :: i, j, ir, jc
     integer                           :: ierr
     integer                           :: iA_start, ix_start, iy_start
@@ -227,7 +227,7 @@ module mod_bicgstab
 #endif
     implicit none
 
-    real(kind=C_DOUBLE), allocatable, target :: x(:), b(:)
+    real(kind=C_DOUBLE), pointer :: x(:), b(:)
     integer :: i
     integer :: ierr
     real :: t0, t1, t2

@@ -762,29 +762,33 @@ mpi_required = 0
     endif
     
     if (.not. gmres) then
-      sol_vec%val => deltas
-      call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_DIRECT)
+      !sol_vec%val => deltas
+      !call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_DIRECT)
       !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
     else
     
       if (.not. solve_only) then
       
-        sol_vec%val => deltas      
+        sol_vec%val => deltas
+        sol_vec%n = ndof_glob
+        !
         call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_PRECON)
-        !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)              
+        write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
+        write(*,*) my_id, deltas(1), deltas(ndof_glob)
+        call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)         
 
 #ifndef DIRECT_CONSTRUCTION
-        !call clck_time(t0)
-        ! ! --- Extract harmonic matrix from global matrix via MPI communication
-        !call distribute_harmonics(my_id,my_id_n,n_cpu)
-        !if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-        !call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        !call clck_time_barrier(t1)
-        !call clck_ldiff(t0,t1,tsecond)
-        !if (my_id .eq. 0) then
-        !  write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-        !endif
+        call clck_time(t0)
+         ! --- Extract harmonic matrix from global matrix via MPI communication
+        call distribute_harmonics(my_id,my_id_n,n_cpu)
+        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+        call clck_time_barrier(t1)
+        call clck_ldiff(t0,t1,tsecond)
+        if (my_id .eq. 0) then
+          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+        endif
 #else 
 
          call clck_time_barrier(t0) 
@@ -822,20 +826,19 @@ mpi_required = 0
       call del_thread_buffers()
 
       call clck_time(t0)
-       
-!      if (use_strumpack) then 
-!#ifdef USE_STRUMPACK
-!        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-!#endif
-!      else
-!#if defined(USE_PASTIX) || defined(USE_MUMPS)
-!        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
-!#endif
-!#if defined(USE_PASTIX6)
-!        call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-!#endif
-!      endif
-
+                        
+      if (use_strumpack) then 
+#ifdef USE_STRUMPACK
+        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+#endif
+      else
+#if defined(USE_PASTIX) || defined(USE_MUMPS)
+        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+#endif
+#if defined(USE_PASTIX6)
+        call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+#endif
+      endif
 
       call clck_time_barrier(t1)
       call clck_ldiff(t0,t1,tsecond)
@@ -850,18 +853,27 @@ mpi_required = 0
       iter_gmres = gmres_max_iter
 
 #ifdef USE_BICGSTAB
-      !sol_vec%val => deltas
-      !call bicgstab_driver(irn_glob, jcn_glob, a_glob, sol_vec%val, rhs_vec%val, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
+      sol_vec%val => deltas
+      sol_vec%n = ndof_glob
+      call bicgstab_driver(irn_glob, jcn_glob, a_glob, sol_vec%val, rhs_vec%val, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
 #else
       call gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
 #endif
-
     endif
+    
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) then
       write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
+    
+      !write(*,*) mumps_par%n, solver%pc%rhs%n
+      !write(*,*) mumps_par%rhs(1), solver%pc%rhs%val(1)
+      !write(*,*) mumps_par%rhs(mumps_par%n), solver%pc%rhs%val(solver%pc%rhs%n)
+      write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
+      write(*,*) my_id, deltas(1), deltas(ndof_glob)
+      call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)              
+    
 
     call clck_time(t0)
     if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then

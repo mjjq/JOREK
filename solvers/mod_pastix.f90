@@ -238,11 +238,11 @@ module mod_pastix
     integer                 :: ierr
     
     allocate(a_mat%column_scaling(a_mat%ng))
-    lcs%ng = a_mat%ng
-    allocate(lcs%val(lcs%ng))
+    lcs%n = a_mat%ng
+    allocate(lcs%val(lcs%n))
 
     a_mat%column_scaling(1:a_mat%ng) = 1.d-20
-    lcs%val(1:lcs%ng) = 1.d-20
+    lcs%val(1:lcs%n) = 1.d-20
     do k=1,a_mat%nnz
       j = a_mat%jcn(k)
       lcs%val(j) = max(lcs%val(j),abs(a_mat%val(k)))

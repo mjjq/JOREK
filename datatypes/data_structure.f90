@@ -168,7 +168,7 @@ module data_structure
   !> RHS vector type
   type type_RHS
     real(kind=8), pointer          :: val(:)
-    integer(kind=int_all)          :: ng                    !< global number of unknowns
+    integer(kind=int_all)          :: n                    !< vector length
   end type type_RHS  
   
   !> Preconditioner type  
@@ -199,6 +199,7 @@ module data_structure
     logical                        :: autodistribute_ranks
     logical                        :: initialized = .false.
     logical                        :: analyzed = .false.
+    integer(kind=int_all)          :: n_glob
   end type type_PRECOND
  
   integer                                         , public :: nbthreads

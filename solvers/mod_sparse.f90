@@ -69,7 +69,7 @@ module mod_sparse
 #endif
       endif
       
-      do i=1,rhs_vec%ng
+      do i=1,rhs_vec%n
         sol_vec%val(i) =  rhs_vec%val(i)
       enddo      
 
@@ -87,7 +87,8 @@ module mod_sparse
       
       call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs)
       
-      call gather_solution(solver%pc,rhs_vec)
+      call gather_solution(solver%pc,sol_vec)
+   
       
 ! iterative part
 

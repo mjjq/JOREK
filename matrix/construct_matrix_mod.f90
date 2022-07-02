@@ -780,7 +780,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 #endif    
   
   global_rhs%val => RHS
-  global_rhs%ng  = ndof
+  global_rhs%n  = ndof
      
   ! --- Memory tracking
   call tr_locvnorms("cm_BCRhs",RHS,ndof)

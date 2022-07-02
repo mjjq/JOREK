@@ -297,7 +297,7 @@ module mod_strumpack
       rhs_c = c_loc(rhs_vec%val);
       dist_c = c_loc(spss%distr)
 
-      call spk_solve(rhs_vec%ng, dist_c, rhs_c, spss%sscp, spss%comm)
+      call spk_solve(rhs_vec%n, dist_c, rhs_c, spss%sscp, spss%comm)
       call MPI_Barrier(spss%comm,ierr)
 
       return

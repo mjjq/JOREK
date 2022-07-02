@@ -768,15 +768,16 @@ mpi_required = 0
 
     else
     
-      if (.not. solve_only) then
+      sol_vec%val => deltas ! initial guess
+      call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_PRECON)
       
-        sol_vec%val => deltas
-        sol_vec%n = ndof_glob
-        !
-        call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_PRECON)
-        write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
-        write(*,*) my_id, deltas(1), deltas(ndof_glob)
-        call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)         
+      !write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
+      !write(*,*) my_id, deltas(1), deltas(ndof_glob)
+      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
+      
+      if (.false.) then    
+      if (.not. solve_only) then
+
 
 #ifndef DIRECT_CONSTRUCTION
         call clck_time(t0)
@@ -844,22 +845,24 @@ mpi_required = 0
       call clck_ldiff(t0,t1,tsecond)
       if (my_id .eq. 0) then
         write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
-      end if
+      endif
+      endif ! (false)      
     endif
 
     call clck_time(t0)
-    if (gmres) then
-      iter_prev = iter_gmres
-      iter_gmres = gmres_max_iter
-
-#ifdef USE_BICGSTAB
-      sol_vec%val => deltas
-      sol_vec%n = ndof_glob
-      call bicgstab_driver(irn_glob, jcn_glob, a_glob, sol_vec%val, rhs_vec%val, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
-#else
-      call gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
-#endif
-    endif
+    
+!    if (gmres) then
+!      iter_prev = iter_gmres
+!      iter_gmres = gmres_max_iter
+!
+!#ifdef USE_BICGSTAB
+!      sol_vec%val => deltas
+!      sol_vec%n = ndof_glob
+!      call bicgstab_driver(irn_glob, jcn_glob, a_glob, sol_vec%val, rhs_vec%val, iter_gmres, gmres_tol, MPI_COMM_WORLD, MPI_COMM_N, MPI_COMM_MASTER)
+!#else
+!      call gmres_driver(my_id,my_id_n,MPI_COMM_N,MPI_COMM_MASTER,iter_gmres)
+!#endif
+!    endif
     
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
@@ -867,12 +870,10 @@ mpi_required = 0
       write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
     end if
     
-      !write(*,*) mumps_par%n, solver%pc%rhs%n
-      !write(*,*) mumps_par%rhs(1), solver%pc%rhs%val(1)
-      !write(*,*) mumps_par%rhs(mumps_par%n), solver%pc%rhs%val(solver%pc%rhs%n)
-      write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
-      write(*,*) my_id, deltas(1), deltas(ndof_glob)
-      call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)              
+
+    !write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
+    !write(*,*) my_id, deltas(1), deltas(ndof_glob)
+    !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)              
     
 
     call clck_time(t0)

@@ -43,7 +43,8 @@ module mod_sparse
     real(kind=8) :: tol = 1.e-7
     
     call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
-    call MPI_COMM_RANK(a_mat%comm, my_id, ierr)    
+    call MPI_COMM_RANK(a_mat%comm, my_id, ierr)
+    sol_vec%n = rhs_vec%n
     
     if (solve_type.eq.MHD_EQUILI) then
     

@@ -2,10 +2,10 @@
 !> subroutine solves the complete system of equation using pastix with
 !  distributed matrix ad_mat on the main group mpi_comm_world.
 !  For pastix5 solver matrix is centralized into ac_mat
-subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
+subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   use tr_module 
   use mod_parameters, only: n_tor, n_var
-  use global_distributed_matrix
+  !use global_distributed_matrix
   use mpi_mod
   use mod_clock
   use mod_coicsr
@@ -28,91 +28,96 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec)
   integer                            :: index_min, index_max
   integer                            :: block_size2
   integer(kind=int_all)              :: n_block, nnz_block
-  type(type_PASTIX_SOLVER) :: ptss
+  type(type_PASTIX_SOLVER)           :: ptss
+  logical                            :: solve_only
   
-  integer(kind=int_all), allocatable         :: sparskit_work(:)
+  integer(kind=int_all), allocatable :: sparskit_work(:)
   
-  comm = ad_mat%comm
+  if (.not.solve_only) then
   
-  call MPI_COMM_RANK(comm, my_id, ierr)
-  call MPI_COMM_SIZE(comm, n_cpu, ierr)  
-
-  !write(*,*) my_id,'*********************************'
-  !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
-  !write(*,*) my_id,'*********************************'
+    call scale_by_cols(ad_mat)
   
-  call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-  
-  ac_mat%ng = ad_mat%ng
-  ac_mat%block_size = ad_mat%block_size
-  ac_mat%comm = ad_mat%comm  
-  
-  allocate(ac_mat%irn(ac_mat%nnz))
-  allocate(ac_mat%jcn(ac_mat%nnz))
-  allocate(ac_mat%val(ac_mat%nnz))
-  
-  call scale_by_cols(ad_mat)
-  
-  call clck_time(t0)
-  
-  call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
-  
-  call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
-  
-  call clck_time(t0)
-
-  block_size2 = ac_mat%block_size**2
-  
-  n_block   = ac_mat%ng/ac_mat%block_size
-  nnz_block = ac_mat%nnz/block_size2
-  
-  ac_mat%nblock = n_block
-  ac_mat%nzblock = nnz_block
-  
-  if (ac_mat%block_size > 1) then
-    do i=1,nnz_block  
-      ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1 
-      ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1 
-    enddo
-  endif
-  
-  allocate(sparskit_work(n_block+1))
-  
-  call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),ac_mat%block_size,sparskit_work)
-  
-  if (allocated(sparskit_work)) deallocate(sparskit_work)
-  
-  call clck_time(t1)
-  call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
-  
-  ! End of matrix preparation
-  
-  if (.not. ptss%initialized) then
-  
-    call pastix_initialize(ptss, comm)
+    comm = ad_mat%comm
     
-  endif
+    call MPI_COMM_RANK(comm, my_id, ierr)
+    call MPI_COMM_SIZE(comm, n_cpu, ierr)  
   
-  if (.not. ptss%analyzed) then
+    !write(*,*) my_id,'*********************************'
+    !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
+    !write(*,*) my_id,'*********************************'
     
-    ptss%iparm(IPARM_DOF_NBR)    = ac_mat%block_size
-    ptss%nblock = n_block
+    call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
     
-    call pastix_analyze(ptss,ac_mat)
+    ac_mat%ng = ad_mat%ng
+    ac_mat%block_size = ad_mat%block_size
+    ac_mat%comm = ad_mat%comm  
+    
+    allocate(ac_mat%irn(ac_mat%nnz))
+    allocate(ac_mat%jcn(ac_mat%nnz))
+    allocate(ac_mat%val(ac_mat%nnz))
+    
+    call clck_time(t0)
+    
+    call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+    
+    call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+    
+    call clck_time(t0)
   
-  endif
+    block_size2 = ac_mat%block_size**2
+    
+    n_block   = ac_mat%ng/ac_mat%block_size
+    nnz_block = ac_mat%nnz/block_size2
+    
+    ac_mat%nblock = n_block
+    ac_mat%nzblock = nnz_block
+    
+    if (ac_mat%block_size > 1) then
+      do i=1,nnz_block  
+        ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1 
+        ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1 
+      enddo
+    endif
+    
+    allocate(sparskit_work(n_block+1))
+    
+    call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),ac_mat%block_size,sparskit_work)
+    
+    deallocate(sparskit_work)
+    
+    call clck_time(t1)
+    call clck_ldiff(t0,t1,tsecond)
+    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
+    
+    ! End of matrix preparation
+    
+    if (.not. ptss%initialized) then
+    
+      call pastix_initialize(ptss, comm)
+      
+    endif
+    
+    if (.not. ptss%analyzed) then
+      
+      ptss%iparm(IPARM_DOF_NBR)    = ac_mat%block_size
+      ptss%nblock = n_block
+      
+      call pastix_analyze(ptss,ac_mat)
+    
+    endif
+    
+    call pastix_factorize(ptss,ac_mat)
   
-  call pastix_factorize(ptss,ac_mat)
-
-  deallocate(ac_mat%irn)
-  deallocate(ac_mat%jcn)
-  deallocate(ac_mat%val)                      
+    deallocate(ac_mat%irn)
+    deallocate(ac_mat%jcn)
+    deallocate(ac_mat%val)
+  
+  endif ! .not.solve_only
   
   call pastix_solve(ptss,rhs_vec)
   
-  do k=1,ac_mat%ng
+  do k=1,rhs_vec%n
     rhs_vec%val(k) =  rhs_vec%val(k)/ad_mat%column_scaling(k)
   enddo
   

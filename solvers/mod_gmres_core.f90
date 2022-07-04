@@ -5,7 +5,7 @@ module mod_gmres_core
   use mod_clock
 
   use data_structure, only: type_SP_MATRIX, type_RHS
-  use phys_module,    only: iter_precon, gmres_4, gmres_tol, gmres_m, index_now
+  use phys_module,    only: gmres_4, gmres_tol, gmres_m, index_now
   
 
   private
@@ -184,7 +184,7 @@ module mod_gmres_core
     iter_gmres = info(2) ! Actual number of iterations
     call MPI_BCAST(iter_gmres,1,MPI_INTEGER,0,a_mat%comm,ierr)
     
-    if (my_id.eq.0) write(*,'(A32,I5)') 'Number of iterations (info(2)): ',info(2)
+    solver%iter_gmres = info(2)
 
     deallocate(work)
     deallocate(work_ndof)

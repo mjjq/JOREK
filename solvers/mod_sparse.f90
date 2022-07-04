@@ -14,7 +14,7 @@ module mod_sparse
 !! sol_vec contains the initial guess
 !! sol_vec, rhs_vec are broadcasted
 !! solve_type - type of system, e.g. GS equilibrium, MHD system with preconditioner, etc.
-  subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type)
+  subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)
 
     use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
     use mod_integer_types
@@ -36,7 +36,6 @@ module mod_sparse
     
     type(type_SP_MATRIX)     :: a_mat
     type(type_RHS)           :: rhs_vec, sol_vec
-    integer                  :: solve_type
     integer                  :: my_id, n_cpu, ierr
     
     type(clcktype)           :: t_itstart, t0, t1, t2, t3
@@ -50,11 +49,11 @@ module mod_sparse
     call MPI_COMM_RANK(a_mat%comm, my_id, ierr)
     sol_vec%n = rhs_vec%n
     
-    if (solve_type.eq.MHD_EQUILI) then
+    if (solver%equilibrium) then
     
-      write(*,*) solve_type
+
       
-    elseif (solve_type.eq.MHD_DIRECT) then
+    elseif (.not.solver%iterative) then
       
       if (my_id.eq.0) write(*,*) "Solving MHD system using direct solver"
     
@@ -77,36 +76,47 @@ module mod_sparse
       
       do i=1,rhs_vec%n
         sol_vec%val(i) =  rhs_vec%val(i)
-      enddo      
+      enddo
+      
+      solver%step_success = .true.
 
-    elseif (solve_type.eq.MHD_PRECON) then
+    elseif (solver%iterative) then
 
       if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
       
-      solver%iter_prev  = iter_precon
-      solver%iter_gmres = gmres_max_iter
+      ! condition for no PC update
+      solver%solve_only = (solver%istep > 1) .and. ((solver%iter_gmres + solver%iter_prev <= 2*solver%iter_precon) &
+                                             .and.  (solver%n_since_update < solver%max_steps_noUpdate))      
+      
+      if (solver%solve_only) then 
+        solver%n_since_update = solver%n_since_update + 1
+      else
+        solver%n_since_update = 0
+      endif         
+      
       
       if (.not.solver%pc%initialized) call initialize_preconditioner(solver%pc,a_mat%comm)
       
 ! Finding PC solution
-     
-      call update_pc_mat(solver%pc,a_mat)
+      if (.not.solver%solve_only) then
+        call update_pc_mat(solver%pc,a_mat)
+      endif
       
-      call update_pc_rhs(solver%pc,rhs_vec)
-      
+      call update_pc_rhs(solver%pc,rhs_vec)      
+        
       if (use_mumps) then
       
-        !call solve_mumps_all(my_id)
+        !call solve_mumps_all(solver%mpss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
         
 #ifdef USE_STRUMPACK        
       elseif (use_strumpack) then
       
-        call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs)
+        call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
 #endif
 #ifdef USE_PASTIX
       elseif (use_pastix) then
       
-        call solve_pastix_all(solver%spss, solver%pc%mat, solver%pc%rhs)
+        call solve_pastix_all(solver%spss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
         !call pastix_finalize(solver%ptss)
 #endif
       endif      
@@ -114,12 +124,18 @@ module mod_sparse
       call gather_solution(solver%pc,sol_vec)
       
 ! iterative part
+      solver%iter_prev  = solver%iter_gmres
+      solver%iter_gmres = solver%iter_max
 
 #ifdef USE_BICGSTAB      
-      call bicgstab_driver(a_mat, sol_vec%val, rhs_vec%val, max_it, tol, solver%pc%comm, solver%pc%MPI_COMM_N, solver%pc%MPI_COMM_MASTER, solver)
+      call bicgstab_driver(a_mat, rhs_vec, sol_vec, solver)
 #else
       call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
 #endif
+
+      if (my_id.eq.0) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
+      
+      solver%step_success = (solver%iter_gmres .lt. solver%iter_max)
       
      
       !call reset_preconditioner(solver%pc)

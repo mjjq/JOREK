@@ -19,7 +19,25 @@ module mod_sparse_data
     type(type_STRUMPACK_SOLVER) :: spss
 #endif
     type(type_PRECOND)          :: pc
-    integer                     :: iter_prev, iter_gmres
+    
+    integer                     :: index_now                           !< current time step index (absolute)
+    real(kind=8)                :: tstep                               !< current time step value
+    real(kind=8)                :: tstep_prev                          !< previous time step
+    integer                     :: istep                               !< curent time step index within jstep group
+    
+    integer                     :: iter_precon                         !< maximum number of iterations without pc update (input)
+    integer                     :: max_steps_noUpdate                  !< maximum number of time steps without pc update (input)
+    integer                     :: iter_max                            !< maximum allowed number of iterations (input)
+    
+    integer                     :: n_since_update = 0                  !< number of time steps since last pc update
+    integer                     :: iter_prev = 0                       !< number of iterations in the previous step
+    integer                     :: iter_gmres                          !< number of iterations in the current step
+    real(kind=8)                :: iter_tol                            !< iterative convergence criteria
+    logical                     :: solve_only = .false.
+    logical                     :: step_success = .false.
+    logical                     :: iterative
+    logical                     :: equilibrium = .false.
+    
   end type type_SP_SOLVER
   
   integer, parameter :: MHD_EQUILI = 0

@@ -642,6 +642,11 @@ mpi_required = 0
     write(*,*) '  values after restarting.'
   end if
   
+  
+  
+  
+  
+  
   !***********************************************************************
   !***********************************************************************
   !*                          time stepping                              *
@@ -654,16 +659,24 @@ mpi_required = 0
   iter_big       = gmres_max_iter
   iter_prev      = 0
   n_since_update = 0
+  
+  solver%iter_precon = iter_precon
+  solver%iter_gmres  = solver%iter_precon
+  solver%iter_max    = gmres_max_iter
+  solver%max_steps_noUpdate = max_steps_noUpdate
+  solver%iter_tol    = gmres_tol
+  
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
   
   if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list
 
-  index_now = index_start  ! index_now: Index of current timestep
+  index_now = index_start  ! index_now: Index of current timestepindex_start  
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)
+  
     call clck_time_barrier(t_itstart)
     t0 = t_itstart
 
@@ -673,10 +686,17 @@ mpi_required = 0
     index_now = index_now + 1
     
     tstep = tstep_n(jstep)
+
     ! start from t=0 
-    if ( index_now <= 1 ) tstep_prev = tstep
+    if (index_now <= 1) tstep_prev = tstep
     
-    if ( freeboundary ) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
+    if ( my_id == 0 ) then
+      write(*,*) '******************************************************'
+      write(*,'(A17,3i7,2f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,tstep_prev,'  *'
+      write(*,*) '******************************************************'
+    end if
+    
+    if (freeboundary) call update_response(my_id,tstep, freeboundary_equil, resistive_wall)
 
     ! ---- For now running the jorek2_main should not include aux inputs
     aux_node_list%n_nodes = 0
@@ -684,12 +704,6 @@ mpi_required = 0
       aux_node_list%node(i)%values = 0.d0
       aux_node_list%node(i)%deltas = 0.d0
     enddo
-
-    if ( my_id == 0 ) then
-      write(*,*) '******************************************************'
-      write(*,'(A17,3i7,2f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,tstep_prev,'  *'
-      write(*,*) '******************************************************'
-    end if
 
     ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
     ! --- n_plane, n_var have to remain the same until the end of the program.
@@ -700,6 +714,7 @@ mpi_required = 0
 
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
     minRad = 0.0
+    
     if (bootstrap) then
       call bootstrap_find_minRad(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
       call bootstrap_get_q_and_ft_splines(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
@@ -709,42 +724,31 @@ mpi_required = 0
     call tr_debug_write("JMAIN:Find_axis_Z",ES%Z_axis)
     call clck_time_barrier(t1)
     call clck_ldiff(t0,t1,tsecond)
-!    if (my_id .eq. 0) then
-!       write(*,FMT_TIMING)  my_id, '# Elapsed time init_time_step :',tsecond
-!    end if
-
-    ! Build the matrix 
-    call clck_time_barrier(t0)
-    if (gmres) then
-      ! Matrix analysis and factorization in the preconditioner is re-done...
-      ! ... in the first step of a simulation (also when restarting)
-      ! ... when tstep changes
-      ! ... when the previous time steps took too many iterations
-      solve_only = (istep > 1) .and. ((iter_gmres+iter_prev <= 2*iter_precon) .and. (n_since_update < max_steps_noUpdate))
-      if (solve_only) then 
-        n_since_update = n_since_update + 1
-      else
-        n_since_update = 0
-      endif
-      !if ( my_id == 0 ) write(*,*) 'solve_only: ', solve_only
-    endif
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
       call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
-    call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)
+    call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)    
+    
 
-    ! --- The following is for parallel debugging only
-
-    !holder = 0;
-    !write(*,*) "my_id", my_id, "PID", getpid(), "Host", name
-
-    !do while (holder == 0)
-    !  call sleep(5)
-    !end do
-
-    ! --- End of parallel debugging section 
+    ! Build the matrix 
+    call clck_time_barrier(t0)
+    
+    !if (gmres) then
+    !  ! Matrix analysis and factorization in the preconditioner is re-done...
+    !  ! ... in the first step of a simulation (also when restarting)
+    !  ! ... when tstep changes
+    !  ! ... when the previous time steps took too many iterations
+    !  
+    !  solve_only = (istep > 1) .and. ((iter_gmres + iter_prev <= 2*iter_precon) .and. (n_since_update < max_steps_noUpdate))
+    !  if (solve_only) then 
+    !    n_since_update = n_since_update + 1
+    !  else
+    !    n_since_update = 0
+    !  endif      
+    !endif
+    
 
     !--------- Constructing Global Matrix
     call construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms,   &
@@ -752,6 +756,7 @@ mpi_required = 0
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
          n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
          irn_jcn, a_mat, rhs_vec, harmonic_matrix=.false.)
+         
     a_mat%index_min => index_min
     a_mat%index_max => index_max
 
@@ -761,93 +766,101 @@ mpi_required = 0
       write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
     endif
     
-    if (.not. gmres) then
-      !sol_vec%val => deltas
-      !call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_DIRECT)
-      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
-
-    else
+    solver%tstep = tstep
+    solver%istep = istep
+    solver%index_now = index_now
+    solver%iterative = gmres
     
-      sol_vec%val => deltas ! initial guess
-      call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, solve_type=MHD_PRECON)
-      
-      !write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
-      !write(*,*) my_id, deltas(1), deltas(ndof_glob)
-      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
-      
-      if (.false.) then    
-      if (.not. solve_only) then
-
-
-#ifndef DIRECT_CONSTRUCTION
-        call clck_time(t0)
-         ! --- Extract harmonic matrix from global matrix via MPI communication
-        call distribute_harmonics(my_id,my_id_n,n_cpu)
-        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-        call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        call clck_time_barrier(t1)
-        call clck_ldiff(t0,t1,tsecond)
-        if (my_id .eq. 0) then
-          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
-        endif
-#else 
-
-         call clck_time_barrier(t0) 
-         ! --- Direct construction of harmonic matrix
-         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
-              node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, restart, freeboundary, .true.)
-        call MPI_Barrier(MPI_COMM_WORLD,ierr)
-        call clck_time_barrier(t1) 
-
-        if (my_id .eq. 0) then
-          call clck_ldiff(t0,t1,tsecond)
-          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
-        endif     
-
-        call clck_time_barrier(t0) 
-        ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
-        call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
-        call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  
-        call clck_time_barrier(t1) 
-
-        if (my_id .eq. 0) then
-          call clck_ldiff(t0,t1,tsecond)
-          write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
-        endif     
-
-#endif
-
-      else
-
-        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
-      endif
-
-       ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
-      call del_thread_buffers()
-
-      call clck_time(t0)
-                        
-      if (use_strumpack) then 
-#ifdef USE_STRUMPACK
-        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-#endif
-      else
-#if defined(USE_PASTIX) || defined(USE_MUMPS)
-        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
-#endif
-#if defined(USE_PASTIX6)
-        call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
-#endif
-      endif
-
-      call clck_time_barrier(t1)
-      call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0) then
-        write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
-      endif
-      endif ! (false)      
-    endif
+    sol_vec%val => deltas
+    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)
+    
+!    if (.not. gmres) then
+!      
+!      call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)
+!      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
+!
+!    else
+!    
+!      call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)
+!      
+!      !write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)
+!      !write(*,*) my_id, deltas(1), deltas(ndof_glob)
+!      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
+!      
+!      if (.false.) then    
+!      if (.not. solve_only) then
+!
+!
+!#ifndef DIRECT_CONSTRUCTION
+!        call clck_time(t0)
+!         ! --- Extract harmonic matrix from global matrix via MPI communication
+!        call distribute_harmonics(my_id,my_id_n,n_cpu)
+!        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+!        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+!        call clck_time_barrier(t1)
+!        call clck_ldiff(t0,t1,tsecond)
+!        if (my_id .eq. 0) then
+!          write(*,FMT_TIMING) my_id, '# Elapsed time distribute :',tsecond
+!        endif
+!#else 
+!
+!         call clck_time_barrier(t0) 
+!         ! --- Direct construction of harmonic matrix
+!         call direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, & 
+!              node_list, element_list, bnd_elm_list, bnd_node_list, xpoint, xcase, restart, freeboundary, .true.)
+!        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+!        call clck_time_barrier(t1) 
+!
+!        if (my_id .eq. 0) then
+!          call clck_ldiff(t0,t1,tsecond)
+!          write(*,FMT_TIMING) my_id, '# Elapsed time in construct harmonic matrix :',tsecond
+!        endif     
+!
+!        call clck_time_barrier(t0) 
+!        ! --- Centralize the harmonic matrix on the master task of the MPI group (if needed)
+!        call centralization_harmonic(my_id, my_id_n, n_cpu_n, MPI_COMM_N)
+!        call MPI_Barrier(MPI_COMM_WORLD,ierr)
+!  
+!        call clck_time_barrier(t1) 
+!
+!        if (my_id .eq. 0) then
+!          call clck_ldiff(t0,t1,tsecond)
+!          write(*,FMT_TIMING) my_id, '# Elapsed time in centralizing the matrix:',tsecond
+!        endif     
+!
+!#endif
+!
+!      else
+!
+!        if(my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,MPI_COMM_MASTER)
+!        
+!      endif
+!
+!       ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
+!      call del_thread_buffers()
+!
+!      call clck_time(t0)
+!                        
+!      if (use_strumpack) then 
+!#ifdef USE_STRUMPACK
+!        call solve_matrix_n_spk(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+!#endif
+!      else
+!#if defined(USE_PASTIX) || defined(USE_MUMPS)
+!        call solve_matrix_n(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only) ! factorise preconditioning matrices
+!#endif
+!#if defined(USE_PASTIX6)
+!        call solve_matrix_n_ptx(my_id,MPI_COMM_N,MPI_COMM_MASTER,solve_only)
+!#endif
+!      endif
+!
+!      call clck_time_barrier(t1)
+!      call clck_ldiff(t0,t1,tsecond)
+!      if (my_id .eq. 0) then
+!        write(*,FMT_TIMING) my_id, '# Elapsed time first solve :',tsecond
+!      endif
+!      endif ! (false)      
+!    endif
 
     call clck_time(t0)
     
@@ -877,7 +890,8 @@ mpi_required = 0
     
 
     call clck_time(t0)
-    if ( (gmres .and. (iter_gmres .lt. iter_big)) .or. (.not.gmres) ) then
+    if (solver%step_success) then
+    ! successful step
 
       if (use_pellet) then
         pellet_volume = total_pellet_volume
@@ -916,7 +930,7 @@ mpi_required = 0
     else
       if ( my_id == 0 ) then
         write(*,*)
-        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', iter_gmres, ' ITERATIONS. ABORTING <<<<<'
+        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
         write(*,*)
       end if
       index_now = index_now - 1 ! Undo the time step
@@ -930,21 +944,21 @@ mpi_required = 0
 
     !-------------------------------------------------------- adapt time step (in progress...)
     mindelta = minval(deltas); maxdelta = maxval(deltas);
-
-    if (gmres .and. adaptive_time) then        ! experimental
-       if (iter_gmres .ge. iter_big) then
-          tstep = tstep /2.d0
-          write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
-       elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
-          !	 tstep = tstep /2.d0
-          !	 iter_gmres = 99999
-          !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
-       elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
-          !	 tstep = tstep * 2.d0
-          !	 iter_gmres = 99999
-          !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
-       endif
-    endif
+    !
+    !if (gmres .and. adaptive_time) then        ! experimental
+    !   if (iter_gmres .ge. iter_big) then
+    !      tstep = tstep /2.d0
+    !      write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+    !   elseif (max(abs(mindelta),abs(maxdelta)) .gt. 0.05) then
+    !      !	 tstep = tstep /2.d0
+    !      !	 iter_gmres = 99999
+    !      !	 write(*,*) my_id,' REDUCTION TIMESTEP : ',tstep
+    !   elseif (max(abs(mindelta),abs(maxdelta)) .lt. 0.001) then
+    !      !	 tstep = tstep * 2.d0
+    !      !	 iter_gmres = 99999
+    !      !	 write(*,*) my_id,' INCREASE TIMESTEP : ',tstep
+    !   endif
+    !endif
 
     !--------------------------------------------------------- energies
     if ( (my_id == 0) .and. (.not. bench_without_plot) ) then
@@ -1112,6 +1126,13 @@ mpi_required = 0
 
   enddo istep_loop
   enddo jstep_loop
+  
+  
+  
+  
+  
+  
+  
   
   !***********************************************************************
   !*                         cleanup  (solvers)                          *

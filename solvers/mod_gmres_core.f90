@@ -19,7 +19,7 @@ module mod_gmres_core
     
     use mod_dpackgmres, only: init_dgmres, drive_dgmres
     use tr_module,      only: tr_locvnorms, tr_vdump
-    use mod_sparse,     only: type_SP_SOLVER
+    use mod_sparse_data,     only: type_SP_SOLVER
 
     implicit none
 #include "r3_info.h"
@@ -70,7 +70,7 @@ module mod_gmres_core
 
     m = gmres_m
 
-    n_dof = rhs_vec%ng
+    n_dof = rhs_vec%n
 
     lwork = m*m + m*(n_dof+5) + 6*n_dof + m + 1
 
@@ -543,7 +543,7 @@ module mod_gmres_core
 
     use pastix_module
     use phys_module, only: use_pastix, use_mumps, use_strumpack
-    use mod_sparse,     only: type_SP_SOLVER
+    use mod_sparse_data,     only: type_SP_SOLVER
 
 #ifdef USE_STRUMPACK
 !    use strumpack_module, only: strumpack_solve
@@ -570,7 +570,7 @@ module mod_gmres_core
     
     call MPI_BCAST(x,n_dof,MPI_DOUBLE_PRECISION,0,solver%pc%MPI_COMM_N,ierr)
    
-    do i = 1, solver%pc%rhs%ng
+    do i = 1, solver%pc%rhs%n
       solver%pc%rhs%val(i) = x(solver%pc%row_index(i))
     enddo
 
@@ -600,7 +600,7 @@ module mod_gmres_core
 
     if (solver%pc%my_id_n .eq. 0) then      
     ! put local solution into global vector y
-      do i = 1, solver%pc%rhs%ng
+      do i = 1, solver%pc%rhs%n
         y_dum(solver%pc%row_index(i)) = solver%pc%rhs%val(i)*solver%pc%row_factor
       enddo
     endif

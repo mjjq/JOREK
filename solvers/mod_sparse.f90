@@ -25,8 +25,12 @@ module mod_sparse
 #endif
     use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner
     use mod_distribute_preconditioner_core, only: update_pc_mat, update_pc_rhs, gather_solution
-    !use mod_gmres_core, only: gmres_driver
+    !
+#ifdef USE_BICGSTAB    
     use mod_bicgstab_core, only: bicgstab_driver
+#else
+    use mod_gmres_core, only: gmres_driver
+#endif
     
     implicit none
     
@@ -57,6 +61,7 @@ module mod_sparse
       if (use_mumps) then
       
         call solve_mumps_all(my_id)
+        
 #ifdef USE_STRUMPACK        
       elseif (use_strumpack) then
       
@@ -78,26 +83,43 @@ module mod_sparse
 
       if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
       
-! Finding PC solution
+      solver%iter_prev  = iter_precon
+      solver%iter_gmres = gmres_max_iter
       
       if (.not.solver%pc%initialized) call initialize_preconditioner(solver%pc,a_mat%comm)
       
+! Finding PC solution
+     
       call update_pc_mat(solver%pc,a_mat)
       
       call update_pc_rhs(solver%pc,rhs_vec)
       
-      call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs)
+      if (use_mumps) then
+      
+        !call solve_mumps_all(my_id)
+        
+#ifdef USE_STRUMPACK        
+      elseif (use_strumpack) then
+      
+        call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs)
+#endif
+#ifdef USE_PASTIX
+      elseif (use_pastix) then
+      
+        call solve_pastix_all(solver%spss, solver%pc%mat, solver%pc%rhs)
+        !call pastix_finalize(solver%ptss)
+#endif
+      endif      
       
       call gather_solution(solver%pc,sol_vec)
-   
       
 ! iterative part
 
-      solver%iter_prev  = iter_precon
-      solver%iter_gmres = gmres_max_iter
-      
-      !call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
+#ifdef USE_BICGSTAB      
       call bicgstab_driver(a_mat, sol_vec%val, rhs_vec%val, max_it, tol, solver%pc%comm, solver%pc%MPI_COMM_N, solver%pc%MPI_COMM_MASTER, solver)
+#else
+      call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
+#endif
       
      
       !call reset_preconditioner(solver%pc)

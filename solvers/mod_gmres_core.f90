@@ -549,7 +549,7 @@ module mod_gmres_core
 !    use strumpack_module, only: strumpack_solve
     use mod_strumpack, only: strumpack_solve_core
 #endif
-#ifdef USE_PASTIX6
+#ifdef USE_PASTIX
     use mod_pastix, only: pastix_solve
 #endif
 
@@ -581,6 +581,7 @@ module mod_gmres_core
 
 #if defined(USE_PASTIX)
     if (use_pastix) then
+      call pastix_solve(solver%ptss,solver%pc%rhs)
     endif ! use_pastix
 #endif /* defined(USE_PASTIX) */
 

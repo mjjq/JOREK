@@ -64,12 +64,12 @@ module mod_sparse
 #ifdef USE_STRUMPACK        
       elseif (use_strumpack) then
       
-        call solve_strumpack_all(solver%spss, a_mat, rhs_vec)
+        call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only)
 #endif
 #ifdef USE_PASTIX
       elseif (use_pastix) then
       
-        call solve_pastix_all(solver%ptss, a_mat, rhs_vec)
+        call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only)
         !call pastix_finalize(solver%ptss)
 #endif
       endif
@@ -116,7 +116,7 @@ module mod_sparse
 #ifdef USE_PASTIX
       elseif (use_pastix) then
       
-        call solve_pastix_all(solver%spss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
+        call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
         !call pastix_finalize(solver%ptss)
 #endif
       endif      

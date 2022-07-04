@@ -29,6 +29,9 @@ module mod_pastix
     integer(kind=int_all)    :: facto    = API_FACT_LU
     integer(kind=int_all)    :: rhs      = 0
     integer(kind=int_all)    :: nblock   = 0
+    
+    real(kind=8), pointer    :: solution_scaling(:)    !< matrix column scaling to be applied to solution vector
+    logical                  :: scaled = .false.
   end type type_PASTIX_SOLVER
 
   private
@@ -205,6 +208,7 @@ module mod_pastix
     integer                           :: my_id, n_cpu, ierr
     type(clcktype)                    :: t_itstart, t0, t1, t2, t3
     real*8                            :: tsecond
+    integer(kind=int_all)             :: i
     
     call MPI_COMM_RANK(ptss%comm, my_id, ierr)
     call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
@@ -215,7 +219,13 @@ module mod_pastix
     ptss%iparm(IPARM_END_TASK)   = API_TASK_SOLVE
  
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
-                      ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,1,ptss%iparm,ptss%dparm)  
+                      ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,1,ptss%iparm,ptss%dparm)
+                      
+    if (ptss%scaled) then
+      do i=1,rhs_vec%n
+        rhs_vec%val(i) =  rhs_vec%val(i)/ptss%solution_scaling(i)
+      enddo
+    endif
   
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond

@@ -2727,8 +2727,6 @@ module exec_commands
   integer   :: nnz
   integer*8 :: check_data
   integer, allocatable :: irn_tmp(:), jcn_tmp(:)
-  integer(kind=int_all), parameter   :: Int0=0
-  integer(kind=int_all), parameter   :: Int1=1
 
 
   if ((jorek_model/=500) .and. (jorek_model/=600)) then

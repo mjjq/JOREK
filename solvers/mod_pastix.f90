@@ -6,15 +6,15 @@ module mod_pastix
   use mod_integer_types
 
   type type_PASTIX_SOLVER
-    integer                  :: comm
+    integer                  :: comm = 0
     logical                  :: initialized = .false.
     logical                  :: analyzed    = .false.
     logical                  :: equilibrium = .false.
     integer(kind=int_all)    :: iparm(IPARM_SIZE)
     real*8                   :: dparm(DPARM_SIZE)
     
-    integer(kind=int_all), pointer :: perm_vars(:) 
-    integer(kind=int_all), pointer :: iperm_vars(:)
+    integer(kind=int_all), dimension(:), pointer :: perm_vars => Null()
+    integer(kind=int_all), dimension(:), pointer :: iperm_vars => Null()
 
     integer(kind=8)          :: idata    = 0
     integer(kind=int_all)    :: sym      = API_SYM_NO    
@@ -30,8 +30,10 @@ module mod_pastix
     integer(kind=int_all)    :: rhs      = 0
     integer(kind=int_all)    :: nblock   = 0
     
-    real(kind=8), pointer    :: solution_scaling(:)    !< matrix column scaling to be applied to solution vector
+    real(kind=8), dimension(:), pointer :: solution_scaling => Null()    !< matrix column scaling to be applied to solution vector
     logical                  :: scaled = .false.
+    logical                  :: refine = .false.
+    
   end type type_PASTIX_SOLVER
 
   private
@@ -113,9 +115,22 @@ module mod_pastix
     
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
                         ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, 1, ptss%iparm,ptss%dparm)
+
+    deallocate(ptss%perm_vars)
+    deallocate(ptss%iperm_vars)
+    ptss%perm_vars => Null()
+    ptss%iperm_vars => Null()
+    
+    ptss%idata = 0
+    ptss%comm  = 0
+    
+    ptss%scaled      = .false.
+    ptss%refine      = .false.
+    ptss%equilibrium = .false.    
                         
     ptss%initialized = .false.
-    ptss%analyzed = .false.
+    ptss%analyzed    = .false.
+
     
     return
 
@@ -135,7 +150,6 @@ module mod_pastix
     integer                           :: my_id, n_cpu, ierr
     type(clcktype)                    :: t_itstart, t0, t1, t2, t3
     real*8                            :: tsecond
-    integer(kind=int_all), allocatable, target :: perm_vars(:), iperm_vars(:)
     
     call MPI_COMM_RANK(ptss%comm, my_id, ierr)
     call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
@@ -145,11 +159,13 @@ module mod_pastix
   
     call clck_time(t0)
     
-    allocate(perm_vars(ptss%nblock)); perm_vars = 0
-    allocate(iperm_vars(ptss%nblock)); iperm_vars = 0
-  
-    ptss%perm_vars  => perm_vars
-    ptss%iperm_vars => iperm_vars
+    ptss%iparm(IPARM_DOF_NBR) = a_mat%block_size
+    ptss%nblock = a_mat%nblock
+    
+    allocate(ptss%perm_vars(ptss%nblock))
+    allocate(ptss%iperm_vars(ptss%nblock))
+    ptss%perm_vars(1:ptss%nblock) = 0
+    ptss%iperm_vars(1:ptss%nblock) = 0
   
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
                         ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, 1, ptss%iparm,ptss%dparm)
@@ -217,6 +233,7 @@ module mod_pastix
   
     ptss%iparm(IPARM_START_TASK) = API_TASK_SOLVE
     ptss%iparm(IPARM_END_TASK)   = API_TASK_SOLVE
+    if (ptss%refine) ptss%iparm(IPARM_END_TASK) = API_TASK_REFINE
  
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
                       ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,1,ptss%iparm,ptss%dparm)
@@ -274,22 +291,27 @@ module mod_pastix
 
   subroutine pastix_init_nthreads(ptss)
     use mpi_mod
-    use omp_lib
+!$  use omp_lib    
     
     implicit none
     type(type_PASTIX_SOLVER) :: ptss
-    integer :: nthrd
+    integer :: nthrd = 1
+    integer :: n_cpu, ierr
 
-    !$omp parallel default(none) shared(nthrd)
-    !$omp master
-      nthrd = omp_get_num_threads()
-    !$omp end master
-    !$omp end parallel
+    call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
+
+!$omp parallel default(none) shared(nthrd)
+!$omp master
+!$      nthrd = omp_get_num_threads()    
+!$omp end master
+!$omp end parallel
     
-    if (nthrd * get_tasks_per_node() > ptss%maxthrd) then
-      nthrd = max(ptss%maxthrd/get_tasks_per_node(), 1)
+    if (nthrd*n_cpu > ptss%maxthrd) then
+      nthrd = max(ptss%maxthrd/n_cpu, 1)
     endif
     ptss%iparm(IPARM_THREAD_NBR) = nthrd
+    
+    return
   end subroutine pastix_init_nthreads
 
 

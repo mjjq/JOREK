@@ -8,6 +8,7 @@ use phys_module
 use mod_poiss
 use equil_info
 use mod_sources
+use mod_sparse_data, only: type_SP_SOLVER
 
 implicit none
 
@@ -30,6 +31,7 @@ logical    :: xpoint2
 !=============================MB:  parallel velocity profile
 real*8     :: zV, dV_dpsi, dV_dpsi2, dV_dz, dV_dz2, dV_dpsi_dz, dV_dpsi3, dV_dpsi2_dz, dV_dpsi_dz2
 real*8     :: Omega, dOmega_dpsi, dOmega_dz, dOmega_dpsi2, dOmega_dz2, dOmega_dpsi_dz
+type(type_SP_SOLVER) :: solver
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
   write(*,*) '*      initial conditions  (303)      *'
@@ -163,15 +165,15 @@ endif
 ! --- except dn_dpsi and dT_dpsi for current profile...)
 if (n_order .ge. 5) then
   call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               var_psi,var_rho,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
+               var_psi,var_rho,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1,solver)
   call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               var_psi,var_T,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
+               var_psi,var_T,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1, solver)
 endif
 
 
 if (tauIC .ne. 0.d0) then
   call Poisson(my_id,2,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               2,4,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)      ! inverse Poisson
+               2,4,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1, solver)      ! inverse Poisson
 endif
 
 
@@ -233,7 +235,7 @@ do in=2,n_tor
   endif
 
   call Poisson(my_id,1,node_list,element_list,bnd_node_list,bnd_elm_list, &
-               4,2,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
+               4,2,1, ES%psi_axis,ES%psi_bnd,xpoint2, xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1, solver)
 enddo
 
 !----------------------------------- fill in parallel velocity at boundary (on open field lines)

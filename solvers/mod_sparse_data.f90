@@ -11,6 +11,7 @@ module mod_sparse_data
 #endif
   use data_structure, only: type_PRECOND
 
+  
   type type_SP_SOLVER
 #ifdef USE_PASTIX
     type(type_PASTIX_SOLVER)    :: ptss
@@ -35,7 +36,7 @@ module mod_sparse_data
     real(kind=8)                :: iter_tol                            !< iterative convergence criteria
     logical                     :: solve_only = .false.
     logical                     :: step_success = .false.
-    logical                     :: iterative
+    logical                     :: iterative = .false.
     logical                     :: equilibrium = .false.
     
   end type type_SP_SOLVER

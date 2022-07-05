@@ -862,7 +862,7 @@ mpi_required = 0
 !      endif ! (false)      
 !    endif
 
-    call clck_time(t0)
+    !call clck_time(t0)
     
 !    if (gmres) then
 !      iter_prev = iter_gmres
@@ -877,11 +877,11 @@ mpi_required = 0
 !#endif
 !    endif
     
-    call clck_time_barrier(t1)
-    call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0) then
-      write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
-    end if
+    !call clck_time_barrier(t1)
+    !call clck_ldiff(t0,t1,tsecond)
+    !if (my_id .eq. 0) then
+    !  write(*,FMT_TIMING)  my_id, '# Elapsed time gmres/solve :',tsecond
+    !end if
     
 
     !write(*,*) my_id, rhs_vec%val(1), rhs_vec%val(ndof_glob)

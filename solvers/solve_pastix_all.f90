@@ -21,7 +21,8 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   real*8                            :: tsecond
   integer                           :: n_cpu, my_id, ierr, comm
   integer                           :: i, j
-  integer(kind=int_all)             :: k
+  integer(kind=int_all)             :: k, nnz
+  integer*8 :: check_data
     
   type(type_SP_MATRIX)               :: ad_mat, ac_mat
   type(type_RHS)                     :: rhs_vec
@@ -44,13 +45,16 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
     !write(*,*) my_id,'*********************************'
     
-    call scale_by_cols(ad_mat)
-    !ptss%solution_scaling = ad_mat%column_scaling
-    allocate(ptss%solution_scaling(ad_mat%ng))
-    do k = 1, ad_mat%ng
-      ptss%solution_scaling(i) = ad_mat%column_scaling(i)
-    enddo
-    ptss%scaled = .true.
+    if (.not.ptss%equilibrium) then
+    
+      call scale_by_cols(ad_mat)
+      allocate(ptss%solution_scaling(ad_mat%ng))
+      do k = 1, ad_mat%ng
+        ptss%solution_scaling(i) = ad_mat%column_scaling(i)
+      enddo
+      ptss%scaled = .true.
+      
+    endif
     
     if (n_cpu>1) then
     
@@ -96,7 +100,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     
     call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),ac_mat%block_size,sparskit_work)
     
-    if (allocated(sparskit_work)) deallocate(sparskit_work)
+    deallocate(sparskit_work)
     
     call clck_time(t1)
     call clck_ldiff(t0,t1,tsecond)
@@ -110,11 +114,20 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
       
     endif
     
+    if (ptss%equilibrium) then
+    ! combine duplicated values
+      nnz = ac_mat%jcn(ac_mat%ng + 1) - 1
+      call pastix_fortran_checkmatrix(check_data, ac_mat%comm, &
+       Int1, ptss%sym, Int1, ac_mat%ng, ac_mat%jcn, ac_mat%irn, ac_mat%val, -Int1, Int1)
+
+      ac_mat%nnz = ac_mat%jcn(ac_mat%ng+1) - 1
+      if (ac_mat%nnz < nnz) then
+         call pastix_fortran_checkmatrix_end(check_data, Int1, ac_mat%irn, ac_mat%val, Int1)
+      endif
+    endif
+    
     if (.not. ptss%analyzed) then
-      
-      ptss%iparm(IPARM_DOF_NBR)    = ac_mat%block_size
-      ptss%nblock = n_block
-      
+     
       call pastix_analyze(ptss,ac_mat)
     
     endif

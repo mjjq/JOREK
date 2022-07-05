@@ -1,12 +1,10 @@
 module mod_sparse
-  use iso_c_binding
-  use mpi
   use mod_sparse_data
-  use phys_module, only:    use_pastix, use_mumps, use_strumpack, iter_precon, gmres_max_iter
+  use phys_module, only: use_pastix, use_mumps, use_strumpack, use_strumpack_eq, use_pastix_eq
   
 
   private
-  public :: solve_sparse_system
+  public :: solve_sparse_system, solver_finalize
 
   contains
 
@@ -21,7 +19,7 @@ module mod_sparse
     use mod_clock
     use mod_sparse_data, only: type_SP_SOLVER
 #ifdef USE_PASTIX
-    use mod_pastix, only: type_PASTIX_SOLVER, pastix_finalize
+    use mod_pastix, only: type_PASTIX_SOLVER
 #endif
     use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner
     use mod_distribute_preconditioner_core, only: update_pc_mat, update_pc_rhs, gather_solution
@@ -50,6 +48,20 @@ module mod_sparse
     sol_vec%n = rhs_vec%n
     
     if (solver%equilibrium) then
+      if (my_id.eq.0) write(*,*) "Solving MHD equilibrium system"
+    
+      if (use_strumpack_eq) then
+    
+        solver%spss%equilibrium = solver%equilibrium
+        call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only)
+        
+      elseif (use_pastix_eq) then
+      
+        solver%ptss%equilibrium = solver%equilibrium
+        solver%ptss%refine = .true.
+        call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only)
+      
+      endif
     
 
       
@@ -117,7 +129,7 @@ module mod_sparse
       elseif (use_pastix) then
       
         call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
-        !call pastix_finalize(solver%ptss)
+
 #endif
       endif      
       
@@ -136,13 +148,31 @@ module mod_sparse
       if (my_id.eq.0) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
       
       solver%step_success = (solver%iter_gmres .lt. solver%iter_max)
-      
-     
-      !call reset_preconditioner(solver%pc)
 
     endif
     
   end subroutine solve_sparse_system
+  
+  !call pastix_finalize(solver%ptss)     
+  !call reset_preconditioner(solver%pc)
+  
+  subroutine solver_finalize(solver)
+#ifdef USE_PASTIX
+    use mod_pastix, only: pastix_finalize
+#endif
+    implicit none
+      
+    type(type_SP_SOLVER)     :: solver
+    
+    write(*,*) "Finalizing solver"    
+    
+#ifdef USE_PASTIX
+    if (solver%ptss%initialized) call pastix_finalize(solver%ptss)
+#endif
+
+
+    return
+  end subroutine solver_finalize
  
   
 end module mod_sparse

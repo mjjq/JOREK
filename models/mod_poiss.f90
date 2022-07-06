@@ -164,15 +164,10 @@ if (my_id == 0) then
     write(*,*) ' nz_AA                   : ',nz_AA
   endif
   
-  !if (.not. associated(a_mat%val))     call tr_allocatep(a_mat%val,1,nz_AA,"a_mat%val",CAT_DMATRIX)
-  !if (.not. associated(rhs_vec%val))   call tr_allocatep(rhs_vec%val,1,n_AA,"rhs_vec%val",CAT_DMATRIX)
-  !if (.not. associated(a_mat%irn))   call tr_allocatep(a_mat%irn,1,nz_AA,"a_mat%irn",CAT_DMATRIX)
-  !if (.not. associated(a_mat%jcn))   call tr_allocatep(a_mat%jcn,1,nz_AA,"a_mat%jcn",CAT_DMATRIX)
-  
-  allocate(a_mat%irn(nz_AA))
-  allocate(a_mat%jcn(nz_AA))
-  allocate(a_mat%val(nz_AA))
-  allocate(rhs_vec%val(n_AA))
+  if (.not. associated(a_mat%val))   call tr_allocatep(a_mat%val,1,nz_AA,"a_mat%val",CAT_DMATRIX)
+  if (.not. associated(a_mat%irn))   call tr_allocatep(a_mat%irn,1,nz_AA,"a_mat%irn",CAT_DMATRIX)
+  if (.not. associated(a_mat%jcn))   call tr_allocatep(a_mat%jcn,1,nz_AA,"a_mat%jcn",CAT_DMATRIX)
+  if (.not. associated(rhs_vec%val)) call tr_allocatep(rhs_vec%val,1,n_AA,"rhs_vec%val",CAT_DMATRIX)  
   
   a_mat%irn = 0
   a_mat%jcn = 0
@@ -748,18 +743,11 @@ if (my_id == 0) then
     enddo     ! nodes
   endif       ! refinement
   
-  !call tr_deallocatep(a_mat%irn,"a_mat%irn",CAT_DMATRIX)
-  !call tr_deallocatep(a_mat%jcn,"a_mat%jcn",CAT_DMATRIX)
-  !call tr_deallocatep(a_mat%val,"a_mat%val",CAT_DMATRIX)
-  !call tr_deallocatep(rhs_vec%val,"rhs_vec%val",CAT_DMATRIX)
-  
-  deallocate(a_mat%irn)
-  deallocate(a_mat%jcn)
-  deallocate(a_mat%val)
-  deallocate(rhs_vec%val)
-  
-  !deallocate(pastix_perm_vars,pastix_iperm_vars)
-  
+  call tr_deallocatep(a_mat%irn,"a_mat%irn",CAT_DMATRIX)
+  call tr_deallocatep(a_mat%jcn,"a_mat%jcn",CAT_DMATRIX)
+  call tr_deallocatep(a_mat%val,"a_mat%val",CAT_DMATRIX)
+  call tr_deallocatep(rhs_vec%val,"rhs_vec%val",CAT_DMATRIX)
+ 
 end if ! my_id == 0
   
 return

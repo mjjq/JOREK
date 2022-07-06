@@ -238,35 +238,6 @@ module mod_preconditioner
 
   end subroutine distribute_ranks_core
   
- !!> Determine mapping from local to globar row index for the RHS
- ! subroutine map_row_index(ng,pc)
- ! 
- !   use data_structure, only: type_PRECOND
- !   use phys_module, only: ranks_per_family
- !   use mod_parameters, only: n_tor
- !   use mod_integer_types
- !
- !   implicit none
- !   
- !   type(type_PRECOND) :: pc
- !   integer(kind=int_all), intent(in) :: ng
- !   integer(kind=int_all) :: i, ndof_family
- !   integer :: im
- !
- !   ndof_family = pc%mode_set_n*ng/n_tor
- !
- !   allocate(pc%row_index(ndof_family)
- !
- !   do i = 0, ng/n_tor - 1
- !     do im = 1,pc%mode_set_n
- !       pc%row_index(im + i*pc%mode_set_n) =  pc%mode_set(im) + i*n_tor
- !     enddo
- !   enddo
- !
- !   return
- ! end subroutine map_row_index
-  
-  
 !> Deallocate arrays and reset to the default values  
   subroutine reset_preconditioner(pc)
     use data_structure, only: type_PRECOND

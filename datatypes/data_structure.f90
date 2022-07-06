@@ -156,8 +156,8 @@ module data_structure
     integer(kind=int_all), dimension(:), pointer :: index_min => Null()        !< minimum index in global range
     integer(kind=int_all), dimension(:), pointer :: index_max => Null()        !< maximum index in global range
     integer                                      :: block_size = 1
-    integer(kind=int_all)                        :: nblock
-    integer(kind=int_all)                        :: nzblock
+    integer(kind=int_all)                        :: nblock               !< ng/block_size
+    integer(kind=int_all)                        :: nzblock              !< nnz/block_size**2
     integer                                      :: comm                 !< communicator over which the matrix is distributed
     logical                                      :: scaled = .false.
     logical                                      :: row_distributed = .false.
@@ -173,33 +173,37 @@ module data_structure
   
   !> Preconditioner type  
   type type_PRECOND
-    type(type_SP_MATRIX)             :: mat
-    type(type_RHS)                   :: rhs
-    integer(kind=int_all), pointer   :: row_index(:)         !< Row indices of local mode family in global RHS
-    real(kind=8)                     :: row_factor           !< Multiplying factor of current mode family in global RHS       
-    integer                          :: n_mode_families      !< number of mode families
-    integer                          :: family_id            !< family id, MPI private
-    integer                          :: mode_set_n           !< number of modes in current mode family    
-    integer, dimension(:), pointer   :: mode_set          !< Mode number in current mode family
-    integer, dimension(:,:), pointer :: mode_families_ranks
-    integer, dimension(:,:), pointer :: mode_families_modes
-    integer, dimension(:), pointer   :: rank_range
-    integer, dimension(:), pointer   :: ranks_per_family
-    integer, dimension(:), pointer   :: modes_per_family
-    integer, dimension(:), pointer   :: rank_id           !< family id for each MPI rank
-    integer                        :: my_id, n_cpu, comm    
-    integer                        :: my_id_n, n_cpu_n, MPI_COMM_N
-    integer                        :: my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
-    integer, pointer               :: send_counts(:,:), recv_counts(:,:)
-    integer, pointer               :: send_disp(:,:), recv_disp(:,:)
-    integer(kind=int_all), pointer :: istart(:), ifinish(:)!< starting and ending indices for split communication
-    integer                        :: nsplit               !<number of split communication calls for long integer
-    integer(kind=int_all), pointer :: n_per_rank(:)        !< number of row/col per MPI rank for each family (?)    
-    logical                        :: autodistribute_modes
-    logical                        :: autodistribute_ranks
-    logical                        :: initialized = .false.
-    logical                        :: analyzed = .false.
-    integer(kind=int_all)          :: n_glob
+    type(type_SP_MATRIX)                         :: mat
+    type(type_RHS)                               :: rhs
+    integer(kind=int_all), dimension(:), pointer :: row_index => Null()           !< Row indices of local mode family in global RHS
+    real(kind=8)                                 :: row_factor                    !< Multiplying factor of current mode family in global RHS       
+    integer                                      :: n_mode_families               !< number of mode families
+    integer                                      :: family_id                     !< family id, MPI private
+    integer                                      :: mode_set_n                    !< number of modes in current mode family    
+    integer, dimension(:), pointer               :: mode_set => Null()            !< Mode number in current mode family
+    integer, dimension(:,:), pointer             :: mode_families_ranks => Null()
+    integer, dimension(:,:), pointer             :: mode_families_modes => Null()
+    integer, dimension(:), pointer               :: rank_range => Null()
+    integer, dimension(:), pointer               :: ranks_per_family => Null()
+    integer, dimension(:), pointer               :: modes_per_family => Null()
+    integer, dimension(:), pointer               :: rank_id => Null()             !< family id for each MPI rank
+    integer                                      :: my_id, n_cpu, comm    
+    integer                                      :: my_id_n, n_cpu_n, MPI_COMM_N
+    integer                                      :: my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
+    integer, dimension(:,:), pointer             :: send_counts => Null()         !< for PC distribution
+    integer, dimension(:,:), pointer             :: recv_counts => Null()         !< for PC distribution
+    integer, dimension(:,:), pointer             :: send_disp => Null()           !< for PC distribution
+    integer, dimension(:,:), pointer             :: recv_disp => Null()           !< for PC distribution
+    
+    integer(kind=int_all), dimension(:), pointer :: istart => Null()              !< starting and ending indices for split communication
+    integer(kind=int_all), dimension(:), pointer :: ifinish => Null()             !< starting and ending indices for split communication
+    integer                                      :: nsplit                        !<number of split communication calls for long integer
+    integer(kind=int_all), dimension(:), pointer :: n_per_rank => Null()          !< number of row/col per MPI rank for each family (?)    
+    logical                                      :: autodistribute_modes
+    logical                                      :: autodistribute_ranks
+    logical                                      :: initialized = .false.
+    logical                                      :: analyzed = .false.
+    integer(kind=int_all)                        :: n_glob
   end type type_PRECOND
  
   integer                                         , public :: nbthreads

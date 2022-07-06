@@ -6,33 +6,33 @@ module mod_pastix
   use mod_integer_types
 
   type type_PASTIX_SOLVER
-    integer                  :: comm = 0
-    logical                  :: initialized = .false.
-    logical                  :: analyzed    = .false.
-    logical                  :: equilibrium = .false.
-    integer(kind=int_all)    :: iparm(IPARM_SIZE)
-    real*8                   :: dparm(DPARM_SIZE)
+    integer                                      :: comm = 0
+    real(kind=8), dimension(:), pointer          :: solution_scaling => Null()    !< matrix column scaling to be applied to solution vector
+    logical                                      :: initialized = .false.
+    logical                                      :: analyzed    = .false.
+    logical                                      :: equilibrium = .false.    
+    logical                                      :: scaled      = .false.
+    logical                                      :: refine      = .false.    
+
+    integer(kind=int_all)                        :: iparm(IPARM_SIZE)
+    real*8                                       :: dparm(DPARM_SIZE)
     
     integer(kind=int_all), dimension(:), pointer :: perm_vars => Null()
     integer(kind=int_all), dimension(:), pointer :: iperm_vars => Null()
 
-    integer(kind=8)          :: idata    = 0
-    integer(kind=int_all)    :: sym      = API_SYM_NO    
-    integer(kind=int_all)    :: iter     = 250
-    integer(kind=int_all)    :: ricar    = 0
-    integer(kind=int_all)    :: iluk     = 3
-    integer(kind=int_all)    :: amalg    = 5 
-    real*8                   :: eps      = 1.d-12
-    real*8                   :: pivot    = 1.d-64
-    integer(kind=int_all)    :: maxthrd  = 1024
-    integer(kind=int_all)    :: verb     = API_VERBOSE_NO
-    integer(kind=int_all)    :: facto    = API_FACT_LU
-    integer(kind=int_all)    :: rhs      = 0
-    integer(kind=int_all)    :: nblock   = 0
-    
-    real(kind=8), dimension(:), pointer :: solution_scaling => Null()    !< matrix column scaling to be applied to solution vector
-    logical                  :: scaled = .false.
-    logical                  :: refine = .false.
+    integer(kind=8)                              :: idata    = 0
+    integer(kind=int_all)                        :: sym      = API_SYM_NO    
+    integer(kind=int_all)                        :: iter     = 250
+    integer(kind=int_all)                        :: ricar    = 0
+    integer(kind=int_all)                        :: iluk     = 3
+    integer(kind=int_all)                        :: amalg    = 5 
+    real*8                                       :: eps      = 1.d-12
+    real*8                                       :: pivot    = 1.d-64
+    integer(kind=int_all)                        :: maxthrd  = 1024
+    integer(kind=int_all)                        :: verb     = API_VERBOSE_NO
+    integer(kind=int_all)                        :: facto    = API_FACT_LU
+    integer(kind=int_all)                        :: rhs      = 0
+    integer(kind=int_all)                        :: nblock   = 0
     
   end type type_PASTIX_SOLVER
 

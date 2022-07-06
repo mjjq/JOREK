@@ -69,11 +69,7 @@ module mod_pastix
     ptss%iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
     ptss%iparm(IPARM_END_TASK)          = API_TASK_INIT  
   
-    if (my_id .eq. 0) then
-      write(*,*) '***********************************'
-      write(*,*) '*    Initialize PastiX solver     *'
-      write(*,*) '***********************************'
-    endif
+    if (my_id .eq. 0) write(*,*) "Initializing PaStiX solver"
                           
     call pastix_fortran(ptss%idata,MPI_COMM_WORLD,ptss%nblock,a_mat%jcn,a_mat%irn,a_mat%val, &
                           ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,1,ptss%iparm,ptss%dparm)
@@ -154,6 +150,8 @@ module mod_pastix
     call MPI_COMM_RANK(ptss%comm, my_id, ierr)
     call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
     
+    if (my_id .eq. 0) write(*,*) "PaStiX solver: analyzing matrix"
+    
     ptss%iparm(IPARM_START_TASK) = API_TASK_ORDERING
     ptss%iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
   
@@ -167,6 +165,7 @@ module mod_pastix
     ptss%perm_vars(1:ptss%nblock) = 0
     ptss%iperm_vars(1:ptss%nblock) = 0
   
+    write(*,*) "ptss%nblock", ptss%nblock 
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
                         ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, 1, ptss%iparm,ptss%dparm)
    
@@ -236,7 +235,7 @@ module mod_pastix
     if (ptss%refine) ptss%iparm(IPARM_END_TASK) = API_TASK_REFINE
  
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
-                      ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,1,ptss%iparm,ptss%dparm)
+                      ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, int1, ptss%iparm,ptss%dparm)
                       
     if (ptss%scaled) then
       do i=1,rhs_vec%n
@@ -246,7 +245,7 @@ module mod_pastix
   
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
-    
+   
     return
     
   end subroutine pastix_solve
@@ -297,6 +296,7 @@ module mod_pastix
     type(type_PASTIX_SOLVER) :: ptss
     integer :: nthrd = 1
     integer :: n_cpu, ierr
+    
 
     call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
 

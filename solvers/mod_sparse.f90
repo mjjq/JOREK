@@ -95,6 +95,7 @@ module mod_sparse
     elseif (solver%iterative) then
 
       if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
+
       
       ! condition for no PC update
       solver%solve_only = (solver%istep > 1) .and. ((solver%iter_gmres + solver%iter_prev <= 2*solver%iter_precon) &
@@ -106,7 +107,6 @@ module mod_sparse
         solver%n_since_update = 0
       endif         
       
-      
       if (.not.solver%pc%initialized) call initialize_preconditioner(solver%pc,a_mat%comm)
       
 ! Finding PC solution
@@ -114,7 +114,7 @@ module mod_sparse
         call update_pc_mat(solver%pc,a_mat)
       endif
       
-      call update_pc_rhs(solver%pc,rhs_vec)      
+      call update_pc_rhs(solver%pc,rhs_vec)
         
       if (use_mumps) then
       
@@ -169,6 +169,11 @@ module mod_sparse
 #ifdef USE_PASTIX
     if (solver%ptss%initialized) call pastix_finalize(solver%ptss)
 #endif
+    
+    solver%solve_only   = .false.
+    solver%step_success = .false.
+    solver%iterative    = .false.
+    solver%equilibrium  = .false.
 
 
     return

@@ -162,6 +162,7 @@ module data_structure
     logical                                      :: scaled = .false.
     logical                                      :: row_distributed = .false.
     logical                                      :: col_distributed = .false.
+    logical                                      :: centralized = .false. !< matrix is available on all comm ranks (not distribued)
   end type type_SP_MATRIX
   
   !> RHS vector type

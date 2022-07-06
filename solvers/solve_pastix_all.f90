@@ -28,7 +28,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   type(type_RHS)                     :: rhs_vec
   integer                            :: index_min, index_max
   integer                            :: block_size2
-  integer(kind=int_all)              :: n_block, nnz_block
+  integer(kind=int_all)              :: nblock, nnz_block
   type(type_PASTIX_SOLVER) :: ptss
   logical                            :: solve_only
   
@@ -50,7 +50,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
       call scale_by_cols(ad_mat)
       allocate(ptss%solution_scaling(ad_mat%ng))
       do k = 1, ad_mat%ng
-        ptss%solution_scaling(i) = ad_mat%column_scaling(i)
+        ptss%solution_scaling(k) = ad_mat%column_scaling(k)
       enddo
       ptss%scaled = .true.
       
@@ -83,10 +83,10 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   
     block_size2 = ac_mat%block_size**2
     
-    n_block   = ac_mat%ng/ac_mat%block_size
+    nblock   = ac_mat%ng/ac_mat%block_size
     nnz_block = ac_mat%nnz/block_size2
     
-    ac_mat%nblock = n_block
+    ac_mat%nblock = nblock
     ac_mat%nzblock = nnz_block
     
     if (ac_mat%block_size > 1) then
@@ -96,9 +96,9 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
       enddo
     endif
     
-    allocate(sparskit_work(n_block+1))
+    allocate(sparskit_work(nblock+1))
     
-    call coicsr2(n_block,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),ac_mat%block_size,sparskit_work)
+    call coicsr2(nblock,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),ac_mat%block_size,sparskit_work)
     
     deallocate(sparskit_work)
     

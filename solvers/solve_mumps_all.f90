@@ -22,15 +22,20 @@ subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only)
 
   comm = a_mat%comm
   call MPI_COMM_RANK(comm, my_id, ierr)
-        
-  call scale_by_cols(a_mat)
-  allocate(mmss%solution_scaling(a_mat%ng))
-  do i = 1, a_mat%ng
-    mmss%solution_scaling(i) = a_mat%column_scaling(i)
-  enddo
-  mmss%scaled = .true.
+
   
   if (.not.solve_only) then
+  
+    call scale_by_cols(a_mat)
+
+    if (associated(mmss%solution_scaling)) then
+    deallocate(mmss%solution_scaling); mmss%solution_scaling => Null()
+    endif
+    allocate(mmss%solution_scaling(a_mat%ng))
+    do i = 1, a_mat%ng
+      mmss%solution_scaling(i) = a_mat%column_scaling(i)
+    enddo
+    mmss%scaled = .true.  
   
     if (.not. mmss%initialized) then
     

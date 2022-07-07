@@ -48,6 +48,9 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     if (.not.ptss%equilibrium) then
     
       call scale_by_cols(ad_mat)
+      if (associated(ptss%solution_scaling)) then
+        deallocate(ptss%solution_scaling); ptss%solution_scaling => Null()
+      endif
       allocate(ptss%solution_scaling(ad_mat%ng))
       do k = 1, ad_mat%ng
         ptss%solution_scaling(k) = ad_mat%column_scaling(k)

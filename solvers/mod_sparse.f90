@@ -1,6 +1,7 @@
 module mod_sparse
   use mod_sparse_data
-  use phys_module, only: use_pastix, use_mumps, use_strumpack, use_strumpack_eq, use_pastix_eq
+  use phys_module, only: use_mumps, use_pastix, use_strumpack, &
+                         use_mumps_eq, use_pastix_eq, use_strumpack_eq
   
 
   private
@@ -46,43 +47,34 @@ module mod_sparse
     call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
     call MPI_COMM_RANK(a_mat%comm, my_id, ierr)
     sol_vec%n = rhs_vec%n
+
+    if (.not.solver%iterative) then
     
-    if (solver%equilibrium) then
-      if (my_id.eq.0) write(*,*) "Solving MHD equilibrium system"
+      if (solver%equilibrium) then
+        if (my_id.eq.0) write(*,*) "Solving MHD equilibrium system"
+      else
+        if (my_id.eq.0) write(*,*) "Solving MHD system using direct solver"
+      endif
     
-      if (use_strumpack_eq) then
-    
+      if ((use_mumps.and..not.solver%equilibrium).or.(use_mumps_eq.and.solver%equilibrium)) then
+#ifdef USE_MUMPS
+        if (my_id.eq.0) write(*,*) "Using MUMPS solver"
+        solver%mmss%equilibrium = solver%equilibrium
+        !call solve_mumps_all_core(solver%mmss, a_mat, rhs_vec, solver%solve_only)
+        call solve_mumps_all(solver%mmss, a_mat, rhs_vec, solver%solve_only)
+#endif        
+      elseif ((use_strumpack.and..not.solver%equilibrium).or.(use_strumpack_eq.and.solver%equilibrium)) then        
+#ifdef USE_STRUMPACK
+        if (my_id.eq.0) write(*,*) "Using STRUMPACK solver"
         solver%spss%equilibrium = solver%equilibrium
         call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only)
-        
-      elseif (use_pastix_eq) then
-      
+#endif
+      elseif ((use_pastix.and..not.solver%equilibrium).or.(use_pastix_eq.and.solver%equilibrium)) then
+#ifdef USE_PASTIX
+        if (my_id.eq.0) write(*,*) "Using PaStiX solver"
         solver%ptss%equilibrium = solver%equilibrium
         solver%ptss%refine = .true.
         call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only)
-      
-      endif
-    
-
-      
-    elseif (.not.solver%iterative) then
-      
-      if (my_id.eq.0) write(*,*) "Solving MHD system using direct solver"
-    
-      if (use_mumps) then
-      
-        call solve_mumps_all(my_id)
-        
-#ifdef USE_STRUMPACK        
-      elseif (use_strumpack) then
-      
-        call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only)
-#endif
-#ifdef USE_PASTIX
-      elseif (use_pastix) then
-      
-        call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only)
-        !call pastix_finalize(solver%ptss)
 #endif
       endif
       
@@ -160,6 +152,9 @@ module mod_sparse
 #ifdef USE_PASTIX
     use mod_pastix, only: pastix_finalize
 #endif
+#ifdef USE_MUMPS
+    use mod_mumps, only: mumps_finalize
+#endif
     implicit none
       
     type(type_SP_SOLVER)     :: solver
@@ -168,6 +163,9 @@ module mod_sparse
     
 #ifdef USE_PASTIX
     if (solver%ptss%initialized) call pastix_finalize(solver%ptss)
+#endif
+#ifdef USE_MUMPS
+    if (solver%mmss%initialized) call mumps_finalize(solver%mmss)
 #endif
     
     solver%solve_only   = .false.

@@ -15,7 +15,6 @@ use vacuum
 use mpi_mod
 use mod_interp, only: interp
 use mod_F_profile
-use mod_sparse_data, only: type_SP_SOLVER
 implicit none
 
           
@@ -57,7 +56,6 @@ real*8     :: density_prof
 real*8, allocatable     :: density_profile(:)
 integer    :: nj
 real*8     :: rr,ww, drr_dR, drr_dZ, drr_dR2, drr_dZ2, drr_dRdZ
-type(type_SP_SOLVER) :: solver
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -160,7 +158,7 @@ if (my_id == 0) then
     write(*,'(A,1f14.8)')                       ' PSI_BND - PSI_AXIS : ', ES%psi_bnd-ES%psi_axis 
   
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
-                 ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,iter, solver)   !----------- for GS use -1
+                 ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
   
     diff = 0.d0
     do i=1, node_list%n_nodes
@@ -336,7 +334,7 @@ if (freeboundary_equil) then
   
     ! --- Iterate equation
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
-                 ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,iter, solver)   !----------- for GS use -1
+                 ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
   
   !  call boundary_check
    
@@ -587,7 +585,7 @@ if (my_id == 0) then
     ES%xpoint   = xpoint
     ES%xcase    = xcase
     call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
-                 var_psi,var_zj,1, psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,1, solver)
+                 var_psi,var_zj,1, psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,1)
   endif
   
   ! --- Find flux surfaces and plot them; determine the q-profile.  

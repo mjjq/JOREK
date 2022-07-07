@@ -11,7 +11,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   
   use mod_integer_types
   use data_structure, only: type_SP_MATRIX, type_RHS
-  use mod_pastix, only:     type_PASTIX_SOLVER, scale_by_cols, pastix_solve, pastix_factorize, pastix_analyze, pastix_initialize
+  use mod_pastix, only:     type_PASTIX_SOLVER, pastix_solve, pastix_factorize, pastix_analyze, pastix_initialize
   
 #include "pastix_fortran.h"  
    
@@ -29,7 +29,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   integer                            :: index_min, index_max
   integer                            :: block_size2
   integer(kind=int_all)              :: nblock, nnz_block
-  type(type_PASTIX_SOLVER) :: ptss
+  type(type_PASTIX_SOLVER)           :: ptss
   logical                            :: solve_only
   
   integer(kind=int_all), allocatable         :: sparskit_work(:)

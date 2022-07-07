@@ -11,7 +11,7 @@
 !!   - STRUMPACK
 !!   - Typical choices for production are PaStiX 5.x or STRUMPACK
 module solve_mat_n
-  use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp
+  use phys_module, only: use_mumps, use_pastix, use_strumpack, use_wsmp, mumps_ordering
   use preconditioner_module, only : my_row_index, my_row_factor, my_mode_set_n
   use matio_module, only: timestamp
   use mod_integer_types

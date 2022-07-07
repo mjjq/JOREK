@@ -3,6 +3,9 @@ module mod_sparse_data
   use iso_c_binding
   use mpi
   use phys_module, only:    use_pastix, use_mumps, use_strumpack, iter_precon, gmres_max_iter
+#ifdef USE_MUMPS
+  use mod_mumps, only:      type_MUMPS_SOLVER
+#endif  
 #ifdef USE_PASTIX
   use mod_pastix, only:     type_PASTIX_SOLVER
 #endif
@@ -13,6 +16,9 @@ module mod_sparse_data
 
   
   type type_SP_SOLVER
+#ifdef USE_MUMPS
+    type(type_MUMPS_SOLVER)     :: mmss
+#endif  
 #ifdef USE_PASTIX
     type(type_PASTIX_SOLVER)    :: ptss
 #endif

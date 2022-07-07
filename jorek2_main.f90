@@ -58,11 +58,8 @@ program JOREK2
 #ifdef USE_PASTIX6
   use mod_pastix, only: pastix_finalize
 #endif
-
-!#ifndef TEST_CORE
   use preconditioner_module
   use mod_distribute_preconditioner  
-!#endif
 
   use direct_construction_mod
   use centralization_mod
@@ -409,13 +406,13 @@ mpi_required = 0
     ! --- Check sanity of grid
     if (.not. RZ_grid_inside_wall) call check_grid(my_id, node_list, element_list)
 
-#ifdef USE_MUMPS
-    ! --- Initialize MUMPS solver (used for equilibrium)
-    call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
-    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
-    call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
-    if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
-#endif
+!#ifdef USE_MUMPS
+!    ! --- Initialize MUMPS solver (used for equilibrium)
+!    call MPI_COMM_GROUP(MPI_COMM_WORLD,MPI_GROUP_WORLD,ierr)
+!    call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
+!    call MPI_COMM_CREATE(MPI_COMM_WORLD,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
+!    if (my_id == 0) call initialise_mumps(MPI_COMM_MUMPS_EQUIL)
+!#endif
 
     ! --- Compute the plasma equilibrium
     if (equil) then
@@ -462,14 +459,14 @@ mpi_required = 0
 
     end if ! (my_id == 0)
     
-#ifdef USE_MUMPS
-    ! --- Clean up this instance of mumps (used for equilibrium)
-    mumps_par%JOB = -2
-    if (my_id == 0) call DMUMPS(mumps_par)
-#endif
-    ! -- For PaStiX solver before version 6.x
-    if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
-    if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
+!#ifdef USE_MUMPS
+!    ! --- Clean up this instance of mumps (used for equilibrium)
+!    mumps_par%JOB = -2
+!    if (my_id == 0) call DMUMPS(mumps_par)
+!#endif
+!    ! -- For PaStiX solver before version 6.x
+!    if (allocated(pastix_perm_vars))  call tr_deallocate(pastix_perm_vars,"pastix_perm_vars",CAT_UNKNOWN)
+!    if (allocated(pastix_iperm_vars)) call tr_deallocate(pastix_iperm_vars,"pastix_iperm_vars",CAT_UNKNOWN)
 
   end if if_not_restart
   
@@ -520,11 +517,11 @@ mpi_required = 0
   call broadcast_equil_state(my_id)                           ! equil_state
 
   if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
-  n_AA = 0  
-  do inode = 1, node_list%n_nodes  
-    n_AA = max(n_AA,node_list%node(inode)%index(4))  
-  end do
-  mumps_par%n = n_AA
+  !n_AA = 0  
+  !do inode = 1, node_list%n_nodes  
+  !  n_AA = max(n_AA,node_list%node(inode)%index(4))  
+  !end do
+  !mumps_par%n = n_AA
 
   ! --- Load deuterium ADAS data if required
   if (deuterium_adas) ad_deuterium =  read_adf11(my_id,'96_h') 
@@ -613,14 +610,14 @@ mpi_required = 0
            1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
     endif
 
-    if ((gmres).and.(my_id_n.eq.0)) call map_row_index(ndof_glob)
-    if (use_mumps) then
-       if (.not. gmres) then
-         call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
-       else
-         call initialise_mumps(MPI_COMM_N)        ! start MUMPS sparse matrix solver on local groups
-       endif
-    endif
+    !if ((gmres).and.(my_id_n.eq.0)) call map_row_index(ndof_glob)
+    !if (use_mumps) then
+    !   if (.not. gmres) then
+    !     call initialise_mumps(MPI_COMM_WORLD)    ! start MUMPS sparse matrix solver all cpus
+    !   else
+    !     call initialise_mumps(MPI_COMM_N)        ! start MUMPS sparse matrix solver on local groups
+    !   endif
+    !endif
 
   endif ! (nstep >0)
   
@@ -1139,28 +1136,28 @@ mpi_required = 0
   !***********************************************************************
 
   if (nstep .gt.0) then
-#ifdef USE_MUMPS
-    if (use_mumps) then
-      mumps_par%JOB = -2                            ! clean up this instance of mumps
-      call DMUMPS(mumps_par)
-    endif
-#endif
+!#ifdef USE_MUMPS
+!    if (use_mumps) then
+!      mumps_par%JOB = -2                            ! clean up this instance of mumps
+!      call DMUMPS(mumps_par)
+!    endif
+!#endif
 
-#ifdef USE_STRUMPACK
-    if (use_strumpack) then
-      call strumpack_finalize(MPI_COMM_WORLD)
-    endif
-#endif
+!#ifdef USE_STRUMPACK
+!    if (use_strumpack) then
+!      call strumpack_finalize(MPI_COMM_WORLD)
+!    endif
+!#endif
 
 #ifdef USE_BICGSTAB
 !    if (gmres) call bicgstab_finalize()
 #endif
 
-#ifdef USE_PASTIX6
-    if (use_pastix) then
-      call pastix_finalize()
-    endif
-#endif
+!#ifdef USE_PASTIX6
+!    if (use_pastix) then
+!      call pastix_finalize()
+!    endif
+!#endif
 
 !#if defined(USE_PASTIX)
 !    if (use_pastix) then

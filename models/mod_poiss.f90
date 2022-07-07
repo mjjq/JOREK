@@ -2,26 +2,22 @@ module mod_poiss
 contains
 subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list,   &
                  ivar_in,ivar_out,i_harm, psi_axis,psi_bnd,xpoint,xcase,Z_xpoint, &
-                 freeboundary_equil,refinement,iter, solver)
+                 freeboundary_equil,refinement,iter)
 !-------------------------------------------------------------------------------
 ! collect the element matrices into one large sparse matrix in coordinate format
 !-------------------------------------------------------------------------------
 use tr_module 
 use data_structure
-!use mumps_module
-use phys_module, only: amix, amix_freeb, use_pastix_eq, use_mumps_eq, use_strumpack_eq, &
-                                                delta_psi_GS, newton_GS_freebnd, newton_GS_fixbnd, n_limiter, treat_axis, fix_axis_nodes
+use phys_module, only: amix, amix_freeb, delta_psi_GS, newton_GS_freebnd, newton_GS_fixbnd, &
+                       n_limiter, treat_axis, fix_axis_nodes
 use equil_info,  only: ES
 use vacuum_equilibrium, only: vacuum_equil
-use mod_coicsr
+!use mod_coicsr
 use mpi_mod
 use mod_interp
 use mod_basisfunctions
 use mod_integer_types
 
-#ifdef USE_STRUMPACK
-use strumpack_module
-#endif
 use mod_axis_treatment
 #ifdef USE_PASTIX6
 use mod_pastix
@@ -87,9 +83,18 @@ type(type_SP_MATRIX) :: a_mat
 type(type_RHS) :: rhs_vec, sol_vec
 type(type_SP_SOLVER) :: solver
 real*8 :: tmp
-
-
 real*8 :: new_dofs(1:4), old_dofs(1:4)
+integer    :: MPI_COMM_MUMPS_EQUIL, MPI_GROUP_MUMPS_EQUIL, MPI_GROUP_WORLD
+
+!#ifdef USE_MUMPS
+!    ! --- Initialize MUMPS  communicator used for equilibrium
+!    if (solver%mmss%comm.eq.0) then
+!      call MPI_COMM_GROUP(MPI_COMM_SELF,MPI_GROUP_WORLD,ierr)
+!      call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
+!      call MPI_COMM_CREATE(MPI_COMM_SELF,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
+!      solver%mmss%comm = MPI_COMM_MUMPS_EQUIL
+!    endif
+!#endif
 
 if (my_id == 0) then
   write(*,*) '**************************************'
@@ -456,36 +461,11 @@ elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for var
 endif
 
 if (my_id == 0) then
-#ifdef USE_MUMPS
-  if (use_mumps_eq) then
-    !a_mat%ng  = n_AA
-    !
-    !mumps_par%JOB = 6
-    !mumps_par%SYM = 0
-    !mumps_par%icntl(7) = 4
-    !
-    !if (iter .le. 1) write(*,*) ' mumps : ',a_mat%ng, a_mat%nnz
-    !
-    !call DMUMPS(mumps_par)
-    !call tr_print_memsize("MUMPS_For_Poisson")
-  endif
-#endif    
 
-#ifdef USE_STRUMPACK
-  if (use_strumpack_eq) then
     solver%equilibrium = .true.
     call solve_sparse_system(a_mat, rhs_vec, rhs_vec, solver)
-    call solver_finalize(solver)
-    
-    !call strumpack_init(MPI_COMM_SELF)
-    !call strumpack_set_mat(a_mat%ng,a_mat%nnz,a_mat%irn,a_mat%jcn,a_mat%val,1,&
-    !                       MPI_COMM_SELF,UPDATE=.false.,DISTRIBUTED=.false.,EQUILIBRIUM=.true.)
-    !call strumpack_analyze(MPI_COMM_SELF)    
-    !call strumpack_factorize(MPI_COMM_SELF)
-    !call strumpack_solve(a_mat%ng,rhs_vec%val,MPI_COMM_SELF)
-    !call strumpack_finalize(MPI_COMM_SELF)
-  endif  
-#endif
+    call solver_finalize(solver)  
+
 
 #ifdef USE_PASTIX6
   !if (use_pastix_eq) then
@@ -500,15 +480,7 @@ if (my_id == 0) then
 #endif
 
 #if defined USE_PASTIX
-  if (use_pastix_eq) then
-  if (.true.) then
-  
-    solver%equilibrium = .true.
-    call solve_sparse_system(a_mat, rhs_vec, rhs_vec, solver)
-    call solver_finalize(solver)
-
- 
-  else
+  !if (use_pastix_eq) then
 !  
 !    if (allocated(sparskit_work)) deallocate(sparskit_work)
 !    allocate(sparskit_work(a_mat%ng + 1))
@@ -587,17 +559,9 @@ if (my_id == 0) then
 !    call pastix_fortran(pastix_data,MPI_COMM_SELF, a_mat%ng, a_mat%jcn, a_mat%irn, a_mat%val, &
 !       pastix_perm_vars,pastix_iperm_vars,rhs_vec%val,Int1,pastix_iparm,pastix_dparm)
 !
-    call tr_print_memsize("PASTIX_For_Poisson")
-  endif
-  endif ! use_pastix_eq
-  
-  tmp = 0
-  do i = 1, rhs_vec%n
-    tmp = tmp + rhs_vec%val(i)**2
-  enddo
-  write(*,*) "mod_poiss2:", rhs_vec%val(1), rhs_vec%val(rhs_vec%n), tmp
-  !write(*,*) associated(sol_vec%val)
-  !call MPI_BARRIER(MPI_COMM_WORLD,ierr); call exit(0)
+    !call tr_print_memsize("PASTIX_For_Poisson")
+    !
+  !endif ! use_pastix_eq
 #endif /* defined(USE_PASTIX)*/
   
   call tr_debug_write("a_mat%ng",int(a_mat%ng))
@@ -749,6 +713,14 @@ if (my_id == 0) then
   call tr_deallocatep(rhs_vec%val,"rhs_vec%val",CAT_DMATRIX)
  
 end if ! my_id == 0
+
+!#ifdef USE_MUMPS
+!    ! --- Free MUMPS  communicator used for equilibrium
+!    if (solver%mmss%comm.eq.0) then
+!      call MPI_COMM_FREE(MPI_COMM_MUMPS_EQUIL,ierr)
+!      solver%mmss%comm = 0
+!    endif
+!#endif
   
 return
 end subroutine poisson

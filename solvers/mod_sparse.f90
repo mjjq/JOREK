@@ -109,19 +109,16 @@ module mod_sparse
       call update_pc_rhs(solver%pc,rhs_vec)
         
       if (use_mumps) then
-      
-        !call solve_mumps_all(solver%mpss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
-        
-#ifdef USE_STRUMPACK        
+#ifdef USE_MUMPS      
+        call solve_mumps_all(solver%mmss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
+#endif
       elseif (use_strumpack) then
-      
+#ifdef USE_STRUMPACK
         call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
 #endif
-#ifdef USE_PASTIX
       elseif (use_pastix) then
-      
+#ifdef USE_PASTIX      
         call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
-
 #endif
       endif      
       

@@ -552,6 +552,9 @@ module mod_gmres_core
 #ifdef USE_PASTIX
     use mod_pastix, only: pastix_solve
 #endif
+#ifdef USE_MUMPS
+    use mod_mumps, only: mumps_solve
+#endif
 
     implicit none
     
@@ -588,6 +591,12 @@ module mod_gmres_core
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
       call strumpack_solve_core(solver%spss, solver%pc%rhs)
+    endif
+#endif
+
+#ifdef USE_MUMPS
+    if (use_mumps) then
+      call mumps_solve(solver%mmss, solver%pc%rhs)
     endif
 #endif
 

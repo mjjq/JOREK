@@ -84,17 +84,6 @@ type(type_RHS) :: rhs_vec, sol_vec
 type(type_SP_SOLVER) :: solver
 real*8 :: tmp
 real*8 :: new_dofs(1:4), old_dofs(1:4)
-integer    :: MPI_COMM_MUMPS_EQUIL, MPI_GROUP_MUMPS_EQUIL, MPI_GROUP_WORLD
-
-!#ifdef USE_MUMPS
-!    ! --- Initialize MUMPS  communicator used for equilibrium
-!    if (solver%mmss%comm.eq.0) then
-!      call MPI_COMM_GROUP(MPI_COMM_SELF,MPI_GROUP_WORLD,ierr)
-!      call MPI_GROUP_INCL(MPI_GROUP_WORLD,1,[0],MPI_GROUP_MUMPS_EQUIL,ierr)
-!      call MPI_COMM_CREATE(MPI_COMM_SELF,MPI_GROUP_MUMPS_EQUIL,MPI_COMM_MUMPS_EQUIL,ierr)
-!      solver%mmss%comm = MPI_COMM_MUMPS_EQUIL
-!    endif
-!#endif
 
 if (my_id == 0) then
   write(*,*) '**************************************'
@@ -713,14 +702,6 @@ if (my_id == 0) then
   call tr_deallocatep(rhs_vec%val,"rhs_vec%val",CAT_DMATRIX)
  
 end if ! my_id == 0
-
-!#ifdef USE_MUMPS
-!    ! --- Free MUMPS  communicator used for equilibrium
-!    if (solver%mmss%comm.eq.0) then
-!      call MPI_COMM_FREE(MPI_COMM_MUMPS_EQUIL,ierr)
-!      solver%mmss%comm = 0
-!    endif
-!#endif
   
 return
 end subroutine poisson

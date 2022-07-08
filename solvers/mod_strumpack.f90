@@ -169,6 +169,7 @@ module mod_strumpack
         enddo
 
         deallocate(a_mat%irn,a_mat%jcn,a_mat%val)
+        
         a_mat%irn => irn_d
         a_mat%jcn => jcn_d
         a_mat%val => val_d

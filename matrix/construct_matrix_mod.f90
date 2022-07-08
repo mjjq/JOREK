@@ -261,7 +261,7 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_master, local_elms, n_local_elms, index_min, index_max,& 
+subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, index_max,& 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
                             n, nz, ndof, n_matrix_block_size, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, global_mat, global_rhs, harmonic_matrix)
   
@@ -292,10 +292,7 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
 
   ! --- Routine parameters
   integer,               intent(in) :: my_id
-  integer,               intent(in) :: MPI_COMM_N
-  integer,               intent(in) :: my_id_n
-  integer,               intent(in) :: MPI_COMM_MASTER
-  integer,               intent(in) :: my_id_master
+  integer,               intent(in) :: comm
   integer,               intent(in) :: local_elms(*)
   integer,               intent(in) :: n_local_elms
   integer,               intent(in) :: index_min
@@ -740,7 +737,6 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
     if ( difference_found ) stop
 #endif
 
-    call MPI_AllReduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #ifdef NORMTRACE
     ! --- For debugging purpose
 
@@ -750,12 +746,9 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
       call tr_vdump(fname,RHS,ndof)
     end if
 #endif
-  else ! ( if harmonic_matrix)
+  endif
   
-    ! --- Form a global rhs from the rhss of the individual mpi tasks
-    call MPI_AllReduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_N,ierr)
-
-  endif 
+  call MPI_AllReduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,comm,ierr)  
 
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
   
@@ -767,11 +760,8 @@ subroutine construct_matrix(my_id, MPI_COMM_N, my_id_n, MPI_COMM_MASTER, my_id_m
   global_mat%nnz = nz
 !  global_mat%index_min = index_min
 !  global_mat%index_max = index_max
-  if (harmonic_matrix) then
-    global_mat%comm = MPI_COMM_N
-  else
-    global_mat%comm = MPI_COMM_WORLD
-  endif
+  global_mat%comm = comm
+
   
 #ifdef USE_BLOCK
   global_mat%block_size  = n_tor*n_var

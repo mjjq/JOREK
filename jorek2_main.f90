@@ -117,12 +117,11 @@ program JOREK2
   real*8                   :: t_matrix, t_send, t_solve
   type(clcktype)           :: t_itstart, t0, t1
   real*8                   :: mindelta, maxdelta
-  integer                  :: my_id, my_id_n, my_id_master
+  integer                  :: my_id
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
   integer                  :: n_local_ELMs
-  integer                  :: n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
+  integer                  :: n_cpu
   integer                  :: iter_gmres
-  integer                  :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: mpi_required,mpi_provided,StatInfo
@@ -517,7 +516,7 @@ mpi_required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,m_cpu,index_size,node_list,element_list,.false.,local_elms, & 
+    call distribute_nodes_elements(id_elements,n_cpu,index_size,node_list,element_list,.false.,local_elms, & 
          n_local_elms,ndof_glob,index_min,index_max, restart, freeboundary)    
 
     node_list%n_dof = ndof_glob
@@ -525,7 +524,7 @@ mpi_required = 0
     local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
 
-    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary,&
+    call global_matrix_structure(my_id,node_List,element_list,bnd_elm_list, freeboundary,&
          local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),              & 
          ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor,                 &
          n_glob, nz_glob, ndof_glob, n_matrix_block_size)

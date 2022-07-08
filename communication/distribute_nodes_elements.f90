@@ -68,7 +68,7 @@ else ! harmonic matrix "direct" construction
   
   if (mod(my_id,m_cpu) .eq. 0) index_min(my_id+1) = 1
   do i=1,n_cpu
-    index_max(i) = ((mod(i-1,m_cpu)+1) * index_total) / m_cpu
+    index_max(i) = ((mod(i-1,m_cpu)+1) * index_total)/m_cpu
   enddo
   do i=2,n_cpu
     if (mod(i-1,m_cpu) .ne. 0) then

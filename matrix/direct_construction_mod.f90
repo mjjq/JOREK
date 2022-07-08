@@ -62,7 +62,7 @@ contains
   if ( .not. matrix_structure_initialized ) then
     matrix_structure_initialized = .true.
 
-    call global_matrix_structure(my_id,my_id_n,node_List,element_list,bnd_elm_list, freeboundary, &
+    call global_matrix_structure(my_id,node_List,element_list,bnd_elm_list, freeboundary, &
       local_elms_harm,n_local_elms_harm,index_min_harm(my_id+1),                                  & 
       index_max_harm(my_id+1), ijA_index_harm, ijA_size_harm,                                     &
       irn_jcn_harm, irn_harm, jcn_harm, i_tor_min, i_tor_max,                           &                         

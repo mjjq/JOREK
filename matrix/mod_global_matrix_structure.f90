@@ -1,6 +1,6 @@
 module mod_global_matrix_structure
 contains
-subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
+subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
   ijA_index, ijA_size, irn_jcn, irn, jcn, i_tor_min, i_tor_max, n, nz, ndof, n_matrix_block_size)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
@@ -21,7 +21,7 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   type (type_element)          :: element
   type (type_node)             :: nodes(n_vertex_max)
 
-  integer :: local_elms(*), my_id, my_id_n, n_local_elms, n_tor_local
+  integer :: local_elms(*), my_id, n_local_elms, n_tor_local
   integer                            :: index_min, index_max
   integer                            :: i, index1, index2, index1_local, index2_local
   integer(kind=int_all)              :: j_larger, j, n_max, maxsize
@@ -283,10 +283,10 @@ subroutine global_matrix_structure(my_id,my_id_n,node_List,element_list,boundary
   jcn = 0
 
   !---- for debugging purpose
-  write(*,'(2i6,a,2i20)') my_id, my_id_n, ' size matrices : n, nz = ', n, nz
-  !write(*,'(2i6,a,2i20)') my_id, my_id_n, ' ndof = ', ndof
-  !write(*,'(2i6,a,2i20)') my_id, my_id_n, ' index_min, index_max = ', index_min, index_max
-  !write(*,'(2i6,a,2i20)') my_id, my_id_n, ' n_local_elms = ', n_local_elms
+  write(*,'(i6,a,2i20)') my_id, ' size matrices : n, nz = ', n, nz
+  !write(*,'(i6,a,2i20)') my_id, ' ndof = ', ndof
+  !write(*,'(i6,a,2i20)') my_id, ' index_min, index_max = ', index_min, index_max
+  !write(*,'(i6,a,2i20)') my_id, ' n_local_elms = ', n_local_elms
 
   return
 end subroutine global_matrix_structure

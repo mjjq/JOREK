@@ -203,7 +203,7 @@ contains
     type(type_SP_MATRIX)               :: a_mat
     integer(kind=int_all), allocatable :: long_recv_counts(:), long_send_counts(:)
     integer(kind=int_all)              :: block_size
-    integer(kind=int_all)              :: n_tor_int, nz_split, i0, i1, ind
+    integer(kind=int_all)              :: nz_split, i0, i1, ind
     integer                            :: isplit, i
     integer                            :: ierr
     
@@ -228,7 +228,7 @@ contains
     allocate(pc%istart(pc%nsplit),pc%ifinish(pc%nsplit))
 
     ! split global nz keeping it integer of (n_var*n_tor)**2
-    block_size = (4*n_var*n_tor_int)**2
+    block_size = (4*n_var*n_tor)**2
     nz_split = ((a_mat%nnz/block_size)/pc%nsplit)*block_size
 
     ! distribute indices for split communication

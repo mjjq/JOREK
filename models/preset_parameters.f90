@@ -6,7 +6,6 @@
 subroutine preset_parameters
   
   use phys_module
-  use pastix_module, only: no_zeros_pastix, pastix_smp_only
   
   implicit none
   

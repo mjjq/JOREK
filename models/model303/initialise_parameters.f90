@@ -4,8 +4,6 @@ subroutine initialise_parameters(my_id, filename)
 use tr_module
 use phys_module
 use pellet_module
-use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
-    pastix_maxthrd
 use vacuum
 use live_data
 

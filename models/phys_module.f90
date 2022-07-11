@@ -125,7 +125,11 @@ module phys_module
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
   real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
   integer :: mumps_ordering       !< MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
+  integer :: pastix_maxthrd
+  real*8  :: pastix_pivot
   logical :: no_zeros_mumps
+  logical :: no_zeros_pastix
+  logical :: pastix_smp_only
 
   ! ------------------------------------------------
   ! --- Structures to implement BCs in model600

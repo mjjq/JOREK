@@ -3,8 +3,6 @@ subroutine broadcast_phys(my_id)
 
 use tr_module
 use phys_module
-use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
-    pastix_maxthrd
 use vacuum
 use mpi_mod
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)

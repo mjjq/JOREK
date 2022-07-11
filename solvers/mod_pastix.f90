@@ -41,7 +41,7 @@ module mod_pastix
 
   contains
   
-  subroutine pastix_initialize(ptss,comm)
+  subroutine pastix_initialize(ptss, a_mat, comm)
     use mpi_mod
     use mod_clock
     use data_structure, only: type_SP_MATRIX, type_RHS

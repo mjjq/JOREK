@@ -511,7 +511,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   endif
   
   this%solver%tstep     = tstep
-  this%solver%istep     = istep
+  this%solver%istep     = this%istep
   this%solver%index_now = index_now
   this%solver%iterative = gmres
     

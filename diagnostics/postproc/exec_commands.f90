@@ -217,7 +217,7 @@ module exec_commands
         case ( 'for-si-units' )
           call select_loop_si_units(command, ierr)
         case ( 'RHS_terms_vtk' )
-          call RHS_terms_vtk(command, first_step, ierr)
+!          call RHS_terms_vtk(command, first_step, ierr)
         case ( 'spi-state' )
           call spi_state(command, first_step, ierr)
         case ( 'shards' )
@@ -2656,7 +2656,7 @@ module exec_commands
 
 
 
-  
+#ifdef OLD_SOLVER  
   !> Output vtk file of individual terms of the RHS in elm_matrix 
   subroutine RHS_terms_vtk(command, first_step, ierr)
 
@@ -3398,7 +3398,8 @@ module exec_commands
 
   end subroutine RHS_terms_vtk   
   
-
+#endif
+!OLD_SOLVER
 
 
   

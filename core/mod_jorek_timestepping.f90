@@ -57,7 +57,7 @@ type, extends(action) :: jorek_timestep_action
   !integer :: MPI_GROUP_WORLD
   !integer :: MPI_GROUP_MASTER !< subset of MPI_COMM_WORLD corresponding to MPI_COMM_MASTER
   !integer, allocatable :: i_tor(:) !< toroidal harmonic solved by this process
-  integer, allocatable :: local_elms(:), index_min(:), index_max(:) !< division of work across processes
+  integer, allocatable, target :: local_elms(:), index_min(:), index_max(:) !< division of work across processes
   integer :: n_local_elms
   !integer :: n_AA !< number of nonzeros
 

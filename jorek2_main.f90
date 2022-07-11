@@ -121,13 +121,12 @@ program JOREK2
   integer                  :: istep,jstep,ierr,i,itor,inode, i_elm_axis, i_elm_xpoint(2)
   integer                  :: n_local_ELMs
   integer                  :: n_cpu
-  integer                  :: iter_gmres
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: mpi_required,mpi_provided,StatInfo
   integer, allocatable, target     :: local_elms(:), index_min(:), index_max(:)
   real*8                   :: zjz, E_min, E_max
-  logical                  :: solve_only, to_quit, freeb_equil2
+  logical                  :: to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
   real*8                   :: zn,  dn_dpsi,  dn_dz,  dn_dpsi2,  dn_dz2,  dn_dpsi_dz,  dn_dpsi3,  dn_dpsi_dz2,  dn_dpsi2_dz
   real*8                   :: zT,  dT_dpsi,  dT_dz,  dT_dpsi2,  dT_dz2,  dT_dpsi_dz,  dT_dpsi3,  dT_dpsi_dz2,  dT_dpsi2_dz
@@ -138,7 +137,7 @@ program JOREK2
   real*8                   :: Rp_start, Rp_end, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,Bgeo
   real*8,allocatable       :: xp(:), yp1(:), yp2(:), yp3(:)
   real*8,allocatable       :: res(:) 
-  integer                  :: nplot, iplot, i_elm, ifail, ivar, iter_big, n_aa, iter_prev, n_since_update, n_spi_begin
+  integer                  :: nplot, iplot, i_elm, ifail, ivar, n_aa, n_since_update, n_spi_begin
   logical                  :: is_local, file_exists
   integer                  :: i_elem, inode1, i_order, index_node1
   type (type_element)      :: element
@@ -516,7 +515,7 @@ mpi_required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements,n_cpu,index_size,node_list,element_list,.false.,local_elms, & 
+    call distribute_nodes_elements(id_elements, n_cpu, index_size,node_list,element_list,.false.,local_elms, & 
          n_local_elms,ndof_glob,index_min,index_max, restart, freeboundary)    
 
     node_list%n_dof = ndof_glob
@@ -564,16 +563,15 @@ mpi_required = 0
   
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
-  iter_gmres     = iter_precon
-  iter_big       = gmres_max_iter
-  iter_prev      = 0
-  n_since_update = 0
-  
   solver%iter_precon = iter_precon
-  solver%iter_gmres  = solver%iter_precon
+  solver%iter_gmres  = iter_precon
   solver%iter_max    = gmres_max_iter
   solver%max_steps_noUpdate = max_steps_noUpdate
   solver%iter_tol    = gmres_tol
+  solver%iter_prev      = 0
+  solver%n_since_update = 0
+  
+  
   
 
   call tr_print_memsize("BeforeTimeStepping")
@@ -866,8 +864,8 @@ mpi_required = 0
         open(42, file='REDO_LU', iostat=ierr)
         if ( ierr == 0 ) close(42, status='delete')
       end if
-      iter_prev  = iter_precon + 1
-      iter_gmres = iter_precon + 1
+      solver%iter_prev  = solver%iter_precon + 1
+      solver%iter_gmres = solver%iter_precon + 1
     end if
 
 

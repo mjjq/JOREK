@@ -124,7 +124,9 @@ program JOREK2
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: mpi_required,mpi_provided,StatInfo
-  integer, allocatable, target     :: local_elms(:), index_min(:), index_max(:)
+  !integer, allocatable, target     :: local_elms(:), index_min(:), index_max(:)
+  integer, dimension(:), pointer :: local_elms => null()
+  integer, dimension(:), pointer :: index_min => null(), index_max => null() !< division of work across processes  
   real*8                   :: zjz, E_min, E_max
   logical                  :: to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
@@ -506,11 +508,11 @@ mpi_required = 0
     index_size  = n_cpu
     id_elements = my_id
 
-    call tr_allocate(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
-    call tr_allocate(index_min,1,index_size,"index_min",CAT_FEM)
-    call tr_allocate(index_max,1,index_size,"index_max",CAT_FEM)
-    call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
-    call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
+    call tr_allocatep(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
+    call tr_allocatep(index_min,1,index_size,"index_min",CAT_FEM)
+    call tr_allocatep(index_max,1,index_size,"index_max",CAT_FEM)
+    !call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
+    !call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
 
     !
     ! Construct index_min, index_max and local_elems
@@ -519,8 +521,8 @@ mpi_required = 0
          n_local_elms,ndof_glob,index_min,index_max, restart, freeboundary)    
 
     node_list%n_dof = ndof_glob
-    local_index_start = index_min
-    local_index_end   = index_max
+    !local_index_start = index_min
+    !local_index_end   = index_max
     ! Build ijA_index, ijA_size and irn_jcn
 
     call global_matrix_structure(my_id,node_List,element_list,bnd_elm_list, freeboundary,&

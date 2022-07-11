@@ -18,7 +18,6 @@ module global_distributed_matrix
   integer(kind=int_all), allocatable, target  :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) !< contains the structure of the sparse matrix (to fill in CSR format)
   real*8,                allocatable, target  :: deltas(:)                                 !< solution from previous step
   real*8,                allocatable, target  :: column_scaling(:)                         !< column scaling of the global matrix
-  integer,               allocatable, target  :: local_index_start(:), local_index_end(:)  !< range of indices local to one MPI process 
   integer(kind=int_all)                       :: ndof_glob, n_glob, nz_glob
   integer(kind=int_all)                       :: n_matrix_block_size                       !< Size of a matrix block (n_var x n_tor)
   

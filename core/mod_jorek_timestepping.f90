@@ -57,7 +57,9 @@ type, extends(action) :: jorek_timestep_action
   !integer :: MPI_GROUP_WORLD
   !integer :: MPI_GROUP_MASTER !< subset of MPI_COMM_WORLD corresponding to MPI_COMM_MASTER
   !integer, allocatable :: i_tor(:) !< toroidal harmonic solved by this process
-  integer, allocatable, target :: local_elms(:), index_min(:), index_max(:) !< division of work across processes
+  !integer, allocatable, target :: local_elms(:), index_min(:), index_max(:) !< division of work across processes
+  integer, dimension(:), pointer :: local_elms => null()
+  integer, dimension(:), pointer :: index_min => null(), index_max => null() !< division of work across processes
   integer :: n_local_elms
   !integer :: n_AA !< number of nonzeros
 
@@ -254,11 +256,10 @@ subroutine setup_solvers(this, sim)
   index_size  = sim%n_cpu
   id_elements = sim%my_id
 
-  call tr_allocate(this%local_elms,1,sim%fields%element_list%n_elements,"local_elms",CAT_FEM)
-  call tr_allocate(this%index_min,1,index_size,"index_min",CAT_FEM)
-  call tr_allocate(this%index_max,1,index_size,"index_max",CAT_FEM)
-  call tr_allocate(local_index_start,1,sim%n_cpu,"local_index_start",CAT_FEM)
-  call tr_allocate(local_index_end,1,sim%n_cpu,"local_index_end",CAT_FEM)
+  call tr_allocatep(this%local_elms,1,sim%fields%element_list%n_elements,"local_elms",CAT_FEM)
+  call tr_allocatep(this%index_min,1,index_size,"index_min",CAT_FEM)
+  call tr_allocatep(this%index_max,1,index_size,"index_max",CAT_FEM)
+
  !
   ! Construct index_min, index_max and local_elems
   !
@@ -266,8 +267,6 @@ subroutine setup_solvers(this, sim)
                                  this%local_elms, this%n_local_elms, ndof_glob, this%index_min, this%index_max, restart, freeboundary)
                                           
   sim%fields%node_list%n_dof = ndof_glob
-  local_index_start = this%index_min
-  local_index_end   = this%index_max
  
   call update_deltas(sim%my_id, sim%fields%node_list) ! create list of delta values in local_matrix module
   

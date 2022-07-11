@@ -520,7 +520,7 @@ ivtk = 23
 
 write(*,'(A)') ' writing VTK output'
 
-open(unit=ivtk,file='eqdsk.vtk',form='binary',convert='BIG_ENDIAN')
+open(unit=ivtk,file='eqdsk.vtk', access='stream', form='unformatted',convert='BIG_ENDIAN')
 
 buffer = '# vtk DataFile Version 3.0'//lf                        ; write(ivtk) trim(buffer)
 buffer = 'eqdsk'//lf                                             ; write(ivtk) trim(buffer)

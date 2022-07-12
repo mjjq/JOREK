@@ -41,19 +41,19 @@ module mod_pastix
 
   contains
   
-  subroutine pastix_initialize(ptss, a_mat, comm)
+  subroutine pastix_initialize(ptss,comm)
     use mpi_mod
     use mod_clock
-    use data_structure, only: type_SP_MATRIX, type_RHS
   
     implicit none
     
     type(type_PASTIX_SOLVER)          :: ptss
-    type(type_SP_MATRIX)              :: a_mat
-    type(type_RHS)                    :: rhs_vec    
     integer                           :: comm, my_id, n_cpu, ierr
     type(clcktype)                    :: t_itstart, t0, t1, t2, t3
     real*8                            :: tsecond
+    ! dummy arguments to be used with pastix_fortran interface
+    integer(kind=int_all), pointer    :: irn(:), jcn(:), perm_vars(:), iperm_vars(:)
+    real(kind=8), pointer             :: val(:), rhs(:)
     
     ptss%comm = comm
     
@@ -70,8 +70,8 @@ module mod_pastix
   
     if (my_id .eq. 0) write(*,*) "Initializing PaStiX solver"
                           
-    call pastix_fortran(ptss%idata,MPI_COMM_WORLD,ptss%nblock,a_mat%jcn,a_mat%irn,a_mat%val, &
-                          ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,1,ptss%iparm,ptss%dparm)
+    call pastix_fortran(ptss%idata,MPI_COMM_WORLD,ptss%nblock,jcn,irn,val, &
+                          perm_vars,iperm_vars,rhs,1,ptss%iparm,ptss%dparm)
   
     ptss%iparm(IPARM_VERBOSE)               = ptss%verb              
     ptss%iparm(IPARM_ITERMAX)               = ptss%iter
@@ -102,14 +102,15 @@ module mod_pastix
     implicit none
     
     type(type_PASTIX_SOLVER)          :: ptss
-    type(type_SP_MATRIX)              :: a_mat
-    type(type_RHS)                    :: rhs_vec
+    ! dummy arguments to be used with pastix_fortran interface
+    integer(kind=int_all), pointer    :: irn(:), jcn(:)
+    real(kind=8), pointer             :: val(:), rhs(:)    
     
     ptss%iparm(IPARM_START_TASK) = API_TASK_CLEAN
     ptss%iparm(IPARM_END_TASK)   = API_TASK_CLEAN
     
-    call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
-                        ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, 1, ptss%iparm,ptss%dparm)
+    call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, jcn, irn, val, &
+                        ptss%perm_vars, ptss%iperm_vars, rhs, 1, ptss%iparm,ptss%dparm)
 
     deallocate(ptss%perm_vars)
     deallocate(ptss%iperm_vars)
@@ -134,17 +135,19 @@ module mod_pastix
   
   subroutine pastix_analyze(ptss,a_mat)
     use mpi_mod
-    use data_structure, only: type_SP_MATRIX, type_RHS
+    use data_structure, only: type_SP_MATRIX
     use mod_clock
   
     implicit none
     
     type(type_PASTIX_SOLVER)          :: ptss
     type(type_SP_MATRIX)              :: a_mat
-    type(type_RHS)                    :: rhs_vec    
     integer                           :: my_id, n_cpu, ierr
     type(clcktype)                    :: t_itstart, t0, t1, t2, t3
     real*8                            :: tsecond
+    
+    ! dummy arguments to be used with pastix interface
+    real(kind=8), pointer             :: rhs(:)    
     
     call MPI_COMM_RANK(ptss%comm, my_id, ierr)
     call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
@@ -166,7 +169,7 @@ module mod_pastix
   
     write(*,*) "ptss%nblock", ptss%nblock 
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
-                        ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, 1, ptss%iparm,ptss%dparm)
+                        ptss%perm_vars, ptss%iperm_vars, rhs, int1, ptss%iparm,ptss%dparm)
    
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond
@@ -200,7 +203,7 @@ module mod_pastix
     ptss%iparm(IPARM_END_TASK)   = API_TASK_NUMFACT
     
     call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
-                        ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,1,ptss%iparm,ptss%dparm)
+                        ptss%perm_vars,ptss%iperm_vars,rhs_vec%val,int1,ptss%iparm,ptss%dparm)
                         
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time factorize:', tsecond
@@ -211,18 +214,21 @@ module mod_pastix
   
   subroutine pastix_solve(ptss,rhs_vec)
     use mpi_mod
-    use data_structure, only: type_SP_MATRIX, type_RHS
+    use data_structure, only: type_RHS
     use mod_clock
   
     implicit none
     
     type(type_PASTIX_SOLVER)          :: ptss
-    type(type_SP_MATRIX)              :: a_mat
     type(type_RHS)                    :: rhs_vec    
     integer                           :: my_id, n_cpu, ierr
     type(clcktype)                    :: t_itstart, t0, t1, t2, t3
     real*8                            :: tsecond
     integer(kind=int_all)             :: i
+    
+    ! dummy arguments to be used with pastix interface
+    integer(kind=int_all), pointer    :: irn(:), jcn(:)
+    real(kind=8), pointer             :: val(:)    
     
     call MPI_COMM_RANK(ptss%comm, my_id, ierr)
     call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
@@ -233,8 +239,8 @@ module mod_pastix
     ptss%iparm(IPARM_END_TASK)   = API_TASK_SOLVE
     if (ptss%refine) ptss%iparm(IPARM_END_TASK) = API_TASK_REFINE
  
-    call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, a_mat%jcn, a_mat%irn, a_mat%val, &
-                      ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, int1, ptss%iparm,ptss%dparm)
+    call pastix_fortran(ptss%idata, ptss%comm, ptss%nblock, jcn, irn, val, &
+                        ptss%perm_vars, ptss%iperm_vars, rhs_vec%val, int1, ptss%iparm,ptss%dparm)
                       
     if (ptss%scaled) then
       do i=1,rhs_vec%n

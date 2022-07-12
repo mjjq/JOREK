@@ -113,7 +113,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     
     if (.not. ptss%initialized) then
     
-      call pastix_initialize(ptss, ac_mat, comm)
+      call pastix_initialize(ptss, comm)
       
     endif
     

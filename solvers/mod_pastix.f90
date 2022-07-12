@@ -119,10 +119,10 @@ module mod_pastix
     ptss%perm_vars  => Null()
     ptss%iperm_vars => Null()
     
-    if (associated(ptss%irn)) deallocate(ptss%irn)
-    if (associated(ptss%jcn)) deallocate(ptss%jcn)
-    if (associated(ptss%val)) deallocate(ptss%val)
-    if (associated(ptss%rhs_val)) deallocate(ptss%rhs_val)
+    !if (associated(ptss%irn)) deallocate(ptss%irn)
+    !if (associated(ptss%jcn)) deallocate(ptss%jcn)
+    !if (associated(ptss%val)) deallocate(ptss%val)
+    !if (associated(ptss%rhs_val)) deallocate(ptss%rhs_val)
     
     ptss%irn => Null()
     ptss%jcn => Null()

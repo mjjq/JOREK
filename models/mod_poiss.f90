@@ -166,8 +166,11 @@ if (my_id == 0) then
   a_mat%irn = 0
   a_mat%jcn = 0
   a_mat%val   = 0.d0
+  a_mat%ng  = n_AA
   a_mat%comm = MPI_COMM_SELF
+  
   rhs_vec%val = 0.d0
+  rhs_vec%n = n_AA  
   
   ilarge=0
   
@@ -286,7 +289,7 @@ if (my_id == 0) then
   
             a_mat%irn(ilarge) = index_large_i
             a_mat%jcn(ilarge) = index_large_k
-            a_mat%val(ilarge)   = ELM(index_ij,index_kl)
+            a_mat%val(ilarge) = ELM(index_ij,index_kl)
   
           enddo
         enddo
@@ -440,9 +443,6 @@ elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for var
   
     nz_AA_old = nz_AA
     nz_AA     = ilarge
-  
-    a_mat%ng  = n_AA
-    rhs_vec%n = n_AA
     a_mat%nnz = nz_AA
  
   end if ! my_id == 0

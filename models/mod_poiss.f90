@@ -352,7 +352,7 @@ end if ! my_id == 0
 
 if (freeboundary_equil .and. (itype .eq. -1)) then
   
-  call vacuum_equil(my_id,node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd)
+  call vacuum_equil(my_id,node_list,bnd_node_list,bnd_elm_list,psi_axis,psi_bnd, a_mat, rhs_vec)
   
 elseif (itype .ne. 0) then        ! apply fixed boundary conditions (not for variable projection)
 

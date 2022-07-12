@@ -110,10 +110,17 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
     
     ! End of matrix preparation
+    ptss%irn => ac_mat%irn
+    ptss%jcn => ac_mat%jcn
+    ptss%val => ac_mat%val
+    ptss%comm = ac_mat%comm
+    ptss%rhs_val => rhs_vec%val
+    ptss%nblock = ac_mat%nblock
+    
     
     if (.not. ptss%initialized) then
     
-      call pastix_initialize(ptss, comm)
+      call pastix_initialize(ptss)
       
     endif
     
@@ -130,12 +137,13 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     endif
     
     if (.not. ptss%analyzed) then
-     
-      call pastix_analyze(ptss,ac_mat)
+    
+      ptss%iparm(IPARM_DOF_NBR) = ac_mat%block_size           
+      call pastix_analyze(ptss)
     
     endif
     
-    call pastix_factorize(ptss,ac_mat)
+    call pastix_factorize(ptss)
     
     if (n_cpu>1) then
       deallocate(ac_mat%irn)

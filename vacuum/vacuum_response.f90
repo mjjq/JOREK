@@ -334,7 +334,8 @@ module vacuum_response
       call MPI_FILE_READ(filehandle, float2d, dim(1)*dim(2), MPI_DOUBLE_PRECISION  ,status,ierr)
       disp = disp + sizeof(float2d)
 
-   else if (present(char1d)) then
+    else if (present(char1d)) then
+      
       if (allocated(char1d)) deallocate(char1d)
       allocate(char1d(1))
       str_len = dim(1) * sizeof(char1d(1))

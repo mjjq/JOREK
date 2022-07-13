@@ -294,8 +294,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   integer,               intent(in) :: comm
   integer,               intent(in) :: local_elms(*)
   integer,               intent(in) :: n_local_elms
-  integer,               intent(in) :: index_min
-  integer,               intent(in) :: index_max
   integer,               intent(in) :: xcase2
   real*8,                intent(in) :: R_axis
   real*8,                intent(in) :: Z_axis
@@ -317,6 +315,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   integer(kind=int_all), intent(inout), allocatable, target :: irn(:)
   integer(kind=int_all), intent(inout), allocatable, target :: jcn(:)
   integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
+  integer, dimension(:), pointer, intent(in) :: index_min
+  integer, dimension(:), pointer, intent(in) :: index_max
   
   !--- Internal variables
   type (type_element)               :: element
@@ -328,6 +328,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   integer                           :: index_node1, index_node2, index_min_loc, index_max_loc
   integer(kind=int_all)             :: ijA_position
   integer(kind=int_all)             :: index_large_i, index_large_k, ilarge2
+  integer(kind=int_all)             :: my_ind_min, my_ind_max
   integer                           :: i_order, k_order, ielm, ierr
   integer                           :: vertex(2), direction(2)
   integer                           :: omp_nthreads, omp_tid, n_tor_local
@@ -357,6 +358,9 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
       write(*,*) '****************************************'
     endif
   endif
+  
+  my_ind_min = index_min(my_id+1)
+  my_ind_max = index_max(my_id+1)
   
   ! --- Memory tracking
   call tr_print_memsize("DebConstM")
@@ -407,7 +411,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list, aux_node_list,                                &
-  !$omp          index_min, index_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,  &
+  !$omp          my_ind_min, my_ind_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,  &
   !$omp          A_mat, rhs_local, rhs, irn, jcn,                                                              &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh,     &
   !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
@@ -615,7 +619,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
           index_large_i = n_tor_local * n_var * (index_node1 - 1)
 
-          if ((index_node1 .ge. index_min) .and. (index_node1 .le. index_max)) then
+          if ((index_node1 .ge. my_ind_min) .and. (index_node1 .le. my_ind_max)) then
 
             do j = 1, n_var * n_tor_local
 
@@ -636,7 +640,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
                 index_large_k = n_tor_local * n_var * (index_node2 - 1)
 
-                call locate_irn_jcn(index_node1,index_node2,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                call locate_irn_jcn(index_node1,index_node2,my_ind_min,my_ind_max,ijA_position,ijA_index, ijA_size, irn_jcn)
 
                 thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local) = 0.d0
                 do j = 1, n_var * n_tor_local
@@ -667,7 +671,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
               enddo ! n_degrees
             enddo ! n_vertex_max
 
-          endif ! index_min < index < index_max
+          endif ! my_ind_min < index < my_ind_max
 
         enddo ! n_degrees
 
@@ -686,15 +690,15 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
-                           index_min, index_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,        & 
+                           my_ind_min, my_ind_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,        & 
                            psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,      & 
                            ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
 
   if (fix_axis_nodes) then
-    call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, index_min, index_max, & 
+    call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, & 
                            ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
   elseif(treat_axis)then
-    call penalize_dof_on_axis(node_list, 4, element_list, local_elms, n_local_elms, index_min, index_max, &
+    call penalize_dof_on_axis(node_list, 4, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, &
                            ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
   endif
 
@@ -705,7 +709,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
     ! --- Add vacuum response (boundary integral) for free boundary computations
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
       call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
-                                  resistive_wall, index_min, index_max, rhs_local, A_mat, tstep, index_now, & 
+                                  resistive_wall, my_ind_min, my_ind_max, rhs_local, A_mat, tstep, index_now, & 
                                   irn, jcn, n_matrix_block_size, ijA_index, ijA_size, irn_jcn, i_tor_min, i_tor_max)
     end if
   
@@ -757,8 +761,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   global_mat%val => a_mat
   global_mat%ng  = ndof
   global_mat%nnz = nz
-!  global_mat%index_min = index_min
-!  global_mat%index_max = index_max
+  global_mat%index_min => index_min
+  global_mat%index_max => index_max
   global_mat%comm = comm
 
   

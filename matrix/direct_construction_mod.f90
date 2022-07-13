@@ -29,7 +29,9 @@ contains
   logical, intent(in) :: direct_construction, xpoint2, restart, freeboundary
   
   ! --- Local variables
-  integer,               allocatable :: index_min_harm(:), index_max_harm(:)
+  integer, dimension(:), pointer :: index_min_harm => null(), index_max_harm => null() !< division of work across processes  
+  
+  
   integer,               allocatable :: local_elms_harm(:)
   integer                            :: n_local_elms_harm
   integer(kind=int_all)              :: ndof 
@@ -40,12 +42,12 @@ contains
     
   ! --- Memory allocation 
   if (allocated(local_elms_harm)) call tr_deallocate(local_elms_harm,"local_elms_harm",CAT_DMATRIX) 
-  if (allocated(index_min_harm))  call tr_deallocate(index_min_harm,"index_min_harm",CAT_DMATRIX) 
-  if (allocated(index_max_harm))  call tr_deallocate(index_max_harm,"index_max_harm",CAT_DMATRIX) 
+  if (associated(index_min_harm))  call tr_deallocatep(index_min_harm,"index_min_harm",CAT_DMATRIX) 
+  if (associated(index_max_harm))  call tr_deallocatep(index_max_harm,"index_max_harm",CAT_DMATRIX) 
  
   call tr_allocate(local_elms_harm,1,element_list%n_elements,"local_elms_harm",CAT_FEM)
-  call tr_allocate(index_min_harm,1,n_cpu,"index_min_harm",CAT_FEM)
-  call tr_allocate(index_max_harm,1,n_cpu,"index_max_harm",CAT_FEM)
+  call tr_allocatep(index_min_harm,1,n_cpu,"index_min_harm",CAT_FEM)
+  call tr_allocatep(index_max_harm,1,n_cpu,"index_max_harm",CAT_FEM)
 
   if(my_id .lt. m_cpu)  then
     i_tor_min = 1
@@ -76,7 +78,7 @@ contains
  
 
   call construct_matrix(my_id, MPI_COMM_N,                &
-    local_elms_harm, n_local_elms_harm, index_min_harm(my_id+1), index_max_harm(my_id+1), xpoint2,&
+    local_elms_harm, n_local_elms_harm, index_min_harm, index_max_harm, xpoint2,&
     xcase2, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint,              &
     ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm, A_harm,  &
     rhs_harm, irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, a_mat, rhs_vec,  &

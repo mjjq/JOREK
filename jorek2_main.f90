@@ -564,17 +564,15 @@ mpi_required = 0
   
   if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
 
-  solver%iter_precon = iter_precon
-  solver%iter_gmres  = iter_precon
-  solver%iter_max    = gmres_max_iter
+  solver%iterative          = gmres
+  solver%iter_precon        = iter_precon
+  solver%iter_gmres         = iter_precon
+  solver%iter_max           = gmres_max_iter
   solver%max_steps_noUpdate = max_steps_noUpdate
-  solver%iter_tol    = gmres_tol
-  solver%iter_prev      = 0
-  solver%n_since_update = 0
-  
-  
-  
-
+  solver%iter_tol           = gmres_tol
+  solver%iter_prev          = 0
+  solver%n_since_update     = 0
+ 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
   
@@ -644,13 +642,10 @@ mpi_required = 0
 
     !--------- Constructing Global Matrix
     call construct_matrix(my_id, MPI_COMM_WORLD, local_elms,   &
-         n_local_ELms, index_min(my_id+1), index_max(my_id+1), xpoint, xcase, ES%R_axis, ES%Z_axis,&
+         n_local_ELms, index_min, index_max, xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
          n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
          irn_jcn, a_mat, rhs_vec, harmonic_matrix=.false.)
-         
-    a_mat%index_min => index_min
-    a_mat%index_max => index_max
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
@@ -658,8 +653,6 @@ mpi_required = 0
     solver%tstep = tstep
     solver%istep = istep
     solver%index_now = index_now
-    solver%iterative = gmres
-    
     sol_vec%val => deltas
     
     call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)

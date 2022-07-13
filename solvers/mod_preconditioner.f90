@@ -69,7 +69,7 @@ module mod_preconditioner
     type(type_PRECOND) :: pc
 
     integer, allocatable :: i_tor(:), ranks_tmp(:)
-    integer :: i, my_id, n_cpu, ierr
+    integer :: my_id, n_cpu, ierr
 
     my_id = pc%my_id
     n_cpu = pc%n_cpu

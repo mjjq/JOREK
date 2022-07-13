@@ -62,7 +62,6 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
     if (.not. spss%initialized) then
       call strumpack_init_core(spss, comm)
       spss%initialized = .true.
-      spss%equilibrium = .false.
     endif
     
     call strumpack_set_mat_core(spss, ac_mat)

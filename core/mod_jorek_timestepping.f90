@@ -16,7 +16,6 @@ use data_structure, only: type_bnd_element_list, type_bnd_node_list, type_SP_MAT
 !use preconditioner_module
 !use mod_distribute_preconditioner
 use direct_construction_mod
-use centralization_mod
 
 use mod_sparse,        only: solve_sparse_system, solver_finalize
 use mod_sparse_data,   only: type_SP_SOLVER

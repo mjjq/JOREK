@@ -490,15 +490,12 @@ subroutine do_jorek_timestep(this, sim, ev)
 
 
   call construct_matrix(sim%my_id, MPI_COMM_WORLD, &
-                        this%local_elms, this%n_local_elms, this%index_min(sim%my_id+1),                                 &
-                        this%index_max(sim%my_id+1), xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis,    &
+                        this%local_elms, this%n_local_elms, this%index_min,                                 &
+                        this%index_max, xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis,    &
                         this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint, 1, n_tor,               &
                         n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size, &
                         irn_jcn,  this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
-  
-  this%a_mat%index_min => this%index_min
-  this%a_mat%index_max => this%index_max                        
-  
+    
   ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
   call del_thread_buffers()
 

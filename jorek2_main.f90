@@ -50,7 +50,6 @@ program JOREK2
   use mod_openadas, only : read_adf11
   use mod_atomic_coeff_deuterium, only: ad_deuterium 
   use direct_construction_mod
-  use centralization_mod
   use mod_exchange_indices
   use mod_startup_teardown
   use mod_initial_grid

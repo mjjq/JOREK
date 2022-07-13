@@ -541,7 +541,6 @@ module mod_gmres_core
 !> Solve step of the local matrices for each toroidal harmonic (preconditioner for gmres)
   subroutine gmres_precondition_core(x, y, n_dof, solver)
 
-    use pastix_module
     use phys_module, only: use_pastix, use_mumps, use_strumpack
     use mod_sparse_data,     only: type_SP_SOLVER
 

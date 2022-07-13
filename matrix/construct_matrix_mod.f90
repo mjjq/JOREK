@@ -265,7 +265,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
                             n, nz, ndof, n_matrix_block_size, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, global_mat, global_rhs, harmonic_matrix)
   
-  use mumps_module 
   use tr_module 
   use mod_parameters
   use data_structure

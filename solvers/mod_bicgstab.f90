@@ -1,4 +1,4 @@
-module mod_bicgstab_core
+module mod_bicgstab
 !     Details of this algorithm are described in "Templates for the
 !     Solution of Linear Systems: Building Blocks for Iterative
 !     Methods", Barrett, Berry, Chan, Demmel, Donato, Dongarra,
@@ -35,11 +35,11 @@ module mod_bicgstab_core
 
 !> solve Ax = b using iterative preconditioned BiCGStab method
   subroutine bicgstab_driver(a_mat, rhs_vec, sol_vec, solver)
-  
+
     use data_structure,  only: type_SP_MATRIX, type_RHS
     use mod_sparse_data, only: type_SP_SOLVER
     implicit none
-    
+
     type(type_SP_MATRIX)                    :: a_mat
     type(type_SP_SOLVER)                    :: solver
     type(type_RHS)                          :: sol_vec, rhs_vec
@@ -58,7 +58,7 @@ module mod_bicgstab_core
     MPI_GLOB   = solver%pc%comm
     MPI_COMM_N = solver%pc%MPI_COMM_N
     MPI_COMM_MASTER = solver%pc%MPI_COMM_MASTER
-    
+
     call MPI_COMM_RANK(MPI_GLOB, my_id, ierr)
     call MPI_COMM_SIZE(MPI_GLOB, n_cpu, ierr)
     call MPI_COMM_RANK(MPI_COMM_N, my_id_n, ierr)
@@ -170,14 +170,14 @@ module mod_bicgstab_core
     use data_structure,  only: type_SP_MATRIX
 
     implicit none
-    
+
     type(type_SP_MATRIX)                    :: a_mat
     real(kind=8), pointer  :: x(:), b(:)
     integer                           :: i, j, ir, jc
     integer                           :: ierr
     integer                           :: iA_start, ix_start, iy_start
     real(kind=8), allocatable         :: b_tmp_block(:)
-    
+
     allocate(b_tmp_block(a_mat%block_size))
 
     !b = 0.d0
@@ -225,7 +225,7 @@ module mod_bicgstab_core
     use preconditioner_module, only: my_row_index, my_row_factor
     use mod_sparse_data, only: type_SP_SOLVER
 #ifdef USE_STRUMPACK
-    use mod_strumpack, only: strumpack_solve_core
+    use mod_strumpack, only: strumpack_solve
 #endif
 #ifdef USE_PASTIX
     use mod_pastix, only: pastix_solve
@@ -234,7 +234,7 @@ module mod_bicgstab_core
     use mod_mumps, only: mumps_solve
 #endif
     implicit none
-    
+
     type(type_SP_SOLVER)         :: solver
 
     real(kind=8), pointer :: x(:), b(:)
@@ -250,7 +250,7 @@ module mod_bicgstab_core
     !t1 = get_time()
     if (use_strumpack) then
 #ifdef USE_STRUMPACK
-      call strumpack_solve_core(solver%spss, solver%pc%rhs)
+      call strumpack_solve(solver%spss, solver%pc%rhs)
       !call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
 #endif
     elseif (use_pastix) then
@@ -284,7 +284,7 @@ module mod_bicgstab_core
     use data_structure,  only: type_SP_MATRIX
 
     implicit none
-    
+
     type(type_SP_MATRIX)  :: a_mat
 
     integer :: i
@@ -333,43 +333,5 @@ module mod_bicgstab_core
     get_time =  real(cc)/cr
   end function get_time
 
-!#ifdef USE_PASTIX
-!!> call PaStiX solver
-!  subroutine pastix_solve(n, rhs, comm)
-!#include "pastix_fortran.h"
-!    use pastix_module
-!    use global_distributed_matrix, only: column_scaling
-!    implicit none
-!
-!    real(kind=C_DOUBLE), dimension(:), pointer :: rhs
-!    integer(kind=C_INT_ALL), intent(in) :: n
-!    integer, intent(in) :: comm
-!
-!    integer :: ierr
-!    integer :: i, n_blocks_loc, blocksize_loc
-!    real*8  :: DUMMY_REAL(1:1)
-!    integer :: DUMMY_INT (1:1)
-!
-!    pastix_iparm(IPARM_START_TASK) = API_TASK_SOLVE
-!    pastix_iparm(IPARM_END_TASK)   = pastix_endsolve
-!    pastix_iparm(IPARM_RHS_MAKING) = pastix_rhs
-!
-!    blocksize_loc = pastix_iparm(IPARM_DOF_NBR)
-!    n_blocks_loc = n/blocksize_loc
-!
-!    call pastix_fortran(pastix_data,comm, n_blocks_loc, DUMMY_INT, DUMMY_INT, DUMMY_REAL, &
-!                        pastix_perm_vars, pastix_iperm_vars, rhs, 1, pastix_iparm, pastix_dparm)
-!
-!    if (my_id_n.eq.0) then
-!      do i = 1, n
-!        rhs(i) = rhs(i)/column_scaling(i)
-!      enddo
-!    endif
-!
-!    call MPI_BARRIER(comm,ierr)
-!
-!  end subroutine pastix_solve
-!#endif
-
 #endif
-end module mod_bicgstab_core
+end module mod_bicgstab

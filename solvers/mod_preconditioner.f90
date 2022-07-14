@@ -2,26 +2,26 @@ module mod_preconditioner
 
   private
   public initialize_preconditioner, reset_preconditioner
-  
+
   contains
-  
+
   subroutine initialize_preconditioner(pc,comm_glob)
     use phys_module, only: autodistribute_modes, n_mode_families, autodistribute_ranks, centralize_harm_mat
     use mod_parameters, only: n_tor
     use data_structure, only: type_PRECOND
     use mpi_mod
     implicit none
-    
+
     type(type_PRECOND) :: pc
     integer            :: comm_glob, my_id, n_cpu, ierr
     integer            :: i
     character(len=256) :: s
-    
+
     pc%comm = comm_glob
-    
+
     call MPI_COMM_RANK(pc%comm, my_id, ierr)
     call MPI_COMM_SIZE(pc%comm, n_cpu, ierr)
-    
+
     pc%my_id = my_id
     pc%n_cpu = n_cpu
     if (pc%my_id.eq.0) write(*,*) "Initializing preconditioner"
@@ -29,22 +29,22 @@ module mod_preconditioner
     pc%autodistribute_ranks = autodistribute_ranks
     pc%autodistribute_modes = autodistribute_modes
     pc%mat%row_distributed  = .not.centralize_harm_mat
-    
+
     if (pc%autodistribute_modes) then
       pc%n_mode_families = (n_tor + 1)/2
     else
       pc%n_mode_families = n_mode_families
     endif
-    
-    call distribute_ranks_core(n_cpu, pc)
-    
-    call create_communicators_core(pc)
+
+    call distribute_ranks(n_cpu, pc)
+
+    call create_communicators(pc)
     pc%mat%comm = pc%MPI_COMM_N ! communicator for PC matrix distribution
-    
-    call distribute_modes_core(pc)
-    
+
+    call distribute_modes(pc)
+
     pc%initialized = .true.
-    
+
     if (my_id.eq.0) then
       do i=1, pc%n_mode_families
         write(s,'(A17,i4,A12)') " mode_family_id: ", i, " MPI ranks: "
@@ -55,13 +55,13 @@ module mod_preconditioner
         write(*,*) trim(s), " modes:", pc%mode_families_modes(i,1:pc%modes_per_family(i))
       enddo
     endif
-    
+
     return
-    
+
   end subroutine initialize_preconditioner
-  
+
 !> Set up MPI communicators for mode families and corresponding masters
-  subroutine create_communicators_core(pc)
+  subroutine create_communicators(pc)
     use data_structure, only: type_PRECOND
     use mpi_mod
     implicit none
@@ -109,19 +109,19 @@ module mod_preconditioner
 
     return
 
-  end subroutine create_communicators_core  
-  
+  end subroutine create_communicators
+
   !> Distribute toroidal modes among mode families
-  subroutine distribute_modes_core(pc)
+  subroutine distribute_modes(pc)
     use data_structure, only: type_PRECOND
-    use phys_module, only: modes_per_family, mode_families_modes, weights_per_family    
+    use phys_module, only: modes_per_family, mode_families_modes, weights_per_family
     implicit none
 
     type(type_PRECOND) :: pc
     integer            :: i, j, n_fam_max
-    
+
     allocate(pc%modes_per_family(pc%n_mode_families))
-    
+
     if (pc%autodistribute_modes) then
       pc%row_factor = 1.0
       pc%modes_per_family(1) = 1
@@ -132,15 +132,15 @@ module mod_preconditioner
         pc%modes_per_family(i) = modes_per_family(i)
       enddo
     endif
-    
+
     n_fam_max = 1
     do i = 1, pc%n_mode_families
       n_fam_max = max(n_fam_max,pc%modes_per_family(i))
     enddo
-    
+
     allocate(pc%mode_families_modes(pc%n_mode_families,n_fam_max))
     pc%mode_families_modes(:,:) = -1
-    
+
     if (pc%autodistribute_modes) then
       pc%mode_families_modes(1,1) = 1
       if (pc%n_mode_families.gt.1) then
@@ -156,15 +156,15 @@ module mod_preconditioner
         enddo
       enddo
     endif
-    
+
     pc%mode_set_n = pc%modes_per_family(pc%family_id)
     allocate(pc%mode_set(pc%mode_set_n))
     pc%mode_set(1:pc%mode_set_n) = pc%mode_families_modes(pc%family_id,1:pc%mode_set_n)
 
-  end subroutine distribute_modes_core  
+  end subroutine distribute_modes
 
   !> Distribute MPI ranks among mode families
-  subroutine distribute_ranks_core(n_cpu,pc)
+  subroutine distribute_ranks(n_cpu,pc)
     use data_structure, only: type_PRECOND
     use phys_module, only: ranks_per_family
     implicit none
@@ -177,7 +177,7 @@ module mod_preconditioner
     allocate(pc%rank_id(n_cpu))
     allocate(pc%ranks_per_family(pc%n_mode_families))
     allocate(pc%mode_families_ranks(pc%n_mode_families,n_cpu))
-    
+
     do i = 1, pc%n_mode_families
       do j = 1, n_cpu
         pc%mode_families_ranks(i,j) = -1
@@ -231,35 +231,35 @@ module mod_preconditioner
         endif
       enddo
     enddo
-    
+
     pc%family_id = pc%rank_id(pc%my_id + 1)
-    
+
     return
 
-  end subroutine distribute_ranks_core
-  
-!> Deallocate arrays and reset to the default values  
+  end subroutine distribute_ranks
+
+!> Deallocate arrays and reset to the default values
   subroutine reset_preconditioner(pc)
     use data_structure, only: type_PRECOND
     implicit none
-    
+
     type(type_PRECOND) :: pc !, pc_def
-    
+
     if (.not.pc%initialized) then
-    
+
       write(*,*) "Preconditioner is not initialized"
-      
+
     else
-    
+
       if (pc%analyzed) then
-      
+
         deallocate(pc%rhs%val)
         deallocate(pc%row_index)
         deallocate(pc%send_counts, pc%recv_counts)
         deallocate(pc%send_disp, pc%recv_disp)
         deallocate(pc%istart, pc%ifinish)
         deallocate(pc%n_per_rank)
-        
+
         deallocate(pc%mat%val)
         deallocate(pc%mat%irn)
         deallocate(pc%mat%jcn)
@@ -270,23 +270,23 @@ module mod_preconditioner
         pc%mat%indexing = 1
         pc%mat%block_size = 1
         pc%analyzed = .false.
-        
+
       endif
-      
+
       deallocate(pc%mode_families_ranks)
       deallocate(pc%mode_families_modes)
       deallocate(pc%rank_id)
       deallocate(pc%mode_set)
-      
+
       pc%initialized = .false.
-    
+
     endif
-    
+
     return
-  
+
   end subroutine reset_preconditioner
-  
-  
+
+
 end module mod_preconditioner
 
 
@@ -303,7 +303,7 @@ end module mod_preconditioner
 !
 !
 !
-!  
+!
 ! !> Determine mapping from local to globar row index for the RHS
 !  subroutine map_row_index(ndof)
 !
@@ -403,7 +403,7 @@ end module mod_preconditioner
 !      if (my_id.eq.0) write(*,*) "Warning: centralization of PC matrix is not advized when using STRUMPACK"
 !    endif
 !
-!  end subroutine check_preconditioner_consistency  
+!  end subroutine check_preconditioner_consistency
 !!#endif
 !
 !

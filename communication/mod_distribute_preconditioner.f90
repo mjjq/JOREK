@@ -1,4 +1,4 @@
-module mod_distribute_preconditioner_core
+module mod_distribute_preconditioner
   use mod_integer_types
 
   implicit none
@@ -477,4 +477,4 @@ contains
 
   end subroutine get_send_recv
 
-end module mod_distribute_preconditioner_core
+end module mod_distribute_preconditioner

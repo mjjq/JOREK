@@ -19,8 +19,8 @@ module mod_strumpack
 
   private
   public :: type_STRUMPACK_SOLVER, &
-            strumpack_init_core, strumpack_set_mat_core, strumpack_analyze_core, &
-            strumpack_factorize_core, strumpack_solve_core
+            strumpack_init, strumpack_set_mat, strumpack_analyze, &
+            strumpack_factorize, strumpack_solve
 
   interface
     subroutine spk() bind(C)
@@ -89,7 +89,7 @@ module mod_strumpack
 
   contains
     
-    subroutine strumpack_init_core(spss,comm)
+    subroutine strumpack_init(spss,comm)
       implicit none
 
       integer comm,ierr, n_cpu
@@ -105,10 +105,10 @@ module mod_strumpack
       call MPI_Barrier(spss%comm,ierr)
 
       return
-    end subroutine strumpack_init_core    
+    end subroutine strumpack_init  
     
     
-    subroutine strumpack_set_mat_core(spss,a_mat)
+    subroutine strumpack_set_mat(spss,a_mat)
       use, intrinsic :: iso_c_binding
       use sorting_module, only : remove_duplicates, convert2csr, convert_sorting
       use mod_integer_types
@@ -145,7 +145,7 @@ module mod_strumpack
 
       if ((.not. dflag).and.(n_cpu.gt.1)) then
         ! distribute rows between n_cpu
-        call distribute_rows_core(a_mat,n_cpu,distr)
+        call distribute_rows(a_mat,n_cpu,distr)
         if (rank.eq.0) write(*,*) "Matrix is not row-distributed. Distributing now."
 
         allocate(myelm(a_mat%nnz))
@@ -208,7 +208,7 @@ module mod_strumpack
         a_mat%irn(1:nnz_d) = a_mat%irn(1:nnz_d) - imin + a_mat%indexing ! irn starts with indx
         
       elseif (n_cpu.eq.1) then
-        call distribute_rows_core(a_mat,1,distr)
+        call distribute_rows(a_mat,1,distr)
         n_d = a_mat%ng
         nnz_d = a_mat%nnz
         write(*,*) "n_d, nnz_d", n_d, nnz_d
@@ -250,9 +250,9 @@ module mod_strumpack
 
 
       return
-    end subroutine strumpack_set_mat_core
+    end subroutine strumpack_set_mat
     
-    subroutine strumpack_analyze_core(spss)
+    subroutine strumpack_analyze(spss)
       use data_structure, only: type_SP_MATRIX
 
       implicit none
@@ -264,9 +264,9 @@ module mod_strumpack
       call MPI_Barrier(spss%comm,ierr)
 
       return
-    end subroutine strumpack_analyze_core 
+    end subroutine strumpack_analyze 
    
-    subroutine strumpack_factorize_core(spss)
+    subroutine strumpack_factorize(spss)
       use data_structure, only: type_SP_MATRIX
 
       implicit none
@@ -278,9 +278,9 @@ module mod_strumpack
       call MPI_Barrier(spss%comm,ierr)
 
       return
-    end subroutine strumpack_factorize_core
+    end subroutine strumpack_factorize
    
-    subroutine strumpack_solve_core(spss, rhs_vec)
+    subroutine strumpack_solve(spss, rhs_vec)
       use data_structure, only: type_SP_MATRIX, type_RHS
       use, intrinsic :: iso_c_binding
 
@@ -303,10 +303,10 @@ module mod_strumpack
       call MPI_Barrier(spss%comm,ierr)
 
       return
-    end subroutine strumpack_solve_core    
+    end subroutine strumpack_solve    
    
 !> Distribute rows between members of MPI group   
-    subroutine distribute_rows_core(a_mat,n_cpu,distr)
+    subroutine distribute_rows(a_mat,n_cpu,distr)
       
       use, intrinsic :: iso_c_binding
       use data_structure, only: type_SP_MATRIX
@@ -334,7 +334,7 @@ module mod_strumpack
       deallocate(nr)
 
       return
-    end subroutine distribute_rows_core 
+    end subroutine distribute_rows
 
 #endif
 end module mod_strumpack

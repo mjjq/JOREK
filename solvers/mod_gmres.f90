@@ -1,4 +1,4 @@
-module mod_gmres_core
+module mod_gmres
 #ifdef USE_GMRES
 
   use mod_integer_types
@@ -138,7 +138,7 @@ module mod_gmres_core
 
            else if (revcom.eq.precondLeft) then        ! perform the left preconditioning
                                                        ! work(colz) <-- M^{-1} * work(colx)
-             call gmres_precondition_core(work(colx), work(colz), n_dof, solver)
+             call gmres_precondition(work(colx), work(colz), n_dof, solver)
              goto 10
 
            else if (revcom.eq.precondRight) then       ! perform the right preconditioning
@@ -539,14 +539,14 @@ module mod_gmres_core
   
   
 !> Solve step of the local matrices for each toroidal harmonic (preconditioner for gmres)
-  subroutine gmres_precondition_core(x, y, n_dof, solver)
+  subroutine gmres_precondition(x, y, n_dof, solver)
 
     use phys_module, only: use_pastix, use_mumps, use_strumpack
     use mod_sparse_data,     only: type_SP_SOLVER
 
 #ifdef USE_STRUMPACK
 !    use strumpack_module, only: strumpack_solve
-    use mod_strumpack, only: strumpack_solve_core
+    use mod_strumpack, only: strumpack_solve
 #endif
 #ifdef USE_PASTIX
     use mod_pastix, only: pastix_solve
@@ -589,7 +589,7 @@ module mod_gmres_core
 
 #ifdef USE_STRUMPACK
     if (use_strumpack) then
-      call strumpack_solve_core(solver%spss, solver%pc%rhs)
+      call strumpack_solve(solver%spss, solver%pc%rhs)
     endif
 #endif
 
@@ -621,8 +621,8 @@ module mod_gmres_core
 
 
     return
-  end subroutine gmres_precondition_core
+  end subroutine gmres_precondition
 
 
 #endif
-end module mod_gmres_core
+end module mod_gmres

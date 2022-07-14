@@ -185,6 +185,7 @@ module mod_strumpack
         distr(1:n_cpu+1) = 0
         imin = minval(a_mat%irn(1:a_mat%nnz))
         imax = maxval(a_mat%irn(1:a_mat%nnz))
+                
         distr(rank+1) = imin
 
         if (rank.eq.(n_cpu-1)) distr(rank+2) = imax + 1
@@ -204,7 +205,7 @@ module mod_strumpack
 
         n_d = distr(rank+2) - distr(rank+1)
         nnz_d = a_mat%nnz
-        a_mat%irn(1:nnz_d) = a_mat%irn(1:nnz_d) - imin + a_mat%indexing ! irn starts from indx
+        a_mat%irn(1:nnz_d) = a_mat%irn(1:nnz_d) - imin + a_mat%indexing ! irn starts with indx
         
       elseif (n_cpu.eq.1) then
         call distribute_rows_core(a_mat,1,distr)

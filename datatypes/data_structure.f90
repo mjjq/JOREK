@@ -197,8 +197,8 @@ module data_structure
     
     integer(kind=int_all), dimension(:), pointer :: istart => Null()              !< starting and ending indices for split communication
     integer(kind=int_all), dimension(:), pointer :: ifinish => Null()             !< starting and ending indices for split communication
-    integer                                      :: nsplit                        !<number of split communication calls for long integer
-    integer(kind=int_all), dimension(:), pointer :: n_per_rank => Null()          !< number of row/col per MPI rank for each family (?)    
+    integer                                      :: nsplit                        !< number of split communication calls for long integer
+    integer(kind=int_all), dimension(:), pointer :: n_per_rank => Null()          !< min number of row/col per MPI rank for each family
     logical                                      :: autodistribute_modes
     logical                                      :: autodistribute_ranks
     logical                                      :: initialized = .false.

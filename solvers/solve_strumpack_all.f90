@@ -22,6 +22,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
   real*8                      :: tsecond
   integer                     :: my_id, n_cpu, comm, ierr
   logical                     :: solve_only
+  logical                     :: centralize = .true.
   
   if (.not.solve_only) then
     
@@ -33,9 +34,11 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
   !write(*,*) my_id,'***************************************'
   !write(*,*) my_id,'* solve sparse matrix using STRUMPACK *'
   !write(*,*) my_id,'***************************************'
+    
+    centralize = (n_cpu>1).and.(.not.ad_mat%row_distributed)
   
-    if (n_cpu>1) then
-  ! centralize distributed matrix
+    if (centralize) then
+  ! centralize distributed matrix ad_mat into ac_mat
     
       call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
     
@@ -83,7 +86,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time factorize:', tsecond
     
-    if (n_cpu>1) then
+    if (centralize) then
       deallocate(ac_mat%irn)
       deallocate(ac_mat%jcn)
       deallocate(ac_mat%val)

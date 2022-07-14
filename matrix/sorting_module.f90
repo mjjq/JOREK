@@ -216,13 +216,13 @@ contains
 
     call system_clock(count=cc, count_rate=cr); t0 =  real(cc)/cr
 
-    irn0 = minval(irn(1:nnz)) - 1
-    nloc = maxval(irn(1:nnz)) - irn0
-    write(*,*) minval(irn(1:nnz)), maxval(irn(1:nnz)), "nloc", nloc
-    irn = irn - irn0
-
+    irn0 = minval(irn(1:nnz))
+    nloc = maxval(irn(1:nnz)) - irn0 + 1
+    !write(*,*) minval(irn(1:nnz)), maxval(irn(1:nnz)), "nloc", nloc
+    irn(1:nnz) = irn(1:nnz) - irn0 - indx + 1 ! irn used as index
 
     write(*,*) "nloc", nloc, "nnz", nnz, "residue", mod(nnz,block_size)
+        
     allocate(indmin(nloc), indmax(nloc), iptr(nloc+1))
     iptr = 0
 

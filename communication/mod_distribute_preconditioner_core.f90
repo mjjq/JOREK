@@ -37,7 +37,7 @@ contains
     integer(kind=int_all)              :: i, i0, i1, nz_split, ibufsize, block_size
     integer(kind=int_all)              :: n_tor_int
 
-    real*8,  allocatable               :: Asnd_buffer(:), Rsnd_buffer(:)
+    real*8,  allocatable               :: Asnd_buffer(:)
     integer(kind=int_all), allocatable :: isnd_buffer(:), jsnd_buffer(:)
     integer(kind=int_all), allocatable :: indx(:)
 
@@ -51,7 +51,7 @@ contains
 
     if (my_id .eq. 0) then
       write(*,*) my_id,'*********************************'
-      write(*,*) my_id,'*      distributing matrix      *'
+      write(*,*) my_id,'*    distributing PC matrix     *'
       write(*,*) my_id,'*********************************'
     endif
 
@@ -66,14 +66,6 @@ contains
 #endif
 
     allocate(indx(n_cpu))
-    
-    allocate(pc%n_per_rank(pc%n_mode_families))
-    
-    do j = 1, pc%n_mode_families
-      block_size = n_var*pc%modes_per_family(j)
-      nr = pc%ranks_per_family(j) ! number of ranks per j-th family
-      pc%n_per_rank(j) = block_size*((a_mat%ng/block_size)/nr) - block_size ! number of rows per rank for j-th family
-    enddo
 
     if (.not.pc%analyzed) call analyze_pc(pc,a_mat)
 
@@ -162,6 +154,7 @@ contains
       deallocate(Asnd_buffer)
       deallocate(isnd_buffer)
       deallocate(jsnd_buffer)
+      deallocate(indx)
 
     enddo
 
@@ -186,6 +179,7 @@ contains
     enddo
 
     call system_clock(count=cc, count_rate=cr); t1 =  real(cc)/cr
+!    write(*,*) "PC row range:", pc%my_id, minval(pc%mat%irn(1:pc%mat%nnz)), maxval(pc%mat%irn(1:pc%mat%nnz))
     if (pc%my_id.eq.0) write(*,'(A42,F6.2)') " Elapsed time updating preconditioner (s):",t1-t0
     return
 
@@ -204,10 +198,35 @@ contains
     integer(kind=int_all), allocatable :: long_recv_counts(:), long_send_counts(:)
     integer(kind=int_all)              :: block_size
     integer(kind=int_all)              :: nz_split, i0, i1, ind
-    integer                            :: isplit, i
+    integer                            :: isplit, i, j
     integer                            :: ierr
+    integer                            :: nr
     
     if (pc%my_id.eq.0) write(*,*) "Analyzing preconditioner"
+    
+    pc%mat%ng = (pc%mode_set_n)*(a_mat%ng)/n_tor ! rank of local PC matrix
+    pc%mat%nr = pc%mat%ng
+    pc%mat%nc = pc%mat%ng
+    pc%n_glob = a_mat%ng
+    
+    allocate(pc%n_per_rank(pc%n_mode_families))
+    
+    ! if disributing, split the rows of the global matrix between ranks of families    
+    do j = 1, pc%n_mode_families
+#ifdef USE_BLOCK    
+      block_size = n_var*pc%modes_per_family(j)
+#else
+      block_size = 1
+#endif
+      nr = pc%ranks_per_family(j)                                    ! number of ranks per j-th family
+      pc%n_per_rank(j) = block_size*((a_mat%ng/block_size)/nr) - block_size ! number of rows per rank for j-th family (lower limit)
+    enddo
+    
+#ifdef USE_BLOCK    
+    pc%mat%block_size = n_var*pc%modes_per_family(pc%family_id) ! set block size for current family
+#else
+    pc%mat%block_size = 1
+#endif     
 
     allocate(long_send_counts(pc%n_cpu))
     allocate(long_recv_counts(pc%n_cpu))
@@ -218,8 +237,6 @@ contains
     call get_send_recv(i0,i1,long_send_counts,long_recv_counts,pc,a_mat)
 
     pc%mat%nnz = sum(long_recv_counts(1:pc%n_cpu)) ! summing up all recieves
-    pc%mat%ng =  (pc%mode_set_n)*(a_mat%ng)/n_tor
-    pc%n_glob = a_mat%ng
      
     pc%nsplit = maxval((/maxval(long_recv_counts),maxval(long_send_counts)/))/INT_MAX + 1
 
@@ -299,7 +316,6 @@ contains
     
     allocate(pc%rhs%val(pc%mat%ng))
     pc%rhs%val(1:pc%mat%ng) = 0.d0
-    !pc%rhs%n = a_mat%ng
     pc%rhs%n = pc%mat%ng
 
     allocate(pc%row_index(pc%rhs%n))
@@ -310,7 +326,7 @@ contains
       enddo
     enddo
     
-    write(*,*) pc%my_id, "PC matrix: n, nnz", pc%mat%ng, pc%mat%nnz
+    write(*,*) pc%my_id, "PC matrix: ng, nnz", pc%mat%ng, pc%mat%nnz
     pc%analyzed = .true.
     
     return         
@@ -381,23 +397,13 @@ contains
     integer                                           :: j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j, ierr
     logical                                           :: distribute
 
+#ifdef USE_STRUMPACK    
     distribute = pc%mat%row_distributed
+#elif USE_PASTIX6
+    distribute = pc%mat%col_distributed
+#endif    
 
     n_tor_int = n_tor
-    
-    allocate(pc%n_per_rank(pc%n_mode_families))
-    
-    do j = 1, pc%n_mode_families
-      block_size = n_var*pc%modes_per_family(j)
-      nr = pc%ranks_per_family(j) ! number of ranks per j-th family
-      pc%n_per_rank(j) = block_size*((a_mat%ng/block_size)/nr) - block_size ! number of rows per rank for j-th family
-    enddo
-    
-#ifdef USE_BLOCK    
-    pc%mat%block_size = n_var*pc%modes_per_family(pc%family_id) ! set block size for current family
-#else
-    pc%mat%block_size = 1
-#endif
 
     long_send_counts = 0 ! number of elements to be sent from current rank to others
 

@@ -89,8 +89,8 @@ contains
       if (pc%autodistribute_modes) then
 
         do i = pc%istart(isplit), pc%ifinish(isplit)
-          n_i = (mod(a_mat%irn(i)-Int1,n_tor_int) + 1) / 2
-          n_j = (mod(a_mat%jcn(i)-Int1,n_tor_int) + 1) / 2
+          n_i = (mod(a_mat%irn(i)-Int1,n_tor_int) + 1)/2
+          n_j = (mod(a_mat%jcn(i)-Int1,n_tor_int) + 1)/2
           if (n_i .eq. n_j) then
             j = n_i + 1
             ji = pc%rank_range(j)
@@ -154,9 +154,10 @@ contains
       deallocate(Asnd_buffer)
       deallocate(isnd_buffer)
       deallocate(jsnd_buffer)
-      deallocate(indx)
 
     enddo
+    
+    deallocate(indx)
 
 ! --- Change indices of the local matrices to local indices
 !$omp do private(i,j,n_i,n_j)
@@ -196,7 +197,7 @@ contains
     type(type_PRECOND)                 :: pc
     type(type_SP_MATRIX)               :: a_mat
     integer(kind=int_all), allocatable :: long_recv_counts(:), long_send_counts(:)
-    integer(kind=int_all)              :: block_size
+    integer(kind=int_all)              :: block_size, block_size2
     integer(kind=int_all)              :: nz_split, i0, i1, ind
     integer                            :: isplit, i, j
     integer                            :: ierr
@@ -218,7 +219,7 @@ contains
 #else
       block_size = 1
 #endif
-      nr = pc%ranks_per_family(j)                                    ! number of ranks per j-th family
+      nr = pc%ranks_per_family(j)                                           ! number of ranks per j-th family
       pc%n_per_rank(j) = block_size*((a_mat%ng/block_size)/nr) - block_size ! number of rows per rank for j-th family (lower limit)
     enddo
     
@@ -239,14 +240,15 @@ contains
     pc%mat%nnz = sum(long_recv_counts(1:pc%n_cpu)) ! summing up all recieves
      
     pc%nsplit = maxval((/maxval(long_recv_counts),maxval(long_send_counts)/))/INT_MAX + 1
+    call MPI_Allreduce(MPI_IN_PLACE,pc%nsplit,1,MPI_INTEGER_ALL,MPI_MAX,pc%MPI_COMM_N,ierr)
 
     if ((pc%my_id.eq.0).and.(pc%nsplit>1)) write(*,*) "Using split communication for preconditioner construction", pc%nsplit
 
     allocate(pc%istart(pc%nsplit),pc%ifinish(pc%nsplit))
 
     ! split global nz keeping it integer of (n_var*n_tor)**2
-    block_size = (4*n_var*n_tor)**2
-    nz_split = ((a_mat%nnz/block_size)/pc%nsplit)*block_size
+    block_size2 = (n_var*n_tor)**2
+    nz_split = ((a_mat%nnz/block_size2)/pc%nsplit)*block_size2
 
     ! distribute indices for split communication
     pc%istart(1) = 1
@@ -283,14 +285,19 @@ contains
       enddo
     enddo
 
+    !cpu:    |   cpu0    |   cpu1    |   cpu2    |
+    !split:  | 1 | 2 | 3 | 1 | 2 | 3 | 1 | 2 | 3 |
+    ! displacements calculated cpu by cpu
+    
     pc%recv_disp(1,1) = 0
-    do i = 2, pc%n_cpu
-        pc%recv_disp(1,i) = pc%recv_disp(1,i-1) + pc%recv_counts(1,i-1)
-    enddo
     do isplit = 2, pc%nsplit
-      pc%recv_disp(isplit,1) = pc%recv_disp(isplit-1,pc%n_cpu) + pc%recv_counts(isplit-1,pc%n_cpu)
-      do i = 2, pc%n_cpu
-          pc%recv_disp(isplit,i) = pc%recv_disp(isplit,i-1) + pc%recv_counts(isplit,i-1)
+      pc%recv_disp(isplit,1) = pc%recv_disp(isplit-1,1) + pc%recv_counts(isplit-1,1)
+    enddo
+    
+    do i = 2, pc%n_cpu
+      pc%recv_disp(1,i) = pc%recv_disp(pc%nsplit,i-1) + pc%recv_counts(pc%nsplit,i-1)
+      do isplit = 2, pc%nsplit
+        pc%recv_disp(isplit,i) = pc%recv_disp(isplit-1,i) + pc%recv_counts(isplit-1,i)
       enddo
     enddo
 
@@ -393,7 +400,7 @@ contains
     integer(kind=int_all), intent(in)                 :: i0, i1
     integer(kind=int_all), allocatable, intent(inout) :: long_recv_counts(:), long_send_counts(:)
     integer(kind=int_all), allocatable                :: sendrecv(:)
-    integer(kind=int_all)                             :: i, n_tor_int, block_size
+    integer(kind=int_all)                             :: i, n_tor_int
     integer                                           :: j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j, ierr
     logical                                           :: distribute
 
@@ -405,7 +412,7 @@ contains
 
     n_tor_int = n_tor
 
-    long_send_counts = 0 ! number of elements to be sent from current rank to others
+    long_send_counts(1:pc%n_cpu) = 0 ! number of elements to be sent from current rank to others
 
    ! calculate number of entries to be distributed from the current rank
     if (pc%autodistribute_modes) then
@@ -461,12 +468,12 @@ contains
     endif
 
     allocate(sendrecv(pc%n_cpu*pc%n_cpu))
-    sendrecv = 0
+    sendrecv(1:pc%n_cpu*pc%n_cpu) = 0
     sendrecv(pc%my_id*pc%n_cpu + 1:(pc%my_id+1)*pc%n_cpu) = long_send_counts(1:pc%n_cpu)
     j = pc%n_cpu*pc%n_cpu
     call mpi_allreduce(MPI_IN_PLACE,sendrecv,j,MPI_INTEGER_ALL,MPI_SUM,a_mat%comm,ierr)
 
-    long_recv_counts = 0
+    long_recv_counts(1:pc%n_cpu) = 0
     do i = 1, pc%n_cpu
       long_recv_counts(i) = sendrecv(pc%n_cpu*(i-1) + pc%my_id + 1)
     enddo

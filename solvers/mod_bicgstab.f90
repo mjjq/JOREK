@@ -8,7 +8,6 @@ module mod_bicgstab
 #ifdef USE_BICGSTAB
   use iso_c_binding
   use mpi
-  use mumps_module,    only: mumps_par
   use phys_module,     only: use_pastix, use_mumps, use_strumpack
 
   use mod_integer_types
@@ -251,7 +250,6 @@ module mod_bicgstab
     if (use_strumpack) then
 #ifdef USE_STRUMPACK
       call strumpack_solve(solver%spss, solver%pc%rhs)
-      !call strumpack_solve(mumps_par%n,mumps_par%rhs,MPI_COMM_N)
 #endif
     elseif (use_pastix) then
 #ifdef USE_PASTIX

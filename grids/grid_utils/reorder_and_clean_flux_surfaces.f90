@@ -2053,6 +2053,8 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   real*8                :: rr2 , ss2, drr2, dss2
   real*8                :: distance, distance_Xpoint
   logical               :: start_stop, debug, dashed, reversed
+  integer               :: n_contour_tmp
+  real*8                :: R_contour_tmp(n_contour_max), Z_contour_tmp(n_contour_max)
   character*256         :: filename
   character*1           :: colour
   
@@ -2589,6 +2591,19 @@ subroutine get_separatrix_contours(node_list, element_list, sep_list)
   endif
   
   
+  ! --- Reverse the two private contours if upper-Xpoint is the main one
+  if (ES%active_xpoint .eq. UPPER_XPOINT) then
+    n_contour_tmp = n_up_priv_contour
+    R_contour_tmp(1:n_up_priv_contour) = R_up_priv_contour(1:n_up_priv_contour)
+    Z_contour_tmp(1:n_up_priv_contour) = Z_up_priv_contour(1:n_up_priv_contour)
+    n_up_priv_contour = n_private_contour 
+    R_up_priv_contour(1:n_private_contour) = R_private_contour(1:n_private_contour)
+    Z_up_priv_contour(1:n_private_contour) = Z_private_contour(1:n_private_contour)
+    n_private_contour = n_contour_tmp
+    R_private_contour(1:n_contour_tmp) = R_contour_tmp(1:n_contour_tmp)
+    Z_private_contour(1:n_contour_tmp) = Z_contour_tmp(1:n_contour_tmp)
+  endif
+
   
   
   ! --- Finally the outer contour

@@ -68,12 +68,15 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
     endif
 
     call strumpack_set_mat(spss, ac_mat)
+    
+    deallocate(ad_mat%irn); ad_mat%irn => null()
+    deallocate(ad_mat%jcn); ad_mat%jcn => null()
+    deallocate(ad_mat%val); ad_mat%val => null()
 
     if (.not. spss%analyzed) then
       call clck_time(t0)
 
       call strumpack_analyze(spss)
-      spss%analyzed = .true.
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
       if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond
@@ -87,9 +90,9 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
     if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time factorize:', tsecond
 
     if (centralize) then
-      deallocate(ac_mat%irn)
-      deallocate(ac_mat%jcn)
-      deallocate(ac_mat%val)
+      deallocate(ac_mat%irn); ac_mat%irn => null()
+      deallocate(ac_mat%jcn); ac_mat%jcn => null()
+      deallocate(ac_mat%val); ac_mat%val => null()
     endif
 
   endif ! .not.solve_only

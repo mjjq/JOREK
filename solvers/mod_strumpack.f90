@@ -262,6 +262,7 @@ module mod_strumpack
 
       call spk_reord(spss%sscp,spss%comm)
       call MPI_Barrier(spss%comm,ierr)
+      spss%analyzed = .true.
 
       return
     end subroutine strumpack_analyze 

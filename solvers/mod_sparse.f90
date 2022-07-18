@@ -14,17 +14,12 @@ module mod_sparse
 !! sol_vec, rhs_vec are broadcasted
 !! solve_type - type of system, e.g. GS equilibrium, MHD system with preconditioner, etc.
   subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)
-
-    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
     use mod_integer_types
     use mod_clock
+    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
     use mod_sparse_data, only: type_SP_SOLVER
-#ifdef USE_PASTIX
-    use mod_pastix, only: type_PASTIX_SOLVER
-#endif
     use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner
     use mod_distribute_preconditioner, only: update_pc_mat, update_pc_rhs, gather_solution
-    !
 #ifdef USE_BICGSTAB
     use mod_bicgstab, only: bicgstab_driver
 #else
@@ -33,16 +28,14 @@ module mod_sparse
 
     implicit none
 
+    type(type_SP_SOLVER)     :: solver
     type(type_SP_MATRIX)     :: a_mat
     type(type_RHS)           :: rhs_vec, sol_vec
+    
     integer                  :: my_id, n_cpu, ierr
-
     type(clcktype)           :: t_itstart, t0, t1, t2, t3
     real*8                   :: tsecond
-    type(type_SP_SOLVER)     :: solver
     integer(kind=int_all)    :: i
-    integer :: max_it = 10
-    real(kind=8) :: tol = 1.e-7
 
     call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
     call MPI_COMM_RANK(a_mat%comm, my_id, ierr)
@@ -86,7 +79,6 @@ module mod_sparse
     elseif (solver%iterative) then
 
       if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
-
 
       ! condition for no PC update
       solver%solve_only = (solver%istep > 1) .and. ((solver%iter_gmres + solver%iter_prev <= 2*solver%iter_precon) &

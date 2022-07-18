@@ -68,6 +68,15 @@ contains
     allocate(indx(n_cpu))
 
     if (.not.pc%analyzed) call analyze_pc(pc,a_mat)
+    
+! --- Allocate PC matrices
+    if (.not.associated(pc%mat%val)) allocate(pc%mat%val(pc%mat%nnz))
+    if (.not.associated(pc%mat%irn)) allocate(pc%mat%irn(pc%mat%nnz))
+    if (.not.associated(pc%mat%jcn)) allocate(pc%mat%jcn(pc%mat%nnz))
+
+    !pc%mat%val(1:pc%mat%nnz) = 0.d0
+    !pc%mat%irn(1:pc%mat%nnz) = 0
+    !pc%mat%jcn(1:pc%mat%nnz) = 0    
 
 ! --- Loop over communication splits
     do isplit = 1, pc%nsplit
@@ -302,15 +311,6 @@ contains
     enddo
 
     deallocate(long_send_counts,long_recv_counts)
-    
-! --- Allocate PC matrices
-    allocate(pc%mat%val(pc%mat%nnz))
-    allocate(pc%mat%irn(pc%mat%nnz))
-    allocate(pc%mat%jcn(pc%mat%nnz))
-
-    pc%mat%val(1:pc%mat%nnz) = 0.d0
-    pc%mat%irn(1:pc%mat%nnz) = 0
-    pc%mat%jcn(1:pc%mat%nnz) = 0
 
     pc%mat%comm = pc%MPI_COMM_N    
     ! centralized

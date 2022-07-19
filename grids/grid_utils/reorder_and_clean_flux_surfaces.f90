@@ -123,7 +123,6 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, plot_sur
             
             distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
             if (distance .lt. psi_accuracy) then
-              found = j
               nStart = i_piece + 1
               n_parts = n_parts + 1
               parts_index(n_parts) = nStart
@@ -225,7 +224,6 @@ subroutine reorder_flux_surfaces(node_list, element_list, surface_list, plot_sur
                 
                 distance = sqrt( (R-R2)**2.d0 + (Z-Z2)**2.d0 )
                 if (distance .lt. psi_accuracy) then
-                  found = j
                   nStart = i_piece + 1
                   n_parts = n_parts + 1
                   parts_index(n_parts) = nStart

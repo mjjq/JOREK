@@ -182,8 +182,7 @@ if (which_leg .le. 2) then
       enddo
     endif
     ! --- please see "create_x_node.f90" if confused
-    !if (xcase .eq. LOWER_XPOINT) then
-    if ( ES%active_xpoint .eq. LOWER_XPOINT ) then
+    if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
       n_xpoint_1 = 2 ! please see "create_x_node.f90" if confused
       n_xpoint_2 = 1
     else
@@ -225,8 +224,7 @@ if (which_leg .le. 2) then
       enddo
     endif
     ! --- please see "create_x_node.f90" if confused
-    !if (xcase .eq. LOWER_XPOINT) then
-    if ( ES%active_xpoint .eq. LOWER_XPOINT ) then
+    if ( (ES%active_xpoint .eq. LOWER_XPOINT) .or. (ES%active_xpoint .eq. SYMMETRIC_XPOINT) ) then
       n_xpoint_1 = 3 ! please see "create_x_node.f90" if confused
       n_xpoint_2 = 4
     else
@@ -279,7 +277,6 @@ else
       enddo
     endif
     ! --- please see "create_x_node.f90" if confused
-    !if (xcase .eq. UPPER_XPOINT) then
     if ( ES%active_xpoint .eq. UPPER_XPOINT ) then
       n_xpoint_1 = 3
       n_xpoint_2 = 4
@@ -323,7 +320,6 @@ else
       enddo
     endif
     ! --- please see "create_x_node.f90" if confused
-    !if (xcase .eq. UPPER_XPOINT) then
     if ( ES%active_xpoint .eq. UPPER_XPOINT ) then
       n_xpoint_1 = 2
       n_xpoint_2 = 1

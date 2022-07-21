@@ -328,7 +328,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   integer                           :: index_node1, index_node2, index_min_loc, index_max_loc
   integer(kind=int_all)             :: ijA_position
   integer(kind=int_all)             :: index_large_i, index_large_k, ilarge2
-  integer(kind=int_all)             :: my_ind_min, my_ind_max
+  integer                           :: my_ind_min, my_ind_max
   integer                           :: i_order, k_order, ielm, ierr
   integer                           :: vertex(2), direction(2)
   integer                           :: omp_nthreads, omp_tid, n_tor_local

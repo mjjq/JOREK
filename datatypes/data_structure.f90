@@ -153,8 +153,8 @@ module data_structure
     integer(kind=int_all)                        :: nr                   !< number of local rows
     integer(kind=int_all)                        :: nc                   !< number of local cols
     integer(kind=int_all)                        :: nnz                  !< number of local nonzero entries
-    integer(kind=int_all), dimension(:), pointer :: index_min => Null()        !< minimum index in global range
-    integer(kind=int_all), dimension(:), pointer :: index_max => Null()        !< maximum index in global range
+    integer, dimension(:), pointer               :: index_min => Null()        !< minimum index in global range
+    integer, dimension(:), pointer               :: index_max => Null()        !< maximum index in global range
     integer                                      :: block_size = 1
     integer(kind=int_all)                        :: nblock               !< ng/block_size
     integer(kind=int_all)                        :: nzblock              !< nnz/block_size**2

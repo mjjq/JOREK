@@ -1253,12 +1253,12 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 #ifdef WITH_TiTe
       T0i      = eq_g_1D(mp,var_Ti,ms)
       T0e      = eq_g_1D(mp,var_Te,ms)
-      T0e_corr = corr_neg_temp(T0e * 2.d0) / 2.d0
 #else
       T0i      = eq_g_1D(mp,var_T,ms) /2.d0
       T0e      = eq_g_1D(mp,var_T,ms) /2.d0
       T0_corr  = corr_neg_temp(T0) 
 #endif
+      T0e_corr     =     corr_neg_temp(T0e * 2.d0) / 2.d0
       dT0e_corr_dT = dcorr_neg_temp_dT(T0e * 2.d0) / 2.d0
 
 #ifdef WITH_Vpar

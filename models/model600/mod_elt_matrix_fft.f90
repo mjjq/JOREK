@@ -533,9 +533,9 @@ do i=1,n_vertex_max
             Ti0_ss = eq_ss(mp,var_Ti,ms,mt)
             Ti0_tt = eq_tt(mp,var_Ti,ms,mt)
             Ti0_st = eq_st(mp,var_Ti,ms,mt)
-           
-            Ti0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
-            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+                                                              ! Factors of 2 come because correction is made on total T
+            Ti0_corr     = corr_neg_temp(Ti0*2.d0) / 2.d0     ! For use in eta(T), visco(T), ...
+            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0*2.d0) / 2.d0 ! Improve the correction
            
             Te0    = eq_g(mp,var_Te,ms,mt)
             Te0_x  = (   y_t(ms,mt) * eq_s(mp,var_Te,ms,mt) - y_s(ms,mt) * eq_t(mp,var_Te,ms,mt) ) / xjac
@@ -546,9 +546,9 @@ do i=1,n_vertex_max
             Te0_ss = eq_ss(mp,var_Te,ms,mt)
             Te0_tt = eq_tt(mp,var_Te,ms,mt)
             Te0_st = eq_st(mp,var_Te,ms,mt)
-           
-            Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
-            dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
+                                                              ! Factors of 2 come because correction is made on total T
+            Te0_corr     = corr_neg_temp(Te0*2.d0) / 2.d0     ! For use in eta(T), visco(T), ...
+            dTe0_corr_dT = dcorr_neg_temp_dT(Te0*2.d0) / 2.d0 ! Improve the correction
 
             zTi   =   eq_zTi(ms,mt)
             zTi_x = dTi_dpsi(ms,mt) * ps0_x
@@ -584,8 +584,8 @@ do i=1,n_vertex_max
             Ti0_tt = T0_tt / 2.d0
             Ti0_st = T0_st / 2.d0
 
-            Ti0_corr     = corr_neg_temp(Ti0) ! For use in eta(T), visco(T), ...
-            dTi0_corr_dT = dcorr_neg_temp_dT(Ti0) ! Improve the correction
+            Ti0_corr     = T0_corr / 2.d0 ! For use in eta(T), visco(T), ...
+            dTi0_corr_dT = dT0_corr_dT / 2.d0 ! Improve the correction
            
             Te0    = Ti0
             Te0_x  = Ti0_x
@@ -597,8 +597,8 @@ do i=1,n_vertex_max
             Te0_tt = Ti0_tt
             Te0_st = Ti0_st
 
-            Te0_corr     = corr_neg_temp(Te0) ! For use in eta(T), visco(T), ...
-            dTe0_corr_dT = dcorr_neg_temp_dT(Te0) ! Improve the correction
+            Te0_corr     = T0_corr / 2.d0 ! For use in eta(T), visco(T), ...
+            dTe0_corr_dT = dT0_corr_dT / 2.d0 ! Improve the correction
 
             zTi   =   eq_zT(ms,mt)         / 2.d0
             zTi_x = dT_dpsi(ms,mt) * ps0_x / 2.d0
@@ -1309,7 +1309,6 @@ do i=1,n_vertex_max
           !-----------------------------------------------------------------
           ! --- Construction of radiative terms, using ADAS (by default)
           !-----------------------------------------------------------------
-
           call construct_radiation_parameters()
 
           ! For shock capturing stabilization
@@ -1631,7 +1630,7 @@ do i=1,n_vertex_max
                          !==========================End of viscous heating terms==============================
 
                          + zeta * v * (r0_corr + rimp0_corr*alpha_i) * delta_g(mp,var_Ti,ms,mt) * BigR * xjac         * factor(var_Ti,9)   &
-                         + zeta * v * Ti0_corr * delta_g(mp,var_rho,ms,mt) * BigR                      * xjac         * factor(var_Ti,9)   &
+                         + zeta * v * Ti0      * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Ti,9)   &
                          ! Energy exchange term
                          + v * BigR * dTi_e                                                            * xjac * tstep * factor(var_Ti,11)  
   
@@ -1701,7 +1700,7 @@ do i=1,n_vertex_max
                                    * ( v_x * ps0_y -  v_y * ps0_x                        ) * xjac * tstep * tstep * factor(var_Te,8 )&
   
                          + zeta * v * (r0_corr+rimp0_corr*alpha_e_bis) * delta_g(mp,var_Te,ms,mt)* BigR  * xjac         * factor(var_Te,10)  &
-                         + zeta * v * Te0_corr * delta_g(mp,var_rho,ms,mt) * BigR                        * xjac         * factor(var_Te,10)  &
+                         + zeta * v * Te0      * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Te,10)  &
                          ! Energy exchange term
                          + v * BigR * dTe_i                                                      * xjac * tstep * factor(var_Te,11)
               if (with_impurities) then
@@ -1822,7 +1821,7 @@ do i=1,n_vertex_max
                                        * ( v_x * ps0_y -  v_y * ps0_x                        )  * xjac * tstep * tstep * factor(var_T,8 )&
                             
                              + zeta * v * (r0_corr + rimp0_corr * alpha_imp_bis) * delta_g(mp,var_T,ms,mt)   * BigR * xjac * factor(var_T,10) &
-                             + zeta * v * T0_corr * delta_g(mp,var_rho,ms,mt) * BigR            * xjac * factor(var_T,10)
+                             + zeta * v * T0      * delta_g(mp,var_rho,ms,mt) * BigR            * xjac * factor(var_T,10)
               if (with_impurities) then
                 rhs_ij(var_T) = rhs_ij(var_T) + &
 !===================== Additional terms from ionization energy terms============
@@ -2954,7 +2953,7 @@ do i=1,n_vertex_max
                                               * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
   
   
-                    amat(var_Ti,var_rho) = v * rho * Ti0_corr   * BigR * xjac * (1.d0 + zeta)     &
+                    amat(var_Ti,var_rho) = v * rho * Ti0    * BigR * xjac * (1.d0 + zeta)     &
                               - v * rho * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                        * theta * tstep &
                               - v * Ti0 * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
                               - v * rho * 2.d0* GAMMA * BigR * Ti0 * u0_y                          * xjac * theta * tstep &
@@ -3267,7 +3266,7 @@ do i=1,n_vertex_max
   
                     amat(var_Te,var_zj) = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0/(BigR**2.d0) * BigR * xjac * theta * tstep
   
-                    amat(var_Te,var_rho) = v * rho * Te0_corr   * BigR * xjac * (1.d0 + zeta)     &
+                    amat(var_Te,var_rho) = v * rho * Te0    * BigR * xjac * (1.d0 + zeta)     &
                               - v * rho * BigR**2 * ( Te0_s * u0_t - Te0_t * u0_s)                        * theta * tstep &
                               - v * Te0 * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
                               - v * rho * 2.d0* GAMMA * BigR * Te0 * u0_y                          * xjac * theta * tstep &
@@ -3693,7 +3692,7 @@ do i=1,n_vertex_max
   
                     amat(var_T,var_zj)  = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0/(BigR**2.d0) * BigR * xjac * theta * tstep
   
-                    amat(var_T,var_rho) =   v * rho * T0_corr   * BigR * xjac * (1.d0 + zeta)     &
+                    amat(var_T,var_rho) =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)     &
                                           - v * rho * BigR**2 * ( T0_s  * u0_t - T0_t  * u0_s)                        * theta * tstep &
                                           - v * T0  * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
                                           - v * rho * 2.d0* GAMMA * BigR * T0 * u0_y                           * xjac * theta * tstep &
@@ -5160,13 +5159,8 @@ subroutine construct_radiation_parameters()
   implicit none
 
   ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
-  if (with_TiTe) then 
-    Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-    Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-  else
-    Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-    Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
-  endif
+  Te_eV       = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+  Te_corr_eV  = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
 
    !--------------------------------------------------------
    ! --- Radiation from background impurity

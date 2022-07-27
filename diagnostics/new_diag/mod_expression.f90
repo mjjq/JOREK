@@ -608,7 +608,7 @@ module mod_expression
 #endif
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
-    real*8  :: Te0_corr, r0_corr, rimp0_corr
+    real*8  :: rimp0_corr
     ! Atomic physics coefficients:
     !   -Mass ratio between main ions and impurites (m_i/m_imp)
     real*8  :: m_i_over_m_imp

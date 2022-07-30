@@ -7,7 +7,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use equil_info, only: ES
-use phys_module, only: xpoint, xcase, n_jropes, R_jropes, Z_jropes, w_jropes, rho_jropes, T_jropes
+use phys_module, only: xpoint, xcase, n_jropes, R_jropes, Z_jropes, w_jropes, rho_jropes, T_jropes, normalized_velocity_profile
 use mod_F_profile
 use mod_interp
 use nodes_elements
@@ -160,7 +160,11 @@ do ms=1, n_gauss
     if (ivar_out .eq. var_Vpar) then
       call velocity       (xpoint, xcase, y_g(ms,mt), ES%Z_xpoint, eq_g(ms,mt), ES%psi_axis, ES%psi_bnd, &
                            zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
-      var_RHS = zV
+      if (normalized_velocity_profile) then
+        var_RHS = zV
+      else
+        var_RHS = R**2 * zV
+      endif
     endif
 #endif
     if (ivar_out .eq. var_rhon) then

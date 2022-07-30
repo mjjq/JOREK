@@ -35,7 +35,9 @@ if (my_id .eq. 0) then
   write(*,*) '***************************************'
 endif
 
-if (my_id .eq. 0) then
+! --- This old projection method should be replaced by a direct solve on the elements
+! --- It is much cleaner and more generic
+if ( (my_id .eq. 0) .and. (n_order .le. 3) ) then
 
   do i=1,node_list%n_nodes
 
@@ -52,18 +54,17 @@ if (my_id .eq. 0) then
 
     call FFprime(   xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
-!============================MB
+
     if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot)) then
     call velocity(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zV,dV_dpsi,dV_dz,dV_dpsi2,dV_dz2, &
                   dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz)
     endif
-!============================MB
-							       
+
     zp       = zn * zT
     dp_dpsi  = zn * dT_dpsi + dn_dpsi * zT
     dp_dpsi2 = zn * dT_dpsi2 + 2.d0 * dn_dpsi * dT_dpsi + dn_dpsi2 * zT
     dp_dz    = zn * dT_dz + dn_dz * zT
-    dp_dz2   = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 							       
+    dp_dz2   = zn * dT_dz2 + 2.d0 * dn_dz * dT_dz + dn_dz2 * zT 
 
     node_list%node(i)%values(1,1,5) = zn
     node_list%node(i)%values(1,2,5) = dn_dpsi    * node_list%node(i)%values(1,2,1) + dn_dz * node_list%node(i)%x(1,2,2)
@@ -92,16 +93,14 @@ if (my_id .eq. 0) then
  
     node_list%node(i)%values(1,:,4) = 0.d0        ! vorticity (will be filled just below with inverse Poisson)
     node_list%node(i)%values(1,:,7) = 0.d0        ! parallel velocity
-!=================================MB:  parallel velocity profile
-if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
-    node_list%node(i)%values(1,1,7) = zV
-    node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(1,2,2)
-    node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(1,3,2)
-    node_list%node(i)%values(1,4,7) = dV_dpsi  * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(1,4,2) &
-                                    + dV_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
-                                 + dV_dz2   * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)
-   endif
-!=================================MB: parallel velocity
+    if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
+      node_list%node(i)%values(1,1,7) = zV
+      node_list%node(i)%values(1,2,7) = dV_dpsi  * node_list%node(i)%values(1,2,1) + dV_dz * node_list%node(i)%x(1,2,2)
+      node_list%node(i)%values(1,3,7) = dV_dpsi  * node_list%node(i)%values(1,3,1) + dV_dz * node_list%node(i)%x(1,3,2)
+      node_list%node(i)%values(1,4,7) = dV_dpsi  * node_list%node(i)%values(1,4,1) + dV_dz * node_list%node(i)%x(1,4,2) &
+                                      + dV_dpsi2 * node_list%node(i)%values(1,2,1) * node_list%node(i)%values(1,3,1)  &
+                                   + dV_dz2   * node_list%node(i)%x(1,2,2)        * node_list%node(i)%x(1,3,2)
+    endif
    
     node_list%node(i)%values(1,:,8) = 0.d0        ! ECCD current 
  
@@ -109,7 +108,22 @@ if ( (abs(V_0) .ge. 1.d-19) .or. (num_rot) ) then
 
   enddo
 
+endif ! if n_order<=3
+
+! --- Variable projection is better at higher order...
+! --- (by the way, we could use this for n_order=3 and remove all the above as well, 
+! --- and remove all derivatives from profiles functions, which are not really needed, 
+! --- except dn_dpsi and dT_dpsi for current profile...)
+if (n_order .ge. 5) then
+  call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               var_psi,var_rho,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
+  call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               var_psi,var_T,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
+  call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
+               var_psi,var_Vpar,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
+  ! note: haven't implemented the tauIC condition, which I still argue is complete rubbish...
 endif
+
 
 if (tauIC .ne. 0.d0) then
   call Poisson(my_id,2,node_list,element_list,bnd_node_list,bnd_elm_list, &
@@ -117,29 +131,6 @@ if (tauIC .ne. 0.d0) then
 endif
 
 
-
-!----------------------------------------- flux boundary perturbation (to be completed, see Marina)
-!if (my_id .eq. 0) then
-!  do i=1,node_list%n_nodes
-!    psi = node_list%node(i)%values(1,1,1)
-!    R   = node_list%node(i)%x(1,1,1)
-!    Z   = node_list%node(i)%x(1,1,2)
-!    theta = atan2(Z-Z_axis, R-R_axis)
-!    psi_bnd = 0.d0
-!    if (xpoint2 .and. (xcase2 .ne. 2)) psi_bnd = ES%psi_xpoint(1)
-!    if (xpoint2 .and. (xcase2 .eq. 2)) psi_bnd = psi_xpoint(2)
-!    if (xpoint2 .and. (xcase2 .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1))) psi_bnd = psi_xpoint(2)
-!    psi_n = (psi - psi_axis)/(psi_bnd - psi_axis)     
-!    if (node_list%node(i)%boundary .ne. 0) then
-!      node_list%node(i)%values(2,1,1) =  0.01 * sin(2.d0*theta)
-!      node_list%node(i)%values(3,1,1) = -0.01 * cos(2.d0*theta) 
-!      node_list%node(i)%values(2,3,1) =  0.01 * cos(2.d0*theta) * 2.d0*PI/float(n_tht)
-!      node_list%node(i)%values(3,3,1) = +0.01 * sin(2.d0*theta) * 2.d0*PI/float(n_tht)
-!    endif
-!  enddo
-!call poisson(my_id,-2,node_list,element_list,1,3,2,xpoint2, xcase2) 
-!call poisson(my_id,-2,node_list,element_list,1,3,3,xpoint2, xcase2) 
-!endif    
     
 !---------------------------- initialise perturbations
 amplitude = 1.d-12

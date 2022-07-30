@@ -32,6 +32,8 @@ if (my_id .eq. 0) then
   write(*,*) '***************************************'
 endif
 
+! --- This old projection method should be replaced by a direct solve on the elements
+! --- It is much cleaner and more generic
 if ( (my_id .eq. 0) .and. (n_order .le. 3) ) then
 
   do i=1,node_list%n_nodes

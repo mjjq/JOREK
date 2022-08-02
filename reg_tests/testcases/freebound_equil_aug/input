@@ -35,19 +35,19 @@
  
  n_pf_coils          = 13
 
- pf_coils( 1)%current    =  0.59079802d+6     ! IV1o   
- pf_coils( 2)%current    =  1.47550797d+6     ! IV1u   
- pf_coils( 3)%current    = -0.40878099d+6     ! IV2o   
- pf_coils( 4)%current    = -1.08130205d+6     ! IV2u   
- pf_coils( 5)%current    = -0.11582000d+6     ! IV3o   
- pf_coils( 6)%current    = -0.11954700d+6     ! IV3u                
- pf_coils( 7)%current    = -0.00274200d+6     ! ICoIo  
- pf_coils( 8)%current    = -0.00008600d+6     ! ICoIu  
- pf_coils( 9)%current    = -0.00048700d+6     ! Ipslon 
- pf_coils(10)%current    =  0.00222000d+6     ! Ipslun 
- pf_coils(11)%current    =  1.03397000d+6     ! IHO2od 
- pf_coils(12)%current    =  1.67137802d+6     ! IHO2ud 
- pf_coils(13)%current    = -8.31900024d+6     ! IOH    
+ pf_coils( 1)%current    = -0.59079802d+6     ! IV1o   
+ pf_coils( 2)%current    = -1.47550797d+6     ! IV1u   
+ pf_coils( 3)%current    =  0.40878099d+6     ! IV2o   
+ pf_coils( 4)%current    =  1.08130205d+6     ! IV2u   
+ pf_coils( 5)%current    =  0.11582000d+6     ! IV3o   
+ pf_coils( 6)%current    =  0.11954700d+6     ! IV3u                
+ pf_coils( 7)%current    =  0.00274200d+6     ! ICoIo  
+ pf_coils( 8)%current    =  0.00008600d+6     ! ICoIu  
+ pf_coils( 9)%current    =  0.00048700d+6     ! Ipslon 
+ pf_coils(10)%current    = -0.00222000d+6     ! Ipslun 
+ pf_coils(11)%current    = -1.03397000d+6     ! IHO2od 
+ pf_coils(12)%current    = -1.67137802d+6     ! IHO2ud 
+ pf_coils(13)%current    =  8.31900024d+6     ! IOH    
                          
  vert_FB_amp(3)          =  1.d0              ! IV2o 
  vert_FB_amp(4)          = -1.d0              ! IV2u

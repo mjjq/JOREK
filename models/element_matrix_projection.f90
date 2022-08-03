@@ -7,11 +7,12 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use equil_info, only: ES
-use phys_module, only: xpoint, xcase, n_jropes, R_jropes, Z_jropes, w_jropes, rho_jropes, T_jropes, normalized_velocity_profile
+use phys_module, only: xpoint, xcase, F0, n_jropes, R_jropes, Z_jropes, w_jropes, rho_jropes, T_jropes, normalized_velocity_profile
 use mod_F_profile
 use mod_interp
 use nodes_elements
 use mod_sources
+use constants
 
 implicit none
 

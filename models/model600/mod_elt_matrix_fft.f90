@@ -921,9 +921,11 @@ do i=1,n_vertex_max
               ddTe_i_dTi = 0.
               ddTe_i_dTe = 0.
               ddTe_i_drho = 0.
+              ddTe_i_drhoimp = 0.
               ddTi_e_dTi = 0.
               ddTi_e_dTe = 0.
               ddTi_e_drho = 0.
+              ddTi_e_drhoimp = 0.
             endif
 
             call construct_pressure()

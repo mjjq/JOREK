@@ -163,7 +163,7 @@ do ms=1, n_gauss
       if (normalized_velocity_profile) then
         var_RHS = zV
       else
-        var_RHS = R**2 * zV
+        var_RHS = 2.d0 * PI / F0 * R**2 * zV
       endif
     endif
 #endif

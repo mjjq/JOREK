@@ -5231,11 +5231,11 @@ subroutine construct_radiation_parameters()
   !------------------------------------------------------------------
   ! --- Radiative function for the main impurity, using interpolation
   ! -----------------------------------------------------------------
+  Lrad = 0.
+  dLrad_dT = 0.
+
   if (with_impurities) then
      
-    Lrad = 0.
-    dLrad_dT = 0.
-
     if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rimp0 > 0.d0) then
       ! Here we are temperarily only considering one impurity species, in the
       ! future maybe a do loop will is needed

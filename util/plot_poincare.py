@@ -7,13 +7,14 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 # Read data
-f = h5py.File("poincare.h5", "r")
-r      = f["r"][:]
-z      = f["z"][:]
-phi    = f["phi"][:]
-iprt   = f["iprt"][:]
-iplane = f["pncrid"][:]
-dist   = f["mileage"][:]
+with h5py.File("poincare.h5", "r") as f:
+    r      = f["r"][:]
+    z      = f["z"][:]
+    phi    = f["phi"][:]
+    psi    = f["psi"][:]
+    iprt   = f["iprt"][:]
+    iplane = f["pncrid"][:]
+    dist   = f["mileage"][:]
 
 fig = plt.figure()
 
@@ -31,12 +32,12 @@ for i in range(nprt):
 
 for i in range(nprt):
     idx = np.logical_and.reduce([iprt == i, iplane == 1])
-    s2.scatter(r[idx], phi[idx], 1, color=colors[np.mod(i,6),:])
+    s2.scatter(psi[idx], phi[idx], 1, color=colors[np.mod(i,6),:])
 
 s1.set_xlabel("R [m]")
 s1.set_ylabel("z [m]")
 
-s2.set_xlabel("R [m]")
+s2.set_xlabel(r"$\psi_n$")
 s2.set_ylabel("Toroidal angle [rad]")
 s2.set_ylim(0,2*np.pi)
 

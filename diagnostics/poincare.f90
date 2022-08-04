@@ -32,12 +32,17 @@ use mod_fields_linear
 use mod_fieldline_euler
 use mod_gc_relativistic
 use hdf5_io_module
+use phys_module, only: xcase, xpoint
+use equil_info
+use mod_boundary, only: boundary_from_grid
+use nodes_elements
+
 
 implicit none
 
 character(len=40) :: fnout !< File where the output is written
 
-real*8, dimension(:,:), allocatable    :: rvals, zvals, phivals !< Coordinate arrays (nprt,norb).
+real*8, dimension(:,:), allocatable    :: rvals, zvals, phivals, psivals !< Coordinate arrays (nprt,norb).
 integer*4, dimension(:,:), allocatable :: pncrid   !< Flag indicating which plane was crossed (nprt,norb).
 integer*4, dimension(:), allocatable   :: nextslot !< Next free slot in coordinate arrays.
 integer*4, dimension(:), allocatable   :: ncross   !< Number of poloidal turns
@@ -96,7 +101,7 @@ else
 end if
 
 ! Allocate and initialize needed data arrays
-allocate ( rvals(nprt,ndata), zvals(nprt,ndata), phivals(nprt,ndata), pncrid(nprt,ndata) )
+allocate ( rvals(nprt,ndata), zvals(nprt,ndata), phivals(nprt,ndata), psivals(nprt,ndata), pncrid(nprt,ndata) )
 allocate ( nextslot(nprt), ncross(nprt), mileage(nprt) )
 
 call cpu_time(t0)
@@ -105,6 +110,9 @@ call cpu_time(t0)
 sim%time = 0
 fieldreader = event(read_jorek_fields_interp_linear(i=-1))
 call with(sim,fieldreader)
+
+call boundary_from_grid(sim%fields%node_list, sim%fields%element_list, bnd_node_list, bnd_elm_list, .false.)
+call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
 
 ! Find the location of the magnetic axis and initialize new markers
 call find_axis(sim%my_id, sim%fields%node_list, sim%fields%element_list, &
@@ -115,6 +123,7 @@ write(*,*) "Markers initialized. Begin simulation."
 ! Init data arrays
 rvals    = 0
 zvals    = 0
+psivals  = 0
 phivals  = 0
 pncrid   = 0
 nextslot = 0
@@ -139,7 +148,7 @@ do while(finished .lt. nprt)
 #else
       !$omp shared(sim, tstep, norb, ndata, mileage, p) &
 #endif
-      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
+      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, psivals, nextslot, pncrid) &
       !$omp private(iprt, ifail, zprev, phiprev) &
       !$omp reduction(+:finished)
       do iprt=1,nprt
@@ -148,8 +157,8 @@ do while(finished .lt. nprt)
             phiprev = p(iprt)%x(3)
             call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time, tstep, &
                  sim%groups(1)%mass, p(iprt))
-            call check_and_store_crossing(iprt, p(iprt)%i_elm, p(iprt)%x, phiprev, zprev, raxis, zaxis, ndata, &
-                 nextslot, ncross, rvals, zvals, phivals, pncrid)
+            call check_and_store_crossing(sim%fields, iprt, sim%time, p(iprt)%i_elm, p(iprt)%st, p(iprt)%x, &
+                 phiprev, zprev, raxis, zaxis, ndata, nextslot, ncross, rvals, zvals, phivals, psivals, pncrid)
             mileage(iprt) = mileage(iprt) + tstep
          else
             finished = finished + 1
@@ -170,7 +179,7 @@ do while(finished .lt. nprt)
 #else
       !$omp shared(sim, tstep, norb, ndata, mileage, p) & ! To avoid GNU compiler failure
 #endif
-      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, nextslot, pncrid) &
+      !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, psivals, nextslot, pncrid) &
       !$omp private(iprt, ifail, zprev, phiprev) &
       !$omp reduction(+:finished)
       do iprt=1,nprt
@@ -178,8 +187,8 @@ do while(finished .lt. nprt)
             zprev   = p(iprt)%x(2)
             phiprev = p(iprt)%x(3)
             call field_line_runge_kutta_fixed_dt_push_jorek(sim%fields, p(iprt), sim%time, tstep)
-            call check_and_store_crossing(iprt, p(iprt)%i_elm, p(iprt)%x, phiprev, zprev, raxis, zaxis, ndata, &
-                 nextslot, ncross, rvals, zvals, phivals, pncrid)
+            call check_and_store_crossing(sim%fields, iprt, sim%time, p(iprt)%i_elm, p(iprt)%st, p(iprt)%x, &
+                 phiprev, zprev, raxis, zaxis, ndata, nextslot, ncross, rvals, zvals, phivals, psivals, pncrid)
             mileage(iprt) = mileage(iprt) + tstep
          else
             finished = finished + 1
@@ -196,10 +205,10 @@ call cpu_time(t1)
 write(*,*) 'CPU time: ', t1-t0
 
 ! Store data
-call write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
+call write_poincare_hdf5(fnout, rvals, zvals, phivals, psivals, pncrid, mileage)
 
 ! Finalize the simulation
-deallocate ( rvals, zvals, phivals, pncrid, nextslot, ncross, mileage )
+deallocate ( rvals, zvals, phivals, psivals, pncrid, nextslot, ncross, mileage )
 call sim%finalize
 
 
@@ -282,11 +291,14 @@ end subroutine init_markers
 !< Note that this method actually records the position marker has *after* it has crossed the plane, i.e., the
 !< actual location of the crossing is not stored. This method could be improved by performing a linear interpolation
 !< on the marker positions at each side of the plane.
-subroutine check_and_store_crossing(iprt, i_elm, x, phiprev, zprev, raxis, zaxis, ndata, nextslot, ncross, & 
-  rvals, zvals, phivals, pncrid)
+subroutine check_and_store_crossing(fields, iprt, time, i_elm, st, x, phiprev, zprev, raxis, zaxis, ndata, nextslot, ncross, & 
+  rvals, zvals, phivals, psivals, pncrid)
   implicit none
+  class(fields_base), intent(in) :: fields !< The field structure for evaluating psi
   integer*4, intent(in) :: iprt    !< Marker position in the sim%group array
+  real*8, intent(in)    :: time    !< Current time
   integer*4, intent(in) :: i_elm   !< Element the marker is located in
+  real*8, intent(in)    :: st(2)   !< Particle position within the element
   real*8, intent(in)    :: x(3)    !< Marker R,z,phi coordinates
   real*8, intent(in)    :: phiprev !< Marker toroidal coordinate at previous time step
   real*8, intent(in)    :: zprev   !< Marker z coordinate at previous time step
@@ -299,8 +311,10 @@ subroutine check_and_store_crossing(iprt, i_elm, x, phiprev, zprev, raxis, zaxis
   real*8, intent(inout)    :: rvals(:,:)   !< Stored R coordinate of a crossing (nprt,ndata)
   real*8, intent(inout)    :: zvals(:,:)   !< Stored z coordinate of a crossing (nprt,ndata)
   real*8, intent(inout)    :: phivals(:,:) !< Stored phi coordinate of a crossing (nprt,ndata)
+  real*8, intent(inout)    :: psivals(:,:) !< Stored psi_n coordinate of a crossing (nprt,ndata)
   integer*4, intent(inout) :: pncrid(:,:)  !< Stored plane index of a crossing (nprt,ndata)
 
+  real*8 :: E(3), B(3), U, psi, psin
   integer*4 :: idx !< Helper variable
 
   ! Check whether OMP was crossed and store crossing
@@ -312,11 +326,15 @@ subroutine check_and_store_crossing(iprt, i_elm, x, phiprev, zprev, raxis, zaxis
      if(nextslot(iprt) .gt. ndata) then
         nextslot(iprt)  = 1
      end if
+
+     call fields%calc_EBpsiU(time, i_elm, st, x(3), E, B, psi, U)
+     psin = get_psi_n(psi, x(2))
      
      idx = nextslot(iprt)
      rvals(iprt, idx)   = x(1)
      zvals(iprt, idx)   = x(2)
      phivals(iprt, idx) = x(3)
+     psivals(iprt, idx) = psin
      pncrid(iprt, idx)  = 1
   end if
 
@@ -327,10 +345,14 @@ subroutine check_and_store_crossing(iprt, i_elm, x, phiprev, zprev, raxis, zaxis
         nextslot(iprt)  = 1
      end if
 
+     call fields%calc_EBpsiU(time, i_elm, st, x(3), E, B, psi, U)
+     psin = get_psi_n(psi, x(2))
+
      idx = nextslot(iprt)
      rvals(iprt, idx)   = x(1)
      zvals(iprt, idx)   = x(2)
      phivals(iprt, idx) = x(3)
+     psivals(iprt, idx) = psin
      pncrid(iprt, idx)  = 2
   end if
 
@@ -347,18 +369,21 @@ end subroutine check_and_store_crossing
 !< There is an additional mileage array where mileage(iprt) notes the total distance iprt
 !< marker travelled during the simulation (seconds for particles and meters for field lines).
 !< Therefore, for lost markers mileage is the connection length.
-subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
+subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, psivals, pncrid, mileage)
   implicit none
   character(len=40)     :: fnout        !< File name where the data is written e.g. "poincare.h5"
   real*8, intent(in)    :: rvals(:,:)   !< Recorded R coordinates (nprt, ndata)
   real*8, intent(in)    :: zvals(:,:)   !< Recorded z coordinates (nprt, ndata)
   real*8, intent(in)    :: phivals(:,:) !< Recorded phi coordinates (nprt, ndata)
+  real*8, intent(in)    :: psivals(:,:) !< Recorded psi_n coordinates (nprt, ndata)
   integer*4, intent(in) :: pncrid(:,:)  !< Plane ID for each crosssing (nprt, ndata)
   real*8, intent(in)    :: mileage(:)   !< Travelled distance (nprt)
 
-  real*8, allocatable :: rvals0(:), zvals0(:), phivals0(:) !< 1D arrays for storing the data once empty points are removed
-  integer*4, allocatable :: pncrid0(:), iprt(:)            !< Arrays for identifyinf the marker and plane from the 1D data arrays
-  integer*4 :: nprt, ndata, npoint, i, j, ipoint           !< Helper variables
+  
+  real*8, allocatable :: rvals0(:), zvals0(:)     !< 1D arrays for storing the data once empty points are removed
+  real*8, allocatable :: phivals0(:), psivals0(:) !< -,,-
+  integer*4, allocatable :: pncrid0(:), iprt(:)   !< Arrays for identifyinf the marker and plane from the 1D data arrays
+  integer*4 :: nprt, ndata, npoint, i, j, ipoint  !< Helper variables
   integer(HID_T) :: file
   integer :: hdferr
 
@@ -376,7 +401,7 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
   end do
 
   allocate( iprt(npoint), pncrid0(npoint) )
-  allocate( rvals0(npoint), zvals0(npoint), phivals0(npoint) )
+  allocate( rvals0(npoint), zvals0(npoint), phivals0(npoint), psivals0(npoint) )
 
   ! Store the (actual) data to 1D arrays
   ipoint = 1
@@ -388,6 +413,7 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
            rvals0(ipoint)   = rvals(i,j)
            zvals0(ipoint)   = zvals(i,j)
            phivals0(ipoint) = mod(phivals(i,j), 2*PI)
+           psivals0(ipoint) = psivals(i,j)
            ipoint = ipoint + 1
         end if
      end do
@@ -404,17 +430,19 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, pncrid, mileage)
   call HDF5_array1D_saving(file, rvals0,   npoint, "r")
   call HDF5_array1D_saving(file, zvals0,   npoint, "z")
   call HDF5_array1D_saving(file, phivals0, npoint, "phi")
+  call HDF5_array1D_saving(file, psivals0, npoint, "psi")
   call HDF5_array1D_saving_int(file, pncrid0,  npoint, "pncrid")
   call HDF5_array1D_saving_int(file,    iprt,  npoint, "iprt")
   call HDF5_array1D_saving(file, mileage, nprt, "mileage")
 
-  deallocate( iprt, pncrid0, rvals0, zvals0, phivals0 )
+  deallocate( iprt, pncrid0, rvals0, zvals0, phivals0, psivals0 )
 
   ! This would be the raw data that is in 2D arrays that someone might find easier to handle
   ! and therefore it is left here
   !call HDF5_array2D_saving(file, rvals,   nprt, norb, "r")
   !call HDF5_array2D_saving(file, zvals,   nprt, norb, "z")
   !call HDF5_array2D_saving(file, phivals, nprt, norb, "phi")
+  !call HDF5_array2D_saving(file, psivals, nprt, norb, "psi")
   !call HDF5_array2D_saving_int(file, pncrid,  nprt, norb, "pncrid")
 
   call h5fclose_f(file, hdferr)

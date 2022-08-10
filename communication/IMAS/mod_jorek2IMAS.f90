@@ -33,7 +33,7 @@ module mod_jorek2IMAS
    
     ! --- Local parameters 
     integer    :: i, j, k, m, etype, irst, int, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_T, fact_time, fact_v, fact_zj, fact_psi, rho0, fact_phi, fact_rho
+    real*8     :: fact_T, fact_time, fact_v, fact_zj, fact_psi, rho0, fact_phi, fact_rho, fact_w
     
     
     ! **********************************************************************************
@@ -72,7 +72,8 @@ module mod_jorek2IMAS
     fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
     fact_time =  sqrt_mu0_rho0 
     fact_v    =  1.d0 /  sqrt_mu0_rho0 
-    fact_phi  =  1.d0 /  sqrt_mu0_rho0 * F0 
+    fact_w    = -1.d0 /  sqrt_mu0_rho0      ! Transform for COCOS convention of toroidal direction (anti-clockwise) 
+    fact_phi  = -1.d0 /  sqrt_mu0_rho0 * F0 ! COCOS convection: F0 depends on phi direction
     fact_zj   = -1.d0 / mu_zero * (-1.d0)   ! Last sign due to COCOS transformation
     fact_rho  =  rho0 
     fact_T    =  1.d0 / ( EL_CHG * mu_zero * central_density * 1.d20 )   
@@ -104,18 +105,18 @@ module mod_jorek2IMAS
         call fill_Bezier_coefficients( ggd_scalar, node_list, var_u, grid_ind, grid_sub_ind, fact_phi )
       endif
   
-      ! --- Toroidal current density. THIS IS NOT CORRECT!!!  A FACTOR 1/R IS MISSING!!!!!!!!!!
+      ! --- Toroidal current density * R
       if (variable_names(i) == 'zj') then      
-        allocate( mhd_ids%ggd(i_slice)%j_tor(n_grid_sub))
-        ggd_scalar => mhd_ids%ggd(i_slice)%j_tor(grid_sub_ind)
+        allocate( mhd_ids%ggd(i_slice)%j_tor_r(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%j_tor_r(grid_sub_ind)
         call fill_Bezier_coefficients( ggd_scalar, node_list, var_zj, grid_ind, grid_sub_ind, fact_zj )
       endif
   
-      ! --- Toroidal vorticity  THIS IS NOT CORRECT!!!  A FACTOR R IS MISSING!!!!!!!!!!
+      ! --- Toroidal vorticity / R 
       if (variable_names(i) == 'omega') then      
-        allocate( mhd_ids%ggd(i_slice)%vorticity(n_grid_sub))
-        ggd_scalar => mhd_ids%ggd(i_slice)%vorticity(grid_sub_ind)
-        call fill_Bezier_coefficients( ggd_scalar, node_list, var_w, grid_ind, grid_sub_ind, fact_v )
+        allocate( mhd_ids%ggd(i_slice)%vorticity_over_r(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%vorticity_over_r(grid_sub_ind)
+        call fill_Bezier_coefficients( ggd_scalar, node_list, var_w, grid_ind, grid_sub_ind, fact_w )
       endif
   
       ! --- Mass density
@@ -152,10 +153,10 @@ module mod_jorek2IMAS
         call fill_Bezier_coefficients( ggd_scalar, node_list, var_Te, grid_ind, grid_sub_ind, fact_T )
       endif
   
-      ! --- Parallel velocity. NOT CORRECT!!!!!!! A FACTOR B_TOT IS MISSING!!!!!!!!!!
+      ! --- Parallel velocity
       if (variable_names(i) == 'v_par') then      
-        allocate( mhd_ids%ggd(i_slice)%velocity_parallel(n_grid_sub))
-        ggd_scalar => mhd_ids%ggd(i_slice)%velocity_parallel(grid_sub_ind)
+        allocate( mhd_ids%ggd(i_slice)%velocity_parallel_over_b_field(n_grid_sub))
+        ggd_scalar => mhd_ids%ggd(i_slice)%velocity_parallel_over_b_field(grid_sub_ind)
         call fill_Bezier_coefficients( ggd_scalar, node_list, var_vpar, grid_ind, grid_sub_ind, fact_v )
       endif
   

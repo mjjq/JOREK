@@ -2,7 +2,7 @@
 program jorek2_IDS
 
 #ifdef USE_IMAS
-  use ids_schemas !, only: ids_equilibrium
+  use ids_schemas 
   use ids_routines, only: imas_open_env, &
      imas_create_env, imas_close, ids_get, ids_put
 
@@ -49,7 +49,7 @@ program jorek2_IDS
 
   call getenv('USER',user)
   
-  ! --- Read parameters from namelist file 'vtk.nml' if it exists
+  ! --- Read parameters from namelist file 'imas.nml' if it exists
   open(42, file='imas.nml', action='read', status='old', iostat=ierr)
   if ( ierr == 0 ) then
     write(*,*) 'Reading parameters from imas.nml namelist.'

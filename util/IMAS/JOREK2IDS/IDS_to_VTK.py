@@ -9,255 +9,287 @@ from vtk.util import numpy_support as npvtk
 from imas import imasdef
 import imas
 
-import logging
 import sys
 
 prec=np.float32
 vtk_prec=vtk.VTK_FLOAT
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
-parser = argparse.ArgumentParser(description="Convert IMAS MHD IDS to VTK file",
+parser = argparse.ArgumentParser(description="Convert IMAS MHD IDS to VTK file(s)",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-s", "--shot", type=int, default=1, help="Shot number")
-parser.add_argument("-r", "--run", type=int, default=8, help="Run number")
+parser.add_argument("-r", "--run", type=int, default=9, help="Run number")
 parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")
 parser.add_argument("-d", "--database", type=str, default="jorek", help="Database name under public/imasdb/")
 parser.add_argument("-o", "--occurrence", type=int, default=0, help="Occurrence number")
 parser.add_argument("-f", "--backend", type=int, default=imasdef.MDSPLUS_BACKEND,
                     help="Database format: 12=MDSPLUS, 13=HDF5")
-parser.add_argument("vtkfile", metavar='jorek.vtk', nargs='?', help="Resulting VTK filename", default="jorek_ids.vtu")
+parser.add_argument("vtkfiles", metavar='jorek?????.vtu', nargs='?', 
+                    help="Resulting VTK filename", default="jorek")
 parser.add_argument("-p", "--phi", type=list, default=[0, 90], help="Phi coordinate")
 parser.add_argument("-n", "--n_plane", type=int, default=3, help="Number of planes")
-parser.add_argument("-b", "--bezier", type=bool, default=True, help="Bezier grid")
+parser.add_argument("-b", "--bezier", type=str2bool, default=True, help="Bezier grid")
+parser.add_argument("-I", "--initial_slice", type=int, default=0, help="Initial slice number")
+parser.add_argument("-F", "--final_slice", type=int, default=9999, help="Final slice number")
+parser.add_argument("-S", "--stride", type=int, default=1, help="Slice stride")
 
 args = parser.parse_args()
+
 
 # Open IMAS DB entry
 data_entry = imas.DBEntry(args.backend, args.database, args.shot, args.run,
                           user_name=args.user)
 status, idx = data_entry.open()
 if status != 0:
-    logging.info('Creation of data entry FAILED! Exiting.')
-    sys.exit(-1)
-else:
-    logging.info('Creation of data entry Ok!')
+    print('Creation of data entry FAILED! Exiting.')
+    sys.exit(status)
 
+print("[get...]", end="", flush=True)
 ids = data_entry.get("mhd")
 
 def visualise():
-    if not(args.bezier):
-        xyz0 = ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[0].object.array
-        xyz = np.empty((len(xyz0), 3))
-        for i in range(len(xyz0)):
-            xyz[i, :] = xyz0[i].geometry
+    initial_slice = max(args.initial_slice, 0)
+    final_slice = min(args.final_slice+1, len(ids.ggd.array))
+    
+    for slice in range (initial_slice, final_slice, args.stride):
+        data = ids.ggd.array[slice] 
+        nameroot = args.vtkfiles + '{:0>5d}'.format(slice)
+        time = ids.time[slice]
+        print(f"[{slice}]", end="", flush=True)
 
-        ien0 = np.array(ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
-        ien = np.empty((np.shape(ien0)[0], np.shape(ien0[0].nodes)[0]))
-        for i in range(np.shape(ien0)[0]):
-            ien[i, :] = np.array(ien0[i].nodes) - 1
-        ien = np.insert(ien, 0, np.shape(ien0[0].nodes)[0], axis=1)
+        if not(args.bezier):
+            gr2d = ids.grid_ggd[0].space[0]
+            xyz0 = gr2d.objects_per_dimension[0].object.array
+            xyz = np.empty((len(xyz0), 3))
+            for i in range(len(xyz0)):
+                xyz[i, 0:2] = xyz0[i].geometry
 
-        v = []
-        if ids.ggd.array[0].electrons.temperature.array != []:
-            v = np.array(ids.ggd.array[0].electrons.temperature.array[0].values)
+            ien0 = np.array(ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
+            ien = np.empty((np.shape(ien0)[0], np.shape(ien0[0].nodes)[0]))
+            for i in range(np.shape(ien0)[0]):
+                ien[i, :] = np.array(ien0[i].nodes) - 1
+            ien = np.insert(ien, 0, np.shape(ien0[0].nodes)[0], axis=1)
 
-        etype = vtk.VTK_QUAD
-        output = vtk.vtkUnstructuredGrid()
+            v = []
+            if len(data.electrons.temperature.array):
+                v = np.array(data.electrons.temperature.array[0].values)
 
-        pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk_prec)
-        p = vtk.vtkPoints()
-        p.SetData(pcoords)
-        output.SetPoints(p)
+            etype = vtk.VTK_QUAD
+            output = vtk.vtkUnstructuredGrid()
 
-        c = vtk.vtkCellArray()
-        c.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
-        output.SetCells(etype, c)
+            pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk_prec)
+            p = vtk.vtkPoints()
+            p.SetData(pcoords)
+            output.SetPoints(p)
 
-        if v != []:
-            tmp = npvtk.numpy_to_vtk(v, deep=True, array_type=vtk_prec)
-            tmp.SetName("T")
-            output.GetPointData().AddArray(tmp)
+            c = vtk.vtkCellArray()
+            c.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
+            output.SetCells(etype, c)
 
-        writer = vtk.vtkUnstructuredGridWriter()
-        writer.SetFileName("test1.vtk")
-        writer.SetInputData(output)
-        writer.Write()
-        exit(0)
+            if len(v):
+                tmp = npvtk.numpy_to_vtk(v, deep=True, array_type=vtk_prec)
+                tmp.SetName("T")
+                output.GetPointData().AddArray(tmp)
 
-    else:
-        # excavating data from IDS file
-        gr2d = ids.grid_ggd[0].space[0]
-        xyz0 = gr2d.objects_per_dimension[0].object.array
-        ien0 = np.array(gr2d.objects_per_dimension[2].object.array)
+            writer = vtk.vtkXMLUnstructuredGridWriter()
 
-        n_period = ids.grid_ggd[0].space[1].geometry_type.index
+            stime = npvtk.numpy_to_vtk(np.array([time]), deep=True, array_type=vtk_prec)
+            stime.SetName("TimeValue")
+            output.GetFieldData().AddArray(stime)
 
-        x = np.zeros((2, 4, len(xyz0)))
-        for j in range(np.shape(x)[2]):
-            x[:, :, j] = gr2d.objects_per_dimension.array[0].object.array[j].geometry_2d
+            writer.SetFileName(nameroot+".vtu")
+            writer.SetInputData(output)
+            writer.Write()
+            #exit(0)
 
-        # size 1, d_{uk}, d_{vk}, d{uv}d{vk} as in Daan Van Vugt thesis
-        size = np.empty((4, 4, np.shape(ien0)[0]))
-        for i in range(np.shape(size)[2]):
-            size[:, :, i] = gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d
-
-        #values
-        val_tor = ids.ggd.array[0].electrons.temperature.array[0].coefficients
-        a = np.shape(val_tor)
-        n_tor = a[0]
-        temp = np.reshape(val_tor, (n_tor, 4, len(xyz0)))
-        temp = np.swapaxes(temp, 0, 1)
-        values = np.array([temp])
-
-        val_tor1 = np.array([ids.ggd.array[0].psi.array[0].coefficients,
-                             ids.ggd.array[0].phi_potential.array[0].coefficients,
-                             ids.ggd.array[0].j_tor.array[0].coefficients,
-                             ids.ggd.array[0].vorticity.array[0].coefficients,
-                             ids.ggd.array[0].mass_density.array[0].coefficients,
-                             ids.ggd.array[0].electrons.temperature.array[0].coefficients,
-                             ids.ggd.array[0].velocity_parallel.array[0].coefficients])
-        a = np.shape(val_tor1)
-        n_tor = a[1]
-        valu = np.reshape(val_tor1, (7, n_tor, 4, len(xyz0)))
-        values = np.swapaxes(valu, 1, 2)
-
-
-
-        #vertex
-        ien0 = np.array(ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
-        ver = np.empty((np.shape(ien0)[0], np.shape(ien0[0].nodes)[0]))
-        for i in range(np.shape(ien0)[0]):
-            ver[i, :] = np.array(ien0[i].nodes)
-        ver = ver.astype(int)
-        vertex = np.swapaxes(ver, 1, 0)
-
-        "everything we need to visualise data is now excavated from IDS file"
-        #vrite vtk
-        n_plane = args.n_plane
-        n_plane = 1 + (n_plane - 1) * 2
-        n_sub = 4
-        phi = args.phi
-        without_n0_mode = False
-        periodic = False
-        
-        if (n_plane == 1):
-            phis = np.asarray([phi[0]])
         else:
-            periodic = (np.mod(phi[0] - phi[1], 360) < 1e-9)
-            phis = np.linspace(phi[0], phi[1], num=n_plane, endpoint=not periodic)
+            # excavating data from IDS file
+            gr2d = ids.grid_ggd[0].space[0]
+            xyz0 = gr2d.objects_per_dimension[0].object.array
+            ien0 = np.array(gr2d.objects_per_dimension[2].object.array)
 
-        phis = phis * np.pi / 180
-        output = vtk.vtkUnstructuredGrid()
-        ien = None
+            n_period = ids.grid_ggd[0].space[1].geometry_type.index
 
-        tmp = np.zeros((x.shape[0], x.shape[1], vertex.shape[0], vertex.shape[1]))
-        for i in range(vertex.shape[0]):  # small loop over vertices (hardcode 4 here?)
-            tmp[:, :, i, :] = x[:, :, vertex[i, :] - 1]
-        # multiply by size[order, vertex, element]
-        tmp[0, :, :, :] *= size
-        tmp[1, :, :, :] *= size
-        # Create output array
-        xy = np.zeros((np.shape(tmp)[3] * 16, 2))
-        for i in range(np.shape(tmp)[3]):
-            x1 = tmp[0, :, :, i]                
-            y1 = tmp[1, :, :, i]
-            x1[3, :] = x1[3, :] + x1[1, :] + x1[2, :]
-            y1[3, :] = y1[3, :] + y1[1, :] + y1[2, :]
-            x1[1:, :] += np.tile(x1[0, :], (3, 1))
-            y1[1:, :] += np.tile(y1[0, :], (3, 1))
-            xy[16 * i:16 * (i + 1), 0] = np.ravel(x1)
-            xy[16 * i:16 * (i + 1), 1] = np.ravel(y1)
-        RZ = xy
+            x = np.zeros((2, 4, len(xyz0)))
+            for j in range(np.shape(x)[2]):
+                x[:, :, j] = gr2d.objects_per_dimension.array[0].object.array[j].geometry_2d
 
-        n_xy = np.shape(RZ)[0]
-        xyz = np.zeros((n_xy * n_plane, 3))
-        for i in range(n_plane):
-            xyz[i * n_xy:(i + 1) * n_xy, 0] = np.ravel(RZ[:, 0] * np.cos(phis[i]))
-            xyz[i * n_xy:(i + 1) * n_xy, 1] = np.ravel(RZ[:, 1])
-            xyz[i * n_xy:(i + 1) * n_xy, 2] = np.ravel(RZ[:, 0] * np.sin(phis[i]))
+            # size 1, d_{uk}, d_{vk}, d{uv}d{vk} as in Daan Van Vugt thesis
+            size = np.empty((4, 4, np.shape(ien0)[0]))
+            for i in range(np.shape(size)[2]):
+                size[:, :, i] = gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d
 
-        if n_plane == 1:
-            index = np.array([0, 1, 2, 3, 4, 5, 9, 10, 7, 6, 8, 11, 12, 13, 15, 14])
-            step = np.array([16 for i in range(16)])
-            ien2 = np.array([index])
-            for i in range(1, np.shape(xyz)[0] // 16):
-                ien2 = np.concatenate((ien2, np.array([index + i * step])), axis=0)
-            ien = np.insert(ien2, 0, 16, axis=1)
-            etype = vtk.VTK_BEZIER_QUADRILATERAL
+            #values
+            val_tor = data.electrons.temperature.array[0].coefficients
+            a = np.shape(val_tor)
+            n_tor = a[0]
+            temp = np.reshape(val_tor, (n_tor, 4, len(xyz0)))
+            temp = np.swapaxes(temp, 0, 1)
+            values = np.array([temp])
+
+            val_tor1 = np.array([data.psi.array[0].coefficients,
+                                 data.phi_potential.array[0].coefficients,
+                                 data.j_tor.array[0].coefficients,
+                                 data.vorticity.array[0].coefficients,
+                                 data.mass_density.array[0].coefficients,
+                                 data.electrons.temperature.array[0].coefficients,
+                                 data.velocity_parallel.array[0].coefficients])
+            a = np.shape(val_tor1)
+            n_tor = a[1]
+            valu = np.reshape(val_tor1, (7, n_tor, 4, len(xyz0)))
+            values = np.swapaxes(valu, 1, 2)
+
+
+
+            #vertex
+            ien0 = np.array(ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
+            ver = np.empty((np.shape(ien0)[0], np.shape(ien0[0].nodes)[0]))
+            for i in range(np.shape(ien0)[0]):
+                ver[i, :] = np.array(ien0[i].nodes)
+            ver = ver.astype(int)
+            vertex = np.swapaxes(ver, 1, 0)
+
+            # Everything we need to visualise data is now excavated from IDS file
+            n_plane = args.n_plane
+            n_plane = 1 + (n_plane - 1) * 2
+            n_sub = 4
+            phi = args.phi
+            without_n0_mode = False
+            periodic = False
             
-        else:
-            alpha = (phi[1] - phi[0]) / (n_plane - 1)
-            s = np.shape(xyz)[0] // n_plane
-            w = np.cos(np.deg2rad(alpha))
-            w1 = np.ones((np.shape(xyz)[0]))
+            if (n_plane == 1):
+                phis = np.asarray([phi[0]])
+            else:
+                periodic = (np.mod(phi[0] - phi[1], 360) < 1e-9)
+                phis = np.linspace(phi[0], phi[1], num=n_plane, endpoint=not periodic)
+
+            phis = phis * np.pi / 180
+            output = vtk.vtkUnstructuredGrid()
             ien = None
-            index = np.array([0, 1, 2, 3, 0 + 2 * s, 1 + 2 * s, 2 + 2 * s, 3 + 2 * s, 4, 5, 9, 10, 7, 6, 8, 11,
-                              4 + 2 * s, 5 + 2 * s, 9 + 2 * s, 10 + 2 * s, 7 + 2 * s, 6 + 2 * s, 8 + 2 * s,
-                              11 + 2 * s, s, 1 + s, 3 + s, 2 + s, 8 + s, 11 + s, 9 + s, 10 + s, 4 + s, 5 + s,
-                              7 + s, 6 + s, 12, 13, 15, 14, 12 + 2 * s, 13 + 2 * s, 15 + 2 * s, 14 + 2 * s,
-                              12 + s, 13 + s, 15 + s, 14 + s])
-            for i in range((n_plane - 1) // 2):
-                index2 = index + i * np.array([s * 2 for k in range(48)])
-                w1[s + i * 2 * s: 2 * s + i * 2 * s] = np.array([w for i in range(s)])
-                xyz[s + i * 2 * s: 2 * s + i * 2 * s, 0] = 1 / w * xyz[s + i * 2 * s: 2 * s + i * 2 * s, 0]
-                xyz[s + i * 2 * s: 2 * s + i * 2 * s, 2] = 1 / w * xyz[s + i * 2 * s: 2 * s + i * 2 * s, 2]
-                step = np.array([16 for i in range(48)])
-                ien2 = np.zeros((np.shape(xyz)[0] // n_plane // 16, 48))
-                for j in range(1, np.shape(xyz)[0] // n_plane // 16):
-                    ien2[j, :] = np.array([index2 + j * step])
 
-                if (np.any(ien)):
-                    ien = np.concatenate((ien, ien2), axis=0)
-                else:
-                    ien = ien2
+            tmp = np.zeros((x.shape[0], x.shape[1], vertex.shape[0], vertex.shape[1]))
+            for i in range(vertex.shape[0]):  # small loop over vertices (hardcode 4 here?)
+                tmp[:, :, i, :] = x[:, :, vertex[i, :] - 1]
+            # multiply by size[order, vertex, element]
+            tmp[0, :, :, :] *= size
+            tmp[1, :, :, :] *= size
+            # Create output array
+            xy = np.zeros((np.shape(tmp)[3] * 16, 2))
+            for i in range(np.shape(tmp)[3]):
+                x1 = tmp[0, :, :, i]                
+                y1 = tmp[1, :, :, i]
+                x1[3, :] = x1[3, :] + x1[1, :] + x1[2, :]
+                y1[3, :] = y1[3, :] + y1[1, :] + y1[2, :]
+                x1[1:, :] += np.tile(x1[0, :], (3, 1))
+                y1[1:, :] += np.tile(y1[0, :], (3, 1))
+                xy[16 * i:16 * (i + 1), 0] = np.ravel(x1)
+                xy[16 * i:16 * (i + 1), 1] = np.ravel(y1)
+            RZ = xy
 
-            ien = np.insert(ien, 0, 48, axis=1)
-            etype = vtk.VTK_BEZIER_HEXAHEDRON
+            n_xy = np.shape(RZ)[0]
+            xyz = np.zeros((n_xy * n_plane, 3))
+            for i in range(n_plane):
+                xyz[i * n_xy:(i + 1) * n_xy, 0] = np.ravel(RZ[:, 0] * np.cos(phis[i]))
+                xyz[i * n_xy:(i + 1) * n_xy, 1] = np.ravel(RZ[:, 1])
+                xyz[i * n_xy:(i + 1) * n_xy, 2] = np.ravel(RZ[:, 0] * np.sin(phis[i]))
 
-            weights = npvtk.numpy_to_vtk(w1, deep=True, array_type=vtk_prec)
-            weights.SetName("RationalWeights")
-            output.GetPointData().SetRationalWeights(weights)
-            n_c = int(np.shape(xyz)[0] / n_plane / 16 * (n_plane - 1) / 2)
-            degrees = npvtk.numpy_to_vtk(np.array([[3, 3, 2] for k in range(n_c)]), deep=True,
-                                         array_type=vtk.VTK_ID_TYPE)
-            degrees.SetName("HigherOrderDegrees")
+            if n_plane == 1:
+                index = np.array([0, 1, 2, 3, 4, 5, 9, 10, 7, 6, 8, 11, 12, 13, 15, 14])
+                step = np.array([16 for i in range(16)])
+                ien2 = np.array([index])
+                for i in range(1, np.shape(xyz)[0] // 16):
+                    ien2 = np.concatenate((ien2, np.array([index + i * step])), axis=0)
+                ien = np.insert(ien2, 0, 16, axis=1)
+                etype = vtk.VTK_BEZIER_QUADRILATERAL
+                
+            else:
+                alpha = (phi[1] - phi[0]) / (n_plane - 1)
+                s = np.shape(xyz)[0] // n_plane
+                w = np.cos(np.deg2rad(alpha))
+                w1 = np.ones((np.shape(xyz)[0]))
+                ien = None
+                index = np.array([0, 1, 2, 3, 0 + 2 * s, 1 + 2 * s, 2 + 2 * s, 3 + 2 * s, 4, 5, 9, 10, 7, 6, 8, 11,
+                                  4 + 2 * s, 5 + 2 * s, 9 + 2 * s, 10 + 2 * s, 7 + 2 * s, 6 + 2 * s, 8 + 2 * s,
+                                  11 + 2 * s, s, 1 + s, 3 + s, 2 + s, 8 + s, 11 + s, 9 + s, 10 + s, 4 + s, 5 + s,
+                                  7 + s, 6 + s, 12, 13, 15, 14, 12 + 2 * s, 13 + 2 * s, 15 + 2 * s, 14 + 2 * s,
+                                  12 + s, 13 + s, 15 + s, 14 + s])
+                for i in range((n_plane - 1) // 2):
+                    index2 = index + i * np.array([s * 2 for k in range(48)])
+                    w1[s + i * 2 * s: 2 * s + i * 2 * s] = np.array([w for i in range(s)])
+                    xyz[s + i * 2 * s: 2 * s + i * 2 * s, 0] = 1 / w * xyz[s + i * 2 * s: 2 * s + i * 2 * s, 0]
+                    xyz[s + i * 2 * s: 2 * s + i * 2 * s, 2] = 1 / w * xyz[s + i * 2 * s: 2 * s + i * 2 * s, 2]
+                    step = np.array([16 for i in range(48)])
+                    ien2 = np.zeros((np.shape(xyz)[0] // n_plane // 16, 48))
+                    for j in range(1, np.shape(xyz)[0] // n_plane // 16):
+                        ien2[j, :] = np.array([index2 + j * step])
 
-            output.GetCellData().SetHigherOrderDegrees(degrees)
+                    if (np.any(ien)):
+                        ien = np.concatenate((ien, ien2), axis=0)
+                    else:
+                        ien = ien2
 
-        pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk_prec)
-        points = vtk.vtkPoints()
-        points.SetData(pcoords)
+                ien = np.insert(ien, 0, 48, axis=1)
+                etype = vtk.VTK_BEZIER_HEXAHEDRON
 
-        cells = vtk.vtkCellArray()
-        cells.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
+                weights = npvtk.numpy_to_vtk(w1, deep=True, array_type=vtk_prec)
+                weights.SetName("RationalWeights")
+                output.GetPointData().SetRationalWeights(weights)
+                n_c = int(np.shape(xyz)[0] / n_plane / 16 * (n_plane - 1) / 2)
+                degrees = npvtk.numpy_to_vtk(np.array([[3, 3, 2] for k in range(n_c)]), deep=True,
+                                             array_type=vtk.VTK_ID_TYPE)
+                degrees.SetName("HigherOrderDegrees")
 
-        output.SetPoints(points)
-        output.SetCells(etype, cells)
-        
-        HZ = toroidal_basis(n_tor, n_period, phis, without_n0_mode)
+                output.GetCellData().SetHigherOrderDegrees(degrees)
 
-        val = interp_scalars_3D(values, vertex, size, n_sub, HZ).reshape((7, -1))
+            pcoords = npvtk.numpy_to_vtk(xyz, deep=True, array_type=vtk_prec)
+            points = vtk.vtkPoints()
+            points.SetData(pcoords)
 
-        a = np.shape(val)
-        val = val.reshape((a[0], a[1] // 16, 16))
-        val[:, :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]] = val[:, :, [0, 12, 15, 3, 4, 8, 11, 7, 1,
-                                                                                       13, 14, 2, 5, 9, 10, 6]]
-        val = val.reshape((a[0], a[1]))
-        
-        nam = ["psi", "u", "j", "w", "rho", "T", "v_par"]
-        for i in range(7):
-            tmp = npvtk.numpy_to_vtk(val[i, :], deep=True, array_type=vtk_prec)
-            tmp.SetName(nam[i])
-            output.GetPointData().AddArray(tmp)
+            cells = vtk.vtkCellArray()
+            cells.SetCells(ien.shape[0], npvtk.numpy_to_vtk(ien, deep=True, array_type=vtk.VTK_ID_TYPE))
 
-        writer = vtk.vtkXMLUnstructuredGridWriter()
-        # writer.SetDataModeToAscii()
-        writer.SetFileName(args.vtkfile)
-        writer.SetInputData(output)
-        writer.Write()
-        print(args.vtkfile, "saved OK")
-        exit(0)
+            output.SetPoints(points)
+            output.SetCells(etype, cells)
+            
+            HZ = toroidal_basis(n_tor, n_period, phis, without_n0_mode)
+
+            val = interp_scalars_3D(values, vertex, size, n_sub, HZ).reshape((7, -1))
+
+            a = np.shape(val)
+            val = val.reshape((a[0], a[1] // 16, 16))
+            val[:, :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]] = val[:, :, [0, 12, 15, 3, 4, 8, 11, 7, 1,
+                                                                                           13, 14, 2, 5, 9, 10, 6]]
+            val = val.reshape((a[0], a[1]))
+            
+            nam = ["psi", "u", "j", "w", "rho", "T", "v_par"]
+            for i in range(7):
+                tmp = npvtk.numpy_to_vtk(val[i, :], deep=True, array_type=vtk_prec)
+                tmp.SetName(nam[i])
+                output.GetPointData().AddArray(tmp)
+
+            writer = vtk.vtkXMLUnstructuredGridWriter()
+            #writer.SetDataModeToAscii()
+            filename = nameroot + '.vtu'
+            writer.SetFileName(filename)
+            
+            stime = npvtk.numpy_to_vtk(np.array([time]), deep=True, array_type=vtk_prec)
+            stime.SetName("TimeValue")
+            output.GetFieldData().AddArray(stime)
+
+            writer.SetInputData(output)
+            writer.Write()
+    print("[OK]")
+    exit(0)
 
 def toroidal_basis(n_tor, n_period, phis, without_n0_mode):
     # Setup toroidal coefficients for each plane and toroidal harmonic

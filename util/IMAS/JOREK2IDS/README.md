@@ -22,7 +22,7 @@ Sample run can be saved with
 and created for visualisation with ParaView using
 
 	local/bin/python3 IDS_to_VTK.py --shot=303 --run=1 --user=${USER} --database=jorek --occurrence=0
-	paraview jorek_ids.vtu
+	paraview jorek..vtu
 
 
 MHD IDS is written under `~/public/imasdb/jorek/3/0/` as 
@@ -33,7 +33,7 @@ MHD IDS is written under `~/public/imasdb/jorek/3/0/` as
 
     local/bin/python IDS_to_VTK.py
     module load ParaView
-    paraview jorek_ids.vtu
+    paraview jorek..vtu
 
 If you start typing sub in ParaView Advanced Properties pane, the 
 `NonLinear Subdivision Level` can be increased from 1 to 3 

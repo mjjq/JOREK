@@ -32,7 +32,7 @@ input arguments:
     i_plane: which plane to interpolate at. If -1 make a 3D field.
 """
 class fields(object):
-    var_names = ["psi", "u", "j", "w", "rho", "T", "v_par"] # rest is ambiguous
+    var_names = ["psi", "u", "j", "w", "rho", "T", "v_par", 'T_e', 'rho_n'] # rest is ambiguous
     def read(self, filename, variables=[], file_prev=None, interp_fraction=None):
         self.vars = variables
         with h5py.File(filename, 'r') as hf:
@@ -251,12 +251,16 @@ def grid_2D(x, vertex, size, n_sub, bezier=False):
     # See http://stackoverflow.com/questions/26089893/understanding-numpys-einsum
     #return np.einsum('lijk,ijk,ijmn->kmnl', x[:,:,vertex], size, bf(n_sub))
     # Code below is ~5x faster or so! try again when einsum supports optimize=True
-
     # First create a temporary array holding: x[order, vertex, element, var]
     tmp = np.zeros((x.shape[0], x.shape[1],vertex.shape[0],vertex.shape[1]))
     # Fill it with the right x
-    for i in range(vertex.shape[0]): # small loop over vertices (hardcode 4 here?)
-        tmp[:,:,i,:] = x[:,:,vertex[i,:]-1]
+    if x.ndim == 4: # New format (after Feb 2021)
+        for i in range(vertex.shape[0]): # small loop over vertices (hardcode 4 here?)
+            tmp[:,:,i,:] = x[:,:,0,vertex[i,:]-1]
+    else:
+        for i in range(vertex.shape[0]): 
+            tmp[:,:,i,:] = x[:,:,vertex[i,:]-1]
+
     # multiply by size[order, vertex, element]
     tmp[0,:,:,:] *= size
     tmp[1,:,:,:] *= size

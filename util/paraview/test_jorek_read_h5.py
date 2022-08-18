@@ -1,7 +1,7 @@
 from __future__ import print_function
 import vtk
 import numpy as np
-import jorek_read_h5 as jorek
+import jorek.jorek_read_h5 as jorek
 
 f = jorek.fields()
 f.read('/tmp/jorek_restart.h5', variables=[2, 5])

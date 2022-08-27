@@ -21,7 +21,7 @@ module mod_jorek2IMAS
 
   subroutine fill_mhd_IDS(first_step, idx)  
 
-    use phys_module, only : t_now, F0, central_density, sqrt_mu0_rho0, &
+    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass
 
     implicit none
@@ -61,9 +61,6 @@ module mod_jorek2IMAS
       call grid2ggd( grid, node_list, element_list )
     endif
 
-    ! --- Time parameter  
-    mhd_ids%ids_properties%homogeneous_time = 1
- 
     ! --- Normalization factors for IMAS
     rho0               = central_density * 1.d20 * central_mass * mass_proton
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
@@ -82,11 +79,13 @@ module mod_jorek2IMAS
     ! --- Set times
     n_slice = 1  
     i_slice = 1
+    allocate(  mhd_ids%time(n_slice) )
+    allocate(  mhd_ids%ggd(n_slice ) )
+
+    mhd_ids%ids_properties%homogeneous_time = 1
   
-    allocate(  mhd_ids%time(n_slice)  )
-    mhd_ids%time = t_now * fact_time
- 
-    allocate( mhd_ids%ggd(n_slice) )
+    mhd_ids%time(i_slice)     = t_start * fact_time 
+    mhd_ids%ggd(i_slice)%time = t_start * fact_time
 
     ! --- Fill MHD data
     do i=1, n_var 
@@ -186,7 +185,7 @@ module mod_jorek2IMAS
 
   subroutine fill_radiation_IDS(first_step, idx)  
 
-    use phys_module, only : t_now, F0, central_density, sqrt_mu0_rho0, &
+    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
                            gamma, index_main_imp
     implicit none
@@ -224,9 +223,6 @@ module mod_jorek2IMAS
       grid => radiation_ids%grid_ggd(grid_ind)
       call grid2ggd( grid, node_list, element_list )
     endif
-
-    ! --- Time parameter  
-    radiation_ids%ids_properties%homogeneous_time = 1
  
     ! --- Normalization factors for IMAS
     rho0               = central_density * 1.d20 * central_mass * mass_proton
@@ -235,18 +231,24 @@ module mod_jorek2IMAS
 
     fact_rad = 1.d0 / ( (gamma-1.d0) * MU_ZERO * sqrt_mu0_rho0 )
     fact_time =  sqrt_mu0_rho0 
-  
+
     ! --- Set times
     n_slice = 1  
     i_slice = 1
-    allocate(  radiation_ids%time(n_slice)  )
-    radiation_ids%time = t_now * fact_time
+    allocate(  radiation_ids%time(n_slice) )
+
+    radiation_ids%ids_properties%homogeneous_time = 1
+    allocate( radiation_ids%process(1)%ggd(n_slice) )
+  
+    radiation_ids%time(i_slice)                = t_start * fact_time 
+    radiation_ids%process(1)%ggd(i_slice)%time = t_start * fact_time
+
+
  
     ! --- Fill radiation data 
     var_rad = 2
   
     allocate( radiation_ids%process(1))   ! --- 1 type of radiation
-    allocate( radiation_ids%process(1)%ggd(n_slice) )
     allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1))
     allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1)%emissivity(n_grid_sub))
     allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1)%label(1) )  
@@ -474,7 +476,6 @@ module mod_jorek2IMAS
     enddo
   
   end subroutine grid2ggd
-
 
 
 

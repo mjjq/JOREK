@@ -60,11 +60,15 @@ ids = data_entry.get("mhd")
 def visualise():
     initial_slice = max(args.initial_slice, 0)
     final_slice = min(args.final_slice+1, len(ids.ggd.array))
+    notime = False
+
+    if np.all(ids.time == ids.time[0]):
+        print('No time values under ids.time!')
+        notime = True
     
     for slice in range (initial_slice, final_slice, args.stride):
-        data = ids.ggd.array[slice] 
+        data = ids.ggd.array[slice]
         nameroot = args.vtkfiles + '{:0>5d}'.format(slice)
-        time = ids.time[slice]
         print(f"[{slice}]", end="", flush=True)
 
         if not(args.bezier):
@@ -103,9 +107,11 @@ def visualise():
 
             writer = vtk.vtkXMLUnstructuredGridWriter()
 
-            stime = npvtk.numpy_to_vtk(np.array([time]), deep=True, array_type=vtk_prec)
-            stime.SetName("TimeValue")
-            output.GetFieldData().AddArray(stime)
+            time = ids.time[slice]
+            if not(notime):
+                stime = npvtk.numpy_to_vtk(np.array([time]), deep=True, array_type=vtk_prec)
+                stime.SetName("TimeValue")
+                output.GetFieldData().AddArray(stime)
 
             writer.SetFileName(nameroot+".vtu")
             writer.SetInputData(output)
@@ -139,11 +145,11 @@ def visualise():
 
             val_tor1 = np.array([data.psi.array[0].coefficients,
                                  data.phi_potential.array[0].coefficients,
-                                 data.j_tor.array[0].coefficients,
-                                 data.vorticity.array[0].coefficients,
+                                 data.j_tor_r.array[0].coefficients,
+                                 data.vorticity_over_r.array[0].coefficients,
                                  data.mass_density.array[0].coefficients,
                                  data.electrons.temperature.array[0].coefficients,
-                                 data.velocity_parallel.array[0].coefficients])
+                                 data.velocity_parallel_over_b_field.array[0].coefficients])
             a = np.shape(val_tor1)
             n_tor = a[1]
             valu = np.reshape(val_tor1, (7, n_tor, 4, len(xyz0)))
@@ -281,11 +287,13 @@ def visualise():
             #writer.SetDataModeToAscii()
             filename = nameroot + '.vtu'
             writer.SetFileName(filename)
-            
-            stime = npvtk.numpy_to_vtk(np.array([time]), deep=True, array_type=vtk_prec)
-            stime.SetName("TimeValue")
-            output.GetFieldData().AddArray(stime)
 
+            time = ids.time[slice]
+            if not(notime):
+                stime = npvtk.numpy_to_vtk(np.array([time]), deep=True, array_type=vtk_prec)
+                stime.SetName("TimeValue")
+                output.GetFieldData().AddArray(stime)
+            
             writer.SetInputData(output)
             writer.Write()
     print("[OK]")

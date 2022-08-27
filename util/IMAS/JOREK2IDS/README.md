@@ -2,7 +2,7 @@
 
 IMAS needs to be set up with
 
-    module load IMAS # at least 3.36 required
+    module load IMAS # at least 3.37 required
     imasdb jorek
     imasdb
 

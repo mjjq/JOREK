@@ -12,7 +12,7 @@
 #         - Space 2 is one-dimensional space with $\phi$ and
 #           geometry_type.index = 1 (Fourier) with geometry
 #           objects (1, 2, 3, ..., number of harmonics)
-#     2. Values (Te, n, w, ...), stored under ggd, with the above two
+#     2. Lossless (Te, n, w, ...), stored under ggd, with the above two
 #        spaces form a "structured" (implicitly defined) grid of node
 #        values, where explicitly RZ values of first harmonics are saved
 #        first, then RZ values of the second harmonics follow up to the
@@ -113,7 +113,8 @@ for i_slice in range(len(args.hdf5files)):
         size         = np.array(hf.get('size'))
         values       = np.array(hf.get('values'))
         tstep        = hf['tstep'][0]
-        t_now        = hf['t_now'][0]/1000
+        t_now        = hf['t_now'][0]
+        t_norm       = hf.get('t_norm', default=[1])[0]
 
     # Grid geometry is taken only from the first time slice. All other
     # time slices share the same geometry. No need to write the same grid
@@ -266,16 +267,13 @@ for i_slice in range(len(args.hdf5files)):
 
         
     quantity_names_list = ["psi", "u", "j", "w", "rho", "T", "v_par"]
-    #quantities_array = val
-    # print("quantity_names_list: ", quantity_names_list)
-    # print("quantities_array: ", quantities_array)
-
+    
     # Set empty IDS path for quantity tree node
     IDSQuantityPath = None
 
     # Set time
-    mhd_ids.ggd[i_slice].time = t_now
-    mhd_ids.time[i_slice] = t_now
+    mhd_ids.ggd[i_slice].time = t_now*t_norm
+    mhd_ids.time[i_slice] = t_now*t_norm
 
     for i in range(len(quantity_names_list)):
         label = quantity_names_list[i]
@@ -288,13 +286,13 @@ for i_slice in range(len(args.hdf5files)):
             mhd_ids.ggd[i_slice].phi_potential.resize(1)
             IDSQuantityPath = mhd_ids.ggd[i_slice].phi_potential[0]
             arr = values[1, :, :, :]
-        elif label == 'j': # Current / toroidal current density
-            mhd_ids.ggd[i_slice].j_tor.resize(1)
-            IDSQuantityPath = mhd_ids.ggd[i_slice].j_tor[0]
+        elif label == 'j': # Current * R/ toroidal current density * R
+            mhd_ids.ggd[i_slice].j_tor_r.resize(1)
+            IDSQuantityPath = mhd_ids.ggd[i_slice].j_tor_r[0]
             arr = values[2, :, :, :]
-        elif label == 'w': # Vorticity
-            mhd_ids.ggd[i_slice].vorticity.resize(1)
-            IDSQuantityPath = mhd_ids.ggd[i_slice].vorticity[0]
+        elif label == 'w': # Vorticity / R
+            mhd_ids.ggd[i_slice].vorticity_over_r.resize(1)
+            IDSQuantityPath = mhd_ids.ggd[i_slice].vorticity_over_r[0]
             arr = values[3, :, :, :]
         elif label == 'rho': # Mass density
             mhd_ids.ggd[i_slice].mass_density.resize(1)
@@ -305,8 +303,8 @@ for i_slice in range(len(args.hdf5files)):
             IDSQuantityPath = mhd_ids.ggd[i_slice].electrons.temperature[0]
             arr = values[5, :, :, :]
         elif label == 'v_par': # Current / toroidal current density
-            mhd_ids.ggd[i_slice].velocity_parallel.resize(1)
-            IDSQuantityPath = mhd_ids.ggd[i_slice].velocity_parallel[0]
+            mhd_ids.ggd[i_slice].velocity_parallel_over_b_field.resize(1)
+            IDSQuantityPath = mhd_ids.ggd[i_slice].velocity_parallel_over_b_field[0]
             arr = values[6, :, :, :]
         else:
             print(f"Unknown label: {label}")

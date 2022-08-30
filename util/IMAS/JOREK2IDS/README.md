@@ -1,4 +1,4 @@
-# Writing IMAS MHD IDS
+# Writing timed IMAS MHD IDS from HDF5 files and generating MHD and Radiation VTK files
 
 IMAS needs to be set up with
 
@@ -29,30 +29,14 @@ MHD IDS is written under `~/public/imasdb/jorek/3/0/` as
 
     ids_3030001.characteristics  ids_3030001.datafile  ids_3030001.tree
 
-## Generating VTK
+## Generating MHD and Radiation VTK
 
-    local/bin/python IDS_to_VTK.py
+    local/bin/python IDS_to_VTK.py --help
     module load ParaView
     paraview jorek..vtu
 
 If you start typing sub in ParaView Advanced Properties pane, the 
 `NonLinear Subdivision Level` can be increased from 1 to 3 
 to get recomputted at finer FEM.
-
-
-## Preparing IMAS and h5py with SMITER 1.6.4
-
-    cd ~/smiter
-    make env_launch.sh
-    source env_launch.sh
-    cd ~/jorek/util/IMAS/JOREK2IDS
-    python -m venv mypy
-    mypy/bin/pip install --upgrade pip
-    mypy/bin/pip install h5py
-    mypy/bin/python jorekHDF5toIDS.py -h
-    cp jorek00000.h5 /tmp/jorek_restart.h5
-    mypy/bin/python jorekHDF5toIDS.py
-    mypy/bin/python IDS_to_VTK.py
-    
      
  

@@ -27,7 +27,7 @@ def str2bool(v):
 parser = argparse.ArgumentParser(description="Convert IMAS MHD IDS to VTK file(s)",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-s", "--shot", type=int, default=1, help="Shot number")
-parser.add_argument("-r", "--run", type=int, default=9, help="Run number")
+parser.add_argument("-r", "--run", type=int, default=10, help="Run number")
 parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")
 parser.add_argument("-d", "--database", type=str, default="jorek", help="Database name under public/imasdb/")
@@ -65,6 +65,7 @@ def visualise():
     if np.all(ids.time == ids.time[0]):
         print('No time values under ids.time!')
         notime = True
+
     
     for slice in range (initial_slice, final_slice, args.stride):
         data = ids.ggd.array[slice]
@@ -136,26 +137,48 @@ def visualise():
                 size[:, :, i] = gr2d.objects_per_dimension.array[2].object.array[i].geometry_2d
 
             #values
-            val_tor = data.electrons.temperature.array[0].coefficients
-            a = np.shape(val_tor)
-            n_tor = a[0]
-            temp = np.reshape(val_tor, (n_tor, 4, len(xyz0)))
-            temp = np.swapaxes(temp, 0, 1)
-            values = np.array([temp])
+            try:
+                ids_r = data_entry.get("radiation")
+                data_r = ids_r.process[0].ggd.array[0]
+                radiation = True
+            except:
+                radiation = False
+                pass
 
-            val_tor1 = np.array([data.psi.array[0].coefficients,
-                                 data.phi_potential.array[0].coefficients,
-                                 data.j_tor_r.array[0].coefficients,
-                                 data.vorticity_over_r.array[0].coefficients,
-                                 data.mass_density.array[0].coefficients,
-                                 data.electrons.temperature.array[0].coefficients,
-                                 data.velocity_parallel_over_b_field.array[0].coefficients])
+            nam_all = {"psi": 'psi',
+                       "u": 'phi_potential',
+                       "j0": 'j_tor',
+                       "j": 'j_tor_r',
+                       "w": 'vorticity_over_r',
+                       "w0": 'vorticity',
+                       "rho": 'mass_density',
+                       "T": 'electrons.temperature',
+                       "v_par": 'velocity_parallel_over_b_field',
+                       "v_par0": 'velocity_parallel'}
+
+            val_tor1 = np.array([])
+            nam = list()
+
+            for key in nam_all:
+                val_tor1, nam = value_in_IDS(data, nam_all, key, val_tor1, nam)
+
+            if radiation:
+                try:
+                    if np.size(val_tor1) == 0:
+                        val_tor1 = np.array([data_r.ion[0].emissivity[0].coefficients])
+                    else:
+                        val_tor1 = np.concatenate((val_tor1,
+                                                   np.array([data_r.ion[0].emissivity[0].coefficients])),
+                                                   axis=0)
+                    nam.append("Radiation (W/m^3)")
+                except:
+                    print('No radiation values')
+
+            n_val = len(nam)
             a = np.shape(val_tor1)
             n_tor = a[1]
-            valu = np.reshape(val_tor1, (7, n_tor, 4, len(xyz0)))
+            valu = np.reshape(val_tor1, (n_val, n_tor, 4, len(xyz0)))
             values = np.swapaxes(valu, 1, 2)
-
-
 
             #vertex
             ien0 = np.array(ids.grid_ggd.array[0].space.array[0].objects_per_dimension.array[2].object.array)
@@ -236,7 +259,7 @@ def visualise():
                     xyz[s + i * 2 * s: 2 * s + i * 2 * s, 2] = 1 / w * xyz[s + i * 2 * s: 2 * s + i * 2 * s, 2]
                     step = np.array([16 for i in range(48)])
                     ien2 = np.zeros((np.shape(xyz)[0] // n_plane // 16, 48))
-                    for j in range(1, np.shape(xyz)[0] // n_plane // 16):
+                    for j in range(0, np.shape(xyz)[0] // n_plane // 16):
                         ien2[j, :] = np.array([index2 + j * step])
 
                     if (np.any(ien)):
@@ -269,16 +292,15 @@ def visualise():
             
             HZ = toroidal_basis(n_tor, n_period, phis, without_n0_mode)
 
-            val = interp_scalars_3D(values, vertex, size, n_sub, HZ).reshape((7, -1))
+            val = interp_scalars_3D(values, vertex, size, n_sub, HZ).reshape((n_val, -1))
 
             a = np.shape(val)
             val = val.reshape((a[0], a[1] // 16, 16))
             val[:, :, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]] = val[:, :, [0, 12, 15, 3, 4, 8, 11, 7, 1,
                                                                                            13, 14, 2, 5, 9, 10, 6]]
             val = val.reshape((a[0], a[1]))
-            
-            nam = ["psi", "u", "j", "w", "rho", "T", "v_par"]
-            for i in range(7):
+
+            for i in range(len(nam)):
                 tmp = npvtk.numpy_to_vtk(val[i, :], deep=True, array_type=vtk_prec)
                 tmp.SetName(nam[i])
                 output.GetPointData().AddArray(tmp)
@@ -431,5 +453,27 @@ def bf_t(n_sub):
     s  = np.tensordot(lin, [1]*n_sub, axes=0)
     t  = s.transpose()
     return basis_functions_t(s, t)
+
+def value_in_IDS(ids_data, valuepaths:dict, name:str, valu:np.ndarray, names:list):
+    """
+    Check if IDS contains chosen value and add it to array of all values
+    """
+    try:
+        new_val = getattr(ids_data, valuepaths[name]).array[0].coefficients
+        if not(names):
+            names = list()
+            names.append(name)
+        else:
+            names.append(name)
+    
+        if np.size(valu) == 0:
+            valu = np.array([new_val])
+            return valu, names
+
+        valu = np.concatenate((valu, np.array([new_val])), axis=0)
+        return valu, names
+
+    except:
+        return valu, names
 
 visualise()

@@ -54,7 +54,7 @@ parser = argparse.ArgumentParser(description="Convert JOREK HDF5 file(s) to IMAS
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-s", "--shot", type=int, default=1,
                     help="Shot number")
-parser.add_argument("-r", "--run", type=int, default=9,
+parser.add_argument("-r", "--run", type=int, default=10,
                     help="Run number")
 parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")

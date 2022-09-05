@@ -1215,6 +1215,16 @@ do i=1,n_vertex_max
             endif
           endif ! (with_TiTe)
 
+          ! --- Parallel momentum source
+          Vt0   = V_source(ms,mt)
+          if (normalized_velocity_profile) then
+            Vt0_x = dV_dpsi_source(ms,mt)*ps0_x
+            Vt0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
+          else
+            Omega_tor0_x = dV_dpsi_source(ms,mt)*ps0_x
+            Omega_tor0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
+          endif
+
           ! --- Particle source from pellet
           phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
           delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
@@ -1230,26 +1240,12 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
-          ! --- Parallel momentum source
-          Vt0   = V_source(ms,mt)
-          if (normalized_velocity_profile) then
-            Vt0_x = dV_dpsi_source(ms,mt)*ps0_x
-            Vt0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
-          else
-            Omega_tor0_x = dV_dpsi_source(ms,mt)*ps0_x
-            Omega_tor0_y = dV_dz_source(ms,mt)+dV_dpsi_source(ms,mt)*ps0_y
-          endif
-
-          !-------------------------------------------
-          ! --- Normalisation of the ionization energy cost for Deuterium
-          !------------------------------------------- 
+          ! ------------
+          ! --- Neutrals: source (e.g. from MGI or SPI) and related atomic coefficients
       
-          ksiion = central_density * 1.d20 * ksi_ion
+          ksiion = central_density * 1.d20 * ksi_ion  ! Ionization energy 
  
           if (with_neutrals) then
-            !-------------------------------------------------------------------------------
-            !---------- Atomic data for neutrals and background constant impurity ----------
-            !-------------------------------------------------------------------------------
 
             call atomic_coeff_deuterium(Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                         LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0, rn0, .true. )
@@ -1261,11 +1257,7 @@ do i=1,n_vertex_max
               dLradDrays_dT = dLradDrays_dT / 2.d0
               dLradDcont_dT = dLradDcont_dT / 2.d0
             endif
-    
-            !--------------------------------------------------------
-            ! --- Source of neutrals, e.g. from MGI/SPI
-            !--------------------------------------------------------
-      
+          
             source_neutral       = 0.d0    
             source_neutral_drift = 0.d0 
       
@@ -1286,35 +1278,26 @@ do i=1,n_vertex_max
             dLradDrays_dT = 0.d0
 
           endif  ! with_neutrals
+          ! ------------
                  
-          !------------------------------------------------------------------------------------------
-          ! ---Calculate energy teleported in JOREK unit (sink at R and source at R + drift_distance)
-          !------------------------------------------------------------------------------------------
-          ! Input energy_teleported is in eV
+          ! --- Teleported energy (for ablation plasmoid teleportation model) in JOREK units (input param. energy_teleported is in eV)
           power_dens_teleport_ju = 0.d0
           if (with_neutrals .and. energy_teleported /= 0.d0) then
             power_dens_teleport_ju = (-source_neutral + source_neutral_drift)  * energy_teleported * &
                                      EL_CHG * (GAMMA-1) * MU_ZERO * 1.d20 * central_density
           end if
 
+          ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
           source_imp = 0.d0
           source_bg  = 0.d0
           if (with_impurities) then
             call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
-!            ! This is to detect N/A
-!            if (source_imp /= source_imp .or. source_bg /= source_bg) then
-!              write(*,*) "WARNING: source_imp = ", source_imp
-!              write(*,*) "WARNING: source_bg = ", source_bg
-!              stop
-!            end if
             source_imp = max(source_imp,0.d0)
             source_bg  = max(source_bg,0.d0)
           endif
-
           source_imp = source_imp + constant_imp_source
-          !-----------------------------------------------------------------
+
           ! --- Construction of radiative terms, using ADAS (by default)
-          !-----------------------------------------------------------------
           call construct_radiation_parameters()
 
           ! For shock capturing stabilization
@@ -4602,7 +4585,7 @@ CONTAINS
 
 ! subroutine that calculates shock-capturing stabilization related terms
 subroutine calculate_sc_quantities()
-! Define total pressure as (assuming neutrals are at same Temperature as ions)
+! Define total pressure as (assuming neutrals are at same temperature as ions)
 ! P_tot = r0 * (Ti0 + Te0) + rn0 * Ti0         and   r0 * T0 + 0.5d0 * rn0 * T0
 if ( with_TiTe ) then 
   Ptot     = Pi0   + Pe0    + rn0 * Ti0
@@ -4737,7 +4720,7 @@ if(add_sources_in_sc)then
 
 endif
 
-! Updates in the physical diffsivities to locally add numerical stabilization.
+! Updates in the physical diffusivities to locally add numerical stabilization.
 visco_T = visco_T + visco_sc_num  * tau_sc
 D_prof  = D_prof  + D_perp_sc_num * tau_sc
 D_prof_imp  = D_prof_imp  + D_perp_imp_sc_num * tau_sc
@@ -4767,10 +4750,10 @@ subroutine construct_imp_charge_states()
      m_i_over_m_imp = central_mass/2.
      m_imp          = 2.
   case('Ar')
-     m_i_over_m_imp = central_mass/40. ! Argon mass = 40 u and main ion (D) mass = 2 u
+     m_i_over_m_imp = central_mass/40.  
      m_imp          = 40.
   case('Ne')
-     m_i_over_m_imp = central_mass/20. ! Neon mass = 20 u and main ion (D) mass = 2 u
+     m_i_over_m_imp = central_mass/20. 
      m_imp          = 20.
   case default
      write(*,*) '!! Gas type "', trim(imp_type(index_main_imp)), '" unknown (in inj_source.f90) !!'
@@ -4780,22 +4763,17 @@ subroutine construct_imp_charge_states()
   end select
 
   if (with_TiTe) then
-
-    ! Te in eV:
-    Te_corr_eV = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+    Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
     dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
-    Te_eV = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
-  else !(with_TiTe)
-     
-    ! Te in eV:
-    Te_corr_eV      = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-    dTe_corr_eV_dT  = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-    Te_eV = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-
+    Te_eV          = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
+  else
+    Te_corr_eV     = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+    dTe_corr_eV_dT = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+    Te_eV          = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
   endif
 
-  ! We estimate the effective charge by a test density 10^20/m^3
-  ! Later maybe we should implement a iterative method
+  ! We estimate the effective charge assuming a density of 10^20/m^3.
+  ! Later maybe we should implement a iterative method.
 
   if (allocated(imp_adas(1)%ionisation_energy)) then
 
@@ -4808,16 +4786,14 @@ subroutine construct_imp_charge_states()
      !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
      !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
      !                              z_TeTe_out=d2Z_imp_dT2)
-     call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-          p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,&
+     call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ), &
+          p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,                     &
           z_avg_TeTe=d2Z_imp_dT2)
-
 
      ! Calculate the ionization potential energy and its derivative wrt. temperature
      E_ion     = 0.
      dE_ion_dT = 0.
-     E_ion_bg  = 13.6 ! Hydrogen and deterium seem to have different ionization energy, 
-     ! but the difference is of the next order.
+     E_ion_bg  = 13.6 ! We neglect the small difference between hydrogen and deuterium
 
      do ion_i=1, imp_adas(1)%n_Z
         do ion_k=1, ion_i
@@ -4842,8 +4818,8 @@ subroutine construct_imp_charge_states()
 
      !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
      !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
-     call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-          p_out=P_imp,p_Te_out=dP_imp_dT,                          &
+     call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ), &
+          p_out=P_imp,p_Te_out=dP_imp_dT,                                                    &
           z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
 
      E_ion     = 0.
@@ -4851,12 +4827,11 @@ subroutine construct_imp_charge_states()
      E_ion_bg  = 0.
   end if
 
-  ! The with_TiTe difference is automatically taken cared of here
   dZ_imp_dT = dZ_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
   if (Te_corr_eV < 0.1) then
-     Z_imp = 0.
-     dZ_imp_dT = 0.
+     Z_imp       = 0.
+     dZ_imp_dT   = 0.
      d2Z_imp_dT2 = 0.
   endif
 
@@ -4888,54 +4863,52 @@ subroutine construct_imp_charge_states()
   alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
   alpha_imp_tri   = 2. * dalpha_imp_dT + d2alpha_imp_dT2 * T0
 
-  ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
-  ne_JOREK     = r0_corr + alpha_e * rimp0_corr ! Electron density in JOREK unit
-  ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
-  ! Too small rho_1 will cause a problem
-  if (ne_SI < 1.d16) ne_SI = 1.d16
-
-  ! Calculate the effective charge of all species
-  Z_eff          = 0.
+  ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! Electron density in SI unit
+  if (ne_SI < 1.d16) ne_SI = 1.d16  
+  ne_JOREK    = r0_corr + alpha_e * rimp0_corr                             ! Electron density in JOREK unit
+  ne_JOREK    = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3)           
+     
+  Z_eff          = 0. ! Effective charge including all ion species
   dZ_eff_dT      = 0.
   dZ_eff_dr0     = 0.
   dZ_eff_drimp0  = 0.
 
-  Z_eff_imp    = 0.
-  dZ_eff_imp_dT= 0.
+  Z_eff_imp      = 0. ! Effective charge including impurities only
+  dZ_eff_imp_dT  = 0.
 
-  ! First get the value of Z_eff
-  Z_eff        = r0_corr - rimp0_corr
+  Z_eff = r0_corr - rimp0_corr ! Contribution from main ions
+  ! Contribution from each impurity charge state
   do ion_i=1, imp_adas(1)%n_Z
-     Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
-     Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
-     dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2 ! Its temperature gradient
+     Z_eff         = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
+     Z_eff_imp     = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 
+     dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2
   end do
-  dZ_eff_imp_dT = dZ_eff_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert the gradient to K to the gradient to JOREK unit, taking care of with_TiTe automatically
-  Z_eff        = Z_eff / ne_JOREK
+  Z_eff = Z_eff / ne_JOREK
+  dZ_eff_imp_dT = dZ_eff_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert the gradient to K to the gradient to JOREK unit
 
-  ! Then three(!) gradients
+  ! Z_eff gradients wrt. T, r0 and rimp0
   if ( (Z_eff >= 1.d0) .and. (Z_eff <= imp_adas(1)%n_Z) ) then
      do ion_i=1, imp_adas(1)%n_Z
         dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rimp0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
      end do
-     dZ_eff_dT    = dZ_eff_dT / ne_JOREK
-     dZ_eff_dT    = dZ_eff_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert the gradient to K to the gradient to JOREK unit, taking care of with_TiTe automatically
-     dZ_eff_dT    = dZ_eff_dT - Z_eff * dalpha_e_dT * rimp0_corr / ne_JOREK
+     dZ_eff_dT = dZ_eff_dT / ne_JOREK
+     dZ_eff_dT = dZ_eff_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert the gradient to K to the gradient to JOREK unit
+     dZ_eff_dT = dZ_eff_dT - Z_eff * dalpha_e_dT * rimp0_corr / ne_JOREK
 
-     dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
+     dZ_eff_dr0 = (1. - Z_eff)/ne_JOREK
 
-     dZ_eff_drimp0  = dZ_eff_drimp0 - 1.
+     dZ_eff_drimp0 = dZ_eff_drimp0 - 1.
      do ion_i=1, imp_adas(1)%n_Z
-        dZ_eff_drimp0= dZ_eff_drimp0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
+        dZ_eff_drimp0 = dZ_eff_drimp0 + m_i_over_m_imp * P_imp(ion_i) * real(ion_i,8)**2
      end do
-     dZ_eff_drimp0  = dZ_eff_drimp0 / ne_JOREK
-     dZ_eff_drimp0  = dZ_eff_drimp0 - Z_eff * alpha_e / ne_JOREK
+     dZ_eff_drimp0 = dZ_eff_drimp0 / ne_JOREK
+     dZ_eff_drimp0 = dZ_eff_drimp0 - Z_eff * alpha_e / ne_JOREK
   else
      if (Z_eff < 1.) Z_eff = 1.
      if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
-     dZ_eff_dT      = 0.d0 
-     dZ_eff_dr0     = 0.d0 
-     dZ_eff_drimp0  = 0.d0 
+     dZ_eff_dT     = 0.d0 
+     dZ_eff_dr0    = 0.d0 
+     dZ_eff_drimp0 = 0.d0 
   end if
   
 end subroutine construct_imp_charge_states

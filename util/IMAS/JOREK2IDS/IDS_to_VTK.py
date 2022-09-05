@@ -145,16 +145,17 @@ def visualise():
                 radiation = False
                 pass
 
-            nam_all = {"psi": 'psi',
-                       "u": 'phi_potential',
-                       "j0": 'j_tor',
-                       "j": 'j_tor_r',
-                       "w": 'vorticity_over_r',
-                       "w0": 'vorticity',
-                       "rho": 'mass_density',
-                       "T": 'electrons.temperature',
-                       "v_par": 'velocity_parallel_over_b_field',
-                       "v_par0": 'velocity_parallel'}
+            nam_all = {"Psi [Wb]": 'psi',
+                       "Phi_potential [V]": 'phi_potential',
+                       "J_tor [A/m^2]": 'j_tor',
+                       "J_tor R [A/m]": 'j_tor_r',
+                       "vorticity_tor/R [m^-1 s^-1]": 'vorticity_over_r',
+                       "vorticity_tor [s^-1]": 'vorticity',
+                       "Mass_density [kg/m^3]": 'mass_density',
+                       "T_e [eV]": 'electrons.temperature',
+                       "T_i [eV]": 't_i_average',
+                       "Vel_parallel/B [m s^-1 T^-1]": 'velocity_parallel_over_b_field',
+                       "Vel_parallel [m/s]": 'velocity_parallel'}
 
             val_tor1 = np.array([])
             nam = list()
@@ -170,7 +171,7 @@ def visualise():
                         val_tor1 = np.concatenate((val_tor1,
                                                    np.array([data_r.ion[0].emissivity[0].coefficients])),
                                                    axis=0)
-                    nam.append("Radiation (W/m^3)")
+                    nam.append("Radiation [W/m^3]")
                 except:
                     print('No radiation values')
 

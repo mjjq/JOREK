@@ -366,7 +366,7 @@ delta_s = delta_s * tstep / tstep_prev
 delta_t = delta_t * tstep / tstep_prev
 
 ! approximate estimate of the element length h_e
-! needed for Shock capturing stabilzation
+! needed for shock capturing stabilization
 midp_edge1(:) =  0.5d0 * ( nodes(1)%x(1,1,:) + nodes(2)%x(1,1,:) )
 midp_edge2(:) =  0.5d0 * ( nodes(2)%x(1,1,:) + nodes(3)%x(1,1,:) )
 midp_edge3(:) =  0.5d0 * ( nodes(3)%x(1,1,:) + nodes(4)%x(1,1,:) )
@@ -571,7 +571,7 @@ do i=1,n_vertex_max
             T0_tt = eq_tt(mp,var_T,ms,mt)
             T0_st = eq_st(mp,var_T,ms,mt)
            
-            T0_corr     = corr_neg_temp(T0) ! For use in eta(T), visco(T), ...
+            T0_corr     = corr_neg_temp(T0)     ! For use in eta(T), visco(T), ...
             dT0_corr_dT = dcorr_neg_temp_dT(T0) ! Improve the correction
 
             Ti0    = T0    / 2.d0
@@ -584,7 +584,7 @@ do i=1,n_vertex_max
             Ti0_tt = T0_tt / 2.d0
             Ti0_st = T0_st / 2.d0
 
-            Ti0_corr     = T0_corr / 2.d0 ! For use in eta(T), visco(T), ...
+            Ti0_corr     = T0_corr / 2.d0     ! For use in eta(T), visco(T), ...
             dTi0_corr_dT = dT0_corr_dT / 2.d0 ! Improve the correction
            
             Te0    = Ti0
@@ -597,7 +597,7 @@ do i=1,n_vertex_max
             Te0_tt = Ti0_tt
             Te0_st = Ti0_st
 
-            Te0_corr     = T0_corr / 2.d0 ! For use in eta(T), visco(T), ...
+            Te0_corr     = T0_corr / 2.d0     ! For use in eta(T), visco(T), ...
             dTe0_corr_dT = dT0_corr_dT / 2.d0 ! Improve the correction
 
             zTi   =   eq_zT(ms,mt)         / 2.d0
@@ -642,7 +642,7 @@ do i=1,n_vertex_max
             rn0_ss   = eq_ss(mp,var_rhon,ms,mt)                                                            
             rn0_st   = eq_st(mp,var_rhon,ms,mt)                                                            
             rn0_tt   = eq_tt(mp,var_rhon,ms,mt)  
-            rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0 ...
+            rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) 
           else
             rn0      = 0.d0
             rn0_x    = 0.d0  
@@ -657,17 +657,17 @@ do i=1,n_vertex_max
           endif
      
           rn0_xx = (rn0_ss * y_t(ms,mt)**2 - 2.d0*rn0_st * y_s(ms,mt)*y_t(ms,mt) + rn0_tt * y_s(ms,mt)**2     &
-            + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                              &
-            + rn0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2               &
+            + rn0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                      &
+            + rn0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2                       &
             - xjac_x * (rn0_s* y_t(ms,mt) - rn0_t * y_s(ms,mt))  / xjac**2
 
           rn0_yy = (rn0_ss * x_t(ms,mt)**2 - 2.d0*rn0_st * x_s(ms,mt)*x_t(ms,mt) + rn0_tt * x_s(ms,mt)**2     &
-            + rn0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                              &
-            + rn0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )       / xjac**2            &
+            + rn0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                                      &
+            + rn0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2                       &
             - xjac_y * (- rn0_s * x_t(ms,mt) + rn0_t * x_s(ms,mt) )  / xjac**2
 
           rn0_hat   = BigR**2 * rn0                                                        
-          rn0_x_hat = 2.d0 * BigR * BigR_x  * rn0 + BigR**2 * rn0_x                             
+          rn0_x_hat = 2.d0 * BigR * BigR_x * rn0 + BigR**2 * rn0_x                             
           rn0_y_hat = BigR**2 * rn0_y                                                            
 
           if (with_impurities) then
@@ -682,7 +682,7 @@ do i=1,n_vertex_max
             rimp0_ss   = eq_ss(mp,var_rhoimp,ms,mt)                                                            
             rimp0_st   = eq_st(mp,var_rhoimp,ms,mt)                                                            
             rimp0_tt   = eq_tt(mp,var_rhoimp,ms,mt)  
-            rimp0_corr = corr_neg_dens(rimp0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rimp0 ...
+            rimp0_corr = corr_neg_dens(rimp0, (/ 0.d-5, 1.d-5 /)) 
             drimp0_corr_dn = dcorr_neg_dens_drho(rimp0, (/ 0.d-5, 1.d-5 /))
           else
             rimp0      = 0.d0
@@ -698,20 +698,20 @@ do i=1,n_vertex_max
             drimp0_corr_dn = 0.d0 
           endif
 
-          rimp0_xx = (rimp0_ss * y_t(ms,mt)**2 - 2.d0*rimp0_st * y_s(ms,mt)*y_t(ms,mt) + rimp0_tt * y_s(ms,mt)**2&
-                    + rimp0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                               &
-                    + rimp0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    /    xjac**2             &
+          rimp0_xx = (rimp0_ss * y_t(ms,mt)**2 - 2.d0*rimp0_st * y_s(ms,mt)*y_t(ms,mt) + rimp0_tt * y_s(ms,mt)**2 &
+                    + rimp0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                                &
+                    + rimp0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    /    xjac**2              &
                     - xjac_x * (rimp0_s* y_t(ms,mt) - rimp0_t * y_s(ms,mt))  / xjac**2
      
-          rimp0_yy = (rimp0_ss * x_t(ms,mt)**2 - 2.d0*rimp0_st * x_s(ms,mt)*x_t(ms,mt) + rimp0_tt * x_s(ms,mt)**2&
-                    + rimp0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                               &
-                    + rimp0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    /    xjac**2             &
+          rimp0_yy = (rimp0_ss * x_t(ms,mt)**2 - 2.d0*rimp0_st * x_s(ms,mt)*x_t(ms,mt) + rimp0_tt * x_s(ms,mt)**2 &
+                    + rimp0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                                &
+                    + rimp0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    /    xjac**2              &
                     - xjac_y * (- rimp0_s * x_t(ms,mt) + rimp0_t * x_s(ms,mt) )  / xjac**2
      
-          rimp0_xy = (- rimp0_ss * y_t(ms,mt)*x_t(ms,mt) - rimp0_tt * x_s(ms,mt)*y_s(ms,mt) &
-                      + rimp0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  ) &
-                      - rimp0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) ) &
-                      - rimp0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2              &
+          rimp0_xy = (- rimp0_ss * y_t(ms,mt)*x_t(ms,mt) - rimp0_tt * x_s(ms,mt)*y_s(ms,mt)                       &
+                      + rimp0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                             &
+                      - rimp0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                             &
+                      - rimp0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) ) )  / xjac**2                &
                       - xjac_x * (- rimp0_s * x_t(ms,mt) + rimp0_t * x_s(ms,mt) )   / xjac**2
      
           rimp0_hat   = BigR**2 * rimp0                                                        
@@ -783,35 +783,35 @@ do i=1,n_vertex_max
                 - xjac_x * (- T0_s * x_t(ms,mt) + T0_t * x_s(ms,mt) )   / xjac**2
 
           Ti0_xx = (Ti0_ss * y_t(ms,mt)**2 - 2.d0*Ti0_st * y_s(ms,mt)*y_t(ms,mt) + Ti0_tt * y_s(ms,mt)**2  &
-                + Ti0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
-                + Ti0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2             &     
+                + Ti0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                               &
+                + Ti0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2                &     
                 - xjac_x * (Ti0_s * y_t(ms,mt) - Ti0_t * y_s(ms,mt))  / xjac**2
 
           Ti0_yy = (Ti0_ss * x_t(ms,mt)**2 - 2.d0*Ti0_st * x_s(ms,mt)*x_t(ms,mt) + Ti0_tt * x_s(ms,mt)**2  &
-                + Ti0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                            &
-                + Ti0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2             &
+                + Ti0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                               &
+                + Ti0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2                &
                 - xjac_y * (- Ti0_s * x_t(ms,mt) + Ti0_t * x_s(ms,mt) )  / xjac**2
 
           Ti0_xy = (- Ti0_ss * y_t(ms,mt)*x_t(ms,mt) - Ti0_tt * x_s(ms,mt)*y_s(ms,mt)                     &
-                   + Ti0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                        &
-                   - Ti0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                        &
-                   - Ti0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2          &
+                   + Ti0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                          &
+                   - Ti0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                          &
+                   - Ti0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2            &
                 - xjac_x * (- Ti0_s * x_t(ms,mt) + Ti0_t * x_s(ms,mt) )   / xjac**2
 
           Te0_xx = (Te0_ss * y_t(ms,mt)**2 - 2.d0*Te0_st * y_s(ms,mt)*y_t(ms,mt) + Te0_tt * y_s(ms,mt)**2  &
-                + Te0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                            &
-                + Te0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2             &     
+                + Te0_s * (y_st(ms,mt)*y_t(ms,mt) - y_tt(ms,mt)*y_s(ms,mt) )                               &
+                + Te0_t * (y_st(ms,mt)*y_s(ms,mt) - y_ss(ms,mt)*y_t(ms,mt) ) )    / xjac**2                &     
                 - xjac_x * (Te0_s * y_t(ms,mt) - Te0_t * y_s(ms,mt))  / xjac**2
 
           Te0_yy = (Te0_ss * x_t(ms,mt)**2 - 2.d0*Te0_st * x_s(ms,mt)*x_t(ms,mt) + Te0_tt * x_s(ms,mt)**2  &
-                + Te0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                            &
-                + Te0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2             &
+                + Te0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                               &
+                + Te0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) ) )    / xjac**2                &
                 - xjac_y * (- Te0_s * x_t(ms,mt) + Te0_t * x_s(ms,mt) )  / xjac**2
 
           Te0_xy = (- Te0_ss * y_t(ms,mt)*x_t(ms,mt) - Te0_tt * x_s(ms,mt)*y_s(ms,mt)                     &
-                   + Te0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                        &
-                   - Te0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                        &
-                   - Te0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2          &
+                   + Te0_st * (y_s(ms,mt)*x_t(ms,mt)  + y_t(ms,mt)*x_s(ms,mt)  )                          &
+                   - Te0_s  * (x_st(ms,mt)*y_t(ms,mt) - x_tt(ms,mt)*y_s(ms,mt) )                          &
+                   - Te0_t * (x_st(ms,mt)*y_s(ms,mt)  - x_ss(ms,mt)*y_t(ms,mt) )  )  / xjac**2            &
                 - xjac_x * (- Te0_s * x_t(ms,mt) + Te0_t * x_s(ms,mt) )   / xjac**2
 
           vpar0_xx = (vpar0_ss * y_t(ms,mt)**2 - 2.d0*vpar0_st * y_s(ms,mt)*y_t(ms,mt) + vpar0_tt * y_s(ms,mt)**2 &
@@ -863,7 +863,8 @@ do i=1,n_vertex_max
 
             ! --- Temperature dependent parallel heat diffusivity
             if ( ZKpar_T_dependent ) then
-              ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+
+              ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)        
               dZKi_par_dT = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0) * dTi0_corr_dT
               if (ZKi_par_T .gt. ZK_par_max) then
                 ZKi_par_T   = Zk_par_max
@@ -874,7 +875,7 @@ do i=1,n_vertex_max
                 dZKi_par_dT = 0.d0
               endif
               
-              ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+              ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)            
               dZKe_par_dT = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0) * dTe0_corr_dT
               if (ZKe_par_T .gt. ZK_par_max) then
                 ZKe_par_T   = Zk_par_max
@@ -884,13 +885,15 @@ do i=1,n_vertex_max
                 ZKe_par_T   = ZK_e_par * (max(Te0,Te_min_ZKpar)/Te_0)**(+2.5d0)
                 dZKe_par_dT = 0.d0
               endif
+
             else
               ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
               dZKi_par_dT = 0.d0
               ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
               dZKe_par_dT = 0.d0
             endif
-            ! --- Impurity atomic parameters
+	    
+            ! --- Impurity-related variables
             alpha_i         = 0.d0
             dalpha_i_dT     = 0.d0
             d2alpha_i_dT2   = 0.d0
@@ -901,8 +904,8 @@ do i=1,n_vertex_max
             alpha_e_bis     = 0.d0
             alpha_e_tri     = 0.d0
 
-            Z_imp = 0.
-            dZ_imp_dT = 0.
+            Z_imp       = 0.
+            dZ_imp_dT   = 0.
             d2Z_imp_dT2 = 0.
 
             E_ion     = 0.
@@ -913,7 +916,6 @@ do i=1,n_vertex_max
                           
             ! --- Ion-electron energy transfer
             if (thermalization) then
-              ! Te in eV:
               call construct_thermalization_terms()
             else
               dTe_i = 0.
@@ -929,6 +931,7 @@ do i=1,n_vertex_max
             endif
 
             call construct_pressure()
+	    
             ! ---Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = Te0
             T_or_Te_corr     = Te0_corr
@@ -939,7 +942,7 @@ do i=1,n_vertex_max
 
             ! --- Temperature dependent parallel heat diffusivity
             if ( ZKpar_T_dependent ) then
-              ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
+              ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)   
               dZK_par_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0) * dT0_corr_dT
               if (ZK_par_T .gt. ZK_par_max) then
                 ZK_par_T   = Zk_par_max
@@ -950,10 +953,11 @@ do i=1,n_vertex_max
                 dZK_par_dT = 0.d0
               endif
             else
-              ZK_par_T   = ZK_par                                            ! parallel conductivity
+              ZK_par_T   = ZK_par                      
               dZK_par_dT = 0.d0
             endif
 
+            ! --- Impurity-related variables
             alpha_i         = 0.d0
             dalpha_i_dT     = 0.d0
             d2alpha_i_dT2   = 0.d0
@@ -1034,7 +1038,7 @@ do i=1,n_vertex_max
           end if
 
           if (with_impurities) then
-            ! This is to represent the dependence on Z_eff in resistivity
+            ! Z_eff-related factor in resistivity
             eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
             eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
   
@@ -1056,7 +1060,7 @@ do i=1,n_vertex_max
             end if
           endif
 
-          ! --- Temperature dependent viscosity
+          ! --- Viscosity
           if ( visco_T_dependent ) then
             visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
             dvisco_dT   = - visco * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
@@ -1089,9 +1093,8 @@ do i=1,n_vertex_max
             eta_num_T     = eta_num
             deta_num_dT   = 0.d0
           end if
-
           
-          ! --- Temperature dependent hyper-viscosity
+          ! --- Hyper-viscosity
           if ( visco_num_T_dependent ) then
             visco_num_T     =   visco_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
             dvisco_num_dT   = - visco_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
@@ -1138,14 +1141,14 @@ do i=1,n_vertex_max
             Jb = 0.d0
           endif
 
-
+          ! --- Particle diffusivities
           D_prof   = get_dperp (psi_norm)
           D_perp_num_psin = D_perp_num +                                                  &
                             D_perp_num_tanh * 0.5d0*(1.d0-                                &
                             tanh((psi_norm-D_perp_num_tanh_psin)/D_perp_num_tanh_sig))
           if (with_impurities) then
             if (num_d_perp_imp) then
-              D_prof_imp = get_dperp(psi_norm,num_d_prof_x=num_d_perp_x_imp,&
+              D_prof_imp = get_dperp(psi_norm,num_d_prof_x=num_d_perp_x_imp,                          &
                                      num_d_prof_y=num_d_perp_y_imp,num_d_prof_len=num_d_perp_len_imp)
             else
               D_prof_imp = get_dperp(psi_norm,D_perp_sp=D_perp_imp)
@@ -1153,24 +1156,7 @@ do i=1,n_vertex_max
           else
             D_prof_imp = 0.
           endif
-
-          if ( with_TiTe ) then
-            ZKi_prof = get_zk_iperp(psi_norm)
-            ZKe_prof = get_zk_eperp(psi_norm)
-            ZK_i_perp_num_psin = ZK_i_perp_num +                                                  &
-                                 ZK_i_perp_num_tanh * 0.5d0*(1.d0-                                &
-                                 tanh((psi_norm-ZK_i_perp_num_tanh_psin)/ZK_i_perp_num_tanh_sig))
-            ZK_e_perp_num_psin = ZK_e_perp_num +                                                  &
-                                 ZK_e_perp_num_tanh * 0.5d0*(1.d0-                                &
-                                 tanh((psi_norm-ZK_e_perp_num_tanh_psin)/ZK_e_perp_num_tanh_sig))
-          else
-            ZK_prof = get_zkperp(psi_norm)
-            ZK_perp_num_psin = ZK_perp_num +                                                  &
-                               ZK_perp_num_tanh * 0.5d0*(1.d0-                                &
-                               tanh((psi_norm-ZK_perp_num_tanh_psin)/ZK_perp_num_tanh_sig))
-          end if
-
-          ! --- Increase diffusivity if very small density/temperature
+          ! --- Increase diffusivity if very small density
           if ((r0-rimp0) .lt. D_prof_neg_thresh) then
             D_prof  = D_prof_neg
             D_par   = D_prof_neg
@@ -1186,7 +1172,28 @@ do i=1,n_vertex_max
             D_par_imp   = D_prof_neg
           endif
 
-          if ( with_TiTe ) then ! (with_TiTe) ****************************************************
+          Dn0x = D_neutral_x      
+          Dn0y = D_neutral_y      
+          Dn0p = D_neutral_p    
+
+          ! --- Perpendicular heat diffusivities
+          if ( with_TiTe ) then
+            ZKi_prof = get_zk_iperp(psi_norm)
+            ZKe_prof = get_zk_eperp(psi_norm)
+            ZK_i_perp_num_psin = ZK_i_perp_num +                                                  &
+                                 ZK_i_perp_num_tanh * 0.5d0*(1.d0-                                &
+                                 tanh((psi_norm-ZK_i_perp_num_tanh_psin)/ZK_i_perp_num_tanh_sig))
+            ZK_e_perp_num_psin = ZK_e_perp_num +                                                  &
+                                 ZK_e_perp_num_tanh * 0.5d0*(1.d0-                                &
+                                 tanh((psi_norm-ZK_e_perp_num_tanh_psin)/ZK_e_perp_num_tanh_sig))
+          else
+            ZK_prof = get_zkperp(psi_norm)
+            ZK_perp_num_psin = ZK_perp_num +                                                  &
+                               ZK_perp_num_tanh * 0.5d0*(1.d0-                                &
+                               tanh((psi_norm-ZK_perp_num_tanh_psin)/ZK_perp_num_tanh_sig))
+          end if
+          ! --- Increase diffusivity if very small temperature
+          if ( with_TiTe ) then
             if (Ti0 .lt. ZK_i_prof_neg_thresh) then
               ZKi_prof = ZK_i_prof_neg
             end if
@@ -1199,27 +1206,23 @@ do i=1,n_vertex_max
             if (Te0 .lt. ZK_e_par_neg_thresh) then
               ZKe_par_T = ZK_e_par_neg
             endif
-          else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
+          else ! (with_TiTe = .f.), i.e. with single temperature
             if (T0 .lt. ZK_prof_neg_thresh) then
               ZK_prof = ZK_prof_neg
             end if
             if (T0 .lt. ZK_par_neg_thresh) then
               ZK_par_T = ZK_par_neg
             endif
-          endif ! (with_TiTe) ********************************************************************
+          endif ! (with_TiTe)
 
+          ! --- Particle source from pellet
           phi       = 2.d0*PI*float(mp-1)/float(n_plane) / float(n_period)
           delta_phi = 2.d0*PI/float(n_plane) / float(n_period)
 
           source_pellet = 0.d0
           source_volume = 0.d0
 
-          Dn0x = D_neutral_x      
-          Dn0y = D_neutral_y      
-          Dn0p = D_neutral_p    
-
           if (use_pellet) then
-
             call pellet_source2(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi, &
                                 pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta, &
                                 x_g(ms,mt),y_g(ms,mt), ps0, phi, r0_corr, Te0_corr, &
@@ -1227,6 +1230,7 @@ do i=1,n_vertex_max
                                 source_pellet, source_volume)
           endif
 
+          ! --- Parallel momentum source
           Vt0   = V_source(ms,mt)
           if (normalized_velocity_profile) then
             Vt0_x = dV_dpsi_source(ms,mt)*ps0_x

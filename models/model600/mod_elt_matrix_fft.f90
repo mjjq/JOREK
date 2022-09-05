@@ -4580,7 +4580,7 @@ endif !--- get terms
 
 return
 
-
+! ---------------------------------------------------------------------------------------------------------------
 CONTAINS
 
 ! subroutine that calculates shock-capturing stabilization related terms
@@ -4740,7 +4740,8 @@ Dn0p = Dn0p + Dn_p_sc_num   * tau_sc
 end subroutine calculate_sc_quantities
 
 
-! This is to construct the impurity charge state related quantities
+! Subroutine which constructs impurity charge state related quantities
+! such as Z_eff
 subroutine construct_imp_charge_states()
 
   implicit none
@@ -4772,8 +4773,8 @@ subroutine construct_imp_charge_states()
     Te_eV          = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
   endif
 
-  ! We estimate the effective charge assuming a density of 10^20/m^3.
-  ! Later maybe we should implement a iterative method.
+  ! We estimate coefficients assuming a density of 10^20/m^3.
+  ! Later maybe we should implement an iterative method.
 
   if (allocated(imp_adas(1)%ionisation_energy)) then
 
@@ -4783,9 +4784,6 @@ subroutine construct_imp_charge_states()
      allocate(P_imp(0:imp_adas(1)%n_Z))
      allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-     !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-     !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
-     !                              z_TeTe_out=d2Z_imp_dT2)
      call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ), &
           p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,                     &
           z_avg_TeTe=d2Z_imp_dT2)
@@ -4801,12 +4799,12 @@ subroutine construct_imp_charge_states()
            dE_ion_dT = dE_ion_dT + dP_imp_dT(ion_i)*imp_adas(1)%ionisation_energy(ion_k)
         end do
      end do
+
      ! Convert from eV to JOREK unit
      E_ion     = E_ion * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
      dE_ion_dT = dE_ion_dT * EL_CHG*MU_ZERO*central_density*1.d20*m_i_over_m_imp
+     dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert gradient from /K to /JOREK unit     
      E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
-     ! Convert the gradient in K to gradient in JOREK unit
-     dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
   else
 
@@ -4816,8 +4814,6 @@ subroutine construct_imp_charge_states()
      allocate(P_imp(0:imp_adas(1)%n_Z))
      allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
-     !       call imp_cor(1)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
-     !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
      call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ), &
           p_out=P_imp,p_Te_out=dP_imp_dT,                                                    &
           z_avg=Z_imp,z_avg_Te=dZ_imp_dT,z_avg_TeTe=d2Z_imp_dT2)
@@ -4827,7 +4823,7 @@ subroutine construct_imp_charge_states()
      E_ion_bg  = 0.
   end if
 
-  dZ_imp_dT = dZ_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
+  dZ_imp_dT = dZ_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert gradient from /K to /JOREK unit
 
   if (Te_corr_eV < 0.1) then
      Z_imp       = 0.
@@ -4863,8 +4859,6 @@ subroutine construct_imp_charge_states()
   alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
   alpha_imp_tri   = 2. * dalpha_imp_dT + d2alpha_imp_dT2 * T0
 
-  ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! Electron density in SI unit
-  if (ne_SI < 1.d16) ne_SI = 1.d16  
   ne_JOREK    = r0_corr + alpha_e * rimp0_corr                             ! Electron density in JOREK unit
   ne_JOREK    = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3)           
      
@@ -4884,7 +4878,7 @@ subroutine construct_imp_charge_states()
      dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2
   end do
   Z_eff = Z_eff / ne_JOREK
-  dZ_eff_imp_dT = dZ_eff_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert the gradient to K to the gradient to JOREK unit
+  dZ_eff_imp_dT = dZ_eff_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert gradient from /K to /JOREK unit
 
   ! Z_eff gradients wrt. T, r0 and rimp0
   if ( (Z_eff >= 1.d0) .and. (Z_eff <= imp_adas(1)%n_Z) ) then
@@ -4892,10 +4886,10 @@ subroutine construct_imp_charge_states()
         dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rimp0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
      end do
      dZ_eff_dT = dZ_eff_dT / ne_JOREK
-     dZ_eff_dT = dZ_eff_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert the gradient to K to the gradient to JOREK unit
+     dZ_eff_dT = dZ_eff_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert gradient from /K to /JOREK unit
      dZ_eff_dT = dZ_eff_dT - Z_eff * dalpha_e_dT * rimp0_corr / ne_JOREK
 
-     dZ_eff_dr0 = (1. - Z_eff)/ne_JOREK
+     dZ_eff_dr0 = (1.-Z_eff)/ne_JOREK
 
      dZ_eff_drimp0 = dZ_eff_drimp0 - 1.
      do ion_i=1, imp_adas(1)%n_Z
@@ -4913,12 +4907,14 @@ subroutine construct_imp_charge_states()
   
 end subroutine construct_imp_charge_states
 
+
+! Subroutine which constructs interspecies (e.g. electron-ion) thermalization terms
 subroutine construct_thermalization_terms()
   
   implicit none
 
-  ne_SI       = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
-  if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd number in the coulomb lambda
+  ne_SI = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density
+  if (ne_SI < 1.d16) ne_SI = 1.d16 ! To prevent absurd numbers in the Coulomb log.
 
   if (with_impurities) then
     if (Te_corr_eV < 10.*Z_imp**2) then

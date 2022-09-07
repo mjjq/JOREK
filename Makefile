@@ -49,7 +49,6 @@ doc docs:
 # Directories containing sources, ordered by number of files
 DIRS := diagnostics			\
 	models				\
-	communication/IMAS		\
 	communication			\
 	communication/IMAS              \
 	grids/grid_utils		\
@@ -131,6 +130,7 @@ most: jorek2_connection2 \
       jorek2_diagno_spi \
       jorek2_fieldlines_vtk \
       jorek2_four \
+      jorek2_IDS \
       jorek2_poincare \
       jorek2_powers \
       jorek2_target2vtk \

@@ -238,6 +238,7 @@ module mod_jorek2IMAS
     allocate(  radiation_ids%time(n_slice) )
 
     radiation_ids%ids_properties%homogeneous_time = 1
+    allocate( radiation_ids%process(1))   ! --- 1 type of radiation
     allocate( radiation_ids%process(1)%ggd(n_slice) )
   
     radiation_ids%time(i_slice)                = t_start * fact_time 
@@ -248,7 +249,6 @@ module mod_jorek2IMAS
     ! --- Fill radiation data 
     var_rad = 2
   
-    allocate( radiation_ids%process(1))   ! --- 1 type of radiation
     allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1))
     allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1)%emissivity(n_grid_sub))
     allocate( radiation_ids%process(1)%ggd(i_slice)%ion(1)%label(1) )  

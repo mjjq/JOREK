@@ -8,6 +8,7 @@ import vtk
 from vtk.util import numpy_support as npvtk
 from imas import imasdef
 import imas
+import operator
 
 import sys
 
@@ -145,17 +146,17 @@ def visualise():
                 radiation = False
                 pass
 
-            nam_all = {"Psi [Wb]": 'psi',
-                       "Phi_potential [V]": 'phi_potential',
-                       "J_tor [A/m^2]": 'j_tor',
-                       "J_tor R [A/m]": 'j_tor_r',
-                       "vorticity_tor/R [m^-1 s^-1]": 'vorticity_over_r',
-                       "vorticity_tor [s^-1]": 'vorticity',
-                       "Mass_density [kg/m^3]": 'mass_density',
-                       "T_e [eV]": 'electrons.temperature',
-                       "T_i [eV]": 't_i_average',
-                       "Vel_parallel/B [m s^-1 T^-1]": 'velocity_parallel_over_b_field',
-                       "Vel_parallel [m/s]": 'velocity_parallel'}
+            nam_all = {"Psi [$Wb$]": 'psi',
+                       "Phi_potential [$V$]": 'phi_potential',
+                       "J_tor [$A/m^2$]": 'j_tor',
+                       "J_tor R [$A/m$]": 'j_tor_r',
+                       "vorticity_tor/R [$m^{-1} s^{-1}$]": 'vorticity_over_r',
+                       "vorticity_tor [s^{-1}]": 'vorticity',
+                       "Mass_density [$kg/m^3$]": 'mass_density',
+                       "T_e [$eV$]": 'electrons.temperature',
+                       "T_i [$eV$]": 't_i_average',
+                       "Vel_parallel/B [$m s^{-1} T^{-1}$]": 'velocity_parallel_over_b_field',
+                       "Vel_parallel [$m/s$]": 'velocity_parallel'}
 
             val_tor1 = np.array([])
             nam = list()
@@ -460,7 +461,7 @@ def value_in_IDS(ids_data, valuepaths:dict, name:str, valu:np.ndarray, names:lis
     Check if IDS contains chosen value and add it to array of all values
     """
     try:
-        new_val = getattr(ids_data, valuepaths[name]).array[0].coefficients
+        new_val = operator.attrgetter(valuepaths[name])(ids_data).array[0].coefficients
         if not(names):
             names = list()
             names.append(name)

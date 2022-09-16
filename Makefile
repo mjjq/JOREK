@@ -50,13 +50,14 @@ doc docs:
 DIRS := diagnostics			       \
 	models				       \
 	communication			       \
+	communication/IMAS                     \
 	grids/grid_utils		       \
 	solvers				       \
 	models/$(MODEL)			       \
 	refinement			       \
 	matrix				       \
 	particles 			       \
-	particles/pushers 	               \
+	particles/pushers 		       \
 	particles/examples 		       \
 	particles/diagnostics 		       \
 	particles/tests 		       \
@@ -71,12 +72,12 @@ DIRS := diagnostics			       \
         particles/postprocessors/tests/drivers \
 	particles/projection_functions         \
 	particles/benchmarks/pusher_cartesian  \
-	particles/benchmarks/pusher            \
+	particles/benchmarks/pusher	       \
 	particles/benchmarks/projection        \
 	elements			       \
 	grids				       \
 	plots				       \
-	diagnostics/new_diag	               \
+	diagnostics/new_diag		       \
 	diagnostics/postproc		       \
 	tools				       \
 	tools/rng                              \
@@ -84,11 +85,11 @@ DIRS := diagnostics			       \
         tools/tests                            \
         tools/tests/drivers                    \
 	non_regression_tests/unit_tests        \
-	datatypes			       \
+	datatypes		     	       \
 	benchmarks                             \
 	core                                   \
 	.				       \
-        vacuum
+	vacuum
 
 DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline
 
@@ -141,6 +142,7 @@ most: jorek2_connection2 \
       jorek2_diagno_spi \
       jorek2_fieldlines_vtk \
       jorek2_four \
+      jorek2_IDS \
       jorek2_poincare \
       jorek2_powers \
       jorek2_target2vtk \

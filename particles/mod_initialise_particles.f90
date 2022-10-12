@@ -349,8 +349,8 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
     if(Ekinbound_in(1).gt.0) phase_bounds(4,1) = Ekinbound_in(1)
     if(Ekinbound_in(2).gt.0) phase_bounds(4,2) = Ekinbound_in(2)
   endif
-  Erest = mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT/EL_CHG !< rest energy in eV
-  phase_bounds(4,:) = (mass/ATOMIC_MASS_UNIT)*SPEED_OF_LIGHT*sqrt(((phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
+  Erest = mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*SPEED_OF_LIGHT/EL_CHG !< rest energy in eV
+  phase_bounds(4,:) = mass*SPEED_OF_LIGHT*sqrt(((phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
   !> pitch angle and gyrangle boxes
   phase_bounds(5,:) = [0.d0,PI]
   if(present(Pitchbound_in)) phase_bounds(5,:) = Pitchbound_in

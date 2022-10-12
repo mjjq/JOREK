@@ -14,6 +14,7 @@ module mod_initialise_particles
   public set_particle_weights_canonical_maxwellian, normalize_with_projection
   public weigh_with_interp_f
   public normalize_with_projection_at_gc
+  public initialise_particles_in_phase_space
 
   interface
     subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
@@ -283,7 +284,7 @@ end subroutine initialise_particles
 !> It is a dirty implementation so it must be replaced with something better in future.
 !> Inputs:
 !> Outputs:
-subroutine initialise_particle_in_phase_space(particles, fields, rng_base, reject_sample,&
+subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reject_sample,&
   mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, Phibound_in,&
   chargebound_in)
   use constants,           only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
@@ -417,7 +418,7 @@ subroutine initialise_particle_in_phase_space(particles, fields, rng_base, rejec
     write(*,*) '**********************************'
   endif
 
-end subroutine initialise_particle_in_phase_space
+end subroutine initialise_particles_in_phase_space
 
 !> Initialise particle positions in E, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
 !> Set Psi_transform to transform from [0,1] to your desired range

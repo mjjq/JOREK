@@ -31,6 +31,16 @@ module mod_initialise_particles
       real*8, dimension(3,n), intent(in) :: gradP
       real*4 :: rej_f
     end function rej_f
+    function accept_f(n_x,x,st,i_elm,fields)
+      use mod_fields, only: fields_base
+      !> inputs:
+      integer,intent(in)                   :: n_x,i_elm
+      real*8,dimension(n_x),intent(in)     :: x
+      real*8,dimension(2),intent(in)       :: st
+      class(fields_base),intent(in)        :: fields
+      !> outputs:
+      logical                              :: accept_f
+    end function accept_f
   end interface
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
@@ -266,6 +276,147 @@ subroutine initialise_particles(particles, node_list, element_list, rng, variabl
     write(*,*) '**********************************'
   endif
 end subroutine initialise_particles
+
+!> Initialise particle in phase space given a generic distribution in space and momentum
+!> space. The acceptance-rejection method is used for generating the particle population.
+!> It is a dirty implementation so it must be replaced with something better in future.
+!> Inputs:
+!> Outputs:
+subroutine initialise_particle_in_phase_space(particles, fields, rng_base, accept_sample,&
+  mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, Phibound_in,&
+  chargebound_in)
+  use constants,           only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
+  use mod_fields,          only: fields_base
+  use mod_random_seed,     only: random_seed
+  use mod_particle_types,  only: particle_base,particle_gc_relativistic
+  use mod_gc_relativistic, only: relativistic_gc_to_particle 
+  use mod_rng
+!$ use omp_lib
+  
+  !> parameters
+  integer,parameter :: rnd_dim=7
+  integer,parameter :: chunksize=64
+
+  !> inputs-outputs
+  class(particle_base), dimension(:), intent(inout) :: particles
+  !> inputs
+  class(fields_base),    intent(in)                 :: fields
+  class(type_rng),       intent(in)                 :: rng_base !< What type of random number generator to use (will be reseeded here)
+  procedure(accept_f)                               :: accept_sample !< if true, the random sample is accepted
+  real*8,intent(in)                                 :: mass,time
+  real*8,dimension(2),intent(in),optional           :: Ekinbound_in, Pitchbound_in, Chibound_in
+  real*8,dimension(2),intent(in),optional           :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
+
+  !> internal variables
+  type(particle_gc_relativistic)           :: gc_tmp !< temparary guiding center particle
+  class(type_rng),dimension(:),allocatable :: rngs 
+  integer                                  :: my_id,n_cpu,n_threads,thread_id,ifail
+  integer                                  :: ii,jj,n_particles,i_elm
+  real*8                                   :: t0,t1,Erest,psi,U  
+  real*8,dimension(2)                      :: st
+  real*8,dimension(3)                      :: B,E
+  !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
+  real*8,dimension(7,2)                    :: phase_bounds 
+  real*8,dimension(:),allocatable          :: variables
+
+  !> extract id and size of the MPI Communicator
+  call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
+
+  ! Setup bounding boxes
+  phase_bounds(3,:) = [0.d0, TWOPI]
+  if(present(Phibound_in)) phase_bounds(3,:) = Phibound_in
+  call domain_bounding_box(fields%node_list,fields%element_list,phase_bounds(1,1),phase_bounds(1,2),phase_bounds(2,1),phase_bounds(2,2))
+  !> check for more restrictive R bounding boxes
+  if(present(Rbound_in)) then
+    if(Rbound_in(1).gt.phase_bounds(1,1)) phase_bounds(1,1) = Rbound_in(1)
+    if((Rbound_in(2).lt.phase_bounds(1,2)).and.(Rbound_in(2).gt.phase_bounds(1,1))) phase_bounds(1,2) = Rbound_in(2)
+  endif
+  !> check for more restrictive Z bounding boxes
+  if(present(Zbound_in)) then
+    if((phase_bounds(2,1).lt.0.d0).and.(Zbound_in(1).gt.phase_bounds(2,1))) phase_bounds(2,1) = Zbound_in(1)
+    if((phase_bounds(2,1).ge.0.d0).and.(Zbound_in(1).lt.phase_bounds(2,1))) phase_bounds(2,1) = Zbound_in(1)
+    if((phase_bounds(2,2).lt.0.d0).and.(Zbound_in(2).gt.phase_bounds(2,2)).and.&
+      ((Zbound_in(2)-phase_bounds(2,1)).gt.0.d0)) phase_bounds(2,2) = Zbound_in(2)
+    if((phase_bounds(2,2).ge.0.d0).and.(Zbound_in(2).lt.phase_bounds(2,2)).and.&
+      ((Zbound_in(2)-phase_bounds(2,1)).gt.0.d0)) phase_bounds(2,2) = Zbound_in(2)
+  endif
+  !> Store momentum bounding box
+  phase_bounds(4,:) = [1.d3, 1.d6] !< kinetic energy in eV
+  if(present(Ekinbound_in)) then
+    if(Ekinbound_in(1).gt.0) phase_bounds(4,1) = Ekinbound_in(1)
+    if(Ekinbound_in(2).gt.0) phase_bounds(4,2) = Ekinbound_in(2)
+  endif
+  Erest = mass*SPEED_OF_LIGHT*SPEED_OF_LIGHT/EL_CHG !< rest energy in eV
+  phase_bounds(4,:) = (mass/ATOMIC_MASS_UNIT)*SPEED_OF_LIGHT*sqrt(((phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
+  !> pitch angle and gyrangle boxes
+  phase_bounds(5,:) = [0.d0,PI]
+  if(present(Pitchbound_in)) phase_bounds(5,:) = Pitchbound_in
+  phase_bounds(6,:) = [0.d0, TWOPI]
+  if(present(Chibound_in)) phase_bounds(6,:) = Chibound_in
+  !> charge boxes
+  phase_bounds(7,:) = 1.d0
+  if(present(chargebound_in)) phase_bounds(7,:) = chargebound_in
+
+  !> initialize random number generator
+  n_threads = 1
+!$ n_threads = omp_get_max_threads()
+  allocate(variables(rnd_dim))
+  allocate(rngs(n_threads),source=rng_base)
+  do ii=1,n_threads
+    call rngs(ii)%initialize(rnd_dim, random_seed(), n_cpu*n_threads, my_id*n_threads+ii,ifail)
+    if (ifail .ne. 0) call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
+  end do
+
+  !> Initialise variables needed in the loop
+  n_particles = size(particles) 
+  call cpu_time(t0)
+  !> Loop on the particles
+#ifndef __NVCOMPILER
+    !$omp parallel default(shared) &
+    !$omp firstprivate(n_particles,mass,time) &
+    !$omp private(ii,variables,thread_id,i_elm,st,ifail,gc_tmp,B,E,psi,U)
+    thread_id = 1
+    !$ thread_id = omp_get_thread_num()+1
+    !$omp do schedule(dynamic,chunksize)
+#endif
+    do ii=1,n_particles
+      i_elm = 0; st = -1.d0;
+      !> loop until the particle is not valid, it can slow down the code
+      !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
+      !> let's check how the openMP dynamic scheduling performs using different chunksize
+      do while(accept_sample(rnd_dim,variables,st,i_elm,fields))
+        call rngs(thread_id)%next(variables)
+        variables = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables
+        call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
+        variables(1),variables(2),i_elm,st(1),st(2),ifail)
+      enddo
+      !> store the values of accepted particles
+      call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
+      gc_tmp%x     = variables(1:3)
+      gc_tmp%st    = st
+      gc_tmp%i_elm = i_elm
+      gc_tmp%p(1)  = variables(4)*cos(variables(5))
+      gc_tmp%p(2)  = ((variables(4)*sin(variables(5)))**2)/(2.d0*mass*norm2(B))
+      gc_tmp%q     = int(variables(7),kind=1)
+      call relativistic_gc_to_particle(fields%node_list,fields%element_list,gc_tmp,particles(ii),&
+      mass,B,variables(6))
+    enddo
+#ifndef __NVCOMPILER
+    !$omp end do
+    !$omp end parallel
+#endif
+
+  !> clean-up
+  call cpu_time(t1)
+  deallocate(variables); deallocate(rngs);
+  write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize cpu :',t1-t0
+  if (my_id .eq. 0) then
+    write(*,*) '* done initialising particles    *'
+    write(*,*) '**********************************'
+  endif
+
+end subroutine initialise_particle_in_phase_space
 
 !> Initialise particle positions in E, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
 !> Set Psi_transform to transform from [0,1] to your desired range

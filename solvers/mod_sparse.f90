@@ -62,7 +62,7 @@ module mod_sparse
         call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only)
 #endif
       elseif ((use_pastix.and..not.solver%equilibrium).or.(use_pastix_eq.and.solver%equilibrium)) then
-#ifdef USE_PASTIX
+#if (defined USE_PASTIX) || (defined USE_PASTIX6)
         if (my_id.eq.0) write(*,*) "Using PaStiX solver"
         solver%ptss%equilibrium = solver%equilibrium
         solver%ptss%refine = .true.
@@ -108,7 +108,7 @@ module mod_sparse
         call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
 #endif
       elseif (use_pastix) then
-#ifdef USE_PASTIX
+#if (defined USE_PASTIX) || (defined USE_PASTIX6)
         call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
 #endif
       endif
@@ -137,7 +137,7 @@ module mod_sparse
   !call reset_preconditioner(solver%pc)
 
   subroutine solver_finalize(solver)
-#ifdef USE_PASTIX
+#if (defined USE_PASTIX) || (defined USE_PASTIX6)
     use mod_pastix, only: pastix_finalize
 #endif
 #ifdef USE_MUMPS
@@ -149,7 +149,7 @@ module mod_sparse
 
     write(*,*) "Finalizing solver"
 
-#ifdef USE_PASTIX
+#if (defined USE_PASTIX) || (defined USE_PASTIX6)
     if (solver%ptss%initialized) call pastix_finalize(solver%ptss)
 #endif
 #ifdef USE_MUMPS

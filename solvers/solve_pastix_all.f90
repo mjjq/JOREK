@@ -161,132 +161,99 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   
   return
 end
-#endif
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-#ifdef USE_PASTIX6
+#elif USE_PASTIX6
 !> subroutine solves the complete system of equation using PaStiX 6.2
-subroutine solve_pastix_all(n_cpu,my_id,index_min,index_max)
-  use mod_pastix
+subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
 
   use tr_module 
-  use mod_parameters
-  use mumps_module
-  use global_distributed_matrix, only: column_scaling, deltas, nz_glob, &
-                                       irn_glob, jcn_glob, a_glob, rhs_glob  
+  use mod_parameters, only: n_tor, n_var
   use mpi_mod
   use mod_clock
+  use mod_coicsr
+  
   use mod_integer_types
-  use data_structure, only: type_SP_MATRIX  
-
-!$ use omp_lib
-
+  use data_structure, only: type_SP_MATRIX, type_RHS
+  use mod_pastix, only:     type_PASTIX_SOLVER, pastix_solve, pastix_factorize, pastix_analyze, pastix_initialize
+  
+  
   implicit none
 
-! --- Routine parameters
-  integer,               intent(in) :: n_cpu, my_id
-  integer,               intent(in) :: index_min, index_max
-
-! --- Local variables
-  real*8,               allocatable :: column_local(:)
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
   real*8                            :: tsecond
-  integer                           :: i, k, j, ierr
-  integer(kind=int_all)             :: m_loc
-  integer(kind=int_all),allocatable :: counts(:), displacements(:)
-  integer(kind=int_all), parameter  :: Int1=1
-  type(type_SP_MATRIX)   :: ad_mat, ac_mat
+  integer                           :: n_cpu, my_id, ierr, comm
+  integer                           :: i, j
+  integer(kind=int_all)             :: k, nnz
+  integer*8 :: check_data
+    
+  type(type_SP_MATRIX)               :: ad_mat, ac_mat
+  type(type_RHS)                     :: rhs_vec
+  integer                            :: index_min, index_max
+  integer                            :: block_size2
+  integer(kind=int_all)              :: nblock, nnz_block
+  type(type_PASTIX_SOLVER)           :: ptss
+  logical                            :: solve_only
   
-!write(*,*) my_id,'*****************************************'
-!write(*,*) my_id,'*  solve global matrix using PaStiX 6.2 *'
-!write(*,*) my_id,'*****************************************'
-
-  m_loc = (index_max - index_min + 1) * n_tor * n_var
-  mumps_par%nz_loc = nz_glob
-
-  call MPI_Allreduce(m_loc,mumps_par%n,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_Allreduce(mumps_par%nz_loc,mumps_par%nz,1,MPI_INTEGER_ALL,MPI_SUM,MPI_COMM_WORLD,ierr)
+  integer(kind=int_all), allocatable         :: sparskit_work(:)
   
-  call clck_time(t0)
-
-!------------------------------------------------------ collect the distributed matrix onto all procs
-  if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-  if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
-
-  call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
-  call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
-
-  call MPI_Allgather(mumps_par%nz_loc,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,MPI_COMM_WORLD,ierr)
-
-  displacements(1) = 0
-  do i=2,n_cpu
-    displacements(i) = displacements(i-1) + counts(i-1)
-  enddo
-
-  if (associated(mumps_par%irn)) call tr_deallocatep(mumps_par%irn,"mumps_par%IRN",CAT_DMATRIX)
-  if (associated(mumps_par%jcn)) call tr_deallocatep(mumps_par%jcn,"mumps_par%JCN",CAT_DMATRIX)
-  if (associated(mumps_par%a) )  call tr_deallocatep(mumps_par%a,"mumps_par%A",CAT_DMATRIX)
-  if (associated(mumps_par%rhs)) call tr_deallocatep(mumps_par%rhs,"mumps_par%rhs",CAT_DMATRIX)
-
-  call tr_allocatep(mumps_par%irn,Int1,mumps_par%nz,"mumps_par%IRN",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%jcn,Int1,mumps_par%nz,"mumps_par%JCN",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%a,Int1,mumps_par%nz,"mumps_par%A",CAT_DMATRIX)
-  call tr_allocatep(mumps_par%rhs,Int1,mumps_par%n,"mumps_par%rhs",CAT_DMATRIX)
-
-  call split_allgathersolve(n_cpu,my_id,counts,displacements,ad_mat,ac_mat)
-
-  call MPI_AllReduce(rhs_glob,mumps_par%rhs,mumps_par%n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+  comm = ad_mat%comm
   
-  call clck_time(t1)
-  call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+  call MPI_COMM_RANK(comm, my_id, ierr)
+  call MPI_COMM_SIZE(comm, n_cpu, ierr)
   
-  call clck_time(t0)
+  if (.not.solve_only) then
   
-  if (.not. spm_initialized) then
-    call pastix_init(MPI_COMM_WORLD)
-    spm_initialized = .true.
+    !write(*,*) my_id,'*********************************'
+    !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
+    !write(*,*) my_id,'*********************************'
+    
+    if (.not.ptss%equilibrium) then
+    
+      call scale_by_cols(ad_mat)
+      if (associated(ptss%solution_scaling)) then
+        deallocate(ptss%solution_scaling); ptss%solution_scaling => Null()
+      endif
+      allocate(ptss%solution_scaling(ad_mat%ng))
+      do k = 1, ad_mat%ng
+        ptss%solution_scaling(k) = ad_mat%column_scaling(k)
+      enddo
+      ptss%scaled = .true.
+      
+    endif
+    
+    if (n_cpu>1) then
+    
+      call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
+      
+      ac_mat%ng = ad_mat%ng
+      ac_mat%block_size = ad_mat%block_size
+      ac_mat%comm = ad_mat%comm  
+      
+      allocate(ac_mat%irn(ac_mat%nnz))
+      allocate(ac_mat%jcn(ac_mat%nnz))
+      allocate(ac_mat%val(ac_mat%nnz))
+      
+      call clck_time(t0)
+      
+      call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+      
+      call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+      if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+      
+    else
+      ac_mat = ad_mat
+    endif
+    
   endif
+    
+  call exit(0)
 
-  call pastix_set_mat(mumps_par%n,mumps_par%nz,mumps_par%irn,mumps_par%jcn,mumps_par%a,1,MPI_COMM_WORLD,&
-                         UPDATE=spm_analyzed,DISTRIBUTED=.false.,EQUILIBRIUM=.false.)
-  
-  if (.not. spm_analyzed) then
-    call clck_time(t0)
-    call pastix_analyze()    
-    spm_analyzed = .true.
-    call clck_time(t1)
-    call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis :', tsecond    
-  endif
-  
-  call clck_time(t0)
 
-  call pastix_factorize()   
-  call pastix_solve(mumps_par%n,mumps_par%rhs,REFINE=.true.)
- 
-  call clck_time(t1)
-  call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed facto/solve :', tsecond
-
-  deltas(1:mumps_par%n) =  mumps_par%rhs(1:mumps_par%n)
-
-  if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-  if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)  
   
   return
+  
 end subroutine solve_pastix_all
 #endif

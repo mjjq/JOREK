@@ -6,7 +6,7 @@ module mod_sparse_data
 #ifdef USE_MUMPS
   use mod_mumps, only:      type_MUMPS_SOLVER
 #endif  
-#ifdef USE_PASTIX
+#if (defined USE_PASTIX) || (defined USE_PASTIX6)
   use mod_pastix, only:     type_PASTIX_SOLVER
 #endif
 #ifdef USE_STRUMPACK
@@ -19,7 +19,7 @@ module mod_sparse_data
 #ifdef USE_MUMPS
     type(type_MUMPS_SOLVER)     :: mmss
 #endif  
-#ifdef USE_PASTIX
+#if (defined USE_PASTIX) || (defined USE_PASTIX6)
     type(type_PASTIX_SOLVER)    :: ptss
 #endif
 #ifdef USE_STRUMPACK

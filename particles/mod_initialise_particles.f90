@@ -31,10 +31,11 @@ module mod_initialise_particles
       real*8, dimension(3,n), intent(in) :: gradP
       real*4 :: rej_f
     end function rej_f
-    function accept_f(n_x,x,st,i_elm,fields)
+    function accept_f(n_x,x,st,i_elm,rng,fields)
       use mod_fields, only: fields_base
       !> inputs:
       integer,intent(in)                   :: n_x,i_elm
+      real*8,intent(in)                    :: rng
       real*8,dimension(n_x),intent(in)     :: x
       real*8,dimension(2),intent(in)       :: st
       class(fields_base),intent(in)        :: fields
@@ -294,7 +295,7 @@ subroutine initialise_particle_in_phase_space(particles, fields, rng_base, accep
 !$ use omp_lib
   
   !> parameters
-  integer,parameter :: rnd_dim=7
+  integer,parameter :: n_variables=7
   integer,parameter :: chunksize=64
 
   !> inputs-outputs
@@ -361,10 +362,10 @@ subroutine initialise_particle_in_phase_space(particles, fields, rng_base, accep
   !> initialize random number generator
   n_threads = 1
 !$ n_threads = omp_get_max_threads()
-  allocate(variables(rnd_dim))
+  allocate(variables(n_variables+1))
   allocate(rngs(n_threads),source=rng_base)
   do ii=1,n_threads
-    call rngs(ii)%initialize(rnd_dim, random_seed(), n_cpu*n_threads, my_id*n_threads+ii,ifail)
+    call rngs(ii)%initialize(n_variables+1, random_seed(), n_cpu*n_threads, my_id*n_threads+ii,ifail)
     if (ifail .ne. 0) call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
   end do
 
@@ -385,9 +386,9 @@ subroutine initialise_particle_in_phase_space(particles, fields, rng_base, accep
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(accept_sample(rnd_dim,variables,st,i_elm,fields))
+      do while(accept_sample(n_variables,variables,st,i_elm,variables(n_variables+1),fields))
         call rngs(thread_id)%next(variables)
-        variables = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables
+        variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
         variables(1),variables(2),i_elm,st(1),st(2),ifail)
       enddo

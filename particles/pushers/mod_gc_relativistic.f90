@@ -623,6 +623,8 @@ contains
         
     !> select particle type
     select type (particle_out)
+    type is (particle_gc_relativistic)
+       particle_out = relativistic_gc
     type is (particle_gc)
        particle_out = relativistic_gc_to_gc(relativistic_gc,mass,B)
     type is (particle_kinetic_relativistic)

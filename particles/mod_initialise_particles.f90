@@ -32,11 +32,11 @@ module mod_initialise_particles
       real*8, dimension(3,n), intent(in) :: gradP
       real*4 :: rej_f
     end function rej_f
-    function reject_f(n_x,x,st,i_elm,rng,fields)
+    function reject_f(n_x,x,st,i_elm,rand,fields)
       use mod_fields, only: fields_base
       !> inputs:
       integer,intent(in)                   :: n_x,i_elm
-      real*8,intent(in)                    :: rng
+      real*8,intent(in)                    :: rand
       real*8,dimension(n_x),intent(in)     :: x
       real*8,dimension(2),intent(in)       :: st
       class(fields_base),intent(in)        :: fields

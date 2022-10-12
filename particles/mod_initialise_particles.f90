@@ -31,7 +31,7 @@ module mod_initialise_particles
       real*8, dimension(3,n), intent(in) :: gradP
       real*4 :: rej_f
     end function rej_f
-    function accept_f(n_x,x,st,i_elm,rng,fields)
+    function reject_f(n_x,x,st,i_elm,rng,fields)
       use mod_fields, only: fields_base
       !> inputs:
       integer,intent(in)                   :: n_x,i_elm
@@ -40,8 +40,8 @@ module mod_initialise_particles
       real*8,dimension(2),intent(in)       :: st
       class(fields_base),intent(in)        :: fields
       !> outputs:
-      logical                              :: accept_f
-    end function accept_f
+      logical                              :: reject_f
+    end function reject_f
   end interface
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
@@ -283,7 +283,7 @@ end subroutine initialise_particles
 !> It is a dirty implementation so it must be replaced with something better in future.
 !> Inputs:
 !> Outputs:
-subroutine initialise_particle_in_phase_space(particles, fields, rng_base, accept_sample,&
+subroutine initialise_particle_in_phase_space(particles, fields, rng_base, reject_sample,&
   mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, Phibound_in,&
   chargebound_in)
   use constants,           only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
@@ -303,7 +303,7 @@ subroutine initialise_particle_in_phase_space(particles, fields, rng_base, accep
   !> inputs
   class(fields_base),    intent(in)                 :: fields
   class(type_rng),       intent(in)                 :: rng_base !< What type of random number generator to use (will be reseeded here)
-  procedure(accept_f)                               :: accept_sample !< if true, the random sample is accepted
+  procedure(reject_f)                               :: reject_sample !< if true, the random sample is accepted
   real*8,intent(in)                                 :: mass,time
   real*8,dimension(2),intent(in),optional           :: Ekinbound_in, Pitchbound_in, Chibound_in
   real*8,dimension(2),intent(in),optional           :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
@@ -386,7 +386,7 @@ subroutine initialise_particle_in_phase_space(particles, fields, rng_base, accep
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(accept_sample(n_variables,variables,st,i_elm,variables(n_variables+1),fields))
+      do while(reject_sample(n_variables,variables,st,i_elm,variables(n_variables+1),fields))
         call rngs(thread_id)%next(variables)
         variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&

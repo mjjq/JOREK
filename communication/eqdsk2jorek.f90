@@ -98,6 +98,7 @@ if ( ierr == 0 ) then
 end if 
 
 write(*,*) '   Tokamak = ', tokamak_name
+write(*,*) '   Boundary type = ',boundary_type
 write(*,*) '   EQDSK minor radius string = ',eqdsk_string_r_min
 
 read(5,'(A52,2i4)') AA,nr,nz

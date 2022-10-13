@@ -34,20 +34,16 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     !write(*,*) my_id,'*********************************'
     
     if (.not. ptss%initialized) then
-    
+      ptss%comm = ad_mat%comm
       call pastix_initialize(ptss)
-      
     endif
     
     call pastix_set_mat(ptss, ad_mat, ac_mat)
     
     ptss%rhs_val => rhs_vec%val
     
-    
     if (.not. ptss%analyzed) then
-    
       call pastix_analyze(ptss)
-    
     endif
     
     call pastix_factorize(ptss)
@@ -57,7 +53,8 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
       deallocate(ac_mat%jcn)
       deallocate(ac_mat%val)
     endif
-  endif ! .not.solve_only
+    
+  endif
   
   call clck_time(t0)
   

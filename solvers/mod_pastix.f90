@@ -243,7 +243,6 @@ module mod_pastix
     ptss%irn => ac_mat%irn
     ptss%jcn => ac_mat%jcn
     ptss%val => ac_mat%val
-    ptss%comm = ac_mat%comm
     ptss%nblock = ac_mat%nblock
     ptss%iparm(IPARM_DOF_NBR) = ac_mat%block_size
     

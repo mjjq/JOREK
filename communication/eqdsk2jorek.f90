@@ -33,7 +33,7 @@ character          :: buffer*80, lf*1, str1*12, str2*24, string_in*250,eqdsk_str
 
 namelist /eqdsk2korek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
                               tria_low_in,quad_up_in,quad_low_in,n_tht_in,r0_in,&
-                              z0_in,a0_in,B_scale,I_scale,R_scale,eqdsk_string_r_min
+                              z0_in,a0_in,B_scale,I_scale,R_scale,smth,eqdsk_string_r_min
 
 !----------------------------- read eqdsk file -----------
 B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
@@ -74,7 +74,7 @@ tokamak_name  = 'ITER'
 !>     ellipticity: 1.85, upper triangularity: 0.4, lower triangularity: 0.4,
 !>     upper quadrangularity: -0.2, lower quadrangularity: -0.2, N# poloidal mesh: 257
 !>     R_axis: 1.7, Z_axis: 0, r_minor: 0.7
-!>   NIMROD_M3DC2:
+!>   NIMROD_M3DC1:
 !>     ellipticity: 1.35/0.7, upper triangularity: 0.3, lower triangularity: 0.3,
 !>     upper quadrangularity: 0, lower quadrangularity: 0, N# poloidal mesh: 257
 !>     R_axis: 1.7, Z_axis: 0, r_minor: 0.7
@@ -86,7 +86,9 @@ eqdsk_string_r_min = 'MINOR RADIUS -> A [m]'
 ellip_in    = 1.d0; tria_up_in  = 0.d0; tria_low_in = 0.d0;
 quad_up_in  = 0.d0; quad_low_in = 0.d0; n_tht_in    = 259;
 r0_in       = 3.d0; z0_in       = 0.d0; a0_in       = 1.d0;
-
+smth = 1.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
+             ! May need hand tuning, based on a visual inspection of the output.
+             ! For more details, see the documentation of regrid.f in libdierckx or the "Tips and Tricks" section of the Wiki page https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90. 
 write(*,*) ' EQDSK to JOREK2 '
 
 ! --- Read parameters from namelist file 'eqdsk2jorek.nml' if it exists
@@ -356,13 +358,11 @@ yb = yy(1)
 ye = yy(nz)
 kx = 3
 ky = 3
-smth = 1.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
-             ! May need hand tuning, based on a visual inspection of the output.
-             ! For more details, see the documentation of regrid.f in libdierckx or the "Hard-coded parameters" section of the Wiki page https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90. 
 nxest = 3*nr/4 ! Upper bound for the number of knots used for the splines. We set it a bit smaller than nr to test the quality of the fit.
 nyest = 3*nz/4
 lwrk  = 4+nxest*(my+2*kx+5)+nyest*(2*ky+5)+mx*(kx+1)+my*(ky+1)+my+nxest
 kwrk  = 3+mx+my+nxest+nyest
+write(*,*) ' Interpolation smoothing parameter = ',smth
 
 allocate(tx(nxest),ty(nyest),c(nxest,nyest),wrk(lwrk),iwrk(kwrk))
 

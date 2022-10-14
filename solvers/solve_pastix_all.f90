@@ -65,16 +65,15 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
       deallocate(ac_mat%jcn)
       deallocate(ac_mat%val)
     endif
-    call MPI_Barrier(MPI_COMM_WORLD, ierr); write(*,*) "exiting"; call exit(0)    
-    
+   
   endif
   
   call clck_time(t0)
   
   call pastix_solve(ptss,rhs_vec)
-  
+    
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond    
+  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
   
   return
 end

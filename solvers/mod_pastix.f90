@@ -317,12 +317,27 @@ module mod_pastix
   end subroutine pastix_factorize
 
   subroutine pastix_solve(ptss,rhs_vec)
+    use, intrinsic :: iso_c_binding
     use data_structure, only: type_RHS
 
     implicit none
 
     type(type_PASTIX_SOLVER)          :: ptss
     type(type_RHS)                    :: rhs_vec
+    
+
+    type(c_ptr) :: rhsc
+    integer(kind=int_all) :: i
+
+    rhsc = c_loc(rhs_vec%val)
+
+    call ptx_solve(ptss%pastix_data, ptss%spm, rhsc, ptss%refine)
+      
+    if (ptss%scaled) then
+      do i = 1, rhs_vec%n
+        rhs_vec%val(i) =  rhs_vec%val(i)/ptss%solution_scaling(i)
+      enddo
+    endif    
 
     return
   end subroutine pastix_solve

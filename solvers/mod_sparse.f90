@@ -113,7 +113,11 @@ module mod_sparse
 #endif
       endif
 
+      call MPI_Barrier(a_mat%comm, ierr)
+      
       call gather_solution(solver%pc,sol_vec)
+      !call MPI_Barrier(MPI_COMM_WORLD, ierr); write(*,*) "exiting"; call exit(0)
+
 
 ! iterative part
       solver%iter_prev  = solver%iter_gmres

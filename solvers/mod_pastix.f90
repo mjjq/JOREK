@@ -136,31 +136,19 @@ module mod_pastix
       
       implicit none
       
-      type(type_PASTIX_SOLVER)          :: ptss
-      type(type_SP_MATRIX)              :: ad_mat, ac_mat
-      integer                           :: n_cpu, my_id, ierr, comm
-      integer                           :: i, j
-      integer(kind=int_all)             :: k, nnzg
-      integer*8                         :: check_data
-      integer                           :: block_size2
-      integer(kind=int_all)             :: nblock, nnz_block
-      integer(kind=int_all), allocatable         :: sparskit_work(:)      
-
-      integer(kind=int_all), dimension(:), pointer :: irn, jcn
-      real(kind=8), dimension(:), pointer :: val
-
-      logical :: distributed
-
-      integer :: indexing=1, block_size, dof
+      type(type_PASTIX_SOLVER)             :: ptss
+      type(type_SP_MATRIX)                 :: ad_mat, ac_mat
+      integer                              :: n_cpu, my_id, ierr, comm
+      integer(kind=int_all)                :: i, k, nnzg
+      integer*8                            :: check_data
+      integer                              :: block_size, block_size2, dof
+      integer(kind=int_all)                :: nblock, nnz_block
+      integer(kind=int_all), allocatable   :: sparskit_work(:)      
+      integer(kind=int_all)                :: n_d, jmin, jmax
+      type(clcktype)                       :: t_itstart, t0, t1, t2, t3
+      real*8                               :: tsecond
+      type(c_ptr)                          :: irn_c, jcn_c, val_c, loc2glob_c, glob2loc_c
       
-      integer(kind=int_all) :: n_d, jmin, jmax
-
-      integer(kind=int_all), dimension(:), allocatable :: iwk
-      type(c_ptr) :: irn_c, jcn_c, val_c, loc2glob_c, glob2loc_c
-      type(clcktype)                    :: t_itstart, t0, t1, t2, t3
-      real*8                            :: tsecond
-
-      logical :: dflag
       
       comm = ad_mat%comm
 
@@ -301,6 +289,14 @@ module mod_pastix
 
     end subroutine pastix_set_mat  
 
+  subroutine pastix_analyze(ptss)
+    implicit none
+
+    type(type_PASTIX_SOLVER)          :: ptss
+    
+    call ptx_analyze(ptss%pastix_data, ptss%spm)    
+    return
+  end subroutine pastix_analyze    
 
   subroutine pastix_finalize(ptss)
     implicit none
@@ -310,17 +306,12 @@ module mod_pastix
     return
   end subroutine pastix_finalize
 
-  subroutine pastix_analyze(ptss)
-    implicit none
-
-    type(type_PASTIX_SOLVER)          :: ptss
-    return
-  end subroutine pastix_analyze
-
   subroutine pastix_factorize(ptss)
     implicit none
 
     type(type_PASTIX_SOLVER)          :: ptss
+    
+    call ptx_factorize(ptss%pastix_data, ptss%spm)
 
     return
   end subroutine pastix_factorize
@@ -517,17 +508,17 @@ module mod_pastix
 
     implicit none
 
-    type(type_PASTIX_SOLVER)          :: ptss
-    type(type_SP_MATRIX)              :: ad_mat, ac_mat
-    type(clcktype)                    :: t_itstart, t0, t1, t2, t3
-    real*8                            :: tsecond
-    integer                           :: n_cpu, my_id, ierr, comm
-    integer                           :: i, j
-    integer(kind=int_all)             :: k, nnz
-    integer*8                         :: check_data
-    integer                           :: block_size2
-    integer(kind=int_all)             :: nblock, nnz_block
-    integer(kind=int_all), allocatable         :: sparskit_work(:)
+    type(type_PASTIX_SOLVER)             :: ptss
+    type(type_SP_MATRIX)                 :: ad_mat, ac_mat
+    type(clcktype)                       :: t_itstart, t0, t1, t2, t3
+    real*8                               :: tsecond
+    integer                              :: n_cpu, my_id, ierr, comm
+    integer                              :: i, j
+    integer(kind=int_all)                :: k, nnz
+    integer*8                            :: check_data
+    integer                              :: block_size2
+    integer(kind=int_all)                :: nblock, nnz_block
+    integer(kind=int_all), allocatable   :: sparskit_work(:)
 
     comm = ad_mat%comm
 

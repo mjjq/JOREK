@@ -32,11 +32,11 @@ module mod_initialise_particles
       real*8, dimension(3,n), intent(in) :: gradP
       real*4 :: rej_f
     end function rej_f
-    function reject_f(n_x,x,st,i_elm,rand,fields)
+    function reject_f(n_x,x,st,time,i_elm,rand,fields)
       use mod_fields, only: fields_base
       !> inputs:
       integer,intent(in)                   :: n_x,i_elm
-      real*8,intent(in)                    :: rand
+      real*8,intent(in)                    :: rand,time
       real*8,dimension(n_x),intent(in)     :: x
       real*8,dimension(2),intent(in)       :: st
       class(fields_base),intent(in)        :: fields
@@ -387,7 +387,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(reject_sample(n_variables,variables,st,i_elm,variables(n_variables+1),fields))
+      do while(reject_sample(n_variables,variables,st,time,i_elm,variables(n_variables+1),fields))
         call rngs(thread_id)%next(variables)
         variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&

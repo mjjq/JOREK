@@ -41,6 +41,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     call pastix_set_mat(ptss, ad_mat, ac_mat)
     
     ptss%rhs_val => rhs_vec%val
+    call MPI_Barrier(MPI_COMM_WORLD, ierr); write(*,*) "exiting"; call exit(0)
     
     if (.not. ptss%analyzed) then
       if (my_id .eq. 0) write(*,*) "PaStiX: analyzing matrix"
@@ -51,6 +52,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
       if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond      
     endif
+    
     
     if (my_id .eq. 0) write(*,*) "PaStiX: factorizing matrix"
     call clck_time(t0)

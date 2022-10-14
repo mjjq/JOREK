@@ -64,7 +64,7 @@ mass        = 5.48579909065d-4 !< electron mass in AMU
 Rbound      = [0.d0,9.99d2]
 Zbound      = [-9.99d2,9.99d2]
 Phibound    = 5.d-1*[PI,3.d0*PI]
-Ekinbound   = 2d7
+Ekinbound   = [2d7-1,2d7+1]
 Pitchbound  = [PI-2.95d-1,PI]
 Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
@@ -93,7 +93,7 @@ call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rb
 
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
-call initialise_particles_in_phase_space(sim%groups(ii)%particles,sim%fields,sob_rng,&
+call initialise_particles_in_phase_space(sim%groups(1)%particles,sim%fields,sob_rng,&
 reject_uniform,sim%groups(ii)%mass,start_time,Ekinbound,Pitchbound,Chibound,&
 Rbound,Zbound,Phibound,chargebound)
 

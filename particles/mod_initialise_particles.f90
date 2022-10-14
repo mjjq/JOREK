@@ -392,7 +392,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
         variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
         variables(1),variables(2),i_elm,st(1),st(2),ifail)
-      enddo
+      enddo 
       !> store the values of accepted particles
       call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
       gc_tmp%x     = variables(1:3)

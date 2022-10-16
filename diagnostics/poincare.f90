@@ -154,7 +154,7 @@ do while(finished .lt. nprt)
       !$omp private(iprt, ifail, zprev, phiprev) &
       !$omp reduction(+:finished)
       do iprt=1,nprt
-         if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
+         if (p(iprt)%i_elm .gt. 0 .and. ncross(iprt) .lt. norb) then
             zprev   = p(iprt)%x(2)
             phiprev = p(iprt)%x(3)
             call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time, tstep, &
@@ -186,7 +186,7 @@ do while(finished .lt. nprt)
       !$omp private(iprt, ifail, zprev, phiprev) &
       !$omp reduction(+:finished)
       do iprt=1,nprt
-         if (p(iprt)%i_elm .ne. 0 .and. ncross(iprt) .lt. norb) then
+         if (p(iprt)%i_elm .gt. 0 .and. ncross(iprt) .lt. norb) then
             zprev   = p(iprt)%x(2)
             phiprev = p(iprt)%x(3)
             call field_line_runge_kutta_fixed_dt_push_jorek(sim%fields, p(iprt), sim%time, tstep)
@@ -280,8 +280,10 @@ subroutine init_markers(sim, nprt, raxis, zaxis, mass, charge, pitch, energy)
              p%x(1), p%x(2), &
              p%x(1), p%x(2), p%i_elm, p%st(1), p%st(2), ifail)
 
-        particle_out = relativistic_gc_momenta_from_E_cospitch(p, energy, pitch, mass, sim%fields, sim%time)
-        p%p = particle_out%p
+        if (p%i_elm .gt. 0) then
+           particle_out = relativistic_gc_momenta_from_E_cospitch(p, energy, pitch, mass, sim%fields, sim%time)
+           p%p = particle_out%p
+        end if
      end select
   end do
 
@@ -324,7 +326,7 @@ subroutine check_and_store_crossing(fields, iprt, time, mileage, i_elm, st, x, p
   integer*4 :: idx !< Helper variable
 
   ! Check whether OMP was crossed and store crossing
-  if (i_elm .ne. 0 .and. &
+  if (i_elm .gt. 0 .and. &
        ( x(1) > raxis .and. sign(1.0, x(2) - zaxis) .ne. sign(1.0, zprev - zaxis) ) ) then
      ncross(iprt)       = ncross(iprt) + 1 ! Update the turns counter
 
@@ -346,7 +348,7 @@ subroutine check_and_store_crossing(fields, iprt, time, mileage, i_elm, st, x, p
   end if
 
   ! Check whether the poloidal plane at phi = 0 was crossed and store the crossing
-  if (i_elm .ne. 0 .and. floor(phiprev/(2*PI)) .ne. floor(x(3)/(2*PI)) ) then
+  if (i_elm .gt. 0 .and. floor(phiprev/(2*PI)) .ne. floor(x(3)/(2*PI)) ) then
      nextslot(iprt)     = nextslot(iprt) + 1
      if(nextslot(iprt) .gt. ndata) then
         nextslot(iprt)  = 1

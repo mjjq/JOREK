@@ -387,7 +387,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(reject_sample(n_variables,variables,st,time,i_elm,variables(n_variables+1),fields))
+      do while(reject_sample(n_variables,variables(1:n_variables),st,time,i_elm,variables(n_variables+1),fields))
         call rngs(thread_id)%next(variables)
         variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&

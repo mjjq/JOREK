@@ -287,11 +287,12 @@ end subroutine initialise_particles
 subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reject_sample,&
   mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, Phibound_in,&
   chargebound_in)
-  use constants,           only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
-  use mod_fields,          only: fields_base
-  use mod_random_seed,     only: random_seed
-  use mod_particle_types,  only: particle_base,particle_gc_relativistic
-  use mod_gc_relativistic, only: relativistic_gc_to_particle 
+  use constants,                 only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  use mod_pusher_tools,          only: get_orthonormals
+  use mod_fields,                only: fields_base
+  use mod_random_seed,           only: random_seed
+  use mod_particle_types,        only: particle_base,particle_kinetic_relativistic
   use mod_rng
 !$ use omp_lib
   
@@ -310,13 +311,12 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
   real*8,dimension(2),intent(in),optional           :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
 
   !> internal variables
-  type(particle_gc_relativistic)           :: gc_tmp !< temparary guiding center particle
   class(type_rng),dimension(:),allocatable :: rngs 
   integer                                  :: my_id,n_cpu,n_threads,thread_id,ifail
   integer                                  :: ii,jj,n_particles,i_elm
   real*8                                   :: t0,t1,Erest,psi,U  
   real*8,dimension(2)                      :: st
-  real*8,dimension(3)                      :: B,E
+  real*8,dimension(3)                      :: B,E,e1,e2
   !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
   real*8,dimension(7,2)                    :: phase_bounds 
   real*8,dimension(:),allocatable          :: variables
@@ -349,8 +349,8 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
     if(Ekinbound_in(1).gt.0) phase_bounds(4,1) = Ekinbound_in(1)
     if(Ekinbound_in(2).gt.0) phase_bounds(4,2) = Ekinbound_in(2)
   endif
-  Erest = mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*SPEED_OF_LIGHT/EL_CHG !< rest energy in eV
-  phase_bounds(4,:) = mass*SPEED_OF_LIGHT*sqrt(((phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
+  Erest = mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT**2 !< rest energy in eV
+  phase_bounds(4,:) = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
   !> pitch angle and gyrangle boxes
   phase_bounds(5,:) = [0.d0,PI]
   if(present(Pitchbound_in)) phase_bounds(5,:) = Pitchbound_in
@@ -377,7 +377,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
     !$omp firstprivate(n_particles,mass,time) &
-    !$omp private(ii,variables,thread_id,i_elm,st,ifail,gc_tmp,B,E,psi,U)
+    !$omp private(ii,variables,thread_id,i_elm,st,ifail,B,e1,e2,E,psi,U)
     thread_id = 1
     !$ thread_id = omp_get_thread_num()+1
     !$omp do schedule(dynamic,chunksize)
@@ -391,18 +391,21 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
         call rngs(thread_id)%next(variables)
         variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
-        variables(1),variables(2),i_elm,st(1),st(2),ifail)
-      enddo 
-      !> store the values of accepted particles
-      call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
-      gc_tmp%x     = variables(1:3)
-      gc_tmp%st    = st
-      gc_tmp%i_elm = i_elm
-      gc_tmp%p(1)  = variables(4)*cos(variables(5))
-      gc_tmp%p(2)  = ((variables(4)*sin(variables(5)))**2)/(2.d0*mass*norm2(B))
-      gc_tmp%q     = int(variables(7),kind=1)
-      call relativistic_gc_to_particle(fields%node_list,fields%element_list,gc_tmp,particles(ii),&
-      mass,B,variables(6))
+        variables(1),variables(2),i_elm,st(1),st(2),ifail) 
+      enddo
+    !> store the values of accepted particles 
+     particles(ii)%x     = variables(1:3)
+     particles(ii)%st    = st
+     particles(ii)%i_elm = i_elm
+     select type (particle=>particles(ii))
+        type is (particle_kinetic_relativistic)
+          call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
+          B = B/norm2(B); call get_orthonormals(B,e1,e2)
+          particle%p = variables(4)*(cos(variables(5))*B+&
+          sin(variables(5))*(cos(variables(6))*e1+sin(variables(6))*e2))
+          particle%p = vector_cylindrical_to_cartesian(particle%x(3),particle%p)
+          particle%q = int(variables(7),kind=1)
+        end select
     enddo
 #ifndef __NVCOMPILER
     !$omp end do

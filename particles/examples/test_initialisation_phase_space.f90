@@ -105,7 +105,7 @@ if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
 if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
 if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
 if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
-Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
+Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/((ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2)))+1.d0)**2-1.d0)
 call compute_equidistant_mesh(Rmesh,nR,Rbound)
 call compute_equidistant_mesh(Zmesh,nZ,Zbound)
 call compute_equidistant_mesh(phimesh,nphi,Phibound) 
@@ -117,6 +117,7 @@ select type(plist=>sim%groups(1)%particles)
   call equidistant_histogram(histogram,n_particles,plist,start_time,nR,nZ,nphi,np,&
   npitch,nchi,Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh,sim%fields)
 end select
+write(*,*) 'DEBUG: out'
 
 !> Compute the expected number of particles from the PDF for each kinetic mesh element and
 !> the L2 error w.r.t. the particle histogram --------------------------------------------
@@ -254,9 +255,9 @@ subroutine equidistant_histogram(histogram,n_particles,particles,time,nR,nZ,nphi
   pmesh(2)-pmesh(1),pitchmesh(2)-pitchmesh(1),gyromesh(2)-gyromesh(1)]
   mesh_init = [Rmesh(1),Zmesh(1),phimesh(1),pmesh(1),pitchmesh(1),gyromesh(1)]
   !> Compute the histogram
-!  !$omp parallel do default(shared) firstprivate(n_particles,time) &
-!  !$omp private(ii,coord,E,B,psi,U,pcyl,e1,e2,ppar,ids) &
-!  !$omp reduction(+:histogram)
+  !$omp parallel do default(shared) firstprivate(n_particles,time) &
+  !$omp private(ii,coord,E,B,psi,U,pcyl,e1,e2,ppar,ids) &
+  !$omp reduction(+:histogram)
   do ii=1,n_particles
     coord(1:3) = particles(ii)%x
     call fields%calc_EBpsiU(time,particles(ii)%i_elm,particles(ii)%st,&
@@ -274,7 +275,7 @@ subroutine equidistant_histogram(histogram,n_particles,particles,time,nR,nZ,nphi
     histogram(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) = &
     histogram(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) + particles(ii)%weight
   enddo
-!  !$omp end parallel do
+  !$omp end parallel do
 end subroutine equidistant_histogram
 
 !> compute the number of particles in an equidistant cyclindrial in space

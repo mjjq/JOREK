@@ -62,11 +62,6 @@ extern "C" void convert2csr(int *indx, int *n_, int *m_, int *nnz_, int **irn, i
   }
 
   mkl_sparse_destroy(csrA);
-<<<<<<< HEAD
-//  mkl_finalize();
-=======
-  //mkl_finalize();
->>>>>>> develop
 
   t1 = std::chrono::steady_clock::now();
   std::cout<<"coo2csr (MKL) (s) = "<< std::chrono::duration_cast<

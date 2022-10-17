@@ -94,7 +94,7 @@ call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rb
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
 call initialise_particles_in_phase_space(sim%groups(1)%particles,sim%fields,sob_rng,&
-reject_uniform,sim%groups(ii)%mass,start_time,Ekinbound,Pitchbound,Chibound,&
+reject_uniform,sim%groups(1)%mass,start_time,Ekinbound,Pitchbound,Chibound,&
 Rbound,Zbound,Phibound,chargebound)
 
 !> Produce histogram from particles ---------------------------------------------------------
@@ -254,9 +254,9 @@ subroutine equidistant_histogram(histogram,n_particles,particles,time,nR,nZ,nphi
   pmesh(2)-pmesh(1),pitchmesh(2)-pitchmesh(1),gyromesh(2)-gyromesh(1)]
   mesh_init = [Rmesh(1),Zmesh(1),phimesh(1),pmesh(1),pitchmesh(1),gyromesh(1)]
   !> Compute the histogram
-  !$omp parallel do default(shared) firstprivate(n_particles,time) &
-  !$omp private(ii,coord,E,B,psi,U,pcyl,e1,e2,ppar,ids) &
-  !$omp reduction(+:histogram)
+!  !$omp parallel do default(shared) firstprivate(n_particles,time) &
+!  !$omp private(ii,coord,E,B,psi,U,pcyl,e1,e2,ppar,ids) &
+!  !$omp reduction(+:histogram)
   do ii=1,n_particles
     coord(1:3) = particles(ii)%x
     call fields%calc_EBpsiU(time,particles(ii)%i_elm,particles(ii)%st,&
@@ -274,7 +274,7 @@ subroutine equidistant_histogram(histogram,n_particles,particles,time,nR,nZ,nphi
     histogram(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) = &
     histogram(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) + particles(ii)%weight
   enddo
-  !$omp end parallel do
+!  !$omp end parallel do
 end subroutine equidistant_histogram
 
 !> compute the number of particles in an equidistant cyclindrial in space

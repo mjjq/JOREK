@@ -32,13 +32,22 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     !write(*,*) my_id,'*********************************'
     !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
     !write(*,*) my_id,'*********************************'
+        
+#ifdef USE_PASTIX
+    call pastix_set_mat(ptss, ad_mat, ac_mat)
     
     if (.not. ptss%initialized) then
       ptss%comm = ad_mat%comm
       call pastix_initialize(ptss)
     endif
+#elif USE_PASTIX6
+    if (.not. ptss%initialized) then
+      ptss%comm = ad_mat%comm
+      call pastix_initialize(ptss)
+    endif
     
-    call pastix_set_mat(ptss, ad_mat, ac_mat)
+    call pastix_set_mat(ptss, ad_mat, ac_mat)          
+#endif
     
     ptss%rhs_val => rhs_vec%val
     

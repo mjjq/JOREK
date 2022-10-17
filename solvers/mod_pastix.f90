@@ -487,6 +487,7 @@ module mod_pastix
     integer(kind=int_all)                        :: facto    = API_FACT_LU
     integer(kind=int_all)                        :: rhs      = 0
     integer(kind=int_all)                        :: nblock   = 0
+    integer(kind=8)                              :: block_size = 1
 
   end type type_PASTIX_SOLVER
 
@@ -592,7 +593,7 @@ module mod_pastix
     ptss%jcn => ac_mat%jcn
     ptss%val => ac_mat%val
     ptss%nblock = ac_mat%nblock
-    ptss%iparm(IPARM_DOF_NBR) = ac_mat%block_size
+    ptss%block_size = ac_mat%block_size
 
     if (ptss%equilibrium) then
     ! combine duplicated values
@@ -715,6 +716,8 @@ module mod_pastix
     implicit none
 
     type(type_PASTIX_SOLVER)          :: ptss
+    
+    ptss%iparm(IPARM_DOF_NBR) = ptss%block_size
 
     ptss%iparm(IPARM_START_TASK) = API_TASK_ORDERING
     ptss%iparm(IPARM_END_TASK)   = API_TASK_ANALYSE

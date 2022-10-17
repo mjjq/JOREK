@@ -191,6 +191,7 @@ module mod_pastix
       else
         ac_mat = ad_mat
       endif
+      
       ac_mat%centralized = .true.
   
       call clck_time(t0)
@@ -203,14 +204,13 @@ module mod_pastix
       ac_mat%nblock = nblock
       ac_mat%nzblock = nnz_block
   
-      if (ac_mat%block_size > 1) then
-        do i = 1,nnz_block
-          ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
-          ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
-        enddo
-      endif
-    
-      nnzg = 0
+      !if (ac_mat%block_size > 1) then
+      !  do i = 1,nnz_block
+      !    ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
+      !    ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
+      !  enddo
+      !endif
+      dof = 1
 
       ! if not already distributed distribute matrix column-wise
       if (ac_mat%centralized) then
@@ -221,26 +221,9 @@ module mod_pastix
         jmax = maxval(ac_mat%jcn(1:ac_mat%nnz))
         ac_mat%jcn(1:ac_mat%nnz) = ac_mat%jcn(1:ac_mat%nnz) - jmin + ac_mat%indexing
       endif
-      call MPI_Allreduce(ac_mat%nnz,nnzg,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
       
-      dof = 1
-!#if (defined(USE_BLOCK))
-!      if (.not.eql) then
-!        nblock   = n/block_size
-!        block_size2 = block_size*block_size
-!        nnz_block = nnz_d/block_size2
-!        if (block_size>1) then
-!          do i=1,nnz_block
-!            irn(i) = (irn((i-1)*block_size2 + 1) - 1)/block_size + 1
-!            jcn(i) = (jcn((i-1)*block_size2 + 1) - 1)/block_size + 1
-!          enddo
-!        endif
-!        jmin = minval(jcn(1:nnz_block))
-!        jmax = maxval(jcn(1:nnz_block))
-!        n = nblock
-!        dof = block_size
-!      endif
-!#endif      
+      nnzg = 0
+      call MPI_Allreduce(ac_mat%nnz,nnzg,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
       
       n_d = jmax - jmin + 1
       allocate(ptss%loc2glob(n_d))

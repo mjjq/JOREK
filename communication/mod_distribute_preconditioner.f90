@@ -223,20 +223,12 @@ contains
     
     ! if disributing, split the rows of the global matrix between ranks of families    
     do j = 1, pc%n_mode_families
-#ifdef USE_BLOCK    
       block_size = n_var*pc%modes_per_family(j)
-#else
-      block_size = 1
-#endif
       nr = pc%ranks_per_family(j)                                           ! number of ranks per j-th family
       pc%n_per_rank(j) = block_size*((a_mat%ng/block_size)/nr) - block_size ! number of rows per rank for j-th family (lower limit)
     enddo
-    
-#ifdef USE_BLOCK    
+ 
     pc%mat%block_size = n_var*pc%modes_per_family(pc%family_id) ! set block size for current family
-#else
-    pc%mat%block_size = 1
-#endif     
 
     allocate(long_send_counts(pc%n_cpu))
     allocate(long_recv_counts(pc%n_cpu))

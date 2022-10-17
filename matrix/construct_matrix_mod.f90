@@ -764,14 +764,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   global_mat%index_min => index_min
   global_mat%index_max => index_max
   global_mat%comm = comm
-
-  
-#ifdef USE_BLOCK
-  global_mat%block_size  = n_tor*n_var
-#else
-  global_mat%block_size = 1
-#endif    
-  
+  global_mat%block_size  = n_tor*n_var ! its already defined in the global matrix structure
   global_rhs%val => RHS
   global_rhs%n  = ndof
      

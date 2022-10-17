@@ -427,9 +427,6 @@ module mod_gmres
     n_blocksize  = a_mat%block_size
     n_blocks     = a_mat%nnz/n_blocksize**2
     ndof_local   = (a_mat%index_max(my_id + 1) - a_mat%index_min(my_id + 1) + 1)*n_blocksize
-
-!    write(*,*) my_id, ndof_local
-!    call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
     
     index_offset = (a_mat%index_min(my_id + 1) - 1)*n_blocksize
     

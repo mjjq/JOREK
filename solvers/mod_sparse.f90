@@ -116,8 +116,9 @@ module mod_sparse
       call MPI_Barrier(a_mat%comm, ierr)
       
       call gather_solution(solver%pc,sol_vec)
-      !call MPI_Barrier(MPI_COMM_WORLD, ierr); write(*,*) "exiting"; call exit(0)
-
+      
+      !write(*,*) sol_vec%val(1:2), sol_vec%val(sol_vec%n-1:sol_vec%n)
+      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
 ! iterative part
       solver%iter_prev  = solver%iter_gmres

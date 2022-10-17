@@ -628,6 +628,11 @@ module mod_pastix
     call pastix_init_nthreads(ptss)
 
     if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ', ptss%iparm(IPARM_THREAD_NBR)
+    
+    allocate(ptss%perm_vars(ptss%nblock))
+    allocate(ptss%iperm_vars(ptss%nblock))
+    ptss%perm_vars(1:ptss%nblock) = 0
+    ptss%iperm_vars(1:ptss%nblock) = 0    
 
     ptss%iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
     ptss%iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
@@ -710,11 +715,6 @@ module mod_pastix
     implicit none
 
     type(type_PASTIX_SOLVER)          :: ptss
-
-    allocate(ptss%perm_vars(ptss%nblock))
-    allocate(ptss%iperm_vars(ptss%nblock))
-    ptss%perm_vars(1:ptss%nblock) = 0
-    ptss%iperm_vars(1:ptss%nblock) = 0
 
     ptss%iparm(IPARM_START_TASK) = API_TASK_ORDERING
     ptss%iparm(IPARM_END_TASK)   = API_TASK_ANALYSE

@@ -196,18 +196,20 @@ module mod_pastix
   
       call clck_time(t0)
   
-      block_size2 = ac_mat%block_size**2
+!#ifdef USE_BLOCK
+      !block_size = ac_mat%block_size
+!#else
+      block_size = 1
+!#endif  
+      block_size2 = block_size**2
   
-      nblock   = ac_mat%ng/ac_mat%block_size
+      nblock   = ac_mat%ng/block_size
       nnz_block = ac_mat%nnz/block_size2
   
-      ac_mat%nblock = nblock
-      ac_mat%nzblock = nnz_block
-  
-      !if (ac_mat%block_size > 1) then
+      !if (block_size > 1) then
       !  do i = 1,nnz_block
-      !    ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
-      !    ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
+      !    ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/block_size + 1
+      !    ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/block_size + 1
       !  enddo
       !endif
       dof = 1
@@ -515,7 +517,7 @@ module mod_pastix
     integer                              :: i, j
     integer(kind=int_all)                :: k, nnz
     integer*8                            :: check_data
-    integer                              :: block_size2
+    integer                              :: block_size, block_size2
     integer(kind=int_all)                :: nblock, nnz_block
     integer(kind=int_all), allocatable   :: sparskit_work(:)
 
@@ -563,15 +565,16 @@ module mod_pastix
 
     call clck_time(t0)
 
-    block_size2 = ac_mat%block_size**2
-
-    nblock   = ac_mat%ng/ac_mat%block_size
+#ifdef USE_BLOCK
+    block_size = ac_mat%block_size
+#else
+    block_size = 1
+#endif
+    block_size2 = block_size**2
+    nblock   = ac_mat%ng/block_size
     nnz_block = ac_mat%nnz/block_size2
 
-    ac_mat%nblock = nblock
-    ac_mat%nzblock = nnz_block
-
-    if (ac_mat%block_size > 1) then
+    if (block_size > 1) then
       do i = 1,nnz_block
         ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
         ac_mat%jcn(i) = (ac_mat%jcn((i-1)*block_size2+1) - 1)/ac_mat%block_size + 1
@@ -580,7 +583,7 @@ module mod_pastix
 
     allocate(sparskit_work(nblock+1))
 
-    call coicsr2(nblock,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),ac_mat%block_size,sparskit_work)
+    call coicsr2(nblock,nnz_block,ac_mat%val,ac_mat%irn(1:nnz_block),ac_mat%jcn(1:nnz_block),block_size,sparskit_work)
 
     deallocate(sparskit_work)
 
@@ -592,8 +595,8 @@ module mod_pastix
     ptss%irn => ac_mat%irn
     ptss%jcn => ac_mat%jcn
     ptss%val => ac_mat%val
-    ptss%nblock = ac_mat%nblock
-    ptss%block_size = ac_mat%block_size
+    ptss%nblock = nblock
+    ptss%block_size = block_size
 
     if (ptss%equilibrium) then
     ! combine duplicated values

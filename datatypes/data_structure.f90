@@ -156,8 +156,6 @@ module data_structure
     integer, dimension(:), pointer               :: index_min => Null()        !< minimum index in global range
     integer, dimension(:), pointer               :: index_max => Null()        !< maximum index in global range
     integer                                      :: block_size = 1
-    integer(kind=int_all)                        :: nblock               !< ng/block_size
-    integer(kind=int_all)                        :: nzblock              !< nnz/block_size**2
     integer                                      :: comm                 !< communicator over which the matrix is distributed
     logical                                      :: scaled = .false.
     logical                                      :: row_distributed = .false.

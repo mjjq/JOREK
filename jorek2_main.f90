@@ -522,17 +522,15 @@ mpi_required = 0
     node_list%n_dof = ndof_glob
     !local_index_start = index_min
     !local_index_end   = index_max
-    ! Build ijA_index, ijA_size and irn_jcn
 
     call global_matrix_structure(my_id,node_List,element_list,bnd_elm_list, freeboundary,&
          local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),              & 
-         ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor,                 &
-         n_glob, nz_glob, ndof_glob, n_matrix_block_size)
+         1, n_tor, n_glob, nz_glob, ndof_glob, a_mat)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
       call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1),& 
-           1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
+           1, n_tor, a_mat) 
     endif
 
   endif ! (nstep >0)
@@ -644,8 +642,7 @@ mpi_required = 0
     call construct_matrix(my_id, MPI_COMM_WORLD, local_elms,   &
          n_local_ELms, index_min, index_max, xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
-         n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size,    &
-         irn_jcn, a_mat, rhs_vec, harmonic_matrix=.false.)
+         n_glob, nz_glob, ndof_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond

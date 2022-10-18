@@ -21,7 +21,6 @@ contains
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
     use mod_elt_matrix_fft,       only : element_matrix_fft
-    use mod_locate_irn_jcn
     use mod_global_matrix_structure
     use mpi_mod
 
@@ -263,7 +262,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, index_max,& 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
-                            n, nz, ndof, n_matrix_block_size, A_mat, rhs, irn, jcn, ijA_index, ijA_size, irn_jcn, global_mat, global_rhs, harmonic_matrix)
+                            n, nz, ndof, rhs, global_mat, global_rhs, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -308,13 +307,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   integer(kind=int_all), intent(in) :: n
   integer(kind=int_all), intent(in) :: nz
   integer(kind=int_all), intent(in) :: ndof
-  integer(kind=int_all), intent(in) :: n_matrix_block_size
   logical,               intent(in) :: harmonic_matrix
-  real*8,                intent(inout), allocatable, target :: A_mat(:)
   real*8,                intent(inout), allocatable, target :: rhs(:)
-  integer(kind=int_all), intent(inout), allocatable, target :: irn(:)
-  integer(kind=int_all), intent(inout), allocatable, target :: jcn(:)
-  integer(kind=int_all), intent(in),    allocatable :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:)
   integer, dimension(:), pointer, intent(in) :: index_min
   integer, dimension(:), pointer, intent(in) :: index_max
   
@@ -397,9 +391,9 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   endif ! (.not. harmonic_matrix)
 
   ! --- Memory allocation
-  if (allocated(A_mat))   call tr_deallocate(A_mat,"A_mat",CAT_DMATRIX) 
-  call tr_allocate(A_mat,Int1,nz,"A_mat",  CAT_DMATRIX)
-  A_mat = 0.0d0
+  if (associated(global_mat%val))   call tr_deallocatep(global_mat%val,"A_mat",CAT_DMATRIX) 
+  call tr_allocatep(global_mat%val,Int1,nz,"A_mat",  CAT_DMATRIX)
+  global_mat%val = 0.0d0
 
   if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
   call tr_allocate(rhs, Int1,ndof,"rhs", CAT_DMATRIX)
@@ -412,9 +406,9 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list, aux_node_list,                                &
   !$omp          my_ind_min, my_ind_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,  &
-  !$omp          A_mat, rhs_local, rhs, irn, jcn,                                                              &
+  !$omp          global_mat, rhs_local, rhs,                                                               &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh,     &
-  !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max, ijA_index, ijA_size, irn_jcn) &
+  !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max) &
   !$omp   private(ife,ielm,iv,inode,element,nodes, aux_nodes, i,inode1,i_order,index_node1, n_tor_local,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
@@ -640,7 +634,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
                 index_large_k = n_tor_local * n_var * (index_node2 - 1)
 
-                call locate_irn_jcn(index_node1,index_node2,my_ind_min,my_ind_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                call locate_irn_jcn(index_node1,index_node2,my_ind_min,my_ind_max,ijA_position,global_mat)
 
                 thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local) = 0.d0
                 do j = 1, n_var * n_tor_local
@@ -652,8 +646,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var * n_tor_local + l
 
-                    irn(ilarge2) = index_large_i	+ j
-                    jcn(ilarge2) = index_large_k	+ l
+                    global_mat%irn(ilarge2) = index_large_i	+ j
+                    global_mat%jcn(ilarge2) = index_large_k	+ l
 
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
@@ -663,8 +657,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
                 enddo ! n_var * n_tor_local
 
                 !$omp critical
-                A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
-                  A_mat(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
+                global_mat%val(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
+                  global_mat%val(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
                   thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local)
                 !$omp end critical 
 
@@ -686,31 +680,31 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   !$omp end parallel
  
   ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",A_mat,nz)
+  call tr_vnorms("cm_A_bef_bc",global_mat%val,nz)
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
                            my_ind_min, my_ind_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,        & 
-                           psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, .false., .false.,      & 
-                           ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
+                           psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,      & 
+                           i_tor_min, i_tor_max, global_mat)
 
   if (fix_axis_nodes) then
     call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, & 
-                           ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
+                           i_tor_min, i_tor_max, global_mat)
   elseif(treat_axis)then
     call penalize_dof_on_axis(node_list, 4, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, &
-                           ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max )
+                           i_tor_min, i_tor_max, global_mat)
   endif
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",A_mat,nz)
+  call tr_vnorms("cm_A_aft_bc",global_mat%val,nz)
 
 
     ! --- Add vacuum response (boundary integral) for free boundary computations
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
       call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
-                                  resistive_wall, my_ind_min, my_ind_max, rhs_local, A_mat, tstep, index_now, & 
-                                  irn, jcn, n_matrix_block_size, ijA_index, ijA_size, irn_jcn, i_tor_min, i_tor_max)
+                                  resistive_wall, my_ind_min, my_ind_max, rhs_local, tstep, index_now, & 
+                                  i_tor_min, i_tor_max, global_mat)
     end if
   
   if ( .not. harmonic_matrix ) then 
@@ -756,9 +750,9 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
   
   ! assign global matrix structure
-  global_mat%irn => irn
-  global_mat%jcn => jcn
-  global_mat%val => a_mat
+  !global_mat%irn => irn
+  !global_mat%jcn => jcn
+  !global_mat%val => a_mat
   global_mat%ng  = ndof
   global_mat%nnz = nz
   global_mat%index_min => index_min

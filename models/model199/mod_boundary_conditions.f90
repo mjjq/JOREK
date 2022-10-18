@@ -17,8 +17,6 @@
 !*   psi_axis     -                                                            *
 !*   psi_bnd      -                                                            *
 !*   Z_xpoint     -                                                            *
-!*   gmres        - boolean indicating if we are using GMRES method            *
-!*   solve_only   - Indicate if we want to perform only solve                  *
 !*                                                                             *
 !*******************************************************************************
 module mod_boundary_conditions
@@ -27,8 +25,8 @@ contains
   subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,          &
                                   n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2,       & 
                                   R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,  &  
-                                  gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn,          & 
-                                  A_mat, i_tor_min, i_tor_max )
+                                  ijA_index, ijA_size, irn_jcn,                    &
+                                  i_tor_min, i_tor_max, a_mat)
 
     use data_structure
     use phys_module, only: F0, GAMMA, keep_n0_const
@@ -58,12 +56,9 @@ contains
     real*8,                             intent(in)    :: R_xpoint(2)
     real*8,                             intent(in)    :: Z_xpoint(2)
     real*8,                             intent(in)    :: psi_xpoint(2)
-    logical,                            intent(in)    :: gmres
-    logical,                            intent(in)    :: solve_only
     integer,                            intent(in)    :: i_tor_min, i_tor_max 
     integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
-    real*8,                allocatable, intent(inout) :: A_mat(:) 
+    type(type_SP_MATRIX)                              :: a_mat
 
     ! Internal parameters
     real*8                :: zbig, zbig_backup
@@ -112,9 +107,9 @@ contains
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local  & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1
 
-                               irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               A_mat(ilarge2)   = zbig
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%val(ilarge2) = zbig
 
                             endif
 
@@ -127,9 +122,9 @@ contains
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1
 
-                               irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               A_mat(ilarge2)    = zbig
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%val(ilarge2) = zbig
 
                             endif
 
@@ -151,9 +146,9 @@ contains
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1
 
-                               irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               A_mat(ilarge2)   = zbig
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%val(ilarge2) = zbig
 
                             endif
 
@@ -166,9 +161,9 @@ contains
                                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
                                  +  (k-1)*n_tor_local + in - i_tor_min + 1
 
-                               irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               A_mat(ilarge2)   = zbig
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%val(ilarge2) = zbig
                             end if
 
                          endif

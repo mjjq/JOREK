@@ -144,9 +144,13 @@ module data_structure
  
   !> Sparse matrix type (generally distributed)
   type type_SP_MATRIX
-    integer(kind=int_all), dimension(:), pointer :: irn => Null()
-    integer(kind=int_all), dimension(:), pointer :: jcn => Null()
-    real(kind=8), dimension(:), pointer          :: val => Null()
+    integer(kind=int_all), dimension(:), pointer   :: irn => Null()
+    integer(kind=int_all), dimension(:), pointer   :: jcn => Null()
+    real(kind=8), dimension(:), pointer            :: val => Null()
+    integer(kind=int_all), dimension(:), pointer   :: ijA_size
+    integer(kind=int_all), dimension(:,:), pointer :: ijA_index
+    integer(kind=int_all), dimension(:,:), pointer :: irn_jcn
+    
     real(kind=8), dimension(:), pointer          :: column_scaling => Null()    !< global column scaling, vector size of ng
     integer                                      :: indexing = 1
     integer(kind=int_all)                        :: ng                   !< matrix total rank

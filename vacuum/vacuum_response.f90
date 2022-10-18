@@ -1700,14 +1700,13 @@ module vacuum_response
   !! expressed by the STARWALL vacuum response in terms of the poloidal magnetic field at the
   !! interface (ideal and resistive wall) and the wall currents (resistive wall).
   subroutine vacuum_boundary_integral(my_id, bnd_node_list, node_list,bnd_elm_list,               &
-    freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, A_mat, tstep, index_now,   &
-    irn, jcn, n_matrix_block_size, ijA_index, ijA_size, irn_jcn, i_tor_min, i_tor_max)
+    freeboundary_equil, resistive_wall, index_min, index_max, rhs_loc, tstep, index_now,   &
+    i_tor_min, i_tor_max, global_mat)
 
-    use data_structure, only: type_node_list, type_bnd_node_list,type_bnd_element_list, type_bnd_element
-    use mod_parameters,     only: n_plane, n_var, n_tor
+    use data_structure, only: type_node_list, type_bnd_node_list,type_bnd_element_list, type_bnd_element, type_SP_MATRIX
+    use mod_parameters, only: n_plane, n_var, n_tor
     use gauss,          only: n_gauss, xgauss, wgauss
-    use global_distributed_matrix, only: irn_glob, jcn_glob, a_glob, ndof_glob,det_row_col,       &
-      det_sparse_pos, det_sparse_pos_block
+    use global_distributed_matrix, only: ndof_glob, det_row_col, det_sparse_pos
     use basis_at_gaussian, only: H1, H1_s, HZ
     use phys_module, only: t_now, t_start
     use mpi_mod
@@ -1724,15 +1723,10 @@ module vacuum_response
     logical,                            intent(in)    :: resistive_wall       !< Resistive or ideal wall?
     integer,                            intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     real*8,                             intent(inout) :: rhs_loc(:)           !< Part of RHS of MPI proc 
-    real*8,                allocatable, intent(inout) :: A_mat(:)             !< Distributed global or harmonic matrix 
     real*8,                             intent(in)    :: tstep                !< delta t, timestep
     integer,                            intent(in)    :: index_now            !< Current timestep index
     integer,                            intent(in)    :: i_tor_min, i_tor_max !< Toroidal harmonics 
-    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:)  
-    integer(kind=int_all),              intent(in)    :: n_matrix_block_size
-    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:)
-    integer(kind=int_all), allocatable, intent(in)    :: ijA_size(:)
-    integer(kind=int_all), allocatable, intent(in)    :: irn_jcn(:,:)
+    type(type_SP_MATRIX)                              :: global_mat
 
     ! --- Local variables
     real*8, allocatable :: psibnd_vec(:)    ! Vector of the values of Psi at the boundary
@@ -1778,7 +1772,7 @@ module vacuum_response
     
     if ( vacuum_debug ) t_elaps_start = MPI_WTIME()  ! for timing
 
-    if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)),sum(abs(A_mat))
+    if ( vacuum_debug ) write(*,*) my_id, 'Before:', sum(abs(rhs_loc)),sum(abs(global_mat%val))
 
     ! --- Determine vectors of the psi and deltapsi boundary values.
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec, psibnd_coils)
@@ -1823,14 +1817,14 @@ module vacuum_response
     ! --- Sum over boundary elements
     !$omp parallel do                                                                                         &
     !$omp default(none)                                                                                       &    
-    !$omp shared(my_id,A_mat, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,          &
+    !$omp shared(my_id, global_mat, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,          &
     !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,                 &
-    !$omp   i_tor_min, i_tor_max, irn, jcn, ijA_index, ijA_size, irn_jcn,                                     & 
+    !$omp   i_tor_min, i_tor_max,                                      & 
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec,psibnd_coils,                   &
 #ifdef __GFORTRAN__
     !$omp   wgauss_copy,                                                                                      &
 #endif
-    !$omp   starwall_equil_coils, response_m_v, Y_coils0,rhs_contrib_arr, n_matrix_block_size,resistive_wall) &
+    !$omp   starwall_equil_coils, response_m_v, Y_coils0,rhs_contrib_arr, resistive_wall) &
     !$omp private(m_bndelem, bndelem_m, x_s, y_s, l_vertex, l_dof, l_node,l_dir, l_node_bnd,                  &
     !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, dA, m_plane,common_prefactor,                     &
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,              &
@@ -1950,13 +1944,13 @@ module vacuum_response
 
                         ! --- Determine the position in the sparse matrix data structure
                         !     which corresponds to the matrix entry at  l_row_j, j_col_psi.
-                        sparsepos_jp = det_sparse_pos(l_row_j,   j_col_psi, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
-                        sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min, n_matrix_block_size, ijA_index, ijA_size, irn_jcn)
+                        sparsepos_jp = det_sparse_pos(l_row_j,   j_col_psi, index_min, global_mat)
+                        sparsepos_pp = det_sparse_pos(l_row_psi, j_col_psi, index_min, global_mat)
 
                         ! --- Vacuum response contribution to the lhs of the current equation
                         amat_contrib = - common_prefactor * response_m_e(i_resp, j_resp)
                         !$omp atomic
-                        A_mat(sparsepos_jp) = A_mat(sparsepos_jp) + amat_contrib
+                        global_mat%val(sparsepos_jp) = global_mat%val(sparsepos_jp) + amat_contrib
 
                       end do L_JS
                     end do L_JD
@@ -1994,7 +1988,7 @@ module vacuum_response
       write(*,'(I4,A,F10.7,A)') my_id, '  Elapsed time vacuum_boundary_integral', t_elaps_end - t_elaps_start, ' s'
     end if
     
-    if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)),sum(abs(A_mat))
+    if ( vacuum_debug ) write(*,*) my_id, 'After:', sum(abs(rhs_loc)),sum(abs(global_mat%val))
 
     if ( allocated(psibnd_vec ) ) deallocate( psibnd_vec  )
     if ( allocated(dpsibnd_vec) ) deallocate( dpsibnd_vec )

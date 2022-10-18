@@ -1,4 +1,5 @@
 module direct_construction_mod
+#ifdef DIRECT_CONSTRUCTION
 
 implicit none
   logical, private                   :: matrix_structure_initialized = .false.  
@@ -7,7 +8,7 @@ contains
 
   !> Constructing harmonic matrix directly from the elementary matrix 
   subroutine direct_construction_harmonic(my_id, my_id_n, m_cpu, n_cpu, MPI_COMM_N,  MPI_COMM_MASTER, my_id_master, & 
-    node_list, element_list, bnd_elm_list, bnd_node_list, xpoint2, xcase2, restart, freeboundary, direct_construction)
+    node_list, element_list, bnd_elm_list, bnd_node_list, xpoint2, xcase2, restart, freeboundary, direct_construction, a_mat)
 
   use data_structure 
   use global_distributed_matrix
@@ -25,6 +26,8 @@ contains
   type(type_bnd_node_list),     intent(inout) :: bnd_node_list
   type (type_element_list),     intent(in)    :: element_list
   type (type_bnd_element_list), intent(in)    :: bnd_elm_list
+  type(type_SP_MATRIX)                        :: a_mat
+  
   integer, intent(in) :: my_id, my_id_n, n_cpu, m_cpu, MPI_COMM_N, MPI_COMM_MASTER, my_id_master, xcase2
   logical, intent(in) :: direct_construction, xpoint2, restart, freeboundary
   
@@ -37,7 +40,6 @@ contains
   integer(kind=int_all)              :: ndof 
   integer                            :: i_tor_min, i_tor_max 
   integer                            :: i, ierr
-  type(type_SP_MATRIX)     :: a_mat
   type(type_RHS)     :: rhs_vec
     
   ! --- Memory allocation 
@@ -67,12 +69,12 @@ contains
     call global_matrix_structure(my_id,node_List,element_list,bnd_elm_list, freeboundary, &
       local_elms_harm,n_local_elms_harm,index_min_harm(my_id+1),                                  & 
       index_max_harm(my_id+1), ijA_index_harm, ijA_size_harm,                                     &
-      irn_jcn_harm, irn_harm, jcn_harm, i_tor_min, i_tor_max,                           &                         
-      n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm)
+      irn_jcn_harm, i_tor_min, i_tor_max,                           &                         
+      n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm, a_mat)
 
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
       call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min_harm(my_id+1), index_max_harm(my_id+1), & 
-        i_tor_min, i_tor_max, irn_harm, jcn_harm, n_matrix_block_size_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm) 
+        i_tor_min, i_tor_max, a_mat%irn, a_mat%jcn, n_matrix_block_size_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm) 
     endif
   endif
  
@@ -80,10 +82,11 @@ contains
   call construct_matrix(my_id, MPI_COMM_N,                &
     local_elms_harm, n_local_elms_harm, index_min_harm, index_max_harm, xpoint2,&
     xcase2, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint,              &
-    ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm, A_harm,  &
-    rhs_harm, irn_harm, jcn_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, a_mat, rhs_vec,  &
+    ES%psi_xpoint, i_tor_min, i_tor_max, n_harm, nz_harm, ndof_harm, n_matrix_block_size_harm,    &
+    rhs_harm, ijA_index_harm, ijA_size_harm, irn_jcn_harm, a_mat, rhs_vec,  &
     direct_construction)
 
   end subroutine direct_construction_harmonic
-
+  
+#endif
 end module direct_construction_mod

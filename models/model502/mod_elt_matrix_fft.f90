@@ -959,7 +959,7 @@ do ms=1, n_gauss
      dZ_eff_imp_dT = dZ_eff_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert gradient from /K to /JOREK unit
 
      if ((Z_eff_imp < 0.d0) .or. (Z_eff_imp > imp_adas(1)%n_Z**2)) then
-       Z_eff_imp = min(max(Z_eff_imp,0.d0),imp_adas(1)%n_Z**2)
+       Z_eff_imp = min(max(Z_eff_imp,0.d0),real(imp_adas(1)%n_Z)**2)       
        dZ_eff_imp_dT = 0.d0
      endif
 

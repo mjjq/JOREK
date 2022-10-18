@@ -14,7 +14,7 @@ module mod_initialise_particles
   public set_particle_weights_canonical_maxwellian, normalize_with_projection
   public weigh_with_interp_f
   public normalize_with_projection_at_gc
-  public initialise_particles_in_phase_space
+  public pdf_f,initialise_particles_in_phase_space
 
   interface
     subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
@@ -32,17 +32,19 @@ module mod_initialise_particles
       real*8, dimension(3,n), intent(in) :: gradP
       real*4 :: rej_f
     end function rej_f
-    function reject_f(n_x,x,st,time,i_elm,rand,fields)
+    function pdf_f(n_x,x,st,time,i_elm,fields,x_min,x_max,n_real_param,real_param)
       use mod_fields, only: fields_base
       !> inputs:
-      integer,intent(in)                   :: n_x,i_elm
-      real*8,intent(in)                    :: rand,time
-      real*8,dimension(n_x),intent(in)     :: x
-      real*8,dimension(2),intent(in)       :: st
-      class(fields_base),intent(in)        :: fields
+      integer,intent(in)                                  :: n_x,i_elm
+      real*8,intent(in)                                   :: time
+      real*8,dimension(n_x),intent(in)                    :: x,x_min,x_max
+      real*8,dimension(2),intent(in)                      :: st
+      class(fields_base),intent(in)                       :: fields
+      integer,intent(in),optional                         :: n_real_param
+      real*8,dimension(:),allocatable,intent(in),optional :: real_param
       !> outputs:
-      logical                              :: reject_f
-    end function reject_f
+      real*8                                              :: pdf_f
+    end function pdf_f
   end interface
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
@@ -284,9 +286,9 @@ end subroutine initialise_particles
 !> It is a dirty implementation so it must be replaced with something better in future.
 !> Inputs:
 !> Outputs:
-subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reject_sample,&
-  mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, Phibound_in,&
-  chargebound_in)
+subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,&
+  mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, &
+  Phibound_in,chargebound_in)
   use constants,                 only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools,          only: get_orthonormals
@@ -305,7 +307,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
   !> inputs
   class(fields_base),    intent(in)                 :: fields
   class(type_rng),       intent(in)                 :: rng_base !< What type of random number generator to use (will be reseeded here)
-  procedure(reject_f)                               :: reject_sample !< if true, the random sample is accepted
+  procedure(pdf_f)                                  :: pdf
   real*8,intent(in)                                 :: mass,time
   real*8,dimension(2),intent(in),optional           :: Ekinbound_in, Pitchbound_in, Chibound_in
   real*8,dimension(2),intent(in),optional           :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
@@ -371,7 +373,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
   end do
 
   !> Initialise variables needed in the loop
-  n_particles = size(particles) 
+  n_particles = size(particles)
   call cpu_time(t0)
   !> Loop on the particles
 #ifndef __NVCOMPILER
@@ -387,7 +389,8 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(reject_sample(n_variables,variables(1:n_variables),st,time,i_elm,variables(n_variables+1),fields))
+      do while(rejection_funct(n_variables,variables(1:n_variables),st,time,&
+        i_elm,variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf))
         call rngs(thread_id)%next(variables)
         variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
@@ -422,6 +425,42 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, reje
   endif
 
 end subroutine initialise_particles_in_phase_space
+
+!> acceptance - rejection function
+!> inputs:
+!>   n_x:    (integer) number of variables
+!>   x:      (real8)(n_x) variables
+!>   st:     (real8)(2) jorek mesh local coordinates
+!>   i_elm:  (integer) jorek element number
+!>   rand:   (real8) uniformly distributed random number [0,1]
+!>   fields: (fields_base) jorek MHD fields
+!>   pdf:    (pdf_f) procedure returning the value of the
+!>           probability density function at a given point
+!> outputs:
+!>   rej: (logical) if true the sample is rejected
+function rejection_funct(n_x,x,st,time,i_elm,rand,&
+x_min,x_max,fields,pdf) result(rej)
+  use mod_fields, only: fields_base
+  implicit none
+  !> input variables
+  class(fields_base),intent(in)    :: fields
+  integer,intent(in)               :: n_x,i_elm
+  real*8,intent(in)                :: time,rand
+  real*8,dimension(2)              :: st
+  real*8,dimension(n_x),intent(in) :: x,x_min,x_max
+  procedure(pdf_f)                 :: pdf
+  !> output variables
+  logical :: rej
+
+  !> check if the particle is valid
+  rej = .true.
+  if(i_elm.le.0) return
+  if((st(1).lt.0.d0).or.(st(1).gt.1.d0)) return
+  if((st(2).lt.0.d0).or.(st(2).gt.1.d0)) return
+  !> reject or accept solution
+  if(rand.le.pdf(n_x,x,st,time,i_elm,fields,x_min,x_max)) rej = .false.
+  
+end function rejection_funct
 
 !> Initialise particle positions in E, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
 !> Set Psi_transform to transform from [0,1] to your desired range

@@ -19,31 +19,18 @@ use mod_random_seed
 use particle_tracer
 implicit none
 
-!> Interfaces -------------------------------------------------------------------------------
-interface
-  function pdf_f(nx,x,i_elm,time,st,fields) result(pdf)
-    use mod_fields, only: fields_base
-    implicit none
-    !> inputs:
-    integer,intent(in)              :: nx
-    real*8,intent(in)               :: time
-    real*8,dimension(nx),intent(in) :: x
-    integer,intent(in)              :: i_elm
-    real*8,dimension(2),intent(in)  :: st
-    class(fields_base),intent(in)   :: fields
-    !> outputs:
-    real*8 :: pdf
-  end function pdf_f
-end interface
-
 !> Variable declarations --------------------------------------------------------------------
 type(sobseq_rng)             :: sob_rng
 type(event)                  :: field_reader
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
-real*8                       :: start_time,mass,charge,error
+integer                      :: n_int_pdf_param,n_real_pdf_param
+integer,dimension(6)         :: mass_tot_mesh_sizes
+integer,dimension(:),allocatable :: int_pdf_param
+real*8                       :: start_time,mass,charge,error,tot_mass
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
+real*8,dimension(:),allocatable           :: real_pdf_param
 real*8,dimension(:,:,:,:,:,:),allocatable :: histogram,number_of_particles
 character(len=:),allocatable              :: jorek_filename
 
@@ -52,7 +39,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-n_particles = 1000
+n_particles = 100000000
 nR          = 5
 nZ          = 5
 nphi        = 5
@@ -64,11 +51,12 @@ mass        = 5.48579909065d-4 !< electron mass in AMU
 Rbound      = [0.d0,9.99d2]
 Zbound      = [-9.99d2,9.99d2]
 Phibound    = 5.d-1*[PI,3.d0*PI]
-Ekinbound   = [2d7-1,2d7+1]
+Ekinbound   = [2d7-1d6,2d7+1d6]
 Pitchbound  = [PI-2.95d-1,PI]
 Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
-charge      = -1.d0 
+charge      = -1.d0
+mass_tot_mesh_sizes = [10,10,10,10,10,10]
 allocate(character(len=25)::jorek_filename)
 jorek_filename = 'jorek_equilibrium' 
 
@@ -80,6 +68,7 @@ allocate(Rmesh(nR)); allocate(Zmesh(nZ)); allocate(phimesh(nphi)); allocate(pmes
 allocate(pitchmesh(npitch)); allocate(chimesh(nchi));
 allocate(histogram(nR,nZ,nphi,np,npitch,nchi));
 allocate(number_of_particles(nR,nZ,nphi,np,npitch,nchi));
+
 Rmesh = 0.d0; Zmesh = 0.d0; phimesh = 0.d0; pmesh = 0.d0; pitchmesh = 0.d0; chimesh = 0.d0;
 histogram = 0.d0; number_of_particles = 0.d0;
 !> read jorek field
@@ -94,8 +83,13 @@ call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rb
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
 call initialise_particles_in_phase_space(sim%groups(1)%particles,sim%fields,sob_rng,&
-reject_uniform,sim%groups(1)%mass,start_time,Ekinbound,Pitchbound,Chibound,&
+pdf_uniform,sim%groups(1)%mass,start_time,Ekinbound,Pitchbound,Chibound,&
 Rbound,Zbound,Phibound,chargebound)
+write(*,*) "... computing particles uniform weights"
+Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/((ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2)))+1.d0)**2-1.d0)
+call mass_from_pdf(tot_mass,mass_tot_mesh_sizes,Rbound,Zbound,Phibound,Pbound,&
+Pitchbound,Chibound,start_time,pdf_uniform,sim%fields)
+sim%groups(1)%particles(:)%weight = tot_mass/n_particles 
 
 !> Produce histogram from particles ---------------------------------------------------------
 write(*,*) "... building particle histogram"
@@ -105,7 +99,6 @@ if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
 if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
 if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
 if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
-Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/((ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2)))+1.d0)**2-1.d0)
 call compute_equidistant_mesh(Rmesh,nR,Rbound)
 call compute_equidistant_mesh(Zmesh,nZ,Zbound)
 call compute_equidistant_mesh(phimesh,nphi,Phibound) 
@@ -168,6 +161,8 @@ subroutine compute_error_norm2_ndim6(error,n1,n2,n3,n4,n5,n6,array1,array2)
           do qq=1,n2
             error = error + dot_product((array2(:,qq,pp,kk,jj,ii)-array1(:,qq,pp,kk,jj,ii)),&
             (array2(:,qq,pp,kk,jj,ii)-array1(:,qq,pp,kk,jj,ii)))
+            write(*,*) 'array 1: ',array1(:,qq,pp,kk,jj,ii),' array 2: ',array2(:,qq,pp,kk,jj,ii)
+            write(*,*) '------'
           enddo
         enddo
       enddo
@@ -198,6 +193,55 @@ subroutine compute_equidistant_mesh(mesh,n_points,bounds)
     mesh(ii) = bounds(1)+real(delta*(ii-1),kind=8)
   enddo
 end subroutine compute_equidistant_mesh
+
+!> Compute the total mass of the distribution
+subroutine mass_from_pdf(mass_tot,mesh_sizes,Rbounds,Zbounds,phibounds,pbounds,&
+pitchbounds,chibounds,time,pdf,fields)
+  use mod_fields,only: fields_base
+  implicit none
+  !> input variables:
+  class(fields_base),intent(in)   :: fields
+  integer,dimension(6),intent(in) :: mesh_sizes
+  real*8,intent(in)               :: time
+  real*8,dimension(2),intent(in)  :: Rbounds,Zbounds,phibounds
+  real*8,dimension(2),intent(in)  :: pbounds,pitchbounds,chibounds
+  procedure(pdf_f)                :: pdf 
+  !> output variables:
+  real*8,intent(out)              :: mass_tot
+  !> internal variables
+  integer :: ii,jj,kk,pp,qq,ss,i_elm,ifail
+  real*8  :: dummy_double_1,dummy_double_2,volume
+  real*8,dimension(2) :: st
+  real*8,dimension(6) :: lower_bound,upper_bound,dist,x
+ 
+  !> initialisation
+  lower_bound  = [Rbounds(1),Zbounds(1),phibounds(1),pbounds(1),pitchbounds(1),chibounds(1)]
+  upper_bound  = [Rbounds(2),Zbounds(2),phibounds(2),pbounds(2),pitchbounds(2),chibounds(2)]
+  dist = upper_bound-lower_bound
+  dist = dist/(real(mesh_sizes-1,kind=8)); mass_tot = 0.d0; volume = product(dist);
+  !> compute integrals
+  !$omp parallel do default(shared) firstprivate(mesh_sizes,volume,lower_bound,upper_bound,dist) &
+  !$omp private(ii,jj,kk,pp,qq,ss,x,dummy_double_1,dummy_double_2,i_elm,st,ifail) &
+  !$omp reduction(+:mass_tot) collapse(6)
+  do ii=1,mesh_sizes(1)-1
+    do jj=1,mesh_sizes(2)-1
+      do kk=1,mesh_sizes(3)-1
+        do pp=1,mesh_sizes(4)-1
+          do qq=1,mesh_sizes(5)-1
+            do ss=1,mesh_sizes(6)-1
+              x = lower_bound + 5.d-1*real([ii,jj,kk,pp,qq,ss],kind=8)*dist
+              call find_RZ(fields%node_list,fields%element_list,x(1),x(2),dummy_double_1,&
+              dummy_double_2,i_elm,st(1),st(2),ifail)
+              mass_tot = mass_tot + volume*x(1)*(x(4)**2)*sin(x(5))*&
+              pdf(6,x,st,time,i_elm,fields,lower_bound,upper_bound)
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+  enddo 
+  !$omp end parallel do
+end subroutine mass_from_pdf
 
 !> Prepare a histogram given equidistant meshes
 !> inputs:
@@ -324,18 +368,20 @@ pitchmesh,gyromesh,charge,time,pdf,fields)
   integer                  :: i_elm,ifail
   real*8                   :: one_over_six,dummy_double_1,dummy_double_2
   real*8,dimension(2)      :: st
-  real*8,dimension(nx)     :: x_midpoints
+  real*8,dimension(nx)     :: x_midpoints,x_min,x_max
   real*8,dimension(nR)     :: R2mesh
   real*8,dimension(np)     :: p3mesh
   real*8,dimension(npitch) :: cospitchmesh 
   !> initialisation
-  one_over_six = 1.d0/6.d0; cospitchmesh = cos(pitchmesh);
+  one_over_six = 1.d0/6.d0; n_particles = 0; cospitchmesh = cos(pitchmesh);
   p3mesh = pmesh**3; R2mesh = Rmesh**2; particle_number = 0.d0; 
   x_midpoints = [0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,charge];
+  x_min = [Rmesh(1),Zmesh(1),phimesh(1),pmesh(1),pitchmesh(1),gyromesh(1),charge]
+  x_max = [Rmesh(nR),Zmesh(nZ),phimesh(nphi),pmesh(np),pitchmesh(npitch),gyromesh(ngyro),charge]
   !> loop over all midpoints, try with openmp collapse clause first. If slow,
   !> manually collapse all loops in one
   !$omp parallel do default(shared) &
-  !$omp firstprivate(ngyro,npitch,np,nphi,nZ,nR,one_over_six,time,x_midpoints) &
+  !$omp firstprivate(ngyro,npitch,np,nphi,nZ,nR,one_over_six,time,x_midpoints,x_min,x_max) &
   !$omp private(ii,jj,kk,pp,qq,rr,i_elm,st,dummy_double_1,dummy_double_2) &
   !$omp collapse(6)
   do ii=1,ngyro-1
@@ -353,10 +399,11 @@ pitchmesh,gyromesh,charge,time,pdf,fields)
               call find_RZ(fields%node_list,fields%element_list,x_midpoints(1),&
               x_midpoints(2),dummy_double_1,dummy_double_2,i_elm,st(1),st(2),ifail)
               !> estimate the number of particles at the kinetic mesh midpoint
-              particle_number(rr,qq,pp,kk,jj,ii) = pdf(nx,x_midpoints,i_elm,time,st,fields)*&
-              (p3mesh(kk+1)-p3mesh(kk))*(cospitchmesh(jj+1)-cospitchmesh(jj))*&
+              particle_number(rr,qq,pp,kk,jj,ii) = pdf(nx,x_midpoints,st,time,i_elm,fields,&
+              x_min,x_max)*(p3mesh(kk+1)-p3mesh(kk))*(cospitchmesh(jj)-cospitchmesh(jj+1))*&
               (gyromesh(ii+1)-gyromesh(ii))*(R2mesh(rr+1)-R2mesh(rr))*(Zmesh(qq+1)-Zmesh(qq))*&
               (phimesh(pp+1)-phimesh(pp))*one_over_six
+              !> sum everything
             enddo
           enddo
         enddo
@@ -401,21 +448,37 @@ function reject_uniform(n_x,x,st,time,i_elm,rand,fields)
 end function reject_uniform
 
 !> Phase space distribution for testing
-function pdf_uniform(nx,x,i_elm,time,st,fields) result(pdf)
+!> inputs:
+!>   nx:     (integer) number of variables
+!>   x:      (real8)(nx) random state to accept
+!>   i_elm:  (integer) jorek mesh element number
+!>   st:     (real8)(2) local mesh coordinates
+!>   fields: (fields_base) jorek MHD fields
+!>   x_min:  (real8)(nx) lower bound of the phase space interval
+!>   x_max:  (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer)(optional) number of real input 
+!>                 parameters of the pdf
+!>   real_param:   (real8)(n_real_param)(optiona) real pdf parameter
+!> outputs:
+!>   pdf:    (real8) value of the probability density 
+function pdf_uniform(nx,x,st,time,i_elm,fields,x_min,x_max,&
+n_real_param,real_param)
   use mod_fields, only: fields_base
   implicit none
-  !> constants
-  real*8,parameter :: val=5.d-1
   !> Inputs:
   integer,intent(in)              :: nx,i_elm
   real*8,intent(in)               :: time
-  real*8,dimension(nx),intent(in) :: x
+  real*8,dimension(nx),intent(in) :: x,x_min,x_max
   real*8,dimension(2),intent(in)  :: st
   class(fields_base),intent(in)   :: fields
+  integer,intent(in),optional     :: n_real_param
+  real*8,dimension(:),allocatable,intent(in),optional :: real_param
   !> Outputs:
-  real*8 :: pdf
+  real*8 :: pdf_uniform
   !> Evalutate pdf
-  pdf = val
+  pdf_uniform = 1.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
+  (cos(x_min(5)-cos(x_max(5))))*(x_max(6)-x_min(6)))
 end function pdf_uniform
 
 end program test_initialisation_phase_space

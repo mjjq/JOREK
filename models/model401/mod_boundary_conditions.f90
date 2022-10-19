@@ -110,7 +110,7 @@ real*8  :: QPs0,QPs0_s,QPs0_t,QPs0_st,QPs0_ss,QPs0_tt
 integer :: ifail, i_elm
 
 real*8  ::   Mach1BC,   Mach1BC_v,   Mach1BC_T,   Mach1BC_u
-real*8  ::  dMach1BC,  dMach1BC_v,  dMach1BC_T,  dMach1BC_Tb, dMach1BC_ubb
+real*8  ::  dMach1BC,  dMach1BC_v,  dMach1BC_Ti, dMach1BC_Te,  dMach1BC_Tb, dMach1BC_ubb
 real*8  :: d2Mach1BC, d2Mach1BC_v, d2Mach1BC_T, d2Mach1BC_Tb, d2Mach1BC_Tbb
 
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), index_tmp, kk, ll
@@ -536,10 +536,9 @@ do i=1, n_local_elms !=== do elements
           dMach1BC    = - Vpar0_b + direction / Btot * factor  * cs0_T * (Ti0_b+Te0_b)  &
                                   + direction / Btot * Hfact_b * cs0         
           dMach1BC_v  = - element_size_0
-          dMach1BC_T  =           + direction / Btot * factor  * cs0_TT* (Ti0_b+Te0_b)  &
+          dMach1BC_Ti =           + direction / Btot * factor  * cs0_TT* Ti0_b  &
                                   + direction / Btot * Hfact_b * cs0_T
-          dMach1BC_Tb =           + direction / Btot * factor  * cs0_T * element_size_0
-          dMach1BC_T  =           + direction / Btot * factor  * cs0_TT* (Ti0_b+Te0_b)  &
+          dMach1BC_Te =           + direction / Btot * factor  * cs0_TT* Te0_b  &
                                   + direction / Btot * Hfact_b * cs0_T
           dMach1BC_Tb =           + direction / Btot * factor  * cs0_T * element_size_0
 
@@ -625,13 +624,13 @@ do i=1, n_local_elms !=== do elements
 
           call boundary_conditions_add_one_entry(               &
                  index_node2, kv, in, index_node,  kTi, in,     &
-                 - zbig * dMach1BC_T,                           & 
+                 - zbig * dMach1BC_Ti,                          & 
                  solve_only, gmres, index_min, index_max,       & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           call boundary_conditions_add_one_entry(               &
                  index_node2, kv, in, index_node,  kTe, in,     &
-                 - zbig * dMach1BC_T,                           & 
+                 - zbig * dMach1BC_Te,                          & 
                  solve_only, gmres, index_min, index_max,       & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 

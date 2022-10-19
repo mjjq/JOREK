@@ -24,9 +24,8 @@ type(sobseq_rng)             :: sob_rng
 type(event)                  :: field_reader
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param
-integer                      :: n_desired_particles_per_elements
 integer,dimension(:),allocatable :: int_pdf_param
-real*8                       :: start_time,mass,charge,error,error_norm
+real*8                       :: start_time,mass,charge,error,error_norm,error_avg_norm
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
@@ -40,7 +39,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-n_desired_particles_per_elements = 10000
+n_particles = 10000000
 nR          = 5
 nZ          = 5
 nphi        = 5
@@ -69,7 +68,6 @@ allocate(pitchmesh(npitch)); allocate(chimesh(nchi));
 allocate(expected_pdf(nR,nZ,nphi,np,npitch,nchi));
 allocate(pdf_at_midpoints(nR,nZ,nphi,np,npitch,nchi));
 
-n_particles = n_desired_particles_per_elements*product([nR,nZ,nphi,np,npitch,nchi]-1)
 Rmesh = 0.d0; Zmesh = 0.d0; phimesh = 0.d0; pmesh = 0.d0; pitchmesh = 0.d0; chimesh = 0.d0;
 expected_pdf = 0.d0; pdf_at_midpoints = 0.d0;
 !> read jorek field
@@ -80,7 +78,13 @@ sim%time = start_time
 sim%groups(1)%mass = mass
 allocate(particle_kinetic_relativistic::sim%groups(1)%particles(n_particles))
 call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rbox(2),Zbox(1),Zbox(2))
-Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/((ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2)))+1.d0)**2-1.d0)
+if(Rbox(1).ge.Rbound(1)) Rbound(1) = Rbox(1)
+if((Rbox(2).lt.Rbound(2)).and.((Rbox(2)-Rbound(1)).gt.0.d0)) Rbound(2) = Rbox(2)
+if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
+if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
+if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
+if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
+Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
 var_min = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),Chibound(1)]
 var_max = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),Chibound(2)]
 
@@ -92,12 +96,6 @@ Pitchbound,Chibound,Rbound,Zbound,Phibound,chargebound)
 
 !> Produce the expected pdf fromt the particle histogram --------------------------------------
 write(*,*) "... building particle histogram and computing the expected pdf"
-if(Rbox(1).ge.Rbound(1)) Rbound(1) = Rbox(1)
-if((Rbox(2).lt.Rbound(2)).and.((Rbox(2)-Rbound(1)).gt.0.d0)) Rbound(2) = Rbox(2)
-if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
-if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
-if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
-if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
 call compute_equidistant_mesh(Rmesh,nR,Rbound)
 call compute_equidistant_mesh(Zmesh,nZ,Zbound)
 call compute_equidistant_mesh(phimesh,nphi,Phibound) 
@@ -116,13 +114,14 @@ write(*,*) "... computing the input pdf at the midpoints of the mesh elements"
 call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,nchi,Rmesh,Zmesh,phimesh,&
      pmesh,pitchmesh,chimesh,charge,start_time,pdf_uniform,sim%fields)
 write(*,*) "... computing L2 error"
-call compute_error_norm2_ndim6(error,error_norm,nR-1,nZ-1,nphi-1,np-1,npitch-1,nchi-1,&
-expected_pdf,pdf_at_midpoints,sup_pdf_uniform(6,var_min,var_max)) 
+call compute_error_norm2_ndim6(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
+npitch-1,nchi-1,expected_pdf,pdf_at_midpoints,sup_pdf_uniform(6,var_min,var_max)) 
 
 !> Log test results -------------------------------------------------------------------------
 write(*,*) "... logging test results"
 write(*,*) "L2 error between the expected pdf from particle histogram and the input pdf at mid points: ",error
 write(*,*) "L2 error normalized to the maximum of the input pdf: ",error_norm
+write(*,*) "L2 error averaged and normalised to the maximum of the input pdf: ",error_avg_norm
 write(*,*) " "
 
 !> Clean-up ---------------------------------------------------------------------------------
@@ -135,15 +134,15 @@ write(*,*) "Test: initialise_particle_in_phase_space: completed."
 contains
 
 !> Compute the L2 error of 6D-arrays
-subroutine compute_error_norm2_ndim6(error_L2,error_L2_norm,n1,n2,n3,n4,n5,n6,&
-array1,array2,sup_array2)
+subroutine compute_error_norm2_ndim6(error_L2,error_L2_norm,error_L2_avg_norm,&
+n1,n2,n3,n4,n5,n6,array1,array2,sup_array2)
   implicit none
   !> inputs
   integer,intent(in)                             :: n1,n2,n3,n4,n5,n6
   real*8,intent(in)                              :: sup_array2
   real*8,dimension(n1,n2,n3,n4,n5,n6),intent(in) :: array1,array2
   !> outputs
-  real*8,intent(out) :: error_L2,error_L2_norm
+  real*8,intent(out) :: error_L2,error_L2_norm,error_L2_avg_norm
   !> variables
   integer :: ii,jj,kk,pp,qq
   real*8  :: error
@@ -169,6 +168,7 @@ array1,array2,sup_array2)
   enddo
   !$omp end parallel do
   error_L2 = sqrt(error); error_L2_norm = error_L2/abs(sup_array2);
+  error_L2_norm = sqrt(error/(n1*n2*n3*n4*n5*n6))/abs(sup_array2)
 end subroutine compute_error_norm2_ndim6
 
 !> Generate an equidistant mesh

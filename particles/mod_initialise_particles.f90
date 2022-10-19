@@ -368,7 +368,6 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   !> charge boxes
   phase_bounds(7,:) = 1.d0
   if(present(chargebound_in)) phase_bounds(7,:) = chargebound_in
-
   !> initialize random number generator
   n_threads = 1
 !$ n_threads = omp_get_max_threads()
@@ -447,26 +446,25 @@ end subroutine initialise_particles_in_phase_space_uniform_sampling
 
 !> acceptance - rejection function assuming the sampling pdf to be uniform
 !> inputs:
-!>   n_x:            (integer) number of variables
-!>   x:              (real8)(n_x) variables
-!>   st:             (real8)(2) jorek mesh local coordinates
-!>   i_elm:          (integer) jorek element number
-!>   rand:           (real8) uniformly distributed random number [0,1]
-!>   fields:         (fields_base) jorek MHD fields
-!>   pdf:            (pdf_f) procedure returning the value of the
-!>                   probability density function at a given point
-!>   sup_volume_pdf: (real8) ration between the sampling volume 
-!>                   and the pdf upper bound
+!>   n_x:              (integer) number of variables
+!>   x:                (real8)(n_x) variables
+!>   st:               (real8)(2) jorek mesh local coordinates
+!>   i_elm:            (integer) jorek element number
+!>   rand:             (real8) uniformly distributed random number [0,1]
+!>   fields:           (fields_base) jorek MHD fields
+!>   pdf:              (pdf_f) procedure returning the value of the
+!>                     probability density function at a given point
+!>   one_over_sup_pdf: (real8) 1/upper bound of the pdf
 !> outputs:
 !>   rej: (logical) if true the sample is rejected
 function rejection_funct_uniform_gpdf(n_x,x,st,time,i_elm,rand,&
-x_min,x_max,fields,pdf,sup_volume_pdf) result(rej)
+x_min,x_max,fields,pdf,one_over_sup_pdf) result(rej)
   use mod_fields, only: fields_base
   implicit none
   !> input variables
   class(fields_base),intent(in)    :: fields
   integer,intent(in)               :: n_x,i_elm
-  real*8,intent(in)                :: time,rand,sup_volume_pdf
+  real*8,intent(in)                :: time,rand,one_over_sup_pdf
   real*8,dimension(2)              :: st
   real*8,dimension(n_x),intent(in) :: x,x_min,x_max
   procedure(pdf_f)                 :: pdf
@@ -479,7 +477,7 @@ x_min,x_max,fields,pdf,sup_volume_pdf) result(rej)
   if((st(1).lt.0.d0).or.(st(1).gt.1.d0)) return
   if((st(2).lt.0.d0).or.(st(2).gt.1.d0)) return
   !> reject or accept solution
-  if(rand.le.sup_volume_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,x_max)) rej = .false.
+  if(rand.le.one_over_sup_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,x_max)) rej = .false.
   
 end function rejection_funct_uniform_gpdf
 

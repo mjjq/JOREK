@@ -323,7 +323,7 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   class(type_rng),dimension(:),allocatable :: rngs 
   integer                                  :: my_id,n_cpu,n_threads,thread_id,ifail
   integer                                  :: ii,jj,n_particles,i_elm
-  real*8                                   :: t0,t1,Erest,psi,U,one_third,volume_over_suppdf
+  real*8                                   :: t0,t1,Erest,psi,U,one_third,one_over_sup_pdf
   real*8,dimension(2)                      :: st
   real*8,dimension(3)                      :: B,E,e1,e2
   !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
@@ -385,17 +385,12 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   phase_bounds_uniform_samp(1,:) = phase_bounds_uniform_samp(1,:)**2
   phase_bounds_uniform_samp(4,:) = phase_bounds_uniform_samp(4,:)**3
   phase_bounds_uniform_samp(5,:) = cos(phase_bounds_uniform_samp(5,:))
-  volume_over_suppdf = 1.d0
-  !> the conditions below are required for avoiding zero volume in case of delta-Dirac distributions
-  volume_over_suppdf = product([5.d-1,1.d0,1.d0,one_third,-1.d0,1.d0,1.d0]*&
-  (phase_bounds_uniform_samp(:,2)-phase_bounds_uniform_samp(:,1)),mask=(abs(&
-  (phase_bounds_uniform_samp(:,2)-phase_bounds_uniform_samp(:,1))).gt.0d0))
-  volume_over_suppdf = volume_over_suppdf/sup_pdf
+  one_over_sup_pdf = 1d0/sup_pdf 
   call cpu_time(t0)
   !> Loop on the particles
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
-    !$omp firstprivate(n_particles,mass,time,phase_bounds,volume_over_suppdf,&
+    !$omp firstprivate(n_particles,mass,time,phase_bounds,one_over_sup_pdf,&
     !$omp phase_bounds_uniform_samp,one_third) &
     !$omp private(ii,variables,thread_id,i_elm,st,ifail,B,e1,e2,E,psi,U)
     thread_id = 1
@@ -408,7 +403,7 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
       do while(rejection_funct_uniform_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,&
-        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,volume_over_suppdf))
+        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,one_over_sup_pdf))
         !> uniform sampling in cylindrical coordinates for the physical space (R,Z,phi),
         !> in spherical coordinates for the momentum space (p,pitch,gyro)
         !> and uniform for the charge state

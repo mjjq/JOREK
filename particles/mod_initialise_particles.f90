@@ -46,6 +46,10 @@ module mod_initialise_particles
       real*8                                              :: pdf_f
     end function pdf_f
   end interface
+  interface initialise_particles_in_phase_space
+    module procedure initialise_particles_in_phase_space_uniform_sampling
+  end interface initialise_particles_in_phase_space
+
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
@@ -283,12 +287,15 @@ end subroutine initialise_particles
 
 !> Initialise particle in phase space given a generic distribution in space and momentum
 !> space. The acceptance-rejection method is used for generating the particle population.
+!> The particle population is sampled uniformely in the phase space (uniform cylindrical
+!> sampling for the spatical coordinates, uniform spherical sampling for the momentum
+!> coordinates and uniform sampling for the charge state)
 !> It is a dirty implementation so it must be replaced with something better in future.
 !> Inputs:
 !> Outputs:
-subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,&
-  mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, &
-  Phibound_in,chargebound_in)
+subroutine initialise_particles_in_phase_space_uniform_sampling(particles, fields, &
+  rng_base, pdf, sup_pdf,mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, &
+  Rbound_in, Zbound_in, Phibound_in,chargebound_in)
   use constants,                 only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools,          only: get_orthonormals
@@ -308,7 +315,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   class(fields_base),    intent(in)                 :: fields
   class(type_rng),       intent(in)                 :: rng_base !< What type of random number generator to use (will be reseeded here)
   procedure(pdf_f)                                  :: pdf
-  real*8,intent(in)                                 :: mass,time
+  real*8,intent(in)                                 :: mass,time,sup_pdf
   real*8,dimension(2),intent(in),optional           :: Ekinbound_in, Pitchbound_in, Chibound_in
   real*8,dimension(2),intent(in),optional           :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
 
@@ -316,11 +323,11 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   class(type_rng),dimension(:),allocatable :: rngs 
   integer                                  :: my_id,n_cpu,n_threads,thread_id,ifail
   integer                                  :: ii,jj,n_particles,i_elm
-  real*8                                   :: t0,t1,Erest,psi,U  
+  real*8                                   :: t0,t1,Erest,psi,U,one_third,volume_over_suppdf
   real*8,dimension(2)                      :: st
   real*8,dimension(3)                      :: B,E,e1,e2
   !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
-  real*8,dimension(7,2)                    :: phase_bounds 
+  real*8,dimension(7,2)                    :: phase_bounds,phase_bounds_uniform_samp
   real*8,dimension(:),allocatable          :: variables
 
   !> extract id and size of the MPI Communicator
@@ -373,12 +380,23 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   end do
 
   !> Initialise variables needed in the loop
-  n_particles = size(particles)
+  n_particles = size(particles); one_third = 1.d0/3.d0;
+  phase_bounds_uniform_samp = phase_bounds
+  phase_bounds_uniform_samp(1,:) = phase_bounds_uniform_samp(1,:)**2
+  phase_bounds_uniform_samp(4,:) = phase_bounds_uniform_samp(4,:)**3
+  phase_bounds_uniform_samp(5,:) = cos(phase_bounds_uniform_samp(5,:))
+  volume_over_suppdf = 1.d0
+  !> the conditions below are required for avoiding zero volume in case of delta-Dirac distributions
+  volume_over_suppdf = product([5.d-1,1.d0,1.d0,one_third,-1.d0,1.d0,1.d0]*&
+  (phase_bounds_uniform_samp(:,2)-phase_bounds_uniform_samp(:,1)),mask=(abs(&
+  (phase_bounds_uniform_samp(:,2)-phase_bounds_uniform_samp(:,1))).gt.0d0))
+  volume_over_suppdf = volume_over_suppdf/sup_pdf
   call cpu_time(t0)
   !> Loop on the particles
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
-    !$omp firstprivate(n_particles,mass,time) &
+    !$omp firstprivate(n_particles,mass,time,phase_bounds,volume_over_suppdf,&
+    !$omp phase_bounds_uniform_samp,one_third) &
     !$omp private(ii,variables,thread_id,i_elm,st,ifail,B,e1,e2,E,psi,U)
     thread_id = 1
     !$ thread_id = omp_get_thread_num()+1
@@ -389,10 +407,16 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(rejection_funct(n_variables,variables(1:n_variables),st,time,&
-        i_elm,variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf))
+      do while(rejection_funct_uniform_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,&
+        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,volume_over_suppdf))
+        !> uniform sampling in cylindrical coordinates for the physical space (R,Z,phi),
+        !> in spherical coordinates for the momentum space (p,pitch,gyro)
+        !> and uniform for the charge state
         call rngs(thread_id)%next(variables)
-        variables(1:n_variables) = phase_bounds(:,1) + (phase_bounds(:,2)-phase_bounds(:,1))*variables(1:n_variables)
+        variables(1:n_variables) = phase_bounds_uniform_samp(:,1) + &
+        (phase_bounds_uniform_samp(:,2)-phase_bounds_uniform_samp(:,1))*variables(1:n_variables)
+        variables(1) = sqrt(variables(1)); variables(4) = variables(4)**one_third;
+        variables(5) = acos(variables(5))
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
         variables(1),variables(2),i_elm,st(1),st(2),ifail) 
       enddo
@@ -424,28 +448,30 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
     write(*,*) '**********************************'
   endif
 
-end subroutine initialise_particles_in_phase_space
+end subroutine initialise_particles_in_phase_space_uniform_sampling
 
-!> acceptance - rejection function
+!> acceptance - rejection function assuming the sampling pdf to be uniform
 !> inputs:
-!>   n_x:    (integer) number of variables
-!>   x:      (real8)(n_x) variables
-!>   st:     (real8)(2) jorek mesh local coordinates
-!>   i_elm:  (integer) jorek element number
-!>   rand:   (real8) uniformly distributed random number [0,1]
-!>   fields: (fields_base) jorek MHD fields
-!>   pdf:    (pdf_f) procedure returning the value of the
-!>           probability density function at a given point
+!>   n_x:            (integer) number of variables
+!>   x:              (real8)(n_x) variables
+!>   st:             (real8)(2) jorek mesh local coordinates
+!>   i_elm:          (integer) jorek element number
+!>   rand:           (real8) uniformly distributed random number [0,1]
+!>   fields:         (fields_base) jorek MHD fields
+!>   pdf:            (pdf_f) procedure returning the value of the
+!>                   probability density function at a given point
+!>   sup_volume_pdf: (real8) ration between the sampling volume 
+!>                   and the pdf upper bound
 !> outputs:
 !>   rej: (logical) if true the sample is rejected
-function rejection_funct(n_x,x,st,time,i_elm,rand,&
-x_min,x_max,fields,pdf) result(rej)
+function rejection_funct_uniform_gpdf(n_x,x,st,time,i_elm,rand,&
+x_min,x_max,fields,pdf,sup_volume_pdf) result(rej)
   use mod_fields, only: fields_base
   implicit none
   !> input variables
   class(fields_base),intent(in)    :: fields
   integer,intent(in)               :: n_x,i_elm
-  real*8,intent(in)                :: time,rand
+  real*8,intent(in)                :: time,rand,sup_volume_pdf
   real*8,dimension(2)              :: st
   real*8,dimension(n_x),intent(in) :: x,x_min,x_max
   procedure(pdf_f)                 :: pdf
@@ -458,9 +484,9 @@ x_min,x_max,fields,pdf) result(rej)
   if((st(1).lt.0.d0).or.(st(1).gt.1.d0)) return
   if((st(2).lt.0.d0).or.(st(2).gt.1.d0)) return
   !> reject or accept solution
-  if(rand.le.pdf(n_x,x,st,time,i_elm,fields,x_min,x_max)) rej = .false.
+  if(rand.le.sup_volume_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,x_max)) rej = .false.
   
-end function rejection_funct
+end function rejection_funct_uniform_gpdf
 
 !> Initialise particle positions in E, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
 !> Set Psi_transform to transform from [0,1] to your desired range

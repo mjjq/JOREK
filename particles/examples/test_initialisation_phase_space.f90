@@ -24,6 +24,7 @@ type(sobseq_rng)             :: sob_rng
 type(event)                  :: field_reader
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param
+integer                      :: n_desired_particles_per_elements
 integer,dimension(:),allocatable :: int_pdf_param
 real*8                       :: start_time,mass,charge,error,tot_mass
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
@@ -39,7 +40,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-n_particles = 1000000
+n_desired_particles_per_elements = 100
 nR          = 5
 nZ          = 5
 nphi        = 5
@@ -68,6 +69,7 @@ allocate(pitchmesh(npitch)); allocate(chimesh(nchi));
 allocate(expected_pdf(nR,nZ,nphi,np,npitch,nchi));
 allocate(pdf_at_midpoints(nR,nZ,nphi,np,npitch,nchi));
 
+n_particles = n_desired_particles_per_elements*product([nR,nZ,nphi,np,npitch,nchi]-1)
 Rmesh = 0.d0; Zmesh = 0.d0; phimesh = 0.d0; pmesh = 0.d0; pitchmesh = 0.d0; chimesh = 0.d0;
 expected_pdf = 0.d0; pdf_at_midpoints = 0.d0;
 !> read jorek field
@@ -156,8 +158,6 @@ subroutine compute_error_norm2_ndim6(error,n1,n2,n3,n4,n5,n6,array1,array2)
           do qq=1,n2
             error = error + dot_product((array2(:,qq,pp,kk,jj,ii)-array1(:,qq,pp,kk,jj,ii)),&
             (array2(:,qq,pp,kk,jj,ii)-array1(:,qq,pp,kk,jj,ii)))
-            write(*,*) 'array 1: ',array1(:,qq,pp,kk,jj,ii),' array 2: ',array2(:,qq,pp,kk,jj,ii)
-            write(*,*) '------'
           enddo
         enddo
       enddo
@@ -406,9 +406,9 @@ n_real_param,real_param)
   !> Outputs:
   real*8 :: pdf_uniform
   !> Evalutate pdf
-  pdf_uniform = 1.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  pdf_uniform = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
-  (cos(x_min(5)-cos(x_max(5))))*(x_max(6)-x_min(6)))
+  (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
 end function pdf_uniform
 
 !> Upper bound of the phase space distribution for testing
@@ -433,9 +433,9 @@ n_real_param,real_param) result(sup_pdf)
   !> Outputs:
   real*8 :: sup_pdf
   !> Evalutate pdf
-  sup_pdf = 1.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  sup_pdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
-  (cos(x_min(5)-cos(x_max(5))))*(x_max(6)-x_min(6)))
+  (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
 end function sup_pdf_uniform
 
 end program test_initialisation_phase_space

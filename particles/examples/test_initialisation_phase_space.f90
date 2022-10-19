@@ -26,7 +26,7 @@ integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param
 integer                      :: n_desired_particles_per_elements
 integer,dimension(:),allocatable :: int_pdf_param
-real*8                       :: start_time,mass,charge,error,tot_mass
+real*8                       :: start_time,mass,charge,error,error_norm
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
@@ -40,7 +40,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-n_desired_particles_per_elements = 100
+n_desired_particles_per_elements = 10000
 nR          = 5
 nZ          = 5
 nphi        = 5
@@ -116,12 +116,13 @@ write(*,*) "... computing the input pdf at the midpoints of the mesh elements"
 call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,nchi,Rmesh,Zmesh,phimesh,&
      pmesh,pitchmesh,chimesh,charge,start_time,pdf_uniform,sim%fields)
 write(*,*) "... computing L2 error"
-call compute_error_norm2_ndim6(error,nR-1,nZ-1,nphi-1,np-1,npitch-1,nchi-1,&
-expected_pdf,pdf_at_midpoints) 
+call compute_error_norm2_ndim6(error,error_norm,nR-1,nZ-1,nphi-1,np-1,npitch-1,nchi-1,&
+expected_pdf,pdf_at_midpoints,sup_pdf_uniform(6,var_min,var_max)) 
 
 !> Log test results -------------------------------------------------------------------------
 write(*,*) "... logging test results"
 write(*,*) "L2 error between the expected pdf from particle histogram and the input pdf at mid points: ",error
+write(*,*) "L2 error normalized to the maximum of the input pdf: ",error_norm
 write(*,*) " "
 
 !> Clean-up ---------------------------------------------------------------------------------
@@ -134,15 +135,18 @@ write(*,*) "Test: initialise_particle_in_phase_space: completed."
 contains
 
 !> Compute the L2 error of 6D-arrays
-subroutine compute_error_norm2_ndim6(error,n1,n2,n3,n4,n5,n6,array1,array2)
+subroutine compute_error_norm2_ndim6(error_L2,error_L2_norm,n1,n2,n3,n4,n5,n6,&
+array1,array2,sup_array2)
   implicit none
   !> inputs
   integer,intent(in)                             :: n1,n2,n3,n4,n5,n6
+  real*8,intent(in)                              :: sup_array2
   real*8,dimension(n1,n2,n3,n4,n5,n6),intent(in) :: array1,array2
   !> outputs
-  real*8,intent(out) :: error
+  real*8,intent(out) :: error_L2,error_L2_norm
   !> variables
   integer :: ii,jj,kk,pp,qq
+  real*8  :: error
 
   !> initialisation
   error = 0.d0
@@ -164,7 +168,7 @@ subroutine compute_error_norm2_ndim6(error,n1,n2,n3,n4,n5,n6,array1,array2)
     enddo
   enddo
   !$omp end parallel do
-  error = sqrt(error)
+  error_L2 = sqrt(error); error_L2_norm = error_L2/abs(sup_array2);
 end subroutine compute_error_norm2_ndim6
 
 !> Generate an equidistant mesh

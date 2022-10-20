@@ -512,7 +512,7 @@ mpi_required = 0
     call distribute_nodes_elements(id_elements, n_cpu, index_size, node_list, element_list, .false., local_elms, & 
          n_local_elms, restart, freeboundary, a_mat)    
     
-    call global_matrix_structure(my_id, node_list, element_list, bnd_elm_list, freeboundary,&
+    call global_matrix_structure(node_list, element_list, bnd_elm_list, freeboundary,&
          local_elms, n_local_elms, n_glob, a_mat, i_tor_min=1, i_tor_max=n_tor)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)

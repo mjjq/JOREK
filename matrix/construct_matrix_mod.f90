@@ -679,7 +679,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
-                           my_ind_min, my_ind_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,        & 
+                           my_ind_min, my_ind_max, rhs_local, xpoint2, xcase2, R_axis, Z_axis,        & 
                            psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, a_mat)
 
   if (fix_axis_nodes) then

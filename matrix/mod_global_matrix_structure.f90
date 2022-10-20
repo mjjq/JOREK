@@ -1,6 +1,6 @@
 module mod_global_matrix_structure
 contains
-subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms, & 
+subroutine global_matrix_structure(node_list, element_list, boundary_list, freeboundary, local_elms, n_local_elms, & 
                                    n, a_mat, i_tor_min, i_tor_max)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
@@ -11,6 +11,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   use mod_ch_node_struct
   use vacuum, only: sr
   use mod_integer_types
+  use mpi_mod
 
   implicit none
 
@@ -23,7 +24,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   integer, dimension(:), pointer :: index_min, index_max
   type(type_SP_MATRIX)           :: a_mat
 
-  integer :: local_elms(*), my_id, n_local_elms, n_tor_local
+  integer                            :: local_elms(*), n_local_elms, n_tor_local
   integer                            :: i, index1, index2, index1_local, index2_local
   integer(kind=int_all)              :: j_larger, j, n_max, maxsize
   integer(kind=int_all)              :: n, ndof
@@ -33,7 +34,10 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   integer, dimension(n_vertex_max)   :: node_out
   logical                            :: freeboundary
   integer(kind=int_all), allocatable :: tmp(:,:)
+  integer                            :: my_id, ierr
 
+  call MPI_COMM_RANK(a_mat%comm, my_id, ierr)
+  
   if ( my_id == 0 ) then
     write(*,*) '**********************************'
     write(*,*) '* global_matrix_structure        *'
@@ -44,6 +48,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   n_tor_local = i_tor_max - i_tor_min + 1
   
   a_mat%block_size = n_tor_local*n_var
+  
   a_mat%i_tor_min = i_tor_min
   a_mat%i_tor_max = i_tor_max
   

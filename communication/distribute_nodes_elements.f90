@@ -1,26 +1,28 @@
-subroutine distribute_nodes_elements(my_id, m_cpu, n_cpu, node_list, element_list, direct_construction, &
-                                    local_elms, n_local_elms, index_min, index_max, restart, freeboundary)
+subroutine distribute_nodes_elements(my_id, m_cpu, index_size, node_list, element_list, direct_construction, &
+                                    local_elms, n_local_elms, restart, freeboundary, a_mat)
 !---------------------------------------------------------------------------------------------
-! subroutine divides the nodes (not their individual dof) over n_cpu equal parts
+! subroutine divides the nodes (not their individual dof) over index_size equal parts
 !            builds local_elms, contain all elements with at least one node with 
 !            one index between index_min and index_max
 !---------------------------------------------------------------------------------------------
 use data_structure
 use mod_integer_types
+use tr_module
 
 implicit none
 
 type (type_node_list)    :: node_list
 type (type_element_list) :: element_list
 type (type_surface_list) :: flux_list
+type(type_SP_MATRIX)     :: a_mat
 
 logical, parameter :: DEBUG = .false.
 
 integer               :: local_elms(*)
-integer               :: my_id, n_cpu, m_cpu, n_local_elms, inode
+integer, dimension(:), pointer :: index_min, index_max
+integer               :: my_id, index_size, m_cpu, n_local_elms, inode
 integer               :: index_total
 integer               :: inext, i,j, k, iv,index1
-integer               :: index_min(*), index_max(*)
 logical               :: restart, freeboundary
 
 logical :: elm_is_local, direct_construction
@@ -47,30 +49,34 @@ do inode=1,node_list%n_nodes
 enddo
 node_list%n_dof = index_total * n_tor * n_var
 
-index_min(1:n_cpu) = 0
-index_max(1:n_cpu) = 0
+call tr_allocatep(index_min,1,index_size,"index_min",CAT_FEM)
+call tr_allocatep(index_max,1,index_size,"index_max",CAT_FEM)
+
+index_min(1:index_size) = 0
+index_max(1:index_size) = 0
+
 
 !----------------------------- must really take into account the number of elements contributing to each node
 
 if (.not. direct_construction) then ! global matrix construction
   
   index_min(1) = 1
-  do i=1,n_cpu
-    index_max(i) = (i * index_total) / n_cpu
+  do i=1,index_size
+    index_max(i) = (i * index_total)/index_size
   enddo
-  do i=2,n_cpu
+  do i=2,index_size
     index_min(i) = index_max(i-1) + 1
   enddo
-  if (my_id .eq. n_cpu-1) index_max(my_id+1) = index_total
-  if (DEBUG) write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
+  if (my_id .eq. index_size-1) index_max(my_id+1) = index_total
+  if (DEBUG) write(*,'(A,3i6)') ' index_min,index_max:', my_id, index_min(my_id+1), index_max(my_id+1)
   
 else ! harmonic matrix "direct" construction
   
   if (mod(my_id,m_cpu) .eq. 0) index_min(my_id+1) = 1 ! my_id_n = 0
-  do i=1,n_cpu
+  do i=1,index_size
     index_max(i) = ((mod(i-1,m_cpu)+1) * index_total)/m_cpu
   enddo
-  do i=2,n_cpu
+  do i=2,index_size
     if (mod(i-1,m_cpu) .ne. 0) then
       index_min(i) = index_max(i-1) + 1
     endif
@@ -125,7 +131,7 @@ enddo
 
 n_local_ELMs = inext
 
-if (DEBUG) write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms,element_list%n_elements
+if (DEBUG) write(*,'(i4,A,20i8)') my_id,' n_local_elms  : ',n_local_elms, element_list%n_elements
 
 !--------------------- check distribution of boundary nodes 
 mpi_distr_count=0
@@ -146,7 +152,8 @@ if (restart .and. freeboundary) then
   end if 
 end if
      
-
+a_mat%index_min => index_min
+a_mat%index_max => index_max
 
 return
 end

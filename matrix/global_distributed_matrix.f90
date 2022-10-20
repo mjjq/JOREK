@@ -151,7 +151,7 @@ module global_distributed_matrix
   
   
   !> Initialize the (freeboundary related) row and column numbers in the sparse matrix structure.
-  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, index_min, index_max, i_tor_min, i_tor_max, a_mat)
+  subroutine global_matrix_structure_vacuum(node_list, bnd_node_list, a_mat, i_tor_min, i_tor_max)
     
     use mod_parameters, only: n_tor, n_var
     use data_structure, only: type_node_list, type_bnd_node_list, type_SP_MATRIX
@@ -162,7 +162,6 @@ module global_distributed_matrix
     ! --- Routine parameters
     type(type_node_list),               intent(in)    :: node_list            !< List of grid nodes
     type(type_bnd_node_list),           intent(in)    :: bnd_node_list        !< List of boundary grid nodes
-    integer,                            intent(in)    :: index_min, index_max !< Responsibility of MPI proc
     integer,                            intent(in)    :: i_tor_min, i_tor_max !< Toroidal mode numbers 
     type(type_SP_MATRIX)                              :: a_mat
     ! --- Local variables
@@ -172,8 +171,7 @@ module global_distributed_matrix
     
     !$omp parallel do                                                                    &
     !$omp default(none)                                                                  &
-    !$omp shared(bnd_node_list, node_list, index_min, index_max, a_mat,               & 
-    !$omp        i_tor_min, i_tor_max)&
+    !$omp shared(bnd_node_list, node_list, a_mat, i_tor_min, i_tor_max)                  &
     !$omp private(l_node_bnd, l_dof, l_tor, l_var, j_node_bnd, j_dof,  j_tor,            &
     !$omp         j_var, l_node, l_dir, l_index, l_row, j_node, j_dir, j_index,          &
     !$omp         j_col, sparsepos)                                                      &
@@ -184,7 +182,7 @@ module global_distributed_matrix
         l_node      = bnd_node_list%bnd_node(l_node_bnd)%index_jorek
         l_dir       = bnd_node_list%bnd_node(l_node_bnd)%direction(l_dof)
         l_index     = node_list%node(l_node)%index(l_dir)
-        if ( (l_index < index_min) .or. (l_index > index_max) ) cycle ! Is the current MPI thread in charge?
+        if ( (l_index < a_mat%my_ind_min) .or. (l_index > a_mat%my_ind_max) ) cycle ! Is the current MPI thread in charge?
         do l_tor = i_tor_min, i_tor_max 
           do l_var = 1, n_var
             l_row = det_row_col(l_index, l_var, l_tor, i_tor_min, i_tor_max)
@@ -201,7 +199,7 @@ module global_distributed_matrix
                     
                     ! --- Determine which position in the sparse matrix data structure corresponds
                     !     to the matrix entry at l_row, j_col.
-                    sparsepos = det_sparse_pos(l_row, j_col, index_min, a_mat)
+                    sparsepos = det_sparse_pos(l_row, j_col, a_mat%my_ind_min, a_mat)
                     
                     ! --- Set row and column numbers in the sparse matrix data structure
                     a_mat%irn(sparsepos) = l_row

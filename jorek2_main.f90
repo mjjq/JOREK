@@ -123,9 +123,7 @@ program JOREK2
   character*8              :: label, itlabel
   character*14             :: fileout
   integer                  :: mpi_required,mpi_provided,StatInfo
-  !integer, allocatable, target     :: local_elms(:), index_min(:), index_max(:)
   integer, dimension(:), pointer :: local_elms => null()
-  integer, dimension(:), pointer :: index_min => null(), index_max => null() !< division of work across processes  
   real*8                   :: zjz, E_min, E_max
   logical                  :: to_quit, freeb_equil2
   integer*4                :: rank, comm_size 
@@ -508,25 +506,18 @@ mpi_required = 0
     id_elements = my_id
 
     call tr_allocatep(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
-    call tr_allocatep(index_min,1,index_size,"index_min",CAT_FEM)
-    call tr_allocatep(index_max,1,index_size,"index_max",CAT_FEM)
-    !call tr_allocate(local_index_start,1,n_cpu,"local_index_start",CAT_FEM)
-    !call tr_allocate(local_index_end,1,n_cpu,"local_index_end",CAT_FEM)
+    
+    a_mat%comm = MPI_COMM_WORLD
 
-    !
-    ! Construct index_min, index_max and local_elems
-    !
     call distribute_nodes_elements(id_elements, n_cpu, index_size, node_list, element_list, .false., local_elms, & 
-         n_local_elms, index_min, index_max, restart, freeboundary)    
+         n_local_elms, restart, freeboundary, a_mat)    
     
     call global_matrix_structure(my_id, node_list, element_list, bnd_elm_list, freeboundary,&
-         local_elms, n_local_elms, index_min(id_elements+1), index_max(id_elements+1),              & 
-         1, n_tor, n_glob, a_mat)
+         local_elms, n_local_elms, n_glob, a_mat, i_tor_min=1, i_tor_max=n_tor)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(node_list, bnd_node_list, index_min(my_id+1), index_max(my_id+1),& 
-           1, n_tor, a_mat) 
+      call global_matrix_structure_vacuum(node_list, bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
     endif
 
   endif ! (nstep >0)
@@ -635,8 +626,7 @@ mpi_required = 0
     call clck_time_barrier(t0)
 
     !--------- Constructing Global Matrix
-    call construct_matrix(my_id, MPI_COMM_WORLD, local_elms,   &
-         n_local_ELms, index_min, index_max, xpoint, xcase, ES%R_axis, ES%Z_axis,&
+    call construct_matrix(my_id, local_elms, n_local_ELms, xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
          n_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
 

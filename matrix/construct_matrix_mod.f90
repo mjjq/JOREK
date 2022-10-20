@@ -21,7 +21,6 @@ contains
     use mod_boundary_matrix_open, only : boundary_matrix_open
     use mod_elt_matrix,           only : element_matrix
     use mod_elt_matrix_fft,       only : element_matrix_fft
-    use mod_global_matrix_structure
     use mpi_mod
 
     ! --- Routine parameters
@@ -260,7 +259,7 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, index_max,& 
+subroutine construct_matrix(my_id, local_elms, n_local_elms, & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, &
                             n, rhs, a_mat, global_rhs, harmonic_matrix)
   
@@ -290,7 +289,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
   ! --- Routine parameters
   integer,               intent(in) :: my_id
-  integer,               intent(in) :: comm
   integer,               intent(in) :: local_elms(*)
   integer,               intent(in) :: n_local_elms
   integer,               intent(in) :: xcase2
@@ -305,8 +303,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   integer(kind=int_all), intent(in) :: n
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable, target :: rhs(:)
-  integer, dimension(:), pointer, intent(in) :: index_min
-  integer, dimension(:), pointer, intent(in) :: index_max
   
   !--- Internal variables
   type (type_element)               :: element
@@ -330,11 +326,14 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   CHARACTER(LEN=128)                :: fname
   integer                           :: i_v(n_var)
   integer, allocatable              :: i_harm(:)
+  integer                           :: comm
   type(type_SP_MATRIX)              :: a_mat
   type(type_RHS)                    :: global_rhs
 
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
+  
+  comm = a_mat%comm
 
   ! --- Printout
   if (my_id .eq. 0) then
@@ -349,8 +348,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
     endif
   endif
   
-  my_ind_min = index_min(my_id+1)
-  my_ind_max = index_max(my_id+1)
+  my_ind_min = a_mat%index_min(my_id+1)
+  my_ind_max = a_mat%index_max(my_id+1)
   
   ! --- Memory tracking
   call tr_print_memsize("DebConstM")
@@ -742,13 +741,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
   
   ! assign global matrix structure
-  !a_mat%irn => irn
-  !a_mat%jcn => jcn
-  !a_mat%val => a_mat
-  a_mat%index_min => index_min
-  a_mat%index_max => index_max
-  a_mat%comm = comm
-  a_mat%block_size  = n_tor*n_var ! its already defined in the global matrix structure
   global_rhs%val => RHS
   global_rhs%n  = a_mat%ng
      

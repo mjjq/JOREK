@@ -516,16 +516,12 @@ mpi_required = 0
     !
     ! Construct index_min, index_max and local_elems
     !
-    call distribute_nodes_elements(id_elements, n_cpu, index_size,node_list,element_list,.false.,local_elms, & 
-         n_local_elms,ndof_glob,index_min,index_max, restart, freeboundary)    
-
-    node_list%n_dof = ndof_glob
-    !local_index_start = index_min
-    !local_index_end   = index_max
-
-    call global_matrix_structure(my_id,node_List,element_list,bnd_elm_list, freeboundary,&
-         local_elms,n_local_elms,index_min(id_elements+1),index_max(id_elements+1),              & 
-         1, n_tor, n_glob, nz_glob, ndof_glob, a_mat)
+    call distribute_nodes_elements(id_elements, n_cpu, index_size, node_list, element_list, .false., local_elms, & 
+         n_local_elms, index_min, index_max, restart, freeboundary)    
+    
+    call global_matrix_structure(my_id, node_list, element_list, bnd_elm_list, freeboundary,&
+         local_elms, n_local_elms, index_min(id_elements+1), index_max(id_elements+1),              & 
+         1, n_tor, n_glob, nz_glob, a_mat)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
@@ -642,7 +638,7 @@ mpi_required = 0
     call construct_matrix(my_id, MPI_COMM_WORLD, local_elms,   &
          n_local_ELms, index_min, index_max, xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
-         n_glob, nz_glob, ndof_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
+         n_glob, nz_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond

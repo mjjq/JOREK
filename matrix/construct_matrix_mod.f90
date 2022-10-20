@@ -262,7 +262,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, index_max,& 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, &
-                            n, nz, ndof, rhs, a_mat, global_rhs, harmonic_matrix)
+                            n, nz, rhs, a_mat, global_rhs, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -304,7 +304,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   logical,               intent(in) :: xpoint2
   integer(kind=int_all), intent(in) :: n
   integer(kind=int_all), intent(in) :: nz
-  integer(kind=int_all), intent(in) :: ndof
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable, target :: rhs(:)
   integer, dimension(:), pointer, intent(in) :: index_min
@@ -394,10 +393,10 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   a_mat%val = 0.0d0
 
   if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
-  call tr_allocate(rhs, Int1,ndof,"rhs", CAT_DMATRIX)
+  call tr_allocate(rhs, Int1,a_mat%ng,"rhs", CAT_DMATRIX)
   rhs = 0.0d0 
 
-  call tr_allocate(rhs_local, Int1,ndof,"rhs_local", CAT_DMATRIX)
+  call tr_allocate(rhs_local, Int1,a_mat%ng,"rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
  
   ! --- Declare shared and private variables for omp
@@ -731,15 +730,15 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 #ifdef NORMTRACE
     ! --- For debugging purpose
 
-    call tr_locvnorms("cm_Rhs",RHS,ndof)
+    call tr_locvnorms("cm_Rhs",RHS,a_mat%ng)
     if (my_id .eq. 0) then
       write(fname,'(A,I6.6)')"rhs",index_now
-      call tr_vdump(fname,RHS,ndof)
+      call tr_vdump(fname,RHS,a_mat%ng)
     end if
 #endif
   endif
   
-  call MPI_AllReduce(RHS_local,RHS,ndof,MPI_DOUBLE_PRECISION,MPI_SUM,comm,ierr)  
+  call MPI_AllReduce(RHS_local,RHS,a_mat%ng,MPI_DOUBLE_PRECISION,MPI_SUM,comm,ierr)  
 
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
   
@@ -747,18 +746,17 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   !a_mat%irn => irn
   !a_mat%jcn => jcn
   !a_mat%val => a_mat
-  a_mat%ng  = ndof
   a_mat%nnz = nz
   a_mat%index_min => index_min
   a_mat%index_max => index_max
   a_mat%comm = comm
   a_mat%block_size  = n_tor*n_var ! its already defined in the global matrix structure
   global_rhs%val => RHS
-  global_rhs%n  = ndof
+  global_rhs%n  = a_mat%ng
      
   ! --- Memory tracking
-  call tr_locvnorms("cm_BCRhs",RHS,ndof)
-  call tr_debug_write("ndof",ndof)
+  call tr_locvnorms("cm_BCRhs",RHS,a_mat%ng)
+  call tr_debug_write("ndof",a_mat%ng)
   
   ! --- Timing
   call r3_info_end(r3_info_index_0)

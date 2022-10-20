@@ -1,7 +1,7 @@
 module mod_global_matrix_structure
 contains
 subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
-  i_tor_min, i_tor_max, n, nz, ndof, a_mat)
+  i_tor_min, i_tor_max, n, nz, a_mat)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
@@ -50,7 +50,8 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   do inode1=1,node_list%n_nodes
      ndof = max(ndof,maxval(node_list%node(inode1)%index))
   enddo
-  ndof = ndof * n_tor_local*n_var
+  ndof = ndof*n_tor_local*n_var
+  a_mat%ng = ndof
 
   n_max = 8192
 
@@ -271,7 +272,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   enddo
 
-  n  = (index_max-index_min+1) * n_tor_local*n_var
+  n  = (index_max - index_min+1) * n_tor_local*n_var
 
   nz = a_mat%ijA_index(index_max-index_min + 1, a_mat%ijA_size(index_max-index_min+1)) + (n_tor_local*n_var)**2 - 1
   

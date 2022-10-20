@@ -1,5 +1,5 @@
-subroutine distribute_nodes_elements(my_id,m_cpu,n_cpu,node_list,element_list, direct_construction, &
-                                    local_elms, n_local_elms, n_dof, index_min, index_max, restart, freeboundary)
+subroutine distribute_nodes_elements(my_id, m_cpu, n_cpu, node_list, element_list, direct_construction, &
+                                    local_elms, n_local_elms, index_min, index_max, restart, freeboundary)
 !---------------------------------------------------------------------------------------------
 ! subroutine divides the nodes (not their individual dof) over n_cpu equal parts
 !            builds local_elms, contain all elements with at least one node with 
@@ -18,7 +18,6 @@ logical, parameter :: DEBUG = .false.
 
 integer               :: local_elms(*)
 integer               :: my_id, n_cpu, m_cpu, n_local_elms, inode
-integer(kind=int_all) :: n_dof
 integer               :: index_total
 integer               :: inext, i,j, k, iv,index1
 integer               :: index_min(*), index_max(*)
@@ -46,6 +45,7 @@ index_total = -1
 do inode=1,node_list%n_nodes
   index_total = max(index_total,maxval(node_list%node(inode)%index))
 enddo
+node_list%n_dof = index_total * n_tor * n_var
 
 index_min(1:n_cpu) = 0
 index_max(1:n_cpu) = 0
@@ -66,7 +66,7 @@ if (.not. direct_construction) then ! global matrix construction
   
 else ! harmonic matrix "direct" construction
   
-  if (mod(my_id,m_cpu) .eq. 0) index_min(my_id+1) = 1
+  if (mod(my_id,m_cpu) .eq. 0) index_min(my_id+1) = 1 ! my_id_n = 0
   do i=1,n_cpu
     index_max(i) = ((mod(i-1,m_cpu)+1) * index_total)/m_cpu
   enddo
@@ -79,8 +79,6 @@ else ! harmonic matrix "direct" construction
   if (DEBUG) write(*,'(A,3i6)') ' index_min,index_max:',my_id,index_min(my_id+1),index_max(my_id+1)
   
 end if 
-
-n_dof = index_total * n_tor * n_var
 
 !----------------------------------------------- find the elements that have a local node
 inext = 0

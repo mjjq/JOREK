@@ -262,7 +262,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, index_max,& 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, &
-                            n, nz, rhs, a_mat, global_rhs, harmonic_matrix)
+                            n, rhs, a_mat, global_rhs, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -303,7 +303,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   real*8,                intent(in) :: psi_xpoint(2)
   logical,               intent(in) :: xpoint2
   integer(kind=int_all), intent(in) :: n
-  integer(kind=int_all), intent(in) :: nz
   logical,               intent(in) :: harmonic_matrix
   real*8,                intent(inout), allocatable, target :: rhs(:)
   integer, dimension(:), pointer, intent(in) :: index_min
@@ -389,14 +388,14 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
   ! --- Memory allocation
   if (associated(a_mat%val))   call tr_deallocatep(a_mat%val,"A_mat",CAT_DMATRIX) 
-  call tr_allocatep(a_mat%val,Int1,nz,"A_mat",  CAT_DMATRIX)
+  call tr_allocatep(a_mat%val, Int1, a_mat%nnz, "A_mat",  CAT_DMATRIX)
   a_mat%val = 0.0d0
 
   if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
-  call tr_allocate(rhs, Int1,a_mat%ng,"rhs", CAT_DMATRIX)
+  call tr_allocate(rhs, Int1, a_mat%ng, "rhs", CAT_DMATRIX)
   rhs = 0.0d0 
 
-  call tr_allocate(rhs_local, Int1,a_mat%ng,"rhs_local", CAT_DMATRIX)
+  call tr_allocate(rhs_local, Int1, a_mat%ng, "rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
  
   ! --- Declare shared and private variables for omp
@@ -677,7 +676,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   !$omp end parallel
  
   ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",a_mat%val,nz)
+  call tr_vnorms("cm_A_bef_bc", a_mat%val, a_mat%nnz)
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
@@ -691,7 +690,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   endif
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",a_mat%val,nz)
+  call tr_vnorms("cm_A_aft_bc", a_mat%val, a_mat%nnz)
 
 
     ! --- Add vacuum response (boundary integral) for free boundary computations
@@ -746,7 +745,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   !a_mat%irn => irn
   !a_mat%jcn => jcn
   !a_mat%val => a_mat
-  a_mat%nnz = nz
   a_mat%index_min => index_min
   a_mat%index_max => index_max
   a_mat%comm = comm

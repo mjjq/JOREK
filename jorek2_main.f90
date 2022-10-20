@@ -521,7 +521,7 @@ mpi_required = 0
     
     call global_matrix_structure(my_id, node_list, element_list, bnd_elm_list, freeboundary,&
          local_elms, n_local_elms, index_min(id_elements+1), index_max(id_elements+1),              & 
-         1, n_tor, n_glob, nz_glob, a_mat)
+         1, n_tor, n_glob, a_mat)
 
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
@@ -638,7 +638,7 @@ mpi_required = 0
     call construct_matrix(my_id, MPI_COMM_WORLD, local_elms,   &
          n_local_ELms, index_min, index_max, xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
-         n_glob, nz_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
+         n_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond

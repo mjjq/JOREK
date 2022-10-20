@@ -1,7 +1,7 @@
 module mod_global_matrix_structure
 contains
 subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
-  i_tor_min, i_tor_max, n, nz, a_mat)
+  i_tor_min, i_tor_max, n, a_mat)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
@@ -26,7 +26,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   integer                            :: index_min, index_max
   integer                            :: i, index1, index2, index1_local, index2_local
   integer(kind=int_all)              :: j_larger, j, n_max, maxsize
-  integer(kind=int_all)              :: n, nz, ndof
+  integer(kind=int_all)              :: n, ndof
   integer                            :: ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2
   integer(kind=int_all)              :: ibase
   integer                            :: inode,i_father,i_tor_min, i_tor_max
@@ -272,28 +272,20 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   enddo
 
-  n  = (index_max - index_min+1) * n_tor_local*n_var
+  n  = (index_max - index_min+1) * n_tor_local*n_var ! local rank
 
-  nz = a_mat%ijA_index(index_max-index_min + 1, a_mat%ijA_size(index_max-index_min+1)) + (n_tor_local*n_var)**2 - 1
+  a_mat%nnz = a_mat%ijA_index(index_max-index_min + 1, a_mat%ijA_size(index_max-index_min+1)) + (n_tor_local*n_var)**2 - 1
+ 
+  if (associated(a_mat%irn)) call tr_deallocatep(a_mat%irn, "irn", CAT_DMATRIX) 
+  call tr_allocatep(a_mat%irn, Int1, a_mat%nnz, "irn", CAT_DMATRIX)
+  a_mat%irn(:) = 0
   
-  !if (allocated(irn))  call tr_deallocate(irn,"irn",CAT_DMATRIX) 
-  !call tr_allocate(irn,Int1,nz,"irn",CAT_DMATRIX)
-  !if (allocated(jcn))  call tr_deallocate(jcn,"jcn",CAT_DMATRIX) 
-  !call tr_allocate(jcn,Int1,nz,"jcn",CAT_DMATRIX)  
-  !
-  !irn = 0
-  !jcn = 0
-  
-  if (associated(a_mat%irn))   call tr_deallocatep(a_mat%irn,"irn",CAT_DMATRIX) 
-  call tr_allocatep(a_mat%irn,Int1,nz,"irn",  CAT_DMATRIX)
-  a_mat%irn = 0
-  
-  if (associated(a_mat%jcn))   call tr_deallocatep(a_mat%jcn,"irn",CAT_DMATRIX) 
-  call tr_allocatep(a_mat%jcn,Int1,nz,"jcn",  CAT_DMATRIX)
-  a_mat%jcn = 0 
+  if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn, "irn", CAT_DMATRIX) 
+  call tr_allocatep(a_mat%jcn, Int1, a_mat%nnz, "jcn",  CAT_DMATRIX)
+  a_mat%jcn(:) = 0 
 
   !---- for debugging purpose
-  write(*,'(i6,a,2i20)') my_id, ' size matrices : n, nz = ', n, nz
+  write(*,'(i6,a,2i20)') my_id, ' size matrices : n, nz = ', n, a_mat%nnz
   !write(*,'(i6,a,2i20)') my_id, ' ndof = ', ndof
   !write(*,'(i6,a,2i20)') my_id, ' index_min, index_max = ', index_min, index_max
   !write(*,'(i6,a,2i20)') my_id, ' n_local_elms = ', n_local_elms

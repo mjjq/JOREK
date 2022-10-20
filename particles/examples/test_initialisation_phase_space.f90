@@ -39,13 +39,13 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-n_particles = 10000000
-nR          = 5
-nZ          = 5
-nphi        = 5
-np          = 5 
-npitch      = 5
-nchi        = 5
+n_particles = 10
+nR          = 10
+nZ          = 10
+nphi        = 10
+np          = 10
+npitch      = 10
+nchi        = 10
 start_time  = 0.d0
 mass        = 5.48579909065d-4 !< electron mass in AMU
 Rbound      = [0.d0,9.99d2]

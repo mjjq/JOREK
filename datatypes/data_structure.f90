@@ -159,6 +159,8 @@ module data_structure
     integer(kind=int_all)                        :: nnz                  !< number of local nonzero entries
     integer, dimension(:), pointer               :: index_min => Null()        !< minimum index in global range
     integer, dimension(:), pointer               :: index_max => Null()        !< maximum index in global range
+    integer                                      :: i_tor_min            ! minimum toroidal Fourier number used in construction
+    integer                                      :: i_tor_max            ! maximum toroidal Fourier number used in construction
     integer                                      :: block_size = 1
     integer                                      :: comm                 !< communicator over which the matrix is distributed
     logical                                      :: scaled = .false.

@@ -26,7 +26,7 @@ contains
 subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,& 
                                 n_local_elms, index_min, index_max, rhs_loc, xpoint2,     &
                                 xcase2, R_axis, Z_axis, psi_axis, psi_bnd,                &
-                                R_xpoint, Z_xpoint, psi_xpoint, i_tor_min, i_tor_max, a_mat)
+                                R_xpoint, Z_xpoint, psi_xpoint, a_mat)
 
 use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
 use data_structure
@@ -64,7 +64,6 @@ real*8,                             intent(in)    :: R_xpoint(2)
 real*8,                             intent(in)    :: Z_xpoint(2)
 real*8,                             intent(in)    :: psi_xpoint(2)
 real*8,                             intent(inout) :: rhs_loc(*)
-integer,                            intent(in)    :: i_tor_min, i_tor_max 
 type(type_SP_MATRIX)                              :: a_mat
 
 ! Internal parameters
@@ -212,7 +211,7 @@ do i=1, n_local_elms !=== do elements
 
       bnd_type = node_list%node(inode)%boundary
 
-      do in=i_tor_min, i_tor_max  ! === do n_tor
+      do in=a_mat%i_tor_min, a_mat%i_tor_max  ! === do n_tor
       
         if (keep_n0_const  .and.  in .eq. 1 ) then
           zbig = 1.d15
@@ -251,23 +250,21 @@ do i=1, n_local_elms !=== do elements
 
               call boundary_conditions_add_one_entry(                &
                      index_node, var_psi, in, index_node, var_psi, in,         &
-                     zbig, index_min, index_max,  & 
-                     i_tor_min, i_tor_max, a_mat)
+                     zbig, index_min, index_max, a_mat)
 
               call boundary_conditions_add_RHS(                      &
                      index_node, var_psi, in, index_min, index_max,       &
-                     RHS_loc, ZBIG * delta_psi_rmp, i_tor_min, i_tor_max)
+                     RHS_loc, ZBIG * delta_psi_rmp, a_mat%i_tor_min, a_mat%i_tor_max)
                   
               index_node2 = node_list%node(inode)%index(iv_dir)
 
               call boundary_conditions_add_one_entry(                 &
                      index_node2, var_psi, in, index_node2, var_psi, in,        &
-                     zbig, index_min, index_max,   & 
-                     i_tor_min, i_tor_max, a_mat)
+                     zbig, index_min, index_max, a_mat)
 
               call boundary_conditions_add_RHS(                       &
                      index_node2, var_psi, in, index_min, index_max,       &
-                     RHS_loc, ZBIG * delta_psi_rmp_ds, i_tor_min, i_tor_max)
+                     RHS_loc, ZBIG * delta_psi_rmp_ds, a_mat%i_tor_min, a_mat%i_tor_max)
 
             endif !=== endif selection RMP harmonics
         
@@ -330,15 +327,13 @@ do i=1, n_local_elms !=== do elements
 
             call boundary_conditions_add_one_entry(                 &
                    index_node, k, in, index_node, k, in,            &
-                   zbig, index_min, index_max,   & 
-                   i_tor_min, i_tor_max, a_mat)
+                   zbig, index_min, index_max, a_mat)
 
             index_node = node_list%node(inode)%index(iv_dir)
 
             call boundary_conditions_add_one_entry(                 &
                    index_node, k, in, index_node, k, in,            &
-                   zbig, index_min, index_max,   & 
-                   i_tor_min, i_tor_max, a_mat)
+                   zbig, index_min, index_max, a_mat)
 
           endif
 
@@ -513,46 +508,40 @@ do i=1, n_local_elms !=== do elements
           call boundary_conditions_add_one_entry(                                 &
                index_node, var_vpar, in, index_node, var_vpar, in,                &
                zbig,                                                              &
-               index_min, index_max,                           &
-               i_tor_min, i_tor_max, a_mat)
+               index_min, index_max, a_mat)
 
           if ( with_TiTe ) then
             call boundary_conditions_add_one_entry(                                 &
                  index_node, var_vpar, in, index_node, var_Ti, in,                  &
                  - zbig * factor / Btot * cs0_T * direction,                        &
-                 index_min, index_max,                           &
-                 i_tor_min, i_tor_max, a_mat)
+                 index_min, index_max, a_mat)
 
             call boundary_conditions_add_one_entry(                                 &
                  index_node, var_vpar, in, index_node, var_Te, in,                  &
                  - zbig * factor / Btot * cs0_T * direction,                        &
-                 index_min, index_max,                           &
-                 i_tor_min, i_tor_max, a_mat)
+                 index_min, index_max, a_mat)
           else
            call boundary_conditions_add_one_entry(                                 &
                 index_node, var_vpar, in, index_node, var_T, in,                   &
                 - zbig * factor / Btot * cs0_T * direction,                        &
-                index_min, index_max,                           &
-                i_tor_min, i_tor_max, a_mat)
+                index_min, index_max, a_mat)
           end if
 
 
           call boundary_conditions_add_one_entry(                                 &
                index_node,  var_vpar, in, index_node2, var_u, in,                 &
                - zbig * factor * BigR**2 * element_size_0 / ps0_b / Btot,         &
-               index_min, index_max,                           &
-               i_tor_min, i_tor_max, a_mat)
+               index_min, index_max, a_mat)
 
           if (in .eq. 1) then
             call boundary_conditions_add_RHS(                                                  &
                    index_node, var_vpar, in,index_min, index_max, RHS_loc,                     &
                    Zbig * ( - Vpar0 + factor*(BigR**2 * U0_b/ps0_b + cs0 * direction) / Btot), &
-                   i_tor_min, i_tor_max)
+                   a_mat%i_tor_min, a_mat%i_tor_max)
           else
             call boundary_conditions_add_RHS(                               &
                    index_node, var_vpar, in, index_min, index_max, RHS_loc, &
-                   0.d0,                                                    &
-                   i_tor_min, i_tor_max)
+                   0.d0, a_mat%i_tor_min, a_mat%i_tor_max)
           endif
   
           index_node  = node_list%node(inode)%index(1)
@@ -561,48 +550,41 @@ do i=1, n_local_elms !=== do elements
           call boundary_conditions_add_one_entry(                                   &
                  index_node2, var_vpar, in, index_node2, var_vpar, in,              &
                  zbig * element_size_0,                                             &
-                 index_min, index_max,                           &
-                 i_tor_min, i_tor_max, a_mat)
+                 index_min, index_max, a_mat)
 
           if ( with_TiTe ) then
             call boundary_conditions_add_one_entry(                                   &
                    index_node2, var_vpar, in, index_node2, var_Ti, in,                &
                    - zbig * element_size_0 * factor / Btot * cs0_T * direction,       &
-                   index_min, index_max,                           &
-                   i_tor_min, i_tor_max, a_mat)
+                   index_min, index_max, a_mat)
 
            call boundary_conditions_add_one_entry(                                    &
                    index_node2, var_vpar, in, index_node,  var_Ti, in,                &
                    - zbig * factor  / Btot * cs0_TT * T0i_b * direction               &
                    - zbig * Hfact_b / Btot * cs0_T         * direction,               &
-                   index_min, index_max,                           &
-                   i_tor_min, i_tor_max, a_mat)
+                   index_min, index_max, a_mat)
 
            call boundary_conditions_add_one_entry(                                    &
                    index_node2, var_vpar, in, index_node2, var_Te, in,                &
                    - zbig * element_size_0 * factor / Btot * cs0_T * direction,       &
-                   index_min, index_max,                           &
-                   i_tor_min, i_tor_max, a_mat)
+                   index_min, index_max, a_mat)
 
             call boundary_conditions_add_one_entry(                                   &
                    index_node2, var_vpar, in, index_node,  var_Te, in,                &
                    - zbig * factor  / Btot * cs0_TT * T0e_b * direction               &
                    - zbig * Hfact_b / Btot * cs0_T          * direction,              &
-                   index_min, index_max,                           &
-                   i_tor_min, i_tor_max, a_mat)
+                   index_min, index_max, a_mat)
           else
             call boundary_conditions_add_one_entry(                                   &
                    index_node2, var_vpar, in, index_node2, var_T, in,                 &
                    - zbig * element_size_0 * factor / Btot * cs0_T * direction,       &
-                   index_min, index_max,                           &
-                   i_tor_min, i_tor_max, a_mat)
+                   index_min, index_max, a_mat)
 
             call boundary_conditions_add_one_entry(                                   &
                    index_node2, var_vpar, in, index_node,  var_T, in,                 &
                    - zbig * factor  / Btot * cs0_TT * T0_b * direction                &
                    - zbig * Hfact_b / Btot * cs0_T         * direction,               &
-                   index_min, index_max,                           &
-                   i_tor_min, i_tor_max, a_mat)
+                   index_min, index_max, a_mat)
           end if
 
 
@@ -612,13 +594,12 @@ do i=1, n_local_elms !=== do elements
                      index_node2, var_vpar, in, index_min, index_max, RHS_loc,     &
                      Zbig*(-Vpar0_b + factor  / Btot * cs0_T * T0_b * direction    &
                                     + Hfact_b / Btot * cs0           * direction), &
-                     i_tor_min, i_tor_max)
+                     a_mat%i_tor_min, a_mat%i_tor_max)
 
           else
              call boundary_conditions_add_RHS(                         &
                    index_node2, var_vpar, in, index_min, index_max, RHS_loc, &
-                   0.d0,                                               &
-                   i_tor_min, i_tor_max) 
+                   0.d0, a_mat%i_tor_min, a_mat%i_tor_max) 
           endif
 
         endif   !=== apply_cs

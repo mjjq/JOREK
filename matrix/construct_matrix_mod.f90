@@ -261,8 +261,8 @@ contains
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
 subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, index_max,& 
-                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,i_tor_min, i_tor_max,  &
-                            n, nz, ndof, rhs, global_mat, global_rhs, harmonic_matrix)
+                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, &
+                            n, nz, ndof, rhs, a_mat, global_rhs, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -302,8 +302,6 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   real*8,                intent(in) :: Z_xpoint(2)
   real*8,                intent(in) :: psi_xpoint(2)
   logical,               intent(in) :: xpoint2
-  integer,               intent(in) :: i_tor_min
-  integer,               intent(in) :: i_tor_max
   integer(kind=int_all), intent(in) :: n
   integer(kind=int_all), intent(in) :: nz
   integer(kind=int_all), intent(in) :: ndof
@@ -334,7 +332,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   CHARACTER(LEN=128)                :: fname
   integer                           :: i_v(n_var)
   integer, allocatable              :: i_harm(:)
-  type(type_SP_MATRIX)              :: global_mat
+  type(type_SP_MATRIX)              :: a_mat
   type(type_RHS)                    :: global_rhs
 
   ! --- Timing call
@@ -391,9 +389,9 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   endif ! (.not. harmonic_matrix)
 
   ! --- Memory allocation
-  if (associated(global_mat%val))   call tr_deallocatep(global_mat%val,"A_mat",CAT_DMATRIX) 
-  call tr_allocatep(global_mat%val,Int1,nz,"A_mat",  CAT_DMATRIX)
-  global_mat%val = 0.0d0
+  if (associated(a_mat%val))   call tr_deallocatep(a_mat%val,"A_mat",CAT_DMATRIX) 
+  call tr_allocatep(a_mat%val,Int1,nz,"A_mat",  CAT_DMATRIX)
+  a_mat%val = 0.0d0
 
   if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
   call tr_allocate(rhs, Int1,ndof,"rhs", CAT_DMATRIX)
@@ -406,9 +404,9 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list, aux_node_list,                                &
   !$omp          my_ind_min, my_ind_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,  &
-  !$omp          global_mat, rhs_local, rhs,                                                               &
+  !$omp          a_mat, rhs_local, rhs,                                                               &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh,     &
-  !$omp          difference_found,rhs_problem,elm_problem, i_tor_min, i_tor_max) &
+  !$omp          difference_found,rhs_problem,elm_problem) &
   !$omp   private(ife,ielm,iv,inode,element,nodes, aux_nodes, i,inode1,i_order,index_node1, n_tor_local,   &
   !$omp           index_large_i,j,index_ij,k,knode,k_order,index_node2,index_large_k,ijA_position,         &
   !$omp           l,index_kl,ilarge2,iv2,vertex,direction,inode2,omp_nthreads,omp_tid,                     &
@@ -426,13 +424,13 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   omp_tid      = 1
 #endif
  
-  n_tor_local = i_tor_max - i_tor_min + 1
+  n_tor_local = a_mat%i_tor_max - a_mat%i_tor_min + 1
   if(treat_axis) then
      do i = 1, n_var
        i_v(i) = i
      enddo
      if (.not. allocated(i_harm)) allocate(i_harm(n_tor_local))
-     do i = i_tor_min, i_tor_max
+     do i = a_mat%i_tor_min, a_mat%i_tor_max
        i_harm(i) = i
      enddo
   endif
@@ -469,7 +467,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
     endif
 
     call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis,        &
-      psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, i_tor_min, i_tor_max, aux_nodes)
+      psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, a_mat%i_tor_min, a_mat%i_tor_max, aux_nodes)
 
     ! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.
     if(treat_axis .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
@@ -634,7 +632,7 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
                 index_large_k = n_tor_local * n_var * (index_node2 - 1)
 
-                call locate_irn_jcn(index_node1,index_node2,my_ind_min,my_ind_max,ijA_position,global_mat)
+                call locate_irn_jcn(index_node1,index_node2,my_ind_min,my_ind_max,ijA_position,a_mat)
 
                 thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local) = 0.d0
                 do j = 1, n_var * n_tor_local
@@ -646,8 +644,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
 
                     ilarge2 = ijA_position - 1 + (j-1) * n_var * n_tor_local + l
 
-                    global_mat%irn(ilarge2) = index_large_i	+ j
-                    global_mat%jcn(ilarge2) = index_large_k	+ l
+                    a_mat%irn(ilarge2) = index_large_i	+ j
+                    a_mat%jcn(ilarge2) = index_large_k	+ l
 
                     thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) = &
                       thread_struct(omp_tid)%synch_buff((j-1)*n_var*n_tor_local+l) + thread_struct(omp_tid)%ELM(index_ij,index_kl)
@@ -657,8 +655,8 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
                 enddo ! n_var * n_tor_local
 
                 !$omp critical
-                global_mat%val(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
-                  global_mat%val(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
+                a_mat%val(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) = &
+                  a_mat%val(ijA_position : ijA_position + n_var*n_tor_local*n_var*n_tor_local - 1) +  &
                   thread_struct(omp_tid)%synch_buff(1:n_var*n_tor_local*n_var*n_tor_local)
                 !$omp end critical 
 
@@ -680,31 +678,27 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   !$omp end parallel
  
   ! --- Memory tracking
-  call tr_vnorms("cm_A_bef_bc",global_mat%val,nz)
+  call tr_vnorms("cm_A_bef_bc",a_mat%val,nz)
   
   ! --- Apply boundary conditions.
   call boundary_conditions(my_id, node_list, element_list,  bnd_node_list,local_elms, n_local_elms,  &
                            my_ind_min, my_ind_max,  rhs_local, xpoint2, xcase2, R_axis, Z_axis,        & 
-                           psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,      & 
-                           i_tor_min, i_tor_max, global_mat)
+                           psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, a_mat)
 
   if (fix_axis_nodes) then
-    call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, & 
-                           i_tor_min, i_tor_max, global_mat)
+    call fix_nodes_on_axis(node_list, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, a_mat)
   elseif(treat_axis)then
-    call penalize_dof_on_axis(node_list, 4, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, &
-                           i_tor_min, i_tor_max, global_mat)
+    call penalize_dof_on_axis(node_list, 4, element_list, local_elms, n_local_elms, my_ind_min, my_ind_max, a_mat)
   endif
 
   ! --- Memory tracking
-  call tr_vnorms("cm_A_aft_bc",global_mat%val,nz)
+  call tr_vnorms("cm_A_aft_bc",a_mat%val,nz)
 
 
     ! --- Add vacuum response (boundary integral) for free boundary computations
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
       call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
-                                  resistive_wall, my_ind_min, my_ind_max, rhs_local, tstep, index_now, & 
-                                  i_tor_min, i_tor_max, global_mat)
+                                  resistive_wall, my_ind_min, my_ind_max, rhs_local, tstep, index_now, a_mat)
     end if
   
   if ( .not. harmonic_matrix ) then 
@@ -750,15 +744,15 @@ subroutine construct_matrix(my_id, comm, local_elms, n_local_elms, index_min, in
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
   
   ! assign global matrix structure
-  !global_mat%irn => irn
-  !global_mat%jcn => jcn
-  !global_mat%val => a_mat
-  global_mat%ng  = ndof
-  global_mat%nnz = nz
-  global_mat%index_min => index_min
-  global_mat%index_max => index_max
-  global_mat%comm = comm
-  global_mat%block_size  = n_tor*n_var ! its already defined in the global matrix structure
+  !a_mat%irn => irn
+  !a_mat%jcn => jcn
+  !a_mat%val => a_mat
+  a_mat%ng  = ndof
+  a_mat%nnz = nz
+  a_mat%index_min => index_min
+  a_mat%index_max => index_max
+  a_mat%comm = comm
+  a_mat%block_size  = n_tor*n_var ! its already defined in the global matrix structure
   global_rhs%val => RHS
   global_rhs%n  = ndof
      

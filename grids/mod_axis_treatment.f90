@@ -293,8 +293,7 @@ end subroutine new_to_old_dofs_on_the_axis
 !> Add condition for the axis directly in the matrix.
 !! - This aims to apply C0 continuity on the grid axis and is used only when treat_aixs=.t.
 !! - The fourth dof is penalized (d^2/dRdZ) when the treat_axis option is used.
-subroutine penalize_dof_on_axis(node_list, dof, element_list, local_elms, n_local_elms, index_min, index_max, &
-  i_tor_min, i_tor_max, a_mat)
+subroutine penalize_dof_on_axis(node_list, dof, element_list, local_elms, n_local_elms, index_min, index_max, a_mat)
 
   use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
   use data_structure
@@ -309,7 +308,6 @@ subroutine penalize_dof_on_axis(node_list, dof, element_list, local_elms, n_loca
   type (type_node_list),     intent(in)    :: node_list             !< List of nodes
   integer,                   intent(in)    :: dof                   !< which dof to penalize  
   type (type_element_list),  intent(in)    :: element_list          !< List of all elements
-  integer,                   intent(in)    :: i_tor_min, i_tor_max
   type(type_SP_MATRIX)                     :: a_mat
   ! Internal parameters
   real*8  :: zbig
@@ -318,7 +316,7 @@ subroutine penalize_dof_on_axis(node_list, dof, element_list, local_elms, n_loca
   integer :: ilarge2, n_tor_local
   integer(kind=int_all):: ijA_position,ijA_position2
 
-  n_tor_local = (i_tor_max - i_tor_min + 1)
+  n_tor_local = (a_mat%i_tor_max - a_mat%i_tor_min + 1)
 
   zbig = 1.d12
   do i=1, n_local_elms
@@ -331,17 +329,17 @@ subroutine penalize_dof_on_axis(node_list, dof, element_list, local_elms, n_loca
 
       if (node_list%node(inode)%axis_node) then
 
-        do in=i_tor_min, i_tor_max
+        do in=a_mat%i_tor_min, a_mat%i_tor_max
           do k=1, n_var
 
             index_node = node_list%node(inode)%index(dof)
             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
               index_large_i = n_tor_local * n_var * (index_node - 1)
-              ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local &
-                + (k-1)*n_tor_local + in - i_tor_min + 1
-              a_mat%irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-              a_mat%jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+              ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-a_mat%i_tor_min) * n_var*n_tor_local &
+                + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
+              a_mat%irn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
+              a_mat%jcn(ilarge2) =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
               a_mat%val(ilarge2)   = zbig
             end if
 

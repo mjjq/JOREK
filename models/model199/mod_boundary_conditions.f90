@@ -24,9 +24,7 @@ implicit none
 contains
   subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,          &
                                   n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2,       & 
-                                  R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,  &  
-                                  ijA_index, ijA_size, irn_jcn,                    &
-                                  i_tor_min, i_tor_max, a_mat)
+                                  R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, a_mat)
 
     use data_structure
     use phys_module, only: F0, GAMMA, keep_n0_const
@@ -56,8 +54,6 @@ contains
     real*8,                             intent(in)    :: R_xpoint(2)
     real*8,                             intent(in)    :: Z_xpoint(2)
     real*8,                             intent(in)    :: psi_xpoint(2)
-    integer,                            intent(in)    :: i_tor_min, i_tor_max 
-    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
     type(type_SP_MATRIX)                              :: a_mat
 
     ! Internal parameters
@@ -69,7 +65,7 @@ contains
     integer               :: ilarge2
     integer               :: ierr, n_tor_local
 
-    n_tor_local = i_tor_max - i_tor_min + 1
+    n_tor_local = a_mat%i_tor_max - a_mat%i_tor_min + 1
     zbig = 1.d12
     zbig_backup = zbig
        do i=1, n_local_elms
@@ -82,7 +78,7 @@ contains
 
              if (node_list%node(inode)%boundary .ne. 0) then
 
-                do in=i_tor_min, i_tor_max 
+                do in=a_mat%i_tor_min, a_mat%i_tor_max 
                   if (keep_n0_const  .and.  in .eq. 1 ) then
                     zbig = 1.d15
                   else
@@ -102,13 +98,13 @@ contains
                             index_node = node_list%node(inode)%index(1)
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
 
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local  & 
-                                 +  (k-1)*n_tor_local + in - i_tor_min + 1
+                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-a_mat%i_tor_min) * n_var*n_tor_local  & 
+                                 +  (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
 
-                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
                                a_mat%val(ilarge2) = zbig
 
                             endif
@@ -117,13 +113,13 @@ contains
 
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
 
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
-                                 +  (k-1)*n_tor_local + in - i_tor_min + 1
+                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-a_mat%i_tor_min) * n_var*n_tor_local   & 
+                                 +  (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
 
-                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
                                a_mat%val(ilarge2) = zbig
 
                             endif
@@ -141,13 +137,13 @@ contains
 
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
 
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
-                                 +  (k-1)*n_tor_local + in - i_tor_min + 1
+                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-a_mat%i_tor_min) * n_var*n_tor_local   & 
+                                 +  (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
 
-                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
                                a_mat%val(ilarge2) = zbig
 
                             endif
@@ -156,13 +152,13 @@ contains
 
                             if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
 
-                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,ijA_index, ijA_size, irn_jcn)
+                               call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
 
-                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-i_tor_min) * n_var*n_tor_local   & 
-                                 +  (k-1)*n_tor_local + in - i_tor_min + 1
+                               ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local + in-a_mat%i_tor_min) * n_var*n_tor_local   & 
+                                 +  (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
 
-                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
-                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - i_tor_min + 1
+                               a_mat%irn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
+                               a_mat%jcn(ilarge2) = n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min + 1
                                a_mat%val(ilarge2) = zbig
                             end if
 

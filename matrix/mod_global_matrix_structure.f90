@@ -1,7 +1,7 @@
 module mod_global_matrix_structure
 contains
 subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,freeboundary,local_elms,n_local_elms,index_min,index_max,& 
-  i_tor_min, i_tor_max, n, nz, ndof, global_mat)
+  i_tor_min, i_tor_max, n, nz, ndof, a_mat)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
@@ -20,7 +20,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   type (type_surface_list)     :: flux_list
   type (type_element)          :: element
   type (type_node)             :: nodes(n_vertex_max)
-  type(type_SP_MATRIX)         :: global_mat
+  type(type_SP_MATRIX)         :: a_mat
 
   integer :: local_elms(*), my_id, n_local_elms, n_tor_local
   integer                            :: index_min, index_max
@@ -42,7 +42,9 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   end if
  
   n_tor_local = i_tor_max - i_tor_min +1
-  global_mat%block_size = n_tor_local*n_var
+  a_mat%block_size = n_tor_local*n_var
+  a_mat%i_tor_min = i_tor_min
+  a_mat%i_tor_max = i_tor_max
 
   ndof = -1
   do inode1=1,node_list%n_nodes
@@ -52,13 +54,13 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   n_max = 8192
 
-  if (associated(global_mat%ijA_size))  call tr_deallocatep(global_mat%ijA_size,"ijA_size",CAT_DMATRIX) 
-  call tr_allocatep(global_mat%ijA_size,Int1,index_max-index_min+Int1,"ijA_size",CAT_DMATRIX)
-  if (associated(global_mat%irn_jcn))  call tr_deallocatep(global_mat%irn_jcn,"irn_jcn",CAT_DMATRIX) 
-  call tr_allocatep(global_mat%irn_jcn,Int1,index_max-index_min+Int1,Int1,n_max,"irn_jcn",CAT_DMATRIX)
+  if (associated(a_mat%ijA_size))  call tr_deallocatep(a_mat%ijA_size,"ijA_size",CAT_DMATRIX) 
+  call tr_allocatep(a_mat%ijA_size,Int1,index_max-index_min+Int1,"ijA_size",CAT_DMATRIX)
+  if (associated(a_mat%irn_jcn))  call tr_deallocatep(a_mat%irn_jcn,"irn_jcn",CAT_DMATRIX) 
+  call tr_allocatep(a_mat%irn_jcn,Int1,index_max-index_min+Int1,Int1,n_max,"irn_jcn",CAT_DMATRIX)
 
-  global_mat%ijA_size    = 0
-  global_mat%irn_jcn = 0
+  a_mat%ijA_size    = 0
+  a_mat%irn_jcn = 0
 
   do i=1,n_local_elms                 ! loop over the local elements
 
@@ -104,21 +106,21 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
                        index2       = node_list%node(inode2)%index(jk)
                        index2_local = index2 - index_min + 1
 
-                       if (global_mat%ijA_size(index1_local) .eq. 0) then                      ! if row index1_local still empty, fill with first value (index2)
+                       if (a_mat%ijA_size(index1_local) .eq. 0) then                      ! if row index1_local still empty, fill with first value (index2)
 
-                          global_mat%ijA_size(index1_local) = 1
-                          global_mat%irn_jcn(index1_local,1) = index2
+                          a_mat%ijA_size(index1_local) = 1
+                          a_mat%irn_jcn(index1_local,1) = index2
 
-                       elseif (index2 .gt. global_mat%irn_jcn(index1_local,global_mat%ijA_size(index1_local))) then   ! if index2 larger than all previous indices, add at end of list
+                       elseif (index2 .gt. a_mat%irn_jcn(index1_local,a_mat%ijA_size(index1_local))) then   ! if index2 larger than all previous indices, add at end of list
 
-                          global_mat%irn_jcn(index1_local,global_mat%ijA_size(index1_local)+1) = index2
-                          global_mat%ijA_size(index1_local) = global_mat%ijA_size(index1_local) + 1
+                          a_mat%irn_jcn(index1_local,a_mat%ijA_size(index1_local)+1) = index2
+                          a_mat%ijA_size(index1_local) = a_mat%ijA_size(index1_local) + 1
 
                        else                                                         ! index2 falls somewhere in (between) existing values
 
-                          do j = 1, global_mat%ijA_size(index1_local)                           ! find the first index larger than index2
+                          do j = 1, a_mat%ijA_size(index1_local)                           ! find the first index larger than index2
 
-                             if (index2 .le. global_mat%irn_jcn(index1_local,j) ) then
+                             if (index2 .le. a_mat%irn_jcn(index1_local,j) ) then
 
                                 j_larger = j                                           ! j_larger is the position of the index larger than (or equal to)  index2
                                 exit
@@ -127,19 +129,19 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
                           enddo
 
-                          if (index2 .ne. global_mat%irn_jcn(index1_local,j_larger) ) then      ! if index2 <> index(j_larger) add index2 and shift the following values
+                          if (index2 .ne. a_mat%irn_jcn(index1_local,j_larger) ) then      ! if index2 <> index(j_larger) add index2 and shift the following values
 
-                             do j=global_mat%ijA_size(index1_local), j_larger, -1                ! shift the higher indeices
+                             do j=a_mat%ijA_size(index1_local), j_larger, -1                ! shift the higher indeices
 
-                                global_mat%irn_jcn(index1_local,j+1) = global_mat%irn_jcn(index1_local,j)
+                                a_mat%irn_jcn(index1_local,j+1) = a_mat%irn_jcn(index1_local,j)
 
                              enddo
 
-                             global_mat%irn_jcn(index1_local,j_larger) = index2                  ! fill the freed position with index2
-                             global_mat%ijA_size(index1_local) = global_mat%ijA_size(index1_local) + 1      ! add one to the total number of contributions of this row (index1_local)
+                             a_mat%irn_jcn(index1_local,j_larger) = index2                  ! fill the freed position with index2
+                             a_mat%ijA_size(index1_local) = a_mat%ijA_size(index1_local) + 1      ! add one to the total number of contributions of this row (index1_local)
 
-                             if (global_mat%ijA_size(index1_local) .gt. n_max) then
-                                write(*,*) ' FATAL error : irn_jcn too small ',global_mat%ijA_size(index1_local)
+                             if (a_mat%ijA_size(index1_local) .gt. n_max) then
+                                write(*,*) ' FATAL error : irn_jcn too small ',a_mat%ijA_size(index1_local)
                              endif
 
                           endif ! (index2 .ne. irn_jcn(index1_local,j_larger) )
@@ -190,21 +192,21 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
                           index2       = node_list%node(inode2)%index(jdir)
                           index2_local = index2 - index_min + 1
 
-                          if (global_mat%ijA_size(index1_local) .eq. 0) then
+                          if (a_mat%ijA_size(index1_local) .eq. 0) then
 
-                             global_mat%ijA_size(index1_local) = 1
-                             global_mat%irn_jcn(index1_local,1) = index2
+                             a_mat%ijA_size(index1_local) = 1
+                             a_mat%irn_jcn(index1_local,1) = index2
 
-                          elseif (index2 .gt. global_mat%irn_jcn(index1_local,global_mat%ijA_size(index1_local))) then
+                          elseif (index2 .gt. a_mat%irn_jcn(index1_local,a_mat%ijA_size(index1_local))) then
 
-                             global_mat%irn_jcn(index1_local,global_mat%ijA_size(index1_local)+1) = index2
-                             global_mat%ijA_size(index1_local) = global_mat%ijA_size(index1_local) + 1
+                             a_mat%irn_jcn(index1_local,a_mat%ijA_size(index1_local)+1) = index2
+                             a_mat%ijA_size(index1_local) = a_mat%ijA_size(index1_local) + 1
 
                           else
 
-                             do j = 1, global_mat%ijA_size(index1_local)
+                             do j = 1, a_mat%ijA_size(index1_local)
 
-                                if (index2 .le. global_mat%irn_jcn(index1_local,j) ) then
+                                if (index2 .le. a_mat%irn_jcn(index1_local,j) ) then
 
                                    j_larger = j
                                    exit
@@ -213,19 +215,19 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
                              enddo
 
-                             if (index2 .ne. global_mat%irn_jcn(index1_local,j_larger) ) then
+                             if (index2 .ne. a_mat%irn_jcn(index1_local,j_larger) ) then
 
-                                do j=global_mat%ijA_size(index1_local), j_larger, -1
+                                do j=a_mat%ijA_size(index1_local), j_larger, -1
 
-                                   global_mat%irn_jcn(index1_local,j+1) = global_mat%irn_jcn(index1_local,j)
+                                   a_mat%irn_jcn(index1_local,j+1) = a_mat%irn_jcn(index1_local,j)
 
                                 enddo
 
-                                global_mat%irn_jcn(index1_local,j_larger) = index2
-                                global_mat%ijA_size(index1_local) = global_mat%ijA_size(index1_local) + 1
+                                a_mat%irn_jcn(index1_local,j_larger) = index2
+                                a_mat%ijA_size(index1_local) = a_mat%ijA_size(index1_local) + 1
 
-                                if (global_mat%ijA_size(index1_local) .gt. n_max) then
-                                   write(*,*) ' FATAL error : irn_jcn too small ',global_mat%ijA_size(index1_local)
+                                if (a_mat%ijA_size(index1_local) .gt. n_max) then
+                                   write(*,*) ' FATAL error : irn_jcn too small ',a_mat%ijA_size(index1_local)
                                 endif
 
                              endif
@@ -244,24 +246,24 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   endif                ! check if free boundary on
   
   ! --- Allocate ijA_index to actually needed size
-  maxsize = maxval(global_mat%ijA_size(:))
-  if (associated(global_mat%ijA_index))  call tr_deallocatep(global_mat%ijA_index,"ijA_index",CAT_DMATRIX) 
-  call tr_allocatep(global_mat%ijA_index,Int1,index_max-index_min+Int1,Int1,maxsize,"ijA_index",CAT_DMATRIX)
+  maxsize = maxval(a_mat%ijA_size(:))
+  if (associated(a_mat%ijA_index))  call tr_deallocatep(a_mat%ijA_index,"ijA_index",CAT_DMATRIX) 
+  call tr_allocatep(a_mat%ijA_index,Int1,index_max-index_min+Int1,Int1,maxsize,"ijA_index",CAT_DMATRIX)
   
   ! --- Re-allocate irn_jcn to actually needed size
   call tr_allocate(tmp,Int1,index_max-index_min+Int1,Int1,maxsize,"tmp",CAT_DMATRIX)
-  tmp(:,1:maxsize) = global_mat%irn_jcn(:,1:maxsize)
-  call tr_deallocatep(global_mat%irn_jcn,"irn_jcn",CAT_DMATRIX)
-  call tr_allocatep(global_mat%irn_jcn,Int1,index_max-index_min+Int1,Int1,maxsize,"irn_jcn",CAT_DMATRIX)
-  global_mat%irn_jcn(:,:) = tmp(:,:)
+  tmp(:,1:maxsize) = a_mat%irn_jcn(:,1:maxsize)
+  call tr_deallocatep(a_mat%irn_jcn,"irn_jcn",CAT_DMATRIX)
+  call tr_allocatep(a_mat%irn_jcn,Int1,index_max-index_min+Int1,Int1,maxsize,"irn_jcn",CAT_DMATRIX)
+  a_mat%irn_jcn(:,:) = tmp(:,:)
   call tr_deallocate(tmp,"tmp",CAT_DMATRIX)
   
   ibase = 0
   do i=1,index_max-index_min+1
 
-     do j=1,global_mat%ijA_size(i)
+     do j=1,a_mat%ijA_size(i)
 
-        global_mat%ijA_index(i,j) = ibase + 1
+        a_mat%ijA_index(i,j) = ibase + 1
 
         ibase = ibase + (n_tor_local*n_var)**2
 
@@ -271,7 +273,7 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
 
   n  = (index_max-index_min+1) * n_tor_local*n_var
 
-  nz = global_mat%ijA_index(index_max-index_min + 1, global_mat%ijA_size(index_max-index_min+1)) + (n_tor_local*n_var)**2 - 1
+  nz = a_mat%ijA_index(index_max-index_min + 1, a_mat%ijA_size(index_max-index_min+1)) + (n_tor_local*n_var)**2 - 1
   
   !if (allocated(irn))  call tr_deallocate(irn,"irn",CAT_DMATRIX) 
   !call tr_allocate(irn,Int1,nz,"irn",CAT_DMATRIX)
@@ -281,13 +283,13 @@ subroutine global_matrix_structure(my_id,node_List,element_list,boundary_list,fr
   !irn = 0
   !jcn = 0
   
-  if (associated(global_mat%irn))   call tr_deallocatep(global_mat%irn,"irn",CAT_DMATRIX) 
-  call tr_allocatep(global_mat%irn,Int1,nz,"irn",  CAT_DMATRIX)
-  global_mat%irn = 0
+  if (associated(a_mat%irn))   call tr_deallocatep(a_mat%irn,"irn",CAT_DMATRIX) 
+  call tr_allocatep(a_mat%irn,Int1,nz,"irn",  CAT_DMATRIX)
+  a_mat%irn = 0
   
-  if (associated(global_mat%jcn))   call tr_deallocatep(global_mat%jcn,"irn",CAT_DMATRIX) 
-  call tr_allocatep(global_mat%jcn,Int1,nz,"jcn",  CAT_DMATRIX)
-  global_mat%jcn = 0 
+  if (associated(a_mat%jcn))   call tr_deallocatep(a_mat%jcn,"irn",CAT_DMATRIX) 
+  call tr_allocatep(a_mat%jcn,Int1,nz,"jcn",  CAT_DMATRIX)
+  a_mat%jcn = 0 
 
   !---- for debugging purpose
   write(*,'(i6,a,2i20)') my_id, ' size matrices : n, nz = ', n, nz

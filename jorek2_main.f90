@@ -641,7 +641,7 @@ mpi_required = 0
     !--------- Constructing Global Matrix
     call construct_matrix(my_id, MPI_COMM_WORLD, local_elms,   &
          n_local_ELms, index_min, index_max, xpoint, xcase, ES%R_axis, ES%Z_axis,&
-         ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, 1, n_tor,   &
+         ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
          n_glob, nz_glob, ndof_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)

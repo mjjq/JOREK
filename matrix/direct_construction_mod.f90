@@ -2,7 +2,7 @@ module direct_construction_mod
 #ifdef DIRECT_CONSTRUCTION
 
 implicit none
-  logical, private                   :: matrix_structure_initialized = .false.  
+  logical, private :: matrix_structure_initialized = .false.  
 
 contains  
 
@@ -40,12 +40,12 @@ contains
   integer(kind=int_all)              :: ndof 
   integer                            :: i_tor_min, i_tor_max 
   integer                            :: i, ierr
-  type(type_RHS)     :: rhs_vec
+  type(type_RHS)                     :: rhs_vec
     
   ! --- Memory allocation 
   if (allocated(local_elms_harm)) call tr_deallocate(local_elms_harm,"local_elms_harm",CAT_DMATRIX) 
-  if (associated(index_min_harm))  call tr_deallocatep(index_min_harm,"index_min_harm",CAT_DMATRIX) 
-  if (associated(index_max_harm))  call tr_deallocatep(index_max_harm,"index_max_harm",CAT_DMATRIX) 
+  if (associated(index_min_harm)) call tr_deallocatep(index_min_harm,"index_min_harm",CAT_DMATRIX) 
+  if (associated(index_max_harm)) call tr_deallocatep(index_max_harm,"index_max_harm",CAT_DMATRIX) 
  
   call tr_allocate(local_elms_harm,1,element_list%n_elements,"local_elms_harm",CAT_FEM)
   call tr_allocatep(index_min_harm,1,n_cpu,"index_min_harm",CAT_FEM)
@@ -60,13 +60,12 @@ contains
   endif
  
   a_mat%comm = MPI_COMM_N
+  
+  call distribute_nodes_elements(my_id, m_cpu, n_cpu, node_list, element_list, direct_construction, local_elms_harm, & 
+         n_local_elms_harm, restart, freeboundary, a_mat)  
 
   if ( .not. matrix_structure_initialized ) then
-  
-    call distribute_nodes_elements(my_id, m_cpu, n_cpu, node_list, element_list, direct_construction, local_elms_harm, & 
-         n_local_elms_harm, restart, freeboundary, a_mat)
-         
-    call global_matrix_structure(node_list, element_list, bnd_elm_list, freeboundary, &
+      call global_matrix_structure(node_list, element_list, bnd_elm_list, freeboundary, &
          local_elms_harm, n_local_elms_harm, n_harm, a_mat, i_tor_min=i_tor_min, i_tor_max=i_tor_max)
          
     call MPI_Barrier(a_mat%comm, ierr)

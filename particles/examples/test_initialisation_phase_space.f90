@@ -27,6 +27,7 @@ integer                      :: n_int_pdf_param,n_real_pdf_param
 integer,dimension(:),allocatable :: int_pdf_param
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,particle_weight
+real*8                       :: mass_tot
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
@@ -42,8 +43,8 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-test_case   = 'uniform'
-n_particles = 10
+test_case   = 'uniform_weight'
+n_particles = 10000000
 nR          = 10
 nZ          = 10
 nphi        = 10
@@ -64,6 +65,7 @@ allocate(character(len=25)::jorek_filename)
 jorek_filename   = 'jorek_equilibrium' 
 n_int_pdf_param  = 0
 n_real_pdf_param = 0
+mass_tot         = 2.5d30
 
 !> Initialisation ---------------------------------------------------------------------------
 !> allocate arrays and initialise them to 0
@@ -97,9 +99,19 @@ var_max = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),Chibound(2)]
 write(*,*) ' '
 write(*,*) 'SELECT PDF TO USE: '
 if(test_case=='uniform_weight') then
-  write(*,*) 'not implemented yet!'
+  write(*,*) 'SELECTED: WEIGHTED PDF UNIFORM!'
+  n_real_pdf_param = 1; allocate(real_pdf_param(n_real_pdf_param));
+  real_pdf_param(1) = product([5d-1,1d0,1d0,1d0/3d0,-1d0,1d0]*&
+  [var_max(1)**2-var_min(1)**2,var_max(2)-var_min(2),var_max(3)-var_min(3),&
+  var_max(4)**3-var_min(4)**3,cos(var_max(5))-cos(var_min(5)),var_max(6)-var_min(6)],&
+  mask=(abs(var_max-var_min).gt.0d0))
+  real_pdf_param(1) = mass_tot/real_pdf_param(1)
+  particle_weight = mass_tot/n_particles
+  pdf_to_use => pdf_uniform
+  pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
+  real_pdf_param,n_int_pdf_param,int_pdf_param)
 else
-  write(*,*) 'SELECTED PDF UNIFORM (DEFAULT)!'
+  write(*,*) 'SELECTED: PDF UNIFORM (DEFAULT)!'
   pdf_to_use => pdf_uniform
   pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
   real_pdf_param,n_int_pdf_param,int_pdf_param)
@@ -149,7 +161,8 @@ write(*,*) " "
 !> Clean-up ---------------------------------------------------------------------------------
 deallocate(Rmesh); deallocate(Zmesh); deallocate(phimesh); deallocate(pmesh); 
 deallocate(pitchmesh); deallocate(chimesh); deallocate(expected_pdf); 
-deallocate(pdf_at_midpoints);
+deallocate(pdf_at_midpoints); if(allocated(real_pdf_param)) deallocate(real_pdf_param);
+if(allocated(int_pdf_param)) deallocate(int_pdf_param);
 pdf_to_use => NULL()
 call sim%finalize()
 write(*,*) "Test: initialise_particle_in_phase_space: completed."
@@ -422,6 +435,8 @@ real_pdf_param_in,n_int_pdf_param_in,int_pdf_param_in)
   if(allocated(int_pdf_param))  deallocate(int_pdf_param);
 end subroutine evaluate_pdf_at_midpoints
 
+!> Definitions of the probability density function (PDF) ------------------------ 
+
 !> Phase space distribution for testing
 !> inputs:
 !>   nx:           (integer) number of variables
@@ -433,6 +448,7 @@ end subroutine evaluate_pdf_at_midpoints
 !>   x_max:        (real8)(nx) upper bound of the phase space interval
 !>   n_real_param: (integer) N# of real input parameters of the pdf
 !>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
 !>   n_int_param:  (integer) N# of integer input parameters of the pdf
 !>   int_param:    (integer)(n_int_param) integer pdf parameters
 !> outputs:
@@ -456,6 +472,7 @@ n_real_param,real_param,n_int_param,int_param)
   pdf_uniform = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
   (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
+  if(n_real_param.gt.0) pdf_uniform = real_param(1)*pdf_uniform
 end function pdf_uniform
 
 !> Upper bound of the phase space distribution for testing
@@ -465,6 +482,7 @@ end function pdf_uniform
 !>   x_max:        (real8)(nx) upper bound of the phase space interval
 !>   n_real_param: (integer) N# of real input parameters of the pdf
 !>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
 !>   n_int_param:  (integer) N# of integer input parameters of the pdf
 !>   int_param:    (integer)(n_int_param) integer pdf parameters
 !> outputs:
@@ -485,6 +503,7 @@ n_int_param,int_param) result(sup_pdf)
   sup_pdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
   (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
+  if(n_real_param.gt.0) sup_pdf = real_param(1)*sup_pdf
 end function sup_pdf_uniform
 
 end program test_initialisation_phase_space

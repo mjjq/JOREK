@@ -32,16 +32,18 @@ module mod_initialise_particles
       real*8, dimension(3,n), intent(in) :: gradP
       real*4 :: rej_f
     end function rej_f
-    function pdf_f(n_x,x,st,time,i_elm,fields,x_min,x_max,n_real_param,real_param)
+    function pdf_f(n_x,x,st,time,i_elm,fields,x_min,x_max,&
+    n_real_param,real_param,n_int_param,int_param)
       use mod_fields, only: fields_base
       !> inputs:
       integer,intent(in)                                  :: n_x,i_elm
+      integer,intent(in)                                  :: n_real_param,n_int_param
+      integer,dimension(:),allocatable,intent(in)         :: int_param
       real*8,intent(in)                                   :: time
       real*8,dimension(n_x),intent(in)                    :: x,x_min,x_max
       real*8,dimension(2),intent(in)                      :: st
+      real*8,dimension(:),allocatable,intent(in)          :: real_param
       class(fields_base),intent(in)                       :: fields
-      integer,intent(in),optional                         :: n_real_param
-      real*8,dimension(:),allocatable,intent(in),optional :: real_param
       !> outputs:
       real*8                                              :: pdf_f
     end function pdf_f
@@ -294,8 +296,9 @@ end subroutine initialise_particles
 !> Inputs:
 !> Outputs:
 subroutine initialise_particles_in_phase_space_uniform_sampling(particles, fields, &
-  rng_base, pdf, sup_pdf,mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, &
-  Rbound_in, Zbound_in, Phibound_in,chargebound_in)
+  rng_base, pdf, sup_pdf, mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, &
+  Rbound_in, Zbound_in, Phibound_in,chargebound_in, n_real_pdf_param_in, &
+  real_pdf_param_in, n_int_pdf_param_in, int_pdf_param_in)
   use constants,                 only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools,          only: get_orthonormals
@@ -312,23 +315,28 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   !> inputs-outputs
   class(particle_base), dimension(:), intent(inout) :: particles
   !> inputs
-  class(fields_base),    intent(in)                 :: fields
-  class(type_rng),       intent(in)                 :: rng_base !< What type of random number generator to use (will be reseeded here)
-  procedure(pdf_f)                                  :: pdf
-  real*8,intent(in)                                 :: mass,time,sup_pdf
-  real*8,dimension(2),intent(in),optional           :: Ekinbound_in, Pitchbound_in, Chibound_in
-  real*8,dimension(2),intent(in),optional           :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
+  class(fields_base),intent(in)                        :: fields
+  class(type_rng),intent(in)                           :: rng_base !< What type of random number generator to use (will be reseeded here)
+  procedure(pdf_f)                                     :: pdf
+  integer,optional                                     :: n_real_pdf_param_in,n_int_pdf_param_in
+  integer,dimension(:),allocatable,intent(in),optional :: int_pdf_param_in
+  real*8,intent(in)                                    :: mass,time,sup_pdf
+  real*8,dimension(2),intent(in),optional              :: Ekinbound_in, Pitchbound_in, Chibound_in
+  real*8,dimension(2),intent(in),optional              :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
+  real*8,dimension(:),allocatable,intent(in),optional  :: real_pdf_param_in
 
   !> internal variables
   class(type_rng),dimension(:),allocatable :: rngs 
   integer                                  :: my_id,n_cpu,n_threads,thread_id,ifail
   integer                                  :: ii,jj,n_particles,i_elm
+  integer                                  :: n_real_pdf_param,n_int_pdf_param
+  integer,dimension(:),allocatable         :: int_pdf_param
   real*8                                   :: t0,t1,Erest,psi,U,one_third,one_over_sup_pdf
   real*8,dimension(2)                      :: st
   real*8,dimension(3)                      :: B,E,e1,e2
   !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
   real*8,dimension(7,2)                    :: phase_bounds,phase_bounds_uniform_samp
-  real*8,dimension(:),allocatable          :: variables
+  real*8,dimension(:),allocatable          :: variables,real_pdf_param
 
   !> extract id and size of the MPI Communicator
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
@@ -375,7 +383,7 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   allocate(rngs(n_threads),source=rng_base)
   do ii=1,n_threads
     call rngs(ii)%initialize(n_variables+1, random_seed(), n_cpu*n_threads, my_id*n_threads+ii,ifail)
-    if (ifail .ne. 0) call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
+    if (ifail.ne.0) call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
   end do
 
   !> Initialise variables needed in the loop
@@ -384,13 +392,22 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   phase_bounds_uniform_samp(1,:) = phase_bounds_uniform_samp(1,:)**2
   phase_bounds_uniform_samp(4,:) = phase_bounds_uniform_samp(4,:)**3
   phase_bounds_uniform_samp(5,:) = cos(phase_bounds_uniform_samp(5,:))
-  one_over_sup_pdf = 1d0/sup_pdf 
+  one_over_sup_pdf = 1d0/sup_pdf; n_real_pdf_param = 0;
+  if(present(n_real_pdf_param_in)) n_real_pdf_param = n_real_pdf_param_in
+  if((present(real_pdf_param_in)).and.(n_real_pdf_param.gt.0)) then
+    allocate(real_pdf_param(n_real_pdf_param)); real_pdf_param = real_pdf_param_in;
+  endif
+  n_int_pdf_param = 0; if(present(n_int_pdf_param_in)) n_int_pdf_param_in = n_int_pdf_param;
+  if((present(int_pdf_param_in)).and.(n_int_pdf_param.gt.0)) then
+    allocate(int_pdf_param(n_int_pdf_param)); int_pdf_param = int_pdf_param_in;
+  endif
   call cpu_time(t0)
   !> Loop on the particles
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
     !$omp firstprivate(n_particles,mass,time,phase_bounds,one_over_sup_pdf,&
-    !$omp phase_bounds_uniform_samp,one_third) &
+    !$omp phase_bounds_uniform_samp,one_third,n_real_pdf_param,n_int_pdf_param,&
+    !$omp real_pdf_param,int_pdf_param) &
     !$omp private(ii,variables,thread_id,i_elm,st,ifail,B,e1,e2,E,psi,U)
     thread_id = 1
     !$ thread_id = omp_get_thread_num()+1
@@ -402,7 +419,8 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
       do while(rejection_funct_uniform_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,&
-        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,one_over_sup_pdf))
+        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,one_over_sup_pdf,&
+        n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param))
         !> uniform sampling in cylindrical coordinates for the physical space (R,Z,phi),
         !> in spherical coordinates for the momentum space (p,pitch,gyro)
         !> and uniform for the charge state
@@ -436,6 +454,8 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   !> clean-up
   call cpu_time(t1)
   deallocate(variables); deallocate(rngs);
+  if(allocated(real_pdf_param)) deallocate(real_pdf_param)
+  if(allocated(int_pdf_param))  deallocate(int_pdf_param)
   write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize cpu :',t1-t0
   if (my_id .eq. 0) then
     write(*,*) '* done initialising particles    *'
@@ -455,18 +475,26 @@ end subroutine initialise_particles_in_phase_space_uniform_sampling
 !>   pdf:              (pdf_f) procedure returning the value of the
 !>                     probability density function at a given point
 !>   one_over_sup_pdf: (real8) 1/upper bound of the pdf
+!>   n_real_pdf_param: (integer) N# of double parameters of the pdf
+!>   real_pdf_param:   (real8)(n_real_pdf_param) pdf double parameters
+!>   n_int_pdf_param:  (integer) N# of integer parameters of the pdf
+!>   int_pdf_param:    (integer)(n_int_pdf_param) pdf integer parameters
 !> outputs:
 !>   rej: (logical) if true the sample is rejected
 function rejection_funct_uniform_gpdf(n_x,x,st,time,i_elm,rand,&
-x_min,x_max,fields,pdf,one_over_sup_pdf) result(rej)
+x_min,x_max,fields,pdf,one_over_sup_pdf,n_real_pdf_param,&
+real_pdf_param,n_int_pdf_param,int_pdf_param) result(rej)
   use mod_fields, only: fields_base
   implicit none
   !> input variables
   class(fields_base),intent(in)    :: fields
   integer,intent(in)               :: n_x,i_elm
+  integer,intent(in)               :: n_real_pdf_param, n_int_pdf_param
+  integer,dimension(:),allocatable,intent(in) :: int_pdf_param
   real*8,intent(in)                :: time,rand,one_over_sup_pdf
   real*8,dimension(2)              :: st
   real*8,dimension(n_x),intent(in) :: x,x_min,x_max
+  real*8,dimension(:),allocatable,intent(in) :: real_pdf_param
   procedure(pdf_f)                 :: pdf
   !> output variables
   logical :: rej
@@ -477,7 +505,8 @@ x_min,x_max,fields,pdf,one_over_sup_pdf) result(rej)
   if((st(1).lt.0.d0).or.(st(1).gt.1.d0)) return
   if((st(2).lt.0.d0).or.(st(2).gt.1.d0)) return
   !> reject or accept solution
-  if(rand.le.one_over_sup_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,x_max)) rej = .false.
+  if(rand.le.one_over_sup_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,x_max,&
+  n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)) rej = .false.
   
 end function rejection_funct_uniform_gpdf
 

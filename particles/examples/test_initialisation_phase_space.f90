@@ -25,7 +25,8 @@ type(event)                  :: field_reader
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param
 integer,dimension(:),allocatable :: int_pdf_param
-real*8                       :: start_time,mass,charge,error,error_norm,error_avg_norm
+real*8                       :: start_time,mass,charge,error,error_norm
+real*8                       :: error_avg_norm,pdf_upper_bound
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
@@ -57,7 +58,9 @@ Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
 charge      = -1.d0
 allocate(character(len=25)::jorek_filename)
-jorek_filename = 'jorek_equilibrium' 
+jorek_filename   = 'jorek_equilibrium' 
+n_int_pdf_param  = 0
+n_real_pdf_param = 0
 
 !> Initialisation ---------------------------------------------------------------------------
 !> allocate arrays and initialise them to 0
@@ -87,12 +90,16 @@ if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0
 Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
 var_min = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),Chibound(1)]
 var_max = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),Chibound(2)]
+!> compute the pdf upper bound
+pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
+real_pdf_param,n_int_pdf_param,int_pdf_param);
 
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
 call initialise_particles_in_phase_space(sim%groups(1)%particles,sim%fields,sob_rng,&
-pdf_uniform,sup_pdf_uniform(6,var_min,var_max),sim%groups(1)%mass,start_time,Ekinbound,&
-Pitchbound,Chibound,Rbound,Zbound,Phibound,chargebound)
+pdf_uniform,pdf_upper_bound,sim%groups(1)%mass,start_time,Ekinbound,&
+Pitchbound,Chibound,Rbound,Zbound,Phibound,chargebound,n_real_pdf_param,&
+real_pdf_param,n_int_pdf_param,int_pdf_param)
 
 !> Produce the expected pdf fromt the particle histogram --------------------------------------
 write(*,*) "... building particle histogram and computing the expected pdf"
@@ -112,10 +119,11 @@ end select
 !> the expected pdf from the  particle histogram --------------------------------------------
 write(*,*) "... computing the input pdf at the midpoints of the mesh elements"
 call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,nchi,Rmesh,Zmesh,phimesh,&
-     pmesh,pitchmesh,chimesh,charge,start_time,pdf_uniform,sim%fields)
+     pmesh,pitchmesh,chimesh,charge,start_time,pdf_uniform,sim%fields,n_real_pdf_param,&
+     real_pdf_param,n_int_pdf_param,int_pdf_param)
 write(*,*) "... computing L2 error"
 call compute_error_norm2_ndim6(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
-npitch-1,nchi-1,expected_pdf,pdf_at_midpoints,sup_pdf_uniform(6,var_min,var_max)) 
+npitch-1,nchi-1,expected_pdf,pdf_at_midpoints,pdf_upper_bound) 
 
 !> Log test results -------------------------------------------------------------------------
 write(*,*) "... logging test results"
@@ -317,7 +325,8 @@ end subroutine estimate_pdf_from_histogram
 !>   pdf_at_midpoints: (real8) value of the pdf at the midpoints
 subroutine evaluate_pdf_at_midpoints(&
 pdf_midpoints,nR,nZ,nphi,np,npitch,ngyro,Rmesh,Zmesh,phimesh,pmesh,& 
-pitchmesh,gyromesh,charge,time,pdf,fields)
+pitchmesh,gyromesh,charge,time,pdf,fields,n_real_pdf_param_in,&
+real_pdf_param_in,n_int_pdf_param_in,int_pdf_param_in)
    use mod_fields, only: fields_base
   implicit none
   !> Parameters
@@ -332,27 +341,41 @@ pitchmesh,gyromesh,charge,time,pdf,fields)
   real*8,dimension(np),intent(in)     :: pmesh
   real*8,dimension(npitch),intent(in) :: pitchmesh
   real*8,dimension(ngyro),intent(in)  :: gyromesh
+  integer,intent(in),optional         :: n_real_pdf_param_in,n_int_pdf_param_in
+  integer,dimension(:),allocatable,intent(in),optional :: int_pdf_param_in
+  real*8,dimension(:),allocatable,intent(in),optional  :: real_pdf_param_in
   procedure(pdf_f)                    :: pdf
   !> Outputs:
   real*8,dimension(nR-1,nZ-1,nphi-1,np-1,npitch-1,ngyro-1),intent(out) :: pdf_midpoints
   !> Variables:
   integer                  :: ii,jj,kk,pp,qq,rr
-  integer                  :: i_elm,ifail
+  integer                  :: i_elm,ifail,n_real_pdf_param,n_int_pdf_param
+  integer,dimension(:),allocatable :: int_pdf_param
   real*8                   :: one_over_six,dummy_double_1,dummy_double_2
   real*8,dimension(2)      :: st
   real*8,dimension(nx)     :: x_midpoints,x_min,x_max
   real*8,dimension(nR)     :: R2mesh
   real*8,dimension(np)     :: p3mesh
-  real*8,dimension(npitch) :: cospitchmesh 
+  real*8,dimension(npitch) :: cospitchmesh
+  real*8,dimension(:),allocatable :: real_pdf_param
   !> initialisation
   one_over_six = 1.d0/6.d0; pdf_midpoints = 0.d0; 
   x_midpoints = [0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,charge];
   x_min = [Rmesh(1),Zmesh(1),phimesh(1),pmesh(1),pitchmesh(1),gyromesh(1),charge]
   x_max = [Rmesh(nR),Zmesh(nZ),phimesh(nphi),pmesh(np),pitchmesh(npitch),gyromesh(ngyro),charge]
+  n_real_pdf_param = 0; if(present(n_real_pdf_param_in)) n_real_pdf_param = n_real_pdf_param_in;
+  if(present(real_pdf_param_in).and.(n_real_pdf_param_in.gt.0)) then
+    allocate(real_pdf_param(n_real_pdf_param)); real_pdf_param = real_pdf_param_in;
+  endif
+  n_int_pdf_param = 0; if(present(n_int_pdf_param_in)) n_int_pdf_param = n_int_pdf_param_in;
+  if(present(int_pdf_param_in).and.(n_int_pdf_param_in.gt.0)) then
+    allocate(int_pdf_param(n_int_pdf_param)); int_pdf_param = int_pdf_param_in;
+  endif
   !> loop over all midpoints, try with openmp collapse clause first. If slow,
   !> manually collapse all loops in one
   !$omp parallel do default(shared) &
-  !$omp firstprivate(ngyro,npitch,np,nphi,nZ,nR,one_over_six,time,x_midpoints,x_min,x_max) &
+  !$omp firstprivate(ngyro,npitch,np,nphi,nZ,nR,one_over_six,time,x_midpoints,x_min,x_max,&
+  !$omp n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param) &
   !$omp private(ii,jj,kk,pp,qq,rr,i_elm,st,dummy_double_1,dummy_double_2) &
   !$omp collapse(6)
   do ii=1,ngyro-1
@@ -371,42 +394,47 @@ pitchmesh,gyromesh,charge,time,pdf,fields)
               x_midpoints(2),dummy_double_1,dummy_double_2,i_elm,st(1),st(2),ifail)
               !> estimate the number of particles at the kinetic mesh midpoint
               pdf_midpoints(rr,qq,pp,kk,jj,ii) = pdf(nx,x_midpoints,st,time,i_elm,fields,&
-              x_min,x_max)
+              x_min,x_max,n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
             enddo
           enddo
         enddo
       enddo
     enddo
   enddo
- !$omp end parallel do
+  !$omp end parallel do
+  !> Clean-up
+  if(allocated(real_pdf_param)) deallocate(real_pdf_param);
+  if(allocated(int_pdf_param))  deallocate(int_pdf_param);
 end subroutine evaluate_pdf_at_midpoints
 
 !> Phase space distribution for testing
 !> inputs:
-!>   nx:     (integer) number of variables
-!>   x:      (real8)(nx) random state to accept
-!>   i_elm:  (integer) jorek mesh element number
-!>   st:     (real8)(2) local mesh coordinates
-!>   fields: (fields_base) jorek MHD fields
-!>   x_min:  (real8)(nx) lower bound of the phase space interval
-!>   x_max:  (real8)(nx) upper bound of the phase space interval
-!>   n_real_param: (integer)(optional) number of real input 
-!>                 parameters of the pdf
-!>   real_param:   (real8)(n_real_param)(optiona) real pdf parameter
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   fields:       (fields_base) jorek MHD fields
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
 !> outputs:
-!>   pdf:    (real8) value of the probability density 
+!>   pdf: (real8) value of the probability density 
 function pdf_uniform(nx,x,st,time,i_elm,fields,x_min,x_max,&
-n_real_param,real_param)
+n_real_param,real_param,n_int_param,int_param)
   use mod_fields, only: fields_base
   implicit none
   !> Inputs:
-  integer,intent(in)              :: nx,i_elm
-  real*8,intent(in)               :: time
-  real*8,dimension(nx),intent(in) :: x,x_min,x_max
-  real*8,dimension(2),intent(in)  :: st
-  class(fields_base),intent(in)   :: fields
-  integer,intent(in),optional     :: n_real_param
-  real*8,dimension(:),allocatable,intent(in),optional :: real_param
+  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x,x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  class(fields_base),intent(in)               :: fields
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
   !> Outputs:
   real*8 :: pdf_uniform
   !> Evalutate pdf
@@ -417,23 +445,25 @@ end function pdf_uniform
 
 !> Upper bound of the phase space distribution for testing
 !> inputs:
-!>   nx:     (integer) number of variables
-!>   x_min:  (real8)(nx) lower bound of the phase space interval
-!>   x_max:  (real8)(nx) upper bound of the phase space interval
-!>   n_real_param: (integer)(optional) number of real input 
-!>                 parameters of the pdf
-!>   real_param:   (real8)(n_real_param)(optiona) real pdf parameter
+!>   nx:           (integer) number of variables
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
 !> outputs:
 !>   sup_pdf:      (real8) value of the probability density upper bound
-function sup_pdf_uniform(nx,x_min,x_max,&
-n_real_param,real_param) result(sup_pdf)
+function sup_pdf_uniform(nx,x_min,x_max,n_real_param,real_param,&
+n_int_param,int_param) result(sup_pdf)
   use mod_fields, only: fields_base
   implicit none
   !> Inputs:
-  integer,intent(in)              :: nx
-  real*8,dimension(nx),intent(in) :: x_min,x_max
-  integer,intent(in),optional     :: n_real_param
-  real*8,dimension(:),allocatable,intent(in),optional :: real_param
+  integer,intent(in)                          :: nx,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
   !> Outputs:
   real*8 :: sup_pdf
   !> Evalutate pdf

@@ -34,7 +34,7 @@ real*8,dimension(6)          :: var_min,var_max
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
 real*8,dimension(:),allocatable           :: real_pdf_param
 real*8,dimension(:,:,:,:,:,:),allocatable :: expected_pdf,pdf_at_midpoints
-character(len=125)                        :: test_case,particle_filename
+character(len=125)                        :: test_case,particle_filename,mesh_filename_root
 character(len=:),allocatable              :: jorek_filename
 procedure(pdf_f),pointer                  :: pdf_to_use=>NULL()
 
@@ -62,11 +62,12 @@ Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
 charge      = -1.d0
 allocate(character(len=25)::jorek_filename)
-jorek_filename    = 'jorek_equilibrium' 
-particle_filename = 'jorek_particle_outputs.txt'
-n_int_pdf_param  = 0
-n_real_pdf_param = 0
-mass_tot         = 2.5d30
+jorek_filename     = 'jorek_equilibrium' 
+particle_filename  = 'jorek_particle_outputs.txt'
+mesh_filename_root = 'jorek_kinetic_mesh_'
+n_int_pdf_param    = 0
+n_real_pdf_param   = 0
+mass_tot           = 2.5d30
 
 !> Initialisation ---------------------------------------------------------------------------
 !> allocate arrays and initialise them to 0
@@ -162,7 +163,13 @@ write(*,*) " "
 !> Write data into file ---------------------------------------------------------------------
 write(*,*) "... writing data in files"
 call dump_kinetic_particles_in_txt(n_particles,sim%groups(1)%particles,sim%groups(1)%mass,particle_filename,ifail)
-
+call write_array1d_double(nR,Rmesh,trim(trim(mesh_filename_root)//'R.txt'),ifail)
+call write_array1d_double(nZ,Zmesh,trim(trim(mesh_filename_root)//'Z.txt'),ifail)
+call write_array1d_double(nphi,phimesh,trim(trim(mesh_filename_root)//'phi.txt'),ifail)
+call write_array1d_double(np,pmesh,trim(trim(mesh_filename_root)//'p.txt'),ifail)
+call write_array1d_double(npitch,pitchmesh,trim(trim(mesh_filename_root)//'pitch.txt'),ifail)
+call write_array1d_double(nchi,chimesh,trim(trim(mesh_filename_root)//'gyro.txt'),ifail)
+!> add here method for writing the charge mesh distribution as well
 !> Clean-up ---------------------------------------------------------------------------------
 deallocate(Rmesh); deallocate(Zmesh); deallocate(phimesh); deallocate(pmesh); 
 deallocate(pitchmesh); deallocate(chimesh); deallocate(expected_pdf); 
@@ -460,12 +467,29 @@ subroutine dump_kinetic_particles_in_txt(n_particles,particles,mass,filename,ifa
   select type (plist=>particles)
   type is (particle_kinetic_relativistic)
     do ii=1,n_particles
-      write(42,'(9E40.16E4)') plist(ii)%x(1),plist(ii)%x(2),plist(ii)%x(3),plist(ii)%p(1),plist(ii)%p(2),&
-      plist(ii)%p(3),plist(ii)%weight,real(plist(ii)%q,kind=8),mass
+      write(42,'(9E40.16E4)') plist(ii)%x(1),plist(ii)%x(2),plist(ii)%x(3),plist(ii)%p(1),&
+      plist(ii)%p(2),plist(ii)%p(3),plist(ii)%weight,real(plist(ii)%q,kind=8),mass
     enddo
   end select
   close(42) !< close file
 end subroutine dump_kinetic_particles_in_txt
+
+!> write 1d array in txt file
+subroutine write_array1d_double(size1,array1d,filename,ifail)
+  implicit none
+  !> Inputs-Outputs
+  integer,intent(inout) :: ifail
+  !> Inputs:
+  integer,intent(in) :: size1
+  real*8,dimension(size1),intent(in) :: array1d
+  character(len=*),intent(in) :: filename
+  !> open file
+  open(unit=43,file=trim(filename),action='write',blank='NULL',form='formatted',status='unknown',iostat=ifail) 
+  do ii=1,size1
+    write(43,'(E40.16e4)') array1d(ii)
+  enddo
+  close(43)
+end subroutine write_array1d_double
 
 !> Definitions of the probability density function (PDF) ------------------------ 
 

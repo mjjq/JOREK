@@ -256,30 +256,23 @@ subroutine setup_solvers(this, sim)
   id_elements = sim%my_id
 
   call tr_allocatep(this%local_elms,1,sim%fields%element_list%n_elements,"local_elms",CAT_FEM)
-  call tr_allocatep(this%index_min,1,index_size,"index_min",CAT_FEM)
-  call tr_allocatep(this%index_max,1,index_size,"index_max",CAT_FEM)
 
- !
+    this%a_mat%comm = MPI_COMM_WORLD
+
+  call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
+                                   this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)  
+  
+  !
   ! Construct index_min, index_max and local_elems
   !
-  call distribute_nodes_elements(id_elements,sim%n_cpu,index_size,sim%fields%node_list,sim%fields%element_list, .false., &
-                                 this%local_elms, this%n_local_elms, ndof_glob, this%index_min, this%index_max, restart, freeboundary)
-                                          
-  sim%fields%node_list%n_dof = ndof_glob
+  call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
+                                   this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)
  
-  call update_deltas(sim%my_id, sim%fields%node_list) ! create list of delta values in local_matrix module
-  
-   ! Build ijA_index, ijA_size and irn_jcn
- 
-  block_size = n_tor*n_var
+  call global_matrix_structure(sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
+                               this%local_elms,this%n_local_elms, n_glob, this%a_mat, i_tor_min=1, i_tor_max=n_tor)
 
-  call global_matrix_structure(sim%my_id, sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
-                               this%local_elms,this%n_local_elms,this%index_min(id_elements+1),this%index_max(id_elements+1),      &
-                               ijA_index, ijA_size, irn_jcn, irn_glob, jcn_glob, 1, n_tor, n_glob, nz_glob, ndof_glob, n_matrix_block_size)                      
-
-  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%index_min(sim%my_id+1), this%index_max(sim%my_id+1), &
-                                        1, n_tor, irn_glob, jcn_glob, n_matrix_block_size, ijA_index, ijA_size, irn_jcn) 
+  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
+    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
   endif
   
   !if ((gmres) .and. (this%my_id_n .eq. 0)) call map_row_index(ndof_glob)
@@ -489,12 +482,9 @@ subroutine do_jorek_timestep(this, sim, ev)
   endif
 
 
-  call construct_matrix(sim%my_id, MPI_COMM_WORLD, &
-                        this%local_elms, this%n_local_elms, this%index_min,                                 &
-                        this%index_max, xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis,    &
-                        this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint, 1, n_tor,               &
-                        n_glob, nz_glob, ndof_glob, n_matrix_block_size, A_glob, rhs_glob, irn_glob, jcn_glob, ijA_index, ijA_size, &
-                        irn_jcn,  this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
+  call construct_matrix(sim%my_id, this%local_elms, this%n_local_elms, xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, &
+                        this%eq%psi_axis, this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint,    &
+                        n_glob, rhs_glob, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
     
   ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
   call del_thread_buffers()

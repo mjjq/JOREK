@@ -23,7 +23,7 @@ implicit none
 type(sobseq_rng)             :: sob_rng
 type(event)                  :: field_reader
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
-integer                      :: n_int_pdf_param,n_real_pdf_param
+integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
 integer,dimension(:),allocatable :: int_pdf_param
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,particle_weight
@@ -34,7 +34,7 @@ real*8,dimension(6)          :: var_min,var_max
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
 real*8,dimension(:),allocatable           :: real_pdf_param
 real*8,dimension(:,:,:,:,:,:),allocatable :: expected_pdf,pdf_at_midpoints
-character(len=125)                        :: test_case
+character(len=125)                        :: test_case,particle_filename
 character(len=:),allocatable              :: jorek_filename
 procedure(pdf_f),pointer                  :: pdf_to_use=>NULL()
 
@@ -62,7 +62,8 @@ Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
 charge      = -1.d0
 allocate(character(len=25)::jorek_filename)
-jorek_filename   = 'jorek_equilibrium' 
+jorek_filename    = 'jorek_equilibrium' 
+particle_filename = 'jorek_particle_outputs.txt'
 n_int_pdf_param  = 0
 n_real_pdf_param = 0
 mass_tot         = 2.5d30
@@ -157,6 +158,10 @@ write(*,*) "L2 error between the expected pdf from particle histogram and the in
 write(*,*) "L2 error normalized to the maximum of the input pdf: ",error_norm
 write(*,*) "L2 error averaged and normalised to the maximum of the input pdf: ",error_avg_norm
 write(*,*) " "
+
+!> Write data into file ---------------------------------------------------------------------
+write(*,*) "... writing data in files"
+call dump_kinetic_particles_in_txt(n_particles,sim%groups(1)%particles,sim%groups(1)%mass,particle_filename,ifail)
 
 !> Clean-up ---------------------------------------------------------------------------------
 deallocate(Rmesh); deallocate(Zmesh); deallocate(phimesh); deallocate(pmesh); 
@@ -434,6 +439,33 @@ real_pdf_param_in,n_int_pdf_param_in,int_pdf_param_in)
   if(allocated(real_pdf_param)) deallocate(real_pdf_param);
   if(allocated(int_pdf_param))  deallocate(int_pdf_param);
 end subroutine evaluate_pdf_at_midpoints
+
+!> Dump particle kinetic list in txt file
+subroutine dump_kinetic_particles_in_txt(n_particles,particles,mass,filename,ifail)
+  use mod_particle_types, only: particle_base
+  use mod_particle_types, only: particle_kinetic_relativistic
+  implicit none
+  !> Onput-Outputs
+  integer,intent(inout) :: ifail
+  !> Inputs
+  integer,intent(in)                                     :: n_particles
+  class(particle_base),dimension(n_particles),intent(in) :: particles
+  character(len=*),intent(in)                :: filename
+  real*8,intent(in)                                      :: mass
+  !> Variables
+  integer :: ii
+
+  !> open the file and write particle properties
+  open(unit=42,file=trim(filename),action='write',blank='NULL',form='formatted',status='unknown',iostat=ifail)
+  select type (plist=>particles)
+  type is (particle_kinetic_relativistic)
+    do ii=1,n_particles
+      write(42,'(9E40.16E4)') plist(ii)%x(1),plist(ii)%x(2),plist(ii)%x(3),plist(ii)%p(1),plist(ii)%p(2),&
+      plist(ii)%p(3),plist(ii)%weight,real(plist(ii)%q,kind=8),mass
+    enddo
+  end select
+  close(42) !< close file
+end subroutine dump_kinetic_particles_in_txt
 
 !> Definitions of the probability density function (PDF) ------------------------ 
 

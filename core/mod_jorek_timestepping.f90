@@ -269,7 +269,7 @@ subroutine setup_solvers(this, sim)
                                    this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)
  
   call global_matrix_structure(sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
-                               this%local_elms,this%n_local_elms, n_glob, this%a_mat, i_tor_min=1, i_tor_max=n_tor)
+                               this%local_elms,this%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)
 
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
     call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
@@ -484,7 +484,7 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   call construct_matrix(sim%my_id, this%local_elms, this%n_local_elms, xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, &
                         this%eq%psi_axis, this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint,    &
-                        n_glob, rhs_glob, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
+                        this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
     
   ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
   call del_thread_buffers()

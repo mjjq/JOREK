@@ -66,7 +66,7 @@ contains
 
   if ( .not. matrix_structure_initialized ) then
       call global_matrix_structure(node_list, element_list, bnd_elm_list, freeboundary, &
-         local_elms_harm, n_local_elms_harm, n_harm, a_mat, i_tor_min=i_tor_min, i_tor_max=i_tor_max)
+         local_elms_harm, n_local_elms_harm, a_mat, i_tor_min=i_tor_min, i_tor_max=i_tor_max)
          
     call MPI_Barrier(a_mat%comm, ierr)
 
@@ -79,7 +79,7 @@ contains
  
   call construct_matrix(my_id, local_elms_harm, n_local_elms_harm, xpoint, xcase, ES%R_axis, ES%Z_axis,&
          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
-         n_harm, rhs_harm, a_mat, rhs_vec, harmonic_matrix=.true.)
+         a_mat, rhs_vec, harmonic_matrix=.true.)
 
   end subroutine direct_construction_harmonic
   

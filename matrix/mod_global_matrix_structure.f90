@@ -1,7 +1,7 @@
 module mod_global_matrix_structure
 contains
 subroutine global_matrix_structure(node_list, element_list, boundary_list, freeboundary, local_elms, n_local_elms, & 
-                                   n, a_mat, i_tor_min, i_tor_max)
+                                   a_mat, i_tor_min, i_tor_max)
   !***********************************************************************
   !* subroutine determines the position of the indices in the global     *
   !* matrix                                                              *
@@ -27,7 +27,7 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
   integer                            :: local_elms(*), n_local_elms, n_tor_local
   integer                            :: i, index1, index2, index1_local, index2_local
   integer(kind=int_all)              :: j_larger, j, n_max, maxsize
-  integer(kind=int_all)              :: n, ndof
+  integer(kind=int_all)              :: ndof
   integer                            :: ibnd, jbnd, idir, jdir, iv, ik, jv, jk, ielm, inode1, inode2
   integer(kind=int_all)              :: ibase
   integer                            :: inode,i_father,i_tor_min, i_tor_max
@@ -281,7 +281,7 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
 
   enddo
 
-  n  = (a_mat%my_ind_max - a_mat%my_ind_min + 1)*a_mat%block_size ! local rank
+  !n  = (a_mat%my_ind_max - a_mat%my_ind_min + 1)*a_mat%block_size ! local rank
 
   a_mat%nnz = a_mat%ijA_index(a_mat%my_ind_max-a_mat%my_ind_min + 1, a_mat%ijA_size(a_mat%my_ind_max-a_mat%my_ind_min+1)) + a_mat%block_size**2 - 1
  
@@ -294,7 +294,7 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
   a_mat%jcn(:) = 0 
 
   !---- for debugging purpose
-  write(*,'(i6,a,2i20)') my_id, ' size matrices : n, nz = ', n, a_mat%nnz
+  write(*,'(i6,a,2i20)') my_id, ' size matrices : n, nz = ', a_mat%nnz
   !write(*,'(i6,a,2i20)') my_id, ' ndof = ', ndof
   !write(*,'(i6,a,2i20)') my_id, ' index_min, index_max = ', a_mat%my_ind_min, a_mat%my_ind_max
   !write(*,'(i6,a,2i20)') my_id, ' n_local_elms = ', n_local_elms

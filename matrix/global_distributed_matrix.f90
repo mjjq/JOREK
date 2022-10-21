@@ -11,19 +11,8 @@ module global_distributed_matrix
   public
   
   ! --- The global distributed matrix and related quantities
-  real*8,                allocatable, target  :: rhs_glob(:)  !< Distributed global right hand side
   real*8,                allocatable, target  :: deltas(:)                                 !< solution from previous step
-  real*8,                allocatable, target  :: column_scaling(:)                         !< column scaling of the global matrix
-  integer(kind=int_all)                       :: ndof_glob, n_glob, nz_glob
-  
-  ! --- The distributed harmonic matrix (in case of direct construction)
-  integer(kind=int_all), allocatable, target  :: ijA_index_harm(:,:), ijA_size_harm(:), irn_jcn_harm(:,:) !< contains the structure of the harmonic sparse matrix (to fill in CSR format)
-  real*8,                allocatable, target  :: A_harm(:)    !< Distributed harmonic matrix
-  real*8,                allocatable, target  :: rhs_harm(:)  !< Distributed harmonic right hand side
-  integer(kind=int_all), allocatable, target  :: irn_harm(:)  !< Row indices for coordinate format harmonic sparse matrix (or CSR)
-  integer(kind=int_all), allocatable, target  :: jcn_harm(:)  !< Column indices for coordinate format harmonic sparse matrix (or CSR)
-  integer(kind=int_all)                       :: ndof_harm, n_harm, nz_harm                       
-  
+    
   ! --- The complex harmonic matrix 
 #ifdef USE_COMPLEX_PRECOND
   double complex,        allocatable, target :: A_cmplx(:)          !< Distributed harmonic matrix

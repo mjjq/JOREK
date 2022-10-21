@@ -510,12 +510,13 @@ mpi_required = 0
     a_mat%comm = MPI_COMM_WORLD
 
     call distribute_nodes_elements(id_elements, n_cpu, index_size, node_list, element_list, .false., local_elms, & 
-         n_local_elms, restart, freeboundary, a_mat)    
+                                   n_local_elms, restart, freeboundary, a_mat)    
     
     call global_matrix_structure(node_list, element_list, bnd_elm_list, freeboundary,&
-         local_elms, n_local_elms, n_glob, a_mat, i_tor_min=1, i_tor_max=n_tor)
+                                 local_elms, n_local_elms, a_mat, i_tor_min=1, i_tor_max=n_tor)
 
-    call MPI_Barrier(MPI_COMM_WORLD,ierr)
+    call MPI_Barrier(a_mat%comm,ierr)
+    
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
       call global_matrix_structure_vacuum(node_list, bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
     endif
@@ -627,8 +628,8 @@ mpi_required = 0
 
     !--------- Constructing Global Matrix
     call construct_matrix(my_id, local_elms, n_local_ELms, xpoint, xcase, ES%R_axis, ES%Z_axis,&
-         ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
-         n_glob, rhs_glob, a_mat, rhs_vec, harmonic_matrix=.false.)
+                          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
+                          a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond

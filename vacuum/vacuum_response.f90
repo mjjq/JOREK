@@ -1705,7 +1705,7 @@ module vacuum_response
     use data_structure, only: type_node_list, type_bnd_node_list,type_bnd_element_list, type_bnd_element, type_SP_MATRIX
     use mod_parameters, only: n_plane, n_var, n_tor
     use gauss,          only: n_gauss, xgauss, wgauss
-    use global_distributed_matrix, only: ndof_glob, det_row_col, det_sparse_pos
+    use global_distributed_matrix, only: det_row_col, det_sparse_pos
     use basis_at_gaussian, only: H1, H1_s, HZ
     use phys_module, only: t_now, t_start
     use mpi_mod

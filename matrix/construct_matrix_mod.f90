@@ -261,7 +261,7 @@ contains
 !! added by external routine calls.
 subroutine construct_matrix(my_id, local_elms, n_local_elms, & 
                             xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, &
-                            n, rhs, a_mat, global_rhs, harmonic_matrix)
+                            a_mat, rhs_vec, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -300,10 +300,8 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   real*8,                intent(in) :: Z_xpoint(2)
   real*8,                intent(in) :: psi_xpoint(2)
   logical,               intent(in) :: xpoint2
-  integer(kind=int_all), intent(in) :: n
   logical,               intent(in) :: harmonic_matrix
-  real*8,                intent(inout), allocatable, target :: rhs(:)
-  
+    
   !--- Internal variables
   type (type_element)               :: element
   type (type_node)                  :: nodes(n_vertex_max), aux_nodes(n_vertex_max)
@@ -328,7 +326,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   integer, allocatable              :: i_harm(:)
   integer                           :: comm
   type(type_SP_MATRIX)              :: a_mat
-  type(type_RHS)                    :: global_rhs
+  type(type_RHS)                    :: rhs_vec
 
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
@@ -388,11 +386,11 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   ! --- Memory allocation
   if (associated(a_mat%val))   call tr_deallocatep(a_mat%val,"A_mat",CAT_DMATRIX) 
   call tr_allocatep(a_mat%val, Int1, a_mat%nnz, "A_mat",  CAT_DMATRIX)
-  a_mat%val = 0.0d0
+  a_mat%val(:) = 0.0d0
 
-  if (allocated(rhs)) call tr_deallocate(rhs,"rhs",CAT_DMATRIX) 
-  call tr_allocate(rhs, Int1, a_mat%ng, "rhs", CAT_DMATRIX)
-  rhs = 0.0d0 
+  if (associated(rhs_vec%val)) call tr_deallocatep(rhs_vec%val,"rhs",CAT_DMATRIX) 
+  call tr_allocatep(rhs_vec%val, Int1, a_mat%ng, "rhs", CAT_DMATRIX)
+  rhs_vec%val(:) = 0.0d0 
 
   call tr_allocate(rhs_local, Int1, a_mat%ng, "rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
@@ -401,7 +399,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   !$omp parallel default(none) &
   !$omp   shared(n_local_elms,local_elms,element_list,node_list, aux_node_list,                                &
   !$omp          my_ind_min, my_ind_max,xpoint2,xcase2,R_axis,Z_axis,psi_axis,psi_bnd,Z_xpoint,harmonic_matrix,  &
-  !$omp          a_mat, rhs_local, rhs,                                                               &
+  !$omp          a_mat, rhs_local, rhs_vec,                                                               &
   !$omp          R_xpoint,my_id,bc_natural_open,bc_natural_flux,refinement,thread_struct,n_tor_fft_thresh,     &
   !$omp          difference_found,rhs_problem,elm_problem) &
   !$omp   private(ife,ielm,iv,inode,element,nodes, aux_nodes, i,inode1,i_order,index_node1, n_tor_local,   &
@@ -728,24 +726,23 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
 #ifdef NORMTRACE
     ! --- For debugging purpose
 
-    call tr_locvnorms("cm_Rhs",RHS,a_mat%ng)
+    call tr_locvnorms("cm_Rhs",rhs_vec%val,a_mat%ng)
     if (my_id .eq. 0) then
       write(fname,'(A,I6.6)')"rhs",index_now
-      call tr_vdump(fname,RHS,a_mat%ng)
+      call tr_vdump(fname,rhs_vec%val,a_mat%ng)
     end if
 #endif
   endif
   
-  call MPI_AllReduce(RHS_local,RHS,a_mat%ng,MPI_DOUBLE_PRECISION,MPI_SUM,comm,ierr)  
+  call MPI_AllReduce(RHS_local,rhs_vec%val,a_mat%ng,MPI_DOUBLE_PRECISION,MPI_SUM,comm,ierr)
+  rhs_vec%n  = a_mat%ng
 
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
   
-  ! assign global matrix structure
-  global_rhs%val => RHS
-  global_rhs%n  = a_mat%ng
+  
      
   ! --- Memory tracking
-  call tr_locvnorms("cm_BCRhs",RHS,a_mat%ng)
+  call tr_locvnorms("cm_BCRhs",rhs_vec%val,a_mat%ng)
   call tr_debug_write("ndof",a_mat%ng)
   
   ! --- Timing

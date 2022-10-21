@@ -26,20 +26,23 @@ integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param
 integer,dimension(:),allocatable :: int_pdf_param
 real*8                       :: start_time,mass,charge,error,error_norm
-real*8                       :: error_avg_norm,pdf_upper_bound
+real*8                       :: error_avg_norm,pdf_upper_bound,particle_weight
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
 real*8,dimension(:),allocatable           :: real_pdf_param
 real*8,dimension(:,:,:,:,:,:),allocatable :: expected_pdf,pdf_at_midpoints
+character(len=125)                        :: test_case
 character(len=:),allocatable              :: jorek_filename
+procedure(pdf_f),pointer                  :: pdf_to_use=>NULL()
 
 !> MPI and groups initialisation ------------------------------------------------------------
 call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
+test_case   = 'uniform'
 n_particles = 10
 nR          = 10
 nZ          = 10
@@ -90,16 +93,27 @@ if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0
 Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
 var_min = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),Chibound(1)]
 var_max = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),Chibound(2)]
-!> compute the pdf upper bound
-pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
-real_pdf_param,n_int_pdf_param,int_pdf_param);
+!> select the pdf to use
+write(*,*) ' '
+write(*,*) 'SELECT PDF TO USE: '
+if(test_case=='uniform_weight') then
+  write(*,*) 'not implemented yet!'
+else
+  write(*,*) 'SELECTED PDF UNIFORM (DEFAULT)!'
+  pdf_to_use => pdf_uniform
+  pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
+  real_pdf_param,n_int_pdf_param,int_pdf_param)
+  particle_weight = 1.d0
+endif
+write(*,*) ' '
 
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
 call initialise_particles_in_phase_space(sim%groups(1)%particles,sim%fields,sob_rng,&
-pdf_uniform,pdf_upper_bound,sim%groups(1)%mass,start_time,Ekinbound,&
+pdf_to_use,pdf_upper_bound,sim%groups(1)%mass,start_time,Ekinbound,&
 Pitchbound,Chibound,Rbound,Zbound,Phibound,chargebound,n_real_pdf_param,&
 real_pdf_param,n_int_pdf_param,int_pdf_param)
+sim%groups(1)%particles(:)%weight = particle_weight !< assign particle weights
 
 !> Produce the expected pdf fromt the particle histogram --------------------------------------
 write(*,*) "... building particle histogram and computing the expected pdf"
@@ -119,7 +133,7 @@ end select
 !> the expected pdf from the  particle histogram --------------------------------------------
 write(*,*) "... computing the input pdf at the midpoints of the mesh elements"
 call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,nchi,Rmesh,Zmesh,phimesh,&
-     pmesh,pitchmesh,chimesh,charge,start_time,pdf_uniform,sim%fields,n_real_pdf_param,&
+     pmesh,pitchmesh,chimesh,charge,start_time,pdf_to_use,sim%fields,n_real_pdf_param,&
      real_pdf_param,n_int_pdf_param,int_pdf_param)
 write(*,*) "... computing L2 error"
 call compute_error_norm2_ndim6(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
@@ -136,6 +150,7 @@ write(*,*) " "
 deallocate(Rmesh); deallocate(Zmesh); deallocate(phimesh); deallocate(pmesh); 
 deallocate(pitchmesh); deallocate(chimesh); deallocate(expected_pdf); 
 deallocate(pdf_at_midpoints);
+pdf_to_use => NULL()
 call sim%finalize()
 write(*,*) "Test: initialise_particle_in_phase_space: completed."
 

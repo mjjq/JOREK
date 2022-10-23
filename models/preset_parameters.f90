@@ -389,6 +389,27 @@ subroutine preset_parameters
   bcs( 15)%dirichlet%rho_imp  = .false.
   bcs( 19)%dirichlet%rho_imp  = .false.
 
+  bcs(  1)%dirichlet%uR    = .false.
+  bcs(4:5)%dirichlet%uR    = .false.
+  bcs(  9)%dirichlet%uR    = .false.
+  bcs( 11)%dirichlet%uR    = .false.
+  bcs( 15)%dirichlet%uR    = .false.
+  bcs( 19)%dirichlet%uR    = .false.
+
+  bcs(  1)%dirichlet%uZ    = .false.
+  bcs(4:5)%dirichlet%uZ    = .false.
+  bcs(  9)%dirichlet%uZ    = .false.
+  bcs( 11)%dirichlet%uZ    = .false.
+  bcs( 15)%dirichlet%uZ    = .false.
+  bcs( 19)%dirichlet%uZ    = .false.
+
+  bcs(  1)%dirichlet%up    = .false.
+  bcs(4:5)%dirichlet%up    = .false.
+  bcs(  9)%dirichlet%up    = .false.
+  bcs( 11)%dirichlet%up    = .false.
+  bcs( 15)%dirichlet%up    = .false.
+  bcs( 19)%dirichlet%up    = .false.
+
   ! --- Mach 1
   bcs(:)%mach1   = .false.
 

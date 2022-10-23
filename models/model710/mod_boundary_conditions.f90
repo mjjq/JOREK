@@ -38,7 +38,7 @@ use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_co
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,            &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
        mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef, no_mach1_bc, Mach1_openBC, Mach1_fix_B, &
-       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const, bcs
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
 use tr_module
 use mpi_mod
 use mod_locate_irn_jcn
@@ -124,7 +124,7 @@ real*8  :: beta, beta_T, beta_b, beta_b_T, beta_b_Tb
 real*8  :: element_size_s, element_size_t, element_size_0, element_size_2
 real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
 
-integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k, bnd_type
+integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
 integer :: j, err, itest, i_mid, i_bnd, idir, iv_dir, iv_perp_dir, k_max
 integer :: index_large_i, index_node, index_node2, index_node3, index_node4, ielm
 integer(kind=int_all) :: ijA_position,ijA_position2
@@ -265,48 +265,46 @@ do i=1, n_local_elms !=== do elements
 
       normal_direction = (/R_mid - R_center, Z_mid - Z_center /) / norm2((/R_mid - R_center, Z_mid - Z_center /))
 
-      bnd_type = node_list%node(inode)%boundary
-
       apply_cs             = .false.
       apply_dirichlet_all  = .false.
 
       ! --- Dirichlet for normal nodes?
-      !if (                                              &
-      !         (node_list%node(inode)%boundary .eq.  2) &
-      !    .or. (node_list%node(inode)%boundary .eq. 12) &
-      !) then
-      !  apply_dirichlet_all = .true.
-      !endif
+
+      if (                                              &
+               (node_list%node(inode)%boundary .eq.  2) &
+          .or. (node_list%node(inode)%boundary .eq. 12) &
+      ) then
+        apply_dirichlet_all = .true.
+      endif
 
       ! --- Mach1 for normal nodes?
-      !if (                                              &
-      !         (node_list%node(inode)%boundary .eq.  1) &
-      !    .or. (node_list%node(inode)%boundary .eq.  4) &
-      !    .or. (node_list%node(inode)%boundary .eq.  5) &
-      !    .or. (node_list%node(inode)%boundary .eq. 11) &
-      !    .or. (node_list%node(inode)%boundary .eq. 15) &
-      !) then
-      !  apply_cs = .true.
-      !endif
+      if (                                              &
+               (node_list%node(inode)%boundary .eq.  1) &
+          .or. (node_list%node(inode)%boundary .eq.  4) &
+          .or. (node_list%node(inode)%boundary .eq.  5) &
+          .or. (node_list%node(inode)%boundary .eq. 11) &
+          .or. (node_list%node(inode)%boundary .eq. 15) &
+      ) then
+        apply_cs = .true.
+      endif
 
       ! --- Dirichlet and Mach-1 for corner nodes? UNCOMMENT ONLY ONE OF THEM!
-      !if (                                              &
-      !         (node_list%node(inode)%boundary .eq.  3) &
-      !    .or. (node_list%node(inode)%boundary .eq.  9) &
-      !    .or. (node_list%node(inode)%boundary .eq. 19) &
-      !    .or. (node_list%node(inode)%boundary .eq. 20) &
-      !    .or. (node_list%node(inode)%boundary .eq. 21) &
-      !) then
-      !  ! --- UNCOMMENT ONLY ONE OF THEM!
-      !  apply_dirichlet_all = .true.
-      !  !apply_cs = .true.
-      !endif
+      if (                                              &
+               (node_list%node(inode)%boundary .eq.  3) &
+          .or. (node_list%node(inode)%boundary .eq.  9) &
+          .or. (node_list%node(inode)%boundary .eq. 19) &
+          .or. (node_list%node(inode)%boundary .eq. 20) &
+          .or. (node_list%node(inode)%boundary .eq. 21) &
+      ) then
+        ! --- UNCOMMENT ONLY ONE OF THEM!
+        apply_dirichlet_all = .true.
+        !apply_cs = .true.
+      endif
 
       ! --- special user-requests to control Mach-1
-      if ( (.not. mach_one_bnd_integral) .and. (.not. Mach1_openBC) .and. bcs(bnd_type)%mach1) &
-                       apply_cs = .true.
       if (no_mach1_bc) apply_cs = .false.
       if (no_mach1_bc) apply_dirichlet_all = .true.
+      if (Mach1_openBC) apply_cs = .false.
 
 
       do in=i_tor_min, i_tor_max  ! === do n_tor
@@ -372,21 +370,28 @@ do i=1, n_local_elms !=== do elements
  
         do k=1, n_var ! === do variables
                                                                                                  
+          ! --- Decide when A3,AR,AZ need BCs
+          apply_psi_BC = .false.
+          if (     (k == var_A3) &
+              .or. (k == var_AR) & ! will be needed eventually for RMPs
+              .or. (k == var_AZ) & ! will be needed eventually for RMPs
+             ) then                        
+            if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
+            if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
+            if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
+            if (in .eq. 1)                                                               apply_psi_BC = .true.
+            if (is_freebound(in,k))                                                      apply_psi_BC = .false.                     
+          endif
+                
           ! --- Apply Dirichlet
-          if (  (apply_dirichlet_all)                                          .or.  &
-                ( (k == var_AR      ) .and. bcs(bnd_type)%dirichlet%AR      )  .or.  &
-                ( (k == var_AZ      ) .and. bcs(bnd_type)%dirichlet%AZ      )  .or.  &
-                ( (k == var_A3      ) .and. bcs(bnd_type)%dirichlet%A3      )  .or.  &
-                ( (k == var_rho     ) .and. bcs(bnd_type)%dirichlet%rho     )  .or.  &
-                ( (k == var_T       ) .and. bcs(bnd_type)%dirichlet%T       )  .or.  &
-                ( (k == var_Ti      ) .and. bcs(bnd_type)%dirichlet%Ti      )  .or.  &
-                ( (k == var_Te      ) .and. bcs(bnd_type)%dirichlet%Te      )  .or.  &
-                ( (k == var_uR      ) .and. bcs(bnd_type)%dirichlet%uR      )  .or.  &
-                ( (k == var_uZ      ) .and. bcs(bnd_type)%dirichlet%uZ      )  .or.  &
-                ( (k == var_up      ) .and. bcs(bnd_type)%dirichlet%up      )  .or.  &
-                ( (k == var_rhon    ) .and. bcs(bnd_type)%dirichlet%rhon    )  .or.  &
-                ( (k == var_nre     ) .and. bcs(bnd_type)%dirichlet%nre     )        &
-             ) then
+          if (        apply_psi_BC      &
+                 .or. ((k .eq. var_rho)  .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_T)    .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_uR)   .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_uZ)   .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_up)   .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_rhon) .and. apply_dirichlet_all)  &
+              ) then
 
             ! --- Fix derivatives in one direction
             do kk = 1,(n_order+1)/2

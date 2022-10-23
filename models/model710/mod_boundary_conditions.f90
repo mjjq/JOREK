@@ -372,19 +372,6 @@ do i=1, n_local_elms !=== do elements
  
         do k=1, n_var ! === do variables
                                                                                                  
-          ! --- Decide when A3,AR,AZ need BCs
-          apply_psi_BC = .false.
-          if (     (k == var_A3) &
-              !.or. (k == var_AR) & ! will be needed eventually for RMPs
-              !.or. (k == var_AZ) & ! will be needed eventually for RMPs
-             ) then                        
-            if ( (RMP_on) .and. (in .lt. RMP_har_cos_spectrum(1))                    )   apply_psi_BC = .true.
-            if ( (RMP_on) .and. (in .gt. RMP_har_sin_spectrum(Number_RMP_harmonics)) )   apply_psi_BC = .true.
-            if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
-            if (in .eq. 1)                                                               apply_psi_BC = .true.
-            if (is_freebound(in,k))                                                      apply_psi_BC = .false.                     
-          endif
-                
           ! --- Apply Dirichlet
           if (  (apply_dirichlet_all)                                          .or.  &
                 ( (k == var_AR      ) .and. bcs(bnd_type)%dirichlet%AR      )  .or.  &
@@ -400,7 +387,6 @@ do i=1, n_local_elms !=== do elements
                 ( (k == var_rhon    ) .and. bcs(bnd_type)%dirichlet%rhon    )  .or.  &
                 ( (k == var_nre     ) .and. bcs(bnd_type)%dirichlet%nre     )        &
              ) then
-
 
             ! --- Fix derivatives in one direction
             do kk = 1,(n_order+1)/2
@@ -995,24 +981,23 @@ do i=1, n_local_elms !=== do elements
                                                     zbig * BC_tmp * element_size_0,                      &
                                                     solve_only, gmres, index_min, index_max, ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-          enddo !=== var_VVV (3 variables of uR, uZ, up)
-
-          ! --- Fix derivatives in one direction
-          k = var_Vpar
-          do kk = 1,(n_order+1)/2
-            do ll = 1,(n_order+1)/2
-              if ( (iv_dir .eq. 2) .and. (ll .gt. 1) ) cycle ! do only pure s derivatives, not cross _st
-              if ( (iv_dir .eq. 3) .and. (kk .gt. 1) ) cycle ! do only pure t derivatives, not cross _st
-              if ( (iv_dir .eq. 2) .and. (kk .lt. 3) ) cycle ! do only node value, 1st and 2nd derivatives, fix the rest
-              if ( (iv_dir .eq. 3) .and. (ll .lt. 3) ) cycle ! do only node value, 1st and 2nd derivatives, fix the rest
-              index_tmp = node_indices(kk,ll)
-              index_node = node_list%node(inode)%index(index_tmp)
-              call boundary_conditions_add_one_entry(                 &
-                     index_node, k, in, index_node, k, in,            &
-                     zbig, solve_only, gmres, index_min, index_max,   & 
-                     ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+            ! --- Fix derivatives in one direction
+            do kk = 1,(n_order+1)/2
+              do ll = 1,(n_order+1)/2
+                if ( (iv_dir .eq. 2) .and. (ll .gt. 1) ) cycle ! do only pure s derivatives, not cross _st
+                if ( (iv_dir .eq. 3) .and. (kk .gt. 1) ) cycle ! do only pure t derivatives, not cross _st
+                if ( (iv_dir .eq. 2) .and. (kk .lt. 3) ) cycle ! do only node value, 1st and 2nd derivatives, fix the rest
+                if ( (iv_dir .eq. 3) .and. (ll .lt. 3) ) cycle ! do only node value, 1st and 2nd derivatives, fix the rest
+                index_tmp = node_indices(kk,ll)
+                index_node = node_list%node(inode)%index(index_tmp)
+                call boundary_conditions_add_one_entry(                        &
+                       index_node, var_VVV(k), in, index_node, var_VVV(k), in, &
+                       zbig, solve_only, gmres, index_min, index_max,          & 
+                       ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+              enddo
             enddo
-          enddo
+
+          enddo !=== var_VVV (3 variables of uR, uZ, up)
 
         endif   !=== apply_cs
         

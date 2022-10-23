@@ -89,7 +89,7 @@ real*8  :: H1(2,n_degrees_1d), H1_s(2,n_degrees_1d), H1_ss(2,n_degrees_1d)
 integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
 integer :: index_large_i, index_node, index_node2, index_node3, ielm
 integer(kind=int_all) :: ijA_position,ijA_position2
-integer :: ilarge2, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
+integer :: ilarge2, kv, kT, kTi, kTe, ku, kn, ilarge_vv, ilarge_vT, ilarge_vus, ilarge_vn
 integer :: ilarge_vsvs, ilarge_vsTs, ilarge_vsT, ilarge_vut, ilarge_vtvt, ilarge_vtTt, ilarge_vtT
 integer :: ierr
 logical :: apply_psi_BC, apply_current_BC, s_constant_boundary, t_constant_boundary, apply_cs, apply_dirichlet_1234, apply_dirichlet_all

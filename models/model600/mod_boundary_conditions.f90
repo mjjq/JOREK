@@ -545,9 +545,9 @@ do i=1, n_local_elms !=== do elements
           dMach1BC_v  = - element_size_0
           dMach1BC_T  =           + direction / Btot * factor  * cs0_TT* T0_b   &
                                   + direction / Btot * Hfact_b * cs0_T
-          dMach1BC_Ti =           + direction / Btot * factor  * cs0_TT* Ti0_b  &
+          dMach1BC_Ti =           + direction / Btot * factor  * cs0_TT* T0_b   &
                                   + direction / Btot * Hfact_b * cs0_T
-          dMach1BC_Te =           + direction / Btot * factor  * cs0_TT* Te0_b  &
+          dMach1BC_Te =           + direction / Btot * factor  * cs0_TT* T0_b   &
                                   + direction / Btot * Hfact_b * cs0_T
           dMach1BC_Tb =           + direction / Btot * factor  * cs0_T * element_size_0
 

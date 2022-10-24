@@ -257,7 +257,7 @@ subroutine setup_solvers(this, sim)
 
   call tr_allocatep(this%local_elms,1,sim%fields%element_list%n_elements,"local_elms",CAT_FEM)
 
-    this%a_mat%comm = MPI_COMM_WORLD
+  this%a_mat%comm = MPI_COMM_WORLD
 
   call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
                                    this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)  

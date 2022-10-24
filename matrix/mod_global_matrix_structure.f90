@@ -294,7 +294,7 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
   a_mat%jcn(:) = 0 
 
   !---- for debugging purpose
-  write(*,'(i6,a,2i20)') my_id, ' size matrices : n, nz = ', a_mat%nnz
+  write(*,'(i6,a,2i20)') my_id, ' size matrices : nz = ', a_mat%nnz
   !write(*,'(i6,a,2i20)') my_id, ' ndof = ', ndof
   !write(*,'(i6,a,2i20)') my_id, ' index_min, index_max = ', a_mat%my_ind_min, a_mat%my_ind_max
   !write(*,'(i6,a,2i20)') my_id, ' n_local_elms = ', n_local_elms

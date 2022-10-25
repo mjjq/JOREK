@@ -118,7 +118,6 @@ if (n_order .ge. 5) then
                var_A3,var_rho,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
   call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
                var_A3,var_T,1, ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,1)
-  ! note: haven't implemented the tauIC condition, which I still argue is complete rubbish...
 endif
 
 

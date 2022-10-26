@@ -555,11 +555,128 @@ n_int_param,int_param) result(sup_pdf)
   real*8,dimension(:),allocatable,intent(in)  :: real_param
   !> Outputs:
   real*8 :: sup_pdf
-  !> Evalutate pdf
+  !> Evalutate the upper extremum of the pdf
   sup_pdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
   (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
   if(n_real_param.gt.0) sup_pdf = real_param(1)*sup_pdf
 end function sup_pdf_uniform
+
+!> Phase space distribution based on the plasma current density
+!> and uniform phase space distribution. The momentum distribution
+!> is considered uniform for relativistic particle hence, the 
+!> appearance of the relativistic factor.
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   fields:       (fields_base) jorek MHD fields
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>                 2) particle mass in AMU
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   pdf: (real8) value of the probability density 
+function pdf_current_density_uniform_phase(nx,x,st,time,i_elm,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(pdf)
+  use constants,          only: MU_ZERO,EL_CHG,SPEED_OF_LIGHT
+  use mod_model_settings, only: var_zj
+  use mod_interp,         only: interp_PRZ
+  use mod_fields,         only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x,x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  class(fields_base),intent(in)               :: fields
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: pdf
+  !> Variables:
+  real*8 :: DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
+  real*8,dimension(1) :: jphi
+
+  !> interpolate the jorek toroidal current density at the particle position
+  call interp_PRZ(fields%node_list,fields%element_list,i_elm,[var_zj],1,&
+  st(1),st(2),x(3),jphi,DUMMY_DOUBLE_1,DUMMY_DOUBLE_2)
+  !> compute the pdf
+  DUMMY_DOUBLE_1 = sqrt((x_max(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
+  pdf = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2);
+  pdf = pdf*(cos(x_min(5))**2 - cos(x_max(5))**2)*(x_max(6)-x_min(6))
+  pdf =(-6.d0*jphi(1))/(pdf*x(7)*EL_CHG*MU_ZERO*(mass**3)*(SPEED_OF_LIGHT**4)*x(1))
+end function pdf_current_density_uniform_phase
+
+!> Upper bound phase space distribution based on the plasma current density
+!> and uniform phase space distribution. The momentum distribution
+!> is considered uniform for relativistic particle hence, the 
+!> appearance of the relativistic factor.
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   fields:       (fields_base) jorek MHD fields
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>                 2) particle mass in AMU
+!>                 3) safety factor: must be >1
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!>                 1) mpi rank
+!> outputs:
+!>   sup_pdf:      (real8) value of the probability density upper bound
+function sup_pdf_current_density_uniform_phase(nx,x_min,x_max,fields,&
+n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
+  use mod_model_settings, only: n_var,var_zj
+  use mod_fields,         only: fields_base
+  implicit none
+  !> Inputs:
+  class(fields_base),intent(in)               :: fields
+  integer,intent(in)                          :: nx,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: sup_pdf
+  !> Variables
+  real*8 :: density_tot,density_in,density_out,pressure_in,pressure_out
+  real*8 :: kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in
+  real*8 :: mom_par_out
+  real*8,dimension(n_var) :: varmin,varmax
+  real*8 :: max_pdf,min_pdf,sqrtpovermc2plus1_max,sqrtpovermc2plus1_min
+  real*8 :: cos2pitch_max,cos2pitch_min
+  !> Evalutate the upper extremum of the pdf
+  call Integrals_3D(int_param(1),fields%node_list,fields%element_list,&
+  density_tot,density_in,density_out,pressure_in,pressure_out,kin_par_tot,&
+  kin_par_in,kin_par_out,mom_par_tot,mom_par_in,mom_par_out,varmin,varmax)
+  !> compute the maximum and the minimum of the pdf
+  sqrtpovermc2plus1_max = sqrt((x_max(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0);
+  cos2pitch_max = cos(x_max(5))**2;
+  sqrtpovermc2plus1_min = sqrt((x_min(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0) 
+  cos2pitch_min = cos(x_min(5))**2
+  max_pdf = ((sqrtpovermc2plus1_max**3)-3.d0*sqrtpovermc2plus1_max) - &
+            ((sqrtpovermc2plus1_min**3)-3.d0*sqrtpovermc2plus1_min);
+  max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)*(x_max(6)-x_min(6))
+  max_pdf =(-6.d0*real_param(3))/(max_pdf*x_min(7)*EL_CHG*MU_ZERO*(mass**3)*&
+           (SPEED_OF_LIGHT**4)*x_min(1)); min_pdf = max_pdf; &
+  min_pdf = min_pdf*varmin(var_zj); max_pdf = varmax(var_zj);
+  !> check which between min_pdf and max_pdf has the maximum absolute value
+  if(abs(max_pdf).ge.abs(min_pdf)) then
+    sup_pdf = max_pdf
+  else
+    sup_pdf = min_pdf
+  endif
+end function sup_pdf_current_density_uniform_phase
+
 
 end program test_initialisation_phase_space

@@ -498,15 +498,22 @@ real_pdf_param,n_int_pdf_param,int_pdf_param) result(rej)
   procedure(pdf_f)                 :: pdf
   !> output variables
   logical :: rej
+  real*8 :: norm_pdf
 
   !> check if the particle is valid
   rej = .true.
   if(i_elm.le.0) return
   if((st(1).lt.0.d0).or.(st(1).gt.1.d0)) return
   if((st(2).lt.0.d0).or.(st(2).gt.1.d0)) return
+  !> check if the pdf is valid
+  norm_pdf = one_over_sup_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,&
+  x_max,n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
+  if(norm_pdf.lt.0d0) then
+    write(*,*) 'pdf/sup(pdf) smaller than 0: skip!' 
+    return
+  endif
   !> reject or accept solution
-  if(rand.le.one_over_sup_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,x_max,&
-  n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)) rej = .false.
+  if(rand.le.norm_pdf) rej = .false.
   
 end function rejection_funct_uniform_gpdf
 

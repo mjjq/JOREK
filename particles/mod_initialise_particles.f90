@@ -512,6 +512,7 @@ real_pdf_param,n_int_pdf_param,int_pdf_param) result(rej)
     write(*,*) 'pdf/sup(pdf) smaller than 0: skip!' 
     return
   endif
+  if(norm_pdf.gt.1d0) write(*,*) 'WARNING: normalised pdf > 1: increase the pdf extremum safety factor'
   !> reject or accept solution
   if(rand.le.norm_pdf) rej = .false.
   

@@ -27,7 +27,7 @@ integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
 integer,dimension(:),allocatable :: int_pdf_param
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,particle_weight
-real*8                       :: mass_tot
+real*8                       :: mass_tot,sup_pdf_safety_factor
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
@@ -43,7 +43,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-test_case   = 'uniform_weight'
+test_case   = 'jorek_current_density_re'
 n_particles = 10000000
 nR          = 10
 nZ          = 10
@@ -62,12 +62,13 @@ Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
 charge      = -1.d0
 allocate(character(len=25)::jorek_filename)
-jorek_filename     = 'jorek_equilibrium' 
-particle_filename  = 'jorek_particle_outputs.txt'
-mesh_filename_root = 'jorek_kinetic_mesh_'
-n_int_pdf_param    = 0
-n_real_pdf_param   = 0
-mass_tot           = 2.5d30
+jorek_filename        = 'jorek_equilibrium' 
+particle_filename     = 'jorek_particle_outputs.txt'
+mesh_filename_root    = 'jorek_kinetic_mesh_'
+n_int_pdf_param       = 0
+n_real_pdf_param      = 0
+mass_tot              = 2.5d30
+sup_pdf_safety_factor = 1d0
 
 !> Initialisation ---------------------------------------------------------------------------
 !> allocate arrays and initialise them to 0
@@ -100,7 +101,20 @@ var_max = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),Chibound(2)]
 !> select the pdf to use
 write(*,*) ' '
 write(*,*) 'SELECT PDF TO USE: '
-if(test_case=='uniform_weight') then
+if(trim(test_case)=='jorek_current_density_re') then
+  write(*,*) 'SELECTED: JOREK CURRENT DENSITY RUNAWAY ELECTRONS!'
+  n_real_pdf_param = 3; allocate(real_pdf_param(n_real_pdf_param));
+  real_pdf_param = [1.d0,mass,sup_pdf_safety_factor]
+  n_int_pdf_param = 1; allocate(int_pdf_param(n_int_pdf_param));
+  int_pdf_param(1) = sim%my_id
+  particle_weight = 1.d0
+  pdf_to_use => pdf_current_density_uniform_phase
+  pdf_upper_bound = sup_pdf_current_density_uniform_phase(7,&
+  [var_min(1),var_min(2),var_min(3),var_min(4),var_min(5),&
+  var_min(6),charge],[var_max(1),var_max(2),var_max(3),var_max(4),&
+  var_max(5),var_max(6),charge],sim%fields,n_real_pdf_param,&
+  real_pdf_param,n_int_pdf_param,int_pdf_param)
+elseif(trim(test_case)=='uniform_weight') then
   write(*,*) 'SELECTED: WEIGHTED PDF UNIFORM!'
   n_real_pdf_param = 1; allocate(real_pdf_param(n_real_pdf_param));
   real_pdf_param(1) = product([5d-1,1d0,1d0,1d0/3d0,-1d0,1d0]*&
@@ -649,7 +663,8 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   !> Outputs:
   real*8 :: sup_pdf
   !> Variables
-  real*8 :: density_tot,density_in,density_out,pressure_in,pressure_out
+  real*8 :: density_tot,density_in,density_out
+  real*8 :: pressure_tot,pressure_in,pressure_out
   real*8 :: kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in
   real*8 :: mom_par_out
   real*8,dimension(n_var) :: varmin,varmax
@@ -657,8 +672,8 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   real*8 :: cos2pitch_max,cos2pitch_min
   !> Evalutate the upper extremum of the pdf
   call Integrals_3D(int_param(1),fields%node_list,fields%element_list,&
-  density_tot,density_in,density_out,pressure_in,pressure_out,kin_par_tot,&
-  kin_par_in,kin_par_out,mom_par_tot,mom_par_in,mom_par_out,varmin,varmax)
+  density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,&
+  kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in,mom_par_out,varmin,varmax)
   !> compute the maximum and the minimum of the pdf
   sqrtpovermc2plus1_max = sqrt((x_max(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0);
   cos2pitch_max = cos(x_max(5))**2;
@@ -668,7 +683,7 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
             ((sqrtpovermc2plus1_min**3)-3.d0*sqrtpovermc2plus1_min);
   max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)*(x_max(6)-x_min(6))
   max_pdf =(-6.d0*real_param(3))/(max_pdf*x_min(7)*EL_CHG*MU_ZERO*(mass**3)*&
-           (SPEED_OF_LIGHT**4)*x_min(1)); min_pdf = max_pdf; &
+           (SPEED_OF_LIGHT**4)*x_min(1)); min_pdf = max_pdf;
   min_pdf = min_pdf*varmin(var_zj); max_pdf = varmax(var_zj);
   !> check which between min_pdf and max_pdf has the maximum absolute value
   if(abs(max_pdf).ge.abs(min_pdf)) then

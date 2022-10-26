@@ -152,16 +152,8 @@ sim%groups(1)%particles(:)%weight = particle_weight !< assign particle weights
 
 !> Produce the expected pdf fromt the particle histogram --------------------------------------
 write(*,*) "... building particle histogram and computing the expected pdf"
-!call compute_equidistant_mesh(Rmesh,nR,Rbound)
-!call compute_equidistant_mesh(Zmesh,nZ,Zbound)
-!call compute_equidistant_mesh(phimesh,nphi,Phibound) 
-!call compute_equidistant_mesh(pmesh,np,Pbound) 
-!call compute_equidistant_mesh(pitchmesh,npitch,Pitchbound)
-!call compute_equidistant_mesh(chimesh,nchi,Chibound)
 select type(plist=>sim%groups(1)%particles)
   type is (particle_kinetic_relativistic)
-  !call estimate_pdf_from_histogram(expected_pdf,n_particles,plist,start_time,nR,nZ,nphi,np,&
-  !npitch,nchi,Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh,sim%fields)
   call compute_cylindrical_spherical_histogram_pdf(histo,expected_pdf,Rmesh,&
   Zmesh,phimesh,pmesh,pitchmesh,chimesh,n_particles,plist,start_time,nR,nZ,nphi,np,&
   npitch,nchi,Rbound,Zbound,Phibound,Pbound,Pitchbound,Chibound,sim%fields)
@@ -387,111 +379,6 @@ subroutine compute_equidistant_mesh(mesh,n_points,bounds)
     mesh(ii) = bounds(1)+real(delta*(ii-1),kind=8)
   enddo
 end subroutine compute_equidistant_mesh
-
-!> Estimate the pdf from the histogram
-!> inputs:
-!>   n_particles: (integer) number of particles
-!>   particles:   (particle_kinetic_relativistic)(n_particles) particle list
-!>   time:        (real8) time of the required MHD fields
-!>   nR:          (integer) size of the mesh along the major radius
-!>   nZ:          (integer) size of the mesh along the vertical coordinate  
-!>   nphi:        (integer) size of the mesh along the toroidal angle
-!>   np:          (integer) size of the mesh along the total momentum
-!>   npitch:      (integer) size of the mesh along the pitch angle
-!>   ngyro:       (integer) size of the mesh along the gyro angle
-!>   Rmesh:       (real8)(nR) major radius equidistant mesh
-!>   Zmesh:       (real8)(nZ) vertical coordinate equidistant mesh
-!>   phimesh:     (real8)(nphi) toroidal angle equidistant mesh
-!>   pmesh:       (real8)(np) total momentum equidistant mesh
-!>   pitchmesh:   (real8)(npitch) pitch angle equidistant mesh
-!>   gyromesh:    (real8)(ngyro) gyro angle equidistant mesh
-!> outputs:
-!>   estimated_pdf:   (real8)(nR-1,nZ-1,nphi-1,np-1,npitch-1,ngyro-1) 6D pdf estimation
-subroutine estimate_pdf_from_histogram(estimated_pdf,n_particles,particles,time,nR,&
-  nZ,nphi,np,npitch,ngyro,Rmesh,Zmesh,phimesh,pmesh,pitchmesh,gyromesh,fields)
-  use constants,                 only: TWOPI
-  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
-  use mod_fields,                only: fields_base
-  use mod_particle_types,        only: particle_kinetic_relativistic
-  use mod_pusher_tools,          only: get_orthonormals
-  implicit none
-  !> inputs:
-  integer,intent(in)                                       :: n_particles
-  type(particle_kinetic_relativistic),dimension(n_particles),intent(in) :: particles
-  class(fields_base),intent(in)                            :: fields
-  real*8,intent(in)                                        :: time
-  integer,intent(in)                                       :: nR,nZ,nphi,np,npitch,ngyro
-  real*8,dimension(nR),intent(in)                          :: Rmesh
-  real*8,dimension(nZ),intent(in)                          :: Zmesh
-  real*8,dimension(nphi),intent(in)                        :: phimesh
-  real*8,dimension(np),intent(in)                          :: pmesh
-  real*8,dimension(npitch),intent(in)                      :: pitchmesh
-  real*8,dimension(ngyro),intent(in)                       :: gyromesh
-  !> outputs:
-  real*8,dimension(nR-1,nZ-1,nphi-1,np-1,npitch-1,ngyro-1),intent(out) :: estimated_pdf
-  !> internal variables
-  integer              :: ii,jj,kk,pp,qq,ss
-  real*8               :: dR,dZ,dphi,dp,dpitch,dgyro
-  real*8               :: psi,U,ppar,one_third
-  integer,dimension(6) :: ids
-  real*8,dimension(3)  :: B,E,e1,e2,pcyl
-  real*8,dimension(6)  :: dist,coord,mesh_init
-
-  !> Initialisations-----------------------------------------------------------------------
-  estimated_pdf = 0.d0; one_third = 1.d0/3.d0;
-  !> compute interval distances
-  dist = [Rmesh(2)-Rmesh(1),Zmesh(2)-Zmesh(1),phimesh(2)-phimesh(1),&
-  pmesh(2)-pmesh(1),pitchmesh(2)-pitchmesh(1),gyromesh(2)-gyromesh(1)]
-  mesh_init = [Rmesh(1),Zmesh(1),phimesh(1),pmesh(1),pitchmesh(1),gyromesh(1)]
-  !> Compute the histogram
-  !$omp parallel do default(shared) firstprivate(n_particles,time) &
-  !$omp private(ii,coord,E,B,psi,U,pcyl,e1,e2,ppar,ids) &
-  !$omp reduction(+:estimated_pdf)
-  do ii=1,n_particles
-    coord(1:3) = particles(ii)%x
-    call fields%calc_EBpsiU(time,particles(ii)%i_elm,particles(ii)%st,&
-    coord(3),E,B,psi,U)
-    pcyl = vector_cartesian_to_cylindrical(coord(3),particles(ii)%p)
-    B = B/norm2(B)
-    call get_orthonormals(B,e1,e2)
-    coord(4)  = norm2(pcyl)
-    ppar  = dot_product(pcyl,B)
-    coord(5) = acos(ppar/coord(4)) 
-    coord(6)  = atan2(dot_product(pcyl-ppar*B,e2),dot_product(pcyl-ppar*B,e1))
-    if(coord(6).lt.0.d0) coord(6) = TWOPI+coord(6)
-    coord(6) = mod(coord(6),TWOPI)
-    ids = floor((coord-mesh_init)/dist)+1
-    estimated_pdf(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) = &
-    estimated_pdf(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) + particles(ii)%weight
-  enddo
-  !$omp end parallel do
-  !> normalize for the the total weight mass
-  estimated_pdf = estimated_pdf/sum(particles(:)%weight)
-  !> divide for the volume of the mesh element
-  !$omp parallel do default(none) &
-  !$omp shared(estimated_pdf,Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh) &
-  !$omp firstprivate(ngyro,npitch,np,nphi,nZ,nR,one_third) &
-  !$omp private(ii,jj,kk,pp,qq,ss,dist) &
-  !$omp collapse(6)
-  do ii=1,ngyro-1
-    do jj=1,npitch-1
-      do kk=1,np-1
-        do pp=1,nphi-1
-          do qq=1,nZ-1
-            do ss=1,nR-1
-              dist = [5d-1*(Rmesh(ss+1)**2-Rmesh(ss)**2),Zmesh(qq+1)-Zmesh(qq),phimesh(pp+1)-phimesh(pp),&
-                     one_third*(pmesh(kk+1)**3-pmesh(kk)**3),cos(pitchmesh(jj))-cos(pitchmesh(jj+1)),&
-                     chimesh(ii+1)-chimesh(ii)]
-              estimated_pdf(ss,qq,pp,kk,jj,ii) = estimated_pdf(ss,qq,pp,kk,jj,ii)/&
-              product(dist,mask=(abs(dist).gt.0.d0))       
-            enddo          
-          enddo
-        enddo
-      enddo
-    enddo
-  enddo  
-  !$omp end parallel do
-end subroutine estimate_pdf_from_histogram
 
 !> evaluate the pdf at the mesh element midpoints
 !> inputs:

@@ -25,6 +25,7 @@ type(event)                  :: field_reader
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
 integer,dimension(:),allocatable :: int_pdf_param
+integer,dimension(:,:,:,:,:,:),allocatable :: histo
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,particle_weight
 real*8                       :: mass_tot,sup_pdf_safety_factor
@@ -35,6 +36,8 @@ real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh
 real*8,dimension(:),allocatable           :: real_pdf_param
 real*8,dimension(:,:,:,:,:,:),allocatable :: expected_pdf,pdf_at_midpoints
 character(len=125)                        :: test_case,particle_filename,mesh_filename_root
+character(len=125)                        :: particle_pdf_filename,exact_pdf_filename
+character(len=125)                        :: particle_histo_filename
 character(len=:),allocatable              :: jorek_filename
 procedure(pdf_f),pointer                  :: pdf_to_use=>NULL()
 
@@ -45,12 +48,12 @@ call sim%initialize(num_groups=1)
 !> Define inputs ----------------------------------------------------------------------------
 test_case   = 'jorek_current_density_re'
 n_particles = 10000000
-nR          = 10
-nZ          = 10
-nphi        = 10
-np          = 10
-npitch      = 10
-nchi        = 10
+nR          = 2
+nZ          = 2
+nphi        = 2
+np          = 81
+npitch      = 81
+nchi        = 81
 start_time  = 0.d0
 mass        = 5.48579909065d-4 !< electron mass in AMU
 Rbound      = [0.d0,9.99d2]
@@ -62,13 +65,16 @@ Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
 charge      = -1.d0
 allocate(character(len=25)::jorek_filename)
-jorek_filename        = 'jorek_equilibrium' 
-particle_filename     = 'jorek_particle_outputs.txt'
-mesh_filename_root    = 'jorek_kinetic_mesh_'
-n_int_pdf_param       = 0
-n_real_pdf_param      = 0
-mass_tot              = 2.5d30
-sup_pdf_safety_factor = 1d0
+jorek_filename          = 'jorek_equilibrium' 
+particle_filename       = 'jorek_particle_outputs.txt'
+mesh_filename_root      = 'jorek_kinetic_mesh_'
+particle_histo_filename = 'jorek_histogram_from_particles.txt'
+particle_pdf_filename   = 'jorek_pdf_from_particles.txt'
+exact_pdf_filename      = 'jorek_exact_pdf_at_midpoints.txt'
+n_int_pdf_param         = 0
+n_real_pdf_param        = 0
+mass_tot                = 2.5d30
+sup_pdf_safety_factor   = 1d0
 
 !> Initialisation ---------------------------------------------------------------------------
 !> allocate arrays and initialise them to 0
@@ -76,6 +82,7 @@ write(*,*) "Test: initialise_particle_in_phase_space: started."
 write(*,*) "... setting-up test features"
 allocate(Rmesh(nR)); allocate(Zmesh(nZ)); allocate(phimesh(nphi)); allocate(pmesh(np));
 allocate(pitchmesh(npitch)); allocate(chimesh(nchi));
+allocate(histo(nR,nZ,nphi,np,npitch,nchi));
 allocate(expected_pdf(nR,nZ,nphi,np,npitch,nchi));
 allocate(pdf_at_midpoints(nR,nZ,nphi,np,npitch,nchi));
 
@@ -145,16 +152,19 @@ sim%groups(1)%particles(:)%weight = particle_weight !< assign particle weights
 
 !> Produce the expected pdf fromt the particle histogram --------------------------------------
 write(*,*) "... building particle histogram and computing the expected pdf"
-call compute_equidistant_mesh(Rmesh,nR,Rbound)
-call compute_equidistant_mesh(Zmesh,nZ,Zbound)
-call compute_equidistant_mesh(phimesh,nphi,Phibound) 
-call compute_equidistant_mesh(pmesh,np,Pbound) 
-call compute_equidistant_mesh(pitchmesh,npitch,Pitchbound)
-call compute_equidistant_mesh(chimesh,nchi,Chibound)
+!call compute_equidistant_mesh(Rmesh,nR,Rbound)
+!call compute_equidistant_mesh(Zmesh,nZ,Zbound)
+!call compute_equidistant_mesh(phimesh,nphi,Phibound) 
+!call compute_equidistant_mesh(pmesh,np,Pbound) 
+!call compute_equidistant_mesh(pitchmesh,npitch,Pitchbound)
+!call compute_equidistant_mesh(chimesh,nchi,Chibound)
 select type(plist=>sim%groups(1)%particles)
   type is (particle_kinetic_relativistic)
-  call estimate_pdf_from_histogram(expected_pdf,n_particles,plist,start_time,nR,nZ,nphi,np,&
-  npitch,nchi,Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh,sim%fields)
+  !call estimate_pdf_from_histogram(expected_pdf,n_particles,plist,start_time,nR,nZ,nphi,np,&
+  !npitch,nchi,Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh,sim%fields)
+  call compute_cylindrical_spherical_histogram_pdf(histo,expected_pdf,Rmesh,&
+  Zmesh,phimesh,pmesh,pitchmesh,chimesh,n_particles,plist,start_time,nR,nZ,nphi,np,&
+  npitch,nchi,Rbound,Zbound,Phibound,Pbound,Pitchbound,Chibound,sim%fields)
 end select
 
 !> Compute the input pdf at the mesh element midpoints and the L2 error w.r.t. the 
@@ -183,10 +193,13 @@ call write_array1d_double(nphi,phimesh,trim(trim(mesh_filename_root)//'phi.txt')
 call write_array1d_double(np,pmesh,trim(trim(mesh_filename_root)//'p.txt'),ifail)
 call write_array1d_double(npitch,pitchmesh,trim(trim(mesh_filename_root)//'pitch.txt'),ifail)
 call write_array1d_double(nchi,chimesh,trim(trim(mesh_filename_root)//'gyro.txt'),ifail)
+call write_array6d_integer(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,histo,trim(particle_histo_filename),ifail)
+call write_array6d_double(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,expected_pdf,trim(particle_pdf_filename),ifail)
+call write_array6d_double(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,pdf_at_midpoints,trim(exact_pdf_filename),ifail)
 !> add here method for writing the charge mesh distribution as well
 !> Clean-up ---------------------------------------------------------------------------------
 deallocate(Rmesh); deallocate(Zmesh); deallocate(phimesh); deallocate(pmesh); 
-deallocate(pitchmesh); deallocate(chimesh); deallocate(expected_pdf); 
+deallocate(pitchmesh); deallocate(chimesh); deallocate(histo); deallocate(expected_pdf); 
 deallocate(pdf_at_midpoints); if(allocated(real_pdf_param)) deallocate(real_pdf_param);
 if(allocated(int_pdf_param)) deallocate(int_pdf_param);
 pdf_to_use => NULL()
@@ -232,6 +245,126 @@ n1,n2,n3,n4,n5,n6,array1,array2,sup_array2)
   error_L2 = sqrt(error); error_L2_norm = error_L2/abs(sup_array2);
   error_L2_norm = sqrt(error/(n1*n2*n3*n4*n5*n6))/abs(sup_array2)
 end subroutine compute_error_norm2_ndim6
+
+!> compute the particle histogram and estimate the pdf using bins of constant volume
+!> inputs:
+!>   n_particles: (integer) number of particles
+!>   particles:   (particle_kinetic_relativistic)(n_particles) particle list
+!>   time:        (real8) time of the required MHD fields
+!>   nR:          (integer) size of the mesh along the major radius
+!>   nZ:          (integer) size of the mesh along the vertical coordinate  
+!>   nphi:        (integer) size of the mesh along the toroidal angle
+!>   np:          (integer) size of the mesh along the total momentum
+!>   npitch:      (integer) size of the mesh along the pitch angle
+!>   ngyro:       (integer) size of the mesh along the gyro angle
+!>   Rbound:      (real8)(2) upper and lower major radius bounds
+!>   Zbound:      (real8)(2) upper and lower vertical coordinate bounds
+!>   phibound:    (real8)(2) upper and lower toroidal angle bounds
+!>   pbound:      (real8)(2) upper and lower total momentum bounds
+!>   pitchbound:  (real8)(2) upper and lower pitch angle bounds
+!>   gyrobound:   (real8)(2) upper and lower gyro angle bounds
+!>   fields:      (fields_base) jorek MHD fields
+!> outputs:
+!>   histo:         (integer)(nR-1,nZ-1,nphi-1,np-1,npitch-1,ngyro-1) 6D particle histogram
+!>   estimated_pdf: (real8)(nR-1,nZ-1,nphi-1,np-1,npitch-1,ngyro-1) 6D pdf estimation   
+!>   Rmesh:         (real8)(nR) major radius mesh equidistant in R**2
+!>   Zmesh:         (real8)(nZ) vertical coordinate equidistant mesh
+!>   phimesh:       (real8)(nphi) toroidal angle equidistant mesh
+!>   pmesh:         (real8)(np) total momentum mesh equidistant in p**3
+!>   pitchmesh:     (real8)(npitch) pitch angle mesh equidistant in cos(pitch)
+!>   gyromesh:      (real8)(ngyro) gyro angle equidistant mesh
+subroutine compute_cylindrical_spherical_histogram_pdf(histo,estimated_pdf,Rmesh,&
+Zmesh,phimesh,pmesh,pitchmesh,gyromesh,n_particles,particles,time,nR,nZ,nphi,np,&
+npitch,ngyro,Rbound,Zbound,phibound,pbound,pitchbound,gyrobound,fields)
+  use constants,                 only: TWOPI
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
+  use mod_fields,                only: fields_base
+  use mod_particle_types,        only: particle_kinetic_relativistic
+  use mod_pusher_tools,          only: get_orthonormals
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in) :: fields
+  integer,intent(in) :: n_particles,nR,nZ,nphi,np,npitch,ngyro
+  real*8,intent(in)  :: time
+  real*8,dimension(2),intent(in) :: Rbound,Zbound,phibound
+  real*8,dimension(2),intent(in) :: pbound,pitchbound,gyrobound
+  type(particle_kinetic_relativistic),dimension(n_particles),intent(in) :: particles
+  !> outputs:
+  integer,dimension(nR-1,nZ-1,nphi-1,np-1,npitch-1,ngyro-1),intent(out) :: histo
+  real*8,dimension(nR),intent(out)     :: Rmesh
+  real*8,dimension(nZ),intent(out)     :: Zmesh
+  real*8,dimension(nphi),intent(out)   :: phimesh
+  real*8,dimension(np),intent(out)     :: pmesh
+  real*8,dimension(npitch),intent(out) :: pitchmesh
+  real*8,dimension(ngyro),intent(out)  :: gyromesh 
+  real*8,dimension(nR-1,nZ-1,nphi-1,np-1,npitch-1,ngyro-1),intent(out) :: estimated_pdf
+  !> variables
+  integer              :: ii,jj
+  integer,dimension(6) :: ids
+  real*8               :: dvolume_real,dvolume_momentum,psi,U,ppar
+  real*8,dimension(3)  :: pcyl,B,E,e1,e2
+  real*8,dimension(6)  :: dist,coord,mesh_init
+  !> Initialisation
+  ids = 0; dist = 1d0; histo=0; estimated_pdf = 0;
+  mesh_init = [Rbound(1)**2,Zbound(1),phibound(1),pbound(1)**3,&
+  cos(pitchbound(1)),gyrobound(1)]
+  !> Compute cylindrical mesh real space keeping the volume of each bin constant
+  dvolume_real = (5d-1*(Rbound(2)**2-Rbound(1)**2)*&
+  (Zbound(2)-Zbound(1))*(phibound(2)-phibound(1)))/&
+  ((nR-1)*(nZ-1)*(nphi-1))
+  call compute_equidistant_mesh(Zmesh,nZ,Zbound)
+  call compute_equidistant_mesh(phimesh,nphi,phibound)
+  dist(2) = Zmesh(2)-Zmesh(1); dist(3) = phimesh(2)-phimesh(1);
+  dist(1) = ((2d0*dvolume_real)/(dist(2)*dist(3)));
+  Rmesh(1) = Rbound(1)**2
+  do ii=1,nR-1
+    Rmesh(ii+1) = Rmesh(1) + real(ii,kind=8)*dist(1)
+  enddo
+  Rmesh = sqrt(Rmesh)
+  !> Compute spherical mesh momentum space keeping the volume of each bin constant
+  dvolume_momentum = ((pbound(2)**3-pbound(1)**3)*&
+  (cos(pitchbound(1))-cos(pitchbound(2)))*(gyrobound(2)-gyrobound(1)))/&
+  (3d0*(npitch-1)*(np-1)*(ngyro-1)) 
+  call compute_equidistant_mesh(gyromesh,ngyro,gyrobound)
+  call compute_equidistant_mesh(pitchmesh,npitch,cos(pitchbound))
+  dist(5) = pitchmesh(2) - pitchmesh(1); dist(6) = gyromesh(2)-gyromesh(1);
+  dist(4) = ((-3d0*dvolume_momentum)/(dist(5)*dist(6))) 
+  pmesh(1) = pbound(1)**3
+  do ii=1,np-1
+    pmesh(ii+1) = pmesh(1) + real(ii,kind=8)*dist(4)
+  enddo
+  pmesh = pmesh**(1d0/3d0); pitchmesh = acos(pitchmesh);
+  !> compute histogram
+  !$omp parallel do default(shared) &
+  !$omp firstprivate(n_particles,time,dist,mesh_init,npitch) &
+  !$omp private(ii,ids,coord,E,B,psi,U,pcyl,e1,e2,ppar) &
+  !$omp reduction(+:histo,estimated_pdf)
+  do ii=1,n_particles
+    ids = 1; coord(1:3) = particles(ii)%x
+    !> compute the momentum in spherical coordinates
+    call fields%calc_EBpsiU(time,particles(ii)%i_elm,particles(ii)%st,&
+    coord(3),E,B,psi,U)
+    pcyl = vector_cartesian_to_cylindrical(coord(3),particles(ii)%p)
+    B = B/norm2(B)
+    call get_orthonormals(B,e1,e2)
+    coord(4)  = norm2(pcyl)
+    ppar  = dot_product(pcyl,B)
+    coord(5) = ppar/coord(4)
+    coord(6)  = atan2(dot_product(pcyl-ppar*B,e2),dot_product(pcyl-ppar*B,e1))
+    if(coord(6).lt.0.d0) coord(6) = TWOPI+coord(6)
+    coord(6) = mod(coord(6),TWOPI)
+    !> compute indices
+    coord(1) = coord(1)**2; coord(4) = coord(4)**3;
+    ids = ids+floor((coord-mesh_init)/dist)
+    !> compute histogram and pdf
+    histo(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) = &
+    histo(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) + 1
+    estimated_pdf(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) = &
+    estimated_pdf(ids(1),ids(2),ids(3),ids(4),ids(5),ids(6)) + particles(ii)%weight
+  enddo 
+  !$omp end parallel do
+  estimated_pdf = estimated_pdf/(dvolume_real*dvolume_momentum)
+end subroutine compute_cylindrical_spherical_histogram_pdf
 
 !> Generate an equidistant mesh
 !> inputs:
@@ -488,7 +621,7 @@ subroutine dump_kinetic_particles_in_txt(n_particles,particles,mass,filename,ifa
   close(42) !< close file
 end subroutine dump_kinetic_particles_in_txt
 
-!> write 1d array in txt file
+!> write 1d array of doubles in txt file
 subroutine write_array1d_double(size1,array1d,filename,ifail)
   implicit none
   !> Inputs-Outputs
@@ -497,13 +630,73 @@ subroutine write_array1d_double(size1,array1d,filename,ifail)
   integer,intent(in) :: size1
   real*8,dimension(size1),intent(in) :: array1d
   character(len=*),intent(in) :: filename
-  !> open file
+  !> Variables
+  integer :: ii
+  !> write 1d array of doubles in txt file
   open(unit=43,file=trim(filename),action='write',blank='NULL',form='formatted',status='unknown',iostat=ifail) 
   do ii=1,size1
     write(43,'(E40.16e4)') array1d(ii)
   enddo
   close(43)
 end subroutine write_array1d_double
+
+!> write 6d array of doubles in txt file
+subroutine write_array6d_double(size1,size2,size3,size4,size5,size6,array6d,filename,ifail)
+  implicit none
+  !> Inputs-Outputs
+  integer,intent(inout) :: ifail
+  !> Inputs
+  integer,intent(in) :: size1,size2,size3,size4,size5,size6
+  real*8,dimension(size1,size2,size3,size4,size5,size6),intent(in) :: array6d
+  character(len=*),intent(in) :: filename
+  !> Variables
+  integer :: ii,jj,kk,pp,qq,rr
+  !> write 6d array of doubles in array
+  open(unit=44,file=trim(filename),action='write',blank='NULL',form='formatted',status='unknown',iostat=ifail)
+  do rr=1,size6
+    do qq=1,size5
+      do pp=1,size4
+        do kk=1,size3
+          do jj=1,size2
+            do ii=1,size1
+              write(44,'(E40.16e4)') array6d(ii,jj,kk,pp,qq,rr)
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+  enddo
+  close(44)
+end subroutine write_array6d_double
+
+!> write 6d array of integer in txt file
+subroutine write_array6d_integer(size1,size2,size3,size4,size5,size6,array6d,filename,ifail)
+  implicit none
+  !> Inputs-Outputs
+  integer,intent(inout) :: ifail
+  !> Inputs
+  integer,intent(in) :: size1,size2,size3,size4,size5,size6
+  integer,dimension(size1,size2,size3,size4,size5,size6),intent(in) :: array6d
+  character(len=*),intent(in) :: filename
+  !> Variables
+  integer :: ii,jj,kk,pp,qq,rr
+  !> write 6d array of doubles in array
+  open(unit=45,file=trim(filename),action='write',blank='NULL',form='formatted',status='unknown',iostat=ifail)
+  do rr=1,size6
+    do qq=1,size5
+      do pp=1,size4
+        do kk=1,size3
+          do jj=1,size2
+            do ii=1,size1
+              write(45,'(I6)') array6d(ii,jj,kk,pp,qq,rr)
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+  enddo
+  close(45)
+end subroutine write_array6d_integer
 
 !> Definitions of the probability density function (PDF) ------------------------ 
 

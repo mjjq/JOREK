@@ -439,7 +439,7 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
      select type (particle=>particles(ii))
         type is (particle_kinetic_relativistic)
           call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
-          B = B/norm2(B); call get_orthonormals(B,e1,e2)
+          B = B/norm2(B); call get_orthonormals(B,e1,e2);
           particle%p = variables(4)*(cos(variables(5))*B+&
           sin(variables(5))*(cos(variables(6))*e1+sin(variables(6))*e2))
           particle%p = vector_cylindrical_to_cartesian(particle%x(3),particle%p)

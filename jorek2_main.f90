@@ -71,9 +71,10 @@ program JOREK2
   use hdf5_io_module
 #endif
   use mpi_mod
-  use mod_impurity,      only: init_imp_adas
-  use mod_sparse,        only: solve_sparse_system, solver_finalize
-  use mod_sparse_data,   only: type_SP_SOLVER
+  use mod_impurity,        only: init_imp_adas
+  use mod_sparse,          only: solve_sparse_system, solver_finalize
+  use mod_sparse_data,     only: type_SP_SOLVER
+  use mod_simulation_data, only: type_MHD_SIM
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &

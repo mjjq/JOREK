@@ -26,7 +26,8 @@ contains
     use mod_parameters, only : n_tor, n_var
     use mpi_mod
     use mod_integer_types
-    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS, type_MHD_SIM    
+    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
+    use mod_simulation_data, only: type_MHD_SIM    
     
     implicit none
     

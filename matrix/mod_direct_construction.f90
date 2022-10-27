@@ -11,7 +11,8 @@ contains
     use mod_parameters, only : n_tor, n_var
     use mpi_mod
     use mod_integer_types
-    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS, type_MHD_SIM    
+    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
+    use mod_simulation_data, only: type_MHD_SIM    
     
     implicit none
     
@@ -32,7 +33,8 @@ contains
     use tr_module
     use mod_integer_types
     use mod_parameters, only : n_tor, n_var
-    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_MHD_SIM
+    use data_structure, only: type_SP_MATRIX, type_PRECOND
+    use mod_simulation_data, only: type_MHD_SIM
     use mod_global_matrix_structure, only: global_matrix_structure
     use global_distributed_matrix, only: global_matrix_structure_vacuum
     

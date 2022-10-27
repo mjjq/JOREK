@@ -16,7 +16,8 @@ module mod_sparse
   subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, sim)
     use mod_integer_types
     use mod_clock
-    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS, type_MHD_SIM
+    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
+    use mod_simulation_data, only: type_MHD_SIM
     use mod_sparse_data, only: type_SP_SOLVER
     use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner, update_pc_rhs, gather_solution
 #ifdef DIRECT_CONSTRUCTION    

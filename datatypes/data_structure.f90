@@ -208,9 +208,25 @@ module data_structure
     logical                                      :: autodistribute_modes
     logical                                      :: autodistribute_ranks
     logical                                      :: initialized = .false.
-    logical                                      :: analyzed = .false.
+    logical                                      :: structured = .false.            !< flag indicating the allocation of PC matrix structure
     integer(kind=int_all)                        :: n_glob
   end type type_PRECOND
+ 
+!> MHD simulation type, containing all variables pertaining to a simulation.
+  type :: mhd_sim
+    real(kind=8)                                  :: time = 0.d0 !< time of the simulation
+    type(type_node_list), pointer                 :: node_list => null() !< Current node list
+    type(type_element_list), pointer              :: element_list => null() !< Current element list
+    type(type_bnd_node_list), pointer             :: bnd_node_list => null()
+    type(type_bnd_element_list), pointer          :: bnd_elm_list => null()
+    
+    integer, dimension(:), pointer                :: local_elms => null()
+    integer                                       :: n_local_elms
+
+    !< MPI settings
+    integer :: my_id = 0
+    integer :: n_cpu = 1 ! if not initialized, act as if there is no mpi
+  end type mhd_sim  
  
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()

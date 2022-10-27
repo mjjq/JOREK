@@ -67,7 +67,7 @@ contains
 
     allocate(indx(n_cpu))
 
-    if (.not.pc%analyzed) call analyze_pc(pc,a_mat)
+    if (.not.pc%structured) call set_pc_structure(pc,a_mat)
     
 ! --- Allocate PC matrices
     if (.not.associated(pc%mat%val)) allocate(pc%mat%val(pc%mat%nnz))
@@ -195,7 +195,7 @@ contains
 
   end subroutine update_pc_mat
 
-  subroutine analyze_pc(pc,a_mat)
+  subroutine set_pc_structure(pc,a_mat)
     use mpi_mod
     use mod_integer_types
     use mod_parameters, only : n_tor, n_var
@@ -326,11 +326,11 @@ contains
     enddo
     
     write(*,*) pc%my_id, "PC matrix: ng, nnz", pc%mat%ng, pc%mat%nnz
-    pc%analyzed = .true.
+    pc%structured = .true.
     
     return         
   
-  end subroutine analyze_pc
+  end subroutine set_pc_structure
 
 
   !> Distribute RHS vector

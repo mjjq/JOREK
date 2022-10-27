@@ -164,9 +164,10 @@ program JOREK2
 
   logical :: input_treat_axis
   
-  type(type_SP_MATRIX) :: a_mat
-  type(type_RHS) :: rhs_vec, sol_vec
-  type(type_SP_SOLVER) :: solver
+  type(mhd_sim)          :: sim
+  type(type_SP_MATRIX)   :: a_mat
+  type(type_RHS)         :: rhs_vec, sol_vec
+  type(type_SP_SOLVER)   :: solver
   
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -508,17 +509,23 @@ mpi_required = 0
     call tr_allocatep(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     
     a_mat%comm = MPI_COMM_WORLD
+    sim%node_list => node_list
+    sim%element_list => element_list
+    sim%bnd_node_list => bnd_node_list
+    sim%bnd_elm_list => bnd_elm_list
+    sim%local_elms => local_elms
+    sim%n_local_elms = n_local_elms
 
-    call distribute_nodes_elements(id_elements, n_cpu, index_size, node_list, element_list, .false., local_elms, & 
-                                   n_local_elms, restart, freeboundary, a_mat)    
+    call distribute_nodes_elements(id_elements, n_cpu, index_size, sim%node_list, sim%element_list, .false., sim%local_elms, & 
+                                   sim%n_local_elms, restart, freeboundary, a_mat)    
     
-    call global_matrix_structure(node_list, element_list, bnd_elm_list, freeboundary,&
-                                 local_elms, n_local_elms, a_mat, i_tor_min=1, i_tor_max=n_tor)
+    call global_matrix_structure(sim%node_list, sim%element_list, bnd_elm_list, freeboundary,&
+                                 sim%local_elms, sim%n_local_elms, a_mat, i_tor_min=1, i_tor_max=n_tor)
 
     call MPI_Barrier(a_mat%comm,ierr)
     
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(node_list, bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
+      call global_matrix_structure_vacuum(sim%node_list, bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
     endif
 
   endif ! (nstep >0)
@@ -621,13 +628,13 @@ mpi_required = 0
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
       call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
-    call tr_debug_write("JMAIN:Debconstruct_n_elms",n_local_elms)    
+    call tr_debug_write("JMAIN:Debconstruct_n_elms",sim%n_local_elms)    
 
     ! Build the matrix 
     call clck_time_barrier(t0)
 
     !--------- Constructing Global Matrix
-    call construct_matrix(my_id, local_elms, n_local_ELms, xpoint, xcase, ES%R_axis, ES%Z_axis,&
+    call construct_matrix(my_id, sim%local_elms, sim%n_local_elms, xpoint, xcase, ES%R_axis, ES%Z_axis,&
                           ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
                           a_mat, rhs_vec, harmonic_matrix=.false.)
 

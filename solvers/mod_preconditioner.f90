@@ -251,7 +251,7 @@ module mod_preconditioner
 
     else
 
-      if (pc%analyzed) then
+      if (pc%structured) then
 
         deallocate(pc%rhs%val)
         deallocate(pc%row_index)
@@ -269,7 +269,7 @@ module mod_preconditioner
         pc%mat%col_distributed = .false.
         pc%mat%indexing = 1
         pc%mat%block_size = 1
-        pc%analyzed = .false.
+        pc%structured = .false.
 
       endif
 

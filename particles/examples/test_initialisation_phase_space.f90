@@ -178,7 +178,8 @@ write(*,*) " "
 
 !> Write data into file ---------------------------------------------------------------------
 write(*,*) "... writing data in files"
-call dump_kinetic_particles_in_txt(n_particles,sim%groups(1)%particles,sim%groups(1)%mass,particle_filename,ifail)
+call dump_kinetic_particles_in_txt(n_particles,sim%groups(1)%particles,sim%groups(1)%mass,&
+start_time,sim%fields,particle_filename,ifail)
 call write_array1d_double(nR,Rmesh,trim(trim(mesh_filename_root)//'R.txt'),ifail)
 call write_array1d_double(nZ,Zmesh,trim(trim(mesh_filename_root)//'Z.txt'),ifail)
 call write_array1d_double(nphi,phimesh,trim(trim(mesh_filename_root)//'phi.txt'),ifail)
@@ -482,27 +483,46 @@ real_pdf_param_in,n_int_pdf_param_in,int_pdf_param_in)
 end subroutine evaluate_pdf_at_midpoints
 
 !> Dump particle kinetic list in txt file
-subroutine dump_kinetic_particles_in_txt(n_particles,particles,mass,filename,ifail)
-  use mod_particle_types, only: particle_base
-  use mod_particle_types, only: particle_kinetic_relativistic
+subroutine dump_kinetic_particles_in_txt(n_particles,particles,mass,time,fields,filename,ifail)
+  use constants,                 only: TWOPI
+  use mod_particle_types,        only: particle_base
+  use mod_particle_types,        only: particle_kinetic_relativistic
+  use mod_fields,                only: fields_base
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
+  use mod_pusher_tools,          only: get_orthonormals
   implicit none
   !> Onput-Outputs
   integer,intent(inout) :: ifail
   !> Inputs
   integer,intent(in)                                     :: n_particles
   class(particle_base),dimension(n_particles),intent(in) :: particles
-  character(len=*),intent(in)                :: filename
-  real*8,intent(in)                                      :: mass
+  class(fields_base),intent(in)                          :: fields
+  character(len=*),intent(in)                            :: filename
+  real*8,intent(in)                                      :: mass,time
   !> Variables
   integer :: ii
+  real*8  :: ptot,ppar,pitch,gyro,psi,U
+  real*8,dimension(3) :: B,E,pcyl,e1,e2
 
   !> open the file and write particle properties
   open(unit=42,file=trim(filename),action='write',blank='NULL',form='formatted',status='unknown',iostat=ifail)
   select type (plist=>particles)
   type is (particle_kinetic_relativistic)
     do ii=1,n_particles
-      write(42,'(9E40.16E4)') plist(ii)%x(1),plist(ii)%x(2),plist(ii)%x(3),plist(ii)%p(1),&
-      plist(ii)%p(2),plist(ii)%p(3),plist(ii)%weight,real(plist(ii)%q,kind=8),mass
+    !> compute the momentum in spherical coordinates
+    call fields%calc_EBpsiU(time,plist(ii)%i_elm,plist(ii)%st,plist(ii)%x(3),E,B,psi,U)
+    pcyl = vector_cartesian_to_cylindrical(plist(ii)%x(3),plist(ii)%p)
+    B = B/norm2(B)
+    call get_orthonormals(B,e1,e2)
+    ptot  = norm2(pcyl)
+    ppar  = dot_product(pcyl,B)
+    pitch = acos(ppar/ptot)
+    gyro  = atan2(dot_product(pcyl-ppar*B,e2),dot_product(pcyl-ppar*B,e1))
+    if(gyro.lt.0.d0) gyro = TWOPI+gyro
+    gyro = mod(gyro,TWOPI)
+      write(42,'(12E40.16E4)') plist(ii)%x(1),plist(ii)%x(2),plist(ii)%x(3),plist(ii)%p(1),&
+      plist(ii)%p(2),plist(ii)%p(3),plist(ii)%weight,real(plist(ii)%q,kind=8),&
+      mass,ptot,pitch,gyro
     enddo
   end select
   close(42) !< close file

@@ -210,6 +210,11 @@ module data_structure
     logical                                      :: initialized = .false.
     logical                                      :: structured = .false.            !< flag indicating the allocation of PC matrix structure
     integer(kind=int_all)                        :: n_glob
+    
+#ifdef DIRECT_CONSTRUCTION
+    integer, dimension(:), pointer               :: local_elms => null()
+    integer                                      :: n_local_elms
+#endif    
   end type type_PRECOND
  
 !> MHD simulation type, containing all variables pertaining to a simulation.
@@ -226,6 +231,11 @@ module data_structure
     !< MPI settings
     integer :: my_id = 0
     integer :: n_cpu = 1 ! if not initialized, act as if there is no mpi
+    
+    logical                                       :: freeboundary
+    logical                                       :: restart
+    
+    integer                                       :: sr_n_tor !< to pass sr%n_tor for direct construction
   end type type_MHD_SIM  
  
   integer                                         , public :: nbthreads

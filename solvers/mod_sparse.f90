@@ -19,7 +19,11 @@ module mod_sparse
     use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS, type_MHD_SIM
     use mod_sparse_data, only: type_SP_SOLVER
     use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner, update_pc_rhs, gather_solution
+#ifdef DIRECT_CONSTRUCTION    
+    use mod_direct_construction, only: update_pc_mat
+#else
     use mod_distribute_preconditioner, only: update_pc_mat
+#endif
 #ifdef USE_BICGSTAB
     use mod_bicgstab, only: bicgstab_driver
 #else

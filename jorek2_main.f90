@@ -49,7 +49,6 @@ program JOREK2
   use mod_integrals3D
   use mod_openadas, only : read_adf11
   use mod_atomic_coeff_deuterium, only: ad_deuterium 
-  use direct_construction_mod
   use mod_exchange_indices
   use mod_startup_teardown
   use mod_initial_grid
@@ -509,13 +508,19 @@ mpi_required = 0
     call tr_allocatep(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     
     a_mat%comm = MPI_COMM_WORLD
+    
+    sim%my_id = my_id
+    sim%n_cpu = n_cpu
+    sim%freeboundary = freeboundary
+    sim%restart = restart
+    
     sim%node_list => node_list
     sim%element_list => element_list
     sim%bnd_node_list => bnd_node_list
     sim%bnd_elm_list => bnd_elm_list
     sim%local_elms => local_elms
-    sim%n_local_elms = n_local_elms
-
+    sim%sr_n_tor = sr%n_tor
+    
     call distribute_nodes_elements(id_elements, n_cpu, index_size, sim%node_list, sim%element_list, .false., sim%local_elms, & 
                                    sim%n_local_elms, restart, freeboundary, a_mat)    
     

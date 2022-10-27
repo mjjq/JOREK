@@ -640,11 +640,9 @@ mpi_required = 0
     call clck_time_barrier(t0)
 
     !--------- Constructing Global Matrix
-    sim%es => es ! points to the equilibrium state
+    sim%es => es ! assign pointer to the equilibrium state
     
-    call construct_matrix(my_id, sim%local_elms, sim%n_local_elms, ES%xpoint, ES%xcase, ES%R_axis, ES%Z_axis,&
-                          ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
-                          a_mat, rhs_vec, harmonic_matrix=.false.)
+    call construct_matrix(sim, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond

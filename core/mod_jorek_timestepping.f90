@@ -32,50 +32,42 @@ public jorek_timestep_action, new_jorek_timestep_action
 #endif
 
 type, extends(action) :: jorek_timestep_action
-  integer :: istep !< index in timestep size array from namelist (not jorek timestep number!)
+  integer                                       :: istep !< index in timestep size array from namelist (not jorek timestep number!)
+    !< MPI settings
+  integer                                       :: my_id = 0
+  integer                                       :: n_cpu = 1  
 
-  logical :: setup_done = .false. !< have we set up the solvers etc?
+  logical                                       :: setup_done = .false. !< have we set up the solvers etc?
 #ifdef USE_FFTW
-  real*8     :: in_fft(1:n_plane)
-  complex*16 :: out_fft(1:n_plane)
+  real*8                                        :: in_fft(1:n_plane)
+  complex*16                                    :: out_fft(1:n_plane)
 #endif
 
-  type(type_bnd_element_list) :: bnd_elm_list !< List of boundary elements
-  type(type_bnd_node_list)    :: bnd_node_list !< List of boundary nodes.
+  type(t_equil_state)                           :: es !< Information about the equilibrium
 
-  type (t_equil_state) :: eq !< Information about the equilibrium
-
-  ! GMRES communicators (TODO: move to separate type?)
-  ! if no gmres is used mpi_comm_n and my_id_n are equal to the global ones (mpi_comm_world and my_id)
-  !integer :: my_id_n, n_cpu_n !< id, count of procs in local comm (for one harmonic)
-  !integer :: my_id_trans, n_cpu_trans !< id, count of procs in transverse comm (all first of MPI_COMM_N, all second, all third)
-  !integer :: my_id_master
-  !integer :: MPI_COMM_N !< group for each harmonic (see [[gmres_setup]])
-  !integer :: MPI_COMM_TRANS !< transversal groups (i.e. every 1st of MPI_COMM_N, every 2nd of MPI_COMM_N etc) (see [[gmres_setup]])
-  !integer :: MPI_COMM_MASTER !< Every first of MPI_COMM_N (see [[gmres_setup]])
-  !integer :: MPI_GROUP_WORLD
-  !integer :: MPI_GROUP_MASTER !< subset of MPI_COMM_WORLD corresponding to MPI_COMM_MASTER
-  !integer, allocatable :: i_tor(:) !< toroidal harmonic solved by this process
-  !integer, allocatable, target :: local_elms(:), index_min(:), index_max(:) !< division of work across processes
-  integer, dimension(:), pointer :: local_elms => null()
-  integer, dimension(:), pointer :: index_min => null(), index_max => null() !< division of work across processes
-  integer :: n_local_elms
-  !integer :: n_AA !< number of nonzeros
-
-  ! when to recalculate the preconditioner
-  !logical :: prec_needed = .true.
-  !integer :: iter_gmres, iter_prev, n_since_update
+  integer, dimension(:), pointer                :: local_elms => null()
+  integer                                       :: n_local_elms  
+  integer, dimension(:), pointer                :: index_min => null(), index_max => null() !< division of work across processes
 
   ! Coupling data for in construct_matrix
-  type(type_node_list), pointer :: auxiliary_node_list => null()
+  type(type_node_list), pointer                 :: node_list => null() !< Current node list
+  type(type_element_list), pointer              :: element_list => null() !< Current element list    
+  type(type_bnd_element_list)                   :: bnd_elm_list !< List of boundary elements
+  type(type_bnd_node_list)                      :: bnd_node_list !< List of boundary nodes.  
+  type(type_node_list), pointer                 :: auxiliary_node_list => null()
+
+  ! MHD solver
+  type(type_SP_MATRIX)                          :: a_mat
+  type(type_RHS)                                :: rhs_vec, sol_vec
+  type(type_SP_SOLVER)                          :: solver
+  
+  logical                                       :: freeboundary
+  logical                                       :: restart
+  
+  integer                                       :: sr_n_tor !< to pass sr%n_tor for direct construction
 
   ! Optionally update the start time of anohter event
   type(event), pointer :: extra_event => null()
-  
-  ! MHD solver
-  type(type_SP_MATRIX) :: a_mat
-  type(type_RHS)       :: rhs_vec, sol_vec
-  type(type_SP_SOLVER) :: solver  
   
 contains
   procedure :: do => do_jorek_timestep
@@ -218,7 +210,7 @@ subroutine setup_solvers(this, sim)
   !mumps_par%n = this%n_AA
 
   call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
-  this%eq = ES
+  this%es = ES
 
   if ( sim%my_id == 0 ) then
     call print_equil_state(.true.)
@@ -258,21 +250,44 @@ subroutine setup_solvers(this, sim)
   call tr_allocatep(this%local_elms,1,sim%fields%element_list%n_elements,"local_elms",CAT_FEM)
 
   this%a_mat%comm = MPI_COMM_WORLD
+  
+  this%my_id         = sim%my_id
+  this%n_cpu         = sim%n_cpu
+  this%freeboundary  = freeboundary
+  this%restart       = restart
 
-  call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
-                                   this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)  
+  this%node_list     => sim%fields%node_list
+  this%element_list  => sim%fields%element_list    
+
+  this%bnd_node_list => bnd_node_list
+  this%bnd_elm_list  => bnd_elm_list
+    
+  this%sr_n_tor      = sr%n_tor  
+  
+  this%node_list     => sim%fields%node_list
+  this%element_list  => sim%fields%element_list
+  
+  call distribute_nodes_elements(id_elements, this%n_cpu, index_size, this%node_list, this%element_list, .false., this%local_elms, & 
+                                   this%n_local_elms, this%restart, this%freeboundary, this%a_mat)
+                                   
+  call global_matrix_structure(this%node_list, this%element_list, this%bnd_elm_list, this%freeboundary,&
+                                 this%local_elms, this%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)                                   
+
+  !call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
+  !                                 this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)  
   
   !
   ! Construct index_min, index_max and local_elems
   !
-  call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
-                                   this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)
- 
-  call global_matrix_structure(sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
-                               this%local_elms,this%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)
+  !call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
+  !                                 this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)
+  !
+  !call global_matrix_structure(sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
+  !                             this%local_elms,this%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)
 
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-    call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
+    call global_matrix_structure_vacuum(this%node_list, this%bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
+    !call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
   endif
   
   !if ((gmres) .and. (this%my_id_n .eq. 0)) call map_row_index(ndof_glob)
@@ -448,16 +463,16 @@ subroutine do_jorek_timestep(this, sim, ev)
   call new_thread_buffers()
 
   call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase )
-  this%eq = ES
+  this%es = ES
 
   if ( sim%my_id == 0 ) call print_equil_state(.false.)
   
   ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
   minRad=0.d0
   if (bootstrap) then
-    call bootstrap_find_minRad(sim%fields%node_list, sim%fields%element_list, this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis, this%eq%psi_bnd)
+    call bootstrap_find_minRad(sim%fields%node_list, sim%fields%element_list, this%es%R_axis, this%es%Z_axis, this%es%psi_axis, this%es%psi_bnd)
 
-    call bootstrap_get_q_and_ft_splines(sim%fields%node_list, sim%fields%element_list, this%eq%psi_axis, this%eq%psi_xpoint, this%eq%R_xpoint, this%eq%Z_xpoint)
+    call bootstrap_get_q_and_ft_splines(sim%fields%node_list, sim%fields%element_list, this%es%psi_axis, this%es%psi_xpoint, this%es%R_xpoint, this%es%Z_xpoint)
   endif
   
   call clck_time_barrier(t1)
@@ -481,10 +496,11 @@ subroutine do_jorek_timestep(this, sim, ev)
     
   endif
 
-
-  call construct_matrix(sim%my_id, this%local_elms, this%n_local_elms, xpoint, xcase, this%eq%R_axis, this%eq%Z_axis, &
-                        this%eq%psi_axis, this%eq%psi_bnd, this%eq%R_xpoint, this%eq%Z_xpoint, this%eq%psi_xpoint,    &
-                        this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
+  call construct_matrix(this, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
+  
+  !call construct_matrix(sim%my_id, this%local_elms, this%n_local_elms, xpoint, xcase, this%es%R_axis, this%es%Z_axis, &
+  !                      this%es%psi_axis, this%es%psi_bnd, this%es%R_xpoint, this%es%Z_xpoint, this%es%psi_xpoint,    &
+  !                      this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
     
   ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
   call del_thread_buffers()
@@ -586,21 +602,21 @@ subroutine do_jorek_timestep(this, sim, ev)
   if (sim%my_id == 0) then
     ! This is a change from jorek2_main, where these quantities are calculated using the old xpoint and axis data
     call update_equil_state(sim%my_id,sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
-    this%eq = ES
+    this%es = ES
 
     call energy(W_mag, W_kin)
     
 !    call integrals(sim%fields%node_list, sim%fields%element_list,                                                         &
-!        this%eq%R_axis, this%eq%Z_axis, this%eq%psi_axis, this%eq%R_xpoint, this%eq%Z_xpoint,       &
-!        this%eq%psi_xpoint, this%eq%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now), &
+!        this%es%R_axis, this%es%Z_axis, this%es%psi_axis, this%es%R_xpoint, this%es%Z_xpoint,       &
+!        this%es%psi_xpoint, this%es%psi_bnd, amin, Bgeo, current_t(index_now), beta_p_t(index_now), &
 !        beta_t_t(index_now), beta_n_t(index_now), density_tot, density_in_t(index_now),             &
 !        density_out_t(index_now), pressure_tot, pressure_in_t(index_now),                           &
 !        pressure_out_t(index_now), heat_src_in_t(index_now), heat_src_out_t(index_now),             &
 !        part_src_in_t(index_now), part_src_out_t(index_now))
 
-    R_axis_t(index_now)   = this%eq%R_axis
-    Z_axis_t(index_now)   = this%eq%Z_axis
-    psi_axis_t(index_now) = this%eq%psi_axis
+    R_axis_t(index_now)   = this%es%R_axis
+    Z_axis_t(index_now)   = this%es%Z_axis
+    psi_axis_t(index_now) = this%es%psi_axis
 
     xtime(index_now)              = t_now
     energies(1:n_tor,1,index_now) = W_mag(1:n_tor)

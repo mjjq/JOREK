@@ -259,9 +259,7 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(my_id, local_elms, n_local_elms, & 
-                            xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint, &
-                            a_mat, rhs_vec, harmonic_matrix)
+subroutine construct_matrix(sim, a_mat, rhs_vec, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -281,6 +279,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   use mod_locate_irn_jcn
   use mod_integer_types
   use mod_axis_treatment
+  use mod_simulation_data, only: type_MHD_SIM
   
   !$ use omp_lib
   implicit none
@@ -288,19 +287,23 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
 #include "r3_info.h"
 
   ! --- Routine parameters
-  integer,               intent(in) :: my_id
-  integer,               intent(in) :: local_elms(*)
-  integer,               intent(in) :: n_local_elms
-  integer,               intent(in) :: xcase2
-  real*8,                intent(in) :: R_axis
-  real*8,                intent(in) :: Z_axis
-  real*8,                intent(in) :: psi_axis
-  real*8,                intent(in) :: psi_bnd
-  real*8,                intent(in) :: R_xpoint(2)
-  real*8,                intent(in) :: Z_xpoint(2)
-  real*8,                intent(in) :: psi_xpoint(2)
-  logical,               intent(in) :: xpoint2
-  logical,               intent(in) :: harmonic_matrix
+  logical,              intent(in)    :: harmonic_matrix
+  type(type_SP_MATRIX), intent(inout) :: a_mat
+  type(type_RHS),       intent(inout) :: rhs_vec
+  type(type_MHD_SIM),   intent(in)    :: sim  
+  
+  integer  :: my_id
+  integer, dimension(:), pointer :: local_elms
+  integer  :: n_local_elms
+  integer  :: xcase2
+  real*8   :: R_axis
+  real*8   :: Z_axis
+  real*8   :: psi_axis
+  real*8   :: psi_bnd
+  real*8   :: R_xpoint(2)
+  real*8   :: Z_xpoint(2)
+  real*8   :: psi_xpoint(2)
+  logical  :: xpoint2  
     
   !--- Internal variables
   type (type_element)               :: element
@@ -317,7 +320,7 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   integer                           :: vertex(2), direction(2)
   integer                           :: omp_nthreads, omp_tid, n_tor_local
   integer                           :: node_out(n_vertex_max)
-  integer                           :: i_father,INODE_FATHER, ios
+  integer                           :: i_father, inode_father, ios
   integer                           :: ilarge_vp, in, ivertex, iorder, ivar, itor, jvertex, jorder, jvar, jtor
   integer                           :: random_element, n_var_reduced, v1, v2, im, index_ij_model400_e, index_kl_model400_e
   real*8                            :: tmp_rhs, tmp_elm, tmp_elm_v2_8
@@ -325,13 +328,26 @@ subroutine construct_matrix(my_id, local_elms, n_local_elms, &
   integer                           :: i_v(n_var)
   integer, allocatable              :: i_harm(:)
   integer                           :: comm
-  type(type_SP_MATRIX)              :: a_mat
-  type(type_RHS)                    :: rhs_vec
+  
+
 
   ! --- Timing call
   call r3_info_begin (r3_info_index_0, 'construct_matrix')
   
   comm = a_mat%comm
+  
+  my_id           = sim%my_id
+  local_elms      => sim%local_elms
+  n_local_elms    = sim%n_local_elms
+  xpoint2         = sim%es%xpoint
+  xcase2          = sim%es%xcase
+  R_axis          = sim%es%R_axis
+  Z_axis          = sim%es%Z_axis
+  psi_axis        = sim%es%psi_axis
+  psi_bnd         = sim%es%psi_bnd
+  R_xpoint(1:2)   = sim%es%R_xpoint(1:2)
+  Z_xpoint(1:2)   = sim%es%Z_xpoint(1:2)
+  psi_xpoint(1:2) = sim%es%psi_xpoint(1:2)
 
   ! --- Printout
   if (my_id .eq. 0) then

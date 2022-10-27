@@ -25,8 +25,8 @@ module mod_simulation_data
     integer                                       :: n_local_elms
 
     !< MPI settings
-    integer :: my_id = 0
-    integer :: n_cpu = 1 ! if not initialized, act as if there is no mpi
+    integer                                       :: my_id = 0
+    integer                                       :: n_cpu = 1 ! if not initialized, act as if there is no mpi
     
     logical                                       :: freeboundary
     logical                                       :: restart

@@ -2,8 +2,9 @@
 !! and flux surface elements, as well as the shattered pellets
 module mod_simulation_data
 
-  use equil_info, only: t_equil_state
-  use data_structure, only: type_node_list, type_element_list, type_bnd_node_list, type_bnd_element_list
+  use equil_info,       only: t_equil_state
+  use data_structure,   only: type_node_list, type_element_list, type_bnd_node_list, type_bnd_element_list
+  use equil_info,       only: t_equil_state
   use mod_integer_types
   
   implicit none
@@ -18,6 +19,7 @@ module mod_simulation_data
     type(type_element_list), pointer              :: element_list => null() !< Current element list
     type(type_bnd_node_list), pointer             :: bnd_node_list => null()
     type(type_bnd_element_list), pointer          :: bnd_elm_list => null()
+    type(t_equil_state), pointer                  :: es => null() !< Pointer to the equilibrium state
     
     integer, dimension(:), pointer                :: local_elms => null()
     integer                                       :: n_local_elms

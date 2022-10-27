@@ -640,7 +640,9 @@ mpi_required = 0
     call clck_time_barrier(t0)
 
     !--------- Constructing Global Matrix
-    call construct_matrix(my_id, sim%local_elms, sim%n_local_elms, xpoint, xcase, ES%R_axis, ES%Z_axis,&
+    sim%es => es ! points to the equilibrium state
+    
+    call construct_matrix(my_id, sim%local_elms, sim%n_local_elms, ES%xpoint, ES%xcase, ES%R_axis, ES%Z_axis,&
                           ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
                           a_mat, rhs_vec, harmonic_matrix=.false.)
 

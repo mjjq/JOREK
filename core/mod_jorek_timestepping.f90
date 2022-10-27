@@ -496,7 +496,7 @@ subroutine do_jorek_timestep(this, sim, ev)
     
   endif
 
-  call construct_matrix(this, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
+  call construct_matrix(this, this%local_elms, this%n_local_elms, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
   
   !call construct_matrix(sim%my_id, this%local_elms, this%n_local_elms, xpoint, xcase, this%es%R_axis, this%es%Z_axis, &
   !                      this%es%psi_axis, this%es%psi_bnd, this%es%R_xpoint, this%es%Z_xpoint, this%es%psi_xpoint,    &

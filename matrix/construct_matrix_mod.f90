@@ -259,7 +259,7 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(sim, a_mat, rhs_vec, harmonic_matrix)
+subroutine construct_matrix(this, local_elms, n_local_elms, a_mat, rhs_vec, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -290,11 +290,11 @@ subroutine construct_matrix(sim, a_mat, rhs_vec, harmonic_matrix)
   logical,              intent(in)    :: harmonic_matrix
   type(type_SP_MATRIX), intent(inout) :: a_mat
   type(type_RHS),       intent(inout) :: rhs_vec
-  type(type_MHD_SIM),   intent(in)    :: sim  
+  type(type_MHD_SIM),   intent(in)    :: this
+  integer, dimension(:), pointer      :: local_elms
+  integer                             :: n_local_elms  
   
   integer  :: my_id
-  integer, dimension(:), pointer :: local_elms
-  integer  :: n_local_elms
   integer  :: xcase2
   real*8   :: R_axis
   real*8   :: Z_axis
@@ -336,18 +336,16 @@ subroutine construct_matrix(sim, a_mat, rhs_vec, harmonic_matrix)
   
   comm = a_mat%comm
   
-  my_id           = sim%my_id
-  local_elms      => sim%local_elms
-  n_local_elms    = sim%n_local_elms
-  xpoint2         = sim%es%xpoint
-  xcase2          = sim%es%xcase
-  R_axis          = sim%es%R_axis
-  Z_axis          = sim%es%Z_axis
-  psi_axis        = sim%es%psi_axis
-  psi_bnd         = sim%es%psi_bnd
-  R_xpoint(1:2)   = sim%es%R_xpoint(1:2)
-  Z_xpoint(1:2)   = sim%es%Z_xpoint(1:2)
-  psi_xpoint(1:2) = sim%es%psi_xpoint(1:2)
+  my_id           = this%my_id
+  xpoint2         = this%es%xpoint
+  xcase2          = this%es%xcase
+  R_axis          = this%es%R_axis
+  Z_axis          = this%es%Z_axis
+  psi_axis        = this%es%psi_axis
+  psi_bnd         = this%es%psi_bnd
+  R_xpoint(1:2)   = this%es%R_xpoint(1:2)
+  Z_xpoint(1:2)   = this%es%Z_xpoint(1:2)
+  psi_xpoint(1:2) = this%es%psi_xpoint(1:2)
 
   ! --- Printout
   if (my_id .eq. 0) then

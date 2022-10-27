@@ -164,10 +164,10 @@ program JOREK2
 
   logical :: input_treat_axis
   
-  type(type_MHD_SIM)          :: sim
-  type(type_SP_MATRIX)   :: a_mat
-  type(type_RHS)         :: rhs_vec, sol_vec
-  type(type_SP_SOLVER)   :: solver
+  type(type_MHD_SIM)          :: this
+  type(type_SP_MATRIX)        :: a_mat
+  type(type_RHS)              :: rhs_vec, sol_vec
+  type(type_SP_SOLVER)        :: solver
   
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -510,28 +510,28 @@ mpi_required = 0
     
     a_mat%comm = MPI_COMM_WORLD
     
-    sim%my_id = my_id
-    sim%n_cpu = n_cpu
-    sim%freeboundary = freeboundary
-    sim%restart = restart
+    this%my_id = my_id
+    this%n_cpu = n_cpu
+    this%freeboundary = freeboundary
+    this%restart = restart
     
-    sim%node_list => node_list
-    sim%element_list => element_list
-    sim%bnd_node_list => bnd_node_list
-    sim%bnd_elm_list => bnd_elm_list
-    sim%local_elms => local_elms
-    sim%sr_n_tor = sr%n_tor
+    this%node_list     => node_list
+    this%element_list  => element_list
+    this%bnd_node_list => bnd_node_list
+    this%bnd_elm_list  => bnd_elm_list
+    this%local_elms    => local_elms
+    this%sr_n_tor      = sr%n_tor
     
-    call distribute_nodes_elements(id_elements, n_cpu, index_size, sim%node_list, sim%element_list, .false., sim%local_elms, & 
-                                   sim%n_local_elms, restart, freeboundary, a_mat)    
+    call distribute_nodes_elements(id_elements, n_cpu, index_size, this%node_list, this%element_list, .false., this%local_elms, & 
+                                   this%n_local_elms, restart, freeboundary, a_mat)    
     
-    call global_matrix_structure(sim%node_list, sim%element_list, sim%bnd_elm_list, freeboundary,&
-                                 sim%local_elms, sim%n_local_elms, a_mat, i_tor_min=1, i_tor_max=n_tor)
+    call global_matrix_structure(this%node_list, this%element_list, this%bnd_elm_list, freeboundary,&
+                                 this%local_elms, this%n_local_elms, a_mat, i_tor_min=1, i_tor_max=n_tor)
 
     call MPI_Barrier(a_mat%comm,ierr)
     
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(sim%node_list, sim%bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
+      call global_matrix_structure_vacuum(this%node_list, this%bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
     endif
 
   endif ! (nstep >0)
@@ -634,15 +634,15 @@ mpi_required = 0
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
       call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
-    call tr_debug_write("JMAIN:Debconstruct_n_elms",sim%n_local_elms)    
+    call tr_debug_write("JMAIN:Debconstruct_n_elms",this%n_local_elms)    
 
     ! Build the matrix 
     call clck_time_barrier(t0)
 
     !--------- Constructing Global Matrix
-    sim%es => es ! assign pointer to the equilibrium state
+    this%es => es ! assign pointer to the equilibrium state
     
-    call construct_matrix(sim, a_mat, rhs_vec, harmonic_matrix=.false.)
+    call construct_matrix(this, this%local_elms, this%n_local_elms, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
@@ -652,7 +652,7 @@ mpi_required = 0
     solver%index_now = index_now
     sol_vec%val => deltas
     
-    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, sim)
+    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, this)
 
     call clck_time(t0)
     if (solver%step_success) then

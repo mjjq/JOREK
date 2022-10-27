@@ -6,30 +6,35 @@ module mod_direct_construction
 
 contains
 
-  subroutine update_pc_mat(pc, a_mat, sim)
+  subroutine update_pc_mat(pc, a_mat, this)
 
     use mod_parameters, only : n_tor, n_var
     use mpi_mod
     use mod_integer_types
     use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
-    use mod_simulation_data, only: type_MHD_SIM    
+    use mod_simulation_data, only: type_MHD_SIM
+    use construct_matrix_mod, only: construct_matrix
     
     implicit none
     
     type(type_PRECOND)                 :: pc
     type(type_SP_MATRIX)               :: a_mat
-    type(type_MHD_SIM)                 :: sim
+    type(type_MHD_SIM)                 :: this
     
-    if (.not.pc%structured) call set_pc_structure(pc, a_mat, sim)
+    integer                            :: ierr    
     
-    !call construct_matrix(sim%my_id, pc%local_elms, pc%n_local_elms, xpoint, xcase, ES%R_axis, ES%Z_axis,&
-    !                      ES%psi_axis, ES%psi_bnd, ES%R_xpoint, ES%Z_xpoint, ES%psi_xpoint, &
-    !                      a_mat, rhs_vec, harmonic_matrix=.false.)
+    if (.not.pc%structured) call set_pc_structure(pc, a_mat, this)
+    write(*,*) this%my_id, pc%mat%my_ind_min, pc%mat%my_ind_max
+    
+    !call construct_matrix(this, pc%local_elms, pc%n_local_elms, pc%mat, pc%rhs, harmonic_matrix=.true.)
+                                   
+    call MPI_Barrier(MPI_COMM_WORLD, ierr)
+    call MPI_Finalize(ierr)    
     
   end subroutine update_pc_mat
   
-  subroutine set_pc_structure(pc, a_mat, sim)
-    use mpi_mod
+  subroutine set_pc_structure(pc, a_mat, this)
+
     use tr_module
     use mod_integer_types
     use mod_parameters, only : n_tor, n_var
@@ -41,10 +46,9 @@ contains
     implicit none
     
     type(type_PRECOND)                 :: pc
-    type(type_MHD_SIM)                 :: sim
+    type(type_MHD_SIM)                 :: this
     type(type_SP_MATRIX)               :: a_mat
     integer                            :: i_tor_min, i_tor_max
-    integer                            :: ierr
     
     if (pc%my_id.eq.0) write(*,*) "Analyzing preconditioner"
     
@@ -56,22 +60,17 @@ contains
     i_tor_min = pc%mode_set(1)
     i_tor_max = pc%mode_set(pc%mode_set_n)
     
-    call tr_allocatep(pc%local_elms,1,sim%element_list%n_elements,"local_elms_harm",CAT_FEM)
+    call tr_allocatep(pc%local_elms,1,this%element_list%n_elements,"local_elms_harm",CAT_FEM)
     
-    call distribute_nodes_elements(sim%my_id, pc%n_cpu_n, sim%n_cpu, sim%node_list, sim%element_list, .true., pc%local_elms, & 
-                                   pc%n_local_elms, sim%restart, sim%freeboundary, pc%mat)
+    call distribute_nodes_elements(this%my_id, pc%n_cpu_n, this%n_cpu, this%node_list, this%element_list, .true., pc%local_elms, & 
+                                   pc%n_local_elms, this%restart, this%freeboundary, pc%mat)
                                    
-    call global_matrix_structure(sim%node_list, sim%element_list, sim%bnd_elm_list, sim%freeboundary, &
+    call global_matrix_structure(this%node_list, this%element_list, this%bnd_elm_list, this%freeboundary, &
                                  pc%local_elms, pc%n_local_elms, pc%mat, i_tor_min=i_tor_min, i_tor_max=i_tor_max)
                                  
-    if (sim%freeboundary .and. (sim%sr_n_tor /= 0)) then 
-      call global_matrix_structure_vacuum(sim%node_list, sim%bnd_node_list, pc%mat, i_tor_min=i_tor_min, i_tor_max=i_tor_max) 
+    if (this%freeboundary .and. (this%sr_n_tor /= 0)) then 
+      call global_matrix_structure_vacuum(this%node_list, this%bnd_node_list, pc%mat, i_tor_min=i_tor_min, i_tor_max=i_tor_max) 
     endif                                 
-
-    write(*,*) sim%my_id, i_tor_min, i_tor_max, pc%n_local_elms
-                                   
-    call MPI_Barrier(MPI_COMM_WORLD, ierr)
-    call MPI_Finalize(ierr)
     
   end subroutine set_pc_structure
   

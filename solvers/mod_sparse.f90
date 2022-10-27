@@ -13,13 +13,13 @@ module mod_sparse
 !! sol_vec contains the initial guess
 !! sol_vec, rhs_vec are broadcasted
 !! solve_type - type of system, e.g. GS equilibrium, MHD system with preconditioner, etc.
-  subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)
+  subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, sim)
     use mod_integer_types
     use mod_clock
-    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
+    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS, type_MHD_SIM
     use mod_sparse_data, only: type_SP_SOLVER
-    use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner
-    use mod_distribute_preconditioner, only: update_pc_mat, update_pc_rhs, gather_solution
+    use mod_preconditioner, only: initialize_preconditioner, reset_preconditioner, update_pc_rhs, gather_solution
+    use mod_distribute_preconditioner, only: update_pc_mat
 #ifdef USE_BICGSTAB
     use mod_bicgstab, only: bicgstab_driver
 #else
@@ -31,6 +31,7 @@ module mod_sparse
     type(type_SP_SOLVER)     :: solver
     type(type_SP_MATRIX)     :: a_mat
     type(type_RHS)           :: rhs_vec, sol_vec
+    type(type_MHD_SIM), optional  :: sim
     
     integer                  :: my_id, n_cpu, ierr
     type(clcktype)           :: t_itstart, t0, t1, t2, t3
@@ -94,7 +95,7 @@ module mod_sparse
 
 ! Finding PC solution
       if (.not.solver%solve_only) then
-        call update_pc_mat(solver%pc,a_mat)
+        call update_pc_mat(solver%pc,a_mat,sim)
       endif
 
       call update_pc_rhs(solver%pc,rhs_vec)

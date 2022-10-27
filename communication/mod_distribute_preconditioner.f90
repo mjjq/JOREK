@@ -1,10 +1,11 @@
 module mod_distribute_preconditioner
+#if !defined(DIRECT_CONSTRUCTION)
   use mod_integer_types
 
   implicit none
 
   private
-  public update_pc_mat, update_pc_rhs, gather_solution
+  public update_pc_mat
 
 contains
 
@@ -20,17 +21,18 @@ contains
   !!    pc%mat%val(1:pc%mat%nnz), pc%rhs(1:pc%mat%n)
   !!    pc%mat%irn(1:pc%mat%nnz)
   !!    pc%mat%jcn(1:pc%mat%nnz)
-  subroutine update_pc_mat(pc, a_mat)
+  subroutine update_pc_mat(pc, a_mat, sim)
 
     use mod_parameters, only : n_tor, n_var
     use mpi_mod
     use mod_integer_types
-    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS    
+    use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS, type_MHD_SIM    
     
     implicit none
     
     type(type_PRECOND)                 :: pc
     type(type_SP_MATRIX)               :: a_mat
+    type(type_MHD_SIM), optional       :: sim
 
     integer                            :: my_id, n_cpu, j, k, l, n, ierr
     integer                            :: nm, ji, nr, lmode, kmode, n_i, n_j, isplit
@@ -332,50 +334,6 @@ contains
   
   end subroutine set_pc_structure
 
-
-  !> Distribute RHS vector
-  subroutine update_pc_rhs(pc,rhs_vec)
-    use data_structure, only: type_PRECOND, type_RHS
-    use mod_integer_types
-
-    implicit none
-    
-    type(type_RHS)     :: rhs_vec
-    type(type_PRECOND) :: pc
-
-    integer(kind=int_all) :: i
-
-    do i=1, pc%rhs%n
-      pc%rhs%val(i) = rhs_vec%val(pc%row_index(i))
-    enddo
-
-  end subroutine update_pc_rhs
-
-  !> Collect the solution vector from the individual mode groups
-  subroutine gather_solution(pc,sol_vec)
-    use data_structure, only: type_PRECOND, type_RHS
-    use mod_integer_types
-    use mpi_mod
-
-    implicit none
-    
-    type(type_RHS)        :: sol_vec
-    type(type_PRECOND)    :: pc
-
-    integer               :: ierr
-    integer(kind=int_all) :: i  
-    
-    sol_vec%val(1:sol_vec%n) = 0.d0
-    if (pc%my_id_n.eq.0) then
-      do i = 1, pc%rhs%n
-        sol_vec%val(pc%row_index(i)) = pc%rhs%val(i)*pc%row_factor
-      enddo
-    endif
-    call MPI_AllReduce(MPI_IN_PLACE,sol_vec%val,sol_vec%n,MPI_DOUBLE_PRECISION,MPI_SUM,pc%comm,ierr)
-    
-    return
-  end subroutine gather_solution
-
   !> Calculate send-recv counts
   subroutine get_send_recv(i0,i1,long_send_counts,long_recv_counts,pc,a_mat)
 
@@ -475,5 +433,5 @@ contains
     return
 
   end subroutine get_send_recv
-
+#endif
 end module mod_distribute_preconditioner

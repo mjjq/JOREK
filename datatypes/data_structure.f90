@@ -213,7 +213,7 @@ module data_structure
   end type type_PRECOND
  
 !> MHD simulation type, containing all variables pertaining to a simulation.
-  type :: mhd_sim
+  type :: type_MHD_SIM
     real(kind=8)                                  :: time = 0.d0 !< time of the simulation
     type(type_node_list), pointer                 :: node_list => null() !< Current node list
     type(type_element_list), pointer              :: element_list => null() !< Current element list
@@ -226,7 +226,7 @@ module data_structure
     !< MPI settings
     integer :: my_id = 0
     integer :: n_cpu = 1 ! if not initialized, act as if there is no mpi
-  end type mhd_sim  
+  end type type_MHD_SIM  
  
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()

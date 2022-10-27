@@ -1,7 +1,7 @@
 module mod_preconditioner
 
   private
-  public initialize_preconditioner, reset_preconditioner
+  public initialize_preconditioner, reset_preconditioner, update_pc_rhs, gather_solution
 
   contains
 
@@ -237,6 +237,49 @@ module mod_preconditioner
     return
 
   end subroutine distribute_ranks
+  
+  !> Distribute RHS vector
+  subroutine update_pc_rhs(pc,rhs_vec)
+    use data_structure, only: type_PRECOND, type_RHS
+    use mod_integer_types
+
+    implicit none
+    
+    type(type_RHS)     :: rhs_vec
+    type(type_PRECOND) :: pc
+
+    integer(kind=int_all) :: i
+
+    do i=1, pc%rhs%n
+      pc%rhs%val(i) = rhs_vec%val(pc%row_index(i))
+    enddo
+
+  end subroutine update_pc_rhs
+  
+  !> Collect the solution vector from the individual mode groups
+  subroutine gather_solution(pc,sol_vec)
+    use data_structure, only: type_PRECOND, type_RHS
+    use mod_integer_types
+    use mpi_mod
+
+    implicit none
+    
+    type(type_RHS)        :: sol_vec
+    type(type_PRECOND)    :: pc
+
+    integer               :: ierr
+    integer(kind=int_all) :: i  
+    
+    sol_vec%val(1:sol_vec%n) = 0.d0
+    if (pc%my_id_n.eq.0) then
+      do i = 1, pc%rhs%n
+        sol_vec%val(pc%row_index(i)) = pc%rhs%val(i)*pc%row_factor
+      enddo
+    endif
+    call MPI_AllReduce(MPI_IN_PLACE,sol_vec%val,sol_vec%n,MPI_DOUBLE_PRECISION,MPI_SUM,pc%comm,ierr)
+    
+    return
+  end subroutine gather_solution  
 
 !> Deallocate arrays and reset to the default values
   subroutine reset_preconditioner(pc)

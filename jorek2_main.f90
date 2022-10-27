@@ -164,7 +164,7 @@ program JOREK2
 
   logical :: input_treat_axis
   
-  type(mhd_sim)          :: sim
+  type(type_MHD_SIM)          :: sim
   type(type_SP_MATRIX)   :: a_mat
   type(type_RHS)         :: rhs_vec, sol_vec
   type(type_SP_SOLVER)   :: solver
@@ -519,13 +519,13 @@ mpi_required = 0
     call distribute_nodes_elements(id_elements, n_cpu, index_size, sim%node_list, sim%element_list, .false., sim%local_elms, & 
                                    sim%n_local_elms, restart, freeboundary, a_mat)    
     
-    call global_matrix_structure(sim%node_list, sim%element_list, bnd_elm_list, freeboundary,&
+    call global_matrix_structure(sim%node_list, sim%element_list, sim%bnd_elm_list, freeboundary,&
                                  sim%local_elms, sim%n_local_elms, a_mat, i_tor_min=1, i_tor_max=n_tor)
 
     call MPI_Barrier(a_mat%comm,ierr)
     
     if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(sim%node_list, bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
+      call global_matrix_structure_vacuum(sim%node_list, sim%bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
     endif
 
   endif ! (nstep >0)
@@ -646,7 +646,7 @@ mpi_required = 0
     solver%index_now = index_now
     sol_vec%val => deltas
     
-    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver)
+    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, sim)
 
     call clck_time(t0)
     if (solver%step_success) then

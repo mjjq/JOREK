@@ -13,7 +13,7 @@ module mod_sparse
 !! sol_vec contains the initial guess
 !! sol_vec, rhs_vec are broadcasted
 !! solve_type - type of system, e.g. GS equilibrium, MHD system with preconditioner, etc.
-  subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, sim)
+  subroutine solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, mhd_sim)
     use mod_integer_types
     use mod_clock
     use data_structure, only: type_SP_MATRIX, type_PRECOND, type_RHS
@@ -36,7 +36,7 @@ module mod_sparse
     type(type_SP_SOLVER)     :: solver
     type(type_SP_MATRIX)     :: a_mat
     type(type_RHS)           :: rhs_vec, sol_vec
-    type(type_MHD_SIM), optional  :: sim
+    type(type_MHD_SIM), optional  :: mhd_sim
     
     integer                  :: my_id, n_cpu, ierr
     type(clcktype)           :: t_itstart, t0, t1, t2, t3
@@ -100,7 +100,7 @@ module mod_sparse
 
 ! Finding PC solution
       if (.not.solver%solve_only) then
-        call update_pc_mat(solver%pc,a_mat,sim)
+        call update_pc_mat(solver%pc,a_mat,mhd_sim)
       endif
 
       call update_pc_rhs(solver%pc,rhs_vec)

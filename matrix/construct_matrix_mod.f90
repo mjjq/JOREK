@@ -336,16 +336,16 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   
   comm = a_mat%comm
   
-  my_id           = mhd_sim%%my_id
-  xpoint2         = mhd_sim%%es%xpoint
-  xcase2          = mhd_sim%%es%xcase
-  R_axis          = mhd_sim%%es%R_axis
-  Z_axis          = mhd_sim%%es%Z_axis
-  psi_axis        = mhd_sim%%es%psi_axis
-  psi_bnd         = mhd_sim%%es%psi_bnd
-  R_xpoint(1:2)   = mhd_sim%%es%R_xpoint(1:2)
-  Z_xpoint(1:2)   = mhd_sim%%es%Z_xpoint(1:2)
-  psi_xpoint(1:2) = mhd_sim%%es%psi_xpoint(1:2)
+  my_id           = mhd_sim%my_id
+  xpoint2         = mhd_sim%es%xpoint
+  xcase2          = mhd_sim%es%xcase
+  R_axis          = mhd_sim%es%R_axis
+  Z_axis          = mhd_sim%es%Z_axis
+  psi_axis        = mhd_sim%es%psi_axis
+  psi_bnd         = mhd_sim%es%psi_bnd
+  R_xpoint(1:2)   = mhd_sim%es%R_xpoint(1:2)
+  Z_xpoint(1:2)   = mhd_sim%es%Z_xpoint(1:2)
+  psi_xpoint(1:2) = mhd_sim%es%psi_xpoint(1:2)
 
   ! --- Printout
   if (my_id .eq. 0) then

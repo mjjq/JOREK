@@ -652,7 +652,7 @@ mpi_required = 0
     solver%index_now = index_now
     sol_vec%val => deltas
     
-    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, this)
+    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, mhd_sim)
 
     call clck_time(t0)
     if (solver%step_success) then

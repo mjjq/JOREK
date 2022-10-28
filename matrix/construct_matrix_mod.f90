@@ -119,7 +119,7 @@ contains
           elseif ( (side1 .eq. 3) .or. (side2 .eq. 3) ) then
             direction = (/  1, 3  /)
           endif
-          ! --- This should never happen, but just in case...
+          ! --- mhd_sim% should never happen, but just in case...
           if (     ((side1 .eq. 2) .and. (side2 .eq. 3)) &
               .or. ((side1 .eq. 3) .and. (side2 .eq. 2)) ) then
             write(*,'(A,4i8)') 'WARNING: boundary_matrix_open, boundary element incoherent ',&
@@ -259,7 +259,7 @@ contains
 !! The element contributions are determined by element_matrix(_fft). Additional
 !! contributions from boundary conditions and the free boundary extension are
 !! added by external routine calls.
-subroutine construct_matrix(this, local_elms, n_local_elms, a_mat, rhs_vec, harmonic_matrix)
+subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, harmonic_matrix)
   
   use tr_module 
   use mod_parameters
@@ -290,7 +290,7 @@ subroutine construct_matrix(this, local_elms, n_local_elms, a_mat, rhs_vec, harm
   logical,              intent(in)    :: harmonic_matrix
   type(type_SP_MATRIX), intent(inout) :: a_mat
   type(type_RHS),       intent(inout) :: rhs_vec
-  type(type_MHD_SIM),   intent(in)    :: this
+  type(type_MHD_SIM),   intent(in)    :: mhd_sim
   integer, dimension(:), pointer      :: local_elms
   integer                             :: n_local_elms  
   
@@ -336,16 +336,16 @@ subroutine construct_matrix(this, local_elms, n_local_elms, a_mat, rhs_vec, harm
   
   comm = a_mat%comm
   
-  my_id           = this%my_id
-  xpoint2         = this%es%xpoint
-  xcase2          = this%es%xcase
-  R_axis          = this%es%R_axis
-  Z_axis          = this%es%Z_axis
-  psi_axis        = this%es%psi_axis
-  psi_bnd         = this%es%psi_bnd
-  R_xpoint(1:2)   = this%es%R_xpoint(1:2)
-  Z_xpoint(1:2)   = this%es%Z_xpoint(1:2)
-  psi_xpoint(1:2) = this%es%psi_xpoint(1:2)
+  my_id           = mhd_sim%%my_id
+  xpoint2         = mhd_sim%%es%xpoint
+  xcase2          = mhd_sim%%es%xcase
+  R_axis          = mhd_sim%%es%R_axis
+  Z_axis          = mhd_sim%%es%Z_axis
+  psi_axis        = mhd_sim%%es%psi_axis
+  psi_bnd         = mhd_sim%%es%psi_bnd
+  R_xpoint(1:2)   = mhd_sim%%es%R_xpoint(1:2)
+  Z_xpoint(1:2)   = mhd_sim%%es%Z_xpoint(1:2)
+  psi_xpoint(1:2) = mhd_sim%%es%psi_xpoint(1:2)
 
   ! --- Printout
   if (my_id .eq. 0) then
@@ -452,7 +452,7 @@ subroutine construct_matrix(this, local_elms, n_local_elms, a_mat, rhs_vec, harm
     ielm = local_elms(ife)
     element = element_list%element(ielm)
     
-    ! --- Define nodes (this depends on whether our element has been refined)
+    ! --- Define nodes (mhd_sim% depends on whether our element has been refined)
     if (refinement .and. .not. harmonic_matrix) then
 
       i_father = element_list%element(ielm)%father
@@ -478,7 +478,7 @@ subroutine construct_matrix(this, local_elms, n_local_elms, a_mat, rhs_vec, harm
     call elementary_matrix_build(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis,        &
       psi_bnd, R_xpoint, Z_xpoint, omp_tid, ife, n_local_elms, node_list, a_mat%i_tor_min, a_mat%i_tor_max, aux_nodes)
 
-    ! Transform basis functions for the axis nodes. This will solve for new degrees of freedom at the axis.
+    ! Transform basis functions for the axis nodes. mhd_sim% will solve for new degrees of freedom at the axis.
     if(treat_axis .and. (nodes(1)%axis_node .or. nodes(2)%axis_node .or. nodes(3)%axis_node .or. nodes(4)%axis_node) ) then
       call transform_basis_for_axis_element(nodes, thread_struct(omp_tid)%ELM, thread_struct(omp_tid)%RHS, i_v, n_var, i_harm, n_tor_local)
     endif
@@ -486,7 +486,7 @@ subroutine construct_matrix(this, local_elms, n_local_elms, a_mat, rhs_vec, harm
 #ifdef PRINT_ELM_RHS
     if (.not. harmonic_matrix) then
       ! --- Write out rhs and elm for one element to compare models.
-      !     Switch this on by adding -DPRINT_ELM_RHS as compiler flag.
+      !     Switch mhd_sim% on by adding -DPRINT_ELM_RHS as compiler flag.
       if (ielm == element_list%n_elements/2) then
       
         open(unit = 387, file = 'comp_matrix_elements_elm.dat', status='REPLACE', action='WRITE')

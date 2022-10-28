@@ -4,6 +4,7 @@ use mod_particle_sim
 use iso_c_binding ! for fftw03.f03
 use mod_parameters, only: n_plane
 use data_structure, only: type_bnd_element_list, type_bnd_node_list, type_SP_MATRIX, type_RHS !< store these in jorek_timestep_action
+use mod_simulation_data, only: type_MHD_SIM
 
 !! Solvers
 !use mumps_module
@@ -60,6 +61,7 @@ type, extends(action) :: jorek_timestep_action
   type(type_SP_MATRIX)                          :: a_mat
   type(type_RHS)                                :: rhs_vec, sol_vec
   type(type_SP_SOLVER)                          :: solver
+  type(type_MHD_SIM)                            :: mhd_sim
   
   logical                                       :: freeboundary
   logical                                       :: restart
@@ -251,27 +253,24 @@ subroutine setup_solvers(this, sim)
 
   this%a_mat%comm = MPI_COMM_WORLD
   
-  this%my_id         = sim%my_id
-  this%n_cpu         = sim%n_cpu
-  this%freeboundary  = freeboundary
-  this%restart       = restart
+  this%mhd_sim%my_id         = sim%my_id
+  this%mhd_sim%n_cpu         = sim%n_cpu
+  this%mhd_sim%freeboundary  = freeboundary
+  this%mhd_sim%restart       = restart
 
-  this%node_list     => sim%fields%node_list
-  this%element_list  => sim%fields%element_list    
+  this%mhd_sim%node_list     => sim%fields%node_list
+  this%mhd_sim%element_list  => sim%fields%element_list    
 
-  this%bnd_node_list => bnd_node_list
-  this%bnd_elm_list  => bnd_elm_list
+  this%mhd_sim%bnd_node_list => bnd_node_list
+  this%mhd_sim%bnd_elm_list  => bnd_elm_list
     
-  this%sr_n_tor      = sr%n_tor  
+  this%mhd_sim%sr_n_tor      = sr%n_tor  
   
-  this%node_list     => sim%fields%node_list
-  this%element_list  => sim%fields%element_list
-  
-  call distribute_nodes_elements(id_elements, this%n_cpu, index_size, this%node_list, this%element_list, .false., this%local_elms, & 
-                                   this%n_local_elms, this%restart, this%freeboundary, this%a_mat)
+  call distribute_nodes_elements(id_elements, this%mhd_sim%n_cpu, index_size, this%mhd_sim%node_list, this%mhd_sim%element_list, .false., this%mhd_sim%local_elms, & 
+                                   this%mhd_sim%n_local_elms, this%mhd_sim%restart, this%mhd_sim%freeboundary, this%a_mat)
                                    
-  call global_matrix_structure(this%node_list, this%element_list, this%bnd_elm_list, this%freeboundary,&
-                                 this%local_elms, this%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)                                   
+  call global_matrix_structure(this%mhd_sim%node_list, this%mhd_sim%element_list, this%mhd_sim%bnd_elm_list, this%mhd_sim%freeboundary,&
+                                 this%mhd_sim%local_elms, this%mhd_sim%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)                                   
 
   !call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
   !                                 this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)  
@@ -286,7 +285,7 @@ subroutine setup_solvers(this, sim)
   !                             this%local_elms,this%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)
 
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-    call global_matrix_structure_vacuum(this%node_list, this%bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
+    call global_matrix_structure_vacuum(this%mhd_sim%node_list, this%mhd_sim%bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
     !call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
   endif
   
@@ -496,7 +495,9 @@ subroutine do_jorek_timestep(this, sim, ev)
     
   endif
 
-  call construct_matrix(this, this%local_elms, this%n_local_elms, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
+  this%mhd_sim%es => es ! assign pointer to the equilibrium state
+    
+  call construct_matrix(this%mhd_sim, this%mhd_sim%local_elms, this%mhd_sim%n_local_elms, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
   
   !call construct_matrix(sim%my_id, this%local_elms, this%n_local_elms, xpoint, xcase, this%es%R_axis, this%es%Z_axis, &
   !                      this%es%psi_axis, this%es%psi_bnd, this%es%R_xpoint, this%es%Z_xpoint, this%es%psi_xpoint,    &

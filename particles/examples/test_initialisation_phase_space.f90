@@ -47,7 +47,7 @@ call sim%initialize(num_groups=1)
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
 test_case   = 'jorek_current_density_re'
-n_particles = 10000000
+n_particles = 100000000
 nR          = 2
 nZ          = 2
 nphi        = 2
@@ -56,11 +56,11 @@ npitch      = 81
 nchi        = 81
 start_time  = 0.d0
 mass        = 5.48579909065d-4 !< electron mass in AMU
-Rbound      = [0.d0,9.99d2]
-Zbound      = [-9.99d2,9.99d2]
-Phibound    = 5.d-1*[PI,3.d0*PI]
-Ekinbound   = [2d7-1d6,2d7+1d6]
-Pitchbound  = [PI-2.95d-1,PI]
+Rbound      = [0.d0,9.99d2] ![2.951,2.953]!
+Zbound      = [-9.99d2,9.99d2]![5d-3,6d-3]
+Phibound    = 5.d-1*[PI,3.d0*PI] ![0d0,1d-3]
+Ekinbound   = [1d3,2d7]![2d7-1d6,2d7+1d6]!
+Pitchbound  = [1d-2,PI]![PI-2.95d-1,PI]
 Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
 charge      = -1.d0
@@ -726,7 +726,7 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(pdf)
   DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
   pdf = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2);
   pdf = pdf*(cos(x_min(5))**2 - cos(x_max(5))**2)*(x_max(6)-x_min(6))
-  pdf =(-6.d0*jphi(1))/(pdf*x(7)*EL_CHG*MU_ZERO*(mass**3)*(SPEED_OF_LIGHT**4)*x(1))
+  pdf =(-6.d0*jphi(1))/(pdf*x(7)*EL_CHG*MU_ZERO*(real_param(2)**3)*(SPEED_OF_LIGHT**4)*x(1))
 end function pdf_current_density_uniform_phase
 
 !> Upper bound phase space distribution based on the plasma current density
@@ -782,7 +782,7 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   max_pdf = ((sqrtpovermc2plus1_max**3)-3.d0*sqrtpovermc2plus1_max) - &
             ((sqrtpovermc2plus1_min**3)-3.d0*sqrtpovermc2plus1_min);
   max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)*(x_max(6)-x_min(6))
-  max_pdf =(-6.d0*real_param(3))/(max_pdf*x_min(7)*EL_CHG*MU_ZERO*(mass**3)*&
+  max_pdf =(-6.d0*real_param(3))/(max_pdf*x_min(7)*EL_CHG*MU_ZERO*(real_param(2)**3)*&
            (SPEED_OF_LIGHT**4)*x_min(1)); min_pdf = max_pdf;
   min_pdf = min_pdf*varmin(var_zj); max_pdf = varmax(var_zj);
   !> check which between min_pdf and max_pdf has the maximum absolute value

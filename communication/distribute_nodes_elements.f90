@@ -37,7 +37,7 @@ if (my_id .eq. 0) then
     write(*,*) '************************************'
   else
     write(*,*) '**************************************'
-    write(*,*) '* distributing nodes harmonic matrix *'
+    write(*,*) '*    distributing nodes PC matrix    *'
     write(*,*) '**************************************'
   endif
 endif
@@ -154,6 +154,9 @@ end if
      
 a_mat%index_min => index_min
 a_mat%index_max => index_max
+
+a_mat%my_ind_min = a_mat%index_min(my_id + 1)
+a_mat%my_ind_max = a_mat%index_max(my_id + 1)
 
 return
 end

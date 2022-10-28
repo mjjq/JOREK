@@ -351,11 +351,11 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   if (my_id .eq. 0) then
     if(.NOT.harmonic_matrix) then
       write(*,*) '****************************************'
-      write(*,*) '*  construct global matrix             *'
+      write(*,*) '*       construct global matrix        *'
       write(*,*) '****************************************'
     else
       write(*,*) '****************************************'
-      write(*,*) '*  construct harmonic matrix           *'
+      write(*,*) '*        construct PC matrix           *'
       write(*,*) '****************************************'
     endif
   endif

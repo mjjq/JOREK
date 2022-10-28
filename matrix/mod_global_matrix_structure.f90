@@ -51,9 +51,6 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
   
   a_mat%i_tor_min = i_tor_min
   a_mat%i_tor_max = i_tor_max
-  
-  a_mat%my_ind_min = a_mat%index_min(my_id + 1)
-  a_mat%my_ind_max = a_mat%index_max(my_id + 1)
 
   ndof = -1
   do inode1=1,node_list%n_nodes

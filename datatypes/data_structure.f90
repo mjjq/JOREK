@@ -158,8 +158,8 @@ module data_structure
     integer(kind=int_all)                        :: nr                   !< number of local rows
     integer(kind=int_all)                        :: nc                   !< number of local cols
     integer(kind=int_all)                        :: nnz                  !< number of local nonzero entries
-    integer, dimension(:), pointer               :: index_min => Null()        !< minimum index in global range for all MPI ranks in comm
-    integer, dimension(:), pointer               :: index_max => Null()        !< maximum index in global range for all MPI ranks in comm
+    integer, dimension(:), pointer               :: index_min => Null()        !< minimum node index in global range for all MPI ranks ! should be associated with mhd_sim!!!
+    integer, dimension(:), pointer               :: index_max => Null()        !< maximum node index in global range for all MPI ranks
     integer                                      :: my_ind_min
     integer                                      :: my_ind_max
     integer                                      :: i_tor_min            ! minimum toroidal Fourier number used in construction

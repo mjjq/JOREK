@@ -512,6 +512,7 @@ mpi_required = 0
     
     mhd_sim%my_id = my_id
     mhd_sim%n_cpu = n_cpu
+    mhd_sim%n_tor = n_tor
     mhd_sim%freeboundary = freeboundary
     mhd_sim%restart = restart
     

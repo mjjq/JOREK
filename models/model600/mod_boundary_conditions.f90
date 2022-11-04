@@ -560,7 +560,7 @@ do i=1, n_local_elms !=== do elements
 
            call boundary_conditions_add_one_entry(                                    &
                    index_node2, var_vpar, in, index_node,  var_Ti, in,                &
-                   - zbig * factor  / Btot * cs0_TT * T0i_b * direction               &
+                   - zbig * factor  / Btot * cs0_TT * T0_b * direction                &
                    - zbig * Hfact_b / Btot * cs0_T         * direction,               &
                    index_min, index_max, a_mat)
 
@@ -571,8 +571,8 @@ do i=1, n_local_elms !=== do elements
 
             call boundary_conditions_add_one_entry(                                   &
                    index_node2, var_vpar, in, index_node,  var_Te, in,                &
-                   - zbig * factor  / Btot * cs0_TT * T0e_b * direction               &
-                   - zbig * Hfact_b / Btot * cs0_T          * direction,              &
+                   - zbig * factor  / Btot * cs0_TT * T0_b * direction                &
+                   - zbig * Hfact_b / Btot * cs0_T         * direction,               &
                    index_min, index_max, a_mat)
           else
             call boundary_conditions_add_one_entry(                                   &

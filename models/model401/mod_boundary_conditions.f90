@@ -569,19 +569,17 @@ do i=1, n_local_elms !=== do elements
                  index_min, index_max,                     & 
                  a_mat)
 
-          call boundary_conditions_add_one_entry(                      &
-                 index_node2, kv, in, index_node,  kTi, in,            &
-                 - zbig * factor  / Btot * cs0_TT * T0i_b * direction  &
-                 - zbig * Hfact_b / Btot * cs0_T         * direction,  & 
-                 index_min, index_max,              & 
-                 a_mat)
+          call boundary_conditions_add_one_entry(                              &
+                 index_node2, kv, in, index_node,  kTi, in,                    &
+                 - zbig * factor  / Btot * cs0_TT * (T0i_b+T0e_b) * direction  &
+                 - zbig * Hfact_b / Btot * cs0_T                  * direction, & 
+                 index_min, index_max, a_mat)
 
-          call boundary_conditions_add_one_entry(                      &
-                 index_node2, kv, in, index_node,  kTe, in,            &
-                 - zbig * factor  / Btot * cs0_TT * T0e_b * direction  &
-                 - zbig * Hfact_b / Btot * cs0_T          * direction, & 
-                 index_min, index_max,              & 
-                 a_mat)
+          call boundary_conditions_add_one_entry(                              &
+                 index_node2, kv, in, index_node,  kTe, in,                    &
+                 - zbig * factor  / Btot * cs0_TT * (T0i_b+T0e_b) * direction  &
+                 - zbig * Hfact_b / Btot * cs0_T                  * direction, & 
+                 index_min, index_max, a_mat)
 
           if (in .eq. 1) then
             call boundary_conditions_add_RHS(                                    &

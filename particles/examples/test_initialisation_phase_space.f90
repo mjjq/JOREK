@@ -14,7 +14,11 @@ program test_initialisation_phase_space
 !use mod_particle_types,       only: particle_base,particle_kinetic_relativistic 
 !use mod_fields_linear,        only: jorek_field_interp_linear,read_jorek_fields_interp_linear
 !use mod_initialise_particles, only: initialise_particles_in_phase_space
-use constants, only: TWOPI,PI
+use constants,       only: TWOPI,PI
+use data_structure,  only: type_bnd_node_list,type_bnd_element_list
+use mod_boundary,    only: boundary_from_grid
+use mod_expression,  only: exprs_all_int,init_expr,exprs,SI_UNITS
+use mod_integrals3D, only: int3d_new
 use mod_random_seed
 use particle_tracer
 implicit none
@@ -22,9 +26,12 @@ implicit none
 !> Variable declarations --------------------------------------------------------------------
 type(sobseq_rng)             :: sob_rng
 type(event)                  :: field_reader
+type(type_bnd_node_list)     :: bnd_node_list
+type(type_bnd_element_list)  :: bnd_elm_list
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
-integer,dimension(:),allocatable :: int_pdf_param
+integer                      :: n_int_weight_param,n_real_weight_param
+integer,dimension(:),allocatable :: int_pdf_param,int_weight_param
 integer,dimension(:,:,:,:,:,:),allocatable :: histo
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,particle_weight
@@ -33,7 +40,7 @@ real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
-real*8,dimension(:),allocatable           :: real_pdf_param
+real*8,dimension(:),allocatable           :: real_pdf_param,real_weight_param,DUMMY_REAL_ARRAY
 real*8,dimension(:,:,:,:,:,:),allocatable :: expected_pdf,pdf_at_midpoints
 character(len=125)                        :: test_case,particle_filename,mesh_filename_root
 character(len=125)                        :: particle_pdf_filename,exact_pdf_filename
@@ -113,6 +120,7 @@ if(trim(test_case)=='jorek_current_density_re') then
   n_real_pdf_param = 3; allocate(real_pdf_param(n_real_pdf_param));
   real_pdf_param = [1.d0,mass,sup_pdf_safety_factor]
   n_int_pdf_param = 1; allocate(int_pdf_param(n_int_pdf_param));
+  n_real_weight_param = 1; allocate(real_weight_param(n_real_weight_param));
   int_pdf_param(1) = sim%my_id
   particle_weight = 1.d0
   pdf_to_use => pdf_current_density_uniform_phase
@@ -121,6 +129,12 @@ if(trim(test_case)=='jorek_current_density_re') then
   var_min(6),charge],[var_max(1),var_max(2),var_max(3),var_max(4),&
   var_max(5),var_max(6),charge],sim%fields,n_real_pdf_param,&
   real_pdf_param,n_int_pdf_param,int_pdf_param)
+  !> compute the integral of the current density in the volume
+  allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
+  call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,.false.)
+  call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
+  exprs('int_jR_3d_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
+  real_weight_param = DUMMY_REAL_ARRAY(2:n_real_weight_param+1); deallocate(DUMMY_REAL_ARRAY);
 elseif(trim(test_case)=='uniform_weight') then
   write(*,*) 'SELECTED: WEIGHTED PDF UNIFORM!'
   n_real_pdf_param = 1; allocate(real_pdf_param(n_real_pdf_param));
@@ -195,6 +209,8 @@ deallocate(Rmesh); deallocate(Zmesh); deallocate(phimesh); deallocate(pmesh);
 deallocate(pitchmesh); deallocate(chimesh); deallocate(histo); deallocate(expected_pdf); 
 deallocate(pdf_at_midpoints); if(allocated(real_pdf_param)) deallocate(real_pdf_param);
 if(allocated(int_pdf_param)) deallocate(int_pdf_param);
+if(allocated(int_weight_param)) deallocate(int_weight_param);
+if(allocated(real_weight_param)) deallocate(real_weight_param);
 pdf_to_use => NULL()
 call sim%finalize()
 write(*,*) "Test: initialise_particle_in_phase_space: completed."
@@ -690,7 +706,7 @@ end function sup_pdf_uniform
 !>   x_max:        (real8)(nx) upper bound of the phase space interval
 !>   n_real_param: (integer) N# of real input parameters of the pdf
 !>   real_param:   (real8)(n_real_param) real pdf parameters
-!>                 1) pdf distribution weight (normally mass/volume)
+!>                 1) pdf distribution coefficient (not used)
 !>                 2) particle mass in AMU
 !>   n_int_param:  (integer) N# of integer input parameters of the pdf
 !>   int_param:    (integer)(n_int_param) integer pdf parameters
@@ -740,7 +756,7 @@ end function pdf_current_density_uniform_phase
 !>   fields:       (fields_base) jorek MHD fields
 !>   n_real_param: (integer) N# of real input parameters of the pdf
 !>   real_param:   (real8)(n_real_param) real pdf parameters
-!>                 1) pdf distribution weight (normally mass/volume)
+!>                 1) pdf distribution coefficient (not used)
 !>                 2) particle mass in AMU
 !>                 3) safety factor: must be >1
 !>   n_int_param:  (integer) N# of integer input parameters of the pdf
@@ -793,5 +809,26 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   endif
 end function sup_pdf_current_density_uniform_phase
 
+!> Method used for computing the weight of each particle. Given that the pdf
+!> is directly sampled via accept-reject method, the particle weight is 
+!> considered uniform for all particles and equal to the total number of
+!> physical particles (from the plasma current) divided the total number of
+!> simulated markers. A uniform distribution in the velocity space is used. 
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   fields:       (fields_base) jorek MHD fields
+!>   n_real_param: (integer) N# of real input parameters
+!>   real_param:   (real8)(n_real_param) real weight parameters
+!>                 1) total plasma current 
+!>   n_int_param:  (integer) N# of integer input parameters
+!>   int_param:    (integer)(n_int_param) integer weight parameters
+!> outputs:
+!function particle_weight_current_density_uniform_phase(nx,x_min,x_max,fields,&
+!n_real_param,real_param,n_int_param,int_param) result(weight)
+
+
+!end function particle_weight_current_density_uniform_phase
 
 end program test_initialisation_phase_space

@@ -70,9 +70,9 @@ if (.not. direct_construction) then ! global matrix construction
   if (my_id .eq. index_size-1) index_max(my_id+1) = index_total
   if (DEBUG) write(*,'(A,3i6)') ' index_min,index_max:', my_id, index_min(my_id+1), index_max(my_id+1)
   
-else ! harmonic matrix "direct" construction
+else ! PC matrix "direct" construction
   
-  if (mod(my_id,m_cpu) .eq. 0) index_min(my_id+1) = 1 ! my_id_n = 0
+  if (mod(my_id,m_cpu) .eq. 0) index_min(my_id+1) = 1
   do i=1,index_size
     index_max(i) = ((mod(i-1,m_cpu)+1) * index_total)/m_cpu
   enddo

@@ -6,18 +6,6 @@ use mod_parameters, only: n_plane
 use data_structure, only: type_bnd_element_list, type_bnd_node_list, type_SP_MATRIX, type_RHS !< store these in jorek_timestep_action
 use mod_simulation_data, only: type_MHD_SIM
 
-!! Solvers
-!use mumps_module
-!use pastix_module
-!use wsmp_module
-!
-!#ifdef USE_STRUMPACK
-!use strumpack_module
-!#endif
-!use preconditioner_module
-!use mod_distribute_preconditioner
-!use direct_construction_mod
-
 use mod_sparse,        only: solve_sparse_system, solver_finalize
 use mod_sparse_data,   only: type_SP_SOLVER
 
@@ -104,7 +92,6 @@ subroutine setup_solvers(this, sim)
   use global_distributed_matrix
   use mod_boundary,         only: boundary_from_grid
   use mod_global_matrix_structure
-  !use gmres_setup,          only: gmres_setup_jorek
   use vacuum
   use vacuum_response,      only: get_vacuum_response, update_response, init_wall_currents, I_coils
   use vacuum_equilibrium,   only: import_external_fields
@@ -226,25 +213,6 @@ subroutine setup_solvers(this, sim)
   call dfftw_plan_dft_r2c_1d(fftw_plan,n_plane,this%in_fft,this%out_fft,FFTW_PATIENT)
 #endif
 
-  !n_masters = (n_tor+1)/2
-  !if (gmres) then
-  !  ! setup per-harmonic and transverse communicators
-  !  !call gmres_setup_jorek(sim%my_id, sim%n_cpu, this%i_tor, this%my_id_n, this%n_cpu_n, &
-  !  !                       this%my_id_trans, this%n_cpu_trans, this%my_id_master,        &
-  !  !                       this%MPI_COMM_N, this%MPI_COMM_TRANS, this%MPI_COMM_MASTER,   &
-  !  !                       this%MPI_GROUP_MASTER, this%MPI_GROUP_WORLD, my_family_id)
-  !  
-  !  call create_communicators(this%my_id_n, this%n_cpu_n, this%MPI_COMM_N, this%my_id_master, n_masters, &
-  !                           this%MPI_COMM_MASTER, this%MPI_COMM_TRANS)
-  !
-  !  call distribute_modes                       
-  !                    
-  !else
-  !   this%my_id_n    = sim%my_id
-  !   this%n_cpu_n    = sim%n_cpu
-  !   this%MPI_COMM_N = MPI_COMM_WORLD
-  !endif
-
   !***********************************************************************
   !*              distribute nodes and elements over cpu's               *
   !***********************************************************************
@@ -274,34 +242,11 @@ subroutine setup_solvers(this, sim)
   call global_matrix_structure(this%mhd_sim%node_list, this%mhd_sim%element_list, this%mhd_sim%bnd_elm_list, this%mhd_sim%freeboundary,&
                                  this%mhd_sim%local_elms, this%mhd_sim%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)                                   
 
-  !call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
-  !                                 this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)  
-  
-  !
-  ! Construct index_min, index_max and local_elems
-  !
-  !call distribute_nodes_elements(id_elements, sim%n_cpu, index_size, sim%fields%node_list, sim%fields%element_list, .false., &
-  !                                 this%local_elms, this%n_local_elms, restart, freeboundary, this%a_mat)
-  !
-  !call global_matrix_structure(sim%fields%node_List, sim%fields%element_list, bnd_elm_list, freeboundary,&
-  !                             this%local_elms,this%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)
-
   if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
     call global_matrix_structure_vacuum(this%mhd_sim%node_list, this%mhd_sim%bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
-    !call global_matrix_structure_vacuum(sim%fields%node_list, bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
   endif
-  
-  !if ((gmres) .and. (this%my_id_n .eq. 0)) call map_row_index(ndof_glob)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-
-  !if (use_mumps) then
-  !  if (.not. gmres) then
-  !    call initialise_mumps(MPI_COMM_WORLD) ! start MUMPS sparse matrix solver all cpus
-  !  else
-  !    call initialise_mumps(this%MPI_COMM_N) ! start MUMPS sparse matrix solver on local groups
-  !  endif
-  !endif
   
   this%solver%iter_precon        = iter_precon
   this%solver%iter_gmres         = iter_precon
@@ -481,29 +426,16 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   ! Build the matrix 
   call clck_time_barrier(t0)
-!  if (gmres) then
-!    ! Matrix analysis and factorization in the preconditioner is re-done...
-!    ! ... in the first step of a simulation (also when restarting)
-!    ! ... when tstep changes
-!    ! ... when the previous time steps took too many iterations
-!    solve_only = (this%istep .gt. 1) .and. (this%iter_gmres+this%iter_prev <= 2*iter_precon)
-!!    solve_only = (.not. this%prec_needed) .and. (this%iter_gmres+this%iter_prev <= 2*iter_precon)
-!  endif
 
   if (use_pellet) then            ! calculating the pellet_volume (total_pellet_volume)
     pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
     call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out, &
                                                                                 kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in, mom_par_out)
-    
   endif
 
   this%mhd_sim%es => es ! assign pointer to the equilibrium state
     
   call construct_matrix(this%mhd_sim, this%mhd_sim%local_elms, this%mhd_sim%n_local_elms, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
-  
-  !call construct_matrix(sim%my_id, this%local_elms, this%n_local_elms, xpoint, xcase, this%es%R_axis, this%es%Z_axis, &
-  !                      this%es%psi_axis, this%es%psi_bnd, this%es%R_xpoint, this%es%Z_xpoint, this%es%psi_xpoint,    &
-  !                      this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
     
   ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
   call del_thread_buffers()
@@ -522,52 +454,6 @@ subroutine do_jorek_timestep(this, sim, ev)
   this%sol_vec%val => deltas
   
   call solve_sparse_system(this%a_mat, this%rhs_vec, this%sol_vec, this%solver)
-
-  !if (.not. gmres) then
-!    if (use_mumps) then
-!#ifdef USE_MUMPS    
-!      call solve_mumps_all(sim%my_id)
-!#endif      
-!    else
-!#if defined(USE_PASTIX) || defined(USE_PASTIX6)    
-!      call solve_pastix_all(sim%n_cpu,sim%my_id,this%index_min(sim%my_id+1),this%index_max(sim%my_id+1))
-!#endif      
-!    endif
-  !else
-  !  call clck_time(t0)
-  !  if (.not. solve_only) then
-  !    call distribute_harmonics(sim%my_id,this%my_id_n,sim%n_cpu)
-  !  endif
-  !  if(this%my_id_n.eq.0) call distribute_vector(rhs_glob,mumps_par%rhs,this%MPI_COMM_MASTER)
-  !  
-  !  call clck_time_barrier(t1)
-  !  call clck_ldiff(t0,t1,tsecond)
-  !  if (sim%my_id .eq. 0) write(*,FMT_TIMING) sim%my_id, '# Elapsed time distribute :',tsecond
-  !
-  !  call clck_time(t0)
-  !  call solve_matrix_n(sim%my_id,this%MPI_COMM_N,this%MPI_COMM_MASTER,solve_only)    ! factorise preconditioning matrices
-  !    
-  !  call clck_time_barrier(t1)
-  !  call clck_ldiff(t0,t1,tsecond)
-  !  if (sim%my_id .eq. 0) write(*,FMT_TIMING) sim%my_id, '# Elapsed time first solve :',tsecond
-  !endif
-  !
-  !call clck_time(t0)
-  !if (gmres) then
-  !  this%iter_prev = this%iter_gmres
-  !  this%iter_gmres = gmres_max_iter
- 
-!#ifdef USE_BICGSTAB
-!    call bicgstab_driver(irn_glob, jcn_glob, a_glob, deltas, rhs_glob, &
-!                     this%iter_gmres, gmres_tol, MPI_COMM_WORLD, this%MPI_COMM_N, this%MPI_COMM_MASTER)
-!#else 
-!    call gmres_driver(sim%my_id,this%my_id_n,this%MPI_COMM_N,this%MPI_COMM_MASTER,this%iter_gmres)
-!#endif
-  !
-  !endif
-  !call clck_time_barrier(t1)
-  !call clck_ldiff(t0,t1,tsecond)
-  !if (sim%my_id .eq. 0) write(*,FMT_TIMING) sim%my_id, '# Elapsed time gmres/solve :',tsecond
 
   call clck_time(t0)
   if (this%solver%step_success) then  

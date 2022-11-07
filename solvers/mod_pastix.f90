@@ -391,65 +391,6 @@ module mod_pastix
     return
 
   end subroutine distribute_matrix
-  
-!> Perform column scaling after column-wise distribution
-!! n - global number of rows
-!! nnz - number of nnz in the local set of columns
-!! the column_scaling array is defined externally
-  !subroutine do_column_scaling(n,nnz,irn,jcn,val,comm)
-  !  use mod_integer_types
-  !  use iso_c_binding
-  !  use tr_module
-  !
-  !  implicit none
-  !  
-  !  integer(kind=int_all) :: n, nnz
-  !  integer(kind=int_all), dimension(:), pointer :: irn, jcn
-  !  real(kind=8), dimension(:), pointer :: val
-  !  
-  !  integer(kind=int_all) :: i, j, k, jmin, jmax, n_d
-  !  integer(kind=int_all), allocatable :: rcounts(:), displs(:)
-  !  real(kind=8), allocatable   :: loc_col_scaling(:)
-  !  integer :: n_cpu_n, my_id_n, comm, ierr
-  !  
-  !  call MPI_Comm_rank(comm, my_id_n, ierr)
-  !  call MPI_Comm_size(comm, n_cpu_n, ierr)
-  !
-  !! calculate local column scaling and gather the results to all ranks
-  !  jmin = minval(jcn(1:nnz))
-  !  jmax = maxval(jcn(1:nnz))
-  !  n_d = jmax - jmin + 1
-  !  allocate(loc_col_scaling(n_d))
-  !  loc_col_scaling(1:n_d) = 1.d-20
-  !  do k=1,nnz
-  !    j = jcn(k) - jmin + 1
-  !    loc_col_scaling(j) = min(max(loc_col_scaling(j),abs(val(k))),1d20)
-  !  enddo          
-  !  do k=1,nnz
-  !    j = jcn(k) - jmin + 1
-  !    val(k) = val(k)/loc_col_scaling(j)
-  !  enddo
-  !  allocate(rcounts(n_cpu_n),displs(n_cpu_n)); rcounts = 0
-  !  rcounts(my_id_n + 1) = n_d
-  !  call MPI_AllReduce(MPI_IN_PLACE, rcounts, n_cpu_n, MPI_INTEGER_ALL, MPI_SUM, comm, ierr)
-  !
-  !  displs(1) = 0
-  !  do i = 2, n_cpu_n
-  !    displs(i) = displs(i-1) + rcounts(i-1)
-  !  enddo
-  !  if (allocated(col_scaling)) deallocate(col_scaling)
-  !  allocate(col_scaling(n))
-  !  call MPI_Allgatherv(loc_col_scaling, n_d, MPI_DOUBLE_PRECISION, col_scaling, rcounts, displs, MPI_DOUBLE_PRECISION, comm, ierr)
-  !  deallocate(rcounts,displs,loc_col_scaling)
-  !
-  !end subroutine do_column_scaling  
-
-
-
-
-
-
-
 
 #elif USE_PASTIX
 #include "pastix_fortran.h"

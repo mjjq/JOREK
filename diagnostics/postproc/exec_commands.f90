@@ -2652,11 +2652,6 @@ module exec_commands
     
   end subroutine fluxsurfaces
   
-
-
-
-
-!#ifdef OLD_SOLVER  
   !> Output vtk file of individual terms of the RHS in elm_matrix 
   subroutine RHS_terms_vtk(command, first_step, ierr)
 
@@ -3299,12 +3294,6 @@ module exec_commands
 #endif  
 
   end subroutine RHS_terms_vtk   
-  
-!#endif
-!OLD_SOLVER
-
-
-  
   
   !> Output the separatrix.
   recursive subroutine separatrix(command, ierr)

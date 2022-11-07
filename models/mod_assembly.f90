@@ -23,8 +23,7 @@ contains
   subroutine boundary_conditions_add_one_entry( &
        &   index_node,  k,  in,                 &
        &   index_node2, k2, in2,                &
-       &   zbig,                                &
-       &   index_min, index_max, a_mat)
+       &   zbig, index_min, index_max, a_mat)
     use mod_parameters
     use mod_locate_irn_jcn
     use mod_integer_types

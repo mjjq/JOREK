@@ -1536,6 +1536,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       Z_eff        = Z_eff / ne_JOREK
 
       if (Z_eff < 1) Z_eff = 1.
+      if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
 
       ! This is to represent the dependence on Z_eff in resistivity
       if ( eta_T_dependent ) then

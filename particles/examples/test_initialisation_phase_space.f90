@@ -809,6 +809,113 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   endif
 end function sup_pdf_current_density_uniform_phase
 
+!> Compute the gdf used for sampling the particle coordinates in 
+!> phase space. The gdf used here is a uniform distribution in
+!> cylindrical coordinates for the spatial coordinates and 
+!> uniform spherical distribution for the momentum coordinates
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   fields:       (fields_base) jorek MHD fields
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   gdf: (real8) value of the sampler probability density 
+function gdf_uniform_phase(nx,x,st,time,i_elm,fields,x_min,x_max,&
+n_real_param,real_param,n_int_param,int_param) result(gdf)
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x,x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  class(fields_base),intent(in)               :: fields
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: gdf
+  !> Evalutate pdf
+  gdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
+  (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
+  if(n_real_param.gt.0) gdf = real_param(1)*gdf
+end function gdf_uniform_phase
+
+!> Upper bound of the uniform phase space sampler distribution
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   sup_gdf: (real8) value of the sampler probability density upper bound
+function sup_gdf_uniform_phase(nx,x_min,x_max,n_real_param,real_param,&
+n_int_param,int_param) result(sup_gdf)
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: sup_gdf
+  !> Evalutate the upper extremum of the pdf
+  sup_gdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
+  (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
+end function sup_gdf_uniform_phase
+
+!> GDF uniform sampler generating particle positions in phase space
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random numbers in [0,1)
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   fields:       (fields_base) jorek MHD fields
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   x:            (real8)(nx) particle position to accept
+subroutine gdf_uniform_sampler(nx,x,st,time,i_elm,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param)
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  class(fields_base),intent(in)               :: fields
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Inputs-Outputs:
+  real*8,dimension(nx),intent(inout)          :: x
+  !> Compute new particle position in phase space
+  x = x_min + (x_max-x_min)*x
+  x(1) = sqrt(x(1)); x(4) = x(4)**(1.d0/3.d0); x(5) = acos(x(5));
+end subroutine gdf_uniform_sampler
+
 !> Dummy particle weight equal to 1 
 !> inputs:
 !>   nx:           (integer) number of variables

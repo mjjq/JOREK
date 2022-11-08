@@ -859,6 +859,32 @@ do i=1,n_vertex_max
           delta_ps_x = (   y_t(ms,mt) * delta_s(mp,var_psi,ms,mt) - y_s(ms,mt) * delta_t(mp,var_psi,ms,mt) ) / xjac
           delta_ps_y = ( - x_t(ms,mt) * delta_s(mp,var_psi,ms,mt) + x_s(ms,mt) * delta_t(mp,var_psi,ms,mt) ) / xjac
 
+
+          ! --- Impurity-related variables
+          alpha_i         = 0.d0
+          dalpha_i_dT     = 0.d0
+          d2alpha_i_dT2   = 0.d0
+
+          alpha_e         = 0.d0
+          dalpha_e_dT     = 0.d0
+          d2alpha_e_dT2   = 0.d0
+          alpha_e_bis     = 0.d0
+          alpha_e_tri     = 0.d0
+
+          alpha_imp       = 0.d0
+          dalpha_imp_dT   = 0.d0
+          d2alpha_imp_dT2 = 0.d0
+          alpha_imp_bis   = 0.d0
+          alpha_imp_tri   = 0.d0
+
+          Z_imp = 0.
+          dZ_imp_dT = 0.
+          d2Z_imp_dT2 = 0.
+
+          E_ion     = 0.
+          dE_ion_dT = 0.
+          E_ion_bg  = 0. 
+
           if ( with_TiTe ) then ! ******************************************************************
 
             ! --- Temperature dependent parallel heat diffusivity
@@ -892,25 +918,6 @@ do i=1,n_vertex_max
               ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
               dZKe_par_dT = 0.d0
             endif
-	    
-            ! --- Impurity-related variables
-            alpha_i         = 0.d0
-            dalpha_i_dT     = 0.d0
-            d2alpha_i_dT2   = 0.d0
-
-            alpha_e         = 0.d0
-            dalpha_e_dT     = 0.d0
-            d2alpha_e_dT2   = 0.d0
-            alpha_e_bis     = 0.d0
-            alpha_e_tri     = 0.d0
-
-            Z_imp       = 0.
-            dZ_imp_dT   = 0.
-            d2Z_imp_dT2 = 0.
-
-            E_ion     = 0.
-            dE_ion_dT = 0.
-            E_ion_bg  = 0. 
 
             if (with_impurities) call construct_imp_charge_states()
                           
@@ -931,7 +938,7 @@ do i=1,n_vertex_max
             endif
 
             call construct_pressure()
-	    
+
             ! ---Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = Te0
             T_or_Te_corr     = Te0_corr
@@ -956,31 +963,6 @@ do i=1,n_vertex_max
               ZK_par_T   = ZK_par                      
               dZK_par_dT = 0.d0
             endif
-
-            ! --- Impurity-related variables
-            alpha_i         = 0.d0
-            dalpha_i_dT     = 0.d0
-            d2alpha_i_dT2   = 0.d0
-
-            alpha_e         = 0.d0
-            dalpha_e_dT     = 0.d0
-            d2alpha_e_dT2   = 0.d0
-            alpha_e_bis     = 0.d0
-            alpha_e_tri     = 0.d0
-
-            alpha_imp       = 0.d0
-            dalpha_imp_dT   = 0.d0
-            d2alpha_imp_dT2 = 0.d0
-            alpha_imp_bis   = 0.d0
-            alpha_imp_tri   = 0.d0
-
-            Z_imp = 0.
-            dZ_imp_dT = 0.
-            d2Z_imp_dT2 = 0.
-
-            E_ion     = 0.
-            dE_ion_dT = 0.
-            E_ion_bg  = 0. 
 
             if (with_impurities) call construct_imp_charge_states()
                

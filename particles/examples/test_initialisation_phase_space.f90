@@ -27,7 +27,8 @@ type(type_bnd_element_list)  :: bnd_elm_list
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
 integer                      :: n_int_weight_param,n_real_weight_param
-integer,dimension(:),allocatable :: int_pdf_param,int_weight_param
+integer                      :: n_int_gdf_param,n_real_gdf_param
+integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:,:,:,:,:,:),allocatable :: histo
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,gdf_upper_bound
@@ -36,7 +37,8 @@ real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
-real*8,dimension(:),allocatable           :: real_pdf_param,real_weight_param,DUMMY_REAL_ARRAY
+real*8,dimension(:),allocatable           :: real_pdf_param,real_weight_param,real_gdf_param
+real*8,dimension(:),allocatable           :: DUMMY_REAL_ARRAY
 real*8,dimension(:,:,:,:,:,:),allocatable :: expected_pdf,pdf_at_midpoints
 character(len=125)                        :: test_case,particle_filename,mesh_filename_root
 character(len=125)                        :: particle_pdf_filename,exact_pdf_filename
@@ -155,6 +157,7 @@ else
   real_pdf_param,n_int_pdf_param,int_pdf_param)
 endif
 !> select gdf to use
+n_real_gdf_param = 0; n_int_gdf_param = 0;
 gdf_to_use         => gdf_uniform_phase
 gdf_sampler_to_use => gdf_uniform_sampler
 gdf_upper_bound    = sup_gdf_uniform_phase(6,var_min,var_max,n_real_pdf_param,&
@@ -164,10 +167,11 @@ write(*,*) ' '
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
 call initialise_particles_in_phase_space(sim%groups(1)%particles,sim%fields,sob_rng,&
-pdf_to_use,weight_to_use,pdf_upper_bound,sim%groups(1)%mass,start_time,Ekinbound,&
-Pitchbound,Chibound,Rbound,Zbound,Phibound,chargebound,n_real_pdf_param,&
-real_pdf_param,n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,&
-n_int_weight_param,int_weight_param)
+pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
+sim%groups(1)%mass,start_time,Ekinbound,Pitchbound,Chibound,Rbound,Zbound,Phibound,&
+chargebound,n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param,&
+n_real_weight_param,real_weight_param,n_int_weight_param,int_weight_param,&
+n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param)
 
 !> Produce the expected pdf fromt the particle histogram --------------------------------------
 write(*,*) "... building particle histogram and computing the expected pdf"

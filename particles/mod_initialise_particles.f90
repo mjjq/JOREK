@@ -355,7 +355,7 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   integer                                  :: n_real_weight_param,n_int_weight_param
   integer                                  :: n_real_gdf_param,n_int_gdf_param
   integer,dimension(:),allocatable         :: int_pdf_param,int_weight_param,int_gdf_param
-  real*8                                   :: t0,t1,Erest,psi,U,one_third
+  real*8                                   :: t0,t1,Erest,psi,U
   real*8                                   :: one_over_sup_pdf,one_over_sup_gdf
   real*8,dimension(2)                      :: st
   real*8,dimension(3)                      :: B,E,e1,e2
@@ -413,7 +413,7 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   end do
 
   !> Initialise variables needed in the loop
-  n_particles = size(particles); one_third = 1.d0/3.d0;
+  n_particles = size(particles);
   phase_bounds_uniform_samp = phase_bounds
   phase_bounds_uniform_samp(1,:) = phase_bounds_uniform_samp(1,:)**2
   phase_bounds_uniform_samp(4,:) = phase_bounds_uniform_samp(4,:)**3
@@ -447,8 +447,8 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
   !> Loop on the particles
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
-    !$omp firstprivate(n_particles,mass,time,phase_bounds,one_over_sup_pdf,one_over_sup_gdf,&
-    !$omp phase_bounds_uniform_samp,one_third,n_real_pdf_param,n_int_pdf_param,&
+    !$omp firstprivate(n_particles,mass,time,phase_bounds,one_over_sup_pdf,&
+    !$omp one_over_sup_gdf,phase_bounds_uniform_samp,n_real_pdf_param,n_int_pdf_param,&
     !$omp real_pdf_param,int_pdf_param,n_real_weight_param,n_int_weight_param,&
     !$omp real_weight_param,int_weight_param,n_real_gdf_param,n_int_gdf_param,&
     !$omp real_gdf_param,int_gdf_param) &
@@ -469,10 +469,9 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
         !> in spherical coordinates for the momentum space (p,pitch,gyro)
         !> and uniform for the charge state
         call rngs(thread_id)%next(variables)
-        variables(1:n_variables) = phase_bounds_uniform_samp(:,1) + &
-        (phase_bounds_uniform_samp(:,2)-phase_bounds_uniform_samp(:,1))*variables(1:n_variables)
-        variables(1) = sqrt(variables(1)); variables(4) = variables(4)**one_third;
-        variables(5) = acos(variables(5))
+        call gdf_sampler(n_variables,variables(1:n_variables),st,time,i_elm,fields,&
+        phase_bounds_uniform_samp(:,1),phase_bounds_uniform_samp(:,2),n_real_gdf_param,&
+        real_gdf_param,n_int_gdf_param,int_gdf_param)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
         variables(1),variables(2),i_elm,st(1),st(2),ifail) 
       enddo

@@ -30,7 +30,7 @@ integer                      :: n_int_weight_param,n_real_weight_param
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param
 integer,dimension(:,:,:,:,:,:),allocatable :: histo
 real*8                       :: start_time,mass,charge,error,error_norm
-real*8                       :: error_avg_norm,pdf_upper_bound
+real*8                       :: error_avg_norm,pdf_upper_bound,gdf_upper_bound
 real*8                       :: sup_pdf_safety_factor
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
@@ -44,7 +44,8 @@ character(len=125)                        :: particle_histo_filename
 character(len=:),allocatable              :: jorek_filename
 procedure(real_f),pointer                 :: pdf_to_use=>NULL()
 procedure(real_f),pointer                 :: weight_to_use=>NULL()
-
+procedure(real_f),pointer                 :: gdf_to_use=>NULL()
+procedure(real_arr_inout_s),pointer       :: gdf_sampler_to_use=>NULL()
 !> MPI and groups initialisation ------------------------------------------------------------
 call sim%initialize(num_groups=1)
 
@@ -153,6 +154,11 @@ else
   pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
   real_pdf_param,n_int_pdf_param,int_pdf_param)
 endif
+!> select gdf to use
+gdf_to_use         => gdf_uniform_phase
+gdf_sampler_to_use => gdf_uniform_sampler
+gdf_upper_bound    = sup_gdf_uniform_phase(6,var_min,var_max,n_real_pdf_param,&
+real_pdf_param,n_int_pdf_param,int_pdf_param)
 write(*,*) ' '
 
 !> Test particle initialisation -------------------------------------------------------------
@@ -211,6 +217,7 @@ if(allocated(int_pdf_param)) deallocate(int_pdf_param);
 if(allocated(int_weight_param)) deallocate(int_weight_param);
 if(allocated(real_weight_param)) deallocate(real_weight_param);
 pdf_to_use => NULL(); weight_to_use => NULL();
+gdf_to_use => NULL(); gdf_sampler_to_use => NULL();
 call sim%finalize()
 write(*,*) "Test: initialise_particle_in_phase_space: completed."
 

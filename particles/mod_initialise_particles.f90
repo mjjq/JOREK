@@ -14,7 +14,7 @@ module mod_initialise_particles
   public set_particle_weights_canonical_maxwellian, normalize_with_projection
   public weigh_with_interp_f
   public normalize_with_projection_at_gc
-  public real_f,initialise_particles_in_phase_space
+  public real_f,real_arr_inout_s,initialise_particles_in_phase_space
 
   interface
     subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
@@ -47,6 +47,21 @@ module mod_initialise_particles
       !> outputs:
       real*8                                              :: real_f
     end function real_f
+    subroutine real_arr_inout_s(n_x,x,st,time,i_elm,fields,x_min,x_max,&
+    n_real_param,real_param,n_int_param,int_param)
+      use mod_fields, only: fields_base
+      !> inputs:
+      integer,intent(in)                                  :: n_x,i_elm
+      integer,intent(in)                                  :: n_real_param,n_int_param
+      integer,dimension(:),allocatable,intent(in)         :: int_param
+      real*8,intent(in)                                   :: time
+      real*8,dimension(n_x),intent(in)                    :: x_min,x_max
+      real*8,dimension(2),intent(in)                      :: st
+      real*8,dimension(:),allocatable,intent(in)          :: real_param
+      class(fields_base),intent(in)                       :: fields
+      !> inputs-outputs:
+      real*8,dimension(n_x),intent(inout)                 :: x
+    end subroutine real_arr_inout_s
   end interface
   interface initialise_particles_in_phase_space
     module procedure initialise_particles_in_phase_space_uniform_sampling

@@ -63,9 +63,6 @@ module mod_initialise_particles
       real*8,dimension(n_x),intent(inout)                 :: x
     end subroutine real_arr_inout_s
   end interface
-  interface initialise_particles_in_phase_space
-    module procedure initialise_particles_in_phase_space_uniform_sampling
-  end interface initialise_particles_in_phase_space
 
 contains
 !> Set positions for particles by rejection sampling from geometric and mhd
@@ -304,18 +301,16 @@ end subroutine initialise_particles
 
 !> Initialise particle in phase space given a generic distribution in space and momentum
 !> space. The acceptance-rejection method is used for generating the particle population.
-!> The particle population is sampled uniformely in the phase space (uniform cylindrical
-!> sampling for the spatical coordinates, uniform spherical sampling for the momentum
-!> coordinates and uniform sampling for the charge state)
-!> It is a dirty implementation so it must be replaced with something better in future.
+!> The particle population is sampled from a generic distribution probability function
+!> gdf. Both the gdf and the gdf sampling routines must be provided as inputs.
 !> Inputs:
 !> Outputs:
-subroutine initialise_particles_in_phase_space_uniform_sampling(particles, fields, &
-  rng_base, pdf, weight_f, gdf, gdf_sampler, sup_pdf, sup_gdf, mass, time, Ekinbound_in, &
-  Pitchbound_in, Chibound_in, Rbound_in, Zbound_in, Phibound_in,chargebound_in, &
-  n_real_pdf_param_in, real_pdf_param_in, n_int_pdf_param_in, int_pdf_param_in,&
-  n_real_weight_param_in, real_weight_param_in, n_int_weight_param_in, int_weight_param_in, &
-  n_real_gdf_param_in, real_gdf_param_in, n_int_gdf_param_in, int_gdf_param_in)
+subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf, weight_f, &
+  gdf, gdf_sampler, sup_pdf, sup_gdf, mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, &
+  Rbound_in, Zbound_in, Phibound_in,chargebound_in, n_real_pdf_param_in, real_pdf_param_in, &
+  n_int_pdf_param_in, int_pdf_param_in,n_real_weight_param_in, real_weight_param_in, &
+  n_int_weight_param_in, int_weight_param_in, n_real_gdf_param_in, real_gdf_param_in, &
+  n_int_gdf_param_in, int_gdf_param_in)
   use constants,                 only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools,          only: get_orthonormals
@@ -462,9 +457,10 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(rejection_funct_uniform_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,&
-        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,one_over_sup_pdf,&
-        n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param))
+      do while(rejection_funct_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,&
+        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,gdf,&
+        one_over_sup_pdf,one_over_sup_gdf,n_real_pdf_param,real_pdf_param,n_int_pdf_param,&
+        int_pdf_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param))
         !> uniform sampling in cylindrical coordinates for the physical space (R,Z,phi),
         !> in spherical coordinates for the momentum space (p,pitch,gyro)
         !> and uniform for the charge state
@@ -512,7 +508,7 @@ subroutine initialise_particles_in_phase_space_uniform_sampling(particles, field
     write(*,*) '**********************************'
   endif
 
-end subroutine initialise_particles_in_phase_space_uniform_sampling
+end subroutine initialise_particles_in_phase_space
 
 !> acceptance - rejection function assuming the sampling pdf to be uniform
 !> inputs:
@@ -524,31 +520,41 @@ end subroutine initialise_particles_in_phase_space_uniform_sampling
 !>   fields:           (fields_base) jorek MHD fields
 !>   pdf:              (real_f) procedure returning the value of the
 !>                     probability density function at a given point
+!>   gdf:              (real_f) procedure returning the value of the
+!>                     probability density function used for generating
+!>                     the variables to be tested
 !>   one_over_sup_pdf: (real8) 1/upper bound of the pdf
+!>   one_over_sup_gdf: (real8) 1/upper bound of the gdf
 !>   n_real_pdf_param: (integer) N# of double parameters of the pdf
 !>   real_pdf_param:   (real8)(n_real_pdf_param) pdf double parameters
 !>   n_int_pdf_param:  (integer) N# of integer parameters of the pdf
 !>   int_pdf_param:    (integer)(n_int_pdf_param) pdf integer parameters
+!>   n_real_gdf_param: (integer) N# of double parameters of the gdf
+!>   real_gdf_param:   (real8)(n_real_pdf_param) gdf double parameters
+!>   n_int_gdf_param:  (integer) N# of integer parameters of the gdf
+!>   int_gdf_param:    (integer)(n_int_pdf_param) gdf integer parameters
 !> outputs:
 !>   rej: (logical) if true the sample is rejected
-function rejection_funct_uniform_gpdf(n_x,x,st,time,i_elm,rand,&
-x_min,x_max,fields,pdf,one_over_sup_pdf,n_real_pdf_param,&
-real_pdf_param,n_int_pdf_param,int_pdf_param) result(rej)
+function rejection_funct_gpdf(n_x,x,st,time,i_elm,rand,&
+x_min,x_max,fields,pdf,gdf,one_over_sup_pdf,one_over_sup_gdf,&
+n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param,&
+n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param) result(rej)
   use mod_fields, only: fields_base
   implicit none
   !> input variables
   class(fields_base),intent(in)    :: fields
   integer,intent(in)               :: n_x,i_elm
   integer,intent(in)               :: n_real_pdf_param, n_int_pdf_param
-  integer,dimension(:),allocatable,intent(in) :: int_pdf_param
-  real*8,intent(in)                :: time,rand,one_over_sup_pdf
+  integer,intent(in)               :: n_real_gdf_param, n_int_gdf_param
+  integer,dimension(:),allocatable,intent(in) :: int_pdf_param,int_gdf_param
+  real*8,intent(in)                :: time,rand,one_over_sup_pdf,one_over_sup_gdf
   real*8,dimension(2)              :: st
   real*8,dimension(n_x),intent(in) :: x,x_min,x_max
-  real*8,dimension(:),allocatable,intent(in) :: real_pdf_param
-  procedure(real_f)                :: pdf
+  real*8,dimension(:),allocatable,intent(in) :: real_pdf_param,real_gdf_param
+  procedure(real_f)                :: pdf,gdf
   !> output variables
   logical :: rej
-  real*8 :: norm_pdf
+  real*8 :: norm_pdf,norm_gdf
 
   !> check if the particle is valid
   rej = .true.
@@ -558,15 +564,22 @@ real_pdf_param,n_int_pdf_param,int_pdf_param) result(rej)
   !> check if the pdf is valid
   norm_pdf = one_over_sup_pdf*pdf(n_x,x,st,time,i_elm,fields,x_min,&
   x_max,n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
+  norm_gdf = one_over_sup_gdf*gdf(n_x,x,st,time,i_elm,fields,x_min,&
+  x_max,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param)
   if(norm_pdf.lt.0d0) then
     write(*,*) 'pdf/sup(pdf) smaller than 0: skip!' 
     return
   endif
+  if(norm_gdf.lt.0d0) then
+    write(*,*) 'gdf/sup(gdf) smaller than 0: skip!' 
+    return
+  endif
   if(norm_pdf.gt.1d0) write(*,*) 'WARNING: normalised pdf > 1: increase the pdf extremum safety factor'
+  if(norm_gdf.gt.1d0) write(*,*) 'WARNING: normalised gdf > 1: increase the pdf extremum safety factor'
   !> reject or accept solution
-  if(rand.le.norm_pdf) rej = .false.
+  if((rand*norm_gdf).le.norm_pdf) rej = .false.
   
-end function rejection_funct_uniform_gpdf
+end function rejection_funct_gpdf
 
 !> Initialise particle positions in E, mu, (psi, theta|R, Z), phi, gamma (gyrophase) space.
 !> Set Psi_transform to transform from [0,1] to your desired range

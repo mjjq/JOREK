@@ -615,6 +615,8 @@ module mod_expression
     real*8  :: m_i_over_m_imp
     !   -Mean impurity ionization state
     real*8  :: Z_imp, T0_Zimp, alpha_Zimp
+    !   -Mean impurity ionization state
+    real*8  :: Z_eff
     !   -Coefficients related to Z_imp
     real*8  :: alpha_imp
     real*8  :: beta_imp

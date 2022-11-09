@@ -379,13 +379,13 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
 
   !> internal variables
   class(type_rng),dimension(:),allocatable :: rngs 
-  integer                                  :: my_id,n_cpu,n_threads,thread_id,ifail
+  integer                                  :: t0,t1,my_id,n_cpu,n_threads,thread_id,ifail
   integer                                  :: ii,jj,n_particles,i_elm
   integer                                  :: n_real_pdf_param,n_int_pdf_param
   integer                                  :: n_real_weight_param,n_int_weight_param
   integer                                  :: n_real_gdf_param,n_int_gdf_param
   integer,dimension(:),allocatable         :: int_pdf_param,int_weight_param,int_gdf_param
-  real*8                                   :: t0,t1,Erest,psi,U
+  real*8                                   :: Erest,psi,U
   real*8                                   :: one_over_sup_pdf,one_over_sup_gdf
   real*8,dimension(2)                      :: st
   real*8,dimension(3)                      :: B,E,e1,e2
@@ -473,7 +473,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   if((present(int_gdf_param_in)).and.(n_int_gdf_param.gt.0)) then
     allocate(int_gdf_param(n_int_gdf_param)); int_gdf_param = int_gdf_param_in;
   endif
-  call cpu_time(t0)
+  call system_clock(t0)
   !> Loop on the particles
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
@@ -538,7 +538,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
 #endif
 
   !> clean-up
-  call cpu_time(t1)
+  call system_clock(t1)
   deallocate(variables); deallocate(rngs);
   if(allocated(real_pdf_param))    deallocate(real_pdf_param)
   if(allocated(int_pdf_param))     deallocate(int_pdf_param)
@@ -546,7 +546,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   if(allocated(int_weight_param))  deallocate(int_weight_param)
   if(allocated(real_gdf_param))    deallocate(real_gdf_param)
   if(allocated(int_gdf_param))     deallocate(int_gdf_param)
-  write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize cpu :',t1-t0
+  write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize cpu :',real(t1-t0,kind=8)/1d3
   if (my_id .eq. 0) then
     write(*,*) '* done initialising particles    *'
     write(*,*) '**********************************'

@@ -314,10 +314,10 @@ module mod_expression
     call add(exprs_all_int, 'LCFS_deltaU   ', 'Upper triangularity   (as in PPCF 55 (2013) 095009)       ')
     call add(exprs_all_int, 'LCFS_deltaL   ', 'Lower triangularity   (as in PPCF 55 (2013) 095009)       ')
 
-    call add(exprs_all_four, 'absolute      ', 'Absolute value of 2D Fourier analysis                  ')
-    call add(exprs_all_four, 'real          ', 'Real part      of 2D Fourier analysis                  ')
-    call add(exprs_all_four, 'imaginary     ', 'Imaginary part of 2D Fourier analysis                  ')
-    call add(exprs_all_four, 'phase         ', 'Complex phase  of 2D Fourier analysis                  ')
+    call add(exprs_all_four, 'absolute      ', 'Absolute value of 2D Fourier analysis                     ')
+    call add(exprs_all_four, 'real          ', 'Real part      of 2D Fourier analysis                     ')
+    call add(exprs_all_four, 'imaginary     ', 'Imaginary part of 2D Fourier analysis                     ')
+    call add(exprs_all_four, 'phase         ', 'Complex phase  of 2D Fourier analysis                     ')
 
   end subroutine init_expr
   

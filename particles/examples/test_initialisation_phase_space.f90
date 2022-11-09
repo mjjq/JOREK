@@ -1044,7 +1044,7 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(weight)
   DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(3)*SPEED_OF_LIGHT)**2)+1.d0)
   weight = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2)
   weight = weight*(cos(x_min(5)+cos(x_max(5))))
-  weight = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3)*real_param(1))/&
+  weight = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
   (weight*real_param(2)*x(7)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
 end function particle_weight_current_density_uniform_phase
 

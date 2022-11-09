@@ -546,7 +546,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   if(allocated(int_weight_param))  deallocate(int_weight_param)
   if(allocated(real_gdf_param))    deallocate(real_gdf_param)
   if(allocated(int_gdf_param))     deallocate(int_gdf_param)
-  write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize cpu :',real(t1-t0,kind=8)/1d3
+  write(*,'(i5,A,2f12.4,A)') my_id, ' Time particle initialize cpu :',real(t1-t0,kind=8)/1d3,'s'
   if (my_id .eq. 0) then
     write(*,*) '* done initialising particles    *'
     write(*,*) '**********************************'

@@ -303,8 +303,42 @@ end subroutine initialise_particles
 !> space. The acceptance-rejection method is used for generating the particle population.
 !> The particle population is sampled from a generic distribution probability function
 !> gdf. Both the gdf and the gdf sampling routines must be provided as inputs.
+!> Check examples/test_initialisation_phase_space.f90 for an example of its usage.
 !> Inputs:
+!>   particles:              (particle_base)(n_particles) particle array to be initialised
+!>   fields:                 (fields_base) jorek MHD fields data structure
+!>   rng_base:               (type_rng) type of random number generator to be used
+!>   pdf:                    (real_f) particle probability density function
+!>   weight_f:               (real_f) method computing the particle weight
+!>   gdf:                    (real_f) probability density function used for sampling 
+!>                           the particle coordinates
+!>   gdf_sampler:            (real_arr_inout_s) method for generating samples of
+!>                           particle coordinates from the gdf probability density
+!>   sup_pdf:                (real8) pdf upper extremum
+!>   sup_gdf:                (real8) gdf upper extremum
+!>   mass:                   (real8) particle mass
+!>   time:                   (real8) physical time at which particles are initialised
+!>   Ekinbound_in:           (real8)(2) kinetic energy upper and lower bounds
+!>   Pitchbound_in:          (real8)(2) pitch angle upper and lower bounds
+!>   Chibound_in:            (real8)(2) gyro-angle upper and lower bounds
+!>   Rbound_in:              (real8)(2) major radius upper and lower bounds
+!>   Zbound_in:              (real8)(2) vertical position upper and lower bounds
+!>   Phibound_in:            (real8)(2) toroidal angle upper and lower bounds
+!>   chargebound_in:         (real8)(2) electric charge upper and lower bounds
+!>   n_real_pdf_param_in:    (integer) number of real parameters of the pdf
+!>   real_pdf_param_in:      (real8)(n_real_pdf_param_in) pdf real parameters
+!>   n_int_pdf_param_in:     (integer) number of integer parameters of the pdf
+!>   int_pdf_param_in:       (integer)(n_int_pdf_param_in) pdf integer parameters
+!>   n_real_weight_param_in: (integer) number of real parameters of the weight
+!>   real_weight_param_in:   (real8)(n_real_weight_param_in) weight real parameters
+!>   n_int_weight_param_in:  (integer) number of integer parameters of the weight
+!>   int_weight_param_in:    (integer)(n_int_weight_param_in) weight integer parameters
+!>   n_real_gdf_param_in:    (integer) number of real parameters of the gdf
+!>   real_gdf_param_in:      (real8)(n_real_gdf_param_in) gdf real parameters
+!>   n_int_gdf_param_in:     (integer) number of integer parameters of the gdf
+!>   int_gdf_param_in:       (integer)(n_int_gdf_param_in) gdf integer parameters
 !> Outputs:
+!>   particles:              (particle_base)(n_particles) initialised particle array
 subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf, weight_f, &
   gdf, gdf_sampler, sup_pdf, sup_gdf, mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, &
   Rbound_in, Zbound_in, Phibound_in,chargebound_in, n_real_pdf_param_in, real_pdf_param_in, &
@@ -317,6 +351,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   use mod_fields,                only: fields_base
   use mod_random_seed,           only: random_seed
   use mod_particle_types,        only: particle_base,particle_kinetic_relativistic
+  use mod_particle_types,        only: particle_kinetic
   use mod_rng
 !$ use omp_lib
   
@@ -478,7 +513,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
      particles(ii)%weight = weight_f(n_variables,variables(1:n_variables),st,time,&
      i_elm,fields,phase_bounds(:,1),phase_bounds(:,2),n_real_weight_param,&
      real_weight_param,n_int_weight_param,int_weight_param)
-     select type (particle=>particles(ii))
+      select type (particle=>particles(ii))
         type is (particle_kinetic_relativistic)
           call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
           B = B/norm2(B); call get_orthonormals(B,e1,e2);
@@ -486,7 +521,16 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
           sin(variables(5))*(cos(variables(6))*e1+sin(variables(6))*e2))
           particle%p = vector_cylindrical_to_cartesian(particle%x(3),particle%p)
           particle%q = int(variables(7),kind=1)
-        end select
+        type is (particle_kinetic) !< compute particle velocity from momentum
+          call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
+          B = B/norm2(B); call get_orthonormals(B,e1,e2);
+          particle%v = variables(4)*(cos(variables(5))*B+&
+          sin(variables(5))*(cos(variables(6))*e1+sin(variables(6))*e2))
+          particle%v = vector_cylindrical_to_cartesian(particle%x(3),particle%v)
+          particle%v = (particle%v*SPEED_OF_LIGHT)/&
+          sqrt((mass*SPEED_OF_LIGHT)**2 + dot_product(particle%v,particle%v))
+          particle%q = int(variables(7),kind=1)           
+      end select
     enddo
 #ifndef __NVCOMPILER
     !$omp end do
@@ -510,7 +554,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
 
 end subroutine initialise_particles_in_phase_space
 
-!> acceptance - rejection function assuming the sampling pdf to be uniform
+!> rejection function of the acceptance - rejection method
 !> inputs:
 !>   n_x:              (integer) number of variables
 !>   x:                (real8)(n_x) variables

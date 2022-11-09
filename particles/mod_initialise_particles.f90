@@ -223,7 +223,8 @@ subroutine initialise_particles(particles, node_list, element_list, rng, variabl
 #endif
     !$omp   shared(particles, node_list, element_list, Rbox, Zbox, PhiBox, varminmax, variables, &
     !$omp          rngs, n_threads, n_streams, seed, my_id, n_mhd, n_geom, i_to_find, not_found) &
-    !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL, success)
+    !$omp   private(j, i, R, Z, phi, i_elm, s, t, ifail, seq, ran, i_thread, P, DUMMY_REAL, success) &
+    !$omp   firstprivate(normalise_uniform_space_rej_vars)
     i_thread = 0
 !$  i_thread=omp_get_thread_num()
     !$omp do schedule(static)

@@ -862,7 +862,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
 #ifdef __GFORTRAN__
     !$omp parallel do default(shared) firstprivate(normalise_uniform_space_rej_vars,varminmax) &
 #else
-    !$omp parallel do default(none) &
+    !$omp parallel do default(none) firstprivate(normalise_uniform_space_rej_vars,varminmax) &
     !$omp   shared(particles_tmp, psimax, psimin, found, F0, cor, mass, charge, T_Maxwell, &
     !$omp          fields, psi_minmax_list, rans, R_axis, Z_axis, blocksize, &
     !$omp          my_include_vpar, central_density, init_uniform_space, Rbox, Zbox, uniform_space_rej_vars, n_geom, n_mhd) &

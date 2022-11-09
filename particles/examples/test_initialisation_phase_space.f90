@@ -54,7 +54,7 @@ call sim%initialize(num_groups=1)
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
 test_case   = 'jorek_current_density_re'
-n_particles = 100000000
+n_particles = 30000000
 nR          = 2
 nZ          = 2
 nphi        = 2
@@ -452,16 +452,12 @@ real_pdf_param_in,n_int_pdf_param_in,int_pdf_param_in)
   integer                  :: ii,jj,kk,pp,qq,rr
   integer                  :: i_elm,ifail,n_real_pdf_param,n_int_pdf_param
   integer,dimension(:),allocatable :: int_pdf_param
-  real*8                   :: one_over_six,dummy_double_1,dummy_double_2
+  real*8                   :: dummy_double_1,dummy_double_2
   real*8,dimension(2)      :: st
   real*8,dimension(nx)     :: x_midpoints,x_min,x_max
-  real*8,dimension(nR)     :: R2mesh
-  real*8,dimension(np)     :: p3mesh
-  real*8,dimension(npitch) :: cospitchmesh
   real*8,dimension(:),allocatable :: real_pdf_param
   !> initialisation
-  one_over_six = 1.d0/6.d0; pdf_midpoints = 0.d0; 
-  x_midpoints = [0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,charge];
+  pdf_midpoints = 0.d0; x_midpoints = [0.d0,0.d0,0.d0,0.d0,0.d0,0.d0,charge];
   x_min = [Rmesh(1),Zmesh(1),phimesh(1),pmesh(1),pitchmesh(1),gyromesh(1),charge]
   x_max = [Rmesh(nR),Zmesh(nZ),phimesh(nphi),pmesh(np),pitchmesh(npitch),gyromesh(ngyro),charge]
   n_real_pdf_param = 0; if(present(n_real_pdf_param_in)) n_real_pdf_param = n_real_pdf_param_in;
@@ -475,7 +471,7 @@ real_pdf_param_in,n_int_pdf_param_in,int_pdf_param_in)
   !> loop over all midpoints, try with openmp collapse clause first. If slow,
   !> manually collapse all loops in one
   !$omp parallel do default(shared) &
-  !$omp firstprivate(ngyro,npitch,np,nphi,nZ,nR,one_over_six,time,x_midpoints,x_min,x_max,&
+  !$omp firstprivate(ngyro,npitch,np,nphi,nZ,nR,time,x_midpoints,x_min,x_max,&
   !$omp n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param) &
   !$omp private(ii,jj,kk,pp,qq,rr,i_elm,st,dummy_double_1,dummy_double_2) &
   !$omp collapse(6)
@@ -486,9 +482,8 @@ real_pdf_param_in,n_int_pdf_param_in,int_pdf_param_in)
           do qq=1,nZ-1
             do rr=1,nR-1
               !> compute midpoint in the local mesh cell
-              x_midpoints(1:6) = [Rmesh(rr),Zmesh(qq),phimesh(pp),pmesh(kk),&
-              pitchmesh(jj),gyromesh(ii)] + 5.d-1*([Rmesh(rr+1),Zmesh(qq+1),&
-              phimesh(pp+1),pmesh(kk+1),pitchmesh(jj+1),gyromesh(ii+1)] - &
+              x_midpoints(1:6) = 5.d-1*([Rmesh(rr+1),Zmesh(qq+1),&
+              phimesh(pp+1),pmesh(kk+1),pitchmesh(jj+1),gyromesh(ii+1)] + &
               [Rmesh(rr),Zmesh(qq),phimesh(pp),pmesh(kk),pitchmesh(jj),gyromesh(ii)])
               !> find local JOREK mesh coordinates 
               call find_RZ(fields%node_list,fields%element_list,x_midpoints(1),&

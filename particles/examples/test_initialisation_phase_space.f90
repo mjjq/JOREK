@@ -17,6 +17,7 @@ use mod_expression,  only: exprs_all_int,init_expr,exprs,SI_UNITS
 use mod_integrals3D, only: int3d_new
 use mod_random_seed
 use particle_tracer
+use mod_particle_io, only: write_simulation_hdf5
 implicit none
 
 !> Variable declarations --------------------------------------------------------------------
@@ -32,7 +33,8 @@ integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:,:,:,:,:,:),allocatable :: histo
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,gdf_upper_bound
-real*8                       :: sup_pdf_safety_factor
+real*8                       :: sup_pdf_safety_factor,n_tot_phys_particles
+real*8                       :: error_n_phys_particles,error_n_phys_particles_norm
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(6)          :: var_min,var_max   
@@ -43,6 +45,7 @@ real*8,dimension(:,:,:,:,:,:),allocatable :: expected_pdf,pdf_at_midpoints
 character(len=125)                        :: test_case,particle_filename,mesh_filename_root
 character(len=125)                        :: particle_pdf_filename,exact_pdf_filename
 character(len=125)                        :: particle_histo_filename
+character(len=15)                         :: particle_restart_filename
 character(len=:),allocatable              :: jorek_filename
 procedure(real_f),pointer                 :: pdf_to_use=>NULL()
 procedure(real_f),pointer                 :: weight_to_use=>NULL()
@@ -78,6 +81,7 @@ mesh_filename_root      = 'jorek_kinetic_mesh_'
 particle_histo_filename = 'jorek_histogram_from_particles.txt'
 particle_pdf_filename   = 'jorek_pdf_from_particles.txt'
 exact_pdf_filename      = 'jorek_exact_pdf_at_midpoints.txt'
+particle_restart_filename = 'part_restart.h5'
 n_int_pdf_param         = 0
 n_real_pdf_param        = 0
 sup_pdf_safety_factor   = 1d0
@@ -135,6 +139,12 @@ if(trim(test_case)=='jorek_current_density_re') then
   exprs('int_jR_3d_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
   real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass]; 
   deallocate(DUMMY_REAL_ARRAY);
+  !> compute the total number of physical particles
+  n_tot_phys_particles = n_physical_particle_current_density_uniform_phase(7,start_time,&
+  sim%fields,[var_min(1),var_min(2),var_min(3),var_min(4),var_min(5),&
+  var_min(6),charge],[var_max(1),var_max(2),var_max(3),var_max(4),&
+  var_max(5),var_max(6),charge],n_real_weight_param,real_weight_param,&
+  n_int_weight_param,int_weight_param)
 elseif(trim(test_case)=='uniform_weight') then
   write(*,*) 'SELECTED: WEIGHTED PDF UNIFORM!'
   n_real_pdf_param = 2; allocate(real_pdf_param(n_real_pdf_param));
@@ -149,12 +159,20 @@ elseif(trim(test_case)=='uniform_weight') then
   exprs('volume',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
   real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8)]; 
   deallocate(DUMMY_REAL_ARRAY);
+  !> compute total number of physical particles
+  n_tot_phys_particles = n_physical_particle_weight_uniform(7,start_time,&
+  sim%fields,[var_min(1),var_min(2),var_min(3),var_min(4),var_min(5),&
+  var_min(6),charge],[var_max(1),var_max(2),var_max(3),var_max(4),&
+  var_max(5),var_max(6),charge],n_real_weight_param,real_weight_param,&
+  n_int_weight_param,int_weight_param)
 else
   write(*,*) 'SELECTED: PDF UNIFORM (DEFAULT)!'
   pdf_to_use    => pdf_uniform
   weight_to_use => weight_uniform_one
   pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
   real_pdf_param,n_int_pdf_param,int_pdf_param)
+  !> compute total number of physical particles
+  n_tot_phys_particles = real(n_particles,kind=8)
 endif
 !> select gdf to use
 n_real_gdf_param = 0; n_int_gdf_param = 0;
@@ -183,7 +201,8 @@ select type(plist=>sim%groups(1)%particles)
 end select
 
 !> Compute the input pdf at the mesh element midpoints and the L2 error w.r.t. the 
-!> the expected pdf from the  particle histogram --------------------------------------------
+!> the expected pdf from the  particle histogram and the error on the 
+!> total number of physical particles
 write(*,*) "... computing the input pdf at the midpoints of the mesh elements"
 call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,nchi,Rmesh,Zmesh,phimesh,&
      pmesh,pitchmesh,chimesh,charge,start_time,pdf_to_use,sim%fields,n_real_pdf_param,&
@@ -191,15 +210,21 @@ call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,nchi,Rmesh,
 write(*,*) "... computing L2 error"
 call compute_error_norm2_ndim6(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
 npitch-1,nchi-1,expected_pdf,pdf_at_midpoints,pdf_upper_bound) 
+call compute_error_tot_n_phys_particles(error_n_phys_particles,error_n_phys_particles_norm,&
+n_tot_phys_particles,sim%groups(1)%particles)
 
 !> Log test results -------------------------------------------------------------------------
 write(*,*) "... logging test results"
 write(*,*) "L2 error between the expected pdf from particle histogram and the input pdf at mid points: ",error
 write(*,*) "L2 error normalized to the maximum of the input pdf: ",error_norm
 write(*,*) "L2 error averaged and normalised to the maximum of the input pdf: ",error_avg_norm
+write(*,*) "Error on the total number of physical particles: ",error_n_phys_particles
+write(*,*) "Error on the total number of physical particles normalised: ",error_n_phys_particles_norm
 write(*,*) " "
 
 !> Write data into file ---------------------------------------------------------------------
+write(*,*) "... write particle restart file"
+call write_simulation_hdf5(sim,trim(particle_restart_filename))
 write(*,*) "... writing data in files"
 call dump_kinetic_particles_in_txt(n_particles,sim%groups(1)%particles,sim%groups(1)%mass,&
 start_time,sim%fields,particle_filename,ifail)
@@ -264,6 +289,40 @@ n1,n2,n3,n4,n5,n6,array1,array2,sup_array2)
   error_L2 = sqrt(error); error_L2_norm = error_L2/abs(sup_array2);
   error_L2_norm = sqrt(error/(n1*n2*n3*n4*n5*n6))/abs(sup_array2)
 end subroutine compute_error_norm2_ndim6
+
+!> compute the error between the expected total number of physical particles
+!> from pdf integration and the actual total number of physical particles 
+!> stored in the particles data structure
+!> inputs:
+!>   n_tot_phys_particles: (real8) expected number of physical particles
+!>   particles:            (particle_base) the list of particles 
+!>                         to be tested
+!> outputs:
+!>   error_n_phys_particles: (real8) error of the total number of physical particles
+subroutine compute_error_tot_n_phys_particles(error_n_phys_particles,&
+error_n_phys_particles_norm,n_tot_phys_particles,particles)
+  use mod_particle_types, only: particle_base
+  implicit none
+  !> Inputs:
+  real*8,intent(in)  :: n_tot_phys_particles
+  class(particle_base),dimension(:),allocatable :: particles
+  !> Outputs:
+  real*8,intent(out) :: error_n_phys_particles,error_n_phys_particles_norm
+  !> Variables:
+  integer :: ii,n_num_particles
+  real*8 :: n_phys_particles_num
+  !> compute the total number of physical particles from 
+  !> particle simulations
+  n_num_particles = size(particles); n_phys_particles_num = 0.d0;
+  !$omp parallel do default(none) shared(particles) private(ii) &
+  !$omp firstprivate(n_num_particles) reduction(+:n_phys_particles_num)
+  do ii=1,n_num_particles
+    n_phys_particles_num = n_phys_particles_num + particles(ii)%weight
+  enddo
+  !$omp end parallel do
+  error_n_phys_particles = abs(n_phys_particles_num-n_tot_phys_particles)
+  error_n_phys_particles_norm = error_n_phys_particles/n_tot_phys_particles
+end subroutine compute_error_tot_n_phys_particles
 
 !> compute the particle histogram and estimate the pdf using bins of constant volume
 !> inputs:
@@ -1047,5 +1106,85 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(weight)
   weight = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
   (weight*real_param(2)*x(7)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
 end function particle_weight_current_density_uniform_phase
+
+!> Compute the total number of physical particles for the weight uniform pdf
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   time:         (real8) physical time at wich the particle is sampled
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   fields:       (fields_base) jorek MHD fields
+!>   n_real_param: (integer) N# of real input parameters
+!>   real_param:   (real8)(n_real_param) real weight parameters
+!>                 1) plasma volume in SI units
+!>                 2) total number of particles 
+!>   n_int_param:  (integer) N# of integer input parameters
+!>   int_param:    (integer)(n_int_param) integer weight parameters
+!> outputs:
+!>   n_phys_part:  (real8) number of physical particles
+function n_physical_particle_weight_uniform(nx,time,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(n_phys_part)
+  use constants,  only: EL_CHG,SPEED_OF_LIGHT
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  class(fields_base),intent(in)               :: fields
+  integer,intent(in)                          :: nx,n_real_param,n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: n_phys_part
+  n_phys_part = real_param(1)
+end function n_physical_particle_weight_uniform
+
+!> Compute the total number of physical particles of the current density -
+!> uniform momentum space distribution
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   time:         (real8) physical time at wich the particle is sampled
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   fields:       (fields_base) jorek MHD fields
+!>   n_real_param: (integer) N# of real input parameters
+!>   real_param:   (real8)(n_real_param) real weight parameters
+!>                 1) 3D integral of the plasma density in SI units
+!>                 2) total number of particles
+!>                 3) mass in AMU 
+!>   n_int_param:  (integer) N# of integer input parameters
+!>   int_param:    (integer)(n_int_param) integer weight parameters
+!> outputs:
+!>   n_phys_part:  (real8) number of physical particles
+function n_physical_particle_current_density_uniform_phase(nx,time,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(n_phys_part)
+  use constants,  only: EL_CHG,SPEED_OF_LIGHT
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  class(fields_base),intent(in)               :: fields
+  integer,intent(in)                          :: nx,n_real_param,n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: n_phys_part
+  !> Variables:
+  real*8 :: DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
+  !> Compute the particle weight
+  DUMMY_DOUBLE_1 = sqrt((x_max(4)**2)/((real_param(3)*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(3)*SPEED_OF_LIGHT)**2)+1.d0)
+  n_phys_part = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2)
+  n_phys_part = n_phys_part*(cos(x_min(5)+cos(x_max(5))))
+  n_phys_part = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
+  (n_phys_part*x_min(7)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
+end function n_physical_particle_current_density_uniform_phase
 
 end program test_initialisation_phase_space

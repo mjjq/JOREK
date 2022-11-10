@@ -153,13 +153,10 @@ endif
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-!$omp          ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius, ns_deltaphi, ns_tor_norm,          &
-!$omp          spi_tor_rot, t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube,                   &
-!$omp          JET_MGI,ASDEX_MGI, central_mass, pellets, tor_frequency,                        &
-!$omp          ns_radius_ratio, ns_radius_min, spi_shard_file,                                 &
-#endif
-#ifdef WITH_Neutrals
-!$omp          local_n_particles_inj, local_n_particles,                                       &
+!$omp          local_n_particles_inj, local_n_particles, ns_amplitude, ns_R, ns_Z,             &
+!$omp          ns_phi, ns_radius, ns_deltaphi, ns_tor_norm, spi_tor_rot,                       &
+!$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
+!$omp          central_mass, pellets, tor_frequency,                                           &
 #endif
 !$omp          wgauss_copy,varmin,varmax)                                                      &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i,                       &
@@ -186,7 +183,7 @@ omp_tid      = 0
 #endif
 
 !$omp do reduction(+:local_pellet_particles, local_plasma_particles, local_pellet_volume,     &
-#ifdef WITH_Neutrals
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &

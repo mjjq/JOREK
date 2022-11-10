@@ -32,34 +32,12 @@ module mod_sampling
   public :: sample_discrete
   public :: sample_piecewise_linear
   public :: cross_product
-  public :: sample_uniform_cone
-  public :: sample_uniform_sphere
-  public :: sample_uniform_sphere_corona_rthetaphi
-  public :: sample_uniform_sphere_corona_rcosphi
+
   !> Switch here which procedure to use by default. The other ones can be found
   !> by their name
   interface normal_vectors
     module procedure normal_vectors_frisvad
   end interface normal_vectors
-
-  interface transform_uniform_cylindrical
-    module procedure transform_uniform_cylindrical_scalar
-    module procedure transform_uniform_cylindrical_square
-  end interface transform_uniform_cylindrical
-
-  interface sample_uniform_cone
-    module procedure sample_uniform_standard_cone
-    module procedure sample_uniform_direction_cone
-    module procedure sample_uniform_direction_length_cone
-  end interface sample_uniform_cone
-
-  interface sample_uniform_sphere_corona_rthetaphi
-    module procedure sample_uniform_sphere_corona_rthetaphi_r8
-  end interface sample_uniform_sphere_corona_rthetaphi
-
-  interface sample_uniform_sphere_corona_rcosphi
-    module procedure sample_uniform_sphere_corona_rcosphi_r8
-  end interface sample_uniform_sphere_corona_rcosphi
 
   !> The Thompson distribution with parameters E_b and n
   type, extends(ddfun) :: thompson_dist
@@ -75,7 +53,7 @@ module mod_sampling
 contains
   !> Transform three uniform random numbers in [0,1] to 
   !> Uniform random numbers in cylindrical coordinates (R,Z,Phi)
-  pure subroutine transform_uniform_cylindrical_scalar(ran3, Rbox, Zbox, Phibox, R, Z, Phi)
+  pure subroutine transform_uniform_cylindrical(ran3, Rbox, Zbox, Phibox, R, Z, Phi)
     implicit none
     real*8, dimension(3), intent(in) :: ran3
     real*8, intent(in), dimension(2) :: Rbox, Zbox, Phibox
@@ -85,26 +63,7 @@ contains
     R   = sqrt(ran3(1) * (Rbox(2)**2-Rbox(1)**2) + Rbox(1)**2)
     Z   = (Zbox(2)-Zbox(1))*ran3(2) + Zbox(1)
     phi = (Phibox(2)-Phibox(1))*ran3(3) + Phibox(1)
-  end subroutine transform_uniform_cylindrical_scalar
-
-  !> Transform three uniform random numbers in [0,1] to 
-  !> uniform random numbers in cylindrical coordinates (R,Z,phi)
-  !> inputs:
-  !>   ran3:   (real8)(3) array of three random numbers within [0,1]
-  !>   Rbox2:  (real8)(2) squared of the major radius bounding box
-  !>   Zbox:   (real8)(2) bounding box of the vertical position
-  !>   phibox: (real8)(2) bounding box of the toroidal angle
-  !> outputs:
-  !>   RZPhi:  (real8)(3) uniform sample in cilyndrical coordinates
-  pure subroutine transform_uniform_cylindrical_square(ran3,Rbox2,Zbox,phibox,RZPhi)
-    implicit none
-    real*8,dimension(3),intent(in)  :: ran3
-    real*8,dimension(2),intent(in)  :: Rbox2,Zbox,phibox
-    real*8,dimension(3),intent(out) :: RZPhi
-    RZPhi = (/sqrt(Rbox2(1)+(Rbox2(2)-Rbox2(1))*ran3(1)),&
-            Zbox(1)+(Zbox(2)-Zbox(1))*ran3(2),&
-            phibox(1)+(phibox(2)-phibox(1))*ran3(3)/)
-  end subroutine transform_uniform_cylindrical_square
+  end subroutine transform_uniform_cylindrical
 
   !> Transform 2N uniform random numbers in [0,1] to
   !> gaussian-distributed random numbers with mean 0 and sigma 1
@@ -121,6 +80,7 @@ contains
           [cos(TWOPI*ran(i+1)), sin(TWOPI*ran(i+1))]
     end do
   end function boxmueller_transform
+
 
   !> Transform a uniformly distributed number u on [0,1] into a normally distributed
   !> number by inverse transform sampling (slow!)
@@ -142,6 +102,7 @@ contains
                        y0=u, x0=x0, x=x, ierr=ierr)
     ! Dangerous: ignore ierr for now
   end function sample_gaussian
+
 
   !> Sample from a Knudsen cosine distribution, representing well the angle
   !> of sputtered particles
@@ -281,6 +242,9 @@ contains
     P = sign((1-abs(x))*exp(-abs(x)*0.5d0)/(2.d0*sqrt(2.d0*PI*abs(x))), x)
   end function PDF_prime_chi_squared_3
 
+
+
+
   !> PDF of a gaussian (normal) distribution with sigma = 1 and mu = 0
   pure function PDF_gaussian(x) result(P)
     use constants, only: PI
@@ -303,6 +267,8 @@ contains
     real*8             :: P
     P = 0.5d0*(1.d0 + erf(x/sqrt(2.d0)))
   end function CDF_gaussian
+
+
 
   !> ---- Thompson distribution sampling functions (CDF, PDF, PDF')
   !> \( \mathrm{CDF}(x) = \left[ 1 - E_b^{n-1} \frac{E_b + n x}{(E_b + x)^n} \right] \)
@@ -334,6 +300,7 @@ contains
         (this%E_b - real(this%n,8)*abs(x))/((abs(x) + this%E_b)**(this%n+2))
     DPDF_thompson = sign(1.d0, x)*DPDF_thompson ! if x < 0 inverse the result
   end function DPDF_thompson
+
 
   !> We make a very shitty estimate of this function from some scaling arguments
   !> We could do much better by minimizing the integral of some parametrized
@@ -368,6 +335,9 @@ contains
     end select
   end function guess_inverse_CDF_thompson
 
+
+
+
   !> Transform a uniformly distributed number u on [0,1) into a number distributed
   !> with the passed dist by inverse transform sampling.
   function sample_dist(dist, u) result(x)
@@ -388,6 +358,7 @@ contains
       write(*,*) "Guess quality", dist%inverse_f(u), x
     end if
   end function sample_dist
+
 
   !> Sample from a discrete distribution, i.e. a list of probabilities.
   !> This is done by calculating the cumulative sum array and bisecting it with our
@@ -427,6 +398,8 @@ contains
     end do
     i_out = size(p,1) ! it must be the last one?
   end function sample_discrete
+
+
 
   !> Sample from a linearly interpolated probability density
   !> This is done by calculating the cumulative sum array and bisecting it with our
@@ -475,161 +448,12 @@ contains
     end do
   end function sample_piecewise_linear
 
-  !> uniform sampling of the oriented cone modifing the ray length
-  !> inputs:
-  !>   cos_half_angle: (real8) cosinus of the cone half angle 
-  !>   u:              (real8)(2) random numbers
-  !>   dir:            (real8)(3) vector providing the direction
-  !>   origin:         (real8)(3) new cone origin
-  !>   len_int:        (real8)(2) length interval
-  !> outputs:
-  !>   ray: (real8)(3) point on the directional unit cone
-  function sample_uniform_direction_length_cone(cos_half_angle,u,dir,&
-  origin,len_int) result(ray)
-    implicit none
-    real*8,intent(in)              :: cos_half_angle
-    real*8,dimension(2),intent(in) :: len_int
-    real*8,dimension(3),intent(in) :: u,dir,origin
-    real*8,dimension(3)            :: ray
-    real*8                         :: length
-    real*8,dimension(3)            :: delta
-    !> compute oriented cone
-    ray = sample_uniform_direction_cone(cos_half_angle,u(1:2),dir,origin)
-    !> modify ray length
-    length = len_int(1) + (len_int(2)-len_int(1))*u(3)
-    delta = ray-origin
-    ray = origin + (delta/sqrt(delta(1)*delta(1)+delta(2)*delta(2)+&
-    delta(3)*delta(3)))*length
- end function sample_uniform_direction_length_cone
+pure function cross_product(a, b)
+  real*8, dimension(3) :: cross_product
+  real*8, dimension(3), intent(in) :: a, b
 
-  !> uniform sampling of the oriented cone given its half aperture angle
-  !> and a direction. Possible to modify the cone origin has well
-  !> inputs:
-  !>   cos_half_angle: (real8) cosinus of the cone half angle 
-  !>   u:              (real8)(2) random numbers
-  !>   dir:            (real8)(3) vector providing the direction
-  !>   origin:         (real8)(3) new cone origin
-  !> outputs:
-  !>   ray: (real8)(3) point on the directional unit cone
-  function sample_uniform_direction_cone(cos_half_angle,u,dir,origin) result(ray)
-    implicit none
-    real*8,intent(in) :: cos_half_angle
-    real*8,dimension(2),intent(in) :: u
-    real*8,dimension(3),intent(in) :: dir,origin
-    real*8,dimension(3)            :: ray
-    real*8                         :: cos_alpha,cos_beta !< spherical coord.
-    real*8                         :: sin_alpha,sin_beta               
-    real*8,dimension(3)            :: t_vec 
-    real*8,dimension(3,3)          :: rot_matrix
-    !> compute 
-    t_vec = dir/sqrt(dir(1)*dir(1)+dir(2)*dir(2)+dir(3)*dir(3))
-    cos_alpha = acos(t_vec(3)); cos_beta = atan2(t_vec(2),t_vec(1));
-    sin_alpha = sin(cos_alpha); sin_beta = sin(cos_beta);
-    cos_alpha = cos(cos_alpha); cos_beta = cos(cos_beta);
-    !> compute random points on the standard sphere
-    ray = sample_uniform_standard_cone(cos_half_angle,u)
-    !> rotate the array along the dir direction
-    rot_matrix(:,1) = (/-sin_beta,cos_beta,0.d0/)
-    rot_matrix(:,2) = (/cos_beta*cos_alpha,sin_beta*cos_alpha,-sin_alpha/)
-    rot_matrix(:,3) = (/cos_beta*sin_alpha,sin_beta*sin_alpha,cos_alpha/)
-    ray = matmul(rot_matrix,ray)
-    !> modify cone origin
-    ray = origin + ray
-  end function sample_uniform_direction_cone 
-
-  !> uniform sampling of the standard cone given its half aperture angle
-  !> the cone axis is assumed to be along the unit sphere north pole
-  !> the direction is given in cartesian coordinates
-  !> inputs:
-  !>   cos_half_angle: (real8) cosinus of the half angle
-  !>   u:              (real8)(2) random number uniformly distributed
-  !> outputs
-  !>   ray: (real8)(3) point on the standard unit cone
-  function sample_uniform_standard_cone(cos_half_angle,u) result(ray)
-    use constants, only: TWOPI
-    implicit none
-    real*8,intent(in)              :: cos_half_angle
-    real*8,dimension(2),intent(in) :: u
-    real*8,dimension(3)            :: ray
-    real*8                         :: z2
-    real*8 ,dimension(2)           :: zphi
-    !zphi =(/0.d0,cos_half_angle/) + (/TWOPI,1.d0-cos_half_angle/)*u
-    zphi(1) = TWOPI*u(1)
-    zphi(2) = cos_half_angle + (1.d0-cos_half_angle)*u(2)
-    z2 = sqrt(1.d0-zphi(2)*zphi(2))
-    ray = (/z2*cos(zphi(1)),z2*sin(zphi(1)),zphi(2)/)
-  end function sample_uniform_standard_cone
-
-  !> uniform sampling in a sphere volume
-  !> inputs:
-  !>   u:         (real8)(3) uniform random numbers
-  !>   R:         (real8) sphere radius
-  !>   cos_theta: (real8)(2) interval of the cosinus of the colatitude  in [-1,1]
-  !>   phi:       (real8)(2) azimuth interval in [0,2*pi]
-  !> outputs: 
-  !>   RThetaPhi: (real8)(3) random R,theta,phi coordinates
-  function sample_uniform_sphere(R,cos_theta,phi,u) result(RThetaPhi)
-    implicit none
-    !> inputs:
-    real*8,intent(in) :: R
-    real*8,dimension(2),intent(in) :: cos_theta,phi
-    real*8,dimension(3),intent(in) :: u
-    !> outputs:
-    real*8,dimension(3) :: RThetaPhi
-    !> compute uniform samples
-    RThetaPhi = (/R*(u(1)**(1.d0/3.d0)),&
-                acos((cos_theta(2)-cos_theta(1))*u(2)+cos_theta(1)),&
-                phi(1)+(phi(2)-phi(1))*u(3)/)
-  end function sample_uniform_sphere 
-
-  !> sampling sphere corona using angles coordinates
-  !> inputs:
-  !>   R_cube:    (real8)(2) cube of the sphere radius interval
-  !>   cos_theta: (real8)(2) interval of the cosinus of the colatitude in [-1,1]
-  !>   phi:       (real8)(2) azimuth interval in [0,2*pi]
-  !>   u:         (real8)(3) uniform random numbers in [0,1]
-  !> outputs:
-  !>   RThetaPhi: (real8)(3) radom radius, colatitude and azimuth
-  function sample_uniform_sphere_corona_rthetaphi_r8(R_cube,cos_theta,phi,u) result(RThetaPhi)
-    implicit none
-    !> inputs:
-    real*8,dimension(2),intent(in) :: R_cube,cos_theta,phi
-    real*8,dimension(3),intent(in) :: u
-    !> outputs:
-    real*8,dimension(3) :: RThetaPhi
-    !> compute uniform samples
-    RThetaPhi = (/(R_cube(1)+(R_cube(2)-R_cube(1))*u(1))**(1.d0/3.d0),&
-    acos(cos_theta(1) + (cos_theta(2)-cos_theta(1))*u(2)),&
-    phi(1) + (phi(2)-phi(1))*u(3)/)
-  end function sample_uniform_sphere_corona_rthetaphi_r8
-
-  !> sampling sphere corona using R, cosinus, azimuth coordinates
-  !> inputs:
-  !>   R_cube:    (real8)(2) cube of the sphere radius interval
-  !>   cos_theta: (real8)(2) interval of the cosinus of the colatitude in [-1,1]
-  !>   phi:       (real8)(2) azimuth interval in [0,2*pi]
-  !>   u:         (real8)(3) uniform random numbers in [0,1]
-  !> outputs:
-  !>   RCosPhi: (real8)(3) radom radius, cosinus of the colatitude and azimuth
-  function sample_uniform_sphere_corona_rcosphi_r8(R_cube,cos_theta,phi,u) result(RCosPhi)
-    implicit none
-    !> inputs:
-    real*8,dimension(2),intent(in) :: R_cube,cos_theta,phi
-    real*8,dimension(3),intent(in) :: u
-    !> outputs:
-    real*8,dimension(3) :: RCosPhi
-    !> compute uniform samples
-    RCosPhi = (/(R_cube(1)+(R_cube(2)-R_cube(1))*u(1))**(1.d0/3.d0),&
-    cos_theta(1) + (cos_theta(2)-cos_theta(1))*u(2),&
-    phi(1) + (phi(2)-phi(1))*u(3)/)
-  end function sample_uniform_sphere_corona_rcosphi_r8
-
-  pure function cross_product(a, b)
-    real*8, dimension(3) :: cross_product
-    real*8, dimension(3), intent(in) :: a, b
-
-    cross_product(1) = a(2) * b(3) - a(3) * b(2)
-    cross_product(2) = a(3) * b(1) - a(1) * b(3)
-    cross_product(3) = a(1) * b(2) - a(2) * b(1)
-  end function cross_product
+  cross_product(1) = a(2) * b(3) - a(3) * b(2)
+  cross_product(2) = a(3) * b(1) - a(1) * b(3)
+  cross_product(3) = a(1) * b(2) - a(2) * b(1)
+end function cross_product
 end module mod_sampling

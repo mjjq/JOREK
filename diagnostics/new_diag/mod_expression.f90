@@ -41,7 +41,7 @@ module mod_expression
   
   ! --- Constants
   character(len=14), parameter, private :: THIS_MOD_NAME = 'mod_expression'
-  integer,           parameter, private :: LEN_NAME      = 13
+  integer,           parameter, private :: LEN_NAME      = 12
   integer,           parameter, private :: LEN_DESCR     = 57
   integer,           parameter, private :: LEN_DOMAIN    = 12
   integer,           parameter, private :: N_EXPR_MAX    = 2000
@@ -218,7 +218,7 @@ module mod_expression
     call add(exprs_all, 'ExB_norm     ', 'EM energy flux, Poynting vector (normal to boundary)      ', 'boundary    ')
     call add(exprs_all, 'gradP_norm   ', 'Total pressure gradient normal to the boundary            ', 'boundary    ')
 #if JOREK_MODEL >= 303
-    call add(exprs_all, 'J_bootstrap ', 'Bootstrap Current                                          ')
+    call add(exprs_all, 'J_bootstrap  ', 'Bootstrap Current                                          ')
 #endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     call add(exprs_all, 'radiation    ', 'Radiation terms for bolometry diagnostic                  ')
@@ -234,18 +234,18 @@ module mod_expression
     call add(exprs_all_int, 'Z_axis       ', 'Z of magnetic axis                                        ')
     call add(exprs_all_int, 'R_curr_cent  ', 'R current centroid,    doi:10.1088/0029-5515/38/5/307     ')  ! See equation 39
     call add(exprs_all_int, 'Z_curr_cent  ', 'Z current centroid,    doi:10.1088/0029-5515/38/5/307     ')  ! in the reference
-    call add(exprs_all_int, 'psi_bnd       ', 'psi at boundary point (defining LCFS)                   ')
-    call add(exprs_all_int, 'R_bnd         ', 'R of boundary point                                     ')
-    call add(exprs_all_int, 'Z_bnd         ', 'Z of boundary point                                     ')
-    call add(exprs_all_int, 'E_tot         ', 'Total energy                                            ')
-    call add(exprs_all_int, 'E_in          ', 'Energy (inside  LCFS)                                   ')
-    call add(exprs_all_int, 'E_out         ', 'Energy (outside LCFS)                                   ')
-    call add(exprs_all_int, 'Wmag_tot      ', 'Total magnetic energy                                   ')
-    call add(exprs_all_int, 'Wmag_in       ', 'Magnetic energy (inside  LCFS)                          ')
-    call add(exprs_all_int, 'Wmag_out      ', 'Magnetic energy (outside LCFS)                          ')
-    call add(exprs_all_int, 'Thermal_tot   ', 'Total thermal energy                                    ')
-    call add(exprs_all_int, 'Thermal_in    ', 'Thermal energy (inside  LCFS)                           ')
-    call add(exprs_all_int, 'Thermal_out   ', 'Thermal energy (outside LCFS)                           ')
+    call add(exprs_all_int, 'psi_bnd      ', 'psi at boundary point (defining LCFS)                   ')
+    call add(exprs_all_int, 'R_bnd        ', 'R of boundary point                                     ')
+    call add(exprs_all_int, 'Z_bnd        ', 'Z of boundary point                                     ')
+    call add(exprs_all_int, 'E_tot        ', 'Total energy                                            ')
+    call add(exprs_all_int, 'E_in         ', 'Energy (inside  LCFS)                                   ')
+    call add(exprs_all_int, 'E_out        ', 'Energy (outside LCFS)                                   ')
+    call add(exprs_all_int, 'Wmag_tot     ', 'Total magnetic energy                                   ')
+    call add(exprs_all_int, 'Wmag_in      ', 'Magnetic energy (inside  LCFS)                          ')
+    call add(exprs_all_int, 'Wmag_out     ', 'Magnetic energy (outside LCFS)                          ')
+    call add(exprs_all_int, 'Thermal_tot  ', 'Total thermal energy                                    ')
+    call add(exprs_all_int, 'Thermal_in   ', 'Thermal energy (inside  LCFS)                           ')
+    call add(exprs_all_int, 'Thermal_out  ', 'Thermal energy (outside LCFS)                           ')
     call add(exprs_all_int, 'Thermal_e_tot', 'Total electron thermal energy                            ')
     call add(exprs_all_int, 'Thermal_e_in ', 'Thermal electron energy (inside  LCFS)                   ')
     call add(exprs_all_int, 'Thermal_e_out', 'Thermal electron energy (outside LCFS)                   ')

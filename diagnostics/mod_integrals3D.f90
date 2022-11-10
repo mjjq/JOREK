@@ -2029,13 +2029,13 @@ if (my_id .eq. 0) then
       case ( 'Ip_out' )
         res(iexpr+1) = current_out 
 
-      case ( 'int_jR_3d_tot' )
+      case ( 'int3d_jR_tot' )
         res(iexpr+1) = current_R_tot 
 
-      case ( 'int_jR_3d_in' )
+      case ( 'int3d_jR_in' )
         res(iexpr+1) = current_R_in 
 
-      case ( 'int_jR_out' )
+      case ( 'int3d_jR_out' )
         res(iexpr+1) = current_R_out 
 
       case ( 'li3' )

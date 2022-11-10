@@ -57,7 +57,7 @@ call sim%initialize(num_groups=1)
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
 test_case   = 'jorek_current_density_re'
-n_particles = 30000000
+n_particles = 100000000
 nR          = 2
 nZ          = 2
 nphi        = 2
@@ -136,7 +136,7 @@ if(trim(test_case)=='jorek_current_density_re') then
   allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
   call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,.false.)
   call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
-  exprs('int_jR_3d_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
+  exprs('int3d_jR_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
   real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass]; 
   deallocate(DUMMY_REAL_ARRAY);
   !> compute the total number of physical particles

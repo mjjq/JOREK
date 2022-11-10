@@ -68,8 +68,8 @@ contains
 !> Set positions for particles by rejection sampling from geometric and mhd
 !> variables after collecting with transform, within Rbound, Zbound and Phibound
 !> if present. See [[test_rejection_sampling]] for examples.
-subroutine initialise_particles(particles, node_list, element_list, rng, variables, &
-  transform, f, Rbound, Zbound, Phibound)
+subroutine initialise_particles(particles, node_list, element_list, &
+  rng, variables, transform, f, Rbound, Zbound, Phibound)
   use mpi
   use mod_sampling
   use mod_random_seed
@@ -110,7 +110,6 @@ subroutine initialise_particles(particles, node_list, element_list, rng, variabl
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
-
   if (present(variables)) then
     if (.not. present(transform)) then
       write(*,*) "ERROR: if variables are present in set_particle_position_rejection_sampling transform must also be present"
@@ -123,7 +122,7 @@ subroutine initialise_particles(particles, node_list, element_list, rng, variabl
   else
     n_mhd = 0
     n_geom = 0
-  endif
+  end if
 
   ! Setup bounding boxes
   call domain_bounding_box(node_list, element_list, Rbox(1), Rbox(2), Zbox(1), Zbox(2))
@@ -207,8 +206,7 @@ subroutine initialise_particles(particles, node_list, element_list, rng, variabl
         if (present(variables)) then
           ! Select the mhd variables requested
           if (n_mhd .ge. 1) then
-            call interp_0(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,&
-            s,t,phi,P(n_geom:n_geom+n_mhd))
+            call interp_0(node_list,element_list,i_elm,variables(n_geom:n_geom+n_mhd),n_mhd,s,t,phi,P(n_geom:n_geom+n_mhd))
           end if
           do k=1,n_geom
             select case (variables(k))
@@ -220,7 +218,7 @@ subroutine initialise_particles(particles, node_list, element_list, rng, variabl
           end do
 
           if (present(transform)) then
-            if (ran(4).lt.transform(p)) then
+            if (ran(4) .lt. transform(p)) then
               particles(j)%x = [r, z, phi]
               particles(j)%i_elm = i_elm
               particles(j)%st = [s, t]
@@ -682,6 +680,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
     n_geom = size(uniform_space_rej_vars, 1) - n_mhd
 
     allocate(grad_P2(3,size(uniform_space_rej_vars,1)))
+
   else
     n_mhd = 0
     n_geom = 0
@@ -698,6 +697,7 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
   else
     my_alpha = 0.d0
   end if
+
 
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr)
@@ -840,7 +840,8 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
                 -R_t * grad_P2(1,n_geom+k) + R_s * grad_P2(2,n_geom+k)]/xjac
             end do
 
-          end if          
+          end if
+         
           if (uniform_space_rej_f(size(uniform_space_rej_vars), P2, grad_P2) .lt. ran(7)) i_elm = 0
         end if
 

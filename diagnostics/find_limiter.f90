@@ -133,6 +133,8 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
         case (4)
           s_pt = 0.d0;    t_pt = s_or_t;  s_const = .true.
         end select
+      else
+        call interp(node_list, element_list, m_elm, 1, 1, s_pt, t_pt, PSMIMA, P_s, P_t, P_st, P_ss, P_tt)  
       endif
       
       ! --- Determine coordinate values (plus derivatives)

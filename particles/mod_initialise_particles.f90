@@ -839,8 +839,9 @@ subroutine initialise_particles_H_mu_psi(particles, fields, rng_base, mass, T_ma
               grad_P2(1:2,n_geom+k) = [Z_t * grad_P2(1,n_geom+k) - Z_s * grad_P2(2,n_geom+k), &
                 -R_t * grad_P2(1,n_geom+k) + R_s * grad_P2(2,n_geom+k)]/xjac
             end do
+ 
+          end if
 
-          end if 
           if (uniform_space_rej_f(size(uniform_space_rej_vars), P2, grad_P2) .lt. ran(7)) i_elm = 0
         end if
 

@@ -13,7 +13,6 @@ use mod_fields_linear
 use mod_fields_hermite_birkhoff
 use mod_gc_relativistic
 use mod_wall_collision
-use phys_module, only : sqrt_mu0_rho0
                   
 implicit none
 
@@ -22,8 +21,6 @@ real(kind=8)                      :: timesteps(1) = [1.d-10]
 real(kind=8)                      :: target_time, t
 integer(kind=4)                   :: n_part, i, j, k, l, n_steps, ifail, max_depth, wall_id
 type(write_particle_diagnostics)  :: diag
-type(particle_gc_relativistic)    :: particle_in, particle_out
-type(particle_gc)                 :: particle_out_gg
 real(kind=8),dimension(3)         :: pos_prev, wall_pos
 
 type(octree_node) :: wall
@@ -34,7 +31,6 @@ call mod_wall_collision_init('wall.h5',max_depth,wall)
 call sim%initialize(num_groups=1)
 call read_simulation_hdf5(sim, 'part_restart.h5')
 n_part = size(sim%groups(1)%particles)
-sim%time = sim%time * sqrt_mu0_rho0 ! This assumes the time written in part_restart file is in JOREK units.
 
 ! Set up the diagnostics output
 !diag = write_particle_diagnostics(filename='diag.h5',only=[1,2,6,12,13,14,15]) ! store total and kinetic energies, p_phi, ielm, phi, R, Z
@@ -70,7 +66,7 @@ do while (.not. sim%stop_now)
     select type (particles => sim%groups(i)%particles)
     type is (particle_gc_relativistic)	
       !$omp parallel do default(private) &
-      !$omp shared (i, n_steps, timesteps, sim, wall, particles)
+      !$omp shared (i, n_steps, timesteps, sim, wall)
        do j=1,size(particles,1)
           do k=1,n_steps
              if (particles(j)%i_elm .le. 0) exit

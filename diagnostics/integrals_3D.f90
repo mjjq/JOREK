@@ -157,6 +157,7 @@ endif
 !$omp          ns_phi, ns_radius, ns_deltaphi, ns_tor_norm, spi_tor_rot,                       &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI,             &
 !$omp          central_mass, pellets, tor_frequency,                                           &
+!$omp          ns_radius_ratio, ns_radius_min, spi_shard_file,                                 &
 #endif
 !$omp          wgauss_copy,varmin,varmax)                                                      &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt, spi_i,                       &
@@ -188,8 +189,7 @@ omp_tid      = 0
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                TVP_int, TVP_ext, TVP_tot, VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
-!$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext)                &
-!$omp reduction(min:varmin) reduction(max:varmax)
+!$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext)
 
 do ife = ife_min, ife_max
 
@@ -249,10 +249,12 @@ do ife = ife_min, ife_max
 
   ! --- Determine smallest and largest values of the variables in the whole domain (on Gauss points and toroidal integration
   ! surfaces)
+  !$omp critical
   do k=1,n_var
     varmin(k) = min(varmin(k),minval(eq_g(:,k,:,:)))
     varmax(k) = max(varmax(k),maxval(eq_g(:,k,:,:))) 
   enddo
+  !$omp end critical
 
   do ms=1, n_gauss
     do mt=1, n_gauss

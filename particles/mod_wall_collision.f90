@@ -153,6 +153,14 @@ subroutine mod_wall_collision_export(sim, file)
               gamma = sqrt( 1.d0 + p(k)%p(1)**2 / (sim%groups(i)%mass*SPEED_OF_LIGHT)**2 &
                              + 2 * p(k)%p(2) * norm2(B) / (sim%groups(i)%mass*SPEED_OF_LIGHT**2) )
               energy(k) = ( gamma - 1.d0 ) * sim%groups(i)%mass * ATOMIC_MASS_UNIT * SPEED_OF_LIGHT**2
+
+           class default
+              ! Not yet implemented, write error message (but only for the first marker)
+              if(k .eq. 1) then
+                 write(*,*) "WARNING: The requested type is not yet implemented in mod_wall_collision_export." 
+                 write(*,*) "Wall ID and particle load will be stored but not the heat load."
+              end if
+
            end select
 
         end do

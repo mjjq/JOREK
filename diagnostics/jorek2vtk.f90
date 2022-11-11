@@ -31,6 +31,7 @@ type (type_bnd_node_list),    pointer :: bnd_node_list
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
 real*4,allocatable    :: currdens(:), xyz (:,:), scalars(:,:), vectors(:,:,:)
+real*4                :: time_vtk
 integer,allocatable   :: ien (:,:)
 integer, parameter    :: ivtk = 22 ! an arbitrary unit number for the VTK output file
 integer               :: i, j, k, m, etype, irst, int, i_var, i_tor, i_tor_old, i_plane, index, index_node, my_id
@@ -203,9 +204,10 @@ include_projections    = .false. ! include projections from particles
 proj_basename          = 'projections' ! basename for particle projection output files
 RphiZ_coords           = .false. ! use xyz transformation (R,0,Z) instead of (R,Z,0)
 
-include_radiation = .false. 
+include_radiation    = .false. 
+include_neutral_dens = .false.
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-include_radiation = .true.
+include_radiation    = .true.
 include_neutral_dens = .true.
 ! --- Read ADAS data and generate coronal equilibrium if needed
 call init_imp_adas(my_id)
@@ -345,7 +347,7 @@ allocate(iibg(n_adas),iproj(n_var))
 if (include_radiation) then
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  call add_vtk_entry('Neut_Ionis  ', 'NeutIonis_Wm-3',  ineu(1), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('Nt_Ionis    ', 'NtIonis_Wm-3',  ineu(1), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Lin_rad     ', 'Lin_radWm-3 ',    ineu(2), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Brems       ', 'Brems_Wm-3  ',    ineu(3), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Joule       ', 'Joule_Wm-3  ',    ineu(4), n_scalars, si_units, scalar_names) 
@@ -360,7 +362,7 @@ end if
 
 #ifdef WITH_Impurities
   call add_vtk_entry('Ionis       ', 'Ionis_Jm-3  ',    iimp(1), n_scalars, si_units, scalar_names) 
-  call add_vtk_entry('Coronal_rad ', 'Coronal_radWm-3', iimp(2), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('Coronal_rad ', 'Cor_radWm-3 ', iimp(2), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Joule       ', 'Joule_Wm-3  ',    iimp(3), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Z_imp       ', 'Z_imp       ',    iimp(4), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Z_eff       ', 'Z_eff       ',    iimp(5), n_scalars, si_units, scalar_names) 
@@ -1710,7 +1712,13 @@ endif ! SI_UNITS
 !--------------------------------------------------- write the binary VTK file
 etype = 9  ! for vtk_quad
 
-call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors)
+if (SI_units) then
+  time_vtk = t_start * t_norm
+else
+  time_vtk = t_start
+endif
+
+call write_vtk('jorek_tmp.vtk',xyz,ien,etype,scalar_names,scalars,vector_names,vectors, time_vtk)
 
 write(*,*) 'done.'
 

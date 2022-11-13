@@ -240,11 +240,10 @@ module mod_jorek2IMAS
     radiation_ids%ids_properties%homogeneous_time = 1
     allocate( radiation_ids%process(1))   ! --- 1 type of radiation
     allocate( radiation_ids%process(1)%ggd(n_slice) )
-  
-    radiation_ids%time(i_slice)                = t_start * fact_time 
-    radiation_ids%process(1)%ggd(i_slice)%time = t_start * fact_time
-
-
+ 
+    ! --- In the projection files the time is already given in SI units... 
+    radiation_ids%time(i_slice)                = t_start  
+    radiation_ids%process(1)%ggd(i_slice)%time = t_start 
  
     ! --- Fill radiation data 
     var_rad = 2

@@ -63,7 +63,7 @@ real*8  :: local_n_particles_inj, local_n_particles, source_neutral, rn0, rho_ba
 integer    :: spi_i
 
 !> Minimum and maximum of the variable
-real*8,dimension(n_var),intent(out),optional :: varminout,varmaxout
+real*8,dimension(n_var),intent(out) :: varminout,varmaxout
 real*8,dimension(n_var) :: varmin,varmax
 
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -135,10 +135,7 @@ ife_min   =      my_id     * ife_delta + 1
 ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 !> Initialise the minimum of all variables
-varmin = 1.e50; varmax = -1.e50;
-if(present(varminout).and.present(varmaxout)) then
-  varminout = 1.e50; varmaxout = -1.e50;
-endif
+varmin = 1.e50; varmax = -1.e50; varminout = 1.e50; varmaxout = -1.e50;
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
@@ -470,10 +467,8 @@ endif
   call MPI_AllReduce(local_n_particles, total_n_particles,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 #endif
 
-if(present(varminout) .and. present(varmaxout)) then
-  call MPI_AllReduce(varmin,varminout,n_var,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,ierr)
-  call MPI_AllReduce(varmax,varmaxout,n_var,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
-endif
+call MPI_AllReduce(varmin,varminout,n_var,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(varmax,varmaxout,n_var,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
 
 rho_norm = central_density*1.d20 * central_mass * 1.67d-27
 t_norm   = sqrt(MU_zero*rho_norm)

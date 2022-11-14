@@ -476,8 +476,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   if (use_pellet) then            ! calculating the pellet_volume (total_pellet_volume)
     pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
     call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out, &
-                                                                                kin_par_tot, kin_par_in, kin_par_out, mom_par_tot,
-mom_par_in, mom_par_out,varmin,varmax)
+                                                                    kin_par_tot, kin_par_in, kin_par_out, mom_par_tot,mom_par_in, mom_par_out,varmin,varmax)
     
   endif
 

@@ -503,8 +503,7 @@ do while (.not. sim%stop_now)
 !===================================================
 
   call Integrals_3D(sim%my_id, sim%fields%node_list, sim%fields%element_list, density_tot, density_in, density_out, &
-                    pressure, pressure_in, pressure_out, kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in,
-mom_par_out,varmin,varmax)
+  pressure, pressure_in, pressure_out, kin_par_tot, kin_par_in, kin_par_out, mom_par_tot, mom_par_in,mom_par_out,varmin,varmax)
 
   particles_remaining = 0.d0
   momentum_remaining  = 0.d0

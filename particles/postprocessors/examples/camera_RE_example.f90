@@ -18,6 +18,9 @@ use mod_pinhole_lens,               only: pinhole_lens
 use mod_filter_unity,               only: filter_unity
 use mod_camera_perspective_static,  only: camera_perspective_static
 use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
+#ifdef USE_HDF5
+use mod_fast_camera_io,             only: write_pixel_intensity_hdf5
+#endif
 
 implicit none
 
@@ -41,10 +44,12 @@ real*8,dimension(:),allocatable   :: real_camera_param,sim_times
 real*8,dimension(:,:,:,:,:),allocatable :: pixel_filter_values
 character(len=15)                 :: particle_filename
 character(len=17)                 :: fields_filename
+character(len=24)                 :: image_filename
 
 !> Variable definitions -------------------------------------------------------------------
 particle_filename = 'part_restart.h5'
-fields_filename   = 'jorek_equilibrium' 
+fields_filename   = 'jorek_equilibrium'
+image_filename    = 'pixel_filter_intensities'
 n_1d = 1; n_2d = 2;
 n_x = 3 !< number of spatial coordinates
 n_groups = 1 !< number of particle groups
@@ -83,7 +88,7 @@ enddo
 write(*,*) 'Reading particle data: completed!'
 
 !> Initialise synthetic diagnostics
-write(*,*) 'Initialise synthetic camera and light sources'
+write(*,*) 'Initialise synthetic camera and light sources ...'
 spectra = spectrum_integrator_2nd(n_wavelenghts,n_spectra,min_spectra,max_spectra)
 call filter_image%init_filter(n_2d)
 do ii=1,n_spectra
@@ -100,10 +105,20 @@ write(*,*) 'Initialise synthetic camera and light sources: completed'
 allocate(pixel_filter_values(n_spectra,2,int_camera_param(1),int_camera_param(2),n_times))
 
 !> Compute image --------------------------------------------------------------------------
-write(*,*) 'Computing image and filters per each time'
+write(*,*) 'Computing image and filters per each time ...'
 call camera%reduce_light_image(synch_sources,spectra,filter_image,filter_spectra,&
 filter_time,my_id,pixel_filter_values,ierr)
 write(*,*) 'Computing image and filters per each time: completed!'
+
+!> Write image ----------------------------------------------------------------------------
+#ifdef USE_HDF5
+if(my_id.eq.0) then
+  write(*,*) 'Write image and filters in HDF5 file ...'
+  call write_pixel_intensity_hdf5(image_filename,n_spectra,2,int_camera_param(2),&
+  int_camera_param(3),n_times,pixel_filter_values,ierr)
+  write(*,*) 'Write image and filters in HDF5 file: completed!'
+endif
+#endif
 
 !> Finalisation ---------------------------------------------------------------------------
 if(allocated(min_spectra))         deallocate(min_spectra)

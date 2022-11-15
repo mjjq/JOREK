@@ -394,7 +394,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,      &
 !$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ns_radius_tmp,                              &
-!$omp           spi_psi_tmp, spi_grad_psi_tmp,                                                 &
+!$omp           spi_psi_tmp, spi_grad_psi_tmp, spi_i, i_inj,                                   &
 !$omp           n_spi_tmp, source_tmp, ns_shape, ns_shape_drift,                               &
 #endif
 #ifdef WITH_Impurities

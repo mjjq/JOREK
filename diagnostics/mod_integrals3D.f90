@@ -165,7 +165,7 @@ real*8     :: spi_psi_tmp
 real*8     :: spi_grad_psi_tmp
 real*8     :: ns_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
 real*8     :: source_tmp
-real*8     :: ns_shape ! variable for numerical integration of source volume
+real*8     :: ns_shape, ns_shape_drift ! variable for numerical integration of source volume
 real*8     :: V_ns, V_ns_drift
 real*8, allocatable :: local_source_volume(:), local_source_volume_drift(:)
 
@@ -395,7 +395,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,      &
 !$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ns_radius_tmp,                              &
 !$omp           spi_psi_tmp, spi_grad_psi_tmp,                                                 &
-!$omp           n_spi_tmp, source_tmp, ns_shape,                                               &
+!$omp           n_spi_tmp, source_tmp, ns_shape, ns_shape_drift,                               &
 #endif
 #ifdef WITH_Impurities
 !$omp           source_bg, source_imp,                                                         &
@@ -1006,6 +1006,7 @@ do ife = ife_min, ife_max
 
                  source_tmp = 0.d0
                  ns_shape = 0.d0
+                 ns_shape_drift = 0.d0
 
                  spi_R_tmp   = pellets(spi_i)%spi_R
                  spi_Z_tmp   = pellets(spi_i)%spi_Z
@@ -1030,15 +1031,25 @@ do ife = ife_min, ife_max
                       + ns_shape * bigR * xjac * wst * delta_phi
 
                  if (drift_distance /= 0) then ! Get the volume at the post-drift location (for normalization)
-                   ns_shape = source_shape(x_g(ms,mt),y_g(ms,mt),phi,     &
-                        spi_R_tmp+drift_distance,spi_Z_tmp,spi_phi_tmp,   &
-                        ns_radius_tmp,ns_deltaphi,                        &
-                        ps0,pellets(spi_i)%spi_psi_drift,                 &
-                        pellets(spi_i)%spi_grad_psi_drift,                &
-                        ns_delta_minor_rad)
 
-                   local_source_volume_drift(spi_i) = local_source_volume_drift(spi_i) &
-                        + ns_shape * bigR * xjac * wst * delta_phi
+                   ! ad-hoc 'if' to tell whether the drifted location is outside the JOREK grid
+                   if ( (abs(spi_psi_tmp - pellets(spi_i)%spi_psi_drift) > 1.d-6 ) .and. (abs(spi_grad_psi_tmp - pellets(spi_i)%spi_grad_psi_drift) > 1.d-6)  ) then
+
+                     ns_shape_drift = source_shape(x_g(ms,mt),y_g(ms,mt),phi,     &
+                          spi_R_tmp+drift_distance,spi_Z_tmp,spi_phi_tmp,   &
+                          ns_radius_tmp,ns_deltaphi,                        &
+                          ps0,pellets(spi_i)%spi_psi_drift,                 &
+                          pellets(spi_i)%spi_grad_psi_drift,                &
+                          ns_delta_minor_rad)
+
+                     local_source_volume_drift(spi_i) = local_source_volume_drift(spi_i) &
+                          + ns_shape_drift * bigR * xjac * wst * delta_phi
+
+                   else
+
+                     local_source_volume_drift(spi_i) = 1.d10
+
+                   end if
                  end if
 
               end if

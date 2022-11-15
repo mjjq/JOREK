@@ -363,11 +363,19 @@ module pellet_module
         pellets(i_p)%spi_grad_psi = sqrt(psi_R**2 + psi_Z**2)
 
         if (drift_distance /= 0) then
-          xjac_drift  = R_s_drift * Z_t_drift - R_t_drift * Z_s_drift
-          psi_R_drift = (  P_s_drift(4) * Z_t_drift - P_t_drift(4) * Z_s_drift ) / xjac_drift
-          psi_Z_drift = (- P_s_drift(4) * R_t_drift + P_t_drift(4) * R_s_drift ) / xjac_drift
-          pellets(i_p)%spi_psi_drift = P_drift(4)
-          pellets(i_p)%spi_grad_psi_drift = sqrt(psi_R_drift**2 + psi_Z_drift**2)
+          if (ifail_drift == 0) then ! if the drifted position locates inside the JOREK grid
+            xjac_drift  = R_s_drift * Z_t_drift - R_t_drift * Z_s_drift
+            psi_R_drift = (  P_s_drift(4) * Z_t_drift - P_t_drift(4) * Z_s_drift) / xjac_drift
+            psi_Z_drift = (- P_s_drift(4) * R_t_drift + P_t_drift(4) * R_s_drift) / xjac_drift
+            pellets(i_p)%spi_psi_drift = P_drift(4)
+            pellets(i_p)%spi_grad_psi_drift = sqrt(psi_R_drift**2 + psi_Z_drift**2)
+          else ! if not, simply fill the same values as the non-drifted location
+            xjac  = R_s * Z_t - R_t * Z_s
+            psi_R = (  P_s(4) * Z_t - P_t(4) * Z_s ) / xjac
+            psi_Z = (- P_s(4) * R_t + P_t(4) * R_s ) / xjac
+            pellets(i_p)%spi_psi = P(4)
+            pellets(i_p)%spi_grad_psi = sqrt(psi_R**2 + psi_Z**2)
+          end if
         end if
 
         ! Now, P(1) represents mass density and P(2) represents temperature, P(3)

@@ -15,6 +15,7 @@ use particle_tracer
 use mod_particle_io,                only: read_simulation_hdf5,get_simulation_hdf5_time
 use mod_spectra_deterministic,      only: spectrum_integrator_2nd
 use mod_pinhole_lens,               only: pinhole_lens
+use mod_filter_unity,               only: filter_unity
 use mod_camera_perspective_static,  only: camera_perspective_static
 use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
 
@@ -22,12 +23,14 @@ implicit none
 
 !> Variables -------------------------------------------------------------------------------
 type(event)                       :: field_reader
-type(camera_perspective_static)   :: camera
-type(spectrum_integrator_2nd)     :: spectra
 type(pinhole_lens)                :: lens
+type(spectrum_integrator_2nd)     :: spectra
+type(filter_unity)                :: filter_image,filter_time
+type(filter_unity),dimension(:),allocatable :: filter_spectra
+type(camera_perspective_static)   :: camera
 type(synchrotron_light_vertices)  :: synch_sources
 type(particle_sim),dimension(:),allocatable :: sims
-integer                           :: ii
+integer                           :: ii,n_1d,n_2d
 integer                           :: n_groups,my_id,n_cpus,n_x,ierr
 integer                           :: n_wavelenghts,n_spectra
 integer                           :: n_int_camera_param,n_real_camera_param
@@ -35,25 +38,34 @@ integer                           :: n_times
 integer,dimension(:),allocatable  :: int_camera_param
 real*8,dimension(:),allocatable   :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable   :: real_camera_param,sim_times
+real*8,dimension(:,:,:,:,:),allocatable :: pixel_filter_values
 character(len=15)                 :: particle_filename
 character(len=17)                 :: fields_filename
 
 !> Variable definitions -------------------------------------------------------------------
 particle_filename = 'part_restart.h5'
 fields_filename   = 'jorek_equilibrium' 
+n_1d = 1; n_2d = 2;
 n_x = 3 !< number of spatial coordinates
 n_groups = 1 !< number of particle groups
 n_spectra     = 1
-n_wavelenghts = 100
+n_wavelenghts = 40
 n_int_camera_param  = 3
 n_real_camera_param = 8
 n_times = 1
-allocate(min_spectra(n_spectra)); min_spectra = [0d0];
-allocate(max_spectra(n_spectra)); max_spectra = [1d0];
+!> JET KDLT-E5WC wavelenght: 3d-6 - 3.5d-6 [m]
+allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
+allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
+allocate(filter_spectra(n_spectra));
 allocate(pinhole_positions(n_x)); pinhole_positions = [0d0,0d0,0d0];
-allocate(int_camera_param(n_int_camera_param)); int_camera_param = [0,0,0];
-allocate(real_camera_param(n_real_camera_param)); 
-real_camera_param = [0d0,0d0,0d0,0d0,0d0,0d0,0d0,0d0];
+!> one pinhole => n_lens_samples=1, JET KLDT-E5WC pixels nx=120,ny=176
+allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,120,176];
+allocate(real_camera_param(n_real_camera_param));
+!> JET KLDT-E5WC camera inputs:
+!> 1:2 -> half width and half height visual plane angle
+!> 3:5 -> camera focal direction: focal distance, latitude, azimuth
+!> 6:8 -> camera position in the tokamak reference system
+real_camera_param = [5.23d-1,5.23d-1,9.998025d-1,1.5807985,2.09801,-8.86d-1,-4.002,-3.32d-1];
 allocate(sim_times(n_times)); allocate(sims(n_times));
 
 !> Initialisation  ------------------------------------------------------------------------
@@ -73,20 +85,36 @@ write(*,*) 'Reading particle data: completed!'
 !> Initialise synthetic diagnostics
 write(*,*) 'Initialise synthetic camera and light sources'
 spectra = spectrum_integrator_2nd(n_wavelenghts,n_spectra,min_spectra,max_spectra)
+call filter_image%init_filter(n_2d)
+do ii=1,n_spectra
+  call filter_spectra(ii)%init_filter(n_1d)
+enddo
+call filter_time%init_filter(n_1d)
 call lens%init_pinhole(n_x,pinhole_positions)
 call camera%init_camera(lens,spectra,n_int_camera_param,n_real_camera_param,&
 int_camera_param,real_camera_param)
 call synch_sources%init_lights_from_particles(n_times,sims)
 write(*,*) 'Initialise synthetic camera and light sources: completed'
 
+!> allocate image and filter arrays
+allocate(pixel_filter_values(n_spectra,2,int_camera_param(1),int_camera_param(2),n_times))
+
+!> Compute image --------------------------------------------------------------------------
+write(*,*) 'Computing image and filters per each time'
+call camera%reduce_light_image(synch_sources,spectra,filter_image,filter_spectra,&
+filter_time,my_id,pixel_filter_values,ierr)
+write(*,*) 'Computing image and filters per each time: completed!'
+
 !> Finalisation ---------------------------------------------------------------------------
-if(allocated(min_spectra))       deallocate(min_spectra)
-if(allocated(max_spectra))       deallocate(max_spectra)
-if(allocated(pinhole_positions)) deallocate(pinhole_positions)
-if(allocated(int_camera_param))  deallocate(int_camera_param)
-if(allocated(real_camera_param)) deallocate(real_camera_param)
-if(allocated(sim_times))         deallocate(sim_times)
-if(allocated(sims))              deallocate(sims)
+if(allocated(min_spectra))         deallocate(min_spectra)
+if(allocated(max_spectra))         deallocate(max_spectra)
+if(allocated(filter_spectra))      deallocate(filter_spectra)
+if(allocated(pinhole_positions))   deallocate(pinhole_positions)
+if(allocated(int_camera_param))    deallocate(int_camera_param)
+if(allocated(real_camera_param))   deallocate(real_camera_param)
+if(allocated(sim_times))           deallocate(sim_times)
+if(allocated(sims))                deallocate(sims)
+if(allocated(pixel_filter_values)) deallocate(pixel_filter_values)
 call finalize_mpi_threads(ierr)
 
 end program camera_RE_example

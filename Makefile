@@ -68,6 +68,7 @@ DIRS := diagnostics			       \
         particles/postprocessors/lens          \
         particles/postprocessors/filters       \
         particles/postprocessors/camera        \
+        particles/postprocessors/examples      \
         particles/postprocessors/tests         \
         particles/postprocessors/tests/drivers \
 	particles/projection_functions         \

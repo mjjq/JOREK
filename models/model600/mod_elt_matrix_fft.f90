@@ -307,11 +307,13 @@ eq_zT           = 0.d0
 amu_neo_prof   = 0.d0
 aki_neo_prof   = 0.d0
 
-if (allocated(P_imp)) deallocate(P_imp)
-if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-allocate(P_imp(0:imp_adas(1)%n_Z))
-allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+if (with_impurities) then
+  if (allocated(P_imp)) deallocate(P_imp)
+  if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+  
+  allocate(P_imp(0:imp_adas(1)%n_Z))
+  allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+endif
 
 do i=1,n_vertex_max
   do j=1,n_degrees

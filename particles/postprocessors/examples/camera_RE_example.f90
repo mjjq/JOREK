@@ -81,6 +81,7 @@ call init_mpi_threads(my_id,n_cpus,ierr)
 write(*,*) 'Reading particle data ...'
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(fields_filename),i=-1))
 do ii=1,n_times
+  call sims(ii)%initialize(n_groups,.true.,my_id,n_cpus)
   call read_simulation_hdf5(sims(ii),particle_filename)
   sim_times(ii) = get_simulation_hdf5_time(particle_filename)
   call with(sims(ii),field_reader)

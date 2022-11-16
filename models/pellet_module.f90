@@ -335,7 +335,16 @@ module pellet_module
         if (drift_distance /= 0) then ! when considering plasmoid drift by shifting neutral source
           call find_RZ(node_list,element_list,pellets(i_p)%spi_R+drift_distance,pellets(i_p)%spi_Z,&
                            R_out_drift,Z_out_drift,i_elm_drift,s_out_drift,t_out_drift,ifail_drift) 
+
+          if (ifail_drift == 0) then ! Post-teleportation plasmoid in computational domain
+            pellets(i_p)%plasmoid_in_domain = 1 ! 0 by default
+          else if (ifail_drift /= 99 .and. ifail_drift /= 999) then
+            write(*,*) "Something wrong in find_RZ!! my_id = ", my_id, i_elm_drift, ifail_drift
+            stop
+          end if
+
         end if
+
 
 #if ((defined WITH_Impurities) || (defined WITH_Neutrals))
 #ifdef WITH_TiTe
@@ -363,18 +372,15 @@ module pellet_module
         pellets(i_p)%spi_grad_psi = sqrt(psi_R**2 + psi_Z**2)
 
         if (drift_distance /= 0) then
-          if (ifail_drift == 0) then ! if the drifted position locates inside the JOREK grid
+          if (pellets(i_p)%plasmoid_in_domain ==1 ) then ! if the drifted position locates inside the JOREK grid
             xjac_drift  = R_s_drift * Z_t_drift - R_t_drift * Z_s_drift
             psi_R_drift = (  P_s_drift(4) * Z_t_drift - P_t_drift(4) * Z_s_drift) / xjac_drift
             psi_Z_drift = (- P_s_drift(4) * R_t_drift + P_t_drift(4) * R_s_drift) / xjac_drift
             pellets(i_p)%spi_psi_drift = P_drift(4)
             pellets(i_p)%spi_grad_psi_drift = sqrt(psi_R_drift**2 + psi_Z_drift**2)
-          else ! if not, simply fill the same values as the non-drifted location
-            xjac  = R_s * Z_t - R_t * Z_s
-            psi_R = (  P_s(4) * Z_t - P_t(4) * Z_s ) / xjac
-            psi_Z = (- P_s(4) * R_t + P_t(4) * R_s ) / xjac
-            pellets(i_p)%spi_psi = P(4)
-            pellets(i_p)%spi_grad_psi = sqrt(psi_R**2 + psi_Z**2)
+          else ! if not, simply fill the same values as the non-drifted location - will be excluded in neutral_source
+            pellets(i_p)%spi_psi_drift = P(4)
+            pellets(i_p)%spi_grad_psi_drift = sqrt(psi_R**2 + psi_Z**2)
           end if
         end if
 
@@ -873,6 +879,7 @@ module pellet_module
         pellets(i_p)%spi_vol_drift     = 0.0
         pellets(i_p)%spi_psi_drift     = 0.0
         pellets(i_p)%spi_grad_psi_drift= 0.0
+        pellets(i_p)%plasmoid_in_domain= 1
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -1212,6 +1219,7 @@ module pellet_module
         pellets(i_p)%spi_vol_drift      =   0.d0
         pellets(i_p)%spi_psi_drift      =   0.d0
         pellets(i_p)%spi_grad_psi_drift =   0.d0
+        pellets(i_p)%plasmoid_in_domain = 1
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -1254,13 +1262,13 @@ module pellet_module
     integer, save         :: dtype
     logical, save         :: dtype_set = .false.
   
-    integer :: len(16) = (/1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1/), t(16) = (/ &
+    integer :: len(17) = (/1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1/), t(17) = (/ &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-      MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+      MPI_REAL8,MPI_INTEGER/) ! MPI_INTEGER1 == MPI_LOGICAL1
   
-    integer(kind=MPI_ADDRESS_KIND) :: base, disp(16)
+    integer(kind=MPI_ADDRESS_KIND) :: base, disp(17)
     type(type_SPI) :: sample_pellet
   
     dtype_out = dtype
@@ -1284,12 +1292,13 @@ module pellet_module
     call MPI_Get_address(sample_pellet%spi_vol_drift,     disp(14),ierr)
     call MPI_Get_address(sample_pellet%spi_psi_drift,     disp(15),ierr)
     call MPI_Get_address(sample_pellet%spi_grad_psi_drift,disp(16),ierr)
+    call MPI_Get_address(sample_pellet%plasmoid_in_domain,disp(17),ierr)
   
     ! Rebase to particle memory beginning
     disp = disp - base
   
     ! Commit the structured type
-    call MPI_Type_create_struct(16, len, disp, t, dtype, ierr)
+    call MPI_Type_create_struct(17, len, disp, t, dtype, ierr)
     call MPI_Type_commit(dtype, ierr)
   
     ! Set the save bit

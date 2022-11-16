@@ -1026,14 +1026,19 @@ do ife = ife_min, ife_max
                       spi_R_tmp,spi_Z_tmp,spi_phi_tmp,              &
                       ns_radius_tmp,ns_deltaphi,                    &
                       ps0,spi_psi_tmp,spi_grad_psi_tmp,ns_delta_minor_rad)
+                 
+                 ! To detect NaNs
+                 if (ns_shape /= ns_shape) then
+                   write(*,*) 'WANRING: ns_shape = ', ns_shape
+                   stop
+                 end if
 
                  local_source_volume(spi_i) = local_source_volume(spi_i) &
                       + ns_shape * bigR * xjac * wst * delta_phi
 
                  if (drift_distance /= 0) then ! Get the volume at the post-drift location (for normalization)
 
-                   ! ad-hoc 'if' to tell whether the drifted location is outside the JOREK grid
-                   if ( (abs(spi_psi_tmp - pellets(spi_i)%spi_psi_drift) > 1.d-6 ) .and. (abs(spi_grad_psi_tmp - pellets(spi_i)%spi_grad_psi_drift) > 1.d-6)  ) then
+                   if (pellets(spi_i)%plasmoid_in_domain == 1) then ! if the drifted location is within the domain
 
                      ns_shape_drift = source_shape(x_g(ms,mt),y_g(ms,mt),phi,     &
                           spi_R_tmp+drift_distance,spi_Z_tmp,spi_phi_tmp,   &
@@ -1042,12 +1047,18 @@ do ife = ife_min, ife_max
                           pellets(spi_i)%spi_grad_psi_drift,                &
                           ns_delta_minor_rad)
 
+                     ! To detect NaNs
+                     if (ns_shape_drift /= ns_shape_drift) then
+                       write(*,*) 'WANRING: ns_shape_drift = ', ns_shape_drift
+                       stop
+                     end if
+
                      local_source_volume_drift(spi_i) = local_source_volume_drift(spi_i) &
                           + ns_shape_drift * bigR * xjac * wst * delta_phi
 
                    else
 
-                     local_source_volume_drift(spi_i) = 1.d10
+                     local_source_volume_drift(spi_i) = 0.d0 ! Analytical volume will be used instead in neutral_source.f90
 
                    end if
                  end if

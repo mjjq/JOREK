@@ -62,7 +62,7 @@ n_times = 1
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
 allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
 allocate(filter_spectra(n_spectra));
-allocate(pinhole_positions(n_x)); pinhole_positions = [0d0,0d0,0d0];
+allocate(pinhole_positions(n_x)); pinhole_positions = [-8.86d-1,-4.002,-3.32d-1];
 !> one pinhole => n_lens_samples=1, JET KLDT-E5WC pixels nx=120,ny=176
 allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,120,176];
 allocate(real_camera_param(n_real_camera_param));

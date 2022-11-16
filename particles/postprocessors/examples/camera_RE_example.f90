@@ -103,7 +103,7 @@ call synch_sources%init_lights_from_particles(n_times,sims)
 write(*,*) 'Initialise synthetic camera and light sources: completed'
 
 !> allocate image and filter arrays
-allocate(pixel_filter_values(n_spectra,2,int_camera_param(1),int_camera_param(2),n_times))
+allocate(pixel_filter_values(n_spectra,2,int_camera_param(2),int_camera_param(3),n_times))
 
 !> Compute image --------------------------------------------------------------------------
 write(*,*) 'Computing image and filters per each time ...'

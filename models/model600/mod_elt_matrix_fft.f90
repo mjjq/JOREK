@@ -307,6 +307,12 @@ eq_zT           = 0.d0
 amu_neo_prof   = 0.d0
 aki_neo_prof   = 0.d0
 
+if (allocated(P_imp)) deallocate(P_imp)
+if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+allocate(P_imp(0:imp_adas(1)%n_Z))
+allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
+
 do i=1,n_vertex_max
   do j=1,n_degrees
     do ms=1, n_gauss
@@ -4766,12 +4772,6 @@ subroutine construct_imp_charge_states()
 
   if (allocated(imp_adas(1)%ionisation_energy)) then
 
-     if (allocated(P_imp)) deallocate(P_imp)
-     if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-     allocate(P_imp(0:imp_adas(1)%n_Z))
-     allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
-
      call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ), &
           p_out=P_imp,p_Te_out=dP_imp_dT,z_avg=Z_imp,z_avg_Te=dZ_imp_dT,                     &
           z_avg_TeTe=d2Z_imp_dT2)
@@ -4795,12 +4795,6 @@ subroutine construct_imp_charge_states()
      E_ion_bg  = E_ion_bg * EL_CHG*MU_ZERO*central_density*1.d20
 
   else
-
-     if (allocated(P_imp)) deallocate(P_imp)
-     if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-     allocate(P_imp(0:imp_adas(1)%n_Z))
-     allocate(dP_imp_dT(0:imp_adas(1)%n_Z))
 
      call imp_cor(1)%interp_linear(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ), &
           p_out=P_imp,p_Te_out=dP_imp_dT,                                                    &

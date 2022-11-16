@@ -87,12 +87,11 @@ sims_particles,n_lights_in)
       write(*,*) "Requested number of lights < number of particles,use: ",n_sync_lights
     endif
   endif
-  !> allocate active particle arrays
-  allocate(n_active_particles(n_groups_max,light_vert%n_vertices)); 
-  allocate(active_particle_id(n_particles_max,n_groups_max,light_vert%n_vertices));
   !> allocate vertices
   call light_vert%allocate_x_properties(n_sync_lights)
-
+  !> allocate active particle arrays
+  allocate(n_active_particles(n_groups_max,light_vert%n_times));
+  allocate(active_particle_id(n_particles_max,n_groups_max,light_vert%n_times));
   !> find active particles for all groups and times
   call light_vert%find_active_particles_id_time(n_groups_max,n_particles_max,&
   n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,&
@@ -101,7 +100,6 @@ sims_particles,n_lights_in)
   call light_vert%fill_synchrotron_lights_from_particles(&
   sims_particles,n_groups_max,n_particles_max,n_groups,&
   n_active_particles,active_particle_id)
-  
   !> cleanup 
   deallocate(n_particles); deallocate(particle_types);
   deallocate(n_active_particles); deallocate(active_particle_id)

@@ -75,8 +75,8 @@ n_times,sims_particles,n_lights_in)
   n_particles_max = maxval(n_particles_relativistic)
   n_lights = n_particles_max
   !> allocate active particle arrays and vertices
-  allocate(n_active_particles(n_groups_max,light_vert%n_vertices))
-  allocate(active_particle_ids(n_particles_max,n_groups_max,light_vert%n_vertices))
+  allocate(n_active_particles(n_groups_max,light_vert%n_times))
+  allocate(active_particle_ids(n_particles_max,n_groups_max,light_vert%n_times))
   call light_vert%allocate_x_properties(n_lights)
 
   !> find active particles for all groups and times

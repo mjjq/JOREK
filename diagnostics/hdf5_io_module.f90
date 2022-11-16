@@ -72,22 +72,24 @@ module hdf5_io_module
   ! parallel IO and data alignment.
   ! See https://support.hdfgroup.org/HDF5/doc1.6/Files.html for more information.
   !----------------------------------------
-  subroutine HDF5_open_or_create(filename,plist,file_id,ierr)
+  subroutine HDF5_open_or_create(filename,plist,file_id,ierr,file_access)
     use mpi
     character(LEN=*) , intent(in)  :: filename  !< file name
     integer(HID_T)   , intent(in), optional :: plist     !< Which features to use when opening
     integer(HID_T)   , intent(out) :: file_id   !< file identifier
+    integer          , intent(in), optional :: file_access
     integer, optional, intent(out) :: ierr
 
     integer        :: ierr_HDF5
+    integer        :: access_f
     logical        :: file_exists, is_hdf5
 
     !*** Initialize fortran interface ***
+    access_f = H5F_ACC_EXCL_F; if(present(file_access)) access_f = file_access
     call H5open_f(ierr_HDF5)
-
     !*** Test if the file exists ***
     inquire(file=trim(filename), exist=file_exists)
-    if (file_exists) then
+    if (file_exists.and.(access_f.ne.H5F_ACC_TRUNC_F)) then
       !*** Test if it is an HDF5 file ***!
       call H5Fis_hdf5_f(trim(filename)//char(0), is_hdf5, ierr_HDF5)
       if (is_hdf5) then
@@ -103,7 +105,7 @@ module hdf5_io_module
     else
       !*** Try to create an HDF5 file ***
       call H5Fcreate_f(trim(filename)//char(0), &
-        H5F_ACC_EXCL_F, file_id, ierr_HDF5, access_prp=plist)
+        access_f, file_id, ierr_HDF5, access_prp=plist)
       if (present(ierr)) ierr = ierr_HDF5
     end if
   end subroutine HDF5_open_or_create

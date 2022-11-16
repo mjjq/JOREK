@@ -17,7 +17,7 @@ contains
 subroutine write_pixel_intensity_hdf5(filename,n_spectra,&
 n_values,n_pixel_x,n_pixel_y,n_times,pixel_filter_array,ierr)
   use hdf5
-  use hdf5_io_module, only: HDF5_open,HDF5_close
+  use hdf5_io_module, only: HDF5_open_or_create,HDF5_close
   use hdf5_io_module, only: HDF5_array5D_saving
   implicit none
   !> Inputs:
@@ -30,7 +30,7 @@ n_values,n_pixel_x,n_pixel_y,n_times,pixel_filter_array,ierr)
   !> Variables:
   integer(HID_T)              :: file_id
   !> open / store / close image
-  call HDF5_open((trim(filename)//'.h5'),file_id,ierr)
+  call HDF5_open_or_create((trim(filename)//'.h5'),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
   call HDF5_array5D_saving(file_id,pixel_filter_array,n_spectra,&
   n_values,n_pixel_x,n_pixel_y,n_times,'pixel_filter_intensities')
   call HDF5_close(file_id)

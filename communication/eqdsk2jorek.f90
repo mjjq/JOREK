@@ -31,7 +31,7 @@ integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext,
 character          :: AA*52, tokamak_name*50,boundary_type*100
 character          :: buffer*80, lf*1, str1*12, str2*24, string_in*250,eqdsk_string_r_min*250
 
-namelist /eqdsk2korek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
+namelist /eqdsk2jorek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
                               tria_low_in,quad_up_in,quad_low_in,n_tht_in,r0_in,&
                               z0_in,a0_in,B_scale,I_scale,R_scale,smth,eqdsk_string_r_min
 
@@ -39,45 +39,17 @@ namelist /eqdsk2korek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
 B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
 I_scale = 1.d0/1.d0  ! scaling factor for the toroidal current
 R_scale = 1.d0/1.d0  ! scaling factor for the space coordinates 
-!> Define the defaults plasma boundaries for a specific tokamak: 'ITER' (default), 'JET', 
+!> Define the defaults JOREK boundaries for a specific tokamak: 'ITER' (default), 'JET', 
 !> 'DIII-D' or define a boundary via user's inputs: 'USER_DEFINED' 
 tokamak_name  = 'ITER'
-!> Define which default boundary to be used (major radius, vertica position and 
+!> Define which default boundary to be used (major radius, vertical position and 
 !> minor radius are rescaled by the R_scale factor):
-!> NOTE: the plasma boundary is computed using:
+!> NOTE: the JOREK boundary is computed using:
 !>   R = R_axis + r_minor*cos(theta+triangularity*sin(theta)+quadrangularity*sin(2*theta))
 !>   Z = Z_axis + r_minor*ellipticity*sin(theta)
-!> ITER:
-!>   CLOSE_WALL_FIT:
-!>     ellipticity: 2, upper triangularity: 0.55, lower triangularity: 0.65,
-!>     upper quadrangularity: -0.1, lower quadrangularity: 0.15, N# poloidal mesh: 257
-!>     R_axis: 6.2, Z_axis: 0.1, r_minor: 2.25
-!>   OUTSIDE_WALL: (default)
-!>     ellipticity: 2.1, upper triangularity: 0.58, lower triangularity: 0.65,
-!>     upper quadrangularity: -0.12, lower quadrangularity: -0., N# poloidal mesh: 257
-!>     R_axis: 6.2, Z_axis: -0.05, r_minor: 2.34
-!> JET:
-!>   OUTSIDE_WALL:
-!>     ellipticity: 1.85, upper triangularity: 0.4, lower triangularity: 0.4,
-!>     upper quadrangularity: -0.2, lower quadrangularity: -0.2, N# poloidal mesh: 257
-!>     R_axis: 2.9, Z_axis: 0.1, r_minor: 1.08
-!>   OUTSIDE_WALL_SHORT_LEG:
-!>     ellipticity: 1.7, upper triangularity: 0.4, lower triangularity: 0.4,
-!>     upper quadrangularity: -0.4, lower quadrangularity: -0.2, N# poloidal mesh: 257
-!>     R_axis: 2.85, Z_axis: 0.15, r_minor: 1.1
-!>   CIRCULAR:
-!>     ellipticity: 1, upper triangularity: 0, lower triangularity: 0,
-!>     upper quadrangularity: 0, lower quadrangularity: 0, N# poloidal mesh: 257
-!>     R_axis: read from eqdsk, Z_axis: read from eqdsk, r_minor: read from eqdsk
-!> DIII-D:
-!>   OUTSIDE_WALL:
-!>     ellipticity: 1.85, upper triangularity: 0.4, lower triangularity: 0.4,
-!>     upper quadrangularity: -0.2, lower quadrangularity: -0.2, N# poloidal mesh: 257
-!>     R_axis: 1.7, Z_axis: 0, r_minor: 0.7
-!>   NIMROD_M3DC1:
-!>     ellipticity: 1.35/0.7, upper triangularity: 0.3, lower triangularity: 0.3,
-!>     upper quadrangularity: 0, lower quadrangularity: 0, N# poloidal mesh: 257
-!>     R_axis: 1.7, Z_axis: 0, r_minor: 0.7
+!> ITER: CLOSE_WALL_FIT, OUTSIDE_WALL (default)
+!> JET: OUTSIDE_WALL, OUTSIDE_WALL_SHORT_LEG, CIRCULAR
+!> DIII-D: OUTSIDE_WALL, NIMROD_M3DC1
 !>
 !> eqdsk_string_r_min: string of the EQDSK file identifying the plasma minor radius
 !>   default value: 'MINOR RADIUS -> A [m]'
@@ -95,7 +67,7 @@ write(*,*) ' EQDSK to JOREK2 '
 open(42, file='eqdsk2jorek.nml', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
   write(*,*) 'Reading parameters from eqdsk2jorek.nml namelist.'
-  read(42,eqdsk2korek_params)
+  read(42,eqdsk2jorek_params)
   close(42)
 end if 
 
@@ -239,7 +211,7 @@ if (tokamak_name == 'ITER') then
     z0     = -0.05 * R_scale
     a0     = 2.34  * R_scale
   else
-    write(*,*) 'Plamsa boundary not or wrongly specified, stopping' 
+    write(*,*) 'JOREK boundary not or wrongly specified, stopping' 
     stop
   endif
 
@@ -259,7 +231,6 @@ else if (tokamak_name == 'JET') then
     a0     = 1.08 * R_scale
 
   !-------------------- contour to avoid too long divertor legs
-  ! red contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
   else if(boundary_type == 'OUTSIDE_WALL_SHORT_LEG') then
     ellip  = 1.7
     tria_u = 0.4
@@ -272,7 +243,6 @@ else if (tokamak_name == 'JET') then
     a0     = 1.1  * R_scale
 
   !-------------------- try circular plasmas
-  ! red contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
   else if(boundary_type == 'CIRCULAR') then
     ellip  = 1.
     tria_u = 0.
@@ -284,7 +254,7 @@ else if (tokamak_name == 'JET') then
     z0     = zmaxis * R_scale
     a0     = a_minor * R_scale
   else
-    write(*,*) 'Plamsa boundary not or wrongly specified, stopping' 
+    write(*,*) 'JOREK boundary not or wrongly specified, stopping' 
     stop
   end if
 
@@ -314,7 +284,7 @@ else if (tokamak_name == 'DIII-D') then
     z0     = 0.  * R_scale
     a0     = 0.7 * R_scale
   else
-    write(*,*) 'Plamsa boundary not or wrongly specified, stopping' 
+    write(*,*) 'JOREK boundary not or wrongly specified, stopping' 
     stop
   end if
 
@@ -336,7 +306,7 @@ else
 
 end if  
 
-write(*,*) 'Plasma boundary parameters'
+write(*,*) 'JOREK boundary parameters'
 write(*,*) 'ellipticity: ',ellip
 write(*,*) 'upper and lower triangularity: ',tria_u,' ',tria_l
 write(*,*) 'upper and lower quadrangularity: ',quad_u,' ',quad_l

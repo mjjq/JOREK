@@ -45,7 +45,7 @@ module mod_neutral_source
 
     ! To detect NaNs
     if (ns_shape /= ns_shape) then
-       write(*,*) 'WANRING: ns_shape = ', ns_shape
+       write(*,*) 'ERROR in mod_neutral_source: ns_shape = ', ns_shape
        stop
     end if
 
@@ -265,8 +265,9 @@ module mod_neutral_source
         spi_grad_psi_tmp_drift = 0.d0
         
         if (ns_delta_minor_rad /= 0.) then
-          ns_delta_minor_rad = 0.d0 ! For non-SPI cases this should be 0. (not in use), otherwise the source_shape would be 0 with zeros spi_grad_psi etc.   
-          write(*,*) 'WANRING: ns_delta_minor_rad not in use, forced to 0.d0!'
+         ! For non-SPI cases this should be 0. (not in use), otherwise the source_shape would be 0 with zeros spi_grad_psi etc.   
+          write(*,*) 'Error in mod_neutral_source: ns_delta_minor_rad/=0. not implemented for non-SPI cases!!'
+          stop
         end if
 
 

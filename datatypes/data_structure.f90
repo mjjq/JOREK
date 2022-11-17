@@ -139,6 +139,7 @@ module data_structure
     real*8  :: spi_psi_drift         !< Psi value at the post-drift deposition position
     real*8  :: spi_grad_psi_drift    !< Value of grad(Psi)=sqrt(PSI_R * PSI_R + PSI_Z * PSI_Z) at the post-drift deposition position
     integer :: plasmoid_in_domain    !< Flag representing whether (post-teleportation) plasmoids are in computational domain
+                                     !! this is only relevant if drift_distance /= 0
   end type type_SPI
  
   integer                                         , public :: nbthreads

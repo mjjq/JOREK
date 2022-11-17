@@ -1029,7 +1029,7 @@ do ife = ife_min, ife_max
                  
                  ! To detect NaNs
                  if (ns_shape /= ns_shape) then
-                   write(*,*) 'WANRING: ns_shape = ', ns_shape
+                   write(*,*) 'ERROR in mod_integrals3D: ns_shape = ', ns_shape
                    stop
                  end if
 
@@ -1049,7 +1049,7 @@ do ife = ife_min, ife_max
 
                      ! To detect NaNs
                      if (ns_shape_drift /= ns_shape_drift) then
-                       write(*,*) 'WANRING: ns_shape_drift = ', ns_shape_drift
+                       write(*,*) 'ERROR in mod_integrals3D: ns_shape_drift = ', ns_shape_drift
                        stop
                      end if
 

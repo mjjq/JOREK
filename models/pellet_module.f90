@@ -879,7 +879,7 @@ module pellet_module
         pellets(i_p)%spi_vol_drift     = 0.0
         pellets(i_p)%spi_psi_drift     = 0.0
         pellets(i_p)%spi_grad_psi_drift= 0.0
-        pellets(i_p)%plasmoid_in_domain= 1
+        pellets(i_p)%plasmoid_in_domain= 0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -1219,7 +1219,7 @@ module pellet_module
         pellets(i_p)%spi_vol_drift      =   0.d0
         pellets(i_p)%spi_psi_drift      =   0.d0
         pellets(i_p)%spi_grad_psi_drift =   0.d0
-        pellets(i_p)%plasmoid_in_domain = 1
+        pellets(i_p)%plasmoid_in_domain = 0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius

@@ -1,4 +1,4 @@
-! This program is the driver of the boost besselk tests
+! This program is the driver of the mpi tools tests
 program mpi_tools_mpi_test_driver
 use fruit
 use mod_mpi_tools_mpi_test, only: run_fruit_mpi_tools_mpi

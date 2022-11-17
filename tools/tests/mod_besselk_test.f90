@@ -1,13 +1,13 @@
-! mod_boost_besselk_test contains procedures for testing procedured
+! mod_besselk_test contains procedures for testing procedured
 ! computing the modified bessel functions of fractional order
-module mod_boost_besselk_test
+module mod_besselk_test
 use fruit 
 use mod_dynamic_array_tools, only: allocate_check
 use mod_dynamic_array_tools, only: deallocate_check
 implicit none
 
 private
-public :: run_fruit_boost_besselk
+public :: run_fruit_besselk
 
 !> variables common to all tests
 integer,parameter               :: max_it=100000   !< maximum number of iterations
@@ -79,24 +79,24 @@ contains
 
 ! Tests baskets -----------------------------------------------------
 
-! run_fruit_boost_besselk performs the setup,
+! run_fruit_besselk performs the setup,
 ! run the tests and performs the teardown of
-! the boost besselk functions
-subroutine run_fruit_boost_besselk()
+! the besselk functions
+subroutine run_fruit_besselk()
   implicit none
 
-  write(*,'(/A)') "  ... setting-up: boost besselk tests" 
+  write(*,'(/A)') "  ... setting-up: besselk tests" 
   call setup !< setup test variables
-  write(*,'(/A)') "  ... running: boost besselk tests"
-  call test_f_boost_besselk
-  call test_boost_besselk
-  call test_boost_besselk_x_array
-  call test_boost_besselk_nu_array
-  call test_boost_besselk_x_nu_array
-  write(*,'(/A)') "  ... tearing-down: boost besselk tests" 
+  write(*,'(/A)') "  ... running: besselk tests"
+  call test_f_besselk
+  call test_besselk
+  call test_besselk_x_array
+  call test_besselk_nu_array
+  call test_besselk_x_nu_array
+  write(*,'(/A)') "  ... tearing-down: besselk tests" 
   call teardown !< cleanup test variables  
   
-end subroutine run_fruit_boost_besselk
+end subroutine run_fruit_besselk
 
 ! Set-up and tear-down ---------------------------------------------
 
@@ -162,9 +162,9 @@ end subroutine teardown
 ! test_besselk tests the computation of the modified bessel
 ! function of the second kind and fractional order using
 ! randomized matlab and python solutions. Test the function.
-subroutine test_f_boost_besselk()
+subroutine test_f_besselk()
   use mod_gnu_rng, only: gnu_rng_interval
-  use mod_boost_besselk, only: f_besselk
+  use mod_besselk, only: f_besselk
   implicit none
 
   ! variables
@@ -197,14 +197,14 @@ subroutine test_f_boost_besselk()
   call assert_equals(bknu_2/bknu_ref_py(2),1.d0,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (function)")
 
-end subroutine test_f_boost_besselk
+end subroutine test_f_besselk
 
 ! test_besselk tests the computation of the modified bessel
 ! function of the second kind and fractional order using
 ! randomized matlab and python solutions. Test the subroutine.
-subroutine test_boost_besselk()
+subroutine test_besselk()
   use mod_gnu_rng, only: gnu_rng_interval
-  use mod_boost_besselk, only: besselk
+  use mod_besselk, only: besselk
   implicit none
 
   ! variables
@@ -237,13 +237,13 @@ subroutine test_boost_besselk()
   call assert_equals(bknu_2/bknu_ref_py(2),1.d0,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (subroutine)")
 
-end subroutine test_boost_besselk
+end subroutine test_besselk
 
-! test_boost_besselk_x_array tests the computation of the modified
+! test_besselk_x_array tests the computation of the modified
 ! bessel function of the second kind and fractional order when 
 ! applied to arrays of x
-subroutine test_boost_besselk_x_array()
-  use mod_boost_besselk, only: besselk
+subroutine test_besselk_x_array()
+  use mod_besselk, only: besselk
   implicit none
   
   ! variables
@@ -270,14 +270,14 @@ subroutine test_boost_besselk_x_array()
   call assert_equals(bknu/bknu_py_loc,bknu_py_loc/bknu_py_loc,Nx*Nnu_loc,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (x-array)")
 
-end subroutine test_boost_besselk_x_array
+end subroutine test_besselk_x_array
 
-! test_boost_besselk_nu_array tests the computation of the modified
+! test_besselk_nu_array tests the computation of the modified
 ! bessel function of the second kind and fractional order when 
 ! applied to arrays of nu
-subroutine test_boost_besselk_nu_array()
+subroutine test_besselk_nu_array()
   use mod_gnu_rng, only: gnu_rng_interval
-  use mod_boost_besselk, only: besselk
+  use mod_besselk, only: besselk
   implicit none
 
   ! variables
@@ -301,13 +301,13 @@ subroutine test_boost_besselk_nu_array()
   call assert_equals(bknu/bknu_py(id,:),bknu_py(id,:)/bknu_py(id,:),Nnu,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (nu-array)")
 
-end subroutine test_boost_besselk_nu_array
+end subroutine test_besselk_nu_array
 
-! test_boost_besselk_x_nu_array tests the computation of the modified
+! test_besselk_x_nu_array tests the computation of the modified
 ! bessel function of the second kind and fractional order when 
 ! applied to arrays of x and nu
-subroutine test_boost_besselk_x_nu_array()
-  use mod_boost_besselk, only: besselk
+subroutine test_besselk_x_nu_array()
+  use mod_besselk, only: besselk
   implicit none
 
   ! variables
@@ -326,6 +326,6 @@ subroutine test_boost_besselk_x_nu_array()
   call assert_equals(bknu/bknu_mat,bknu_mat/bknu_mat,Nx,Nnu,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (x-nu-arrays)")
 
-end subroutine test_boost_besselk_x_nu_array
+end subroutine test_besselk_x_nu_array
 
-end module mod_boost_besselk_test
+end module mod_besselk_test

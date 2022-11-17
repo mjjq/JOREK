@@ -5,23 +5,21 @@
 ! with fractional order.
 ! WARNING: cyl_bessel_k(nu,x) accept only scalal
 !          inputs
-module mod_boost_besselk
+module mod_besselk
 implicit none
 
 private
 public ::  f_besselk,besselk
 
-#ifdef USE_BOOST
-! binding interface to the boost cyl_bessel_k
+! binding interface to the cyl_bessel_k
 interface 
-  function boost_besselk_cpp(nu,x) bind(C,name="boost_besselk_cpp")
+  function besselk_cpp(nu,x) bind(C,name="besselk_cpp")
     use iso_c_binding, only: c_double
     implicit none
-    real(c_double) :: boost_besselk_cpp
+    real(c_double) :: besselk_cpp
     real(c_double) :: nu,x
-  end function boost_besselk_cpp
+  end function besselk_cpp
 end interface
-#endif
 
 ! interface for the different procedure in the module
 interface f_besselk    
@@ -37,21 +35,8 @@ end interface besselk
 
 contains
 
-#ifndef USE_BOOST
-  ! dummy function in case the compilation occurred 
-  ! without USE_BOOST
-  real*8 function boost_besselk_cpp(nu,x)
-    implicit none
-    real*8,intent(in) :: nu,x
-    boost_besselk_cpp = 0.d0
-    write(*,*) "Required BOOST besselk but BOOST not linked!"
-    write(*,*) "Link BOOST library and recompile with USE_BOOST=1"
-    write(*,*) "BOOST Besselk: return zero"
-  end function boost_besselk_cpp
-#endif
-
 ! besselk is a specialization of the cyl_bessel_k
-! function of boost to double datatypes
+! function to double datatypes
 ! inputs:
 !   nu: (real8) bessel function fractional order
 !   x:  (real8) value at which the bessel function
@@ -63,11 +48,11 @@ function f_besselk_single_cpp(nu,x) result(bknu)
   real*8, intent(in) :: nu,x
   ! outputs
   real*8 :: bknu
-  bknu = boost_besselk_cpp(nu,x)
+  bknu = besselk_cpp(nu,x)
 end function f_besselk_single_cpp
 
 ! besselk is a specialization of the cyl_bessel_k
-! function of boost to double datatypes
+! function to double datatypes
 ! inputs:
 !   nu: (real8) bessel function fractional order
 !   x:  (real8) value at which the bessel function
@@ -79,7 +64,7 @@ subroutine besselk_single_cpp(nu,x,bknu)
   real*8, intent(in) :: nu,x
   ! outputs
   real*8,intent(out) :: bknu
-  bknu = boost_besselk_cpp(nu,x)
+  bknu = besselk_cpp(nu,x)
 end subroutine besselk_single_cpp
 
 ! besselk_x_array computes the modified bessel
@@ -102,7 +87,7 @@ subroutine besselk_x_array_cpp(Nx,nu,x,bknu)
   integer :: ii
 
   do ii=1,Nx
-    bknu(ii) = boost_besselk_cpp(nu,x(ii))
+    bknu(ii) = besselk_cpp(nu,x(ii))
   enddo
 end subroutine besselk_x_array_cpp
 
@@ -127,7 +112,7 @@ subroutine besselk_nu_array_cpp(Nnu,nu,x,bknu)
   integer :: ii
 
   do ii=1,Nnu
-    bknu(ii) = boost_besselk_cpp(nu(ii),x)
+    bknu(ii) = besselk_cpp(nu(ii),x)
   enddo
 end subroutine besselk_nu_array_cpp
 
@@ -154,10 +139,10 @@ subroutine besselk_x_nu_array_cpp(Nx,Nnu,nu,x,bknu)
 
   do jj=1,Nnu
     do ii=1,Nx
-      bknu(ii,jj) = boost_besselk_cpp(nu(jj),x(ii))
+      bknu(ii,jj) = besselk_cpp(nu(jj),x(ii))
     enddo
   enddo
 
 end subroutine besselk_x_nu_array_cpp
 
-end module mod_boost_besselk
+end module mod_besselk

@@ -420,7 +420,7 @@ end subroutine compute_synch_x_properties_ana
 subroutine compute_synch_directionality_irradiance(x_illum,&
 x_light,property,dir_func,irradiance)
   use constants,                 only: TWOPI,PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
-  use mod_boost_besselk,         only: besselk
+  use mod_besselk,               only: besselk
   use mod_coordinate_transforms, only: cartesian_to_spherical_latitude
   implicit none
   !> inputs

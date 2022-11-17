@@ -129,7 +129,7 @@ end subroutine init_synchrotron_lights_from_particles
 subroutine synchrotron_directionality_funct(light_vert,spectra,time_id,&
 light_id,x_shaded,light_dstb)
   use constants,                only: TWOPI,SPEED_OF_LIGHT
-  use mod_boost_besselk,        only: f_besselk
+  use mod_besselk,        only: f_besselk
   use mod_coordinate_transforms,only: cartesian_to_spherical_latitude
   use mod_spectra,              only: spectrum_base
   !$ use omp_lib
@@ -239,7 +239,7 @@ subroutine compute_synchrotron_directionality_funct(n_x,&
 wavelength,orbit_curvature,one_over_gamma,rpsichi,z_cos,&
 factor_2,z_value,z2_value,factor_1,dir_funct)
   use constants,         only: TWOPI
-  use mod_boost_besselk, only: f_besselk
+  use mod_besselk, only: f_besselk
   implicit none
   !> inputs:
   integer,intent(in)               :: n_x

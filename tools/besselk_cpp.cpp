@@ -16,8 +16,8 @@
 //double besselk_cpp(double const  &nu, double const &x){
 double besselk_cpp(double const &nu, double const &x){
   #ifdef USE_BOOST
-    no_sigabrt_policy policy_to_use;
-    return boost::math::cyl_bessel_k(nu,x,policy_to_use);
+   // no_sigabrt_policy policy_to_use;
+    return boost::math::cyl_bessel_k(nu,x,no_sigabrt_policy());
   #else
     return std::cyl_bessel_k(nu,x);
   #endif

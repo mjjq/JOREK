@@ -250,15 +250,18 @@ factor_2,z_value,z2_value,factor_1,dir_funct)
   !> outputs:
   real*8,intent(out) :: dir_funct
   !> variables:
-  real*8 :: zeta
+  real*8 :: zeta,besselk_1,besselk_2
   !> compute the directionality function
+  dir_funct = 0.d0;  
   !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
   zeta = TWOPI*((one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
   (3.d0*wavelength*orbit_curvature)
+  besselk_1 = f_besselk(onethird,zeta); besselk_2 = f_besselk(twothirds,zeta);
+  if(isnan(besselk_1)) return; if(isnan(besselk_2)) return;
   !> funct = I*(K_1/3(zeta)*cos(zeta*z_cos)*(((gamma**2 * psi**2)/(1 + gamma**2 * psi**2)) -
   !>  0.5*(1+z**2)) + K_(2/3)(zeta)*sin(zeta*z_cos))/lambda**4
-  dir_funct = factor_1*(f_besselk(onethird,zeta)*cos(zeta*z_cos)*(factor_2-z2_value)+&
-  f_besselk(twothirds,zeta)*z_value*sin(zeta*z_cos))/&
+  dir_funct = factor_1*(besselk_1*cos(zeta*z_cos)*(factor_2-z2_value)+&
+  besselk_2*z_value*sin(zeta*z_cos))/&
   (wavelength*wavelength*wavelength*wavelength)
 end subroutine compute_synchrotron_directionality_funct
 

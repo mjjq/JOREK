@@ -13,9 +13,11 @@
     boost_besselk_cpp: (double) modified bessel
                        function of the 2nd kind at x
                        and of order nu */
-double boost_besselk_cpp(double const  &nu, double const &x){
+//double boost_besselk_cpp(double const  &nu, double const &x){
+double boost_besselk_cpp(double const &nu, double const &x){
   #ifdef USE_BOOST
-    return boost::math::cyl_bessel_k(nu,x);
+    no_sigabrt_policy policy_to_use;
+    return boost::math::cyl_bessel_k(nu,x,policy_to_use);
   #else
     return 0.e0;
   #endif

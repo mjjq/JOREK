@@ -334,7 +334,7 @@ module pellet_module
 
         if (drift_distance /= 0) then ! when considering plasmoid drift by shifting neutral source
 
-          pellets(i_p)%plasmoid_in_domain = 0 ! Always assumed to be out ot domain before searching again
+          pellets(i_p)%plasmoid_in_domain = 0 ! Always assumed to be out of domain before searching again
 
           call find_RZ(node_list,element_list,pellets(i_p)%spi_R+drift_distance,pellets(i_p)%spi_Z,&
                            R_out_drift,Z_out_drift,i_elm_drift,s_out_drift,t_out_drift,ifail_drift) 

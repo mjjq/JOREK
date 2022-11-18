@@ -91,6 +91,7 @@ write(*,*) 'Reading particle data: completed!'
 !> Initialise synthetic diagnostics
 write(*,*) 'Initialise synthetic camera and light sources ...'
 spectra = spectrum_integrator_2nd(n_wavelenghts,n_spectra,min_spectra,max_spectra)
+call spectra%generate_spectrum()
 call filter_image%init_filter(n_2d)
 do ii=1,n_spectra
   call filter_spectra(ii)%init_filter(n_1d)

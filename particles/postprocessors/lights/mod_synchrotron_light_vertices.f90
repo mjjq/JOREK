@@ -151,10 +151,13 @@ light_id,x_shaded,light_dstb)
   real*8,dimension(light_vert%n_property_vertex) :: light_properties
 
   !> initialisations
-  in_parallel = .false.
+  in_parallel = .false.; light_dstb = 0d0;
   !$ in_parallel = omp_in_parallel()
-  !> compute the spherical coordinates of the light-point ray
+  !> check if the shaded point is in the synchrotron emission cone
   light_properties = light_vert%properties(:,light_id,time_id)
+  if(.not.check_shaded_x_in_synchrotron_cone(light_vert%n_x,x_shaded,&
+  light_vert%x(:,light_id,time_id),light_properties(1:3),light_properties(11))) return
+  !> compute the spherical coordinates of the light-point ray
   rpsichi = cartesian_to_spherical_latitude(x_shaded,light_vert%x(:,light_id,time_id),&
   light_properties(1:3),light_properties(4:6),light_properties(7:9))
   !> compute the factors and the value of z

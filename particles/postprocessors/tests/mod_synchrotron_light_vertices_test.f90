@@ -483,9 +483,10 @@ end subroutine compute_synch_x_properties_ana
 !> compute the synchrotron lights directionaly function and irradiance
 subroutine compute_synch_directionality_irradiance(x_illum,&
 x_light,property,dir_func,irradiance)
-  use constants,                 only: TWOPI,PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
-  use mod_besselk,               only: besselk
-  use mod_coordinate_transforms, only: cartesian_to_spherical_latitude
+  use constants,                      only: TWOPI,PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
+  use mod_besselk,                    only: besselk
+  use mod_coordinate_transforms,      only: cartesian_to_spherical_latitude
+  use mod_synchrotron_light_vertices, only: check_shaded_x_in_synchrotron_cone
   implicit none
   !> inputs
   real*8,dimension(n_x),intent(in)          :: x_illum,x_light
@@ -500,6 +501,11 @@ x_light,property,dir_func,irradiance)
   real*8                :: one_z2,z_z3,factor,factor_2
   real*8,dimension(n_x) :: rpsichi
 
+  !> initialisations
+  dir_func = 0d0; irradiance =0d0;
+  !> check is the shaded point is in the synchrotron cone
+  if(.not.check_shaded_x_in_synchrotron_cone(n_x,x_illum,&
+  x_light,property(1:3),property(11))) return
   !> compute the spherical coordinate variables
   rpsichi = cartesian_to_spherical_latitude(x_illum,x_light,&
   property(1:3),property(4:6),property(7:9))

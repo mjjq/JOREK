@@ -9,6 +9,7 @@ public :: synchrotron_light_vertices
 #ifdef UNIT_TESTS
 public :: fill_synchrotron_lights_from_particles
 public :: compute_synchrotron_light_properties
+public :: check_shaded_x_in_synchrotron_cone
 #endif
 
 !> Variables ---------------------------------------
@@ -340,6 +341,34 @@ n_groups,n_active_particles,active_particles_id)
     enddo
   enddo
 end subroutine fill_synchrotron_lights_from_particles
+
+!> check if the shaded point of the synchrotron light is inside
+!> the synchrotron radiation cone of half width sin(theta) ≃ 1/gamma
+!> where gamma is the relativistic factor. 
+!> inputs:
+!>   n_x:       (integer) size of the coordinate system
+!>   x_shaded:  (real8)(n_x) position of the shaded point
+!>   x_light:   (real8)(n_x) position of the point light
+!>   light_dir: (real8)(n_x) principal direction of the light emission 
+!>   rel_fact:  (real8)(n_x) relativistic factor
+!> outouts:
+!>   in_code: (logical) if true the gather point is in the synchrotron cone
+function check_shaded_x_in_synchrotron_cone(n_x,x_shaded,x_light,&
+light_dir,rel_fact) result(in_cone)
+  !> Inputs:
+  integer,intent(in)               :: n_x
+  real*8,intent(in)                :: rel_fact
+  real*8,dimension(n_x),intent(in) :: x_shaded,x_light,light_dir
+  !> Outputs:
+  logical :: in_cone
+  !> Variables:
+  real*8 :: costheta
+  !> initialisation
+  in_cone = .false.
+  !> check if the shaded point is in the synchrotron conede
+  costheta = dot_product(x_shaded-x_light,light_dir)/norm2(x_shaded-x_light)
+  if((costheta.ge.0).and.((sqrt(1d0-costheta*costheta)*rel_fact).le.1d0)) in_cone=.true.
+end function check_shaded_x_in_synchrotron_cone
 
 !> compute_synchrotron_light_properties computes the
 !> synchrotron radiation properties from a

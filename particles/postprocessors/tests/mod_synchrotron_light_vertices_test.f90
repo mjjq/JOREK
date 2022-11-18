@@ -33,6 +33,7 @@ integer,parameter                           :: n_lines_per_spectrum=13
 real*8,dimension(n_spectra),parameter       :: min_wlen=(/3.0d-6,2.5d-7/)
 real*8,dimension(n_spectra),parameter       :: max_wlen=(/3.5d-6,4.2d-7/)
 !> parameters for generating shadowed points
+integer,parameter                           :: n_shaded_points=53
 integer,parameter                           :: n_shadowed_per_particle=7
 real*8,dimension(2),parameter               :: length_shadowed=(/2.d-1,7.d0/)
 !> variables for generating synchrotron lights
@@ -62,6 +63,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   call test_compute_synchrotron_light_properties
   call test_fill_synchrotron_lights_from_particles
   call test_init_synchrotron_lights_from_particles
+  call test_check_shaded_x_in_synchrotron_cone 
   call test_synchrotron_irradiance_directional_func
   call test_synchrotron_irradiance_directional_func_taskloop
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
@@ -150,6 +152,68 @@ subroutine teardown()
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> test the check if a shaded point is whithin the radiation cone of
+!> a synchrotron light or not
+subroutine test_check_shaded_x_in_synchrotron_cone()
+  use constants,                      only: PI,TWOPI,SPEED_OF_LIGHT
+  use mod_coordinate_transforms,      only: vectors_to_orthonormal_basis
+  use mod_sampling,                   only: sample_uniform_sphere_corona_rcosphi
+  use mod_sampling,                   only: sample_uniform_cone
+  use mod_particle_types,             only: particle_kinetic_relativistic
+  use mod_synchrotron_light_vertices, only: check_shaded_x_in_synchrotron_cone
+  implicit none
+  !> variables
+  integer                            :: ii
+  integer,dimension(n_x)             :: particle_id
+  real*8                             :: rel_fact,p_norm,costheta,sintheta
+  real*8,dimension(n_x)              :: rnd3,x_shaded,x_light,light_dir,tang,nor,binor
+  logical                            :: fail
+  logical,dimension(n_shaded_points) :: in_cone_points,out_cone_points
+  !> initialisation: extract a random light
+  in_cone_points = .false.; out_cone_points = .true.;
+  x_light = 0d0; light_dir = 0d0; fail = .true.;
+  do while(fail)
+    call random_number(rnd3); particle_id(1) = size(sims_particles);
+    particle_id(1) = max(1+floor(real(particle_id(1),kind=8)*rnd3(1)),particle_id(1));
+    particle_id(2) = size(sims_particles(particle_id(1))%groups);
+    particle_id(2) = max(1+floor(real(particle_id(2),kind=8)*rnd3(2)),particle_id(2))
+    particle_id(3) = size(sims_particles(particle_id(1))%groups(particle_id(2))%particles);
+    particle_id(3) = max(1+floor(real(particle_id(3),kind=8)*rnd3(3)),particle_id(3))
+    x_light = sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3))%x
+    select type(p=>sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3)))
+    type is (particle_kinetic_relativistic)
+      p_norm = norm2(p%p); light_dir = p%p/p_norm; 
+      rel_fact = sqrt(1d0 + (p_norm/(SPEED_OF_LIGHT*&
+      sims_particles(particle_id(1))%groups(particle_id(2))%mass))**2)
+      fail = .false.
+    end select
+  enddo
+  call random_number(rnd3)
+  call vectors_to_orthonormal_basis(light_dir,rnd3,tang,nor,binor)
+  costheta = sqrt(1d0-rel_fact**(-2))
+  !> identify in_cone shadowed points
+  do ii=1,n_shaded_points
+    call random_number(rnd3); 
+    x_shaded = sample_uniform_cone(costheta,rnd3,light_dir,x_light,length_shadowed)
+    in_cone_points(ii) = check_shaded_x_in_synchrotron_cone(&
+    n_x,x_shaded,x_light,light_dir,rel_fact)
+  enddo
+  !> identify out_cone shadowed points
+  do ii=1,n_shaded_points
+    call random_number(rnd3)
+    x_shaded = sample_uniform_sphere_corona_rcosphi(length_shadowed**3,[-1d0,costheta],[0d0,TWOPI],rnd3)
+    sintheta = sqrt(1d0-x_shaded(2)**2); x_shaded = x_light+x_shaded(1)*&
+    (tang*x_shaded(2)+sintheta*(nor*cos(x_shaded(3))+binor*sin(x_shaded(3))))
+    out_cone_points(ii) = check_shaded_x_in_synchrotron_cone(&
+    n_x,x_shaded,x_light,light_dir,rel_fact)
+  enddo
+  !> check results
+  call assert_true(all(in_cone_points),&
+  "Error check shaded x in synchrotron cone: false negative detected!")
+  call assert_true(all(.not.out_cone_points),&
+  "Error check shaded x in synchrotron cone: false positive detected!")
+end subroutine test_check_shaded_x_in_synchrotron_cone 
+
 !> test the synchrotron light irradiance and directional functions
 !> taskloop based parallelisation
 subroutine test_synchrotron_irradiance_directional_func_taskloop()

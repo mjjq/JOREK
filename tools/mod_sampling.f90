@@ -455,7 +455,7 @@ contains
   !> uniform sampling of the oriented cone modifing the ray length
   !> inputs:
   !>   cos_half_angle: (real8) cosinus of the cone half angle 
-  !>   u:              (real8)(2) random numbers
+  !>   u:              (real8)(3) random numbers
   !>   dir:            (real8)(3) vector providing the direction
   !>   origin:         (real8)(3) new cone origin
   !>   len_int:        (real8)(2) length interval

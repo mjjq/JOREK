@@ -1252,9 +1252,16 @@ do i=1,n_vertex_max
             source_neutral_drift = 0.d0 
       
             call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral,source_neutral_drift)
+
+            ! To detect NaNs
+            if (source_neutral /= source_neutral .or. source_neutral_drift /= source_neutral_drift) then
+              write(*,*) 'ERROR in mod_elt_matrix_fft: source_neutral = ', source_neutral
+              write(*,*) 'ERROR in mod_elt_matrix_fft: source_neutral_drift = ', source_neutral_drift
+              stop
+            end if
           
-            source_neutral       = max(source_neutral,0.)
-            source_neutral_drift = max(source_neutral_drift,0.)
+            source_neutral       = max(0.,source_neutral)
+            source_neutral_drift = max(0.,source_neutral_drift)
 
           else ! no neutrals (neutral terms are always multiplied by one of these coefficients)
             

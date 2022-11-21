@@ -28,6 +28,7 @@ for frame_id,frame in enumerate(pixel_intensities):
   for spectrum_id,spectrum in enumerate(frame):
     plt.figure()
     plt.imshow(spectrum)
+    plt.colorbar()
     plt.title("".join(['Image for spectrum N# ',str(spectrum_id+1),\
     ' time N#: ',str(frame_id+1)]))
 
@@ -35,6 +36,7 @@ for img_filter_id,img_filter in enumerate(filter_intensities):
   for spectrum_id,spectrum in enumerate(img_filter):
     plt.figure()
     plt.imshow(spectrum)
+    plt.colorbar()
     plt.title("".join(['Filter for spectrum N# ',str(spectrum_id+1),\
     ' time N#: ',str(img_filter_id+1)]))
 

@@ -254,6 +254,12 @@ if ( NEO ) then
 endif
 !======================================= NEO
 
+if (allocated(P_imp)) deallocate(P_imp)
+if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
+allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
+
 do i=1,n_vertex_max
  do j=1,n_degrees
 
@@ -839,12 +845,6 @@ do ms=1, n_gauss
 
      if (allocated(imp_adas(index_main_imp)%ionisation_energy)) then
 
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
-
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
 !                              z_TeTe_out=d2Z_imp_dT2)
@@ -873,12 +873,6 @@ do ms=1, n_gauss
        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
      else
-
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
 
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)

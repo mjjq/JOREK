@@ -101,6 +101,7 @@ module data_structure
      real*8, dimension (:,:,:), allocatable:: ELM_n
      real*8, dimension (:,:,:), allocatable:: ELM_k
      real*8, dimension (:,:,:), allocatable:: ELM_kn
+     real*8, dimension (:,:,:), allocatable:: ELM_pnn
      real*8, dimension (:,:)  , allocatable:: RHS_p
      real*8, dimension (:,:)  , allocatable:: RHS_k
      real*8, dimension (:,:)  , allocatable :: ELM
@@ -137,7 +138,8 @@ module data_structure
     real*8  :: spi_vol_drift         !< Numerically integrated volume of the gas source depositing at the post-drift position
     real*8  :: spi_psi_drift         !< Psi value at the post-drift deposition position
     real*8  :: spi_grad_psi_drift    !< Value of grad(Psi)=sqrt(PSI_R * PSI_R + PSI_Z * PSI_Z) at the post-drift deposition position
-
+    integer :: plasmoid_in_domain    !< Flag representing whether (post-teleportation) plasmoids are in computational domain
+                                     !! this is only relevant if drift_distance /= 0
   end type type_SPI
  
   integer                                         , public :: nbthreads
@@ -171,6 +173,7 @@ contains
           call tr_allocate(thread_struct(i)%ELM_n, 1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_n",CAT_MATELEM)
           call tr_allocate(thread_struct(i)%ELM_k, 1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_k",CAT_MATELEM)
           call tr_allocate(thread_struct(i)%ELM_kn,1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_kn",CAT_MATELEM)
+          call tr_allocate(thread_struct(i)%ELM_pnn,1,n_plane,1,n_vertex_max*n_var*n_degrees,1,n_vertex_max*n_var*n_degrees,"ELM_pnn",CAT_MATELEM)
           call tr_allocate(thread_struct(i)%RHS_p, 1,n_plane,1,n_vertex_max*n_var*n_degrees,"RHS_p",CAT_MATELEM)                                     
           call tr_allocate(thread_struct(i)%RHS_k, 1,n_plane,1,n_vertex_max*n_var*n_degrees,"RHS_k",CAT_MATELEM)                                     
           call tr_allocate(thread_struct(i)%ELM,   1,n_tor*n_vertex_max*n_degrees*n_var,1,n_tor*n_vertex_max*n_degrees*n_var,"ELM",CAT_MATELEM)       
@@ -180,6 +183,7 @@ contains
           thread_struct(i)%ELM_n   = 0.d0
           thread_struct(i)%ELM_k   = 0.d0
           thread_struct(i)%ELM_kn  = 0.d0
+          thread_struct(i)%ELM_pnn = 0.d0
           thread_struct(i)%RHS_p   = 0.d0
           thread_struct(i)%RHS_k   = 0.d0
           thread_struct(i)%ELM     = 0.d0
@@ -224,6 +228,7 @@ contains
        call tr_deallocate(thread_struct(i)%ELM_n,"ELM_n",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%ELM_k,"ELM_k",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%ELM_kn,"ELM_kn",CAT_MATELEM)
+       call tr_deallocate(thread_struct(i)%ELM_pnn,"ELM_pnn",CAT_MATELEM)
        call tr_deallocate(thread_struct(i)%RHS_p,"RHS_p",CAT_MATELEM)                                     
        call tr_deallocate(thread_struct(i)%RHS_k,"RHS_k",CAT_MATELEM)                                     
        call tr_deallocate(thread_struct(i)%ELM,"ELM",CAT_MATELEM)

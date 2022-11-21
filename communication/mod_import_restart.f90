@@ -90,6 +90,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8,  allocatable :: spi_vol_arr_drift (:)
   real*8,  allocatable :: spi_psi_arr_drift (:)
   real*8,  allocatable :: spi_grad_psi_arr_drift (:)
+  integer, allocatable :: plasmoid_in_domain_arr (:)
 
   integer              :: n_spi_check, n_inj_check
   logical              :: modes_changed
@@ -427,6 +428,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     call tr_allocate(thmwork_tot_t,1,index_start+nstep,"thmwork_tot_t",CAT_UNKNOWN)
     thmwork_tot_t = 0.d0
 
+
     if (allocated(volume_t)) call tr_deallocate(volume_t,"volume_t",CAT_UNKNOWN)
     call tr_allocate(volume_t,1,index_start+nstep,"volume_t",CAT_UNKNOWN)
     volume_t = 0.d0
@@ -583,6 +585,7 @@ endif
       allocate (spi_vol_arr_drift(n_spi_tot))
       allocate (spi_psi_arr_drift(n_spi_tot))
       allocate (spi_grad_psi_arr_drift(n_spi_tot))
+      allocate (plasmoid_in_domain_arr(n_spi_tot))
     
       read(21,err=999, end=999)  spi_R_arr(1:n_spi_tot)
       read(21,err=999, end=999)  spi_Z_arr(1:n_spi_tot)
@@ -600,6 +603,7 @@ endif
       read(21,err=999, end=999)  spi_vol_arr_drift(1:n_spi_tot)
       read(21,err=999, end=999)  spi_psi_arr_drift(1:n_spi_tot)
       read(21,err=999, end=999)  spi_grad_psi_arr_drift(1:n_spi_tot)
+      read(21,err=999, end=999)  plasmoid_in_domain_arr(1:n_spi_tot)
 
       do i=1, n_spi_tot
         pellets(i)%spi_R       = spi_R_arr(i)
@@ -618,6 +622,7 @@ endif
         pellets(i)%spi_vol_drift     = spi_vol_arr_drift(i)
         pellets(i)%spi_psi_drift     = spi_psi_arr_drift(i)
         pellets(i)%spi_grad_psi_drift= spi_grad_psi_arr_drift(i)
+        pellets(i)%plasmoid_in_domain= plasmoid_in_domain_arr(i)
 
         write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                         pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
@@ -639,6 +644,7 @@ endif
       deallocate (spi_vol_arr_drift)
       deallocate (spi_psi_arr_drift)
       deallocate (spi_grad_psi_arr_drift)
+      deallocate (plasmoid_in_domain_arr)
 
       if (spi_tor_rot) then
         read(21,err=999, end=999) ns_phi_rotate 
@@ -921,6 +927,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_vol_arr_drift (:)
   real*8, allocatable :: spi_psi_arr_drift (:)
   real*8, allocatable :: spi_grad_psi_arr_drift (:)
+  integer,allocatable :: plasmoid_in_domain_arr (:)
 
   integer :: err_exists, dterr, n_spi_begin, i_inj
   logical :: flag_exists, type_match
@@ -1494,6 +1501,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
     thmwork_tot_t = 0.d0
     call HDF5_array1D_reading(file_id,thmwork_tot_t,'thmwork_tot_t')
 
+
     if (allocated(volume_t)) call tr_deallocate(volume_t,"volume_t",CAT_UNKNOWN)
     call tr_allocate(volume_t,1,index_start+nstep,"volume_t",CAT_UNKNOWN)
     volume_t = 0.d0
@@ -1746,6 +1754,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       allocate (spi_vol_arr_drift(n_spi_tot))
       allocate (spi_psi_arr_drift(n_spi_tot))
       allocate (spi_grad_psi_arr_drift(n_spi_tot))
+      allocate (plasmoid_in_domain_arr(n_spi_tot))
 
       call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
       call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
@@ -1846,6 +1855,14 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         write(*,*)"Backward Compatibility: No spi_grad_psi_drift found, assuming to be 0."
       end if
 
+      call H5Lexists_f(file_id,"plasmoid_in_domain_arr",flag_exists,err_exists)
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_array1D_reading_int(file_id,plasmoid_in_domain_arr,"plasmoid_in_domain_arr")
+      else
+        plasmoid_in_domain_arr = 0
+        write(*,*)"Backward Compatibility: No plasmoid_in_domain found, assuming to be 0 (not in domain)."
+      end if 
+
       do i=1, n_spi_tot
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
@@ -1863,6 +1880,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         pellets(i)%spi_vol_drift     = spi_vol_arr_drift(i)
         pellets(i)%spi_psi_drift     = spi_psi_arr_drift(i)
         pellets(i)%spi_grad_psi_drift= spi_grad_psi_arr_drift(i)
+        pellets(i)%plasmoid_in_domain= plasmoid_in_domain_arr(i)
 
         write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                         pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
@@ -1885,6 +1903,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_vol_arr_drift)
       deallocate (spi_psi_arr_drift)
       deallocate (spi_grad_psi_arr_drift)
+      deallocate (plasmoid_in_domain_arr)
 
       if (spi_tor_rot) then
         call HDF5_real_reading(file_id,ns_phi_rotate,"ns_phi_rotate")
@@ -2013,4 +2032,190 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
 
   return
 end subroutine import_hdf5_restart
+
+
+! Import an HDF5 restart file (aux_node_list) - used only for some diagnostics purpose
+! Here we only import the information of node_list, except element_list
+subroutine import_hdf5_restart_aux(aux_node_list, filename, format_rst, error)
+
+#include "version.h"
+  use tr_module
+  use data_structure
+  use phys_module
+#ifdef USE_HDF5
+  use hdf5
+  use hdf5_io_module
+  use mod_parameters
+#endif
+
+  implicit none
+
+  ! --- Routine parameters
+  type(type_node_list),target,intent(inout) :: aux_node_list
+  character(len=*),           intent(in)    :: filename
+  integer,                    intent(in)    :: format_rst  ! format of restart file
+  integer,                    intent(out)   :: error
+
+  ! --- Local variables
+  integer              :: i, j, m, k, n_tor_tmp, n_coord_tor_tmp, jorek_model_tmp, n_var_tmp, n_order_tmp, n_period_tmp, n_dim_tmp
+  integer              :: n_vertex_max_tmp, n_nodes_max_tmp, n_elements_max_tmp,n_boundary_max_tmp
+  integer              :: n_pieces_max_tmp, n_degrees_tmp, nref_max_tmp, n_ref_list_tmp, n_new_modes
+  integer, allocatable :: mode_tmp(:), new_mode(:)
+  character*50         :: version_control, version_control_tmp
+  logical              :: kept, modes_changed
+
+#ifdef USE_HDF5
+  integer(HID_T)     :: file_id
+
+  ! type_node, node_list%n_nodes
+  real(RKIND), allocatable :: t_x(:,:,:,:)        ! n_coord_tor, n_order+1, n_dim
+  real(RKIND), allocatable :: t_values(:,:,:,:)   !       n_tor, n_order+1, n_fields
+
+#endif
+  error = 0
+#ifdef USE_HDF5
+
+  ! ->  Reading HDF5 file
+  write(*,*) 'Importing HDF5 restart file "', trim(filename), '".'
+
+  ! -> Open HDF5 file
+  call HDF5_open(trim(filename),file_id,error)
+  if ( error /= 0 ) then
+    write(*,*) '...failed!'
+    return
+  end if
+
+  call HDF5_char_reading(file_id,version_control_tmp, "RCS_version")
+  version_control = trim(adjustl(RCS_VERSION))
+
+  call HDF5_integer_reading(file_id,jorek_model_tmp,"jorek_model")
+  call HDF5_integer_reading(file_id,n_var_tmp,"n_var")
+  if ( n_var /= n_var_tmp ) then
+!    write(*,*) 'WARNING: The number of variables in the restart file and the compiled JOREK binary does not agree.'
+!    write(*,*) 'n_var in binary : ', n_var
+!    write(*,*) 'n_var in HDF5   : ', n_var_tmp
+!    write(*,*) ' --> But we are with particle projection HDF5, therefore we proceed with the n_var in the binary '
+    n_var_tmp = n_var
+  end if
+  call HDF5_integer_reading(file_id,n_dim_tmp,"n_dim")
+  call HDF5_integer_reading(file_id,n_order_tmp,"n_order")
+  call HDF5_integer_reading(file_id,n_tor_tmp, "n_tor")
+  call HDF5_integer_reading(file_id,n_coord_tor_tmp, "n_coord_tor")
+  call HDF5_integer_reading(file_id,n_period_tmp, "n_period")
+  call HDF5_integer_reading(file_id,n_vertex_max_tmp, "n_vertex_max")
+  call HDF5_integer_reading(file_id,n_nodes_max_tmp, "n_nodes_max")
+  call HDF5_integer_reading(file_id,n_elements_max_tmp, "n_elements_max")
+
+  if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
+  allocate(mode_tmp(n_tor_tmp))
+  mode_tmp = -1 ! unset
+
+  if (format_rst == 1) then
+    call HDF5_array1D_reading_int(file_id,mode_tmp,"mode_tmp")
+    write(*,*) " import_restart, HDF5 file : n_var     = ",mode_tmp
+    write(*,*) ' NEW format (1) : ',mode_tmp
+  elseif (format_rst == 0) then
+    do i=1, n_tor_tmp
+       mode_tmp(i) = int(i / 2) * n_period_tmp
+    end do
+    modes_changed = .false.
+    if (n_tor_tmp .ne. n_tor) then
+      modes_changed = .true.
+    elseif (sum(abs(mode_tmp-mode)) .gt. 0) then
+      modes_changed = .true.
+    end if
+
+    write(*,*) ' OLD format (0) : '
+    write(*,'(A,999i4)') ' previous modenumbers : ',mode_tmp
+    write(*,'(A,999i4)') ' new mode numbers     : ',mode
+    do i = 1, n_tor_tmp, 2
+      kept = .false.
+      do j = 1, n_tor, 2
+        if ( mode_tmp(i) == mode(j) ) kept = .true.
+      end do
+      if ( .not. kept ) write (*,'(1x,a,i5,a)') 'Warning: The mode n=', mode_tmp(i), ' is being dropped!'
+    end do
+  elseif ( format_rst > 2 ) then
+    write(*,'(A,i3)') ' restart file format not supported : ',format_rst
+    stop
+  endif
+
+  if (n_tor_tmp .gt. n_tor) write(*,'(3(a,i5))') &
+       ' Warning: Reducing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_tor_tmp .lt. n_tor) write(*,'(3(a,i5))') &
+       ' Warning: Increasing number of harmonics from', n_tor_tmp, ' to', n_tor, '!'
+  if (n_period_tmp .ne. n_period) write(*,'(3(a,i5))') &
+       ' Warning: n_period has changed from', n_period_tmp, ' to', n_period
+  if (n_coord_tor_tmp .ne. n_coord_tor) then
+    write(*,'(3(a,i5))') "Error: The number of toroidal harmonics in the grid representation has changed from ", &
+                         n_coord_tor_tmp, " to ", n_coord_tor, "!"
+    stop
+  endif
+
+  call HDF5_integer_reading(file_id,aux_node_list%n_nodes,"n_nodes")
+  call HDF5_integer_reading(file_id,aux_node_list%n_dof,"n_dof")
+
+  call tr_allocate(t_x, 1,aux_node_list%n_nodes,1,n_coord_tor_tmp,1,n_order+1,1,n_dim_tmp, "aux_node_list%x",     CAT_UNKNOWN)
+  call tr_allocate(t_values,1,aux_node_list%n_nodes,1, n_tor_tmp,1,n_order+1,1,n_var_tmp, "aux_node_list%values",CAT_UNKNOWN)
+
+  call HDF5_real_reading(file_id,t_start,'t_now')
+
+  call HDF5_array4D_reading(file_id,t_x, 'x')
+  call HDF5_array4D_reading(file_id,t_values,   'values')
+
+  ! --- Detect new modes that need to be initialized to noise level
+  if (allocated(new_mode))   call tr_deallocate(new_mode,"new_mode",CAT_UNKNOWN)
+  allocate(new_mode(n_tor))
+  new_mode(:)=1
+
+  do m=1,n_tor_tmp,2
+    do k=1, n_tor,2
+      if (mode_tmp(m) .eq. mode(k)) then
+        if ((m .eq. 1) .and. (k.eq.1)) then
+          new_mode(k)=0
+        else
+          new_mode(k-1)=0
+          new_mode(k)=0
+        end if
+      end if
+    end do
+  end do
+  if (any(new_mode .ne. 0)) write(*,'(a,999i4)') ' need initialization  : ', new_mode
+
+  do i=1,aux_node_list%n_nodes
+    aux_node_list%node(i)%x = t_x(i,:,:,:)
+
+    aux_node_list%node(i)%values = 0.d0
+    aux_node_list%node(i)%deltas = 0.d0
+
+    do m=1,n_tor_tmp,2
+      do k=1, n_tor,2
+        if (mode_tmp(m) .eq. mode(k)) then
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            aux_node_list%node(i)%values(k,:,1:n_var_tmp)   = t_values(i,m,:,1:n_var_tmp)
+          else
+            aux_node_list%node(i)%values(k-1,:,1:n_var_tmp) = t_values(i,m-1,:,1:n_var_tmp)
+            aux_node_list%node(i)%values(k,:,1:n_var_tmp)   = t_values(i,m,:,1:n_var_tmp)
+          end if
+        end if
+      end do
+    end do
+  end do
+
+  call HDF5_close(file_id)
+
+  write(*,*) '********** read aux_node_list **********'
+  write(*,'(A19,f14.6,A)') ' * aux node time : ',t_start,' *'
+  write(*,*) '****************************************'
+
+  ! -> Deallocate temporary arrays 
+  call tr_deallocate(t_x,"t_x",CAT_UNKNOWN)
+  call tr_deallocate(t_values,"t_values",CAT_UNKNOWN)
+
+#else
+  write (6,*) " ERROR: trying to import with hdf5 but USE_HDF5 was not set at compile-time"
+#endif
+  return
+end subroutine import_hdf5_restart_aux
+
 end module mod_import_restart

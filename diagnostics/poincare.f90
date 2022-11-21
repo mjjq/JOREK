@@ -36,6 +36,7 @@ use phys_module, only: xcase, xpoint
 use equil_info
 use mod_boundary, only: boundary_from_grid
 use nodes_elements
+use mod_interp, only: interp
 
 
 implicit none
@@ -335,8 +336,7 @@ subroutine check_and_store_crossing(fields, iprt, time, mileage, i_elm, st, x, p
         nextslot(iprt)  = 1
      end if
 
-     call fields%calc_EBpsiU(time, i_elm, st, x(3), E, B, psi, U)
-     psin = get_psi_n(psi, x(2))
+     call get_psi_n0(fields, i_elm, st(1), st(2), x(2), psin)
      
      idx = nextslot(iprt)
      rvals(iprt, idx)   = x(1)
@@ -354,8 +354,7 @@ subroutine check_and_store_crossing(fields, iprt, time, mileage, i_elm, st, x, p
         nextslot(iprt)  = 1
      end if
 
-     call fields%calc_EBpsiU(time, i_elm, st, x(3), E, B, psi, U)
-     psin = get_psi_n(psi, x(2))
+     call get_psi_n0(fields, i_elm, st(1), st(2), x(2), psin)
 
      idx = nextslot(iprt)
      rvals(iprt, idx)   = x(1)
@@ -464,5 +463,22 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, psivals, milvals, p
 
 end subroutine write_poincare_hdf5
 
+
+!< Helper function to evaluate normalized psi from n = 1 component
+subroutine get_psi_n0(field, i_elm, s, t, z, psin)
+  implicit none
+
+  class(fields_base),  intent(in) :: field !< Field data
+  integer, intent(in) :: i_elm             !< Corresponding element
+  real*8, intent(in)  :: s, t, z           !< Position in element coordinates and z
+  real*8, intent(out) :: psin              !< Normalized psi
+
+  real*8 :: P(1), P_s, P_t, P_st, P_ss, P_tt
+  integer :: i_var = 1, n_tor = 1
+
+  call interp(field%node_list, field%element_list, i_elm, i_var, n_tor, s, t, P(1), P_s, P_t, P_st, P_ss, P_tt)
+  psin = get_psi_n(P(1), z)
+
+end subroutine get_psi_n0
 
 end program poincare

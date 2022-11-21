@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # Data ---------------------------------------------------------- #
-filepath = "/home/sommariv/jorek_simulations/test_synchrotron_soft_pulse95135_press0_parabolicq_q95_6dot8_res1r5dot88m5_res2r4dot705m4_Ip612en1MA_fast_sim"
+filepath = "."
 filename = "pixel_filter_intensities.h5"
 datasetname = "pixel_filter_intensities"
 separator = "/"

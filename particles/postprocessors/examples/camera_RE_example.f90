@@ -33,12 +33,12 @@ type(filter_unity),dimension(:),allocatable :: filter_spectra
 type(camera_perspective_static)   :: camera
 type(synchrotron_light_vertices)  :: synch_sources
 type(particle_sim),dimension(:),allocatable :: sims
-integer                           :: ii,n_1d,n_2d
+integer                           :: ii,n_1d,n_2d,t0,t1
 integer                           :: n_groups,my_id,n_cpus,n_x,ierr
 integer                           :: n_wavelenghts,n_spectra
 integer                           :: n_int_camera_param,n_real_camera_param
 integer                           :: n_times
-integer,dimension(:),allocatable  :: int_camera_param
+integer,dimension(:),allocatable  :: int_camera_param 
 real*8,dimension(:),allocatable   :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable   :: real_camera_param,sim_times
 real*8,dimension(:,:,:,:,:),allocatable :: pixel_filter_values
@@ -90,6 +90,7 @@ write(*,*) 'Reading particle data: completed!'
 
 !> Initialise synthetic diagnostics
 write(*,*) 'Initialise synthetic camera and light sources ...'
+call system_clock(t0)
 spectra = spectrum_integrator_2nd(n_wavelenghts,n_spectra,min_spectra,max_spectra)
 call spectra%generate_spectrum()
 call filter_image%init_filter(n_2d)
@@ -101,16 +102,21 @@ call lens%init_pinhole(n_x,pinhole_positions)
 call camera%init_camera(lens,spectra,n_int_camera_param,n_real_camera_param,&
 int_camera_param,real_camera_param)
 call synch_sources%init_lights_from_particles(n_times,sims)
+call system_clock(t1)
 write(*,*) 'Initialise synthetic camera and light sources: completed'
+write(*,*) my_id, 'System time fast camera initialisation (s): ',real(t1-t0,kind=8)/1d3
 
 !> allocate image and filter arrays
 allocate(pixel_filter_values(n_spectra,2,int_camera_param(2),int_camera_param(3),n_times))
 
 !> Compute image --------------------------------------------------------------------------
 write(*,*) 'Computing image and filters per each time ...'
+call system_clock(t0)
 call camera%reduce_light_image(synch_sources,spectra,filter_image,filter_spectra,&
 filter_time,my_id,pixel_filter_values,ierr)
+call system_clock(t1)
 write(*,*) 'Computing image and filters per each time: completed!'
+write(*,*) my_id, 'System time computing image and filters (s): ',real(t1-t0,kind=8)/1d3
 
 !> Write image ----------------------------------------------------------------------------
 #ifdef USE_HDF5

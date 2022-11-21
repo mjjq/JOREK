@@ -71,6 +71,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_vol_arr_drift (:)
   real*8, allocatable :: spi_psi_arr_drift (:)
   real*8, allocatable :: spi_grad_psi_arr_drift (:)
+  integer,allocatable :: plasmoid_in_domain_arr (:)
 
   ! -> Write binary restart file
   open(21, file=filename, form='unformatted', status='replace', action='write')
@@ -169,6 +170,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     allocate (spi_vol_arr_drift(n_spi_tot))
     allocate (spi_psi_arr_drift(n_spi_tot))
     allocate (spi_grad_psi_arr_drift(n_spi_tot))
+    allocate (plasmoid_in_domain_arr(n_spi_tot))
 
     do i=1, n_spi_tot
       spi_R_arr(i)       = pellets(i)%spi_R
@@ -187,6 +189,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
       spi_vol_arr_drift(i)     = pellets(i)%spi_vol_drift
       spi_psi_arr_drift(i)     = pellets(i)%spi_psi_drift
       spi_grad_psi_arr_drift(i)= pellets(i)%spi_grad_psi_drift
+      plasmoid_in_domain_arr(i)= pellets(i)%plasmoid_in_domain
     end do
 
     write(21) spi_R_arr(1:n_spi_tot)
@@ -205,6 +208,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     write(21) spi_vol_arr_drift(1:n_spi_tot)
     write(21) spi_psi_arr_drift(1:n_spi_tot)
     write(21) spi_grad_psi_arr_drift(1:n_spi_tot)
+    write(21) plasmoid_in_domain_arr(1:n_spi_tot)
 
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
@@ -222,6 +226,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
     deallocate (spi_vol_arr_drift)
     deallocate (spi_psi_arr_drift)
     deallocate (spi_grad_psi_arr_drift)
+    deallocate (plasmoid_in_domain_arr)
 
     if (spi_tor_rot) then
       write(21) ns_phi_rotate
@@ -337,6 +342,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real*8, allocatable :: spi_vol_arr_drift (:)
   real*8, allocatable :: spi_psi_arr_drift (:)
   real*8, allocatable :: spi_grad_psi_arr_drift (:)
+  integer,allocatable :: plasmoid_in_domain_arr (:)
 
   ! index_now+nstep
   real(RKIND), allocatable :: t_xtime(:)                   ! nstep
@@ -722,6 +728,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     allocate (spi_vol_arr_drift(n_spi_tot))
     allocate (spi_psi_arr_drift(n_spi_tot))
     allocate (spi_grad_psi_arr_drift(n_spi_tot))
+    allocate (plasmoid_in_domain_arr(n_spi_tot))
 
     do i=1, n_spi_tot
       spi_R_arr(i)       = pellets(i)%spi_R
@@ -740,6 +747,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
       spi_vol_arr_drift(i)     = pellets(i)%spi_vol_drift
       spi_psi_arr_drift(i)     = pellets(i)%spi_psi_drift
       spi_grad_psi_arr_drift(i)= pellets(i)%spi_grad_psi_drift
+      plasmoid_in_domain_arr(i)= pellets(i)%plasmoid_in_domain
     end do
 
     call HDF5_array1D_saving(file_id,spi_R_arr, &
@@ -774,6 +782,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
              n_spi_tot,'spi_psi_arr_drift'//char(0))
     call HDF5_array1D_saving(file_id,spi_grad_psi_arr_drift, &
              n_spi_tot,'spi_grad_psi_arr_drift'//char(0))
+    call HDF5_array1D_saving_int(file_id,plasmoid_in_domain_arr, &
+             n_spi_tot,'plasmoid_in_domain_arr'//char(0))
 
     deallocate (spi_R_arr)
     deallocate (spi_Z_arr)
@@ -791,6 +801,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
     deallocate (spi_vol_arr_drift)
     deallocate (spi_psi_arr_drift)
     deallocate (spi_grad_psi_arr_drift)
+    deallocate (plasmoid_in_domain_arr)
 
     if (spi_tor_rot) call HDF5_real_saving(file_id,ns_phi_rotate,"ns_phi_rotate"//char(0)) 
   else

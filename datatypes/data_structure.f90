@@ -153,7 +153,7 @@ module data_structure
     integer(kind=int_all), dimension(:,:), pointer :: irn_jcn
     
     real(kind=8), dimension(:), pointer          :: column_scaling => Null()    !< global column scaling, vector size of ng
-    integer                                      :: indexing = 1
+    integer                                      :: indexing = 1         !< matrix indexing (1 is standart FORTRAN)
     integer(kind=int_all)                        :: ng                   !< matrix total rank
     integer(kind=int_all)                        :: nr                   !< number of local rows
     integer(kind=int_all)                        :: nc                   !< number of local cols
@@ -180,37 +180,40 @@ module data_structure
   
   !> Preconditioner type  
   type type_PRECOND
-    type(type_SP_MATRIX)                         :: mat
-    type(type_RHS)                               :: rhs
+    type(type_SP_MATRIX)                         :: mat                           !< PC matrix structure
+    type(type_RHS)                               :: rhs                           !< PC rhs structure
+    
+    integer                                      :: n_mode_families               !< number of mode families (input)
+    integer, dimension(:), pointer               :: modes_per_family => Null()    !< number of toroidal modes per mode family (input)    
+    integer, dimension(:), pointer               :: ranks_per_family => Null()    !< number of MPI tasks per mode family (input)
+    logical                                      :: autodistribute_modes          !< if true - use single mode par family (input)
+    logical                                      :: autodistribute_ranks          !< if true - distribute MPI ranks equally between mode families (input)
     integer(kind=int_all), dimension(:), pointer :: row_index => Null()           !< Row indices of local mode family in global RHS
-    real(kind=8)                                 :: row_factor                    !< Multiplying factor of current mode family in global RHS       
-    integer                                      :: n_mode_families               !< number of mode families
-    integer                                      :: family_id                     !< family id, MPI private
+    real(kind=8)                                 :: row_factor                    !< Multiplying factor of current mode family in global RHS           
+
+    integer                                      :: family_id                     !< family id (MPI private)
     integer                                      :: mode_set_n                    !< number of modes in current mode family    
-    integer, dimension(:), pointer               :: mode_set => Null()            !< Mode number in current mode family
-    integer, dimension(:,:), pointer             :: mode_families_ranks => Null()
-    integer, dimension(:,:), pointer             :: mode_families_modes => Null()
-    integer, dimension(:), pointer               :: rank_range => Null()
-    integer, dimension(:), pointer               :: ranks_per_family => Null()
-    integer, dimension(:), pointer               :: modes_per_family => Null()
-    integer, dimension(:), pointer               :: rank_id => Null()             !< family id for each MPI rank
+    integer, dimension(:), pointer               :: mode_set => Null()            !< toroidal modes in current mode family
+    integer, dimension(:,:), pointer             :: mode_families_ranks => Null() !< MPI ranks which belong to each mode family
+    integer, dimension(:,:), pointer             :: mode_families_modes => Null() !< Toroidal modes which belong to each mode family
+    
+    integer, dimension(:), pointer               :: rank_range => Null()          !< range of MPI ranks which belong to mode families
     integer                                      :: my_id, n_cpu, comm    
     integer                                      :: my_id_n, n_cpu_n, MPI_COMM_N
     integer                                      :: my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
-    integer, dimension(:,:), pointer             :: send_counts => Null()         !< for PC distribution
-    integer, dimension(:,:), pointer             :: recv_counts => Null()         !< for PC distribution
-    integer, dimension(:,:), pointer             :: send_disp => Null()           !< for PC distribution
-    integer, dimension(:,:), pointer             :: recv_disp => Null()           !< for PC distribution
-    
-    integer(kind=int_all), dimension(:), pointer :: istart => Null()              !< starting and ending indices for split communication
-    integer(kind=int_all), dimension(:), pointer :: ifinish => Null()             !< starting and ending indices for split communication
-    integer                                      :: nsplit                        !< number of split communication calls for long integer
-    integer(kind=int_all), dimension(:), pointer :: n_per_rank => Null()          !< min number of row/col per MPI rank for each family
-    logical                                      :: autodistribute_modes
-    logical                                      :: autodistribute_ranks
+! the following variables are used in PC distribution (they are set only once to save computation time)
+    integer, dimension(:,:), pointer             :: send_counts => Null()         !< number of entries sent to each other MPI ranks (PC distribution)
+    integer, dimension(:,:), pointer             :: recv_counts => Null()         !< number of entries received from each other MPI ranks (PC distribution)
+    integer, dimension(:,:), pointer             :: send_disp => Null()           !< send dispalcements for mpi_alltoallv (PC distribution)
+    integer, dimension(:,:), pointer             :: recv_disp => Null()           !< receive dispalcements for mpi_alltoallv (PC distribution)
+    integer(kind=int_all), dimension(:), pointer :: istart => Null()              !< start-index for split communication
+    integer(kind=int_all), dimension(:), pointer :: ifinish => Null()             !< end-index for split communication
+    integer                                      :: nsplit                        !< number of communication splits
+    integer(kind=int_all), dimension(:), pointer :: n_per_rank => Null()          !< min number of rows/cols per MPI rank for each family
+
     logical                                      :: initialized = .false.
-    logical                                      :: structured = .false.            !< flag indicating the allocation of PC matrix structure
-    integer(kind=int_all)                        :: n_glob
+    logical                                      :: structured = .false.          !< flag indicating the allocation of PC matrix structure
+    integer(kind=int_all)                        :: n_glob                        !< global number of unknowns
     
 #ifdef DIRECT_CONSTRUCTION
     integer, dimension(:), pointer               :: local_elms => null()

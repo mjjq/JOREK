@@ -159,14 +159,6 @@ module mod_mumps
     return
     
   end subroutine mumps_finalize
-    
-    
-    
-  !type(DMUMPS_STRUC)  :: mumps_par
-  !
-  !integer             :: mumps_ordering        ! ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
-  !logical             :: no_zeros_mumps
-  !integer             :: MPI_COMM_MUMPS_EQUIL, MPI_GROUP_MUMPS_EQUIL
   
 #endif
 end module mod_mumps

@@ -133,15 +133,6 @@ subroutine setup_solvers(this, sim)
     endif
   endif
 
-  !! --- Preset some solver variables
-  !pastix_initialised = .false.
-  !pastix_analysed    = .false.
-
-  !! MURGE with ntor=1 doesn't work
-  !if (n_tor .eq. 1) then
-  !  gmres     = .false.
-  !end if
-
   ! --- Initialize the vacuum part.
   call vacuum_init(sim%my_id, freeboundary_equil, freeboundary, resistive_wall)
 
@@ -153,7 +144,6 @@ subroutine setup_solvers(this, sim)
 
   ! Warn on doing stupid stuff
   call sanity_checks(sim%my_id, sim%n_cpu, 7, 7) ! #### the 7, 7 is just a dummy that needs to be removed later on; the sanity_checks should anyway not be part of setup_solvers in the end (to be addressed in a separate pull request) @TODO
-  !if (nstep .gt. 0)   call check_preconditioner_consistency
 
   ! Initialise the boundary element and node list
   if (sim%my_id .eq. 0) then
@@ -193,12 +183,6 @@ subroutine setup_solvers(this, sim)
 
   ! nodes, elements, bnd_nodes and phys have already been broadcast
   if ( freeboundary ) call broadcast_vacuum(sim%my_id, resistive_wall)
-  !
-  !this%n_AA = 0
-  !do inode = 1, sim%fields%node_list%n_nodes  
-  !  this%n_AA = max(this%n_AA,sim%fields%node_list%node(inode)%index(4))  
-  !end do
-  !mumps_par%n = this%n_AA
 
   call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase)
   this%es = ES
@@ -263,47 +247,6 @@ subroutine setup_solvers(this, sim)
 end subroutine setup_solvers
 
 
-!!> Destroy memory used by these solvers
-!!> note that this is not yet explicitly called somewhere!
-!subroutine cleanup_solvers(this, sim)
-!
-!  use phys_module, only: gmres, use_mumps, use_pastix
-!  use mpi_mod,     only: MPI_COMM_WORLD
-!  class(jorek_timestep_action), intent(inout) :: this
-!  type(particle_sim), intent(inout)           :: sim
-!
-!  integer :: DUMMY_INT
-!  real*8  :: DUMMY_REAL
-!
-!  if (use_mumps) then
-!
-!#ifdef USE_MUMPS
-!    mumps_par%JOB = -2                            ! clean up this instance of mumps
-!    call DMUMPS(mumps_par)
-!#endif
-!
-!  elseif (use_pastix) then
-!
-!    pastix_iparm(2)     = 7                       ! Clean-up
-!    pastix_iparm(3)     = 7
-!
-!    if (.not. gmres) then
-!
-!      call pastix_fortran(pastix_data,MPI_COMM_WORLD,mumps_par%n,DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-!                          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-!
-!    elseif ( (.not. pastix_smp_only) .or. (pastix_smp_only .and. (this%my_id_n .eq.0))  ) then
-!
-!      call pastix_fortran(pastix_data,this%MPI_COMM_N,mumps_par%n,&
-!                          DUMMY_INT,DUMMY_INT,DUMMY_REAL, &
-!                          pastix_perm_vars,pastix_iperm_vars,mumps_par%rhs,1,pastix_iparm,pastix_dparm)
-!    endif
-!
-!  endif
-!
-!end subroutine cleanup_solvers
-
-
 !> Perform a single jorek timestep, with timestep size from current time - last time
 !> Notes:
 !> - STOP_NOW file handling does not work
@@ -320,15 +263,10 @@ subroutine do_jorek_timestep(this, sim, ev)
   use tr_module,               only: tr_print_memsize, tr_resetfile
   use mod_export_restart
   use construct_matrix_mod
-  !use solve_mat_n
   use pellet_module
   use vacuum
   use vacuum_response,         only: update_response
   use mod_fields_linear
-  !use mod_gmres,               only: gmres_driver
-!#ifdef USE_BICGSTAB
-!  use mod_bicgstab, only: bicgstab_driver, bicgstab_finalize
-!#endif
   use mod_expression,          only: exprs_all_int, init_expr
   use mod_integrals3D
 
@@ -457,7 +395,6 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   call clck_time(t0)
   if (this%solver%step_success) then  
-  !if ( (gmres .and. (this%iter_gmres .lt. gmres_max_iter)) .or. (.not. gmres) ) then
 
     ! TODO add if use_pellet
 

@@ -29,10 +29,6 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
 
   if (.not.solve_only) then
 
-    !write(*,*) my_id,'*********************************'
-    !write(*,*) my_id,'*  solve global matrix (PaStiX) *'
-    !write(*,*) my_id,'*********************************'
-
     ptss%rhs_val => rhs_vec%val
 
 #ifdef USE_PASTIX

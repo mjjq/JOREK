@@ -12,7 +12,6 @@ use phys_module, only: amix, amix_freeb, delta_psi_GS, newton_GS_freebnd, newton
                        n_limiter, treat_axis, fix_axis_nodes
 use equil_info,  only: ES
 use vacuum_equilibrium, only: vacuum_equil
-!use mod_coicsr
 use mpi_mod
 use mod_interp
 use mod_basisfunctions

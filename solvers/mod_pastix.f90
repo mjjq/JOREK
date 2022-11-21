@@ -53,11 +53,7 @@ module mod_pastix
       type(C_PTR), intent(inout) :: spm
       integer :: indx, comm
       integer(kind=int_all) :: n, n_d, nnz, nnz_d, dof
-
       type(C_PTR), intent(inout) :: rptr, cptr, values, loc2glob, glob2loc
-
-      !integer(kind=C_INT), dimension(:), pointer :: rptr, cptr, ptss%loc2glob, ptss%glob2loc
-      !real(kind=C_DOUBLE), dimension(:), pointer :: values
       logical :: update, check
 
     end subroutine ptx_set_mat    
@@ -629,11 +625,6 @@ module mod_pastix
 
     ptss%perm_vars  => Null()
     ptss%iperm_vars => Null()
-
-    !if (associated(ptss%irn)) deallocate(ptss%irn)
-    !if (associated(ptss%jcn)) deallocate(ptss%jcn)
-    !if (associated(ptss%val)) deallocate(ptss%val)
-    !if (associated(ptss%rhs_val)) deallocate(ptss%rhs_val)
 
     ptss%irn => Null()
     ptss%jcn => Null()

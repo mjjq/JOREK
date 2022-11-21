@@ -43,8 +43,6 @@ module mod_bicgstab
     type(type_SP_SOLVER)                    :: solver
     type(type_RHS)                          :: sol_vec, rhs_vec
 
-    !real(kind=C_DOUBLE), pointer            :: b(:)
-    !real(kind=C_DOUBLE), pointer            :: x(:)
     integer                                 :: comm_glob, comm_n, comm_master, ierr
 
     real(kind=C_DOUBLE), pointer :: r(:), r_tld(:), s(:), s_hat(:), tmp(:), p(:), p_hat(:), v(:), t(:)
@@ -190,12 +188,6 @@ module mod_bicgstab
 
     b_tmp = 0.d0
 
-!!$omp parallel default(none)                                      &
-!!$omp shared(a_mat,x,n_blocks,blocksize,blocksize2,index_offset)   &
-!!$omp private(i,iA_start,ix_start,iy_start,b_tmp_block)           &
-!!$omp reduction(+:b_tmp)
-!!$omp do schedule(guided)
-
 !$omp parallel                                    &
 !$omp private(i,iA_start,ix_start,iy_start,b_tmp_block)           &
 !$omp reduction(+:b_tmp)
@@ -299,7 +291,6 @@ module mod_bicgstab
 
     index_offset = (a_mat%index_min(my_id + 1) - 1)*blocksize
     n_local   = (a_mat%index_max(my_id + 1) - a_mat%index_min(my_id + 1) + 1)*blocksize
-    write(*,*) my_id, index_offset, n_local
 
     allocate(b_tmp(n_local))
     allocate(rcv_c(n_cpu),rcv_d(n_cpu))

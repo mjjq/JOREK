@@ -122,9 +122,6 @@ module mod_sparse
       call MPI_Barrier(a_mat%comm, ierr)
       
       call gather_solution(solver%pc,sol_vec)
-      
-      !write(*,*) sol_vec%val(1:2), sol_vec%val(sol_vec%n-1:sol_vec%n)
-      !call MPI_Barrier(MPI_COMM_WORLD,ierr); call MPI_Finalize(ierr); call exit(0)
 
 ! iterative part
       solver%iter_prev  = solver%iter_gmres
@@ -144,9 +141,7 @@ module mod_sparse
 
   end subroutine solve_sparse_system
 
-  !call pastix_finalize(solver%ptss)
-  !call reset_preconditioner(solver%pc)
-
+!> Finilize solver instance
   subroutine solver_finalize(solver)
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
     use mod_pastix, only: pastix_finalize

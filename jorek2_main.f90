@@ -62,8 +62,6 @@ program JOREK2
   use live_data4,          only: init_live_data4, write_live_data4, finalize_live_data4
 #endif
 #endif
-
-  !use solve_mat_n
   use tr_module
   use mod_clock
 #ifdef USE_HDF5
@@ -232,8 +230,6 @@ mpi_required = 0
   
   ! --- Initialize the vacuum part.
   call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
-
-  !if (nstep .gt. 0)   call check_preconditioner_consistency
   
   ! --- Initialize live data file which will be filled during the code run
   if ( my_id == 0 ) call init_live_data()
@@ -578,7 +574,7 @@ mpi_required = 0
   
   if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list
 
-  index_now = index_start  ! index_now: Index of current timestepindex_start  
+  index_now = index_start  ! index_now: Index of current timestep
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)

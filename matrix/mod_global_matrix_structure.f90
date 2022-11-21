@@ -278,8 +278,6 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
 
   enddo
 
-  !n  = (a_mat%my_ind_max - a_mat%my_ind_min + 1)*a_mat%block_size ! local rank
-
   a_mat%nnz = a_mat%ijA_index(a_mat%my_ind_max-a_mat%my_ind_min + 1, a_mat%ijA_size(a_mat%my_ind_max-a_mat%my_ind_min+1)) + a_mat%block_size**2 - 1
  
   if (associated(a_mat%irn)) call tr_deallocatep(a_mat%irn, "irn", CAT_DMATRIX) 

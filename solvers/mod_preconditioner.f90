@@ -5,6 +5,8 @@ module mod_preconditioner
 
   contains
 
+!> Initialize preconditioner structure (PC)
+!! call subroutines for setting mode families, creating communicators, distributing tasks
   subroutine initialize_preconditioner(pc,comm_glob)
     use phys_module, only: autodistribute_modes, n_mode_families, autodistribute_ranks, centralize_harm_mat
     use mod_parameters, only: n_tor
@@ -172,11 +174,12 @@ module mod_preconditioner
     type(type_PRECOND) :: pc
     integer, intent(in)  :: n_cpu
     integer :: mcpu, r, i, j
+    integer, dimension(:), pointer :: rank_id => Null()
 
     allocate(pc%rank_range(pc%n_mode_families + 1))
-    allocate(pc%rank_id(n_cpu))
     allocate(pc%ranks_per_family(pc%n_mode_families))
     allocate(pc%mode_families_ranks(pc%n_mode_families,n_cpu))
+    allocate(rank_id(n_cpu))
 
     do i = 1, pc%n_mode_families
       do j = 1, n_cpu
@@ -216,7 +219,7 @@ module mod_preconditioner
     do i = 1, n_cpu
       do j = 2, pc%n_mode_families + 1
         if ((i.ge.pc%rank_range(j-1)).and.(i.lt.pc%rank_range(j))) then
-          pc%rank_id(i) = j - 1
+          rank_id(i) = j - 1
           exit
         endif
       enddo
@@ -225,14 +228,15 @@ module mod_preconditioner
     do j=1,pc%n_mode_families
       r = 0
       do i = 1, n_cpu
-        if (pc%rank_id(i).eq.j) then
+        if (rank_id(i).eq.j) then
           r = r + 1
           pc%mode_families_ranks(j,r) = i - 1
         endif
       enddo
     enddo
 
-    pc%family_id = pc%rank_id(pc%my_id + 1)
+    pc%family_id = rank_id(pc%my_id + 1)
+    deallocate(rank_id)
 
     return
 
@@ -288,11 +292,7 @@ module mod_preconditioner
 
     type(type_PRECOND) :: pc !, pc_def
 
-    if (.not.pc%initialized) then
-
-      write(*,*) "Preconditioner is not initialized"
-
-    else
+    if (pc%initialized) then
 
       if (pc%structured) then
 
@@ -318,7 +318,6 @@ module mod_preconditioner
 
       deallocate(pc%mode_families_ranks)
       deallocate(pc%mode_families_modes)
-      deallocate(pc%rank_id)
       deallocate(pc%mode_set)
 
       pc%initialized = .false.

@@ -119,7 +119,7 @@ contains
           elseif ( (side1 .eq. 3) .or. (side2 .eq. 3) ) then
             direction = (/  1, 3  /)
           endif
-          ! --- mhd_sim% should never happen, but just in case...
+          ! --- This should never happen, but just in case...
           if (     ((side1 .eq. 2) .and. (side2 .eq. 3)) &
               .or. ((side1 .eq. 3) .and. (side2 .eq. 2)) ) then
             write(*,'(A,4i8)') 'WARNING: boundary_matrix_open, boundary element incoherent ',&

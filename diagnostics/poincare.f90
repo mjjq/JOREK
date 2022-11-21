@@ -37,7 +37,7 @@ use equil_info
 use mod_boundary, only: boundary_from_grid
 use nodes_elements
 use mod_interp, only: interp
-
+use mod_coordinate_transforms, only: cylindrical_to_cartesian
 
 implicit none
 
@@ -55,7 +55,7 @@ class(*), pointer :: p
 real*8    :: tstep
 integer*4 :: norb, ndata, nprt, finished
 integer*4 :: ifail, iprt
-real*8    :: zprev, phiprev, raxis, zaxis
+real*8    :: zprev, phiprev, raxis, zaxis, xyz(3), xyz0(3)
 real*8    :: taxis, saxis, psiaxis, ielmaxis
 real*8    :: mass, pitch, energy
 integer*4 :: charge
@@ -152,16 +152,18 @@ do while(finished .lt. nprt)
       !$omp shared(sim, tstep, norb, ndata, mileage, p) &
 #endif
       !$omp shared(raxis, zaxis, ncross, nprt, rvals, zvals, phivals, psivals, milvals, nextslot, pncrid) &
-      !$omp private(iprt, ifail, zprev, phiprev) &
+      !$omp private(iprt, ifail, zprev, phiprev, xyz, xyz0) &
       !$omp reduction(+:finished)
       do iprt=1,nprt
          if (p(iprt)%i_elm .gt. 0 .and. ncross(iprt) .lt. norb) then
+            xyz0    = cylindrical_to_cartesian(p(iprt)%x)
             zprev   = p(iprt)%x(2)
             phiprev = p(iprt)%x(3)
             call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time, tstep, &
                  sim%groups(1)%mass, p(iprt))
 
-            mileage(iprt) = mileage(iprt) + tstep
+            xyz = cylindrical_to_cartesian(p(iprt)%x)
+            mileage(iprt) = mileage(iprt) + norm2(xyz - xyz0)
             call check_and_store_crossing(sim%fields, iprt, sim%time, mileage(iprt), p(iprt)%i_elm, p(iprt)%st, p(iprt)%x, &
                  phiprev, zprev, raxis, zaxis, ndata, nextslot, ncross, rvals, zvals, phivals, psivals, milvals, pncrid)
          else
@@ -412,7 +414,7 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, psivals, milvals, p
   end do
 
   allocate( iprt(npoint), pncrid0(npoint) )
-  allocate( rvals0(npoint), zvals0(npoint), phivals0(npoint), psivals0(npoint) )
+  allocate( rvals0(npoint), zvals0(npoint), phivals0(npoint), psivals0(npoint), milvals0(npoint) )
 
   ! Store the (actual) data to 1D arrays
   ipoint = 1
@@ -425,6 +427,7 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, psivals, milvals, p
            zvals0(ipoint)   = zvals(i,j)
            phivals0(ipoint) = mod(phivals(i,j), 2*PI)
            psivals0(ipoint) = psivals(i,j)
+           milvals0(ipoint) = milvals(i,j)
            ipoint = ipoint + 1
         end if
      end do
@@ -447,7 +450,7 @@ subroutine write_poincare_hdf5(fnout, rvals, zvals, phivals, psivals, milvals, p
   call HDF5_array1D_saving_int(file,    iprt,  npoint, "iprt")
   call HDF5_array1D_saving(file, mileage, nprt, "mileage")
 
-  deallocate( iprt, pncrid0, rvals0, zvals0, phivals0, psivals0 )
+  deallocate( iprt, pncrid0, rvals0, zvals0, phivals0, psivals0, milvals0 )
 
   ! This would be the raw data that is in 2D arrays that someone might find easier to handle
   ! and therefore it is left here

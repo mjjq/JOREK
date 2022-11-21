@@ -25,6 +25,7 @@ type(sobseq_rng)             :: sob_rng
 type(event)                  :: field_reader
 type(type_bnd_node_list)     :: bnd_node_list
 type(type_bnd_element_list)  :: bnd_elm_list
+logical                      :: write_txt 
 integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
 integer                      :: n_int_weight_param,n_real_weight_param
@@ -56,6 +57,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
+write_txt   = .false.
 test_case   = 'jorek_current_density_re'
 n_particles = 100000000
 nR          = 2
@@ -66,11 +68,11 @@ npitch      = 81
 nchi        = 81
 start_time  = 0.d0
 mass        = 5.48579909065d-4 !< electron mass in AMU
-Rbound      = [0.d0,9.99d2] ![2.951,2.953]!
-Zbound      = [-9.99d2,9.99d2]![5d-3,6d-3]
-Phibound    = 5.d-1*[PI,3.d0*PI] ![0d0,1d-3]
-Ekinbound   = [1d3,2d7]![2d7-1d6,2d7+1d6]!
-Pitchbound  = [PI-2.95d-1,PI] ![1d-2,PI]
+Rbound      = [0.d0,9.99d2]
+Zbound      = [-9.99d2,9.99d2]
+Phibound    = 5.d-1*[PI,3.d0*PI]
+Ekinbound   = [2d7-1d4,2d7+1d4]
+Pitchbound  = [PI-2.95d-1,PI]
 Chibound    = [0.d0,TWOPI]
 Chargebound = -1.d0
 charge      = -1.d0
@@ -226,17 +228,19 @@ write(*,*) " "
 write(*,*) "... write particle restart file"
 call write_simulation_hdf5(sim,trim(particle_restart_filename))
 write(*,*) "... writing data in files"
-call dump_kinetic_particles_in_txt(n_particles,sim%groups(1)%particles,sim%groups(1)%mass,&
-start_time,sim%fields,particle_filename,ifail)
-call write_array1d_double(nR,Rmesh,trim(trim(mesh_filename_root)//'R.txt'),ifail)
-call write_array1d_double(nZ,Zmesh,trim(trim(mesh_filename_root)//'Z.txt'),ifail)
-call write_array1d_double(nphi,phimesh,trim(trim(mesh_filename_root)//'phi.txt'),ifail)
-call write_array1d_double(np,pmesh,trim(trim(mesh_filename_root)//'p.txt'),ifail)
-call write_array1d_double(npitch,pitchmesh,trim(trim(mesh_filename_root)//'pitch.txt'),ifail)
-call write_array1d_double(nchi,chimesh,trim(trim(mesh_filename_root)//'gyro.txt'),ifail)
-call write_array6d_integer(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,histo,trim(particle_histo_filename),ifail)
-call write_array6d_double(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,expected_pdf,trim(particle_pdf_filename),ifail)
-call write_array6d_double(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,pdf_at_midpoints,trim(exact_pdf_filename),ifail)
+if(write_txt) then
+  call dump_kinetic_particles_in_txt(n_particles,sim%groups(1)%particles,sim%groups(1)%mass,&
+  start_time,sim%fields,particle_filename,ifail)
+  call write_array1d_double(nR,Rmesh,trim(trim(mesh_filename_root)//'R.txt'),ifail)
+  call write_array1d_double(nZ,Zmesh,trim(trim(mesh_filename_root)//'Z.txt'),ifail)
+  call write_array1d_double(nphi,phimesh,trim(trim(mesh_filename_root)//'phi.txt'),ifail)
+  call write_array1d_double(np,pmesh,trim(trim(mesh_filename_root)//'p.txt'),ifail)
+  call write_array1d_double(npitch,pitchmesh,trim(trim(mesh_filename_root)//'pitch.txt'),ifail)
+  call write_array1d_double(nchi,chimesh,trim(trim(mesh_filename_root)//'gyro.txt'),ifail)
+  call write_array6d_integer(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,histo,trim(particle_histo_filename),ifail)
+  call write_array6d_double(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,expected_pdf,trim(particle_pdf_filename),ifail)
+  call write_array6d_double(nchi-1,npitch-1,np-1,nphi-1,nZ-1,nR-1,pdf_at_midpoints,trim(exact_pdf_filename),ifail)
+endif
 !> add here method for writing the charge mesh distribution as well
 !> Clean-up ---------------------------------------------------------------------------------
 deallocate(Rmesh); deallocate(Zmesh); deallocate(phimesh); deallocate(pmesh); 

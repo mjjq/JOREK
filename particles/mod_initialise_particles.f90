@@ -349,7 +349,7 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   real*8,dimension(2)                      :: st
   real*8,dimension(3)                      :: B,E,e1,e2
   !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
-  real*8,dimension(7,2)                    :: phase_bounds,phase_bounds_uniform_samp
+  real*8,dimension(7,2)                    :: phase_bounds
   real*8,dimension(:),allocatable          :: variables,real_pdf_param,real_weight_param
   real*8,dimension(:),allocatable          :: real_gdf_param
 
@@ -381,8 +381,8 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
     if(Ekinbound_in(1).gt.0) phase_bounds(4,1) = Ekinbound_in(1)
     if(Ekinbound_in(2).gt.0) phase_bounds(4,2) = Ekinbound_in(2)
   endif
-  Erest = mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT**2 !< rest energy in eV
-  phase_bounds(4,:) = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
+  Erest = (mass*ATOMIC_MASS_UNIT/EL_CHG)*SPEED_OF_LIGHT**2 !< rest energy in eV
+  phase_bounds(4,:) = mass*SPEED_OF_LIGHT*sqrt(((phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
   !> pitch angle and gyrangle boxes
   phase_bounds(5,:) = [0.d0,PI]
   if(present(Pitchbound_in)) phase_bounds(5,:) = Pitchbound_in
@@ -403,10 +403,6 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
 
   !> Initialise variables needed in the loop
   n_particles = size(particles);
-  phase_bounds_uniform_samp = phase_bounds
-  phase_bounds_uniform_samp(1,:) = phase_bounds_uniform_samp(1,:)**2
-  phase_bounds_uniform_samp(4,:) = phase_bounds_uniform_samp(4,:)**3
-  phase_bounds_uniform_samp(5,:) = cos(phase_bounds_uniform_samp(5,:))
   one_over_sup_pdf = 1d0/sup_pdf; one_over_sup_gdf = 1d0/sup_gdf;
   n_real_pdf_param = 0; if(present(n_real_pdf_param_in)) n_real_pdf_param = n_real_pdf_param_in
   if((present(real_pdf_param_in)).and.(n_real_pdf_param.gt.0)) then
@@ -433,14 +429,14 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
     allocate(int_gdf_param(n_int_gdf_param)); int_gdf_param = int_gdf_param_in;
   endif
   call system_clock(t0)
+
   !> Loop on the particles
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
     !$omp firstprivate(n_particles,mass,time,phase_bounds,one_over_sup_pdf,&
-    !$omp one_over_sup_gdf,phase_bounds_uniform_samp,n_real_pdf_param,n_int_pdf_param,&
-    !$omp real_pdf_param,int_pdf_param,n_real_weight_param,n_int_weight_param,&
-    !$omp real_weight_param,int_weight_param,n_real_gdf_param,n_int_gdf_param,&
-    !$omp real_gdf_param,int_gdf_param) &
+    !$omp one_over_sup_gdf,n_real_pdf_param,n_int_pdf_param,real_pdf_param,&
+    !$omp int_pdf_param,n_real_weight_param,n_int_weight_param,real_weight_param,&
+    !$omp int_weight_param,n_real_gdf_param,n_int_gdf_param,real_gdf_param,int_gdf_param) &
     !$omp private(ii,variables,thread_id,i_elm,st,ifail,B,e1,e2,E,psi,U)
     thread_id = 1
     !$ thread_id = omp_get_thread_num()+1
@@ -460,8 +456,8 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
         !> and uniform for the charge state
         call rngs(thread_id)%next(variables)
         call gdf_sampler(n_variables,variables(1:n_variables),st,time,i_elm,fields,&
-        phase_bounds_uniform_samp(:,1),phase_bounds_uniform_samp(:,2),n_real_gdf_param,&
-        real_gdf_param,n_int_gdf_param,int_gdf_param)
+        phase_bounds(:,1),phase_bounds(:,2),n_real_gdf_param,real_gdf_param,&
+        n_int_gdf_param,int_gdf_param)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
         variables(1),variables(2),i_elm,st(1),st(2),ifail) 
       enddo

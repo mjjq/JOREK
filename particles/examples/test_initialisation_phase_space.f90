@@ -57,7 +57,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-write_txt   = .false.
+write_txt   = .true.
 test_case   = 'jorek_current_density_re'
 n_particles = 100000000
 nR          = 2
@@ -802,7 +802,6 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(pdf)
   !> Variables:
   real*8 :: DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
   real*8,dimension(1) :: jphi
-
   !> interpolate the jorek toroidal current density at the particle position
   call interp_PRZ(fields%node_list,fields%element_list,i_elm,[var_zj],1,&
   st(1),st(2),x(3),jphi,DUMMY_DOUBLE_1,DUMMY_DOUBLE_2)
@@ -868,8 +867,8 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
             ((sqrtpovermc2plus1_min**3)-3.d0*sqrtpovermc2plus1_min);
   max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)*(x_max(6)-x_min(6))
   max_pdf =(-6.d0*real_param(3))/(max_pdf*x_min(7)*EL_CHG*MU_ZERO*(real_param(2)**3)*&
-           (SPEED_OF_LIGHT**4)*x_min(1)); min_pdf = max_pdf;
-  min_pdf = min_pdf*varmin(var_zj); max_pdf = varmax(var_zj);
+           (SPEED_OF_LIGHT**4)*x_min(1));
+  min_pdf = max_pdf*varmin(var_zj); max_pdf = max_pdf*varmax(var_zj);
   !> check which between min_pdf and max_pdf has the maximum absolute value
   if(abs(max_pdf).ge.abs(min_pdf)) then
     sup_pdf = max_pdf
@@ -981,8 +980,11 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param)
   !> Inputs-Outputs:
   real*8,dimension(nx),intent(inout)          :: x
   !> Compute new particle position in phase space
-  x = x_min + (x_max-x_min)*x
-  x(1) = sqrt(x(1)); x(4) = x(4)**(1.d0/3.d0); x(5) = acos(x(5));
+  x(1) = sqrt(x_min(1)**2 + (x_max(1)**2 - x_min(1)**2)*x(1))
+  x(2:3) = x_min(2:3) + (x_max(2:3)-x_min(2:3))*x(2:3)
+  x(4) = (x_min(4)**3 + (x_max(4)**3-x_min(4)**3)*x(4))**(1d0/3d0)
+  x(5) = acos(cos(x_min(5))-(cos(x_max(5))-cos(x_min(5)))*x(5))
+  x(6:7) = x_min(6:7) + (x_max(6:7)-x_min(6:7))*x(6:7)
 end subroutine gdf_uniform_sampler
 
 !> Dummy particle weight equal to 1 

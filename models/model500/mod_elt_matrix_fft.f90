@@ -99,7 +99,6 @@ logical    :: xpoint2, use_fft
 real*8     :: Btheta2, epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 ! neutral source                                                                                                                  
-integer    :: i_inj                                                                                                               
 real*8     :: source_neutral, source_neutral_arr(n_inj_max)                                                                       
 real*8     :: source_neutral_drift, source_neutral_drift_arr(n_inj_max) !Neutral source deposited at R+drift_distance to impose plasmoid drift     
 real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max) !Teleported power density in JOREK unit (sink at R and source at R+drift)

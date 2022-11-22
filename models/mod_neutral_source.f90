@@ -196,7 +196,9 @@ module mod_neutral_source
     real*8     :: spi_grad_psi_tmp_drift
 
     source_neutral_arr       = 0.d0
-    source_neutral_drift_arr = 0.d0
+    if (present(source_neutral_drift_arr)) then
+      source_neutral_drift_arr = 0.d0
+    end if
 
     if (using_spi) then
 

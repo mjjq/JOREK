@@ -308,6 +308,9 @@ module mod_injection_source
 
     source_background_arr = 0.d0
     source_impurity_arr   = 0.d0
+    if (present(source_background_drift_arr)) then
+      source_background_drift_arr = 0.d0
+    end if
 
     if (using_spi) then
 

@@ -57,7 +57,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-write_txt   = .true.
+write_txt   = .false.
 test_case   = 'jorek_current_density_re'
 n_particles = 100000000
 nR          = 2
@@ -70,7 +70,7 @@ start_time  = 0.d0
 mass        = 5.48579909065d-4 !< electron mass in AMU
 Rbound      = [0.d0,9.99d2]
 Zbound      = [-9.99d2,9.99d2]
-Phibound    = 5.d-1*[PI,3.d0*PI]
+Phibound    = 2.5d-1*[TWOPI,5d0*PI]
 Ekinbound   = [2d7-1d4,2d7+1d4]
 Pitchbound  = [PI-2.95d-1,PI]
 Chibound    = [0.d0,TWOPI]

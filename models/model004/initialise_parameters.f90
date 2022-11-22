@@ -259,6 +259,13 @@ if (my_id .eq. 0) then
     nstep_n(1) = nstep
   endif
 
+  ! --- Fill the same ablation model to others if not specified to keep the old behavior
+  do i = 2,n_inj
+    if (spi_abl_model(i) < 0) then
+      spi_abl_model(i) = spi_abl_model(1)
+    end if
+  end do
+
   call allocate_live_data()
 
 endif
@@ -286,7 +293,6 @@ if ( my_id == 0 ) then
       stop
     end if
   end if
-
 
   if (n_inj > n_inj_max .or. n_inj < 1) then
     write(*,*) "ERROR! Do not support n_inj larger than n_inj_max or smaller than 1, EXITING!"

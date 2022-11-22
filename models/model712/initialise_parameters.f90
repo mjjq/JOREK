@@ -235,7 +235,14 @@ if (my_id .eq. 0) then
         stop
      endif
   endif
-  
+
+  ! --- Fill the same ablation model to others if not specified to keep the old behavior
+  do i = 2,n_inj
+    if (spi_abl_model(i) < 0) then
+      spi_abl_model(i) = spi_abl_model(1)
+    end if
+  end do
+
   call allocate_live_data()
 
 endif

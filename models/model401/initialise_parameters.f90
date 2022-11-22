@@ -239,6 +239,13 @@ if ( my_id == 0 ) then
     end if
   end if
 
+  do i = 1,n_inj
+    if (drift_distance(i) < 0.d0 .or. energy_teleported(i) < 0.d0) then
+      write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
+      stop
+    end if
+  end do
+
   if (using_spi) call init_spi_all()
 end if
 

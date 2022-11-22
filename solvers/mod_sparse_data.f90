@@ -40,20 +40,16 @@ module mod_sparse_data
     integer                     :: iter_prev = 0                       !< number of iterations in the previous step
     integer                     :: iter_gmres                          !< number of iterations in the current step
     real(kind=8)                :: iter_tol                            !< iterative convergence criteria
-    logical                     :: solve_only = .false.
-    logical                     :: step_success = .false.
-    logical                     :: iterative = .false.
-    logical                     :: equilibrium = .false.
+    logical                     :: solve_only = .false.                !< flag for updating PC matrix (.true. - no update/factorization needed)
+    logical                     :: step_success = .false.              !< flag indicating successfull time step completion
+    logical                     :: iterative = .false.                 !< flag indicating use of iterative solver 
+    logical                     :: equilibrium = .false.               !< flag indicating equilibrium solver (with duplicate entries in sparse matrix)
     
     integer                     :: verbose = 1                         !< flag for logfile printout (0: no printout)
     
   end type type_SP_SOLVER
-  
-  integer, parameter :: MHD_EQUILI = 0
-  integer, parameter :: MHD_DIRECT = 1
-  integer, parameter :: MHD_PRECON = 2
    
   private
-  public :: MHD_EQUILI, MHD_DIRECT, MHD_PRECON, type_SP_SOLVER
+  public :: type_SP_SOLVER
 
 end module mod_sparse_data

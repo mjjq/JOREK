@@ -427,6 +427,7 @@ module mod_pastix
     integer(kind=int_all)                        :: rhs      = 0
     integer(kind=int_all)                        :: nblock   = 0
     integer(kind=8)                              :: block_size = 1
+    integer(kind=8)                              :: nthrd = 1
 
   end type type_PASTIX_SOLVER
 
@@ -568,7 +569,7 @@ module mod_pastix
 
     call pastix_init_nthreads(ptss)
 
-    if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ', ptss%iparm(IPARM_THREAD_NBR)
+    if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ', ptss%nthrd
     
     allocate(ptss%perm_vars(ptss%nblock))
     allocate(ptss%iperm_vars(ptss%nblock))
@@ -613,7 +614,6 @@ module mod_pastix
 
     type(type_PASTIX_SOLVER)          :: ptss
 
-
     ptss%iparm(IPARM_START_TASK) = API_TASK_CLEAN
     ptss%iparm(IPARM_END_TASK)   = API_TASK_CLEAN
 
@@ -653,6 +653,7 @@ module mod_pastix
     type(type_PASTIX_SOLVER)          :: ptss
     
     ptss%iparm(IPARM_DOF_NBR) = ptss%block_size
+    ptss%iparm(IPARM_THREAD_NBR) = ptss%nthrd
 
     ptss%iparm(IPARM_START_TASK) = API_TASK_ORDERING
     ptss%iparm(IPARM_END_TASK)   = API_TASK_ANALYSE
@@ -736,7 +737,7 @@ module mod_pastix
     if (nthrd*n_cpu > ptss%maxthrd) then
       nthrd = max(ptss%maxthrd/n_cpu, 1)
     endif
-    ptss%iparm(IPARM_THREAD_NBR) = nthrd
+    ptss%nthrd = nthrd
 
     return
   end subroutine pastix_init_nthreads

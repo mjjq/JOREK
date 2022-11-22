@@ -33,9 +33,9 @@ module mod_sparse
 
     implicit none
 
-    type(type_SP_SOLVER)     :: solver
-    type(type_SP_MATRIX)     :: a_mat
-    type(type_RHS)           :: rhs_vec, sol_vec
+    type(type_SP_SOLVER)          :: solver
+    type(type_SP_MATRIX)          :: a_mat
+    type(type_RHS)                :: rhs_vec, sol_vec
     type(type_MHD_SIM), optional  :: mhd_sim
     
     integer                  :: my_id, n_cpu, ierr
@@ -45,31 +45,33 @@ module mod_sparse
 
     call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
     call MPI_COMM_RANK(a_mat%comm, my_id, ierr)
+    
+   
     sol_vec%n = rhs_vec%n
 
     if (.not.solver%iterative) then
 
       if (solver%equilibrium) then
-        if (my_id.eq.0) write(*,*) "Solving MHD equilibrium system"
+        if (solver%verbose.ne.0) write(*,*) "Solving MHD equilibrium system"
       else
-        if (my_id.eq.0) write(*,*) "Solving MHD system using direct solver"
+        if (solver%verbose.ne.0) write(*,*) "Solving MHD system using direct solver"
       endif
 
       if ((use_mumps.and..not.solver%equilibrium).or.(use_mumps_eq.and.solver%equilibrium)) then
 #ifdef USE_MUMPS
-        if (my_id.eq.0) write(*,*) "Using MUMPS solver"
+        if (solver%verbose.ne.0) write(*,*) "Using MUMPS solver"
         solver%mmss%equilibrium = solver%equilibrium
         call solve_mumps_all(solver%mmss, a_mat, rhs_vec, solver%solve_only)
 #endif
       elseif ((use_strumpack.and..not.solver%equilibrium).or.(use_strumpack_eq.and.solver%equilibrium)) then
 #ifdef USE_STRUMPACK
-        if (my_id.eq.0) write(*,*) "Using STRUMPACK solver"
+        if (solver%verbose.ne.0) write(*,*) "Using STRUMPACK solver"
         solver%spss%equilibrium = solver%equilibrium
         call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only)
 #endif
       elseif ((use_pastix.and..not.solver%equilibrium).or.(use_pastix_eq.and.solver%equilibrium)) then
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
-        if (my_id.eq.0) write(*,*) "Using PaStiX solver"
+        if (solver%verbose.ne.0) write(*,*) "Using PaStiX solver"
         solver%ptss%equilibrium = solver%equilibrium
         solver%ptss%refine = .true.
         call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only)
@@ -84,7 +86,7 @@ module mod_sparse
 
     elseif (solver%iterative) then
 
-      if (my_id.eq.0) write(*,*) "Solving MHD system using iterative solver"
+      if (solver%verbose.ne.0) write(*,*) "Solving MHD system using iterative solver"
 
       ! condition for no PC update
       solver%solve_only = (solver%istep > 1) .and. ((solver%iter_gmres + solver%iter_prev <= 2*solver%iter_precon) &
@@ -133,7 +135,7 @@ module mod_sparse
       call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
 #endif
 
-      if (my_id.eq.0) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
+      if (solver%verbose.ne.0) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
 
       solver%step_success = (solver%iter_gmres .lt. solver%iter_max)
 
@@ -153,7 +155,7 @@ module mod_sparse
 
     type(type_SP_SOLVER)     :: solver
 
-    write(*,*) "Finalizing solver"
+    if (solver%verbose.ne.0) write(*,*) "Finalizing solver"
 
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
     if (solver%ptss%initialized) call pastix_finalize(solver%ptss)

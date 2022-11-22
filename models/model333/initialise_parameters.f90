@@ -75,12 +75,11 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_mumps, mumps_ordering,                          &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
-                pastix_smp_only, refinement, force_central_node,    &
+                refinement, force_central_node,                     &
                 fix_axis_nodes,                                     &
                 grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &
                 RZ_grid_jump_thres,                                 &
                 adaptive_time, equil, bench_without_plot,           &
-                no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, use_strumpack,                   & 
                 heatsource_psin, heatsource_sig,                    &

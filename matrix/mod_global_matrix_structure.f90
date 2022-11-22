@@ -284,7 +284,7 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
   call tr_allocatep(a_mat%irn, Int1, a_mat%nnz, "irn", CAT_DMATRIX)
   a_mat%irn(:) = 0
   
-  if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn, "irn", CAT_DMATRIX) 
+  if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn, "jcn", CAT_DMATRIX) 
   call tr_allocatep(a_mat%jcn, Int1, a_mat%nnz, "jcn",  CAT_DMATRIX)
   a_mat%jcn(:) = 0 
 

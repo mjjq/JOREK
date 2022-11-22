@@ -624,8 +624,6 @@ subroutine preset_parameters
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
-  no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
-  no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
   mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
   use_BLR_compression = .false.             ! Use MUMPS / PaStiX 6 solver with Block-low-rank (BLR) compression

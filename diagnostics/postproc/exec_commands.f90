@@ -3210,6 +3210,7 @@ module exec_commands
         
 !!!! solve here
           solver%equilibrium = .true.
+          solver%verbose = 0
           call solve_sparse_system(a_mat, rhs_vec, rhs_vec, solver)
           call solver_finalize(solver)  
 

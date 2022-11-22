@@ -14,7 +14,6 @@ module mod_mumps
     
     type(DMUMPS_STRUC)  :: mumps_par
     integer             :: mumps_ordering
-    logical             :: no_zeros_mumps
     logical             :: use_BLR_compression
     real(kind=8)        :: epsilon_BLR
   
@@ -26,7 +25,7 @@ module mod_mumps
   contains
   
   subroutine mumps_initialize(mmss,comm)
-    use phys_module, only: mumps_ordering, no_zeros_mumps, epsilon_BLR, use_BLR_compression
+    use phys_module, only: mumps_ordering, epsilon_BLR, use_BLR_compression
     implicit none
     
     type(type_MUMPS_SOLVER)            :: mmss

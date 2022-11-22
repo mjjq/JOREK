@@ -751,7 +751,6 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'use_mumps_eq          ', use_mumps_eq
   write(*,LOGI_FMT) 'use_pastix_eq         ', use_pastix_eq
   write(*,LOGI_FMT) 'use_strumpack_eq      ', use_strumpack_eq  
-  write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd
   write(*,LOGI_FMT) 'refinement            ', refinement
@@ -760,8 +759,6 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
   write(*,LOGI_FMT) 'equil                 ', equil
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
-  write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
-  write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
   write(*,LOGI_FMT) 'deuterium_adas_1e20   ', deuterium_adas_1e20

@@ -45,6 +45,8 @@ module mod_sparse_data
     logical                     :: iterative = .false.
     logical                     :: equilibrium = .false.
     
+    integer                     :: verbose = 1                         !< flag for logfile printout (0: no printout)
+    
   end type type_SP_SOLVER
   
   integer, parameter :: MHD_EQUILI = 0

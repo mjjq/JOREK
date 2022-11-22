@@ -1272,7 +1272,7 @@ do i=1,n_vertex_max
           source_neutral       = 0.d0; source_neutral_arr       = 0.d0
           source_neutral_drift = 0.d0; source_neutral_drift_arr = 0.d0
 
-          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,A30,source_neutral_arr,source_neutral_drift_arr)
 
           do i_inj = 1,n_inj
             source_neutral       = source_neutral + source_neutral_arr(i_inj)
@@ -1286,8 +1286,8 @@ do i=1,n_vertex_max
             stop
           end if
 
-          source_neutral       = max(0.,source_neutral)
-          source_neutral_drift = max(0.,source_neutral_drift)
+          source_neutral       = max(0.,source_neutral)       + source_pellet
+          source_neutral_drift = max(0.,source_neutral_drift) + source_pellet
 
           !------------------------------------------------------------------------------------------
           ! ---Calculate energy teleported in JOREK unit (sink at R and source at R + drift_distance)

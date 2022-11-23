@@ -502,7 +502,7 @@ x_light,property,dir_func,irradiance)
   real*8,dimension(n_x) :: rpsichi
 
   !> initialisations
-  dir_func = 0d0; irradiance =0d0;
+  dir_func = 0d0; irradiance = 0d0;
   !> check is the shaded point is in the synchrotron cone
   if(.not.check_shaded_x_in_synchrotron_cone(n_x,x_illum,&
   x_light,property(1:3),property(11))) return
@@ -510,22 +510,22 @@ x_light,property,dir_func,irradiance)
   rpsichi = cartesian_to_spherical_latitude(x_illum,x_light,&
   property(1:3),property(4:6),property(7:9))
   !> compute the particle dependent variables
-  z = (property(11)*rpsichi(3))/sqrt(1.d0+(property(11)*rpsichi(2))**2.d0)
-  one_z2 = 5.d-1*(1.d0+z*z); z_z3 = 1.5d0*(z+((z**3.d0)/3.d0))
-  factor_2 = ((property(11)*rpsichi(2))**2.d0)/(1.d0+(property(11)*rpsichi(2))**2.d0)
-  factor = (1.d0+(property(11)*rpsichi(2))**2.d0)**2.d0
-  factor = (factor*SPEED_OF_LIGHT*(EL_CHG**2.d0))/&
-           (sqrt(3.d0)*EPS_ZERO*property(12)*(property(11)**4.d0))
+  z = (property(11)*rpsichi(3))/sqrt(1.d0+(property(11)*rpsichi(2))**2)
+  one_z2 = 5.d-1*(1.d0+(z**2)); z_z3 = 1.5d0*(z+((z**3)/3.d0))
+  factor_2 = ((property(11)*rpsichi(2))**2)/(1.d0+(property(11)*rpsichi(2))**2)
+  factor = (1.d0+(property(11)*rpsichi(2))**2)**2
+  factor = (factor*SPEED_OF_LIGHT*(EL_CHG**2))/&
+           (sqrt(3.d0)*EPS_ZERO*property(12)*(property(11)**4))
   !> compute the irradiance
   !> compute the directionaly function
   do ii=1,spectrum%n_spectra
     do jj=1,spectrum%n_points
-      zeta = TWOPI*(((1.d0/property(11)**2.d0)+rpsichi(2)**2.d0)**1.5d0)/&
+      zeta = TWOPI*(((1.d0/property(11)**2)+rpsichi(2)**2)**1.5d0)/&
       (3.d0*spectrum%points(jj,ii)*property(12))
       call besselk(onethird,zeta,besselk13)
       call besselk(twothird,zeta,besselk23)
       irradiance(jj,ii) = factor*((factor_2-one_z2)*besselk13*cos(zeta*z_z3)+&
-      besselk23*z*sin(zeta*z_z3))/(spectrum%points(jj,ii)**4.d0)
+      besselk23*z*sin(zeta*z_z3))/(spectrum%points(jj,ii)**4)
       dir_func(jj,ii) = irradiance(jj,ii)/property(13)
     enddo
   enddo
@@ -553,7 +553,7 @@ subroutine compute_synch_properties_ana_1p(phi,mass,particle,property)
   real*8,dimension(3) :: vec_real_size3
   !> compute relativistic factor, velocity and beta
   rel_fact = sqrt(1.d0+(dot_product(particle%p,particle%p)/&
-             (SPEED_OF_LIGHT*SPEED_OF_LIGHT*mass*mass)))
+             ((SPEED_OF_LIGHT*mass)**2)))
   vel_vec = particle%p/(mass*rel_fact)
   velocity = norm2(vel_vec)
   beta     =  velocity/SPEED_OF_LIGHT
@@ -570,10 +570,10 @@ subroutine compute_synch_properties_ana_1p(phi,mass,particle,property)
   vec_real_size3 = E_field + cross_product(vel_vec,B_field)
   vec_real_size3 = cross_product(vel_vec,vec_real_size3)
   kappa = (norm2(vec_real_size3)*EL_CHG*abs(real(particle%q,kind=8)))/&
-  (rel_fact*mass*ATOMIC_MASS_UNIT*velocity**3.d0)
+  (rel_fact*mass*ATOMIC_MASS_UNIT*velocity**3)
   !> compute total radiated power (L. Carbajal, PPCF, 2017)
-  P_rad = (((rel_fact*velocity)**4.d0)*((kappa*EL_CHG*real(particle%q,kind=8))**2.d0))/&
-  (6.d0*PI*EPS_ZERO*(SPEED_OF_LIGHT**3.d0))
+  P_rad = (((rel_fact*velocity)**4)*((kappa*EL_CHG*real(particle%q,kind=8))**2))/&
+  (6.d0*PI*EPS_ZERO*(SPEED_OF_LIGHT**3))
   !> Store all values in the array
   property(1:3) = T_vec; property(4:6) = N_vec; property(7:9) = B_vec;
   property(10) = beta; property(11) = rel_fact; property(12) = kappa;

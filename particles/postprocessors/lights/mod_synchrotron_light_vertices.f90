@@ -369,7 +369,7 @@ light_dir,rel_fact) result(in_cone)
   in_cone = .false.
   !> check if the shaded point is in the synchrotron conede
   costheta = dot_product(x_shaded-x_light,light_dir)/norm2(x_shaded-x_light)
-  if((costheta.ge.0).and.((sqrt(1d0-costheta*costheta)*rel_fact).le.1d0)) in_cone=.true.
+  if((costheta.ge.0).and.((sqrt(1d0-costheta**2)*rel_fact).le.1d0)) in_cone=.true.
 end function check_shaded_x_in_synchrotron_cone
 
 !> compute_synchrotron_light_properties computes the
@@ -417,31 +417,22 @@ mass,E_field,B_field,sync_properties)
   real*8,dimension(field_size) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
 
   !> compute velocity, velocity direction and relativistic factor
-  velocity =  sqrt(particle_in%p(1)*particle_in%p(1)+&
-              particle_in%p(2)*particle_in%p(2)+&
-              particle_in%p(3)*particle_in%p(3)) 
+  velocity = sqrt(particle_in%p(1)**2+particle_in%p(2)**2+particle_in%p(3)**2) 
   sync_properties(1:3) = particle_in%p/velocity
-  sync_properties(10)   = velocity/SPEED_OF_LIGHT
-  sync_properties(11)   = sqrt(1.d0 + (sync_properties(10)*sync_properties(10))/(mass*mass))
-  sync_properties(10)   = sync_properties(10)/(mass*sync_properties(11))
+  sync_properties(10)  = velocity/SPEED_OF_LIGHT
+  sync_properties(11)  = sqrt(1.d0 + (sync_properties(10)**2)/(mass**2))
+  sync_properties(10)  = sync_properties(10)/(mass*sync_properties(11))
   !> compute orbit curvature
   sync_properties(4:6) = E_field+cross_product(particle_in%p/(mass*sync_properties(11)),B_field)
   vector_1d_3 = cross_product(sync_properties(1:3),sync_properties(4:6))
-  sync_properties(12) = (abs(real(particle_in%q,kind=8))*EL_CHG*&
-                       sqrt(vector_1d_3(1)*vector_1d_3(1)+&
-                       vector_1d_3(2)*vector_1d_3(2)+&
-                       vector_1d_3(3)*vector_1d_3(3)))/&
-                       (sync_properties(11)*mass*ATOMIC_MASS_UNIT*&
-                       sync_properties(10)*sync_properties(10)*&
-                       SPEED_OF_LIGHT*SPEED_OF_LIGHT)
+  sync_properties(12)  = (abs(real(particle_in%q,kind=8))*EL_CHG*&
+                         sqrt(vector_1d_3(1)**2+vector_1d_3(2)**2+vector_1d_3(3)**2))/&
+                         (sync_properties(11)*mass*ATOMIC_MASS_UNIT*&
+                         ((sync_properties(10)*SPEED_OF_LIGHT)**2))
   !> compute total synchrotron power
-  sync_properties(13) = (real(particle_in%q*particle_in%q,kind=8)*&
-                       EL_CHG*EL_CHG*SPEED_OF_LIGHT*sync_properties(10)*&
-                       sync_properties(10)*sync_properties(10)*&
-                       sync_properties(10)*sync_properties(11)*&
-                       sync_properties(11)*sync_properties(11)*&
-                       sync_properties(11)*sync_properties(12)*&
-                       sync_properties(12))/(6.d0*PI*EPS_ZERO)
+  sync_properties(13)  = (((EL_CHG*real(particle_in%q*particle_in%q,kind=8))**2)*&
+                         SPEED_OF_LIGHT*(sync_properties(10)**4)*(sync_properties(11)**4)*&
+                         (sync_properties(12)**2))/(6.d0*PI*EPS_ZERO)
 
   !> construct and store the orthonormal basis
   call vectors_to_orthonormal_basis(sync_properties(1:3),sync_properties(4:6),&

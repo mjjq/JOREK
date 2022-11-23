@@ -497,7 +497,7 @@ x_light,property,dir_func,irradiance)
   integer               :: ii,jj
   real*8                :: onethird=1.d0/3.d0
   real*8                :: twothird=2.d0/3.d0
-  real*8                :: z,zeta,besselk13,besselk23
+  real*8                :: z_v,zeta,besselk13,besselk23
   real*8                :: one_z2,z_z3,factor,factor_2
   real*8,dimension(n_x) :: rpsichi
 
@@ -510,8 +510,8 @@ x_light,property,dir_func,irradiance)
   rpsichi = cartesian_to_spherical_latitude(x_illum,x_light,&
   property(1:3),property(4:6),property(7:9))
   !> compute the particle dependent variables
-  z = (property(11)*rpsichi(3))/sqrt(1.d0+(property(11)*rpsichi(2))**2)
-  one_z2 = 5.d-1*(1.d0+(z**2)); z_z3 = 1.5d0*(z+((z**3)/3.d0))
+  z_v = (property(11)*rpsichi(3))/sqrt(1.d0+((property(11)*rpsichi(2))**2))
+  one_z2 = 5.d-1*(1.d0+(z_v**2)); z_z3 = 1.5d0*(z_v+((z_v**3)/3.d0))
   factor_2 = ((property(11)*rpsichi(2))**2)/(1.d0+(property(11)*rpsichi(2))**2)
   factor = (1.d0+(property(11)*rpsichi(2))**2)**2
   factor = (factor*SPEED_OF_LIGHT*(EL_CHG**2))/&
@@ -525,7 +525,7 @@ x_light,property,dir_func,irradiance)
       call besselk(onethird,zeta,besselk13)
       call besselk(twothird,zeta,besselk23)
       irradiance(jj,ii) = factor*((factor_2-one_z2)*besselk13*cos(zeta*z_z3)+&
-      besselk23*z*sin(zeta*z_z3))/(spectrum%points(jj,ii)**4)
+      besselk23*z_v*sin(zeta*z_z3))/(spectrum%points(jj,ii)**4)
       dir_func(jj,ii) = irradiance(jj,ii)/property(13)
     enddo
   enddo

@@ -173,7 +173,7 @@ light_id,x_shaded,light_dstb)
   !> (6*PI / (sqrt(3)) * beta**4 * gamma**8 * kappa**3 )*( 1 + gamma**2 * psi**2)**2
   !> beta = v/c; kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
   !> Power_tot = (q**2/(6*PI*eps0i*c**3))*gamma**4 * v**4 * kappa**2
-  factor_1 = (factor_1**2)*((3.d0*TWOPI)/(sqrt3*(light_properties(10)**4)*&
+  factor_1 = ((3.d0*TWOPI*(factor_1**2))/(sqrt3*(light_properties(10)**4)*&
   (light_properties(11)**8)*(light_properties(12)**3)))
   if(in_parallel) then
     !$omp taskloop default(shared) private(ii,jj) &
@@ -258,7 +258,7 @@ factor_2,z_value,z2_value,factor_1,dir_funct)
   !> compute the directionality function
   dir_funct = 0.d0;  
   !> zeta = (2*PI*(1/gamma**2 + psi**2)**(3/2))/(3*kappa*lambda)
-  zeta = TWOPI*((one_over_gamma+rpsichi(2)*rpsichi(2))**1.5d0)/&
+  zeta = TWOPI*((one_over_gamma+(rpsichi(2)**2))**1.5d0)/&
   (3.d0*wavelength*orbit_curvature)
   besselk_1 = f_besselk(onethird,zeta); besselk_2 = f_besselk(twothirds,zeta);
   if(isnan(besselk_1)) return; if(isnan(besselk_2)) return;

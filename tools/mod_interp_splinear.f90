@@ -124,9 +124,9 @@ if (yy .lt. ty(iy1)) iy2 = iy1 - 1
 if (iy2 .gt. size(ty)) iy2 = size(ty) - 1
 if (iy2 .lt. 1       ) iy2 = 2
 
-fx1  = (f(ix1,iy1,:) - f(ix2,iy1,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy1,:)
-fx2  = (f(ix1,iy2,:) - f(ix2,iy2,:))/(tx(ix1) - tx(ix2)) * (x - tx(ix1)) + f(ix1,iy2,:)
-fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (y - ty(iy1)) + fx1
+fx1  = (f(ix1,iy1,:) - f(ix2,iy1,:))/(tx(ix1) - tx(ix2)) * (xx - tx(ix1)) + f(ix1,iy1,:)
+fx2  = (f(ix1,iy2,:) - f(ix2,iy2,:))/(tx(ix1) - tx(ix2)) * (xx - tx(ix1)) + f(ix1,iy2,:)
+fout = (fx1 - fx2) / (ty(iy1) - ty(iy2)) * (yy - ty(iy1)) + fx1
 end function L2D2interp
 
 !> Like [[L2D2interp]], but calculate the gradient in direction `dim`.

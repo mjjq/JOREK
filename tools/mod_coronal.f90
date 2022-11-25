@@ -177,7 +177,7 @@ do m=1, n_d
       ! p(iz-1) * scd(iz-1) - p(iz) * acd(iz)
       call ad%SCD%interp(iz-1, cor%density(m), cor%temperature(k), ion_rate) ! ionizing from level iz-1 to iz
       call ad%ACD%interp(iz, cor%density(m), cor%temperature(k), rec_rate) ! recombining from iz to iz - 1
-      p(iz) = p(iz-1) * ion_rate/rec_rate
+      p(iz) = max(p(iz-1) * ion_rate/rec_rate, 0.0)
     end do
 
     cor%Z(m,k,:) = p / sum(p)

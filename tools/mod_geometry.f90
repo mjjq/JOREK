@@ -106,7 +106,15 @@ end subroutine compute_plane_line_intersect_cart_points_r8
 !> the spherical coordinates of the plane mid point in
 !> the origin coordinate system and the origin coordinates
 !> inputs:
+!>   mirror_xy:   (integer)(2) mirror plane vertices w.r.t.
+!>                the x and y axes.
+!>                1) if 1 mirror w.r.t. the x-axis
+!>                2) if 1 mirror w.r.t. the y-axis
+!>
 !>   half_angles: (real8)(2) 1:half_width 2:half_height
+!>                3: orientation - alignment of the 
+!>                P1,P2,P3 points w.r.t. the Z axis
+!> 
 !>   rthetaphi:   (real8)(3) spherical coordinates of the
 !>                plane midpoin: rthetaphi(1): distance
 !>                               rthetaphi(2): colatitude
@@ -117,17 +125,19 @@ end subroutine compute_plane_line_intersect_cart_points_r8
 !>                    coordinates: pp(:,1) -> P1
 !>                                 pp(:,2) -> P2
 !>                                 pp(:,3) -> P3
-subroutine define_direction_origin_plane_from_half_angles(half_angles,&
-rthetaphi,origin,pp)
+subroutine define_direction_origin_plane_from_half_angles(&
+mirror_xy,half_angles,rthetaphi,origin,pp)
   implicit none
-  real*8,dimension(2),intent(in) :: half_angles
-  real*8,dimension(3),intent(in) :: rthetaphi,origin
+  integer,dimension(2),intent(in) :: mirror_xy
+  real*8,dimension(3),intent(in)  :: half_angles
+  real*8,dimension(3),intent(in)  :: rthetaphi,origin
   !> outputs:
   real*8,dimension(3,3),intent(out) :: pp
   !> variables
   integer :: ii
   !> compute directional plane vertices
-  call define_direction_plane_from_half_angles(half_angles,rthetaphi,pp)
+  call define_direction_plane_from_half_angles(&
+  mirror_xy,half_angles,rthetaphi,pp)
   !> translate vertices
   do ii=1,3
     pp(:,ii) = origin + pp(:,ii)
@@ -139,7 +149,15 @@ end subroutine define_direction_origin_plane_from_half_angles
 !> and the spherical coordinates of the plane mid point in
 !> the origin coordinate system
 !> inputs:
+!>   mirror_xy:   (integer)(2) mirror plane vertices w.r.t.
+!>                the x and y axes.
+!>                1) if 1 mirror w.r.t. the x-axis
+!>                2) if 1 mirror w.r.t. the y-axis
+!>
 !>   half_angles: (real8)(2) 1:half_width 2:half_height
+!>                3: orientation - alignment of the 
+!>                P1,P2,P3 points w.r.t. the Z axis
+!> 
 !>   rthetaphi:   (real8)(3) spherical coordinates of the
 !>                plane midpoin: rthetaphi(1): distance
 !>                               rthetaphi(2): colatitude
@@ -149,32 +167,20 @@ end subroutine define_direction_origin_plane_from_half_angles
 !>                    coordinates: pp(:,1) -> P1
 !>                                 pp(:,2) -> P2
 !>                                 pp(:,3) -> P3
-subroutine define_direction_plane_from_half_angles(half_angles,&
-rthetaphi,pp)
+subroutine define_direction_plane_from_half_angles(mirror_xy,&
+half_angles,rthetaphi,pp)
+  use mod_coordinate_transforms, only: vectors_spherical_to_cartesian
   implicit none
   !> inputs:
-  real*8,dimension(2),intent(in) :: half_angles
-  real*8,dimension(3),intent(in) :: rthetaphi
+  integer,dimension(2),intent(in) :: mirror_xy
+  real*8,dimension(3),intent(in)  :: half_angles
+  real*8,dimension(3),intent(in)  :: rthetaphi
   !> outputs:
-  real*8,dimension(3,3),intent(out) :: pp
-  !> variables
-  integer :: ii
-  real*8,dimension(2) :: cos_thetaphi,sin_thetaphi
-  real*8,dimension(3,3) :: rot
-  !> compute rotation transform
-  cos_thetaphi = cos(rthetaphi(2:3));
-  sin_thetaphi = sin(rthetaphi(2:3));
-  rot(:,1) = (/-sin_thetaphi(2),cos_thetaphi(2),0.d0/)
-  rot(:,2) = (/cos_thetaphi(1)*cos_thetaphi(2),&
-             cos_thetaphi(1)*sin_thetaphi(2),-sin_thetaphi(1)/)
-  rot(:,3) = (/sin_thetaphi(1)*cos_thetaphi(2),&
-             sin_thetaphi(1)*sin_thetaphi(2),cos_thetaphi(1)/)
+  real*8,dimension(3,3),intent(out) :: pp  !> compute rotation transform
   !> compute plane vertices
-  call define_standard_plane_from_half_angles(half_angles,pp)
-  !> transform the vertices in the new positions
-  do ii=1,3
-    pp(:,ii) = rthetaphi(1)*matmul(rot,pp(:,ii))
-  enddo
+  call define_standard_plane_from_half_angles(mirror_xy,half_angles,pp)
+  !> rotate the points defining the plane in the cartesian reference
+  call vectors_spherical_to_cartesian(3,rthetaphi,pp)
 end subroutine define_direction_plane_from_half_angles
 
 !> define a plane vertices given the half width and half height
@@ -188,25 +194,42 @@ end subroutine define_direction_plane_from_half_angles
 !>   v           v
 !> P3 -> width -> P4 
 !> inputs:
+!>   mirror_xy:   (integer)(2) mirror plane vertices w.r.t.
+!>                the x and y axes.
+!>                1) if 1 mirror w.r.t. the x-axis
+!>                2) if 1 mirror w.r.t. the y-axis
+!>
 !>   half_angles: (real8)(2) 1:half_width 2:half_height
+!>                3: orientation - alignment of the 
+!>                P1,P2,P3 points w.r.t. the Z axis
+!>                 
 !> outputs
 !>   pp: (real8)(3,3) points defining a plane in cartesian 
 !>                    coordinates: pp(:,1) -> P1
 !>                                 pp(:,2) -> P2
 !>                                 pp(:,3) -> P3
-subroutine define_standard_plane_from_half_angles(half_angles,pp)
+subroutine define_standard_plane_from_half_angles(mirror_xy,half_angles,pp)
+  use mod_coordinate_transforms, only: mirror_around_cart_x
+  use mod_coordinate_transforms, only: mirror_around_cart_y
+  use mod_coordinate_transforms, only: rotate_vectors_cart_z
   implicit none
   !> inputs:
-  real*8,dimension(2),intent(in) :: half_angles
+  integer,dimension(2),intent(in) :: mirror_xy
+  real*8,dimension(3),intent(in)  :: half_angles
   !> outputs:
   real*8,dimension(3,3),intent(out) :: pp
   !> variables
-  real*8,dimension(2) :: tan_angles
+  real*8,dimension(2)   :: tan_angles
   !> compute plane vertex coordinates
-  tan_angles = tan(half_angles)
+  tan_angles = tan(half_angles(1:2))
   pp(:,1) = (/-tan_angles(1),tan_angles(2),1.d0/)
   pp(:,2) = (/tan_angles(1),tan_angles(2),1.d0/)
   pp(:,3) = (/-tan_angles(1),-tan_angles(2),1.d0/)
+  !> change the orientation of the plane points
+  call rotate_vectors_cart_z(3,half_angles(3),pp)
+  !> mirror w.r.t. x and y axis if required
+  if(mirror_xy(1).eq.1) call mirror_around_cart_x(3,pp)
+  if(mirror_xy(2).eq.1) call mirror_around_cart_y(3,pp)
 end subroutine define_standard_plane_from_half_angles
 
 !> define vertex given its spherical coordinates and an origin

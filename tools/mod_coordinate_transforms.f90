@@ -17,6 +17,11 @@ module mod_coordinate_transforms
   public :: transform_first_derivatives_st_to_RZ
   public :: transform_second_derivatives_st_to_RZ
   public :: vectors_to_orthonormal_basis
+  public :: vectors_spherical_to_cartesian
+  public :: vectors_cartesian_to_spherical
+  public :: rotate_vectors_cart_z
+  public :: mirror_around_cart_x
+  public :: mirror_around_cart_y
 
   !> interfaces
   interface cartesian_to_cylindrical
@@ -70,6 +75,40 @@ module mod_coordinate_transforms
     module procedure vectors_to_orthonormal_basis_3d_r4
     module procedure vectors_to_orthonormal_basis_3d_r8
   end interface vectors_to_orthonormal_basis
+
+  !> overload the vector rotation function from a standard 
+  !> spherical reference to a standard cartesian reference
+  interface vectors_spherical_to_cartesian
+    module procedure vectors_spherical_to_cartesian_std_r4
+    module procedure vectors_spherical_to_cartesian_std_r8
+  end interface vectors_spherical_to_cartesian
+
+  !> overload the vector rotation function from a standard 
+  !> cartesian reference to a standard spherical reference
+  interface vectors_cartesian_to_spherical
+    module procedure vectors_cartesian_to_spherical_std_r4
+    module procedure vectors_cartesian_to_spherical_std_r8
+  interface vectors_cartesian_to_spherical
+
+  !> overload method for rotating axis along the standard
+  !> cartesian Z axis
+  interface rotate_vectors_cart_z
+    module procedure rotate_vectors_cart_z_std_r8
+  end interface rotate_vectors_cart_z
+
+  !> overload method for mirroring a vector w.r.t. 
+  !> to the standard x-axis
+  interface mirror_around_cart_x
+    module procedure mirror_around_cart_x_std_r4
+    module procedure mirror_around_cart_x_std_r8
+  end interface mirror_around_cart_x
+
+  !> overload method for mirroring a vector w.r.t. 
+  !> to the standard y-axis
+  interface mirror_around_cart_y
+    module procedure mirror_around_cart_y_std_r4
+    module procedure mirror_around_cart_y_std_r8
+  end interface mirror_around_cart_y
 
 contains
   !> convert a position in xyz coordinates to RZPhi coordinates
@@ -365,6 +404,204 @@ contains
     B = cross_product(T,N)
     B = B/norm2(B)
   end subroutine vectors_to_orthonormal_basis_3d_r8
+
+  !> rotate spherical vectors defined in standard spherical reference
+  !> to the standard cartesian reference. Apply a first rotation along
+  !> the Z axis of angle phi and a second rotation along the rotated
+  !> y axis of an angle theta then multiply for the sphere radius
+  !> inputs:
+  !> n_v:       (integer) number of vectors to rotate
+  !> rthetaphi: (real4)(3) sphere radius, colatitude (theta) and azimuth (phi)
+  !> vect:      (real4)(3,n_v) vectors in the spherical system 
+  !> outpus:
+  !> vect:      (real4)(3,n_v) vectors in the cartesian reference
+  subroutine vectors_spherical_to_cartesian_std_r4(n_v,rthetaphi,vect)
+    implicit none
+    integer,intent(in)                    :: n_v
+    real*4,dimension(3),intent(in)        :: rthetaphi
+    real*4,dimension(3,n_v),intent(inout) :: vect
+    real*4,dimension(2)   :: cos_thetaphi,sin_thetaphi
+    real*4,dimension(3,3) :: rot
+    !> compute rotation transform
+    cos_thetaphi = cos(rthetaphi(2:3));
+    sin_thetaphi = sin(rthetaphi(2:3));
+    rot(:,1) = (/cos_thetaphi(1)*cos_thetaphi(2),sin_thetaphi(2)*cos_thetaphi(1),-sin_thetaphi(1)/)
+    rot(:,2) = (/-sin_thetaphi(2),cos_thetaphi(2),real(0d0,kind=4)/)
+    rot(:,3) = (/sin_thetaphi(1)*cos_thetaphi(2),sin_thetaphi(1)*sin_thetaphi(2),cos_thetaphi(1)/)
+    !> transform the vertices in the new positions
+    vect = rthetaphi(1)*matmul(rot,vect)
+  end subroutine vectors_spherical_to_cartesian_std_r4
+
+  !> rotate spherical vectors defined in standard spherical reference
+  !> to the standard cartesian reference. Apply a first rotation along
+  !> the Z axis of angle phi and a second rotation along the rotated
+  !> y axis of an angle theta then multiply for the sphere radius
+  !> inputs:
+  !> n_v:       (integer) number of vectors to rotate
+  !> rthetaphi: (real8)(3) sphere radius, colatitude (theta) and azimuth (phi)
+  !> vect:      (real8)(3,n_v) vectors in the spherical system 
+  !> outpus:
+  !> vect:      (real8)(3,n_v) vectors in the cartesian reference
+  subroutine vectors_spherical_to_cartesian_std_r8(n_v,rthetaphi,vect)
+    implicit none
+    integer,intent(in)                    :: n_v
+    real*8,dimension(3),intent(in)        :: rthetaphi
+    real*8,dimension(3,n_v),intent(inout) :: vect
+    real*8,dimension(2)   :: cos_thetaphi,sin_thetaphi
+    real*8,dimension(3,3) :: rot
+    !> compute rotation transform
+    cos_thetaphi = cos(rthetaphi(2:3));
+    sin_thetaphi = sin(rthetaphi(2:3));
+    rot(:,1) = (/cos_thetaphi(1)*cos_thetaphi(2),sin_thetaphi(2)*cos_thetaphi(1),-sin_thetaphi(1)/)
+    rot(:,2) = (/-sin_thetaphi(2),cos_thetaphi(2),0d0/)
+    rot(:,3) = (/sin_thetaphi(1)*cos_thetaphi(2),sin_thetaphi(1)*sin_thetaphi(2),cos_thetaphi(1)/)
+    !> transform the vertices in the new positions
+    vect = rthetaphi(1)*matmul(rot,vect)
+  end subroutine vectors_spherical_to_cartesian_std_r8
+
+  !> rotate cartesian vectors defined in standard cartesian reference
+  !> to the standard spherical reference. Apply a first rotation along
+  !> the y axis of angle phi and a second rotation along the rotated
+  !> z axis of an angle theta then divide by the sphere radius
+  !> inputs:
+  !> n_v:       (integer) number of vectors to rotate
+  !> rthetaphi: (real8)(3) sphere radius, colatitude (theta) and azimuth (phi)
+  !> vect:      (real8)(3,n_v) vectors in the cartesian system 
+  !> outpus:
+  !> vect:      (real8)(3,n_v) vectors in the spherical reference
+  subroutine vectors_cartesian_to_spherical_std_r4(n_v,rthetaphi,vect)
+    implicit none
+    integer,intent(in)                    :: n_v
+    real*4,dimension(3),intent(in)        :: rthetaphi
+    real*4,dimension(3,n_v),intent(inout) :: vect
+    real*4,dimension(2)   :: cos_thetaphi,sin_thetaphi
+    real*4,dimension(3,3) :: rot
+    !> compute rotation transform
+    cos_thetaphi = cos(rthetaphi(2:3));
+    sin_thetaphi = sin(rthetaphi(2:3));
+    rot(:,1) = (/cos_thetaphi(1)*cos_thetaphi(2),-sin_thetaphi(2),sin_thetaphi(1)*cos_thetaphi(2)/)
+    rot(:,2) = (/sin_thetaphi(2)*cos_thetaphi(1),cos_thetaphi(2),sin_thetaphi(1)*sin_thetaphi(2)/)
+    rot(:,3) = (/-sin_thetaphi(1),real(0d0,kind=4),cos_thetaphi(1)/)
+    !> transform the vertices in the new positions
+    vect = matmul(rot,vect/rthetaphi(1))
+  end subroutine vectors_cartesian_to_spherical_std_r4
+
+  !> rotate cartesian vectors defined in standard cartesian reference
+  !> to the standard spherical reference. Apply a first rotation along
+  !> the y axis of angle phi and a second rotation along the rotated
+  !> z axis of an angle theta then divide by the sphere radius
+  !> inputs:
+  !> n_v:       (integer) number of vectors to rotate
+  !> rthetaphi: (real8)(3) sphere radius, colatitude (theta) and azimuth (phi)
+  !> vect:      (real8)(3,n_v) vectors in the cartesian system 
+  !> outpus:
+  !> vect:      (real8)(3,n_v) vectors in the spherical reference
+  subroutine vectors_cartesian_to_spherical_std_r8(n_v,rthetaphi,vect)
+    implicit none
+    integer,intent(in)                    :: n_v
+    real*8,dimension(3),intent(in)        :: rthetaphi
+    real*8,dimension(3,n_v),intent(inout) :: vect
+    real*8,dimension(2)   :: cos_thetaphi,sin_thetaphi
+    real*8,dimension(3,3) :: rot
+    !> compute rotation transform
+    cos_thetaphi = cos(rthetaphi(2:3));
+    sin_thetaphi = sin(rthetaphi(2:3));
+    rot(:,1) = (/cos_thetaphi(1)*cos_thetaphi(2),-sin_thetaphi(2),sin_thetaphi(1)*cos_thetaphi(2)/)
+    rot(:,2) = (/sin_thetaphi(2)*cos_thetaphi(1),cos_thetaphi(2),sin_thetaphi(1)*sin_thetaphi(2)/)
+    rot(:,3) = (/-sin_thetaphi(1),0d0,cos_thetaphi(1)/)
+    !> transform the vertices in the new positions
+    vect = matmul(rot,vect/rthetaphi(1))
+  end subroutine vectors_cartesian_to_spherical_std_r8
+
+  !> rotate vector around the standard cartesia z axis
+  !> inputs: 
+  !>   n_v:    (integer) number of vectors
+  !>   angles: (real4) rotation angle
+  !>   vect:   (3,n_v)(real4) vectors to be rotated
+  !> outputs:
+  !>   vect:   (3,n_v)(real4) rotated vectors
+  subroutine rotate_vectors_cart_z_std_r4(n_v,angle,vect)
+    implicit none
+    integer,intent(in)                     :: n_v
+    real*4,intent(in)                      :: angle
+    real*4,dimension(3,n_v),intent(inout)  :: vect
+    real*4,dimension(2,2)                  :: rot
+    rot(1:2,1) = [cos(angle),-sin(angle)]
+    rot(1:2,2) = [-rot(2,1),rot(1,1)]
+    !> change the orientation of the plane points
+    vect(1:2,:) = matmul(rot,vect(1:2,:))
+  end subroutine rotate_vectors_cart_z_std_r4
+
+  !> rotate vector around the standard cartesia z axis
+  !> inputs: 
+  !>   n_v:    (integer) number of vectors
+  !>   angles: (real8) rotation angle
+  !>   vect:   (3,n_v)(real8) vectors to be rotated
+  !> outputs:
+  !>   vect:   (3,n_v)(real8) rotated vectors
+  subroutine rotate_vectors_cart_z_std_r8(n_v,angle,vect)
+    implicit none
+    integer,intent(in)                     :: n_v
+    real*8,intent(in)                      :: angle
+    real*8,dimension(3,n_v),intent(inout)  :: vect
+    real*8,dimension(2,2)                  :: rot
+    rot(1:2,1) = [cos(angle),-sin(angle)]
+    rot(1:2,2) = [-rot(2,1),rot(1,1)]
+    !> change the orientation of the plane points
+    vect(1:2,:) = matmul(rot,vect(1:2,:))
+  end subroutine rotate_vectors_cart_z_std_r8
+
+  !> mirror the vectors w.r.t the standard cartesian x-axis
+  !> inputs:
+  !>   n_v:  (integer) number of vectors
+  !>   vect: (3,n_v)(real4) vectors to mirror
+  !> outputs:
+  !>   vect: (3,n_v)(real4) mirrored vectors
+  subroutine mirror_around_cart_x_std_r4(n_v,vect)
+    implicit none
+    integer,intent(in)                    :: n_v
+    real*4,dimension(3,n_v),intent(inout) :: vect
+    vect(2,:) = -vect(2,:)
+  end subroutine mirror_around_cart_x_std_r4
+
+  !> mirror the vectors w.r.t the standard cartesian x-axis
+  !> inputs:
+  !>   n_v:  (integer) number of vectors
+  !>   vect: (3,n_v)(real8) vectors to mirror
+  !> outputs:
+  !>   vect: (3,n_v)(real8) mirrored vectors
+  subroutine mirror_around_cart_x_std_r8(n_v,vect)
+    implicit none
+    integer,intent(in)                    :: n_v
+    real*8,dimension(3,n_v),intent(inout) :: vect
+    vect(2,:) = -vect(2,:)
+  end subroutine mirror_around_cart_x_std_r8
+
+  !> mirror the vectors w.r.t the standard cartesian y-axis
+  !> inputs:
+  !>   n_v:  (integer) number of vectors
+  !>   vect: (3,n_v)(real8) vectors to mirror
+  !> outputs:
+  !>   vect: (3,n_v)(real8) mirrored vectors
+  subroutine mirror_around_cart_y_std_r4(n_v,vect)
+    implicit none
+    integer,intent(in)                    :: n_v
+    real*4,dimension(3,n_v),intent(inout) :: vect
+    vect(1,:) = -vect(1,:)
+  end subroutine mirror_around_cart_y_std_r4
+
+  !> mirror the vectors w.r.t the standard cartesian y-axis
+  !> inputs:
+  !>   n_v:  (integer) number of vectors
+  !>   vect: (3,n_v)(real8) vectors to mirror
+  !> outputs:
+  !>   vect: (3,n_v)(real8) mirrored vectors
+  subroutine mirror_around_cart_y_std_r8(n_v,vect)
+    implicit none
+    integer,intent(in)   :: n_v
+    real*8,dimension(3,n_v),intent(inout) :: vect
+    vect(1,:) = -vect(1,:)
+  end subroutine mirror_around_cart_y_std_r8
 
 !--------------------------------------------------------------------------
 !> This procedure expresses first order derivatives from the local (s,t)

@@ -10,6 +10,7 @@
 !> considered hereater hence, only one particle population and 
 !> JOREK MHD fields are used.
 program camera_RE_example
+use constants,                      only: PI
 use mod_mpi_tools,                  only: init_mpi_threads,finalize_mpi_threads
 use particle_tracer
 use mod_particle_io,                only: read_simulation_hdf5,get_simulation_hdf5_time
@@ -55,8 +56,8 @@ n_x = 3 !< number of spatial coordinates
 n_groups = 1 !< number of particle groups
 n_spectra     = 1
 n_wavelenghts = 40
-n_int_camera_param  = 3
-n_real_camera_param = 8
+n_int_camera_param  = 5
+n_real_camera_param = 9
 n_times = 1
 !> JET KDLT-E5WC wavelenght: 3d-6 - 3.5d-6 [m]
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
@@ -64,13 +65,13 @@ allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
 allocate(filter_spectra(n_spectra));
 allocate(pinhole_positions(n_x)); pinhole_positions = [-8.86d-1,-4.002,-3.32d-1];
 !> one pinhole => n_lens_samples=1, JET KLDT-E5WC pixels nx=120,ny=176
-allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,120,176];
+allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,120,176,0,1];
 allocate(real_camera_param(n_real_camera_param));
 !> JET KLDT-E5WC camera inputs:
-!> 1:2 -> half width and half height visual plane angle
-!> 3:5 -> camera focal direction: focal distance, latitude, azimuth
-!> 6:8 -> camera position in the tokamak reference system
-real_camera_param = [5.23d-1,5.23d-1,9.998025d-1,1.5807985,2.09801,-8.86d-1,-4.002,-3.32d-1];
+!> 1:3 -> half width, half height and orientation of the visual plane angle
+!> 4:6 -> camera focal direction: focal distance, latitude, azimuth
+!> 7:9 -> camera position in the tokamak reference system
+real_camera_param = [5.23d-1,5.23d-1,5d-1*PI,9.998025d-1,1.5807985,2.09801,-8.86d-1,-4.002,-3.32d-1];
 allocate(sim_times(n_times)); allocate(sims(n_times));
 
 !> Initialisation  ------------------------------------------------------------------------

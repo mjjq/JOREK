@@ -182,14 +182,14 @@ my_id,r_unit,int_param,real_param)
   integer,dimension(:),allocatable,intent(out) :: int_param
   real*8,dimension(:),allocatable,intent(out)  :: real_param
   !> variables:
-  integer :: n_lens_samples,n_pixels_x,n_pixels_y
+  integer :: n_lens_samples,n_pixels_x,n_pixels_y,mirror_x,mirror_y
   integer,dimension(2) :: n_inputs
   real*8  :: image_plane_half_width,image_plane_half_height
-  real*8  :: image_plane_focal_point_distance
+  real*8  :: image_plane_orientation,image_plane_focal_point_distance
   real*8  :: image_plane_colatitude,image_plane_azimuth
   real*8  :: focal_point_x_pos,focal_point_y_pos,focal_point_z_pos
   !> definitions and initialisations
-  namelist /camera_in/ n_lens_samples,n_pixels_x,n_pixels_y,&
+  namelist /camera_in/ n_lens_samples,n_pixels_x,n_pixels_y,mirror_x,mirror_y,&
                        image_plane_half_width,image_plane_half_height,&
                        image_plane_focal_point_distance,&
                        image_plane_colatitude,image_plane_azimuth,&
@@ -203,11 +203,11 @@ my_id,r_unit,int_param,real_param)
     if(allocated(real_param)) deallocate(real_param)
     allocate(real_param(n_inputs(2)))
     read(r_unit,camera_in)
-    int_param = (/n_lens_samples,n_pixels_x,n_pixels_y/)
+    int_param = (/n_lens_samples,n_pixels_x,n_pixels_y,mirror_x,mirror_y/)
     real_param = (/image_plane_half_width,image_plane_half_height,&
-    image_plane_focal_point_distance,image_plane_colatitude,&
-    image_plane_azimuth,focal_point_x_pos,focal_point_y_pos,&
-    focal_point_z_pos/)
+    image_plane_orientation,image_plane_focal_point_distance,&
+    image_plane_colatitude,image_plane_azimuth,focal_point_x_pos,&
+    focal_point_y_pos,focal_point_z_pos/)
   endif
 end subroutine read_camera_perspective_static_inputs
 
@@ -224,7 +224,7 @@ camera_in) result(n_inputs)
   class(camera_perspective_static),intent(in) :: camera_in
   !> outputs:
   integer,dimension(2) :: n_inputs
-  n_inputs = (/3,8/)
+  n_inputs = (/5,9/)
 end function return_n_camera_perspective_static_inputs
 
 !> procedure used for initialising a static perspective camera
@@ -238,12 +238,15 @@ end function return_n_camera_perspective_static_inputs
 !>                            1) number of lens samples
 !>                            2) number of pixels in the x-direction
 !>                            3) number of pixels in the y-direction
+!>                            4) mirror image plane along x if 1
+!>                            5) mirror image plane along y if 1
 !>  real_param:      (real8)(n_int_param) real parameters:
-!>                            1:2) image plane half widht and half
-!>                                 height angles in the focal reference
-!>                            3:5) distance betweem the image plane
+!>                            1:3) image plane half widht, half
+!>                                 height and orientation  angles 
+!>                                 in the focal reference
+!>                            4:6) distance betweem the image plane
 !>                                 and the camera focal point
-!>                            6:8) camera focal point position
+!>                            7:9) camera focal point position
 !> outputs:
 !>   camera_inout:   (camera) allocated camera
 !>   lens_inout:     (lens) camera lens object
@@ -271,12 +274,10 @@ spectrum_inout,n_int_param,n_real_param,int_param,real_param)
   call camera_inout%allocate_camera_perspective_static(spectrum_inout,&
   n_int_param,int_param)
   !> define the image plane characteristics
-  call camera_inout%define_image_plane_pixel_size(n_real_param,real_param)
+  call camera_inout%define_image_plane_pixel_size(n_int_param,n_real_param,&
+  int_param,real_param)
   !> sample the lens
   call camera_inout%generate_points_on_lens_pdf(lens_inout,int_param(1))
-  !> initialise the image plane vertices
-  call define_plane_from_half_angles(real_param(1:2),real_param(3:5),&
-  real_param(6:8),camera_inout%image_plane)
 end subroutine init_camera_perspective_static
 
 !> procedure used for allocating all attributes of camera perspective static
@@ -378,29 +379,35 @@ end subroutine generate_points_on_lens_static_perspective
 !> generate the image plane direction, vertices and compute the pixel width and height
 !> inputs:
 !>  camera_inout: (camera_perspective_static) camera with unallocated image plane
+!>  n_int_param:  (integer) number of integer parameters
 !>  n_real_param: (integer) number of real parameters
+!>  int_param:    (integer)(n_int_param) integer parameters
+!>                4) mirror w.r.t. the x axis
+!>                5) mirror w.r.t. the y axis
 !>  real_param:   (real8)(n_real_param) real parameters, order:
-!>                1:2) plane width and height half angles
-!>                3:5) plane position w.r.t. the pupil in spherical coordinates
-!>                6:8) position of the pupil in cartesian coordinates
+!>                1:3) plane width, height half angles and plane orientation
+!>                4:6) plane position w.r.t. the pupil in spherical coordinates
+!>                7:9) position of the pupil in cartesian coordinates
 !> outputs:
 !>  camera_inout: (camera_perspective_static) camera with defined image plane
-subroutine define_image_plane_pixel_size(camera_inout,n_real_param,real_param)
+subroutine define_image_plane_pixel_size(camera_inout,n_int_param,n_real_param,&
+int_param,real_param)
   use mod_geometry, only: define_vertex_spherical_coord
   use mod_geometry, only: define_plane_from_half_angles
   implicit none
   !> inputs-outputs:
   class(camera_perspective_static),intent(inout) :: camera_inout
   !> inputs:
-  integer,intent(in)                             :: n_real_param
+  integer,intent(in)                             :: n_int_param,n_real_param
+  integer,dimension(n_int_param),intent(in)      :: int_param
   real*8,dimension(n_real_param),intent(in)      :: real_param
   !> define the image plane direction and store it
   call define_vertex_spherical_coord((/1.d0,real_param(4),real_param(5)/),&
   camera_inout%image_plane_direction)
   !> define the plane from the width/height half angles, the distance
   !> from the pupil and the pupil position
-  call define_plane_from_half_angles(real_param(1:2),real_param(3:5),&
-  real_param(6:8),camera_inout%image_plane)
+  call define_plane_from_half_angles(int_param(4:5),real_param(1:3),&
+  real_param(4:6),real_param(7:9),camera_inout%image_plane)
   !> compute the pixel width and heigh in the pixel reference system
   camera_inout%pixel_size = (/1.d0,1.d0/)/real(camera_inout%n_pixels_spectra(2:3),kind=8)
 end subroutine define_image_plane_pixel_size

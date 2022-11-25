@@ -109,7 +109,6 @@ do newton_iter_number = 1, newton_iter_max
       if (ifail .ne. 0) i_elm_new = 0
     end if
     if (i_elm_new .eq. 0) then ! No element on that side, particle is lost
-      i_elm_new = - i_elm_tmp ! Save position of particle
       ! Calculate new R and Z in x_new
       call try_interp(node_list,element_list,i_elm_tmp,st_new,x_new,R_s,R_t,Z_s,Z_t,inv_st_jac_det)
       ! Set new element-local coordinates for the point on the axis

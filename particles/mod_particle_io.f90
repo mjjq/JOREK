@@ -97,17 +97,17 @@ if (allocated(sim%groups)) then
       x(:,j) = sim%groups(i)%particles(j)%x
     end do
 !    call MPI_Gatherv(x(:,:), 3*n_here, MPI_REAL8, &
-!      x_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+!      x_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(0:i-1),1)*3, i=0,n_cpu-1)], &
 !      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
     call MPI_Gatherv(x(1,:), n_here, MPI_REAL8, &
-                     x_all(1,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                     x_all(1,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     call MPI_Gatherv(x(2,:), n_here, MPI_REAL8, &
-                     x_all(2,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                     x_all(2,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
     call MPI_Gatherv(x(3,:), n_here, MPI_REAL8, &
-                     x_all(3,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                     x_all(3,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                      MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
     ! st
@@ -116,7 +116,7 @@ if (allocated(sim%groups)) then
       st(:,j) = sim%groups(i)%particles(j)%st
     end do
     call MPI_Gatherv(st(:,:), 2*n_here, MPI_REAL8, &
-      st_all(:,:), particles_per_proc*2, [(sum(particles_per_proc(1:i),1)*2, i=0,n_cpu-1)], &
+      st_all(:,:), particles_per_proc*2, [(sum(particles_per_proc(0:i-1),1)*2, i=0,n_cpu-1)], &
       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
     ! weight
@@ -125,7 +125,7 @@ if (allocated(sim%groups)) then
       weight(j) = sim%groups(i)%particles(j)%weight
     end do
     call MPI_Gatherv(weight(:), n_here, MPI_REAL8, &
-      weight_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+      weight_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
       MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
     ! i_elm
@@ -134,7 +134,7 @@ if (allocated(sim%groups)) then
       i_elm(j) = sim%groups(i)%particles(j)%i_elm
     end do
     call MPI_Gatherv(i_elm(:), n_here, MPI_INTEGER, &
-      i_elm_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+      i_elm_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
       MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
     ! i_life
@@ -143,7 +143,7 @@ if (allocated(sim%groups)) then
       i_life(j) = sim%groups(i)%particles(j)%i_life
     end do
     call MPI_Gatherv(i_life(:), n_here, MPI_INTEGER, &
-      i_life_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+      i_life_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
       MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
     ! t_birth
@@ -152,7 +152,7 @@ if (allocated(sim%groups)) then
       t_birth(j) = sim%groups(i)%particles(j)%t_birth
     end do
     call MPI_Gatherv(t_birth(:), n_here, MPI_REAL4, &
-      t_birth_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+      t_birth_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
       MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
 
     ! Write out stuff depending on particle type
@@ -167,17 +167,17 @@ if (allocated(sim%groups)) then
         v(:,j) = p(j)%v
       end do
 !      call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
-!        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+!        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(0:i-1),1)*3, i=0,n_cpu-1)], &
 !        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       call MPI_Gatherv(v(1,:), n_here, MPI_REAL8, &
-                       v_all(1,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       v_all(1,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       call MPI_Gatherv(v(2,:), n_here, MPI_REAL8, &
-                       v_all(2,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       v_all(2,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       call MPI_Gatherv(v(3,:), n_here, MPI_REAL8, &
-                       v_all(3,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       v_all(3,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       ! q
       allocate(q(n_here), q_all(n_total))
@@ -185,7 +185,7 @@ if (allocated(sim%groups)) then
         q(j) = p(j)%q
       end do
       call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
-        q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        q_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
@@ -203,17 +203,17 @@ if (allocated(sim%groups)) then
         v(:,j) = p(j)%v
       end do
 !      call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
-!        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+!        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(0:i-1),1)*3, i=0,n_cpu-1)], &
 !        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       call MPI_Gatherv(v(1,:), n_here, MPI_REAL8, &
-                       v_all(1,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       v_all(1,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       call MPI_Gatherv(v(2,:), n_here, MPI_REAL8, &
-                       v_all(2,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       v_all(2,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       call MPI_Gatherv(v(3,:), n_here, MPI_REAL8, &
-                       v_all(3,:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+                       v_all(3,:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
                        MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! q
@@ -222,7 +222,7 @@ if (allocated(sim%groups)) then
         q(j) = p(j)%q
       end do
       call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
-        q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        q_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
@@ -240,7 +240,7 @@ if (allocated(sim%groups)) then
         E(j) = p(j)%E
       end do
       call MPI_Gatherv(E(:), n_here, MPI_REAL8, &
-        E_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        E_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! mu
@@ -249,7 +249,7 @@ if (allocated(sim%groups)) then
         mu(j) = p(j)%mu
       end do
       call MPI_Gatherv(mu(:), n_here, MPI_REAL8, &
-        mu_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        mu_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! q
@@ -258,7 +258,7 @@ if (allocated(sim%groups)) then
         q(j) = p(j)%q
       end do
       call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
-        q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        q_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
@@ -277,7 +277,7 @@ if (allocated(sim%groups)) then
         Vpar(j) = p(j)%Vpar
       end do
       call MPI_Gatherv(Vpar(:), n_here, MPI_REAL8, &
-        Vpar_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        Vpar_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! mu
@@ -286,7 +286,7 @@ if (allocated(sim%groups)) then
         mu(j) = p(j)%mu
       end do
       call MPI_Gatherv(mu(:), n_here, MPI_REAL8, &
-        mu_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        mu_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       
       ! B_norm
@@ -295,7 +295,7 @@ if (allocated(sim%groups)) then
         B_norm(j) = p(j)%B_norm
       end do
       call MPI_Gatherv(B_norm(:), n_here, MPI_REAL8, &
-        B_norm_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        B_norm_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! q
@@ -304,7 +304,7 @@ if (allocated(sim%groups)) then
         q(j) = p(j)%q
       end do
       call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
-        q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        q_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
@@ -323,7 +323,7 @@ if (allocated(sim%groups)) then
         v1(j) = p(j)%v
       end do
       call MPI_Gatherv(v1(:), n_here, MPI_REAL8, &
-        v1_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        v1_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
       if (my_id .eq. 0) then
         call HDF5_array1D_saving(file,v1_all,n_total,group_name//"v")
@@ -339,7 +339,7 @@ if (allocated(sim%groups)) then
         v(:,j) = p(j)%p
       end do
       call MPI_Gatherv(v(:,:), 3*n_here, MPI_REAL8, &
-        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(1:i),1)*3, i=0,n_cpu-1)], &
+        v_all(:,:), particles_per_proc*3, [(sum(particles_per_proc(0:i-1),1)*3, i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! q
@@ -348,7 +348,7 @@ if (allocated(sim%groups)) then
         q(j) = p(j)%q
       end do
       call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
-        q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        q_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then
@@ -366,7 +366,7 @@ if (allocated(sim%groups)) then
         v(:,j) = p(j)%p
       end do
       call MPI_Gatherv(v(:,:), 2*n_here, MPI_REAL8, &
-        v_all(:,:), particles_per_proc*2, [(sum(particles_per_proc(1:i),1)*2, i=0,n_cpu-1)], &
+        v_all(:,:), particles_per_proc*2, [(sum(particles_per_proc(0:i-1),1)*2, i=0,n_cpu-1)], &
         MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
       ! q
@@ -375,7 +375,7 @@ if (allocated(sim%groups)) then
         q(j) = p(j)%q
       end do
       call MPI_Gatherv(q(:), n_here, MPI_INTEGER, &
-        q_all(:), particles_per_proc, [(sum(particles_per_proc(1:i),1), i=0,n_cpu-1)], &
+        q_all(:), particles_per_proc, [(sum(particles_per_proc(0:i-1),1), i=0,n_cpu-1)], &
         MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 
       if (my_id .eq. 0) then

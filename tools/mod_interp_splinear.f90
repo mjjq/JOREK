@@ -116,7 +116,7 @@ yy = min(max(y,minval(ty)),maxval(ty))
 ix1 = minloc(abs(tx - xx), dim=1)
 if (xx .ge. tx(ix1)) ix2 = ix1 + 1 ! find other index
 if (xx .lt. tx(ix1)) ix2 = ix1 - 1
-if (ix2 .gt. size(tx)) ix2 = size(tx) - 1 ! if it does not exist, extrapolate
+if (ix2 .gt. size(tx)) ix2 = size(tx) - 1
 if (ix2 .lt. 1       ) ix2 = 2
 iy1 = minloc(abs(ty - yy), dim=1)
 if (yy .ge. ty(iy1)) iy2 = iy1 + 1

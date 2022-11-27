@@ -163,7 +163,7 @@ do while(finished .lt. nprt)
                  sim%groups(1)%mass, p(iprt))
 
             xyz = cylindrical_to_cartesian(p(iprt)%x)
-            if ( .not. isnan(norm2(xyz - xyz0)) ) then
+            if ( p(iprt)%i_elm > 0  ) then
               mileage(iprt) = mileage(iprt) + norm2(xyz - xyz0)
             endif
             call check_and_store_crossing(sim%fields, iprt, sim%time, mileage(iprt), p(iprt)%i_elm, p(iprt)%st, p(iprt)%x, &

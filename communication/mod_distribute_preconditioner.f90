@@ -71,6 +71,10 @@ contains
     allocate(indx(n_cpu))
 
     if (.not.pc%structured) call set_pc_structure(pc,a_mat)
+! --- Allocate PC matrices
+    if (.not.associated(pc%mat%val)) allocate(pc%mat%val(pc%mat%nnz))
+    if (.not.associated(pc%mat%irn)) allocate(pc%mat%irn(pc%mat%nnz))
+    if (.not.associated(pc%mat%jcn)) allocate(pc%mat%jcn(pc%mat%nnz))
 
 ! --- Loop over communication splits
     do isplit = 1, pc%nsplit
@@ -318,11 +322,6 @@ contains
         pc%row_index(i + ind*pc%mode_set_n) =  pc%mode_set(i) + ind*n_tor
       enddo
     enddo
-    
-! --- Allocate PC matrices
-    if (.not.associated(pc%mat%val)) allocate(pc%mat%val(pc%mat%nnz))
-    if (.not.associated(pc%mat%irn)) allocate(pc%mat%irn(pc%mat%nnz))
-    if (.not.associated(pc%mat%jcn)) allocate(pc%mat%jcn(pc%mat%nnz))    
     
     write(*,*) pc%my_id, "PC matrix: ng, nnz", pc%mat%ng, pc%mat%nnz
     pc%structured = .true.

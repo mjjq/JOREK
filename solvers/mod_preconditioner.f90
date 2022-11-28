@@ -297,16 +297,33 @@ module mod_preconditioner
       if (pc%structured) then
 
         deallocate(pc%rhs%val)
+        pc%rhs%val => Null()
         deallocate(pc%row_index)
+        pc%row_index => Null()
         deallocate(pc%send_counts, pc%recv_counts)
+        pc%send_counts => Null()
+        pc%recv_counts => Null()
         deallocate(pc%send_disp, pc%recv_disp)
+        pc%send_disp => Null()
+        pc%recv_disp => Null()
         deallocate(pc%istart, pc%ifinish)
+        pc%istart => Null()
+        pc%ifinish => Null()
         deallocate(pc%n_per_rank)
+        pc%n_per_rank => Null()
 
         deallocate(pc%mat%val)
         deallocate(pc%mat%irn)
         deallocate(pc%mat%jcn)
-        if (pc%mat%scaled) deallocate(pc%mat%column_scaling)
+        pc%mat%val => Null()
+        pc%mat%irn => Null()
+        pc%mat%jcn => Null()
+
+        if (pc%mat%scaled) then
+          deallocate(pc%mat%column_scaling)
+          pc%mat%column_scaling => Null()
+        endif
+
         pc%mat%scaled = .false.
         pc%mat%row_distributed = .false.
         pc%mat%col_distributed = .false.
@@ -317,8 +334,11 @@ module mod_preconditioner
       endif
 
       deallocate(pc%mode_families_ranks)
+      pc%mode_families_ranks => Null()
       deallocate(pc%mode_families_modes)
+      pc%mode_families_modes => Null()
       deallocate(pc%mode_set)
+      pc%mode_set => Null()
 
       pc%initialized = .false.
 

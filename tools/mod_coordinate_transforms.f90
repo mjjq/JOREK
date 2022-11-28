@@ -88,7 +88,7 @@ module mod_coordinate_transforms
   interface vectors_cartesian_to_spherical
     module procedure vectors_cartesian_to_spherical_std_r4
     module procedure vectors_cartesian_to_spherical_std_r8
-  interface vectors_cartesian_to_spherical
+  end interface vectors_cartesian_to_spherical
 
   !> overload method for rotating axis along the standard
   !> cartesian Z axis

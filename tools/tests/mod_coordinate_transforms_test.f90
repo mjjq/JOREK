@@ -2,7 +2,7 @@
 !> procedures for testing the mod_coordinate_transforms
 !> module procedures
 module mod_coordinate_transforms_test
-use constants, only: PI
+use constants, only: PI,TWOPI
 use fruit
 implicit none
 
@@ -25,7 +25,9 @@ real*8,dimension(3),parameter :: zeros_r8=(/0.d0,0.d0,0.d0/)
 !> position components
 real*8,dimension(3),parameter :: x_lowbnd=(/-2.3d1,-3.2d2,-9.d-1/)
 real*8,dimension(3),parameter :: x_uppbnd=(/4.23d2,1.45d1,7.50d1/)
-real*8,dimension(2),parameter :: phi_interval=(/0.d0,2.d0*PI/)
+real*8,dimension(2),parameter :: r_interval=(/3.23d-3,4.53d2/)
+real*8,dimension(2),parameter :: theta_interval=(/0d0,PI/)
+real*8,dimension(2),parameter :: phi_interval=(/0.d0,TWOPI/)
 !> intervals for randomly chosing the first, second and third
 !> vector components
 real*8,dimension(3),parameter :: a_lowbnd=(/-3.41d2,-4.67d1,-9.35d1/)
@@ -33,12 +35,14 @@ real*8,dimension(3),parameter :: a_uppbnd=(/6.75d1,8.70d1,2.43d2/)
 real*4,dimension(3,n_points)  :: x_r4           !< set o positions
 real*4,dimension(3,n_origins) :: origin_r4      !< set of origins
 real*4,dimension(3,n_origins) :: v1_r4,v2_r4    !< random vectors
-real*4,dimension(3,n_origins) :: T_r4,N_r4,B_r4 !< sphere directions
+real*4,dimension(3,n_origins) :: T_r4,N_r4,B_r4 !< sphere directions 
+real*4,dimension(3,n_points)  :: rthetaphi_r4   !< spherical coordinates
 real*8,dimension(3,n_points)  :: x_r8           !< set o positions
 real*8,dimension(n_points)    :: phi_r8         !< set of toroidal angles
 real*8,dimension(3,n_origins) :: origin_r8      !< set of origins
-real*8,dimension(3,n_origins)  :: v1_r8,v2_r8    !< random vectors
+real*8,dimension(3,n_origins) :: v1_r8,v2_r8    !< random vectors
 real*8,dimension(3,n_origins) :: T_r8,N_r8,B_r8 !< sphere directioins
+real*8,dimension(3,n_points)  :: rthetaphi_r8   !< spherical coordinates
 
 !> Interfaces ------------------------------------------
 !> function for testing basis orthonormality
@@ -61,6 +65,7 @@ subroutine run_fruit_coordinate_transforms()
   call test_cartesian_tofrom_spherical_colatitude_std_transform
   call test_cartesian_tofrom_cylindrical_vector_rotation
   call test_vectors_to_orthonormal_basis
+  call test_cartesian_tofrom_spherical
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -70,12 +75,22 @@ end subroutine run_fruit_coordinate_transforms
 subroutine setup()
   use mod_gnu_rng,        only: gnu_rng_interval
   use mod_math_operators, only: cross_product
+  use mod_sampling,       only: sample_uniform_sphere_corona_rthetaphi
   implicit none
   !> variables
-  integer :: ii
-  
+  integer             :: ii
+  real*8,dimension(2) :: r3_interval,costheta_interval
+  real*8,dimension(3) :: rnd_r8
+
   !> generate set of random toroidal angles
   call gnu_rng_interval(n_points,phi_interval,phi_r8)
+  !> generate random spherical points
+  r3_interval = r_interval**3; costheta_interval = cos(theta_interval);
+  do ii=1,n_points
+    call random_number(rnd_r8)
+    rthetaphi_r8(:,ii) = sample_uniform_sphere_corona_rthetaphi(&
+    r3_interval,costheta_interval,phi_interval,rnd_r8)
+  enddo
   !> generate random positions (assume cartesian coord.)
   do ii=1,n_points
     call gnu_rng_interval(n_points,x_lowbnd,x_uppbnd,x_r8(:,ii))
@@ -102,7 +117,8 @@ subroutine setup()
   !> convert to float precision
   x_r4 = real(x_r8,kind=4); origin_r4 = real(origin_r8,kind=8); 
   v1_r4 = real(v1_r8,kind=4); v2_r4 = real(v2_r8,kind=4); T_r4 = real(T_r8,kind=4); 
-  N_r4 = real(N_r8,kind=4); B_r4 = real(B_r8,kind=4);
+  N_r4 = real(N_r8,kind=4); B_r4 = real(B_r8,kind=4); 
+  rthetaphi_r4 = real(rthetaphi_r8,kind=4);
   do ii=1,n_origins
     call test_orthonormality_basis(T_r4(:,ii),N_r4(:,ii),B_r4(:,ii))
   enddo
@@ -114,11 +130,41 @@ subroutine teardown()
   !> set all variables to 0
   x_r4 = zero_r4; origin_r4 = zero_r4; v1_r4 = zero_r4;
   v2_r4 = zero_r4; T_r4 = zero_r4; N_r4 = zero_r4; B_r4 = zero_r4;
-  x_r8 = 0.d0; origin_r8 = 0.d0; v1_r8 = 0.d0; v2_r8 = 0.e0;
-  T_r8 = 0.d0; N_r8 = 0.d0; B_r8 = 0.d0;
-  phi_r8 = 0.d0
+  rthetaphi_r4 = zero_r4; x_r8 = 0.d0; origin_r8 = 0.d0; 
+  v1_r8 = 0.d0; v2_r8 = 0.e0; T_r8 = 0.d0; N_r8 = 0.d0; B_r8 = 0.d0;
+  phi_r8 = 0.d0; rthetaphi_r8 = 0.d0;
 end subroutine teardown
 !> Tests -----------------------------------------------
+
+!> Test cartesian to spherical and spherical to cartesian
+!> for both sing and double precision
+subroutine test_cartesian_tofrom_spherical()
+  use mod_coordinate_transforms, only: vectors_cartesian_to_spherical
+  use mod_coordinate_transforms, only: vectors_spherical_to_cartesian
+  implicit none
+  !> variables
+  integer                      :: ii
+  real*4,dimension(3,n_points) :: x_cart_new_r4,zeros_3nv_r4
+  real*8,dimension(3,n_points) :: x_cart_new_r8,zeros_3nv_r8
+  !> test single precision
+  zeros_3nv_r4 = real(0d0,kind=4);
+  do ii=1,n_points
+    x_cart_new_r4 = x_r4;
+    call vectors_cartesian_to_spherical(n_points,rthetaphi_r4(:,ii),x_cart_new_r4)
+    call vectors_spherical_to_cartesian(n_points,rthetaphi_r4(:,ii),x_cart_new_r4)
+    call assert_equals(x_r4-x_cart_new_r4,zeros_3nv_r4,3,n_points,tol_calc_r4,&
+    "Error test cartesian to/from spherical (float): x-cartesian mismatch!")
+  enddo
+  zeros_3nv_r8 = 0d0;
+  do ii=1,n_points
+    x_cart_new_r8 = x_r8;
+    call vectors_cartesian_to_spherical(n_points,rthetaphi_r8(:,ii),x_cart_new_r8)
+    call vectors_spherical_to_cartesian(n_points,rthetaphi_r8(:,ii),x_cart_new_r8)
+    call assert_equals(x_r8-x_cart_new_r8,zeros_3nv_r8,3,n_points,tol_calc_r8,&
+    "Error test cartesian to/from spherical (double): x-cartesian mismatch!")
+  enddo
+end subroutine test_cartesian_tofrom_spherical
+
 !> Test cartesian to cylindrical and cylindrical to 
 !> cartesian transformations for single and double
 !> precision functions

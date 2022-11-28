@@ -446,8 +446,8 @@ subroutine do_particle_sputter(this, sim, ev)
     !$ i_rng = omp_get_thread_num()+1
     !$omp do schedule(dynamic, 10)
     do j = 1,size(sim%groups(i)%particles,1)
-      ! Skip if this particle is not lost in a specific location (i_elm .eq. 0 means lost 'somewhere')
-      if (sim%groups(i)%particles(j)%i_elm .ge. 0) cycle !< .not. .lt.!< if this is not a lost particle go to next particle
+      ! Skip if this particle is not lost in a specific location (i_elm .lt. 0 means lost 'somewhere')
+      if (sim%groups(i)%particles(j)%i_elm .gt. 0) cycle !< .not. .lt.!< if this is not a lost particle go to next particle
         
       ! Find out if this particle is lost in any of the edge domains
       do i_patch = 1,size(this%fluid_sputter_yield%patch,1)

@@ -140,7 +140,7 @@ do while (.not. sim%stop_now)
 #endif
           dt_local = dt_try !< update the time step
 
-          if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
+          if (particles(j)%i_elm .le. 0) n_lost = n_lost + 1		
        end do !< time steps
       end do !< particles
 !      !$omp end parallel do

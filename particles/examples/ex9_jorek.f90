@@ -128,7 +128,7 @@ do while (.not. sim%stop_now)
 
           !> write time step profile if enables
           if(write_timestep) write(22,'(i6,2e26.16)') j,time_local,dt_local
-          if (particles(j)%i_elm .eq. 0) n_lost = n_lost + 1		
+          if (particles(j)%i_elm .le. 0) n_lost = n_lost + 1		
        end do !< time steps
        !< overwrite simu
       end do !< particles

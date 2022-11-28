@@ -9,18 +9,19 @@ private
 public :: run_fruit_geometry
 
 !> Variables ----------------------------------------------
-integer,parameter :: n_planes=11
-integer,parameter :: n_nodes_plane=3
-integer,parameter :: n_lines_per_test=23
-integer,parameter :: n_tests=5
-integer,parameter :: n_lines=n_tests*n_lines_per_test
-real*8,parameter  :: tol_real8=7.5d-10
-real*8,parameter  :: radius=2.d2
+integer,parameter              :: n_planes=11
+integer,parameter              :: n_nodes_plane=3
+integer,parameter              :: n_lines_per_test=23
+integer,parameter              :: n_tests=5
+integer,parameter              :: n_lines=n_tests*n_lines_per_test
+integer,dimension(2),parameter :: mirror_xy_interval=(/0,1/) 
+real*8,parameter               :: tol_real8=7.5d-10
+real*8,parameter               :: radius=2.d2
 real*8,dimension(2),parameter  :: len_interval=(/2.d0,5.d2/)
 real*8,dimension(2),parameter  :: cos_theta_interval=(/-1.d0,1.d0/)
 real*8,dimension(2),parameter  :: phi_interval=(/0.d0,TWOPI/)
-real*8,dimension(2),parameter  :: half_angle_lowbnd=(/PI/21.d0,PI/11.d0/)
-real*8,dimension(2),parameter  :: half_angle_uppbnd=(/PI/2.d0,TWOPI/5.d0/)
+real*8,dimension(3),parameter  :: half_angle_lowbnd=(/PI/21.d0,PI/11.d0,0d0/)
+real*8,dimension(3),parameter  :: half_angle_uppbnd=(/PI/2.d0,TWOPI/5.d0,TWOPI/)
 real*8,dimension(3),parameter  :: ppxyz_lowbound=(/-1.d0,2.d0,-4.d1/)
 real*8,dimension(3),parameter  :: ppxyz_uppbound=(/5.d0,2.5d1,-3.2d1/)
 real*8,dimension(3),parameter  :: plxyz_lowbound=(/-3.d0,1.d1,4.d1/)
@@ -36,7 +37,8 @@ real*8,dimension(2,n_tests),parameter :: st_uppbound=&
        reshape((/1.d0,1.d0,-5.d-2,-4.d-3,-1.d-1,5.d1,&
        9.2d1,-1.d-3,1.1d1,3.05d0/),shape(st_uppbound))
 logical,dimension(n_lines,n_planes)        :: intersect_sol
-real*8,dimension(2,n_planes)               :: half_angles_sol
+integer,dimension(2,n_planes)              :: mirror_xy_sol
+real*8,dimension(3,n_planes)               :: half_angles_sol
 real*8,dimension(3,n_planes)               :: origins_sol,rthetaphi_sol
 real*8,dimension(3,n_nodes_plane,n_planes) :: pp_sol
 real*8,dimension(3,n_lines,n_planes)       :: stq_sol,pos_intersect_sol
@@ -115,13 +117,15 @@ subroutine setup_plane_definition_from_half_angle()
   real*8,dimension(3) :: rand
 
   !> generate plane coordinates, widths and heights
+  call gnu_rng_interval(2,n_planes,mirror_xy_interval,mirror_xy_sol)
   do ii=1,n_planes
     call random_number(rand)
     rthetaphi_sol(:,ii) = sample_uniform_sphere(radius,&
     cos_theta_interval,phi_interval,rand)
     call gnu_rng_interval(3,pl0_lowbound,pl0_uppbound,origins_sol(:,ii))
-    call gnu_rng_interval(2,half_angle_lowbnd,half_angle_uppbnd,half_angles_sol(:,ii))
+    call gnu_rng_interval(3,half_angle_lowbnd,half_angle_uppbnd,half_angles_sol(:,ii))
   enddo
+
 end subroutine setup_plane_definition_from_half_angle
 
 !> Tests --------------------------------------------------
@@ -213,7 +217,7 @@ subroutine test_define_standard_plane_from_half_angle()
   normal = (/0.d0,0.d0,1.d0/); origin = (/0.d0,0.d0,0.d0/);
   !> compute plane and quantities to test
   do ii=1,n_planes
-    call define_plane_from_half_angles(half_angles_sol(:,ii),plane)
+    call define_plane_from_half_angles(mirror_xy_sol(:,ii),half_angles_sol(:,ii),plane)
     call extract_values_for_plane_definition_test(normal,origin,&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
     distance_loc(:,ii),orthogonal(:,ii))
@@ -251,7 +255,8 @@ subroutine test_define_direction_plane_from_half_angle()
   do ii=1,n_planes
     normal = spherical_colatitude_to_cartesian(rthetaphi_sol(:,ii),origin)
     distance_loc(:,ii) = rthetaphi_sol(1,ii)
-    call define_plane_from_half_angles(half_angles_sol(:,ii),rthetaphi_sol(:,ii),plane)
+    call define_plane_from_half_angles(mirror_xy_sol(:,ii),&
+    half_angles_sol(:,ii),rthetaphi_sol(:,ii),plane)
     call extract_values_for_plane_definition_test(normal,origin,&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
     distance_loc(:,ii),orthogonal(:,ii))
@@ -288,8 +293,8 @@ subroutine test_define_direction_plane_from_half_angle_origin()
     origin = origins_sol(:,ii)
     normal = spherical_colatitude_to_cartesian(rthetaphi_sol(:,ii),origin)
     distance_loc(:,ii) = rthetaphi_sol(1,ii)
-    call define_plane_from_half_angles(half_angles_sol(:,ii),rthetaphi_sol(:,ii),&
-    origin,plane)
+    call define_plane_from_half_angles(mirror_xy_sol(:,ii),half_angles_sol(:,ii),&
+    rthetaphi_sol(:,ii),origin,plane)
     call extract_values_for_plane_definition_test(normal,origin,&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
     distance_loc(:,ii),orthogonal(:,ii))

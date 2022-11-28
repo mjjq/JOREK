@@ -68,6 +68,8 @@ subroutine run_fruit_coordinate_transforms()
   call test_vectors_to_orthonormal_basis
   call test_cartesian_tofrom_spherical
   call test_rotate_vectors_cart_z
+  call test_mirror_around_cart_x
+  call test_mirror_around_cart_y
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -138,6 +140,36 @@ subroutine teardown()
   N_r8 = 0.d0; B_r8 = 0.d0; phi_r8 = 0.d0; rthetaphi_r8 = 0.d0;
 end subroutine teardown
 !> Tests -----------------------------------------------
+
+!> Test mirroring around the cartesian x axis
+subroutine test_mirror_around_cart_x()
+  use mod_coordinate_transforms, only: mirror_around_cart_x
+  implicit none
+  real*4,dimension(3,n_points) :: x_new_r4
+  real*8,dimension(3,n_points) :: x_new_r8
+  x_new_r4 = x_r4; call mirror_around_cart_x(n_points,x_new_r4);
+  x_new_r8 = x_r8; call mirror_around_cart_x(n_points,x_new_r8);
+  x_new_r4(2,:) = -x_new_r4(2,:); x_new_r8(2,:) = -x_new_r8(2,:);
+  call assert_equals(x_new_r4,x_r4,3,n_points,tol_calc_r4,&
+  "Error test cartesian x-mirroring (float): position  mismatch!")
+  call assert_equals(x_new_r8,x_r8,3,n_points,tol_calc_r8,&
+  "Error test cartesian x-mirroring (double): position  mismatch!")
+end subroutine test_mirror_around_cart_x
+
+!> Test mirroring around the cartesian y axis
+subroutine test_mirror_around_cart_y()
+  use mod_coordinate_transforms, only: mirror_around_cart_y
+  implicit none
+  real*4,dimension(3,n_points) :: x_new_r4
+  real*8,dimension(3,n_points) :: x_new_r8
+  x_new_r4 = x_r4; call mirror_around_cart_y(n_points,x_new_r4);
+  x_new_r8 = x_r8; call mirror_around_cart_y(n_points,x_new_r8);
+  x_new_r4(1,:) = -x_new_r4(1,:); x_new_r8(1,:) = -x_new_r8(1,:);
+  call assert_equals(x_new_r4,x_r4,3,n_points,tol_calc_r4,&
+  "Error test cartesian y-mirroring (float): position  mismatch!")
+  call assert_equals(x_new_r8,x_r8,3,n_points,tol_calc_r8,&
+  "Error test cartesian y-mirroring (double): position  mismatch!")
+end subroutine test_mirror_around_cart_y
 
 !> Test rotate_vectors cartesian Z axis for both single and
 !> double precision

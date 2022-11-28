@@ -209,6 +209,7 @@ subroutine test_define_standard_plane_from_half_angle()
   !> variables
   integer :: ii
   real*8,dimension(3)            :: normal,origin
+  real*8,dimension(n_planes)     :: plane_angle
   real*8,dimension(4,n_planes)   :: distance_loc
   real*8,dimension(2,n_planes)   :: half_width_angle_loc,half_height_angle_loc
   real*8,dimension(5,n_planes)   :: orthogonal
@@ -218,9 +219,9 @@ subroutine test_define_standard_plane_from_half_angle()
   !> compute plane and quantities to test
   do ii=1,n_planes
     call define_plane_from_half_angles(mirror_xy_sol(:,ii),half_angles_sol(:,ii),plane)
-    call extract_values_for_plane_definition_test(normal,origin,&
+    call extract_values_for_plane_definition_test(normal,origin,mirror_xy_sol(:,ii),&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
-    distance_loc(:,ii),orthogonal(:,ii))
+    distance_loc(:,ii),orthogonal(:,ii),plane_angle(ii))
   enddo
   !> check values 
   call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
@@ -235,6 +236,8 @@ subroutine test_define_standard_plane_from_half_angle()
   tol_real8,"Error define standard plane from half angles: distance is not unity!")
   call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
   tol_real8,"Error define standard plane from half angles: axis not orthogonal!")
+  call assert_equals(plane_angle,half_angles_sol(3,:),n_planes,&
+  tol_real8,"Error define standard plane from half angles: plane angle mismatch!")
 end subroutine test_define_standard_plane_from_half_angle
 
 !> Test define plane from half angles with direction and distance
@@ -245,6 +248,7 @@ subroutine test_define_direction_plane_from_half_angle()
   !> variables
   integer :: ii
   real*8,dimension(3)            :: normal,origin
+  real*8,dimension(n_planes)     :: plane_angle
   real*8,dimension(4,n_planes)   :: distance_loc
   real*8,dimension(2,n_planes)   :: half_width_angle_loc,half_height_angle_loc
   real*8,dimension(5,n_planes)   :: orthogonal
@@ -257,9 +261,9 @@ subroutine test_define_direction_plane_from_half_angle()
     distance_loc(:,ii) = rthetaphi_sol(1,ii)
     call define_plane_from_half_angles(mirror_xy_sol(:,ii),&
     half_angles_sol(:,ii),rthetaphi_sol(:,ii),plane)
-    call extract_values_for_plane_definition_test(normal,origin,&
+    call extract_values_for_plane_definition_test(normal,origin,mirror_xy_sol(:,ii),&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
-    distance_loc(:,ii),orthogonal(:,ii))
+    distance_loc(:,ii),orthogonal(:,ii),plane_angle(ii))
   enddo
   !> check values 
   call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
@@ -274,6 +278,8 @@ subroutine test_define_direction_plane_from_half_angle()
   tol_real8,"Error define direction plane from half angles: distance is not unity!")
   call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
   tol_real8,"Error define direction plane from half angles: axis not orthogonal!")
+  call assert_equals(plane_angle,half_angles_sol(3,:),n_planes,&
+  tol_real8,"Error define standard plane from half angles: plane angle mismatch!")
 end subroutine test_define_direction_plane_from_half_angle
 
 !> Test define plane from half angles with direction, distance and origin
@@ -284,6 +290,7 @@ subroutine test_define_direction_plane_from_half_angle_origin()
   !> variables
   integer :: ii
   real*8,dimension(3)            :: normal,origin
+  real*8,dimension(n_planes)     :: plane_angle
   real*8,dimension(4,n_planes)   :: distance_loc
   real*8,dimension(2,n_planes)   :: half_width_angle_loc,half_height_angle_loc
   real*8,dimension(5,n_planes)   :: orthogonal
@@ -295,9 +302,9 @@ subroutine test_define_direction_plane_from_half_angle_origin()
     distance_loc(:,ii) = rthetaphi_sol(1,ii)
     call define_plane_from_half_angles(mirror_xy_sol(:,ii),half_angles_sol(:,ii),&
     rthetaphi_sol(:,ii),origin,plane)
-    call extract_values_for_plane_definition_test(normal,origin,&
+    call extract_values_for_plane_definition_test(normal,origin,mirror_xy_sol(:,ii),&
     plane,half_height_angle_loc(:,ii),half_width_angle_loc(:,ii),&
-    distance_loc(:,ii),orthogonal(:,ii))
+    distance_loc(:,ii),orthogonal(:,ii),plane_angle(ii))
   enddo
   !> check values 
   call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
@@ -312,25 +319,35 @@ subroutine test_define_direction_plane_from_half_angle_origin()
   tol_real8,"Error define direction plane from half angles origin: distance is not unity!")
   call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
   tol_real8,"Error define direction plane from half angles origin: axis not orthogonal!")
+  call assert_equals(plane_angle,half_angles_sol(3,:),n_planes,&
+  tol_real8,"Error define standard plane from half angles: plane angle mismatch!")
 end subroutine test_define_direction_plane_from_half_angle_origin
 
 !> Tools --------------------------------------------------
 !> extract values for testing the definition of plane
-subroutine extract_values_for_plane_definition_test(n_vector,origin,&
-plane,half_height_angle,half_width_angle,distance,orthogonal)
+subroutine extract_values_for_plane_definition_test(n_vector,origin,mirror_xy,&
+plane,half_height_angle,half_width_angle,distance,orthogonal,plane_angle)
+  use constants,                 only: TWOPI
+  use mod_coordinate_transforms, only: cartesian_to_spherical_colatitude
+  use mod_coordinate_transforms, only: vectors_cartesian_to_spherical
+  use mod_coordinate_transforms, only: mirror_around_cart_y
+  use mod_coordinate_transforms, only: mirror_around_cart_x
   use mod_geometry, only: compute_global_cart_coord_plane_points
   implicit none
   !> inputs
+  integer,dimension(2),intent(in)  :: mirror_xy
   real*8,dimension(3),intent(in)   :: origin,n_vector
   real*8,dimension(3,3),intent(in) :: plane 
   !> outputs:
+  real*8,intent(out)              :: plane_angle
   real*8,dimension(2),intent(out) :: half_height_angle
   real*8,dimension(2),intent(out) :: half_width_angle
   real*8,dimension(4),intent(out) :: distance
   real*8,dimension(5),intent(out) :: orthogonal
   !> variables
   real*8 :: norm_n_origin_vector
-  real*8,dimension(3) :: A1,A2,B1,B2,P4,normal
+  real*8,dimension(3)   :: A1,A2,B1,B2,P4,normal,rthetachi
+  real*8,dimension(3,3) :: plane_test
 
   !> initialise data
   normal = n_vector - origin
@@ -357,6 +374,18 @@ plane,half_height_angle,half_width_angle,distance,orthogonal)
   orthogonal(3) = dot_product((B1-n_vector)/norm2(B1-n_vector),normal)
   orthogonal(4) = dot_product((B2-n_vector)/norm2(B2-n_vector),normal)
   orthogonal(5) = dot_product((B2-B1)/norm2(B2-B1),(A2-A1)/norm2(A2-A1))
+  !> compute the normal spherical coordinates
+  rthetachi = cartesian_to_spherical_colatitude(n_vector,origin)
+  !> anti-transform the plane nodes
+  plane_test = plane;
+  call vectors_cartesian_to_spherical(size(plane_test,dim=2),rthetachi,plane_test)
+  !> anti-mirror the plane position if required
+  if(mirror_xy(2).eq.1) call mirror_around_cart_y(size(plane_test,dim=2),plane_test)
+  if(mirror_xy(1).eq.1) call mirror_around_cart_x(size(plane_test,dim=2),plane_test)
+  !> compute the rotation angle
+  B1 = 5d-1*(plane_test(:,1)+plane_test(:,3)); B1(1:2) = B1(1:2)/norm2(B1(1:2));
+  plane_angle = atan2(B1(2),B1(1));
+  if(plane_angle.lt.0d0) plane_angle = TWOPI+plane_angle
 end subroutine extract_values_for_plane_definition_test
 
 !>---------------------------------------------------------

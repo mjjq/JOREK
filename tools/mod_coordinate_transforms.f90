@@ -93,6 +93,7 @@ module mod_coordinate_transforms
   !> overload method for rotating axis along the standard
   !> cartesian Z axis
   interface rotate_vectors_cart_z
+    module procedure rotate_vectors_cart_z_std_r4
     module procedure rotate_vectors_cart_z_std_r8
   end interface rotate_vectors_cart_z
 

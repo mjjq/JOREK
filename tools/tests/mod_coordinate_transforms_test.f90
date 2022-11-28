@@ -33,6 +33,7 @@ real*8,dimension(2),parameter :: phi_interval=(/0.d0,TWOPI/)
 real*8,dimension(3),parameter :: a_lowbnd=(/-3.41d2,-4.67d1,-9.35d1/)
 real*8,dimension(3),parameter :: a_uppbnd=(/6.75d1,8.70d1,2.43d2/)
 real*4,dimension(3,n_points)  :: x_r4           !< set o positions
+real*4,dimension(n_points)    :: phi_r4         !< set of toroidal angles
 real*4,dimension(3,n_origins) :: origin_r4      !< set of origins
 real*4,dimension(3,n_origins) :: v1_r4,v2_r4    !< random vectors
 real*4,dimension(3,n_origins) :: T_r4,N_r4,B_r4 !< sphere directions 
@@ -66,6 +67,7 @@ subroutine run_fruit_coordinate_transforms()
   call test_cartesian_tofrom_cylindrical_vector_rotation
   call test_vectors_to_orthonormal_basis
   call test_cartesian_tofrom_spherical
+  call test_rotate_vectors_cart_z
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -115,8 +117,9 @@ subroutine setup()
   enddo
 
   !> convert to float precision
-  x_r4 = real(x_r8,kind=4); origin_r4 = real(origin_r8,kind=8); 
-  v1_r4 = real(v1_r8,kind=4); v2_r4 = real(v2_r8,kind=4); T_r4 = real(T_r8,kind=4); 
+  x_r4 = real(x_r8,kind=4);  phi_r4 = real(phi_r8,kind=4); 
+  origin_r4 = real(origin_r8,kind=8); v1_r4 = real(v1_r8,kind=4); 
+  v2_r4 = real(v2_r8,kind=4); T_r4 = real(T_r8,kind=4); 
   N_r4 = real(N_r8,kind=4); B_r4 = real(B_r8,kind=4); 
   rthetaphi_r4 = real(rthetaphi_r8,kind=4);
   do ii=1,n_origins
@@ -130,11 +133,47 @@ subroutine teardown()
   !> set all variables to 0
   x_r4 = zero_r4; origin_r4 = zero_r4; v1_r4 = zero_r4;
   v2_r4 = zero_r4; T_r4 = zero_r4; N_r4 = zero_r4; B_r4 = zero_r4;
-  rthetaphi_r4 = zero_r4; x_r8 = 0.d0; origin_r8 = 0.d0; 
-  v1_r8 = 0.d0; v2_r8 = 0.e0; T_r8 = 0.d0; N_r8 = 0.d0; B_r8 = 0.d0;
-  phi_r8 = 0.d0; rthetaphi_r8 = 0.d0;
+  rthetaphi_r4 = zero_r4; phi_r4 =zero_r4; x_r8 = 0.d0; 
+  origin_r8 = 0.d0; v1_r8 = 0.d0; v2_r8 = 0.e0; T_r8 = 0.d0; 
+  N_r8 = 0.d0; B_r8 = 0.d0; phi_r8 = 0.d0; rthetaphi_r8 = 0.d0;
 end subroutine teardown
 !> Tests -----------------------------------------------
+
+!> Test rotate_vectors cartesian Z axis for both single and
+!> double precision
+subroutine test_rotate_vectors_cart_z()
+  use mod_coordinate_transforms, only: rotate_vectors_cart_z
+  implicit none
+  integer                      :: ii
+  real*4,dimension(n_points)   :: phi_test_r4,ones_nv_r4,zeros_nv_r4
+  real*4,dimension(3,n_points) :: x_new_r4
+  real*8,dimension(n_points)   :: phi_test_r8,ones_nv_r8,zeros_nv_r8
+  real*8,dimension(3,n_points) :: x_new_r8
+  ones_nv_r4 = real(1d0,kind=4); zeros_nv_r4 = real(0d0,kind=4);
+  do ii=1,n_points
+    x_new_r4 = x_r4
+    call rotate_vectors_cart_z(n_points,phi_r4(ii),x_new_r4)
+    phi_test_r4 = atan2(x_new_r4(1,:)*x_r4(2,:)-x_new_r4(2,:)*x_r4(1,:),&
+    x_new_r4(1,:)*x_r4(1,:)+x_new_r4(2,:)*x_r4(2,:))
+    where(phi_test_r4.lt.zero_r4) phi_test_r4 = real(TWOPI,kind=4)+phi_test_r4
+    call assert_equals(phi_test_r4-phi_r4(ii)*ones_nv_r4,zeros_nv_r4,&
+    n_points,tol_calc_r4,"Error test cartesian z-rotation (float): angle  mismatch!")
+    call assert_equals(x_new_r4(3,:),x_r4(3,:),&
+    n_points,tol_calc_r4,"Error test cartesian z-rotation (float): z  mismatch!")
+  enddo
+  ones_nv_r8 = 1d0; zeros_nv_r8 = 0d0;
+  do ii=1,n_points
+    x_new_r8 = x_r8
+    call rotate_vectors_cart_z(n_points,phi_r8(ii),x_new_r8)
+    phi_test_r8 = atan2(x_new_r8(1,:)*x_r8(2,:)-x_new_r8(2,:)*x_r8(1,:),&
+    x_new_r8(1,:)*x_r8(1,:)+x_new_r8(2,:)*x_r8(2,:))
+    where(phi_test_r8.lt.0d0) phi_test_r8 = TWOPI+phi_test_r8
+    call assert_equals(phi_test_r8-phi_r8(ii)*ones_nv_r8,zeros_nv_r8,&
+    n_points,tol_calc_r8,"Error test cartesian z-rotation (double): angle  mismatch!")
+    call assert_equals(x_new_r8(3,:),x_r8(3,:),&
+    n_points,tol_calc_r8,"Error test cartesian z-rotation (double): z  mismatch!")
+  enddo
+end subroutine test_rotate_vectors_cart_z
 
 !> Test cartesian to spherical and spherical to cartesian
 !> for both sing and double precision

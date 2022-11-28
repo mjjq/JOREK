@@ -1765,25 +1765,25 @@ module mod_expression
                 res = visco_num_t / fact_resistiv
                 
               case ( 'zkpar_T' )
-                res = zkpar_t / fact_time
+                res = zkpar_t   / fact_resistiv / (gamma - 1) / r0 / fact_rho  ! \chi_par in (m^2 s^{-1})
                 
               case ( 'zkipar_T' )
-                res = zki_par_t / fact_time
+                res = zki_par_t / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                 
               case ( 'zkepar_T' )
-                res = zke_par_t / fact_time
+                res = zke_par_t / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                 
               case ( 'dprof' ) 
                 res = d_prof / fact_time
                   
               case ( 'zkprof' )
-                res = zk_prof / fact_time
+                res = zk_prof  / fact_resistiv / (gamma - 1) / r0 / fact_rho   ! \chi_perp in (m^2 s^{-1})
                 
               case ( 'zkiprof' )
-                res = zki_prof / fact_time
+                res = zki_prof / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                 
               case ( 'zkeprof' )
-                res = zke_prof / fact_time
+                res = zke_prof / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                   
               case ( 'pres' )
                 res = P0 / fact_mu_zero

@@ -191,7 +191,7 @@ my_id,r_unit,int_param,real_param)
   !> definitions and initialisations
   namelist /camera_in/ n_lens_samples,n_pixels_x,n_pixels_y,mirror_x,mirror_y,&
                        image_plane_half_width,image_plane_half_height,&
-                       image_plane_focal_point_distance,&
+                       image_plane_orientation,image_plane_focal_point_distance,&
                        image_plane_colatitude,image_plane_azimuth,&
                        focal_point_x_pos,focal_point_y_pos,focal_point_z_pos
 

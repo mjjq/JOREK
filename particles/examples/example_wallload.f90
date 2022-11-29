@@ -76,7 +76,7 @@ do while (.not. sim%stop_now)
              call runge_kutta_fixed_dt_gc_push_jorek(sim%fields,sim%time,timesteps(i), &
                   sim%groups(i)%mass,particles(j))
              if(particles(j)%i_elm .le. 0) then
-                particles(j)%i_elm = 0 ! This marker was not without hitting the wall
+                particles(j)%i_elm = 0 ! This marker was lost outside the grid without hitting the 3D triangular mesh wall
                 exit
              end if
 

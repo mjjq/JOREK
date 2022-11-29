@@ -120,7 +120,7 @@ do while (.not. sim%stop_now)
        do j=1,size(particles,1)
           time_local = sim%time !< copy simulation time in local variable
           dt_local = timesteps(i)!< time step in local variable
-        do while((time_local .lt. target_time) .and. (particles(j)%i_elm .ne. 0)) !< continue until we reach the target time
+        do while((time_local .lt. target_time) .and. (particles(j)%i_elm .gt. 0)) !< continue until we reach the target time
           call runge_kutta_adapt_dt_gc_push_jorek(sim%fields,time_local,&
                dt_local,target_time,sim%groups(i)%mass,particles(j)) !< push in jorek fields
 

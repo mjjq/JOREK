@@ -835,6 +835,9 @@ do ife = ife_min, ife_max
                                                                ! Too small rho_1 will cause a problem
 #endif /* WITH_TiTe */
 
+        ! This is to avoid too small ne_SI in some logarithm caoculation
+        ne_SI = max(1.d16,ne_SI)
+
         ! Calculate the effective charge of all species
         Z_eff        = 0.
         Z_eff_imp    = 0.

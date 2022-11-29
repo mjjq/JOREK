@@ -402,7 +402,7 @@ int_param,real_param)
   integer,dimension(n_int_param),intent(in)      :: int_param
   real*8,dimension(n_real_param),intent(in)      :: real_param
   !> define the image plane direction and store it
-  call define_vertex_spherical_coord((/1.d0,real_param(4),real_param(5)/),&
+  call define_vertex_spherical_coord((/1.d0,real_param(5),real_param(6)/),&
   camera_inout%image_plane_direction)
   !> define the plane from the width/height half angles, the distance
   !> from the pupil and the pupil position

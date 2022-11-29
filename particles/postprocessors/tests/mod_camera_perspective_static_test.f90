@@ -14,8 +14,8 @@ private
 public :: run_fruit_camera_perspective_static
 
 !> Variable and data types -------------------------
-integer,parameter :: n_int_param=3
-integer,parameter :: n_real_param=8
+integer,parameter :: n_int_param=5
+integer,parameter :: n_real_param=9
 integer,parameter :: n_points_per_pixel=11
 integer,parameter :: n_planes=11
 integer,parameter :: n_properties=1
@@ -31,6 +31,7 @@ integer,parameter :: n_lines_per_spectrum=13
 integer,parameter :: n_spectra=2
 integer,parameter :: n_rays_sol=123
 integer,parameter :: test_plane_pupil_id=1
+integer,dimension(2),parameter :: mirror_xy_interval=(/0,1/)
 real*8,parameter  :: tol_real8=5.d-15 
 real*8,parameter  :: tol_real8_2=5.d-9
 real*8,parameter  :: tol_real8_rel=3.d-6
@@ -39,8 +40,8 @@ real*8,parameter  :: accept_threshold=5.d-1
 real*8,dimension(2),parameter :: costheta_interval=(/-1.d0,1.d0/)
 real*8,dimension(2),parameter :: phi_interval=(/0.d0,TWOPI/)
 real*8,dimension(2),parameter :: ray_q_interval=(/3.1d-2,9.5d-1/)
-real*8,dimension(2),parameter :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0/)
-real*8,dimension(2),parameter :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0/)
+real*8,dimension(3),parameter :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0,0d0/)
+real*8,dimension(3),parameter :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0,TWOPI/)
 real*8,dimension(3),parameter :: center_pos_lowbnd=(/-2.d-1,4.d1,-7.d0/)
 real*8,dimension(3),parameter :: center_pos_uppbnd=(/3.4d1,3.d2,5.d0/)
 real*8,dimension(3),parameter :: test_points_lowbnd=(/-7.4d-1,2.9d1,-5.d0/)
@@ -50,10 +51,11 @@ real*8,dimension(2),parameter :: st_false_uppbnd=(/1.4d1,4.5d2/)
 real*8,dimension(n_spectra),parameter :: min_wlen=(/3.d0-6,2.5d-7/)
 real*8,dimension(n_spectra),parameter :: max_wlen=(/3.5d0-6,4.2d-7/)
 logical,dimension(n_rays_sol)          ::accept_ray_sol
+integer,dimension(2,n_planes)            :: mirror_xy_sol
 integer,dimension(:,:,:,:),allocatable :: pixel_ids
 integer,dimension(:,:,:,:),allocatable :: pixel_ids_sol
 real*8,dimension(n_st_sol)             :: pixel_size_sol
-real*8,dimension(2,n_planes)           :: half_angle_sol
+real*8,dimension(3,n_planes)           :: half_angle_sol
 real*8,dimension(n_x_sol,n_planes)     :: image_plane_coords
 real*8,dimension(n_x_sol,n_planes)     :: pupil_positions
 real*8,dimension(n_x_sol,n_planes)     :: test_points
@@ -118,8 +120,9 @@ subroutine setup()
     test_points_uppbnd,test_points(:,ii))
   enddo
   !> generate the ray variables for one image plane
-  call generate_ray_variables_from_origin_plane(half_angle_sol(:,test_plane_pupil_id),&
-  pupil_positions(:,test_plane_pupil_id),image_plane_coords(:,test_plane_pupil_id),center)
+  call generate_ray_variables_from_origin_plane(mirror_xy_sol(:,test_plane_pupil_id),&
+  half_angle_sol(:,test_plane_pupil_id),pupil_positions(:,test_plane_pupil_id),&
+  image_plane_coords(:,test_plane_pupil_id),center)
 end subroutine setup
 
 !> tearing-down unit test features
@@ -147,10 +150,11 @@ subroutine test_init_camera_perspective_static_pinhole()
   real*8,dimension(n_real_param)           :: real_param
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_sol
   !> initialisation, only one image plane is considered
-  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/)
-  real_param(1:2) = half_angle_sol(:,test_plane_pupil_id)
-  real_param(3:5) = image_plane_coords(:,test_plane_pupil_id)
-  real_param(6:8) = pupil_positions(:,test_plane_pupil_id)
+  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y,&
+  mirror_xy_sol(1,test_plane_pupil_id),mirror_xy_sol(2,test_plane_pupil_id)/)
+  real_param(1:3) = half_angle_sol(:,test_plane_pupil_id)
+  real_param(4:6) = image_plane_coords(:,test_plane_pupil_id)
+  real_param(7:9) = pupil_positions(:,test_plane_pupil_id)
   allocate(points_on_lens(n_x_sol,1,1))
   allocate(pdf_points_on_lens(1,1,1))
   call pinhole_sol%sampling(1,points_on_lens)
@@ -190,7 +194,7 @@ subroutine test_init_camera_perspective_static_pinhole()
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,&
   camera_sol%image_plane,"Error init camera perspective static pinhole: image plane")
   if(allocated(camera_sol%image_plane)) then
-    call define_plane_from_half_angles(half_angle_sol(:,1),&
+    call define_plane_from_half_angles(mirror_xy_sol(:,1),half_angle_sol(:,1),&
     image_plane_coords(:,1),pupil_positions(:,1),image_plane_sol)
     call assert_equals(camera_sol%image_plane,image_plane_sol,n_x_sol,&
     n_plane_vertices,tol_real8,&
@@ -291,6 +295,7 @@ subroutine test_image_plane_pixel_size_definitions()
   implicit none
   !> variables
   integer                                    :: ii
+  integer,dimension(n_int_param)             :: int_param
   real*8,dimension(n_x_sol)                  :: direction_sol,direction_test
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_sol
   real*8,dimension(n_x_sol,n_plane_vertices) :: image_plane_std_sol
@@ -302,19 +307,21 @@ subroutine test_image_plane_pixel_size_definitions()
   !> test the definition of the image plane and pixel size
   do ii=1,n_planes
     !> store plane value in parameters
-    real_param(1:2) = half_angle_sol(:,ii)
-    real_param(3:5) = image_plane_coords(:,ii)
-    real_param(6:8) = pupil_positions(:,ii)
+    int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y,&
+    mirror_xy_sol(1,ii),mirror_xy_sol(2,ii)/)
+    real_param(1:3) = half_angle_sol(:,ii)
+    real_param(4:6) = image_plane_coords(:,ii)
+    real_param(7:9) = pupil_positions(:,ii)
     !> generate camera and solution planes
-    call camera_sol%define_image_plane_pixel_size(n_real_param,real_param)
-    call define_plane_from_half_angles(half_angle_sol(:,ii),&
+    call camera_sol%define_image_plane_pixel_size(n_int_param,n_real_param,int_param,real_param)
+    call define_plane_from_half_angles(mirror_xy_sol(:,ii),half_angle_sol(:,ii),&
     image_plane_coords(:,ii),pupil_positions(:,ii),image_plane_sol)
-    call define_plane_from_half_angles(half_angle_sol(:,ii),&
+    call define_plane_from_half_angles(mirror_xy_sol(:,ii),half_angle_sol(:,ii),&
     image_plane_coords(:,ii),image_plane_std_sol)
     direction_test = (/1.d0,acos(camera_sol%image_plane_direction(3)),&
     atan2(camera_sol%image_plane_direction(2),camera_sol%image_plane_direction(1))/)
     if(direction_test(3).lt.0.d0) direction_test(3) = TWOPI + direction_test(3)
-    direction_sol = (/1.d0,real_param(4),real_param(5)/)
+    direction_sol = (/1.d0,real_param(5),real_param(6)/)
     !> test plane and pixel size
     call assert_equals(direction_test,direction_sol,n_x_sol,tol_real8,&
     "Error camera perspective static define image plane: image plane direction mismatch!")
@@ -324,7 +331,7 @@ subroutine test_image_plane_pixel_size_definitions()
     call assert_equals(camera_sol%pixel_size,pixel_size_sol,2,tol_real8,&
     "Error camera perspective static define image plane: pixel size mismatch!")
   enddo
-  !> deallocate camera perspective static
+  !> deallocate camera
   call camera_sol%deallocate_camera_perspective_static
 end subroutine test_image_plane_pixel_size_definitions
 
@@ -381,33 +388,33 @@ subroutine test_cosine_view_angle_static()
   real*8,dimension(n_x_sol)      :: vertex_1
   real*8,dimension(n_real_param) :: real_param
   real*8,dimension(n_planes)     :: cos_view_angle_sol
-  real*8,dimension(n_planes)     :: cos_view_angle_test
-  !> initialisation
-  camera_sol%n_property_vertex = n_properties;
-  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/)
-  call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
-  n_int_param,n_real_param,int_param,real_param)
+  real*8,dimension(n_planes)     :: cos_view_angle_test 
   !> test the calculation of the view angle cosinus
   do ii=1,n_planes
     !> store plane value in parameters
-    real_param(1:2) = half_angle_sol(:,ii)
-    real_param(3:5) = image_plane_coords(:,ii)
-    real_param(6:8) = pupil_positions(:,ii)
+    int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y,&
+    mirror_xy_sol(1,ii),mirror_xy_sol(2,ii)/)
+    call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
+    n_int_param,n_real_param,int_param,real_param)
+    real_param(1:3) = half_angle_sol(:,ii)
+    real_param(4:6) = image_plane_coords(:,ii)
+    real_param(7:9) = pupil_positions(:,ii)
     !> compute solution
-    call define_vertex_spherical_coord(real_param(3:5),real_param(6:8),vertex_1)
-    call compute_cos_angle_two_vectors(real_param(6:8),vertex_1,test_points(:,ii),cos_view_angle_sol(ii))
+    call define_vertex_spherical_coord(real_param(4:6),real_param(7:9),vertex_1)
+    call compute_cos_angle_two_vectors(real_param(7:9),vertex_1,test_points(:,ii),cos_view_angle_sol(ii))
     !> compute test value
-    call pinhole%init_pinhole(n_x_sol,real_param(6:8))
+    call pinhole%init_pinhole(n_x_sol,real_param(7:9))
     call camera_sol%generate_points_on_lens_pdf(pinhole)
-    call camera_sol%define_image_plane_pixel_size(n_real_param,real_param)
+    call camera_sol%define_image_plane_pixel_size(n_int_param,n_real_param,int_param,real_param)
     call camera_sol%cos_view_angle_static(test_points(:,ii),1,cos_view_angle_test(ii))
+    !> deallocate camera perspective static
+    call camera_sol%deallocate_camera_perspective_static
   enddo
   !> check solutions
   call assert_equals(cos_view_angle_test,cos_view_angle_sol,n_planes,tol_real8,&
   "Error computation cosine view angle perspective static: cosine view angles mismatch!")
-  !> deallocate camera perspective static
+  !> deallocate lens
   call pinhole%deallocate_lens
-  call camera_sol%deallocate_camera_perspective_static
 end subroutine test_cosine_view_angle_static 
 
 !> test the calculation of the physical material function for the perspective static camera
@@ -423,32 +430,32 @@ subroutine test_material_funct_perspective_static()
   real*8,dimension(n_real_param) :: real_param
   real*8,dimension(n_planes)     :: material_sol
   real*8,dimension(n_planes)     :: material_test
-  !> initialisation
-  camera_sol%n_property_vertex = n_properties;
-  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/)
-  call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
-  n_int_param,n_real_param,int_param,real_param)
   !> test the calculation of the view angle cosinus
   do ii=1,n_planes
     !> store plane value in parameters
-    real_param(1:2) = half_angle_sol(:,ii)
-    real_param(3:5) = image_plane_coords(:,ii)
-    real_param(6:8) = pupil_positions(:,ii)
+    int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y,&
+    mirror_xy_sol(1,ii),mirror_xy_sol(2,ii)/)
+    real_param(1:3) = half_angle_sol(:,ii)
+    real_param(4:6) = image_plane_coords(:,ii)
+    real_param(7:9) = pupil_positions(:,ii)
     !> compute solution
-    call define_vertex_spherical_coord(real_param(3:5),real_param(6:8),vertex_1)
-    call compute_cos_angle_two_vectors(real_param(6:8),vertex_1,test_points(:,ii),material_sol(ii))
+    call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
+    n_int_param,n_real_param,int_param,real_param)
+    call define_vertex_spherical_coord(real_param(4:6),real_param(7:9),vertex_1)
+    call compute_cos_angle_two_vectors(real_param(7:9),vertex_1,test_points(:,ii),material_sol(ii))
     !> compute test value
-    call pinhole%init_pinhole(n_x_sol,real_param(6:8))
+    call pinhole%init_pinhole(n_x_sol,real_param(7:9))
     call camera_sol%generate_points_on_lens_pdf(pinhole)
-    call camera_sol%define_image_plane_pixel_size(n_real_param,real_param)
+    call camera_sol%define_image_plane_pixel_size(n_int_param,n_real_param,int_param,real_param)
     call camera_sol%physical_material_funct(test_points(:,ii),1,material_test(ii),1)
+    !> deallocate camera perspective static
+    call camera_sol%deallocate_camera_perspective_static
   enddo
   !> check solutions
   call assert_equals(material_test,material_sol,n_planes,tol_real8,&
   "Error computation physical material funct perspective static: cosine view angles mismatch!")
-  !> deallocate camera perspective static
+  !> deallocate lens
   call pinhole%deallocate_lens
-  call camera_sol%deallocate_camera_perspective_static
 end subroutine test_material_funct_perspective_static
 
 !> test the method for finding image plane - ray intersections
@@ -463,10 +470,11 @@ subroutine test_find_ray_image_plane_intersection()
   real*8,dimension(n_stq_sol,n_rays_sol) :: test_ray_stq
   !> initialisation
   camera_sol%n_property_vertex = n_properties;
-  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/)
-  real_param(1:2) = half_angle_sol(:,test_plane_pupil_id)
-  real_param(3:5) = image_plane_coords(:,test_plane_pupil_id)
-  real_param(6:8) = pupil_positions(:,test_plane_pupil_id)
+  int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y,&
+  mirror_xy_sol(1,test_plane_pupil_id),mirror_xy_sol(2,test_plane_pupil_id)/)
+  real_param(1:3) = half_angle_sol(:,test_plane_pupil_id)
+  real_param(4:6) = image_plane_coords(:,test_plane_pupil_id)
+  real_param(7:9) = pupil_positions(:,test_plane_pupil_id)
   call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
   n_int_param,n_real_param,int_param,real_param)
   !> compute rays and intersections
@@ -494,11 +502,12 @@ subroutine generate_image_planes_variables()
   integer             :: ii
   real*8,dimension(3) :: rand
   !> generation routine
+  call gnu_rng_interval(2,n_planes,mirror_xy_interval,mirror_xy_sol)
   do ii=1,n_planes
     call random_number(rand)
     image_plane_coords(:,ii) = sample_uniform_sphere(&
     plane_distance,costheta_interval,phi_interval,rand)
-    call gnu_rng_interval(2,half_angle_lowbnd,&
+    call gnu_rng_interval(3,half_angle_lowbnd,&
     half_angle_uppbnd,half_angle_sol(:,ii))
     call gnu_rng_interval(n_x_sol,center_pos_lowbnd,&
     center_pos_uppbnd,pupil_positions(:,ii))
@@ -506,14 +515,15 @@ subroutine generate_image_planes_variables()
 end subroutine generate_image_planes_variables
 
 !> sample the vertex of a ray given an origin and a plane
-subroutine generate_ray_variables_from_origin_plane(half_width,&
-origin,plane_coords,x_lens)
+subroutine generate_ray_variables_from_origin_plane(mirror_xy,&
+half_width,origin,plane_coords,x_lens)
   use mod_geometry, only: define_plane_from_half_angles
   use mod_geometry, only: compute_global_cart_coord_plane_points
   use mod_gnu_rng,  only: gnu_rng_interval
   implicit none
   !> inputs
-  real*8,dimension(2),intent(in)         :: half_width
+  integer,dimension(2),intent(in)        :: mirror_xy
+  real*8,dimension(3),intent(in)         :: half_width
   real*8,dimension(n_x_sol),intent(in)   :: origin,x_lens
   real*8,dimension(n_x_sol),intent(in)   :: plane_coords
   !> variables
@@ -523,7 +533,7 @@ origin,plane_coords,x_lens)
   real*8,dimension(n_x_sol)   :: plane_pos
   real*8,dimension(n_x_sol,3) :: plane
   !> intiialisation
-  call define_plane_from_half_angles(half_width,plane_coords,origin,plane)
+  call define_plane_from_half_angles(mirror_xy,half_width,plane_coords,origin,plane)
   test_ray_stq_sol(1:2,:) = 5.d-1
   !> loop on the number of rays
   do ii=1,n_rays_sol

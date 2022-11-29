@@ -4817,7 +4817,7 @@ subroutine construct_imp_charge_states()
 
   dZ_imp_dT = dZ_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert gradient from /K to /JOREK unit
 
-  if (Te_corr_eV < 0.1) then
+  if (Te_corr_eV < 1.0) then
      Z_imp       = 0.
      dZ_imp_dT   = 0.
      d2Z_imp_dT2 = 0.

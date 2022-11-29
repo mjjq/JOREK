@@ -81,7 +81,7 @@ integer :: ix1, iy1 !< Index of closest point
 integer :: ix2, iy2 !< Index of other (usually next closest) point
 real*8  :: fx1, fx2 ! Temporary variables
 
-xx = min(max(x,minval(tx)),maxval(tx)) !SJLee
+xx = min(max(x,minval(tx)),maxval(tx))
 yy = min(max(y,minval(ty)),maxval(ty))
 
 ix1 = minloc(abs(tx - xx), dim=1)

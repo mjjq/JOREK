@@ -27,6 +27,7 @@ program jorek2_wall_forces
   use mod_element_rtree, only: populate_element_rtree
   use basis_at_gaussian, only: initialise_basis
   use tr_module
+
 #ifdef USE_HDF5
   use hdf5
   use hdf5_io_module
@@ -39,7 +40,7 @@ program jorek2_wall_forces
                                             stdout=>output_unit, &
                                             stderr=>error_unit
   implicit none
- 
+  character(len=60), parameter ::      FMT = "(1I5.5,'..', 1I5.5,'_' , 1f5.3 )" 
   integer   :: my_id, my_id_n, my_id_master, ierr, ierr2
   integer   :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
   integer   :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
@@ -51,7 +52,7 @@ program jorek2_wall_forces
   real*8    :: Fx, Fy, Fz, scale_fact=1.d5
 
   character*17                          :: file_in
-  character*5                           :: fact
+  character*20                          :: fact
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
   namelist /wall_forces/ istart, iend, delta_step, scale_fact 
@@ -104,7 +105,7 @@ program jorek2_wall_forces
      end if
      if (scale_fact > 1.d3 .or. scale_fact < 1.d-3) scale_fact = 1.01d0
      write(*,*) 'scale factor:', scale_fact
-     write(fact,'(1f5.3)') scale_fact
+     write(fact,FMT) istart, iend, scale_fact
      open(87,file=trim('total_wall_forces_')//trim(fact)//'.dat',action='write')
      write(87,*) '#Step  time(norm)   time(ms)      Fx(N)        Fy(N)          Fz(N)'
   end if

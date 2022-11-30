@@ -21,7 +21,7 @@ module mod_ccoll_relativistic
      real*8, allocatable, dimension(:,:) :: L1
   end type ccoll_tabulatedL0L1
 
-  public :: ccoll_tabulatedL0L1, ccoll_compute_L0L1table, ccoll_free_L0L1table, &
+  public :: ccoll_tabulatedL0L1, ccoll_compute_L0L1table, ccoll_deallocate_L0L1table, &
        ccoll_read_L0L1table, ccoll_write_L0L1table, &
        ccoll_kinetic_relativistic_push, ccoll_clog, ccoll_coeffs, ccoll_gc_relativistic_push
 
@@ -144,13 +144,13 @@ contains
 
 
   !> Deinitializes tabulated L0L1 values struct.
-  subroutine ccoll_free_L0L1table(dat)
+  subroutine ccoll_deallocate_L0L1table(dat)
     implicit none
     type(ccoll_tabulatedL0L1), intent(inout) :: dat ! data to be deinitialized
    
     deallocate(dat%u,dat%theta,dat%L0,dat%L1)
 
-  end subroutine ccoll_free_L0L1table
+  end subroutine ccoll_deallocate_L0L1table
 
 
   !> Writes tabulated L0L1 values to a file.
@@ -221,12 +221,12 @@ contains
 
     debyeLength = sqrt( EPS_ZERO * SPEED_OF_LIGHT**2 / sum( ( nb * qb**2 ) / ( thb * mb ) ) )
     nspec = size(clog)
-    ubar = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 ) * (/(1,i=1,nspec)/) + 3 * thb )
+    ubar = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 ) * (/(1,i=1,nspec)/) + 3.d0 * thb )
 
     do i=1,nspec
        mr  = ma * mb(i) / ( ma + mb(i) )
-       bcl = qa * qb(i) / ( 4 * PI * EPS_ZERO * mr * ubar(i)**2 )
-       bqm = HBAR / ( 2 * mr * ubar(i) )
+       bcl = qa * qb(i) / ( 4.d0 * PI * EPS_ZERO * mr * ubar(i)**2 )
+       bqm = HBAR / ( 2.d0 * mr * ubar(i) )
 
        clog(i) = log(debyeLength/max(bcl,bqm))
     end do
@@ -262,12 +262,12 @@ contains
     real*8  :: u2,u3,u4,gamma2,gamma3 ! Helper variables
     
     gamma = sqrt(1.D0+u**2)
-    Gab = nb * ( qa * qb )**2 * clog / ( 4 * pi * EPS_ZERO**2 * ma**2 * SPEED_OF_LIGHT**3 )
+    Gab = nb * ( qa * qb )**2 * clog / ( 4.d0 * pi * EPS_ZERO**2 * ma**2 * SPEED_OF_LIGHT**3 )
     u2  = u**2
     u3  = u**3
 
     if(present(dK) .or. present(dDpar) .or. present(dDperp) .or. present(dkappa)) then
-       u4=u**4
+       u4 = u**4
        gamma2 = gamma**2
        gamma3 = gamma**3
        call ccoll_mufuncs(dat,u,thb,mu0,mu1,mu2,dmu0,dmu1,dmu2)
@@ -283,22 +283,23 @@ contains
        Dpar = Gab * gamma * thb * mu1 / u3
     end if
     if(present(dDpar)) then
-       dDpar = ( Gab * thb / ( gamma * u4 ) ) * ( gamma2 * u * dmu1 - ( 1.D0 + 2 * gamma2 ) * mu1 )
+       dDpar = ( Gab * thb / ( gamma * u4 ) ) * ( gamma2 * u * dmu1 - ( 1.D0 + 2.d0 * gamma2 ) * mu1 )
     end if
 
     if(present(Dperp)) then
-       Dperp=Gab*(u2*(mu0+gamma*thb*mu2)-thb*mu1)/(2*gamma*u3)
+       Dperp = Gab * ( u2 * ( mu0 + gamma * thb * mu2 ) - thb * mu1 ) / ( 2.d0 * gamma * u3 )
     end if
     if(present(dDperp)) then
-       dDperp=(Gab/(2*gamma3*u4))*((4*gamma2-1.D0)*thb*mu1-u2*((2*gamma2-1.D0)*mu0+thb*&
-            gamma3*mu2)+gamma2*(u3*(dmu0+thb*gamma*dmu2)-thb*u*dmu1))
+       dDperp = ( Gab / ( 2.d0 * gamma3 * u4 ) ) * ( ( 4.d0 * gamma2 - 1.D0 ) * thb * mu1 &
+            - u2 * ( ( 2.d0 * gamma2 - 1.D0 ) * mu0 + thb * gamma3 * mu2 ) &
+            + gamma2 * ( u3 * ( dmu0 + thb * gamma * dmu2 ) - thb * u * dmu1 ) )
     end if
 
     if(present(kappa)) then
-       kappa=-Gab*(ma/mb)*mu1/u2
+       kappa = -Gab * ( ma / mb ) * mu1 / u2
     end if
     if(present(dkappa)) then
-       dkappa=-Gab*(ma/mb)*(dmu1-2*mu1/u)/u2
+       dkappa = -Gab * ( ma / mb ) * ( dmu1 - 2.d0 * mu1 / u ) / u2
     end if
 
   end subroutine ccoll_coeffs
@@ -349,8 +350,8 @@ contains
     deallocate(clogab)
 
     ! Use Euler-Maruyama method to get uout
-    uout = uin + K * uhat * dt + sqrt( 2 * Dpar ) * dot_product( uhat, dW ) * uhat &
-         + sqrt( 2 * Dperp ) * ( dW - dot_product( uhat, dW ) * uhat )
+    uout = uin + K * uhat * dt + sqrt( 2.d0 * Dpar ) * dot_product( uhat, dW ) * uhat &
+         + sqrt( 2.d0 * Dperp ) * ( dW - dot_product( uhat, dW ) * uhat )
 
   end subroutine ccoll_kinetic_relativistic_push
 
@@ -397,16 +398,16 @@ contains
        Dperp  = Dperp  + Dperpb
     end do
 
-    nu = 2 * Dperp / uin**2
+    nu = 2.d0 * Dperp / uin**2
     deallocate(clogab)
 
-    uout  = uin + ( kappa + dDpar + 2 * Dpar / uin ) * dt &
-                + sqrt( 2 * Dpar * dt ) * rnd(1)
+    uout  = uin + ( kappa + dDpar + 2.d0 * Dpar / uin ) * dt &
+                + sqrt( 2.d0 * Dpar * dt ) * rnd(1)
     xiout = xiin - xiin * nu * dt + sqrt( ( 1.0 - xiin**2 ) * nu * dt ) * rnd(2)
 
     ! Reflect uout if uout is below the cutoff value
     if(uout .lt. cutoff) then
-       uout = 2*cutoff-uout
+       uout = 2.d0 * cutoff-uout
     end if
 
     ! Reflect pitch if xiout is outside the interval [-1, 1]
@@ -438,7 +439,8 @@ contains
 
     real*8 :: gamma,gammasq,expBessel2,L0,L1,expgammatheta,tg,th2,u2,tgK
 
-    gammasq       = 1.D0+u**2
+    u2            = u**2
+    gammasq       = 1.D0 + u2
     gamma         = sqrt(gammasq)
     expBessel2    = bessel_k2exp(1.D0 / th)
     expgammatheta = exp( ( 1.D0 - gamma ) / th )
@@ -449,20 +451,19 @@ contains
 
     mu0 = ( gammasq * L0 - th * L1 + ( th - gamma ) * u * expgammatheta ) / expBessel2
     mu1 = ( gammasq * L1 - th * L0 + ( th * gamma - 1 ) * u * expgammatheta ) / expBessel2
-    mu2 = ( 2 * tg * L1 + ( 1 + 2 * th2 ) * u * expgammatheta ) / ( th * expBessel2 )
+    mu2 = ( 2.d0 * tg * L1 + ( 1 + 2.d0 * th2 ) * u * expgammatheta ) / ( th * expBessel2 )
 
     if(present(dmu0) .or. present(dmu1) .or. present(dmu2)) then
-       u2  = u**2
        tgK = tg * expBessel2
        if(present(dmu0)) then
-          dmu0 = ( 2 * tg * u * L0 + ( gamma - 2 * th ) * u2 * expgammatheta ) / tgK
+          dmu0 = ( 2.d0 * tg * u * L0 + ( gamma - 2.d0 * th ) * u2 * expgammatheta ) / tgK
        end if
        if(present(dmu1)) then
           !dmu1=(2.D0*tg*u*L1+(2.D0*th2+1.D0)*u2*expgammatheta)/tgK ! This is the explicit form
           dmu1 = mu2 * u / gamma
        end if
        if(present(dmu2)) then
-          dmu2 = ( 2 * th2 * u * L1 + ( 2 * th2 * tg + 2 * th2 + tg - u2 ) * expgammatheta ) / ( tgK * th )
+          dmu2 = ( 2.d0 * th2 * u * L1 + ( 2.d0 * th2 * tg + 2.d0 * th2 + tg - u2 ) * expgammatheta ) / ( tgK * th )
        end if
     end if
     

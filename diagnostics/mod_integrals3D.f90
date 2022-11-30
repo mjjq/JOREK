@@ -152,7 +152,7 @@ real*8  :: source_bg, source_imp, source_bg_drift
 real*8  :: source_bg_arr(n_inj_max), source_imp_arr(n_inj_max), source_bg_drift_arr(n_inj_max) 
 #endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion, local_P_ei, total_P_ei
+real*8  :: local_radiation, local_radiation_bg, local_E_ion, total_radiation, total_radiation_bg, total_E_ion, local_P_ei, total_P_ei
 real*8  :: local_P_ion, total_P_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 real*8  :: ne_SI, Te_eV, Te_corr_eV, Ti_eV
@@ -308,6 +308,7 @@ local_n_particles     = 0.d0
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 local_radiation       = 0.d0
+local_radiation_bg    = 0.d0
 local_radiation_phi   = 0.d0
 local_E_ion           = 0.d0
 local_P_ei            = 0.d0
@@ -366,7 +367,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          ns_phi, ns_radius, ns_deltaphi, ns_delta_minor_rad, ns_tor_norm, spi_tor_rot, local_E_ion,  &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI, local_P_ion,&
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type, local_P_ei,  &
-!$omp          n_adas, nimp_bg,                                                                &
+!$omp          n_adas, nimp_bg, local_radiation_bg,                                            &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp          ksi_ion, GAMMA, use_imp_adas,                                                   &
@@ -435,7 +436,7 @@ omp_tid      = 0
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 !$omp                local_radiation, local_radiation_phi, local_E_ion, local_P_ei, local_P_ion, &
-!$omp                local_source_volume, local_source_volume_drift,                          &
+!$omp                local_source_volume, local_source_volume_drift, local_radiation_bg,      &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                P_e_int, P_i_int, P_e_ext, P_i_ext, P_e_tot, P_i_tot,                    &
@@ -865,13 +866,15 @@ do ife = ife_min, ife_max
         local_radiation_phi(mp) = local_radiation_phi(mp) &
                                   + ne_SI * (rn0_corr * central_density * 1.d20 * Lrad + frad_bg)&
                                   * bigR * xjac * wst * delta_phi        
-        local_radiation = local_radiation &
-                          + ne_SI * (rn0_corr * central_density * 1.d20 * Lrad + frad_bg)&
-                          * bigR * xjac * wst * delta_phi 
-        local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
-                          * bigR * xjac * wst * delta_phi
-        local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
-                          * bigR * xjac * wst * delta_phi
+        local_radiation    = local_radiation &
+                             + ne_SI * (rn0_corr * central_density * 1.d20 * Lrad + frad_bg)&
+                             * bigR * xjac * wst * delta_phi 
+        local_radiation_bg = local_radiation_bg &
+                             + ne_SI * frad_bg * bigR * xjac * wst * delta_phi 
+        local_E_ion        = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
+                             * bigR * xjac * wst * delta_phi
+        local_E_ion        = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
+                             * bigR * xjac * wst * delta_phi
 #ifdef WITH_TiTe
        !--------------------------------------------------------
        ! --- Ion-electron energy transfer
@@ -1636,6 +1639,7 @@ call MPI_AllReduce(varmin,V_min,n_var,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORL
 call MPI_AllReduce(varmax,V_max,n_var,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_radiation_bg, total_radiation_bg,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_P_ei, total_P_ei,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_P_ion, total_P_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1688,6 +1692,7 @@ V_max                = varmax
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 total_radiation      = local_radiation
+total_radiation_bg   = local_radiation_bg
 total_E_ion          = local_E_ion
 total_P_ei           = local_P_ei
 total_P_ion          = local_P_ion
@@ -1799,6 +1804,7 @@ area                 = n_period * area / (2.d0 * PI)
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 total_radiation     = n_period * total_radiation
+total_radiation_bg  = n_period * total_radiation_bg
 total_radiation_phi = n_period * total_radiation_phi
 total_E_ion         = n_period * total_E_ion
 total_P_ei          = n_period * total_P_ei
@@ -2021,6 +2027,14 @@ if (my_id .eq. 0) then
       case ( 'Ohmic_out' )
         res(iexpr+1) = ohm_out 
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+      case ( 'Rad_tot' )
+        res(iexpr+1) = total_radiation
+
+      case ( 'Rad_bg_tot' )
+        res(iexpr+1) = total_radiation_bg
+#endif
+
       case ( 'P_vn' )
         res(iexpr+1) = vn_p0 
 
@@ -2208,7 +2222,8 @@ if (my_id .eq. 0) then
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI              : ', total_n_particles_inj, total_n_particles
-  write(*,'(A,1e14.6,A)')  ' Radiation power                : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)')  ' Radiation power (incl. backgr. imp) : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)')  ' Radiation power BACKGROUND     : ', total_radiation_bg/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)')  ' Radiation power SANITY         : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   if (with_neutrals) then
     write(*,'(A,1e14.6,A)') ' Ionization power              : ', total_P_ion/1.d6, ' [MW]'

@@ -27,8 +27,9 @@ integer,parameter                           :: n_pixels_x=64
 integer,parameter                           :: n_pixels_y=32
 integer,parameter                           :: n_active_light_time_rank=345
 integer,dimension(2),parameter              :: rng_seed_interval=(/642,12456324/)
-integer,dimension(2),parameter              :: n_inputs_sol=(/3,8/)
-real*8,parameter                            :: accept_threshold=1.5d-1
+integer,dimension(2),parameter              :: n_inputs_sol=(/5,9/)
+integer,dimension(2),parameter              :: mirror_xy_interval=(/0,1/)
+real*8,parameter                            :: accept_threshold=9d-1
 real*8,parameter                            :: plane_distance_sol=4.23d0
 real*8,parameter                            :: dt_sol=1.d-2
 real*8,parameter                            :: tol_real8=5.d-16
@@ -38,10 +39,10 @@ real*8,dimension(2),parameter               :: st_outbnd=(/-2.d2,5.d3/)
 real*8,dimension(2),parameter               :: q_interval=(/-3.1d-1,2.5d-1/)
 real*8,dimension(2),parameter               :: property_interval=(/5.d-10,5.d-8/)
 real*8,dimension(2),parameter               :: width_gaussian=(/5.d-5,5.d-1/)
-real*8,dimension(2),parameter               :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0/)
-real*8,dimension(2),parameter               :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0/)
 real*8,dimension(2),parameter               :: costheta_interval=(/-1.d0,1.d0/)
 real*8,dimension(2),parameter               :: phi_interval=(/0.d0,TWOPI/)
+real*8,dimension(3),parameter               :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0,0d0/)
+real*8,dimension(3),parameter               :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0,TWOPI/)
 real*8,dimension(n_spectra_sol),parameter   :: min_wlen=(/3.d-6,2.5d-7/)
 real*8,dimension(n_spectra_sol),parameter   :: max_wlen=(/3.5d-6,4.2d-7/)
 real*8,dimension(n_x_sol),parameter         :: center_pos_lowbnd=(/-9.d-1,6.d1,-3.2d0/)
@@ -54,9 +55,9 @@ type(camera_perspective_static)             :: camera_sol
 type(omnidirectional_gaussian_lights)       :: lights_rank
 type(filter_unity),dimension(n_spectra_sol) :: filter_spectra_sol
 integer                                     :: n_particles_time
-integer,dimension(3)                        :: int_param_sol
+integer,dimension(5)                        :: int_param_sol
 real*8                                      :: pixel_area_sol
-real*8,dimension(8)                         :: real_param_sol
+real*8,dimension(9)                         :: real_param_sol
 real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: image_filter_rank
 real*8,dimension(:,:,:,:),allocatable       :: image_sol
 real*8,dimension(:,:,:,:,:),allocatable     :: image_filter_sol
@@ -85,10 +86,11 @@ subroutine run_fruit_camera_perspective_static_mpi(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,*) "  ... running: camera perspective static mpi tests"
   call test_camera_perspective_static_inputs(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
-  call test_reduct_particle_light_image_static(rank,n_tasks,ifail)
-  call test_compute_images(rank,n_tasks,ifail)
-  if(rank.eq.0) write(*,*) "  ... tearing-down: camera perspective static mpi tests"
+  call test_reduce_particle_light_image_static(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
+  call test_compute_images(rank,n_tasks,ifail)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
+  if(rank.eq.0) write(*,*) "  ... tearing-down: camera perspective static mpi tests"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_camera_perspective_static_mpi
 
@@ -130,22 +132,27 @@ subroutine setup_camera(rank,n_tasks,ifail)
   real*8,dimension(n_x_sol)        :: center
   real*8,dimension(:),allocatable  :: real_param
   !> initialisation
-  n_int_param = 3; n_real_param = 8;
+  n_int_param = 5; n_real_param = 9;
   if(.not.allocated(int_param))  allocate(int_param(n_int_param))
   if(.not.allocated(real_param)) allocate(real_param(n_real_param))
-  !> initialise pinhole object
-  int_param = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y/)
-  if(rank.eq.0) call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,center)
+  !> initialise pinhole object 
+  if(rank.eq.0) then 
+    int_param(1:3) = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y/)
+    call gnu_rng_interval(2,mirror_xy_interval,int_param(4:5))
+    call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,center)
+  endif 
+  call MPI_Bcast(int_param,n_int_param,MPI_INTEGER,0,MPI_COMM_WORLD,ifail)
   call MPI_Bcast(center,n_x_sol,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
   call pinhole_sol%init_pinhole(n_x_sol,center)
   !> initialise camera object
-  int_param_sol = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y/)
+  int_param_sol = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y,int_param(4),int_param(5)/)
   if(rank.eq.0) then
-    call gnu_rng_interval(2,half_angle_lowbnd,half_angle_uppbnd,real_param_sol(1:2))
-    call random_number(real_param_sol(3:5))
-    real_param_sol(3:5) = sample_uniform_sphere(plane_distance_sol,&
-    costheta_interval,phi_interval,real_param_sol(3:5))
-    call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,real_param_sol(6:8))
+    call gnu_rng_interval(3,half_angle_lowbnd,half_angle_uppbnd,real_param_sol(1:3))
+    call random_number(real_param_sol(4:6))
+    real_param_sol(4:6) = sample_uniform_sphere(plane_distance_sol,&
+    costheta_interval,phi_interval,real_param_sol(4:6))
+    call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,real_param_sol(7:9))
+    real_param = real_param_sol
   endif
   call MPI_Bcast(real_param,n_real_param,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
   call camera_sol%init_camera(pinhole_sol,spectra_sol,n_int_param,&
@@ -171,14 +178,17 @@ subroutine write_camera_input_file(rank,n_tasks,ifail)
     write(read_unit,'(/A,I10)') 'n_lens_samples = ',                     int_param_sol(1)
     write(read_unit,'(/A,I10)') 'n_pixels_x = ',                         int_param_sol(2)
     write(read_unit,'(/A,I10)') 'n_pixels_y = ',                         int_param_sol(3)
+    write(read_unit,'(/A,I10)') 'mirror_x = ',                           int_param_sol(4)
+    write(read_unit,'(/A,I10)') 'mirror_y = ',                           int_param_sol(5)
     write(read_unit,'(/A,F20.16)') 'image_plane_half_width = ',          real_param_sol(1)
     write(read_unit,'(/A,F20.16)') 'image_plane_half_height = ',         real_param_sol(2)
-    write(read_unit,'(/A,F20.16)') 'image_plane_focal_point_distance = ',real_param_sol(3) 
-    write(read_unit,'(/A,F20.16)') 'image_plane_colatitude = ',          real_param_sol(4)
-    write(read_unit,'(/A,F20.16)') 'image_plane_azimuth = ',             real_param_sol(5)
-    write(read_unit,'(/A,F20.16)') 'focal_point_x_pos = ',               real_param_sol(6)
-    write(read_unit,'(/A,F20.16)') 'focal_point_y_pos = ',               real_param_sol(7)
-    write(read_unit,'(/A,F20.16)') 'focal_point_z_pos = ',               real_param_sol(8)
+    write(read_unit,'(/A,F20.16)') 'image_plane_orientation = ',         real_param_sol(3)
+    write(read_unit,'(/A,F20.16)') 'image_plane_focal_point_distance = ',real_param_sol(4) 
+    write(read_unit,'(/A,F20.16)') 'image_plane_colatitude = ',          real_param_sol(5)
+    write(read_unit,'(/A,F20.16)') 'image_plane_azimuth = ',             real_param_sol(6)
+    write(read_unit,'(/A,F20.16)') 'focal_point_x_pos = ',               real_param_sol(7)
+    write(read_unit,'(/A,F20.16)') 'focal_point_y_pos = ',               real_param_sol(8)
+    write(read_unit,'(/A,F20.16)') 'focal_point_z_pos = ',               real_param_sol(9)
     write(read_unit,'(/A)') '/'
     close(read_unit)
   endif
@@ -293,7 +303,7 @@ subroutine test_camera_perspective_static_inputs(rank,n_tasks,ifail)
 end subroutine test_camera_perspective_static_inputs 
 
 !> test the reduction of all light sources and filters on image plane
-subroutine test_reduct_particle_light_image_static(rank,n_tasks,ifail)
+subroutine test_reduce_particle_light_image_static(rank,n_tasks,ifail)
   use mod_assert_equals_tools, only: assert_equals_rel_error
   implicit none
   !> inputs-outputs:
@@ -312,7 +322,7 @@ subroutine test_reduct_particle_light_image_static(rank,n_tasks,ifail)
   pixel_intensities_test,image_filter_sol,tol_real8_rel,&
   "Error camera reduction particle light image static: pixel intensity mismatch!")
   endif
-end subroutine test_reduct_particle_light_image_static
+end subroutine test_reduce_particle_light_image_static
 
 !> test image generation
 subroutine test_compute_images(rank,n_tasks,ifail)
@@ -360,7 +370,7 @@ subroutine fill_omnidirectional_light(rank,n_tasks,ifail)
     do jj=1,n_active_light_time_rank
       !> random number for deciding shadowed lights
       call random_number(rand)
-      if(rand.gt.accept_threshold) then
+      if(rand.lt.accept_threshold) then
         call random_number(stq_sol)
       else
         do while(all(stq_sol.ge.0.d0).and.all(stq_sol.le.1.d0))
@@ -452,13 +462,11 @@ subroutine compute_solution_image(rank,n_tasks,ifail)
   real*8,dimension(:,:,:,:,:,:),allocatable   :: image_buffer
   !> receive all contributions from all tasks
   n_count = n_spectra_sol*2*n_pixels_x*n_pixels_y*1
-  if(rank.eq.0) then
-    allocate(image_buffer(n_spectra_sol,2,n_pixels_x,n_pixels_y,1,n_tasks))
-    image_buffer = 0.d0;
-  endif
+  allocate(image_buffer(n_spectra_sol,2,n_pixels_x,n_pixels_y,1,n_tasks))
+  image_buffer = 0.d0
   !> retrive all the image planes
-  call MPI_Gather(image_filter_rank,n_count,MPI_DOUBLE_PRECISION,image_buffer,n_count,&
-  MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ifail)
+  call MPI_Gather(image_filter_rank,n_count,MPI_REAL8,image_buffer,n_count,&
+  MPI_REAL8,0,MPI_COMM_WORLD,ifail)
   if(rank.eq.0) then
     do ii=1,n_tasks
       image_filter_sol = image_filter_sol + image_buffer(:,:,:,:,:,ii)

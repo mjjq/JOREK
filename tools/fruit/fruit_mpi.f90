@@ -101,21 +101,22 @@ contains
     !                       |                     |                  |
     !              sum(num_msgs_rank(1:1))+1      |             num_msgs_sum
     !                                    sum(num_msgs_rank(1:2))+1
-
-    if (rank == 0) then
-      msgs_all(1:num_msgs) = msgs(1:num_msgs)
-      do i = 1, size - 1
-        imsg = sum(num_msgs_rank(1:i)) + 1
-        call MPI_RECV(&
-        & msgs_all(imsg), &
-        & num_msgs_rank(i + 1) * MSG_LENGTH_HERE, MPI_CHARACTER, &
-        & i, 7, MPI_COMM_WORLD, status, ierr)
-      enddo
-    else
-      call MPI_Send(&
-      & msgs, &
-      & num_msgs * MSG_LENGTH_HERE               , MPI_CHARACTER, &
-      & 0, 7, MPI_COMM_WORLD, ierr)
+    if(num_msgs_sum.ne.0) then
+      if (rank == 0) then
+        msgs_all(1:num_msgs) = msgs(1:num_msgs)
+        do i = 1, size - 1
+          imsg = sum(num_msgs_rank(1:i)) + 1
+          call MPI_RECV(&
+          & msgs_all(imsg), &
+          & num_msgs_rank(i + 1) * MSG_LENGTH_HERE, MPI_CHARACTER, &
+          & i, 7, MPI_COMM_WORLD, status, ierr)
+        enddo
+      else
+        call MPI_Send(&
+        & msgs, &
+        & num_msgs * MSG_LENGTH_HERE               , MPI_CHARACTER, &
+        & 0, 7, MPI_COMM_WORLD, ierr)
+      endif
     endif
 
     call MPI_REDUCE(&

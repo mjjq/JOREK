@@ -6,6 +6,7 @@
 !<
 module mod_ccoll_relativistic
   use constants
+  use hdf5_io_module
   use mod_bessel, only : bessel_k2exp, bessel_k1exp, bessel_k0exp
   use mod_simpson, only : simpson_adaptive, func_real8_1D
   implicit none
@@ -159,20 +160,26 @@ contains
     class(ccoll_tabulatedL0L1), intent(in) :: dat ! data to be written
     character(len=*), intent(in) :: fn           ! output filename
 
-    integer :: chn=989
-    integer :: nu,nth
+    integer(HID_T) :: file_id
+    integer :: nu, nth, ierr
 
     nu  = size(dat%u)
     nth = size(dat%theta)
 
-    open(unit=chn,file=fn,action='write')
-    write(chn,*) nu
-    write(chn,*) nth
-    write(chn,*) dat%u
-    write(chn,*) dat%theta
-    write(chn,*) dat%L0
-    write(chn,*) dat%L1
-    close(chn)
+    call HDF5_create(fn, file_id, ierr)
+    if( ierr .ne. 0 ) then
+       write(*,*) "Could not store L0 and L1 integrals on file."
+       return
+    end if
+
+    call HDF5_integer_saving(file_id,  nu,  "nu")
+    call HDF5_integer_saving(file_id, nth, "nth")
+    call HDF5_array1D_saving(file_id,     dat%u,  nu,       "u")
+    call HDF5_array1D_saving(file_id, dat%theta, nth,      "th")
+    call HDF5_array2D_saving(file_id,    dat%L0,  nu, nth, "L0")
+    call HDF5_array2D_saving(file_id,    dat%L1,  nu, nth, "L1")
+
+    call HDF5_close(file_id)
     
   end subroutine ccoll_write_L0L1table
 
@@ -180,19 +187,23 @@ contains
   type(ccoll_tabulatedL0L1) function ccoll_read_L0L1table(fn)
     character(len=*), intent(in) :: fn !< input filename
 
-    integer :: chn=989
-    integer :: nu,nth
+    integer(HID_T) :: file_id
+    integer :: nu, nth, ierr
 
-    open(unit=chn,file=fn,action='read')
-    read(chn,*) nu
-    read(chn,*) nth
+    call HDF5_open(fn, file_id, ierr)
+    if( ierr .ne. 0 ) then
+       write(*,*) "Could not read L0 and L1 integrals from the file."
+    end if
+    call HDF5_integer_reading(file_id,  nu,  "nu")
+    call HDF5_integer_reading(file_id, nth, "nth")
     allocate(ccoll_read_L0L1table%u(nu), ccoll_read_L0L1table%theta(nth),&
          ccoll_read_L0L1table%L0(nu,nth), ccoll_read_L0L1table%L1(nu,nth))
-    read(chn,*) ccoll_read_L0L1table%u
-    read(chn,*) ccoll_read_L0L1table%theta
-    read(chn,*) ccoll_read_L0L1table%L0
-    read(chn,*) ccoll_read_L0L1table%L1
-    close(chn)
+
+    call HDF5_array1D_reading(file_id, ccoll_read_L0L1table%u,      "u")
+    call HDF5_array1D_reading(file_id, ccoll_read_L0L1table%theta, "th")
+    call HDF5_array2D_reading(file_id, ccoll_read_L0L1table%L0,    "L0")
+    call HDF5_array2D_reading(file_id, ccoll_read_L0L1table%L1,    "L1")
+    call HDF5_close(file_id)
     
   end function ccoll_read_L0L1table
 

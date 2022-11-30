@@ -48,12 +48,13 @@ program jorek2_wall_forces
   integer*4 :: rank, comm_size 
   logical   :: first_step
 
-  real*8    :: Fx, Fy, Fz
+  real*8    :: Fx, Fy, Fz, scale_fact=1.d5
 
   character*17                          :: file_in
+  character*5                           :: fact
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
   integer :: resultlength
- 
+  namelist /wall_forces/ istart, iend, delta_step, scale_fact 
  
   !***********************************************************************
   !*                  intialisation (copied from jorek2_main)            *
@@ -96,23 +97,22 @@ program jorek2_wall_forces
   call initialise_basis()
 
   first_step = .true.
-
   if (my_id==0) then
-    open(25,file='wall_forces.nml',action='read',iostat=ierr)
-    if (ierr/=0) then
-      write(*,*) 'Could not read wall_forces.nml'
-      stop
-    endif
-    read(25,*) istart, iend, delta_step   
-    close(25)
-
-    open(87,file='total_wall_forces.dat',action='write')
-    write(87,*) '#Step  time(norm)   time(ms)      Fx(N)        Fy(N)          Fz(N)'
-  endif
+     open(25, file='wall_forces.nml', action='read', status='old', iostat=ierr)
+     if (ierr==0) then
+        read(25,wall_forces)
+     end if
+     if (scale_fact > 1.d3 .or. scale_fact < 1.d-3) scale_fact = 1.01d0
+     write(*,*) 'scale factor:', scale_fact
+     write(fact,'(1f5.3)') scale_fact
+     open(87,file=trim('total_wall_forces_')//trim(fact)//'.dat',action='write')
+     write(87,*) '#Step  time(norm)   time(ms)      Fx(N)        Fy(N)          Fz(N)'
+  end if
 
   call MPI_BCAST(     istart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST(       iend,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   call MPI_BCAST( delta_step,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST( scale_fact,1,MPI_DOUBLE,0,MPI_COMM_WORLD,ierr)
 
   ! --- Loop over restart files
   do istep = istart, iend, delta_step 
@@ -133,7 +133,7 @@ program jorek2_wall_forces
       write(*,*) ' **** Fatal: jorek2_wall_forces needs freeboundary simulations ****'
       stop
     endif
-  
+
     call MPI_Barrier(MPI_COMM_WORLD,ierr)
     ! --- Fill the vacuum response matrices for freeboundary computations
     if (first_step) then
@@ -164,7 +164,7 @@ program jorek2_wall_forces
     endif 
   
     ! --- FORCES ---
-    call total_wall_forces(my_id, node_list, element_list, Fx, Fy, Fz)
+    call total_wall_forces(my_id, node_list, element_list, scale_fact, Fx, Fy, Fz)
  
     if (my_id==0) then
       write(87,'(I5.5,5ES14.6)') istep, t_start, t_start*sqrt_mu0_rho0*1.d3, Fx, Fy, Fz 

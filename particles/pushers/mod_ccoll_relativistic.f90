@@ -9,6 +9,7 @@ module mod_ccoll_relativistic
   use hdf5_io_module
   use mod_bessel, only : bessel_k2exp, bessel_k1exp, bessel_k0exp
   use mod_simpson, only : simpson_adaptive, func_real8_1D
+  use mod_interp_methods, only: interp_bilinear
   implicit none
 
   real*8, parameter :: DEFAULT_L0L1_eps    = 1.D-8 !< default tolerance in eval_L0L1
@@ -509,8 +510,8 @@ contains
     else
        if( (u.gt.data%u(1)) .and. (th.gt.data%theta(1)) ) then
           
-          L0 = interp2(log10(data%u),log10(data%theta),data%L0,log10(u),log10(th)) 
-          L1 = interp2(log10(data%u),log10(data%theta),data%L1,log10(u),log10(th))
+          L0 = interp_bilinear(log10(data%u),log10(data%theta),data%L0,log10(u),log10(th)) 
+          L1 = interp_bilinear(log10(data%u),log10(data%theta),data%L1,log10(u),log10(th))
        else
           L0 = sqrt(pi*theta/2)*erf(u/sqrt(2*theta))
           L1 = L0
@@ -519,63 +520,37 @@ contains
     
   end subroutine interp_L0L1
 
-  !> Bilinear interpolation for interpolating tabulated L0 and L1 values
-  real(kind=8) function interp2(x, y, f, xq, yq)
-    implicit none
-    
-    real*8, intent(in) :: x(:), y(:) !< abscissae
-    real*8, intent(in) :: f(:,:)     !< function values
-    real*8, intent(in) :: xq, yq     !< queried point
-
-    real*8  :: dx, dy
-    integer :: ix, iy
-
-    dx = x(2) - x(1)
-    dy = y(2) - y(1)
-    
-    ix = floor( ( xq - x(1) ) / dx ) + 1
-    iy = floor( ( yq - y(1) ) / dy ) + 1
-
-    interp2 = ( f(ix, iy)         * ( x(ix + 1) - xq ) * ( y(iy + 1) - yq ) &
-              + f(ix + 1, iy)     * ( xq - x(ix) )     * ( y(iy + 1) - yq ) &
-              + f(ix, iy + 1)     * ( x(ix + 1) - xq ) * ( yq - y(iy) )     &
-              + f(ix + 1, iy + 1) * ( xq - x(ix) )     * ( yq - y(iy) )     &
-              ) / ( dx * dy )
-    
-  end function interp2
-
-
 end module mod_ccoll_relativistic
 
 
 !< Simple program that generates a file "ccoll.data" that contains tabulated L0 and L1 values
 !< that should be applicable for every fusion plasma.
-!program ccoll_generate_L0L1
-!  use mod_ccoll_relativistic
-!  
-!  implicit none
-!
-!  type(ccoll_tabulatedL0L1) :: dat
-!  logical :: storage_file_on_disk
-!  character(20), parameter :: storage_file='ccolldata'
-!
-!   real*8, parameter  :: uminxp  = -3.D0
-!   real*8, parameter  :: umaxxp  = 2.D0
-!   real*8, parameter  :: thminxp = -3.D0
-!   real*8, parameter  :: thmaxxp = -1.D0 
-!   integer, parameter :: nu      = 401
-!   integer, parameter :: nth     = 201
-!
-!   ! Initialize the look-up tables
-!  print*,''
-!  write(*,*) 'Initializing look-up tables...'
-!  inquire(file=storage_file,exist=storage_file_on_disk)
-!  if(storage_file_on_disk) then
-!     write(*,*) 'File already exists.'
-!  else
-!     dat = ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth)
-!     call ccoll_write_L0L1table(dat,storage_file)
-!  end if
-!  print*,'Done!'
-!
-!end program ccoll_generate_L0L1
+program ccoll_generate_L0L1
+  use mod_ccoll_relativistic
+  
+  implicit none
+
+  type(ccoll_tabulatedL0L1) :: dat
+  logical :: storage_file_on_disk
+  character(20), parameter :: storage_file='ccolldata'
+
+   real*8, parameter  :: uminxp  = -3.D0
+   real*8, parameter  :: umaxxp  = 2.D0
+   real*8, parameter  :: thminxp = -3.D0
+   real*8, parameter  :: thmaxxp = -1.D0 
+   integer, parameter :: nu      = 401
+   integer, parameter :: nth     = 201
+
+   ! Initialize the look-up tables
+  print*,''
+  write(*,*) 'Initializing look-up tables...'
+  inquire(file=storage_file,exist=storage_file_on_disk)
+  if(storage_file_on_disk) then
+     write(*,*) 'File already exists.'
+  else
+     dat = ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth)
+     call ccoll_write_L0L1table(dat,storage_file)
+  end if
+  print*,'Done!'
+
+end program ccoll_generate_L0L1

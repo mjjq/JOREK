@@ -1086,11 +1086,19 @@ do ife = ife_min, ife_max
 
         do i_inj = 1,n_inj
           if (drift_distance(i_inj) /= 0.d0) then
-            source_neutral = source_neutral + max(0.,source_neutral_drift_arr(i_inj))
+            source_neutral = source_neutral + source_neutral_drift_arr(i_inj)
           else
-            source_neutral = source_neutral + max(0.,source_neutral_arr(i_inj))
+            source_neutral = source_neutral + source_neutral_arr(i_inj)
           end if
         end do
+
+        ! To detect NaNs
+        if (source_neutral /= source_neutral) then
+          write(*,*) 'ERROR in mod_integrals_3D: source_neutral = ', source_neutral
+          stop
+        end if
+
+        source_neutral       = max(0.,source_neutral)
 
         ! Neutral injection rate in particles/s
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR *&
@@ -1116,13 +1124,23 @@ do ife = ife_min, ife_max
         call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_bg_drift_arr)
 
         do i_inj = 1,n_inj
-          source_imp = source_imp + max(0., source_imp_arr(i_inj))
+          source_imp = source_imp + source_imp_arr(i_inj)
           if (drift_distance(i_inj) /= 0.d0) then
-            source_bg = source_bg + max(0., source_bg_drift_arr(i_inj))
+            source_bg = source_bg + source_bg_drift_arr(i_inj)
           else
-            source_bg = source_bg + max(0., source_bg_arr(i_inj))
+            source_bg = source_bg + source_bg_arr(i_inj)
           end if
         end do
+
+        ! This is to detect N/A
+        if (source_imp /= source_imp .or. source_bg /= source_bg) then
+          write(*,*) "ERROR: in mod_integrals_3D: source_imp = ", source_imp
+          write(*,*) "ERROR: in mod_integrals_3D: source_bg = ", source_bg
+          stop
+        end if
+
+        source_imp = max(0., source_imp)
+        source_bg  = max(0., source_bg)
 
         ! Frictional heat source
         fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&

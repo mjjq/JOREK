@@ -1134,8 +1134,8 @@ do ife = ife_min, ife_max
 
         ! This is to detect N/A
         if (source_imp /= source_imp .or. source_bg /= source_bg) then
-          write(*,*) "ERROR: in mod_integrals_3D: source_imp = ", source_imp
-          write(*,*) "ERROR: in mod_integrals_3D: source_bg = ", source_bg
+          write(*,*) "ERROR in mod_integrals_3D: source_imp = ", source_imp
+          write(*,*) "ERROR in mod_integrals_3D: source_bg = ", source_bg
           stop
         end if
 

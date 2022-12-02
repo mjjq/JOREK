@@ -1038,8 +1038,8 @@ do ms=1, n_gauss
 
      ! This is to detect N/A
      if (source_imp /= source_imp .or. source_bg /= source_bg) then
-       write(*,*) "WARNING: source_imp = ", source_imp
-       write(*,*) "WARNING: source_bg = ", source_bg
+       write(*,*) "ERROR in mod_elt_matrix (502): source_imp = ", source_imp
+       write(*,*) "ERROR in mod_elt_matrix (502): source_bg = ", source_bg
        stop
      end if
 

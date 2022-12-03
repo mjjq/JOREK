@@ -119,10 +119,10 @@ real*8     :: Btheta2, epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 
 ! neutral source
-real*8     :: source_neutral
-real*8     :: source_neutral_drift ! Neutral source deposited at R+drift_distance to impose plasmoid drift
-real*8     :: power_dens_teleport_ju ! Teleported power density in JOREK unit (sink at R and source at R+drift)
-! Impurity and direct background species (not neutral) source
+integer    :: i_inj
+real*8     :: source_neutral, source_neutral_arr(n_inj_max)
+real*8     :: source_neutral_drift, source_neutral_drift_arr(n_inj_max) ! Neutral source deposited at R+drift_distance to impose plasmoid drift
+real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max) ! Teleported power density in JOREK unit (sink at R and source at R+drift)
 real*8     :: source_imp
 real*8     :: source_bg
 
@@ -1247,11 +1247,20 @@ do i=1,n_vertex_max
               dLradDrays_dT = dLradDrays_dT / 2.d0
               dLradDcont_dT = dLradDcont_dT / 2.d0
             endif
-          
-            source_neutral       = 0.d0    
-            source_neutral_drift = 0.d0 
+    
+            !--------------------------------------------------------
+            ! --- Source of neutrals, e.g. from MGI/SPI
+            !--------------------------------------------------------
       
-            call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral,source_neutral_drift)
+            source_neutral       = 0.d0; source_neutral_arr       = 0.d0
+            source_neutral_drift = 0.d0; source_neutral_drift_arr = 0.d0
+
+            call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+
+            do i_inj = 1,n_inj
+              source_neutral       = source_neutral + source_neutral_arr(i_inj)
+              source_neutral_drift = source_neutral_drift + source_neutral_drift_arr(i_inj)
+            end do
 
             ! To detect NaNs
             if (source_neutral /= source_neutral .or. source_neutral_drift /= source_neutral_drift) then
@@ -1277,12 +1286,18 @@ do i=1,n_vertex_max
           endif  ! with_neutrals
           ! ------------
                  
-          ! --- Teleported energy (for ablation plasmoid teleportation model) in JOREK units (input param. energy_teleported is in eV)
-          power_dens_teleport_ju = 0.d0
-          if (with_neutrals .and. energy_teleported /= 0.d0) then
-            power_dens_teleport_ju = (-source_neutral + source_neutral_drift)  * energy_teleported * &
-                                     EL_CHG * (GAMMA-1) * MU_ZERO * 1.d20 * central_density
-          end if
+          !------------------------------------------------------------------------------------------
+          ! ---Calculate energy teleported in JOREK unit (sink at R and source at R + drift_distance)
+          !------------------------------------------------------------------------------------------
+          ! Input energy_teleported is in eV
+          power_dens_teleport_ju = 0.d0; power_dens_teleport_ju_arr = 0.d0
+          do i_inj = 1,n_inj
+            if (with_neutrals .and. energy_teleported(i_inj) /= 0.d0) then
+              power_dens_teleport_ju_arr(i_inj) = (-source_neutral_arr(i_inj) + source_neutral_drift_arr(i_inj))  * energy_teleported(i_inj) * &
+                                                  EL_CHG * (GAMMA-1) * MU_ZERO * 1.d20 * central_density
+              power_dens_teleport_ju = power_dens_teleport_ju + power_dens_teleport_ju_arr(i_inj)
+            end if
+          end do
 
           ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
           source_imp = 0.d0

@@ -214,6 +214,7 @@ subroutine setup_solvers(this, sim)
 
   this%mhd_sim%node_list     => sim%fields%node_list
   this%mhd_sim%element_list  => sim%fields%element_list    
+  this%mhd_sim%local_elms    => this%local_elms
 
   this%mhd_sim%bnd_node_list => bnd_node_list
   this%mhd_sim%bnd_elm_list  => bnd_elm_list
@@ -222,6 +223,8 @@ subroutine setup_solvers(this, sim)
   
   call distribute_nodes_elements(id_elements, this%mhd_sim%n_cpu, index_size, this%mhd_sim%node_list, this%mhd_sim%element_list, .false., this%mhd_sim%local_elms, & 
                                    this%mhd_sim%n_local_elms, this%mhd_sim%restart, this%mhd_sim%freeboundary, this%a_mat)
+
+  call update_deltas(this%mhd_sim%my_id, this%mhd_sim%node_list)
                                    
   call global_matrix_structure(this%mhd_sim%node_list, this%mhd_sim%element_list, this%mhd_sim%bnd_elm_list, this%mhd_sim%freeboundary,&
                                  this%mhd_sim%local_elms, this%mhd_sim%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)                                   

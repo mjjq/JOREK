@@ -7,7 +7,6 @@ implicit none
 private
 public :: synchrotron_light_vertices
 #ifdef UNIT_TESTS
-public :: fill_synchrotron_lights_from_particles
 public :: compute_synchrotron_light_properties
 public :: check_shaded_x_in_synchrotron_cone
 #endif
@@ -18,93 +17,23 @@ real*8,parameter  :: twothirds=2.d0/3.d0
 real*8,parameter  :: sqrt3=sqrt(3.d0)
 type,extends(light_vertices) :: synchrotron_light_vertices
   contains
-  procedure,pass(light_vert) :: init_lights_from_particles => &
-                                init_synchrotron_lights_from_particles
   procedure,pass(light_vert) :: directionality_funct => &
                                 synchrotron_directionality_funct
   procedure,pass(light_vert) :: spectral_irradiance => &
                                 synchrotron_spectral_irradiance
-  procedure,pass(sync_lights),private :: fill_synchrotron_lights_from_particles
+  procedure,pass(light_vert),private :: compute_mhd_fields => &
+                                        compute_synchrotron_mhd_fields
+  procedure,pass(light_vert),private :: compute_light_properties => &
+                                        compute_synchrotron_light_properties
+  procedure,nopass,private           :: check_x_shaded_in_emission_zone => &
+                                        check_shaded_x_in_synchrotron_cone
+check_x_shaded_in_emission_zone
 end type synchrotron_light_vertices
 !> Interfaces --------------------------------------
 
 contains
 
 !> Procedures --------------------------------------
-!> init_synchrotron_light_from_particles computes the properties
-!> of the synchrotron light for each particle and stores them 
-!> in the proprerties array
-!> inputs:
-!>   light_vert:     (synchrotron_light_vertices) empty synchrotron lights
-!>   n_times:        (integer) number of simulation times
-!>   sims_particles: (particle_sim)(n_times) array of particle simulations
-!>   n_lights_in:    (integer)(optional) number of requested lights
-!> outputs:
-!>   light_vert: (synchrotron_light_vertices) initialised synchrotron lights
-!>   sims_particles: (particle_sim)(n_times) array of particle simulations
-subroutine init_synchrotron_lights_from_particles(light_vert,n_times,&
-sims_particles,n_lights_in)
-  use mod_particle_types,        only: particle_kinetic_relativistic_id
-  use mod_particle_sim,          only: particle_sim
-  implicit none
-  !> inputs-outputs
-  class(synchrotron_light_vertices),intent(inout)     :: light_vert
-  type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
-  !> inputs
-  integer,intent(in)                                  :: n_times
-  integer,intent(in),optional                         :: n_lights_in
-  !> variables
-  integer :: ii
-  integer :: n_sync_lights,n_groups_max,n_particles_max
-  integer,dimension(n_times)           :: n_groups,n_particle_relativistics
-  integer,dimension(:,:),allocatable   :: n_particles,particle_types,n_active_particles
-  integer,dimension(:,:,:),allocatable :: active_particle_id
-
-  light_vert%n_property_vertex = 13 
-  !> initialise time vector
-  call light_vert%allocate_time_vector(n_times)
-  call light_vert%fill_time_vector_particle_sims(sims_particles)
-  !> allocate extract number of particles and particles type
-  call light_vert%extract_n_groups_all_particle_sims(sims_particles,n_groups)
-  n_groups_max = maxval(n_groups)
-  allocate(n_particles(n_groups_max,light_vert%n_times)) 
-  allocate(particle_types(n_groups_max,light_vert%n_times))
-  call light_vert%extract_n_particles_all_particle_sims(sims_particles,&
-  n_groups_max,n_particles)
-  call light_vert%extract_particle_types_all_particle_sims(sims_particles,&
-  n_groups_max,particle_types)
-  !> compute the number of relativistic particles per each time
-  do ii=1,light_vert%n_times
-    n_particle_relativistics(ii) = sum(n_particles(:,ii),&
-    mask=particle_types(:,ii).eq.particle_kinetic_relativistic_id)
-  enddo
-  n_particles_max = maxval(n_particle_relativistics)
-  n_sync_lights = n_particles_max
-  if(present(n_lights_in)) then
-    if(n_sync_lights.lt.n_lights_in) then
-      n_sync_lights =  n_lights_in   
-    else
-      write(*,*) "Error initialise synchrotron lights from particles"
-      write(*,*) "Requested number of lights < number of particles,use: ",n_sync_lights
-    endif
-  endif
-  !> allocate vertices
-  call light_vert%allocate_x_properties(n_sync_lights)
-  !> allocate active particle arrays
-  allocate(n_active_particles(n_groups_max,light_vert%n_times));
-  allocate(active_particle_id(n_particles_max,n_groups_max,light_vert%n_times));
-  !> find active particles for all groups and times
-  call light_vert%find_active_particles_id_time(n_groups_max,n_particles_max,&
-  n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,&
-  particle_kinetic_relativistic_id)
-  !> fill the synchrotron lights
-  call light_vert%fill_synchrotron_lights_from_particles(&
-  sims_particles,n_groups_max,n_particles_max,n_groups,&
-  n_active_particles,active_particle_id)
-  !> cleanup 
-  deallocate(n_particles); deallocate(particle_types);
-  deallocate(n_active_particles); deallocate(active_particle_id)
-end subroutine init_synchrotron_lights_from_particles
 
 !> synchrotron_directionality_funct computes the directionaliy function
 !> for synchrotron lights which is the full angular-spectral distribution
@@ -146,6 +75,7 @@ light_id,x_shaded,light_dstb)
   !> variables
   logical :: in_parallel
   integer :: ii,jj 
+  integer,dimension(0) :: int_param
   real*8  :: zeta,one_over_gamma,z_value,z2_value,factor_1,factor_2,z_cos
   real*8,dimension(light_vert%n_x) :: rpsichi !< spherical coordinates
   real*8,dimension(light_vert%n_property_vertex) :: light_properties
@@ -155,8 +85,9 @@ light_id,x_shaded,light_dstb)
   !$ in_parallel = omp_in_parallel()
   !> check if the shaded point is in the synchrotron emission cone
   light_properties = light_vert%properties(:,light_id,time_id)
-  if(.not.check_shaded_x_in_synchrotron_cone(light_vert%n_x,x_shaded,&
-  light_vert%x(:,light_id,time_id),light_properties(1:3),light_properties(11))) return
+  if(.not.light_vert%check_x_shaded_in_emission_zone(light_vert%n_x,x_shaded,&
+  light_vert%x(:,light_id,time_id),0,4,int_param,[light_properties(1),&
+  light_properties(2),light_properties(3),light_properties(11)])) return
   !> compute the spherical coordinates of the light-point ray
   rpsichi = cartesian_to_spherical_latitude(x_shaded,light_vert%x(:,light_id,time_id),&
   light_properties(1:3),light_properties(4:6),light_properties(7:9))
@@ -236,6 +167,142 @@ light_id,x_shaded,light_spec_irradiance)
   light_spec_irradiance = light_spec_irradiance*light_vert%properties(13,light_id,time_id)
 end subroutine synchrotron_spectral_irradiance
 
+!> interpolate the JOREK MHD fields required for computing the
+!> synchrotron radiation properties
+!> inputs:
+!>   light_vert: (synchrotron_light_vertices) empty synchrotron lights
+!>   fields:     (fields_base) JOREK MHD fields
+!>   particle:   (particle_base) JOREK particle base structure
+!>   mass:       (real8) particle mass
+!> outputs:
+!>   mhd_fields: (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
+!>               1-3: x,y,z electric field componenets
+!>               4-6: x,y,z magnetic field componenets
+subroutine compute_synchrotron_mhd_fields(light_vert,fields,&
+particle,mass,mhd_fields)
+  use mod_fields,                only: fields_base
+  use mod_particle_types,        only: particle_base
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  !> used only for unit testing but required for compilation
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields
+  implicit none
+  !> Inputs:
+  class(synchrotron_light_vertices),intent(in) :: light_vert
+  class(fields_nase),intent(in)                :: fields
+  class(particle_base),intent(in)              :: particle_base
+  real*8,intent(in)                            :: mass
+  !> Outputs:
+  real*8,dimension(light_vert%n_mhd),intent(out) :: mhd_fields
+  !> Variables:
+  real*8 :: psi,U
+  !> compute the MHD fields
+#ifndef UNIT_TESTS_AFIELDS
+  !> compute JOREK electric and magnetic JOREK fields in cartesian coordinates
+  call fields%calc_EBpsiU(light_vert%times(ii),particle%i_elm,&
+  particle%st,particle%x(3),mhd_fields(1:3),mhd_fields(4:6),psi,U)
+  mhd_fields(1:3) = vector_cylindrical_to_cartesian(particle%x(3),mhd_fields(1:3))
+  mhd_fields(4:6) = vector_cylindrical_to_cartesian(particle%x(3),mhd_fields(4:6))
+#else
+  !> analytical fields only for unit testing
+  call compute_test_E_B_fields(particle%x,mhd_fields(1:3),mhd_fields(4:6))
+#endif
+end subroutine compute_synchrotron_mhd_fields
+
+!> compute_synchrotron_light_properties computes the
+!> synchrotron radiation properties from a
+!> kinetic relativistic particle. Variables
+!> inputs:
+!>   light_vert:  (synchrotron_light_vertices) empty synchrotron lights
+!>   property_id: (integer) index of the property to be initialised
+!>   time_id:     (integer) time index
+!>   particle_in: (particle_kinetic_relativistic) jorek particle
+!>   mass:        (real8) mass of the particle
+!>   mhd_fields:  (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
+!>                1-3: x,y,z electric field componenets
+!>                4-6: x,y,z magnetic field componenets
+!> outputs:
+!>   light_vert: (synchrotron_light_vertices) synchrotron lights with
+!>               initialised properties. First dimension of the properties are:
+!>                 1:3 -> component of the velocity direction (cartesian)
+!>                     -> T = v/||v||
+!>                 4:6 -> second orthonormal basis cartesian coordinates
+!>                     -> N = E + v X B - v*E
+!>                 7:9 -> components of the third orthonormal basis (cartesian)
+!>                     -> B = T X N
+!>                 10  -> beta -> velocity/speed of light = v/c
+!>                 11  -> relativistic factor gamma = sqrt(1+(p/(mass*c))**2)
+!>                 12  -> orbit curvature (L. Carbakal, PPCF, 2017)
+!>                     -> kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
+!>                 13  -> total radiation power (L. Carbajal, PPCF, 2017)i
+!>                     -> P_tot = (q**2/(6*PI*eps0*c**3))*gamma**4 * v**4 * kappa**2
+subroutine compute_synchrotron_light_properties(light_vert,&
+property_id,time_id,particle_in,mass,mhd_fields)
+  use constants,                 only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
+  use mod_math_operators,        only: cross_product
+  use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
+  use mod_particle_types,        only: particle_base,particle_kinetic_relativistic
+  implicit none
+  !> inputs-outputs
+  class(synchrotron_light_vertices),intent(inout) :: light_vert
+  !> inputs
+  class(particle_base),intent(in)                 :: particle_in
+  integer,intent(in)                              :: property_id,time_id
+  real*8,intent(in)                               :: mass
+  real*8,dimension(light_vert%n_mhd),intent(in)   :: mhd_fields
+  !> variables
+  real*8 :: velocity
+  real*8,dimension(field_size) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
+
+  select type(p_in=>particle_in)
+    type is (particle_kinetic_relativistic)
+    !> compute velocity, velocity direction and relativistic factor
+    velocity = sqrt(p_in%p(1)**2+p_in%p(2)**2+p_in%p(3)**2) 
+    light_vert%properties(1:3,property_id,time_id) = p_in%p/velocity
+    light_vert%properties(10,property_id,time_id)  = velocity/SPEED_OF_LIGHT
+    light_vert%properties(11,property_id,time_id)  = sqrt(1.d0 + &
+                           (light_vert%properties(10,property_id,time_id)**2)/(mass**2))
+    light_vert%properties(10,property_id,time_id)  = light_vert%properties(10,property_id,time_id)/&
+                           (mass*light_vert%properties(11,property_id,time_id))
+  !> compute orbit curvature
+    light_vert%properties(4:6,property_id,time_id) = mhd_fields(1:3)+cross_product(p_in%p/&
+                           (mass*light_vert%properties(11,property_id,time_id)),mhd_fields(4:6))
+    vector_1d_3 = cross_product(light_vert%properties(1:3,property_id,time_id),&
+                           light_vert%properties(4:6,property_id,time_id))
+    light_vert%properties(12,property_id,time_id)  = (abs(real(p_in%q,kind=8))*EL_CHG*&
+                           sqrt(vector_1d_3(1)**2+vector_1d_3(2)**2+vector_1d_3(3)**2))/&
+                           (light_vert%properties(11,property_id,time_id)*mass*ATOMIC_MASS_UNIT*&
+                           ((light_vert%properties(10,property_id,time_id)*SPEED_OF_LIGHT)**2))
+    !> compute total synchrotron power
+    light_vert%properties(13,property_id,time_id)  = (((EL_CHG*real(p_in%q,kind=8))**2)*&
+                           SPEED_OF_LIGHT*(light_vert%properties(10,property_id,time_id)**4)*&
+                           (light_vert%properties(11,property_id,time_id)**4)*&
+                           (light_vert%properties(12,property_id,time_id)**2))/(6.d0*PI*EPS_ZERO)
+  end select
+  !> construct and store the orthonormal basis
+  call vectors_to_orthonormal_basis(light_vert%properties(1:3,property_id,time_id),&
+  light_vert%properties(4:6,property_id,time_id),vector_1d_3,vector_1d_3_2,vector_1d_3_3)
+  light_vert%properties(1:3,property_id,time_id) = vector_1d_3; 
+  light_vert%properties(4:6,property_id,time_id) = vector_1d_3_2;
+  light_vert%properties(7:9,property_id,time_id) = vector_1d_3_3
+end subroutine compute_synchrotron_light_properties
+
+!> initialise and allocate synchrotron light variables
+!> inputs:
+!>   light_vert: (synchrotron_light_vertices) synchrotron lights class
+!> outputs:
+!>   light_vert: (synchrotron_light_vertices) synchrotron lights class
+subroutine setup_synchrotron_light_class(light_vert)
+use mod_particle_types, only: particle_kinetic_relativistic_id
+  implicit none
+  !> inputs-outputs
+  class(synchrotron_light_vertices),intent(inout) :: light_vert
+  !> set-up the synchrotron light variables 
+  light_vert%n_property_vertex = 13; light_vert%n_mhd = 6;
+  light_vert%n_particle_types = 1;
+  if(allocate(light_vert%particle_types)) deallocate(light_vert%particle_types)
+  allocate(light_vert%particle_types(light_vert%n_particle_types))
+  light_vert%particle_types = [particle_kinetic_relativistic_id]
+end subroutine setup_synchrotron_light_class
 
 !> Tools ------------------------------------------
 !> compute the synchrotron radiation directionality function
@@ -268,82 +335,6 @@ factor_2,z_value,z2_value,factor_1,dir_funct)
   besselk_2*z_value*sin(zeta*z_cos))/(wavelength**4)
 end subroutine compute_synchrotron_directionality_funct
 
-!> fill_synchrotron_lights_from_particles_serial fill the
-!> x and properties arrays of synchrotron lights from
-!> particle lists (basic and simple openmp parallelisation)
-!> inputs:
-!>   sync_lights:        (synchrotron_light_vertices) empty synchrotron lights
-!>   sims_particles:     (particle_sim)(n_times) array of particle simulations
-!>   n_groups_max:       (integer) maximum size of groups
-!>   n_particles_max:    (integer) maximum number of particles
-!>   n_groups:           (integer)(n_times) size of each group 
-!>   n_active_particles: (integer)(n_group_max,n_times) number of active particles
-!>                       per group and per time
-!>   active_particle_id: (integer)(n_particle_max,n_group_max,n_times) indices
-!>                       of the active particles
-!> outputs:
-!>   sync_lights: (synchrotron_light_vertices) initialised synchrotron lights
-subroutine fill_synchrotron_lights_from_particles(sync_lights,&
-sims_particles,n_groups_max,n_particles_max,&
-n_groups,n_active_particles,active_particles_id)
-  use mod_particle_sim,          only: particle_sim
-  use mod_particle_types,        only: particle_kinetic_relativistic
-  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
-  !> used only for unit testing but required for compilation
-  use mod_particle_common_test_tools, only: compute_test_E_B_fields
-  implicit none
-  !> inputs-outputs
-  class(synchrotron_light_vertices),intent(inout) :: sync_lights
-  !> inputs:
-  type(particle_sim),dimension(sync_lights%n_times),intent(in)   :: sims_particles
-  integer,intent(in)                                             :: n_groups_max
-  integer,intent(in)                                             :: n_particles_max
-  integer,dimension(sync_lights%n_times),intent(in)              :: n_groups
-  integer,dimension(n_groups_max,sync_lights%n_times),intent(in) :: n_active_particles
-  integer,dimension(n_particles_max,n_groups_max,sync_lights%n_times),intent(in)::active_particles_id
-  !> variables
-  integer :: ii,jj,kk,pp
-  real*8  :: psi,U
-  real*8,dimension(sync_lights%n_x) :: E_field,B_field
-
-  !> compute synchrotron light properties from particle simulations
-  do ii=1,sync_lights%n_times
-    pp = 0
-    do jj=1,n_groups(ii)
-        !$omp parallel default(private) firstprivate(ii,jj,pp,n_active_particles) &
-        !$omp shared(sims_particles,active_particles_id,sync_lights)
-        select type (p_list=>sims_particles(ii)%groups(jj)%particles)
-          type is (particle_kinetic_relativistic)
-          !$omp do
-          do kk=1,n_active_particles(jj,ii)
-            call sync_lights%store_light_x_from_particle_id(pp+kk,ii,&
-            p_list(active_particles_id(kk,jj,ii))) !< store position
-            !> compute E,B fields
-#ifndef UNIT_TESTS_AFIELDS
-            call sims_particles(ii)%fields%calc_EBpsiU(sync_lights%times(ii),&
-            p_list(active_particles_id(kk,jj,ii))%i_elm,&
-            p_list(active_particles_id(kk,jj,ii))%st,&
-            p_list(active_particles_id(kk,jj,ii))%x(3),&
-            E_field,B_field,psi,U)
-#else
-            !> analytical fields only for unit testing
-            call compute_test_E_B_fields(p_list(active_particles_id(kk,jj,ii))%x,E_field,B_field)
-#endif
-            !> compute synchrotron light properties
-            call compute_synchrotron_light_properties(sync_lights%n_x,sync_lights%n_property_vertex,&
-            p_list(active_particles_id(kk,jj,ii)),sims_particles(ii)%groups(jj)%mass,&
-            vector_cylindrical_to_cartesian(p_list(active_particles_id(kk,jj,ii))%x(3),E_field),&
-            vector_cylindrical_to_cartesian(p_list(active_particles_id(kk,jj,ii))%x(3),B_field),&
-            sync_lights%properties(:,pp+kk,ii))
-        enddo
-        !$omp end do
-        end select
-        !$omp end parallel
-        pp = pp + n_active_particles(jj,ii) 
-    enddo
-  enddo
-end subroutine fill_synchrotron_lights_from_particles
-
 !> check if the shaded point of the synchrotron light is inside
 !> the synchrotron radiation cone of half width sin(theta) ≃ 1/gamma
 !> where gamma is the relativistic factor. 
@@ -351,95 +342,35 @@ end subroutine fill_synchrotron_lights_from_particles
 !>   n_x:       (integer) size of the coordinate system
 !>   x_shaded:  (real8)(n_x) position of the shaded point
 !>   x_light:   (real8)(n_x) position of the point light
+!>   n_int_param: (integer) number of integer parameters: 0
+!>   n_real_param: (real8) number of real parameters: 4
+!>   int_param:    (integer)(n_int_param) integer parameters
+!>   real_param:   (real8)(n_real_param) real_parameters:
+!>                 1- x component of the emission cone (momentum) direction
+!>                 2- y component of the emission cone (momentum) direction
+!>                 3- z component of the emission cone (momentum) direction
+!>                 4- relativistic factor
 !>   light_dir: (real8)(n_x) principal direction of the light emission 
 !>   rel_fact:  (real8)(n_x) relativistic factor
 !> outouts:
 !>   in_code: (logical) if true the gather point is in the synchrotron cone
 function check_shaded_x_in_synchrotron_cone(n_x,x_shaded,x_light,&
-light_dir,rel_fact) result(in_cone)
+n_int_param,n_real_param,int_param,real_param) result(in_range)
   !> Inputs:
-  integer,intent(in)               :: n_x
-  real*8,intent(in)                :: rel_fact
-  real*8,dimension(n_x),intent(in) :: x_shaded,x_light,light_dir
+  integer,intent(in)                        :: n_x,n_int_param,n_real_param
+  integer,dimension(n_int_param),intent(in) :: int_param
+  real*8,dimension(n_x),intent(in)          :: x_shaded,x_light
+  real*8,dimension(n_real_param),intent(in) :: real_param
   !> Outputs:
-  logical :: in_cone
+  logical :: in_range
   !> Variables:
   real*8 :: costheta
   !> initialisation
-  in_cone = .false.
+  in_range = .false.
   !> check if the shaded point is in the synchrotron conede
-  costheta = dot_product(x_shaded-x_light,light_dir)/norm2(x_shaded-x_light)
-  if((costheta.ge.0).and.((sqrt(1d0-costheta**2)*rel_fact).le.1d0)) in_cone=.true.
+  costheta = dot_product(x_shaded-x_light,real_param(1:3))/norm2(x_shaded-x_light)
+  if((costheta.ge.0).and.((sqrt(1d0-costheta**2)*real_param(4)).le.1d0)) in_range=.true.
 end function check_shaded_x_in_synchrotron_cone
-
-!> compute_synchrotron_light_properties computes the
-!> synchrotron radiation properties from a
-!> kinetic relativistic particle. Variables
-!> inputs:
-!>   field_size:    (integer) size of the field vectors
-!>   property_size: (integer) size of the property vector
-!>   particle_in:   (particle_kinetic_relativistic) jorek particle
-!>   mass:          (real8) mass of the particle
-!>   E_field_cart:  (real8)(field_size) electric field at particle position
-!>                  in the cartesian reference system
-!>   B_field_cart:  (real8)(field_size) magnetic field at particle position
-!>                  in the cartesian reference system
-!> outputs:
-!>   sync_properties: (real8)(property_size) synchrotron radiation properties
-!>                    1:3 -> component of the velocity direction (cartesian)
-!>                        -> T = v/||v||
-!>                    4:6 -> second orthonormal basis cartesian coordinates
-!>                        -> N = E + v X B - v*E
-!>                    7:9 -> components of the third orthonormal basis (cartesian)
-!>                        -> B = T X N
-!>                    10  -> beta -> velocity/speed of light = v/c
-!>                    11  -> relativistic factor gamma = sqrt(1+(p/(mass*c))**2)
-!>                    12  -> orbit curvature (L. Carbakal, PPCF, 2017)
-!>                        -> kappa = (|q|/(gamma*mass*v**3))||v X (E + v X B)||
-!>                    13  -> total radiation power (L. Carbajal, PPCF, 2017)i
-!>                        -> P_tot = (q**2/(6*PI*eps0*c**3))*gamma**4 * v**4 * kappa**2
-subroutine compute_synchrotron_light_properties(field_size,property_size,particle_in,&
-mass,E_field,B_field,sync_properties)
-  use constants,                 only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
-  use mod_math_operators,        only: cross_product
-  use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
-  use mod_particle_types,        only: particle_kinetic_relativistic
-  implicit none
-  !> inputs
-  type(particle_kinetic_relativistic),intent(in) :: particle_in
-  integer                                        :: field_size,property_size
-  real*8,intent(in)                              :: mass
-  real*8,dimension(field_size),intent(in)        :: B_field,E_field
-  !> outputs
-  real*8,dimension(property_size),intent(out) :: sync_properties
-  !> variables
-  real*8 :: velocity
-  real*8,dimension(field_size) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
-
-  !> compute velocity, velocity direction and relativistic factor
-  velocity = sqrt(particle_in%p(1)**2+particle_in%p(2)**2+particle_in%p(3)**2) 
-  sync_properties(1:3) = particle_in%p/velocity
-  sync_properties(10)  = velocity/SPEED_OF_LIGHT
-  sync_properties(11)  = sqrt(1.d0 + (sync_properties(10)**2)/(mass**2))
-  sync_properties(10)  = sync_properties(10)/(mass*sync_properties(11))
-  !> compute orbit curvature
-  sync_properties(4:6) = E_field+cross_product(particle_in%p/(mass*sync_properties(11)),B_field)
-  vector_1d_3 = cross_product(sync_properties(1:3),sync_properties(4:6))
-  sync_properties(12)  = (abs(real(particle_in%q,kind=8))*EL_CHG*&
-                         sqrt(vector_1d_3(1)**2+vector_1d_3(2)**2+vector_1d_3(3)**2))/&
-                         (sync_properties(11)*mass*ATOMIC_MASS_UNIT*&
-                         ((sync_properties(10)*SPEED_OF_LIGHT)**2))
-  !> compute total synchrotron power
-  sync_properties(13)  = (((EL_CHG*real(particle_in%q*particle_in%q,kind=8))**2)*&
-                         SPEED_OF_LIGHT*(sync_properties(10)**4)*(sync_properties(11)**4)*&
-                         (sync_properties(12)**2))/(6.d0*PI*EPS_ZERO)
-
-  !> construct and store the orthonormal basis
-  call vectors_to_orthonormal_basis(sync_properties(1:3),sync_properties(4:6),&
-  vector_1d_3,vector_1d_3_2,vector_1d_3_3)
-  sync_properties(1:3) = vector_1d_3; sync_properties(4:6) = vector_1d_3_2;
-  sync_properties(7:9) = vector_1d_3_3
-end subroutine compute_synchrotron_light_properties
 
 !>-------------------------------------------------
 end module mod_synchrotron_light_vertices

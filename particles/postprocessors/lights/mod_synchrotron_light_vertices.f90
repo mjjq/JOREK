@@ -176,7 +176,7 @@ end subroutine synchrotron_spectral_irradiance
 !>               1-3: x,y,z electric field componenets
 !>               4-6: x,y,z magnetic field componenets
 subroutine compute_synchrotron_mhd_fields(light_vert,fields,&
-particle,mass,mhd_fields)
+particle_in,mass,mhd_fields)
   use mod_fields,                only: fields_base
   use mod_particle_types,        only: particle_base
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
@@ -187,8 +187,8 @@ particle,mass,mhd_fields)
   implicit none
   !> Inputs:
   class(synchrotron_light_vertices),intent(in) :: light_vert
-  class(fields_nase),intent(in)                :: fields
-  class(particle_base),intent(in)              :: particle_base
+  class(fields_base),intent(in)                :: fields
+  class(particle_base),intent(in)              :: particle_in
   real*8,intent(in)                            :: mass
   !> Outputs:
   real*8,dimension(light_vert%n_mhd),intent(out) :: mhd_fields
@@ -197,13 +197,13 @@ particle,mass,mhd_fields)
   !> compute the MHD fields
 #ifndef UNIT_TESTS_AFIELDS
   !> compute JOREK electric and magnetic JOREK fields in cartesian coordinates
-  call fields%calc_EBpsiU(light_vert%times(ii),particle%i_elm,&
-  particle%st,particle%x(3),mhd_fields(1:3),mhd_fields(4:6),psi,U)
-  mhd_fields(1:3) = vector_cylindrical_to_cartesian(particle%x(3),mhd_fields(1:3))
-  mhd_fields(4:6) = vector_cylindrical_to_cartesian(particle%x(3),mhd_fields(4:6))
+  call fields%calc_EBpsiU(light_vert%times(ii),particle_in%i_elm,&
+  particle_in%st,particle_in%x(3),mhd_fields(1:3),mhd_fields(4:6),psi,U)
+  mhd_fields(1:3) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(1:3))
+  mhd_fields(4:6) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(4:6))
 #else
   !> analytical fields only for unit testing
-  call compute_test_E_B_fields(particle%x,mhd_fields(1:3),mhd_fields(4:6))
+  call compute_test_E_B_fields(particle_in%x,mhd_fields(1:3),mhd_fields(4:6))
 #endif
 end subroutine compute_synchrotron_mhd_fields
 
@@ -250,7 +250,7 @@ property_id,time_id,particle_in,mass,mhd_fields)
   real*8,dimension(light_vert%n_mhd),intent(in)   :: mhd_fields
   !> variables
   real*8 :: velocity
-  real*8,dimension(field_size) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
+  real*8,dimension(light_vert%n_x) :: vector_1d_3,vector_1d_3_2,vector_1d_3_3
 
   select type(p_in=>particle_in)
     type is (particle_kinetic_relativistic)
@@ -298,7 +298,7 @@ subroutine setup_synchrotron_light_class(light_vert)
   !> set-up the synchrotron light variables 
   light_vert%n_property_vertex = 13; light_vert%n_mhd = 6;
   light_vert%n_particle_types = 1;
-  if(allocate(light_vert%particle_types)) deallocate(light_vert%particle_types)
+  if(allocated(light_vert%particle_types)) deallocate(light_vert%particle_types)
   allocate(light_vert%particle_types(light_vert%n_particle_types))
   light_vert%particle_types = [particle_kinetic_relativistic_id]
 end subroutine setup_synchrotron_light_class

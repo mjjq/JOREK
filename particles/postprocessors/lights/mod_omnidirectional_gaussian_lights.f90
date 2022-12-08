@@ -43,7 +43,7 @@ contains
 !>   mhd_fields: (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
 !>               1 -> intensity of the magnetic field
 subroutine compute_omnidirectional_mhd_fields(light_vert,fields,&
-particle,mass,mhd_fields)
+particle_in,mass,mhd_fields)
   use mod_fields,                only: fields_base
   use mod_particle_types,        only: particle_base
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
@@ -55,7 +55,7 @@ particle,mass,mhd_fields)
   !> Inputs:
   class(omnidirectional_gaussian_lights),intent(in) :: light_vert
   class(fields_nase),intent(in)                     :: fields
-  class(particle_base),intent(in)                   :: particle_base
+  class(particle_base),intent(in)                   :: particle_in
   real*8,intent(in)                                 :: mass
   !> Outputs:
   real*8,dimension(light_vert%n_mhd),intent(out)    :: mhd_fields
@@ -65,11 +65,11 @@ particle,mass,mhd_fields)
   !> compute the MHD fields
 #ifndef UNIT_TESTS_AFIELDS
   !> compute JOREK electric and magnetic JOREK fields in cartesian coordinates
-  call fields%calc_EBpsiU(light_vert%times(ii),particle%i_elm,&
-  particle%st,particle%x(3),E,B,psi,U)
+  call fields%calc_EBpsiU(light_vert%times(ii),particle_in%i_elm,&
+  particle_in%st,particle_in%x(3),E,B,psi,U)
 #else
   !> analytical fields only for unit testing
-  call compute_test_E_B_fields(particle%x,E,B)
+  call compute_test_E_B_fields(particle_in%x,E,B)
 #endif
   mhd_fields(1) = norm2(B)
 end subroutine compute_omnidirectional_mhd_fields
@@ -247,7 +247,7 @@ subroutine setup_omnidirectional_light_class(light_vert)
   !> set-up the omnidirectional light variables 
   light_vert%n_property_vertex = 2; light_vert%n_mhd = 1;
   light_vert%n_particle_types = 2;
-  if(allocate(light_vert%particle_types)) deallocate(light_vert%particle_types)
+  if(allocated(light_vert%particle_types)) deallocate(light_vert%particle_types)
   allocate(light_vert%particle_types(light_vert%n_particle_types))
   light_vert%particle_types = [particle_kinetic_relativistic_id,&
                                particle_gc_relativistic_id]

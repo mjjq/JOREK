@@ -27,7 +27,7 @@ type,abstract,extends(vertices) :: light_vertices
   procedure(direct_funct),pass(light_vert),deferred     :: directionality_funct
   procedure(spect_irradiance),pass(light_vert),deferred :: spectral_irradiance
   procedure(comp_light_prop),pass(light_vert),deferred  :: compute_light_properties
-  procedure(comp_mhd_fileds),pass(light_vert),deferred  :: compute_mhd_fields
+  procedure(comp_mhd_fields),pass(light_vert),deferred  :: compute_mhd_fields
   procedure(setup_light),pass(light_vert),deferred      :: setup_light_class
   procedure(check_x_shaded),nopass,deferred             :: check_x_shaded_in_emission_zone 
 end type light_vertices
@@ -95,7 +95,7 @@ interface
     class(spectrum_base),intent(inout)  :: spectra
     !> inputs
     integer,intent(in)                  :: time_id,light_id
-    real*8,dimension(light_vert%n_x),intent(in)    :: x_shaded2
+    real*8,dimension(light_vert%n_x),intent(in)    :: x_shaded
     !> outputs
     real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
   end subroutine spect_irradiance
@@ -110,19 +110,17 @@ interface
   !>   mhd_fields:   (real8)(n_mhd) JOREK MHD field array
   !> outputs:
   !>   light_vert: (light_vertices) initialised light vertices
-  subroutine comp_light_prop(light_vert,property_id,time_id,particle,mass,mhd_fields)
-    use mod_particle_types, only :: particle_base
+  subroutine comp_light_prop(light_vert,property_id,time_id,particle_in,mass,mhd_fields)
+    use mod_particle_types, only: particle_base
     IMPORT :: light_vertices
     implicit none
     !> inputs-outputs
     class(light_vertices),intent(inout)           :: light_vert
     !> inputs
-    class(particle_base),intent(in)               :: particle
+    class(particle_base),intent(in)               :: particle_in
     integer,intent(in)                            :: property_id,time_id
     real*8,intent(in)                             :: mass
     real*8,dimension(light_vert%n_mhd),intent(in) :: mhd_fields
-    !> outputs
-    real*8,dimension(light_vert%n_property_vertex),intent(out) :: light_properties
   end subroutine comp_light_prop
 
   !> compute the JOREK MHD fields at a given location
@@ -133,7 +131,7 @@ interface
   !>   mass:         (real8) particle mass
   !> outputs:
   !>   mhd_fields:   (real8)(n_mhd) interpolated JOREK MHD fields
-  subroutine compute_mhd_fields(light_vert,fields,particle,mass,mhd_fields)
+  subroutine comp_mhd_fields(light_vert,fields,particle_in,mass,mhd_fields)
     use mod_fields,         only: fields_base
     use mod_particle_types, only: particle_base
     IMPORT :: light_vertices
@@ -141,11 +139,11 @@ interface
     !> inputs
     class(light_vertices),intent(in)          :: light_vert
     class(fields_base),intent(in)             :: fields
-    class(particle_base),intent(in)           :: particle
+    class(particle_base),intent(in)           :: particle_in
     real*8,intent(in)                         :: mass
     !> outputs
-    real*8,dimension(light_vertices%n_mhd),intent(out) :: mhd_fields
-  end subroutine compute_mhd_fields
+    real*8,dimension(light_vert%n_mhd),intent(out) :: mhd_fields
+  end subroutine comp_mhd_fields
 
   !> setup the light class parameters and parameter arrays
   !> light vertex class
@@ -203,7 +201,7 @@ sims_particles,n_lights_in)
   use mod_particle_sim, only: particle_sim
   implicit none
   !> inputs-outputs
-  class(synchrotron_light_vertices),intent(inout)     :: light_vert
+  class(light_vertices),intent(inout)                 :: light_vert
   type(particle_sim),dimension(n_times),intent(inout) :: sims_particles
   !> inputs
   integer,intent(in)                                  :: n_times
@@ -234,7 +232,7 @@ sims_particles,n_lights_in)
   do ii=1,light_vert%n_times
     do jj=1,light_vert%n_particle_types
       n_particles_required(ii) = n_particles_required(ii) + sum(n_particles(:,ii),&
-      mask=particle_types(:,ii).eq.particle_kinetic_relativistic_id(jj))
+      mask=particle_types(:,ii).eq.light_vert%particle_types(jj))
     enddo
   enddo
   n_particles_max = maxval(n_particles_required)
@@ -254,12 +252,11 @@ sims_particles,n_lights_in)
   allocate(active_particle_id(n_particles_max,n_groups_max,light_vert%n_times));
   !> find active particles for all groups and times
   call light_vert%find_active_particles_id_time(n_groups_max,n_particles_max,&
-  n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,&
-  particle_kinetic_relativistic_id)
+  n_groups,n_particles,sims_particles,n_active_particles,active_particle_id)
   !> fill the light data structure
   call light_vert%fill_lights_from_particles(sims_particles,&
   n_groups_max,n_particles_max,n_groups,particle_types,&
-  n_active_particles,active_particles_id)
+  n_active_particles,active_particle_id)
   !> cleanup 
   deallocate(n_particles); deallocate(particle_types);
   deallocate(n_active_particles); deallocate(active_particle_id)
@@ -311,14 +308,14 @@ particle_types,n_active_particles,active_particles_id)
         !$omp shared(sims_particles,active_particles_id,light_vert)
         do kk=1,n_active_particles(jj,ii)
           call light_vert%store_light_x_from_particle_id(pp+kk,ii,&
-          p_list(active_particles_id(kk,jj,ii))) !< store position
+          sims_particles(ii)%groups(jj)%particles(active_particles_id(kk,jj,ii))) !< store position
           !> compute MHD fields
           call light_vert%compute_mhd_fields(sims_particles(ii)%fields,&
-          p_list(active_particles_id(kk,jj,ii)),&
+          sims_particles(ii)%groups(jj)%particles(active_particles_id(kk,jj,ii)),&
           sims_particles(ii)%groups(jj)%mass,mhd_fields)
           !> compute light properties
           call light_vert%compute_light_properties(pp+kk,ii,&
-          p_list(active_particles_id(kk,jj,ii)),&
+          sims_particles(ii)%groups(jj)%particles(active_particles_id(kk,jj,ii)),&
           sims_particles(ii)%groups(jj)%mass,mhd_fields)
         enddo
         !$omp end parallel do
@@ -392,7 +389,7 @@ end function return_n_light_inputs
 !>   active_particle_id: (integer)(n_particles_max,n_groups_max,n_times)
 !>                       particle list index of active particles
 subroutine find_active_particles_id_time(light_vert,n_groups_max,n_particles_max,&
-n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type)
+n_groups,n_particles,sims_particles,n_active_particles,active_particle_id)
   use mod_particle_sim,only: particle_sim
   implicit none
   !> inputs-outputs
@@ -402,17 +399,18 @@ n_groups,n_particles,sims_particles,n_active_particles,active_particle_id,p_type
   integer,intent(in) :: n_groups_max,n_particles_max
   integer,dimension(light_vert%n_times),intent(in) :: n_groups
   integer,dimension(n_groups_max,light_vert%n_times),intent(in) :: n_particles
-  integer,intent(in),optional :: p_type
   !> outputs
   integer,dimension(n_groups_max,light_vert%n_times),intent(out) :: n_active_particles
   integer,dimension(n_particles_max,n_groups_max,light_vert%n_times),intent(out)::active_particle_id
   !> variables
   integer :: ii
   n_active_particles = 0; active_particle_id = 0;
-  if(present(p_type)) then
+  if(allocated(light_vert%particle_types).and.&
+  (size(light_vert%particle_types).eq.light_vert%n_particle_types)) then
     do ii=1,light_vert%n_times
       call sims_particles(ii)%find_active_particles_groups(n_groups(ii),n_particles_max,&
-      n_particles(:,ii),n_active_particles(:,ii),active_particle_id(:,:,ii),p_type)
+      n_particles(:,ii),n_active_particles(:,ii),active_particle_id(:,:,ii),&
+      light_vert%n_particle_types,light_vert%particle_types)
       light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))
     enddo
   else

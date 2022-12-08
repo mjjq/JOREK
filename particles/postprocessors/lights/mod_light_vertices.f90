@@ -14,22 +14,22 @@ type,abstract,extends(vertices) :: light_vertices
   integer                          :: n_particle_types !< number of particles types
   integer,dimension(:),allocatable :: particle_types   !< list of particles type ids
   contains
-  procedure,pass(light_vert)                                   :: return_n_light_inputs
-  procedure,pass(light_vert)                                   :: read_light_inputs
-  procedure,pass(light_vert)                                   :: fill_time_vector_particle_sims
-  procedure,pass(light_vert)                                   :: extract_n_groups_all_particle_sims 
-  procedure,pass(light_vert)                                   :: extract_n_particles_all_particle_sims
-  procedure,pass(light_vert)                                   :: extract_particle_types_all_particle_sims
-  procedure,pass(light_vert)                                   :: store_light_x_from_particle_id
-  procedure,pass(light_vert)                                   :: find_active_particles_id_time
-  procedure,pass(light_vert)                                   :: init_lights_from_particles
-  procedure,pass(light_vert),private                           :: fill_lights_from_particles
-  procedure(direct_funct),pass(light_vert),deferred            :: directionality_funct
-  procedure(spect_irradiance),pass(light_vert),deferred        :: spectral_irradiance
-  procedure(comp_light_prop),pass(light_vert),private,deferred :: compute_light_properties
-  procedure(comp_mhd_fileds),pass(light_vert),private,deferred :: compute_mhd_fields
-  procedure(setup_light),pass(light_vert),private,deferred     :: setup_light_class
-  procedure(check_x_shaded),nopass,private,deferred            :: check_x_shaded_in_emission_zone 
+  procedure,pass(light_vert)                            :: return_n_light_inputs
+  procedure,pass(light_vert)                            :: read_light_inputs
+  procedure,pass(light_vert)                            :: fill_time_vector_particle_sims
+  procedure,pass(light_vert)                            :: extract_n_groups_all_particle_sims 
+  procedure,pass(light_vert)                            :: extract_n_particles_all_particle_sims
+  procedure,pass(light_vert)                            :: extract_particle_types_all_particle_sims
+  procedure,pass(light_vert)                            :: store_light_x_from_particle_id
+  procedure,pass(light_vert)                            :: find_active_particles_id_time
+  procedure,pass(light_vert)                            :: init_lights_from_particles
+  procedure,pass(light_vert)                            :: fill_lights_from_particles
+  procedure(direct_funct),pass(light_vert),deferred     :: directionality_funct
+  procedure(spect_irradiance),pass(light_vert),deferred :: spectral_irradiance
+  procedure(comp_light_prop),pass(light_vert),deferred  :: compute_light_properties
+  procedure(comp_mhd_fileds),pass(light_vert),deferred  :: compute_mhd_fields
+  procedure(setup_light),pass(light_vert),deferred      :: setup_light_class
+  procedure(check_x_shaded),nopass,deferred             :: check_x_shaded_in_emission_zone 
 end type light_vertices
 
 !> Interfaces -------------------------------------------

@@ -18,14 +18,14 @@ type,extends(light_vertices) :: omnidirectional_gaussian_lights
                                 omnidir_gaussian_directionality_funct
   procedure,pass(light_vert) :: spectral_irradiance => &
                                 omnidir_gaussian_spectral_irradiance
-  procedure,pass(light_vert),private :: compute_mhd_fields => &
-                                        compute_omnidirectional_mhd_fields
-  procedure,pass(light_vert),private :: compute_light_properties => & 
-                                        compute_omnidirectional_light_properties
-  procedure,pass(light_vert),private :: setup_light_class => &
-                                        setup_omnidirectional_light_class
-  procedure,nopass,private           :: check_x_shaded_in_emission_zone => &
-                                        check_shaded_x_omnidirectional_light
+  procedure,pass(light_vert) :: compute_mhd_fields => &
+                                compute_omnidirectional_mhd_fields
+  procedure,pass(light_vert) :: compute_light_properties => & 
+                                compute_omnidirectional_light_properties
+  procedure,pass(light_vert) :: setup_light_class => &
+                                setup_omnidirectional_light_class
+  procedure,nopass           :: check_x_shaded_in_emission_zone => &
+                                check_shaded_x_omnidirectional_light
 end type omnidirectional_gaussian_lights
 !> Interfaces ---------------------------------------------------
 

@@ -21,14 +21,14 @@ type,extends(light_vertices) :: synchrotron_light_vertices
                                 synchrotron_directionality_funct
   procedure,pass(light_vert) :: spectral_irradiance => &
                                 synchrotron_spectral_irradiance
-  procedure,pass(light_vert),private :: compute_mhd_fields => &
-                                        compute_synchrotron_mhd_fields
-  procedure,pass(light_vert),private :: compute_light_properties => &
-                                        compute_synchrotron_light_properties
-  procedure,pass(light_vert),private :: setup_light_class => &
-                                        setup_synchrotron_light_class
-  procedure,nopass,private           :: check_x_shaded_in_emission_zone => &
-                                        check_shaded_x_in_synchrotron_cone
+  procedure,pass(light_vert) :: compute_mhd_fields => &
+                                compute_synchrotron_mhd_fields
+  procedure,pass(light_vert) :: compute_light_properties => &
+                                compute_synchrotron_light_properties
+  procedure,pass(light_vert) :: setup_light_class => &
+                                setup_synchrotron_light_class
+  procedure,nopass           :: check_x_shaded_in_emission_zone => &
+                                check_shaded_x_in_synchrotron_cone
 end type synchrotron_light_vertices
 !> Interfaces --------------------------------------
 

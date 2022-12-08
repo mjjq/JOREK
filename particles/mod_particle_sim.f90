@@ -191,27 +191,36 @@ end subroutine find_particle_types
 !> returns number and ids of active particles for all groups
 !> and for a specific type of particle (encoded)
 subroutine find_active_particles_groups(sim,n_groups,n_particles_max,&
-n_particles,n_active_particles,active_particle_id,p_type)
+n_particles,n_active_particles,active_particle_id,n_p_type,p_type)
   use mod_particle_types, only: find_active_particle_id
   implicit none
   !> inputs-outputs
   class(particle_sim),intent(inout) :: sim
   !> inputs
-  integer,intent(in) :: n_groups,n_particles_max
-  integer,dimension(n_groups),intent(in) :: n_particles
-  integer,intent(in),optional :: p_type
+  integer,intent(in)                       :: n_groups,n_particles_max
+  integer,dimension(n_groups),intent(in)   :: n_particles
+  integer,intent(in),optional              :: n_p_type
+  integer,dimension(:),intent(in),optional :: p_type
   !> outputs
   integer,dimension(n_groups),intent(out) :: n_active_particles
   integer,dimension(n_particles_max,n_groups),intent(out) :: active_particle_id
   !> variables
-  integer :: ii
+  integer :: ii,jj
   n_active_particles = 0; active_particle_id = 0;
-  if(present(p_type)) then
-    do ii=1,n_groups
-      call find_active_particle_id(p_type,n_particles(ii),&
-      sim%groups(ii)%particles,n_active_particles(ii),&
-      active_particle_id(1:n_particles(ii),ii))
-    enddo
+  if(present(n_p_type).and.present(p_type)) then
+    if(size(p_type).eq.n_p_type) then
+      do ii=1,n_groups
+        do jj=1,n_p_type
+          call find_active_particle_id(p_type(jj),n_particles(ii),&
+          sim%groups(ii)%particles,n_active_particles(ii),&
+          active_particle_id(1:n_particles(ii),ii))
+          !> the particle list of each group contains particles
+          !> of only one type hence if an active particle is found
+          !> the search for th iith group can be stopped
+          if(n_active_particles(ii).gt.0) exit
+        enddo
+      enddo
+    endif
   else
     do ii=1,n_groups
       call find_active_particle_id(n_particles(ii),&

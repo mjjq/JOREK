@@ -25,9 +25,10 @@ type,extends(light_vertices) :: synchrotron_light_vertices
                                         compute_synchrotron_mhd_fields
   procedure,pass(light_vert),private :: compute_light_properties => &
                                         compute_synchrotron_light_properties
+  procedure,pass(light_vert),private :: setup_light_class => &
+                                        setup_synchrotron_light_class
   procedure,nopass,private           :: check_x_shaded_in_emission_zone => &
                                         check_shaded_x_in_synchrotron_cone
-check_x_shaded_in_emission_zone
 end type synchrotron_light_vertices
 !> Interfaces --------------------------------------
 
@@ -184,7 +185,9 @@ particle,mass,mhd_fields)
   use mod_particle_types,        only: particle_base
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   !> used only for unit testing but required for compilation
+#ifdef UNIT_TESTS_AFIELDS
   use mod_particle_common_test_tools, only: compute_test_E_B_fields
+#endif
   implicit none
   !> Inputs:
   class(synchrotron_light_vertices),intent(in) :: light_vert
@@ -292,7 +295,7 @@ end subroutine compute_synchrotron_light_properties
 !> outputs:
 !>   light_vert: (synchrotron_light_vertices) synchrotron lights class
 subroutine setup_synchrotron_light_class(light_vert)
-use mod_particle_types, only: particle_kinetic_relativistic_id
+  use mod_particle_types, only: particle_kinetic_relativistic_id
   implicit none
   !> inputs-outputs
   class(synchrotron_light_vertices),intent(inout) :: light_vert
@@ -339,10 +342,10 @@ end subroutine compute_synchrotron_directionality_funct
 !> the synchrotron radiation cone of half width sin(theta) ≃ 1/gamma
 !> where gamma is the relativistic factor. 
 !> inputs:
-!>   n_x:       (integer) size of the coordinate system
-!>   x_shaded:  (real8)(n_x) position of the shaded point
-!>   x_light:   (real8)(n_x) position of the point light
-!>   n_int_param: (integer) number of integer parameters: 0
+!>   n_x:          (integer) size of the coordinate system
+!>   x_shaded:     (real8)(n_x) position of the shaded point
+!>   x_light:      (real8)(n_x) position of the point light
+!>   n_int_param:  (integer) number of integer parameters: 0
 !>   n_real_param: (real8) number of real parameters: 4
 !>   int_param:    (integer)(n_int_param) integer parameters
 !>   real_param:   (real8)(n_real_param) real_parameters:
@@ -350,8 +353,6 @@ end subroutine compute_synchrotron_directionality_funct
 !>                 2- y component of the emission cone (momentum) direction
 !>                 3- z component of the emission cone (momentum) direction
 !>                 4- relativistic factor
-!>   light_dir: (real8)(n_x) principal direction of the light emission 
-!>   rel_fact:  (real8)(n_x) relativistic factor
 !> outouts:
 !>   in_code: (logical) if true the gather point is in the synchrotron cone
 function check_shaded_x_in_synchrotron_cone(n_x,x_shaded,x_light,&

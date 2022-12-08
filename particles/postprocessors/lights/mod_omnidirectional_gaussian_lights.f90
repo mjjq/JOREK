@@ -18,78 +18,129 @@ type,extends(light_vertices) :: omnidirectional_gaussian_lights
                                 omnidir_gaussian_directionality_funct
   procedure,pass(light_vert) :: spectral_irradiance => &
                                 omnidir_gaussian_spectral_irradiance
-  procedure,pass(light_vert),private :: fill_omnidir_gaussian_lights_from_particles
+  procedure,pass(light_vert),private :: compute_mhd_fields => &
+                                        compute_omnidirectional_mhd_fields
+  procedure,pass(light_vert),private :: compute_light_properties => & 
+                                        compute_omnidirectional_light_properties
+  procedure,pass(light_vert),private :: setup_light_class => &
+                                        setup_omnidirectional_light_class
+  procedure,nopass,private           :: check_x_shaded_in_emission_zone => &
+                                        check_shaded_x_omnidirectional_light
 end type omnidirectional_gaussian_lights
 !> Interfaces ---------------------------------------------------
 
 contains
 
 !> Procedures ---------------------------------------------------
-!> init_omnidir_gaussian_lights_from_particles computes and stores
-!> the properties of omnidirectional gaussian lights from particles
+!> interpolate the JOREK MHD fields required for computing the
+!> omnidirectional radiation properties
 !> inputs:
-!>   light_vert:     (omnidirectional_gaussian_light) empty
-!>                   omnidirectional gaussian light
-!>   n_times:        (integer) number of simulation times
-!>   sims_particles: (particle_sim)(n_times) array of particle simulations
-!>   n_lights_in:    (integer)(optional) number of requested lights
+!>   light_vert: (synchrotron_light_vertices) empty synchrotron lights
+!>   fields:     (fields_base) JOREK MHD fields
+!>   particle:   (particle_base) JOREK particle base structure
+!>   mass:       (real8) particle mass
 !> outputs:
-!>   light_vert:     (omnidirectional_gaussian_light) initialised 
-!>                   omnidirectional gaussian light
-!>   sims_particles: (particle_sim)(n_times) array of particle simulations
-subroutine init_omnidir_gaussian_lights_from_particles(light_vert,&
-n_times,sims_particles,n_lights_in)
-  use mod_particle_types, only: particle_kinetic_relativistic_id
-  use mod_particle_sim,    only: particle_sim
+!>   mhd_fields: (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
+!>               1 -> intensity of the magnetic field
+subroutine compute_omnidirectional_mhd_fields(light_vert,fields,&
+particle,mass,mhd_fields)
+  use mod_fields,                only: fields_base
+  use mod_particle_types,        only: particle_base
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  !> used only for unit testing but required for compilation
+#ifdef UNIT_TESTS_AFIELDS
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields
+#endif
   implicit none
-  !> inputs-outputs:
+  !> Inputs:
+  class(omnidirectional_gaussian_lights),intent(in) :: light_vert
+  class(fields_nase),intent(in)                     :: fields
+  class(particle_base),intent(in)                   :: particle_base
+  real*8,intent(in)                                 :: mass
+  !> Outputs:
+  real*8,dimension(light_vert%n_mhd),intent(out)    :: mhd_fields
+  !> Variables:
+  real*8 :: psi,U
+  real*8,dimension(3) :: E,B
+  !> compute the MHD fields
+#ifndef UNIT_TESTS_AFIELDS
+  !> compute JOREK electric and magnetic JOREK fields in cartesian coordinates
+  call fields%calc_EBpsiU(light_vert%times(ii),particle%i_elm,&
+  particle%st,particle%x(3),E,B,psi,U)
+#else
+  !> analytical fields only for unit testing
+  call compute_test_E_B_fields(particle%x,E,B)
+#endif
+  mhd_fields(1) = norm2(B)
+end subroutine compute_omnidirectional_mhd_fields
+
+!> compute omnidirectional light properties from kinetic relativistic
+!> and guiding center particles.
+!> inputs:
+!>   light_vert:  (omnidirectional_light_vertices) empty synchrotron lights
+!>   property_id: (integer) index of the property to be initialised
+!>   time_id:     (integer) time index
+!>   particle_in: (particle_kinetic_relativistic) jorek particle
+!>   mass:        (real8) mass of the particle
+!>   mhd_fields:  (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
+!>                  1 -> norm of the magnetic field
+!> outputs:
+!>   light_vert: (omnidirectional_light_vertices) synchrotron lights with
+!>               initialised properties. First dimension of the properties are:
+!>                 1 -> relativistic factor gamma = sqrt(1+(p/(mass*c))**2)
+!>                 2 -> total power 1/sqrt(2*pi*relativistic_factor)
+subroutine compute_omnidirectional_light_properties(light_vert,property_id,&
+time_id,particle_in,mass,mhd_fields)
+  use constants,                 only: TWOPI,SPEED_OF_LIGHT
+  use mod_math_operators,        only: cross_product
+  use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
+  use mod_particle_types,        only: particle_base,particle_kinetic_relativistic
+  use mod_particle_types,        only, particle_gc_relativistic
+  implicit none
+  !> inputs-outputs
   class(omnidirectional_gaussian_lights),intent(inout) :: light_vert
-  type(particle_sim),dimension(n_times),intent(inout)  :: sims_particles
-  !> inputs:
-  integer,intent(in)                                   :: n_times
-  integer,intent(in),optional                          :: n_lights_in
-  !> variables:
-  integer                              :: ii,n_groups_max,n_particles_max,n_lights
-  integer,dimension(n_times)           :: n_groups,n_particles_relativistic
-  integer,dimension(:,:),allocatable   :: n_particles,particle_types,n_active_particles
-  integer,dimension(:,:,:),allocatable :: active_particle_ids
+  !> inputs
+  class(particle_base),intent(in)                 :: particle_in
+  integer,intent(in)                              :: property_id,time_id
+  real*8,intent(in)                               :: mass
+  real*8,dimension(light_vert%n_mhd),intent(in)   :: mhd_fields
+  select type (p_in => particle_in)
+    type is (particle_kinetic_relativistic)
+    light_vert%properties(1,property_id,time_id) = sqrt(1d0 + &
+    (dot_product(p_in%p,p_in%p)/((mass*SPEED_OF_LIGHT)**2)))
+    type is (particle_gc_relativistic)
+    light_vert%properties(1,property_id,time_id) = sqrt(1d0 + &
+    ((p_in%p(q)*p_in%p(1))/((mass*SPEED_OF_LIGHT)**2)) + &
+    ((2d0*p_in%p(2)*mhd_fields(1))/(mass*(SPEED_OF_LIGHT**2))))
+  end select
+  light_vert%properties(2,property_id,time_id) = 1d0/sqrt(TWOPI*&
+  light_vert%properties(1,property_id,time_id))
+end subroutine compute_omnidirectional_light_properties 
 
-  !> initialisations
-  light_vert%n_property_vertex = 3
-  call light_vert%allocate_time_vector(n_times)
-  call light_vert%fill_time_vector_particle_sims(sims_particles)
-  !> allocate number of particles and particle types
-  call light_vert%extract_n_groups_all_particle_sims(sims_particles,n_groups)
-  n_groups_max = maxval(n_groups)
-  allocate(n_particles(n_groups_max,light_vert%n_times))
-  allocate(particle_types(n_groups_max,light_vert%n_times))
-  call light_vert%extract_n_particles_all_particle_sims(sims_particles,&
-  n_groups_max,n_particles)
-  call light_vert%extract_particle_types_all_particle_sims(sims_particles,&
-  n_groups_max,particle_types)
-  !> compute the number of relativistic particles per each time
-  do ii=1,light_vert%n_times
-    n_particles_relativistic(ii) = sum(n_particles(:,ii),&
-    mask=particle_types(:,ii).eq.particle_kinetic_relativistic_id)
-  enddo
-  n_particles_max = maxval(n_particles_relativistic)
-  n_lights = n_particles_max
-  !> allocate active particle arrays and vertices
-  allocate(n_active_particles(n_groups_max,light_vert%n_times))
-  allocate(active_particle_ids(n_particles_max,n_groups_max,light_vert%n_times))
-  call light_vert%allocate_x_properties(n_lights)
-
-  !> find active particles for all groups and times
-  call light_vert%find_active_particles_id_time(n_groups_max,n_particles_max,&
-  n_groups,n_particles,sims_particles,n_active_particles,active_particle_ids,&
-  particle_kinetic_relativistic_id)
-  !> fill the omnidirectional gaussian lights
-  call light_vert%fill_omnidir_gaussian_lights_from_particles(sims_particles,&
-  n_groups_max,n_particles_max,n_groups,n_active_particles,active_particle_ids)
-  !> cleanup
-  deallocate(n_particles); deallocate(particle_types);
-  deallocate(n_active_particles); deallocate(active_particle_ids);
-end subroutine init_omnidir_gaussian_lights_from_particles
+!> check if the shaded point is within the emission range.
+!> Given that it is an omnidirectional light, the function returns true
+!> inputs:
+!>   n_x:          (integer) size of the coordinate system
+!>   x_shaded:     (real8)(n_x) position of the shaded point
+!>   x_light:      (real8)(n_x) position of the point light
+!>   n_int_param:  (integer) number of integer parameters: 0
+!>   n_real_param: (real8) number of real parameters: 0
+!>   int_param:    (integer)(n_int_param) integer parameters
+!>   real_param:   (real8)(n_real_param) real_parameters
+!> outouts:
+!>   in_range: (logical) always true
+function check_shaded_x_omnidirectional_light(n_x,x_shaded,x_light,&
+n_int_param,n_real_param,int_param,real_param) result(in_range)
+  implicit none
+  !> Inputs:
+  integer,intent(in)                        :: n_x,n_int_param,n_real_param
+  integer,dimension(n_int_param),intent(in) :: int_param
+  real*8,dimension(n_x),intent(in)          :: x_shaded,x_light
+  real*8,dimension(n_real_param),intent(in) :: real_param
+  !> Outputs:
+  logical :: in_range
+  in_range = .true.
+end function check_shaded_x_omnidirectional_light
 
 !> omnidir_gaussian_spectral_irradiance computes the full spectral anguler
 !> power distribution for omnidirectional gaussian lights
@@ -182,68 +233,27 @@ x_shaded,light_dstb)
   light_dstb = light_dstb/(light_vert%properties(2,light_id,time_id)*light_vert%light_intensity)
 end subroutine omnidir_gaussian_directionality_funct
 
-!> Tools --------------------------------------------------------
-!> fill_omnidir_gaussian_lights_from_particles fill the x and properties 
-!> arrays of omnidirectional gaussian lights from particle lists
+!> initialise and allocate synchrotron light variables
 !> inputs:
-!>   light_vert:          (omnidirectional_gaussian_lights) empty
-!>                        omnidirectional gaussian lights
-!>   sims_particles:      (particle_sim)(n_times) array of particle simulations
-!>   n_groups_max:        (integer) maximum size of groups
-!>   n_particles_max:     (integer)(n_times) maximum number of particles
-!>   n_groups:            (integer)(n_times) size of each group
-!>   n_active_particles:  (integer)(n_groups_max,n_times) number of active particles
-!>                        per group and per time
-!>   active_particle_ids: (integer)(n_particles_max,n_groups_max,n_times) indiced
-!>                        of the active particles
+!>   light_vert: (omnidirectional_gaussian_lights) omnidirectional lights class
 !> outputs:
-!>   light_vert: (omnidirectional_gaussian_lights) initialised
-!>               omnidirectional gaussian lights
-subroutine fill_omnidir_gaussian_lights_from_particles(light_vert,sims_particles,&
-n_groups_max,n_particles_max,n_groups,n_active_particles,active_particle_ids)
-  use constants,          only: PI,SPEED_OF_LIGHT
-  use mod_particle_sim,   only: particle_sim
-  use mod_particle_types, only: particle_kinetic_relativistic
+!>   light_vert: (omnidirectional_gaussian_lights) omnidirectional lights class
+subroutine setup_omnidirectional_light_class(light_vert)
+  use mod_particle_types, only: particle_kinetic_relativistic_id
+  use mod_particle_types, only: particle_gc_relativistic_id
   implicit none
-  !> inputs-outputs:
-  class(omnidirectional_gaussian_lights),intent(inout)          :: light_vert
-  !> inputs:
-  type(particle_sim),dimension(light_vert%n_times),intent(in)   :: sims_particles
-  integer,intent(in)                                            :: n_groups_max
-  integer,intent(in)                                            :: n_particles_max
-  integer,dimension(light_vert%n_times),intent(in)              :: n_groups
-  integer,dimension(n_groups_max,light_vert%n_times),intent(in) :: n_active_particles
-  integer,dimension(n_particles_max,n_groups_max,light_vert%n_times),intent(in)::active_particle_ids
-  real*8                                                        :: rel_factor
-  real*8,dimension(light_vert%n_x)                              :: momentum
-  !> variables:
-  integer :: ii,jj,kk,pp
-  !> compute omnidirectional light properties
-  do ii=1,light_vert%n_times
-    pp=0
-    do jj=1,n_groups(ii)
-      !$omp parallel default(private) firstprivate(ii,jj,pp,n_active_particles) &
-      !$omp shared(sims_particles,active_particle_ids,light_vert)
-      select type (p_list=>sims_particles(ii)%groups(jj)%particles)
-        type is (particle_kinetic_relativistic)
-        !$omp do
-        do kk=1,n_active_particles(jj,ii)
-          call light_vert%store_light_x_from_particle_id(pp+kk,ii,&
-          p_list(active_particle_ids(kk,jj,ii))) !< store position
-          !> compute properties
-          momentum = p_list(active_particle_ids(kk,jj,ii))%p
-          rel_factor = sqrt(1.d0+((momentum(1)*momentum(1) + momentum(2)*momentum(2) + &
-                       momentum(3)*momentum(3))/(SPEED_OF_LIGHT*SPEED_OF_LIGHT*&
-                       sims_particles(ii)%groups(jj)%mass*sims_particles(ii)%groups(jj)%mass)))
-          light_vert%properties(:,pp+kk,ii) = (/rel_factor,1.d0/sqrt(2.d0*PI*rel_factor)/)
-        enddo
-        !$omp end do
-      end select
-      !$omp end parallel
-      pp = pp + n_active_particles(jj,ii)
-    enddo
-  enddo
-end subroutine fill_omnidir_gaussian_lights_from_particles
+  !> inputs-outputs
+  class(omnidirectional_gaussian_lights),intent(inout) :: light_vert
+  !> set-up the omnidirectional light variables 
+  light_vert%n_property_vertex = 2; light_vert%n_mhd = 1;
+  light_vert%n_particle_types = 2;
+  if(allocate(light_vert%particle_types)) deallocate(light_vert%particle_types)
+  allocate(light_vert%particle_types(light_vert%n_particle_types))
+  light_vert%particle_types = [particle_kinetic_relativistic_id,&
+                               particle_gc_relativistic_id]
+end subroutine setup_omnidirectional_light_class
+
+!> Tools --------------------------------------------------------
 
 !>---------------------------------------------------------------
 end module mod_omnidirectional_gaussian_lights

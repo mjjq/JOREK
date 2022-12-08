@@ -17,39 +17,42 @@ real*8,parameter                            :: tol2_real8=3.5d-8
 real*8,parameter                            :: mass_RE=5.48579909065d-4
 real*8,parameter                            :: exclusion_values=1.d-100
 !> parameters for generating synhrotron lights
+integer,
 integer,parameter :: n_x=3
 integer,parameter :: n_properties=13
 integer,parameter :: fill_type_base=1 !< use cylindrical initialisation
 integer,parameter :: n_times_sol=2
-integer,dimension(n_times_sol),parameter    :: n_groups_per_sim=(/3,2/)
-integer,parameter                           :: n_groups_max=maxval(n_groups_per_sim)
+integer,parameter :: n_particle_types_check_sol=1
+integer,dimension(n_times_sol),parameter      :: n_groups_per_sim=(/3,2/)
+integer,parameter                             :: n_groups_max=maxval(n_groups_per_sim)
 integer,dimension(n_groups_max,n_times_sol),parameter :: n_particles_per_group=&
            reshape((/135,247,512,367,413,0/),shape(n_particles_per_group))
-integer,parameter                           :: n_particles_max=maxval(n_particles_per_group)
-real*8,parameter                            :: survival_threshold=0.33
+integer,parameter                             :: n_particles_max=maxval(n_particles_per_group)
+real*8,parameter                              :: survival_threshold=0.33
 !> parameters for generating spectra
-integer,parameter                           :: n_spectra=2
-integer,parameter                           :: n_lines_per_spectrum=13
-real*8,dimension(n_spectra),parameter       :: min_wlen=(/3.0d-6,2.5d-7/)
-real*8,dimension(n_spectra),parameter       :: max_wlen=(/3.5d-6,4.2d-7/)
+integer,parameter                             :: n_spectra=2
+integer,parameter                             :: n_lines_per_spectrum=13
+real*8,dimension(n_spectra),parameter         :: min_wlen=(/3.0d-6,2.5d-7/)
+real*8,dimension(n_spectra),parameter         :: max_wlen=(/3.5d-6,4.2d-7/)
 !> parameters for generating shadowed points
-integer,parameter                           :: n_shaded_points=53
-integer,parameter                           :: n_shadowed_per_particle=7
-real*8,dimension(2),parameter               :: length_shadowed=(/2.d-1,7.d0/)
+integer,parameter                             :: n_shaded_points=53
+integer,parameter                             :: n_shadowed_per_particle=7
+real*8,dimension(2),parameter                 :: length_shadowed=(/2.d-1,7.d0/)
 !> variables for generating synchrotron lights
-type(synchrotron_light_vertices)            :: vertex_sol
-type(particle_sim),dimension(n_times_sol)   :: sims_particles
-integer                                     :: n_particles_RE_max
-integer,dimension(n_times_sol)              :: n_active_vertices_sol
-integer,dimension(n_groups_max,n_times_sol) :: n_active_particles_sol
+type(synchrotron_light_vertices)              :: vertex_sol
+type(particle_sim),dimension(n_times_sol)     :: sims_particles
+integer                                       :: n_particles_RE_max
+integer,dimension(n_particle_types_check_sol) :: particle_types_check_sol
+integer,dimension(n_times_sol)                :: n_active_vertices_sol
+integer,dimension(n_groups_max,n_times_sol)   :: n_active_particles_sol
 integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_ids_sol
-real*8,dimension(n_times_sol)               :: time_vector_sol
+real*8,dimension(n_times_sol)                 :: time_vector_sol
 real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol) :: x_cart_sol
 real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: properties_sol
 !> variables for generating spectra
-type(spectrum_rng_uniform)                  :: spectrum
+type(spectrum_rng_uniform)                    :: spectrum
 !> variables for generating shadowed points
-real*8,dimension(:,:,:,:),allocatable       :: x_shadowed
+real*8,dimension(:,:,:,:),allocatable         :: x_shadowed
 
 !> Interfaces --------------------------------------------------------
 contains
@@ -60,6 +63,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   write(*,'(/A)') "  ... setting-up: synchrotron light vertices tests"
   call setup
   write(*,'(/A)') "  ... running: synchrotron light vertices tests"
+  call test_setup_synchrotron_radiation_class
   call test_compute_synchrotron_light_properties
   call test_fill_synchrotron_lights_from_particles
   call test_init_synchrotron_lights_from_particles
@@ -96,6 +100,7 @@ subroutine setup()
   integer :: ii,jj,ifail,n_particles_RE_max_loc,n_threads
   class(type_rng),dimension(:),allocatable :: rngs
   !> initialisation
+  particle_types_check_sol = (/particle_kinetic_relativistic_id/)
   vertex_sol%n_property_vertex = n_properties; ifail = 0; 
   n_particles_RE_max = 0; n_active_particles_sol = 0;
   n_threads = 1
@@ -152,6 +157,22 @@ subroutine teardown()
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> Test setup synchrotron radiation class
+subroutine test_setup_synchrotron_radiation_class()
+  implicit none
+  !> setup the synchrotron light class
+  call vertex_sol%setup_light_class
+  !> perform checks
+  call assert_equal(vertex_sol%n_property_vertex,n_properties,&
+  "Error check setup synchrotron light class: wrong size of the vertex properties array!")
+  call assert_equal(vertex_sol%n_mhd,n_mhd_sol,&
+  "Error check setup synchrotron light class: wrong size of the mhd array!")
+  call assert_equal(vertex_sol%n_particle_types,n_particle_types_check_sol,&
+  "Error check setup synchrotron light class: wrong size of the particle types array!")
+  call assert_equal(vertex_sol%particle_types,particle_types_check_sol,&
+  n_particle_types_check_sol,"Error check setup synchrotron light class: wrong particle types list!")
+end subroutine test_setup_synchrotron_radiation_class
+
 !> test the check if a shaded point is whithin the radiation cone of
 !> a synchrotron light or not
 subroutine test_check_shaded_x_in_synchrotron_cone()
@@ -160,18 +181,20 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
   use mod_sampling,                   only: sample_uniform_sphere_corona_rcosphi
   use mod_sampling,                   only: sample_uniform_cone
   use mod_particle_types,             only: particle_kinetic_relativistic
-  use mod_synchrotron_light_vertices, only: check_shaded_x_in_synchrotron_cone
   implicit none
   !> variables
-  integer                            :: ii
+  integer                            :: ii,n_int_para,n_real_param
+  integer,dimension(0)               :: int_param
   integer,dimension(n_x)             :: particle_id
-  real*8                             :: rel_fact,p_norm,costheta,sintheta
-  real*8,dimension(n_x)              :: rnd3,x_shaded,x_light,light_dir,tang,nor,binor
+  real*8                             :: p_norm,costheta,sintheta
+  real*8,dimension(4)                 :: real_param
+  real*8,dimension(n_x)              :: rnd3,x_shaded,x_light,tang,nor,binor
   logical                            :: fail
   logical,dimension(n_shaded_points) :: in_cone_points,out_cone_points
   !> initialisation: extract a random light
+  n_int_param = size(int_param); n_real_param = size(real_param);
   in_cone_points = .false.; out_cone_points = .true.;
-  x_light = 0d0; light_dir = 0d0; fail = .true.;
+  x_light = 0d0; real_param = 0d0; fail = .true.;
   do while(fail)
     call random_number(rnd3); particle_id(1) = size(sims_particles);
     particle_id(1) = max(1+floor(real(particle_id(1),kind=8)*rnd3(1)),particle_id(1));
@@ -182,21 +205,21 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
     x_light = sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3))%x
     select type(p=>sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3)))
     type is (particle_kinetic_relativistic)
-      p_norm = norm2(p%p); light_dir = p%p/p_norm; 
-      rel_fact = sqrt(1d0 + (p_norm/(SPEED_OF_LIGHT*&
+      p_norm = norm2(p%p); real_param(1:3) = p%p/p_norm; 
+      real_param(4) = sqrt(1d0 + (p_norm/(SPEED_OF_LIGHT*&
       sims_particles(particle_id(1))%groups(particle_id(2))%mass))**2)
       fail = .false.
     end select
   enddo
   call random_number(rnd3)
-  call vectors_to_orthonormal_basis(light_dir,rnd3,tang,nor,binor)
+  call vectors_to_orthonormal_basis(real_param(1:3),rnd3,tang,nor,binor)
   costheta = sqrt(1d0-rel_fact**(-2))
   !> identify in_cone shadowed points
   do ii=1,n_shaded_points
     call random_number(rnd3); 
-    x_shaded = sample_uniform_cone(costheta,rnd3,light_dir,x_light,length_shadowed)
-    in_cone_points(ii) = check_shaded_x_in_synchrotron_cone(&
-    n_x,x_shaded,x_light,light_dir,rel_fact)
+    x_shaded = sample_uniform_cone(costheta,rnd3,real_param(1:3),x_light,length_shadowed)
+    in_cone_points(ii) = vertex_sol%check_x_shaded_in_emission_zone(&
+    n_x,x_shaded,x_light,n_int_param,n_real_param,int_param,real_param)
   enddo
   !> identify out_cone shadowed points
   do ii=1,n_shaded_points
@@ -204,8 +227,8 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
     x_shaded = sample_uniform_sphere_corona_rcosphi(length_shadowed**3,[-1d0,costheta],[0d0,TWOPI],rnd3)
     sintheta = sqrt(1d0-x_shaded(2)**2); x_shaded = x_light+x_shaded(1)*&
     (tang*x_shaded(2)+sintheta*(nor*cos(x_shaded(3))+binor*sin(x_shaded(3))))
-    out_cone_points(ii) = check_shaded_x_in_synchrotron_cone(&
-    n_x,x_shaded,x_light,light_dir,rel_fact)
+    out_cone_points(ii) = vertex_sol%check_x_shaded_in_emission_zone(&
+    n_x,x_shaded,x_light,n_int_param,n_real_param,int_param,real_param)
   enddo
   !> check results
   call assert_true(all(in_cone_points),&
@@ -393,7 +416,7 @@ subroutine test_compute_synchrotron_light_properties()
   implicit none
   !> variables
   integer :: ii,jj,kk,counter
-  real*8,dimension(3) :: E_field,B_field
+  real*8,dimension(6) :: mhd_fields
   real*8,dimension(n_properties) :: properties
   real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
   !> loop for computing the properties and testing
@@ -406,12 +429,12 @@ subroutine test_compute_synchrotron_light_properties()
         do ii=1,n_particles_per_group(jj,kk)
           if(p_list(ii)%i_elm.le.0) cycle
           counter = counter + 1
-          call compute_test_E_B_fields(p_list(ii)%x,E_field,B_field)
-          B_field = vector_cylindrical_to_cartesian(p_list(ii)%x(3),B_field)
-          E_field = vector_cylindrical_to_cartesian(p_list(ii)%x(3),E_field)
-          call compute_synchrotron_light_properties(3,n_properties,&
-          p_list(ii),sims_particles(kk)%groups(jj)%mass,E_field,B_field,properties)
-          error(:,counter) = abs((properties - properties_sol(:,counter,kk))/&
+          call compute_test_E_B_fields(p_list(ii)%x,mhd_fields(1:3),mhd_fields(4:6))
+          mhd_fields(1:3) = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(1:3))
+          mhd_fields(4:6) = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(4:6))
+          call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
+          sims_particles(kk)%groups(jj)%mass,mhd_fields)
+          error(:,counter) = abs((properties - light_vert%properties(:,counter,kk))/&
           properties_sol(:,counter,kk))
         enddo
       end select

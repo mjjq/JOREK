@@ -6,10 +6,6 @@ implicit none
 
 private
 public :: synchrotron_light_vertices
-#ifdef UNIT_TESTS
-public :: compute_synchrotron_light_properties
-public :: check_shaded_x_in_synchrotron_cone
-#endif
 
 !> Variables ---------------------------------------
 real*8,parameter  :: onethird=1.d0/3.d0

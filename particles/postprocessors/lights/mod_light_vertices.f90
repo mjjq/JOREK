@@ -24,6 +24,7 @@ type,abstract,extends(vertices) :: light_vertices
   procedure,pass(light_vert)                            :: find_active_particles_id_time
   procedure,pass(light_vert)                            :: init_lights_from_particles
   procedure,pass(light_vert)                            :: fill_lights_from_particles
+  procedure,pass(light_vert)                            :: deallocate_light_vertices
   procedure(direct_funct),pass(light_vert),deferred     :: directionality_funct
   procedure(spect_irradiance),pass(light_vert),deferred :: spectral_irradiance
   procedure(comp_light_prop),pass(light_vert),deferred  :: compute_light_properties
@@ -186,6 +187,17 @@ end interface
 contains
 
 !> Procedures ------------------------------------------- 
+!> Deallocate the vertices and light vertices structures
+subroutine deallocate_light_vertices(light_vert)
+  !> inputs-outputs
+  class(light_vertices),intent(inout) :: light_vert
+  !> clean-up light vertices data structure
+  if(allocated(light_vert%particle_types)) deallocate(light_vert%particle_types)
+  light_vert%n_particle_types = 0; light_vert%n_mhd = 0;
+  !> clean-up general vertices data structure
+  call light_vert%deallocate_vertices
+end subroutine deallocate_light_vertices
+
 !> Computes the position and properties of the particle light vertices 
 !> for each particle and stores them in the position proprerties arrays
 !> inputs:

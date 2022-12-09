@@ -58,6 +58,7 @@ subroutine run_fruit_light_vertices()
   call prepare_input_file
   call setup
   write(*,'(/A)') "  ... running: light vertices tests"
+  call test_deallocate_light_vertices
   call test_ligth_read_inputs
   call test_find_all_active_particles_ids
   call test_find_all_active_particles_ids_types
@@ -125,12 +126,43 @@ end subroutine setup
 
 subroutine teardown()
   implicit none
-  vertex_sol%n_property_vertex=0
+  vertex_sol%n_mhd = 0; vertex_sol%n_particle_types = 0;
+  if(allocated(vertex_sol%particle_types)) deallocate(vertex_sol%particle_types)
+  call vertex_sol%deallocate_vertices
   !> remove input file
   call system("rm "//input_file)
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> test deallocate light vertices
+subroutine test_deallocate_light_vertices()
+  type(full_synchrotron_light_dist) :: vertex_test
+  !> allocate test vertices
+  vertex_test%n_property_vertex = n_properties_sol; 
+  call vertex_test%allocate_vertices(n_times_sol,n_particles_max*n_groups_max)
+  call vertex_test%setup_light_class
+  call vertex_test%deallocate_light_vertices
+  !> check deallocation of main variables 
+  call assert_equals(vertex_test%n_mhd,0,&
+  "Error deallocate light vertices: n_mhd not 0!")
+  call assert_equals(vertex_test%n_particle_types,0,&
+  "Error deallocate light vertices: n_particle_types not 0!")
+  call assert_false(allocated(vertex_test%particle_types),&
+  "Error deallocate light vertices: particle_types not deallocated!")
+  call assert_equals(vertex_test%n_times,0,&
+  "Error deallocate light vertices: n_times not reset!")
+  call assert_equals(vertex_test%n_vertices,0,&
+  "Error deallocate light vertices: n_vertices not reset!")
+  call assert_false(allocated(vertex_test%n_active_vertices),&
+  "Error deallocate light vertices: n_active_vertices allocated!")
+  call assert_false(allocated(vertex_test%times),&
+  "Error deallocate light vertices: times allocated!")
+  call assert_false(allocated(vertex_test%x),&
+  "Error deallocate light vertices: x allocated!")
+  call assert_false(allocated(vertex_test%properties),&
+  "Error deallocate light vertices: properties allocated!")
+end subroutine test_deallocate_light_vertices
+
 !> test the procedure used for reading light input files
 subroutine test_ligth_read_inputs()
   implicit none

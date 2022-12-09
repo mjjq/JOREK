@@ -405,21 +405,22 @@ n_groups,n_particles,sims_particles,n_active_particles,active_particle_id)
   !> variables
   integer :: ii
   n_active_particles = 0; active_particle_id = 0;
-  if(allocated(light_vert%particle_types).and.&
-  (size(light_vert%particle_types).eq.light_vert%n_particle_types)) then
-    do ii=1,light_vert%n_times
-      call sims_particles(ii)%find_active_particles_groups(n_groups(ii),n_particles_max,&
-      n_particles(:,ii),n_active_particles(:,ii),active_particle_id(:,:,ii),&
-      light_vert%n_particle_types,light_vert%particle_types)
-      light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))
-    enddo
-  else
-    do ii=1,light_vert%n_times
-      call sims_particles(ii)%find_active_particles_groups(n_groups(ii),n_particles_max,&
-      n_particles(:,ii),n_active_particles(:,ii),active_particle_id(:,:,ii))
-      light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))    
-    enddo
+  if(allocated(light_vert%particle_types)) then
+    if(size(light_vert%particle_types).eq.light_vert%n_particle_types) then
+      do ii=1,light_vert%n_times
+        call sims_particles(ii)%find_active_particles_groups(n_groups(ii),n_particles_max,&
+        n_particles(:,ii),n_active_particles(:,ii),active_particle_id(:,:,ii),&
+        light_vert%n_particle_types,light_vert%particle_types)
+        light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))
+      enddo
+      return
+    endif
   endif
+  do ii=1,light_vert%n_times
+    call sims_particles(ii)%find_active_particles_groups(n_groups(ii),n_particles_max,&
+    n_particles(:,ii),n_active_particles(:,ii),active_particle_id(:,:,ii))
+    light_vert%n_active_vertices(ii) = sum(n_active_particles(:,ii))    
+  enddo
 end subroutine find_active_particles_id_time
 
 !> fill the time vector from particle simulations

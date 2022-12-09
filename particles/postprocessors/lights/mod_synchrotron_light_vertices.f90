@@ -199,12 +199,12 @@ particle_in,mass,mhd_fields)
   !> compute JOREK electric and magnetic JOREK fields in cartesian coordinates
   call fields%calc_EBpsiU(light_vert%times(ii),particle_in%i_elm,&
   particle_in%st,particle_in%x(3),mhd_fields(1:3),mhd_fields(4:6),psi,U)
-  mhd_fields(1:3) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(1:3))
-  mhd_fields(4:6) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(4:6))
 #else
   !> analytical fields only for unit testing
   call compute_test_E_B_fields(particle_in%x,mhd_fields(1:3),mhd_fields(4:6))
 #endif
+  mhd_fields(1:3) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(1:3))
+  mhd_fields(4:6) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(4:6))
 end subroutine compute_synchrotron_mhd_fields
 
 !> compute_synchrotron_light_properties computes the
@@ -262,7 +262,7 @@ property_id,time_id,particle_in,mass,mhd_fields)
                            (light_vert%properties(10,property_id,time_id)**2)/(mass**2))
     light_vert%properties(10,property_id,time_id)  = light_vert%properties(10,property_id,time_id)/&
                            (mass*light_vert%properties(11,property_id,time_id))
-  !> compute orbit curvature
+    !> compute orbit curvature
     light_vert%properties(4:6,property_id,time_id) = mhd_fields(1:3)+cross_product(p_in%p/&
                            (mass*light_vert%properties(11,property_id,time_id)),mhd_fields(4:6))
     vector_1d_3 = cross_product(light_vert%properties(1:3,property_id,time_id),&
@@ -276,13 +276,13 @@ property_id,time_id,particle_in,mass,mhd_fields)
                            SPEED_OF_LIGHT*(light_vert%properties(10,property_id,time_id)**4)*&
                            (light_vert%properties(11,property_id,time_id)**4)*&
                            (light_vert%properties(12,property_id,time_id)**2))/(6.d0*PI*EPS_ZERO)
+    !> construct and store the orthonormal basis
+    call vectors_to_orthonormal_basis(light_vert%properties(1:3,property_id,time_id),&
+    light_vert%properties(4:6,property_id,time_id),vector_1d_3,vector_1d_3_2,vector_1d_3_3)
+    light_vert%properties(1:3,property_id,time_id) = vector_1d_3; 
+    light_vert%properties(4:6,property_id,time_id) = vector_1d_3_2;
+    light_vert%properties(7:9,property_id,time_id) = vector_1d_3_3
   end select
-  !> construct and store the orthonormal basis
-  call vectors_to_orthonormal_basis(light_vert%properties(1:3,property_id,time_id),&
-  light_vert%properties(4:6,property_id,time_id),vector_1d_3,vector_1d_3_2,vector_1d_3_3)
-  light_vert%properties(1:3,property_id,time_id) = vector_1d_3; 
-  light_vert%properties(4:6,property_id,time_id) = vector_1d_3_2;
-  light_vert%properties(7:9,property_id,time_id) = vector_1d_3_3
 end subroutine compute_synchrotron_light_properties
 
 !> initialise and allocate synchrotron light variables

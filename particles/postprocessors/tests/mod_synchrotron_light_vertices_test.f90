@@ -2,6 +2,9 @@
 !> procedures for testing the synchrotron light vertices
 module mod_synchrotron_light_vertices_test
 use fruit
+use mod_particle_types,             only: particle_gc_vpar_id
+use mod_particle_types,             only: particle_kinetic_id
+use mod_particle_types,             only: particle_kinetic_relativistic_id
 use mod_particle_sim,               only: particle_sim
 use mod_spectra_monte_carlo,        only: spectrum_rng_uniform
 use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
@@ -17,7 +20,7 @@ real*8,parameter                            :: tol2_real8=3.5d-8
 real*8,parameter                            :: mass_RE=5.48579909065d-4
 real*8,parameter                            :: exclusion_values=1.d-100
 !> parameters for generating synhrotron lights
-integer,
+integer,parameter :: n_mhd_sol=6 !< three components E-fields and three B-fields
 integer,parameter :: n_x=3
 integer,parameter :: n_properties=13
 integer,parameter :: fill_type_base=1 !< use cylindrical initialisation
@@ -28,6 +31,10 @@ integer,parameter                             :: n_groups_max=maxval(n_groups_pe
 integer,dimension(n_groups_max,n_times_sol),parameter :: n_particles_per_group=&
            reshape((/135,247,512,367,413,0/),shape(n_particles_per_group))
 integer,parameter                             :: n_particles_max=maxval(n_particles_per_group)
+integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types_sol=&
+           reshape((/particle_kinetic_relativistic_id,particle_gc_vpar_id,&
+           particle_kinetic_relativistic_id,particle_kinetic_id,&
+           particle_kinetic_relativistic_id,0/),shape(particle_types_sol))
 real*8,parameter                              :: survival_threshold=0.33
 !> parameters for generating spectra
 integer,parameter                             :: n_spectra=2
@@ -77,26 +84,20 @@ end subroutine run_fruit_synchrotron_light_vertices
 !> Set-up and tear-down procedures------------------------------------
 !> allocate and initialise the unit test features
 subroutine setup()
-  use mod_rng,                              only: type_rng
-  use mod_pcg32_rng,                        only: pcg32_rng
-  use mod_particle_types,                   only: particle_gc_vpar_id
-  use mod_particle_types,                   only: particle_kinetic_id
-  use mod_particle_types,                   only: particle_kinetic_relativistic_id
-  use mod_gnu_rng,                          only: gnu_rng_interval
-  use mod_common_test_tools,       only: omp_initialize_rngs
-  use mod_particle_common_test_tools,       only: sim_time_interval
-  use mod_particle_common_test_tools,       only: allocate_one_particle_list_type 
-  use mod_particle_common_test_tools,       only: fill_groups,fill_mass_RE
-  use mod_particle_common_test_tools,       only: fill_particles_tokamak
-  use mod_particle_common_test_tools,       only: invalidate_particles
-  use mod_particle_common_test_tools,       only: obtain_active_particle_ids
+  use mod_rng,                        only: type_rng
+  use mod_pcg32_rng,                  only: pcg32_rng
+  use mod_gnu_rng,                    only: gnu_rng_interval
+  use mod_common_test_tools,          only: omp_initialize_rngs
+  use mod_particle_common_test_tools, only: sim_time_interval
+  use mod_particle_common_test_tools, only: allocate_one_particle_list_type 
+  use mod_particle_common_test_tools, only: fill_groups,fill_mass_RE
+  use mod_particle_common_test_tools, only: fill_particles_tokamak
+  use mod_particle_common_test_tools, only: invalidate_particles
+  use mod_particle_common_test_tools, only: obtain_active_particle_ids
+  use mod_fields_linear,              only: jorek_fields_interp_linear
   !$ use omp_lib
   implicit none
   !> variables
-  integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types=&
-  reshape((/particle_kinetic_relativistic_id,particle_gc_vpar_id,&
-  particle_kinetic_relativistic_id,particle_kinetic_id,&
-  particle_kinetic_relativistic_id,0/),shape(particle_types))
   integer :: ii,jj,ifail,n_particles_RE_max_loc,n_threads
   class(type_rng),dimension(:),allocatable :: rngs
   !> initialisation
@@ -111,10 +112,11 @@ subroutine setup()
   !> allocate and initialise particle list
   do ii=1,n_times_sol
     sims_particles(ii)%time = time_vector_sol(ii)
+    allocate(jorek_fields_interp_linear::sims_particles(ii)%fields)
     allocate(sims_particles(ii)%groups(n_groups_per_sim(ii)))
     call allocate_one_particle_list_type(n_groups_per_sim(ii),&
     n_particles_per_group(1:n_groups_per_sim(ii),ii),&
-    particle_types(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups,ifail)
+    particle_types_sol(1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups,ifail)
     call fill_groups(n_groups_per_sim(ii),sims_particles(ii)%groups)
     call fill_mass_RE(n_groups_per_sim(ii),sims_particles(ii)%groups)
     call fill_particles_tokamak(n_groups_per_sim(ii),sims_particles(ii)%groups,fill_type_base)
@@ -124,12 +126,12 @@ subroutine setup()
     active_particle_ids_sol(:,1:n_groups_per_sim(ii),ii),sims_particles(ii)%groups)
     n_active_vertices_sol(ii) = sum(n_active_particles_sol(:,ii))
     !> set to zero if particles are not kinetic relativistic
-    where(particle_types(:,ii).ne.particle_kinetic_relativistic_id) 
+    where(particle_types_sol(:,ii).ne.particle_kinetic_relativistic_id) 
       n_active_particles_sol(:,ii)=0
     endwhere
     n_particles_RE_max_loc = 0
     do jj=1,n_groups_per_sim(ii)
-      if(particle_types(jj,ii).ne.particle_kinetic_relativistic_id) cycle
+      if(particle_types_sol(jj,ii).ne.particle_kinetic_relativistic_id) cycle
       n_particles_RE_max_loc = n_particles_RE_max_loc + n_particles_per_group(jj,ii)
     enddo
     n_particles_RE_max = max(n_particles_RE_max,n_particles_RE_max_loc)
@@ -163,13 +165,13 @@ subroutine test_setup_synchrotron_radiation_class()
   !> setup the synchrotron light class
   call vertex_sol%setup_light_class
   !> perform checks
-  call assert_equal(vertex_sol%n_property_vertex,n_properties,&
+  call assert_equals(vertex_sol%n_property_vertex,n_properties,&
   "Error check setup synchrotron light class: wrong size of the vertex properties array!")
-  call assert_equal(vertex_sol%n_mhd,n_mhd_sol,&
+  call assert_equals(vertex_sol%n_mhd,n_mhd_sol,&
   "Error check setup synchrotron light class: wrong size of the mhd array!")
-  call assert_equal(vertex_sol%n_particle_types,n_particle_types_check_sol,&
+  call assert_equals(vertex_sol%n_particle_types,n_particle_types_check_sol,&
   "Error check setup synchrotron light class: wrong size of the particle types array!")
-  call assert_equal(vertex_sol%particle_types,particle_types_check_sol,&
+  call assert_equals(vertex_sol%particle_types,particle_types_check_sol,&
   n_particle_types_check_sol,"Error check setup synchrotron light class: wrong particle types list!")
 end subroutine test_setup_synchrotron_radiation_class
 
@@ -183,7 +185,7 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
   use mod_particle_types,             only: particle_kinetic_relativistic
   implicit none
   !> variables
-  integer                            :: ii,n_int_para,n_real_param
+  integer                            :: ii,n_int_param,n_real_param
   integer,dimension(0)               :: int_param
   integer,dimension(n_x)             :: particle_id
   real*8                             :: p_norm,costheta,sintheta
@@ -213,7 +215,7 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
   enddo
   call random_number(rnd3)
   call vectors_to_orthonormal_basis(real_param(1:3),rnd3,tang,nor,binor)
-  costheta = sqrt(1d0-rel_fact**(-2))
+  costheta = sqrt(1d0-real_param(4)**(-2))
   !> identify in_cone shadowed points
   do ii=1,n_shaded_points
     call random_number(rnd3); 
@@ -391,13 +393,14 @@ end subroutine test_init_synchrotron_lights_from_particles
 
 !> test fill synchrotron lights from particles
 subroutine test_fill_synchrotron_lights_from_particles()
-  use mod_assert_equals_tools,        only: assert_equals_rel_error
-  use mod_synchrotron_light_vertices, only: fill_synchrotron_lights_from_particles
+  use mod_assert_equals_tools, only: assert_equals_rel_error
   implicit none
-  !> variables
+!> DEBUG DEBUG
+integer :: ii,jj
+!> DEBUG DEBUG
   !> fill synchrotron lights from particles
-  call fill_synchrotron_lights_from_particles(vertex_sol,sims_particles,&
-  n_groups_max,n_particles_max,n_groups_per_sim,n_active_particles_sol,&
+  call vertex_sol%fill_lights_from_particles(sims_particles,n_groups_max,&
+  n_particles_max,n_groups_per_sim,particle_types_sol,n_active_particles_sol,&
   active_particle_ids_sol)
   call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
   vertex_sol%x,x_cart_sol,tol_real8,&
@@ -411,13 +414,11 @@ end subroutine test_fill_synchrotron_lights_from_particles
 subroutine test_compute_synchrotron_light_properties()
   use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
   use mod_particle_types,             only: particle_kinetic_relativistic
-  use mod_synchrotron_light_vertices, only: compute_synchrotron_light_properties
   use mod_particle_common_test_tools, only: compute_test_E_B_fields 
   implicit none
   !> variables
   integer :: ii,jj,kk,counter
   real*8,dimension(6) :: mhd_fields
-  real*8,dimension(n_properties) :: properties
   real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
   !> loop for computing the properties and testing
   zeros = 0.d0
@@ -434,11 +435,11 @@ subroutine test_compute_synchrotron_light_properties()
           mhd_fields(4:6) = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(4:6))
           call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
           sims_particles(kk)%groups(jj)%mass,mhd_fields)
-          error(:,counter) = abs((properties - light_vert%properties(:,counter,kk))/&
-          properties_sol(:,counter,kk))
         enddo
       end select
     enddo
+    where(properties_sol(:,:,kk).ne.0d0) error = abs((properties_sol(:,:,kk)-&
+    vertex_sol%properties(:,:,kk))/properties_sol(:,:,kk))
     !> check if the properties arrays are equal
     call assert_equals(error,zeros,n_properties,n_particles_max*n_groups_max,&
     tol_real8,"Error synchrotron light compute properties: too large errors!")
@@ -509,7 +510,6 @@ x_light,property,dir_func,irradiance)
   use constants,                      only: TWOPI,PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
   use mod_besselk,                    only: besselk
   use mod_coordinate_transforms,      only: cartesian_to_spherical_latitude
-  use mod_synchrotron_light_vertices, only: check_shaded_x_in_synchrotron_cone
   implicit none
   !> inputs
   real*8,dimension(n_x),intent(in)          :: x_illum,x_light
@@ -518,6 +518,7 @@ x_light,property,dir_func,irradiance)
   real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(out) :: dir_func,irradiance
   !> variables
   integer               :: ii,jj
+  integer,dimension(0)  :: int_param
   real*8                :: onethird=1.d0/3.d0
   real*8                :: twothird=2.d0/3.d0
   real*8                :: z_v,zeta,besselk13,besselk23
@@ -527,8 +528,8 @@ x_light,property,dir_func,irradiance)
   !> initialisations
   dir_func = 0d0; irradiance = 0d0;
   !> check is the shaded point is in the synchrotron cone
-  if(.not.check_shaded_x_in_synchrotron_cone(n_x,x_illum,&
-  x_light,property(1:3),property(11))) return
+  if(.not.vertex_sol%check_x_shaded_in_emission_zone(n_x,x_illum,&
+  x_light,0,4,int_param,[property(1),property(2),property(3),property(11)])) return
   !> compute the spherical coordinate variables
   rpsichi = cartesian_to_spherical_latitude(x_illum,x_light,&
   property(1:3),property(4:6),property(7:9))

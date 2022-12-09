@@ -303,7 +303,7 @@ particle_types,n_active_particles,active_particles_id)
   do ii=1,light_vert%n_times
     pp = 0
     do jj=1,n_groups(ii)
-        if(.not.any(particle_types(jj,ii).eq.light_vert%particle_types)) cycle
+        if(all(particle_types(jj,ii).ne.light_vert%particle_types)) cycle
         !$omp parallel do default(private) firstprivate(ii,jj,pp,n_active_particles) &
         !$omp shared(sims_particles,active_particles_id,light_vert)
         do kk=1,n_active_particles(jj,ii)

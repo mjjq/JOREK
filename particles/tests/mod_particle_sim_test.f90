@@ -187,25 +187,19 @@ subroutine test_find_active_particle_id_type()
   implicit none
   !> variables
   integer :: ii
-  integer,dimension(n_particle_types) :: n_particles_array,n_active_particles
-  integer,dimension(n_particle_types) :: n_act_part_sol_loc
+  integer,dimension(n_particle_types) :: n_active_particles,n_particle_array
   integer,dimension(n_particles,n_particle_types) :: active_particle_ids
-  integer,dimension(n_particles,n_particle_types) :: act_part_ids_sol_loc
 
-  !> compute active particles and their id and tests
-  n_particles_array = n_particles;
-  do ii=1,n_particle_types
-    n_active_particles = -1; active_particle_ids = -1;
-    n_act_part_sol_loc = 0; act_part_ids_sol_loc = 0;
-    n_act_part_sol_loc(ii) = n_active_particles_sol(ii)
-    act_part_ids_sol_loc(:,ii) = active_particle_ids_sol(:,ii)
-    call sim_sol%find_active_particles_groups(n_particle_types,n_particles,&
-    n_particles_array,n_active_particles,active_particle_ids,particle_type_list_sol(ii))
-    call assert_equals(n_active_particles,n_act_part_sol_loc,n_particle_types,&
-    "Error particle_sim find active particle type: n_active_particles mismatch!")
-    call assert_equals(active_particle_ids,act_part_ids_sol_loc,n_particles,n_particle_types,&
-    "Error particle_sim find active particle type: active_particle_ids mismatch!")
-  enddo 
+  !> find the active particle id using particle_sim routines
+  n_particle_array = n_particles;  
+  call sim_sol%find_active_particles_groups(n_particle_types,n_particles,&
+  n_particle_array,n_active_particles,active_particle_ids,&
+  n_particle_types,particle_type_list_sol)
+  !> check correctness of the identification
+  call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
+  "Error particle_sim find active particle type: n_active_particles mismatch!")
+  call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
+  "Error particle_sim find active particle type: active_particle_ids mismatch!")
 end subroutine test_find_active_particle_id_type
 
 !>-----------------------------------------------

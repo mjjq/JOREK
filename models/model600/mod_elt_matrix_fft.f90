@@ -123,8 +123,8 @@ integer    :: i_inj
 real*8     :: source_neutral, source_neutral_arr(n_inj_max)
 real*8     :: source_neutral_drift, source_neutral_drift_arr(n_inj_max) ! Neutral source deposited at R+drift_distance to impose plasmoid drift
 real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max) ! Teleported power density in JOREK unit (sink at R and source at R+drift)
-real*8     :: source_imp
-real*8     :: source_bg
+real*8     :: source_imp, source_imp_arr(n_inj_max)
+real*8     :: source_bg, source_bg_arr(n_inj_max)
 
 ! time normalisation
 real*8     :: t_norm
@@ -1303,7 +1303,11 @@ do i=1,n_vertex_max
           source_imp = 0.d0
           source_bg  = 0.d0
           if (with_impurities) then
-            call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
+            call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp)
+            do i_inj = 1,n_inj
+              source_imp = source_imp + source_imp_arr(i_inj)
+              source_bg  = source_bg  + source_bg_arr(i_inj)
+            end do
             ! This is to detect N/A
             if (source_imp /= source_imp .or. source_bg /= source_bg) then
               write(*,*) "WARNING: source_imp = ", source_imp

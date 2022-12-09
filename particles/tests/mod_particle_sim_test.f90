@@ -186,7 +186,6 @@ end subroutine test_find_active_particle_id
 subroutine test_find_active_particle_id_type()
   implicit none
   !> variables
-  integer :: ii
   integer,dimension(n_particle_types) :: n_active_particles,n_particle_array
   integer,dimension(n_particles,n_particle_types) :: active_particle_ids
 

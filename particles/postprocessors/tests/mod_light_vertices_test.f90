@@ -6,7 +6,7 @@
 module mod_light_vertices_test
 use fruit
 use mod_particle_sim, only: particle_sim
-use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
+use mod_full_synchrotron_light_dist_vertices, only: full_synchrotron_light_dist
 use mod_particle_types, only: particle_fieldline_id,particle_gc_id
 use mod_particle_types, only: particle_gc_vpar_id,particle_gc_Qin_id
 use mod_particle_types, only: particle_kinetic_id,particle_kinetic_leapfrog_id
@@ -40,7 +40,7 @@ integer,dimension(n_groups_max,n_times_sol),parameter :: particle_types_sol=&
 integer,parameter                          :: n_particles_max=maxval(n_particles_per_group)
 real*8,parameter                           :: survival_threshold=0.21
 real*8,parameter                           :: tol_real8=5.d-16
-type(synchrotron_light_vertices)                                :: vertex_sol
+type(full_synchrotron_light_dist)                               :: vertex_sol
 type(particle_sim),dimension(n_times_sol)                       :: sims_particles
 integer,dimension(n_times_sol)                                  :: n_active_vertices_sol
 integer,dimension(n_groups_max,n_times_sol)                     :: n_active_particles_sol

@@ -1,17 +1,17 @@
-!> mod_synchrotron_light_vertices_test contains all variables and
+!> mod_full_synchrotron_light_dist_test contains all variables and
 !> procedures for testing the synchrotron light vertices
-module mod_synchrotron_light_vertices_test
+module mod_full_synchrotron_light_dist_vertices_test
 use fruit
-use mod_particle_types,             only: particle_gc_vpar_id
-use mod_particle_types,             only: particle_kinetic_id
-use mod_particle_types,             only: particle_kinetic_relativistic_id
-use mod_particle_sim,               only: particle_sim
-use mod_spectra_monte_carlo,        only: spectrum_rng_uniform
-use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
+use mod_particle_types,                       only: particle_gc_vpar_id
+use mod_particle_types,                       only: particle_kinetic_id
+use mod_particle_types,                       only: particle_kinetic_relativistic_id
+use mod_particle_sim,                         only: particle_sim
+use mod_spectra_monte_carlo,                  only: spectrum_rng_uniform
+use mod_full_synchrotron_light_dist_vertices, only: full_synchrotron_light_dist
 implicit none
 
 private
-public :: run_fruit_synchrotron_light_vertices
+public :: run_fruit_full_synchrotron_light_dist_vertices
 
 !> Variables ---------------------------------------------------------
 !> general parameters
@@ -46,7 +46,7 @@ integer,parameter                             :: n_shaded_points=53
 integer,parameter                             :: n_shadowed_per_particle=7
 real*8,dimension(2),parameter                 :: length_shadowed=(/2.d-1,7.d0/)
 !> variables for generating synchrotron lights
-type(synchrotron_light_vertices)              :: vertex_sol
+type(full_synchrotron_light_dist)             :: vertex_sol
 type(particle_sim),dimension(n_times_sol)     :: sims_particles
 integer                                       :: n_particles_RE_max
 integer,dimension(n_particle_types_check_sol) :: particle_types_check_sol
@@ -65,7 +65,7 @@ real*8,dimension(:,:,:,:),allocatable         :: x_shadowed
 contains
 !> Fruit test basket -------------------------------------------------
 !> fruit basket having all set-up, tests and tearing-down procedures
-subroutine run_fruit_synchrotron_light_vertices()
+subroutine run_fruit_full_synchrotron_light_dist_vertices()
   implicit none
   write(*,'(/A)') "  ... setting-up: synchrotron light vertices tests"
   call setup
@@ -79,7 +79,7 @@ subroutine run_fruit_synchrotron_light_vertices()
   call test_synchrotron_irradiance_directional_func_taskloop
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
   call teardown
-end subroutine run_fruit_synchrotron_light_vertices
+end subroutine run_fruit_full_synchrotron_light_dist_vertices
 
 !> Set-up and tear-down procedures------------------------------------
 !> allocate and initialise the unit test features
@@ -605,4 +605,4 @@ subroutine compute_synch_properties_ana_1p(phi,mass,particle,property)
 end subroutine compute_synch_properties_ana_1p
 
 !>--------------------------------------------------------------------
-end module mod_synchrotron_light_vertices_test
+end module mod_full_synchrotron_light_dist_vertices_test

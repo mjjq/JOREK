@@ -18,7 +18,7 @@ use mod_spectra_deterministic,      only: spectrum_integrator_2nd
 use mod_pinhole_lens,               only: pinhole_lens
 use mod_filter_unity,               only: filter_unity
 use mod_camera_perspective_static,  only: camera_perspective_static
-use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
+use mod_full_synchrotron_light_dist_vertices, only: full_synchrotron_light_dist
 #ifdef USE_HDF5
 use mod_fast_camera_io,             only: write_pixel_intensity_hdf5
 #endif
@@ -26,26 +26,26 @@ use mod_fast_camera_io,             only: write_pixel_intensity_hdf5
 implicit none
 
 !> Variables -------------------------------------------------------------------------------
-type(event)                       :: field_reader
-type(pinhole_lens)                :: lens
-type(spectrum_integrator_2nd)     :: spectra
-type(filter_unity)                :: filter_image,filter_time
+type(event)                        :: field_reader
+type(pinhole_lens)                 :: lens
+type(spectrum_integrator_2nd)      :: spectra
+type(filter_unity)                 :: filter_image,filter_time
 type(filter_unity),dimension(:),allocatable :: filter_spectra
-type(camera_perspective_static)   :: camera
-type(synchrotron_light_vertices)  :: synch_sources
+type(camera_perspective_static)    :: camera
+type(full_synchrotron_light_dist)  :: synch_sources
 type(particle_sim),dimension(:),allocatable :: sims
-integer                           :: ii,n_1d,n_2d,t0,t1
-integer                           :: n_groups,my_id,n_cpus,n_x,ierr
-integer                           :: n_wavelenghts,n_spectra
-integer                           :: n_int_camera_param,n_real_camera_param
-integer                           :: n_times
-integer,dimension(:),allocatable  :: int_camera_param 
-real*8,dimension(:),allocatable   :: min_spectra,max_spectra,pinhole_positions
-real*8,dimension(:),allocatable   :: real_camera_param,sim_times
+integer                            :: ii,n_1d,n_2d,t0,t1
+integer                            :: n_groups,my_id,n_cpus,n_x,ierr
+integer                            :: n_wavelenghts,n_spectra
+integer                            :: n_int_camera_param,n_real_camera_param
+integer                            :: n_times
+integer,dimension(:),allocatable   :: int_camera_param 
+real*8,dimension(:),allocatable    :: min_spectra,max_spectra,pinhole_positions
+real*8,dimension(:),allocatable    :: real_camera_param,sim_times
 real*8,dimension(:,:,:,:,:),allocatable :: pixel_filter_values
-character(len=15)                 :: particle_filename
-character(len=17)                 :: fields_filename
-character(len=24)                 :: image_filename
+character(len=15)                  :: particle_filename
+character(len=17)                  :: fields_filename
+character(len=24)                  :: image_filename
 
 !> Variable definitions -------------------------------------------------------------------
 particle_filename = 'part_restart.h5'

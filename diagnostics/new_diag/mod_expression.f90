@@ -222,6 +222,7 @@ module mod_expression
 #endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     call add(exprs_all, 'radiation   ', 'Radiation terms for bolometry diagnostic              ')
+    call add(exprs_all, 'radiation_bg', 'Radiation terms from background impurities for bolometry diagnostic ')
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
@@ -277,6 +278,8 @@ module mod_expression
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
     call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
     call add(exprs_all_int, 'Ohmic_out   ', 'Ohmic heating (outside LCFS)                          ')
+    call add(exprs_all_int, 'Rad_tot     ', 'Total impurity radiation power (incl. backgr. imp)    ')
+    call add(exprs_all_int, 'Rad_bg_tot  ', 'Background impurity radiation power                   ')
     call add(exprs_all_int, 'P_vn        ', 'Boundary flux of outgoing pressure                    ')
     call add(exprs_all_int, 'qn_par      ', 'Boundary flux of the parallel thermal conduction      ')
     call add(exprs_all_int, 'qn_perp     ', 'Boundary flux of the perpendicular thermal conduction ')
@@ -1486,7 +1489,11 @@ module mod_expression
           if ( (psi_abs > 1.d-6) .and. (r0 > 1.d-6) .and. (abs(Btheta) > 1.d-6) ) then
             
             Er       = -(u0_R * ps0_R + u0_Z * ps0_Z) / psi_abs   ! radial electric field
-            Vsound   = sqrt(GAMMA*T0_corr) / sqrt(BB2)                 ! sound speed
+            if (with_TiTe) then
+              Vsound   = sqrt(GAMMA*(Ti0_corr+Te0_corr)) / sqrt(BB2)     ! sound speed
+            else
+              Vsound   = sqrt(GAMMA*T0_corr) / sqrt(BB2)                 ! sound speed
+            endif
             Mach_par = Vpar0 / Vsound                             ! parallel Mach number
             Mach_pol = Vtheta / Vsound                            ! poloidal Mach number
             
@@ -1765,25 +1772,25 @@ module mod_expression
                 res = visco_num_t / fact_resistiv
                 
               case ( 'zkpar_T' )
-                res = zkpar_t / fact_time
+                res = zkpar_t   / fact_resistiv / (gamma - 1) / r0 / fact_rho  ! \chi_par in (m^2 s^{-1})
                 
               case ( 'zkipar_T' )
-                res = zki_par_t / fact_time
+                res = zki_par_t / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                 
               case ( 'zkepar_T' )
-                res = zke_par_t / fact_time
+                res = zke_par_t / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                 
               case ( 'dprof' ) 
                 res = d_prof / fact_time
                   
               case ( 'zkprof' )
-                res = zk_prof / fact_time
+                res = zk_prof  / fact_resistiv / (gamma - 1) / r0 / fact_rho   ! \chi_perp in (m^2 s^{-1})
                 
               case ( 'zkiprof' )
-                res = zki_prof / fact_time
+                res = zki_prof / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                 
               case ( 'zkeprof' )
-                res = zke_prof / fact_time
+                res = zke_prof / fact_resistiv / (gamma - 1) / r0 / fact_rho 
                   
               case ( 'pres' )
                 res = P0 / fact_mu_zero
@@ -2037,6 +2044,9 @@ module mod_expression
 #ifdef WITH_Impurities
               case ( 'radiation' )
                 res = (r0_corr + beta_imp*rn0_corr) * (rn0_corr * Lrad + frad_bg) * fact_rad
+
+              case ( 'radiation_bg' )
+                res = (r0_corr + beta_imp*rn0_corr) * frad_bg * fact_rad
 #endif
 
               case default

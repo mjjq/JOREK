@@ -115,7 +115,9 @@ real*8     :: rhon, rhon_x, rhon_y, rhon_s, rhon_t, rhon_p, rhon_ss, rhon_st, rh
 real*8     :: rn0_xx, rn0_yy, rn0_xy, rhon_xx, rhon_yy
 
 ! Impurity and background source
-real*8     :: source_imp, source_bg
+real*8     :: source_imp, source_bg, source_imp_arr(n_inj_max), source_bg_arr(n_inj_max)
+real*8     :: source_bg_drift_arr(n_inj_max)
+real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max)
 
 ! time normalization
 real*8     :: t_norm
@@ -219,6 +221,12 @@ dV_dz_source=0.d0
 eq_zne          = 0.d0
 eq_zTe          = 0.d0         
 eq_zTi          = 0.d0
+
+if (allocated(P_imp)) deallocate(P_imp)
+if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
+allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
 
 do i=1,n_vertex_max
  do j=1,n_degrees
@@ -829,12 +837,6 @@ do ms=1, n_gauss
 
      if (allocated(imp_adas(index_main_imp)%ionisation_energy)) then
 
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
-
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
 !                              z_TeTe_out=d2Z_imp_dT2)
@@ -862,12 +864,6 @@ do ms=1, n_gauss
        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
      else
-
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
 
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
@@ -1024,17 +1020,41 @@ do ms=1, n_gauss
    ! --- Source of Impurities and Background species
    !--------------------------------------------------------
 
-     source_imp = 0.d0                    
-     source_bg  = 0.d0
+     source_imp = 0.d0; source_imp_arr = 0.d0
+     source_bg  = 0.d0; source_bg_arr  = 0.d0
 
-     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
+     source_bg_drift_arr = 0.d0
 
-     if (source_imp .lt. 0.d0) then
-      source_imp = 0.d0
-     endif
-     if (source_bg .lt. 0.d0) then
-      source_bg = 0.d0
-     endif
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp,source_bg_drift_arr)
+
+     do i_inj = 1,n_inj
+       source_imp = source_imp + source_imp_arr(i_inj)
+       if (drift_distance(i_inj) /= 0.d0) then
+         source_bg = source_bg + source_bg_drift_arr(i_inj)
+       else
+         source_bg = source_bg + source_bg_arr(i_inj)
+       end if
+     end do
+
+     ! This is to detect N/A
+     if (source_imp /= source_imp .or. source_bg /= source_bg) then
+       write(*,*) "ERROR in mod_elt_matrix (502): source_imp = ", source_imp
+       write(*,*) "ERROR in mod_elt_matrix (502): source_bg = ", source_bg
+       stop
+     end if
+
+     source_imp = max(0., source_imp)
+     source_bg  = max(0., source_bg)
+
+     ! teleported energy
+     power_dens_teleport_ju = 0.d0; power_dens_teleport_ju_arr = 0.d0
+     do i_inj = 1,n_inj
+       if (energy_teleported(i_inj) /= 0.d0) then
+         power_dens_teleport_ju_arr(i_inj) = (-source_bg_arr(i_inj) + source_bg_drift_arr(i_inj)) * energy_teleported(i_inj) * &
+                                             EL_CHG * (GAMMA-1.) * MU_ZERO * 1.d20 * central_density
+         power_dens_teleport_ju = power_dens_teleport_ju + power_dens_teleport_ju_arr(i_inj)
+       end if
+     end do
 
    !--------------------------------------------------------
    ! --- Radiation from background impurity
@@ -1511,6 +1531,8 @@ do ms=1, n_gauss
 
          rhs_ij_9 =   v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep &
  
+                    + v * BigR * power_dens_teleport_ju                                * xjac * tstep &
+
                     + v * (r0 + rn0*alpha_e_bis) * BigR**2 * ( Te0_s * u0_t - Te0_t * u0_s)   * tstep &
                     + v * Te0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * tstep &
                     + v * alpha_e * Te0 * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)             * tstep &

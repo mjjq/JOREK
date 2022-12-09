@@ -109,9 +109,10 @@ real*8     :: Btheta2, epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
 
 ! neutral source
-real*8     :: source_neutral
-real*8     :: source_neutral_drift ! Neutral source deposited at R+drift_distance to impose plasmoid drift
-real*8     :: power_dens_teleport_ju ! Teleported power density in JOREK unit (sink at R and source at R+drift)
+integer    :: i_inj
+real*8     :: source_neutral, source_neutral_arr(n_inj_max)
+real*8     :: source_neutral_drift, source_neutral_drift_arr(n_inj_max) ! Neutral source deposited at R+drift_distance to impose plasmoid drift
+real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max) ! Teleported power density in JOREK unit (sink at R and source at R+drift)
 
 ! time normalisation
 real*8     :: t_norm
@@ -1150,13 +1151,25 @@ do i=1,n_vertex_max
             ! --- Source of neutrals, e.g. from MGI/SPI
             !--------------------------------------------------------
       
-            source_neutral       = 0.d0    
-            source_neutral_drift = 0.d0 
-      
-            call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral,source_neutral_drift)
+            source_neutral       = 0.d0; source_neutral_arr       = 0.d0
+            source_neutral_drift = 0.d0; source_neutral_drift_arr = 0.d0
+
+            call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+
+            do i_inj = 1,n_inj
+              source_neutral       = source_neutral + source_neutral_arr(i_inj)
+              source_neutral_drift = source_neutral_drift + source_neutral_drift_arr(i_inj)
+            end do
+
+            ! To detect NaNs
+            if (source_neutral /= source_neutral .or. source_neutral_drift /= source_neutral_drift) then
+              write(*,*) 'ERROR in mod_elt_matrix_fft: source_neutral = ', source_neutral
+              write(*,*) 'ERROR in mod_elt_matrix_fft: source_neutral_drift = ', source_neutral_drift
+              stop
+            end if
           
-            source_neutral       = max(source_neutral,0.)
-            source_neutral_drift = max(source_neutral_drift,0.)
+            source_neutral       = max(0.,source_neutral)
+            source_neutral_drift = max(0.,source_neutral_drift)
 
           else ! no neutrals (neutral terms are always multiplied by one of these coefficients)
             
@@ -1175,11 +1188,14 @@ do i=1,n_vertex_max
           ! ---Calculate energy teleported in JOREK unit (sink at R and source at R + drift_distance)
           !------------------------------------------------------------------------------------------
           ! Input energy_teleported is in eV
-          power_dens_teleport_ju = 0.d0
-          if (with_neutrals .and. energy_teleported /= 0.d0) then
-            power_dens_teleport_ju = (-source_neutral + source_neutral_drift)  * energy_teleported * &
-                                     EL_CHG * (GAMMA-1) * MU_ZERO * 1.d20 * central_density
-          end if
+          power_dens_teleport_ju = 0.d0; power_dens_teleport_ju_arr = 0.d0
+          do i_inj = 1,n_inj
+            if (with_neutrals .and. energy_teleported(i_inj) /= 0.d0) then
+              power_dens_teleport_ju_arr(i_inj) = (-source_neutral_arr(i_inj) + source_neutral_drift_arr(i_inj))  * energy_teleported(i_inj) * &
+                                                  EL_CHG * (GAMMA-1) * MU_ZERO * 1.d20 * central_density
+              power_dens_teleport_ju = power_dens_teleport_ju + power_dens_teleport_ju_arr(i_inj)
+            end if
+          end do
 
           !-----------------------------------------------------------------
           ! --- Radiation from background impurity, using ADAS (by default)
@@ -1205,7 +1221,7 @@ do i=1,n_vertex_max
                 dLrad_imp_dT = 0.
               end if
               if (dLrad_imp_dT/=dLrad_imp_dT) then
-                write(*,*) "WARNING: dLrad_imp_dT ", dLrad_imp_dT
+                write(*,*) "ERROR in mod_elt_matrix_fft: dLrad_imp_dT ", dLrad_imp_dT
                 stop
               end if
 
@@ -1227,7 +1243,7 @@ do i=1,n_vertex_max
               dfrad_bg_dT = -(1./3.)*((MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)**(0.5d0))*(1./EL_CHG)                               &
                             *2.*(nimp_bg(1)*Arad_bg/Crad_bg**2.)*(log(Te_corr_eV)-log(Brad_bg))*(1./Te_corr_eV)*exp(-((log(Te_corr_eV)-log(Brad_bg))**2.)/Crad_bg**2.)
             else
-              write(*,*) "WARNING: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
+              write(*,*) "ERROR in mod_elt_matrix_fft: hard-coded fitting doesn't exist for  ", trim(imp_type(1)), ", use open adas instead!"
               stop
             end if 
 

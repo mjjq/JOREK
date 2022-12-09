@@ -90,6 +90,7 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   real*8,  allocatable :: spi_vol_arr_drift (:)
   real*8,  allocatable :: spi_psi_arr_drift (:)
   real*8,  allocatable :: spi_grad_psi_arr_drift (:)
+  integer, allocatable :: plasmoid_in_domain_arr (:)
 
   integer              :: n_spi_check, n_inj_check
   logical              :: modes_changed
@@ -584,6 +585,7 @@ endif
       allocate (spi_vol_arr_drift(n_spi_tot))
       allocate (spi_psi_arr_drift(n_spi_tot))
       allocate (spi_grad_psi_arr_drift(n_spi_tot))
+      allocate (plasmoid_in_domain_arr(n_spi_tot))
     
       read(21,err=999, end=999)  spi_R_arr(1:n_spi_tot)
       read(21,err=999, end=999)  spi_Z_arr(1:n_spi_tot)
@@ -601,6 +603,7 @@ endif
       read(21,err=999, end=999)  spi_vol_arr_drift(1:n_spi_tot)
       read(21,err=999, end=999)  spi_psi_arr_drift(1:n_spi_tot)
       read(21,err=999, end=999)  spi_grad_psi_arr_drift(1:n_spi_tot)
+      read(21,err=999, end=999)  plasmoid_in_domain_arr(1:n_spi_tot)
 
       do i=1, n_spi_tot
         pellets(i)%spi_R       = spi_R_arr(i)
@@ -619,6 +622,7 @@ endif
         pellets(i)%spi_vol_drift     = spi_vol_arr_drift(i)
         pellets(i)%spi_psi_drift     = spi_psi_arr_drift(i)
         pellets(i)%spi_grad_psi_drift= spi_grad_psi_arr_drift(i)
+        pellets(i)%plasmoid_in_domain= plasmoid_in_domain_arr(i)
 
         write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                         pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
@@ -640,6 +644,7 @@ endif
       deallocate (spi_vol_arr_drift)
       deallocate (spi_psi_arr_drift)
       deallocate (spi_grad_psi_arr_drift)
+      deallocate (plasmoid_in_domain_arr)
 
       if (spi_tor_rot) then
         read(21,err=999, end=999) ns_phi_rotate 
@@ -922,6 +927,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real*8, allocatable :: spi_vol_arr_drift (:)
   real*8, allocatable :: spi_psi_arr_drift (:)
   real*8, allocatable :: spi_grad_psi_arr_drift (:)
+  integer,allocatable :: plasmoid_in_domain_arr (:)
 
   integer :: err_exists, dterr, n_spi_begin, i_inj
   logical :: flag_exists, type_match
@@ -1748,6 +1754,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       allocate (spi_vol_arr_drift(n_spi_tot))
       allocate (spi_psi_arr_drift(n_spi_tot))
       allocate (spi_grad_psi_arr_drift(n_spi_tot))
+      allocate (plasmoid_in_domain_arr(n_spi_tot))
 
       call HDF5_array1D_reading(file_id,spi_R_arr,"spi_R_arr")
       call HDF5_array1D_reading(file_id,spi_Z_arr,"spi_Z_arr")
@@ -1847,6 +1854,15 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         spi_grad_psi_arr_drift = 0.0
         write(*,*)"Backward Compatibility: No spi_grad_psi_drift found, assuming to be 0."
       end if
+
+      call H5Lexists_f(file_id,"plasmoid_in_domain_arr",flag_exists,err_exists)
+      if (flag_exists .and. err_exists == 0) then
+        call HDF5_array1D_reading_int(file_id,plasmoid_in_domain_arr,"plasmoid_in_domain_arr")
+      else
+        plasmoid_in_domain_arr = 0
+        write(*,*)"Backward Compatibility: No plasmoid_in_domain found, assuming to be 0 (not in domain)."
+      end if 
+
       do i=1, n_spi_tot
         pellets(i)%spi_R       = spi_R_arr(i)
         pellets(i)%spi_Z       = spi_Z_arr(i)
@@ -1864,6 +1880,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
         pellets(i)%spi_vol_drift     = spi_vol_arr_drift(i)
         pellets(i)%spi_psi_drift     = spi_psi_arr_drift(i)
         pellets(i)%spi_grad_psi_drift= spi_grad_psi_arr_drift(i)
+        pellets(i)%plasmoid_in_domain= plasmoid_in_domain_arr(i)
 
         write(*,'(A,I5,6ES10.2)') ' *** SHATTERED PELLET PARAMETERS : ',i, pellets(i)%spi_R, pellets(i)%spi_Z, &
                         pellets(i)%spi_phi, pellets(i)%spi_Vel_R, pellets(i)%spi_Vel_Z, pellets(i)%spi_radius
@@ -1886,6 +1903,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       deallocate (spi_vol_arr_drift)
       deallocate (spi_psi_arr_drift)
       deallocate (spi_grad_psi_arr_drift)
+      deallocate (plasmoid_in_domain_arr)
 
       if (spi_tor_rot) then
         call HDF5_real_reading(file_id,ns_phi_rotate,"ns_phi_rotate")

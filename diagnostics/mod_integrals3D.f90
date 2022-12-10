@@ -144,7 +144,7 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (defined WITH_Neutrals)
 real*8  :: source_neutral, source_neutral_drift
 real*8  :: source_neutral_arr(n_inj_max), source_neutral_drift_arr(n_inj_max)
 #endif

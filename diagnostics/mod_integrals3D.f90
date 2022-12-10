@@ -206,7 +206,6 @@ real*8  :: alpha_imp, dalpha_imp_dT, beta_imp, dbeta_imp_dT
 
 ! Additional variables related to the radiated power
 #if (defined WITH_Neutrals)
-real*8  :: source_neutral
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature

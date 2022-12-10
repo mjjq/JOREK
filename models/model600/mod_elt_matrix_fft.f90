@@ -1300,8 +1300,8 @@ do i=1,n_vertex_max
           end do
 
           ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
-          source_imp = 0.d0
-          source_bg  = 0.d0
+          source_imp = 0.d0; source_imp_arr = 0.d0
+          source_bg  = 0.d0; source_bg_arr = 0.d0
           if (with_impurities) then
             call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp)
             do i_inj = 1,n_inj

@@ -121,10 +121,11 @@ interface
   !>   light_vert:   (light_vertices) light vertices
   !>   fields:       (fields_base) JOREK MHD fields data structure
   !>   particle:     (particle_base) JOREK particle base 
+  !>   time_id:      (integer) id of the particle simulation time
   !>   mass:         (real8) particle mass
   !> outputs:
   !>   mhd_fields:   (real8)(n_mhd) interpolated JOREK MHD fields
-  subroutine comp_mhd_fields(light_vert,fields,particle_in,mass,mhd_fields)
+  subroutine comp_mhd_fields(light_vert,fields,particle_in,time_id,mass,mhd_fields)
     use mod_fields,         only: fields_base
     use mod_particle_types, only: particle_base
     IMPORT :: light_vertices
@@ -133,6 +134,7 @@ interface
     class(light_vertices),intent(in)          :: light_vert
     class(fields_base),intent(in)             :: fields
     class(particle_base),intent(in)           :: particle_in
+    integer,intent(in)                        :: time_id
     real*8,intent(in)                         :: mass
     !> outputs
     real*8,dimension(light_vert%n_mhd),intent(out) :: mhd_fields
@@ -316,7 +318,7 @@ particle_types,n_active_particles,active_particles_id)
           !> compute MHD fields
           call light_vert%compute_mhd_fields(sims_particles(ii)%fields,&
           sims_particles(ii)%groups(jj)%particles(active_particles_id(kk,jj,ii)),&
-          sims_particles(ii)%groups(jj)%mass,mhd_fields)
+          ii,sims_particles(ii)%groups(jj)%mass,mhd_fields)
           !> compute light properties
           call light_vert%compute_light_properties(pp+kk,ii,&
           sims_particles(ii)%groups(jj)%particles(active_particles_id(kk,jj,ii)),&

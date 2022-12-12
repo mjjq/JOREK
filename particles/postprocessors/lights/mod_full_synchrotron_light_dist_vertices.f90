@@ -1,7 +1,7 @@
 !> the mod_full_synchrotron_dist_light implements 
 !> variables and procedures defining a 
 !> the full synchrotron light distribution
-!> of paritcle light sources. The model used is:
+!> of particle light sources. The model used is:
 !> L. Carbajal et al., PPCF, vol.59, 124001, 2017
 module mod_full_synchrotron_light_dist_vertices
 use mod_synchrotron_light_vertices, only: synchrotron_light
@@ -168,16 +168,17 @@ end subroutine synchrotron_spectral_irradiance
 !> interpolate the JOREK MHD fields required for computing the
 !> synchrotron radiation properties
 !> inputs:
-!>   light_vert: (full_synchrotron_light_dist) empty synchrotron lights
-!>   fields:     (fields_base) JOREK MHD fields
-!>   particle:   (particle_base) JOREK particle base structure
-!>   mass:       (real8) particle mass
+!>   light_vert:  (full_synchrotron_light_dist) empty synchrotron lights
+!>   fields:      (fields_base) JOREK MHD fields
+!>   particle_in: (particle_base) JOREK particle base structure
+!>   time_id:     (integer) particle simulation time index
+!>   mass:        (real8) particle mass
 !> outputs:
 !>   mhd_fields: (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
 !>               1-3: x,y,z electric field componenets
 !>               4-6: x,y,z magnetic field componenets
 subroutine compute_synchrotron_mhd_fields(light_vert,fields,&
-particle_in,mass,mhd_fields)
+particle_in,time_id,mass,mhd_fields)
   use mod_fields,                only: fields_base
   use mod_particle_types,        only: particle_base
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
@@ -190,16 +191,16 @@ particle_in,mass,mhd_fields)
   class(full_synchrotron_light_dist),intent(in) :: light_vert
   class(fields_base),intent(in)                 :: fields
   class(particle_base),intent(in)               :: particle_in
+  integer,intent(in)                            :: time_id
   real*8,intent(in)                             :: mass
   !> Outputs:
   real*8,dimension(light_vert%n_mhd),intent(out) :: mhd_fields
   !> Variables:
-  integer :: ii
   real*8  :: psi,U
   !> compute the MHD fields
 #ifndef UNIT_TESTS_AFIELDS
   !> compute JOREK electric and magnetic JOREK fields in cartesian coordinates
-  call fields%calc_EBpsiU(light_vert%times(ii),particle_in%i_elm,&
+  call fields%calc_EBpsiU(light_vert%times(time_id),particle_in%i_elm,&
   particle_in%st,particle_in%x(3),mhd_fields(1:3),mhd_fields(4:6),psi,U)
 #else
   !> analytical fields only for unit testing

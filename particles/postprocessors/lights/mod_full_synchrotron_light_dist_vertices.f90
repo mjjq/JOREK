@@ -212,7 +212,7 @@ end subroutine compute_synchrotron_mhd_fields
 
 !> compute_synchrotron_light_properties computes the
 !> synchrotron radiation properties from a
-!> kinetic relativistic particle. Variables
+!> kinetic relativistic particle.
 !> inputs:
 !>   light_vert:  (full_synchrotron_light_dist) empty synchrotron lights
 !>   property_id: (integer) index of the property to be initialised

@@ -34,14 +34,6 @@ type,abstract,extends(vertices) :: light_vertices
 end type light_vertices
 
 !> Interfaces -------------------------------------------
-!> module procedure
-!interface fill_time_vector
-!  module procedure fill_time_vector_particle_sims
-!end interface fill_time_vector
-
-interface store_x_from_id
-  module procedure store_light_x_from_particle_id
-end interface store_x_from_id
 
 interface
 

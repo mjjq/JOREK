@@ -57,7 +57,6 @@ contains
 subroutine synchrotron_directionality_funct(light_vert,spectra,time_id,&
 light_id,x_shaded,light_dstb)
   use constants,                only: TWOPI,SPEED_OF_LIGHT
-  use mod_besselk,        only: f_besselk
   use mod_coordinate_transforms,only: cartesian_to_spherical_latitude
   use mod_spectra,              only: spectrum_base
   !$ use omp_lib
@@ -144,8 +143,7 @@ end subroutine synchrotron_directionality_funct
 !>   light_vert: (synchrotron_light vertices) synchrotron light sources
 !>   spectra:    (spectrum_base) spectral intervals and integrators
 !>   light_spec_irradiance:  (real8)(n_points,n_spectra) synchrotron full spectral
-!>                           angular distribution per unit of total power at the
-!>                           at the shaded point x_shaded
+!>                           angular distribution in SI units at the shaded point x_shaded
 subroutine synchrotron_spectral_irradiance(light_vert,spectra,time_id,&
 light_id,x_shaded,light_spec_irradiance)
   use mod_spectra,  only: spectrum_base

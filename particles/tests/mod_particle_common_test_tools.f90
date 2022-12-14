@@ -18,7 +18,7 @@ public :: fill_particle_kinetic,fill_particle_kinetic_leapfrog
 public :: fill_particle_kinetic_relativistic,fill_particle_gc_relativistic
 public :: obtain_particle_charges,allocate_one_particle_list_type
 public :: copy_group_fieldline_B_hat_prev
-public :: compute_test_E_B_fields
+public :: compute_test_E_B_fields,compute_test_E_B_normB_gradB_curlb_Dbdt_fields
 public :: fill_particle_kinetic_relativistic_RE,fill_particle_gc_relativistic_RE
 public :: fill_particles_tokamak,fill_mass_RE
 public :: fill_particle_simulations_no_init
@@ -90,11 +90,48 @@ subroutine compute_test_E_B_fields_parabolic(x,E_field,B_field)
   real*8,dimension(3),intent(in) :: x
   !> outputs:
   real*8,dimension(3),intent(out) :: E_field,B_field
-  !> compute magnetic field
-  !> compute the electric field
+  !> compute magnetic field and electric field
   B_field = B0*(/x(2)-Z0,R0-x(1),R0/)/x(1)
   E_field = (/0.d0,0.d0,-E0*R0/x(1)/)
 end subroutine compute_test_E_B_fields_parabolic
+
+!> compute test electric, magnetic, gradB, curlb, dbdt using
+!> a parabolic poloidal flux:
+!> psi = B0*((R-R0)**2 + (Z-Z0)**2)/2
+!> and a radially dependent toroidal magnetic/electric fields
+!> inputs:
+!>   x: (real8)(3) position in cylindrical coord. (R,Z,phi)
+!> outputs:
+!>   E_field: (real8)(3) electric field
+!>   b_field: (real8)(3) magnetic field direction
+!>   normB:   (real8) magnetic intensity
+!>   gradB:   (real8)(3) gradient of the magnetic intensity
+!>   curlb:   (real8)(3) curl of the magnetic direction
+!>   dbdt:    (real8)(3) time derivative of the magnetic direction
+subroutine compute_test_E_B_normB_gradB_curlb_Dbdt_fields(x,E_field,&
+b_field,normB,gradB,curlb,dbdt)
+  use mod_math_operators, only: cross_product
+  implicit none
+  !> inputs:
+  real*8,dimension(3),intent(in) :: x
+  !> outputs:
+  real*8,intent(out)              :: normB
+  real*8,dimension(3),intent(out) :: E_field,b_field,gradB,curlb,dbdt
+  !> compute the electric field
+  E_field = (/0d0,0d0,-E0*R0/x(1)/)
+  !> compute the magnetic field and its norm
+  b_field = B0*(/x(2)-Z0,R0-x(1),R0/)/x(1)
+  normB = norm2(b_field)
+  !> compute the gradient of the magnetic field intensity
+  gradB = (/-((R0+2d0*x(1))*(R0-x(1))+((x(2)-Z0)**2)+(R0**2))/x(1),x(2)-Z0,0d0/)
+  gradB = (gradB*(B0**2))/((x(1)**2)*normB)
+  !> curl of the magnetic field direction
+  b_field = b_field/normB;
+  curlb = -B0*(/0d0,0d0,R0+x(1)/)/(x(1)**2)
+  curlb = curlb + cross_product(b_field,gradB); curlb = curlb/normB;
+  !> compute the time derivative of the magnetic field direction
+  dbdt = 0d0; 
+end subroutine compute_test_E_B_normB_gradB_curlb_Dbdt_fields
 
 !> compute test gradient of the poloidal flux
 !> a parabolic poloidal flux:

@@ -23,7 +23,7 @@ module mod_ccoll_relativistic
   end type ccoll_tabulatedL0L1
 
   public :: ccoll_tabulatedL0L1, ccoll_compute_L0L1table, ccoll_deallocate_L0L1table, &
-       ccoll_read_L0L1table, ccoll_write_L0L1table, &
+       ccoll_read_L0L1table, ccoll_write_L0L1table, ccoll_init_ions, &
        ccoll_kinetic_relativistic_push, ccoll_clog, ccoll_coeffs, ccoll_gc_relativistic_push
 
   private
@@ -206,6 +206,81 @@ contains
     call HDF5_close(file_id)
     
   end function ccoll_read_L0L1table
+
+
+  !> Initialize ion data
+  !> This routine allocates and initializes data needed to include ions (including impurities) to the collision operator.
+  !> Call this once before calling fields%calc_njTj.
+  !> All initialized arrays have size Nion and the order is (/main ion, imp_0, imp_+1, imp_+2, .../)
+  subroutine ccoll_init_ions(fields, ni, Z0, Zi, ai, Ii, mi, m_i_over_m_imp, ierr)
+    use phys_module, only: central_mass, imp_type
+    implicit none
+    class(fields_base), intent(in) :: fields
+    real*8, intent(inout),allocatable :: ni(:) !< Allocated empty array for storing ion number densities
+    real*8, intent(inout),allocatable :: Z0(:) !< The net charge for all ions and their charge states
+    real*8, intent(inout),allocatable :: Zi(:) !< The charge number (i.e. atomic number) for all ions
+    real*8, intent(inout),allocatable :: ai(:) !< Normalized effective length scale for needed for the partial screening collisions 
+    real*8, intent(inout),allocatable :: Ii(:) !< Mean excitation energy needed for the partial screening collisions
+    real*8, intent(inout),allocatable :: mi(:) !< Ion masses [kg]
+    real*8, intent(out) :: m_i_over_m_imp      !< m_i / m_imp where m_i is main ion mass and m_imp impurity species mass
+    integer, intent(out) :: ierr               !< Zero if initialization was a success
+
+    real*8 :: Iconst_Ar(19), aconst_Ar(19)
+    real*8 :: Iconst_Ne(11), aconst_Ne(11)
+    integer atomnum_imp
+  
+    ierr = 0
+
+    ! Mean excitation energy for all charge states from neutral to fully ionized (for which we used a dummy value as it is not used in the computation)
+    Iconst_Ar = (/188.5, 219.4, 253.8, 293.4, 339.1, 394.5, 463.4, 568.0, 728.0, 795.9, 879.8, 989.9, 1138.1, 1369.5, 1791.2, 2497.0, 4677.2, 4838.2, 1.0/)
+    Iconst_Ne = (/137.2, 165.2, 196.9, 235.2, 282.8, 352.6, 475.0, 696.8,  1409.2, 1498.4, 1.0/)
+
+    ! Normalized effective length scale for all charge states from neutral to fully ionized (for which we used a dummy value as it is not used in the computation)
+    aconst_Ar = (/96, 90, 84, 78, 72, 65, 59, 53, 47, 44, 41, 38, 35, 32, 27, 21, 13, 13, 1/)
+    aconst_Ne = (/111, 100, 90, 80, 71, 62, 52, 40, 24, 23, 1/)
+
+    if(with_impurities) then
+       if( trim(imp_type) .eq. 'Ne') then
+          atomnum_imp = 10
+          m_i_over_m_imp = central_mass/20
+
+          allocate( Ii(atomnum_imp + 2), ai(atomnum_imp + 2) )
+          Ii(2:atomnum_imp) = Iconst_Ne
+          ai(2:atomnum_imp) = aconst_Ne
+       elseif( trim(imp_type) .eq. 'Ar') then
+          atomnum_imp = 18
+          m_i_over_m_imp = central_mass/40
+
+          allocate( Ii(atomnum_imp + 2), ai(atomnum_imp + 2) )
+          Ii(2:atomnum_imp) = Iconst_Ar
+          ai(2:atomnum_imp) = aconst_Ar
+       else
+          ! Unknown impurity
+          ierr = 1
+          return
+       end if
+
+       allocate( ni(size(Ii)), Z0(size(Ii)), Zi(size(Ii)), mi(size(Ii)) )
+       Zi(2:size(Ii)) = atomnum_imp
+       Z0(2:size(Ii)) = (/0:atomnum_imp/)
+       mi(2:size(Ii)) = MASS_PROTON * central_mass / m_i_over_m_imp
+
+    else
+       allocate( ni(1), Z0(1), Zi(1), mi(1) )
+       m_i_over_m_imp = 1
+
+    end if
+
+    mi(i) = central_mass * MASS_PROTON
+    Zi(1) = 1
+    Z0(1) = 1
+    Ii(1) = 1.0
+    ai(1) = 1.0
+
+    Ii = Ii*EL_CHG
+  
+  end subroutine ccoll_init_ions
+
 
   !> Computes Coulomb logarithm for a given test particle and plasma species.
   !> The logarithm is estimated as ln{lambda_D/min{bqm,bcl}} where lambda_D is

@@ -3,7 +3,7 @@
 !> synchrotron light distribution of guiding center light
 !> sources. The model used is:
 !> M. Hoppe et al., Nucl. Fusion, vol.58, p.026032, 2018
-module mod_gyroaverage_synchrotron_dist_light_vertices
+module mod_gyroaverage_synchrotron_light_dist_vertices
 use mod_synchrotron_light_vertices, only: synchrotron_light
 implicit none
 
@@ -54,8 +54,8 @@ time_id,light_id,x_shaded,light_dstb)
   !$ use omp_lib
   implicit none
   !> Inputs-Outputs:
-  class(gyroaverage_synchrotron_light_dist),intent(in) :: light_vert
-  class(spectrum_base),intent(inout)                   :: spectra
+  class(gyroaverage_synchrotron_light_dist),intent(inout) :: light_vert
+  class(spectrum_base),intent(inout)                      :: spectra
   !> Inputs:
   integer,intent(in)                          :: time_id,light_id
   real*8,dimension(light_vert%n_x),intent(in) :: x_shaded
@@ -88,7 +88,7 @@ time_id,light_id,x_shaded,light_dstb)
   !> compute the directionality function factors
   fact_3 = 5d-1*cospsi*(1d0-cospsi*cospsi)
   cospsi = light_properties(5)*cospsi !< becareful fron now on cospsi = beta*cospsi
-  fact3 = fact_3/(1d0-cospsi)
+  fact_3 = fact_3/(1d0-cospsi)
   fact_2 = (1d0-light_properties(5)*light_properties(6)*cosmu)*(((1d0-cospsi)/cospsi)**2)
   fact_1 = (sqrt(((1d0-cospsi)**3)/(5d-1*cospsi)))*(light_properties(4)**3)
   !> compute the directionality function
@@ -137,8 +137,8 @@ time_id,light_id,x_shaded,light_spec_irradiance)
   use mod_spectra, only: spectrum_base
   implicit none
   !> Inputs-Outputs:
-  class(gyroaverage_synchrotron_light_dist),intent(in) :: light_vert
-  class(spectrum_base),intent(inout)                   :: spectra
+  class(gyroaverage_synchrotron_light_dist),intent(inout) :: light_vert
+  class(spectrum_base),intent(inout)                      :: spectra
   !> Inputs:
   integer,intent(in)                          :: time_id,light_id
   real*8,dimension(light_vert%n_x),intent(in) :: x_shaded
@@ -168,7 +168,7 @@ end subroutine gyroaverage_synchrotron_spectral_irradiance
 !>                 8-10:  x,y,z components of the gradient of ||B||
 !>                 11-13: x,y,z components of the curl of b
 !>                 14-16: x,y,z components of the b time derivative
-subroutine compute_synchrotron_mhd_fields(light_vert,fields,&
+subroutine compute_gyroaverage_synchrotron_mhd_fields(light_vert,fields,&
 particle_in,time_id,mass,mhd_fields)
   use mod_fields,                only: fields_base
   use mod_particle_types,        only: particle_base
@@ -203,7 +203,7 @@ particle_in,time_id,mass,mhd_fields)
   mhd_fields(8:10)  = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(8:10))
   mhd_fields(11:13) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(11:13))
   mhd_fields(14:16) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(14:16))
-end subroutine compute_synchrotron_mhd_fields
+end subroutine compute_gyroaverage_synchrotron_mhd_fields
 
 !> compute the gyroaverage synchrotron light properties from a
 !> relativistic guiding center particle.
@@ -249,32 +249,37 @@ property_id,time_id,particle_in,mass,mhd_fields)
   select type(p_in=>particle_in)
     type is (particle_gc_relativistic)
     !> compute the gc velocity direction
-    light_vert%properties(1:4) = compute_relativistic_gc_rhs(integer(p_in%q,kind=4),&
+    light_vert%properties(1:4,property_id,time_id) = compute_relativistic_gc_rhs(int(p_in%q,kind=4),&
                                  mass,p_in%p(2),p_in%x(1),p_in%p(1),mhd_fields(7),&
                                  mhd_fields(1:3),mhd_fields(4:6),mhd_fields(8:10),&
                                  mhd_fields(11:13),mhd_fields(14:16))
-    light_vert%properties(1:3) = light_vert%properties(1:3)/sqrt(light_vert%properties(1)**2 + &
-    light_vert%properties(2)**2 + light_vert%properties(3)**2)
+    light_vert%properties(1:3,property_id,time_id) = light_vert%properties(1:3,property_id,time_id)/&
+    sqrt(light_vert%properties(1,property_id,time_id)**2 + light_vert%properties(2,property_id,time_id)**2 + &
+    light_vert%properties(3,property_id,time_id)**2)
     !> compute the relativistic factor
-    light_vert%properties(4) = compute_relativistic_factor(p_in,mass,mhd_fields(7))
+    light_vert%properties(4,property_id,time_id) = compute_relativistic_factor(p_in,mass,mhd_fields(7))
     !> compute beta beta = v/c
-    light_vert%properties(5) = sqrt(1d0 - (1d0/(light_vert%properties(4)**2)))
+    light_vert%properties(5,property_id,time_id) = sqrt(1d0 - &
+                         (1d0/(light_vert%properties(4,property_id,time_id)**2)))
     !> compute cosinus and sinus of the pitch angle beta_perp2 = (p_perp/(mass*gamma*c))**2
     !> (p_perp/(mass*c))**2 = (2*mu*B)/(mass*(c**2))
     charge_r8 = real(p_in%q,kind=8)
-    beta_perp2 = (2d0*p_in%p(2)*mhd_fields(7))/(mass*((SPEED_OF_LIGHT*light_vert%properties(4))**2)) 
-    light_vert%properties(6:7) = (/p_in%p(1)/(mass*SPEED_OF_LIGHT*light_vert%properties(4)),&
-    sqrt(beta_perp2)/)/light_vert%properties(5)
+    beta_perp2 = (2d0*p_in%p(2)*mhd_fields(7))/(mass*((SPEED_OF_LIGHT*&
+                 light_vert%properties(4,property_id,time_id))**2)) 
+    light_vert%properties(6:7,property_id,time_id) = (/p_in%p(1)/(mass*SPEED_OF_LIGHT*&
+    light_vert%properties(4,property_id,time_id)),sqrt(beta_perp2)/)/light_vert%properties(5,property_id,time_id)
     !> compute the critical wavelenght
     rel_fact_parallel = sqrt(1d0+((p_in%p(1)/(mass*SPEED_OF_LIGHT))**2))
-    light_vert%properties(8) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*rel_fact_parallel)/&
-                             (3d0*charge_r8*EL_CHG*mhd_fields(7)*(light_vert%properties(4)**2))
+    light_vert%properties(8,property_id,time_id) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
+                             rel_fact_parallel)/(3d0*charge_r8*EL_CHG*mhd_fields(7)*&
+                             (light_vert%properties(4,property_id,time_id)**2))
     !> compute the directionality function intensity
-    light_vert%properties(9) = (2.7d1*EL_CHG*charge*mhd_fields(7)*(light_vert%properties(4)**7))/&
-    (1.28d2*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*((PI*light_vert%properties(8)*(rel_fact_parallel**2))**2))
+    light_vert%properties(9,property_id,time_id) = (2.7d1*EL_CHG*charge_r8*mhd_fields(7)*&
+    (light_vert%properties(4,property_id,time_id)**7))/(1.28d2*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
+    ((PI*light_vert%properties(8,property_id,time_id)*(rel_fact_parallel**2))**2))
     !> compute the synchrotron power for normalisation
-    light_vert%properties(10) = (beta_perp2*((mhd_fields(7)*rel_fact_parallel*&
-                                light_vert%properties(4)*((EL_CHG*charge)**2))**2))/&
+    light_vert%properties(10,property_id,time_id) = (beta_perp2*((mhd_fields(7)*rel_fact_parallel*&
+                                light_vert%properties(4,property_id,time_id)*((EL_CHG*charge_r8)**2))**2))/&
                                 (6d0*PI*EPS_ZERO*SPEED_OF_LIGHT*((mass*ATOMIC_MASS_UNIT)**2))
   end select
 end subroutine compute_gyroaverage_synchrotron_light_properties
@@ -287,11 +292,11 @@ end subroutine compute_gyroaverage_synchrotron_light_properties
 !> outputs:
 !>   light_vert:  (gyroaverage_synchrotron_light_dist) initialised 
 !>                gyroaverage synchrotron light class
-subroutine setup_gyroaverage_synchrotron_light_class
+subroutine setup_gyroaverage_synchrotron_light_class(light_vert)
   use mod_particle_types, only: particle_gc_relativistic_id
   implicit none
   !> Inputs-Outputs:
-  class(gyroaverage_synchrotron_light_dist),intent(in) :: light_vert
+  class(gyroaverage_synchrotron_light_dist),intent(inout) :: light_vert
   !> set-up the gyroaverage synchrotron light variables
   light_vert%n_property_vertex = 10; light_vert%n_mhd = 16;
   light_vert%n_particle_types = 1;
@@ -329,8 +334,8 @@ wavelength_crit,fact_1,fact_2,fact_3,dir_funct_intensity,dir_funct)
   xi = lambdac_over_lambda*fact_1;
   besselk_1 = f_besselk(onethirds,xi); besselk_2 = f_besselk(twothirds,xi);
   if(isnan(besselk_1)) return; if(isnan(besselk_2)) return;
-  dir_funct = dir_funct_intensity*(lambdac_over_lambda**4)*funct_2*(&
+  dir_funct = dir_funct_intensity*(lambdac_over_lambda**4)*fact_2*(&
               (besselk_2**2) + (besselk_1**2)*fact_3)
 end subroutine compute_synchrotron_directionality_funct
 !> -------------------------------------------------------
-end module mod_gyroaverage_synchrotron_dist_light_vertices
+end module mod_gyroaverage_synchrotron_light_dist_vertices

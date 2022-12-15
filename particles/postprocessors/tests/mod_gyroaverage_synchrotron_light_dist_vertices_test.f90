@@ -95,8 +95,8 @@ subroutine setup()
   integer :: ii,jj,ifail,n_gc_RE_max_loc,n_threads
   class(type_rng),dimension(:),allocatable :: rngs
   !> initialisation
-  particle_types_check_sol = (/particle_gc_relativistic_id/)
-  vertex_sol%n_property_vertex = n_properties; ifail = 0;
+  ifail = 0; particle_types_check_sol = (/particle_gc_relativistic_id/);
+  vertex_sol%n_mhd = n_mhd_sol; vertex_sol%n_property_vertex = n_properties;
   n_gc_RE_max = 0; n_active_particles_sol = 0; n_threads = 1;
   !$ n_threads = omp_get_max_threads()
   call gnu_rng_interval(n_times_sol,sim_time_interval,time_vector_sol)

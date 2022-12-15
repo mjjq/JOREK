@@ -19,7 +19,7 @@ real*8,parameter                            :: tol_real8=2.5d-11
 real*8,parameter                            :: tol2_real8=3.5d-8
 real*8,parameter                            :: mass_RE=5.48579909065d-4
 real*8,parameter                            :: exclusion_values=1.d-100
-!> parameters for generating synhrotron lights
+!> parameters for generating synchrotron lights
 integer,parameter :: n_mhd_sol=6 !< three components E-fields and three B-fields
 integer,parameter :: n_x=3
 integer,parameter :: n_properties=13

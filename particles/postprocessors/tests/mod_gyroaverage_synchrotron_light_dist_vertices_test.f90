@@ -127,13 +127,13 @@ subroutine setup()
       n_gc_RE_max = max(n_gc_RE_max,n_gc_RE_max_loc)
   enddo
   !> initialise positions and properties tables
-  !TODO
+  call compute_gyroavg_synch_x_properties_ana()
   !> initialise deterministic spectra
   spectrum = spectrum_integrator_2nd(n_lines_per_spectrum,n_spectra,min_wlen,max_wlen)
   call spectrum%generate_spectrum()
   !> generate shadowed point positions
   allocate(x_shadowed(n_x,n_shaded_points_per_particle,n_gc_RE_max,n_times_sol))
-  !TODO
+  call compute_x_shadowed_gc
 end subroutine setup 
 
 !> destroy all test features
@@ -142,9 +142,125 @@ subroutine teardown()
   call vertex_sol%deallocate_vertices; call spectrum%deallocate_spectrum;
   if(allocated(x_shadowed)) deallocate(x_shadowed)
 end subroutine teardown
+
 !> Tests -------------------------------------------------------------
 
 !> Tools -------------------------------------------------------------
+!> generate shadowed points for each light. The shadowed point position
+!> is taken within the emission cone of the synchrotron radiation.
+!> The emission cone half angle is approximated with 
+!> cos(theta) = 1/(2*rel_fact). The relativistic factor is defined as:
+!> rel_fact = sqrt(1+(p/(mass*c))**2) with p the total gc momentum and
+!> c the speed of light
+subroutine compute_x_shadowed_gc()
+  use mod_sampling, only: sample_uniform_cone
+  implicit none
+  !> variables
+  integer :: ii,jj,kk,n_gc_time
+  real*8  :: cos_half_angle
+  real*8,dimension(n_x) :: v_gc_dir,x_gc,rng
+  !> generate shadowed points
+  do kk=1,n_times_sol
+    n_gc_time = sum(n_active_particles_sol(:,jj))
+    do jj=1,n_gc_time
+      x_gc = x_cart_sol(:,jj,kk)
+      v_gc_dir = properties_sol(1:3,jj,kk)
+      cos_half_angle = cos(5d-1/properties_sol(4,jj,kk))
+      do ii=1,n_shaded_points_per_particle
+        call random_number(rng)
+        x_shadowed(:,ii,jj,kk) = sample_uniform_cone(cos_half_angle,&
+        rng,v_gc_dir,x_gc,length_shadowed)
+      enddo
+    enddo
+  enddo
+end subroutine compute_x_shadowed_gc
+
+!> compute & fill the gyroaverage synchrotron light positions and properties
+subroutine compute_gyroavg_synch_x_properties_ana()
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian
+  use mod_particle_types,        only: particle_gc_relativistic
+  implicit none
+  !> variables
+  integer :: ii,jj,kk,counter
+  !> initialise positions and properties arrays
+  x_cart_sol = 0d0; properties_sol = 0d0;
+  !> fill property table
+  do kk=1,n_times_sol
+    counter = 0
+    do jj=1,n_groups_per_sim(kk)
+      select type(p_list=>sims_particles(kk)%groups(jj)%particles)
+        type is (particle_gc_relativistic)
+        do ii=1,n_particles_per_group(jj,kk)
+          if(p_list(ii)%i_elm.eq.0) cycle
+          counter = counter + 1
+          x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
+          call compute_gyroavg_synch_properties_ana_1p(p_list(ii),&
+          sims_particles(kk)%groups(jj)%mass,properties_sol(:,counter,kk))
+        enddo
+      end select
+    enddo
+  enddo
+end subroutine compute_gyroavg_synch_x_properties_ana
+
+!> compute gyroaverage synchrotron light properties using the analytical
+!> tokamak-like MHD fields for one guiding center
+subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties)
+  use constants,                      only: PI,EL_CHG,EPS_ZERO
+  use constants,                      only: ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
+  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
+  use mod_coordinate_transforms,      only: cylindrical_to_cartesian_velocity
+  use mod_particle_types,             only: particle_gc_relativistic
+  use mod_gc_relativistic,            only: compute_relativistic_gc_rhs
+  use mod_particle_common_test_tools, only: compute_test_E_B_normB_gradB_curlb_Dbdt_fields
+  implicit none
+  !> inputs:
+  type(particle_gc_relativistic),intent(in)  :: gc_in
+  real*8,intent(in)                          :: mass 
+  !> outputs:
+  real*8,dimension(n_properties),intent(out) :: properties
+  !> variables:
+  real*8                :: normB,rel_fact,rel_fact_parallel
+  real*8                :: thetap,charge,p_perp
+  real*8,dimension(n_x) :: E_field,b_field,gradB,curlb,dbdt
+  real*8,dimension(4)   :: x_gc_velocity
+  
+  !> compute the analytical MHD fields for computing the GC velocity
+  call compute_test_E_B_normB_gradB_curlb_Dbdt_fields(gc_in%x,E_field,&
+       b_field,normB,gradB,curlb,dbdt)
+  E_field = vector_cylindrical_to_cartesian(gc_in%x(3),E_field)
+  b_field = vector_cylindrical_to_cartesian(gc_in%x(3),b_field)
+  gradB   = vector_cylindrical_to_cartesian(gc_in%x(3),gradB)
+  curlb   = vector_cylindrical_to_cartesian(gc_in%x(3),curlb)
+  dbdt    = vector_cylindrical_to_cartesian(gc_in%x(3),dbdt)
+  !> compute the guiding center velocity
+  x_gc_velocity = compute_relativistic_gc_rhs(int(gc_in%q,kind=4),mass,gc_in%x(2),&
+  gc_in%x(1),gc_in%p(1),normB,E_field,b_field,gradB,curlb,dbdt)
+  x_gc_velocity(1:3) = cylindrical_to_cartesian_velocity(&
+  gc_in%x(1),gc_in%x(3),x_gc_velocity(1:3))
+  properties(1:3) = x_gc_velocity(1:3)/norm2(x_gc_velocity(1:3))
+  !> compute the relativistic factor
+  rel_fact = 1d0 + ((gc_in%p(1)/(mass*SPEED_OF_LIGHT))**2) 
+  rel_fact_parallel = sqrt(rel_fact)
+  rel_fact = sqrt(rel_fact + ((2d0*gc_in%p(2)*normB)/(mass*(SPEED_OF_LIGHT**2))))
+  properties(4) = rel_fact
+  !> compute the beta
+  properties(5) = sqrt(1d0 - (1d0/(rel_fact**2)));
+  !> compute the pitch angle
+  p_perp = sqrt(2d0*mass*gc_in%p(2)*normB); thetap = atan2(p_perp,gc_in%p(1));
+  properties(6:7) = (/cos(thetap),sin(thetap)/)
+  !> critical wavelength
+  charge = real(gc_in%q,kind=8)*EL_CHG
+  properties(8) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*rel_fact_parallel)/&
+                  (3d0*charge*normB*(rel_fact**2))
+  !> compute the directionality function intensity
+  properties(9) = (27d0*charge*normB*(rel_fact**7))/&
+                  (128d0*(PI**2)*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
+                  (sin(thetap)**2)*(rel_fact_parallel**4))
+  !> compute the synchrotron power normalisation
+  p_perp = p_perp/(mass*rel_fact) !< perpendicular velocity
+  properties(10) = ((charge**4)*((normB*rel_fact*rel_fact_parallel*p_perp)**2))/&
+                   (6d0*PI*EPS_ZERO*((mass*ATOMIC_MASS_UNIT)**2)*(SPEED_OF_LIGHT**3))
+end subroutine compute_gyroavg_synch_properties_ana_1p
 
 !>--------------------------------------------------------------------
 end module mod_gyroaverage_synchrotron_light_dist_vertices_test

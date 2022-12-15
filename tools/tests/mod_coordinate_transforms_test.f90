@@ -32,13 +32,15 @@ real*8,dimension(2),parameter :: phi_interval=(/0.d0,TWOPI/)
 !> vector components
 real*8,dimension(3),parameter :: a_lowbnd=(/-3.41d2,-4.67d1,-9.35d1/)
 real*8,dimension(3),parameter :: a_uppbnd=(/6.75d1,8.70d1,2.43d2/)
-real*4,dimension(3,n_points)  :: x_r4           !< set o positions
+real*4,dimension(3,n_points)  :: x_r4           !< set of positions
+real*4,dimension(3,n_points)  :: v_xyz_r4       !< set of velocities
 real*4,dimension(n_points)    :: phi_r4         !< set of toroidal angles
 real*4,dimension(3,n_origins) :: origin_r4      !< set of origins
 real*4,dimension(3,n_origins) :: v1_r4,v2_r4    !< random vectors
 real*4,dimension(3,n_origins) :: T_r4,N_r4,B_r4 !< sphere directions 
 real*4,dimension(3,n_points)  :: rthetaphi_r4   !< spherical coordinates
-real*8,dimension(3,n_points)  :: x_r8           !< set o positions
+real*8,dimension(3,n_points)  :: x_r8           !< set of positions
+real*8,dimension(3,n_points)  :: v_xyz_r8       !< set of velocities
 real*8,dimension(n_points)    :: phi_r8         !< set of toroidal angles
 real*8,dimension(3,n_origins) :: origin_r8      !< set of origins
 real*8,dimension(3,n_origins) :: v1_r8,v2_r8    !< random vectors
@@ -62,6 +64,7 @@ subroutine run_fruit_coordinate_transforms()
   call setup
   write(*,'(/A)') "  ... running: coordinate transforms tests"
   call test_cartesian_tofrom_cylindrical_transform
+  call test_cartesian_tofrom_cylindrical_velocity_transform
   call test_cartesian_tofrom_spherical_latitude_transform
   call test_cartesian_tofrom_spherical_colatitude_std_transform
   call test_cartesian_tofrom_cylindrical_vector_rotation
@@ -95,9 +98,10 @@ subroutine setup()
     rthetaphi_r8(:,ii) = sample_uniform_sphere_corona_rthetaphi(&
     r3_interval,costheta_interval,phi_interval,rnd_r8)
   enddo
-  !> generate random positions (assume cartesian coord.)
+  !> generate random positions and velocities (assume cartesian coord.)
   do ii=1,n_points
     call gnu_rng_interval(n_points,x_lowbnd,x_uppbnd,x_r8(:,ii))
+    call gnu_rng_interval(n_points,a_lowbnd,a_uppbnd,v_xyz_r8(:,ii))
   enddo
   !> generate random origins (assume cartesian coord.)
   do ii=1,n_origins
@@ -120,10 +124,10 @@ subroutine setup()
 
   !> convert to float precision
   x_r4 = real(x_r8,kind=4);  phi_r4 = real(phi_r8,kind=4); 
-  origin_r4 = real(origin_r8,kind=8); v1_r4 = real(v1_r8,kind=4); 
-  v2_r4 = real(v2_r8,kind=4); T_r4 = real(T_r8,kind=4); 
-  N_r4 = real(N_r8,kind=4); B_r4 = real(B_r8,kind=4); 
-  rthetaphi_r4 = real(rthetaphi_r8,kind=4);
+  v_xyz_r4 = real(v_xyz_r8,kind=4); origin_r4 = real(origin_r8,kind=8); 
+  v1_r4 = real(v1_r8,kind=4); v2_r4 = real(v2_r8,kind=4); 
+  T_r4 = real(T_r8,kind=4); N_r4 = real(N_r8,kind=4); 
+  B_r4 = real(B_r8,kind=4); rthetaphi_r4 = real(rthetaphi_r8,kind=4);
   do ii=1,n_origins
     call test_orthonormality_basis(T_r4(:,ii),N_r4(:,ii),B_r4(:,ii))
   enddo
@@ -262,6 +266,36 @@ subroutine test_cartesian_tofrom_cylindrical_transform()
     "Error test cartesian to/from cylindrical (double): x-cartesian mismatch!")
   enddo
 end subroutine test_cartesian_tofrom_cylindrical_transform
+
+!> Test cartesian to cylindrical velocities and from 
+!> cylindrical to cartesian velocities for both single
+!> and double precision functions
+subroutine test_cartesian_tofrom_cylindrical_velocity_transform
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical_velocity
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian_velocity
+  implicit none
+  !> variables
+  integer :: ii
+  real*4,dimension(3) :: x_cyl_r4,v_xyz_new_r4,v_cyl_r4
+  real*8,dimension(3) :: x_cyl_r8,v_xyz_new_r8,v_cyl_r8
+  !> test single precision
+  do ii=1,n_points
+    x_cyl_r4 = cartesian_to_cylindrical(x_r4(:,ii))
+    v_cyl_r4 = cartesian_to_cylindrical_velocity(x_r4(1,ii),x_r4(2,ii),v_xyz_r4(:,ii))
+    v_xyz_new_r4 = cylindrical_to_cartesian_velocity(x_cyl_r4(1),x_cyl_r4(3),v_cyl_r4)
+    call assert_equals(abs(v_xyz_r4(:,ii)-v_xyz_new_r4),zeros_r4,3,tol_calc_r4,&
+    "Error test cartesian to/from cylindrical velocity (single): v-cartesian mismatch!")
+  enddo
+  !> test double precision
+  do ii=1,n_points
+    x_cyl_r8 = cartesian_to_cylindrical(x_r8(:,ii))
+    v_cyl_r8 = cartesian_to_cylindrical_velocity(x_r8(1,ii),x_r8(2,ii),v_xyz_r8(:,ii))
+    v_xyz_new_r8 = cylindrical_to_cartesian_velocity(x_cyl_r8(1),x_cyl_r8(3),v_cyl_r8)
+    call assert_equals(abs(v_xyz_r8(:,ii)-v_xyz_new_r8),zeros_r8,3,tol_calc_r8,&
+    "Error test cartesian to/from cylindrical velocity (double): v-cartesian mismatch!")
+  enddo
+end subroutine test_cartesian_tofrom_cylindrical_velocity_transform
 
 !> Test cartesian to spherical (latitude) and spherical
 !> (latitude) transformations for single and double

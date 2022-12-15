@@ -4,6 +4,8 @@ module mod_coordinate_transforms
   private
   public :: cartesian_to_cylindrical
   public :: cylindrical_to_cartesian
+  public :: cylindrical_to_cartesian_velocity
+  public :: cartesian_to_cylindrical_velocity
   public :: cartesian_to_spherical_latitude
   public :: spherical_latitude_to_cartesian
   public :: spherical_colatitude_to_cartesian
@@ -33,6 +35,16 @@ module mod_coordinate_transforms
     module procedure cylindrical_to_cartesian_real8
     module procedure cylindrical_to_cartesian_real4
   end interface cylindrical_to_cartesian
+
+  interface cylindrical_to_cartesian_velocity
+    module procedure cylindrical_to_cartesian_velocity_real4
+    module procedure cylindrical_to_cartesian_velocity_real8
+  end interface cylindrical_to_cartesian_velocity
+
+  interface cartesian_to_cylindrical_velocity
+    module procedure cartesian_to_cylindrical_velocity_real4
+    module procedure cartesian_to_cylindrical_velocity_real8
+  end interface cartesian_to_cylindrical_velocity
 
   !> overload speherical (latitude) to cartesian coordinate transform
   interface cartesian_to_spherical_latitude
@@ -132,6 +144,16 @@ contains
     cyl(3) = atan2(-xyz(2), xyz(1))
   end function cartesian_to_cylindrical_r8
 
+  !> converts a position in RZPhi coordinates to xyz coordinates
+  pure function cylindrical_to_cartesian_real4(cyl) result(xyz)
+    real*4, intent(in)           :: cyl(3) !< The vector components in RZPhi coordinates
+    real*4                       :: xyz(3) !< The vector components in xyz coordinates
+
+    xyz(1) = cyl(1)*cos(-cyl(3))
+    xyz(2) = cyl(1)*sin(-cyl(3))
+    xyz(3) = cyl(2)
+  end function cylindrical_to_cartesian_real4
+
  !> converts a position in RZPhi coordinates to xyz coordinates
   pure function cylindrical_to_cartesian_real8(cyl) result(xyz)
     real*8, intent(in)           :: cyl(3) !< The vector components in RZPhi coordinates
@@ -142,15 +164,49 @@ contains
     xyz(3) = cyl(2)
   end function cylindrical_to_cartesian_real8
 
-  !> converts a position in RZPhi coordinates to xyz coordinates
-  pure function cylindrical_to_cartesian_real4(cyl) result(xyz)
-    real*4, intent(in)           :: cyl(3) !< The vector components in RZPhi coordinates
-    real*4                       :: xyz(3) !< The vector components in xyz coordinates
+  !> converts the cylindrical velocity into cartesian velocity
+  pure function cylindrical_to_cartesian_velocity_real4(R,phi,v_cyl) result(v_xyz)
+    real*4, intent(in) :: R,phi
+    real*4, intent(in) :: v_cyl(3)
+    real*4             :: v_xyz(3)
+    
+    v_xyz(1) = v_cyl(1)*cos(-phi) + R*v_cyl(3)*sin(-phi)
+    v_xyz(2) = v_cyl(1)*sin(-phi) - R*v_cyl(3)*cos(-phi)
+    v_xyz(3) = v_cyl(2)
+  end function cylindrical_to_cartesian_velocity_real4
 
-    xyz(1) = cyl(1)*cos(-cyl(3))
-    xyz(2) = cyl(1)*sin(-cyl(3))
-    xyz(3) = cyl(2)
-  end function cylindrical_to_cartesian_real4
+  !> converts the cylindrical velocity into cartesian velocity
+  pure function cylindrical_to_cartesian_velocity_real8(R,phi,v_cyl) result(v_xyz)
+    real*8, intent(in) :: R,phi
+    real*8, intent(in) :: v_cyl(3)
+    real*8             :: v_xyz(3)
+    
+    v_xyz(1) = v_cyl(1)*cos(-phi) + R*v_cyl(3)*sin(-phi)
+    v_xyz(2) = v_cyl(1)*sin(-phi) - R*v_cyl(3)*cos(-phi)
+    v_xyz(3) = v_cyl(2)
+  end function cylindrical_to_cartesian_velocity_real8
+
+  !> converts the cartesian velocity into cylindrical velocity
+  pure function cartesian_to_cylindrical_velocity_real4(x,y,v_xyz) result(v_cyl)
+    real*4, intent(in) :: x,y
+    real*4, intent(in) :: v_xyz(3)
+    real*4             :: v_cyl(3)
+     
+    v_cyl(1) = (x*v_xyz(1) + y*v_xyz(2))/(sqrt(x**2 + y**2))
+    v_cyl(3) = (y*v_xyz(1)-x*v_xyz(2))/(x**2 + y**2)
+    v_cyl(2) = v_xyz(3)
+  end function cartesian_to_cylindrical_velocity_real4
+
+  !> converts the cartesian velocity into cylindrical velocity
+  pure function cartesian_to_cylindrical_velocity_real8(x,y,v_xyz) result(v_cyl)
+    real*8, intent(in) :: x,y
+    real*8, intent(in) :: v_xyz(3)
+    real*8             :: v_cyl(3)
+     
+    v_cyl(1) = (x*v_xyz(1) + y*v_xyz(2))/(sqrt(x**2 + y**2))
+    v_cyl(3) = (y*v_xyz(1)-x*v_xyz(2))/(x**2 + y**2)
+    v_cyl(2) = v_xyz(3)
+  end function cartesian_to_cylindrical_velocity_real8
 
   !> return the spherical coordinates in terms of the latitude and azimutal angles
   !> (rPsiChi) given the center and the orientation of the sphere. The sphere

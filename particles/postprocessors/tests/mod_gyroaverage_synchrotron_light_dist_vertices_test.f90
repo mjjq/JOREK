@@ -16,7 +16,7 @@ public :: run_fruit_gyroaverage_synchrotron_light_dist_vertices
 
 !> Variables ---------------------------------------------------------
 !> general parameters
-real*8,parameter :: tol_real8=1d-16
+real*8,parameter :: tol_real8=1d-12
 real*8,parameter :: tol2_real8=1d-16
 real*8,parameter :: mass_RE=5.48579909065d-4
 !> parameters for generating synchrotron lights
@@ -276,7 +276,7 @@ subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties)
   curlb   = vector_cylindrical_to_cartesian(gc_in%x(3),curlb)
   dbdt    = vector_cylindrical_to_cartesian(gc_in%x(3),dbdt)
   !> compute the guiding center velocity
-  x_gc_velocity = compute_relativistic_gc_rhs(int(gc_in%q,kind=4),mass,gc_in%x(2),&
+  x_gc_velocity = compute_relativistic_gc_rhs(int(gc_in%q,kind=4),mass,gc_in%p(2),&
   gc_in%x(1),gc_in%p(1),normB,E_field,b_field,gradB,curlb,dbdt)
   x_gc_velocity(1:3) = cylindrical_to_cartesian_velocity(&
   gc_in%x(1),gc_in%x(3),x_gc_velocity(1:3))

@@ -279,7 +279,7 @@ property_id,time_id,particle_in,mass,mhd_fields)
     !> compute the directionality function intensity
     light_vert%properties(9,property_id,time_id) = (2.7d1*EL_CHG*charge_r8*mhd_fields(7)*&
     (light_vert%properties(4,property_id,time_id)**7))/(1.28d2*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
-    ((PI*light_vert%properties(8,property_id,time_id)*(rel_fact_parallel**2))**2))
+    ((PI*light_vert%properties(7,property_id,time_id)*(rel_fact_parallel**2))**2))
     !> compute the synchrotron power for normalisation
     light_vert%properties(10,property_id,time_id) = (beta_perp2*((mhd_fields(7)*rel_fact_parallel*&
                                 light_vert%properties(4,property_id,time_id)*((EL_CHG*charge_r8)**2))**2))/&

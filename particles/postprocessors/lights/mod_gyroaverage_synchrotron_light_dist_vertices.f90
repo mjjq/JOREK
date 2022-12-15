@@ -230,10 +230,11 @@ end subroutine compute_gyroaverage_synchrotron_mhd_fields
 !>                       (((q**2)*B*gamma*gamma_parallel*v_perp)**2)/(6*pi*epsilon0*(m**2)*(c**3))
 subroutine compute_gyroaverage_synchrotron_light_properties(light_vert,&
 property_id,time_id,particle_in,mass,mhd_fields)
-  use constants,           only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT     
-  use mod_particle_types,  only: particle_base,particle_gc_relativistic
-  use mod_gc_relativistic, only: compute_relativistic_factor
-  use mod_gc_relativistic, only: compute_relativistic_gc_rhs
+  use constants,                 only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian_velocity     
+  use mod_particle_types,        only: particle_base,particle_gc_relativistic
+  use mod_gc_relativistic,       only: compute_relativistic_factor
+  use mod_gc_relativistic,       only: compute_relativistic_gc_rhs
   implicit none
   !> inputs-outputs
   class(gyroaverage_synchrotron_light_dist),intent(inout) :: light_vert
@@ -253,6 +254,8 @@ property_id,time_id,particle_in,mass,mhd_fields)
                                  mass,p_in%p(2),p_in%x(1),p_in%p(1),mhd_fields(7),&
                                  mhd_fields(1:3),mhd_fields(4:6),mhd_fields(8:10),&
                                  mhd_fields(11:13),mhd_fields(14:16))
+    light_vert%properties(1:3,property_id,time_id) = cylindrical_to_cartesian_velocity(&
+    particle_in%x(1),particle_in%x(3),light_vert%properties(1:3,property_id,time_id))
     light_vert%properties(1:3,property_id,time_id) = light_vert%properties(1:3,property_id,time_id)/&
     sqrt(light_vert%properties(1,property_id,time_id)**2 + light_vert%properties(2,property_id,time_id)**2 + &
     light_vert%properties(3,property_id,time_id)**2)

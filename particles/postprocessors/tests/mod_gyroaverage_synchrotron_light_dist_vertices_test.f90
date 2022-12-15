@@ -70,6 +70,7 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   write(*,'(/A)') "  ... setting-up: gyroaverage synchrotron light vertices tests"
   call setup
   write(*,'(/A)') "  ... running: gyroaverage synchrotron light vertices tests"
+  call test_compute_synchrotron_light_properties
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices
@@ -145,6 +146,48 @@ end subroutine teardown
 
 !> Tests -------------------------------------------------------------
 
+!> test the method for computing the gyroaverage synchrotron radiation properties
+subroutine test_compute_synchrotron_light_properties()
+  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
+  use mod_particle_types,             only: particle_gc_relativistic
+  use mod_particle_common_test_tools, only: compute_test_E_B_normB_gradB_curlb_Dbdt_fields
+  implicit none
+  !> variables
+  integer :: ii,jj,kk,counter
+  real*8,dimension(16) :: mhd_fields
+  real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
+  !> loop for computing the properties and do the testing
+  zeros = 0d0
+  do kk=1,n_times_sol
+    counter = 0; error = 0d0;
+    do jj=1,n_groups_per_sim(kk)
+      select type(p_list=>sims_particles(kk)%groups(jj)%particles)
+        type is (particle_gc_relativistic)
+        do ii=1,n_particles_per_group(jj,kk)
+          if(p_list(ii)%i_elm.le.0) cycle
+          counter = counter + 1
+          !> compute the analytical MHD fields for computing the GC velocity
+          call compute_test_E_B_normB_gradB_curlb_Dbdt_fields(p_list(ii)%x,mhd_fields(1:3),&
+          mhd_fields(4:6),mhd_fields(7),mhd_fields(8:10),mhd_fields(11:13),mhd_fields(14:16))
+          mhd_fields(1:3)   = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(1:3))
+          mhd_fields(4:6)   = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(4:6))
+          mhd_fields(8:10)  = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(8:10))
+          mhd_fields(11:13) = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(11:13))
+          mhd_fields(14:16) = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(14:16)) 
+          !> compute the light properties
+          call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
+          sims_particles(kk)%groups(jj)%mass,mhd_fields)
+        enddo
+      end select
+    enddo
+    where(properties_sol(:,:,kk).ne.0d0) error = abs((vertex_sol%properties(:,:,kk) - &
+    properties_sol(:,:,kk))/properties_sol(:,:,kk))
+    !> check if the properties arrays are equal
+    call assert_equals(error,zeros,n_properties,n_particles_max*n_groups_max,&
+    tol_real8,"Error gyroaverage synchrotron light compute properties: too large errors!")
+  enddo
+end subroutine test_compute_synchrotron_light_properties
+
 !> Tools -------------------------------------------------------------
 !> generate shadowed points for each light. The shadowed point position
 !> is taken within the emission cone of the synchrotron radiation.
@@ -161,7 +204,7 @@ subroutine compute_x_shadowed_gc()
   real*8,dimension(n_x) :: v_gc_dir,x_gc,rng
   !> generate shadowed points
   do kk=1,n_times_sol
-    n_gc_time = sum(n_active_particles_sol(:,jj))
+    n_gc_time = sum(n_active_particles_sol(:,kk))
     do jj=1,n_gc_time
       x_gc = x_cart_sol(:,jj,kk)
       v_gc_dir = properties_sol(1:3,jj,kk)

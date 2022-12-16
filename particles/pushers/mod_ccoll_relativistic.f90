@@ -5,6 +5,7 @@
 !> Comp. Phys. Comm.
 !<
 module mod_ccoll_relativistic
+  use data_structure
   use constants
   use hdf5_io_module
   use mod_bessel, only : bessel_k2exp, bessel_k1exp, bessel_k0exp
@@ -25,7 +26,7 @@ module mod_ccoll_relativistic
 
   public :: ccoll_tabulatedL0L1, ccoll_compute_L0L1table, ccoll_deallocate_L0L1table, &
        ccoll_read_L0L1table, ccoll_write_L0L1table, ccoll_init_ions, &
-       ccoll_kinetic_relativistic_push, ccoll_clog, ccoll_coeffs, ccoll_gc_relativistic_push
+       ccoll_kinetic_relativistic_push, ccoll_gc_relativistic_push
 
   private
 
@@ -213,21 +214,20 @@ contains
   !> This routine allocates and initializes data needed to include ions (including impurities) to the collision operator.
   !> Call this once before calling fields%calc_njTj.
   !> All initialized arrays have size Nion and the order is (/main ion, imp_0, imp_+1, imp_+2, .../)
-  subroutine ccoll_init_ions(fields, ni, Z0, Zi, ai, Ii, mi, m_i_over_m_imp, ierr)
+  subroutine ccoll_init_ions(ni, Z0, Zi, ai, Ii, mi, m_i_over_m_imp, ierr)
     use phys_module, only: central_mass, imp_type
     implicit none
-    class(fields_base), intent(in) :: fields
-    real*8, intent(inout),allocatable :: ni(:) !< Allocated empty array for storing ion number densities
-    real*8, intent(inout),allocatable :: Z0(:) !< The net charge for all ions and their charge states
-    real*8, intent(inout),allocatable :: Zi(:) !< The charge number (i.e. atomic number) for all ions
-    real*8, intent(inout),allocatable :: ai(:) !< Normalized effective length scale for needed for the partial screening collisions 
-    real*8, intent(inout),allocatable :: Ii(:) !< Mean excitation energy needed for the partial screening collisions
-    real*8, intent(inout),allocatable :: mi(:) !< Ion masses [kg]
-    real*8, intent(out) :: m_i_over_m_imp      !< m_i / m_imp where m_i is main ion mass and m_imp impurity species mass
-    integer, intent(out) :: ierr               !< Zero if initialization was a success
+    real*8, intent(inout),allocatable  :: ni(:)   !< Allocated empty array for storing ion number densities
+    integer*1, intent(inout),allocatable :: Z0(:) !< The net charge for all ions and their charge states
+    integer*1, intent(inout),allocatable :: Zi(:) !< The charge number (i.e. atomic number) for all ions
+    integer, intent(inout),allocatable :: ai(:)   !< Normalized effective length scale for needed for the partial screening collisions 
+    real*8, intent(inout),allocatable  :: Ii(:)   !< Mean excitation energy needed for the partial screening collisions
+    real*8, intent(inout),allocatable  :: mi(:)   !< Ion masses [kg]
+    real*8, intent(out) :: m_i_over_m_imp         !< m_i / m_imp where m_i is main ion mass and m_imp impurity species mass
+    integer, intent(out) :: ierr                  !< Zero if initialization was a success
 
-    real*8 :: Iconst_Ar(19), aconst_Ar(19)
-    real*8 :: Iconst_Ne(11), aconst_Ne(11)
+    real*8  :: Iconst_Ar(19), Iconst_Ne(11)
+    integer :: aconst_Ar(19), aconst_Ne(11)
     integer atomnum_imp
   
     ierr = 0
@@ -241,14 +241,14 @@ contains
     aconst_Ne = (/111, 100, 90, 80, 71, 62, 52, 40, 24, 23, 1/)
 
     if(with_impurities) then
-       if( trim(imp_type) .eq. 'Ne') then
+       if( trim(imp_type(1)) .eq. 'Ne') then
           atomnum_imp = 10
           m_i_over_m_imp = central_mass/20
 
           allocate( Ii(atomnum_imp + 2), ai(atomnum_imp + 2) )
           Ii(2:atomnum_imp) = Iconst_Ne
           ai(2:atomnum_imp) = aconst_Ne
-       elseif( trim(imp_type) .eq. 'Ar') then
+       elseif( trim(imp_type(1)) .eq. 'Ar') then
           atomnum_imp = 18
           m_i_over_m_imp = central_mass/40
 
@@ -272,11 +272,11 @@ contains
 
     end if
 
-    mi(i) = central_mass * MASS_PROTON
+    mi(1) = central_mass * MASS_PROTON
     Zi(1) = 1
     Z0(1) = 1
     Ii(1) = 1.0
-    ai(1) = 1.0
+    ai(1) = 1
 
     Ii = Ii*EL_CHG
   
@@ -288,37 +288,44 @@ contains
   !> the Debye length, and bqm and bcl are quantum mechanical and classical
   !> impact parameters, respectively. The Coulomb logarithm for different
   !> plasma species is returned. 
-  subroutine ccoll_clog(ma,qa,mb,qb,nb,thb,u,clog)
+  subroutine ccoll_clog(ma,qa,mi,qi,ne,ni,th,u,cloge,clogi)
     implicit none
-    real*8, intent(in)  :: ma      !< test particle mass [kg]
-    real*8, intent(in)  :: qa      !< test particle charge [C]
-    real*8, intent(in)  :: mb(:)   !< list of background species masses [kg]
-    real*8, intent(in)  :: qb(:)   !< list of background species charges [C]
-    real*8, intent(in)  :: nb(:)   !< list of background densities [1/m^3]
-    real*8, intent(in)  :: thb(:)  !< list of normalized background temperatures [T_b/(m_b*c^2)]
-    real*8, intent(in)  :: u       !< normalized test particle momentum [p/mc]
-    real*8, intent(out) :: clog(:) !< Coulomb logarithm for each species
+    real*8, intent(in)  :: ma       !< test particle mass [kg]
+    real*8, intent(in)  :: qa       !< test particle charge [C]
+    real*8, intent(in)  :: mi(:)    !< list of background species masses [kg]
+    real*8, intent(in)  :: qi(:)    !< list of background species charges [C]
+    real*8, intent(in)  :: ne       !<
+    real*8, intent(in)  :: ni(:)    !< list of background densities [1/m^3]
+    real*8, intent(in)  :: th(2)    !< list of normalized background temperatures [T_b/(m_b*c^2)]
+    real*8, intent(in)  :: u        !< normalized test particle momentum [p/mc]
+    real*8, intent(out) :: cloge    !< Coulomb logarithm for electrons
+    real*8, intent(out) :: clogi(:) !< Coulomb logarithm for each ion species
 
-    real*8  :: debyeLength ! Debye length accounting for all plasma species
+    real*8  :: debyeLength ! Debye length
     real*8  :: mr          ! Reduced mass 
     real*8  :: bcl         ! Classical impact parameter
     real*8  :: bqm         ! Quantum mechanical impact parameter
-    integer :: nspec,i     ! Helper variables
-    real*8, dimension(size(clog)) :: ubar ! Mean relative velocity
+    integer :: i           ! Helper variables
+    real*8  :: ubar        ! Mean relative velocity
 
-    debyeLength = sqrt( EPS_ZERO * SPEED_OF_LIGHT**2 / sum( ( nb * qb**2 ) / ( thb * mb ) ) )
-    nspec = size(clog)
-    ubar = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 ) * (/(1,i=1,nspec)/) + 3.d0 * thb )
+    debyeLength = sqrt( EPS_ZERO * SPEED_OF_LIGHT**2 / ( ( ne * EL_CHG**2 ) / ( th(1) * MASS_ELECTRON ) ) )
+    ubar  = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 )  + 3.d0 * th(1) )
+    mr    = ma * MASS_ELECTRON / ( ma + MASS_ELECTRON )
+    bcl   = qa * EL_CHG / ( 4.d0 * PI * EPS_ZERO * mr * ubar**2 )
+    bqm   = HBAR / ( 2.d0 * mr * ubar )
+    cloge = log(debyeLength/max(bcl,bqm))
 
-    do i=1,nspec
-       mr  = ma * mb(i) / ( ma + mb(i) )
-       bcl = qa * qb(i) / ( 4.d0 * PI * EPS_ZERO * mr * ubar(i)**2 )
-       bqm = HBAR / ( 2.d0 * mr * ubar(i) )
+    ubar  = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 )  + 3.d0 * th(2) )
+    do i=1,size(mi)
+       mr  = ma * mi(i) / ( ma + mi(i) )
+       bcl = qa * qi(i) / ( 4.d0 * PI * EPS_ZERO * mr * ubar**2 )
+       bqm = HBAR / ( 2.d0 * mr * ubar )
 
-       clog(i) = log(debyeLength/max(bcl,bqm))
+       clogi(i) = log(debyeLength/max(bcl,bqm))
     end do
 
   end subroutine ccoll_clog
+
 
   !> Computes requested collision coefficients and respective derivatives
   !> for a given test particle and background species.
@@ -329,7 +336,7 @@ contains
     class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)  :: ma   !< test particle mass [kg]
     real*8, intent(in)  :: qa   !< test particle charge [C]
-    real*8, intent(in)  :: clog !< Coulomb logarithm for each species
+    real*8, intent(in)  :: clog !< Coulomb logarithm
     real*8, intent(in)  :: mb   !< background species mass [kg]
     real*8, intent(in)  :: qb   !< background species charge [C]
     real*8, intent(in)  :: nb   !< background density [1/m^3]
@@ -393,27 +400,29 @@ contains
   
   !> Computes the value for particle momentum after collisions with
   !> background species using Euler-Maruyama method with a fixed time step.
-  subroutine ccoll_kinetic_relativistic_push(dat,ma,qa,mb,qb,nb,thb,dt,rnd,uin,uout)
+  subroutine ccoll_kinetic_relativistic_push(dat,ma,qa,mi,Z0,ne,ni,th,dt,rnd,uin,uout)
     implicit none
     class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
-    real*8, intent(in) :: ma      !< test particle mass [kg]
-    real*8, intent(in) :: qa      !< test particle charge [C]
-    real*8, intent(in) :: mb(:)   !< list of background species masses [kg]
-    real*8, intent(in) :: qb(:)   !< list of background species charges [C]
-    real*8, intent(in) :: nb(:)   !< list of background densities [1/m^3]
-    real*8, intent(in) :: thb(:)  !< list of normalized background temperatures [T_b/(m_b*c^2)]
-    real*8, intent(in) :: dt      !< time step length [s]
-    real*8, intent(in) :: rnd(3)  !< array with three elements of standard normal random numbers ~ N(0,1)
-    real*8, intent(in) :: uin(3)  !< normalized test particle momentum [p/mc]
+    real*8, intent(in)    :: ma     !< test particle mass [kg]
+    integer*1, intent(in) :: qa     !< test particle charge number [1]
+    real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
+    integer*1, intent(in) :: Z0(:)  !< list of background ion charge numbers [1]
+    real*8, intent(in)    :: ne     !< background electron density [1/m^3]
+    real*8, intent(in)    :: ni(:)  !< list of background ion densities [1/m^3]
+    real*8, intent(in)    :: th(2)  !< normalized background (electron, ion) temperatures [T_b/(m_b*c^2)]
+    real*8, intent(in)    :: dt     !< time step length [s]
+    real*8, intent(in)    :: rnd(3) !< array with three elements of standard normal random numbers ~ N(0,1)
+    real*8, intent(in)    :: uin(3) !< normalized test particle momentum [p/mc]
     
     real*8, intent(out) :: uout(3) !< updated momentum [p/mc]
 
-    real*8, allocatable :: clogab(:)
+    real*8 :: clogae
+    real*8, allocatable :: clogai(:)
     real*8 :: K,Dpar,Dperp,Kb,Dparb,Dperpb ! the fokker-planck coefficients
     real*8 :: dW(3)                        ! the change in the Wiener process during dt
     real*8 :: uhat(3)                      ! a unit vector parallel to pin
     real*8 :: u                            ! absolute value of particle momentum normalized to mc
-    integer  :: i, nspecies                ! for iterating over plasma species
+    integer  :: i                          ! for iterating over plasma species
 
     ! Wiener process for this step
     dW = sqrt(dt)*rnd
@@ -421,20 +430,24 @@ contains
      ! Evaluate and sum Fokker-Planck coefficients
     u = norm2(uin)
     uhat = uin / u
-    nspecies = size(mb)
-    allocate(clogab(nspecies))
-    call ccoll_clog(ma,qa,mb,qb,nb,thb,u,clogab)
-    
-    K        = 0.D0
-    Dpar     = 0.D0
-    Dperp    = 0.D0
-    do i = 1,nspecies
-       call ccoll_coeffs(dat,ma,qa,clogab(i),mb(i),qb(i),nb(i),thb(i),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
+
+    allocate(clogai(size(mi)))
+    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,ni,th,u,clogae,clogai)
+
+    ! Electron contribution
+    call ccoll_coeffs(dat,ma,qa*EL_CHG,clogae,MASS_ELECTRON,-EL_CHG,ne,th(1),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
+    K     = Kb
+    Dpar  = Dparb
+    Dperp = Dperpb
+
+    ! Ion contribution
+    do i = 1,size(mi)
+       call ccoll_coeffs(dat,ma,qa*EL_CHG,clogai(i),mi(i),Z0(i)*EL_CHG,ni(i),th(2),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
        K     = K     + Kb
        Dpar  = Dpar  + Dparb
        Dperp = Dperp + Dperpb
     end do
-    deallocate(clogab)
+    deallocate(clogai)
 
     ! Use Euler-Maruyama method to get uout
     uout = uin + K * uhat * dt + sqrt( 2.d0 * Dpar ) * dot_product( uhat, dW ) * uhat &
@@ -443,50 +456,55 @@ contains
   end subroutine ccoll_kinetic_relativistic_push
 
   ! Apply Coulomb collisions for guiding center
-  subroutine ccoll_gc_relativistic_push(dat,ma,qa,mb,qb,nb,thb,uin,uout,xiin,xiout,dt,rnd,cutoff)
+  subroutine ccoll_gc_relativistic_push(dat,ma,qa,mi,Z0,ne,ni,th,uin,uout,xiin,xiout,dt,rnd,cutoff)
     
     class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
-    real*8, intent(in) :: ma     !< test particle mass [kg]
-    real*8, intent(in) :: qa     !< test particle charge [C]
-    real*8, intent(in) :: mb(:)  !< list of background species masses [kg]
-    real*8, intent(in) :: qb(:)  !< list of background species charges [C]
-    real*8, intent(in) :: nb(:)  !< list of background densities [1/m^3]
-    real*8, intent(in) :: thb(:) !< list of normalized background temperatures [T_b/(m_b*c^2)]
-    real*8, intent(in) :: dt     !< time step length [s]
-    real*8, intent(in) :: uin    !< test particle momentum  [p/mc]
-    real*8, intent(in) :: xiin   !< test particle pitch [ppar/p]
-    real*8, intent(in) :: cutoff !< minimum normalized momentum, energies below this are reflected
-    real*8, intent(in) :: rnd(2) !< normally ditributed random numbes
+    real*8, intent(in)    :: ma     !< test particle mass [kg]
+    integer*1, intent(in) :: qa     !< test particle charge number [1]
+    real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
+    integer*1, intent(in) :: Z0(:)  !< list of background ion charge numbers [1]
+    real*8, intent(in)    :: ne     !< background electron density [1/m^3]
+    real*8, intent(in)    :: ni(:)  !< list of background ion densities [1/m^3]
+    real*8, intent(in)    :: th(2)  !< normalized background (electron, ion) temperatures [T_b/(m_b*c^2)]
+    real*8, intent(in)    :: dt     !< time step length [s]
+    real*8, intent(in)    :: uin    !< test particle momentum  [p/mc]
+    real*8, intent(in)    :: xiin   !< test particle pitch [ppar/p]
+    real*8, intent(in)    :: cutoff !< minimum normalized momentum, energies below this are reflected
+    real*8, intent(in)    :: rnd(2) !< normally ditributed random numbes
 
     real*8, intent(out) :: uout  !< updated momentum
     real*8, intent(out) :: xiout !< updated pitch
 
-    real*8, allocatable :: clogab(:)
+    real*8 :: clogae
+    real*8, allocatable :: clogai(:)
     real*8 :: kappa, Dpar, dDpar, Dperp, nu ! Collision coefficients
     real*8 :: kappab, Dparb, dDparb, Dperpb ! Coll. coefficients species-wise
-    integer :: i, nspecies
+    integer :: i
 
-    nspecies = size(mb)
-    allocate(clogab(nspecies))
-    call ccoll_clog(ma,qa,mb,qb,nb,thb,uin,clogab)
+    allocate(clogai(size(mi)))
+    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,ni,th,uin,clogae,clogai)
 
-    kappa  = 0
-    Dpar   = 0
-    dDpar  = 0
-    Dperp  = 0
-    do i = 1,nspecies
+    ! Electron contribution
+    call ccoll_coeffs(dat, ma, qa*EL_CHG, clogae, MASS_ELECTRON, -EL_CHG, ne, th(1), uin, &
+            kappa=kappab, Dpar=Dparb, Dperp=Dperpb, dDpar=dDparb)
+    kappa = kappab
+    Dpar  = Dparb
+    dDpar = dDparb
+    Dperp = Dperpb
 
-       call ccoll_coeffs(dat, ma, qa, clogab(i), mb(i), qb(i), nb(i), thb(i), uin, &
-            kappa  = kappab,   Dpar = Dparb,   Dperp = Dperpb, dDpar = dDparb)
+    ! Ion contribution
+    do i = 1,size(mi)
+       call ccoll_coeffs(dat, ma, qa*EL_CHG, clogai(i), mi(i), Z0(i)*EL_CHG, ni(i), th(2), uin, &
+            kappa=kappab, Dpar=Dparb, Dperp=Dperpb, dDpar=dDparb)
 
-       kappa  = kappa  + kappab
-       Dpar   = Dpar   + Dparb
-       dDpar  = dDpar  + dDparb
-       Dperp  = Dperp  + Dperpb
+       kappa = kappa + kappab
+       Dpar  = Dpar  + Dparb
+       dDpar = dDpar + dDparb
+       Dperp = Dperp + Dperpb
     end do
 
     nu = 2.d0 * Dperp / uin**2
-    deallocate(clogab)
+    deallocate(clogai)
 
     uout  = uin + ( kappa + dDpar + 2.d0 * Dpar / uin ) * dt &
                 + sqrt( 2.d0 * Dpar * dt ) * rnd(1)
@@ -572,9 +590,9 @@ contains
     nu = size(data%u)
     nth = size(data%theta)
 
-    if ( theta.gt.data%theta(nth) ) then
+    if ( theta .gt. data%theta(nth) ) then
        th=data%theta(nth) 
-       print*,'Warning, temperature exceeds tabulated'
+       write(*,*) 'Warning: temperature exceeds tabulated', theta, th
     else
        th=theta
     end if

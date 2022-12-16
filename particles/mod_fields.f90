@@ -235,7 +235,9 @@ end subroutine calc_NeTe
 !> Calculate densities and temperature(s) for all species including ions
 !> For impurities, coronal equilibrium is assumed. Note that you will need adas data to be initialized first
 !> (call init_imp_adas).
-pure subroutine calc_NjTj(fields, time, i_elm, st, phi, m_i_over_m_imp, ne, te, ni, ti)
+!>
+!> TODO make this "pure" subroutine but currently imp_cor%interp_linear prevents this.
+subroutine calc_NjTj(fields, time, i_elm, st, phi, m_i_over_m_imp, ne, te, ni, ti)
   use phys_module, only: central_density, imp_cor
   use constants
   class(fields_base), intent(in) :: fields
@@ -249,9 +251,6 @@ pure subroutine calc_NjTj(fields, time, i_elm, st, phi, m_i_over_m_imp, ne, te, 
   
   real*8, dimension(4) :: P, P_s, P_t, P_phi, P_time
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
-
-  integer*4  :: atomnum_imp,j
-  real*8    :: Z_imp, Te
 
   ! Interpolate needed quantities depending on case and evaluate temperature(s)
   if(with_TiTe) then

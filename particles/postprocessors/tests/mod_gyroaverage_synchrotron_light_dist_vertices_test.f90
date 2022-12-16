@@ -70,6 +70,7 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   write(*,'(/A)') "  ... setting-up: gyroaverage synchrotron light vertices tests"
   call setup
   write(*,'(/A)') "  ... running: gyroaverage synchrotron light vertices tests"
+  call test_setup_gyroaverage_synchrotron_radiation_class
   call test_compute_gyroaverage_synchrotron_mhd_fields
   call test_compute_gyroaverage_synchrotron_light_properties
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
@@ -146,6 +147,20 @@ subroutine teardown()
 end subroutine teardown
 
 !> Tests -------------------------------------------------------------
+!> Test setup the gyroaverage synchrotron radiation class
+subroutine test_setup_gyroaverage_synchrotron_radiation_class()
+  implicit none
+  !> setup the gyroaverage synchrotron light class
+  call vertex_sol%setup_light_class
+  call assert_equals(vertex_sol%n_property_vertex,n_properties,&
+  "Error check setup gyroaverage synchrotron light class: wrong size of the vertex properties array!")
+  call assert_equals(vertex_sol%n_mhd,n_mhd_sol,&
+  "Error check setup gyroaverage synchrotron light class: wrong size of the mhd array!")
+  call assert_equals(vertex_sol%n_particle_types,n_particle_types_check_sol,&
+  "Error check setup gyroaverage synchrotron light class: wrong size of the particle types array!")
+  call assert_equals(vertex_sol%particle_types,particle_types_check_sol,&
+  n_particle_types_check_sol,"Error check setup gyroaverage synchrotron light class: wrong particle types list!")
+end subroutine test_setup_gyroaverage_synchrotron_radiation_class
 
 !> test the method used for computing the MHD fields required by GCs
 subroutine test_compute_gyroaverage_synchrotron_mhd_fields()

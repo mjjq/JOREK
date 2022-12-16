@@ -358,7 +358,7 @@ subroutine test_init_synchrotron_lights_from_particles()
   n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
   "Error init synchrotron lights from particles set n lights large: properties errors too large!")
 
-  !> copy valued of x and properties
+  !> copy values of x and properties
   x_cart_loc = 0.d0; properties_loc = 0.d0;
   do ii=1,n_times_sol
     n_particles_time = sum(n_active_particles_sol(:,ii))

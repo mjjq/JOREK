@@ -583,7 +583,7 @@ rel_fact_parallel,normB)
   !> compute the pitch angle
   p_perp = sqrt(2d0*mass*gc_in%p(2)*normB); thetap = atan2(p_perp,gc_in%p(1));
   if(thetap.lt.0.d0) thetap = TWOPI+thetap; thetap = PI-thetap; 
-  properties(6:7) = (/cos(thetap),abs(sin(thetap))/)
+  properties(6:7) = abs((/cos(thetap),sin(thetap)/))
   !> critical wavelength
   charge = real(abs(gc_in%q),kind=8)*EL_CHG
   properties(8) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*rel_fact_parallel)/&

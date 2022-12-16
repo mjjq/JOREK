@@ -228,7 +228,7 @@ contains
 
     real*8  :: Iconst_Ar(19), Iconst_Ne(11)
     integer :: aconst_Ar(19), aconst_Ne(11)
-    integer atomnum_imp
+    integer*1 :: atomnum_imp, i
   
     ierr = 0
 
@@ -263,7 +263,7 @@ contains
 
        allocate( ni(size(Ii)), Z0(size(Ii)), Zi(size(Ii)), mi(size(Ii)) )
        Zi(2:size(Ii)) = atomnum_imp
-       Z0(2:size(Ii)) = (/0:atomnum_imp/)
+       Z0(2:size(Ii)) = (/ (i, i=0,atomnum_imp, 1) /)
        mi(2:size(Ii)) = MASS_PROTON * central_mass / m_i_over_m_imp
 
     else

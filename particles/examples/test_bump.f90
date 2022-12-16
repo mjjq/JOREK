@@ -249,26 +249,25 @@ do istep=1,nstep
          E  = [0.d0, 0.d0, Enorm]
 
          if (prt(iprt)%i_elm .gt. 0) then
+
+            !call runge_kutta_fixed_dt_gc_push_jorek_radreact(sim%fields,sim%time,deltat, sim%groups(1)%mass, prt(iprt))
+            !call ccoll_gc_relativistic_push(dat, ni, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
             
             ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
             prt(iprt)%p(1) = prt(iprt)%p(1) + (EL_CHG*prt(iprt)%q / ATOMIC_MASS_UNIT) * norm2(E) * deltat
             call radreactforce_gc(B, deltat, sim%groups(1)%mass, prt(iprt))
-            !call runge_kutta_fixed_dt_gc_push_jorek_radreact(sim%fields,sim%time,deltat, sim%groups(1)%mass, prt(iprt))
-
-            ! For collisions we need to convert from ppar,mu to pnorm,pitch (and then revert)
-            !call sim%fields%calc_EBpsiU(sim%time, prt(iprt)%i_elm, prt(iprt)%st, prt(iprt)%x(3), E, B, psi, U)
+            
             pnorm = sqrt(prt(iprt)%p(2) * 2 * norm2(B) * sim%groups(1)%mass + prt(iprt)%p(1)**2)
             pin   = pnorm / ( sim%groups(1)%mass * SPEED_OF_LIGHT )
             xiin  = prt(iprt)%p(1) / pnorm
-
-            !call sim%fields%calc_NeTeNi(sim%time, particles(j)%i_elm, particles(j)%st, particles(j)%x(3), m_i_over_m_imp, ne, th, ni)
 
             call random_number(rnd)
             rnd = floor(2*rnd)
             rnd = -1.0 + 2.0 * rnd
 
-            call ccoll_gc_relativistic_push(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, ne, ni, th, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
-
+            call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
+                 ne, ni, th, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+            
             p(iprt)  = pout
             xi(iprt) = xiout
 
@@ -276,7 +275,7 @@ do istep=1,nstep
             pnorm = pout * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
             prt(iprt)%p(1) = pnorm * xiout
             prt(iprt)%p(2) = ( pnorm**2 - prt(iprt)%p(1)**2 ) / ( 2 * norm2(B) * sim%groups(1)%mass )
-                  
+
          end if
       end do
       !$omp end parallel do
@@ -297,16 +296,15 @@ do istep=1,nstep
           
          if (prt(iprt)%i_elm .gt. 0) then
 
+            !call volume_preserving_radiation_push_jorek(prt(iprt),sim%fields,sim%groups(1)%mass,sim%time,deltat,ifail)
+            !call ccoll_kinetic_relativistic_push(dat, ni, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+
             ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
             prt(iprt)%p =  prt(iprt)%p + EL_CHG * prt(iprt)%q * vector_cylindrical_to_cartesian(prt(iprt)%x(3), E) * deltat / ATOMIC_MASS_UNIT
             call radreactforce_kinetic(B, deltat, sim%groups(1)%mass, prt(iprt))
-            !call volume_preserving_radiation_push_jorek(prt(iprt),sim%fields,sim%groups(1)%mass,sim%time,deltat,ifail)
-
+            
             ! For collisions we need to convert from ppar,mu to pnorm,pitch (and then revert)
-            !call sim%fields%calc_EBpsiU(sim%time, prt(iprt)%i_elm, prt(iprt)%st, prt(iprt)%x(3), E, B, psi, U)
             pnorm = norm2(prt(iprt)%p) / (sim%groups(1)%mass * SPEED_OF_LIGHT)
-
-            !call sim%fields%calc_NeTeNi(sim%time, particles(j)%i_elm, particles(j)%st, particles(j)%x(3), m_i_over_m_imp, ne, th, ni)
 
             call random_number(rndprt)
             rndprt = floor(2*rndprt)
@@ -314,8 +312,8 @@ do istep=1,nstep
 
             pnorm = norm2(prt(iprt)%p)
 
-            call ccoll_kinetic_relativistic_push(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, ne, ni, th, deltat, rndprt, &
-                 prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
+            call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
+                 ne, ni, th, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
             prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
 
             poutprt = prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT)

@@ -8,6 +8,8 @@ module mod_ccoll_relativistic
   use data_structure
   use constants
   use hdf5_io_module
+  use mod_particle_types
+  use mod_fields
   use mod_bessel, only : bessel_k2exp, bessel_k1exp, bessel_k0exp
   use mod_simpson, only : simpson_adaptive, func_real8_1D
   use mod_interp_methods, only: interp_bilinear
@@ -31,8 +33,8 @@ module mod_ccoll_relativistic
   end type ccoll_data
 
   public :: ccoll_data, ccoll_compute_L0L1table, ccoll_write_L0L1table, ccoll_read_L0L1table, &
-       ccoll_init, ccoll_deallocate, &
-       ccoll_kinetic_relativistic_push, ccoll_gc_relativistic_push
+       ccoll_init, ccoll_deallocate, ccoll_kinetic_relativistic_push, ccoll_gc_relativistic_push, &
+       ccoll_kinetic_relativistic_explicitpush, ccoll_gc_relativistic_explicitpush
 
   private
 
@@ -41,6 +43,7 @@ contains
   !> Initializes data for collision evaluation
   !> Parameters and tabulated values are stored in the returned struct.
   subroutine ccoll_init(fn, dat, ni)
+    implicit none
     character(len=*), intent(in)  :: fn         !< Filename where L0L1 are tabulated
     type(ccoll_data), intent(inout) :: dat      !< Contains parameters and tabulated values
     real*8, allocatable, intent(inout) :: ni(:) !< Allocated empty array for storing ion densities
@@ -406,10 +409,42 @@ contains
     end if
 
   end subroutine ccoll_coeffs
+
+  !> Updates particle momentum after collisions
+  !> Pushing is done by calling the explicit push function. This function is just a wrapper
+  !> that additionally evaluates the plasma quantities and takes care of the coordinate transformation
+  !> in momentum space thus simplifying the process of including collisions in simulations.
+  subroutine ccoll_kinetic_relativistic_push(dat, ni, prt, fields, mass, time, dt)
+    implicit none
+    class(ccoll_data), intent(in) :: dat !< Collision data
+    class(particle_kinetic_relativistic), intent(inout) :: prt
+    class(fields_base), intent(in) :: fields
+    real*8, intent(inout) :: ni(:)      !< Allocated array for storing ion densities
+    real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
+
+    real*8 :: pnorm, E(3), B(3), psi, U, th(2), ne, rnd(3), pout(3)
+
+    call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
+    pnorm = norm2(prt%p) / (mass * SPEED_OF_LIGHT)
+
+    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, th(1), ni, th(2))
+    th(1) = th(1) * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
+    th(2) = th(2) * K_BOLTZ / ( dat%mi(1) * SPEED_OF_LIGHT**2 )
+    
+    ! This should be ~N(0,1) but this approximation works well enough
+    call random_number(rnd)
+    rnd = floor(2.d0*rnd)
+    rnd = -1.d0 + 2.d0 * rnd
+
+    call ccoll_kinetic_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q, dat%mi, dat%Z0, &
+         ne, ni, th, dt, rnd, prt%p / (mass * SPEED_OF_LIGHT), pout)
+    prt%p = pout * (mass * SPEED_OF_LIGHT)
+    
+  end subroutine ccoll_kinetic_relativistic_push
   
   !> Computes the value for particle momentum after collisions with
   !> background species using Euler-Maruyama method with a fixed time step.
-  subroutine ccoll_kinetic_relativistic_push(dat,ma,qa,mi,Z0,ne,ni,th,dt,rnd,uin,uout)
+  subroutine ccoll_kinetic_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,ni,th,dt,rnd,uin,uout)
     implicit none
     class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
@@ -462,10 +497,46 @@ contains
     uout = uin + K * uhat * dt + sqrt( 2.d0 * Dpar ) * dot_product( uhat, dW ) * uhat &
          + sqrt( 2.d0 * Dperp ) * ( dW - dot_product( uhat, dW ) * uhat )
 
-  end subroutine ccoll_kinetic_relativistic_push
+  end subroutine ccoll_kinetic_relativistic_explicitpush
+
+  
+  !> Updates guiding center momentum after collisions
+  !> Pushing is done by calling the explicit push function. This function is just a wrapper
+  !> that additionally evaluates the plasma quantities and takes care of the coordinate transformation
+  !> in momentum space thus simplifying the process of including collisions in simulations.
+  subroutine ccoll_gc_relativistic_push(dat, ni, prt, fields, mass, time, dt)
+    implicit none
+    class(ccoll_data), intent(in) :: dat !< Collision data
+    class(particle_gc_relativistic), intent(inout) :: prt
+    class(fields_base), intent(in) :: fields
+    real*8, intent(inout) :: ni(:)      !< Allocated array for storing ion densities
+    real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
+
+    real*8 :: pnorm, E(3), B(3), psi, U, th(2), ne, rnd(2), pin, xiin, pout, xiout
+
+    call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)                                                                                                                                                                                                          
+    pnorm = sqrt(prt%p(2) * 2 * norm2(B) * mass + prt%p(1)**2)
+    pin   = pnorm / ( mass * SPEED_OF_LIGHT )
+    xiin  = prt%p(1) / pnorm
+    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, th(1), ni, th(2))
+    th(1) = th(1) * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
+    th(2) = th(2) * K_BOLTZ / ( dat%mi(1) * SPEED_OF_LIGHT**2 )
+    
+    call random_number(rnd)
+    rnd = floor(2.d0*rnd)
+    rnd = -1.d0 + 2.d0 * rnd
+
+    call ccoll_gc_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q, dat%mi, dat%Z0, &
+         ne, ni, th, pin, pout, xiin, xiout, dt, rnd, 1.0e-4)
+
+    pnorm = pout * ( mass * SPEED_OF_LIGHT )
+    prt%p(1) = pnorm * xiout
+    prt%p(2) = ( pnorm**2 - prt%p(1)**2 ) / ( 2 * norm2(B) * mass )
+
+  end subroutine ccoll_gc_relativistic_push
 
   ! Apply Coulomb collisions for guiding center
-  subroutine ccoll_gc_relativistic_push(dat,ma,qa,mi,Z0,ne,ni,th,uin,uout,xiin,xiout,dt,rnd,cutoff)
+  subroutine ccoll_gc_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,ni,th,uin,uout,xiin,xiout,dt,rnd,cutoff)
     
     class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
@@ -536,7 +607,7 @@ contains
        end if
     end if
 
-  end subroutine ccoll_gc_relativistic_push
+  end subroutine ccoll_gc_relativistic_explicitpush
 
   !> Evaluates the mu functions (and their derivatives if needed)
   subroutine ccoll_mufuncs(data,u,th,mu0,mu1,mu2,dmu0,dmu1,dmu2)

@@ -73,6 +73,7 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   call test_setup_gyroaverage_synchrotron_radiation_class
   call test_compute_gyroaverage_synchrotron_mhd_fields
   call test_compute_gyroaverage_synchrotron_light_properties
+  call test_init_gyroaverage_synchrotron_lights_from_gc
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices
@@ -226,6 +227,59 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
     tol_real8,"Error gyroaverage synchrotron light compute properties: too large errors!")
   enddo
 end subroutine test_compute_gyroaverage_synchrotron_light_properties
+
+!> test the initialisation of gyroaverage synchrotron lights form relativistic gc
+subroutine test_init_gyroaverage_synchrotron_lights_from_gc()
+  use mod_assert_equals_tools, only: assert_equals_rel_error
+  implicit none
+  !> variables
+  integer,parameter                                      :: n_synch_fail=1
+  integer                                                :: ii,n_particles_time
+  real*8,dimension(n_x,n_gc_RE_max,n_times_sol)          :: x_cart_loc
+  real*8,dimension(n_properties,n_gc_RE_max,n_times_sol) :: properties_loc
+  !> test datastructure initialisation with given size
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles,&
+  n_particles_max*n_groups_max)
+  call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
+  vertex_sol%x,x_cart_sol,tol_real8,&
+  "Error init gyroaverage synchrotron lights from particles set n lights large: positions errors too large!")
+  call assert_equals_rel_error(n_properties,n_particles_max*n_groups_max,&
+  n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
+  "Error init gyroaverage synchrotron lights from particles set n lights large: properties errors too large!")
+
+  !> copy values of x and properties
+  do ii=1,n_times_sol
+    n_particles_time                        = sum(n_active_particles_sol(:,ii))
+    x_cart_loc(:,1:n_particles_time,ii)     = x_cart_sol(:,1:n_particles_time,ii)
+    properties_loc(:,1:n_particles_time,ii) = properties_sol(:,1:n_particles_time,ii)
+  enddo
+  !> test lights initialisation without inputs
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
+  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  "Error init gyroaverage synchrotron lights from particles: positions shape mismatch!")
+  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  "Error init gyroaverage synchrotron lights from particles: properties shape mismatch!")
+  call assert_equals_rel_error(n_x,n_gc_RE_max,n_times_sol,&
+  vertex_sol%x,x_cart_loc,tol_real8,&
+  "Error init gyroaverage synchrotron lights from particles: positions errors too large!")
+  call assert_equals_rel_error(n_properties,n_gc_RE_max,&
+  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  "Error init gyroaverage synchrotron lights from particles: properties errors too large!")
+
+  !> test lights initialisation with too small number of vertices
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles,n_synch_fail)
+  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  "Error init gyroaverage synchrotron lights from particles set n lights small: positions shape mismatch!")
+  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  "Error init gyroaverage synchrotron lights from particles set n lights small: properties shape mismatch!")
+  call assert_equals_rel_error(n_x,n_gc_RE_max,n_times_sol,&
+  vertex_sol%x,x_cart_loc,tol_real8,&
+  "Error init gyroaverage synchrotron lights from particles set n lights small: positions errors too large!")
+  call assert_equals_rel_error(n_properties,n_gc_RE_max,&
+  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  "Error init gyroaverage synchrotron lights from particles set n lights small: properties errors too large!")  
+
+end subroutine test_init_gyroaverage_synchrotron_lights_from_gc
 
 !> Tools -------------------------------------------------------------
 !> generate shadowed points for each light. The shadowed point position

@@ -268,8 +268,8 @@ property_id,time_id,particle_in,mass,mhd_fields)
     charge_r8 = abs(real(p_in%q,kind=8))
     beta_perp2 = (2d0*p_in%p(2)*mhd_fields(7))/(mass*((SPEED_OF_LIGHT*&
                  light_vert%properties(4,property_id,time_id))**2)) 
-    light_vert%properties(6:7,property_id,time_id) = (/p_in%p(1)/(mass*SPEED_OF_LIGHT*&
-    light_vert%properties(4,property_id,time_id)),sqrt(beta_perp2)/)/light_vert%properties(5,property_id,time_id)
+    light_vert%properties(6:7,property_id,time_id) = (/1.d0,0.d0/)-(/p_in%p(1)/(mass*SPEED_OF_LIGHT*&
+    light_vert%properties(4,property_id,time_id)),-sqrt(beta_perp2)/)/light_vert%properties(5,property_id,time_id)
     !> compute the critical wavelenght
     rel_fact_parallel = sqrt(1d0+((p_in%p(1)/(mass*SPEED_OF_LIGHT))**2))
     light_vert%properties(8,property_id,time_id) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&

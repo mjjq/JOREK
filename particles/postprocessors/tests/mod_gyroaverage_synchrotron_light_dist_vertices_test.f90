@@ -473,7 +473,7 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
   int_param,properties(1:4))) return
   mu_angle = acos(dot_product((x_shaded-x_light)/norm2(x_shaded-x_light),properties(1:3)))
   thetap = atan2(properties(7),properties(6))
-  if(thetap.lt.0d0) thetap = TWOPI + thetap; psi_angle = mu_angle - thetap;
+  if(thetap.lt.0d0) thetap = TWOPI + thetap; thetap = PI-thetap; psi_angle = mu_angle - thetap;
   fact1 = ((1d0-properties(5)*cos(psi_angle))/(properties(5)*cos(psi_angle)))**2
   fact1 = fact1*(1d0-properties(5)*properties(6)*cos(mu_angle))
   fact2 = (5d-1*properties(5)*cos(psi_angle)*(sin(psi_angle)**2))/(1d0-properties(5)*cos(psi_angle))
@@ -553,7 +553,7 @@ end subroutine compute_gyroavg_synch_x_properties_ana
 !> tokamak-like MHD fields for one guiding center
 subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties,&
 rel_fact_parallel,normB)
-  use constants,                      only: PI,EL_CHG,EPS_ZERO
+  use constants,                      only: PI,TWOPI,EL_CHG,EPS_ZERO
   use constants,                      only: ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
   use mod_particle_types,             only: particle_gc_relativistic
   implicit none
@@ -582,7 +582,8 @@ rel_fact_parallel,normB)
   properties(5) = sqrt(1d0 - (1d0/(rel_fact**2)));
   !> compute the pitch angle
   p_perp = sqrt(2d0*mass*gc_in%p(2)*normB); thetap = atan2(p_perp,gc_in%p(1));
-  properties(6:7) = (/cos(thetap),sin(thetap)/)
+  if(thetap.lt.0.d0) thetap = TWOPI+thetap; thetap = PI-thetap; 
+  properties(6:7) = (/cos(thetap),abs(sin(thetap))/)
   !> critical wavelength
   charge = real(abs(gc_in%q),kind=8)*EL_CHG
   properties(8) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*rel_fact_parallel)/&

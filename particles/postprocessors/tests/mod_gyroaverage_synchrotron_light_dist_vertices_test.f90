@@ -343,9 +343,7 @@ end subroutine compute_gyroavg_synch_x_properties_ana
 subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties)
   use constants,                      only: PI,EL_CHG,EPS_ZERO
   use constants,                      only: ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
-  use mod_coordinate_transforms,      only: cylindrical_to_cartesian_velocity
   use mod_particle_types,             only: particle_gc_relativistic
-  use mod_gc_relativistic,            only: compute_relativistic_gc_rhs
   implicit none
   !> inputs:
   type(particle_gc_relativistic),intent(in)  :: gc_in
@@ -355,17 +353,14 @@ subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties)
   !> variables:
   real*8                :: normB,rel_fact,rel_fact_parallel
   real*8                :: thetap,charge,p_perp
-  real*8,dimension(n_x) :: E_field,b_field,gradB,curlb,dbdt
-  real*8,dimension(4)   :: x_gc_velocity
+  real*8,dimension(n_x) :: E_field,b_field,gradB,curlb,dbdt,v_gc_cart
   
   !> compute the analytical MHD fields for computing the GC velocity
   call compute_mhd_fields_gc_cart(gc_in,E_field,b_field,normB,gradB,curlb,dbdt)
   !> compute the guiding center velocity
-  x_gc_velocity = compute_relativistic_gc_rhs(int(gc_in%q,kind=4),mass,gc_in%p(2),&
-  gc_in%x(1),gc_in%p(1),normB,E_field,b_field,gradB,curlb,dbdt)
-  x_gc_velocity(1:3) = cylindrical_to_cartesian_velocity(&
-  gc_in%x(1),gc_in%x(3),x_gc_velocity(1:3))
-  properties(1:3) = x_gc_velocity(1:3)/norm2(x_gc_velocity(1:3))
+  call compute_gc_velocity_cartesian(gc_in,mass,E_field,b_field,&
+  normB,gradB,curlb,dbdt,v_gc_cart)
+  properties(1:3) = v_gc_cart/norm2(v_gc_cart)
   !> compute the relativistic factor
   rel_fact = 1d0 + ((gc_in%p(1)/(mass*SPEED_OF_LIGHT))**2) 
   rel_fact_parallel = sqrt(rel_fact)
@@ -410,6 +405,27 @@ subroutine compute_mhd_fields_gc_cart(particle,E_field,b_field,normB,gradB,curlb
   curlb   = vector_cylindrical_to_cartesian(particle%x(3),curlb)
   dbdt    = vector_cylindrical_to_cartesian(particle%x(3),dbdt)
 end subroutine compute_mhd_fields_gc_cart
+
+!> compute the relativistic gc velocity in cartesian coordinates
+subroutine compute_gc_velocity_cartesian(gc_in,mass,E_field,b_field,&
+  normB,gradB,curlb,dbdt,v_gc_cart)
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian_velocity
+  use mod_particle_types,        only: particle_gc_relativistic
+  use mod_gc_relativistic,       only: compute_relativistic_gc_rhs
+  implicit none
+  !> inputs:
+  type(particle_gc_relativistic),intent(in) :: gc_in
+  real*8,intent(in)                         :: mass,normB
+  real*8,dimension(n_x),intent(in)  :: E_field,b_field,gradB,curlb,dbdt
+  !> outputs:
+  real*8,dimension(n_x),intent(out) :: v_gc_cart
+  !> variables:
+  real*8,dimension(4) :: xdot_gc_cart
+  xdot_gc_cart = compute_relativistic_gc_rhs(int(gc_in%q,kind=4),mass,gc_in%p(2),&
+  gc_in%x(1),gc_in%p(1),normB,E_field,b_field,gradB,curlb,dbdt)
+  v_gc_cart = cylindrical_to_cartesian_velocity(&
+  gc_in%x(1),gc_in%x(3),xdot_gc_cart(1:3)) 
+end subroutine compute_gc_velocity_cartesian
 
 !>--------------------------------------------------------------------
 end module mod_gyroaverage_synchrotron_light_dist_vertices_test

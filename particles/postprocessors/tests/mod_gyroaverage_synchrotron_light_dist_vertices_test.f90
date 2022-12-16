@@ -584,7 +584,7 @@ rel_fact_parallel,normB)
   p_perp = sqrt(2d0*mass*gc_in%p(2)*normB); thetap = atan2(p_perp,gc_in%p(1));
   properties(6:7) = (/cos(thetap),sin(thetap)/)
   !> critical wavelength
-  charge = real(gc_in%q,kind=8)*EL_CHG
+  charge = real(abs(gc_in%q),kind=8)*EL_CHG
   properties(8) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*rel_fact_parallel)/&
                   (3d0*charge*normB*(rel_fact**2))
   !> compute the directionality function intensity

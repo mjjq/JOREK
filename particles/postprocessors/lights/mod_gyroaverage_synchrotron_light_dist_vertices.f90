@@ -74,8 +74,7 @@ time_id,light_id,x_shaded,light_dstb)
   light_properties = light_vert%properties(:,light_id,time_id)
   !> check if the shaded point is in the synchrotron emission cone
   if(.not.light_vert%check_x_shaded_in_emission_zone(light_vert%n_x,&
-  x_shaded,light_vert%x(:,light_id,time_id),0,4,int_param,[light_properties(1),&
-  light_properties(2),light_properties(3),light_properties(4)])) return
+  x_shaded,light_vert%x(:,light_id,time_id),0,4,int_param,light_properties(1:4))) return
   !> the mu and psi angle cosinues, note that psi = mu-thetap hence
   !> cos(mu-thetap) = cos(mu)*cos(thetap) + sin(mu)*sin(thetap)
   cosmu = (x_shaded(1)-light_vert%x(1,light_id,time_id))*light_properties(1)+&
@@ -266,7 +265,7 @@ property_id,time_id,particle_in,mass,mhd_fields)
                          (1d0/(light_vert%properties(4,property_id,time_id)**2)))
     !> compute cosinus and sinus of the pitch angle beta_perp2 = (p_perp/(mass*gamma*c))**2
     !> (p_perp/(mass*c))**2 = (2*mu*B)/(mass*(c**2))
-    charge_r8 = real(p_in%q,kind=8)
+    charge_r8 = abs(real(p_in%q,kind=8))
     beta_perp2 = (2d0*p_in%p(2)*mhd_fields(7))/(mass*((SPEED_OF_LIGHT*&
                  light_vert%properties(4,property_id,time_id))**2)) 
     light_vert%properties(6:7,property_id,time_id) = (/p_in%p(1)/(mass*SPEED_OF_LIGHT*&

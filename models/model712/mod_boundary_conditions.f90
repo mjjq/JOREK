@@ -151,7 +151,6 @@ real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, 
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), index_tmp, kk, ll
 logical, parameter :: include_2nd_derivatives = .false.
 
-
 RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
 ! for the moment it's done in a way that all RMP harmonics follow each other,i.e. n=2,n=3,n=4... 

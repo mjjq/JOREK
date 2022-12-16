@@ -29,11 +29,6 @@ module pellet_module
                             particle_source, volume_source)
   
   implicit none
-#if _OPENMP >= 201511
-  !$omp declare simd uniform(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,              &
-  !$omp pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,   &
-  !$omp R, Z, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume)
-#endif
 
     real*8, intent(in)  :: R, Z, psi                 ! position where the particle source is calculated
     real*8, intent(inout) :: phi                     ! toroidal position
@@ -55,6 +50,12 @@ module pellet_module
     
     ! --- local variables
     real*8  :: radius, atn, atn_psi, atn_phi, atomic_mass, ablation_rate
+
+#if _OPENMP >= 201511
+  !$omp declare simd uniform(pellet_amplitude,pellet_R,pellet_Z,pellet_psi,pellet_phi,              &
+  !$omp pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,   &
+  !$omp R, Z, r0, T0, central_density, pellet_particles, pellet_density, pellet_volume)
+#endif
     
     particle_source = 0.d0
     volume_source   = 0.d0
@@ -194,7 +195,7 @@ module pellet_module
     use phys_module, only: pellets, imp_type, central_density, central_mass, spi_abl_model, spi_tor_rot,      &
                            ns_phi_rotate, tor_frequency, tstep, pellet_density, pellet_density_bg,            &
                            index_now, xtime_spi_ablation, xtime_spi_ablation_bg, xtime_spi_ablation_rate,&
-                           xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor, index_main_imp, n_adas
+                           xtime_spi_ablation_bg_rate, F0, R_geo, imp_cor, index_main_imp, n_adas, drift_distance
     use mpi_mod
     use corr_neg
     
@@ -227,6 +228,15 @@ module pellet_module
 
     integer, intent(in) :: i_inj
     integer, intent(in) :: n_spi_begin
+
+    ! - Extra variables when considering plasmoid drift by teleportation
+    real*8  :: R_out_drift, Z_out_drift
+    integer :: i_elm_drift, ifail_drift
+    real*8, dimension(4) :: P_drift, P_s_drift, P_t_drift, P_phi_drift
+    real*8  :: R_drift, R_s_drift, R_t_drift, Z_drift, Z_s_drift, Z_t_drift
+    real*8  :: s_out_drift,t_out_drift
+    real*8  :: xjac_drift, psi_R_drift, psi_Z_drift
+
   
     spi_delta_phi   = 0.
     spi_Vel_R_tmp   = 0.
@@ -276,12 +286,12 @@ module pellet_module
         else if (pellet_density_bg > 0. .and. pellet_density > 0.) then
           spi_density_tmp = 1./((1.-pellets(i_p)%spi_species)/pellet_density_bg + pellets(i_p)%spi_species/pellet_density)
         else
-          write(*,*) "ERROR: Something is wrong when determining the pellet species, exiting"
+          write(*,*) "ERROR in pellet_module: Something is wrong when determining the pellet species, exiting"
           stop
         end if
   
         if (spi_density_tmp == 0. .or. spi_density_tmp /= spi_density_tmp) then
-          write(*,*) "ERROR: Problem calculating spi_density!", spi_density_tmp
+          write(*,*) "ERROR in pellet_module: Problem calculating spi_density!", spi_density_tmp
           stop
         endif
   
@@ -306,9 +316,9 @@ module pellet_module
         end if
       end if
   
-      if (spi_abl_model == 0) then
+      if (spi_abl_model(i_inj) == 0) then
         pellets(i_p)%spi_abl   = ns_amplitude(i_inj)
-      else if (spi_abl_model >= 1) then
+      else if (spi_abl_model(i_inj) >= 1) then
   
         call find_RZ(node_list,element_list,pellets(i_p)%spi_R,pellets(i_p)%spi_Z,&
                      R_out,Z_out,i_elm,s_out,t_out,ifail)
@@ -318,17 +328,43 @@ module pellet_module
           pellets(i_p)%spi_abl = 0.
           cycle
         else if (ifail /= 0) then
-          write(*,*) "Something wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
+          write(*,*) "ERROR in pellet_module: Something wrong in find_RZ!! my_id = ", my_id, i_elm, ifail
           stop
         end if
+
+        if (drift_distance(i_inj) /= 0) then ! when considering plasmoid drift by shifting neutral source
+
+          pellets(i_p)%plasmoid_in_domain = 0 ! Always assumed to be out of domain before searching again
+
+          call find_RZ(node_list,element_list,pellets(i_p)%spi_R+drift_distance(i_inj),pellets(i_p)%spi_Z,&
+                           R_out_drift,Z_out_drift,i_elm_drift,s_out_drift,t_out_drift,ifail_drift) 
+
+          if (ifail_drift == 0) then ! Post-teleportation plasmoid in computational domain
+            pellets(i_p)%plasmoid_in_domain = 1 ! 0 by default
+          else if (ifail_drift /= 99 .and. ifail_drift /= 999) then
+            write(*,*) "ERROR in pellet_module: Something wrong in find_RZ!! my_id = ", my_id, i_elm_drift, ifail_drift
+            stop
+          end if
+
+        end if
+
 
 #if ((defined WITH_Impurities) || (defined WITH_Neutrals))
 #ifdef WITH_TiTe
         call interp_PRZ(node_list,element_list,i_elm,[var_rho,var_Te,var_rhon,1],4,s_out,t_out,pellets(i_p)%spi_phi,&
-                        P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+                        P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)        
+        if (drift_distance(i_inj) /= 0) then
+          call interp_PRZ(node_list,element_list,i_elm_drift,[var_rho,var_Te,var_rhon,1],4,s_out_drift,t_out_drift,pellets(i_p)%spi_phi,&
+                                 P_drift,P_s_drift,P_t_drift,P_phi_drift,R_drift,R_s_drift,R_t_drift,Z_drift,Z_s_drift,Z_t_drift)
+        end if
+
 #else /* WITH_TiTe */
         call interp_PRZ(node_list,element_list,i_elm,[var_rho,var_T,var_rhon,1],4,s_out,t_out,pellets(i_p)%spi_phi,&
                         P,P_s,P_t,P_phi,R,R_s,R_t,Z,Z_s,Z_t)
+        if (drift_distance(i_inj) /= 0) then
+          call interp_PRZ(node_list,element_list,i_elm_drift,[var_rho,var_T,var_rhon,1],4,s_out_drift,t_out_drift,pellets(i_p)%spi_phi,&
+                                 P_drift,P_s_drift,P_t_drift,P_phi_drift,R_drift,R_s_drift,R_t_drift,Z_drift,Z_s_drift,Z_t_drift)
+        end if
 #endif /* WITH_TiTe */
 #endif /* ((defined WITH_Impurities) || (defined WITH_Neutrals)) */
 
@@ -337,6 +373,19 @@ module pellet_module
         psi_Z = (- P_s(4) * R_t + P_t(4) * R_s ) / xjac
         pellets(i_p)%spi_psi = P(4)
         pellets(i_p)%spi_grad_psi = sqrt(psi_R**2 + psi_Z**2)
+
+        if (drift_distance(i_inj) /= 0) then
+          if (pellets(i_p)%plasmoid_in_domain ==1 ) then ! if the drifted position locates inside the JOREK grid
+            xjac_drift  = R_s_drift * Z_t_drift - R_t_drift * Z_s_drift
+            psi_R_drift = (  P_s_drift(4) * Z_t_drift - P_t_drift(4) * Z_s_drift) / xjac_drift
+            psi_Z_drift = (- P_s_drift(4) * R_t_drift + P_t_drift(4) * R_s_drift) / xjac_drift
+            pellets(i_p)%spi_psi_drift = P_drift(4)
+            pellets(i_p)%spi_grad_psi_drift = sqrt(psi_R_drift**2 + psi_Z_drift**2)
+          else ! if not, simply fill the same values as the non-drifted location - will be excluded in neutral_source
+            pellets(i_p)%spi_psi_drift = P(4)
+            pellets(i_p)%spi_grad_psi_drift = sqrt(psi_R**2 + psi_Z**2)
+          end if
+        end if
 
         ! Now, P(1) represents mass density and P(2) represents temperature, P(3)
         ! is the impurity density
@@ -366,13 +415,13 @@ module pellet_module
         if (n_imp_SI < 0.) n_imp_SI = 0.      
   
         ! NGS model
-        if (spi_abl_model == 1) then
+        if (spi_abl_model(i_inj) == 1) then
           pellets(i_p)%spi_abl    = 4.12d16 * (pellets(i_p)%spi_radius**(4.0/3.0)) * (n_SI**(1.0/3.0)) * &
                                    (T_eV**1.64)
           if (my_id == 0 .and. pellets(i_p)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
             write(*,*) "Check Point, n_SI, T_eV = ", n_SI, T_eV
           end if
-        else if (spi_abl_model == 2) then
+        else if (spi_abl_model(i_inj) == 2) then
           select case ( trim(imp_type(index_main_imp)) )
             case('D2')
               ne_SI   = n_SI
@@ -432,7 +481,7 @@ module pellet_module
           if (my_id == 0 .and. pellets(i_p)%spi_radius > 0.0 .and. mod(index_now,20)==0) then
             write(*,*) "Check Point, ne_SI, T_eV = ", ne_SI, T_eV
           end if
-        else if (spi_abl_model == 3) then
+        else if (spi_abl_model(i_inj) == 3) then
           select case ( trim(imp_type(index_main_imp)) )
             case('D2') ! We temporarily wusing D2 ablation rate for H2 ablation here
               pellets(i_p)%spi_abl = 39.0023 * 2. * MOLE_NUMBER * ((pellets(i_p)%spi_radius*1.d2 / 0.2)**(4./3.)) &
@@ -662,18 +711,18 @@ module pellet_module
       else if (spi_quantity_bg > 0. .and. pellet_density_bg > 0.) then
         mix_ratio = 0.
       else
-        write(*,*) "WARNING!!! Something is wrong in the injection quantity or pellet density, exiting."
+        write(*,*) "ERROR in pellet_module: Something is wrong in the injection quantity or pellet density, exiting."
         stop
       end if
 
       select case ( trim(imp_type(index_main_imp)) ) 
         case('D2')
-          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
+          write(*,*) "ERROR in pellet_module: Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
         case('Ne')
           ! Only Parks formula can properly treat the mixing of neon and D2/H2,
           ! otherwise we assume neon and D2/H2 formed seperately.
-          if (spi_abl_model == 3 .and. mix_ratio < 1. .and. mix_ratio > 0.) then
+          if (spi_abl_model(i_inj) == 3 .and. mix_ratio < 1. .and. mix_ratio > 0.) then
             do i = 1, n_spi
               i_p = i - 1 + n_spi_begin
               pellets(i_p)%spi_species = spi_quantity/(spi_quantity + spi_quantity_bg)
@@ -720,7 +769,7 @@ module pellet_module
         case default
           write(*,*) '!! Gas type "', trim(imp_type(index_main_imp)), '" unknown !!'
           write(*,*) '=> We assume the gas is D2.'
-          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
+          write(*,*) "ERROR in pellet_module: Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
       end select
   
@@ -780,13 +829,13 @@ module pellet_module
 
       if (spi_Vel_diff < 0) then
         write(*,*) "WARNING, negative velocity spread, spi_Vel_diff = ", spi_Vel_diff
-        write(*,*) "Please always use a positive spi_Vel_diff, EXITING!" 
+        write(*,*) "ERROR in pellet_module: Please always use a positive spi_Vel_diff, EXITING!" 
         stop
       end if
 
       if (spi_L_inj_diff < 0) then
         write(*,*) "WARNING, negative position spread, spi_L_inj_diff = ", spi_L_inj_diff
-        write(*,*) "Please always use a positive spi_L_inj_diff, EXITING!" 
+        write(*,*) "ERROR in pellet_module: Please always use a positive spi_L_inj_diff, EXITING!" 
         stop
       end if
 
@@ -830,6 +879,10 @@ module pellet_module
         pellets(i_p)%spi_vol     = 0.0
         pellets(i_p)%spi_psi     = 0.0
         pellets(i_p)%spi_grad_psi= 0.0
+        pellets(i_p)%spi_vol_drift     = 0.0
+        pellets(i_p)%spi_psi_drift     = 0.0
+        pellets(i_p)%spi_grad_psi_drift= 0.0
+        pellets(i_p)%plasmoid_in_domain= 0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -853,7 +906,7 @@ module pellet_module
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg_rate")
 
     else
-      write(*,*) "ERROR: n_spi<1"
+      write(*,*) "ERROR in pellet_module: n_spi<1"
       stop
     end if
 
@@ -960,7 +1013,7 @@ module pellet_module
               n_line = n_line+1
 
               if (n_col /= n_col_expected) then
-                write(*,*) "ERROR: 'spi_plume_file' is defected."
+                write(*,*) "ERROR in pellet_module: 'spi_plume_file' is defected."
                 stop
               end if
 
@@ -977,13 +1030,13 @@ module pellet_module
 
           ! check 3) Consistency of spi shard file with the parameters in the input file (especially 'n_spi')
           if (n_spi /= n_line) then
-            write(*,*) "ERROR: 'spi_plume_file' contains different number of lines than the given 'n_spi' in the input file."
+            write(*,*) "ERROR in pellet_module: 'spi_plume_file' contains different number of lines than the given 'n_spi' in the input file."
             stop
           end if
 
         else
 
-          write(*,'(A33,I2,A)') "ERROR: 'spi_plume_file' for SPI (", i_inj, ") does not exist, exiting now"
+          write(*,'(A33,I2,A)') "ERROR in pellet_module: 'spi_plume_file' for SPI (", i_inj, ") does not exist, exiting now"
           stop
 
         end if
@@ -994,20 +1047,20 @@ module pellet_module
 
         call HDF5_open(trim(spi_plume_file(i_inj)),file_id,error)
         if ( error /= 0 ) then
-          write(*,*) "ERROR: failed to open 'spi_plume_file (HDF5)'."
+          write(*,*) "ERROR in pellet_module: failed to open 'spi_plume_file (HDF5)'."
           stop
         end if
 
         call HDF5_integer_reading(file_id,n_line,"n_spi")
 
         if (n_spi /= n_line) then
-            write(*,*) "ERROR: 'n_spi' value does not match between the 'spi_plume_file (HDF5)' and the input file."
+            write(*,*) "ERROR in pellet_module: 'n_spi' value does not match between the 'spi_plume_file (HDF5)' and the input file."
             stop
         end if
 
 #else
 
-        write(*,*) "ERROR: trying to use 'spi_plume_file' in HDF5 format without 'USE_HDF5'"
+        write(*,*) "ERROR in pellet_module: trying to use 'spi_plume_file' in HDF5 format without 'USE_HDF5'"
         stop
 
 #endif
@@ -1031,7 +1084,7 @@ module pellet_module
             if (io == iostat_end) then
               exit
             else
-              write(*,*) "ERROR: in reading 'spi_plume_file', iostat = ", io
+              write(*,*) "ERROR in pellet_module: in reading 'spi_plume_file', iostat = ", io
               stop
             end if
           end if
@@ -1056,7 +1109,7 @@ module pellet_module
 
 #else
 
-        write(*,*) "ERROR: trying to use 'spi_plume_file' in HDF5 format without 'USE_HDF5'"
+        write(*,*) "ERROR in pellet_module: trying to use 'spi_plume_file' in HDF5 format without 'USE_HDF5'"
         stop
 
 #endif
@@ -1066,7 +1119,7 @@ module pellet_module
       spi_species_molar_D2_sum = 0.d0
       do i = 1, n_spi
         if (spi_species_molar_D2_tmp(i) < 0. .or. spi_species_molar_D2_tmp(i) > 1.) then
-          write(*,*) "ERROR: D2 molar fraction in spi data file has illegal values for the fragment ", i
+          write(*,*) "ERROR in pellet_module: D2 molar fraction in spi data file has illegal values for the fragment ", i
         end if
         spi_species_molar_D2_sum = spi_species_molar_D2_sum + spi_species_molar_D2_tmp(i)
       end do
@@ -1083,12 +1136,12 @@ module pellet_module
 
       select case ( trim(imp_type(index_main_imp)) )
         case('D2')
-          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
+          write(*,*) "Error in pellet_module: Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
         case('Ne')
           ! Only Parks formula can properly treat the mixing of neon and D2/H2.
           ! otherwise we assume neon and D2/H2 formed separately.
-          if (spi_abl_model == 3) then
+          if (spi_abl_model(i_inj) == 3) then
             do i = 1, n_spi
               i_p = i - 1 + n_spi_begin
               spi_species_atomic_tmp = 1.d0 - 2.d0 * spi_species_molar_D2_tmp(i) / (spi_species_molar_D2_tmp(i) + 1.d0)
@@ -1115,7 +1168,7 @@ module pellet_module
                 spi_density_tmp = pellet_density_bg
                 real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp *1.d20
               else
-                write(*,*) "ERROR: Only 'spi_abl_model = 3' can properly treat the mixing of neon and D2/H2  , exiting."
+                write(*,*) "ERROR in pellet_module: Only 'spi_abl_model(i_inj) = 3' can properly treat the mixing of neon and D2/H2  , exiting."
                 stop
               end if
             end do
@@ -1134,14 +1187,14 @@ module pellet_module
               spi_density_tmp = pellet_density_bg
               real_spi_quantity(1) = real_spi_quantity(1) + (4./3.) * PI * (spi_radius_tmp(i)**3) * spi_density_tmp *1.d20
             else
-              write(*,*) "ERROR: Argon and D2/H2 part of the pellet are always formed separately, exiting."
+              write(*,*) "ERROR in pellet_module: Argon and D2/H2 part of the pellet are always formed separately, exiting."
               stop
             end if
           end do
         case default
           write(*,*) '!! Gas type "', trim(imp_type(index_main_imp)), '" unknown !!'
           write(*,*) '=> We assume the gas is D2.'
-          write(*,*) "Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
+          write(*,*) "ERROR in pellet_module: Injection of D2 species should be done by spi_quantity_bg, please revise input file accordingly."
           stop
       end select
 
@@ -1166,6 +1219,10 @@ module pellet_module
         pellets(i_p)%spi_vol     =   0.d0
         pellets(i_p)%spi_psi     =   0.d0
         pellets(i_p)%spi_grad_psi=   0.d0
+        pellets(i_p)%spi_vol_drift      =   0.d0
+        pellets(i_p)%spi_psi_drift      =   0.d0
+        pellets(i_p)%spi_grad_psi_drift =   0.d0
+        pellets(i_p)%plasmoid_in_domain = 0
 
         write(*,'(A,I5,5ES10.2)') ' *** SHATTERED PELLET PARAMETERS :',i_p, pellets(i_p)%spi_R, pellets(i_p)%spi_Z, &
                               pellets(i_p)%spi_Vel_R, pellets(i_p)%spi_Vel_Z, pellets(i_p)%spi_radius
@@ -1188,7 +1245,7 @@ module pellet_module
       if (nstep .gt. 0) call tr_allocate(xtime_spi_ablation_bg_rate,1,n_spi_tot,1,nstep,"xtime_spi_ablation_bg_rate")
 
     else
-      write(*,*) "ERROR: n_spi<1"
+      write(*,*) "ERROR in pellet_module: n_spi<1"
       stop
     end if
 
@@ -1208,12 +1265,13 @@ module pellet_module
     integer, save         :: dtype
     logical, save         :: dtype_set = .false.
   
-    integer :: len(13) = (/1,1,1,1,1,1,1,1,1,1,1,1,1/), t(13) = (/ &
+    integer :: len(17) = (/1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1/), t(17) = (/ &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
       MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
-      MPI_REAL8,MPI_REAL8,MPI_REAL8/) ! MPI_INTEGER1 == MPI_LOGICAL1
+      MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8,MPI_REAL8, &
+      MPI_REAL8,MPI_INTEGER/) ! MPI_INTEGER1 == MPI_LOGICAL1
   
-    integer(kind=MPI_ADDRESS_KIND) :: base, disp(13)
+    integer(kind=MPI_ADDRESS_KIND) :: base, disp(17)
     type(type_SPI) :: sample_pellet
   
     dtype_out = dtype
@@ -1234,12 +1292,16 @@ module pellet_module
     call MPI_Get_address(sample_pellet%spi_vol,     disp(11),ierr)
     call MPI_Get_address(sample_pellet%spi_psi,     disp(12),ierr)
     call MPI_Get_address(sample_pellet%spi_grad_psi,disp(13),ierr)
+    call MPI_Get_address(sample_pellet%spi_vol_drift,     disp(14),ierr)
+    call MPI_Get_address(sample_pellet%spi_psi_drift,     disp(15),ierr)
+    call MPI_Get_address(sample_pellet%spi_grad_psi_drift,disp(16),ierr)
+    call MPI_Get_address(sample_pellet%plasmoid_in_domain,disp(17),ierr)
   
     ! Rebase to particle memory beginning
     disp = disp - base
   
     ! Commit the structured type
-    call MPI_Type_create_struct(13, len, disp, t, dtype, ierr)
+    call MPI_Type_create_struct(17, len, disp, t, dtype, ierr)
     call MPI_Type_commit(dtype, ierr)
   
     ! Set the save bit

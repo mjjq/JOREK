@@ -34,9 +34,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
                 SIG_up_leg_0, SIG_up_leg_1, SIG_up_priv,            &
-                SIG_outer, SIG_inner,                               &
+                SIG_outer, SIG_inner, SIG_theta_up,                 &
                 dPSI_outer, dPSI_inner, dPSI_up_priv,               &
-                nout, xr1, sig1, xr2, sig2,                         &
+                nout, nout_projection, xr1, sig1, xr2, sig2,        &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 rect_grid_vac_psi,                                  &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
@@ -76,9 +76,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_perp, ZK_i_perp, ZK_e_perp, D_par, D_perp,       &
                 heatsource_e, heatsource_i, heatsource,             &
                 particlesource, tauIC, Wdia,                        &
-                eta_num, visco_num, visco_par_num, D_perp_num,      &
+                eta_num, visco_num, visco_par_num,                  &
+                D_perp_num,  D_perp_num_tanh,                       &
+                D_perp_num_tanh_psin, D_perp_num_tanh_sig,          &
+                ZK_perp_num, ZK_perp_num_tanh,                      &
+                ZK_perp_num_tanh_psin, ZK_perp_num_tanh_sig,        &
                 eta_num_T_dependent, visco_num_T_dependent,         &
-                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
+                Dn_perp_num, time_evol_scheme,                      &
+                ZK_i_perp_num, ZK_i_perp_num_tanh,                  &
+                ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig,    &
+                ZK_e_perp_num, ZK_e_perp_num_tanh,                  &
+                ZK_e_perp_num_tanh_psin, ZK_e_perp_num_tanh_sig,    &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -136,6 +144,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_tor_rot, tor_frequency, spi_num_vol,            &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
+				T_min_neg,rho_min_neg,                              &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection, rho_min,                        &
@@ -145,12 +154,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_e_par_neg, ZK_i_par_neg, ZK_e_prof_neg, ZK_i_prof_neg,   &
                 ZK_e_prof_neg_thresh, ZK_i_prof_neg_thresh,         &
                 ZK_e_par_neg_thresh, ZK_i_par_neg_thresh,           &
-                ns_deltaphi, ns_deltaminrad, ksi_ion, spi_rnd_seed, &
+                ns_deltaphi, ns_delta_minor_rad, ksi_ion, spi_rnd_seed, &
                 ns_amplitude, ns_R, ns_Z, ns_phi, ns_radius,        &
                 spi_Vel_Rref,spi_Vel_Zref, using_spi, n_spi, n_inj, &
                 spi_Vel_RxZref, spi_quantity, spi_abl_model,        &
-                ng_radius_ratio, ng_radius_min, spi_angle,          &
+                ns_radius_ratio, ns_radius_min, spi_angle,          &
                 spi_L_inj, spi_L_inj_diff,                          &
+                drift_distance, energy_teleported,                  &
                 K_Dmv, A_Dmv, L_tube, V_Dmv, P_Dmv,                 &
                 spi_Vel_diff, t_ns, JET_MGI, ASDEX_MGI,             &
                 delta_n_convection, nimp_bg, output_prad_phi,       &
@@ -178,7 +188,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family,                                   &
+                ranks_per_family, treat_axis, Z_xpoint_limit,       &
                 tgnum_psi, tgnum_u, tgnum_zj, tgnum_w, tgnum_rho,   &
                 tgnum_T, tgnum_Ti, tgnum_Te, tgnum_vpar, tgnum_rhon,&
                 tgnum_nre, tgnum_AR, tgnum_AZ, tgnum_A3,            &
@@ -193,8 +203,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
                 ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
-                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact
-      
+                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact,    &
+                eta_num_prof, eta_num_psin_dependent,               &
+                visco_par_heating,T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar
+
 if (my_id .eq. 0) then
 
   ! --- Preset input parameters to reasonable default values.
@@ -264,6 +276,13 @@ if (my_id .eq. 0) then
     nstep_n(1) = nstep
   endif
 
+  ! --- Fill the same ablation model to others if not specified to keep the old behavior
+  do i = 2,n_inj
+    if (spi_abl_model(i) < 0) then
+      spi_abl_model(i) = spi_abl_model(1)
+    end if
+  end do
+
   call allocate_live_data()
 
 endif
@@ -315,11 +334,18 @@ if ( my_id == 0 ) then
     stop
   end if
 
- if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
+  if (index_main_imp < 0 .or. index_main_imp > n_adas) then 
     write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
     write(*,*) "ERROR: index_main_imp:", index_main_imp
     stop
- end if
+  end if
+
+  do i = 1,n_inj
+    if (drift_distance(i) < 0.d0 .or. energy_teleported(i) < 0.d0) then 
+      write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
+      stop
+    end if
+  end do
 
   if (using_spi) call init_spi_all()
 

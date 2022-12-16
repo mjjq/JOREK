@@ -9,7 +9,7 @@ contains
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
                               ELM, RHS, tid, ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,                               &
                               eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t,                 &
-                              i_tor_min, i_tor_max, aux_nodes, get_terms)
+                              i_tor_min, i_tor_max, aux_nodes, ELM_pnn, get_terms)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -37,7 +37,7 @@ type (type_element)       :: element
 type (type_node)          :: nodes(n_vertex_max)     ! fluid variables
 type (type_node),optional :: aux_nodes(n_vertex_max) ! particle moments
 
-#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
+#define DIM0 n_tor*n_vertex_max*n_degrees*n_var
 
 integer, intent(in)            :: tid
 integer, intent(in)            :: i_tor_min, i_tor_max
@@ -98,14 +98,13 @@ real*8     :: dT_dpsi(n_gauss,n_gauss),dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3
 logical    :: xpoint2, use_fft
 real*8     :: Btheta2, epsil, Btheta2_psi
 real*8, dimension(n_gauss,n_gauss)    :: amu_neo_prof, aki_neo_prof
-! neutral source
-real*8     :: source_neutral
-real*8     :: source_neutral_tmp
+! neutral source                                                                                                                  
+real*8     :: source_neutral, source_neutral_arr(n_inj_max)                                                                       
+real*8     :: source_neutral_drift, source_neutral_drift_arr(n_inj_max) !Neutral source deposited at R+drift_distance to impose plasmoid drift     
+real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max) !Teleported power density in JOREK unit (sink at R and source at R+drift)
+
 ! time normalisation
 real*8     :: t_norm
-! Temporary variables serving the SPI module
-integer    :: spi_i
-real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
@@ -136,7 +135,7 @@ real*8     :: factor(n_var,max_terms)
 integer    :: i_v, i_loc, j_loc
 
 #define DIM1 n_plane
-#define DIM2 1:n_vertex_max*n_var*(n_order+1)
+#define DIM2 1:n_vertex_max*n_var*n_degrees
 
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_p
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_n
@@ -144,6 +143,7 @@ real*8, dimension(DIM1, DIM2, DIM2) :: ELM_k
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_kn
 real*8, dimension(DIM1, DIM2)       :: RHS_p
 real*8, dimension(DIM1, DIM2)       :: RHS_k
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_pnn
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
@@ -242,7 +242,7 @@ amu_neo_prof   = 0.d0
 aki_neo_prof   = 0.d0
 
 do i=1,n_vertex_max
-  do j=1,n_order+1
+  do j=1,n_degrees
     do ms=1, n_gauss
       do mt=1, n_gauss
 
@@ -335,7 +335,7 @@ eq_zTe = eq_zTe / 2.d0  ! electron temperature
 
 !--------------------------------------------------- sum over the Gaussian integration points
 do i=1,n_vertex_max
-  do j=1,n_order+1
+  do j=1,n_degrees
 
     if (.not. present(get_terms)) then
       ELM_p(:,:,1:n_var)  = 0
@@ -765,12 +765,40 @@ do i=1,n_vertex_max
           ! --- Source of neutrals, e.g. from MGI/SPI
           !--------------------------------------------------------
 
-          source_neutral = 0.d0                   
-     
-          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral)
-     
-          source_neutral = max(source_neutral,0.)
-      
+          source_neutral       = 0.d0; source_neutral_arr       = 0.d0
+          source_neutral_drift = 0.d0; source_neutral_drift_arr = 0.d0
+
+          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+
+          do i_inj = 1,n_inj
+            source_neutral       = source_neutral + source_neutral_arr(i_inj)
+            source_neutral_drift = source_neutral_drift + source_neutral_drift_arr(i_inj)
+          end do
+
+          ! To detect NaNs
+          if (source_neutral /= source_neutral .or. source_neutral_drift /= source_neutral_drift) then
+            write(*,*) 'ERROR in mod_elt_matrix_fft: source_neutral = ',source_neutral
+            write(*,*) 'ERROR in mod_elt_matrix_fft: source_neutral_drift = ',source_neutral_drift
+            stop
+          end if
+
+          source_neutral       = max(0.,source_neutral)
+          source_neutral_drift = max(0.,source_neutral_drift)
+
+          !------------------------------------------------------------------------------------------
+          ! ---Calculate energy teleported in JOREK unit (sink at R and source
+          ! at R + drift_distance)
+          !------------------------------------------------------------------------------------------
+          ! Input energy_teleported is in eV
+          power_dens_teleport_ju = 0.d0; power_dens_teleport_ju_arr = 0.d0
+          do i_inj = 1,n_inj
+            if (with_neutrals .and. energy_teleported(i_inj) /= 0.d0) then
+              power_dens_teleport_ju_arr(i_inj) = (-source_neutral_arr(i_inj) + source_neutral_drift_arr(i_inj))  * energy_teleported(i_inj) * &
+                                                  EL_CHG * (GAMMA-1) * MU_ZERO * 1.d20 * central_density
+              power_dens_teleport_ju = power_dens_teleport_ju + power_dens_teleport_ju_arr(i_inj)
+            end if
+          end do
+
          !-----------------------------------------------------------------
          ! --- Radiation from background impurity, using ADAS (by default)
          !-----------------------------------------------------------------
@@ -821,7 +849,6 @@ do i=1,n_vertex_max
             end if 
 
           end if
-
 
          !--------------------------------------------------------
 
@@ -992,6 +1019,8 @@ do i=1,n_vertex_max
             !###################################################################################################
 
             rhs_ij(6) =  v * BigR * heat_source(ms,mt)                                    * xjac * tstep * factor(6, 1)& ! External heat source
+
+                       + v * BigR * power_dens_teleport_ju                                * xjac * tstep * factor(6, 1)& ! Additional energy teleportation term
             
                        + v * r0 * BigR**2 * ( T0_s * u0_t - T0_t * u0_s)                         * tstep * factor(6, 2)& ! vperp*gradP
                        + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep * factor(6, 2)&
@@ -1118,7 +1147,7 @@ do i=1,n_vertex_max
 
                   - BigR * v * r0_corr * rn0_corr * Sion_T                                 * xjac * tstep * factor(8,3) &  ! Ionization sink
                   + BigR * v * r0_corr * r0_corr  * Srec_T                                 * xjac * tstep * factor(8,4) &  ! Recombination source
-                  + BigR * v * source_neutral                                              * xjac * tstep * factor(8,5) &  ! External neutral source
+                  + BigR * v * source_neutral_drift                                        * xjac * tstep * factor(8,5) &  ! External neutral source
                   - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rn0_xx + rn0_x/Bigr + rn0_yy)  * BigR * xjac * tstep * factor(8,6) & ! Hyper diffusitivity
 
                   + v * delta_g(mp,8,ms,mt) * BigR * xjac * zeta* factor(8,7) ! Variation
@@ -1130,9 +1159,9 @@ do i=1,n_vertex_max
             !###################################################################################################
 
             if (use_fft) then
-              index_ij =       n_var*(n_order+1)*(i-1) +       n_var*(j-1) + 1
+              index_ij =       n_var*n_degrees*(i-1) +       n_var*(j-1) + 1
             else
-              index_ij = n_tor_local*n_var*(n_order+1)*(i-1) + n_tor_local * n_var * (j-1) + im - n_tor_start +1 
+              index_ij = n_tor_local*n_var*n_degrees*(i-1) + n_tor_local * n_var * (j-1) + im - n_tor_start +1 
             endif
 
 
@@ -1219,7 +1248,7 @@ do i=1,n_vertex_max
 
             do k=1,n_vertex_max
 
-              do l=1,n_order+1
+              do l=1,n_degrees
 
                 do in = n_tor_start, n_tor_end
 
@@ -2043,7 +2072,7 @@ do i=1,n_vertex_max
                   ! --- Fill up the matrix
                   if (use_fft) then
 
-                    index_kl = n_var*(n_order+1)*(k-1) + n_var*(l-1) + 1
+                    index_kl = n_var*n_degrees*(k-1) + n_var*(l-1) + 1
  
                     do kl = 1, n_var
                       do ij = 1, n_var
@@ -2058,7 +2087,7 @@ do i=1,n_vertex_max
 
                   else
 
-                    index_kl = n_tor_local*n_var*(n_order+1)*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
+                    index_kl = n_tor_local*n_var*n_degrees*(k-1) + n_tor_local*n_var*(l-1) + in - n_tor_start +1
 
                     do kl = 1, n_var
                       do ij = 1, n_var
@@ -2074,7 +2103,7 @@ do i=1,n_vertex_max
 
                 enddo ! in loop (n_tor, or not...)
 
-              enddo ! l loop (n_order+1)
+              enddo ! l loop n_degrees
             enddo ! k loop (n_vertex)
 
           enddo ! im loop (n_tor, or not...)
@@ -2089,9 +2118,9 @@ do i=1,n_vertex_max
     if (use_fft) then
 
       do i_v = 1, n_var
-        do j_loc=1, n_vertex_max*n_var*(n_order+1)
+        do j_loc=1, n_vertex_max*n_var*n_degrees
 
-          i_loc = n_var*(n_order+1)*(i-1) + n_var * (j-1) + i_v 
+          i_loc = n_var*n_degrees*(i-1) + n_var * (j-1) + i_v 
           in_fft =  ELM_p(1:n_plane,j_loc,i_v)
 #ifdef USE_FFTW
           call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
@@ -2301,7 +2330,7 @@ do i=1,n_vertex_max
 
     endif ! apply fft (or not)
 
-  enddo ! j loop (n_order+1)
+  enddo ! j loop n_degrees
 enddo ! i loop (n_vertex)
 
 
@@ -2313,7 +2342,7 @@ if (present(get_terms)) then
 
   do i_term=1, max_terms
 
-    do j=1, n_vertex_max*n_var*(n_order+1)
+    do j=1, n_vertex_max*n_var*n_degrees
     
       in_fft = ELM_p(1:n_plane,i_term, j)
 #ifdef USE_FFTW
@@ -2333,7 +2362,7 @@ if (present(get_terms)) then
     
     enddo
     
-    do j=1, n_vertex_max*n_var*(n_order+1)
+    do j=1, n_vertex_max*n_var*n_degrees
     
       in_fft = ELM_k(1:n_plane,i_term,j)
 #ifdef USE_FFTW
@@ -2362,7 +2391,7 @@ else
 
   ELM = 0.5d0 * ELM
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
   
     in_fft = RHS_p(1:n_plane,j)
 #ifdef USE_FFTW
@@ -2382,7 +2411,7 @@ else
   
   enddo
   
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
   
     in_fft = RHS_k(1:n_plane,j)
 #ifdef USE_FFTW

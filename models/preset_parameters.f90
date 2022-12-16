@@ -32,6 +32,11 @@ subroutine preset_parameters
   visco_num_T_dependent = .false.
   add_sources_in_sc     = .false.
 
+  eta_num_psin_dependent= .false.
+  eta_num_prof = 0.d0
+  eta_num_prof(1) = 0.8d0
+  eta_num_prof(2) = 0.03d0
+
   eta           = 1.d-5
   T_max_eta     = 1.d3
   eta_ohmic     = 0.d0
@@ -39,6 +44,7 @@ subroutine preset_parameters
 
   visco = 1.d-5
   visco_par = 1.d-5
+  visco_par_heating = 0.d0
   
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)
@@ -124,6 +130,7 @@ subroutine preset_parameters
   SIG_private = 0.1d0
   SIG_up_priv = 0.1d0
   SIG_theta   = 0.03d0
+  SIG_theta_up= 999.d0
   SIG_leg_0   = 0.05d0
   SIG_leg_1   = 0.2d0
   SIG_up_leg_0= 0.05d0
@@ -183,6 +190,8 @@ subroutine preset_parameters
   xleft  = 0.d0
   xpoint = .false.
   force_horizontal_Xline = .false.
+  Z_xpoint_limit(1) = -0.4d0
+  Z_xpoint_limit(2) =  0.4d0
 
   xr1  = 9999.d0
   sig1 = 9999.d0
@@ -229,23 +238,36 @@ subroutine preset_parameters
   ZK_i_prof_neg_thresh = 0.d0 ! default is zero for keeping the old behavior
   ZK_i_par_neg_thresh  = 0.d0
 
+  HW_coef    = 0.d0
+  HW_coef(1) = 1.d-6
+  HW_coef(2) = 1.d0
+
   ne_SI_min          = 1.d18
   Te_eV_min          = 5.
   rn0_min            = 1.d-8
   T_min              = 1.0d-20
   rho_min            = 1.0d-20
+  T_min_neg          = -1.d12 !< only used if T_min_neg>0 , 2.01d-5*central_density*Tmin_ev (cd = 1, 20 eV)
+  T_min_ZKpar        = -1.d12 
+  Ti_min_ZKpar       = -1.d12 
+  Te_min_ZKpar       = -1.d12 
+  rho_min_neg        = -1.d12
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
 
-  eta_num       = 0.d0
-  visco_num     = 0.d0
-  visco_par_num = 0.d0
-  D_perp_num    = 0.d0
-  ZK_perp_num   = 0.d0
-  ZK_i_perp_num = 0.d0
-  ZK_e_perp_num = 0.d0
-  Dn_perp_num   = 0.d0
+  eta_num            = 0.d0
+  visco_num          = 0.d0
+  visco_par_num      = 0.d0
+  D_perp_num         = 0.d0
+  D_perp_num_tanh    = 0.d0; D_perp_num_tanh_psin    = 3.d-1; D_perp_num_tanh_sig    = 1.d-1
+  ZK_perp_num        = 0.d0
+  ZK_perp_num_tanh   = 0.d0; ZK_perp_num_tanh_psin   = 3.d-1; ZK_perp_num_tanh_sig   = 1.d-1
+  ZK_i_perp_num      = 0.d0
+  ZK_i_perp_num_tanh = 0.d0; ZK_i_perp_num_tanh_psin = 3.d-1; ZK_i_perp_num_tanh_sig = 1.d-1
+  ZK_e_perp_num      = 0.d0
+  ZK_e_perp_num_tanh = 0.d0; ZK_e_perp_num_tanh_psin = 3.d-1; ZK_e_perp_num_tanh_sig = 1.d-1
+  Dn_perp_num        = 0.d0
 
   use_sc = .false.
   visco_sc_num     = 0.d0
@@ -490,6 +512,7 @@ subroutine preset_parameters
   index_start = 0
 
   nout = 9999999
+  nout_projection = -1
 
   rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
 
@@ -527,7 +550,13 @@ subroutine preset_parameters
   
   export_for_nemec   = .false.
   
-  gmres              = .true.               ! Use iterative solver
+  ! Use iterative solver by default if n_tor>1.
+  if ( n_tor == 1) then
+    gmres            = .false.
+  else
+    gmres            = .true.
+  end if
+  
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
   gmres_tol          = 1.d-8                ! converge tolerance GMRES
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
@@ -590,6 +619,7 @@ subroutine preset_parameters
   no_mach1_bc        = .false.              ! Never apply Mach-1 BCs
 
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  Mach1_fix_B        = .true.               !< Full-MHD: Use the initial magnetic field for Mach1 BCs on targets, ie. without AR and AZ variations
 
   eta_ARAZ_const     = 0.d0                 !< Use uniform resistivity for AR and AZ equations, used only if eta_ARAZ_on=.false.
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
@@ -631,6 +661,7 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  surface_cross_tol = 1.005
   eqdsk_psi_fact = 1.d0
   extend_existing_grid = .false.
   n_wall_blocks        = 0
@@ -659,7 +690,7 @@ subroutine preset_parameters
   ns_phi    = 1.57d0
   ns_radius =   0.08d0
   ns_deltaphi =  0.5
-  ns_deltaminrad = 0.d0
+  ns_delta_minor_rad = 0.d0
   ns_tor_norm = 1.
   ksi_ion = 1.84d-24
   D_neutral_x = 1.d-5
@@ -672,7 +703,9 @@ subroutine preset_parameters
   imp_type = ' '
   index_main_imp = 0
   if (with_impurities) index_main_imp = 1
-  use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one exists for argon
+  use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one only implemented for argon
+  drift_distance = 0.d0 ! No artificial plasmoid drift by default
+  energy_teleported = 0.d0 
 
   !====== JET DMV-2 parameters
   L_tube = 2.4d0
@@ -686,8 +719,8 @@ subroutine preset_parameters
   spi_Vel_RxZref  = 0.0d0
   spi_quantity    = 0.0
   spi_quantity_bg = 0.0
-  ng_radius_ratio = 1.4d0
-  ng_radius_min   = 8.d-2
+  ns_radius_ratio = 1.4d0
+  ns_radius_min   = 8.d-2
   spi_Vel_diff    = 0.0
   spi_angle       = 0.0
   spi_L_inj       = 0.25
@@ -698,7 +731,7 @@ subroutine preset_parameters
   n_spi(1)        = 1
   n_inj           = 1
   spi_rnd_seed    = 0
-  spi_abl_model   = 0
+  spi_abl_model   = -1
   spi_shard_file(:) = 'none'
   spi_plume_file(:) = 'none'
   spi_plume_hdf5  = .false.
@@ -737,6 +770,10 @@ subroutine preset_parameters
 
   thermalization = .false.
 
+!===================== Polar axis treatment flag========
+
+  treat_axis = .false.
+  
 !===================== not used?
   Q_bar = 0.d0
   Sigma = 0.d0
@@ -760,5 +797,6 @@ use_pcs_full       = .false.
 use_ionisation     = .true.
 use_sputtering     = .false.
 use_cx             = .true.
+use_marker         = .false.
 
 end subroutine preset_parameters

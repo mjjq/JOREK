@@ -7,7 +7,7 @@ contains
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, &
                               ELM, RHS, tid, ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,                               &
                               eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt, delta_g, delta_s, delta_t,                 &
-                              i_tor_min, i_tor_max, aux_nodes)
+                              i_tor_min, i_tor_max, aux_nodes, ELM_pnn)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -33,7 +33,7 @@ type (type_element)       :: element
 type (type_node)          :: nodes(n_vertex_max)     ! fluid variables
 type (type_node),optional :: aux_nodes(n_vertex_max) ! particle moments
 
-#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
+#define DIM0 n_tor*n_vertex_max*n_degrees*n_var
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
@@ -119,8 +119,10 @@ real*8     :: rn0_xx, rn0_yy, rn0_xy, rhon_xx, rhon_yy
 ! New momentum equation related rhs and amat
 real*8     :: amat_25_n, amat_27_n
 
-! Neutral source
-real*8     :: source_imp, source_bg
+! Impurity and background source
+real*8     :: source_imp, source_bg, source_imp_arr(n_inj_max), source_bg_arr(n_inj_max)
+real*8     :: source_bg_drift_arr(n_inj_max)
+real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max)
 
 ! time normalization
 real*8     :: t_norm
@@ -164,7 +166,7 @@ complex*16 :: out_fft(1:n_plane)
 integer*8  :: plan
 
 #define DIM1 n_plane
-#define DIM2 1:n_vertex_max*n_var*(n_order+1)
+#define DIM2 1:n_vertex_max*n_var*n_degrees
 
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_p
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_n
@@ -172,6 +174,7 @@ real*8, dimension(DIM1, DIM2, DIM2) :: ELM_k
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_kn
 real*8, dimension(DIM1, DIM2)       :: RHS_p
 real*8, dimension(DIM1, DIM2)       :: RHS_k
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_pnn
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
@@ -230,8 +233,14 @@ if ( NEO ) then
 endif
 !======================================= NEO
 
+if (allocated(P_imp)) deallocate(P_imp)
+if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
+allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
+
 do i=1,n_vertex_max
- do j=1,n_order+1
+ do j=1,n_degrees
 
    do ms=1, n_gauss
      do mt=1, n_gauss
@@ -747,12 +756,6 @@ do ms=1, n_gauss
 
      if (allocated(imp_adas(index_main_imp)%ionisation_energy)) then
 
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
-
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),           &
 !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT, &
 !                              z_TeTe_out=d2Z_imp_dT2)
@@ -782,12 +785,6 @@ do ms=1, n_gauss
        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
      else
-
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
 
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
@@ -859,6 +856,7 @@ do ms=1, n_gauss
          dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rn0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
        end do
        dZ_eff_dT    = dZ_eff_dT / ne_JOREK
+       dZ_eff_dT    = dZ_eff_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! convert from K to JOREK unit
        dZ_eff_dT    = dZ_eff_dT - Z_eff * dbeta_imp_dT * rn0_corr / ne_JOREK
   
        dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
@@ -886,12 +884,12 @@ do ms=1, n_gauss
 
        deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
        deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
-       deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT
+       deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT
        eta_T     = eta_T * eta_coef
 
        deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
        deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
-       deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dT0_corr_dT	   
+       deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT
        eta_T_ohm = eta_T_ohm * eta_coef
 
      end if
@@ -931,25 +929,43 @@ do ms=1, n_gauss
 
      phi = 2.d0*PI*float(mp-1)/float(n_plane)/float(n_period)
 
-     source_imp = 0.d0
-     source_bg  = 0.d0
+     source_imp = 0.d0; source_imp_arr = 0.d0
+     source_bg  = 0.d0; source_bg_arr = 0.d0
 
-     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
+     source_bg_drift_arr = 0.d0
+
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp,source_bg_drift_arr)
+
+     do i_inj = 1,n_inj
+       source_imp = source_imp + source_imp_arr(i_inj)
+       if (drift_distance(i_inj) /= 0.d0) then
+         source_bg = source_bg + source_bg_drift_arr(i_inj)
+       else
+         source_bg = source_bg + source_bg_arr(i_inj)
+       end if
+     end do
 
      ! This is to detect N/A
      if (source_imp /= source_imp .or. source_bg /= source_bg) then
-       write(*,*) "WARNING: source_imp = ", source_imp
-       write(*,*) "WARNING: source_bg = ", source_bg
+       write(*,*) "ERROR in mod_elt_matrix_fft (501): source_imp = ", source_imp
+       write(*,*) "ERROR in mod_elt_matrix_fft (501): source_bg = ", source_bg
        stop
      end if
      
-     if (source_imp .lt. 0.d0) then
-      source_imp = 0.d0
-     endif
-     
-     if (source_bg .lt. 0.d0) then
-      source_bg = 0.d0
-     endif
+     source_imp = max(0., source_imp)
+     source_bg  = max(0., source_bg)
+
+     ! teleported energy
+     power_dens_teleport_ju_arr = 0.d0
+     power_dens_teleport_ju     = 0.d0
+     do i_inj = 1,n_inj
+       if (energy_teleported(i_inj) /= 0.d0) then
+         power_dens_teleport_ju_arr(i_inj) = (-source_bg_arr(i_inj) + source_bg_drift_arr(i_inj)) * energy_teleported(i_inj) * &
+                                             EL_CHG * (GAMMA-1.) * MU_ZERO * 1.d20 * central_density
+         power_dens_teleport_ju = power_dens_teleport_ju + power_dens_teleport_ju_arr(i_inj)
+       end if
+     end do
+
 
    !--------------------------------------------------------
    ! --- Radiation from background impurity
@@ -1006,9 +1022,9 @@ do ms=1, n_gauss
 
      do i=1,n_vertex_max
 
-       do j=1,n_order+1
+       do j=1,n_degrees
 
-         index_ij = n_var*(n_order+1)*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
+         index_ij = n_var*n_degrees*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
 
          v   =  H(i,j,ms,mt) * element%size(i,j)
          v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
@@ -1172,6 +1188,8 @@ do ms=1, n_gauss
 !###################################################################################################
 
          rhs_ij_6 =   v * BigR * heat_source(ms,mt)                                    * xjac * tstep &
+
+                    + v * BigR * power_dens_teleport_ju                                * xjac * tstep &
  
                     + v * (r0 + rn0*alpha_imp_bis) * BigR**2 * ( T0_s * u0_t - T0_t * u0_s)   * tstep &
                     + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep &
@@ -1253,7 +1271,8 @@ do ms=1, n_gauss
                     + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * visco_par_heating * (vpar0_x * vpar0_x + vpar0_y * vpar0_y)      * xjac * tstep &
+                    + (GAMMA - 1.) * vpar0 * BigR * visco_par_heating * (v_x * vpar0_x     + v_y * vpar0_y)      * xjac * tstep &
 !==========================End of viscous heating terms==============================
 
                     + v * BigR * (GAMMA - 1.) * eta_T_ohm * (zj0/BigR)**2           * xjac * tstep  &
@@ -1420,7 +1439,7 @@ do ms=1, n_gauss
 	 
          do k=1,n_vertex_max
 
-           do l=1,n_order+1
+           do l=1,n_degrees
 
              psi   = H(k,l,ms,mt) * element%size(k,l)
 
@@ -1486,7 +1505,7 @@ do ms=1, n_gauss
              rhon_x_hat = 2.d0 * BigR * BigR_x  * rhon + BigR**2 * rhon_x    
              rhon_y_hat = BigR**2 * rhon_y                                   
 
-             index_kl = n_var*(n_order+1)*(k-1) + n_var * (l-1) + 1   ! index in the ELM matrix
+             index_kl = n_var*n_degrees*(k-1) + n_var * (l-1) + 1   ! index in the ELM matrix
 
 !###################################################################################################
 !#  equation 1   (induction equation)                                                              #
@@ -1872,7 +1891,7 @@ do ms=1, n_gauss
                              * T0 * ((r0_x+alpha_imp*rn0_x) * psi_y - (r0_y+alpha_imp*rn0_y) * psi_x)         &
                              * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep &
                    + TG_num6 * 0.25d0 / BigR * vpar0**2                                                       &
-                             * (r0_x+alpha_imp*rn0_x) * (T0_x * psi_y - T0_y * psi_x)                         &
+                             * (r0+alpha_imp*rn0) * (T0_x * psi_y - T0_y * psi_x)                         &
                              * (                            + F0 / BigR * v_p) * xjac * theta * tstep * tstep
 
 
@@ -2114,7 +2133,9 @@ do ms=1, n_gauss
                        - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * v * BigR * visco_par_heating * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * vpar0 * BigR * visco_par_heating    * (vpar_x*v_x     + vpar_y*v_y)     * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * vpar * BigR * visco_par_heating    * (vpar0_x*v_x     + vpar0_y*v_y)    * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
  
                    + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
@@ -2693,9 +2714,9 @@ do ms=1, n_gauss
  enddo
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
     in_fft =  ELM_p(1:n_plane,i,j)
 #ifdef USE_FFTW
@@ -2756,9 +2777,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_n(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -2824,9 +2845,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_k(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -2891,9 +2912,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_kn(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -2962,7 +2983,7 @@ enddo
 
 ELM = 0.5d0 * ELM
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+do j=1, n_vertex_max*n_var*n_degrees
 
   in_fft = RHS_p(1:n_plane,j)
 #ifdef USE_FFTW
@@ -2986,7 +3007,7 @@ do j=1, n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+do j=1, n_vertex_max*n_var*n_degrees
 
   in_fft = RHS_k(1:n_plane,j)
 #ifdef USE_FFTW

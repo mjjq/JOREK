@@ -14,8 +14,9 @@ module mod_neutral_source
 
 
   !> Calculates the neutral source
-  subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
-                              A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,               &
+  subroutine neutral_source(ns_amplitude,ns_R,ns_Z,ns_phi,ns_psi,ns_grad_psi,ns_radius,ns_deltaphi, &
+                              ns_delta_minor_rad,ns_tor_norm,                                       &
+                              A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns,L_tube,R,Z,phi,psi,rhon_source,t_now,    &
                               JET_MGI,ASDEX_MGI,central_density,central_mass,source_volume)
 
     use mod_source_shape, only: source_shape
@@ -24,7 +25,7 @@ module mod_neutral_source
 
     ! --- Routine parameters
     real*8,  intent(in)  :: R, Z, phi, psi, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_now, t_ns, ns_amplitude
-    real*8,  intent(in)  :: ns_R, ns_Z, ns_phi, ns_psi, ns_grad_psi, ns_radius, ns_deltaphi, ns_deltaminrad, L_tube
+    real*8,  intent(in)  :: ns_R, ns_Z, ns_phi, ns_psi, ns_grad_psi, ns_radius, ns_deltaphi, ns_delta_minor_rad, L_tube
     real*8,  intent(in)  :: central_density, central_mass, ns_tor_norm
     logical, intent(in)  :: JET_MGI, ASDEX_MGI
     real*8,  intent(out) :: rhon_source
@@ -40,7 +41,13 @@ module mod_neutral_source
 
     ! Compute the source shape
     ns_shape = source_shape(R,Z,phi,ns_R,ns_Z,ns_phi,ns_radius,ns_deltaphi,&
-         psi,ns_psi,ns_grad_psi,ns_deltaminrad)
+         psi,ns_psi,ns_grad_psi,ns_delta_minor_rad)
+
+    ! To detect NaNs
+    if (ns_shape /= ns_shape) then
+       write(*,*) 'ERROR in mod_neutral_source: ns_shape = ', ns_shape
+       stop
+    end if
 
     ! Volume used for normalization:
     ! if finite, the input value for source_volume will be used as this will correspond to the numerically integrated gas source volume
@@ -51,10 +58,10 @@ module mod_neutral_source
     if (source_volume .gt. 0.) then ! i.e., when numerical integration of the ablation source volume is used
        V_ns = source_volume
     else ! i.e., when numerical integration of the ablation source volume is not used
-       if (ns_deltaminrad .gt. 0.) then
+       if (ns_delta_minor_rad .gt. 0.) then
     ! i.e., with poloidally elongated ablation cloud
     ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
-          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * min(ns_deltaminrad,ns_radius)
+          V_ns  = PI * ns_R * ns_tor_norm * ns_radius * min(ns_delta_minor_rad,ns_radius)
        else
     ! i.e., standard case with circular ablation cloud in the poloidal plane
     ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon
@@ -157,13 +164,14 @@ module mod_neutral_source
   end subroutine neutral_source
 
 
-  subroutine total_neutral_source(R,Z,phi,psi,source_neutral) 
+  subroutine total_neutral_source(R,Z,phi,psi,source_neutral_arr,source_neutral_drift_arr) 
 
-    use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ng_radius_ratio, ns_radius
-    use phys_module, only: ng_radius_min, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
+    use phys_module, only: using_spi, JET_MGI, ASDEX_MGI, n_spi_tot, pellets, ns_radius_ratio, ns_radius
+    use phys_module, only: ns_radius_min, n_inj_max, n_inj, n_spi, n_spi_tot, ns_deltaphi, L_tube
     use phys_module, only: ns_tor_norm, A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns, t_now, central_density, central_mass
     use phys_module, only: ns_amplitude, ns_R, ns_Z, ns_phi
-    use phys_module, only: spi_num_vol, ns_deltaminrad
+    use phys_module, only: spi_num_vol, ns_delta_minor_rad
+    use phys_module, only: drift_distance
 
     implicit none
 
@@ -171,56 +179,84 @@ module mod_neutral_source
     real*8, intent(in)   :: Z
     real*8, intent(in)   :: phi
     real*8, intent(in)   :: psi
-    real*8, intent(out)  :: source_neutral
+    real*8, intent(out)  :: source_neutral_arr(n_inj_max)
+    real*8, intent(out), optional  :: source_neutral_drift_arr(n_inj_max) !< Neutral source at the post-drift (if any) position
 
     ! Temporary variables serving the SPI module
-    integer    :: spi_i, i_inj,  n_spi_tmp
-    
-    real*8     :: spi_R_tmp
-    real*8     :: spi_Z_tmp
-    real*8     :: spi_phi_tmp
-    real*8     :: spi_abl_tmp
+    integer    :: spi_i, i_inj,  n_spi_tmp, n_spi_begin, i
+    real*8     :: ns_radius_loc    
     real*8     :: spi_psi_tmp
     real*8     :: spi_grad_psi_tmp
-    real*8     :: ng_radius !< Radius of neutral gas cloud as a result of the ablation
     real*8     :: source_neutral_tmp
     real*8     :: spi_vol_tmp !< Numerically integrated gas source volume
+    ! Additional ones related to plasmoid drift 
+    real*8     :: source_neutral_tmp_drift
+    real*8     :: spi_vol_tmp_drift 
+    real*8     :: spi_psi_tmp_drift
+    real*8     :: spi_grad_psi_tmp_drift
+
+    source_neutral_arr       = 0.d0
+    if (present(source_neutral_drift_arr)) then
+      source_neutral_drift_arr = 0.d0
+    end if
 
     if (using_spi) then
 
-      do spi_i=1, n_spi_tot
+      n_spi_begin = 1
+      do i_inj = 1,n_inj
 
-        source_neutral_tmp = 0.d0 
+        do i = 1,n_spi(i_inj)
+          spi_i = n_spi_begin + i - 1
 
-        if (pellets(spi_i)%spi_radius > 0.0) then
+          source_neutral_tmp = 0.d0 
+          source_neutral_tmp_drift = 0.d0
 
-          if (spi_num_vol) then
-             spi_vol_tmp = pellets(spi_i)%spi_vol
-          else
-             spi_vol_tmp = 0.d0
-          endif
+          if (pellets(spi_i)%spi_radius > 0.0) then
 
-          ng_radius   = pellets(spi_i)%spi_radius * ng_radius_ratio
+            if (spi_num_vol) then
+               spi_vol_tmp = pellets(spi_i)%spi_vol
+               spi_vol_tmp_drift = pellets(spi_i)%spi_vol_drift
+            else
+               spi_vol_tmp = 0.d0
+               spi_vol_tmp_drift = 0.d0
+            endif
 
-          if (ng_radius < ng_radius_min) then
-            ng_radius = ng_radius_min
+            ns_radius_loc = pellets(spi_i)%spi_radius * ns_radius_ratio
+
+            if (ns_radius_loc < ns_radius_min) then
+              ns_radius_loc = ns_radius_min
+            end if
+
+            call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi, &
+                          pellets(spi_i)%spi_psi,pellets(spi_i)%spi_grad_psi, &
+                          ns_radius_loc,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
+                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,R,Z,phi,psi, &
+                          source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
+
+            if (present(source_neutral_drift_arr)) then
+              if (drift_distance(i_inj) /= 0.d0) then
+                if ( pellets(spi_i)%plasmoid_in_domain == 1 ) then
+                  call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R+drift_distance(i_inj),pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi, &
+                                pellets(spi_i)%spi_psi_drift,pellets(spi_i)%spi_grad_psi_drift, &
+                                ns_radius_loc,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
+                                A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,R,Z,phi,psi, &
+                                source_neutral_tmp_drift,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp_drift)
+                else
+                  source_neutral_tmp_drift = 0.d0 ! Plasmoid outside of the domain
+                end if
+              else 
+                source_neutral_tmp_drift = source_neutral_tmp
+              end if
+              source_neutral_drift_arr(i_inj) = source_neutral_drift_arr(i_inj) + source_neutral_tmp_drift
+            end if
+
           end if
 
-          n_spi_tmp = 0
-          do i_inj = 1, n_inj
-            n_spi_tmp = n_spi_tmp + n_spi(i_inj)
-            if (spi_i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
-          end do
+          source_neutral_arr(i_inj) = source_neutral_arr(i_inj) + source_neutral_tmp   
 
-          call neutral_source(pellets(spi_i)%spi_abl,pellets(spi_i)%spi_R,pellets(spi_i)%spi_Z,pellets(spi_i)%spi_phi, &
-                        pellets(spi_i)%spi_psi,pellets(spi_i)%spi_grad_psi, &
-                        ng_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
-                        A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),0.,R,Z,phi,psi, &
-                        source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
+        end do
 
-        end if
-
-        source_neutral = source_neutral + source_neutral_tmp
+        n_spi_begin = n_spi_begin + n_spi(i_inj)
 
       end do
 
@@ -231,12 +267,37 @@ module mod_neutral_source
         spi_vol_tmp = 0.d0
         spi_psi_tmp = 0.d0
         spi_grad_psi_tmp = 0.d0
+        source_neutral_tmp_drift = 0.d0
+        spi_psi_tmp_drift = 0.d0
+        spi_grad_psi_tmp_drift = 0.d0
+        
+        if (ns_delta_minor_rad /= 0.) then
+         ! For non-SPI cases this should be 0. (not in use), otherwise the source_shape would be 0 with zeros spi_grad_psi etc.   
+          write(*,*) 'Error in mod_neutral_source: ns_delta_minor_rad/=0. not implemented for non-SPI cases!!'
+          stop
+        end if
+
 
         call neutral_source(ns_amplitude(i_inj),ns_R(i_inj),ns_Z(i_inj),ns_phi(i_inj),spi_psi_tmp,spi_grad_psi_tmp, &
-                      ns_radius,ns_deltaphi,ns_deltaminrad,ns_tor_norm, &
+                      ns_radius,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
                       A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,psi, &
                       source_neutral_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
-        source_neutral = source_neutral + source_neutral_tmp
+
+        if (present(source_neutral_drift_arr)) then
+          if (drift_distance(i_inj) /= 0.d0) then
+            call neutral_source(ns_amplitude(i_inj),ns_R(i_inj)+drift_distance(i_inj),ns_Z(i_inj),ns_phi(i_inj), &
+                          spi_psi_tmp_drift,spi_grad_psi_tmp_drift, &
+                          ns_radius,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
+                          A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,psi, &
+                          source_neutral_tmp_drift,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp)
+          else
+            source_neutral_tmp_drift = source_neutral_tmp
+          end if
+          source_neutral_drift_arr(i_inj) = source_neutral_drift_arr(i_inj) + source_neutral_tmp_drift
+        end if
+
+        source_neutral_arr(i_inj) = source_neutral_arr(i_inj) + source_neutral_tmp
+
       end do
     end if
 

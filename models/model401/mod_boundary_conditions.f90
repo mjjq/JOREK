@@ -83,7 +83,7 @@ real*8  :: R_s, R_t, Z, Z_s, Z_t, R_tt, Z_tt, ps0, ps0_s, ps0_t, ps0_tt, ps0_x, 
 real*8  :: ps0_b, T0i_b, T0e_b, u0_b, Vpar0_b, R_b, Z_b, R_bb, Z_bb, ps0_bb, grad_b(2)
 real*8  :: Btot, grad_psi, u0_s, u0_t, u0_x, u0_y
 real*8  :: element_size_s, element_size_t, element_size_0
-real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
+real*8  :: H1(2,n_degrees_1d), H1_s(2,n_degrees_1d), H1_ss(2,n_degrees_1d)
 integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
 integer :: index_large_i, index_node, index_node2, ielm
 integer(kind=int_all) :: ijA_position,ijA_position2
@@ -581,18 +581,18 @@ do i=1, n_local_elms !=== do elements
                  solve_only, gmres, index_min, index_max,                     & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-          call boundary_conditions_add_one_entry(                      &
-                 index_node2, kv, in, index_node,  kTi, in,            &
-                 - zbig * factor  / Btot * cs0_TT * T0i_b * direction  &
-                 - zbig * Hfact_b / Btot * cs0_T         * direction,  & 
-                 solve_only, gmres, index_min, index_max,              & 
+          call boundary_conditions_add_one_entry(                              &
+                 index_node2, kv, in, index_node,  kTi, in,                    &
+                 - zbig * factor  / Btot * cs0_TT * (T0i_b+T0e_b) * direction  &
+                 - zbig * Hfact_b / Btot * cs0_T                  * direction, & 
+                 solve_only, gmres, index_min, index_max,                      & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
-          call boundary_conditions_add_one_entry(                      &
-                 index_node2, kv, in, index_node,  kTe, in,            &
-                 - zbig * factor  / Btot * cs0_TT * T0e_b * direction  &
-                 - zbig * Hfact_b / Btot * cs0_T          * direction, & 
-                 solve_only, gmres, index_min, index_max,              & 
+          call boundary_conditions_add_one_entry(                              &
+                 index_node2, kv, in, index_node,  kTe, in,                    &
+                 - zbig * factor  / Btot * cs0_TT * (T0i_b+T0e_b) * direction  &
+                 - zbig * Hfact_b / Btot * cs0_T                  * direction, & 
+                 solve_only, gmres, index_min, index_max,                      & 
                  ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
 
           if (in .eq. 1) then

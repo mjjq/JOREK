@@ -22,6 +22,7 @@ module phys_module
   real*8  :: eta_rst              !< eta value from restart file
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity (normalized)
+  real*8  :: visco_par_heating    !< Parallel viscosity used in the parallel viscous heating term (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
   real*8  :: central_mass         !< average ion mass in atomic mass units (constant in time and space)
@@ -54,6 +55,8 @@ module phys_module
   real*8  :: min_sheath_angle     !< For sheath boundary conditions: Minimum incident angle for heat and particle fluxes (in degrees)
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
+  integer :: nout_projection      !< Output particle projection every nout_projection timesteps (only for diagnostics)
+                                  !< Note that the 'to_h5' or 'to_vtk' flag should be .true. in the 'new_projection' function for this parameter to be in play
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
   real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
@@ -61,11 +64,13 @@ module phys_module
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
   logical :: import_equil         !< (presently unused)
   logical :: xpoint               !< X-point plasma or not? see also xcase
+  real*8  :: Z_xpoint_limit(2)    !< Search the lower X-point in the region Z < Z_xpoint_limit(1) and the upper X-point in the region Z > Z_xpoint_limit(2) 
   logical :: bootstrap            !< Evolve the Bootstrap current consistently with time?
   real*8  :: minRad               !< Approximation of minor radius for bootstrap current calculation
   logical :: refinement           !< Use mesh refinement? (not presently available)
   logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids or independent values?
   logical :: fix_axis_nodes       !< Fix t-derivative and cross st-derivative on axis to avoid noise
+  logical :: treat_axis           !> Flag for chosing grid axis treatment (see grids/mod_axis_treatment.f90)
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
@@ -77,6 +82,7 @@ module phys_module
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  logical :: Mach1_fix_B          !< Full-MHD: Use the initial magnetic field for Mach1 BCs on targets, ie. without AR and AZ variations
 
   ! --- RESISTIVITY SWITCHES FOR AR AND AZ EQUATIONS
   ! --- 1.
@@ -186,6 +192,7 @@ module phys_module
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
   !> Points used as blocks to extend grid into complex wall structures, see https://www.jorek.eu/wiki/doku.php?id=wallgrid_tutorial
+  real*8  :: surface_cross_tol                                                  !< Tolerance when looking for crossing of polar lines and surfaces, needs to be > 1.0
   real*8  :: eqdsk_psi_fact                                                     !< multiply eqdsk psi by factor for grid_inside_wall
   logical :: extend_existing_grid                                               !< Add patches to existing grid from restart file
   integer, parameter :: n_wall_blocks_max = 30                                  !< Maximum number of blocks (30 should be enough)
@@ -264,15 +271,22 @@ module phys_module
   real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num, Zk_i_perp_num, Zk_e_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num,                                      &
+             D_perp_num, D_perp_num_tanh, D_perp_num_tanh_psin, D_perp_num_tanh_sig, &
+             ZK_perp_num, ZK_i_perp_num, ZK_e_perp_num,                              &
+             ZK_perp_num_tanh, ZK_perp_num_tanh_psin, ZK_perp_num_tanh_sig,          &
+             ZK_i_perp_num_tanh, ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig,    &
+             ZK_e_perp_num_tanh, ZK_e_perp_num_tanh_psin, ZK_e_perp_num_tanh_sig
+  real*8  :: Dn_perp_num
 
   !> @name Shock-capturing terms
   logical :: use_sc  !< Use shock-capturing stabilization
   real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num
   real*8  :: ZK_perp_sc_num, ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num, ZK_e_perp_sc_num, ZK_e_par_sc_num
   real*8  :: visco_sc_num, visco_par_sc_num
-
-  logical :: eta_num_T_dependent  !< Hyper-resistivity dependent on temperature? Otherwise constant.
+  logical :: eta_num_T_dependent     !< Hyper-resistivity dependent on temperature? Otherwise constant.
+  logical :: eta_num_psin_dependent  !< Give profile for Hyper-resistivity as function of \psi_N? Useful for 2D current flattening
+  real*8  :: eta_num_prof(10)        !< Coefficients to specify \psi_N profile for hyper-resistivity
   logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   logical :: add_sources_in_sc    !< Whether to add effect of sources in shock-capturing stabilization or not
 
@@ -380,11 +394,14 @@ module phys_module
   real*8  :: ns_phi(n_inj_max) !< Phi position of gas source
   real*8  :: ns_radius         !< Poloidal radius of gas source
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
-  real*8  :: ns_deltaminrad    !< Extension of gas source in the minor radial direction (if greater than 0.)
-  real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
+  real*8  :: ns_delta_minor_rad  !< Extension of gas source in the minor radial direction (if greater than 0.)
+  real*8  :: ns_tor_norm         !< Gas source normalization factor related to its toroidal shape
+  real*8  :: drift_distance(n_inj_max)    !< Shift the R position of the neutral deposition outward by drift_distance (in meters) for plasmoid drift
+  real*8  :: energy_teleported(n_inj_max) !< Energy (in eV) teleported per atom to consider plasmoid drift effects
 
   character(len=80) :: imp_type(n_imp_max) !< Type of injected material or background impurity species: Argon, neon, ...
   logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
+
 
   !> @name Massive gas injection-related input parameters
   
@@ -410,7 +427,7 @@ module phys_module
   real*8  :: spi_Vel_RxZref(n_inj_max) !< Reference velocity of pellet center along RxZ direction upon injection
   real*8  :: spi_quantity(n_inj_max)   !< Total injected atom number for impurity SPI
   real*8  :: spi_quantity_bg(n_inj_max)!< Total injected atom number for background species SPI
-  real*8  :: ng_radius_ratio           !< We are assuming a constant ratio between the radius of NG clouds
+  real*8  :: ns_radius_ratio           !< We are assuming a constant ratio between the radius of NG clouds
                                        !< and that of shattered pellets
 
   real*8  :: spi_Vel_diff(n_inj_max)   !< The velocity difference from the reference velocity
@@ -420,7 +437,7 @@ module phys_module
   real*8  :: ns_phi_rotate             !< The toroidal position of rotated injection point
   real*8  :: tor_frequency             !< The rigid body rotation frequency
 
-  real*8  :: ng_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
+  real*8  :: ns_radius_min      !< This defines the minimum radius of neutral cloud for numerical reasons (in m)
 
   real*8, allocatable  :: xtime_spi_ablation(:,:)         !< The time history of SPI ablation
   real*8, allocatable  :: xtime_spi_ablation_rate(:,:)    !< The time history of SPI ablation rate
@@ -437,11 +454,11 @@ module phys_module
   integer :: n_spi(n_inj_max)   !< Number of shattered fragment injected for each injection
   integer :: n_spi_tot          !< Total number of shattered fragments injected
   integer :: n_inj              !< Number of injections
-  integer :: spi_abl_model      !< Determine which type of ablation model is used.
-                                !< 0 for constant release rate, 1 for NGS model,
-                                !< 2 for Sergeev formula, 3 for Parks formula.
-                                !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
-                                !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
+  integer :: spi_abl_model(n_inj_max)  !< Determine which type of ablation model is used.
+                                       !< 0 for constant release rate, 1 for NGS model,
+                                       !< 2 for Sergeev formula, 3 for Parks formula.
+                                       !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
+                                       !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
   character(len=256) :: spi_shard_file(n_inj_max)!< The name of the shard size file
@@ -535,6 +552,7 @@ module phys_module
   real*8  :: SIG_private       !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_up_priv       !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_theta         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_theta_up      !< Width with grid accumulation (for flux-aligned grid; only valid for double-null)
   real*8  :: SIG_leg_0         !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_leg_1         !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_up_leg_0      !< Width with grid accumulation (for flux-aligned grid)
@@ -553,6 +571,9 @@ module phys_module
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
   real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
   real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
+  real*8  :: T_min_ZKpar          !< Do not use smaller parallel heat diffusion values below this MHD temperature (Ti+Te); JOREK units
+  real*8  :: Ti_min_ZKpar         !< Do not use smaller parallel heat diffusion values below Ti; JOREK units
+  real*8  :: Te_min_ZKpar         !< Do not use smaller parallel heat diffusion values below Te; JOREK units
   real*8  :: ZK_par_SpitzerHaerm  !< Spitzer-Haerm parallel heat diffusion value in the plasma center (assuming a Z=1 plasma with Te=Ti)
   real*8  :: ZK_i_perp(10) = 0.d0 !< Coefficients for perpendicular ion heat diffusion profile
   real*8  :: ZK_e_perp(10) = 0.d0 !< Coefficients for perpendicular electron heat diffusion profile
@@ -564,6 +585,7 @@ module phys_module
   real*8  :: D_neutral_y          !< Neutral particle diffusivity in Z-direction
   real*8  :: D_neutral_p          !< Neutral particle diffusivity in phi-direction
   logical :: ZKpar_T_dependent    !< Use a temperature dependent parallel heat diffusivity
+  real*8  :: HW_coef(10)   = 0.d0 !< Coefficients for Hasegawa-Wakatani fluctuation term
 
   !> @name Numerical heat and particle diffusivity profiles
   character(len=512)  :: d_perp_file        !< ASCII file with perpendicular particle diffusion profile
@@ -807,9 +829,11 @@ module phys_module
   real*8              :: D_imp_extra_p           !< Additional impurity diffusivity in phi-direction
   real*8              :: D_imp_extra_neg         !< Additional impurity diffusion coefficient in regions with negative impurity density
   real*8              :: D_imp_extra_neg_thresh  !< D_imp_extra_neg becomes effective if rho_imp < D_imp_extra_neg_thresh
-  real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.)
+  real*8              :: T_min              !< minimum temperature (limits on the temperature dependence of resistivity etc.) value in jorek units: 2.01d-5*central_density*Tmin_ev (preset central_density = 1, 20 eV)
   real*8              :: rho_min            !< minimum density
-
+  real*8              :: T_min_neg          !< minimum temperature,used for correcting negative values,in jorek units: 2.01d-5*central_density*Tmin_ev (preset central_density = 1, 20 eV)  
+  real*8              :: rho_min_neg        !< minimum density, used for correcting negative values  
+  
   real*8              :: ne_SI_min          !< minimum e density (in SI unit) below which we cut-off the radiation loss
   real*8              :: Te_eV_min          !< minimum temperature (in eV) below which we cut-off the radiation loss
   real*8              :: rn0_min            !< minimum impurity density (in JU) for radiation loss cut-off
@@ -843,6 +867,7 @@ module phys_module
   logical :: use_pcs          ! use pressure coupling scheme for fast particles
   logical :: use_pcs_full     ! use full tensor pressure coupling scheme for fast particles
   logical :: use_cx           ! switch on sputtering         (in particle module)
+  logical :: use_marker       ! This flag determines whether to use marker particles to treat impurity (Placeholder)
   logical :: use_sputtering   ! switch on charge-exchange    (in particle module)
   logical :: use_ionisation   ! switch on ionisation         (in particle module)
   real*8  :: n_particles      ! the number of particles (real on purpose)
@@ -865,7 +890,7 @@ module phys_module
   real*8  :: weights_per_family(n_fam_max)            !< Multiplication factor of family's contribution to the full solution
   logical :: autodistribute_ranks                     !< use automatic or manual rank distribution
   integer :: ranks_per_family(n_fam_max)              !< Number of MPI ranks per mode families
-  
+ 
   contains
   
 end module phys_module

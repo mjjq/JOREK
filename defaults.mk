@@ -67,11 +67,20 @@ endif
 # Default flags for intel
 ifeq ($(COMPILER_FAMILY), intel)
   COMPILER_MAJOR_VERSION=$(shell $(FC) -V 2>&1 | grep -o "Version [0-9]*" | cut -d' ' -f 2)
+  COMPILER_MAJOR_VERSION_ID=$(shell $(FC) -V 2>&1 | grep -o "Version [0-9]*.*" | cut -d'.' -f 2)
   FFLAGS += -align
   ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -ge 15; echo $$?),0)
     FLAGS += -qopenmp
   else
     FLAGS += -openmp
+  endif
+
+  ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -gt 19; echo $$?),0)
+    FFLAGS +: -warn noexternal
+  else ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -eq 19; echo $$?),0)
+    ifeq ($(shell test $(COMPILER_MAJOR_VERSION_ID) -ge 1; echo $$?),0)
+      FFLAGS += -warn noexternal
+    endif
   endif
   FFLAGS += -warn all
   FFLAGS += -warn nointerfaces
@@ -188,6 +197,13 @@ ifeq (1, $(USE_FFTW))
   INCLUDES := $(INCLUDES) $(INC_FFTW)
 endif
 
+# polynomial order > 3 requires more Gauss points
+N_ORDER_PARAMETER = $(shell cat models/mod_settings.f90 |grep n_order |grep -v n_degrees | grep -v SETTINGS | awk '{print $$6}' | bc)
+ifneq (3, $(N_ORDER_PARAMETER))
+  DEFINES  := $(DEFINES) -DGAUSS_ORDER=8
+endif
+
+
 ifeq (1, $(USE_PASTIX_MURGE))
   LIBS     := $(LIBS) $(LIB_PASTIX_MURGE) $(LIB_PASTIX_BLAS)
   DEFINES  := $(DEFINES) -DUSE_MURGE
@@ -268,6 +284,12 @@ ifeq (1, $(USE_BICGSTAB))
   DEFINES  := $(DEFINES) -DUSE_BICGSTAB
 endif
 
+ifeq (1, $(USE_IMAS))
+  LIBS     := $(LIBS) $(IMASLIB)
+  INCLUDES := $(INCLUDES) $(IMASINCLUDE)
+  DEFINES  := $(DEFINES) -DUSE_IMAS
+endif
+
 
 # Do not check to make these files to speed up and clean -d output
 Makefile: ;
@@ -280,6 +302,7 @@ $(MODDIR)/version.h:
 	@echo "Generate .mod/version.h"
 	@rm -f $@.tmp
 	@echo "#define RCS_VERSION '`git describe --always --dirty --abbrev 2> /dev/null`'" >> $@.tmp
+	@echo "#define JOREK_VERSION '`git describe --tags \`git rev-list --tags --max-count=1\` 2> /dev/null`'" >> $@.tmp
 	@echo "#define RCS_LABEL '`git log -1 --format="%s (%D)" 2> /dev/null | sed -e "s/'/''/g" `'" >> $@.tmp
 	@echo "#define RCS_TIME '`git log -1 --format="%ad" 2> /dev/null`'" >> $@.tmp
 	@echo "#define compile_command '$(FC)'" >> $@.tmp

@@ -190,7 +190,7 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
   integer,dimension(0)               :: int_param
   integer,dimension(n_x)             :: particle_id
   real*8                             :: p_norm,costheta,sintheta
-  real*8,dimension(4)                 :: real_param
+  real*8,dimension(4)                :: real_param
   real*8,dimension(n_x)              :: rnd3,x_shaded,x_light,tang,nor,binor
   logical                            :: fail
   logical,dimension(n_shaded_points) :: in_cone_points,out_cone_points
@@ -199,15 +199,15 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
   in_cone_points = .false.; out_cone_points = .true.;
   x_light = 0d0; real_param = 0d0; fail = .true.;
   do while(fail)
-    call random_number(rnd3); particle_id(1) = size(sims_particles);
-    particle_id(1) = max(1+floor(real(particle_id(1),kind=8)*rnd3(1)),particle_id(1));
-    particle_id(2) = size(sims_particles(particle_id(1))%groups);
-    particle_id(2) = max(1+floor(real(particle_id(2),kind=8)*rnd3(2)),particle_id(2))
-    particle_id(3) = size(sims_particles(particle_id(1))%groups(particle_id(2))%particles);
-    particle_id(3) = max(1+floor(real(particle_id(3),kind=8)*rnd3(3)),particle_id(3))
-    x_light = sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3))%x
+    call random_number(rnd3)
+   particle_id(1) = min(1+floor(real(n_times_sol,kind=8)*rnd3(1)),n_times_sol)
+   particle_id(2) = min(1+floor(real(n_groups_per_sim(particle_id(1)),kind=8)*rnd3(2)),&
+                    n_groups_per_sim(particle_id(1)))
+   particle_id(3) = min(1+floor(real(n_particles_per_group(particle_id(2),particle_id(1)),&
+                    kind=8)*rnd3(3)),n_particles_per_group(particle_id(2),particle_id(1)))  
     select type(p=>sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3)))
     type is (particle_kinetic_relativistic)
+      x_light = sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3))%x
       p_norm = norm2(p%p); real_param(1:3) = p%p/p_norm; 
       real_param(4) = sqrt(1d0 + (p_norm/(SPEED_OF_LIGHT*&
       sims_particles(particle_id(1))%groups(particle_id(2))%mass))**2)
@@ -358,7 +358,7 @@ subroutine test_init_synchrotron_lights_from_particles()
   n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
   "Error init synchrotron lights from particles set n lights large: properties errors too large!")
 
-  !> copy values of x and properties
+  !> copy valued of x and properties
   x_cart_loc = 0.d0; properties_loc = 0.d0;
   do ii=1,n_times_sol
     n_particles_time = sum(n_active_particles_sol(:,ii))

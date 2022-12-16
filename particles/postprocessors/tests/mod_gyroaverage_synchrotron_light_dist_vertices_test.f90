@@ -74,6 +74,7 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   call test_compute_gyroaverage_synchrotron_mhd_fields
   call test_compute_gyroaverage_synchrotron_light_properties
   call test_init_gyroaverage_synchrotron_lights_from_gc
+  call test_check_shaded_x_in_gyroaverage_synchrotron_cone
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices
@@ -280,6 +281,78 @@ subroutine test_init_gyroaverage_synchrotron_lights_from_gc()
   "Error init gyroaverage synchrotron lights from particles set n lights small: properties errors too large!")  
 
 end subroutine test_init_gyroaverage_synchrotron_lights_from_gc
+
+!> test the check if a point is within the radiation cone of 
+!> a synchrotron light or outside (basically the test of the 
+!> same routine of the full synchrotron model).
+subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone()
+  use constants,                 only: PI,TWOPI
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian_velocity
+  use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
+  use mod_sampling,              only: sample_uniform_sphere_corona_rcosphi
+  use mod_sampling,              only: sample_uniform_cone
+  use mod_particle_types,        only: particle_gc_relativistic
+  use mod_gc_relativistic,       only: compute_relativistic_factor
+  implicit none
+  !> variables
+  integer                            :: ii,n_int_param,n_real_param
+  integer,dimension(0)               :: int_param
+  integer,dimension(n_x)             :: particle_id
+  real*8                             :: normB,costheta,sintheta
+  real*8,dimension(4)                :: real_param
+  real*8,dimension(n_x)              :: E_field,b_field,gradB,curlb,dbdt
+  real*8,dimension(n_x)              :: rnd3,x_shaded,x_light,tang,nor,binor
+  logical                            :: ifail
+  logical,dimension(n_shaded_points) :: in_cone_points,out_cone_points
+  !> initialisation: extract a random light
+  n_int_param = size(int_param); n_real_param = size(real_param);
+  in_cone_points = .false.; out_cone_points = .false.;
+  x_light = 0d0; real_param = 0d0; ifail = .true.;
+  do while(ifail)
+    call random_number(rnd3); 
+   particle_id(1) = min(1+floor(real(n_times_sol,kind=8)*rnd3(1)),n_times_sol)
+   particle_id(2) = min(1+floor(real(n_groups_per_sim(particle_id(1)),kind=8)*rnd3(2)),&
+                    n_groups_per_sim(particle_id(1)))
+   particle_id(3) = min(1+floor(real(n_particles_per_group(particle_id(2),particle_id(1)),&
+                    kind=8)*rnd3(3)),n_particles_per_group(particle_id(2),particle_id(1)))
+   select type(p=>sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3)))
+     type is (particle_gc_relativistic)
+     x_light = p%x; call compute_mhd_fields_gc_cart(p,E_field,b_field,normB,gradB,curlb,dbdt)
+     call compute_gc_velocity_cartesian(p,sims_particles(particle_id(1))%groups(particle_id(2))%mass,&
+     E_field,b_field,normB,gradB,curlb,dbdt,real_param(1:3))
+     real_param(1:3) = real_param(1:3)/norm2(real_param(1:3))
+     real_param(4) = compute_relativistic_factor(p,&
+     sims_particles(particle_id(1))%groups(particle_id(2))%mass,normB)
+     ifail = .false.
+   end select  
+  enddo
+
+  !> generate a velocity based reference system
+  call random_number(rnd3)
+  call vectors_to_orthonormal_basis(real_param(1:3),rnd3,tang,nor,binor)
+  costheta = sqrt(1d0-(1d0/(real_param(4)**2)))
+  !> identify in_cone shaded points
+  do ii=1,n_shaded_points
+    call random_number(rnd3)
+    x_shaded = sample_uniform_cone(costheta,rnd3,real_param(1:3),x_light,length_shadowed)
+    in_cone_points(ii) = vertex_sol%check_x_shaded_in_emission_zone(&
+    n_x,x_shaded,x_light,n_int_param,n_real_param,int_param,real_param)
+  enddo
+  !> identify out_cone shaded points
+  do ii=1,n_shaded_points
+    call random_number(rnd3)
+    x_shaded = sample_uniform_sphere_corona_rcosphi(length_shadowed**3,[-1d0,costheta],[0d0,TWOPI],rnd3)
+    sintheta = sqrt(1d0-x_shaded(2)**2); x_shaded = x_light+x_shaded(1)*&
+    (tang*x_shaded(2)+sintheta*(nor*cos(x_shaded(3))+binor*sin(x_shaded(3))))
+    out_cone_points(ii) = vertex_sol%check_x_shaded_in_emission_zone(&
+    n_x,x_shaded,x_light,n_int_param,n_real_param,int_param,real_param)
+  enddo
+  !> check results
+  call assert_true(all(in_cone_points),&
+  "Error check shaded x in gyroaverage synchrotron cone: false negative detected!")
+  call assert_true(all(.not.out_cone_points),&
+  "Error check shaded x in gyroaverage synchrotron cone: false positive detected!")
+end subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone
 
 !> Tools -------------------------------------------------------------
 !> generate shadowed points for each light. The shadowed point position

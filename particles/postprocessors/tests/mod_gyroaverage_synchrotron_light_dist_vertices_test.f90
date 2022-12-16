@@ -473,7 +473,7 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
   int_param,properties(1:4))) return
   mu_angle = acos(dot_product((x_shaded-x_light)/norm2(x_shaded-x_light),properties(1:3)))
   thetap = atan2(properties(7),properties(6))
-  if(thetap.lt.0d0) thetap = TWOPI + thetap; thetap = PI-thetap; psi_angle = mu_angle - thetap;
+  if(thetap.lt.0d0) thetap = TWOPI + thetap; psi_angle = mu_angle - thetap;
   fact1 = ((1d0-properties(5)*cos(psi_angle))/(properties(5)*cos(psi_angle)))**2
   fact1 = fact1*(1d0-properties(5)*properties(6)*cos(mu_angle))
   fact2 = (5d-1*properties(5)*cos(psi_angle)*(sin(psi_angle)**2))/(1d0-properties(5)*cos(psi_angle))

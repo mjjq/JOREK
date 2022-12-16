@@ -71,6 +71,7 @@ subroutine run_fruit_full_synchrotron_light_dist_vertices()
   call setup
   write(*,'(/A)') "  ... running: synchrotron light vertices tests"
   call test_setup_synchrotron_radiation_class
+  call test_compute_synchrotron_mhd_fields
   call test_compute_synchrotron_light_properties
   call test_fill_synchrotron_lights_from_particles
   call test_init_synchrotron_lights_from_particles
@@ -410,15 +411,43 @@ integer :: ii,jj
   "Error fill synchrotron lights from particles: properties errors too large!")
 end subroutine test_fill_synchrotron_lights_from_particles
 
-!> test the property function of synchrotron light properties
-subroutine test_compute_synchrotron_light_properties()
-  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
-  use mod_particle_types,             only: particle_kinetic_relativistic
-  use mod_particle_common_test_tools, only: compute_test_E_B_fields 
+!> test the calculation of MHD fields
+subroutine test_compute_synchrotron_mhd_fields()
   implicit none
   !> variables
   integer :: ii,jj,kk,counter
-  real*8,dimension(6) :: mhd_fields
+  real*8,dimension(n_mhd_sol,n_particles_max*n_groups_max) :: mhd_fields_sol
+  real*8,dimension(n_mhd_sol,n_particles_max*n_groups_max) :: mhd_fields_test
+  !> loop over all active particles and perform tests
+  do kk=1,n_times_sol
+    counter = 0; mhd_fields_sol = 0d0; mhd_fields_test = 0d0;
+    do jj=1,n_groups_per_sim(kk)
+      do ii=1,n_particles_per_group(jj,kk)
+        if(sims_particles(kk)%groups(jj)%particles(ii)%i_elm.le.0) cycle
+        counter = counter + 1
+        !> compute the solution mhd fields
+        call compute_EB_fields_cart(sims_particles(kk)%groups(jj)%particles(ii),&
+        mhd_fields_sol(1:3,counter),mhd_fields_sol(4:6,counter))
+        !> compute the test mhd fields
+        call vertex_sol%compute_mhd_fields(sims_particles(kk)%fields,&
+        sims_particles(kk)%groups(jj)%particles(ii),kk,&
+        sims_particles(kk)%groups(jj)%mass,mhd_fields_test(:,counter))
+      enddo
+    enddo
+    !> check the results
+    call assert_equals(mhd_fields_test,mhd_fields_sol,n_mhd_sol,&
+    n_particles_max*n_groups_max,tol_real8,&
+    "Error synchrotron light compute mhd fields: too large errors!")
+  enddo
+end subroutine test_compute_synchrotron_mhd_fields 
+
+!> test the property function of synchrotron light properties
+subroutine test_compute_synchrotron_light_properties()
+  use mod_particle_types, only: particle_kinetic_relativistic
+  implicit none
+  !> variables
+  integer :: ii,jj,kk,counter
+  real*8,dimension(n_mhd_sol) :: mhd_fields
   real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
   !> loop for computing the properties and testing
   zeros = 0.d0
@@ -430,9 +459,7 @@ subroutine test_compute_synchrotron_light_properties()
         do ii=1,n_particles_per_group(jj,kk)
           if(p_list(ii)%i_elm.le.0) cycle
           counter = counter + 1
-          call compute_test_E_B_fields(p_list(ii)%x,mhd_fields(1:3),mhd_fields(4:6))
-          mhd_fields(1:3) = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(1:3))
-          mhd_fields(4:6) = vector_cylindrical_to_cartesian(p_list(ii)%x(3),mhd_fields(4:6))
+          call compute_EB_fields_cart(p_list(ii),mhd_fields(1:3),mhd_fields(4:6))
           call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
           sims_particles(kk)%groups(jj)%mass,mhd_fields)
         enddo
@@ -495,7 +522,7 @@ subroutine compute_synch_x_properties_ana()
           if(p_list(ii)%i_elm.le.0) cycle
           counter = counter + 1
           x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
-          call compute_synch_properties_ana_1p(p_list(ii)%x(3),&
+          call compute_synch_properties_ana_1p(&
           sims_particles(kk)%groups(jj)%mass,p_list(ii),&
           properties_sol(:,counter,kk))
         enddo
@@ -557,18 +584,16 @@ end subroutine compute_synch_directionality_irradiance
 
 !> compute synchrotron electron properties using the analytical
 !> tokamak like electric and magnetic fields for one particle
-subroutine compute_synch_properties_ana_1p(phi,mass,particle,property)
+subroutine compute_synch_properties_ana_1p(mass,particle,property)
   use constants,                      only: PI,EL_CHG,ATOMIC_MASS_UNIT
   use constants,                      only: SPEED_OF_LIGHT,EPS_ZERO
   use mod_math_operators,             only: cross_product
-  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
   use mod_particle_types,             only: particle_kinetic_relativistic
-  use mod_particle_common_test_tools, only: compute_test_E_B_fields 
   implicit none
   !> inputs-outputs
   type(particle_kinetic_relativistic),intent(inout) :: particle
   !> inputs
-  real*8,intent(in) :: mass,phi
+  real*8,intent(in) :: mass
   !> outputs
   real*8,dimension(n_properties),intent(out) :: property
   !> variables
@@ -583,9 +608,7 @@ subroutine compute_synch_properties_ana_1p(phi,mass,particle,property)
   beta     =  velocity/SPEED_OF_LIGHT
   T_vec   = vel_vec/velocity
   !> compute electric and magnetic field
-  call compute_test_E_B_fields(particle%x,E_field,B_field)
-  B_field = vector_cylindrical_to_cartesian(phi,B_field)
-  E_field = vector_cylindrical_to_cartesian(phi,E_field)
+  call compute_EB_fields_cart(particle,E_field,B_field)
   !> compute normal and binormal vectors
   N_vec = E_field + cross_product(vel_vec,B_field) - dot_product(T_vec,E_field)*T_vec
   N_vec = N_vec/norm2(N_vec)
@@ -603,6 +626,22 @@ subroutine compute_synch_properties_ana_1p(phi,mass,particle,property)
   property(10) = beta; property(11) = rel_fact; property(12) = kappa;
   property(13) = P_rad;
 end subroutine compute_synch_properties_ana_1p
+
+!> compute the electric and magnetic fields in cartesian coordinates
+subroutine compute_EB_fields_cart(particle,E_field,B_field)
+  use mod_particle_types,             only: particle_base
+  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields 
+  implicit none
+  !> inputs:
+  class(particle_base),intent(in) :: particle
+  !> outputs
+  real*8,dimension(n_x),intent(out) :: B_field,E_field
+  !> compute electric and magnetic field
+  call compute_test_E_B_fields(particle%x,E_field,B_field)
+  E_field = vector_cylindrical_to_cartesian(particle%x(3),E_field)
+  B_field = vector_cylindrical_to_cartesian(particle%x(3),B_field)
+end subroutine compute_EB_fields_cart
 
 !>--------------------------------------------------------------------
 end module mod_full_synchrotron_light_dist_vertices_test

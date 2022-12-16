@@ -246,11 +246,12 @@ subroutine calc_NjTj(fields, time, i_elm, st, phi, m_i_over_m_imp, ne, te, ni, t
   real*8, intent(in)             :: m_i_over_m_imp !< main ion mass / mass of the impurity (used only if impurities present)
   real*8, intent(out)            :: ne             !< electron density [m^-3]
   real*8, intent(out)            :: te             !< electron temperature [K]
-  real*8, intent(out)            :: ni(:)          !< ion densities [m^-3] (for each charge state)
+  real*8, intent(out)            :: ni(:)          !< ion densities [m^-3] (for each charge state: [n_main, n_imp0, n_imp+1, ...])
   real*8, intent(out)            :: ti             !< ion temperature [K]
   
   real*8, dimension(4) :: P, P_s, P_t, P_phi, P_time
   real*8               :: R, R_s, R_t, Z, Z_s, Z_t
+  integer :: i
 
   ! Interpolate needed quantities depending on case and evaluate temperature(s)
   if(with_TiTe) then
@@ -279,10 +280,11 @@ subroutine calc_NjTj(fields, time, i_elm, st, phi, m_i_over_m_imp, ne, te, ni, t
      ni(1) = max(central_density * ( P(1) - P(3) ) * 1d20,1d10) ! main ion density [1/m^3], capped against negative
      ne = ni(1)
 
+     ! Assume single impurity species and store their densities to ni array as [n_main, n_imp0, n_imp+1, ...]
      call imp_cor(1)%interp_linear(density=20.d0,temperature=log10(Te),p_out=ni(2:size(ni)))
 
      ni(2:size(ni)) = central_density*1.d20 * m_i_over_m_imp * ni(2:size(ni)) * P(3)
-     ne = ne + sum( ni(2:size(ni)) * ( (/2:size(ni)/) - 2 ) )
+     ne = ne + sum( ni(2:size(ni)) * ( (/ (i, i=0,size(ni)-2, 1) /) ) )
   else
      ne    = max(central_density * P(1) * 1d20,1d16)
      ni(1) = ne

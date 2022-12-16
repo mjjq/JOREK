@@ -171,22 +171,18 @@ integer*4 :: iprt, nprt, istep, chargenum
 
 real*8 :: E(3), B(3), psi, U, p0, xi0, rc0, zc0
 real*8 :: pnorm, pin, xiin, pout, xiout, rnd(2), rndprt(3), pinprt(3), poutprt(3)
-real*8, dimension(:), allocatable    :: ni, mi, Ii
-integer*1, dimension(:), allocatable :: Z0, Zi
-integer, dimension(:), allocatable   :: ai
-real*8 :: m_i_over_m_imp, th(2), ne
+real*8, dimension(:), allocatable    :: ni
+real*8 :: th(2), ne
 
 ! For CPU time
 real*8 :: t0, t1
 
-type(ccoll_tabulatedL0L1) :: dat
-
-dat = ccoll_read_L0L1table('ccolldata')
+type(ccoll_data) :: dat
 
 !!! Simulation options begin !!!
 tstep         = 1.e-7 !< Marker time step
-duration      = 1e1   !< How long markers are traced
-nprt          = 48*24 !< Number of markers
+duration      = 1e0   !< How long markers are traced
+nprt          = 48*1 !< Number of markers
 time_startsim = 0.0
 fnout         = "bump_gc.h5"
 
@@ -202,14 +198,15 @@ call random_seed()
 
 !call sim%initialize(num_groups=1)
 !call init_imp_adas(0)
-!call ccoll_init_ions(ni, Z0, Zi, ai, Ii, mi, m_i_over_m_imp, ifail)
+!call ccoll_init('ccolldata', dat, ni)
+dat = ccoll_read_L0L1table('ccolldata')
 allocate(sim%groups(1))
-allocate( ni(1), mi(1), Z0(1), Zi(1), ai(1), Ii(1))
-mi(1) = MASS_PROTON
-Z0(1) = 1
-Zi(1) = 1
-ai(1) = 1
-Ii(1) = 1.d0
+allocate( ni(1), dat%mi(1), dat%Z0(1), dat%Zi(1), dat%ai(1), dat%Ii(1))
+dat%mi(1) = MASS_PROTON
+dat%Z0(1) = 1
+dat%Zi(1) = 1
+dat%ai(1) = 1
+dat%Ii(1) = 1.d0
 
 ! Toggle here between GC and gyro-orbit
 allocate(particle_gc_relativistic::sim%groups(1)%particles(nprt))
@@ -241,16 +238,15 @@ do istep=1,nstep
 
       !$omp parallel do default(shared) &
       !$omp private(pnorm, pin, pout, xiin, xiout, rnd) &
-      !$omp private(th, ne, ni, Z0, E, B, psi, U) &
+      !$omp private(th, ne, ni, E, B, psi, U) &
       !$omp private(iprt, ifail)
       do iprt=1,nprt
 
-         th = [ temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2) , temperature * EL_CHG / (mi(1) * SPEED_OF_LIGHT**2) ]
+         th = [ temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2) , temperature * EL_CHG / (dat%mi(1) * SPEED_OF_LIGHT**2) ]
          ne = density
          ni = [density]
          B  = [0.d0, 0.d0, Bnorm]
          E  = [0.d0, 0.d0, Enorm]
-         Z0 = 1
 
          if (prt(iprt)%i_elm .gt. 0) then
             
@@ -271,7 +267,7 @@ do istep=1,nstep
             rnd = floor(2*rnd)
             rnd = -1.0 + 2.0 * rnd
 
-            call ccoll_gc_relativistic_push(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, mi, Z0, ne, ni, th, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+            call ccoll_gc_relativistic_push(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, ne, ni, th, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
 
             p(iprt)  = pout
             xi(iprt) = xiout
@@ -289,16 +285,15 @@ do istep=1,nstep
 
       !$omp parallel do default(shared) &
       !$omp private(pnorm, rndprt, poutprt) &
-      !$omp private(th, ne, ni, Z0, E, B, psi, U) &
+      !$omp private(th, ne, ni, E, B, psi, U) &
       !$omp private(iprt, ifail)
       do iprt=1,nprt
 
-         th = [ temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2) , temperature * EL_CHG / (mi(1) * SPEED_OF_LIGHT**2) ]
+         th = [ temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2) , temperature * EL_CHG / (dat%mi(1) * SPEED_OF_LIGHT**2) ]
          ne = density
          ni = [density]
          B  = [0.d0, 0.d0, Bnorm]
          E  = [0.d0, 0.d0, Enorm]
-         Z0 = 1
           
          if (prt(iprt)%i_elm .gt. 0) then
 
@@ -319,7 +314,7 @@ do istep=1,nstep
 
             pnorm = norm2(prt(iprt)%p)
 
-            call ccoll_kinetic_relativistic_push(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, mi, Z0, ne, ni, th, deltat, rndprt, &
+            call ccoll_kinetic_relativistic_push(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, ne, ni, th, deltat, rndprt, &
                  prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
             prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
 
@@ -335,17 +330,14 @@ do istep=1,nstep
 
 end do
 
-!close(10)
-
 call cpu_time(t1)
 write(*,*) 'CPU time: ', t1-t0 
-
-!write(*,*) p
 
 call write_state_hdf5(fnout, p, xi)
 
 ! Finalize the simulation
-deallocate ( p, xi, mi, Z0, Zi, Ii, ai, ni )
+call ccoll_deallocate(dat)
+deallocate ( p, xi, ni )
 !call sim%finalize
 
 end program test_bump

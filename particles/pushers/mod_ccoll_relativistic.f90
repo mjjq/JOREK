@@ -16,22 +16,38 @@ module mod_ccoll_relativistic
   real*8, parameter :: DEFAULT_L0L1_eps    = 1.D-8 !< default tolerance in eval_L0L1
   real*8, parameter :: DEFAULT_L0L1_cutoff = 1.D-7 !< default cutoff in evalL0L1
   
-  ! Struct for storing tabulated values of special functions L0 and L1
-  type ccoll_tabulatedL0L1
-     real*8, allocatable, dimension(:)   :: u
-     real*8, allocatable, dimension(:)   :: theta
-     real*8, allocatable, dimension(:,:) :: L0
-     real*8, allocatable, dimension(:,:) :: L1
-  end type ccoll_tabulatedL0L1
+  ! Struct for storing tabulated values of special functions L0 and L1 as well as the ion data
+  type ccoll_data
+     real*8, allocatable, dimension(:)    :: u     !< p/mc abscissa for tabulated data
+     real*8, allocatable, dimension(:)    :: theta !< T/mc^2 abscissa for tabulated data
+     real*8, allocatable, dimension(:,:)  :: L0    !< Tabulated values for L0
+     real*8, allocatable, dimension(:,:)  :: L1    !< Tabulated values for L1
+     real*8, allocatable, dimension(:)    :: mi    !< Ion species mass
+     real*8, allocatable, dimension(:)    :: Ii    !< Mean excitation energy for ions
+     integer, allocatable, dimension(:)   :: ai    !< Ion normalized effective length sclae
+     integer*1, allocatable, dimension(:) :: Zi    !< Ion atomic number
+     integer*1, allocatable, dimension(:) :: Z0    !< Ion charge state
+     real*8 :: m_i_over_m_imp                      !< Main ion mass / impurity species mass
+  end type ccoll_data
 
-  public :: ccoll_tabulatedL0L1, ccoll_compute_L0L1table, ccoll_deallocate_L0L1table, &
-       ccoll_read_L0L1table, ccoll_write_L0L1table, ccoll_init_ions, &
+  public :: ccoll_data, ccoll_compute_L0L1table, ccoll_write_L0L1table, ccoll_read_L0L1table, &
+       ccoll_init, ccoll_deallocate, &
        ccoll_kinetic_relativistic_push, ccoll_gc_relativistic_push
 
   private
 
 contains
 
+  !> Initializes data for collision evaluation
+  !> Parameters and tabulated values are stored in the returned struct.
+  subroutine ccoll_init(fn, dat, ni)
+    character(len=*), intent(in)  :: fn         !< Filename where L0L1 are tabulated
+    type(ccoll_data), intent(inout) :: dat      !< Contains parameters and tabulated values
+    real*8, allocatable, intent(inout) :: ni(:) !< Allocated empty array for storing ion densities
+
+    dat = ccoll_read_L0L1table(fn)
+    call ccoll_init_ions(dat, ni)
+  end subroutine ccoll_init
 
   !> Evaluates the special functions L0 and L1.
   !> The cutoff parameter (< 1) divides the integral in two
@@ -105,7 +121,7 @@ contains
     real*8, intent(in), optional :: eps    !> error tolerance for evaluating L0 and L1
     real*8, intent(in), optional :: cutoff !> cutoff value for evaluating L0 and L1
 
-    type(ccoll_tabulatedL0L1) :: tabulatedL0L1
+    type(ccoll_data) :: tabulatedL0L1
 
     integer :: i, j
     
@@ -146,21 +162,21 @@ contains
   end function ccoll_compute_L0L1table
 
 
-  !> Deinitializes tabulated L0L1 values struct.
-  subroutine ccoll_deallocate_L0L1table(dat)
+  !> Deinitializes tabulated L0L1 and ion values struct.
+  subroutine ccoll_deallocate(dat)
     implicit none
-    type(ccoll_tabulatedL0L1), intent(inout) :: dat ! data to be deinitialized
+    type(ccoll_data), intent(inout) :: dat ! data to be deinitialized
    
-    deallocate(dat%u,dat%theta,dat%L0,dat%L1)
+    deallocate(dat%u,dat%theta,dat%L0,dat%L1,dat%mi,dat%Z0,dat%Zi,dat%Ii,dat%ai)
 
-  end subroutine ccoll_deallocate_L0L1table
+  end subroutine ccoll_deallocate
 
 
   !> Writes tabulated L0L1 values to a file.
   subroutine ccoll_write_L0L1table(dat,fn)
     implicit none
-    class(ccoll_tabulatedL0L1), intent(in) :: dat ! data to be written
-    character(len=*), intent(in) :: fn           ! output filename
+    class(ccoll_data), intent(in) :: dat ! data to be written
+    character(len=*), intent(in)  :: fn  ! output filename
 
     integer(HID_T) :: file_id
     integer :: nu, nth, ierr
@@ -186,7 +202,7 @@ contains
   end subroutine ccoll_write_L0L1table
 
   !> Reads tabulated L0L1 values from a file.
-  type(ccoll_tabulatedL0L1) function ccoll_read_L0L1table(fn)
+  type(ccoll_data) function ccoll_read_L0L1table(fn)
     character(len=*), intent(in) :: fn !< input filename
 
     integer(HID_T) :: file_id
@@ -214,25 +230,17 @@ contains
   !> This routine allocates and initializes data needed to include ions (including impurities) to the collision operator.
   !> Call this once before calling fields%calc_njTj.
   !> All initialized arrays have size Nion and the order is (/main ion, imp_0, imp_+1, imp_+2, .../)
-  subroutine ccoll_init_ions(ni, Z0, Zi, ai, Ii, mi, m_i_over_m_imp, ierr)
+  subroutine ccoll_init_ions(dat, ni)
     use phys_module, only: central_mass, imp_type
     implicit none
+    type(ccoll_data), intent(inout) :: dat
     real*8, intent(inout),allocatable  :: ni(:)   !< Allocated empty array for storing ion number densities
-    integer*1, intent(inout),allocatable :: Z0(:) !< The net charge for all ions and their charge states
-    integer*1, intent(inout),allocatable :: Zi(:) !< The charge number (i.e. atomic number) for all ions
-    integer, intent(inout),allocatable :: ai(:)   !< Normalized effective length scale for needed for the partial screening collisions 
-    real*8, intent(inout),allocatable  :: Ii(:)   !< Mean excitation energy needed for the partial screening collisions
-    real*8, intent(inout),allocatable  :: mi(:)   !< Ion masses [kg]
-    real*8, intent(out) :: m_i_over_m_imp         !< m_i / m_imp where m_i is main ion mass and m_imp impurity species mass
-    integer, intent(out) :: ierr                  !< Zero if initialization was a success
 
     real*8  :: Iconst_Ar(19), Iconst_Ne(11)
     integer :: aconst_Ar(19), aconst_Ne(11)
-    integer*1 :: atomnum_imp, i
-  
-    ierr = 0
+    integer*1 :: atomnum_imp, i, nions
 
-    ! Mean excitation energy for all charge states from neutral to fully ionized (for which we used a dummy value as it is not used in the computation)
+    ! Mean excitation energy [eV] for all charge states from neutral to fully ionized (for which we used a dummy value as it is not used in the computation)
     Iconst_Ar = (/188.5, 219.4, 253.8, 293.4, 339.1, 394.5, 463.4, 568.0, 728.0, 795.9, 879.8, 989.9, 1138.1, 1369.5, 1791.2, 2497.0, 4677.2, 4838.2, 1.0/)
     Iconst_Ne = (/137.2, 165.2, 196.9, 235.2, 282.8, 352.6, 475.0, 696.8,  1409.2, 1498.4, 1.0/)
 
@@ -243,42 +251,43 @@ contains
     if(with_impurities) then
        if( trim(imp_type(1)) .eq. 'Ne') then
           atomnum_imp = 10
-          m_i_over_m_imp = central_mass/20
+          dat%m_i_over_m_imp = central_mass/20
 
-          allocate( Ii(atomnum_imp + 2), ai(atomnum_imp + 2) )
-          Ii(2:atomnum_imp) = Iconst_Ne
-          ai(2:atomnum_imp) = aconst_Ne
+          allocate( dat%Ii(atomnum_imp + 2), dat%ai(atomnum_imp + 2) )
+          dat%Ii(2:atomnum_imp) = Iconst_Ne
+          dat%ai(2:atomnum_imp) = aconst_Ne
        elseif( trim(imp_type(1)) .eq. 'Ar') then
           atomnum_imp = 18
-          m_i_over_m_imp = central_mass/40
+          dat%m_i_over_m_imp = central_mass/40
 
-          allocate( Ii(atomnum_imp + 2), ai(atomnum_imp + 2) )
-          Ii(2:atomnum_imp) = Iconst_Ar
-          ai(2:atomnum_imp) = aconst_Ar
+          allocate( dat%Ii(atomnum_imp + 2), dat%ai(atomnum_imp + 2) )
+          dat%Ii(2:atomnum_imp) = Iconst_Ar
+          dat%ai(2:atomnum_imp) = aconst_Ar
        else
           ! Unknown impurity
-          ierr = 1
+          write(*,*) "Unknown impurity species"
           return
        end if
 
-       allocate( ni(size(Ii)), Z0(size(Ii)), Zi(size(Ii)), mi(size(Ii)) )
-       Zi(2:size(Ii)) = atomnum_imp
-       Z0(2:size(Ii)) = (/ (i, i=0,atomnum_imp, 1) /)
-       mi(2:size(Ii)) = MASS_PROTON * central_mass / m_i_over_m_imp
+       nions = size(dat%Ii)
+       allocate( ni(nions), dat%Z0(nions), dat%Zi(nions), dat%mi(nions) )
+       dat%Zi(2:nions) = atomnum_imp
+       dat%Z0(2:nions) = (/ (i, i=0,atomnum_imp, 1) /)
+       dat%mi(2:nions) = MASS_PROTON * central_mass / dat%m_i_over_m_imp
 
     else
-       allocate( ni(1), Z0(1), Zi(1), mi(1) )
-       m_i_over_m_imp = 1
+       allocate( ni(1), dat%Z0(1), dat%Zi(1), dat%mi(1) )
+       dat%m_i_over_m_imp = 1
 
     end if
 
-    mi(1) = central_mass * MASS_PROTON
-    Zi(1) = 1
-    Z0(1) = 1
-    Ii(1) = 1.0
-    ai(1) = 1
+    dat%mi(1) = central_mass * MASS_PROTON
+    dat%Zi(1) = 1
+    dat%Z0(1) = 1
+    dat%Ii(1) = 1.0
+    dat%ai(1) = 1
 
-    Ii = Ii*EL_CHG
+    dat%Ii = dat%Ii*EL_CHG ! Convert to Joules
   
   end subroutine ccoll_init_ions
 
@@ -333,7 +342,7 @@ contains
        K,dK,Dpar,dDpar,Dperp,dDperp,kappa,dkappa)
     implicit none
 
-    class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
+    class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)  :: ma   !< test particle mass [kg]
     real*8, intent(in)  :: qa   !< test particle charge [C]
     real*8, intent(in)  :: clog !< Coulomb logarithm
@@ -402,7 +411,7 @@ contains
   !> background species using Euler-Maruyama method with a fixed time step.
   subroutine ccoll_kinetic_relativistic_push(dat,ma,qa,mi,Z0,ne,ni,th,dt,rnd,uin,uout)
     implicit none
-    class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
+    class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
     integer*1, intent(in) :: qa     !< test particle charge number [1]
     real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
@@ -458,7 +467,7 @@ contains
   ! Apply Coulomb collisions for guiding center
   subroutine ccoll_gc_relativistic_push(dat,ma,qa,mi,Z0,ne,ni,th,uin,uout,xiin,xiout,dt,rnd,cutoff)
     
-    class(ccoll_tabulatedL0L1), intent(in) :: dat !< tabulated L0L1 values
+    class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
     integer*1, intent(in) :: qa     !< test particle charge number [1]
     real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
@@ -532,7 +541,7 @@ contains
   !> Evaluates the mu functions (and their derivatives if needed)
   subroutine ccoll_mufuncs(data,u,th,mu0,mu1,mu2,dmu0,dmu1,dmu2)
     implicit none
-    class(ccoll_tabulatedL0L1), intent(in) :: data !< initialized L0L1 tables
+    class(ccoll_data), intent(in) :: data !< initialized L0L1 tables
     real*8, intent(in)  :: u   !< p/mc value
     real*8, intent(in)  :: th  !< T/mc^2
     real*8, intent(out) :: mu0 !< Eq. 14 in the referece paper
@@ -578,7 +587,7 @@ contains
   !> Interpolates (bilinear) the special functions L0 and L1
   !> Approximations are used outside the tabulated domain.
   subroutine interp_L0L1(data,u,theta,L0,L1)
-    class(ccoll_tabulatedL0L1), intent(in) :: data !< tabulated L0L1 values
+    class(ccoll_data), intent(in) :: data !< tabulated L0L1 values
     real*8, intent(in)  :: u     !< queried p/mc value
     real*8, intent(in)  :: theta !< queried T/mc^2 value
     real*8, intent(out) :: L0    !< interpolated L0
@@ -624,7 +633,7 @@ end module mod_ccoll_relativistic
 !  
 !  implicit none
 !
-!  type(ccoll_tabulatedL0L1) :: dat
+!  type(ccoll_data) :: dat
 !  logical :: storage_file_on_disk
 !  character(20), parameter :: storage_file='ccolldata'
 !

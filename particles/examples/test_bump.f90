@@ -172,7 +172,7 @@ integer*4 :: iprt, nprt, istep, chargenum
 real*8 :: E(3), B(3), psi, U, p0, xi0, rc0, zc0
 real*8 :: pnorm, pin, xiin, pout, xiout, rnd(2), rndprt(3), pinprt(3), poutprt(3)
 real*8, dimension(:), allocatable    :: ni
-real*8 :: th(2), ne
+real*8 :: the, thi(1), ne
 
 ! For CPU time
 real*8 :: t0, t1
@@ -198,7 +198,7 @@ call random_seed()
 
 !call sim%initialize(num_groups=1)
 !call init_imp_adas(0)
-!call ccoll_init('ccolldata', dat, ni)
+!call ccoll_init('ccolldata', dat)
 dat = ccoll_read_L0L1table('ccolldata')
 allocate(sim%groups(1))
 allocate( ni(1), dat%mi(1), dat%Z0(1), dat%Zi(1), dat%ai(1), dat%Ii(1))
@@ -238,11 +238,12 @@ do istep=1,nstep
 
       !$omp parallel do default(shared) &
       !$omp private(pnorm, pin, pout, xiin, xiout, rnd) &
-      !$omp private(th, ne, ni, E, B, psi, U) &
+      !$omp private(the, thi, ne, ni, E, B, psi, U) &
       !$omp private(iprt, ifail)
       do iprt=1,nprt
 
-         th = [ temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2) , temperature * EL_CHG / (dat%mi(1) * SPEED_OF_LIGHT**2) ]
+         the = temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2)
+         thi = [ temperature * EL_CHG / (dat%mi(1) * SPEED_OF_LIGHT**2) ]
          ne = density
          ni = [density]
          B  = [0.d0, 0.d0, Bnorm]
@@ -251,7 +252,7 @@ do istep=1,nstep
          if (prt(iprt)%i_elm .gt. 0) then
 
             !call runge_kutta_fixed_dt_gc_push_jorek_radreact(sim%fields,sim%time,deltat, sim%groups(1)%mass, prt(iprt))
-            !call ccoll_gc_relativistic_push(dat, ni, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+            !call ccoll_gc_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
             
             ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
             prt(iprt)%p(1) = prt(iprt)%p(1) + (EL_CHG*prt(iprt)%q / ATOMIC_MASS_UNIT) * norm2(E) * deltat
@@ -266,7 +267,7 @@ do istep=1,nstep
             rnd = -1.0 + 2.0 * rnd
 
             call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
-                 ne, ni, th, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+                 ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
             
             p(iprt)  = pout
             xi(iprt) = xiout
@@ -284,11 +285,12 @@ do istep=1,nstep
 
       !$omp parallel do default(shared) &
       !$omp private(pnorm, rndprt, poutprt) &
-      !$omp private(th, ne, ni, E, B, psi, U) &
+      !$omp private(the, thi, ne, ni, E, B, psi, U) &
       !$omp private(iprt, ifail)
       do iprt=1,nprt
 
-         th = [ temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2) , temperature * EL_CHG / (dat%mi(1) * SPEED_OF_LIGHT**2) ]
+         the = temperature * EL_CHG / (MASS_ELECTRON * SPEED_OF_LIGHT**2) 
+         thi = [temperature * EL_CHG / (dat%mi(1) * SPEED_OF_LIGHT**2) ]
          ne = density
          ni = [density]
          B  = [0.d0, 0.d0, Bnorm]
@@ -297,7 +299,7 @@ do istep=1,nstep
          if (prt(iprt)%i_elm .gt. 0) then
 
             !call volume_preserving_radiation_push_jorek(prt(iprt),sim%fields,sim%groups(1)%mass,sim%time,deltat,ifail)
-            !call ccoll_kinetic_relativistic_push(dat, ni, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+            !call ccoll_kinetic_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
 
             ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
             prt(iprt)%p =  prt(iprt)%p + EL_CHG * prt(iprt)%q * vector_cylindrical_to_cartesian(prt(iprt)%x(3), E) * deltat / ATOMIC_MASS_UNIT
@@ -313,7 +315,7 @@ do istep=1,nstep
             pnorm = norm2(prt(iprt)%p)
 
             call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
-                 ne, ni, th, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
+                 ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
             prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
 
             poutprt = prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT)

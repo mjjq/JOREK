@@ -42,14 +42,13 @@ contains
 
   !> Initializes data for collision evaluation
   !> Parameters and tabulated values are stored in the returned struct.
-  subroutine ccoll_init(fn, dat, ni)
+  subroutine ccoll_init(fn, dat)
     implicit none
     character(len=*), intent(in)  :: fn         !< Filename where L0L1 are tabulated
     type(ccoll_data), intent(inout) :: dat      !< Contains parameters and tabulated values
-    real*8, allocatable, intent(inout) :: ni(:) !< Allocated empty array for storing ion densities
 
     dat = ccoll_read_L0L1table(fn)
-    call ccoll_init_ions(dat, ni)
+    call ccoll_init_ions(dat)
   end subroutine ccoll_init
 
   !> Evaluates the special functions L0 and L1.
@@ -233,11 +232,10 @@ contains
   !> This routine allocates and initializes data needed to include ions (including impurities) to the collision operator.
   !> Call this once before calling fields%calc_njTj.
   !> All initialized arrays have size Nion and the order is (/main ion, imp_0, imp_+1, imp_+2, .../)
-  subroutine ccoll_init_ions(dat, ni)
+  subroutine ccoll_init_ions(dat)
     use phys_module, only: central_mass, imp_type
     implicit none
     type(ccoll_data), intent(inout) :: dat
-    real*8, intent(inout),allocatable  :: ni(:)   !< Allocated empty array for storing ion number densities
 
     real*8  :: Iconst_Ar(19), Iconst_Ne(11)
     integer :: aconst_Ar(19), aconst_Ne(11)
@@ -273,13 +271,13 @@ contains
        end if
 
        nions = size(dat%Ii)
-       allocate( ni(nions), dat%Z0(nions), dat%Zi(nions), dat%mi(nions) )
+       allocate( dat%Z0(nions), dat%Zi(nions), dat%mi(nions) )
        dat%Zi(2:nions) = atomnum_imp
        dat%Z0(2:nions) = (/ (i, i=0,atomnum_imp, 1) /)
        dat%mi(2:nions) = MASS_PROTON * central_mass / dat%m_i_over_m_imp
 
     else
-       allocate( ni(1), dat%Z0(1), dat%Zi(1), dat%mi(1) )
+       allocate( dat%Z0(1), dat%Zi(1), dat%mi(1) )
        dat%m_i_over_m_imp = 1
 
     end if
@@ -300,15 +298,16 @@ contains
   !> the Debye length, and bqm and bcl are quantum mechanical and classical
   !> impact parameters, respectively. The Coulomb logarithm for different
   !> plasma species is returned. 
-  subroutine ccoll_clog(ma,qa,mi,qi,ne,ni,th,u,cloge,clogi)
+  subroutine ccoll_clog(ma,qa,mi,qi,ne,the,ni,thi,u,cloge,clogi)
     implicit none
     real*8, intent(in)  :: ma       !< test particle mass [kg]
     real*8, intent(in)  :: qa       !< test particle charge [C]
     real*8, intent(in)  :: mi(:)    !< list of background species masses [kg]
     real*8, intent(in)  :: qi(:)    !< list of background species charges [C]
-    real*8, intent(in)  :: ne       !<
+    real*8, intent(in)  :: ne       !< electron density [1/m^3]
+    real*8, intent(in)  :: the      !< normalized electron temperature [T_b/(m_b*c^2)]
     real*8, intent(in)  :: ni(:)    !< list of background densities [1/m^3]
-    real*8, intent(in)  :: th(2)    !< list of normalized background temperatures [T_b/(m_b*c^2)]
+    real*8, intent(in)  :: thi(:)   !< list of normalized ion temperatures [T_b/(m_b*c^2)]
     real*8, intent(in)  :: u        !< normalized test particle momentum [p/mc]
     real*8, intent(out) :: cloge    !< Coulomb logarithm for electrons
     real*8, intent(out) :: clogi(:) !< Coulomb logarithm for each ion species
@@ -320,15 +319,15 @@ contains
     integer :: i           ! Helper variables
     real*8  :: ubar        ! Mean relative velocity
 
-    debyeLength = sqrt( EPS_ZERO * SPEED_OF_LIGHT**2 / ( ( ne * EL_CHG**2 ) / ( th(1) * MASS_ELECTRON ) ) )
-    ubar  = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 )  + 3.d0 * th(1) )
+    debyeLength = sqrt( EPS_ZERO * SPEED_OF_LIGHT**2 / ( ( ne * EL_CHG**2 ) / ( the * MASS_ELECTRON ) ) )
+    ubar  = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 )  + 3.d0 * the )
     mr    = ma * MASS_ELECTRON / ( ma + MASS_ELECTRON )
     bcl   = qa * EL_CHG / ( 4.d0 * PI * EPS_ZERO * mr * ubar**2 )
     bqm   = HBAR / ( 2.d0 * mr * ubar )
     cloge = log(debyeLength/max(bcl,bqm))
 
-    ubar  = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 )  + 3.d0 * th(2) )
     do i=1,size(mi)
+       ubar  = SPEED_OF_LIGHT * sqrt( u**2 / ( 1 + u**2 )  + 3.d0 * thi(i) )
        mr  = ma * mi(i) / ( ma + mi(i) )
        bcl = qa * qi(i) / ( 4.d0 * PI * EPS_ZERO * mr * ubar**2 )
        bqm = HBAR / ( 2.d0 * mr * ubar )
@@ -414,22 +413,23 @@ contains
   !> Pushing is done by calling the explicit push function. This function is just a wrapper
   !> that additionally evaluates the plasma quantities and takes care of the coordinate transformation
   !> in momentum space thus simplifying the process of including collisions in simulations.
-  subroutine ccoll_kinetic_relativistic_push(dat, ni, prt, fields, mass, time, dt)
+  subroutine ccoll_kinetic_relativistic_push(dat, prt, fields, mass, time, dt)
     implicit none
     class(ccoll_data), intent(in) :: dat !< Collision data
     class(particle_kinetic_relativistic), intent(inout) :: prt
     class(fields_base), intent(in) :: fields
-    real*8, intent(inout) :: ni(:)      !< Allocated array for storing ion densities
     real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
 
-    real*8 :: pnorm, E(3), B(3), psi, U, th(2), ne, rnd(3), pout(3)
+    real*8 :: pnorm, E(3), B(3), psi, U, ne, rnd(3), pout(3), Te, Ti, the
+    real*8, allocatable :: ni(:), thi(:)
 
     call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
     pnorm = norm2(prt%p) / (mass * SPEED_OF_LIGHT)
 
-    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, th(1), ni, th(2))
-    th(1) = th(1) * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
-    th(2) = th(2) * K_BOLTZ / ( dat%mi(1) * SPEED_OF_LIGHT**2 )
+    allocate(ni(size(dat%mi)), thi(size(dat%mi)))
+    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, Te, ni, Ti)
+    the = Te * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
+    thi = Ti * K_BOLTZ / ( dat%mi * SPEED_OF_LIGHT**2 )
     
     ! This should be ~N(0,1) but this approximation works well enough
     call random_number(rnd)
@@ -437,14 +437,15 @@ contains
     rnd = -1.d0 + 2.d0 * rnd
 
     call ccoll_kinetic_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q, dat%mi, dat%Z0, &
-         ne, ni, th, dt, rnd, prt%p / (mass * SPEED_OF_LIGHT), pout)
+         ne, the, ni, thi, dt, rnd, prt%p / (mass * SPEED_OF_LIGHT), pout)
     prt%p = pout * (mass * SPEED_OF_LIGHT)
+    deallocate(ni, thi)
     
   end subroutine ccoll_kinetic_relativistic_push
   
   !> Computes the value for particle momentum after collisions with
   !> background species using Euler-Maruyama method with a fixed time step.
-  subroutine ccoll_kinetic_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,ni,th,dt,rnd,uin,uout)
+  subroutine ccoll_kinetic_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,the,ni,thi,dt,rnd,uin,uout)
     implicit none
     class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
@@ -452,8 +453,9 @@ contains
     real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
     integer*1, intent(in) :: Z0(:)  !< list of background ion charge numbers [1]
     real*8, intent(in)    :: ne     !< background electron density [1/m^3]
+    real*8, intent(in)    :: the    !< normalized electron temperatures [T_b/(m_b*c^2)]
     real*8, intent(in)    :: ni(:)  !< list of background ion densities [1/m^3]
-    real*8, intent(in)    :: th(2)  !< normalized background (electron, ion) temperatures [T_b/(m_b*c^2)]
+    real*8, intent(in)    :: thi(:) !< normalized ion temperatures [T_b/(m_b*c^2)]
     real*8, intent(in)    :: dt     !< time step length [s]
     real*8, intent(in)    :: rnd(3) !< array with three elements of standard normal random numbers ~ N(0,1)
     real*8, intent(in)    :: uin(3) !< normalized test particle momentum [p/mc]
@@ -476,17 +478,17 @@ contains
     uhat = uin / u
 
     allocate(clogai(size(mi)))
-    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,ni,th,u,clogae,clogai)
+    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,the,ni,thi,u,clogae,clogai)
 
     ! Electron contribution
-    call ccoll_coeffs(dat,ma,qa*EL_CHG,clogae,MASS_ELECTRON,-EL_CHG,ne,th(1),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
+    call ccoll_coeffs(dat,ma,qa*EL_CHG,clogae,MASS_ELECTRON,-EL_CHG,ne,the,u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
     K     = Kb
     Dpar  = Dparb
     Dperp = Dperpb
 
     ! Ion contribution
     do i = 1,size(mi)
-       call ccoll_coeffs(dat,ma,qa*EL_CHG,clogai(i),mi(i),Z0(i)*EL_CHG,ni(i),th(2),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
+       call ccoll_coeffs(dat,ma,qa*EL_CHG,clogai(i),mi(i),Z0(i)*EL_CHG,ni(i),thi(i),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
        K     = K     + Kb
        Dpar  = Dpar  + Dparb
        Dperp = Dperp + Dperpb
@@ -504,39 +506,41 @@ contains
   !> Pushing is done by calling the explicit push function. This function is just a wrapper
   !> that additionally evaluates the plasma quantities and takes care of the coordinate transformation
   !> in momentum space thus simplifying the process of including collisions in simulations.
-  subroutine ccoll_gc_relativistic_push(dat, ni, prt, fields, mass, time, dt)
+  subroutine ccoll_gc_relativistic_push(dat, prt, fields, mass, time, dt)
     implicit none
     class(ccoll_data), intent(in) :: dat !< Collision data
     class(particle_gc_relativistic), intent(inout) :: prt
     class(fields_base), intent(in) :: fields
-    real*8, intent(inout) :: ni(:)      !< Allocated array for storing ion densities
     real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
 
-    real*8 :: pnorm, E(3), B(3), psi, U, th(2), ne, rnd(2), pin, xiin, pout, xiout
+    real*8 :: pnorm, E(3), B(3), psi, U, Te, Ti, the, ne, rnd(2), pin, xiin, pout, xiout
+    real*8, allocatable :: ni(:), thi(:)
 
+    allocate(ni(size(dat%mi)), thi(size(dat%mi)))
     call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)                                                                                                                                                                                                          
     pnorm = sqrt(prt%p(2) * 2 * norm2(B) * mass + prt%p(1)**2)
     pin   = pnorm / ( mass * SPEED_OF_LIGHT )
     xiin  = prt%p(1) / pnorm
-    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, th(1), ni, th(2))
-    th(1) = th(1) * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
-    th(2) = th(2) * K_BOLTZ / ( dat%mi(1) * SPEED_OF_LIGHT**2 )
+    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, Te, ni, Ti)
+    the = Te * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
+    thi = Ti * K_BOLTZ / ( dat%mi * SPEED_OF_LIGHT**2 )
     
     call random_number(rnd)
     rnd = floor(2.d0*rnd)
     rnd = -1.d0 + 2.d0 * rnd
 
     call ccoll_gc_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q, dat%mi, dat%Z0, &
-         ne, ni, th, pin, pout, xiin, xiout, dt, rnd, 1.0e-4)
+         ne, the, ni, thi, pin, pout, xiin, xiout, dt, rnd, 1.0e-4)
 
     pnorm = pout * ( mass * SPEED_OF_LIGHT )
     prt%p(1) = pnorm * xiout
     prt%p(2) = ( pnorm**2 - prt%p(1)**2 ) / ( 2 * norm2(B) * mass )
+    deallocate(ni, thi)
 
   end subroutine ccoll_gc_relativistic_push
 
   ! Apply Coulomb collisions for guiding center
-  subroutine ccoll_gc_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,ni,th,uin,uout,xiin,xiout,dt,rnd,cutoff)
+  subroutine ccoll_gc_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,the,ni,thi,uin,uout,xiin,xiout,dt,rnd,cutoff)
     
     class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
@@ -544,8 +548,9 @@ contains
     real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
     integer*1, intent(in) :: Z0(:)  !< list of background ion charge numbers [1]
     real*8, intent(in)    :: ne     !< background electron density [1/m^3]
+    real*8, intent(in)    :: the    !< normalized electron temperature [T_b/(m_b*c^2)]
     real*8, intent(in)    :: ni(:)  !< list of background ion densities [1/m^3]
-    real*8, intent(in)    :: th(2)  !< normalized background (electron, ion) temperatures [T_b/(m_b*c^2)]
+    real*8, intent(in)    :: thi(:) !< normalized ion temperatures [T_b/(m_b*c^2)]
     real*8, intent(in)    :: dt     !< time step length [s]
     real*8, intent(in)    :: uin    !< test particle momentum  [p/mc]
     real*8, intent(in)    :: xiin   !< test particle pitch [ppar/p]
@@ -562,10 +567,10 @@ contains
     integer :: i
 
     allocate(clogai(size(mi)))
-    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,ni,th,uin,clogae,clogai)
+    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,the,ni,thi,uin,clogae,clogai)
 
     ! Electron contribution
-    call ccoll_coeffs(dat, ma, qa*EL_CHG, clogae, MASS_ELECTRON, -EL_CHG, ne, th(1), uin, &
+    call ccoll_coeffs(dat, ma, qa*EL_CHG, clogae, MASS_ELECTRON, -EL_CHG, ne, the, uin, &
             kappa=kappab, Dpar=Dparb, Dperp=Dperpb, dDpar=dDparb)
     kappa = kappab
     Dpar  = Dparb
@@ -574,7 +579,7 @@ contains
 
     ! Ion contribution
     do i = 1,size(mi)
-       call ccoll_coeffs(dat, ma, qa*EL_CHG, clogai(i), mi(i), Z0(i)*EL_CHG, ni(i), th(2), uin, &
+       call ccoll_coeffs(dat, ma, qa*EL_CHG, clogai(i), mi(i), Z0(i)*EL_CHG, ni(i), thi(i), uin, &
             kappa=kappab, Dpar=Dparb, Dperp=Dperpb, dDpar=dDparb)
 
        kappa = kappa + kappab

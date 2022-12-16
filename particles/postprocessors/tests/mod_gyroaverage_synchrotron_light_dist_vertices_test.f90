@@ -16,6 +16,8 @@ public :: run_fruit_gyroaverage_synchrotron_light_dist_vertices
 
 !> Variables ---------------------------------------------------------
 !> general parameters
+real*8,parameter :: onethird=1d0/3d0
+real*8,parameter :: twothird=2d0/3d0
 real*8,parameter :: tol_real8=1d-12
 real*8,parameter :: tol2_real8=1d-16
 real*8,parameter :: mass_RE=5.48579909065d-4
@@ -54,6 +56,8 @@ integer,dimension(n_times_sol)                        :: n_active_vertices_sol
 integer,dimension(n_groups_max,n_times_sol)           :: n_active_particles_sol
 integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_ids_sol
 real*8,dimension(n_times_sol)                         :: time_vector_sol
+real*8,dimension(n_particles_max*n_groups_max,n_times_sol)              :: rel_fact_parallel_sol
+real*8,dimension(n_particles_max*n_groups_max,n_times_sol)              :: normB_sol
 real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol)          :: x_cart_sol
 real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: properties_sol
 !> variables for generating spectra
@@ -75,6 +79,8 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   call test_compute_gyroaverage_synchrotron_light_properties
   call test_init_gyroaverage_synchrotron_lights_from_gc
   call test_check_shaded_x_in_gyroaverage_synchrotron_cone
+  call test_gyroaverage_synchrotron_irradiance_directionality_funct
+  call test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices
@@ -354,7 +360,138 @@ subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone()
   "Error check shaded x in gyroaverage synchrotron cone: false positive detected!")
 end subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone
 
+!> test the gyroaverage synchrotron radiation irradiance and directionality functions
+subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct()
+  use mod_assert_equals_tools, only: assert_equals_rel_error
+  implicit none
+  !> variables
+  integer                                                :: ii,jj,kk
+  integer,dimension(n_times_sol)                         :: n_particles_time
+  real*8,dimension(n_x,n_gc_RE_max,n_times_sol)          :: x_cart_loc
+  real*8,dimension(n_properties,n_gc_RE_max,n_times_sol) :: properties_loc
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: dir_fun,irradiance
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: dir_fun_sol
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: irradiance_sol
+ 
+  !> initialise the gyroaverage synchrotron lights
+  x_cart_loc = 0d0; properties_loc = 0d0; n_particles_time = 0;
+  do ii=1,n_times_sol
+    n_particles_time(ii) = sum(n_active_particles_sol(:,ii))
+    x_cart_loc(:,1:n_particles_time(ii),ii) = x_cart_sol(:,1:n_particles_time(ii),ii)
+    properties_loc(:,1:n_particles_time(ii),ii) = properties_sol(:,1:n_particles_time(ii),ii)
+  enddo
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
+  !> compute and check the irradiance and directionality functions
+  do kk=1,n_times_sol
+    do jj=1,n_particles_time(kk)
+      do ii=1,n_shaded_points_per_particle
+        call compute_gyroavg_synch_directionality_irradiance(normB_sol(jj,kk),&
+        rel_fact_parallel_sol(jj,kk),1d0,mass_RE,x_shadowed(:,ii,jj,kk),&
+        x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol(:,:,ii),irradiance_sol(:,:,ii))
+        call vertex_sol%directionality_funct(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),dir_fun(:,:,ii))
+        call vertex_sol%spectral_irradiance(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),irradiance(:,:,ii))
+      enddo
+      !> check the solution via relative error
+      call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+      n_shaded_points_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
+      "Error gyroaverage synchrotron directionality function: directionality function mismatch!")
+      call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+      n_shaded_points_per_particle,irradiance,irradiance_sol,tol2_real8,&
+      "Error gyroaverage synchrotron directionality function: directionality function mismatch!")
+    enddo
+  enddo
+end subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct
+
+!> test the gyroaverage synchrotron radiation irradiance and directionality functions
+!> using taskloop parallelisation
+subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop()
+  use mod_assert_equals_tools, only: assert_equals_rel_error
+  implicit none
+  !> variables
+  integer                                                :: ii,jj,kk
+  integer,dimension(n_times_sol)                         :: n_particles_time
+  real*8,dimension(n_x,n_gc_RE_max,n_times_sol)          :: x_cart_loc
+  real*8,dimension(n_properties,n_gc_RE_max,n_times_sol) :: properties_loc
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: dir_fun,irradiance
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: dir_fun_sol
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: irradiance_sol
+ 
+  !> initialise the gyroaverage synchrotron lights
+  x_cart_loc = 0d0; properties_loc = 0d0; n_particles_time = 0;
+  do ii=1,n_times_sol
+    n_particles_time(ii) = sum(n_active_particles_sol(:,ii))
+    x_cart_loc(:,1:n_particles_time(ii),ii) = x_cart_sol(:,1:n_particles_time(ii),ii)
+    properties_loc(:,1:n_particles_time(ii),ii) = properties_sol(:,1:n_particles_time(ii),ii)
+  enddo
+  call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
+  !> compute and check the irradiance and directionality functions
+  do kk=1,n_times_sol
+    do jj=1,n_particles_time(kk)
+      do ii=1,n_shaded_points_per_particle
+        call compute_gyroavg_synch_directionality_irradiance(normB_sol(jj,kk),&
+        rel_fact_parallel_sol(jj,kk),1d0,mass_RE,x_shadowed(:,ii,jj,kk),&
+        x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol(:,:,ii),irradiance_sol(:,:,ii))
+        !$omp parallel default(shared) firstprivate(ii,jj,kk)
+        !$omp single
+        call vertex_sol%directionality_funct(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),dir_fun(:,:,ii))
+        call vertex_sol%spectral_irradiance(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),irradiance(:,:,ii))
+        !$omp end single
+        !$omp end parallel
+      enddo
+      !> check the solution via relative error
+      call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+      n_shaded_points_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
+      "Error gyroaverage synchrotron directionality function taskloop: directionality function mismatch!")
+      call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
+      n_shaded_points_per_particle,irradiance,irradiance_sol,tol2_real8,&
+      "Error gyroaverage synchrotron directionality function taskloop: directionality function mismatch!")
+    enddo
+  enddo
+end subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
+
 !> Tools -------------------------------------------------------------
+!> compute the gyroaverage synchrotron lights irradiance and directionality functions
+subroutine compute_gyroavg_synch_directionality_irradiance(normB,rel_fact_parallel,&
+charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
+  use constants,   only: PI,TWOPI,EL_CHG,EPS_ZERO,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
+  use mod_besselk, only: besselk
+  implicit none
+  !> inputs:
+  real*8,intent(in)                         :: normB,rel_fact_parallel,charge,mass
+  real*8,dimension(n_x),intent(in)          :: x_shaded,x_light 
+  real*8,dimension(n_properties),intent(in) :: properties 
+  !> outputs:
+  real*8,dimension(spectrum%n_points,spectrum%n_spectra),intent(out) :: dir_funct,irradiance
+  !> variables:
+  integer :: ii,jj
+  integer,dimension(0) :: int_param
+  real*8 :: mu_angle,thetap,psi_angle,xi,fact1,fact2,fact3,besselk13,besselk23
+  !> initialisations
+  irradiance = 0d0;
+  !> check if the point is shaded by the synchrotron light
+  if(.not.vertex_sol%check_x_shaded_in_emission_zone(n_x,x_shaded,x_light,0,4,&
+  int_param,properties(1:4))) return
+  mu_angle = acos(dot_product((x_shaded-x_light)/norm2(x_shaded-x_light),properties(1:3)))
+  thetap = atan2(properties(7),properties(6))
+  if(thetap.lt.0d0) thetap = TWOPI + thetap; psi_angle = mu_angle - thetap;
+  fact1 = ((1d0-properties(5)*cos(psi_angle))/(properties(5)*cos(psi_angle)))**2
+  fact1 = fact1*(1d0-properties(5)*properties(6)*cos(mu_angle))
+  fact2 = (5d-1*properties(5)*cos(psi_angle)*(sin(psi_angle)**2))/(1d0-properties(5)*cos(psi_angle))
+  fact3 = (properties(4)**3)*sqrt(((1d0-properties(5)*cos(psi_angle))**3)/&
+          (5d1*properties(5)*cos(psi_angle)))
+  !> compute the irradiance
+  do ii=1,spectrum%n_spectra
+    do jj=1,spectrum%n_points
+      xi = fact3*(properties(8)/spectrum%points(jj,ii))
+      call besselk(onethird,xi,besselk13); call besselk(twothird,xi,besselk23);
+      irradiance(jj,ii) = ((9d0*((charge*EL_CHG)**5)*(properties(5)**2)*(properties(4)**9)*(normB**3))*&
+      ((properties(8)/spectrum%points(jj,ii))**4)*fact1*((besselk13**2)+fact2*(besselk23**2)))/&
+      (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel**2)*((mass*ATOMIC_MASS_UNIT)**3)) 
+    enddo
+  enddo
+  dir_funct = irradiance/properties(10)
+end subroutine compute_gyroavg_synch_directionality_irradiance
+
 !> generate shadowed points for each light. The shadowed point position
 !> is taken within the emission cone of the synchrotron radiation.
 !> The emission cone half angle is approximated with 
@@ -404,7 +541,8 @@ subroutine compute_gyroavg_synch_x_properties_ana()
           counter = counter + 1
           x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
           call compute_gyroavg_synch_properties_ana_1p(p_list(ii),&
-          sims_particles(kk)%groups(jj)%mass,properties_sol(:,counter,kk))
+          sims_particles(kk)%groups(jj)%mass,properties_sol(:,counter,kk),&
+          rel_fact_parallel_sol(counter,kk),normB_sol(counter,kk))
         enddo
       end select
     enddo
@@ -413,7 +551,8 @@ end subroutine compute_gyroavg_synch_x_properties_ana
 
 !> compute gyroaverage synchrotron light properties using the analytical
 !> tokamak-like MHD fields for one guiding center
-subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties)
+subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties,&
+rel_fact_parallel,normB)
   use constants,                      only: PI,EL_CHG,EPS_ZERO
   use constants,                      only: ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
   use mod_particle_types,             only: particle_gc_relativistic
@@ -422,10 +561,10 @@ subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties)
   type(particle_gc_relativistic),intent(in)  :: gc_in
   real*8,intent(in)                          :: mass 
   !> outputs:
+  real*8                                     :: rel_fact_parallel,normB
   real*8,dimension(n_properties),intent(out) :: properties
   !> variables:
-  real*8                :: normB,rel_fact,rel_fact_parallel
-  real*8                :: thetap,charge,p_perp
+  real*8                :: rel_fact,thetap,charge,p_perp
   real*8,dimension(n_x) :: E_field,b_field,gradB,curlb,dbdt,v_gc_cart
   
   !> compute the analytical MHD fields for computing the GC velocity

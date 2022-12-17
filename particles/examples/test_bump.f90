@@ -252,9 +252,12 @@ do istep=1,nstep
 
          if (prt(iprt)%i_elm .gt. 0) then
 
+            !** Use these when using actual JOREK data **!
             !call runge_kutta_fixed_dt_gc_push_jorek_radreact(sim%fields,sim%time,deltat, sim%groups(1)%mass, prt(iprt))
             !call ccoll_gc_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+            !********************************************!
             
+            !** Test block **!
             ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
             prt(iprt)%p(1) = prt(iprt)%p(1) + (EL_CHG*prt(iprt)%q / ATOMIC_MASS_UNIT) * norm2(E) * deltat
             call radreactforce_gc(B, deltat, sim%groups(1)%mass, prt(iprt))
@@ -269,8 +272,10 @@ do istep=1,nstep
 
             call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
                  ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+            !** Use this instead to test the partial screening operator **!
             !call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
-            
+            !*************************************************************!
+
             p(iprt)  = pout
             xi(iprt) = xiout
 
@@ -278,6 +283,7 @@ do istep=1,nstep
             pnorm = pout * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
             prt(iprt)%p(1) = pnorm * xiout
             prt(iprt)%p(2) = ( pnorm**2 - prt(iprt)%p(1)**2 ) / ( 2 * norm2(B) * sim%groups(1)%mass )
+            !** Test block ends **!
 
          end if
       end do
@@ -301,9 +307,12 @@ do istep=1,nstep
           
          if (prt(iprt)%i_elm .gt. 0) then
 
+            !** Use these when using actual JOREK data **!
             !call volume_preserving_radiation_push_jorek(prt(iprt),sim%fields,sim%groups(1)%mass,sim%time,deltat,ifail)
             !call ccoll_kinetic_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+            !********************************************!
 
+            !** Test block **!
             ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
             prt(iprt)%p =  prt(iprt)%p + EL_CHG * prt(iprt)%q * vector_cylindrical_to_cartesian(prt(iprt)%x(3), E) * deltat / ATOMIC_MASS_UNIT
             call radreactforce_kinetic(B, deltat, sim%groups(1)%mass, prt(iprt))
@@ -317,23 +326,24 @@ do istep=1,nstep
 
             pnorm = norm2(prt(iprt)%p)
 
-            !call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
-            !     ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
+            call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
+                 ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
             
-            bhat = vector_cylindrical_to_cartesian(prt(iprt)%x(3), B) / norm2(B)
-            pin  = norm2(prt(iprt)%p) / (mass * SPEED_OF_LIGHT)
-            xiin = dot_product(prt(iprt)%p, bhat) / norm2(prt(iprt)%p)
-            call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rndprt, 1.0e-4)
-            bperp = prt(iprt)%p - dot_product(prt(iprt)%p, bhat) * bhat
-            bperp = bperp / norm2(bperp)
-            poutprt = (xiout * bhat + sqrt( 1.d0 - xiout**2 ) * bperp ) * pout
-            
-            prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
+            !** Use this instead to test the partial screening operator **!
+            !bhat = vector_cylindrical_to_cartesian(prt(iprt)%x(3), B) / norm2(B)
+            !pin  = norm2(prt(iprt)%p) / (mass * SPEED_OF_LIGHT)
+            !xiin = dot_product(prt(iprt)%p, bhat) / norm2(prt(iprt)%p)
+            !call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rndprt, 1.0e-4)
+            !bperp = prt(iprt)%p - dot_product(prt(iprt)%p, bhat) * bhat
+            !bperp = bperp / norm2(bperp)
+            !poutprt = (xiout * bhat + sqrt( 1.d0 - xiout**2 ) * bperp ) * pout
+            !*************************************************************!
 
+            prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
             poutprt = prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT)
             p(iprt)  = norm2(poutprt) 
             xi(iprt) = dot_product(prt(iprt)%p, vector_cylindrical_to_cartesian(prt(iprt)%x(3), B)) / ( norm2(prt(iprt)%p) * norm2(B) )
-                  
+            !** Test block ends **!
          end if
       end do
       !$omp end parallel do

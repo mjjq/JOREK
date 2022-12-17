@@ -267,7 +267,7 @@ do istep=1,nstep
             rnd = floor(2*rnd)
             rnd = -1.0 + 2.0 * rnd
 
-            call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
+            call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
                  ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
             !call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
             
@@ -317,7 +317,7 @@ do istep=1,nstep
 
             pnorm = norm2(prt(iprt)%p)
 
-            !call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
+            !call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
             !     ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
             
             bhat = vector_cylindrical_to_cartesian(prt(iprt)%x(3), B) / norm2(B)

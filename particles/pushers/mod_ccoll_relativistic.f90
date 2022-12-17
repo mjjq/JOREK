@@ -426,11 +426,10 @@ contains
     class(fields_base), intent(in) :: fields
     real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
 
-    real*8 :: pnorm, E(3), B(3), psi, U, ne, rnd(3), pout(3), Te, Ti, the
+    real*8 :: E(3), B(3), psi, U, ne, rnd(3), pout(3), Te, Ti, the
     real*8, allocatable :: ni(:), thi(:)
 
     call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
-    pnorm = norm2(prt%p) / (mass * SPEED_OF_LIGHT)
 
     allocate(ni(size(dat%mi)), thi(size(dat%mi)))
     call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, Te, ni, Ti)
@@ -442,7 +441,7 @@ contains
     rnd = floor(2.d0*rnd)
     rnd = -1.d0 + 2.d0 * rnd
 
-    call ccoll_kinetic_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q, dat%mi, dat%Z0, &
+    call ccoll_kinetic_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q, &
          ne, the, ni, thi, dt, rnd, prt%p / (mass * SPEED_OF_LIGHT), pout)
     prt%p = pout * (mass * SPEED_OF_LIGHT)
     deallocate(ni, thi)
@@ -451,13 +450,11 @@ contains
   
   !> Computes the value for particle momentum after collisions with
   !> background species using Euler-Maruyama method with a fixed time step.
-  subroutine ccoll_kinetic_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,the,ni,thi,dt,rnd,uin,uout)
+  subroutine ccoll_kinetic_relativistic_explicitpush(dat,ma,qa,ne,the,ni,thi,dt,rnd,uin,uout)
     implicit none
     class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
     integer*1, intent(in) :: qa     !< test particle charge number [1]
-    real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
-    integer*1, intent(in) :: Z0(:)  !< list of background ion charge numbers [1]
     real*8, intent(in)    :: ne     !< background electron density [1/m^3]
     real*8, intent(in)    :: the    !< normalized electron temperatures [T_b/(m_b*c^2)]
     real*8, intent(in)    :: ni(:)  !< list of background ion densities [1/m^3]
@@ -483,8 +480,8 @@ contains
     u = norm2(uin)
     uhat = uin / u
 
-    allocate(clogai(size(mi)))
-    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,the,ni,thi,u,clogae,clogai)
+    allocate(clogai(size(dat%mi)))
+    call ccoll_clog(ma,qa*EL_CHG,dat%mi,dat%Z0*EL_CHG,ne,the,ni,thi,u,clogae,clogai)
 
     ! Electron contribution
     call ccoll_coeffs(dat,ma,qa*EL_CHG,clogae,MASS_ELECTRON,-EL_CHG,ne,the,u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
@@ -493,8 +490,8 @@ contains
     Dperp = Dperpb
 
     ! Ion contribution
-    do i = 1,size(mi)
-       call ccoll_coeffs(dat,ma,qa*EL_CHG,clogai(i),mi(i),Z0(i)*EL_CHG,ni(i),thi(i),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
+    do i = 1,size(dat%mi)
+       call ccoll_coeffs(dat,ma,qa*EL_CHG,clogai(i),dat%mi(i),dat%Z0(i)*EL_CHG,ni(i),thi(i),u,K=Kb,Dpar=Dparb,Dperp=Dperpb)
        K     = K     + Kb
        Dpar  = Dpar  + Dparb
        Dperp = Dperp + Dperpb
@@ -535,7 +532,7 @@ contains
     rnd = floor(2.d0*rnd)
     rnd = -1.d0 + 2.d0 * rnd
 
-    call ccoll_gc_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q, dat%mi, dat%Z0, &
+    call ccoll_gc_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q,  &
          ne, the, ni, thi, pin, pout, xiin, xiout, dt, rnd, 1.0e-4)
 
     pnorm = pout * ( mass * SPEED_OF_LIGHT )
@@ -546,13 +543,11 @@ contains
   end subroutine ccoll_gc_relativistic_push
 
   ! Apply Coulomb collisions for guiding center
-  subroutine ccoll_gc_relativistic_explicitpush(dat,ma,qa,mi,Z0,ne,the,ni,thi,uin,uout,xiin,xiout,dt,rnd,cutoff)
+  subroutine ccoll_gc_relativistic_explicitpush(dat,ma,qa,ne,the,ni,thi,uin,uout,xiin,xiout,dt,rnd,cutoff)
     
     class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
     integer*1, intent(in) :: qa     !< test particle charge number [1]
-    real*8, intent(in)    :: mi(:)  !< list of background ion masses [kg]
-    integer*1, intent(in) :: Z0(:)  !< list of background ion charge numbers [1]
     real*8, intent(in)    :: ne     !< background electron density [1/m^3]
     real*8, intent(in)    :: the    !< normalized electron temperature [T_b/(m_b*c^2)]
     real*8, intent(in)    :: ni(:)  !< list of background ion densities [1/m^3]
@@ -572,8 +567,8 @@ contains
     real*8 :: kappab, Dparb, dDparb, Dperpb ! Coll. coefficients species-wise
     integer :: i
 
-    allocate(clogai(size(mi)))
-    call ccoll_clog(ma,qa*EL_CHG,mi,Z0*EL_CHG,ne,the,ni,thi,uin,clogae,clogai)
+    allocate(clogai(size(dat%mi)))
+    call ccoll_clog(ma,qa*EL_CHG,dat%mi,dat%Z0*EL_CHG,ne,the,ni,thi,uin,clogae,clogai)
 
     ! Electron contribution
     call ccoll_coeffs(dat, ma, qa*EL_CHG, clogae, MASS_ELECTRON, -EL_CHG, ne, the, uin, &
@@ -584,8 +579,8 @@ contains
     Dperp = Dperpb
 
     ! Ion contribution
-    do i = 1,size(mi)
-       call ccoll_coeffs(dat, ma, qa*EL_CHG, clogai(i), mi(i), Z0(i)*EL_CHG, ni(i), thi(i), uin, &
+    do i = 1,size(dat%mi)
+       call ccoll_coeffs(dat, ma, qa*EL_CHG, clogai(i), dat%mi(i), dat%Z0(i)*EL_CHG, ni(i), thi(i), uin, &
             kappa=kappab, Dpar=Dparb, Dperp=Dperpb, dDpar=dDparb)
 
        kappa = kappa + kappab

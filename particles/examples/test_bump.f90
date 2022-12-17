@@ -173,6 +173,7 @@ real*8 :: E(3), B(3), psi, U, p0, xi0, rc0, zc0
 real*8 :: pnorm, pin, xiin, pout, xiout, rnd(2), rndprt(3), pinprt(3), poutprt(3)
 real*8, dimension(:), allocatable    :: ni
 real*8 :: the, thi(1), ne
+real*8 :: bhat(3), bperp(3)
 
 ! For CPU time
 real*8 :: t0, t1
@@ -209,8 +210,8 @@ dat%ai(1) = 1
 dat%Ii(1) = 1.d0
 
 ! Toggle here between GC and gyro-orbit
-allocate(particle_gc_relativistic::sim%groups(1)%particles(nprt))
-!allocate(particle_kinetic_relativistic::sim%groups(1)%particles(nprt))
+!allocate(particle_gc_relativistic::sim%groups(1)%particles(nprt))
+allocate(particle_kinetic_relativistic::sim%groups(1)%particles(nprt))
 
 ! Allocate and initialize needed data arrays
 allocate( p(nprt), xi(nprt) )
@@ -268,6 +269,7 @@ do istep=1,nstep
 
             call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
                  ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+            !call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
             
             p(iprt)  = pout
             xi(iprt) = xiout
@@ -286,6 +288,7 @@ do istep=1,nstep
       !$omp parallel do default(shared) &
       !$omp private(pnorm, rndprt, poutprt) &
       !$omp private(the, thi, ne, ni, E, B, psi, U) &
+      !$omp private(bhat, bperp, xiout, xiin, pin, pout) &
       !$omp private(iprt, ifail)
       do iprt=1,nprt
 
@@ -314,8 +317,17 @@ do istep=1,nstep
 
             pnorm = norm2(prt(iprt)%p)
 
-            call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
-                 ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
+            !call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, dat%mi, dat%Z0, &
+            !     ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
+            
+            bhat = vector_cylindrical_to_cartesian(prt(iprt)%x(3), B) / norm2(B)
+            pin  = norm2(prt(iprt)%p) / (mass * SPEED_OF_LIGHT)
+            xiin = dot_product(prt(iprt)%p, bhat) / norm2(prt(iprt)%p)
+            call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rndprt, 1.0e-4)
+            bperp = prt(iprt)%p - dot_product(prt(iprt)%p, bhat) * bhat
+            bperp = bperp / norm2(bperp)
+            poutprt = (xiout * bhat + sqrt( 1.d0 - xiout**2 ) * bperp ) * pout
+            
             prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
 
             poutprt = prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT)

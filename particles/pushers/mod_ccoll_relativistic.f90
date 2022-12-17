@@ -3,6 +3,7 @@
 !> Coulomb collisions for (relativistic) test particles.
 !> See Sarkimaki et al, "Adaptive time-stepping Monte Carlo integration of Coulomb collisions",
 !> Comp. Phys. Comm.
+!> For the partial screening operator, see PhD thesis by Linnea Hesslow.
 !<
 module mod_ccoll_relativistic
   use data_structure
@@ -13,10 +14,12 @@ module mod_ccoll_relativistic
   use mod_bessel, only : bessel_k2exp, bessel_k1exp, bessel_k0exp
   use mod_simpson, only : simpson_adaptive, func_real8_1D
   use mod_interp_methods, only: interp_bilinear
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   implicit none
 
   real*8, parameter :: DEFAULT_L0L1_eps    = 1.D-8 !< default tolerance in eval_L0L1
   real*8, parameter :: DEFAULT_L0L1_cutoff = 1.D-7 !< default cutoff in evalL0L1
+  real*8, parameter :: DEFAULT_UCUTOFF     = 1.D-4 !< Minimum p/mc value test particle can have
   
   ! Struct for storing tabulated values of special functions L0 and L1 as well as the ion data
   type ccoll_data
@@ -34,7 +37,9 @@ module mod_ccoll_relativistic
 
   public :: ccoll_data, ccoll_compute_L0L1table, ccoll_write_L0L1table, ccoll_read_L0L1table, &
        ccoll_init, ccoll_deallocate, ccoll_kinetic_relativistic_push, ccoll_gc_relativistic_push, &
-       ccoll_kinetic_relativistic_explicitpush, ccoll_gc_relativistic_explicitpush
+       ccoll_kinetic_relativistic_explicitpush, ccoll_gc_relativistic_explicitpush, &
+       ccoll_explicitpush_partialscreening, ccoll_gc_relativistic_push_partialscreening, &
+       ccoll_kinetic_relativistic_push_partialscreening
 
   private
 
@@ -409,6 +414,7 @@ contains
 
   end subroutine ccoll_coeffs
 
+
   !> Updates particle momentum after collisions
   !> Pushing is done by calling the explicit push function. This function is just a wrapper
   !> that additionally evaluates the plasma quantities and takes care of the coordinate transformation
@@ -614,6 +620,158 @@ contains
 
   end subroutine ccoll_gc_relativistic_explicitpush
 
+  
+  !> Evaluate coefficients for the partial screening operator
+  !> Note that the partial screening operator assumes test particle is electron.
+  subroutine ccoll_coeffs_partialscreening(dat, ne, the, ni, u, nuee_S, nuee_par, nuee_D, nuei_D)
+    implicit none
+
+    type(ccoll_data), intent(in) :: dat
+    real*8, intent(in)  :: ne
+    real*8, intent(in)  :: the
+    real*8, intent(in)  :: ni(:)
+    real*8, intent(in)  :: u
+    real*8, intent(out) :: nuee_S
+    real*8, intent(out) :: nuee_par
+    real*8, intent(out) :: nuee_D
+    real*8, intent(out) :: nuei_D
+
+    real*8 :: clog0, clogee, clogei
+    real*8 :: gamma, nu_c, Zeff
+    real*8 :: mu0, mu1, mu2
+    real*8 :: Nebnd, g, h, tmp
+    integer :: i
+
+    gamma = sqrt(1.d0 + u**2)
+    call ccoll_mufuncs(dat,u,the,mu0,mu1,mu2)
+
+    ! Coulomb logarithms specifically for energetic electrons
+    clog0 = 14.9d0 - 0.5d0 * log( ne / 1.d20 ) + log( the * MASS_ELECTRON * SPEED_OF_LIGHT**2 / ( 1.d3 * EL_CHG ) ) 
+    clogee = clog0 + (1.d0/5.d0) * log( 1.d0 + ( 2.d0 * ( gamma - 1.d0 ) / sqrt( 2.d0 * the )  )**(5.d0/2.d0) )
+    clogei = clog0 + (1.d0/5.d0) * log( 1.d0 + ( 2.d0 * u / sqrt( 2.d0 * the ) )**5 )
+
+    Zeff = 0.d0
+    g    = 0.d0
+    h    = 0.d0
+    do i=1,size(ni)
+       Nebnd = dat%Zi(i) - dat%Z0(i)
+       Zeff  = Zeff + ni(i) * dat%Z0(i)**2 / ne
+
+       tmp = ( u * dat%ai(i) )**( 3.d0 / 2.d0 )
+       g = g + ( 2.d0 / 3.d0 ) * ( ni(i) / ne ) * ( ( dat%Zi(i)**2 - dat%Z0(i)**2 ) * log( tmp + 1.d0 ) &
+             - Nebnd**2 * ( tmp / ( tmp + 1.d0 ) ) )
+
+       h = h + ( ni(i) / ne ) * Nebnd * ( log( 1.d0 + ( u * sqrt( gamma - 1.d0 ) / ( dat%Ii(i) / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 ) ) )**5 ) / 5.d0 &
+             - 1.d0 + 1.d0 / gamma**2 )
+    end do
+    
+    nu_c     = ( ne * EL_CHG**4 * clog0 ) / ( 4 * PI * EPS_ZERO**2 * MASS_ELECTRON**2 * SPEED_OF_LIGHT**3 )
+    nuee_S   = ( nu_c * gamma**2 / ( clog0 * u**2 ) ) * ( clogee * mu1 / gamma**2 + h )
+    nuee_par = ( 2 * nu_c * gamma * the / u**3 ) * mu1
+    nuee_D   = ( 2 * nu_c * clogee / ( u**2 * clog0 ) ) * ( u**2 * mu0 + u**2 * gamma * the * mu2 - the * mu1 ) / ( 2 * gamma * u**3 )
+    nuei_D   = ( nu_c * gamma / ( u**3 * clog0 ) ) * ( clogei * Zeff + g )
+
+  end subroutine ccoll_coeffs_partialscreening
+
+  !> Push electron taking partial screening effect into account
+  subroutine ccoll_explicitpush_partialscreening(dat, ne, the, ni, uin, uout, xiin, xiout, dt, rnd, cutoff)
+    implicit none
+    type(ccoll_data), intent(in) :: dat
+    
+    real*8, intent(in) :: ne, ni(:),the, uin, xiin
+    real*8, intent(in) :: cutoff, dt, rnd(2)
+    real*8, intent(out) :: uout, xiout
+
+    real*8 :: nuee_S, nuee_par, nuee_D, nuei_D
+    call ccoll_coeffs_partialscreening(dat, ne, the, ni, uin, nuee_S, nuee_par, nuee_D, nuei_D)
+
+    
+    uout  = uin - nuee_S * dt + sqrt( nuee_par * dt ) * rnd(1)
+    if(uout .lt. cutoff) then
+       uout = 2*cutoff-uout
+    end if
+    
+    xiout = xiin - ( nuee_D + nuei_D ) * xiin * dt + sqrt( ( 1.d0 - xiin**2 ) * ( nuee_D + nuei_D ) * dt  ) * rnd(2)
+    if(abs(xiout) .gt. 1.d0) then
+       xiout = modulo( xiout, 2.d0 )
+       if(abs(xiout) .gt. 1.d0) then
+          xiout = sign(2.d0-abs(xiout), xiout)
+       end if
+    end if
+
+  end subroutine ccoll_explicitpush_partialscreening
+
+  !> Push guiding center electron taking partial screening into account
+  !> Evaluates the field and takes care of the coordinate transformation before calling the
+  !> explicit pusher.
+  subroutine ccoll_gc_relativistic_push_partialscreening(dat, prt, fields, mass, time, dt)
+    implicit none
+    class(ccoll_data), intent(in) :: dat !< Collision data
+    class(particle_gc_relativistic), intent(inout) :: prt
+    class(fields_base), intent(in) :: fields
+    real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
+    real*8 :: pnorm, E(3), B(3), psi, U, Te, Ti, the, ne, rnd(2), pin, xiin, pout, xiout
+    real*8, allocatable :: ni(:), thi(:)
+
+    allocate(ni(size(dat%mi)), thi(size(dat%mi)))
+    call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
+    pnorm = sqrt(prt%p(2) * 2 * norm2(B) * mass + prt%p(1)**2)
+    pin   = pnorm / ( mass * SPEED_OF_LIGHT )
+    xiin  = prt%p(1) / pnorm
+    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, Te, ni, Ti)
+    the = Te * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
+    thi = Ti * K_BOLTZ / ( dat%mi * SPEED_OF_LIGHT**2 )
+
+    call random_number(rnd)
+    rnd = floor(2.d0*rnd)
+    rnd = -1.d0 + 2.d0 * rnd
+
+    call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, dt, rnd, DEFAULT_UCUTOFF)
+    
+    pnorm = pout * ( mass * SPEED_OF_LIGHT )
+    prt%p(1) = pnorm * xiout
+    prt%p(2) = ( pnorm**2 - prt%p(1)**2 ) / ( 2 * norm2(B) * mass )
+    deallocate(ni, thi)
+
+  end subroutine ccoll_gc_relativistic_push_partialscreening
+
+  !> Push gyro orbiting electron taking partial screening into account
+  !> Evaluates the field and takes care of the coordinate transformation before calling the
+  !> explicit pusher.
+  subroutine ccoll_kinetic_relativistic_push_partialscreening(dat, prt, fields, mass, time, dt)
+    implicit none
+    class(ccoll_data), intent(in) :: dat !< Collision data
+    class(particle_kinetic_relativistic), intent(inout) :: prt
+    class(fields_base), intent(in) :: fields
+    real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
+    real*8 :: E(3), B(3), psi, U, ne, rnd(2), pin, pout, xiin, xiout, Te, Ti, the, bperp(3), bhat(3)
+    real*8, allocatable :: ni(:), thi(:)
+
+    call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
+    bhat = vector_cylindrical_to_cartesian(prt%x(3), B) / norm2(B)
+    pin  = norm2(prt%p) / (mass * SPEED_OF_LIGHT)
+    xiin = dot_product(prt%p, bhat) / ( norm2(prt%p) )
+
+    allocate(ni(size(dat%mi)), thi(size(dat%mi)))
+    call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, Te, ni, Ti)
+    the = Te * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
+    thi = Ti * K_BOLTZ / ( dat%mi * SPEED_OF_LIGHT**2 )
+
+    call random_number(rnd)
+    rnd = floor(2.d0*rnd)
+    rnd = -1.d0 + 2.d0 * rnd
+
+    call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, dt, rnd, DEFAULT_UCUTOFF)
+    
+    ! Back to particle coordinates (gyroangle is left invariant)
+    bperp = prt%p - dot_product(prt%p, bhat) * bhat
+    bperp = bperp / norm2(bperp)
+
+    prt%p = (xiout * bhat + sqrt( 1.d0 - xiout**2 ) * bperp ) * pout * (mass * SPEED_OF_LIGHT)
+    deallocate(ni, thi)
+
+  end subroutine ccoll_kinetic_relativistic_push_partialscreening
+
   !> Evaluates the mu functions (and their derivatives if needed)
   subroutine ccoll_mufuncs(data,u,th,mu0,mu1,mu2,dmu0,dmu1,dmu2)
     implicit none
@@ -640,7 +798,7 @@ contains
     call interp_L0L1(data,u,th,L0,L1)
 
     mu0 = ( gammasq * L0 - th * L1 + ( th - gamma ) * u * expgammatheta ) / expBessel2
-    mu1 = ( gammasq * L1 - th * L0 + ( th * gamma - 1 ) * u * expgammatheta ) / expBessel2
+    mu1 = ( gammasq * L1 - th * L0 + ( th * gamma - 1.d0 ) * u * expgammatheta ) / expBessel2
     mu2 = ( 2.d0 * tg * L1 + ( 1 + 2.d0 * th2 ) * u * expgammatheta ) / ( th * expBessel2 )
 
     if(present(dmu0) .or. present(dmu1) .or. present(dmu2)) then

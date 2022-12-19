@@ -132,7 +132,7 @@ def read_markers(partout, group, warea):
         wallid_prt = h5["groups/"+group+"/i_elm"][:]
         r_prt   = h5["groups/"+group+"/x"][:,0]
         z_prt   = h5["groups/"+group+"/x"][:,1]
-        phi_prt = np.mod(h5["groups/"+group+"/x"][:,2], 2*np.pi)
+        phi_prt = 2*np.pi - np.mod(h5["groups/"+group+"/x"][:,2], 2*np.pi) # Change direction of phi from JOREK coords to right-handed
         pol_prt = np.arctan2( z_prt - z0, r_prt - r0 )
         weight  = h5["groups/"+group+"/weight"][:]
 
@@ -172,7 +172,7 @@ def plot_wallcontour(ax, wr, wz, r0, z0, wallmesh=None, phi=0):
         while i < idx.size:
             nk = idx[i]
             xyz = pts[idx[i+1:i+1+nk],:]
-            ax.plot(xyz[:,0], xyz[:,2], color='black')
+            ax.plot(np.sqrt(xyz[:,0]**2+xyz[:,1]**2), xyz[:,2], color='black')
             i = i + nk + 1
 
     ax.set_xlabel(r'R [m]')

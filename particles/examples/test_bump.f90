@@ -150,6 +150,8 @@ program test_bump
   use mod_gc_relativistic
   use mod_ccoll_relativistic
   use mod_radreactforce
+  use mod_kinetic_relativistic
+  use mod_impurity, only: init_imp_adas
   use testccoll_helpers
 
   use constants, only: EL_CHG, SPEED_OF_LIGHT, ATOMIC_MASS_UNIT, PI, EPS_ZERO, MASS_ELECTRON, K_BOLTZ

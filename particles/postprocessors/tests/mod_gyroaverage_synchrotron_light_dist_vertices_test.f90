@@ -202,14 +202,16 @@ end subroutine test_compute_gyroaverage_synchrotron_mhd_fields
 
 !> test the method for computing the gyroaverage synchrotron radiation properties
 subroutine test_compute_gyroaverage_synchrotron_light_properties()
+  use constants, only: PI,ATOMIC_MASS_UNIT,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
   use mod_particle_types, only: particle_gc_relativistic
   implicit none
   !> variables
   integer :: ii,jj,kk,counter
   real*8,dimension(16) :: mhd_fields
+  real*8,dimension(n_particles_max*n_groups_max)              :: error_coeff,zeros_1
   real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
   !> loop for computing the properties and do the testing
-  zeros = 0d0
+  zeros = 0d0; zeros_1 = 0d0;
   do kk=1,n_times_sol
     counter = 0; error = 0d0;
     do jj=1,n_groups_per_sim(kk)
@@ -224,6 +226,11 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
           !> compute the light properties
           call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
           sims_particles(kk)%groups(jj)%mass,mhd_fields)
+          error_coeff(counter) = abs(vertex_sol%properties(10,counter,kk)*&
+          vertex_sol%properties(9,counter,kk) - ((9d0*((EL_CHG*abs(real(p_list(ii)%q,kind=8)))**5)*&
+          (properties_sol(4,counter,kk)**9)*(properties_sol(5,counter,kk)**2)*(mhd_fields(7)**3))/&
+          (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel_sol(counter,kk)**2)*&
+          ((sims_particles(kk)%groups(jj)%mass*ATOMIC_MASS_UNIT)**3))))
         enddo
       end select
     enddo
@@ -232,6 +239,8 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
     !> check if the properties arrays are equal
     call assert_equals(error,zeros,n_properties,n_particles_max*n_groups_max,&
     tol_real8,"Error gyroaverage synchrotron light compute properties: too large errors!")
+    call assert_equals(error_coeff,zeros_1,n_particles_max*n_groups_max,&
+    tol_real8,"Error gyroaverage synchrotron light compute properties: normalisation mismatch!")
   enddo
 end subroutine test_compute_gyroaverage_synchrotron_light_properties
 
@@ -366,13 +375,16 @@ subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct()
   implicit none
   !> variables
   integer                                                :: ii,jj,kk
+  !> DEBUG DEBUG DEBUG
+  integer :: ss,pp
+  !> DEBUG DEBUG DEBUG
   integer,dimension(n_times_sol)                         :: n_particles_time
   real*8,dimension(n_x,n_gc_RE_max,n_times_sol)          :: x_cart_loc
   real*8,dimension(n_properties,n_gc_RE_max,n_times_sol) :: properties_loc
   real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: dir_fun,irradiance
   real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: dir_fun_sol
   real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shaded_points_per_particle) :: irradiance_sol
- 
+  !>  
   !> initialise the gyroaverage synchrotron lights
   x_cart_loc = 0d0; properties_loc = 0d0; n_particles_time = 0;
   do ii=1,n_times_sol
@@ -485,7 +497,7 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
       xi = fact3*(properties(8)/spectrum%points(jj,ii))
       call besselk(onethird,xi,besselk13); call besselk(twothird,xi,besselk23);
       irradiance(jj,ii) = ((9d0*((charge*EL_CHG)**5)*(properties(5)**2)*(properties(4)**9)*(normB**3))*&
-      ((properties(8)/spectrum%points(jj,ii))**4)*fact1*((besselk13**2)+fact2*(besselk23**2)))/&
+      ((properties(8)/spectrum%points(jj,ii))**4)*fact1*((besselk23**2)+fact2*(besselk13**2)))/&
       (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel**2)*((mass*ATOMIC_MASS_UNIT)**3)) 
     enddo
   enddo

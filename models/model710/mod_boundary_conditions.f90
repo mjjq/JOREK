@@ -122,7 +122,7 @@ real*8  :: Cs,   Cs_T,   Cs_b,   Cs_b_T,   Cs_b_Tb
 real*8  :: beta, beta_T, beta_b, beta_b_T, beta_b_Tb
 
 real*8  :: element_size_s, element_size_t, element_size_0, element_size_2
-real*8  :: H1(2,2), H1_s(2,2), H1_ss(2,2)
+real*8  :: H1(2,n_degrees_1d), H1_s(2,n_degrees_1d), H1_ss(2,n_degrees_1d)
 
 integer :: i, in, iv, iv2, iv3, inode, inode2, inode3, k
 integer :: j, err, itest, i_mid, i_bnd, idir, iv_dir, iv_perp_dir, k_max

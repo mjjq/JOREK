@@ -87,7 +87,7 @@ time_id,light_id,x_shaded,light_dstb)
   !> compute the directionality function factors
   fact_3 = 5d-1*cospsi*(1d0-cospsi*cospsi)
   cospsi = light_properties(5)*cospsi !< becareful fron now on cospsi = beta*cospsi
-  fact_3 = fact_3/(1d0-cospsi)
+  fact_3 = light_properties(5)*fact_3/(1d0-cospsi)
   fact_2 = (1d0-light_properties(5)*light_properties(6)*cosmu)*(((1d0-cospsi)/cospsi)**2)
   fact_1 = (sqrt(((1d0-cospsi)**3)/(5d-1*cospsi)))*(light_properties(4)**3)
   !> compute the directionality function

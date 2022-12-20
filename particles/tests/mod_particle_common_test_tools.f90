@@ -52,7 +52,7 @@ real*8,parameter :: B0=3.5d0 !< toroidal magnetic field on axis
 real*8,parameter :: R0=3.d0  !< axis major radius
 real*8,parameter :: Z0=1.d-1 !< axis vertical position
 real*8,parameter :: E0=5.3d0 !< toroidal electric field on axis
-real*8,parameter,dimension(3) :: EThetaChi_RE_lowbnd=(/1.d5,5d-1*PI+1d-3,0.d0/) !< for RE
+real*8,parameter,dimension(3) :: EThetaChi_RE_lowbnd=(/1.d5,0.d0,0.d0/) !< for RE
 real*8,parameter,dimension(3) :: EThetaChi_RE_uppbnd=(/5.d7,PI,2.d0*PI/) !< for RE
 !> Interfaces -------------------------------------------------
 interface allocate_one_particle_list_type

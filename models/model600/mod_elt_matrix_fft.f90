@@ -981,6 +981,12 @@ do i=1,n_vertex_max
             d2visco_dT2 = 0.d0
           end if
 
+          if (.not. visco_old_setup) then
+            visco_T     = visco_T      * BigR**2.d0
+            dvisco_dT   = dvisco_dT    * BigR**2.d0
+            d2visco_dT2 = d2visco_dT2  * BigR**2.d0
+          endif
+
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
           
           ! --- Hyper-resistivity

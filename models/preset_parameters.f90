@@ -617,6 +617,7 @@ subroutine preset_parameters
   no_mach1_bc        = .false.              ! Never apply Mach-1 BCs
 
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  Mach1_fix_B        = .true.               !< Full-MHD: Use the initial magnetic field for Mach1 BCs on targets, ie. without AR and AZ variations
 
   eta_ARAZ_const     = 0.d0                 !< Use uniform resistivity for AR and AZ equations, used only if eta_ARAZ_on=.false.
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
@@ -726,7 +727,7 @@ subroutine preset_parameters
   n_spi(1)        = 1
   n_inj           = 1
   spi_rnd_seed    = 0
-  spi_abl_model   = 0
+  spi_abl_model   = -1
   spi_shard_file(:) = 'none'
   spi_plume_file(:) = 'none'
   spi_plume_hdf5  = .false.

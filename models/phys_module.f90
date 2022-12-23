@@ -82,6 +82,7 @@ module phys_module
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  logical :: Mach1_fix_B          !< Full-MHD: Use the initial magnetic field for Mach1 BCs on targets, ie. without AR and AZ variations
 
   ! --- RESISTIVITY SWITCHES FOR AR AND AZ EQUATIONS
   ! --- 1.
@@ -270,7 +271,14 @@ module phys_module
   real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num, Zk_i_perp_num, Zk_e_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num,                                      &
+             D_perp_num, D_perp_num_tanh, D_perp_num_tanh_psin, D_perp_num_tanh_sig, &
+             ZK_perp_num, ZK_i_perp_num, ZK_e_perp_num,                              &
+             ZK_perp_num_tanh, ZK_perp_num_tanh_psin, ZK_perp_num_tanh_sig,          &
+             ZK_i_perp_num_tanh, ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig,    &
+             ZK_e_perp_num_tanh, ZK_e_perp_num_tanh_psin, ZK_e_perp_num_tanh_sig
+  real*8  :: Dn_perp_num
+
   !> @name Shock-capturing terms
   logical :: use_sc  !< Use shock-capturing stabilization
   real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num
@@ -393,9 +401,9 @@ module phys_module
   real*8  :: ns_radius         !< Poloidal radius of gas source
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
   real*8  :: ns_delta_minor_rad  !< Extension of gas source in the minor radial direction (if greater than 0.)
-  real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
-  real*8  :: drift_distance    !< Shift the R position of the neutral deposition outward by drift_distance (in meters) for plasmoid drift
-  real*8  :: energy_teleported !< Energy (in eV) teleported per atom to consider plasmoid drift effects
+  real*8  :: ns_tor_norm         !< Gas source normalization factor related to its toroidal shape
+  real*8  :: drift_distance(n_inj_max)    !< Shift the R position of the neutral deposition outward by drift_distance (in meters) for plasmoid drift
+  real*8  :: energy_teleported(n_inj_max) !< Energy (in eV) teleported per atom to consider plasmoid drift effects
 
   character(len=80) :: imp_type(n_imp_max) !< Type of injected material or background impurity species: Argon, neon, ...
   logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
@@ -452,11 +460,11 @@ module phys_module
   integer :: n_spi(n_inj_max)   !< Number of shattered fragment injected for each injection
   integer :: n_spi_tot          !< Total number of shattered fragments injected
   integer :: n_inj              !< Number of injections
-  integer :: spi_abl_model      !< Determine which type of ablation model is used.
-                                !< 0 for constant release rate, 1 for NGS model,
-                                !< 2 for Sergeev formula, 3 for Parks formula.
-                                !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
-                                !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
+  integer :: spi_abl_model(n_inj_max)  !< Determine which type of ablation model is used.
+                                       !< 0 for constant release rate, 1 for NGS model,
+                                       !< 2 for Sergeev formula, 3 for Parks formula.
+                                       !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
+                                       !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
   character(len=256) :: spi_shard_file(n_inj_max)!< The name of the shard size file
@@ -550,6 +558,7 @@ module phys_module
   real*8  :: SIG_private       !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_up_priv       !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_theta         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_theta_up      !< Width with grid accumulation (for flux-aligned grid; only valid for double-null)
   real*8  :: SIG_leg_0         !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_leg_1         !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_up_leg_0      !< Width with grid accumulation (for flux-aligned grid)
@@ -568,6 +577,9 @@ module phys_module
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
   real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
   real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
+  real*8  :: T_min_ZKpar          !< Do not use smaller parallel heat diffusion values below this MHD temperature (Ti+Te); JOREK units
+  real*8  :: Ti_min_ZKpar         !< Do not use smaller parallel heat diffusion values below Ti; JOREK units
+  real*8  :: Te_min_ZKpar         !< Do not use smaller parallel heat diffusion values below Te; JOREK units
   real*8  :: ZK_par_SpitzerHaerm  !< Spitzer-Haerm parallel heat diffusion value in the plasma center (assuming a Z=1 plasma with Te=Ti)
   real*8  :: ZK_i_perp(10) = 0.d0 !< Coefficients for perpendicular ion heat diffusion profile
   real*8  :: ZK_e_perp(10) = 0.d0 !< Coefficients for perpendicular electron heat diffusion profile

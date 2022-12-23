@@ -76,13 +76,12 @@ ifeq ($(COMPILER_FAMILY), intel)
   endif
 
   ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -gt 19; echo $$?),0)
-    FFLAGS += -warn noexternal
+    FFLAGS +: -warn noexternal
   else ifeq ($(shell test $(COMPILER_MAJOR_VERSION) -eq 19; echo $$?),0)
     ifeq ($(shell test $(COMPILER_MAJOR_VERSION_ID) -ge 1; echo $$?),0)
       FFLAGS += -warn noexternal
     endif
   endif
-
   FFLAGS += -warn all
   FFLAGS += -warn nointerfaces
   FFLAGS += -warn nounused
@@ -198,6 +197,13 @@ ifeq (1, $(USE_FFTW))
   INCLUDES := $(INCLUDES) $(INC_FFTW)
 endif
 
+# polynomial order > 3 requires more Gauss points
+N_ORDER_PARAMETER = $(shell cat models/mod_settings.f90 |grep n_order |grep -v n_degrees | grep -v SETTINGS | awk '{print $$6}' | bc)
+ifneq (3, $(N_ORDER_PARAMETER))
+  DEFINES  := $(DEFINES) -DGAUSS_ORDER=8
+endif
+
+
 ifeq (1, $(USE_PASTIX_MURGE))
   LIBS     := $(LIBS) $(LIB_PASTIX_MURGE) $(LIB_PASTIX_BLAS)
   DEFINES  := $(DEFINES) -DUSE_MURGE
@@ -276,6 +282,12 @@ endif
 
 ifeq (1, $(USE_BICGSTAB))
   DEFINES  := $(DEFINES) -DUSE_BICGSTAB
+endif
+
+ifeq (1, $(USE_IMAS))
+  LIBS     := $(LIBS) $(IMASLIB)
+  INCLUDES := $(INCLUDES) $(IMASINCLUDE)
+  DEFINES  := $(DEFINES) -DUSE_IMAS
 endif
 
 

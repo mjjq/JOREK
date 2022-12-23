@@ -271,6 +271,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REAL_FMT) 'SIG_open              ', SIG_open
     write(*,REAL_FMT) 'SIG_private           ', SIG_private
     write(*,REAL_FMT) 'SIG_theta             ', SIG_theta
+    write(*,REAL_FMT) 'SIG_theta_up          ', SIG_theta_up
     write(*,REAL_FMT) 'SIG_leg_0             ', SIG_leg_0
     write(*,REAL_FMT) 'SIG_leg_1             ', SIG_leg_1
     write(*,REAL_FMT) 'SIG_outer             ', SIG_outer
@@ -493,6 +494,9 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'visco_num_T_dependent ', visco_num_T_dependent
   write(*,REAL_FMT) 'visco_par_num         ', visco_par_num
   write(*,REAL_FMT) 'D_perp_num            ', D_perp_num
+  write(*,REAL_FMT) 'D_perp_num_tanh       ', D_perp_num_tanh
+  write(*,REAL_FMT) 'D_perp_num_tanh_psin  ', D_perp_num_tanh_psin
+  write(*,REAL_FMT) 'D_perp_num_tanh_sig   ', D_perp_num_tanh_sig
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
   write(*,REAL_FMT) 'Dimp_perp_num         ', Dimp_perp_num
 
@@ -517,9 +521,18 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'add_sources_in_sc     ', add_sources_in_sc
   if (with_TiTe) then
     write(*,REAL_FMT) 'ZK_i_perp_num         ', ZK_i_perp_num
+    write(*,REAL_FMT) 'ZK_i_perp_num_tanh     ', ZK_i_perp_num_tanh
+    write(*,REAL_FMT) 'ZK_i_perp_num_tanh_psin', ZK_i_perp_num_tanh_psin
+    write(*,REAL_FMT) 'ZK_i_perp_num_tanh_sig ', ZK_i_perp_num_tanh_sig
     write(*,REAL_FMT) 'ZK_e_perp_num         ', ZK_e_perp_num
+    write(*,REAL_FMT) 'ZK_e_perp_num_tanh     ', ZK_e_perp_num_tanh
+    write(*,REAL_FMT) 'ZK_e_perp_num_tanh_psin', ZK_e_perp_num_tanh_psin
+    write(*,REAL_FMT) 'ZK_e_perp_num_tanh_sig ', ZK_e_perp_num_tanh_sig
   else
     write(*,REAL_FMT) 'ZK_perp_num           ', ZK_perp_num
+    write(*,REAL_FMT) 'ZK_perp_num_tanh      ', ZK_perp_num_tanh
+    write(*,REAL_FMT) 'ZK_perp_num_tanh_psin ', ZK_perp_num_tanh_psin
+    write(*,REAL_FMT) 'ZK_perp_num_tanh_sig  ', ZK_perp_num_tanh_sig
   end if
   write(*,REAL_FMT) 'tgnum                 ', tgnum(:)
   write(*,REAL_FMT) 'tgnum_psi             ', tgnum_psi 
@@ -568,6 +581,9 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'D_imp_extra_neg_thresh', D_imp_extra_neg_thresh
   write(*,REAL_FMT) 'T_min                 ', T_min
   write(*,REAL_FMT) 'T_min_neg             ', T_min_neg
+  write(*,REAL_FMT) 'T_min_ZKpar           ', T_min_ZKpar
+  write(*,REAL_FMT) 'Ti_min_ZKpar          ', Ti_min_ZKpar
+  write(*,REAL_FMT) 'Te_min_ZKpar          ', Te_min_ZKpar
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
   write(*,REAL_FMT) 'rn0_min               ', rn0_min
@@ -757,6 +773,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
 
 #ifdef fullmhd
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
+    write(*,LOGI_FMT) 'Mach1_fix_B           ', Mach1_fix_B
     write(*,REA3_FMT) 'eta_ARAZ_const        ', eta_ARAZ_const
     write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
     write(*,LOGI_FMT) 'eta_ARAZ_simple       ', eta_ARAZ_simple

@@ -79,9 +79,9 @@ integer,  parameter :: n_terms_u    = 11
 integer,  parameter :: n_terms_zj   = 1
 integer,  parameter :: n_terms_w    = 1
 integer,  parameter :: n_terms_rho  = 12
-integer,  parameter :: n_terms_T    = 17
+integer,  parameter :: n_terms_T    = 18
 integer,  parameter :: n_terms_Te   = 16
-integer,  parameter :: n_terms_Ti   = 12
+integer,  parameter :: n_terms_Ti   = 13
 integer,  parameter :: n_terms_vpar = 10
 integer,  parameter :: n_terms_rhon = 7
 
@@ -143,7 +143,8 @@ character*36, dimension(n_terms_T),     parameter :: T_term_names=  &
                                                  'T_Eq__Brems_radiation  ', &  ! 14:
                                                  'T_Eq__backg_imp_radiat ', &  ! 15:
                                                  'T_Eq__power_teleported ', &  ! 16:
-                                                 'T_Eq__viscopar_heating '/)   ! 17:
+                                                 'T_Eq__viscopar_heating ', &  ! 17:
+                                                 'T_Eq__visco_heating    '/)   ! 18:
 
 character*36, dimension(n_terms_Ti),    parameter :: Ti_term_names=  &
                                               (/ 'Ti_Eq__ext_heat_source ', &  !  1:
@@ -157,7 +158,8 @@ character*36, dimension(n_terms_Ti),    parameter :: Ti_term_names=  &
                                                  'Ti_Eq__zeta_timevol    ', &  !  9:
                                                  'Ti_Eq__neutral_friction', &  ! 10:
                                                  'Ti_Eq__TiTe_energy_exch', &  ! 11:
-                                                 'Ti_Eq__viscopar_heating'/)   ! 12:
+                                                 'Ti_Eq__viscopar_heating', &  ! 12:
+                                                 'Ti_Eq__visco_heating   '/)   ! 13:
 
 character*36, dimension(n_terms_Te),    parameter :: Te_term_names=  &
                                               (/ 'Te_Eq__ext_heat_source ', &  !  1:

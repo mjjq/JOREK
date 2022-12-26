@@ -57,7 +57,7 @@ real*8     :: Bgrad_rho_k_star, Bgrad_T_k_star, Bgrad_Ti_Ti_n, Bgrad_Te_Te_n, Bg
 real*8     :: ZK_par_T, dZK_par_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT
 real*8     :: D_prof, ZK_prof, ZKi_prof, ZKe_prof, psi_norm, theta, zeta, delta_u_x, delta_u_y, delta_ps_x, delta_ps_y
 real*8     :: rhs_ij(n_var), rhs_ij_k(n_var)
-real*8     :: amat(n_var,n_var), amat_k(n_var,n_var), amat_n(n_var,n_var), amat_kn(n_var,n_var)
+real*8     :: amat(n_var,n_var), amat_k(n_var,n_var), amat_n(n_var,n_var), amat_kn(n_var,n_var), amat_nn(n_var,n_var)
 
 real*8     :: v, v_x, v_y, v_s, v_t, v_p, v_ss, v_st, v_tt, v_xx, v_xy, v_yy
 real*8     :: ps0, ps0_x, ps0_y, ps0_p, ps0_s, ps0_t, ps0_ss, ps0_tt, ps0_st, ps0_xx, ps0_yy, ps0_xy
@@ -89,6 +89,7 @@ real*8     :: Pi0_x_Ti,  Pi0_xx_Ti,  Pi0_y_Ti,  Pi0_yy_Ti,  Pi0_xy_Ti
 real*8     :: Pe0, Pe0_s, Pe0_t, Pe0_x, Pe0_y, Pe0_p, Pe0_ss, Pe0_st, Pe0_tt, Pe0_xx, Pe0_xy, Pe0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_Ti
+real*8     :: visco_T_heating, dvisco_dT_heating, d2visco_dT2_heating
 real*8     :: eta_T_ohm, deta_dT_ohm,  deta_num_dT,  dvisco_num_dT, D_perp_num_psin, ZK_perp_num_psin, ZK_i_perp_num_psin, ZK_e_perp_num_psin
 real*8     :: Ti0_ps0_x, Ti_ps0_x, Ti0_psi_x, Ti0_ps0_y, Ti_ps0_y, Ti0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: Te0_ps0_x, Te_ps0_x, Te0_psi_x, Te0_ps0_y, Te_ps0_y, Te0_psi_y
@@ -201,6 +202,7 @@ ELM_p = 0.d0
 ELM_n = 0.d0
 ELM_k = 0.d0
 ELM_kn = 0.d0
+ELM_pnn=0.d0
 RHS_p = 0.d0
 RHS_k = 0.d0
 ELM   = 0.d0
@@ -254,7 +256,7 @@ else
 endif
 
 rhs_ij  = 0.d0; rhs_ij_k  = 0.d0; 
-amat    = 0.d0; amat_k    = 0.d0; amat_n = 0.d0; amat_kn = 0.d0
+amat    = 0.d0; amat_k    = 0.d0; amat_n = 0.d0; amat_kn = 0.d0; amat_nn = 0.d0;
 !---------------------------------------------------- value of (x,y) and derivatives on Gaussian points
 x_g  = 0.d0; x_s  = 0.d0; x_t  = 0.d0; x_st  = 0.d0; x_ss  = 0.d0; x_tt  = 0.d0;
 y_g  = 0.d0; y_s  = 0.d0; y_t  = 0.d0; y_st  = 0.d0; y_ss  = 0.d0; y_tt  = 0.d0;
@@ -405,6 +407,7 @@ do i=1,n_vertex_max
       ELM_n(:,:,1:n_var)  = 0
       ELM_k(:,:,1:n_var)  = 0
       ELM_kn(:,:,1:n_var) = 0
+      ELM_pnn(:,:,1:n_var)= 0
     endif
 
     do ms=1, n_gauss
@@ -999,6 +1002,11 @@ do i=1,n_vertex_max
             visco_fact_old = 1.d0 
           endif
 
+          ! --- Viscosity heating
+          visco_T_heating     = visco_heating * (visco_T     / max(visco, 1d-20) )
+          dvisco_dT_heating   = visco_heating * (dvisco_dT   / max(visco, 1d-20) )
+          d2visco_dT2_heating = visco_heating * (d2visco_dT2 / max(visco, 1d-20) )
+
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
           
           ! --- Hyper-resistivity
@@ -1579,6 +1587,11 @@ do i=1,n_vertex_max
                             + (GAMMA - 1.) * v * BigR * visco_par_heating * (vpar0_x * vpar0_x + vpar0_y * vpar0_y) * xjac * tstep * factor(var_Ti,12) &
                             + (GAMMA - 1.) * vpar0 * BigR * visco_par_heating * (v_x * vpar0_x     + v_y * vpar0_y) * xjac * tstep * factor(var_Ti,12) &
                             !==========================End of viscous heating terms==============================
+                            !============================ The perpendicular viscous heating terms================
+                            -(GAMMA-1.) * v * visco_T_heating * BigR**2.0 * (u0_x * w0_x + u0_y * w0_y) * visco_fact_old(1) * BigR * xjac * tstep * factor(var_Ti,13) &
+                            -(GAMMA-1.) * v * visco_T_heating * 2.d0 * BigR * w0 * u0_x                 * visco_fact_old(2) * BigR * xjac * tstep * factor(var_Ti,13) &
+                            -(GAMMA-1.) * v * visco_T_heating *  (u0_x * u0_xpp + u0_y * u0_ypp)        * visco_fact_old(2) * BigR * xjac * tstep * factor(var_Ti,13) &
+                            !============================End perpendicular viscous heating terms=================
 
                          + zeta * v * r0_corr  * delta_g(mp,var_Ti,ms,mt) * BigR                 * xjac         * factor(var_Ti,9)   &
                          + zeta * v * Ti0      * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Ti,9)   &
@@ -1694,6 +1707,11 @@ do i=1,n_vertex_max
                              + (GAMMA - 1.) * v * BigR * visco_par_heating * (vpar0_x * vpar0_x + vpar0_y * vpar0_y) * xjac * tstep * factor(var_T,17) &
                              + (GAMMA - 1.) * vpar0 * BigR * visco_par_heating * (v_x * vpar0_x     + v_y * vpar0_y) * xjac * tstep * factor(var_T,17) &
                              !==========================End of viscous heating terms==============================
+                             !============================ The perpendicular viscous heating terms================
+                             -(GAMMA-1.) * v * visco_T_heating * BigR**2.0 * (u0_x * w0_x + u0_y * w0_y) * visco_fact_old(1) * BigR * xjac * tstep * factor(var_T,18) &
+                             -(GAMMA-1.) * v * visco_T_heating * 2.d0 * BigR * w0 * u0_x                 * visco_fact_old(2) * BigR * xjac * tstep * factor(var_T,18) &
+                             -(GAMMA-1.) * v * visco_T_heating *  (u0_x * u0_xpp + u0_y * u0_ypp)        * visco_fact_old(2) * BigR * xjac * tstep * factor(var_T,18) &
+                             !============================End perpendicular viscous heating terms=================
 
                              - v * BigR * ksiion  * r0 * rn0 * Sion_T                           * xjac * tstep * factor(var_T,12) &
                              - v * BigR * r0_corr * rn0_corr * LradDrays_T                      * xjac * tstep * factor(var_T,13) &
@@ -2001,8 +2019,6 @@ do i=1,n_vertex_max
                                     + r0_hat * BigR**2 * w0 * (v_s * u_t  - v_t  * u_s)                                   * theta * tstep &
                                     + BigR**2 * (u_x * u0_x + u_y * u0_y) * (v_x * r0_y_hat - v_y * r0_x_hat)      * xjac * theta * tstep &
 
-                                    + visco_T *  (v_x * u_xpp + v_y * u_ypp)  * visco_fact_old(2)           * BigR * xjac * theta * tstep &
-
                                     + tauIC*2. * BigR**3 * Pi0_y * (v_x* u_x + v_y * u_y)                          * xjac * theta * tstep &
 
                                     + v * tauIC*2. * BigR**4 * (u_xy * (Pi0_xx - Pi0_yy) - Pi0_xy * (u_xx - u_yy)) * xjac * theta * tstep &
@@ -2045,6 +2061,7 @@ do i=1,n_vertex_max
                               * BigR * xjac * theta * tstep
                   endif
                   !---------------------------------------- NEO
+                  amat_nn(var_u,var_u) = visco_T *  (v_x * u_xpp + v_y * u_ypp)  * visco_fact_old(2)   * BigR * xjac * theta * tstep 
 
                   amat(var_u,var_zj)   = - v * (ps0_s * zj_t  - ps0_t * zj_s)                                              * theta * tstep
                                                                                                                     
@@ -2052,7 +2069,7 @@ do i=1,n_vertex_max
                                                                                                                     
                   amat(var_u,var_w) = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)                                   * theta * tstep &
                                     + BigR**2.d0 * ( v_x * w_x + v_y * w_y) * visco_T * visco_fact_old(1)  * BigR * xjac   * theta * tstep &
-                                    + 2.d0 * BigR * w *  v_x * visco_T                * visco_fact_old(2)  * BigR * xjac   * theta * tstep &
+                                    + 2.d0 * BigR * w *  v_x                * visco_T * visco_fact_old(2)  * BigR * xjac   * theta * tstep &
  
                                     + v * tauIC*2. * BigR**4 * (Pi0_s * w_t - Pi0_t * w_s)                                 * theta * tstep &
                                                                                                                     
@@ -2702,6 +2719,10 @@ do i=1,n_vertex_max
                                     * (r0*rn0*Sion_T)                                * xjac * theta * tstep &
                                !==============================End of friction terms===================
 
+                                + (GAMMA-1.) * v * BigR**2.d0 * ( u_x * w0_x + u_y * w0_y) * visco_T_heating * visco_fact_old(1)  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u_x                 * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * (u_x * u0_xpp + u_y * u0_ypp)           * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+ 
                            + tgnum_Ti* 0.25d0 * BigR**2 * Ti0* (r0_x * u_y - r0_y * u_x)                &
                                               * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
                            + tgnum_Ti* 0.25d0 * BigR**2 * r0* (Ti0_x * u_y - Ti0_y * u_x)                &
@@ -2710,8 +2731,13 @@ do i=1,n_vertex_max
                                               * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep    &
                            + tgnum_Ti* 0.25d0 * BigR**2 * r0* (Ti0_x * u0_y - Ti0_y * u0_x)              &
                                               * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
-  
-  
+
+                    amat_nn(var_Ti,var_u) = (GAMMA-1.) * v * visco_T_heating *  (u0_x * u_xpp + u0_y * u_ypp)       * visco_fact_old(2)  * BigR * xjac * theta * tstep
+ 
+                    amat(var_Ti,var_w) = (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w_x + u0_y * w_y) * visco_T_heating * visco_fact_old(1)  * BigR * xjac * theta * tstep &
+                                       + (GAMMA-1.) * v * 2.d0 * BigR * w *  u0_x                 * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep 
+ 
+ 
                     amat(var_Ti,var_rho) = v * rho * Ti0    * BigR * xjac * (1.d0 + zeta)     &
                               - v * rho * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)                        * theta * tstep &
                               - v * Ti0 * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
@@ -2861,6 +2887,10 @@ do i=1,n_vertex_max
   
                     amat(var_Ti,var_Te) = - v * BigR * ddTi_e_dTe * Te                           * xjac * theta * tstep &
 
+                                          + (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w0_x + u0_y * w0_y) * dvisco_dT_heating * Te * visco_fact_old(1)  * BigR * xjac * theta * tstep &
+                                          + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u0_x                  * dvisco_dT_heating * Te * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                          + (GAMMA-1.) * v * (u0_x * u0_xpp + u0_y * u0_ypp)           * dvisco_dT_heating * Te * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+ 
                                           !===================== Additional terms from friction terms============
                                           - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 &
                                               * (r0*rn0*dSion_dT) * Te * xjac * theta * tstep &
@@ -3133,7 +3163,11 @@ do i=1,n_vertex_max
                                         - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
                                             * (r0*rn0*Sion_T)                                     * xjac * theta * tstep &
                                        !==============================End of friction terms===================
-  
+ 
+                                + (GAMMA-1.) * v * BigR**2.d0 * ( u_x * w0_x + u_y * w0_y) * visco_T_heating * visco_fact_old(1)  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u_x                 * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * (u_x * u0_xpp + u_y * u0_ypp)           * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+ 
                           + tgnum_T * 0.25d0 * BigR**2 * T0* (r0_x * u_y - r0_y * u_x)                                &
                                              * ( v_x * u0_y - v_y * u0_x)              * xjac * theta * tstep * tstep &
                           + tgnum_T * 0.25d0 * BigR**2 * r0* (T0_x * u_y - T0_y * u_x)                                &
@@ -3143,8 +3177,13 @@ do i=1,n_vertex_max
                           + tgnum_T * 0.25d0 * BigR**2 * r0* (T0_x * u0_y - T0_y * u0_x)                              &
                                              * ( v_x * u_y - v_y * u_x)                * xjac * theta * tstep * tstep 
   
+                    amat_nn(var_T,var_u)= (GAMMA-1.) * v * visco_T_heating *  (u0_x * u_xpp + u0_y * u_ypp) * visco_fact_old(2)  * BigR * xjac * theta * tstep
+                    
                     amat(var_T,var_zj)  = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0/(BigR**2.d0) * BigR * xjac * theta * tstep
   
+                    amat(var_T,var_w)   = (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w_x + u0_y * w_y) * visco_T_heating * visco_fact_old(1) * BigR * xjac * theta * tstep &
+                                        + (GAMMA-1.) * v * 2.d0 * BigR * w *  u0_x                 * visco_T_heating * visco_fact_old(2) * BigR * xjac * theta * tstep 
+ 
                     amat(var_T,var_rho) =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)     &
                                           - v * rho * BigR**2 * ( T0_s  * u0_t - T0_t  * u0_s)                        * theta * tstep &
                                           - v * T0  * BigR**2 * ( rho_s * u0_t - rho_t * u0_s)                        * theta * tstep &
@@ -3231,6 +3270,11 @@ do i=1,n_vertex_max
                                       - v * BigR * ((GAMMA - 1.)/2.) * vv2 &
                                           * (r0*rn0*dSion_dT) * T * xjac * theta * tstep &
                                      !==============================End of friction terms=================
+
+                                     + (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w0_x + u0_y * w0_y) * dvisco_dT_heating * T * visco_fact_old(1)  * BigR * xjac * theta * tstep &
+                                     + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u0_x                  * dvisco_dT_heating * T * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                     + (GAMMA-1.) * v * (u0_x * u0_xpp + u0_y * u0_ypp)           * dvisco_dT_heating * T * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+ 
 
                           + tgnum_T * 0.25d0 * BigR**2 * T* (r0_x * u0_y - r0_y * u0_x)                               &
                                     * ( v_x * u0_y - v_y * u0_x)                       * xjac * theta * tstep * tstep &
@@ -3393,6 +3437,7 @@ do i=1,n_vertex_max
                         ELM_n(mp,index_kl+kl-1,ij)  =  ELM_n(mp,index_kl+kl-1,ij) + wst * amat_n(ij,kl)
                         ELM_k(mp,index_kl+kl-1,ij)  =  ELM_k(mp,index_kl+kl-1,ij) + wst * amat_k(ij,kl)
                         ELM_kn(mp,index_kl+kl-1,ij) =  ELM_kn(mp,index_kl+kl-1,ij) + wst * amat_kn(ij,kl)
+                        ELM_pnn(mp,index_kl+kl-1,ij)=  ELM_pnn(mp,index_kl+kl-1,ij) + wst * amat_nn(ij,kl)
                       
                       enddo
                     enddo
@@ -3404,7 +3449,7 @@ do i=1,n_vertex_max
 
                         ELM(index_ij+(ij-1)*(n_tor_local),index_kl+(kl-1)*(n_tor_local)) = &
                         ELM(index_ij+(ij-1)*(n_tor_local),index_kl+(kl-1)*(n_tor_local))   &
-                          + (amat(ij,kl) + amat_k(ij,kl) + amat_n(ij,kl) + amat_kn(ij,kl)) * wst
+                          + (amat(ij,kl) + amat_k(ij,kl) + amat_n(ij,kl) + amat_kn(ij,kl) + amat_nn(ij,kl)) * wst
                       
                       enddo
                     enddo
@@ -3633,6 +3678,61 @@ do i=1,n_vertex_max
             enddo
 
           endif
+
+          if (maxval(abs(ELM_pnn(1:n_plane,j_loc, i_v))) .ne. 0.d0) then
+
+            in_fft =  ELM_pnn(1:n_plane,j_loc, i_v)
+
+#ifdef USE_FFTW
+            call dfftw_execute_dft_r2c(fftw_plan, in_fft, out_fft)
+#else
+            call my_fft(in_fft, out_fft, n_plane)
+#endif
+
+            do m=1,(n_tor+1)/2
+
+              im      = max(2*(m-1),1)
+              index_m = n_tor*(j_loc-1) + max(2*(m-1),1)
+
+              do k=1,(n_tor+1)/2
+
+                ik      = max(2*(k-1),1)
+                index_k = n_tor*(i_loc-1) + max(2*(k-1),1)
+
+                l = (k-1) + (m-1)
+
+                if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - real(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + imag(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + imag(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) + real(out_fft(l+1)) * float(mode(im)**2)
+                elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   + real(out_fft(abs(l)+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - imag(out_fft(abs(l)+1)) * float(mode(im)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - imag(out_fft(abs(l)+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(abs(l)+1)) * float(mode(im)**2)
+                endif
+
+                l = (k-1) - (m-1)
+
+                if ( (l .ge. 0) .and. (l .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - real(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   + imag(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) - imag(out_fft(l+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(l+1)) * float(mode(im)**2)
+                elseif ( (l .lt. 0) .and. (abs(l) .le. n_plane/2) ) then
+                  ELM(index_k,  index_m  ) = ELM(index_k,  index_m)   - real(out_fft(abs(l)+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m  ) = ELM(index_k+1,index_m)   - imag(out_fft(abs(l)+1)) * float(mode(im)**2)
+                  ELM(index_k,  index_m+1) = ELM(index_k,  index_m+1) + imag(out_fft(abs(l)+1)) * float(mode(im)**2)
+                  ELM(index_k+1,index_m+1) = ELM(index_k+1,index_m+1) - real(out_fft(abs(l)+1)) * float(mode(im)**2)
+                endif
+
+              enddo
+
+            enddo
+
+          endif
+
         enddo
 
       enddo

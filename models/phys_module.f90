@@ -17,6 +17,7 @@ module phys_module
   real*8  :: T_max_eta            !< Temperature above which the resistivity is truncated (use with care; only for numerical reasons)
   real*8  :: T_max_eta_ohm        !< Temperature above which the resistivity used in the Ohmic heating term is truncated (use with care; only for numerical reasons)
   real*8  :: visco                !< Viscosity at plasma center (normalized)
+  real*8  :: visco_heating        !< Viscosity used in the perpendicular viscous heating term
   real*8  :: visco_rst            !< visco value from restart file
   real*8  :: visco_par_rst        !< visco_par value from restart file
   real*8  :: eta_rst              !< eta value from restart file

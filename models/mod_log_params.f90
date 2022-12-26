@@ -224,6 +224,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
   write(*,LOGI_FMT) 'visco_old_setup       ', visco_old_setup
   write(*,REAL_FMT) 'visco                 ', visco
+  write(*,REAL_FMT) 'visco_heating         ', visco_heating
   write(*,REAL_FMT) 'visco_par             ', visco_par
   write(*,REAL_FMT) 'visco_par_heating     ', visco_par_heating
   write(*,LOGI_FMT) 'restart               ', restart

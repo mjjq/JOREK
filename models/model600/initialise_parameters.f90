@@ -206,7 +206,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact,    &
                 eta_num_prof, eta_num_psin_dependent,               &
                 visco_par_heating,T_min_ZKpar,Ti_min_ZKpar,         &
-                Te_min_ZKpar, visco_old_setup
+                Te_min_ZKpar, visco_old_setup, visco_heating
 
 if (my_id .eq. 0) then
 

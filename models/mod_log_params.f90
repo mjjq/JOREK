@@ -498,7 +498,6 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'D_perp_num_tanh_psin  ', D_perp_num_tanh_psin
   write(*,REAL_FMT) 'D_perp_num_tanh_sig   ', D_perp_num_tanh_sig
   write(*,REAL_FMT) 'Dn_perp_num           ', Dn_perp_num
-  write(*,REAL_FMT) 'Dimp_perp_num         ', Dimp_perp_num
 
   write(*,LOGI_FMT) 'use_sc                ', use_sc
   write(*,REAL_FMT) 'visco_sc_num          ', visco_sc_num

@@ -382,10 +382,13 @@ do i=1, n_local_elms !=== do elements
           if (        apply_psi_BC      &
                  .or. ((k .eq. var_rho)  .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_T)    .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_Ti)   .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_Te)   .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_uR)   .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_uZ)   .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_up)   .and. apply_dirichlet_all)  &
                  .or. ((k .eq. var_rhon) .and. apply_dirichlet_all)  &
+                 .or. ((k .eq. var_rhoimp).and. apply_dirichlet_all)  &
               ) then
 
             ! --- Fix node values

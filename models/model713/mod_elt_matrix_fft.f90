@@ -1975,7 +1975,7 @@ do i=1,n_vertex_max
               Qvec_p(var_rhoimp) = - v * ( rhoimp0_corr * divU + UgradRhoimp ) + v * source_imp      &
                                    - D_prof_imp * gradRhoimp_gradVstar__p                            &
                                    - (D_par_imp-D_prof_imp) * BgradVstar__p * BgradRhoimp / BB2      &
-                                   - Dimp_perp_num * lap_Vstar * lap_rhoimp  
+                                   - Dn_perp_num * lap_Vstar * lap_rhoimp  
               Qvec_k(var_rhoimp) = - D_prof_imp * gradRhoimp_gradVstar__k                            &
                                    - (D_par_imp-D_prof_imp) * BgradVstar__k * BgradRhoimp / BB2
             endif
@@ -4274,7 +4274,7 @@ do i=1,n_vertex_max
                     Qjac_p (var_rhoimp,var_rhoimp) = - v * ( rhoimp * divU + UgradRhoimp_rhoimp__p )                   &
                                                      - D_prof_imp * gradRhoimp_gradVstar_rhoimp__p                     &
                                                      - (D_par_imp-D_prof_imp) * BgradVstar__p * BgradRhoimp_rhoimp__p / BB2 &
-                                                     - Dimp_perp_num * lap_Vstar * lap_bf
+                                                     - Dn_perp_num * lap_Vstar * lap_bf
                     Qjac_n (var_rhoimp,var_rhoimp) = - v * (UgradRhoimp_rhoimp__n )                                      &
                                                      - (D_par_imp-D_prof_imp) * BgradVstar__p * BgradRhoimp_rhoimp__n / BB2
                     Qjac_k (var_rhoimp,var_rhoimp) = - (D_par_imp-D_prof_imp) * BgradVstar__k * BgradRhoimp_rhoimp__p / BB2

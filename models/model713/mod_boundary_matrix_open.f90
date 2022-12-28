@@ -269,7 +269,7 @@ do ms=1, n_gauss
       rhoVdiaR0 = tauIC*F0 / (R * BB2) * (  BZ0*p0_p - R*Bp0*p0_Z)
       rhoVdiaZ0 = tauIC*F0 / (R * BB2) * (R*BP0*p0_R -   BR0*p0_p)
 
-      T0_corr = max(Ti0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
+      T0_corr = max(T0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
       c_s = sqrt(gamma * T0_corr)
     endif
 

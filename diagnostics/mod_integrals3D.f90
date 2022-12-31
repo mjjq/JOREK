@@ -68,6 +68,7 @@ real*8  :: eq_g(n_plane,0:n_var,n_gauss,n_gauss), eq_s(n_plane,0:n_var,n_gauss,n
 real*8  :: eq_t(n_plane,0:n_var,n_gauss,n_gauss), eq_p(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: eq_ss(n_plane,0:n_var,n_gauss,n_gauss), eq_tt(n_plane,0:n_var,n_gauss,n_gauss), eq_st(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: eq_sp(n_plane,0:n_var,n_gauss,n_gauss), eq_tp(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_spp(n_plane,0:n_var,n_gauss,n_gauss), eq_tpp(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
 real*8  :: psi_axisym(n_gauss,n_gauss)
 
@@ -112,10 +113,12 @@ real*8  :: kin_par_in, kin_par_out, kin_par_tot, kin_perp_in, kin_perp_out, kin_
 real*8  :: VM_int, VM_ext, VM_tot, mag_in, mag_out, mag_tot, J2_int, J2_ext, J2_tot, ohm_in, ohm_tot, ohm_out
 real*8  :: heli_tot, thm_wk, thm_wk_tot, mag_wk, mag_wk_tot, thermal_work_tot
 real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_tot
+real*8  :: vprp_disp_tot, vprp_disp, visco_dissip_tot, visco_T
 real*8  :: fric_disp_tot, fric_disp, friction_dissip_tot
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy
+real*8  :: w0, dwdx, dwdy, u0_xpp, u0_ypp
 real*8  :: dTedx, dTedy, dTidx, dTidy, dPedx, dPedy, dPidx, dPidy
 real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
@@ -141,7 +144,7 @@ real*8  :: u0_x, u0_y
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
-
+real*8  :: T_or_Te, T_or_Te_corr, T_or_Te_0
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 real*8  :: source_neutral, source_neutral_drift
@@ -283,6 +286,7 @@ kinpar_flux  = 0.d0
 poynting_flux= 0.d0
 viscopar_flux= 0.d0
 vpar_disp_tot= 0.d0
+vprp_disp_tot= 0.d0
 fric_disp_tot= 0.d0
 psi_off      = 0.d0
 thm_wk_tot   = 0.d0
@@ -346,7 +350,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
-!$omp          H_ss, H_tt, H_st,                                                               &
+!$omp          H_ss, H_tt, H_st, HZ_pp,                                                        &
 !$omp          R_xpoint, Z_xpoint, my_id, use_pellet, delta_phi, R_axis, Z_axis, psi_axis, psi_bnd, &
 !$omp          D_tot, D_int, D_Ext, P_tot, P_int, P_ext, Vol, C_intern, C_ext, VP_ext, VP_int, &
 !$omp          VK_ext, VK_int, VK_tot, VM_ext, VM_int, VM_tot, J2_tot, J2_ext, J2_int,         &
@@ -357,7 +361,8 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
-!$omp          mag_wk_tot, vpar_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
+!$omp          visco, visco_T_dependent,                                                       &
+!$omp          mag_wk_tot, vpar_disp_tot, vprp_disp_tot, fric_disp_tot, area1, mag_src_tot,    &
 !$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp          spi_num_vol, local_source_volume, local_source_volume_drift, drift_distance,    &
@@ -380,8 +385,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
 !$omp           x_ss, x_tt, x_st, y_ss, y_tt, y_st, eq_ss, eq_tt, eq_st, eq_sp, eq_tp,         &
-!$omp           psi_axisym,                                                                    &
+!$omp           eq_spp, eq_tpp, psi_axisym,                                                    &
 !$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
+!$omp           w0, dwdx, dwdy, u0_xpp, u0_ypp,                                                &
 !$omp           dpdx, dpdy, phi, T0i, psi_as_coord,                                            &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
@@ -392,8 +398,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, fric_disp, p0_p, T0_corr, r0_corr, u0_p,     &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
-!$omp           eta_T_ohm,                                                              &
-
+!$omp           eta_T_ohm, vprp_disp,  T_or_Te, T_or_Te_corr, T_or_Te_0, visco_T,              &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,      &
 !$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ns_radius_tmp,                              &
@@ -443,7 +448,7 @@ omp_tid      = 0
 !$omp                VP_int, VP_ext, VP_tot, VK_tot, VK_int, VK_ext, VM_ext,                  &
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
 !$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1, mag_src_tot,     &
-!$omp                fric_disp_tot, R2curr_tmp, Zcurr_tmp)
+!$omp                fric_disp_tot, R2curr_tmp, Zcurr_tmp, vprp_disp_tot)
 
 do ife = ife_min, ife_max
 
@@ -490,7 +495,7 @@ do ife = ife_min, ife_max
   enddo
 
   eq_g(:,:,:,:) = 0.d0; eq_s(:,:,:,:) = 0.d0; eq_t(:,:,:,:) = 0.d0; eq_p(:,:,:,:) = 0.d0; eq_ss(:,:,:,:) = 0.d0; eq_tt(:,:,:,:) = 0.d0; eq_st(:,:,:,:) = 0.d0; 
-  eq_sp(:,:,:,:) = 0.d0; eq_tp(:,:,:,:) = 0.d0;
+  eq_sp(:,:,:,:) = 0.d0; eq_tp(:,:,:,:) = 0.d0; eq_spp(:,:,:,:) = 0.d0; eq_tpp(:,:,:,:) = 0.d0;
 
   do i=1,n_vertex_max
     do j=1,n_degrees
@@ -510,6 +515,9 @@ do ife = ife_min, ife_max
                 eq_ss(mp,k,ms,mt) = eq_ss(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_ss(i,j,ms,mt)* HZ(in,mp)
                 eq_tt(mp,k,ms,mt) = eq_tt(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_tt(i,j,ms,mt)* HZ(in,mp)
                 eq_st(mp,k,ms,mt) = eq_st(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_st(i,j,ms,mt)* HZ(in,mp)
+
+                eq_spp(mp,k,ms,mt) = eq_spp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)*HZ_pp(in,mp)
+                eq_tpp(mp,k,ms,mt) = eq_tpp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)*HZ_pp(in,mp)
               enddo
             enddo
 
@@ -634,12 +642,27 @@ do ife = ife_min, ife_max
         psi_as_coord = ps0
 #endif
 #ifdef WITH_TiTe
-        eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
-        eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
+        T_or_Te          = Te0
+        T_or_Te_corr     = Te0_corr
+        T_or_Te_0        = Te_0
 #else
-        eta_T         = resistivity(eta, T0_corr, T_max_eta, T_0)  
-        eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm, T_0)
+        T_or_Te          = T0
+        T_or_Te_corr     = T0_corr
+        T_or_Te_0        = T_0
 #endif
+        eta_T         = resistivity(eta, T_or_Te_corr, T_max_eta, T_or_Te_0)  
+        eta_T_ohm     = resistivity(eta_ohmic, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0)
+
+        ! --- Temperature dependent viscosity
+        if ( visco_T_dependent ) then
+          visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
+          if (T_or_Te .lt. T_min) then
+            visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+          endif
+        else
+          visco_T     = visco
+        end if
+
         ! This is currently broken for two temperature models !
         ! Some of these do not seem to be doing anything so I'm commenting them off !
         !dTdx   = (   y_t(ms,mt) * eq_s(mp,var_T,ms,mt) - y_s(ms,mt) * eq_t(mp,var_T,ms,mt) ) / xjac
@@ -652,6 +675,13 @@ do ife = ife_min, ife_max
 
         dudx = (   y_t(ms,mt) * eq_s(mp,var_u,ms,mt) - y_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
         dudy = ( - x_t(ms,mt) * eq_s(mp,var_u,ms,mt) + x_s(ms,mt) * eq_t(mp,var_u,ms,mt) ) / xjac
+
+        w0   = eq_g(mp,var_w,ms,mt)
+        dwdx = (   y_t(ms,mt) * eq_s(mp,var_w,ms,mt) - y_s(ms,mt) * eq_t(mp,var_w,ms,mt) ) / xjac
+        dwdy = ( - x_t(ms,mt) * eq_s(mp,var_w,ms,mt) + x_s(ms,mt) * eq_t(mp,var_w,ms,mt) ) / xjac
+
+        u0_xpp = (   y_t(ms,mt) * eq_spp(mp,var_u,ms,mt) - y_s(ms,mt) * eq_tpp(mp,var_u,ms,mt) ) / xjac
+        u0_ypp = ( - x_t(ms,mt) * eq_spp(mp,var_u,ms,mt) + x_s(ms,mt) * eq_tpp(mp,var_u,ms,mt) ) / xjac
 
         vpar_x = (   y_t(ms,mt) * vpar_s - y_s(ms,mt) * vpar_t ) / xjac
         vpar_y = ( - x_t(ms,mt) * vpar_s + x_s(ms,mt) * vpar_t ) / xjac
@@ -964,7 +994,11 @@ do ife = ife_min, ife_max
         hel1       = F0* ( (ps0 - psi_off) - y_g(ms,mt)*dpsidy) / (BigR**2.d0)
         mag_wk     = - (ps0_s*u0_t - ps0_t*u0_s) / xjac * zj0 / BigR  &
                      + F0 * zj0 * u0_p / (BigR**2.d0)
+
         vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
+        vprp_disp  = -visco_T * ( BigR**2.d0 * ( dwdx*dudx + dwdy*dudy )          &
+                                 + 2.d0 * BigR * w0 * dudx                        &
+                                 + u0_xpp * dudx + u0_ypp * dudy   )
 
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
@@ -977,6 +1011,7 @@ do ife = ife_min, ife_max
         mag_wk_tot    = mag_wk_tot + mag_wk       * BigR * xjac * wst * delta_phi
         thm_wk_tot    = thm_wk_tot + thm_wk                     * wst * delta_phi
         vpar_disp_tot = vpar_disp_tot + vpar_disp * BigR * xjac * wst * delta_phi
+        vprp_disp_tot = vprp_disp_tot + vprp_disp * BigR * xjac * wst * delta_phi
 
         R2curr_tmp    = R2curr_tmp - x_g(ms,mt)**2.0 * zj0 /BigR * xjac * wst * delta_phi    
         Zcurr_tmp     = Zcurr_tmp  - y_g(ms,mt)      * zj0 /BigR * xjac * wst * delta_phi    
@@ -1651,6 +1686,7 @@ call MPI_AllReduce(heli_tot, helicity_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COM
 call MPI_AllReduce(thm_wk_tot, thermal_work_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(mag_wk_tot, mag_work_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(vpar_disp_tot, viscopar_dissip_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(vprp_disp_tot, visco_dissip_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(fric_disp_tot, friction_dissip_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(mag_src_tot, mag_source_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(varmin,V_min,n_var,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,ierr)
@@ -1702,6 +1738,7 @@ ohm_tot              = J2_tot
 helicity_tot         = heli_tot
 thermal_work_tot     = thm_wk_tot
 mag_work_tot         = mag_wk_tot
+visco_dissip_tot     = vprp_disp_tot
 viscopar_dissip_tot  = vpar_disp_tot
 friction_dissip_tot  = fric_disp_tot
 mag_source_tot       = mag_src_tot
@@ -1814,6 +1851,7 @@ neut_particles_tot   = n_period * neut_particles_tot * fact_part
 helicity_tot         = n_period * helicity_tot
 thermal_work_tot     = n_period * thermal_work_tot    * fact_flux 
 mag_work_tot         = n_period * mag_work_tot        * fact_flux
+visco_dissip_tot     = n_period * visco_dissip_tot    * fact_flux
 viscopar_dissip_tot  = n_period * viscopar_dissip_tot * fact_flux
 friction_dissip_tot  = n_period * friction_dissip_tot * fact_flux
 mag_source_tot       = n_period * mag_source_tot      * fact_flux
@@ -2029,6 +2067,9 @@ if (my_id .eq. 0) then
 
       case ( 'Viscpar_diss' )
         res(iexpr+1) = viscopar_dissip_tot
+
+      case ( 'Visc_diss' )
+        res(iexpr+1) = visco_dissip_tot
 
       case ( 'Friction_diss' )
         res(iexpr+1) = friction_dissip_tot
@@ -2296,6 +2337,7 @@ if (my_id .eq. 0) then
     E_tot_t(index_now)               = E_tot 
     Wmag_tot_t(index_now)            = mag_tot 
     Ohmic_tot_t(index_now)           = ohm_tot
+    visco_dissip_tot_t(index_now)    = visco_dissip_tot
     viscopar_dissip_tot_t(index_now) = viscopar_dissip_tot
     friction_dissip_tot_t(index_now) = friction_dissip_tot
     thmwork_tot_t(index_now)         = thermal_work_tot 

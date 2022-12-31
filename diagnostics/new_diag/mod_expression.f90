@@ -273,6 +273,7 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
+    call add(exprs_all_int, 'Visc_diss   ', 'Total perpendicular viscosity dissipation             ')
     call add(exprs_all_int, 'Friction_diss','Total frictional dissipation                          ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')

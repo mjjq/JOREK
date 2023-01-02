@@ -22,6 +22,8 @@ module mod_pastix
     real(kind=8), dimension(:), pointer          :: val => Null()
     real(kind=8), dimension(:), pointer          :: rhs_val => Null()
 
+    integer                                      :: verbose = 1                   !< flag for logfile printout (0: no printout)
+
   end type type_PASTIX_SOLVER
 
   private

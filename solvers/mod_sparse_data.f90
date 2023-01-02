@@ -1,8 +1,5 @@
 module mod_sparse_data
 
-  use iso_c_binding
-  use mpi
-  use phys_module, only:    use_pastix, use_mumps, use_strumpack, iter_precon, gmres_max_iter
 #ifdef USE_MUMPS
   use mod_mumps, only:      type_MUMPS_SOLVER
 #endif  
@@ -13,8 +10,10 @@ module mod_sparse_data
   use mod_strumpack, only:  type_STRUMPACK_SOLVER
 #endif
   use data_structure, only: type_PRECOND
-
   
+  integer, parameter :: pastix = 1, mumps = 2, strumpack = 3
+
+
   type type_SP_SOLVER
 #ifdef USE_MUMPS
     type(type_MUMPS_SOLVER)     :: mmss
@@ -45,11 +44,13 @@ module mod_sparse_data
     logical                     :: iterative = .false.                 !< flag indicating use of iterative solver 
     logical                     :: equilibrium = .false.               !< flag indicating equilibrium solver (with duplicate entries in sparse matrix)
     
+    integer                     :: library = pastix                    !< solver library (default=pastix)
+
     integer                     :: verbose = 1                         !< flag for logfile printout (0: no printout)
     
   end type type_SP_SOLVER
    
   private
-  public :: type_SP_SOLVER
+  public :: type_SP_SOLVER, mumps, pastix, strumpack
 
 end module mod_sparse_data

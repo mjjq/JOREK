@@ -9,7 +9,8 @@ subroutine Poisson(my_id,itype,node_list,element_list,bnd_node_list,bnd_elm_list
 use tr_module 
 use data_structure
 use phys_module, only: amix, amix_freeb, delta_psi_GS, newton_GS_freebnd, newton_GS_fixbnd, &
-                       n_limiter, treat_axis, fix_axis_nodes
+                       n_limiter, treat_axis, fix_axis_nodes, &
+                       use_mumps_eq, use_pastix_eq, use_strumpack_eq
 use equil_info,  only: ES
 use vacuum_equilibrium, only: vacuum_equil
 use mpi_mod
@@ -22,7 +23,7 @@ use mod_axis_treatment
 #ifdef USE_PASTIX6
 use mod_pastix
 #endif
-use mod_sparse_data, only: type_SP_SOLVER
+use mod_sparse_data, only: type_SP_SOLVER, mumps, pastix, strumpack
 use mod_sparse, only: solve_sparse_system, solver_finalize
 
 implicit none
@@ -467,6 +468,13 @@ endif
 if (my_id == 0) then
 
   solver%equilibrium = .true.
+  if (use_strumpack_eq) then
+    solver%library = strumpack
+  elseif (use_mumps_eq) then
+    solver%library = mumps
+  else
+    solver%library = pastix
+  endif
   call solve_sparse_system(a_mat, rhs_vec, rhs_vec, solver)
   call solver_finalize(solver)  
   

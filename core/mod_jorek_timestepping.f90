@@ -97,6 +97,7 @@ subroutine setup_solvers(this, sim)
   use vacuum_equilibrium,   only: import_external_fields
   use mod_startup_teardown, only: sanity_checks
   use mod_log_params,       only: log_parameters
+  use mod_sparse_data,      only: mumps, pastix, strumpack
 
   implicit none
 
@@ -242,7 +243,13 @@ subroutine setup_solvers(this, sim)
   this%solver%iter_tol           = gmres_tol
   this%solver%iter_prev          = 0
   this%solver%n_since_update     = 0
-
+  if (use_strumpack) then
+    this%solver%library = strumpack
+  elseif (use_mumps) then
+    this%solver%library = mumps
+  elseif (use_pastix) then
+    this%solver%library = pastix
+  endif
   this%setup_done = .true.
 
   if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list

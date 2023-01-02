@@ -71,7 +71,7 @@ program JOREK2
   use mpi_mod
   use mod_impurity,        only: init_imp_adas
   use mod_sparse,          only: solve_sparse_system, solver_finalize
-  use mod_sparse_data,     only: type_SP_SOLVER
+  use mod_sparse_data,     only: type_SP_SOLVER, mumps, pastix, strumpack
   use mod_simulation_data, only: type_MHD_SIM
 
   use, intrinsic :: iso_c_binding
@@ -568,7 +568,14 @@ mpi_required = 0
   solver%iter_tol           = gmres_tol
   solver%iter_prev          = 0
   solver%n_since_update     = 0
- 
+  if (use_strumpack) then
+    solver%library = strumpack
+  elseif (use_mumps) then
+    solver%library = mumps
+  elseif (use_pastix) then
+    solver%library = pastix
+  endif
+
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
   

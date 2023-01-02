@@ -1,5 +1,5 @@
 #ifdef USE_MUMPS
-subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only)
+subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only, verbose)
   use tr_module 
   use mpi_mod
   use mod_clock
@@ -15,7 +15,7 @@ subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only)
   type(type_SP_MATRIX)     :: a_mat
   type(type_RHS)           :: rhs_vec
   type(type_MUMPS_SOLVER)  :: mmss
-  logical                  :: solve_only
+  logical                  :: solve_only, verbose
   
   integer               :: comm, my_id, ierr
   integer(kind=int_all) :: i  
@@ -49,7 +49,7 @@ subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only)
       call mumps_analyze(mmss,a_mat)
     
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0) write(*,FMT_TIMING) my_id,  '## Elapsed time analysis:', tsecond
+      if (verbose.and.(my_id .eq. 0)) write(*,FMT_TIMING) my_id,  '## Elapsed time analysis:', tsecond
       
     endif
     
@@ -58,7 +58,7 @@ subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only)
     call mumps_factorize(mmss,a_mat)
     
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0) write(*,FMT_TIMING) my_id,  '## Elapsed time factorize:', tsecond
+    if (verbose.and.(my_id .eq. 0)) write(*,FMT_TIMING) my_id,  '## Elapsed time factorize:', tsecond
     
   endif
  
@@ -67,7 +67,7 @@ subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only)
   call mumps_solve(mmss,rhs_vec)
 
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0) write(*,FMT_TIMING) my_id,  '## Elapsed time solve:', tsecond    
+  if (verbose.and.(my_id .eq. 0)) write(*,FMT_TIMING) my_id,  '## Elapsed time solve:', tsecond
   
   return
 

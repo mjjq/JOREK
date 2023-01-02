@@ -51,29 +51,29 @@ module mod_sparse
     if (.not.solver%iterative) then
 
       if (solver%equilibrium) then
-        if (solver%verbose.ne.0) write(*,*) "Solving MHD equilibrium system"
+        if (solver%verbose) write(*,*) "Solving MHD equilibrium system"
       else
-        if (solver%verbose.ne.0) write(*,*) "Solving MHD system using direct solver"
+        if (solver%verbose) write(*,*) "Solving MHD system using direct solver"
       endif
 
       if (solver%library.eq.mumps) then
 #ifdef USE_MUMPS
-        if (solver%verbose.ne.0) write(*,*) "Using MUMPS solver"
+        if (solver%verbose) write(*,*) "Using MUMPS solver"
         solver%mmss%equilibrium = solver%equilibrium
-        call solve_mumps_all(solver%mmss, a_mat, rhs_vec, solver%solve_only)
+        call solve_mumps_all(solver%mmss, a_mat, rhs_vec, solver%solve_only, solver%verbose)
 #endif
       elseif (solver%library.eq.strumpack) then
 #ifdef USE_STRUMPACK
-        if (solver%verbose.ne.0) write(*,*) "Using STRUMPACK solver"
+        if (solver%verbose) write(*,*) "Using STRUMPACK solver"
         solver%spss%equilibrium = solver%equilibrium
-        call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only)
+        call solve_strumpack_all(solver%spss, a_mat, rhs_vec, solver%solve_only, solver%verbose)
 #endif
       elseif (solver%library.eq.pastix) then
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
-        if (solver%verbose.ne.0) write(*,*) "Using PaStiX solver"
+        if (solver%verbose) write(*,*) "Using PaStiX solver"
         solver%ptss%equilibrium = solver%equilibrium
         solver%ptss%refine = .true.
-        call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only)
+        call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only, solver%verbose)
 #endif
       endif
 
@@ -85,7 +85,7 @@ module mod_sparse
 
     elseif (solver%iterative) then
 
-      if (solver%verbose.ne.0) write(*,*) "Solving MHD system using iterative solver"
+      if (solver%verbose) write(*,*) "Solving MHD system using iterative solver"
 
       ! condition for no PC update
       solver%solve_only = (solver%istep > 1) .and. ((solver%iter_gmres + solver%iter_prev <= 2*solver%iter_precon) &
@@ -108,15 +108,15 @@ module mod_sparse
 
       if (solver%library.eq.mumps) then
 #ifdef USE_MUMPS
-        call solve_mumps_all(solver%mmss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
+        call solve_mumps_all(solver%mmss, solver%pc%mat, solver%pc%rhs, solver%solve_only, solver%verbose)
 #endif
       elseif (solver%library.eq.strumpack) then
 #ifdef USE_STRUMPACK
-        call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
+        call solve_strumpack_all(solver%spss, solver%pc%mat, solver%pc%rhs, solver%solve_only, solver%verbose)
 #endif
       elseif (solver%library.eq.pastix) then
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
-        call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only)
+        call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only, solver%verbose)
 #endif
       endif
 
@@ -134,7 +134,7 @@ module mod_sparse
       call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
 #endif
 
-      if (solver%verbose.ne.0) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
+      if (solver%verbose) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
 
       solver%step_success = (solver%iter_gmres .lt. solver%iter_max)
 
@@ -167,6 +167,7 @@ module mod_sparse
     solver%step_success = .false.
     solver%iterative    = .false.
     solver%equilibrium  = .false.
+    solver%verbose      = .true.
 
 
     return

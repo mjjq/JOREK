@@ -46,7 +46,7 @@ module mod_sparse_data
     
     integer                     :: library = pastix                    !< solver library (default=pastix)
 
-    integer                     :: verbose = 1                         !< flag for logfile printout (0: no printout)
+    logical                     :: verbose = .true.                    !< flag for logfile printout
     
   end type type_SP_SOLVER
    

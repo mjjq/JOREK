@@ -468,6 +468,7 @@ endif
 if (my_id == 0) then
 
   solver%equilibrium = .true.
+  solver%verbose = .false.
   if (use_strumpack_eq) then
     solver%library = strumpack
   elseif (use_mumps_eq) then

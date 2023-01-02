@@ -2,7 +2,7 @@
 !> subroutine solves the complete system of equation using pastix with
 !  distributed matrix ad_mat on the main group mpi_comm_world.
 !  For pastix5 solver matrix is centralized into ac_mat
-subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
+subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
   use tr_module
   use mod_parameters, only: n_tor, n_var
   use mpi_mod
@@ -20,7 +20,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   type(type_SP_MATRIX)              :: ad_mat, ac_mat
   type(type_RHS)                    :: rhs_vec
   type(type_PASTIX_SOLVER)          :: ptss
-  logical                           :: solve_only
+  logical                           :: solve_only, verbose
 
   comm = ad_mat%comm
 
@@ -54,7 +54,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
       call pastix_analyze(ptss)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond
+      if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond
     endif
 
     if (my_id .eq. 0) write(*,*) "PaStiX: factorizing matrix"
@@ -63,7 +63,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
     call pastix_factorize(ptss)
 
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time factorization:', tsecond
+    if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time factorization:', tsecond
 
     if (n_cpu>1) then
       deallocate(ac_mat%irn)
@@ -78,7 +78,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only)
   call pastix_solve(ptss,rhs_vec)
 
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
+  if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
 
   return
 end

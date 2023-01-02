@@ -1,7 +1,7 @@
 #ifdef USE_STRUMPACK
 !> subroutine solves the complete system of equation using STRUMPACK
 ! takes distributed matrix ad_mat, centralize it and solve, placing the solution into the rhs_vec
-subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
+subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
   use mod_strumpack
 
   use tr_module
@@ -21,7 +21,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
   type(clcktype)              :: t_itstart, t0, t1, t2, t3
   real*8                      :: tsecond
   integer                     :: my_id, n_cpu, comm, ierr
-  logical                     :: solve_only
+  logical                     :: solve_only, verbose
   logical                     :: centralize = .true.
 
   if (.not.solve_only) then
@@ -56,7 +56,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
 
       call clck_time(t1)
       call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+      if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
 
     else
       ac_mat = ad_mat
@@ -79,7 +79,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
       call strumpack_analyze(spss)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond
+      if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond
     endif
 
     call clck_time(t0)
@@ -87,7 +87,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
     call strumpack_factorize(spss)
 
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time factorize:', tsecond
+    if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time factorize:', tsecond
 
     if (centralize) then
       deallocate(ac_mat%irn); ac_mat%irn => null()
@@ -102,7 +102,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only)
   call strumpack_solve(spss, rhs_vec)
 
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
+  if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
 
 
 

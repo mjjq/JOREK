@@ -353,6 +353,12 @@ if ( my_id == 0 ) then
   end do
 
   if (using_spi) call init_spi_all()
+  ! ---- This is an ad hoc way to stop duplication of neutral source and ionized main species source, should find a permanenty solution later
+
+  if (with_impurities .and. with_neutrals) then
+    write(*,*) "WARNNING! Currently do not support both with_neutrals and with impurities enabled at the same time! Should be fixed sonn. EXITING!"
+    stop
+  endif
 
 end if
 

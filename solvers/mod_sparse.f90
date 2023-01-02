@@ -154,7 +154,7 @@ module mod_sparse
 
     type(type_SP_SOLVER)     :: solver
 
-    if (solver%verbose.ne.0) write(*,*) "Finalizing solver"
+    if (solver%verbose) write(*,*) "Finalizing solver"
 
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
     if (solver%ptss%initialized) call pastix_finalize(solver%ptss)

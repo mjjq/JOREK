@@ -1966,6 +1966,7 @@ do i=1,n_vertex_max
               !###################################################################################################
               Pvec_prev(var_T) =   v * rho0_corr * delta_g(mp,var_T, ms,mt) &
                                   + v * T0_corr  * delta_g(mp,var_rho,ms,mt)
+
               Qvec_p(var_T) = + v * ( - rho0 * UgradT -  T0 * UgradRho - gamma * p0 * divU ) &
                               + v * heat_source(ms,mt)                                       &
                               + v * (gamma-1.d0) * Qvisc_T                                   &
@@ -3019,8 +3020,6 @@ do i=1,n_vertex_max
                   Qjac_p (var_UR,var_UR ) =  Qconv_UR_UR__p + visco_T * Qvisc_UR_UR__p &
                                             - v * PneoR_UR                             &
                                             - v * particle_source(ms,mt) * UR          &
-                                            - v * rho0_corr * rhon0      * Sion_T * UR &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * UR &
                                             - visco_num * lap_Vstar * lap_bf
                   Qjac_n (var_UR,var_UR ) =  Qconv_UR_UR__n + visco_T * Qvisc_UR_UR__n
                   Qjac_k (var_UR,var_UR ) =                 + visco_T * Qvisc_UR_UR__k
@@ -3036,18 +3035,19 @@ do i=1,n_vertex_max
                   Qjac_k (var_UR,var_Up ) =                 + visco_T * Qvisc_UR_Up__k
                   Qjac_kn(var_UR,var_Up ) =                 + visco_T * Qvisc_UR_Up__kn
 
-                  Qjac_p (var_UR,var_rho) =  Qconv_UR_rho__p + ( v_R + v / R ) * (rho*(Ti0+Te0)) - v * PneoR_rho__p &
-                                            - v *       rho * rhon0      * Sion_T * UR0 &
-                                            + v * 2.0 * rho * rho0_corr  * Srec_T * UR0
-                  Qjac_n (var_UR,var_rho) =  Qconv_UR_rho__n                                     - v * PneoR_rho__n
-
                   if (with_TiTe) then
+                    Qjac_p (var_UR,var_rho) =  Qconv_UR_rho__p + ( v_R + v / R ) * (rho*(Ti0+Te0)) - v * PneoR_rho__p
+                    Qjac_n (var_UR,var_rho) =  Qconv_UR_rho__n                                     - v * PneoR_rho__n
+                          
                     Qjac_p (var_UR,var_Ti ) =  Qconv_UR_Ti__p  + ( v_R + v / R ) * (rho0*Ti      ) - v * PneoR_Ti__p
                     Qjac_n (var_UR,var_Ti ) =  Qconv_UR_Ti__n                                      - v * PneoR_Ti__n
 
                     Qjac_p (var_UR,var_Te ) =                  + ( v_R + v / R ) * (rho0*Te      ) + dvisco_dT * Te * Qvisc_UR__p
                     Qjac_k (var_UR,var_Te ) =                                                      + dvisco_dT * Te * Qvisc_UR__k
                   else
+                    Qjac_p (var_UR,var_rho) =  Qconv_UR_rho__p + ( v_R + v / R ) * (rho*T0) - v * PneoR_rho__p
+                    Qjac_n (var_UR,var_rho) =  Qconv_UR_rho__n                                     - v * PneoR_rho__n
+                          
                     Qjac_p (var_UR,var_T  ) =  Qconv_UR_T__p   + ( v_R + v / R ) * (rho0*T       ) - v * PneoR_T__p &
                                               + dvisco_dT * T * Qvisc_UR__p
                     Qjac_n (var_UR,var_T  ) =  Qconv_UR_T__n   - v * PneoR_Ti__n
@@ -3117,8 +3117,6 @@ do i=1,n_vertex_max
                   Qjac_p (var_UZ,var_UZ )  =  Qconv_UZ_UZ__p + visco_T * Qvisc_UZ_UZ__p &
                                              - v * PneoZ_UZ                             &
                                              - v * particle_source(ms,mt) * UZ0         &
-                                             - v * rho0_corr * rhon0      * Sion_T * UZ &
-                                             + v * rho0_corr * rho0_corr  * Srec_T * UZ &
                                             - visco_num * lap_Vstar * lap_bf
                   Qjac_n (var_UZ,var_UZ )  =  Qconv_UZ_UZ__n + visco_T * Qvisc_UZ_UZ__n
                   Qjac_k (var_UZ,var_UZ )  =                 + visco_T * Qvisc_UZ_UZ__k
@@ -3129,18 +3127,19 @@ do i=1,n_vertex_max
                   Qjac_k (var_UZ,var_Up )  =                 + visco_T * Qvisc_UZ_Up__k
                   Qjac_kn(var_UZ,var_Up )  =                 + visco_T * Qvisc_UZ_Up__kn
 
-                  Qjac_p (var_UZ,var_rho)  =  Qconv_UZ_rho__p + v_Z * (rho*(Ti0+Te0)) - v * PneoZ_rho__p &
-                                             - v *       rho * rhon0      * Sion_T * UZ0 &
-                                             + v * 2.0 * rho * rho0_corr  * Srec_T * UZ0
-                  Qjac_n (var_UZ,var_rho)  =  Qconv_UZ_rho__n                         - v * PneoZ_rho__n
-
                   if (with_TiTe) then
+                    Qjac_p (var_UZ,var_rho)  =  Qconv_UZ_rho__p + v_Z * (rho*(Ti0+Te0)) - v * PneoZ_rho__p
+                    Qjac_n (var_UZ,var_rho)  =  Qconv_UZ_rho__n                         - v * PneoZ_rho__n
+                          
                     Qjac_p (var_UZ,var_Ti )  =  Qconv_UZ_Ti__p  + v_Z * (rho0*Ti      ) - v * PneoZ_Ti__p
                     Qjac_n (var_UZ,var_Ti )  =  Qconv_UZ_Ti__n                          - v * PneoZ_Ti__n
 
                     Qjac_p (var_UZ,var_Te )  =                  + v_Z * (rho0*Te      ) + dvisco_dT * Te * Qvisc_UZ__p
                     Qjac_k (var_UZ,var_Te )  =                                          + dvisco_dT * Te * Qvisc_UZ__k
                   else
+                    Qjac_p (var_UZ,var_rho)  =  Qconv_UZ_rho__p + v_Z * (rho*T0) - v * PneoZ_rho__p
+                    Qjac_n (var_UZ,var_rho)  =  Qconv_UZ_rho__n                         - v * PneoZ_rho__n
+                          
                     Qjac_p (var_UZ,var_T  )  =  Qconv_UZ_T__p  + v_Z * (rho0*T ) - v * PneoZ_T__p &
                                                + v_Z * (rho0*T  ) + dvisco_dT * T  * Qvisc_UZ__p
                     Qjac_k (var_UZ,var_T  )  = + dvisco_dT * T  * Qvisc_UZ__k
@@ -3206,8 +3205,6 @@ do i=1,n_vertex_max
                                             + p0 * BgradVstar_AR__p          &
                                             - v * (BR0*PneoR_AR__p + BZ0*PneoZ_AR__p) &
                                             - v * particle_source(ms,mt) * (Bp0_AR*Up0) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (Bp0_AR*Up0) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (Bp0_AR*Up0) &
                                             - visco_num * lap_Vstar * (BR0_AR * lap_UR               + Bp0_AR * lap_Up)
                   Qjac_n (var_Up,var_AR)  = + BZ0_AR__n * Qconv_UZ              &
                                             + BR0       * Qconv_UR_AR__n        &
@@ -3218,8 +3215,6 @@ do i=1,n_vertex_max
                                             - v * (BR0*PneoR_AR__n + BZ0*PneoZ_AR__n) &
                                             - v * (                + BZ0_AR__n*PneoZ) &
                                             - v * particle_source(ms,mt) * (BZ0_AR__n*UZ0) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (BZ0_AR__n*UZ0) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (BZ0_AR__n*UZ0) &
                                             - visco_num * lap_Vstar * (               + BZ0_AR__n * lap_UZ)
                   Qjac_k (var_Up,var_AR)  = + BR0_AR * visco_T * Qvisc_UR__k &
                                             + Bp0_AR * visco_T * Qvisc_Up__k &
@@ -3236,8 +3231,6 @@ do i=1,n_vertex_max
                                             + p0 * BgradVstar_AZ__p          &
                                             - v * (BR0*PneoR_AZ__p + BZ0*PneoZ_AZ__p) &
                                             - v * particle_source(ms,mt) * (Bp0_AZ*Up0) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (Bp0_AZ*Up0) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (Bp0_AZ*Up0) &
                                             - visco_num * lap_Vstar * (              + BZ0_AZ * lap_UZ + Bp0_AZ * lap_Up)
                   Qjac_n (var_Up,var_AZ)  = + BR0_AZ__n * Qconv_UR              &
                                             + BR0       * Qconv_UR_AZ__n        &
@@ -3248,8 +3241,6 @@ do i=1,n_vertex_max
                                             - v * (BR0*PneoR_AZ__n + BZ0*PneoZ_AZ__n) &
                                             - v * (BR0_AZ__n*PneoR                  ) &
                                             - v * particle_source(ms,mt) * (BR0_AZ__n*UR0) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (BR0_AZ__n*UR0) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (BR0_AZ__n*UR0) &
                                             - visco_num * lap_Vstar * (BR0_AZ__n * lap_UR )
                   Qjac_k (var_Up,var_AZ)  = + BZ0_AZ * visco_T * Qvisc_UZ__k &
                                             + Bp0_AZ * visco_T * Qvisc_Up__k &
@@ -3269,8 +3260,6 @@ do i=1,n_vertex_max
                                             - v * (BR0*PneoR_A3__p + BZ0*PneoZ_A3__p) &
                                             - v * (BR0_A3*PneoR    + BZ0_A3*PneoZ   ) &
                                             - v * particle_source(ms,mt) * (BR0_A3*UR0 + BZ0_A3*UZ0) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (BR0_A3*UR0 + BZ0_A3*UZ0) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (BR0_A3*UR0 + BZ0_A3*UZ0) &
                                             - visco_num * lap_Vstar * (BR0_A3 * lap_UR + BZ0_A3 * lap_UZ + Bp0_A3 * lap_Up)
                   Qjac_n (var_Up,var_A3)  = + BR0    * Qconv_UR_A3__n        &
                                             + BZ0    * Qconv_UZ_A3__n        &
@@ -3289,8 +3278,6 @@ do i=1,n_vertex_max
                                             + Bp0 * visco_T * Qvisc_Up_UR__p &
                                             - v * (BR0*PneoR_UR + BZ0*PneoZ_UR) &
                                             - v * particle_source(ms,mt) * (BR0*UR) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (BR0*UR) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (BR0*UR) &
                                             - visco_num * lap_Vstar * BR0 * lap_bf
                   Qjac_n (var_Up,var_UR)  = + BR0 * Qconv_UR_UR__n           &
                                             + BZ0 * Qconv_UZ_UR__n           &
@@ -3313,8 +3300,6 @@ do i=1,n_vertex_max
                                             + Bp0 * visco_T * Qvisc_Up_UZ__p &
                                             - v * (BR0*PneoR_UZ + BZ0*PneoZ_UZ) &
                                             - v * particle_source(ms,mt) * (BZ0*UZ) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (BZ0*UZ) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (BZ0*UZ) &
                                             - visco_num * lap_Vstar * BZ0 * lap_bf
                   Qjac_n (var_Up,var_UZ)  = + BR0 * Qconv_UR_UZ__n           &
                                             + BZ0 * Qconv_UZ_UZ__n           &
@@ -3336,8 +3321,6 @@ do i=1,n_vertex_max
                                             + BZ0 * visco_T * Qvisc_UZ_Up__p &
                                             + Bp0 * visco_T * Qvisc_Up_Up__p &
                                             - v * particle_source(ms,mt) * (Bp0*Up) &
-                                            - v * rho0_corr * rhon0      * Sion_T * (Bp0*Up) &
-                                            + v * rho0_corr * rho0_corr  * Srec_T * (Bp0*Up) &
                                             - visco_num * lap_Vstar * Bp0 * lap_bf
                   Qjac_n (var_Up,var_Up)  = + BR0 * Qconv_UR_Up__n              &
                                             + BZ0 * Qconv_UZ_Up__n              &
@@ -3355,17 +3338,18 @@ do i=1,n_vertex_max
                   Qjac_p (var_Up,var_rho) = + BR0 * Qconv_UR_rho__p              &
                                             + BZ0 * Qconv_UZ_rho__p              &
                                             + Bp0 * Qconv_Up_rho__p              &
-                                            + (rho*(Ti0+Te0)) * BgradVstar__p    &
-                                            - v * (BR0*PneoR_rho__p + BZ0*PneoZ_rho__p) &
-                                            - v *       rho * rhon0      * Sion_T * (BR0*UR0 + BZ0*UZ0 + Bp0*Up0) &
-                                            + v * 2.0 * rho * rho0_corr  * Srec_T * (BR0*UR0 + BZ0*UZ0 + Bp0*Up0)
+                                            - v * (BR0*PneoR_rho__p + BZ0*PneoZ_rho__p)
                   Qjac_n (var_Up,var_rho) = + BR0 * Qconv_UR_rho__n              &
                                             + BZ0 * Qconv_UZ_rho__n              &
                                             + Bp0 * Qconv_Up_rho__n              &
                                             - v * (BR0*PneoR_rho__n + BZ0*PneoZ_rho__n)
-                  Qjac_k (var_Up,var_rho) = + (rho*(Ti0+Te0)) * BgradVstar__k
 
-                  if( with_TiTe) then                  
+                  if( with_TiTe) then
+                    Qjac_p (var_Up,var_rho) =   Qjac_p (var_Up,var_rho)           &
+                                              + (rho*(Ti0+Te0)) * BgradVstar__p
+                    Qjac_k (var_Up,var_rho) = Qjac_k (var_Up,var_rho)             &
+                                              + (rho*(Ti0+Te0)) * BgradVstar__k
+
                     Qjac_p (var_Up,var_Ti)  = + BR0 * Qconv_UR_Ti__p              &
                                               + BZ0 * Qconv_UZ_Ti__p              &
                                               + Bp0 * Qconv_Up_Ti__p              &
@@ -3386,6 +3370,11 @@ do i=1,n_vertex_max
                                               + Bp0 * dvisco_dT * Te * Qvisc_Up__k &
                                               + (rho0*Te) * BgradVstar__k
                   else
+                    Qjac_p (var_Up,var_rho) =   Qjac_p (var_Up,var_rho)           &
+                                              + (rho*T0) * BgradVstar__p     
+                    Qjac_k (var_Up,var_rho) = Qjac_k (var_Up,var_rho)             & 
+                                              + (rho*T0) * BgradVstar__k
+                          
                     Qjac_p (var_Up,var_T )  = + BR0 * Qconv_UR_T__p &
                                               + BZ0 * Qconv_UZ_T__p &
                                               + Bp0 * Qconv_Up_T__p &
@@ -3579,19 +3568,22 @@ do i=1,n_vertex_max
                     Qjac_n (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__n
                     Qjac_k (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__k
                     Qjac_kn(var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__kn
-
-                    Qjac_p (var_rho,var_Te ) = + v * rho0_corr * rhon0      * dSion_dT * Te            &
-                                               - v * rho0_corr * rho0_corr  * dSrec_dT * Te
                   else
                     Qjac_p (var_rho,var_T ) = + rho0 * VdiaGradVstar_T__p
                     Qjac_n (var_rho,var_T ) = + rho0 * VdiaGradVstar_T__n
                     Qjac_k (var_rho,var_T ) = + rho0 * VdiaGradVstar_T__k
                     Qjac_kn(var_rho,var_T ) = + rho0 * VdiaGradVstar_T__kn
-
-                    Qjac_p (var_rho,var_T ) = + v * rho0_corr * rhon0      * dSion_dT * T            &
-                                              - v * rho0_corr * rho0_corr  * dSrec_dT * T                          
                   endif
                   if(with_neutrals)then
+                    if(with_TiTe)then
+                      Qjac_p (var_rho,var_Te ) = Qjac_p (var_rho,var_Te )         &
+                                                 + v * rho0_corr * rhon0      * dSion_dT * Te            &
+                                                 - v * rho0_corr * rho0_corr  * dSrec_dT * Te
+                    else                       
+                      Qjac_p (var_rho,var_T ) = Qjac_p (var_rho,var_T )           &
+                                                + v * rho0_corr * rhon0      * dSion_dT * T            &
+                                                - v * rho0_corr * rho0_corr  * dSrec_dT * T
+                    endif      
                     Qjac_p (var_rho,var_rho) = Qjac_p (var_rho,var_rho)                               &
                                              + v *       rho * rhon0      * Sion_T                    &
                                              - v * 2.0 * rho * rho0_corr  * Srec_T 

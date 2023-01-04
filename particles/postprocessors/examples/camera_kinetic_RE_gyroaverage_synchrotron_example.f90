@@ -92,7 +92,7 @@ do ii=1,n_times
   call sims_gc(ii)%initialize(n_groups,.true.,my_id,n_cpus)
   call with(sims_gc(ii),field_reader)
   !> transform particle kinetic relativistic to relativistic gc
-  !> TODO
+  call relativistic_kinetic_sim_to_relativistic_gc_sim(sims(ii),sims_gc(ii)) 
 enddo
 if(allocated(sims)) deallocate(sims)
 write(*,*) 'Reading particle data: completed!' 
@@ -149,5 +149,53 @@ if(allocated(sims))                deallocate(sims)
 if(allocated(sims_gc))             deallocate(sims_gc)
 if(allocated(pixel_filter_values)) deallocate(pixel_filter_values)
 call finalize_mpi_threads(ierr)
+
+contains
+
+!> Tools ----------------------------------------------------------------------------------
+
+!> Tools for transforming a relativistic kinetic particle simulation
+!> in a relativistic gc simulations. The JOREK MHD fields must be
+!> loaded in the relativistic gc simulation.
+!> inputs:
+!>   sim_kin: (particle_sim) kinetic relativistic particle simulation
+!>   sim_gc:  (particle_sim) kinetic gc simulation
+!> outputs:
+!>   sim_kin: (particle_sim) kinetic relativistic particle simulation
+!>   sim_gc:  (particle_sim) kinetic gc simulation 
+subroutine relativistic_kinetic_sim_to_relativistic_gc_sim(sim_kin,sim_gc) 
+  implicit none
+  !> Inputs-Outputs:
+  type(particle_sim),intent(inout) :: sim_kin
+  type(particle_sim),intent(inout) :: sim_gc
+  !> Variables
+  integer :: ii,jj,counter,n_particles
+  real*8  :: U,psi
+  real*8,dimension(3) :: E_field,B_field
+  !> copy base data from sim_kin to sim_gc
+  sim_gc%time   = sim_kin%time; sim_gc%stop_now = sim_kin%stop_now;
+  sim_gc%t_norm = sim_kin%t_norm; sim_gc%my_id  = sim_kin%my_id;
+  sim_gc%n_cpu  = sim_kin%n_cpu; sim_gc%wtime_start = sim_kin%wtime_start;
+  counter = 1
+  do jj=1,size(sim_kin%groups)
+  select type (p_list=>sim_kin%groups(jj)%particles)
+    type is (particle_kinetic_relativistic)
+    sim_gc%groups(counter)%Z    = sim_kin%groups(jj)%Z
+    sim_gc%groups(counter)%mass = sim_kin%groups(jj)%mass
+    sim_gc%groups(counter)%dt   = sim_kin%groups(jj)%dt
+    n_particles = size(p_list)
+    allocate(particle_gc_relativistic::sim_gc%groups(counter)%particles(n_particles))
+    do ii=1,n_particles
+      call sim_gc%fields%calc_EBpsiU(sim_gc%time,p_list(ii)%i_elm,&
+      p_list(ii)%st,p_list(ii)%x(3),E_field,B_field,psi,U)
+      call relativistic_kinetic_to_particle(sim_gc%fields%node_list,&
+      sim_gc%fields%element_list,p_list(ii),&
+      sim_gc%groups(counter)%particles(ii),sim_gc%groups(counter)%mass,&
+      B_field)
+    enddo
+    counter = counter + 1
+  end select
+  enddo
+end subroutine relativistic_kinetic_sim_to_relativistic_gc_sim
 
 end program camera_kinetic_RE_gyroaverage_synchrotron_example

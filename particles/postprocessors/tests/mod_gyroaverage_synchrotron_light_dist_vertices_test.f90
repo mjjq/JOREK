@@ -17,9 +17,9 @@ public :: run_fruit_gyroaverage_synchrotron_light_dist_vertices
 !> Variables ---------------------------------------------------------
 !> general parameters
 real*8,parameter :: onethird=1d0/3d0
-real*8,parameter :: twothird=2d0/3d0
+real*8,parameter :: twothirds=2d0/3d0
 real*8,parameter :: tol_real8=1d-12
-real*8,parameter :: tol2_real8=1d-16
+real*8,parameter :: tol2_real8=5d-13
 real*8,parameter :: mass_RE=5.48579909065d-4
 !> parameters for generating synchrotron lights
 integer,parameter :: n_mhd_sol=16
@@ -485,17 +485,18 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
   int_param,properties(1:4))) return
   mu_angle = acos(dot_product((x_shaded-x_light)/norm2(x_shaded-x_light),properties(1:3)))
   thetap = atan2(properties(7),properties(6))
-  if(thetap.lt.0d0) thetap = TWOPI + thetap; psi_angle = mu_angle - thetap;
-  fact1 = ((1d0-properties(5)*cos(psi_angle))/(properties(5)*cos(psi_angle)))**2
-  fact1 = fact1*(1d0-properties(5)*properties(6)*cos(mu_angle))
+  if(thetap.lt.0d0) thetap = TWOPI + thetap 
+  psi_angle = mu_angle - thetap
+  fact1 = (((1d0-properties(5)*cos(psi_angle))/(properties(5)*cos(psi_angle)))**2)*&
+          (1d0-properties(5)*properties(6)*cos(mu_angle))
   fact2 = (5d-1*properties(5)*cos(psi_angle)*(sin(psi_angle)**2))/(1d0-properties(5)*cos(psi_angle))
   fact3 = (properties(4)**3)*sqrt(((1d0-properties(5)*cos(psi_angle))**3)/&
-          (5d1*properties(5)*cos(psi_angle)))
+          (5d-1*properties(5)*cos(psi_angle)))
   !> compute the irradiance
   do ii=1,spectrum%n_spectra
     do jj=1,spectrum%n_points
       xi = fact3*(properties(8)/spectrum%points(jj,ii))
-      call besselk(onethird,xi,besselk13); call besselk(twothird,xi,besselk23);
+      call besselk(onethird,xi,besselk13); call besselk(twothirds,xi,besselk23); 
       irradiance(jj,ii) = ((9d0*((charge*EL_CHG)**5)*(properties(5)**2)*(properties(4)**9)*(normB**3))*&
       ((properties(8)/spectrum%points(jj,ii))**4)*fact1*((besselk23**2)+fact2*(besselk13**2)))/&
       (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel**2)*((mass*ATOMIC_MASS_UNIT)**3)) 

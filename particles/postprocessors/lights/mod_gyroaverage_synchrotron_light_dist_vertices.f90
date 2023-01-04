@@ -11,7 +11,7 @@ private
 public :: gyroaverage_synchrotron_light_dist
 
 !> Variables ---------------------------------------------
-real*8,parameter :: onethirds=1d0/3d0
+real*8,parameter :: onethird=1d0/3d0
 real*8,parameter :: twothirds=2d0/3d0
 type,extends(synchrotron_light) :: gyroaverage_synchrotron_light_dist
   contains
@@ -77,13 +77,10 @@ time_id,light_id,x_shaded,light_dstb)
   x_shaded,light_vert%x(:,light_id,time_id),0,4,int_param,light_properties(1:4))) return
   !> the mu and psi angle cosinues, note that psi = mu-thetap hence
   !> cos(mu-thetap) = cos(mu)*cos(thetap) + sin(mu)*sin(thetap)
-  cosmu = (x_shaded(1)-light_vert%x(1,light_id,time_id))*light_properties(1)+&
-          (x_shaded(2)-light_vert%x(2,light_id,time_id))*light_properties(2)+&
-          (x_shaded(3)-light_vert%x(3,light_id,time_id))*light_properties(3)
-  cosmu = cosmu/sqrt(((x_shaded(1)-light_vert%x(1,light_id,time_id))**2) +&
-          ((x_shaded(2)-light_vert%x(2,light_id,time_id))**2) +&
-          ((x_shaded(3)-light_vert%x(3,light_id,time_id))**2))
-  cospsi = cosmu*light_properties(6) + light_properties(7)*sqrt(1d0-cosmu*cosmu)
+  cosmu = dot_product((x_shaded-light_vert%x(:,light_id,time_id))/&
+          norm2(x_shaded-light_vert%x(:,light_id,time_id)),light_properties(1:3))
+  cospsi = cosmu*light_properties(6) + light_properties(7)*sqrt(1d0-cosmu**2)
+
   !> compute the directionality function factors
   fact_3 = 5d-1*cospsi*(1d0-cospsi*cospsi)
   cospsi = light_properties(5)*cospsi !< becareful fron now on cospsi = beta*cospsi
@@ -334,7 +331,7 @@ wavelength_crit,fact_1,fact_2,fact_3,dir_funct_intensity,dir_funct)
   !> compute the directionality function
   lambdac_over_lambda = wavelength_crit/wavelength;
   xi = lambdac_over_lambda*fact_1;
-  besselk_1 = f_besselk(onethirds,xi); besselk_2 = f_besselk(twothirds,xi);
+  besselk_1 = f_besselk(onethird,xi); besselk_2 = f_besselk(twothirds,xi);
   if(isnan(besselk_1)) return; if(isnan(besselk_2)) return;
   dir_funct = dir_funct_intensity*(lambdac_over_lambda**4)*fact_2*(&
               (besselk_2**2) + (besselk_1**2)*fact_3)

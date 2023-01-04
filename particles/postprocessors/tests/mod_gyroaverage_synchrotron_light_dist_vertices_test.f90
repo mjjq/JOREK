@@ -19,8 +19,8 @@ public :: run_fruit_gyroaverage_synchrotron_light_dist_vertices
 real*8,parameter :: onethird=1d0/3d0
 real*8,parameter :: twothirds=2d0/3d0
 real*8,parameter :: tol_real8=2d-11
-real*8,parameter :: tol2_real8=1d-8
-real*8,parameter :: tol3_real8=5d-9
+real*8,parameter :: tol2_real8=5d-1
+real*8,parameter :: tol3_real8=5d-8
 real*8,parameter :: mass_RE=5.48579909065d-4
 !> parameters for generating synchrotron lights
 integer,parameter :: n_mhd_sol=16

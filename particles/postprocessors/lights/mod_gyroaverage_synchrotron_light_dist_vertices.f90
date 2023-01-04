@@ -333,8 +333,7 @@ wavelength_crit,fact_1,fact_2,fact_3,dir_funct_intensity,dir_funct)
   xi = lambdac_over_lambda*fact_1;
   besselk_1 = f_besselk(onethird,xi); besselk_2 = f_besselk(twothirds,xi);
   if(isnan(besselk_1)) return; if(isnan(besselk_2)) return;
-  dir_funct = dir_funct_intensity*(lambdac_over_lambda**4)*fact_2*(&
-              (besselk_2**2) + (besselk_1**2)*fact_3)
+  dir_funct = dir_funct_intensity*((lambdac_over_lambda**4)*fact_2*((besselk_2**2)+(besselk_1**2)*fact_3))
 end subroutine compute_synchrotron_directionality_funct
 !> -------------------------------------------------------
 end module mod_gyroaverage_synchrotron_light_dist_vertices

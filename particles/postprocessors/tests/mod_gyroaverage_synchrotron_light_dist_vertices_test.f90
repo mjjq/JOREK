@@ -496,10 +496,10 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
   do ii=1,spectrum%n_spectra
     do jj=1,spectrum%n_points
       xi = fact3*(properties(8)/spectrum%points(jj,ii))
-      call besselk(onethird,xi,besselk13); call besselk(twothirds,xi,besselk23); 
-      irradiance(jj,ii) = ((9d0*((charge*EL_CHG)**5)*(properties(5)**2)*(properties(4)**9)*(normB**3))*&
-      ((properties(8)/spectrum%points(jj,ii))**4)*fact1*((besselk23**2)+fact2*(besselk13**2)))/&
-      (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel**2)*((mass*ATOMIC_MASS_UNIT)**3)) 
+      call besselk(onethird,xi,besselk13); call besselk(twothirds,xi,besselk23);
+       irradiance(jj,ii) = (((9d0*((charge*EL_CHG)**5)*(properties(5)**2)*(properties(4)**9)*(normB**3)))/&
+      (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel**2)*((mass*ATOMIC_MASS_UNIT)**3)))*&
+      (((properties(8)/spectrum%points(jj,ii))**4)*fact1*((besselk23**2)+fact2*(besselk13**2)))
     enddo
   enddo
   dir_funct = irradiance/properties(10)

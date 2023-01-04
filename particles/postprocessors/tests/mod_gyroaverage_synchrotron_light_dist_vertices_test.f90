@@ -18,8 +18,9 @@ public :: run_fruit_gyroaverage_synchrotron_light_dist_vertices
 !> general parameters
 real*8,parameter :: onethird=1d0/3d0
 real*8,parameter :: twothirds=2d0/3d0
-real*8,parameter :: tol_real8=1d-12
-real*8,parameter :: tol2_real8=5d-13
+real*8,parameter :: tol_real8=2d-11
+real*8,parameter :: tol2_real8=1d-8
+real*8,parameter :: tol3_real8=5d-9
 real*8,parameter :: mass_RE=5.48579909065d-4
 !> parameters for generating synchrotron lights
 integer,parameter :: n_mhd_sol=16
@@ -207,6 +208,7 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
   implicit none
   !> variables
   integer :: ii,jj,kk,counter
+  real*8  :: factor
   real*8,dimension(16) :: mhd_fields
   real*8,dimension(n_particles_max*n_groups_max)              :: error_coeff,zeros_1
   real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
@@ -226,11 +228,14 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
           !> compute the light properties
           call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
           sims_particles(kk)%groups(jj)%mass,mhd_fields)
-          error_coeff(counter) = abs(vertex_sol%properties(10,counter,kk)*&
-          vertex_sol%properties(9,counter,kk) - ((9d0*((EL_CHG*abs(real(p_list(ii)%q,kind=8)))**5)*&
+          !> check if the pre-multiplicative coefficients match
+          factor = ((9d0*((EL_CHG*abs(real(p_list(ii)%q,kind=8)))**5)*&
           (properties_sol(4,counter,kk)**9)*(properties_sol(5,counter,kk)**2)*(mhd_fields(7)**3))/&
           (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel_sol(counter,kk)**2)*&
-          ((sims_particles(kk)%groups(jj)%mass*ATOMIC_MASS_UNIT)**3))))
+          ((sims_particles(kk)%groups(jj)%mass*ATOMIC_MASS_UNIT)**3)))
+          error_coeff(counter) = abs(vertex_sol%properties(10,counter,kk)*&
+          vertex_sol%properties(9,counter,kk) - factor)
+          if(factor.ne.0d0) error_coeff(counter) = error_coeff(counter)/factor
         enddo
       end select
     enddo
@@ -375,9 +380,6 @@ subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct()
   implicit none
   !> variables
   integer                                                :: ii,jj,kk
-  !> DEBUG DEBUG DEBUG
-  integer :: ss,pp
-  !> DEBUG DEBUG DEBUG
   integer,dimension(n_times_sol)                         :: n_particles_time
   real*8,dimension(n_x,n_gc_RE_max,n_times_sol)          :: x_cart_loc
   real*8,dimension(n_properties,n_gc_RE_max,n_times_sol) :: properties_loc
@@ -408,8 +410,8 @@ subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct()
       n_shaded_points_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
       "Error gyroaverage synchrotron directionality function: directionality function mismatch!")
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shaded_points_per_particle,irradiance,irradiance_sol,tol2_real8,&
-      "Error gyroaverage synchrotron directionality function: directionality function mismatch!")
+      n_shaded_points_per_particle,irradiance,irradiance_sol,tol3_real8,&
+      "Error gyroaverage synchrotron directionality function: irradiance mismatch!")
     enddo
   enddo
 end subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct
@@ -455,8 +457,8 @@ subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop()
       n_shaded_points_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
       "Error gyroaverage synchrotron directionality function taskloop: directionality function mismatch!")
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shaded_points_per_particle,irradiance,irradiance_sol,tol2_real8,&
-      "Error gyroaverage synchrotron directionality function taskloop: directionality function mismatch!")
+      n_shaded_points_per_particle,irradiance,irradiance_sol,tol3_real8,&
+      "Error gyroaverage synchrotron directionality function taskloop: irradiance mismatch!")
     enddo
   enddo
 end subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop

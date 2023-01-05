@@ -88,8 +88,7 @@ field_reader = event(read_jorek_fields_interp_linear(basename=trim(fields_filena
 do ii=1,n_times
   call sims(ii)%initialize(n_groups,.true.,my_id,n_cpus)
   call read_simulation_hdf5(sims(ii),particle_filename)
-  sim_times(ii) = get_simulation_hdf5_time(particle_filename)
-  call sims_gc(ii)%initialize(n_groups,.true.,my_id,n_cpus)
+  sim_times(ii) = get_simulation_hdf5_time(particle_filename) 
   call with(sims_gc(ii),field_reader)
   !> transform particle kinetic relativistic to relativistic gc
   call relativistic_kinetic_sim_to_relativistic_gc_sim(sims(ii),sims_gc(ii)) 
@@ -176,6 +175,7 @@ subroutine relativistic_kinetic_sim_to_relativistic_gc_sim(sim_kin,sim_gc)
   sim_gc%time   = sim_kin%time; sim_gc%stop_now = sim_kin%stop_now;
   sim_gc%t_norm = sim_kin%t_norm; sim_gc%my_id  = sim_kin%my_id;
   sim_gc%n_cpu  = sim_kin%n_cpu; sim_gc%wtime_start = sim_kin%wtime_start;
+  if(.not.allocated(sim_gc%groups)) allocate(sim_gc%groups(n_groups))
   counter = 1
   do jj=1,size(sim_kin%groups)
   select type (p_list=>sim_kin%groups(jj)%particles)

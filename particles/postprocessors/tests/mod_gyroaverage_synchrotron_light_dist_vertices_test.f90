@@ -186,7 +186,7 @@ subroutine test_compute_gyroaverage_synchrotron_mhd_fields()
         if(sims_particles(kk)%groups(jj)%particles(ii)%i_elm.le.0) cycle
         counter = counter + 1
         !> compute the solution mhd fields
-        call compute_mhd_fields_gc_cart(sims_particles(kk)%groups(jj)%particles(ii),&
+        call compute_mhd_fields_gc_cyl(sims_particles(kk)%groups(jj)%particles(ii),&
         mhd_fields_sol(1:3,counter),mhd_fields_sol(4:6,counter),mhd_fields_sol(7,counter),&
         mhd_fields_sol(8:10,counter),mhd_fields_sol(11:13,counter),mhd_fields_sol(14:16,counter))
         !> compute the test mhd fields
@@ -223,7 +223,7 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
           if(p_list(ii)%i_elm.le.0) cycle
           counter = counter + 1
           !> compute the analytical MHD fields for computing the GC velocity
-          call compute_mhd_fields_gc_cart(p_list(ii),mhd_fields(1:3),mhd_fields(4:6),&
+          call compute_mhd_fields_gc_cyl(p_list(ii),mhd_fields(1:3),mhd_fields(4:6),&
           mhd_fields(7),mhd_fields(8:10),mhd_fields(11:13),mhd_fields(14:16))
           !> compute the light properties
           call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
@@ -337,7 +337,7 @@ subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone()
                     kind=8)*rnd3(3)),n_particles_per_group(particle_id(2),particle_id(1)))
    select type(p=>sims_particles(particle_id(1))%groups(particle_id(2))%particles(particle_id(3)))
      type is (particle_gc_relativistic)
-     x_light = p%x; call compute_mhd_fields_gc_cart(p,E_field,b_field,normB,gradB,curlb,dbdt)
+     x_light = p%x; call compute_mhd_fields_gc_cyl(p,E_field,b_field,normB,gradB,curlb,dbdt)
      call compute_gc_velocity_cartesian(p,sims_particles(particle_id(1))%groups(particle_id(2))%mass,&
      E_field,b_field,normB,gradB,curlb,dbdt,real_param(1:3))
      real_param(1:3) = real_param(1:3)/norm2(real_param(1:3))
@@ -583,7 +583,7 @@ rel_fact_parallel,normB)
   real*8,dimension(n_x) :: E_field,b_field,gradB,curlb,dbdt,v_gc_cart
   
   !> compute the analytical MHD fields for computing the GC velocity
-  call compute_mhd_fields_gc_cart(gc_in,E_field,b_field,normB,gradB,curlb,dbdt)
+  call compute_mhd_fields_gc_cyl(gc_in,E_field,b_field,normB,gradB,curlb,dbdt)
   !> compute the guiding center velocity
   call compute_gc_velocity_cartesian(gc_in,mass,E_field,b_field,&
   normB,gradB,curlb,dbdt,v_gc_cart)
@@ -613,8 +613,8 @@ rel_fact_parallel,normB)
                    (6d0*PI*EPS_ZERO*((mass*ATOMIC_MASS_UNIT)**2)*(SPEED_OF_LIGHT**3))
 end subroutine compute_gyroavg_synch_properties_ana_1p
 
-!> compute the MHD fields for GC in cartesian coordinates
-subroutine compute_mhd_fields_gc_cart(particle,E_field,b_field,normB,gradB,curlb,dbdt)
+!> compute the MHD fields for GC in cylindrical coordinates
+subroutine compute_mhd_fields_gc_cyl(particle,E_field,b_field,normB,gradB,curlb,dbdt)
   use mod_particle_types,             only: particle_base
   use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
   use mod_particle_common_test_tools, only: compute_test_E_B_normB_gradB_curlb_Dbdt_fields
@@ -627,12 +627,7 @@ subroutine compute_mhd_fields_gc_cart(particle,E_field,b_field,normB,gradB,curlb
   !> compute the MHD fields and derivatives in cartesian coordinates
   call compute_test_E_B_normB_gradB_curlb_Dbdt_fields(particle%x,E_field,&
        b_field,normB,gradB,curlb,dbdt)
-  E_field = vector_cylindrical_to_cartesian(particle%x(3),E_field)
-  b_field = vector_cylindrical_to_cartesian(particle%x(3),b_field)
-  gradB   = vector_cylindrical_to_cartesian(particle%x(3),gradB)
-  curlb   = vector_cylindrical_to_cartesian(particle%x(3),curlb)
-  dbdt    = vector_cylindrical_to_cartesian(particle%x(3),dbdt)
-end subroutine compute_mhd_fields_gc_cart
+end subroutine compute_mhd_fields_gc_cyl
 
 !> compute the relativistic gc velocity in cartesian coordinates
 subroutine compute_gc_velocity_cartesian(gc_in,mass,E_field,b_field,&

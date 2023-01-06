@@ -158,12 +158,12 @@ end subroutine gyroaverage_synchrotron_spectral_irradiance
 !>   mass:        (real8) particle mass
 !>   outputs:
 !>     mhd_fields: (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
-!>                 1-3:   x,y,z components of the electric field
-!>                 4-6:   x,y,z components of the magnetic field direction: b
+!>                 1-3:   R,Z,phi components of the electric field
+!>                 4-6:   R,Z,phi components of the magnetic field direction: b
 !>                 7:     intensity of the magnetic field: ||B||
-!>                 8-10:  x,y,z components of the gradient of ||B||
-!>                 11-13: x,y,z components of the curl of b
-!>                 14-16: x,y,z components of the b time derivative
+!>                 8-10:  R,Z,phi components of the gradient of ||B||
+!>                 11-13: R,Z,phi components of the curl of b
+!>                 14-16: R,Z,phi components of the b time derivative
 subroutine compute_gyroaverage_synchrotron_mhd_fields(light_vert,fields,&
 particle_in,time_id,mass,mhd_fields)
   use mod_fields,                only: fields_base
@@ -194,11 +194,6 @@ particle_in,time_id,mass,mhd_fields)
   mhd_fields(1:3),mhd_fields(4:6),mhd_fields(7),mhd_fields(8:10),&
   mhd_fields(11:13),mhd_fields(14:16))
 #endif
-  mhd_fields(1:3)   = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(1:3))
-  mhd_fields(4:6)   = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(4:6))
-  mhd_fields(8:10)  = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(8:10))
-  mhd_fields(11:13) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(11:13))
-  mhd_fields(14:16) = vector_cylindrical_to_cartesian(particle_in%x(3),mhd_fields(14:16))
 end subroutine compute_gyroaverage_synchrotron_mhd_fields
 
 !> compute the gyroaverage synchrotron light properties from a

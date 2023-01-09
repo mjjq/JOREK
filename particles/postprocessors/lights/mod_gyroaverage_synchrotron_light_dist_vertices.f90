@@ -262,8 +262,10 @@ property_id,time_id,particle_in,mass,mhd_fields)
                  light_vert%properties(4,property_id,time_id))**2)) 
     light_vert%properties(6:7,property_id,time_id) = (/abs(p_in%p(1))/(mass*SPEED_OF_LIGHT*&
     light_vert%properties(4,property_id,time_id)),sqrt(beta_perp2)/)/light_vert%properties(5,property_id,time_id)
+    !> compute the parallel relative factor \gamma_par = sqrt(1-1/(beta_par**2)), beta_par = p_par/(m*c*gamma)
+    rel_fact_parallel = sqrt(((mass*SPEED_OF_LIGHT*light_vert%properties(4,property_id,time_id))**2)/&
+                        (((mass*SPEED_OF_LIGHT*light_vert%properties(4,property_id,time_id))**2)-(p_in%p(1)**2)))
     !> compute the critical wavelenght
-    rel_fact_parallel = sqrt(1d0+((p_in%p(1)/(mass*SPEED_OF_LIGHT))**2))
     light_vert%properties(8,property_id,time_id) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
                              rel_fact_parallel)/(3d0*charge_r8*EL_CHG*mhd_fields(7)*&
                              (light_vert%properties(4,property_id,time_id)**2))

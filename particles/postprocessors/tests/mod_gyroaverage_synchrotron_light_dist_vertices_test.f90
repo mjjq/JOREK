@@ -589,10 +589,10 @@ rel_fact_parallel,normB)
   normB,gradB,curlb,dbdt,v_gc_cart)
   properties(1:3) = v_gc_cart/norm2(v_gc_cart)
   !> compute the relativistic factor
-  rel_fact = 1d0 + ((gc_in%p(1)/(mass*SPEED_OF_LIGHT))**2) 
-  rel_fact_parallel = sqrt(rel_fact)
-  rel_fact = sqrt(rel_fact + ((2d0*gc_in%p(2)*normB)/(mass*(SPEED_OF_LIGHT**2))))
-  properties(4) = rel_fact
+  properties(4) = sqrt(1d0 + ((gc_in%p(1)/(mass*SPEED_OF_LIGHT))**2) +&
+             ((2d0*gc_in%p(2)*normB)/(mass*(SPEED_OF_LIGHT**2))))
+  rel_fact_parallel = gc_in%p(1)/(mass*SPEED_OF_LIGHT*rel_fact)
+  rel_fact_parallel = 1d0/(sqrt(1d0-rel_fact_parallel**2))
   !> compute the beta
   properties(5) = sqrt(1d0 - (1d0/(rel_fact**2)));
   !> compute the pitch angle

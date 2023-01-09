@@ -73,6 +73,7 @@ module mod_sparse
         if (solver%verbose) write(*,*) "Using PaStiX solver"
         solver%ptss%equilibrium = solver%equilibrium
         solver%ptss%refine = .true.
+        solver%ptss%tag = my_id
         call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only, solver%verbose)
 #endif
       endif
@@ -116,6 +117,7 @@ module mod_sparse
 #endif
       elseif (solver%library.eq.pastix) then
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
+        solver%ptss%tag = my_id
         call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only, solver%verbose)
 #endif
       endif
@@ -134,7 +136,7 @@ module mod_sparse
       call gmres_driver(a_mat, rhs_vec, sol_vec, solver)
 #endif
 
-      if (solver%verbose) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
+      if (solver%verbose.and.(my_id.eq.0)) write(*,'(A32,I5)') 'Number of iterations: ', solver%iter_gmres
 
       solver%step_success = (solver%iter_gmres .lt. solver%iter_max)
 

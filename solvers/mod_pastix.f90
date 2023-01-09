@@ -22,7 +22,8 @@ module mod_pastix
     real(kind=8), dimension(:), pointer          :: val => Null()
     real(kind=8), dimension(:), pointer          :: rhs_val => Null()
 
-    integer                                      :: verbose = 1                   !< flag for logfile printout (0: no printout)
+    integer                                      :: verb = 1                      !< flag for logfile printout (0: no printout)
+    integer                                      :: tag = 0                       !< tag to be used for controlled output, e.g. global MPI rank
 
   end type type_PASTIX_SOLVER
 
@@ -44,7 +45,7 @@ module mod_pastix
       integer, intent(in) :: comm
 
     end subroutine ptx_init
-    
+
     subroutine ptx_set_mat(spm, indx, n, nnz, n_d, nnz_d, dof, rptr, cptr, values, &
                loc2glob, glob2loc, comm, update, check) bind(C)
 
@@ -58,7 +59,7 @@ module mod_pastix
       type(C_PTR), intent(inout) :: rptr, cptr, values, loc2glob, glob2loc
       logical :: update, check
 
-    end subroutine ptx_set_mat    
+    end subroutine ptx_set_mat
 
     subroutine ptx_analyze(pastix_data, spm) bind(C)
 
@@ -97,9 +98,9 @@ module mod_pastix
       type(C_PTR), intent(inout) :: spm, pastix_data
       type(C_PTR), intent(inout) :: iparm, dparm
 
-    end subroutine ptx_finalize    
-    
-    
+    end subroutine ptx_finalize
+
+
   end interface
 
   contains
@@ -118,7 +119,7 @@ module mod_pastix
 
     return
   end subroutine pastix_initialize
-  
+
 !> Prepare sparse matrix for pastix solver
 !! Matrix is distributed column-wise among MPI processes in comm
 !! The values are scaled such that the largest value in each column is 1
@@ -131,9 +132,9 @@ module mod_pastix
       use mpi_mod
       use data_structure, only: type_SP_MATRIX
       use mod_clock
-      
+
       implicit none
-      
+
       type(type_PASTIX_SOLVER)             :: ptss
       type(type_SP_MATRIX)                 :: ad_mat, ac_mat
       integer                              :: n_cpu, my_id, ierr, comm
@@ -141,13 +142,13 @@ module mod_pastix
       integer*8                            :: check_data
       integer                              :: block_size, block_size2, dof
       integer(kind=int_all)                :: nblock, nnz_block
-      integer(kind=int_all), allocatable   :: sparskit_work(:)      
+      integer(kind=int_all), allocatable   :: sparskit_work(:)
       integer(kind=int_all)                :: n_d, jmin, jmax
       type(clcktype)                       :: t_itstart, t0, t1, t2, t3
       real*8                               :: tsecond
       type(c_ptr)                          :: irn_c, jcn_c, val_c, loc2glob_c, glob2loc_c
-      
-      
+
+
       comm = ad_mat%comm
 
       call MPI_COMM_RANK(comm, my_id, ierr)
@@ -168,42 +169,42 @@ module mod_pastix
       endif
 
       if (n_cpu>1) then
-  
+
         call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-  
+
         ac_mat%ng = ad_mat%ng
         ac_mat%block_size = ad_mat%block_size
         ac_mat%comm = ad_mat%comm
-  
+
         allocate(ac_mat%irn(ac_mat%nnz))
         allocate(ac_mat%jcn(ac_mat%nnz))
         allocate(ac_mat%val(ac_mat%nnz))
-  
+
         call clck_time(t0)
-  
+
         call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
-  
+
         call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
         if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
-  
+
       else
         ac_mat = ad_mat
       endif
-      
+
       ac_mat%centralized = .true.
-  
+
       call clck_time(t0)
-  
+
 !#ifdef USE_BLOCK
       !block_size = ac_mat%block_size
 !#else
       block_size = 1
-!#endif  
+!#endif
       block_size2 = block_size**2
-  
+
       nblock   = ac_mat%ng/block_size
       nnz_block = ac_mat%nnz/block_size2
-  
+
       !if (block_size > 1) then
       !  do i = 1,nnz_block
       !    ac_mat%irn(i) = (ac_mat%irn((i-1)*block_size2+1) - 1)/block_size + 1
@@ -221,10 +222,10 @@ module mod_pastix
         jmax = maxval(ac_mat%jcn(1:ac_mat%nnz))
         ac_mat%jcn(1:ac_mat%nnz) = ac_mat%jcn(1:ac_mat%nnz) - jmin + ac_mat%indexing
       endif
-      
+
       nnzg = 0
       call MPI_Allreduce(ac_mat%nnz,nnzg,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-      
+
       n_d = jmax - jmin + 1
       allocate(ptss%loc2glob(n_d))
       do i = 1, n_d
@@ -242,14 +243,14 @@ module mod_pastix
       do i = 1, n_d
         ptss%glob2loc(ptss%loc2glob(i) + 1 - ac_mat%indexing)= ptss%loc2glob(i) - ptss%loc2glob(1)
       enddo
-      
+
       glob2loc_c = c_loc(ptss%glob2loc); loc2glob_c = c_loc(ptss%loc2glob)
 
       if (ptss%equilibrium) then
 #if (!defined(USEMKL))
         call remove_duplicates(ac_mat%ng, ac_mat%nnz, ac_mat%jcn, ac_mat%irn, ac_mat%val)
 #endif
-        irn_c = c_loc(ac_mat%irn); jcn_c = c_loc(ac_mat%jcn); val_c = c_loc(ac_mat%val); 
+        irn_c = c_loc(ac_mat%irn); jcn_c = c_loc(ac_mat%jcn); val_c = c_loc(ac_mat%val);
         call convert2csr(ac_mat%indexing, n_d, ac_mat%ng, ac_mat%nnz, jcn_c, irn_c, val_c)
       else
         if (allocated(sparskit_work)) deallocate(sparskit_work)
@@ -260,7 +261,7 @@ module mod_pastix
         call coicsr(ac_mat%ng,ac_mat%nnz,1,ac_mat%val,ac_mat%irn,ac_mat%jcn,sparskit_work)
 !#endif
         deallocate(sparskit_work)
-        irn_c = c_loc(ac_mat%irn); jcn_c = c_loc(ac_mat%jcn); val_c = c_loc(ac_mat%val); 
+        irn_c = c_loc(ac_mat%irn); jcn_c = c_loc(ac_mat%jcn); val_c = c_loc(ac_mat%val);
       endif
 
       call MPI_Barrier(comm,ierr)
@@ -270,16 +271,16 @@ module mod_pastix
 
       return
 
-    end subroutine pastix_set_mat  
+    end subroutine pastix_set_mat
 
   subroutine pastix_analyze(ptss)
     implicit none
 
     type(type_PASTIX_SOLVER)          :: ptss
-    
-    call ptx_analyze(ptss%pastix_data, ptss%spm)    
+
+    call ptx_analyze(ptss%pastix_data, ptss%spm)
     return
-  end subroutine pastix_analyze    
+  end subroutine pastix_analyze
 
   subroutine pastix_finalize(ptss)
     implicit none
@@ -293,7 +294,7 @@ module mod_pastix
     implicit none
 
     type(type_PASTIX_SOLVER)          :: ptss
-    
+
     call ptx_factorize(ptss%pastix_data, ptss%spm)
 
     return
@@ -307,7 +308,7 @@ module mod_pastix
 
     type(type_PASTIX_SOLVER)          :: ptss
     type(type_RHS)                    :: rhs_vec
-    
+
 
     type(c_ptr) :: rhsc
     integer(kind=int_all) :: i
@@ -315,12 +316,12 @@ module mod_pastix
     rhsc = c_loc(rhs_vec%val)
 
     call ptx_solve(ptss%pastix_data, ptss%spm, rhsc, ptss%refine)
-      
+
     if (ptss%scaled) then
       do i = 1, rhs_vec%n
         rhs_vec%val(i) =  rhs_vec%val(i)/ptss%solution_scaling(i)
       enddo
-    endif    
+    endif
 
     return
   end subroutine pastix_solve
@@ -329,7 +330,7 @@ module mod_pastix
   subroutine distribute_matrix(jmin,jmax,ac_mat)
     use data_structure, only: type_SP_MATRIX
     implicit none
-    
+
     type(type_SP_MATRIX)              :: ad_mat, ac_mat
 
     integer(kind=int_all), intent(out) :: jmin, jmax
@@ -353,7 +354,7 @@ module mod_pastix
     do i = 2, n_cpu + 1
       dist(i) = dist(i) + dist(i-1)
     enddo
-    
+
     jmin = dist(my_id + 1)
     jmax = dist(my_id + 2) - 1
 
@@ -367,9 +368,9 @@ module mod_pastix
     enddo
 
     ad_mat%nnz = j - 1
-    
+
     allocate(ad_mat%irn(ad_mat%nnz),ad_mat%jcn(ad_mat%nnz),ad_mat%val(ad_mat%nnz))
-    
+
     ad_mat%col_distributed = .true.
     ad_mat%centralized = .false.
     ad_mat%indexing = ac_mat%indexing
@@ -431,6 +432,8 @@ module mod_pastix
     integer(kind=8)                              :: block_size = 1
     integer(kind=8)                              :: nthrd = 1
 
+    integer                                      :: tag = 0                     !< tag to be used for controlled output, e.g. global MPI rank
+
   end type type_PASTIX_SOLVER
 
   private
@@ -480,8 +483,9 @@ module mod_pastix
 
     endif
 
-    if (n_cpu>1) then
+    if ((n_cpu.gt.1).and.(.not.ad_mat%centralized)) then
 
+      ac_mat%nnz = 0
       call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
 
       ac_mat%ng = ad_mat%ng
@@ -497,7 +501,7 @@ module mod_pastix
       call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+      if (my_id .eq. 0)  write(*,FMT_TIMING) ptss%tag, '## Elapsed time mpi_gather :', tsecond
 
     else
       ac_mat = ad_mat
@@ -529,7 +533,7 @@ module mod_pastix
 
     call clck_time(t1)
     call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time coicsr :', tsecond
+    if (my_id .eq. 0)  write(*,FMT_TIMING) ptss%tag, '## Elapsed time coicsr :', tsecond
 
     ! End of matrix preparation
     ptss%irn => ac_mat%irn
@@ -571,12 +575,12 @@ module mod_pastix
 
     call pastix_init_nthreads(ptss)
 
-    if (my_id .eq. 0) write(*,'(i5,A,i5)') my_id,' PastiX n_threads : ', ptss%nthrd
-    
+    if (my_id .eq. 0) write(*,'(i5,A,i5)') ptss%tag,' PastiX n_threads : ', ptss%nthrd
+
     allocate(ptss%perm_vars(ptss%nblock))
     allocate(ptss%iperm_vars(ptss%nblock))
     ptss%perm_vars(1:ptss%nblock) = 0
-    ptss%iperm_vars(1:ptss%nblock) = 0    
+    ptss%iperm_vars(1:ptss%nblock) = 0
 
     ptss%iparm(IPARM_MODIFY_PARAMETER)  = API_NO          ! insert default values
     ptss%iparm(IPARM_START_TASK)        = API_TASK_INIT   ! initializse
@@ -653,7 +657,7 @@ module mod_pastix
     implicit none
 
     type(type_PASTIX_SOLVER)          :: ptss
-    
+
     ptss%iparm(IPARM_DOF_NBR) = ptss%block_size
     ptss%iparm(IPARM_THREAD_NBR) = ptss%nthrd
 

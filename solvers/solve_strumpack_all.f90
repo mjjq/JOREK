@@ -68,9 +68,8 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
     endif
 
     call strumpack_set_mat(spss, ac_mat)
-    
-    deallocate(ad_mat%irn); ad_mat%irn => null()
-    deallocate(ad_mat%jcn); ad_mat%jcn => null()
+
+    ! strumpack copies matrix values into permuted sparse matrix, thus the original matrix can be deallocated
     deallocate(ad_mat%val); ad_mat%val => null()
 
     if (.not. spss%analyzed) then

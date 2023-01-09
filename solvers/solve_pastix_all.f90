@@ -12,6 +12,8 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
   use data_structure, only: type_SP_MATRIX, type_RHS
   use mod_pastix, only:     type_PASTIX_SOLVER, pastix_set_mat, pastix_solve, pastix_factorize, pastix_analyze, pastix_initialize
 
+  !use matio_module, only: save_mat_h5
+
   implicit none
 
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
@@ -47,25 +49,27 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
     call pastix_set_mat(ptss, ad_mat, ac_mat)
 #endif
 
+    !call save_mat_h5(tag,ac_mat%ng,ac_mat%nnz,ac_mat%irn,ac_mat%jcn,ac_mat%val,rhs_vec%val)
+
     if (.not. ptss%analyzed) then
-      if (my_id .eq. 0) write(*,*) "PaStiX: analyzing matrix"
+      if (verbose) write(*,*) "PaStiX: analyzing matrix"
       call clck_time(t0)
 
       call pastix_analyze(ptss)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond
+      if (verbose)  write(*,FMT_TIMING) ptss%tag, '## Elapsed time analysis:', tsecond
     endif
 
-    if (my_id .eq. 0) write(*,*) "PaStiX: factorizing matrix"
+    if (verbose.and.(my_id.eq.0)) write(*,*) "PaStiX: factorizing matrix"
     call clck_time(t0)
 
     call pastix_factorize(ptss)
 
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-    if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time factorization:', tsecond
+    if (verbose.and.(my_id.eq.0))  write(*,FMT_TIMING) ptss%tag, '## Elapsed time factorization:', tsecond
 
-    if (n_cpu>1) then
+    if (n_cpu>1.and.(.not.ad_mat%centralized)) then
       deallocate(ac_mat%irn)
       deallocate(ac_mat%jcn)
       deallocate(ac_mat%val)
@@ -78,7 +82,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
   call pastix_solve(ptss,rhs_vec)
 
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
+  if (verbose.and.(my_id.eq.0))  write(*,FMT_TIMING) ptss%tag, '## Elapsed time solve:', tsecond
 
   return
 end

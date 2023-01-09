@@ -155,10 +155,10 @@ module data_structure
     
     real(kind=8), dimension(:), pointer          :: column_scaling => Null()    !< global column scaling, vector size of ng
     integer                                      :: indexing = 1         !< matrix indexing (1 is standart FORTRAN)
-    integer(kind=int_all)                        :: ng                   !< matrix total rank
-    integer(kind=int_all)                        :: nr                   !< number of local rows
-    integer(kind=int_all)                        :: nc                   !< number of local cols
-    integer(kind=int_all)                        :: nnz                  !< number of local nonzero entries
+    integer(kind=int_all)                        :: ng = 0               !< matrix total rank
+    integer(kind=int_all)                        :: nr = 0               !< number of local rows
+    integer(kind=int_all)                        :: nc = 0               !< number of local cols
+    integer(kind=int_all)                        :: nnz = 0              !< number of local nonzero entries
     integer, dimension(:), pointer               :: index_min => Null()  !< minimum node index in global range for all MPI ranks
     integer, dimension(:), pointer               :: index_max => Null()  !< maximum node index in global range for all MPI ranks
     integer                                      :: my_ind_min

@@ -1,5 +1,5 @@
 !> Gather distributed matrix ad_mat into centralized matrix ac_mat
-! using split MPI_Allgatherv if MPI counts beyond 64-int
+! using split MPI_Allgatherv if MPI counts beyond INT_MAX
 subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
 
   use mpi_mod
@@ -43,29 +43,11 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)  
   
   call MPI_Allgather(ad_mat%nnz,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,comm,ierr)
-  ac_mat%nnz = sum(counts)
 
   displacements(1) = 0
   do i=2,n_cpu
     displacements(i) = displacements(i-1) + counts(i-1)
   enddo
-
-  ! --- If we're using short integers, then this is just a simple wrapper, no need to split
-#ifndef INTSIZE64
-  call MPI_AllgatherV(ad_mat%irn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%irn, &
-                      counts,displacements,MPI_INTEGER_ALL,comm,ierr)
-  call MPI_AllgatherV(ad_mat%jcn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%jcn, &
-                      counts,displacements,MPI_INTEGER_ALL,comm,ierr)
-  call MPI_AllgatherV(ad_mat%val,ad_mat%nnz,MPI_DOUBLE_PRECISION,ac_mat%val, &
-                      counts,displacements,MPI_DOUBLE_PRECISION,comm,ierr)
-                      
-  call tr_deallocate(counts,"counts",CAT_DMATRIX)
-  call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
-                      
-  return
-#else
-
-  ! --- Otherwise, we might need to split the MPI communications
 
   ! --- Check if we need to split
   need_to_split = .false.
@@ -92,7 +74,7 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
 
     ! --- Split respective to the max send/recv
     n_split = ac_mat%nnz / INT_MAX + 1
-    if (my_id .eq. 0) write(*,*) 'Warning: Splitting Main Matrix MPI centralisation',n_split
+    if (my_id .eq. 0) write(*,*) 'Warning: splitting matrix MPI centralisation', n_split
 
     !write(*,*)'******* BEFORE SPLIT:'
     !write(*,'(A,2i20)') 'nnz   ',my_id,mumps_par%nz
@@ -189,6 +171,5 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
   
   return
-#endif  
 
 end subroutine split_allgathersolve

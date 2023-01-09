@@ -147,9 +147,7 @@ real*8, allocatable :: psi_RMP_sin1(:),dpsi_RMP_sin_dR1(:),dpsi_RMP_sin_dZ1(:)
 real*8  :: establish_RMP
 real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, delta_psi_rmp_dt, psi_test, sigmo_fonc
 
-
-RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
-  
+RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****        
 ! for the moment it's done in a way that all RMP harmonics follow each other,i.e. n=2,n=3,n=4... 
 ! if you want for example n=2 and n=4 RMP you should consider n=2,3,4, but put zeros at the boundary in the input file for n=3 RMP
 ! example: ntor=13 and nperiod=1(so taking into account, toroidal numbers n=0,1,2....6) and  n=2 and n=3 are toroidal numbers of RMPs, 
@@ -474,14 +472,19 @@ do i=1, n_local_elms !=== do elements
 
           xjac     =  R_s*Z_t - R_t*Z_s
 
-          Ti0      = max(node_list%node(inode)%values(1,1,var_Ti), T_min)
-          Ti0_b    = node_list%node(inode)%values(1,iv_dir,var_Ti)    * element_size_0 
+          if(with_TiTe)then
+            Ti0      = max(node_list%node(inode)%values(1,1,var_Ti), T_min)
+            Ti0_b    = node_list%node(inode)%values(1,iv_dir,var_Ti)    * element_size_0 
 
-          Te0      = max(node_list%node(inode)%values(1,1,var_Te), T_min)
-          Te0_b    = node_list%node(inode)%values(1,iv_dir,var_Te)    * element_size_0 
+            Te0      = max(node_list%node(inode)%values(1,1,var_Te), T_min)
+            Te0_b    = node_list%node(inode)%values(1,iv_dir,var_Te)    * element_size_0 
 
-          T0       = Ti0 + Te0
-          T0_b     = Ti0_b + Te0_b
+            T0       = Ti0 + Te0
+            T0_b     = Ti0_b + Te0_b
+          else
+            T0      = max(node_list%node(inode)%values(1,1,var_T), T_min)
+            T0_b    = node_list%node(inode)%values(1,iv_dir,var_T)    * element_size_0
+          endif
 
           uR       = node_list%node(inode)%values(1,1,var_uR)
           uR_b     = node_list%node(inode)%values(1,iv_dir,var_uR) * element_size_0 

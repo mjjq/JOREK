@@ -455,6 +455,7 @@ RHS_p  = 0.d0
 RHS_k  = 0.d0
 ELM    = 0.d0
 RHS    = 0.d0
+ELM_pnn= 0.d0
 
 rhs_p_ij  = 0.d0
 rhs_k_ij  = 0.d0
@@ -1257,6 +1258,7 @@ do i=1,n_vertex_max
           eta_R = deta_dT * Te0_R
           eta_Z = deta_dT * Te0_Z
           eta_p = deta_dT * Te0_p
+
           ! --- Eta for ohmic heating 
           if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
             eta_T_ohm     =   eta_ohmic   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
@@ -1268,6 +1270,7 @@ do i=1,n_vertex_max
             eta_T_ohm     = eta_ohmic
             deta_dT_ohm   = 0.d0
           end if
+
           if ( eta_T_dependent .and. xpoint2 .and. (T_or_Te .lt. T_min) ) then
             eta_T     = eta       * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
             deta_dT   = 0.d0
@@ -1428,7 +1431,6 @@ do i=1,n_vertex_max
           Bp00 = Bp0
           if (eta_ARAZ_simple) Bp00 = ( AZ0_R - AR0_Z )
 
-
           ! --- B.grad and V.grad
           BgradRho = BR0 * rho0_R + BZ0 * rho0_Z + Bp0 * rho0_p / R
           UgradRho = UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R
@@ -1516,21 +1518,9 @@ do i=1,n_vertex_max
             dfrad_bg_dT = 0.d0
 
             UgradRhon = 0.d0
+            power_dens_teleport_ju = 0.d0
+            power_dens_teleport_ju_arr = 0.d0
           endif
-
-          !!! These terms are related to plasmoids? Should we add them in this model?
-          !------------------------------------------------------------------------------------------
-          ! ---Calculate energy teleported in JOREK unit (sink at R and source at R + drift_distance)
-          !------------------------------------------------------------------------------------------
-          ! Input energy_teleported is in eV
-          !power_dens_teleport_ju = 0.d0; power_dens_teleport_ju_arr = 0.d0
-          !do i_inj = 1,n_inj
-          !  if (with_neutrals .and. energy_teleported(i_inj) /= 0.d0) then
-          !    power_dens_teleport_ju_arr(i_inj) = (-source_neutral_arr(i_inj) + source_neutral_drift_arr(i_inj))  * energy_teleported(i_inj) * &
-          !                                        EL_CHG * (GAMMA-1) * MU_ZERO * 1.d20 * central_density
-          !    power_dens_teleport_ju = power_dens_teleport_ju + power_dens_teleport_ju_arr(i_inj)
-          !  end if
-          !end do
 
           ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
           source_imp = 0.d0; source_imp_arr = 0.d0
@@ -3053,6 +3043,7 @@ do i=1,n_vertex_max
                     Qjac_n (var_UR,var_T  ) =  Qconv_UR_T__n   - v * PneoR_Ti__n
                     Qjac_k (var_UR,var_T  ) = + dvisco_dT * T * Qvisc_UR__k
                   endif
+
                   if ( with_neutrals) then
                     Qjac_p (var_UR,var_UR ) =  Qjac_p (var_UR,var_UR ) &
                                               - v * rho0_corr * rhon0      * Sion_T * UR &
@@ -3569,10 +3560,10 @@ do i=1,n_vertex_max
                     Qjac_k (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__k
                     Qjac_kn(var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__kn
                   else
-                    Qjac_p (var_rho,var_T ) = + rho0 * VdiaGradVstar_T__p
-                    Qjac_n (var_rho,var_T ) = + rho0 * VdiaGradVstar_T__n
-                    Qjac_k (var_rho,var_T ) = + rho0 * VdiaGradVstar_T__k
-                    Qjac_kn(var_rho,var_T ) = + rho0 * VdiaGradVstar_T__kn
+                    Qjac_p (var_rho,var_T ) = + rho0 * VdiaGradVstar_Ti__p
+                    Qjac_n (var_rho,var_T ) = + rho0 * VdiaGradVstar_Ti__n
+                    Qjac_k (var_rho,var_T ) = + rho0 * VdiaGradVstar_Ti__k
+                    Qjac_kn(var_rho,var_T ) = + rho0 * VdiaGradVstar_Ti__kn
                   endif
                   if(with_neutrals)then
                     if(with_TiTe)then

@@ -55,6 +55,8 @@ real*8     :: uR0, uR0_s, uR0_t, uR0_R, uR0_Z
 real*8     :: uZ0, uZ0_s, uZ0_t, uZ0_R, uZ0_Z
 real*8     :: UP0, Up
 real*8     :: rho0,rho0_p,rho0_s,rho0_t,rho0_R,rho0_Z
+real*8     :: rhon0,rhon0_p,rhon0_s,rhon0_t,rhon0_R,rhon0_Z
+real*8     :: rhoimp0,rhoimp0_p,rhoimp0_s,rhoimp0_t,rhoimp0_R,rhoimp0_Z
 real*8     :: Ti0, Ti0_p, Ti0_s, Ti0_t, Ti0_R, Ti0_Z, Ti0_corr
 real*8     :: Te0, Te0_p, Te0_s, Te0_t, Te0_R, Te0_Z, Te0_corr
 real*8     :: pi0,               pi0_p, pi0_R, pi0_Z
@@ -92,8 +94,6 @@ real*8     :: Mach1
 integer    :: n_tor_local
 
 logical    :: parallel_projection
-
-real*8     :: Vdia_factor, Vneo_factor
 
 ! --- Time integration parameters
 theta = time_evol_theta
@@ -210,13 +210,30 @@ do ms=1, n_gauss
   do mp = 1, n_plane
 
     ! --- Density
-    ! --- Density
     rho0    = eq_g(mp,var_rho,ms)
     rho0_p  = eq_p(mp,var_rho,ms)
     rho0_s  = eq_s(mp,var_rho,ms)
     rho0_t  = eq_t(mp,var_rho,ms)
     rho0_R  = (   Z_t(ms) * rho0_s  - Z_s(ms) * rho0_t ) / xjac
     rho0_Z  = ( - R_t(ms) * rho0_s  + R_s(ms) * rho0_t ) / xjac
+    
+    if( with_neutrals)then
+      rhon0    = eq_g(mp,var_rhon,ms)
+      rhon0_p  = eq_p(mp,var_rhon,ms)
+      rhon0_s  = eq_s(mp,var_rhon,ms)
+      rhon0_t  = eq_t(mp,var_rhon,ms)
+      rhon0_R  = (   Z_t(ms) * rhon0_s  - Z_s(ms) * rhon0_t ) / xjac
+      rhon0_Z  = ( - R_t(ms) * rhon0_s  + R_s(ms) * rhon0_t ) / xjac
+    endif
+
+    if( with_impurities)then
+      rhoimp0    = eq_g(mp,var_rhoimp,ms)
+      rhoimp0_p  = eq_p(mp,var_rhoimp,ms)
+      rhoimp0_s  = eq_s(mp,var_rhoimp,ms)
+      rhoimp0_t  = eq_t(mp,var_rhoimp,ms)
+      rhoimp0_R  = (   Z_t(ms) * rhoimp0_s  - Z_s(ms) * rhoimp0_t ) / xjac
+      rhoimp0_Z  = ( - R_t(ms) * rhoimp0_s  + R_s(ms) * rhoimp0_t ) / xjac
+    endif
     
     ! --- Velocity
     uR0   = eq_g(mp,var_uR,ms)
@@ -227,6 +244,7 @@ do ms=1, n_gauss
     
       ! --- Ti
       Ti0    = eq_g(mp,var_Ti,ms)
+      Ti0_corr = max(Ti0,1.d-12)
       Ti0_p  = eq_p(mp,var_Ti,ms)
       Ti0_s  = eq_s(mp,var_Ti,ms)
       Ti0_t  = eq_t(mp,var_Ti,ms)
@@ -235,6 +253,7 @@ do ms=1, n_gauss
 
       ! --- Te
       Te0    = eq_g(mp,var_Te,ms)
+      Te0_corr = max(Te0,1.d-12)
       Te0_p  = eq_p(mp,var_Te,ms)
       Te0_s  = eq_s(mp,var_Te,ms)
       Te0_t  = eq_t(mp,var_Te,ms)
@@ -247,15 +266,8 @@ do ms=1, n_gauss
       T0_t   = Ti0_t + Te0_t  
       T0_R   = Ti0_R + Te0_R  
       T0_Z   = Ti0_Z + Te0_Z  
-      T0_corr = max(T0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
+      T0_corr = Ti0_corr + Te0_corr
 
-      ! --- P
-      pi0    = rho0 * Ti0
-      pi0_R  = rho0_R * Ti0 + rho0 * Ti0_R
-      pi0_Z  = rho0_Z * Ti0 + rho0 * Ti0_Z
-      pi0_p  = rho0_p * Ti0 + rho0 * Ti0_p
-
-      Vdia_factor = 1.d0
     else
       ! --- T
       T0    = eq_g(mp,var_T,ms)
@@ -266,19 +278,35 @@ do ms=1, n_gauss
       T0_Z  = ( - R_t(ms) * T0_s  + R_s(ms) * T0_t ) / xjac
       T0_corr = max(T0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
 
-      ! --- P
-      p0    = rho0 * T0
-      p0_R  = rho0_R * T0 + rho0 * T0_R
-      p0_Z  = rho0_Z * T0 + rho0 * T0_Z
-      p0_p  = rho0_p * T0 + rho0 * T0_p
-  
+      Ti0    = 0.5d0 * T0
+      Ti0_p  = 0.5d0 * T0_p
+      Ti0_s  = 0.5d0 * T0_s
+      Ti0_t  = 0.5d0 * T0_t
+      Ti0_R  = 0.5d0 * T0_R
+      Ti0_Z  = 0.5d0 * T0_Z
+      Ti0_corr = 0.5d0 * T0_corr
+      
+      Te0    = Ti0
+      Te0_p  = Ti0_p
+      Te0_s  = Ti0_s
+      Te0_t  = Ti0_t
+      Te0_R  = Ti0_R
+      Te0_Z  = Ti0_Z
+      Te0_corr = Ti0_corr
+      
     endif
 
+    ! --- P
+    pi0    = rho0 * Ti0
+    pi0_R  = rho0_R * Ti0 + rho0 * Ti0_R
+    pi0_Z  = rho0_Z * Ti0 + rho0 * Ti0_Z
+    pi0_p  = rho0_p * Ti0 + rho0 * Ti0_p
+    
     c_s = sqrt(gamma * T0_corr)
 
     ! --- Diamagnetic velocity (times rho)
-    rhoVdiaR0 = tauIC*F0 / (R * BB2) * (  BZ0*p0_p - R*Bp0*p0_Z) * Vdia_factor
-    rhoVdiaZ0 = tauIC*F0 / (R * BB2) * (R*BP0*p0_R -   BR0*p0_p) * Vdia_factor
+    rhoVdiaR0 = tauIC*F0 / (R * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z)
+    rhoVdiaZ0 = tauIC*F0 / (R * BB2) * (R*BP0*pi0_R -   BR0*pi0_p)
     
     ! --- AR
     AR0   = eq_g(mp,var_AR,ms)
@@ -353,7 +381,7 @@ do ms=1, n_gauss
             Qbnd(var_Ti) = - v * (gamma_sheath_i - 1.d0) * rho0 * Ti0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
             Qbnd(var_Te) = - v * (gamma_sheath_e - 1.d0) * rho0 * Te0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
           else
-            Qbnd(var_Ti) = - v * (gamma_sheath   - 1.d0) * rho0 * T0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
+            Qbnd(var_T)  = - v * (gamma_sheath   - 1.d0) * rho0 * T0 * cs_direction * c_s * B_dot_n / sqrt(BB2)
           endif
 
           ! --- Neutrals reflection
@@ -499,7 +527,7 @@ do ms=1, n_gauss
                     Qjac(var_up,var_Ti) = - Mach1 * zbig * v * ( - cs_Ti * Bp0 * cs_direction / sqrt(BB2) )
                     Qjac(var_up,var_Te) = - Mach1 * zbig * v * ( - cs_Te * Bp0 * cs_direction / sqrt(BB2) )
                   else
-                    Qjac(var_up,var_T ) = - Mach1 * zbig * v * ( - cs_Te * Bp0 * cs_direction / sqrt(BB2) )
+                    Qjac(var_up,var_T ) = - Mach1 * zbig * v * ( - cs_T  * Bp0 * cs_direction / sqrt(BB2) )
                   endif
                 endif
 
@@ -509,9 +537,10 @@ do ms=1, n_gauss
                 Qjac(var_rho, var_AZ ) = + v * rhoVdia_dot_n_AZ 
                 Qjac(var_rho, var_A3 ) = + v * rhoVdia_dot_n_A3 
                 Qjac(var_rho, var_rho) = + v * rhoVdia_dot_n_rho
-                Qjac(var_rho, var_Ti ) = + v * rhoVdia_dot_n_Ti 
 
-                if(with_TiTe)then                
+                if(with_TiTe)then           
+                  Qjac(var_rho, var_Ti ) = + v * rhoVdia_dot_n_Ti
+                        
                   ! --- Sheath-linearised energy equation
                   Qjac(var_Ti, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
                                            - v * (gamma_sheath - 1.d0) * rho0 * Ti0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
@@ -536,6 +565,8 @@ do ms=1, n_gauss
                                            + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * cs_Te * B_dot_n    / sqrt(BB2)
                   Qjac(var_Te, var_Ti)   = + v * (gamma_sheath - 1.d0) * rho0 * Te0 * cs_direction * cs_Ti * B_dot_n    / sqrt(BB2)
                 else
+                  Qjac(var_rho, var_T )  = + v * rhoVdia_dot_n_Ti
+                        
                   ! --- Sheath-linearised energy equation
                   Qjac(var_T, var_AR )  = + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s   * B_dot_n_AR / sqrt(BB2) &
                                           - v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_AR / BB2**1.5
@@ -545,7 +576,7 @@ do ms=1, n_gauss
                                           - v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / BB2**1.5
                   Qjac(var_T, var_rho)  = + v * (gamma_sheath - 1.d0) * rho  * T0 * cs_direction * c_s   * B_dot_n    / sqrt(BB2)
                   Qjac(var_T, var_T)    = + v * (gamma_sheath - 1.d0) * rho0 * T  * cs_direction * c_s   * B_dot_n    / sqrt(BB2) &
-                                          + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * cs_Te * B_dot_n    / sqrt(BB2)
+                                          + v * (gamma_sheath - 1.d0) * rho0 * T0 * cs_direction * cs_T  * B_dot_n    / sqrt(BB2)
                 endif
 
                 ! --- Neutrals reflection
@@ -574,10 +605,10 @@ do ms=1, n_gauss
                                               + v * imp_reflection * rho0 * cs_direction * c_s   * B_dot_n    * 0.5 * BB2_A3 / sqrt(BB2)**1.5
                   Qjac(var_rhoimp, var_rho) = - v * imp_reflection * rho  * cs_direction * c_s   * B_dot_n / sqrt(BB2)
                   if(with_TiTe)then
-                    Qjac(var_rhon, var_Ti ) = - v * imp_reflection * rho0 * cs_direction * cs_Ti * B_dot_n / sqrt(BB2)
-                    Qjac(var_rhon, var_Te ) = - v * imp_reflection * rho0 * cs_direction * cs_Te * B_dot_n / sqrt(BB2)
+                    Qjac(var_rhoimp, var_Ti ) = - v * imp_reflection * rho0 * cs_direction * cs_Ti * B_dot_n / sqrt(BB2)
+                    Qjac(var_rhoimp, var_Te ) = - v * imp_reflection * rho0 * cs_direction * cs_Te * B_dot_n / sqrt(BB2)
                   else
-                    Qjac(var_rhon, var_T  ) = - v * imp_reflection * rho0 * cs_direction * cs_T * B_dot_n / sqrt(BB2)
+                    Qjac(var_rhoimp, var_T  ) = - v * imp_reflection * rho0 * cs_direction * cs_T * B_dot_n / sqrt(BB2)
                   endif
                 endif
 

@@ -31,6 +31,7 @@ type,abstract,extends(vertices) :: light_vertices
   procedure(comp_mhd_fields),pass(light_vert),deferred  :: compute_mhd_fields
   procedure(setup_light),pass(light_vert),deferred      :: setup_light_class
   procedure(check_x_shaded),nopass,deferred             :: check_x_shaded_in_emission_zone 
+  procedure(check_angles_shaded),nopass,deferred        :: check_angles_shaded_in_emission_zone
 end type light_vertices
 
 !> Interfaces -------------------------------------------
@@ -176,6 +177,29 @@ interface
     logical :: in_range
   end function check_x_shaded
 
+  !> check if a gather point is within the emission cone of a light source 
+  !> given the gather-light point angles
+  !> inputs:
+  !>   n_x:          (integer) size of the spatial coordinate vector
+  !>   x_shaded:     (real8)(n_x) x,y,z coordinates of the shaded (gather) vertex
+  !>   x_light:      (real8)(n_x) x,y,z coordinates of the light vertex
+  !>   n_int_param:  (integer) size of the integer parameter array 
+  !>   n_real_param: (integer) size of the real parameter array
+  !>   int_param:    (integer)(n_integer_param) integer parameter array
+  !>   int_reak:     (real8)(n_real_param) real parameter array
+  !> outputs:
+  !>   in_range:     (logical) true is the gather point is shaded by the light
+  function check_angles_shaded(n_angles,angles,n_int_param,n_real_param,&
+  int_param,real_param) result(in_range)
+    implicit none
+    !> inputs:
+    integer,intent(in)                        :: n_angles,n_int_param,n_real_param
+    integer,dimension(n_int_param),intent(in) :: int_param
+    real*8,dimension(n_angles),intent(in)     :: angles
+    real*8,dimension(n_real_param),intent(in) :: real_param
+    !> outputs:
+    logical :: in_range
+  end function check_angles_shaded
 end interface
 
 contains

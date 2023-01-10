@@ -65,24 +65,24 @@ time_id,light_id,x_shaded,light_dstb)
   logical :: in_parallel
   integer :: ii,jj
   integer,dimension(0) :: int_param
-  real*8 :: cosmu,cospsi,fact_1,fact_2,fact_3
+  real*8 :: cosmu,cospsi,sin2psi,fact_1,fact_2,fact_3
   real*8,dimension(light_vert%n_property_vertex) :: light_properties
 
   !> initialisations
   in_parallel = .false.; light_dstb = 0d0;
   !$ in_parallel = omp_in_parallel()
   light_properties = light_vert%properties(:,light_id,time_id)
-  !> check if the shaded point is in the synchrotron emission cone
-  if(.not.light_vert%check_x_shaded_in_emission_zone(light_vert%n_x,&
-  x_shaded,light_vert%x(:,light_id,time_id),0,4,int_param,light_properties(1:4))) return
   !> the mu and psi angle cosinues, note that psi = mu-thetap hence
   !> cos(mu-thetap) = cos(mu)*cos(thetap) + sin(mu)*sin(thetap)
   cosmu = dot_product((x_shaded-light_vert%x(:,light_id,time_id))/&
           norm2(x_shaded-light_vert%x(:,light_id,time_id)),light_properties(1:3))
-  cospsi = cosmu*light_properties(6) + light_properties(7)*sqrt(1d0-cosmu**2)
-
+  cospsi  = cosmu*light_properties(6) + light_properties(7)*sqrt(1d0-cosmu**2)
+  sin2psi = 1d0-cospsi**2
+  !> check if the shaded point is in the synchrotron emission cone
+  if(.not.light_vert%check_angles_shaded_in_emission_zone(2,[sqrt(sin2psi),cospsi],&
+  0,1,int_param,[light_properties(4)])) return
   !> compute the directionality function factors
-  fact_3 = 5d-1*cospsi*(1d0-cospsi*cospsi)
+  fact_3 = 5d-1*cospsi*sin2psi
   cospsi = light_properties(5)*cospsi !< becareful fron now on cospsi = beta*cospsi
   fact_3 = light_properties(5)*fact_3/(1d0-cospsi)
   fact_2 = (1d0-light_properties(5)*light_properties(6)*cosmu)*(((1d0-cospsi)/cospsi)**2)

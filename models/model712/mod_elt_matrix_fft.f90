@@ -662,16 +662,27 @@ do ms=1, n_gauss
         Rho0_t = eq_t(1,var_rho,ms,mt)
         Rho0_R = (   y_t(ms,mt) * rho0_s  - y_s(ms,mt) * rho0_t ) / xjac
         Rho0_Z = ( - x_t(ms,mt) * rho0_s  + x_s(ms,mt) * rho0_t ) / xjac
+        call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+                           Ti_initial (ms,mt),dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
+        call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+                           Te_initial (ms,mt),dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
       else
-        Ti0   = Ti_initial(ms,mt)
-        Ti0_R = dTi_dpsi * psi_axisym_R(ms,mt)
-        Ti0_Z = dTi_dpsi * psi_axisym_Z(ms,mt)
-        Te0   = Te_initial(ms,mt)
-        Te0_R = dTe_dpsi * psi_axisym_R(ms,mt)
-        Te0_Z = dTe_dpsi * psi_axisym_Z(ms,mt)
-        rho0   = rho_initial(ms,mt)
-        rho0_R = dn_dpsi * psi_axisym_R(ms,mt)
-        rho0_Z = dn_dpsi * psi_axisym_Z(ms,mt)
+        T0     = eq_g(1,var_T,ms,mt)
+        T0_s   = eq_s(1,var_T,ms,mt)
+        T0_t   = eq_t(1,var_T,ms,mt)
+        T0_R   = (   y_t(ms,mt) * T0_s  - y_s(ms,mt) * T0_t ) / xjac
+        T0_Z   = ( - x_t(ms,mt) * T0_s  + x_s(ms,mt) * T0_t ) / xjac
+        rho0   = eq_g(1,var_rho,ms,mt)
+        rho0_s = eq_s(1,var_rho,ms,mt)
+        rho0_t = eq_t(1,var_rho,ms,mt)
+        rho0_R = (   y_t(ms,mt) * rho0_s  - y_s(ms,mt) * rho0_t ) / xjac
+        rho0_Z = ( - x_t(ms,mt) * rho0_s  + x_s(ms,mt) * rho0_t ) / xjac
+        ! --- Full Sauter formula
+        Ti0   = T0   / 2.d0 ; Te0   = T0   / 2.d0
+        Ti0_R = T0_R / 2.d0 ; Te0_R = T0_R / 2.d0
+        Ti0_Z = T0_Z / 2.d0 ; Te0_Z = T0_Z / 2.d0              
+        call temperature(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
+                         T_initial  (ms,mt),dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
       endif      
       call bootstrap_current(R, Z,                                                        &
                              R_axis,   Z_axis,   psi_axis,                                &
@@ -682,6 +693,8 @@ do ms=1, n_gauss
                              Te0,  Te0_R,  Te0_Z,                                         &
                              Jb)
       ! --- Full Sauter formula for initial profiles
+      call density      (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, &
+                         rho_initial(ms,mt),dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
       if ( with_TiTe ) then
         Ti0   = Ti_initial(ms,mt)
         Ti0_R = dTi_dpsi * psi_axisym_R(ms,mt)
@@ -691,27 +704,17 @@ do ms=1, n_gauss
         Te0_Z = dTe_dpsi * psi_axisym_Z(ms,mt)
         rho0   = rho_initial(ms,mt)
         rho0_R = dn_dpsi * psi_axisym_R(ms,mt)
-        rho0_Z = dn_dpsi * psi_axisym_Z(ms,mt)
-        call density      (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, &
-                           rho_initial(ms,mt),dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
-        call temperature_i(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
-                           Ti_initial (ms,mt),dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2,dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
-        call temperature_e(xpoint2, xcase2, y_g(ms,mt), Z_xpoint, eq_g(1,1,ms,mt),psi_axis,psi_bnd, &
-                         Te_initial (ms,mt),dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2,dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
+        rho0_Z = dn_dpsi * psi_axisym_Z(ms,mt)              
       else
-        T0    = eq_g(1,var_T,ms,mt)
-        T0_s  = eq_s(1,var_T,ms,mt)
-        T0_t  = eq_t(1,var_T,ms,mt)
-        T0_R  = (   y_t(ms,mt) * T0_s  - y_s(ms,mt) * T0_t ) / xjac
-        T0_Z  = ( - x_t(ms,mt) * T0_s  + x_s(ms,mt) * T0_t ) / xjac
-        Ti0   = T0   / 2.d0 ; Te0   = T0   / 2.d0
-        Ti0_R = T0_R / 2.d0 ; Te0_R = T0_R / 2.d0
-        Ti0_Z = T0_Z / 2.d0 ; Te0_Z = T0_Z / 2.d0
-        rho0   = eq_g(1,var_rho,ms,mt)
-        rho0_s = eq_s(1,var_rho,ms,mt)
-        rho0_t = eq_t(1,var_rho,ms,mt)
-        rho0_R = (   y_t(ms,mt) * rho0_s  - y_s(ms,mt) * rho0_t ) / xjac
-        rho0_Z = ( - x_t(ms,mt) * rho0_s  + x_s(ms,mt) * rho0_t ) / xjac
+        Ti0   = T_initial(ms,mt)       / 2.d0
+        Ti0_R = dT_dpsi * psi_axisym_R(ms,mt) / 2.d0
+        Ti0_Z = dT_dpsi * psi_axisym_Z(ms,mt) / 2.d0
+        Te0   = Ti0
+        Te0_R = Ti0_R
+        Te0_Z = Ti0_Z
+        rho0   = rho_initial(ms,mt)
+        rho0_R = dn_dpsi * psi_axisym_R(ms,mt)
+        rho0_Z = dn_dpsi * psi_axisym_Z(ms,mt)              
       endif      
       call bootstrap_current(R, Z,                                                        &
                              R_axis,   Z_axis,   psi_axis,                                &
@@ -1255,9 +1258,15 @@ do i=1,n_vertex_max
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
           end if
-          eta_R = deta_dT * Te0_R
-          eta_Z = deta_dT * Te0_Z
-          eta_p = deta_dT * Te0_p
+          if(with_TiTe)then
+            eta_R = deta_dT * Te0_R
+            eta_Z = deta_dT * Te0_Z
+            eta_p = deta_dT * Te0_p
+          else
+            eta_R = deta_dT * T0_R
+            eta_Z = deta_dT * T0_Z
+            eta_p = deta_dT * T0_p
+          endif               
 
           ! --- Eta for ohmic heating 
           if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
@@ -2637,11 +2646,19 @@ do i=1,n_vertex_max
                   Qconv_Up_rho__p = - v * ( rho   * ( UgradUp + UR0 * Up0 / R ) + Up0 * divRhoU_rho__p  )
                   Qconv_Up_rho__n = - v * (                                     + Up0 * divRhoU_rho__n  )
 
-                  eta_T_T    = deta_dT * Te
-                  eta_R_T    = d2eta_d2T * Te * Te0_R + deta_dT * Te_R
-                  eta_Z_T    = d2eta_d2T * Te * Te0_Z + deta_dT * Te_Z
-                  eta_p_T__p = d2eta_d2T * Te * Te0_p
-                  eta_p_T__n = deta_dT * Te_p
+                  if(with_TiTe)then
+                    eta_T_T    = deta_dT * Te
+                    eta_R_T    = d2eta_d2T * Te * Te0_R + deta_dT * Te_R
+                    eta_Z_T    = d2eta_d2T * Te * Te0_Z + deta_dT * Te_Z
+                    eta_p_T__p = d2eta_d2T * Te * Te0_p
+                    eta_p_T__n = deta_dT * Te_p
+                  else
+                    eta_T_T    = deta_dT * T
+                    eta_R_T    = d2eta_d2T * T * T0_R + deta_dT * T_R
+                    eta_Z_T    = d2eta_d2T * T * T0_Z + deta_dT * T_Z
+                    eta_p_T__p = d2eta_d2T * T * T0_p
+                    eta_p_T__n = deta_dT * T_p
+                  endif                    
 
                   JR0_AR__p  = 0.d0  ; JR0_AR__n  = 0.d0  ; JR0_AR__nn = 0.d0
                   JR0_AZ__p  = 0.d0  ; JR0_AZ__n  = 0.d0  ; JR0_AZ__nn = 0.d0
@@ -3133,9 +3150,8 @@ do i=1,n_vertex_max
                           
                     Qjac_p (var_UZ,var_T  )  =  Qconv_UZ_T__p  + v_Z * (rho0*T ) - v * PneoZ_T__p &
                                                + v_Z * (rho0*T  ) + dvisco_dT * T  * Qvisc_UZ__p
-                    Qjac_k (var_UZ,var_T  )  = + dvisco_dT * T  * Qvisc_UZ__k
-
                     Qjac_n (var_UZ,var_T  )  =  Qconv_UZ_T__n - v * PneoZ_T__n
+                    Qjac_k (var_UZ,var_T  )  = + dvisco_dT * T  * Qvisc_UZ__k                    
                   endif
 
                   if ( with_neutrals) then
@@ -4120,9 +4136,9 @@ do i=1,n_vertex_max
                                              + v * (gamma-1.d0) * Qvisc_T_T__p                                           &
                                              - ZK_prof * gradT_gradVstar_T__p                                         &
                                              - (ZK_par_T-ZK_prof) * BgradVstar__p * BgradT_T__p / BB2                &
-                                             - (dZKe_par_dT*T    ) * BgradVstar__p * BgradT       / BB2                &
+                                             - (dZK_par_dT*T    ) * BgradVstar__p * BgradT       / BB2                &
                                              + v * (gamma-1.0d0) * deta_dT_ohm * T * JJ2                                &
-                                             - ZK_e_perp_num * lap_Vstar * lap_bf
+                                             - ZK_perp_num * lap_Vstar * lap_bf
                     Qjac_n (var_T,var_T)  = + v * ( - rho0 * UgradT_T__n                                            ) &
                                             + v * (gamma-1.d0) * Qvisc_T_T__n                                           &
                                             - (ZK_par_T-ZK_prof) * BgradVstar__p * BgradT_T__n / BB2

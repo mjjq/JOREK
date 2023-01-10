@@ -304,10 +304,6 @@ do ms=1, n_gauss
     
     c_s = sqrt(gamma * T0_corr)
 
-    ! --- Diamagnetic velocity (times rho)
-    rhoVdiaR0 = tauIC*F0 / (R * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z)
-    rhoVdiaZ0 = tauIC*F0 / (R * BB2) * (R*BP0*pi0_R -   BR0*pi0_p)
-    
     ! --- AR
     AR0   = eq_g(mp,var_AR,ms)
     AR0_p = eq_p(mp,var_AR,ms)
@@ -340,6 +336,8 @@ do ms=1, n_gauss
     BB2 = BR0*BR0 + BZ0*BZ0 + Bp0*Bp0
 
     ! --- Diamagnetic velocity (times rho)
+    rhoVdiaR0 = tauIC*F0 / (R * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z)
+    rhoVdiaZ0 = tauIC*F0 / (R * BB2) * (R*BP0*pi0_R -   BR0*pi0_p)
     rhoVdia_dot_n = rhoVdiaR0 * normal(1) + rhoVdiaZ0 * normal(2)
 
     ! --- Magnetic field direction at target

@@ -14,7 +14,7 @@ subroutine init_live_data_model(file_handle)
   
   integer :: i
   real*8  :: psin, FFp, dFFp_dpsi, dens, dn_dpsi
-  real*8  :: temp, temp_i, dT_dpsi, dTi_dpsi, temp_e, dTe_dpsi, S_rho, S_T, S_Ti, S_Te, d_perp, zk_pepr, zki_perp, zke_perp, rhon, drhon_dpsi
+  real*8  :: temp, temp_i, dT_dpsi, dTi_dpsi, temp_e, dTe_dpsi, S_rho, S_T, S_Ti, S_Te, d_perp, zk_perp, zki_perp, zke_perp, rhon, drhon_dpsi
   real*8  :: d, d1, d2, d3, d4, d5, d6 ! dummies
   
   write(file_handle,'(A,I5)') '@n_input_profiles: ', 10
@@ -60,7 +60,7 @@ subroutine init_live_data_model(file_handle)
         temp_i, dTi_dpsi, temp_e, dTe_dpsi, S_rho, S_Ti, S_Te, rhon, d_perp, zki_perp, zke_perp
     else
       write(file_handle,'(a,17es13.4e3)') '@input_profiles: ', psin, FFp, dFFp_dpsi, dens, dn_dpsi,    &
-        temp, dT_dpsi, S_rho, S_T, rhon, d_perp, zke_perp
+        temp, dT_dpsi, S_rho, S_T, rhon, d_perp, zk_perp
     endif
     
   end do

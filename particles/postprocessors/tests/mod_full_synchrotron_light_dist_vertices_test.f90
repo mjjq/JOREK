@@ -493,7 +493,7 @@ subroutine compute_x_shadowed_particles()
     do jj=1,n_particles_time
       x_part = x_cart_sol(:,jj,kk)
       p_dir = properties_sol(1:3,jj,kk)
-      cos_half_angle = cos(1.d0/(2.d0*properties_sol(11,jj,kk)))
+      cos_half_angle = cos(1.d0/(properties_sol(11,jj,kk)))
       do ii=1,n_shadowed_per_particle
         call random_number(rng)
         x_shadowed(:,ii,jj,kk) = sample_uniform_cone(cos_half_angle,&

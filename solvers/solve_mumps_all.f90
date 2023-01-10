@@ -23,7 +23,7 @@ subroutine solve_mumps_all(mmss, a_mat, rhs_vec, solve_only, tag)
 
   logical                  :: verbose = .false.
 
-  comm = ad_mat%comm
+  comm = a_mat%comm
 
   call MPI_COMM_RANK(comm, my_id, ierr)
   call MPI_COMM_SIZE(comm, n_cpu, ierr)

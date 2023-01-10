@@ -1,7 +1,7 @@
 #ifdef USE_STRUMPACK
 !> subroutine solves the complete system of equation using STRUMPACK
 ! takes distributed matrix ad_mat, centralize it and solve, placing the solution into the rhs_vec
-subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
+subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
   use mod_strumpack
 
   use tr_module
@@ -12,28 +12,29 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
 
   implicit none
 
-  type(type_SP_MATRIX)        :: ad_mat, ac_mat
+! --- Input variables
+  type(type_SP_MATRIX)        :: ad_mat
   type(type_RHS)              :: rhs_vec
   type(type_STRUMPACK_SOLVER) :: spss
-
+  logical                     :: solve_only
+  integer                     :: tag
 
 ! --- Local variables
+  type(type_SP_MATRIX)        :: ac_mat
   type(clcktype)              :: t_itstart, t0, t1, t2, t3
   real*8                      :: tsecond
   integer                     :: my_id, n_cpu, comm, ierr
-  logical                     :: solve_only, verbose
   logical                     :: centralize = .true.
+  logical                     :: verbose = .false.
+
+  comm = ad_mat%comm
+
+  call MPI_COMM_RANK(comm, my_id, ierr)
+  call MPI_COMM_SIZE(comm, n_cpu, ierr)
+
+  if ((tag.ge.0).and.(my_id.eq.0)) verbose = .true.
 
   if (.not.solve_only) then
-
-    comm = ad_mat%comm
-
-    call MPI_COMM_RANK(comm, my_id, ierr)
-    call MPI_COMM_SIZE(comm, n_cpu, ierr)
-
-  !write(*,*) my_id,'***************************************'
-  !write(*,*) my_id,'* solve sparse matrix using STRUMPACK *'
-  !write(*,*) my_id,'***************************************'
 
     centralize = (n_cpu>1).and.(.not.ad_mat%row_distributed)
 
@@ -56,7 +57,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
 
       call clck_time(t1)
       call clck_ldiff(t0,t1,tsecond)
-      if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+      if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
       ac_mat = ad_mat
@@ -78,7 +79,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
       call strumpack_analyze(spss)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time analysis:', tsecond
+      if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time analysis:', tsecond
     endif
 
     call clck_time(t0)
@@ -86,7 +87,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
     call strumpack_factorize(spss)
 
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-    if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time factorize:', tsecond
+    if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time factorize:', tsecond
 
     if (centralize) then
       deallocate(ac_mat%irn); ac_mat%irn => null()
@@ -101,7 +102,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, verbose)
   call strumpack_solve(spss, rhs_vec)
 
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (verbose.and.(my_id .eq. 0))  write(*,FMT_TIMING) my_id, '## Elapsed time solve:', tsecond
+  if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time solve:', tsecond
 
 
 

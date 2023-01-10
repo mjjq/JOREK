@@ -2,7 +2,7 @@
 !> subroutine solves the complete system of equation using pastix with
 !  distributed matrix ad_mat on the main group mpi_comm_world.
 !  For pastix5 solver matrix is centralized into ac_mat
-subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
+subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, tag)
   use tr_module
   use mod_parameters, only: n_tor, n_var
   use mpi_mod
@@ -16,18 +16,26 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
 
   implicit none
 
+! --- Input variables
+  type(type_SP_MATRIX)              :: ad_mat
+  type(type_RHS)                    :: rhs_vec
+  type(type_PASTIX_SOLVER)          :: ptss
+  logical                           :: solve_only
+  integer                           :: tag
+
+! --- Local variables
   type(clcktype)                    :: t_itstart, t0, t1, t2, t3
   real*8                            :: tsecond
   integer                           :: n_cpu, my_id, ierr, comm
-  type(type_SP_MATRIX)              :: ad_mat, ac_mat
-  type(type_RHS)                    :: rhs_vec
-  type(type_PASTIX_SOLVER)          :: ptss
-  logical                           :: solve_only, verbose
+  type(type_SP_MATRIX)              :: ac_mat
+  logical                           :: verbose = .false.
 
   comm = ad_mat%comm
 
   call MPI_COMM_RANK(comm, my_id, ierr)
   call MPI_COMM_SIZE(comm, n_cpu, ierr)
+  
+  if ((tag.ge.0).and.(my_id.eq.0)) verbose = .true.
 
   if (.not.solve_only) then
 
@@ -58,16 +66,16 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
       call pastix_analyze(ptss)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (verbose)  write(*,FMT_TIMING) ptss%tag, '## Elapsed time analysis:', tsecond
+      if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time analysis:', tsecond
     endif
 
-    if (verbose.and.(my_id.eq.0)) write(*,*) "PaStiX: factorizing matrix"
+    if (verbose) write(*,*) "PaStiX: factorizing matrix"
     call clck_time(t0)
 
     call pastix_factorize(ptss)
 
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-    if (verbose.and.(my_id.eq.0))  write(*,FMT_TIMING) ptss%tag, '## Elapsed time factorization:', tsecond
+    if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time factorization:', tsecond
 
     if (n_cpu>1.and.(.not.ad_mat%centralized)) then
       deallocate(ac_mat%irn)
@@ -82,7 +90,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, verbose)
   call pastix_solve(ptss,rhs_vec)
 
   call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-  if (verbose.and.(my_id.eq.0))  write(*,FMT_TIMING) ptss%tag, '## Elapsed time solve:', tsecond
+  if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time solve:', tsecond
 
   return
 end

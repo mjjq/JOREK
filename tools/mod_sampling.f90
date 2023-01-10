@@ -532,7 +532,7 @@ contains
     real*8 ,dimension(2)           :: zphi
     !zphi =(/0.d0,cos_half_angle/) + (/TWOPI,1.d0-cos_half_angle/)*u
     zphi(1) = TWOPI*u(1)
-    zphi(2) = cos_half_angle + (1.d0-cos_half_angle)*u(2)
+    zphi(2) = 1d0 + (cos_half_angle-1d0)*u(2)
     z2 = sqrt(1.d0-zphi(2)*zphi(2))
     ray = (/z2*cos(zphi(1)),z2*sin(zphi(1)),zphi(2)/)
   end function sample_uniform_standard_cone

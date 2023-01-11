@@ -162,21 +162,29 @@ if (my_id == 0) then
     write(*,*) ' number of boundary nodes: ',n_border
     write(*,*) ' nz_AA                   : ',nz_AA
   endif
-  
-  if (.not. associated(a_mat%val))   call tr_allocatep(a_mat%val,1,nz_AA,"a_mat%val",CAT_DMATRIX)
-  if (.not. associated(a_mat%irn))   call tr_allocatep(a_mat%irn,1,nz_AA,"a_mat%irn",CAT_DMATRIX)
-  if (.not. associated(a_mat%jcn))   call tr_allocatep(a_mat%jcn,1,nz_AA,"a_mat%jcn",CAT_DMATRIX)
-  if (.not. associated(rhs_vec%val)) call tr_allocatep(rhs_vec%val,1,n_AA,"rhs_vec%val",CAT_DMATRIX)  
-  
-  a_mat%irn = 0
-  a_mat%jcn = 0
-  a_mat%val   = 0.d0
+
   a_mat%ng  = n_AA
+  a_mat%nnz  = nz_AA
   a_mat%comm = MPI_COMM_SELF
-  
-  rhs_vec%val = 0.d0
-  rhs_vec%n = n_AA  
-  
+
+  if (associated(a_mat%irn)) call tr_deallocatep(a_mat%irn,"a_mat_eq",CAT_DMATRIX)
+  if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn,"a_mat_eq",CAT_DMATRIX)
+  if (associated(a_mat%val)) call tr_deallocatep(a_mat%val,"a_mat_eq",CAT_DMATRIX)
+
+  call tr_allocatep(a_mat%val,1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
+  call tr_allocatep(a_mat%irn,1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
+  call tr_allocatep(a_mat%jcn,1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
+
+  a_mat%irn(1:a_mat%nnz) = 0
+  a_mat%jcn(1:a_mat%nnz) = 0
+  a_mat%val(1:a_mat%nnz) = 0.d0
+
+  rhs_vec%n = n_AA
+
+  if (associated(rhs_vec%val)) call tr_deallocatep(rhs_vec%val,"rhs_eq",CAT_DMATRIX)
+  call tr_allocatep(rhs_vec%val,1,rhs_vec%n,"rhs_eq",CAT_DMATRIX)
+  rhs_vec%val(1:rhs_vec%n) = 0.d0
+
   ilarge=0
   
   amix_used = amix
@@ -473,11 +481,11 @@ if (my_id == 0) then
     solver%library = strumpack
   elseif (use_mumps_eq) then
     solver%library = mumps
-  else
+  elseif (use_pastix_eq) then
     solver%library = pastix
   endif
   call solve_sparse_system(a_mat, rhs_vec, rhs_vec, solver)
-  call solver_finalize(solver)  
+  call solver_finalize(solver)
   
   call tr_debug_write("a_mat%ng",int(a_mat%ng))
   call tr_debug_write("a_mat%nnz",int(a_mat%nnz))
@@ -621,12 +629,12 @@ if (my_id == 0) then
       endif   ! constrained
     enddo     ! nodes
   endif       ! refinement
-  
-  call tr_deallocatep(a_mat%irn,"a_mat%irn",CAT_DMATRIX)
-  call tr_deallocatep(a_mat%jcn,"a_mat%jcn",CAT_DMATRIX)
-  call tr_deallocatep(a_mat%val,"a_mat%val",CAT_DMATRIX)
-  call tr_deallocatep(rhs_vec%val,"rhs_vec%val",CAT_DMATRIX)
- 
+
+  if (associated(a_mat%irn)) call tr_deallocatep(a_mat%irn,"a_mat_eq",CAT_DMATRIX)
+  if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn,"a_mat_eq",CAT_DMATRIX)
+  if (associated(a_mat%val)) call tr_deallocatep(a_mat%val,"a_mat_eq",CAT_DMATRIX)
+  if (associated(rhs_vec%val)) call tr_deallocatep(rhs_vec%val,"rhs_eq",CAT_DMATRIX)
+
 end if ! my_id == 0
   
 return

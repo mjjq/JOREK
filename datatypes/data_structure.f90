@@ -149,9 +149,9 @@ module data_structure
     integer(kind=int_all), dimension(:), pointer   :: irn => Null()
     integer(kind=int_all), dimension(:), pointer   :: jcn => Null()
     real(kind=8), dimension(:), pointer            :: val => Null()
-    integer(kind=int_all), dimension(:), pointer   :: ijA_size
-    integer(kind=int_all), dimension(:,:), pointer :: ijA_index
-    integer(kind=int_all), dimension(:,:), pointer :: irn_jcn
+    integer(kind=int_all), dimension(:), pointer   :: ijA_size => Null()
+    integer(kind=int_all), dimension(:,:), pointer :: ijA_index => Null()
+    integer(kind=int_all), dimension(:,:), pointer :: irn_jcn => Null()
     
     real(kind=8), dimension(:), pointer          :: column_scaling => Null()    !< global column scaling, vector size of ng
     integer                                      :: indexing = 1         !< matrix indexing (1 is standart FORTRAN)
@@ -171,6 +171,9 @@ module data_structure
     logical                                      :: row_distributed = .false.
     logical                                      :: col_distributed = .false.
     logical                                      :: centralized = .false. !< matrix is available on all comm ranks (not distribued)
+
+  contains
+    procedure :: copy_to
   end type type_SP_MATRIX
   
   !> RHS vector type
@@ -334,6 +337,42 @@ contains
     deallocate(thread_struct)
   end subroutine del_thread_buffers
   
+! a = self
+  subroutine copy_to(self, mat_a)
+    class(type_SP_MATRIX), intent(in) :: self
+    class(type_SP_MATRIX), intent(inout) :: mat_a
+
+    mat_a%irn            => self%irn
+    mat_a%jcn            => self%jcn
+    mat_a%val            => self%val
+
+    mat_a%ijA_size       => self%ijA_size
+    mat_a%ijA_index      => self%ijA_index
+    mat_a%irn_jcn        => self%irn_jcn
+
+    mat_a%column_scaling => self%column_scaling
+    mat_a%index_min      => self%index_min
+    mat_a%index_max      => self%index_max
+
+    mat_a%indexing        = self%indexing
+    mat_a%ng              = self%ng
+    mat_a%nr              = self%nr
+    mat_a%nc              = self%nc
+    mat_a%nnz             = self%nnz
+    mat_a%my_ind_min      = self%my_ind_min
+    mat_a%my_ind_max      = self%my_ind_max
+    mat_a%i_tor_min       = self%i_tor_min
+    mat_a%i_tor_max       = self%i_tor_max
+    mat_a%block_size      = self%block_size
+    mat_a%comm            = self%comm
+    mat_a%scaled          = self%scaled
+    mat_a%row_distributed = self%row_distributed
+    mat_a%col_distributed = self%col_distributed
+    mat_a%centralized     = self%centralized
+
+    return
+  end subroutine
+
 end module data_structure
 
 

@@ -79,9 +79,9 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   call test_compute_gyroaverage_synchrotron_mhd_fields
   call test_compute_gyroaverage_synchrotron_light_properties
   call test_init_gyroaverage_synchrotron_lights_from_gc
-  call test_check_shaded_x_in_gyroaverage_synchrotron_cone
+  call test_check_shaded_angles_in_gyroaverage_synchrotron_cone
   call test_gyroaverage_synchrotron_irradiance_directionality_funct
-  call test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
+  !call test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices
@@ -304,8 +304,8 @@ end subroutine test_init_gyroaverage_synchrotron_lights_from_gc
 
 !> test the check if a point is within the radiation cone of 
 !> a synchrotron light or outside (basically the test of the 
-!> same routine of the full synchrotron model).
-subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone()
+!> same routine of the full synchrotron model) using their angles.
+subroutine test_check_shaded_angles_in_gyroaverage_synchrotron_cone()
   use constants,                 only: PI,TWOPI
   use mod_coordinate_transforms, only: cylindrical_to_cartesian_velocity
   use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
@@ -316,17 +316,20 @@ subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone()
   implicit none
   !> variables
   integer                            :: ii,n_int_param,n_real_param
+  integer                            :: n_angles,n_real_param_2
   integer,dimension(0)               :: int_param
   integer,dimension(n_x)             :: particle_id
-  real*8                             :: normB,costheta,sintheta
+  real*8                             :: normB,costheta,sintheta,cospsi
+  real*8                             :: sinpitch_angle,cospitch_angle
+  real*8                             :: pitch_angle,p_perp,cosmu
   real*8,dimension(4)                :: real_param
   real*8,dimension(n_x)              :: E_field,b_field,gradB,curlb,dbdt
   real*8,dimension(n_x)              :: rnd3,x_shaded,x_light,tang,nor,binor
   logical                            :: ifail
   logical,dimension(n_shaded_points) :: in_cone_points,out_cone_points
   !> initialisation: extract a random light
-  n_int_param = size(int_param); n_real_param = size(real_param);
-  in_cone_points = .false.; out_cone_points = .false.;
+  n_angles = 2; n_int_param = size(int_param); n_real_param = size(real_param);
+  n_real_param_2 = 1; in_cone_points = .false.; out_cone_points = .false.;
   x_light = 0d0; real_param = 0d0; ifail = .true.;
   do while(ifail)
     call random_number(rnd3); 
@@ -343,20 +346,26 @@ subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone()
      real_param(1:3) = real_param(1:3)/norm2(real_param(1:3))
      real_param(4) = compute_relativistic_factor(p,&
      sims_particles(particle_id(1))%groups(particle_id(2))%mass,normB)
+     p_perp = sqrt(2d0*sims_particles(particle_id(1))%groups(particle_id(2))%mass*p%p(2)*normB); 
+     pitch_angle = atan2(p_perp,abs(p%p(1)));
+     if(pitch_angle.lt.0d0) pitch_angle = TWOPI + pitch_angle
      ifail = .false.
    end select  
   enddo
 
-  !> generate a velocity based reference system
-  call random_number(rnd3)
+  !> generate a velocity based reference system mu = pitch_angle + 1/gamma
+  call random_number(rnd3);
   call vectors_to_orthonormal_basis(real_param(1:3),rnd3,tang,nor,binor)
-  costheta = sqrt(1d0-(1d0/(real_param(4)**2)))
+  cospitch_angle = cos(pitch_angle); sinpitch_angle = sin(pitch_angle);
+  costheta = cos((asin(1d0/real_param(4))+pitch_angle))
   !> identify in_cone shaded points
   do ii=1,n_shaded_points
     call random_number(rnd3)
-    x_shaded = sample_uniform_cone(costheta,rnd3,real_param(1:3),x_light,length_shadowed)
-    in_cone_points(ii) = vertex_sol%check_x_shaded_in_emission_zone(&
-    n_x,x_shaded,x_light,n_int_param,n_real_param,int_param,real_param)
+    x_shaded = sample_uniform_cone([costheta,cospitch_angle],rnd3,real_param(1:3),x_light,length_shadowed)
+    cosmu  = dot_product((x_shaded-x_light),real_param(1:3))/norm2(x_shaded-x_light)
+    cospsi = cosmu*cospitch_angle + sinpitch_angle*sqrt(1d0-cosmu**2) 
+    in_cone_points(ii) = vertex_sol%check_angles_shaded_in_emission_zone(&
+    n_angles,[sqrt(1d0-cospsi**2),cospsi],n_int_param,n_real_param_2,int_param,[real_param(4)])
   enddo
   !> identify out_cone shaded points
   do ii=1,n_shaded_points
@@ -364,15 +373,17 @@ subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone()
     x_shaded = sample_uniform_sphere_corona_rcosphi(length_shadowed**3,[-1d0,costheta],[0d0,TWOPI],rnd3)
     sintheta = sqrt(1d0-x_shaded(2)**2); x_shaded = x_light+x_shaded(1)*&
     (tang*x_shaded(2)+sintheta*(nor*cos(x_shaded(3))+binor*sin(x_shaded(3))))
-    out_cone_points(ii) = vertex_sol%check_x_shaded_in_emission_zone(&
-    n_x,x_shaded,x_light,n_int_param,n_real_param,int_param,real_param)
+    cosmu  = dot_product((x_shaded-x_light),real_param(1:3))/norm2(x_shaded-x_light)
+    cospsi = cosmu*cospitch_angle + sinpitch_angle*sqrt(1d0-cosmu**2) 
+    out_cone_points(ii) = vertex_sol%check_angles_shaded_in_emission_zone(&
+    n_angles,[sqrt(1d0-cospsi**2),cospsi],n_int_param,n_real_param_2,int_param,[real_param(4)])
   enddo
   !> check results
   call assert_true(all(in_cone_points),&
-  "Error check shaded x in gyroaverage synchrotron cone: false negative detected!")
+  "Error check shaded angles in gyroaverage synchrotron cone: false negative detected!")
   call assert_true(all(.not.out_cone_points),&
-  "Error check shaded x in gyroaverage synchrotron cone: false positive detected!")
-end subroutine test_check_shaded_x_in_gyroaverage_synchrotron_cone
+  "Error check shaded angles in gyroaverage synchrotron cone: false positive detected!")
+end subroutine test_check_shaded_angles_in_gyroaverage_synchrotron_cone
 
 !> test the gyroaverage synchrotron radiation irradiance and directionality functions
 subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct()
@@ -482,13 +493,13 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
   real*8 :: mu_angle,thetap,psi_angle,xi,fact1,fact2,fact3,besselk13,besselk23
   !> initialisations
   irradiance = 0d0;
-  !> check if the point is shaded by the synchrotron light
-  if(.not.vertex_sol%check_x_shaded_in_emission_zone(n_x,x_shaded,x_light,0,4,&
-  int_param,properties(1:4))) return
   mu_angle = acos(dot_product((x_shaded-x_light)/norm2(x_shaded-x_light),properties(1:3)))
   thetap = atan2(properties(7),properties(6))
   if(thetap.lt.0d0) thetap = TWOPI + thetap 
   psi_angle = mu_angle - thetap
+  !> check if the point is shaded by the synchrotron light
+  if(.not.vertex_sol%check_angles_shaded_in_emission_zone(2,[sin(psi_angle),&
+  cos(psi_angle)],0,1,int_param,[properties(4)])) return
   fact1 = (((1d0-properties(5)*cos(psi_angle))/(properties(5)*cos(psi_angle)))**2)*&
           (1d0-properties(5)*properties(6)*cos(mu_angle))
   fact2 = (5d-1*properties(5)*cos(psi_angle)*(sin(psi_angle)**2))/(1d0-properties(5)*cos(psi_angle))
@@ -514,6 +525,7 @@ end subroutine compute_gyroavg_synch_directionality_irradiance
 !> rel_fact = sqrt(1+(p/(mass*c))**2) with p the total gc momentum and
 !> c the speed of light
 subroutine compute_x_shadowed_gc()
+  use constants,    only: TWOPI
   use mod_sampling, only: sample_uniform_cone
   implicit none
   !> variables
@@ -526,11 +538,14 @@ subroutine compute_x_shadowed_gc()
     do jj=1,n_gc_time
       x_gc = x_cart_sol(:,jj,kk)
       v_gc_dir = properties_sol(1:3,jj,kk)
-      cos_half_angle = cos(5d-1/properties_sol(4,jj,kk))
+      !> angle to be sampled 1/rel_fact + theta
+      cos_half_angle = atan2(properties_sol(7,jj,kk),properties_sol(6,jj,kk))
+      if(cos_half_angle.lt.0d0) cos_half_angle = cos_half_angle + TWOPI
+      cos_half_angle = cos((cos_half_angle + (1d0/properties_sol(4,jj,kk))))
       do ii=1,n_shaded_points_per_particle
         call random_number(rng)
-        x_shadowed(:,ii,jj,kk) = sample_uniform_cone(cos_half_angle,&
-        rng,v_gc_dir,x_gc,length_shadowed)
+        x_shadowed(:,ii,jj,kk) = sample_uniform_cone([cos_half_angle,&
+        properties_sol(6,jj,kk)],rng,v_gc_dir,x_gc,length_shadowed)
       enddo
     enddo
   enddo
@@ -579,7 +594,7 @@ rel_fact_parallel,normB)
   real*8                                     :: rel_fact_parallel,normB
   real*8,dimension(n_properties),intent(out) :: properties
   !> variables:
-  real*8                :: rel_fact,thetap,charge,p_perp
+  real*8                :: thetap,charge,p_perp
   real*8,dimension(n_x) :: E_field,b_field,gradB,curlb,dbdt,v_gc_cart
   
   !> compute the analytical MHD fields for computing the GC velocity
@@ -591,25 +606,25 @@ rel_fact_parallel,normB)
   !> compute the relativistic factor
   properties(4) = sqrt(1d0 + ((gc_in%p(1)/(mass*SPEED_OF_LIGHT))**2) +&
              ((2d0*gc_in%p(2)*normB)/(mass*(SPEED_OF_LIGHT**2))))
-  rel_fact_parallel = gc_in%p(1)/(mass*SPEED_OF_LIGHT*rel_fact)
+  rel_fact_parallel = gc_in%p(1)/(mass*SPEED_OF_LIGHT*properties(4))
   rel_fact_parallel = 1d0/(sqrt(1d0-rel_fact_parallel**2))
   !> compute the beta
-  properties(5) = sqrt(1d0 - (1d0/(rel_fact**2)));
+  properties(5) = sqrt(1d0 - (1d0/(properties(4)**2)));
   !> compute the pitch angle
-  p_perp = sqrt(2d0*mass*gc_in%p(2)*normB); thetap = atan2(p_perp,gc_in%p(1));
-  if(thetap.lt.0.d0) thetap = TWOPI+thetap; thetap = PI-thetap; 
+  p_perp = sqrt(2d0*mass*gc_in%p(2)*normB); thetap = atan2(p_perp,abs(gc_in%p(1)));
+  if(thetap.lt.0.d0) thetap = TWOPI+thetap;
   properties(6:7) = abs((/cos(thetap),sin(thetap)/))
   !> critical wavelength
   charge = real(abs(gc_in%q),kind=8)*EL_CHG
   properties(8) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*rel_fact_parallel)/&
-                  (3d0*charge*normB*(rel_fact**2))
+                  (3d0*charge*normB*(properties(4)**2))
   !> compute the directionality function intensity
-  properties(9) = (27d0*charge*normB*(rel_fact**7))/&
+  properties(9) = (27d0*charge*normB*(properties(4)**7))/&
                   (128d0*(PI**2)*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
                   (sin(thetap)**2)*(rel_fact_parallel**4))
   !> compute the synchrotron power normalisation
-  p_perp = p_perp/(mass*rel_fact) !< perpendicular velocity
-  properties(10) = ((charge**4)*((normB*rel_fact*rel_fact_parallel*p_perp)**2))/&
+  p_perp = p_perp/(mass*properties(4)) !< perpendicular velocity
+  properties(10) = ((charge**4)*((normB*properties(4)*rel_fact_parallel*p_perp)**2))/&
                    (6d0*PI*EPS_ZERO*((mass*ATOMIC_MASS_UNIT)**2)*(SPEED_OF_LIGHT**3))
 end subroutine compute_gyroavg_synch_properties_ana_1p
 

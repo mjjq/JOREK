@@ -3149,7 +3149,7 @@ do i=1,n_vertex_max
                     Qjac_n (var_UZ,var_rho)  =  Qconv_UZ_rho__n                         - v * PneoZ_rho__n
                           
                     Qjac_p (var_UZ,var_T  )  =  Qconv_UZ_T__p  + v_Z * (rho0*T ) - v * PneoZ_T__p &
-                                               + v_Z * (rho0*T  ) + dvisco_dT * T  * Qvisc_UZ__p
+                                               + dvisco_dT * T  * Qvisc_UZ__p
                     Qjac_n (var_UZ,var_T  )  =  Qconv_UZ_T__n - v * PneoZ_T__n
                     Qjac_k (var_UZ,var_T  )  = + dvisco_dT * T  * Qvisc_UZ__k                    
                   endif

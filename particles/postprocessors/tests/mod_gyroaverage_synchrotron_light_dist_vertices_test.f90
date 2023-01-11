@@ -18,7 +18,7 @@ public :: run_fruit_gyroaverage_synchrotron_light_dist_vertices
 !> general parameters
 real*8,parameter :: onethird=1d0/3d0
 real*8,parameter :: twothirds=2d0/3d0
-real*8,parameter :: tol_real8=2d-11
+real*8,parameter :: tol_real8=5d-12
 real*8,parameter :: tol2_real8=5d-1
 real*8,parameter :: tol3_real8=5d-8
 real*8,parameter :: mass_RE=5.48579909065d-4
@@ -81,7 +81,7 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   call test_init_gyroaverage_synchrotron_lights_from_gc
   call test_check_shaded_angles_in_gyroaverage_synchrotron_cone
   call test_gyroaverage_synchrotron_irradiance_directionality_funct
-  !call test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
+  call test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices

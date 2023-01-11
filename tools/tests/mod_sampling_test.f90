@@ -17,6 +17,7 @@ integer,parameter :: n_origins=5
 integer,parameter :: n_rays=21
 integer,parameter :: n_samples=156
 real*8,parameter  :: tol_real8=5.d-15
+real*8,parameter  :: half_angle_lower_limit_sol=0d0
 real*8,dimension(2),parameter :: colat_int=(/-PI,PI/)
 real*8,dimension(2),parameter :: azimuth_int=(/0.d0,TWOPI/)
 real*8,dimension(2),parameter :: half_angle_int=(/TWOPI/2.3d2,TWOPI/5.3d0/)
@@ -26,7 +27,7 @@ real*8,dimension(2),parameter :: azimuth_sphere_int=(/PI/1.1d1,TWOPI/1.5d0/)
 real*8,dimension(2),parameter :: R_sphere_int=(/1.d0,3.2d2/)
 real*8,dimension(3),parameter :: origin_min=(/-1.d0,2.d0,-7.d0/)
 real*8,dimension(3),parameter :: origin_max=(/2.d0,5.d0,2.5d0/)
-real*8,dimension(n_cos_half_angle) :: cos_half_angle_sol
+real*8,dimension(n_cos_half_angle,2) :: cos_half_angle_sol
 real*8,dimension(n_x,n_directions) :: directions
 real*8,dimension(n_x,n_origins)    :: origins
 real*8,dimension(n_x,n_samples)    :: rand_sol
@@ -58,9 +59,14 @@ subroutine setup_cone()
   use mod_gnu_rng, only: gnu_rng_interval
   implicit none
   integer :: ii
-  real*8,dimension(n_directions) :: colatitude,azimuth,lengths
+  real*8,dimension(n_cos_half_angle) :: half_angle_lower_limit
+  real*8,dimension(n_cos_half_angle,2) :: half_angles
+  real*8,dimension(n_directions)     :: colatitude,azimuth,lengths
   !> generate set of half solid angle cosines
-  call gnu_rng_interval(n_cos_half_angle,half_angle_int,cos_half_angle_sol)
+  call gnu_rng_interval(n_cos_half_angle,half_angle_int,cos_half_angle_sol(:,1))
+  half_angle_lower_limit = half_angle_lower_limit_sol
+  call gnu_rng_interval(n_cos_half_angle,half_angle_lower_limit,&
+  cos_half_angle_sol(:,1),cos_half_angle_sol (:,2)) 
   cos_half_angle_sol = cos(cos_half_angle_sol)
   !> generate set of origins
   do ii=1,n_origins
@@ -104,13 +110,14 @@ subroutine test_sample_uniform_direction_length_cone()
       do jj=1,n_cos_half_angle
         do ii=1,n_rays
           call random_number(u)
-          ray = sample_uniform_cone(cos_half_angle_sol(jj),u,&
+          ray = sample_uniform_cone(cos_half_angle_sol(jj,:),u,&
           directions(:,kk),origins(:,pp),length_int)
           ray = ray - origins(:,pp)
           ray_length(ii) = norm2(ray)
           cos_half_angle(ii) = dot_product(ray/ray_length(ii),directions(:,kk)/norm2(directions(:,kk)))
         enddo
-        call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj)).and.(cos_half_angle.le.1.d0)),&
+        call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj,1)).and.&
+        (cos_half_angle.le.cos_half_angle_sol(jj,2))),&
         "Error uniform sampling direction length cone: rays cosinus half angle out-of-bound!")
         call assert_true(all((ray_length.ge.length_int(1)).and.(ray_length.le.length_int(2))),&
         "Error uniform sampling direction length cone: rays length out-of-bound!")
@@ -136,13 +143,14 @@ subroutine test_sample_uniform_direction_cone()
       do jj=1,n_cos_half_angle
         do ii=1,n_rays
           call random_number(u)
-          ray = sample_uniform_cone(cos_half_angle_sol(jj),u,&
+          ray = sample_uniform_cone(cos_half_angle_sol(jj,:),u,&
           directions(:,kk),origins(:,pp))
           ray = ray - origins(:,pp)
           ray_length(ii) = norm2(ray)
           cos_half_angle(ii) = dot_product(ray,directions(:,kk)/norm2(directions(:,kk)))
         enddo
-        call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj)).and.(cos_half_angle.le.1.d0)),&
+        call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj,1)).and.&
+        (cos_half_angle.le.cos_half_angle_sol(jj,2))),&
         "Error uniform sampling direction cone: rays cosinus half angle out-of-bound!")
         call assert_equals(ray_length,ones,n_rays,tol_real8,&
         "Error uniform sampling direction cone: rays length not unitary!")
@@ -165,12 +173,13 @@ subroutine test_sample_uniform_standard_cone()
   do jj=1,n_cos_half_angle
     do ii=1,n_rays
       call random_number(u)
-      ray = sample_uniform_cone(cos_half_angle_sol(jj),u)
+      ray = sample_uniform_cone(cos_half_angle_sol(jj,:),u)
       ray_length(ii) = norm2(ray)
       cos_half_angle(ii) = dot_product(ray,z_dir)
     enddo
     !> check correctness
-    call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj)).and.(cos_half_angle.le.1.d0)),&
+    call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj,1)).and.&
+    (cos_half_angle.le.cos_half_angle_sol(jj,2))),&
     "Error uniform sampling standard cone: rays cosinus half angle out-of-bound!")
     call assert_equals(ray_length,ones,n_rays,tol_real8,&
     "Error uniform sampling standard cone: rays length not unitary!")

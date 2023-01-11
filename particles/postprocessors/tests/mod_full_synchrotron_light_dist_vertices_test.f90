@@ -44,6 +44,7 @@ real*8,dimension(n_spectra),parameter         :: max_wlen=(/3.5d-6,4.2d-7/)
 !> parameters for generating shadowed points
 integer,parameter                             :: n_shaded_points=53
 integer,parameter                             :: n_shadowed_per_particle=7
+real*8,parameter                              :: maximum_cos_half_angle_sol=1d0
 real*8,dimension(2),parameter                 :: length_shadowed=(/2.d-1,7.d0/)
 !> variables for generating synchrotron lights
 type(full_synchrotron_light_dist)             :: vertex_sol
@@ -220,7 +221,8 @@ subroutine test_check_shaded_x_in_synchrotron_cone()
   !> identify in_cone shadowed points
   do ii=1,n_shaded_points
     call random_number(rnd3); 
-    x_shaded = sample_uniform_cone(costheta,rnd3,real_param(1:3),x_light,length_shadowed)
+    x_shaded = sample_uniform_cone([costheta,maximum_cos_half_angle_sol],&
+    rnd3,real_param(1:3),x_light,length_shadowed)
     in_cone_points(ii) = vertex_sol%check_x_shaded_in_emission_zone(&
     n_x,x_shaded,x_light,n_int_param,n_real_param,int_param,real_param)
   enddo
@@ -496,8 +498,8 @@ subroutine compute_x_shadowed_particles()
       cos_half_angle = cos(1.d0/(properties_sol(11,jj,kk)))
       do ii=1,n_shadowed_per_particle
         call random_number(rng)
-        x_shadowed(:,ii,jj,kk) = sample_uniform_cone(cos_half_angle,&
-        rng,p_dir,x_part,length_shadowed)
+        x_shadowed(:,ii,jj,kk) = sample_uniform_cone([cos_half_angle,&
+        maximum_cos_half_angle_sol],rng,p_dir,x_part,length_shadowed)
       enddo
     enddo
   enddo 

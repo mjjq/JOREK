@@ -691,6 +691,54 @@ end subroutine write_array6d_integer
 
 !> Definitions of the probability density function (PDF) ------------------------ 
 
+!> method used for transforming the momentum space from spherical
+!> coordinates (p,pitch,chi) and cartesian coordinates for the
+!> charge state into particle kinetic relativistic coordinates
+!> the order of the variables in a sample are:
+!> 1: R ,2: Z, 3: phi, 4: momentum, 5: pitch angle, 
+!> 6: gyro angle, 7: charge.
+!> inputs: 
+!>   p_inout:      (particle_base) particle to be initialised
+!>   n_x:          (integer) size of the phase space sample
+!>   x:            (real8)(n_x) phase space sample in spehrical
+!>                 momentum coordinates cartesian charge coordinates
+!>   time:         (real8) time of the simulation
+!>   fields:       (fields_base) JOREK MHD fields
+!>   n_real_param: (integer) number of real parameters: 0
+!>   real_param:   (real8)(n_real_param) real parameters: empty
+!>   n_int_param:  (integer) number of integer parameters: 0
+!>   int_param:    (integer)(n_real_param) integer parameters: empty
+!> outputs:
+!>   p_inout: (particle_base) initialised particle
+subroutine spherical_p_cartesian_q_to_relativistic_kinetic(p_inout,&
+n_x,x,time,fields,n_real_param,real_paran,n_int_param,int_param)
+  use mod_particle_types,        only: particle_base
+  use mod_particle_types,        only: particle_kinetic_relativistic
+  use mod_fields,                only: fields_base
+  use mod_pushe_tools,           only: get_orthonormals
+  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
+  implicit none
+  !> Inputs-Outputs:
+  class(particle_base),intent(inout) :: p_inout
+  !> Inputs:
+  class(fields_base),intent(in)             :: fields
+  integer,intent(in)                        :: n_x,n_real_param,n_int_param
+  integer,dimension(n_int_param),intent(in) :: int_param
+  real*8,intent(in)                         :: time
+  real*8,dimension(n_x),intent(in)          :: x
+  real*8,dimension(n_real_param),intent(in) :: real_param
+  !> variables
+  select type (p=>p_inout)
+  type is (particle_kinetic_relativistic)
+    call fields%calc_EBpsiU(time,p%i_elm,p%st,p%x(3),&
+    E_field,B_field,psi,U); B_field = B_field/norm2(B_field);
+    call get_orthonormals(B,e1,e2)
+    p%p = x(4)*(cos(x(5))*B_field + sin(x(5))*(cos(x(6))*e1 + sin(x(6))*e2))
+    p%p = vector_cylindrical_to_cartesian(p%x(3),p%p)
+    p%q = int(x(7),kind=1)
+  end select
+end subroutine spherical_p_cartesian_q_to_relativistic_kinetic
+
 !> Phase space distribution for testing
 !> inputs:
 !>   nx:           (integer) number of variables

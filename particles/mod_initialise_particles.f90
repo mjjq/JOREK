@@ -328,13 +328,9 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
   n_real_gdf_param_in, real_gdf_param_in, n_int_gdf_param_in, int_gdf_param_in, &
   n_real_samp_to_part_param_in,real_samp_to_part_param_in,n_int_samp_to_part_param_in, &
   int_samp_to_part_param_in)
-  use constants,                 only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
-  use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
-  use mod_pusher_tools,          only: get_orthonormals
   use mod_fields,                only: fields_base
   use mod_random_seed,           only: random_seed
-  use mod_particle_types,        only: particle_base,particle_kinetic_relativistic
-  use mod_particle_types,        only: particle_kinetic
+  use mod_particle_types,        only: particle_base
   use mod_rng
 !$ use omp_lib
   

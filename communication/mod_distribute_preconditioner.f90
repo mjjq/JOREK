@@ -44,7 +44,7 @@ contains
     integer(kind=int_all), allocatable :: isnd_buffer(:), jsnd_buffer(:)
     integer(kind=int_all), allocatable :: indx(:)
 
-    logical                            :: distribute
+    logical                            :: distribute_row, distribute_col
 
     integer :: cc, cr
     real t0, t1
@@ -62,11 +62,9 @@ contains
 
 ! --- Copy of n_tor as long-integer for modulo functions (just to keep safe)
     n_tor_int = n_tor
-#ifdef USE_STRUMPACK    
-    distribute = pc%mat%row_distributed
-#elif USE_PASTIX6
-    distribute = pc%mat%col_distributed
-#endif
+
+    distribute_row = pc%mat%row_distributed.and.(.not.pc%mat%col_distributed)
+    distribute_col = pc%mat%col_distributed.and.(.not.pc%mat%row_distributed)
 
     allocate(indx(n_cpu))
 
@@ -101,13 +99,12 @@ contains
           if (n_i .eq. n_j) then
             j = n_i + 1
             ji = pc%rank_range(j)
-            if (distribute) then
+            if (distribute_row) then
               nr = pc%ranks_per_family(j)
-#ifdef USE_STRUMPACK
               ji =  ji + min((a_mat%irn(i)-Int1)/pc%n_per_rank(j), nr-1) ! row bin index for j-th family
-#elif USE_PASTIX6
+            elseif (distribute_col) then
+              nr = pc%ranks_per_family(j)
               ji =  ji + min((a_mat%jcn(i)-Int1)/pc%n_per_rank(j), nr-1) ! column bin index for j-th family
-#endif
             endif
             indx(ji) = indx(ji) + 1
             Asnd_buffer(indx(ji)) = a_mat%val(i)
@@ -131,13 +128,12 @@ contains
                 lmode = pc%mode_families_modes(j,l)
                 if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
                   ji = pc%rank_range(j)
-                  if (distribute) then
+                  if (distribute_row) then
                     nr = pc%ranks_per_family(j)
-#ifdef USE_STRUMPACK
                     ji =  ji + min((a_mat%irn(i)-1)/pc%n_per_rank(j), nr-1) ! row bin index for j-th family
-#elif USE_PASTIX6
+                  elseif (distribute_col) then
+                    nr = pc%ranks_per_family(j)
                     ji =  ji + min((a_mat%jcn(i)-1)/pc%n_per_rank(j), nr-1) ! row bin index for j-th family
-#endif
                   endif
                   indx(ji) = indx(ji) + 1
                   Asnd_buffer(indx(ji)) = a_mat%val(i)
@@ -348,13 +344,11 @@ contains
     integer(kind=int_all), allocatable                :: sendrecv(:)
     integer(kind=int_all)                             :: i, n_tor_int
     integer                                           :: j, ji, nm, nr, k, kmode, l, lmode, n_i, n_j, ierr
-    logical                                           :: distribute
+    logical                                           :: distribute_row, distribute_col
 
-#ifdef USE_STRUMPACK    
-    distribute = pc%mat%row_distributed
-#elif USE_PASTIX6
-    distribute = pc%mat%col_distributed
-#endif    
+
+    distribute_row = pc%mat%row_distributed.and.(.not.pc%mat%col_distributed)
+    distribute_col = pc%mat%col_distributed.and.(.not.pc%mat%row_distributed)
 
     n_tor_int = n_tor
 
@@ -369,13 +363,12 @@ contains
         if (n_i .eq. n_j) then
           j = n_i + 1
           ji = pc%rank_range(j)
-          if (distribute) then
+          if (distribute_row) then
             nr = pc%ranks_per_family(j)
-#ifdef USE_STRUMPACK
             ji =  ji + min((a_mat%irn(i)-Int1)/pc%n_per_rank(j), nr-1) ! row bin index for j-th family
-#elif USE_PASTIX6
+          elseif (distribute_col) then
+            nr = pc%ranks_per_family(j)
             ji =  ji + min((a_mat%jcn(i)-Int1)/pc%n_per_rank(j), nr-1) ! column bin index for j-th family
-#endif
           endif
           long_send_counts(ji) = long_send_counts(ji) + 1
         endif
@@ -396,13 +389,12 @@ contains
               lmode = pc%mode_families_modes(j,l)
               if ((n_i.eq.kmode).and.(n_j.eq.lmode)) then
                 ji = pc%rank_range(j)
-                if (distribute) then
+                if (distribute_row) then
                   nr = pc%ranks_per_family(j)
-#ifdef USE_STRUMPACK
                   ji =  ji + min((a_mat%irn(i)-Int1)/pc%n_per_rank(j), nr-1) ! row bin index for j-th family
-#elif USE_PASTIX6
+                elseif (distribute_col) then
+                  nr = pc%ranks_per_family(j)
                   ji =  ji + min((a_mat%jcn(i)-Int1)/pc%n_per_rank(j), nr-1) ! column bin index for j-th family
-#endif
                 endif
                 long_send_counts(ji) = long_send_counts(ji) + 1
               endif

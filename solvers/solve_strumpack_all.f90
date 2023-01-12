@@ -38,7 +38,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
 
   if (.not.solve_only) then
 
-    centralize = (n_cpu>1).and.(.not.ad_mat%row_distributed)
+    centralize = (n_cpu.gt.1).and.(.not.ad_mat%row_distributed)
 
     if (centralize) then
 
@@ -51,7 +51,6 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
 
     else
       call ad_mat%copy_to(ac_mat, with_data=.true.)
-      ac_mat%reduced = .true.
     endif
 
     if (.not. spss%initialized) then

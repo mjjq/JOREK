@@ -753,6 +753,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
 
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)
   
+  call check_if_distributed(a_mat)
   
      
   ! --- Memory tracking
@@ -793,6 +794,27 @@ subroutine  decrypt_index(ind, ivertex, iorder, ivar, itor)
   itor = ind2
 
 end subroutine decrypt_index
+
+!> check if matrix is row distributed
+subroutine check_if_distributed(a_mat)
+  use mpi_mod
+  use data_structure, only: type_SP_MATRIX
+  use mod_integer_types
+  implicit none
+
+  type(type_SP_MATRIX)  :: a_mat
+  integer(kind=int_all) :: nloc, nglob
+  integer               :: ierr
+
+  nloc = a_mat%irn(a_mat%nnz) - a_mat%irn(1) + 1
+  call MPI_AllReduce(nloc,nglob,1,MPI_INTEGER_ALL,MPI_SUM,a_mat%comm,ierr)
+  a_mat%row_distributed = (nglob.eq.a_mat%ng)
+
+  nloc = a_mat%jcn(a_mat%nnz) - a_mat%jcn(1) + 1
+  call MPI_AllReduce(nloc,nglob,1,MPI_INTEGER_ALL,MPI_SUM,a_mat%comm,ierr)
+  a_mat%col_distributed = (nglob.eq.a_mat%ng)
+
+end subroutine check_if_distributed
 
 
 end module construct_matrix_mod

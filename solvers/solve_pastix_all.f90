@@ -77,7 +77,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, tag)
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time factorization:', tsecond
 
-    if (n_cpu>1.and.(.not.ad_mat%reduced)) then
+    if ((n_cpu.gt.1).and.(ac_mat%reduced)) then
       if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"sp_mat",CAT_DMATRIX)
       if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"sp_mat",CAT_DMATRIX)
       if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"sp_mat",CAT_DMATRIX)

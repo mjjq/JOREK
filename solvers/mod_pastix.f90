@@ -147,6 +147,7 @@ module mod_pastix
     type(clcktype)                       :: t_itstart, t0, t1, t2, t3
     real*8                               :: tsecond
     type(c_ptr)                          :: irn_c, jcn_c, val_c, loc2glob_c, glob2loc_c
+    logical                              :: centralize
 
     external matrix_split_reduce
 
@@ -169,7 +170,9 @@ module mod_pastix
 
     endif
 
-    if ((n_cpu.gt.1).and.(.not.ad_mat%reduced)) then
+! centralize matrix if it's not distributed by columns; then it will be reduced and distributed
+    centralize = (n_cpu.gt.1).and.(.not.ad_mat%col_distributed)
+    if (centralize) then
 
       call clck_time(t0)
 
@@ -180,7 +183,6 @@ module mod_pastix
 
     else
       call ad_mat%copy_to(ac_mat, with_data=.true.)
-      ac_mat%reduced = .true.
     endif
 
     call clck_time(t0)
@@ -204,13 +206,13 @@ module mod_pastix
     dof = 1
 
     ! if not already distributed distribute matrix column-wise
-    if (ac_mat%reduced) then
-      call distribute_matrix(jmin, jmax, ac_mat)
-    elseif (ac_mat%col_distributed) then
+    if (ac_mat%col_distributed) then
     ! already column distributed;
       jmin = minval(ac_mat%jcn(1:ac_mat%nnz))
       jmax = maxval(ac_mat%jcn(1:ac_mat%nnz))
       ac_mat%jcn(1:ac_mat%nnz) = ac_mat%jcn(1:ac_mat%nnz) - jmin + ac_mat%indexing
+    else
+      call distribute_matrix(jmin, jmax, ac_mat)
     endif
 
     nnzg = 0

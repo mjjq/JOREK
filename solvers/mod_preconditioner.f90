@@ -30,7 +30,7 @@ module mod_preconditioner
 
     pc%autodistribute_ranks = autodistribute_ranks
     pc%autodistribute_modes = autodistribute_modes
-    pc%mat%row_distributed  = .not.centralize_harm_mat
+    !pc%mat%row_distributed  = .not.centralize_harm_mat
 
     if (pc%autodistribute_modes) then
       pc%n_mode_families = (n_tor + 1)/2

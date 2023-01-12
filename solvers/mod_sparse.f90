@@ -104,7 +104,14 @@ module mod_sparse
         solver%n_since_update = 0
       endif
 
-      if (.not.solver%pc%initialized) call initialize_preconditioner(solver%pc,a_mat%comm)
+      if (.not.solver%pc%initialized) then
+        call initialize_preconditioner(solver%pc,a_mat%comm)
+        ! set whether to distribute pc matrix when constructing by communication
+        if (solver%library.eq.strumpack) solver%pc%mat%row_distributed = .true.
+#if (defined USE_PASTIX6)
+        if (solver%library.eq.pastix) solver%pc%mat%col_distributed = .true.
+#endif
+      endif
 
 ! Finding PC solution
       if (.not.solver%solve_only) then

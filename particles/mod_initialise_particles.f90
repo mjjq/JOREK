@@ -27,6 +27,7 @@ module mod_initialise_particles
       integer, intent(out)   :: ifail
     end subroutine find_RZ
     function rej_f(n, P, gradP)
+      implicit none
       integer, intent(in) :: n
       real*8, dimension(n), intent(in) :: P
       real*8, dimension(3,n), intent(in) :: gradP
@@ -35,6 +36,7 @@ module mod_initialise_particles
     function real_f(n_x,x,st,time,i_elm,fields,x_min,x_max,&
     n_real_param,real_param,n_int_param,int_param)
       use mod_fields, only: fields_base
+      implicit none
       !> inputs:
       integer,intent(in)                                  :: n_x,i_elm
       integer,intent(in)                                  :: n_real_param,n_int_param
@@ -50,6 +52,7 @@ module mod_initialise_particles
     subroutine real_arr_inout_s(n_x,x,st,time,i_elm,fields,x_min,x_max,&
     n_real_param,real_param,n_int_param,int_param)
       use mod_fields, only: fields_base
+      implicit none
       !> inputs:
       integer,intent(in)                                  :: n_x,i_elm
       integer,intent(in)                                  :: n_real_param,n_int_param
@@ -62,6 +65,22 @@ module mod_initialise_particles
       !> inputs-outputs:
       real*8,dimension(n_x),intent(inout)                 :: x
     end subroutine real_arr_inout_s
+    subroutine part_inout_s(p_inout,n_x,x,time,fields,n_real_param,&
+    real_param,n_int_param,int_param)
+      use mod_particle_types, only: particle_base
+      use mod_fields,         only: fields_base
+      implicit none
+      !> inputs:
+      integer,intent(in)               :: n_x
+      integer,intent(in)               :: n_int_param,n_real_param
+      integer,dimension(n_int_param),intent(in) :: int_param
+      real*8,intent(in)                :: time
+      real*8,dimension(n_x),intent(in) :: x
+      real*8,dimension(n_real_param),intent(in) :: real_param
+      !> inputs-outputs:
+      class(particle_base),intent(inout) :: p_inout
+      class(fields_base),intent(inout)   :: fields
+    end subroutine
   end interface
 
 contains
@@ -264,6 +283,7 @@ end subroutine initialise_particles
 !> gdf. Both the gdf and the gdf sampling routines must be provided as inputs.
 !> Check examples/test_initialisation_phase_space.f90 for an example of its usage.
 !> Inputs:
+!>   n_dim:                  (integer) dimensionality of the phase space
 !>   particles:              (particle_base)(n_particles) particle array to be initialised
 !>   fields:                 (fields_base) jorek MHD fields data structure
 !>   rng_base:               (type_rng) type of random number generator to be used
@@ -275,15 +295,12 @@ end subroutine initialise_particles
 !>                           particle coordinates from the gdf probability density
 !>   sup_pdf:                (real8) pdf upper extremum
 !>   sup_gdf:                (real8) gdf upper extremum
+!>   sample_to_particle:     (part_inout_s) method use for transforming a sample in
+!>                           sample coordinates in particle coordinates
 !>   mass:                   (real8) particle mass
 !>   time:                   (real8) physical time at which particles are initialised
-!>   Ekinbound_in:           (real8)(2) kinetic energy upper and lower bounds
-!>   Pitchbound_in:          (real8)(2) pitch angle upper and lower bounds
-!>   Chibound_in:            (real8)(2) gyro-angle upper and lower bounds
-!>   Rbound_in:              (real8)(2) major radius upper and lower bounds
-!>   Zbound_in:              (real8)(2) vertical position upper and lower bounds
-!>   Phibound_in:            (real8)(2) toroidal angle upper and lower bounds
-!>   chargebound_in:         (real8)(2) electric charge upper and lower bounds
+!>   phase_bounds:           (real8)(n_dim,2) minima (first column) and maxima 
+!>                           (second column) of the sampling phase space interval
 !>   n_real_pdf_param_in:    (integer) number of real parameters of the pdf
 !>   real_pdf_param_in:      (real8)(n_real_pdf_param_in) pdf real parameters
 !>   n_int_pdf_param_in:     (integer) number of integer parameters of the pdf
@@ -296,14 +313,21 @@ end subroutine initialise_particles
 !>   real_gdf_param_in:      (real8)(n_real_gdf_param_in) gdf real parameters
 !>   n_int_gdf_param_in:     (integer) number of integer parameters of the gdf
 !>   int_gdf_param_in:       (integer)(n_int_gdf_param_in) gdf integer parameters
+!>   n_real_samp_to_part_in: (real8) size of the real parameter array of the
+!>                           sample to particle method
+!>   real_samp_to_part_in:   (real8) intger parameter array od the sample to particle method
+!>   n_int_samp_to_part_in:  (integer) size of the integer parameter array of the
+!>                           sample to particle method
+!>   int_samp_to_part_in:    (integer) intger parameter array od the sample to particle method
 !> Outputs:
 !>   particles:              (particle_base)(n_particles) initialised particle array
-subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf, weight_f, &
-  gdf, gdf_sampler, sup_pdf, sup_gdf, mass, time, Ekinbound_in, Pitchbound_in, Chibound_in, &
-  Rbound_in, Zbound_in, Phibound_in,chargebound_in, n_real_pdf_param_in, real_pdf_param_in, &
-  n_int_pdf_param_in, int_pdf_param_in,n_real_weight_param_in, real_weight_param_in, &
-  n_int_weight_param_in, int_weight_param_in, n_real_gdf_param_in, real_gdf_param_in, &
-  n_int_gdf_param_in, int_gdf_param_in)
+subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_base, pdf, weight_f, &
+  gdf, gdf_sampler, sup_pdf, sup_gdf, sample_to_particle, mass, time, phase_bounds, &
+  n_real_pdf_param_in, real_pdf_param_in, n_int_pdf_param_in, int_pdf_param_in, &
+  n_real_weight_param_in, real_weight_param_in, n_int_weight_param_in, int_weight_param_in, &
+  n_real_gdf_param_in, real_gdf_param_in, n_int_gdf_param_in, int_gdf_param_in, &
+  n_real_samp_to_part_param_in,real_samp_to_part_param_in,n_int_samp_to_part_param_in, &
+  int_samp_to_part_param_in)
   use constants,                 only: PI,TWOPI,SPEED_OF_LIGHT,EL_CHG,ATOMIC_MASS_UNIT
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   use mod_pusher_tools,          only: get_orthonormals
@@ -315,7 +339,6 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
 !$ use omp_lib
   
   !> parameters
-  integer,parameter :: n_variables=7
   integer,parameter :: chunksize=64
 
   !> inputs-outputs
@@ -325,16 +348,19 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   class(type_rng),intent(in)                           :: rng_base !< What type of random number generator to use (will be reseeded here)
   procedure(real_f)                                    :: pdf,weight_f,gdf
   procedure(real_arr_inout_s)                          :: gdf_sampler
-  integer,optional                                     :: n_real_pdf_param_in,n_int_pdf_param_in
-  integer,optional                                     :: n_real_weight_param_in,n_int_weight_param_in
-  integer,optional                                     :: n_real_gdf_param_in,n_int_gdf_param_in
+  procedure(part_inout_s)                              :: sample_to_particle
+  integer,intent(in)                                   :: n_dim
+  integer,intent(in),optional                          :: n_real_pdf_param_in,n_int_pdf_param_in
+  integer,intent(in),optional                          :: n_real_weight_param_in,n_int_weight_param_in
+  integer,intent(in),optional                          :: n_real_gdf_param_in,n_int_gdf_param_in
+  integer,intent(in),optional                          :: n_real_samp_to_part_param_in
+  integer,intent(in),optional                          :: n_int_samp_to_part_param_in 
   integer,dimension(:),allocatable,intent(in),optional :: int_pdf_param_in,int_weight_param_in
-  integer,dimension(:),allocatable,intent(in),optional :: int_gdf_param_in
+  integer,dimension(:),allocatable,intent(in),optional :: int_gdf_param_in,int_samp_to_part_param_in
   real*8,intent(in)                                    :: mass,time,sup_pdf,sup_gdf
-  real*8,dimension(2),intent(in),optional              :: Ekinbound_in, Pitchbound_in, Chibound_in
-  real*8,dimension(2),intent(in),optional              :: Rbound_in, Zbound_in, Phibound_in,chargebound_in
+  real*8,dimension(n_dim,2),intent(in)                 :: phase_bounds
   real*8,dimension(:),allocatable,intent(in),optional  :: real_pdf_param_in,real_weight_param_in
-  real*8,dimension(:),allocatable,intent(in),optional  :: real_gdf_param_in
+  real*8,dimension(:),allocatable,intent(in),optional  :: real_gdf_param_in,real_samp_to_part_param_in
 
   !> internal variables
   class(type_rng),dimension(:),allocatable :: rngs 
@@ -343,7 +369,9 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   integer                                  :: n_real_pdf_param,n_int_pdf_param
   integer                                  :: n_real_weight_param,n_int_weight_param
   integer                                  :: n_real_gdf_param,n_int_gdf_param
+  integer                                  :: n_real_samp_to_part_param,n_int_samp_to_part_param
   integer,dimension(:),allocatable         :: int_pdf_param,int_weight_param,int_gdf_param
+  integer,dimension(:),allocatable         :: int_samp_to_part_param
   real*8                                   :: Erest,psi,U
   real*8                                   :: one_over_sup_pdf,one_over_sup_gdf
   real*8,dimension(2)                      :: st
@@ -351,53 +379,19 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
   real*8,dimension(7,2)                    :: phase_bounds
   real*8,dimension(:),allocatable          :: variables,real_pdf_param,real_weight_param
-  real*8,dimension(:),allocatable          :: real_gdf_param
+  real*8,dimension(:),allocatable          :: real_gdf_param,real_samp_to_part_param
 
   !> extract id and size of the MPI Communicator
   call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, ifail)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ifail)
 
-  ! Setup bounding boxes
-  phase_bounds(3,:) = [0.d0, TWOPI]
-  if(present(Phibound_in)) phase_bounds(3,:) = Phibound_in
-  call domain_bounding_box(fields%node_list,fields%element_list,phase_bounds(1,1),phase_bounds(1,2),phase_bounds(2,1),phase_bounds(2,2))
-  !> check for more restrictive R bounding boxes
-  if(present(Rbound_in)) then
-    if(Rbound_in(1).gt.phase_bounds(1,1)) phase_bounds(1,1) = Rbound_in(1)
-    if((Rbound_in(2).lt.phase_bounds(1,2)).and.(Rbound_in(2).gt.phase_bounds(1,1))) phase_bounds(1,2) = Rbound_in(2)
-  endif
-  !> check for more restrictive Z bounding boxes
-  if(present(Zbound_in)) then
-    if((phase_bounds(2,1).lt.0.d0).and.(Zbound_in(1).gt.phase_bounds(2,1))) phase_bounds(2,1) = Zbound_in(1)
-    if((phase_bounds(2,1).ge.0.d0).and.(Zbound_in(1).lt.phase_bounds(2,1))) phase_bounds(2,1) = Zbound_in(1)
-    if((phase_bounds(2,2).lt.0.d0).and.(Zbound_in(2).gt.phase_bounds(2,2)).and.&
-      ((Zbound_in(2)-phase_bounds(2,1)).gt.0.d0)) phase_bounds(2,2) = Zbound_in(2)
-    if((phase_bounds(2,2).ge.0.d0).and.(Zbound_in(2).lt.phase_bounds(2,2)).and.&
-      ((Zbound_in(2)-phase_bounds(2,1)).gt.0.d0)) phase_bounds(2,2) = Zbound_in(2)
-  endif
-  !> Store momentum bounding box
-  phase_bounds(4,:) = [1.d3, 1.d6] !< kinetic energy in eV
-  if(present(Ekinbound_in)) then
-    if(Ekinbound_in(1).gt.0) phase_bounds(4,1) = Ekinbound_in(1)
-    if(Ekinbound_in(2).gt.0) phase_bounds(4,2) = Ekinbound_in(2)
-  endif
-  Erest = (mass*ATOMIC_MASS_UNIT/EL_CHG)*SPEED_OF_LIGHT**2 !< rest energy in eV
-  phase_bounds(4,:) = mass*SPEED_OF_LIGHT*sqrt(((phase_bounds(4,:)/Erest)+1.d0)**2-1.d0)
-  !> pitch angle and gyrangle boxes
-  phase_bounds(5,:) = [0.d0,PI]
-  if(present(Pitchbound_in)) phase_bounds(5,:) = Pitchbound_in
-  phase_bounds(6,:) = [0.d0, TWOPI]
-  if(present(Chibound_in)) phase_bounds(6,:) = Chibound_in
-  !> charge boxes
-  phase_bounds(7,:) = 1.d0
-  if(present(chargebound_in)) phase_bounds(7,:) = chargebound_in
   !> initialize random number generator
   n_threads = 1
 !$ n_threads = omp_get_max_threads()
-  allocate(variables(n_variables+1))
+  allocate(variables(n_dim+1))
   allocate(rngs(n_threads),source=rng_base)
   do ii=1,n_threads
-    call rngs(ii)%initialize(n_variables+1, random_seed(), n_cpu*n_threads, my_id*n_threads+ii,ifail)
+    call rngs(ii)%initialize(n_dim+1, random_seed(), n_cpu*n_threads, my_id*n_threads+ii,ifail)
     if (ifail.ne.0) call MPI_ABORT(MPI_COMM_WORLD, -1, ifail)
   end do
 
@@ -428,15 +422,28 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   if((present(int_gdf_param_in)).and.(n_int_gdf_param.gt.0)) then
     allocate(int_gdf_param(n_int_gdf_param)); int_gdf_param = int_gdf_param_in;
   endif
+  n_real_samp_to_part_param = 0; if(present(n_real_samp_to_part_param_in)) &
+  n_real_samp_to_part_param = n_real_samp_to_part_param_in
+  if((present(real_samp_to_part_param_in)).and.(n_real_samp_to_part_param.gt.0)) then
+    allocate(real_samp_to_part_param(n_real_samp_to_part_param)); 
+    real_samp_to_part_param = real_samp_to_part_param_in
+  endif
+  n_int_samp_to_part_param = 0; if(present(n_int_samp_to_part_param_in)) &
+  n_int_samp_to_part_param_in = n_int_samp_to_part_param;
+  if((present(int_samp_to_part_param_in)).and.(n_int_samp_to_part_param.gt.0)) then
+    allocate(int_samp_to_part_param(n_int_samp_to_part_param)); int_samp_to_part_param = int_samp_to_part_param_in;
+  endif
   call system_clock(t0)
 
   !> Loop on the particles
 #ifndef __NVCOMPILER
     !$omp parallel default(shared) &
-    !$omp firstprivate(n_particles,mass,time,phase_bounds,one_over_sup_pdf,&
+    !$omp firstprivate(n_dim,n_particles,mass,time,phase_bounds,one_over_sup_pdf,&
     !$omp one_over_sup_gdf,n_real_pdf_param,n_int_pdf_param,real_pdf_param,&
     !$omp int_pdf_param,n_real_weight_param,n_int_weight_param,real_weight_param,&
-    !$omp int_weight_param,n_real_gdf_param,n_int_gdf_param,real_gdf_param,int_gdf_param) &
+    !$omp int_weight_param,n_real_gdf_param,n_int_gdf_param,real_gdf_param,int_gdf_param,&
+    !$omp n_real_samp_to_part_param,n_int_samp_to_part_param,real_samp_to_part_param,&
+    !$omp int_samp_to_part_param) &
     !$omp private(ii,variables,thread_id,i_elm,st,ifail,B,e1,e2,E,psi,U)
     thread_id = 1
     !$ thread_id = omp_get_thread_num()+1
@@ -447,45 +454,30 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(rejection_funct_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,&
-        variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,gdf,&
+      do while(rejection_funct_gpdf(n_dim,variables(1:n_dim),st,time,i_elm,&
+        variables(n_dim+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,gdf,&
         one_over_sup_pdf,one_over_sup_gdf,n_real_pdf_param,real_pdf_param,n_int_pdf_param,&
         int_pdf_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param))
         !> uniform sampling in cylindrical coordinates for the physical space (R,Z,phi),
-        !> in spherical coordinates for the momentum space (p,pitch,gyro)
-        !> and uniform for the charge state
+        !> and general coordinates for the phase space
         call rngs(thread_id)%next(variables)
-        call gdf_sampler(n_variables,variables(1:n_variables),st,time,i_elm,fields,&
+        call gdf_sampler(n_dim,variables(1:n_dim),st,time,i_elm,fields,&
         phase_bounds(:,1),phase_bounds(:,2),n_real_gdf_param,real_gdf_param,&
         n_int_gdf_param,int_gdf_param)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
         variables(1),variables(2),i_elm,st(1),st(2),ifail) 
       enddo
-    !> store the values of accepted particles 
-     particles(ii)%x      = variables(1:3)
-     particles(ii)%st     = st
-     particles(ii)%i_elm  = i_elm
-     particles(ii)%weight = weight_f(n_variables,variables(1:n_variables),st,time,&
-     i_elm,fields,phase_bounds(:,1),phase_bounds(:,2),n_real_weight_param,&
-     real_weight_param,n_int_weight_param,int_weight_param)
-      select type (particle=>particles(ii))
-        type is (particle_kinetic_relativistic)
-          call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
-          B = B/norm2(B); call get_orthonormals(B,e1,e2);
-          particle%p = variables(4)*(cos(variables(5))*B+&
-          sin(variables(5))*(cos(variables(6))*e1+sin(variables(6))*e2))
-          particle%p = vector_cylindrical_to_cartesian(particle%x(3),particle%p)
-          particle%q = int(variables(7),kind=1)
-        type is (particle_kinetic) !< compute particle velocity from momentum
-          call fields%calc_EBpsiU(time,i_elm,st,variables(3),E,B,psi,U)
-          B = B/norm2(B); call get_orthonormals(B,e1,e2);
-          particle%v = variables(4)*(cos(variables(5))*B+&
-          sin(variables(5))*(cos(variables(6))*e1+sin(variables(6))*e2))
-          particle%v = vector_cylindrical_to_cartesian(particle%x(3),particle%v)
-          particle%v = (particle%v*SPEED_OF_LIGHT)/&
-          sqrt((mass*SPEED_OF_LIGHT)**2 + dot_product(particle%v,particle%v))
-          particle%q = int(variables(7),kind=1)           
-      end select
+      !> store the values of accepted particles 
+      particles(ii)%x      = variables(1:3)
+      particles(ii)%st     = st
+      particles(ii)%i_elm  = i_elm
+      particles(ii)%weight = weight_f(n_dim,variables(1:n_dim),st,time,&
+      i_elm,fields,phase_bounds(:,1),phase_bounds(:,2),n_real_weight_param,&
+      real_weight_param,n_int_weight_param,int_weight_param)
+      !> transform the remaining variables of the sampe in particle coordinates
+      call sample_to_particle(particles(ii),n_dim,variables(1:n_dim),time,fields,&
+      n_real_samp_to_part_param,real_samp_to_part_param,n_int_samp_to_param,&
+      int_samp_to_param)
     enddo
 #ifndef __NVCOMPILER
     !$omp end do
@@ -495,12 +487,14 @@ subroutine initialise_particles_in_phase_space(particles, fields, rng_base, pdf,
   !> clean-up
   call system_clock(t1)
   deallocate(variables); deallocate(rngs);
-  if(allocated(real_pdf_param))    deallocate(real_pdf_param)
-  if(allocated(int_pdf_param))     deallocate(int_pdf_param)
-  if(allocated(real_weight_param)) deallocate(real_weight_param)
-  if(allocated(int_weight_param))  deallocate(int_weight_param)
-  if(allocated(real_gdf_param))    deallocate(real_gdf_param)
-  if(allocated(int_gdf_param))     deallocate(int_gdf_param)
+  if(allocated(real_pdf_param))          deallocate(real_pdf_param)
+  if(allocated(int_pdf_param))           deallocate(int_pdf_param)
+  if(allocated(real_weight_param))       deallocate(real_weight_param)
+  if(allocated(int_weight_param))        deallocate(int_weight_param)
+  if(allocated(real_gdf_param))          deallocate(real_gdf_param)
+  if(allocated(int_gdf_param))           deallocate(int_gdf_param)
+  if(allocated(real_samp_to_part_param)) deallocate(real_samp_to_part_param)
+  if(allocated(int_samp_to_part_param))  deallocate(int_samp_to_part_param)
   write(*,'(i5,A,2f12.4)') my_id, ' Time particle initialize system (s) :',real(t1-t0,kind=8)/1d3
   if (my_id .eq. 0) then
     write(*,*) '* done initialising particles    *'

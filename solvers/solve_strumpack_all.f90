@@ -27,6 +27,8 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
   logical                     :: centralize = .true.
   logical                     :: verbose = .false.
 
+  external matrix_split_reduce
+
   comm = ad_mat%comm
 
   call MPI_COMM_RANK(comm, my_id, ierr)
@@ -39,28 +41,17 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
     centralize = (n_cpu>1).and.(.not.ad_mat%row_distributed)
 
     if (centralize) then
-  ! centralize distributed matrix ad_mat into ac_mat
-
-      call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-
-      ac_mat%ng = ad_mat%ng
-      ac_mat%block_size = ad_mat%block_size
-      ac_mat%comm = ad_mat%comm
 
       call clck_time(t0)
 
-      allocate(ac_mat%irn(ac_mat%nnz))
-      allocate(ac_mat%jcn(ac_mat%nnz))
-      allocate(ac_mat%val(ac_mat%nnz))
+      call matrix_split_reduce(ad_mat,ac_mat)
 
-      call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
-
-      call clck_time(t1)
-      call clck_ldiff(t0,t1,tsecond)
-      if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
+      call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+      if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
-      ac_mat = ad_mat
+      call ad_mat%copy_to(ac_mat, with_data=.true.)
+      ac_mat%reduced = .true.
     endif
 
     if (.not. spss%initialized) then

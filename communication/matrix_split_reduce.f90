@@ -1,24 +1,22 @@
-!> Gather distributed matrix ad_mat into centralized matrix ac_mat
+!> Reduces distributed matrix ad_mat into centralized matrix ac_mat
 ! using split MPI_Allgatherv if MPI counts beyond INT_MAX
-subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+subroutine matrix_split_reduce(ad_mat, ac_mat)
 
   use mpi_mod
   use mod_integer_types
   use data_structure, only: type_SP_MATRIX
   use tr_module
-
   implicit none
 
-  ! --- Routine variables
-  integer               :: n_cpu, my_id
-  !integer(kind=int_all) :: counts(n_cpu),displacements(n_cpu)
+  type(type_SP_MATRIX), intent(inout)  :: ad_mat
+  type(type_SP_MATRIX), intent(inout)  :: ac_mat
 
-  ! --- Local variables
-  integer               :: comm
+
+  integer               :: my_id, n_cpu, comm
   integer               :: i, i_cpu, ierr
   integer, allocatable  :: counts_int(:),displacements_int(:)
   integer(kind=int_all),allocatable :: counts(:), displacements(:) ! should be placed inside split_allgathersolve
-  
+
   integer(kind=int_all) :: i_long
 
   logical                :: need_to_split
@@ -30,24 +28,37 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   real*8,                allocatable :: Arecv_buffer(:)
   integer(kind=int_all), allocatable :: irecv_buffer(:), jrecv_buffer(:)
   integer(kind=int_all), allocatable :: index_buffer(:), index_target(:)
-  
-  type(type_SP_MATRIX)   :: ad_mat, ac_mat
-  
-  
+
   comm = ad_mat%comm
-  
+  call MPI_COMM_RANK(comm, my_id, ierr)
+  call MPI_COMM_SIZE(comm, n_cpu, ierr)
+
   if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
   if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
 
   call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
-  call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)  
-  
+  call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
+
   call MPI_Allgather(ad_mat%nnz,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,comm,ierr)
 
   displacements(1) = 0
   do i=2,n_cpu
     displacements(i) = displacements(i-1) + counts(i-1)
   enddo
+  
+  call ad_mat%copy_to(ac_mat, with_data=.false.) ! copy matrix parameters except arrays
+  ac_mat%reduced = .true.
+
+  ! Allocate centralized matrix
+  if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"RMatrix",CAT_DMATRIX)
+  if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"RMatrix",CAT_DMATRIX)
+  if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"RMatrix",CAT_DMATRIX)
+
+  ac_mat%nnz = sum(counts(1:n_cpu))
+
+  call tr_allocatep(ac_mat%irn,Int1,ac_mat%nnz,"RMatrix",CAT_DMATRIX)
+  call tr_allocatep(ac_mat%jcn,Int1,ac_mat%nnz,"RMatrix",CAT_DMATRIX)
+  call tr_allocatep(ac_mat%val,Int1,ac_mat%nnz,"RMatrix",CAT_DMATRIX)
 
   ! --- Check if we need to split
   need_to_split = .false.
@@ -76,12 +87,8 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
     n_split = ac_mat%nnz / INT_MAX + 1
     if (my_id .eq. 0) write(*,*) 'Warning: splitting matrix MPI centralisation', n_split
 
-    !write(*,*)'******* BEFORE SPLIT:'
-    !write(*,'(A,2i20)') 'nnz   ',my_id,mumps_par%nz
-    !write(*,'(A,10i20)')'counts',my_id,counts
-    !write(*,'(A,10i20)')'disps ',my_id,displacements
     do i_split=1,n_split
- 
+
       ! --- Split counts for each MPI chunk
       do i_cpu=1,n_cpu
         count_split = counts(i_cpu) / n_split
@@ -131,14 +138,8 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
           = jrecv_buffer(displacements_int(i_cpu)+1:displacements_int(i_cpu)+counts_int(i_cpu))
       enddo
 
-    !write(*,*)'******* NEW SPLIT:',i_split,n_split
-    !write(*,'(A,10i20)')'counts',my_id,counts_int
-    !write(*,'(A,10i20)')'index ',my_id,index_buffer
-    !write(*,'(A,10i20)')'disps ',my_id,displacements_int
-    !write(*,'(A,10i20)')'target',my_id,index_target
-
     enddo
- 
+
     ! --- Deallocate buffers of split matrix
     call tr_deallocate(Arecv_buffer,"SPL_GATH_Arecv_buffer",CAT_DMATRIX)
     call tr_deallocate(irecv_buffer,"SPL_GATH_irecv_buffer",CAT_DMATRIX)
@@ -169,7 +170,6 @@ subroutine split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
   call tr_deallocate(displacements_int,"SPL_GATH_displacements",CAT_DMATRIX)
   call tr_deallocate(counts,"counts",CAT_DMATRIX)
   call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
-  
-  return
 
-end subroutine split_allgathersolve
+  return
+end subroutine matrix_split_reduce

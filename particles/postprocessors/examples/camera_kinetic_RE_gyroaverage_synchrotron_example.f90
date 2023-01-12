@@ -37,6 +37,7 @@ type(filter_unity),dimension(:),allocatable :: filter_spectra
 type(camera_perspective_static)          :: camera
 type(gyroaverage_synchrotron_light_dist) :: synch_sources
 type(particle_sim),dimension(:),allocatable :: sims,sims_gc
+logical                            :: write_gc_in_txt
 integer                            :: ii,n_1d,n_2d,t0,t1
 integer                            :: n_groups,my_id,n_cpus,n_x,ierr
 integer                            :: n_wavelenghts,n_spectra
@@ -46,14 +47,19 @@ integer,dimension(:),allocatable   :: int_camera_param
 real*8,dimension(:),allocatable    :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable    :: real_camera_param,sim_times
 real*8,dimension(:,:,:,:,:),allocatable :: pixel_filter_values
+character(len=4)                   :: extension
 character(len=15)                  :: particle_filename
 character(len=17)                  :: fields_filename
 character(len=24)                  :: image_filename
+character(len=27)                  :: filename_gc_txt_root
+character(len=33)                  :: filename_gc_txt
 
 !> Variable definitions -------------------------------------------------------------------
-particle_filename = 'part_restart.h5'
-fields_filename   = 'jorek_equilibrium'
-image_filename    = 'pixel_filter_intensities'
+particle_filename    = 'part_restart.h5'
+fields_filename      = 'jorek_equilibrium'
+image_filename       = 'pixel_filter_intensities'
+filename_gc_txt_root = 'jorek_relativistic_gc_data_'
+extension            = '.txt'
 n_1d = 1; n_2d = 2;
 n_x = 3 !< number of spatial coordinates
 n_groups = 1 !< number of particle groups
@@ -62,6 +68,7 @@ n_wavelenghts = 40
 n_int_camera_param  = 5
 n_real_camera_param = 9
 n_times = 1
+write_gc_in_txt = .true.
 !> JET KDLT-E5WC wavelenght: 3d-6 - 3.5d-6 [m]
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
 allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
@@ -95,6 +102,13 @@ do ii=1,n_times
 enddo
 if(allocated(sims)) deallocate(sims)
 write(*,*) 'Reading particle data: completed!' 
+
+if(write_gc_in_txt) then
+  write(*,*) 'Write particle data in txt file'
+  write(filename_gc_txt,'(A,I2,A)') filename_gc_txt_root,my_id,extension
+  call dump_relativistic_gc_in_txt(filename_gc_txt,sims_gc)
+  write(*,*) 'Write particle data in txt file: completed!'
+endif
 
 !> Initialise synthetic diagnostics
 write(*,*) 'Initialise synthetic camera and light sources ...'
@@ -197,5 +211,56 @@ subroutine relativistic_kinetic_sim_to_relativistic_gc_sim(sim_kin,sim_gc)
   end select
   enddo
 end subroutine relativistic_kinetic_sim_to_relativistic_gc_sim
+
+!> dump gc particles in a txt file with name filename
+!> sequence of the writint data:
+!> 1:R, 2:Z, 3:phi, 4:parallel momentum, 5:magnetic moment, 
+!> 6:weight 7:total momentum 8:pitch angle, 9:mass, 10:charge
+!> inputs:
+!>   filename: (character) name of the file 
+!>   sims_gc:  (particle_sim)(n_times) gc simulation
+!> outputs:
+!>   sim_gc:   (particle_sim) gc simulation
+subroutine dump_relativistic_gc_in_txt(filename,sims_gc)
+  implicit none
+  !> Inputs-Outputs:
+  type(particle_sim),dimension(:),allocatable,intent(inout) :: sims_gc
+  !> Inputs:
+  character(len=*),intent(in) :: filename
+  !> Variables
+  integer             :: ii,jj,kk,ifail
+  real*8              :: momentum_tot,momentum_perp_2
+  real*8              :: pitch_angle,normB,psi,U
+  real*8,dimension(3) :: B_field,E_field
+  !> open the file
+  open(unit=43,file=trim(filename),action='write',blank='NULL',&
+  form='formatted',status='unknown',iostat=ifail)
+  !> write gc data into txt
+  do kk=1,size(sims_gc)
+    do jj=1,size(sims_gc(kk)%groups)
+      select type (p_list=>sims_gc(kk)%groups(jj)%particles)
+        type is (particle_gc_relativistic)
+        do ii=1,size(p_list)
+          call sims_gc(kk)%fields%calc_EBpsiU(sims_gc(kk)%time,&
+          p_list(ii)%i_elm,p_list(ii)%st,p_list(ii)%x(3),E_field,&
+          B_field,psi,U); normB = norm2(B_field);
+          !> compute the squared perpendicular momentum and total momentum
+          momentum_perp_2 = 2d0*p_list(ii)%p(2)*sims_gc(kk)%groups(jj)%mass*normB
+          momentum_tot    = sqrt(p_list(ii)%p(1)**2 + momentum_perp_2)
+          !> compute the pitch angle
+          pitch_angle     = (p_list(ii)%p(2)/abs(p_list(ii)%p(2)))*sqrt(momentum_perp_2)
+          pitch_angle     = atan2(pitch_angle,p_list(ii)%p(1))
+          if(pitch_angle.lt.0d0) pitch_angle = TWOPI+pitch_angle
+          !> write data in txt
+          write(43,'(10E40.16E4)') p_list(ii)%x(1),p_list(ii)%x(2),p_list(ii)%x(3),&
+          p_list(ii)%p(1),p_list(ii)%p(2),p_list(ii)%weight,momentum_tot,&
+          pitch_angle,sims_gc(kk)%groups(jj)%mass,real(p_list(ii)%q,kind=8)
+        enddo
+      end select
+    enddo
+  enddo
+  !> close the file
+  close(43)
+end subroutine dump_relativistic_gc_in_txt
 
 end program camera_kinetic_RE_gyroaverage_synchrotron_example

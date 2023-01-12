@@ -78,7 +78,6 @@ module mod_sparse
         if (verbose) write(*,*) "Using PaStiX solver"
         solver%ptss%equilibrium = solver%equilibrium
         solver%ptss%refine = .true.
-        solver%ptss%tag = my_id
         call solve_pastix_all(solver%ptss, a_mat, rhs_vec, solver%solve_only, tag)
 #endif
       endif
@@ -124,7 +123,6 @@ module mod_sparse
 #endif
       elseif (solver%library.eq.pastix) then
 #if (defined USE_PASTIX) || (defined USE_PASTIX6)
-        solver%ptss%tag = my_id
         call solve_pastix_all(solver%ptss, solver%pc%mat, solver%pc%rhs, solver%solve_only, tag)
 #endif
       endif

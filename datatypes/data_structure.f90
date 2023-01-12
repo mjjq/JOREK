@@ -170,7 +170,7 @@ module data_structure
     logical                                      :: scaled = .false.
     logical                                      :: row_distributed = .false.
     logical                                      :: col_distributed = .false.
-    logical                                      :: centralized = .false. !< matrix is available on all comm ranks (not distribued)
+    logical                                      :: reduced = .false. !< matrix is available on all comm ranks (not distribued)
 
   contains
     procedure :: copy_to
@@ -337,22 +337,25 @@ contains
     deallocate(thread_struct)
   end subroutine del_thread_buffers
   
-! a = self
-  subroutine copy_to(self, mat_a)
-    class(type_SP_MATRIX), intent(in) :: self
+! copy one matrix structure into another
+  subroutine copy_to(self, mat_a, with_data)
+    class(type_SP_MATRIX), intent(in)    :: self
     class(type_SP_MATRIX), intent(inout) :: mat_a
+    logical                              :: with_data
 
-    mat_a%irn            => self%irn
-    mat_a%jcn            => self%jcn
-    mat_a%val            => self%val
+    if (with_data) then
+      mat_a%irn            => self%irn
+      mat_a%jcn            => self%jcn
+      mat_a%val            => self%val
 
-    mat_a%ijA_size       => self%ijA_size
-    mat_a%ijA_index      => self%ijA_index
-    mat_a%irn_jcn        => self%irn_jcn
+      mat_a%ijA_size       => self%ijA_size
+      mat_a%ijA_index      => self%ijA_index
+      mat_a%irn_jcn        => self%irn_jcn
 
-    mat_a%column_scaling => self%column_scaling
-    mat_a%index_min      => self%index_min
-    mat_a%index_max      => self%index_max
+      mat_a%column_scaling => self%column_scaling
+      mat_a%index_min      => self%index_min
+      mat_a%index_max      => self%index_max
+    endif
 
     mat_a%indexing        = self%indexing
     mat_a%ng              = self%ng
@@ -368,7 +371,7 @@ contains
     mat_a%scaled          = self%scaled
     mat_a%row_distributed = self%row_distributed
     mat_a%col_distributed = self%col_distributed
-    mat_a%centralized     = self%centralized
+    mat_a%reduced         = self%reduced
 
     return
   end subroutine

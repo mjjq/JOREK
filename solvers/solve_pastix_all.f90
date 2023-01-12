@@ -42,7 +42,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, tag)
     ptss%rhs_val => rhs_vec%val
 
 #ifdef USE_PASTIX
-    call pastix_set_mat(ptss, ad_mat, ac_mat)
+    call pastix_set_mat(ptss, ad_mat, ac_mat, tag)
 
     if (.not. ptss%initialized) then
       ptss%comm = ad_mat%comm
@@ -54,7 +54,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, tag)
       call pastix_initialize(ptss)
     endif
 
-    call pastix_set_mat(ptss, ad_mat, ac_mat)
+    call pastix_set_mat(ptss, ad_mat, ac_mat, tag)
 #endif
 
     !call save_mat_h5(tag,ac_mat%ng,ac_mat%nnz,ac_mat%irn,ac_mat%jcn,ac_mat%val,rhs_vec%val)
@@ -77,7 +77,7 @@ subroutine solve_pastix_all(ptss, ad_mat, rhs_vec, solve_only, tag)
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time factorization:', tsecond
 
-    if (n_cpu>1.and.(.not.ad_mat%centralized)) then
+    if (n_cpu>1.and.(.not.ad_mat%reduced)) then
       if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"sp_mat",CAT_DMATRIX)
       if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"sp_mat",CAT_DMATRIX)
       if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"sp_mat",CAT_DMATRIX)

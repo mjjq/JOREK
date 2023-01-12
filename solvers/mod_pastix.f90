@@ -21,7 +21,6 @@ module mod_pastix
     real(kind=8), dimension(:), pointer          :: rhs_val => Null()
 
     integer                                      :: verb = 1                      !< flag for logfile printout (0: no printout)
-    integer                                      :: tag = 0                       !< tag to be used for controlled output, e.g. global MPI rank
 
   end type type_PASTIX_SOLVER
 
@@ -124,7 +123,7 @@ module mod_pastix
 !! Matrix is distributed column-wise among MPI processes in comm
 !! The values are scaled such that the largest value in each column is 1
 !! The matrix is converted to CSC format as required by distributed PaStiX
-  subroutine pastix_set_mat(ptss, ad_mat, ac_mat)
+  subroutine pastix_set_mat(ptss, ad_mat, ac_mat, tag)
 
     use, intrinsic :: iso_c_binding
     use mod_coicsr, only: coicsr, coicsr2
@@ -132,12 +131,12 @@ module mod_pastix
     use mpi_mod
     use data_structure, only: type_SP_MATRIX
     use mod_clock
-    use tr_module
 
     implicit none
 
     type(type_PASTIX_SOLVER)             :: ptss
     type(type_SP_MATRIX)                 :: ad_mat, ac_mat
+    integer                              :: tag
     integer                              :: n_cpu, my_id, ierr, comm
     integer(kind=int_all)                :: i, k, nnzg
     integer*8                            :: check_data
@@ -149,6 +148,7 @@ module mod_pastix
     real*8                               :: tsecond
     type(c_ptr)                          :: irn_c, jcn_c, val_c, loc2glob_c, glob2loc_c
 
+    external matrix_split_reduce
 
     comm = ad_mat%comm
 
@@ -169,34 +169,19 @@ module mod_pastix
 
     endif
 
-    if (n_cpu>1) then
-
-      call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-
-      ac_mat%ng = ad_mat%ng
-      ac_mat%block_size = ad_mat%block_size
-      ac_mat%comm = ad_mat%comm
-
-      if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"sp_mat",CAT_DMATRIX)
-      if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"sp_mat",CAT_DMATRIX)
-      if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"sp_mat",CAT_DMATRIX)
-
-      call tr_allocatep(ac_mat%val,1,ac_mat%nnz,"sp_mat",CAT_DMATRIX)
-      call tr_allocatep(ac_mat%irn,1,ac_mat%nnz,"sp_mat",CAT_DMATRIX)
-      call tr_allocatep(ac_mat%jcn,1,ac_mat%nnz,"sp_mat",CAT_DMATRIX)
+    if ((n_cpu.gt.1).and.(.not.ad_mat%reduced)) then
 
       call clck_time(t0)
 
-      call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+      call matrix_split_reduce(ad_mat,ac_mat)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0)  write(*,FMT_TIMING) my_id, '## Elapsed time mpi_gather :', tsecond
+      if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
-      call ad_mat%copy_to(ac_mat)
+      call ad_mat%copy_to(ac_mat, with_data=.true.)
+      ac_mat%reduced = .true.
     endif
-
-    ac_mat%centralized = .true.
 
     call clck_time(t0)
 
@@ -219,7 +204,7 @@ module mod_pastix
     dof = 1
 
     ! if not already distributed distribute matrix column-wise
-    if (ac_mat%centralized) then
+    if (ac_mat%reduced) then
       call distribute_matrix(jmin, jmax, ac_mat)
     elseif (ac_mat%col_distributed) then
     ! already column distributed;
@@ -266,7 +251,9 @@ module mod_pastix
       call coicsr(ac_mat%ng,ac_mat%nnz,1,ac_mat%val,ac_mat%irn,ac_mat%jcn,sparskit_work)
 !#endif
       deallocate(sparskit_work)
+
       irn_c = c_loc(ac_mat%irn); jcn_c = c_loc(ac_mat%jcn); val_c = c_loc(ac_mat%val);
+
     endif
 
     call MPI_Barrier(comm,ierr)
@@ -395,13 +382,9 @@ module mod_pastix
 
       allocate(al_mat%irn(al_mat%nnz),al_mat%jcn(al_mat%nnz),al_mat%val(al_mat%nnz))
 
-      al_mat%col_distributed = .true.
-      al_mat%centralized = .false.
-      al_mat%indexing = ac_mat%indexing
-
       do i = 1, al_mat%nnz
-        al_mat%irn(i) = ac_mat%irn(myelm(i)) - dist(my_id + 1) + al_mat%indexing
-        al_mat%jcn(i) = ac_mat%jcn(myelm(i))
+        al_mat%irn(i) = ac_mat%irn(myelm(i))
+        al_mat%jcn(i) = ac_mat%jcn(myelm(i)) - dist(my_id + 1) + ac_mat%indexing
         al_mat%val(i) = ac_mat%val(myelm(i))
       enddo
 
@@ -411,6 +394,7 @@ module mod_pastix
       ac_mat%irn => al_mat%irn
       ac_mat%jcn => al_mat%jcn
       ac_mat%val => al_mat%val
+      ac_mat%nnz = al_mat%nnz
 
     endif
 
@@ -459,8 +443,6 @@ module mod_pastix
     integer(kind=8)                              :: block_size = 1
     integer(kind=8)                              :: nthrd = 1
 
-    integer                                      :: tag = 0                     !< tag to be used for controlled output, e.g. global MPI rank
-
   end type type_PASTIX_SOLVER
 
   private
@@ -471,7 +453,7 @@ module mod_pastix
 
 !> Prepares matrix for PaStiX5 solver:
 !  rescale columns; convert to csc format
-  subroutine pastix_set_mat(ptss, ad_mat, ac_mat)
+  subroutine pastix_set_mat(ptss, ad_mat, ac_mat, tag)
     use mpi_mod
     use mod_clock
     use mod_coicsr
@@ -481,6 +463,7 @@ module mod_pastix
 
     type(type_PASTIX_SOLVER)             :: ptss
     type(type_SP_MATRIX)                 :: ad_mat, ac_mat
+    integer                              :: tag
     type(clcktype)                       :: t_itstart, t0, t1, t2, t3
     real*8                               :: tsecond
     integer                              :: n_cpu, my_id, ierr, comm
@@ -490,6 +473,8 @@ module mod_pastix
     integer                              :: block_size, block_size2
     integer(kind=int_all)                :: nblock, nnz_block
     integer(kind=int_all), allocatable   :: sparskit_work(:)
+
+    external matrix_split_reduce
 
     comm = ad_mat%comm
 
@@ -510,28 +495,18 @@ module mod_pastix
 
     endif
 
-    if ((n_cpu.gt.1).and.(.not.ad_mat%centralized)) then
-
-      ac_mat%nnz = 0
-      call MPI_Allreduce(ad_mat%nnz,ac_mat%nnz,1,MPI_INTEGER_ALL,MPI_SUM,comm,ierr)
-
-      ac_mat%ng = ad_mat%ng
-      ac_mat%block_size = ad_mat%block_size
-      ac_mat%comm = ad_mat%comm
-
-      allocate(ac_mat%irn(ac_mat%nnz))
-      allocate(ac_mat%jcn(ac_mat%nnz))
-      allocate(ac_mat%val(ac_mat%nnz))
+    if ((n_cpu.gt.1).and.(.not.ad_mat%reduced)) then
 
       call clck_time(t0)
 
-      call split_allgathersolve(n_cpu,my_id,ad_mat,ac_mat)
+      call matrix_split_reduce(ad_mat,ac_mat)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (my_id .eq. 0)  write(*,FMT_TIMING) ptss%tag, '## Elapsed time mpi_gather :', tsecond
+      if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
-      ac_mat = ad_mat
+      call ad_mat%copy_to(ac_mat, with_data=.true.)
+      ac_mat%reduced = .true.
     endif
 
     call clck_time(t0)
@@ -560,7 +535,7 @@ module mod_pastix
 
     call clck_time(t1)
     call clck_ldiff(t0,t1,tsecond)
-    if (my_id .eq. 0)  write(*,FMT_TIMING) ptss%tag, '## Elapsed time coicsr :', tsecond
+    if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time coicsr :', tsecond
 
     ! End of matrix preparation
     ptss%irn => ac_mat%irn
@@ -602,7 +577,7 @@ module mod_pastix
 
     call pastix_init_nthreads(ptss)
 
-    if (my_id .eq. 0) write(*,'(i5,A,i5)') ptss%tag,' PastiX n_threads : ', ptss%nthrd
+    if (my_id .eq. 0) write(*,'(A,i5)') ' PastiX n_threads : ', ptss%nthrd
 
     allocate(ptss%perm_vars(ptss%nblock))
     allocate(ptss%iperm_vars(ptss%nblock))

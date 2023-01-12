@@ -47,7 +47,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
       call matrix_split_reduce(ad_mat,ac_mat)
 
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
-      if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
+      if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
       call ad_mat%copy_to(ac_mat, with_data=.true.)

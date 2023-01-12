@@ -164,6 +164,9 @@ module mod_sparse
 #ifdef USE_MUMPS
     use mod_mumps, only: mumps_finalize
 #endif
+#ifdef USE_STRUMPACK
+    use mod_strumpack, only: strumpack_finalize
+#endif
     implicit none
 
     type(type_SP_SOLVER)     :: solver
@@ -175,6 +178,9 @@ module mod_sparse
 #endif
 #ifdef USE_MUMPS
     if (solver%mmss%initialized) call mumps_finalize(solver%mmss)
+#endif
+#ifdef USE_STRUMPACK
+    if (solver%spss%initialized) call strumpack_finalize(solver%spss)
 #endif
 
     solver%solve_only   = .false.

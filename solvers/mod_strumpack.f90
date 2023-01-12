@@ -14,13 +14,13 @@ module mod_strumpack
     logical                          :: initialized = .false.
     logical                          :: analyzed = .false.
     logical                          :: equilibrium = .false.
-    integer                          :: comm
+    integer                          :: comm = 0
   end type type_STRUMPACK_SOLVER
 
   private
   public :: type_STRUMPACK_SOLVER, &
             strumpack_init, strumpack_set_mat, strumpack_analyze, &
-            strumpack_factorize, strumpack_solve
+            strumpack_factorize, strumpack_solve, strumpack_finalize
 
   interface
     subroutine spk() bind(C)
@@ -304,7 +304,27 @@ module mod_strumpack
       call MPI_Barrier(spss%comm,ierr)
 
       return
-    end subroutine strumpack_solve    
+    end subroutine strumpack_solve
+
+!> Finalize strumpack solver instance
+    subroutine strumpack_finalize(spss)
+      implicit none
+
+      type(type_STRUMPACK_SOLVER)   :: spss
+
+      if (associated(spss%distr)) then
+        deallocate(spss%distr); spss%distr => null()
+      endif
+
+      call spk_finalize(spss%sscp, spss%comm)
+
+      spss%initialized = .false.
+      spss%analyzed    = .false.
+      spss%equilibrium = .false.
+      spss%comm        = 0
+
+      return
+    end subroutine strumpack_finalize
    
 !> Distribute rows between members of MPI group   
     subroutine distribute_rows(a_mat,n_cpu,distr)

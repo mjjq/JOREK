@@ -80,7 +80,6 @@ real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
 real*8     :: eta_ARAZ, tauIC_ARAZ
 logical    :: use_fft
 
-
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t, x_ss, x_st, x_tt
 real*8, dimension(n_gauss,n_gauss)    :: y_g, y_s, y_t, y_ss, y_st, y_tt
 real*8, dimension(n_gauss,n_gauss)    :: Fprofile
@@ -179,7 +178,6 @@ real*8     :: VdiaR0_AZ__p,  VdiaR0_AZ__n
 real*8     :: VdiaR0_A3__p,  VdiaR0_A3__n
 real*8     :: VdiaR0_rho__p, VdiaR0_rho__n
 real*8     :: VdiaR0_Ti__p,  VdiaR0_Ti__n
-real*8     :: VdiaR0_T__p,   VdiaR0_T__n
 
 real*8     :: VdiaZ0
 real*8     :: VdiaZ0_AR__p,  VdiaZ0_AR__n
@@ -187,7 +185,6 @@ real*8     :: VdiaZ0_AZ__p,  VdiaZ0_AZ__n
 real*8     :: VdiaZ0_A3__p,  VdiaZ0_A3__n
 real*8     :: VdiaZ0_rho__p, VdiaZ0_rho__n
 real*8     :: VdiaZ0_Ti__p,  VdiaZ0_Ti__n
-real*8     :: VdiaZ0_T__p ,  VdiaZ0_T__n
 
 real*8     :: VdiaP0
 real*8     :: VdiaP0_AR__p,  VdiaP0_AR__n
@@ -195,7 +192,6 @@ real*8     :: VdiaP0_AZ__p,  VdiaP0_AZ__n
 real*8     :: VdiaP0_A3__p,  VdiaP0_A3__n
 real*8     :: VdiaP0_rho__p, VdiaP0_rho__n
 real*8     :: VdiaP0_Ti__p,  VdiaP0_Ti__n
-real*8     :: VdiaP0_T__p ,  VdiaP0_T__n
 
 real*8     :: VdiaGradUR
 real*8     :: VdiaGradUR_AR__p,  VdiaGradUR_AR__n
@@ -204,7 +200,6 @@ real*8     :: VdiaGradUR_A3__p,  VdiaGradUR_A3__n
 real*8     :: VdiaGradUR_rho__p, VdiaGradUR_rho__n
 real*8     :: VdiaGradUR_Ti__p,  VdiaGradUR_Ti__n
 real*8     :: VdiaGradUR_UR__p,  VdiaGradUR_UR__n
-real*8     :: VdiaGradUR_T__p ,  VdiaGradUR_T__n
 
 real*8     :: VdiaGradUZ
 real*8     :: VdiaGradUZ_AR__p,  VdiaGradUZ_AR__n
@@ -213,7 +208,6 @@ real*8     :: VdiaGradUZ_A3__p,  VdiaGradUZ_A3__n
 real*8     :: VdiaGradUZ_rho__p, VdiaGradUZ_rho__n
 real*8     :: VdiaGradUZ_Ti__p,  VdiaGradUZ_Ti__n
 real*8     :: VdiaGradUZ_UZ__p,  VdiaGradUZ_UZ__n
-real*8     :: VdiaGradUZ_T__p ,  VdiaGradUZ_T__n
 
 real*8     :: VdiaGradUp
 real*8     :: VdiaGradUp_AR__p,  VdiaGradUp_AR__n
@@ -222,7 +216,6 @@ real*8     :: VdiaGradUp_A3__p,  VdiaGradUp_A3__n
 real*8     :: VdiaGradUp_rho__p, VdiaGradUp_rho__n
 real*8     :: VdiaGradUp_Ti__p,  VdiaGradUp_Ti__n
 real*8     :: VdiaGradUp_Up__p,  VdiaGradUp_Up__n
-real*8     :: VdiaGradUp_T__p ,  VdiaGradUp_T__n
 
 real*8     :: VdiaGradVstar__p, VdiaGradVstar__k
 real*8     :: VdiaGradVstar_AR__p,  VdiaGradVstar_AR__n,  VdiaGradVstar_AR__k,  VdiaGradVstar_AR__kn
@@ -230,7 +223,6 @@ real*8     :: VdiaGradVstar_AZ__p,  VdiaGradVstar_AZ__n,  VdiaGradVstar_AZ__k,  
 real*8     :: VdiaGradVstar_A3__p,  VdiaGradVstar_A3__n,  VdiaGradVstar_A3__k,  VdiaGradVstar_A3__kn
 real*8     :: VdiaGradVstar_rho__p, VdiaGradVstar_rho__n, VdiaGradVstar_rho__k, VdiaGradVstar_rho__kn
 real*8     :: VdiaGradVstar_Ti__p,  VdiaGradVstar_Ti__n,  VdiaGradVstar_Ti__k,  VdiaGradVstar_Ti__kn
-real*8     :: VdiaGradVstar_T__p ,  VdiaGradVstar_T__n ,  VdiaGradVstar_T__k ,  VdiaGradVstar_T__kn
 
 real*8     :: Btht, Btht_AR__p, Btht_AR__n, Btht_AZ__p, Btht_AZ__n, Btht_A3
 real*8     :: Vtht
@@ -240,14 +232,12 @@ real*8     :: Vtht_A3__p,  Vtht_A3__n
 real*8     :: Vtht_rho__p, Vtht_rho__n
 real*8     :: Vtht_Ti__p,  Vtht_Ti__n
 real*8     :: Vtht_UR, Vtht_UZ
-real*8     :: Vtht_T__p,  Vtht_T__n
 
 real*8     :: Vneo
 real*8     :: Vneo_AR__p,  Vneo_AR__n
 real*8     :: Vneo_AZ__p,  Vneo_AZ__n
 real*8     :: Vneo_A3__p,  Vneo_A3__n
 real*8     :: Vneo_Ti__p,  Vneo_Ti__n
-real*8     :: Vneo_T__p ,  Vneo_T__n
 
 real*8     :: PneoR
 real*8     :: PneoR_AR__p,  PneoR_AR__n
@@ -255,9 +245,8 @@ real*8     :: PneoR_AZ__p,  PneoR_AZ__n
 real*8     :: PneoR_A3__p,  PneoR_A3__n
 real*8     :: PneoR_rho__p, PneoR_rho__n
 real*8     :: PneoR_Ti__p,  PneoR_Ti__n
-real*8     :: PneoR_T__p ,  PneoR_T__n
-
 real*8     :: PneoR_UR,     PneoR_UZ
+
 real*8     :: PneoZ
 real*8     :: PneoZ_AR__p,  PneoZ_AR__n
 real*8     :: PneoZ_AZ__p,  PneoZ_AZ__n
@@ -265,7 +254,6 @@ real*8     :: PneoZ_A3__p,  PneoZ_A3__n
 real*8     :: PneoZ_rho__p, PneoZ_rho__n
 real*8     :: PneoZ_Ti__p,  PneoZ_Ti__n
 real*8     :: PneoZ_UR,     PneoZ_UZ
-real*8     :: PneoZ_T__p ,  PneoZ_T__n
 
 real*8     :: ZKi_prof, ZKe_prof, ZK_prof, D_prof, psi_norm, D_prof_imp
 
@@ -283,7 +271,6 @@ real*8     :: Qconv_UR_UZ__p,  Qconv_UR_UZ__n
 real*8     :: Qconv_UR_Up__p,  Qconv_UR_Up__n
 real*8     :: Qconv_UR_rho__p, Qconv_UR_rho__n
 real*8     :: Qconv_UR_Ti__p,  Qconv_UR_Ti__n
-real*8     :: Qconv_UR_T__p ,  Qconv_UR_T__n
 
 real*8     :: Qconv_UZ
 real*8     :: Qconv_UZ_AR__p,  Qconv_UZ_AR__n
@@ -294,7 +281,6 @@ real*8     :: Qconv_UZ_UZ__p,  Qconv_UZ_UZ__n
 real*8     :: Qconv_UZ_Up__p,  Qconv_UZ_Up__n
 real*8     :: Qconv_UZ_rho__p, Qconv_UZ_rho__n
 real*8     :: Qconv_UZ_Ti__p,  Qconv_UZ_Ti__n
-real*8     :: Qconv_UZ_T__p ,  Qconv_UZ_T__n
 
 real*8     :: Qconv_Up
 real*8     :: Qconv_Up_AR__p,  Qconv_Up_AR__n
@@ -305,7 +291,6 @@ real*8     :: Qconv_Up_UZ__p,  Qconv_Up_UZ__n
 real*8     :: Qconv_Up_Up__p,  Qconv_Up_Up__n
 real*8     :: Qconv_Up_rho__p, Qconv_Up_rho__n
 real*8     :: Qconv_Up_Ti__p,  Qconv_Up_Ti__n
-real*8     :: Qconv_Up_T__p ,  Qconv_Up_T__n
 
 real*8     :: JxB_UR__p, JxB_UR__k
 real*8     :: JxB_UZ__p, JxB_UZ__k
@@ -395,8 +380,6 @@ integer    :: i_imp                                           ! Loop for more th
 ! --- Matrix
 real*8, dimension(n_var      )   :: rhs_p_ij, rhs_k_ij, Pvec_prev, Qvec_p, Qvec_k
 real*8, dimension(n_var,n_var)   :: amat, Pjac, Qjac_p, Qjac_k, Qjac_n, Qjac_kn
-
-real*8     :: BgradPe_factor, Vdia_factor, Vneo_factor
 
 ! --- Ohmic heating, for details please see:
 ! https://www.jorek.eu/wiki/doku.php?id=ohmic_heating
@@ -1450,12 +1433,7 @@ do i=1,n_vertex_max
           UgradTe  = UR0 * Te0_R  + UZ0 * Te0_Z  + Up0 * Te0_p  / R
           UgradT   = UR0 * T0_R   + UZ0 * T0_Z   + Up0 * T0_p   / R
 
-          if(with_TiTe)then
-             BgradPe_factor = 1.d0
-          else
-             BgradPe_factor = 1.d0
-          endif          
-          BgradPe  = BgradPe_factor * (rho0*BgradTe + Te0*BgradRho)
+          BgradPe  = rho0 * BgradTe + Te0 * BgradRho
 
           ! --- V.grad.V
           UgradUR  = UR0 * UR0_R + UZ0 * UR0_Z + Up0 * UR0_p / R
@@ -1477,14 +1455,9 @@ do i=1,n_vertex_max
           !  endif
           !enddo
           !tau_IC = tauIC * (0.5d0 - 0.5d0 * tanh(-(distance_bnd - 0.02)/0.01) )
-          if(with_TiTe)then
-            Vdia_factor = 1.d0 ; Vneo_factor = 1.d0
-          else
-            Vdia_factor = 1.d0 ; Vneo_factor = 1.d0
-          endif
-          VdiaR0 = tau_IC*F0 / (R * rho0_corr * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z) * Vdia_factor
-          VdiaZ0 = tau_IC*F0 / (R * rho0_corr * BB2) * (R*BP0*pi0_R -   BR0*pi0_p) * Vdia_factor
-          VdiaP0 = tau_IC*F0 / (    rho0_corr * BB2) * (  BR0*pi0_Z -   BZ0*pi0_R) * Vdia_factor
+          VdiaR0 = tau_IC*F0 / (R * rho0_corr * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z)
+          VdiaZ0 = tau_IC*F0 / (R * rho0_corr * BB2) * (R*BP0*pi0_R -   BR0*pi0_p)
+          VdiaP0 = tau_IC*F0 / (    rho0_corr * BB2) * (  BR0*pi0_Z -   BZ0*pi0_R)
 
           ! --- Vdia.grad.V
           VdiaGradUR  = VdiaR0 * UR0_R + VdiaZ0 * UR0_Z + VdiaP0 * UR0_p / R
@@ -1501,7 +1474,7 @@ do i=1,n_vertex_max
             Btht  = sqrt(BR0**2 + BZ0**2)
             Btht  = max(1.d-10,Btht)
             Vtht  = ( BR0*(UR0+VdiaR0) + BZ0*(UZ0+VdiaZ0) ) / Btht
-            Vneo  = +aki_neo_prof(ms,mt) * tau_IC*F0 / BB2 / Btht * ( BR0*Bp0*Ti0_Z - BZ0*Bp0*Ti0_R) * Vneo_factor
+            Vneo  = +aki_neo_prof(ms,mt) * tau_IC*F0 / BB2 / Btht * ( BR0*Bp0*Ti0_Z - BZ0*Bp0*Ti0_R)
             PneoR = +amu_neo_prof(ms,mt) * rho0 * BB2/Btht**3 * BR0 * (Vtht - Vneo)
             PneoZ = +amu_neo_prof(ms,mt) * rho0 * BB2/Btht**3 * BZ0 * (Vtht - Vneo)
           else
@@ -2161,15 +2134,15 @@ do i=1,n_vertex_max
                   BgradRho_rho__p = BR0 * rho_R + BZ0 * rho_Z
                   BgradRho_rho__n = Bp0 * rho_p / R
 
-                  BgradPe_AR__p  = BgradPe_factor * (rho0*BgradTe_AR__p + Te0*BgradRho_AR__p  )
-                  BgradPe_AR__n  = BgradPe_factor * (rho0*BgradTe_AR__n + Te0*BgradRho_AR__n  )
-                  BgradPe_AZ__p  = BgradPe_factor * (rho0*BgradTe_AZ__p + Te0*BgradRho_AZ__p  )
-                  BgradPe_AZ__n  = BgradPe_factor * (rho0*BgradTe_AZ__n + Te0*BgradRho_AZ__n  )
-                  BgradPe_A3     = BgradPe_factor * (rho0*BgradTe_A3    + Te0*BgradRho_A3     )
-                  BgradPe_rho__p = BgradPe_factor * (rho*BgradTe        + Te0*BgradRho_rho__p )
-                  BgradPe_rho__n = BgradPe_factor * (                   + Te0*BgradRho_rho__n )
-                  BgradPe_Te__p  = BgradPe_factor * (rho0*BgradTe_Te__p + Te *BgradRho        )
-                  BgradPe_Te__n  = BgradPe_factor * (rho0*BgradTe_Te__n                       )
+                  BgradPe_AR__p  = rho0*BgradTe_AR__p + Te0*BgradRho_AR__p  
+                  BgradPe_AR__n  = rho0*BgradTe_AR__n + Te0*BgradRho_AR__n  
+                  BgradPe_AZ__p  = rho0*BgradTe_AZ__p + Te0*BgradRho_AZ__p  
+                  BgradPe_AZ__n  = rho0*BgradTe_AZ__n + Te0*BgradRho_AZ__n  
+                  BgradPe_A3     = rho0*BgradTe_A3    + Te0*BgradRho_A3     
+                  BgradPe_rho__p = rho*BgradTe        + Te0*BgradRho_rho__p 
+                  BgradPe_rho__n =                    + Te0*BgradRho_rho__n 
+                  BgradPe_Te__p  = rho0*BgradTe_Te__p + Te *BgradRho        
+                  BgradPe_Te__n  = rho0*BgradTe_Te__n                       
 
                   UgradUR_UR__p = UR  * UR0_R + UR0 * UR_R + UZ0 * UR_Z
                   UgradUR_UR__n = Up0 * UR_p  / R
@@ -2256,8 +2229,6 @@ do i=1,n_vertex_max
                   VdiaR0_rho__n = + tau_IC*F0 / (R * rho0_corr * BB2   ) * (  BZ0*(rho_p*Ti0)                              )
                   VdiaR0_Ti__p  = + tau_IC*F0 / (R * rho0_corr * BB2   ) * (  BZ0*(rho0_p*Ti) - R*Bp0*(rho0*Ti_Z+rho0_Z*Ti))
                   VdiaR0_Ti__n  = + tau_IC*F0 / (R * rho0_corr * BB2   ) * (  BZ0*(rho0*Ti_p)                              )
-                  VdiaR0_T__p  = VdiaR0_Ti__p
-                  VdiaR0_T__n  = VdiaR0_Ti__n
 
                   VdiaZ0_AR__p  = + tau_IC*F0 / (R * rho0_corr * BB2   ) * (R*BP0_AR*pi0_R -   BR0_AR   *pi0_p) &
                                   - tau_IC*F0 / (R * rho0_corr * BB2**2) * (R*BP0   *pi0_R -   BR0      *pi0_p) * BB2_AR__p
@@ -2274,8 +2245,6 @@ do i=1,n_vertex_max
                   VdiaZ0_rho__n = + tau_IC*F0 / (R * rho0_corr * BB2   ) * (                            -   BR0*(rho_p*Ti0))
                   VdiaZ0_Ti__p  = + tau_IC*F0 / (R * rho0_corr * BB2   ) * (R*BP0*(Ti*rho0_R+Ti_R*rho0) -   BR0*(Ti*rho0_p))
                   VdiaZ0_Ti__n  = + tau_IC*F0 / (R * rho0_corr * BB2   ) * (                            -   BR0*(Ti_p*rho0))
-                  VdiaZ0_T__p   = VdiaZ0_Ti__p
-                  VdiaZ0_T__n   = VdiaZ0_Ti__n
 
                   VdiaP0_AR__p  = + tau_IC*F0 / (    rho0_corr * BB2   ) * (  BR0_AR   *pi0_Z                    ) &
                                   - tau_IC*F0 / (    rho0_corr * BB2**2) * (  BR0      *pi0_Z -   BZ0      *pi0_R) * BB2_AR__p
@@ -2293,8 +2262,6 @@ do i=1,n_vertex_max
                   VdiaP0_rho__n = 0.d0
                   VdiaP0_Ti__p  = + tau_IC*F0 / (    rho0_corr * BB2   ) * (  BR0*(rho0*Ti_Z+rho0_Z*Ti) -   BZ0*(rho0*Ti_R+rho0_R*Ti))
                   VdiaP0_Ti__n  = 0.d0
-                  VdiaP0_T__p  = VdiaP0_Ti__p
-                  VdiaP0_T__n  = VdiaP0_Ti__n
 
                   VdiaGradUR_AR__p  = VdiaR0_AR__p  * UR0_R + VdiaZ0_AR__p  * UR0_Z + VdiaP0_AR__p  * UR0_p / R
                   VdiaGradUR_AR__n  = VdiaR0_AR__n  * UR0_R + VdiaZ0_AR__n  * UR0_Z + VdiaP0_AR__n  * UR0_p / R
@@ -2390,8 +2357,6 @@ do i=1,n_vertex_max
                     Vneo_A3__n = 0.d0
                     Vneo_Ti__p = -aki_neo_prof(ms,mt) * tau_IC*F0 / BB2    / Btht    * ( BR0*Bp0*Ti_Z        - BZ0*Bp0*Ti_R       )
                     Vneo_Ti__n = 0.d0
-                    Vneo_T__p  = Vneo_Ti__p
-                    Vneo_T__n  = Vneo_Ti__n
 
                     PneoR_AR__p  = +amu_neo_prof(ms,mt) * rho0 * BB2_AR__p/Btht**3 * BR0       * (Vtht        - Vneo      ) &
                                    +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BR0       * (Vtht_AR__p  - Vneo_AR__p) &
@@ -2416,8 +2381,6 @@ do i=1,n_vertex_max
                     PneoR_rho__n = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BR0       * (Vtht_rho__n             )
                     PneoR_Ti__p  = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BR0       * (Vtht_Ti__p  - Vneo_Ti__p)
                     PneoR_Ti__n  = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BR0       * (Vtht_Ti__n  - Vneo_Ti__n)
-                    PneoR_T__p   = PneoR_Ti__p
-                    PneoR_T__n   = PneoR_Ti__n
                     PneoR_UR     = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BR0       * (Vtht_UR                 )
                     PneoR_UZ     = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BR0       * (Vtht_UZ                 )
                     
@@ -2444,8 +2407,6 @@ do i=1,n_vertex_max
                     PneoZ_rho__n = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BZ0       * (Vtht_rho__n             )
                     PneoZ_Ti__p  = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BZ0       * (Vtht_Ti__p  - Vneo_Ti__p)
                     PneoZ_Ti__n  = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BZ0       * (Vtht_Ti__n  - Vneo_Ti__n)
-                    PneoZ_T__p   = PneoZ_Ti__p
-                    PneoZ_T__n   = PneoZ_Ti__n
                     PneoZ_UR     = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BZ0       * (Vtht_UR                 )
                     PneoZ_UZ     = +amu_neo_prof(ms,mt) * rho0 * BB2      /Btht**3 * BZ0       * (Vtht_UZ                 )
                   else
@@ -2459,8 +2420,6 @@ do i=1,n_vertex_max
                     PneoR_rho__n = 0.d0 ; PneoZ_rho__n = 0.d0
                     PneoR_Ti__p  = 0.d0 ; PneoZ_Ti__p  = 0.d0
                     PneoR_Ti__n  = 0.d0 ; PneoZ_Ti__n  = 0.d0
-                    PneoR_T__p   = 0.d0 ; PneoZ_T__p   = 0.d0
-                    PneoR_T__n   = 0.d0 ; PneoZ_T__n   = 0.d0
                     PneoR_UR     = 0.d0 ; PneoZ_UR     = 0.d0
                     PneoR_UZ     = 0.d0 ; PneoZ_UZ     = 0.d0
                   endif
@@ -2476,8 +2435,6 @@ do i=1,n_vertex_max
                   Qconv_UR_rho__n =                                           - v * rho0 * ( VdiaGradUR_rho__n - VdiaP0_rho__n*Up0 / R )
                   Qconv_UR_Ti__p  =                                           - v * rho0 * ( VdiaGradUR_Ti__p  - VdiaP0_Ti__p *Up0 / R )
                   Qconv_UR_Ti__n  =                                           - v * rho0 * ( VdiaGradUR_Ti__n  - VdiaP0_Ti__n *Up0 / R )
-                  Qconv_UR_T__p   = Qconv_UR_Ti__p
-                  Qconv_UR_T__n   = Qconv_UR_Ti__n
                   Qconv_UR_UR__p  = - v * rho0 * ( UgradUR_UR__p         )    - v * rho0 * ( VdiaGradUR_UR__p                          )
                   Qconv_UR_UR__n  = - v * rho0 * ( UgradUR_UR__n         )    - v * rho0 * ( VdiaGradUR_UR__n                          )
                   Qconv_UR_UZ__p  = - v * rho0 * ( UgradUR_UZ            )
@@ -2495,8 +2452,6 @@ do i=1,n_vertex_max
                   Qconv_UZ_rho__n =                                           - v * rho0 * VdiaGradUZ_rho__n
                   Qconv_UZ_Ti__p  =                                           - v * rho0 * VdiaGradUZ_Ti__p
                   Qconv_UZ_Ti__n  =                                           - v * rho0 * VdiaGradUZ_Ti__n
-                  Qconv_UZ_T__p   = Qconv_UZ_Ti__p
-                  Qconv_UZ_T__n   = Qconv_UZ_Ti__n
                   Qconv_UZ_UR__p  = - v * rho0 * UgradUZ_UR
                   Qconv_UZ_UR__n  = 0.d0
                   Qconv_UZ_UZ__p  = - v * rho0 * UgradUZ_UZ__p                - v * rho0 * VdiaGradUZ_UZ__p
@@ -2515,8 +2470,6 @@ do i=1,n_vertex_max
                   Qconv_Up_rho__n =                                           - v * rho0 * ( VdiaGradUp_rho__n + VdiaP0_rho__n*UR0 / R )
                   Qconv_Up_Ti__p  =                                           - v * rho0 * ( VdiaGradUp_Ti__p  + VdiaP0_Ti__p *UR0 / R )
                   Qconv_Up_Ti__n  =                                           - v * rho0 * ( VdiaGradUp_Ti__n  + VdiaP0_Ti__n *UR0 / R )
-                  Qconv_Up_T__p   = Qconv_Up_Ti__p
-                  Qconv_Up_T__n   = Qconv_Up_Ti__n
                   Qconv_Up_UR__p  = - v * rho0 * ( UgradUp_UR    + UR*Up0 / R)- v * rho0 * (                   + VdiaP0       *UR  / R )
                   Qconv_Up_UR__n  = 0.d0
                   Qconv_Up_UZ__p  = - v * rho0 * ( UgradUp_UZ                )
@@ -3055,9 +3008,9 @@ do i=1,n_vertex_max
                     Qjac_p (var_UR,var_rho) =  Qconv_UR_rho__p + ( v_R + v / R ) * (rho*T0) - v * PneoR_rho__p
                     Qjac_n (var_UR,var_rho) =  Qconv_UR_rho__n                                     - v * PneoR_rho__n
                           
-                    Qjac_p (var_UR,var_T  ) =  Qconv_UR_T__p   + ( v_R + v / R ) * (rho0*T       ) - v * PneoR_T__p &
+                    Qjac_p (var_UR,var_T  ) =  Qconv_UR_Ti__p   + ( v_R + v / R ) * (rho0*T       ) - v * PneoR_Ti__p &
                                               + dvisco_dT * T * Qvisc_UR__p
-                    Qjac_n (var_UR,var_T  ) =  Qconv_UR_T__n   - v * PneoR_Ti__n
+                    Qjac_n (var_UR,var_T  ) =  Qconv_UR_Ti__n   - v * PneoR_Ti__n
                     Qjac_k (var_UR,var_T  ) = + dvisco_dT * T * Qvisc_UR__k
                   endif
 
@@ -3148,9 +3101,9 @@ do i=1,n_vertex_max
                     Qjac_p (var_UZ,var_rho)  =  Qconv_UZ_rho__p + v_Z * (rho*T0) - v * PneoZ_rho__p
                     Qjac_n (var_UZ,var_rho)  =  Qconv_UZ_rho__n                         - v * PneoZ_rho__n
                           
-                    Qjac_p (var_UZ,var_T  )  =  Qconv_UZ_T__p  + v_Z * (rho0*T ) - v * PneoZ_T__p &
+                    Qjac_p (var_UZ,var_T  )  =  Qconv_UZ_Ti__p  + v_Z * (rho0*T ) - v * PneoZ_Ti__p &
                                                + dvisco_dT * T  * Qvisc_UZ__p
-                    Qjac_n (var_UZ,var_T  )  =  Qconv_UZ_T__n - v * PneoZ_T__n
+                    Qjac_n (var_UZ,var_T  )  =  Qconv_UZ_Ti__n - v * PneoZ_Ti__n
                     Qjac_k (var_UZ,var_T  )  = + dvisco_dT * T  * Qvisc_UZ__k                    
                   endif
 
@@ -3382,18 +3335,18 @@ do i=1,n_vertex_max
                     Qjac_k (var_Up,var_rho) = Qjac_k (var_Up,var_rho)             & 
                                               + (rho*T0) * BgradVstar__k
                           
-                    Qjac_p (var_Up,var_T )  = + BR0 * Qconv_UR_T__p &
-                                              + BZ0 * Qconv_UZ_T__p &
-                                              + Bp0 * Qconv_Up_T__p &
+                    Qjac_p (var_Up,var_T )  = + BR0 * Qconv_UR_Ti__p &
+                                              + BZ0 * Qconv_UZ_Ti__p &
+                                              + Bp0 * Qconv_Up_Ti__p &
                                               + BR0 * dvisco_dT * T * Qvisc_UR__p &
                                               + BZ0 * dvisco_dT * T * Qvisc_UZ__p &
                                               + Bp0 * dvisco_dT * T * Qvisc_Up__p &
                                               + (rho0*T) * BgradVstar__p &
-                                              - v * (BR0*PneoR_T__p + BZ0*PneoZ_T__p)
-                    Qjac_n (var_Up,var_T )  = + BR0 * Qconv_UR_T__n &
-                                              + BZ0 * Qconv_UZ_T__n &
-                                              + Bp0 * Qconv_Up_T__n &
-                                              - v * (BR0*PneoR_T__n + BZ0*PneoZ_T__n)
+                                              - v * (BR0*PneoR_Ti__p + BZ0*PneoZ_Ti__p)
+                    Qjac_n (var_Up,var_T )  = + BR0 * Qconv_UR_Ti__n &
+                                              + BZ0 * Qconv_UZ_Ti__n &
+                                              + Bp0 * Qconv_Up_Ti__n &
+                                              - v * (BR0*PneoR_Ti__n + BZ0*PneoZ_Ti__n)
                     Qjac_k (var_Up,var_T )  = + BR0 * dvisco_dT * T * Qvisc_UR__k &
                                               + BZ0 * dvisco_dT * T * Qvisc_UZ__k &
                                               + Bp0 * dvisco_dT * T * Qvisc_Up__k &

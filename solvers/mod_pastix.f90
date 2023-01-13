@@ -506,6 +506,8 @@ module mod_pastix
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
       if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
+      deallocate(ad_mat%val); ad_mat%val => null()
+
     else
       call ad_mat%copy_to(ac_mat, with_data=.true.)
       ac_mat%reduced = .true.

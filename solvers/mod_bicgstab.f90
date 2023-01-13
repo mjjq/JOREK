@@ -8,7 +8,7 @@ module mod_bicgstab
 #ifdef USE_BICGSTAB
   use iso_c_binding
   use mpi
-  use phys_module,     only: use_pastix, use_mumps, use_strumpack
+  use mod_sparse_data, only: pastix, mumps, strumpack
 
   use mod_integer_types
 
@@ -67,6 +67,7 @@ module mod_bicgstab
 
     iter = 0
     flag = 0
+    t1 = 0; t2 = 0;
 
     allocate(r(n_glob), r_tld(n_glob), s(n_glob), s_hat(n_glob), &
              tmp(n_glob), p(n_glob), p_hat(n_glob), v(n_glob), t(n_glob))
@@ -79,66 +80,70 @@ module mod_bicgstab
     r = rhs_vec%val - tmp
 
     error = dnrm2(n_glob, r, 1)/bnrm2;
-    if (error <= solver%iter_tol) then
-      !if (my_id.eq.0) write(*,*) "bicgstab exiting, initial relative error:", error
-      solver%iter_gmres = 1
-    endif
-
-    omega  = 1.0
-    r_tld = r
-
-    t1 = 0; t2 = 0;
 
     if (my_id.eq.0) write(*,*) "bicgstab initial relative error:", error
 
-    do iter = 1, solver%iter_max
-      rho = ddot(n_glob,r_tld,1,r,1) ! direction vector
+    if (error <= solver%iter_tol) then
 
-      if (rho == 0.0) exit
+      solver%iter_gmres = 1
 
-      if (iter > 1) then
-        beta  = (rho/rho_1)*(alpha/omega)
-        p = r + beta*(p - omega*v)
-      else
-        p = r
-      endif
+    else ! go into iterations
 
-      t0 = get_time()
-      call prec(solver, p, p_hat)
-      t1 = t1 + get_time() - t0
-      t0 = get_time()
-      call matv(a_mat, p_hat, v)
-      t2 = t2 + get_time() - t0
+      omega  = 1.0
+      r_tld = r
 
-      alpha = rho/ddot(n_glob,r_tld,1,v,1)
-      s = r - alpha*v
-      !snrm2 = dnrm2(n_glob, s, 1)
+      do iter = 1, solver%iter_max
+        rho = ddot(n_glob,r_tld,1,r,1) ! direction vector
 
-      !if (snrm2 < tol) then
-      !  x = x + alpha*p_hat
-      !  resid = snrm2/bnrm2
-      !  exit
-      !endif
+        if (rho == 0.0) exit
 
-      t0 = get_time()
-      call prec(solver, s, s_hat) ! stabilizer
-      t1 = t1 + get_time() - t0
-      t0 = get_time()
-      call matv(a_mat, s_hat, t)
-      t2 = t2 + get_time() - t0
+        if (iter > 1) then
+          beta  = (rho/rho_1)*(alpha/omega)
+          p = r + beta*(p - omega*v)
+        else
+          p = r
+        endif
 
-      omega = ddot(n_glob,t,1,s,1)/ddot(n_glob,t,1,t,1)
-      sol_vec%val = sol_vec%val + alpha*p_hat + omega*s_hat ! update approximation
-      r = s - omega*t
-      error = dnrm2(n_glob, r, 1)/bnrm2
+        t0 = get_time()
+        call prec(solver, p, p_hat)
+        t1 = t1 + get_time() - t0
+        t0 = get_time()
+        call matv(a_mat, p_hat, v)
+        t2 = t2 + get_time() - t0
 
-      if (error <= solver%iter_tol) exit
-      if (omega == 0.0) exit
+        alpha = rho/ddot(n_glob,r_tld,1,v,1)
+        s = r - alpha*v
+        !snrm2 = dnrm2(n_glob, s, 1)
 
-      rho_1 = rho
-    enddo
+        !if (snrm2 < tol) then
+        !  x = x + alpha*p_hat
+        !  resid = snrm2/bnrm2
+        !  exit
+        !endif
 
-    solver%iter_gmres = iter! - 1 ! actual number of iterations
+        t0 = get_time()
+        call prec(solver, s, s_hat) ! stabilizer
+        t1 = t1 + get_time() - t0
+        t0 = get_time()
+        call matv(a_mat, s_hat, t)
+        t2 = t2 + get_time() - t0
+
+        omega = ddot(n_glob,t,1,s,1)/ddot(n_glob,t,1,t,1)
+        sol_vec%val = sol_vec%val + alpha*p_hat + omega*s_hat ! update approximation
+        r = s - omega*t
+        error = dnrm2(n_glob, r, 1)/bnrm2
+
+        if (my_id.eq.0) write(*,'(A12,1X,I3,5X,A6,1X,E10.3)') "bicgstab it:", iter, "error:", error
+
+        if (error <= solver%iter_tol) exit
+        if (omega == 0.0) exit
+
+        rho_1 = rho
+      enddo
+
+      solver%iter_gmres = iter
+
+    endif
 
     if (error <= solver%iter_tol) then ! converged
      flag = 0
@@ -213,7 +218,6 @@ module mod_bicgstab
 
 !> apply preconditioner b = M\x
   subroutine prec(solver,x,b)
-    use preconditioner_module, only: my_row_index, my_row_factor
     use mod_sparse_data, only: type_SP_SOLVER
 #ifdef USE_STRUMPACK
     use mod_strumpack, only: strumpack_solve
@@ -239,15 +243,15 @@ module mod_bicgstab
     enddo
 
     !t1 = get_time()
-    if (use_strumpack) then
+    if (solver%library.eq.strumpack) then
 #ifdef USE_STRUMPACK
       call strumpack_solve(solver%spss, solver%pc%rhs)
 #endif
-    elseif (use_pastix) then
+    elseif (solver%library.eq.pastix) then
 #ifdef USE_PASTIX
       call pastix_solve(solver%ptss, solver%pc%rhs)
 #endif
-    elseif (use_mumps) then
+    elseif (solver%library.eq.mumps) then
 #ifdef USE_MUMPS
       call mumps_solve(solver%mmss, solver%pc%rhs)
 #endif

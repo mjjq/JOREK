@@ -55,7 +55,8 @@ module mod_gmres
     call init_dgmres(icntl,cntl)
     
 
-    icntl(3) = 6            ! output unit
+    icntl(3) = 0            ! output unit
+    if (my_id.eq.0) icntl(3) = 6
     icntl(7) = iter_gmres   ! Maximum number of iterations
     icntl(4) = 1            ! preconditioner (1) = left preconditioner
     icntl(5) = 3            ! orthogonalization scheme

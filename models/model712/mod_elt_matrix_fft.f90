@@ -1564,7 +1564,7 @@ do i=1,n_vertex_max
             BgradRhoimp = 0.d0
           endif
 
-          source_imp = source_imp !! + constant_imp_source  !! do we need it?
+          source_imp = source_imp ! + constant_imp_source  !! do we need it?
           
           psieq_R = (   y_t(ms,mt) * psi_axisym_s(ms,mt)  - y_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
           psieq_Z = ( - x_t(ms,mt) * psi_axisym_s(ms,mt)  + x_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
@@ -2122,8 +2122,8 @@ do i=1,n_vertex_max
                   BgradT_AR__n =                   + BZ0_AR__n * T0_Z
                   BgradT_AZ__p =                   + BZ0_AZ    * T0_Z + Bp0_AZ * T0_p / R
                   BgradT_AZ__n = BR0_AZ__n * T0_R
-                  BgradT_A3    = BR0_A3    * T0_R + BZ0_A3    * T0_Z  + Bp0_A3 * T0_p / R
-                  BgradT_T__p  = BR0 * T_R + BZ0 * T_Z
+                  BgradT_A3    = BR0_A3    * T0_R  + BZ0_A3    * T0_Z  + Bp0_A3 * T0_p / R
+                  BgradT_T__p  = BR0 * T_R         + BZ0       * T_Z
                   BgradT_T__n  = Bp0 * T_p / R
                   
                   BgradRho_AR__p  = BR0_AR    * rho0_R                      + Bp0_AR * rho0_p / R
@@ -3077,7 +3077,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_UZ,var_UZ )  =  Qconv_UZ_UZ__p + visco_T * Qvisc_UZ_UZ__p &
                                              - v * PneoZ_UZ                             &
-                                             - v * particle_source(ms,mt) * UZ0         &
+                                             - v * particle_source(ms,mt) * UZ          &
                                             - visco_num * lap_Vstar * lap_bf
                   Qjac_n (var_UZ,var_UZ )  =  Qconv_UZ_UZ__n + visco_T * Qvisc_UZ_UZ__n
                   Qjac_k (var_UZ,var_UZ )  =                 + visco_T * Qvisc_UZ_UZ__k
@@ -3837,11 +3837,7 @@ do i=1,n_vertex_max
                                               + v * (gamma-1.d0) * Qvisc_T_Up__n
 
                     Qjac_p (var_Te,var_rho) = + v * ( - rho * UgradTe - Te0 * UgradRho_rho__p  - gamma * (rho*Te0) * divU ) &
-                                              + v * ddTe_i_drho                                                             &
-                                              - v * ksiion * rho * rhon0_corr * Sion_T                                      &
-                                              - v *       rho * rhon0_corr * LradDrays_T                                    &
-                                              - v * 2.0 * rho * rho0_corr  * LradDcont_T                                    &
-                                              - v *       rho * frad_bg
+                                              + v * ddTe_i_drho
                     Qjac_n (var_Te,var_rho) = + v * (                 - Te0 * UgradRho_rho__n                             )
 
                     Qjac_p (var_Te,var_Te)  = + v * ( - rho0 * UgradTe_Te__p - Te * UgradRho - gamma * (rho0*Te) * divU ) &
@@ -3850,10 +3846,6 @@ do i=1,n_vertex_max
                                               - (ZKe_par_T-ZKe_prof) * BgradVstar__p * BgradTe_Te__p / BB2                &
                                               - (dZKe_par_dT*Te    ) * BgradVstar__p * BgradTe       / BB2                &
                                               + v * ddTe_i_dTe                                                            &
-                                              - v * ksiion * rho0_corr * rhon0_corr * dSion_dT * Te                       &
-                                              - v * rho0_corr * rhon0_corr * dLradDrays_dT * Te                           &
-                                              - v * rho0_corr * rho0_corr  * dLradDcont_dT * Te                           &
-                                              - v * rho0_corr * dfrad_bg_dT * Te                                          &
                                               + v * (gamma-1.0d0) * deta_dT_ohm * Te * JJ2                                &
                                               - ZK_e_perp_num * lap_Vstar * lap_bf
                     Qjac_n (var_Te,var_Te)  = + v * ( - rho0 * UgradTe_Te__n                                            ) &

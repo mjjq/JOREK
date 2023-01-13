@@ -26,11 +26,13 @@ type(event)                  :: field_reader
 type(type_bnd_node_list)     :: bnd_node_list
 type(type_bnd_element_list)  :: bnd_elm_list
 logical                      :: write_txt 
-integer                      :: ii,n_particles,nR,nZ,nphi,np,npitch,nchi
+integer                      :: ii,n_dim,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
 integer                      :: n_int_weight_param,n_real_weight_param
 integer                      :: n_int_gdf_param,n_real_gdf_param
+integer                      :: n_int_pdf_to_part_coord_param,n_real_pdf_to_part_coord_param
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
+integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
 integer,dimension(:,:,:,:,:,:),allocatable :: histo
 real*8                       :: start_time,mass,charge,error,error_norm
 real*8                       :: error_avg_norm,pdf_upper_bound,gdf_upper_bound
@@ -38,7 +40,8 @@ real*8                       :: sup_pdf_safety_factor,n_tot_phys_particles
 real*8                       :: error_n_phys_particles,error_n_phys_particles_norm
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
-real*8,dimension(6)          :: var_min,var_max   
+real*8,dimension(7,2)        :: phase_space_bounds
+real*8,dimension(:),allocatable           :: real_pdf_to_part_coord_param,
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
 real*8,dimension(:),allocatable           :: real_pdf_param,real_weight_param,real_gdf_param
 real*8,dimension(:),allocatable           :: DUMMY_REAL_ARRAY
@@ -48,10 +51,12 @@ character(len=125)                        :: particle_pdf_filename,exact_pdf_fil
 character(len=125)                        :: particle_histo_filename
 character(len=15)                         :: particle_restart_filename
 character(len=:),allocatable              :: jorek_filename
-procedure(real_f),pointer                 :: pdf_to_use=>NULL()
-procedure(real_f),pointer                 :: weight_to_use=>NULL()
-procedure(real_f),pointer                 :: gdf_to_use=>NULL()
-procedure(real_arr_inout_s),pointer       :: gdf_sampler_to_use=>NULL()
+procedure(real_f),pointer                 :: pdf_to_use         => NULL()
+procedure(real_f),pointer                 :: weight_to_use      => NULL()
+procedure(real_f),pointer                 :: gdf_to_use         => NULL()
+procedure(real_arr_inout_s),pointer       :: gdf_sampler_to_use => NULL()
+procedure(part_inout_s),pointer           :: pdf_to_part_coord  => NULL()
+
 !> MPI and groups initialisation ------------------------------------------------------------
 call sim%initialize(num_groups=1)
 
@@ -59,6 +64,7 @@ call sim%initialize(num_groups=1)
 !> Define inputs ----------------------------------------------------------------------------
 write_txt   = .false.
 test_case   = 'jorek_current_density_re'
+n_dim       = 7
 n_particles = 100000000
 nR          = 2
 nZ          = 2
@@ -115,25 +121,24 @@ if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
 if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
 if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
 Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
-var_min = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),Chibound(1)]
-var_max = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),Chibound(2)]
+phase_space_bounds(:,1) = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),Chibound(1),charge]
+phase_space_bounds(:,2) = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),Chibound(2),charge]
 !> select the pdf to use
 write(*,*) ' '
 write(*,*) 'SELECT PDF TO USE: '
 if(trim(test_case)=='jorek_current_density_re') then
   write(*,*) 'SELECTED: JOREK CURRENT DENSITY RUNAWAY ELECTRONS!'
   n_real_pdf_param = 3; allocate(real_pdf_param(n_real_pdf_param));
-  real_pdf_param = [1.d0,mass,sup_pdf_safety_factor]
-  n_int_pdf_param = 1; allocate(int_pdf_param(n_int_pdf_param));
+  real_pdf_param   = [1.d0,mass,sup_pdf_safety_factor]
+  n_int_pdf_param  = 1; allocate(int_pdf_param(n_int_pdf_param));
   n_real_weight_param = 3; allocate(real_weight_param(n_real_weight_param));
-  int_pdf_param(1) = sim%my_id
-  pdf_to_use    => pdf_current_density_uniform_phase
-  weight_to_use => particle_weight_current_density_uniform_phase
-  pdf_upper_bound = sup_pdf_current_density_uniform_phase(7,&
-  [var_min(1),var_min(2),var_min(3),var_min(4),var_min(5),&
-  var_min(6),charge],[var_max(1),var_max(2),var_max(3),var_max(4),&
-  var_max(5),var_max(6),charge],sim%fields,n_real_pdf_param,&
-  real_pdf_param,n_int_pdf_param,int_pdf_param)
+  int_pdf_param(1)    = sim%my_id
+  pdf_to_use          => pdf_current_density_uniform_phase
+  weight_to_use       => particle_weight_current_density_uniform_phase
+  pdf_to_part_coord   => spherical_p_cartesian_q_to_relativistic_kinetic
+  pdf_upper_bound     = sup_pdf_current_density_uniform_phase(7,&
+  phase_space_bounds(:,1),phase_space_bounds(:,2),sim%fields,&
+  n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute the integral of the current density in the volume
   allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
   call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,.false.)
@@ -143,16 +148,16 @@ if(trim(test_case)=='jorek_current_density_re') then
   deallocate(DUMMY_REAL_ARRAY);
   !> compute the total number of physical particles
   n_tot_phys_particles = n_physical_particle_current_density_uniform_phase(7,start_time,&
-  sim%fields,[var_min(1),var_min(2),var_min(3),var_min(4),var_min(5),&
-  var_min(6),charge],[var_max(1),var_max(2),var_max(3),var_max(4),&
-  var_max(5),var_max(6),charge],n_real_weight_param,real_weight_param,&
-  n_int_weight_param,int_weight_param)
+  sim%fields,phase_space_bounds(:,1),phase_space_bounds(:,2),n_real_weight_param,&
+  real_weight_param,n_int_weight_param,int_weight_param)
 elseif(trim(test_case)=='uniform_weight') then
   write(*,*) 'SELECTED: WEIGHTED PDF UNIFORM!'
   n_real_pdf_param = 2; allocate(real_pdf_param(n_real_pdf_param));
-  pdf_to_use    => pdf_uniform
-  weight_to_use => weight_uniform
-  pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
+  pdf_to_use        => pdf_uniform
+  weight_to_use     => weight_uniform
+  pdf_to_part_coord => spherical_p_cartesian_q_to_relativistic_kinetic
+  pdf_upper_bound   = sup_pdf_uniform(6,phase_space_bounds(1:6,1), &
+  phase_space_bounds(1:6,2) ,n_real_pdf_param,&
   real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute the plasma volume
   allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
@@ -163,15 +168,15 @@ elseif(trim(test_case)=='uniform_weight') then
   deallocate(DUMMY_REAL_ARRAY);
   !> compute total number of physical particles
   n_tot_phys_particles = n_physical_particle_weight_uniform(7,start_time,&
-  sim%fields,[var_min(1),var_min(2),var_min(3),var_min(4),var_min(5),&
-  var_min(6),charge],[var_max(1),var_max(2),var_max(3),var_max(4),&
-  var_max(5),var_max(6),charge],n_real_weight_param,real_weight_param,&
-  n_int_weight_param,int_weight_param)
+  sim%fields,phase_space_bounds(:,1),phase_space_bounds(:,2),&
+  n_real_weight_param,real_weight_param,n_int_weight_param,int_weight_param)
 else
   write(*,*) 'SELECTED: PDF UNIFORM (DEFAULT)!'
-  pdf_to_use    => pdf_uniform
-  weight_to_use => weight_uniform_one
-  pdf_upper_bound = sup_pdf_uniform(6,var_min,var_max,n_real_pdf_param,&
+  pdf_to_use        => pdf_uniform
+  weight_to_use     => weight_uniform_one
+  pdf_to_part_coord => spherical_p_cartesian_q_to_relativistic_kinetic
+  pdf_upper_bound   = sup_pdf_uniform(6,phase_space_bounds(1:6,1),&
+  phase_space_bounds(1:6,2),n_real_pdf_param,&
   real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute total number of physical particles
   n_tot_phys_particles = real(n_particles,kind=8)
@@ -180,18 +185,20 @@ endif
 n_real_gdf_param = 0; n_int_gdf_param = 0;
 gdf_to_use         => gdf_uniform_phase
 gdf_sampler_to_use => gdf_uniform_sampler
-gdf_upper_bound    = sup_gdf_uniform_phase(6,var_min,var_max,n_real_pdf_param,&
+gdf_upper_bound    = sup_gdf_uniform_phase(6,phase_space_bounds(1:6,1),&
+phase_space_bounds(1:6,2) ,n_real_pdf_param,&
 real_pdf_param,n_int_pdf_param,int_pdf_param)
 write(*,*) ' '
 
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
-call initialise_particles_in_phase_space(sim%groups(1)%particles,sim%fields,sob_rng,&
+call initialise_particles_in_phase_space(n_dim,sim%groups(1)%particles,sim%fields,sob_rng,&
 pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
-sim%groups(1)%mass,start_time,Ekinbound,Pitchbound,Chibound,Rbound,Zbound,Phibound,&
-chargebound,n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param,&
-n_real_weight_param,real_weight_param,n_int_weight_param,int_weight_param,&
-n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param)
+pdf_to_part_coord,sim%groups(1)%mass,start_time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
+n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight_param,&
+int_weight_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param,&
+n_real_pdf_to_part_coord_param,real_pdf_to_part_coord_param,&
+n_int_pdf_to_part_coord_param,int_pdf_to_part_coord_param)
 
 !> Produce the expected pdf fromt the particle histogram --------------------------------------
 write(*,*) "... building particle histogram and computing the expected pdf"

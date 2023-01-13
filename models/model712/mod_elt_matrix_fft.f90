@@ -2522,7 +2522,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_UZ,var_UZ )  =  Qconv_UZ_UZ__p + visco_T * Qvisc_UZ_UZ__p &
                                              - v * PneoZ_UZ                             &
-                                             - v * particle_source(ms,mt) * UZ0         &
+                                             - v * particle_source(ms,mt) * UZ          &
                                              - v * rho0_corr * rhon0      * Sion_T * UZ &
                                              + v * rho0_corr * rho0_corr  * Srec_T * UZ &
                                             - visco_num * lap_Vstar * lap_bf

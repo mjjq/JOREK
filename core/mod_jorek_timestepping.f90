@@ -266,7 +266,6 @@ subroutine do_jorek_timestep(this, sim, ev)
   use nodes_elements
   use mod_clock
   use global_distributed_matrix
-  use data_structure,          only: new_thread_buffers, del_thread_buffers
   use mod_bootstrap_functions, only: bootstrap_find_minRad, bootstrap_get_q_and_ft_splines
   use live_data
   use mod_live_data_core,      only: write_live_data_all
@@ -351,10 +350,6 @@ subroutine do_jorek_timestep(this, sim, ev)
   t0 = t_itstart
 
   if ( freeboundary ) call update_response(sim%my_id,dt_jorek, freeboundary_equil, resistive_wall)
-  
-  ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
-  ! --- n_plane, n_var have to remain the same until the end of the program.
-  call new_thread_buffers()
 
   call update_equil_state(sim%my_id, sim%fields%node_list, sim%fields%element_list, bnd_elm_list, xpoint, xcase )
   this%es = ES
@@ -384,9 +379,6 @@ subroutine do_jorek_timestep(this, sim, ev)
   this%mhd_sim%es => es ! assign pointer to the equilibrium state
     
   call construct_matrix(this%mhd_sim, this%mhd_sim%local_elms, this%mhd_sim%n_local_elms, this%a_mat, this%rhs_vec, harmonic_matrix=.false.)
-    
-  ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
-  call del_thread_buffers()
 
   call clck_time_barrier(t1)
   if (sim%my_id .eq. 0) then

@@ -614,10 +614,6 @@ mpi_required = 0
       aux_node_list%node(i)%deltas = 0.d0
     enddo
 
-    ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor, 
-    ! --- n_plane, n_var have to remain the same until the end of the program.
-    call new_thread_buffers()
-    
     call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
     if ( my_id == 0 ) call print_equil_state(.false.)
 
@@ -645,7 +641,7 @@ mpi_required = 0
 
     !--------- Constructing Global Matrix
     mhd_sim%es => es ! assign pointer to the equilibrium state
-    
+
     call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_mat, rhs_vec, harmonic_matrix=.false.)
 
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)

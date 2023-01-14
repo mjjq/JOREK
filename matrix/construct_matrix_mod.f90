@@ -359,7 +359,11 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
       write(*,*) '****************************************'
     endif
   endif
-  
+
+  ! --- Initialise the buffers needed by OpenMP threads. The values of n_tor,
+  ! --- n_plane, n_var have to remain the same until the end of the program.
+  call new_thread_buffers()
+
   my_ind_min = a_mat%index_min(my_id+1)
   my_ind_max = a_mat%index_max(my_id+1)
   
@@ -760,6 +764,9 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   call tr_locvnorms("cm_BCRhs",rhs_vec%val,a_mat%ng)
   call tr_debug_write("ndof",a_mat%ng)
   
+  ! --- Free the buffers needed by OpenMP threads (ELM-RHS etc.)
+  call del_thread_buffers()
+
   ! --- Timing
   call r3_info_end(r3_info_index_0)
   call tr_print_memsize("EndConstM")

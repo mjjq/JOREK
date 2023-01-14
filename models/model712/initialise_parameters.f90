@@ -8,6 +8,7 @@ use pastix_module, only: no_zeros_pastix, pastix_smp_only, &
     pastix_maxthrd
 use vacuum
 use live_data
+use pellet_module
 
 implicit none
 
@@ -146,7 +147,16 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs, cte_current_FB_fact,     &
-                eta_ohmic, force_central_node
+                eta_ohmic, force_central_node, D_par_imp,           &
+                D_perp_imp, imp_type, adas_dir,                     &
+                spi_shard_file, spi_tor_rot, pellet_density,        &
+                pellet_density_bg,                                  &
+                use_sc, add_sources_in_sc, visco_sc_num,            &
+                D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
+                ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
+                ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
+                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact,    &
+                D_perp_imp_sc_num, D_par_imp_sc_num
 
 if (my_id .eq. 0) then
 
@@ -237,6 +247,13 @@ if (my_id .eq. 0) then
      endif
   endif
 
+  ! --- Fill the same ablation model to others if not specified to keep the old behavior
+  do i = 2,n_inj
+    if (spi_abl_model(i) < 0) then
+      spi_abl_model(i) = spi_abl_model(1)
+    end if
+  end do
+  
   call allocate_live_data()
 
 endif
@@ -247,6 +264,69 @@ call read_num_profiles(my_id)
 
 ! --- Determine the derivatives of the numerical input profiles.
 call derive_num_profiles(my_id)
-  
+ 
+! --- Initialize the shattered pellet position
+
+#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+spi_quantity_bg   = spi_quantity
+pellet_density_bg = pellet_density
+#endif
+
+if ( my_id == 0 ) then
+  if (2*PI/(n_tor*n_period) >= ns_deltaphi) then
+    write(*,*) "WARNING! ns_deltaphi too small for the n_tor, BEWARE!"
+    if (t_now > minval(t_ns)) then
+      write(*,*) "EXITING NOW!!!"
+      stop
+    end if
+  end if
+
+
+  if (n_inj > n_inj_max .or. n_inj < 1) then
+    write(*,*) "ERROR! Do not support n_inj larger than n_inj_max or smaller than 1, EXITING!"
+    stop
+  end if
+
+    do i = 1, n_inj_max
+    if (n_spi(i)/=0 .and. i > n_inj) then
+      write(*,*) "ERROR! Something wrong with n_inj, double check, EXITING!", n_spi, n_inj
+      stop
+    end if
+  end do
+
+  if (n_adas > n_imp_max) then
+    write(*,*) "ERROR: n_adas should be no larger than n_imp_max, EXITING!"
+    stop
+  end if
+
+  if (n_adas > 1 .and. (.not. use_imp_adas)) then
+    write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
+    stop
+  end if
+
+  if (index_main_imp < 0 .or. index_main_imp > n_adas) then
+    write(*,*) "ERROR: Illegal value of index_main_imp, EXITING!"
+    write(*,*) "ERROR: index_main_imp:", index_main_imp
+    stop
+  end if
+
+  do i = 1,n_inj
+    if (drift_distance(i) < 0.d0 .or. energy_teleported(i) < 0.d0) then
+      write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
+      stop
+    end if
+  end do
+
+  if (using_spi) call init_spi_all()
+  ! ---- This is an ad hoc way to stop duplication of neutral source and ionized main species source, should find a permanenty solution later
+
+  if (with_impurities .and. with_neutrals .and. using_spi .and. (maxval(spi_quantity_bg)>0.0)) then
+    write(*,*) "WARNNING! Currently do not support both with_neutrals and with impurities enabled at the same time"
+    write(*,*)  "while injecting background species! Should be fixed soon. EXITING!"
+    stop
+  endif
+
+endif
+
 return
 end subroutine initialise_parameters

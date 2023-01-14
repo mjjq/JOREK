@@ -512,10 +512,14 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'visco_par_sc_num      ', visco_par_sc_num
   write(*,REAL_FMT) 'Dn_pol_sc_num         ', Dn_pol_sc_num
   write(*,REAL_FMT) 'Dn_p_sc_num           ', Dn_p_sc_num
+  write(*,REAL_FMT) 'D_perp_imp_sc_num     ', D_perp_imp_sc_num
+  write(*,REAL_FMT) 'D_par_imp_sc_num      ', D_par_imp_sc_num
 
   if(jorek_model == 004 ) then
     write(*,REAL_FMT) 'HW_coef               ', HW_coef(1:2)
   endif
+
+  write(*,REAL_FMT) 'constant_imp_source   ', constant_imp_source
 
   write(*,LOGI_FMT) 'add_sources_in_sc     ', add_sources_in_sc
   if (with_TiTe) then

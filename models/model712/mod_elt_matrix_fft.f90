@@ -423,6 +423,14 @@ real*8     :: deta_drho0, deta_drhoimp0, deta_drho0_ohm, deta_drhoimp0_ohm
 real*8, allocatable :: dP_imp_dT(:), P_imp(:)
 integer*8  :: ion_i, ion_k
 
+!  --- For shock capturing stabilization
+real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
+real*8     :: len1, len2, h_e
+real*8     :: Ptot, Ptot_R,  Ptot_Z,  Ptot_p, Ptot_corr
+real*8     :: f_p, d_p, tau_sc, R_rho, R_Ti, R_Te, R_T, R_rhon, R_rhoimp
+real*8     :: s_p, src_rho, src_p, src_pi, src_pe, src_rhon, src_rhoimp
+real*8     :: rho_eff, rhoi_eff, rhoe_eff
+
 ! --- Switches for numerical stability of resistive and diamagnetic terms in AR and AZ equations
 eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
 tauIC_ARAZ= 0.d0  ! =0.0 to switch off diamagnetic terms for AR and AZ equations
@@ -567,6 +575,17 @@ do i=1,n_vertex_max
     enddo
   enddo
 enddo
+
+! approximate estimate of the element length h_e
+! needed for Shock capturing stabilzation
+midp_edge1(:) =  0.5d0 * ( nodes(1)%x(1,1,:) + nodes(2)%x(1,1,:) )
+midp_edge2(:) =  0.5d0 * ( nodes(2)%x(1,1,:) + nodes(3)%x(1,1,:) )
+midp_edge3(:) =  0.5d0 * ( nodes(3)%x(1,1,:) + nodes(4)%x(1,1,:) )
+midp_edge4(:) =  0.5d0 * ( nodes(4)%x(1,1,:) + nodes(1)%x(1,1,:) )
+
+len1 = sqrt( (midp_edge1(1)-midp_edge3(1))**2 + (midp_edge1(2)-midp_edge3(2))**2 )
+len2 = sqrt( (midp_edge2(1)-midp_edge4(1))**2 + (midp_edge2(2)-midp_edge4(2))**2 )
+h_e = dmin1(len1, len2)
 
 ! --- Sources
 ! --- Note about the current sources:
@@ -1072,7 +1091,20 @@ do i=1,n_vertex_max
             dT_or_Te_corr_dT = dT0_corr_dT
 
           endif
-            
+           
+          rhon0      = 0.d0
+          rhon0_corr = 0.d0
+          rhon0_p    = 0.d0
+          rhon0_s    = 0.d0
+          rhon0_t    = 0.d0
+          rhon0_R    = 0.d0
+          rhon0_Z    = 0.d0
+          rhon0_ss   = 0.d0
+          rhon0_st   = 0.d0
+          rhon0_tt   = 0.d0
+          rhon0_RR   = 0.d0
+          rhon0_ZZ   = 0.d0
+          
           ! --- rho neutrals
           if (with_neutrals) then
             rhon0      = eq_g(mp,var_rhon,ms,mt)
@@ -1095,21 +1127,22 @@ do i=1,n_vertex_max
                          + rhon0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                          + rhon0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                          - rhon0_Z * xjac_Z / xjac
-          else
-            rhon0      = 0.d0 
-            rhon0_corr = 0.d0 
-            rhon0_p    = 0.d0 
-            rhon0_s    = 0.d0 
-            rhon0_t    = 0.d0 
-            rhon0_R    = 0.d0 
-            rhon0_Z    = 0.d0 
-            rhon0_ss   = 0.d0 
-            rhon0_st   = 0.d0 
-            rhon0_tt   = 0.d0 
-            rhon0_RR   = 0.d0 
-            rhon0_ZZ   = 0.d0 
           endif
 
+          rhoimp0      = 0.d0
+          rhoimp0_corr = 0.d0
+          rhoimp0_p    = 0.d0
+          rhoimp0_s    = 0.d0
+          rhoimp0_t    = 0.d0
+          rhoimp0_R    = 0.d0
+          rhoimp0_Z    = 0.d0
+          rhoimp0_ss   = 0.d0
+          rhoimp0_st   = 0.d0
+          rhoimp0_tt   = 0.d0
+          rhoimp0_RR   = 0.d0
+          rhoimp0_ZZ   = 0.d0
+          drhoimp0_corr_dn = 0.d0
+          
           if (with_impurities) then
             rhoimp0      = eq_g(mp,var_rhoimp,ms,mt)
             rhoimp0_corr = max(rhoimp0,1.d-12)
@@ -1132,20 +1165,6 @@ do i=1,n_vertex_max
                          + rhoimp0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                          - rhoimp0_Z * xjac_Z / xjac
             drhoimp0_corr_dn = 0.d0 ! dcorr_neg_dens_drho(rhoimp0, (/ 0.d-5, 1.d-5 /))
-          else
-            rhoimp0      = 0.d0  
-            rhoimp0_corr = 0.d0 
-            rhoimp0_p    = 0.d0  
-            rhoimp0_s    = 0.d0  
-            rhoimp0_t    = 0.d0  
-            rhoimp0_R    = 0.d0 
-            rhoimp0_Z    = 0.d0 
-            rhoimp0_ss   = 0.d0 
-            rhoimp0_st   = 0.d0 
-            rhoimp0_tt   = 0.d0 
-            rhoimp0_RR   = 0.d0 
-            rhoimp0_ZZ   = 0.d0
-            drhoimp0_corr_dn = 0.d0                  
           endif
 
           ! --- P
@@ -1484,87 +1503,80 @@ do i=1,n_vertex_max
 
           vv2 = Up0**2 + UR0**2 + UZ0**2
 
-          if (with_neutrals)then
-            call neutrals_modeling()
-            UgradRhon = UR0 * rhon0_R + UZ0 * rhon0_Z + Up0 * rhon0_p / R
-          else
-            Sion_T        = 0.d0
-            dSion_dT      = 0.d0
-            Srec_T        = 0.d0
-            dSrec_dT      = 0.d0
-            LradDcont_T   = 0.d0
-            dLradDcont_dT = 0.d0
-            LradDrays_T   = 0.d0
-            dLradDrays_dT = 0.d0
-            frad_bg     = 0.d0
-            dfrad_bg_dT = 0.d0
+          Sion_T        = 0.d0
+          dSion_dT      = 0.d0
+          Srec_T        = 0.d0
+          dSrec_dT      = 0.d0
+          LradDcont_T   = 0.d0
+          dLradDcont_dT = 0.d0
+          LradDrays_T   = 0.d0
+          dLradDrays_dT = 0.d0
+          frad_bg     = 0.d0
+          dfrad_bg_dT = 0.d0
 
-            UgradRhon = 0.d0
-            power_dens_teleport_ju = 0.d0
-            power_dens_teleport_ju_arr = 0.d0
-          endif
+          power_dens_teleport_ju = 0.d0
+          power_dens_teleport_ju_arr = 0.d0
+          UgradRhon = UR0 * rhon0_R + UZ0 * rhon0_Z + Up0 * rhon0_p / R
+
+          if (with_neutrals) call neutrals_modeling()
 
           ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
           source_imp = 0.d0; source_imp_arr = 0.d0
           source_bg  = 0.d0; source_bg_arr = 0.d0
+ 
+          E_ion     = 0.d0
+          dE_ion_dT = 0.d0
+          alpha_i       = 0.d0
+          dalpha_i_dT   = 0.d0
+          d2alpha_i_dT2 = 0.d0
+
+          alpha_e       = 0.d0
+          dalpha_e_dT   = 0.d0
+          d2alpha_e_dT2 = 0.d0
+          alpha_e_bis   = 0.d0
+          alpha_e_tri   = 0.d0
+
+          alpha_imp       = 0.d0
+          dalpha_imp_dT   = 0.d0
+          d2alpha_imp_dT2 = 0.d0
+          alpha_imp_bis   = 0.d0
+          alpha_imp_tri   = 0.d0
+
+          Lrad        = 0.d0
+          dLrad_dT    = 0.d0
+          frad_bg     = 0.d0
+          dfrad_bg_dT = 0.d0
+
+          pif0      = 0.d0
+          pif0_R    = 0.d0
+          pif0_Z    = 0.d0
+          pif0_s    = 0.d0
+          pif0_t    = 0.d0
+          pif0_p    = 0.d0
+          pif0_corr = 0.d0
+
+          pef0      = 0.d0
+          pef0_R    = 0.d0
+          pef0_Z    = 0.d0
+          pef0_s    = 0.d0
+          pef0_t    = 0.d0
+          pef0_p    = 0.d0
+          pef0_corr = 0.d0
+
+          pf0     =  0.d0 
+          pf0_R   =  0.d0 
+          pf0_Z   =  0.d0 
+          pf0_s   =  0.d0 
+          pf0_t   =  0.d0 
+          pf0_p   =  0.d0 
+          pf0_corr=  0.d0
           
-          if (with_impurities)then
-            call impurities_modeling()
-            UgradRhoimp = UR0 * rhoimp0_R + UZ0 * rhoimp0_Z + Up0 * rhoimp0_p / R
-            BgradRhoimp = BR0 * rhoimp0_R + BZ0 * rhoimp0_Z + Bp0 * rhoimp0_p / R
-          else
-            E_ion     = 0.d0
-            dE_ion_dT = 0.d0
-            alpha_i       = 0.d0
-            dalpha_i_dT   = 0.d0
-            d2alpha_i_dT2 = 0.d0
+          UgradRhoimp = UR0 * rhoimp0_R + UZ0 * rhoimp0_Z + Up0 * rhoimp0_p / R
+          BgradRhoimp = BR0 * rhoimp0_R + BZ0 * rhoimp0_Z + Bp0 * rhoimp0_p / R
+          
+          if (with_impurities) call impurities_modeling()
 
-            alpha_e       = 0.d0
-            dalpha_e_dT   = 0.d0
-            d2alpha_e_dT2 = 0.d0
-            alpha_e_bis   = 0.d0
-            alpha_e_tri   = 0.d0
-
-            alpha_imp       = 0.d0
-            dalpha_imp_dT   = 0.d0
-            d2alpha_imp_dT2 = 0.d0
-            alpha_imp_bis   = 0.d0
-            alpha_imp_tri   = 0.d0
-
-            Lrad        = 0.d0
-            dLrad_dT    = 0.d0
-            frad_bg     = 0.d0
-            dfrad_bg_dT = 0.d0
-
-            pif0      = 0.d0
-            pif0_R    = 0.d0
-            pif0_Z    = 0.d0
-            pif0_s    = 0.d0
-            pif0_t    = 0.d0
-            pif0_p    = 0.d0
-            pif0_corr = 0.d0
-
-            pef0      = 0.d0
-            pef0_R    = 0.d0
-            pef0_Z    = 0.d0
-            pef0_s    = 0.d0
-            pef0_t    = 0.d0
-            pef0_p    = 0.d0
-            pef0_corr = 0.d0
-
-            pf0     =  0.d0 
-            pf0_R   =  0.d0 
-            pf0_Z   =  0.d0 
-            pf0_s   =  0.d0 
-            pf0_t   =  0.d0 
-            pf0_p   =  0.d0 
-            pf0_corr=  0.d0
-            
-            UgradRhoimp = 0.d0
-            BgradRhoimp = 0.d0
-          endif
-
-          source_imp = source_imp ! + constant_imp_source  !! do we need it?
+          source_imp = source_imp + constant_imp_source
           
           psieq_R = (   y_t(ms,mt) * psi_axisym_s(ms,mt)  - y_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
           psieq_Z = ( - x_t(ms,mt) * psi_axisym_s(ms,mt)  + x_s(ms,mt) * psi_axisym_t(ms,mt) ) / xjac
@@ -1588,6 +1600,10 @@ do i=1,n_vertex_max
 
           JJ2 = JR0*JR0 + JZ0*JZ0 + Jp0*Jp0
 
+          ! For shock capturing stabilization
+          tau_sc = 0.d0
+          if (use_sc) call calculate_sc_quantities()
+          
           do im=n_tor_start, n_tor_end
 
             ! --- test functions (V*)
@@ -1891,7 +1907,6 @@ do i=1,n_vertex_max
 
               Qvec_p(var_Te) = + v * ( - rho0 * UgradTe - Te0 * UgradRho -  gamma * pe0 * divU ) &
                                + v * heat_source_e(ms,mt)                                        &
-                               + v * power_dens_teleport_ju                                      &
                                + v * (gamma-1.d0) * Qvisc_T                                      &
                                - ZKe_prof * gradTe_gradVstar__p                                  &
                                - (ZKe_par_T-ZKe_prof) * BgradVstar__p * BgradTe / BB2            &
@@ -1903,6 +1918,7 @@ do i=1,n_vertex_max
                                - (ZKe_par_T-ZKe_prof) * BgradVstar__k * BgradTe / BB2
               if(with_neutrals)then
                 Qvec_p(var_Te) = Qvec_p(var_Te) &
+                               + v * power_dens_teleport_ju                   &                        
                                - v * ksiion * rho0_corr * rhon0_corr * Sion_T &
                                - v * rho0_corr * rhon0_corr * LradDrays_T &
                                - v * rho0_corr * rho0_corr  * LradDcont_T &
@@ -5173,6 +5189,106 @@ subroutine construct_radiation_parameters()
     end if
   end if
 end subroutine construct_radiation_parameters
+
+! subroutine that calculates shock-capturing stabilization related terms
+subroutine calculate_sc_quantities()
+
+  d_p = 0.d0      
+
+  R_rho = rho0 * divU + UgradRho
+  R_rhon = 0.d0
+  R_rhoimp = rhoimp0_corr * divU + UgradRhoimp
+  
+  ! total pressure including neutrals and impurities
+  if ( with_TiTe ) then
+    Ptot     = Pi0   + Pe0    + rhon0 * Ti0 + pif0 + pef0 + (gamma-1.d0) * rhoimp0 * E_ion
+    Ptot_corr= rho0_corr * (Ti0_corr + Te0_corr) + rhon0_corr * Ti0_corr + pif0_corr + pef0_corr + (gamma-1.d0) * rhoimp0_corr * E_ion
+    Ptot_p   = Pi0_p + Pe0_p  + rhon0 * Ti0_p + rhon0_p * Ti0 + pif0_p + pef0_p + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * Te0_p + rhoimp0_p * E_ion)
+    Ptot_R   = Pi0_R + Pe0_R  + rhon0 * Ti0_R + rhon0_R * Ti0 + pif0_R + pef0_R + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * Te0_R + rhoimp0_R * E_ion)
+    Ptot_Z   = Pi0_Z + Pe0_Z  + rhon0 * Ti0_Z + rhon0_Z * Ti0 + pif0_Z + pef0_Z + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * Te0_Z + rhoimp0_Z * E_ion)
+
+    rhoi_eff = rhoimp0_corr + rhoimp0*alpha_i + rhoimp0*T0*dalpha_i_dT
+    rhoe_eff = rhoimp0_corr + rhoimp0*alpha_e + rhoimp0*T0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT
+    R_Ti = UgradTi + (gamma-1.d0) * (pi0 + alpha_imp*rhon0*T0) / rhoi_eff * divU
+    R_Te = UgradTe + (gamma-1.d0) * (pe0 + alpha_imp*rhon0*T0) / rhoe_eff * divU
+
+    d_p   = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te + ( alpha_imp*T0 + (gamma-1.0d0)*E_ion )* R_rhoimp + Ti0 * R_rhon 
+    
+  else
+    Ptot     = P0    + 0.5d0 * rhon0 * T0 + pf0 + (gamma-1.d0) * rhoimp0 * E_ion
+    Ptot_corr=  rho0_corr * T0_corr + 0.5d0 * rhon0_corr * T0_corr + pf0_corr + (gamma-1.d0) * rhoimp0_corr * E_ion
+    Ptot_p   = P0_p  + 0.5d0 * (rhon0 * T0_p + rhon0_p * T0) + pf0_p + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * T0_p + rhoimp0_p * E_ion)
+    Ptot_R   = P0_R  + 0.5d0 * (rhon0 * T0_R + rhon0_R * T0) + pf0_R + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * T0_R + rhoimp0_R * E_ion)
+    Ptot_Z   = P0_Z  + 0.5d0 * (rhon0 * T0_Z + rhon0_Z * T0) + pf0_Z + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * T0_Z + rhoimp0_Z * E_ion)
+
+    rho_eff = rhoimp0_corr + rhoimp0*alpha_imp + rhoimp0*T0*dalpha_imp_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT
+    R_T     = UgradT + (gamma-1.d0) * (p0 + alpha_imp*rhon0*T0) / rho_eff * divU    
+
+    d_p   = T0 * R_rho + rho_eff * R_T + ( alpha_imp*T0 + (gamma-1.0d0)*E_ion )* R_rhoimp + T0 * R_rhon    
+  endif
+  
+  ! Shock-detector term based on the total pressure gradient
+  f_p = dsqrt( Ptot_R*Ptot_R + Ptot_Z*Ptot_Z + Ptot_p*Ptot_p/ (R*R) ) / Ptot_corr * h_e
+  ! Estimation of the numerical stabilization coefficient
+  tau_sc = h_e * h_e * abs(d_p) / Ptot_corr * f_p
+  
+  ! Use of source terms to increase the stabilization coefficients
+  if(add_sources_in_sc)then
+    src_rho = (particle_source(ms,mt) + source_pellet + source_bg + source_imp) &
+            + rho0_corr * rhon0_corr * Sion_T         &
+            - rho0_corr * rho0_corr  * Srec_T
+  
+    src_rhon = - rho0_corr * rhon0_corr * Sion_T      &
+               + rho0_corr * rho0_corr  * Srec_T      &
+               + source_neutral_drift
+  
+    src_rhoimp = source_imp
+
+    if ( with_TiTe ) then ! (with_TiTe)
+      src_pi  = heat_source_i(ms,mt)                                      &
+              +  (gamma-1.d0) * 0.5d0 * vv2 * (source_neutral + source_bg + source_imp)
+  
+      src_pe  = heat_source_e(ms,mt)                           &
+              -  ksiion * rho0_corr * rhon0_corr * Sion_T       &
+              -  rho0_corr * rhon0_corr * LradDrays_T           &
+              -  rho0_corr * rho0_corr  * LradDcont_T           &
+              -  rho0_corr * frad_bg                            &
+              - (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad 
+      s_p = (Ti0 + Te0) * src_rho + src_pi + src_pe + ( alpha_imp*T0 + (gamma-1.0d0)*E_ion )* src_rhoimp + Ti0 * src_rhon
+    else
+      src_p   =  heat_source(ms,mt)                                        &
+              +  (gamma-1.d0) * 0.5d0 * vv2 * (source_neutral + source_bg + source_imp)    &
+              -  ksiion * rho0_corr * rhon0_corr * Sion_T       &
+              -  rho0_corr * rhon0_corr * LradDrays_T           &
+              -  rho0_corr * rho0_corr  * LradDcont_T           &
+              -  rho0_corr * frad_bg                            &
+              - (rho0 + alpha_imp*rhoimp0) * rhoimp0 * Lrad
+
+      s_p = T0 * src_rho + src_p + ( alpha_imp*T0 + (gamma-1.0d0)*E_ion )* src_rhoimp + T0 * src_rhon
+    endif
+  
+    tau_sc = h_e * h_e * (abs(d_p) + abs(s_p)) / Ptot_corr * f_p
+  
+  endif
+  
+  ! Updates in the physical diffusivities to locally add numerical stabilization.
+  visco_T = visco_T + visco_sc_num  * tau_sc
+  D_prof  = D_prof  + D_perp_sc_num * tau_sc
+  D_prof_imp  = D_prof_imp  + D_perp_imp_sc_num * tau_sc
+  if ( with_TiTe ) then
+    ZKi_prof  = ZKi_prof  + ZK_i_perp_sc_num * tau_sc
+    ZKi_par_T = ZKi_par_T + ZK_i_par_sc_num  * tau_sc
+    ZKe_prof  = ZKe_prof  + ZK_e_perp_sc_num * tau_sc
+    ZKe_par_T = ZKe_par_T + ZK_e_par_sc_num  * tau_sc
+  else
+    ZK_prof  = ZK_prof   + ZK_perp_sc_num * tau_sc
+    ZK_par_T = ZK_par_T  + ZK_par_sc_num  * tau_sc
+  endif
+  Dn0R = Dn0R + Dn_pol_sc_num * tau_sc
+  Dn0Z = Dn0Z + Dn_pol_sc_num * tau_sc
+  Dn0p = Dn0p + Dn_p_sc_num   * tau_sc
+
+end subroutine calculate_sc_quantities
 
 subroutine my_fft(in_fft,out_fft,n)
   implicit none

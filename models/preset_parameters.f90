@@ -272,6 +272,8 @@ subroutine preset_parameters
   use_sc = .false.
   visco_sc_num     = 0.d0
   D_perp_sc_num    = 0.d0
+  D_perp_imp_sc_num= 0.d0
+  D_par_imp_sc_num = 0.d0
   D_par_sc_num     = 0.d0
   ZK_perp_sc_num   = 0.d0
   ZK_par_sc_num    = 0.d0
@@ -706,6 +708,7 @@ subroutine preset_parameters
   use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one only implemented for argon
   drift_distance = 0.d0 ! No artificial plasmoid drift by default
   energy_teleported = 0.d0 
+  constant_imp_source = 0.d0
 
   !====== JET DMV-2 parameters
   L_tube = 2.4d0

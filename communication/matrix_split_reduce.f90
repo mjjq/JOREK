@@ -14,7 +14,7 @@ subroutine matrix_split_reduce(ad_mat, ac_mat)
 
   integer               :: my_id, n_cpu, comm
   integer               :: i, i_cpu, ierr
-  integer(kind=int_all) :: is, ie, count_max
+  integer(kind=int_all) :: is, ie
   integer, allocatable  :: counts_int(:),displacements_int(:)
   integer(kind=int_all),allocatable :: counts(:), displacements(:) ! should be placed inside split_allgathersolve
 
@@ -107,43 +107,19 @@ subroutine matrix_split_reduce(ad_mat, ac_mat)
         index_target(i_cpu) = displacements(i_cpu) + (i_split-1)*count_split
       enddo
 
-      ! --- Copy distributed matrix into send/recv buffers
       i_cpu = my_id+1
-
-      count_max = maxval(counts_int(1:n_cpu))
 
       is = index_buffer(i_cpu) + 1
       ie = index_buffer(i_cpu) + counts_int(i_cpu)
 
-      call tr_allocate(irecv_buffer,Int1,count_max,"SPL_GATH_irecv_buffer",CAT_DMATRIX)
-      call MPI_AllgatherV(ad_mat%irn(is:ie),counts_int(my_id+1),MPI_INTEGER_ALL,irecv_buffer, &
-                          counts_int,displacements_int,MPI_INTEGER_ALL,comm,ierr)
-      ! --- Copy from buffer into centralised matrix
-      do i_cpu=1,n_cpu
-        ac_mat%irn(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
-          = irecv_buffer(displacements_int(i_cpu)+1:displacements_int(i_cpu)+counts_int(i_cpu))
-      enddo
-      call tr_deallocate(irecv_buffer,"SPL_GATH_irecv_buffer",CAT_DMATRIX)
+      call MPI_AllgatherV(ad_mat%irn(is:ie),counts_int(my_id+1),MPI_INTEGER_ALL,ac_mat%irn, &
+                          counts_int,index_target,MPI_INTEGER_ALL,comm,ierr)
 
-      call tr_allocate(jrecv_buffer,Int1,count_max,"SPL_GATH_jrecv_buffer",CAT_DMATRIX)
-      call MPI_AllgatherV(ad_mat%jcn(is:ie),counts_int(my_id+1),MPI_INTEGER_ALL,jrecv_buffer, &
-                          counts_int,displacements_int,MPI_INTEGER_ALL,comm,ierr)
-      ! --- Copy from buffer into centralised matrix
-      do i_cpu=1,n_cpu
-        ac_mat%jcn(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
-          = jrecv_buffer(displacements_int(i_cpu)+1:displacements_int(i_cpu)+counts_int(i_cpu))
-      enddo
-      call tr_deallocate(jrecv_buffer,"SPL_GATH_jrecv_buffer",CAT_DMATRIX)
+      call MPI_AllgatherV(ad_mat%jcn(is:ie),counts_int(my_id+1),MPI_INTEGER_ALL,ac_mat%jcn, &
+                          counts_int,index_target,MPI_INTEGER_ALL,comm,ierr)
 
-      call tr_allocate(Arecv_buffer,Int1,count_max,"SPL_GATH_Arecv_buffer",CAT_DMATRIX)
-      call MPI_AllgatherV(ad_mat%val(is:ie),counts_int(my_id+1),MPI_DOUBLE_PRECISION,Arecv_buffer, &
-                          counts_int,displacements_int,MPI_DOUBLE_PRECISION,comm,ierr)
-      ! --- Copy from buffer into centralised matrix
-      do i_cpu=1,n_cpu
-        ac_mat%val(index_target(i_cpu)+1:index_target(i_cpu)+counts_int(i_cpu)) &
-          = Arecv_buffer(displacements_int(i_cpu)+1:displacements_int(i_cpu)+counts_int(i_cpu))
-      enddo
-      call tr_deallocate(Arecv_buffer,"SPL_GATH_Arecv_buffer",CAT_DMATRIX)
+      call MPI_AllgatherV(ad_mat%val(is:ie),counts_int(my_id+1),MPI_DOUBLE_PRECISION,ac_mat%val, &
+                          counts_int,index_target,MPI_DOUBLE_PRECISION,comm,ierr)
 
     enddo
 

@@ -50,7 +50,7 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
       if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
-      call ad_mat%copy_to(ac_mat, with_data=.true.)
+      call ad_mat%move_to(ac_mat, with_data=.true.)
     endif
 
     if (.not. spss%initialized) then
@@ -61,7 +61,12 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
     call strumpack_set_mat(spss, ac_mat)
 
     ! strumpack copies matrix values into permuted sparse matrix, thus the original matrix can be deallocated
-    deallocate(ad_mat%val); ad_mat%val => null()
+    if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"irn",CAT_DMATRIX)
+    if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"jcn",CAT_DMATRIX)
+    if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"val",CAT_DMATRIX)
+    if (associated(ad_mat%irn)) call tr_deallocatep(ad_mat%irn,"irn",CAT_DMATRIX)
+    if (associated(ad_mat%jcn)) call tr_deallocatep(ad_mat%jcn,"jcn",CAT_DMATRIX)
+    if (associated(ad_mat%val)) call tr_deallocatep(ad_mat%val,"val",CAT_DMATRIX)
 
     if (.not. spss%analyzed) then
       call clck_time(t0)
@@ -78,12 +83,6 @@ subroutine solve_strumpack_all(spss, ad_mat, rhs_vec, solve_only, tag)
 
     call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
     if (verbose)  write(*,FMT_TIMING) tag, '## Elapsed time factorize:', tsecond
-
-    if (centralize) then
-      deallocate(ac_mat%irn); ac_mat%irn => null()
-      deallocate(ac_mat%jcn); ac_mat%jcn => null()
-      deallocate(ac_mat%val); ac_mat%val => null()
-    endif
 
   endif ! .not.solve_only
 

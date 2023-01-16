@@ -15,8 +15,9 @@ subroutine matrix_split_reduce(ad_mat, ac_mat)
   integer               :: my_id, n_cpu, comm
   integer               :: i, i_cpu, ierr
   integer(kind=int_all) :: is, ie
-  integer, allocatable  :: counts_int(:),displacements_int(:)
-  integer(kind=int_all),allocatable :: counts(:), displacements(:) ! should be placed inside split_allgathersolve
+  integer, allocatable  :: counts_short(:,:), displs_short(:,:)
+  integer, allocatable  :: index_buffer(:,:), index_target(:,:)
+  integer(kind=int_all),allocatable :: counts_long(:), displs_long(:)
 
   integer(kind=int_all) :: i_long
 
@@ -24,127 +25,146 @@ subroutine matrix_split_reduce(ad_mat, ac_mat)
   integer                :: n_split, i_split
   integer(kind=int_all)  :: count_split
 
-  real*8,                allocatable :: Asend_buffer(:)
-  integer(kind=int_all), allocatable :: isend_buffer(:), jsend_buffer(:)
-  real*8,                allocatable :: Arecv_buffer(:)
-  integer(kind=int_all), allocatable :: irecv_buffer(:), jrecv_buffer(:)
-  integer(kind=int_all), allocatable :: index_buffer(:), index_target(:)
 
   comm = ad_mat%comm
   call MPI_COMM_RANK(comm, my_id, ierr)
   call MPI_COMM_SIZE(comm, n_cpu, ierr)
 
-  if (allocated(counts))        call tr_deallocate(counts,"counts",CAT_DMATRIX)
-  if (allocated(displacements)) call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+  allocate(counts_long(n_cpu))
+  allocate(displs_long(n_cpu))
 
-  call tr_allocate(counts,1,n_cpu,"counts",CAT_DMATRIX)
-  call tr_allocate(displacements,1,n_cpu,"displacements",CAT_DMATRIX)
+  call MPI_Allgather(ad_mat%nnz,1,MPI_INTEGER_ALL,counts_long,1,MPI_INTEGER_ALL,comm,ierr)
 
-  call MPI_Allgather(ad_mat%nnz,1,MPI_INTEGER_ALL,counts,1,MPI_INTEGER_ALL,comm,ierr)
-
-  displacements(1) = 0
+  displs_long(1) = 0
   do i=2,n_cpu
-    displacements(i) = displacements(i-1) + counts(i-1)
+    displs_long(i) = displs_long(i-1) + counts_long(i-1)
   enddo
-  
-  call ad_mat%copy_to(ac_mat, with_data=.false.) ! copy matrix parameters except arrays
+
+  call ad_mat%move_to(ac_mat, with_data=.false.) ! copy matrix parameters except arrays
   ac_mat%reduced = .true.
 
   ! Allocate centralized matrix
-  if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"RMatrix",CAT_DMATRIX)
-  if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"RMatrix",CAT_DMATRIX)
-  if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"RMatrix",CAT_DMATRIX)
+  if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"irn",CAT_DMATRIX)
+  if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"jcn",CAT_DMATRIX)
+  if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"val",CAT_DMATRIX)
 
-  ac_mat%nnz = sum(counts(1:n_cpu))
-
-  call tr_allocatep(ac_mat%irn,Int1,ac_mat%nnz,"RMatrix",CAT_DMATRIX)
-  call tr_allocatep(ac_mat%jcn,Int1,ac_mat%nnz,"RMatrix",CAT_DMATRIX)
-  call tr_allocatep(ac_mat%val,Int1,ac_mat%nnz,"RMatrix",CAT_DMATRIX)
+  ac_mat%nnz = sum(counts_long(1:n_cpu))
 
   ! --- Check if we need to split
-  need_to_split = .false.
-  if (ac_mat%nnz .gt. INT_MAX) need_to_split = .true.
+  if (ac_mat%nnz .gt. INT_MAX) then
+    need_to_split = .true.
+    n_split = ac_mat%nnz / INT_MAX + 1
+  else
+    need_to_split = .false.
+    n_split = 1
+  endif
 
   ! --- Allocate short-integer counts and displacements for MPI calls
   ! --- Counts still need to be copied because MPI count types are always short ints
-  call tr_allocate(counts_int,1,n_cpu,"SPL_GATH_counts",CAT_DMATRIX)
-  call tr_allocate(displacements_int,1,n_cpu,"SPL_GATH_displacements",CAT_DMATRIX)
+  allocate(counts_short(n_split,n_cpu))
+  allocate(displs_short(n_split,n_cpu))
+
 
   ! --- Split MPI calls
   if (need_to_split) then
-
-    call tr_allocate(index_buffer,1,n_cpu,"SPL_GATH_index_buffer",CAT_DMATRIX)
-    call tr_allocate(index_target,1,n_cpu,"SPL_GATH_index_target",CAT_DMATRIX)
-
     ! --- Split respective to the max send/recv
-    n_split = ac_mat%nnz / INT_MAX + 1
+
     if (my_id .eq. 0) write(*,*) 'Warning: splitting matrix MPI centralisation', n_split
+
+    allocate(index_buffer(n_split,n_cpu))
+    allocate(index_target(n_split,n_cpu))
 
     do i_split=1,n_split
 
       ! --- Split counts for each MPI chunk
       do i_cpu=1,n_cpu
-        count_split = counts(i_cpu) / n_split
+        count_split = counts_long(i_cpu) / n_split
         if (i_split .gt. 1) then
-          index_buffer(i_cpu) = (i_split-1)*count_split
+          index_buffer(i_split,i_cpu) = (i_split-1)*count_split
         else
-          index_buffer(i_cpu) = 0
+          index_buffer(i_split,i_cpu) = 0
         endif
-        counts_int(i_cpu) = count_split
+        counts_short(i_split,i_cpu) = count_split
         if (i_split .eq. n_split) then
-          counts_int(i_cpu) = counts(i_cpu) - (n_split-1)*count_split
+          counts_short(i_split,i_cpu) = counts_long(i_cpu) - (n_split-1)*count_split
         endif
       enddo
 
       ! --- Split displacements for each MPI chunk
-      displacements_int = 0
-      index_target = 0
-      count_split = counts(1) / n_split
-      index_target(1) = displacements(1) + (i_split-1)*count_split
+      displs_short(i_split,1:n_cpu) = 0
+      index_target(i_split,1:n_cpu) = 0
+      count_split = counts_long(1) / n_split
+      index_target(i_split,1) = displs_long(1) + (i_split-1)*count_split
       do i_cpu=2,n_cpu
-        displacements_int(i_cpu) = displacements_int(i_cpu-1) + counts_int(i_cpu-1)
-        count_split = counts(i_cpu) / n_split
-        index_target(i_cpu) = displacements(i_cpu) + (i_split-1)*count_split
+        displs_short(i_split,i_cpu) = displs_short(i_split,i_cpu-1) + counts_short(i_split,i_cpu-1)
+        count_split = counts_long(i_cpu) / n_split
+        index_target(i_split,i_cpu) = displs_long(i_cpu) + (i_split-1)*count_split
       enddo
-
-      i_cpu = my_id+1
-
-      is = index_buffer(i_cpu) + 1
-      ie = index_buffer(i_cpu) + counts_int(i_cpu)
-
-      call MPI_AllgatherV(ad_mat%irn(is:ie),counts_int(my_id+1),MPI_INTEGER_ALL,ac_mat%irn, &
-                          counts_int,index_target,MPI_INTEGER_ALL,comm,ierr)
-
-      call MPI_AllgatherV(ad_mat%jcn(is:ie),counts_int(my_id+1),MPI_INTEGER_ALL,ac_mat%jcn, &
-                          counts_int,index_target,MPI_INTEGER_ALL,comm,ierr)
-
-      call MPI_AllgatherV(ad_mat%val(is:ie),counts_int(my_id+1),MPI_DOUBLE_PRECISION,ac_mat%val, &
-                          counts_int,index_target,MPI_DOUBLE_PRECISION,comm,ierr)
 
     enddo
 
-    call tr_deallocate(index_buffer,"SPL_GATH_index_buffer",CAT_DMATRIX)
-    call tr_deallocate(index_target,"SPL_GATH_index_target",CAT_DMATRIX)
+! do irn, jcn, val one by one to save memory
+    i_cpu = my_id+1
+
+    call tr_allocatep(ac_mat%irn,Int1,ac_mat%nnz,"irn",CAT_DMATRIX)
+    do i_split=1,n_split
+      is = index_buffer(i_split,i_cpu) + 1
+      ie = index_buffer(i_split,i_cpu) + counts_short(i_split,i_cpu)
+      call MPI_AllgatherV(ad_mat%irn(is:ie),counts_short(i_split,i_cpu),MPI_INTEGER_ALL,ac_mat%irn, &
+                          counts_short(i_split,1:n_cpu),index_target(i_split,1:n_cpu),MPI_INTEGER_ALL,comm,ierr)
+    enddo
+    call tr_deallocatep(ad_mat%irn,"irn",CAT_DMATRIX)
+
+    call tr_allocatep(ac_mat%jcn,Int1,ac_mat%nnz,"jcn",CAT_DMATRIX)
+    do i_split=1,n_split
+      is = index_buffer(i_split,i_cpu) + 1
+      ie = index_buffer(i_split,i_cpu) + counts_short(i_split,i_cpu)
+      call MPI_AllgatherV(ad_mat%jcn(is:ie),counts_short(i_split,i_cpu),MPI_INTEGER_ALL,ac_mat%jcn, &
+                          counts_short(i_split,1:n_cpu),index_target(i_split,1:n_cpu),MPI_INTEGER_ALL,comm,ierr)
+    enddo
+    call tr_deallocatep(ad_mat%jcn,"jcn",CAT_DMATRIX)
+
+    call tr_allocatep(ac_mat%val,Int1,ac_mat%nnz,"val",CAT_DMATRIX)
+    do i_split=1,n_split
+      is = index_buffer(i_split,i_cpu) + 1
+      ie = index_buffer(i_split,i_cpu) + counts_short(i_split,i_cpu)
+      call MPI_AllgatherV(ad_mat%val(is:ie),counts_short(i_split,i_cpu),MPI_DOUBLE_PRECISION,ac_mat%val, &
+                          counts_short(i_split,1:n_cpu),index_target(i_split,1:n_cpu),MPI_DOUBLE_PRECISION,comm,ierr)
+    enddo
+    call tr_deallocatep(ad_mat%val,"val",CAT_DMATRIX)
+
+
+    deallocate(index_buffer)
+    deallocate(index_target)
 
   ! --- Don't split MPI calls
   else
-    ! --- Counts still need to be copied because MPI count types are always short ints
-    counts_int(:) = counts(:)
-    displacements_int(:) = displacements(:)
 
-    call MPI_AllgatherV(ad_mat%irn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%irn, &
-                        counts_int,displacements_int,MPI_INTEGER_ALL,comm,ierr)
-    call MPI_AllgatherV(ad_mat%jcn,ad_mat%nnz,MPI_INTEGER_ALL,ac_mat%jcn, &
-                        counts_int,displacements_int,MPI_INTEGER_ALL,comm,ierr)
-    call MPI_AllgatherV(ad_mat%val,ad_mat%nnz,MPI_DOUBLE_PRECISION,ac_mat%val, &
-                        counts_int,displacements_int,MPI_DOUBLE_PRECISION,comm,ierr)
+    ! --- Counts still need to be copied because MPI count types are always short ints
+    counts_short(1,1:n_cpu) = counts_long(1:n_cpu)
+    displs_short(1,1:n_cpu) = displs_long(1:n_cpu)
+
+    call tr_allocatep(ac_mat%irn,Int1,ac_mat%nnz,"irn",CAT_DMATRIX)
+    call MPI_AllgatherV(ad_mat%irn,counts_short(1,my_id+1),MPI_INTEGER_ALL,ac_mat%irn, &
+                        counts_short(1,1:n_cpu),displs_short(1,1:n_cpu),MPI_INTEGER_ALL,comm,ierr)
+    call tr_deallocatep(ad_mat%irn,"irn",CAT_DMATRIX)
+
+    call tr_allocatep(ac_mat%jcn,Int1,ac_mat%nnz,"jcn",CAT_DMATRIX)
+    call MPI_AllgatherV(ad_mat%jcn,counts_short(1,my_id+1),MPI_INTEGER_ALL,ac_mat%jcn, &
+                        counts_short(1,1:n_cpu),displs_short(1,1:n_cpu),MPI_INTEGER_ALL,comm,ierr)
+    call tr_deallocatep(ad_mat%jcn,"jcn",CAT_DMATRIX)
+
+    call tr_allocatep(ac_mat%val,Int1,ac_mat%nnz,"val",CAT_DMATRIX)
+    call MPI_AllgatherV(ad_mat%val,counts_short(1,my_id+1),MPI_DOUBLE_PRECISION,ac_mat%val, &
+                        counts_short(1,1:n_cpu),displs_short(1,1:n_cpu),MPI_DOUBLE_PRECISION,comm,ierr)
+    call tr_deallocatep(ad_mat%val,"val",CAT_DMATRIX)
+
   endif
 
-  ! --- Deallocate short-integer counts and displacements
-  call tr_deallocate(counts_int,"SPL_GATH_counts",CAT_DMATRIX)
-  call tr_deallocate(displacements_int,"SPL_GATH_displacements",CAT_DMATRIX)
-  call tr_deallocate(counts,"counts",CAT_DMATRIX)
-  call tr_deallocate(displacements,"displacements",CAT_DMATRIX)
+  deallocate(counts_short)
+  deallocate(displs_short)
+  deallocate(counts_long)
+  deallocate(displs_long)
 
   return
 end subroutine matrix_split_reduce

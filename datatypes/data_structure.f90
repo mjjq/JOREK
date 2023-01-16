@@ -173,7 +173,7 @@ module data_structure
     logical                                      :: reduced = .false. !< matrix is available on all comm ranks (not distribued)
 
   contains
-    procedure :: copy_to
+    procedure :: move_to
   end type type_SP_MATRIX
   
   !> RHS vector type
@@ -338,15 +338,15 @@ contains
   end subroutine del_thread_buffers
   
 ! copy one matrix structure into another
-  subroutine copy_to(self, mat_a, with_data)
-    class(type_SP_MATRIX), intent(in)    :: self
+  subroutine move_to(self, mat_a, with_data)
+    class(type_SP_MATRIX), intent(inout)    :: self
     class(type_SP_MATRIX), intent(inout) :: mat_a
     logical                              :: with_data
 
     if (with_data) then
-      mat_a%irn            => self%irn
-      mat_a%jcn            => self%jcn
-      mat_a%val            => self%val
+      mat_a%irn            => self%irn; self%irn => null()
+      mat_a%jcn            => self%jcn; self%jcn => null()
+      mat_a%val            => self%val; self%val => null()
 
       mat_a%ijA_size       => self%ijA_size
       mat_a%ijA_index      => self%ijA_index

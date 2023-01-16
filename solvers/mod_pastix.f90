@@ -173,7 +173,7 @@ module mod_pastix
 ! centralize matrix if it's not distributed by columns; then it will be reduced and distributed
     centralize = (n_cpu.gt.1).and.(.not.ad_mat%col_distributed)
     if (centralize) then
-
+! new ac_mat is allocated, ad_mat is deallocated
       call clck_time(t0)
 
       call matrix_split_reduce(ad_mat,ac_mat)
@@ -182,7 +182,9 @@ module mod_pastix
       if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
-      call ad_mat%copy_to(ac_mat, with_data=.true.)
+! new ac_mat points to ad_mat; no allocation is done
+      call ad_mat%move_to(ac_mat, with_data=.true.)
+      ac_mat%reduced = .true.
     endif
 
     call clck_time(t0)
@@ -460,6 +462,7 @@ module mod_pastix
     use mod_clock
     use mod_coicsr
     use data_structure, only: type_SP_MATRIX
+    use tr_module
 
     implicit none
 
@@ -475,6 +478,7 @@ module mod_pastix
     integer                              :: block_size, block_size2
     integer(kind=int_all)                :: nblock, nnz_block
     integer(kind=int_all), allocatable   :: sparskit_work(:)
+    logical                              :: centralize
 
     external matrix_split_reduce
 
@@ -482,6 +486,10 @@ module mod_pastix
 
     call MPI_COMM_RANK(comm, my_id, ierr)
     call MPI_COMM_SIZE(comm, n_cpu, ierr)
+
+    ! clean from previous factorization
+    if (associated(ptss%perm_vars)) deallocate(ptss%perm_vars); ptss%perm_vars  => Null()
+    if (associated(ptss%iperm_vars)) deallocate(ptss%iperm_vars); ptss%iperm_vars => Null()
 
     if (.not.ptss%equilibrium) then
 
@@ -497,7 +505,9 @@ module mod_pastix
 
     endif
 
-    if ((n_cpu.gt.1).and.(.not.ad_mat%reduced)) then
+! centralize matrix if it's not distributed by columns; then it will be reduced and distributed
+    centralize = (n_cpu.gt.1).and.(.not.ad_mat%col_distributed)
+    if (centralize) then
 
       call clck_time(t0)
 
@@ -506,10 +516,8 @@ module mod_pastix
       call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
       if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
-      deallocate(ad_mat%val); ad_mat%val => null()
-
     else
-      call ad_mat%copy_to(ac_mat, with_data=.true.)
+      call ad_mat%move_to(ac_mat, with_data=.true.)
       ac_mat%reduced = .true.
     endif
 
@@ -582,6 +590,9 @@ module mod_pastix
     call pastix_init_nthreads(ptss)
 
     if (my_id .eq. 0) write(*,'(A,i5)') ' PastiX n_threads : ', ptss%nthrd
+
+    if (associated(ptss%perm_vars)) deallocate(ptss%perm_vars); ptss%perm_vars  => Null()
+    if (associated(ptss%iperm_vars)) deallocate(ptss%iperm_vars); ptss%iperm_vars => Null()
 
     allocate(ptss%perm_vars(ptss%nblock))
     allocate(ptss%iperm_vars(ptss%nblock))

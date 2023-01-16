@@ -279,14 +279,6 @@ subroutine global_matrix_structure(node_list, element_list, boundary_list, freeb
   enddo
 
   a_mat%nnz = a_mat%ijA_index(a_mat%my_ind_max-a_mat%my_ind_min + 1, a_mat%ijA_size(a_mat%my_ind_max-a_mat%my_ind_min+1)) + a_mat%block_size**2 - 1
- 
-  if (associated(a_mat%irn)) call tr_deallocatep(a_mat%irn, "irn", CAT_DMATRIX) 
-  call tr_allocatep(a_mat%irn, Int1, a_mat%nnz, "irn", CAT_DMATRIX)
-  a_mat%irn(:) = 0
-  
-  if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn, "jcn", CAT_DMATRIX) 
-  call tr_allocatep(a_mat%jcn, Int1, a_mat%nnz, "jcn",  CAT_DMATRIX)
-  a_mat%jcn(:) = 0 
 
   !---- for debugging purpose
   write(*,'(i6,a,2i20)') my_id, ' size matrices : nz = ', a_mat%nnz

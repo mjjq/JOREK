@@ -280,6 +280,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   use mod_integer_types
   use mod_axis_treatment
   use mod_simulation_data, only: type_MHD_SIM
+  use global_distributed_matrix, only: global_matrix_structure_vacuum
   
   !$ use omp_lib
   implicit none
@@ -402,16 +403,28 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   endif ! (.not. harmonic_matrix)
 
   ! --- Memory allocation
-  if (associated(a_mat%val))   call tr_deallocatep(a_mat%val,"A_mat",CAT_DMATRIX) 
-  call tr_allocatep(a_mat%val, Int1, a_mat%nnz, "A_mat",  CAT_DMATRIX)
-  a_mat%val(:) = 0.0d0
+  if (associated(a_mat%irn)) call tr_deallocatep(a_mat%irn, "irn", CAT_DMATRIX)
+  if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn, "jcn", CAT_DMATRIX)
+  if (associated(a_mat%val)) call tr_deallocatep(a_mat%val, "val", CAT_DMATRIX)
 
-  if (associated(rhs_vec%val)) call tr_deallocatep(rhs_vec%val,"rhs",CAT_DMATRIX) 
+  call tr_allocatep(a_mat%irn, Int1, a_mat%nnz, "irn", CAT_DMATRIX)
+  call tr_allocatep(a_mat%jcn, Int1, a_mat%nnz, "jcn", CAT_DMATRIX)
+  call tr_allocatep(a_mat%val, Int1, a_mat%nnz, "val", CAT_DMATRIX)
+
+  a_mat%irn(1:a_mat%nnz) = 0
+  a_mat%jcn(1:a_mat%nnz) = 0
+  a_mat%val(1:a_mat%nnz) = 0.0d0
+
+  if (associated(rhs_vec%val)) call tr_deallocatep(rhs_vec%val,"rhs",CAT_DMATRIX)
   call tr_allocatep(rhs_vec%val, Int1, a_mat%ng, "rhs", CAT_DMATRIX)
   rhs_vec%val(:) = 0.0d0 
 
   call tr_allocate(rhs_local, Int1, a_mat%ng, "rhs_local", CAT_DMATRIX)
   rhs_local  = 0.d0
+
+  if (mhd_sim%freeboundary .and. (mhd_sim%sr_n_tor /= 0 ) ) then
+    call global_matrix_structure_vacuum(mhd_sim%node_list, mhd_sim%bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor)
+  endif
  
   ! --- Declare shared and private variables for omp
   !$omp parallel default(none) &
@@ -707,13 +720,12 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   ! --- Memory tracking
   call tr_vnorms("cm_A_aft_bc", a_mat%val, a_mat%nnz)
 
-
-    ! --- Add vacuum response (boundary integral) for free boundary computations
-    if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-      call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, & 
+  ! --- Add vacuum response (boundary integral) for free boundary computations
+  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
+    call vacuum_boundary_integral(my_id, bnd_node_list, node_list, bnd_elm_list, freeboundary_equil, &
                                   resistive_wall, my_ind_min, my_ind_max, rhs_local, tstep, index_now, a_mat)
-    end if
-  
+  endif
+
   if ( .not. harmonic_matrix ) then 
     ! --- Summarise element_matrix comparison
 #ifdef COMPARE_ELEMENT_MATRIX

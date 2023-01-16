@@ -526,10 +526,6 @@ mpi_required = 0
                                  mhd_sim%local_elms, mhd_sim%n_local_elms, a_mat, i_tor_min=1, i_tor_max=n_tor)
 
     call MPI_Barrier(a_mat%comm,ierr)
-    
-    if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then 
-      call global_matrix_structure_vacuum(mhd_sim%node_list, mhd_sim%bnd_node_list, a_mat, i_tor_min=1, i_tor_max=n_tor) 
-    endif
 
   endif ! (nstep >0)
   

@@ -230,10 +230,6 @@ subroutine setup_solvers(this, sim)
   call global_matrix_structure(this%mhd_sim%node_list, this%mhd_sim%element_list, this%mhd_sim%bnd_elm_list, this%mhd_sim%freeboundary,&
                                  this%mhd_sim%local_elms, this%mhd_sim%n_local_elms, this%a_mat, i_tor_min=1, i_tor_max=n_tor)                                   
 
-  if ( freeboundary .and. ( sr%n_tor /= 0 ) ) then
-    call global_matrix_structure_vacuum(this%mhd_sim%node_list, this%mhd_sim%bnd_node_list, this%a_mat, i_tor_min=1, i_tor_max=n_tor) 
-  endif
-
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
   this%solver%iter_precon        = iter_precon

@@ -14,7 +14,7 @@ module mod_initialise_particles
   public set_particle_weights_canonical_maxwellian, normalize_with_projection
   public weigh_with_interp_f
   public normalize_with_projection_at_gc
-  public real_f,real_arr_inout_s,initialise_particles_in_phase_space
+  public real_f,real_arr_inout_s,part_inout_s,initialise_particles_in_phase_space
 
   interface
     subroutine find_RZ(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)

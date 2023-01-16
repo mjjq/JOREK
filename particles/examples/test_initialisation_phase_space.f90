@@ -26,7 +26,7 @@ type(event)                  :: field_reader
 type(type_bnd_node_list)     :: bnd_node_list
 type(type_bnd_element_list)  :: bnd_elm_list
 logical                      :: write_txt 
-integer                      :: ii,n_dim,n_particles,nR,nZ,nphi,np,npitch,nchi
+integer                      :: ii,n_variables,n_particles,nR,nZ,nphi,np,npitch,nchi
 integer                      :: n_int_pdf_param,n_real_pdf_param,ifail
 integer                      :: n_int_weight_param,n_real_weight_param
 integer                      :: n_int_gdf_param,n_real_gdf_param
@@ -41,7 +41,7 @@ real*8                       :: error_n_phys_particles,error_n_phys_particles_no
 real*8,dimension(2)          :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)          :: Ekinbound,Pbound,Pitchbound,Chibound,Chargebound
 real*8,dimension(7,2)        :: phase_space_bounds
-real*8,dimension(:),allocatable           :: real_pdf_to_part_coord_param,
+real*8,dimension(:),allocatable           :: real_pdf_to_part_coord_param
 real*8,dimension(:),allocatable           :: Rmesh,Zmesh,phimesh,pmesh,pitchmesh,chimesh
 real*8,dimension(:),allocatable           :: real_pdf_param,real_weight_param,real_gdf_param
 real*8,dimension(:),allocatable           :: DUMMY_REAL_ARRAY
@@ -64,7 +64,7 @@ call sim%initialize(num_groups=1)
 !> Define inputs ----------------------------------------------------------------------------
 write_txt   = .false.
 test_case   = 'jorek_current_density_re'
-n_dim       = 7
+n_variables = 7
 n_particles = 100000000
 nR          = 2
 nZ          = 2
@@ -192,7 +192,7 @@ write(*,*) ' '
 
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
-call initialise_particles_in_phase_space(n_dim,sim%groups(1)%particles,sim%fields,sob_rng,&
+call initialise_particles_in_phase_space(n_variables,sim%groups(1)%particles,sim%fields,sob_rng,&
 pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
 pdf_to_part_coord,sim%groups(1)%mass,start_time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
 n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight_param,&
@@ -718,11 +718,11 @@ end subroutine write_array6d_integer
 !> outputs:
 !>   p_inout: (particle_base) initialised particle
 subroutine spherical_p_cartesian_q_to_relativistic_kinetic(p_inout,&
-n_x,x,time,fields,n_real_param,real_paran,n_int_param,int_param)
+n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
   use mod_particle_types,        only: particle_base
   use mod_particle_types,        only: particle_kinetic_relativistic
   use mod_fields,                only: fields_base
-  use mod_pushe_tools,           only: get_orthonormals
+  use mod_pusher_tools,          only: get_orthonormals
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   implicit none
   !> Inputs-Outputs:
@@ -735,11 +735,13 @@ n_x,x,time,fields,n_real_param,real_paran,n_int_param,int_param)
   real*8,dimension(n_x),intent(in)          :: x
   real*8,dimension(n_real_param),intent(in) :: real_param
   !> variables
+  real*8              :: psi,U
+  real*8,dimension(3) :: B_field,E_field,e1,e2
   select type (p=>p_inout)
   type is (particle_kinetic_relativistic)
     call fields%calc_EBpsiU(time,p%i_elm,p%st,p%x(3),&
     E_field,B_field,psi,U); B_field = B_field/norm2(B_field);
-    call get_orthonormals(B,e1,e2)
+    call get_orthonormals(B_field,e1,e2)
     p%p = x(4)*(cos(x(5))*B_field + sin(x(5))*(cos(x(6))*e1 + sin(x(6))*e2))
     p%p = vector_cylindrical_to_cartesian(p%x(3),p%p)
     p%q = int(x(7),kind=1)

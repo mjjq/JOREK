@@ -79,7 +79,7 @@ module mod_initialise_particles
       real*8,dimension(n_real_param),intent(in) :: real_param
       !> inputs-outputs:
       class(particle_base),intent(inout) :: p_inout
-      class(fields_base),intent(inout)   :: fields
+      class(fields_base),intent(in)      :: fields
     end subroutine
   end interface
 
@@ -368,12 +368,8 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
   integer                                  :: n_real_samp_to_part_param,n_int_samp_to_part_param
   integer,dimension(:),allocatable         :: int_pdf_param,int_weight_param,int_gdf_param
   integer,dimension(:),allocatable         :: int_samp_to_part_param
-  real*8                                   :: Erest,psi,U
   real*8                                   :: one_over_sup_pdf,one_over_sup_gdf
   real*8,dimension(2)                      :: st
-  real*8,dimension(3)                      :: B,E,e1,e2
-  !> phase space bounds 1: R, 2: Z, 3: phi, 4: momentum, 5: pitch, 6: gyro, 7: charge
-  real*8,dimension(7,2)                    :: phase_bounds
   real*8,dimension(:),allocatable          :: variables,real_pdf_param,real_weight_param
   real*8,dimension(:),allocatable          :: real_gdf_param,real_samp_to_part_param
 
@@ -398,7 +394,7 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
   if((present(real_pdf_param_in)).and.(n_real_pdf_param.gt.0)) then
     allocate(real_pdf_param(n_real_pdf_param)); real_pdf_param = real_pdf_param_in;
   endif
-  n_int_pdf_param = 0; if(present(n_int_pdf_param_in)) n_int_pdf_param_in = n_int_pdf_param;
+  n_int_pdf_param = 0; if(present(n_int_pdf_param_in)) n_int_pdf_param = n_int_pdf_param_in;
   if((present(int_pdf_param_in)).and.(n_int_pdf_param.gt.0)) then
     allocate(int_pdf_param(n_int_pdf_param)); int_pdf_param = int_pdf_param_in;
   endif
@@ -406,7 +402,7 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
   if((present(real_weight_param_in)).and.(n_real_weight_param.gt.0)) then
     allocate(real_weight_param(n_real_weight_param)); real_weight_param = real_weight_param_in;
   endif
-  n_int_weight_param = 0; if(present(n_int_weight_param_in)) n_int_weight_param_in = n_int_weight_param;
+  n_int_weight_param = 0; if(present(n_int_weight_param_in)) n_int_weight_param = n_int_weight_param_in;
   if((present(int_weight_param_in)).and.(n_int_weight_param.gt.0)) then
     allocate(int_weight_param(n_int_weight_param)); int_weight_param = int_weight_param_in;
   endif
@@ -414,7 +410,7 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
   if((present(real_gdf_param_in)).and.(n_real_gdf_param.gt.0)) then
     allocate(real_gdf_param(n_real_gdf_param)); real_gdf_param = real_gdf_param_in;
   endif
-  n_int_gdf_param = 0; if(present(n_int_gdf_param_in)) n_int_gdf_param_in = n_int_gdf_param;
+  n_int_gdf_param = 0; if(present(n_int_gdf_param_in)) n_int_gdf_param = n_int_gdf_param_in;
   if((present(int_gdf_param_in)).and.(n_int_gdf_param.gt.0)) then
     allocate(int_gdf_param(n_int_gdf_param)); int_gdf_param = int_gdf_param_in;
   endif
@@ -425,7 +421,7 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
     real_samp_to_part_param = real_samp_to_part_param_in
   endif
   n_int_samp_to_part_param = 0; if(present(n_int_samp_to_part_param_in)) &
-  n_int_samp_to_part_param_in = n_int_samp_to_part_param;
+  n_int_samp_to_part_param = n_int_samp_to_part_param_in;
   if((present(int_samp_to_part_param_in)).and.(n_int_samp_to_part_param.gt.0)) then
     allocate(int_samp_to_part_param(n_int_samp_to_part_param)); int_samp_to_part_param = int_samp_to_part_param_in;
   endif
@@ -440,7 +436,7 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
     !$omp int_weight_param,n_real_gdf_param,n_int_gdf_param,real_gdf_param,int_gdf_param,&
     !$omp n_real_samp_to_part_param,n_int_samp_to_part_param,real_samp_to_part_param,&
     !$omp int_samp_to_part_param) &
-    !$omp private(ii,variables,thread_id,i_elm,st,ifail,B,e1,e2,E,psi,U)
+    !$omp private(ii,variables,thread_id,i_elm,st,ifail)
     thread_id = 1
     !$ thread_id = omp_get_thread_num()+1
     !$omp do schedule(dynamic,chunksize)
@@ -472,8 +468,8 @@ subroutine initialise_particles_in_phase_space(n_dim, particles, fields, rng_bas
       real_weight_param,n_int_weight_param,int_weight_param)
       !> transform the remaining variables of the sampe in particle coordinates
       call sample_to_particle(particles(ii),n_dim,variables(1:n_dim),time,fields,&
-      n_real_samp_to_part_param,real_samp_to_part_param,n_int_samp_to_param,&
-      int_samp_to_param)
+      n_real_samp_to_part_param,real_samp_to_part_param,n_int_samp_to_part_param,&
+      int_samp_to_part_param)
     enddo
 #ifndef __NVCOMPILER
     !$omp end do

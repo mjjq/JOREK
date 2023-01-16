@@ -68,7 +68,7 @@ call sim%initialize(num_groups=1)
 write_txt   = .false.
 test_case   = 'jorek_current_density_re'
 n_variables = 7
-n_particles = 10000000
+n_particles = 100000000
 nR          = 2
 nZ          = 2
 nphi        = 2
@@ -140,6 +140,8 @@ if(trim(test_case)=='jorek_current_density_re') then
   n_int_pdf_param  = 1; allocate(int_pdf_param(n_int_pdf_param));
   n_real_weight_param = 3; allocate(real_weight_param(n_real_weight_param));
   int_pdf_param(1)    = sim%my_id
+  n_int_pdf_to_part_coord_param  = 0
+  n_real_pdf_to_part_coord_param = 0
   pdf_to_use          => pdf_current_density_uniform_phase
   weight_to_use       => particle_weight_current_density_uniform_phase
   pdf_to_part_coord   => spherical_p_cartesian_q_to_relativistic_kinetic
@@ -159,6 +161,8 @@ if(trim(test_case)=='jorek_current_density_re') then
 elseif(trim(test_case)=='uniform_weight') then
   write(*,*) 'SELECTED: WEIGHTED PDF UNIFORM!'
   n_real_pdf_param = 2; allocate(real_pdf_param(n_real_pdf_param));
+  n_int_pdf_to_part_coord_param  = 0
+  n_real_pdf_to_part_coord_param = 0
   pdf_to_use        => pdf_uniform
   weight_to_use     => weight_uniform
   pdf_to_part_coord => spherical_p_cartesian_q_to_relativistic_kinetic
@@ -177,6 +181,8 @@ elseif(trim(test_case)=='uniform_weight') then
   n_real_weight_param,real_weight_param,n_int_weight_param,int_weight_param)
 else
   write(*,*) 'SELECTED: PDF UNIFORM (DEFAULT)!'
+  n_int_pdf_to_part_coord_param  = 0
+  n_real_pdf_to_part_coord_param = 0
   pdf_to_use        => pdf_uniform
   weight_to_use     => weight_uniform_one
   pdf_to_part_coord => spherical_p_cartesian_q_to_relativistic_kinetic
@@ -733,12 +739,12 @@ n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
   !> Inputs-Outputs:
   class(particle_base),intent(inout) :: p_inout
   !> Inputs:
-  class(fields_base),intent(in)             :: fields
-  integer,intent(in)                        :: n_x,n_real_param,n_int_param
-  integer,dimension(n_int_param),intent(in) :: int_param
-  real*8,intent(in)                         :: time
-  real*8,dimension(n_x),intent(in)          :: x
-  real*8,dimension(n_real_param),intent(in) :: real_param
+  class(fields_base),intent(in)               :: fields
+  integer,intent(in)                          :: n_x,n_real_param,n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(n_x),intent(in)            :: x
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
   !> variables
   real*8              :: psi,U
   real*8,dimension(3) :: B_field,E_field,e1,e2

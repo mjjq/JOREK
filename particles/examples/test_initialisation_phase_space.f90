@@ -11,10 +11,13 @@ program test_initialisation_phase_space
 !> momentum space and the distribution of electric charges
 !> be aware that the electric charge should be a double 
 use constants,       only: TWOPI,PI
+use phys_module,     only: xcase,xpoint
 use data_structure,  only: type_bnd_node_list,type_bnd_element_list
 use mod_boundary,    only: boundary_from_grid
 use mod_expression,  only: exprs_all_int,init_expr,exprs,SI_UNITS
 use mod_integrals3D, only: int3d_new
+use mod_boundary,    only: boundary_from_grid
+use equil_info
 use mod_random_seed
 use particle_tracer
 use mod_particle_io, only: write_simulation_hdf5
@@ -65,7 +68,7 @@ call sim%initialize(num_groups=1)
 write_txt   = .false.
 test_case   = 'jorek_current_density_re'
 n_variables = 7
-n_particles = 100000000
+n_particles = 10000000
 nR          = 2
 nZ          = 2
 nphi        = 2
@@ -109,6 +112,10 @@ expected_pdf = 0.d0; pdf_at_midpoints = 0.d0;
 !> read jorek field
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(jorek_filename),i=-1))
 call with(sim,field_reader)
+!> update equilibrium state
+if(sim%my_id.eq.0) call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,.false.)
+call broadcast_boundary(sim%my_id,bnd_elm_list,bnd_node_list)
+call update_equil_state(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_elm_list,xpoint,xcase)
 !> initailise simulation parameters
 sim%time = start_time
 sim%groups(1)%mass = mass
@@ -141,7 +148,6 @@ if(trim(test_case)=='jorek_current_density_re') then
   n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute the integral of the current density in the volume
   allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
-  call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,.false.)
   call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
   exprs('int3d_jR_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
   real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass]; 
@@ -161,7 +167,6 @@ elseif(trim(test_case)=='uniform_weight') then
   real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute the plasma volume
   allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
-  call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,.false.)
   call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
   exprs('volume',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
   real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8)]; 
@@ -891,6 +896,7 @@ end function pdf_current_density_uniform_phase
 !>   sup_pdf:      (real8) value of the probability density upper bound
 function sup_pdf_current_density_uniform_phase(nx,x_min,x_max,fields,&
 n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
+  use constants,          only: SPEED_OF_LIGHT,EL_CHG,MU_ZERO
   use mod_model_settings, only: n_var,var_zj
   use mod_fields,         only: fields_base
   implicit none

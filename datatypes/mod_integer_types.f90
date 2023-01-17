@@ -14,7 +14,7 @@ module mod_integer_types
   integer, parameter                :: MPI_INTEGER_ALL = MPI_INTEGER
   integer, parameter                :: C_INT_ALL = C_INT
 #endif
-  integer(kind=int_all), parameter  :: INT_MAX = 1000000000
+  integer(kind=int_all), parameter  :: INT_MAX = 250000000
   integer(kind=int_all), parameter  :: Int1=1
   integer(kind=int_all), parameter  :: Int0=0
 

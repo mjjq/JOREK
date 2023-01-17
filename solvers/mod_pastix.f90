@@ -478,9 +478,9 @@ module mod_pastix
     integer                              :: block_size, block_size2
     integer(kind=int_all)                :: nblock, nnz_block
     integer(kind=int_all), allocatable   :: sparskit_work(:)
-    logical                              :: centralize
+    logical                              :: distributed
 
-    external matrix_split_reduce
+    external matrix_split_reduce, matrix_split_bcast
 
     comm = ad_mat%comm
 
@@ -506,9 +506,20 @@ module mod_pastix
     endif
 
 ! centralize matrix if it's not distributed by columns; then it will be reduced and distributed
-    centralize = (n_cpu.gt.1).and.(.not.ad_mat%col_distributed)
-    if (centralize) then
+! use reduce if not row_distributed (meaning matrix is on my_id_n==0)
+    distributed = ad_mat%row_distributed.or.ad_mat%col_distributed
+    if ((n_cpu.gt.1).and.(.not.distributed)) then
+    ! matrix comes from communication, thus must be broadcasted
+      call clck_time(t0)
 
+      call matrix_split_bcast(ad_mat,ac_mat)
+
+      call clck_time(t1); call clck_ldiff(t0,t1,tsecond)
+      if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_bcast :', tsecond
+
+
+    elseif ((n_cpu.gt.1).and.(distributed)) then
+    ! matrix comes from direct construction, thus must be all-gathered
       call clck_time(t0)
 
       call matrix_split_reduce(ad_mat,ac_mat)
@@ -517,6 +528,7 @@ module mod_pastix
       if (tag .ge. 0)  write(*,FMT_TIMING) tag, '## Elapsed time mpi_gather :', tsecond
 
     else
+    ! matrix is already reduced (n_cpu = 1)
       call ad_mat%move_to(ac_mat, with_data=.true.)
       ac_mat%reduced = .true.
     endif

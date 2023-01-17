@@ -24,7 +24,7 @@ use mod_particle_io, only: write_simulation_hdf5
 implicit none
 
 !> Variable declarations --------------------------------------------------------------------
-type(pcg32_rng)              :: pcg32_rng
+type(pcg32_rng)              :: rng_pcg32
 type(event)                  :: field_reader
 type(type_bnd_node_list)     :: bnd_node_list
 type(type_bnd_element_list)  :: bnd_elm_list
@@ -203,7 +203,7 @@ write(*,*) ' '
 
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising particles in phase space"
-call initialise_particles_in_phase_space(n_variables,sim%groups(1)%particles,sim%fields,pcg32_rng,&
+call initialise_particles_in_phase_space(n_variables,sim%groups(1)%particles,sim%fields,rng_pcg32,&
 pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
 pdf_to_part_coord,sim%groups(1)%mass,start_time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
 n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight_param,&

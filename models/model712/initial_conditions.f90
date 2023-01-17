@@ -128,11 +128,11 @@ if (my_id .eq. 0) then
 
     if(with_neutrals)then
       node_list%node(i)%values(1,:,var_rhon) = 0.d0
-      node_list%node(i)%values(1,1,var_rhon) = 1.d-10
+      node_list%node(i)%values(1,1,var_rhon) = 0.d0
     endif
     if(with_impurities)then
       node_list%node(i)%values(1,:,var_rhoimp) = 0.d0
-      node_list%node(i)%values(1,1,var_rhoimp) = 1.d-10
+      node_list%node(i)%values(1,1,var_rhoimp) = 0.d0
     endif
     
     node_list%node(i)%deltas = 0.d0

@@ -349,7 +349,7 @@ allocate(iibg(n_adas),iproj(n_var))
 if (include_radiation) then
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-  call add_vtk_entry('Nt_Ionis    ', 'NtIonis_Wm-3',  ineu(1), n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('Nt_Ionis    ', 'NtIonis_Wm-3',    ineu(1), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Lin_rad     ', 'Lin_radWm-3 ',    ineu(2), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Brems       ', 'Brems_Wm-3  ',    ineu(3), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Joule       ', 'Joule_Wm-3  ',    ineu(4), n_scalars, si_units, scalar_names) 
@@ -369,7 +369,6 @@ end if
   call add_vtk_entry('Z_imp       ', 'Z_imp       ',    iimp(4), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Z_eff       ', 'Z_eff       ',    iimp(5), n_scalars, si_units, scalar_names)
   call add_vtk_entry('beta_imp    ', 'beta_imp    ',    iimp(6), n_scalars, si_units, scalar_names)
-
   call add_vtk_entry('ne_corr     ', 'ne20m-3_corr',    i_ne,    n_scalars, si_units, scalar_names)
 #endif
 
@@ -1517,7 +1516,12 @@ if (SI_units) then
 
 #ifdef fullmhd
     !===========================================density in 1e20m-3
-    scalars(i,var_rho) = scalars(i,var_rho) * central_density
+    if (with_impurities) then
+      scalars(i,var_rho) = (scalars(i,var_rho) + scalars(i,iimp(6))*scalars(i,var_rhoimp)) * central_density
+      scalars(i,i_ne)    = scalars(i,i_ne) * central_density
+    else
+      scalars(i,var_rho) = scalars(i,var_rho) * central_density
+    end if
     !===========================================electron temperature in keV
     if (with_TiTe) then
       scalars(i,var_Ti ) = scalars(i,var_Ti)  / MU_zero / (central_density * 1d20) / EL_CHG /1.e3 

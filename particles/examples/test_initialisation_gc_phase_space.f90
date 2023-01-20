@@ -69,10 +69,10 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-write_txt   = .true.
+write_txt   = .false.
 test_case   = 'jorek_current_density_re'
 n_variables = 6
-n_particles = 1000000
+n_particles = 100000000
 nR          = 2
 nZ          = 2
 nphi        = 2
@@ -221,10 +221,10 @@ n_int_pdf_to_part_coord_param,int_pdf_to_part_coord_param)
 !> Produce the expected pdf fromt the guiding center histogram -------------------------------
 write(*,*) "... building guiding center histogram and computing the expected pdf"
 select type(plist=>sim%groups(1)%particles)
-  type is (particle_kinetic_relativistic)
+  type is (particle_gc_relativistic)
   call compute_cylindrical_spherical_histogram_pdf(histo,expected_pdf,Rmesh,&
   Zmesh,phimesh,pmesh,pitchmesh,n_particles,plist,start_time,sim%groups(1)%mass,&
-  nR,nZ,nphi,np,npitch,Rbound,Zbound,Phibound,Pbound,Pitchbound,Chibound,sim%fields)
+  nR,nZ,nphi,np,npitch,Rbound,Zbound,Phibound,Pbound,Pitchbound,sim%fields)
 end select
 
 !> Compute the input pdf at the mesh element midpoints and the L2 error w.r.t. the 
@@ -274,7 +274,7 @@ if(allocated(int_pdf_param)) deallocate(int_pdf_param);
 if(allocated(int_weight_param)) deallocate(int_weight_param);
 if(allocated(real_weight_param)) deallocate(real_weight_param);
 if(allocated(int_pdf_to_part_coord_param)) deallocate(int_pdf_to_part_coord_param);
-if(allocated(real_pdf_to_part_coord_param) deallocate(real_pdf_to_part_coord_param);
+if(allocated(real_pdf_to_part_coord_param)) deallocate(real_pdf_to_part_coord_param);
 pdf_to_use => NULL(); weight_to_use => NULL();
 gdf_to_use => NULL(); gdf_sampler_to_use => NULL();
 call sim%finalize()
@@ -308,7 +308,7 @@ n1,n2,n3,n4,n5,array1,array2,sup_array2)
       do kk=1,n3
         do pp=1,n2
           error = error + dot_product((array2(:,pp,kk,jj,ii)-array1(:,pp,kk,jj,ii)),&
-          (array2(:,qq,pp,kk,jj,ii)-array1(:,pp,kk,jj,ii)))
+          (array2(:,pp,kk,jj,ii)-array1(:,pp,kk,jj,ii)))
         enddo
       enddo
     enddo
@@ -379,7 +379,7 @@ end subroutine compute_error_tot_n_phys_particles
 !>   pitchmesh:     (real8)(npitch) pitch angle mesh equidistant in cos(pitch)
 subroutine compute_cylindrical_spherical_histogram_pdf(histo,estimated_pdf,Rmesh,&
 Zmesh,phimesh,pmesh,pitchmesh,n_particles,particles,time,mass,nR,nZ,nphi,np,&
-npitch,ngyro,Rbound,Zbound,phibound,pbound,pitchbound,fields)
+npitch,Rbound,Zbound,phibound,pbound,pitchbound,fields)
   use constants,                 only: TWOPI
   use mod_fields,                only: fields_base
   use mod_particle_types,        only: particle_gc_relativistic
@@ -497,7 +497,7 @@ end subroutine compute_equidistant_mesh
 !> outputs:
 !>   pdf_at_midpoints: (real8) value of the pdf at the midpoints
 subroutine evaluate_pdf_at_midpoints(&
-pdf_midpoints,nR,nZ,nphi,np,npitch,ngyro,Rmesh,Zmesh,phimesh,pmesh,& 
+pdf_midpoints,nR,nZ,nphi,np,npitch,Rmesh,Zmesh,phimesh,pmesh,& 
 pitchmesh,charge,time,pdf,fields,n_real_pdf_param_in,real_pdf_param_in,&
 n_int_pdf_param_in,int_pdf_param_in)
    use mod_fields, only: fields_base
@@ -559,7 +559,7 @@ n_int_pdf_param_in,int_pdf_param_in)
             call find_RZ(fields%node_list,fields%element_list,x_midpoints(1),&
             x_midpoints(2),dummy_double_1,dummy_double_2,i_elm,st(1),st(2),ifail)
             !> estimate the number of particles at the kinetic mesh midpoint
-            pdf_midpoints(rr,qq,pp,kk,jj,ii) = pdf(nx,x_midpoints,st,time,i_elm,fields,&
+            pdf_midpoints(qq,pp,kk,jj,ii) = pdf(nx,x_midpoints,st,time,i_elm,fields,&
             x_min,x_max,n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
           enddo
         enddo
@@ -601,7 +601,7 @@ subroutine dump_relativistic_gc_particles_in_txt(n_particles,particles,mass,time
       call fields%calc_EBpsiU(time,plist(ii)%i_elm,plist(ii)%st,plist(ii)%x(3),E,B,psi,U)
       normB = norm2(B); pperp  = sqrt(2d0*mass*plist(ii)%p(2)*normB);
       ptot  = sqrt(1d0+((plist(ii)%p(1)**2)+(pperp**2))/((mass*SPEED_OF_LIGHT)**2))
-      pitch = acos(ppar/ptot)
+      pitch = acos(plist(ii)%p(1)/ptot)
       write(42,'(12E40.16E4)') plist(ii)%x(1),plist(ii)%x(2),plist(ii)%x(3),plist(ii)%p(1),&
       plist(ii)%p(2),plist(ii)%weight,real(plist(ii)%q,kind=8),mass,ptot,pperp,pitch,normB
     enddo
@@ -724,11 +724,11 @@ n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
   real*8              :: psi,U
   real*8,dimension(3) :: B_field,E_field
   select type (p=>p_inout)
-  type is (particle_kinetic_relativistic)
+  type is (particle_gc_relativistic)
     call fields%calc_EBpsiU(time,p%i_elm,p%st,p%x(3),&
     E_field,B_field,psi,U);
     p%p = x(4)*[cos(x(5)),&
-    (x(4)*((sin(x(5)))**2))/(2d0*real_param(1)*norm2(B))]
+    (x(4)*((sin(x(5)))**2))/(2d0*real_param(1)*norm2(B_field))]
     p%q = int(x(6),kind=1)
   end select
 end subroutine spherical_p_cartesian_q_to_relativistic_gc
@@ -786,6 +786,7 @@ end function pdf_uniform
 !>   sup_pdf:      (real8) value of the probability density upper bound
 function sup_pdf_uniform(nx,x_min,x_max,n_real_param,real_param,&
 n_int_param,int_param) result(sup_pdf)
+  use constants,  only: PI
   use mod_fields, only: fields_base
   implicit none
   !> Inputs:
@@ -797,9 +798,9 @@ n_int_param,int_param) result(sup_pdf)
   !> Outputs:
   real*8 :: sup_pdf
   !> Evalutate the upper extremum of the pdf
-  sup_pdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  sup_pdf = 3.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
-  (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
+  (cos(x_min(5))-cos(x_max(5)))*PI)
   if(n_real_param.gt.0) sup_pdf = real_param(1)*sup_pdf
 end function sup_pdf_uniform
 
@@ -826,7 +827,7 @@ end function sup_pdf_uniform
 !>   pdf: (real8) value of the probability density 
 function pdf_current_density_uniform_phase(nx,x,st,time,i_elm,fields,&
 x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(pdf)
-  use constants,          only: MU_ZERO,EL_CHG,SPEED_OF_LIGHT
+  use constants,          only: MU_ZERO,EL_CHG,SPEED_OF_LIGHT,PI
   use mod_model_settings, only: var_zj
   use mod_interp,         only: interp_PRZ
   use mod_fields,         only: fields_base
@@ -852,8 +853,8 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(pdf)
   DUMMY_DOUBLE_1 = sqrt((x_max(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
   DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
   pdf = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2);
-  pdf = pdf*(cos(x_min(5))**2 - cos(x_max(5))**2)*(x_max(6)-x_min(6))
-  pdf =(-6.d0*jphi(1))/(pdf*x(7)*EL_CHG*MU_ZERO*(real_param(2)**3)*(SPEED_OF_LIGHT**4)*x(1))
+  pdf = pdf*(cos(x_min(5))**2 - cos(x_max(5))**2)
+  pdf =(-3.d0*jphi(1))/(pdf*x(6)*PI*EL_CHG*MU_ZERO*(real_param(2)**3)*(SPEED_OF_LIGHT**4)*x(1))
 end function pdf_current_density_uniform_phase
 
 !> Upper bound phase space distribution based on the plasma current density
@@ -877,7 +878,7 @@ end function pdf_current_density_uniform_phase
 !>   sup_pdf:      (real8) value of the probability density upper bound
 function sup_pdf_current_density_uniform_phase(nx,x_min,x_max,fields,&
 n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
-  use constants,          only: SPEED_OF_LIGHT,EL_CHG,MU_ZERO
+  use constants,          only: SPEED_OF_LIGHT,EL_CHG,MU_ZERO,PI
   use mod_model_settings, only: n_var,var_zj
   use mod_fields,         only: fields_base
   implicit none
@@ -909,8 +910,8 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   cos2pitch_min = cos(x_min(5))**2
   max_pdf = ((sqrtpovermc2plus1_max**3)-3.d0*sqrtpovermc2plus1_max) - &
             ((sqrtpovermc2plus1_min**3)-3.d0*sqrtpovermc2plus1_min);
-  max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)*(x_max(6)-x_min(6))
-  max_pdf =(-6.d0*real_param(3))/(max_pdf*x_min(7)*EL_CHG*MU_ZERO*(real_param(2)**3)*&
+  max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)
+  max_pdf =(-3.d0*real_param(3))/(max_pdf*PI*x_min(6)*EL_CHG*MU_ZERO*(real_param(2)**3)*&
            (SPEED_OF_LIGHT**4)*x_min(1));
   min_pdf = max_pdf*varmin(var_zj); max_pdf = max_pdf*varmax(var_zj);
   !> check which between min_pdf and max_pdf has the maximum absolute value
@@ -924,7 +925,9 @@ end function sup_pdf_current_density_uniform_phase
 !> Compute the gdf used for sampling the particle coordinates in 
 !> phase space. The gdf used here is a uniform distribution in
 !> cylindrical coordinates for the spatial coordinates and 
-!> uniform spherical distribution for the momentum coordinates
+!> uniform spherical distribution for the momentum coordinates.
+!> The gyro-angle coordinate is not considered here despite
+!> that the spherical topology is retained
 !> inputs:
 !>   nx:           (integer) number of variables
 !>   x:            (real8)(nx) random state to accept
@@ -942,6 +945,7 @@ end function sup_pdf_current_density_uniform_phase
 !>   gdf: (real8) value of the sampler probability density 
 function gdf_uniform_phase(nx,x,st,time,i_elm,fields,x_min,x_max,&
 n_real_param,real_param,n_int_param,int_param) result(gdf)
+  use constants,  only: PI
   use mod_fields, only: fields_base
   implicit none
   !> Inputs:
@@ -956,13 +960,15 @@ n_real_param,real_param,n_int_param,int_param) result(gdf)
   !> Outputs:
   real*8 :: gdf
   !> Evalutate pdf
-  gdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  gdf = 3.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
-  (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
+  (cos(x_min(5))-cos(x_max(5)))*PI)
   if(n_real_param.gt.0) gdf = real_param(1)*gdf
 end function gdf_uniform_phase
 
 !> Upper bound of the uniform phase space sampler distribution
+!> The gyro-angle coordinate is not considered here despite
+!> that the spherical topology is retained
 !> inputs:
 !>   nx:           (integer) number of variables
 !>   x_min:        (real8)(nx) lower bound of the phase space interval
@@ -976,6 +982,7 @@ end function gdf_uniform_phase
 !>   sup_gdf: (real8) value of the sampler probability density upper bound
 function sup_gdf_uniform_phase(nx,x_min,x_max,n_real_param,real_param,&
 n_int_param,int_param) result(sup_gdf)
+  use constants,  only: PI
   use mod_fields, only: fields_base
   implicit none
   !> Inputs:
@@ -987,12 +994,14 @@ n_int_param,int_param) result(sup_gdf)
   !> Outputs:
   real*8 :: sup_gdf
   !> Evalutate the upper extremum of the pdf
-  sup_gdf = 6.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  sup_gdf = 3.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
   (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
-  (cos(x_min(5))-cos(x_max(5)))*(x_max(6)-x_min(6)))
+  (cos(x_min(5))-cos(x_max(5)))*PI)
 end function sup_gdf_uniform_phase
 
 !> GDF uniform sampler generating particle positions in phase space
+!> The gyro-angle coordinate is not considered here despite
+!> that the spherical topology is retained
 !> inputs:
 !>   nx:           (integer) number of variables
 !>   x:            (real8)(nx) random numbers in [0,1)
@@ -1028,7 +1037,7 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param)
   x(2:3) = x_min(2:3) + (x_max(2:3)-x_min(2:3))*x(2:3)
   x(4) = (x_min(4)**3 + (x_max(4)**3-x_min(4)**3)*x(4))**(1d0/3d0)
   x(5) = acos(cos(x_min(5))-(cos(x_max(5))-cos(x_min(5)))*x(5))
-  x(6:7) = x_min(6:7) + (x_max(6:7)-x_min(6:7))*x(6:7)
+  x(6) = x_min(6) + (x_max(6)-x_min(6))*x(6)
 end subroutine gdf_uniform_sampler
 
 !> Dummy particle weight equal to 1 
@@ -1154,7 +1163,7 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(weight)
   weight = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2)
   weight = weight*(cos(x_min(5)+cos(x_max(5))))
   weight = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
-  (weight*real_param(2)*x(7)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
+  (weight*real_param(2)*x(6)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
 end function particle_weight_current_density_uniform_phase
 
 !> Compute the total number of physical particles for the weight uniform pdf
@@ -1234,7 +1243,7 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(n_phys_part)
   n_phys_part = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2)
   n_phys_part = n_phys_part*(cos(x_min(5)+cos(x_max(5))))
   n_phys_part = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
-  (n_phys_part*x_min(7)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
+  (n_phys_part*x_min(6)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
 end function n_physical_particle_current_density_uniform_phase
 
 end program test_initialisation_gc_phase_space

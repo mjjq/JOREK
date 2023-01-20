@@ -1,15 +1,17 @@
 program test_initialisation_phase_space
 !> program used for testing the initialisation method: 
-!>   initialise_particles_in_phase_space 
+!> initialise_particles_in_phase_space 
 !> contained in mod_initialise_particles
-!> the idea is to provide a reject_uniform function
+!> using the relativistic kinetic particle model.
+!> The idea is to provide a reject_uniform function
 !> which reject a uniformly distributed random sample
 !> between [0 1] as a function of a user defined 
-!> 6D distribution. The distribution function as to be
-!> in R,Z,phi coordinates for the physical space, 
+!> 6D distribution. The distribution function used hereafter
+!> is expressed in R,Z,phi coordinates for the physical space, 
 !> momentum, pitch and gyro angles coordinates for the
-!> momentum space and the distribution of electric charges
-!> be aware that the electric charge should be a double 
+!> momentum space and the cartesian coordinates for the 
+!> distribution of electric charges. Be aware that 
+!> the electric charge should be a double 
 use constants,       only: TWOPI,PI
 use phys_module,     only: xcase,xpoint
 use data_structure,  only: type_bnd_node_list,type_bnd_element_list

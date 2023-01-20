@@ -69,7 +69,7 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-write_txt   = .false.
+write_txt   = .true.
 test_case   = 'jorek_current_density_re'
 n_variables = 6
 n_particles = 100000000
@@ -235,7 +235,7 @@ call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,Rmesh,Zmesh
      pmesh,pitchmesh,charge,start_time,pdf_to_use,sim%fields,n_real_pdf_param,&
      real_pdf_param,n_int_pdf_param,int_pdf_param)
 write(*,*) "... computing L2 error"
-call compute_error_norm2_ndim6(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
+call compute_error_norm2_ndim5(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
 npitch-1,expected_pdf,pdf_at_midpoints,pdf_upper_bound) 
 call compute_error_tot_n_phys_particles(error_n_phys_particles,error_n_phys_particles_norm,&
 n_tot_phys_particles,sim%groups(1)%particles)
@@ -315,7 +315,7 @@ n1,n2,n3,n4,n5,array1,array2,sup_array2)
   enddo
   !$omp end parallel do
   error_L2 = sqrt(error); error_L2_norm = error_L2/abs(sup_array2);
-  error_L2_norm = sqrt(error/(n1*n2*n3*n4*n5*n5))/abs(sup_array2)
+  error_L2_avg_norm = sqrt(error/(n1*n2*n3*n4*n5*n5))/abs(sup_array2)
 end subroutine compute_error_norm2_ndim5
 
 !> compute the error between the expected total number of physical particles

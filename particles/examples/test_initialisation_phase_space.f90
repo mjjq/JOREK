@@ -147,7 +147,7 @@ if(trim(test_case)=='jorek_current_density_re') then
   pdf_to_use          => pdf_current_density_uniform_phase
   weight_to_use       => particle_weight_current_density_uniform_phase
   pdf_to_part_coord   => spherical_p_cartesian_q_to_relativistic_kinetic
-  pdf_upper_bound     = sup_pdf_current_density_uniform_phase(7,&
+  pdf_upper_bound     = sup_pdf_current_density_uniform_phase(n_variables,&
   phase_space_bounds(:,1),phase_space_bounds(:,2),sim%fields,&
   n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute the integral of the current density in the volume
@@ -157,9 +157,9 @@ if(trim(test_case)=='jorek_current_density_re') then
   real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass]; 
   deallocate(DUMMY_REAL_ARRAY);
   !> compute the total number of physical particles
-  n_tot_phys_particles = n_physical_particle_current_density_uniform_phase(7,start_time,&
-  sim%fields,phase_space_bounds(:,1),phase_space_bounds(:,2),n_real_weight_param,&
-  real_weight_param,n_int_weight_param,int_weight_param)
+  n_tot_phys_particles = n_physical_particle_current_density_uniform_phase(n_variables,&
+  start_time,sim%fields,phase_space_bounds(:,1),phase_space_bounds(:,2),&
+  n_real_weight_param,real_weight_param,n_int_weight_param,int_weight_param)
 elseif(trim(test_case)=='uniform_weight') then
   write(*,*) 'SELECTED: WEIGHTED PDF UNIFORM!'
   n_real_pdf_param = 2; allocate(real_pdf_param(n_real_pdf_param));
@@ -168,9 +168,9 @@ elseif(trim(test_case)=='uniform_weight') then
   pdf_to_use        => pdf_uniform
   weight_to_use     => weight_uniform
   pdf_to_part_coord => spherical_p_cartesian_q_to_relativistic_kinetic
-  pdf_upper_bound   = sup_pdf_uniform(6,phase_space_bounds(1:6,1), &
-  phase_space_bounds(1:6,2) ,n_real_pdf_param,&
-  real_pdf_param,n_int_pdf_param,int_pdf_param)
+  pdf_upper_bound   = sup_pdf_uniform(n_variables-1,&
+  phase_space_bounds(1:n_variables-1,1),phase_space_bounds(1:n_variables-1,2),&
+  n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute the plasma volume
   allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
   call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
@@ -178,7 +178,7 @@ elseif(trim(test_case)=='uniform_weight') then
   real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8)]; 
   deallocate(DUMMY_REAL_ARRAY);
   !> compute total number of physical particles
-  n_tot_phys_particles = n_physical_particle_weight_uniform(7,start_time,&
+  n_tot_phys_particles = n_physical_particle_weight_uniform(n_variables,start_time,&
   sim%fields,phase_space_bounds(:,1),phase_space_bounds(:,2),&
   n_real_weight_param,real_weight_param,n_int_weight_param,int_weight_param)
 else
@@ -188,8 +188,8 @@ else
   pdf_to_use        => pdf_uniform
   weight_to_use     => weight_uniform_one
   pdf_to_part_coord => spherical_p_cartesian_q_to_relativistic_kinetic
-  pdf_upper_bound   = sup_pdf_uniform(6,phase_space_bounds(1:6,1),&
-  phase_space_bounds(1:6,2),n_real_pdf_param,&
+  pdf_upper_bound   = sup_pdf_uniform(6,phase_space_bounds(1:n_variables-1,1),&
+  phase_space_bounds(1:n_variables-1,2),n_real_pdf_param,&
   real_pdf_param,n_int_pdf_param,int_pdf_param)
   !> compute total number of physical particles
   n_tot_phys_particles = real(n_particles,kind=8)
@@ -198,9 +198,9 @@ endif
 n_real_gdf_param = 0; n_int_gdf_param = 0;
 gdf_to_use         => gdf_uniform_phase
 gdf_sampler_to_use => gdf_uniform_sampler
-gdf_upper_bound    = sup_gdf_uniform_phase(6,phase_space_bounds(1:6,1),&
-phase_space_bounds(1:6,2) ,n_real_pdf_param,&
-real_pdf_param,n_int_pdf_param,int_pdf_param)
+gdf_upper_bound    = sup_gdf_uniform_phase(n_variables-1, &
+phase_space_bounds(1:n_variables-1,1),phase_space_bounds(1:n_variables-1,2), &
+n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
 write(*,*) ' '
 
 !> Test particle initialisation -------------------------------------------------------------

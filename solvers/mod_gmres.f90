@@ -28,10 +28,10 @@ module mod_gmres
     type(type_SP_SOLVER)  :: solver
 
     integer               :: j
-    integer               :: my_id, comm, ierr
+    integer               :: my_id, comm, ierr, counts
     integer               :: revcom, iter_gmres
     integer               :: icntl(8), info(3)
-    integer(kind=int_all) :: i, m, colx, coly, colz, nbscal, lwork, n_dof, irc(5)
+    integer(kind=int_all) :: i, m, colx, coly, colz, nbscal, lwork, irc(5), n_dof
 
     integer :: matvec, precondLeft, precondRight, dotProd
     real*8  :: cntl(5), rinfo(2), sum, err, Bnorm, Xnorm
@@ -222,23 +222,21 @@ module mod_gmres
     real*8                :: y_tmp_block(a_mat%block_size)
     integer,allocatable   :: recv_counts(:), recv_disp(:)
     integer               :: n, i, ir, jc
-    integer               :: my_id, n_cpu, ierr
-    integer(kind=int_all) :: n_blocksize, n_blocks, iA_start, ix_start, iy_start, ndof_local, index_offset, Int_tmp
-    integer               :: size_x_short, size_y_short
-    integer               :: index_ytmp_min, index_ytmp_max
+    integer               :: my_id, n_cpu, ierr, counts
+    integer(kind=int_all) :: n_blocksize, n_blocks, iA_start, ix_start, iy_start, index_offset, Int_tmp
+    integer               :: ndof_local
     
     if ( PRINT_TIMING_INFO ) then
       call cpu_time(t1)
       call MPI_Barrier(MPI_COMM_WORLD,ierr)
       call cpu_time(t2)
     end if
-    
-    size_x_short = size_x
 
     call MPI_COMM_SIZE(a_mat%comm, n_cpu, ierr)
     call MPI_COMM_RANK(a_mat%comm, my_id, ierr) 
 
-    call MPI_BCAST(x,size_x_short,MPI_DOUBLE_PRECISION,0,a_mat%comm,ierr)
+    counts = size_x
+    call MPI_BCAST(x,counts,MPI_DOUBLE_PRECISION,0,a_mat%comm,ierr)
 
     if ( PRINT_TIMING_INFO ) call cpu_time(t3)
 
@@ -372,14 +370,15 @@ module mod_gmres
     real, intent (inout)  :: y(*)
 
     real, allocatable     :: y_tmp(:)
-    integer               :: i, ierr
+    integer               :: i, ierr, counts
     real, dimension(:), allocatable :: y_dum
 
     real*8                :: DUMMY_REAL(1:1)
     integer(kind=int_all) :: DUMMY_INT (1:1)
     integer(kind=int_all) :: n_dof
     
-    call MPI_BCAST(x,n_dof,MPI_DOUBLE_PRECISION,0,solver%pc%MPI_COMM_N,ierr)
+    counts = n_dof
+    call MPI_BCAST(x,counts,MPI_DOUBLE_PRECISION,0,solver%pc%MPI_COMM_N,ierr)
    
     do i = 1, solver%pc%rhs%n
       solver%pc%rhs%val(i) = x(solver%pc%row_index(i))
@@ -418,7 +417,8 @@ module mod_gmres
       enddo
     endif
 
-    call MPI_AllReduce(MPI_IN_PLACE,y_dum,n_dof,MPI_DOUBLE_PRECISION,MPI_SUM,solver%pc%comm,ierr)
+    counts = n_dof
+    call MPI_AllReduce(MPI_IN_PLACE,y_dum,counts,MPI_DOUBLE_PRECISION,MPI_SUM,solver%pc%comm,ierr)
     y(1:n_dof) = y_dum(1:n_dof)
 
     deallocate(y_dum)

@@ -171,9 +171,9 @@ if (my_id == 0) then
   if (associated(a_mat%jcn)) call tr_deallocatep(a_mat%jcn,"a_mat_eq",CAT_DMATRIX)
   if (associated(a_mat%val)) call tr_deallocatep(a_mat%val,"a_mat_eq",CAT_DMATRIX)
 
-  call tr_allocatep(a_mat%val,1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
-  call tr_allocatep(a_mat%irn,1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
-  call tr_allocatep(a_mat%jcn,1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
+  call tr_allocatep(a_mat%val,int1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
+  call tr_allocatep(a_mat%irn,int1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
+  call tr_allocatep(a_mat%jcn,int1,a_mat%nnz,"a_mat_eq",CAT_DMATRIX)
 
   a_mat%irn(1:a_mat%nnz) = 0
   a_mat%jcn(1:a_mat%nnz) = 0
@@ -182,7 +182,7 @@ if (my_id == 0) then
   rhs_vec%n = n_AA
 
   if (associated(rhs_vec%val)) call tr_deallocatep(rhs_vec%val,"rhs_eq",CAT_DMATRIX)
-  call tr_allocatep(rhs_vec%val,1,rhs_vec%n,"rhs_eq",CAT_DMATRIX)
+  call tr_allocatep(rhs_vec%val,int1,rhs_vec%n,"rhs_eq",CAT_DMATRIX)
   rhs_vec%val(1:rhs_vec%n) = 0.d0
 
   ilarge=0

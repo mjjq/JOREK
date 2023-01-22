@@ -475,8 +475,7 @@ module mod_pastix
     integer                              :: i, j
     integer(kind=int_all)                :: k, nnz
     integer*8                            :: check_data
-    integer                              :: block_size, block_size2
-    integer(kind=int_all)                :: nblock, nnz_block
+    integer(kind=int_all)                :: nblock, nnz_block, block_size, block_size2
     integer(kind=int_all), allocatable   :: sparskit_work(:)
     logical                              :: distributed
 

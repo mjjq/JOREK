@@ -10,8 +10,8 @@ subroutine matrix_split_bcast(ad_mat, ac_mat)
   type(type_SP_MATRIX), intent(inout)  :: ac_mat
 
   integer               :: my_id, n_cpu, comm, ierr
-  integer(kind=int_all) :: is, ie, buff_max, nnz, nz_split_end
-  integer               :: n_split, i
+  integer(kind=int_all) :: is, ie
+  integer               :: nnz, buff_max, nz_split_end, n_split, i
 
   comm = ad_mat%comm
   call MPI_COMM_RANK(comm, my_id, ierr)
@@ -28,9 +28,9 @@ subroutine matrix_split_bcast(ad_mat, ac_mat)
     if (associated(ac_mat%irn)) call tr_deallocatep(ac_mat%irn,"irn",CAT_DMATRIX)
     if (associated(ac_mat%jcn)) call tr_deallocatep(ac_mat%jcn,"jcn",CAT_DMATRIX)
     if (associated(ac_mat%val)) call tr_deallocatep(ac_mat%val,"val",CAT_DMATRIX)
-    call tr_allocatep(ac_mat%irn,Int1,nnz,"irn",CAT_DMATRIX)
-    call tr_allocatep(ac_mat%jcn,Int1,nnz,"jcn",CAT_DMATRIX)
-    call tr_allocatep(ac_mat%val,Int1,nnz,"val",CAT_DMATRIX)
+    call tr_allocatep(ac_mat%irn,Int1,ac_mat%nnz,"irn",CAT_DMATRIX)
+    call tr_allocatep(ac_mat%jcn,Int1,ac_mat%nnz,"jcn",CAT_DMATRIX)
+    call tr_allocatep(ac_mat%val,Int1,ac_mat%nnz,"val",CAT_DMATRIX)
   endif
 
   buff_max = INT_MAX

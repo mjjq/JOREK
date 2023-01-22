@@ -9,7 +9,7 @@
     type(type_SP_MATRIX)    :: a_mat
     type(type_RHS)          :: lcs     ! local column scaling
     integer(kind=int_all)   :: j, k
-    integer                 :: ierr
+    integer                 :: counts, ierr
     
     if (associated(a_mat%column_scaling)) then
       deallocate(a_mat%column_scaling); a_mat%column_scaling => Null()
@@ -25,7 +25,8 @@
       lcs%val(j) = max(lcs%val(j),abs(a_mat%val(k)))
     enddo
 
-    call MPI_AllReduce(lcs%val,a_mat%column_scaling,a_mat%ng,MPI_DOUBLE_PRECISION,MPI_MAX,a_mat%comm,ierr)
+    counts = a_mat%ng
+    call MPI_AllReduce(lcs%val,a_mat%column_scaling,counts,MPI_DOUBLE_PRECISION,MPI_MAX,a_mat%comm,ierr)
     
     do k = 1, a_mat%nnz
       j = a_mat%jcn(k)

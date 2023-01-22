@@ -271,7 +271,7 @@ module mod_preconditioner
     type(type_RHS)        :: sol_vec
     type(type_PRECOND)    :: pc
 
-    integer               :: ierr
+    integer               :: counts, ierr
     integer(kind=int_all) :: i  
     
     sol_vec%val(1:sol_vec%n) = 0.d0
@@ -280,7 +280,8 @@ module mod_preconditioner
         sol_vec%val(pc%row_index(i)) = pc%rhs%val(i)*pc%row_factor
       enddo
     endif
-    call MPI_AllReduce(MPI_IN_PLACE,sol_vec%val,sol_vec%n,MPI_DOUBLE_PRECISION,MPI_SUM,pc%comm,ierr)
+    counts = sol_vec%n
+    call MPI_AllReduce(MPI_IN_PLACE,sol_vec%val,counts,MPI_DOUBLE_PRECISION,MPI_SUM,pc%comm,ierr)
     
     return
   end subroutine gather_solution  

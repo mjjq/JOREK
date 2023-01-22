@@ -317,7 +317,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   integer(kind=int_all)             :: ijA_position
   integer(kind=int_all)             :: index_large_i, index_large_k, ilarge2
   integer                           :: my_ind_min, my_ind_max
-  integer                           :: i_order, k_order, ielm, ierr
+  integer                           :: i_order, k_order, ielm
   integer                           :: vertex(2), direction(2)
   integer                           :: omp_nthreads, omp_tid, n_tor_local
   integer                           :: node_out(n_vertex_max)
@@ -328,7 +328,7 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
   CHARACTER(LEN=128)                :: fname
   integer                           :: i_v(n_var)
   integer, allocatable              :: i_harm(:)
-  integer                           :: comm
+  integer                           :: comm, ierr, counts
   
 
 
@@ -763,8 +763,9 @@ subroutine construct_matrix(mhd_sim, local_elms, n_local_elms, a_mat, rhs_vec, h
     end if
 #endif
   endif
-  
-  call MPI_AllReduce(RHS_local,rhs_vec%val,a_mat%ng,MPI_DOUBLE_PRECISION,MPI_SUM,comm,ierr)
+
+  counts = a_mat%ng
+  call MPI_AllReduce(RHS_local,rhs_vec%val,counts,MPI_DOUBLE_PRECISION,MPI_SUM,comm,ierr)
   rhs_vec%n  = a_mat%ng
 
   call tr_deallocate(RHS_local,"RHS_local",CAT_DMATRIX)

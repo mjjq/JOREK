@@ -46,7 +46,7 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int_all>** spss_,MP
   spss->options().set_matching(MatchingJob::MAX_DIAGONAL_PRODUCT_SCALING);
 //  spss->options().set_matching(MatchingJob::NONE);
   spss->options().set_reordering_method(ReorderingStrategy::METIS);
-  spss->options().enable_METIS_NodeNDP();
+  spss->options().enable_METIS_NodeND();
 
 //  spss->options().set_reordering_method(ReorderingStrategy::PARMETIS);
 //  spss->options().set_reordering_method(ReorderingStrategy::PTSCOTCH);
@@ -209,6 +209,13 @@ extern "C" void spk_solve(int_all* n_, int_all ** dist_, double** rhs_,
   return;
 }
 
+extern "C" void spk_delete_factors(StrumpackSparseSolverMPIDist<double,int>** spss_) {
+  StrumpackSparseSolverMPIDist<double,int>* spss= *spss_;
+
+  spss->delete_factors();
+
+  return;
+}
 
 extern "C" void spk_finalize(StrumpackSparseSolverMPIDist<double,int_all>** spss_,MPI_Fint* comm_) {
 

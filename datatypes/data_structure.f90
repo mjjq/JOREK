@@ -161,19 +161,21 @@ module data_structure
     integer(kind=int_all)                        :: nnz = 0              !< number of local nonzero entries
     integer, dimension(:), pointer               :: index_min => Null()  !< minimum node index in global range for all MPI ranks
     integer, dimension(:), pointer               :: index_max => Null()  !< maximum node index in global range for all MPI ranks
-    integer                                      :: my_ind_min
-    integer                                      :: my_ind_max
-    integer                                      :: i_tor_min            ! minimum toroidal Fourier number used in construction
-    integer                                      :: i_tor_max            ! maximum toroidal Fourier number used in construction
+    integer                                      :: my_ind_min = 0
+    integer                                      :: my_ind_max = 0
+    integer                                      :: i_tor_min = 0        ! minimum toroidal Fourier number used in construction
+    integer                                      :: i_tor_max = 0        ! maximum toroidal Fourier number used in construction
     integer                                      :: block_size = 1
-    integer                                      :: comm                 !< communicator over which the matrix is distributed
+    integer                                      :: comm = 0             !< communicator over which the matrix is distributed
     logical                                      :: scaled = .false.
     logical                                      :: row_distributed = .false.
     logical                                      :: col_distributed = .false.
     logical                                      :: reduced = .false. !< matrix is available on all comm ranks (not distribued)
 
   contains
+    procedure :: copy_to
     procedure :: move_to
+    procedure :: reset
   end type type_SP_MATRIX
   
   !> RHS vector type
@@ -336,8 +338,8 @@ contains
     call tr_unregister_mem(sizeof(thread_struct),"thread_struct",CAT_MATELEM)
     deallocate(thread_struct)
   end subroutine del_thread_buffers
-  
-! copy one matrix structure into another
+
+! move one matrix structure into another
   subroutine move_to(self, mat_a, with_data)
     class(type_SP_MATRIX), intent(inout)    :: self
     class(type_SP_MATRIX), intent(inout) :: mat_a
@@ -374,6 +376,88 @@ contains
     mat_a%reduced         = self%reduced
 
     return
+  end subroutine
+
+! copy one matrix structure into another
+  subroutine copy_to(self, mat_a)
+    class(type_SP_MATRIX), intent(inout)    :: self
+    class(type_SP_MATRIX), intent(inout)    :: mat_a
+
+    call mat_a%reset()
+
+    call self%move_to(mat_a, with_data=.false.)
+
+    if (associated(self%irn)) then
+      allocate(mat_a%irn(mat_a%nnz))
+      mat_a%irn(1:mat_a%nnz) = self%irn(1:self%nnz)
+    endif
+    if (associated(self%jcn)) then
+      allocate(mat_a%jcn(mat_a%nnz))
+      mat_a%jcn(1:mat_a%nnz) = self%jcn(1:self%nnz)
+    endif
+    if (associated(self%val)) then
+      allocate(mat_a%val(mat_a%nnz))
+      mat_a%val(1:mat_a%nnz) = self%val(1:self%nnz)
+    endif
+    if (associated(self%column_scaling)) then
+      allocate(mat_a%column_scaling(mat_a%ng))
+      mat_a%column_scaling(1:mat_a%ng) = self%column_scaling(1:self%ng)
+    endif
+    !mat_a%ijA_size       => self%ijA_size
+    !mat_a%ijA_index      => self%ijA_index
+    !mat_a%irn_jcn        => self%irn_jcn
+    !mat_a%index_min      => self%index_min
+    !mat_a%index_max      => self%index_max
+
+    return
+  end subroutine
+
+  subroutine reset(self)
+    class(type_SP_MATRIX), intent(inout)    :: self
+
+    if (associated(self%irn)) then
+      deallocate(self%irn); self%irn => Null()
+    endif
+    if (associated(self%jcn)) then
+      deallocate(self%jcn); self%jcn => Null()
+    endif
+    if (associated(self%val)) then
+      deallocate(self%val); self%val => Null()
+    endif
+    if (associated(self%ijA_size)) then
+      deallocate(self%ijA_size); self%ijA_size => Null()
+    endif
+    if (associated(self%ijA_index)) then
+      deallocate(self%ijA_index); self%ijA_index => Null()
+    endif
+    if (associated(self%irn_jcn)) then
+      deallocate(self%irn_jcn); self%irn_jcn => Null()
+    endif
+    if (associated(self%column_scaling)) then
+      deallocate(self%column_scaling); self%column_scaling => Null()
+    endif
+    if (associated(self%index_min)) then
+      deallocate(self%index_min); self%index_min => Null()
+    endif
+    if (associated(self%index_max)) then
+      deallocate(self%index_max); self%index_max => Null()
+    endif
+
+    self%indexing = 1
+    self%ng = 0
+    self%nr = 0
+    self%nc = 0
+    self%nnz = 0
+    self%my_ind_min = 0
+    self%my_ind_max = 0
+    self%i_tor_min = 0
+    self%i_tor_max = 0
+    self%block_size = 1
+    self%comm = 0
+    self%scaled = .false.
+    self%row_distributed = .false.
+    self%col_distributed = .false.
+    self%reduced = .false.
   end subroutine
 
 end module data_structure

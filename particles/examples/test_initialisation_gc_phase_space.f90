@@ -108,7 +108,7 @@ allocate(pitchmesh(npitch)); allocate(histo(nR,nZ,nphi,np,npitch));
 allocate(expected_pdf(nR,nZ,nphi,np,npitch));
 allocate(pdf_at_midpoints(nR,nZ,nphi,np,npitch));
 
-Rmesh = 0.d0; Zmesh = 0.d0; phimesh = 0.d0; pmesh = 0.d0; pitchmesh = 0.d0; chimesh = 0.d0;
+Rmesh = 0.d0; Zmesh = 0.d0; phimesh = 0.d0; pmesh = 0.d0; pitchmesh = 0.d0;
 expected_pdf = 0.d0; pdf_at_midpoints = 0.d0;
 !> read jorek field
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(jorek_filename),i=-1))

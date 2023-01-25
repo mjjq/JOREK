@@ -4725,7 +4725,7 @@ if(add_sources_in_sc)then
              - r0_corr * r0_corr  * LradDcont_T              &
              - r0_corr * frad_bg
             
-    s_p = (Ti0 + Te_0) * src_rho + (src_pi + src_pe) + Ti0 * src_rhon
+    s_p = (Ti0 + Te0) * src_rho + (src_pi + src_pe) + Ti0 * src_rhon
   else
     src_p   =  heat_source(ms,mt)                                         &
             +  (gamma-1.d0) * eta_T_ohm * (zj0 / BigR)**2.d0              &

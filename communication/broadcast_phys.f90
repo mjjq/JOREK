@@ -3,9 +3,6 @@ subroutine broadcast_phys(my_id)
 
 use tr_module
 use phys_module
-use mumps_module,  only: no_zeros_mumps, mumps_ordering
-use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
-    pastix_maxthrd
 use vacuum
 use mpi_mod
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
@@ -709,7 +706,6 @@ if (my_id .eq. 0) then
   call MPI_PACK(use_pastix_eq,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(use_strumpack,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(use_strumpack_eq,       1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(pastix_smp_only,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(refinement,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(force_central_node,     1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(fix_axis_nodes,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -728,8 +724,6 @@ if (my_id .eq. 0) then
   call MPI_PACK(tauIC_ARAZ_on,          1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(fix_axis_nodes,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(bench_without_plot,     1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(no_zeros_pastix,        1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
-  call MPI_PACK(no_zeros_mumps,         1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(RMP_on,                 1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(NEO,                    1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(num_neo_file,           1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -1485,7 +1479,6 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,use_pastix_eq,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,use_strumpack,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,use_strumpack_eq,       1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,pastix_smp_only,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,refinement,             1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,force_central_node,     1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,fix_axis_nodes,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
@@ -1504,8 +1497,6 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,tauIC_ARAZ_on,          1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,fix_axis_nodes,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,bench_without_plot,     1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,no_zeros_pastix,        1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
-  call MPI_UNPACK(buffer,bufsize,position,no_zeros_mumps,         1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,RMP_on,                 1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,NEO,                    1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,num_neo_file,           1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)

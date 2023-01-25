@@ -125,6 +125,9 @@ module phys_module
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
   real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
+  integer :: mumps_ordering       !< MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
+  integer :: pastix_maxthrd       !< maximum number of threads used by pastix solver (could be beneficial to use the reduced number)
+  real*8  :: pastix_pivot         !< Pastix epsilon for magnitude control (pivot threshold)
 
   ! ------------------------------------------------
   ! --- Structures to implement BCs in model600

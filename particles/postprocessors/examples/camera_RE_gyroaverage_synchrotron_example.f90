@@ -218,8 +218,9 @@ subroutine relativistic_kinetic_sim_to_relativistic_gc_sim(sim_kin,sim_gc)
     allocate(particle_gc_relativistic::sim_gc%groups(counter)%particles(n_particles))   
     select type (p_list_2=>sim_gc%groups(counter)%particles)
     type is (particle_gc_relativistic)
-      p_list_2(:) = p_list(:); counter = counter + 1;
+      p_list_2(:) = p_list(:)
     end select
+    counter = counter + 1
   end select
   enddo
 end subroutine relativistic_kinetic_sim_to_relativistic_gc_sim

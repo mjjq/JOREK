@@ -396,7 +396,7 @@ int_param,real_param)
   call define_plane_from_half_angles(int_param(4:5),real_param(1:3),&
   real_param(4:6),real_param(7:9),camera_inout%image_plane(:,:,1))
   !> compute the image plane lenght of the edges
-  !call compute_plane_edge_length(camera_inout%image_plane(:,:,1),camera_inout%plane_edge_length)
+  call compute_plane_edge_length(camera_inout%image_plane(:,:,1),camera_inout%plane_edge_length(:,1))
   !> compute the pixel width and heigh in the pixel reference system
   camera_inout%pixel_size = (/1.d0,1.d0/)/real(camera_inout%n_pixels_spectra(2:3),kind=8)
 end subroutine define_image_plane_pixel_size

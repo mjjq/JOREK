@@ -183,22 +183,22 @@ subroutine test_init_camera_perspective_static_pinhole()
   call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
   camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
   "Error init camera perspective static pinhole: pdf points on lens") 
-  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%image_plane_direction,&
+  call assert_equals_allocatable_arrays(n_x_sol,n_times_sol,camera_sol%image_plane_direction,&
   "Error init camera perspective static pinhole: image plane direction")
   if(allocated(camera_sol%image_plane_direction)) then
-    direction_test = (/1.d0,acos(camera_sol%image_plane_direction(3)),&
-    atan2(camera_sol%image_plane_direction(2),camera_sol%image_plane_direction(1))/)
+    direction_test = (/1.d0,acos(camera_sol%image_plane_direction(3,1)),&
+    atan2(camera_sol%image_plane_direction(2,1),camera_sol%image_plane_direction(1,1))/)
     if(direction_test(3).lt.0.d0) direction_test(3) = TWOPI + direction_test(3)
     direction_sol = (/1.d0,image_plane_coords(2,1),image_plane_coords(3,1)/)
     call assert_equals(direction_test,direction_sol,n_x_sol,tol_real8,&
     "Error init camera perspective static pinhole: image plane mismatch!")
   endif
-  call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,&
+  call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,n_times_sol,&
   camera_sol%image_plane,"Error init camera perspective static pinhole: image plane")
   if(allocated(camera_sol%image_plane)) then
     call define_plane_from_half_angles(mirror_xy_sol(:,1),half_angle_sol(:,1),&
     image_plane_coords(:,1),pupil_positions(:,1),image_plane_sol)
-    call assert_equals(camera_sol%image_plane,image_plane_sol,n_x_sol,&
+    call assert_equals(camera_sol%image_plane(:,:,1),image_plane_sol,n_x_sol,&
     n_plane_vertices,tol_real8,&
     "Error init camera perspective static pinhole: image plane mismatch!")
   endif
@@ -230,9 +230,9 @@ subroutine test_de_allocation_camera_perspective_static()
   camera_sol%properties,"Error allocate camera perspective static: properties")
   call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra,n_pixels_x,n_pixels_y/),&
   3,"Error allocate camera perspective static: n pixels / spectra")
-  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%image_plane_direction,&
+  call assert_equals_allocatable_arrays(n_x_sol,n_times_sol,camera_sol%image_plane_direction,&
   "Error allocate_camera perspective static: image plane direction")
-  call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,&
+  call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,n_times_sol,&
   camera_sol%image_plane,"Error allocate_camera perspective static: image plane") 
   !> deallocate camera perspective static
   call camera_sol%deallocate_camera_perspective_static
@@ -320,14 +320,14 @@ subroutine test_image_plane_pixel_size_definitions()
     image_plane_coords(:,ii),pupil_positions(:,ii),image_plane_sol)
     call define_plane_from_half_angles(mirror_xy_sol(:,ii),half_angle_sol(:,ii),&
     image_plane_coords(:,ii),image_plane_std_sol)
-    direction_test = (/1.d0,acos(camera_sol%image_plane_direction(3)),&
-    atan2(camera_sol%image_plane_direction(2),camera_sol%image_plane_direction(1))/)
+    direction_test = (/1.d0,acos(camera_sol%image_plane_direction(3,1)),&
+    atan2(camera_sol%image_plane_direction(2,1),camera_sol%image_plane_direction(1,1))/)
     if(direction_test(3).lt.0.d0) direction_test(3) = TWOPI + direction_test(3)
     direction_sol = (/1.d0,real_param(5),real_param(6)/)
     !> test plane and pixel size
     call assert_equals(direction_test,direction_sol,n_x_sol,tol_real8,&
     "Error camera perspective static define image plane: image plane direction mismatch!")
-    call assert_equals(camera_sol%image_plane,image_plane_sol,n_x_sol,&
+    call assert_equals(camera_sol%image_plane(:,:,1),image_plane_sol,n_x_sol,&
     n_plane_vertices,tol_real8,&
     "Error camera perspective static define image plane: image plane mismatch!")
     call assert_equals(camera_sol%pixel_size,pixel_size_sol,2,tol_real8,&
@@ -396,16 +396,16 @@ subroutine test_cosine_view_angle_static()
     !> store plane value in parameters
     int_param = (/n_points_on_lens_sol,n_pixels_x,n_pixels_y,&
     mirror_xy_sol(1,ii),mirror_xy_sol(2,ii)/)
-    call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
-    n_int_param,n_real_param,int_param,real_param)
     real_param(1:3) = half_angle_sol(:,ii)
     real_param(4:6) = image_plane_coords(:,ii)
     real_param(7:9) = pupil_positions(:,ii)
+    call pinhole%init_pinhole(n_x_sol,real_param(7:9))
+    call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
+    n_int_param,n_real_param,int_param,real_param)
     !> compute solution
     call define_vertex_spherical_coord(real_param(4:6),real_param(7:9),vertex_1)
     call compute_cos_angle_two_vectors(real_param(7:9),vertex_1,test_points(:,ii),cos_view_angle_sol(ii))
     !> compute test value
-    call pinhole%init_pinhole(n_x_sol,real_param(7:9))
     call camera_sol%generate_points_on_lens_pdf(pinhole)
     call camera_sol%define_image_plane_pixel_size(n_int_param,n_real_param,int_param,real_param)
     call camera_sol%cos_view_angle_static(test_points(:,ii),1,cos_view_angle_test(ii))

@@ -152,7 +152,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 weights_per_family, autodistribute_ranks,           &
                 ranks_per_family, cte_current_FB_fact, treat_axis,  &
                 ZK_prof_neg_thresh, ZK_prof_neg, ZK_par_neg_thresh,  &
-                ZK_par_neg, Z_xpoint_limit, visco_par_heating 
+                ZK_par_neg, Z_xpoint_limit, visco_par_heating,      &
+                CARIDDI_mode
 
 if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

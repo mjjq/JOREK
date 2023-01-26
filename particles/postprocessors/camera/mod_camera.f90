@@ -34,6 +34,8 @@ type,abstract,extends(vertices) :: camera
    procedure,pass(camera_inout)                                 :: allocate_camera
    procedure,pass(camera_inout)                                 :: deallocate_camera
    procedure,pass(camera_inout)                                 :: compute_images
+   procedure,pass(camera_inout)                                 :: plane_to_pixel_local_coord
+   procedure,pass(camera_inout)                                 :: pixel_local_to_scaled_plane_coord
 end type camera
 
 !> Interfaces ------------------------------------------------------
@@ -278,6 +280,54 @@ subroutine deallocate_camera(camera_inout)
   camera_inout%n_pixels_spectra = 0; camera_inout%exposure_time = 0.d0;
   camera_inout%n_plane_points = 0;  camera_inout%pixel_size = 0d0;
 end subroutine deallocate_camera
+
+!> compute the pixel number and the position in the pixel local coordinates
+!> of a point on the image plane (in the plane local coordinates)
+!> inputs:
+!>  camera_inout: (camera) camera with unallocated image plane
+!>  st_plane:     (real8)(2) position in the plane local coordinates
+!> outputs:
+!>  camera_inout: (camera_perspective_static) camera with defined image plane
+!>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
+!>  st_pixel:     (real8)(2) position in the pixel local coordinates
+subroutine plane_to_pixel_local_coord(camera_inout,st_plane,i_pixel,st_pixel)
+  implicit none
+  !> inputs-outputs
+  class(camera),intent(inout)      :: camera_inout
+  !> inputs
+  real*8,dimension(2),intent(in)   :: st_plane
+  !> outputs
+  integer,dimension(2),intent(out) :: i_pixel
+  real*8,dimension(2),intent(out)  :: st_pixel
+  !> find the local pixel coordinates and find the position in the pixel local coordinates
+  st_pixel = st_plane/camera_inout%pixel_size
+  i_pixel = floor(st_pixel)
+  st_pixel = st_pixel - real(i_pixel,kind=8)
+  i_pixel = i_pixel + 1
+end subroutine plane_to_pixel_local_coord
+
+!> compute the coordinate in the scaled plane given the local pixel coordinates
+!> inputs:
+!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
+!>  id_time:      (integer) index of the considered time
+!>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
+!>  st_pixel:     (real8)(2) position in the pixel local coordinates
+!> outputs: 
+!>  st_scale:     (real8)(2) position rescaled by the plane size
+subroutine pixel_local_to_scaled_plane_coord(camera_inout,id_time,i_pixel,st_pixel,st_scale)
+  implicit none
+  !> inputs-outputs
+  class(camera),intent(inout)     :: camera_inout
+  !> inputs:
+  integer,intent(in)              :: id_time
+  integer,dimension(2),intent(in) :: i_pixel
+  real*8,dimension(2),intent(in)  :: st_pixel
+  !> outputs:
+  real*8,dimension(2),intent(out) :: st_scale
+  !> compute the plane local coordinate rescaled by the plane size
+  st_scale = camera_inout%plane_edge_length(:,id_time)*camera_inout%pixel_size*&
+            (real(i_pixel-1,kind=8)+st_pixel)
+end subroutine pixel_local_to_scaled_plane_coord
 
 !> procedure used for the rendering of images
 !> inputs:

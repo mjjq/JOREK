@@ -2,32 +2,26 @@
 !> procedures defining a perspective camera which does not
 !> vary with time (static)
 module mod_camera_perspective_static
-use mod_camera, only: camera
+use mod_camera_static, only: camera_static
 implicit none
   
 private
 public :: camera_perspective_static
 
 !> Variables and type definitions ----------------------------
-type,extends(camera) :: camera_perspective_static
+type,extends(camera_static) :: camera_perspective_static
   contains
   procedure,pass(camera_in)    :: return_n_camera_inputs => &
   return_n_camera_perspective_static_inputs
   procedure,pass(camera_inout) :: read_camera_inputs => &
   read_camera_perspective_static_inputs
   procedure,pass(camera_inout) :: init_camera => init_camera_perspective_static
-  procedure,pass(camera_inout) :: generate_points_on_lens_pdf => &
-  generate_points_on_lens_static_perspective
   procedure,pass(camera_inout) :: reduce_light_image => &
   reduce_particle_light_image_static
   procedure,pass(camera_inout) :: physical_material_funct => &
   physical_material_funct_perspective_static
-  procedure,pass(camera_inout) :: find_ray_image_plane_intersection => &
-  find_ray_image_plane_intersection_static
   procedure,pass(camera_inout) :: allocate_camera_perspective_static
   procedure,pass(camera_inout) :: deallocate_camera_perspective_static
-  procedure,pass(camera_inout) :: define_image_plane_pixel_size
-  procedure,pass(camera_inout) :: plane_to_pixel_local_coord
   procedure,pass(camera_inout) :: cos_view_angle_static
 end type camera_perspective_static
 
@@ -317,137 +311,6 @@ subroutine deallocate_camera_perspective_static(camera_inout)
   call camera_inout%deallocate_camera
 end subroutine deallocate_camera_perspective_static
 
-!> generate points on lens and retrive their pdf
-!> inputs:
-!>   camera_inout: (camera) camera with initialised points on lens
-!>   lens_inout:   (lens) lens model for generating points
-!>   n_points_in:  (integer)(optional) number of points to sample
-!>                                     default: 1000, pinhole: 1
-!> outputs:
-!>   camera_out:   (camera) camera with initialised points on lens
-subroutine generate_points_on_lens_static_perspective(camera_inout,&
-lens_inout,n_points_in)
-  use mod_lens,         only: lens
-  use mod_pinhole_lens, only: pinhole_lens
-  implicit none
-  !> inputs-outputs:
-  class(camera_perspective_static),intent(inout) :: camera_inout
-  class(lens),intent(inout)                      :: lens_inout
-  !> inputs:
-  integer,intent(in),optional                    :: n_points_in
-  !> initialisations
-  camera_inout%n_vertices = 1000
-  if(present(n_points_in)) camera_inout%n_vertices = n_points_in
-  !> check if the lens is a pinhole, overwrite n_points_lens
-  select type(ln=>lens_inout)
-    type is(pinhole_lens)
-    camera_inout%n_vertices = 1
-  end select
-  camera_inout%n_active_vertices = camera_inout%n_vertices
-  !> sample the lens
-  if(allocated(camera_inout%x)) then
-    if(camera_inout%n_vertices.ne.size(camera_inout%x,dim=2)) &
-    deallocate(camera_inout%x)
-  endif
-  if(allocated(camera_inout%properties)) then
-    if(camera_inout%n_vertices.ne.size(camera_inout%properties,dim=2)) &
-    deallocate(camera_inout%properties)
-  endif
-  if(.not.allocated(camera_inout%x)) &
-  allocate(camera_inout%x(camera_inout%n_x,camera_inout%n_vertices,1))
-  if(.not.allocated(camera_inout%properties)) &
-  allocate(camera_inout%properties(camera_inout%n_property_vertex,camera_inout%n_vertices,1))
-  call lens_inout%sampling(camera_inout%n_vertices,camera_inout%x(:,:,1))
-  call lens_inout%pdf(camera_inout%n_vertices,camera_inout%x(:,:,1),&
-  camera_inout%properties(1,:,1))
-end subroutine generate_points_on_lens_static_perspective
-
-!> generate the image plane direction, vertices and compute the pixel width and height
-!> inputs:
-!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
-!>  n_int_param:  (integer) number of integer parameters
-!>  n_real_param: (integer) number of real parameters
-!>  int_param:    (integer)(n_int_param) integer parameters
-!>                4) mirror w.r.t. the x axis
-!>                5) mirror w.r.t. the y axis
-!>  real_param:   (real8)(n_real_param) real parameters, order:
-!>                1:3) plane width, height half angles and plane orientation
-!>                4:6) plane position w.r.t. the pupil in spherical coordinates
-!>                7:9) position of the pupil in cartesian coordinates
-!> outputs:
-!>  camera_inout: (camera_perspective_static) camera with defined image plane
-subroutine define_image_plane_pixel_size(camera_inout,n_int_param,n_real_param,&
-int_param,real_param)
-  use mod_geometry, only: compute_plane_edge_length
-  use mod_geometry, only: define_vertex_spherical_coord
-  use mod_geometry, only: define_plane_from_half_angles
-  implicit none
-  !> inputs-outputs:
-  class(camera_perspective_static),intent(inout) :: camera_inout
-  !> inputs:
-  integer,intent(in)                             :: n_int_param,n_real_param
-  integer,dimension(n_int_param),intent(in)      :: int_param
-  real*8,dimension(n_real_param),intent(in)      :: real_param
-  !> define the image plane direction and store it
-  call define_vertex_spherical_coord((/1.d0,real_param(5),real_param(6)/),&
-  camera_inout%image_plane_direction(:,1))
-  !> define the plane from the width/height half angles, the distance
-  !> from the pupil and the pupil position
-  call define_plane_from_half_angles(int_param(4:5),real_param(1:3),&
-  real_param(4:6),real_param(7:9),camera_inout%image_plane(:,:,1))
-  !> compute the image plane lenght of the edges
-  call compute_plane_edge_length(camera_inout%image_plane(:,:,1),camera_inout%plane_edge_length(:,1))
-  !> compute the pixel width and heigh in the pixel reference system
-  camera_inout%pixel_size = (/1.d0,1.d0/)/real(camera_inout%n_pixels_spectra(2:3),kind=8)
-end subroutine define_image_plane_pixel_size
-
-!> compute the pixel number and the position in the pixel local coordinates
-!> of a point on the image plane (in the plane local coordinates)
-!> inputs:
-!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
-!>  st_plane:     (real8)(2) position in the plane local coordinates
-!> outputs:
-!>  camera_inout: (camera_perspective_static) camera with defined image plane
-!>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
-!>  st_pixel:     (real8)(2) position in the pixel local coordinates
-subroutine plane_to_pixel_local_coord(camera_inout,st_plane,i_pixel,st_pixel)
-  implicit none
-  !> inputs-outputs
-  class(camera_perspective_static),intent(inout) :: camera_inout
-  !> inputs
-  real*8,dimension(2),intent(in)   :: st_plane
-  !> outputs
-  integer,dimension(2),intent(out) :: i_pixel
-  real*8,dimension(2),intent(out)  :: st_pixel
-  !> find the local pixel coordinates and find the position in the pixel local coordinates
-  st_pixel = st_plane/camera_inout%pixel_size
-  i_pixel = floor(st_pixel)
-  st_pixel = st_pixel - real(i_pixel,kind=8)
-  i_pixel = i_pixel + 1
-end subroutine plane_to_pixel_local_coord
-
-!> TODO compute the coordinate in the scaled plane given the local pixel coordinates
-!> inputs:
-!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
-!>  id_time:      (integer) index of the considered time
-!>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
-!>  st_pixel:     (real8)(2) position in the pixel local coordinates
-!> outputs: 
-!>  st_scale:     (real8)(2) position rescaled by the plane size
-!subroutine pixel_local_to_scaled_plane_coord(camera_inout,id_time,i_pixel,st_pixel,st_scale)
-!  implicit none
-!  !> inputs-outputs
-!  class(camera_perspective_static),intent(inout) :: camera_inout
-  !> inputs:
-!  integer,dimension(2),intent(in) :: i_pixel
-!  real*8,dimension(2),intent(in)  :: st_pixel
-  !> outputs:
-!  real*8,dimension(2),intent(in)  :: st_scale
-  !> compute the plane local coordinate rescaled by the plane size
-!  st_scale = camera_inout%plane_edge_length(:,id_time)*camera_inout*pixel_size*
-!            (real(i_pixel-1,kind=8)+st_pixel)
-!end subroutine pixel_local_to_scaled_plane_coord
-
 !> compute the physical importance function for the camera perspective static
 !> inputs:
 !>   camera_inout:   (camera_perspective_static) initialised camera object
@@ -503,40 +366,6 @@ subroutine cos_view_angle_static(camera_inout,x_pos,x_lens_id,cos_view_angle)
                    ray(2)*camera_inout%image_plane_direction(2,1) + &
                    ray(3)*camera_inout%image_plane_direction(3,1)
 end subroutine cos_view_angle_static
-
-!> find intersection between a camera ray and the image plane
-!> inputs:
-!>   camera_inout: (camera_perspective_static) initialised camera object
-!>   x_pos:        (real8)(3) coordinated of the point defining a ray
-!>   x_lens_id:    (integer) index of the point on lens to be treated
-!>   time_id_in:   (integer)(optional) time index (not used)
-!> outputs:
-!>   camera_inout: (camera_perspective_static) initialised camera object
-!>   intersect:    (bool) if true an intersection is found
-!>   local_coords: (real8)(3) plane (s,t) and ray (q) local 
-!>                            coordinates of the intersection
-subroutine find_ray_image_plane_intersection_static(camera_inout,&
-x_pos,x_lens_id,intersect,local_coords,time_id_in)
-  use mod_geometry, only: compute_plane_line_intersection_cart
-  implicit none
-  !> inputs-outpus:
-  class(camera_perspective_static),intent(inout) :: camera_inout
-  !> inputs:
-  integer,intent(in)                             :: x_lens_id
-  real*8,dimension(camera_inout%n_x),intent(in)  :: x_pos
-  integer,intent(in),optional                    :: time_id_in
-  !> outputs:
-  logical,intent(out)                            :: intersect
-  real*8,dimension(3),intent(out)                :: local_coords
-  !> variables
-  real*8,dimension(camera_inout%n_x,3)           :: plane
-  real*8,dimension(camera_inout%n_x,2)           :: ray
-  !> compute intersection between the ray and the image plane
-  ray(:,1) = camera_inout%x(:,x_lens_id,1); ray(:,2) = x_pos;
-  call compute_plane_line_intersection_cart(camera_inout%image_plane(:,:,1),&
-  ray,intersect,local_coords)
-end subroutine find_ray_image_plane_intersection_static
-
 
 !>------------------------------------------------------------
 end module mod_camera_perspective_static

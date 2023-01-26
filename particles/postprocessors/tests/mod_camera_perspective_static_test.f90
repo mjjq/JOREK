@@ -163,6 +163,8 @@ subroutine test_init_camera_perspective_static_pinhole()
   call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
   n_int_param,n_real_param,int_param,real_param)
   !> perform tests
+  call assert_equals(camera_sol%n_times,1,&
+  "Error init camera perspective static pinhole: n_times is not 1")
   call assert_equals(camera_sol%n_vertices,1,&
   "Error init camera perspective static pinhole: n vertices is not 1")
   call assert_equals_allocatable_arrays(n_times_sol,camera_sol%n_active_vertices,&

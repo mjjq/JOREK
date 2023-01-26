@@ -115,8 +115,12 @@ subroutine allocate_lens(lens_inout,n_x,center)
   !> inputs
   integer :: n_x
   real*8,dimension(n_x),intent(in),optional :: center
-  if(allocated(lens_inout%center)) deallocate(lens_inout%center)
-  allocate(lens_inout%center(n_x)); lens_inout%n_x = n_x;
+  if(allocated(lens_inout%center)) then
+    if(lens_inout%n_x.ne.n_x) deallocate(lens_inout%center)
+  endif
+  if(.not.allocated(lens_inout%center)) then
+    allocate(lens_inout%center(n_x)); lens_inout%n_x = n_x;
+  endif
   if(present(center)) then
     lens_inout%center = center
   else

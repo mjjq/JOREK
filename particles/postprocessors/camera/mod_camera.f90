@@ -16,7 +16,12 @@ type,abstract,extends(vertices) :: camera
    !> the x variables contains the global position of the 
    !> visual points on the lens / film for each frame
    !> number of spectra and pixels
+   integer              :: n_plane_points !< number of points of a plane
    integer,dimension(3) :: n_pixels_spectra
+   real*8,dimension(2)  :: pixel_size !< width and height of a pixel 
+   real*8,dimension(:,:),allocatable   :: plane_edge_length !< length of the image plane edges
+   real*8,dimension(:,:,:),allocatable :: image_plane !< vertices of the image plane
+   real*8,dimension(:,:),allocatable   :: image_plane_direction !< view direction of the image plane
    real*8               :: exposure_time !< exposure time for each camera frame
   contains
    procedure(int_ret_n_cam_inps),pass(camera_in),deferred       :: return_n_camera_inputs
@@ -233,8 +238,26 @@ n_pixels_x,n_pixels_y,n_spectra)
   
   !> allocate vertices
   call camera_inout%allocate_vertices(n_times,n_vertices)
+  if(allocated(camera_inout%plane_edge_length)) then
+    if(size(camera_inout%plane_edge_length,2).ne.n_times) deallocate(camera_inout%plane_edge_length)
+  endif
+  if(.not.allocated(camera_inout%plane_edge_length)) allocate(camera_inout%plane_edge_length(2,n_times))
+  if(allocated(camera_inout%image_plane_direction)) then
+    if(size(camera_inout%image_plane_direction,2).ne.n_times) &
+    deallocate(camera_inout%image_plane_direction)
+  endif
+  if(.not.allocated(camera_inout%image_plane_direction)) &
+  allocate(camera_inout%image_plane_direction(camera_inout%n_x,n_times))
+  if(allocated(camera_inout%image_plane)) then
+    if(.not.((size(camera_inout%image_plane,2).eq.camera_inout%n_plane_points).and.&
+    (size(camera_inout%image_plane,3).eq.n_times))) deallocate(camera_inout%image_plane)
+  endif
+  if(.not.allocated(camera_inout%image_plane)) &
+  allocate(camera_inout%image_plane(camera_inout%n_x,camera_inout%n_plane_points,n_times))
   !> allocate camera
-  camera_inout%exposure_time=0.d0;
+  camera_inout%exposure_time = 0d0; camera_inout%plane_edge_length = 0d0;
+  camera_inout%image_plane_direction = 0d0; camera_inout%image_plane = 0d0;
+  camera_inout%pixel_size = 0d0;
   camera_inout%n_pixels_spectra = (/n_spectra,n_pixels_x,n_pixels_y/)
 end subroutine allocate_camera
 
@@ -249,7 +272,11 @@ subroutine deallocate_camera(camera_inout)
   class(camera),intent(inout) :: camera_inout
   !> deallocate everything and reset counters
   call camera_inout%deallocate_vertices
+  if(allocated(camera_inout%plane_edge_length))     deallocate(camera_inout%plane_edge_length)
+  if(allocated(camera_inout%image_plane_direction)) deallocate(camera_inout%image_plane_direction)
+  if(allocated(camera_inout%image_plane))           deallocate(camera_inout%image_plane)
   camera_inout%n_pixels_spectra = 0; camera_inout%exposure_time = 0.d0;
+  camera_inout%n_plane_points = 0;  camera_inout%pixel_size = 0d0;
 end subroutine deallocate_camera
 
 !> procedure used for the rendering of images

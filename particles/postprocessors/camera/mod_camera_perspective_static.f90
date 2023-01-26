@@ -10,10 +10,6 @@ public :: camera_perspective_static
 
 !> Variables and type definitions ----------------------------
 type,extends(camera) :: camera_perspective_static
-  integer :: n_plane_points !< number of points of a plane
-  real*8,dimension(2) :: pixel_size !< width and height of a pixel
-  real*8,dimension(:,:),allocatable :: image_plane !< vertices of the image plane
-  real*8,dimension(:),allocatable   :: image_plane_direction
   contains
   procedure,pass(camera_in)    :: return_n_camera_inputs => &
   return_n_camera_perspective_static_inputs
@@ -97,8 +93,8 @@ pixel_intensities,ierr)
   pixel_intensities = 0.d0
   camera_inout%exposure_time = light_inout%times(light_inout%n_times) - light_inout%times(1)
   if(camera_inout%exposure_time.le.0.d0) camera_inout%exposure_time = 1.d0
-  pixel_area = (norm2(camera_inout%image_plane(:,2)-camera_inout%image_plane(:,1))*&
-               norm2(camera_inout%image_plane(:,3)-camera_inout%image_plane(:,1)))/&
+  pixel_area = (norm2(camera_inout%image_plane(:,2,1)-camera_inout%image_plane(:,1,1))*&
+               norm2(camera_inout%image_plane(:,3,1)-camera_inout%image_plane(:,1,1)))/&
                (real(camera_inout%n_pixels_spectra(2)*camera_inout%n_pixels_spectra(3),kind=8))
   !> compute the time filter weights
   call filter_time_inout%compute_filter_from_position_vectorial(light_inout%n_times,&
@@ -267,6 +263,7 @@ spectrum_inout,n_int_param,n_real_param,int_param,real_param)
   real*8,dimension(n_real_param),intent(in)      :: real_param
 
   !> set variables
+  camera_inout%n_times=1;
   camera_inout%n_property_vertex=1; camera_inout%n_plane_points=3;
   !> initialise attributes
   !> lens samples are stored as x positions of the
@@ -305,15 +302,6 @@ spectrum_inout,n_int_param,int_param)
   !> allocate camera base type
   call camera_inout%allocate_camera(1,int_param(1),&
   int_param(2),int_param(3),spectrum_inout%n_spectra)
-  !> allocate attributes specific to camera_perspective_static
-  if(allocated(camera_inout%image_plane_direction)) deallocate(camera_inout%image_plane_direction)
-  if(allocated(camera_inout%image_plane)) then
-    if(size(camera_inout%image_plane,2).ne.camera_inout%n_plane_points) &
-    deallocate(camera_inout%image_plane)
-  endif
-  allocate(camera_inout%image_plane_direction(camera_inout%n_x))
-  allocate(camera_inout%image_plane(camera_inout%n_x,&
-  camera_inout%n_plane_points))
 end subroutine allocate_camera_perspective_static
 
 !> procedure used for deallocating all attributes of camera perspective static
@@ -327,8 +315,6 @@ subroutine deallocate_camera_perspective_static(camera_inout)
   class(camera_perspective_static),intent(inout) :: camera_inout
   !> deallocate variables
   call camera_inout%deallocate_camera
-  if(allocated(camera_inout%image_plane_direction)) deallocate(camera_inout%image_plane_direction)
-  if(allocated(camera_inout%image_plane)) deallocate(camera_inout%image_plane)
 end subroutine deallocate_camera_perspective_static
 
 !> generate points on lens and retrive their pdf
@@ -392,6 +378,7 @@ end subroutine generate_points_on_lens_static_perspective
 !>  camera_inout: (camera_perspective_static) camera with defined image plane
 subroutine define_image_plane_pixel_size(camera_inout,n_int_param,n_real_param,&
 int_param,real_param)
+  use mod_geometry, only: compute_plane_edge_length
   use mod_geometry, only: define_vertex_spherical_coord
   use mod_geometry, only: define_plane_from_half_angles
   implicit none
@@ -403,11 +390,13 @@ int_param,real_param)
   real*8,dimension(n_real_param),intent(in)      :: real_param
   !> define the image plane direction and store it
   call define_vertex_spherical_coord((/1.d0,real_param(5),real_param(6)/),&
-  camera_inout%image_plane_direction)
+  camera_inout%image_plane_direction(:,1))
   !> define the plane from the width/height half angles, the distance
   !> from the pupil and the pupil position
   call define_plane_from_half_angles(int_param(4:5),real_param(1:3),&
-  real_param(4:6),real_param(7:9),camera_inout%image_plane)
+  real_param(4:6),real_param(7:9),camera_inout%image_plane(:,:,1))
+  !> compute the image plane lenght of the edges
+  !call compute_plane_edge_length(camera_inout%image_plane(:,:,1),camera_inout%plane_edge_length)
   !> compute the pixel width and heigh in the pixel reference system
   camera_inout%pixel_size = (/1.d0,1.d0/)/real(camera_inout%n_pixels_spectra(2:3),kind=8)
 end subroutine define_image_plane_pixel_size
@@ -436,6 +425,28 @@ subroutine plane_to_pixel_local_coord(camera_inout,st_plane,i_pixel,st_pixel)
   st_pixel = st_pixel - real(i_pixel,kind=8)
   i_pixel = i_pixel + 1
 end subroutine plane_to_pixel_local_coord
+
+!> TODO compute the coordinate in the scaled plane given the local pixel coordinates
+!> inputs:
+!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
+!>  id_time:      (integer) index of the considered time
+!>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
+!>  st_pixel:     (real8)(2) position in the pixel local coordinates
+!> outputs: 
+!>  st_scale:     (real8)(2) position rescaled by the plane size
+!subroutine pixel_local_to_scaled_plane_coord(camera_inout,id_time,i_pixel,st_pixel,st_scale)
+!  implicit none
+!  !> inputs-outputs
+!  class(camera_perspective_static),intent(inout) :: camera_inout
+  !> inputs:
+!  integer,dimension(2),intent(in) :: i_pixel
+!  real*8,dimension(2),intent(in)  :: st_pixel
+  !> outputs:
+!  real*8,dimension(2),intent(in)  :: st_scale
+  !> compute the plane local coordinate rescaled by the plane size
+!  st_scale = camera_inout%plane_edge_length(:,id_time)*camera_inout*pixel_size*
+!            (real(i_pixel-1,kind=8)+st_pixel)
+!end subroutine pixel_local_to_scaled_plane_coord
 
 !> compute the physical importance function for the camera perspective static
 !> inputs:
@@ -488,9 +499,9 @@ subroutine cos_view_angle_static(camera_inout,x_pos,x_lens_id,cos_view_angle)
   !> compute the cosinus of the view angle
   ray = x_pos - camera_inout%x(:,x_lens_id,1)
   ray = ray/sqrt(ray(1)*ray(1)+ray(2)*ray(2)+ray(3)*ray(3))
-  cos_view_angle = ray(1)*camera_inout%image_plane_direction(1) + &
-                   ray(2)*camera_inout%image_plane_direction(2) + &
-                   ray(3)*camera_inout%image_plane_direction(3)
+  cos_view_angle = ray(1)*camera_inout%image_plane_direction(1,1) + &
+                   ray(2)*camera_inout%image_plane_direction(2,1) + &
+                   ray(3)*camera_inout%image_plane_direction(3,1)
 end subroutine cos_view_angle_static
 
 !> find intersection between a camera ray and the image plane
@@ -522,7 +533,7 @@ x_pos,x_lens_id,intersect,local_coords,time_id_in)
   real*8,dimension(camera_inout%n_x,2)           :: ray
   !> compute intersection between the ray and the image plane
   ray(:,1) = camera_inout%x(:,x_lens_id,1); ray(:,2) = x_pos;
-  call compute_plane_line_intersection_cart(camera_inout%image_plane,&
+  call compute_plane_line_intersection_cart(camera_inout%image_plane(:,:,1),&
   ray,intersect,local_coords)
 end subroutine find_ray_image_plane_intersection_static
 

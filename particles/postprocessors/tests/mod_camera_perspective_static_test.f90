@@ -3,10 +3,10 @@
 !> the camera perspective static model
 module mod_camera_perspective_static_test
 use fruit
-use mod_assert_equals_tools,   only: assert_equals_allocatable_arrays
-use constants,                 only: PI,TWOPI
-use mod_pinhole_lens,          only: pinhole_lens
-use mod_spectra_deterministic, only: spectrum_integrator_2nd
+use mod_assert_equals_tools,       only: assert_equals_allocatable_arrays
+use constants,                     only: PI,TWOPI
+use mod_pinhole_lens,              only: pinhole_lens
+use mod_spectra_deterministic,     only: spectrum_integrator_2nd
 use mod_camera_perspective_static, only: camera_perspective_static
 implicit none
 
@@ -67,7 +67,6 @@ subroutine run_fruit_camera_perspective_static
   write(*,'(/A)') "  ... setting-up: camera perspective static tests"
   call setup
   write(*,'(/A)') "  ... running: camera perspective static tests"
-  call test_points_on_lens_pdf_pinhole
   call test_de_allocation_camera_perspective_static
   call test_init_camera_perspective_static_pinhole
   call test_cosine_view_angle_static
@@ -191,6 +190,8 @@ end subroutine test_init_camera_perspective_static_pinhole
 subroutine test_de_allocation_camera_perspective_static()
   use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
   implicit none
+  !> initialise property size
+  camera_sol%n_property_vertex = n_properties
   !> allocate camera perspective static
   call camera_sol%allocate_camera_perspective_static(spectrum_sol,3,&
   (/n_points_on_lens_sol,n_pixels_x,n_pixels_y/))
@@ -208,7 +209,7 @@ subroutine test_de_allocation_camera_perspective_static()
   call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra,n_pixels_x,n_pixels_y/),&
   3,"Error allocate camera perspective static: n pixels / spectra")
   call assert_equals_allocatable_arrays(n_x_sol,n_times_sol,camera_sol%image_plane_direction,&
-  "Error allocate_camera perspective static: image plane direction")
+  "Error allocate camera perspective static: image plane direction")
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,n_times_sol,&
   camera_sol%image_plane,"Error allocate_camera perspective static: image plane") 
   !> deallocate camera perspective static
@@ -229,43 +230,9 @@ subroutine test_de_allocation_camera_perspective_static()
   "Error deallocate camera perspective static: image plane direction not deallocated!")
   call assert_false(allocated(camera_sol%image_plane),&
   "Error deallocate camera perspective static: image plane not deallocated!")
+  !> nullify property size
+  camera_sol%n_property_vertex = 0
 end subroutine test_de_allocation_camera_perspective_static
-
-!> test generation of points and pdf on lens using
-!> a pinhole lens
-subroutine test_points_on_lens_pdf_pinhole()
-  implicit none
-  !> allocate and initialise variables
-  camera_sol%n_property_vertex = n_properties
-  call camera_sol%allocate_vertices(1,1)
-  allocate(points_on_lens(n_x_sol,1,1))
-  allocate(pdf_points_on_lens(1,1,1))
-  call pinhole_sol%sampling(1,points_on_lens)
-  call pinhole_sol%pdf(1,points_on_lens(:,:,1),pdf_points_on_lens(:,1,1))
-  !> test generation without input number of points
-  call camera_sol%generate_points_on_lens_pdf(pinhole_sol)
-  call assert_equals(camera_sol%n_vertices,1,&
-  "Error camera perspective static generate points on pinhole: n vertices not 1!")
-  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
-  camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
-  "Error camera perspective static generate points on pinhole: x")
-  call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
-  camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
-  "Error camera perspective static generate points on pinhole: pdf points on lens")
-  !> test generation with input number points
-  call camera_sol%generate_points_on_lens_pdf(pinhole_sol,n_points_on_lens_sol)
-  call assert_equals(camera_sol%n_vertices,1,&
-  "Error camera perspective static generate points on pinhole: n vertices not 1!")
-  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
-  camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
-  "Error camera perspective static generate points on pinhole: points on lens")
-  call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
-  camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
-  "Error camera perspective static generate points on pinhole: pdf points on lens") 
-  !> deallocate variable
-  call camera_sol%deallocate_vertices
-  deallocate(points_on_lens); deallocate(pdf_points_on_lens);
-end subroutine test_points_on_lens_pdf_pinhole
 
 !> test the calculation of the cosinus between the image plane direction and a ray
 subroutine test_cosine_view_angle_static()

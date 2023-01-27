@@ -3,6 +3,7 @@
 !> shared by all static camera
 module mod_camera_static_test
 use fruit
+use mod_assert_equals_tools,       only: assert_equals_allocatable_arrays
 use constants,                     only: PI,TWOPI
 use mod_pinhole_lens,              only: pinhole_lens
 use mod_spectra_deterministic,     only: spectrum_integrator_2nd
@@ -40,10 +41,10 @@ real*8,dimension(3),parameter :: half_angle_lowbnd=(/PI/1.d1,PI/4.d0,0d0/)
 real*8,dimension(3),parameter :: half_angle_uppbnd=(/PI/1.9d0,PI/3.d0,TWOPI/)
 real*8,dimension(3),parameter :: center_pos_lowbnd=(/-2.d-1,4.d1,-7.d0/)
 real*8,dimension(3),parameter :: center_pos_uppbnd=(/3.4d1,3.d2,5.d0/)
-real*8,dimension(3),parameter :: test_points_lowbnd=(/-7.4d-1,2.9d1,-5.d0/)
-real*8,dimension(3),parameter :: test_points_uppbnd=(/1.4d1,4.5d2,9.d0/)
 real*8,dimension(2),parameter :: st_false_lowbnd=(/-5.4d1,-9.d0/)
 real*8,dimension(2),parameter :: st_false_uppbnd=(/1.4d1,4.5d2/)
+real*8,dimension(3),parameter :: test_points_lowbnd=(/-7.4d-1,2.9d1,-5.d0/)
+real*8,dimension(3),parameter :: test_points_uppbnd=(/1.4d1,4.5d2,9.d0/)
 real*8,dimension(n_spectra),parameter :: min_wlen=(/3.d0-6,2.5d-7/)
 real*8,dimension(n_spectra),parameter :: max_wlen=(/3.5d0-6,4.2d-7/)
 logical,dimension(n_rays_sol)          :: accept_ray_sol
@@ -52,9 +53,11 @@ real*8,dimension(n_st_sol)             :: pixel_size_sol
 real*8,dimension(3,n_planes)           :: half_angle_sol
 real*8,dimension(n_x_sol,n_planes)     :: image_plane_coords
 real*8,dimension(n_x_sol,n_planes)     :: pupil_positions
-real*8,dimension(n_x_sol,n_planes)     :: test_points
 real*8,dimension(n_x_sol,n_rays_sol)   :: test_ray_vertices
 real*8,dimension(n_stq_sol,n_rays_sol) :: test_ray_stq_sol
+real*8,dimension(n_x_sol,n_planes)     :: test_points
+real*8,dimension(:,:,:),allocatable    :: points_on_lens
+real*8,dimension(:,:,:),allocatable    :: pdf_points_on_lens
 type(camera_perspective_static) :: camera_sol
 type(pinhole_lens)              :: pinhole_sol
 type(spectrum_integrator_2nd)   :: spectrum_sol
@@ -68,6 +71,7 @@ subroutine run_fruit_camera_static()
   write(*,'(/A)') "  ... setting-up: camera static tests"
   call setup
   write(*,'(/A)') "  ... running: camera static tests"
+  call test_points_on_lens_pdf_pinhole
   call test_image_plane_pixel_size_definitions
   call test_find_ray_image_plane_intersection
   write(*,'(/A)') "  ... tearing-up: camera static tests"
@@ -80,7 +84,7 @@ end subroutine run_fruit_camera_static
 subroutine setup()
   use mod_gnu_rng,                 only: gnu_rng_interval
   use mod_common_camera_test_tool, only: generate_image_plane_variables
-  use mod_common_camera_test_tool,   only: generate_ray_variables_from_origin_plane
+  use mod_common_camera_test_tool, only: generate_ray_variables_from_origin_plane
   implicit none
   integer :: ii
   real*8,dimension(3) :: center
@@ -117,9 +121,47 @@ subroutine teardown()
   implicit none
   pixel_size_sol = 0.d0
   call pinhole_sol%deallocate_lens; call spectrum_sol%deallocate_spectrum;
+  if(allocated(points_on_lens))     deallocate(points_on_lens)
+  if(allocated(pdf_points_on_lens)) deallocate(pdf_points_on_lens)
 end subroutine teardown
 
 !> Tests -------------------------------------------
+!> test generation of points and pdf on lens using
+!> a pinhole lens
+subroutine test_points_on_lens_pdf_pinhole()
+  implicit none
+  !> allocate and initialise variables
+  camera_sol%n_property_vertex = n_properties
+  call camera_sol%allocate_vertices(1,1)
+  allocate(points_on_lens(n_x_sol,1,1))
+  allocate(pdf_points_on_lens(1,1,1))
+  call pinhole_sol%sampling(1,points_on_lens)
+  call pinhole_sol%pdf(1,points_on_lens(:,:,1),pdf_points_on_lens(:,1,1))
+  !> test generation without input number of points
+  call camera_sol%generate_points_on_lens_pdf(pinhole_sol)
+  call assert_equals(camera_sol%n_vertices,1,&
+  "Error camera perspective static generate points on pinhole: n vertices not 1!")
+  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
+  camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
+  "Error camera perspective static generate points on pinhole: x")
+  call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
+  camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
+  "Error camera perspective static generate points on pinhole: pdf points on lens")
+  !> test generation with input number points
+  call camera_sol%generate_points_on_lens_pdf(pinhole_sol,n_points_on_lens_sol)
+  call assert_equals(camera_sol%n_vertices,1,&
+  "Error camera perspective static generate points on pinhole: n vertices not 1!")
+  call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
+  camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
+  "Error camera perspective static generate points on pinhole: points on lens")
+  call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
+  camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
+  "Error camera perspective static generate points on pinhole: pdf points on lens")
+  !> deallocate variable
+  call camera_sol%deallocate_vertices
+  deallocate(points_on_lens); deallocate(pdf_points_on_lens);
+end subroutine test_points_on_lens_pdf_pinhole
+
 !> test the generation of image planes and the calculation of the pixel size
 subroutine test_image_plane_pixel_size_definitions()
   use constants,    only: TWOPI

@@ -35,7 +35,6 @@ real*8,parameter  :: tol_real8=5.d-15
 real*8,parameter  :: tol_real8_2=5.d-9
 real*8,parameter  :: tol_real8_rel=3.d-6
 real*8,parameter  :: plane_distance=2.5d1
-real*8,parameter  :: accept_threshold=5.d-1
 real*8,dimension(2),parameter :: costheta_interval=(/-1.d0,1.d0/)
 real*8,dimension(2),parameter :: phi_interval=(/0.d0,TWOPI/)
 real*8,dimension(2),parameter :: ray_q_interval=(/3.1d-2,9.5d-1/)
@@ -94,6 +93,7 @@ end subroutine run_fruit_camera_perspective_static
 subroutine setup()
   use mod_gnu_rng,                 only: gnu_rng_interval
   use mod_common_camera_test_tool, only: generate_image_plane_variables
+use mod_common_camera_test_tool,   only: generate_ray_variables_from_origin_plane
   implicit none
   integer :: ii
   real*8,dimension(3) :: center
@@ -118,9 +118,11 @@ subroutine setup()
     test_points_uppbnd,test_points(:,ii))
   enddo
   !> generate the ray variables for one image plane
-  call generate_ray_variables_from_origin_plane(mirror_xy_sol(:,test_plane_pupil_id),&
+  call generate_ray_variables_from_origin_plane(n_x_sol,n_st_sol,n_stq_sol,n_rays_sol,&
+  st_false_lowbnd,st_false_uppbnd,ray_q_interval,mirror_xy_sol(:,test_plane_pupil_id),&
   half_angle_sol(:,test_plane_pupil_id),pupil_positions(:,test_plane_pupil_id),&
-  image_plane_coords(:,test_plane_pupil_id),center)
+  image_plane_coords(:,test_plane_pupil_id),center,accept_ray_sol,&
+  test_ray_stq_sol,test_ray_vertices)
 end subroutine setup
 
 !> tearing-down unit test features
@@ -448,49 +450,6 @@ subroutine test_find_ray_image_plane_intersection()
 end subroutine test_find_ray_image_plane_intersection 
 
 !> Tools -------------------------------------------
-!> sample the vertex of a ray given an origin and a plane
-subroutine generate_ray_variables_from_origin_plane(mirror_xy,&
-half_width,origin,plane_coords,x_lens)
-  use mod_geometry, only: define_plane_from_half_angles
-  use mod_geometry, only: compute_global_cart_coord_plane_points
-  use mod_gnu_rng,  only: gnu_rng_interval
-  implicit none
-  !> inputs
-  integer,dimension(2),intent(in)        :: mirror_xy
-  real*8,dimension(3),intent(in)         :: half_width
-  real*8,dimension(n_x_sol),intent(in)   :: origin,x_lens
-  real*8,dimension(n_x_sol),intent(in)   :: plane_coords
-  !> variables
-  integer :: ii
-  real*8 ::  rand
-  real*8,dimension(n_st_sol)  :: st_value
-  real*8,dimension(n_x_sol)   :: plane_pos
-  real*8,dimension(n_x_sol,3) :: plane
-  !> intiialisation
-  call define_plane_from_half_angles(mirror_xy,half_width,plane_coords,origin,plane)
-  test_ray_stq_sol(1:2,:) = 5.d-1
-  !> loop on the number of rays
-  do ii=1,n_rays_sol
-    !> check if a ray with or without intersection must be generated
-    call random_number(rand)
-    if(rand.gt.accept_threshold) then
-      call random_number(test_ray_stq_sol(1:2,ii))
-      accept_ray_sol(ii) = .true.
-    else
-      do while((all(test_ray_stq_sol(1:2,ii).ge.0.d0).and.all(test_ray_stq_sol(1:2,ii).le.1.d0)))
-        call gnu_rng_interval(2,st_false_lowbnd,st_false_uppbnd,test_ray_stq_sol(1:2,ii))
-      enddo
-      accept_ray_sol(ii) = .false.
-    endif
-    !> sample a ray lenght
-    call gnu_rng_interval(ray_q_interval,test_ray_stq_sol(3,ii))
-    !> compute the position on the plane
-    plane_pos = compute_global_cart_coord_plane_points(plane,test_ray_stq_sol(1:2,ii))
-    !> compute and store the ray vertex and its local coordinate
-    test_ray_vertices(:,ii) = x_lens+(plane_pos-x_lens)/test_ray_stq_sol(3,ii)
-  enddo
-end subroutine generate_ray_variables_from_origin_plane
-
 !> compute angle between two vectors with same origin
 subroutine compute_cos_angle_two_vectors_origin_points(&
 origin,vertex_1,vertex_2,cos_angle)

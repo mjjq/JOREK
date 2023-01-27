@@ -2,9 +2,9 @@
 !> procedures used by multiple camera unit test modules
 module mod_common_camera_test_tool
 implicit none
-
 private
 public :: generate_image_plane_variables
+public :: generate_ray_variables_from_origin_plane
 
 !> Variable and data types -------------------------
 !> Interfaces --------------------------------------
@@ -64,5 +64,76 @@ half_angle,image_plane_coords,pupil_positions)
     center_pos_uppbnd,pupil_positions(:,ii))
   enddo
 end subroutine generate_image_plane_variables
+
+!> sample the vertex of a ray given an origin and a plane
+!> inputs:
+!>   n_x:             (integer) size of the position vector
+!>   n_st:            (integer) size of the plane local coordinates
+!>   n_stq:           (integer) number of local plane/ray coordinates
+!>   n_rays:          (integer) number of ray to generate
+!>   mirror_xy:       (integer)(2) check if the plane should be mirrored 
+!>   st_false_lowbnd: (real8)(2) lower bound of the local plane coordinates
+!>   st_false_uppbnd: (real8)(2) upper bound of the local plane coordinates
+!>   ray_q_interval:  (real8)(2) interval of the local ray coordinate
+!>   half_width:      (real8)(3) plane dimensions
+!>   origin:          (real8)(n_x) position of the pupil
+!>   plane_coords:    (real8)(n_x) position of the plane in the pupil reference
+!>   x_lens:          (real8)(n_x) position on the camera lens
+!>                                 intersected by the ray
+!> outputs:
+!>   accept_ray:      (logical)(n_rays) if true plane and ray intersect
+!>   ray_stq:         (real8)(n_stq,n_rays) local plane-ray coordinates
+!>   ray_vertices:    (n_x,n_rays) vertices of the rays
+subroutine generate_ray_variables_from_origin_plane(n_x,n_st,n_stq,n_rays,&
+st_false_lowbnd,st_false_uppbnd,ray_q_interval,mirror_xy,half_width,&
+origin,plane_coords,x_lens,accept_ray,ray_stq,ray_vertices)
+  use mod_geometry, only: define_plane_from_half_angles
+  use mod_geometry, only: compute_global_cart_coord_plane_points
+  use mod_gnu_rng,  only: gnu_rng_interval
+  implicit none
+  !> parameters:
+  real*8,parameter  :: accept_threshold=5.d-1
+  !> inputs:
+  integer,intent(in)                 :: n_x,n_st,n_stq,n_rays
+  integer,dimension(2),intent(in)    :: mirror_xy
+  real*8,dimension(3),intent(in)     :: half_width
+  real*8,dimension(2),intent(in)     :: ray_q_interval
+  real*8,dimension(2),intent(in)     :: st_false_lowbnd,st_false_uppbnd
+  real*8,dimension(n_x),intent(in)   :: origin,x_lens
+  real*8,dimension(n_x),intent(in)   :: plane_coords
+  !> outputs:
+  logical,dimension(n_rays),intent(out)      :: accept_ray
+  real*8,dimension(n_stq,n_rays),intent(out) :: ray_stq
+  real*8,dimension(n_x,n_rays),intent(out)   :: ray_vertices
+  !> variables:
+  integer :: ii
+  real*8 ::  rand
+  real*8,dimension(n_st)  :: st_value
+  real*8,dimension(n_x)   :: plane_pos
+  real*8,dimension(n_x,3) :: plane
+  !> intiialisation
+  call define_plane_from_half_angles(mirror_xy,half_width,plane_coords,origin,plane)
+  ray_stq(1:2,:) = 5.d-1
+  !> loop on the number of rays
+  do ii=1,n_rays
+    !> check if a ray with or without intersection must be generated
+    call random_number(rand)
+    if(rand.gt.accept_threshold) then
+      call random_number(ray_stq(1:2,ii))
+      accept_ray(ii) = .true.
+    else
+      do while((all(ray_stq(1:2,ii).ge.0.d0).and.all(ray_stq(1:2,ii).le.1.d0)))
+        call gnu_rng_interval(2,st_false_lowbnd,st_false_uppbnd,ray_stq(1:2,ii))
+      enddo
+      accept_ray(ii) = .false.
+    endif
+    !> sample a ray lenght
+    call gnu_rng_interval(ray_q_interval,ray_stq(3,ii))
+    !> compute the position on the plane
+    plane_pos = compute_global_cart_coord_plane_points(plane,ray_stq(1:2,ii))
+    !> compute and store the ray vertex and its local coordinate
+    ray_vertices(:,ii) = x_lens+(plane_pos-x_lens)/ray_stq(3,ii)
+  enddo
+end subroutine generate_ray_variables_from_origin_plane
 !> -------------------------------------------------
 end module mod_common_camera_test_tool

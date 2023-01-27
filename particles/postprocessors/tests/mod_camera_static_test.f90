@@ -80,7 +80,7 @@ end subroutine run_fruit_camera_static
 subroutine setup()
   use mod_gnu_rng,                 only: gnu_rng_interval
   use mod_common_camera_test_tool, only: generate_image_plane_variables
-use mod_common_camera_test_tool,   only: generate_ray_variables_from_origin_plane
+  use mod_common_camera_test_tool,   only: generate_ray_variables_from_origin_plane
   implicit none
   integer :: ii
   real*8,dimension(3) :: center

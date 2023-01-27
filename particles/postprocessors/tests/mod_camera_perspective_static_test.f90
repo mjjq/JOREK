@@ -49,7 +49,7 @@ real*8,dimension(2),parameter :: st_false_lowbnd=(/-5.4d1,-9.d0/)
 real*8,dimension(2),parameter :: st_false_uppbnd=(/1.4d1,4.5d2/)
 real*8,dimension(n_spectra),parameter :: min_wlen=(/3.d0-6,2.5d-7/)
 real*8,dimension(n_spectra),parameter :: max_wlen=(/3.5d0-6,4.2d-7/)
-logical,dimension(n_rays_sol)          ::accept_ray_sol
+logical,dimension(n_rays_sol)          :: accept_ray_sol
 integer,dimension(2,n_planes)          :: mirror_xy_sol
 real*8,dimension(n_st_sol)             :: pixel_size_sol
 real*8,dimension(3,n_planes)           :: half_angle_sol
@@ -92,7 +92,8 @@ end subroutine run_fruit_camera_perspective_static
 !> Set-up and tear-down ----------------------------
 !> set-up unit test features
 subroutine setup()
-  use mod_gnu_rng, only: gnu_rng_interval
+  use mod_gnu_rng,                 only: gnu_rng_interval
+  use mod_common_camera_test_tool, only: generate_image_plane_variables
   implicit none
   integer :: ii
   real*8,dimension(3) :: center
@@ -105,7 +106,10 @@ subroutine setup()
   spectrum_sol = spectrum_integrator_2nd(n_lines_per_spectrum,&
   n_spectra,min_wlen,max_wlen)
   !> initialise image plane variables
-  call generate_image_planes_variables()
+  call generate_image_plane_variables(n_x_sol,n_planes,mirror_xy_interval,&
+  plane_distance,costheta_interval,phi_interval,half_angle_lowbnd,&
+  half_angle_uppbnd,center_pos_lowbnd,center_pos_uppbnd,mirror_xy_sol,&
+  half_angle_sol,image_plane_coords,pupil_positions)
   !> initialise camera
   camera_sol%n_plane_points = n_plane_vertices
   !> initialise the test points
@@ -444,27 +448,6 @@ subroutine test_find_ray_image_plane_intersection()
 end subroutine test_find_ray_image_plane_intersection 
 
 !> Tools -------------------------------------------
-!> sample the image plane variables
-subroutine generate_image_planes_variables()
-  use mod_gnu_rng,  only: gnu_rng_interval
-  use mod_sampling, only: sample_uniform_sphere
-  implicit none
-  !> variables
-  integer             :: ii
-  real*8,dimension(3) :: rand
-  !> generation routine
-  call gnu_rng_interval(2,n_planes,mirror_xy_interval,mirror_xy_sol)
-  do ii=1,n_planes
-    call random_number(rand)
-    image_plane_coords(:,ii) = sample_uniform_sphere(&
-    plane_distance,costheta_interval,phi_interval,rand)
-    call gnu_rng_interval(3,half_angle_lowbnd,&
-    half_angle_uppbnd,half_angle_sol(:,ii))
-    call gnu_rng_interval(n_x_sol,center_pos_lowbnd,&
-    center_pos_uppbnd,pupil_positions(:,ii))
-  enddo
-end subroutine generate_image_planes_variables
-
 !> sample the vertex of a ray given an origin and a plane
 subroutine generate_ray_variables_from_origin_plane(mirror_xy,&
 half_width,origin,plane_coords,x_lens)

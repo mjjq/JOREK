@@ -47,6 +47,7 @@ integer                            :: n_times
 integer,dimension(:),allocatable   :: int_camera_param 
 real*8,dimension(:),allocatable    :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable    :: real_camera_param,sim_times
+real*8,dimension(:,:),allocatable :: x_pixel_positions,y_pixel_positions
 real*8,dimension(:,:,:,:,:),allocatable :: pixel_filter_values
 character(len=4)                   :: extension
 character(len=15)                  :: particle_filename
@@ -77,7 +78,9 @@ allocate(filter_spectra(n_spectra));
 allocate(pinhole_positions(n_x)); pinhole_positions = [-8.86d-1,-4.002,-3.32d-1];
 !> one pinhole => n_lens_samples=1, JET KLDT-E5WC pixels nx=120,ny=176
 allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,120,176,0,1];
-allocate(real_camera_param(n_real_camera_param));
+allocate(real_camera_param(n_real_camera_param))
+allocate(x_pixel_positions(int_camera_param(2),n_times))
+allocate(y_pixel_positions(int_camera_param(3),n_times))
 !> JET KLDT-E5WC camera inputs:
 !> 1:3 -> half width, half height and orientation of the visual plane angle
 !> 4:6 -> camera focal direction: focal distance, latitude, azimuth
@@ -125,6 +128,7 @@ call lens%init_pinhole(n_x,pinhole_positions)
 call camera%init_camera(lens,spectra,n_int_camera_param,n_real_camera_param,&
 int_camera_param,real_camera_param)
 call synch_sources%init_lights_from_particles(n_times,sims_gc)
+call camera%compute_scaled_pixel_positions_on_plane(x_pixel_positions,y_pixel_positions) 
 call system_clock(t1)
 write(*,*) 'Initialise synthetic camera and light sources: completed'
 write(*,*) my_id, 'System time fast camera initialisation (s): ',real(t1-t0,kind=8)/1d3
@@ -146,7 +150,7 @@ write(*,*) my_id, 'System time computing image and filters (s): ',real(t1-t0,kin
 if(my_id.eq.0) then
   write(*,*) 'Write image and filters in HDF5 file ...'
   call write_pixel_intensity_hdf5(image_filename,n_spectra,2,int_camera_param(2),&
-  int_camera_param(3),n_times,pixel_filter_values,ierr)
+  int_camera_param(3),n_times,x_pixel_positions,y_pixel_positions,pixel_filter_values,ierr)
   write(*,*) 'Write image and filters in HDF5 file: completed!'
 endif
 #endif
@@ -161,6 +165,8 @@ if(allocated(real_camera_param))   deallocate(real_camera_param)
 if(allocated(sim_times))           deallocate(sim_times)
 if(allocated(sims))                deallocate(sims)
 if(allocated(sims_gc))             deallocate(sims_gc)
+if(allocated(x_pixel_positions))   deallocate(x_pixel_positions)
+if(allocated(y_pixel_positions))   deallocate(y_pixel_positions)
 if(allocated(pixel_filter_values)) deallocate(pixel_filter_values)
 call finalize_mpi_threads(ierr)
 

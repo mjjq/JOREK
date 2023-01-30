@@ -642,8 +642,8 @@ do ife = ife_min, ife_max
         psi_as_coord = ps0
 #endif
 #ifdef WITH_TiTe
-        T_or_Te          = Te0
-        T_or_Te_corr     = Te0_corr
+        T_or_Te          = T0e
+        T_or_Te_corr     = T0e_corr
         T_or_Te_0        = Te_0
 #else
         T_or_Te          = T0

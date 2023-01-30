@@ -26,8 +26,14 @@ integer,parameter :: n_pixels_x_2_sol=1024
 integer,parameter :: n_pixels_y_2_sol=128
 integer,parameter :: n_spectra_2_sol=12
 integer,parameter :: n_vertices_2_sol=234
+integer,parameter :: n_pixels_x_3_sol=31
+integer,parameter :: n_pixels_y_3_sol=12
+real*8,parameter  :: tol_real8=7.5e-15 
 real*8,parameter  :: tol_real8_rel=3.d-6
+real*8,dimension(2),parameter :: plane_edge_length_lowbnd=(/2.4d-3,4.3d-1/)
+real*8,dimension(2),parameter :: plane_edge_length_uppbnd=(/3.25d2,4.74d1/) 
 real*8,dimension(n_st_sol)             :: pixel_size_sol
+real*8,dimension(2,n_times_sol)        :: plane_edge_length_sol
 integer,dimension(:,:,:,:),allocatable :: pixel_ids
 integer,dimension(:,:,:,:),allocatable :: pixel_ids_sol
 real*8,dimension(:,:,:,:),allocatable  :: st_point_on_pixels
@@ -44,6 +50,7 @@ subroutine run_fruit_camera
   write(*,'(/A)') "  ... running: camera tests"
   call test_de_allocate_camera
   call test_computation_pixel_ids_st_plane_point
+  call test_computation_pixel_to_scaled_plane_point
   write(*,'(/A)') "  ... tearing-down: camera tests"
   call teardown()
 end subroutine run_fruit_camera
@@ -51,12 +58,20 @@ end subroutine run_fruit_camera
 !> Set-up and tear-down ---------------------------------------------
 !> set-up test features
 subroutine setup()
+  use mod_gnu_rng, only: gnu_rng_interval
   implicit none
+  !> variables
+  integer :: ii
   !> set n_properties
   camera_sol%n_property_vertex = n_properties_sol
   !> set the number of points of a plane
   camera_sol%n_plane_points = n_plane_points_sol
   pixel_size_sol = (/1.d0,1.d0/)/real((/n_pixels_x_sol,n_pixels_y_sol/),kind=8)
+  !> generate random plane_edge_length for all times
+  do ii=1,n_times_sol
+    call gnu_rng_interval(2,plane_edge_length_lowbnd,plane_edge_length_uppbnd,&
+    plane_edge_length_sol(:,ii))
+  enddo
 end subroutine setup
 
 !> tear-down test features
@@ -182,7 +197,7 @@ subroutine test_computation_pixel_ids_st_plane_point()
       enddo
     enddo
   enddo
-  !> test solutions
+  !> test results
   call assert_equals_extended(n_st_sol,n_points_per_pixel_sol,n_pixels_x_sol,&
   n_pixels_y_sol,pixel_ids,pixel_ids_sol,&
   "Error computation position in pixel coordinates: pixel ids mismatch!")
@@ -194,6 +209,38 @@ subroutine test_computation_pixel_ids_st_plane_point()
   deallocate(st_point_on_pixels); deallocate(pixel_ids_sol);
   deallocate(st_point_on_pixels_sol); deallocate(pixel_ids);
 end subroutine test_computation_pixel_ids_st_plane_point
+
+!> test the computation of the scaled plane coordinates from
+!> the pixel coordinates
+subroutine test_computation_pixel_to_scaled_plane_point()
+  use mod_assert_equals_tools, only: assert_equals_extended
+  implicit none
+  !> variables
+  integer :: ii,jj,kk
+  real*8,dimension(2,n_pixels_x_2_sol,n_pixels_y_3_sol,n_times_sol) :: st_out,st_in
+  !> initialise camera and test data
+  call camera_sol%allocate_camera(n_times_sol,n_vertices_sol,&
+  n_pixels_x_sol,n_pixels_y_sol,n_spectra_sol) 
+  camera_sol%pixel_size = pixel_size_sol
+  camera_sol%plane_edge_length = plane_edge_length_sol
+  !> loop for computing the particle coordinates
+  do kk=1,n_times_sol
+    do jj=1,n_pixels_y_3_sol
+      do ii=1,n_pixels_x_3_sol
+        call random_number(st_in(:,ii,jj,kk))
+        call camera_sol%pixel_local_to_scaled_plane_coord(kk,[ii,jj],st_in(:,ii,jj,kk),st_out(:,ii,jj,kk))
+        st_out(:,ii,jj,kk) = (st_out(:,ii,jj,kk)/(camera_sol%pixel_size*camera_sol%plane_edge_length(:,kk))) - &
+        real([ii-1,jj-1],kind=8)
+      enddo
+    enddo
+  enddo
+  !> check test results
+  call assert_equals_extended(2,n_pixels_x_3_sol,n_pixels_y_3_sol,&
+  n_times_sol,st_out,st_in,tol_real8,&
+  "Error computation scaled position: local pixel coord. mismatch!")
+  !> cleanup
+  call camera_sol%deallocate_camera
+end subroutine test_computation_pixel_to_scaled_plane_point
 
 !> Tools ------------------------------------------------------------
 !>-------------------------------------------------------------------

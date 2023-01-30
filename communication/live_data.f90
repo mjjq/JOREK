@@ -702,8 +702,9 @@ module live_data
       li3_tot_t, part_src_tot_t, heat_src_tot_t, volume_t, area_t, mag_ener_src_tot, eta_ohmic, eta, &
       dpart_tot_dt, part_flux_Dpar_t, part_flux_Dperp_t, part_flux_vpar_t, part_flux_vperp_t, &
       dnpart_tot_dt, npart_tot_t, npart_flux_t, density_tot_t, flux_poynting_t, xtime_rad_power, &
-      xtime_E_ion_power, thermal_e_tot_t, thermal_i_tot_t, xtime_P_ei, visco_dissip_tot_t, visco, &
-      visco_par, visco_heating, visco_par_heating
+      xtime_E_ion_power, thermal_e_tot_t, thermal_i_tot_t, xtime_P_ei, visco_par, visco_par_heating, &
+      visco_dissip_tot_t, visco, visco_heating
+      
 
 
     implicit none

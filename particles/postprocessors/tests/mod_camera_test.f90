@@ -51,6 +51,7 @@ subroutine run_fruit_camera
   call test_de_allocate_camera
   call test_computation_pixel_ids_st_plane_point
   call test_computation_pixel_to_scaled_plane_point
+  call test_compute_scaled_pixel_position_on_plane
   write(*,'(/A)') "  ... tearing-down: camera tests"
   call teardown()
 end subroutine run_fruit_camera
@@ -217,11 +218,11 @@ subroutine test_computation_pixel_to_scaled_plane_point()
   implicit none
   !> variables
   integer :: ii,jj,kk
-  real*8,dimension(2,n_pixels_x_2_sol,n_pixels_y_3_sol,n_times_sol) :: st_out,st_in
+  real*8,dimension(2,n_pixels_x_3_sol,n_pixels_y_3_sol,n_times_sol) :: st_out,st_in
   !> initialise camera and test data
   call camera_sol%allocate_camera(n_times_sol,n_vertices_sol,&
-  n_pixels_x_sol,n_pixels_y_sol,n_spectra_sol) 
-  camera_sol%pixel_size = pixel_size_sol
+  n_pixels_x_3_sol,n_pixels_y_3_sol,n_spectra_sol) 
+  camera_sol%pixel_size = real(1d0/(/n_pixels_x_3_sol,n_pixels_y_3_sol/),kind=8)
   camera_sol%plane_edge_length = plane_edge_length_sol
   !> loop for computing the particle coordinates
   do kk=1,n_times_sol
@@ -241,6 +242,44 @@ subroutine test_computation_pixel_to_scaled_plane_point()
   !> cleanup
   call camera_sol%deallocate_camera
 end subroutine test_computation_pixel_to_scaled_plane_point
+
+!> test the generation of the scaled pixel positions for all times
+subroutine test_compute_scaled_pixel_position_on_plane()
+  implicit none
+  !> variables
+  integer :: ii
+  real*8,dimension(n_pixels_x_3_sol)             :: x_pixel_ids
+  real*8,dimension(n_pixels_y_3_sol)             :: y_pixel_ids
+  real*8,dimension(n_pixels_x_3_sol,n_times_sol) :: x_pixels,dot5_x
+  real*8,dimension(n_pixels_y_3_sol,n_times_sol) :: y_pixels,dot5_y
+  !> initialisations
+  dot5_x = 5d-1; dot5_y = 5d-1;
+  do ii=1,n_pixels_x_3_sol
+    x_pixel_ids(ii) = real(ii-1,kind=8)
+  enddo
+  do ii=1,n_pixels_y_3_sol
+    y_pixel_ids(ii) = real(ii-1,kind=8)
+  enddo
+  call camera_sol%allocate_camera(n_times_sol,n_vertices_sol,&
+  n_pixels_x_3_sol,n_pixels_y_3_sol,n_spectra_sol) 
+  camera_sol%pixel_size = real(1d0/(/n_pixels_x_3_sol,n_pixels_y_3_sol/),kind=8)
+  camera_sol%plane_edge_length = plane_edge_length_sol
+  !> loop for computing the mesh in local pixel coordinates
+  call camera_sol%compute_scaled_pixel_positions_on_plane(x_pixels,y_pixels)
+  do ii=1,n_times_sol
+    x_pixels(:,ii) = (x_pixels(:,ii)/(camera_sol%pixel_size(1)*&
+    camera_sol%plane_edge_length(1,ii))) - x_pixel_ids 
+    y_pixels(:,ii) = (y_pixels(:,ii)/(camera_sol%pixel_size(2)*&
+    camera_sol%plane_edge_length(2,ii))) - y_pixel_ids
+  enddo
+  !> test results
+  call assert_equals(x_pixels,dot5_x,n_pixels_x_3_sol,n_times_sol,tol_real8,&
+  "Error computation scaled pixel positions: x pixel positions mismatch!")
+  call assert_equals(y_pixels,dot5_y,n_pixels_y_3_sol,n_times_sol,tol_real8,&
+  "Error computation scaled pixel positions: y pixel positions mismatch!")
+  !> cleanup
+  call camera_sol%deallocate_camera
+end subroutine test_compute_scaled_pixel_position_on_plane
 
 !> Tools ------------------------------------------------------------
 !>-------------------------------------------------------------------

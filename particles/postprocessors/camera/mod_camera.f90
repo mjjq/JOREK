@@ -36,6 +36,7 @@ type,abstract,extends(vertices) :: camera
    procedure,pass(camera_inout)                                 :: compute_images
    procedure,pass(camera_inout)                                 :: plane_to_pixel_local_coord
    procedure,pass(camera_inout)                                 :: pixel_local_to_scaled_plane_coord
+   procedure,pass(camera_inout)                                 :: compute_scaled_pixel_positions_on_plane
 end type camera
 
 !> Interfaces ------------------------------------------------------
@@ -284,10 +285,10 @@ end subroutine deallocate_camera
 !> compute the pixel number and the position in the pixel local coordinates
 !> of a point on the image plane (in the plane local coordinates)
 !> inputs:
-!>  camera_inout: (camera) camera with unallocated image plane
+!>  camera_inout: (camera) camera vertices
 !>  st_plane:     (real8)(2) position in the plane local coordinates
 !> outputs:
-!>  camera_inout: (camera_perspective_static) camera with defined image plane
+!>  camera_inout: (camera) camera vertices
 !>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
 !>  st_pixel:     (real8)(2) position in the pixel local coordinates
 subroutine plane_to_pixel_local_coord(camera_inout,st_plane,i_pixel,st_pixel)
@@ -308,11 +309,12 @@ end subroutine plane_to_pixel_local_coord
 
 !> compute the coordinate in the scaled plane given the local pixel coordinates
 !> inputs:
-!>  camera_inout: (camera_perspective_static) camera with unallocated image plane
+!>  camera_inout: (camera) camera vertices
 !>  id_time:      (integer) index of the considered time
 !>  i_pixel:      (integer)(2) pixel indices of the point on the plane (s,t)
 !>  st_pixel:     (real8)(2) position in the pixel local coordinates
 !> outputs: 
+!>  camera_inout: (camera) camera vertices
 !>  st_scale:     (real8)(2) position rescaled by the plane size
 subroutine pixel_local_to_scaled_plane_coord(camera_inout,id_time,i_pixel,st_pixel,st_scale)
   implicit none
@@ -328,6 +330,37 @@ subroutine pixel_local_to_scaled_plane_coord(camera_inout,id_time,i_pixel,st_pix
   st_scale = camera_inout%plane_edge_length(:,id_time)*camera_inout%pixel_size*&
             (real(i_pixel-1,kind=8)+st_pixel)
 end subroutine pixel_local_to_scaled_plane_coord
+
+!> generate the pixel mesh grid scaled as the image plane
+!> inputs:
+!>  camera_inout: (camera) camera vertices
+!> outputs:
+!>  x_pos:        (real8)(n_pixels_x,n_times) x pixel positions for all times
+!>  y_pos:        (real8)(n_pixels_y,n_times) y pixel positions for all times
+!>  camera_inout: (camera) camera vertices
+subroutine compute_scaled_pixel_positions_on_plane(camera_inout,x_pos,y_pos)
+  implicit none
+  !> inputs-outputs
+  class(camera),intent(inout)  :: camera_inout
+  !> outputs: 
+  real*8,dimension(camera_inout%n_pixels_spectra(2),camera_inout%n_times),intent(out) :: x_pos
+  real*8,dimension(camera_inout%n_pixels_spectra(3),camera_inout%n_times),intent(out) :: y_pos
+  !> variables:
+  integer :: ii,jj
+  real*8,dimension(2) :: st
+  do jj=1,camera_inout%n_times
+    !> compute x mesh
+    do ii=1,camera_inout%n_pixels_spectra(2)
+      call camera_inout%pixel_local_to_scaled_plane_coord(jj,[ii,1],[5d-1,5d-1],st)
+      x_pos(ii,jj) = st(1)
+    enddo
+    !> compute y mesh
+    do ii=1,camera_inout%n_pixels_spectra(3)
+      call camera_inout%pixel_local_to_scaled_plane_coord(jj,[1,ii],[5d-1,5d-1],st)
+      y_pos(ii,jj) = st(2)
+    enddo
+  enddo
+end subroutine compute_scaled_pixel_positions_on_plane
 
 !> procedure used for the rendering of images
 !> inputs:

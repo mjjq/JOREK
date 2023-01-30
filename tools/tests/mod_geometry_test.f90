@@ -60,6 +60,7 @@ subroutine run_fruit_geometry()
   call test_define_direction_plane_from_half_angle_origin
   call test_vertex_spherical_coord_standard
   call test_vertex_spherical_coord_origin
+  call test_compute_edge_length
   write(*,'(/A)') "  ... tearing-down: geometry tests"
 end subroutine run_fruit_geometry
 
@@ -321,6 +322,24 @@ subroutine test_define_direction_plane_from_half_angle_origin()
   call assert_equals(plane_angle,half_angles_sol(3,:),n_planes,&
   tol_real8,"Error define direction plane from half angles origin: plane angle mismatch!")
 end subroutine test_define_direction_plane_from_half_angle_origin
+
+!> test if the lenght of the plane sides are computed correctly 
+subroutine test_compute_edge_length()
+  use mod_geometry, only: compute_plane_edge_length
+  implicit none
+  !> variables
+  integer :: ii
+  real*8,dimension(2,n_planes) :: solution_length,test_length
+  !> compute test and solution lengths
+  do ii=1,n_planes
+    call compute_plane_edge_length(pp_sol(:,:,ii),test_length(:,ii))
+    solution_length(:,ii) = [norm2(pp_sol(:,2,ii)-pp_sol(:,1,ii)),&
+    norm2(pp_sol(:,3,ii)-pp_sol(:,1,ii))]
+  enddo
+  !> test results 
+  call assert_equals(test_length,solution_length,2,n_planes,&
+  tol_real8,"Error computing length of plane edges: edge length mismatch!")
+end subroutine test_compute_edge_length
 
 !> Tools --------------------------------------------------
 !> extract values for testing the definition of plane

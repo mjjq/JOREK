@@ -4,12 +4,16 @@ module mod_geometry
 implicit none
 
 private
+public :: compute_plane_edge_length
 public :: compute_global_cart_coord_plane_points
 public :: compute_plane_line_intersection_cart
 public :: define_plane_from_half_angles
 public :: define_vertex_spherical_coord
 
 !> Interfaces -------------------------------------------------
+interface compute_plane_edge_length
+  module procedure compute_plane_edge_length_r8
+end interface compute_plane_edge_length
 interface compute_global_cart_coord_plane_points
   module procedure compute_global_cart_coord_plane_points_r8
 end interface compute_global_cart_coord_plane_points
@@ -31,6 +35,30 @@ end interface define_vertex_spherical_coord
 
 contains
 !> Procedures -------------------------------------------------
+!> compute the width (P1->P2) and the height (P1->P3) of a plane
+!> defined by the points
+!> P1 -> s -> P2
+!> |           |
+!> v           v
+!> t           t
+!> |           |
+!> v           v
+!> P3 -> s -> P4
+!> inputs:
+!>   pp: (real8)(3,3) points defining a plane in cartesian 
+!>                    coordinates: pp(:,1) -> origin
+!>                                 pp(:,2) -> s=1,t=0 node
+!>                                 pp(:,3) -> s=0,t=1 node
+!> outputs:
+!>   lengths: (real8)(2) 1) width (P1->P2) and 2) height
+!>                       (P3->P4) of a plane
+subroutine compute_plane_edge_length_r8(pp,lengths)
+  implicit none
+  real*8,dimension(3,3),intent(in) :: pp
+  real*8,dimension(2),intent(out)  :: lengths
+  lengths = [norm2(pp(:,2)-pp(:,1)),norm2(pp(:,3)-pp(:,1))]
+end subroutine compute_plane_edge_length_r8
+
 !> compute the global cartesian coordinates of a point on 
 !> a plane given the nodes defining the plane and the point
 !> local coordinates (double precision)

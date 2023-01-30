@@ -1988,10 +1988,10 @@ do i=1,n_vertex_max
                                    + v * (gamma-1.d0) * E_ion_bg * (delta_g(mp,var_rho,ms,mt) - delta_g(mp,var_rhoimp,ms,mt))
 
                 Qvec_p(var_T) = Qvec_p(var_T) &
-                              + v * (- rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT - T0 * alpha_imp * UgradRhon) &
+                              + v * (- rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT - T0 * alpha_imp * UgradRhoimp) &
                               - v * gamma * pf0 * divU                                                &
                               + v * (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)             &
-                              - v * (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad                         &
+                              - v * (rho0 + alpha_imp*rhoimp0) * rhoimp0 * Lrad                         &
                               - v * rho0 * frad_bg                                                    &
                               + v * (gamma-1.d0) * ( - rhoimp0 * dE_ion_dT * UgradT - E_ion * UgradRhoimp - E_ion_bg * (UgradRho - UgradRhoimp) )       &
                               - v * (gamma-1.d0) * rhoimp0 * E_ion * divU                             &
@@ -3985,7 +3985,7 @@ do i=1,n_vertex_max
 
                       Qjac_p (var_Te,var_UR)  = Qjac_p (var_Te,var_UR)                                        &
                                               - v * rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * UgradTe_UR        &
-                                              - v * Te0 * alpha_e * UgradRhon_UR                              &
+                                              - v * Te0 * alpha_e * UgradRhoimp_UR                            &
                                               - v * gamma * pef0 * divU_UR                                    &
                                               - v * (gamma-1.d0) * rhoimp0 * dE_ion_dT * UgradTe_UR           &
                                               - v * (gamma-1.d0) * E_ion * UgradRhoimp_UR                     &
@@ -4262,7 +4262,7 @@ do i=1,n_vertex_max
 
                       Qjac_p (var_T,var_UR)  = Qjac_p (var_T,var_UR)                                        &
                                              - v * rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT_UR     &
-                                             - v * T0 * alpha_imp * UgradRhon_UR                              &
+                                             - v * T0 * alpha_imp * UgradRhoimp_UR                          &
                                              - v * gamma * pf0 * divU_UR                                    &
                                              - v * (gamma-1.d0) * rhoimp0 * dE_ion_dT * UgradT_UR           &
                                              - v * (gamma-1.d0) * E_ion * UgradRhoimp_UR                     &
@@ -4282,7 +4282,7 @@ do i=1,n_vertex_max
 
                       Qjac_p (var_T,var_Up)  = Qjac_p (var_T,var_Up)                                     &
                                             - v * rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT_Up      &
-                                            - v * T0 * alpha_e * UgradRhoimp_Up                          &
+                                            - v * T0 * alpha_imp * UgradRhoimp_Up                          &
                                             - v * (gamma-1.d0) * rhoimp0 * dE_ion_dT * UgradT_Up         &
                                             - v * (gamma-1.d0) * E_ion * UgradRhoimp_Up                  &
                                             - v * (gamma-1.d0) * E_ion_bg * (UgradRho_Up-UgradRhoimp_Up)
@@ -4309,8 +4309,8 @@ do i=1,n_vertex_max
                                              - v * gamma * (rhoimp0*alpha_imp*T + rhoimp0*T0*dalpha_imp_dT*T) * divU    &
 
                                              - v * rho0    * rhoimp0  * dLrad_dT  * T              &
-                                             - v * rhoimp0 * rhoimp0 * dalpha_e_dT * T * Lrad  &
-                                             - v * rhoimp0 * rhoimp0 * alpha_e * dLrad_dT  * T  &
+                                             - v * rhoimp0 * rhoimp0 * dalpha_imp_dT * T * Lrad  &
+                                             - v * rhoimp0 * rhoimp0 * alpha_imp * dLrad_dT  * T  &
 
                                              - v * rho0 * dfrad_bg_dT * T                   &
 
@@ -4326,8 +4326,8 @@ do i=1,n_vertex_max
                                              - (gamma-1.d0) * dE_ion_dT * T * ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp / BB2
 
                        Qjac_n (var_T,var_T)   = Qjac_n (var_T,var_T)                           &
-                                              - v * rhoimp0 * alpha_e * UgradT_T__n            &
-                                              - v * rhoimp0 * dalpha_e_dT * T0 * UgradTe_Te__n  &
+                                              - v * rhoimp0 * alpha_imp * UgradT_T__n            &
+                                              - v * rhoimp0 * dalpha_imp_dT * T0 * UgradTe_Te__n  &
                                               - v * (gamma-1.d0) * rhoimp0 * dE_ion_dT * UgradT_T__n
 
                        Qjac_p (var_T,var_rhoimp)= Qjac_p (var_T,var_rhoimp)                           &
@@ -4335,7 +4335,7 @@ do i=1,n_vertex_max
                                                 - v * T0 * alpha_imp * UgradRhoimp_rhoimp__p            &
                                                 - v * gamma * (rhoimp * alpha_imp * T0) * divU          &
                                                 - v * rho0 * rhoimp * Lrad                             &
-                                                - 2.0d0 * v * alpha_e * rhoimp0 * rhoimp * Lrad       &
+                                                - 2.0d0 * v * alpha_imp * rhoimp0 * rhoimp * Lrad       &
                                                 + v * (gamma-1.d0) * deta_drhoimp0_ohm * rhoimp * JJ2  &
                                                 - v * (gamma-1.d0) * rhoimp * dE_ion_dT * UgradTe     &
                                                 - v * (gamma-1.d0) * E_ion * UgradRhoimp_rhoimp__p     &
@@ -4837,7 +4837,6 @@ subroutine neutrals_modeling()
 
    ! --- Electron temperature in eV
    Te_eV = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
-
    ! --- Normalisation of the ionization energy cost for Deuterium
    ksiion = central_density * 1.d20 * ksi_ion
 
@@ -5003,21 +5002,17 @@ subroutine impurities_modeling()
     pif0_s   = rhoimp0_s * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_s
     pif0_t   = rhoimp0_t * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_t
     pif0_p   = rhoimp0_p * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_p
-    pif0_corr = rhoimp0_corr * alpha_imp * Ti0_corr
+    pif0_corr = rhoimp0_corr * alpha_i * Ti0_corr
 
     pef0     = rhoimp0 * alpha_e * Te0
     pef0_R   = rhoimp0_R * alpha_e * T0 + rhoimp0 * alpha_e * Te0_R + rhoimp0 * dalpha_e_dT * Te0 * Te0_R
     pef0_Z   = rhoimp0_Z * alpha_e * T0 + rhoimp0 * alpha_e * Te0_Z + rhoimp0 * dalpha_e_dT * Te0 * Te0_Z
-    pef0_s   = rhoimp0_s * alpha_e * T0 + rhoimp0 * alpha_e * Te0_s + rhoimp0 * dalpha_e_dT * Te0 * Te0_s
-    pef0_t   = rhoimp0_t * alpha_e * T0 + rhoimp0 * alpha_e * Te0_t + rhoimp0 * dalpha_e_dT * Te0 * Te0_t
     pef0_p   = rhoimp0_p * alpha_e * T0 + rhoimp0 * alpha_e * Te0_p + rhoimp0 * dalpha_e_dT * Te0 * Te0_p
-    pef0_corr = rhoimp0_corr * alpha_imp * Te0_corr
+    pef0_corr = rhoimp0_corr * alpha_e * Te0_corr
 
     pf0      = pif0      +   pef0
     pf0_R    = pif0_R    +   pef0_R
     pf0_Z    = pif0_Z    +   pef0_Z
-    pf0_s    = pif0_s    +   pef0_s
-    pf0_t    = pif0_t    +   pef0_t
     pf0_p    = pif0_p    +   pef0_p
     pf0_corr = pif0_corr +   pef0_corr
 
@@ -5026,24 +5021,18 @@ subroutine impurities_modeling()
     pif0      = 0.d0
     pif0_R    = 0.d0
     pif0_Z    = 0.d0
-    pif0_s    = 0.d0
-    pif0_t    = 0.d0
     pif0_p    = 0.d0
     pif0_corr = 0.d0
 
     pef0      = 0.d0
     pef0_R    = 0.d0
     pef0_Z    = 0.d0
-    pef0_s    = 0.d0
-    pef0_t    = 0.d0
     pef0_p    = 0.d0
     pef0_corr = 0.d0
 
     pf0     = rhoimp0 * alpha_imp * T0
     pf0_R   = rhoimp0_R * alpha_imp * T0 + rhoimp0 * alpha_imp * T0_R + rhoimp0 * dalpha_imp_dT * T0 * T0_R
     pf0_Z   = rhoimp0_Z * alpha_imp * T0 + rhoimp0 * alpha_imp * T0_Z + rhoimp0 * dalpha_imp_dT * T0 * T0_Z
-    pf0_s   = rhoimp0_s * alpha_imp * T0 + rhoimp0 * alpha_imp * T0_s + rhoimp0 * dalpha_imp_dT * T0 * T0_s
-    pf0_t   = rhoimp0_t * alpha_imp * T0 + rhoimp0 * alpha_imp * T0_t + rhoimp0 * dalpha_imp_dT * T0 * T0_t
     pf0_p   = rhoimp0_p * alpha_imp * T0 + rhoimp0 * alpha_imp * T0_p + rhoimp0 * dalpha_imp_dT * T0 * T0_p
     pf0_corr = rhoimp0_corr * alpha_imp * T0_corr
 
@@ -5075,15 +5064,9 @@ subroutine construct_imp_charge_states()
      m_imp          = 2.
   end select
 
-  if (with_TiTe) then
-    Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-    dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
-    Te_eV          = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
-  else
-    Te_corr_eV     = T0_corr/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-    dTe_corr_eV_dT = dT0_corr_dT/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-    Te_eV          = T0/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
-  endif
+  Te_corr_eV     = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+  dTe_corr_eV_dT = dTe0_corr_dT/(EL_CHG*MU_ZERO*central_density*1.d20)
+  Te_eV          = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
 
   ! We estimate coefficients assuming a density of 10^20/m^3.
   ! Later maybe we should implement an iterative method.
@@ -5159,7 +5142,11 @@ subroutine construct_imp_charge_states()
   alpha_imp_bis   = alpha_imp + dalpha_imp_dT*T0
   alpha_imp_tri   = 2. * dalpha_imp_dT + d2alpha_imp_dT2 * T0
 
-  ne_JOREK    = rho0_corr + alpha_e * rhoimp0_corr                             ! Electron density in JOREK unit
+  if(with_TiTe)then
+    ne_JOREK    = rho0_corr + alpha_e * rhoimp0_corr                             ! Electron density in JOREK unit
+  else
+    ne_JOREK    = rho0_corr + alpha_imp * rhoimp0_corr
+  endif
   !ne_JOREK    = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3)
 
   Z_eff           = 0. ! Effective charge including all ion species
@@ -5213,12 +5200,16 @@ subroutine construct_imp_charge_states()
 end subroutine construct_imp_charge_states
 
 subroutine construct_radiation_parameters()
-  ne_SI       = (rho0_corr + alpha_e * rhoimp0_corr) * 1.d20 * central_density 
-  Te_eV       = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)       
+  if (with_TiTe)then      
+    ne_SI       = (rho0_corr + alpha_e * rhoimp0_corr) * 1.d20 * central_density 
+  else
+    ne_SI       = (rho0_corr + alpha_imp * rhoimp0_corr) * 1.d20 * central_density
+  endif
+  Te_eV       = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
   Te_corr_eV  = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
 
   ! --- Radiation from background impurity
-  if (use_imp_adas .or. with_impurities) then  ! use open adas by default
+  if (use_imp_adas) then  ! use open adas by default
     frad_bg     = 0. 
     dfrad_bg_dT = 0.
 
@@ -5268,19 +5259,17 @@ subroutine construct_radiation_parameters()
   Lrad     = 0.
   dLrad_dT = 0.
 
-  if (with_impurities) then     
-    if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rhoimp0 > 0.d0) then
-      call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI), &
-                                     log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
-      Lrad     = Lrad * m_i_over_m_imp
-      dLrad_dT = dLrad_dT * m_i_over_m_imp * dTe0_corr_dT
-    end if
+  if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rhoimp0 > 0.d0) then
+    call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI), &
+                                   log10(Te_corr_eV*EL_CHG/K_BOLTZ),.true.,Lrad,dLrad_dT)
+    Lrad     = Lrad * m_i_over_m_imp
+    dLrad_dT = dLrad_dT * m_i_over_m_imp * dTe0_corr_dT
+  end if
 
-    if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
-      write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ", &
-                           Lrad, dLrad_dT, E_ion, dE_ion_dT
-      stop
-    end if
+  if (Lrad/=Lrad .or. dLrad_dT/=dLrad_dT .or. E_ion/=E_ion .or. dE_ion_dT/=dE_ion_dT) then
+    write(*,*) "WARNING: Lrad, dLrad_dT, E_ion/=E_ion, dE_ion_dT/=dE_ion_dT = ", &
+                         Lrad, dLrad_dT, E_ion, dE_ion_dT
+    stop
   end if
 end subroutine construct_radiation_parameters
 
@@ -5304,10 +5293,10 @@ subroutine calculate_sc_quantities()
 
     rhoi_eff = rhoimp0_corr + rhoimp0*alpha_i + rhoimp0*T0*dalpha_i_dT
     rhoe_eff = rhoimp0_corr + rhoimp0*alpha_e + rhoimp0*T0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT
-    R_Ti = UgradTi + (gamma-1.d0) * (pi0 + alpha_imp*rhon0*T0) / rhoi_eff * divU
-    R_Te = UgradTe + (gamma-1.d0) * (pe0 + alpha_imp*rhon0*T0) / rhoe_eff * divU
+    R_Ti = UgradTi + (gamma-1.d0) * (pi0 + alpha_i*rhoimp0*Ti0) / rhoi_eff * divU
+    R_Te = UgradTe + (gamma-1.d0) * (pe0 + alpha_e*rhoimp0*Te0) / rhoe_eff * divU
 
-    d_p   = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te + ( alpha_imp*T0 + (gamma-1.0d0)*E_ion )* R_rhoimp + Ti0 * R_rhon 
+    d_p   = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te + ( alpha_i*Ti0 + alpha_e*Te0 + (gamma-1.d0)*E_ion )* R_rhoimp + Ti0 * R_rhon 
     
   else
 
@@ -5350,8 +5339,9 @@ subroutine calculate_sc_quantities()
               -  rho0_corr * rhon0_corr * LradDrays_T           &
               -  rho0_corr * rho0_corr  * LradDcont_T           &
               -  rho0_corr * frad_bg                            &
-              - (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad 
-      s_p = (Ti0 + Te0) * src_rho + src_pi + src_pe + ( alpha_imp*T0 + (gamma-1.0d0)*E_ion )* src_rhoimp + Ti0 * src_rhon
+              - (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad
+
+      s_p = (Ti0 + Te0) * src_rho + src_pi + src_pe + ( alpha_i*Ti0 + alpha_e*Te0 + (gamma-1.d0)*E_ion )* src_rhoimp + Ti0 * src_rhon
     else
       src_p   =  heat_source(ms,mt)                                        &
               +  (gamma-1.d0) * 0.5d0 * vv2 * (source_neutral + source_bg + source_imp)    &

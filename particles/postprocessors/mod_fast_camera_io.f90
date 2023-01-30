@@ -37,7 +37,7 @@ pixel_filter_array,ierr)
   character(len=*),intent(in) :: filename
   integer,intent(in)          :: n_spectra,n_values,n_pixel_x
   integer,intent(in)          :: n_pixel_y,n_times
-  real*8,dimension(n_pixel_x.n_times),intent(in) :: x_pixel_coord
+  real*8,dimension(n_pixel_x,n_times),intent(in) :: x_pixel_coord
   real*8,dimension(n_pixel_y,n_times),intent(in) :: y_pixel_coord
   real*8,dimension(n_spectra,n_values,n_pixel_x,n_pixel_y,n_times),intent(in) :: pixel_filter_array
   !> Outputs:
@@ -46,8 +46,8 @@ pixel_filter_array,ierr)
   integer(HID_T)              :: file_id
   !> open / store / close image
   call HDF5_open_or_create((trim(filename)//'.h5'),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
-  call HDF5_array2D_saving(file_id,x_pixel_coord,n_pixel_x,'x_pixel_coordinates')
-  call HDF5_array2D_saving(file_id,y_pixel_coord,n_pixel_y,'y_pixel_coordinates')
+  call HDF5_array2D_saving(file_id,x_pixel_coord,n_pixel_x,n_times,'x_pixel_coordinates')
+  call HDF5_array2D_saving(file_id,y_pixel_coord,n_pixel_y,n_times,'y_pixel_coordinates')
   call HDF5_array5D_saving(file_id,pixel_filter_array,n_spectra,&
   n_values,n_pixel_x,n_pixel_y,n_times,'pixel_filter_intensities')
   call HDF5_close(file_id)

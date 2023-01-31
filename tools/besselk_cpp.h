@@ -27,7 +27,7 @@ the besselk_cpp function */
       evaluation_error<user_error> //< use user defined evalauation_error exception handler
     > no_sigabrt_policy;
     BOOST_MATH_DECLARE_SPECIAL_FUNCTIONS(no_sigabrt_policy)
-  #else
+  #elif USE_STD_BESSELK
     #include <cmath>
     using std::cyl_bessel_k;
   #endif

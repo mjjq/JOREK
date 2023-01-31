@@ -1,10 +1,11 @@
-subroutine update_values(my_id,element_list,node_list,RHS)
+subroutine update_values(my_id, element_list, node_list, rhs_vec)
 !-----------------------------------------------------------------------
 ! subroutine adds the delta_values in RHS to the values in the node_list
 !-----------------------------------------------------------------------
 
-use data_structure
+use data_structure, only: type_element_list, type_node_list, type_RHS
 use phys_module, only: keep_n0_const, treat_axis
+use mod_parameters, only: n_tor, n_var, n_degrees, n_vertex_max
 use mod_basisfunctions
 use mod_axis_treatment
 
@@ -14,7 +15,7 @@ implicit none
 integer,                  intent(in)    :: my_id
 type (type_element_list), intent(inout) :: element_list
 type (type_node_list),    intent(inout) :: node_list
-real*8,                   intent(inout) :: RHS(*)
+type(type_RHS),           intent(inout) :: rhs_vec
 
 ! --- local variables
 real*8, dimension(4,n_degrees)	 :: H, H_s, H_t, H_st
@@ -47,15 +48,15 @@ if (my_id .eq. 0) then
         do j=1,n_degrees
            index_node = node_list%node(i)%index(j)
            index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
-           new_dofs(j) = RHS(index)
+           new_dofs(j) = rhs_vec%val(index)
            id = n_degrees*(n_tor)*(k-1) + n_degrees*(in-1) + j
-           stored_dofs(id) = RHS(index)
+           stored_dofs(id) = rhs_vec%val(index)
         enddo
         call new_to_old_dofs_on_the_axis(node_list, i, new_dofs, old_dofs)
         do j=1,n_degrees
            index_node = node_list%node(i)%index(j)
            index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
-           RHS(index) = old_dofs(j)
+           rhs_vec%val(index) = old_dofs(j)
         enddo
       enddo
       enddo
@@ -71,8 +72,8 @@ if (my_id .eq. 0) then
         do in=i_tor_min,n_tor
           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
           if (index .gt. 0) then
-            node_list%node(i)%values(in,j,k) = node_list%node(i)%values(in,j,k)+ RHS(index)
-            node_list%node(i)%deltas(in,j,k) = RHS(index)
+            node_list%node(i)%values(in,j,k) = node_list%node(i)%values(in,j,k)+ rhs_vec%val(index)
+            node_list%node(i)%deltas(in,j,k) = rhs_vec%val(index)
           endif  ! index gt 0
         enddo  ! in over n_tor
       enddo !k over nvar
@@ -81,8 +82,8 @@ if (my_id .eq. 0) then
       do in=1,n_tor
         index = n_tor*n_var * (index_node - 1) + n_tor*(n_var-1) + in
         if (index .gt. 0) then
-          node_list%node(i)%values(in,j,n_var) = node_list%node(i)%values(in,j,n_var)+RHS(index)
-          node_list%node(i)%deltas(in,j,n_var) = RHS(index)
+          node_list%node(i)%values(in,j,n_var) = node_list%node(i)%values(in,j,n_var)+rhs_vec%val(index)
+          node_list%node(i)%deltas(in,j,n_var) = rhs_vec%val(index)
         endif  ! index gt 0
       enddo  ! in over n_tor
 
@@ -91,8 +92,8 @@ if (my_id .eq. 0) then
         do in=i_tor_min,n_tor
           index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
           if (index .gt. 0) then
-            node_list%node(i)%values(in,j,k) = node_list%node(i)%values(in,j,k) + RHS(index)
-            node_list%node(i)%deltas(in,j,k) = RHS(index)
+            node_list%node(i)%values(in,j,k) = node_list%node(i)%values(in,j,k) + rhs_vec%val(index)
+            node_list%node(i)%deltas(in,j,k) = rhs_vec%val(index)
           endif  ! index gt 0
         enddo  ! in over n_tor
       enddo !k over nvar
@@ -107,7 +108,7 @@ if (my_id .eq. 0) then
            index_node = node_list%node(i)%index(j)
            index = n_tor*n_var * (index_node - 1) + n_tor*(k-1) + in
            id = n_degrees*(n_tor)*(k-1) + n_degrees*(in-1) + j
-           RHS(index) = stored_dofs(id)
+           rhs_vec%val(index) = stored_dofs(id)
         enddo
       enddo
       enddo

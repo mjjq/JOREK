@@ -164,7 +164,7 @@ program JOREK2
   
   type(type_MHD_SIM)          :: mhd_sim
   type(type_SP_MATRIX)        :: a_mat
-  type(type_RHS)              :: rhs_vec, sol_vec
+  type(type_RHS)              :: rhs_vec, sol_vec, deltas
   type(type_SP_SOLVER)        :: solver
   
   call init_expr()
@@ -554,7 +554,7 @@ mpi_required = 0
   !***********************************************************************
   !***********************************************************************
   
-  if (nstep > 0) call update_deltas(my_id, node_list) ! create list of delta values in local_matrix module
+  if (nstep > 0) call update_deltas(node_list, deltas) ! create list of delta values in local_matrix module
 
   solver%iterative          = gmres
   solver%iter_precon        = iter_precon
@@ -646,9 +646,9 @@ mpi_required = 0
     solver%tstep = tstep
     solver%istep = istep
     solver%index_now = index_now
-    sol_vec%val => deltas
+!    sol_vec%val => deltas%val !!! sol_vec might not bee needed
     
-    call solve_sparse_system(a_mat, rhs_vec, sol_vec, solver, mhd_sim)
+    call solve_sparse_system(a_mat, rhs_vec, deltas, solver, mhd_sim)
 
     call clck_time(t0)
     if (solver%step_success) then
@@ -678,8 +678,8 @@ mpi_required = 0
        end if
 #endif
 
-      call update_values(my_id,element_list,node_list,deltas)         ! add solution to node values
-      call update_deltas(my_id,node_list)
+      call update_values(my_id, element_list,node_list, deltas)         ! add solution to node values
+      call update_deltas(node_list, deltas)
 
       t_now = t_now + tstep
 
@@ -703,7 +703,7 @@ mpi_required = 0
 
 
     !-------------------------------------------------------- adapt time step (in progress...)
-    mindelta = minval(deltas); maxdelta = maxval(deltas);
+    mindelta = minval(deltas%val(1:deltas%n)); maxdelta = maxval(deltas%val(1:deltas%n));
     !
     !if (gmres .and. adaptive_time) then        ! experimental
     !   if (iter_gmres .ge. iter_big) then
@@ -770,7 +770,7 @@ mpi_required = 0
        write(*,132)
        write(*,130) 'After step ', istep, ' (t_now=', t_now, '):'
        write(*,132)
-       write(*,133) 'min,max deltas  =', mindelta, minloc(deltas), maxdelta, maxloc(deltas)
+       write(*,133) 'min,max deltas  =', mindelta, minloc(deltas%val(1:deltas%n)), maxdelta, maxloc(deltas%val(1:deltas%n))
        write(*,131) 'W_mag,_kin      =', W_mag(1), W_mag(n_tor), W_kin(1), W_kin(n_tor)
        Growth_mag  = 0.d0; Growth_kin  = 0.d0; Growth_mag0 = 0.d0; Growth_kin0 = 0.d0
        if (index_now > index_start+1) then
@@ -868,8 +868,8 @@ mpi_required = 0
     end if
     
     ! --- Exit the code if NaNs are detected.
-    if ( allocated(deltas) ) then
-      sum_deltas = sum(deltas)
+    if (associated(deltas%val)) then
+      sum_deltas = sum(deltas%val(1:deltas%n))
       if ( sum_deltas /= sum_deltas ) then
         write(*,*)
         write(*,*) '>>>>> NaNs DETECTED: EXITING THE CODE <<<<<'

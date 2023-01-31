@@ -95,7 +95,7 @@ time_id,particle_in,mass,mhd_fields)
   use mod_math_operators,        only: cross_product
   use mod_coordinate_transforms, only: vectors_to_orthonormal_basis
   use mod_particle_types,        only: particle_base,particle_kinetic_relativistic
-  use mod_particle_types,        only, particle_gc_relativistic
+  use mod_particle_types,        only: particle_gc_relativistic
   implicit none
   !> inputs-outputs
   class(omnidirectional_gaussian_lights),intent(inout) :: light_vert

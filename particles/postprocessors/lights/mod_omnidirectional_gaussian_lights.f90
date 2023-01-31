@@ -22,9 +22,9 @@ type,extends(light_vertices) :: omnidirectional_gaussian_lights
                                 compute_omnidirectional_light_properties
   procedure,pass(light_vert) :: setup_light_class => &
                                 setup_omnidirectional_light_class
-  procedure,pass(light_vert) :: check_x_shaded_in_emission_zone => &
+  procedure,nopass           :: check_x_shaded_in_emission_zone => &
                                 check_shaded_x_omnidirectional_light
-  procedure,pass(light_vert) :: check_angles_shaded_in_emission_zone => &
+  procedure,nopass           :: check_angles_shaded_in_emission_zone => &
                                 chack_angles_shaded_omnidirectional_light                                
 end type omnidirectional_gaussian_lights
 !> Interfaces ---------------------------------------------------

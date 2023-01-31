@@ -188,7 +188,7 @@ subroutine test_codify_particle_list()
   "Error in particle_types codify particle list type: list types mismatch!")
 end subroutine test_codify_particle_list
 
-#ifdef UNIT_TETS
+#ifdef UNIT_TESTS
 !> test find active particle id, sequential version
 subroutine test_find_active_particle_id_seq()
   implicit none

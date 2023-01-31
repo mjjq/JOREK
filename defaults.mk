@@ -287,6 +287,11 @@ ifeq (1, $(USE_BOOST))
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++17
 endif
 
+ifeq (1, $(USE_STD_BESSELK))
+  DEFINES := $(DEFINES) -DUSE_STD_BESSELK
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++17
+endif
+
 ifeq (1, $(USE_BICGSTAB))
   DEFINES  := $(DEFINES) -DUSE_BICGSTAB
 else

@@ -12,8 +12,6 @@ public :: omnidirectional_gaussian_lights
 type,extends(light_vertices) :: omnidirectional_gaussian_lights
   real*8 :: light_intensity=1.d0
   contains
-  procedure,pass(light_vert) :: init_lights_from_particles => &
-                                init_omnidir_gaussian_lights_from_particles
   procedure,pass(light_vert) :: directionality_funct => &
                                 omnidir_gaussian_directionality_funct
   procedure,pass(light_vert) :: spectral_irradiance => &
@@ -24,8 +22,10 @@ type,extends(light_vertices) :: omnidirectional_gaussian_lights
                                 compute_omnidirectional_light_properties
   procedure,pass(light_vert) :: setup_light_class => &
                                 setup_omnidirectional_light_class
-  procedure,nopass           :: check_x_shaded_in_emission_zone => &
+  procedure,pass(light_vert) :: check_x_shaded_in_emission_zone => &
                                 check_shaded_x_omnidirectional_light
+  procedure,pass(light_vert) :: check_angles_shaded_in_emission_zone => &
+                                chack_angles_shaded_omnidirectional_light                                
 end type omnidirectional_gaussian_lights
 !> Interfaces ---------------------------------------------------
 
@@ -38,12 +38,13 @@ contains
 !>   light_vert: (synchrotron_light_vertices) empty synchrotron lights
 !>   fields:     (fields_base) JOREK MHD fields
 !>   particle:   (particle_base) JOREK particle base structure
+!>   time_id:    (real8) index of simulation time
 !>   mass:       (real8) particle mass
 !> outputs:
 !>   mhd_fields: (real8)(n_mhd) JOREK MHD fields in cartesian coordinates
 !>               1 -> intensity of the magnetic field
 subroutine compute_omnidirectional_mhd_fields(light_vert,fields,&
-particle_in,mass,mhd_fields)
+particle_in,time_id,mass,mhd_fields)
   use mod_fields,                only: fields_base
   use mod_particle_types,        only: particle_base
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
@@ -54,8 +55,9 @@ particle_in,mass,mhd_fields)
   implicit none
   !> Inputs:
   class(omnidirectional_gaussian_lights),intent(in) :: light_vert
-  class(fields_nase),intent(in)                     :: fields
+  class(fields_base),intent(in)                     :: fields
   class(particle_base),intent(in)                   :: particle_in
+  integer,intent(in)                                :: time_id
   real*8,intent(in)                                 :: mass
   !> Outputs:
   real*8,dimension(light_vert%n_mhd),intent(out)    :: mhd_fields
@@ -65,7 +67,7 @@ particle_in,mass,mhd_fields)
   !> compute the MHD fields
 #ifndef UNIT_TESTS_AFIELDS
   !> compute JOREK electric and magnetic JOREK fields in cartesian coordinates
-  call fields%calc_EBpsiU(light_vert%times(ii),particle_in%i_elm,&
+  call fields%calc_EBpsiU(light_vert%times(time_id),particle_in%i_elm,&
   particle_in%st,particle_in%x(3),E,B,psi,U)
 #else
   !> analytical fields only for unit testing
@@ -110,7 +112,7 @@ time_id,particle_in,mass,mhd_fields)
     (dot_product(p_in%p,p_in%p)/((mass*SPEED_OF_LIGHT)**2)))
     type is (particle_gc_relativistic)
     light_vert%properties(1,property_id,time_id) = sqrt(1d0 + &
-    ((p_in%p(q)*p_in%p(1))/((mass*SPEED_OF_LIGHT)**2)) + &
+    ((p_in%p(1)*p_in%p(1))/((mass*SPEED_OF_LIGHT)**2)) + &
     ((2d0*p_in%p(2)*mhd_fields(1))/(mass*(SPEED_OF_LIGHT**2))))
   end select
   light_vert%properties(2,property_id,time_id) = 1d0/sqrt(TWOPI*&
@@ -141,6 +143,22 @@ n_int_param,n_real_param,int_param,real_param) result(in_range)
   logical :: in_range
   in_range = .true.
 end function check_shaded_x_omnidirectional_light
+
+!> check if the shaded point is within the emission cone.
+!> Given that it is an omnidirectional light, the function returns true
+function chack_angles_shaded_omnidirectional_light(n_angles,angles,n_int_param,&
+n_real_param,int_param,real_param) result(in_range)
+  implicit none
+  !> inputs:
+  integer,intent(in)                        :: n_angles,n_int_param,n_real_param
+  integer,dimension(n_int_param),intent(in) :: int_param
+  real*8,dimension(n_angles),intent(in)     :: angles 
+  real*8,dimension(n_real_param),intent(in) :: real_param
+  !> outputs:
+  logical :: in_range
+  !> always true if not occluded 
+  in_range = .true.
+end function chack_angles_shaded_omnidirectional_light
 
 !> omnidir_gaussian_spectral_irradiance computes the full spectral anguler
 !> power distribution for omnidirectional gaussian lights

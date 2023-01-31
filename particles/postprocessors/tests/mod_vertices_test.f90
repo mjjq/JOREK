@@ -5,7 +5,7 @@
 !> is used instead
 module mod_vertices_test
 use fruit
-use mod_synchrotron_light_vertices, only: synchrotron_light_vertices
+use mod_gyroaverage_synchrotron_light_dist_vertices, only: gyroaverage_synchrotron_light_dist
 implicit none
 
 private
@@ -25,9 +25,9 @@ integer,dimension(n_times_2_sol),parameter :: n_active_vertices_2_sol=&
                                               (/128,57,183,213,34/)
 real*8,parameter :: tol_real8=5.d-16
 real*8,dimension(2),parameter :: rng_interval=(/-2.d3,3.d3/)
-type(synchrotron_light_vertices) :: vertex_sol,vertex_2_sol
-integer                          :: n_new_vertex_success,n_new_vertex_fail
-integer                          :: n_distances,ifail
+type(gyroaverage_synchrotron_light_dist) :: vertex_sol,vertex_2_sol
+integer                                  :: n_new_vertex_success,n_new_vertex_fail
+integer                                  :: n_distances,ifail
 !> position and property solution arrays
 real*8,dimension(n_x,n_vertices_sol,n_times_sol)              :: x_sol
 real*8,dimension(n_x,n_vertices_2_sol,n_times_2_sol)          :: x_2_sol
@@ -47,8 +47,10 @@ subroutine run_fruit_vertices()
   call test_de_allocate_time_vector 
   call test_de_allocates_vertex_x_properties
   call test_de_allocates_vertices
+#ifdef UNIT_TESTS
   call test_vertices_resize_nodataloss_seq
   call test_vertices_resize_nodataloss_omp
+#endif
   call test_vertices_resize_nodataloss
   call test_fit_tables_to_active_vertices
   write(*,'(/A)') "  ... tearing-down: vertices tests"
@@ -211,6 +213,7 @@ subroutine test_de_allocates_vertices()
   "Error deallocate vertices: properties allocated!")
 end subroutine test_de_allocates_vertices
 
+#ifdef UNIT_TESTS 
 !> test vertex resize without data losses: sequential
 subroutine test_vertices_resize_nodataloss_seq
   use mod_assert_equals_tools, only: assert_equals_allocatable_arrays
@@ -280,6 +283,7 @@ subroutine test_vertices_resize_nodataloss_omp
   call vertex_sol%deallocate_vertices 
 
 end subroutine test_vertices_resize_nodataloss_omp
+#endif
 
 !> test vertex resize without data losses: interface
 subroutine test_vertices_resize_nodataloss

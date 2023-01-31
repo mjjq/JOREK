@@ -36,8 +36,10 @@ subroutine run_fruit_particle_types()
   call test_particle_get_q
   call test_codify_single_particle_type
   call test_codify_particle_list
+#ifdef UNIT_TESTS
   call test_find_active_particle_id_seq
   call test_find_active_particle_id_omp
+#endif
   call test_find_active_particle_id
   call test_find_active_particle_id_type
   write(*,'(/A)') "  ... tearing-down: particle types tests"
@@ -186,6 +188,7 @@ subroutine test_codify_particle_list()
   "Error in particle_types codify particle list type: list types mismatch!")
 end subroutine test_codify_particle_list
 
+#ifdef UNIT_TETS
 !> test find active particle id, sequential version
 subroutine test_find_active_particle_id_seq()
   implicit none
@@ -227,6 +230,7 @@ subroutine test_find_active_particle_id_omp()
   call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
   "Error particle_types find active particle openmp: active_particle_ids mismatch!")
 end subroutine test_find_active_particle_id_omp
+#endif
 
 !> test find active particle id interface notype
 subroutine test_find_active_particle_id()

@@ -108,7 +108,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_prof_neg, ZK_i_prof_neg, ZK_i_par_neg,            &
                 ZK_e_prof_neg, ZK_e_par_neg,                        &
                 D_prof_neg_thresh, ZK_e_prof_neg_thresh, T_min,     &
-				T_min_neg,rho_min_neg,                              &
+                D_prof_imp_neg_thresh, D_prof_tot_neg_thresh,       &
+                T_min_neg,rho_min_neg,                              &
                 ne_SI_min, Te_eV_min, rn0_min, ZK_i_prof_neg_thresh,&
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &
@@ -150,7 +151,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
                 ranks_per_family, cte_current_FB_fact, treat_axis,  &
-                Z_xpoint_limit, visco_par_heating
+                ZK_prof_neg_thresh, ZK_prof_neg, ZK_par_neg_thresh,  &
+                ZK_par_neg, Z_xpoint_limit, visco_par_heating,      &
+                CARIDDI_mode
 
 if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

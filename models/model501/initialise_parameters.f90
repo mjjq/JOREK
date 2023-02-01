@@ -104,7 +104,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 corr_neg_temp_coef, corr_neg_dens_coef,             &
                 D_prof_neg, ZK_prof_neg, ZK_par_neg,                &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
-				T_min_neg,rho_min_neg,                              &
+                D_prof_imp_neg_thresh, D_prof_tot_neg_thresh,       &
+                T_min_neg,rho_min_neg,                              &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
                 D_imp_extra_R, D_imp_extra_Z, D_imp_extra_p,        &
                 D_imp_extra_neg, D_imp_extra_neg_thresh,            &
@@ -146,7 +147,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
                 ranks_per_family, cte_current_FB_fact, treat_axis,  &
-                visco_par_heating
+                visco_par_heating, CARIDDI_mode
 
 if (my_id .eq. 0) then
 

@@ -217,6 +217,8 @@ subroutine preset_parameters
 
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  D_prof_imp_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  D_prof_tot_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
 
   D_imp_extra_R = 0.d0
   D_imp_extra_Z = 0.d0
@@ -280,6 +282,8 @@ subroutine preset_parameters
   visco_par_sc_num = 0.d0
   Dn_pol_sc_num    = 0.d0
   Dn_p_sc_num      = 0.d0
+  D_perp_imp_sc_num= 0.d0
+  D_par_imp_sc_num = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7
@@ -579,6 +583,7 @@ subroutine preset_parameters
   tgnum_Te           = 0.d0
   tgnum_vpar         = 0.d0
   tgnum_rhon         = 0.d0
+  tgnum_rhoimp       = 0.d0
   tgnum_nre          = 0.d0
   tgnum_AR           = 0.d0
   tgnum_AZ           = 0.d0
@@ -702,6 +707,7 @@ subroutine preset_parameters
   use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one only implemented for argon
   drift_distance = 0.d0 ! No artificial plasmoid drift by default
   energy_teleported = 0.d0 
+  constant_imp_source = 0.d0
 
   !====== JET DMV-2 parameters
   L_tube = 2.4d0
@@ -764,7 +770,7 @@ subroutine preset_parameters
 
 !===================== Thermalization flag========
 
-  thermalization = .false.
+  thermalization = .true.
 
 !===================== Polar axis treatment flag========
 

@@ -510,11 +510,14 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'visco_par_sc_num      ', visco_par_sc_num
   write(*,REAL_FMT) 'Dn_pol_sc_num         ', Dn_pol_sc_num
   write(*,REAL_FMT) 'Dn_p_sc_num           ', Dn_p_sc_num
+  write(*,REAL_FMT) 'D_perp_imp_sc_num     ', D_perp_imp_sc_num
+  write(*,REAL_FMT) 'D_par_imp_sc_num      ', D_par_imp_sc_num
 
   if(jorek_model == 004 ) then
     write(*,REAL_FMT) 'HW_coef               ', HW_coef(1:2)
   endif
 
+  write(*,REAL_FMT) 'constant_imp_source   ', constant_imp_source
   write(*,LOGI_FMT) 'add_sources_in_sc     ', add_sources_in_sc
   if (with_TiTe) then
     write(*,REAL_FMT) 'ZK_i_perp_num         ', ZK_i_perp_num
@@ -545,6 +548,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   end if
   write(*,REAL_FMT) 'tgnum_vpar            ', tgnum_vpar
   write(*,REAL_FMT) 'tgnum_rhon            ', tgnum_rhon
+  write(*,REAL_FMT) 'tgnum_rhoimp          ', tgnum_rhoimp
   write(*,REAL_FMT) 'tgnum_nre             ', tgnum_nre 
   write(*,REAL_FMT) 'tgnum_AR              ', tgnum_AR  
   write(*,REAL_FMT) 'tgnum_AZ              ', tgnum_AZ  
@@ -556,6 +560,8 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'linear_run            ', linear_run
   write(*,REAL_FMT) 'D_prof_neg            ', D_prof_neg
   write(*,REAL_FMT) 'D_prof_neg_thresh     ', D_prof_neg_thresh
+  write(*,REAL_FMT) 'D_prof_imp_neg_thresh ', D_prof_imp_neg_thresh
+  write(*,REAL_FMT) 'D_prof_tot_neg_thresh ', D_prof_tot_neg_thresh
   if (with_TiTe) then
     write(*,REAL_FMT) 'ZK_e_prof_neg           ', ZK_e_prof_neg
     write(*,REAL_FMT) 'ZK_e_par_neg            ', ZK_e_par_neg
@@ -635,6 +641,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REA3_FMT) 'z_limiter             ', z_limiter(1:min(9,n_limiter))
   end if
 
+  write(*,LOGI_FMT) 'CARIDDI_mode          ', CARIDDI_mode
   write(*,LOGI_FMT) 'freeboundary_equil    ', freeboundary_equil
   write(*,LOGI_FMT) 'freeboundary          ', freeboundary
   write(*,LOGI_FMT) 'freeb_change_indices  ', freeb_change_indices

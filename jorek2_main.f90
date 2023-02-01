@@ -647,6 +647,7 @@ mpi_required = 0
     solver%istep = istep
     solver%index_now = index_now
 !    sol_vec%val => deltas%val !!! sol_vec might not bee needed
+! here set the tolerance for inner iteration cycle
     
     call solve_sparse_system(a_mat, rhs_vec, deltas, solver, mhd_sim)
 
@@ -678,7 +679,7 @@ mpi_required = 0
        end if
 #endif
 
-      call update_values(my_id, element_list,node_list, deltas)         ! add solution to node values
+      call update_values(element_list,node_list, deltas)         ! add solution to node values
       call update_deltas(node_list, deltas)
 
       t_now = t_now + tstep

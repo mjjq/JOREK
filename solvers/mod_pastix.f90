@@ -587,6 +587,7 @@ module mod_pastix
   subroutine pastix_initialize(ptss)
     use mpi_mod
     use mod_clock
+    use phys_module, only: pastix_maxthrd
 
     implicit none
 
@@ -595,7 +596,7 @@ module mod_pastix
     type(clcktype)                    :: t_itstart, t0, t1, t2, t3
     real*8                            :: tsecond
 
-
+    ptss%maxthrd = pastix_maxthrd
     call MPI_COMM_RANK(ptss%comm, my_id, ierr)
 
     call pastix_init_nthreads(ptss)

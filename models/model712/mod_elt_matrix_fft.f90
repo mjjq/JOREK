@@ -1991,7 +1991,7 @@ do i=1,n_vertex_max
                               + v * (- rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT - T0 * alpha_imp * UgradRhoimp) &
                               - v * gamma * pf0 * divU                                                &
                               + v * (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)             &
-                              - v * (rho0 + alpha_imp*rhoimp0) * rhoimp0 * Lrad                         &
+                              - v * (rho0 + alpha_imp*rhoimp0) * rhoimp0 * Lrad                       &
                               - v * rho0 * frad_bg                                                    &
                               + v * (gamma-1.d0) * ( - rhoimp0 * dE_ion_dT * UgradT - E_ion * UgradRhoimp - E_ion_bg * (UgradRho - UgradRhoimp) )       &
                               - v * (gamma-1.d0) * rhoimp0 * E_ion * divU                             &
@@ -2134,16 +2134,16 @@ do i=1,n_vertex_max
                   BgradTi_AZ__p =                   + BZ0_AZ    * Ti0_Z + Bp0_AZ * Ti0_p / R
                   BgradTi_AZ__n = BR0_AZ__n * Ti0_R
                   BgradTi_A3    = BR0_A3    * Ti0_R + BZ0_A3    * Ti0_Z + Bp0_A3 * Ti0_p / R
-                  BgradTi_Ti__p = BR0 * Ti_R + BZ0 * Ti_Z
-                  BgradTi_Ti__n = Bp0 * Ti_p / R
+                  BgradTi_Ti__p = BR0 * Ti_R        + BZ0 * Ti_Z
+                  BgradTi_Ti__n =                                         Bp0 * Ti_p / R
 
                   BgradTe_AR__p = BR0_AR    * Te0_R                     + Bp0_AR * Te0_p / R
                   BgradTe_AR__n =                   + BZ0_AR__n * Te0_Z
                   BgradTe_AZ__p =                   + BZ0_AZ    * Te0_Z + Bp0_AZ * Te0_p / R
                   BgradTe_AZ__n = BR0_AZ__n * Te0_R
                   BgradTe_A3    = BR0_A3    * Te0_R + BZ0_A3    * Te0_Z + Bp0_A3 * Te0_p / R
-                  BgradTe_Te__p = BR0 * Te_R + BZ0 * Te_Z
-                  BgradTe_Te__n = Bp0 * Te_p / R
+                  BgradTe_Te__p = BR0 * Te_R        + BZ0 * Te_Z
+                  BgradTe_Te__n =                                         Bp0 * Te_p / R
 
                   BgradT_AR__p = BR0_AR    * T0_R                     + Bp0_AR * T0_p / R
                   BgradT_AR__n =                   + BZ0_AR__n * T0_Z
@@ -2151,15 +2151,15 @@ do i=1,n_vertex_max
                   BgradT_AZ__n = BR0_AZ__n * T0_R
                   BgradT_A3    = BR0_A3    * T0_R  + BZ0_A3    * T0_Z  + Bp0_A3 * T0_p / R
                   BgradT_T__p  = BR0 * T_R         + BZ0       * T_Z
-                  BgradT_T__n  = Bp0 * T_p / R
+                  BgradT_T__n  =                                         Bp0 * T_p / R
                   
                   BgradRho_AR__p  = BR0_AR    * rho0_R                      + Bp0_AR * rho0_p / R
                   BgradRho_AR__n  =                    + BZ0_AR__n * rho0_Z
                   BgradRho_AZ__p  =                    + BZ0_AZ    * rho0_Z + Bp0_AZ * rho0_p / R
                   BgradRho_AZ__n  = BR0_AZ__n * rho0_R
                   BgradRho_A3     = BR0_A3    * rho0_R + BZ0_A3    * rho0_Z + Bp0_A3 * rho0_p / R
-                  BgradRho_rho__p = BR0 * rho_R + BZ0 * rho_Z
-                  BgradRho_rho__n = Bp0 * rho_p / R
+                  BgradRho_rho__p = BR0 * rho_R        + BZ0 * rho_Z
+                  BgradRho_rho__n =                                           Bp0 * rho_p / R
 
                   BgradPe_AR__p  = rho0*BgradTe_AR__p + Te0*BgradRho_AR__p  
                   BgradPe_AR__n  = rho0*BgradTe_AR__n + Te0*BgradRho_AR__n  
@@ -2626,19 +2626,11 @@ do i=1,n_vertex_max
                   Qconv_Up_rho__p = - v * ( rho   * ( UgradUp + UR0 * Up0 / R ) + Up0 * divRhoU_rho__p  )
                   Qconv_Up_rho__n = - v * (                                     + Up0 * divRhoU_rho__n  )
 
-                  if(with_TiTe)then
-                    eta_T_T    = deta_dT * Te
-                    eta_R_T    = d2eta_d2T * Te * Te0_R + deta_dT * Te_R
-                    eta_Z_T    = d2eta_d2T * Te * Te0_Z + deta_dT * Te_Z
-                    eta_p_T__p = d2eta_d2T * Te * Te0_p
-                    eta_p_T__n = deta_dT * Te_p
-                  else
-                    eta_T_T    = deta_dT * T
-                    eta_R_T    = d2eta_d2T * T * T0_R + deta_dT * T_R
-                    eta_Z_T    = d2eta_d2T * T * T0_Z + deta_dT * T_Z
-                    eta_p_T__p = d2eta_d2T * T * T0_p
-                    eta_p_T__n = deta_dT * T_p
-                  endif                    
+                  eta_T_T    = deta_dT * Te
+                  eta_R_T    = d2eta_d2T * Te * Te0_R + deta_dT * Te_R
+                  eta_Z_T    = d2eta_d2T * Te * Te0_Z + deta_dT * Te_Z
+                  eta_p_T__p = d2eta_d2T * Te * Te0_p
+                  eta_p_T__n = deta_dT * Te_p
 
                   JR0_AR__p  = 0.d0  ; JR0_AR__n  = 0.d0  ; JR0_AR__nn = 0.d0
                   JR0_AZ__p  = 0.d0  ; JR0_AZ__n  = 0.d0  ; JR0_AZ__nn = 0.d0
@@ -2768,6 +2760,23 @@ do i=1,n_vertex_max
                   vv2_UZ = 2.d0 * UZ0 * UZ
                   vv2_Up = 2.d0 * Up0 * Up
 
+                  BgradRhoimp_AR__p     = 0.d0 
+                  BgradRhoimp_AR__n     = 0.d0 
+                  BgradRhoimp_AZ__p     = 0.d0 
+                  BgradRhoimp_AZ__n     = 0.d0 
+                  BgradRhoimp_A3        = 0.d0 
+                  BgradRhoimp_rhoimp__p = 0.d0 
+                  BgradRhoimp_rhoimp__n = 0.d0 
+
+                  UgradRhoimp_UR        = 0.d0 
+                  UgradRhoimp_UZ        = 0.d0 
+                  UgradRhoimp_Up        = 0.d0 
+                  UgradRhoimp_rhoimp__p = 0.d0 
+                  UgradRhoimp_rhoimp__n = 0.d0 
+
+                  gradRhoimp_gradVstar_rhoimp__p  = 0.d0 
+                  gradRhoimp_gradVstar_rhoimp__kn = 0.d0 
+                  
                   if ( with_impurities ) then
                     BgradRhoimp_AR__p     = BR0_AR    * rhoimp0_R                            + Bp0_AR * rhoimp0_p / R
                     BgradRhoimp_AR__n     =                       + BZ0_AR__n * rhoimp0_Z
@@ -2785,7 +2794,6 @@ do i=1,n_vertex_max
 
                     gradRhoimp_gradVstar_rhoimp__p  = rhoimp_R * v_R  + rhoimp_Z * v_Z
                     gradRhoimp_gradVstar_rhoimp__kn = (rhoimp_p / R) * (v_p  / R)
-
                   endif
 
                   amat      = 0.d0
@@ -3032,12 +3040,12 @@ do i=1,n_vertex_max
                     Qjac_p (var_UR,var_Te ) =                  + ( v_R + v / R ) * (rho0*Te      ) + dvisco_dT * Te * Qvisc_UR__p
                     Qjac_k (var_UR,var_Te ) =                                                      + dvisco_dT * Te * Qvisc_UR__k
                   else
-                    Qjac_p (var_UR,var_rho) =  Qconv_UR_rho__p + ( v_R + v / R ) * (rho*T0) - v * PneoR_rho__p
-                    Qjac_n (var_UR,var_rho) =  Qconv_UR_rho__n                                     - v * PneoR_rho__n
+                    Qjac_p (var_UR,var_rho) =  Qconv_UR_rho__p + ( v_R + v / R ) * (rho*T0)  - v * PneoR_rho__p
+                    Qjac_n (var_UR,var_rho) =  Qconv_UR_rho__n                               - v * PneoR_rho__n
                           
-                    Qjac_p (var_UR,var_T  ) =  Qconv_UR_Ti__p   + ( v_R + v / R ) * (rho0*T       ) - v * PneoR_Ti__p &
+                    Qjac_p (var_UR,var_T  ) =  Qconv_UR_Ti__p  + ( v_R + v / R ) * (rho0*T ) - v * PneoR_Ti__p &
                                               + dvisco_dT * T * Qvisc_UR__p
-                    Qjac_n (var_UR,var_T  ) =  Qconv_UR_Ti__n   - v * PneoR_Ti__n
+                    Qjac_n (var_UR,var_T  ) =  Qconv_UR_Ti__n                                - v * PneoR_Ti__n
                     Qjac_k (var_UR,var_T  ) = + dvisco_dT * T * Qvisc_UR__k
                   endif
 
@@ -3068,12 +3076,12 @@ do i=1,n_vertex_max
                       Qjac_p (var_UR, var_Te)     =  Qjac_p(var_UR, var_Te)    &
                                                   +  (v_R + v/R)*(rhoimp0*alpha_e*Te + rhoimp0*Te0*dalpha_e_dT*Te)
                       Qjac_p (var_UR, var_rhoimp) =  Qjac_p(var_UR, var_rhoimp) &
-                                                  +  (v_R + v/R)*(rhoimp0*(alpha_i*Ti0+alpha_e*Te0))
+                                                  +  (v_R + v/R)*(rhoimp*(alpha_i*Ti0+alpha_e*Te0))
                     else
                       Qjac_p (var_UR, var_T)    =  Qjac_p(var_UR, var_T)    &
                                                 +  (v_R + v/R)*(rhoimp0*alpha_imp*T + rhoimp0*T0*dalpha_imp_dT*T)
                       Qjac_p (var_UR, var_rhoimp) =  Qjac_p(var_UR, var_rhoimp) &
-                                                  + (v_R + v/R) * (rhoimp0*alpha_imp*T0)
+                                                  + (v_R + v/R) * (rhoimp*alpha_imp*T0)
                     endif
                   endif
 
@@ -3125,13 +3133,13 @@ do i=1,n_vertex_max
                     Qjac_p (var_UZ,var_Te )  =                  + v_Z * (rho0*Te      ) + dvisco_dT * Te * Qvisc_UZ__p
                     Qjac_k (var_UZ,var_Te )  =                                          + dvisco_dT * Te * Qvisc_UZ__k
                   else
-                    Qjac_p (var_UZ,var_rho)  =  Qconv_UZ_rho__p + v_Z * (rho*T0) - v * PneoZ_rho__p
-                    Qjac_n (var_UZ,var_rho)  =  Qconv_UZ_rho__n                         - v * PneoZ_rho__n
+                    Qjac_p (var_UZ,var_rho)  =  Qconv_UZ_rho__p + v_Z * (rho*T0)  - v * PneoZ_rho__p
+                    Qjac_n (var_UZ,var_rho)  =  Qconv_UZ_rho__n                   - v * PneoZ_rho__n
                           
                     Qjac_p (var_UZ,var_T  )  =  Qconv_UZ_Ti__p  + v_Z * (rho0*T ) - v * PneoZ_Ti__p &
                                                + dvisco_dT * T  * Qvisc_UZ__p
-                    Qjac_n (var_UZ,var_T  )  =  Qconv_UZ_Ti__n - v * PneoZ_Ti__n
-                    Qjac_k (var_UZ,var_T  )  = + dvisco_dT * T  * Qvisc_UZ__k                    
+                    Qjac_n (var_UZ,var_T  )  =  Qconv_UZ_Ti__n                    - v * PneoZ_Ti__n
+                    Qjac_k (var_UZ,var_T  )  = + dvisco_dT * T  * Qvisc_UZ__k
                   endif
 
                   if ( with_neutrals) then
@@ -3166,12 +3174,12 @@ do i=1,n_vertex_max
                       Qjac_p (var_UZ, var_Te)     =  Qjac_p(var_UZ, var_Te)    &
                                                   +  v_Z*(rhoimp0*alpha_e*Te + rhoimp0*Te0*dalpha_e_dT*Te)
                       Qjac_p (var_UZ, var_rhoimp) =  Qjac_p(var_UZ, var_rhoimp) &
-                                                  +  v_Z*(rhoimp0*(alpha_i*Ti0 + alpha_e*Te0))
+                                                  +  v_Z*(rhoimp*(alpha_i*Ti0 + alpha_e*Te0))
                     else
                       Qjac_p (var_UZ, var_T)    =  Qjac_p(var_UZ, var_T)    &
                                                 +  v_Z*(rhoimp0*alpha_imp*T + rhoimp0*T0*dalpha_imp_dT*T)
                       Qjac_p (var_UZ, var_rhoimp) =  Qjac_p(var_UZ, var_rhoimp) &
-                                                  +  v_Z*(rhoimp0*alpha_imp*T0)
+                                                  +  v_Z*(rhoimp*alpha_imp*T0)
                     endif
                   endif
 
@@ -3463,9 +3471,9 @@ do i=1,n_vertex_max
                                                +  BgradVstar__k * (rhoimp0*alpha_e*Te + rhoimp0*Te0*dalpha_e_dT*Te)
 
                       Qjac_p(var_Up, var_rhoimp) =  Qjac_p(var_Up, var_rhoimp) &
-                                                 + BgradVstar__p * (rhoimp0*(alpha_i*Ti0+alpha_e*Te0))
+                                                 + BgradVstar__p * (rhoimp*(alpha_i*Ti0+alpha_e*Te0))
                       Qjac_k(var_Up, var_rhoimp) =  Qjac_k(var_Up, var_rhoimp) &
-                                                 + BgradVstar__k * (rhoimp0*(alpha_i*Ti0+alpha_e*Te0))
+                                                 + BgradVstar__k * (rhoimp*(alpha_i*Ti0+alpha_e*Te0))
                     else
                       Qjac_p(var_Up, var_T)    =  Qjac_p(var_Up, var_T)    &
                                                +  BgradVstar__p * (rhoimp0*alpha_imp*T + rhoimp0*T0*dalpha_imp_dT*T)
@@ -3473,9 +3481,9 @@ do i=1,n_vertex_max
                                                +  BgradVstar__k * (rhoimp0*alpha_imp*T + rhoimp0*T0*dalpha_imp_dT*T)
 
                       Qjac_p(var_Up, var_rhoimp) =  Qjac_p(var_Up, var_rhoimp) &
-                                                 + BgradVstar__p * (rhoimp0*alpha_imp*T0)
+                                                 + BgradVstar__p * (rhoimp*alpha_imp*T0)
                       Qjac_k(var_Up, var_rhoimp) =  Qjac_k(var_Up, var_rhoimp) &
-                                                 + BgradVstar__k * (rhoimp0*alpha_imp*T0)
+                                                 + BgradVstar__k * (rhoimp*alpha_imp*T0)
                     endif
 
                   endif
@@ -3657,18 +3665,18 @@ do i=1,n_vertex_max
                                               - D_prof * gradRhoimp_gradVstar_rhoimp__kn                     &
                                                - ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__k * BgradRhoimp_rhoimp__n / BB2
 
-                    Qjac_p (var_rho,var_rhon) = + D_prof * gradRhoimp_gradVstar_rhoimp__p                      &
-                                                + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__p * BgradRhoimp_rhoimp__p / BB2 &
-                                                - D_prof_imp * gradRhoimp_gradVstar_rhoimp__p                  &
-                                                - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__p * BgradRhoimp_rhoimp__p / BB2
-                    Qjac_n (var_rho,var_rhon) = + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__p * BgradRhoimp_rhoimp__n / BB2 &
-                                                - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__p * BgradRhoimp_rhoimp__n / BB2
-                    Qjac_k (var_rho,var_rhon) = + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__k * BgradRhoimp_rhoimp__p / BB2 &
-                                                - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp_rhoimp__p / BB2
-                    Qjac_kn(var_rho,var_rhon) = + D_prof * gradRhoimp_gradVstar_rhoimp__kn                     &
-                                                + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__k * BgradRhoimp_rhoimp__n / BB2 &
-                                                - D_prof_imp * gradRhoimp_gradVstar_rhoimp__kn                 &
-                                                - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp_rhoimp__n / BB2
+                    Qjac_p (var_rho,var_rhoimp) = + D_prof * gradRhoimp_gradVstar_rhoimp__p                      &
+                                                  + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__p * BgradRhoimp_rhoimp__p / BB2 &
+                                                  - D_prof_imp * gradRhoimp_gradVstar_rhoimp__p                  &
+                                                  - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__p * BgradRhoimp_rhoimp__p / BB2
+                    Qjac_n (var_rho,var_rhoimp) = + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__p * BgradRhoimp_rhoimp__n / BB2 &
+                                                  - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__p * BgradRhoimp_rhoimp__n / BB2
+                    Qjac_k (var_rho,var_rhoimp) = + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__k * BgradRhoimp_rhoimp__p / BB2 &
+                                                  - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp_rhoimp__p / BB2
+                    Qjac_kn(var_rho,var_rhoimp) = + D_prof * gradRhoimp_gradVstar_rhoimp__kn                     &
+                                                  + ((D_par+D_par_sc_num*tau_sc)-D_prof) * BgradVstar__k * BgradRhoimp_rhoimp__n / BB2 &
+                                                  - D_prof_imp * gradRhoimp_gradVstar_rhoimp__kn                 &
+                                                  - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp_rhoimp__n / BB2
                                        
                   endif
                   !###################################################################################################
@@ -4999,15 +5007,13 @@ subroutine impurities_modeling()
     pif0     = rhoimp0 * alpha_i * Ti0
     pif0_R   = rhoimp0_R * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_R
     pif0_Z   = rhoimp0_Z * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_Z
-    pif0_s   = rhoimp0_s * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_s
-    pif0_t   = rhoimp0_t * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_t
     pif0_p   = rhoimp0_p * alpha_i * Ti0 + rhoimp0 * alpha_i * Ti0_p
     pif0_corr = rhoimp0_corr * alpha_i * Ti0_corr
 
     pef0     = rhoimp0 * alpha_e * Te0
-    pef0_R   = rhoimp0_R * alpha_e * T0 + rhoimp0 * alpha_e * Te0_R + rhoimp0 * dalpha_e_dT * Te0 * Te0_R
-    pef0_Z   = rhoimp0_Z * alpha_e * T0 + rhoimp0 * alpha_e * Te0_Z + rhoimp0 * dalpha_e_dT * Te0 * Te0_Z
-    pef0_p   = rhoimp0_p * alpha_e * T0 + rhoimp0 * alpha_e * Te0_p + rhoimp0 * dalpha_e_dT * Te0 * Te0_p
+    pef0_R   = rhoimp0_R * alpha_e * Te0 + rhoimp0 * alpha_e * Te0_R + rhoimp0 * dalpha_e_dT * Te0 * Te0_R
+    pef0_Z   = rhoimp0_Z * alpha_e * Te0 + rhoimp0 * alpha_e * Te0_Z + rhoimp0 * dalpha_e_dT * Te0 * Te0_Z
+    pef0_p   = rhoimp0_p * alpha_e * Te0 + rhoimp0 * alpha_e * Te0_p + rhoimp0 * dalpha_e_dT * Te0 * Te0_p
     pef0_corr = rhoimp0_corr * alpha_e * Te0_corr
 
     pf0      = pif0      +   pef0
@@ -5200,11 +5206,8 @@ subroutine construct_imp_charge_states()
 end subroutine construct_imp_charge_states
 
 subroutine construct_radiation_parameters()
-  if (with_TiTe)then      
-    ne_SI       = (rho0_corr + alpha_e * rhoimp0_corr) * 1.d20 * central_density 
-  else
-    ne_SI       = (rho0_corr + alpha_imp * rhoimp0_corr) * 1.d20 * central_density
-  endif
+  ne_SI       = (rho0_corr + alpha_e * rhoimp0_corr) * 1.d20 * central_density 
+  ne_SI       = (rho0_corr + alpha_imp * rhoimp0_corr) * 1.d20 * central_density
   Te_eV       = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
   Te_corr_eV  = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
 

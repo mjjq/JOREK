@@ -750,26 +750,27 @@ module mod_pastix
 
   subroutine pastix_init_nthreads(ptss)
     use mpi_mod
-!$  use omp_lib
+#ifdef _OPENMP
+    use omp_lib
+#endif
 
     implicit none
     type(type_PASTIX_SOLVER) :: ptss
-    integer :: nthrd = 1
-    integer :: n_cpu, ierr
+    integer :: nbthreads
 
+#ifdef _OPENMP
+    !$OMP PARALLEL shared(nbthreads)
+    !$OMP master
+    call omp_set_dynamic(.false.)
+    nbthreads = omp_get_num_threads()
+    !$OMP end master
+    !$OMP barrier
+    !$OMP end PARALLEL
+#else
+    nbthreads = 1
+#endif
 
-    call MPI_COMM_SIZE(ptss%comm, n_cpu, ierr)
-
-!$omp parallel default(none) shared(nthrd)
-!$omp master
-!$      nthrd = omp_get_num_threads()
-!$omp end master
-!$omp end parallel
-
-    if (nthrd*n_cpu > ptss%maxthrd) then
-      nthrd = max(ptss%maxthrd/n_cpu, 1)
-    endif
-    ptss%nthrd = nthrd
+    ptss%nthrd = max(min(ptss%maxthrd,nbthreads),1)
 
     return
   end subroutine pastix_init_nthreads

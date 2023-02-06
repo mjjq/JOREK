@@ -151,27 +151,37 @@ contains
       endif
 
       allocate(Arcv_buffer(sum(pc%recv_counts(isplit,1:n_cpu))))
-      allocate(ircv_buffer(sum(pc%recv_counts(isplit,1:n_cpu))))
-      allocate(jrcv_buffer(sum(pc%recv_counts(isplit,1:n_cpu))))
       call mpi_alltoallv(Asnd_buffer, pc%send_counts(isplit,1:n_cpu), pc%send_disp(isplit,1:n_cpu), MPI_DOUBLE_PRECISION, &
                          Arcv_buffer, pc%recv_counts(isplit,1:n_cpu), pc%splt_disp(isplit,1:n_cpu), MPI_DOUBLE_PRECISION,a_mat%comm,ierr)
+      do icpu = 1, n_cpu
+        i0 = pc%recv_disp(isplit,icpu) + int1
+        i1 = i0 + pc%recv_counts(isplit,icpu) - int1
+        pc%mat%val(i0:i1) = Arcv_buffer(pc%splt_disp(isplit,icpu) + 1:pc%splt_disp(isplit,icpu) + pc%recv_counts(isplit,icpu))
+      enddo
+      deallocate(Arcv_buffer)
+      deallocate(Asnd_buffer)
+
+      allocate(ircv_buffer(sum(pc%recv_counts(isplit,1:n_cpu))))
       call mpi_alltoallv(isnd_buffer, pc%send_counts(isplit,1:n_cpu), pc%send_disp(isplit,1:n_cpu), MPI_INTEGER_ALL, &
                          ircv_buffer, pc%recv_counts(isplit,1:n_cpu), pc%splt_disp(isplit,1:n_cpu), MPI_INTEGER_ALL,a_mat%comm,ierr)
+
+      do icpu = 1, n_cpu
+        i0 = pc%recv_disp(isplit,icpu) + int1
+        i1 = i0 + pc%recv_counts(isplit,icpu) - int1
+        pc%mat%irn(i0:i1) = ircv_buffer(pc%splt_disp(isplit,icpu) + 1:pc%splt_disp(isplit,icpu) + pc%recv_counts(isplit,icpu))
+      enddo
+      deallocate(ircv_buffer)
+      deallocate(isnd_buffer)
+
+      allocate(jrcv_buffer(sum(pc%recv_counts(isplit,1:n_cpu))))
       call mpi_alltoallv(jsnd_buffer, pc%send_counts(isplit,1:n_cpu), pc%send_disp(isplit,1:n_cpu), MPI_INTEGER_ALL, &
                          jrcv_buffer, pc%recv_counts(isplit,1:n_cpu), pc%splt_disp(isplit,1:n_cpu), MPI_INTEGER_ALL,a_mat%comm,ierr)
       do icpu = 1, n_cpu
         i0 = pc%recv_disp(isplit,icpu) + int1
         i1 = i0 + pc%recv_counts(isplit,icpu) - int1
-        pc%mat%val(i0:i1) = Arcv_buffer(pc%splt_disp(isplit,icpu) + 1:pc%splt_disp(isplit,icpu) + pc%recv_counts(isplit,icpu))
-        pc%mat%irn(i0:i1) = ircv_buffer(pc%splt_disp(isplit,icpu) + 1:pc%splt_disp(isplit,icpu) + pc%recv_counts(isplit,icpu))
         pc%mat%jcn(i0:i1) = jrcv_buffer(pc%splt_disp(isplit,icpu) + 1:pc%splt_disp(isplit,icpu) + pc%recv_counts(isplit,icpu))
       enddo
-      deallocate(Arcv_buffer)
-      deallocate(ircv_buffer)
       deallocate(jrcv_buffer)
-
-      deallocate(Asnd_buffer)
-      deallocate(isnd_buffer)
       deallocate(jsnd_buffer)
 
     enddo

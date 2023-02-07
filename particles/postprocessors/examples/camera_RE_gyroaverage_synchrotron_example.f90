@@ -41,7 +41,7 @@ type(particle_sim),dimension(:),allocatable :: sims,sims_gc
 logical                            :: write_gc_in_txt
 integer                            :: ii,n_1d,n_2d,t0,t1
 integer                            :: n_groups,my_id,n_cpus,n_x,ierr
-integer                            :: n_wavelenghts,n_spectra
+integer                            :: n_wavelengths,n_spectra
 integer                            :: n_int_camera_param,n_real_camera_param
 integer                            :: n_times
 integer,dimension(:),allocatable   :: int_camera_param 
@@ -66,12 +66,12 @@ n_1d = 1; n_2d = 2;
 n_x = 3 !< number of spatial coordinates
 n_groups = 1 !< number of particle groups
 n_spectra     = 1
-n_wavelenghts = 40
+n_wavelengths = 40
 n_int_camera_param  = 5
 n_real_camera_param = 9
 n_times = 1
 write_gc_in_txt = .false.
-!> JET KDLT-E5WC wavelenght: 3d-6 - 3.5d-6 [m]
+!> JET KDLT-E5WC wavelength: 3d-6 - 3.5d-6 [m]
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
 allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
 allocate(filter_spectra(n_spectra));
@@ -117,7 +117,7 @@ endif
 !> Initialise synthetic diagnostics
 write(*,*) 'Initialise synthetic camera and light sources ...'
 call system_clock(t0)
-spectra = spectrum_integrator_2nd(n_wavelenghts,n_spectra,min_spectra,max_spectra)
+spectra = spectrum_integrator_2nd(n_wavelengths,n_spectra,min_spectra,max_spectra)
 call spectra%generate_spectrum()
 call filter_image%init_filter(n_2d)
 do ii=1,n_spectra

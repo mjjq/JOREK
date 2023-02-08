@@ -71,6 +71,7 @@ DIRS := diagnostics			       \
         particles/postprocessors/examples      \
         particles/postprocessors/tests         \
         particles/postprocessors/tests/drivers \
+        particles/postprocessors/utils	       \
 	particles/projection_functions         \
 	particles/benchmarks/pusher_cartesian  \
 	particles/benchmarks/pusher	       \

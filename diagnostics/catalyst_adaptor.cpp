@@ -39,13 +39,25 @@ void catalyst_adaptor_execute(int *a_step_index, double *a_time) {
   // use variable names consistent with JOREK
   int nsub = 0;
   int n_elements = 0;
+  int n_scalars = 0;
+
   // We want only rank 0 to pass the grid to Catalyst
   if (my_id == 0)
-    catalyst_get_grid_params(&nsub, &n_elements);
+    catalyst_get_params(&nsub, &n_elements, &n_scalars);
   int nnos = nsub * nsub * n_elements; // Number of nodes in the Catalyst grid
   int nel = (nsub - 1) * (nsub - 1) *
             n_elements; // Number of cells in the Catalyst grid
   int nnoel = 4;        // Number of points needed to define a cell
+
+  std::vector<std::string> scalar_names(n_scalars);
+  if (my_id == 0) {
+    char name[36];
+    for (int iscalar = 0; iscalar < n_scalars; ++iscalar) {
+      int f_iscalar = iscalar + 1; // Fortran is 1-indexed
+      catalyst_get_scalar_name(name, &f_iscalar);
+      scalar_names[iscalar] = name;
+    }
+  }
 
   conduit_cpp::Node exec_params;
 
@@ -89,11 +101,39 @@ void catalyst_adaptor_execute(int *a_step_index, double *a_time) {
   mesh["topologies/mesh/elements/connectivity"].set_external(cell_points.data(),
                                                              nnoel * nel);
 
+  // store all the scalar variables in one big flattened array
+  std::vector<float> scalars(nnos * n_scalars);
+
+  if (my_id == 0)
+    catalyst_interp_scalars(scalars.data());
+
+  // add scalars
+  auto fields = mesh["fields"];
+  for (int iscalar = 0; iscalar < n_scalars; ++iscalar) {
+    // auto scalar = fields[scalar_names[iscalar]];
+    std::string scalar_path = scalar_names[iscalar] + "/";
+    fields[scalar_path + std::string("association")].set("vertex");
+    fields[scalar_path + std::string("topology")].set("mesh");
+    fields[scalar_path + std::string("volume_dependent")].set("false");
+    fields[scalar_path + std::string("values")].set_external(
+        scalars.data(), nnos,
+        /*offset=*/iscalar * sizeof(float),
+        /*stride=*/n_scalars * sizeof(float));
+  }
+
   // verify the mesh
+  if (my_id == 0)
+    exec_params.print();
+
   conduit_cpp::Node mesh_info;
   if (!conduit_cpp::BlueprintMesh::verify(mesh, mesh_info)) {
     std::cerr << "Grid does not satisfy Conduit mesh blueprint" << std::endl;
     mesh_info.print();
+  }
+
+  catalyst_status err = catalyst_execute(conduit_cpp::c_node(&exec_params));
+  if (err != catalyst_status_ok) {
+    std::cerr << "Failed to execute Catalyst: " << err << std::endl;
   }
 
   if (my_id == 0)

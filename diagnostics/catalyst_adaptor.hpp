@@ -12,10 +12,16 @@ void catalyst_adaptor_execute(int *a_step_index, double *a_time);
 
 void catalyst_adaptor_finalise();
 
-void catalyst_get_grid_params(int *a_nsub, int *a_n_elements);
+// ********** Fortran functions below *********
+
+void catalyst_get_params(int *a_nsub, int *a_n_elements, int *a_n_scalars);
+
+void catalyst_get_scalar_name(char *a_scalar_name, int *a_iscalar);
 
 void catalyst_interp_grid(int *a_nnos, int *a_nel, float *a_coords_RZst,
                           int *a_cell_points);
+
+void catalyst_interp_scalars(float *a_scalars);
 }
 
 #endif /* USE_CATALYST */

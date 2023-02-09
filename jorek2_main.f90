@@ -535,6 +535,11 @@ mpi_required = 0
     call MPI_Barrier(a_mat%comm,ierr)
 
   endif ! (nstep >0)
+
+  ! --- Do Catalyst insitu pipelines before the first timestep
+#ifdef USE_CATALYST
+  call catalyst_adaptor_execute(index_start, t_now)
+#endif
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
@@ -828,6 +833,11 @@ mpi_required = 0
     endif
     write(itlabel,'(I8)') istep
     call tr_print_memsize("AfterIter"//itlabel)
+
+    ! --- Do Catalyst insitu pipelines
+#ifdef USE_CATALYST
+    call catalyst_adaptor_execute(index_now, t_now)
+#endif
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then

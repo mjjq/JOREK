@@ -2,7 +2,9 @@
 
 #if USE_CATALYST
 #include "catalyst.hpp"
+#include "catalyst_conduit_blueprint.hpp"
 #include <iostream>
+#include <mpi.h>
 
 extern "C" {
 void catalyst_adaptor() {}
@@ -20,6 +22,82 @@ void catalyst_adaptor_initialise(char *a_catalyst_script) {
   if (err != catalyst_status_ok) {
     std::cerr << "Failed to initialize Catalyst: " << err << std::endl;
   }
+}
+
+void catalyst_adaptor_execute(int *a_step_index, double *a_time) {
+  int my_id;
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+
+  if (my_id == 0) {
+    std::cout << "*******************************\n";
+    std::cout << "* Executing Catalyst pipeline *\n";
+    std::cout << "*******************************\n";
+    std::cout << "Step " << *a_step_index << " (t_now = " << *a_time << ")";
+    std::cout << std::endl;
+  }
+
+  // use variable names consistent with JOREK
+  int nsub = 0;
+  int n_elements = 0;
+  // We want only rank 0 to pass the grid to Catalyst
+  if (my_id == 0)
+    catalyst_get_grid_params(&nsub, &n_elements);
+  int nnos = nsub * nsub * n_elements; // Number of nodes in the Catalyst grid
+  int nel = (nsub - 1) * (nsub - 1) *
+            n_elements; // Number of cells in the Catalyst grid
+  int nnoel = 4;        // Number of points needed to define a cell
+
+  conduit_cpp::Node exec_params;
+
+  // add time/cycle information
+  auto state = exec_params["catalyst/state"];
+  state["timestep"].set(*a_step_index);
+  state["time"].set(*a_time);
+  state["multiblock"].set(1);
+
+  // Add channels.
+  // We only have 1 channel here. Let's name it 'grid'.
+  auto channel = exec_params["catalyst/channels/grid"];
+
+  // Use Conduit Mesh Blueprint
+  channel["type"].set("mesh");
+
+  // now create the mesh.
+  auto mesh = channel["data"];
+
+  mesh["coordsets/coords/type"].set("explicit");
+
+  // store the cylindrical coords (R,Z) and local coords (s,t) in a flat array
+  std::vector<float> coords_RZst(4 * nnos);
+  std::vector<int> cell_points(nnoel * nel);
+
+  if (my_id == 0)
+    catalyst_interp_grid(&nnos, &nel, coords_RZst.data(), cell_points.data());
+
+  // set coordinates of nodes
+  mesh["coordsets/coords/type"].set("explicit");
+  mesh["coordsets/coords/values/r"].set_external(
+      coords_RZst.data(), nnos, /*offset=*/0, /*stride=*/4 * sizeof(float));
+  mesh["coordsets/coords/values/z"].set_external(coords_RZst.data(), nnos,
+                                                 /*offset=*/sizeof(float),
+                                                 /*stride=*/4 * sizeof(float));
+
+  // set topology
+  mesh["topologies/mesh/type"].set("unstructured");
+  mesh["topologies/mesh/coordset"].set("coords");
+  mesh["topologies/mesh/elements/shape"].set("quad");
+  mesh["topologies/mesh/elements/connectivity"].set_external(cell_points.data(),
+                                                             nnoel * nel);
+
+  // verify the mesh
+  conduit_cpp::Node mesh_info;
+  if (!conduit_cpp::BlueprintMesh::verify(mesh, mesh_info)) {
+    std::cerr << "Grid does not satisfy Conduit mesh blueprint" << std::endl;
+    mesh_info.print();
+  }
+
+  if (my_id == 0)
+    std::cout << std::endl;
 }
 
 void catalyst_adaptor_finalise() {

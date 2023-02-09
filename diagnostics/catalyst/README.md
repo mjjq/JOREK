@@ -50,9 +50,9 @@ Note that it is not necessary to build JOREK with the same Catalyst
 implementation you intend to use. We will switch to using the ParaView Catalyst
 implementation at runtime as the stub implementation does nothing.
 
-You will need ParaView 5.9 or greater to run JOREK with ParaView Catalyst. This 
-can be downloaded from the 
-[ParaView website](https://www.paraview.org/download/).
+You will need ParaView 5.9 or greater to run JOREK with ParaView's Catalyst
+implementation. This can be downloaded from the [ParaView
+website](https://www.paraview.org/download/).
 
 ## Building JOREK with Catalyst
 
@@ -100,7 +100,8 @@ export CATALYST_IMPLEMENTATION_PATHS=/path/to/paraview/lib/catalyst/
 Note that the installation of ParaView has the necessary Catalyst support if you 
 can see the file `libcatalyst-paraview.so` under `paraview/lib/catalyst/` 
 (this is what Catalyst will look for if you set the environment variables as
-above). If this doesn't exist, you may need to ask for ParaView to be rebuilt with 
+above). If this doesn't exist, you may need to ask for ParaView to be rebuilt 
+with Catalyst2 (`libcatalyst` in the Spack package) support.
 
 Assuming everything is working, you should see the following output when you run 
 the simulation (Catalyst is initialized towards the end of the initialization 
@@ -119,6 +120,20 @@ catalyst:
 ...
 ```
 
+If there are issues loading ParaView's Catalyst implementation, you can set the
+`CATALYST_DEBUG` environment variable to a non-empty value to log the search and
+loading procedure.
+
+You can control the verbosity of ParaView's output by setting the enviroment
+variable `PARAVIEW_LOG_CATALYST_VERBOSITY` appropriately. For example
+```bash
+export PARAVIEW_LOG_CATALYST_VERBOSITY=OFF # print nothing
+export PARAVIEW_LOG_CATALYST_VERBOSITY=ERROR # only print errors
+export PARAVIEW_LOG_CATALYST_VERBOSITY=WARNING # print errors and warning
+export PARAVIEW_LOG_CATALYST_VERBOSITY=INFO # print errors, warning and info
+export PARAVIEW_LOG_CATALYST_VERBOSITY=TRACE # max verbosity, print everything
+```
+
 ## Generating a ParaView Catalyst script
 
 The easiest way to generate a suitable ParaView Catalyst Python script using the
@@ -132,9 +147,23 @@ Next apply filters and adjust the camera view as desired. Note that not all
 variables may be available during the simulation.
 
 In order to generate a valid Catalyst script, it is then necessary to add an 
-'Extractor' which will, for example, save an image. This can be done using the
-menu options, Extractors → Image → PNG.
+'Extractor' which will, for example, save an image or VTK file. This can be done
+using the menu options, Extractors → Image → PNG.
 
 Finally, to generate the Catalyst script, use the menu options File → 
 Save Catalyst State. By default, the output directory for Extracts will be
 'dataset'.
+
+## Implementation details
+
+Currently, only model199 has Catalyst support added. However, the only part that
+is model specific are the changes to the `initialise_parameters` subroutine so
+it is straightforward to add support to another model.
+
+The adaptor currently creates and passes a 2D grid that is similar to that
+created by the `jorek2vtk` program. In particular, JOREK elements are subdivided
+into `catalyst_nsub * catalyst_nsub = 5 * 5` elements and the components of the
+variables with respect to the toroidal harmonics are interpolated onto this new
+grid and then projected onto the planar slice (`i_plane = 1` i.e. `phi = 0`).
+Currently, only the variables in `mod_model_settings` are interpolated onto this
+new grid so there are `n_var` variables passed.

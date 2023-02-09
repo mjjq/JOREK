@@ -132,10 +132,9 @@ void catalyst_adaptor_execute(int *a_step_index, double *a_time) {
     // add scalars
     auto fields = mesh["fields"];
     for (int iscalar = 0; iscalar < n_scalars; ++iscalar) {
-      // fortran starts indices at 1
       scalars[iscalar].resize(nnos);
-      int fortran_iscalar = iscalar + 1;
-      catalyst_interp_scalar(scalars[iscalar].data(), &fortran_iscalar);
+      int f_iscalar = iscalar + 1; // Fortran is 1-indexed
+      catalyst_interp_scalar(scalars[iscalar].data(), &f_iscalar);
       // auto scalar = fields[scalar_names[iscalar]];
       std::string scalar_path = scalar_names[iscalar] + "/";
       fields[scalar_path + std::string("association")].set("vertex");

@@ -101,5 +101,5 @@
  gmres_max_iter = 200
  gmres_tol = 1.d-8
 
- catalyst_script = "gridwriter.py"
+ catalyst_scripts = "diagnostics/catalyst/gridwriter.py:diagnostics/catalyst/slice_rho.py"
 /

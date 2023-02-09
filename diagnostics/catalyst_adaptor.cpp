@@ -5,15 +5,22 @@
 #include "catalyst_conduit_blueprint.hpp"
 #include <iostream>
 #include <mpi.h>
+#include <sstream>
 
 extern "C" {
 void catalyst_adaptor() {}
 
-void catalyst_adaptor_initialise(char *a_catalyst_script) {
+void catalyst_adaptor_initialise(char *a_catalyst_scripts) {
   conduit_cpp::Node node;
 
   // Pass script to Catalyst
-  node["catalyst/scripts/script0"].set_string(a_catalyst_script);
+  int iscript = 0;
+  std::stringstream catalyst_scripts_stream(a_catalyst_scripts);
+  std::string script;
+  while (std::getline(catalyst_scripts_stream, script, ':')) {
+    node["catalyst/scripts/script" + std::to_string(iscript++)].set_string(
+        script);
+  }
 
   // Initialize Catalyst
   catalyst_status err1 = catalyst_initialize(conduit_cpp::c_node(&node));
@@ -138,13 +145,6 @@ void catalyst_adaptor_execute(int *a_step_index, double *a_time) {
           scalars[iscalar]);
     }
   }
-
-  // verify the mesh
-  // if (my_id == 0) {
-  //   std::cout << "Rank 0 Conduit Params: \n";
-  //   exec_params.print_detailed();
-  //   std::cout << std::endl;
-  // }
 
   conduit_cpp::Node mesh_info;
   if (!conduit_cpp::BlueprintMesh::verify(mesh, mesh_info)) {

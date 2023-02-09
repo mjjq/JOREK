@@ -486,7 +486,7 @@ mpi_required = 0
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
 #ifdef USE_CATALYST
-  call catalyst_adaptor_initialise(trim(catalyst_script) // c_null_char)
+  call catalyst_adaptor_initialise(trim(catalyst_scripts) // c_null_char)
 #endif
   
   call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)

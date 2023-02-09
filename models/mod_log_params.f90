@@ -12,7 +12,7 @@ use phys_module
 use vacuum
 use gauss, only: n_gauss
 #ifdef USE_CATALYST
-  use mod_catalyst_adaptor, only: catalyst_script
+  use mod_catalyst_adaptor, only: catalyst_scripts
 #endif
 
 implicit none
@@ -945,7 +945,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,LOGI_FMT) 'use_sputtering,     ',use_sputtering    
   write(*,LOGI_FMT) 'use_cx,             ',use_cx
 #ifdef USE_CATALYST
-  write(*,CHAR_FMT) 'catalyst_script,    ',trim(catalyst_script)
+  write(*,CHAR_FMT) 'catalyst_scripts,   ',trim(catalyst_scripts)
 #endif
 
   write(*,*)

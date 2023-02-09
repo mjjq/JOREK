@@ -16,7 +16,7 @@ module mod_catalyst_adaptor
 
   private
 
-  character(kind=c_char, len=4096), public :: catalyst_script !< Path to Catalyst pipeline script
+  character(kind=c_char, len=65536), public:: catalyst_scripts !< Path to Catalyst scripts (multiple paths separated with ':')
   integer(c_int), public                   :: catalyst_nsub = 5 !< Number of subdivisions of each JOREK element
   integer                                  :: n_scalars !< The number of scalar variables passed to Catalyst
   integer                                  :: nnos !< Number of nodes in the Catalyst grid
@@ -28,9 +28,9 @@ module mod_catalyst_adaptor
 
   interface
 
-    subroutine catalyst_adaptor_initialise(a_catalyst_script) bind(C)
+    subroutine catalyst_adaptor_initialise(a_catalyst_scripts) bind(C)
       use, intrinsic :: iso_c_binding
-      character(kind=c_char), intent(in) :: a_catalyst_script 
+      character(kind=c_char), intent(in) :: a_catalyst_scripts 
     end subroutine catalyst_adaptor_initialise
 
     subroutine catalyst_adaptor_execute(a_step_index, a_time) bind(C)
@@ -85,7 +85,7 @@ module mod_catalyst_adaptor
       integer(c_int), intent(inout), dimension(nnoel * a_nel) :: a_cell_points
 
       integer :: i, j, ielm, inode, k
-      real*8 :: s, t, R, R_s, R_t, Z, Z_s, Z_t
+      real*8 :: s, t, R, Z
 
       nnos = a_nnos
       nel = a_nel
@@ -102,7 +102,7 @@ module mod_catalyst_adaptor
           ! Create nsub^2 points per element at regularly spaced intervals
           do k=1,catalyst_nsub
             t = float(k-1)/float(catalyst_nsub-1)
-            call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
+            call interp_RZ(node_list,element_list,i,s,t,R,Z)
             inode = inode + 1
             a_coords_R(inode) = real(R, c_float)
             a_coords_Z(inode) = real(Z, c_float)

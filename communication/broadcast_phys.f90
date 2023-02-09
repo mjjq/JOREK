@@ -13,7 +13,7 @@ use mpi_mod
 #endif
 use pellet_module
 #ifdef USE_CATALYST
-  use mod_catalyst_adaptor, only: catalyst_script
+  use mod_catalyst_adaptor, only: catalyst_scripts
 #endif
 
 implicit none
@@ -795,7 +795,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(treat_axis,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
 #ifdef USE_CATALYST
-  call MPI_PACK(catalyst_script,4096,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(catalyst_scripts,65536,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 #endif
 
 
@@ -1576,7 +1576,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,treat_axis,            1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   
 #ifdef USE_CATALYST
-  call MPI_UNPACK(buffer,bufsize,position,catalyst_script,     4096,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,catalyst_scripts,    65536,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
 #endif
   
   ! --- Please leave this as last parameter

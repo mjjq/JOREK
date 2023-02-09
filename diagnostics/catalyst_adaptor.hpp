@@ -6,7 +6,7 @@
 extern "C" {
 void catalyst_adaptor();
 
-void catalyst_adaptor_initialise(char *a_catalyst_script);
+void catalyst_adaptor_initialise(char *a_catalyst_scripts);
 
 void catalyst_adaptor_execute(int *a_step_index, double *a_time);
 

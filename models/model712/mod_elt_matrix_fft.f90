@@ -5207,7 +5207,6 @@ end subroutine construct_imp_charge_states
 
 subroutine construct_radiation_parameters()
   ne_SI       = (rho0_corr + alpha_e * rhoimp0_corr) * 1.d20 * central_density 
-  ne_SI       = (rho0_corr + alpha_imp * rhoimp0_corr) * 1.d20 * central_density
   Te_eV       = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
   Te_corr_eV  = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
 
@@ -5294,8 +5293,8 @@ subroutine calculate_sc_quantities()
     Ptot_R   = Pi0_R + Pe0_R  + rhon0 * Ti0_R + rhon0_R * Ti0 + pif0_R + pef0_R + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * Te0_R + rhoimp0_R * E_ion)
     Ptot_Z   = Pi0_Z + Pe0_Z  + rhon0 * Ti0_Z + rhon0_Z * Ti0 + pif0_Z + pef0_Z + (gamma-1.d0)*(rhoimp0 * dE_ion_dT * Te0_Z + rhoimp0_Z * E_ion)
 
-    rhoi_eff = rhoimp0_corr + rhoimp0*alpha_i + rhoimp0*T0*dalpha_i_dT
-    rhoe_eff = rhoimp0_corr + rhoimp0*alpha_e + rhoimp0*T0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT
+    rhoi_eff = rhoimp0_corr + rhoimp0*alpha_i + rhoimp0*Ti0*dalpha_i_dT
+    rhoe_eff = rhoimp0_corr + rhoimp0*alpha_e + rhoimp0*Te0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT
     R_Ti = UgradTi + (gamma-1.d0) * (pi0 + alpha_i*rhoimp0*Ti0) / rhoi_eff * divU
     R_Te = UgradTe + (gamma-1.d0) * (pe0 + alpha_e*rhoimp0*Te0) / rhoe_eff * divU
 

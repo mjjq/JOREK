@@ -73,6 +73,9 @@ program JOREK2
   use mod_sparse,          only: solve_sparse_system, solver_finalize
   use mod_sparse_data,     only: type_SP_SOLVER, mumps, pastix, strumpack
   use mod_simulation_data, only: type_MHD_SIM
+#ifdef USE_CATALYST
+  use mod_catalyst_adaptor
+#endif
 
   use, intrinsic :: iso_c_binding
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -481,6 +484,10 @@ mpi_required = 0
   call tr_debug_write("JMAIN:End_init nAA",n_AA)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
+#ifdef USE_CATALYST
+  call catalyst_adaptor_initialise(trim(catalyst_script) // c_null_char)
+#endif
   
   call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
   if ( my_id == 0 ) then
@@ -1072,6 +1079,10 @@ mpi_required = 0
 #endif
 #endif
   endif
+
+#ifdef USE_CATALYST
+  call catalyst_adaptor_finalise()
+#endif
  
 #ifdef USE_FFTW
   call dfftw_destroy_plan(fftw_plan)

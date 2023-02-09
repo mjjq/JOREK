@@ -10,17 +10,36 @@ extern "C" {
 void catalyst_adaptor() {}
 
 void catalyst_adaptor_initialise(char *a_catalyst_script) {
-  std::cout << "The Catalyst script passed to me is:\n"
-            << a_catalyst_script << std::endl;
   conduit_cpp::Node node;
 
   // Pass script to Catalyst
   node["catalyst/scripts/script0"].set_string(a_catalyst_script);
 
   // Initialize Catalyst
-  catalyst_status err = catalyst_initialize(conduit_cpp::c_node(&node));
-  if (err != catalyst_status_ok) {
-    std::cerr << "Failed to initialize Catalyst: " << err << std::endl;
+  catalyst_status err1 = catalyst_initialize(conduit_cpp::c_node(&node));
+  if (err1 != catalyst_status_ok) {
+    std::cerr << "Failed to initialize Catalyst: " << err1 << std::endl;
+  }
+
+  conduit_cpp::Node catalyst_info;
+  catalyst_status err2 = catalyst_about(conduit_cpp::c_node(&catalyst_info));
+  if (err2 != catalyst_status_ok) {
+    std::cerr << "Failed to get Catalyst implementation info: " << err2
+              << std::endl;
+  }
+  int my_id;
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+  if (my_id == 0) {
+    std::cout << "**********************************\n";
+    std::cout << "* Initializing Catalyst pipeline *\n";
+    std::cout << "**********************************\n";
+    std::cout << "Catalyst info:";
+    if (catalyst_info.has_path("catalyst/tpl/conduit/license")) {
+      // remove the long license string from the output
+      catalyst_info.remove("catalyst/tpl/conduit/license");
+    }
+    std::string catalyst_info_yaml = catalyst_info.to_yaml();
+    std::cout << catalyst_info_yaml;
   }
 }
 
@@ -65,7 +84,7 @@ void catalyst_adaptor_execute(int *a_step_index, double *a_time) {
   auto state = exec_params["catalyst/state"];
   state["timestep"].set(*a_step_index);
   state["time"].set(*a_time);
-  state["multiblock"].set(1);
+  state["multiblock"].set(0);
 
   // Add channels.
   // We only have 1 channel here. Let's name it 'grid'.
@@ -79,51 +98,53 @@ void catalyst_adaptor_execute(int *a_step_index, double *a_time) {
 
   mesh["coordsets/coords/type"].set("explicit");
 
-  // store the cylindrical coords (R,Z) and local coords (s,t) in a flat array
-  std::vector<float> coords_RZst(4 * nnos);
+  std::vector<float> coords_R(nnos);
+  std::vector<float> coords_Z(nnos);
   std::vector<int> cell_points(nnoel * nel);
 
-  if (my_id == 0)
-    catalyst_interp_grid(&nnos, &nel, coords_RZst.data(), cell_points.data());
+  if (my_id == 0) {
+    catalyst_interp_grid(&nnos, &nel, coords_R.data(), coords_Z.data(),
+                         cell_points.data());
+  }
 
   // set coordinates of nodes
   mesh["coordsets/coords/type"].set("explicit");
-  mesh["coordsets/coords/values/r"].set_external(
-      coords_RZst.data(), nnos, /*offset=*/0, /*stride=*/4 * sizeof(float));
-  mesh["coordsets/coords/values/z"].set_external(coords_RZst.data(), nnos,
-                                                 /*offset=*/sizeof(float),
-                                                 /*stride=*/4 * sizeof(float));
+  mesh["coordsets/coords/values/r"].set_external(coords_R);
+  mesh["coordsets/coords/values/z"].set_external(coords_Z);
 
   // set topology
   mesh["topologies/mesh/type"].set("unstructured");
   mesh["topologies/mesh/coordset"].set("coords");
   mesh["topologies/mesh/elements/shape"].set("quad");
-  mesh["topologies/mesh/elements/connectivity"].set_external(cell_points.data(),
-                                                             nnoel * nel);
+  mesh["topologies/mesh/elements/connectivity"].set_external(cell_points);
 
-  // store all the scalar variables in one big flattened array
-  std::vector<float> scalars(nnos * n_scalars);
+  // store all scalars in this 2D array
+  std::vector<std::vector<float>> scalars(n_scalars);
 
-  if (my_id == 0)
-    catalyst_interp_scalars(scalars.data());
-
-  // add scalars
-  auto fields = mesh["fields"];
-  for (int iscalar = 0; iscalar < n_scalars; ++iscalar) {
-    // auto scalar = fields[scalar_names[iscalar]];
-    std::string scalar_path = scalar_names[iscalar] + "/";
-    fields[scalar_path + std::string("association")].set("vertex");
-    fields[scalar_path + std::string("topology")].set("mesh");
-    fields[scalar_path + std::string("volume_dependent")].set("false");
-    fields[scalar_path + std::string("values")].set_external(
-        scalars.data(), nnos,
-        /*offset=*/iscalar * sizeof(float),
-        /*stride=*/n_scalars * sizeof(float));
+  if (my_id == 0) {
+    // add scalars
+    auto fields = mesh["fields"];
+    for (int iscalar = 0; iscalar < n_scalars; ++iscalar) {
+      // fortran starts indices at 1
+      scalars[iscalar].resize(nnos);
+      int fortran_iscalar = iscalar + 1;
+      catalyst_interp_scalar(scalars[iscalar].data(), &fortran_iscalar);
+      // auto scalar = fields[scalar_names[iscalar]];
+      std::string scalar_path = scalar_names[iscalar] + "/";
+      fields[scalar_path + std::string("association")].set("vertex");
+      fields[scalar_path + std::string("topology")].set("mesh");
+      fields[scalar_path + std::string("volume_dependent")].set("false");
+      fields[scalar_path + std::string("values")].set_external(
+          scalars[iscalar]);
+    }
   }
 
   // verify the mesh
-  if (my_id == 0)
-    exec_params.print();
+  // if (my_id == 0) {
+  //   std::cout << "Rank 0 Conduit Params: \n";
+  //   exec_params.print_detailed();
+  //   std::cout << std::endl;
+  // }
 
   conduit_cpp::Node mesh_info;
   if (!conduit_cpp::BlueprintMesh::verify(mesh, mesh_info)) {

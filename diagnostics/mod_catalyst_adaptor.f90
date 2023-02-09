@@ -22,8 +22,8 @@ module mod_catalyst_adaptor
   integer                                  :: nnos !< Number of nodes in the Catalyst grid
   integer                                  :: nel !< Number of cells in the Catalyst grid
   integer                                  :: nnoel = 4 !< Number of points to define a cell
-  real(c_float), pointer                   :: coords_RZst(:) !< pointer to coords array in catalyst_adaptor.cpp
-                                                             !< only valid in catalyst_adaptor_execute
+  real(c_float), dimension(:), allocatable :: coords_s !< local subdivision coordinate s
+  real(c_float), dimension(:), allocatable :: coords_t !< local subdivision coordinate t
   integer                                  :: i_plane = 1 !< which plane to interpolate at
 
   interface
@@ -76,11 +76,12 @@ module mod_catalyst_adaptor
       enddo
     end subroutine catalyst_get_scalar_name
 
-    subroutine catalyst_interp_grid(a_nnos, a_nel, a_coords_RZst, a_cell_points) bind(C)
+    subroutine catalyst_interp_grid(a_nnos, a_nel, a_coords_R, a_coords_Z, a_cell_points) bind(C)
       use, intrinsic :: iso_c_binding
       integer(c_int), intent(in) :: a_nnos
       integer(c_int), intent(in) :: a_nel
-      real(c_float), intent(inout), dimension(4 * a_nnos), target :: a_coords_RZst
+      real(c_float), intent(inout), dimension(a_nnos), target :: a_coords_R
+      real(c_float), intent(inout), dimension(a_nnos), target :: a_coords_Z
       integer(c_int), intent(inout), dimension(nnoel * a_nel) :: a_cell_points
 
       integer :: i, j, ielm, inode, k
@@ -91,8 +92,8 @@ module mod_catalyst_adaptor
       inode = 0
       ielm = 0
 
-      ! Store a pointer to the coords in this module
-      coords_RZst => a_coords_RZst
+      if (.not. allocated(coords_s)) allocate(coords_s(a_nnos))
+      if (.not. allocated(coords_t)) allocate(coords_t(a_nnos))
 
       ! Create points for each element
       do i=1,element_list%n_elements
@@ -103,7 +104,10 @@ module mod_catalyst_adaptor
             t = float(k-1)/float(catalyst_nsub-1)
             call interp_RZ(node_list,element_list,i,s,t,R,R_s,R_t,Z,Z_s,Z_t)
             inode = inode + 1
-            a_coords_RZst(4*inode-3:4*inode) = real([R, Z, s, t], c_float)
+            a_coords_R(inode) = real(R, c_float)
+            a_coords_Z(inode) = real(Z, c_float)
+            coords_s(inode) = real(s, c_float)
+            coords_t(inode) = real(t, c_float)
           enddo
         enddo
 
@@ -122,34 +126,31 @@ module mod_catalyst_adaptor
       enddo
     end subroutine catalyst_interp_grid
 
-    subroutine catalyst_interp_scalars(a_scalars) bind(C)
+    subroutine catalyst_interp_scalar(a_scalar, a_iscalar) bind(C)
       use, intrinsic :: iso_c_binding
-      real(c_float), intent(inout), dimension(nnos*n_scalars) :: a_scalars
+      real(c_float), intent(inout), dimension(nnos) :: a_scalar
+      integer(c_int), intent(in)                    :: a_iscalar
 
       integer :: i !< JOREK element index
-      integer :: iflat !< index in the flattened array a_scalars
-      integer :: iscalar, inode, i_tor
+      integer :: inode, i_tor
       real*8 :: s, t, P, P_s, P_t, P_ss, P_st, P_tt
 
       i = 0
-      a_scalars = 0.0
+      a_scalar = 0.0
       do inode=1,nnos
         ! Increment the JOREK element index by 1 every nsub^2 nodes
         if (modulo(inode - 1, catalyst_nsub * catalyst_nsub) .eq. 0) then
           i = i + 1
         endif
-        s = coords_RZst(4*inode-1)
-        t = coords_RZst(4*inode  )
-        do iscalar=1,n_scalars
-          iflat = n_scalars * (inode - 1) + iscalar
-          do i_tor=1,n_tor
-            call interp(node_list,element_list,i,iscalar,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
-            a_scalars(iflat) = a_scalars(iflat) + real(P * HZ(i_tor,i_plane), c_float)
-          enddo ! i_tor
-        enddo ! iscalar
+        s = coords_s(inode)
+        t = coords_t(inode)
+        do i_tor=1,n_tor
+          call interp(node_list,element_list,i,a_iscalar,i_tor,s,t,P,P_s,P_t,P_st,P_ss,P_tt)
+          a_scalar(inode) = a_scalar(inode) + real(P * HZ(i_tor,i_plane), c_float)
+        enddo ! i_tor
       enddo ! inode
-
-    end subroutine catalyst_interp_scalars
+      
+    end subroutine catalyst_interp_scalar
 
 #endif 
 end module mod_catalyst_adaptor

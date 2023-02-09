@@ -18,10 +18,10 @@ void catalyst_get_params(int *a_nsub, int *a_n_elements, int *a_n_scalars);
 
 void catalyst_get_scalar_name(char *a_scalar_name, int *a_iscalar);
 
-void catalyst_interp_grid(int *a_nnos, int *a_nel, float *a_coords_RZst,
-                          int *a_cell_points);
+void catalyst_interp_grid(int *a_nnos, int *a_nel, float *a_coords_R,
+                          float *a_coords_Z, int *a_cell_points);
 
-void catalyst_interp_scalars(float *a_scalars);
+void catalyst_interp_scalar(float *a_scalars, int *a_iscalar);
 }
 
 #endif /* USE_CATALYST */

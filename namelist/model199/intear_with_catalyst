@@ -4,7 +4,7 @@
  regrid  = .f.
  refinement=.false.
  tstep   = 1000.
- nstep   = 1
+ nstep   = 0
 
  nout = 1
 
@@ -101,5 +101,5 @@
  gmres_max_iter = 200
  gmres_tol = 1.d-8
 
- catalyst_script = "/rds/project/rds-YVo7YUJF2mk/shared/paraview/build-v5.10.1-server-only/superbuild/paraview/src/Examples/Catalyst2/CxxFullExample/catalyst_pipeline.py"
+ catalyst_script = "gridwriter.py"
 /

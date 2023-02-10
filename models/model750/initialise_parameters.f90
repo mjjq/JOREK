@@ -146,13 +146,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 eta_ohmic, force_central_node, D_par_imp,           &
                 D_perp_imp, imp_type, adas_dir,                     &
                 spi_shard_file, spi_tor_rot, pellet_density,        &
-                pellet_density_bg,                                  &
-                use_sc, add_sources_in_sc, visco_sc_num,            &
-                D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
-                ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
-                ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
-                Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact,    &
-                D_perp_imp_sc_num, D_par_imp_sc_num, Te_eV_min,     &
+                pellet_density_bg, cte_current_FB_fact, Te_eV_min,  &
                 spi_plume_file, n_adas, index_main_imp,             &
                 output_prad_phi, spi_quantity_bg, CARIDDI_mode
 

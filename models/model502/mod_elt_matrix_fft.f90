@@ -6,7 +6,7 @@ contains
 
 subroutine element_matrix_fft(element, nodes, xpoint2, xcase2, R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, ELM, RHS, tid, &
                               ELM_p, ELM_n, ELM_k, ELM_kn, RHS_p, RHS_k,  eq_g, eq_s, eq_t, eq_p, eq_ss, eq_st, eq_tt,               &
-                              delta_g, delta_s, delta_t, i_tor_min, i_tor_max, aux_nodes)
+                              delta_g, delta_s, delta_t, i_tor_min, i_tor_max, aux_nodes, ELM_pnn)
 !---------------------------------------------------------------
 ! calculates the matrix contribution of one element
 !---------------------------------------------------------------
@@ -32,7 +32,7 @@ type (type_element)        :: element
 type (type_node)           :: nodes(n_vertex_max)
 type (type_node), optional :: aux_nodes(n_vertex_max)
 
-#define DIM0 n_tor*n_vertex_max*(n_order+1)*n_var
+#define DIM0 n_tor*n_vertex_max*n_degrees*n_var
 
 real*8, dimension (DIM0,DIM0)  :: ELM
 real*8, dimension (DIM0)       :: RHS
@@ -131,8 +131,10 @@ real*8     :: rn0_xx, rn0_yy, rn0_xy, rhon_xx, rhon_yy
 ! New momentum equation related rhs and amat
 real*8     :: amat_25_n, amat_27_n
 
-! Neutral source
-real*8     :: source_imp, source_bg
+! Impurity and background source
+real*8     :: source_imp, source_bg, source_imp_arr(n_inj_max), source_bg_arr(n_inj_max)
+real*8     :: source_bg_drift_arr(n_inj_max)
+real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max)
 
 ! time normalization
 real*8     :: t_norm
@@ -184,7 +186,7 @@ integer*8  :: plan
 
 
 #define DIM1 n_plane
-#define DIM2 1:n_vertex_max*n_var*(n_order+1)
+#define DIM2 1:n_vertex_max*n_var*n_degrees
 
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_p
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_n
@@ -192,6 +194,7 @@ real*8, dimension(DIM1, DIM2, DIM2) :: ELM_k
 real*8, dimension(DIM1, DIM2, DIM2) :: ELM_kn
 real*8, dimension(DIM1, DIM2)       :: RHS_p
 real*8, dimension(DIM1, DIM2)       :: RHS_k
+real*8, dimension(DIM1, DIM2, DIM2) :: ELM_pnn
 
 real*8, dimension(n_gauss,n_gauss)    :: x_g, x_s, x_t
 real*8, dimension(n_gauss,n_gauss)    :: x_ss, x_st, x_tt
@@ -253,8 +256,14 @@ if ( NEO ) then
 endif
 !======================================= NEO
 
+if (allocated(P_imp)) deallocate(P_imp)
+if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
+
+allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
+allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
+
 do i=1,n_vertex_max
- do j=1,n_order+1
+ do j=1,n_degrees
 
    do ms=1, n_gauss
      do mt=1, n_gauss
@@ -765,11 +774,19 @@ do ms=1, n_gauss
 
      ! --- Increase diffusivity if very small density/temperature
      if (xpoint2) then
-       if (r0 .lt. D_prof_neg_thresh)  then
+       if ((r0-rn0) .lt. D_prof_neg_thresh) then
          D_prof  = D_prof_neg
-         D_prof_imp = D_prof_neg
          D_par   = D_prof_neg
-         D_par_imp = D_prof_neg
+       endif
+       if (rn0 .lt. D_prof_imp_neg_thresh) then
+         D_prof_imp  = D_prof_neg
+         D_par_imp   = D_prof_neg
+       endif
+       if ((r0 .lt. D_prof_tot_neg_thresh) .and. ((r0-rn0) .ge. D_prof_neg_thresh)) then
+         D_prof  = D_prof_neg
+         D_par   = D_prof_neg
+         D_prof_imp  = D_prof_neg
+         D_par_imp   = D_prof_neg
        endif
        if (Ti0 .lt. ZK_i_prof_neg_thresh) then
          ZK_i_prof = ZK_i_prof_neg
@@ -838,12 +855,6 @@ do ms=1, n_gauss
 
      if (allocated(imp_adas(index_main_imp)%ionisation_energy)) then
 
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
-
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                              p_out=P_imp,p_Te_out=dP_imp_dT,z_out=Z_imp,z_Te_out=dZ_imp_dT,&
 !                              z_TeTe_out=d2Z_imp_dT2)
@@ -872,12 +883,6 @@ do ms=1, n_gauss
        dE_ion_dT = dE_ion_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ
 
      else
-
-       if (allocated(P_imp)) deallocate(P_imp)
-       if (allocated(dP_imp_dT)) deallocate(dP_imp_dT)
-
-       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
-       allocate(dP_imp_dT(0:imp_adas(index_main_imp)%n_Z))
 
 !       call imp_cor(index_main_imp)%interp(density=20.,temperature=log10(Te_corr_eV*EL_CHG/K_BOLTZ),&
 !                                          z_out=Z_imp,z_Te_out=dZ_imp_dT,z_TeTe_out=d2Z_imp_dT2)
@@ -946,16 +951,21 @@ do ms=1, n_gauss
        Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
        dZ_eff_imp_dT = dZ_eff_imp_dT + dP_imp_dT(ion_i) * real(ion_i,8)**2 ! Its temperature gradient
      end do
-     Z_eff        = Z_eff / ne_JOREK
-     if (Z_eff < 1.) Z_eff = 1.
-     if (Z_eff > (imp_adas(index_main_imp)%n_Z)**2) Z_eff = (imp_adas(index_main_imp)%n_Z)**2
+     Z_eff         = Z_eff / ne_JOREK
+     dZ_eff_imp_dT = dZ_eff_imp_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! Convert gradient from /K to /JOREK unit
+
+     if ((Z_eff_imp < 0.d0) .or. (Z_eff_imp > imp_adas(1)%n_Z**2)) then
+       Z_eff_imp = min(max(Z_eff_imp,0.d0),real(imp_adas(1)%n_Z)**2)       
+       dZ_eff_imp_dT = 0.d0
+     endif
 
      ! Then three(!) gradients
-     if (Z_eff >= 1.) then
+     if ( (Z_eff >= 1.d0) .and. (Z_eff <= imp_adas(1)%n_Z) ) then
        do ion_i=1, imp_adas(index_main_imp)%n_Z
          dZ_eff_dT  = dZ_eff_dT + m_i_over_m_imp * rn0_corr * dP_imp_dT(ion_i) * real(ion_i,8)**2
        end do
        dZ_eff_dT    = dZ_eff_dT / ne_JOREK
+       dZ_eff_dT    = dZ_eff_dT * dTe_corr_eV_dT * EL_CHG / K_BOLTZ ! convert from K to JOREK unit
        dZ_eff_dT    = dZ_eff_dT - Z_eff * dalpha_e_dT * rn0_corr / ne_JOREK
   
        dZ_eff_dr0   = (1. - Z_eff)/ne_JOREK
@@ -967,7 +977,11 @@ do ms=1, n_gauss
        dZ_eff_drn0  = dZ_eff_drn0 / ne_JOREK
        dZ_eff_drn0  = dZ_eff_drn0 - Z_eff * alpha_e / ne_JOREK
      else
-       Z_eff        = 1.
+       if (Z_eff < 1.) Z_eff = 1.
+       if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
+       dZ_eff_dT      = 0.d0 
+       dZ_eff_dr0     = 0.d0 
+       dZ_eff_drn0    = 0.d0 
      end if
 
      ! This is to represent the dependence on Z_eff in resistivity
@@ -982,12 +996,12 @@ do ms=1, n_gauss
      if ( eta_T_dependent ) then
        deta_dr0  = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
        deta_drn0 = eta_T * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
-       deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
+       deta_dT   = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT
        eta_T     = eta_T * eta_coef
 
        deta_dr0_ohm  = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
        deta_drn0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drn0 * drn0_corr_dn
-       deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT * dTe0_corr_dT
+       deta_dT_ohm   = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT
        eta_T_ohm = eta_T_ohm * eta_coef
      end if
 
@@ -1029,29 +1043,47 @@ do ms=1, n_gauss
    ! --- Source of neutrals from Massive Gas Injection (MGI)
    !--------------------------------------------------------
 
-     source_imp = 0.d0
-     source_bg  = 0.d0
+     source_imp = 0.d0; source_imp_arr = 0.d0
+     source_bg  = 0.d0; source_bg_arr = 0.d0
+
+     source_bg_drift_arr = 0.d0
 
 !============================================================!
 ! Important note: in order to implementing more complicated  !
 !    model, we should add more arguments to inj_source       !
 !============================================================!
 
-     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
+     call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp,source_bg_drift_arr)
+
+     do i_inj = 1,n_inj
+       source_imp = source_imp + source_imp_arr(i_inj)
+       if (drift_distance(i_inj) /= 0.d0) then
+         source_bg = source_bg + source_bg_drift_arr(i_inj)
+       else
+         source_bg = source_bg + source_bg_arr(i_inj)
+       end if
+     end do
 
      ! This is to detect N/A
      if (source_imp /= source_imp .or. source_bg /= source_bg) then
-       write(*,*) "WARNING: source_imp = ", source_imp
-       write(*,*) "WARNING: source_bg = ", source_bg
+       write(*,*) "ERROR in mod_elt_matrix_fft(502): source_imp = ", source_imp
+       write(*,*) "ERROR in mod_elt_matrix_fft(502): source_bg = ", source_bg
        stop
      end if
      
-     if (source_imp .lt. 0.d0) then
-      source_imp = 0.d0
-     endif
-     if (source_bg .lt. 0.d0) then
-      source_bg = 0.d0
-     endif
+     source_imp = max(0., source_imp)
+     source_bg  = max(0., source_bg)
+
+     ! teleported energy
+     power_dens_teleport_ju_arr = 0.d0
+     power_dens_teleport_ju     = 0.d0
+     do i_inj = 1,n_inj
+       if (energy_teleported(i_inj) /= 0.d0) then
+         power_dens_teleport_ju_arr(i_inj) = (-source_bg_arr(i_inj) + source_bg_drift_arr(i_inj)) * energy_teleported(i_inj) * & 
+                                             EL_CHG * (GAMMA-1.) * MU_ZERO * 1.d20 * central_density
+         power_dens_teleport_ju = power_dens_teleport_ju + power_dens_teleport_ju_arr(i_inj)
+       end if
+     end do
 
    !--------------------------------------------------------
    ! --- Radiation from background impurity
@@ -1113,19 +1145,20 @@ do ms=1, n_gauss
     nu_e_bg  = nu_e_bg * t_norm
 
     dTe_i    = (nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)
-    dTi_e    = -dTe_i
 
     !Calculating the density and temperature derivative for amats
     !We negelect the coulomb log's dericatives due to their smallness
     dnu_e_imp_dTi   = -1.5*MASS_ELECTRON*nu_e_imp*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr)
     dnu_e_imp_dTe   = -1.5*MASS_PROTON*m_imp*nu_e_imp*dTe0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*m_imp*Te0_corr) &
-                      + 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
-                        * dZ_eff_imp_dT * (1.d14*central_density*rn0_corr*m_i_over_m_imp) * lambda_e_imp &
+                      + nu_e_imp * dZ_eff_imp_dT / Z_eff_imp
+
+    dnu_e_imp_drhon = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
+                        * Z_eff_imp * (1.d14*central_density*drn0_corr_dn*m_i_over_m_imp) * lambda_e_imp &
                         / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
                         / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
-
-    dnu_e_imp_drhon = nu_e_imp * drn0_corr_dn / rn0_corr
     dnu_e_imp_drho  = 0.
+    dnu_e_imp_drhon = dnu_e_imp_drhon * t_norm
+    dnu_e_imp_drho  = dnu_e_imp_drho * t_norm
 
     dnu_e_bg_dTi    = -1.5*MASS_ELECTRON*nu_e_bg*dTi0_corr_dT / (MASS_ELECTRON*Ti0_corr + MASS_PROTON*central_mass*Te0_corr)
     dnu_e_bg_dTe    = -1.5*MASS_PROTON*central_mass*nu_e_bg*dTe0_corr_dT &
@@ -1134,32 +1167,41 @@ do ms=1, n_gauss
       dnu_e_bg_drhon = 0.
       dnu_e_bg_drho  = 0.
     else
-      dnu_e_bg_drhon = -nu_e_bg * drn0_corr_dn / (r0_corr-rn0_corr)
-      dnu_e_bg_drho  = nu_e_bg * dr0_corr_dn / (r0_corr-rn0_corr)
+      dnu_e_bg_drhon = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
+                         * (1.d14*central_density*(-drn0_corr_dn)) * lambda_e_bg &
+                         / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
+                         / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
+      dnu_e_bg_drho  = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
+                         * (1.d14*central_density*(dr0_corr_dn)) * lambda_e_bg &
+                         / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
+                         / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
+      dnu_e_bg_drhon = dnu_e_bg_drhon * t_norm
+      dnu_e_bg_drho  = dnu_e_bg_drho * t_norm
     end if
 
     ddTe_i_dTi      = (dnu_e_imp_dTi + dnu_e_bg_dTi) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
                       + (nu_e_imp + nu_e_bg) * dTi0_corr_dT * (r0_corr + alpha_e*rn0_corr)
     ddTe_i_dTe      = (dnu_e_imp_dTe + dnu_e_bg_dTe) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
                       - (nu_e_imp + nu_e_bg) * dTe0_corr_dT * (r0_corr + alpha_e*rn0_corr)                 &
-                      - (nu_e_imp + nu_e_bg) * Te0_corr     * dalpha_e_dT * rn0_corr
+                      + (nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * dalpha_e_dT * rn0_corr
     ddTe_i_drhon    = (dnu_e_imp_drhon + dnu_e_bg_drhon) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
                       +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * alpha_e * drn0_corr_dn
     ddTe_i_drho     = (dnu_e_imp_drho + dnu_e_bg_drho) * (Ti0_corr - Te0_corr) * (r0_corr + alpha_e*rn0_corr)&
                       +(nu_e_imp + nu_e_bg) * (Ti0_corr - Te0_corr) * dr0_corr_dn
 
+    if (r0_corr+alpha_e*rn0_corr < 0.) then
+      dTe_i         = 0.
+      ddTe_i_dTi    = 0.
+      ddTe_i_dTe    = 0.
+      ddTe_i_drhon  = 0.
+      ddTe_i_drho   = 0.
+    end if
+
+    dTi_e           = -dTe_i
     ddTi_e_dTi      = -ddTe_i_dTi
     ddTi_e_dTe      = -ddTe_i_dTe
     ddTi_e_drhon    = -ddTe_i_drhon
     ddTi_e_drho     = -ddTe_i_drho
-
-    if (r0_corr+alpha_e*rn0_corr < 0.) then
-      dTi_e         = 0.
-      ddTi_e_dTi    = 0.
-      ddTe_i_dTe    = 0.
-      ddTi_e_drhon  = 0.
-      ddTi_e_drho   = 0.
-    end if
 
 !--------------------------------------------------------
 
@@ -1215,9 +1257,9 @@ do ms=1, n_gauss
 
      do i=1,n_vertex_max
 
-       do j=1,n_order+1
+       do j=1,n_degrees
 
-         index_ij = n_var*(n_order+1)*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
+         index_ij = n_var*n_degrees*(i-1) + n_var * (j-1) + 1   ! index in the ELM matrix
 
          v   =  H(i,j,ms,mt) * element%size(i,j)
          v_x = (  y_t(ms,mt) * h_s(i,j,ms,mt) - y_s(ms,mt) * h_t(i,j,ms,mt) ) * element%size(i,j) / xjac
@@ -1428,7 +1470,8 @@ do ms=1, n_gauss
                     + zeta * v * Ti0 * delta_g(mp,5,ms,mt) * BigR                                      * xjac &
                     + zeta * v * alpha_i * Ti0 * delta_g(mp,8,ms,mt) * BigR                            * xjac &
 !============================Behold, the parallel viscous heating terms!=============
-                    + (GAMMA - 1.) * v * BigR * visco_par * (vpar0_x * vpar0_x + vpar0_y * vpar0_y) * xjac * tstep &
+                    + (GAMMA - 1.) * v * BigR * visco_par_heating * (vpar0_x * vpar0_x + vpar0_y * vpar0_y) * xjac * tstep &
+                    + (GAMMA - 1.) * vpar0 * BigR * visco_par_heating * (v_x * vpar0_x     + v_y * vpar0_y) * xjac * tstep &
 !==========================End of viscous heating terms==============================
 !===================== Additional terms from friction terms============
                     + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp) * xjac * tstep &
@@ -1567,7 +1610,9 @@ do ms=1, n_gauss
 !###################################################################################################
 
          rhs_ij_9 =   v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep &
- 
+
+                    + v * BigR * power_dens_teleport_ju                                * xjac * tstep &
+
                     + v * (r0 + rn0*alpha_e_bis) * BigR**2 * ( Te0_s * u0_t - Te0_t * u0_s)   * tstep &
                     + v * Te0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * tstep &
                     + v * alpha_e * Te0 * BigR**2 * (rn0_s * u0_t - rn0_t * u0_s)             * tstep &
@@ -1704,7 +1749,7 @@ do ms=1, n_gauss
 
          do k=1,n_vertex_max
 
-           do l=1,n_order+1
+           do l=1,n_degrees
 
              psi   = H(k,l,ms,mt) * element%size(k,l)
 
@@ -1770,7 +1815,7 @@ do ms=1, n_gauss
              rhon_x_hat = 2.d0 * BigR * BigR_x  * rhon + BigR**2 * rhon_x    
              rhon_y_hat = BigR**2 * rhon_y                                   
 
-             index_kl = n_var*(n_order+1)*(k-1) + n_var * (l-1) + 1   ! index in the ELM matrix
+             index_kl = n_var*n_degrees*(k-1) + n_var * (l-1) + 1   ! index in the ELM matrix
 
 !###################################################################################################
 !#  equation 1   (induction equation)                                                              #
@@ -2308,7 +2353,9 @@ do ms=1, n_gauss
                        - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp) * xjac * theta * tstep &
 !==============================End of friction terms=================
 !============================Behold, the parallel viscous heating terms!=============
-                       - (GAMMA - 1.) * v * BigR * visco_par * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * v * BigR * visco_par_heating * 2.d0 * (vpar_x*vpar0_x + vpar_y*vpar0_y) * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * vpar0 * BigR * visco_par_heating    * (vpar_x*v_x     + vpar_y*v_y)     * xjac * theta * tstep  &
+                       - (GAMMA - 1.) * vpar * BigR * visco_par_heating    * (vpar0_x*v_x     + vpar0_y*v_y)    * xjac * theta * tstep  &
 !==========================End of viscous heating terms==============================
 
                        + TG_num6 * 0.25d0 / BigR * 2.d0 * vpar0*vpar &
@@ -3336,9 +3383,9 @@ do ms=1, n_gauss
  enddo
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
     in_fft =  ELM_p(1:n_plane,i,j)
 #ifdef USE_FFTW
@@ -3399,9 +3446,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_n(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -3467,9 +3514,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_k(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -3534,9 +3581,9 @@ do i=1,n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do i=1,n_vertex_max*n_var*(n_order+1)
+do i=1,n_vertex_max*n_var*n_degrees
 
-  do j=1, n_vertex_max*n_var*(n_order+1)
+  do j=1, n_vertex_max*n_var*n_degrees
 
   if (maxval(abs(ELM_kn(1:n_plane,i,j))) .ne. 0.d0) then
 
@@ -3605,7 +3652,7 @@ enddo
 
 ELM = 0.5d0 * ELM
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+do j=1, n_vertex_max*n_var*n_degrees
 
   in_fft = RHS_p(1:n_plane,j)
 #ifdef USE_FFTW
@@ -3629,7 +3676,7 @@ do j=1, n_vertex_max*n_var*(n_order+1)
 
 enddo
 
-do j=1, n_vertex_max*n_var*(n_order+1)
+do j=1, n_vertex_max*n_var*n_degrees
 
   in_fft = RHS_k(1:n_plane,j)
 #ifdef USE_FFTW

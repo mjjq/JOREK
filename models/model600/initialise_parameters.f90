@@ -3,9 +3,6 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: no_zeros_mumps, mumps_ordering
-use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
-    pastix_maxthrd
 use vacuum
 use pellet_module
 use live_data
@@ -34,9 +31,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
                 SIG_up_leg_0, SIG_up_leg_1, SIG_up_priv,            &
-                SIG_outer, SIG_inner,                               &
+                SIG_outer, SIG_inner, SIG_theta_up,                 &
                 dPSI_outer, dPSI_inner, dPSI_up_priv,               &
-                nout, xr1, sig1, xr2, sig2,                         &
+                nout, nout_projection, xr1, sig1, xr2, sig2,        &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 rect_grid_vac_psi,                                  &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
@@ -76,10 +73,17 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_perp, ZK_i_perp, ZK_e_perp, D_par, D_perp,       &
                 heatsource_e, heatsource_i, heatsource,             &
                 particlesource, tauIC, Wdia,                        &
-                eta_num, visco_num, visco_par_num, D_perp_num,      &
+                eta_num, visco_num, visco_par_num,                  &
+                D_perp_num,  D_perp_num_tanh,                       &
+                D_perp_num_tanh_psin, D_perp_num_tanh_sig,          &
+                ZK_perp_num, ZK_perp_num_tanh,                      &
+                ZK_perp_num_tanh_psin, ZK_perp_num_tanh_sig,        &
                 eta_num_T_dependent, visco_num_T_dependent,         &
-                ZK_perp_num, Dn_perp_num, time_evol_scheme,         &
-                ZK_i_perp_num, ZK_e_perp_num,                       &
+                Dn_perp_num, time_evol_scheme,                      &
+                ZK_i_perp_num, ZK_i_perp_num_tanh,                  &
+                ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig,    &
+                ZK_e_perp_num, ZK_e_perp_num_tanh,                  &
+                ZK_e_perp_num_tanh_psin, ZK_e_perp_num_tanh_sig,    &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi, pellet_density,       &
@@ -102,10 +106,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 n_tor_fft_thresh, use_strumpack,                    &
-                pastix_smp_only, refinement, force_central_node,    &
+                refinement, force_central_node,                     &
                 fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
-                no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 
                 heatsource_psin, heatsource_sig,                    &
@@ -137,7 +140,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_tor_rot, tor_frequency, spi_num_vol,            &
                 NEO, neo_file, aki_neo_const, amu_neo_const,        &
                 D_prof_neg_thresh, ZK_prof_neg_thresh, T_min,       &
-				T_min_neg,rho_min_neg,implicit_heat_source,         &
+                D_prof_imp_neg_thresh, D_prof_tot_neg_thresh,       &
+                ZK_par_neg_thresh, D_imp_extra_neg_thresh,          &
+                T_min_neg,rho_min_neg,implicit_heat_source,         &
                 ne_SI_min, Te_eV_min, rn0_min,                      &
                 D_neutral_x, D_neutral_y, D_neutral_p,              &
                 neutral_reflection, rho_min,                        &
@@ -181,7 +186,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family, Z_xpoint_limit,                   &
+                ranks_per_family, treat_axis, Z_xpoint_limit, tgnum_rhoimp,     &
                 tgnum_psi, tgnum_u, tgnum_zj, tgnum_w, tgnum_rho,   &
                 tgnum_T, tgnum_Ti, tgnum_Te, tgnum_vpar, tgnum_rhon,&
                 tgnum_nre, tgnum_AR, tgnum_AZ, tgnum_A3,            &
@@ -197,7 +202,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
                 ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
                 Dn_pol_sc_num, Dn_p_sc_num, cte_current_FB_fact,    &
-                eta_num_prof, eta_num_psin_dependent
+                D_perp_imp_sc_num, D_par_imp_sc_num,                &
+                eta_num_prof, eta_num_psin_dependent, D_par_imp,    &
+                D_perp_imp, spi_quantity_bg, pellet_density_bg,     &
+                visco_par_heating, constant_imp_source,             &
+                T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar,              &
+                CARIDDI_mode
+
 
 if (my_id .eq. 0) then
 
@@ -268,6 +279,13 @@ if (my_id .eq. 0) then
     nstep_n(1) = nstep
   endif
 
+  ! --- Fill the same ablation model to others if not specified to keep the old behavior
+  do i = 2,n_inj
+    if (spi_abl_model(i) < 0) then
+      spi_abl_model(i) = spi_abl_model(1)
+    end if
+  end do
+
   call allocate_live_data()
 
 endif
@@ -325,12 +343,20 @@ if ( my_id == 0 ) then
     stop
   end if
 
-  if (drift_distance < 0.d0 .or. energy_teleported < 0.d0) then 
-    write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
-    stop
-  end if
+  do i = 1,n_inj
+    if (drift_distance(i) < 0.d0 .or. energy_teleported(i) < 0.d0) then 
+      write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
+      stop
+    end if
+  end do
 
   if (using_spi) call init_spi_all()
+  ! ---- This is an ad hoc way to stop duplication of neutral source and ionized main species source, should find a permanenty solution later
+
+  if (with_impurities .and. with_neutrals .and. using_spi .and. (maxval(spi_quantity_bg)>0.0)) then
+    write(*,*) "WARNNING! Currently do not support both with_neutrals and with impurities enabled at the same time while injecting background species! Should be fixed sonn. EXITING!"
+    stop
+  endif
 
 end if
 

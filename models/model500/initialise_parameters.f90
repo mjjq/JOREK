@@ -3,9 +3,6 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
-use mumps_module,  only: no_zeros_mumps, mumps_ordering
-use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, &
-    pastix_maxthrd
 use vacuum
 use pellet_module
 use live_data
@@ -34,7 +31,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
                 SIG_up_leg_0, SIG_up_leg_1, SIG_up_priv,            &
-                SIG_outer, SIG_inner,                               &
+                SIG_outer, SIG_inner, SIG_theta_up,                 &
                 dPSI_outer, dPSI_inner, dPSI_up_priv,               &
                 nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
@@ -85,10 +82,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element, use_wsmp, &
                 n_tor_fft_thresh, use_strumpack,                    &
-                pastix_smp_only, refinement, force_central_node,    &
+                refinement, force_central_node,                     &
                 fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
-                no_zeros_pastix, no_zeros_mumps,                    &
                 eta_T_dependent, visco_T_dependent,                 &
                 zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        &                                 
                 heatsource_psin, heatsource_sig,                    &
@@ -151,7 +147,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family, cte_current_FB_fact
+                ranks_per_family, cte_current_FB_fact, treat_axis,  &
+                CARIDDI_mode
 
 if (my_id .eq. 0) then
 
@@ -232,6 +229,13 @@ if (my_id .eq. 0) then
     nstep_n(1) = nstep
   endif
 
+  ! --- Fill the same ablation model to others if not specified to keep the old behavior
+  do i = 2,n_inj
+    if (spi_abl_model(i) < 0) then
+      spi_abl_model(i) = spi_abl_model(1)
+    end if
+  end do
+
   call allocate_live_data()
 
 endif
@@ -279,6 +283,13 @@ if ( my_id == 0 ) then
     write(*,*) "ERROR: Only support ADAS data for more than one impurities, through setting use_imp_adas to true, EXITING!"
     stop
   end if
+
+  do i = 1,n_inj
+    if (drift_distance(i) < 0.d0 .or. energy_teleported(i) < 0.d0) then
+      write(*,*) "ERROR: drift_distance and energy_teleported should be 0 or positive as signs already handled in codes, EXITING!"
+      stop
+    end if
+  end do
 
   if (using_spi) call init_spi_all()
 

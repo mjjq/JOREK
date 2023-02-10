@@ -22,6 +22,7 @@ module phys_module
   real*8  :: eta_rst              !< eta value from restart file
   logical :: visco_T_dependent    !< Viscosity dependent on temperature? Otherwise constant.
   real*8  :: visco_par            !< Parallel viscosity (normalized)
+  real*8  :: visco_par_heating    !< Parallel viscosity used in the parallel viscous heating term (normalized)
   real*8  :: F0                   !< Determines fixed toroidal magnetic field: \f$ B_\phi = F_0/R \f$
   real*8  :: central_density      !< particle density at the magnetic axis (in units of \f$10^{20} m^{-3}\f$)
   real*8  :: central_mass         !< average ion mass in atomic mass units (constant in time and space)
@@ -54,6 +55,8 @@ module phys_module
   real*8  :: min_sheath_angle     !< For sheath boundary conditions: Minimum incident angle for heat and particle fluxes (in degrees)
   integer :: mode(n_tor)          !< Toroidal mode number corresponding to the JOREK modes, e.g., for n_period=8 and n_tor=3, mode(:)=0,8,8
   integer :: nout                 !< Output a restart file every nout timesteps
+  integer :: nout_projection      !< Output particle projection every nout_projection timesteps (only for diagnostics)
+                                  !< Note that the 'to_h5' or 'to_vtk' flag should be .true. in the 'new_projection' function for this parameter to be in play
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
   real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
@@ -67,6 +70,7 @@ module phys_module
   logical :: refinement           !< Use mesh refinement? (not presently available)
   logical :: force_central_node   !< Force all nodes in the center to have the same values in flux aligned grids or independent values?
   logical :: fix_axis_nodes       !< Fix t-derivative and cross st-derivative on axis to avoid noise
+  logical :: treat_axis           !> Flag for chosing grid axis treatment (see grids/mod_axis_treatment.f90)
   logical :: bc_natural_flux      !< boundary conditions for flux surface boundaries (2 and 3)
   logical :: bc_natural_open      !< use natural boundary conditions on the open fieldlines
   logical :: produce_live_data    !< Write data 'macroscopic_vars.dat' during the code run allowing to use plot_live_data.sh?
@@ -78,6 +82,7 @@ module phys_module
   logical :: equil                !< compute equilibrium
   logical :: no_mach1_bc          !< Never apply Mach-1 BCs
   logical :: Mach1_openBC         !< Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  logical :: Mach1_fix_B          !< Full-MHD: Use the initial magnetic field for Mach1 BCs on targets, ie. without AR and AZ variations
 
   ! --- RESISTIVITY SWITCHES FOR AR AND AZ EQUATIONS
   ! --- 1.
@@ -120,6 +125,9 @@ module phys_module
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
   real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
+  integer :: mumps_ordering       !< MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
+  integer :: pastix_maxthrd       !< maximum number of threads used by pastix solver (could be beneficial to use the reduced number)
+  real*8  :: pastix_pivot         !< Pastix epsilon for magnitude control (pivot threshold)
 
   ! ------------------------------------------------
   ! --- Structures to implement BCs in model600
@@ -187,6 +195,7 @@ module phys_module
   integer :: last_target_point		   !< index of the last  target point on the limiter (does NOT need to be > first_target_point)
   
   !> Points used as blocks to extend grid into complex wall structures, see https://www.jorek.eu/wiki/doku.php?id=wallgrid_tutorial
+  real*8  :: surface_cross_tol                                                  !< Tolerance when looking for crossing of polar lines and surfaces, needs to be > 1.0
   real*8  :: eqdsk_psi_fact                                                     !< multiply eqdsk psi by factor for grid_inside_wall
   logical :: extend_existing_grid                                               !< Add patches to existing grid from restart file
   integer, parameter :: n_wall_blocks_max = 30                                  !< Maximum number of blocks (30 should be enough)
@@ -263,12 +272,20 @@ module phys_module
   real*8  :: heatsource_gauss_e_sig    !< Width over which electrons Gaussian source extends
   real*8  :: heatsource_gauss_i_psin   !< Position around which ions Gaussian source is located
   real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
+  real*8  :: constant_imp_source       !< Adds a constant impurity source
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
-  real*8  :: eta_num, visco_num, visco_par_num, D_perp_num, Zk_perp_num, Dn_perp_num, Zk_i_perp_num, Zk_e_perp_num
+  real*8  :: eta_num, visco_num, visco_par_num,                                      &
+             D_perp_num, D_perp_num_tanh, D_perp_num_tanh_psin, D_perp_num_tanh_sig, &
+             ZK_perp_num, ZK_i_perp_num, ZK_e_perp_num,                              &
+             ZK_perp_num_tanh, ZK_perp_num_tanh_psin, ZK_perp_num_tanh_sig,          &
+             ZK_i_perp_num_tanh, ZK_i_perp_num_tanh_psin, ZK_i_perp_num_tanh_sig,    &
+             ZK_e_perp_num_tanh, ZK_e_perp_num_tanh_psin, ZK_e_perp_num_tanh_sig
+  real*8  :: Dn_perp_num
+
   !> @name Shock-capturing terms
   logical :: use_sc  !< Use shock-capturing stabilization
-  real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num
+  real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num, D_perp_imp_sc_num, D_par_imp_sc_num
   real*8  :: ZK_perp_sc_num, ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num, ZK_e_perp_sc_num, ZK_e_par_sc_num
   real*8  :: visco_sc_num, visco_par_sc_num
   logical :: eta_num_T_dependent     !< Hyper-resistivity dependent on temperature? Otherwise constant.
@@ -382,9 +399,9 @@ module phys_module
   real*8  :: ns_radius         !< Poloidal radius of gas source
   real*8  :: ns_deltaphi       !< Toroidal extension of gas source
   real*8  :: ns_delta_minor_rad  !< Extension of gas source in the minor radial direction (if greater than 0.)
-  real*8  :: ns_tor_norm       !< Gas source normalization factor related to its toroidal shape
-  real*8  :: drift_distance    !< Shift the R position of the neutral deposition outward by drift_distance (in meters) for plasmoid drift
-  real*8  :: energy_teleported !< Energy (in eV) teleported per atom to consider plasmoid drift effects
+  real*8  :: ns_tor_norm         !< Gas source normalization factor related to its toroidal shape
+  real*8  :: drift_distance(n_inj_max)    !< Shift the R position of the neutral deposition outward by drift_distance (in meters) for plasmoid drift
+  real*8  :: energy_teleported(n_inj_max) !< Energy (in eV) teleported per atom to consider plasmoid drift effects
 
   character(len=80) :: imp_type(n_imp_max) !< Type of injected material or background impurity species: Argon, neon, ...
   logical :: use_imp_adas       !< Use open adas to calculate ionization, recombination and radiation coeffients for impurities
@@ -441,11 +458,11 @@ module phys_module
   integer :: n_spi(n_inj_max)   !< Number of shattered fragment injected for each injection
   integer :: n_spi_tot          !< Total number of shattered fragments injected
   integer :: n_inj              !< Number of injections
-  integer :: spi_abl_model      !< Determine which type of ablation model is used.
-                                !< 0 for constant release rate, 1 for NGS model,
-                                !< 2 for Sergeev formula, 3 for Parks formula.
-                                !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
-                                !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
+  integer :: spi_abl_model(n_inj_max)  !< Determine which type of ablation model is used.
+                                       !< 0 for constant release rate, 1 for NGS model,
+                                       !< 2 for Sergeev formula, 3 for Parks formula.
+                                       !< For details see Nucl. Fusion 61 (2021) 026015 (23pp), 
+                                       !< https://iopscience.iop.org/article/10.1088/1741-4326/abcbcb
   integer :: spi_rnd_seed(40)   !< Random seed array used for the generation of the SPI velocity spread
 
   character(len=256) :: spi_shard_file(n_inj_max)!< The name of the shard size file
@@ -539,6 +556,7 @@ module phys_module
   real*8  :: SIG_private       !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_up_priv       !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_theta         !< Width with grid accumulation (for flux-aligned grid)
+  real*8  :: SIG_theta_up      !< Width with grid accumulation (for flux-aligned grid; only valid for double-null)
   real*8  :: SIG_leg_0         !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_leg_1         !< Width with grid accumulation (for flux-aligned grid)
   real*8  :: SIG_up_leg_0      !< Width with grid accumulation (for flux-aligned grid)
@@ -557,6 +575,9 @@ module phys_module
   real*8  :: ZK_perp(10)   = 0.d0 !< Coefficients for perpendicular heat diffusion profile
   real*8  :: ZK_par               !< Parallel heat diffusion value in the plasma center
   real*8  :: ZK_par_max           !< Do not use larger parallel heat diffusion values for numerical reasons
+  real*8  :: T_min_ZKpar          !< Do not use smaller parallel heat diffusion values below this MHD temperature (Ti+Te); JOREK units
+  real*8  :: Ti_min_ZKpar         !< Do not use smaller parallel heat diffusion values below Ti; JOREK units
+  real*8  :: Te_min_ZKpar         !< Do not use smaller parallel heat diffusion values below Te; JOREK units
   real*8  :: ZK_par_SpitzerHaerm  !< Spitzer-Haerm parallel heat diffusion value in the plasma center (assuming a Z=1 plasma with Te=Ti)
   real*8  :: ZK_i_perp(10) = 0.d0 !< Coefficients for perpendicular ion heat diffusion profile
   real*8  :: ZK_e_perp(10) = 0.d0 !< Coefficients for perpendicular electron heat diffusion profile
@@ -784,6 +805,7 @@ module phys_module
   real*8              :: tgnum_Te     
   real*8              :: tgnum_vpar   
   real*8              :: tgnum_rhon   
+  real*8              :: tgnum_rhoimp 
   real*8              :: tgnum_nre    
   real*8              :: tgnum_AR     
   real*8              :: tgnum_AZ    
@@ -793,8 +815,10 @@ module phys_module
   logical             :: keep_current_prof !< Artificial current source to approximately keep the initial current profile, i.e., \f$\eta(j-j0)\f$?
   
   !> @name Numerical parameters
-  real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative density
-  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
+  real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative background species density
+  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if r0-rimp0 < D_prof_neg_thresh
+  real*8              :: D_prof_imp_neg_thresh  !< D_prof_neg becomes effective if rimp0 < D_prof_imp_neg_thresh
+  real*8              :: D_prof_tot_neg_thresh  !< D_prof_neg becomes effective if r0 < D_prof_tot_neg_thresh
   real*8              :: ZK_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
   real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
@@ -851,6 +875,7 @@ module phys_module
   logical :: use_pcs          ! use pressure coupling scheme for fast particles
   logical :: use_pcs_full     ! use full tensor pressure coupling scheme for fast particles
   logical :: use_cx           ! switch on sputtering         (in particle module)
+  logical :: use_marker       ! This flag determines whether to use marker particles to treat impurity (Placeholder)
   logical :: use_sputtering   ! switch on charge-exchange    (in particle module)
   logical :: use_ionisation   ! switch on ionisation         (in particle module)
   real*8  :: n_particles      ! the number of particles (real on purpose)
@@ -873,7 +898,7 @@ module phys_module
   real*8  :: weights_per_family(n_fam_max)            !< Multiplication factor of family's contribution to the full solution
   logical :: autodistribute_ranks                     !< use automatic or manual rank distribution
   integer :: ranks_per_family(n_fam_max)              !< Number of MPI ranks per mode families
-  
+ 
   contains
   
 end module phys_module

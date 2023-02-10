@@ -47,7 +47,7 @@ real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
 real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
-real*8     :: sigmas(16), dZ_axis, dR_axis, Z_axis_int, Z_axis_old, R_axis_old, R_axis_int, area_ref
+real*8     :: sigmas(17), dZ_axis, dR_axis, Z_axis_int, Z_axis_old, R_axis_old, R_axis_int, area_ref
 integer    :: n_grids(12)
 logical    :: freeboundary_equil2
 real*8     :: T_prof, T_0_old, FF_0_old, T_1_old, FF_1_old
@@ -147,7 +147,7 @@ if (my_id == 0) then
       if ( (ES%Z_lim .gt. ES%Z_xpoint(1)) .and. (ES%Z_lim .lt. ES%Z_xpoint(2)) ) then
         if (n_limiter /= 0) then   ! else n_limiter = 0 and psi_bnd is set to 0
           ES%psi_bnd = ES%psi_lim
-          write(*,'(A,3f8.3)') ' LIMITER PLASMA ',psi_lim,R_lim,Z_lim
+          write(*,'(A,3f8.3)') ' LIMITER PLASMA ',ES%psi_lim,ES%R_lim,ES%Z_lim
         endif
       endif
     endif
@@ -243,7 +243,7 @@ if (freeboundary_equil) then
         ES%ifail_axis = ifail   
       endif
       
-      write(10,'(i6,9e20.12)') iter, current_tot, R_axis, Z_axis, ES%psi_bnd-ES%psi_axis
+      write(10,'(i6,9e20.12)') iter, current_tot, ES%R_axis, ES%Z_axis, ES%psi_bnd-ES%psi_axis
       
       ES%psi_bnd = 0.d0
    
@@ -419,6 +419,8 @@ if (my_id == 0) then
   psi_axis = psi_axis - psi_offset_freeb
   psi_bnd  = psi_bnd  - psi_offset_freeb
 
+  ! --- This fills in the data for the current variable "zj" (for R-MHD only)
+#ifndef fullmhd
   do i=1,node_list%n_nodes
   
     node_list%node(i)%values(1,1,1) = node_list%node(i)%values(1,1,1) - psi_offset_freeb
@@ -449,22 +451,8 @@ if (my_id == 0) then
     		     zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
     endif
   
-#ifdef fullmhd
-      call F_profile(xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,F_prof,dF_dpsi      ,dF_dz      , &
-                                                                  dF_dpsi2    ,dF_dz2       ,dF_dpsi_dz , &
-                                                                  zFFprime    ,dFFprime_dpsi,dFFprime_dz, &
-                                                                  dFFprime_dpsi2,dFFprime_dz2 ,dFFprime_dpsi_dz)
-  
-      node_list%node(i)%Fprof_eq(1) =   F_prof
-      node_list%node(i)%Fprof_eq(2) =   dF_dpsi * node_list%node(i)%values(1,2,var_A3)  + dF_dz * node_list%node(i)%x(1,2,2)
-      node_list%node(i)%Fprof_eq(3) =   dF_dpsi * node_list%node(i)%values(1,3,var_A3)  + dF_dz * node_list%node(i)%x(1,3,2)
-      node_list%node(i)%Fprof_eq(4) =   dF_dpsi * node_list%node(i)%values(1,4,var_A3)  + dF_dz * node_list%node(i)%x(1,4,2)      &
-                                      + dF_dpsi2 * node_list%node(i)%values(1,2,var_A3) * node_list%node(i)%values(1,3,var_A3)  &
-                                      + dF_dz2   * node_list%node(i)%x(1,2,2) * node_list%node(i)%x(1,3,2)
-#else
     call FFprime(    xpoint2, xcase2, Z, Z_xpoint, psi,psi_axis,psi_bnd,zFFprime,dFFprime_dpsi,dFFprime_dz, &
                                                                dFFprime_dpsi2,dFFprime_dz2, dFFprime_dpsi_dz, .true.)
-#endif
 
   
     zjz     = zFFprime      - R*R *      (dn_dpsi    * zT + zn * dT_dpsi)
@@ -568,6 +556,28 @@ if (my_id == 0) then
 
   enddo
   
+  ! --- Variable projection is better at higher order...
+  ! --- (by the way, we could use this for n_order=3 and remove all the above as well, 
+  ! --- and remove all derivatives from profiles functions, which are not really needed, 
+  ! --- except dn_dpsi and dT_dpsi for current profile...)
+  if (n_order .ge. 5) then
+    call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    if (xpoint2) then
+      ES%xpoint = xpoint2
+      ES%Z_xpoint = Z_xpoint
+    endif
+    ES%psi_bnd  = psi_bnd
+    ES%psi_axis = psi_axis
+    ES%Z_xpoint = Z_xpoint
+    ES%xpoint   = xpoint
+    ES%xcase    = xcase
+    call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
+                 var_psi,var_zj,1, psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,1)
+  endif
+#endif
+  ! --- END of filling data for current variable "zj" (R-MHD only)
+  
   ! --- Find flux surfaces and plot them; determine the q-profile.  
   if (xpoint2 .and. (n_flux .gt. 1)) then
     
@@ -585,6 +595,7 @@ if (my_id == 0) then
     sigmas(10) = SIG_up_leg_0; sigmas(11) = SIG_up_leg_1
     sigmas(12) = dPSI_open   ; sigmas(13) = dPSI_outer  ; sigmas(14) = dPSI_inner
     sigmas(15) = dPSI_private; sigmas(16) = dPSI_up_priv
+    sigmas(17) = SIG_theta_up
   
     n_grids(1) = 2*n_flux   ; n_grids(2) = n_tht
     n_grids(3) = 2*n_open   ; n_grids(4) = 2*n_outer  ; n_grids(5) = 2*n_inner

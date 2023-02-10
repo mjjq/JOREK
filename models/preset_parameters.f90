@@ -6,8 +6,6 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: no_zeros_mumps, mumps_ordering
-  use pastix_module, only: no_zeros_pastix, pastix_smp_only
   
   implicit none
   
@@ -44,6 +42,7 @@ subroutine preset_parameters
 
   visco = 1.d-5
   visco_par = 1.d-5
+  visco_par_heating = 0.d0
   
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)
@@ -129,6 +128,7 @@ subroutine preset_parameters
   SIG_private = 0.1d0
   SIG_up_priv = 0.1d0
   SIG_theta   = 0.03d0
+  SIG_theta_up= 999.d0
   SIG_leg_0   = 0.05d0
   SIG_leg_1   = 0.2d0
   SIG_up_leg_0= 0.05d0
@@ -217,6 +217,8 @@ subroutine preset_parameters
 
   D_prof_neg         = 1.d-5
   D_prof_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  D_prof_imp_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
+  D_prof_tot_neg_thresh  = 0.d0 ! default is zero for keeping the old behavior
 
   D_imp_extra_R = 0.d0
   D_imp_extra_Z = 0.d0
@@ -246,6 +248,9 @@ subroutine preset_parameters
   T_min              = 1.0d-20
   rho_min            = 1.0d-20
   T_min_neg          = -1.d12 !< only used if T_min_neg>0 , 2.01d-5*central_density*Tmin_ev (cd = 1, 20 eV)
+  T_min_ZKpar        = -1.d12 
+  Ti_min_ZKpar       = -1.d12 
+  Te_min_ZKpar       = -1.d12 
   rho_min_neg        = -1.d12
   
   implicit_heat_source = 0.d0
@@ -253,14 +258,18 @@ subroutine preset_parameters
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
 
-  eta_num       = 0.d0
-  visco_num     = 0.d0
-  visco_par_num = 0.d0
-  D_perp_num    = 0.d0
-  ZK_perp_num   = 0.d0
-  ZK_i_perp_num = 0.d0
-  ZK_e_perp_num = 0.d0
-  Dn_perp_num   = 0.d0
+  eta_num            = 0.d0
+  visco_num          = 0.d0
+  visco_par_num      = 0.d0
+  D_perp_num         = 0.d0
+  D_perp_num_tanh    = 0.d0; D_perp_num_tanh_psin    = 3.d-1; D_perp_num_tanh_sig    = 1.d-1
+  ZK_perp_num        = 0.d0
+  ZK_perp_num_tanh   = 0.d0; ZK_perp_num_tanh_psin   = 3.d-1; ZK_perp_num_tanh_sig   = 1.d-1
+  ZK_i_perp_num      = 0.d0
+  ZK_i_perp_num_tanh = 0.d0; ZK_i_perp_num_tanh_psin = 3.d-1; ZK_i_perp_num_tanh_sig = 1.d-1
+  ZK_e_perp_num      = 0.d0
+  ZK_e_perp_num_tanh = 0.d0; ZK_e_perp_num_tanh_psin = 3.d-1; ZK_e_perp_num_tanh_sig = 1.d-1
+  Dn_perp_num        = 0.d0
 
   use_sc = .false.
   visco_sc_num     = 0.d0
@@ -275,6 +284,8 @@ subroutine preset_parameters
   visco_par_sc_num = 0.d0
   Dn_pol_sc_num    = 0.d0
   Dn_p_sc_num      = 0.d0
+  D_perp_imp_sc_num= 0.d0
+  D_par_imp_sc_num = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7
@@ -505,6 +516,7 @@ subroutine preset_parameters
   index_start = 0
 
   nout = 9999999
+  nout_projection = -1
 
   rst_hdf5 = 1   ! =0,restart with binary files; =1, with HDF5 files
 
@@ -542,7 +554,13 @@ subroutine preset_parameters
   
   export_for_nemec   = .false.
   
-  gmres              = .true.               ! Use iterative solver
+  ! Use iterative solver by default if n_tor>1.
+  if ( n_tor == 1) then
+    gmres            = .false.
+  else
+    gmres            = .true.
+  end if
+  
   gmres_max_iter     = 200                  ! Max number of GMRES iterations
   gmres_tol          = 1.d-8                ! converge tolerance GMRES
   gmres_4            = 1.d3                 ! error estimate GMRES (ratio preconditioned versus non-preconditioned error
@@ -567,6 +585,7 @@ subroutine preset_parameters
   tgnum_Te           = 0.d0
   tgnum_vpar         = 0.d0
   tgnum_rhon         = 0.d0
+  tgnum_rhoimp       = 0.d0
   tgnum_nre          = 0.d0
   tgnum_AR           = 0.d0
   tgnum_AZ           = 0.d0
@@ -605,6 +624,7 @@ subroutine preset_parameters
   no_mach1_bc        = .false.              ! Never apply Mach-1 BCs
 
   Mach1_openBC       = .true.               ! Full-MHD: Apply Mach-1 BCs inside mod_boundary_matrix_open.f90 (or mod_boundary_conditions.f90)
+  Mach1_fix_B        = .true.               !< Full-MHD: Use the initial magnetic field for Mach1 BCs on targets, ie. without AR and AZ variations
 
   eta_ARAZ_const     = 0.d0                 !< Use uniform resistivity for AR and AZ equations, used only if eta_ARAZ_on=.false.
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
@@ -612,8 +632,6 @@ subroutine preset_parameters
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
-  no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
-  no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
   mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
   use_BLR_compression = .false.             ! Use MUMPS / PaStiX 6 solver with Block-low-rank (BLR) compression
@@ -646,6 +664,7 @@ subroutine preset_parameters
   R_limiter = 0.d0
   Z_limiter = 0.d0
   
+  surface_cross_tol = 1.005
   eqdsk_psi_fact = 1.d0
   extend_existing_grid = .false.
   n_wall_blocks        = 0
@@ -690,6 +709,7 @@ subroutine preset_parameters
   use_imp_adas = .true. ! Directly use adas for impurity radiation; hard-coded one only implemented for argon
   drift_distance = 0.d0 ! No artificial plasmoid drift by default
   energy_teleported = 0.d0 
+  constant_imp_source = 0.d0
 
   !====== JET DMV-2 parameters
   L_tube = 2.4d0
@@ -715,7 +735,7 @@ subroutine preset_parameters
   n_spi(1)        = 1
   n_inj           = 1
   spi_rnd_seed    = 0
-  spi_abl_model   = 0
+  spi_abl_model   = -1
   spi_shard_file(:) = 'none'
   spi_plume_file(:) = 'none'
   spi_plume_hdf5  = .false.
@@ -752,8 +772,12 @@ subroutine preset_parameters
 
 !===================== Thermalization flag========
 
-  thermalization = .false.
+  thermalization = .true.
 
+!===================== Polar axis treatment flag========
+
+  treat_axis = .false.
+  
 !===================== not used?
   Q_bar = 0.d0
   Sigma = 0.d0
@@ -777,5 +801,6 @@ use_pcs_full       = .false.
 use_ionisation     = .true.
 use_sputtering     = .false.
 use_cx             = .true.
+use_marker         = .false.
 
 end subroutine preset_parameters

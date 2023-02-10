@@ -89,7 +89,7 @@ integer :: k_vertex, k_dof, k_node, k_dir, k_dir_perp, m_bndelem, dir_perp(2), m
 integer :: iexpr
 real*8  :: R_c, Z_c, vec_inside(2), grad_t(2)
 real*8  :: k_size, k_size_perp
-real*8  :: G(4,4), sign_out, psi_n, ps0_sbnd, u0_sbnd
+real*8  :: G(4,n_degrees), sign_out, psi_n, ps0_sbnd, u0_sbnd
 real*8  :: dt_back, dt_now, r_dt, r_dt2
 real*8  :: I_halo, TPF, q02, q95, q99
 real*8, allocatable :: qval(:), radav(:)
@@ -102,7 +102,7 @@ real*8  :: psi_as_coord
 real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
 real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
 real*8  :: BR_Z, BZ_R
-real*8  :: r0_corr, T0_corr, T0e_corr, T0i_corr
+real*8  :: r0_corr, T0_corr, T0e_corr, T0i_corr, dT0e_corr_dT 
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: pressure_e, pressure_e_in, pressure_e_out, pressure_i, pressure_i_in, pressure_i_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
@@ -115,11 +115,11 @@ real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_to
 real*8  :: fric_disp_tot, fric_disp, friction_dissip_tot
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
-real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy
+real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy, drhoimpdx, drhoimpdy
 real*8  :: dTedx, dTedy, dTidx, dTidy, dPedx, dPedy, dPidx, dPidy
 real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
-real*8  :: local_n_particles_inj, local_n_particles, rn0, rn0_corr, neut_particles_tot
+real*8  :: local_n_particles_inj, local_n_particles, rn0, rn0_corr, neut_particles_tot, rimp0, rimp0_corr
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, sheath_heatflux
 real*8  :: ZK_e_prof, ZK_i_prof, ZK_e_par_T, ZK_i_par_T
 real*8  :: fact_mu0, fact_flux, fact_part
@@ -135,7 +135,8 @@ real*8  :: UU,UU_s,UU_t,UU_st,UU_ss,UU_tt
 real*8  :: PS,PS_s,PS_t,PS_st,PS_ss,PS_tt 
 real*8  :: vp,vp_s,vp_t,vp_st,vp_ss,vp_tt 
 real*8  :: rn,rn_s,rn_t,rn_st,rn_ss,rn_tt 
-real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, Ti, Ti_s, Ti_t, Te, Te_s, Te_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t
+real*8  :: rimp,rimp_s,rimp_t,rimp_st,rimp_ss,rimp_tt 
+real*8  :: psi_s, psi_t, rho_s, rho_t, T_s, T_t, Ti, Ti_s, Ti_t, Te, Te_s, Te_t, p0_s, p0_t, u0_s, u0_t, ps0_s, ps0_t, p0_p, rhon_s, rhon_t, rhoimp_s, rhoimp_t
 real*8  :: u0_p, u_s, u_t, u_p
 real*8  :: u0_x, u0_y
 real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, li3
@@ -143,14 +144,16 @@ real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 real*8  :: heating_impl_in, heating_impl_out, H_impl_int, H_impl_ext,heating_impl_tot
 
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
-real*8  :: source_neutral
+#if (defined WITH_Neutrals)
+real*8  :: source_neutral, source_neutral_drift
+real*8  :: source_neutral_arr(n_inj_max), source_neutral_drift_arr(n_inj_max)
 #endif
 #ifdef WITH_Impurities
-real*8  :: source_bg, source_imp
+real*8  :: source_bg, source_imp, source_bg_drift
+real*8  :: source_bg_arr(n_inj_max), source_imp_arr(n_inj_max), source_bg_drift_arr(n_inj_max) 
 #endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-real*8  :: local_radiation, local_E_ion, total_radiation, total_E_ion, local_P_ei, total_P_ei
+real*8  :: local_radiation, local_radiation_bg, local_E_ion, total_radiation, total_radiation_bg, total_E_ion, local_P_ei, total_P_ei
 real*8  :: local_P_ion, total_P_ion
 real*8  :: local_radiation_phi(n_plane), total_radiation_phi(n_plane)
 real*8  :: ne_SI, Te_eV, Te_corr_eV, Ti_eV
@@ -165,7 +168,7 @@ real*8     :: spi_psi_tmp
 real*8     :: spi_grad_psi_tmp
 real*8     :: ns_radius_tmp !< Radius of neutral gas cloud as a result of the ablation
 real*8     :: source_tmp
-real*8     :: ns_shape ! variable for numerical integration of source volume
+real*8     :: ns_shape, ns_shape_drift ! variable for numerical integration of source volume
 real*8     :: V_ns, V_ns_drift
 real*8, allocatable :: local_source_volume(:), local_source_volume_drift(:)
 
@@ -181,12 +184,11 @@ real*8  :: m_i_over_m_imp, m_imp
 real*8  :: Z_imp, dZ_imp_dT, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
 real*8  :: Z_eff_imp
 !   -Corrected plasma temperature and density for radiation calculation
-real*8  :: dT0e_corr_dT, Ti_corr_eV
+real*8  :: Ti_corr_eV
 !   -Temporary variable for charge state distribution
 real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
-real*8     :: Lrad_imp, frad_bg
-integer    :: ion_i, ion_k, i_phi, i_imp
+integer    :: ion_i, ion_k
 #endif
 #ifdef WITH_Impurities
 #ifdef WITH_TiTe
@@ -197,12 +199,13 @@ real*8  :: alpha_i, alpha_e, dalpha_e_dT
 real*8     :: nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i
 #else /* WITH_TiTe */
 !   -Coefficients related to Z_imp
+real*8  :: alpha_i, alpha_e, dalpha_e_dT
 real*8  :: alpha_imp, dalpha_imp_dT, beta_imp, dbeta_imp_dT
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
 
 ! Additional variables related to the radiated power
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (defined WITH_Neutrals)
 ! Atomic physics coefficients:
 !   -Ionization
 real*8     :: Sion_T, dSion_dT                                ! Ionization rate and its derivative wrt. temperature
@@ -213,11 +216,13 @@ real*8     :: Srec_T, dSrec_dT                                ! Recombination ra
 real*8     :: LradDrays_T, dLradDrays_dT                      ! Line (/rays) radiation rate and its derivative wrt. temperature
 real*8     :: LradDcont_T, dLradDcont_dT                      ! Continuum (Brem.) radiation rate and its derivative wrt. T
 !   -Radiation from background impurities
-real*8     :: Arad_bg, Brad_bg, Crad_bg, frad_bg              ! Retain hard-coded fitting for argon
-real*8     :: Lrad_imp
-integer*8  :: i_phi
+real*8     :: Arad_bg, Brad_bg, Crad_bg                       ! Retain hard-coded fitting for argon
 real*8     :: coef_prad_si                                    ! Prad,SI = coef_prad_si * Prad,jorek
-integer    :: i_imp                                           ! Loop for more than one background impurity
+#endif
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+integer    :: i_imp, i_phi                                    ! Loop for more than one background impurity
+real*8     :: frad_bg, Lrad_imp                               ! Retain hard-coded fitting for argon
 #endif
 
 #ifndef NOMPIVERSION
@@ -308,6 +313,7 @@ local_n_particles     = 0.d0
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 local_radiation       = 0.d0
+local_radiation_bg    = 0.d0
 local_radiation_phi   = 0.d0
 local_E_ion           = 0.d0
 local_P_ei            = 0.d0
@@ -356,7 +362,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          pellet_radius, pellet_delta_psi, pellet_sig, pellet_length, pellet_ellipse, pellet_theta,  &
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
-!$omp          heli_tot,  keep_current_prof, psi_off, visco_par, thm_wk_tot,                   &
+!$omp          heli_tot,  keep_current_prof, psi_off, visco_par, visco_par_heating, thm_wk_tot,&
 !$omp          mag_wk_tot, vpar_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
 !$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -367,7 +373,7 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp          ns_phi, ns_radius, ns_deltaphi, ns_delta_minor_rad, ns_tor_norm, spi_tor_rot, local_E_ion,  &
 !$omp          t_now, A_Dmv, K_Dmv, V_Dmv, P_Dmv, t_ns, L_tube, JET_MGI,ASDEX_MGI, local_P_ion,&
 !$omp          local_radiation, local_radiation_phi, imp_cor, imp_adas, imp_type, local_P_ei,  &
-!$omp          n_adas, nimp_bg,                                                                &
+!$omp          n_adas, nimp_bg, local_radiation_bg,                                            &
 #endif
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
 !$omp          ksi_ion, use_imp_adas,                                                   &
@@ -392,16 +398,17 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, fric_disp, p0_p, T0_corr, r0_corr, u0_p,     &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
-!$omp           eta_T_ohm,                                                              &
+!$omp           eta_T_ohm, rn0, rn0_corr, rimp0, rimp0_corr,                                   &
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-!$omp           rn0, rn0_corr, i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,      &
+!$omp           i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,                     &
 !$omp           spi_R_tmp, spi_Z_tmp, spi_phi_tmp, ns_radius_tmp,                              &
-!$omp           spi_psi_tmp, spi_grad_psi_tmp,                                                 &
-!$omp           n_spi_tmp, source_tmp, ns_shape,                                               &
+!$omp           spi_psi_tmp, spi_grad_psi_tmp, spi_i, i_inj,                                   &
+!$omp           n_spi_tmp, source_tmp, ns_shape, ns_shape_drift,                               &
 #endif
 #ifdef WITH_Impurities
-!$omp           source_bg, source_imp,                                                         &
+!$omp           source_bg, source_imp, source_bg_drift,                                        &
+!$omp           source_bg_arr, source_imp_arr, source_bg_drift_arr,                            &
 !$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT,                                       &
 !$omp           ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,                                 &
 !$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV,                                 &
@@ -413,9 +420,10 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 #if (defined WITH_Impurities) && (!defined WITH_TiTe) 
 !$omp           alpha_imp, beta_imp, dalpha_imp_dT,                                            &
 #endif
-#if (defined WITH_Neutrals) && (!defined WITH_Impurities)
+#if (defined WITH_Neutrals)
 !$omp           Sion_T, dSion_dT, Srec_T, dSrec_dT, ksiion, source_neutral,                    &
-!$omp           LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,          &
+!$omp           source_neutral_drift, source_neutral_arr, source_neutral_drift_arr,            &
+!$omp           LradDrays_T, LradDcont_T, dLradDrays_dT, dLradDcont_dT,                        &
 !$omp           Arad_bg, Brad_bg, Crad_bg,                                                     &
 !$omp           coef_prad_si,                                                                  &
 #endif
@@ -434,7 +442,7 @@ omp_tid      = 0
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp                local_n_particles_inj,  local_n_particles,                               &
 !$omp                local_radiation, local_radiation_phi, local_E_ion, local_P_ei, local_P_ion, &
-!$omp                local_source_volume, local_source_volume_drift,                          &
+!$omp                local_source_volume, local_source_volume_drift, local_radiation_bg,      &
 #endif
 !$omp                D_int, D_ext, P_int, H_int, S_int, H_ext, S_ext, P_ext, C_intern, C_ext, &
 !$omp                P_e_int, P_i_int, P_e_ext, P_i_ext, P_e_tot, P_i_tot,                    &
@@ -457,7 +465,7 @@ do ife = ife_min, ife_max
   psi_axisym(:,:) = 0.d0
 
   do i=1,n_vertex_max
-    do j=1,n_order+1
+    do j=1,n_degrees
 
       do ms=1, n_gauss
         do mt=1, n_gauss
@@ -491,7 +499,7 @@ do ife = ife_min, ife_max
   eq_sp(:,:,:,:) = 0.d0; eq_tp(:,:,:,:) = 0.d0;
 
   do i=1,n_vertex_max
-    do j=1,n_order+1
+    do j=1,n_degrees
 
       do mp=1,n_plane
         do ms=1, n_gauss
@@ -560,19 +568,19 @@ do ife = ife_min, ife_max
         BigR = x_g(ms,mt)
 
         r0     = eq_g(mp,var_rho,ms,mt)
-        r0_corr = corr_neg_dens1(r0)
+        r0_corr = corr_neg_dens(r0)
 #ifdef WITH_TiTe
         T0i    = eq_g(mp,var_Ti,ms,mt)
         T0e    = eq_g(mp,var_Te,ms,mt)
-        T0e_corr = corr_neg_temp1(T0e)
-        T0i_corr = corr_neg_temp1(T0i)
+        T0e_corr = corr_neg_temp(T0e*2.d0) / 2.d0
+        T0i_corr = corr_neg_temp(T0i*2.d0) / 2.d0
 #else
-        T0     = eq_g(mp,var_T,ms,mt)
-        T0i    = eq_g(mp,var_T,ms,mt) /2.d0
-        T0e    = eq_g(mp,var_T,ms,mt) /2.d0
-        T0_corr = corr_neg_temp1(T0)
-        T0e_corr = corr_neg_temp1(T0e)
-        T0i_corr = corr_neg_temp1(T0i)
+        T0       = eq_g(mp,var_T,ms,mt)
+        T0i      = eq_g(mp,var_T,ms,mt) /2.d0
+        T0e      = eq_g(mp,var_T,ms,mt) /2.d0
+        T0_corr  = corr_neg_temp(T0)
+        T0e_corr = T0_corr / 2.d0
+        T0i_corr = T0_corr / 2.d0
 #endif
         zj0    = eq_g(mp,var_zj,ms,mt)
         ps0    = eq_g(mp,var_psi,ms,mt)
@@ -588,9 +596,19 @@ do ife = ife_min, ife_max
         vpar_s  = eq_s(mp,var_Vpar,ms,mt)
         vpar_t  = eq_t(mp,var_Vpar,ms,mt)
 
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+#if (defined WITH_Neutrals)
         rn0    = eq_g(mp,var_rhon,ms,mt)
         rn0_corr = corr_neg_dens(rn0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rn0
+#else
+        rn0      = 0.d0
+        rn0_corr = 0.d0 
+#endif
+#if (defined WITH_Impurities)
+        rimp0  = eq_g(mp,var_rhoimp,ms,mt)
+        rimp0_corr = corr_neg_dens(rimp0, (/ 0.d-5, 1.d-5 /)) ! Correction for negative rimp0
+#else
+        rimp0  = 0.d0
+        rimp0_corr = 0.d0 
 #endif
       
 #ifdef fullmhd
@@ -694,8 +712,14 @@ do ife = ife_min, ife_max
       
         ! --- Radiation from background impurity
         ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
-        Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV
-        Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20) ! Te in eV, uncorrected
+
+        if (with_TiTe) then 
+          Te_corr_eV =       T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV =       T0e/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+        else
+          Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+        endif
 
         if (use_imp_adas) then  ! use open adas by default  
           ! Use radiation coefficients from ADAS
@@ -765,13 +789,18 @@ do ife = ife_min, ife_max
             m_imp          = 2.
         end select
 
-        ! Te in eV:
-        Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-        Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
-   
-        ! Ti in eV:
-        Ti_corr_eV = T0i_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-        Ti_eV = T0i/(EL_CHG*MU_ZERO*central_density*1.d20)
+        ! Temperatures in eV and corrected values:
+        if (with_TiTe) then 
+          Ti_eV      = T0i          /(EL_CHG*MU_ZERO*central_density*1.d20)
+          Te_eV      = T0e          /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Ti_corr_eV = T0i_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)
+          Te_corr_eV = T0e_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)  
+        else
+          Ti_eV      = 0.5d0*T0     /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Te_eV      = 0.5d0*T0     /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Ti_corr_eV = 0.5d0*T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Te_corr_eV = 0.5d0*T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  
+        endif
 
         if (allocated(P_imp)) deallocate(P_imp)
         allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
@@ -801,33 +830,37 @@ do ife = ife_min, ife_max
         alpha_e       = m_i_over_m_imp*Z_imp - 1.
         dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
   
-        ne_SI        = (r0_corr + alpha_e * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-        ne_JOREK     = r0_corr + alpha_e * rn0_corr ! Electron density in JOREK unit
+        ne_SI        = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
+        ne_JOREK     = r0_corr + alpha_e * rimp0_corr ! Electron density in JOREK unit
         ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                             ! Too small rho_1 will cause a problem
 #else /* WITH_TiTe */
         alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         dalpha_imp_dT= 0.5*m_i_over_m_imp*dZ_imp_dT
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
-        ne_SI        = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
-        ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
+        ne_SI        = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density !electron density (SI)
+        ne_JOREK     = r0_corr + beta_imp * rimp0_corr ! Electron density in JOREK unit
         ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                                ! Too small rho_1 will cause a problem
 #endif /* WITH_TiTe */
+
+        ! This is to avoid too small ne_SI in some logarithm caoculation
+        ne_SI = max(1.d16,ne_SI)
 
         ! Calculate the effective charge of all species
         Z_eff        = 0.
         Z_eff_imp    = 0.
    
         ! First get the value of Z_eff
-        Z_eff        = r0_corr - rn0_corr
+        Z_eff        = r0_corr - rimp0_corr
         do ion_i=1, imp_adas(index_main_imp)%n_Z
-          Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+          Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
           Z_eff_imp  = Z_eff_imp + P_imp(ion_i) * real(ion_i,8)**2 ! The summation of normalized nZ**2 for impurity
         end do
         Z_eff        = Z_eff / ne_JOREK
   
         if (Z_eff < 1) Z_eff = 1.
+        if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
    
         ! This is to represent the dependence on Z_eff in resistivity
         if ( eta_T_dependent ) then
@@ -837,7 +870,7 @@ do ife = ife_min, ife_max
           eta_T_ohm    = eta_T_ohm * eta_coef
         endif
 
-        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rn0 > rn0_min) then
+        if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rimp0 > rn0_min) then
           Lrad = 0.0
           !call radiation_function(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
           call radiation_function_linear(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),.false.,Lrad)
@@ -862,14 +895,16 @@ do ife = ife_min, ife_max
         end do
 
         local_radiation_phi(mp) = local_radiation_phi(mp) &
-                                  + ne_SI * (rn0_corr * central_density * 1.d20 * Lrad + frad_bg)&
+                                  + ne_SI * (rimp0_corr * central_density * 1.d20 * Lrad + frad_bg)&
                                   * bigR * xjac * wst * delta_phi        
         local_radiation = local_radiation &
-                          + ne_SI * (rn0_corr * central_density * 1.d20 * Lrad + frad_bg)&
+                          + ne_SI * (rimp0_corr * central_density * 1.d20 * Lrad + frad_bg)&
                           * bigR * xjac * wst * delta_phi 
-        local_E_ion     = local_E_ion + rn0 * central_density * 1.d20 * E_ion             &
+        local_radiation_bg = local_radiation_bg &
+                             + ne_SI * frad_bg * bigR * xjac * wst * delta_phi 
+        local_E_ion     = local_E_ion + rimp0 * central_density * 1.d20 * E_ion             &
                           * bigR * xjac * wst * delta_phi
-        local_E_ion     = local_E_ion + (r0 - rn0) * central_density * 1.d20 * E_ion_bg   &
+        local_E_ion     = local_E_ion + (r0 - rimp0) * central_density * 1.d20 * E_ion_bg   &
                           * bigR * xjac * wst * delta_phi
 #ifdef WITH_TiTe
        !--------------------------------------------------------
@@ -886,11 +921,11 @@ do ife = ife_min, ife_max
           lambda_e_bg  = 24. - log((ne_SI*1.d-6)**0.5*Te_corr_eV**(-1.0))
         endif
         nu_e_imp     = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
-                       * Z_eff_imp * (1.d14*central_density*rn0_corr*m_i_over_m_imp) * lambda_e_imp &
+                       * Z_eff_imp * (1.d14*central_density*rimp0_corr*m_i_over_m_imp) * lambda_e_imp &
                        / (1.d3*(MASS_ELECTRON*T0i_corr+T0e_corr*MASS_PROTON*m_imp)&
                        / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
         nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
-                       * (1.d14*central_density*(r0_corr-rn0_corr)) * lambda_e_bg &
+                       * (1.d14*central_density*(r0_corr-rimp0_corr)) * lambda_e_bg &
                        / (1.d3*(MASS_ELECTRON*T0i_corr+T0e_corr*MASS_PROTON*central_mass)&
                        / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
     
@@ -902,35 +937,35 @@ do ife = ife_min, ife_max
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
 #ifdef WITH_Impurities
-        D_tot  = D_tot  + (r0-rn0) * xjac * BigR * wst * delta_phi 
+        D_tot  = D_tot  + (r0-rimp0) * xjac * BigR * wst * delta_phi 
 #ifdef WITH_TiTe
-        P_e_tot = P_e_tot + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
-        P_i_tot = P_i_tot + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi
+        P_e_tot = P_e_tot + (r0+alpha_e*rimp0) * T0e * xjac * BigR * wst * delta_phi
+        P_i_tot = P_i_tot + (r0+alpha_i*rimp0) * T0i * xjac * BigR * wst * delta_phi
         P_tot   = P_e_tot + P_i_tot
 
-        p0_s   = (r0+alpha_i*rn0)*eq_s(mp,var_Ti,ms,mt) &
-                 + T0i * (eq_s(mp,var_rho,ms,mt)+alpha_i*eq_s(mp,var_rhon,ms,mt))&
-                 + (r0+alpha_e*rn0+dalpha_e_dT*rn0*T0e)*eq_s(mp,var_Te,ms,mt)&
-                 + T0e * (eq_s(mp,var_rho,ms,mt)+alpha_e*eq_s(mp,var_rhon,ms,mt))
-        p0_t   = (r0+alpha_i*rn0)*eq_t(mp,var_Ti,ms,mt) &
-                 + T0i * (eq_t(mp,var_rho,ms,mt)+alpha_i*eq_t(mp,var_rhon,ms,mt))&
-                 + (r0+alpha_e*rn0+dalpha_e_dT*rn0*T0e)*eq_t(mp,var_Te,ms,mt)&
-                 + T0e * (eq_t(mp,var_rho,ms,mt)+alpha_e*eq_t(mp,var_rhon,ms,mt))
-        p0_p   = (r0+alpha_i*rn0)*eq_p(mp,var_Ti,ms,mt) &
-                 + T0i * (eq_p(mp,var_rho,ms,mt)+alpha_i*eq_p(mp,var_rhon,ms,mt))&
-                 + (r0+alpha_e*rn0+dalpha_e_dT*rn0*T0e)*eq_p(mp,var_Te,ms,mt)&
-                 + T0e * (eq_p(mp,var_rho,ms,mt)+alpha_e*eq_p(mp,var_rhon,ms,mt))
+        p0_s   = (r0+alpha_i*rimp0)*eq_s(mp,var_Ti,ms,mt) &
+                 + T0i * (eq_s(mp,var_rho,ms,mt)+alpha_i*eq_s(mp,var_rhoimp,ms,mt))&
+                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*T0e)*eq_s(mp,var_Te,ms,mt)&
+                 + T0e * (eq_s(mp,var_rho,ms,mt)+alpha_e*eq_s(mp,var_rhoimp,ms,mt))
+        p0_t   = (r0+alpha_i*rimp0)*eq_t(mp,var_Ti,ms,mt) &
+                 + T0i * (eq_t(mp,var_rho,ms,mt)+alpha_i*eq_t(mp,var_rhoimp,ms,mt))&
+                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*T0e)*eq_t(mp,var_Te,ms,mt)&
+                 + T0e * (eq_t(mp,var_rho,ms,mt)+alpha_e*eq_t(mp,var_rhoimp,ms,mt))
+        p0_p   = (r0+alpha_i*rimp0)*eq_p(mp,var_Ti,ms,mt) &
+                 + T0i * (eq_p(mp,var_rho,ms,mt)+alpha_i*eq_p(mp,var_rhoimp,ms,mt))&
+                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*T0e)*eq_p(mp,var_Te,ms,mt)&
+                 + T0e * (eq_p(mp,var_rho,ms,mt)+alpha_e*eq_p(mp,var_rhoimp,ms,mt))
 #else /* WITH_TiTe */
-        P_tot  = P_tot  + (r0+alpha_imp*rn0) * T0 * xjac * BigR * wst * delta_phi
+        P_tot  = P_tot  + (r0+alpha_imp*rimp0) * T0 * xjac * BigR * wst * delta_phi
         P_e_tot = P_tot / 2.
         P_i_tot = P_e_tot
 
-        p0_s   = (r0+alpha_imp*rn0+dalpha_imp_dT*rn0*T0)*eq_s(mp,var_T,ms,mt) &
-                 + T0 * (eq_s(mp,var_rho,ms,mt)+alpha_imp*eq_s(mp,var_rhon,ms,mt))
-        p0_t   = (r0+alpha_imp*rn0+dalpha_imp_dT*rn0*T0)*eq_t(mp,var_T,ms,mt) &
-                 + T0 * (eq_t(mp,var_rho,ms,mt)+alpha_imp*eq_t(mp,var_rhon,ms,mt))
-        p0_p   = (r0+alpha_imp*rn0+dalpha_imp_dT*rn0*T0)*eq_p(mp,var_T,ms,mt) &
-                 + T0 * (eq_p(mp,var_rho,ms,mt)+alpha_imp*eq_p(mp,var_rhon,ms,mt))
+        p0_s   = (r0+alpha_imp*rimp0+dalpha_imp_dT*rimp0*T0)*eq_s(mp,var_T,ms,mt) &
+                 + T0 * (eq_s(mp,var_rho,ms,mt)+alpha_imp*eq_s(mp,var_rhoimp,ms,mt))
+        p0_t   = (r0+alpha_imp*rimp0+dalpha_imp_dT*rimp0*T0)*eq_t(mp,var_T,ms,mt) &
+                 + T0 * (eq_t(mp,var_rho,ms,mt)+alpha_imp*eq_t(mp,var_rhoimp,ms,mt))
+        p0_p   = (r0+alpha_imp*rimp0+dalpha_imp_dT*rimp0*T0)*eq_p(mp,var_T,ms,mt) &
+                 + T0 * (eq_p(mp,var_rho,ms,mt)+alpha_imp*eq_p(mp,var_rhoimp,ms,mt))
 #endif /* WITH_TiTe */
 #else /* WITH_Impurities */
         D_tot  = D_tot  + r0       * xjac * BigR * wst * delta_phi
@@ -960,7 +995,8 @@ do ife = ife_min, ife_max
         hel1       = F0* ( (ps0 - psi_off) - y_g(ms,mt)*dpsidy) / (BigR**2.d0)
         mag_wk     = - (ps0_s*u0_t - ps0_t*u0_s) / xjac * zj0 / BigR  &
                      + F0 * zj0 * u0_p / (BigR**2.d0)
-        vpar_disp  = visco_par * (F0/BigR)**2.d0 * (vpar_x**2.d0+vpar_y**2.d0 ) 
+
+        vpar_disp  = visco_par * (vpar_x**2.d0+vpar_y**2.d0 ) 
 
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi
@@ -1009,6 +1045,7 @@ do ife = ife_min, ife_max
 
                  source_tmp = 0.d0
                  ns_shape = 0.d0
+                 ns_shape_drift = 0.d0
 
                  spi_R_tmp   = pellets(spi_i)%spi_R
                  spi_Z_tmp   = pellets(spi_i)%spi_Z
@@ -1028,20 +1065,41 @@ do ife = ife_min, ife_max
                       spi_R_tmp,spi_Z_tmp,spi_phi_tmp,              &
                       ns_radius_tmp,ns_deltaphi,                    &
                       ps0,spi_psi_tmp,spi_grad_psi_tmp,ns_delta_minor_rad)
+                 
+                 ! To detect NaNs
+                 if (ns_shape /= ns_shape) then
+                   write(*,*) 'ERROR in mod_integrals3D: ns_shape = ', ns_shape
+                   stop
+                 end if
 
                  local_source_volume(spi_i) = local_source_volume(spi_i) &
                       + ns_shape * bigR * xjac * wst * delta_phi
 
-                 if (drift_distance /= 0) then ! Get the volume at the post-drift location (for normalization)
-                   ns_shape = source_shape(x_g(ms,mt),y_g(ms,mt),phi,     &
-                        spi_R_tmp+drift_distance,spi_Z_tmp,spi_phi_tmp,   &
-                        ns_radius_tmp,ns_deltaphi,                        &
-                        ps0,pellets(spi_i)%spi_psi_drift,                 &
-                        pellets(spi_i)%spi_grad_psi_drift,                &
-                        ns_delta_minor_rad)
+                 if (drift_distance(i_inj) /= 0) then ! Get the volume at the post-drift location (for normalization)
 
-                   local_source_volume_drift(spi_i) = local_source_volume_drift(spi_i) &
-                        + ns_shape * bigR * xjac * wst * delta_phi
+                   if (pellets(spi_i)%plasmoid_in_domain == 1) then ! if the drifted location is within the domain
+
+                     ns_shape_drift = source_shape(x_g(ms,mt),y_g(ms,mt),phi,     &
+                          spi_R_tmp+drift_distance(i_inj),spi_Z_tmp,spi_phi_tmp,  &
+                          ns_radius_tmp,ns_deltaphi,                        &
+                          ps0,pellets(spi_i)%spi_psi_drift,                 &
+                          pellets(spi_i)%spi_grad_psi_drift,                &
+                          ns_delta_minor_rad)
+
+                     ! To detect NaNs
+                     if (ns_shape_drift /= ns_shape_drift) then
+                       write(*,*) 'ERROR in mod_integrals3D: ns_shape_drift = ', ns_shape_drift
+                       stop
+                     end if
+
+                     local_source_volume_drift(spi_i) = local_source_volume_drift(spi_i) &
+                          + ns_shape_drift * bigR * xjac * wst * delta_phi
+
+                   else
+
+                     local_source_volume_drift(spi_i) = 0.d0 ! Analytical volume will be used instead in neutral_source.f90
+
+                   end if
                  end if
 
               end if
@@ -1053,9 +1111,26 @@ do ife = ife_min, ife_max
 #if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
-        source_neutral = 0.d0
+        source_neutral     = 0.d0
+        source_neutral_arr = 0.d0
 
-        call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral)
+        call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr, source_neutral_drift_arr)
+
+        do i_inj = 1,n_inj
+          if (drift_distance(i_inj) /= 0.d0) then
+            source_neutral = source_neutral + source_neutral_drift_arr(i_inj)
+          else
+            source_neutral = source_neutral + source_neutral_arr(i_inj)
+          end if
+        end do
+
+        ! To detect NaNs
+        if (source_neutral /= source_neutral) then
+          write(*,*) 'ERROR in mod_integrals_3D: source_neutral = ', source_neutral
+          stop
+        end if
+
+        source_neutral       = max(0.,source_neutral)
 
         ! Neutral injection rate in particles/s
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_neutral * bigR *&
@@ -1070,10 +1145,34 @@ do ife = ife_min, ife_max
 #ifdef WITH_Impurities
         !--- Calculate the neutral injection rate and the number of neutrals in the plasma
 
-        source_imp = 0.d0
-        source_bg  = 0.d0
+        source_imp      = 0.d0
+        source_bg       = 0.d0
+        source_bg_drift = 0.d0
 
-        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg,source_imp,m_i_over_m_imp,index_main_imp)
+        source_imp_arr      = 0.d0
+        source_bg_arr       = 0.d0
+        source_bg_drift_arr = 0.d0
+
+        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_bg_drift_arr)
+
+        do i_inj = 1,n_inj
+          source_imp = source_imp + source_imp_arr(i_inj)
+          if (drift_distance(i_inj) /= 0.d0) then
+            source_bg = source_bg + source_bg_drift_arr(i_inj)
+          else
+            source_bg = source_bg + source_bg_arr(i_inj)
+          end if
+        end do
+
+        ! This is to detect N/A
+        if (source_imp /= source_imp .or. source_bg /= source_bg) then
+          write(*,*) "ERROR in mod_integrals_3D: source_imp = ", source_imp
+          write(*,*) "ERROR in mod_integrals_3D: source_bg = ", source_bg
+          stop
+        end if
+
+        source_imp = max(0., source_imp)
+        source_bg  = max(0., source_bg)
 
         ! Frictional heat source
         fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&
@@ -1084,17 +1183,17 @@ do ife = ife_min, ife_max
         local_n_particles_inj = local_n_particles_inj + 0.5d0 * central_density * 1.d20 * source_imp * m_i_over_m_imp * bigR &
 	                         * xjac * wst * delta_phi / sqrt(MU_ZERO*central_mass*MASS_PROTON*central_density*1.d20)
         ! Total neutrals in particles
-        local_n_particles     = local_n_particles + central_density * 1.d20 * rn0 * m_i_over_m_imp * bigR * xjac * wst * delta_phi
+        local_n_particles     = local_n_particles + central_density * 1.d20 * rimp0 * m_i_over_m_imp * bigR * xjac * wst * delta_phi
 #endif
         if ( get_psi_n(psi_as_coord, y_g(ms,mt)) <= 1.d0 ) then   !inside LCFS
 #ifdef WITH_Impurities
-          D_int = D_int + (r0-rn0) * xjac * BigR * wst * delta_phi
+          D_int = D_int + (r0-rimp0) * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
-          P_e_int = P_e_int + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
-          P_i_int = P_i_int + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi
+          P_e_int = P_e_int + (r0+alpha_e*rimp0) * T0e * xjac * BigR * wst * delta_phi
+          P_i_int = P_i_int + (r0+alpha_i*rimp0) * T0i * xjac * BigR * wst * delta_phi
           P_int   = P_e_int + P_i_int
 #else /* WITH_TiTe */
-          P_int = P_int + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+          P_int = P_int + (r0+alpha_imp*rimp0) * T0   * xjac * BigR * wst * delta_phi
           P_e_int = P_int / 2.
           P_i_int = P_e_int
 #endif /* WITH_TiTe */
@@ -1130,13 +1229,13 @@ do ife = ife_min, ife_max
           J2_int = J2_int + eta_T_ohm * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
         else
 #ifdef WITH_Impurities
-          D_ext = D_ext + (r0-rn0) * xjac * BigR * wst * delta_phi
+          D_ext = D_ext + (r0-rimp0) * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
-          P_e_ext = P_e_ext + (r0+alpha_e*rn0) * T0e * xjac * BigR * wst * delta_phi
-          P_i_ext = P_i_ext + (r0+alpha_i*rn0) * T0i * xjac * BigR * wst * delta_phi
+          P_e_ext = P_e_ext + (r0+alpha_e*rimp0) * T0e * xjac * BigR * wst * delta_phi
+          P_i_ext = P_i_ext + (r0+alpha_i*rimp0) * T0i * xjac * BigR * wst * delta_phi
           P_ext   = P_e_ext + P_i_ext
 #else /* WITH_TiTe */
-          P_ext = P_ext + (r0+alpha_imp*rn0) * T0   * xjac * BigR * wst * delta_phi
+          P_ext = P_ext + (r0+alpha_imp*rimp0) * T0   * xjac * BigR * wst * delta_phi
           P_e_ext = P_ext / 2.
           P_i_ext = P_e_ext
 #endif /* WITH_TiTe */
@@ -1227,7 +1326,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
   call basisfunctions(xgauss(2),xgauss(2), G)  
   R_c = 0.d0 ;  Z_c = 0.d0 
   do i = 1, n_vertex_max
-    do j = 1, n_order+1
+    do j = 1, n_degrees
       node_k = node_list%node(elm_k%vertex(i)) 
       R_c    = R_c + node_k%x(1,j,1) * elm_k%size(i,j) * G(i,j)
       Z_c    = Z_c + node_k%x(1,j,2) * elm_k%size(i,j) * G(i,j)
@@ -1269,15 +1368,18 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       u0_sbnd  = eq_s_1D(mp,var_u   ,ms)
       zj0      = eq_g_1D(mp,var_Zj  ,ms) 
       r0       = eq_g_1D(mp,var_rho ,ms) 
-      r0_corr  = corr_neg_dens1(r0)
+      r0_corr  = corr_neg_dens(r0)
       T0       = eq_g_1D(mp,var_T   ,ms) 
 #ifdef WITH_TiTe
-      T0i    = eq_g_1D(mp,var_Ti,ms)
-      T0e    = eq_g_1D(mp,var_Te,ms)
+      T0i      = eq_g_1D(mp,var_Ti,ms)
+      T0e      = eq_g_1D(mp,var_Te,ms)
 #else
-      T0i    = eq_g_1D(mp,var_T,ms) /2.d0
-      T0e    = eq_g_1D(mp,var_T,ms) /2.d0
+      T0i      = eq_g_1D(mp,var_T,ms) /2.d0
+      T0e      = eq_g_1D(mp,var_T,ms) /2.d0
+      T0_corr  = corr_neg_temp(T0) 
 #endif
+      T0e_corr     =     corr_neg_temp(T0e * 2.d0) / 2.d0
+      dT0e_corr_dT = dcorr_neg_temp_dT(T0e * 2.d0) / 2.d0
 
 #ifdef WITH_Vpar
       vpar0    = eq_g_1D(mp,var_vpar,ms)
@@ -1285,12 +1387,19 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       vpar0    = 0.d0
 #endif
 
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+#if (defined WITH_Neutrals)
       rn0      = eq_g_1D(mp,var_rhon,ms)
-      rn0_corr = corr_neg_dens1(rn0) ! Correction for negative rn0
+      rn0_corr = corr_neg_dens(rn0) ! Correction for negative rn0
 #else
       rn0      = 0.d0
       rn0_corr = 0.d0 
+#endif
+#if (defined WITH_Impurities)
+      rimp0      = eq_g_1D(mp,var_rhoimp,ms)
+      rimp0_corr = corr_neg_dens1(rimp0) ! Correction for negative rimp0
+#else
+      rimp0      = 0.d0
+      rimp0_corr = 0.d0 
 #endif
 
       if (keep_current_prof) then
@@ -1304,6 +1413,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       u_s    = 0.d0; u_t    = 0.d0; u_p = 0.d0;
       rho_s  = 0.d0; rho_t  = 0.d0;
       rhon_s = 0.d0; rhon_t = 0.d0;
+      rhoimp_s = 0.d0; rhoimp_t = 0.d0;
       T_s    = 0.d0; T_t    = 0.d0;
       Ti_s   = 0.d0; Ti_t   = 0.d0;
       Te_s   = 0.d0; Te_t   = 0.d0;
@@ -1357,13 +1467,21 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         vpar_t = 0.d0
 #endif
 
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+#if (defined WITH_Neutrals)
         call interp(node_list,element_list,m_elm,var_rhon,in,sg,tg,rn,rn_s,rn_t,rn_st,rn_ss,rn_tt)
         rhon_s = rhon_s + rn_s * HZ(in,mp)
         rhon_t = rhon_t + rn_t * HZ(in,mp)
 #else
         rhon_s = 0.d0
         rhon_t = 0.d0
+#endif
+#if (defined WITH_Impurities)
+        call interp(node_list,element_list,m_elm,var_rhoimp,in,sg,tg,rimp,rimp_s,rimp_t,rimp_st,rimp_ss,rimp_tt)
+        rhoimp_s = rhoimp_s + rimp_s * HZ(in,mp)
+        rhoimp_t = rhoimp_t + rimp_t * HZ(in,mp)
+#else
+        rhoimp_s = 0.d0
+        rhoimp_t = 0.d0
 #endif
 
       enddo
@@ -1386,13 +1504,15 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       drhondx = (   Z_t * rhon_s - Z_s * rhon_t ) / xjac
       drhondy = ( - R_t * rhon_s + R_s * rhon_t ) / xjac
 
+      drhoimpdx = (   Z_t * rhoimp_s - Z_s * rhoimp_t ) / xjac
+      drhoimpdy = ( - R_t * rhoimp_s + R_s * rhoimp_t ) / xjac
+
       BB2    = (F0*F0 + dpsidx*dpsidx + dpsidy*dpsidy) / BigR**2
 
       ! --- get normalized flux 
       psi_n = get_psi_n(ps0,Z)
  
 #ifdef WITH_TiTe
-      T0e_corr      = corr_neg_temp1(T0e)
       eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
       eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
 
@@ -1400,25 +1520,50 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ZK_i_prof     = get_zk_iperp(psi_n)
  
       if (ZKpar_T_dependent) then
-        ZK_e_par_T = ZK_e_par * (max(T0e,T_min)/Te_0)**( 2.5d0)
-        ZK_i_par_T = ZK_i_par * (max(T0i,T_min)/Ti_0)**( 2.5d0)
+        ZK_e_par_T = ZK_e_par * (max(T0e,Te_min_ZKpar)/Te_0)**( 2.5d0)
+        ZK_i_par_T = ZK_i_par * (max(T0i,Ti_min_ZKpar)/Ti_0)**( 2.5d0)
+        if (ZK_e_par_T .gt. ZK_par_max)  ZK_e_par_T   = ZK_par_max
+        if (ZK_i_par_T .gt. ZK_par_max)  ZK_i_par_T   = ZK_par_max
       else
         ZK_e_par_T = ZK_e_par 
         ZK_i_par_T = ZK_i_par 
       endif
 #else
-      T0_corr       = corr_neg_temp1(T0)
       eta_T         = resistivity(eta, T0_corr, T_max_eta, T_0)  
       eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm, T_0)
 
       ZK_prof = get_zkperp(psi_n)
- 
+
       if (ZKpar_T_dependent) then
-        ZKpar_T = ZK_par * (max(T0,T_min)/T_0)**( 2.5d0)
+        ZKpar_T = ZK_par * (max(T0,T_min_ZKpar)/T_0)**( 2.5d0)
+        if (ZKpar_T .gt. ZK_par_max)  ZKpar_T   = ZK_par_max
       else
         ZKpar_T = ZK_par
       endif
 #endif
+
+      if ( with_TiTe ) then ! (with_TiTe) ****************************************************
+        if (T0i .lt. ZK_i_prof_neg_thresh) then
+          ZK_i_prof = ZK_i_prof_neg
+        end if
+        if (T0i .lt. ZK_i_par_neg_thresh) then
+          ZK_i_par_T = ZK_i_par_neg
+        endif
+        if (T0e .lt. ZK_e_prof_neg_thresh) then
+          ZK_e_prof = ZK_e_prof_neg
+        end if
+        if (T0e .lt. ZK_e_par_neg_thresh) then
+          ZK_e_par_T = ZK_e_par_neg
+        endif
+      else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
+        if (T0 .lt. ZK_prof_neg_thresh) then
+          ZK_prof = ZK_prof_neg
+        end if
+        if (T0 .lt. ZK_par_neg_thresh) then
+          ZKpar_T = ZK_par_neg
+        endif
+      endif ! (with_TiTe) ********************************************************************
+
 
 #ifdef WITH_Impurities
       !-------------------------------------------
@@ -1438,8 +1583,6 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
           m_i_over_m_imp = central_mass/2.
       end select
 
-      T0e_corr = corr_neg_temp1(T0e)
-      dT0e_corr_dT = dcorr_neg_temp_dT(T0e,(/5.d-1,5.d-1/),T_min)
       Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
       Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
    
@@ -1457,35 +1600,39 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       alpha_e       = m_i_over_m_imp*Z_imp - 1.
       dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
 
-      ne_SI        = (r0_corr + alpha_e * rn0_corr) * 1.d20 * central_density ! electron density (SI)
-      ne_JOREK     = r0_corr + alpha_e * rn0_corr ! Electron density in JOREK unit
+      ne_SI        = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density ! electron density (SI)
+      ne_JOREK     = r0_corr + alpha_e * rimp0_corr ! Electron density in JOREK unit
       ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                           ! Too small rho_1 will cause a problem
-      dne_JOREK_dx = drhodx + alpha_e * drhondx + rn0_corr * dalpha_e_dT * dTedx
-      dne_JOREK_dy = drhody + alpha_e * drhondy + rn0_corr * dalpha_e_dT * dTedy
+      dne_JOREK_dx = drhodx + alpha_e * drhoimpdx + rimp0_corr * dalpha_e_dT * dTedx
+      dne_JOREK_dy = drhody + alpha_e * drhoimpdy + rimp0_corr * dalpha_e_dT * dTedy
 #else /* WITH_TiTe */
+      alpha_i       = m_i_over_m_imp - 1.
+      alpha_e       = m_i_over_m_imp*Z_imp - 1.
+      dalpha_e_dT   = m_i_over_m_imp*dZ_imp_dT
       alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
       beta_imp     = m_i_over_m_imp*Z_imp - 1.
       dbeta_imp_dT = m_i_over_m_imp*dZ_imp_dT
-      ne_SI        = (r0_corr + beta_imp * rn0_corr) * 1.d20 * central_density !electron density (SI)
-      ne_JOREK     = r0_corr + beta_imp * rn0_corr ! Electron density in JOREK unit
+      ne_SI        = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density !electron density (SI)
+      ne_JOREK     = r0_corr + beta_imp * rimp0_corr ! Electron density in JOREK unit
       ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
                                                              ! Too small rho_1 will cause a problem
-      dne_JOREK_dx = drhodx + alpha_imp * drhondx + rn0_corr * dbeta_imp_dT * dTedx
-      dne_JOREK_dy = drhody + alpha_imp * drhondy + rn0_corr * dbeta_imp_dT * dTedy
+      dne_JOREK_dx = drhodx + alpha_imp * drhoimpdx + rimp0_corr * dbeta_imp_dT * dTedx
+      dne_JOREK_dy = drhody + alpha_imp * drhoimpdy + rimp0_corr * dbeta_imp_dT * dTedy
 #endif /* WITH_TiTe */
 
       ! Calculate the effective charge of all species
       Z_eff        = 0.
 
       ! First get the value of Z_eff
-      Z_eff        = r0_corr - rn0_corr
+      Z_eff        = r0_corr - rimp0_corr
       do ion_i=1, imp_adas(index_main_imp)%n_Z
-        Z_eff      = Z_eff + m_i_over_m_imp * rn0_corr * P_imp(ion_i) * real(ion_i,8)**2
+        Z_eff      = Z_eff + m_i_over_m_imp * rimp0_corr * P_imp(ion_i) * real(ion_i,8)**2
       end do
       Z_eff        = Z_eff / ne_JOREK
 
       if (Z_eff < 1) Z_eff = 1.
+      if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
 
       ! This is to represent the dependence on Z_eff in resistivity
       if ( eta_T_dependent ) then
@@ -1497,8 +1644,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
       dPedx  = ne_JOREK * dTedx + T0e * dne_JOREK_dx
       dPedy  = ne_JOREK * dTedy + T0e * dne_JOREK_dy
-      dPidx  = (r0 + rn0) * dTidx + T0i * (drhodx + drhondx)
-      dPidy  = (r0 + rn0) * dTidy + T0i * (drhody + drhondy)
+      dPidx  = (r0 + alpha_i*rimp0) * dTidx + T0i * (drhodx + alpha_i*drhoimpdx)
+      dPidy  = (r0 + alpha_i*rimp0) * dTidy + T0i * (drhody + alpha_i*drhoimpdy)
       dPdx   = dPedx + dPidx
       dPdy   = dPedy + dPidy
 #else /* WITH_Impurities */
@@ -1608,6 +1755,7 @@ call MPI_AllReduce(varmin,V_min,n_var,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORL
 call MPI_AllReduce(varmax,V_max,n_var,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,ierr)
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 call MPI_AllReduce(local_radiation, total_radiation,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+call MPI_AllReduce(local_radiation_bg, total_radiation_bg,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_E_ion, total_E_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_P_ei, total_P_ei,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
 call MPI_AllReduce(local_P_ion, total_P_ion,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -1662,6 +1810,7 @@ V_max                = varmax
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 total_radiation      = local_radiation
+total_radiation_bg   = local_radiation_bg
 total_E_ion          = local_E_ion
 total_P_ei           = local_P_ei
 total_P_ion          = local_P_ion
@@ -1775,6 +1924,7 @@ area                 = n_period * area / (2.d0 * PI)
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 total_radiation     = n_period * total_radiation
+total_radiation_bg  = n_period * total_radiation_bg
 total_radiation_phi = n_period * total_radiation_phi
 total_E_ion         = n_period * total_E_ion
 total_P_ei          = n_period * total_P_ei
@@ -1998,6 +2148,14 @@ if (my_id .eq. 0) then
       case ( 'Ohmic_out' )
         res(iexpr+1) = ohm_out 
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+      case ( 'Rad_tot' )
+        res(iexpr+1) = total_radiation
+
+      case ( 'Rad_bg_tot' )
+        res(iexpr+1) = total_radiation_bg
+#endif
+
       case ( 'P_vn' )
         res(iexpr+1) = vn_p0 
 
@@ -2097,6 +2255,14 @@ if (my_id .eq. 0) then
       case ( 'LCFS_deltaL' )
         res(iexpr+1) = ES%LCFS_deltaL
 
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+      case ( 'tot_radiated' )
+        res(iexpr+1) = total_radiation
+#else
+      case ( 'tot_radiated' )
+        res(iexpr+1) = 0.d0 
+#endif
+
     end select
             
   end do loop_expr
@@ -2110,6 +2276,13 @@ if (my_id .eq. 0) then
   if (using_spi) then
     write(*,'(A)')   ' Integrals_3D, SPI               : '
     do i = 1, n_spi_tot
+
+       n_spi_tmp = 0
+       do i_inj = 1,n_inj
+         n_spi_tmp = n_spi_tmp + n_spi(i_inj)                                                   
+         if (i <= n_spi_tmp)  exit !< Determine the injection location index of the fragment
+       end do
+
        if (pellets(i)%spi_radius > 0. .and. pellets(i)%spi_abl > 0.) then
           write(*,'(A,i14)')    "Pellet number                = ", i
           write(*,'(A,3f14.6)') "Pellet coordinates (R,Z,phi) = ", pellets(i)%spi_R, pellets(i)%spi_Z, pellets(i)%spi_phi
@@ -2128,30 +2301,30 @@ if (my_id .eq. 0) then
              ! i.e., with poloidally elongated ablation cloud
              ! in this case the analytical formula below is approximate (usually it agrees with the numerical integral within a few percents)
              V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ns_radius_tmp * min(ns_delta_minor_rad,ns_radius_tmp)
-             if (drift_distance /= 0.d0) then
-               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ns_radius_tmp * min(ns_delta_minor_rad,ns_radius_tmp)
+             if (drift_distance(i_inj) /= 0.d0) then
+               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance(i_inj)) * ns_tor_norm * ns_radius_tmp * min(ns_delta_minor_rad,ns_radius_tmp)
              end if
           else
              ! i.e., standard case with circular ablation cloud in the poloidal plane
              ! in this case the ablation source volume is given by the exact analytical formula as derived by E. Nardon
              V_ns  = PI * pellets(i)%spi_R * ns_tor_norm * ns_radius_tmp**2.d0
-             if (drift_distance /= 0.d0) then
-               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance) * ns_tor_norm * ns_radius_tmp**2.d0
+             if (drift_distance(i_inj) /= 0.d0) then
+               V_ns_drift  = PI * (pellets(i)%spi_R + drift_distance(i_inj)) * ns_tor_norm * ns_radius_tmp**2.d0
              end if
           endif
           
           write(*,'(A,2es14.6,f14.6)') "Source vol (num,an,diff %)   = ", pellets(i)%spi_vol, V_ns, 1d2*(pellets(i)%spi_vol - V_ns)/V_ns
           if (abs((pellets(i)%spi_vol - V_ns)/V_ns) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
 
-          if (drift_distance /= 0.d0) then 
+          if (drift_distance(i_inj) /= 0.d0) then 
             write(*,'(A,2es14.6,f14.6)') "Drifted source vol (num,an,diff %)   = ", pellets(i)%spi_vol_drift, V_ns_drift, 1d2*(pellets(i)%spi_vol_drift - V_ns_drift)/V_ns_drift
             if (abs((pellets(i)%spi_vol_drift - V_ns_drift)/V_ns_drift) .gt. 0.1d0) write(*,*) "WARNING: Difference larger than 10% "
           end if
 
           ! recommended ablation source radius in the poloidal direction from ns_radius / (R*ns_deltaphi) = B_pol/B_tor
           write(*,'(A,2f14.6)') "Source pol rad (actual,recom)= ", ns_radius_tmp, pellets(i)%spi_R * ns_deltaphi * pellets(i)%spi_grad_psi / abs(F0)
-          if (drift_distance /= 0.d0) then 
-            write(*,'(A,2f14.6)') "Drifted source pol rad (actual,recom)= ", ns_radius_tmp, (pellets(i)%spi_R + drift_distance) * ns_deltaphi * pellets(i)%spi_grad_psi_drift / abs(F0)
+          if (drift_distance(i_inj) /= 0.d0) then 
+            write(*,'(A,2f14.6)') "Drifted source pol rad (actual,recom)= ", ns_radius_tmp, (pellets(i)%spi_R + drift_distance(i_inj)) * ns_deltaphi * pellets(i)%spi_grad_psi_drift / abs(F0)
           end if
        end if
     end do
@@ -2179,7 +2352,8 @@ if (my_id .eq. 0) then
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
   write(*,'(A,4es14.6)')   ' Integrals_3D, MGI              : ', total_n_particles_inj, total_n_particles
-  write(*,'(A,1e14.6,A)')  ' Radiation power                : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)')  ' Radiation power (incl. backgr. imp) : ', total_radiation/1.d6, ' [MW]'
+  write(*,'(A,1e14.6,A)')  ' Radiation power BACKGROUND     : ', total_radiation_bg/1.d6, ' [MW]'
   write(*,'(A,1e14.6,A)')  ' Radiation power SANITY         : ', sum(total_radiation_phi)/1.d6, ' [MW]'
   if (with_neutrals) then
     write(*,'(A,1e14.6,A)') ' Ionization power              : ', total_P_ion/1.d6, ' [MW]'

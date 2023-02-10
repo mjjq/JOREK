@@ -12,6 +12,7 @@ module vacuum
   logical, parameter  :: vacuum_decouple_modes = .false. !< Option to switch off 3D wall mode coupling
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
+  logical             :: CARIDDI_mode                    !< CARIDDI or STARWALL
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity_fact           !< Scaling factor for the wall and coil resistivities specified in STARWALL
@@ -120,6 +121,7 @@ module vacuum
     integer :: n_rmp_coils            = 0  !< Number of RMP coils
     integer :: n_voltage_coils        = 0  !< Number of "voltage coils"
     integer :: n_diag_coils           = 0  !< Number of diagnostic coils
+    integer :: ind_start_coils        = -1 !< starting index of coils in wall matrix
     integer :: ind_start_pol_coils    = -1 !< Index of first poloildal field coil
     integer :: ind_start_rmp_coils    = -1 !< Index of first RMP coil
     integer :: ind_start_voltage_coils= -1 !< Index of first voltage coil
@@ -204,7 +206,7 @@ module vacuum
   subroutine set_coil_curr_time_trace()
     use profiles, only: readProf
     
-    integer :: i, j, k, l, err
+    integer :: i, j, k, l, i_start_coil, i_end_coil, err
     character(len=60) :: s, filename
     real*8 :: r
     class(t_coil_curr_input), pointer :: coil_curr_input
@@ -214,7 +216,16 @@ module vacuum
       n_coils = sr%ncoil
       if (.not. allocated(I_coils)) then 
         allocate(I_coils(n_coils))
-        I_coils = 0.d0
+        I_coils(:)                =  0.d0
+        i_start_coil = sr%ind_start_pol_coils
+        i_end_coil   = i_start_coil + sr%n_pol_coils - 1
+        I_coils(i_start_coil:i_end_coil) =  pf_coils(1:sr%n_pol_coils)%current
+        
+        i_start_coil = sr%ind_start_rmp_coils
+        i_end_coil   = i_start_coil + sr%n_rmp_coils - 1
+        I_coils(i_start_coil:i_end_coil) =  rmp_coils(1:sr%n_rmp_coils)%current 
+        n_coils                   =  sr%ncoil
+          
       endif
     endif
         
@@ -412,6 +423,7 @@ module vacuum
     logical, intent(out)   :: freeboundary_equil, freeboundary, resistive_wall
     
     ! --- Preset namelist input parameters.
+    CARIDDI_mode         = .false.            !< True if CARIDDI input file
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
     find_pf_coil_currents= .false.

@@ -1594,8 +1594,6 @@ do i=1,n_vertex_max
               !###################################################################################################
   
               rhs_ij(var_Ti) =  v * BigR * heat_source_i(ms,mt)                                  * xjac * tstep * factor(var_Ti,1) &
-			  +implicit_heat_source*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(Ti0,T_min_neg))* xjac*tstep*BigR    &
-			  
               
                               + v * (r0 + rimp0*alpha_i) * BigR**2 * ( Ti0_s * u0_t - Ti0_t * u0_s)     * tstep * factor(var_Ti,2) &
                               + v * Ti0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                        * tstep * factor(var_Ti,2) &
@@ -1645,8 +1643,12 @@ do i=1,n_vertex_max
                          + zeta * v * (r0_corr + rimp0_corr*alpha_i) * delta_g(mp,var_Ti,ms,mt) * BigR * xjac         * factor(var_Ti,9)   &
                          + zeta * v * Ti0      * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Ti,9)   &
                          ! Energy exchange term
-                         + v * BigR * dTi_e                                                            * xjac * tstep * factor(var_Ti,11)  
-  
+                         + v * BigR * dTi_e                                                            * xjac * tstep * factor(var_Ti,11)   &
+                         ! heating  source for small temperatures
+                         +implicit_heat_source*(gamma-1.d0)*v &
+                                  *(0.5d0*T_min_neg*(1 + exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) )) -min(Ti0,T_min_neg))            &
+                                  *xjac*tstep*BigR * factor(var_Ti,13)   
+ 
               if (with_impurities) then
                 rhs_ij(var_Ti) = rhs_ij(var_Ti) + &
                          + zeta * v * alpha_i * Ti0 * delta_g(mp,var_rhoimp,ms,mt) * BigR              * xjac         * factor(var_Ti,9)
@@ -1667,9 +1669,7 @@ do i=1,n_vertex_max
               !#  Electron Energy Equation                                                                       #
               !###################################################################################################
   
-              rhs_ij(var_Te) =  v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep * factor(var_Te,1 ) &
-			  +implicit_heat_source*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(Te0,T_min_neg))* xjac*tstep*BigR    &
-                                                                                                 
+              rhs_ij(var_Te) =  v * BigR * heat_source_e(ms,mt)                                  * xjac * tstep * factor(var_Te,1 ) &                                                                                                 
                               + v * (r0 + rimp0*alpha_e_bis) * BigR**2  * (Te0_s * u0_t - Te0_t * u0_s) * tstep * factor(var_Te,2 ) &
                               + v * Te0 * BigR**2 * ( r0_s * u0_t -  r0_t * u0_s)                       * tstep * factor(var_Te,2 ) &
                               + v * alpha_e * Te0 * BigR**2 * (rimp0_s * u0_t - rimp0_t * u0_s)         * tstep * factor(var_Te,2 ) &
@@ -1716,7 +1716,12 @@ do i=1,n_vertex_max
                          + zeta * v * (r0_corr+rimp0_corr*alpha_e_bis) * delta_g(mp,var_Te,ms,mt)* BigR  * xjac         * factor(var_Te,10)  &
                          + zeta * v * Te0      * delta_g(mp,var_rho,ms,mt) * BigR                * xjac         * factor(var_Te,10)  &
                          ! Energy exchange term
-                         + v * BigR * dTe_i                                                      * xjac * tstep * factor(var_Te,11)
+                         + v * BigR * dTe_i                                                      * xjac * tstep * factor(var_Te,11)  &
+                         ! implicit heating source
+                         +implicit_heat_source*(gamma-1.d0)*v                                                                      & 
+                            * (0.5d0*T_min_neg*(1+exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) )) -min(Te0,T_min_neg))    &
+                                                                                           * xjac*tstep*BigR  * factor(var_Te,19)  
+
               if (with_impurities) then
                 rhs_ij(var_Te) = rhs_ij(var_Te) + &
               !===================== Additional terms from ionization energy terms============
@@ -1778,7 +1783,6 @@ do i=1,n_vertex_max
               !###################################################################################################
   
               rhs_ij(var_T) =  v * BigR * heat_source(ms,mt)                                    * xjac * tstep * factor(var_T,1 ) &
-			  +implicit_heat_source*(gamma-1.d0)*v*(0.5d0*T_min_neg + 0.5d0*T_min_neg*exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -min(T0,T_min_neg))* xjac*tstep*BigR    &
               
                              + v * (r0 + rimp0*alpha_imp_bis) * BigR**2 * (T0_s  * u0_t - T0_t * u0_s) * tstep * factor(var_T,2 ) &
                              + v * T0 * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * tstep * factor(var_T,2 ) &
@@ -1836,7 +1840,11 @@ do i=1,n_vertex_max
                                        * ( v_x * ps0_y -  v_y * ps0_x                        )  * xjac * tstep * tstep * factor(var_T,8 )&
                             
                              + zeta * v * (r0_corr + rimp0_corr * alpha_imp_bis) * delta_g(mp,var_T,ms,mt)   * BigR * xjac * factor(var_T,10) &
-                             + zeta * v * T0      * delta_g(mp,var_rho,ms,mt) * BigR            * xjac * factor(var_T,10)
+                             + zeta * v * T0      * delta_g(mp,var_rho,ms,mt) * BigR            * xjac * factor(var_T,10)                     &
+                             +implicit_heat_source*(gamma-1.d0)*v &
+                             * (0.5d0*T_min_neg*(1 + exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) )) -min(T0,T_min_neg)) &
+                             *                                                                                 xjac*tstep*BigR  * factor(var_T,20)   
+
               if (with_impurities) then
                 rhs_ij(var_T) = rhs_ij(var_T) + &
                 !===================== Additional terms from ionization energy terms============
@@ -3022,7 +3030,8 @@ do i=1,n_vertex_max
                               - v * (r0 + rimp0*alpha_i) * BigR**2  * (Ti_s  * u0_t - Ti_t  * u0_s) * theta * tstep &
                               - v * Ti  * BigR**2 * (r0_s * u0_t - r0_t * u0_s)                     * theta * tstep &
                               - v * alpha_i * Ti * BigR**2 * (rimp0_s * u0_t - rimp0_t * u0_s)      * theta * tstep &
-                              -implicit_heat_source*(gamma-1.d0)*v*(exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Ti* xjac*theta*tstep*BigR &
+                              - implicit_heat_source*(gamma-1.d0)*v                                                &
+                              *(exp( (min(Ti0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Ti* xjac*theta*tstep*BigR &
   
                               - v * (r0 + rimp0*alpha_i) * 2.d0* GAMMA * BigR * Ti * u0_y    * xjac * theta * tstep &
   
@@ -3385,7 +3394,8 @@ do i=1,n_vertex_max
                               - v * Te  * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                         * theta * tstep &
   
                               - v * (r0 + rimp0 * alpha_e_bis) * 2.d0* GAMMA * BigR * Te * u0_y   * xjac * theta * tstep &
-                              -implicit_heat_source*(gamma-1.d0)*v*(exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Te* xjac*theta*tstep*BigR &
+                              - implicit_heat_source*(gamma-1.d0)*v                                                      &
+                              *(exp( (min(Te0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*Te* xjac*theta*tstep*BigR &
                               + v * Te * F0  / BigR * Vpar0 * (r0_p + rimp0_p * alpha_e_bis)      * xjac * theta * tstep &
                               + v * (rimp0 * alpha_e_tri) * Te * F0 / BigR * Vpar0 * Te0_p        * xjac * theta * tstep &
   
@@ -3794,8 +3804,9 @@ do i=1,n_vertex_max
                                     * T0 * (+ F0 / BigR * rho_p)                                                      &
                                     * (     + F0 / BigR * v_p)                         * xjac * theta * tstep * tstep
   
-                    amat(var_T,var_T) = v * (r0_corr + rimp0_corr * alpha_imp_bis) * T  * BigR * xjac * (1.d0 + zeta)     &
-                          -implicit_heat_source*(gamma-1.d0)*v*(exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*T* xjac*theta*tstep*BigR &
+                    amat(var_T,var_T) = v * (r0_corr + rimp0_corr * alpha_imp_bis) * T  * BigR * xjac * (1.d0 + zeta)  &
+                         -implicit_heat_source*(gamma-1.d0)*v                                                          &
+                         *(exp( (min(T0,T_min_neg)-T_min_neg)/(0.5d0*T_min_neg) ) -1.d0)*T* xjac*theta*tstep*BigR      &
                     !=============== The ionization potential energy term=========================
                           + (GAMMA - 1.) * v * rimp0 * dE_ion_dT  * T * BigR * xjac * (1.d0 + zeta)                        &
                           - (GAMMA - 1.) * v * rimp0 * dE_ion_dT * BigR**2 * (T_s*u0_t - T_t*u0_s)         * theta * tstep &

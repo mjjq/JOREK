@@ -272,8 +272,6 @@ subroutine preset_parameters
   use_sc = .false.
   visco_sc_num     = 0.d0
   D_perp_sc_num    = 0.d0
-  D_perp_imp_sc_num= 0.d0
-  D_par_imp_sc_num = 0.d0
   D_par_sc_num     = 0.d0
   ZK_perp_sc_num   = 0.d0
   ZK_par_sc_num    = 0.d0

@@ -3,7 +3,7 @@ module mod_model_settings
 
   implicit none
 
-  logical, parameter :: with_TiTe       = .true.
+  logical, parameter :: with_TiTe       = .false.
   logical, parameter :: with_neutrals   = .false.
   logical, parameter :: with_impurities = .true.
   logical, parameter :: with_Vpar       = .false.
@@ -44,20 +44,18 @@ module mod_model_settings
   ! --- variable indices for the model extensions
   integer, parameter :: n_var_base   = var_rho
   integer, parameter :: n_var_T      = merge(n_var_base+2, n_var_base+1, with_TiTe )  ! place of variable temperature                 (T)
-  integer, parameter :: if_neutrals  = merge(1, 0, with_neutrals )
-  integer, parameter :: if_imp       = merge(1, 0, with_impurities )
   integer, parameter :: var_T        = merge(0, n_var_T, with_TiTe )  ! place of variable temperature                 (T)
   integer, parameter :: var_Ti       = merge(n_var_T-1, 0, with_TiTe )! place of variable ion temperature             (Ti)
   integer, parameter :: var_Te       = merge(n_var_T, 0, with_TiTe )  ! place of variable electron temperature        (Te)
-  integer, parameter :: var_rhon     = merge(n_var_T+1, 0, if_neutrals==1 )  ! place of variable neutral density (rhon)
-  integer, parameter :: var_rhoimp   = merge( merge(n_var_T+1, 0, if_imp==1 )+1, n_var_T+1, if_neutrals==1)  ! place of variable impurity density (rhoimp)
-  integer, parameter :: n_var        = n_var_T+if_neutrals+if_imp
+  integer, parameter :: var_rhon     = merge(n_var_T+1, 0, with_neutrals )  ! place of variable neutral density (rhon)
+  integer, parameter :: var_rhoimp   = merge(n_var_T+1, 0, with_impurities )  ! place of variable impurity density (rhoimp)
 
-  integer, parameter :: n_var_TiTe        = sum(merge( (/1/), (/0/), with_TiTe      ))
+  integer, parameter :: n_var_TiTe        = sum(merge( (/2/), (/1/), with_TiTe      ))
   integer, parameter :: n_var_neutrals    = sum(merge( (/1/), (/0/), with_neutrals  )) 
   integer, parameter :: n_var_impurities  = sum(merge( (/1/), (/0/), with_impurities)) 
   integer, parameter :: n_var_refluid     = sum(merge( (/1/), (/0/), with_refluid   )) !### not yet
   integer, parameter :: n_var_ext(n_mod_ext) = (/ n_var_TiTe, n_var_neutrals, n_var_impurities, n_var_refluid /)
+  integer, parameter :: n_var = n_var_base + sum(n_var_ext) !< total number of variables
 
   ! --- variables not relevant to this model
   integer, parameter :: var_psi  = 1                       ! place of variable psi/mag pot 3               (ps or A3)  

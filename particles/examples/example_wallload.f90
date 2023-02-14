@@ -104,7 +104,7 @@ do while (.not. sim%stop_now)
       !$omp shared (i, n_steps, timesteps, sim, wall, iangle)
        do j=1,size(particles,1)
           do k=1,n_steps
-             if (particles(j)%i_elm .le. 0) exit
+             if(particles(j)%i_elm .le. 0) exit
 
              pos_prev = particles(j)%x
 

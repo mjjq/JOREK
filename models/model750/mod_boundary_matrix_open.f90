@@ -244,7 +244,7 @@ do ms=1, n_gauss
     
       ! --- Ti
       Ti0    = eq_g(mp,var_Ti,ms)
-      Ti0_corr = max(Ti0,1.d-12)
+      Ti0_corr = max(Ti0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
       Ti0_p  = eq_p(mp,var_Ti,ms)
       Ti0_s  = eq_s(mp,var_Ti,ms)
       Ti0_t  = eq_t(mp,var_Ti,ms)
@@ -253,7 +253,7 @@ do ms=1, n_gauss
 
       ! --- Te
       Te0    = eq_g(mp,var_Te,ms)
-      Te0_corr = max(Te0,1.d-12)
+      Te0_corr = max(Te0,1.d-12) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
       Te0_p  = eq_p(mp,var_Te,ms)
       Te0_s  = eq_s(mp,var_Te,ms)
       Te0_t  = eq_t(mp,var_Te,ms)

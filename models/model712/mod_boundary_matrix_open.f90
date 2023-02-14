@@ -204,7 +204,6 @@ do ms=1, n_gauss
   do mp = 1, n_plane
 
     ! --- Density
-    ! --- Density
     rho0    = eq_g(mp,var_rho,ms)
     rho0_p  = eq_p(mp,var_rho,ms)
     rho0_s  = eq_s(mp,var_rho,ms)

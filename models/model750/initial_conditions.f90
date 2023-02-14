@@ -56,18 +56,20 @@ if (my_id .eq. 0) then
     call density(    xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,             &
                                                                dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz)
 
-    call temperature_i(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2, &
+    if (with_TiTe) then
+      call temperature_i(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zTi,dTi_dpsi,dTi_dz,dTi_dpsi2,dTi_dz2, &
                                                                dTi_dpsi_dz,dTi_dpsi3,dTi_dpsi_dz2, dTi_dpsi2_dz)
-
-    call temperature_e(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2, &
+      
+      call temperature_e(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zTe,dTe_dpsi,dTe_dz,dTe_dpsi2,dTe_dz2, &
                                                                dTe_dpsi_dz,dTe_dpsi3,dTe_dpsi_dz2, dTe_dpsi2_dz)
-
-    call temperature(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2, &
+    else
+      call temperature(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zT,dT_dpsi,dT_dz,dT_dpsi2,dT_dz2, &
                                                                dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz)
-                                                       
-    call neutral_density(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zrn,drn_dpsi,drn_dz,drn_dpsi2,drn_dz2,             &
+    end if                                                   
+    if (with_neturals) then    
+      call neutral_density(xpoint2, xcase2, Z, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,zrn,drn_dpsi,drn_dz,drn_dpsi2,drn_dz2,             &
                                                                drn_dpsi_dz,drn_dpsi3,drn_dpsi_dz2, drn_dpsi2_dz)
-
+    end if
 
     node_list%node(i)%values(1,:,var_uR) = 0.d0    
     node_list%node(i)%values(1,:,var_uZ) = 0.d0

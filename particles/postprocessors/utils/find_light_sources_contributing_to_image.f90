@@ -25,6 +25,7 @@ integer                                     :: ii,t0,t1
 integer                                     :: n_groups,my_id,n_cpus,n_x,ierr
 integer                                     :: n_times,n_wavelengths,n_spectra
 integer                                     :: n_int_camera_param,n_real_camera_param
+integer                                     :: n_contributing_lights
 integer,dimension(:),allocatable            :: int_camera_param
 real*8,dimension(:),allocatable             :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable             :: real_camera_param,sim_times
@@ -32,11 +33,11 @@ real*8,dimension(:,:,:),allocatable         :: active_light_source_positions
 real*8,dimension(:,:,:),allocatable         :: active_light_source_intensities
 character(len=15)                           :: particle_filename
 character(len=17)                           :: fields_filename
-character(len=26)                           :: light_intensity_filename
+character(len=29)                           :: output_filename
 !> Variables definitions -----------------------------------------------------------------------------------
-particle_filename        = 'part_restart.h5'
-fields_filename          = 'jorek_equilibrium'
-light_intensity_filename = 'active_light_intesities.h5'
+particle_filename   = 'part_restart.h5'
+fields_filename     = 'jorek_equilibrium'
+output_filename     = 'contributing_light_intesities'
 n_x                 = 3 !< size of the spatial coordinates array
 n_groups            = 1 !< number of particle groups
 n_spectra           = 1 !< number of spectra
@@ -94,13 +95,19 @@ write(*,*) my_id, 'System time fast camera initialisation (s): ',real(t1-t0,kind
 write(*,*) "Findig light sources contributing to an image and computing spectral intensities: ..."
 call system_clock(t0)
 call compute_contribution_light_source_to_image_static(camera,synch_sources,spectra,&
-active_light_source_positions,active_light_source_intensities)
+n_contributing_lights,active_light_source_positions,active_light_source_intensities)
 call system_clock(t1)
 write(*,*) "Findig light sources contributing to an image and computing spectral intensities: completed!"
 write(*,*) my_id,'System time finding contributing light sources and computing intensities (s): ',real(t1-t0,kind=8)
 
 !> Write active light sources ------------------------------------------------------------------------------
-
+#ifdef USE_HDF5
+  write(*,*) "Write contributing light sources in HDF5 file ..."
+  call write_source_light_positions_contributions_in_hdf5(output_filename,my_id,n_x,&
+  n_spectra,n_contributing_lights,camera%n_vertices,active_light_source_positions,&
+  active_light_source_intensities,ierr)
+  write(*,*) "Write contributing light sources in HDF5 file: completed!"
+#endif
 !> Finalisation --------------------------------------------------------------------------------------------
 if(allocated(min_spectra))       deallocate(min_spectra);
 if(allocated(max_spectra))       deallocate(max_spectra);
@@ -121,13 +128,15 @@ contains
 !>   lights_inout:  (light_vertices) class containing all active lights
 !>   spectra_inout: (spectral_base)  camera spectrum class
 !> outputs:
-!>   active_light_source_positions:   (real8)(n_x,n_active_lights,n_lens_points) position
-!>                                    of the light sources contributing to an image
+!>   n_contributing_lights:           (integer) number of contributing lights
+!>   active_light_source_positions:   (real8)(n_x,n_contributing_lights,n_lens_points)
+!>                                    positions of the light sources contributing to an image
 !>   active_light_source_intensities: (real8)(n_spectra,n_contributing_lights,n_lens_points)
 !>                                    integrated spectral intensities of the light sources
 !>                                    contributing to an image
 subroutine compute_contribution_light_source_to_image_static(camera_inout,lights_inout,&
-spectra_inout,active_light_source_positions,active_light_source_intensities)
+spectra_inout,n_contributing_lights,active_light_source_positions,&
+active_light_source_intensities)
   use mod_spectra,        only: spectrum_base
   use mod_light_vertices, only: light_vertices
   use mod_camera_static,  only: camera_static
@@ -137,6 +146,7 @@ spectra_inout,active_light_source_positions,active_light_source_intensities)
   class(light_vertices),intent(inout) :: lights_inout
   class(spectrum_base),intent(inout)  :: spectra_inout
   !> outputs:
+  integer,intent(out)                             :: n_contributing_lights
   real*8,dimension(:,:,:),allocatable,intent(out) :: active_light_source_positions
   real*8,dimension(:,:,:),allocatable,intent(out) :: active_light_source_intensities
   !> variables:3
@@ -178,6 +188,60 @@ spectra_inout,active_light_source_positions,active_light_source_intensities)
     enddo
     !$omp end parallel do
   enddo
+  n_contributing_lights = counter-1
 end subroutine compute_contribution_light_source_to_image_static
+
+!> write the source light positions and spectral contribution to hdf5 file.
+!> inputs:
+!>   filename: (character) name of the hdf5 file to write in
+!>   my_id:             (integer) mpi task id
+!>   n_x:               (integer) number of position dimensions
+!>   n_spectra:         (integer) number of spectral interval
+!>   n_lights:          (integer) number of contributing lights
+!>   n_lens_points:     (integer) number of points on lens
+!>   light_positions:   (real8)(n_x,n_contributing_lights,n_lens_points)
+!>                      positions of the light sources contributing to an image
+!>   light_intensities: (real8)(n_spectra,n_contributing_lights,n_lens_points)
+!>                      integrated spectral intensities of the light sources
+!>                      contributing to an image
+!> outputs:
+!>   ierr:
+subroutine write_source_light_positions_contributions_in_hdf5(filename,my_id,&
+n_x,n_spectra,n_lights,n_lens_points,light_positions,light_intensities,ierr)
+  use hdf5
+  use hdf5_io_module, only: HDF5_open_or_create,HDF5_close
+  use hdf5_io_module, only: HDF5_array3D_saving
+  implicit none
+  !> intpus:
+  character(len=*),intent(in) :: filename
+  integer,intent(in)          :: my_id,n_x,n_spectra,n_lights,n_lens_points
+  real*8,dimension(n_x,n_lights,n_lens_points),intent(in)       :: light_positions
+  real*8,dimension(n_spectra,n_lights,n_lens_points),intent(in) :: light_intensities
+  !> outputs:
+  integer,intent(out) :: ierr
+  !> variables:
+  integer :: file_out_len
+  integer(HID_T) :: file_id
+  character(len=10) :: format_char
+  character(len=:),allocatable :: filename_out
+  !> create the output filename
+  write(format_char,'(A,I1,A)') "(A,A,I",digits(my_id),",A)"
+  file_out_len = len(trim(filename))+1+digits(my_id)+3
+  allocate(character(len=file_out_len)::filename_out)
+  write(filename_out,trim(format_char)) filename,"_",my_id,".h5"
+  !> open / close hdf5 file and save arrays in it
+  call HDF5_open_or_create(trim(filename_out),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
+  call HDF5_array3D_saving(file_id,light_positions,n_x,n_lights,n_lens_points,'contributing_light_positions')
+  call HDF5_array3D_saving(file_id,light_intensities,n_spectra,n_lights,n_lens_points,&
+  'contributing_light_intensities')
+  call HDF5_close(file_id)
+  deallocate(filename_out)
+end subroutine write_source_light_positions_contributions_in_hdf5
+
+!> write the camera pinholes, planes and plane directions in hdf5 file
+!> inputs:
+!> outputs:
+!subroutine write_pinholes_planes_directions_in_hdf5()
+!end subroutine write_pinholes_planes_directions_in_hdf5
 !> ---------------------------------------------------------------------------------------------------------
 end program find_light_sources_contributing_to_image

@@ -1516,11 +1516,9 @@ if (SI_units) then
 
 #ifdef fullmhd
     !===========================================density in 1e20m-3
+    scalars(i,var_rho) = scalars(i,var_rho) * central_density
     if (with_impurities) then
-      scalars(i,var_rho) = (scalars(i,var_rho) + scalars(i,iimp(6))*scalars(i,var_rhoimp)) * central_density
       scalars(i,i_ne)    = scalars(i,i_ne) * central_density
-    else
-      scalars(i,var_rho) = scalars(i,var_rho) * central_density
     end if
     !===========================================electron temperature in keV
     if (with_TiTe) then
@@ -1573,11 +1571,9 @@ if (SI_units) then
     !============================================j_phi in MA/m2
     scalars(i,var_zj) = currdens(i) / MU_zero * 1.e-6
     !============================================density in 1e20m-3
+    scalars(i,var_rho) = scalars(i,var_rho) * central_density
     if (with_impurities) then
-      scalars(i,var_rho) = (scalars(i,var_rho) + scalars(i,iimp(6))*scalars(i,var_rhoimp)) * central_density
       scalars(i,i_ne)    = scalars(i,i_ne) * central_density
-    else
-      scalars(i,var_rho) = scalars(i,var_rho) * central_density
     end if
     if (with_TiTe) then
       !===========================================ion and electron temperatures in keV

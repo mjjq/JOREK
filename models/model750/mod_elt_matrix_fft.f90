@@ -3420,7 +3420,7 @@ do i=1,n_vertex_max
                                             - v * (source_bg + source_imp) * (BZ0_AR__n*UZ0)
 
                     Qjac_p (var_Up,var_AZ)  = Qjac_p (var_Up,var_AZ)        &
-                                            - v * (source_bg + source_imp) * (Bp0_AZ*UR0)
+                                            - v * (source_bg + source_imp) * (Bp0_AZ*Up0)
                     Qjac_n (var_Up,var_AZ)  = Qjac_n (var_Up,var_AZ) &
                                             - v * (source_bg + source_imp) * (BR0_AZ__n*UR0)
 

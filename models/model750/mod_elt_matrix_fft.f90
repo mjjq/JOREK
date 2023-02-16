@@ -3785,7 +3785,7 @@ do i=1,n_vertex_max
                                                  - v * Ti0 * alpha_i * UgradRhoimp_rhoimp__p            &
                                                  - v * gamma * (rhoimp * alpha_i * Ti0) * divU
                        Qjac_n (var_Ti,var_rhoimp)= Qjac_n (var_Ti,var_rhoimp)                         &
-                                                 - v * T0 * alpha_i * UgradRhoimp_rhoimp__n
+                                                 - v * Ti0 * alpha_i * UgradRhoimp_rhoimp__n
 
                     endif
 
@@ -5021,7 +5021,7 @@ subroutine impurities_modeling()
 
   endif
             
-  call construct_radiation_parameters()        
+  call construct_radiation_parameters()
 end subroutine impurities_modeling
 
 ! Subroutine which constructs impurity charge state related quantities

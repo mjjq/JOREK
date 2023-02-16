@@ -107,6 +107,9 @@ write(*,*) my_id,'System time finding contributing light sources and computing i
   n_spectra,n_contributing_lights,camera%n_vertices,active_light_source_positions,&
   active_light_source_intensities,ierr)
   write(*,*) "Write contributing light sources in HDF5 file: completed!"
+  write(*,*) "Write camera data in HDF5 file ..."
+  call write_pinholes_planes_directions_in_hdf5(output_filename,my_id,camera,ierr)
+  write(*,*) "Write camera data in HDF5 file: completed!"
 #endif
 !> Finalisation --------------------------------------------------------------------------------------------
 if(allocated(min_spectra))       deallocate(min_spectra);
@@ -193,7 +196,7 @@ end subroutine compute_contribution_light_source_to_image_static
 
 !> write the source light positions and spectral contribution to hdf5 file.
 !> inputs:
-!>   filename: (character) name of the hdf5 file to write in
+!>   filename:          (character) name of the hdf5 file to write in
 !>   my_id:             (integer) mpi task id
 !>   n_x:               (integer) number of position dimensions
 !>   n_spectra:         (integer) number of spectral interval
@@ -205,7 +208,7 @@ end subroutine compute_contribution_light_source_to_image_static
 !>                      integrated spectral intensities of the light sources
 !>                      contributing to an image
 !> outputs:
-!>   ierr:
+!>   ierr: (integer) error variable
 subroutine write_source_light_positions_contributions_in_hdf5(filename,my_id,&
 n_x,n_spectra,n_lights,n_lens_points,light_positions,light_intensities,ierr)
   use hdf5
@@ -240,8 +243,42 @@ end subroutine write_source_light_positions_contributions_in_hdf5
 
 !> write the camera pinholes, planes and plane directions in hdf5 file
 !> inputs:
+!>   filename:     (character) name of the hdf5 file to write in
+!>   my_id:        (integer) mpi task id
+!>   camera_inout: (camera) camera with variables to be stored
 !> outputs:
-!subroutine write_pinholes_planes_directions_in_hdf5()
-!end subroutine write_pinholes_planes_directions_in_hdf5
+!>   camera_inout: (camera) camera with variables to be stored
+!>   ierr:         (integer) error variable
+subroutine write_pinholes_planes_directions_in_hdf5(filename,my_id,camera_inout,ierr)
+  use hdf5
+  use hdf5_io_module, only: HDF5_open_or_create,HDF5_close
+  use hdf5_io_module, only: HDF5_array2D_saving,HDF5_array3D_saving
+  use mod_camera,     only: camera
+  implicit none
+  !> inputs-outputs:
+  class(camera),intent(inout) :: camera_inout
+  !> inputs:
+  character(len=*),intent(in) :: filename
+  integer,intent(in) :: my_id
+  !> outputs:
+  integer,intent(out) :: ierr
+  !> variables:
+  integer :: file_out_len
+  integer(HID_T) :: file_id
+  character(len=10) :: format_char
+  character(len=:),allocatable :: filename_out
+  !> create the output filename
+  write(format_char,'(A,I1,A)') "(A,A,I",digits(my_id),",A)"
+  file_out_len = len(trim(filename))+1+digits(my_id)+3
+  allocate(character(len=file_out_len)::filename_out)
+  write(filename_out,trim(format_char)) filename,"_",my_id,".h5"
+  !> open / close hdf5 file and save arrays in it
+  call HDF5_open_or_create(trim(filename_out),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
+  call HDF5_array3D_saving(file_id,camera_inout%x,camera_inout%n_x,camera_inout%n_vertices,camera_inout%n_times,'point_on_lens_positions')
+  call HDF5_array3D_saving(file_id,camera_inout%image_plane,camera_inout%n_x,camera_inout%n_plane_points,camera_inout%n_times,'image_plane_verices')
+  call HDF5_array2D_saving(file_id,camera_inout%image_plane_direction,camera_inout%n_x,camera_inout%n_times,'image_plane_directions')
+  call HDF5_close(file_id)
+  deallocate(filename_out)
+end subroutine write_pinholes_planes_directions_in_hdf5
 !> ---------------------------------------------------------------------------------------------------------
 end program find_light_sources_contributing_to_image

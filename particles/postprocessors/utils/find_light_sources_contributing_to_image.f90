@@ -21,11 +21,12 @@ type(spectrum_integrator_2nd)               :: spectra
 type(camera_perspective_static)             :: camera
 type(gyroaverage_synchrotron_light_dist)    :: synch_sources
 type(particle_sim),dimension(:),allocatable :: sims
-integer                                     :: ii,t0,t1
+integer                                     :: ii
 integer                                     :: n_groups,my_id,n_cpus,n_x,ierr
 integer                                     :: n_times,n_wavelengths,n_spectra
 integer                                     :: n_int_camera_param,n_real_camera_param
 integer,dimension(:),allocatable            :: int_camera_param,n_contributing_lights
+real*8                                      :: t1,t0
 real*8,dimension(:),allocatable             :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable             :: real_camera_param,sim_times
 real*8,dimension(:,:,:),allocatable         :: active_light_source_positions
@@ -75,30 +76,30 @@ write(*,*) "Reading particle and MHD data: completed!"
 
 !> Initialise synthetic camera and light sources
 write(*,*) 'Initialise synthetic camera and light sources ...'
-call system_clock(t0)
+t0 = MPI_Wtime()
 spectra = spectrum_integrator_2nd(n_wavelengths,n_spectra,min_spectra,max_spectra)
 call spectra%generate_spectrum()
 call lens%init_pinhole(n_x,pinhole_positions)
 call camera%init_camera(lens,spectra,n_int_camera_param,n_real_camera_param,&
 int_camera_param,real_camera_param)
 call synch_sources%init_lights_from_particles(n_times,sims)
-call system_clock(t1)
+t1 = MPI_Wtime()
 allocate(n_contributing_lights(camera%n_vertices))
 allocate(active_light_source_positions(n_x,sum(synch_sources%n_active_vertices),camera%n_vertices)) 
 active_light_source_positions = 0d0;
 allocate(active_light_source_intensities(n_spectra,sum(synch_sources%n_active_vertices),camera%n_vertices)); 
 active_light_source_intensities = 0d0;
 write(*,*) 'Initialise synthetic camera and light sources: completed!'
-write(*,*) my_id, 'System time fast camera initialisation (s): ',real(t1-t0,kind=8)/1d3
+write(*,*) my_id, 'System time fast camera initialisation (s): ',t1-t0
 
 !> Find active light sources -------------------------------------------------------------------------------
 write(*,*) "Findig light sources contributing to an image and computing spectral intensities: ..."
-call system_clock(t0)
+t0 = MPI_Wtime()
 call compute_contribution_light_source_to_image_static(camera,synch_sources,spectra,&
 n_contributing_lights,active_light_source_positions,active_light_source_intensities)
-call system_clock(t1)
+t1 = MPI_Wtime()
 write(*,*) "Findig light sources contributing to an image and computing spectral intensities: completed!"
-write(*,*) my_id,'System time finding contributing light sources and computing intensities (s): ',real(t1-t0,kind=8)
+write(*,*) my_id,'System time finding contributing light sources and computing intensities (s): ',t1-t0
 
 !> Write active light sources ------------------------------------------------------------------------------
 #ifdef USE_HDF5
@@ -230,13 +231,15 @@ light_intensities,ierr)
   !> outputs:
   integer,intent(out) :: ierr
   !> variables:
-  integer :: file_out_len
+  integer :: file_out_len,n_my_id
   integer(HID_T) :: file_id
   character(len=10) :: format_char
   character(len=:),allocatable :: filename_out
   !> create the output filename
-  write(format_char,'(A,I1,A)') "(A,A,I",digits(my_id),",A)"
-  file_out_len = len(trim(filename))+1+digits(my_id)+3
+  n_my_id = int(log10(real(my_id)))+1
+  if(my_id.eq.0) n_my_id = 1
+  write(format_char,'(A,I1,A)') "(A,A,I",n_my_id,",A)"
+  file_out_len = len(trim(filename))+1+n_my_id+3
   allocate(character(len=file_out_len)::filename_out)
   write(filename_out,trim(format_char)) filename,"_",my_id,".h5"
   !> open / close hdf5 file and save arrays in it
@@ -271,19 +274,22 @@ subroutine write_pinholes_planes_directions_in_hdf5(filename,my_id,camera_inout,
   !> outputs:
   integer,intent(out) :: ierr
   !> variables:
-  integer :: file_out_len
+  integer :: file_out_len,n_my_id
   integer(HID_T) :: file_id
   character(len=10) :: format_char
   character(len=:),allocatable :: filename_out
   !> create the output filename
-  write(format_char,'(A,I1,A)') "(A,A,I",digits(my_id),",A)"
-  file_out_len = len(trim(filename))+1+digits(my_id)+3
+  n_my_id = int(log10(real(my_id)))+1
+  if(my_id.eq.0) n_my_id = 1
+  write(format_char,'(A,I1,A)') "(A,A,I",n_my_id,",A)"
+  file_out_len = len(trim(filename))+1+n_my_id+3
   allocate(character(len=file_out_len)::filename_out)
   write(filename_out,trim(format_char)) filename,"_",my_id,".h5"
   !> open / close hdf5 file and save arrays in it
   call HDF5_open_or_create(trim(filename_out),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
   call HDF5_array3D_saving(file_id,camera_inout%x,camera_inout%n_x,camera_inout%n_vertices,camera_inout%n_times,'point_on_lens_positions')
-  call HDF5_array3D_saving(file_id,camera_inout%image_plane,camera_inout%n_x,camera_inout%n_plane_points,camera_inout%n_times,'image_plane_verices')
+  call HDF5_array3D_saving(file_id,camera_inout%image_plane,camera_inout%n_x,&
+  camera_inout%n_plane_points,camera_inout%n_times,'image_plane_vertices')
   call HDF5_array2D_saving(file_id,camera_inout%image_plane_direction,camera_inout%n_x,camera_inout%n_times,'image_plane_directions')
   call HDF5_close(file_id)
   deallocate(filename_out)

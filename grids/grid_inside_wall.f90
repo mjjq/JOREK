@@ -1271,8 +1271,8 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
   Zmax = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
 
   write(*,*)'Building grid inside wall for STEP'
-  write(*, '(A, 2F7.2')'R min, max = ', Rmin, Rmax
-  write(*, '(A, 2F7.2')'Z min, max = ', Zmin, Zmax
+  write(*, '(A, 2F7.2)')'R min, max = ', Rmin, Rmax
+  write(*, '(A, 2F7.2)')'Z min, max = ', Zmin, Zmax
 
   ! --- Find lower and upper divertor split points
   ! --- Where does the core seperate into the inner/outer divertors

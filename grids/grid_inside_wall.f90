@@ -1237,6 +1237,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
   ! --- Create an r/z grid for STEP
   ! --- STEP has extended inner and outer divertors
   ! --- which are not handled adequately by create_grid_inside_wall_usual
+  ! --- Assume that the outer divertors are larger than the inner divertors
   !
   !           ___
   !   ___    /  /
@@ -1260,27 +1261,156 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
   real*8,  intent(inout)  :: R_grid(4*nR,nZ+1),Z_grid(4*nR,nZ+1)
 
   ! --- Local variables
-  real*8 :: Rmin, Rmax, Zmin, Zmax
-  real*8 :: lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r
-  real*8 :: upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r
+  real*8  :: Rmin, Rmax, r_min1, r_max1, r_min2, r_max2, width1, width2
+  real*8  :: lower_inner_z, lower_outer_z, upper_inner_z, upper_outer_z
+  real*8  :: lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r
+  real*8  :: upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r
+  integer :: nR_lower_inner, nR_lower_outer, nR_upper_inner, nR_upper_outer
+  integer :: i_lo_start, i_lo_end
+  integer :: i_li_start, i_li_end
+  integer :: i_core_start, i_core_end
+  integer :: i_ui_start, i_ui_end
+  integer :: i_uo_start, i_uo_end
+  real*8  :: accuracy
+  real*8, allocatable  :: Zlines(:)
+
+  integer :: in_section, i_z, j_r
+  logical :: debug
+
+  ! --- Initialize local variables
+  accuracy = +1.d-5
+  allocate(Zlines(nZ+1))
+  debug = .true.
+
+  write(*,*)'Building grid inside wall for STEP'
 
   ! --- Cut the fomain with horizontal lines
   Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
   Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
-  Zmin = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
-  Zmax = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
-
-  write(*,*)'Building grid inside wall for STEP'
-  write(*, '(A, 2F7.2)')'R min, max = ', Rmin, Rmax
-  write(*, '(A, 2F7.2)')'Z min, max = ', Zmin, Zmax
 
   ! --- Find lower and upper divertor split points
   ! --- Where does the core seperate into the inner/outer divertors
   call leg_split_location_step(.true., lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r)
   call leg_split_location_step(.false., upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r)
 
-  write(*,'(A, 4F7.3)')'Lower split z, r inner, split, outer = ',lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r
-  write(*,'(A, 4F7.3)')'Upper split z, r inner, split, outer = ',upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r
+  ! --- Find lower and upper divertor z values
+  call find_divertor_z_values_step(.true., lower_split_z, lower_inner_z, lower_outer_z)
+  call find_divertor_z_values_step(.false., upper_split_z, upper_inner_z, upper_outer_z)
+
+  ! --- Determine ZLines, based on z values
+  call determine_zlines_step(nZ, Zlines, &
+                             lower_outer_z, lower_inner_z, lower_split_z, &
+                             upper_split_z, upper_inner_z, upper_outer_z)
+
+  ! --- Determine nR inner/outer at the split points
+  call determine_nr_split(nR, nR_lower_inner, nR_lower_outer, &
+                          lower_split_inner_r, lower_split_r, lower_split_outer_r)
+  call determine_nr_split(nR, nR_upper_inner, nR_upper_outer, &
+                          upper_split_inner_r, upper_split_r, upper_split_outer_r)
+
+  if (debug) then
+    write(*, '(A, 3F7.3)')'Lower Z split, inner, outer = ',lower_split_z, lower_inner_z, lower_outer_z
+    write(*, '(A, 2I5)')'Lower split nR inner, outer = ',nR_lower_inner,nR_lower_outer
+
+    write(*, '(A, 3F7.3)')'Upper Z split, inner, outer = ',upper_split_z, upper_inner_z, upper_outer_z
+    write(*, '(A, 2I5)')'Upper split nR inner, outer = ',nR_upper_inner,nR_upper_outer
+  end if
+
+
+  ! --- Loop over Zlines
+  in_section = 0
+  loop_zlines: do i_z = 1, nZ + 1
+
+    ! --- intersect the wall polygon
+    call RintersectPolygon(n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), Rmin, Rmax, &
+                           Zlines(i_z), accuracy, r_min1, r_max1, r_min2, r_max2)
+    width1 = r_max1 - r_min1
+    width2 = r_max2 - r_min2
+
+    ! --- Which section are we in ?
+    ! --- Section 1 = Lower outer divertor leg
+    ! --- Section 2 = Lower inner + outer divertor legs
+    ! --- Section 3 = Core
+    ! --- Section 4 = Upper inner + outer divertor legs
+    ! --- Section 5 = Upper outer divertor leg
+
+    if ((width1 .gt. 0.d0) .and. (width2 .eq. 0.d0)) then
+      if (in_section .eq. 0) in_section = 1
+      if (in_section .eq. 2) in_section = 3
+      if (in_section .eq. 4) in_section = 5
+    end if
+    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) then
+      if (in_section .eq. 1) in_section = 2
+      if (in_section .eq. 3) in_section = 4
+    end if
+
+    if (debug)   write(*,'(A, 2I5, 3F7.3)')'i, Z w1, w2, section = ',i_z,in_section,Zlines(i_z),width1,width2
+
+    section_1: if (in_section .eq. 1) then
+      nR_grid(i_z, 1) = 0
+      nR_grid(i_z, 2) = nR_lower_outer
+
+      s1_outer: do j_r = 1, nR_lower_outer
+        R_grid(j_r, i_z) = r_min1 + real(j_r - 1)/real(nR_lower_outer - 1) * (r_max1 - r_min1)
+        Z_grid(j_r, i_z) = Zlines(i_z)
+      end do s1_outer
+    end if section_1
+
+    section_2: if (in_section .eq. 2) then
+      nR_grid(i_z, 1) = nR_lower_inner
+      nR_grid(i_z, 2) = nR_lower_outer
+
+      s2_inner: do j_r = 1, nR_lower_inner
+        R_grid(j_r, i_z) = r_min1 + real(j_r - 1)/real(nR_lower_inner - 1) * (r_max1 - r_min1)
+        Z_grid(j_r, i_z) = Zlines(i_z)
+      end do s2_inner
+
+      s2_outer: do j_r = nR_lower_inner + 1, nR_lower_inner + nR_lower_outer
+        R_grid(j_r, i_z) = r_min2 + real(j_r - nR_lower_inner - 1)/real(nR_lower_outer - 1) * (r_max2 - r_min2)
+        Z_grid(j_r, i_z) = Zlines(i_z)
+      end do s2_outer
+    end if section_2
+
+    section_3: if (in_section .eq. 3) then
+      nR_grid(i_z, 1) = nR
+      nR_grid(i_z, 2) = 0
+
+      s3_core: do j_r = 1, nR
+        R_grid(j_r, i_z) = r_min1 + real(j_r - 1)/real(nR - 1) * (r_max1 - r_min1)
+        Z_grid(j_r, i_z) = Zlines(i_z)
+      end do s3_core
+    end if section_3
+
+    section_4: if (in_section .eq. 4) then
+      nR_grid(i_z, 1) = nR_upper_inner
+      nR_grid(i_z, 2) = nR_upper_outer
+
+      s4_inner: do j_r = 1, nR_upper_inner
+        R_grid(j_r, i_z) = r_min1 + real(j_r - 1)/real(nR_upper_inner - 1) * (r_max1 - r_min1)
+        Z_grid(j_r, i_z) = Zlines(i_z)
+      end do s4_inner
+
+      s4_outer: do j_r =  nR_upper_inner + 1, nR_upper_inner + nR_upper_outer
+        R_grid(j_r, i_z) = r_min2 + real(j_r - nR_upper_inner - 1)/real(nR_upper_outer - 1) * (r_max2 - r_min2)
+        Z_grid(j_r, i_z) = Zlines(i_z)
+      end do s4_outer
+    end if section_4
+
+    section_5: if (in_section .eq. 5) then
+      nR_grid(i_z, 1) = 0
+      nR_grid(i_z, 2) = nR_upper_outer
+
+      s5_outer: do j_r = 1, nR_upper_outer
+        R_grid(j_r, i_z) = r_min1 + real(j_r - 1)/real(nR_upper_outer - 1) * (r_max1 - r_min1)
+        Z_grid(j_r, i_z) = Zlines(i_z)
+      end do s5_outer
+    end if section_5
+
+
+  end do loop_zlines
+
+  ! --- clean up
+  deallocate(Zlines)
 
   stop
 
@@ -1288,6 +1418,13 @@ end subroutine create_grid_inside_wall_STEP
 
 subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r)
   ! --- Determine the leg split location
+  ! --- In ASCII art below (for upper), where is (a) in r/z
+  ! --- and what are the r values for the inner/outer wall
+  !           ___
+  !   ___    /  /
+  !   \  \  /  /
+  !    \  \/a /
+  !    |      |
 
   use grid_xpoint_data, only: n_wall, R_wall, Z_wall
 
@@ -1302,14 +1439,12 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
   real*8  :: z_limit, z_value, accuracy
   integer :: i
 
+  ! --- Initialize local variables
   accuracy = +1.d-5
 
   ! --- find the limits of the wall
-  if (is_lower .eq. .true.) then
-    z_limit = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
-  else
-    z_limit = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
-  end if
+  if (is_lower .eq. .true.)   z_limit = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  if (is_lower .eq. .false.)  z_limit = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
 
   Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
   Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
@@ -1322,7 +1457,6 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
     ! --- intersect the wall polygon
     call RintersectPolygon(n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), Rmin, Rmax, &
                            z_value, accuracy, r_min1, r_max1, r_min2, r_max2)
-
     width1 = r_max1 - r_min1
     width2 = r_max2 - r_min2
 
@@ -1348,3 +1482,210 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
   return
 
 end subroutine leg_split_location_step
+
+subroutine find_divertor_z_values_step(is_lower, split_z, inner_z, outer_z)
+  ! --- Determine the Z values of the inner and outer divertors
+  ! --- In ASCII art below (for upper), find (b) and (c), given (a)
+  !           ___ c
+  ! b ___    /  /
+  !   \  \  /  /
+  !    \  \/a /
+  !    |      |
+
+  use grid_xpoint_data, only: n_wall, R_wall, Z_wall
+
+  implicit none
+
+  ! --- Input variables
+  logical, intent(in) :: is_lower
+  real*8, intent(in)  :: split_z
+  real*8, intent(out) :: inner_z, outer_z
+
+  ! --- Local variables
+  real*8  :: Rmin, Rmax, r_min1, r_max1, r_min2, r_max2, width1, width2
+  real*8  :: accuracy
+  integer :: i
+
+  ! --- Initialize local variables
+  accuracy = +1.d-5
+
+  ! --- find the limits of the wall
+  if (is_lower .eq. .true.)   outer_z = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  if (is_lower .eq. .false.)  outer_z = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
+
+  Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
+  Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
+
+  ! --- Loop over Z with a very high resolutuon
+  ! --- break loop once there are 2 intersections of the wall polygon
+  ! --- Start from the top/bottom and work inwards
+
+  find_inner_z: do i= 1, 400
+    inner_z = outer_z + (real(i-1)/real(399) * (split_z - outer_z))
+
+    ! --- intersect the wall polygon
+    call RintersectPolygon(n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), Rmin, Rmax, &
+                           inner_z, accuracy, r_min1, r_max1, r_min2, r_max2)
+    width1 = r_max1 - r_min1
+    width2 = r_max2 - r_min2
+
+    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0))  exit find_inner_z
+
+  end do find_inner_z
+
+  return
+
+end subroutine find_divertor_z_values_step
+
+subroutine determine_zlines_step(nZ, Zlines, &
+                                 lower_outer_z, lower_inner_z, lower_split_z, &
+                                 upper_split_z, upper_inner_z, upper_outer_z)
+  ! --- Determine an optimal z lines, based on multiple z values
+  implicit none
+
+  ! --- Input variables
+  integer, intent(in)    :: nZ
+  real*8,  intent(in)    :: lower_outer_z, lower_inner_z, lower_split_z
+  real*8,  intent(in)    :: upper_split_z, upper_inner_z, upper_outer_z
+  real*8,  intent(inout) :: Zlines(nZ+1)
+
+  ! --- Local variables
+  logical :: debug
+  real*8  :: total_height, fraction_core
+  real*8  :: fraction_lower_inner, fraction_lower_outer
+  real*8  :: fraction_upper_inner, fraction_upper_outer
+
+  integer :: nZ_core, nZ_diff
+  integer :: nZ_lower_inner, nZ_lower_outer
+  integer :: nZ_upper_inner, nZ_upper_outer
+  integer :: i
+  integer :: i_lo_start, i_lo_end
+  integer :: i_li_start, i_li_end
+  integer :: i_core_start, i_core_end
+  integer :: i_ui_start, i_ui_end
+  integer :: i_uo_start, i_uo_end
+
+  real*8  :: delta_lower_inner, delta_lower_outer, delta_core, delta_upper_inner, delta_upper_outer
+
+  debug = .true.
+
+  ! --- determine fractions of Z for each section
+  total_height = abs(lower_outer_z) + abs(upper_split_z)
+
+  fraction_lower_outer = (abs(lower_outer_z) - abs(lower_inner_z)) / total_height
+  fraction_lower_inner = (abs(lower_inner_z) - abs(lower_split_z)) / total_height
+  fraction_core = (abs(lower_split_z) + abs(upper_split_z)) / total_height
+  fraction_upper_inner = (abs(upper_inner_z) - abs(upper_split_z)) / total_height
+  fraction_upper_outer = (abs(upper_outer_z) - abs(upper_inner_z)) / total_height
+
+  ! --- determine how many lines each section should have
+  ! --- truncation extreemly likely here
+  nZ_lower_outer = int(fraction_lower_outer * nZ)
+  nZ_lower_inner = int(fraction_lower_inner * nZ)
+  nZ_core = int(fraction_core * nZ)
+  nZ_upper_inner = int(fraction_upper_inner * nZ)
+  nZ_upper_outer = int(fraction_upper_outer * nZ)
+
+
+  ! --- closure condition: sum(nZ_section) == nZ
+  ! --- add/subtract any truncation diff to the core
+  nZ_diff = nZ - nZ_lower_outer - nZ_lower_inner - nZ_core - nZ_upper_inner - nZ_upper_outer
+  nZ_core = nZ_core + nZ_diff
+  if (debug) write(*,'(A, 7I5)')'nZ lo, li, core, ui, uo, total, nZ = ', &
+          nZ_lower_outer, nZ_lower_inner, nZ_core, nZ_upper_inner, nZ_upper_outer, &
+          nZ_lower_outer + nZ_lower_inner + nZ_core + nZ_upper_inner + nZ_upper_outer, nZ
+
+  ! --- Grid spacing deltas for each section
+  delta_lower_outer = (abs(lower_outer_z) - abs(lower_inner_z)) / nZ_lower_outer
+  delta_lower_inner = (abs(lower_inner_z) - abs(lower_split_z)) / nZ_lower_inner
+  delta_core = (abs(lower_split_z) + abs(upper_split_z)) / nZ_core
+  delta_upper_inner = (abs(upper_inner_z) - abs(upper_split_z)) / nZ_upper_inner
+  delta_upper_outer = (abs(upper_outer_z) - abs(upper_inner_z)) / nZ_upper_outer
+
+  if (debug) write(*, '(A, 5F7.4)')' Deltas :: lo, li, core, ui, uo = ', &
+          delta_lower_outer, delta_lower_inner, delta_core, delta_upper_inner, delta_upper_outer
+
+  ! --- loop start/end values
+  i_lo_start = 1
+  i_lo_end = nZ_lower_outer
+
+  i_li_start = i_lo_end + 1
+  i_li_end = i_li_start + nZ_lower_inner - 1
+
+  i_core_start = i_li_end + 1
+  i_core_end = i_core_start + nZ_core - 1
+
+  i_ui_start = i_core_end + 1
+  i_ui_end = i_ui_start + nZ_upper_inner - 1
+
+  i_uo_start = i_ui_end + 1
+  i_uo_end = i_uo_start + nZ_upper_outer
+
+  if (debug) then
+    write(*, '(A, 2I5)')' Loop start, end :: lower outer :: ',i_lo_start, i_lo_end
+    write(*, '(A, 2I5)')' Loop start, end :: lower inner :: ',i_li_start, i_li_end
+    write(*, '(A, 2I5)')' Loop start, end :: core :: ',i_core_start, i_core_end
+    write(*, '(A, 2I5)')' Loop start, end :: upper inner :: ',i_ui_start, i_ui_end
+    write(*, '(A, 2I5)')' Loop start, end :: upper outer :: ',i_uo_start, i_uo_end
+  end if
+
+  ! --- Create Z lines
+  loop_lo: do i = i_lo_start, i_lo_end
+    Zlines(i) = lower_outer_z + real(i - i_lo_start) * delta_lower_outer
+    if (debug) write(*,'(A, i5, F7.3)')' Lower outer i, Zlines = ',i, Zlines(i)
+  end do loop_lo
+
+  loop_li: do i = i_li_start, i_li_end
+    Zlines(i) = lower_inner_z + real(i - i_li_start) * delta_lower_inner
+    if (debug) write(*,'(A, i5, F7.3)')' Lower inner i, Zlines = ',i, Zlines(i)
+  end do loop_li
+
+  loop_core: do i = i_core_start, i_core_end
+    Zlines(i) = lower_split_z + real(i - i_core_start) * delta_core
+    if (debug) write(*,'(A, i5, F7.3)')' Core i, Zlines = ',i, Zlines(i)
+  end do loop_core
+
+  loop_ui: do i = i_ui_start, i_ui_end
+    Zlines(i) = upper_split_z + real(i - i_ui_start) * delta_upper_inner
+    if (debug) write(*,'(A, i5, F7.3)')' Upper inner i, Zlines = ',i, Zlines(i)
+  end do loop_ui
+
+  loop_uo: do i = i_uo_start, i_uo_end
+    Zlines(i) = upper_inner_z + real(i - i_uo_start) * delta_upper_outer
+    if (debug) write(*,'(A, i5, F7.3)')' Upper outer i, Zlines = ',i, Zlines(i)
+  end do loop_uo
+
+  return
+
+end subroutine determine_zlines_step
+
+subroutine determine_nr_split(nR, nR_inner, nR_outer, inner_r, split_r, outer_r)
+  ! --- How many R grid pieces should go into the inner/outer divertors
+  implicit none
+
+  ! --- Input variables
+  integer, intent(in)  :: nR
+  real*8,  intent(in)  :: inner_r, split_r, outer_r
+  integer, intent(out) :: nR_inner, nR_outer
+
+  ! --- Local variables
+  real*8 :: fraction_inner, fraction_outer, total_width, nR_diff
+
+  ! --- determine fractions
+  total_width = outer_r - inner_r
+  fraction_inner = (split_r - inner_r) / total_width
+  fraction_outer = (outer_r - split_r) / total_width
+
+  ! --- determine how many lines each section should have
+  ! --- truncation extreemly likely here
+  nR_inner = int(fraction_inner * nR)
+  nR_outer = int(fraction_outer * nR)
+
+  ! --- closure condition : nR_inner + nR_outer == nR
+  ! --- add/subtract any trancation diff to the outer
+  nR_diff = nR - nR_inner - nR_outer
+  nR_outer = nR_outer + nR_diff
+
+  return
+
+end subroutine determine_nr_split

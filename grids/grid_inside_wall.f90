@@ -1266,21 +1266,29 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
   real*8  :: lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r
   real*8  :: upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r
   integer :: nR_lower_inner, nR_lower_outer, nR_upper_inner, nR_upper_outer
-  integer :: i_lo_start, i_lo_end
-  integer :: i_li_start, i_li_end
-  integer :: i_core_start, i_core_end
-  integer :: i_ui_start, i_ui_end
-  integer :: i_uo_start, i_uo_end
+
+  integer :: nZ_section_1, nZ_section_2, nZ_section_3, nZ_section_4, nZ_section_5
+  integer :: node_loop_lower_inner_start, node_loop_lower_inner_end
+  integer :: node_loop_lower_outer_start, node_loop_lower_outer_end
+  integer :: node_loop_core_start, node_loop_core_end
+  integer :: node_loop_upper_inner_start, node_loop_upper_inner_end
+  integer :: node_loop_upper_outer_start, node_loop_upper_outer_end
+
   real*8  :: accuracy
   real*8, allocatable  :: Zlines(:)
 
-  integer :: in_section, i_z, j_r
+  integer :: in_section, i_z, j_r, elm_count
   logical :: debug
 
   ! --- Initialize local variables
   accuracy = +1.d-5
   allocate(Zlines(nZ+1))
   debug = .true.
+  nZ_section_1 = 0
+  nZ_section_2 = 0
+  nZ_section_3 = 0
+  nZ_section_4 = 0
+  nZ_section_5 = 0
 
   write(*,*)'Building grid inside wall for STEP'
 
@@ -1347,6 +1355,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     if (debug)   write(*,'(A, 2I5, 3F7.3)')'i, Z w1, w2, section = ',i_z,in_section,Zlines(i_z),width1,width2
 
     section_1: if (in_section .eq. 1) then
+      nZ_section_1 = nZ_section_1 + 1
       nR_grid(i_z, 1) = 0
       nR_grid(i_z, 2) = nR_lower_outer
 
@@ -1357,6 +1366,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_1
 
     section_2: if (in_section .eq. 2) then
+      nZ_section_2 = nZ_section_2 + 1
       nR_grid(i_z, 1) = nR_lower_inner
       nR_grid(i_z, 2) = nR_lower_outer
 
@@ -1372,6 +1382,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_2
 
     section_3: if (in_section .eq. 3) then
+      nZ_section_3 = nZ_section_3 + 1
       nR_grid(i_z, 1) = nR
       nR_grid(i_z, 2) = 0
 
@@ -1382,6 +1393,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_3
 
     section_4: if (in_section .eq. 4) then
+      nZ_section_4 = nZ_section_4 + 1
       nR_grid(i_z, 1) = nR_upper_inner
       nR_grid(i_z, 2) = nR_upper_outer
 
@@ -1397,6 +1409,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_4
 
     section_5: if (in_section .eq. 5) then
+      nZ_section_5 = nZ_section_5 + 1
       nR_grid(i_z, 1) = 0
       nR_grid(i_z, 2) = nR_upper_outer
 
@@ -1409,10 +1422,179 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
 
   end do loop_zlines
 
+  ! --- Set node loop ranges
+  node_loop_lower_inner_start = nZ_section_1
+  node_loop_lower_inner_end = node_loop_lower_inner_start + nZ_section_2 - 1
+
+  node_loop_lower_outer_start = 1
+  node_loop_lower_outer_end = node_loop_lower_inner_end
+
+  node_loop_core_start = nZ_section_1 + nZ_section_2 + 1
+  node_loop_core_end = nZ_section_1 + nZ_section_2 + nZ_section_3 - 1
+
+  node_loop_upper_inner_start = nZ_section_1 + nZ_section_2 + nZ_section_3 + 1
+  node_loop_upper_inner_end = node_loop_upper_inner_start + nZ_section_4 - 2
+
+  node_loop_upper_outer_start = node_loop_upper_inner_start
+  node_loop_upper_outer_end = nZ
+
+  ! --- Create nodes
+  elm_count = 0
+
+  ! -- lower inner divertor leg
+  lower_inner_divertor_nodes: do i_z = node_loop_lower_inner_start, node_loop_lower_inner_end
+    do j_r = 1, nR_grid(i_z, 1) - 1
+      elm_count = elm_count + 1
+      ! -- Lower left corner
+      node_index(elm_count, 1, 1) = j_r
+      node_index(elm_count, 1, 2) = i_z
+      ! -- Lower right corner
+      node_index(elm_count, 2, 1) = j_r + 1
+      node_index(elm_count, 2, 2) = i_z
+      ! -- Upper right corner
+      node_index(elm_count, 3, 1) = j_r + 1
+      node_index(elm_count, 3, 2) = i_z + 1
+      ! -- Upper left corner
+      node_index(elm_count, 4, 1) = j_r
+      node_index(elm_count, 4, 2) = i_z + 1
+
+    end do
+  end do lower_inner_divertor_nodes
+
+  lower_outer_divertor_nodes: do i_z = node_loop_lower_outer_start, node_loop_lower_outer_end
+    do j_r = nR_grid(i_z, 1) + 1, nR_grid(i_z, 1) + nR_grid(i_z, 2) - 1
+      elm_count = elm_count + 1
+
+      ! -- Lower left corner
+      node_index(elm_count, 1, 1) = j_r
+      node_index(elm_count, 1, 2) = i_z
+      ! -- Lower right corner
+      node_index(elm_count, 2, 1) = j_r + 1
+      node_index(elm_count, 2, 2) = i_z
+      ! -- Upper right corner
+      if (i_z .eq. nZ_section_1)  then
+        node_index(elm_count, 3, 1) = j_r + 1 + nR_grid(i_z+1, 1)
+      else
+        node_index(elm_count, 3, 1) = j_r + 1
+      end if
+      node_index(elm_count, 3, 2) = i_z + 1
+      ! -- Upper left corner
+      if (i_z .eq. nZ_section_1)  then
+        node_index(elm_count, 4, 1) = j_r + nR_grid(i_z+1, 1)
+      else
+        node_index(elm_count, 4, 1) = j_r
+      end if
+      node_index(elm_count, 4, 2) = i_z + 1
+
+    end do
+  end do lower_outer_divertor_nodes
+
+  knit_lower_legs_to_core: do i_z = node_loop_lower_outer_end+1, node_loop_core_start-1
+    do j_r = 1, nR_grid(i_z, 1) + nR_grid(i_z, 2) - 1
+      elm_count = elm_count + 1
+      ! -- Lower left corner
+      node_index(elm_count, 1, 1) = j_r
+      node_index(elm_count, 1, 2) = i_z
+      ! -- Lower right corner
+      node_index(elm_count, 2, 1) = j_r + 1
+      node_index(elm_count, 2, 2) = i_z
+      ! -- Upper right corner
+      node_index(elm_count, 3, 1) = j_r + 1
+      node_index(elm_count, 3, 2) = i_z + 1
+      ! -- Upper left corner
+      node_index(elm_count, 4, 1) = j_r
+      node_index(elm_count, 4, 2) = i_z + 1
+
+    end do
+  end do knit_lower_legs_to_core
+
+  core_nodes: do i_z = node_loop_core_start, node_loop_core_end
+    do j_r = 1, nR_grid(i_z, 1) - 1
+      elm_count = elm_count + 1
+      ! -- Lower left corner
+      node_index(elm_count, 1, 1) = j_r
+      node_index(elm_count, 1, 2) = i_z
+      ! -- Lower right corner
+      node_index(elm_count, 2, 1) = j_r + 1
+      node_index(elm_count, 2, 2) = i_z
+      ! -- Upper right corner
+      node_index(elm_count, 3, 1) = j_r + 1
+      node_index(elm_count, 3, 2) = i_z + 1
+      ! -- Upper left corner
+      node_index(elm_count, 4, 1) = j_r
+      node_index(elm_count, 4, 2) = i_z + 1
+    end do
+  end do core_nodes
+
+  knit_upper_legs_to_core: do i_z = node_loop_core_end + 1, node_loop_upper_inner_start - 1
+    do j_r = 1, nR_grid(i_z, 1) - 1
+      elm_count = elm_count + 1
+      ! -- Lower left corner
+      node_index(elm_count, 1, 1) = j_r
+      node_index(elm_count, 1, 2) = i_z
+      ! -- Lower right corner
+      node_index(elm_count, 2, 1) = j_r + 1
+      node_index(elm_count, 2, 2) = i_z
+      ! -- Upper right corner
+      node_index(elm_count, 3, 1) = j_r + 1
+      node_index(elm_count, 3, 2) = i_z + 1
+      ! -- Upper left corner
+      node_index(elm_count, 4, 1) = j_r
+      node_index(elm_count, 4, 2) = i_z + 1
+    end do
+  end do knit_upper_legs_to_core
+
+  upper_inner_nodes: do i_z = node_loop_upper_inner_start, node_loop_upper_inner_end
+    do j_r = 1, nR_grid(i_z, 1) - 1
+      elm_count = elm_count + 1
+      ! -- Lower left corner
+      node_index(elm_count, 1, 1) = j_r
+      node_index(elm_count, 1, 2) = i_z
+      ! -- Lower right corner
+      node_index(elm_count, 2, 1) = j_r + 1
+      node_index(elm_count, 2, 2) = i_z
+      ! -- Upper right corner
+      node_index(elm_count, 3, 1) = j_r + 1
+      node_index(elm_count, 3, 2) = i_z + 1
+      ! -- Upper left corner
+      node_index(elm_count, 4, 1) = j_r
+      node_index(elm_count, 4, 2) = i_z + 1
+
+    end do
+  end do upper_inner_nodes
+
+  upper_outer_nodes: do i_z = node_loop_upper_outer_start, node_loop_upper_outer_end
+    do j_r = nR_grid(i_z, 1) + 1, nR_grid(i_z, 1) + nR_grid(i_z, 2) - 1
+      elm_count = elm_count + 1
+      ! -- Lower left corner
+      node_index(elm_count, 1, 1) = j_r
+      node_index(elm_count, 1, 2) = i_z
+      ! -- Lower right corner
+      node_index(elm_count, 2, 1) = j_r + 1
+      node_index(elm_count, 2, 2) = i_z
+      ! -- Upper right corner
+      if (i_z .eq. node_loop_upper_inner_end + 1)  then
+        node_index(elm_count, 3, 1) = j_r + 1 - nR_grid(i_z, 1)
+      else
+        node_index(elm_count, 3, 1) = j_r + 1
+      end if
+      node_index(elm_count, 3, 2) = i_z + 1
+      ! -- Upper left corner
+      if (i_z .eq. node_loop_upper_inner_end + 1)  then
+        node_index(elm_count, 4, 1) = j_r - nR_grid(i_z, 1)
+      else
+        node_index(elm_count, 4, 1) = j_r
+      end if
+      node_index(elm_count, 4, 2) = i_z + 1
+    end do
+  end do upper_outer_nodes
+
+  n_elm = elm_count
+
   ! --- clean up
   deallocate(Zlines)
 
-  stop
+  return
 
 end subroutine create_grid_inside_wall_STEP
 
@@ -1591,9 +1773,13 @@ subroutine determine_zlines_step(nZ, Zlines, &
   ! --- add/subtract any truncation diff to the core
   nZ_diff = nZ - nZ_lower_outer - nZ_lower_inner - nZ_core - nZ_upper_inner - nZ_upper_outer
   nZ_core = nZ_core + nZ_diff
-  if (debug) write(*,'(A, 7I5)')'nZ lo, li, core, ui, uo, total, nZ = ', &
+  if (debug) then
+
+    write(*,'(A, 7I5)')'nZ lo, li, core, ui, uo, total, nZ, diff = ', &
           nZ_lower_outer, nZ_lower_inner, nZ_core, nZ_upper_inner, nZ_upper_outer, &
-          nZ_lower_outer + nZ_lower_inner + nZ_core + nZ_upper_inner + nZ_upper_outer, nZ
+          nZ_lower_outer + nZ_lower_inner + nZ_core + nZ_upper_inner + nZ_upper_outer, nZ,nZ_diff
+
+  end if
 
   ! --- Grid spacing deltas for each section
   delta_lower_outer = (abs(lower_outer_z) - abs(lower_inner_z)) / nZ_lower_outer

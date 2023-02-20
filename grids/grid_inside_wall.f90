@@ -162,6 +162,8 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   if (tokamak_device(1:6) .eq. 'MAST-U') then
     nR_grid(1:nZ+1,2) = 0
     call create_grid_inside_wall_MASTU(nR, nZ, nR_grid(1:nZ+1,1), node_index, Zlines, R_grid, Z_grid, n_elm)
+  else if (tokamak_device(1:4) .eq. 'STEP') then
+    call create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_grid, n_elm)
   else
     call create_grid_inside_wall_usual(nR, nZ, nR_grid, node_index, Zlines, R_grid, Z_grid, n_elm)
   endif
@@ -1231,4 +1233,118 @@ subroutine create_grid_inside_wall_MASTU(nR, nZ, nR_grid, node_index, Zlines, R_
 
 end subroutine create_grid_inside_wall_MASTU
 
+subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_grid, n_elm)
+  ! --- Create an r/z grid for STEP
+  ! --- STEP has extended inner and outer divertors
+  ! --- which are not handled adequately by create_grid_inside_wall_usual
+  !
+  !           ___
+  !   ___    /  /
+  !   \  \  /  /
+  !    \  \/  /
+  !    |      |
+  !    |      |   ! A rather poor ASCII art cartoon of STEP
+  !    |      |
+  !    /  /\  \
+  !   /__/  \  \
+  !          \__\
+  !
 
+  use grid_xpoint_data, only: n_wall, R_wall, Z_wall
+
+  implicit none
+
+  ! --- Input variables
+  integer, intent(inout)  :: nR, nZ, n_elm
+  integer, intent(inout)  :: nR_grid(nZ+1,2),node_index(4*nR*nZ,4,2)
+  real*8,  intent(inout)  :: R_grid(4*nR,nZ+1),Z_grid(4*nR,nZ+1)
+
+  ! --- Local variables
+  real*8 :: Rmin, Rmax, Zmin, Zmax
+  real*8 :: lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r
+  real*8 :: upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r
+
+  ! --- Cut the fomain with horizontal lines
+  Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
+  Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
+  Zmin = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  Zmax = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
+
+  write(*,*)'Building grid inside wall for STEP'
+  write(*, '(A, 2F7.2')'R min, max = ', Rmin, Rmax
+  write(*, '(A, 2F7.2')'Z min, max = ', Zmin, Zmax
+
+  ! --- Find lower and upper divertor split points
+  ! --- Where does the core seperate into the inner/outer divertors
+  call leg_split_location_step(.true., lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r)
+  call leg_split_location_step(.false., upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r)
+
+  write(*,'(A, 4F7.3)')'Lower split z, r inner, split, outer = ',lower_split_z, lower_split_inner_r, lower_split_r, lower_split_outer_r
+  write(*,'(A, 4F7.3)')'Upper split z, r inner, split, outer = ',upper_split_z, upper_split_inner_r, upper_split_r, upper_split_outer_r
+
+  stop
+
+end subroutine create_grid_inside_wall_STEP
+
+subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r)
+  ! --- Determine the leg split location
+
+  use grid_xpoint_data, only: n_wall, R_wall, Z_wall
+
+  implicit none
+
+  ! --- Input variables
+  logical, intent(in) :: is_lower
+  real*8, intent(out) :: common_z, inner_r, split_r, outer_r
+
+  ! --- Local variables
+  real*8  :: Rmin, Rmax, r_min1, r_max1, r_min2, r_max2, width1, width2
+  real*8  :: z_limit, z_value, accuracy
+  integer :: i
+
+  accuracy = +1.d-5
+
+  ! --- find the limits of the wall
+  if (is_lower .eq. .true.) then
+    z_limit = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  else
+    z_limit = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
+  end if
+
+  Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
+  Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
+
+  ! --- Loop over Z with a very high resolution
+  ! --- break loop once there are 2 intersections of the wall polygon
+  find_split: do i = 300, 500
+    z_value = real(i-1)/real(499) * z_limit
+
+    ! --- intersect the wall polygon
+    call RintersectPolygon(n_wall, R_wall(1:n_wall), Z_wall(1:n_wall), Rmin, Rmax, &
+                           z_value, accuracy, r_min1, r_max1, r_min2, r_max2)
+
+    width1 = r_max1 - r_min1
+    width2 = r_max2 - r_min2
+
+    ! --- Has the split been found ?
+    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) then
+      ! --- split found, determine r by taking the average of max1 and min2
+      split_r = (r_max1 + r_min2) / 2.d0
+      exit find_split
+
+    else
+      ! --- split not found, set the outputs required prior to split
+      common_z = z_value
+      inner_r = r_min1
+      outer_r = r_max1
+    end if
+
+  end do find_split
+
+  ! Apply a small buffer to the common z
+  if (is_lower .eq. .true.)   common_z = common_z + 0.01
+  if (is_lower .eq. .false.)  common_z = common_z - 0.01
+
+  return
+
+end subroutine leg_split_location_step

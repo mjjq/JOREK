@@ -1337,29 +1337,29 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     ! --- Figure out start/end i_z values for each section
     ! --- Used later for creating the nodes
 
-    single_intersection_polygon: if ((width1 .gt. 0.d0) .and. (width2 .eq. 0.d0)) then
-      if (in_section .eq. 0) then
+    single_intersection_polygon: if ((width1 > 0.d0) .and. (width2 == 0.d0)) then
+      if (in_section == 0) then
         in_section = 1
         node_lo_start = i_z
       end if
-      if (in_section .eq. 2) then
+      if (in_section == 2) then
         in_section = 3
         node_li_end = i_z - 2
         node_lo_end = i_z - 2
         node_core_start = i_z - 1
       end if
-      if (in_section .eq. 4) then
+      if (in_section == 4) then
         in_section = 5
         node_ui_end = i_z - 2
       end if
     end if single_intersection_polygon
 
-    double_intersection_polygon: if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) then
-      if (in_section .eq. 1) then
+    double_intersection_polygon: if ((width1 > 0.d0) .and. (width2 > 0.d0)) then
+      if (in_section == 1) then
         in_section = 2
         node_li_start = i_z
       end if
-      if (in_section .eq. 3) then
+      if (in_section == 3) then
         in_section = 4
         node_core_end = i_z - 1
         node_ui_start = i_z
@@ -1370,7 +1370,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     ! --- Set values for the R_grid and Z_grid for each section
 
     ! --- Section 1 - Lower outer divertor leg
-    section_1: if (in_section .eq. 1) then
+    section_1: if (in_section == 1) then
       nR_grid(i_z, 1) = 0
       nR_grid(i_z, 2) = nR_lower_outer
 
@@ -1381,7 +1381,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_1
 
     ! --- Section 2 - Lower inner + outer divertor legs
-    section_2: if (in_section .eq. 2) then
+    section_2: if (in_section == 2) then
       nR_grid(i_z, 1) = nR_lower_inner
       nR_grid(i_z, 2) = nR_lower_outer
 
@@ -1397,7 +1397,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_2
 
     ! --- Section 3 - Core
-    section_3: if (in_section .eq. 3) then
+    section_3: if (in_section == 3) then
       nR_grid(i_z, 1) = nR
       nR_grid(i_z, 2) = 0
 
@@ -1408,7 +1408,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_3
 
     ! --- Section 4 - Upper inner + outer divertor legs
-    section_4: if (in_section .eq. 4) then
+    section_4: if (in_section == 4) then
       nR_grid(i_z, 1) = nR_upper_inner
       nR_grid(i_z, 2) = nR_upper_outer
 
@@ -1424,7 +1424,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end if section_4
 
     ! --- Section 5 - Upper outer divertor leg
-    section_5: if (in_section .eq. 5) then
+    section_5: if (in_section == 5) then
       nR_grid(i_z, 1) = 0
       nR_grid(i_z, 2) = nR_upper_outer
 
@@ -1471,14 +1471,14 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
       node_index(elm_count, 2, 1) = j_r + 1
       node_index(elm_count, 2, 2) = i_z
       ! -- Upper right corner
-      if (i_z .eq. node_li_start - 1)  then
+      if (i_z == node_li_start - 1)  then
         node_index(elm_count, 3, 1) = j_r + 1 + nR_grid(i_z+1, 1)
       else
         node_index(elm_count, 3, 1) = j_r + 1
       end if
       node_index(elm_count, 3, 2) = i_z + 1
       ! -- Upper left corner
-      if (i_z .eq. node_li_start - 1)  then
+      if (i_z == node_li_start - 1)  then
         node_index(elm_count, 4, 1) = j_r + nR_grid(i_z+1, 1)
       else
         node_index(elm_count, 4, 1) = j_r
@@ -1538,14 +1538,14 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
       node_index(elm_count, 2, 1) = j_r + 1
       node_index(elm_count, 2, 2) = i_z
       ! -- Upper right corner
-      if (i_z .eq. node_ui_end + 1)  then
+      if (i_z == node_ui_end + 1)  then
         node_index(elm_count, 3, 1) = j_r + 1 - nR_grid(i_z, 1)
       else
         node_index(elm_count, 3, 1) = j_r + 1
       end if
       node_index(elm_count, 3, 2) = i_z + 1
       ! -- Upper left corner
-      if (i_z .eq.  node_ui_end + 1)  then
+      if (i_z == node_ui_end + 1)  then
         node_index(elm_count, 4, 1) = j_r - nR_grid(i_z, 1)
       else
         node_index(elm_count, 4, 1) = j_r
@@ -1590,8 +1590,8 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
   accuracy = +1.d-5
 
   ! --- find the limits of the wall
-  if (is_lower .eq. .true.)   z_limit = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
-  if (is_lower .eq. .false.)  z_limit = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
+  if (is_lower .eqv. .true.)   z_limit = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  if (is_lower .eqv. .false.)  z_limit = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
 
   Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
   Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
@@ -1608,7 +1608,7 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
     width2 = r_max2 - r_min2
 
     ! --- Has the split been found ?
-    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) then
+    if ((width1 > 0.d0) .and. (width2 > 0.d0)) then
       ! --- split found, determine r by taking the average of max1 and min2
       split_r = (r_max1 + r_min2) / 2.d0
       exit find_split
@@ -1623,8 +1623,8 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
   end do find_split
 
   ! Apply a small buffer to the common z
-  if (is_lower .eq. .true.)   common_z = common_z + 0.01
-  if (is_lower .eq. .false.)  common_z = common_z - 0.01
+  if (is_lower .eqv. .true.)   common_z = common_z + 0.01
+  if (is_lower .eqv. .false.)  common_z = common_z - 0.01
 
   return
 
@@ -1657,8 +1657,8 @@ subroutine find_divertor_z_values_step(is_lower, split_z, inner_z, outer_z)
   accuracy = +1.d-5
 
   ! --- find the limits of the wall
-  if (is_lower .eq. .true.)   outer_z = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
-  if (is_lower .eq. .false.)  outer_z = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
+  if (is_lower .eqv. .true.)   outer_z = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  if (is_lower .eqv. .false.)  outer_z = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
 
   Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
   Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
@@ -1676,13 +1676,13 @@ subroutine find_divertor_z_values_step(is_lower, split_z, inner_z, outer_z)
     width1 = r_max1 - r_min1
     width2 = r_max2 - r_min2
 
-    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) exit find_inner_z
+    if ((width1 > 0.d0) .and. (width2 > 0.d0)) exit find_inner_z
 
   end do find_inner_z
 
   ! --- Shift inner points lightly inside
-  if (is_lower .eq. .true.)   inner_z = inner_z + 1.e-3  ! slightly inside
-  if (is_lower .eq. .false.)  inner_z = inner_z - 1.e-3  ! slightly inside
+  if (is_lower .eqv. .true.)   inner_z = inner_z + 1.e-3  ! slightly inside
+  if (is_lower .eqv. .false.)  inner_z = inner_z - 1.e-3  ! slightly inside
 
   return
 

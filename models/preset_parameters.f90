@@ -141,6 +141,7 @@ subroutine preset_parameters
   dPSI_up_priv = 0.03
   
   SDN_threshold = 1.d-4
+  force_SDN     = .false.
   
   R_geo     = 10.d0
   Z_geo     = 0.d0

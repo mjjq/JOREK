@@ -285,6 +285,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,INTG_FMT) 'first_target_point    ', first_target_point
     write(*,INTG_FMT) 'last_target_point     ', last_target_point
     write(*,REAL_FMT) 'SDN_threshold         ', SDN_threshold
+    write(*,LOGI_FMT) 'force_SDN             ', force_SDN
   end if
 
   write(*,REAL_FMT) 'surface_cross_tol     ',surface_cross_tol

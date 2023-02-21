@@ -36,8 +36,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
-                R_Z_psi_bnd_file,                                   &
-                force_horizontal_Xline,                            &
+                R_Z_psi_bnd_file, SDN_threshold, force_SDN,         &
+                force_horizontal_Xline,                             &
                 n_pfc, manipulate_psi_map,                          &
                 Rmin_pfc, Rmax_pfc, Zmin_pfc, Zmax_pfc, current_pfc,&
                 grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &

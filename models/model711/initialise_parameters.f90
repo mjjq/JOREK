@@ -25,8 +25,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 tauIC_ARAZ_on,                                      &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg,                           &
-                n_outer, n_inner, n_up_priv, n_up_leg,              &
+                n_open, n_private, n_leg, n_leg_out,                &
+                n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
@@ -36,7 +36,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 nout, nout_projection, xr1, sig1, xr2, sig2,        &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
-                R_Z_psi_bnd_file,                                   &
+                R_Z_psi_bnd_file, SDN_threshold, force_SDN,         &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 extend_existing_grid, no_mach1_bc,                  &
                 grid_to_wall, RZ_grid_inside_wall, eqdsk_psi_fact,  &

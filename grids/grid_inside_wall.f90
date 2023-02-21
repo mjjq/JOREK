@@ -1280,9 +1280,13 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
   logical :: debug
 
   ! --- Initialize local variables
+  debug = .false.
+
   accuracy = +1.d-5
+  in_section = 0
+  node_uo_end = nZ
+
   allocate(Zlines(nZ+1))
-  debug = .true.
 
   write(*,*)'Building grid inside wall for STEP'
 
@@ -1320,8 +1324,6 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
 
 
   ! --- Loop over Zlines
-  in_section = 0
-  node_uo_end = nZ
   loop_zlines: do i_z = 1, nZ + 1
 
     ! --- intersect the wall polygon
@@ -1336,8 +1338,11 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     ! --- Section 3 = Core
     ! --- Section 4 = Upper inner + outer divertor legs
     ! --- Section 5 = Upper outer divertor leg
+    !
+    ! --- Figure out start/end i_z values for each section
+    ! --- Used later for creating the nodes
 
-    if ((width1 .gt. 0.d0) .and. (width2 .eq. 0.d0)) then
+    single_intersection_polygon: if ((width1 .gt. 0.d0) .and. (width2 .eq. 0.d0)) then
       if (in_section .eq. 0) then
         in_section = 1
         node_lo_start = i_z
@@ -1352,8 +1357,9 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
         in_section = 5
         node_ui_end = i_z - 2
       end if
-    end if
-    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) then
+    end if single_intersection_polygon
+
+    double_intersection_polygon: if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) then
       if (in_section .eq. 1) then
         in_section = 2
         node_li_start = i_z
@@ -1364,8 +1370,11 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
         node_ui_start = i_z
         node_uo_start = i_z
       end if
-    end if
+    end if double_intersection_polygon
 
+    ! --- Set values for the R_grid and Z_grid for each section
+
+    ! --- Section 1 - Lower outer divertor leg
     section_1: if (in_section .eq. 1) then
       nR_grid(i_z, 1) = 0
       nR_grid(i_z, 2) = nR_lower_outer
@@ -1376,6 +1385,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
       end do s1_outer
     end if section_1
 
+    ! --- Section 2 - Lower inner + outer divertor legs
     section_2: if (in_section .eq. 2) then
       nR_grid(i_z, 1) = nR_lower_inner
       nR_grid(i_z, 2) = nR_lower_outer
@@ -1391,6 +1401,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
       end do s2_outer
     end if section_2
 
+    ! --- Section 3 - Core
     section_3: if (in_section .eq. 3) then
       nR_grid(i_z, 1) = nR
       nR_grid(i_z, 2) = 0
@@ -1401,6 +1412,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
       end do s3_core
     end if section_3
 
+    ! --- Section 4 - Upper inner + outer divertor legs
     section_4: if (in_section .eq. 4) then
       nR_grid(i_z, 1) = nR_upper_inner
       nR_grid(i_z, 2) = nR_upper_outer
@@ -1416,6 +1428,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
       end do s4_outer
     end if section_4
 
+    ! --- Section 5 - Upper outer divertor leg
     section_5: if (in_section .eq. 5) then
       nR_grid(i_z, 1) = 0
       nR_grid(i_z, 2) = nR_upper_outer
@@ -1428,10 +1441,10 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
 
   end do loop_zlines
 
-  ! --- Create nodes
+  ! --- Create nodes for each section
   elm_count = 0
 
-  ! -- lower inner divertor leg
+  ! --- lower inner divertor nodes
   lower_inner_divertor_nodes: do i_z = node_li_start, node_li_end
     do j_r = 1, nR_grid(i_z, 1) - 1
       elm_count = elm_count + 1
@@ -1451,6 +1464,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end do
   end do lower_inner_divertor_nodes
 
+  ! --- lower outer divertor nodes
   lower_outer_divertor_nodes: do i_z = node_lo_start, node_lo_end
     do j_r = nR_grid(i_z, 1) + 1, nR_grid(i_z, 1) + nR_grid(i_z, 2) - 1
       elm_count = elm_count + 1
@@ -1479,6 +1493,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end do
   end do lower_outer_divertor_nodes
 
+  ! --- Core nodes
   core_nodes: do i_z = node_core_start, node_core_end
     do j_r = 1, nR_grid(i_z, 1) + nR_grid(i_z, 2) - 1
       elm_count = elm_count + 1
@@ -1497,6 +1512,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end do
   end do core_nodes
 
+  ! --- upper inner divertor nodes
   upper_inner_nodes: do i_z = node_ui_start, node_ui_end
     do j_r = 1, nR_grid(i_z, 1) - 1
       elm_count = elm_count + 1
@@ -1516,6 +1532,7 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
     end do
   end do upper_inner_nodes
 
+  ! --- upper outer divertor nodes
   upper_outer_nodes: do i_z = node_uo_start, node_uo_end
     do j_r = nR_grid(i_z, 1) + 1, nR_grid(i_z, 1) + nR_grid(i_z, 2) - 1
       elm_count = elm_count + 1
@@ -1554,7 +1571,7 @@ end subroutine create_grid_inside_wall_STEP
 subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r)
   ! --- Determine the leg split location
   ! --- In ASCII art below (for upper), where is (a) in r/z
-  ! --- and what are the r values for the inner/outer wall
+  ! --- and what are the r values for the inner/outer wall at Z(a)
   !           ___
   !   ___    /  /
   !   \  \  /  /
@@ -1664,7 +1681,7 @@ subroutine find_divertor_z_values_step(is_lower, split_z, inner_z, outer_z)
     width1 = r_max1 - r_min1
     width2 = r_max2 - r_min2
 
-    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0))  exit find_inner_z
+    if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) exit find_inner_z
 
   end do find_inner_z
 
@@ -1702,7 +1719,7 @@ subroutine determine_zlines_step(nZ, Zlines, &
 
   real*8  :: delta_lower_inner, delta_lower_outer, delta_core, delta_upper_inner, delta_upper_outer
 
-  debug = .true.
+  debug = .false.
 
   ! --- determine fractions of Z for each section
   total_height = abs(lower_outer_z) + abs(upper_split_z)
@@ -1721,17 +1738,14 @@ subroutine determine_zlines_step(nZ, Zlines, &
   nZ_upper_inner = int(fraction_upper_inner * nZ)
   nZ_upper_outer = int(fraction_upper_outer * nZ)
 
-
   ! --- closure condition: sum(nZ_section) == nZ
   ! --- add/subtract any truncation diff to the core
   nZ_diff = nZ - nZ_lower_outer - nZ_lower_inner - nZ_core - nZ_upper_inner - nZ_upper_outer
   nZ_core = nZ_core + nZ_diff
   if (debug) then
-
     write(*,'(A, 7I5)')'nZ lo, li, core, ui, uo, total, nZ, diff = ', &
           nZ_lower_outer, nZ_lower_inner, nZ_core, nZ_upper_inner, nZ_upper_outer, &
           nZ_lower_outer + nZ_lower_inner + nZ_core + nZ_upper_inner + nZ_upper_outer, nZ,nZ_diff
-
   end if
 
   ! --- Grid spacing deltas for each section
@@ -1741,8 +1755,10 @@ subroutine determine_zlines_step(nZ, Zlines, &
   delta_upper_inner = (abs(upper_inner_z) - abs(upper_split_z)) / nZ_upper_inner
   delta_upper_outer = (abs(upper_outer_z) - abs(upper_inner_z)) / nZ_upper_outer
 
-  if (debug) write(*, '(A, 5F7.4)')' Deltas :: lo, li, core, ui, uo = ', &
+  if (debug) then
+    write(*, '(A, 5F7.4)')' Deltas :: lo, li, core, ui, uo = ', &
           delta_lower_outer, delta_lower_inner, delta_core, delta_upper_inner, delta_upper_outer
+  end if
 
   ! --- loop start/end values
   i_lo_start = 1
@@ -1821,9 +1837,9 @@ subroutine determine_nr_split(nR, nR_inner, nR_outer, inner_r, split_r, outer_r)
   nR_outer = int(fraction_outer * nR)
 
   ! --- closure condition : nR_inner + nR_outer == nR
-  ! --- add/subtract any trancation diff to the outer
+  ! --- add/subtract any trancation diff to the inner
   nR_diff = nR - nR_inner - nR_outer
-  nR_outer = nR_outer + nR_diff
+  nR_inner = nR_inner + nR_diff
 
   return
 

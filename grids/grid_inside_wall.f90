@@ -1471,14 +1471,14 @@ subroutine create_grid_inside_wall_STEP(nR, nZ, nR_grid, node_index, R_grid, Z_g
       node_index(elm_count, 2, 1) = j_r + 1
       node_index(elm_count, 2, 2) = i_z
       ! -- Upper right corner
-      if (i_z .eq. node_lo_end - 1)  then
+      if (i_z .eq. node_li_start - 1)  then
         node_index(elm_count, 3, 1) = j_r + 1 + nR_grid(i_z+1, 1)
       else
         node_index(elm_count, 3, 1) = j_r + 1
       end if
       node_index(elm_count, 3, 2) = i_z + 1
       ! -- Upper left corner
-      if (i_z .eq. node_lo_end - 1)  then
+      if (i_z .eq. node_li_start - 1)  then
         node_index(elm_count, 4, 1) = j_r + nR_grid(i_z+1, 1)
       else
         node_index(elm_count, 4, 1) = j_r
@@ -1679,6 +1679,10 @@ subroutine find_divertor_z_values_step(is_lower, split_z, inner_z, outer_z)
     if ((width1 .gt. 0.d0) .and. (width2 .gt. 0.d0)) exit find_inner_z
 
   end do find_inner_z
+
+  ! --- Shift inner points lightly inside
+  if (is_lower .eq. .true.)   inner_z = inner_z + 1.e-3  ! slightly inside
+  if (is_lower .eq. .false.)  inner_z = inner_z - 1.e-3  ! slightly inside
 
   return
 

@@ -370,6 +370,19 @@ else
   
 endif
 
+! --- Project psi to force symmetry of psi at midplane (do it several times to make sure it is strongly done?)
+if ( (my_id == 0) .and. (force_SDN) ) then
+  write(*,'(A,i6,3E19.9)')'psi_Xpoints diff:',0,ES%psi_xpoint(1),ES%psi_xpoint(2),abs(ES%psi_xpoint(1)-ES%psi_xpoint(2))
+  ! --- One would assume that projecting many times would converge, but it doesn't
+  ! --- Typically though, one step is enough to reduce the difference of psi_xpoint(1)-psi_xpoint(2) by one order of magnitude
+  do iter=1,1
+    call Poisson(0,0,node_list,element_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
+                 0.0,1.0,.true.,xcase,ES%Z_xpoint,.false.,.false.,1)
+    call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
+    write(*,'(A,i6,3E19.9)')'psi_Xpoints diff:',iter,ES%psi_xpoint(1),ES%psi_xpoint(2),abs(ES%psi_xpoint(1)-ES%psi_xpoint(2))
+  enddo
+endif
+
 if (my_id == 0) then
   ! Update psi axis and boundary with new values from the last iteration of equilibrium solvers 
   call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)

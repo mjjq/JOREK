@@ -1839,7 +1839,7 @@ do i=1,n_vertex_max
 
               Qvec_k(var_rho) = Qvec_k(var_rho)                  &
                               + D_prof * gradRhoimp_gradVstar__k &
-                              + (D_par+D_par_sc_num-D_prof) * BgradVstar__k * BgradRhoimp / BB2 &
+                              + (D_par-D_prof) * BgradVstar__k * BgradRhoimp / BB2 &
                               - D_prof_imp * gradRhoimp_gradVstar__k               &
                               - (D_par_imp-D_prof_imp) * BgradVstar__k * BgradRhoimp / BB2
             endif          

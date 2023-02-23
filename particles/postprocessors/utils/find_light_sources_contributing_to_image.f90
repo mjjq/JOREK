@@ -21,11 +21,11 @@ type(spectrum_integrator_2nd)               :: spectra
 type(camera_perspective_static)             :: camera
 type(gyroaverage_synchrotron_light_dist)    :: synch_sources
 type(particle_sim),dimension(:),allocatable :: sims
-integer                                     :: ii
+integer                                     :: ii,n_particles_tot
 integer                                     :: n_groups,my_id,n_cpus,n_x,ierr
 integer                                     :: n_times,n_wavelengths,n_spectra
 integer                                     :: n_int_camera_param,n_real_camera_param
-integer,dimension(:),allocatable            :: int_camera_param,n_contributing_lights
+integer,dimension(:),allocatable            :: int_camera_param
 real*8                                      :: t1,t0
 real*8,dimension(:),allocatable             :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable             :: real_camera_param,sim_times
@@ -33,18 +33,20 @@ real*8,dimension(:,:,:),allocatable         :: active_light_source_positions
 real*8,dimension(:,:,:),allocatable         :: active_light_source_intensities
 character(len=15)                           :: particle_filename
 character(len=17)                           :: fields_filename
-character(len=29)                           :: output_filename
+character(len=29)                           :: light_output_filename
+character(len=30)                           :: camera_output_filename
 !> Variables definitions -----------------------------------------------------------------------------------
-particle_filename   = 'part_restart.h5'
-fields_filename     = 'jorek_equilibrium'
-output_filename     = 'contributing_light_intesities'
-n_x                 = 3 !< size of the spatial coordinates array
-n_groups            = 1 !< number of particle groups
-n_spectra           = 1 !< number of spectra
-n_wavelengths       = 40 !< number of wavelengths per spectrum
-n_int_camera_param  = 5
-n_real_camera_param = 9
-n_times             = 1
+particle_filename      = 'part_restart.h5'
+fields_filename        = 'jorek_equilibrium'
+light_output_filename  = 'contributing_light_intesities'
+camera_output_filename = 'contributing_camera_intesities'
+n_x                    = 3 !< size of the spatial coordinates array
+n_groups               = 1 !< number of particle groups
+n_spectra              = 1 !< number of spectra
+n_wavelengths          = 40 !< number of wavelengths per spectrum
+n_int_camera_param     = 5
+n_real_camera_param    = 9
+n_times                = 1
 !> JET KLDT-E5WC wavlength: 3d-6 , 3.5d-6 [m]
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
 allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
@@ -83,11 +85,11 @@ call lens%init_pinhole(n_x,pinhole_positions)
 call camera%init_camera(lens,spectra,n_int_camera_param,n_real_camera_param,&
 int_camera_param,real_camera_param)
 call synch_sources%init_lights_from_particles(n_times,sims)
+n_particles_tot = sum(synch_sources%n_active_vertices)
 t1 = MPI_Wtime()
-allocate(n_contributing_lights(camera%n_vertices))
-allocate(active_light_source_positions(n_x,sum(synch_sources%n_active_vertices),camera%n_vertices)) 
+allocate(active_light_source_positions(n_x,n_particles_tot,camera%n_vertices)) 
 active_light_source_positions = 0d0;
-allocate(active_light_source_intensities(n_spectra,sum(synch_sources%n_active_vertices),camera%n_vertices)); 
+allocate(active_light_source_intensities(n_spectra,n_particles_tot,camera%n_vertices)); 
 active_light_source_intensities = 0d0;
 write(*,*) 'Initialise synthetic camera and light sources: completed!'
 write(*,*) my_id, 'System time fast camera initialisation (s): ',t1-t0
@@ -96,7 +98,7 @@ write(*,*) my_id, 'System time fast camera initialisation (s): ',t1-t0
 write(*,*) "Findig light sources contributing to an image and computing spectral intensities: ..."
 t0 = MPI_Wtime()
 call compute_contribution_light_source_to_image_static(camera,synch_sources,spectra,&
-n_contributing_lights,active_light_source_positions,active_light_source_intensities)
+n_particles_tot,active_light_source_positions,active_light_source_intensities)
 t1 = MPI_Wtime()
 write(*,*) "Findig light sources contributing to an image and computing spectral intensities: completed!"
 write(*,*) my_id,'System time finding contributing light sources and computing intensities (s): ',t1-t0
@@ -104,12 +106,12 @@ write(*,*) my_id,'System time finding contributing light sources and computing i
 !> Write active light sources ------------------------------------------------------------------------------
 #ifdef USE_HDF5
   write(*,*) "Write contributing light sources in HDF5 file ..."
-  call write_source_light_positions_contributions_in_hdf5(output_filename,my_id,n_x,&
-  n_spectra,sum(synch_sources%n_active_vertices),camera%n_vertices,n_contributing_lights,&
-  active_light_source_positions,active_light_source_intensities,ierr)
+  call write_source_light_positions_contributions_in_hdf5(light_output_filename,my_id,n_x,&
+  n_spectra,n_particles_tot,camera%n_vertices,active_light_source_positions,&
+  active_light_source_intensities,ierr)
   write(*,*) "Write contributing light sources in HDF5 file: completed!"
   write(*,*) "Write camera data in HDF5 file ..."
-  call write_pinholes_planes_directions_in_hdf5(output_filename,my_id,camera,ierr)
+  call write_pinholes_planes_directions_in_hdf5(camera_output_filename,my_id,camera,ierr)
   write(*,*) "Write camera data in HDF5 file: completed!"
 #endif
 !> Finalisation --------------------------------------------------------------------------------------------
@@ -118,7 +120,6 @@ if(allocated(max_spectra))           deallocate(max_spectra);
 if(allocated(pinhole_positions))     deallocate(pinhole_positions);
 if(allocated(int_camera_param))      deallocate(int_camera_param);
 if(allocated(real_camera_param))     deallocate(real_camera_param);
-if(allocated(n_contributing_lights)) deallocate(n_contributing_lights);
 if(allocated(sim_times))             deallocate(sim_times);
 if(allocated(sims))                  deallocate(sims);
 call finalize_mpi_threads(ierr)
@@ -132,16 +133,17 @@ contains
 !>   camera_inout:  (camera_static)  class defining a static camera
 !>   lights_inout:  (light_vertices) class containing all active lights
 !>   spectra_inout: (spectral_base)  camera spectrum class
+!>   n_particles:   (integer) total number of simulated particles
 !> outputs:
-!>   n_contributing_lights:           (integer)(n_points_on_lens) number of contributing lights
+!>   n_particles:                     (integer)(n_points_on_lens) number of contributing lights
 !>                                    per lens point
-!>   active_light_source_positions:   (real8)(n_x,n_contributing_lights,n_lens_points)
-!>                                    positions of the light sources contributing to an image
-!>   active_light_source_intensities: (real8)(n_spectra,n_contributing_lights,n_lens_points)
+!>   active_light_source_positions:   (real8)(n_x,n_particles,n_lens_points) positions of 
+!>                                    the light sources contributing to an image
+!>   active_light_source_intensities: (real8)(n_spectra,n_particles,n_lens_points)
 !>                                    integrated spectral intensities of the light sources
 !>                                    contributing to an image
 subroutine compute_contribution_light_source_to_image_static(camera_inout,lights_inout,&
-spectra_inout,n_contributing_lights,active_light_source_positions,&
+spectra_inout,n_particles,active_light_source_positions,&
 active_light_source_intensities)
   use mod_spectra,        only: spectrum_base
   use mod_light_vertices, only: light_vertices
@@ -151,34 +153,34 @@ active_light_source_intensities)
   class(camera_static),intent(inout)  :: camera_inout
   class(light_vertices),intent(inout) :: lights_inout
   class(spectrum_base),intent(inout)  :: spectra_inout
+  !> inputs:
+  integer,intent(in) :: n_particles
   !> outputs:
-  integer,dimension(:),allocatable,intent(inout)    :: n_contributing_lights
-  real*8,dimension(:,:,:),allocatable,intent(inout) :: active_light_source_positions
-  real*8,dimension(:,:,:),allocatable,intent(inout) :: active_light_source_intensities
-  !> variables:3
+  real*8,dimension(camera_inout%n_x,n_particles,camera_inout%n_vertices),intent(inout) :: active_light_source_positions
+  real*8,dimension(spectra_inout%n_spectra,n_particles,camera_inout%n_vertices),intent(inout) :: active_light_source_intensities
+  !> variables:
   logical :: intersect
-  integer :: ii,jj,kk,counter
+  integer :: ii,jj,kk,base_counter
   real*8  :: material_value,visibility_geometry
   real*8,dimension(3)                                              :: plane_line_coords
   real*8,dimension(spectra_inout%n_spectra)                        :: integrated_irradiance
   real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
   !> initialisation 
-  n_contributing_lights = 0
+  base_counter = 0
   !> compute the contribution of each light for each time
   do jj=1,lights_inout%n_times !< loop on the times
     do ii=1,camera_inout%n_vertices !< loop on the camera lens points
-      counter = 0
-      !$omp parallel do default(private) firstprivate(jj,ii) &
+      !$omp parallel do default(private) firstprivate(base_counter,jj,ii) &
       !$omp shared(lights_inout,camera_inout,spectra_inout,&
-      !$omp active_light_source_positions,active_light_source_intensities) &
-      !$omp reduction(+:counter)
+      !$omp active_light_source_positions,active_light_source_intensities)
       do kk=1,lights_inout%n_active_vertices(jj) !< loop on the lights
         !> compute the material function skip is <= 0
         call camera_inout%physical_material_funct(lights_inout%x(:,kk,jj),ii,material_value)
-        if(material_value.le.0.d0) cycle
+        if(material_value.le.0.d0) cycle;
         !> compute the intersection camera - light source, skip if not
         call camera_inout%find_ray_image_plane_intersection(lights_inout%x(:,kk,jj),ii,&
-        intersect,plane_line_coords); if(.not.intersect) cycle;
+        intersect,plane_line_coords); 
+        if(.not.intersect) cycle;
         !> compute the geometry and visibility functions
         call camera_inout%visibility_geometry_funct(lights_inout,1,jj,ii,kk,visibility_geometry)
         !> compute the spectral irradiance
@@ -186,15 +188,13 @@ active_light_source_intensities)
         spectral_irradiance)
         call spectra_inout%integrate_data(spectral_irradiance,integrated_irradiance)
         !> store the light position and light contribution
-        counter = counter + 1
-        active_light_source_positions(:,counter,ii) = lights_inout%x(:,kk,jj)
-        active_light_source_intensities(:,counter,ii) = integrated_irradiance*&
+        active_light_source_positions(:,base_counter+kk,ii) = lights_inout%x(:,kk,jj)
+        active_light_source_intensities(:,base_counter+kk,ii) = integrated_irradiance*&
         material_value*visibility_geometry
-        !> update counter
       enddo
-    !$omp end parallel do
-    n_contributing_lights(ii) = n_contributing_lights(ii) + counter
+      !$omp end parallel do
     enddo
+    base_counter = base_counter + lights_inout%n_active_vertices(jj)
   enddo
 end subroutine compute_contribution_light_source_to_image_static
 
@@ -206,18 +206,15 @@ end subroutine compute_contribution_light_source_to_image_static
 !>   n_spectra:             (integer) number of spectral interval
 !>   n_lights:              (integer) number of contributing lights
 !>   n_lens_points:         (integer) number of points on lens
-!>   n_contributing_lights: (integer)(n_lens_point) number of contributing lights
-!>                          per point on the lens
-!>   light_positions:       (real8)(n_x,n_contributing_lights,n_lens_points)
-!>                          positions of the light sources contributing to an image
-!>   light_intensities:     (real8)(n_spectra,n_contributing_lights,n_lens_points)
-!>                          integrated spectral intensities of the light sources
-!>                          contributing to an image
+!>   light_positions:       (real8)(n_x,n_lights,n_lens_points) positions of
+!>                          the light sources contributing to an image
+!>   light_intensities:     (real8)(n_spectra,n_lights,n_lens_points)
+!>                          integrated spectral intensities of 
+!>                          the light sources contributing to an image
 !> outputs:
 !>   ierr: (integer) error variable
 subroutine write_source_light_positions_contributions_in_hdf5(filename,my_id,&
-n_x,n_spectra,n_lights,n_lens_points,n_contributing_lights,light_positions,&
-light_intensities,ierr)
+n_x,n_spectra,n_lights,n_lens_points,light_positions,light_intensities,ierr)
   use hdf5
   use hdf5_io_module, only: HDF5_open_or_create,HDF5_close
   use hdf5_io_module, only: HDF5_array1D_saving_int,HDF5_array3D_saving
@@ -225,7 +222,6 @@ light_intensities,ierr)
   !> intpus:
   character(len=*),intent(in) :: filename
   integer,intent(in)          :: my_id,n_x,n_spectra,n_lights,n_lens_points
-  integer,dimension(n_lens_points),intent(in)                   :: n_contributing_lights
   real*8,dimension(n_x,n_lights,n_lens_points),intent(in)       :: light_positions
   real*8,dimension(n_spectra,n_lights,n_lens_points),intent(in) :: light_intensities
   !> outputs:
@@ -244,7 +240,6 @@ light_intensities,ierr)
   write(filename_out,trim(format_char)) filename,"_",my_id,".h5"
   !> open / close hdf5 file and save arrays in it
   call HDF5_open_or_create(trim(filename_out),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
-  call HDF5_array1D_saving_int(file_id,n_contributing_lights,n_lens_points,'n_contributing_light_per_lens_point')
   call HDF5_array3D_saving(file_id,light_positions,n_x,n_lights,n_lens_points,'contributing_light_positions')
   call HDF5_array3D_saving(file_id,light_intensities,n_spectra,n_lights,n_lens_points,&
   'contributing_light_intensities')

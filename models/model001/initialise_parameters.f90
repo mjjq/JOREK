@@ -32,7 +32,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 nout, xr1, sig1, xr2, sig2,                         &
                 R_begin, R_end, Z_begin, Z_end,                     &
                 R_geo, Z_geo, amin, mf, fbnd, fpsi, mode,           &
-                R_Z_psi_bnd_file, SDN_threshold, force_SDN,         &
+                R_Z_psi_bnd_file,                                   &
                 R_boundary, Z_boundary, psi_boundary, n_boundary,   &
                 tokamak_device, manipulate_psi_map,                 &
                 F0, time_evol_scheme,                               &

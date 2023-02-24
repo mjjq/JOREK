@@ -59,7 +59,6 @@ module phys_module
                                   !< Note that the 'to_h5' or 'to_vtk' flag should be .true. in the 'new_projection' function for this parameter to be in play
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
   real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
-  logical :: force_SDN            !< Force up-down symmetry of the plasma
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
   logical :: restart              !< Restart a code run from the restart file jorek_restart.h5?
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?

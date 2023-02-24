@@ -5,6 +5,10 @@
 # ----------------------------------------------------- #
 # Program functions ----------------------------------- #
 # Read datasets from HDF5 files
+def comput_major_radius(x,y):
+  from numpy import power,sqrt
+  return sqrt(power(x,2)+power(y,2))
+
 def read_datasets_from_hdf5(filenames,filepath,datasets,separator):
   import h5py
   import numpy as np
@@ -40,8 +44,9 @@ def check_equal_light_data(light_data):
 # 2: tokamak limiter (first wall) major radius
 # 3: tokamak limiter (first wall) vertical position
 # structure of the camera data for each camera data:
-# 0: vertices of the image planes
-# 1: view directions of the image planes
+# 0: points on the lens
+# 1: vertices of the image planes
+# 2: view directions of the image planes
 def plot_light_and_camera_data(light_data,camera_data,n_tor=100,markersize=1,\
 linewidth=3,fontsize=16):
   import numpy as np
@@ -88,10 +93,9 @@ linewidth=3,fontsize=16):
         axs[0].tick_params(axis='x',labelsize=fontsize,colors='red')
         axs[0].tick_params(axis='y',labelsize=fontsize,colors='red')
         # aggregated front view
-        major_radius = np.sqrt(np.power(positions[time_id,mask,0],2)+\
-        np.power(positions[time_id,mask,1],2))
-        axs[1].scatter(major_radius,positions[time_id,mask,2],s=markersize,\
-        c=spectrum[mask],marker='.',cmap='inferno',vmin=0,vmax=max_spectrum)
+        axs[1].scatter(comput_major_radius(positions[time_id,mask,0],positions[time_id,mask,1]),\
+        positions[time_id,mask,2],s=markersize,c=spectrum[mask],marker='.',cmap='inferno',\
+        vmin=0,vmax=max_spectrum)
         axs[1].set_aspect('equal')
         axs[1].set_facecolor([0,0,0])
         axs[1].set_title('Aggregated frontal view',fontsize=fontsize,color='red')
@@ -118,6 +122,39 @@ linewidth=3,fontsize=16):
   axs[0].plot(x_limiter_min,y_limiter_min,color='red',linewidth=linewidth)
   axs[0].plot(x_limiter_max,y_limiter_max,color='red',linewidth=linewidth)
   axs[1].plot(R_limiter,Z_limiter,color='red',linewidth=linewidth)
+  del x_limiter_min,y_limiter_min,x_limiter_max,y_limiter_max,R_limiter,Z_limiter
+  # Plotting the camera properties
+  for dataset in camera_data:
+    # Plot points on lens
+    lens_point_position_avg = []
+    for points in dataset[0]:
+      lens_point_position_avg.append(np.array([np.mean(points[:,0]),np.mean(points[:,1]),np.mean(points[:,2])]))
+      axs[0].scatter(points[:,0],points[:,1],marker='.',s=markersize,c='green')
+      axs[2].scatter3D(points[:,0],points[:,1],points[:,2],marker='.',s=markersize,c='green')
+    # Plot image planes
+    for plane in dataset[1]:
+      point4 = plane[1,:]-plane[0,:]+plane[2,:]
+      axs[0].plot([plane[0,0],plane[1,0]],[plane[0,1],plane[1,1]],color='green',linewidth=linewidth)
+      axs[0].plot([plane[0,0],plane[2,0]],[plane[0,1],plane[2,1]],color='green',linewidth=linewidth)
+      axs[0].plot([plane[1,0],point4[0]],[plane[1,1],point4[1]],color='green',linewidth=linewidth)
+      axs[0].plot([plane[2,0],point4[0]],[plane[2,1],point4[1]],color='green',linewidth=linewidth)
+      axs[2].plot3D([plane[0,0],plane[1,0]],[plane[0,1],plane[1,1]],[plane[0,2],plane[1,2]],\
+      color='green',linewidth=linewidth)
+      axs[2].plot3D([plane[0,0],plane[2,0]],[plane[0,1],plane[2,1]],[plane[0,2],plane[2,2]],\
+      color='green',linewidth=linewidth)
+      axs[2].plot3D([plane[1,0],point4[0]],[plane[1,1],point4[1]],[plane[1,2],point4[2]],\
+      color='green',linewidth=linewidth)
+      axs[2].plot3D([plane[2,0],point4[0]],[plane[2,1],point4[1]],[plane[2,2],point4[2]],\
+      color='green',linewidth=linewidth)
+    del point4
+    # Plot view directions
+    for time_id,direction in enumerate(dataset[2]):
+      point = lens_point_position_avg[time_id]
+      axs[0].quiver(point[0],point[1],direction[0],direction[1],color='green',\
+      linewidth=linewidth)
+      axs[2].quiver(point[0],point[1],point[2],direction[0],direction[1],direction[2],\
+      color='green',linewidth=linewidth)
+    del lens_point_position_avg
   # generating image
   plt.suptitle("".join(['Point light source intensities, spectrum N#:',str(spectra_id)]),\
   fontsize=fontsize)

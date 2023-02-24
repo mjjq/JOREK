@@ -1590,8 +1590,8 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
   accuracy = +1.d-5
 
   ! --- find the limits of the wall
-  if (is_lower .eqv. .true.)   z_limit = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
-  if (is_lower .eqv. .false.)  z_limit = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
+  if (is_lower)        z_limit = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  if (.not. is_lower)  z_limit = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
 
   Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
   Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
@@ -1623,8 +1623,8 @@ subroutine leg_split_location_step(is_lower, common_z, inner_r, split_r, outer_r
   end do find_split
 
   ! Apply a small buffer to the common z
-  if (is_lower .eqv. .true.)   common_z = common_z + 0.01
-  if (is_lower .eqv. .false.)  common_z = common_z - 0.01
+  if (is_lower)        common_z = common_z + 0.01
+  if (.not. is_lower)  common_z = common_z - 0.01
 
   return
 
@@ -1657,8 +1657,8 @@ subroutine find_divertor_z_values_step(is_lower, split_z, inner_z, outer_z)
   accuracy = +1.d-5
 
   ! --- find the limits of the wall
-  if (is_lower .eqv. .true.)   outer_z = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
-  if (is_lower .eqv. .false.)  outer_z = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
+  if (is_lower)        outer_z = minval(Z_wall(1:n_wall)) + 1.e-3  ! slightly inside
+  if (.not. is_lower)  outer_z = maxval(Z_wall(1:n_wall)) - 1.e-3  ! slightly inside
 
   Rmin = minval(R_wall(1:n_wall)) - 1.e-3  ! slightly outside
   Rmax = maxval(R_wall(1:n_wall)) + 1.e-3  ! slightly outside
@@ -1681,8 +1681,8 @@ subroutine find_divertor_z_values_step(is_lower, split_z, inner_z, outer_z)
   end do find_inner_z
 
   ! --- Shift inner points lightly inside
-  if (is_lower .eqv. .true.)   inner_z = inner_z + 1.e-3  ! slightly inside
-  if (is_lower .eqv. .false.)  inner_z = inner_z - 1.e-3  ! slightly inside
+  if (is_lower)   inner_z = inner_z + 1.e-3  ! slightly inside
+  if (.not. is_lower)  inner_z = inner_z - 1.e-3  ! slightly inside
 
   return
 

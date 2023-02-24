@@ -77,9 +77,9 @@ linewidth=3,fontsize=16):
       for time_id,spectrum in enumerate(np.transpose(spectra[spectra_id,:,:],[1,0])):
         mask = np.where(spectrum>0)
         # aggregated top view
-        axs[0].scatter(positions[time_id,mask,0],\
-        positions[time_id,mask,1],marker='.',s=markersize,\
-        c=spectrum[mask],cmap='inferno',vmin=0,vmax=max_spectrum)
+        axs[0].scatter(positions[time_id,mask,0],positions[time_id,mask,1],marker='.',\
+        s=markersize,c=spectrum[mask],cmap='inferno',\
+        vmin=0,vmax=max_spectrum)
         axs[0].set_aspect('equal')
         axs[0].set_facecolor([0,0,0])
         axs[0].set_title('Aggregated top view',fontsize=fontsize,color='red')
@@ -100,8 +100,7 @@ linewidth=3,fontsize=16):
         axs[1].tick_params(axis='x',labelsize=fontsize,colors='red')
         axs[1].tick_params(axis='y',labelsize=fontsize,colors='red')
         # 3D view
-        axs[2].scatter3D(positions[time_id,mask,0],\
-        positions[time_id,mask,1],positions[time_id,mask,2],\
+        axs[2].scatter3D(positions[time_id,mask,0],positions[time_id,mask,1],positions[time_id,mask,2],\
         s=markersize,c=spectrum[mask],marker='.',cmap='inferno',vmin=0,vmax=max_spectrum)
         axs[2].set_facecolor([0,0,0])
         axs[2].set_aspect('equal')

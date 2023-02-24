@@ -217,7 +217,9 @@ subroutine write_source_light_positions_contributions_in_hdf5(filename,my_id,&
 n_x,n_spectra,n_lights,n_lens_points,light_positions,light_intensities,ierr)
   use hdf5
   use hdf5_io_module, only: HDF5_open_or_create,HDF5_close
-  use hdf5_io_module, only: HDF5_array1D_saving_int,HDF5_array3D_saving
+  use hdf5_io_module, only: HDF5_array1D_saving_int,HDF5_array1D_saving
+  use hdf5_io_module, only: HDF5_array3D_saving
+  use phys_module,    only: n_limiter,R_limiter,Z_limiter
   implicit none
   !> intpus:
   character(len=*),intent(in) :: filename
@@ -243,6 +245,8 @@ n_x,n_spectra,n_lights,n_lens_points,light_positions,light_intensities,ierr)
   call HDF5_array3D_saving(file_id,light_positions,n_x,n_lights,n_lens_points,'contributing_light_positions')
   call HDF5_array3D_saving(file_id,light_intensities,n_spectra,n_lights,n_lens_points,&
   'contributing_light_intensities')
+  call HDF5_array1D_saving(file_id,R_limiter,n_limiter,'limiter_major_radius')
+  call HDF5_array1D_saving(file_id,Z_limiter,n_limiter,'limiter_vertical_coordinate')
   call HDF5_close(file_id)
   deallocate(filename_out)
 end subroutine write_source_light_positions_contributions_in_hdf5

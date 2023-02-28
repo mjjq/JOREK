@@ -148,7 +148,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 spi_shard_file, spi_tor_rot, pellet_density,        &
                 pellet_density_bg, cte_current_FB_fact, Te_eV_min,  &
                 spi_plume_file, n_adas, index_main_imp,             &
-                output_prad_phi, spi_quantity_bg, CARIDDI_mode
+                output_prad_phi, spi_quantity_bg, CARIDDI_mode,     &
+               autodistribute_modes, modes_per_family,              &
+                mode_families_modes, n_mode_families,               &
+                weights_per_family, autodistribute_ranks                
 
 if (my_id .eq. 0) then
 

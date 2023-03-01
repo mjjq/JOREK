@@ -1938,7 +1938,12 @@ Z_curr_cent  = Z_curr_cent / current_tot
 
 ! --- Externally calculated quantities
 ! --- Halo currents
-call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF, .false.)
+#ifdef fullmhd   
+  I_halo = 0.d0 ! Needs to be adapted for Full MHD
+  TPF    = 0.d0 
+#else
+  call integrated_normal_bnd_curr(node_list, bnd_node_list, bnd_elm_list, I_halo, TPF, .false.)
+#endif
 
 ! --- Safety factor at important locations
 surface_list%n_psi = 4 

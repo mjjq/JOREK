@@ -159,7 +159,23 @@ end subroutine compute_magnetic_field_poloidal_flux
 
 !> write the magnetic field file to be provided as input to SOFT
 !> inputs:
-!> outputs:
+!>   filename:       (character) name of the file to be generated
+!>   fields:         (fields_base) jorek MHD fields
+!>   n_vec:          (integer) N# of components of the magnetic vector
+!>   n_R_loc:        (integer) number of major radius point for one task
+!>   n_Z:            (integer) number of vertical positions
+!>   n_RZ_wall:      (integer) number of wall nodes
+!>   n_cpus:         (integer) number of mpi tasks
+!>   my_id:          (integer) mpi task identifier 
+!>   RZ_axis:        (real8)(2) magnetic field coordinates
+!>   R_mesh:         (real8)(n_cpus*n_R_loc) radial mesh
+!>   Z_mesh:         (real8)(n_Z) vertical mesh
+!>   R_wall:         (real8)(n_RZ_wall) radial coordinates of the wall
+!>   Z_wall:         (real8)(n_RZ_wall) vertical coordinates of the wall
+!>   magnetic_field: (real8)(n_vec,n_Z,n_R_loc) magnetic field Br,Bz,Bphi
+!>   poloidal_flux:  (real8)(n_Z,n_R_loc) poloidal flux array
+!>   mag_name:       (character) name of the input file (metadeta)
+!>   description:    (character) description of the input file (metadeta)
 subroutine write_SOFT_magnetic_field_file(filename,fields,n_vec,n_R_loc,n_Z,n_RZ_wall,&
 n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_wall,Z_wall,magnetic_field,poloidal_flux,&
 mag_name,description)

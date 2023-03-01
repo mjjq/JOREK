@@ -48,7 +48,7 @@ module profiles
       end if
     end do
     aux1  = (x0 - x(left)) / (x(right) - x(left))
-    aux2  = (1. - aux1)
+    aux2  = (1.d0 - aux1)
     interpolProf = y(left) * aux2 + y(right) * aux1
     
   end function interpolProf
@@ -95,12 +95,12 @@ module profiles
       if ( allocated(x) ) then
         px(1:len) = x(1:len)
       else
-        px = 0.
+        px = 0.d0
       end if
       if ( allocated(y) ) then
         py(1:len) = y(1:len)
       else
-        py = 0.
+        py = 0.d0
       end if
     end if
     
@@ -235,8 +235,8 @@ module profiles
     
     do i = 1, len
       
-      c = 0.
-      f = 0.
+      c = 0.d0
+      f = 0.d0
       f(0) = y(i)
       
       if ( (i==1) .or. (i==len) ) then
@@ -256,7 +256,7 @@ module profiles
           d(1) = x(len-1) - x(i)
           d(2) = x(len-2) - x(i)
         end if
-        c(0) = -(1/d(1)) - 1/d(2)
+        c(0) = -(1.d0/d(1)) - 1.d0/d(2)
         c(1) = -(d(2)/(d(1)**2 - d(1)*d(2)))
         c(2) = d(1)/((d(1) - d(2))*d(2))
         
@@ -270,7 +270,7 @@ module profiles
         d(1)  = x(i+1) - x(i)
         
         c(-1) = -(d(1)/(d(-1)**2 - d(-1)*d(1)))
-        c(0)  = -(1/d(-1)) - 1/d(1)
+        c(0)  = -(1.d0/d(-1)) - 1.d0/d(1)
         c(1)  = d(-1)/((d(-1) - d(1))*d(1))
 
       end if
@@ -323,17 +323,17 @@ module profiles
       if ( allocated(x1) ) then
         px1(1:len) = x1(1:len)
       else
-        px1 = 0.
+        px1 = 0.d0
       end if
       if ( allocated(x2) ) then
         px2(1:len) = x2(1:len)
       else
-        px2 = 0.
+        px2 = 0.d0
       end if
       if ( allocated(x3) ) then
         px3(1:len) = x3(1:len)
       else
-        px3 = 0.
+        px3 = 0.d0
       end if
     end if
     

@@ -747,8 +747,9 @@ module phys_module
   real*8, allocatable :: num_Fprofile_y3(:) !< Third derivatives of Fprofile profile (\f$ d^2F/d\Psi_N^2 \f$)
 
   !> @name Numerical input profile for Fprofile
-  integer, parameter  :: n_Fprofile_internal_max = 300                !< INTERNAL Max Size of F-profile
+  integer, parameter  :: n_Fprofile_internal_max = 500                !< INTERNAL Max Size of F-profile
   integer             :: n_Fprofile_internal                          !< INTERNAL Size of F-profile
+  real*8              :: Fprofile_internal_psi(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration
   real*8              :: Fprofile_internal   (n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration
   real*8              :: Fprofile_internal_d1(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (first derivative)
   real*8              :: Fprofile_internal_d2(n_Fprofile_internal_max)!< INTERNAL F-profile, from  FFprime integration (second derivative)

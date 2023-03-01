@@ -107,7 +107,7 @@ subroutine read_num_profiles(my_id)
       call tr_allocate(num_Fprofile_y2,1,n_Fprofile_internal,"num_Fprofile_y2",CAT_GRID)
       call tr_allocate(num_Fprofile_y3,1,n_Fprofile_internal,"num_Fprofile_y3",CAT_GRID)
       do i=1,n_Fprofile_internal
-        num_Fprofile_x (i) = Fprofile_psi_max * real(i-1)/real(n_Fprofile_internal-1)
+        num_Fprofile_x(i)  = Fprofile_internal_psi(i)
         num_Fprofile_y0(i) = Fprofile_internal(i)
       enddo
       call derivProf(num_Fprofile_x, num_Fprofile_y0, num_Fprofile_len, num_Fprofile_y1)

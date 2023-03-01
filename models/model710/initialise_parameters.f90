@@ -82,7 +82,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_mumps, mumps_ordering, use_strumpack,           &
                 use_BLR_compression, epsilon_BLR, just_in_time_BLR, &
                 use_pastix, use_murge, use_murge_element,           &
-                refinement, grid_to_wall,                           &
+                refinement, grid_to_wall, n_ext,                    &
                 fix_axis_nodes,                                     &
                 adaptive_time, equil, bench_without_plot,           &
                 eta_T_dependent, visco_T_dependent,ZKpar_T_dependent,&

@@ -170,6 +170,11 @@ program JOREK2
   type(type_RHS)              :: rhs_vec, sol_vec, deltas
   type(type_SP_SOLVER)        :: solver
   
+  integer                     :: inewton, maxnewton
+  logical                     :: converged = .false.
+  type(type_RHS)              :: deln, rhsk
+  type(type_SP_MATRIX)        :: a_matk
+  
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -583,6 +588,12 @@ mpi_required = 0
   elseif (use_pastix) then
     solver%library = pastix
   endif
+  
+  deln%n = deltas%n
+  allocate(deln%val(deln%n))
+  rhsk%n = rhs_vec%n
+  allocate(rhsk%val(rhsk%n))
+  
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
@@ -593,7 +604,7 @@ mpi_required = 0
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)
-  
+  !!! start newton if equilibrium state can change
     call clck_time_barrier(t_itstart)
     t0 = t_itstart
 
@@ -649,67 +660,79 @@ mpi_required = 0
 
     !--------- Constructing Global Matrix
     mhd_sim%es => es ! assign pointer to the equilibrium state
-
     call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_mat, rhs_vec, harmonic_matrix=.false.)
-
+  
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id.eq.0) write(*,FMT_TIMING) my_id, '# Elapsed time in construct global matrix :',tsecond
-    
+      
     solver%tstep = tstep
     solver%istep = istep
-    solver%index_now = index_now
-!    sol_vec%val => deltas%val !!! sol_vec might not bee needed
-! here set the tolerance for inner iteration cycle
+    solver%index_now = index_now  
     
-    call solve_sparse_system(a_mat, rhs_vec, deltas, solver, mhd_sim)
-
-    call clck_time(t0)
-    if (solver%step_success) then
-    ! successful step
-
-      if (use_pellet) then
-        pellet_volume = total_pellet_volume
-        call update_pellet(my_id,node_list,element_list)
-
-        if (my_id == 0) then
-          xtime_pellet_R(index_now)         = pellet_R
-          xtime_pellet_Z(index_now)         = pellet_Z
-          xtime_pellet_psi(index_now)       = pellet_psi
-          xtime_pellet_particles(index_now) = pellet_particles
-          xtime_phys_ablation(index_now)    = phys_ablation
+    !!! start newton
+    converged = .false.
+    deln%val(1:deln%n) = 0.0
+    call a_mat%copy_to(a_matk)
+    
+    do while(.not.converged)
+      call matrix_vector(deln, a_mat, rhsk)
+      rhsk%val(1:rhsk%n) = rhs_vec%val(1:rhs_vec%n) - rhsk%val(1:rhsk%n)
+     
+      call solve_sparse_system(a_mat, rhs_vec, deltas, solver, mhd_sim)
+  
+      call clck_time(t0)
+      if (solver%step_success) then
+      ! successful step
+  
+        if (use_pellet) then
+          pellet_volume = total_pellet_volume
+          call update_pellet(my_id,node_list,element_list)
+  
+          if (my_id == 0) then
+            xtime_pellet_R(index_now)         = pellet_R
+            xtime_pellet_Z(index_now)         = pellet_Z
+            xtime_pellet_psi(index_now)       = pellet_psi
+            xtime_pellet_particles(index_now) = pellet_particles
+            xtime_phys_ablation(index_now)    = phys_ablation
+          endif
+  
         endif
-
-      endif
-
+  
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
-       if (using_spi) then
-         n_spi_begin = 1
-         do i = 1, n_inj !< Do one update for each injection location
-           if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
-           n_spi_begin = n_spi_begin + n_spi(i)
-         end do
-       end if
+         if (using_spi) then
+           n_spi_begin = 1
+           do i = 1, n_inj !< Do one update for each injection location
+             if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
+             n_spi_begin = n_spi_begin + n_spi(i)
+           end do
+         end if
 #endif
-
-      call update_values(element_list,node_list, deltas)         ! add solution to node values
-      call update_deltas(node_list, deltas)
-
-      t_now = t_now + tstep
-
-      ! save previous time step
-      tstep_prev = tstep
-
-    else
-    
-      if ( my_id == 0 ) then
-        write(*,*)
-        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
-        write(*,*)
-      end if
-      index_now = index_now - 1 ! Undo the time step
-      exit jstep_loop
+  
+        call update_values(element_list,node_list, deltas)         ! add solution to node values
+        call update_deltas(node_list, deltas)
+  
+        !!! end newton
+        deln%val(1:deln%n) = deln%val(1:deln%n) + deltas%val(1:deltas%n)
+        call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, rhsk, harmonic_matrix=.false.)
+        converged = .true.
+        if (converged) then
+          t_now = t_now + tstep
+          ! save previous time step
+          tstep_prev = tstep
+        endif
+  
+      else
       
-    endif
+        if ( my_id == 0 ) then
+          write(*,*)
+          write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
+          write(*,*)
+        end if
+        index_now = index_now - 1 ! Undo the time step
+        exit jstep_loop
+        
+      endif
+    enddo !Newton loop
     
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
@@ -901,6 +924,7 @@ mpi_required = 0
     if (my_id .eq. 0) then
        write(*,FMT_TIMING)  my_id, '# Elapsed time ITERATION :',tsecond
     end if
+    
 
   enddo istep_loop
   enddo jstep_loop

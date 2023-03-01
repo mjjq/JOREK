@@ -167,6 +167,7 @@ module data_structure
     integer                                      :: i_tor_max = 0        ! maximum toroidal Fourier number used in construction
     integer                                      :: block_size = 1
     integer                                      :: comm = 0             !< communicator over which the matrix is distributed
+    integer                                      :: ncpu = 1
     logical                                      :: scaled = .false.
     logical                                      :: row_distributed = .false.
     logical                                      :: col_distributed = .false.
@@ -371,6 +372,7 @@ contains
     mat_a%i_tor_max       = self%i_tor_max
     mat_a%block_size      = self%block_size
     mat_a%comm            = self%comm
+    mat_a%ncpu            = self%ncpu
     mat_a%scaled          = self%scaled
     mat_a%row_distributed = self%row_distributed
     mat_a%col_distributed = self%col_distributed
@@ -403,6 +405,14 @@ contains
     if (associated(self%column_scaling)) then
       allocate(mat_a%column_scaling(mat_a%ng))
       mat_a%column_scaling(1:mat_a%ng) = self%column_scaling(1:self%ng)
+    endif
+    if (associated(self%index_min)) then
+      allocate(mat_a%index_min(mat_a%ncpu))
+      mat_a%index_min(1:mat_a%ncpu) = self%index_min(1:self%ncpu)
+    endif
+    if (associated(self%index_max)) then
+      allocate(mat_a%index_max(mat_a%ncpu))
+      mat_a%index_max(1:mat_a%ncpu) = self%index_max(1:self%ncpu)
     endif
     !mat_a%ijA_size       => self%ijA_size
     !mat_a%ijA_index      => self%ijA_index

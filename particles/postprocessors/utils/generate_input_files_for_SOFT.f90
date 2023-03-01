@@ -2,26 +2,37 @@
 !> files compatible with the SOFT code inputs from the 
 !> JOREK MHD solutions and distribution functions.
 program generate_input_files_for_SOFT
-use mod_mpi_tools,   only: init_mpi_threads,finalize_mpi_threads
+use phys_module,   only: n_limiter,R_limiter,Z_limiter
+use mod_mpi_tools, only: init_mpi_threads,finalize_mpi_threads
 use particle_tracer
 
 implicit none
 
 !> Variables --------------------------------------------------------------------------------------------
 type(event)       :: field_reader
-integer           :: my_id,n_cpus,ierr
-integer           :: n_vec,n_R,n_Z,n_R_loc,n_Z_loc
+integer           :: my_id,n_cpus,ierr,i_elm_axis
+integer           :: n_vec,n_R,n_Z,n_R_loc
+real*8            :: time,tor_angle,psi_axis
+real*8,dimension(2)                 :: RZ_axis,st_axis
 real*8,dimension(:),allocatable     :: R_mesh,Z_mesh
+real*8,dimension(:,:),allocatable   :: poloidal_flux
 real*8,dimension(:,:,:),allocatable :: magnetic_field
 character(len=17) :: fields_filename
-character(len=20) :: magnetic_field_filename
+character(len=28) :: magnetic_field_filename
 character(len=20) :: pdf_filename
+character(len=63) :: soft_mag_name
+character(len=78) :: soft_desc
 !> Variables definitions --------------------------------------------------------------------------------
-n_vec = 3 !< number of vector components
-n_R   = 101 !< total number of radial points
-n_Z   = 101 !< total number of vertical coordinate points
-fields_filename = 'jorek_equilibrium'
-
+n_vec           = 3 !< number of vector components
+n_R             = 54  !< total number of radial points
+n_Z             = 81 !< total number of vertical coordinate points
+time            = 0d0 !< simulation time
+tor_angle       = 0d0 !< toroidal angle 
+fields_filename         = 'jorek_equilibrium'            !< jorek restart filename
+magnetic_field_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field input from jorek
+!> name and description of the soft field
+soft_mag_name = 'jorek_circular_equilibrium_hollow_current_profile_magnetic_data' 
+soft_desc     = 'pulse95135_press0_parabolicq_q95_6dot8_res1r5dot88m5_res2r4dot705m4_Ip612en1MA'
 !> Initialisation ---------------------------------------------------------------------------------------
 !> initialise the MPI communicator
 call init_mpi_threads(my_id,n_cpus,ierr)
@@ -34,26 +45,34 @@ write(*,*) "Reading MHD data: completed!"
 !> initialise magnetic field array
 write(*,*) "Initialise magnetic field datastructures ..."
 !> allocate R,Z mesh and magnetic field arrays
+n_R_loc = n_R/n_cpus; n_R_loc = max(n_R_loc,n_R - (n_cpus-1)*n_R_loc); n_R = n_R_loc*n_cpus;
 allocate(R_mesh(n_R)); R_mesh = 0d0; allocate(Z_mesh(n_Z)); Z_mesh = 0d0;
-allocate(magnetic_field(n_vec,n_Z,n_R)); magnetic_field = 0d0;
+allocate(poloidal_flux(n_Z,n_R_loc)); poloidal_flux = 0d0;
+allocate(magnetic_field(n_vec,n_Z,n_R_loc)); magnetic_field = 0d0;
 write(*,*) "Initialise magnetic field datastructures: completed!"
 
-!> Compute mesh -----------------------------------------------------------------------------------------
+!> Compute ----------------------------------------------------------------------------------------------
 write(*,*) "Generate computational mesh ..."
 call generate_equidistant_RZ_mesh(sim%fields,n_R,n_Z,R_mesh,Z_mesh)
 write(*,*) "Generate computational mesh: completed!"
 
+write(*,*) "Compute and write the magnetic field ..."
+call compute_magnetic_field_poloidal_flux(sim%fields,n_vec,n_R_loc,n_Z,time,tor_angle,&
+R_mesh(my_id*n_R_loc+1:(my_id+1)*n_R_loc),Z_mesh,magnetic_field,poloidal_flux)
+call find_axis(my_id,sim%fields%node_list,sim%fields%element_list,psi_axis,RZ_axis(1),RZ_axis(2),&
+i_elm_axis,st_axis(1),st_axis(2),ierr) !< compute the magnetic axis position
+call write_SOFT_magnetic_field_file(magnetic_field_filename,sim%fields,n_vec,n_R_loc,n_Z,&
+n_limiter,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_limiter,Z_limiter,&
+magnetic_field,poloidal_flux,soft_mag_name,soft_desc)
+write(*,*) "Compute and write the magnetic field: completed!"
+
 !> Write input files ------------------------------------------------------------------------------------
-#ifdef USE_HDF5
-  write(*,*) "Write magnetic field in HDF5 file ..."
-  write(*,*) "Write magnetic field in HDF5 file: completed!"
-  write(*,*) "Write probability distribution function in HDF5 file ..."
-  write(*,*) "Write probability distribution function in HDF5 file: completed!"
-#endif
+
 !> Finalisation -----------------------------------------------------------------------------------------
-if(allocated(R_mesh))         deallocate(R_mesh);
-if(allocated(Z_mesh))         deallocate(Z_mesh);
-if(allocated(magnetic_field)) deallocate(magnetic_field);
+if(allocated(R_mesh))                deallocate(R_mesh);
+if(allocated(Z_mesh))                deallocate(Z_mesh);
+if(allocated(poloidal_flux))         deallocate(poloidal_flux);
+if(allocated(magnetic_field))        deallocate(magnetic_field);
 call finalize_mpi_threads(ierr)
 
 contains
@@ -82,12 +101,162 @@ real*8  :: dR,dZ
 !> define the domain bounding box
 call domain_bounding_box(fields%node_list,fields%element_list,R_mesh(1),R_mesh(n_R),Z_mesh(1),Z_mesh(n_Z))
 dR = (R_mesh(n_R)-R_mesh(1))/real(n_R-1,kind=8); dZ = (Z_mesh(n_Z)-Z_mesh(1))/real(n_Z-1,kind=8);
-write(*,*) "initial bounding box R,Z: ",R_mesh(1),R_mesh(n_R),Z_mesh(1),Z_mesh(n_Z)
 !> generate mesh
 R_mesh = [(R_mesh(1)+real(ii,kind=8)*dR,ii=0,n_R-1)]
 Z_mesh = [(Z_mesh(1)+real(ii,kind=8)*dZ,ii=0,n_Z-1)]
-write(*,*) "final bounding box R,Z: ",R_mesh(1),R_mesh(n_R),Z_mesh(1),Z_mesh(n_Z)
 end subroutine generate_equidistant_RZ_mesh
+
+!> compute the magnetic field at a give R,Z position
+!> inputs:
+!>   fields:    (fields_base) JOREK MHD fields
+!>   n_v:       (integer) number of magnetic field vector components (must be 3)
+!>   n_R:       (integer) number of mesh points along the major radius
+!>   n_Z:       (integer) number of mesh points along the vertical coordinates
+!>   time:      (real8) time of the magnetic field
+!>   tor_angle: (real8) toroidal angle
+!>   R_mesh:    (real8)(n_R) mesh along the major radius
+!>   Z_mesh:    (real8)(n_Z) mesh along the vertical coordinate
+!> outputs:
+!>   magnetic_field: (real8)(n_v,n_Z,n_R) radial, vertical and toroidal components
+!>                   of the magnetic field
+!>   poloidal_flux:  (real8)(n_Z,n_R) poloidal flux
+subroutine compute_magnetic_field_poloidal_flux(fields,n_v,n_R,n_Z,time,tor_angle,&
+R_mesh,Z_mesh,magnetic_field,poloidal_flux)
+  use mod_fields, only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in)    :: fields
+  integer,intent(in)               :: n_v,n_R,n_Z
+  real*8,intent(in)                :: time,tor_angle
+  real*8,dimension(n_R),intent(in) :: R_mesh
+  real*8,dimension(n_Z),intent(in) :: Z_mesh
+  !> outputs:
+  real*8,dimension(n_v,n_Z,n_R),intent(out) :: magnetic_field
+  real*8,dimension(n_Z,n_R),intent(out)     :: poloidal_flux
+  !> variables:
+  integer             :: ii,jj,i_elm_out,ierr
+  real*8              :: R_out,Z_out,U
+  real*8,dimension(2) :: st_out
+  real*8,dimension(3) :: E_field
+  !> initialisation
+  magnetic_field = 0d0; poloidal_flux = 0d0;
+  !> loop on the R,Z coordinates
+  !$omp parallel do default(private) firstprivate(tor_angle,time,n_R,n_Z) &
+  !$omp shared(fields,R_mesh,Z_mesh,magnetic_field,poloidal_flux) collapse(2)
+  do ii=1,n_R
+    do jj=1,n_Z
+      !> compute the mesh node position in local coordinates
+      call find_RZ(fields%node_list,fields%element_list,R_mesh(ii),Z_mesh(jj),R_out,Z_out,&
+      i_elm_out,st_out(1),st_out(2),ierr)
+      if(i_elm_out.le.0) cycle!< cycle if element is not found
+      !> compute the magnetic field and store it
+      call fields%calc_EBpsiU(time,i_elm_out,st_out,tor_angle,E_field,&
+      magnetic_field(:,jj,ii),poloidal_flux(jj,ii),U)
+    enddo
+  enddo
+  !$omp end parallel do
+end subroutine compute_magnetic_field_poloidal_flux
+
+!> write the magnetic field file to be provided as input to SOFT
+!> inputs:
+!> outputs:
+subroutine write_SOFT_magnetic_field_file(filename,fields,n_vec,n_R_loc,n_Z,n_RZ_wall,&
+n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_wall,Z_wall,magnetic_field,poloidal_flux,&
+mag_name,description)
+  use mpi
+  use hdf5
+  use hdf5_io_module, only: HDF5_open_or_create,HDF5_close,HDF5_char_saving
+  use hdf5_io_module, only: HDF5_array1D_saving,HDF5_array2D_saving
+  use mod_fields,     only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in)                      :: fields
+  character(len=*),intent(in)                        :: filename,mag_name,description
+  integer,intent(in)                                 :: n_vec,n_R_loc,n_Z
+  integer,intent(in)                                 :: n_RZ_wall,n_cpus,my_id
+  real*8,dimension(2),intent(in)                     :: RZ_axis
+  real*8,dimension(n_R_loc*n_cpus),intent(in)        :: R_mesh
+  real*8,dimension(n_Z),intent(in)                   :: Z_mesh
+  real*8,dimension(n_RZ_wall),intent(in)             :: R_wall,Z_wall
+  real*8,dimension(n_Z,n_R_loc),intent(in)           :: poloidal_flux
+  real*8,dimension(n_vec,n_Z,n_R_loc),intent(in)     :: magnetic_field
+  !> variables:
+  character(len=8)              :: date
+  character(len=10)             :: time
+  character(len=5)              :: zone
+  character(len=:),allocatable  :: description_full
+  integer                       :: ii,desc_len
+  integer(HID_T)                :: file_id
+  real*8,dimension(2,n_RZ_wall) :: RZ_wall
+  real*8,dimension(n_Z,n_cpus*n_R_loc)       :: global_poloidal_flux
+  real*8,dimension(n_vec,n_Z,n_cpus*n_R_loc) :: global_magnetic_field
+
+  !> gather the poloidal flux
+  call gather_2d_array_equal_chunks(my_id,n_cpus,n_Z,n_R_loc,poloidal_flux,global_poloidal_flux) 
+  !> gather the magnetic field components
+  do ii = 1,n_vec
+    call gather_2d_array_equal_chunks(my_id,n_cpus,n_Z,n_R_loc,&
+    magnetic_field(ii,:,:),global_magnetic_field(ii,:,:)) 
+  enddo
+  !> write SOFT magnetic input file
+  if(my_id.eq.0) then
+    call HDF5_open_or_create(trim(filename//'.h5'),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
+    call HDF5_array1D_saving(file_id,RZ_axis,2,'maxis')         !< write magnetic axis
+    call HDF5_array1D_saving(file_id,R_mesh,n_cpus*n_R_loc,'r') !< write radial mesh
+    call HDF5_array1D_saving(file_id,Z_mesh,n_Z,'z')            !< write vertical mesh
+    !> write the tokamak wall
+    RZ_wall(1,:) = R_wall; RZ_wall(2,:) = Z_wall;
+    call HDF5_array2D_saving(file_id,RZ_wall,2,n_RZ_wall,'wall')
+    call HDF5_array2D_saving(file_id,global_poloidal_flux,n_Z,n_R_loc*n_cpus,'Psi') !< poloidal flux
+    call HDF5_array2D_saving(file_id,global_magnetic_field(1,:,:),n_Z,n_R_loc*n_cpus,'Br')   !< radial B
+    call HDF5_array2D_saving(file_id,global_magnetic_field(2,:,:),n_Z,n_R_loc*n_cpus,'Bz')   !< vertical B
+    call HDF5_array2D_saving(file_id,global_magnetic_field(3,:,:),n_Z,n_R_loc*n_cpus,'Bphi') !< toroidal B
+    !> write magnetic field name
+    call HDF5_char_saving(file_id,trim(mag_name),'name')
+    !> create and write magnetic field description
+    call date_and_time(DATE=date,TIME=time,ZONE=zone)
+    desc_len = len(mag_name)+len(date)+len(time)+len(zone)+18
+    allocate(character(len=desc_len)::description_full)
+    description_full = description//'_date_'//date//'_time_'//time//'_zone_'//zone
+    call HDF5_char_saving(file_id,trim(description_full),'desc')
+    deallocate(description_full)
+    call HDF5_close(file_id)
+  endif
+end subroutine write_SOFT_magnetic_field_file
+
+!> gather 2d equally chunked array to global 2d array
+!> inputs:
+!>   my_id:       (integer) mpi task identifier
+!>   n_cpus:      (integer) number of mpi tasks
+!>   n1:          (integer) size of the local array 1st dimension
+!>   n2:          (integer) size of the local array 2nd dimension
+!>   local_array: (real8)(n1,n2) local array to be gathered
+!> outputs:
+!>   global_array: (real8)(n_cpus*n1,n_cpus*n2) gathered global array
+subroutine gather_2d_array_equal_chunks(my_id,n_cpus,n1,n2,local_array,global_array)
+  use mpi
+  implicit none
+  !> inputs:
+  integer,intent(in)                 :: my_id,n_cpus,n1,n2
+  real*8,dimension(n1,n2),intent(in) :: local_array
+  !> outputs:
+  real*8,dimension(n1,n_cpus*n2),intent(out) :: global_array
+  !> variables
+  integer                        :: ii,doublesize,subarraytype,resizedsubarraytype,ierr
+  integer(kind=MPI_Address_kind) :: startresized,extent
+  integer,dimension(n_cpus)      :: disps,counts
+  !> create a vector for each subblock and gather them
+  if(my_id.eq.0) then
+    global_array = 0d0; counts = 1; disps = [(n2*ii,ii=0,n_cpus-1)]; startresized = 0;
+    call MPI_Type_size(MPI_REAL8,doublesize,ierr); extent = n1*doublesize;
+    call MPI_Type_create_subarray(2,[n1,n_cpus*n2],[n1,n2],[0,0],MPI_ORDER_FORTRAN,MPI_REAL8,subarraytype,ierr)
+    call MPI_Type_create_resized(subarraytype,startresized,extent,resizedsubarraytype,ierr)
+    call MPI_Type_commit(resizedsubarraytype,ierr)
+  endif
+  call MPI_gatherv(local_array,n1*n2,MPI_REAL8,global_array,counts,disps,resizedsubarraytype,0,MPI_COMM_WORLD,ierr)
+  if(my_id.eq.0) call MPI_Type_free(resizedsubarraytype,ierr) 
+end subroutine gather_2d_array_equal_chunks
+
 !> ------------------------------------------------------------------------------------------------------
 end program generate_input_files_for_SOFT
 

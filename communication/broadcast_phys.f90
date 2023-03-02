@@ -12,6 +12,9 @@ use mpi_mod
   use mod_injection_source
 #endif
 use pellet_module
+#ifdef USE_CATALYST
+  use mod_catalyst_adaptor, only: catalyst_scripts
+#endif
 
 implicit none
 
@@ -153,6 +156,7 @@ if (my_id .eq. 0) then
   call MPI_PACK(D_imp_extra_neg_thresh, 1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(T_min,                  1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(T_min_neg,              1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+  call MPI_PACK(implicit_heat_source,   1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(T_min_ZKpar,            1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(Ti_min_ZKpar,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
   call MPI_PACK(Te_min_ZKpar,           1,MPI_REAL8,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -791,6 +795,11 @@ if (my_id .eq. 0) then
   endif
   call MPI_PACK(treat_axis,             1,MPI_LOGICAL,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
 
+#ifdef USE_CATALYST
+  call MPI_PACK(catalyst_scripts,65536,MPI_CHARACTER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
+#endif
+
+
     ! --- Please leave this as last parameter
   test_value = 42
   call MPI_PACK(test_value,             1,MPI_INTEGER,buffer,bufsize,position,MPI_COMM_WORLD,ierr)
@@ -924,6 +933,7 @@ if (my_id .ne. 0) then
   call MPI_UNPACK(buffer,bufsize,position,D_imp_extra_neg_thresh, 1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,T_min,                  1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,T_min_neg,              1,MPI_REAL8,MPI_COMM_WORLD,ierr)
+  call MPI_UNPACK(buffer,bufsize,position,implicit_heat_source,   1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,T_min_Zkpar,            1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,Ti_min_Zkpar,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
   call MPI_UNPACK(buffer,bufsize,position,Te_min_Zkpar,           1,MPI_REAL8,MPI_COMM_WORLD,ierr)
@@ -1567,6 +1577,9 @@ if (my_id .ne. 0) then
   endif  
   call MPI_UNPACK(buffer,bufsize,position,treat_axis,            1,MPI_LOGICAL,MPI_COMM_WORLD,ierr)
   
+#ifdef USE_CATALYST
+  call MPI_UNPACK(buffer,bufsize,position,catalyst_scripts,    65536,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+#endif
   
   ! --- Please leave this as last parameter
   call MPI_UNPACK(buffer,bufsize,position,test_value,             1,MPI_INTEGER,MPI_COMM_WORLD,ierr)

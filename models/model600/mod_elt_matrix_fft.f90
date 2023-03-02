@@ -239,7 +239,7 @@ epsil=1.d-3
 
 ! --- Decide whether or not use the conservative form of the momentum equation
 ! --- (conservative form not ready yet with diamagnetic flows)
-if (tauIC > 0.d0) fact_conservative_u = 0.d0
+if (tauIC /= 0.d0) fact_conservative_u = 0.d0
 
 ! --- Take time evolution parameters from phys_module
 theta = time_evol_theta

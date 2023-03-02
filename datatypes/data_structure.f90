@@ -163,6 +163,8 @@ module data_structure
     integer, dimension(:), pointer               :: index_max => Null()  !< maximum node index in global range for all MPI ranks
     integer                                      :: my_ind_min = 0
     integer                                      :: my_ind_max = 0
+    integer                                      :: my_ind_size = 0
+    integer(kind=int_all)                        :: maxsize = 0          !< maxval(ijA_size(:))
     integer                                      :: i_tor_min = 0        ! minimum toroidal Fourier number used in construction
     integer                                      :: i_tor_max = 0        ! maximum toroidal Fourier number used in construction
     integer                                      :: block_size = 1
@@ -368,6 +370,8 @@ contains
     mat_a%nnz             = self%nnz
     mat_a%my_ind_min      = self%my_ind_min
     mat_a%my_ind_max      = self%my_ind_max
+    mat_a%my_ind_size     = self%my_ind_size
+    mat_a%maxsize         = self%maxsize
     mat_a%i_tor_min       = self%i_tor_min
     mat_a%i_tor_max       = self%i_tor_max
     mat_a%block_size      = self%block_size
@@ -414,11 +418,18 @@ contains
       allocate(mat_a%index_max(mat_a%ncpu))
       mat_a%index_max(1:mat_a%ncpu) = self%index_max(1:self%ncpu)
     endif
-    !mat_a%ijA_size       => self%ijA_size
-    !mat_a%ijA_index      => self%ijA_index
-    !mat_a%irn_jcn        => self%irn_jcn
-    !mat_a%index_min      => self%index_min
-    !mat_a%index_max      => self%index_max
+    if (associated(self%ijA_size)) then
+      allocate(mat_a%ijA_size(mat_a%my_ind_size))
+      mat_a%ijA_size(1:mat_a%my_ind_size) = self%ijA_size(1:self%my_ind_size)
+    endif
+    if (associated(self%irn_jcn)) then
+      allocate(mat_a%irn_jcn(mat_a%my_ind_size,mat_a%maxsize))
+      mat_a%irn_jcn(1:mat_a%my_ind_size,1:mat_a%maxsize) = self%irn_jcn(1:self%my_ind_size,1:self%maxsize)
+    endif
+    if (associated(self%ijA_index)) then
+      allocate(mat_a%ijA_index(mat_a%my_ind_size,mat_a%maxsize))
+      mat_a%ijA_index(1:mat_a%my_ind_size,1:mat_a%maxsize) = self%ijA_index(1:self%my_ind_size,1:self%maxsize)
+    endif    
 
     return
   end subroutine
@@ -461,6 +472,8 @@ contains
     self%nnz = 0
     self%my_ind_min = 0
     self%my_ind_max = 0
+    self%my_ind_size = 0
+    self%maxsize = 0
     self%i_tor_min = 0
     self%i_tor_max = 0
     self%block_size = 1

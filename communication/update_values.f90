@@ -12,7 +12,7 @@ use mod_axis_treatment
 implicit none
 
 ! --- Routine parameters
-type (type_element_list), intent(inout) :: element_list
+type (type_element_list), intent(in) :: element_list
 type (type_node_list),    intent(inout) :: node_list
 type(type_RHS),           intent(inout) :: rhs_vec
 

@@ -48,8 +48,8 @@ module mod_sparse_matrix
 ! move one matrix structure into another
   subroutine move_to(self, mat_a, with_data)
     class(type_SP_MATRIX), intent(inout)    :: self
-    class(type_SP_MATRIX), intent(inout) :: mat_a
-    logical                              :: with_data
+    class(type_SP_MATRIX), intent(inout)    :: mat_a
+    logical                                 :: with_data
 
     if (with_data) then
       mat_a%irn            => self%irn; self%irn => null()

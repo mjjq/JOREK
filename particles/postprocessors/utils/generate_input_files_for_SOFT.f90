@@ -2,19 +2,28 @@
 !> files compatible with the SOFT code inputs from the 
 !> JOREK MHD solutions and distribution functions.
 program generate_input_files_for_SOFT
-use phys_module,   only: n_limiter,R_limiter,Z_limiter
-use mod_mpi_tools, only: init_mpi_threads,finalize_mpi_threads
+use phys_module,    only: n_limiter,R_limiter,Z_limiter,xcase,xpoint
+use data_structure, only: type_bnd_node_list,type_bnd_element_list
+use data_structure, only: type_surface_list
+use mod_mpi_tools,  only: init_mpi_threads,finalize_mpi_threads
+use mod_boundary,   only: boundary_from_grid
+use equil_info,     only: ES,update_equil_state
 use particle_tracer
 
 implicit none
 
 !> Variables --------------------------------------------------------------------------------------------
-type(event)       :: field_reader
-integer           :: my_id,n_cpus,ierr,i_elm_axis
-integer           :: n_vec,n_R,n_Z,n_R_loc
-real*8            :: time,tor_angle,psi_axis
+type(event)                 :: field_reader
+type(type_surface_list)     :: flux_surfaces
+type(type_bnd_node_list)    :: bnd_node_list
+type(type_bnd_element_list) :: bnd_elm_list
+integer                     :: my_id,n_cpus,ierr,i_elm_axis
+integer                     :: n_vec,n_R,n_Z,n_R_loc
+integer                     :: n_flux,n_flux_loc,errorcode
+real*8                      :: time,tor_angle,psi_axis,flux_axis_tol
 real*8,dimension(2)                 :: RZ_axis,st_axis
-real*8,dimension(:),allocatable     :: R_mesh,Z_mesh
+real*8,dimension(:),allocatable     :: R_mesh,Z_mesh,flux_mesh
+real*8,dimension(:),allocatable     :: flux_minor_radii_Zmag_LFS
 real*8,dimension(:,:),allocatable   :: poloidal_flux
 real*8,dimension(:,:,:),allocatable :: magnetic_field
 character(len=17) :: fields_filename
@@ -23,11 +32,13 @@ character(len=20) :: pdf_filename
 character(len=63) :: soft_mag_name
 character(len=78) :: soft_desc
 !> Variables definitions --------------------------------------------------------------------------------
-n_vec           = 3 !< number of vector components
-n_R             = 54  !< total number of radial points
-n_Z             = 81 !< total number of vertical coordinate points
-time            = 0d0 !< simulation time
-tor_angle       = 0d0 !< toroidal angle 
+n_vec           = 3    !< number of vector components
+n_R             = 54   !< total number of radial points
+n_Z             = 81   !< total number of vertical coordinate points
+n_flux          = 101   !< number of flux surfaces / minor radii
+time            = 0d0  !< simulation time
+tor_angle       = 0d0  !< toroidal angle
+flux_axis_tol   = -2.5d-3 !< tolerance of the poloidal flux axis for mesh generation
 fields_filename         = 'jorek_equilibrium'            !< jorek restart filename
 magnetic_field_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field input from jorek
 !> name and description of the soft field
@@ -43,36 +54,63 @@ field_reader = event(read_jorek_fields_interp_linear(basename=trim(fields_filena
 call with(sim,field_reader)
 write(*,*) "Reading MHD data: completed!"
 !> initialise magnetic field array
-write(*,*) "Initialise magnetic field datastructures ..."
+write(*,*) "Initialise magnetic field computation ..."
 !> allocate R,Z mesh and magnetic field arrays
 n_R_loc = n_R/n_cpus; n_R_loc = max(n_R_loc,n_R - (n_cpus-1)*n_R_loc); n_R = n_R_loc*n_cpus;
 allocate(R_mesh(n_R)); R_mesh = 0d0; allocate(Z_mesh(n_Z)); Z_mesh = 0d0;
 allocate(poloidal_flux(n_Z,n_R_loc)); poloidal_flux = 0d0;
 allocate(magnetic_field(n_vec,n_Z,n_R_loc)); magnetic_field = 0d0;
-write(*,*) "Initialise magnetic field datastructures: completed!"
+write(*,*) "Initialise magnetic field computation: completed!"
 
-!> Compute ----------------------------------------------------------------------------------------------
+write(*,*) "Initialise distribution function computation ..."
+!> update equilibrium state
+if(my_id.eq.0) call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,&
+bnd_node_list,bnd_elm_list,.false.)
+call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+call update_equil_state(my_id,sim%fields%node_list,sim%fields%element_list,bnd_elm_list,xpoint,xcase)
+!> define flux surfaces
+n_flux_loc = n_flux/n_cpus; n_flux_loc = max(n_flux - (n_cpus-1)*n_flux_loc,n_flux_loc);
+n_flux = n_flux_loc*n_cpus; allocate(flux_minor_radii_Zmag_LFS(n_flux_loc));
+flux_minor_radii_Zmag_LFS = 0d0; flux_surfaces%n_psi = n_flux_loc; 
+allocate(flux_surfaces%psi_values(flux_surfaces%n_psi));
+write(*,*) "Initialise distribution function computation: completed!"
+
+!> Compute and write soft inputs ------------------------------------------------------------------------
 write(*,*) "Generate computational mesh ..."
-call generate_equidistant_RZ_mesh(sim%fields,n_R,n_Z,R_mesh,Z_mesh)
+call find_axis(my_id,sim%fields%node_list,sim%fields%element_list,psi_axis,RZ_axis(1),RZ_axis(2),&
+i_elm_axis,st_axis(1),st_axis(2),ierr) !< compute the magnetic axis position
+call generate_equidistant_RZ_mesh(sim%fields,n_R,n_Z,R_mesh,Z_mesh); allocate(flux_mesh(n_flux));
+call generate_equidistant_poloidal_flux_mesh(n_flux,ES%psi_axis,ES%psi_bnd,flux_axis_tol,flux_mesh)
+flux_surfaces%psi_values = flux_mesh(n_flux_loc*my_id+1:n_flux_loc*(my_id+1)); deallocate(flux_mesh); 
+call find_flux_surfaces(my_id,xpoint,xcase,sim%fields%node_list,sim%fields%element_list,flux_surfaces);
+!> check if a flux surface has not been found
+if(any(flux_surfaces%flux_surfaces(:)%n_pieces.eq.0)) then
+  write(*,*) 'one or more flux surfaces are not found: stop!'
+  call MPI_Abort(MPI_COMM_WORLD,errorcode,ierr)
+endif
 write(*,*) "Generate computational mesh: completed!"
 
+!> generate magnetic field inputs
 write(*,*) "Compute and write the magnetic field ..."
 call compute_magnetic_field_poloidal_flux(sim%fields,n_vec,n_R_loc,n_Z,time,tor_angle,&
 R_mesh(my_id*n_R_loc+1:(my_id+1)*n_R_loc),Z_mesh,magnetic_field,poloidal_flux)
-call find_axis(my_id,sim%fields%node_list,sim%fields%element_list,psi_axis,RZ_axis(1),RZ_axis(2),&
-i_elm_axis,st_axis(1),st_axis(2),ierr) !< compute the magnetic axis position
 call write_SOFT_magnetic_field_file(magnetic_field_filename,sim%fields,n_vec,n_R_loc,n_Z,&
 n_limiter,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_limiter,Z_limiter,&
 magnetic_field,poloidal_flux,soft_mag_name,soft_desc)
 write(*,*) "Compute and write the magnetic field: completed!"
 
-!> Write input files ------------------------------------------------------------------------------------
+!> generate distribution function inputs
+write(*,*) "Compute and write distribution function ..."
+call find_LFS_minor_radius_flux_surface(sim%fields,flux_surfaces,RZ_axis,flux_minor_radii_Zmag_LFS);
+write(*,*) "Compute and write distribution function: completed!"
 
 !> Finalisation -----------------------------------------------------------------------------------------
-if(allocated(R_mesh))                deallocate(R_mesh);
-if(allocated(Z_mesh))                deallocate(Z_mesh);
-if(allocated(poloidal_flux))         deallocate(poloidal_flux);
-if(allocated(magnetic_field))        deallocate(magnetic_field);
+if(allocated(R_mesh))                    deallocate(R_mesh);
+if(allocated(Z_mesh))                    deallocate(Z_mesh);
+if(allocated(poloidal_flux))             deallocate(poloidal_flux);
+if(allocated(magnetic_field))            deallocate(magnetic_field);
+if(allocated(flux_surfaces%psi_values))  deallocate(flux_surfaces%psi_values);
+if(allocated(flux_minor_radii_Zmag_LFS)) deallocate(flux_minor_radii_Zmag_LFS);
 call finalize_mpi_threads(ierr)
 
 contains
@@ -87,24 +125,48 @@ contains
 !>   R_mesh: (real8)(n_R) major radius mesh
 !>   Z_mesh: (real8)(n_Z) vertical coordinate mesh
 subroutine generate_equidistant_RZ_mesh(fields,n_R,n_Z,R_mesh,Z_mesh)
-use mod_fields, only: fields_base
-implicit none
-!> inputs:
-class(fields_base),intent(in) :: fields
-integer,intent(in)            :: n_R,n_Z
-!> outputs: 
-real*8,dimension(n_R),intent(out) :: R_mesh
-real*8,dimension(n_Z),intent(out) :: Z_mesh
-!> variables:
-integer :: ii
-real*8  :: dR,dZ
-!> define the domain bounding box
-call domain_bounding_box(fields%node_list,fields%element_list,R_mesh(1),R_mesh(n_R),Z_mesh(1),Z_mesh(n_Z))
-dR = (R_mesh(n_R)-R_mesh(1))/real(n_R-1,kind=8); dZ = (Z_mesh(n_Z)-Z_mesh(1))/real(n_Z-1,kind=8);
-!> generate mesh
-R_mesh = [(R_mesh(1)+real(ii,kind=8)*dR,ii=0,n_R-1)]
-Z_mesh = [(Z_mesh(1)+real(ii,kind=8)*dZ,ii=0,n_Z-1)]
+  use mod_fields, only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in) :: fields
+  integer,intent(in)            :: n_R,n_Z
+  !> outputs: 
+  real*8,dimension(n_R),intent(out) :: R_mesh
+  real*8,dimension(n_Z),intent(out) :: Z_mesh
+  !> variables:
+  integer :: ii
+  real*8  :: dR,dZ
+  !> define the domain bounding box
+  call domain_bounding_box(fields%node_list,fields%element_list,R_mesh(1),R_mesh(n_R),Z_mesh(1),Z_mesh(n_Z))
+  dR = (R_mesh(n_R)-R_mesh(1))/real(n_R-1,kind=8); dZ = (Z_mesh(n_Z)-Z_mesh(1))/real(n_Z-1,kind=8);
+  !> generate mesh
+  R_mesh = [(R_mesh(1)+real(ii,kind=8)*dR,ii=0,n_R-1)]
+  Z_mesh = [(Z_mesh(1)+real(ii,kind=8)*dZ,ii=0,n_Z-1)]
 end subroutine generate_equidistant_RZ_mesh
+
+!> generate equidistant mesh in poloidal flux
+!> inputs:
+!>   n_psi:        (integer) number of poloidal flux points
+!>   psi_axis:     (real8) poloidal flux at the magnetic axis
+!>   psi_bnd:      (real8) poloidal flux at the boundary
+!>   psi_axis_tol: (real8) tolerance of the poloidal flux axis
+!> outputs:
+!>   psi_mesh: (real8)(n_psi)
+subroutine generate_equidistant_poloidal_flux_mesh(n_psi,psi_axis,psi_bnd,psi_axis_tol,psi_mesh)
+  implicit none
+  !> inputs:
+  integer, intent(in) :: n_psi
+  real*8, intent(in)  :: psi_axis,psi_bnd,psi_axis_tol
+  !> outputs:
+  real*8,dimension(n_psi),intent(out) :: psi_mesh
+  !> variables:
+  integer :: ii
+  real*8  :: dpsi
+  !> compute mesh
+  dpsi = 1d0/real(n_psi-1,kind=8)
+  psi_mesh  = psi_axis*(1d0+psi_axis_tol)+[(real(ii,kind=8)*dpsi,ii=0,n_psi-1)]*&
+  (psi_bnd*(1d0)-psi_axis*(psi_axis_tol+1d0))
+end subroutine generate_equidistant_poloidal_flux_mesh
 
 !> compute the magnetic field at a give R,Z position
 !> inputs:
@@ -273,6 +335,156 @@ subroutine gather_2d_array_equal_chunks(my_id,n_cpus,n1,n2,local_array,global_ar
   if(my_id.eq.0) call MPI_Type_free(resizedsubarraytype,ierr) 
 end subroutine gather_2d_array_equal_chunks
 
+!> find the minor radii of flux surfaces at the low field side
+!> at the magnetic axis vertical position
+!> mesh element node numbering
+!> 3 - 2
+!> |   |
+!> 4 - 1
+!> inputs:
+!>   fields: (fields_base) JOREK MHD fields
+!>   fluxes: (type_surface_list) flux surface list
+!>   RZ_axis: (real8)(2) major radius and vertical position magnetic axis
+!> outputs:
+!>   flux_minor_radii_Zmag_LFS: (real8)(n_psi) low-field-side flux surface
+!>                              minor radii at the magnetix axis vertical position
+subroutine find_LFS_minor_radius_flux_surface(fields,fluxes,RZ_axis,flux_minor_radii_Zmag_LFS)
+  use data_structure, only: type_surface_list
+  use mod_interp,     only: interp_RZ
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in)      :: fields
+  type(type_surface_list),intent(in) :: fluxes
+  real*8,dimension(2),intent(in)     :: RZ_axis
+  !> outputs:
+  real*8,dimension(fluxes%n_psi),intent(out) :: flux_minor_radii_Zmag_LFS
+  !> variables
+  integer :: ii,jj,kk,i_harmonic,n_nodes,ifail,errorcode,ierr
+  integer,dimension(2) :: Z_flux_ids
+  real*8               :: s_ZFlux,t_ZFlux
+  real*8,dimension(2)  :: ZFlux_new,RZ_flux
+  real*8,dimension(4)  :: R_nodes,Z_nodes
+  logical              :: Z_axis_in_peice
+  !> initialisation
+  ifail = 999; flux_minor_radii_Zmag_LFS = -9.99d2;
+  n_nodes = size(fluxes%flux_surfaces(1)%t,1) !< number of nodes per element
+  i_harmonic = 1; !< the minor radius is computed on the equilibrium
+  Z_flux_ids = [-2,var_psi] !< vertical coordinate and poloidal flux indexes
+  !> loop on the magnetic flux surfaces
+  do ii=1,fluxes%n_psi
+    !> loop on the number of elements of each flux surface
+    do jj=1,fluxes%flux_surfaces(ii)%n_pieces
+      !> compute the surface nodes global coordinates
+      do kk=1,n_nodes 
+        call interp_RZ(fields%node_list,fields%element_list,fluxes%flux_surfaces(ii)%elm(jj),&
+        fluxes%flux_surfaces(ii)%s(kk,jj),fluxes%flux_surfaces(ii)%t(kk,jj),R_nodes(kk),Z_nodes(kk))
+      enddo
+      !> check if the magnetic axis vertical position is within the element
+      !> and the element at the LFS (R>=R_axis)
+      if(any(RZ_axis(1).le.R_nodes)) cycle 
+      !> TODO ADD TOLERANCE IN Z COMPARISON FOR TAKING INTO ACCOUNT CUBIC INTERPOLATION
+      if(all((Z_nodes.gt.RZ_axis(2))).or.all((Z_nodes.lt.RZ_axis(2)))) cycle
+      !> find the nearest point at Z_axis on the flux surface
+      call find_point_from_target_in_elm_harmonic(fields,fluxes%flux_surfaces(ii)%elm(jj),&
+      i_harmonic,n_nodes,Z_flux_ids,fluxes%flux_surfaces(ii)%s(:,jj),fluxes%flux_surfaces(ii)%s(:,jj),&
+      [RZ_axis(2),fluxes%psi_values(ii)],s_ZFlux,t_ZFlux,ZFlux_new,ifail)
+      !> if failed, try with the previous surface element
+      if((ifail.ne.0).and.((jj-1).gt.0)) call find_point_from_target_in_elm_harmonic(fields,&
+      fluxes%flux_surfaces(ii)%elm(jj-1),&
+      i_harmonic,n_nodes,Z_flux_ids,fluxes%flux_surfaces(ii)%s(:,jj-1),fluxes%flux_surfaces(ii)%t(:,jj-1),&
+      [RZ_axis(2),fluxes%psi_values(ii)],s_ZFlux,t_ZFlux,ZFlux_new,ifail)
+      !> if failed, try with next surface element
+      if((ifail.ne.0).and.((jj+1).le.fluxes%flux_surfaces(ii)%n_pieces)) &
+      call find_point_from_target_in_elm_harmonic(fields,fluxes%flux_surfaces(ii)%elm(jj+1),&
+      i_harmonic,n_nodes,Z_flux_ids,fluxes%flux_surfaces(ii)%s(:,jj+1),fluxes%flux_surfaces(ii)%t(:,jj+1),&
+      [RZ_axis(2),fluxes%psi_values(ii)],s_ZFlux,t_ZFlux,ZFlux_new,ifail)
+      !> if failed again just exit
+      if(ifail.ne.0) exit
+      !> compute the minor radius
+      call interp_RZ(fields%node_list,fields%element_list,fluxes%flux_surfaces(ii)%elm(jj),&
+      s_ZFlux,t_ZFlux,RZ_flux(1),RZ_flux(2))
+      flux_minor_radii_Zmag_LFS(ii) = norm2(RZ_flux - RZ_axis)
+      exit
+    enddo
+    if(ifail.ne.0) then
+      write(*,*) 'flux surface id: ',ii,'not found: abort!'
+      call MPI_Abort(MPI_COMM_WORLD,errorcode,ierr)
+    endif
+  enddo
+end subroutine find_LFS_minor_radius_flux_surface
+
+!> find a point given two targets within an element by Newton method
+!> inputs:
+!>   fields:      (fields)(fields_base) JOREK MHD fields
+!>   i_elm:       (integer) element number
+!>   i_harmonic:  (integer) selected toroidal harmonic
+!>   n_trial:     (integer) number of trial element coordinates
+!>   target_ids:  (integer)(2) element indexes of the target variables
+!>                -1: R, -2: Z
+!>   s_trial:     (real8)(n_trial) 1st trial coordinate in element frame
+!>   t_trial:     (real8)(n_trial) 2nd trial coordinate in element frame
+!>   targets_old: (real8)(2) target values to find
+!> outputs:
+!>   s_new:       (real8) 1st point coordinate in element frame
+!>   t_new:       (real8) 2nd point coordinate in element frame
+!>   targets_new: (real8)(2) computed targets
+!>   ifail:       (integer) 0 if find routine is successful
+subroutine find_point_from_target_in_elm_harmonic(fields,i_elm,i_harmonic,n_trial,&
+target_ids,s_trial,t_trial,targets_old,s_new,t_new,targets_new,ifail)
+  use mod_interp, only: interp,interp_RZ
+  use mod_fields, only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in)        :: fields
+  integer,intent(in)                   :: i_elm,i_harmonic,n_trial
+  integer,dimension(2),intent(in)      :: target_ids
+  real*8,dimension(2),intent(in)       :: targets_old
+  real*8,dimension(n_trial),intent(in) :: s_trial,t_trial
+  !> outputs:
+  integer,intent(out)             :: ifail
+  real*8,intent(out)              :: s_new,t_new
+  real*8,dimension(2),intent(out) :: targets_new
+  !> variables:
+  logical :: converged
+  integer :: ii,jj,iter,max_iter
+  real*8  :: error,tolerance
+  real*8  :: R,R_s,R_t,Z,Z_s,Z_t,dummy1,dummy2,dummy3
+  real*8,dimension(2)  :: delta_targets,targets_s,targets_t 
+  !> initialisation
+  converged = .false. !< true if convergence is reached 
+  max_iter  = 10; !< maximum number of iteration for convergence
+  tolerance = 1d-16;  !< tolerance for convergence
+  ifail = 999;  
+  !> apply the Newton method for finding the s,t position given a set of target variables
+  !> loop on the number of trial
+  do ii=1,n_trial
+    targets_new = 0d0; error = 1e50;
+    s_new = s_trial(ii); t_new = t_trial(ii);
+    !> loop on the number of iterations
+    do iter=1,max_iter 
+      do jj=1,2
+        if(target_ids(jj).le.0) then
+          if(target_ids(jj).eq.-1) call interp_RZ(fields%node_list,fields%element_list,&
+          i_elm,s_new,t_new,targets_new(jj),targets_s(jj),targets_t(jj),dummy1,dummy2,dummy3) !< target R
+          if(target_ids(jj).eq.-2) call interp_RZ(fields%node_list,fields%element_list,&
+          i_elm,s_new,t_new,dummy1,dummy2,dummy3,targets_new(jj),targets_s(jj),targets_t(jj)) !< target Z
+        else
+          call interp(fields%node_list,fields%element_list,i_elm,target_ids(jj),i_harmonic,&
+          s_new,t_new,targets_new(jj),targets_s(jj),targets_t(jj))
+        endif
+      enddo
+      delta_targets = targets_old - targets_new
+      converged = maxval(abs(delta_targets)).le.tolerance
+      if(((s_new.ge.0d0).and.(s_new.le.1d0)).and.((t_new.ge.0d0).and.(t_new.le.1d0)).and.converged) then
+        ifail = 0; exit;
+      endif
+      delta_targets = delta_targets/(targets_s(1)*targets_t(2)-targets_t(1)*targets_s(2))
+      s_new = s_new - targets_t(1)*delta_targets(2) + targets_t(2)*delta_targets(1)
+      t_new = t_new + targets_s(1)*delta_targets(2) - targets_s(2)*delta_targets(1)
+    enddo
+    if(((s_new.ge.0d0).and.(s_new.le.1d0)).and.((t_new.ge.0d0).and.(t_new.le.1d0)).and.converged) exit;
+  enddo
+end subroutine find_point_from_target_in_elm_harmonic
 !> ------------------------------------------------------------------------------------------------------
 end program generate_input_files_for_SOFT
 

@@ -107,6 +107,7 @@ program JOREK2
     end subroutine set_trap_sigterm
     logical function sigterm_called() bind(C)
     end function sigterm_called
+
   end interface
   
   type (type_surface_list) :: surface_list
@@ -170,10 +171,19 @@ program JOREK2
   type(type_RHS)              :: rhs_vec, sol_vec, deltas
   type(type_SP_SOLVER)        :: solver
   
-  integer                     :: inewton, maxnewton
-  logical                     :: converged = .false.
-  type(type_RHS)              :: deln, rhsk
-  type(type_SP_MATRIX)        :: a_matk
+! Newton related  
+  integer                       :: inewton, maxNewton = 10
+  logical                       :: converged = .false.
+  real(kind=8)                  :: gamma_Newton=0.5, alpha_Newton=2.d0, tolk
+  real(kind=8)                  :: normRHSn, normRHSprevious, normRHScurrent
+  type(type_RHS)                :: deln, rhsk, residue
+  type(type_SP_MATRIX)          :: a_matk
+  type(type_node_list)          :: node_list_n
+  real(kind=8), allocatable     :: store_value(:,:,:,:), store_delta(:,:,:,:)
+  
+  external                      :: matrix_vector
+  real(kind=C_DOUBLE), external :: dnrm2
+!!!!
   
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
@@ -517,6 +527,7 @@ mpi_required = 0
     call tr_allocatep(local_elms,1,element_list%n_elements,"local_elms",CAT_FEM)
     
     a_mat%comm = MPI_COMM_WORLD
+    a_mat%ncpu = n_cpu
     
     mhd_sim%my_id = my_id
     mhd_sim%n_cpu = n_cpu
@@ -548,17 +559,17 @@ mpi_required = 0
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
     fileout = 'jorek00000'
-    call export_restart(node_list, element_list, fileout)
-    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
   end if
   
-  if ( ( my_id == 0 ) .and. ( (node_list%n_nodes > n_nodes_max+1000)                               &
-    .or. (element_list%n_elements > n_elements_max+1000) ) ) then
+  if ( ( my_id == 0 ) .and. ( (mhd_sim%node_list%n_nodes > n_nodes_max+1000)                               &
+    .or. (mhd_sim%element_list%n_elements > n_elements_max+1000) ) ) then
     write(*,*) 'WARNING: n_nodes_max and/or n_elements_max is too large. This wastes memory.'
-    write(*,*) '  n_nodes_max,    n_nodes    =', n_nodes_max,    node_list%n_nodes
-    write(*,*) '  n_elements_max, n_elements =', n_elements_max, element_list%n_elements
+    write(*,*) '  n_nodes_max,    n_nodes    =', n_nodes_max,    mhd_sim%node_list%n_nodes
+    write(*,*) '  n_elements_max, n_elements =', n_elements_max, mhd_sim%element_list%n_elements
     write(*,*) '  Note: for the equilibrium calculation higher values might be needed depending'
     write(*,*) '  on the resolution of your initial grid. In that case, you can run with reduced'
     write(*,*) '  values after restarting.'
@@ -571,7 +582,7 @@ mpi_required = 0
   !***********************************************************************
   !***********************************************************************
   
-  if (nstep > 0) call update_deltas(node_list, deltas) ! create list of delta values in local_matrix module
+  if (nstep > 0) call update_deltas(mhd_sim%node_list, deltas) ! create list of delta values in local_matrix module
 
   solver%iterative          = gmres
   solver%iter_precon        = iter_precon
@@ -591,8 +602,8 @@ mpi_required = 0
   
   deln%n = deltas%n
   allocate(deln%val(deln%n))
-  rhsk%n = rhs_vec%n
-  allocate(rhsk%val(rhsk%n))
+  rhsk%n = deltas%n
+  allocate(rhsk%val(rhsk%n)); rhsk%val(1:rhsk%n) = 0.0
   
 
   call tr_print_memsize("BeforeTimeStepping")
@@ -633,15 +644,15 @@ mpi_required = 0
       aux_node_list%node(i)%deltas = 0.d0
     enddo
 
-    call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
+    call update_equil_state(my_id,mhd_sim%node_list, mhd_sim%element_list, bnd_elm_list, xpoint, xcase)
     if ( my_id == 0 ) call print_equil_state(.false.)
 
     ! --- Prepare minor radius and q-,ft-,B-splines for bootstrap current
     minRad = 0.0
     
     if (bootstrap) then
-      call bootstrap_find_minRad(node_list, element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
-      call bootstrap_get_q_and_ft_splines(node_list, element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
+      call bootstrap_find_minRad(mhd_sim%node_list, mhd_sim%element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
+      call bootstrap_get_q_and_ft_splines(mhd_sim%node_list, mhd_sim%element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
     endif
     
     call tr_debug_write("JMAIN:Find_axis_R",ES%R_axis)
@@ -651,7 +662,7 @@ mpi_required = 0
     
     if (use_pellet) then	    ! calculating the pellet_volume (total_pellet_volume)
       pellet_volume = PI * pellet_radius**2 * 2.d0 * PI * pellet_R * (pellet_phi/PI)
-      call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+      call int3d_new(my_id, mhd_sim%node_list, mhd_sim%element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
     endif
     call tr_debug_write("JMAIN:Debconstruct_n_elms",mhd_sim%n_local_elms)    
 
@@ -671,58 +682,54 @@ mpi_required = 0
     
     !!! start newton
     converged = .false.
-    deln%val(1:deln%n) = 0.0
+    deln%val(1:deln%n) = 0.d0
+    normRHSn = dnrm2(rhs_vec%n, rhs_vec%val, 1)
     call a_mat%copy_to(a_matk)
+    call node_list_save(mhd_sim%node_list, store_value, store_delta)
     
-    do while(.not.converged)
-      call matrix_vector(deln, a_mat, rhsk)
+    inewton = 1
+    normRHScurrent = normRHSn
+    solver%solve_only = (istep > 1)
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    newton_loop: do inewton=1, maxNewton
+    
+      if (inewton.gt.1) call matrix_vector(deln, a_mat, rhsk)
+      normRHSprevious = normRHScurrent ! store previous norm
       rhsk%val(1:rhsk%n) = rhs_vec%val(1:rhs_vec%n) - rhsk%val(1:rhsk%n)
-     
-      call solve_sparse_system(a_mat, rhs_vec, deltas, solver, mhd_sim)
-  
-      call clck_time(t0)
-      if (solver%step_success) then
-      ! successful step
-  
-        if (use_pellet) then
-          pellet_volume = total_pellet_volume
-          call update_pellet(my_id,node_list,element_list)
-  
-          if (my_id == 0) then
-            xtime_pellet_R(index_now)         = pellet_R
-            xtime_pellet_Z(index_now)         = pellet_Z
-            xtime_pellet_psi(index_now)       = pellet_psi
-            xtime_pellet_particles(index_now) = pellet_particles
-            xtime_phys_ablation(index_now)    = phys_ablation
-          endif
-  
-        endif
-  
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
-         if (using_spi) then
-           n_spi_begin = 1
-           do i = 1, n_inj !< Do one update for each injection location
-             if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
-             n_spi_begin = n_spi_begin + n_spi(i)
-           end do
-         end if
-#endif
-  
-        call update_values(element_list,node_list, deltas)         ! add solution to node values
-        call update_deltas(node_list, deltas)
-  
-        !!! end newton
-        deln%val(1:deln%n) = deln%val(1:deln%n) + deltas%val(1:deltas%n)
-        call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, rhsk, harmonic_matrix=.false.)
-        converged = .true.
-        if (converged) then
-          t_now = t_now + tstep
-          ! save previous time step
-          tstep_prev = tstep
-        endif
-  
-      else
+      normRHScurrent = dnrm2(rhsk%n, rhsk%val, 1) ! new RHSk norm
       
+     
+      tolk = normRHScurrent/normRHSn
+      
+      if (tolk.le.gmres_tol) then
+        converged = .true.
+        if (my_id.eq.0) then
+          write(*,*) "Newton:", inewton, normRHSn, normRHScurrent, normRHSprevious, normRHScurrent/normRHSn
+          write(*,*) "deltas norm2:", dnrm2(deln%n, deln%val, 1)
+        endif
+        
+        call node_list_restore(mhd_sim%node_list, store_value, store_delta)
+        call update_values(mhd_sim%element_list,node_list, deln)
+        call update_deltas(mhd_sim%node_list, deln)        
+        exit newton_loop
+      endif
+      
+      
+      solver%iter_tol = 1e-3
+      call solve_sparse_system(a_matk, rhsk, deltas, solver, mhd_sim)
+      
+      if (.not.solver%step_success) then
         if ( my_id == 0 ) then
           write(*,*)
           write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
@@ -730,10 +737,53 @@ mpi_required = 0
         end if
         index_now = index_now - 1 ! Undo the time step
         exit jstep_loop
-        
-      endif
-    enddo !Newton loop
+      endif      
+  
+      deln%val(1:deln%n) = deln%val(1:deln%n) + deltas%val(1:deltas%n)
+      
+      call update_values(mhd_sim%element_list,mhd_sim%node_list, deltas)
+      call update_deltas(mhd_sim%node_list, deltas)
+
+      call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, rhsk, harmonic_matrix=.false.)
+      solver%solve_only = .true.
+      
+    enddo newton_loop
     
+    
+    
+   
+    
+    call clck_time(t0)
+    
+    if (use_pellet) then
+      pellet_volume = total_pellet_volume
+      call update_pellet(my_id,mhd_sim%node_list,mhd_sim%element_list)
+
+      if (my_id == 0) then
+        xtime_pellet_R(index_now)         = pellet_R
+        xtime_pellet_Z(index_now)         = pellet_Z
+        xtime_pellet_psi(index_now)       = pellet_psi
+        xtime_pellet_particles(index_now) = pellet_particles
+        xtime_phys_ablation(index_now)    = phys_ablation
+      endif
+
+    endif
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+    if (using_spi) then
+      n_spi_begin = 1
+      do i = 1, n_inj !< Do one update for each injection location
+        if (t_now >= t_ns(i)) call update_spi(my_id,mhd_sim%node_list,mhd_sim%element_list,i,n_spi_begin)
+        n_spi_begin = n_spi_begin + n_spi(i)
+      end do
+    endif
+#endif
+
+    t_now = t_now + tstep
+        ! save previous time step
+    tstep_prev = tstep
+
+
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
 
@@ -776,7 +826,7 @@ mpi_required = 0
        energies(1:n_tor,2,index_now) = W_kin(1:n_tor)
 
 #ifdef JECCD
-       call temp(node_list,element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
+       call temp(mhd_sim%node_list,mhd_sim%element_list,A_tem,A_den,A_jen,A_jec,A_jec1,A_jec2)
        write(*,'(A,12e16.8)') ' current energies2 : ',A_tem,A_den
        write(*,'(A,12e16.8)') ' current energies3 : ',A_jen,A_jec
 #ifdef JEC2DIAG
@@ -828,7 +878,7 @@ mpi_required = 0
        write(*,*)
     endif   !--- my_id=0
 
-    call int3d_new(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
+    call int3d_new(my_id, mhd_sim%node_list, mhd_sim%element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, 1)
 
     if (my_id .eq. 0 ) then
       ! --- Output energies and growth_rates to text files during the code run
@@ -865,10 +915,10 @@ mpi_required = 0
     
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
-      if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+      if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
       write(fileout,'(A5,i5.5)') 'jorek',index_now
-      call export_restart(node_list, element_list, fileout)
-      if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+      call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
+      if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.
@@ -953,14 +1003,14 @@ mpi_required = 0
   !***********************************************************************
 
   if (my_id .eq. 0)  then
-    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
     fileout = 'jorek_restart'
-    call export_restart(node_list, element_list, fileout)
-    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
+    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     if ( write_ps ) then
       if (.not. bench_without_plot) then
         do ivar=1,n_var
-          call plot_solution(node_list,element_list,ivar,-1,1,variable_names(ivar))
+          call plot_solution(mhd_sim%node_list,mhd_sim%element_list,ivar,-1,1,variable_names(ivar))
         enddo
 
         do i=1,n_tor,2
@@ -968,7 +1018,7 @@ mpi_required = 0
 
           do ivar=1,n_var
             if ((ivar .ne. 3) .and. (ivar .ne. 4)) then
-              call plot_solution(node_list,element_list,ivar,i,1,variable_names(ivar)//label)
+              call plot_solution(mhd_sim%node_list,mhd_sim%element_list,ivar,i,1,variable_names(ivar)//label)
             endif
           enddo
 
@@ -1029,11 +1079,11 @@ mpi_required = 0
 
         Rp =  Rp_start + float(i-1)/float(nplot-1) * (Rp_end - Rp_start)
 
-        call find_RZ(node_list,element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
+        call find_RZ(mhd_sim%node_list,mhd_sim%element_list,Rp,Zp,R_out,Z_out,i_elm,s_out,t_out,ifail)
 
         if (ifail .eq. 0) then
 
-    	  call interp(node_list,element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
+    	  call interp(mhd_sim%node_list,mhd_sim%element_list,i_elm,1,1,s_out,t_out,psi,P_s,P_t,P_st,P_ss,P_tt)
 
     	  call density(    xpoint,xcase, Zp, ES%Z_xpoint, psi,ES%psi_axis,ES%psi_bnd,	       &
     	     zn,dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2,dn_dpsi2_dz)
@@ -1101,7 +1151,7 @@ mpi_required = 0
     write(*,*) 'Warning: Export to helena is not adapted for full MHD'
     write(*,*) ' '
 #else
-    call export_helena(node_list,element_list,bnd_elm_list)
+    call export_helena(mhd_sim%node_list,mhd_sim%element_list,bnd_elm_list)
 #endif
     if (allocated(energies))  call tr_deallocate(energies,"energies",CAT_UNKNOWN)
     if (allocated(xtime))     call tr_deallocate(xtime,"xtime",CAT_UNKNOWN)

@@ -32,12 +32,18 @@ module data_structure
     integer    :: parent_elem                     !< which element do parent nodes belong to ? "refinement"
     real*8     :: ref_lambda, ref_mu              !< Local coordinates of node inside the parent element. "refinement"
     logical    :: constrained                     !< Constrained node or not..."refinement"
+    
+  contains
+    procedure :: copy_node    
   end type type_node
 
   type type_node_list                             !< type definition of a list of nodes
     integer            :: n_nodes                 !< the number of nodes in the list
     integer            :: n_dof                   !< the total number of degrees of freedom
     type (type_node)   :: node(n_nodes_max)       !< an allocatable list of nodes
+    
+  contains
+    procedure :: copy_node_list
   end type type_node_list
 
   type type_element                               !< type definition for one elements
@@ -306,6 +312,102 @@ contains
     call tr_unregister_mem(sizeof(thread_struct),"thread_struct",CAT_MATELEM)
     deallocate(thread_struct)
   end subroutine del_thread_buffers
+  
+! copy one node structure into another
+  subroutine copy_node(self, node)
+    class(type_node) :: self
+    class(type_node) :: node
+    
+    node%x(1:n_coord_tor,1:n_degrees,1:n_dim) = self%x(1:n_coord_tor,1:n_degrees,1:n_dim)
+    node%values(1:n_tor,1:n_degrees,1:n_var)  = self%values(1:n_tor,1:n_degrees,1:n_var)
+    node%deltas(1:n_tor,1:n_degrees,1:n_var)  = self%deltas(1:n_tor,1:n_degrees,1:n_var)
+#ifdef fullmhd
+    node%psi_eq(1:n_degrees)      = self%psi_eq(1:n_degrees)
+    node%Fprof_eq(1:n_degrees)    = self%Fprof_eq(1:n_degrees)
+#elif altcs
+    node%psi_eq(1:n_degrees)      = self%psi_eq(1:n_degrees)
+#endif    
+    node%index(1:n_degrees) = self%index(1:n_degrees)
+    node%boundary           = self%boundary
+    node%boundary_index     = self%boundary_index
+    node%axis_node          = self%axis_node
+    node%axis_dof           = self%axis_dof
+    node%parents(1:2)       = self%parents(1:2)
+    node%parent_elem        = self%parent_elem
+    node%ref_lambda         = self%ref_lambda
+    node%ref_mu             = self%ref_mu
+    node%constrained        = self%constrained
+    
+    return
+  end subroutine copy_node
+  
+  subroutine copy_node_list(self, node_list)
+    class(type_node_list) :: self
+    class(type_node_list) :: node_list
+    
+    integer :: i
+    
+    node_list%n_nodes = self%n_nodes
+    node_list%n_dof   = self%n_dof
+    
+    !do i = 1, n_nodes_max
+    !  call self%node(i)%copy_node(node_list%node(i))
+    !enddo
+    
+    return
+  end subroutine copy_node_list
+  
+  subroutine node_list_save(node_list, store_value, store_delta)
+    implicit none
+    
+    class(type_node_list)         :: node_list
+    real(kind=8), allocatable     :: store_value(:,:,:,:), store_delta(:,:,:,:)
+    
+    integer :: inode, itor, n_nodes, ivar, ideg, n_deg = 4
+  
+    n_nodes = node_list%n_nodes
+   
+    if (allocated(store_value)) deallocate(store_value)
+    if (allocated(store_delta)) deallocate(store_delta)
+    allocate(store_value(n_nodes,n_var,n_tor,n_deg), store_delta(n_nodes,n_var,n_tor,n_deg))
+
+    do inode = 1, n_nodes
+      do ivar = 1, n_var
+        do itor = 1, n_tor
+          do ideg = 1, n_deg
+            store_value(inode,ivar,itor,ideg) = node_list%node(inode)%values(itor,ideg,ivar)
+            store_delta(inode,ivar,itor,ideg) = node_list%node(inode)%deltas(itor,ideg,ivar)
+          enddo
+        enddo
+      enddo
+    enddo    
+    
+    return
+  end subroutine node_list_save
+  
+  subroutine node_list_restore(node_list, store_value, store_delta)
+    implicit none
+    
+    class(type_node_list)         :: node_list
+    real(kind=8), allocatable     :: store_value(:,:,:,:), store_delta(:,:,:,:)
+    
+    integer :: inode, itor, n_nodes, ivar, ideg, n_deg = 4
+  
+    n_nodes = node_list%n_nodes
+
+    do inode = 1, n_nodes
+      do ivar = 1, n_var
+        do itor = 1, n_tor
+          do ideg = 1, n_deg
+            node_list%node(inode)%values(itor,ideg,ivar) = store_value(inode,ivar,itor,ideg)
+            node_list%node(inode)%deltas(itor,ideg,ivar) = store_delta(inode,ivar,itor,ideg)
+          enddo
+        enddo
+      enddo
+    enddo     
+    
+    return
+  end subroutine node_list_restore  
 
 end module data_structure
 

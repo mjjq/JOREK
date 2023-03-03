@@ -11,6 +11,9 @@ subroutine log_parameters(my_id, short)
 use phys_module
 use vacuum
 use gauss, only: n_gauss
+#ifdef USE_CATALYST
+  use mod_catalyst_adaptor, only: catalyst_scripts
+#endif
 
 implicit none
 
@@ -165,6 +168,13 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
 
 write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
 #ifdef USE_BICGSTAB
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
+#ifdef USE_CATALYST
   write(*,*) 'on'
 #else
   write(*,*) 'off'
@@ -589,6 +599,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'Te_min_ZKpar          ', Te_min_ZKpar
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
+  write(*,REAL_FMT) 'implicit_heat_source  ', implicit_heat_source
   write(*,REAL_FMT) 'rn0_min               ', rn0_min
   write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,REAL_FMT) 'rho_min_neg           ', rho_min_neg
@@ -933,7 +944,10 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'use_pcs,            ',use_pcs
   write(*,LOGI_FMT) 'use_ionisation,     ',use_ionisation    
   write(*,LOGI_FMT) 'use_sputtering,     ',use_sputtering    
-  write(*,LOGI_FMT) 'use_cx,             ',use_cx            
+  write(*,LOGI_FMT) 'use_cx,             ',use_cx
+#ifdef USE_CATALYST
+  write(*,CHAR_FMT) 'catalyst_scripts,   ',trim(catalyst_scripts)
+#endif
 
   write(*,*)
   write(*,200)

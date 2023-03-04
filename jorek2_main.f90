@@ -176,7 +176,7 @@ program JOREK2
   logical                       :: converged = .false.
   real(kind=8)                  :: gamma_Newton=0.5, alpha_Newton=2.d0, tolk
   real(kind=8)                  :: normRHSn, normRHSprevious, normRHScurrent
-  type(type_RHS)                :: deln, rhsk, residue
+  type(type_RHS)                :: deln, rhsk, residue, dum_vec
   type(type_SP_MATRIX)          :: a_matk
   type(type_node_list)          :: node_list_n
   real(kind=8), allocatable     :: store_value(:,:,:,:), store_delta(:,:,:,:)
@@ -602,6 +602,8 @@ mpi_required = 0
   
   deln%n = deltas%n
   allocate(deln%val(deln%n))
+  dum_vec%n = deltas%n
+  allocate(dum_vec%val(dum_vec%n))  
   rhsk%n = deltas%n
   allocate(rhsk%val(rhsk%n)); rhsk%val(1:rhsk%n) = 0.0
   
@@ -683,6 +685,7 @@ mpi_required = 0
     !!! start newton
     converged = .false.
     deln%val(1:deln%n) = 0.d0
+    rhsk%val(1:deln%n) = 0.d0
     normRHSn = dnrm2(rhs_vec%n, rhs_vec%val, 1)
     call a_mat%copy_to(a_matk)
     call node_list_save(mhd_sim%node_list, store_value, store_delta)
@@ -691,44 +694,50 @@ mpi_required = 0
     normRHScurrent = normRHSn
     solver%solve_only = (istep > 1)
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
+
     newton_loop: do inewton=1, maxNewton
-    
+
       if (inewton.gt.1) call matrix_vector(deln, a_mat, rhsk)
       normRHSprevious = normRHScurrent ! store previous norm
       rhsk%val(1:rhsk%n) = rhs_vec%val(1:rhs_vec%n) - rhsk%val(1:rhsk%n)
       normRHScurrent = dnrm2(rhsk%n, rhsk%val, 1) ! new RHSk norm
-      
-     
+
+
       tolk = normRHScurrent/normRHSn
-      
+      if (my_id.eq.0) write(*,*) "Newton:", inewton, tolk
+
       if (tolk.le.gmres_tol) then
         converged = .true.
         if (my_id.eq.0) then
-          write(*,*) "Newton:", inewton, normRHSn, normRHScurrent, normRHSprevious, normRHScurrent/normRHSn
-          write(*,*) "deltas norm2:", dnrm2(deln%n, deln%val, 1)
+          write(*,*) "Newton converged:", inewton, normRHScurrent/normRHSn
         endif
-        
+
         call node_list_restore(mhd_sim%node_list, store_value, store_delta)
         call update_values(mhd_sim%element_list,node_list, deln)
-        call update_deltas(mhd_sim%node_list, deln)        
+        call update_deltas(mhd_sim%node_list, deln)
         exit newton_loop
+      elseif (inewton.gt.1) then
+        call update_values(mhd_sim%element_list,mhd_sim%node_list, deltas)
+        call update_deltas(mhd_sim%node_list, deltas)
+
+        call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, dum_vec, harmonic_matrix=.false.)
       endif
-      
-      
+
+
       solver%iter_tol = 1e-3
       call solve_sparse_system(a_matk, rhsk, deltas, solver, mhd_sim)
-      
+      solver%solve_only = .true.
+
       if (.not.solver%step_success) then
         if ( my_id == 0 ) then
           write(*,*)
@@ -737,21 +746,15 @@ mpi_required = 0
         end if
         index_now = index_now - 1 ! Undo the time step
         exit jstep_loop
-      endif      
-  
-      deln%val(1:deln%n) = deln%val(1:deln%n) + deltas%val(1:deltas%n)
-      
-      call update_values(mhd_sim%element_list,mhd_sim%node_list, deltas)
-      call update_deltas(mhd_sim%node_list, deltas)
+      endif
 
-      call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, rhsk, harmonic_matrix=.false.)
-      solver%solve_only = .true.
-      
+      deln%val(1:deln%n) = deln%val(1:deln%n) + deltas%val(1:deltas%n)
+
     enddo newton_loop
-    
-    
-    
-   
+
+
+
+
     
     call clck_time(t0)
     

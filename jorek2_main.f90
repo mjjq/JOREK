@@ -579,6 +579,7 @@ mpi_required = 0
   solver%iter_tol           = gmres_tol
   solver%iter_prev          = 0
   solver%n_since_update     = 0
+  solver%use_newton         = .true.
   if (use_strumpack) then
     solver%library = strumpack
   elseif (use_mumps) then
@@ -661,8 +662,12 @@ mpi_required = 0
     solver%istep = istep
     solver%index_now = index_now
     solver%solve_only = (istep > 1)
-    
-    call solve_newton(solver, a_mat, rhs_vec, deltas, mhd_sim, my_id)
+
+    if (solver%use_newton) then
+      call solve_newton(a_mat, rhs_vec, deltas, solver, mhd_sim, my_id)
+    else
+      call solve_sparse_system(a_mat, rhs_vec, deltas, solver, mhd_sim)
+    endif
 
     if (.not.solver%step_success) then
       if ( my_id == 0 ) then
@@ -673,6 +678,9 @@ mpi_required = 0
       index_now = index_now - 1 ! Undo the time step
       exit jstep_loop
     endif
+
+    call update_values(mhd_sim%element_list, mhd_sim%node_list, deltas)
+    call update_deltas(mhd_sim%node_list, deltas)
     
     call clck_time(t0)
     

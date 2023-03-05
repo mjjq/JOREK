@@ -43,6 +43,7 @@ module mod_sparse_data
     logical                     :: step_success = .false.              !< flag indicating successfull time step completion
     logical                     :: iterative = .false.                 !< flag indicating use of iterative solver 
     logical                     :: equilibrium = .false.               !< flag indicating equilibrium solver (with duplicate entries in sparse matrix)
+    logical                     :: use_newton = .false.
     
     integer                     :: library = pastix                    !< solver library (default=pastix)
 

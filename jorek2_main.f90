@@ -81,6 +81,7 @@ program JOREK2
   use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
                                             stdout=>output_unit, &
                                             stderr=>error_unit
+  use mod_newton_solver, only: solve_newton
   
   implicit none
 
@@ -170,21 +171,7 @@ program JOREK2
   type(type_SP_MATRIX)        :: a_mat
   type(type_RHS)              :: rhs_vec, sol_vec, deltas
   type(type_SP_SOLVER)        :: solver
-  
-! Newton related  
-  integer                       :: inewton, maxNewton = 10
-  logical                       :: converged = .false.
-  real(kind=8)                  :: gamma_Newton=0.5, alpha_Newton=2.d0, tolk
-  real(kind=8)                  :: normRHSn, normRHSprevious, normRHScurrent
-  type(type_RHS)                :: deln, rhsk, residue, dum_vec
-  type(type_SP_MATRIX)          :: a_matk
-  type(type_node_list)          :: node_list_n
-  real(kind=8), allocatable     :: store_value(:,:,:,:), store_delta(:,:,:,:)
-  
-  external                      :: matrix_vector
-  real(kind=C_DOUBLE), external :: dnrm2
-!!!!
-  
+ 
   call init_expr()
   allocate(res(exprs_all_int%n_expr+1))
   res = 0.d0   
@@ -599,14 +586,6 @@ mpi_required = 0
   elseif (use_pastix) then
     solver%library = pastix
   endif
-  
-  deln%n = deltas%n
-  allocate(deln%val(deln%n))
-  dum_vec%n = deltas%n
-  allocate(dum_vec%val(dum_vec%n))  
-  rhsk%n = deltas%n
-  allocate(rhsk%val(rhsk%n)); rhsk%val(1:rhsk%n) = 0.0
-  
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
@@ -617,7 +596,7 @@ mpi_required = 0
 
   jstep_loop: do jstep = 1, 10 ! Go through the different values of the tstep_n and nstep_n arrays
   istep_loop: do istep = 1, nstep_n(jstep)
-  !!! start newton if equilibrium state can change
+
     call clck_time_barrier(t_itstart)
     t0 = t_itstart
 
@@ -680,81 +659,20 @@ mpi_required = 0
       
     solver%tstep = tstep
     solver%istep = istep
-    solver%index_now = index_now  
-    
-    !!! start newton
-    converged = .false.
-    deln%val(1:deln%n) = 0.d0
-    rhsk%val(1:deln%n) = 0.d0
-    normRHSn = dnrm2(rhs_vec%n, rhs_vec%val, 1)
-    call a_mat%copy_to(a_matk)
-    call node_list_save(mhd_sim%node_list, store_value, store_delta)
-    
-    inewton = 1
-    normRHScurrent = normRHSn
+    solver%index_now = index_now
     solver%solve_only = (istep > 1)
+    
+    call solve_newton(solver, a_mat, rhs_vec, deltas, mhd_sim, my_id)
 
-
-
-
-
-
-
-
-
-
-
-
-    newton_loop: do inewton=1, maxNewton
-
-      if (inewton.gt.1) call matrix_vector(deln, a_mat, rhsk)
-      normRHSprevious = normRHScurrent ! store previous norm
-      rhsk%val(1:rhsk%n) = rhs_vec%val(1:rhs_vec%n) - rhsk%val(1:rhsk%n)
-      normRHScurrent = dnrm2(rhsk%n, rhsk%val, 1) ! new RHSk norm
-
-
-      tolk = normRHScurrent/normRHSn
-      if (my_id.eq.0) write(*,*) "Newton:", inewton, tolk
-
-      if (tolk.le.gmres_tol) then
-        converged = .true.
-        if (my_id.eq.0) then
-          write(*,*) "Newton converged:", inewton, normRHScurrent/normRHSn
-        endif
-
-        call node_list_restore(mhd_sim%node_list, store_value, store_delta)
-        call update_values(mhd_sim%element_list,node_list, deln)
-        call update_deltas(mhd_sim%node_list, deln)
-        exit newton_loop
-      elseif (inewton.gt.1) then
-        call update_values(mhd_sim%element_list,mhd_sim%node_list, deltas)
-        call update_deltas(mhd_sim%node_list, deltas)
-
-        call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, dum_vec, harmonic_matrix=.false.)
-      endif
-
-
-      solver%iter_tol = 1e-3
-      call solve_sparse_system(a_matk, rhsk, deltas, solver, mhd_sim)
-      solver%solve_only = .true.
-
-      if (.not.solver%step_success) then
-        if ( my_id == 0 ) then
-          write(*,*)
-          write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
-          write(*,*)
-        end if
-        index_now = index_now - 1 ! Undo the time step
-        exit jstep_loop
-      endif
-
-      deln%val(1:deln%n) = deln%val(1:deln%n) + deltas%val(1:deltas%n)
-
-    enddo newton_loop
-
-
-
-
+    if (.not.solver%step_success) then
+      if ( my_id == 0 ) then
+        write(*,*)
+        write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
+        write(*,*)
+      end if
+      index_now = index_now - 1 ! Undo the time step
+      exit jstep_loop
+    endif
     
     call clck_time(t0)
     

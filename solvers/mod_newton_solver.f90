@@ -97,6 +97,8 @@ contains
         call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, dum_vec, harmonic_matrix=.false.)
         deallocate(dum_vec%val)
 
+        if (inewton.eq.newton_solver%maxNewton) solver%step_success = .false.
+
       endif
 
       solver%iter_tol = tol_Gmres

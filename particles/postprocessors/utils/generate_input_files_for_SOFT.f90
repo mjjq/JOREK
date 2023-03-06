@@ -486,6 +486,62 @@ target_ids,s_trial,t_trial,targets_old,s_new,t_new,targets_new,ifail)
     if(((s_new.ge.0d0).and.(s_new.le.1d0)).and.((t_new.ge.0d0).and.(t_new.le.1d0)).and.converged) exit;
   enddo
 end subroutine find_point_from_target_in_elm_harmonic
+
+!> Method for integrate the toroidal current density over a flux surface 
+!> mutuated by the determine_q_profile routine. Only the n=0 mode is 
+!> integrated given that the integral over [0,2*PI] of higher order
+!> harmonics is 0 (assuming the magnetic toroidal coordinate to be
+!> alligned with the geometrical toroidal coordinate). 
+!> The SI units are used.
+!> inputs:
+!>   fields:       (fields_base) JOREK MHD fields
+!>   flux_surface: (type_surface) flux surface datatype
+!> outptus:
+!>   int_jz: (real8) integral of the toroidal current density in SI units
+subroutine integrate_current_density_over_flux_surface(fields,flux_surface,int_zj)
+  use constants,          only: MU_ZERO
+  use mod_model_settings, only: var_zj
+  use data_structure,     only: type_surface
+  use mod_interp,         only: interp_RZ,interp
+  use mod_fields,         only: fields_base
+  implicit none
+  !> parameters:
+  !> Gaussian points between (-1d0,1d0) to be used for Gauss integration
+  real*8, parameter :: xgs(4)=(/-0.861136311594053,-0.339981043584856,0.339981043584856,0.861136311594053/)
+  real*8, parameter :: wgs(4)=(/0.347854845137454,0.652145154862546,0.652145154862546,0.347854845137454/)
+  !> inputs:
+  class(fields_base),intent(in) :: fields
+  type(type_surface),intent(in) :: flux_surface
+  !> outputs:
+  real*8,intent(out) :: int_zj
+  !> variables:
+  integer :: jj,kk
+  real*8  :: ri,dri,si,dsi,zjgi,dl
+  real*8  :: Rgi,dRgi_dr,dRgi_ds,dRgi_drs,dRgi_drr,dRgi_dss,dRgi_dt
+  real*8  :: Zgi,dZgi_dr,dZgi_ds,dZgi_drs,dZgi_drr,dZgi_dss,dZgi_dt
+  !> initialisation
+  int_zj = 0d0;
+  !> loop on the number of elements and node elements
+  do jj=1,flux_surface%n_pieces
+    do kk=1,4
+      !> interpolate the local coordinates on the flux surface
+      call CUB1D(flux_surface%s(1,jj),flux_surface%s(2,jj),flux_surface%s(3,jj),&
+      flux_surface%s(4,jj),xgs(kk),ri,dri)
+      call CUB1D(flux_surface%t(1,jj),flux_surface%t(2,jj),flux_surface%t(3,jj),&
+      flux_surface%t(4,jj),xgs(kk),si,dsi)
+      !> interpolate the position and the current density
+      call interp(fields%node_list,fields%element_list,flux_surface%elm(jj),var_zj,1,ri,si,zjgi)
+      call interp_RZ(fields%node_list,fields%element_list,flux_surface%elm(jj),ri,si,Rgi,dRgi_dr,&
+      dRgi_ds,dRgi_drs,dRgi_drr,dRgi_dss,Zgi,dZgi_dr,dZgi_ds,dZgi_drs,dZgi_drr,dZgi_dss)
+      !> element of curve for the integral
+      dRgi_dt = dRgi_dr*dri + dRgi_ds*dsi; dZgi_dt = dZgi_dr*dri + dZgi_ds*dsi;
+      dl = sqrt(dRgi_dt**2 + dZgi_dt**2)
+      int_zj = int_zj - (wgs(kk)*zjgi*dl)/Rgi !< integrate the current density 
+    enddo
+  enddo
+  int_zj = int_zj/MU_ZERO
+end subroutine integrate_current_density_over_flux_surface
+
 !> ------------------------------------------------------------------------------------------------------
 end program generate_input_files_for_SOFT
 

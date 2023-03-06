@@ -15,11 +15,11 @@ public :: sincosperiod_moivre, mode_moivre !< public for regtesting, used by int
 public :: interp_PRZ_combined !< same as interp, but for any variable, including R and Z
 
 interface interp
-  module procedure interp_2,interp_1,interp_0
+  module procedure interp_2,interp_1,interp_0_single_harmonic
 end interface interp
 
 interface interp_delta
-  module procedure interp_2_delta,interp_1_delta,interp_0_delta
+  module procedure interp_2_delta,interp_1_delta,interp_0_single_harmonic_delta
 end interface interp_delta
 
 interface interp_RZ
@@ -505,6 +505,73 @@ do kv = 1,n_vertex_max  ! 4 vertices
   end do
 end do
 end subroutine interp_1_delta
+
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!> (s,t) in the local coordinates (limited to values)
+pure subroutine interp_0_single_harmonic(node_list, element_list, i_elm, i_var, i_harm, s, t, P)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P
+
+! --- Local variables
+real*8 :: G(4,n_degrees)
+integer :: kv, iv, kf 
+
+call basisfunctions(s,t,G)
+
+P = 0.d0;
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_degrees       ! basis functions
+
+#ifdef fullmhd
+    if (i_var == 710) then
+      P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+    elseif (i_var == 711) then
+      P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+    else
+#endif
+      P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+#ifdef fullmhd
+    endif
+#endif
+  end do
+end do
+end subroutine interp_0_single_harmonic
+
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!> (s,t) in the local coordinates, of the deltas instead of the values (limited to value)
+pure subroutine interp_0_single_harmonic_delta(node_list, element_list, i_elm, i_var, i_harm, s, t, P)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P
+
+! --- Local variables
+real*8 :: G(4,n_degrees)
+integer :: kv, iv, kf 
+
+call basisfunctions(s,t,G)
+
+P = 0.d0;
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_degrees       ! basis functions
+    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+  end do
+end do
+end subroutine interp_0_single_harmonic_delta
 
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
 pure subroutine interp_0(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P)

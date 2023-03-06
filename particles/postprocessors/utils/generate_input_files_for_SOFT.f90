@@ -361,6 +361,7 @@ subroutine find_LFS_minor_radius_flux_surface(fields,fluxes,RZ_axis,flux_minor_r
   !> variables
   integer :: ii,jj,kk,i_harmonic,n_nodes,ifail,errorcode,ierr
   integer,dimension(2) :: Z_flux_ids
+  integer,dimension(3) :: ids_to_test
   real*8               :: s_ZFlux,t_ZFlux
   real*8,dimension(2)  :: ZFlux_new,RZ_flux
   real*8,dimension(4)  :: R_nodes,Z_nodes
@@ -385,19 +386,19 @@ subroutine find_LFS_minor_radius_flux_surface(fields,fluxes,RZ_axis,flux_minor_r
       !> TODO ADD TOLERANCE IN Z COMPARISON FOR TAKING INTO ACCOUNT CUBIC INTERPOLATION
       if(all((Z_nodes.gt.RZ_axis(2))).or.all((Z_nodes.lt.RZ_axis(2)))) cycle
       !> find the nearest point at Z_axis on the flux surface
-      call find_point_from_target_in_elm_harmonic(fields,fluxes%flux_surfaces(ii)%elm(jj),&
-      i_harmonic,n_nodes,Z_flux_ids,fluxes%flux_surfaces(ii)%s(:,jj),fluxes%flux_surfaces(ii)%s(:,jj),&
-      [RZ_axis(2),fluxes%psi_values(ii)],s_ZFlux,t_ZFlux,ZFlux_new,ifail)
-      !> if failed, try with the previous surface element
-      if((ifail.ne.0).and.((jj-1).gt.0)) call find_point_from_target_in_elm_harmonic(fields,&
-      fluxes%flux_surfaces(ii)%elm(jj-1),&
-      i_harmonic,n_nodes,Z_flux_ids,fluxes%flux_surfaces(ii)%s(:,jj-1),fluxes%flux_surfaces(ii)%t(:,jj-1),&
-      [RZ_axis(2),fluxes%psi_values(ii)],s_ZFlux,t_ZFlux,ZFlux_new,ifail)
-      !> if failed, try with next surface element
-      if((ifail.ne.0).and.((jj+1).le.fluxes%flux_surfaces(ii)%n_pieces)) &
-      call find_point_from_target_in_elm_harmonic(fields,fluxes%flux_surfaces(ii)%elm(jj+1),&
-      i_harmonic,n_nodes,Z_flux_ids,fluxes%flux_surfaces(ii)%s(:,jj+1),fluxes%flux_surfaces(ii)%t(:,jj+1),&
-      [RZ_axis(2),fluxes%psi_values(ii)],s_ZFlux,t_ZFlux,ZFlux_new,ifail)
+      ids_to_test = [jj,jj-1,jj+1]
+      do kk=1,3
+        call find_point_from_target_in_elm_harmonic(fields,fluxes%flux_surfaces(ii)%elm(ids_to_test(kk)),&
+        i_harmonic,n_nodes,Z_flux_ids,fluxes%flux_surfaces(ii)%s(:,ids_to_test(kk)),&
+        fluxes%flux_surfaces(ii)%t(:,ids_to_test(kk)),[RZ_axis(2),fluxes%psi_values(ii)],&
+        s_ZFlux,t_ZFlux,ZFlux_new,ifail)
+        if(ifail.eq.0) then
+          !> interpolate the R,Z values of the best match point
+          call interp_RZ(fields%node_list,fields%element_list,&
+          fluxes%flux_surfaces(ii)%elm(ids_to_test(kk)),s_ZFlux,t_ZFlux,RZ_flux(1),RZ_flux(2))
+          exit
+        endif
+      enddo
       !> if failed again just exit
       if(ifail.ne.0) exit
       !> compute the minor radius

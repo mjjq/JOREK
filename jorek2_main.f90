@@ -579,7 +579,7 @@ mpi_required = 0
   solver%iter_tol           = gmres_tol
   solver%iter_prev          = 0
   solver%n_since_update     = 0
-  solver%use_newton         = .true.
+  solver%use_newton         = .false.
   if (use_strumpack) then
     solver%library = strumpack
   elseif (use_mumps) then
@@ -669,7 +669,44 @@ mpi_required = 0
       call solve_sparse_system(a_mat, rhs_vec, deltas, solver, mhd_sim)
     endif
 
-    if (.not.solver%step_success) then
+    call clck_time(t0)
+    if (solver%step_success) then
+    ! successful step
+
+      if (use_pellet) then
+        pellet_volume = total_pellet_volume
+        call update_pellet(my_id,node_list,element_list)
+
+        if (my_id == 0) then
+          xtime_pellet_R(index_now)         = pellet_R
+          xtime_pellet_Z(index_now)         = pellet_Z
+          xtime_pellet_psi(index_now)       = pellet_psi
+          xtime_pellet_particles(index_now) = pellet_particles
+          xtime_phys_ablation(index_now)    = phys_ablation
+        endif
+
+      endif
+
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+       if (using_spi) then
+         n_spi_begin = 1
+         do i = 1, n_inj !< Do one update for each injection location
+           if (t_now >= t_ns(i)) call update_spi(my_id,node_list,element_list,i,n_spi_begin)
+           n_spi_begin = n_spi_begin + n_spi(i)
+         end do
+       end if
+#endif
+
+      call update_values(mhd_sim%element_list, mhd_sim%node_list, deltas)         ! add solution to node values
+      call update_deltas(mhd_sim%node_list, deltas)
+
+      t_now = t_now + tstep
+
+      ! save previous time step
+      tstep_prev = tstep
+
+    else
+    
       if ( my_id == 0 ) then
         write(*,*)
         write(*,'(a,i6.6,a)') '>>>>> NO CONVERGENCE AFTER ', solver%iter_gmres, ' ITERATIONS. ABORTING <<<<<'
@@ -677,42 +714,9 @@ mpi_required = 0
       end if
       index_now = index_now - 1 ! Undo the time step
       exit jstep_loop
+      
     endif
-
-    call update_values(mhd_sim%element_list, mhd_sim%node_list, deltas)
-    call update_deltas(mhd_sim%node_list, deltas)
     
-    call clck_time(t0)
-    
-    if (use_pellet) then
-      pellet_volume = total_pellet_volume
-      call update_pellet(my_id,mhd_sim%node_list,mhd_sim%element_list)
-
-      if (my_id == 0) then
-        xtime_pellet_R(index_now)         = pellet_R
-        xtime_pellet_Z(index_now)         = pellet_Z
-        xtime_pellet_psi(index_now)       = pellet_psi
-        xtime_pellet_particles(index_now) = pellet_particles
-        xtime_phys_ablation(index_now)    = phys_ablation
-      endif
-
-    endif
-
-#if (defined WITH_Neutrals) || (defined WITH_Impurities)
-    if (using_spi) then
-      n_spi_begin = 1
-      do i = 1, n_inj !< Do one update for each injection location
-        if (t_now >= t_ns(i)) call update_spi(my_id,mhd_sim%node_list,mhd_sim%element_list,i,n_spi_begin)
-        n_spi_begin = n_spi_begin + n_spi(i)
-      end do
-    endif
-#endif
-
-    t_now = t_now + tstep
-        ! save previous time step
-    tstep_prev = tstep
-
-
     call clck_time_barrier(t1); call clck_ldiff(t0,t1,tsecond)
     if (my_id .eq. 0) write(*,FMT_TIMING)  my_id, '#  Elapsed time Final Update:',tsecond
 

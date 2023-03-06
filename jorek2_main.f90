@@ -168,7 +168,7 @@ program JOREK2
   
   type(type_MHD_SIM)          :: mhd_sim
   type(type_SP_MATRIX)        :: a_mat
-  type(type_RHS)              :: rhs_vec, sol_vec, deltas
+  type(type_RHS)              :: rhs_vec, deltas
   type(type_SP_SOLVER)        :: solver
  
   call init_expr()

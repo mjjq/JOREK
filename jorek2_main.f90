@@ -471,6 +471,17 @@ mpi_required = 0
 
   if ( freeboundary ) call broadcast_vacuum(my_id, resistive_wall)
 
+  mhd_sim%my_id = my_id
+  mhd_sim%n_cpu = n_cpu
+  mhd_sim%n_tor = n_tor
+  mhd_sim%freeboundary = freeboundary
+  mhd_sim%restart = restart
+
+  mhd_sim%node_list     => node_list
+  mhd_sim%element_list  => element_list
+  mhd_sim%bnd_node_list => bnd_node_list
+  mhd_sim%bnd_elm_list  => bnd_elm_list
+
   ! --- Load deuterium ADAS data if required
   if (deuterium_adas) ad_deuterium = read_adf11(my_id,'96_h') 
 
@@ -515,16 +526,6 @@ mpi_required = 0
     a_mat%comm = MPI_COMM_WORLD
     a_mat%ncpu = n_cpu
     
-    mhd_sim%my_id = my_id
-    mhd_sim%n_cpu = n_cpu
-    mhd_sim%n_tor = n_tor
-    mhd_sim%freeboundary = freeboundary
-    mhd_sim%restart = restart
-    
-    mhd_sim%node_list     => node_list
-    mhd_sim%element_list  => element_list
-    mhd_sim%bnd_node_list => bnd_node_list
-    mhd_sim%bnd_elm_list  => bnd_elm_list
     mhd_sim%local_elms    => local_elms
     mhd_sim%sr_n_tor      = sr%n_tor
     

@@ -406,8 +406,8 @@ subroutine do_jorek_timestep(this, sim, ev)
     end if
 #endif    
 
-    call update_values(sim%my_id, sim%fields%element_list, sim%fields%node_list, deltas)         ! add solution to node values
-    call update_deltas(sim%my_id, sim%fields%node_list)
+    call update_values(sim%fields%element_list, sim%fields%node_list, deltas)         ! add solution to node values
+    call update_deltas(sim%fields%node_list, deltas)
     t_now = t_now + dt_jorek
   else
     if ( sim%my_id == 0 ) then

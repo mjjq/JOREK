@@ -28,7 +28,6 @@ program JOREK2
   use phys_module
   use mod_parameters
   use mod_log_params
-  use global_distributed_matrix
   use nodes_elements
   use pellet_module
   use equil_info

@@ -545,17 +545,17 @@ mpi_required = 0
   
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
-    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
     fileout = 'jorek00000'
-    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
-    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
+    call export_restart(node_list, element_list, fileout)
+    if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
   end if
   
-  if ( ( my_id == 0 ) .and. ( (mhd_sim%node_list%n_nodes > n_nodes_max+1000)                               &
-    .or. (mhd_sim%element_list%n_elements > n_elements_max+1000) ) ) then
+  if ( ( my_id == 0 ) .and. ( (node_list%n_nodes > n_nodes_max+1000)                               &
+    .or. (element_list%n_elements > n_elements_max+1000) ) ) then
     write(*,*) 'WARNING: n_nodes_max and/or n_elements_max is too large. This wastes memory.'
-    write(*,*) '  n_nodes_max,    n_nodes    =', n_nodes_max,    mhd_sim%node_list%n_nodes
-    write(*,*) '  n_elements_max, n_elements =', n_elements_max, mhd_sim%element_list%n_elements
+    write(*,*) '  n_nodes_max,    n_nodes    =', n_nodes_max, node_list%n_nodes
+    write(*,*) '  n_elements_max, n_elements =', n_elements_max, element_list%n_elements
     write(*,*) '  Note: for the equilibrium calculation higher values might be needed depending'
     write(*,*) '  on the resolution of your initial grid. In that case, you can run with reduced'
     write(*,*) '  values after restarting.'

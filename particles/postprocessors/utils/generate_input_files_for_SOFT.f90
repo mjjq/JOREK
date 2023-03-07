@@ -38,7 +38,7 @@ character(len=78) :: soft_desc
 n_vec           = 3    !< number of vector components
 n_R             = 54   !< total number of radial points
 n_Z             = 81   !< total number of vertical coordinate points
-n_flux          = 101  !< number of flux surfaces / minor radii
+n_flux          = 100  !< number of flux surfaces / minor radii
 n_momenta       = 101  !< number of nodes of the momentum mesh
 n_pitch         = 101  !< number of nodes of the pitch angle mesh
 charge          = -1   !< electron charge w.r.t. proton charge
@@ -678,7 +678,7 @@ n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf)
   if(my_id.eq.0) call HDF5_open_or_create(trim(filename//'.h5'),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
   !> gather the minor radius from all mpi tasks
   call mpi_gather(minor_radii_task,n_radii_per_task,MPI_REAL8,minor_radii_global,&
-  n_radii_per_task*n_cpus,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  n_radii_per_task,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   if(my_id.eq.0) then
     !> write minor radius in HDF5 file
     call HDF5_array1D_saving(file_id,minor_radii_global,n_cpus*n_radii_per_task,'r')

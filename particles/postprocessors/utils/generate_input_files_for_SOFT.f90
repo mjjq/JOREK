@@ -31,7 +31,7 @@ real*8,dimension(:,:),allocatable   :: poloidal_flux
 real*8,dimension(:,:,:),allocatable :: magnetic_field,pdf
 character(len=17) :: fields_filename
 character(len=28) :: magnetic_field_filename
-character(len=20) :: pdf_filename
+character(len=17) :: pdf_filename
 character(len=63) :: soft_mag_name
 character(len=78) :: soft_desc
 !> Variables definitions --------------------------------------------------------------------------------
@@ -50,6 +50,7 @@ pitch_bnd       = [PI-2.95d-1,PI]   !< pitch angle lower and upper bound
 flux_axis_tol   = -2.5d-3 !< tolerance of the poloidal flux axis for mesh generation
 fields_filename         = 'jorek_equilibrium'            !< jorek restart filename
 magnetic_field_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field input from jorek
+pdf_filename            = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
 !> name and description of the soft field
 soft_mag_name = 'jorek_circular_equilibrium_hollow_current_profile_magnetic_data' 
 soft_desc     = 'pulse95135_press0_parabolicq_q95_6dot8_res1r5dot88m5_res2r4dot705m4_Ip612en1MA'
@@ -118,6 +119,11 @@ write(*,*) "Compute and write distribution function ..."
 call find_LFS_minor_radius_flux_surface(sim%fields,flux_surfaces,RZ_axis,flux_minor_radii_Zmag_LFS);
 call soft_current_density_uniform_phase_pdf(sim%fields,flux_surfaces,n_momenta,&
 n_pitch,charge,mass,momentum_mesh,pitch_mesh,pdf)
+!> write distribution in soft input file the momentum mesh and the pdf are
+!> normalised w.r.t. mass*SPEED_OF_LIGHT
+call write_soft_distribution_function(pdf_filename,my_id,n_cpus,flux_surfaces%n_psi,&
+n_momenta,n_pitch,flux_minor_radii_Zmag_LFS,momentum_mesh/(mass*SPEED_OF_LIGHT),&
+pitch_mesh,pdf*((mass*SPEED_OF_LIGHT)**3))
 write(*,*) "Compute and write distribution function: completed!"
 
 !> Finalisation -----------------------------------------------------------------------------------------
@@ -627,6 +633,89 @@ subroutine integrate_current_density_over_flux_surface(fields,flux_surface,int_z
   enddo
   int_zj = int_zj/MU_ZERO
 end subroutine integrate_current_density_over_flux_surface
+
+!> write SOFT distribution function file
+!> inputs:
+!>   filename:         (character)(*) name of the hdf5 file
+!>   my_id:            (integer) mpi task number
+!>   n_cpus:           (integer) total number of mpi tasks
+!>   n_radii_per_task: (integer) number of radial points per task
+!>   n_momenta:        (integer) number of momentum mesh nodes
+!>   n_pitch:          (integer) number of pitch mesh nodes
+!>   minor_radii_task: (real8)(n_radii_per_task) minor radii of each task
+!>   momentum_mesh:    (real8)(n_momenta) momentum mesh
+!>   pitch_mesh:       (real8)(n_pitch) pitch angle mesh
+!>   pdf:              (real8)(n_momenta,n_pitch,n_radii_per_task) particle distribution function
+!> outputs
+subroutine write_soft_distribution_function(filename,my_id,n_cpus,n_radii_per_task,&
+n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf)
+  use mpi
+  use hdf5
+  use hdf5_io_module, only: HDF5_open_or_create,HDF5_close,HDF5_char_saving
+  use hdf5_io_module, only: HDF5_array1D_saving,HDF5_array2D_saving
+  use constants,      only: ATOMIC_MASS_UNIT
+  implicit none
+  !> inputs:
+  character(len=*),intent(in) :: filename
+  integer,intent(in)          :: my_id,n_cpus,n_radii_per_task,n_momenta,n_pitch
+  real*8,dimension(n_radii_per_task),intent(in) :: minor_radii_task
+  real*8,dimension(n_momenta),intent(in)        :: momentum_mesh
+  real*8,dimension(n_pitch),intent(in)          :: pitch_mesh
+  real*8,dimension(n_momenta,n_pitch,n_radii_per_task),intent(in) :: pdf
+  !> variables:
+  character(len=10)            :: format_char
+  character(len=:),allocatable :: group_name
+  integer                      :: ii,jj,r_id,n_r_id,ierr,group_name_len
+  integer(HID_T)               :: file_id,group_id
+  integer,dimension(MPI_STATUS_SIZE)        :: statuss
+  real*8,dimension(n_cpus*n_radii_per_task) :: minor_radii_global
+  real*8,dimension(:,:,:),allocatable       :: pdf_local
+
+  !> open the hdf5 file 
+  if(my_id.eq.0) call HDF5_open_or_create(trim(filename//'.h5'),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
+  !> gather the minor radius from all mpi tasks
+  call mpi_gather(minor_radii_global,n_radii_per_task,MPI_REAL8,minor_radii_task,&
+  n_radii_per_task,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  if(my_id.eq.0) then
+    !> write minor radius in HDF5 file
+    call HDF5_array1D_saving(file_id,minor_radii_global,n_cpus*n_radii_per_task,'r')
+  endif
+  !> send the pdf distribution to root
+  if(my_id.ne.0) call MPI_send(pdf,n_radii_per_task*n_momenta*n_pitch,MPI_REAL8,0,my_id,MPI_COMM_WORLD,ierr);
+  !> write pdf distribution in hdf5 file
+  if(my_id.eq.0) then
+    allocate(pdf_local(n_momenta,n_pitch,n_radii_per_task))
+    !> loop on the number of cpus
+    do ii=0,n_cpus-1
+      if(ii.eq.0) then
+        pdf_local = pdf
+      else
+        call mpi_recv(pdf_local,n_radii_per_task*n_momenta*n_pitch,MPI_REAL8,ii,ii,MPI_COMM_WORLD,statuss,ierr)
+      endif
+      do jj=0,n_radii_per_task
+        !> create group
+        r_id = ii*n_radii_per_task+jj
+        n_r_id = int(log10(real(r_id)))+1
+        if(r_id.eq.0) n_r_id = 1
+        write(format_char,'(A,I1,A)') "(A,I",n_r_id,")" 
+        group_name_len = 1+n_r_id
+        allocate(character(len=group_name_len)::group_name)
+        write(group_name,trim(format_char)) "r",r_id
+        call h5gcreate_f(file_id,trim(group_name),group_id,ierr)
+        call h5gclose_f(group_id,ierr)
+        !> dump data in hdf5
+        call HDF5_array2D_saving(file_id,pdf_local(:,:,jj+1),n_momenta,n_pitch,trim(group_name)//"/f")
+        call HDF5_array1D_saving(file_id,momentum_mesh,n_momenta,trim(group_name)//"/p")
+        call HDF5_array1D_saving(file_id,pitch_mesh,n_pitch,trim(group_name)//"/xi")
+        !> cleanup
+        deallocate(group_name)
+      enddo
+    enddo
+    !> cleanup
+    call HDF5_close(file_id)
+    deallocate(pdf_local)
+  endif
+end subroutine write_soft_distribution_function
 
 !> ------------------------------------------------------------------------------------------------------
 end program generate_input_files_for_SOFT

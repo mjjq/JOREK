@@ -6,7 +6,7 @@ use mod_parameters, only: n_plane
 use data_structure, only: type_bnd_element_list, type_bnd_node_list, type_SP_MATRIX, type_RHS !< store these in jorek_timestep_action
 use mod_simulation_data, only: type_MHD_SIM
 
-use mod_sparse,        only: solve_sparse_system, solver_finalize
+use mod_sparse,        only: solve_sparse_system
 use mod_sparse_data,   only: type_SP_SOLVER
 
 use equil_info
@@ -97,7 +97,6 @@ subroutine setup_solvers(this, sim)
   use vacuum_equilibrium,   only: import_external_fields
   use mod_startup_teardown, only: sanity_checks
   use mod_log_params,       only: log_parameters
-  use mod_sparse_data,      only: mumps, pastix, strumpack
 
   implicit none
 
@@ -232,20 +231,7 @@ subroutine setup_solvers(this, sim)
 
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   
-  this%solver%iter_precon        = iter_precon
-  this%solver%iter_gmres         = iter_precon
-  this%solver%iter_max           = gmres_max_iter
-  this%solver%max_steps_noUpdate = max_steps_noUpdate
-  this%solver%iter_tol           = gmres_tol
-  this%solver%iter_prev          = 0
-  this%solver%n_since_update     = 0
-  if (use_strumpack) then
-    this%solver%library = strumpack
-  elseif (use_mumps) then
-    this%solver%library = mumps
-  elseif (use_pastix) then
-    this%solver%library = pastix
-  endif
+  call this%solver%setup()
   this%setup_done = .true.
 
   if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list

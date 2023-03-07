@@ -69,8 +69,8 @@ program JOREK2
 #endif
   use mpi_mod
   use mod_impurity,        only: init_imp_adas
-  use mod_sparse,          only: solve_sparse_system, solver_finalize
-  use mod_sparse_data,     only: type_SP_SOLVER, mumps, pastix, strumpack
+  use mod_sparse,          only: solve_sparse_system
+  use mod_sparse_data,     only: type_SP_SOLVER
   use mod_simulation_data, only: type_MHD_SIM
 #ifdef USE_CATALYST
   use mod_catalyst_adaptor
@@ -571,22 +571,7 @@ mpi_required = 0
   
   if (nstep > 0) call update_deltas(mhd_sim%node_list, deltas) ! create list of delta values in local_matrix module
 
-  solver%iterative          = gmres
-  solver%iter_precon        = iter_precon
-  solver%iter_gmres         = iter_precon
-  solver%iter_max           = gmres_max_iter
-  solver%max_steps_noUpdate = max_steps_noUpdate
-  solver%iter_tol           = gmres_tol
-  solver%iter_prev          = 0
-  solver%n_since_update     = 0
-  solver%use_newton         = .false.
-  if (use_strumpack) then
-    solver%library = strumpack
-  elseif (use_mumps) then
-    solver%library = mumps
-  elseif (use_pastix) then
-    solver%library = pastix
-  endif
+  call solver%setup()
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
@@ -918,7 +903,7 @@ mpi_required = 0
   !***********************************************************************
 
   if (nstep .gt.0) then
-    call solver_finalize(solver)    
+    call solver%finalize()
   endif
   
   ! --- Close open files

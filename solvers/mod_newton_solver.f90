@@ -8,6 +8,9 @@ implicit none
     integer                       :: maxNewton    = 20
     real(kind=8)                  :: gamma_Newton = 0.5
     real(kind=8)                  :: alpha_Newton = 2.d0
+    
+    contains
+    procedure :: setup
   end type type_newton_solver
 
 contains
@@ -40,6 +43,7 @@ contains
     !real(kind=C_DOUBLE), external :: dnrm2
 
     verbose = solver%verbose.and.(tag.eq.0)
+    call newton_solver%setup()
 
     deln%n = deltas%n
     if (associated(deln%val)) deallocate(deln%val)
@@ -114,5 +118,16 @@ contains
     return
 
   end subroutine solve_newton
+  
+!< Set Newton parameters
+  subroutine setup(self)
+    use phys_module, only: maxNewton, gamma_Newton, alpha_Newton
+    class(type_newton_solver)     :: self
+    
+    self%maxNewton = maxNewton
+    self%gamma_Newton = gamma_Newton
+    self%alpha_Newton = alpha_Newton
+    return  
+  end subroutine setup
 
 end module mod_newton_solver

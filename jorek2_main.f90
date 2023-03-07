@@ -571,7 +571,7 @@ mpi_required = 0
   
   if (nstep > 0) call update_deltas(mhd_sim%node_list, deltas) ! create list of delta values in local_matrix module
 
-  call solver%setup()
+  call solver%setup() ! set sparse solver parameters
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing

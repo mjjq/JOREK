@@ -63,7 +63,7 @@ module mod_sparse_data
 !> Set solver parameters
   subroutine setup(self)
     use phys_module, only: gmres, iter_precon, gmres_max_iter, max_steps_noUpdate, gmres_tol, &
-                           use_pastix, use_mumps, use_strumpack
+                           use_pastix, use_mumps, use_strumpack, use_newton
     class(type_SP_SOLVER)     :: self
 
     self%iterative          = gmres
@@ -74,7 +74,7 @@ module mod_sparse_data
     self%iter_tol           = gmres_tol
     self%iter_prev          = 0
     self%n_since_update     = 0
-    self%use_newton         = .false.
+    self%use_newton         = use_newton
     if (use_strumpack) then
       self%library = strumpack
     elseif (use_mumps) then

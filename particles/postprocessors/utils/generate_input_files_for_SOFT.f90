@@ -2,6 +2,7 @@
 !> files compatible with the SOFT code inputs from the 
 !> JOREK MHD solutions and distribution functions.
 program generate_input_files_for_SOFT
+use constants,      only: PI,SPEED_OF_LIGHT,ATOMIC_MASS_UNIT,EL_CHG
 use phys_module,    only: n_limiter,R_limiter,Z_limiter,xcase,xpoint
 use data_structure, only: type_bnd_node_list,type_bnd_element_list
 use data_structure, only: type_surface_list
@@ -18,14 +19,16 @@ type(type_surface_list)     :: flux_surfaces
 type(type_bnd_node_list)    :: bnd_node_list
 type(type_bnd_element_list) :: bnd_elm_list
 integer                     :: my_id,n_cpus,ierr,i_elm_axis
-integer                     :: n_vec,n_R,n_Z,n_R_loc
-integer                     :: n_flux,n_flux_loc,errorcode
-real*8                      :: time,tor_angle,psi_axis,flux_axis_tol
-real*8,dimension(2)                 :: RZ_axis,st_axis
+integer                     :: n_vec,n_R,n_Z,n_R_loc,n_momenta,n_pitch
+integer                     :: n_flux,n_flux_loc,errorcode,charge
+real*8                      :: time,tor_angle,psi_axis,flux_axis_tol,mass
+real*8,dimension(2)                 :: RZ_axis,st_axis,Ekin_bnd,pitch_bnd
+real*8,dimension(2)                 :: momentum_bnd
 real*8,dimension(:),allocatable     :: R_mesh,Z_mesh,flux_mesh
 real*8,dimension(:),allocatable     :: flux_minor_radii_Zmag_LFS
+real*8,dimension(:),allocatable     :: momentum_mesh,pitch_mesh
 real*8,dimension(:,:),allocatable   :: poloidal_flux
-real*8,dimension(:,:,:),allocatable :: magnetic_field
+real*8,dimension(:,:,:),allocatable :: magnetic_field,pdf
 character(len=17) :: fields_filename
 character(len=28) :: magnetic_field_filename
 character(len=20) :: pdf_filename
@@ -35,9 +38,15 @@ character(len=78) :: soft_desc
 n_vec           = 3    !< number of vector components
 n_R             = 54   !< total number of radial points
 n_Z             = 81   !< total number of vertical coordinate points
-n_flux          = 101   !< number of flux surfaces / minor radii
+n_flux          = 101  !< number of flux surfaces / minor radii
+n_momenta       = 101  !< number of nodes of the momentum mesh
+n_pitch         = 101  !< number of nodes of the pitch angle mesh
+charge          = -1   !< electron charge w.r.t. proton charge
+mass            = 5.48579909065d-4 !< electron mass in AMU
 time            = 0d0  !< simulation time
 tor_angle       = 0d0  !< toroidal angle
+Ekin_bnd        = [2d7-1d4,2d7+1d4] !< kinetic energy lower and upper bound
+pitch_bnd       = [PI-2.95d-1,PI]   !< pitch angle lower and upper bound
 flux_axis_tol   = -2.5d-3 !< tolerance of the poloidal flux axis for mesh generation
 fields_filename         = 'jorek_equilibrium'            !< jorek restart filename
 magnetic_field_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field input from jorek
@@ -73,6 +82,11 @@ n_flux_loc = n_flux/n_cpus; n_flux_loc = max(n_flux - (n_cpus-1)*n_flux_loc,n_fl
 n_flux = n_flux_loc*n_cpus; allocate(flux_minor_radii_Zmag_LFS(n_flux_loc));
 flux_minor_radii_Zmag_LFS = 0d0; flux_surfaces%n_psi = n_flux_loc; 
 allocate(flux_surfaces%psi_values(flux_surfaces%n_psi));
+!> allocate and initialise momentum mesh, pitch angle mesh and particle distribution
+momentum_bnd = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekin_bnd/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
+allocate(momentum_mesh(n_momenta)); call generate_equidistant_mesh_1d(n_momenta,momentum_bnd,momentum_mesh);
+allocate(pitch_mesh(n_pitch)); call generate_equidistant_mesh_1d(n_pitch,pitch_bnd,pitch_mesh);
+allocate(pdf(n_momenta,n_pitch,flux_surfaces%n_psi));
 write(*,*) "Initialise distribution function computation: completed!"
 
 !> Compute and write soft inputs ------------------------------------------------------------------------
@@ -102,6 +116,8 @@ write(*,*) "Compute and write the magnetic field: completed!"
 !> generate distribution function inputs
 write(*,*) "Compute and write distribution function ..."
 call find_LFS_minor_radius_flux_surface(sim%fields,flux_surfaces,RZ_axis,flux_minor_radii_Zmag_LFS);
+call soft_current_density_uniform_phase_pdf(sim%fields,flux_surfaces,n_momenta,&
+n_pitch,charge,mass,momentum_mesh,pitch_mesh,pdf)
 write(*,*) "Compute and write distribution function: completed!"
 
 !> Finalisation -----------------------------------------------------------------------------------------
@@ -111,11 +127,36 @@ if(allocated(poloidal_flux))             deallocate(poloidal_flux);
 if(allocated(magnetic_field))            deallocate(magnetic_field);
 if(allocated(flux_surfaces%psi_values))  deallocate(flux_surfaces%psi_values);
 if(allocated(flux_minor_radii_Zmag_LFS)) deallocate(flux_minor_radii_Zmag_LFS);
+if(allocated(momentum_mesh))             deallocate(momentum_mesh);
+if(allocated(pitch_mesh))                deallocate(pitch_mesh);
+if(allocated(pdf))                       deallocate(pdf);
 call finalize_mpi_threads(ierr)
 
 contains
 
 !> Tools ------------------------------------------------------------------------------------------------
+!> generate equidistant mesh generic coordinates
+!> inputs:
+!>   n_nodes: (integer) number of nodes composing the mesh
+!>   bounds:  (real8)(2) 1-lower and 2-upper mesh bounds
+!> outputs
+!>   mesh: (real8)(n_nodes) mesh having lower and upper bounds
+!>         equal to bounds
+subroutine generate_equidistant_mesh_1d(n_nodes,bounds,mesh)
+  implicit none
+  !> inputs:
+  integer,intent(in)             :: n_nodes
+  real*8,dimension(2),intent(in) :: bounds
+  !> outpus:
+  real*8,dimension(n_nodes),intent(out) :: mesh
+  !> variables:
+  integer :: ii
+  real*8  :: delta
+  !> generate the mesh
+  delta = (bounds(2)-bounds(1))/real(n_nodes-1,kind=8)
+  mesh = [(bounds(1)+real(ii,kind=8)*delta,ii=0,n_nodes-1)]
+end subroutine generate_equidistant_mesh_1d
+
 !> generate equidistant mesh in R and Z coordinates
 !> inputs:
 !>   fields: (fields_base) jorek mhd fields datatype 
@@ -343,7 +384,7 @@ end subroutine gather_2d_array_equal_chunks
 !> 4 - 1
 !> inputs:
 !>   fields: (fields_base) JOREK MHD fields
-!>   fluxes: (type_surface_list) flux surface list
+!>   fluxes: (type_surface_list)(n_psi) flux surface list
 !>   RZ_axis: (real8)(2) major radius and vertical position magnetic axis
 !> outputs:
 !>   flux_minor_radii_Zmag_LFS: (real8)(n_psi) low-field-side flux surface
@@ -486,6 +527,51 @@ target_ids,s_trial,t_trial,targets_old,s_new,t_new,targets_new,ifail)
     if(((s_new.ge.0d0).and.(s_new.le.1d0)).and.((t_new.ge.0d0).and.(t_new.le.1d0)).and.converged) exit;
   enddo
 end subroutine find_point_from_target_in_elm_harmonic
+
+!> compute electron distribution function based on the current density
+!> and unform phase space compatible with SOFT inputs.
+!> inputs:
+!>   fields:        (fields)(fields_base) JOREK MHD fields
+!>   fluxes:        (type_surface_list)(n_psi) flux surface list
+!>   n_momenta:     (integer) size of the momentum mesh 
+!>   n_pitch:       (integer) size of the pitch angle mesh
+!>   charge:        (integer) particle charge per unit of hydrogen charge
+!>   mass:          (real8) particle mass in AMU
+!>   momentum_mesh: (real8)(n_momenta) momentum mesh in [AMU*m/s]
+!>   pitch_mesh:    (real8)(n_pitch) pitch angle mesh in [r] 
+!> outputs:
+!>   pdf: (n_momenta,n_pitch,n_psi) soft compatible electron distribution
+!>        from radial current density and uniform momentum - pitch angle
+subroutine soft_current_density_uniform_phase_pdf(fields,fluxes,n_momenta,&
+n_pitch,charge,mass,momentum_mesh,pitch_mesh,pdf)
+  use constants,      only: EL_CHG,PI,SPEED_OF_LIGHT
+  use data_structure, only: type_surface_list
+  use mod_fields,     only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in)           :: fields
+  type(type_surface_list),intent(in)      :: fluxes
+  integer,intent(in)                      :: n_momenta,n_pitch,charge
+  real*8,intent(in)                       :: mass
+  real*8,dimension (n_momenta),intent(in) :: momentum_mesh
+  real*8,dimension(n_pitch),intent(in)    :: pitch_mesh
+  !> outputs:
+  real*8,dimension(n_momenta,n_pitch,fluxes%n_psi),intent(out) :: pdf
+  !> variables:
+  integer :: ii
+  real*8  :: int_zj,DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
+  !> initialisation
+  DUMMY_DOUBLE_1 = sqrt((maxval(momentum_mesh,dim=1)**2)/((mass*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_2 = sqrt((minval(momentum_mesh,dim=1)**2)/((mass*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_1 = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2);
+  DUMMY_DOUBLE_1 = DUMMY_DOUBLE_1*(cos(minval(pitch_mesh,dim=1))**2 - cos(maxval(pitch_mesh,dim=1))**2)
+  !> compute current density based pdf
+  do ii=1,fluxes%n_psi
+    !> integrate the current density over a flux surface
+    call integrate_current_density_over_flux_surface(fields,fluxes%flux_surfaces(ii),int_zj)
+    pdf(:,:,ii) = (3d0*int_zj)/(DUMMY_DOUBLE_1*real(charge,kind=8)*PI*EL_CHG*(mass**3)*(SPEED_OF_LIGHT**4))
+  enddo 
+end subroutine soft_current_density_uniform_phase_pdf 
 
 !> Method for integrate the toroidal current density over a flux surface 
 !> mutuated by the determine_q_profile routine. Only the n=0 mode is 

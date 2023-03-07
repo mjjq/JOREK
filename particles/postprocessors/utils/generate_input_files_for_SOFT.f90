@@ -572,11 +572,14 @@ n_pitch,charge,mass,momentum_mesh,pitch_mesh,pdf)
   DUMMY_DOUBLE_1 = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2);
   DUMMY_DOUBLE_1 = DUMMY_DOUBLE_1*(cos(minval(pitch_mesh,dim=1))**2 - cos(maxval(pitch_mesh,dim=1))**2)
   !> compute current density based pdf
+  !$omp parallel do default(shared) firstprivate(DUMMY_DOUBLE_1,charge,mass) &
+  !$omp private(int_zj,ii)
   do ii=1,fluxes%n_psi
     !> integrate the current density over a flux surface
     call integrate_current_density_over_flux_surface(fields,fluxes%flux_surfaces(ii),int_zj)
     pdf(:,:,ii) = (3d0*int_zj)/(DUMMY_DOUBLE_1*real(charge,kind=8)*PI*EL_CHG*(mass**3)*(SPEED_OF_LIGHT**4))
-  enddo 
+  enddo
+  !$omp end parallel do 
 end subroutine soft_current_density_uniform_phase_pdf 
 
 !> Method for integrate the toroidal current density over a flux surface 

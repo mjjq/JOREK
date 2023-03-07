@@ -1,25 +1,26 @@
 module mod_newton_solver
 
-use data_structure, only: type_RHS, node_list_save, node_list_restore
-use mod_sparse_matrix, only: type_SP_MATRIX
 implicit none
 
   type type_newton_solver
     integer                       :: maxNewton    = 20
     real(kind=8)                  :: gamma_Newton = 0.5
     real(kind=8)                  :: alpha_Newton = 2.d0
-    
+
     contains
     procedure :: setup
   end type type_newton_solver
 
 contains
 
+!> Solve sparse system using inexact Newton iterative method
   subroutine solve_newton(a_mat, rhs_vec, deltas, solver, mhd_sim, tag)
     use mod_sparse_data,      only: type_SP_SOLVER
     use mod_sparse,           only: solve_sparse_system
     use construct_matrix_mod, only: construct_matrix
     use mod_simulation_data,  only: type_MHD_SIM
+    use data_structure,       only: type_RHS, node_list_save, node_list_restore
+    use mod_sparse_matrix,    only: type_SP_MATRIX
 
     type(type_SP_SOLVER)          :: solver
     type(type_SP_MATRIX)          :: a_mat
@@ -101,7 +102,10 @@ contains
         call construct_matrix(mhd_sim, mhd_sim%local_elms, mhd_sim%n_local_elms, a_matk, dum_vec, harmonic_matrix=.false.)
         deallocate(dum_vec%val)
 
-        if (inewton.eq.newton_solver%maxNewton) solver%step_success = .false.
+        if (inewton.eq.newton_solver%maxNewton) then
+          write(*,*) "Newton failed to converge:", inewton - 1, tol_Newton
+          solver%step_success = .false.
+        endif
 
       endif
 
@@ -118,16 +122,16 @@ contains
     return
 
   end subroutine solve_newton
-  
-!< Set Newton parameters
+
+!> Set Newton parameters
   subroutine setup(self)
     use phys_module, only: maxNewton, gamma_Newton, alpha_Newton
     class(type_newton_solver)     :: self
-    
+
     self%maxNewton = maxNewton
     self%gamma_Newton = gamma_Newton
     self%alpha_Newton = alpha_Newton
-    return  
+    return
   end subroutine setup
 
 end module mod_newton_solver

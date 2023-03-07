@@ -677,8 +677,8 @@ n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf)
   !> open the hdf5 file 
   if(my_id.eq.0) call HDF5_open_or_create(trim(filename//'.h5'),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
   !> gather the minor radius from all mpi tasks
-  call mpi_gather(minor_radii_global,n_radii_per_task,MPI_REAL8,minor_radii_task,&
-  n_radii_per_task,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call mpi_gather(minor_radii_task,n_radii_per_task,MPI_REAL8,minor_radii_global,&
+  n_radii_per_task*n_cpus,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   if(my_id.eq.0) then
     !> write minor radius in HDF5 file
     call HDF5_array1D_saving(file_id,minor_radii_global,n_cpus*n_radii_per_task,'r')
@@ -695,7 +695,7 @@ n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf)
       else
         call mpi_recv(pdf_local,n_radii_per_task*n_momenta*n_pitch,MPI_REAL8,ii,ii,MPI_COMM_WORLD,statuss,ierr)
       endif
-      do jj=0,n_radii_per_task
+      do jj=0,n_radii_per_task-1
         !> create group
         r_id = ii*n_radii_per_task+jj
         n_r_id = int(log10(real(r_id)))+1

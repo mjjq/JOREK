@@ -1968,7 +1968,7 @@ do i=1,n_vertex_max
                               + v * (- rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT - T0 * alpha_imp * UgradRhoimp) &
                               - v * gamma * pf0 * divU                                                &
                               + v * (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)             &
-                              - v * (rho0 + alpha_imp*rhoimp0) * rhoimp0 * Lrad                       &
+                              - v * (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad                         &
                               - v * rho0 * frad_bg                                                    &
                               + v * (gamma-1.d0) * ( - rhoimp0 * dE_ion_dT * UgradT - E_ion * UgradRhoimp - E_ion_bg * (UgradRho - UgradRhoimp) )       &
                               - v * (gamma-1.d0) * rhoimp0 * E_ion * divU                             &
@@ -4294,8 +4294,8 @@ do i=1,n_vertex_max
                                              - v * gamma * (rhoimp0*alpha_imp*T + rhoimp0*T0*dalpha_imp_dT*T) * divU    &
 
                                              - v * rho0    * rhoimp0  * dLrad_dT  * T              &
-                                             - v * rhoimp0 * rhoimp0 * dalpha_imp_dT * T * Lrad  &
-                                             - v * rhoimp0 * rhoimp0 * alpha_imp * dLrad_dT  * T  &
+                                             - v * rhoimp0 * rhoimp0 * dalpha_e_dT * T * Lrad  &
+                                             - v * rhoimp0 * rhoimp0 * alpha_e * dLrad_dT  * T  &
 
                                              - v * rho0 * dfrad_bg_dT * T                   &
 
@@ -4320,7 +4320,7 @@ do i=1,n_vertex_max
                                                 - v * T0 * alpha_imp * UgradRhoimp_rhoimp__p            &
                                                 - v * gamma * (rhoimp * alpha_imp * T0) * divU          &
                                                 - v * rho0 * rhoimp * Lrad                             &
-                                                - 2.0d0 * v * alpha_imp * rhoimp0 * rhoimp * Lrad       &
+                                                - 2.0d0 * v * alpha_e * rhoimp0 * rhoimp * Lrad       &
                                                 + v * (gamma-1.d0) * deta_drhoimp0_ohm * rhoimp * JJ2  &
                                                 - v * (gamma-1.d0) * rhoimp * dE_ion_dT * UgradTe     &
                                                 - v * (gamma-1.d0) * E_ion * UgradRhoimp_rhoimp__p     &

@@ -1,7 +1,7 @@
 # Plot the SOFT-compatible JOREK MHD field
 # main function
-def load_and_plot_images(filename="",filepath=".",separator="/",\
-fontsize=32,linewidth=3,markersize=3):
+def load_and_plot_images(magfilename="",pdffilename="",filepath=".",\
+separator="/",fontsize=32,linewidth=3,markersize=3):
   import h5py
   import numpy as np
   from matplotlib import pyplot as plt
@@ -9,7 +9,7 @@ fontsize=32,linewidth=3,markersize=3):
   separatrix = np.array([])
   wall = np.array([])
   # Read image
-  fhandler = h5py.File("".join([filepath,separator,filename]),'r')
+  fhandler = h5py.File("".join([filepath,separator,magfilename]),'r')
   major_radius = np.array(fhandler['r'])
   vertical_position = np.array(fhandler['z'])
   BR = np.transpose(np.array(fhandler['Br']))
@@ -21,6 +21,11 @@ fontsize=32,linewidth=3,markersize=3):
   if('separatrix' in fhandler):
     lcfs = np.transpose(np.array(fhandler['separatrix']))
   axis = np.array(fhandler['maxis'])
+  fhandler.close()
+  # read plasma minor radius
+  fhandler = h5py.File("".join([filepath,separator,pdffilename]),'r')
+  R_minor_radii = axis[0]+np.array(fhandler['r'])
+  Z_minor_radii = axis[1]*np.ones(R_minor_radii.shape,dtype=np.float64)
   fhandler.close()
 
   # Plot magnetic field
@@ -37,6 +42,7 @@ fontsize=32,linewidth=3,markersize=3):
     ax[0].plot(lcfs[0,:],lcfs[1,:],color='r',linewidth=linewidth)
   if(len(wall)!=0):
     ax[0].plot(wall[0,:],wall[1,:],color='r',linewidth=linewidth)
+  ax[0].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[0].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
   ax[0].set_title('Radial magnetic field',fontsize=fontsize)
   ax[0].tick_params(axis='x',labelsize=fontsize)
@@ -51,6 +57,7 @@ fontsize=32,linewidth=3,markersize=3):
   if(len(lcfs)!=0):
     ax[1].plot(lcfs[0,:],lcfs[1,:],color='r',linewidth=linewidth)
   ax[1].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
+  ax[1].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[1].set_title('Vertical magnetic field',fontsize=fontsize)
   ax[1].tick_params(axis='x',labelsize=fontsize)
   ax[1].tick_params(axis='y',labelsize=fontsize)
@@ -64,6 +71,7 @@ fontsize=32,linewidth=3,markersize=3):
   if(len(wall)!=0):
     ax[2].plot(wall[0,:],wall[1,:],color='r',linewidth=linewidth)
   ax[2].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
+  ax[2].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[2].set_title('Toroidal magnetic field',fontsize=fontsize)
   ax[2].tick_params(axis='x',labelsize=fontsize)
   ax[2].tick_params(axis='y',labelsize=fontsize)
@@ -77,6 +85,7 @@ fontsize=32,linewidth=3,markersize=3):
   if(len(wall)!=0):
     ax[3].plot(wall[0,:],wall[1,:],color='r',linewidth=linewidth)
   ax[3].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
+  ax[3].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[3].set_title('Poloidal flux',fontsize=fontsize)
   ax[3].tick_params(axis='x',labelsize=fontsize)
   ax[3].tick_params(axis='y',labelsize=fontsize)
@@ -86,7 +95,8 @@ fontsize=32,linewidth=3,markersize=3):
 
 # Run main ------------------------------------------------------ #
 if __name__ == "__main__":
-  load_and_plot_images(filename="magnetic_field_jorek_to_soft.h5",filepath=".")
+  load_and_plot_images(magfilename="magnetic_field_jorek_to_soft.h5",
+  pdffilename="pdf_jorek_to_soft.h5",filepath=".")
 
 # --------------------------------------------------------------- #
 

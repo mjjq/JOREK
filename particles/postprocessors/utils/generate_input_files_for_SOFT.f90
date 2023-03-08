@@ -4,6 +4,7 @@
 program generate_input_files_for_SOFT
 use constants,      only: PI,SPEED_OF_LIGHT,ATOMIC_MASS_UNIT,EL_CHG
 use phys_module,    only: n_limiter,R_limiter,Z_limiter,xcase,xpoint
+use phys_module,    only: n_boundary,R_boundary,Z_boundary,xcase,xpoint
 use data_structure, only: type_bnd_node_list,type_bnd_element_list
 use data_structure, only: type_surface_list
 use mod_mpi_tools,  only: init_mpi_threads,finalize_mpi_threads
@@ -20,14 +21,14 @@ type(type_bnd_node_list)    :: bnd_node_list
 type(type_bnd_element_list) :: bnd_elm_list
 integer                     :: my_id,n_cpus,ierr,i_elm_axis
 integer                     :: n_vec,n_R,n_Z,n_R_loc,n_momenta,n_pitch
-integer                     :: n_flux,n_flux_loc,errorcode,charge
+integer                     :: n_flux,n_flux_loc,errorcode,charge,n_LCFS
 real*8                      :: time,tor_angle,psi_axis,flux_axis_tol,mass
 real*8,dimension(2)                 :: RZ_axis,st_axis,Ekin_bnd,pitch_bnd
 real*8,dimension(2)                 :: momentum_bnd
 real*8,dimension(:),allocatable     :: R_mesh,Z_mesh,flux_mesh
 real*8,dimension(:),allocatable     :: flux_minor_radii_Zmag_LFS
 real*8,dimension(:),allocatable     :: momentum_mesh,pitch_mesh
-real*8,dimension(:,:),allocatable   :: poloidal_flux
+real*8,dimension(:,:),allocatable   :: poloidal_flux,RZ_LCFS
 real*8,dimension(:,:,:),allocatable :: magnetic_field,pdf
 character(len=17) :: fields_filename
 character(len=28) :: magnetic_field_filename
@@ -83,11 +84,17 @@ n_flux_loc = n_flux/n_cpus; n_flux_loc = max(n_flux - (n_cpus-1)*n_flux_loc,n_fl
 n_flux = n_flux_loc*n_cpus; allocate(flux_minor_radii_Zmag_LFS(n_flux_loc));
 flux_minor_radii_Zmag_LFS = 0d0; flux_surfaces%n_psi = n_flux_loc; 
 allocate(flux_surfaces%psi_values(flux_surfaces%n_psi));
+!> Assume the LCFS to be at the RZ_boundary
+!> TODO IMPLEMENT A METHOD FOR FINDING THE SEPARATRIX
+n_LCFS = n_boundary; allocate(RZ_LCFS(2,n_LCFS)); 
+RZ_LCFS(1,:) = R_boundary(1:n_LCFS); RZ_LCFS(2,:) = Z_boundary(1:n_LCFS);
 !> allocate and initialise momentum mesh, pitch angle mesh and particle distribution
 momentum_bnd = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekin_bnd/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
 allocate(momentum_mesh(n_momenta)); call generate_equidistant_mesh_1d(n_momenta,momentum_bnd,momentum_mesh);
 allocate(pitch_mesh(n_pitch)); call generate_equidistant_mesh_1d(n_pitch,pitch_bnd,pitch_mesh);
 allocate(pdf(n_momenta,n_pitch,flux_surfaces%n_psi));
+write(*,*) "Momentum interval normalised to mass*speed_of_light: ",momentum_bnd/(mass*SPEED_OF_LIGHT)
+write(*,*) "Pitch angle interval: ",pitch_bnd
 write(*,*) "Initialise distribution function computation: completed!"
 
 !> Compute and write soft inputs ------------------------------------------------------------------------
@@ -110,8 +117,8 @@ write(*,*) "Compute and write the magnetic field ..."
 call compute_magnetic_field_poloidal_flux(sim%fields,n_vec,n_R_loc,n_Z,time,tor_angle,&
 R_mesh(my_id*n_R_loc+1:(my_id+1)*n_R_loc),Z_mesh,magnetic_field,poloidal_flux)
 call write_SOFT_magnetic_field_file(magnetic_field_filename,sim%fields,n_vec,n_R_loc,n_Z,&
-n_limiter,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_limiter,Z_limiter,&
-magnetic_field,poloidal_flux,soft_mag_name,soft_desc)
+n_limiter,n_LCFS,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_limiter,Z_limiter,&
+RZ_LCFS,magnetic_field,poloidal_flux,soft_mag_name,soft_desc)
 write(*,*) "Compute and write the magnetic field: completed!"
 
 !> generate distribution function inputs
@@ -133,6 +140,7 @@ if(allocated(poloidal_flux))             deallocate(poloidal_flux);
 if(allocated(magnetic_field))            deallocate(magnetic_field);
 if(allocated(flux_surfaces%psi_values))  deallocate(flux_surfaces%psi_values);
 if(allocated(flux_minor_radii_Zmag_LFS)) deallocate(flux_minor_radii_Zmag_LFS);
+if(allocated(RZ_LCFS))                   deallocate(RZ_LCFS);
 if(allocated(momentum_mesh))             deallocate(momentum_mesh);
 if(allocated(pitch_mesh))                deallocate(pitch_mesh);
 if(allocated(pdf))                       deallocate(pdf);
@@ -286,8 +294,8 @@ end subroutine compute_magnetic_field_poloidal_flux
 !>   mag_name:       (character) name of the input file (metadeta)
 !>   description:    (character) description of the input file (metadeta)
 subroutine write_SOFT_magnetic_field_file(filename,fields,n_vec,n_R_loc,n_Z,n_RZ_wall,&
-n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_wall,Z_wall,magnetic_field,poloidal_flux,&
-mag_name,description)
+n_lcfs,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_wall,Z_wall,RZ_lcfs,magnetic_field,&
+poloidal_flux,mag_name,description)
   use mpi
   use hdf5
   use hdf5_io_module, only: HDF5_open_or_create,HDF5_close,HDF5_char_saving
@@ -297,12 +305,13 @@ mag_name,description)
   !> inputs:
   class(fields_base),intent(in)                      :: fields
   character(len=*),intent(in)                        :: filename,mag_name,description
-  integer,intent(in)                                 :: n_vec,n_R_loc,n_Z
+  integer,intent(in)                                 :: n_vec,n_R_loc,n_Z,n_lcfs
   integer,intent(in)                                 :: n_RZ_wall,n_cpus,my_id
   real*8,dimension(2),intent(in)                     :: RZ_axis
   real*8,dimension(n_R_loc*n_cpus),intent(in)        :: R_mesh
   real*8,dimension(n_Z),intent(in)                   :: Z_mesh
   real*8,dimension(n_RZ_wall),intent(in)             :: R_wall,Z_wall
+  real*8,dimension(2,n_lcfs),intent(in)              :: RZ_lcfs
   real*8,dimension(n_Z,n_R_loc),intent(in)           :: poloidal_flux
   real*8,dimension(n_vec,n_Z,n_R_loc),intent(in)     :: magnetic_field
   !> variables:
@@ -332,6 +341,8 @@ mag_name,description)
     !> write the tokamak wall
     RZ_wall(1,:) = R_wall; RZ_wall(2,:) = Z_wall;
     call HDF5_array2D_saving(file_id,RZ_wall,2,n_RZ_wall,'wall')
+    call HDF5_array2D_saving(file_id,RZ_lcfs,2,n_lcfs,'separatrix')
+    !> write magnetic field - poloidal flux
     call HDF5_array2D_saving(file_id,global_poloidal_flux,n_Z,n_R_loc*n_cpus,'Psi') !< poloidal flux
     call HDF5_array2D_saving(file_id,global_magnetic_field(1,:,:),n_Z,n_R_loc*n_cpus,'Br')   !< radial B
     call HDF5_array2D_saving(file_id,global_magnetic_field(2,:,:),n_Z,n_R_loc*n_cpus,'Bz')   !< vertical B

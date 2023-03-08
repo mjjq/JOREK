@@ -19,6 +19,7 @@ type(event)                 :: field_reader
 type(type_surface_list)     :: flux_surfaces
 type(type_bnd_node_list)    :: bnd_node_list
 type(type_bnd_element_list) :: bnd_elm_list
+logical                     :: write_wall
 integer                     :: my_id,n_cpus,ierr,i_elm_axis
 integer                     :: n_vec,n_R,n_Z,n_R_loc,n_momenta,n_pitch
 integer                     :: n_flux,n_flux_loc,errorcode,charge,n_LCFS
@@ -36,13 +37,14 @@ character(len=17) :: pdf_filename
 character(len=63) :: soft_mag_name
 character(len=78) :: soft_desc
 !> Variables definitions --------------------------------------------------------------------------------
-n_vec           = 3    !< number of vector components
-n_R             = 54   !< total number of radial points
-n_Z             = 81   !< total number of vertical coordinate points
-n_flux          = 100  !< number of flux surfaces / minor radii
-n_momenta       = 101  !< number of nodes of the momentum mesh
-n_pitch         = 101  !< number of nodes of the pitch angle mesh
-charge          = -1   !< electron charge w.r.t. proton charge
+write_wall      =.false. !< write the tokamak wall in soft hdf5
+n_vec           = 3      !< number of vector components
+n_R             = 54     !< total number of radial points
+n_Z             = 81     !< total number of vertical coordinate points
+n_flux          = 100    !< number of flux surfaces / minor radii
+n_momenta       = 101    !< number of nodes of the momentum mesh
+n_pitch         = 101    !< number of nodes of the pitch angle mesh
+charge          = -1     !< electron charge w.r.t. proton charge
 mass            = 5.48579909065d-4 !< electron mass in AMU
 time            = 0d0  !< simulation time
 tor_angle       = 0d0  !< toroidal angle
@@ -116,8 +118,8 @@ write(*,*) "Generate computational mesh: completed!"
 write(*,*) "Compute and write the magnetic field ..."
 call compute_magnetic_field_poloidal_flux(sim%fields,n_vec,n_R_loc,n_Z,time,tor_angle,&
 R_mesh(my_id*n_R_loc+1:(my_id+1)*n_R_loc),Z_mesh,magnetic_field,poloidal_flux)
-call write_SOFT_magnetic_field_file(magnetic_field_filename,sim%fields,n_vec,n_R_loc,n_Z,&
-n_limiter,n_LCFS,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_limiter,Z_limiter,&
+call write_SOFT_magnetic_field_file(magnetic_field_filename,sim%fields,write_wall,n_vec,&
+n_R_loc,n_Z,n_limiter,n_LCFS,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_limiter,Z_limiter,&
 RZ_LCFS,magnetic_field,poloidal_flux,soft_mag_name,soft_desc)
 write(*,*) "Compute and write the magnetic field: completed!"
 
@@ -278,10 +280,12 @@ end subroutine compute_magnetic_field_poloidal_flux
 !> inputs:
 !>   filename:       (character) name of the file to be generated
 !>   fields:         (fields_base) jorek MHD fields
+!>   write_wall:     (logical) if true write the tokamak wall in hdf5
 !>   n_vec:          (integer) N# of components of the magnetic vector
 !>   n_R_loc:        (integer) number of major radius point for one task
 !>   n_Z:            (integer) number of vertical positions
 !>   n_RZ_wall:      (integer) number of wall nodes
+!>   n_lcfs:         (integer) number of last close flux surface nodes
 !>   n_cpus:         (integer) number of mpi tasks
 !>   my_id:          (integer) mpi task identifier 
 !>   RZ_axis:        (real8)(2) magnetic field coordinates
@@ -289,13 +293,15 @@ end subroutine compute_magnetic_field_poloidal_flux
 !>   Z_mesh:         (real8)(n_Z) vertical mesh
 !>   R_wall:         (real8)(n_RZ_wall) radial coordinates of the wall
 !>   Z_wall:         (real8)(n_RZ_wall) vertical coordinates of the wall
+!>   RZ_lcfs:        (real8)(2,n_lcfs) 1-major radius and 2-vertical coordinates
+!>                   of the last close flux surface
 !>   magnetic_field: (real8)(n_vec,n_Z,n_R_loc) magnetic field Br,Bz,Bphi
 !>   poloidal_flux:  (real8)(n_Z,n_R_loc) poloidal flux array
 !>   mag_name:       (character) name of the input file (metadeta)
 !>   description:    (character) description of the input file (metadeta)
-subroutine write_SOFT_magnetic_field_file(filename,fields,n_vec,n_R_loc,n_Z,n_RZ_wall,&
-n_lcfs,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_wall,Z_wall,RZ_lcfs,magnetic_field,&
-poloidal_flux,mag_name,description)
+subroutine write_SOFT_magnetic_field_file(filename,fields,write_wall,n_vec,n_R_loc,&
+n_Z,n_RZ_wall,n_lcfs,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_wall,Z_wall,RZ_lcfs,&
+magnetic_field,poloidal_flux,mag_name,description)
   use mpi
   use hdf5
   use hdf5_io_module, only: HDF5_open_or_create,HDF5_close,HDF5_char_saving
@@ -305,6 +311,7 @@ poloidal_flux,mag_name,description)
   !> inputs:
   class(fields_base),intent(in)                      :: fields
   character(len=*),intent(in)                        :: filename,mag_name,description
+  logical,intent(in)                                 :: write_wall
   integer,intent(in)                                 :: n_vec,n_R_loc,n_Z,n_lcfs
   integer,intent(in)                                 :: n_RZ_wall,n_cpus,my_id
   real*8,dimension(2),intent(in)                     :: RZ_axis
@@ -340,7 +347,7 @@ poloidal_flux,mag_name,description)
     call HDF5_array1D_saving(file_id,Z_mesh,n_Z,'z')            !< write vertical mesh
     !> write the tokamak wall
     RZ_wall(1,:) = R_wall; RZ_wall(2,:) = Z_wall;
-    call HDF5_array2D_saving(file_id,RZ_wall,2,n_RZ_wall,'wall')
+    if(write_wall) call HDF5_array2D_saving(file_id,RZ_wall,2,n_RZ_wall,'wall')
     call HDF5_array2D_saving(file_id,RZ_lcfs,2,n_lcfs,'separatrix')
     !> write magnetic field - poloidal flux
     call HDF5_array2D_saving(file_id,global_poloidal_flux,n_Z,n_R_loc*n_cpus,'Psi') !< poloidal flux

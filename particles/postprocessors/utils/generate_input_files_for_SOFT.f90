@@ -363,7 +363,9 @@ magnetic_field,poloidal_flux,mag_name,description)
     call HDF5_array2D_saving(file_id,global_poloidal_flux,n_Z,n_R_loc*n_cpus,'Psi') !< poloidal flux
     call HDF5_array2D_saving(file_id,global_magnetic_field(1,:,:),n_Z,n_R_loc*n_cpus,'Br')   !< radial B
     call HDF5_array2D_saving(file_id,global_magnetic_field(2,:,:),n_Z,n_R_loc*n_cpus,'Bz')   !< vertical B
-    call HDF5_array2D_saving(file_id,global_magnetic_field(3,:,:),n_Z,n_R_loc*n_cpus,'Bphi') !< toroidal B
+    !> add a negative sign to the toroidal magnetic field because the toroidal angle in SOFT
+    !> is positive clockwise
+    call HDF5_array2D_saving(file_id,-global_magnetic_field(3,:,:),n_Z,n_R_loc*n_cpus,'Bphi')
     !> write magnetic field name
     call HDF5_char_saving(file_id,trim(mag_name),'name')
     !> create and write magnetic field description

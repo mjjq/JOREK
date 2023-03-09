@@ -19,8 +19,8 @@ type(event)                 :: field_reader
 type(type_surface_list)     :: flux_surfaces
 type(type_bnd_node_list)    :: bnd_node_list
 type(type_bnd_element_list) :: bnd_elm_list
-logical                     :: write_wall,reverse_pitch_mesh
-integer                     :: my_id,n_cpus,ierr,i_elm_axis
+logical                     :: write_wall
+integer                     :: my_id,n_cpus,ierr,i_elm_axis,ii
 integer                     :: n_vec,n_R,n_Z,n_R_loc,n_momenta,n_pitch
 integer                     :: n_flux,n_flux_loc,errorcode,charge,n_LCFS
 real*8                      :: time,tor_angle,psi_axis,flux_axis_tol,mass
@@ -29,6 +29,7 @@ real*8,dimension(2)                 :: momentum_bnd
 real*8,dimension(:),allocatable     :: R_mesh,Z_mesh,flux_mesh
 real*8,dimension(:),allocatable     :: flux_minor_radii_Zmag_LFS
 real*8,dimension(:),allocatable     :: momentum_mesh,pitch_mesh
+real*8,dimension(:),allocatable     :: cospitch_mesh
 real*8,dimension(:,:),allocatable   :: poloidal_flux,RZ_LCFS
 real*8,dimension(:,:,:),allocatable :: magnetic_field,pdf
 character(len=17) :: fields_filename
@@ -39,11 +40,9 @@ character(len=78) :: soft_desc
 !> Variables definitions --------------------------------------------------------------------------------
 write_wall      =.false. !< write the tokamak wall in soft hdf5
 !> if true the order of the pitch mesh and of the distribution function along
-!> the pitch direction is inverted
-reverse_pitch_mesh = .true.
 n_vec           = 3      !< number of vector components
-n_R             = 54     !< total number of radial points
-n_Z             = 81     !< total number of vertical coordinate points
+n_R             = 102    !< total number of radial points
+n_Z             = 101    !< total number of vertical coordinate points
 n_flux          = 100    !< number of flux surfaces / minor radii
 n_momenta       = 101    !< number of nodes of the momentum mesh
 n_pitch         = 101    !< number of nodes of the pitch angle mesh
@@ -97,6 +96,9 @@ RZ_LCFS(1,:) = R_boundary(1:n_LCFS); RZ_LCFS(2,:) = Z_boundary(1:n_LCFS);
 momentum_bnd = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekin_bnd/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
 allocate(momentum_mesh(n_momenta)); call generate_equidistant_mesh_1d(n_momenta,momentum_bnd,momentum_mesh);
 allocate(pitch_mesh(n_pitch)); call generate_equidistant_mesh_1d(n_pitch,pitch_bnd,pitch_mesh);
+!> revert the pitch mesh for having the cosinues varibale always increasing
+pitch_mesh = cos(pitch_mesh); allocate(cospitch_mesh(n_pitch));
+cospitch_mesh = [(pitch_mesh(n_pitch-ii+1),ii=1,n_pitch)]; deallocate(pitch_mesh);
 allocate(pdf(n_momenta,n_pitch,flux_surfaces%n_psi));
 write(*,*) "Momentum interval normalised to mass*speed_of_light: ",momentum_bnd/(mass*SPEED_OF_LIGHT)
 write(*,*) "Pitch angle interval: ",pitch_bnd
@@ -130,12 +132,12 @@ write(*,*) "Compute and write the magnetic field: completed!"
 write(*,*) "Compute and write distribution function ..."
 call find_LFS_minor_radius_flux_surface(sim%fields,flux_surfaces,RZ_axis,flux_minor_radii_Zmag_LFS);
 call soft_current_density_uniform_phase_pdf(sim%fields,flux_surfaces,n_momenta,&
-n_pitch,charge,mass,momentum_mesh,pitch_mesh,pdf)
+n_pitch,charge,mass,momentum_mesh,cospitch_mesh,pdf)
 !> write distribution in soft input file the momentum mesh and the pdf are
 !> normalised w.r.t. mass*SPEED_OF_LIGHT
-call write_soft_distribution_function(pdf_filename,reverse_pitch_mesh,my_id,n_cpus,&
-flux_surfaces%n_psi,n_momenta,n_pitch,flux_minor_radii_Zmag_LFS,momentum_mesh/(mass*SPEED_OF_LIGHT),&
-pitch_mesh,pdf*((mass*SPEED_OF_LIGHT)**3))
+call write_soft_distribution_function(pdf_filename,my_id,n_cpus,flux_surfaces%n_psi,&
+n_momenta,n_pitch,flux_minor_radii_Zmag_LFS,momentum_mesh/(mass*SPEED_OF_LIGHT),&
+cospitch_mesh,pdf*((mass*SPEED_OF_LIGHT)**3))
 write(*,*) "Compute and write distribution function: completed!"
 
 !> Finalisation -----------------------------------------------------------------------------------------
@@ -148,6 +150,7 @@ if(allocated(flux_minor_radii_Zmag_LFS)) deallocate(flux_minor_radii_Zmag_LFS);
 if(allocated(RZ_LCFS))                   deallocate(RZ_LCFS);
 if(allocated(momentum_mesh))             deallocate(momentum_mesh);
 if(allocated(pitch_mesh))                deallocate(pitch_mesh);
+if(allocated(cospitch_mesh))             deallocate(cospitch_mesh);
 if(allocated(pdf))                       deallocate(pdf);
 call finalize_mpi_threads(ierr)
 
@@ -350,7 +353,11 @@ magnetic_field,poloidal_flux,mag_name,description)
     call HDF5_array1D_saving(file_id,Z_mesh,n_Z,'z')            !< write vertical mesh
     !> write the tokamak wall
     RZ_wall(1,:) = R_wall; RZ_wall(2,:) = Z_wall;
-    if(write_wall) call HDF5_array2D_saving(file_id,RZ_wall,2,n_RZ_wall,'wall')
+    if(write_wall) then
+      call HDF5_array2D_saving(file_id,RZ_wall,2,n_RZ_wall,'wall')
+    else
+      call HDF5_array2D_saving(file_id,RZ_lcfs,2,n_lcfs,'wall')
+    endif
     call HDF5_array2D_saving(file_id,RZ_lcfs,2,n_lcfs,'separatrix')
     !> write magnetic field - poloidal flux
     call HDF5_array2D_saving(file_id,global_poloidal_flux,n_Z,n_R_loc*n_cpus,'Psi') !< poloidal flux
@@ -565,12 +572,12 @@ end subroutine find_point_from_target_in_elm_harmonic
 !>   charge:        (integer) particle charge per unit of hydrogen charge
 !>   mass:          (real8) particle mass in AMU
 !>   momentum_mesh: (real8)(n_momenta) momentum mesh in [AMU*m/s]
-!>   pitch_mesh:    (real8)(n_pitch) pitch angle mesh in [r] 
+!>   cospitch_mesh: (real8)(n_pitch) cos pitch angle in increasing order
 !> outputs:
 !>   pdf: (n_momenta,n_pitch,n_psi) soft compatible electron distribution
 !>        from radial current density and uniform momentum - pitch angle
 subroutine soft_current_density_uniform_phase_pdf(fields,fluxes,n_momenta,&
-n_pitch,charge,mass,momentum_mesh,pitch_mesh,pdf)
+n_pitch,charge,mass,momentum_mesh,cospitch_mesh,pdf)
   use constants,      only: EL_CHG,PI,SPEED_OF_LIGHT
   use data_structure, only: type_surface_list
   use mod_fields,     only: fields_base
@@ -581,24 +588,24 @@ n_pitch,charge,mass,momentum_mesh,pitch_mesh,pdf)
   integer,intent(in)                      :: n_momenta,n_pitch,charge
   real*8,intent(in)                       :: mass
   real*8,dimension (n_momenta),intent(in) :: momentum_mesh
-  real*8,dimension(n_pitch),intent(in)    :: pitch_mesh
+  real*8,dimension(n_pitch),intent(in)    :: cospitch_mesh
   !> outputs:
   real*8,dimension(n_momenta,n_pitch,fluxes%n_psi),intent(out) :: pdf
   !> variables:
   integer :: ii
   real*8  :: int_zj,DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
   !> initialisation
-  DUMMY_DOUBLE_1 = sqrt((maxval(momentum_mesh,dim=1)**2)/((mass*SPEED_OF_LIGHT)**2)+1.d0)
-  DUMMY_DOUBLE_2 = sqrt((minval(momentum_mesh,dim=1)**2)/((mass*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_1 = sqrt((momentum_mesh(1)**2)/((mass*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_2 = sqrt((momentum_mesh(n_momenta)**2)/((mass*SPEED_OF_LIGHT)**2)+1.d0)
   DUMMY_DOUBLE_1 = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2);
-  DUMMY_DOUBLE_1 = DUMMY_DOUBLE_1*(cos(minval(pitch_mesh,dim=1))**2 - cos(maxval(pitch_mesh,dim=1))**2)
+  DUMMY_DOUBLE_1 = DUMMY_DOUBLE_1*(cospitch_mesh(n_pitch)**2 - cospitch_mesh(2)**2)
   !> compute current density based pdf
   !$omp parallel do default(shared) firstprivate(DUMMY_DOUBLE_1,charge,mass) &
   !$omp private(int_zj,ii)
   do ii=1,fluxes%n_psi
     !> integrate the current density over a flux surface
     call integrate_current_density_over_flux_surface(fields,fluxes%flux_surfaces(ii),int_zj)
-    pdf(:,:,ii) = (3d0*int_zj)/(DUMMY_DOUBLE_1*real(charge,kind=8)*PI*EL_CHG*(mass**3)*(SPEED_OF_LIGHT**4))
+    pdf(:,:,ii) = (3d0*int_zj)/(DUMMY_DOUBLE_1*real(abs(charge),kind=8)*PI*EL_CHG*(mass**3)*(SPEED_OF_LIGHT**4))
   enddo
   !$omp end parallel do 
 end subroutine soft_current_density_uniform_phase_pdf 
@@ -615,7 +622,7 @@ end subroutine soft_current_density_uniform_phase_pdf
 !> outptus:
 !>   int_jz: (real8) integral of the toroidal current density in SI units
 subroutine integrate_current_density_over_flux_surface(fields,flux_surface,int_zj)
-  use constants,          only: MU_ZERO
+  use constants,          only: MU_ZERO,TWOPI
   use mod_model_settings, only: var_zj
   use data_structure,     only: type_surface
   use mod_interp,         only: interp_RZ,interp
@@ -655,14 +662,13 @@ subroutine integrate_current_density_over_flux_surface(fields,flux_surface,int_z
       int_zj = int_zj - (wgs(kk)*zjgi*dl)/Rgi !< integrate the current density 
     enddo
   enddo
-  int_zj = int_zj/MU_ZERO
+  !> the 2*PI is used as result for the integral along the toroidal direction
+  int_zj = TWOPI*int_zj/MU_ZERO
 end subroutine integrate_current_density_over_flux_surface
 
 !> write SOFT distribution function file
 !> inputs:
 !>   filename:           (character)(*) name of the hdf5 file
-!>   reverse_pitch_mesh: (logical) if true the order of the pitch mesh and of the
-!>                       distribution function along the pitch direction is inverted
 !>   my_id:              (integer) mpi task number
 !>   n_cpus:             (integer) total number of mpi tasks
 !>   n_radii_per_task:   (integer) number of radial points per task
@@ -670,11 +676,11 @@ end subroutine integrate_current_density_over_flux_surface
 !>   n_pitch:            (integer) number of pitch mesh nodes
 !>   minor_radii_task:   (real8)(n_radii_per_task) minor radii of each task
 !>   momentum_mesh:      (real8)(n_momenta) momentum mesh
-!>   pitch_mesh:         (real8)(n_pitch) pitch angle mesh
+!>   cospitch_mesh:      (real8)(n_pitch) cos pitch angle mesh in increasing order
 !>   pdf:                (real8)(n_momenta,n_pitch,n_radii_per_task) particle distribution function
 !> outputs
-subroutine write_soft_distribution_function(filename,reverse_pitch_mesh,my_id,n_cpus,&
-n_radii_per_task,n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf)
+subroutine write_soft_distribution_function(filename,my_id,n_cpus,n_radii_per_task,&
+n_momenta,n_pitch,minor_radii_task,momentum_mesh,cospitch_mesh,pdf)
   use mpi
   use hdf5
   use hdf5_io_module, only: HDF5_open_or_create,HDF5_close,HDF5_char_saving
@@ -683,11 +689,10 @@ n_radii_per_task,n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf
   implicit none
   !> inputs:
   character(len=*),intent(in) :: filename
-  logical,intent(in)          :: reverse_pitch_mesh
   integer,intent(in)          :: my_id,n_cpus,n_radii_per_task,n_momenta,n_pitch
   real*8,dimension(n_radii_per_task),intent(in) :: minor_radii_task
   real*8,dimension(n_momenta),intent(in)        :: momentum_mesh
-  real*8,dimension(n_pitch),intent(in)          :: pitch_mesh
+  real*8,dimension(n_pitch),intent(in)          :: cospitch_mesh
   real*8,dimension(n_momenta,n_pitch,n_radii_per_task),intent(in) :: pdf
   !> variables:
   character(len=10)            :: format_char
@@ -695,9 +700,7 @@ n_radii_per_task,n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf
   integer                      :: ii,jj,kk,r_id,n_r_id,ierr,group_name_len
   integer(HID_T)               :: file_id,group_id
   integer,dimension(MPI_STATUS_SIZE)        :: statuss
-  real*8,dimension(n_pitch)                 :: cospitch
   real*8,dimension(n_cpus*n_radii_per_task) :: minor_radii_global
-  real*8,dimension(n_momenta,n_pitch)       :: pdf_reverse
   real*8,dimension(:,:,:),allocatable       :: pdf_local
 
   !> open the hdf5 file 
@@ -714,7 +717,6 @@ n_radii_per_task,n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf
   !> write pdf distribution in hdf5 file
   if(my_id.eq.0) then
     !> generate the xi mesh
-    if(reverse_pitch_mesh) cospitch = [(cos(pitch_mesh(n_pitch-ii+1)),ii=1,n_pitch)]
     allocate(pdf_local(n_momenta,n_pitch,n_radii_per_task))
     !> loop on the number of cpus
     do ii=0,n_cpus-1
@@ -735,16 +737,9 @@ n_radii_per_task,n_momenta,n_pitch,minor_radii_task,momentum_mesh,pitch_mesh,pdf
         call h5gcreate_f(file_id,trim(group_name),group_id,ierr)
         call h5gclose_f(group_id,ierr)
         !> dump data in hdf5
-        if(reverse_pitch_mesh) then
-          do kk = 1,n_pitch
-            pdf_reverse(:,kk) =  pdf_local(:,n_pitch-kk+1,jj+1)
-          enddo
-        else
-          pdf_reverse = pdf_local(:,:,jj+1)
-        endif
-        call HDF5_array2D_saving(file_id,pdf_reverse,n_momenta,n_pitch,trim(group_name)//"/f")
+        call HDF5_array2D_saving(file_id,pdf_local(:,:,jj+1),n_momenta,n_pitch,trim(group_name)//"/f")
         call HDF5_array1D_saving(file_id,momentum_mesh,n_momenta,trim(group_name)//"/p")
-        call HDF5_array1D_saving(file_id,cospitch,n_pitch,trim(group_name)//"/xi")
+        call HDF5_array1D_saving(file_id,cospitch_mesh,n_pitch,trim(group_name)//"/xi")
         !> cleanup
         deallocate(group_name)
       enddo

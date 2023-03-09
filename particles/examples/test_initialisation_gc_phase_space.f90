@@ -32,7 +32,7 @@ type(pcg32_rng)             :: rng_pcg32
 type(event)                 :: field_reader
 type(type_bnd_node_list)    :: bnd_node_list
 type(type_bnd_element_list) :: bnd_elm_list
-logical                     :: write_txt 
+logical                     :: write_txt,do_verification
 integer                     :: ii,n_variables,n_particles,nR,nZ,nphi,np,npitch
 integer                     :: n_int_pdf_param,n_real_pdf_param,ifail
 integer                     :: n_int_weight_param,n_real_weight_param
@@ -69,24 +69,25 @@ call sim%initialize(num_groups=1)
 
 !>-------------------------------------------------------------------------------------------
 !> Define inputs ----------------------------------------------------------------------------
-write_txt   = .true.
-test_case   = 'jorek_current_density_re'
-n_variables = 6
-n_particles = 100000000
-nR          = 2
-nZ          = 2
-nphi        = 2
-np          = 81
-npitch      = 81
-start_time  = 0.d0
-mass        = 5.48579909065d-4 !< electron mass in AMU
-Rbound      = [0.d0,9.99d2]
-Zbound      = [-9.99d2,9.99d2]
-Phibound    = 2.5d-1*[TWOPI,5d0*PI]
-Ekinbound   = [2d7-1d4,2d7+1d4]
-Pitchbound  = [PI-2.95d-1,PI]
-Chargebound = -1.d0
-charge      = -1.d0
+write_txt       = .true.
+do_verification = .false.
+test_case       = 'jorek_current_density_re'
+n_variables     = 6
+n_particles     = 100000000
+nR              = 2
+nZ              = 2
+nphi            = 2
+np              = 81
+npitch          = 81
+start_time      = 0.d0
+mass            = 5.48579909065d-4 !< electron mass in AMU
+Rbound          = [0.d0,9.99d2]
+Zbound          = [-9.99d2,9.99d2]
+Phibound        = 2.5d-1*[TWOPI,5d0*PI]
+Ekinbound       = [2d7-1d4,2d7+1d4]
+Pitchbound      = [PI-2.95d-1,PI]
+Chargebound     = -1.d0
+charge          = -1.d0
 allocate(character(len=25)::jorek_filename)
 jorek_filename          = 'jorek_equilibrium' 
 particle_filename       = 'jorek_gc_outputs.txt'
@@ -219,35 +220,37 @@ n_real_pdf_to_part_coord_param,real_pdf_to_part_coord_param,&
 n_int_pdf_to_part_coord_param,int_pdf_to_part_coord_param)
 
 !> Produce the expected pdf fromt the guiding center histogram -------------------------------
-write(*,*) "... building guiding center histogram and computing the expected pdf"
-select type(plist=>sim%groups(1)%particles)
-  type is (particle_gc_relativistic)
-  call compute_cylindrical_spherical_histogram_pdf(histo,expected_pdf,Rmesh,&
-  Zmesh,phimesh,pmesh,pitchmesh,n_particles,plist,start_time,sim%groups(1)%mass,&
-  nR,nZ,nphi,np,npitch,Rbound,Zbound,Phibound,Pbound,Pitchbound,sim%fields)
-end select
+if(do_verification) then
+  write(*,*) "... building guiding center histogram and computing the expected pdf"
+  select type(plist=>sim%groups(1)%particles)
+    type is (particle_gc_relativistic)
+    call compute_cylindrical_spherical_histogram_pdf(histo,expected_pdf,Rmesh,&
+    Zmesh,phimesh,pmesh,pitchmesh,n_particles,plist,start_time,sim%groups(1)%mass,&
+    nR,nZ,nphi,np,npitch,Rbound,Zbound,Phibound,Pbound,Pitchbound,sim%fields)
+  end select
 
-!> Compute the input pdf at the mesh element midpoints and the L2 error w.r.t. the 
-!> the expected pdf from the  particle histogram and the error on the 
-!> total number of physical particles
-write(*,*) "... computing the input pdf at the midpoints of the mesh elements"
-call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,Rmesh,Zmesh,phimesh,&
-     pmesh,pitchmesh,charge,start_time,pdf_to_use,sim%fields,n_real_pdf_param,&
-     real_pdf_param,n_int_pdf_param,int_pdf_param)
-write(*,*) "... computing L2 error"
-call compute_error_norm2_ndim5(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
-npitch-1,expected_pdf,pdf_at_midpoints,pdf_upper_bound) 
-call compute_error_tot_n_phys_particles(error_n_phys_particles,error_n_phys_particles_norm,&
-n_tot_phys_particles,sim%groups(1)%particles)
+  !> Compute the input pdf at the mesh element midpoints and the L2 error w.r.t. the 
+  !> the expected pdf from the  particle histogram and the error on the 
+  !> total number of physical particles
+  write(*,*) "... computing the input pdf at the midpoints of the mesh elements"
+  call evaluate_pdf_at_midpoints(pdf_at_midpoints,nR,nZ,nphi,np,npitch,Rmesh,Zmesh,phimesh,&
+       pmesh,pitchmesh,charge,start_time,pdf_to_use,sim%fields,n_real_pdf_param,&
+       real_pdf_param,n_int_pdf_param,int_pdf_param)
+  write(*,*) "... computing L2 error"
+  call compute_error_norm2_ndim5(error,error_norm,error_avg_norm,nR-1,nZ-1,nphi-1,np-1,&
+  npitch-1,expected_pdf,pdf_at_midpoints,pdf_upper_bound) 
+  call compute_error_tot_n_phys_particles(error_n_phys_particles,error_n_phys_particles_norm,&
+  n_tot_phys_particles,sim%groups(1)%particles)
 
-!> Log test results -------------------------------------------------------------------------
-write(*,*) "... logging test results"
-write(*,*) "L2 error between the expected pdf from gc histogram and the input pdf at mid points: ",error
-write(*,*) "L2 error normalized to the maximum of the input pdf: ",error_norm
-write(*,*) "L2 error averaged and normalised to the maximum of the input pdf: ",error_avg_norm
-write(*,*) "Error on the total number of physical particles: ",error_n_phys_particles
-write(*,*) "Error on the total number of physical particles normalised: ",error_n_phys_particles_norm
-write(*,*) " "
+  !> Log test results -------------------------------------------------------------------------
+  write(*,*) "... logging test results"
+  write(*,*) "L2 error between the expected pdf from gc histogram and the input pdf at mid points: ",error
+  write(*,*) "L2 error normalized to the maximum of the input pdf: ",error_norm
+  write(*,*) "L2 error averaged and normalised to the maximum of the input pdf: ",error_avg_norm
+  write(*,*) "Error on the total number of physical particles: ",error_n_phys_particles
+  write(*,*) "Error on the total number of physical particles normalised: ",error_n_phys_particles_norm
+  write(*,*) " "
+endif
 
 !> Write data into file ---------------------------------------------------------------------
 write(*,*) "... write particle restart file"
@@ -256,14 +259,16 @@ write(*,*) "... writing data in files"
 if(write_txt) then
   call dump_relativistic_gc_particles_in_txt(n_particles,sim%groups(1)%particles,&
   sim%groups(1)%mass,start_time,sim%fields,particle_filename,ifail)
-  call write_array1d_double(nR,Rmesh,trim(trim(mesh_filename_root)//'R.txt'),ifail)
-  call write_array1d_double(nZ,Zmesh,trim(trim(mesh_filename_root)//'Z.txt'),ifail)
-  call write_array1d_double(nphi,phimesh,trim(trim(mesh_filename_root)//'phi.txt'),ifail)
-  call write_array1d_double(np,pmesh,trim(trim(mesh_filename_root)//'p.txt'),ifail)
-  call write_array1d_double(npitch,pitchmesh,trim(trim(mesh_filename_root)//'pitch.txt'),ifail)
-  call write_array5d_integer(npitch-1,np-1,nphi-1,nZ-1,nR-1,histo,trim(particle_histo_filename),ifail)
-  call write_array5d_double(npitch-1,np-1,nphi-1,nZ-1,nR-1,expected_pdf,trim(particle_pdf_filename),ifail)
-  call write_array5d_double(npitch-1,np-1,nphi-1,nZ-1,nR-1,pdf_at_midpoints,trim(exact_pdf_filename),ifail)
+  if(do_verification) then
+    call write_array1d_double(nR,Rmesh,trim(trim(mesh_filename_root)//'R.txt'),ifail)
+    call write_array1d_double(nZ,Zmesh,trim(trim(mesh_filename_root)//'Z.txt'),ifail)
+    call write_array1d_double(nphi,phimesh,trim(trim(mesh_filename_root)//'phi.txt'),ifail)
+    call write_array1d_double(np,pmesh,trim(trim(mesh_filename_root)//'p.txt'),ifail)
+    call write_array1d_double(npitch,pitchmesh,trim(trim(mesh_filename_root)//'pitch.txt'),ifail)
+    call write_array5d_integer(npitch-1,np-1,nphi-1,nZ-1,nR-1,histo,trim(particle_histo_filename),ifail)
+    call write_array5d_double(npitch-1,np-1,nphi-1,nZ-1,nR-1,expected_pdf,trim(particle_pdf_filename),ifail)
+    call write_array5d_double(npitch-1,np-1,nphi-1,nZ-1,nR-1,pdf_at_midpoints,trim(exact_pdf_filename),ifail)
+  endif
 endif
 !> add here method for writing the charge mesh distribution as well
 !> Clean-up ---------------------------------------------------------------------------------

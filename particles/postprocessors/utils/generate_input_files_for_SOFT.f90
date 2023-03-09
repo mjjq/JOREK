@@ -41,8 +41,8 @@ character(len=78) :: soft_desc
 write_wall      =.false. !< write the tokamak wall in soft hdf5
 !> if true the order of the pitch mesh and of the distribution function along
 n_vec           = 3      !< number of vector components
-n_R             = 102    !< total number of radial points
-n_Z             = 101    !< total number of vertical coordinate points
+n_R             = 202    !< total number of radial points
+n_Z             = 201    !< total number of vertical coordinate points
 n_flux          = 100    !< number of flux surfaces / minor radii
 n_momenta       = 101    !< number of nodes of the momentum mesh
 n_pitch         = 101    !< number of nodes of the pitch angle mesh
@@ -157,6 +157,26 @@ call finalize_mpi_threads(ierr)
 contains
 
 !> Tools ------------------------------------------------------------------------------------------------
+!> generate squared spaced mesh
+!> inputs:
+!>   n_nodes: (integer) number of nodes composing the mesh
+!>   bounds:  (real8)(2) 1-lower and 2-upper mesh bound
+!> outputs:
+!>   mesh: (real8)(n_nodes) squared mesh with bounds
+subroutine generate_squared_mesh_1d(n_nodes,bounds,mesh)
+  use mpi
+  implicit none
+  !> inputs:
+  integer,intent(in)             :: n_nodes
+  real*8,dimension(2),intent(in) :: bounds
+  !> outpus:
+  real*8,dimension(n_nodes),intent(out) :: mesh
+  !> variables:
+  integer :: errorcode,ierr
+  !> generate square root mesh
+  call generate_equidistant_mesh_1d(n_nodes,[0d0,1d0],mesh)
+  mesh = bounds(1) + (bounds(2)-bounds(1))*mesh**2
+end subroutine generate_squared_mesh_1d
 !> generate equidistant mesh generic coordinates
 !> inputs:
 !>   n_nodes: (integer) number of nodes composing the mesh
@@ -207,14 +227,14 @@ subroutine generate_equidistant_RZ_mesh(fields,n_R,n_Z,R_mesh,Z_mesh)
   Z_mesh = [(Z_mesh(1)+real(ii,kind=8)*dZ,ii=0,n_Z-1)]
 end subroutine generate_equidistant_RZ_mesh
 
-!> generate equidistant mesh in poloidal flux
+!> generate squared mesh in poloidal flux
 !> inputs:
 !>   n_psi:        (integer) number of poloidal flux points
 !>   psi_axis:     (real8) poloidal flux at the magnetic axis
 !>   psi_bnd:      (real8) poloidal flux at the boundary
 !>   psi_axis_tol: (real8) tolerance of the poloidal flux axis
 !> outputs:
-!>   psi_mesh: (real8)(n_psi)
+!>   psi_mesh: (real8)(n_psi) squared psi mesh
 subroutine generate_equidistant_poloidal_flux_mesh(n_psi,psi_axis,psi_bnd,psi_axis_tol,psi_mesh)
   implicit none
   !> inputs:
@@ -222,13 +242,8 @@ subroutine generate_equidistant_poloidal_flux_mesh(n_psi,psi_axis,psi_bnd,psi_ax
   real*8, intent(in)  :: psi_axis,psi_bnd,psi_axis_tol
   !> outputs:
   real*8,dimension(n_psi),intent(out) :: psi_mesh
-  !> variables:
-  integer :: ii
-  real*8  :: dpsi
   !> compute mesh
-  dpsi = 1d0/real(n_psi-1,kind=8)
-  psi_mesh  = psi_axis*(1d0+psi_axis_tol)+[(real(ii,kind=8)*dpsi,ii=0,n_psi-1)]*&
-  (psi_bnd*(1d0)-psi_axis*(psi_axis_tol+1d0))
+  call generate_squared_mesh_1d(n_psi,[psi_axis*(1d0+psi_axis_tol),psi_bnd],psi_mesh)
 end subroutine generate_equidistant_poloidal_flux_mesh
 
 !> compute the magnetic field at a give R,Z position

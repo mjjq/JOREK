@@ -308,59 +308,6 @@ contains
     call tr_unregister_mem(sizeof(thread_struct),"thread_struct",CAT_MATELEM)
     deallocate(thread_struct)
   end subroutine del_thread_buffers
-  
-  
-  subroutine node_list_save(node_list, store_value, store_delta)
-    implicit none
-    
-    class(type_node_list)         :: node_list
-    real(kind=8), allocatable     :: store_value(:,:,:,:), store_delta(:,:,:,:)
-    
-    integer :: inode, itor, n_nodes, ivar, ideg, n_deg = 4
-  
-    n_nodes = node_list%n_nodes
-   
-    if (allocated(store_value)) deallocate(store_value)
-    if (allocated(store_delta)) deallocate(store_delta)
-    allocate(store_value(n_nodes,n_var,n_tor,n_deg), store_delta(n_nodes,n_var,n_tor,n_deg))
-
-    do inode = 1, n_nodes
-      do ivar = 1, n_var
-        do itor = 1, n_tor
-          do ideg = 1, n_deg
-            store_value(inode,ivar,itor,ideg) = node_list%node(inode)%values(itor,ideg,ivar)
-            store_delta(inode,ivar,itor,ideg) = node_list%node(inode)%deltas(itor,ideg,ivar)
-          enddo
-        enddo
-      enddo
-    enddo    
-    
-    return
-  end subroutine node_list_save
-  
-  subroutine node_list_restore(node_list, store_value, store_delta)
-    implicit none
-    
-    class(type_node_list)         :: node_list
-    real(kind=8), allocatable     :: store_value(:,:,:,:), store_delta(:,:,:,:)
-    
-    integer :: inode, itor, n_nodes, ivar, ideg, n_deg = 4
-  
-    n_nodes = node_list%n_nodes
-
-    do inode = 1, n_nodes
-      do ivar = 1, n_var
-        do itor = 1, n_tor
-          do ideg = 1, n_deg
-            node_list%node(inode)%values(itor,ideg,ivar) = store_value(inode,ivar,itor,ideg)
-            node_list%node(inode)%deltas(itor,ideg,ivar) = store_delta(inode,ivar,itor,ideg)
-          enddo
-        enddo
-      enddo
-    enddo     
-    
-    return
-  end subroutine node_list_restore  
 
 end module data_structure
 

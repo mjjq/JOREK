@@ -16,6 +16,16 @@ module mod_sparse_data
 
   integer, parameter :: pastix = 1, mumps = 2, strumpack = 3
 
+  type type_newton_solver
+    integer                       :: maxNewton    = 20
+    real(kind=8)                  :: gamma_Newton = 0.5
+    real(kind=8)                  :: alpha_Newton = 2.d0
+    real(kind=8), pointer         :: store_value(:,:,:,:) => null()
+    real(kind=8), pointer         :: store_delta(:,:,:,:) => null()
+
+    contains
+    procedure :: newton_setup, newton_finalize
+  end type type_newton_solver
 
   type type_SP_SOLVER
 #ifdef USE_MUMPS
@@ -28,6 +38,7 @@ module mod_sparse_data
     type(type_STRUMPACK_SOLVER) :: spss
 #endif
     type(type_PRECOND)          :: pc
+    type(type_newton_solver)    :: newton
 
     integer                     :: index_now                           !< current time step index (absolute)
     real(kind=8)                :: tstep                               !< current time step value
@@ -118,7 +129,35 @@ module mod_sparse_data
     self%equilibrium  = .false.
     self%verbose      = .true.
 
+    call self%newton%newton_finalize()
+
     return
   end subroutine finalize
+
+!> Set Newton parameters
+  subroutine newton_setup(self)
+    use phys_module, only: maxNewton, gamma_Newton, alpha_Newton
+    class(type_newton_solver)     :: self
+
+    self%maxNewton = maxNewton
+    self%gamma_Newton = gamma_Newton
+    self%alpha_Newton = alpha_Newton
+    return
+  end subroutine newton_setup
+
+!> Finalize Newton solver
+  subroutine newton_finalize(self)
+    class(type_newton_solver)     :: self
+
+    if (associated(self%store_value)) deallocate(self%store_value)
+    if (associated(self%store_delta)) deallocate(self%store_delta)
+
+    self%store_value => null()
+    self%store_delta => null()
+    self%maxNewton = 20
+    self%gamma_Newton = 0.5
+    self%alpha_Newton = 2.d0
+    return
+  end subroutine newton_finalize
 
 end module mod_sparse_data

@@ -5285,7 +5285,7 @@ subroutine calculate_sc_quantities()
   R_Te     = 0.d0
   R_T      = 0.d0
   R_rhon   = 0.d0
-  R_rhoimp = rhoimp0_corr * divU + UgradRhoimp
+  R_rhoimp = 0.d0
   
   ! total pressure including neutrals and impurities
   if ( with_TiTe ) then
@@ -5313,6 +5313,7 @@ subroutine calculate_sc_quantities()
       rhoe_eff = rho0_corr
       R_Ti = UgradTi + (gamma-1.d0) * pi0 / rhoi_eff * divU
       R_Te = UgradTe + (gamma-1.d0) * pe0 / rhoe_eff * divU
+      R_rhon   = 0.d0
 
       d_p   = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te + Ti0 * R_rhon
     endif
@@ -5328,6 +5329,7 @@ subroutine calculate_sc_quantities()
       rhoe_eff = rho0_corr + alpha_e*rhoimp0 + rhoimp0*Te0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT
       R_Ti = UgradTi + (gamma-1.d0) * (pi0 + alpha_i*rhoimp0*Ti0) / rhoi_eff * divU
       R_Te = UgradTe + (gamma-1.d0) * (pe0 + alpha_e*rhoimp0*Te0) / rhoe_eff * divU
+      R_rhoimp = rhoimp0_corr * divU + UgradRhoimp
 
       d_p   = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te + (alpha_i*Ti0 + alpha_e*Te0 + (gamma-1.d0)*E_ion) * R_rhoimp
     endif
@@ -5354,6 +5356,7 @@ subroutine calculate_sc_quantities()
 
       rho_eff  = rho0_corr 
       R_T      = UgradT + (gamma-1.d0) * p0 / rho_eff * divU
+      R_rhon   = 0.d0
 
       d_p      = T0 * R_rho + rho_eff * R_T + T0 * R_rhon
     endif
@@ -5367,6 +5370,7 @@ subroutine calculate_sc_quantities()
 
       rho_eff  = rho0_corr + alpha_imp*rhoimp0 + rhoimp0*dalpha_imp_dT*T0 + (gamma-1.d0)*rhoimp0*dE_ion_dT
       R_T      = UgradT + (gamma-1.d0) * (p0 + alpha_imp*rhoimp0*T0) / rho_eff * divU
+      R_rhoimp = rhoimp0_corr * divU + UgradRhoimp
 
       d_p      = T0 * R_rho + rho_eff * R_T + (alpha_imp*T0 + (gamma-1.0d0)*E_ion) * R_rhoimp
     endif

@@ -9,10 +9,11 @@ contains
 subroutine log_parameters(my_id, short)
 
 use phys_module
-use mumps_module,  only: no_zeros_mumps, mumps_ordering
-use pastix_module, only: no_zeros_pastix, pastix_smp_only, pastix_pivot, pastix_maxthrd
 use vacuum
 use gauss, only: n_gauss
+#ifdef USE_CATALYST
+  use mod_catalyst_adaptor, only: catalyst_scripts
+#endif
 
 implicit none
 
@@ -167,6 +168,13 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
 
 write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
 #ifdef USE_BICGSTAB
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
+#ifdef USE_CATALYST
   write(*,*) 'on'
 #else
   write(*,*) 'off'
@@ -591,6 +599,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,REAL_FMT) 'Te_min_ZKpar          ', Te_min_ZKpar
   write(*,REAL_FMT) 'ne_SI_min             ', ne_SI_min
   write(*,REAL_FMT) 'Te_eV_min             ', Te_eV_min
+  write(*,REAL_FMT) 'implicit_heat_source  ', implicit_heat_source
   write(*,REAL_FMT) 'rn0_min               ', rn0_min
   write(*,REAL_FMT) 'rho_min               ', rho_min
   write(*,REAL_FMT) 'rho_min_neg           ', rho_min_neg
@@ -643,6 +652,7 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
     write(*,REA3_FMT) 'z_limiter             ', z_limiter(1:min(9,n_limiter))
   end if
 
+  write(*,LOGI_FMT) 'CARIDDI_mode          ', CARIDDI_mode
   write(*,LOGI_FMT) 'freeboundary_equil    ', freeboundary_equil
   write(*,LOGI_FMT) 'freeboundary          ', freeboundary
   write(*,LOGI_FMT) 'freeb_change_indices  ', freeb_change_indices
@@ -759,7 +769,6 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'use_mumps_eq          ', use_mumps_eq
   write(*,LOGI_FMT) 'use_pastix_eq         ', use_pastix_eq
   write(*,LOGI_FMT) 'use_strumpack_eq      ', use_strumpack_eq  
-  write(*,LOGI_FMT) 'pastix_smp_only       ', pastix_smp_only
   write(*,REAL_FMT) 'pastix_pivot          ', pastix_pivot
   write(*,INTG_FMT) 'pastix_maxthrd        ', pastix_maxthrd
   write(*,LOGI_FMT) 'refinement            ', refinement
@@ -768,13 +777,15 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
   write(*,LOGI_FMT) 'equil                 ', equil
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
-  write(*,LOGI_FMT) 'no_zeros_mumps        ', no_zeros_mumps
-  write(*,LOGI_FMT) 'no_zeros_pastix       ', no_zeros_pastix
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
   write(*,LOGI_FMT) 'deuterium_adas_1e20   ', deuterium_adas_1e20
   write(*,LOGI_FMT) 'old_deuterium_atomic  ', old_deuterium_atomic
   write(*,LOGI_FMT) 'no_mach1_bc           ', no_mach1_bc
+  write(*,LOGI_FMT) 'use_newton            ', use_newton
+  write(*,INTG_FMT) 'maxNewton             ', maxNewton
+  write(*,REAL_FMT) 'gamma_Newton          ', gamma_Newton
+  write(*,REAL_FMT) 'alpha_Newton          ', alpha_Newton
 
 #ifdef fullmhd
     write(*,LOGI_FMT) 'Mach1_openBC          ', Mach1_openBC
@@ -937,7 +948,10 @@ write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
   write(*,LOGI_FMT) 'use_pcs,            ',use_pcs
   write(*,LOGI_FMT) 'use_ionisation,     ',use_ionisation    
   write(*,LOGI_FMT) 'use_sputtering,     ',use_sputtering    
-  write(*,LOGI_FMT) 'use_cx,             ',use_cx            
+  write(*,LOGI_FMT) 'use_cx,             ',use_cx
+#ifdef USE_CATALYST
+  write(*,CHAR_FMT) 'catalyst_scripts,   ',trim(catalyst_scripts)
+#endif
 
   write(*,*)
   write(*,200)

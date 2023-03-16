@@ -2,10 +2,13 @@
 !! and flux surface elements, as well as the shattered pellets
 module data_structure
   use mod_parameters
+  use mod_integer_types
   use tr_module
   use gauss
-  use ISO_C_BINDING, ONLY : C_INT
+  use ISO_C_BINDING, ONLY : C_INT, C_DOUBLE
+  use mod_sparse_matrix, only: type_SP_MATRIX
 
+  
   implicit none
 
   type type_node                                  !< type definition of a node (i.e. a vertex)
@@ -29,12 +32,14 @@ module data_structure
     integer    :: parent_elem                     !< which element do parent nodes belong to ? "refinement"
     real*8     :: ref_lambda, ref_mu              !< Local coordinates of node inside the parent element. "refinement"
     logical    :: constrained                     !< Constrained node or not..."refinement"
+    
   end type type_node
 
   type type_node_list                             !< type definition of a list of nodes
     integer            :: n_nodes                 !< the number of nodes in the list
     integer            :: n_dof                   !< the total number of degrees of freedom
     type (type_node)   :: node(n_nodes_max)       !< an allocatable list of nodes
+    
   end type type_node_list
 
   type type_element                               !< type definition for one elements
@@ -141,7 +146,57 @@ module data_structure
     integer :: plasmoid_in_domain    !< Flag representing whether (post-teleportation) plasmoids are in computational domain
                                      !! this is only relevant if drift_distance /= 0
   end type type_SPI
- 
+  
+  !> RHS vector type
+  type type_RHS
+    real(kind=8), dimension(:), pointer :: val => Null()
+    integer(kind=int_all)               :: n                    !< vector length
+  end type type_RHS  
+  
+  !> Preconditioner type  
+  type type_PRECOND
+    type(type_SP_MATRIX)                         :: mat                           !< PC matrix structure
+    type(type_RHS)                               :: rhs                           !< PC rhs structure
+    
+    integer                                      :: n_mode_families               !< number of mode families (input)
+    integer, dimension(:), pointer               :: modes_per_family => Null()    !< number of toroidal modes per mode family (input)    
+    integer, dimension(:), pointer               :: ranks_per_family => Null()    !< number of MPI tasks per mode family (input)
+    logical                                      :: autodistribute_modes          !< if true - use single mode par family (input)
+    logical                                      :: autodistribute_ranks          !< if true - distribute MPI ranks equally between mode families (input)
+    integer(kind=int_all), dimension(:), pointer :: row_index => Null()           !< Row indices of local mode family in global RHS
+    real(kind=8)                                 :: row_factor                    !< Multiplying factor of current mode family in global RHS           
+
+    integer                                      :: family_id                     !< family id (MPI private)
+    integer                                      :: mode_set_n                    !< number of modes in current mode family    
+    integer, dimension(:), pointer               :: mode_set => Null()            !< toroidal modes in current mode family
+    integer, dimension(:,:), pointer             :: mode_families_ranks => Null() !< MPI ranks which belong to each mode family
+    integer, dimension(:,:), pointer             :: mode_families_modes => Null() !< Toroidal modes which belong to each mode family
+    
+    integer, dimension(:), pointer               :: rank_range => Null()          !< range of MPI ranks which belong to mode families
+    integer                                      :: my_id, n_cpu, comm    
+    integer                                      :: my_id_n, n_cpu_n, MPI_COMM_N
+    integer                                      :: my_id_master, n_masters, MPI_COMM_MASTER, MPI_COMM_TRANS, MPI_GROUP_WORLD, MPI_GROUP_MASTER
+! the following variables are used in PC distribution (they are set only once to save computation time)
+    integer, dimension(:,:), pointer             :: send_counts => Null()         !< number of entries sent to each other MPI ranks (PC distribution)
+    integer, dimension(:,:), pointer             :: recv_counts => Null()         !< number of entries received from each other MPI ranks (PC distribution)
+    integer, dimension(:,:), pointer             :: send_disp => Null()           !< send dispalcements for mpi_alltoallv (PC distribution)
+    integer, dimension(:,:), pointer             :: splt_disp => Null()           !< receive displacement for split communication
+    integer(kind=int_all), dimension(:,:), pointer :: recv_disp => Null()           !< receive dispalcements for mpi_alltoallv (PC distribution)
+    integer(kind=int_all), dimension(:), pointer :: istart => Null()              !< start-index for split communication
+    integer(kind=int_all), dimension(:), pointer :: ifinish => Null()             !< end-index for split communication
+    integer                                      :: nsplit                        !< number of communication splits
+    integer(kind=int_all), dimension(:), pointer :: n_per_rank => Null()          !< min number of rows/cols per MPI rank for each family
+
+    logical                                      :: initialized = .false.
+    logical                                      :: structured = .false.          !< flag indicating the allocation of PC matrix structure
+    integer(kind=int_all)                        :: n_glob                        !< global number of unknowns
+    
+#ifdef DIRECT_CONSTRUCTION
+    integer, dimension(:), pointer               :: local_elms => null()
+    integer                                      :: n_local_elms
+#endif    
+  end type type_PRECOND
+
   integer                                         , public :: nbthreads
   TYPE(type_thread_buffer), dimension(:), pointer , public :: thread_struct => NULL()
   
@@ -253,7 +308,7 @@ contains
     call tr_unregister_mem(sizeof(thread_struct),"thread_struct",CAT_MATELEM)
     deallocate(thread_struct)
   end subroutine del_thread_buffers
-  
+
 end module data_structure
 
 

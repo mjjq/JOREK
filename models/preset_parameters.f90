@@ -6,8 +6,6 @@
 subroutine preset_parameters
   
   use phys_module
-  use mumps_module,  only: no_zeros_mumps, mumps_ordering
-  use pastix_module, only: no_zeros_pastix, pastix_smp_only
   
   implicit none
   
@@ -254,6 +252,8 @@ subroutine preset_parameters
   Ti_min_ZKpar       = -1.d12 
   Te_min_ZKpar       = -1.d12 
   rho_min_neg        = -1.d12
+  
+  implicit_heat_source = 0.d0
   
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
@@ -632,14 +632,17 @@ subroutine preset_parameters
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
 
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
-  no_zeros_pastix    = .false.              ! .true. to remove nonzeros in the preconditioning matrix with MUMPS
-  no_zeros_mumps     = .false.              ! .true. to remove nonzeros in the preconditioning matrix with PaStiX
 
   mumps_ordering     = 7                    ! MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS)
   use_BLR_compression = .false.             ! Use MUMPS / PaStiX 6 solver with Block-low-rank (BLR) compression
   pastix_blr_abs_tol = .true.               ! Use absolute tolerance
   epsilon_BLR        = 0.                   ! Accuracy of BLR compression (0. = lossless)
   just_in_time_BLR   = .true.               ! Use Just-in-time strategy for BLR compression (.false. = memory-optimal)
+  pastix_maxthrd     = 1024
+  use_newton         = .false.
+  maxNewton          = 20
+  gamma_Newton       = 0.5
+  alpha_Newton       = 2.d0
 
   
 !==== RMP parameters =====

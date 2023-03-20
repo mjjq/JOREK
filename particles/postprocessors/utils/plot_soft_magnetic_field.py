@@ -41,7 +41,7 @@ separator="/",fontsize=32,linewidth=3,markersize=3):
   if(len(lcfs)!=0):
     ax[0].plot(lcfs[0,:],lcfs[1,:],color='r',linewidth=linewidth)
   if(len(wall)!=0):
-    ax[0].plot(wall[0,:],wall[1,:],color='r',linewidth=linewidth)
+    ax[0].plot(wall[0,:],wall[1,:],color='g',linewidth=linewidth)
   ax[0].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[0].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
   ax[0].set_title('Radial magnetic field',fontsize=fontsize)
@@ -52,10 +52,10 @@ separator="/",fontsize=32,linewidth=3,markersize=3):
   ax[1].set_aspect('equal')
   ax[1].set_xlabel('R [m]',fontsize=fontsize)
   ax[1].set_ylabel('Z [m]',fontsize=fontsize)
-  if(len(wall)!=0):
-    ax[1].plot(wall[0,:],wall[1,:],color='r',linewidth=linewidth)
   if(len(lcfs)!=0):
     ax[1].plot(lcfs[0,:],lcfs[1,:],color='r',linewidth=linewidth)
+  if(len(wall)!=0):
+    ax[1].plot(wall[0,:],wall[1,:],color='g',linewidth=linewidth)
   ax[1].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
   ax[1].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[1].set_title('Vertical magnetic field',fontsize=fontsize)
@@ -69,7 +69,7 @@ separator="/",fontsize=32,linewidth=3,markersize=3):
   if(len(lcfs)!=0):
     ax[2].plot(lcfs[0,:],lcfs[1,:],color='r',linewidth=linewidth)
   if(len(wall)!=0):
-    ax[2].plot(wall[0,:],wall[1,:],color='r',linewidth=linewidth)
+    ax[2].plot(wall[0,:],wall[1,:],color='g',linewidth=linewidth)
   ax[2].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
   ax[2].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[2].set_title('Toroidal magnetic field',fontsize=fontsize)
@@ -83,7 +83,7 @@ separator="/",fontsize=32,linewidth=3,markersize=3):
   if(len(lcfs)!=0):
     ax[3].plot(lcfs[0,:],lcfs[1,:],color='r',linewidth=linewidth)
   if(len(wall)!=0):
-    ax[3].plot(wall[0,:],wall[1,:],color='r',linewidth=linewidth)
+    ax[3].plot(wall[0,:],wall[1,:],color='g',linewidth=linewidth)
   ax[3].plot(axis[0],axis[1],marker='o',markersize=markersize,markerfacecolor='r',markeredgecolor='r')
   ax[3].scatter(R_minor_radii,Z_minor_radii,marker='s',s=markersize,color='r')
   ax[3].set_title('Poloidal flux',fontsize=fontsize)

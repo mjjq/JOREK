@@ -19,8 +19,8 @@ type(event)                 :: field_reader
 type(type_surface_list)     :: flux_surfaces
 type(type_bnd_node_list)    :: bnd_node_list
 type(type_bnd_element_list) :: bnd_elm_list
-logical                     :: write_wall
-integer                     :: my_id,n_cpus,ierr,i_elm_axis,ii
+logical                     :: write_wall,use_boundary_lcfs
+integer                     :: my_id,n_cpus,ierr,i_elm_axis,ii,n_points_lcfs
 integer                     :: n_vec,n_R,n_Z,n_R_loc,n_momenta,n_pitch
 integer                     :: n_flux,n_flux_loc,errorcode,charge,n_LCFS
 real*8                      :: time,tor_angle,psi_axis,flux_axis_tol,mass
@@ -38,7 +38,8 @@ character(len=17) :: pdf_filename
 character(len=63) :: soft_mag_name
 character(len=78) :: soft_desc
 !> Variables definitions --------------------------------------------------------------------------------
-write_wall      =.false. !< write the tokamak wall in soft hdf5
+write_wall        = .false. !< write the tokamak wall in soft hdf5
+use_boundary_lcfs = .true.  !< use the plasma boundary as separatrix
 !> if true the order of the pitch mesh and of the distribution function along
 n_vec           = 3      !< number of vector components
 n_R             = 202    !< total number of radial points
@@ -47,6 +48,7 @@ n_flux          = 100    !< number of flux surfaces / minor radii
 n_momenta       = 101    !< number of nodes of the momentum mesh
 n_pitch         = 101    !< number of nodes of the pitch angle mesh
 charge          = -1     !< electron charge w.r.t. proton charge
+n_points_lcfs   = 5      !< number of separatrix point per separatrix segment
 mass            = 5.48579909065d-4 !< electron mass in AMU
 time            = 0d0  !< simulation time
 tor_angle       = 0d0  !< toroidal angle
@@ -88,10 +90,18 @@ n_flux_loc = n_flux/n_cpus; n_flux_loc = max(n_flux - (n_cpus-1)*n_flux_loc,n_fl
 n_flux = n_flux_loc*n_cpus; allocate(flux_minor_radii_Zmag_LFS(n_flux_loc));
 flux_minor_radii_Zmag_LFS = 0d0; flux_surfaces%n_psi = n_flux_loc; 
 allocate(flux_surfaces%psi_values(flux_surfaces%n_psi));
-!> Assume the LCFS to be at the RZ_boundary
-!> TODO IMPLEMENT A METHOD FOR FINDING THE SEPARATRIX
-n_LCFS = n_boundary; allocate(RZ_LCFS(2,n_LCFS)); 
-RZ_LCFS(1,:) = R_boundary(1:n_LCFS); RZ_LCFS(2,:) = Z_boundary(1:n_LCFS);
+!> Find the separatrix coordinates
+call find_axis(my_id,sim%fields%node_list,sim%fields%element_list,psi_axis,RZ_axis(1),RZ_axis(2),&
+i_elm_axis,st_axis(1),st_axis(2),ierr) !< compute the magnetic axis position
+if(use_boundary_lcfs) then 
+  !> use the plasma boundary as separatrix
+  n_LCFS = n_boundary; allocate(RZ_LCFS(2,n_LCFS)); 
+  RZ_LCFS(1,:) = R_boundary(1:n_LCFS); RZ_LCFS(2,:) = Z_boundary(1:n_LCFS);
+else
+  !> find the separatrix
+  call find_and_compute_separatrix(sim%fields,my_id,xpoint,xcase,n_points_lcfs,&
+  ES%psi_bnd,RZ_axis,n_LCFS,RZ_LCFS)
+endif
 !> allocate and initialise momentum mesh, pitch angle mesh and particle distribution
 momentum_bnd = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekin_bnd/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
 allocate(momentum_mesh(n_momenta)); call generate_equidistant_mesh_1d(n_momenta,momentum_bnd,momentum_mesh);
@@ -106,8 +116,6 @@ write(*,*) "Initialise distribution function computation: completed!"
 
 !> Compute and write soft inputs ------------------------------------------------------------------------
 write(*,*) "Generate computational mesh ..."
-call find_axis(my_id,sim%fields%node_list,sim%fields%element_list,psi_axis,RZ_axis(1),RZ_axis(2),&
-i_elm_axis,st_axis(1),st_axis(2),ierr) !< compute the magnetic axis position
 call generate_equidistant_RZ_mesh(sim%fields,n_R,n_Z,R_mesh,Z_mesh); allocate(flux_mesh(n_flux));
 call generate_equidistant_poloidal_flux_mesh(n_flux,ES%psi_axis,ES%psi_bnd,flux_axis_tol,flux_mesh)
 flux_surfaces%psi_values = flux_mesh(n_flux_loc*my_id+1:n_flux_loc*(my_id+1)); deallocate(flux_mesh); 
@@ -475,7 +483,8 @@ subroutine find_LFS_minor_radius_flux_surface(fields,fluxes,RZ_axis,flux_minor_r
       !> check if the magnetic axis vertical position is within the element
       !> and the element at the LFS (R>=R_axis)
       if(any(RZ_axis(1).le.R_nodes)) cycle 
-      !> TODO ADD TOLERANCE IN Z COMPARISON FOR TAKING INTO ACCOUNT CUBIC INTERPOLATION
+      !> it may require the addition of a tolerance in Z for taking into
+      !> into account the cubic interpolation
       if(all((Z_nodes.gt.RZ_axis(2))).or.all((Z_nodes.lt.RZ_axis(2)))) cycle
       !> find the nearest point at Z_axis on the flux surface
       ids_to_test = [jj,jj-1,jj+1]
@@ -766,6 +775,110 @@ n_momenta,n_pitch,minor_radii_task,momentum_mesh,cospitch_mesh,pdf)
     deallocate(pdf_local)
   endif
 end subroutine write_soft_distribution_function
+
+!> find points on the separatrix (last close flux surface)
+!> inputs:
+!>   fields:   (fields_base) JOREK MHD field type
+!>   my_id:    (integer) rank of the MPI task
+!>   xpoint:   (logical) if true a x-point lcfs is found
+!>   xcase:    (integer) type of x-point case
+!>   n_points: (integer) number of lcfs RZ points per segment
+!>   psi_bnd:  (real8) flux of the plasma boundary
+!>   RZ_mag:   (real8)(2) 1- R and 2-Z coordinates of the magnetic axis
+!> outputs:
+!>   n_lcfs:   (integer) number of RZ points of the lcfs
+!>   RZ_lcfs:  (real8)(2,n_lcfs) 1-R and 2-Z coordinates of the lcfs
+subroutine find_and_compute_separatrix(fields,my_id,xpoint,xcase,n_points,&
+psi_bnd,RZ_mag,n_lcfs,RZ_lcfs)
+  use constants,      only: TWOPI
+  use data_structure, only: type_surface_list
+  use mod_interp,     only: interp_RZ
+  use mod_fields,     only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base) :: fields
+  logical,intent(in) :: xpoint
+  integer,intent(in) :: my_id,xcase,n_points
+  real*8,intent(in)  :: psi_bnd
+  real*8,dimension(2),intent(in) :: RZ_mag
+  !> outputs:
+  integer,intent(out)                           :: n_lcfs
+  real*8,dimension(:,:),allocatable,intent(out) :: RZ_lcfs
+  !> variables:
+  type(type_surface_list) :: lcfs_list
+  integer                 :: jj,kk,i_elm
+  real*8                  :: ss1,dss1,ss2,dss2,tt1,dtt1,tt2,dtt2
+  real*8                  :: u,si,ti,dsi,dti
+  real*8,dimension(:),allocatable :: theta_lcfs
+  !> find the separatrix
+  lcfs_list%n_psi=1; allocate(lcfs_list%psi_values(lcfs_list%n_psi));
+  lcfs_list%psi_values(1) = psi_bnd;
+  call find_flux_surfaces(my_id,xpoint,xcase,fields%node_list,fields%element_list,lcfs_list);
+  n_lcfs = lcfs_list%flux_surfaces(1)%n_pieces*n_points; allocate(RZ_lcfs(2,n_lcfs));
+  allocate(theta_lcfs(n_lcfs));
+  !> compute RZ positions of the different segments, loop on the segments
+  do jj=1,lcfs_list%flux_surfaces(1)%n_pieces
+    !> extract data of the segment element
+    i_elm = lcfs_list%flux_surfaces(1)%elm(jj)
+    ss1   = lcfs_list%flux_surfaces(1)%s(1,jj)
+    dss1  = lcfs_list%flux_surfaces(1)%s(2,jj)
+    ss2   = lcfs_list%flux_surfaces(1)%s(3,jj)
+    dss2  = lcfs_list%flux_surfaces(1)%s(4,jj)
+    tt1   = lcfs_list%flux_surfaces(1)%t(1,jj)
+    dtt1  = lcfs_list%flux_surfaces(1)%t(2,jj)
+    tt2   = lcfs_list%flux_surfaces(1)%t(3,jj)
+    dtt2  = lcfs_list%flux_surfaces(1)%t(4,jj)
+    !> loop over the points of the segment for computing the RZ positions
+    do kk=1,n_points
+      u = -1d0 + 2d0*real(kk-1,kind=8)/real(n_points-1,kind=8)
+      !> compute the s and t values of the point in the i_elm element
+      call CUB1D(ss1,dss1,ss2,dss2,u,si,dsi)
+      call CUB1D(tt1,dtt1,tt2,dtt2,u,ti,dti)
+      !> interpolate the lcfs position
+      call interp_RZ(fields%node_list,fields%element_list,i_elm,si,ti, &
+      RZ_lcfs(1,(jj-1)*n_points+kk),RZ_lcfs(2,(jj-1)*n_points+kk))
+    enddo
+  enddo
+  !> sorting the lcfs
+  theta_lcfs = atan2(RZ_lcfs(2,:)-RZ_mag(2),RZ_lcfs(1,:)-RZ_mag(1))
+  where(theta_lcfs.gt.0d0) theta_lcfs = TWOPI+theta_lcfs
+  call sort(RZ_lcfs(1,:),RZ_lcfs(2,:),theta_lcfs,n_lcfs)
+  !> clean-up
+  if(allocated(lcfs_list%psi_values))    deallocate(lcfs_list%psi_values)
+  if(allocated(lcfs_list%flux_surfaces)) deallocate(lcfs_list%flux_surfaces)
+  if(allocated(theta_lcfs))              deallocate(theta_lcfs)
+end subroutine find_and_compute_separatrix
+
+!> basic sorting algorithm three arrays given one ordering
+!> inputs:
+!>   x:     (real8)(n_elem) array to be sorted
+!>   y:     (real8)(n_elem) array to be sorted
+!>   z:     (real8)(n_elem) array to be sorted
+!>   n_elm: (integer) number of elements in the array
+!> outputs:
+!>   x: (real8)(n_elem) array to be sorted w.r.t. z
+!>   y: (real8)(n_elem) array to be sorted w.r.t. z
+!>   z: (real8)(n_elem) array to be sorted
+subroutine sort(x,y,z,n_elem)
+  implicit none
+  !> inputs:
+  integer,intent(in)                     :: n_elem
+  !> input-outputs:
+  real*8,dimension(n_elem),intent(inout) :: x,y,z
+  !> variables:
+  integer :: jj,ii
+  real*8  :: tmp
+  !> sort from minimum to maximum 
+  do ii=1,n_elem-1
+    do jj=ii+1,n_elem
+      if(z(jj).lt.z(ii)) then
+        tmp = x(ii); x(ii) = x(jj); x(jj) = tmp;
+        tmp = y(ii); y(ii) = y(jj); y(jj) = tmp;
+        tmp = z(ii); z(ii) = z(jj); z(jj) = tmp;
+      endif
+    enddo
+  enddo
+end subroutine sort
 
 !> ------------------------------------------------------------------------------------------------------
 end program generate_input_files_for_SOFT

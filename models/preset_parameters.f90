@@ -253,6 +253,8 @@ subroutine preset_parameters
   Te_min_ZKpar       = -1.d12 
   rho_min_neg        = -1.d12
   
+  implicit_heat_source = 0.d0
+  
   corr_neg_temp_coef(:) = (/ 0.5, 0.5 /)
   corr_neg_dens_coef(:) = (/ 0.5, 0.5 /)
 
@@ -637,6 +639,10 @@ subroutine preset_parameters
   epsilon_BLR        = 0.                   ! Accuracy of BLR compression (0. = lossless)
   just_in_time_BLR   = .true.               ! Use Just-in-time strategy for BLR compression (.false. = memory-optimal)
   pastix_maxthrd     = 1024
+  use_newton         = .false.
+  maxNewton          = 20
+  gamma_Newton       = 0.5
+  alpha_Newton       = 2.d0
 
   
 !==== RMP parameters =====

@@ -26,7 +26,7 @@ time                = 0d0                 !< simulation time
 mass                = 5.48579909065d-4    !< electron mass in AMU 
 charge              = -1d0                !< electron charge
 fields_filename     = 'jorek_equilibrium' !< jorek restart filename
-particle_filename   = 'part_restart.h5'   !< particle restart filename 
+particle_filename   = 'part_restart_soft_orbits.h5' !< particle restart filename 
 soft_orbit_filename = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall' !< soft orbit filename
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator

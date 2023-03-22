@@ -132,9 +132,8 @@ n_vec,n_orbits,n_t_steps,soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
         else
           p%x = RZphi; p%st = st; p%weight = 1d0; p%i_elm = i_elm; p%i_life = 0; p%t_birth = 0.;
           call sim%fields%calc_EBpsiU(time,i_elm,st,RZphi(3),E_field,B_field,psi,U)
-          p%p = ATOMIC_MASS_UNIT*[soft_orbit_ppar(jj,ii),&
-          (5d-1*ATOMIC_MASS_UNIT*(soft_orbit_pperp(jj,ii)**2))/(mass*norm2(B_field))]; 
-          p%q = int(charge,kind=1);
+          p%p = ATOMIC_MASS_UNIT*[soft_orbit_ppar(jj,ii),(5d-1*ATOMIC_MASS_UNIT*(soft_orbit_pperp(jj,ii)**2))/&
+          (mass*norm2(B_field))]; p%q = int(charge,kind=1);
         endif
       end select
     enddo

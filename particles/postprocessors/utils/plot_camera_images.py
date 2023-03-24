@@ -53,11 +53,36 @@ separator="/"):
   plt.show()
   return
 
+def generate_argument_parser():
+  import argparse
+  parser = argparse.ArgumentParser(\
+  description='read and plot fast camera image and filter')
+  parser.add_argument('-f','--filename',type=str,action='store',\
+  dest='filename',default='pixel_filter_intensities.h5',\
+  help='name of the file to be read')
+  parser.add_argument('--filepath','-fp',type=str,required=False,\
+  dest='filepath',action='store',default='.',\
+  help='path to the image/filter hdf5 files to be loaded, default: .')
+  parser.add_argument('--separator','-sep',type=str,required=False,\
+  dest='separator',action='store',default='/',help='file separator, default: /')
+  parser.add_argument('--image_datasetname','-imdset',type=str,required=False,\
+  dest='image_datasetname',action='store',default='pixel_filter_intensities',\
+  help='image-filter dataset name')
+  parser.add_argument('--x_pixel_coordinates_datasetname','-icx',type=str,\
+  required=False,dest='pixel_x_postion_datasetname',action='store',\
+  default='x_pixel_coordinates',help='x position coordinates dataset name')
+  parser.add_argument('--y_pixel_coordinates_datasetname','-icy',type=str,\
+  required=False,dest='pixel_y_postion_datasetname',action='store',\
+  default='y_pixel_coordinates',help='y position coordinates dataset name')
+  return parser.parse_args()
+
 # Run main ------------------------------------------------------ #
 if __name__ == "__main__":
-  load_and_plot_images(filename="pixel_filter_intensities.h5",\
-  filepath=".",image_datasetname="pixel_filter_intensities",\
-  pixel_x_postion_datasetname="x_pixel_coordinates",\
-  pixel_y_postion_datasetname="y_pixel_coordinates")
+  args = generate_argument_parser()
+  load_and_plot_images(filename=args.filename,\
+  filepath=args.filepath,image_datasetname=args.image_datasetname,\
+  pixel_x_postion_datasetname=args.pixel_x_postion_datasetname,\
+  pixel_y_postion_datasetname=args.pixel_y_postion_datasetname,\
+  separator=args.separator)
 
 # --------------------------------------------------------------- #

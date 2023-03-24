@@ -93,10 +93,36 @@ separator="/",fontsize=32,linewidth=3,markersize=3):
   plt.show()
   return
 
+def generate_argument_parser():
+  import argparse
+  parser = argparse.ArgumentParser(\
+  description='read and plot the soft-compatible magnetic fields')
+  parser.add_argument('--magfilename','-mf',type=str,action='store',\
+  required=False,default='magnetic_field_jorek_to_soft.h5',\
+  dest='magfilename',help='name of the soft-compatible magnetic field file')
+  parser.add_argument('--pdffilename','-pdff',type=str,action='store',\
+  required=False,default='pdf_jorek_to_soft.h5',\
+  dest='pdffilename',help='name of the soft-compatible pdf file')
+  parser.add_argument('--filepath','-fp',type=str,required=False,\
+  dest='filepath',action='store',default='.',\
+  help='path to light and camera hdf5 files to be loaded, default: .')
+  parser.add_argument('--separator','-sep',type=str,required=False,\
+  dest='separator',action='store',default='/',help='file separator, default: /')
+  parser.add_argument('--fontsize','-fsize',type=int,required=False,\
+  dest='fontsize',action='store',default=32,help='figures font size: 32')
+  parser.add_argument('--markersize','-msize',type=int,required=False,\
+  dest='markersize',action='store',default=3,help='figures marker size: 3')
+  parser.add_argument('--linewidth','-lwidth',type=int,required=False,\
+  dest='linewidth',action='store',default=3,help='figures line width: 3')
+  return parser.parse_args()
+
 # Run main ------------------------------------------------------ #
 if __name__ == "__main__":
-  load_and_plot_images(magfilename="magnetic_field_jorek_to_soft.h5",
-  pdffilename="pdf_jorek_to_soft.h5",filepath=".")
+  args = generate_argument_parser()
+  load_and_plot_images(magfilename=args.magfilename,
+  pdffilename=args.pdffilename,filepath=args.filepath,\
+  separator=args.separator,fontsize=args.fontsize,\
+  markersize=args.markersize,linewidth=args.linewidth)
 
 # --------------------------------------------------------------- #
 

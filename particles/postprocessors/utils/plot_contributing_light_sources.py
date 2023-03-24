@@ -177,7 +177,7 @@ linewidth=3,fontsize=16):
 #   image_plane_directions: viewing directions of each
 #     image plane
 def load_and_plot_contributing_light_sources(\
-light_filenames=[],camera_filenames=[],filepath="",\
+light_filenames=[],camera_filenames=[],filepath=".",\
 light_dataset=["contributing_light_positions","contributing_light_intensities",\
 "limiter_major_radius","limiter_vertical_coordinate"],\
 camera_dataset=["point_on_lens_positions","image_plane_vertices",\
@@ -192,24 +192,33 @@ camera_dataset=["point_on_lens_positions","image_plane_vertices",\
   # Plot data
   plot_light_and_camera_data(light_data,camera_data)
 
+def generate_argument_parser():
+  import argparse
+  parser = argparse.ArgumentParser(\
+  description='read and plot particles contributing to an image')
+  parser.add_argument('--light_names','-ln',type=str,nargs='*',\
+  action='store',required=True,help='list of ligth files to be read')
+  parser.add_argument('--camera_names','-cn',type=str,nargs='*',\
+  action='store',required=True,help='list of camera files to be read')
+  parser.add_argument('--filepath','-fp',type=str,required=False,\
+  dest='filepath',action='store',default='.',\
+  help='path to light and camera hdf5 files to be loaded, default: .')
+  parser.add_argument('--separator','-sep',type=str,required=False,\
+  dest='separator',action='store',default='/',help='file separator, default: /')
+  parser.add_argument('--light_dataset','-ldset',type=str,nargs='*',required=False,\
+  dest='light_dataset',action='store',default=["contributing_light_positions",\
+  "contributing_light_intensities","limiter_major_radius",\
+  "limiter_vertical_coordinate"],help='light datasets to be loaded')
+  parser.add_argument('--camera_dataset','-cdset',type=str,nargs='*',required=False,\
+  dest='camera_dataset',action='store',default=["point_on_lens_positions","image_plane_vertices",\
+  "image_plane_directions"],help='camera datasets to be loaded')
+  return parser.parse_args()
+
 # Run main -------------------------------------------- #
 if __name__ == "__main__":
-  light_names = ["contributing_light_intesities_0.h5",\
-  "contributing_light_intesities_1.h5"]#,"contributing_light_intesities_2.h5",\
-  #"contributing_light_intesities_3.h5","contributing_light_intesities_4.h5",\
-  #"contributing_light_intesities_5.h5","contributing_light_intesities_6.h5",\
-  #"contributing_light_intesities_7.h5","contributing_light_intesities_8.h5",\
-  #"contributing_light_intesities_9.h5","contributing_light_intesities_10.h5",\
-  #"contributing_light_intesities_11.h5"] 
-  camera_names = ["contributing_camera_intesities_0.h5",\
-  "contributing_camera_intesities_1.h5","contributing_camera_intesities_2.h5",\
-  "contributing_camera_intesities_3.h5","contributing_camera_intesities_4.h5",\
-  "contributing_camera_intesities_5.h5","contributing_camera_intesities_6.h5",\
-  "contributing_camera_intesities_7.h5","contributing_camera_intesities_8.h5",\
-  "contributing_camera_intesities_9.h5","contributing_camera_intesities_10.h5",\
-  "contributing_camera_intesities_11.h5"]
-  path = "."
-  fig=load_and_plot_contributing_light_sources(light_filenames=light_names,\
-  camera_filenames=camera_names,filepath=path)
+  args = generate_argument_parser()
+  fig=load_and_plot_contributing_light_sources(light_filenames=args.light_names,\
+  camera_filenames=args.camera_names,filepath=args.filepath,separator=args.separator,\
+  light_dataset=args.light_dataset,camera_dataset=args.camera_dataset)
 # ----------------------------------------------------- #
 

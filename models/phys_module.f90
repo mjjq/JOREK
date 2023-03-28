@@ -125,6 +125,13 @@ module phys_module
   logical :: use_wsmp             !< Use WSMP solver
   logical :: centralize_harm_mat  !< Centralize harmonic matrices on toridal master ranks; switch for STRUMPACK solver
   real*8  :: prev_FB_fact = 1.d0  !< FB_factor that had been applied when importing the restart file
+  integer :: mumps_ordering       !< MUMPS ordering option (7:automatic, 3:Scotch, 4:PORD, 5:METIS), default: 7
+  integer :: pastix_maxthrd       !< maximum number of threads used by pastix solver (could be beneficial to use the reduced number)
+  real*8  :: pastix_pivot         !< Pastix epsilon for magnitude control (pivot threshold)
+  logical :: use_newton           !< Use inexact Newton method
+  integer :: maxNewton            !< maximum number of Newton iterations
+  real(kind=8) :: gamma_Newton    !< Newton gamma-parameter: gmres_tol = gamma_Newton*(normRHScurrent/normRHSprevious)**alpha_Newton
+  real(kind=8) :: alpha_Newton    !< Newton alpha-parameter: gmres_tol = gamma_Newton*(normRHScurrent/normRHSprevious)**alpha_Newton
 
   ! ------------------------------------------------
   ! --- Structures to implement BCs in model600
@@ -269,6 +276,7 @@ module phys_module
   real*8  :: heatsource_gauss_e_sig    !< Width over which electrons Gaussian source extends
   real*8  :: heatsource_gauss_i_psin   !< Position around which ions Gaussian source is located
   real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
+  real*8  :: constant_imp_source       !< Adds a constant impurity source
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
   real*8  :: eta_num, visco_num, visco_par_num,                                      &
@@ -281,7 +289,7 @@ module phys_module
 
   !> @name Shock-capturing terms
   logical :: use_sc  !< Use shock-capturing stabilization
-  real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num
+  real*8  :: D_perp_sc_num, D_par_sc_num, Dn_pol_sc_num, Dn_p_sc_num, D_perp_imp_sc_num, D_par_imp_sc_num
   real*8  :: ZK_perp_sc_num, ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num, ZK_e_perp_sc_num, ZK_e_par_sc_num
   real*8  :: visco_sc_num, visco_par_sc_num
   logical :: eta_num_T_dependent     !< Hyper-resistivity dependent on temperature? Otherwise constant.
@@ -801,6 +809,7 @@ module phys_module
   real*8              :: tgnum_Te     
   real*8              :: tgnum_vpar   
   real*8              :: tgnum_rhon   
+  real*8              :: tgnum_rhoimp 
   real*8              :: tgnum_nre    
   real*8              :: tgnum_AR     
   real*8              :: tgnum_AZ    
@@ -810,8 +819,10 @@ module phys_module
   logical             :: keep_current_prof !< Artificial current source to approximately keep the initial current profile, i.e., \f$\eta(j-j0)\f$?
   
   !> @name Numerical parameters
-  real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative density
-  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if rho < D_prof_neg_thresh
+  real*8              :: D_prof_neg         !< Particle diffusion coefficient in regions with negative background species density
+  real*8              :: D_prof_neg_thresh  !< D_prof_neg becomes effective if r0-rimp0 < D_prof_neg_thresh
+  real*8              :: D_prof_imp_neg_thresh  !< D_prof_neg becomes effective if rimp0 < D_prof_imp_neg_thresh
+  real*8              :: D_prof_tot_neg_thresh  !< D_prof_neg becomes effective if r0 < D_prof_tot_neg_thresh
   real*8              :: ZK_prof_neg        !< Perp. heat diffusion coefficient in regions with negative temperature
   real*8              :: ZK_par_neg         !< Parallel diffusion coefficient in regions with negative temperature
   real*8              :: ZK_prof_neg_thresh !< ZK_prof_neg becomes effective if T < ZK_prof_neg_thresh
@@ -833,6 +844,7 @@ module phys_module
   real*8              :: rho_min            !< minimum density
   real*8              :: T_min_neg          !< minimum temperature,used for correcting negative values,in jorek units: 2.01d-5*central_density*Tmin_ev (preset central_density = 1, 20 eV)  
   real*8              :: rho_min_neg        !< minimum density, used for correcting negative values  
+  real*8              :: implicit_heat_source !< Choose = 1.d0 to fully switch on the implicit heat source for numerical stabilization
   
   real*8              :: ne_SI_min          !< minimum e density (in SI unit) below which we cut-off the radiation loss
   real*8              :: Te_eV_min          !< minimum temperature (in eV) below which we cut-off the radiation loss

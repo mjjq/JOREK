@@ -94,8 +94,11 @@ module mod_newton_solver
         deallocate(dum_vec%val)
 
         if (inewton.eq.solver%newton%maxNewton) then
-          write(*,*) "Newton failed to converge:", inewton - 1, tol_Newton
+          if (verbose) then
+            write(*,*) "Newton failed to converge:", inewton - 1, tol_Newton
+          endif
           solver%step_success = .false.
+          return
         endif
 
       endif

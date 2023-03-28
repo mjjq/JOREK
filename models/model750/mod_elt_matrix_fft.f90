@@ -4363,8 +4363,7 @@ do i=1,n_vertex_max
                     Pjac   (var_rhon,var_rhon)  = v * rhon
 
                     Qjac_p (var_rhon,var_rho )  = - v *       rho * rhon0_corr * Sion_T &
-                                                  + v * 2.0 * rho * rho0_corr  * Srec_T &
-                                                  - Dn_perp_num * lap_Vstar * lap_bf
+                                                  + v * 2.0 * rho * rho0_corr  * Srec_T
                     if (with_TiTe)then
                       Qjac_p (var_rhon,var_Te  )  = - v * rho0_corr * rhon0_corr * dSion_dT * Te &
                                                     + v * rho0_corr * rho0_corr  * dSrec_dT * Te
@@ -4374,7 +4373,8 @@ do i=1,n_vertex_max
                     endif
                     Qjac_p (var_rhon,var_rhon)  = - Dn0R * rhon_R * v_R                &
                                                   - Dn0Z * rhon_Z * v_Z                &
-                                                  - v * rho0_corr * rhon * Sion_T 
+                                                  - v * rho0_corr * rhon * Sion_T      &
+                                                  - Dn_perp_num * lap_Vstar * lap_bf
                     Qjac_kn(var_rhon,var_rhon)  = - Dn0p * rhon_p * v_p/R**2
                   endif
 

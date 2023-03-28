@@ -19,6 +19,7 @@ real*8,dimension(:,:),allocatable :: soft_orbit_ppar_local,soft_orbit_pperp_loca
 character(len=17)    :: fields_filename
 character(len=125)   :: particle_filename
 character(len=193)   :: soft_orbit_filename
+character(len=25)    :: filename_jorek_hdf5
 !> Variable definitions --------------------------------------------------------------------
 n_groups            = 1                   !< number of jorek particle groups
 n_vec               = 3                   !< component of a vector
@@ -28,6 +29,7 @@ charge              = -1d0                !< electron charge
 fields_filename     = 'jorek_equilibrium' !< jorek restart filename
 particle_filename   = 'part_restart_soft_orbits.h5' !< particle restart filename 
 soft_orbit_filename = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall' !< soft orbit filename
+filename_jorek_hdf5 = 'jorek_particles_from_soft'
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator
 call init_mpi_threads(my_id,n_cpus,ierr)
@@ -60,9 +62,13 @@ write(*,*) 'Converting soft orbit to JOREK relativistic gc ...'
 call convert_soft_orbits_in_jorek_relativistic_gcs(sim,time,mass,charge,n_vec,dims(2),&
 dims(4),soft_orbit_x_local,soft_orbit_ppar_local,soft_orbit_pperp_local)
 write(*,*) 'Converting soft orbit to JOREK relativistic gc: completed!'
-write(*,*) 'Writing JOREK relativistic gc in ',particle_filename,' ...'
+write(*,*) 'Writing JOREK relativistic gc in ',trim(particle_filename),' ...'
 call write_simulation_hdf5(sim,trim(particle_filename))
-write(*,*) 'Writing JOREK relativistic gc in ',particle_filename,' completed!'
+write(*,*) 'Writing JOREK relativistic gc in ',trim(particle_filename),' completed!'
+!> Write data in HDF5 file -----------------------------------------------------------------
+write(*,*) 'Writing JOREK particles in HDF5 file ...'
+call write_particles_in_hdf5(my_id,filename_jorek_hdf5,n_cpus,n_vec,sim)
+write(*,*) 'Writing JOREK particles in HDF5 file: completed!'
 !> Finalisation ----------------------------------------------------------------------------
 if(allocated(soft_orbit_x))           deallocate(soft_orbit_x)
 if(allocated(soft_orbit_ppar))        deallocate(soft_orbit_ppar)
@@ -219,6 +225,72 @@ subroutine read_soft_orbit_file(soft_orbit_filename,x,ppar,pperp)
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
 end subroutine read_soft_orbit_file
+
+!> write jorek particles in HDF5
+!> inputs:
+!>   my_id:    (integer)
+!>   filename: (character) hdf5 filename
+!>   n_cpus:   (integer) total number of mpi tasks
+!>   n_vec:    (integer) size of the x position vector
+!>   sim:      (particle_sim) jorek particle simulation
+!> outputs:
+subroutine write_particles_in_hdf5(my_id,filename,n_cpus,n_vec,sim)
+  use constants,      only: SPEED_OF_LIGHT
+  use mpi
+  use hdf5
+  use hdf5_io_module, only: HDF5_open_or_create,HDF5_close
+  use hdf5_io_module, only: HDF5_array2D_saving,HDF5_array1D_saving
+  use mod_coordinate_transforms, only: cylindrical_to_cartesian
+  implicit none
+  !> inputs:
+  type(particle_sim),intent(in) :: sim
+  character(len=*),intent(in)   :: filename
+  integer,intent(in)            :: my_id,n_cpus,n_vec
+  !> variables:
+  integer(HID_T) :: file_id
+  integer        :: ii,n_particles,ierr
+  real*8         :: U,psi
+  real*8,dimension(n_vec) :: Bvec,Evec
+  real*8,dimension(:,:),allocatable :: x_pos,x_pos_glob
+  real*8,dimension(:),allocatable   :: ppar,pperp,ppar_glob,pperp_glob
+  !> initialisation
+  n_particles = size(sim%groups(1)%particles);
+  !> compute position in cartesian coordinates, ppar and pperp
+  allocate(x_pos(n_vec,n_particles)); x_pos = 0d0;
+  allocate(ppar(n_particles));        ppar  = 0d0;
+  allocate(pperp(n_particles));       pperp = 0d0;
+  allocate(x_pos_glob(n_vec,n_cpus*n_particles)); x_pos_glob = 0d0;
+  allocate(ppar_glob(n_cpus*n_particles));        ppar_glob  = 0d0;
+  allocate(pperp_glob(n_cpus*n_particles));       pperp_glob = 0d0; 
+  do ii=1,n_particles
+    if(sim%groups(1)%particles(ii)%i_elm.le.0) cycle
+    x_pos(:,ii) = cylindrical_to_cartesian(sim%groups(1)%particles(ii)%x)
+    call sim%fields%calc_EBpsiU(sim%time,sim%groups(1)%particles(ii)%i_elm,\
+    sim%groups(1)%particles(ii)%st,sim%groups(1)%particles(ii)%x(3),Evec,Bvec,psi,U)
+    select type (part=>sim%groups(1)%particles(ii))
+    type is (particle_gc_relativistic)
+      ppar(ii) = part%p(1)/(sim%groups(1)%mass*SPEED_OF_LIGHT)
+      pperp(ii) = sqrt(2d0*sim%groups(1)%mass*norm2(Bvec)*part%p(2))/\
+      (sim%groups(1)%mass*SPEED_OF_LIGHT)
+    end select
+  enddo
+  !> gather data from all mpi tasks 
+  call MPI_gather(x_pos,n_vec*n_particles,MPI_REAL8,x_pos_glob,n_vec*n_particles,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_gather(ppar,n_particles,MPI_REAL8,ppar_glob,n_particles,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_gather(pperp,n_particles,MPI_REAL8,pperp_glob,n_particles,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  !> write data in hdf5
+  if(my_id.eq.0) then
+    call HDF5_open_or_create(trim(filename//'.h5'),H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
+    call HDF5_array2D_saving(file_id,x_pos_glob,n_vec,n_cpus*n_particles,'x')
+    call HDF5_array1D_saving(file_id,ppar_glob,n_cpus*n_particles,'ppar')
+    call HDF5_array1D_saving(file_id,pperp_glob,n_cpus*n_particles,'pperp')
+    call HDF5_close(file_id)
+  endif
+  !> cleanup
+  if(allocated(x_pos)) deallocate(x_pos); if(allocated(x_pos_glob)) deallocate(x_pos_glob);
+  if(allocated(ppar))  deallocate(ppar);  if(allocated(ppar_glob))  deallocate(ppar_glob);
+  if(allocated(pperp)) deallocate(pperp); if(allocated(pperp_glob)) deallocate(pperp_glob);
+end subroutine write_particles_in_hdf5
 
 !> -----------------------------------------------------------------------------------------
 

@@ -50,6 +50,8 @@ separator="/"):
   # Plot pixel and filter intensities
   imshow_4d(pixel_intensities,x_positions=x_positions,y_positions=y_positions,title="Image for" )
   imshow_4d(filter_intensities,x_positions=x_positions,y_positions=y_positions,title="Filter for" )
+  if((np.isnan(pixel_intensities)).any()):
+    print('Warning: found pixel(s) with NaN intensity')
   plt.show()
   return
 

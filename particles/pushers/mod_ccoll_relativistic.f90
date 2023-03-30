@@ -129,9 +129,6 @@ contains
 
     integer :: i, j
    
-    ! For CPU time
-    real*8 :: t0, t1
-
     ! Set optional parameters 
     if(present(eps))    eps_in    = eps
     if(present(cutoff)) cutoff_in = cutoff

@@ -25,10 +25,10 @@ character(len=125)   :: particle_filename
 character(len=193)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
 !> Variable definitions --------------------------------------------------------------------
-do_write_particles_in_hdf5 = .true.       !< writeh particle in hdf5 if true
+do_write_particles_in_hdf5 = .false.       !< writeh particle in hdf5 if true
 n_groups            = 1                   !< number of jorek particle groups
 n_vec               = 3                   !< component of a vector
-n_phi               = 1                   !< number of sampled toroidal positions to be sampled for each particle
+n_phi               = 6                   !< number of sampled toroidal positions to be sampled for each particle
 time                = 0d0                 !< simulation time
 mass                = 5.48579909065d-4    !< electron mass in AMU 
 charge              = -1d0                !< electron charge
@@ -120,8 +120,6 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
   use mod_rng
   !$ use omp_lib
   implicit none
-  !> parameters:
-  integer,parameter :: intkind=8
   !> inputs-outputs:
   type(particle_sim),intent(inout) :: sim
   !> inputs:
@@ -137,7 +135,6 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
   !> variables:
   class(type_rng),dimension(:),allocatable :: rngs
   integer   :: ii,jj,i_elm,ifail,n_threads,thread_id
-  integer(kind=intkind)   :: id,one
   real*8                  :: U,psi
   real*8,dimension(2)     :: st,Rbox,Zbox
   real*8,dimension(3)     :: RZphi,B_field,E_field
@@ -151,16 +148,14 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
     if(ifail.ne.0) call MPI_Abort(MPI_COMM_WORLD,-1,ifail)
   enddo
   !> initialise and allocate particle simulation array
-  one = int(1,kind=intkind)
   call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,&
   Rbox(1),Rbox(2),Zbox(1),Zbox(2))
   sim%time = time; sim%groups(1)%mass = mass; 
-  id = int(n_points,kind=intkind)*int(n_phi,kind=intkind);
-  allocate(particle_gc_relativistic::sim%groups(1)%particles(id))
+  allocate(particle_gc_relativistic::sim%groups(1)%particles(n_points*n_phi))
   !> loop on the soft orbits
   !$omp parallel default(shared) firstprivate(n_points,n_vec,time,charge,n_phi,mass,&
-  !$omp Rbox,Zbox,phi_interval,one) private(ii,jj,RZphi,i_elm,st,B_field,E_field,U,&
-  !$omp psi,ifail,phi_array,thread_id,id)
+  !$omp Rbox,Zbox,phi_interval) private(ii,jj,RZphi,i_elm,st,B_field,E_field,U,&
+  !$omp psi,ifail,phi_array,thread_id)
   thread_id = 1
   !$ thread_id = omp_get_thread_num()+1
   !$omp do
@@ -173,8 +168,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
     call rngs(thread_id)%next(phi_array); 
     phi_array = phi_interval(1)+(phi_interval(2)-phi_interval(1))*phi_array;
     do jj=1,n_phi
-      id = (int(ii,kind=intkind)-one)*int(n_phi,kind=intkind)+int(jj,kind=intkind)
-      select type (p=>sim%groups(1)%particles(id))
+      select type (p=>sim%groups(1)%particles((ii-1)*n_phi+jj))
         type is (particle_gc_relativistic)
         if(i_elm.le.0) then
           p%x = 0d0; p%st = 0d0; p%weight = 0d0; p%i_elm = 0; p%i_life = 0; p%t_birth = 0.;
@@ -267,10 +261,9 @@ subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,ppar,p
   real*8,dimension(:),allocatable,intent(out)   :: ppar,pperp
   real*8,dimension(:,:),allocatable,intent(out) :: x
   !> variables:
-  integer(HID_T)          :: file_id
-  integer                 :: ii,jj,n_orbits,n_times,ierr
-  integer,dimension(:),allocatable   :: n_active_orbits
-  integer,dimension(:,:),allocatable :: valid_orbit_id
+  integer(HID_T) :: file_id
+  integer        :: ii,n_orbits,n_times,n_active_orbits,ierr
+  integer,dimension(:),allocatable   :: valid_orbit_id
   real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename//".h5"),file_id,ierr)
@@ -281,34 +274,33 @@ subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,ppar,p
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
   !> remove zero orbits
-  n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1); 
+  n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1);
+  n_soft_points = n_orbits*n_times; n_active_orbits = 0;
+  !> reshape arrays
+  x_loc     = reshape(x_loc,[n_vec,n_soft_points])
+  ppar_loc  = reshape(ppar_loc,[n_soft_points,1])
+  pperp_loc = reshape(pperp_loc,[n_soft_points,1])
   !> find id of active orbits
-  allocate(n_active_orbits(n_orbits));        n_active_orbits = 0;
-  allocate(valid_orbit_id(n_times,n_orbits)); valid_orbit_id  = 0;
-  do jj=1,n_orbits
-    do ii=1,n_times
-      if((x_loc((ii-1)*n_vec+1,jj).eq.0d0).and.(x_loc((ii-1)*n_vec+2,jj).eq.0d0).and.&
-      (x_loc(ii*n_vec,jj).eq.0d0)) cycle
-        n_active_orbits(jj) = n_active_orbits(jj) + 1
-        valid_orbit_id(n_active_orbits(jj),jj) = ii;
-    enddo
+  allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
+  do ii=1,n_soft_points
+    if((x_loc(1,ii).eq.0d0).and.(x_loc(2,ii).eq.0d0).and.(x_loc(3,ii).eq.0d0)) cycle
+    if((ppar_loc(ii,1).eq.0d0).and.(pperp_loc(ii,1).eq.0d0)) cycle
+    n_active_orbits = n_active_orbits + 1
+    valid_orbit_id(n_active_orbits) = ii;
   enddo
   !> copy only active orbits
-  n_soft_points = sum(n_active_orbits)
-  allocate(x(n_vec,n_soft_points)); x     = 0d0;
-  allocate(ppar(n_soft_points));    ppar  = 0d0; 
-  allocate(pperp(n_soft_points));   pperp = 0d0;
-  n_soft_points  = 0
-  do jj=1,n_orbits   
-    do ii = 1,n_active_orbits(jj)
-      x(:,n_soft_points+ii)    = x_loc((valid_orbit_id(ii,jj)-1)*n_vec+1:valid_orbit_id(ii,jj)*n_vec,jj)
-      ppar(n_soft_points+ii)   = ppar_loc(valid_orbit_id(ii,jj),jj)
-      pperp(n_soft_points+ii)  = pperp_loc(valid_orbit_id(ii,jj),jj)
-    enddo
-    n_soft_points = n_soft_points + n_active_orbits(jj)
+  allocate(x(n_vec,n_active_orbits)); x     = 0d0;
+  allocate(ppar(n_active_orbits));    ppar  = 0d0; 
+  allocate(pperp(n_active_orbits));   pperp = 0d0;
+  !$omp parallel do default(none) firstprivate(n_active_orbits) private(ii) &
+  !$omp shared(x,x_loc,ppar,ppar_loc,pperp,pperp_loc,valid_orbit_id)
+  do ii=1,n_active_orbits   
+    x(:,ii)    = x_loc(:,valid_orbit_id(ii))
+    ppar(ii)   = ppar_loc(valid_orbit_id(ii),1)
+    pperp(ii)  = pperp_loc(valid_orbit_id(ii),1)
   enddo
-  !> clean-up
-  if(allocated(n_active_orbits)) deallocate(n_active_orbits)
+  !$omp end parallel do
+  n_soft_points = n_active_orbits
   if(allocated(valid_orbit_id))  deallocate(valid_orbit_id)
   if(allocated(ppar_loc))        deallocate(ppar_loc)
   if(allocated(pperp_loc))       deallocate(pperp_loc)

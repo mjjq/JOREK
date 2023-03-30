@@ -492,7 +492,8 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
   integer,dimension(0) :: int_param
   real*8 :: mu_angle,thetap,psi_angle,xi,fact1,fact2,fact3,besselk13,besselk23
   !> initialisations
-  irradiance = 0d0;
+  irradiance = 0d0; dir_funct = 0d0;
+  if(properties(10).eq.0d0) return
   mu_angle = acos(dot_product((x_shaded-x_light)/norm2(x_shaded-x_light),properties(1:3)))
   thetap = atan2(properties(7),properties(6))
   if(thetap.lt.0d0) thetap = TWOPI + thetap 
@@ -597,6 +598,8 @@ rel_fact_parallel,normB)
   real*8                :: thetap,charge,p_perp
   real*8,dimension(n_x) :: E_field,b_field,gradB,curlb,dbdt,v_gc_cart
   
+  !> initialisation
+  properties = 0d0
   !> compute the analytical MHD fields for computing the GC velocity
   call compute_mhd_fields_gc_cyl(gc_in,E_field,b_field,normB,gradB,curlb,dbdt)
   !> compute the guiding center velocity
@@ -619,6 +622,7 @@ rel_fact_parallel,normB)
   properties(8) = (4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*rel_fact_parallel)/&
                   (3d0*charge*normB*(properties(4)**2))
   !> compute the directionality function intensity
+  if(sin(thetap).ne.0d0) &
   properties(9) = (27d0*charge*normB*(properties(4)**7))/&
                   (128d0*(PI**2)*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
                   (sin(thetap)**2)*(rel_fact_parallel**4))

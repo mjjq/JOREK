@@ -70,14 +70,14 @@ def plot_particle_positions(x_pos,markersize=1,fontsize=16):
   RZ_pos = compute_particle_RZ_positions(x_pos)
   # plot the figure
   fig = plt.figure(facecolor='white',edgecolor='white')
-  axs = [fig.add_subplot(121),fig.add_subplot(122,projection='3d')]
+  axs = [fig.add_subplot(131),fig.add_subplot(132),fig.add_subplot(133,projection='3d')]
   plot_scatter_2d(axs[0],RZ_pos,title='JOREK particle RZ positions from SOFT',\
   xlab='R [m]',ylab='Z [m]',fontsize=fontsize,markertype='.',\
   markersize=markersize,markercolor='b',aspect='equal')
-  plot_scatter_2d(axs[0],x_pos[:,0:2],title='JOREK particle xy positions from SOFT',\
+  plot_scatter_2d(axs[1],x_pos[:,0:2],title='JOREK particle xy positions from SOFT',\
   xlab='x [m]',ylab='y [m]',fontsize=fontsize,markertype='.',\
   markersize=markersize,markercolor='b',aspect='equal')
-  plot_scatter_3d(axs[1],x_pos,title='JOREK particle positions from SOFT',\
+  plot_scatter_3d(axs[2],x_pos,title='JOREK particle positions from SOFT',\
   xlab='x [m]',ylab='y [m]',zlab='z [m]',fontsize=fontsize,markertype='.',\
   markersize=markersize,markercolor='b',aspect='equal',rotate=False)
   plt.show()

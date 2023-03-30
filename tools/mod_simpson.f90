@@ -41,7 +41,7 @@ contains
     integer, intent(in) :: bottom
     real*8 :: val
     real*8 :: c, h, d, e,fd,fe, Sleft, Sright, S2
-    procedure(func_real8_1d), pointer :: f
+    procedure(func_real8_1d) :: f
 
     c  = ( a + b ) / 2
     h  = b - a
@@ -68,7 +68,7 @@ contains
   !< given relative error tolerance is obtained
   function simpson_adaptive(f, a, b, eps, maxDepth) result (val)
     implicit none
-    procedure(func_real8_1d), pointer :: f !< pointer to the (1D) integrand function
+    procedure(func_real8_1d) :: f          !< (1D) integrand function
     real*8, intent(in) :: a                !< lower limit for the interval
     real*8, intent(in) :: b                !< upper limit for the interval
     real*8, intent(in) :: eps              !< absolute tolerance

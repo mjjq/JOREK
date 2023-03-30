@@ -73,7 +73,6 @@ contains
 
     real*8 :: def_cutoff, u_cutoff
     real*8 :: def_tol, tol
-    procedure(func_real8_1d), pointer :: L0_ptr => null(), L1_ptr => null()
 
     def_tol    = DEFAULT_L0L1_eps
     def_cutoff = DEFAULT_L0L1_cutoff
@@ -82,18 +81,14 @@ contains
 
     u_cutoff = sqrt((1.D0 - theta * log(def_cutoff))**2 - 1.D0)
 
-    L0_ptr => L0_integrand
-    L1_ptr => L1_integrand
-
-    ! the integral is evaluated in two parts if u > u_cutoff
     if(u_cutoff > u) then
        tol = 0.5D0 * def_tol * u
-       L0 = simpson_adaptive(L0_ptr,0.D0,u,tol,10)
-       L1 = simpson_adaptive(L1_ptr,0.D0,u,tol,10)
+       L0 = simpson_adaptive(L0_integrand,0.D0,u,tol,10)
+       L1 = simpson_adaptive(L1_integrand,0.D0,u,tol,10)
     else
        tol = 0.5D0 * def_tol * u_cutoff
-       L0 = simpson_adaptive(L0_ptr,0.D0,u_cutoff,tol,10) + simpson_adaptive(L0_ptr,u_cutoff,u,tol,20)
-       L1 = simpson_adaptive(L1_ptr,0.D0,u_cutoff,tol,10) + simpson_adaptive(L1_ptr,u_cutoff,u,tol,20)
+       L0 = simpson_adaptive(L0_integrand,0.D0,u_cutoff,tol,10) + simpson_adaptive(L0_integrand,u_cutoff,u,tol,20)
+       L1 = simpson_adaptive(L1_integrand,0.D0,u_cutoff,tol,10) + simpson_adaptive(L1_integrand,u_cutoff,u,tol,20)
     end if
 
   contains
@@ -125,13 +120,23 @@ contains
     real*8, intent(in)  :: thmaxxp !> maximum theta as thmax=10^thmaxxp
     integer, intent(in) :: nu      !> number of u grid points
     integer, intent(in) :: nth     !> number of theta grid points
-    real*8, intent(in), optional :: eps    !> error tolerance for evaluating L0 and L1
-    real*8, intent(in), optional :: cutoff !> cutoff value for evaluating L0 and L1
+    real*8, intent(in), optional :: eps       !> error tolerance for evaluating L0 and L1
+    real*8, intent(in), optional :: cutoff    !> cutoff value for evaluating L0 and L1
+    real*8 :: eps_in    = DEFAULT_L0L1_eps    !> used to define default value for eps
+    real*8 :: cutoff_in = DEFAULT_L0L1_cutoff !> used to define default value for cutoff
 
     type(ccoll_data) :: tabulatedL0L1
 
     integer :: i, j
-    
+   
+    ! For CPU time
+    real*8 :: t0, t1
+
+    ! Set optional parameters 
+    if(present(eps))    eps_in    = eps
+    if(present(cutoff)) cutoff_in = cutoff
+
+ 
     allocate(tabulatedL0L1%u(nu), &
          tabulatedL0L1%theta(nth),&
          tabulatedL0L1%L0(nu,nth),&
@@ -142,30 +147,23 @@ contains
     tabulatedL0L1%theta = 10**( thminxp + (/ ( ( i - 1 ) * ( thmaxxp - thminxp ) / ( nth - 1 ), i=1,nth) /) )
 
     ! Evaluate and store values to the table
+
+    !$omp parallel default(shared) &
+    !$omp private(i,j)
+    !$omp single
     do i=1,nu
        do j=1,nth
-          if(present(eps) .and. present(cutoff)) then
-             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
-                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j),&
-                  eps=eps,cutoff=cutoff)
-          elseif(present(eps)) then
-             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
-                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j),&
-                  eps=eps)
-          elseif(present(cutoff)) then
-             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
-                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j),&
-                  cutoff=cutoff)
-          else
-             call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
-                  tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j))
-          end if
-       end do
-       
-       ! This might last some time so keep user updated on progress
-       write(*,*) "done: ",i,"/",nu
+         !$omp task
+         call eval_L0L1(tabulatedL0L1%u(i),tabulatedL0L1%theta(j),&
+              tabulatedL0L1%L0(i,j),tabulatedL0L1%L1(i,j),&
+              eps=eps_in,cutoff=cutoff_in)
+         !$omp end task
+       end do 
     end do
-    
+    !$omp end single
+    !$omp taskwait
+    !$omp end parallel  
+ 
   end function ccoll_compute_L0L1table
 
 
@@ -254,6 +252,7 @@ contains
     aconst_Ar = (/96, 90, 84, 78, 72, 65, 59, 53, 47, 44, 41, 38, 35, 32, 27, 21, 13, 13, 1/)
     aconst_Ne = (/111, 100, 90, 80, 71, 62, 52, 40, 24, 23, 1/)
 
+
     if(with_impurities) then
        if( trim(imp_type(1)) .eq. 'Ne') then
           atomnum_imp = 10
@@ -287,6 +286,8 @@ contains
 
     end if
 
+
+    allocate( dat%Ii(1), dat%ai(1) )
     dat%mi(1) = central_mass * MASS_PROTON
     dat%Zi(1) = 1
     dat%Z0(1) = 1
@@ -857,35 +858,35 @@ end module mod_ccoll_relativistic
 
 !< Simple program that generates a file "ccoll.data" that contains tabulated L0 and L1 values
 !< that should be applicable for every fusion plasma.
-!program ccoll_generate_L0L1
-!  use mod_ccoll_relativistic
-!  
-!  implicit none
-!
-!  type(ccoll_data) :: dat
-!  logical :: storage_file_on_disk
-!  character(20), parameter :: storage_file='ccolldata'
-!
-!   real*8, parameter  :: uminxp  = -3.D0
-!   real*8, parameter  :: umaxxp  = 2.D0
-!   real*8, parameter  :: thminxp = -3.D0
-!   real*8, parameter  :: thmaxxp = -1.D0 
-!   integer, parameter :: nu      = 401
-!   integer, parameter :: nth     = 201
-!
-!   ! Initialize the look-up tables
-!  print*,''
-!  write(*,*) 'Initializing look-up tables...'
-!  inquire(file=storage_file,exist=storage_file_on_disk)
-!  if(storage_file_on_disk) then
-!     write(*,*) 'File already exists.'
-!  else
-!     dat = ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth)
-!     call ccoll_write_L0L1table(dat,storage_file)
-!  end if
-!  print*,'Done!'
-!
-!end program ccoll_generate_L0L1
+program ccoll_generate_L0L1
+  use mod_ccoll_relativistic
+  
+  implicit none
+
+  type(ccoll_data) :: dat
+  logical :: storage_file_on_disk
+  character(20), parameter :: storage_file='ccolldata'
+
+   real*8, parameter  :: uminxp  = -3.D0
+   real*8, parameter  :: umaxxp  = 2.D0
+   real*8, parameter  :: thminxp = -3.D0
+   real*8, parameter  :: thmaxxp = -1.D0 
+   integer, parameter :: nu      = 401
+   integer, parameter :: nth     = 201
+
+   ! Initialize the look-up tables
+  print*,''
+  write(*,*) 'Initializing look-up tables...'
+  inquire(file=storage_file,exist=storage_file_on_disk)
+  if(storage_file_on_disk) then
+     write(*,*) 'File already exists.'
+  else
+     dat = ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth)
+     call ccoll_write_L0L1table(dat,storage_file)
+  end if
+  print*,'Done!'
+
+end program ccoll_generate_L0L1
 
 
 

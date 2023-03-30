@@ -71,8 +71,6 @@ time_id,light_id,x_shaded,light_dstb)
   !> initialisations
   in_parallel = .false.; light_dstb = 0d0;
   light_properties = light_vert%properties(:,light_id,time_id)
-  !> skip integration in case of 0 intensities
-  if(light_properties(9).eq.0d0) return
   !$ in_parallel = omp_in_parallel()
   !> the mu and psi angle cosinues, note that psi = mu-thetap hence
   !> cos(mu-thetap) = cos(mu)*cos(thetap) + sin(mu)*sin(thetap)
@@ -142,10 +140,6 @@ time_id,light_id,x_shaded,light_spec_irradiance)
   real*8,dimension(light_vert%n_x),intent(in) :: x_shaded
   !> Outputs:
   real*8,dimension(spectra%n_points,spectra%n_spectra),intent(out) :: light_spec_irradiance
-  !> initialisation
-  light_spec_irradiance =  0d0;
-  !> skip integration for 0 intensity
-  if(light_vert%properties(10,light_id,time_id).eq.0d0) return 
   !> compute the directionality function
   call light_vert%directionality_funct(spectra,time_id,light_id,x_shaded,light_spec_irradiance)
   !> denormalise the directionality function
@@ -241,7 +235,7 @@ property_id,time_id,particle_in,mass,mhd_fields)
   real*8,dimension(light_vert%n_mhd),intent(in) :: mhd_fields
   !> variables
   real*8 :: charge_r8
-  real*8 :: beta_perp2,rel_fact_parallel !< (perpendicular velocity/c)**2, parallel relativistic factor
+  real*8 :: rel_fact_parallel !< parallel relativistic factor
   light_vert%properties(:,property_id,time_id) = 0d0
   select type(p_in=>particle_in)
     type is (particle_gc_relativistic)
@@ -260,13 +254,11 @@ property_id,time_id,particle_in,mass,mhd_fields)
     !> compute beta beta = v/c
     light_vert%properties(5,property_id,time_id) = sqrt(1d0 - &
                          (1d0/(light_vert%properties(4,property_id,time_id)**2)))
-    !> compute cosinus and sinus of the pitch angle beta_perp2 = (p_perp/(mass*gamma*c))**2
-    !> (p_perp/(mass*c))**2 = (2*mu*B)/(mass*(c**2))
+    !> compute cosinus and sinus of the pitch angle
     charge_r8 = abs(real(p_in%q,kind=8))
-    beta_perp2 = (2d0*p_in%p(2)*mhd_fields(7))/(mass*((SPEED_OF_LIGHT*&
-                 light_vert%properties(4,property_id,time_id))**2)) 
     light_vert%properties(6:7,property_id,time_id) = (/abs(p_in%p(1))/(mass*SPEED_OF_LIGHT*&
-    light_vert%properties(4,property_id,time_id)),sqrt(beta_perp2)/)/light_vert%properties(5,property_id,time_id)
+    light_vert%properties(4,property_id,time_id)),sqrt((2d0*p_in%p(2)*mhd_fields(7))/(mass*((SPEED_OF_LIGHT*&
+    light_vert%properties(4,property_id,time_id))**2)))/)/light_vert%properties(5,property_id,time_id)
     !> compute the parallel relativistic factor \gamma_par = sqrt(1-1/(beta_par**2)), beta_par = p_par/(m*c*gamma)
     rel_fact_parallel = sqrt(((mass*SPEED_OF_LIGHT*light_vert%properties(4,property_id,time_id))**2)/&
                         (((mass*SPEED_OF_LIGHT*light_vert%properties(4,property_id,time_id))**2)-(p_in%p(1)**2)))
@@ -275,15 +267,14 @@ property_id,time_id,particle_in,mass,mhd_fields)
                              rel_fact_parallel)/(3d0*charge_r8*EL_CHG*mhd_fields(7)*&
                              (light_vert%properties(4,property_id,time_id)**2))
     !> compute the directionality function intensity
-    !> WARNING: for passing particle property(7) = sin(pitch) = 0
-    if(light_vert%properties(7,property_id,time_id).ne.0d0) &
     light_vert%properties(9,property_id,time_id) = (2.7d1*EL_CHG*charge_r8*mhd_fields(7)*&
-    (light_vert%properties(4,property_id,time_id)**7))/(1.28d2*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*&
-    ((PI*light_vert%properties(7,property_id,time_id)*(rel_fact_parallel**2))**2))
+    (light_vert%properties(4,property_id,time_id)**7))/(1.28d2*mass*ATOMIC_MASS_UNIT*&
+    SPEED_OF_LIGHT*((PI*(rel_fact_parallel**2))**2))
     !> compute the synchrotron power for normalisation
-    light_vert%properties(10,property_id,time_id) = (beta_perp2*((mhd_fields(7)*rel_fact_parallel*&
-                                light_vert%properties(4,property_id,time_id)*((EL_CHG*charge_r8)**2))**2))/&
-                                (6d0*PI*EPS_ZERO*SPEED_OF_LIGHT*((mass*ATOMIC_MASS_UNIT)**2))
+    light_vert%properties(10,property_id,time_id) = (((light_vert%properties(5,property_id,time_id)*&
+                                mhd_fields(7)*rel_fact_parallel*light_vert%properties(4,property_id,time_id)*&
+                                ((EL_CHG*charge_r8)**2))**2))/(6d0*PI*EPS_ZERO*SPEED_OF_LIGHT*&
+                                ((mass*ATOMIC_MASS_UNIT)**2))
   end select
 end subroutine compute_gyroaverage_synchrotron_light_properties
 

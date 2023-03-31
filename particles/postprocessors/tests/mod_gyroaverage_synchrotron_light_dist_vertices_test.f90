@@ -59,6 +59,7 @@ integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_i
 real*8,dimension(n_times_sol)                         :: time_vector_sol
 real*8,dimension(n_particles_max*n_groups_max,n_times_sol)              :: rel_fact_parallel_sol
 real*8,dimension(n_particles_max*n_groups_max,n_times_sol)              :: normB_sol
+real*8,dimension(n_particles_max*n_groups_max,n_times_sol)              :: weight_sol
 real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol)          :: x_cart_sol
 real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: properties_sol
 !> variables for generating spectra
@@ -229,7 +230,7 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
           call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
           sims_particles(kk)%groups(jj)%mass,mhd_fields)
           !> check if the pre-multiplicative coefficients match
-          factor = ((9d0*((EL_CHG*abs(real(p_list(ii)%q,kind=8)))**5)*&
+          factor = p_list(ii)%weight*((9d0*((EL_CHG*abs(real(p_list(ii)%q,kind=8)))**5)*&
           (properties_sol(4,counter,kk)**9)*(properties_sol(5,counter,kk)**2)*(mhd_fields(7)**3))/&
           (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel_sol(counter,kk)**2)*&
           ((sims_particles(kk)%groups(jj)%mass*ATOMIC_MASS_UNIT)**3)))
@@ -411,7 +412,7 @@ subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct()
     do jj=1,n_particles_time(kk)
       do ii=1,n_shaded_points_per_particle
         call compute_gyroavg_synch_directionality_irradiance(normB_sol(jj,kk),&
-        rel_fact_parallel_sol(jj,kk),1d0,mass_RE,x_shadowed(:,ii,jj,kk),&
+        rel_fact_parallel_sol(jj,kk),weight_sol(jj,kk),1d0,mass_RE,x_shadowed(:,ii,jj,kk),&
         x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol(:,:,ii),irradiance_sol(:,:,ii))
         call vertex_sol%directionality_funct(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),dir_fun(:,:,ii))
         call vertex_sol%spectral_irradiance(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),irradiance(:,:,ii))
@@ -454,7 +455,7 @@ subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop()
     do jj=1,n_particles_time(kk)
       do ii=1,n_shaded_points_per_particle
         call compute_gyroavg_synch_directionality_irradiance(normB_sol(jj,kk),&
-        rel_fact_parallel_sol(jj,kk),1d0,mass_RE,x_shadowed(:,ii,jj,kk),&
+        rel_fact_parallel_sol(jj,kk),weight_sol(jj,kk),1d0,mass_RE,x_shadowed(:,ii,jj,kk),&
         x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol(:,:,ii),irradiance_sol(:,:,ii))
         !$omp parallel default(shared) firstprivate(ii,jj,kk)
         !$omp single
@@ -477,12 +478,12 @@ end subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
 !> Tools -------------------------------------------------------------
 !> compute the gyroaverage synchrotron lights irradiance and directionality functions
 subroutine compute_gyroavg_synch_directionality_irradiance(normB,rel_fact_parallel,&
-charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
+weight,charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
   use constants,   only: PI,TWOPI,EL_CHG,EPS_ZERO,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
   use mod_besselk, only: besselk
   implicit none
   !> inputs:
-  real*8,intent(in)                         :: normB,rel_fact_parallel,charge,mass
+  real*8,intent(in)                         :: weight,normB,rel_fact_parallel,charge,mass
   real*8,dimension(n_x),intent(in)          :: x_shaded,x_light 
   real*8,dimension(n_properties),intent(in) :: properties 
   !> outputs:
@@ -510,9 +511,10 @@ charge,mass,x_shaded,x_light,properties,dir_funct,irradiance)
     do jj=1,spectrum%n_points
       xi = fact3*(properties(8)/spectrum%points(jj,ii))
       call besselk(onethird,xi,besselk13); call besselk(twothirds,xi,besselk23);
-       irradiance(jj,ii) = (((9d0*((charge*EL_CHG)**5)*(properties(5)**2)*(properties(4)**9)*(normB**3)))/&
-      (2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel**2)*((mass*ATOMIC_MASS_UNIT)**3)))*&
-      (((properties(8)/spectrum%points(jj,ii))**4)*fact1*((besselk23**2)+fact2*(besselk13**2)))
+       irradiance(jj,ii) = ((weight*(9d0*((charge*EL_CHG)**5)*(properties(5)**2)*(properties(4)**9)*&
+       (normB**3)))/(2.56d2*(PI**3)*EPS_ZERO*(SPEED_OF_LIGHT**2)*(rel_fact_parallel**2)*&
+       ((mass*ATOMIC_MASS_UNIT)**3)))*(((properties(8)/spectrum%points(jj,ii))**4)*fact1*&
+       ((besselk23**2)+fact2*(besselk13**2)))
     enddo
   enddo
   dir_funct = irradiance/properties(10)
@@ -572,7 +574,8 @@ subroutine compute_gyroavg_synch_x_properties_ana()
           x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
           call compute_gyroavg_synch_properties_ana_1p(p_list(ii),&
           sims_particles(kk)%groups(jj)%mass,properties_sol(:,counter,kk),&
-          rel_fact_parallel_sol(counter,kk),normB_sol(counter,kk))
+          rel_fact_parallel_sol(counter,kk),normB_sol(counter,kk),&
+          weight_sol(counter,kk))
         enddo
       end select
     enddo
@@ -582,7 +585,7 @@ end subroutine compute_gyroavg_synch_x_properties_ana
 !> compute gyroaverage synchrotron light properties using the analytical
 !> tokamak-like MHD fields for one guiding center
 subroutine compute_gyroavg_synch_properties_ana_1p(gc_in,mass,properties,&
-rel_fact_parallel,normB)
+rel_fact_parallel,normB,weight)
   use constants,                      only: PI,TWOPI,EL_CHG,EPS_ZERO
   use constants,                      only: ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
   use mod_particle_types,             only: particle_gc_relativistic
@@ -591,7 +594,7 @@ rel_fact_parallel,normB)
   type(particle_gc_relativistic),intent(in)  :: gc_in
   real*8,intent(in)                          :: mass 
   !> outputs:
-  real*8                                     :: rel_fact_parallel,normB
+  real*8,intent(out)                        :: rel_fact_parallel,normB,weight
   real*8,dimension(n_properties),intent(out) :: properties
   !> variables:
   real*8                :: thetap,charge
@@ -624,7 +627,8 @@ rel_fact_parallel,normB)
   properties(9) = (27d0*charge*normB*(properties(4)**7))/(128d0*(PI**2)*mass*&
                   ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*(rel_fact_parallel**4))
   !> compute the synchrotron power normalisation
-  properties(10) = ((charge**4)*((normB*properties(4)*properties(5)*rel_fact_parallel)**2))/&
+  weight = gc_in%weight
+  properties(10) = (weight*(charge**4)*((normB*properties(4)*properties(5)*rel_fact_parallel)**2))/&
                    (6d0*PI*EPS_ZERO*SPEED_OF_LIGHT*((mass*ATOMIC_MASS_UNIT)**2))
 end subroutine compute_gyroavg_synch_properties_ana_1p
 

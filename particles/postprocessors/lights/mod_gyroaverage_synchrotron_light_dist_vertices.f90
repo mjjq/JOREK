@@ -273,7 +273,7 @@ property_id,time_id,particle_in,mass,mhd_fields)
     !> compute the synchrotron power for normalisation
     light_vert%properties(10,property_id,time_id) = (((light_vert%properties(5,property_id,time_id)*&
                                 mhd_fields(7)*rel_fact_parallel*light_vert%properties(4,property_id,time_id)*&
-                                ((EL_CHG*charge_r8)**2))**2))/(6d0*PI*EPS_ZERO*SPEED_OF_LIGHT*&
+                                ((EL_CHG*charge_r8)**2))**2)*p_in%weight)/(6d0*PI*EPS_ZERO*SPEED_OF_LIGHT*&
                                 ((mass*ATOMIC_MASS_UNIT)**2))
   end select
 end subroutine compute_gyroaverage_synchrotron_light_properties

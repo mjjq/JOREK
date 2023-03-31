@@ -56,9 +56,9 @@ type(omnidirectional_gaussian_lights)       :: lights_rank
 type(filter_unity),dimension(n_spectra_sol) :: filter_spectra_sol
 integer                                     :: n_particles_time
 integer,dimension(5)                        :: int_param_sol
+real*8                                      :: pixel_area_sol
 real*8,dimension(9)                         :: real_param_sol
 real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: image_filter_rank
-real*8,dimension(:),allocatable             :: pixel_area_sol
 real*8,dimension(:,:,:,:),allocatable       :: image_sol
 real*8,dimension(:,:,:,:,:),allocatable     :: image_filter_sol
 
@@ -135,7 +135,6 @@ subroutine setup_camera(rank,n_tasks,ifail)
   n_int_param = 5; n_real_param = 9;
   if(.not.allocated(int_param))  allocate(int_param(n_int_param))
   if(.not.allocated(real_param)) allocate(real_param(n_real_param))
-  if(.not.allocated(pixel_area_sol)) allocate(pixel_area_sol(n_times))
   !> initialise pinhole object 
   if(rank.eq.0) then 
     int_param(1:3) = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y/)
@@ -159,10 +158,8 @@ subroutine setup_camera(rank,n_tasks,ifail)
   call camera_sol%init_camera(pinhole_sol,spectra_sol,n_int_param,&
   n_real_param,int_param,real_param)
   !> compute the pixel area for squared pixels
-  do ii=1,n_times
-    pixel_area_sol(ii) = (norm2(camera_sol%image_plane(:,2,ii)-camera_sol%image_plane(:,1,ii))*&
-    norm2(camera_sol%image_plane(:,3,ii)-camera_sol%image_plane(:,1,ii)))/(n_pixels_x*n_pixels_y)
-  enddo 
+  pixel_area_sol = (norm2(camera_sol%image_plane(:,2,1)-camera_sol%image_plane(:,1,1))*&
+  norm2(camera_sol%image_plane(:,3,1)-camera_sol%image_plane(:,1,1)))/(n_pixels_x*n_pixels_y)
   !> cleanup
   if(allocated(int_param))  deallocate(int_param)
   if(allocated(real_param)) deallocate(real_param)
@@ -268,7 +265,6 @@ subroutine teardown(rank,n_tasks,ifail)
   call camera_sol%deallocate_camera_perspective_static
   if(allocated(image_sol))        deallocate(image_sol)
   if(allocated(image_filter_sol)) deallocate(image_filter_sol)
-  if(allocated(pixel_area_sol))   deallocate(pixel_area_sol)
   if(rank.eq.0) call system("rm "//input_file)
 end subroutine teardown
 
@@ -446,7 +442,7 @@ subroutine compute_contribution_image_plane(rank,n_tasks,ifail)
         !> reduction of the irradiance and the filter function
         image_filter_rank(:,1,i_pixel(1),i_pixel(2),1) = &
         image_filter_rank(:,1,i_pixel(1),i_pixel(2),1) + (light_integral*material_value*&
-        pixel_area_sol(jj)*pixel_filter*time_filter(jj)*camera_sol%exposure_time)/geometry
+        pixel_area_sol*pixel_filter*time_filter(jj)*camera_sol%exposure_time)/geometry
         image_filter_rank(:,2,i_pixel(1),i_pixel(2),1) = &
         image_filter_rank(:,2,i_pixel(1),i_pixel(2),1) + time_filter(jj)*pixel_filter
       enddo

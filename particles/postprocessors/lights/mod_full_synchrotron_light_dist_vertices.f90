@@ -273,7 +273,7 @@ property_id,time_id,particle_in,mass,mhd_fields)
                            (light_vert%properties(11,property_id,time_id)*mass*ATOMIC_MASS_UNIT*&
                            ((light_vert%properties(10,property_id,time_id)*SPEED_OF_LIGHT)**2))
     !> compute total synchrotron power
-    light_vert%properties(13,property_id,time_id)  = (((EL_CHG*real(p_in%q,kind=8))**2)*&
+    light_vert%properties(13,property_id,time_id)  = (p_in%weight*((EL_CHG*real(p_in%q,kind=8))**2)*&
                            SPEED_OF_LIGHT*(light_vert%properties(10,property_id,time_id)**4)*&
                            (light_vert%properties(11,property_id,time_id)**4)*&
                            (light_vert%properties(12,property_id,time_id)**2))/(6.d0*PI*EPS_ZERO)

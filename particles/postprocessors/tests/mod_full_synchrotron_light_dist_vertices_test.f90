@@ -55,6 +55,7 @@ integer,dimension(n_times_sol)                :: n_active_vertices_sol
 integer,dimension(n_groups_max,n_times_sol)   :: n_active_particles_sol
 integer,dimension(n_particles_max,n_groups_max,n_times_sol) :: active_particle_ids_sol
 real*8,dimension(n_times_sol)                 :: time_vector_sol
+real*8,dimension(n_particles_max*n_groups_max,n_times_sol)     :: weight_sol
 real*8,dimension(n_x,n_particles_max*n_groups_max,n_times_sol) :: x_cart_sol
 real*8,dimension(n_properties,n_particles_max*n_groups_max,n_times_sol) :: properties_sol
 !> variables for generating spectra
@@ -267,7 +268,7 @@ subroutine test_synchrotron_irradiance_directional_func_taskloop()
   do kk=1,n_times_sol
     do jj=1,n_particles_time(kk)
       do ii=1,n_shadowed_per_particle
-        call compute_synch_directionality_irradiance(x_shadowed(:,ii,jj,kk),&
+        call compute_synch_directionality_irradiance(weight_sol(jj,kk),x_shadowed(:,ii,jj,kk),&
         x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol(:,:,ii),irradiance_sol(:,:,ii))
         !$omp parallel default(shared) firstprivate(ii,kk,jj)
         !$omp single
@@ -318,7 +319,7 @@ subroutine test_synchrotron_irradiance_directional_func()
   do kk=1,n_times_sol
     do jj=1,n_particles_time(kk)
       do ii=1,n_shadowed_per_particle
-        call compute_synch_directionality_irradiance(x_shadowed(:,ii,jj,kk),&
+        call compute_synch_directionality_irradiance(weight_sol(jj,kk),x_shadowed(:,ii,jj,kk),&
         x_cart_loc(:,jj,kk),properties_loc(:,jj,kk),dir_fun_sol(:,:,ii),irradiance_sol(:,:,ii))
         call vertex_sol%directionality_funct(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),dir_fun(:,:,ii))
         call vertex_sol%spectral_irradiance(spectrum,kk,jj,x_shadowed(:,ii,jj,kk),irradiance(:,:,ii))
@@ -526,7 +527,7 @@ subroutine compute_synch_x_properties_ana()
           x_cart_sol(:,counter,kk) = cylindrical_to_cartesian(p_list(ii)%x)
           call compute_synch_properties_ana_1p(&
           sims_particles(kk)%groups(jj)%mass,p_list(ii),&
-          properties_sol(:,counter,kk))
+          weight_sol(counter,kk),properties_sol(:,counter,kk))
         enddo
       end select
     enddo
@@ -534,13 +535,14 @@ subroutine compute_synch_x_properties_ana()
 end subroutine compute_synch_x_properties_ana
 
 !> compute the synchrotron lights directionaly function and irradiance
-subroutine compute_synch_directionality_irradiance(x_illum,&
+subroutine compute_synch_directionality_irradiance(weight,x_illum,&
 x_light,property,dir_func,irradiance)
   use constants,                      only: TWOPI,PI,EL_CHG,EPS_ZERO,SPEED_OF_LIGHT
   use mod_besselk,                    only: besselk
   use mod_coordinate_transforms,      only: cartesian_to_spherical_latitude
   implicit none
   !> inputs
+  real*8,intent(in)                         :: weight
   real*8,dimension(n_x),intent(in)          :: x_illum,x_light
   real*8,dimension(n_properties),intent(in) :: property
   !> outputs
@@ -567,7 +569,7 @@ x_light,property,dir_func,irradiance)
   one_z2 = 5.d-1*(1.d0+(z_v**2)); z_z3 = 1.5d0*(z_v+((z_v**3)/3.d0))
   factor_2 = ((property(11)*rpsichi(2))**2)/(1.d0+(property(11)*rpsichi(2))**2)
   factor = (1.d0+(property(11)*rpsichi(2))**2)**2
-  factor = (factor*SPEED_OF_LIGHT*(EL_CHG**2))/&
+  factor = weight*(factor*SPEED_OF_LIGHT*(EL_CHG**2))/&
            (sqrt(3.d0)*EPS_ZERO*property(12)*(property(11)**4))
   !> compute the irradiance
   !> compute the directionaly function
@@ -586,7 +588,7 @@ end subroutine compute_synch_directionality_irradiance
 
 !> compute synchrotron electron properties using the analytical
 !> tokamak like electric and magnetic fields for one particle
-subroutine compute_synch_properties_ana_1p(mass,particle,property)
+subroutine compute_synch_properties_ana_1p(mass,particle,weight,property)
   use constants,                      only: PI,EL_CHG,ATOMIC_MASS_UNIT
   use constants,                      only: SPEED_OF_LIGHT,EPS_ZERO
   use mod_math_operators,             only: cross_product
@@ -597,6 +599,7 @@ subroutine compute_synch_properties_ana_1p(mass,particle,property)
   !> inputs
   real*8,intent(in) :: mass
   !> outputs
+  real*8,intent(out) :: weight
   real*8,dimension(n_properties),intent(out) :: property
   !> variables
   real*8 :: velocity,beta,rel_fact,kappa,P_rad
@@ -621,8 +624,9 @@ subroutine compute_synch_properties_ana_1p(mass,particle,property)
   kappa = (norm2(vec_real_size3)*EL_CHG*abs(real(particle%q,kind=8)))/&
   (rel_fact*mass*ATOMIC_MASS_UNIT*velocity**3)
   !> compute total radiated power (L. Carbajal, PPCF, 2017)
-  P_rad = (((rel_fact*velocity)**4)*((kappa*EL_CHG*real(particle%q,kind=8))**2))/&
-  (6.d0*PI*EPS_ZERO*(SPEED_OF_LIGHT**3))
+  weight = particle%weight
+  P_rad = (weight*((rel_fact*velocity)**4)*((kappa*EL_CHG*&
+  real(particle%q,kind=8))**2))/(6.d0*PI*EPS_ZERO*(SPEED_OF_LIGHT**3))
   !> Store all values in the array
   property(1:3) = T_vec; property(4:6) = N_vec; property(7:9) = B_vec;
   property(10) = beta; property(11) = rel_fact; property(12) = kappa;

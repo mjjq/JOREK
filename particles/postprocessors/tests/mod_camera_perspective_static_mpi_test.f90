@@ -37,6 +37,7 @@ real*8,parameter                            :: tol_real8_rel=5.d-15
 real*8,parameter                            :: light_intensity=1.d13
 real*8,dimension(2),parameter               :: st_outbnd=(/-2.d2,5.d3/)
 real*8,dimension(2),parameter               :: q_interval=(/-3.1d-1,2.5d-1/)
+real*8,dimension(2),parameter               :: weight_interval=(/2d-1,5d-2/)
 real*8,dimension(2),parameter               :: property_interval=(/5.d-10,5.d-8/)
 real*8,dimension(2),parameter               :: width_gaussian=(/5.d-5,5.d-1/)
 real*8,dimension(2),parameter               :: costheta_interval=(/-1.d0,1.d0/)
@@ -354,7 +355,7 @@ subroutine fill_omnidirectional_light(rank,n_tasks,ifail)
   integer,intent(in) :: rank,n_tasks,ifail
   !> variables
   integer                                 :: ii,jj,thread_id
-  real*8                                  :: rand
+  real*8                                  :: rand,weight
   real*8,dimension(n_x_sol)               :: stq_sol
   real*8,dimension(n_property_light)      :: properties_sol
   real*8,dimension(n_x_sol)               :: x_sol,plane_pos
@@ -384,9 +385,11 @@ subroutine fill_omnidirectional_light(rank,n_tasks,ifail)
       camera_sol%image_plane(:,:,ii),stq_sol(1:n_st_sol))
       !> compute and store the ray vertex and its local coordinates
       lights_rank%x(:,jj,ii) = pinhole_sol%center + (plane_pos-pinhole_sol%center)/stq_sol(n_x_sol)
+      !> sample the particle weight
+      call gnu_rng_interval(weight_interval,weight)
       !> compute light properties
       call gnu_rng_interval(property_interval,lights_rank%properties(1,jj,ii))
-      lights_rank%properties(2,jj,ii) = 1.d0/sqrt(2.d0*PI*lights_rank%properties(1,jj,ii))
+      lights_rank%properties(2,jj,ii) = weight/sqrt(2.d0*PI*lights_rank%properties(1,jj,ii))
     enddo
   enddo
   !$omp end do

@@ -115,8 +115,8 @@ time_id,particle_in,mass,mhd_fields)
     ((p_in%p(1)*p_in%p(1))/((mass*SPEED_OF_LIGHT)**2)) + &
     ((2d0*p_in%p(2)*mhd_fields(1))/(mass*(SPEED_OF_LIGHT**2))))
   end select
-  light_vert%properties(2,property_id,time_id) = 1d0/sqrt(TWOPI*&
-  light_vert%properties(1,property_id,time_id))
+  light_vert%properties(2,property_id,time_id) = particle_in%weight/&
+  sqrt(TWOPI*light_vert%properties(1,property_id,time_id))
 end subroutine compute_omnidirectional_light_properties 
 
 !> check if the shaded point is within the emission range.

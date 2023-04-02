@@ -21,6 +21,7 @@ type (type_node),optional :: aux_nodes(n_vertex_max)
 real*8, dimension (:,:), allocatable  :: ELM
 real*8, dimension (:)  , allocatable  :: RHS
 integer, intent(in)                   :: tid, i_tor_min, i_tor_max
+type (type_node), optional            :: aux_nodes(n_vertex_max)
 
 integer    :: i, j, ms, mt, mp, k, l, index_ij, index_kl, index, xcase2
 integer    :: in, im, ij1, ij2, kl1, kl2

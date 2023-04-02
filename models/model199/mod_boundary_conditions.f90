@@ -17,8 +17,6 @@
 !*   psi_axis     -                                                            *
 !*   psi_bnd      -                                                            *
 !*   Z_xpoint     -                                                            *
-!*   gmres        - boolean indicating if we are using GMRES method            *
-!*   solve_only   - Indicate if we want to perform only solve                  *
 !*                                                                             *
 !*******************************************************************************
 module mod_boundary_conditions
@@ -27,14 +25,12 @@ contains
   subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, local_elms,          &
                                   n_local_elms, index_min, index_max, rhs_loc, xpoint2, xcase2,       & 
                                   R_axis, Z_axis, psi_axis, psi_bnd, R_xpoint, Z_xpoint, psi_xpoint,  &  
-                                  gmres, solve_only, ijA_index, ijA_size, irn_jcn, irn, jcn,          & 
-                                  A_mat, i_tor_min, i_tor_max )
+                                  a_mat)
 
     use data_structure
     use phys_module, only: F0, GAMMA, keep_n0_const
     use vacuum, only: is_freebound
     use mpi_mod
-    use mod_locate_irn_jcn
     use mod_integer_types
     use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
     use mod_node_indices
@@ -60,12 +56,7 @@ contains
     real*8,                             intent(in)    :: R_xpoint(2)
     real*8,                             intent(in)    :: Z_xpoint(2)
     real*8,                             intent(in)    :: psi_xpoint(2)
-    logical,                            intent(in)    :: gmres
-    logical,                            intent(in)    :: solve_only
-    integer,                            intent(in)    :: i_tor_min, i_tor_max 
-    integer(kind=int_all), allocatable, intent(in)    :: ijA_index(:,:), ijA_size(:), irn_jcn(:,:) 
-    integer(kind=int_all), allocatable, intent(inout) :: irn(:), jcn(:) 
-    real*8,                allocatable, intent(inout) :: A_mat(:) 
+    type(type_SP_MATRIX)                              :: a_mat
 
     ! Internal parameters
     real*8                :: zbig, zbig_backup
@@ -80,7 +71,7 @@ contains
     ! --- calculate node_indices
     call calculate_node_indices(node_indices)
 
-    n_tor_local = i_tor_max - i_tor_min + 1
+    n_tor_local = a_mat%i_tor_max - a_mat%i_tor_min + 1
     zbig = 1.d12
     zbig_backup = zbig
 
@@ -94,7 +85,7 @@ contains
 
           if (node_list%node(inode)%boundary .ne. 0) then
 
-             do in=i_tor_min, i_tor_max 
+             do in=a_mat%i_tor_min, a_mat%i_tor_max 
                if (keep_n0_const  .and.  in .eq. 1 ) then
                  zbig = 1.d15
                else
@@ -121,8 +112,7 @@ contains
                              index_node = node_list%node(inode)%index(index_tmp)
                              call boundary_conditions_add_one_entry(                 &
                                     index_node, k, in, index_node, k, in,            &
-                                    zbig, solve_only, gmres, index_min, index_max,   &
-                                    ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+                                    zbig, index_min, index_max, a_mat)
                            enddo
                          enddo
 
@@ -145,8 +135,7 @@ contains
                              index_node = node_list%node(inode)%index(index_tmp)
                              call boundary_conditions_add_one_entry(                 &
                                     index_node, k, in, index_node, k, in,            &
-                                    zbig, solve_only, gmres, index_min, index_max,   &
-                                    ijA_index, ijA_size, irn_jcn, irn, jcn, A_mat, i_tor_min, i_tor_max)
+                                    zbig, index_min, index_max, a_mat)
                            enddo
                          enddo
 

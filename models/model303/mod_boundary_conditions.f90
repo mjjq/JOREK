@@ -354,7 +354,7 @@ do i=1, n_local_elms !=== do elements
                 index_node = node_list%node(inode)%index(index_tmp)
                 call boundary_conditions_add_one_entry(                 &
                        index_node, k, in, index_node, k, in,            &
-                       zbig, index_min, index_max, a_mat, a_mat%i_tor_min, a_mat%i_tor_max)
+                       zbig, index_min, index_max, a_mat)
               enddo
             enddo
 

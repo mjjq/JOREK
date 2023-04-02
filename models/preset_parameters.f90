@@ -340,9 +340,6 @@ subroutine preset_parameters
   bcs(:)%dirichlet%AR      = .true.
   bcs(:)%dirichlet%AZ      = .true.
   bcs(:)%dirichlet%A3      = .true.
-  bcs(:)%dirichlet%uR      = .true.
-  bcs(:)%dirichlet%uZ      = .true.
-  bcs(:)%dirichlet%up      = .true.
 
   bcs(  1)%dirichlet%rho   = .false.
   bcs(4:5)%dirichlet%rho   = .false.

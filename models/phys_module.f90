@@ -155,9 +155,6 @@ module phys_module
     logical :: AR   
     logical :: AZ   
     logical :: A3  
-    logical :: uR   
-    logical :: uZ   
-    logical :: up  
   end type type_dirichlet_bc
 
   type type_natural_bc                           

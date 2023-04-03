@@ -68,15 +68,16 @@ if(my_id.eq.0) then
   call read_soft_pdf_file(soft_pdf_filename,n_r_pdf_mesh,soft_pdf_r_mesh,soft_pdf_list)
 endif
 call MPI_Bcast(dims,size(dims),MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-allocate(soft_orbit_x_local(n_vec,dims(2))); soft_orbit_x_local     = 0d0;
-allocate(soft_orbit_ppar_local(dims(2)));    soft_orbit_ppar_local  = 0d0;
-allocate(soft_orbit_pperp_local(dims(2)));   soft_orbit_pperp_local = 0d0;
-allocate(soft_orbit_Jdtdrho_local(dims(2)));   soft_orbit_Jdtdrho_local = 0d0;
+allocate(soft_orbit_x_local(n_vec,dims(2)));  soft_orbit_x_local     = 0d0;
+allocate(soft_orbit_ppar_local(dims(2)));     soft_orbit_ppar_local  = 0d0;
+allocate(soft_orbit_pperp_local(dims(2)));    soft_orbit_pperp_local = 0d0;
+allocate(soft_orbit_Jdtdrho_local(dims(2)));  soft_orbit_Jdtdrho_local = 0d0;
 call scatter_2D_arrays(my_id,n_cpus,n_vec,dims(2),dims(1),soft_orbit_x,soft_orbit_x_local)
 call MPI_Scatter(soft_orbit_ppar,dims(2),MPI_REAL8,soft_orbit_ppar_local,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 call MPI_Scatter(soft_orbit_pperp,dims(2),MPI_REAL8,soft_orbit_pperp_local,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 call MPI_Scatter(soft_orbit_Jdtdrho,dims(2),MPI_REAL8,soft_orbit_Jdtdrho_local,dims(2),&
 MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call broadcast_soft_pdf_list(my_id,n_r_pdf_mesh,soft_pdf_r_mesh,soft_pdf_list)
 if(allocated(soft_orbit_x))       deallocate(soft_orbit_x)
 if(allocated(soft_orbit_ppar))    deallocate(soft_orbit_ppar)
 if(allocated(soft_orbit_pperp))   deallocate(soft_orbit_pperp)
@@ -331,6 +332,25 @@ ppar,pperp,Jdtdrho)
   if(allocated(x_loc))           deallocate(x_loc)
 end subroutine read_soft_orbit_file
 
+!> allocate soft pdf type and initialize to 0
+!> inputs:
+!>   soft_pdf: (type_soft_pdf) soft_pdf to be initialized
+!> outputs:
+!>   soft_pdf: (type_soft_pdf) initialized soft_pdf
+subroutine init_soft_pdf(n_pxi,soft_pdf)
+  implicit none
+  !> inputs-outputs:
+  type(type_soft_pdf),intent(inout) :: soft_pdf
+  integer,dimension(2),intent(in)   :: n_pxi
+  !> allocate soft_pdf and initialize to 0
+  if(allocated(soft_pdf%p)) deallocate(soft_pdf%p); 
+  allocate(soft_pdf%p(n_pxi(1))); soft_pdf%p=0d0;
+  if(allocated(soft_pdf%xi)) deallocate(soft_pdf%xi); 
+  allocate(soft_pdf%xi(n_pxi(2))); soft_pdf%xi=0d0;
+  if(allocated(soft_pdf%pdf)) deallocate(soft_pdf%pdf); 
+  allocate(soft_pdf%pdf(n_pxi(1),n_pxi(2))); soft_pdf%pdf=0d0;
+end subroutine init_soft_pdf
+
 !> read and distribute the pdf used in SOFT and its mesh (r,xi,p)
 !> inputs:
 !>   soft_pdf_filename: (charcater)(*) soft pdf filename
@@ -379,6 +399,85 @@ subroutine read_soft_pdf_file(soft_pdf_filename,n_r_mesh,r_mesh,soft_pdf)
   !> close hdf5 file
   call HDF5_close(file_id)
 end subroutine read_soft_pdf_file
+
+!> broadcast the soft pdf list and meshes
+!>   n_r:           (integer) number of soft minor radii
+!>   r_mesh:        (real8)(n_r) soft pdf minor radii
+!>   soft_pdf_list: (type_pdf_list)(n_r) soft pdf for various minor radii
+!> inputs:
+!>   n_r:           (integer) number of soft minor radii
+!>   r_mesh:        (real8)(n_r) soft pdf minor radii
+!>   soft_pdf_list: (type_pdf_list)(n_r) soft pdf for various minor radii
+!> outputs:
+subroutine broadcast_soft_pdf_list(my_id,n_r,r_mesh,soft_pdf_list)
+  use mpi
+  implicit none
+  !> inputs-outputs:
+  integer,intent(inout) :: n_r
+  real*8,dimension(:),allocatable,intent(inout) :: r_mesh
+  type(type_soft_pdf),dimension(:),allocatable,intent(inout) :: soft_pdf_list
+  !> inputs:
+  integer,intent(in) :: my_id
+  !> variables:
+  integer :: ii,n_p_mesh_global,n_xi_mesh_global,ierr
+  integer,dimension(2)               :: n_pxi_sum
+  real*8,dimension(:),allocatable    :: p_mesh_global,xi_mesh_global
+  real*8,dimension(:,:),allocatable  :: pdf_global
+  integer,dimension(:,:),allocatable :: dims_pxi
+  !> broadcast the minor radius size and allocate p and xi mesh sizes
+  call MPI_Bcast(n_r,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  allocate(dims_pxi(2,n_r)); dims_pxi = 0;
+  !> extract and broadcast the pdf sizes
+  if(my_id.eq.0) then
+    do ii=1,n_r
+      dims_pxi(:,ii) = [size(soft_pdf_list(ii)%p),size(soft_pdf_list(ii)%xi)]
+    enddo
+  endif
+  call MPI_Bcast(dims_pxi,n_r*2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  !> allocate global pdf, r and xi arrays
+  n_p_mesh_global = sum(dims_pxi(:,1)); n_xi_mesh_global = sum(dims_pxi(:,2));
+  allocate(p_mesh_global(n_p_mesh_global)); p_mesh_global    = 0d0;
+  allocate(xi_mesh_global(n_xi_mesh_global)); xi_mesh_global = 0d0;
+  allocate(pdf_global(n_p_mesh_global,n_xi_mesh_global)); pdf_global = 0d0;
+  !> allocate soft_pdf_list for all ranks except master
+  if(my_id.ne.0) then
+    if(allocated(soft_pdf_list)) deallocate(soft_pdf_list); allocate(soft_pdf_list(n_r));
+    do ii=1,n_r
+      call init_soft_pdf(dims_pxi(:,ii),soft_pdf_list(ii))
+    enddo
+  endif
+  !> construct the global arrays to be sent
+  if(my_id.eq.0) then
+    n_pxi_sum = 0;
+    do ii=1,n_r
+      p_mesh_global(n_pxi_sum(1)+1:n_pxi_sum(1)+dims_pxi(1,ii))  = soft_pdf_list(ii)%p 
+      xi_mesh_global(n_pxi_sum(2)+1:n_pxi_sum(2)+dims_pxi(2,ii)) = soft_pdf_list(ii)%xi
+      pdf_global(n_pxi_sum(1)+1:n_pxi_sum(1)+dims_pxi(1,ii),&
+      n_pxi_sum(2)+1:n_pxi_sum(2)+dims_pxi(2,ii)) = soft_pdf_list(ii)%pdf
+      n_pxi_sum = n_pxi_sum + dims_pxi(:,ii);
+    enddo
+  endif
+  !> broadcast global arrays
+  call MPI_Bcast(p_mesh_global,n_p_mesh_global,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(xi_mesh_global,n_xi_mesh_global,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(pdf_global,n_p_mesh_global*n_xi_mesh_global,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  !> store the soft pdf into structure
+  if(my_id.ne.0) then
+    n_pxi_sum = 0;
+    do ii=1,n_r
+      soft_pdf_list(ii)%p   = p_mesh_global(n_pxi_sum(1)+1:n_pxi_sum(1)+dims_pxi(1,ii))
+      soft_pdf_list(ii)%xi  = xi_mesh_global(n_pxi_sum(2)+1:n_pxi_sum(2)+dims_pxi(2,ii))
+      soft_pdf_list(ii)%pdf = pdf_global(n_pxi_sum(1)+1:n_pxi_sum(1)+dims_pxi(1,ii),&
+      n_pxi_sum(2)+1:n_pxi_sum(2)+dims_pxi(2,ii))
+      n_pxi_sum = n_pxi_sum + dims_pxi(:,ii);
+    enddo
+  endif
+  !> clean up
+  if(allocated(dims_pxi))       deallocate(dims_pxi)
+  if(allocated(p_mesh_global))  deallocate(p_mesh_global)
+  if(allocated(xi_mesh_global)) deallocate(xi_mesh_global)
+  if(allocated(pdf_global))     deallocate(pdf_global)
+end subroutine broadcast_soft_pdf_list
 
 !> write jorek particles in HDF5
 !> inputs:

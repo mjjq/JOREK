@@ -26,7 +26,8 @@ integer,dimension(2) :: dims
 real*8               :: time,mass,charge
 real*8,dimension(2)  :: phi_interval
 real*8,dimension(:),allocatable   :: soft_orbit_ppar_local,soft_orbit_pperp_local
-real*8,dimension(:),allocatable   :: soft_orbit_ppar,soft_orbit_pperp,soft_pdf_r_mesh
+real*8,dimension(:),allocatable   :: soft_orbit_Jdtdrho_local,soft_orbit_ppar
+real*8,dimension(:),allocatable   :: soft_orbit_pperp,soft_orbit_Jdtdrho,soft_pdf_r_mesh
 real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local
 character(len=17)    :: fields_filename,soft_pdf_filename
 character(len=125)   :: particle_filename
@@ -58,7 +59,8 @@ write(*,*) "Reading MHD data: completed!"
 !> Read soft input and generate JOREK particle restart -------------------------------------
 write(*,*) "Reading SOFT orbit file ..."
 if(my_id.eq.0) then
-  call read_soft_orbit_file(soft_orbit_filename,n_vec,dims(1),soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
+  call read_soft_orbit_file(soft_orbit_filename,n_vec,dims(1),soft_orbit_x,&
+  soft_orbit_ppar,soft_orbit_pperp,soft_orbit_Jdtdrho)
   !> scatter the global arrays to each mpi process)
   dims(2) = dims(1)/n_cpus;
   if(dims(2)*n_cpus.lt.dims(1)) dims(2) = dims(2)+1
@@ -69,18 +71,22 @@ call MPI_Bcast(dims,size(dims),MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 allocate(soft_orbit_x_local(n_vec,dims(2))); soft_orbit_x_local     = 0d0;
 allocate(soft_orbit_ppar_local(dims(2)));    soft_orbit_ppar_local  = 0d0;
 allocate(soft_orbit_pperp_local(dims(2)));   soft_orbit_pperp_local = 0d0;
+allocate(soft_orbit_Jdtdrho_local(dims(2)));   soft_orbit_Jdtdrho_local = 0d0;
 call scatter_2D_arrays(my_id,n_cpus,n_vec,dims(2),dims(1),soft_orbit_x,soft_orbit_x_local)
 call MPI_Scatter(soft_orbit_ppar,dims(2),MPI_REAL8,soft_orbit_ppar_local,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 call MPI_Scatter(soft_orbit_pperp,dims(2),MPI_REAL8,soft_orbit_pperp_local,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-if(allocated(soft_orbit_x))     deallocate(soft_orbit_x)
-if(allocated(soft_orbit_ppar))  deallocate(soft_orbit_ppar)
-if(allocated(soft_orbit_pperp)) deallocate(soft_orbit_pperp)
+call MPI_Scatter(soft_orbit_Jdtdrho,dims(2),MPI_REAL8,soft_orbit_Jdtdrho_local,dims(2),&
+MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+if(allocated(soft_orbit_x))       deallocate(soft_orbit_x)
+if(allocated(soft_orbit_ppar))    deallocate(soft_orbit_ppar)
+if(allocated(soft_orbit_pperp))   deallocate(soft_orbit_pperp)
+if(allocated(soft_orbit_Jdtdrho)) deallocate(soft_orbit_Jdtdrho)
 write(*,*) "Reading SOFT orbit file: completed!"
 !> Generate JOREK relativistic gc from SOFT orbits -----------------------------------------
 write(*,*) 'Converting soft orbit to JOREK relativistic gc ...'
 call convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_type,my_id,n_cpus,time,\
 mass,charge,n_vec,dims(2),n_phi,phi_interval,soft_orbit_x_local,\
-soft_orbit_ppar_local,soft_orbit_pperp_local)
+soft_orbit_ppar_local,soft_orbit_pperp_local,soft_orbit_Jdtdrho_local)
 write(*,*) 'Converting soft orbit to JOREK relativistic gc: completed!'
 write(*,*) 'Writing JOREK relativistic gc in ',trim(particle_filename),' ...'
 call write_simulation_hdf5(sim,trim(particle_filename))
@@ -92,14 +98,15 @@ if(do_write_particles_in_hdf5) then
   write(*,*) 'Writing JOREK particles in HDF5 file: completed!'
 endif
 !> Finalisation ----------------------------------------------------------------------------
-if(allocated(soft_orbit_x))           deallocate(soft_orbit_x)
-if(allocated(soft_orbit_ppar))        deallocate(soft_orbit_ppar)
-if(allocated(soft_orbit_pperp))       deallocate(soft_orbit_pperp)
-if(allocated(soft_orbit_x_local))     deallocate(soft_orbit_x_local)
-if(allocated(soft_orbit_ppar_local))  deallocate(soft_orbit_ppar_local)
-if(allocated(soft_orbit_pperp_local)) deallocate(soft_orbit_pperp_local)
-if(allocated(soft_pdf_r_mesh))        deallocate(soft_pdf_r_mesh)
-if(allocated(soft_pdf_list))          deallocate(soft_pdf_list)
+if(allocated(soft_orbit_x))             deallocate(soft_orbit_x)
+if(allocated(soft_orbit_ppar))          deallocate(soft_orbit_ppar)
+if(allocated(soft_orbit_pperp))         deallocate(soft_orbit_pperp)
+if(allocated(soft_orbit_x_local))       deallocate(soft_orbit_x_local)
+if(allocated(soft_orbit_ppar_local))    deallocate(soft_orbit_ppar_local)
+if(allocated(soft_orbit_pperp_local))   deallocate(soft_orbit_pperp_local)
+if(allocated(soft_orbit_Jdtdrho_local)) deallocate(soft_orbit_Jdtdrho_local)
+if(allocated(soft_pdf_r_mesh))          deallocate(soft_pdf_r_mesh)
+if(allocated(soft_pdf_list))            deallocate(soft_pdf_list)
 call finalize_mpi_threads(ierr)
 write(*,*) 'Program terminated: good bye!'
 
@@ -107,25 +114,26 @@ contains
 
 !> generate jorek particle relativistic gc from soft orbits 
 !> inputs:
-!>   sim:              (particle_sim) particle simulation type to be initialised
-!>   rng_base:         (type_rng) type of the random number generator
-!>   my_id:            (integer) MPI task rank
-!>   n_cpus:           (integer) number of MPI tasks
-!>   time:             (real8) simulation time
-!>   mass:             (real8) particle mass in AMU
-!>   charge:           (real8) particle charge (RE: -1)
-!>   n_vec:            (integer) size of the position vector
-!>   n_points:         (integer) number of soft valid points
-!>   n_phi:            (integer) number of toroidal samples per particles
-!>   phi_interval:     (real8)(2) toroidal angle interval for sampling
-!>   soft_orbit_x:     (real8)(n_vec,n_points) soft positions in xyz
-!>   soft_orbit_ppar:  (real8)(n_points) soft parallel momentum
-!>   soft_orbit_pperp: (real8)(n_points) soft perpendicular momentum
+!>   sim:                (particle_sim) particle simulation type to be initialised
+!>   rng_base:           (type_rng) type of the random number generator
+!>   my_id:              (integer) MPI task rank
+!>   n_cpus:             (integer) number of MPI tasks
+!>   time:               (real8) simulation time
+!>   mass:               (real8) particle mass in AMU
+!>   charge:             (real8) particle charge (RE: -1)
+!>   n_vec:              (integer) size of the position vector
+!>   n_points:           (integer) number of soft valid points
+!>   n_phi:              (integer) number of toroidal samples per particles
+!>   phi_interval:       (real8)(2) toroidal angle interval for sampling
+!>   soft_orbit_x:       (real8)(n_vec,n_points) soft positions in xyz
+!>   soft_orbit_ppar:    (real8)(n_points) soft parallel momentum
+!>   soft_orbit_pperp:   (real8)(n_points) soft perpendicular momentum
+!>   soft_orbit_Jdtdrho: (real8)(n_points) soft jacobian*dpoloidal*dminor_radius
 !> outpus:
 !>   sim: (particle_sim) initialised particle simulation
 subroutine convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_base,my_id,&
 n_cpus,time,mass,charge,n_vec,n_points,n_phi,phi_interval,&
-soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
+soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_Jdtdrho)
   use mpi
   use constants,                 only: SPEED_OF_LIGHT
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
@@ -143,6 +151,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp)
   real*8,dimension(2),intent(in)   :: phi_interval
   real*8,dimension(n_points),intent(in)       :: soft_orbit_ppar
   real*8,dimension(n_points),intent(in)       :: soft_orbit_pperp
+  real*8,dimension(n_points),intent(in)       :: soft_orbit_Jdtdrho
   real*8,dimension(n_vec,n_points),intent(in) :: soft_orbit_x
 
   !> variables:
@@ -260,7 +269,9 @@ end subroutine scatter_2D_arrays
 !>   x:             (real8)(3,n_soft_particles) soft positions in xyz coordinates
 !>   ppar:          (real8)(n_soft_particles) soft parallel momentum
 !>   pperp:         (real8)(n_soft_particles) soft perpendicular momentum
-subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,ppar,pperp)
+!>   Jdtdrho:       (real8)(n_soft_particles) jacobian*dpoloidal*dminor_radius
+subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,&
+ppar,pperp,Jdtdrho)
   use constants, only: ATOMIC_MASS_UNIT
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
@@ -271,28 +282,30 @@ subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,ppar,p
   integer,intent(in)          :: n_vec
   !> outputs:
   integer,intent(out) :: n_soft_points
-  real*8,dimension(:),allocatable,intent(out)   :: ppar,pperp
+  real*8,dimension(:),allocatable,intent(out)   :: ppar,pperp,Jdtdrho
   real*8,dimension(:,:),allocatable,intent(out) :: x
   !> variables:
   integer(HID_T) :: file_id
   integer        :: ii,n_orbits,n_times,n_active_orbits,ierr
   integer,dimension(:),allocatable   :: valid_orbit_id
-  real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc
+  real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,Jdtdrho_loc
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename//".h5"),file_id,ierr)
   !> read sofit particles
-  call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")   !< parallel momentum
-  call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp") !< perpendicular momentum
-  call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")         !< position in xyz coordinates
+  call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")       !< parallel momentum
+  call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")     !< perpendicular momentum
+  call HDF5_allocatable_array2D_reading(file_id,Jdtdrho_loc,"/Jdtdrho") !< jacobia*dpoloidal*dminorradius
+  call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")             !< position in xyz coordinates
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
   !> remove zero orbits
   n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1);
   n_soft_points = n_orbits*n_times; n_active_orbits = 0;
   !> reshape arrays
-  x_loc     = reshape(x_loc,[n_vec,n_soft_points])
-  ppar_loc  = reshape(ppar_loc,[n_soft_points,1])
-  pperp_loc = reshape(pperp_loc,[n_soft_points,1])
+  x_loc       = reshape(x_loc,[n_vec,n_soft_points])
+  ppar_loc    = reshape(ppar_loc,[n_soft_points,1])
+  pperp_loc   = reshape(pperp_loc,[n_soft_points,1])
+  Jdtdrho_loc = reshape(Jdtdrho_loc,[n_soft_points,1])
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_soft_points
@@ -305,13 +318,16 @@ subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,ppar,p
   allocate(x(n_vec,n_active_orbits)); x     = 0d0;
   allocate(ppar(n_active_orbits));    ppar  = 0d0; 
   allocate(pperp(n_active_orbits));   pperp = 0d0;
-  x     = x_loc(:,valid_orbit_id(1:n_active_orbits))
-  ppar  = ppar_loc(valid_orbit_id(1:n_active_orbits),1)
-  pperp = pperp_loc(valid_orbit_id(1:n_active_orbits),1)
+  allocate(Jdtdrho(n_active_orbits)); Jdtdrho = 0d0;
+  x       = x_loc(:,valid_orbit_id(1:n_active_orbits))
+  ppar    = ppar_loc(valid_orbit_id(1:n_active_orbits),1)
+  pperp   = pperp_loc(valid_orbit_id(1:n_active_orbits),1)
+  Jdtdrho = Jdtdrho_loc(valid_orbit_id(1:n_active_orbits),1)
   n_soft_points = n_active_orbits
   if(allocated(valid_orbit_id))  deallocate(valid_orbit_id)
   if(allocated(ppar_loc))        deallocate(ppar_loc)
   if(allocated(pperp_loc))       deallocate(pperp_loc)
+  if(allocated(Jdtdrho_loc))     deallocate(Jdtdrho_loc)
   if(allocated(x_loc))           deallocate(x_loc)
 end subroutine read_soft_orbit_file
 

@@ -292,14 +292,9 @@ subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,ppar,p
   allocate(x(n_vec,n_active_orbits)); x     = 0d0;
   allocate(ppar(n_active_orbits));    ppar  = 0d0; 
   allocate(pperp(n_active_orbits));   pperp = 0d0;
-  !$omp parallel do default(none) firstprivate(n_active_orbits) private(ii) &
-  !$omp shared(x,x_loc,ppar,ppar_loc,pperp,pperp_loc,valid_orbit_id)
-  do ii=1,n_active_orbits   
-    x(:,ii)    = x_loc(:,valid_orbit_id(ii))
-    ppar(ii)   = ppar_loc(valid_orbit_id(ii),1)
-    pperp(ii)  = pperp_loc(valid_orbit_id(ii),1)
-  enddo
-  !$omp end parallel do
+  x     = x_loc(:,valid_orbit_id(1:n_active_orbits))
+  ppar  = ppar_loc(valid_orbit_id(1:n_active_orbits),1)
+  pperp = pperp_loc(valid_orbit_id(1:n_active_orbits),1)
   n_soft_points = n_active_orbits
   if(allocated(valid_orbit_id))  deallocate(valid_orbit_id)
   if(allocated(ppar_loc))        deallocate(ppar_loc)

@@ -9,18 +9,26 @@ use particle_tracer
 
 implicit none
 
+!> Data-types ------------------------------------------------------------------------------
+!> derived datatype describing the particle pdf used in SODT
+type type_soft_pdf
+  real*8,dimension(:),allocatable   :: xi,p !< cos(pitch_angle) and momentum sizes
+  real*8,dimension(:,:),allocatable :: pdf  !< particle pdf
+end type type_soft_pdf
+
 !> Variables -------------------------------------------------------------------------------
 type(pcg32_rng)      :: rng_type
 type(event)          :: field_reader
+type(type_soft_pdf),dimension(:),allocatable :: soft_pdf_list
 logical              :: do_write_particles_in_hdf5
-integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi
+integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi,n_r_pdf_mesh
 integer,dimension(2) :: dims
 real*8               :: time,mass,charge
 real*8,dimension(2)  :: phi_interval
 real*8,dimension(:),allocatable   :: soft_orbit_ppar_local,soft_orbit_pperp_local
-real*8,dimension(:),allocatable   :: soft_orbit_ppar,soft_orbit_pperp
+real*8,dimension(:),allocatable   :: soft_orbit_ppar,soft_orbit_pperp,soft_pdf_r_mesh
 real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local
-character(len=17)    :: fields_filename
+character(len=17)    :: fields_filename,soft_pdf_filename
 character(len=125)   :: particle_filename
 character(len=193)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
@@ -35,6 +43,7 @@ charge              = -1d0                !< electron charge
 phi_interval        = [0d0,PI]            !< toroidal angle interval in which particles are sampled
 fields_filename     = 'jorek_equilibrium' !< jorek restart filename
 particle_filename   = 'part_restart_soft_orbits.h5' !< particle restart filename 
+soft_pdf_filename   = 'pdf_jorek_to_soft'           !< soft distribution field input from jorek
 soft_orbit_filename = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall' !< soft orbit filename
 filename_jorek_hdf5 = 'jorek_particles_from_soft'
 !> Initialisation --------------------------------------------------------------------------
@@ -53,6 +62,8 @@ if(my_id.eq.0) then
   !> scatter the global arrays to each mpi process)
   dims(2) = dims(1)/n_cpus;
   if(dims(2)*n_cpus.lt.dims(1)) dims(2) = dims(2)+1
+  !> read the soft_pdf_file
+  call read_soft_pdf_file(soft_pdf_filename,n_r_pdf_mesh,soft_pdf_r_mesh,soft_pdf_list)
 endif
 call MPI_Bcast(dims,size(dims),MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 allocate(soft_orbit_x_local(n_vec,dims(2))); soft_orbit_x_local     = 0d0;
@@ -87,6 +98,8 @@ if(allocated(soft_orbit_pperp))       deallocate(soft_orbit_pperp)
 if(allocated(soft_orbit_x_local))     deallocate(soft_orbit_x_local)
 if(allocated(soft_orbit_ppar_local))  deallocate(soft_orbit_ppar_local)
 if(allocated(soft_orbit_pperp_local)) deallocate(soft_orbit_pperp_local)
+if(allocated(soft_pdf_r_mesh))        deallocate(soft_pdf_r_mesh)
+if(allocated(soft_pdf_list))          deallocate(soft_pdf_list)
 call finalize_mpi_threads(ierr)
 write(*,*) 'Program terminated: good bye!'
 
@@ -301,6 +314,55 @@ subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,ppar,p
   if(allocated(pperp_loc))       deallocate(pperp_loc)
   if(allocated(x_loc))           deallocate(x_loc)
 end subroutine read_soft_orbit_file
+
+!> read and distribute the pdf used in SOFT and its mesh (r,xi,p)
+!> inputs:
+!>   soft_pdf_filename: (charcater)(*) soft pdf filename
+!> outputs:
+!>   n_r_mesh: (integer) size of the pdf minor radius mesh
+!>   r_mesh:   (real8)(n_r_mesh) pdf minor radius mesh
+!>   soft_pdf: (type_soft_pdf)(n_r_mesh) the pdf used by soft with the xi,p meshes
+subroutine read_soft_pdf_file(soft_pdf_filename,n_r_mesh,r_mesh,soft_pdf)
+  use hdf5
+  use hdf5_io_module, only: HDF5_open,HDF5_close
+  use hdf5_io_module, only: HDF5_allocatable_array1D_reading
+  use hdf5_io_module, only: HDF5_allocatable_array2D_reading
+  implicit none
+  !> inputs:
+  character(len=*),intent(in) :: soft_pdf_filename
+  !> outputs:
+  integer,intent(out) :: n_r_mesh
+  real*8,dimension(:),allocatable,intent(out)              :: r_mesh
+  type(type_soft_pdf),dimension(:),allocatable,intent(out) :: soft_pdf
+  !> variables:
+  character(len=10) :: format_char
+  character(len=:),allocatable  :: group_name
+  integer(HID_T)    :: file_id
+  integer           :: ii,ierr,r_id,n_r_id,group_name_len
+  !> open hdf5 file
+  call HDF5_open(trim(soft_orbit_filename//".h5"),file_id,ierr)
+  !> read mesh datasets
+  call HDF5_allocatable_array1D_reading(file_id,r_mesh,"r")
+  !> allocate soft pdf data strucutre
+  allocate(soft_pdf(n_r_mesh))
+  !> read soft pdf
+  do ii=1,n_r_mesh
+    !> define the group name compatible with soft nomenclature
+    r_id = ii-1
+    n_r_id = int(log10(real(r_id)))+1
+    if(r_id.eq.0) n_r_id = 1
+    write(format_char,'(A,I1,A)') "(A,I",n_r_id,")"
+    group_name_len = 1+n_r_id
+    allocate(character(len=group_name_len)::group_name)
+    write(group_name,trim(format_char)) "r",r_id
+    !> read the pdf data 
+    call HDF5_allocatable_array1D_reading(file_id,soft_pdf(ii)%p,trim(group_name//"/p"))
+    call HDF5_allocatable_array1D_reading(file_id,soft_pdf(ii)%xi,trim(group_name//"/xi"))
+    call HDF5_allocatable_array2D_reading(file_id,soft_pdf(ii)%pdf,trim(group_name//"/f"))
+  enddo
+  !> close hdf5 file
+  call HDF5_close(file_id)
+end subroutine read_soft_pdf_file
 
 !> write jorek particles in HDF5
 !> inputs:

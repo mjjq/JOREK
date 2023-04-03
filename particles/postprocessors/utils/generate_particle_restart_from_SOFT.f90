@@ -263,15 +263,15 @@ end subroutine scatter_2D_arrays
 
 !> read SOFT orbit file
 !> inputs:
-!>   soft_orbit_filename: (character)(*) name of the soft orbit file
-!>   n_vec:               (integer) size of the position vector
+!>   soft_orbit_filename_in: (character)(*) name of the soft orbit file
+!>   n_vec:                  (integer) size of the position vector
 !> outputs:
 !>   n_soft_points: (integer) total number of valid soft orbits
 !>   x:             (real8)(3,n_soft_particles) soft positions in xyz coordinates
 !>   ppar:          (real8)(n_soft_particles) soft parallel momentum
 !>   pperp:         (real8)(n_soft_particles) soft perpendicular momentum
 !>   Jdtdrho:       (real8)(n_soft_particles) jacobian*dpoloidal*dminor_radius
-subroutine read_soft_orbit_file(soft_orbit_filename,n_vec,n_soft_points,x,&
+subroutine read_soft_orbit_file(soft_orbit_filename_in,n_vec,n_soft_points,x,&
 ppar,pperp,Jdtdrho)
   use constants, only: ATOMIC_MASS_UNIT
   use hdf5
@@ -279,7 +279,7 @@ ppar,pperp,Jdtdrho)
   use hdf5_io_module, only: HDF5_allocatable_array2D_reading
   implicit none
   !> inputs:
-  character(len=*),intent(in) :: soft_orbit_filename
+  character(len=*),intent(in) :: soft_orbit_filename_in
   integer,intent(in)          :: n_vec
   !> outputs:
   integer,intent(out) :: n_soft_points
@@ -291,7 +291,7 @@ ppar,pperp,Jdtdrho)
   integer,dimension(:),allocatable   :: valid_orbit_id
   real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,Jdtdrho_loc
   !> open the soft orbit hdf5 file
-  call HDF5_open(trim(soft_orbit_filename//".h5"),file_id,ierr)
+  call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
   !> read sofit particles
   call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")       !< parallel momentum
   call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")     !< perpendicular momentum
@@ -353,19 +353,19 @@ end subroutine init_soft_pdf
 
 !> read and distribute the pdf used in SOFT and its mesh (r,xi,p)
 !> inputs:
-!>   soft_pdf_filename: (charcater)(*) soft pdf filename
+!>   soft_pdf_filename_in: (charcater)(*) soft pdf filename
 !> outputs:
 !>   n_r_mesh: (integer) size of the pdf minor radius mesh
 !>   r_mesh:   (real8)(n_r_mesh) pdf minor radius mesh
 !>   soft_pdf: (type_soft_pdf)(n_r_mesh) the pdf used by soft with the xi,p meshes
-subroutine read_soft_pdf_file(soft_pdf_filename,n_r_mesh,r_mesh,soft_pdf)
+subroutine read_soft_pdf_file(soft_pdf_filename_in,n_r_mesh,r_mesh,soft_pdf)
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
   use hdf5_io_module, only: HDF5_allocatable_array1D_reading
   use hdf5_io_module, only: HDF5_allocatable_array2D_reading
   implicit none
   !> inputs:
-  character(len=*),intent(in) :: soft_pdf_filename
+  character(len=*),intent(in) :: soft_pdf_filename_in
   !> outputs:
   integer,intent(out) :: n_r_mesh
   real*8,dimension(:),allocatable,intent(out)              :: r_mesh
@@ -376,11 +376,11 @@ subroutine read_soft_pdf_file(soft_pdf_filename,n_r_mesh,r_mesh,soft_pdf)
   integer(HID_T)    :: file_id
   integer           :: ii,ierr,r_id,n_r_id,group_name_len
   !> open hdf5 file
-  call HDF5_open(trim(soft_orbit_filename//".h5"),file_id,ierr)
+  call HDF5_open(trim(soft_pdf_filename_in)//".h5",file_id,ierr)
   !> read mesh datasets
   call HDF5_allocatable_array1D_reading(file_id,r_mesh,"r")
   !> allocate soft pdf data strucutre
-  allocate(soft_pdf(n_r_mesh))
+  n_r_mesh = size(r_mesh); allocate(soft_pdf(n_r_mesh))
   !> read soft pdf
   do ii=1,n_r_mesh
     !> define the group name compatible with soft nomenclature
@@ -388,13 +388,14 @@ subroutine read_soft_pdf_file(soft_pdf_filename,n_r_mesh,r_mesh,soft_pdf)
     n_r_id = int(log10(real(r_id)))+1
     if(r_id.eq.0) n_r_id = 1
     write(format_char,'(A,I1,A)') "(A,I",n_r_id,")"
-    group_name_len = 1+n_r_id
+    group_name_len = 2+n_r_id
     allocate(character(len=group_name_len)::group_name)
-    write(group_name,trim(format_char)) "r",r_id
+    write(group_name,trim(format_char)) "/r",r_id
     !> read the pdf data 
-    call HDF5_allocatable_array1D_reading(file_id,soft_pdf(ii)%p,trim(group_name//"/p"))
-    call HDF5_allocatable_array1D_reading(file_id,soft_pdf(ii)%xi,trim(group_name//"/xi"))
-    call HDF5_allocatable_array2D_reading(file_id,soft_pdf(ii)%pdf,trim(group_name//"/f"))
+    call HDF5_allocatable_array1D_reading(file_id,soft_pdf(ii)%p,trim(group_name)//"/p")
+    call HDF5_allocatable_array1D_reading(file_id,soft_pdf(ii)%xi,trim(group_name)//"/xi")
+    call HDF5_allocatable_array2D_reading(file_id,soft_pdf(ii)%pdf,trim(group_name)//"/f")
+    deallocate(group_name)
   enddo
   !> close hdf5 file
   call HDF5_close(file_id)
@@ -419,8 +420,8 @@ subroutine broadcast_soft_pdf_list(my_id,n_r,r_mesh,soft_pdf_list)
   !> inputs:
   integer,intent(in) :: my_id
   !> variables:
-  integer :: ii,n_p_mesh_global,n_xi_mesh_global,ierr
-  integer,dimension(2)               :: n_pxi_sum
+  integer :: ii
+  integer,dimension(2)               :: n_pxi_mesh_global,n_pxi_sum
   real*8,dimension(:),allocatable    :: p_mesh_global,xi_mesh_global
   real*8,dimension(:,:),allocatable  :: pdf_global
   integer,dimension(:,:),allocatable :: dims_pxi
@@ -435,10 +436,10 @@ subroutine broadcast_soft_pdf_list(my_id,n_r,r_mesh,soft_pdf_list)
   endif
   call MPI_Bcast(dims_pxi,n_r*2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
   !> allocate global pdf, r and xi arrays
-  n_p_mesh_global = sum(dims_pxi(:,1)); n_xi_mesh_global = sum(dims_pxi(:,2));
-  allocate(p_mesh_global(n_p_mesh_global)); p_mesh_global    = 0d0;
-  allocate(xi_mesh_global(n_xi_mesh_global)); xi_mesh_global = 0d0;
-  allocate(pdf_global(n_p_mesh_global,n_xi_mesh_global)); pdf_global = 0d0;
+  n_pxi_mesh_global = sum(dims_pxi,dim=2);
+  allocate(p_mesh_global(n_pxi_mesh_global(1))); p_mesh_global    = 0d0;
+  allocate(xi_mesh_global(n_pxi_mesh_global(2))); xi_mesh_global = 0d0;
+  allocate(pdf_global(n_pxi_mesh_global(1),n_pxi_mesh_global(2))); pdf_global = 0d0;
   !> allocate soft_pdf_list for all ranks except master
   if(my_id.ne.0) then
     if(allocated(soft_pdf_list)) deallocate(soft_pdf_list); allocate(soft_pdf_list(n_r));
@@ -458,9 +459,9 @@ subroutine broadcast_soft_pdf_list(my_id,n_r,r_mesh,soft_pdf_list)
     enddo
   endif
   !> broadcast global arrays
-  call MPI_Bcast(p_mesh_global,n_p_mesh_global,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_Bcast(xi_mesh_global,n_xi_mesh_global,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-  call MPI_Bcast(pdf_global,n_p_mesh_global*n_xi_mesh_global,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(p_mesh_global,n_pxi_mesh_global(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(xi_mesh_global,n_pxi_mesh_global(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(pdf_global,n_pxi_mesh_global(1)*n_pxi_mesh_global(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
   !> store the soft pdf into structure
   if(my_id.ne.0) then
     n_pxi_sum = 0;

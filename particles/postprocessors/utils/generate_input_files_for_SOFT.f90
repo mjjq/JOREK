@@ -130,7 +130,7 @@ write(*,*) "Generate computational mesh: completed!"
 !> generate magnetic field inputs
 write(*,*) "Compute and write the magnetic field ..."
 call compute_magnetic_field_poloidal_flux(sim%fields,n_vec,n_R_loc,n_Z,time,tor_angle,&
-R_mesh(my_id*n_R_loc+1:(my_id+1)*n_R_loc),Z_mesh,magnetic_field,poloidal_flux)
+R_mesh(my_id*n_R_loc+1:(my_id+1)*n_R_loc),Z_mesh,ES%psi_bnd,magnetic_field,poloidal_flux)
 call write_SOFT_magnetic_field_file(magnetic_field_filename,sim%fields,write_wall,n_vec,&
 n_R_loc,n_Z,n_limiter,n_LCFS,n_cpus,my_id,RZ_axis,R_mesh,Z_mesh,R_limiter,Z_limiter,&
 RZ_LCFS,magnetic_field,poloidal_flux,soft_mag_name,soft_desc)
@@ -255,27 +255,29 @@ subroutine generate_equidistant_poloidal_flux_mesh(n_psi,psi_axis,psi_bnd,psi_ax
 end subroutine generate_equidistant_poloidal_flux_mesh
 
 !> compute the magnetic field at a give R,Z position
+!> all points outside the boundary have the boundary poloidal flux value
 !> inputs:
-!>   fields:    (fields_base) JOREK MHD fields
-!>   n_v:       (integer) number of magnetic field vector components (must be 3)
-!>   n_R:       (integer) number of mesh points along the major radius
-!>   n_Z:       (integer) number of mesh points along the vertical coordinates
-!>   time:      (real8) time of the magnetic field
-!>   tor_angle: (real8) toroidal angle
-!>   R_mesh:    (real8)(n_R) mesh along the major radius
-!>   Z_mesh:    (real8)(n_Z) mesh along the vertical coordinate
+!>   fields:           (fields_base) JOREK MHD fields
+!>   n_v:              (integer) number of magnetic field vector components (must be 3)
+!>   n_R:              (integer) number of mesh points along the major radius
+!>   n_Z:              (integer) number of mesh points along the vertical coordinates
+!>   time:             (real8) time of the magnetic field
+!>   tor_angle:        (real8) toroidal angle
+!>   ploidal_flux_bnd: (real8) boundary poloidal flux
+!>   R_mesh:           (real8)(n_R) mesh along the major radius
+!>   Z_mesh:           (real8)(n_Z) mesh along the vertical coordinate
 !> outputs:
 !>   magnetic_field: (real8)(n_v,n_Z,n_R) radial, vertical and toroidal components
 !>                   of the magnetic field
 !>   poloidal_flux:  (real8)(n_Z,n_R) poloidal flux
 subroutine compute_magnetic_field_poloidal_flux(fields,n_v,n_R,n_Z,time,tor_angle,&
-R_mesh,Z_mesh,magnetic_field,poloidal_flux)
+R_mesh,Z_mesh,ploidal_flux_bnd,magnetic_field,poloidal_flux)
   use mod_fields, only: fields_base
   implicit none
   !> inputs:
   class(fields_base),intent(in)    :: fields
   integer,intent(in)               :: n_v,n_R,n_Z
-  real*8,intent(in)                :: time,tor_angle
+  real*8,intent(in)                :: time,tor_angle,ploidal_flux_bnd
   real*8,dimension(n_R),intent(in) :: R_mesh
   real*8,dimension(n_Z),intent(in) :: Z_mesh
   !> outputs:
@@ -287,7 +289,7 @@ R_mesh,Z_mesh,magnetic_field,poloidal_flux)
   real*8,dimension(2) :: st_out
   real*8,dimension(3) :: E_field
   !> initialisation
-  magnetic_field = 0d0; poloidal_flux = 0d0;
+  magnetic_field = 0d0; poloidal_flux = ploidal_flux_bnd;
   !> loop on the R,Z coordinates
   !$omp parallel do default(private) firstprivate(tor_angle,time,n_R,n_Z) &
   !$omp shared(fields,R_mesh,Z_mesh,magnetic_field,poloidal_flux) collapse(2)

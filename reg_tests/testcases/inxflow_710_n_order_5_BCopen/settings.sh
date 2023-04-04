@@ -16,7 +16,8 @@ function compile_jorek () {
     mv jorek_model${jorekmodel} jorek_model${jorekmodel}_1                           || exit 1
     make cleanall                                                                    || exit 1
   fi
-  ./util/config.sh model=$jorekmodel n_tor=3 n_plane=4 n_period=6 n_order=5          || exit 1
+  #./util/config.sh model=$jorekmodel n_tor=3 n_plane=4 n_period=6 n_order=5          || exit 1
+  ./util/config.sh model=$jorekmodel n_tor=1 n_plane=1 n_period=1 n_order=5          || exit 1
   make $compilopt $debugoptions jorek_model${jorekmodel}                             || exit 1
   mv jorek_model${jorekmodel} jorek_model${jorekmodel}_3                             || exit 1
 }
@@ -34,8 +35,8 @@ function initial_run () {
 # --- Carry out the test case
 function restart_run () {
   ${codedir}/util/setinput.sh input restart=.t. nstep_n=1 tstep_n=2.d0 nout=1       || exit 1
-  #$MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee logfile              || exit 1
-  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile              || exit 1
+  $MPIRUN $mpitasks ./jorek_model${jorekmodel}_3 < input | tee logfile              || exit 1
+  #$MPIRUN $mpitasks ./jorek_model${jorekmodel}_1 < input | tee logfile              || exit 1
 }
 
 

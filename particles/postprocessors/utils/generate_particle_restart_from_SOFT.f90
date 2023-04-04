@@ -28,24 +28,27 @@ real*8,dimension(2)  :: phi_interval
 real*8,dimension(:),allocatable   :: soft_orbit_ppar_local,soft_orbit_pperp_local
 real*8,dimension(:),allocatable   :: soft_orbit_Jdtdrho_local,soft_orbit_ppar
 real*8,dimension(:),allocatable   :: soft_orbit_pperp,soft_orbit_Jdtdrho,soft_pdf_r_mesh
-real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local
+real*8,dimension(:),allocatable   :: soft_R_mesh,soft_Z_mesh
+real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local,soft_r_minor
 character(len=17)    :: fields_filename,soft_pdf_filename
+character(len=28)    :: soft_magfield_filename
 character(len=125)   :: particle_filename
 character(len=193)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
 !> Variable definitions --------------------------------------------------------------------
-do_write_particles_in_hdf5 = .false.       !< writeh particle in hdf5 if true
-n_groups            = 1                   !< number of jorek particle groups
-n_vec               = 3                   !< component of a vector
-n_phi               = 6                   !< number of sampled toroidal positions to be sampled for each particle
-time                = 0d0                 !< simulation time
-mass                = 5.48579909065d-4    !< electron mass in AMU 
-charge              = -1d0                !< electron charge
-phi_interval        = [0d0,PI]            !< toroidal angle interval in which particles are sampled
-fields_filename     = 'jorek_equilibrium' !< jorek restart filename
-particle_filename   = 'part_restart_soft_orbits.h5' !< particle restart filename 
-soft_pdf_filename   = 'pdf_jorek_to_soft'           !< soft distribution field input from jorek
-soft_orbit_filename = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall' !< soft orbit filename
+do_write_particles_in_hdf5 = .false.         !< writeh particle in hdf5 if true
+n_groups               = 1                   !< number of jorek particle groups
+n_vec                  = 3                   !< component of a vector
+n_phi                  = 6                   !< number of toroidal positions to be sampled for each particle
+time                   = 0d0                 !< simulation time
+mass                   = 5.48579909065d-4    !< electron mass in AMU 
+charge                 = -1d0                !< electron charge
+phi_interval           = [0d0,PI]            !< toroidal angle interval in which particles are sampled
+fields_filename        = 'jorek_equilibrium' !< jorek restart filename
+soft_magfield_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field file
+particle_filename      = 'part_restart_soft_orbits.h5'  !< particle restart filename 
+soft_pdf_filename      = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
+soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall' !< soft orbit filename
 filename_jorek_hdf5 = 'jorek_particles_from_soft'
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator
@@ -57,7 +60,9 @@ field_reader = event(read_jorek_fields_interp_linear(basename=trim(fields_filena
 call with(sim,field_reader)
 write(*,*) "Reading MHD data: completed!"
 !> Read soft input and generate JOREK particle restart -------------------------------------
-write(*,*) "Reading SOFT orbit file ..."
+write(*,*) "Reading SOFT magnetic field, pdf and orbit files ..."
+!> compute and broadcast the minor radii array
+call read_and_broadcast_soft_minor_radii(my_id,soft_magfield_filename,soft_R_mesh,soft_Z_mesh,soft_r_minor)
 if(my_id.eq.0) then
   call read_soft_orbit_file(soft_orbit_filename,n_vec,dims(1),soft_orbit_x,&
   soft_orbit_ppar,soft_orbit_pperp,soft_orbit_Jdtdrho)
@@ -82,7 +87,7 @@ if(allocated(soft_orbit_x))       deallocate(soft_orbit_x)
 if(allocated(soft_orbit_ppar))    deallocate(soft_orbit_ppar)
 if(allocated(soft_orbit_pperp))   deallocate(soft_orbit_pperp)
 if(allocated(soft_orbit_Jdtdrho)) deallocate(soft_orbit_Jdtdrho)
-write(*,*) "Reading SOFT orbit file: completed!"
+write(*,*) "Reading SOFT magnetic field, pdf and orbit files: completed!"
 !> Generate JOREK relativistic gc from SOFT orbits -----------------------------------------
 write(*,*) 'Converting soft orbit to JOREK relativistic gc ...'
 call convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_type,my_id,n_cpus,time,\
@@ -108,6 +113,9 @@ if(allocated(soft_orbit_pperp_local))   deallocate(soft_orbit_pperp_local)
 if(allocated(soft_orbit_Jdtdrho_local)) deallocate(soft_orbit_Jdtdrho_local)
 if(allocated(soft_pdf_r_mesh))          deallocate(soft_pdf_r_mesh)
 if(allocated(soft_pdf_list))            deallocate(soft_pdf_list)
+if(allocated(soft_R_mesh))              deallocate(soft_R_mesh)
+if(allocated(soft_Z_mesh))              deallocate(soft_Z_mesh)
+if(allocated(soft_r_minor))             deallocate(soft_r_minor)
 call finalize_mpi_threads(ierr)
 write(*,*) 'Program terminated: good bye!'
 
@@ -479,6 +487,138 @@ subroutine broadcast_soft_pdf_list(my_id,n_r,r_mesh,soft_pdf_list)
   if(allocated(xi_mesh_global)) deallocate(xi_mesh_global)
   if(allocated(pdf_global))     deallocate(pdf_global)
 end subroutine broadcast_soft_pdf_list
+
+!> read and broadcast the soft minor radii
+!> inputs:
+!>   my_id:       (integer) mpi task number
+!>   filename_in: (character) name of the soft magnetic field file
+!> outputs:
+!>   R_mesh:  (real8)(nR) soft major radius mesh
+!>   Z_mesh:  (real8)(nZ) soft vertical position mesh
+!>   r_minor: (real8)(nZ,nR) soft minor radii
+subroutine read_and_broadcast_soft_minor_radii(my_id,filename_in,R_mesh,Z_mesh,r_minor)
+  use hdf5
+  use hdf5_io_module, only: HDF5_open,HDF5_close
+  use hdf5_io_module, only: HDF5_array1D_reading
+  use hdf5_io_module, only: HDF5_allocatable_array1D_reading
+  use hdf5_io_module, only: HDF5_allocatable_array2D_reading
+  implicit none
+  !> inputs:
+  character(len=*),intent(in) :: filename_in
+  integer,intent(in)          :: my_id
+  !> outputs:
+  real*8,dimension(:),allocatable,intent(out)   :: R_mesh,Z_mesh
+  real*8,dimension(:,:),allocatable,intent(out) :: r_minor
+  !> variables:
+  integer(HID_T) :: file_id 
+  integer        :: n_separatrix,ierr
+  integer,dimension(2) :: id_R,id_Z
+  integer,dimension(4) :: dims
+  real*8               :: poloidal_flux_axis,poloidal_flux_bnd
+  real*8,dimension(2)  :: RZ_axis,Rnodes,Znodes
+  real*8,dimension(4)  :: poloidal_flux_nodes
+  real*8,dimension(:,:),allocatable :: separatrix
+  if(my_id.eq.0) then
+    !> open hdf5 file
+    call HDF5_open(trim(filename_in)//".h5",file_id,ierr)
+    call HDF5_array1D_reading(file_id,RZ_axis,"/maxis")
+    call HDF5_allocatable_array1D_reading(file_id,R_mesh,"/r")
+    call HDF5_allocatable_array1D_reading(file_id,Z_mesh,"/z")
+    call HDF5_allocatable_array2D_reading(file_id,r_minor,"/Psi")
+    call HDF5_allocatable_array2D_reading(file_id,separatrix,"/separatrix")
+    !> close hdf5 file
+    call HDF5_close(file_id)
+    dims(1:2) = shape(r_minor); dims(3:4) = shape(separatrix); 
+  endif
+  call MPI_Bcast(dims,4,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if(.not.allocated(Z_mesh))     allocate(Z_mesh(dims(1)))
+  if(.not.allocated(R_mesh))     allocate(R_mesh(dims(2)))
+  if(.not.allocated(r_minor))    allocate(r_minor(dims(1),dims(2)))
+  if(.not.allocated(separatrix)) allocate(separatrix(dims(3),dims(4)))
+  call MPI_Bcast(RZ_axis,2,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(Z_mesh,dims(1),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(R_mesh,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(r_minor,dims(1)*dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  call MPI_Bcast(separatrix,dims(3)*dims(4),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+  !> find poloidal flux at the magnetic axis
+  call find_point_segment(RZ_axis(1),dims(2),R_mesh,id_R,Rnodes)
+  call find_point_segment(RZ_axis(2),dims(1),Z_mesh,id_Z,Znodes)
+  poloidal_flux_nodes = [r_minor(id_Z(1),id_R(1)),r_minor(id_Z(1),id_R(2)),\
+                         r_minor(id_Z(2),id_R(2)),r_minor(id_Z(2),id_R(1))]
+  poloidal_flux_axis = bilinear_interp_RZ(RZ_axis(1),RZ_axis(2),\
+                       Rnodes,Znodes,poloidal_flux_nodes)
+  !> find the poloidal flux at the plasma boundary
+  call find_point_segment(separatrix(1,1),dims(2),R_mesh,id_R,Rnodes)
+  call find_point_segment(separatrix(2,1),dims(1),Z_mesh,id_Z,Znodes)
+  poloidal_flux_nodes = [r_minor(id_Z(1),id_R(1)),r_minor(id_Z(1),id_R(2)),\
+                         r_minor(id_Z(2),id_R(2)),r_minor(id_Z(2),id_R(1))]
+  poloidal_flux_bnd = bilinear_interp_RZ(separatrix(1,1),separatrix(2,1),\
+                      Rnodes,Znodes,poloidal_flux_nodes)
+  !> compute the magnetic minor radii
+  r_minor = sqrt((r_minor-poloidal_flux_axis)/(poloidal_flux_bnd-poloidal_flux_axis))
+  !> cleanup
+  if(allocated(separatrix)) deallocate(separatrix)
+end subroutine read_and_broadcast_soft_minor_radii
+
+!> identify mesh element containing a target point
+!> inputs:
+!>   x:      (real8) target point
+!>   nx:     (integer) number of mesh nodes
+!>   x_mesh: (real8)(nx) 1D mesh
+!> outputs:
+!>   id_x:   (integer)(2) indexes of the nodes containing the target point
+!>   xnodes: (real8)(2) min,max of the value
+subroutine find_point_segment(x,nx,x_mesh,id_x,xnodes)
+  implicit none
+  !> inputs:
+  integer,intent(in) :: nx
+  real*8,intent(in)  :: x 
+  real*8,dimension(nx),intent(in) :: x_mesh
+  !> outputs:
+  integer,dimension(2),intent(out) :: id_x
+  real*8,dimension(2),intent(out)  :: xnodes
+  !> variables:
+  !> identify the nearest node
+  id_x = [minloc(abs(x-x_mesh)),-1];
+  if(id_x(1).le.1) then 
+    id_x = [1,2];
+  elseif(id_x(1).ge.nx) then
+    id_x = [nx-1,nx]
+  elseif(x.ge.x_mesh(id_x(1))) then
+    id_x = [id_x(1),id_x(1)+1]
+  elseif(x.lt.x_mesh(id_x(1))) then
+    id_x = [id_x(1)-1,id_x(1)]
+  endif
+  xnodes = x_mesh(id_x(1):id_x(2))
+end subroutine find_point_segment
+
+!> perform a bilinear interpolation in the RZ coordinates
+!> 4 - 3
+!> |   |
+!> 1 - 2
+!> inputs:
+!>   R:      (real8) target major radius
+!>   Z:      (real8) target vertical position
+!>   Rnodes: (real8)(2) min,max major radius value
+!>   Znodes: (real8)(2) min,max vertical position value
+!>   fnodes: (real8)(4) f-function value at the 4 nodes
+!> outputs:
+!>   f:      (real8) interpolated value
+function bilinear_interp_RZ(R,Z,Rnodes,Znodes,fnodes) result(f)
+  implicit none
+  !> inputs:
+  real*8,intent(in) :: R,Z
+  real*8,dimension(2),intent(in) :: Rnodes,Znodes
+  real*8,dimension(4),intent(in) :: fnodes
+  !> outputs:
+  real*8 :: f
+  !> compute bilinear interpolation
+  f = (fnodes(1)*(Rnodes(2)-R)*(Znodes(2)-Z) + &
+      fnodes(2)*(R-Rnodes(1))*(Znodes(2)-Z) + &
+      fnodes(3)*(R-Rnodes(1))*(Z-Znodes(1)) + &
+      fnodes(4)*(Rnodes(2)-R)*(Z-Znodes(1)))/&
+      ((Rnodes(2)-Rnodes(1))*(Znodes(2)-Znodes(1)))
+end function bilinear_interp_RZ
 
 !> write jorek particles in HDF5
 !> inputs:

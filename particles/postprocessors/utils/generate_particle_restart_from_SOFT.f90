@@ -298,6 +298,7 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   use constants, only: ATOMIC_MASS_UNIT
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
+  use hdf5_io_module, only: HDF5_allocatable_array1D_reading
   use hdf5_io_module, only: HDF5_allocatable_array2D_reading
   implicit none
   !> inputs:
@@ -315,20 +316,26 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   integer(HID_T) :: file_id
   integer        :: ii,n_orbits,n_times,n_active_orbits,ierr
   integer,dimension(:),allocatable   :: valid_orbit_id
+  real*8                             :: orbit_dp,orbit_dxi
   real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,weights_loc
-  real*8,dimension(:),allocatable    :: orbit_pdf_loc
+  real*8,dimension(:),allocatable    :: orbit_pdf_loc,orbit_p_mesh,orbit_xi_mesh
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
   !> read sofit particles
-  call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")       !< parallel momentum
-  call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")     !< perpendicular momentum
-  call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho") !< jacobia*dpoloidal*dminorradius
-  call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")             !< position in xyz coordinates
+  call HDF5_allocatable_array1D_reading(file_id,orbit_p_mesh,'/param1')  !< momentum mesh
+  call HDF5_allocatable_array1D_reading(file_id,orbit_xi_mesh,'/param2') !< cospitch mesh 
+  call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")        !< parallel momentum
+  call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")      !< perpendicular momentum
+  call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobia*dpoloidal*dminorradius
+  call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")              !< position in xyz coordinates
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
   !> remove zero orbits
   n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1);
   n_soft_points = n_orbits*n_times; n_active_orbits = 0;
+  !> check if the momentum and cospitch angle mesh are uniform and extract their value
+  call check_uniform_mesh_extract_length_1d(orbit_dp,orbit_p_mesh)
+  call check_uniform_mesh_extract_length_1d(orbit_dxi,orbit_xi_mesh)
   !> extract and compute the pdf for each orbit: be aware the pdf is taken at t=0
   !> and then replicated for nt times for each orbit
   allocate(orbit_pdf_loc(n_orbits)); orbit_pdf_loc = 0d0;
@@ -342,7 +349,7 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   x_loc         = reshape(x_loc,[n_vec,n_soft_points])
   ppar_loc      = reshape(ppar_loc,[n_soft_points,1])
   pperp_loc     = reshape(pperp_loc,[n_soft_points,1])
-  weights_loc   = reshape(weights_loc,[n_soft_points,1])
+  weights_loc   = orbit_dp*orbit_dxi*reshape(weights_loc,[n_soft_points,1])
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_soft_points
@@ -368,6 +375,30 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   if(allocated(orbit_pdf_loc))  deallocate(orbit_pdf_loc)
   if(allocated(x_loc))          deallocate(x_loc)
 end subroutine read_and_compute_soft_orbit_data
+
+!> check if the mesh is uniform and extract the element size
+!> inputs:
+!>   mesh: (real8)(n) mesh
+!> outputs:
+!>   lenght: (real8) length of one element
+subroutine check_uniform_mesh_extract_length_1d(length,mesh)
+  implicit none
+  !> inputs:
+  real*8,dimension(:),allocatable :: mesh
+  !> outputs:
+  real*8,intent(out) :: length
+  !> variables
+  integer :: nmesh
+  real*8  :: tol
+  !> initialisation
+  tol = 1d-15; nmesh = size(mesh);
+  !> check consistency
+  length = mesh(2)-mesh(1)
+  if(any(abs(((mesh(2:nmesh)-mesh(1:nmesh-1))-length)/maxval(abs(mesh))).gt.tol)) then
+    write(*,*) "WARNING: mesh is not uniform! error: ",&
+    maxval(abs(((mesh(2:nmesh)-mesh(1:nmesh-1))-length)/maxval(abs(mesh))))
+  endif
+end subroutine check_uniform_mesh_extract_length_1d
 
 !> compute the pdf for each soft orbit. The pdf is computed for t=0 and then replicated for
 !> all other times

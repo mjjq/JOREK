@@ -148,6 +148,8 @@ contains
 !>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle
 !> outpus:
 !>   sim: (particle_sim) initialised particle simulation
+!>   soft_orbit_weights: (real8)(n_points) soft orbit weight:
+!>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle*dtorangle
 subroutine convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_base,my_id,&
 n_cpus,time,mass,charge,n_vec,n_points,n_phi,phi_interval,&
 soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
@@ -159,7 +161,8 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   !$ use omp_lib
   implicit none
   !> inputs-outputs:
-  type(particle_sim),intent(inout) :: sim
+  type(particle_sim),intent(inout)         :: sim
+  real*8,dimension(n_points),intent(inout) :: soft_orbit_weights
   !> inputs:
   class(type_rng),intent(in)       :: rng_base
   integer,intent(in)               :: my_id,n_cpus,n_vec
@@ -168,7 +171,6 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   real*8,dimension(2),intent(in)   :: phi_interval
   real*8,dimension(n_points),intent(in)       :: soft_orbit_ppar
   real*8,dimension(n_points),intent(in)       :: soft_orbit_pperp
-  real*8,dimension(n_points),intent(in)       :: soft_orbit_weights
   real*8,dimension(n_vec,n_points),intent(in) :: soft_orbit_x
 
   !> variables:
@@ -191,6 +193,8 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   Rbox(1),Rbox(2),Zbox(1),Zbox(2))
   sim%time = time; sim%groups(1)%mass = mass; 
   allocate(particle_gc_relativistic::sim%groups(1)%particles(n_points*n_phi))
+  !> the differential of the toroidal angle for having the total number of particles
+  soft_orbit_weights = soft_orbit_weights*((phi_interval(2)-phi_interval(1))/real(n_phi,kind=8))
   !> loop on the soft orbits
   !$omp parallel default(shared) firstprivate(n_points,n_vec,time,charge,n_phi,mass,&
   !$omp Rbox,Zbox,phi_interval) private(ii,jj,RZphi,i_elm,st,B_field,E_field,U,&
@@ -213,7 +217,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
           p%x = 0d0; p%st = 0d0; p%weight = 0d0; p%i_elm = 0; p%i_life = 0; p%t_birth = 0.;
           p%p = 0d0; p%q = int(0,kind=1);
         else
-          p%x = [RZphi(1),RZphi(2),phi_array(jj)]; p%st = st; p%weight = 1d0;
+          p%x = [RZphi(1),RZphi(2),phi_array(jj)]; p%st = st; p%weight = soft_orbit_weights(ii);
           p%i_elm = i_elm; p%i_life = 0; p%t_birth = 0.;
           call sim%fields%calc_EBpsiU(time,i_elm,st,RZphi(3),E_field,B_field,psi,U)
           p%p = SPEED_OF_LIGHT*mass*[soft_orbit_ppar(ii),(5d-1*SPEED_OF_LIGHT*&
@@ -447,6 +451,7 @@ orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
                             dims(1),dims(2),Zmesh,Rmesh,poloidal_flux)
   enddo
   increasing = poloidal_flux_pdf(1).lt.poloidal_flux_pdf(2)
+  !> TODO OMP PARALLELISATION
   !> loop on the orbit
   do ii=1,norbits
     ZRpos = [orbit_x(3,ii),sqrt((orbit_x(1,ii))**2+(orbit_x(2,ii))**2)] !< ZR position of the orbit at t=0

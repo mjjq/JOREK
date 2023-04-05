@@ -451,8 +451,11 @@ orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
                             dims(1),dims(2),Zmesh,Rmesh,poloidal_flux)
   enddo
   increasing = poloidal_flux_pdf(1).lt.poloidal_flux_pdf(2)
-  !> TODO OMP PARALLELISATION
   !> loop on the orbit
+  !$omp parallel do default(none) firstprivate(norbits,dims,increasing) &
+  !$omp private(ii,ZRpos,pxipos,pflux_pos,ids_pflux,values_pflux,pdf_values) &
+  !$omp shared(orbit_x,orbit_ppar,orbit_pperp,Zmesh,Rmesh,poloidal_flux,&
+  !$omp poloidal_flux_pdf,pdf_list,orbit_pdfs)
   do ii=1,norbits
     ZRpos = [orbit_x(3,ii),sqrt((orbit_x(1,ii))**2+(orbit_x(2,ii))**2)] !< ZR position of the orbit at t=0
     if(ZRpos(2).eq.0d0) cycle
@@ -472,6 +475,7 @@ orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
     !> interpolate and store the pdfs w.r.t. the minor radius
     orbit_pdfs(ii) = linear_interp(pflux_pos,values_pflux,pdf_values)
   enddo
+  !$omp end parallel do
   if(allocated(poloidal_flux_pdf)) deallocate(poloidal_flux_pdf)
 end subroutine compute_pdf_orbit 
 

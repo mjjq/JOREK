@@ -26,9 +26,8 @@ integer,dimension(2) :: dims
 real*8               :: time,mass,charge
 real*8,dimension(2)  :: phi_interval,soft_RZ_axis
 real*8,dimension(:),allocatable   :: soft_orbit_ppar_local,soft_orbit_pperp_local
-real*8,dimension(:),allocatable   :: soft_orbit_Jdtdrho_local,soft_orbit_ppar
-real*8,dimension(:),allocatable   :: soft_orbit_pperp,soft_orbit_Jdtdrho,soft_pdf_r_mesh
-real*8,dimension(:),allocatable   :: soft_orbit_pdf,soft_orbit_pdf_local
+real*8,dimension(:),allocatable   :: soft_orbit_weights_local,soft_orbit_ppar
+real*8,dimension(:),allocatable   :: soft_orbit_pperp,soft_orbit_weights,soft_pdf_r_mesh
 real*8,dimension(:),allocatable   :: soft_R_mesh,soft_Z_mesh
 real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local,soft_poloidal_flux
 character(len=17)    :: fields_filename,soft_pdf_filename
@@ -71,7 +70,7 @@ if(my_id.eq.0) then
   call read_soft_pdf_file(soft_pdf_filename,n_r_pdf_mesh,soft_pdf_r_mesh,soft_pdf_list)
   call read_and_compute_soft_orbit_data(soft_orbit_filename,n_vec,dims(1),soft_RZ_axis,soft_R_mesh,&
   soft_Z_mesh,soft_poloidal_flux,soft_pdf_r_mesh,soft_pdf_list,soft_orbit_x,soft_orbit_ppar,&
-  soft_orbit_pperp,soft_orbit_Jdtdrho,soft_orbit_pdf)
+  soft_orbit_pperp,soft_orbit_weights)
   !> scatter the global arrays to each mpi process)
   dims(2) = dims(1)/n_cpus;
   if(dims(2)*n_cpus.lt.dims(1)) dims(2) = dims(2)+1
@@ -85,25 +84,22 @@ call MPI_Bcast(dims,size(dims),MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 allocate(soft_orbit_x_local(n_vec,dims(2)));  soft_orbit_x_local     = 0d0;
 allocate(soft_orbit_ppar_local(dims(2)));     soft_orbit_ppar_local  = 0d0;
 allocate(soft_orbit_pperp_local(dims(2)));    soft_orbit_pperp_local = 0d0;
-allocate(soft_orbit_Jdtdrho_local(dims(2)));  soft_orbit_Jdtdrho_local = 0d0;
-allocate(soft_orbit_pdf_local(dims(2)));      soft_orbit_pdf_local = 0d0;
+allocate(soft_orbit_weights_local(dims(2)));  soft_orbit_weights_local = 0d0;
 call scatter_2D_arrays(my_id,n_cpus,n_vec,dims(2),dims(1),soft_orbit_x,soft_orbit_x_local)
 call MPI_Scatter(soft_orbit_ppar,dims(2),MPI_REAL8,soft_orbit_ppar_local,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 call MPI_Scatter(soft_orbit_pperp,dims(2),MPI_REAL8,soft_orbit_pperp_local,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-call MPI_Scatter(soft_orbit_Jdtdrho,dims(2),MPI_REAL8,soft_orbit_Jdtdrho_local,dims(2),&
+call MPI_Scatter(soft_orbit_weights,dims(2),MPI_REAL8,soft_orbit_weights_local,dims(2),&
 MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-call MPI_Scatter(soft_orbit_pdf,dims(2),MPI_REAL8,soft_orbit_pdf_local,dims(2),MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 if(allocated(soft_orbit_x))       deallocate(soft_orbit_x)
 if(allocated(soft_orbit_ppar))    deallocate(soft_orbit_ppar)
 if(allocated(soft_orbit_pperp))   deallocate(soft_orbit_pperp)
-if(allocated(soft_orbit_Jdtdrho)) deallocate(soft_orbit_Jdtdrho)
-if(allocated(soft_orbit_pdf))     deallocate(soft_orbit_pdf)
+if(allocated(soft_orbit_weights)) deallocate(soft_orbit_weights)
 write(*,*) "Reading SOFT magnetic field, pdf and orbit files: completed!"
 !> Generate JOREK relativistic gc from SOFT orbits -----------------------------------------
 write(*,*) 'Converting soft orbit to JOREK relativistic gc ...'
 call convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_type,my_id,n_cpus,time,\
 mass,charge,n_vec,dims(2),n_phi,phi_interval,soft_orbit_x_local,\
-soft_orbit_ppar_local,soft_orbit_pperp_local,soft_orbit_Jdtdrho_local)
+soft_orbit_ppar_local,soft_orbit_pperp_local,soft_orbit_weights_local)
 write(*,*) 'Converting soft orbit to JOREK relativistic gc: completed!'
 write(*,*) 'Writing JOREK relativistic gc in ',trim(particle_filename),' ...'
 call write_simulation_hdf5(sim,trim(particle_filename))
@@ -121,8 +117,7 @@ if(allocated(soft_orbit_pperp))         deallocate(soft_orbit_pperp)
 if(allocated(soft_orbit_x_local))       deallocate(soft_orbit_x_local)
 if(allocated(soft_orbit_ppar_local))    deallocate(soft_orbit_ppar_local)
 if(allocated(soft_orbit_pperp_local))   deallocate(soft_orbit_pperp_local)
-if(allocated(soft_orbit_Jdtdrho_local)) deallocate(soft_orbit_Jdtdrho_local)
-if(allocated(soft_orbit_pdf_local))     deallocate(soft_orbit_pdf_local)
+if(allocated(soft_orbit_weights_local)) deallocate(soft_orbit_weights_local)
 if(allocated(soft_pdf_r_mesh))          deallocate(soft_pdf_r_mesh)
 if(allocated(soft_pdf_list))            deallocate(soft_pdf_list)
 if(allocated(soft_R_mesh))              deallocate(soft_R_mesh)
@@ -149,12 +144,13 @@ contains
 !>   soft_orbit_x:       (real8)(n_vec,n_points) soft positions in xyz
 !>   soft_orbit_ppar:    (real8)(n_points) soft parallel momentum
 !>   soft_orbit_pperp:   (real8)(n_points) soft perpendicular momentum
-!>   soft_orbit_Jdtdrho: (real8)(n_points) soft jacobian*dpoloidal*dminor_radius
+!>   soft_orbit_weights: (real8)(n_points) soft orbit weight:
+!>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle
 !> outpus:
 !>   sim: (particle_sim) initialised particle simulation
 subroutine convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_base,my_id,&
 n_cpus,time,mass,charge,n_vec,n_points,n_phi,phi_interval,&
-soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_Jdtdrho)
+soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   use mpi
   use constants,                 only: SPEED_OF_LIGHT
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
@@ -172,7 +168,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_Jdtdrho)
   real*8,dimension(2),intent(in)   :: phi_interval
   real*8,dimension(n_points),intent(in)       :: soft_orbit_ppar
   real*8,dimension(n_points),intent(in)       :: soft_orbit_pperp
-  real*8,dimension(n_points),intent(in)       :: soft_orbit_Jdtdrho
+  real*8,dimension(n_points),intent(in)       :: soft_orbit_weights
   real*8,dimension(n_vec,n_points),intent(in) :: soft_orbit_x
 
   !> variables:
@@ -296,10 +292,9 @@ end subroutine scatter_2D_arrays
 !>   x:             (real8)(3,n_soft_particles) soft positions in xyz coordinates
 !>   ppar:          (real8)(n_soft_particles) soft parallel momentum
 !>   pperp:         (real8)(n_soft_particles) soft perpendicular momentum
-!>   Jdtdrho:       (real8)(n_soft_particles) jacobian*dpoloidal*dminor_radius
-!>   orbit_pdf:     (real8)(n_soft_particles) pdf of each orbit at t=0
+!>   weights:       (real8)(n_soft_particles) orbit weight: pdf(t=0)*Jdtdrho*dp*dxi
 subroutine read_and_compute_soft_orbit_data(soft_orbit_filename_in,n_vec,n_soft_points,&
-RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbit_pdf)
+RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   use constants, only: ATOMIC_MASS_UNIT
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
@@ -314,20 +309,20 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbi
   real*8,dimension(:,:),allocatable,intent(in) :: poloidal_flux
   !> outputs:
   integer,intent(out) :: n_soft_points
-  real*8,dimension(:),allocatable,intent(out)   :: ppar,pperp,Jdtdrho,orbit_pdf
+  real*8,dimension(:),allocatable,intent(out)   :: ppar,pperp,weights
   real*8,dimension(:,:),allocatable,intent(out) :: x
   !> variables:
   integer(HID_T) :: file_id
   integer        :: ii,n_orbits,n_times,n_active_orbits,ierr
   integer,dimension(:),allocatable   :: valid_orbit_id
-  real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,Jdtdrho_loc
-  real*8,dimension(:,:),allocatable :: orbit_pdf_loc
+  real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,weights_loc
+  real*8,dimension(:),allocatable    :: orbit_pdf_loc
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
   !> read sofit particles
   call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")       !< parallel momentum
   call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")     !< perpendicular momentum
-  call HDF5_allocatable_array2D_reading(file_id,Jdtdrho_loc,"/Jdtdrho") !< jacobia*dpoloidal*dminorradius
+  call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho") !< jacobia*dpoloidal*dminorradius
   call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")             !< position in xyz coordinates
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
@@ -336,15 +331,18 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbi
   n_soft_points = n_orbits*n_times; n_active_orbits = 0;
   !> extract and compute the pdf for each orbit: be aware the pdf is taken at t=0
   !> and then replicated for nt times for each orbit
-  allocate(orbit_pdf_loc(n_times,n_orbits)); orbit_pdf_loc = 0d0;
+  allocate(orbit_pdf_loc(n_orbits)); orbit_pdf_loc = 0d0;
   call compute_pdf_orbit(n_vec,n_times,n_orbits,RZaxis,x_loc,ppar_loc,pperp_loc,&
   Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdf_loc)
+  !> multiply the Jdtdrho by the pdf
+  do ii=1,n_orbits
+    weights_loc(:,ii) = weights_loc(:,ii)*orbit_pdf_loc(ii)
+  enddo
   !> reshape arrays
   x_loc         = reshape(x_loc,[n_vec,n_soft_points])
   ppar_loc      = reshape(ppar_loc,[n_soft_points,1])
   pperp_loc     = reshape(pperp_loc,[n_soft_points,1])
-  Jdtdrho_loc   = reshape(Jdtdrho_loc,[n_soft_points,1])
-  orbit_pdf_loc = reshape(orbit_pdf_loc,[n_soft_points,1])
+  weights_loc   = reshape(weights_loc,[n_soft_points,1])
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_soft_points
@@ -354,21 +352,19 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbi
     valid_orbit_id(n_active_orbits) = ii;
   enddo
   !> copy only active orbits
-  allocate(x(n_vec,n_active_orbits));   x         = 0d0;
-  allocate(ppar(n_active_orbits));      ppar      = 0d0; 
-  allocate(pperp(n_active_orbits));     pperp     = 0d0;
-  allocate(Jdtdrho(n_active_orbits));   Jdtdrho   = 0d0;
-  allocate(orbit_pdf(n_active_orbits)); orbit_pdf = 0d0;
-  x         = x_loc(:,valid_orbit_id(1:n_active_orbits))
-  ppar      = ppar_loc(valid_orbit_id(1:n_active_orbits),1)
-  pperp     = pperp_loc(valid_orbit_id(1:n_active_orbits),1)
-  Jdtdrho   = Jdtdrho_loc(valid_orbit_id(1:n_active_orbits),1)
-  orbit_pdf = orbit_pdf_loc(valid_orbit_id(1:n_active_orbits),1)
+  allocate(x(n_vec,n_active_orbits)); x       = 0d0;
+  allocate(ppar(n_active_orbits));    ppar    = 0d0; 
+  allocate(pperp(n_active_orbits));   pperp   = 0d0;
+  allocate(weights(n_active_orbits)); weights = 0d0;
+  x       = x_loc(:,valid_orbit_id(1:n_active_orbits))
+  ppar    = ppar_loc(valid_orbit_id(1:n_active_orbits),1)
+  pperp   = pperp_loc(valid_orbit_id(1:n_active_orbits),1)
+  weights = weights_loc(valid_orbit_id(1:n_active_orbits),1)
   n_soft_points = n_active_orbits
   if(allocated(valid_orbit_id)) deallocate(valid_orbit_id)
   if(allocated(ppar_loc))       deallocate(ppar_loc)
   if(allocated(pperp_loc))      deallocate(pperp_loc)
-  if(allocated(Jdtdrho_loc))    deallocate(Jdtdrho_loc)
+  if(allocated(weights_loc))    deallocate(weights_loc)
   if(allocated(orbit_pdf_loc))  deallocate(orbit_pdf_loc)
   if(allocated(x_loc))          deallocate(x_loc)
 end subroutine read_and_compute_soft_orbit_data
@@ -389,7 +385,7 @@ end subroutine read_and_compute_soft_orbit_data
 !>   r_minor_mesh:  (real8)(nr) soft pdf minor radius mesh
 !>   pdf_list:      (type_soft_pdf) soft input pdf list
 !> outputs:
-!>   orbit_pdfs:   (real8)(ntimes,norbits) pdf for each orbit and time
+!>   orbit_pdfs:   (real8)(norbits) pdf for each orbit and time
 subroutine compute_pdf_orbit(nvec,ntimes,norbits,RZ_axis,orbit_x,orbit_ppar,&
 orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
   implicit none
@@ -402,7 +398,7 @@ orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
   real*8,dimension(:),allocatable,intent(in)       :: Rmesh,Zmesh,r_minor_mesh
   real*8,dimension(:,:),allocatable,intent(in)     :: poloidal_flux
   !> outputs:
-  real*8,dimension(ntimes,norbits),intent(out)     :: orbit_pdfs
+  real*8,dimension(norbits),intent(out)            :: orbit_pdfs
   !> variables:
   integer :: ii
   integer,dimension(2) :: ids_pflux
@@ -438,7 +434,7 @@ orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
                     size(pdf_list(ids_pflux(2))%p),size(pdf_list(ids_pflux(2))%xi),&
                     pdf_list(ids_pflux(2))%p,pdf_list(ids_pflux(2))%xi,pdf_list(ids_pflux(2))%pdf)
     !> interpolate and store the pdfs w.r.t. the minor radius
-    orbit_pdfs(:,ii) = linear_interp(pflux_pos,values_pflux,pdf_values)
+    orbit_pdfs(ii) = linear_interp(pflux_pos,values_pflux,pdf_values)
   enddo
   if(allocated(poloidal_flux_pdf)) deallocate(poloidal_flux_pdf)
 end subroutine compute_pdf_orbit 

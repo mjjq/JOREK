@@ -24,13 +24,13 @@ logical              :: do_write_particles_in_hdf5
 integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi,n_r_pdf_mesh
 integer,dimension(2) :: dims
 real*8               :: time,mass,charge
-real*8,dimension(2)  :: phi_interval
+real*8,dimension(2)  :: phi_interval,soft_RZ_axis
 real*8,dimension(:),allocatable   :: soft_orbit_ppar_local,soft_orbit_pperp_local
 real*8,dimension(:),allocatable   :: soft_orbit_Jdtdrho_local,soft_orbit_ppar
 real*8,dimension(:),allocatable   :: soft_orbit_pperp,soft_orbit_Jdtdrho,soft_pdf_r_mesh
 real*8,dimension(:),allocatable   :: soft_orbit_pdf,soft_orbit_pdf_local
 real*8,dimension(:),allocatable   :: soft_R_mesh,soft_Z_mesh
-real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local,soft_r_minor
+real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local,soft_poloidal_flux
 character(len=17)    :: fields_filename,soft_pdf_filename
 character(len=28)    :: soft_magfield_filename
 character(len=125)   :: particle_filename
@@ -65,19 +65,21 @@ write(*,*) "Reading SOFT magnetic field, pdf and orbit files ..."
 !> compute and broadcast the minor radii array
 if(my_id.eq.0) then
   !> compute and broadcast the minor radii array
-  call read_and_compute_soft_minor_radii(soft_magfield_filename,soft_R_mesh,soft_Z_mesh,soft_r_minor)
+  call read_soft_maxis_and_poloidal_flux(soft_magfield_filename,soft_RZ_axis,soft_R_mesh,&
+  soft_Z_mesh,soft_poloidal_flux)
   !> read the soft_pdf_file
   call read_soft_pdf_file(soft_pdf_filename,n_r_pdf_mesh,soft_pdf_r_mesh,soft_pdf_list)
-  call read_and_compute_soft_orbit_data(soft_orbit_filename,n_vec,dims(1),soft_R_mesh,soft_Z_mesh,&
-  soft_r_minor,soft_pdf_r_mesh,soft_pdf_list,soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,&
-  soft_orbit_Jdtdrho,soft_orbit_pdf)
+  call read_and_compute_soft_orbit_data(soft_orbit_filename,n_vec,dims(1),soft_RZ_axis,soft_R_mesh,&
+  soft_Z_mesh,soft_poloidal_flux,soft_pdf_r_mesh,soft_pdf_list,soft_orbit_x,soft_orbit_ppar,&
+  soft_orbit_pperp,soft_orbit_Jdtdrho,soft_orbit_pdf)
   !> scatter the global arrays to each mpi process)
   dims(2) = dims(1)/n_cpus;
   if(dims(2)*n_cpus.lt.dims(1)) dims(2) = dims(2)+1
-  if(allocated(soft_R_mesh))   deallocate(soft_R_mesh)
-  if(allocated(soft_Z_mesh))   deallocate(soft_Z_mesh)
-  if(allocated(soft_r_minor))  deallocate(soft_r_minor)
-  if(allocated(soft_pdf_list)) deallocate(soft_pdf_list)
+  if(allocated(soft_R_mesh))        deallocate(soft_R_mesh)
+  if(allocated(soft_Z_mesh))        deallocate(soft_Z_mesh)
+  if(allocated(soft_pdf_r_mesh))    deallocate(soft_pdf_r_mesh)
+  if(allocated(soft_poloidal_flux)) deallocate(soft_poloidal_flux)
+  if(allocated(soft_pdf_list))      deallocate(soft_pdf_list)
 endif
 call MPI_Bcast(dims,size(dims),MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 allocate(soft_orbit_x_local(n_vec,dims(2)));  soft_orbit_x_local     = 0d0;
@@ -125,7 +127,7 @@ if(allocated(soft_pdf_r_mesh))          deallocate(soft_pdf_r_mesh)
 if(allocated(soft_pdf_list))            deallocate(soft_pdf_list)
 if(allocated(soft_R_mesh))              deallocate(soft_R_mesh)
 if(allocated(soft_Z_mesh))              deallocate(soft_Z_mesh)
-if(allocated(soft_r_minor))             deallocate(soft_r_minor)
+if(allocated(soft_poloidal_flux))       deallocate(soft_poloidal_flux)
 call finalize_mpi_threads(ierr)
 write(*,*) 'Program terminated: good bye!'
 
@@ -283,9 +285,10 @@ end subroutine scatter_2D_arrays
 !> inputs:
 !>   soft_orbit_filename_in: (character)(*) name of the soft orbit file
 !>   n_vec:                  (integer) size of the position vector
+!>   RZ_axis:                (real8)(2) position of the magnetic axis
 !>   Rmesh:                  (real8)(nR) major radius mesh of the minor radii
-!>   Rmesh:                  (real8)(nZ) vertical coordinate mesh of the minor radii
-!>   r_minor:                (real8)(nZ,nR) magnetic minor radii
+!>   Zmesh:                  (real8)(nZ) vertical coordinate mesh of the minor radii
+!>   poloidal_flux:          (real8)(nZ,nR) poloidal flux in the RZ grid
 !>   r_minor_mesh:           (real8)(nr) pdf minor radius mesh
 !>   pdf_list:               (type_soft_pdf)(nr) soft input pdfs
 !> outputs:
@@ -296,7 +299,7 @@ end subroutine scatter_2D_arrays
 !>   Jdtdrho:       (real8)(n_soft_particles) jacobian*dpoloidal*dminor_radius
 !>   orbit_pdf:     (real8)(n_soft_particles) pdf of each orbit at t=0
 subroutine read_and_compute_soft_orbit_data(soft_orbit_filename_in,n_vec,n_soft_points,&
-Rmesh,Zmesh,r_minor,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbit_pdf)
+RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbit_pdf)
   use constants, only: ATOMIC_MASS_UNIT
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
@@ -306,8 +309,9 @@ Rmesh,Zmesh,r_minor,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbit_pdf)
   type(type_soft_pdf),dimension(:),allocatable,intent(in) :: pdf_list
   character(len=*),intent(in)    :: soft_orbit_filename_in
   integer,intent(in)             :: n_vec
+  real*8,dimension(2),intent(in)               :: RZaxis
   real*8,dimension(:),allocatable,intent(in)   :: Rmesh,Zmesh,r_minor_mesh
-  real*8,dimension(:,:),allocatable,intent(in) :: r_minor
+  real*8,dimension(:,:),allocatable,intent(in) :: poloidal_flux
   !> outputs:
   integer,intent(out) :: n_soft_points
   real*8,dimension(:),allocatable,intent(out)   :: ppar,pperp,Jdtdrho,orbit_pdf
@@ -333,8 +337,8 @@ Rmesh,Zmesh,r_minor,r_minor_mesh,pdf_list,x,ppar,pperp,Jdtdrho,orbit_pdf)
   !> extract and compute the pdf for each orbit: be aware the pdf is taken at t=0
   !> and then replicated for nt times for each orbit
   allocate(orbit_pdf_loc(n_times,n_orbits)); orbit_pdf_loc = 0d0;
-  call compute_pdf_orbit(n_vec,n_times,n_orbits,x_loc,ppar_loc,pperp_loc,Rmesh,&
-  Zmesh,r_minor,r_minor_mesh,pdf_list,orbit_pdf_loc)
+  call compute_pdf_orbit(n_vec,n_times,n_orbits,RZaxis,x_loc,ppar_loc,pperp_loc,&
+  Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdf_loc)
   !> reshape arrays
   x_loc         = reshape(x_loc,[n_vec,n_soft_points])
   ppar_loc      = reshape(ppar_loc,[n_soft_points,1])
@@ -372,42 +376,50 @@ end subroutine read_and_compute_soft_orbit_data
 !> compute the pdf for each soft orbit. The pdf is computed for t=0 and then replicated for
 !> all other times
 !> inputs:
-!>   nvec:         (integer) size of the position vector must be 3
-!>   ntimes:       (integer) number of orbit times
-!>   norbits:      (integer) number of soft orbits
-!>   orbit_x:      (real8)(ntimes*nvec,norbits) orbit position in cartesian coord.
-!>   orbit_ppar:   (real8)(ntimes,norbits) orbit parallel momentum
-!>   orbit_pperp:  (real8)(ntimes,norbits) orbit perpendicular momentum
-!>   Rmesh:        (real8)(nR) major radius coordinate mesh of the minor radii
-!>   Zmesh:        (real8)(nZ) vertical coordinate mesh of the minor radii
-!>   r_minor:      (real8)(nZ,nR) soft magnetic minor radii
-!>   r_minor_mesh: (real8)(nr) soft pdf minor radius mesh
-!>   pdf_list:     (type_soft_pdf) soft input pdf list
+!>   nvec:          (integer) size of the position vector must be 3
+!>   ntimes:        (integer) number of orbit times
+!>   norbits:       (integer) number of soft orbits
+!>   RZ_axis:       (real8)(2) position of the magnetic axis
+!>   orbit_x:       (real8)(ntimes*nvec,norbits) orbit position in cartesian coord.
+!>   orbit_ppar:    (real8)(ntimes,norbits) orbit parallel momentum
+!>   orbit_pperp:   (real8)(ntimes,norbits) orbit perpendicular momentum
+!>   Rmesh:         (real8)(nR) major radius coordinate mesh of the minor radii
+!>   Zmesh:         (real8)(nZ) vertical coordinate mesh of the minor radii
+!>   poloidal_flux: (real8)(nZ,nR) soft poloidal flux
+!>   r_minor_mesh:  (real8)(nr) soft pdf minor radius mesh
+!>   pdf_list:      (type_soft_pdf) soft input pdf list
 !> outputs:
 !>   orbit_pdfs:   (real8)(ntimes,norbits) pdf for each orbit and time
-subroutine compute_pdf_orbit(nvec,ntimes,norbits,orbit_x,orbit_ppar,orbit_pperp,Rmesh,&
-Zmesh,r_minor,r_minor_mesh,pdf_list,orbit_pdfs)
+subroutine compute_pdf_orbit(nvec,ntimes,norbits,RZ_axis,orbit_x,orbit_ppar,&
+orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
   implicit none
   !> inputs:
   type(type_soft_pdf),dimension(:),allocatable,intent(in)    :: pdf_list
   integer,intent(in) :: nvec,ntimes,norbits
+  real*8,dimension(2),intent(in)                   :: RZ_axis
   real*8,dimension(ntimes,norbits),intent(in)      :: orbit_ppar,orbit_pperp
   real*8,dimension(nvec*ntimes,norbits),intent(in) :: orbit_x
   real*8,dimension(:),allocatable,intent(in)       :: Rmesh,Zmesh,r_minor_mesh
-  real*8,dimension(:,:),allocatable,intent(in)     :: r_minor
+  real*8,dimension(:,:),allocatable,intent(in)     :: poloidal_flux
   !> outputs:
   real*8,dimension(ntimes,norbits),intent(out)     :: orbit_pdfs
   !> variables:
   integer :: ii
-  integer,dimension(2) :: ids_r_minor
+  integer,dimension(2) :: ids_pflux
   integer,dimension(3) :: dims
-  real*8               :: r_minor_pos
-  real*8,dimension(2)  :: ZRpos,pxipos,values_r_minor,pdf_values
-  real*8,dimension(:),allocatable :: r_minor_mesh_norm
+  real*8               :: pflux_pos
+  real*8,dimension(2)  :: ZRpos,pxipos,values_pflux,pdf_values
+  real*8,dimension(:),allocatable :: poloidal_flux_pdf
+  logical              :: increasing
   !> initialisaition
   dims = [size(Zmesh),size(Rmesh),size(r_minor_mesh)]
-  allocate(r_minor_mesh_norm(dims(3)))
-  r_minor_mesh_norm = r_minor_mesh/r_minor_mesh(dims(3))
+  allocate(poloidal_flux_pdf(dims(3)))
+  !> compute the poloidal flux at the pdf mesh point
+  do ii=1,dims(3)
+    poloidal_flux_pdf(ii) = bilinear_interp_cartesian(RZ_axis(2),RZ_axis(1)+r_minor_mesh(ii),&
+                            dims(1),dims(2),Zmesh,Rmesh,poloidal_flux)
+  enddo
+  increasing = poloidal_flux_pdf(1).lt.poloidal_flux_pdf(2)
   !> loop on the orbit
   do ii=1,norbits
     ZRpos = [orbit_x(3,ii),sqrt((orbit_x(1,ii))**2+(orbit_x(2,ii))**2)] !< ZR position of the orbit at t=0
@@ -415,21 +427,20 @@ Zmesh,r_minor,r_minor_mesh,pdf_list,orbit_pdfs)
     pxipos(1) = sqrt(orbit_ppar(1,ii)**2 + orbit_pperp(1,ii)**2)
     pxipos(2) = orbit_ppar(1,ii)/pxipos(1)
     !> interpolate the magnetic minor radius
-    r_minor_pos = bilinear_interp_cartesian(ZRpos(1),ZRpos(2),dims(1),dims(2),&
-                  Zmesh,Rmesh,r_minor)
+    pflux_pos = bilinear_interp_cartesian(ZRpos(1),ZRpos(2),dims(1),dims(2),Zmesh,Rmesh,poloidal_flux)
     !> find the minor radius within the pdf mesh
-    call find_point_segment(r_minor_pos,dims(3),r_minor_mesh_norm,ids_r_minor,values_r_minor)
+    call find_point_segment(pflux_pos,dims(3),poloidal_flux_pdf,ids_pflux,values_pflux,increasing)
     !> interpolate in momentum space the pdf values
     pdf_values(1) = bilinear_interp_cartesian(pxipos(1),pxipos(2),&
-                    size(pdf_list(ids_r_minor(1))%p),size(pdf_list(ids_r_minor(1))%xi),&
-                    pdf_list(ids_r_minor(1))%p,pdf_list(ids_r_minor(1))%xi,pdf_list(ids_r_minor(1))%pdf)
+                    size(pdf_list(ids_pflux(1))%p),size(pdf_list(ids_pflux(1))%xi),&
+                    pdf_list(ids_pflux(1))%p,pdf_list(ids_pflux(1))%xi,pdf_list(ids_pflux(1))%pdf)
     pdf_values(2) = bilinear_interp_cartesian(pxipos(1),pxipos(2),&
-                    size(pdf_list(ids_r_minor(2))%p),size(pdf_list(ids_r_minor(2))%xi),&
-                    pdf_list(ids_r_minor(2))%p,pdf_list(ids_r_minor(2))%xi,pdf_list(ids_r_minor(2))%pdf)
+                    size(pdf_list(ids_pflux(2))%p),size(pdf_list(ids_pflux(2))%xi),&
+                    pdf_list(ids_pflux(2))%p,pdf_list(ids_pflux(2))%xi,pdf_list(ids_pflux(2))%pdf)
     !> interpolate and store the pdfs w.r.t. the minor radius
-    orbit_pdfs(:,ii) = linear_interp(r_minor_pos,values_r_minor,pdf_values)
+    orbit_pdfs(:,ii) = linear_interp(pflux_pos,values_pflux,pdf_values)
   enddo
-  if(allocated(r_minor_mesh_norm)) deallocate(r_minor_mesh_norm)
+  if(allocated(poloidal_flux_pdf)) deallocate(poloidal_flux_pdf)
 end subroutine compute_pdf_orbit 
 
 !> allocate soft pdf type and initialize to 0
@@ -585,10 +596,11 @@ end subroutine broadcast_soft_pdf_list
 !>   my_id:       (integer) mpi task number
 !>   filename_in: (character) name of the soft magnetic field file
 !> outputs:
-!>   R_mesh:  (real8)(nR) soft major radius mesh
-!>   Z_mesh:  (real8)(nZ) soft vertical position mesh
-!>   r_minor: (real8)(nZ,nR) soft minor radii
-subroutine read_and_compute_soft_minor_radii(filename_in,R_mesh,Z_mesh,r_minor)
+!>   RZ_axis:       (real8)(2) magnetic axis position
+!>   R_mesh:        (real8)(nR) soft major radius mesh
+!>   Z_mesh:        (real8)(nZ) soft vertical position mesh
+!>   poloidal_flux: (real8)(nZ,nR) soft minor radii
+subroutine read_soft_maxis_and_poloidal_flux(filename_in,RZ_axis,R_mesh,Z_mesh,poloidal_flux)
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
   use hdf5_io_module, only: HDF5_array1D_reading
@@ -598,36 +610,24 @@ subroutine read_and_compute_soft_minor_radii(filename_in,R_mesh,Z_mesh,r_minor)
   !> inputs:
   character(len=*),intent(in) :: filename_in
   !> outputs:
+  real*8,dimension(2),intent(out)               :: RZ_axis
   real*8,dimension(:),allocatable,intent(out)   :: R_mesh,Z_mesh
-  real*8,dimension(:,:),allocatable,intent(out) :: r_minor
+  real*8,dimension(:,:),allocatable,intent(out) :: poloidal_flux
   !> variables:
   integer(HID_T) :: file_id 
   integer        :: n_separatrix,ierr
   integer,dimension(4) :: dims
   real*8               :: poloidal_flux_axis,poloidal_flux_bnd
-  real*8,dimension(2)  :: RZ_axis
   real*8,dimension(:,:),allocatable :: separatrix
   !> open hdf5 file
   call HDF5_open(trim(filename_in)//".h5",file_id,ierr)
   call HDF5_array1D_reading(file_id,RZ_axis,"/maxis")
   call HDF5_allocatable_array1D_reading(file_id,R_mesh,"/r")
   call HDF5_allocatable_array1D_reading(file_id,Z_mesh,"/z")
-  call HDF5_allocatable_array2D_reading(file_id,r_minor,"/Psi")
-  call HDF5_allocatable_array2D_reading(file_id,separatrix,"/separatrix")
+  call HDF5_allocatable_array2D_reading(file_id,poloidal_flux,"/Psi")
   !> close hdf5 file
   call HDF5_close(file_id)
-  dims(1:2) = shape(r_minor); dims(3:4) = shape(separatrix); 
-  !> find poloidal flux at the magnetic axis
-  poloidal_flux_axis = bilinear_interp_cartesian(RZ_axis(2),RZ_axis(1),&
-                       dims(1),dims(2),Z_mesh,R_mesh,r_minor)
-  !> find the poloidal flux at the plasma boundary
-  poloidal_flux_bnd = bilinear_interp_cartesian(separatrix(2,1),separatrix(1,1),&
-                       dims(1),dims(2),Z_mesh,R_mesh,r_minor)
-  !> compute the magnetic minor radii
-  r_minor = sqrt((r_minor-poloidal_flux_axis)/(poloidal_flux_bnd-poloidal_flux_axis))
-  !> cleanup
-  if(allocated(separatrix)) deallocate(separatrix)
-end subroutine read_and_compute_soft_minor_radii
+end subroutine read_soft_maxis_and_poloidal_flux
 
 !> perform a linear interpolation between two nodes
 !> inputs:
@@ -675,8 +675,8 @@ mesh_1,mesh_2,matrix) result(f)
   integer,dimension(2) :: id_1,id_2
   real*8,dimension(2)  :: nodes_1,nodes_2
   !> find poloidal flux at the magnetic axis
-  call find_point_segment(pos_1,dim_1,mesh_1,id_1,nodes_1)
-  call find_point_segment(pos_2,dim_2,mesh_2,id_2,nodes_2)
+  call find_point_segment(pos_1,dim_1,mesh_1,id_1,nodes_1,mesh_1(1).lt.mesh_1(2))
+  call find_point_segment(pos_2,dim_2,mesh_2,id_2,nodes_2,mesh_2(1).lt.mesh_2(2))
   !> compute bilinear interpolation
   f = (matrix(id_1(1),id_2(1))*(nodes_1(2)-pos_1)*(nodes_2(2)-pos_2) + &
       matrix(id_1(1),id_2(2))*(pos_1-nodes_1(1))*(nodes_2(2)-pos_2) + &
@@ -691,31 +691,47 @@ end function bilinear_interp_cartesian
 !>   x:      (real8) target point
 !>   nx:     (integer) number of mesh nodes
 !>   x_mesh: (real8)(nx) 1D mesh
+!>   increasing_in: (logical) if true the mesh value is considered increasing with index
 !> outputs:
 !>   id_x:   (integer)(2) indexes of the nodes containing the target point
 !>   xnodes: (real8)(2) min,max of the value
-subroutine find_point_segment(x,nx,x_mesh,id_x,xnodes)
+subroutine find_point_segment(x,nx,x_mesh,id_x,xnodes,increasing_in)
   implicit none
   !> inputs:
   integer,intent(in) :: nx
   real*8,intent(in)  :: x 
   real*8,dimension(nx),intent(in) :: x_mesh
+  logical,intent(in),optional :: increasing_in
   !> outputs:
   integer,dimension(2),intent(out) :: id_x
   real*8,dimension(2),intent(out)  :: xnodes
   !> variables:
+  logical :: increasing
+  !> initialisation
+  increasing = .true.
+  if(present(increasing_in)) increasing = increasing_in
   !> identify the nearest node
   id_x = [minloc(abs(x-x_mesh)),-1];
   if(id_x(1).le.1) then 
     id_x = [1,2];
   elseif(id_x(1).ge.nx) then
     id_x = [nx-1,nx]
-  elseif(x.ge.x_mesh(id_x(1))) then
-    id_x = [id_x(1),id_x(1)+1]
-  elseif(x.lt.x_mesh(id_x(1))) then
-    id_x = [id_x(1)-1,id_x(1)]
+  else
+    if(increasing) then
+      if(x.ge.x_mesh(id_x(1))) then
+        id_x = [id_x(1),id_x(1)+1]
+      elseif(x.lt.x_mesh(id_x(1))) then
+        id_x = [id_x(1)-1,id_x(1)]
+      endif
+    else
+      if(x.le.x_mesh(id_x(1))) then
+        id_x = [id_x(1),id_x(1)+1]
+      elseif(x.gt.x_mesh(id_x(1))) then
+        id_x = [id_x(1)-1,id_x(1)]
+      endif
+    endif
   endif
-  xnodes = x_mesh(id_x(1):id_x(2))
+  xnodes = x_mesh(id_x)
 end subroutine find_point_segment
 
 !> write jorek particles in HDF5

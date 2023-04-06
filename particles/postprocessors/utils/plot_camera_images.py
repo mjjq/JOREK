@@ -126,15 +126,34 @@ separator="/"):
   show()
   return image
 
-# compute the differences between the jorek images and the test images
+# compute the differences between the jorek images and the test images.
+# the number of spectra and the number of pixels of the two image set must be the same
 # inputs:
 #   jorek_image: (ntimes,nspectra,ny,nx) set of jorek images per time per spectrum
 #   test_image:  (ntimes,nspectra,ny,nx) set of test images per time per spectrum
 def compute_and_plot_image_differences(jorek_image,test_image):
-  from numpy import array
+  from numpy import array,zeros,float64,amax,abs
   from matplotlib.pyplot import show
-  # in
-
+  # check image shape compatibility
+  if(jorek_image.shape[1:]!=test_image.shape[1:]):
+    raise Exception("JOREK and test image sets have different shapes!")
+  # initialisation
+  image_error = zeros((jorek_image.shape[0]*test_image.shape[0],\
+  jorek_image.shape[1],jorek_image.shape[2],jorek_image.shape[3],),dtype=float64)
+  normalised_image_error = zeros(image_error.shape,dtype=float64)
+  # compute differences
+  for test_id,test_frame in enumerate(test_image):
+    for jorek_id,jorek_frame in enumerate(jorek_image):
+      for spectra_id,spectra in enumerate(jorek_frame):
+        image_error[test_id*jorek_image.shape[0],spectra_id,:,:] = spectra-test_frame[spectra_id]
+        normalised_image_error[test_id*jorek_image.shape[0],spectra_id,:,:] = \
+        (spectra/amax(abs(spectra))) - (test_frame[spectra_id]/amax(abs(test_frame[spectra_id])))
+  # plot images
+  imshow_4d(image_error,title="Differences between the JOREK and test images")
+  imshow_4d(normalised_image_error,title="Normalised differences between the JOREK and test images")
+  imshow_4d(abs(image_error),title="Error between the JOREK and test images")
+  imshow_4d(abs(normalised_image_error),title="Normalised error between the JOREK and test images")
+  show()
 
 def generate_argument_parser():
   import argparse

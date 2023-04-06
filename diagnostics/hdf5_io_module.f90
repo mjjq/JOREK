@@ -65,6 +65,31 @@ module hdf5_io_module
     call H5Fclose_f(file_id,error)
   end subroutine HDF5_close
 
+  !---------------------------------------- 
+  ! extract dataset rank and shape
+  !----------------------------------------
+  subroutine HDF5_extract_dataset_rank_shape(file_id,rank,dims,dsetname)
+    !> inputs:
+    character(len=*),intent(in) ::dsetname
+    integer(HID_T), intent(in)  :: file_id
+    !> outputs:
+    integer,intent(out) :: rank !< rank (number of indexes) of the dataset
+    integer(HSIZE_T),dimension(:),allocatable,intent(out) :: dims !< shape of the dataset
+    !> variables:
+    integer(HID_T) :: dataset_id,dataspace_id !< datatset,dataspace identifier
+    integer        :: error !< error flag
+    integer(HSIZE_T),dimension(:),allocatable :: maxdims !< maximum dataset shape
+    !*** get the dataset and dataspace ids ***
+    call H5Dopen_f(file_id,trim(dsetname),dataset_id,error)
+    call H5dget_space_f(dataset_id,dataspace_id,error)
+    !*** get the space rank ***
+    call H5Sget_simple_extent_ndims_f(dataspace_id,rank,error)
+    !> allocate shapes
+    allocate(dims(rank)); allocate(maxdims(rank));
+    !*** get space size ***
+    call H5Sget_simple_extent_dims_f(dataspace_id,dims,maxdims,error)
+  end subroutine HDF5_extract_dataset_rank_shape
+
   !----------------------------------------
   ! Open or create HDF5 file
   ! Takes a property list as optional argument, which can be used to set parameters

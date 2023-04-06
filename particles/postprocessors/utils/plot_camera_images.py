@@ -1,6 +1,28 @@
 # --------------------------------------------------------------- #
 # Read and plot the camera pixel and filter intensities HDF5 file
 # --------------------------------------------------------------- #
+# Method used for adapting the sizes of position coordinates
+def adapt_positions_for_plot(positions):
+  from numpy import newaxis,transpose
+  if(positions.size==0):
+    return positions
+  if(len(positions.shape)<2):
+    positions = positions[newaxis,:]
+  positions = transpose(positions,axes=[1,0])
+  return positions
+
+# Method used for adapitng images for plot
+def adapt_images_for_plot(images):
+  from numpy import newaxis,transpose
+  if(images.size==0):
+    return images
+  if(len(images.shape)<3):  
+    images  = images[:,:,newaxis]
+  if(len(images.shape)<4):
+    images = images[:,:,:,newaxis]
+  images = transpose(images,axes=[3,2,1,0])
+  return images
+
 # Method used for plotting 4d arrays as 2d images
 # inputs:
 #   frames_spectra: (nx,ny,n_spectra,n_times) array to plot
@@ -10,7 +32,10 @@
 #                   default: no scaling is used
 #   title:          (string) figure title, default: empty
 def imshow_4d(frames_spectra,x_positions=[],y_positions=[],title=""):
-  from matplotlib import pyplot as plt
+  from numpy import newaxis
+  from matplotlib.pyplot import figure,imshow,colorbar
+  from matplotlib.pyplot import title as tit
+  # plot with extension
   for frame_id,frame in enumerate(frames_spectra):
     if(not ((len(x_positions)==0) and (len(y_positions)==0))):
       dx = 0.5*(x_positions[1,frame_id]-x_positions[0,frame_id])
@@ -20,39 +45,66 @@ def imshow_4d(frames_spectra,x_positions=[],y_positions=[],title=""):
     else:
       ext = None
     for spectrum_id,spectrum in enumerate(frame):
-      plt.figure()
-      plt.imshow(spectrum,extent=ext)
-      plt.colorbar()
-      plt.title("".join([title,' spectrum N# ',str(spectrum_id+1),\
+      figure()
+      imshow(spectrum,extent=ext)
+      colorbar()
+      tit("".join([title,' spectrum N# ',str(spectrum_id+1),\
       ' time N#: ',str(frame_id+1)]))   
   return  
 
-# main function
-def load_and_plot_images(filename="",filepath=".",image_datasetname="",\
+# main functions
+def load_and_plot_jorek_images(filename="",filepath=".",image_datasetname="",\
 pixel_x_postion_datasetname="",pixel_y_postion_datasetname="",\
 separator="/"):
   import h5py
-  import numpy as np
-  from matplotlib import pyplot as plt
+  from numpy import array,isnan,transpose
+  from matplotlib.pyplot import show
   # Initialisation
   # Read image
   fhandler = h5py.File("".join([filepath,separator,filename]),'r')
-  pixel_filter_intensities = np.array(fhandler[image_datasetname])
-  x_positions = np.array(fhandler[pixel_x_postion_datasetname])
-  y_positions = np.array(fhandler[pixel_y_postion_datasetname])
+  pixel_filter_intensities = array(fhandler[image_datasetname])
+  x_positions = array(fhandler[pixel_x_postion_datasetname])
+  y_positions = array(fhandler[pixel_y_postion_datasetname])
   fhandler.close()
   # Reorder pixel and filter intensities for plotting
-  x_positions = np.transpose(x_positions,axes=[1,0])
-  y_positions = np.transpose(y_positions,axes=[1,0])
-  pixel_filter_intensities = np.transpose(pixel_filter_intensities,axes=[3,4,0,1,2])
+  x_positions = transpose(x_positions,axes=[1,0])
+  y_positions = transpose(y_positions,axes=[1,0])
+  pixel_filter_intensities = transpose(pixel_filter_intensities,axes=[3,4,0,1,2])
   pixel_intensities = pixel_filter_intensities[0]
   filter_intensities = pixel_filter_intensities[1]
   # Plot pixel and filter intensities
   imshow_4d(pixel_intensities,x_positions=x_positions,y_positions=y_positions,title="Image for" )
   imshow_4d(filter_intensities,x_positions=x_positions,y_positions=y_positions,title="Filter for" )
-  if((np.isnan(pixel_intensities)).any()):
+  if((isnan(pixel_intensities)).any()):
     print('Warning: found pixel(s) with NaN intensity')
-  plt.show()
+  show()
+  return
+
+def load_and_plot_generic_images(filename="",filepath=".",image_datasetname="",\
+pixel_x_postion_datasetname="",pixel_y_postion_datasetname="",\
+separator="/"):
+  import h5py
+  from numpy import array,isnan
+  from matplotlib.pyplot import show
+  # Initialisation
+  x_positions = array([]); y_positions = array([]);
+  # Read image
+  fhandler = h5py.File("".join([filepath,separator,filename]),'r')
+  image = array(fhandler[image_datasetname])
+  if(pixel_x_postion_datasetname in fhandler):
+    x_positions = array(fhandler[pixel_x_postion_datasetname])
+  if(pixel_y_postion_datasetname in fhandler):
+    y_positions = array(fhandler[pixel_y_postion_datasetname])
+  fhandler.close()
+  # Reorder pixel and filter intensities for plotting
+  x_positions = adapt_positions_for_plot(x_positions)
+  y_positions = adapt_positions_for_plot(y_positions)
+  image = adapt_images_for_plot(image)
+  # Plot pixel and filter intensities
+  imshow_4d(image,x_positions=x_positions,y_positions=y_positions,title="Comparison image")
+  if((isnan(image)).any()):
+    print('Warning: found generic image with NaN intensity')
+  show()
   return
 
 def generate_argument_parser():
@@ -76,15 +128,25 @@ def generate_argument_parser():
   parser.add_argument('--y_pixel_coordinates_datasetname','-icy',type=str,\
   required=False,dest='pixel_y_postion_datasetname',action='store',\
   default='y_pixel_coordinates',help='y position coordinates dataset name')
+  parser.add_argument('-fgen','--genericfilename',type=str,action='store',required=False,\
+  dest='generic_filename',default='',help='name of the SOFT code filename to be read')
+  parser.add_argument('--generic_image_datasetname','-gimdset',type=str,required=False,\
+  dest='generic_image_datasetname',action='store',default='image',\
+  help='SOFT image-filter dataset name')
   return parser.parse_args()
 
 # Run main ------------------------------------------------------ #
 if __name__ == "__main__":
   args = generate_argument_parser()
-  load_and_plot_images(filename=args.filename,\
-  filepath=args.filepath,image_datasetname=args.image_datasetname,\
-  pixel_x_postion_datasetname=args.pixel_x_postion_datasetname,\
-  pixel_y_postion_datasetname=args.pixel_y_postion_datasetname,\
-  separator=args.separator)
+  if(len(args.filename)!=0):
+    load_and_plot_jorek_images(filename=args.filename,\
+    filepath=args.filepath,image_datasetname=args.image_datasetname,\
+    pixel_x_postion_datasetname=args.pixel_x_postion_datasetname,\
+    pixel_y_postion_datasetname=args.pixel_y_postion_datasetname,\
+    separator=args.separator)
+  if(len(args.generic_filename)!=0):
+    load_and_plot_generic_images(filename=args.generic_filename,\
+    filepath=args.filepath,image_datasetname=args.generic_image_datasetname,\
+    separator=args.separator)
 
 # --------------------------------------------------------------- #

@@ -196,7 +196,7 @@ if __name__ == "__main__":
     generic_image=load_and_plot_generic_images(filename=args.generic_filename,\
     filepath=args.filepath,image_datasetname=args.generic_image_datasetname,\
     separator=args.separator)
-  if((generic_image.size!=0) and (jorek_image.size!=0)):
+  if((len(args.generic_filename)!=0) and (len(args.filename)!=0)):
     compute_and_plot_image_differences(jorek_image,generic_image)
 
 # --------------------------------------------------------------- #

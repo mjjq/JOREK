@@ -33,7 +33,7 @@ real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local,soft_poloid
 character(len=17)    :: fields_filename,soft_pdf_filename
 character(len=28)    :: soft_magfield_filename
 character(len=125)   :: particle_filename
-character(len=193)   :: soft_orbit_filename
+character(len=250)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
 !> Variable definitions --------------------------------------------------------------------
 do_write_particles_in_hdf5 = .false.         !< writeh particle in hdf5 if true
@@ -48,7 +48,7 @@ fields_filename        = 'jorek_equilibrium' !< jorek restart filename
 soft_magfield_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field file
 particle_filename      = 'part_restart_soft_orbits.h5'  !< particle restart filename 
 soft_pdf_filename      = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
-soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall' !< soft orbit filename
+soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a97_nowall' !< soft orbit filename
 filename_jorek_hdf5 = 'jorek_particles_from_soft'
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator

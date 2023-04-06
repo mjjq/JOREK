@@ -1912,7 +1912,7 @@ do i=1,n_vertex_max
                                + v * (- rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * UgradTe - Te0 * alpha_e * UgradRhoimp) &
                                - v * gamma * pef0 * divU                                                         &
                                - v * (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad                                   &
-                               - v * rho0 * frad_bg                                                              &
+                               - v * (rho0 + alpha_e*rhoimp0) * frad_bg                                          &
                                + v * (gamma-1.d0) * ( - rhoimp0 * dE_ion_dT * UgradTe - E_ion * UgradRhoimp - E_ion_bg * (UgradRho - UgradRhoimp))    &
                                - v * (gamma-1.d0) * rhoimp0 * E_ion * divU                                       &
                                - v * (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU                             &                               
@@ -1968,8 +1968,8 @@ do i=1,n_vertex_max
                               + v * (- rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT - T0 * alpha_imp * UgradRhoimp) &
                               - v * gamma * pf0 * divU                                                &
                               + v * (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)             &
-                              - v * (rho0 + alpha_imp*rhoimp0) * rhoimp0 * Lrad                       &
-                              - v * rho0 * frad_bg                                                    &
+                              - v * (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad                         &
+                              - v * (rho0 + alpha_e*rhoimp0) * frad_bg                                &
                               + v * (gamma-1.d0) * ( - rhoimp0 * dE_ion_dT * UgradT - E_ion * UgradRhoimp - E_ion_bg * (UgradRho - UgradRhoimp) )       &
                               - v * (gamma-1.d0) * rhoimp0 * E_ion * divU                             &
                               - v * (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU                   &
@@ -4019,7 +4019,8 @@ do i=1,n_vertex_max
                                               - v * rhoimp0 * rhoimp0 * dalpha_e_dT * Te * Lrad  &
                                               - v * rhoimp0 * rhoimp0 * alpha_e * dLrad_dT  * Te  &
 
-                                              - v * rho0 * dfrad_bg_dT * Te                   &
+                                              - v * dalpha_e_dT * Te * rhoimp0 * frad_bg       &
+                                              - v * alpha_e * rhoimp0 * dfrad_bg_dT * Te       &
 
                                               - v * (gamma-1.d0) * rhoimp0 * dE_ion_dT * UgradTe_Te__p    &
 
@@ -4042,7 +4043,8 @@ do i=1,n_vertex_max
                                                  - v * Te0 * alpha_e * UgradRhoimp_rhoimp__p            &
                                                  - v * gamma * (rhoimp * alpha_e * Te0) * divU          &
                                                  - v * rho0 * rhoimp * Lrad                             &
-                                                 - 2.d0 * v * alpha_e * rhoimp0 * rhoimp * Lrad       &
+                                                 - 2.d0 * v * alpha_e * rhoimp0 * rhoimp * Lrad         &
+                                                 - v * alpha_e * rhoimp * frad_bg                       &
                                                  + v * (gamma-1.d0) * deta_drhoimp0_ohm * rhoimp * JJ2  & 
                                                  - v * (gamma-1.d0) * rhoimp * dE_ion_dT * UgradTe     &
                                                  - v * (gamma-1.d0) * E_ion * UgradRhoimp_rhoimp__p     &
@@ -4294,10 +4296,11 @@ do i=1,n_vertex_max
                                              - v * gamma * (rhoimp0*alpha_imp*T + rhoimp0*T0*dalpha_imp_dT*T) * divU    &
 
                                              - v * rho0    * rhoimp0  * dLrad_dT  * T              &
-                                             - v * rhoimp0 * rhoimp0 * dalpha_imp_dT * T * Lrad  &
-                                             - v * rhoimp0 * rhoimp0 * alpha_imp * dLrad_dT  * T  &
+                                             - v * rhoimp0 * rhoimp0 * dalpha_e_dT * T * Lrad  &
+                                             - v * rhoimp0 * rhoimp0 * alpha_e * dLrad_dT  * T  &
 
-                                             - v * rho0 * dfrad_bg_dT * T                   &
+                                             - v * dalpha_e_dT * T * rhoimp0 * frad_bg       &
+                                             - v * alpha_e * rhoimp0 * dfrad_bg_dT * T       &
 
                                              - v * (gamma-1.d0) * rhoimp0 * dE_ion_dT * UgradT_T__p    &
 
@@ -4320,7 +4323,8 @@ do i=1,n_vertex_max
                                                 - v * T0 * alpha_imp * UgradRhoimp_rhoimp__p            &
                                                 - v * gamma * (rhoimp * alpha_imp * T0) * divU          &
                                                 - v * rho0 * rhoimp * Lrad                             &
-                                                - 2.0d0 * v * alpha_imp * rhoimp0 * rhoimp * Lrad       &
+                                                - 2.0d0 * v * alpha_e * rhoimp0 * rhoimp * Lrad       &
+                                                - v * alpha_e * rhoimp * frad_bg                       &
                                                 + v * (gamma-1.d0) * deta_drhoimp0_ohm * rhoimp * JJ2  &
                                                 - v * (gamma-1.d0) * rhoimp * dE_ion_dT * UgradTe     &
                                                 - v * (gamma-1.d0) * E_ion * UgradRhoimp_rhoimp__p     &
@@ -4359,8 +4363,7 @@ do i=1,n_vertex_max
                     Pjac   (var_rhon,var_rhon)  = v * rhon
 
                     Qjac_p (var_rhon,var_rho )  = - v *       rho * rhon0_corr * Sion_T &
-                                                  + v * 2.0 * rho * rho0_corr  * Srec_T &
-                                                  - Dn_perp_num * lap_Vstar * lap_bf
+                                                  + v * 2.0 * rho * rho0_corr  * Srec_T
                     if (with_TiTe)then
                       Qjac_p (var_rhon,var_Te  )  = - v * rho0_corr * rhon0_corr * dSion_dT * Te &
                                                     + v * rho0_corr * rho0_corr  * dSrec_dT * Te
@@ -4370,7 +4373,8 @@ do i=1,n_vertex_max
                     endif
                     Qjac_p (var_rhon,var_rhon)  = - Dn0R * rhon_R * v_R                &
                                                   - Dn0Z * rhon_Z * v_Z                &
-                                                  - v * rho0_corr * rhon * Sion_T 
+                                                  - v * rho0_corr * rhon * Sion_T      &
+                                                  - Dn_perp_num * lap_Vstar * lap_bf
                     Qjac_kn(var_rhon,var_rhon)  = - Dn0p * rhon_p * v_p/R**2
                   endif
 

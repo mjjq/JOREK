@@ -4028,6 +4028,8 @@ do i=1,n_vertex_max
                           + (GAMMA - 1.) * v * E_ion_bg * (r0-rimp0) * F0 / BigR * vpar_p       * xjac * theta * tstep
                       !================= End ionization potential energy ===========================
 
+                    end if ! (with_vpar)
+                    
                       if (with_neutrals) then
                         amat(var_T,var_rhon) = + v * BigR * (r0+alpha_e*rimp0) * rhon * ksiion * Sion_T * xjac * theta * tstep &
                                                + v * BigR * rhon * (r0_corr+alpha_e*rimp0_corr) * LradDrays_T * xjac * theta * tstep &
@@ -4037,6 +4039,7 @@ do i=1,n_vertex_max
                         !==============================End of friction terms=================
 
                       endif
+                      
                       if (with_impurities) then
                         amat(var_T,var_rhoimp) = v * rhoimp * alpha_imp * T0 * BigR * xjac * (1.d0 + zeta)&
                         !=============== The ionization potential energy term=========================
@@ -4130,9 +4133,7 @@ do i=1,n_vertex_max
 
                         !=====================End of new TG_num terms=================================
 
-                      endif
-
-                    end if ! (with_vpar)
+                      endif ! (with_impurities)
                     
                   end if ! (with_TiTe) *************************************************************
  

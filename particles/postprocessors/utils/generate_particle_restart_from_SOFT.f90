@@ -219,7 +219,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
         else
           p%x = [RZphi(1),RZphi(2),phi_array(jj)]; p%st = st; p%weight = soft_orbit_weights(ii);
           p%i_elm = i_elm; p%i_life = 0; p%t_birth = 0.;
-          call sim%fields%calc_EBpsiU(time,i_elm,st,RZphi(3),E_field,B_field,psi,U)
+          call sim%fields%calc_EBpsiU(time,i_elm,st,p%x(3),E_field,B_field,psi,U)
           p%p = SPEED_OF_LIGHT*mass*[soft_orbit_ppar(ii),(5d-1*SPEED_OF_LIGHT*&
           (soft_orbit_pperp(ii)**2))/(norm2(B_field))]; p%q = int(charge,kind=1);
         endif

@@ -54,38 +54,40 @@ def imshow_4d(frames_spectra,x_positions=[],y_positions=[],title=""):
 
 # load and plot a jorek image set
 # inputs:
-#   filename:                     (string) name of the hdf5 containing the images
+#   filenames:                    (list) list of names of the hdf5 files containing the images
 #   filepath:                     (string) path to the file containing the images
 #   image_datasetname:            (string) name of the image hdf5 dataset
 #   pixel_x_position_datasetname: (string) name of the x coordinate map hdf5 dataset
 #   pixel_y_position_datasetname: (string) name of the y coordinate map hdf5 dataset
 #   separator:                    (string) filename-filepath separator
 # outputs:
-#   image: (ntimes,nspectrum,ny,nx) set of jorek images
-def load_and_plot_jorek_images(filename="",filepath=".",image_datasetname="",\
+#   images: (n_images,ntimes,nspectrum,ny,nx) set of jorek images
+def load_and_plot_jorek_images(filenames=[],filepath=".",image_datasetname="",\
 pixel_x_postion_datasetname="",pixel_y_postion_datasetname="",\
 separator="/"):
   import h5py
   from numpy import array,isnan,transpose
   from matplotlib.pyplot import show
   # Initialisation
+  pixel_intensities = []
   # Read image
-  fhandler = h5py.File("".join([filepath,separator,filename]),'r')
-  pixel_filter_intensities = array(fhandler[image_datasetname])
-  x_positions = array(fhandler[pixel_x_postion_datasetname])
-  y_positions = array(fhandler[pixel_y_postion_datasetname])
-  fhandler.close()
-  # Reorder pixel and filter intensities for plotting
-  x_positions = transpose(x_positions,axes=[1,0])
-  y_positions = transpose(y_positions,axes=[1,0])
-  pixel_filter_intensities = transpose(pixel_filter_intensities,axes=[3,4,0,1,2])
-  pixel_intensities = pixel_filter_intensities[0]
-  filter_intensities = pixel_filter_intensities[1]
-  # Plot pixel and filter intensities
-  imshow_4d(pixel_intensities,x_positions=x_positions,y_positions=y_positions,title="Image for" )
-  imshow_4d(filter_intensities,x_positions=x_positions,y_positions=y_positions,title="Filter for" )
-  if((isnan(pixel_intensities)).any()):
-    print('Warning: found pixel(s) with NaN intensity')
+  for filename in filenames:
+    fhandler = h5py.File("".join([filepath,separator,filename]),'r')
+    pixel_filter_intensities = array(fhandler[image_datasetname])
+    x_positions = array(fhandler[pixel_x_postion_datasetname])
+    y_positions = array(fhandler[pixel_y_postion_datasetname])
+    fhandler.close()
+    # Reorder pixel and filter intensities for plotting
+    x_positions = transpose(x_positions,axes=[1,0])
+    y_positions = transpose(y_positions,axes=[1,0])
+    pixel_filter_intensities = transpose(pixel_filter_intensities,axes=[3,4,0,1,2])
+    pixel_intensities.append(pixel_filter_intensities[0])
+    filter_intensities = pixel_filter_intensities[1]
+    # Plot pixel and filter intensities
+    imshow_4d(pixel_intensities[-1],x_positions=x_positions,y_positions=y_positions,title="Image for" )
+    imshow_4d(filter_intensities,x_positions=x_positions,y_positions=y_positions,title="Filter for" )
+    if((isnan(pixel_intensities)).any()):
+      print('Warning: found pixel(s) with NaN intensity')
   show()
   return pixel_intensities
 
@@ -129,38 +131,40 @@ separator="/"):
 # compute the differences between the jorek images and the test images.
 # the number of spectra and the number of pixels of the two image set must be the same
 # inputs:
-#   jorek_image: (ntimes,nspectra,ny,nx) set of jorek images per time per spectrum
+#   jorek_image: (n_images,ntimes,nspectra,ny,nx) set of jorek images per time per spectrum
 #   test_image:  (ntimes,nspectra,ny,nx) set of test images per time per spectrum
-def compute_and_plot_image_differences(jorek_image,test_image):
+def compute_and_plot_image_differences(jorek_images,test_image):
   from numpy import array,zeros,float64,amax,abs
   from matplotlib.pyplot import show
-  # check image shape compatibility
-  if(jorek_image.shape[1:]!=test_image.shape[1:]):
-    raise Exception("JOREK and test image sets have different shapes!")
-  # initialisation
-  image_error = zeros((jorek_image.shape[0]*test_image.shape[0],\
-  jorek_image.shape[1],jorek_image.shape[2],jorek_image.shape[3],),dtype=float64)
-  normalised_image_error = zeros(image_error.shape,dtype=float64)
-  # compute differences
-  for test_id,test_frame in enumerate(test_image):
-    for jorek_id,jorek_frame in enumerate(jorek_image):
-      for spectra_id,spectra in enumerate(jorek_frame):
-        image_error[test_id*jorek_image.shape[0],spectra_id,:,:] = spectra-test_frame[spectra_id]
-        normalised_image_error[test_id*jorek_image.shape[0],spectra_id,:,:] = \
-        (spectra/amax(abs(spectra))) - (test_frame[spectra_id]/amax(abs(test_frame[spectra_id])))
-  # plot images
-  imshow_4d(image_error,title="Differences between the JOREK and test images")
-  imshow_4d(normalised_image_error,title="Normalised differences between the JOREK and test images")
-  imshow_4d(abs(image_error),title="Error between the JOREK and test images")
-  imshow_4d(abs(normalised_image_error),title="Normalised error between the JOREK and test images")
+  # loop on the JOREK images
+  for jorek_image in jorek_images:
+    # check image shape compatibility
+    if(jorek_image.shape[1:]!=test_image.shape[1:]):
+      raise Exception("JOREK and test image sets have different shapes!")
+    # initialisation
+    image_error = zeros((jorek_image.shape[0]*test_image.shape[0],\
+    jorek_image.shape[1],jorek_image.shape[2],jorek_image.shape[3],),dtype=float64)
+    normalised_image_error = zeros(image_error.shape,dtype=float64)
+    # compute differences
+    for test_id,test_frame in enumerate(test_image):
+      for jorek_id,jorek_frame in enumerate(jorek_image):
+        for spectra_id,spectra in enumerate(jorek_frame):
+          image_error[test_id*jorek_image.shape[0],spectra_id,:,:] = spectra-test_frame[spectra_id]
+          normalised_image_error[test_id*jorek_image.shape[0],spectra_id,:,:] = \
+          (spectra/amax(abs(spectra))) - (test_frame[spectra_id]/amax(abs(test_frame[spectra_id])))
+    # plot images
+    imshow_4d(image_error,title="Differences between the JOREK and test images")
+    imshow_4d(normalised_image_error,title="Normalised differences between the JOREK and test images")
+    imshow_4d(abs(image_error),title="Error between the JOREK and test images")
+    imshow_4d(abs(normalised_image_error),title="Normalised error between the JOREK and test images")
   show()
 
 def generate_argument_parser():
   import argparse
   parser = argparse.ArgumentParser(\
   description='read and plot fast camera image and filter')
-  parser.add_argument('-f','--filename',type=str,action='store',\
-  dest='filename',default='pixel_filter_intensities.h5',\
+  parser.add_argument('-f','--filenames',type=str,nargs='*',\
+  action='store',dest='filenames',default=['pixel_filter_intensities.h5'],\
   help='name of the file to be read')
   parser.add_argument('--filepath','-fp',type=str,required=False,\
   dest='filepath',action='store',default='.',\
@@ -186,8 +190,8 @@ def generate_argument_parser():
 # Run main ------------------------------------------------------ #
 if __name__ == "__main__":
   args = generate_argument_parser()
-  if(len(args.filename)!=0):
-    jorek_image=load_and_plot_jorek_images(filename=args.filename,\
+  if(len(args.filenames)!=0):
+    jorek_images=load_and_plot_jorek_images(filenames=args.filenames,\
     filepath=args.filepath,image_datasetname=args.image_datasetname,\
     pixel_x_postion_datasetname=args.pixel_x_postion_datasetname,\
     pixel_y_postion_datasetname=args.pixel_y_postion_datasetname,\
@@ -196,7 +200,7 @@ if __name__ == "__main__":
     generic_image=load_and_plot_generic_images(filename=args.generic_filename,\
     filepath=args.filepath,image_datasetname=args.generic_image_datasetname,\
     separator=args.separator)
-  if((len(args.generic_filename)!=0) and (len(args.filename)!=0)):
-    compute_and_plot_image_differences(jorek_image,generic_image)
+  if((len(args.generic_filename)!=0) and (len(args.filenames)!=0)):
+    compute_and_plot_image_differences(jorek_images,generic_image)
 
 # --------------------------------------------------------------- #

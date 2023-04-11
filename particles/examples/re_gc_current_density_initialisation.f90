@@ -7,7 +7,7 @@ use constants,       only: TWOPI,PI
 use phys_module,     only: xcase,xpoint
 use data_structure,  only: type_bnd_node_list,type_bnd_element_list
 use mod_boundary,    only: boundary_from_grid
-use mod_expressionm, only: exprs_all_int,init_expr,exprs,SI_UNITS
+use mod_expression,  only: exprs_all_int,init_expr,exprs,SI_UNITS
 use mod_integrals3D, only: int3d_new
 use mod_boundary,    only: boundary_from_grid
 use equil_info
@@ -28,7 +28,7 @@ integer                     :: n_int_pdf_to_part_coord_param,n_real_pdf_to_part_
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
 real*8                           :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
-real*8                           :: sup_pdf_safety_factor,n_tot_phys_particles
+real*8                           :: sup_pdf_safety_factor
 real*8,dimension(2)              :: Rbox,Zbox,Rbound,Zbound,phibound,Ekinbound
 real*8,dimension(2)              :: Pbound,Pitchbound,Chargebound
 real*8,dimension(6,2)            :: phase_space_bounds
@@ -71,7 +71,7 @@ call update_equil_state(sim%my_id,sim%fields%node_list,sim%fields%element_list,b
 sim%time = start_time
 sim%groups(1:n_groups)%mass = mass
 do  ii=1,n_groups
-  allocate(particle_gc_relativistic::sim%group(ii)%particles(n_particles))
+  allocate(particle_gc_relativistic::sim%groups(ii)%particles(n_particles))
 enddo
 !> difine phase space domain
 call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rbox(2),Zbox(1),Zbox(2))
@@ -106,10 +106,6 @@ call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_l
 exprs('int3d_jR_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
 real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass];
 deallocate(DUMMY_REAL_ARRAY);
-!> compute the total number of physical particles
-n_tot_phys_particles = n_physical_particle_current_density_uniform_phase(n_variables,&
-start_time,sim%fields,phase_space_bounds(:,1),phase_space_bounds(:,2),n_real_weight_param,&
-real_weight_param,n_int_weight_param,int_weight_param)
 !> define the sampler and samper distribution
 n_real_gdf_param = 0; n_int_gdf_param = 0;
 gdf_to_use         => gdf_uniform_phase
@@ -193,7 +189,7 @@ n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
   end select
 end subroutine spherical_p_cartesian_q_to_relativistic_gc
 
-> Phase space distribution based on the plasma current density
+!> Phase space distribution based on the plasma current density
 !> and uniform phase space distribution. The momentum distribution
 !> is considered uniform for relativistic particle hence, the 
 !> appearance of the relativistic factor.
@@ -429,8 +425,11 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param)
   x(6) = x_min(6) + (x_max(6)-x_min(6))*x(6)
 end subroutine gdf_uniform_sampler
 
-!> Compute the total number of physical particles of the current density -
-!> uniform momentum space distribution
+!> Method used for computing the weight of each particle. Given that the pdf
+!> is directly sampled via accept-reject method, the particle weight is 
+!> considered uniform for all particles and equal to the total number of
+!> physical particles (from the plasma current) divided the total number of
+!> simulated markers. A uniform distribution in the velocity space is used. 
 !> inputs:
 !>   nx:           (integer) number of variables
 !>   x:            (real8)(nx) random state to accept
@@ -448,30 +447,31 @@ end subroutine gdf_uniform_sampler
 !>   n_int_param:  (integer) N# of integer input parameters
 !>   int_param:    (integer)(n_int_param) integer weight parameters
 !> outputs:
-!>   n_phys_part:  (real8) number of physical particles
-function n_physical_particle_current_density_uniform_phase(nx,time,fields,&
-x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(n_phys_part)
+!>   weight:       (real) particle weight
+function particle_weight_current_density_uniform_phase(nx,x,st,time,i_elm,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(weight)
   use constants,  only: EL_CHG,SPEED_OF_LIGHT
   use mod_fields, only: fields_base
   implicit none
   !> Inputs:
   class(fields_base),intent(in)               :: fields
-  integer,intent(in)                          :: nx,n_real_param,n_int_param
+  integer,intent(in)                          :: nx,i_elm,n_real_param,n_int_param
   integer,dimension(:),allocatable,intent(in) :: int_param
   real*8,intent(in)                           :: time
-  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  real*8,dimension(nx),intent(in)             :: x,x_min,x_max
   real*8,dimension(:),allocatable,intent(in)  :: real_param
   !> Outputs:
-  real*8 :: n_phys_part
+  real*8 :: weight
   !> Variables:
   real*8 :: DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
   !> Compute the particle weight
   DUMMY_DOUBLE_1 = sqrt((x_max(4)**2)/((real_param(3)*SPEED_OF_LIGHT)**2)+1.d0)
   DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(3)*SPEED_OF_LIGHT)**2)+1.d0)
-  n_phys_part = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2)
-  n_phys_part = n_phys_part*(cos(x_min(5)+cos(x_max(5))))
-  n_phys_part = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
-  (n_phys_part*x_min(6)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
-end function n_physical_particle_current_density_uniform_phase
+  weight = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2)
+  weight = weight*(cos(x_min(5)+cos(x_max(5))))
+  weight = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
+  (weight*real_param(2)*x(6)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
+end function particle_weight_current_density_uniform_phase
 
 end program re_gc_current_density_initialisation

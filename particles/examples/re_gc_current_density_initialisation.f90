@@ -1,0 +1,477 @@
+!> Example for initialising the a relativistic gc population
+!> (runaway electrons) and running the simulation
+!> the current density initialisation is used for generating
+!> the initial gc population
+program re_gc_current_density_initialisation
+use constants,       only: TWOPI,PI
+use phys_module,     only: xcase,xpoint
+use data_structure,  only: type_bnd_node_list,type_bnd_element_list
+use mod_boundary,    only: boundary_from_grid
+use mod_expressionm, only: exprs_all_int,init_expr,exprs,SI_UNITS
+use mod_integrals3D, only: int3d_new
+use mod_boundary,    only: boundary_from_grid
+use equil_info
+use mod_random_seed
+use particle_tracer
+use mod_particle_io, only: write_simulation_hdf5
+implicit none
+!> Variable declarations --------------------------------------------------------------------
+type(pcg32_rng)             :: rng_pcg32
+type(event)                 :: field_reader
+type(type_bnd_node_list)    :: bnd_node_list
+type(type_bnd_element_list) :: bnd_elm_list
+integer                     :: ii,n_variables,n_particles,n_groups
+integer                     :: n_int_pdf_param,n_real_pdf_param,ifail
+integer                     :: n_int_weight_param,n_real_weight_param
+integer                     :: n_int_gdf_param,n_real_gdf_param
+integer                     :: n_int_pdf_to_part_coord_param,n_real_pdf_to_part_coord_param
+integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
+integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
+real*8                           :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
+real*8                           :: sup_pdf_safety_factor,n_tot_phys_particles
+real*8,dimension(2)              :: Rbox,Zbox,Rbound,Zbound,phibound,Ekinbound
+real*8,dimension(2)              :: Pbound,Pitchbound,Chargebound
+real*8,dimension(6,2)            :: phase_space_bounds
+real*8,dimension(:),allocatable  :: real_pdf_to_part_coord_param
+real*8,dimension(:),allocatable  :: real_pdf_param,real_weight_param,real_gdf_param
+real*8,dimension(:),allocatable  :: DUMMY_REAL_ARRAY
+procedure(real_f),pointer           :: pdf_to_use         => NULL()
+procedure(real_f),pointer           :: weight_to_use      => NULL()
+procedure(real_f),pointer           :: gdf_to_use         => NULL()
+procedure(real_arr_inout_s),pointer :: gdf_sampler_to_use => NULL()
+procedure(part_inout_s),pointer     :: pdf_to_part_coord  => NULL()
+
+!> MPI and groups initialisation ------------------------------------------------------------
+n_groups = 1; call sim%initialize(num_groups=n_groups);
+!> Define inputs ----------------------------------------------------------------------------
+n_variables           = 6                !< phase space dimensionality
+n_particles           = 1000000000
+start_time            = 0d0
+mass                  = 5.48579909065d-4 !< electron mass in AMU
+charge                = -1d0             !< electron charge / EL_CHG
+Rbound                = [0.d0,9.99d2]
+Zbound                = [-9.99d2,9.99d2]
+Phibound              = [0d0,TWOPI]
+Ekinbound             = [2d7-1d4,2d7+1d4] !< kinetic energy in eV
+Pitchbound            = [PI-2.95d-1,PI]
+Chargebound           = -1.d0
+sup_pdf_safety_factor = 1d0
+!> Initialisation ---------------------------------------------------------------------------
+write(*,*) "Simulate runaway electrons as gc: started!"
+write(*,*) "... initialise simulation parameters"
+!> TODO initialise simulation events
+!> TODO events
+!> TODO call with(sim,events)
+!> update equilibrium state
+if(sim%my_id.eq.0) call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,&
+bnd_node_list,bnd_elm_list,.false.)
+call broadcast_boundary(sim%my_id,bnd_elm_list,bnd_node_list)
+call update_equil_state(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_elm_list,xpoint,xcase)
+!> initialise particle structure
+sim%time = start_time
+sim%groups(1:n_groups)%mass = mass
+do  ii=1,n_groups
+  allocate(particle_gc_relativistic::sim%group(ii)%particles(n_particles))
+enddo
+!> difine phase space domain
+call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rbox(2),Zbox(1),Zbox(2))
+if(Rbox(1).ge.Rbound(1)) Rbound(1) = Rbox(1)
+if((Rbox(2).lt.Rbound(2)).and.((Rbox(2)-Rbound(1)).gt.0.d0)) Rbound(2) = Rbox(2)
+if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
+if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
+if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
+if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
+Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
+phase_space_bounds(:,1) = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),charge]
+phase_space_bounds(:,2) = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),charge]
+!> define particle PDF
+n_real_pdf_param = 3; allocate(real_pdf_param(n_real_pdf_param));
+real_pdf_param   = [1.d0,mass,sup_pdf_safety_factor]
+n_int_pdf_param  = 1; allocate(int_pdf_param(n_int_pdf_param));
+n_real_weight_param = 3; allocate(real_weight_param(n_real_weight_param));
+int_pdf_param(1)    = sim%my_id
+n_int_pdf_to_part_coord_param  = 0
+n_real_pdf_to_part_coord_param = 1
+allocate(real_pdf_to_part_coord_param(n_real_pdf_to_part_coord_param))
+real_pdf_to_part_coord_param(1) = mass
+pdf_to_use          => pdf_current_density_uniform_phase
+weight_to_use       => particle_weight_current_density_uniform_phase
+pdf_to_part_coord   => spherical_p_cartesian_q_to_relativistic_gc
+pdf_upper_bound     = sup_pdf_current_density_uniform_phase(n_variables,&
+phase_space_bounds(:,1),phase_space_bounds(:,2),sim%fields,&
+n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
+!> compute the integral of the current density in the volume
+allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
+call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
+exprs('int3d_jR_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
+real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass];
+deallocate(DUMMY_REAL_ARRAY);
+!> compute the total number of physical particles
+n_tot_phys_particles = n_physical_particle_current_density_uniform_phase(n_variables,&
+start_time,sim%fields,phase_space_bounds(:,1),phase_space_bounds(:,2),n_real_weight_param,&
+real_weight_param,n_int_weight_param,int_weight_param)
+!> define the sampler and samper distribution
+n_real_gdf_param = 0; n_int_gdf_param = 0;
+gdf_to_use         => gdf_uniform_phase
+gdf_sampler_to_use => gdf_uniform_sampler
+gdf_upper_bound    = sup_gdf_uniform_phase(n_variables,&
+phase_space_bounds(1:n_variables,1),phase_space_bounds(1:n_variables,2), &
+n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
+write(*,*) "... initialise simulation parameters: completed!"
+
+!> Test particle initialisation -------------------------------------------------------------
+write(*,*) "... initialising guiding center in phase space ..."
+call initialise_particles_in_phase_space(n_variables,sim%groups(1)%particles,sim%fields,rng_pcg32,&
+pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
+pdf_to_part_coord,sim%groups(1)%mass,start_time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
+n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight_param,&
+int_weight_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param,&
+n_real_pdf_to_part_coord_param,real_pdf_to_part_coord_param,&
+n_int_pdf_to_part_coord_param,int_pdf_to_part_coord_param)
+write(*,*) "... initialising guiding center in phase space: completed!"
+
+!> Clean-up ---------------------------------------------------------------------------------
+if(allocated(real_pdf_param))               deallocate(real_pdf_param);
+if(allocated(int_pdf_param))                deallocate(int_pdf_param);
+if(allocated(int_weight_param))             deallocate(int_weight_param);
+if(allocated(real_weight_param))            deallocate(real_weight_param);
+if(allocated(int_pdf_to_part_coord_param))  deallocate(int_pdf_to_part_coord_param);
+if(allocated(real_pdf_to_part_coord_param)) deallocate(real_pdf_to_part_coord_param);
+pdf_to_use => NULL(); weight_to_use      => NULL();
+gdf_to_use => NULL(); gdf_sampler_to_use => NULL();
+call sim%finalize()
+write(*,*) "Simulate runaway electrons as gc: started!"
+
+contains
+
+!> method used for transforming the momentum space from spherical
+!> coordinates (p,pitch) and cartesian coordinates for the
+!> charge state into particle gc relativistic coordinates
+!> the order of the variables in a sample are:
+!> 1: R ,2: Z, 3: phi, 4: momentum, 5: pitch angle, 6: charge.
+!> we note that a spherical jacobian is still used for the 
+!> momentum space despite that only the total momentum and 
+!> the pitch angle are provided
+!> inputs: 
+!>   p_inout:      (particle_base) particle to be initialised
+!>   n_x:          (integer) size of the phase space sample
+!>   x:            (real8)(n_x) phase space sample in cylindrical
+!>                 space-momentum coordinates cartesian charge coordinates
+!>   time:         (real8) time of the simulation
+!>   fields:       (fields_base) JOREK MHD fields
+!>   n_real_param: (integer) number of real parameters: 1
+!>   real_param:   (real8)(n_real_param) real parameters: 1:mass
+!>   n_int_param:  (integer) number of integer parameters: 0
+!>   int_param:    (integer)(n_real_param) integer parameters: empty
+!> outputs:
+!>   p_inout: (particle_base) initialised particle
+subroutine spherical_p_cartesian_q_to_relativistic_gc(p_inout,&
+n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
+  use mod_particle_types,        only: particle_base
+  use mod_particle_types,        only: particle_gc_relativistic
+  use mod_fields,                only: fields_base
+  implicit none
+  !> Inputs-Outputs:
+  class(particle_base),intent(inout) :: p_inout
+  !> Inputs:
+  class(fields_base),intent(in)               :: fields
+  integer,intent(in)                          :: n_x,n_real_param,n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(n_x),intent(in)            :: x
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> variables
+  real*8              :: psi,U
+  real*8,dimension(3) :: B_field,E_field
+  select type (p=>p_inout)
+  type is (particle_gc_relativistic)
+    call fields%calc_EBpsiU(time,p%i_elm,p%st,p%x(3),&
+    E_field,B_field,psi,U);
+    p%p = x(4)*[cos(x(5)),&
+    (x(4)*((sin(x(5)))**2))/(2d0*real_param(1)*norm2(B_field))]
+    p%q = int(x(6),kind=1)
+  end select
+end subroutine spherical_p_cartesian_q_to_relativistic_gc
+
+> Phase space distribution based on the plasma current density
+!> and uniform phase space distribution. The momentum distribution
+!> is considered uniform for relativistic particle hence, the 
+!> appearance of the relativistic factor.
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   time:         (real8) physical time at wich the particle is sampled
+!>   fields:       (fields_base) jorek MHD fields
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution coefficient (not used)
+!>                 2) particle mass in AMU
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   pdf: (real8) value of the probability density 
+function pdf_current_density_uniform_phase(nx,x,st,time,i_elm,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(pdf)
+  use constants,          only: MU_ZERO,EL_CHG,SPEED_OF_LIGHT,PI
+  use mod_model_settings, only: var_zj
+  use mod_interp,         only: interp_PRZ
+  use mod_fields,         only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x,x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  class(fields_base),intent(in)               :: fields
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: pdf
+  !> Variables:
+  real*8 :: DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
+  real*8,dimension(1) :: jphi
+  !> interpolate the jorek toroidal current density at the particle position
+  call interp_PRZ(fields%node_list,fields%element_list,i_elm,[var_zj],1,&
+  st(1),st(2),x(3),jphi,DUMMY_DOUBLE_1,DUMMY_DOUBLE_2)
+  !> compute the pdf
+  DUMMY_DOUBLE_1 = sqrt((x_max(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
+  pdf = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2);
+  pdf = pdf*(cos(x_min(5))**2 - cos(x_max(5))**2)
+  pdf =(-3.d0*jphi(1))/(pdf*x(6)*PI*EL_CHG*MU_ZERO*(real_param(2)**3)*(SPEED_OF_LIGHT**4)*x(1))
+end function pdf_current_density_uniform_phase
+
+!> Upper bound phase space distribution based on the plasma current density
+!> and uniform phase space distribution. The momentum distribution
+!> is considered uniform for relativistic particle hence, the 
+!> appearance of the relativistic factor.
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   fields:       (fields_base) jorek MHD fields
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution coefficient (not used)
+!>                 2) particle mass in AMU
+!>                 3) safety factor: must be >1
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!>                 1) mpi rank
+!> outputs:
+!>   sup_pdf:      (real8) value of the probability density upper bound
+function sup_pdf_current_density_uniform_phase(nx,x_min,x_max,fields,&
+n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
+  use constants,          only: SPEED_OF_LIGHT,EL_CHG,MU_ZERO,PI
+  use mod_model_settings, only: n_var,var_zj
+  use mod_fields,         only: fields_base
+  implicit none
+  !> Inputs:
+  class(fields_base),intent(in)               :: fields
+  integer,intent(in)                          :: nx,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: sup_pdf
+  !> Variables
+  real*8 :: density_tot,density_in,density_out
+  real*8 :: pressure_tot,pressure_in,pressure_out
+  real*8 :: kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in
+  real*8 :: mom_par_out
+  real*8,dimension(n_var) :: varmin,varmax
+  real*8 :: max_pdf,min_pdf,sqrtpovermc2plus1_max,sqrtpovermc2plus1_min
+  real*8 :: cos2pitch_max,cos2pitch_min
+  !> Evalutate the upper extremum of the pdf
+  call Integrals_3D(int_param(1),fields%node_list,fields%element_list,&
+  density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,&
+  kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in,mom_par_out,varmin,varmax)
+  !> compute the maximum and the minimum of the pdf
+  sqrtpovermc2plus1_max = sqrt((x_max(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0);
+  cos2pitch_max = cos(x_max(5))**2;
+  sqrtpovermc2plus1_min = sqrt((x_min(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0)
+  cos2pitch_min = cos(x_min(5))**2
+  max_pdf = ((sqrtpovermc2plus1_max**3)-3.d0*sqrtpovermc2plus1_max) - &
+            ((sqrtpovermc2plus1_min**3)-3.d0*sqrtpovermc2plus1_min);
+  max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)
+  max_pdf =(-3.d0*real_param(3))/(max_pdf*PI*x_min(6)*EL_CHG*MU_ZERO*(real_param(2)**3)*&
+           (SPEED_OF_LIGHT**4)*x_min(1));
+  min_pdf = max_pdf*varmin(var_zj); max_pdf = max_pdf*varmax(var_zj);
+  !> check which between min_pdf and max_pdf has the maximum absolute value
+  if(abs(max_pdf).ge.abs(min_pdf)) then
+    sup_pdf = max_pdf
+  else
+    sup_pdf = min_pdf
+  endif
+end function sup_pdf_current_density_uniform_phase
+
+!> Compute the gdf used for sampling the particle coordinates in 
+!> phase space. The gdf used here is a uniform distribution in
+!> cylindrical coordinates for the spatial coordinates and 
+!> uniform spherical distribution for the momentum coordinates.
+!> The gyro-angle coordinate is not considered here despite
+!> that the spherical topology is retained
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   fields:       (fields_base) jorek MHD fields
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   gdf: (real8) value of the sampler probability density 
+function gdf_uniform_phase(nx,x,st,time,i_elm,fields,x_min,x_max,&
+n_real_param,real_param,n_int_param,int_param) result(gdf)
+  use constants,  only: PI
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x,x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  class(fields_base),intent(in)               :: fields
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: gdf
+  !> Evalutate pdf
+  gdf = 3.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
+  (cos(x_min(5))-cos(x_max(5)))*PI)
+  if(n_real_param.gt.0) gdf = real_param(1)*gdf
+end function gdf_uniform_phase
+
+!> Upper bound of the uniform phase space sampler distribution
+!> The gyro-angle coordinate is not considered here despite
+!> that the spherical topology is retained
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   sup_gdf: (real8) value of the sampler probability density upper bound
+function sup_gdf_uniform_phase(nx,x_min,x_max,n_real_param,real_param,&
+n_int_param,int_param) result(sup_gdf)
+  use constants,  only: PI
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: sup_gdf
+  !> Evalutate the upper extremum of the pdf
+  sup_gdf = 3.d0/((x_max(1)**2-x_min(1)**2)*(x_max(2)-x_min(2))*&
+  (x_max(3)-x_min(3))*(x_max(4)**3-x_min(4)**3)*&
+  (cos(x_min(5))-cos(x_max(5)))*PI)
+end function sup_gdf_uniform_phase
+
+!> GDF uniform sampler generating particle positions in phase space
+!> The gyro-angle coordinate is not considered here despite
+!> that the spherical topology is retained
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random numbers in [0,1)
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   fields:       (fields_base) jorek MHD fields
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   n_real_param: (integer) N# of real input parameters of the pdf
+!>   real_param:   (real8)(n_real_param) real pdf parameters
+!>                 1) pdf distribution weight (normally mass/volume)
+!>   n_int_param:  (integer) N# of integer input parameters of the pdf
+!>   int_param:    (integer)(n_int_param) integer pdf parameters
+!> outputs:
+!>   x:            (real8)(nx) particle position to accept
+subroutine gdf_uniform_sampler(nx,x,st,time,i_elm,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param)
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(2),intent(in)              :: st
+  class(fields_base),intent(in)               :: fields
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Inputs-Outputs:
+  real*8,dimension(nx),intent(inout)          :: x
+  !> Compute new particle position in phase space
+  x(1) = sqrt(x_min(1)**2 + (x_max(1)**2 - x_min(1)**2)*x(1))
+  x(2:3) = x_min(2:3) + (x_max(2:3)-x_min(2:3))*x(2:3)
+  x(4) = (x_min(4)**3 + (x_max(4)**3-x_min(4)**3)*x(4))**(1d0/3d0)
+  x(5) = acos(cos(x_min(5))-(cos(x_max(5))-cos(x_min(5)))*x(5))
+  x(6) = x_min(6) + (x_max(6)-x_min(6))*x(6)
+end subroutine gdf_uniform_sampler
+
+!> Compute the total number of physical particles of the current density -
+!> uniform momentum space distribution
+!> inputs:
+!>   nx:           (integer) number of variables
+!>   x:            (real8)(nx) random state to accept
+!>   i_elm:        (integer) jorek mesh element number
+!>   st:           (real8)(2) local mesh coordinates
+!>   time:         (real8) physical time at wich the particle is sampled
+!>   x_min:        (real8)(nx) lower bound of the phase space interval
+!>   x_max:        (real8)(nx) upper bound of the phase space interval
+!>   fields:       (fields_base) jorek MHD fields
+!>   n_real_param: (integer) N# of real input parameters
+!>   real_param:   (real8)(n_real_param) real weight parameters
+!>                 1) 3D integral of the plasma density in SI units
+!>                 2) total number of particles
+!>                 3) mass in AMU 
+!>   n_int_param:  (integer) N# of integer input parameters
+!>   int_param:    (integer)(n_int_param) integer weight parameters
+!> outputs:
+!>   n_phys_part:  (real8) number of physical particles
+function n_physical_particle_current_density_uniform_phase(nx,time,fields,&
+x_min,x_max,n_real_param,real_param,n_int_param,int_param) result(n_phys_part)
+  use constants,  only: EL_CHG,SPEED_OF_LIGHT
+  use mod_fields, only: fields_base
+  implicit none
+  !> Inputs:
+  class(fields_base),intent(in)               :: fields
+  integer,intent(in)                          :: nx,n_real_param,n_int_param
+  integer,dimension(:),allocatable,intent(in) :: int_param
+  real*8,intent(in)                           :: time
+  real*8,dimension(nx),intent(in)             :: x_min,x_max
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
+  !> Outputs:
+  real*8 :: n_phys_part
+  !> Variables:
+  real*8 :: DUMMY_DOUBLE_1,DUMMY_DOUBLE_2
+  !> Compute the particle weight
+  DUMMY_DOUBLE_1 = sqrt((x_max(4)**2)/((real_param(3)*SPEED_OF_LIGHT)**2)+1.d0)
+  DUMMY_DOUBLE_2 = sqrt((x_min(4)**2)/((real_param(3)*SPEED_OF_LIGHT)**2)+1.d0)
+  n_phys_part = ((DUMMY_DOUBLE_1**3)-3.d0*DUMMY_DOUBLE_1) - ((DUMMY_DOUBLE_2**3)-3.d0*DUMMY_DOUBLE_2)
+  n_phys_part = n_phys_part*(cos(x_min(5)+cos(x_max(5))))
+  n_phys_part = (2.d0*real_param(1)*(x_max(4)**3 - x_min(4)**3))/&
+  (n_phys_part*x_min(6)*EL_CHG*(real_param(3)**3)*(SPEED_OF_LIGHT**4))
+end function n_physical_particle_current_density_uniform_phase
+
+end program re_gc_current_density_initialisation

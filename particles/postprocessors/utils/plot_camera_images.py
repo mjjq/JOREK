@@ -86,7 +86,7 @@ separator="/"):
     # Plot pixel and filter intensities
     imshow_4d(pixel_intensities[-1],x_positions=x_positions,y_positions=y_positions,title="Image for" )
     imshow_4d(filter_intensities,x_positions=x_positions,y_positions=y_positions,title="Filter for" )
-    if((isnan(pixel_intensities)).any()):
+    if((isnan(pixel_intensities[-1])).any()):
       print('Warning: found pixel(s) with NaN intensity')
   show()
   return pixel_intensities
@@ -137,10 +137,11 @@ def compute_and_plot_image_differences(jorek_images,test_image):
   from numpy import array,zeros,float64,amax,abs
   from matplotlib.pyplot import show
   # loop on the JOREK images
-  for jorek_image in jorek_images:
+  for jorek_image_id,jorek_image in enumerate(jorek_images):
     # check image shape compatibility
     if(jorek_image.shape[1:]!=test_image.shape[1:]):
-      raise Exception("JOREK and test image sets have different shapes!")
+      raise Exception("".join(["JOREK and test image sets have different shapes jorek shape: ",\
+      str(jorek_image.shape)," test image shape: ",str(test_image.shape)]))
     # initialisation
     image_error = zeros((jorek_image.shape[0]*test_image.shape[0],\
     jorek_image.shape[1],jorek_image.shape[2],jorek_image.shape[3],),dtype=float64)
@@ -153,10 +154,14 @@ def compute_and_plot_image_differences(jorek_images,test_image):
           normalised_image_error[test_id*jorek_image.shape[0],spectra_id,:,:] = \
           (spectra/amax(abs(spectra))) - (test_frame[spectra_id]/amax(abs(test_frame[spectra_id])))
     # plot images
-    imshow_4d(image_error,title="Differences between the JOREK and test images")
-    imshow_4d(normalised_image_error,title="Normalised differences between the JOREK and test images")
-    imshow_4d(abs(image_error),title="Error between the JOREK and test images")
-    imshow_4d(abs(normalised_image_error),title="Normalised error between the JOREK and test images")
+    imshow_4d(image_error,title="".join(["Differences between the JOREK image N# ",str(jorek_image_id+1),\
+    " and the test image"]))
+    imshow_4d(normalised_image_error,title="".join(["Normalised differences between the JOREK image N# ",\
+    str(jorek_image_id+1)," and the test image"]))
+    imshow_4d(abs(image_error),title="".join(["Error between the JOREK image N# ",str(jorek_image_id+1),\
+    " and the test image"]))
+    imshow_4d(abs(normalised_image_error),title="".join(["Normalised error between the JOREK image N# ",\
+    str(jorek_image_id+1)," and test the image"]))
   show()
 
 def generate_argument_parser():

@@ -2167,7 +2167,9 @@ do i=1,n_vertex_max
                               - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * rho * Te0_p                     * xjac * theta * tstep &
 
                               - v * tauIC*2. * rho /(r0_corr**2 * BB2) * F0**2/BigR**2 * (ps0_s * Pe0_t - ps0_t * Pe0_s) * theta * tstep &
-                              + v * tauIC*2. * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * Pe0_p                    * xjac * theta * tstep 
+                              + v * tauIC*2. * rho /(r0_corr**2 * BB2) * F0**3/BigR**3 * Pe0_p                    * xjac * theta * tstep &
+                              ! The density gradient term from Z_eff
+                              - deta_dr0 * v * rho * (zj0-current_source(ms,mt)-Jb) / BigR                        * xjac * theta * tstep
 
                   amat_n(var_psi,var_rho) = - v * tauIC*2./(r0_corr*BB2) * F0**3/BigR**3 * Te0  * rho_p           * xjac * theta * tstep 
 

@@ -168,10 +168,8 @@ particle_in,time_id,mass,mhd_fields)
   use mod_fields,                only: fields_base
   use mod_particle_types,        only: particle_base
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
-#ifdef UNIT_TESTS_AFIELDS
-  !> used only for unit testing
+  !> used only for unit testing but it is required for compilation
   use mod_particle_common_test_tools, only: compute_test_E_B_normB_gradB_curlb_Dbdt_fields
-#endif
   implicit none
   !> Inputs:
   class(gyroaverage_synchrotron_light_dist),intent(in) :: light_vert

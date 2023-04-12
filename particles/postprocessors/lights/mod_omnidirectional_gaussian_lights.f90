@@ -49,9 +49,7 @@ particle_in,time_id,mass,mhd_fields)
   use mod_particle_types,        only: particle_base
   use mod_coordinate_transforms, only: vector_cylindrical_to_cartesian
   !> used only for unit testing but required for compilation
-#ifdef UNIT_TESTS_AFIELDS
   use mod_particle_common_test_tools, only: compute_test_E_B_fields
-#endif
   implicit none
   !> Inputs:
   class(omnidirectional_gaussian_lights),intent(in) :: light_vert

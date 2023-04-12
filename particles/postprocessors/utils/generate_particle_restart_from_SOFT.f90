@@ -38,7 +38,7 @@ character(len=250)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
 !> Variable definitions --------------------------------------------------------------------
 do_write_particles_in_hdf5 = .false.         !< writeh particle in hdf5 if true
-use_random_toroidal_angle  = .false.         !< if true use random toroidal angle 
+use_random_toroidal_angle  = .true.          !< if true use random toroidal angle 
 n_groups               = 1                   !< number of jorek particle groups
 n_vec                  = 3                   !< component of a vector
 n_phi                  = 6                   !< number of toroidal positions to be sampled for each particle
@@ -388,8 +388,8 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   use constants, only: ATOMIC_MASS_UNIT
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
+  use hdf5_io_module, only: HDF5_allocatable_array1D_reading_int
   use hdf5_io_module, only: HDF5_allocatable_array1D_reading
-  use hdf5_io_module, only: HDF5_allocatable_array2D_reading_int
   use hdf5_io_module, only: HDF5_allocatable_array2D_reading
   implicit none
   !> inputs:
@@ -405,19 +405,18 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   real*8,dimension(:,:),allocatable,intent(out) :: x
   !> variables:
   integer(HID_T) :: file_id
-  integer        :: ii,n_orbits,n_times,n_active_orbits,ierr
-  integer,dimension(:),allocatable   :: valid_orbit_id
-  integer,dimension(:,:),allocatable :: classification_loc
+  integer        :: ii,jj,id,n_orbits,n_times,n_active_orbits,ierr
+  integer,dimension(:),allocatable   :: classification_loc,valid_orbit_id
   real*8                             :: orbit_dp,orbit_dxi
   real*8,dimension(:),allocatable    :: orbit_pdf_loc,orbit_p_mesh,orbit_xi_mesh
   real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,weights_loc
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
   !> read sofit particles
+  call HDF5_allocatable_array1D_reading_int(file_id,classification_loc,'/classification') !< orbit classification
   call HDF5_allocatable_array1D_reading(file_id,orbit_p_mesh,'/param1')  !< momentum mesh
   call HDF5_allocatable_array1D_reading(file_id,orbit_xi_mesh,'/param2') !< cospitch mesh 
   call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")        !< parallel momentum
-  call HDF5_allocatable_array2D_reading_int(file_id,classification_loc,'/classification') !< orbit classification
   call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")      !< perpendicular momentum
   call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobia*dpoloidal*dminorradius
   call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")              !< position in xyz coordinates
@@ -442,16 +441,18 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   x_loc              = reshape(x_loc,[n_vec,n_soft_points])
   ppar_loc           = reshape(ppar_loc,[n_soft_points,1])
   pperp_loc          = reshape(pperp_loc,[n_soft_points,1])
-  classification_loc = reshape(classification_loc,[n_soft_points,1])
   weights_loc        = orbit_dp*orbit_dxi*reshape(weights_loc,[n_soft_points,1])
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
-  do ii=1,n_soft_points
-    if(classification_loc(ii,1).eq.discarded_label) cycle
-    if((x_loc(1,ii).eq.0d0).and.(x_loc(2,ii).eq.0d0).and.(x_loc(3,ii).eq.0d0)) cycle
-    if((ppar_loc(ii,1).eq.0d0).and.(pperp_loc(ii,1).eq.0d0)) cycle
-    n_active_orbits = n_active_orbits + 1
-    valid_orbit_id(n_active_orbits) = ii;
+  do ii=1,n_orbits
+    if(classification_loc(ii).eq.discarded_label) cycle
+    do jj=1,n_times
+      id = (ii-1)*n_times+jj
+      if((x_loc(1,id).eq.0d0).and.(x_loc(2,id).eq.0d0).and.(x_loc(3,id).eq.0d0)) cycle
+      if((ppar_loc(id,1).eq.0d0).and.(pperp_loc(id,1).eq.0d0)) cycle
+      n_active_orbits = n_active_orbits + 1
+      valid_orbit_id(n_active_orbits) = id;
+    enddo
   enddo
   !> copy only active orbits
   allocate(x(n_vec,n_active_orbits)); x       = 0d0;

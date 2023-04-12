@@ -85,7 +85,7 @@ allocate(y_pixel_positions(int_camera_param(3),n_times))
 !> 1:3 -> half width, half height and orientation of the visual plane angle
 !> 4:6 -> camera focal direction: focal distance, latitude, azimuth
 !> 7:9 -> camera position in the tokamak reference system
-real_camera_param = [5.23d-1,5.23d-1,5d-1*PI,9.998025d-1,1.5807985,2.09801,-8.86d-1,-4.002,-3.32d-1];
+real_camera_param = [5.23d-1,5.23d-1,5d-1*PI,9.998025d-1,1.5807965,2.09801,-8.86d-1,-4.002,-3.32d-1];
 allocate(sim_times(n_times)); allocate(sims(n_times)); 
 allocate(sims_gc(n_times))
 

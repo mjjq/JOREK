@@ -35,7 +35,8 @@ def check_equal_light_data(light_data):
   num_spectra = light_data[0][1].shape[0]
   test_spectra = [dataset[1].shape[0]==num_spectra for dataset in light_data]
   if(not all(test_spectra)):
-    exit('Number of spectra must be the same for all light datasets')
+    exit("".join(['Number of spectra must be the same for all light datasets ref N# spectra: ',\
+    str(num_spectra),' test N# spectra: ',str(test_spectra)]))
 
 # Plot light and camera data
 # structure of the light data for each light data

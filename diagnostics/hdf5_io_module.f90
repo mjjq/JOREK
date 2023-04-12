@@ -1009,6 +1009,57 @@ module hdf5_io_module
   end subroutine HDF5_allocatable_array1D_reading
 
   !---------------------------------------- 
+  ! HDF5 reading for an integer allocatable array 1D
+  !---------------------------------------- 
+  subroutine HDF5_allocatable_array1D_reading_int(file_id,array1D,dsetname,reqdims,start)
+    !> inputs:
+    integer(HID_T),intent(in)                         :: file_id  !< file identifier
+    character(len=*),intent(in)                       :: dsetname !< dataset name
+    integer(HSIZE_T),dimension(1),intent(in),optional :: start    !< offset array to read
+    integer(HSIZE_T),dimension(1),intent(in),optional :: reqdims  !< requested slab dimensions
+    !> inputs-outputs:
+    integer,dimension(:),allocatable,intent(inout) :: array1D
+    !> variables:
+    integer(HID_T) :: dataspace_id,dataspace_req_id !< dataspace identifier
+    integer(HID_T) :: dataset_id   !< dataset identifier
+    integer        :: rank,error   !< dataset rank and hdf5 error
+    integer(HSIZE_T),dimension(1) :: dims,maxdims !< dataset dimensions
+
+    !*** initialisation ***
+    dims = 0; if(allocated(array1D)) deallocate(array1D)
+    !*** get the dataset and dataspace ids ***
+    call H5Dopen_f(file_id,trim(dsetname),dataset_id,error)
+    call H5dget_space_f(dataset_id,dataspace_id,error)
+    !*** get the space rank ***
+    call H5Sget_simple_extent_ndims_f(dataspace_id,rank,error)
+    if(rank.eq.1) then
+      !*** get space size ***
+      call H5Sget_simple_extent_dims_f(dataspace_id,dims,maxdims,error)
+      if(present(reqdims).and.present(start)) then
+        !*** load a data slab of size reqdims and start start ***
+        !*** using default transfer properties ***
+        allocate(array1D(reqdims(1))); array1D = 0;
+        call H5Screate_simple_f(1,reqdims,dataspace_req_id,error)
+        call H5Sselect_hyperslab_f(dataset_id, H5S_SELECT_SET_F, &
+        start=start, count=shape(array1D,kind=HSIZE_T), hdferr=error)
+        call H5Dread_f(dataset_id,H5T_NATIVE_INTEGER,array1D,reqdims,error, &
+            file_space_id=dataspace_id, mem_space_id=dataspace_req_id)
+        call H5Sclose_f(dataspace_req_id,error)       
+      else
+        !*** allocate and read read the dataset ***
+        !*** using default transfer properties ***
+        allocate(array1D(dims(1))); array1D = 0;
+        call H5Dread_f(dataset_id,H5T_NATIVE_INTEGER,array1D,dims,error)
+      endif
+    else
+      write(*,*) 'Read 1D allocatable integer array from HDF5, rank is not 1: skip!'
+    endif
+    !*** Closing ***
+    call H5Sclose_f(dataspace_id,error)
+    call H5Dclose_f(dataset_id,error)
+  end subroutine HDF5_allocatable_array1D_reading_int
+
+  !---------------------------------------- 
   ! HDF5 reading for an integer array 2D 
   !----------------------------------------
   subroutine HDF5_array2D_reading_int(file_id,array2D,dsetname,start)
@@ -1092,7 +1143,7 @@ module hdf5_io_module
         call H5Dread_f(dataset_id,H5T_NATIVE_INTEGER,array2D,dims,error)
       endif
     else
-      write(*,*) 'Read 2D allocatable array from HDF5, rank is not 1: skip!'
+      write(*,*) 'Read 2D integer allocatable array from HDF5, rank is not 2: skip!'
     endif
     !*** Closing ***
     call H5Sclose_f(dataspace_id,error)
@@ -1183,7 +1234,7 @@ module hdf5_io_module
         call H5Dread_f(dataset_id,H5T_NATIVE_DOUBLE,array2D,dims,error)
       endif
     else
-      write(*,*) 'Read 2D allocatable array from HDF5, rank is not 1: skip!'
+      write(*,*) 'Read 2D allocatable array from HDF5, rank is not 2: skip!'
     endif
     !*** Closing ***
     call H5Sclose_f(dataspace_id,error)
@@ -1279,7 +1330,7 @@ module hdf5_io_module
         call H5Dread_f(dataset_id,H5T_NATIVE_DOUBLE,array3D,dims,error)
       endif
     else
-      write(*,*) 'Read 3D allocatable array from HDF5, rank is not 1: skip!'
+      write(*,*) 'Read 3D allocatable array from HDF5, rank is not 3: skip!'
     endif
     !*** Closing ***
     call H5Sclose_f(dataspace_id,error)
@@ -1372,7 +1423,7 @@ module hdf5_io_module
         call H5Dread_f(dataset_id,H5T_NATIVE_DOUBLE,array4D,dims,error)
       endif
     else
-      write(*,*) 'Read 4D allocatable array from HDF5, rank is not 1: skip!'
+      write(*,*) 'Read 4D allocatable array from HDF5, rank is not 4: skip!'
     endif
     !*** Closing ***
     call H5Sclose_f(dataspace_id,error)
@@ -1463,7 +1514,7 @@ module hdf5_io_module
         call H5Dread_f(dataset_id,H5T_NATIVE_DOUBLE,array5D,dims,error)
       endif
     else
-      write(*,*) 'Read 5D allocatable array from HDF5, rank is not 1: skip!'
+      write(*,*) 'Read 5D allocatable array from HDF5, rank is not 5: skip!'
     endif
     !*** Closing ***
     call H5Sclose_f(dataspace_id,error)

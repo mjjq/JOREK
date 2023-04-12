@@ -3,38 +3,44 @@
 !> the current density initialisation is used for generating
 !> the initial gc population
 program re_gc_current_density_initialisation
-use constants,       only: TWOPI,PI
-use phys_module,     only: xcase,xpoint
-use data_structure,  only: type_bnd_node_list,type_bnd_element_list
-use mod_boundary,    only: boundary_from_grid
-use mod_expression,  only: exprs_all_int,init_expr,exprs,SI_UNITS
-use mod_integrals3D, only: int3d_new
-use mod_boundary,    only: boundary_from_grid
+use constants,                only: TWOPI,PI
+use phys_module,              only: xcase,xpoint
+use data_structure,           only: type_bnd_node_list,type_bnd_element_list
+use mod_boundary,             only: boundary_from_grid
+use mod_expression,           only: exprs_all_int,init_expr,exprs,SI_UNITS
+use mod_integrals3D,          only: int3d_new
+use mod_boundary,             only: boundary_from_grid
 use equil_info
 use mod_random_seed
+use mod_particle_diagnostics, only: write_particle_diagnostics
+use mod_io_actions,           only: write_action
 use particle_tracer
-use mod_particle_io, only: write_simulation_hdf5
 implicit none
 !> Variable declarations --------------------------------------------------------------------
-type(pcg32_rng)             :: rng_pcg32
-type(event)                 :: field_reader
-type(type_bnd_node_list)    :: bnd_node_list
-type(type_bnd_element_list) :: bnd_elm_list
-integer                     :: ii,n_variables,n_particles,n_groups
-integer                     :: n_int_pdf_param,n_real_pdf_param,ifail
-integer                     :: n_int_weight_param,n_real_weight_param
-integer                     :: n_int_gdf_param,n_real_gdf_param
-integer                     :: n_int_pdf_to_part_coord_param,n_real_pdf_to_part_coord_param
+type(pcg32_rng)                  :: rng_pcg32
+type(event)                      :: field_reader
+type(type_bnd_node_list)         :: bnd_node_list
+type(type_bnd_element_list)      :: bnd_elm_list
+type(write_particle_diagnostics) :: write_diag
+type(write_action)               :: write_particles
+logical                          :: append_diag
+integer                          :: ii,n_variables,n_particles,n_groups,restart_id
+integer                          :: fraction_of_modes,n_int_pdf_param,n_real_pdf_param
+integer                          :: ifail,n_int_weight_param,n_real_weight_param
+integer                          :: n_int_gdf_param,n_real_gdf_param,n_int_pdf_to_part_coord_param
+integer                          :: n_real_pdf_to_part_coord_param
+integer,dimension(2)             :: diag_list
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
-real*8                           :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
-real*8                           :: sup_pdf_safety_factor
+real*8                           :: diag_step,write_step,mass,charge,pdf_upper_bound
+real*8                           :: gdf_upper_bound,sup_pdf_safety_factor
 real*8,dimension(2)              :: Rbox,Zbox,Rbound,Zbound,phibound,Ekinbound
 real*8,dimension(2)              :: Pbound,Pitchbound,Chargebound
 real*8,dimension(6,2)            :: phase_space_bounds
 real*8,dimension(:),allocatable  :: real_pdf_to_part_coord_param
 real*8,dimension(:),allocatable  :: real_pdf_param,real_weight_param,real_gdf_param
 real*8,dimension(:),allocatable  :: DUMMY_REAL_ARRAY
+character(len=20)                :: diag_filename,particle_restart_basename,restart_basename
 procedure(real_f),pointer           :: pdf_to_use         => NULL()
 procedure(real_f),pointer           :: weight_to_use      => NULL()
 procedure(real_f),pointer           :: gdf_to_use         => NULL()
@@ -44,31 +50,42 @@ procedure(part_inout_s),pointer     :: pdf_to_part_coord  => NULL()
 !> MPI and groups initialisation ------------------------------------------------------------
 n_groups = 1; call sim%initialize(num_groups=n_groups);
 !> Define inputs ----------------------------------------------------------------------------
-n_variables           = 6                !< phase space dimensionality
-n_particles           = 1000000000
-start_time            = 0d0
-mass                  = 5.48579909065d-4 !< electron mass in AMU
-charge                = -1d0             !< electron charge / EL_CHG
-Rbound                = [0.d0,9.99d2]
-Zbound                = [-9.99d2,9.99d2]
-Phibound              = [0d0,TWOPI]
-Ekinbound             = [2d7-1d4,2d7+1d4] !< kinetic energy in eV
-Pitchbound            = [PI-2.95d-1,PI]
-Chargebound           = -1.d0
-sup_pdf_safety_factor = 1d0
+diag_filename             = 'part_diag.h5'   !< particle diagnostics filename
+particle_restart_basename = 'part_restart'  !< particle restart file basename
+restart_basename          = 'jorek'          !< JOREK restart file basename
+append_diag               = .true.           !< if true, append diagnostics in the same file
+restart_id                = 0                !< first JOREK restart file number
+n_variables               = 6                !< phase space dimensionality
+n_particles               = 1000000000       !< number of particles per task
+fraction_of_modes         = 1                !< fraction of JOREK modes to be used for interpolation
+diag_list                 = [1,6]            !< total energy, canonical toroidal momentum
+diag_step                 = 1d-4             !< time step at which the diagnostic files are written
+write_step                = 1d-3             !< time step at which the particle restart file is written
+mass                      = 5.48579909065d-4 !< electron mass in AMU
+charge                    = -1d0             !< electron charge / EL_CHG
+Rbound                    = [0.d0,9.99d2]
+Zbound                    = [-9.99d2,9.99d2]
+Phibound                  = [0d0,TWOPI]
+Ekinbound                 = [2d7-1d4,2d7+1d4] !< kinetic energy in eV
+Pitchbound                = [PI-2.95d-1,PI]
+Chargebound               = -1.d0
+sup_pdf_safety_factor     = 1d0
 !> Initialisation ---------------------------------------------------------------------------
 write(*,*) "Simulate runaway electrons as gc: started!"
 write(*,*) "... initialise simulation parameters"
-!> TODO initialise simulation events
-!> TODO events
-!> TODO call with(sim,events)
+!> initialise simulation events
+write_diag = write_particle_diagnostics(filename=trim(diag_filename),append=append_diag,only=diag_list)
+write_particles = write_action(basename=trim(particle_restart_basename))
+field_reader = event(read_jorek_fields_interp_linear(basename=trim(restart_basename),i=restart_id,\
+               mode_divisor=fraction_of_mode))
+call with(sim,field_reader)
+events = [event(write_diag,start=sim%time,step=diag_step),event(write_particles,start=sim%time,step=write_step)]
 !> update equilibrium state
 if(sim%my_id.eq.0) call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,&
 bnd_node_list,bnd_elm_list,.false.)
 call broadcast_boundary(sim%my_id,bnd_elm_list,bnd_node_list)
 call update_equil_state(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_elm_list,xpoint,xcase)
 !> initialise particle structure
-sim%time = start_time
 sim%groups(1:n_groups)%mass = mass
 do  ii=1,n_groups
   allocate(particle_gc_relativistic::sim%groups(ii)%particles(n_particles))
@@ -119,7 +136,7 @@ write(*,*) "... initialise simulation parameters: completed!"
 write(*,*) "... initialising guiding center in phase space ..."
 call initialise_particles_in_phase_space(n_variables,sim%groups(1)%particles,sim%fields,rng_pcg32,&
 pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
-pdf_to_part_coord,sim%groups(1)%mass,start_time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
+pdf_to_part_coord,sim%groups(1)%mass,sim%time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
 n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight_param,&
 int_weight_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param,&
 n_real_pdf_to_part_coord_param,real_pdf_to_part_coord_param,&

@@ -20,8 +20,9 @@ end type type_soft_pdf
 type(pcg32_rng)      :: rng_type
 type(event)          :: field_reader
 type(type_soft_pdf),dimension(:),allocatable :: soft_pdf_list
-logical              :: do_write_particles_in_hdf5
-integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi,n_r_pdf_mesh
+logical              :: do_write_particles_in_hdf5,use_random_toroidal_angle
+integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi
+integer              :: n_r_pdf_mesh,discarded_orbit
 integer,dimension(2) :: dims
 real*8               :: time,mass,charge
 real*8,dimension(2)  :: phi_interval,soft_RZ_axis
@@ -37,9 +38,11 @@ character(len=250)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
 !> Variable definitions --------------------------------------------------------------------
 do_write_particles_in_hdf5 = .false.         !< writeh particle in hdf5 if true
+use_random_toroidal_angle  = .false.         !< if true use random toroidal angle 
 n_groups               = 1                   !< number of jorek particle groups
 n_vec                  = 3                   !< component of a vector
 n_phi                  = 6                   !< number of toroidal positions to be sampled for each particle
+discarded_orbit        = 5                   !< label of SOFT discarded orbit
 time                   = 0d0                 !< simulation time
 mass                   = 5.48579909065d-4    !< electron mass in AMU 
 charge                 = -1d0                !< electron charge
@@ -68,9 +71,9 @@ if(my_id.eq.0) then
   soft_Z_mesh,soft_poloidal_flux)
   !> read the soft_pdf_file
   call read_soft_pdf_file(soft_pdf_filename,n_r_pdf_mesh,soft_pdf_r_mesh,soft_pdf_list)
-  call read_and_compute_soft_orbit_data(soft_orbit_filename,n_vec,dims(1),soft_RZ_axis,soft_R_mesh,&
-  soft_Z_mesh,soft_poloidal_flux,soft_pdf_r_mesh,soft_pdf_list,soft_orbit_x,soft_orbit_ppar,&
-  soft_orbit_pperp,soft_orbit_weights)
+  call read_and_compute_soft_orbit_data(soft_orbit_filename,n_vec,dims(1),discarded_orbit,\
+  soft_RZ_axis,soft_R_mesh,soft_Z_mesh,soft_poloidal_flux,soft_pdf_r_mesh,soft_pdf_list,\
+  soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   !> scatter the global arrays to each mpi process)
   dims(2) = dims(1)/n_cpus;
   if(dims(2)*n_cpus.lt.dims(1)) dims(2) = dims(2)+1
@@ -97,9 +100,16 @@ if(allocated(soft_orbit_weights)) deallocate(soft_orbit_weights)
 write(*,*) "Reading SOFT magnetic field, pdf and orbit files: completed!"
 !> Generate JOREK relativistic gc from SOFT orbits -----------------------------------------
 write(*,*) 'Converting soft orbit to JOREK relativistic gc ...'
-call convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_type,my_id,n_cpus,time,\
-mass,charge,n_vec,dims(2),n_phi,phi_interval,soft_orbit_x_local,\
-soft_orbit_ppar_local,soft_orbit_pperp_local,soft_orbit_weights_local)
+if(use_random_toroidal_angle) then
+  write(*,*) "use random the toroidal angle"
+  call convert_soft_orbits_in_jorek_relativistic_gcs_rnd_phi(sim,rng_type,my_id,n_cpus,\
+  time,mass,charge,n_vec,dims(2),n_phi,phi_interval,soft_orbit_x_local,soft_orbit_ppar_local,\
+  soft_orbit_pperp_local,soft_orbit_weights_local)
+else
+  write(*,*) "use SOFT toroidal angle"
+  call convert_soft_orbits_in_jorek_relativistic_gcs(sim,my_id,n_cpus,time,mass,charge,n_vec,dims(2),\
+  soft_orbit_x_local,soft_orbit_ppar_local,soft_orbit_pperp_local,soft_orbit_weights_local)
+endif
 write(*,*) 'Converting soft orbit to JOREK relativistic gc: completed!'
 write(*,*) 'Writing JOREK relativistic gc in ',trim(particle_filename),' ...'
 call write_simulation_hdf5(sim,trim(particle_filename))
@@ -128,7 +138,82 @@ write(*,*) 'Program terminated: good bye!'
 
 contains
 
-!> generate jorek particle relativistic gc from soft orbits 
+!> generate jorek particle relativistic gc from soft orbits
+!> inputs:
+!>   sim:                (particle_sim) particle simulation type to be initialised
+!>   my_id:              (integer) MPI task rank
+!>   n_cpus:             (integer) number of MPI tasks
+!>   time:               (real8) simulation time
+!>   mass:               (real8) particle mass in AMU
+!>   charge:             (real8) particle charge (RE: -1)
+!>   n_vec:              (integer) size of the position vector
+!>   n_points:           (integer) number of soft valid points
+!>   soft_orbit_x:       (real8)(n_vec,n_points) soft positions in xyz
+!>   soft_orbit_ppar:    (real8)(n_points) soft parallel momentum
+!>   soft_orbit_pperp:   (real8)(n_points) soft perpendicular momentum
+!>   soft_orbit_weights: (real8)(n_points) soft orbit weight:
+!>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle
+!> outpus:
+!>   sim: (particle_sim) initialised particle simulation
+!>   soft_orbit_weights: (real8)(n_points) soft orbit weight:
+!>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle*dtorangle
+subroutine convert_soft_orbits_in_jorek_relativistic_gcs(&
+sim,my_id,n_cpus,time,mass,charge,n_vec,n_points,soft_orbit_x,&
+soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
+  use mpi
+  use constants,                 only: TWOPI,SPEED_OF_LIGHT
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  implicit none
+  !> inputs-outputs:
+  type(particle_sim),intent(inout)         :: sim
+  real*8,dimension(n_points),intent(inout) :: soft_orbit_weights
+  !> inputs:
+  integer,intent(in)               :: my_id,n_cpus,n_vec,n_points
+  real*8,intent(in)                :: time,mass,charge
+  real*8,dimension(n_points),intent(in)       :: soft_orbit_ppar
+  real*8,dimension(n_points),intent(in)       :: soft_orbit_pperp
+  real*8,dimension(n_vec,n_points),intent(in) :: soft_orbit_x
+
+  !> variables:
+  integer             :: ii,i_elm,ifail
+  real*8              :: U,psi
+  real*8,dimension(2) :: st,Rbox,Zbox
+  real*8,dimension(3) :: RZphi,B_field,E_field
+  !> initialise and allocate particle simulation array
+  call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,&
+  Rbox(1),Rbox(2),Zbox(1),Zbox(2))
+  sim%time = time; sim%groups(1)%mass = mass; 
+  allocate(particle_gc_relativistic::sim%groups(1)%particles(n_points))
+  !> the differential of the toroidal angle for having the total number of particles
+  soft_orbit_weights = soft_orbit_weights*TWOPI
+  !> loop on the soft orbits
+  !$omp parallel do default(shared) firstprivate(n_points,n_vec,time,charge,mass,&
+  !$omp Rbox,Zbox) private(ii,RZphi,i_elm,st,B_field,E_field,U,psi,ifail)
+  do ii=1,n_points
+    !> transform the soft orbit coordinates in jorek global/local coordinates
+    RZphi = cartesian_to_cylindrical(soft_orbit_x(:,ii)); i_elm = -1;
+    if(((RZphi(1).ge.Rbox(1)).and.(RZphi(1).le.Rbox(2))).and.((RZphi(2).ge.Zbox(1)).and.(RZphi(2).le.Zbox(2)))) &
+    call find_RZ(sim%fields%node_list,sim%fields%element_list,RZphi(1),RZphi(2),&
+    RZphi(1),RZphi(2),i_elm,st(1),st(2),ifail)
+    select type (p=>sim%groups(1)%particles(ii))
+    type is (particle_gc_relativistic)
+      if(i_elm.le.0) then
+        p%x = 0d0; p%st = 0d0; p%weight = 0d0; p%i_elm = 0; p%i_life = 0; p%t_birth = 0.;
+        p%p = 0d0; p%q = int(0,kind=1);
+      else
+        p%x = RZphi; p%st = st; p%weight = soft_orbit_weights(ii);
+        p%i_elm = i_elm; p%i_life = 0; p%t_birth = 0.;
+        call sim%fields%calc_EBpsiU(time,i_elm,st,p%x(3),E_field,B_field,psi,U)
+        p%p = SPEED_OF_LIGHT*mass*[soft_orbit_ppar(ii),(5d-1*SPEED_OF_LIGHT*&
+        (soft_orbit_pperp(ii)**2))/(norm2(B_field))]; p%q = int(charge,kind=1);
+      endif
+    end select
+  enddo
+  !$omp end parallel do
+end subroutine convert_soft_orbits_in_jorek_relativistic_gcs
+
+!> generate jorek particle relativistic gc from soft orbits randomising the toroidal
+!> angle within a given toroidal angle interval 
 !> inputs:
 !>   sim:                (particle_sim) particle simulation type to be initialised
 !>   rng_base:           (type_rng) type of the random number generator
@@ -150,8 +235,8 @@ contains
 !>   sim: (particle_sim) initialised particle simulation
 !>   soft_orbit_weights: (real8)(n_points) soft orbit weight:
 !>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle*dtorangle
-subroutine convert_soft_orbits_in_jorek_relativistic_gcs(sim,rng_base,my_id,&
-n_cpus,time,mass,charge,n_vec,n_points,n_phi,phi_interval,&
+subroutine convert_soft_orbits_in_jorek_relativistic_gcs_rnd_phi(sim,rng_base,&
+my_id,n_cpus,time,mass,charge,n_vec,n_points,n_phi,phi_interval,&
 soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   use mpi
   use constants,                 only: SPEED_OF_LIGHT
@@ -175,7 +260,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
 
   !> variables:
   class(type_rng),dimension(:),allocatable :: rngs
-  integer   :: ii,jj,i_elm,ifail,n_threads,thread_id
+  integer :: ii,jj,i_elm,ifail,n_threads,thread_id
   real*8                  :: U,psi
   real*8,dimension(2)     :: st,Rbox,Zbox
   real*8,dimension(3)     :: RZphi,B_field,E_field
@@ -230,7 +315,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   !$omp end parallel
   !> clean-up
   if(allocated(rngs)) deallocate(rngs)
-end subroutine convert_soft_orbits_in_jorek_relativistic_gcs
+end subroutine convert_soft_orbits_in_jorek_relativistic_gcs_rnd_phi
 
 !> scatter 2D array between MPI processes, the scattering is performed
 !> along the second index
@@ -285,6 +370,7 @@ end subroutine scatter_2D_arrays
 !> inputs:
 !>   soft_orbit_filename_in: (character)(*) name of the soft orbit file
 !>   n_vec:                  (integer) size of the position vector
+!>   discarded_label:        (integer) classification label of discarded orbit
 !>   RZ_axis:                (real8)(2) position of the magnetic axis
 !>   Rmesh:                  (real8)(nR) major radius mesh of the minor radii
 !>   Zmesh:                  (real8)(nZ) vertical coordinate mesh of the minor radii
@@ -298,17 +384,18 @@ end subroutine scatter_2D_arrays
 !>   pperp:         (real8)(n_soft_particles) soft perpendicular momentum
 !>   weights:       (real8)(n_soft_particles) orbit weight: pdf(t=0)*Jdtdrho*dp*dxi
 subroutine read_and_compute_soft_orbit_data(soft_orbit_filename_in,n_vec,n_soft_points,&
-RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
+discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   use constants, only: ATOMIC_MASS_UNIT
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
   use hdf5_io_module, only: HDF5_allocatable_array1D_reading
+  use hdf5_io_module, only: HDF5_allocatable_array2D_reading_int
   use hdf5_io_module, only: HDF5_allocatable_array2D_reading
   implicit none
   !> inputs:
   type(type_soft_pdf),dimension(:),allocatable,intent(in) :: pdf_list
   character(len=*),intent(in)    :: soft_orbit_filename_in
-  integer,intent(in)             :: n_vec
+  integer,intent(in)             :: n_vec,discarded_label
   real*8,dimension(2),intent(in)               :: RZaxis
   real*8,dimension(:),allocatable,intent(in)   :: Rmesh,Zmesh,r_minor_mesh
   real*8,dimension(:,:),allocatable,intent(in) :: poloidal_flux
@@ -320,15 +407,17 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   integer(HID_T) :: file_id
   integer        :: ii,n_orbits,n_times,n_active_orbits,ierr
   integer,dimension(:),allocatable   :: valid_orbit_id
+  integer,dimension(:,:),allocatable :: classification_loc
   real*8                             :: orbit_dp,orbit_dxi
-  real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,weights_loc
   real*8,dimension(:),allocatable    :: orbit_pdf_loc,orbit_p_mesh,orbit_xi_mesh
+  real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,weights_loc
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
   !> read sofit particles
   call HDF5_allocatable_array1D_reading(file_id,orbit_p_mesh,'/param1')  !< momentum mesh
   call HDF5_allocatable_array1D_reading(file_id,orbit_xi_mesh,'/param2') !< cospitch mesh 
   call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")        !< parallel momentum
+  call HDF5_allocatable_array2D_reading_int(file_id,classification_loc,'/classification') !< orbit classification
   call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")      !< perpendicular momentum
   call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobia*dpoloidal*dminorradius
   call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")              !< position in xyz coordinates
@@ -350,13 +439,15 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
     weights_loc(:,ii) = weights_loc(:,ii)*orbit_pdf_loc(ii)
   enddo
   !> reshape arrays
-  x_loc         = reshape(x_loc,[n_vec,n_soft_points])
-  ppar_loc      = reshape(ppar_loc,[n_soft_points,1])
-  pperp_loc     = reshape(pperp_loc,[n_soft_points,1])
-  weights_loc   = orbit_dp*orbit_dxi*reshape(weights_loc,[n_soft_points,1])
+  x_loc              = reshape(x_loc,[n_vec,n_soft_points])
+  ppar_loc           = reshape(ppar_loc,[n_soft_points,1])
+  pperp_loc          = reshape(pperp_loc,[n_soft_points,1])
+  classification_loc = reshape(classification_loc,[n_soft_points,1])
+  weights_loc        = orbit_dp*orbit_dxi*reshape(weights_loc,[n_soft_points,1])
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_soft_points
+    if(classification_loc(ii,1).eq.discarded_label) cycle
     if((x_loc(1,ii).eq.0d0).and.(x_loc(2,ii).eq.0d0).and.(x_loc(3,ii).eq.0d0)) cycle
     if((ppar_loc(ii,1).eq.0d0).and.(pperp_loc(ii,1).eq.0d0)) cycle
     n_active_orbits = n_active_orbits + 1
@@ -372,12 +463,13 @@ RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   pperp   = pperp_loc(valid_orbit_id(1:n_active_orbits),1)
   weights = weights_loc(valid_orbit_id(1:n_active_orbits),1)
   n_soft_points = n_active_orbits
-  if(allocated(valid_orbit_id)) deallocate(valid_orbit_id)
-  if(allocated(ppar_loc))       deallocate(ppar_loc)
-  if(allocated(pperp_loc))      deallocate(pperp_loc)
-  if(allocated(weights_loc))    deallocate(weights_loc)
-  if(allocated(orbit_pdf_loc))  deallocate(orbit_pdf_loc)
-  if(allocated(x_loc))          deallocate(x_loc)
+  if(allocated(valid_orbit_id))     deallocate(valid_orbit_id)
+  if(allocated(classification_loc)) deallocate(classification_loc)
+  if(allocated(ppar_loc))           deallocate(ppar_loc)
+  if(allocated(pperp_loc))          deallocate(pperp_loc)
+  if(allocated(weights_loc))        deallocate(weights_loc)
+  if(allocated(orbit_pdf_loc))      deallocate(orbit_pdf_loc)
+  if(allocated(x_loc))              deallocate(x_loc)
 end subroutine read_and_compute_soft_orbit_data
 
 !> check if the mesh is uniform and extract the element size

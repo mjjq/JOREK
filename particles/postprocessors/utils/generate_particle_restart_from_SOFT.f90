@@ -385,7 +385,7 @@ end subroutine scatter_2D_arrays
 !>   weights:       (real8)(n_soft_particles) orbit weight: pdf(t=0)*Jdtdrho*dp*dxi
 subroutine read_and_compute_soft_orbit_data(soft_orbit_filename_in,n_vec,n_soft_points,&
 discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
-  use constants, only: ATOMIC_MASS_UNIT
+  use constants, only: ATOMIC_MASS_UNIT,TWOPI
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
   use hdf5_io_module, only: HDF5_allocatable_array1D_reading_int
@@ -418,7 +418,7 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   call HDF5_allocatable_array1D_reading(file_id,orbit_xi_mesh,'/param2') !< cospitch mesh 
   call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")        !< parallel momentum
   call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")      !< perpendicular momentum
-  call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobia*dpoloidal*dminorradius
+  call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobian*dpoloidal*dminorradius
   call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")              !< position in xyz coordinates
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
@@ -441,7 +441,7 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   x_loc              = reshape(x_loc,[n_vec,n_soft_points])
   ppar_loc           = reshape(ppar_loc,[n_soft_points,1])
   pperp_loc          = reshape(pperp_loc,[n_soft_points,1])
-  weights_loc        = orbit_dp*orbit_dxi*reshape(weights_loc,[n_soft_points,1])
+  weights_loc        = TWOPI*orbit_dp*orbit_dxi*(ppar_loc**2+pperp_loc**2)*reshape(weights_loc,[n_soft_points,1])
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_orbits

@@ -22,9 +22,9 @@ type(event)                      :: field_reader
 type(type_bnd_node_list)         :: bnd_node_list
 type(type_bnd_element_list)      :: bnd_elm_list
 type(write_particle_diagnostics) :: write_diag
-type(write_action)               :: write_particles
-logical                          :: append_diag
-integer                          :: ii,n_variables,n_particles,n_groups,restart_id
+type(write_action)               :: write_particles,write_restart_particles
+logical                          :: append_diag,stop_at_last_mhd_restart
+integer                          :: ii,n_variables,n_particles,n_groups,restart_id,n_gc_variables
 integer                          :: fraction_of_modes,n_int_pdf_param,n_real_pdf_param
 integer                          :: ifail,n_int_weight_param,n_real_weight_param
 integer                          :: n_int_gdf_param,n_real_gdf_param,n_int_pdf_to_part_coord_param
@@ -32,11 +32,12 @@ integer                          :: n_real_pdf_to_part_coord_param
 integer,dimension(2)             :: diag_list
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
-real*8                           :: diag_step,write_step,mass,charge,pdf_upper_bound
-real*8                           :: gdf_upper_bound,sup_pdf_safety_factor
+real*8                           :: diag_step,write_step,mass,charge,sim_time_interval
+real*8                           :: pdf_upper_bound,gdf_upper_bound,sup_pdf_safety_factor
 real*8,dimension(2)              :: Rbox,Zbox,Rbound,Zbound,phibound,Ekinbound
 real*8,dimension(2)              :: Pbound,Pitchbound,Chargebound
 real*8,dimension(6,2)            :: phase_space_bounds
+real*8,dimension(4)              :: rk45_gc_tolerances
 real*8,dimension(:),allocatable  :: real_pdf_to_part_coord_param
 real*8,dimension(:),allocatable  :: real_pdf_param,real_weight_param,real_gdf_param
 real*8,dimension(:),allocatable  :: DUMMY_REAL_ARRAY
@@ -50,36 +51,46 @@ procedure(part_inout_s),pointer     :: pdf_to_part_coord  => NULL()
 !> MPI and groups initialisation ------------------------------------------------------------
 n_groups = 1; call sim%initialize(num_groups=n_groups);
 !> Define inputs ----------------------------------------------------------------------------
-diag_filename             = 'part_diag.h5'   !< particle diagnostics filename
-particle_restart_basename = 'part_restart'  !< particle restart file basename
-restart_basename          = 'jorek'          !< JOREK restart file basename
-append_diag               = .true.           !< if true, append diagnostics in the same file
-restart_id                = 0                !< first JOREK restart file number
-n_variables               = 6                !< phase space dimensionality
-n_particles               = 1000000000       !< number of particles per task
-fraction_of_modes         = 1                !< fraction of JOREK modes to be used for interpolation
-diag_list                 = [1,6]            !< total energy, canonical toroidal momentum
-diag_step                 = 1d-4             !< time step at which the diagnostic files are written
-write_step                = 1d-3             !< time step at which the particle restart file is written
-mass                      = 5.48579909065d-4 !< electron mass in AMU
-charge                    = -1d0             !< electron charge / EL_CHG
-Rbound                    = [0.d0,9.99d2]
-Zbound                    = [-9.99d2,9.99d2]
-Phibound                  = [0d0,TWOPI]
-Ekinbound                 = [2d7-1d4,2d7+1d4] !< kinetic energy in eV
-Pitchbound                = [PI-2.95d-1,PI]
-Chargebound               = -1.d0
-sup_pdf_safety_factor     = 1d0
+diag_filename              = 'part_diag.h5'   !< particle diagnostics filename
+particle_restart_basename  = 'part_restart'   !< particle restart file basename
+restart_basename           = 'jorek'          !< JOREK restart file basename
+append_diag                = .true.           !< if true, append diagnostics in the same file
+abort_at_last_mhd_restart  = .false.          !< abort when the last simulation restart is reached
+restart_id                 = 0                !< first JOREK restart file number
+n_variables                = 6                !< phase space dimensionality
+n_gc_variables             = 4                !< number of variables use for integrating a gc particle 
+n_particles                = 1000000000       !< number of particles per task
+fraction_of_modes          = 1                !< fraction of JOREK modes to be used for interpolation
+diag_list                  = [1,6]            !< total energy, canonical toroidal momentum
+gc_timesteps               = [1d-9]           !< initial gc timestep in SI units
+sim_time_interval          = 1d-6             !< total simulation time interval
+diag_step                  = 1d-4             !< time step at which the diagnostic files are written
+write_step                 = 1d-3             !< time step at which the particle restart file is written
+mass                       = 5.48579909065d-4 !< electron mass in AMU
+charge                     = -1d0             !< electron charge / EL_CHG
+Rbound                     = [0.d0,9.99d2]
+Zbound                     = [-9.99d2,9.99d2]
+Phibound                   = [0d0,TWOPI]
+Ekinbound                  = [2d7-1d4,2d7+1d4] !< kinetic energy in eV
+Pitchbound                 = [PI-2.95d-1,PI]
+Chargebound                = -1.d0
+sup_pdf_safety_factor      = 1d0
+rk45_gc_tolerances         = [1d-2,1d-2,1d-2,1d3] !< RK45 tolerances for time step control
+                                                  !< 1: R, 2: Z, 3: phi, 4: ppar
 !> Initialisation ---------------------------------------------------------------------------
 write(*,*) "Simulate runaway electrons as gc: started!"
 write(*,*) "... initialise simulation parameters"
+gc_timesteps = gc_timesteps/sqrt(MU_ZERO*central_density*1d20*central_mass*MASS_PROTON)
 !> initialise simulation events
 write_diag = write_particle_diagnostics(filename=trim(diag_filename),append=append_diag,only=diag_list)
 write_particles = write_action(basename=trim(particle_restart_basename))
+write_restart_particles = write_action(filename=(trim(particle_restart_basename)//".h5"))
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(restart_basename),i=restart_id,\
-               mode_divisor=fraction_of_mode))
+               mode_divisor=fraction_of_mode,stop_at_end=abort_at_last_mhd_restart))
 call with(sim,field_reader)
-events = [event(write_diag,start=sim%time,step=diag_step),event(write_particles,start=sim%time,step=write_step)]
+events = [event(write_diag,start=sim%time,step=diag_step),\
+         event(write_particles,start=sim%time,step=write_step),\
+         event(stop_action(),start=sim%time+sim_time_interval)]
 !> update equilibrium state
 if(sim%my_id.eq.0) call boundary_from_grid(sim%fields%node_list,sim%fields%element_list,&
 bnd_node_list,bnd_elm_list,.false.)
@@ -141,7 +152,14 @@ n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight
 int_weight_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param,&
 n_real_pdf_to_part_coord_param,real_pdf_to_part_coord_param,&
 n_int_pdf_to_part_coord_param,int_pdf_to_part_coord_param)
+call with(sim,events,at=sim%time); !< execute event at the simulation initial state
 write(*,*) "... initialising guiding center in phase space: completed!"
+
+!> Test particle initialisation -------------------------------------------------------------
+call integrate_particles(n_gc_variables,gc_timesteps,rk45_gc_tolerances,field_reader,events,sim)
+
+!> Write a particle restart file ------------------------------------------------------------
+call with(sim,write_restart_particles)
 
 !> Clean-up ---------------------------------------------------------------------------------
 if(allocated(real_pdf_param))               deallocate(real_pdf_param);
@@ -156,6 +174,81 @@ call sim%finalize()
 write(*,*) "Simulate runaway electrons as gc: started!"
 
 contains
+
+!> particle integrator
+!> inputs:
+!>   n_var:        (integer) number of variables of the Runge-Kutta integrator
+!>   time_steps:   (integer)(n_groups) initial time step per group
+!>   rk_tols:      (real8)(n_var) tolerances of the runge-kutta integrator
+!>   field_reader: (event) reader event of the JOREK MHD fields
+!>   events:       (n_real8)(n_events)(n_events) events to execute at each target time
+!>   sim:          (particle_sim) jorek particle simulation structure
+!> outputs:
+!>   field_reader: (event) reader event of the JOREK MHD fields
+!>   events:       (n_real8)(n_events)(n_events) events to execute at each target time
+!>   sim:          (particle_sim) jorek particle simulation structure
+subroutine integrate_particles(n_var,time_steps,rk_tols,field_reader,events,sim)
+implicit none
+!> inputs-outputs:
+type(particle_sim),intent(inout)                   :: sim
+type(event),intent(inout)                          :: field_reader
+type(event),dimension(:),allocatable,intent(inout) :: events
+!> inputs:
+integer,intent(in)                             :: n_var
+integer,dimension(n_var),intent(in)            :: rk_tols
+integer,dimension(size(sim%groups)),intent(in) :: time_steps 
+!> variables:
+real*8 :: target_time
+!> loop for all the simulation time
+do while (.not.sim%stop_now)
+  target_time = min(next_event_at(sim,events),next_event_at(sim,[field_reader]))
+  write(*,*) "Integrating target time: ",target_time
+  call push_guiding_center_loop(n_var,size(sim%groups),time_steps,target_time,rk_tols,sim)
+  call with(sim,events,at=sim%time);
+  call with(sim,field_reader,at=sim%time)
+  write(*,*) "Integration of the target time: ",target_time," completed!"
+enddo
+end subroutine integrate_particles
+
+!> guiding center pushing loop
+!> inputs:
+!>   n_var:       (integer) number of variables of the Runge-Kutta integrator
+!>   n_groups:    (integer) number of particle groups
+!>   time_steps:  (integer)(n_groups) initial time step per group
+!>   target_time: (real8) time at which the particle integration is stopped
+!>   rk_tols:     (real8)(n_var) tolerances of the runge-kutta integrator
+!>   sim:         (particle_sim) jorek particle simulation structure
+!> outputs:
+!>   sim: (particle_sim) jorek particle simulation structure
+subroutine push_guiding_center_loop(n_var,n_groups,time_steps,target_time,rk_tols,sim)
+implicit none
+!> inputs-outputs:
+type(particle_sim),intent(inout) :: sim
+!> inputs:
+integer,intent(in)                     :: n_var,n_groups,n_particles
+integer,dimension(n_groups),intent(in) :: timesteps
+real*8,intent(in) :: target_time,
+real*8,dimension(n_var),intent(in) :: rk_tols
+!> variables:
+integer :: jj,ii
+real*8  :: local_time,local_dt,dt_try
+!> loop on the particles
+  do jj=1,n_groups
+    do ii=1,size(sim%groups(jj)%particles)
+      select type (gc => sim%groups(jj)%particles(ii))
+      type is (particle_gc_relativistic)
+        local_time = sim%time; local_dt = timesteps(jj);
+        do while (((target_time-local_time).gt.0d0).and.(gc%i_elm.gt.0))
+          call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,rk_tols,&
+          local_time,local_dt,target_time,sim%groups(jj)%mass,dt_try,gc)
+          local_time = local_time + local_dt
+          local_dt = min(dt_try,target_time-local_time)
+        enddo
+      end select
+    enddo
+  enddo
+  sim%time = target_time
+end subroutine push_guiding_center_loop
 
 !> method used for transforming the momentum space from spherical
 !> coordinates (p,pitch) and cartesian coordinates for the

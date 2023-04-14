@@ -49,7 +49,7 @@ def check_equal_light_data(light_data):
 # 1: vertices of the image planes
 # 2: view directions of the image planes
 def plot_light_and_camera_data(light_data,camera_data,n_tor=100,markersize=1,\
-linewidth=3,fontsize=16):
+linewidth=3,fontsize=16,colormap_scaling=1e0):
   import numpy as np
   from mpl_toolkits.mplot3d import Axes3D
   from matplotlib import pyplot as plt
@@ -70,7 +70,7 @@ linewidth=3,fontsize=16):
   # find the maximum of the specta
   max_spectrum = 0
   for dataset in light_data:
-    max_spectrum = max(max_spectrum,np.amax(dataset[1]))
+    max_spectrum = colormap_scaling*max(max_spectrum,np.amax(dataset[1]))
   # do scatter plots
   for spectra_id in range(n_spectra):
     fig = plt.figure(facecolor='white',edgecolor='white')
@@ -182,7 +182,8 @@ light_filenames=[],camera_filenames=[],filepath=".",\
 light_dataset=["contributing_light_positions","contributing_light_intensities",\
 "limiter_major_radius","limiter_vertical_coordinate"],\
 camera_dataset=["point_on_lens_positions","image_plane_vertices",\
-"image_plane_directions"],separator="/"):
+"image_plane_directions"],separator="/",n_tor_mesh=100,marker_size=1,\
+line_width=3,font_size=16,color_scaling=1e0):
   # Read data from files
   light_data = read_datasets_from_hdf5(light_filenames,filepath,\
   light_dataset,separator)  
@@ -191,7 +192,9 @@ camera_dataset=["point_on_lens_positions","image_plane_vertices",\
   # Check consistency of the data
   check_equal_light_data(light_data)
   # Plot data
-  plot_light_and_camera_data(light_data,camera_data)
+  plot_light_and_camera_data(light_data,camera_data,\
+  n_tor=n_tor_mesh,markersize=marker_size,linewidth=line_width,\
+  fontsize=font_size,colormap_scaling=color_scaling)
 
 def generate_argument_parser():
   import argparse
@@ -213,6 +216,16 @@ def generate_argument_parser():
   parser.add_argument('--camera_dataset','-cdset',type=str,nargs='*',required=False,\
   dest='camera_dataset',action='store',default=["point_on_lens_positions","image_plane_vertices",\
   "image_plane_directions"],help='camera datasets to be loaded')
+  parser.add_argument('--fontsize','-font',type=int,required=False,\
+  dest='fontsize',action='store',default=16,help='plot font size, default: 16')
+  parser.add_argument('--markersize','-msize',type=int,required=False,\
+  dest='markersize',action='store',default=1,help='size of the markers, default: 1')
+  parser.add_argument('--linewidth','-lwidth',type=int,required=False,\
+  dest='linewidth',action='store',default=3,help='plot line width, default: 3')
+  parser.add_argument('--colorscalefactor','-cfact',type=float,required=False,\
+  dest='colorscalefactor',action='store',default=1e0,help='scaling factor of the colorbar, default: 1e0')
+  parser.add_argument('--n_tor_mesh','-ntor',type=int,required=False,\
+  dest='n_tor_mesh',action='store',default=100,help='number of poloidal points for plotting the wall, default: 100')
   return parser.parse_args()
 
 # Run main -------------------------------------------- #
@@ -220,6 +233,8 @@ if __name__ == "__main__":
   args = generate_argument_parser()
   fig=load_and_plot_contributing_light_sources(light_filenames=args.light_names,\
   camera_filenames=args.camera_names,filepath=args.filepath,separator=args.separator,\
-  light_dataset=args.light_dataset,camera_dataset=args.camera_dataset)
+  light_dataset=args.light_dataset,camera_dataset=args.camera_dataset,
+  n_tor_mesh=args.n_tor_mesh,marker_size=args.markersize,line_width=args.linewidth,\
+  font_size=args.fontsize,color_scaling=args.colorscalefactor)
 # ----------------------------------------------------- #
 

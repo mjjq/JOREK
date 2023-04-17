@@ -172,7 +172,7 @@ if(allocated(real_pdf_to_part_coord_param)) deallocate(real_pdf_to_part_coord_pa
 pdf_to_use => NULL(); weight_to_use      => NULL();
 gdf_to_use => NULL(); gdf_sampler_to_use => NULL();
 call sim%finalize()
-write(*,*) "Simulate runaway electrons as gc: started!"
+write(*,*) "Simulate runaway electrons as gc: completed!"
 
 contains
 

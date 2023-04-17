@@ -89,7 +89,7 @@ write_restart_particles = write_action(filename=(trim(particle_restart_basename)
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(restart_basename),i=restart_id,\
                mode_divisor=fraction_of_modes,stop_at_end=abort_at_last_mhd_restart))
 call with(sim,field_reader)
-events = [event(write_diag,start=sim%time,step=diag_step),\
+events = [field_reader,event(write_diag,start=sim%time,step=diag_step),\
          event(write_particles,start=sim%time,step=write_step),\
          event(stop_action(),start=sim%time+sim_time_interval)]
 !> update equilibrium state
@@ -157,7 +157,7 @@ call with(sim,events,at=sim%time); !< execute event at the simulation initial st
 write(*,*) "... initialising guiding center in phase space: completed!"
 
 !> Test particle initialisation -------------------------------------------------------------
-call integrate_particles(n_gc_variables,gc_timesteps,rk45_gc_tolerances,field_reader,events,sim)
+call integrate_particles(n_gc_variables,gc_timesteps,rk45_gc_tolerances,events,sim)
 
 !> Write a particle restart file ------------------------------------------------------------
 call with(sim,write_restart_particles)
@@ -181,32 +181,28 @@ contains
 !>   n_var:        (integer) number of variables of the Runge-Kutta integrator
 !>   time_steps:   (integer)(n_groups) initial time step per group
 !>   rk_tols:      (real8)(n_var) tolerances of the runge-kutta integrator
-!>   field_reader: (event) reader event of the JOREK MHD fields
 !>   events:       (n_real8)(n_events)(n_events) events to execute at each target time
 !>   sim:          (particle_sim) jorek particle simulation structure
 !> outputs:
-!>   field_reader: (event) reader event of the JOREK MHD fields
 !>   events:       (n_real8)(n_events)(n_events) events to execute at each target time
 !>   sim:          (particle_sim) jorek particle simulation structure
-subroutine integrate_particles(n_var,time_steps,rk_tols,field_reader,events,sim)
+subroutine integrate_particles(n_var,time_steps,rk_tols,events,sim)
 implicit none
 !> inputs-outputs:
 type(particle_sim),intent(inout)                   :: sim
-type(event),intent(inout)                          :: field_reader
 type(event),dimension(:),allocatable,intent(inout) :: events
 !> inputs:
 integer,intent(in)                            :: n_var
 real*8,dimension(n_var),intent(in)            :: rk_tols
 real*8,dimension(size(sim%groups)),intent(in) :: time_steps 
 !> variables:
-real*8 :: target_time
+real*8 :: target_time,field_time
 !> loop for all the simulation time
 do while (.not.sim%stop_now)
-  target_time = min(next_event_at(sim,events),next_event_at(sim,[field_reader]))
+  target_time = next_event_at(sim,events);
   write(*,*) "Integrating target time: ",target_time
   call push_guiding_center_loop(n_var,size(sim%groups),time_steps,target_time,rk_tols,sim)
   call with(sim,events,at=sim%time);
-  call with(sim,field_reader)
   write(*,*) "Integration of the target time: ",target_time," completed!"
 enddo
 end subroutine integrate_particles

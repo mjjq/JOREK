@@ -82,9 +82,8 @@ time_id,light_id,x_shaded,light_dstb)
   if(.not.light_vert%check_angles_shaded_in_emission_zone(2,[sqrt(sin2psi),cospsi],&
   0,1,int_param,[light_properties(4)])) return
   !> compute the directionality function factors
-  fact_3 = 5d-1*cospsi*sin2psi
   cospsi = light_properties(5)*cospsi !< becareful fron now on cospsi = beta*cospsi
-  fact_3 = light_properties(5)*fact_3/(1d0-cospsi)
+  fact_3 = (5d-1*cospsi*sin2psi)/(1d0-cospsi)
   fact_2 = (1d0-light_properties(5)*light_properties(6)*cosmu)*(((1d0-cospsi)/cospsi)**2)
   fact_1 = (sqrt(((1d0-cospsi)**3)/(5d-1*cospsi)))*(light_properties(4)**3)
   !> compute the directionality function
@@ -215,7 +214,7 @@ end subroutine compute_gyroaverage_synchrotron_mhd_fields
 !>                9   -> directionality function intensity = 
 !>                       (27*q*B*gamma**7)/(128*(pi**2)*m*c*(sin(thetap)**2)*gamma_parallel**4)
 !>                10  -> synchrotron power normalisation:
-!>                       (((q**2)*B*gamma*gamma_parallel*v_perp)**2)/(6*pi*epsilon0*(m**2)*(c**3))
+!>                       (((q**2)*B*gamma*gamma_parallel*v_perp)**2)/(6*pi*epsilon0*(m**2)*c)
 subroutine compute_gyroaverage_synchrotron_light_properties(light_vert,&
 property_id,time_id,particle_in,mass,mhd_fields)
   use constants,                 only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT

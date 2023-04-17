@@ -4,7 +4,7 @@
 !> the initial gc population
 program re_gc_current_density_initialisation
 use constants,                only: TWOPI,PI
-use phys_module,              only: xcase,xpoint
+use phys_module,              only: xcase,xpoint,central_density,central_mass
 use data_structure,           only: type_bnd_node_list,type_bnd_element_list
 use mod_boundary,             only: boundary_from_grid
 use mod_expression,           only: exprs_all_int,init_expr,exprs,SI_UNITS
@@ -23,7 +23,7 @@ type(type_bnd_node_list)         :: bnd_node_list
 type(type_bnd_element_list)      :: bnd_elm_list
 type(write_particle_diagnostics) :: write_diag
 type(write_action)               :: write_particles,write_restart_particles
-logical                          :: append_diag,stop_at_last_mhd_restart
+logical                          :: append_diag,abort_at_last_mhd_restart
 integer                          :: ii,n_variables,n_particles,n_groups,restart_id,n_gc_variables
 integer                          :: fraction_of_modes,n_int_pdf_param,n_real_pdf_param
 integer                          :: ifail,n_int_weight_param,n_real_weight_param
@@ -34,10 +34,11 @@ integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
 real*8                           :: diag_step,write_step,mass,charge,sim_time_interval
 real*8                           :: pdf_upper_bound,gdf_upper_bound,sup_pdf_safety_factor
+real*8,dimension(1)              :: gc_timesteps
 real*8,dimension(2)              :: Rbox,Zbox,Rbound,Zbound,phibound,Ekinbound
 real*8,dimension(2)              :: Pbound,Pitchbound,Chargebound
-real*8,dimension(6,2)            :: phase_space_bounds
 real*8,dimension(4)              :: rk45_gc_tolerances
+real*8,dimension(6,2)            :: phase_space_bounds
 real*8,dimension(:),allocatable  :: real_pdf_to_part_coord_param
 real*8,dimension(:),allocatable  :: real_pdf_param,real_weight_param,real_gdf_param
 real*8,dimension(:),allocatable  :: DUMMY_REAL_ARRAY
@@ -86,7 +87,7 @@ write_diag = write_particle_diagnostics(filename=trim(diag_filename),append=appe
 write_particles = write_action(basename=trim(particle_restart_basename))
 write_restart_particles = write_action(filename=(trim(particle_restart_basename)//".h5"))
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(restart_basename),i=restart_id,\
-               mode_divisor=fraction_of_mode,stop_at_end=abort_at_last_mhd_restart))
+               mode_divisor=fraction_of_modes,stop_at_end=abort_at_last_mhd_restart))
 call with(sim,field_reader)
 events = [event(write_diag,start=sim%time,step=diag_step),\
          event(write_particles,start=sim%time,step=write_step),\
@@ -194,9 +195,9 @@ type(particle_sim),intent(inout)                   :: sim
 type(event),intent(inout)                          :: field_reader
 type(event),dimension(:),allocatable,intent(inout) :: events
 !> inputs:
-integer,intent(in)                             :: n_var
-integer,dimension(n_var),intent(in)            :: rk_tols
-integer,dimension(size(sim%groups)),intent(in) :: time_steps 
+integer,intent(in)                            :: n_var
+real*8,dimension(n_var),intent(in)            :: rk_tols
+real*8,dimension(size(sim%groups)),intent(in) :: time_steps 
 !> variables:
 real*8 :: target_time
 !> loop for all the simulation time
@@ -205,7 +206,7 @@ do while (.not.sim%stop_now)
   write(*,*) "Integrating target time: ",target_time
   call push_guiding_center_loop(n_var,size(sim%groups),time_steps,target_time,rk_tols,sim)
   call with(sim,events,at=sim%time);
-  call with(sim,field_reader,at=sim%time)
+  call with(sim,field_reader)
   write(*,*) "Integration of the target time: ",target_time," completed!"
 enddo
 end subroutine integrate_particles
@@ -221,14 +222,15 @@ end subroutine integrate_particles
 !> outputs:
 !>   sim: (particle_sim) jorek particle simulation structure
 subroutine push_guiding_center_loop(n_var,n_groups,time_steps,target_time,rk_tols,sim)
+use mod_gc_relativistic, only: runge_kutta_error_control_dt_gc_push_jorek
 implicit none
 !> inputs-outputs:
 type(particle_sim),intent(inout) :: sim
 !> inputs:
-integer,intent(in)                     :: n_var,n_groups,n_particles
-integer,dimension(n_groups),intent(in) :: timesteps
-real*8,intent(in) :: target_time,
-real*8,dimension(n_var),intent(in) :: rk_tols
+integer,intent(in)                    :: n_var,n_groups
+real*8,dimension(n_groups),intent(in) :: time_steps
+real*8,intent(in)                     :: target_time
+real*8,dimension(n_var),intent(in)    :: rk_tols
 !> variables:
 integer :: jj,ii
 real*8  :: local_time,local_dt,dt_try
@@ -237,7 +239,7 @@ real*8  :: local_time,local_dt,dt_try
     do ii=1,size(sim%groups(jj)%particles)
       select type (gc => sim%groups(jj)%particles(ii))
       type is (particle_gc_relativistic)
-        local_time = sim%time; local_dt = timesteps(jj);
+        local_time = sim%time; local_dt = time_steps(jj);
         do while (((target_time-local_time).gt.0d0).and.(gc%i_elm.gt.0))
           call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,rk_tols,&
           local_time,local_dt,target_time,sim%groups(jj)%mass,dt_try,gc)

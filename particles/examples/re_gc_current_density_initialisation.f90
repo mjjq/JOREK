@@ -13,17 +13,17 @@ use mod_boundary,             only: boundary_from_grid
 use equil_info
 use mod_random_seed
 use mod_particle_diagnostics, only: write_particle_diagnostics
-use mod_io_actions,           only: write_action
+use mod_io_actions,           only: write_action,read_action
 use particle_tracer
 implicit none
 !> Variable declarations --------------------------------------------------------------------
 type(pcg32_rng)                  :: rng_pcg32
-type(event)                      :: field_reader
+type(event)                      :: field_reader,particle_reader
 type(type_bnd_node_list)         :: bnd_node_list
 type(type_bnd_element_list)      :: bnd_elm_list
 type(write_particle_diagnostics) :: write_diag
-type(write_action)               :: write_particles,write_restart_particles
-logical                          :: append_diag,abort_at_last_mhd_restart,fdiag_exist
+type(write_action)               :: write_particles,write_restart_particles 
+logical                          :: append_diag,abort_at_last_mhd_restart,file_exist
 integer                          :: ii,n_variables,n_particles,n_groups,restart_id,n_gc_variables
 integer                          :: fraction_of_modes,n_int_pdf_param,n_real_pdf_param
 integer                          :: ifail,n_int_weight_param,n_real_weight_param
@@ -42,6 +42,7 @@ real*8,dimension(6,2)            :: phase_space_bounds
 real*8,dimension(:),allocatable  :: real_pdf_to_part_coord_param
 real*8,dimension(:),allocatable  :: real_pdf_param,real_weight_param,real_gdf_param
 real*8,dimension(:),allocatable  :: DUMMY_REAL_ARRAY
+character(len=3)                 :: hdf5ext 
 character(len=20)                :: diag_filename,particle_restart_basename,restart_basename
 procedure(real_f),pointer           :: pdf_to_use         => NULL()
 procedure(real_f),pointer           :: weight_to_use      => NULL()
@@ -52,7 +53,8 @@ procedure(part_inout_s),pointer     :: pdf_to_part_coord  => NULL()
 !> MPI and groups initialisation ------------------------------------------------------------
 n_groups = 1; call sim%initialize(num_groups=n_groups);
 !> Define inputs ----------------------------------------------------------------------------
-diag_filename              = 'part_diag.h5'   !< particle diagnostics filename
+hdf5ext                    = '.h5'            !< extension of the hdf5file
+diag_filename              = 'part_diag'   !< particle diagnostics filename
 particle_restart_basename  = 'part_restart'   !< particle restart file basename
 restart_basename           = 'jorek'          !< JOREK restart file basename
 append_diag                = .true.           !< if true, append diagnostics in the same file
@@ -83,11 +85,12 @@ write(*,*) "Simulate runaway electrons as gc: started!"
 write(*,*) "... initialise simulation parameters"
 gc_timesteps = gc_timesteps/sqrt(MU_ZERO*central_density*1d20*central_mass*MASS_PROTON)
 !> initialise simulation events
-inquire(file=trim(diag_filename),exist=fdiag_exist)
-if(fdiag_exist) call system("rm "//trim(diag_filename))
-write_diag = write_particle_diagnostics(filename=trim(diag_filename),append=append_diag,only=diag_list)
+inquire(file=(trim(diag_filename)//trim(hdf5ext)),exist=file_exist)
+if(file_exist) call system("rm "//(trim(diag_filename)//trim(hdf5ext)))
+write_diag = write_particle_diagnostics(filename=(trim(diag_filename)//trim(hdf5ext)),&
+             append=append_diag,only=diag_list)
 write_particles = write_action(basename=trim(particle_restart_basename))
-write_restart_particles = write_action(filename=(trim(particle_restart_basename)//".h5"))
+write_restart_particles = write_action(filename=(trim(particle_restart_basename)//trim(hdf5ext)))
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(restart_basename),i=restart_id,\
                mode_divisor=fraction_of_modes,stop_at_end=abort_at_last_mhd_restart))
 call with(sim,field_reader)
@@ -99,63 +102,73 @@ if(sim%my_id.eq.0) call boundary_from_grid(sim%fields%node_list,sim%fields%eleme
 bnd_node_list,bnd_elm_list,.false.)
 call broadcast_boundary(sim%my_id,bnd_elm_list,bnd_node_list)
 call update_equil_state(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_elm_list,xpoint,xcase)
-!> initialise particle structure
-sim%groups(1:n_groups)%mass = mass
-do  ii=1,n_groups
-  allocate(particle_gc_relativistic::sim%groups(ii)%particles(n_particles))
-enddo
-!> difine phase space domain
-call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rbox(2),Zbox(1),Zbox(2))
-if(Rbox(1).ge.Rbound(1)) Rbound(1) = Rbox(1)
-if((Rbox(2).lt.Rbound(2)).and.((Rbox(2)-Rbound(1)).gt.0.d0)) Rbound(2) = Rbox(2)
-if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
-if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
-if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
-if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
-Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
-phase_space_bounds(:,1) = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),charge]
-phase_space_bounds(:,2) = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),charge]
-!> define particle PDF
-n_real_pdf_param = 3; allocate(real_pdf_param(n_real_pdf_param));
-real_pdf_param   = [1.d0,mass,sup_pdf_safety_factor]
-n_int_pdf_param  = 1; allocate(int_pdf_param(n_int_pdf_param));
-n_real_weight_param = 3; allocate(real_weight_param(n_real_weight_param));
-int_pdf_param(1)    = sim%my_id
-n_int_pdf_to_part_coord_param  = 0
-n_real_pdf_to_part_coord_param = 1
-allocate(real_pdf_to_part_coord_param(n_real_pdf_to_part_coord_param))
-real_pdf_to_part_coord_param(1) = mass
-pdf_to_use          => pdf_current_density_uniform_phase
-weight_to_use       => particle_weight_current_density_uniform_phase
-pdf_to_part_coord   => spherical_p_cartesian_q_to_relativistic_gc
-pdf_upper_bound     = sup_pdf_current_density_uniform_phase(n_variables,&
-phase_space_bounds(:,1),phase_space_bounds(:,2),sim%fields,&
-n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
-!> compute the integral of the current density in the volume
-allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
-call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
-exprs('int3d_jR_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
-real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass];
-deallocate(DUMMY_REAL_ARRAY);
-!> define the sampler and samper distribution
-n_real_gdf_param = 0; n_int_gdf_param = 0;
-gdf_to_use         => gdf_uniform_phase
-gdf_sampler_to_use => gdf_uniform_sampler
-gdf_upper_bound    = sup_gdf_uniform_phase(n_variables,&
-phase_space_bounds(1:n_variables,1),phase_space_bounds(1:n_variables,2), &
-n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
+!> check if particle restart file exists
+inquire(file=trim(particle_restart_basename)//trim(hdf5ext),exist=file_exist)
+if(.not.file_exist) then
+  !> initialise particle structure
+  sim%groups(1:n_groups)%mass = mass
+  do ii=1,n_groups
+    allocate(particle_gc_relativistic::sim%groups(ii)%particles(n_particles))
+  enddo
+  !> difine phase space domain
+  call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rbox(2),Zbox(1),Zbox(2))
+  if(Rbox(1).ge.Rbound(1)) Rbound(1) = Rbox(1)
+  if((Rbox(2).lt.Rbound(2)).and.((Rbox(2)-Rbound(1)).gt.0.d0)) Rbound(2) = Rbox(2)
+  if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
+  if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
+  if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
+  if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
+  Pbound = mass*SPEED_OF_LIGHT*sqrt(((EL_CHG*Ekinbound/(ATOMIC_MASS_UNIT*mass*SPEED_OF_LIGHT**2))+1.d0)**2-1.d0)
+  phase_space_bounds(:,1) = [Rbound(1),Zbound(1),Phibound(1),Pbound(1),Pitchbound(1),charge]
+  phase_space_bounds(:,2) = [Rbound(2),Zbound(2),Phibound(2),Pbound(2),Pitchbound(2),charge]
+  !> define particle PDF
+  n_real_pdf_param = 3; allocate(real_pdf_param(n_real_pdf_param));
+  real_pdf_param   = [1.d0,mass,sup_pdf_safety_factor]
+  n_int_pdf_param  = 1; allocate(int_pdf_param(n_int_pdf_param));
+  n_real_weight_param = 3; allocate(real_weight_param(n_real_weight_param));
+  int_pdf_param(1)    = sim%my_id
+  n_int_pdf_to_part_coord_param  = 0
+  n_real_pdf_to_part_coord_param = 1
+  allocate(real_pdf_to_part_coord_param(n_real_pdf_to_part_coord_param))
+  real_pdf_to_part_coord_param(1) = mass
+  pdf_to_use          => pdf_current_density_uniform_phase
+  weight_to_use       => particle_weight_current_density_uniform_phase
+  pdf_to_part_coord   => spherical_p_cartesian_q_to_relativistic_gc
+  pdf_upper_bound     = sup_pdf_current_density_uniform_phase(n_variables,&
+  phase_space_bounds(:,1),phase_space_bounds(:,2),sim%fields,&
+  n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
+  !> compute the integral of the current density in the volume
+  allocate(DUMMY_REAL_ARRAY(n_real_weight_param+1)); call init_expr;
+  call int3d_new(sim%my_id,sim%fields%node_list,sim%fields%element_list,bnd_node_list,bnd_elm_list,&
+  exprs('int3d_jR_tot',1,exprs_all_int%n_coord,exprs_all_int),DUMMY_REAL_ARRAY,SI_UNITS)
+  real_weight_param = [DUMMY_REAL_ARRAY(2),real(n_particles,kind=8),sim%groups(1)%mass];
+  deallocate(DUMMY_REAL_ARRAY);
+  !> define the sampler and samper distribution
+  n_real_gdf_param = 0; n_int_gdf_param = 0;
+  gdf_to_use         => gdf_uniform_phase
+  gdf_sampler_to_use => gdf_uniform_sampler
+  gdf_upper_bound    = sup_gdf_uniform_phase(n_variables,&
+  phase_space_bounds(1:n_variables,1),phase_space_bounds(1:n_variables,2), &
+  n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param)
+endif
 write(*,*) "... initialise simulation parameters: completed!"
 
 !> Test particle initialisation -------------------------------------------------------------
 write(*,*) "... initialising guiding center in phase space ..."
-call initialise_particles_in_phase_space(n_variables,sim%groups(1)%particles,sim%fields,rng_pcg32,&
-pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
-pdf_to_part_coord,sim%groups(1)%mass,sim%time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
-n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight_param,&
-int_weight_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param,&
-n_real_pdf_to_part_coord_param,real_pdf_to_part_coord_param,&
-n_int_pdf_to_part_coord_param,int_pdf_to_part_coord_param)
-call with(sim,events,at=sim%time); !< execute event at the simulation initial state
+if(file_exist) then
+  write(*,*) "Reading particle restart: ",trim(particle_restart_basename)//trim(hdf5ext)
+  particle_reader = event(read_action(filename=trim(particle_restart_basename)//trim(hdf5ext)))
+  call with(sim,particle_reader)
+else
+  call initialise_particles_in_phase_space(n_variables,sim%groups(1)%particles,sim%fields,rng_pcg32,&
+  pdf_to_use,weight_to_use,gdf_to_use,gdf_sampler_to_use,pdf_upper_bound,gdf_upper_bound,&
+  pdf_to_part_coord,sim%groups(1)%mass,sim%time,phase_space_bounds,n_real_pdf_param,real_pdf_param,&
+  n_int_pdf_param,int_pdf_param,n_real_weight_param,real_weight_param,n_int_weight_param,&
+  int_weight_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param,&
+  n_real_pdf_to_part_coord_param,real_pdf_to_part_coord_param,&
+  n_int_pdf_to_part_coord_param,int_pdf_to_part_coord_param)
+  call with(sim,events,at=sim%time); !< execute event at the simulation initial state
+endif
 write(*,*) "... initialising guiding center in phase space: completed!"
 
 !> Test particle initialisation -------------------------------------------------------------

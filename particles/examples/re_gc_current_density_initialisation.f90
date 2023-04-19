@@ -60,13 +60,13 @@ abort_at_last_mhd_restart  = .false.          !< abort when the last simulation 
 restart_id                 = 0                !< first JOREK restart file number
 n_variables                = 6                !< phase space dimensionality
 n_gc_variables             = 4                !< number of variables use for integrating a gc particle 
-n_particles                = 1000             !< number of particles per task
+n_particles                = 32               !< number of particles per task
 fraction_of_modes          = 1                !< fraction of JOREK modes to be used for interpolation
 diag_list                  = [1,6]            !< total energy, canonical toroidal momentum
 gc_timesteps               = [1d-9]           !< initial gc timestep in SI units
-sim_time_interval          = 1d-4             !< total simulation time interval
-diag_step                  = 1d-5             !< time step at which the diagnostic files are written
-write_step                 = 1d-5             !< time step at which the particle restart file is written
+sim_time_interval          = 1d-3             !< total simulation time interval
+diag_step                  = 1d-8             !< time step at which the diagnostic files are written
+write_step                 = 1d-4             !< time step at which the particle restart file is written
 mass                       = 5.48579909065d-4 !< electron mass in AMU
 charge                     = -1d0             !< electron charge / EL_CHG
 Rbound                     = [0.d0,9.99d2]
@@ -207,7 +207,7 @@ do while (.not.sim%stop_now)
   call with(sim,events,at=sim%time);
   write(*,*) "Integration of the target time: ",target_time," completed!"
 enddo
-end subroutine integrate_particles
+end subroutine integrate_particles   
 
 !> guiding center pushing loop
 !> inputs:
@@ -233,22 +233,25 @@ real*8,dimension(n_var),intent(in)    :: rk_tols
 integer :: jj,ii
 real*8  :: local_time,local_dt,dt_try
 !> loop on the particles
-  do jj=1,n_groups
-    do ii=1,size(sim%groups(jj)%particles)
-      select type (gc => sim%groups(jj)%particles(ii))
+do jj=1,n_groups
+  !$omp parallel do default(none) firstprivate(jj,target_time,time_steps,rk_tols) &
+  !$omp private(ii,local_time,local_dt,dt_try) shared(sim)
+  do ii=1,size(sim%groups(jj)%particles)
+    select type (gc => sim%groups(jj)%particles(ii))
       type is (particle_gc_relativistic)
-        local_time = sim%time; local_dt = time_steps(jj);
-        do while (((target_time-local_time).gt.0d0).and.(gc%i_elm.gt.0))
-          call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,rk_tols,&
-          local_time,local_dt,target_time,sim%groups(jj)%mass,dt_try,gc)
-          local_time = local_time + local_dt
-          local_dt = min(dt_try,target_time-local_time)
-          if(local_dt.le.0d0) local_dt = time_steps(jj)
-        enddo
-      end select
-    enddo
+      local_time = sim%time; local_dt = time_steps(jj);
+      do while (((target_time-local_time).gt.0d0).and.(gc%i_elm.gt.0))
+        call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,rk_tols,&
+        local_time,local_dt,target_time,sim%groups(jj)%mass,dt_try,gc)
+        local_time = local_time + local_dt
+        local_dt = min(dt_try,target_time-local_time)
+        if(local_dt.le.0d0) local_dt = time_steps(jj)
+      enddo
+    end select
   enddo
-  sim%time = target_time
+  !$omp end parallel do
+enddo
+sim%time = target_time
 end subroutine push_guiding_center_loop
 
 !> method used for transforming the momentum space from spherical

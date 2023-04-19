@@ -137,7 +137,12 @@ function do_convert () {
       fi
     fi
 
-    $binary < $infile > ./log 2>&1
+    if [ "$poinc_tool" == "poincare" ]; then
+      mpirun -n 1 $binary < $infile > ./log 2>&1
+    else 
+      $binary < $infile > ./log 2>&1
+    fi
+
     if [ $? -ne 0 ]; then
       if [ ! -f $ERROR_STOP_FILE ]; then
         touch $ERROR_STOP_FILE

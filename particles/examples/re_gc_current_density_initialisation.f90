@@ -23,7 +23,7 @@ type(type_bnd_node_list)         :: bnd_node_list
 type(type_bnd_element_list)      :: bnd_elm_list
 type(write_particle_diagnostics) :: write_diag
 type(write_action)               :: write_particles,write_restart_particles
-logical                          :: append_diag,abort_at_last_mhd_restart
+logical                          :: append_diag,abort_at_last_mhd_restart,fdiag_exist
 integer                          :: ii,n_variables,n_particles,n_groups,restart_id,n_gc_variables
 integer                          :: fraction_of_modes,n_int_pdf_param,n_real_pdf_param
 integer                          :: ifail,n_int_weight_param,n_real_weight_param
@@ -64,9 +64,9 @@ n_particles                = 1000             !< number of particles per task
 fraction_of_modes          = 1                !< fraction of JOREK modes to be used for interpolation
 diag_list                  = [1,6]            !< total energy, canonical toroidal momentum
 gc_timesteps               = [1d-9]           !< initial gc timestep in SI units
-sim_time_interval          = 1d-6             !< total simulation time interval
-diag_step                  = 1d-7             !< time step at which the diagnostic files are written
-write_step                 = 2d-7             !< time step at which the particle restart file is written
+sim_time_interval          = 1d-4             !< total simulation time interval
+diag_step                  = 1d-5             !< time step at which the diagnostic files are written
+write_step                 = 1d-5             !< time step at which the particle restart file is written
 mass                       = 5.48579909065d-4 !< electron mass in AMU
 charge                     = -1d0             !< electron charge / EL_CHG
 Rbound                     = [0.d0,9.99d2]
@@ -83,6 +83,8 @@ write(*,*) "Simulate runaway electrons as gc: started!"
 write(*,*) "... initialise simulation parameters"
 gc_timesteps = gc_timesteps/sqrt(MU_ZERO*central_density*1d20*central_mass*MASS_PROTON)
 !> initialise simulation events
+inquire(file=trim(diag_filename),exist=fdiag_exist)
+if(fdiag_exist) call system("rm "//trim(diag_filename))
 write_diag = write_particle_diagnostics(filename=trim(diag_filename),append=append_diag,only=diag_list)
 write_particles = write_action(basename=trim(particle_restart_basename))
 write_restart_particles = write_action(filename=(trim(particle_restart_basename)//".h5"))
@@ -241,6 +243,7 @@ real*8  :: local_time,local_dt,dt_try
           local_time,local_dt,target_time,sim%groups(jj)%mass,dt_try,gc)
           local_time = local_time + local_dt
           local_dt = min(dt_try,target_time-local_time)
+          if(local_dt.le.0d0) local_dt = time_steps(jj)
         enddo
       end select
     enddo

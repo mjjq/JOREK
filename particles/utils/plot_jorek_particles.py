@@ -59,14 +59,13 @@ def read_jorek_particle_restart_file(filename,filepath,separator):
       if('S' in str(particles[part_data_name].dtype)):
         particles[part_data_name] = str(particles[part_data_name])
         particles[part_data_name] = particles[part_data_name][2:-1]
-
     groups.append(particles)
   sim_time = float64(fhandler['time'])
   fhandler.close()
   return groups,sim_time
 
-# plot 1d histograms for a set of positions (physical or velocity space)
-# results are contained ina list having elements of the form: 
+# generate 1d histograms for a set of positions (physical or velocity space)
+# results are stored in a list having elements of the form: 
 # [histogram,histogram_edges]
 def create_phase_space_1d_histograms(data_array,p_weights,bins=[]):
   from numpy import histogram
@@ -75,6 +74,14 @@ def create_phase_space_1d_histograms(data_array,p_weights,bins=[]):
     histo,edges = histogram(data,bins=bins[ids],weights=p_weights)
     hists.append([histo,edges])
   return hists
+
+# generate 2d histograms for a set of positions (physical or velocity space)
+# results are stored in a list of the form 
+def create_phase_space_2d_histograms():
+
+# generate 2d histograms for a set of positions (physical or velocity space)
+# given a values along a third axis results are stored in a list of the form 
+def create_phase_space_2d_histograms_slice():
 
 # plot 1d histograms
 def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18,ncols=3):

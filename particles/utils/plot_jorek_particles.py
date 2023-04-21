@@ -23,11 +23,11 @@ def compute_spherical_azimuthal_volumes(theta):
   from numpy import cos
   return cos(theta[1:-2])-cos(theta[2:])
 
-# Return the correct y labels and titles in velocity space
+# Return the correct x labels and titles in phase space
 def define_histogram_labels_titles(key,ptype):
   if(key=='x'):
     titles = ['Major radius','Vertical coordinate','Toroidal angle']
-    labels = ['R [m]','Z [m]','\phi [r]']
+    labels = ['R [m]','Z [m]','phi [r]']
   elif(key=='v'):
     if(ptype=='particle_kinetic_relativistic'):
       titles = ['x-cartesian momentum','y-cartesian momentum','z-cartesian momentum']
@@ -39,6 +39,32 @@ def define_histogram_labels_titles(key,ptype):
       titles = ['velocity 1','velocity 2','velocity 3']
       labels = ['v1','v2','v3']
   return titles,labels
+
+# Return the correct x,y labels, titles and aspect ratio in phase space
+def define_histogram_labels_titles_aspectratio_2d(key,ptype):
+  if(key=='x'):
+    titles  = ['Major radius - vertical coordinate','Major radius - toroidal angle',\
+    'Vertical coordinate - toroidal angle']
+    xlabels = ['R [m]','R [m]','Z [m]']
+    ylabels = ['Z [m]','phi [r]','phi [r]']
+    aspectratio = [True,False,False]
+  elif(key=='v'):
+    if(ptype=='particle_kinetic_relativistic'):
+      titles  = ['Momenta: px-py','Momenta: px-pz','Momenta: py-pz']
+      xlabels = ['px [AMUm/s]','px [AMUm/s]','py [AMUm/s]']
+      ylabels = ['py [AMUm/s]','pz [AMUm/s]','pz [AMUm/s]']
+      aspectratio = [True,True,True]
+    elif(ptype=='particle_gc_relativistic'):
+      titles  = ['Parallel momentum - magnetic moment']
+      xlabels = ['p_par [AMUm/s]']
+      ylabels = ['mu [AMUm^2/Cs]']
+      aspectratio = [False]
+    else:
+      titles  = ['velocities v1-v2','velocities v1-v3','velocities v2-v3']
+      xlabels = ['v1','v1','v2']
+      ylabels = ['v2','v3','v3']
+      aspectratio = [False,False,False]
+  return titles,xlabels,ylabels,aspectratio
 
 # Read a jorek particle restart file. Zero ended bytes structre 
 # ('S'-type) are identified and transformed in strings
@@ -77,20 +103,31 @@ def create_phase_space_1d_histograms(data_array,p_weights,bins=[]):
 
 # generate 2d histograms for a set of positions (physical or velocity space)
 # results are stored in a list of the form 
-def create_phase_space_2d_histograms():
-
-# generate 2d histograms for a set of positions (physical or velocity space)
-# given a values along a third axis results are stored in a list of the form 
-def create_phase_space_2d_histograms_slice():
+def create_phase_space_2d_histograms(data_array,p_weights,bins2d=[]):
+  from numpy import histogram2d
+  n_histograms = 0
+  histos = []
+  for id1,data1 in enumerate(data_array):
+    local_histos = []
+    for id2,data2 in enumerate(data_array[id1+1:]):
+      histo,xedges,yedges = histogram2d(data1,data2,\
+      bins=[bins2d[id1],bins2d[id1+id2+1]],weights=p_weights)
+      local_histos.append([histo,xedges,yedges])
+    n_histograms = n_histograms + len(local_histos)
+    histos.append(local_histos)
+  return histos,n_histograms
 
 # plot 1d histograms
 def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18,ncols=3):
   from numpy import ceil as npceil
   from matplotlib.pyplot import subplots,stairs
-  nrows = int(npceil(len(hists)/ncols))
-  if(ncols>len(hists)):
-    ncols = len(hists)
+  n_histos = len(hists)
+  nrows = max(int(npceil(n_histos/ncols)),1)
+  if(ncols>n_histos):
+    ncols = n_histos
   fig,axs = subplots(nrows=nrows,ncols=ncols,facecolor='white',edgecolor='white')
+  if(n_histos==1):
+    axs = [axs]
   for histo_id,histo in enumerate(hists):
     axs[histo_id].stairs(histo[0],edges=histo[1],fill=True)
     axs[histo_id].set_title(titles[histo_id],fontsize=fontsize)
@@ -101,6 +138,34 @@ def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18,ncols=3):
     axs[histo_id].grid()
   return fig,axs
 
+# plot 2d histograms
+def plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectequal,\
+fontsize=18,ncols=3,colormap='inferno'):
+  from numpy import ceil as npceil
+  from numpy import amax
+  from matplotlib.pyplot import subplots,pcolormesh
+  count = 0
+  nrows = max(int(npceil(n_histos/ncols)),1)
+  if(ncols>n_histos):
+    ncols = n_histos
+  fig,axs = subplots(nrows=nrows,ncols=ncols,facecolor='white',edgecolor='white')
+  if(n_histos==1): 
+    axs = [axs]
+  for histos_id,histos in enumerate(hists2d):
+    for histo_id,histo in enumerate(histos):
+      im = axs[count].pcolormesh(histo[1],histo[2],histo[0],\
+      cmap=colormap,vmin=0.,vmax=amax(histo[0]),edgecolors='none',shading='flat')
+      axs[count].set_title(titles[histos_id+histo_id],fontsize=fontsize)
+      axs[count].set_xlabel(xlabels[histos_id+histo_id],fontsize=fontsize)
+      axs[count].set_ylabel(ylabels[histos_id+histo_id],fontsize=fontsize)
+      axs[count].tick_params(axis='x',labelsize=fontsize)
+      axs[count].tick_params(axis='y',labelsize=fontsize)
+      if(aspectequal[count]):
+        axs[count].set_aspect('equal')
+      fig.colorbar(im,ax=axs[count])
+      count = count + 1
+  return fig,axs
+      
 # generate and plot 1d histograms from the jorek particle distribution
 def computes_1d_histograms_jorek_particles(groups,key,bins=[100,100,100],\
 ylabels=['','',''],n_cols=3,fontsize=18):
@@ -108,22 +173,40 @@ ylabels=['','',''],n_cols=3,fontsize=18):
   for group in groups: 
     # extract titles and x lables
     titles,xlabels = define_histogram_labels_titles(key,group['type'])
-    # compute histograms physical space
+    # compute histograms physical space and plot it
     hists = create_phase_space_1d_histograms(group[key],group['weight'],bins=bins)
     fig,axs = plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=fontsize,ncols=n_cols)
     show()
 
+# generate and plot 1d histograms from the jorek particle distribution
+def computes_2d_histograms_jorek_particles(groups,key,bins=[100,100,100],\
+n_cols=3,fontsize=18,colormap='inferno'):
+  from matplotlib.pyplot import show
+  for group in groups:
+    # extract titles, xlabels, ylabels and plot aspect ratio
+    titles,xlabels,ylabels,aspectratio = define_histogram_labels_titles_aspectratio_2d(key,group['type'])
+    # compute histograms physical space and plot it
+    hists2d,n_histos = create_phase_space_2d_histograms(group[key],group['weight'],bins2d=bins)
+    fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
+    fontsize=fontsize,ncols=n_cols,colormap=colormap)
+    show()
+  
 # main function
-def read_analyse_plot_jorek_restart(filename,filepath,separator,\
-pos_bins=[100,100,100],n_cols_pos=3,fontsize=18):
+def read_analyse_plot_jorek_restart(filename,filepath,separator,bins1d=[100,100,100],
+bins2d=[100,100,100],n_cols=3,fontsize=18,colormap='inferno'):
   # read the jorek particle restart data
   p_groups,sim_time = read_jorek_particle_restart_file(filename,filepath,separator)
   # plot 1d histograms
-  computes_1d_histograms_jorek_particles(p_groups,'x',bins=pos_bins,\
-  ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols_pos,fontsize=fontsize)
-  computes_1d_histograms_jorek_particles(p_groups,'v',bins=pos_bins,\
-  ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols_pos,fontsize=fontsize)
- 
+  computes_1d_histograms_jorek_particles(p_groups,'x',bins=bins1d,\
+  ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols,fontsize=fontsize)
+  computes_1d_histograms_jorek_particles(p_groups,'v',bins=bins1d,\
+  ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols,fontsize=fontsize)
+  # plot 2d histograms
+  computes_2d_histograms_jorek_particles(p_groups,'x',bins=bins2d,\
+  n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+  computes_2d_histograms_jorek_particles(p_groups,'v',bins=bins2d,\
+  n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+  
 # argument parser 
 def generate_argument_parser():
   from argparse import ArgumentParser
@@ -135,19 +218,25 @@ def generate_argument_parser():
   dest='filepath',default='.',help='path of the file to be read, default: .')
   parser.add_argument('--separator','-sep',type=str,action='store',required=False,\
   dest='separator',default='/',help='file separator, default: /')
-  parser.add_argument('--pos_bins','-pbins',nargs='*',action='store',required=False,\
-  default=[100,100,100],dest='pos_bins',\
-  help='number of or method for computing the bins in physical space, default: auto')
-  parser.add_argument('--n_cols_subplots_pos','-ncsp',type=int,action='store',required=False,\
-  dest='n_cols_pos',default=3,help='number of columns for physical space subplots, default: 3')
+  parser.add_argument('--bins1d','-pbins1d',nargs='*',action='store',required=False,\
+  default=[100,100,100],dest='bins1d',\
+  help='number of or method for computing the bins for 1D histograms, default: 100')
+  parser.add_argument('--bins2d','-pbins2d',nargs='*',action='store',required=False,\
+  default=[100,100,100],dest='bins2d',\
+  help='number of or method for computing the bins for 2D histograms, default: 100')
+  parser.add_argument('--n_cols_subplots','-ncsp',type=int,action='store',required=False,\
+  dest='n_cols',default=3,help='number of columns for histogram subplots, default: 3')
   parser.add_argument('--fontsize','-fsize',type=int,action='store',required=False,\
   dest='fontsize',default=18,help='plot font size, default: 18')
+  parser.add_argument('--colormap','-cmap',type=str,action='store',required=False,\
+  dest='colormap',default='inferno',help='colormap of 2D histograms, default: inferno')
   return parser.parse_args()
 
 # Run main -------------------------------------------- #
 if __name__ == "__main__":
   args = generate_argument_parser()
   read_analyse_plot_jorek_restart(args.filename,args.filepath,args.separator,\
-  pos_bins=args.pos_bins,n_cols_pos=args.n_cols_pos,fontsize=args.fontsize)
+  bins1d=args.bins1d,bins2d=args.bins2d,n_cols=args.n_cols,fontsize=args.fontsize,\
+  colormap=args.colormap)
 
 # ----------------------------------------------------- #

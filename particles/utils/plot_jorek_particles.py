@@ -1,5 +1,5 @@
 # ----------------------------------------------------- #
-# The function plot the particle properties read by
+# The function plots the particle properties read by
 # a JOREK restart file
 # ----------------------------------------------------- #
 # Read datasets from HDF5 files

@@ -83,10 +83,11 @@ rk45_gc_tolerances         = [1d-2,1d-2,1d-2,1d3] !< RK45 tolerances for time st
 !> Initialisation ---------------------------------------------------------------------------
 write(*,*) "Simulate runaway electrons as gc: started!"
 write(*,*) "... initialise simulation parameters"
+call sim%initialize(n_groups,.true.)
 gc_timesteps = gc_timesteps/sqrt(MU_ZERO*central_density*1d20*central_mass*MASS_PROTON)
 !> initialise simulation events
 inquire(file=(trim(diag_filename)//trim(hdf5ext)),exist=file_exist)
-if(file_exist) call system("rm "//(trim(diag_filename)//trim(hdf5ext)))
+if(file_exist.and.(sim%my_id.eq.0)) call system("rm "//(trim(diag_filename)//trim(hdf5ext)))
 write_diag = write_particle_diagnostics(filename=(trim(diag_filename)//trim(hdf5ext)),&
              append=append_diag,only=diag_list)
 write_particles = write_action(basename=trim(particle_restart_basename))

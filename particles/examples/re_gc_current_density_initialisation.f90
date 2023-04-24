@@ -65,7 +65,7 @@ n_gc_variables             = 4                !< number of variables use for int
 n_particles                = 32               !< number of particles per task
 fraction_of_modes          = 1                !< fraction of JOREK modes to be used for interpolation
 diag_list                  = [1,6]            !< total energy, canonical toroidal momentum
-gc_timesteps               = [1d-9]           !< initial gc timestep in SI units
+gc_timesteps               = [1d-10]           !< initial gc timestep in SI units
 sim_time_interval          = 1d-3             !< total simulation time interval
 diag_step                  = 1d-8             !< time step at which the diagnostic files are written
 write_step                 = 1d-4             !< time step at which the particle restart file is written
@@ -83,7 +83,6 @@ rk45_gc_tolerances         = [1d-2,1d-2,1d-2,1d3] !< RK45 tolerances for time st
 !> Initialisation ---------------------------------------------------------------------------
 write(*,*) "Simulate runaway electrons as gc: started!"
 write(*,*) "... initialise simulation parameters"
-call sim%initialize(n_groups,.true.)
 gc_timesteps = gc_timesteps/sqrt(MU_ZERO*central_density*1d20*central_mass*MASS_PROTON)
 !> initialise simulation events
 inquire(file=(trim(diag_filename)//trim(hdf5ext)),exist=file_exist)

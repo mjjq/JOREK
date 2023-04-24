@@ -23,6 +23,7 @@ real*8             :: angle, ellip, tria_u, tria_l, quad_u, quad_l, r0, z0, a0, 
 real*8             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag,ssibry,bcentr,a_minor
 real*8             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
 real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd, rho_bnd, T_bnd
+real*8             :: p_bnd, sig_ext, dpdpsi_sep
 real*8             :: xb ,xe, yb, ye, smth, fp, fout
 real*8             :: B_scale, I_scale, R_scale, F_axis, factor, dfactor
 real*8             :: ellip_in,tria_up_in,tria_low_in,quad_up_in,quad_low_in,r0_in,z0_in,a0_in
@@ -88,6 +89,7 @@ read(5,'(5e16.9)') zmaxis,xdum3,ssibry,xdum4,xdum5
 write(*,'(A,2f10.5,A)') ' xdim,  zdim : ',xdim,zdim,' m'
 write(*,'(A,2f10.5,A)') ' rzero, zmid : ',rzero,zmid, ' m'
 write(*,'(A,f10.5,A)')  ' xip         : ',xip/1e6,' MA'
+write(*,'(A,f10.5,A)')  ' rmaxis      : ',rmaxis,' m'
 write(*,'(A,f10.5,A)')  ' zmaxis      : ',zmaxis,' m'
 write(*,'(A,f10.5,A)')  ' Bvac        : ',bcentr,' T'
 write(*,'(A,3f10.5,A)') ' psi (axis,bnd) :',ssimag,ssibry,ssibry-ssimag,' Wb'
@@ -104,6 +106,15 @@ read(5,'(5e16.9)') (dpr(i),i=1,n_psi)
 read(5,'(5e16.9)') ((psirz(i,j),i=1,nr),j=1,nz)
 read(5,'(5e16.9)') (q(i),i=1,n_psi)
 
+allocate(psi(n_psi))
+open(21,file='profiles_eqdsk')
+do i=1,n_psi
+  psi(i) = real(i-1)/real(n_psi-1)
+  write(21,'(6e14.6)') psi(i),f(i),p(i),df2(i),dpr(i),q(i)
+enddo
+close(21)
+
+
 write(*,*) '   reading limiter'
 
 read(5,*)  nbbs,limitr
@@ -111,6 +122,22 @@ allocate(rbnd(nbbs),zbnd(nbbs))
 read(5,'(5e16.9)') (rbnd(i),zbnd(i),i=1,nbbs)
 allocate(rlim(limitr),zlim(limitr))
 read(5,'(5e16.9)') (rlim(i),zlim(i),i=1,limitr)
+
+! write limiter
+open(21,file='limiter.dat')
+  do j=1,limitr
+    write(21,'(2e16.8)') rlim(j), zlim(j)
+  enddo
+close(21)
+
+! write boundary
+open(21,file='boundary.dat')
+  do j=1,nbbs
+    write(21,'(2e16.8)') rbnd(j), zbnd(j)
+  enddo
+close(21)
+
+
 
 ! ------------------- find and read the plasma minor radius
 iostatus = 0; str_id = 0;string_in = ''; 
@@ -174,16 +201,23 @@ if ((R_scale .ne. 1.d0) .or. (B_scale .ne. 1.d0) .or. (I_scale .ne. 1.d0)) then
   write(*,'(A)')               '********************************************************'
 endif
 
-allocate(xx(nr),yy(nz),psi(n_psi))
-do i=1,n_psi
-  psi(i) = real(i-1)/real(n_psi-1)
-enddo     
+allocate(xx(nr),yy(nz))
 do i=1,nr
   xx(i) = rgrid1 + xdim*real(i-1)/real(nr-1)
 enddo     
 do i=1,nz
   yy(i) = zmid + zdim*(real(i-1)/real(nz-1)-0.5)
 enddo     
+
+open(21,file='psiRZ_eqdsk')
+do i=1,nr
+  do j=1,nz
+    write(21,'(3e14.6)') xx(i),yy(j),psirz(i,j)
+  enddo
+  write(21,'(A)') ''
+enddo
+close(21)
+
 
 if (tokamak_name == 'ITER') then
 
@@ -407,16 +441,13 @@ allocate(df2_ext(n_ext),rho_ext(n_ext),T_ext(n_ext),psi_ext(n_ext),p_ext(n_ext))
 
 df2_ext(1:n_psi) = df2(1:n_psi)
 rho_ext(1:n_psi) = 1.d0
-T_ext(1:n_psi)   = p(1:n_psi)
 
 df2_ext(n_psi-1:n_ext) = df2_ext(n_psi)
 rho_ext(n_psi-1:n_ext) = rho_ext(n_psi)
-T_ext(n_psi-1:n_ext)   = T_ext(n_psi)
 
 psi_sep = 1.0d0     ! in normalised psi units
 sig_sep = 0.005     ! in normalised psi units
 rho_bnd = 0.01      ! in jorek units
-T_bnd   = 1.d-5     ! in jorek units
 
 psi_ext(1:n_psi) = psi(1:n_psi)
 do i=n_psi+1,n_ext
@@ -424,15 +455,29 @@ do i=n_psi+1,n_ext
 enddo
 
 zmu0 = 4.d-7 * PI
+! extend the pressure profile (ends at psin=1) towards the SOL
+! by considering a tanh decay of the following type:
+! p_ext(psi) = (p(n_psi)-p_bnd)*( 1 - tanh((psi-psi_ext(n_psi))/sig_ext) ) + p_bnd
+!
+! where sig_ext = (p_bnd - p(n_psi)) / (dpdpsi_sep)
+! with dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
+!
+! the equation above matches p(n_psi) at psi(n_psi) and it goes down to p_bnd with 
+! a slope sig_ext that matches dp/dpsi at psi(n_psi)
+
+p_bnd      =  p(n_psi) * 1.e-2 ! make p_bnd 100 times smaller than p_sep
+dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
+sig_ext    = (p_bnd - p(n_psi)) / dpdpsi_sep
+
+p_ext(      1:n_psi) = p(1:n_psi)
+p_ext(n_psi+1:n_ext) = (p(n_psi)-p_bnd)*( 1 - tanh((psi_ext(n_psi+1:n_ext)-psi_ext(n_psi))/sig_ext) ) + p_bnd
 
 do i=1,n_ext
   tanh1 = tanh((psi_ext(i) - psi_sep)/sig_sep)
   df2_ext(i) = df2_ext(i) * (0.5d0 - 0.5d0*tanh1)
   rho_ext(i) = (rho_ext(i) - rho_bnd) * (0.5d0 - 0.5d0*tanh1) + rho_bnd
-  T_ext(i)   = T_ext(i)   * (0.5d0 - 0.5d0*tanh1) * zmu0 +T_bnd 
-!   T_ext(i)   = T_ext(i) / rho_ext(i) * zmu0 + T_bnd 
-  p_ext(i)   = rho_ext(i) * T_ext(i)
 enddo
+T_ext(1:n_ext) = p_ext(1:n_ext)*zmu0 / rho_ext(1:n_ext)
 
 call lplot6(2,2,psi_ext,df2_ext,n_ext,'df2')
 call lplot6(3,2,psi_ext,p_ext,n_ext,'pressure')
@@ -467,6 +512,12 @@ do i=1,n_ext
   write(21,*) psi_ext(i),T_ext(i)
 enddo
 close(21)
+open(21,file='jorek_pressure')
+do i=1,n_ext
+  write(21,*) psi_ext(i),p_ext(i)
+enddo
+close(21)
+
 
 open(21,file='jorek_namelist')
 
@@ -541,7 +592,7 @@ write(21,*) ' Z_geo = ',z0
 if (tokamak_name=='JET') then
   write(21,*) ' F0    = ',-2.96*bcentr ! By convention, the vacuum toroidal field is given at 2.96m in JET eqdsk files. 					
 else
-  write(21,*) ' F0    = ',-r0*bcentr
+  write(21,*) ' F0    = ',-rzero*bcentr
 end if
 write(21,*) ' amin  = 1.d0 ! scale factor for plasma size only'
 write(21,*)

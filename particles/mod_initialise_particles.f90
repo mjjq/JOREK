@@ -562,7 +562,7 @@ n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param) result(rej)
   !> check if the particle is valid
   rej = .true.
   if(i_elm.le.0) return
-  if(weight.eq.0d0) return
+  if(weight.le.0d0) return
   if((st(1).lt.0.d0).or.(st(1).gt.1.d0)) return
   if((st(2).lt.0.d0).or.(st(2).gt.1.d0)) return
   !> check if the pdf is valid

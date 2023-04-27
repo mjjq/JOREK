@@ -90,6 +90,15 @@ def read_jorek_particle_restart_file(filename,filepath,separator):
   fhandler.close()
   return groups,sim_time
 
+# compute the amount of uninitialised particles w.r.t. the total number of particles
+def compute_uninitialised_particles(groups,deathflags,deathvalues):
+  for group_id,group in enumerate(groups):
+    for deathflag_id,deathflag in enumerate(deathflags):
+      values = group[deathflag]
+      n_dead_particles = len(values[values==deathvalues[deathflag_id]]) 
+      print("group id: ",group_id," number of particles with ",\
+      deathflag,"==",deathvalues[deathflag_id],1e2*float(n_dead_particles)/len(values),"%, ",n_dead_particles)
+
 # generate 1d histograms for a set of positions (physical or velocity space)
 # results are stored in a list having elements of the form: 
 # [histogram,histogram_edges]
@@ -97,21 +106,21 @@ def create_phase_space_1d_histograms(data_array,p_weights,bins=[]):
   from numpy import histogram
   hists = []
   for ids,data in enumerate(data_array):
-    histo,edges = histogram(data,bins=bins[ids],weights=p_weights)
+    histo,edges = histogram(data[p_weights>0.],bins=bins[ids],weights=p_weights[p_weights>0.])
     hists.append([histo,edges])
   return hists
 
 # generate 2d histograms for a set of positions (physical or velocity space)
 # results are stored in a list of the form 
 def create_phase_space_2d_histograms(data_array,p_weights,bins2d=[]):
-  from numpy import histogram2d
+  from numpy import histogram2d,amin,amax
   n_histograms = 0
   histos = []
   for id1,data1 in enumerate(data_array):
     local_histos = []
     for id2,data2 in enumerate(data_array[id1+1:]):
-      histo,xedges,yedges = histogram2d(data1,data2,\
-      bins=[bins2d[id1],bins2d[id1+id2+1]],weights=p_weights)
+      histo,xedges,yedges = histogram2d(data1[p_weights>0.],data2[p_weights>0.],\
+      bins=[bins2d[id1],bins2d[id1+id2+1]],weights=p_weights[p_weights>0.])
       local_histos.append([histo,xedges,yedges])
     n_histograms = n_histograms + len(local_histos)
     histos.append(local_histos)
@@ -161,7 +170,7 @@ fontsize=18,ncols=3,colormap='inferno'):
       axs[count].tick_params(axis='x',labelsize=fontsize)
       axs[count].tick_params(axis='y',labelsize=fontsize)
       if(aspectequal[count]):
-        axs[count].set_aspect('equal')
+        axs[count].set_aspect('equal',adjustable='datalim')
       fig.colorbar(im,ax=axs[count])
       count = count + 1
   return fig,axs
@@ -196,6 +205,8 @@ def read_analyse_plot_jorek_restart(filename,filepath,separator,bins1d=[100,100,
 bins2d=[100,100,100],n_cols=3,fontsize=18,colormap='inferno'):
   # read the jorek particle restart data
   p_groups,sim_time = read_jorek_particle_restart_file(filename,filepath,separator)
+  # 0d analysis
+  compute_uninitialised_particles(p_groups,['i_elm','weight'],[0,0.])
   # plot 1d histograms
   computes_1d_histograms_jorek_particles(p_groups,'x',bins=bins1d,\
   ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols,fontsize=fontsize)
@@ -219,10 +230,10 @@ def generate_argument_parser():
   parser.add_argument('--separator','-sep',type=str,action='store',required=False,\
   dest='separator',default='/',help='file separator, default: /')
   parser.add_argument('--bins1d','-pbins1d',nargs='*',action='store',required=False,\
-  default=[100,100,100],dest='bins1d',\
+  default=[1000,1000,1000],dest='bins1d',\
   help='number of or method for computing the bins for 1D histograms, default: 100')
   parser.add_argument('--bins2d','-pbins2d',nargs='*',action='store',required=False,\
-  default=[100,100,100],dest='bins2d',\
+  default=[1000,1000,1000],dest='bins2d',\
   help='number of or method for computing the bins for 2D histograms, default: 100')
   parser.add_argument('--n_cols_subplots','-ncsp',type=int,action='store',required=False,\
   dest='n_cols',default=3,help='number of columns for histogram subplots, default: 3')

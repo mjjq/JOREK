@@ -368,7 +368,7 @@ subroutine initialise_particles_in_phase_space(n_variables, particles, fields, r
   integer                                  :: n_real_samp_to_part_param,n_int_samp_to_part_param
   integer,dimension(:),allocatable         :: int_pdf_param,int_weight_param,int_gdf_param
   integer,dimension(:),allocatable         :: int_samp_to_part_param
-  real*8                                   :: one_over_sup_pdf,one_over_sup_gdf
+  real*8                                   :: weight,one_over_sup_pdf,one_over_sup_gdf
   real*8,dimension(2)                      :: st
   real*8,dimension(:),allocatable          :: variables,real_pdf_param,real_weight_param
   real*8,dimension(:),allocatable          :: real_gdf_param,real_samp_to_part_param
@@ -452,17 +452,17 @@ subroutine initialise_particles_in_phase_space(n_variables, particles, fields, r
     !$omp int_weight_param,n_real_gdf_param,n_int_gdf_param,real_gdf_param,int_gdf_param,&
     !$omp n_real_samp_to_part_param,n_int_samp_to_part_param,real_samp_to_part_param,&
     !$omp int_samp_to_part_param) &
-    !$omp private(ii,variables,thread_id,i_elm,st,ifail)
+    !$omp private(ii,variables,thread_id,i_elm,st,weight,ifail)
     thread_id = 1
     !$ thread_id = omp_get_thread_num()+1
     !$omp do schedule(dynamic,chunksize)
 #endif
     do ii=1,n_particles
-      i_elm = 0; st = -1.d0;
+      i_elm = 0; st = -1.d0; weight = 0d0;
       !> loop until the particle is not valid, it can slow down the code
       !> but before trying a manual load balacing has done in initialise_particles_H_mu_psi
       !> let's check how the openMP dynamic scheduling performs using different chunksize
-      do while(rejection_funct_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,&
+      do while(rejection_funct_gpdf(n_variables,variables(1:n_variables),st,time,i_elm,weight,&
         variables(n_variables+1),phase_bounds(:,1),phase_bounds(:,2),fields,pdf,gdf,&
         one_over_sup_pdf,one_over_sup_gdf,n_real_pdf_param,real_pdf_param,n_int_pdf_param,&
         int_pdf_param,n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param))
@@ -474,14 +474,15 @@ subroutine initialise_particles_in_phase_space(n_variables, particles, fields, r
         n_int_gdf_param,int_gdf_param)
         call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
         variables(1),variables(2),i_elm,st(1),st(2),ifail) 
+        weight = weight_f(n_variables,variables(1:n_variables),st,time,&
+                 i_elm,fields,phase_bounds(:,1),phase_bounds(:,2),n_real_weight_param,&
+                 real_weight_param,n_int_weight_param,int_weight_param)
       enddo
       !> store the values of accepted particles 
       particles(ii)%x      = variables(1:3)
       particles(ii)%st     = st
       particles(ii)%i_elm  = i_elm
-      particles(ii)%weight = weight_f(n_variables,variables(1:n_variables),st,time,&
-      i_elm,fields,phase_bounds(:,1),phase_bounds(:,2),n_real_weight_param,&
-      real_weight_param,n_int_weight_param,int_weight_param)
+      particles(ii)%weight = weight
       !> transform the remaining variables of the sampe in particle coordinates
       call sample_to_particle(particles(ii),n_variables,variables(1:n_variables),time,fields,&
       n_real_samp_to_part_param,real_samp_to_part_param,n_int_samp_to_part_param,&
@@ -517,6 +518,7 @@ end subroutine initialise_particles_in_phase_space
 !>   x:                (real8)(n_x) variables
 !>   st:               (real8)(2) jorek mesh local coordinates
 !>   i_elm:            (integer) jorek element number
+!>   weight:           (real8) particle weight
 !>   rand:             (real8) uniformly distributed random number [0,1]
 !>   fields:           (fields_base) jorek MHD fields
 !>   pdf:              (real_f) procedure returning the value of the
@@ -536,7 +538,7 @@ end subroutine initialise_particles_in_phase_space
 !>   int_gdf_param:    (integer)(n_int_pdf_param) gdf integer parameters
 !> outputs:
 !>   rej: (logical) if true the sample is rejected
-function rejection_funct_gpdf(n_x,x,st,time,i_elm,rand,&
+function rejection_funct_gpdf(n_x,x,st,time,i_elm,weight,rand,&
 x_min,x_max,fields,pdf,gdf,one_over_sup_pdf,one_over_sup_gdf,&
 n_real_pdf_param,real_pdf_param,n_int_pdf_param,int_pdf_param,&
 n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param) result(rej)
@@ -548,7 +550,7 @@ n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param) result(rej)
   integer,intent(in)               :: n_real_pdf_param, n_int_pdf_param
   integer,intent(in)               :: n_real_gdf_param, n_int_gdf_param
   integer,dimension(:),allocatable,intent(in) :: int_pdf_param,int_gdf_param
-  real*8,intent(in)                :: time,rand,one_over_sup_pdf,one_over_sup_gdf
+  real*8,intent(in)                :: weight,time,rand,one_over_sup_pdf,one_over_sup_gdf
   real*8,dimension(2)              :: st
   real*8,dimension(n_x),intent(in) :: x,x_min,x_max
   real*8,dimension(:),allocatable,intent(in) :: real_pdf_param,real_gdf_param
@@ -560,6 +562,7 @@ n_real_gdf_param,real_gdf_param,n_int_gdf_param,int_gdf_param) result(rej)
   !> check if the particle is valid
   rej = .true.
   if(i_elm.le.0) return
+  if(weight.eq.0d0) return
   if((st(1).lt.0.d0).or.(st(1).gt.1.d0)) return
   if((st(2).lt.0.d0).or.(st(2).gt.1.d0)) return
   !> check if the pdf is valid

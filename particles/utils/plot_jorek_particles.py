@@ -95,32 +95,32 @@ def compute_uninitialised_particles(groups,deathflags,deathvalues):
   for group_id,group in enumerate(groups):
     for deathflag_id,deathflag in enumerate(deathflags):
       values = group[deathflag]
-      n_dead_particles = len(values[values==deathvalues[deathflag_id]]) 
+      n_dead_particles = len(values[values<=deathvalues[deathflag_id]]) 
       print("group id: ",group_id," number of particles with ",\
-      deathflag,"==",deathvalues[deathflag_id],1e2*float(n_dead_particles)/len(values),"%, ",n_dead_particles)
+      deathflag,"<=",deathvalues[deathflag_id],1e2*float(n_dead_particles)/len(values),"%, ",n_dead_particles)
 
 # generate 1d histograms for a set of positions (physical or velocity space)
 # results are stored in a list having elements of the form: 
 # [histogram,histogram_edges]
-def create_phase_space_1d_histograms(data_array,p_weights,bins=[]):
+def create_phase_space_1d_histograms(data_array,p_weights,flags,deathvalue,bins=[]):
   from numpy import histogram
   hists = []
   for ids,data in enumerate(data_array):
-    histo,edges = histogram(data[p_weights>0.],bins=bins[ids],weights=p_weights[p_weights>0.])
+    histo,edges = histogram(data[flags>deathvalue],bins=bins[ids],weights=p_weights[flags>deathvalue])
     hists.append([histo,edges])
   return hists
 
 # generate 2d histograms for a set of positions (physical or velocity space)
 # results are stored in a list of the form 
-def create_phase_space_2d_histograms(data_array,p_weights,bins2d=[]):
+def create_phase_space_2d_histograms(data_array,p_weights,flags,deathvalue,bins2d=[]):
   from numpy import histogram2d,amin,amax
   n_histograms = 0
   histos = []
   for id1,data1 in enumerate(data_array):
     local_histos = []
     for id2,data2 in enumerate(data_array[id1+1:]):
-      histo,xedges,yedges = histogram2d(data1[p_weights>0.],data2[p_weights>0.],\
-      bins=[bins2d[id1],bins2d[id1+id2+1]],weights=p_weights[p_weights>0.])
+      histo,xedges,yedges = histogram2d(data1[flags>deathvalue],data2[flags>deathvalue],\
+      bins=[bins2d[id1],bins2d[id1+id2+1]],weights=p_weights[flags>deathvalue])
       local_histos.append([histo,xedges,yedges])
     n_histograms = n_histograms + len(local_histos)
     histos.append(local_histos)
@@ -176,46 +176,48 @@ fontsize=18,ncols=3,colormap='inferno'):
   return fig,axs
       
 # generate and plot 1d histograms from the jorek particle distribution
-def computes_1d_histograms_jorek_particles(groups,key,bins=[100,100,100],\
+def computes_1d_histograms_jorek_particles(groups,key,deathvalue,bins=[100,100,100],\
 ylabels=['','',''],n_cols=3,fontsize=18):
   from matplotlib.pyplot import show
   for group in groups: 
     # extract titles and x lables
     titles,xlabels = define_histogram_labels_titles(key,group['type'])
     # compute histograms physical space and plot it
-    hists = create_phase_space_1d_histograms(group[key],group['weight'],bins=bins)
+    hists = create_phase_space_1d_histograms(group[key],group['weight'],group['i_elm'],\
+    deathvalue,bins=bins)
     fig,axs = plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=fontsize,ncols=n_cols)
     show()
 
 # generate and plot 1d histograms from the jorek particle distribution
-def computes_2d_histograms_jorek_particles(groups,key,bins=[100,100,100],\
+def computes_2d_histograms_jorek_particles(groups,key,deathvalue=0,bins=[100,100,100],\
 n_cols=3,fontsize=18,colormap='inferno'):
   from matplotlib.pyplot import show
   for group in groups:
     # extract titles, xlabels, ylabels and plot aspect ratio
     titles,xlabels,ylabels,aspectratio = define_histogram_labels_titles_aspectratio_2d(key,group['type'])
     # compute histograms physical space and plot it
-    hists2d,n_histos = create_phase_space_2d_histograms(group[key],group['weight'],bins2d=bins)
+    hists2d,n_histos = create_phase_space_2d_histograms(group[key],group['weight'],group['i_elm'],\
+    deathvalue,bins2d=bins)
     fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
     fontsize=fontsize,ncols=n_cols,colormap=colormap)
     show()
   
 # main function
-def read_analyse_plot_jorek_restart(filename,filepath,separator,bins1d=[100,100,100],
+def read_analyse_plot_jorek_restart(filename,filepath,separator,deathvalue=0,bins1d=[100,100,100],
 bins2d=[100,100,100],n_cols=3,fontsize=18,colormap='inferno'):
   # read the jorek particle restart data
   p_groups,sim_time = read_jorek_particle_restart_file(filename,filepath,separator)
   # 0d analysis
   compute_uninitialised_particles(p_groups,['i_elm','weight'],[0,0.])
   # plot 1d histograms
-  computes_1d_histograms_jorek_particles(p_groups,'x',bins=bins1d,\
+  computes_1d_histograms_jorek_particles(p_groups,'x',deathvalue,bins=bins1d,\
   ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols,fontsize=fontsize)
-  computes_1d_histograms_jorek_particles(p_groups,'v',bins=bins1d,\
+  computes_1d_histograms_jorek_particles(p_groups,'v',deathvalue,bins=bins1d,\
   ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols,fontsize=fontsize)
   # plot 2d histograms
-  computes_2d_histograms_jorek_particles(p_groups,'x',bins=bins2d,\
+  computes_2d_histograms_jorek_particles(p_groups,'x',deathvalue,bins=bins2d,\
   n_cols=n_cols,fontsize=fontsize,colormap=colormap)
-  computes_2d_histograms_jorek_particles(p_groups,'v',bins=bins2d,\
+  computes_2d_histograms_jorek_particles(p_groups,'v',deathvalue,bins=bins2d,\
   n_cols=n_cols,fontsize=fontsize,colormap=colormap)
   
 # argument parser 
@@ -241,13 +243,16 @@ def generate_argument_parser():
   dest='fontsize',default=18,help='plot font size, default: 18')
   parser.add_argument('--colormap','-cmap',type=str,action='store',required=False,\
   dest='colormap',default='inferno',help='colormap of 2D histograms, default: inferno')
+  parser.add_argument('--deathvalue','-dval',type=int,action='store',required=False,\
+  dest='deathvalue',default=0,\
+  help='flag value below which a particle is set to inactive, default: 0') 
   return parser.parse_args()
 
 # Run main -------------------------------------------- #
 if __name__ == "__main__":
   args = generate_argument_parser()
   read_analyse_plot_jorek_restart(args.filename,args.filepath,args.separator,\
-  bins1d=args.bins1d,bins2d=args.bins2d,n_cols=args.n_cols,fontsize=args.fontsize,\
-  colormap=args.colormap)
+  deathvalue=args.deathvalue,bins1d=args.bins1d,bins2d=args.bins2d,\
+  n_cols=args.n_cols,fontsize=args.fontsize,colormap=args.colormap)
 
 # ----------------------------------------------------- #

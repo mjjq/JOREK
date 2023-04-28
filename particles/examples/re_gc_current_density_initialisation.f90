@@ -405,17 +405,21 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   !> Outputs:
   real*8 :: sup_pdf
   !> Variables
-  real*8 :: density_tot,density_in,density_out
-  real*8 :: pressure_tot,pressure_in,pressure_out
-  real*8 :: kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in
-  real*8 :: mom_par_out
+  integer :: ifail
+  real*8  :: density_tot,density_in,density_out
+  real*8  :: pressure_tot,pressure_in,pressure_out
+  real*8  :: kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in
+  real*8  :: mom_par_out
+  real*8,dimension(2)     :: zj_minmax
   real*8,dimension(n_var) :: varmin,varmax
-  real*8 :: max_pdf,min_pdf,sqrtpovermc2plus1_max,sqrtpovermc2plus1_min
-  real*8 :: cos2pitch_max,cos2pitch_min
+  real*8  :: max_pdf,min_pdf,sqrtpovermc2plus1_max,sqrtpovermc2plus1_min
+  real*8  :: cos2pitch_max,cos2pitch_min
   !> Evalutate the upper extremum of the pdf
   call Integrals_3D(int_param(1),fields%node_list,fields%element_list,&
   density_tot,density_in,density_out,pressure_tot,pressure_in,pressure_out,&
   kin_par_tot,kin_par_in,kin_par_out,mom_par_tot,mom_par_in,mom_par_out,varmin,varmax)
+  zj_minmax = [varmin(var_zj),varmax(var_zj)]
+  call MPI_Bcast(zj_minmax,2,MPI_REAL8,0,MPI_COMM_WORLD,ifail)
   !> compute the maximum and the minimum of the pdf
   sqrtpovermc2plus1_max = sqrt((x_max(4)**2)/((real_param(2)*SPEED_OF_LIGHT)**2)+1.d0);
   cos2pitch_max = cos(x_max(5))**2;
@@ -426,7 +430,7 @@ n_real_param,real_param,n_int_param,int_param) result(sup_pdf)
   max_pdf = max_pdf*(cos2pitch_min - cos2pitch_max)
   max_pdf =(-3.d0*real_param(3))/(max_pdf*PI*x_min(6)*EL_CHG*MU_ZERO*(real_param(2)**3)*&
            (SPEED_OF_LIGHT**4)*x_min(1));
-  min_pdf = max_pdf*varmin(var_zj); max_pdf = max_pdf*varmax(var_zj);
+  min_pdf = max_pdf*zj_minmax(1); max_pdf = max_pdf*zj_minmax(2);
   !> check which between min_pdf and max_pdf has the maximum absolute value
   if(abs(max_pdf).ge.abs(min_pdf)) then
     sup_pdf = max_pdf

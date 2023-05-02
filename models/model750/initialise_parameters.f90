@@ -21,7 +21,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 restart, regrid, write_ps, time_evol_theta,         &
                 time_evol_zeta, force_horizontal_Xline,             &
-                Mach1_openBC, thermalization,                       &
+                Mach1_openBC, thermalization, Mach1_fix_B,          &
                 eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       & 
                 tauIC_ARAZ_on,                                      &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
@@ -242,7 +242,7 @@ if (my_id .eq. 0) then
   endif
 
   ! --- Checking consistency of eta_ARAZ parameters
-  if (eta_ARAZ_on == .true.) then
+  if (eta_ARAZ_on .eqv. .true.) then
      if (eta_ARAZ_const .ne. 0) then
         write(*,*) 'One should not use both eta_ARAZ_on and eta_ARAZ_const simultaneously, to avoid double-counting. Please use eta_ARAZ_on = .t. with eta_ARAZ_const = 0.d0, or eta_ARAZ_on = .f. with eta_ARAZ_const .ne. 0'
         stop

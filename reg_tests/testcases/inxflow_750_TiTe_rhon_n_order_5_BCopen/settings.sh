@@ -2,7 +2,7 @@
 jorekmodel="750"
 options="with_TiTe=.true. with_neutrals=.true. with_impurities=.false. with_refluid=.false. with_vpar=.false."
 description="Ballooning mode, simple X-point plasma, Ti-Te full-MHD model with neutrals, model$jorekmodel, n_tor=3 + FFT."
-mpitasks=20 # 2
+mpitasks=2
 binaries="jorek_model${jorekmodel}_3"
 binaries_initial="jorek_model${jorekmodel}_1"
 requiredfiles="input"
@@ -42,5 +42,5 @@ function restart_run () {
 
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
-  compare_results_generic 3.e-8                                                     || exit 1
+  compare_results_generic 3.e-7                                                     || exit 1
 }

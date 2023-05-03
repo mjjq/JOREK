@@ -523,6 +523,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,REAL_FMT) 'D_perp_imp_sc_num     ', D_perp_imp_sc_num
   write(*,REAL_FMT) 'D_par_imp_sc_num      ', D_par_imp_sc_num
 
+  write(*,INTG_FMT) 'vms_type               ', vms_type
   write(*,REAL_FMT) 'vms_coeff_AR           ', vms_coeff_AR
   write(*,REAL_FMT) 'vms_coeff_AZ           ', vms_coeff_AZ
   write(*,REAL_FMT) 'vms_coeff_A3           ', vms_coeff_A3
@@ -534,7 +535,8 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,REAL_FMT) 'vms_coeff_Te           ', vms_coeff_Te
   write(*,REAL_FMT) 'vms_coeff_Ti           ', vms_coeff_Ti
   write(*,REAL_FMT) 'vms_coeff_rhon         ', vms_coeff_rhon
-  
+  write(*,REAL_FMT) 'vms_coeff_rhoimp       ', vms_coeff_rhoimp
+
   if(jorek_model == 004 ) then
     write(*,REAL_FMT) 'HW_coef               ', HW_coef(1:2)
   endif

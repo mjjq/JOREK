@@ -302,7 +302,8 @@ module phys_module
   real*8     :: vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3
   real*8     :: vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up
   real*8     :: vms_coeff_T, vms_coeff_Te, vms_coeff_Ti
-  real*8     :: vms_coeff_rho, vms_coeff_rhon
+  real*8     :: vms_coeff_rho, vms_coeff_rhon, vms_coeff_rhoimp
+  integer    :: vms_type
   
   !> @name Timestepping parameters
   real*8  :: tstep             		!< Size of the timesteps (\f$ \Delta t \f$)

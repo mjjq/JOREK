@@ -178,8 +178,8 @@ module mod_expression
     call add(exprs_all, 'V_neo       ', 'Neoclassical Velocity                                 ')
     call add(exprs_all, 'Vperp_e     ', 'Electron Perpendicular Velocity                       ')
     call add(exprs_all, 'Vperp_i     ', 'Ion Perpendicular Velocity                            ')
-    call add(exprs_all, 'V_ExB       ', 'Poloidal component of ExB Velocity                    ')
-    call add(exprs_all, 'V_D         ', 'ExB Drift Velocity along R                            ')
+    call add(exprs_all, 'V_ExB_pol   ', 'Poloidal component of ExB Velocity                    ')
+    call add(exprs_all, 'V_ExB_R     ', 'R component of ExB Velocity                           ')
     call add(exprs_all, 'Vstar_e     ', 'Electron Diamagnetic Velocity                         ')
     call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
@@ -1942,10 +1942,10 @@ module mod_expression
               case ( 'Vperp_i' )
                 res = Vperp_i / fact_time
                 
-              case ( 'V_ExB' )
+              case ( 'V_ExB_pol' )
                 res = V_ExB / fact_time
 
-              case ( 'V_D' )
+              case ( 'V_ExB_R' )
                 res = -R*u0_Z / fact_time 
 
               case ( 'Vstar_e' )

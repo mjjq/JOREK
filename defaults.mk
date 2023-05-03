@@ -166,6 +166,9 @@ endif
 ifeq (model712, $(MODEL))
   DEFINES  := $(DEFINES) -Dfullmhd
 endif
+ifeq (model750, $(MODEL))
+  DEFINES  := $(DEFINES) -Dfullmhd
+endif
 
 ifeq (.true., $(shell ./util/config.sh -p with_vpar))
   DEFINES  := $(DEFINES) -DWITH_Vpar
@@ -282,12 +285,20 @@ endif
 
 ifeq (1, $(USE_BICGSTAB))
   DEFINES  := $(DEFINES) -DUSE_BICGSTAB
+else
+  DEFINES := $(DEFINES) -DUSE_GMRES
 endif
 
 ifeq (1, $(USE_IMAS))
   LIBS     := $(LIBS) $(IMASLIB)
   INCLUDES := $(INCLUDES) $(IMASINCLUDE)
   DEFINES  := $(DEFINES) -DUSE_IMAS
+endif
+
+ifeq (1, $(USE_CATALYST))
+  LIBS     := $(LIBS) $(CATALYSTLIB)
+  INCLUDES := $(INCLUDES) -I$(CATALYSTINCLUDE)
+  DEFINES  := $(DEFINES) -DUSE_CATALYST
 endif
 
 

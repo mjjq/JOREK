@@ -287,6 +287,7 @@ subroutine preset_parameters
   D_perp_imp_sc_num= 0.d0
   D_par_imp_sc_num = 0.d0
  
+  use_vms = .false.
   vms_coeff_AR     = 0.d0
   vms_coeff_AZ     = 0.d0
   vms_coeff_A3     = 0.d0

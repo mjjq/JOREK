@@ -652,8 +652,11 @@ do mp = 1, n_plane
       UZ0    = eq_g(mp,var_UZ,ms,mt)
       Up0    = eq_g(mp,var_Up,ms,mt)
       rho0   = eq_g(mp,var_rho,ms,mt)
-      T0     = eq_g(mp,var_T,ms,mt)
-
+      if(with_TiTe)then
+        T0     = eq_g(mp,var_Ti,ms,mt) + eq_g(mp,var_Te,ms,mt)
+      else
+        T0     = eq_g(mp,var_T,ms,mt)
+      endif
       p0    = rho0 * T0
 
       speed(mp,ms,mt) = sqrt(abs((gamma*p0 + BB2)/dmax1(rho0, 1d-3) )) + sqrt(UR0*UR0 + UZ0*UZ0 + Up0*Up0)
@@ -2113,7 +2116,7 @@ do i=1,n_vertex_max
                                    - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp / BB2
             endif
 
-            call add_vms_to_rhs()
+            if (use_vms) call add_vms_to_rhs()
 
             ! --- Fill Up the RHS
             if (use_fft) then
@@ -4519,7 +4522,7 @@ do i=1,n_vertex_max
                                                      - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp_rhoimp__n / BB2
                   endif
 
-                  call add_vms_to_elm()
+                  if (use_sc) call add_vms_to_elm()
 
                   if (use_fft) then
                     index_kl =       n_var*n_degrees*(k-1) +       n_var*(l-1) + 1
@@ -5759,8 +5762,8 @@ CASE(11)
     vms_rhoimp__p(var_Up) = 0.0d0
     vms_rhoimp__k(var_Up) = rhoimp0 * v_p / R
 
-    vms_rhon__p(var_rhoimp)= - UgradVstar__p
-    vms_rhon__k(var_rhoimp)= - UgradVstar__k
+    vms_rhoimp__p(var_rhoimp)= - UgradVstar__p
+    vms_rhoimp__k(var_rhoimp)= - UgradVstar__k
   endif
 
 CASE(12)
@@ -6223,7 +6226,7 @@ CASE(11) ! only diagonal part
        Te_eff_Te     = (rhoe_eff_Te     * pe_eff - rhoe_eff * pe_eff_Te    ) / rhoe_eff**2
        Te_eff_rhoimp = (rhoe_eff_rhoimp * pe_eff - rhoe_eff * pe_eff_rhoimp) / rhoe_eff**2
 
-       ! Te equation
+       ! Ti equation
        res_jac__p(var_Ti, var_UR) =  UR * Ti0_R + (gamma - 1.0d0) * Ti_eff * divU_UR
   
        res_jac__p(var_Ti, var_UZ) =  UZ * Ti0_Z + (gamma - 1.0d0) * Ti_eff * divU_UZ
@@ -6771,7 +6774,6 @@ do jj =1, n_var
     Qjac_k (var_Te,jj)   =  Qjac_k (var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__k(:)  , res_jac__p(:, jj))
     Qjac_n (var_Te,jj)   =  Qjac_n (var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__p(:)  , res_jac__n(:, jj))
     Qjac_kn(var_Te,jj)   =  Qjac_kn(var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__k(:)  , res_jac__n(:, jj))
-
   else
     Qjac_p (var_T,jj)   =  Qjac_p (var_T,jj)  - vms_coeff_T  * tscale * dot_product(vms_T__p(:)  , res_jac__p(:, jj))
     Qjac_k (var_T,jj)   =  Qjac_k (var_T,jj)  - vms_coeff_T  * tscale * dot_product(vms_T__k(:)  , res_jac__p(:, jj))

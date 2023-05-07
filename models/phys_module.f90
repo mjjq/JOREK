@@ -299,6 +299,7 @@ module phys_module
   logical :: add_sources_in_sc    !< Whether to add effect of sources in shock-capturing stabilization or not
 
   !> @name VMS terms
+  logical    :: use_vms
   real*8     :: vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3
   real*8     :: vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up
   real*8     :: vms_coeff_T, vms_coeff_Te, vms_coeff_Ti

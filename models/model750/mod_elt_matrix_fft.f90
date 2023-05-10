@@ -5599,7 +5599,7 @@ CASE(11)
        res(var_T) = UgradT + (gamma-1.d0) * T_eff * divU
      endif
   endif
-  if(with_neutrals)    res(var_rho)    =  UgradRhon   + rhon0   * divU 
+  if(with_neutrals)    res(var_rho)    =  0.d0
   if(with_impurities)  res(var_rhoimp) =  UgradRhoimp + rhoimp0 * divU
 
   ! based on the diagonal part of adjoint/transpose(\mathcal{L})
@@ -5744,14 +5744,7 @@ CASE(11)
 
   ! equation rhon
   if(with_neutrals)then
-    vms_rhon__p(var_UR) =  rhon0 * v_R
-    vms_rhon__p(var_UZ) =  rhon0 * v_Z
-
-    vms_rhon__p(var_Up) = 0.0d0
-    vms_rhon__k(var_Up) = rhon0 * v_p / R
-
-    vms_rhon__p(var_rhon)= - UgradVstar__p
-    vms_rhon__k(var_rhon)= - UgradVstar__k
+    ! no advection
   endif
 
   ! equation rhoimp
@@ -5802,8 +5795,8 @@ CASE(12)
   endif
   if(with_impurities)then
     res(var_rho) = res(var_rho) - (source_bg + source_imp)                                 &
-                                - D_prof * (rho0_R / R + rho0_RR + rho0_ZZ + rho0_pp/R**2) &
-                                + D_prof_imp * (rhoimp0_R / R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2)
+                                + D_prof * (rhoimp0_R / R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2) &
+                                - D_prof_imp * (rhoimp0_R / R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2)
   endif
 
   if(with_TiTe)then
@@ -5867,8 +5860,9 @@ CASE(12)
                  + (gamma-1.d0) * E_ion_bg * D_prof * ( (rho0_R - rhoimp0_R) / R + (rho0_RR-rhoimp0_RR) + (rho0_ZZ - rhoimp0_ZZ) + (rho0_pp-rhoimp0_pp)/R**2 ) / rho_eff 
     endif
   endif
-  if(with_neutrals)   res(var_rho)    =   UgradRhon  + rhon0   * divU & 
-                                       - (Dn0R * (rhon0_R/R + rhon0_RR) + Dn0Z * rhon0_ZZ + Dn0p * rhon0_pp/R**2)
+  if(with_neutrals)   res(var_rho)    = - (Dn0R * (rhon0_R/R + rhon0_RR) + Dn0Z * rhon0_ZZ + Dn0p * rhon0_pp/R**2) &
+                                        + rho0_corr * rhon0_corr * Sion_T - rho0_corr * rho0_corr  * Srec_T &
+                                        - source_neutral_drift  
   if(with_impurities) res(var_rhoimp) =  UgradRhoimp + rhoimp0 * divU &
                                        - D_prof_imp * (rhoimp0_R/R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2)
   !
@@ -6307,15 +6301,7 @@ CASE(11) ! only diagonal part
 
   ! rhon equation 
   if(with_neutrals)then
-    res_jac__p(var_rhon, var_UR) =  UR * rhon0_R + rhon0 * divU_UR
-
-    res_jac__p(var_rhon, var_UZ) =  UZ * rhon0_Z + rhon0 * divU_UZ
-
-    res_jac__p(var_rhon, var_Up) =  Up * rhon0_p / R
-    res_jac__n(var_rhon, var_Up) =  rhon0 * divU_Up__n
-
-    res_jac__p(var_rhon, var_rhon) = UR0 * rhon_R + UZ0 * rhon_Z + rhon * divU
-    res_jac__n(var_rhon, var_rhon) = Up0 * rhon_p / R
+    ! no advection
   endif
 
   ! rhoimp equation
@@ -6723,6 +6709,36 @@ CASE(12)
     endif
   endif
 
+  ! rho equation
+  res_jac__p(var_rho, var_UR) =  UR * rho0_R +  rho0 * divU_UR
+
+  res_jac__p(var_rho, var_UZ) =  UZ * rho0_Z + rho0 * divU_UZ
+
+  res_jac__p(var_rho, var_Up) =  Up * rho0_p / R
+  res_jac__n(var_rho, var_Up) =  rho0 * divU_Up__n
+
+  res_jac__p(var_rho, var_rho) = UR0 * rho_R + UZ0 * rho_Z + rho * divU &
+                               - D_prof * (rho_R / R + rho_RR + rho_ZZ)
+  res_jac__n(var_rho, var_rho) = Up0 * rho_p / R
+  res_jac__nn(var_rho, var_rho) = - D_prof * rho_pp/R**2
+
+  if(with_neutrals)then
+    res_jac__p(var_rho, var_rho)  = res_jac__p(var_rho, var_rho) - rho * rhon0 * Sion_T + 2.d0 * rho * rho0_corr * Srec_T
+    res_jac__p(var_rho, var_rhon) =                              - rho0_corr* rhon * Sion_T
+  endif
+  if(with_impurities)then
+    res_jac__p(var_rho, var_rhoimp) = + D_prof * (rhoimp_R / R + rhoimp_RR + rhoimp_ZZ) &
+                                      - D_prof_imp * (rhoimp_R / R + rhoimp_RR + rhoimp_ZZ)
+
+    res_jac__nn(var_rho, var_rhoimp) = + D_prof * rhoimp_pp/R**2 - D_prof_imp * rhoimp_pp/R**2
+  endif
+
+  if(with_neutrals)then
+    res_jac__p(var_rhon, var_rho)   = + rho * rhon0 * Sion_T - 2.d0 * rho * rho0_corr * Srec_T
+
+    res_jac__p(var_rhon, var_rhon)  = - (Dn0R * (rhon_R/R + rhon_RR) + Dn0Z * rhon_ZZ) + rho0_corr * rhon * Sion_T
+    res_jac__nn(var_rhon, var_rhon) = - Dn0p * rhon_pp/R**2
+  endif
 
 CASE(-1)
 ! --- No VMS

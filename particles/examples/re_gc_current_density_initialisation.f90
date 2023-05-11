@@ -28,7 +28,7 @@ integer                          :: ii,n_variables,n_particles,n_groups,restart_
 integer                          :: fraction_of_modes,n_int_pdf_param,n_real_pdf_param
 integer                          :: ifail,n_int_weight_param,n_real_weight_param
 integer                          :: n_int_gdf_param,n_real_gdf_param,n_int_pdf_to_part_coord_param
-integer                          :: n_real_pdf_to_part_coord_param
+integer                          :: n_real_pdf_to_part_coord_param,gc_integrator_type
 integer,dimension(2)             :: diag_list
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
@@ -60,13 +60,17 @@ restart_basename           = 'jorek'          !< JOREK restart file basename
 append_diag                = .true.           !< if true, append diagnostics in the same file
 abort_at_last_mhd_restart  = .false.          !< abort when the last simulation restart is reached
 restart_id                 = 0                !< first JOREK restart file number
+gc_integrator_type         = 1                !< type of gc integration strategy to be used
+                                              !< default: Runge-Kutta 45 fixed time step
+                                              !< =1 Runge-Kutta 45 with feedback time step control
+                                              !< =2 Runge-Kutta 45 with feedforward time step control
 n_variables                = 6                !< phase space dimensionality
 n_gc_variables             = 4                !< number of variables use for integrating a gc particle 
 n_particles                = 32               !< number of particles per task
 fraction_of_modes          = 1                !< fraction of JOREK modes to be used for interpolation
 diag_list                  = [1,6]            !< total energy, canonical toroidal momentum
-gc_timesteps               = [1d-10]           !< initial gc timestep in SI units
-sim_time_interval          = 1d-3             !< total simulation time interval
+gc_timesteps               = [1d-10]          !< initial gc timestep in SI units
+sim_time_interval          = 1d-5             !< total simulation time interval
 diag_step                  = 1d-8             !< time step at which the diagnostic files are written
 write_step                 = 1d-4             !< time step at which the particle restart file is written
 mass                       = 5.48579909065d-4 !< electron mass in AMU
@@ -78,7 +82,7 @@ Ekinbound                  = [2d7-1d4,2d7+1d4] !< kinetic energy in eV
 Pitchbound                 = [PI-2.95d-1,PI]
 Chargebound                = -1.d0
 sup_pdf_safety_factor      = 1d0
-rk45_gc_tolerances         = [1d-2,1d-2,1d-2,1d3] !< RK45 tolerances for time step control
+rk45_gc_tolerances         = [1d-4,1d-4,1d-4,1d1] !< RK45 tolerances for time step control
                                                   !< 1: R, 2: Z, 3: phi, 4: ppar
 !> Initialisation ---------------------------------------------------------------------------
 write(*,*) "Simulate runaway electrons as gc: started!"
@@ -173,7 +177,7 @@ endif
 write(*,*) "... initialising guiding center in phase space: completed!"
 
 !> Test particle initialisation -------------------------------------------------------------
-call integrate_particles(n_gc_variables,gc_timesteps,rk45_gc_tolerances,events,sim)
+call integrate_particles(n_gc_variables,gc_integrator_type,gc_timesteps,rk45_gc_tolerances,events,sim)
 
 !> Write a particle restart file ------------------------------------------------------------
 call with(sim,write_restart_particles)
@@ -194,21 +198,25 @@ contains
 
 !> particle integrator
 !> inputs:
-!>   n_var:        (integer) number of variables of the Runge-Kutta integrator
-!>   time_steps:   (integer)(n_groups) initial time step per group
-!>   rk_tols:      (real8)(n_var) tolerances of the runge-kutta integrator
-!>   events:       (n_real8)(n_events)(n_events) events to execute at each target time
-!>   sim:          (particle_sim) jorek particle simulation structure
+!>   n_var:           (integer) number of variables of the Runge-Kutta integrator
+!>   integrator_type: (integer) type of integrator to be used:
+!>                    default: Runge-Kutta 45 fixed time step
+!>                    =1 Runge-Kutta 45 feedback time step control
+!>                    =2 Runge-Kutta 45 feed forward time step control based on MHD gradients
+!>   time_steps:      (integer)(n_groups) initial time step per group
+!>   rk_tols:         (real8)(n_var) tolerances of the runge-kutta integrator
+!>   events:          (n_real8)(n_events)(n_events) events to execute at each target time
+!>   sim:             (particle_sim) jorek particle simulation structure
 !> outputs:
-!>   events:       (n_real8)(n_events)(n_events) events to execute at each target time
-!>   sim:          (particle_sim) jorek particle simulation structure
-subroutine integrate_particles(n_var,time_steps,rk_tols,events,sim)
+!>   events:          (n_real8)(n_events)(n_events) events to execute at each target time
+!>   sim:             (particle_sim) jorek particle simulation structure
+subroutine integrate_particles(n_var,integrator_type,time_steps,rk_tols,events,sim)
 implicit none
 !> inputs-outputs:
 type(particle_sim),intent(inout)                   :: sim
 type(event),dimension(:),allocatable,intent(inout) :: events
 !> inputs:
-integer,intent(in)                            :: n_var
+integer,intent(in)                            :: n_var,integrator_type
 real*8,dimension(n_var),intent(in)            :: rk_tols
 real*8,dimension(size(sim%groups)),intent(in) :: time_steps 
 !> variables:
@@ -217,13 +225,105 @@ real*8 :: target_time,field_time
 do while (.not.sim%stop_now)
   target_time = next_event_at(sim,events);
   write(*,*) "Integrating target time: ",target_time
-  call push_guiding_center_loop(n_var,size(sim%groups),time_steps,target_time,rk_tols,sim)
+  if(integrator_type.eq.1) then
+    call push_guiding_center_loop_rk45_feedback(n_var,size(sim%groups),time_steps,target_time,rk_tols,sim)
+  elseif(integrator_type.eq.2) then
+    call push_guiding_center_loop_rk45_feedforward(n_var,size(sim%groups),time_steps,target_time,sim)
+  else
+    call push_guiding_center_loop_rk45_fix(n_var,size(sim%groups),time_steps,target_time,sim) 
+  endif
   call with(sim,events,at=sim%time);
   write(*,*) "Integration of the target time: ",target_time," completed!"
 enddo
 end subroutine integrate_particles   
 
-!> guiding center pushing loop
+
+!> guiding center loop using the fixed time step runge kutta
+!> inputs:
+!>   n_var:       (integer) number of variables of the Runge-Kutta integrator
+!>   n_groups:    (integer) number of particle groups
+!>   time_steps:  (integer)(n_groups) initial time step per group
+!>   target_time: (real8) time at which the particle integration is stopped
+!>   sim:         (particle_sim) jorek particle simulation structure
+!> outputs:
+!>   sim: (particle_sim) jorek particle simulation structure
+subroutine push_guiding_center_loop_rk45_fix(n_var,n_groups,time_steps,target_time,sim)
+use mod_gc_relativistic, only: runge_kutta_fixed_dt_gc_push_jorek
+implicit none
+!> inputs-outputs:
+type(particle_sim),intent(inout)      :: sim
+!> inputs:
+integer,intent(in)                    :: n_var,n_groups
+real*8,intent(in)                     :: target_time
+real*8,dimension(n_groups),intent(in) :: time_steps
+!> variables:
+integer :: ii,jj
+real*8  :: local_time,local_dt
+!> loop on particles
+do jj=1,n_groups
+  !$omp parallel do default(none) firstprivate(jj,target_time,time_steps) &
+  !$omp private(ii,local_time,local_dt) shared(sim)
+  do ii=1,size(sim%groups(jj)%particles)
+    select type (gc=>sim%groups(jj)%particles(ii))
+      type is (particle_gc_relativistic)
+      local_time = sim%time; local_dt = time_steps(jj)
+      do while(((target_time-local_time).gt.0d0).and.(gc%i_elm.gt.0))
+        call runge_kutta_fixed_dt_gc_push_jorek(&
+        sim%fields,local_time,local_dt,sim%groups(jj)%mass,gc)
+        local_time = local_time+local_dt
+        local_dt   = min(time_steps(jj),target_time-local_time)
+      enddo
+    end select
+  enddo
+  !$omp end parallel do
+enddo
+sim%time = target_time
+end subroutine  push_guiding_center_loop_rk45_fix
+
+!> guiding center pushing loop using the feedforward control Runge-Kutta
+!> inputs:
+!>   n_var:       (integer) number of variables of the Runge-Kutta integrator
+!>   n_groups:    (integer) number of particle groups
+!>   time_steps:  (integer)(n_groups) initial time step per group
+!>   target_time: (real8) time at which the particle integration is stopped
+!>   sim:         (particle_sim) jorek particle simulation structure
+!> outputs:
+!>   sim: (particle_sim) jorek particle simulation structure
+subroutine push_guiding_center_loop_rk45_feedforward(n_var,n_groups,&
+time_steps,target_time,sim)
+use mod_gc_relativistic, only: runge_kutta_adapt_dt_gc_push_jorek
+implicit none
+!> inputs-outputs:
+type(particle_sim),intent(inout)      :: sim
+!> inputs:
+integer,intent(in)                    :: n_var,n_groups
+real*8,intent(in)                     :: target_time
+real*8,dimension(n_groups),intent(in) :: time_steps
+!> variables:
+integer :: ii,jj
+real*8  :: local_time,local_dt
+!> loop on particles
+do jj=1,n_groups
+  !$omp parallel do default(none) firstprivate(jj,target_time,time_steps) &
+  !$omp private(local_time,local_dt,ii) shared(sim)
+  do ii=1,size(sim%groups(jj)%particles)
+    select type (gc => sim%groups(jj)%particles(ii))
+      type is (particle_gc_relativistic)
+        local_time = sim%time; local_dt = time_steps(jj);
+        do while(((target_time-local_time).gt.0d0).and.(gc%i_elm.gt.0))
+          call runge_kutta_adapt_dt_gc_push_jorek(sim%fields,local_time,local_dt,&
+          target_time,sim%groups(jj)%mass,gc)
+          local_time = local_time+local_dt
+         if(local_dt.le.0d0) local_dt = time_steps(jj)
+        enddo
+    end select
+  enddo
+  !$omp end parallel do
+enddo
+sim%time = target_time
+end subroutine push_guiding_center_loop_rk45_feedforward
+
+!> guiding center pushing loop using the feedback control Runge-Kutta
 !> inputs:
 !>   n_var:       (integer) number of variables of the Runge-Kutta integrator
 !>   n_groups:    (integer) number of particle groups
@@ -233,11 +333,12 @@ end subroutine integrate_particles
 !>   sim:         (particle_sim) jorek particle simulation structure
 !> outputs:
 !>   sim: (particle_sim) jorek particle simulation structure
-subroutine push_guiding_center_loop(n_var,n_groups,time_steps,target_time,rk_tols,sim)
+subroutine push_guiding_center_loop_rk45_feedback(n_var,n_groups,time_steps,\
+target_time,rk_tols,sim)
 use mod_gc_relativistic, only: runge_kutta_error_control_dt_gc_push_jorek
 implicit none
 !> inputs-outputs:
-type(particle_sim),intent(inout) :: sim
+type(particle_sim),intent(inout)      :: sim
 !> inputs:
 integer,intent(in)                    :: n_var,n_groups
 real*8,dimension(n_groups),intent(in) :: time_steps
@@ -266,7 +367,7 @@ do jj=1,n_groups
   !$omp end parallel do
 enddo
 sim%time = target_time
-end subroutine push_guiding_center_loop
+end subroutine push_guiding_center_loop_rk45_feedback
 
 !> method used for transforming the momentum space from spherical
 !> coordinates (p,pitch) and cartesian coordinates for the

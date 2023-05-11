@@ -164,9 +164,9 @@ fontsize=18,ncols=3,colormap='inferno'):
     for histo_id,histo in enumerate(histos):
       im = axs[count].pcolormesh(histo[1],histo[2],histo[0],\
       cmap=colormap,vmin=0.,vmax=amax(histo[0]),edgecolors='none',shading='flat')
-      axs[count].set_title(titles[histos_id+histo_id],fontsize=fontsize)
-      axs[count].set_xlabel(xlabels[histos_id+histo_id],fontsize=fontsize)
-      axs[count].set_ylabel(ylabels[histos_id+histo_id],fontsize=fontsize)
+      axs[count].set_title(titles[count],fontsize=fontsize)
+      axs[count].set_xlabel(xlabels[count],fontsize=fontsize)
+      axs[count].set_ylabel(ylabels[count],fontsize=fontsize)
       axs[count].tick_params(axis='x',labelsize=fontsize)
       axs[count].tick_params(axis='y',labelsize=fontsize)
       if(aspectequal[count]):

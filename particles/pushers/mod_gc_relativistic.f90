@@ -125,8 +125,9 @@ contains
     implicit none
     !> input/output variables
     type(particle_gc_relativistic), intent(inout) :: particle
-    real(kind=8), intent(inout) :: t, dt
+    real(kind=8), intent(inout) :: dt
     !> input variables
+    real(kind=8), intent(in)       :: t
     class(fields_base), intent(in) :: fields
     real(kind=8), intent(in)       :: t_stop,mass
     !> internal variables

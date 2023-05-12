@@ -27,7 +27,7 @@ def read_jorek_particle_diagnostics_file(filename,filepath,separator):
 
 # plot profiles for multiple groups
 def plot_time_profiles_multiple_groups(groups,xkeys,ykeys,titles,xlabels=[],ylabels=[],ncols=3,\
-fontsize=18,linewidth=3,ploterror=False):
+fontsize=18,linewidth=3,ploterror=False,addlegend=False):
   from numpy import ceil as npceil
   from numpy import abs as npabs
   from matplotlib.pyplot import subplots,show
@@ -57,18 +57,20 @@ fontsize=18,linewidth=3,ploterror=False):
       axs[xkeyid*nykeys+ykeyid].set_xlabel(xlabels[xkeyid],fontsize=fontsize)
       axs[xkeyid*nykeys+ykeyid].tick_params(axis='x',labelsize=fontsize)
       axs[xkeyid*nykeys+ykeyid].tick_params(axis='y',labelsize=fontsize)
-      axs[xkeyid*nykeys+ykeyid].legend(fontsize=fontsize)
+      if(addlegend):
+        axs[xkeyid*nykeys+ykeyid].legend(fontsize=fontsize)
       axs[xkeyid*nykeys+ykeyid].grid()
   show()
 
 # main function
 def read_analyse_plot_jorek_diagnostics(filename,filepath,separator,xkeys_prof,ykeys_prof,titles_prof,\
-xlabels_prof,ylabels_prof,ncols,fontsize,linewidth,ploterror):
+xlabels_prof,ylabels_prof,ncols,fontsize,linewidth,ploterror,addlegend):
   # read jorek particle diagnostics file
   p_groups,psi_axis,psi_bnd = read_jorek_particle_diagnostics_file(filename,filepath,separator)
   # ploty profiles for all groups
   plot_time_profiles_multiple_groups(p_groups,xkeys_prof,ykeys_prof,titles_prof,xlabels=xlabels_prof,\
-  ylabels=ylabels_prof,ncols=ncols,fontsize=fontsize,linewidth=linewidth,ploterror=ploterror)
+  ylabels=ylabels_prof,ncols=ncols,fontsize=fontsize,linewidth=linewidth,ploterror=ploterror,\
+  addlegend=addlegend)
 
 # argument parser
 def generate_argument_parser():
@@ -100,6 +102,8 @@ def generate_argument_parser():
   dest='linewidth',default=3,help='line width for subplot, default: 3')
   parser.add_argument('--ploerror','-plterr',type=bool,action='store',required=False,\
   dest='ploterror',default=True,help='plot profile error w.r.t. initial error, default: True')
+  parser.add_argument('--addlegend','-al',type=bool,action='store',required=False,\
+  dest='addlegend',default=False,help='add legend to plots, default: False')
   return parser.parse_args()
 
 # Run main -------------------------------------------------- #
@@ -107,7 +111,7 @@ if __name__ == "__main__":
   args = generate_argument_parser()
   read_analyse_plot_jorek_diagnostics(args.filename,args.filepath,args.separator,\
   args.xkeys_prof,args.ykeys_prof,args.titles_prof,args.xlabels_prof,args.ylabels_prof,\
-  args.ncols,args.fontsize,args.linewidth,args.ploterror)
+  args.ncols,args.fontsize,args.linewidth,args.ploterror,args.addlegend)
 # ----------------------------------------------------------- #
 
 

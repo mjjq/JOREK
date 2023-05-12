@@ -231,11 +231,11 @@ def generate_argument_parser():
   dest='filepath',default='.',help='path of the file to be read, default: .')
   parser.add_argument('--separator','-sep',type=str,action='store',required=False,\
   dest='separator',default='/',help='file separator, default: /')
-  parser.add_argument('--bins1d','-pbins1d',nargs='*',action='store',required=False,\
-  default=[1000,1000,1000],dest='bins1d',\
+  parser.add_argument('--bins1d','-pbins1d',type=int,nargs='*',action='store',\
+  required=False,default=[1000,1000,1000],dest='bins1d',\
   help='number of or method for computing the bins for 1D histograms, default: 100')
-  parser.add_argument('--bins2d','-pbins2d',nargs='*',action='store',required=False,\
-  default=[1000,1000,1000],dest='bins2d',\
+  parser.add_argument('--bins2d','-pbins2d',type=int,nargs='*',action='store',\
+  required=False,default=[1000,1000,1000],dest='bins2d',\
   help='number of or method for computing the bins for 2D histograms, default: 100')
   parser.add_argument('--n_cols_subplots','-ncsp',type=int,action='store',required=False,\
   dest='n_cols',default=3,help='number of columns for histogram subplots, default: 3')

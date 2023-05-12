@@ -83,16 +83,16 @@ def generate_argument_parser():
   dest='filepath',default='.',help='path to the particle diagnostic file, default: .')
   parser.add_argument('--separator','-sep',type=str,action='store',required=False,\
   dest='separator',default='/',help='file separator, default: /')
-  parser.add_argument('--xkeysprof','-xkp',nargs="*",action='store',required=False,\
+  parser.add_argument('--xkeysprof','-xkp',type=str,nargs="*",action='store',required=False,\
   dest='xkeys_prof',default=['t'],help='coordinate values to plot, default: [t]')
-  parser.add_argument('--ykeysprof','-ykp',nargs="*",action='store',required=False,\
+  parser.add_argument('--ykeysprof','-ykp',type=str,nargs="*",action='store',required=False,\
   dest='ykeys_prof',default=['e','p_phi'],help='profiles to plot, default: [e,p_phi]')
-  parser.add_argument('--titlesprof','-titp',nargs="*",action='store',required=False,\
+  parser.add_argument('--titlesprof','-titp',type=str,nargs="*",action='store',required=False,\
   dest='titles_prof',default=[['Particle total energy vs time','Particle torroidal canonical momentum vs time']],\
   help='plot titles, default: [[Particle total energy vs time, Particle torroidal canonical momentum vs time]]')
-  parser.add_argument('--xlabelsprof','-xlabp',nargs="*",action='store',required=False,\
+  parser.add_argument('--xlabelsprof','-xlabp',type=str,nargs="*",action='store',required=False,\
   dest='xlabels_prof',default=['time [s]'],help='x labels titles, default: [time [s]]')
-  parser.add_argument('--ylabelsprof','-ylabp',nargs="*",action='store',required=False,\
+  parser.add_argument('--ylabelsprof','-ylabp',type=str,nargs="*",action='store',required=False,\
   dest='ylabels_prof',default=['Etot','P\phi'],help='y labels titles, default: [Etot [eV],P\phi]')
   parser.add_argument('--ncols',type=int,action='store',required=False,\
   dest='ncols',default=3,help='number of columns for subplot, default: 3')

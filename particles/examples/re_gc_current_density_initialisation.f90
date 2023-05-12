@@ -87,7 +87,6 @@ rk45_gc_tolerances         = [1d-4,1d-4,1d-4,1d1] !< RK45 tolerances for time st
 !> Initialisation ---------------------------------------------------------------------------
 write(*,*) "Simulate runaway electrons as gc: started!"
 write(*,*) "... initialise simulation parameters"
-gc_timesteps = gc_timesteps/sqrt(MU_ZERO*central_density*1d20*central_mass*MASS_PROTON)
 !> initialise simulation events
 inquire(file=(trim(diag_filename)//trim(hdf5ext)),exist=file_exist)
 if(file_exist.and.(sim%my_id.eq.0)) call system("rm "//(trim(diag_filename)//trim(hdf5ext)))
@@ -359,7 +358,6 @@ do jj=1,n_groups
         call runge_kutta_error_control_dt_gc_push_jorek(sim%fields,rk_tols,&
         local_time,local_dt,target_time,sim%groups(jj)%mass,dt_try,gc)
         local_time = local_time + local_dt
-        local_dt = min(dt_try,target_time-local_time)
         if(local_dt.le.0d0) local_dt = time_steps(jj)
       enddo
     end select

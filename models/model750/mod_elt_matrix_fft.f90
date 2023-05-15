@@ -5292,7 +5292,7 @@ subroutine calculate_sc_quantities()
       R_Te = UgradTe + (gamma-1.d0) * pe0 / rhoe_eff * divU
       R_rhon   = 0.d0
 
-      d_p   = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te + Ti0 * R_rhon
+      d_p   = (Ti0 + Te0) * R_rho + (rho0 + rhon0) * R_Ti + rho0 * R_Te + Ti0 * R_rhon
     endif
 
     if(with_impurities)then
@@ -5335,7 +5335,7 @@ subroutine calculate_sc_quantities()
       R_T      = UgradT + (gamma-1.d0) * p0 / rho_eff * divU
       R_rhon   = 0.d0
 
-      d_p      = T0 * R_rho + rho_eff * R_T + T0 * R_rhon
+      d_p      = T0 * R_rho + (rho0+0.5d0*rhon0) * R_T + 0.5d0 * T0 * R_rhon
     endif
 
     if(with_impurities)then
@@ -5407,7 +5407,7 @@ subroutine calculate_sc_quantities()
               -  ksiion * rho0_corr * rhon0_corr * Sion_T       &
               -  rho0_corr * rhon0_corr * LradDrays_T           &
               -  rho0_corr * rho0_corr  * LradDcont_T
-        s_p   = T0 * src_rho + src_p + T0 * src_rhon
+        s_p   = T0 * src_rho + src_p + 0.5d0 * T0 * src_rhon
       endif
       if(with_impurities)then
         src_p =  src_p +  (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)    &

@@ -4763,7 +4763,7 @@ if ( with_TiTe ) then ! (with_TiTe)
          - BigR  * (Te0_x * u0_y  - Te0_y * u0_x)         &
          + F0    * Vpar0 * Te0_p / BigR**2
 
-    d_p = (Ti0+Te0)*R_rho + (r0+rn0)*R_Ti + r0*R_Te + Ti0*R_rhon &
+    d_p = (Ti0+Te0)*R_rho + (r0+rn0)*R_Ti + r0*R_Te + Ti0*R_rhon
   endif
 
   if( with_impurities ) then

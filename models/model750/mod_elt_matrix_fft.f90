@@ -5306,7 +5306,7 @@ subroutine calculate_sc_quantities()
       rhoe_eff = rho0_corr + alpha_e*rhoimp0 + rhoimp0*Te0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT
       R_Ti = UgradTi + (gamma-1.d0) * (pi0 + alpha_i*rhoimp0*Ti0) / rhoi_eff * divU
       R_Te = UgradTe + (gamma-1.d0) * (pe0 + alpha_e*rhoimp0*Te0) / rhoe_eff * divU
-      R_rhoimp = rhoimp0_corr * divU + UgradRhoimp
+      R_rhoimp = rhoimp0 * divU + UgradRhoimp
 
       d_p   = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te + (alpha_i*Ti0 + alpha_e*Te0 + (gamma-1.d0)*E_ion) * R_rhoimp
     endif

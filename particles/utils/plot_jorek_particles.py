@@ -126,6 +126,29 @@ def create_phase_space_2d_histograms(data_array,p_weights,flags,deathvalue,bins2
     histos.append(local_histos)
   return histos,n_histograms
 
+# generate 2d histograms for a set of positions slicing at a specific
+# interval of one data id
+def create_phase_space_2d_sliced_histograms(data_array,p_weights,slice_data_ids,\
+slice_data_intervals,flags,deathvalues,bins2d=[]):
+  from numpy import histogram2d,amin,amax
+  n_histograms = 0
+  histos = []
+  for slice_id,slice_data_id in enumerate(slice_data_ids):
+    slice_mask = [(data>deathvalues and data >= slice_data_intervals[slice_id,0] and \
+    data < slice_data_intervals[slice_id,1]) for data in data_array[slice_data_id]]
+    compute_ids = [ids for ids,data in enumerate(data_array)]
+    compute_ids.remove(slice_data_id)
+    for id1,data1_id in  enumerate(compute_ids):
+      local_histos = []
+      for data2_id in compute_ids[id1+1:]:
+        histo,xedges,yedges = histogram2d(data_array[data1_id,slice_mask],\
+        data_array[data2_id,slice_mask],bins=[bins2d[data1_id],bins2d[data2_id]],\
+        weights=p_weights[slice_mask])
+        local_histos.append([histo,xedges,yedges])
+      n_histograms = n_histograms + len(local_histos)
+      histos.append(local_histos)
+  return histos,n_histograms 
+
 # plot 1d histograms
 def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18,ncols=3):
   from numpy import ceil as npceil
@@ -139,9 +162,12 @@ def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18,ncols=3):
     axs = [axs]
   for histo_id,histo in enumerate(hists):
     axs[histo_id].stairs(histo[0],edges=histo[1],fill=True)
-    axs[histo_id].set_title(titles[histo_id],fontsize=fontsize)
-    axs[histo_id].set_xlabel(xlabels[histo_id],fontsize=fontsize)
-    axs[histo_id].set_ylabel(ylabels[histo_id],fontsize=fontsize)
+    if(len(titles)>histo_id):
+      axs[histo_id].set_title(titles[histo_id],fontsize=fontsize)
+    if(len(xlabels)>histo_id):
+      axs[histo_id].set_xlabel(xlabels[histo_id],fontsize=fontsize)
+    if(len(ylabels)>histo_id):
+      axs[histo_id].set_ylabel(ylabels[histo_id],fontsize=fontsize)
     axs[histo_id].tick_params(axis='x',labelsize=fontsize)
     axs[histo_id].tick_params(axis='y',labelsize=fontsize)
     axs[histo_id].grid()
@@ -151,7 +177,7 @@ def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18,ncols=3):
 def plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectequal,\
 fontsize=18,ncols=3,colormap='inferno'):
   from numpy import ceil as npceil
-  from numpy import amax
+  from numpy import amax,transpose
   from matplotlib.pyplot import subplots,pcolormesh
   count = 0
   nrows = max(int(npceil(n_histos/ncols)),1)
@@ -162,15 +188,19 @@ fontsize=18,ncols=3,colormap='inferno'):
     axs = [axs]
   for histos_id,histos in enumerate(hists2d):
     for histo_id,histo in enumerate(histos):
-      im = axs[count].pcolormesh(histo[1],histo[2],histo[0],\
+      im = axs[count].pcolormesh(histo[1],histo[2],transpose(histo[0]),\
       cmap=colormap,vmin=0.,vmax=amax(histo[0]),edgecolors='none',shading='flat')
-      axs[count].set_title(titles[count],fontsize=fontsize)
-      axs[count].set_xlabel(xlabels[count],fontsize=fontsize)
-      axs[count].set_ylabel(ylabels[count],fontsize=fontsize)
+      if(len(titles)>count):
+        axs[count].set_title(titles[count],fontsize=fontsize)
+      if(len(xlabels)>count):
+        axs[count].set_xlabel(xlabels[count],fontsize=fontsize)
+      if(len(ylabels)>count):
+        axs[count].set_ylabel(ylabels[count],fontsize=fontsize)
       axs[count].tick_params(axis='x',labelsize=fontsize)
       axs[count].tick_params(axis='y',labelsize=fontsize)
-      if(aspectequal[count]):
-        axs[count].set_aspect('equal',adjustable='datalim')
+      if(len(aspectequal)>count):
+        if(aspectequal[count]):
+          axs[count].set_aspect('equal',adjustable='datalim')
       fig.colorbar(im,ax=axs[count])
       count = count + 1
   return fig,axs
@@ -188,7 +218,7 @@ ylabels=['','',''],n_cols=3,fontsize=18):
     fig,axs = plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=fontsize,ncols=n_cols)
     show()
 
-# generate and plot 1d histograms from the jorek particle distribution
+# generate and plot 2d histograms from the jorek particle distribution
 def computes_2d_histograms_jorek_particles(groups,key,deathvalue=0,bins=[100,100,100],\
 n_cols=3,fontsize=18,colormap='inferno'):
   from matplotlib.pyplot import show
@@ -201,10 +231,35 @@ n_cols=3,fontsize=18,colormap='inferno'):
     fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
     fontsize=fontsize,ncols=n_cols,colormap=colormap)
     show()
-  
+
+# generate and plot 2d histogrames from jorek particle distribution
+# give a set of coordinate slices
+def computes_phase_space_2d_sliced_histograms(groups,key,slice_data_ids=[],\
+slice_data_intervals=[],deathvalue=0,bins=[100,100,100],\
+n_cols=3,fontsize=18,colormap='inferno'):
+  from numpy import array,reshape
+  from matplotlib.pyplot import show
+  slice_data_intervals = reshape(slice_data_intervals,(len(slice_data_ids),2))
+  for group in groups:
+    # extract titles, xlabels, ylabels and plot aspect ratio
+    if(slice_data_ids==[2,1,0]):
+      titles,xlabels,ylabels,aspectratio = define_histogram_labels_titles_aspectratio_2d(key,group['type']) 
+    else:
+      titles      = []
+      xlabels     = []
+      ylabels     = []
+      aspectratio = [True]
+    # compute histograms physical space slacing values and plot it
+    hists2d,n_histos = create_phase_space_2d_sliced_histograms(group[key],group['weight'],\
+    array(slice_data_ids),slice_data_intervals,group['i_elm'],deathvalue,bins2d=bins)
+    fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
+    fontsize=fontsize,ncols=n_cols,colormap=colormap)
+    show()
+
 # main function
 def read_analyse_plot_jorek_restart(filename,filepath,separator,deathvalue=0,bins1d=[100,100,100],
-bins2d=[100,100,100],n_cols=3,fontsize=18,colormap='inferno'):
+bins2d=[100,100,100],n_cols=3,fontsize=18,colormap='inferno',spatial_slice_ids=[],\
+spatial_slice_intervals=[],velocity_slice_ids=[],velocity_slice_intervals=[]):
   # read the jorek particle restart data
   p_groups,sim_time = read_jorek_particle_restart_file(filename,filepath,separator)
   # 0d analysis
@@ -219,7 +274,20 @@ bins2d=[100,100,100],n_cols=3,fontsize=18,colormap='inferno'):
   n_cols=n_cols,fontsize=fontsize,colormap=colormap)
   computes_2d_histograms_jorek_particles(p_groups,'v',deathvalue,bins=bins2d,\
   n_cols=n_cols,fontsize=fontsize,colormap=colormap)
-  
+  # plot 2d histograms with slicing
+  if(len(spatial_slice_ids)!=0 and len(spatial_slice_intervals)==2*len(spatial_slice_ids)):
+    computes_phase_space_2d_sliced_histograms(p_groups,'x',slice_data_ids=spatial_slice_ids,\
+    slice_data_intervals=spatial_slice_intervals,deathvalue=deathvalue,bins=bins2d,\
+    n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+  else:
+    print("spatial slice lists not compatible of empty: skip spatial slices histograms")
+  if(len(velocity_slice_ids)!=0 and len(velocity_slice_intervals)==2*len(velocity_slice_ids)):
+    computes_phase_space_2d_sliced_histograms(p_groups,'v',slice_data_ids=spatial_slice_ids,\
+    slice_data_intervals=spatial_slice_intervals,deathvalue=deathvalue,bins=bins2d,\
+    n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+  else:
+    print("velocity slice lists not compatible of empty: skip velocity slices histograms") 
+
 # argument parser 
 def generate_argument_parser():
   from argparse import ArgumentParser
@@ -246,6 +314,18 @@ def generate_argument_parser():
   parser.add_argument('--deathvalue','-dval',type=int,action='store',required=False,\
   dest='deathvalue',default=0,\
   help='flag value below which a particle is set to inactive, default: 0') 
+  parser.add_argument('--spatialsliceids','-slids',type=int,nargs='*',action='store',\
+  required=False,default=[],dest='spatial_slice_ids',\
+  help='indexes of the spatial data slices for computing sliced spatial 2D histograms, default: []')
+  parser.add_argument('--velocitysliceids','-vlids',type=int,nargs='*',action='store',\
+  required=False,default=[],dest='velocity_slice_ids',\
+  help='indexes of the velocity data slices for computing sliced velocity 2D histograms, default: []')
+  parser.add_argument('--spatialsliceintervals','-slint',type=float,nargs='*',action='store',\
+  required=False,default=[],dest='spatial_slice_intervals',\
+  help='intervals of the spatial data slices for computing sliced spatial 2D histograms, default: []')
+  parser.add_argument('--velocitysliceintervals','-vlint',type=float,nargs='*',action='store',\
+  required=False,default=[],dest='velocity_slice_intervals',\
+  help='intervals of the velocity data slices for computing sliced velocity 2D histograms, default: []')
   return parser.parse_args()
 
 # Run main -------------------------------------------- #
@@ -253,6 +333,10 @@ if __name__ == "__main__":
   args = generate_argument_parser()
   read_analyse_plot_jorek_restart(args.filename,args.filepath,args.separator,\
   deathvalue=args.deathvalue,bins1d=args.bins1d,bins2d=args.bins2d,\
-  n_cols=args.n_cols,fontsize=args.fontsize,colormap=args.colormap)
+  n_cols=args.n_cols,fontsize=args.fontsize,colormap=args.colormap,\
+  spatial_slice_ids=args.spatial_slice_ids,\
+  spatial_slice_intervals=args.spatial_slice_intervals,\
+  velocity_slice_ids=args.velocity_slice_ids,\
+  velocity_slice_intervals=args.velocity_slice_intervals)
 
 # ----------------------------------------------------- #

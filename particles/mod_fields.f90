@@ -256,7 +256,7 @@ subroutine calc_NjTj(fields, time, i_elm, st, phi, m_i_over_m_imp, ne, te, ni, t
   ! Interpolate needed quantities depending on case and evaluate temperature(s)
   if(with_TiTe) then
      if(with_impurities) then
-        call fields%interp_PRZ(time,i_elm,[var_rho,var_Te,var_rhon,var_Ti],4,st(1),st(2),phi,P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
+        call fields%interp_PRZ(time,i_elm,[var_rho,var_Te,var_rhoimp,var_Ti],4,st(1),st(2),phi,P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
         Ti = max(P(4)/(K_BOLTZ*MU_ZERO*central_density*1.d20), 1.d0)
      else
         call fields%interp_PRZ(time,i_elm,[var_rho,var_Te,var_Ti],3,st(1),st(2),phi,P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
@@ -266,7 +266,7 @@ subroutine calc_NjTj(fields, time, i_elm, st, phi, m_i_over_m_imp, ne, te, ni, t
 
   else
      if(with_impurities) then
-        call fields%interp_PRZ(time,i_elm,[var_rho,var_T,var_rhon],3,st(1),st(2),phi,P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
+        call fields%interp_PRZ(time,i_elm,[var_rho,var_T,var_rhoimp],3,st(1),st(2),phi,P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
      else
         call fields%interp_PRZ(time,i_elm,[var_rho,var_T],2,st(1),st(2),phi,P,P_s,P_t,P_phi,P_time,R,R_s,R_t,Z,Z_s,Z_t)
      end if

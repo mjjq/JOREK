@@ -6,7 +6,7 @@ program convert
 implicit none
 integer, parameter :: ind_max =    1000000
 integer, parameter :: n_nodes_max = 100000
-integer, parameter :: nodes_per_elem = 8
+integer, parameter :: nodes_per_elem = 6
 logical, parameter :: ascii = .true.
 real*8,  parameter :: PI = 3.141592653589793
 
@@ -68,6 +68,14 @@ do
     elemnode(i,6) = tmp_elemnode(6)
     elemnode(i,7) = tmp_elemnode(7)
     elemnode(i,8) = tmp_elemnode(3)
+  elseif ( nodes_per_elem == 6 ) then
+    tmp_elemnode(:) = elemnode(i,:)
+    elemnode(i,1) = tmp_elemnode(1)
+    elemnode(i,2) = tmp_elemnode(2)
+    elemnode(i,3) = tmp_elemnode(3)
+    elemnode(i,4) = tmp_elemnode(4)
+    elemnode(i,5) = tmp_elemnode(5)
+    elemnode(i,6) = tmp_elemnode(6)
   else
     write(*,*) 'STOP, not implemented'
     stop
@@ -137,8 +145,11 @@ if ( ascii ) then
   write(ifile,'(a)') 'CELL_TYPES'//str1
   if ( nodes_per_elem == 8 ) then
     write(ifile,'(4i10)') (12, i=1,n_elems)
-  else
+  elseif ( nodes_per_elem == 6 ) then
     write(ifile,'(4i10)') (13, i=1,n_elems)
+  else
+    write(*,*) 'not implemented'
+    stop
   end if
 else
   write(str1(1:12),'(i12)') n_elems
@@ -153,10 +164,11 @@ end if
 ! ================= Convert wall currents =================================
 call HDF5_open('jorek_restart.h5',file_id,error)
 call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
+
 allocate(wall_curr(n_wall_curr),S(n_wall_curr,n_wall_curr),wall_curr_real(n_wall_curr))
 call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
 call HDF5_close(file_id)
-n_wall_curr=20320
+
 !open(13, file='wall_curr.dat', action='read')
 !i=0
 !

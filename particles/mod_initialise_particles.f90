@@ -54,15 +54,16 @@ module mod_initialise_particles
       use mod_fields, only: fields_base
       implicit none
       !> inputs:
-      integer,intent(in)                                  :: n_x,i_elm
+      integer,intent(in)                                  :: n_x
       integer,intent(in)                                  :: n_real_param,n_int_param
       integer,dimension(:),allocatable,intent(in)         :: int_param
       real*8,intent(in)                                   :: time
       real*8,dimension(n_x),intent(in)                    :: x_min,x_max
-      real*8,dimension(2),intent(in)                      :: st
       real*8,dimension(:),allocatable,intent(in)          :: real_param
       class(fields_base),intent(in)                       :: fields
       !> inputs-outputs:
+      integer,intent(inout)                               :: i_elm
+      real*8,dimension(2),intent(inout)                   :: st
       real*8,dimension(n_x),intent(inout)                 :: x
     end subroutine real_arr_inout_s
     subroutine part_inout_s(p_inout,n_x,x,time,fields,n_real_param,&
@@ -472,8 +473,6 @@ subroutine initialise_particles_in_phase_space(n_variables, particles, fields, r
         call gdf_sampler(n_variables,variables(1:n_variables),st,time,i_elm,fields,&
         phase_bounds(:,1),phase_bounds(:,2),n_real_gdf_param,real_gdf_param,&
         n_int_gdf_param,int_gdf_param)
-        call find_RZ(fields%node_list,fields%element_list,variables(1),variables(2),&
-        variables(1),variables(2),i_elm,st(1),st(2),ifail) 
         weight = weight_f(n_variables,variables(1:n_variables),st,time,&
                  i_elm,fields,phase_bounds(:,1),phase_bounds(:,2),n_real_weight_param,&
                  real_weight_param,n_int_weight_param,int_weight_param)

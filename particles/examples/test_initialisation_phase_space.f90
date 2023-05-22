@@ -1040,21 +1040,24 @@ end function sup_gdf_uniform_phase
 !>   n_int_param:  (integer) N# of integer input parameters of the pdf
 !>   int_param:    (integer)(n_int_param) integer pdf parameters
 !> outputs:
+!>   i_elm:        (integer) updated jorek mesh element number
+!>   st:           (real8)(2) updated local mesh coordinates
 !>   x:            (real8)(nx) particle position to accept
 subroutine gdf_uniform_sampler(nx,x,st,time,i_elm,fields,&
 x_min,x_max,n_real_param,real_param,n_int_param,int_param)
   use mod_fields, only: fields_base
   implicit none
   !> Inputs:
-  integer,intent(in)                          :: nx,i_elm,n_real_param
+  integer,intent(in)                          :: nx,n_real_param
   integer,intent(in)                          :: n_int_param
   integer,dimension(:),allocatable,intent(in) :: int_param
   real*8,intent(in)                           :: time
   real*8,dimension(nx),intent(in)             :: x_min,x_max
-  real*8,dimension(2),intent(in)              :: st
   class(fields_base),intent(in)               :: fields
   real*8,dimension(:),allocatable,intent(in)  :: real_param
   !> Inputs-Outputs:
+  integer,intent(inout)                       :: i_elm
+  real*8,dimension(2),intent(inout)           :: st
   real*8,dimension(nx),intent(inout)          :: x
   !> Compute new particle position in phase space
   x(1) = sqrt(x_min(1)**2 + (x_max(1)**2 - x_min(1)**2)*x(1))
@@ -1062,6 +1065,9 @@ x_min,x_max,n_real_param,real_param,n_int_param,int_param)
   x(4) = (x_min(4)**3 + (x_max(4)**3-x_min(4)**3)*x(4))**(1d0/3d0)
   x(5) = acos(cos(x_min(5))-(cos(x_max(5))-cos(x_min(5)))*x(5))
   x(6:7) = x_min(6:7) + (x_max(6:7)-x_min(6:7))*x(6:7)
+  !> find particle RZ coordinates
+  call find_RZ(fields%node_list,fields%element_list,x(1),x(2),&
+  x(1),x(2),i_elm,st(1),st(2),ifail)
 end subroutine gdf_uniform_sampler
 
 !> Dummy particle weight equal to 1 

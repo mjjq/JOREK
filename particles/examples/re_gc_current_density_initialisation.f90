@@ -34,6 +34,7 @@ integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
 real*8                           :: diag_step,write_step,mass,charge,sim_time_interval
 real*8                           :: pdf_upper_bound,gdf_upper_bound,sup_pdf_safety_factor
+real*8                           :: starttime,endtime
 real*8,dimension(1)              :: gc_timesteps
 real*8,dimension(2)              :: Rbox,Zbox,Rbound,Zbound,phibound,Ekinbound
 real*8,dimension(2)              :: Pbound,Pitchbound,Chargebound
@@ -176,7 +177,10 @@ endif
 write(*,*) "... initialising guiding center in phase space: completed!"
 
 !> Test particle initialisation -------------------------------------------------------------
+starttime = MPI_Wtime()
 call integrate_particles(n_gc_variables,gc_integrator_type,gc_timesteps,rk45_gc_tolerances,events,sim)
+endtime = MPI_WTIME()
+write(*,*) "my_id: ",sim%my_id," total pusher wall time [s]: ",endtime-starttime
 
 !> Write a particle restart file ------------------------------------------------------------
 call with(sim,write_restart_particles)

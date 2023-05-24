@@ -54,7 +54,7 @@ time            = 0d0  !< simulation time
 tor_angle       = 0d0  !< toroidal angle
 Ekin_bnd        = [2d7-1d4,2d7+1d4] !< kinetic energy lower and upper bound
 pitch_bnd       = [PI-2.95d-1,PI]   !< PI-pitch angle lower and upper bound
-flux_axis_tol   = -2.5d-3 !< tolerance of the poloidal flux axis for mesh generation
+flux_axis_tol   = 0d0  !< tolerance of the poloidal flux axis for mesh generation
 fields_filename         = 'jorek_equilibrium'            !< jorek restart filename
 magnetic_field_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field input from jorek
 pdf_filename            = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
@@ -119,12 +119,7 @@ write(*,*) "Generate computational mesh ..."
 call generate_equidistant_RZ_mesh(sim%fields,n_R,n_Z,R_mesh,Z_mesh); allocate(flux_mesh(n_flux));
 call generate_equidistant_poloidal_flux_mesh(n_flux,ES%psi_axis,ES%psi_bnd,flux_axis_tol,flux_mesh)
 flux_surfaces%psi_values = flux_mesh(n_flux_loc*my_id+1:n_flux_loc*(my_id+1)); deallocate(flux_mesh); 
-call find_flux_surfaces(my_id,xpoint,xcase,sim%fields%node_list,sim%fields%element_list,flux_surfaces);
-!> check if a flux surface has not been found
-if(any(flux_surfaces%flux_surfaces(:)%n_pieces.eq.0)) then
-  write(*,*) 'one or more flux surfaces are not found: stop!'
-  call MPI_Abort(MPI_COMM_WORLD,errorcode,ierr)
-endif
+call define_flux_surfaces(my_id,xcase,xpoint,i_elm_axis,psi_axis,st_axis,sim%fields,flux_surfaces)
 write(*,*) "Generate computational mesh: completed!"
 
 !> generate magnetic field inputs
@@ -138,7 +133,7 @@ write(*,*) "Compute and write the magnetic field: completed!"
 
 !> generate distribution function inputs
 write(*,*) "Compute and write distribution function ..."
-call find_LFS_minor_radius_flux_surface(sim%fields,flux_surfaces,RZ_axis,flux_minor_radii_Zmag_LFS);
+call find_LFS_minor_radius_flux_surface(sim%fields,flux_surfaces,psi_axis,RZ_axis,flux_minor_radii_Zmag_LFS);
 call soft_current_density_uniform_phase_pdf(sim%fields,flux_surfaces,n_momenta,&
 n_pitch,charge,mass,momentum_mesh,cospitch_mesh,pdf)
 !> write distribution in soft input file the momentum mesh and the pdf are
@@ -444,19 +439,21 @@ end subroutine gather_2d_array_equal_chunks
 !> |   |
 !> 4 - 1
 !> inputs:
-!>   fields: (fields_base) JOREK MHD fields
-!>   fluxes: (type_surface_list)(n_psi) flux surface list
+!>   fields:  (fields_base) JOREK MHD fields
+!>   fluxes:  (type_surface_list)(n_psi) flux surface list
+!>   psiaxis: (real8) poloidal flux at the magnetic axis
 !>   RZ_axis: (real8)(2) major radius and vertical position magnetic axis
 !> outputs:
 !>   flux_minor_radii_Zmag_LFS: (real8)(n_psi) low-field-side flux surface
 !>                              minor radii at the magnetix axis vertical position
-subroutine find_LFS_minor_radius_flux_surface(fields,fluxes,RZ_axis,flux_minor_radii_Zmag_LFS)
+subroutine find_LFS_minor_radius_flux_surface(fields,fluxes,psiaxis,RZ_axis,flux_minor_radii_Zmag_LFS)
   use data_structure, only: type_surface_list
   use mod_interp,     only: interp_RZ
   implicit none
   !> inputs:
   class(fields_base),intent(in)      :: fields
   type(type_surface_list),intent(in) :: fluxes
+  real*8,intent(in)                  :: psiaxis
   real*8,dimension(2),intent(in)     :: RZ_axis
   !> outputs:
   real*8,dimension(fluxes%n_psi),intent(out) :: flux_minor_radii_Zmag_LFS
@@ -482,12 +479,16 @@ subroutine find_LFS_minor_radius_flux_surface(fields,fluxes,RZ_axis,flux_minor_r
         call interp_RZ(fields%node_list,fields%element_list,fluxes%flux_surfaces(ii)%elm(jj),&
         fluxes%flux_surfaces(ii)%s(kk,jj),fluxes%flux_surfaces(ii)%t(kk,jj),R_nodes(kk),Z_nodes(kk))
       enddo
+      !> check if we are in the magnetic axis
+      if(fluxes%psi_values(ii).eq.psiaxis) then
+        flux_minor_radii_Zmag_LFS(ii) = 0d0; ifail = 0; cycle;
+      endif
       !> check if the magnetic axis vertical position is within the element
       !> and the element at the LFS (R>=R_axis)
       if(any(RZ_axis(1).le.R_nodes)) cycle 
       !> it may require the addition of a tolerance in Z for taking into
       !> into account the cubic interpolation
-      if(all((Z_nodes.gt.RZ_axis(2))).or.all((Z_nodes.lt.RZ_axis(2)))) cycle
+      if(all((Z_nodes.gt.RZ_axis(2))).or.all((Z_nodes.lt.RZ_axis(2)))) cycle 
       !> find the nearest point at Z_axis on the flux surface
       ids_to_test = [jj,jj-1,jj+1]
       do kk=1,3
@@ -672,7 +673,8 @@ subroutine integrate_current_density_over_flux_surface(fields,flux_surface,int_z
   real*8  :: Zgi,dZgi_dr,dZgi_ds,dZgi_drs,dZgi_drr,dZgi_dss,dZgi_dt
   !> initialisation
   int_zj = 0d0;
-  !> loop on the number of elements and node elements
+  !> loop on the number of elements and node elements.
+  !> WARNING This is not consistent for the magnetic axis
   do jj=1,flux_surface%n_pieces
     do kk=1,4
       !> interpolate the local coordinates on the flux surface
@@ -881,6 +883,59 @@ subroutine sort(x,y,z,n_elem)
     enddo
   enddo
 end subroutine sort
+
+!> find the flux surfaces or define a flux surface with the 
+!> magnetic axis values in case of
+!> inputs:
+!>   my_id:             (integer) MPI rank id
+!>   x_case:            (integer) type of plasma configuration (limiter,x-point,etc)
+!>   x_point:           (logical) if true a x-point configuration is used
+!>   i_elm_axis:        (integer) element containing the magnetic axis
+!>   psi_axis:          (real8) poloidal flux at the magnetic axis
+!>   st_axis:           (real8) local element coordinated of the magnetic axis
+!>   fields:            (fields_base) JOREK particle MHD fields
+!>   flux_surface_list: (type_surface_list) list of flux surfaces including 
+!>                     the magnetic axis 
+!> outputs:
+!>   flux_surface_list: (type_surface_list) list of flux surfaces including 
+!>                     the magnetic axis 
+subroutine define_flux_surfaces(my_id,x_case,x_point,i_elm_axis,psi_axis,\
+st_axis,fields,flux_surface_list)
+  use data_structure, only: type_surface_list
+  use mod_fields,     only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in)  :: fields
+  integer,intent(in)             :: my_id,x_case,i_elm_axis
+  logical,intent(in)             :: x_point 
+  real*8,intent(in)              :: psi_axis
+  real*8,dimension(2),intent(in) :: st_axis
+  !> inputs-outputs:
+  type(type_surface_list),intent(inout) :: flux_surface_list
+  !> variables:
+  integer :: ii,errorcode,ierr
+  !> initialisation
+  errorcode = 999
+  !> find the flux surfaces
+  call find_flux_surfaces(my_id,x_point,x_case,fields%node_list,fields%element_list,flux_surfaces);
+  do ii=1,flux_surfaces%n_psi
+    if(flux_surface_list%flux_surfaces(ii)%n_pieces.eq.0) then
+      if(flux_surface_list%psi_values(ii).eq.psi_axis) then
+        flux_surface_list%flux_surfaces(ii)%n_pieces = 1
+        flux_surface_list%flux_surfaces(ii)%psi = psi_axis
+        flux_surface_list%flux_surfaces(ii)%n_parts = 1
+        flux_surface_list%flux_surfaces(ii)%parts_index(1) = 1 !< to be checked
+        flux_surface_list%flux_surfaces(ii)%elm(1) = i_elm_axis
+        flux_surface_list%flux_surfaces(ii)%s(:,1) = st_axis(1)
+        flux_surface_list%flux_surfaces(ii)%t(:,1) = st_axis(2)
+      else
+        write(*,*) 'one or more flux surfaces are not found psi: ',&
+        flux_surface_list%psi_values(ii),' psi axis: ',psi_axis,' stop!'
+        call MPI_Abort(MPI_COMM_WORLD,errorcode,ierr)
+      endif
+    endif
+  enddo 
+end subroutine define_flux_surfaces
 
 !> ------------------------------------------------------------------------------------------------------
 end program generate_input_files_for_SOFT

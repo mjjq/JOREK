@@ -98,14 +98,6 @@ write(*,*) '  Indices last  element: ', elemnode(n_elems,:)
 write(*,*)
 
 
-! ================= Convert wall currents =================================
-call HDF5_open('jorek_restart.h5',file_id,error)
-call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
-
-allocate(wall_curr(n_wall_curr),S(n_wall_curr,n_wall_curr),wall_curr_real(n_wall_curr))
-call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
-call HDF5_close(file_id)
-
 !#============== LOAD number of DOFS per element
 open(13, file='ndofel.dat', action='read')
 allocate(ndofel(n_elems))
@@ -153,6 +145,14 @@ do i =1,ind_last
   full_glob(ij_glob(i,1),ij_glob(i,2)) = ind_glob(i)
 end do
 
+! ================= Convert wall currents =================================
+call HDF5_open('jorek_restart.h5',file_id,error)
+call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
+
+allocate(wall_curr(n_wall_curr),S(n_wall_curr,n_wall_curr),wall_curr_real(n_wall_curr))
+call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
+call HDF5_close(file_id)
+
 ! Load S matrix
 open(13, file='S_mat.bin', status='old', form='unformatted', access='stream', action='read')
 read(13) S
@@ -162,11 +162,6 @@ do i = 1, n_wall_curr
 end do
 deallocate(wall_curr)
 
-open(13, file='wall_curr_test.dat')
-do i=1,n_wall_curr
-  write(13, '(ES16.8)') wall_curr_real(i)/4e-7/3.141592653589793
-end do
-close(13)
 allocate(wall_curr_el(n_elems),jx(n_elems),jy(n_elems),jz(n_elems), jphi(n_elems))
 wall_curr_el=0.d0
 
@@ -182,7 +177,7 @@ do i = 1, n_elems
   do j = 1,nodes_per_elem
     xyz_e(:) = xyznode(elemnode(i,j),:)/nodes_per_elem
   end do
-  phi = atan2(xyz_e(2),xyz_e(1))
+  phi = -atan2(xyz_e(2),xyz_e(1))
   jphi(i) = jx(i) * sin(phi) - jy(i) * cos(phi)
   wall_curr_el(i) = (jx(i)**2+jy(i)**2+jz(i)**2)**.5
 end do
@@ -210,6 +205,14 @@ close(ifile)
 call write_header('3dwall_comp_PSL.vtk',ifile, n_nodes, xyznode)
 call det_comp(elem_component, 98-33, 98-32, n_elems, istart, iend, nelems_comp)
 write(*,*) 'passive', istart, iend, nelems_comp, n_elems
+call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
+call write_header_scalar(ifile, nelems_comp)
+call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
+call write_scalar('I*e_phi', ifile, istart, iend, jphi)
+call write_vector('J', ifile, istart, iend, jx, jy, jz)
+close(ifile)
+call write_header('3dwall_comp_PF.vtk',ifile, n_nodes, xyznode)
+call det_comp(elem_component, 98-31, 98, n_elems, istart, iend, nelems_comp)
 call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
 call write_header_scalar(ifile, nelems_comp)
 call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)

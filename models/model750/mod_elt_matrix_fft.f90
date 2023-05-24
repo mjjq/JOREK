@@ -6396,8 +6396,8 @@ CASE(13)
       vms_T__p(var_Te) = vms_T__p(var_Te) + (alpha_imp*rhoimp0 + rhoimp0*T0*dalpha_imp_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT) * UgradVstar__p
       vms_T__k(var_Te) = vms_T__k(var_Te) + (alpha_imp*rhoimp0 + rhoimp0*T0*dalpha_imp_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT) * UgradVstar__k
 
-      vms_T__p(var_rhoimp)= (alpha_imp*Te0 + (gamma-1.d0)*E_ion) * UgradVstar__p
-      vms_T__k(var_rhoimp)= (alpha_imp*Te0 + (gamma-1.d0)*E_ion) * UgradVstar__k
+      vms_T__p(var_rhoimp)= (alpha_imp*T0 + (gamma-1.d0)*E_ion) * UgradVstar__p
+      vms_T__k(var_rhoimp)= (alpha_imp*T0 + (gamma-1.d0)*E_ion) * UgradVstar__k
     endif
   endif
 
@@ -6422,49 +6422,49 @@ CASE(-1)
 END SELECT
 
 ! for B-projection
-vms_Up__p(:) = BR0*vms_UR__p(:) + BZ0*vms_UZ__p(:) + Bp0*vms_Up__p(:)
-vms_Up__k(:) = BR0*vms_UR__k(:) + BZ0*vms_UZ__k(:) + Bp0*vms_Up__k(:)
+vms_Up__p = BR0*vms_UR__p + BZ0*vms_UZ__p + Bp0*vms_Up__p
+vms_Up__k = BR0*vms_UR__k + BZ0*vms_UZ__k + Bp0*vms_Up__k
 
-Qvec_p(var_AR) = Qvec_p(var_AR) - vms_coeff_AR * tscale * dot_product(res(:), vms_AR__p(:))
-Qvec_k(var_AR) = Qvec_k(var_AR) - vms_coeff_AR * tscale * dot_product(res(:), vms_AR__k(:))
+Qvec_p(var_AR) = Qvec_p(var_AR) - vms_coeff_AR * tscale * dot_product(res, vms_AR__p)
+Qvec_k(var_AR) = Qvec_k(var_AR) - vms_coeff_AR * tscale * dot_product(res, vms_AR__k)
 
-Qvec_p(var_AZ) = Qvec_p(var_AZ) - vms_coeff_AZ * tscale * dot_product(res(:), vms_AZ__p(:))
-Qvec_k(var_AZ) = Qvec_k(var_AZ) - vms_coeff_AZ * tscale * dot_product(res(:), vms_AZ__k(:))
+Qvec_p(var_AZ) = Qvec_p(var_AZ) - vms_coeff_AZ * tscale * dot_product(res, vms_AZ__p)
+Qvec_k(var_AZ) = Qvec_k(var_AZ) - vms_coeff_AZ * tscale * dot_product(res, vms_AZ__k)
 
-Qvec_p(var_A3) = Qvec_p(var_A3) - vms_coeff_A3 * tscale * dot_product(res(:), vms_A3__p(:))
-Qvec_k(var_A3) = Qvec_k(var_A3) - vms_coeff_A3 * tscale * dot_product(res(:), vms_A3__k(:))
+Qvec_p(var_A3) = Qvec_p(var_A3) - vms_coeff_A3 * tscale * dot_product(res, vms_A3__p)
+Qvec_k(var_A3) = Qvec_k(var_A3) - vms_coeff_A3 * tscale * dot_product(res, vms_A3__k)
 
-Qvec_p(var_UR) = Qvec_p(var_UR) - vms_coeff_UR * tscale * dot_product(res(:), vms_UR__p(:))
-Qvec_k(var_UR) = Qvec_k(var_UR) - vms_coeff_UR * tscale * dot_product(res(:), vms_UR__k(:))
+Qvec_p(var_UR) = Qvec_p(var_UR) - vms_coeff_UR * tscale * dot_product(res, vms_UR__p)
+Qvec_k(var_UR) = Qvec_k(var_UR) - vms_coeff_UR * tscale * dot_product(res, vms_UR__k)
 
-Qvec_p(var_UZ) = Qvec_p(var_UZ) - vms_coeff_UZ * tscale * dot_product(res(:), vms_UZ__p(:))
-Qvec_k(var_UZ) = Qvec_k(var_UZ) - vms_coeff_UZ * tscale * dot_product(res(:), vms_UZ__k(:))
+Qvec_p(var_UZ) = Qvec_p(var_UZ) - vms_coeff_UZ * tscale * dot_product(res, vms_UZ__p)
+Qvec_k(var_UZ) = Qvec_k(var_UZ) - vms_coeff_UZ * tscale * dot_product(res, vms_UZ__k)
 
-Qvec_p(var_Up) = Qvec_p(var_Up) - vms_coeff_Up * tscale * dot_product(res(:), vms_Up__p(:))
-Qvec_k(var_Up) = Qvec_k(var_Up) - vms_coeff_Up * tscale * dot_product(res(:), vms_Up__k(:))
+Qvec_p(var_Up) = Qvec_p(var_Up) - vms_coeff_Up * tscale * dot_product(res, vms_Up__p)
+Qvec_k(var_Up) = Qvec_k(var_Up) - vms_coeff_Up * tscale * dot_product(res, vms_Up__k)
 
-Qvec_p(var_rho)= Qvec_p(var_rho)- vms_coeff_rho* tscale * dot_product(res(:), vms_rho__p(:))
-Qvec_k(var_rho)= Qvec_k(var_rho)- vms_coeff_rho* tscale * dot_product(res(:), vms_rho__k(:))
+Qvec_p(var_rho)= Qvec_p(var_rho)- vms_coeff_rho* tscale * dot_product(res, vms_rho__p)
+Qvec_k(var_rho)= Qvec_k(var_rho)- vms_coeff_rho* tscale * dot_product(res, vms_rho__k)
 
 if(with_TiTe)then
-  Qvec_p(var_Ti)  = Qvec_p(var_Ti)  - vms_coeff_Ti  * tscale * dot_product(res(:), vms_Ti__p(:))
-  Qvec_k(var_Ti)  = Qvec_k(var_Ti)  - vms_coeff_Ti  * tscale * dot_product(res(:), vms_Ti__k(:))
+  Qvec_p(var_Ti)  = Qvec_p(var_Ti)  - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__p)
+  Qvec_k(var_Ti)  = Qvec_k(var_Ti)  - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__k)
 
-  Qvec_p(var_Te)  = Qvec_p(var_Te)  - vms_coeff_Te  * tscale * dot_product(res(:), vms_Te__p(:))
-  Qvec_k(var_Te)  = Qvec_k(var_Te)  - vms_coeff_Te  * tscale * dot_product(res(:), vms_Te__k(:))
+  Qvec_p(var_Te)  = Qvec_p(var_Te)  - vms_coeff_Te  * tscale * dot_product(res, vms_Te__p)
+  Qvec_k(var_Te)  = Qvec_k(var_Te)  - vms_coeff_Te  * tscale * dot_product(res, vms_Te__k)
 else
-  Qvec_p(var_T)  = Qvec_p(var_T)  - vms_coeff_T  * tscale * dot_product(res(:), vms_T__p(:))
-  Qvec_k(var_T)  = Qvec_k(var_T)  - vms_coeff_T  * tscale * dot_product(res(:), vms_T__k(:))
+  Qvec_p(var_T)  = Qvec_p(var_T)  - vms_coeff_T  * tscale * dot_product(res, vms_T__p)
+  Qvec_k(var_T)  = Qvec_k(var_T)  - vms_coeff_T  * tscale * dot_product(res, vms_T__k)
 endif
 
 if(with_neutrals)then
-  Qvec_p(var_rhon)= Qvec_p(var_rhon)- vms_coeff_rhon* tscale * dot_product(res(:), vms_rhon__p(:))
-  Qvec_k(var_rhon)= Qvec_k(var_rhon)- vms_coeff_rhon* tscale * dot_product(res(:), vms_rhon__k(:))
+  Qvec_p(var_rhon)= Qvec_p(var_rhon)- vms_coeff_rhon* tscale * dot_product(res, vms_rhon__p)
+  Qvec_k(var_rhon)= Qvec_k(var_rhon)- vms_coeff_rhon* tscale * dot_product(res, vms_rhon__k)
 endif
 
 if(with_impurities)then
-  Qvec_p(var_rhoimp)= Qvec_p(var_rhoimp)- vms_coeff_rhoimp* tscale * dot_product(res(:), vms_rhoimp__p(:))
-  Qvec_k(var_rhoimp)= Qvec_k(var_rhoimp)- vms_coeff_rhoimp* tscale * dot_product(res(:), vms_rhoimp__k(:))
+  Qvec_p(var_rhoimp)= Qvec_p(var_rhoimp)- vms_coeff_rhoimp* tscale * dot_product(res, vms_rhoimp__p)
+  Qvec_k(var_rhoimp)= Qvec_k(var_rhoimp)- vms_coeff_rhoimp* tscale * dot_product(res, vms_rhoimp__k)
 endif
 
 end subroutine add_vms_to_rhs
@@ -7866,6 +7866,9 @@ CASE(13)
     res_jac__p(var_Ti, var_Up) =  rho0 * Up * Ti0_p / R + Ti0 * Up * rho0_p / R
     res_jac__n(var_Ti, var_Up) =  gamma * p0 * divU_Up__n
 
+    res_jac__p(var_Ti, var_rho)=  rho * UgradTi + Ti0 * (UR0*rho_R + UZ0*rho_Z) + gamma * rho * Ti0 * divU  
+    res_jac__n(var_Ti, var_rho)=                  Ti0 * (UZ0*rho_p / R)
+
     res_jac__p(var_Ti, var_Ti) =   rho0 * (UR0 * Ti_R + UZ0 * Ti_Z)                      &
                                  + Ti * (UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R) &
                                  + gamma * rho0 * Ti * divU                              &
@@ -7882,6 +7885,9 @@ CASE(13)
 
     res_jac__p(var_Te, var_Up) =  rho0 * Up * Te0_p / R + Te0 * Up * rho0_p / R
     res_jac__n(var_Te, var_Up) =  gamma * p0 * divU_Up__n
+
+    res_jac__p(var_Te, var_rho)=  rho * UgradTe + Te0 * (UR0*rho_R + UZ0*rho_Z) + gamma * rho * Te0 * divU
+    res_jac__n(var_Te, var_rho)=                  Te0 * (UZ0*rho_p / R)
 
     res_jac__p(var_Te, var_Ti) =  gamma * rho0 * Ti * divU
 
@@ -8038,6 +8044,9 @@ CASE(13)
                               - (gamma-1.d0) * 0.5d0 * vv2_Up * particle_source(ms,mt)
 
     res_jac__n(var_T, var_Up) =  res_jac__n(var_T, var_Up) +  gamma * p0 * divU_Up__n
+
+    res_jac__p(var_T, var_rho)=  rho * UgradT + T0 * (UR0*rho_R + UZ0*rho_Z) + gamma * rho * T0 * divU
+    res_jac__n(var_T, var_rho)=                 T0 * (UZ0*rho_p / R)
 
     res_jac__p(var_T, var_T) =  res_jac__p(var_T, var_T) &
                              + rho0 * (UR0 * T_R + UZ0 * T_Z) + T * UgradRho + gamma * rho0 * T * divU &

@@ -6401,9 +6401,13 @@ CASE(13)
     endif
   endif
 
+- (Dn0R * (rhon0_R/R + rhon0_RR) + Dn0Z * rhon0_ZZ + Dn0p * rhon0_pp/R**2) &
+
   !! equation rhon
-  !if(with_neutrals)then
-  !endif
+  if(with_neutrals)then
+    vms_rhoimp__p (var_rhon)= - (Dn0R * (rhon_R/R + rhon_RR) + Dn0Z * rhon_ZZ)
+    vms_rhoimp__nn(var_rhon)= -  Dn0p * rhon_pp/R**2
+  endif
 
   !! equation rhoimp
   if(with_impurities)then
@@ -6413,8 +6417,8 @@ CASE(13)
 
     vms_rhoimp__k(var_Up) = rhoimp0 * v_p / R
 
-    vms_rhoimp__p(var_rho)= UgradVstar__p
-    vms_rhoimp__k(var_rho)= UgradVstar__k
+    vms_rhoimp__p(var_rhoimp)= UgradVstar__p
+    vms_rhoimp__k(var_rhoimp)= UgradVstar__k
   endif
 
 CASE(-1)

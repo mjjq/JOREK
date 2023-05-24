@@ -5733,7 +5733,6 @@ CASE(11)
 
     vms_Te__p(var_Ti)  =  v * UgradRho + rho0 * UgradVstar__p
     vms_Te__k(var_Ti)  =  rho0 * UgradVstar__k
-
   else
     vms_T__p(var_UR) =  gamma * rho0 * T0 * v_R + rho0 * v * T0_R + (gamma-1.0d0) * T0 * v * rho0_R
     
@@ -5747,7 +5746,6 @@ CASE(11)
     
     vms_T__p(var_T)  =  v * UgradRho + rho0 * UgradVstar__p
     vms_T__k(var_T)  =  rho0 * UgradVstar__k
-
   endif
 
   ! equation rhon
@@ -6117,8 +6115,8 @@ CASE(12)
 
     vms_rhoimp__k(var_Up) = rhoimp0 * v_p / R
 
-    vms_rhoimp__p(var_rho)= UgradVstar__p
-    vms_rhoimp__k(var_rho)= UgradVstar__k
+    vms_rhoimp__p(var_rhoimp)= UgradVstar__p
+    vms_rhoimp__k(var_rhoimp)= UgradVstar__k
   endif
 
 CASE(13)
@@ -6401,12 +6399,10 @@ CASE(13)
     endif
   endif
 
-- (Dn0R * (rhon0_R/R + rhon0_RR) + Dn0Z * rhon0_ZZ + Dn0p * rhon0_pp/R**2) &
-
   !! equation rhon
   if(with_neutrals)then
-    vms_rhoimp__p (var_rhon)= - (Dn0R * (rhon_R/R + rhon_RR) + Dn0Z * rhon_ZZ)
-    vms_rhoimp__nn(var_rhon)= -  Dn0p * rhon_pp/R**2
+    vms_rhon__p (var_rhon)= - Dn0R * (rhon_R/R + rhon_RR) + Dn0Z * rhon_ZZ
+    !vms_rhon__kk(var_rhon)= - Dn0p * rhon_pp/R**2 ! not availabble
   endif
 
   !! equation rhoimp

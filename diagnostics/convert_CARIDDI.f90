@@ -102,7 +102,7 @@ write(*,*)
 open(13, file='ndofel.dat', action='read')
 allocate(ndofel(n_elems))
 do i=1,n_elems
-  read(13,'(i)') ndofel(i)
+  read(13,'(i12)') ndofel(i)
 end do
 close(13)
 
@@ -318,7 +318,7 @@ contains
     
     character(len=12) :: str1
     if (ascii) then
-      write(ifile,'(a,i)')'CELL_DATA ',nelems
+      write(ifile,'(a,i12)')'CELL_DATA ',nelems
     else
       write(str1, '(i12)') nelems
       buffer = lf//'CELL_DATA '//str1//lf; write(ifile) trim(buffer)
@@ -352,11 +352,11 @@ contains
     integer :: i
     write(*,*) istart, iend
     if ( ascii ) then
-      write(ifile,'(a,i)')'VECTORS '//trim(name)//' float'
+      write(ifile,'(a,i12)')'VECTORS '//trim(name)//' float'
       write(ifile,'(4es28.9)') ((/v1(i),v2(i),v3(i)/), i=istart, iend)
     else
       buffer = lf//'VECTORS '//trim(name)//' float'//lf; write(ifile) trim(buffer)
-      write(ifile) ((real(v1(i),4),real(v2(i),4),real(v3(i),4)), i=istart, iend)
+      write(ifile) ( (/real(v1(i),4), real(v2(i),4), real(v3(i),4)/), i=istart, iend)
     endif
 
   end subroutine write_vector

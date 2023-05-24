@@ -5968,7 +5968,7 @@ CASE(12)
  
   if(with_TiTe)then
     vms_UR__p(var_rho)=  v * ( (Ti0+Te0) / R + T0 * rho0_R / rho0 + UgradUR ) + UR0 * UgradVstar__p + (Ti0+Te0) * v_R
-    vms_UR__p(var_rho)=                                                       + UR0 * UgradVstar__k
+    vms_UR__k(var_rho)=                                                       + UR0 * UgradVstar__k
 
     vms_UR__p(var_Ti) =  v * ( rho0 / R + rho0_R) + rho0 * v_R
 
@@ -5976,7 +5976,7 @@ CASE(12)
 
   else
     vms_UR__p(var_rho)=  v * ( T0 / R + T0 * rho0_R / rho0 + UgradUR ) + UR0 * UgradVstar__p + T0 * v_R
-    vms_UR__p(var_rho)=                                                + UR0 * UgradVstar__k
+    vms_UR__k(var_rho)=                                                + UR0 * UgradVstar__k
 
     vms_UR__p(var_T)  =  v * ( rho0 / R + rho0_R) + rho0 * v_R
   endif
@@ -5992,7 +5992,7 @@ CASE(12)
 
   if(with_TiTe)then
     vms_UZ__p(var_rho)=  v * ((Ti0+Te0) * rho0_Z / rho0 + UgradUZ ) + UZ0 * UgradVstar__p + (Ti0+Te0) * v_Z
-    vms_UZ__p(var_rho)=                                             + UZ0 * UgradVstar__k
+    vms_UZ__k(var_rho)=                                             + UZ0 * UgradVstar__k
 
     vms_UZ__p(var_Ti) =  v * rho0_Z +  rho0 * v_Z
 
@@ -6000,7 +6000,7 @@ CASE(12)
 
   else
     vms_UZ__p(var_rho)=  v * (T0 * rho0_Z / rho0 + UgradUZ ) + UZ0 * UgradVstar__p + T0 * v_Z
-    vms_UZ__p(var_rho)=                                      + UZ0 * UgradVstar__k
+    vms_UZ__k(var_rho)=                                      + UZ0 * UgradVstar__k
 
     vms_UZ__p(var_T)  =  v * rho0_Z +  rho0 * v_Z
   endif
@@ -6121,6 +6121,302 @@ CASE(12)
     vms_rhoimp__k(var_rho)= UgradVstar__k
   endif
 
+CASE(13)
+
+  ! viscosity terms in strong form
+  vsR = UR0 / R + UR0_RR + UR0_ZZ + UR0_pp / R**2 - 2.d0 * Up0_p / R - UR0 / R**2
+  vsZ = UZ0 / R + UZ0_RR + UZ0_ZZ + UZ0_pp / R**2 
+  vsp = Up0 / R + Up0_RR + Up0_ZZ + Up0_pp / R**2 + 2.d0 * UR0_p / R - Up0 / R**2
+
+  ! residual in A
+  res(var_AR) = -     (UZ0 * Bp0 - Up0 * BZ0) - tauIC_ARAZ * tau_IC * F0/rho0_corr/BB2 * BR0  * BgradPe &
+                +     eta_T * (JR0 - current_source_JR(ms,mt))
+  res(var_AZ) = -     (Up0 * BR0 - UR0 * Bp0) - tauIC_ARAZ * tau_IC * F0/rho0_corr/BB2 * BZ0  * BgradPe &
+                +     eta_T * (JZ0 - current_source_JZ(ms,mt))
+  res(var_A3) = - R * (UR0 * BZ0 - UZ0 * BR0) -              tau_IC * F0/rho0_corr/BB2 * R*Bp0* BgradPe &
+                + R * eta_T * (Jp0 - current_source_Jp(ms,mt))
+
+  ! residual in momentum
+  res(var_UR) = rho0 * UgradUR - rho0 * Up0 * Up0/R + rho0 * VdiaGradUR - rho0 * VdiaP0*Up0 / R &
+              + p0_R   - visco_T * vsR - PneoR + particle_source(ms,mt) * UR0
+  res(var_UZ) = rho0 * UgradUZ                      + rho0 * VdiaGradUZ                  & 
+              + p0_Z   - visco_T * vsZ - PneoZ + particle_source(ms,mt) * UZ0
+  res(var_Up) = rho0 * UgradUp + rho0 * UR0 * Up0/R + rho0 * VdiaGradUp + rho0 * VdiaP0*UR0 / R &
+              + p0_p/R - visco_T * vsp         + particle_source(ms,mt) * Up0
+  if(with_neutrals)then
+    res(var_UR) = res(var_UR) + rho0_corr * rhon0 * Sion_T * UR0 - rho0_corr * rho0_corr * Srec_T * UR0
+    res(var_UZ) = res(var_UZ) + rho0_corr * rhon0 * Sion_T * UZ0 - rho0_corr * rho0_corr * Srec_T * UZ0
+    res(var_Up) = res(var_Up) + rho0_corr * rhon0 * Sion_T * Up0 - rho0_corr * rho0_corr * Srec_T * Up0
+  endif
+  if(with_impurities)then
+    res(var_UR) = res(var_UR) + pf0_R   + (source_bg + source_imp) * UR0
+    res(var_UZ) = res(var_UZ) + pf0_Z   + (source_bg + source_imp) * UZ0
+    res(var_Up) = res(var_Up) + pf0_p/R + (source_bg + source_imp) * Up0
+  endif
+
+  ! residual in density equation
+  res(var_rho)=   UgradRho + rho0 * divU - D_prof * (rho0_R / R + rho0_RR + rho0_ZZ + rho0_pp/R**2)
+  if(with_neutrals)then
+    res(var_rho) = res(var_rho) - rho0_corr * rhon0 * Sion_T + rho0_corr * rho0_corr * Srec_T
+  endif
+  if(with_impurities)then
+    res(var_rho) = res(var_rho) - (source_bg + source_imp)                                 &
+                                + D_prof * (rhoimp0_R / R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2) &
+                                - D_prof_imp * (rhoimp0_R / R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2)
+  endif
+
+  ! residual in temperature equations
+  if(with_TiTe)then
+     res(var_Ti) = rho0 * UgradTi + Ti0 * UgradRho + gamma * pi0 * divU &
+                 - heat_source_i(ms,mt) - (gamma-1.d0) * Qvisc_T        &
+                 - ZKi_prof * (Ti0_R / R + Ti0_RR + Ti0_ZZ + Ti0_pp/R**2) - dTi_e
+     res(var_Te) = rho0 * UgradTe + Te0 * UgradRho + gamma * pe0 * divU  &
+                 - heat_source_e(ms,mt) - (gamma-1.d0) * Qvisc_T       &
+                 - ZKe_prof * (Te0_R / R + Te0_RR + Te0_ZZ + Te0_pp/R**2) - dTe_i &
+                 - (gamma-1.0d0) * eta_T_ohm * JJ2
+     if(with_neutrals)then
+       res(var_Ti) = res(var_Ti) - (gamma-1.d0) * 0.5d0 * vv2 * source_neutral
+       res(var_Te) = res(var_Te) -  power_dens_teleport_ju                 &
+                                 + ksiion * rho0_corr * rhon0_corr * Sion_T &
+                                 + rho0_corr * rhon0_corr * LradDrays_T     &
+                                 + rho0_corr * rho0_corr  * LradDcont_T     &
+                                 + rho0_corr * frad_bg
+     endif
+     if(with_impurities)then
+       res(var_Ti) = res(var_Ti) &
+                   + rhoimp0 * alpha_i * UgradTi + Ti0 * alpha_i * UgradRhoimp + gamma * pif0 * divU & 
+                   - (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)
+       res(var_Te) = res(var_Te) &
+                   + rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * UgradTe + Te0 * alpha_e * UgradRhoimp &
+                   + v * gamma * pef0 * divU &
+                   + (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad + (rho0 + alpha_e*rhoimp0) * frad_bg &
+                   + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * UgradTe + E_ion * UgradRhoimp + E_ion_bg * (UgradRho - UgradRhoimp)) &
+                   + (gamma-1.d0) * rhoimp0 * E_ion * divU + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU &
+                   + (gamma-1.d0) * E_ion * D_prof_imp * ( (rho0_R - rhoimp0_R) / R + (rho0_RR-rhoimp0_RR) + (rho0_ZZ - rhoimp0_ZZ) + (rho0_pp-rhoimp0_pp)/R**2 )     &
+                   + (gamma-1.d0) * E_ion_bg * D_prof * ((rho0_R-rhoimp0_R)/R + (rho0_RR-rhoimp0_RR) + (rho0_ZZ-rhoimp0_ZZ)+ (rho0_pp-rhoimp0_pp) / R**2 )
+     endif
+
+  else ! if with_TiTe
+    res(var_T) = rho0 * UgradT + T0 * UgradRho + gamma * p0 * divU & 
+               - heat_source(ms,mt) - (gamma-1.d0) * Qvisc_T - (gamma-1.d0) * eta_T_ohm * JJ2 &
+               - ZK_prof * (T0_R / R + T0_RR + T0_ZZ + T0_pp/R**2)                         &
+               - (gamma-1.d0) * 0.5d0 * vv2 * particle_source(ms,mt)
+    if(with_neutrals)then
+       res(var_T) = res(var_T) -  (gamma-1.d0) * 0.5d0 * vv2 * source_neutral &
+                               - power_dens_teleport_ju                      &
+                               + ksiion * rho0_corr * rhon0_corr * Sion_T    &
+                               + rho0_corr * rhon0_corr * LradDrays_T        &
+                               + rho0_corr * rho0_corr  * LradDcont_T        &
+                               + rho0_corr * frad_bg 
+    endif
+    if(with_impurities)then
+      res(var_T) = res(T) &
+                 + rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT + T0 * alpha_imp * UgradRhoimp   &
+                 + gamma * pf0 * divU - (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)         &
+                 -  heat_source(ms,mt) - (gamma-1.d0) * Qvisc_T - (gamma-1.0d0) * eta_T_ohm * JJ2     &
+                 - (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad - (rho0 + alpha_e*rhoimp0) * frad_bg     &
+                 - (gamma-1.d0) * (rhoimp0 * dE_ion_dT * UgradT + E_ion * UgradRhoimp + E_ion_bg * (UgradRho - UgradRhoimp)) &
+                 + (gamma-1.d0) * rhoimp0 * E_ion * divU                             &
+                 + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU                   &
+                 + (gamma-1.d0) * E_ion * D_prof_imp * (rhoimp0_R / R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2)           &
+                 + (gamma-1.d0) * E_ion_bg * D_prof * ( (rho0_R - rhoimp0_R) / R + (rho0_RR-rhoimp0_RR) + (rho0_ZZ - rhoimp0_ZZ) + (rho0_pp-rhoimp0_pp)/R**2 )
+
+    endif
+  endif
+
+  ! continuity equations in rhon and rhoimp
+  if(with_neutrals)   res(var_rho)    = - (Dn0R * (rhon0_R/R + rhon0_RR) + Dn0Z * rhon0_ZZ + Dn0p * rhon0_pp/R**2) &
+                                        + rho0_corr * rhon0_corr * Sion_T - rho0_corr * rho0_corr  * Srec_T &
+                                        - source_neutral_drift
+  if(with_impurities) res(var_rhoimp) =  UgradRhoimp + rhoimp0 * divU - source_imp &
+                                       - D_prof_imp * (rhoimp0_R/R + rhoimp0_RR + rhoimp0_ZZ + rhoimp0_pp/R**2)
+  
+  ! stabilization operators based on first derivatives only
+  ! equation A_R
+  vms_AR__p(var_AR) =   UZ0 * v_Z
+  vms_AR__k(var_AR) =   Up0 * v_p / R
+
+  vms_AR__p(var_AZ) = - UZ0 * v_R
+
+  vms_AR__p(var_A3) = - Up0 * v_R / R
+
+  ! equation A_Z
+  vms_AZ__p(var_AR) = - UR0 * v_Z
+
+  vms_AZ__p(var_AZ) =   UR0 * v_R
+  vms_AZ__k(var_AZ) =   Up0 * v_p / R
+
+  vms_AZ__p(var_A3) = - Up0 * v_Z / R
+
+  ! equation A_3
+  vms_A3__k(var_AR) = - UR0 * v_p
+
+  vms_A3__k(var_AZ) = - UZ0 * v_p
+
+  vms_A3__p(var_A3) = + UZ0 * v_Z + UR0 * v_R + UR0 * v / R
+  
+  ! equation UR
+  vms_UR__p(var_UR) =  rho0 * UgradVstar__p
+  vms_UR__k(var_UR) =  rho0 * UgradVstar__k
+  
+  vms_UR__p(var_Up) =  rho0 * (Up0 * v / R)
+ 
+  if(with_TiTe)then
+    vms_UR__p(var_rho)=  (Ti0+Te0) * (v/R + v_R) 
+
+    vms_UR__p(var_Ti) =  rho0 * (v/R + v_R)
+
+    vms_UR__p(var_Te) =  rho0 * (v/R + v_R)
+  else
+    vms_UR__p(var_rho)=  T0 * (v/R + v_R)
+
+    vms_UR__p(var_T)  =  rho0 * (v/R + v_R)
+  endif
+
+  ! equation UZ
+  vms_UZ__p(var_UZ) =  rho0 * UgradVstar__p
+  vms_UZ__k(var_UZ) =  rho0 * UgradVstar__k
+  
+  if(with_TiTe)then
+    vms_UZ__p(var_rho)=  (Ti0+Te0) * v_Z
+
+    vms_UZ__p(var_Ti) =  rho0 * v_Z
+
+    vms_UZ__p(var_Te) =  rho0 * v_Z
+  else
+    vms_UZ__p(var_rho)=  T0 * v_Z
+
+    vms_UZ__p(var_T)  =  rho0 * v_Z
+  endif
+
+  ! equation Up
+  vms_Up__p(var_UR) =  - rho0 * Up0 * v / R 
+  
+  vms_Up__p(var_Up) =  rho0 * UgradVstar__p
+  vms_Up__k(var_Up) =  rho0 * UgradVstar__k
+  
+  if(with_TiTe)then
+    vms_Up__k(var_rho)=  (Ti0+Te0) * v_p / R 
+
+    vms_Up__k(var_Ti) =  rho0 * v_p / R
+
+    vms_Up__k(var_Te) =  rho0 * v_p / R
+  else
+    vms_Up__k(var_rho)=  T0 * v_p / R
+  
+    vms_Up__k(var_T)  =  rho0 * v_p / R
+  endif
+
+  !! equation rho
+  vms_rho__p(var_UR) =  rho0 * v_R
+
+  vms_rho__p(var_UZ) =  rho0 * v_Z
+  
+  vms_rho__k(var_Up) = rho0 * v_p / R
+  
+  vms_rho__p(var_rho)=  UgradVstar__p
+  vms_rho__k(var_rho)=  UgradVstar__k
+  
+  if(with_TiTe)then
+    !! equation Ti
+    vms_Ti__p(var_UR) = gamma * pi0 * v_R
+    
+    vms_Ti__p(var_UZ) = gamma * pi0 * v_Z
+
+    vms_Ti__k(var_Up) = gamma * pi0 * v_p / R
+
+    vms_Ti__p(var_rho)= Ti0 * UgradVstar__p
+    vms_Ti__k(var_rho)= Ti0 * UgradVstar__k
+    
+    vms_Ti__p(var_Ti) = rho0 * UgradVstar__p
+    vms_Ti__k(var_Ti) = rho0 * UgradVstar__k
+
+    if(with_impurities)then
+    !! equation Ti
+      vms_Ti__p(var_UR) = vms_Ti__p(var_UR) + gamma * pif0 * v_R
+
+      vms_Ti__p(var_UZ) = vms_Ti__p(var_UZ) + gamma * pif0 * v_Z
+
+      vms_Ti__k(var_Up) = vms_Ti__k(var_Up) + gamma * pif0 * v_p / R
+
+      vms_Ti__p(var_Ti)  = vms_Ti__p(var_Ti) + (alpha_i*rhoimp0 + rhoimp0*Ti0*dalpha_i_dT) * UgradVstar__p
+      vms_Ti__k(var_Ti)  = vms_Ti__k(var_Ti) + (alpha_i*rhoimp0 + rhoimp0*Ti0*dalpha_i_dT) * UgradVstar__k
+
+      vms_Ti__p(var_rhoimp)= alpha_i * Ti0 * UgradVstar__p
+      vms_Ti__k(var_rhoimp)= alpha_i * Ti0 * UgradVstar__k
+    endif
+
+    !! equation Te
+    vms_Te__p(var_UR) = gamma * pe0 * v_R
+  
+    vms_Te__p(var_UZ) = gamma * pe0 * v_Z
+
+    vms_Te__k(var_Up) = gamma * pe0 * v_p / R
+
+    vms_Te__p(var_rho)=  Te0 * UgradVstar__p
+    vms_Te__k(var_rho)=  Te0 * UgradVstar__k
+  
+    vms_Te__p(var_Te) =  rho0 * UgradVstar__p
+    vms_Te__k(var_Te) =  rho0 * UgradVstar__k
+
+    if(with_impurities)then
+      vms_Te__p(var_UR) = vms_Te__p(var_UR) + gamma * (pef0 + (gamma-1.d0) * rhoimp0 * E_ion) * v_R
+                                            
+      vms_Te__p(var_UZ) = vms_Te__p(var_UZ) + gamma * (pef0 + (gamma-1.d0) * rhoimp0 * E_ion) * v_Z
+                                            
+      vms_Te__k(var_Up) = vms_Te__k(var_Up) + gamma * (pef0 + (gamma-1.d0) * rhoimp0 * E_ion) * v_p / R
+                                            
+      vms_Te__p(var_Te) = vms_Te__p(var_Te)  + (alpha_e*rhoimp0 + rhoimp0*Te0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT) * UgradVstar__p
+      vms_Te__k(var_Te) = vms_Te__k(var_Te)  + (alpha_e*rhoimp0 + rhoimp0*Te0*dalpha_e_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT) * UgradVstar__k
+
+      vms_Te__p(var_rhoimp)= (alpha_e*Te0 + (gamma-1.d0)*E_ion) * UgradVstar__p
+      vms_Te__k(var_rhoimp)= (alpha_e*Te0 + (gamma-1.d0)*E_ion) * UgradVstar__k
+    endif
+  else
+    !! equation T
+    vms_T__p(var_UR) = gamma * p0 * v_R
+  
+    vms_T__p(var_UZ) = gamma * p0 * v_Z
+
+    vms_T__k(var_Up) = gamma * p0 * v_p / R
+
+    vms_T__p(var_rho)=  T0 * UgradVstar__p
+    vms_T__k(var_rho)=  T0 * UgradVstar__k
+  
+    vms_T__p(var_T)  =  rho0 * UgradVstar__p
+    vms_T__k(var_T)  =  rho0 * UgradVstar__k
+
+    if(with_impurities)then
+      vms_T__p(var_UR) = vms_T__p(var_UR) + gamma * (pf0 + (gamma-1.d0) * rhoimp0 * E_ion) * v_R
+    
+      vms_T__p(var_UZ) = vms_T__p(var_UZ) + gamma * (pf0 + (gamma-1.d0) * rhoimp0 * E_ion) * v_Z
+    
+      vms_T__k(var_Up) = vms_T__k(var_Up) + gamma * (pf0 + (gamma-1.d0) * rhoimp0 * E_ion) * v_p / R
+    
+      vms_T__p(var_Te) = vms_T__p(var_Te) + (alpha_imp*rhoimp0 + rhoimp0*T0*dalpha_imp_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT) * UgradVstar__p
+      vms_T__k(var_Te) = vms_T__k(var_Te) + (alpha_imp*rhoimp0 + rhoimp0*T0*dalpha_imp_dT + (gamma-1.d0)*rhoimp0*dE_ion_dT) * UgradVstar__k
+
+      vms_T__p(var_rhoimp)= (alpha_imp*Te0 + (gamma-1.d0)*E_ion) * UgradVstar__p
+      vms_T__k(var_rhoimp)= (alpha_imp*Te0 + (gamma-1.d0)*E_ion) * UgradVstar__k
+    endif
+  endif
+
+  !! equation rhon
+  !if(with_neutrals)then
+  !endif
+
+  !! equation rhoimp
+  if(with_impurities)then
+    vms_rhoimp__p(var_UR) = rhoimp0 * v_R
+
+    vms_rhoimp__p(var_UZ) = rhoimp0 * v_Z
+
+    vms_rhoimp__k(var_Up) = rhoimp0 * v_p / R
+
+    vms_rhoimp__p(var_rho)= UgradVstar__p
+    vms_rhoimp__k(var_rho)= UgradVstar__k
+  endif
+
 CASE(-1)
 ! --- No VMS
 END SELECT
@@ -6128,31 +6424,6 @@ END SELECT
 ! for B-projection
 vms_Up__p(:) = BR0*vms_UR__p(:) + BZ0*vms_UZ__p(:) + Bp0*vms_Up__p(:)
 vms_Up__k(:) = BR0*vms_UR__k(:) + BZ0*vms_UZ__k(:) + Bp0*vms_Up__k(:)
-
-! update time derivatives
-Pvec_prev  (var_AR) =  Pvec_prev  (var_AR) - vms_coeff_AR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AR__p(1:n_var))
-Pvec_prev_k(var_AR) =  Pvec_prev_k(var_AR) - vms_coeff_AR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AR__k(1:n_var))
-
-Pvec_prev  (var_AZ) =  Pvec_prev  (var_AZ) - vms_coeff_AZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AZ__p(1:n_var))
-Pvec_prev_k(var_AZ) =  Pvec_prev_k(var_AZ) - vms_coeff_AZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_AZ__k(1:n_var))
-
-Pvec_prev  (var_A3) =  Pvec_prev  (var_A3) - vms_coeff_A3 * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_A3__p(1:n_var))
-Pvec_prev_k(var_A3) =  Pvec_prev_k(var_A3) - vms_coeff_A3 * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_A3__k(1:n_var))
-
-Pvec_prev  (var_UR) =  Pvec_prev  (var_UR) - vms_coeff_UR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__p(1:n_var))
-Pvec_prev_k(var_UR) =  Pvec_prev_k(var_UR) - vms_coeff_UR * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__k(1:n_var))
-
-Pvec_prev  (var_UZ) =  Pvec_prev  (var_UZ) - vms_coeff_UZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UZ__p(1:n_var))
-Pvec_prev_k(var_UZ) =  Pvec_prev_k(var_UZ) - vms_coeff_UZ * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_UR__k(1:n_var))
-
-Pvec_prev  (var_Up) =  Pvec_prev  (var_Up) - vms_coeff_Up * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_Up__p(1:n_var))
-Pvec_prev_k(var_Up) =  Pvec_prev_k(var_Up) - vms_coeff_Up * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_Up__k(1:n_var))
-
-Pvec_prev  (var_rho)=  Pvec_prev  (var_rho)- vms_coeff_rho* tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_rho__p(1:n_var))
-Pvec_prev_k(var_rho)=  Pvec_prev_k(var_rho)- vms_coeff_rho* tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_rho__k(1:n_var))
-
-Pvec_prev  (var_T)  =  Pvec_prev  (var_T)  - vms_coeff_T  * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_T__p(1:n_var))
-Pvec_prev_k(var_T)  =  Pvec_prev_k(var_T)  - vms_coeff_T  * tscale * dot_product(delta_g(mp,1:n_var,ms,mt), vms_T__k(1:n_var))
 
 Qvec_p(var_AR) = Qvec_p(var_AR) - vms_coeff_AR * tscale * dot_product(res(:), vms_AR__p(:))
 Qvec_k(var_AR) = Qvec_k(var_AR) - vms_coeff_AR * tscale * dot_product(res(:), vms_AR__k(:))
@@ -6679,22 +6950,22 @@ CASE(12)
   endif
 
   if ( with_impurities ) then
-    res_jac__p (var_UR,var_UR ) =  res_jac__p (var_UR,var_UR ) + (source_bg + source_imp) * UR
+    res_jac__p (var_UR,var_UR ) =  res_jac__p (var_UR,var_UR ) + (source_bg + source_imp) * UR  / rho0_corr
     if(with_TiTe) then
       res_jac__p (var_UR, var_Ti)     =  res_jac__p(var_UR, var_Ti) &
-                                       +  rhoimp0_R * alpha_i * Ti + rhoimp0 * alpha_i * Ti_R
+                                       + ( rhoimp0_R * alpha_i * Ti + rhoimp0 * alpha_i * Ti_R ) / rho0_corr
       ! approximation
       res_jac__p (var_UR, var_Te)     =  res_jac__p(var_UR, var_Te) &
-                                       + rhoimp0_R * alpha_e * Te + rhoimp0 * alpha_e * Te_R + rhoimp0 * dalpha_e_dT * Te0 * Te_R
+                                       + ( rhoimp0_R * alpha_e * Te + rhoimp0 * alpha_e * Te_R + rhoimp0 * dalpha_e_dT * Te0 * Te_R ) / rho0_corr
       res_jac__p (var_UR, var_rhoimp) =  res_jac__p(var_UR, var_rhoimp) &
-                                       + rhoimp_R * alpha_i * Ti0 + rhoimp * alpha_i * Ti0_R &
-                                       + rhoimp_R * alpha_e * Te0 + rhoimp * alpha_e * Te0_R + rhoimp * dalpha_e_dT * Te0 * Te0_R
+                                       + ( rhoimp_R * alpha_i * Ti0 + rhoimp * alpha_i * Ti0_R &
+                                       +   rhoimp_R * alpha_e * Te0 + rhoimp * alpha_e * Te0_R + rhoimp * dalpha_e_dT * Te0 * Te0_R ) / rho0_corr
 
     else
       res_jac__p (var_UR, var_T)      =  res_jac__p(var_UR, var_T)      & 
-                                       + rhoimp0_R * alpha_imp * T + rhoimp0 * alpha_imp * T_R + rhoimp0 * dalpha_imp_dT * T0 * T_R
+                                       + ( rhoimp0_R * alpha_imp * T + rhoimp0 * alpha_imp * T_R + rhoimp0 * dalpha_imp_dT * T0 * T_R ) / rho0_corr
       res_jac__p (var_UR, var_rhoimp) =  res_jac__p(var_UR, var_rhoimp) &
-                                       + rhoimp_R * alpha_imp * T0 + rhoimp * alpha_imp * T0_R + rhoimp * dalpha_imp_dT * T0 * T0_R
+                                       + ( rhoimp_R * alpha_imp * T0 + rhoimp * alpha_imp * T0_R + rhoimp * dalpha_imp_dT * T0 * T0_R ) / rho0_corr
     endif
   endif
 
@@ -6749,21 +7020,21 @@ CASE(12)
   endif
 
   if ( with_impurities ) then
-    res_jac__p (var_UZ,var_UZ ) =  res_jac__p (var_UZ,var_UZ ) + (source_bg + source_imp) * UZ
+    res_jac__p (var_UZ,var_UZ ) =  res_jac__p (var_UZ,var_UZ ) + (source_bg + source_imp) * UZ / rho0_corr
     if(with_TiTe) then
       res_jac__p (var_UZ, var_Ti)     =  res_jac__p(var_UZ, var_Ti) &
-                                       +  rhoimp0_Z * alpha_i * Ti + rhoimp0 * alpha_i * Ti_Z
+                                       + ( rhoimp0_Z * alpha_i * Ti + rhoimp0 * alpha_i * Ti_Z ) / rho0_corr
       ! approximation
       res_jac__p (var_UZ, var_Te)     =  res_jac__p(var_UZ, var_Te) &
-                                       + rhoimp0_Z * alpha_e * Te + rhoimp0 * alpha_e * Te_Z + rhoimp0 * dalpha_e_dT * Te0 * Te_Z
+                                       + ( rhoimp0_Z * alpha_e * Te + rhoimp0 * alpha_e * Te_Z + rhoimp0 * dalpha_e_dT * Te0 * Te_Z ) / rho0_corr
       res_jac__p (var_UZ, var_rhoimp) =  res_jac__p(var_UZ, var_rhoimp) &
-                                       + rhoimp_Z * alpha_i * Ti0 + rhoimp * alpha_i * Ti0_Z &
-                                       + rhoimp_Z * alpha_e * Te0 + rhoimp * alpha_e * Te0_Z + rhoimp * dalpha_e_dT * Te0 * Te0_Z
+                                       + ( rhoimp_Z * alpha_i * Ti0 + rhoimp * alpha_i * Ti0_Z &
+                                       +   rhoimp_Z * alpha_e * Te0 + rhoimp * alpha_e * Te0_Z + rhoimp * dalpha_e_dT * Te0 * Te0_Z ) / rho0_corr
     else
       res_jac__p (var_UZ, var_T)      =  res_jac__p(var_UZ, var_T)      & 
-                                       + rhoimp0_Z * alpha_imp * T + rhoimp0 * alpha_imp * T_Z + rhoimp0 * dalpha_imp_dT * T0 * T_Z
+                                       + ( rhoimp0_Z * alpha_imp * T + rhoimp0 * alpha_imp * T_Z + rhoimp0 * dalpha_imp_dT * T0 * T_Z ) / rho0_corr
       res_jac__p (var_UZ, var_rhoimp) =  res_jac__p(var_UZ, var_rhoimp) &
-                                       + rhoimp_Z * alpha_imp * T0 + rhoimp * alpha_imp * T0_Z + rhoimp * dalpha_imp_dT * T0 * T0_Z
+                                       + ( rhoimp_Z * alpha_imp * T0 + rhoimp * alpha_imp * T0_Z + rhoimp * dalpha_imp_dT * T0 * T0_Z ) / rho0_corr
     endif
   endif
 
@@ -6821,22 +7092,34 @@ CASE(12)
   endif
 
   if ( with_impurities ) then
-    res_jac__p (var_Up,var_Up ) =  res_jac__p (var_Up,var_Up ) + (source_bg + source_imp) * Up
+    res_jac__p (var_Up,var_Up ) =  res_jac__p (var_Up,var_Up ) + (source_bg + source_imp) * Up / rho0_corr
     if(with_TiTe) then
-      res_jac__p (var_Up, var_Ti)     =  res_jac__p(var_Up, var_Ti) &
-                                       +  rhoimp0_p * alpha_i * Ti / R + rhoimp0 * alpha_i * Ti_p / R
+      res_jac__p (var_Up, var_Ti)     =  res_jac__p(var_Up, var_Ti) + ( rhoimp0_p * alpha_i * Ti / R ) / rho0_corr
+      res_jac__n (var_Up, var_Ti)     =  res_jac__n(var_Up, var_Ti) + ( rhoimp0 * alpha_i * Ti_p / R ) / rho0_corr
+
       ! approximation
       res_jac__p (var_Up, var_Te)     =  res_jac__p(var_Up, var_Te) &
-                                       + rhoimp0_p / R * alpha_e * Te + rhoimp0 * alpha_e * Te_p / R + rhoimp0 * dalpha_e_dT * Te0 * Te_p / R
+                                      + ( rhoimp0_p / R * alpha_e * Te ) / rho0_corr
+      res_jac__n (var_Up, var_Te)     =  res_jac__n(var_Up, var_Te) &
+                                      + (rhoimp0 * alpha_e * Te_p / R + rhoimp0 * dalpha_e_dT * Te0 * Te_p / R ) / rho0_corr
+
       res_jac__p (var_Up, var_rhoimp) =  res_jac__p(var_Up, var_rhoimp) &
-                                       + rhoimp_p / R * alpha_i * Ti0 + rhoimp * alpha_i * Ti0_p / R &
-                                       + rhoimp_p / R * alpha_e * Te0 + rhoimp * alpha_e * Te0_p / R + rhoimp * dalpha_e_dT * Te0 * Te0_p / R
+                                       + ( rhoimp * alpha_i * Ti0_p / R &
+                                       + rhoimp * alpha_e * Te0_p / R + rhoimp * dalpha_e_dT * Te0 * Te0_p / R ) / rho0_corr
+      res_jac__n (var_Up, var_rhoimp) =  res_jac__n(var_Up, var_rhoimp) &
+                                       + ( rhoimp_p / R * alpha_i * Ti0 &
+                                       +   rhoimp_p / R * alpha_e * Te0 ) / rho0_corr
 
     else
       res_jac__p (var_Up, var_T)      =  res_jac__p(var_Up, var_T)      & 
-                                       + rhoimp0_p / R * alpha_imp * T + rhoimp0 * alpha_imp * T_p / R + rhoimp0 * dalpha_imp_dT * T0 * T_p / R
+                                      + ( rhoimp0_p / R * alpha_imp * T ) / rho0_corr
+      res_jac__n (var_Up, var_T)      =  res_jac__n(var_Up, var_T)      &
+                                      + ( rhoimp0 * alpha_imp * T_p / R + rhoimp0 * dalpha_imp_dT * T0 * T_p / R) / rho0_corr 
+
       res_jac__p (var_Up, var_rhoimp) =  res_jac__p(var_Up, var_rhoimp) &
-                                       + rhoimp_p / R * alpha_imp * T0 + rhoimp * alpha_imp * T0_p / R + rhoimp * dalpha_imp_dT * T0 * T0_p / R
+                                      + ( rhoimp * alpha_imp * T0_p / R + rhoimp * dalpha_imp_dT * T0 * T0_p / R ) / rho0_corr
+      res_jac__n (var_Up, var_rhoimp) =  res_jac__n(var_Up, var_rhoimp) &
+                                      + ( rhoimp_p / R * alpha_imp * T0 ) / rho0_corr
     endif
   endif
 
@@ -6855,7 +7138,7 @@ CASE(12)
 
   if(with_neutrals)then
     res_jac__p(var_rho, var_rho)  = res_jac__p(var_rho, var_rho) - rho * rhon0 * Sion_T + 2.d0 * rho * rho0_corr * Srec_T
-    res_jac__p(var_rho, var_rhon) =                              - rho0_corr* rhon * Sion_T
+    res_jac__p(var_rho, var_rhon) =                              - rho0_corr * rhon * Sion_T
   endif
   if(with_impurities)then
     res_jac__p(var_rho, var_rhoimp) = + D_prof * (rhoimp_R / R + rhoimp_RR + rhoimp_ZZ) &
@@ -7128,51 +7411,764 @@ CASE(12)
     res_jac__nn(var_rhoimp, var_rhoimp)= - D_prof_imp * rhoimp_pp/R**2
   endif
 
+CASE(13)
+
+  vsR_UR__p = UR / R + UR_RR + UR_ZZ - UR / R**2 + UR / R**2
+  vsR_UR__n = 0.d0
+  vsR_UR__nn= UR_pp / R**2
+
+  vsR_UZ__p = 0.d0
+  vsR_UZ__n = 0.d0
+  vsR_UZ__nn= 0.d0
+
+  vsR_Up__p = 0.d0
+  vsR_Up__n = - 2.d0 * Up_p / R
+  vsR_Up__nn= 0.d0
+
+  vsZ_UR__p = 0.d0
+  vsZ_UR__n = 0.d0
+  vsZ_UR__nn= 0.d0
+
+  vsZ_UZ__p = UZ / R + UZ_RR + UZ_ZZ
+  vsZ_UZ__n = 0.d0
+  vsZ_UZ__nn= UZ_pp / R**2
+
+  vsZ_Up__p = 0.d0
+  vsZ_Up__n = 0.d0
+  vsZ_Up__nn= 0.d0
+
+  vsp_UR__p = 0.d0
+  vsp_UR__n = 2.d0 * UR_p / R
+  vsp_UR__nn= 0.d0
+
+  vsp_UZ__p = 0.d0
+  vsp_UZ__n = 0.d0
+  vsp_UZ__nn= 0.d0
+
+  vsp_Up__p = Up / R + Up_RR + Up_ZZ - Up / R**2
+  vsp_Up__n = 0.d0
+  vsp_Up__nn= Up_pp / R**2
+
+  ! AR equation:
+  res_jac__p(var_AR, var_AR) = - UZ0 * Bp0_AR &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AR__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AR__p &
+                               + eta_T * JR0_AR__p
+  res_jac__n(var_AR, var_AR) =   Up0 * BZ0_AR__n &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AR__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AR__n &
+                               + eta_T * JR0_AR__n
+  res_jac__nn(var_AR, var_AR) = + eta_T * JR0_AR__nn
+
+  res_jac__p(var_AR, var_AZ) = - UZ0 * Bp0_AZ + Up0 * BZ0_AZ &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AZ__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AZ__p &
+                               + eta_T * JR0_AZ__p
+  res_jac__n(var_AR, var_AZ) = + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0_AZ__n * BgradPe &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0       * BgradPe_AZ__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0       * BgradPe * BB2_AZ__n &
+                               + eta_T * JR0_AZ__n
+  res_jac__nn(var_AR, var_AZ)= + eta_T * JR0_AZ__nn
+
+  res_jac__p(var_AR, var_A3) = - UZ0 * Bp0_A3 + Up0 * BZ0_A3 &
+                               - tauIC_ARAZ* tau_IC*F0/rho0_corr/BB2    * BR0_A3 * BgradPe &
+                               - tauIC_ARAZ* tau_IC*F0/rho0_corr/BB2    * BR0    * BgradPe_A3 &
+                               + tauIC_ARAZ* tau_IC*F0/rho0_corr/BB2**2 * BR0    * BgradPe * BB2_A3 &
+                               + eta_T * JR0_A3__p
+  res_jac__n(var_AR, var_A3) = + eta_T * JR0_A3__n
+  res_jac__nn(var_AR, var_A3)= + eta_T * JR0_A3__nn
+
+  res_jac__p(var_AR, var_UZ) = - UZ * Bp0 
+  res_jac__p(var_AR, var_Up) =   Up * BZ0 
+
+  res_jac__p(var_AR, var_rho)= - tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BR0 * BgradPe_rho__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr**2/BB2 * BR0 * BgradPe * rho
+
+  res_jac__n(var_AR, var_rho)= + tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BR0 * BgradPe_rho__n
+
+  if(with_TiTe)then
+    res_jac__p(var_AR,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__p + eta_T_T * JR0 
+    res_jac__n(var_AR,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__n
+  else
+    res_jac__p(var_AR,var_T )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__p + eta_T_T * JR0
+    res_jac__n(var_AR,var_T )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__n
+  endif
+
+  ! AZ equation:
+  res_jac__p(var_AZ, var_AR) = - Up0 * BR0_AR + UR0 * Bp0_AR &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AR__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AR__p &
+                               + eta_T * JZ0_AR__p
+  res_jac__n(var_AZ, var_AR) = - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0_AR__n * BgradPe &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0       * BgradPe_AR__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0       * BgradPe * BB2_AR__n &
+                               + eta_T * JZ0_AZ__n
+  res_jac__nn(var_AR, var_AR) = + eta_T * JZ0_AR__nn
+
+  res_jac__p(var_AZ, var_AZ) = + UR0 * Bp0_AZ &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AZ__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AZ__p &
+                               + eta_T * JZ0_AZ__p
+  res_jac__n(var_AZ, var_AZ) = - Up0 * BR0_AZ__n &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AZ__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AZ__n &
+                               + eta_T * JZ0_AZ__n
+  res_jac__nn(var_AZ, var_AZ) = + eta_T * JZ0_AZ__nn
+
+  res_jac__p(var_AZ, var_A3) = - Up0 * BR0_A3 + UR0 * Bp0_A3 &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0_A3 * BgradPe &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0    * BgradPe_A3 &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0    * BgradPe * BB2_A3 &
+                               + eta_T * JZ0_A3__p
+  res_jac__n (var_AZ, var_A3) = + eta_T * JZ0_A3__n
+  res_jac__nn(var_AZ, var_A3) = + eta_T * JZ0_A3__nn
+
+  res_jac__p (var_AZ,var_UR) =   UR * Bp0
+  res_jac__p (var_AZ,var_Up) = - Up * BR0
+
+  res_jac__p (var_AZ,var_rho)= - tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BZ0 * BgradPe_rho__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr**2/BB2 * BZ0 * BgradPe * rho
+  res_jac__n (var_AZ,var_rho)= - tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BZ0 * BgradPe_rho__n
+
+  if(with_TiTe)then
+    res_jac__p (var_AZ,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__p + eta_T_T * JZ0
+    res_jac__n (var_AZ,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__n
+  else
+    res_jac__p (var_AZ,var_T )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__p + eta_T_T * JZ0
+    res_jac__n (var_AZ,var_T )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__n
+  endif
+
+  ! A3 equation:
+  res_jac__p(var_A3, var_AR) = + UZ0 * BR0_AR * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPe &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__p &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__p &
+                               + R * eta_T * Jp0_AR__p
+  res_jac__n(var_A3, var_AR) = - UR0 * BZ0_AR__n * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__n &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__n &
+                               + R * eta_T * Jp0_AR__n
+  res_jac__nn(var_A3, var_AR) = + R * eta_T * Jp0_AR__nn
+
+  res_jac__p(var_A3, var_AZ) = - UR0 * BZ0_AZ * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPe &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__p &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__p &
+                               + R * eta_T * Jp0_AZ__p
+  res_jac__n(var_A3, var_AZ) = + UZ0 * BR0_AZ__n * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__n &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__n &
+                               + R * eta_T * Jp0_AZ__n
+  res_jac__nn(var_A3, var_AZ) = + R * eta_T * Jp0_AZ__nn
+
+  res_jac__p(var_A3, var_A3) = - UR0 * BZ0_A3 * R + UZ0 * BR0_A3 * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_A3 &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_A3 &
+                               + R * eta_T * Jp0_A3__p
+  res_jac__n (var_A3, var_A3) = + R * eta_T * Jp0_A3__n
+  res_jac__nn(var_A3, var_A3) = + R * eta_T * Jp0_A3__nn
+
+
+  res_jac__p(var_A3,var_UR) = - UR * BZ0
+  res_jac__n(var_A3,var_UZ) = + UZ * BR0
+
+  res_jac__p(var_A3,var_rho) = - tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__p &
+                               + tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPe * rho
+  res_jac__n (var_A3,var_rho)= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_rho__n
+
+  if(with_TiTe)then
+    res_jac__p (var_A3,var_Te )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p + R * eta_T_T * Jp0
+    res_jac__n (var_A3,var_Te )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
+  else
+    res_jac__p (var_A3,var_T )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p + R * eta_T_T * Jp0
+    res_jac__n (var_A3,var_T )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
+  endif
+
+  ! UR equation:
+  res_jac__p(var_UR,var_AR ) =  rho0 * ( VdiaGradUR_AR__p  - VdiaP0_AR__p * Up0 / R ) - PneoR_AR__p
+  res_jac__n(var_UR,var_AR ) =  rho0 * ( VdiaGradUR_AR__n  - VdiaP0_AR__n * Up0 / R ) - PneoR_AR__n
+
+  res_jac__p(var_UR,var_AZ ) =  rho0 * ( VdiaGradUR_AZ__p  - VdiaP0_AZ__p * Up0 / R ) - PneoR_AZ__p
+  res_jac__n(var_UR,var_AZ ) =  rho0 * ( VdiaGradUR_AZ__n  - VdiaP0_AZ__n * Up0 / R ) - PneoR_AZ__n
+
+  res_jac__p(var_UR,var_A3 ) =  rho0 * ( VdiaGradUR_A3__p  - VdiaP0_A3__p * Up0 / R ) - PneoR_A3__p
+  res_jac__n(var_UR,var_A3 ) =  rho0 * ( VdiaGradUR_A3__n  - VdiaP0_A3__n * Up0 / R ) - PneoR_A3__n
+
+  res_jac__p(var_UR, var_UR) =  rho0 * UgradUR_UR__p + rho0 * VdiaGradUR_UR__p &
+                               - visco_T * vsR_UR__p - PneoR_UR - particle_source(ms,mt) * UR 
+  res_jac__n(var_UR, var_UR) =  rho0 * UgradUR_UR__n + rho0 * VdiaGradUR_UR__n &
+                               - visco_T * vsR_UR__n
+  res_jac__nn(var_UR, var_UR)= - visco_T * vsR_UR__nn
+
+  res_jac__p(var_UR, var_UZ) =  rho0 * UgradUR_UZ - visco_T * vsR_UZ__p - PneoR_UZ
+  res_jac__n(var_UR, var_UZ) =                    - visco_T * vsR_UZ__n           
+  res_jac__nn(var_UR, var_UZ)=                    - visco_T * vsR_UZ__nn          
+
+  res_jac__p(var_UR, var_Up) = rho0 * UgradUR_Up - 2.0*rho0*Up*Up0**2 / R - rho0 * VdiaP0 * Up / R &
+                                             - visco_T * vsR_Up__p 
+  res_jac__n(var_UR, var_Up) =               - visco_T * vsR_Up__n 
+  res_jac__nn(var_UR, var_Up)=               - visco_T * vsR_Up__nn
+
+  if (with_TiTe) then
+    ! approximation
+    res_jac__p (var_UR,var_rho) = rho * UgradUR - rho * Up0 * Up0 / R                     &
+                                + rho0 * VdiaGradUR_rho__p + rho * VdiaGradUR             &
+                                - rho0 * VdiaP0_rho__p * Up0 / R - rho * VdiaP0 * Up0 / R &
+                                + rho_R*(Ti0+Te0) + rho*(Ti0_R+Te0_R) - PneoR_rho__p
+    res_jac__n (var_UR,var_rho) = rho0 * VdiaGradUR_rho__n                                &
+                                - rho0 * VdiaP0_rho__n * Up0 / R                          &
+                                                                     - PneoR_rho__n   
+
+    res_jac__p (var_UR,var_Ti ) = rho0 * VdiaGradUR_Ti__p  - rho0 * VdiaP0_Ti__p * Up0 / R  &
+                                + (rho0_R*Ti     + rho0*Ti_R       ) - PneoR_Ti__p - dvisco_dT * T * Qvisc_UR__p
+    res_jac__n (var_UR,var_Ti ) = rho0 * VdiaGradUR_Ti__n  - rho0 * VdiaP0_Ti__n * Up0 / R &
+                                                                      - PneoR_Ti__n 
+
+    res_jac__p (var_UR,var_Te ) =  (rho0_R*Te     + rho0*Te_R       ) + dvisco_dT * Te * vsR 
+  else
+    res_jac__p (var_UR,var_rho) =  rho * UgradUR - rho * Up0 * Up0 / R                    &
+                                + rho0 * VdiaGradUR_rho__p + rho * VdiaGradUR             &
+                                - rho0 * VdiaP0_rho__p * Up0 / R - rho * VdiaP0 * Up0 / R &
+                                + (rho*T0_R + rho_R*T0) - PneoR_rho__p
+    res_jac__n (var_UR,var_rho) =  rho0 * VdiaGradUR_rho__n                    &
+                                - rho0 * VdiaP0_rho__n * Up0 / R               &
+                                                        - PneoR_rho__n
+
+    res_jac__p (var_UR,var_T  ) =  rho0 * VdiaGradUR_Ti__p + (rho0_R*T + rho0*T_R) - PneoR_Ti__p - dvisco_dT * T * Qvisc_UR__p
+    res_jac__n (var_UR,var_T  ) =  rho0 * VdiaGradUR_Ti__p +                       - PneoR_Ti__n
+  endif
+
+  if ( with_neutrals) then
+    res_jac__p (var_UR,var_UR ) =  res_jac__p (var_UR,var_UR ) &
+                                + rho0_corr * rhon0_corr * Sion_T * UR - rho0_corr * rho0_corr * Srec_T * UR
+    res_jac__n (var_UR,var_rho) =  res_jac__n (var_UR,var_rho) &
+                                + rho * rhon0_corr * Sion_T * UR0 - 2.d0 * rho * rho0_corr * Srec_T * UR0
+    if(with_TiTe) then
+      res_jac__p (var_UR,var_Te ) =  res_jac__p (var_UR,var_Te ) &
+                                  +  rho0_corr * rhon0 * dSion_dT * Te * UR0 - rho0_corr * rho0_corr * dSrec_dT * Te * UR0
+    else
+      res_jac__p (var_UR,var_T  ) =  res_jac__p (var_UR,var_T  ) &
+                                  +  rho0_corr * rhon0 * dSion_dT * T  * UR0 - rho0_corr * rho0_corr * dSrec_dT * T  * UR0
+    endif
+    res_jac__p (var_UR,var_rhon)= + rho0_corr * rhon * Sion_T * UR0
+  endif
+
+  if ( with_impurities ) then
+    res_jac__p (var_UR,var_UR ) =  res_jac__p (var_UR,var_UR ) + (source_bg + source_imp) * UR
+    if(with_TiTe) then
+      res_jac__p (var_UR, var_Ti)     =  res_jac__p(var_UR, var_Ti) &
+                                       +  rhoimp0_R * alpha_i * Ti + rhoimp0 * alpha_i * Ti_R
+      res_jac__p (var_UR, var_Te)     =  res_jac__p(var_UR, var_Te) &
+                                       + rhoimp0_R * alpha_e * Te + rhoimp0 * alpha_e * Te_R + rhoimp0 * dalpha_e_dT * Te0 * Te_R
+      res_jac__p (var_UR, var_rhoimp) =  res_jac__p(var_UR, var_rhoimp) &
+                                       + rhoimp_R * alpha_i * Ti0 + rhoimp * alpha_i * Ti0_R &
+                                       + rhoimp_R * alpha_e * Te0 + rhoimp * alpha_e * Te0_R + rhoimp * dalpha_e_dT * Te0 * Te0_R
+
+    else
+      res_jac__p (var_UR, var_T)      =  res_jac__p(var_UR, var_T)      & 
+                                       + rhoimp0_R * alpha_imp * T + rhoimp0 * alpha_imp * T_R + rhoimp0 * dalpha_imp_dT * T0 * T_R
+      res_jac__p (var_UR, var_rhoimp) =  res_jac__p(var_UR, var_rhoimp) &
+                                       + rhoimp_R * alpha_imp * T0 + rhoimp * alpha_imp * T0_R + rhoimp * dalpha_imp_dT * T0 * T0_R
+    endif
+  endif
+
+  ! UZ equation:
+  res_jac__p(var_UZ,var_AR ) =  rho0 * VdiaGradUZ_AR__p - PneoZ_AR__p
+  res_jac__n(var_UZ,var_AR ) =  rho0 * VdiaGradUZ_AR__n - PneoZ_AR__n
+
+  res_jac__p(var_UZ,var_AZ ) =  rho0 * VdiaGradUZ_AZ__p - PneoZ_AZ__p
+  res_jac__n(var_UZ,var_AZ ) =  rho0 * VdiaGradUZ_AZ__n - PneoZ_AZ__n
+
+  res_jac__p(var_UZ,var_A3 ) =  rho0 * VdiaGradUZ_A3__p - PneoZ_A3__p
+  res_jac__n(var_UZ,var_A3 ) =  rho0 * VdiaGradUZ_A3__n - PneoZ_A3__n
+
+  res_jac__p(var_UZ, var_UR) =  rho0 * UgradUZ_UR - visco_T * vsZ_UR__p - PneoZ_UR
+  res_jac__n(var_UZ, var_UR) =                    - visco_T * vsR_UR__n           
+  res_jac__nn(var_UZ, var_UR)=                    - visco_T * vsR_UR__nn          
+
+  res_jac__p(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__p - visco_T * vsZ_UZ__p - PneoZ_UZ - particle_source(ms,mt) * UZ
+  res_jac__n(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__n - visco_T * vsZ_UZ__n
+  res_jac__nn(var_UZ, var_UZ)=                      - visco_T * vsZ_UZ__nn
+
+  res_jac__p(var_UZ, var_Up) = rho0 * UgradUZ_Up - visco_T * vsZ_Up__p 
+  res_jac__n(var_UZ, var_Up) =                   - visco_T * vsZ_Up__n 
+  res_jac__nn(var_UZ, var_Up)=                   - visco_T * vsZ_Up__nn
+
+  if (with_TiTe) then
+    ! approximation
+    res_jac__p (var_UZ,var_rho) =  rho0 * VdiaGradUZ_rho__p + rho_Z*(Ti0+Te0) + rho*(Ti0_Z+Te0_Z) - PneoZ_rho__p
+    res_jac__n (var_UZ,var_rho) =  rho0 * VdiaGradUZ_rho__n                                        - PneoZ_rho__n
+
+    res_jac__p (var_UZ,var_Ti ) =  rho0 * VdiaGradUZ_Ti__p  + (rho0_Z*Ti       + rho0*Ti_Z       ) - PneoZ_Ti__p
+    res_jac__n (var_UZ,var_Ti ) =  rho0 * VdiaGradUZ_Ti__n                                         - PneoZ_Ti__n
+
+    res_jac__p (var_UZ,var_Te ) =  (rho0_Z*Te     + rho0*Te_Z       ) - dvisco_dT * Te * vsZ
+  else
+    res_jac__p (var_UZ,var_rho) =  rho0 * VdiaGradUZ_rho__p + (rho*T0_Z + rho_Z*T0) - PneoZ_rho__p 
+    res_jac__n (var_UZ,var_rho) =  rho0 * VdiaGradUZ_rho__n                         - PneoZ_rho__n 
+
+    res_jac__p (var_UZ,var_T  ) =  rho0 * VdiaGradUZ_Ti__p + (rho0_Z*T + rho0*T_Z) - PneoZ_Ti__p - dvisco_dT * T * vsZ 
+    res_jac__n (var_UZ,var_T  ) =  rho0 * VdiaGradUZ_Ti__p +                       - PneoZ_Ti__n
+  endif
+
+  if ( with_neutrals) then
+    res_jac__p (var_UZ,var_UZ ) =  res_jac__p (var_UZ,var_UZ ) + rho0_corr * rhon0 * Sion_T * UZ - rho0_corr * rho0_corr * Srec_T * UZ
+    res_jac__n (var_UZ,var_rho) =  res_jac__n (var_UZ,var_rho) + rho * rhon0 * Sion_T * UZ  - 2.d0 * rho * rho0_corr * Srec_T * UZ0
+    if(with_TiTe) then
+      res_jac__p (var_UZ,var_Te ) =  res_jac__p (var_UZ,var_Te ) + rho0_corr * rhon0 * dSion_dT * Te * UZ0 - rho0_corr * rho0_corr * dSrec_dT * Te * UZ0
+    else
+      res_jac__p (var_UZ,var_T  ) =  res_jac__p (var_UZ,var_T  ) + rho0_corr * rhon0 * dSion_dT * T  * UZ0 - rho0_corr * rho0_corr * dSrec_dT * T  * UZ0
+    endif
+    res_jac__p (var_UZ,var_rhon)= + rho0_corr * rhon * Sion_T * UZ0
+  endif
+
+  if ( with_impurities ) then
+    res_jac__p (var_UZ,var_UZ ) =  res_jac__p (var_UZ,var_UZ ) + (source_bg + source_imp) * UZ
+    if(with_TiTe) then
+      res_jac__p (var_UZ, var_Ti)     =  res_jac__p(var_UZ, var_Ti) &
+                                       +  rhoimp0_Z * alpha_i * Ti + rhoimp0 * alpha_i * Ti_Z
+      res_jac__p (var_UZ, var_Te)     =  res_jac__p(var_UZ, var_Te) &
+                                       + rhoimp0_Z * alpha_e * Te + rhoimp0 * alpha_e * Te_Z + rhoimp0 * dalpha_e_dT * Te0 * Te_Z
+      res_jac__p (var_UZ, var_rhoimp) =  res_jac__p(var_UZ, var_rhoimp) &
+                                       + rhoimp_Z * alpha_i * Ti0 + rhoimp * alpha_i * Ti0_Z &
+                                       + rhoimp_Z * alpha_e * Te0 + rhoimp * alpha_e * Te0_Z + rhoimp * dalpha_e_dT * Te0 * Te0_Z
+    else
+      res_jac__p (var_UZ, var_T)      =  res_jac__p(var_UZ, var_T)      & 
+                                       + rhoimp0_Z * alpha_imp * T + rhoimp0 * alpha_imp * T_Z + rhoimp0 * dalpha_imp_dT * T0 * T_Z
+      res_jac__p (var_UZ, var_rhoimp) =  res_jac__p(var_UZ, var_rhoimp) &
+                                       + rhoimp_Z * alpha_imp * T0 + rhoimp * alpha_imp * T0_Z + rhoimp * dalpha_imp_dT * T0 * T0_Z
+    endif
+  endif
+
+  ! Up equation:
+  res_jac__p(var_Up,var_AR ) =  rho0 * (VdiaGradUp_AR__p  + VdiaP0_AR__p * UR0 / R) - PneoR_AR__p
+  res_jac__n(var_Up,var_AR ) =  rho0 * (VdiaGradUp_AR__n  + VdiaP0_AR__n * UR0 / R) - PneoR_AR__n
+
+  res_jac__p(var_Up,var_AZ ) =  rho0 * (VdiaGradUp_AZ__p  + VdiaP0_AZ__p * UR0 / R) - PneoR_AZ__p
+  res_jac__n(var_Up,var_AZ ) =  rho0 * (VdiaGradUp_AZ__n  + VdiaP0_AZ__n * UR0 / R) - PneoR_AZ__n
+
+  res_jac__p(var_Up,var_A3 ) =  rho0 * (VdiaGradUp_A3__p  + VdiaP0_A3__p * UR0 / R) - PneoR_A3__p
+  res_jac__n(var_Up,var_A3 ) =  rho0 * (VdiaGradUp_A3__n  + VdiaP0_A3__n * UR0 / R) - PneoR_A3__n
+
+  res_jac__p(var_Up, var_UR) =  rho0 * UgradUp_UR     + rho0 * UR * Up0 / R      + rho0 * VdiaP0 * UR / R &
+                               - visco_T * vsp_UR__p
+  res_jac__n(var_Up, var_UR) = - visco_T * vsp_UR__n
+  res_jac__nn(var_Up, var_UR)= - visco_T * vsp_UR__nn
+
+  res_jac__p(var_Up, var_UZ) =  rho0 * UgradUp_UZ - visco_T * vsp_UZ__p 
+  res_jac__n(var_Up, var_UZ) =                    - visco_T * vsp_UZ__n 
+  res_jac__nn(var_Up, var_UZ)=                    - visco_T * vsp_UZ__nn
+
+  res_jac__p(var_Up, var_Up) =  rho0 * UgradUp_Up__p + rho0 * UR0 * Up / R - rho0 * VdiaGradUp_Up__p &
+                                             - visco_T * vsR_Up__p - particle_source(ms,mt) * Up
+  res_jac__n(var_Up, var_Up) =  rho0 * UgradUp_Up__n                       - rho0 * VdiaGradUp_Up__n &
+                                             - visco_T * vsR_Up__n 
+  res_jac__nn(var_Up, var_Up)=               - visco_T * vsR_Up__nn
+
+  if (with_TiTe) then
+    res_jac__p (var_Up,var_rho) = rho0 *  ( VdiaGradUp_rho__p + VdiaP0_rho__p * UR0 / R ) &
+                                + rho  *  ( VdiaGradUp        + VdiaP0 * UR0 / R )
+    res_jac__n (var_Up,var_rho) = rho0 *  ( VdiaGradUp_rho__n + VdiaP0_rho__n * UR0 / R ) &
+                                + (rho_p*(Ti0+Te0) + rho*(Ti0_p+Te0_p))/R
+
+    res_jac__p (var_Up,var_Ti ) = rho0 * ( VdiaGradUp_Ti__p  + VdiaP0_Ti__p * UR0 / R ) 
+    res_jac__n (var_Up,var_Ti ) = rho0 * ( VdiaGradUp_Ti__n  + VdiaP0_Ti__n * UR0 / R ) &
+                                +  (rho0_p * Ti   + rho0 * Ti_p   ) / R
+
+    res_jac__p (var_Up,var_Te ) =  - dvisco_dT * Te * vsp
+    res_jac__n (var_Up,var_Te ) =  (rho0_p * Te   + rho0 * Te_p   ) / R - dvisco_dT * Te * vsp 
+  else
+    res_jac__p (var_Up,var_rho) =  rho0 * ( VdiaGradUp_rho__p + VdiaP0_rho__p * UR0 / R ) &
+                                +  rho * ( VdiaGradUp         + VdiaP0 * UR0 / R )
+    res_jac__n (var_Up,var_rho) =  rho0 * ( VdiaGradUp_rho__n        + VdiaP0_rho__n * UR0 / R )  &
+                                + (rho * T0_p + rho_p * T0) / R
+
+    res_jac__p (var_Up,var_T  ) =  rho0 * ( VdiaGradUp_Ti__p  + VdiaP0_Ti__p * UR0 / R ) &
+                                +  rho * ( VdiaGradUp        + VdiaP0 * UR0 / R ) &
+                                + dvisco_dT * T * vsp 
+    res_jac__n (var_Up,var_T  ) = rho0 * ( VdiaGradUp_Ti__n  + VdiaP0_Ti__n * UR0 / R ) &
+                                + (rho0_p * T + rho0 * T_p) / R 
+  endif
+
+  if ( with_neutrals) then
+    res_jac__p (var_Up,var_Up ) =  res_jac__p (var_Up,var_Up ) + rho0_corr * rhon0 * Sion_T * Up - rho0_corr * rho0_corr * Srec_T * Up
+    res_jac__n (var_Up,var_rho) =  res_jac__n (var_Up,var_rho) + rho * rhon0_corr * Sion_T * Up  - 2.d0 * rho * rho0_corr * Srec_T * Up0
+    if(with_TiTe) then
+      res_jac__p (var_Up,var_Te ) =  res_jac__p (var_Up,var_Te ) +  rho0_corr * rhon0_corr * dSion_dT * Te * Up0 - rho0_corr * rho0_corr * dSrec_dT * Te * Up0
+    else
+      res_jac__p (var_Up,var_T  ) =  res_jac__p (var_Up,var_T  ) +  rho0_corr * rhon0_corr * dSion_dT * T  * Up0 - rho0_corr * rho0_corr * dSrec_dT * T  * Up0
+    endif
+    res_jac__p (var_Up,var_rhon)= + rho0_corr * rhon * Sion_T * Up0
+  endif
+
+  if ( with_impurities ) then
+    res_jac__p (var_Up,var_Up ) =  res_jac__p (var_Up,var_Up ) + (source_bg + source_imp) * Up
+    if(with_TiTe) then
+      res_jac__p (var_Up, var_Ti)     =  res_jac__p(var_Up, var_Ti) +  rhoimp0_p * alpha_i * Ti / R 
+      res_jac__n (var_Up, var_Ti)     =  res_jac__n(var_Up, var_Ti) + rhoimp0 * alpha_i * Ti_p / R
+
+      res_jac__p (var_Up, var_Te)     =  res_jac__p(var_Up, var_Te) &
+                                      + rhoimp0_p / R * alpha_e * Te
+      res_jac__n (var_Up, var_Te)     =  res_jac__n(var_Up, var_Te) &
+                                      + rhoimp0 * alpha_e * Te_p / R + rhoimp0 * dalpha_e_dT * Te0 * Te_p / R
+
+      res_jac__p (var_Up, var_rhoimp) =  res_jac__p(var_Up, var_rhoimp) &
+                                      + rhoimp * alpha_i * Ti0_p / R &
+                                      + rhoimp * alpha_e * Te0_p / R + rhoimp * dalpha_e_dT * Te0 * Te0_p / R
+      res_jac__n (var_Up, var_rhoimp) =  res_jac__n(var_Up, var_rhoimp) &
+                                      + rhoimp_p / R * alpha_i * Ti0 &
+                                      + rhoimp_p / R * alpha_e * Te0
+    else
+      res_jac__p (var_Up, var_T)      =  res_jac__p(var_Up, var_T)      & 
+                                      + rhoimp0_p / R * alpha_imp * T
+      res_jac__n (var_Up, var_T)      =  res_jac__n(var_Up, var_T)      &
+                                      + rhoimp0 * alpha_imp * T_p / R + rhoimp0 * dalpha_imp_dT * T0 * T_p / R
+
+      res_jac__p (var_Up, var_rhoimp) =  res_jac__p(var_Up, var_rhoimp) &
+                                      + rhoimp * alpha_imp * T0_p / R + rhoimp * dalpha_imp_dT * T0 * T0_p / R
+      res_jac__n (var_Up, var_rhoimp) =  res_jac__n(var_Up, var_rhoimp) &
+                                      + rhoimp_p / R * alpha_imp * T0
+    endif
+  endif
+
+  ! rho equation
+  res_jac__p(var_rho, var_UR) =  UR * rho0_R + rho0 * divU_UR
+
+  res_jac__p(var_rho, var_UZ) =  UZ * rho0_Z + rho0 * divU_UZ
+
+  res_jac__p(var_rho, var_Up) =  Up * rho0_p / R
+  res_jac__n(var_rho, var_Up) =  rho0 * divU_Up__n
+
+  res_jac__p(var_rho, var_rho) = UR0 * rho_R + UZ0 * rho_Z + rho * divU &
+                               - D_prof * (rho_R / R + rho_RR + rho_ZZ)
+  res_jac__n(var_rho, var_rho) = Up0 * rho_p / R
+  res_jac__nn(var_rho, var_rho) = - D_prof * rho_pp / R**2
+
+  if(with_neutrals)then
+    res_jac__p(var_rho, var_rho)  = res_jac__p(var_rho, var_rho) - rho * rhon0 * Sion_T + 2.d0 * rho * rho0_corr * Srec_T
+    res_jac__p(var_rho, var_rhon) =                              - rho0_corr * rhon * Sion_T
+  endif
+
+  if(with_impurities)then
+    res_jac__p(var_rho, var_rhoimp) = + D_prof * (rhoimp_R / R + rhoimp_RR + rhoimp_ZZ) &
+                                      - D_prof_imp * (rhoimp_R / R + rhoimp_RR + rhoimp_ZZ)
+
+    res_jac__nn(var_rho, var_rhoimp) = + D_prof * rhoimp_pp / R**2 - D_prof_imp * rhoimp_pp / R**2
+  endif
+
+  ! T equations
+  if(with_TiTe)then
+    ! Ti equation
+    res_jac__p(var_Ti, var_UR) =  rho0 * UR * Ti0_R + Ti0 * UR * rho0_R + gamma * p0 * divU_UR
+
+    res_jac__p(var_Ti, var_UZ) =  rho0 * UZ * Ti0_Z + Ti0 * UZ * rho0_Z + gamma * p0 * divU_UZ
+
+    res_jac__p(var_Ti, var_Up) =  rho0 * Up * Ti0_p / R + Ti0 * Up * rho0_p / R
+    res_jac__n(var_Ti, var_Up) =  gamma * p0 * divU_Up__n
+
+    res_jac__p(var_Ti, var_Ti) =   rho0 * (UR0 * Ti_R + UZ0 * Ti_Z)                      &
+                                 + Ti * (UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R) &
+                                 + gamma * rho0 * Ti * divU                              &
+                                 - ZKi_prof * (Ti_R / R + Ti_RR + Ti_ZZ) 
+    res_jac__n(var_Ti, var_Ti) =   rho0 * Up0 * Ti_p / R
+    res_jac__nn(var_Ti, var_Ti)= - ZKi_prof * Ti_pp / R**2 
+
+    res_jac__p(var_Ti, var_Te) =   gamma * rho0 * Te * divU
+
+    ! Te equation
+    res_jac__p(var_Te, var_UR) =  rho0 * UR * Te0_R + Te0 * UR * rho0_R + gamma * p0 * divU_UR
+
+    res_jac__p(var_Te, var_UZ) =  rho0 * UZ * Te0_Z + Te0 * UZ * rho0_Z + gamma * p0 * divU_UZ
+
+    res_jac__p(var_Te, var_Up) =  rho0 * Up * Te0_p / R + Te0 * Up * rho0_p / R
+    res_jac__n(var_Te, var_Up) =  gamma * p0 * divU_Up__n
+
+    res_jac__p(var_Te, var_Ti) =  gamma * rho0 * Ti * divU
+
+    res_jac__p(var_Te, var_Te) =   rho0 * ( UR0 * Te_R + UZ0 * Te_Z )                      &
+                                 + Te   * (UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R) &
+                                 + gamma * rho0 * Te * divU                                &
+                                 - ZKe_prof * (Te_R / R + Te_RR + Te_ZZ )
+    res_jac__n(var_Te, var_Te) =   rho0 * Up0 * Te_p / R
+    res_jac__nn(var_Te, var_Te)= - ZKe_prof * Te_pp / R**2
+
+    if(with_neutrals)then
+      res_jac__p(var_Ti, var_UR) =   res_jac__p(var_Ti, var_UR) &
+                                    - (gamma-1.d0) * 0.5d0 * vv2_UR * source_neutral
+      res_jac__p(var_Ti, var_UZ) =   res_jac__p(var_Ti, var_UZ) &
+                                    - (gamma-1.d0) * 0.5d0 * vv2_UZ * source_neutral
+      res_jac__p(var_Ti, var_Up) =   res_jac__p(var_Ti, var_Up) &
+                                    - (gamma-1.d0) * 0.5d0 * vv2_Up * source_neutral
+
+      res_jac__p(var_Te, var_Te)  = res_jac__p(var_Te, var_Te) &
+                                  +   ksiion * rho0_corr * rhon0_corr * dSion_dT * Te &
+                                  +   rho0_corr * rhon0_corr * dLradDrays_dT * Te    &
+                                  +   rho0_corr * rho0_corr  * dLradDcont_dT * Te    &
+                                  +   rho0_corr * dfrad_bg_dT * Te
+
+      res_jac__p(var_Te, var_rhon)= res_jac__p(var_Te, var_rhon) &
+                                  +   ksiion * rho0_corr * rhon * Sion_T &
+                                  +   rho0_corr * rhon * LradDrays_T
+    endif
+
+    if(with_impurities)then
+       ! Ti equation
+       res_jac__p(var_Ti, var_UR) = res_jac__p(var_Ti, var_UR) &
+                                  +  rhoimp0 * alpha_i * UR * Ti0_R + Ti0 * alpha_i * UR * rhoimp0_R &
+                                  +  gamma * pif0 * divU_UR                                          &
+                                  -  (gamma-1.d0) * 0.5d0 * vv2_UR * (source_bg + source_imp)
+  
+       res_jac__p(var_Ti, var_UZ) = res_jac__p(var_Ti, var_UZ) &
+                                  +  rhoimp0 * alpha_i * UZ * Ti0_Z + Ti0 * alpha_i * UZ * rhoimp0_Z &
+                                  +  gamma * pif0 * divU_UZ                                          &
+                                  -  (gamma-1.d0) * 0.5d0 * vv2_UZ * (source_bg + source_imp)
+
+       res_jac__p(var_Ti, var_Up) = res_jac__p(var_Ti, var_Up) &
+                                  + rhoimp0 * alpha_i * Up * Ti0_p / R + Ti0 * alpha_i * Up * rhoimp0_p / R &
+                                  -  (gamma-1.d0) * 0.5d0 * vv2_Up * (source_bg + source_imp)
+       res_jac__n(var_Ti, var_Up) = res_jac__n(var_Ti, var_Up) + gamma * pif0 * divU_Up__n
+
+       res_jac__p(var_Ti, var_Ti) = res_jac__p(var_Ti, var_Ti) &
+                                  + rhoimp0 * alpha_i * (UR0 * Ti_R + UZ0 * Ti_Z) &
+                                  +  rhoimp0 * dalpha_i_dT * Ti * UgradTi + Ti * alpha_i * UgradRhoimp &
+                                  +  Ti0 * dalpha_i_dT * Ti * UgradRhoimp          &
+                                  +  gamma * rhoimp0 * alpha_i * Ti * divU
+       res_jac__n(var_Ti, var_Ti) = res_jac__n(var_Ti, var_Ti) + rhoimp0 * alpha_i * Up0 * Ti_p / R
+ 
+       res_jac__p(var_Ti, var_rhoimp) = res_jac__p(var_Ti, var_rhoimp) &
+                                      + rhoimp * alpha_i * UgradTi  &
+                                      + Ti0 * alpha_i * (UR0 * rhoimp0_R + UZ0 * rhoimp0_Z) &
+                                      + gamma * rhoimp * alpha_i * Ti0 * divU
+       res_jac__n(var_Ti, var_rhoimp) = res_jac__n(var_Ti, var_rhoimp) + Ti0 * alpha_i * Up0 * rhoimp0_p / R
+
+       ! Te equation
+       res_jac__p(var_Te, var_UR) = res_jac__p(var_Te, var_UR) &
+                                  +  rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * UR * Te0_R &
+                                  + Te0 * alpha_e * UR * rhoimp0_R                      &
+                                  + v * gamma * pef0 * divU_UR &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * UR * Te0 + E_ion * UR * rhoimp0_R + E_ion_bg * (UR * rho0_R - UR * rhoimp0_R)) &
+                                  + (gamma-1.d0) * rhoimp0 * E_ion * divU_UR + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU_UR
+
+       res_jac__p(var_Te, var_UZ) = res_jac__p(var_Te, var_UZ) &
+                                  +  rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * UZ * Te0_Z &                
+                                  + Te0 * alpha_e * UZ * rhoimp0_Z                      &
+                                  + v * gamma * pef0 * divU_UZ &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * UZ * Te0 + E_ion * UZ * rhoimp0_R + E_ion_bg * (UZ * rho0_Z - UZ * rhoimp0_Z)) &
+                                  + (gamma-1.d0) * rhoimp0 * E_ion * divU_UZ + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU_UZ 
+
+       res_jac__p(var_Te, var_Up) = res_jac__p(var_Te, var_Up) &
+                                  +  rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * Up * Te0_p / R &                
+                                  + Te0 * alpha_e * Up * rhoimp0_p / R                      &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * Up * Te0 + E_ion * Up * rhoimp0_R + E_ion_bg * (Up * rho0_p/R - Up * rhoimp0_p/R)) 
+       res_jac__n(var_Te, var_Up) = res_jac__n(var_Te, var_Up) &
+                                  + v * gamma * pef0 * divU_Up__n &
+                                  + (gamma-1.d0) * rhoimp0 * E_ion * divU_Up__n + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU_Up__n
+
+       res_jac__p(var_Te, var_rho)= res_jac__p(var_Te, var_rho) &
+                                  + rho * rhoimp0 * Lrad + rho * frad_bg &
+                                  + (gamma-1.d0) * E_ion_bg * (UR0 * rho_R + UZ0 * rho_Z ) &
+                                  + (gamma-1.d0) * rho * E_ion_bg * divU                  &
+                                  + (gamma-1.d0) * E_ion * D_prof_imp * ( rho_R / R + rho_RR + rho_ZZ )   &
+                                  + (gamma-1.d0) * E_ion_bg * D_prof * (rho0_R/R + rho_RR + rho_ZZ )
+       res_jac__n(var_Te, var_rho)= res_jac__n(var_Te, var_rho) &
+                                  + (gamma-1.d0) * E_ion_bg * Up0 * rho_p / R
+       res_jac__nn(var_Te, var_rho)= res_jac__nn(var_Te, var_rho)                       &
+                                  + (gamma-1.d0) * E_ion * D_prof_imp * rho_pp / R**2   &
+                                  + (gamma-1.d0) * E_ion_bg * D_prof * rho_pp / R**2
+
+       res_jac__p(var_Te, var_Te) =   res_jac__p(var_Te, var_Te) &
+                                  + rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * (UR0 * Te_R + UZ0 * Te_Z) &
+                                  + rhoimp0 * (dalpha_e_dT*Te + dalpha_e_dT*Te) * UgradTe             &
+                                  + Te  * alpha_e * UgradRhoimp &
+                                  + Te0 * dalpha_e_dT * Te * UgradRhoimp &
+                                  + gamma * (alpha_e*Te*rhoimp0 + (gamma-1.d0)*rhoimp0*dE_ion_dT*Te) * divU &
+                                  + (rho0 + alpha_e*rhoimp0) * rhoimp0 * dLrad_dT * Te &
+                                  + (rho0 + dalpha_e_dT*Te*rhoimp0) * rhoimp0 * Lrad   &
+                                  + (rho0 + alpha_e*rhoimp0) * dfrad_bg_dT * Te        &
+                                  + (rho0 + dalpha_e_dT*Te*rhoimp0) * frad_bg          &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * (UR0*Te_R+UZ0*Te_Z) + dE_ion_dT * UgradRhoimp ) &
+                                  + (gamma-1.d0) * rhoimp0 * dE_ion_dT * divU  &
+                                  + (gamma-1.d0) * dE_ion_dT * D_prof_imp * ( (rho0_R - rhoimp0_R) / R + (rho0_RR-rhoimp0_RR) + (rho0_ZZ - rhoimp0_ZZ) + (rho0_pp-rhoimp0_pp)/R**2 )
+
+       res_jac__n(var_Te, var_Te) =   res_jac__n(var_Te, var_Te) &
+                                  + rhoimp0 * (alpha_e + dalpha_e_dT*Te0) * Up0 * Te_p / R &
+                                  + (gamma-1.d0) * rhoimp0 * dE_ion_dT * Up0 * Te_p / R 
+
+       res_jac__p(var_Te, var_rhoimp) = res_jac__p(var_Te, var_rhoimp) &
+                                      + rhoimp * (alpha_e + dalpha_e_dT*Te0) * UgradTe  &
+                                      + Te0 * alpha_e * (UR0 * rhoimp_R + UZ0 * rhoimp_Z) &
+                                      + gamma * (alpha_e * Te0 *rhoimp) * divU &
+                                      + (rho0 + alpha_e*rhoimp0) * rhoimp * Lrad   &
+                                      + (alpha_e*rhoimp) * rhoimp0 * Lrad   &
+                                      + (rho0 + alpha_e*rhoimp) * frad_bg   &
+                                      + (gamma-1.d0) * (rhoimp * dE_ion_dT * UgradTe + E_ion * (UR0 * rhoimp_R + UZ0 * rhoimp_Z)) &
+                                      - (gamma-1.d0) * E_ion_bg * (UR0 * rhoimp_R + UZ0 * rhoimp_Z)                    &
+                                      + (gamma-1.d0) * rhoimp * E_ion * divU - (gamma-1.d0) * rhoimp * E_ion_bg * divU &
+                                      - (gamma-1.d0) * E_ion * D_prof_imp * ( rhoimp_R / R + rhoimp_RR + rhoimp_ZZ )   &
+                                      - (gamma-1.d0) * E_ion_bg * D_prof * (rho_R/R + rhoimp_RR + rhoimp_ZZ)
+
+       res_jac__n(var_Te, var_rhoimp) = res_jac__n(var_Te, var_rhoimp) &
+                                      + Te0 * alpha_e * Up0 * rhoimp_p / R &
+                                      + (gamma-1.d0) * E_ion * Up0 * rhoimp_p / R  & 
+                                      - (gamma-1.d0) * E_ion_bg * Up0 * rhoimp_p / R
+
+       res_jac__nn(var_Te, var_rhoimp) = res_jac__nn(var_Te, var_rhoimp) &
+                                       - (gamma-1.d0) * E_ion * D_prof_imp * rhoimp_pp / R**2   &
+                                       - (gamma-1.d0) * E_ion_bg * D_prof * rhoimp_pp / R**2
+
+    endif
+
+  else ! T equation
+
+    res(var_T) = rho0 * UgradT + T0 * UgradRho + gamma * p0 * divU &
+               - heat_source(ms,mt) - (gamma-1.d0) * Qvisc_T - (gamma-1.d0) * eta_T_ohm * JJ2 &
+               - ZK_prof * (T0_R / R + T0_RR + T0_ZZ + T0_pp/R**2)                         &
+               - (gamma-1.d0) * 0.5d0 * vv2 * particle_source(ms,mt)
+
+    res_jac__p(var_T, var_UR) =  res_jac__p(var_T, var_UR) &
+                              +  rho0 * UR * T0_R + T * UR0 * rho0_R + gamma * p0 * divU_UR &
+                              - (gamma-1.d0) * 0.5d0 * vv2_UR * particle_source(ms,mt) 
+
+    res_jac__p(var_T, var_UZ) =  res_jac__p(var_T, var_UZ) &
+                              +  rho0 * UZ * T0_Z + T * UZ0 * rho0_Z + gamma * p0 * divU_UZ &
+                              - (gamma-1.d0) * 0.5d0 * vv2_UZ * particle_source(ms,mt)
+
+    res_jac__p(var_T, var_Up) =  res_jac__p(var_T, var_Up) &
+                              +  rho0 * Up * T0_p / R + T * Up0 * rho0_p / R &
+                              - (gamma-1.d0) * 0.5d0 * vv2_Up * particle_source(ms,mt)
+
+    res_jac__n(var_T, var_Up) =  res_jac__n(var_T, var_Up) +  gamma * p0 * divU_Up__n
+
+    res_jac__p(var_T, var_T) =  res_jac__p(var_T, var_T) &
+                             + rho0 * (UR0 * T_R + UZ0 * T_Z) + T * UgradRho + gamma * rho0 * T * divU &
+                             - ZK_prof * (T_R / R + T_RR + T_ZZ + T_pp / R**2)
+    res_jac__n(var_T, var_T) = res_jac__n(var_T, var_T) + rho0 * Up0 * T_p / R
+    res_jac__nn(var_T, var_T)= res_jac__nn(var_T, var_T)- ZK_prof * T_pp / R**2
+
+    if(with_neutrals)then
+      res_jac__p(var_T, var_rho) =  res_jac__p(var_T, var_rho)                  &
+                                     + ksiion * rho * rhon0_corr * Sion_T       &
+                                     + rho * rhon0_corr * LradDrays_T           &
+                                     + 2.d0 * rho * rho0_corr  * LradDcont_T    &
+                                     + rho * frad_bg 
+
+      res_jac__p(var_T, var_T) =  res_jac__p(var_T, var_T)                            &
+                                     + ksiion * rho0_corr * rhon0_corr * dSion_dT * T &
+                                     + rho0_corr * rhon0_corr * dLradDrays_dT * T     &
+                                     + rho0_corr * rho0_corr  * dLradDcont_dT * T     &
+                                     + rho0_corr * dfrad_bg_dT * T
+
+      res_jac__p(var_T, var_rhon)=   + ksiion * rho0_corr * rhon * Sion_T  &
+                                     + rho0_corr * rhon * LradDrays_T
+    endif
+
+    if(with_impurities)then
+       res_jac__p(var_T, var_UR) = res_jac__p(var_T, var_UR) &
+                                  +  rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UR * T0_R &
+                                  + T0 * alpha_imp * UR * rhoimp0_R                      &
+                                  + v * gamma * pf0 * divU_UR &
+                                  - (gamma-1.d0) * 0.5d0 * vv2_UR * (source_bg + source_imp) &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * UR * T0 + E_ion * UR * rhoimp0_R + E_ion_bg * (UR * rho0_R - UR * rhoimp0_R)) &
+                                  + (gamma-1.d0) * rhoimp0 * E_ion * divU_UR + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU_UR
+
+       res_jac__p(var_T, var_UZ) = res_jac__p(var_T, var_UZ) &
+                                  +  rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UZ * T0_Z &                
+                                  + T0 * alpha_e * UZ * rhoimp0_Z                      &
+                                  + v * gamma * pf0 * divU_UZ                          &
+                                  - (gamma-1.d0) * 0.5d0 * vv2_UZ * (source_bg + source_imp) &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * UZ * T0 + E_ion * UZ * rhoimp0_R + E_ion_bg * (UZ * rho0_Z - UZ * rhoimp0_Z)) &
+                                  + (gamma-1.d0) * rhoimp0 * E_ion * divU_UZ + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU_UZ 
+
+       res_jac__p(var_T, var_Up) = res_jac__p(var_T, var_Up) &
+                                  +  rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * Up * T0_p / R &                
+                                  + T0 * alpha_imp * Up * rhoimp0_p / R                      &
+                                  - (gamma-1.d0) * 0.5d0 * vv2_Up * (source_bg + source_imp) &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * Up * T0 + E_ion * Up * rhoimp0_R + E_ion_bg * (Up * rho0_p/R - Up * rhoimp0_p/R)) 
+       res_jac__n(var_T, var_Up) = res_jac__n(var_T, var_Up) &
+                                  + v * gamma * pf0 * divU_Up__n &
+                                  + (gamma-1.d0) * rhoimp0 * E_ion * divU_Up__n + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU_Up__n
+
+       res_jac__p(var_T, var_rho)= res_jac__p(var_T, var_rho) &
+                                  + rho * rhoimp0 * Lrad + rho * frad_bg &
+                                  + (gamma-1.d0) * E_ion_bg * (UR0 * rho_R + UZ0 * rho_Z ) &
+                                  + (gamma-1.d0) * rho * E_ion_bg * divU                  &
+                                  + (gamma-1.d0) * E_ion * D_prof_imp * ( rho_R / R + rho_RR + rho_ZZ)   &
+                                  + (gamma-1.d0) * E_ion_bg * D_prof * (rho0_R/R + rho_RR + rho_ZZ)
+       res_jac__n(var_T, var_rho)= res_jac__n(var_T, var_rho) &
+                                  + (gamma-1.d0) * E_ion_bg * Up0 * rho_p / R
+       res_jac__nn(var_T, var_rho)= res_jac__nn(var_T, var_rho)                       &
+                                  + (gamma-1.d0) * E_ion * D_prof_imp * rho_pp / R**2   &
+                                  + (gamma-1.d0) * E_ion_bg * D_prof * rho_pp / R**2
+
+       res_jac__p(var_T, var_T) =   res_jac__p(var_T, var_T) &
+                                  + rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * (UR0 * T_R + UZ0 * T_Z) &
+                                  + rhoimp0 * (dalpha_imp_dT*Te + dalpha_imp_dT*T) * UgradT             &
+                                  + T  * alpha_imp * UgradRhoimp &
+                                  + T0 * dalpha_imp_dT * T * UgradRhoimp &
+                                  + gamma * (alpha_imp * T *rhoimp0 + (gamma-1.d0)*rhoimp0*dE_ion_dT*T) * divU &
+                                  + (rho0 + alpha_imp*rhoimp0) * rhoimp0 * dLrad_dT * T &
+                                  + (rho0 + dalpha_imp_dT*T*rhoimp0) * rhoimp0 * Lrad   &
+                                  + (rho0 + alpha_imp*rhoimp0) * dfrad_bg_dT * T        &
+                                  + (rho0 + dalpha_e_dT*T*rhoimp0) * frad_bg          &
+                                  + (gamma-1.d0) * (rhoimp0 * dE_ion_dT * (UR0*T_R+UZ0*T_Z) + dE_ion_dT * UgradRhoimp ) &
+                                  + (gamma-1.d0) * rhoimp0 * dE_ion_dT * divU  &
+                                  + (gamma-1.d0) * dE_ion_dT * D_prof_imp * ( (rho0_R - rhoimp0_R) / R + (rho0_RR-rhoimp0_RR) + (rho0_ZZ - rhoimp0_ZZ) + (rho0_pp-rhoimp0_pp)/R**2 )
+
+       res_jac__n(var_T, var_T) =   res_jac__n(var_T, var_T) &
+                                  + rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * Up0 * T_p / R &
+                                  + (gamma-1.d0) * rhoimp0 * dE_ion_dT * Up0 * T_p / R 
+
+       res_jac__p(var_T, var_rhoimp) = res_jac__p(var_T, var_rhoimp) &
+                                     + rhoimp * (alpha_imp + dalpha_imp_dT*T0) * UgradT  &
+                                     + T0 * alpha_imp * (UR0 * rhoimp_R + UZ0 * rhoimp_Z) &
+                                     + gamma * (alpha_imp * T0 *rhoimp) * divU &
+                                     + (rho0 + alpha_imp*rhoimp0) * rhoimp * Lrad   &
+                                     + (alpha_imp*rhoimp) * rhoimp0 * Lrad   &
+                                     + (rho0 + alpha_imp*rhoimp) * frad_bg   &
+                                     + (gamma-1.d0) * (rhoimp * dE_ion_dT * UgradT + E_ion * (UR0 * rhoimp_R + UZ0 * rhoimp_Z)) &
+                                     - (gamma-1.d0) * E_ion_bg * (UR0 * rhoimp_R + UZ0 * rhoimp_Z)                    &
+                                     + (gamma-1.d0) * rhoimp * E_ion * divU - (gamma-1.d0) * rhoimp * E_ion_bg * divU &
+                                     - (gamma-1.d0) * E_ion * D_prof_imp * ( rhoimp_R / R + rhoimp_RR + rhoimp_ZZ )   &
+                                     - (gamma-1.d0) * E_ion_bg * D_prof * (rho_R/R + rhoimp_RR + rhoimp_ZZ)
+
+       res_jac__n(var_T, var_rhoimp) = res_jac__n(var_T, var_rhoimp) &
+                                     + T0 * alpha_imp * Up0 * rhoimp_p / R &
+                                     + (gamma-1.d0) * E_ion * Up0 * rhoimp_p / R  & 
+                                     - (gamma-1.d0) * E_ion_bg * Up0 * rhoimp_p / R
+
+       res_jac__nn(var_T, var_rhoimp) = res_jac__nn(var_T, var_rhoimp) &
+                                      - (gamma-1.d0) * E_ion * D_prof_imp * rhoimp_pp / R**2   &
+                                      - (gamma-1.d0) * E_ion_bg * D_prof * rhoimp_pp / R**2
+    endif
+  endif
+
+  ! rhon equation
+  if(with_neutrals)then
+    res_jac__p(var_rhon, var_rho)   = + rho * rhon0 * Sion_T - 2.d0 * rho * rho0_corr * Srec_T
+
+    res_jac__p(var_rhon, var_rhon)  = - (Dn0R * (rhon_R/R + rhon_RR) + Dn0Z * rhon_ZZ) + rho0_corr * rhon * Sion_T
+    res_jac__nn(var_rhon, var_rhon) = - Dn0p * rhon_pp/R**2
+  endif
+
+  ! rhoimp equation
+  if(with_impurities)then
+    res_jac__p(var_rhoimp, var_UR) =  UR * rhoimp0_R + rhoimp0 * divU_UR
+
+    res_jac__p(var_rhoimp, var_UZ) =  UZ * rhoimp0_Z + rhoimp0 * divU_UZ
+
+    res_jac__p(var_rhoimp, var_Up) =  Up * rhoimp0_p / R
+    res_jac__n(var_rhoimp, var_Up) =  rhoimp0 * divU_Up__n
+
+    res_jac__p(var_rhoimp, var_rhoimp) = UR0 * rhoimp_R + UZ0 * rhoimp_Z + rhoimp * divU &
+                                       - D_prof_imp * (rhoimp_R/R + rhoimp_RR + rhoimp_ZZ)
+    res_jac__n(var_rhoimp, var_rhoimp) = Up0 * rhoimp_p / R
+    res_jac__nn(var_rhoimp, var_rhoimp)= - D_prof_imp * rhoimp_pp/R**2
+  endif
+
+
 CASE(-1)
 ! --- No VMS
 END SELECT
-
-Pjac  (var_AR, 1:n_var) = Pjac  (var_AR, 1:n_var) - vms_coeff_AR * tscale * vms_AR__p(1:n_var)
-Pjac_k(var_AR, 1:n_var) = Pjac_k(var_AR, 1:n_var) - vms_coeff_AR * tscale * vms_AR__k(1:n_var)
-
-Pjac  (var_AZ, 1:n_var) = Pjac  (var_AZ, 1:n_var) - vms_coeff_AZ * tscale * vms_AZ__p(1:n_var)
-Pjac_k(var_AZ, 1:n_var) = Pjac_k(var_AZ, 1:n_var) - vms_coeff_AZ * tscale * vms_AZ__k(1:n_var)
-
-Pjac  (var_A3, 1:n_var) = Pjac  (var_A3, 1:n_var) - vms_coeff_A3 * tscale * vms_A3__p(1:n_var)
-Pjac_k(var_A3, 1:n_var) = Pjac_k(var_A3, 1:n_var) - vms_coeff_A3 * tscale * vms_A3__k(1:n_var)
-
-Pjac  (var_UR, 1:n_var) = Pjac  (var_UR, 1:n_var) - vms_coeff_UR * tscale * vms_UR__p(1:n_var)
-Pjac_k(var_UR, 1:n_var) = Pjac_k(var_UR, 1:n_var) - vms_coeff_UR * tscale * vms_UR__k(1:n_var)
-
-Pjac  (var_UZ, 1:n_var) = Pjac  (var_UZ, 1:n_var) - vms_coeff_UZ * tscale * vms_UZ__p(1:n_var)
-Pjac_k(var_UZ, 1:n_var) = Pjac_k(var_UZ, 1:n_var) - vms_coeff_UZ * tscale * vms_UZ__k(1:n_var)
-
-Pjac  (var_Up, 1:n_var) = Pjac  (var_Up, 1:n_var) - vms_coeff_Up * tscale * vms_Up__p(1:n_var)
-Pjac_k(var_Up, 1:n_var) = Pjac_k(var_Up, 1:n_var) - vms_coeff_Up * tscale * vms_Up__k(1:n_var)
-
-Pjac  (var_rho, 1:n_var) = Pjac  (var_rho,1:n_var)  - vms_coeff_rho * tscale * vms_rho__p(1:n_var)
-Pjac_k(var_rho, 1:n_var) = Pjac_k(var_rho, 1:n_var) - vms_coeff_rho * tscale * vms_rho__k(1:n_var)
-
-if(with_TiTe)then
-  Pjac  (var_Ti, 1:n_var)   = Pjac  (var_Ti, 1:n_var) - vms_coeff_Ti * tscale * vms_Ti__p(1:n_var)
-  Pjac_k(var_Ti, 1:n_var)   = Pjac_k(var_Ti, 1:n_var) - vms_coeff_Ti * tscale * vms_Ti__k(1:n_var)
-
-  Pjac  (var_Te, 1:n_var)   = Pjac  (var_Te, 1:n_var) - vms_coeff_Te * tscale * vms_Te__p(1:n_var)
-  Pjac_k(var_Te, 1:n_var)   = Pjac_k(var_Te, 1:n_var) - vms_coeff_Te * tscale * vms_Te__k(1:n_var)
-else
-  Pjac  (var_T, 1:n_var)   = Pjac  (var_T, 1:n_var) - vms_coeff_T * tscale * vms_T__p(1:n_var)
-  Pjac_k(var_T, 1:n_var)   = Pjac_k(var_T, 1:n_var) - vms_coeff_T * tscale * vms_T__k(1:n_var)
-endif
-
-if(with_neutrals)then
-  Pjac  (var_rhon, 1:n_var) = Pjac  (var_rhon,1:n_var)  - vms_coeff_rhon * tscale * vms_rhon__p(1:n_var)
-  Pjac_k(var_rhon, 1:n_var) = Pjac_k(var_rhon, 1:n_var) - vms_coeff_rhon * tscale * vms_rhon__k(1:n_var)
-endif
-
-if(with_impurities)then
-  Pjac  (var_rhoimp, 1:n_var) = Pjac  (var_rhoimp, 1:n_var) - vms_coeff_rhoimp * tscale * vms_rhoimp__p(1:n_var)
-  Pjac_k(var_rhoimp, 1:n_var) = Pjac_k(var_rhoimp, 1:n_var) - vms_coeff_rhoimp * tscale * vms_rhoimp__k(1:n_var)
-endif
 
 do jj =1, n_var
   Qjac_p (var_AR,jj)  =  Qjac_p (var_AR,jj) - vms_coeff_AR * tscale * dot_product(vms_AR__p(:) , res_jac__p(:, jj))

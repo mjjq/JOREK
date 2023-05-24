@@ -232,7 +232,7 @@ contains
     if ( ascii ) then
       open(ifile, file=filename, form='formatted', status='replace')
     else
-      open(ifile, file=filename, form='binary', convert='BIG_ENDIAN', status='replace')
+      open(ifile, file=filename, form='unformatted', convert='BIG_ENDIAN', access='stream', status='replace')
     end if
     
     if ( ascii ) then

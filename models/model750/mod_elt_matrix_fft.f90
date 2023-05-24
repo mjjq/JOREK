@@ -6471,7 +6471,7 @@ end subroutine add_vms_to_rhs
 
 subroutine add_vms_to_elm()
 
-res_jac__p = 0.d0 ; res_jac__n = 0.d0 ; res_jac__n = 0.d0
+res_jac__p = 0.d0 ; res_jac__n = 0.d0 ; res_jac__nn = 0.d0
 
 SELECT CASE(vms_type)
 CASE(11) ! only diagonal part
@@ -8173,7 +8173,6 @@ CASE(13)
     res_jac__n(var_rhoimp, var_rhoimp) = Up0 * rhoimp_p / R
     res_jac__nn(var_rhoimp, var_rhoimp)= - D_prof_imp * rhoimp_pp/R**2
   endif
-
 
 CASE(-1)
 ! --- No VMS

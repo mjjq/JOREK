@@ -7,7 +7,7 @@ implicit none
 integer, parameter :: ind_max =    1000000
 integer, parameter :: n_nodes_max = 100000
 integer, parameter :: nodes_per_elem = 6
-logical, parameter :: ascii = .true.
+logical, parameter :: ascii = .false.
 real*8,  parameter :: PI = 3.141592653589793
 
 real*8  :: xyznode(n_nodes_max,3), xyzav(3), maxdist
@@ -15,8 +15,11 @@ integer :: elemnode(n_nodes_max/2, nodes_per_elem)
 integer :: tmp_elemnode(nodes_per_elem)
 integer :: elem_component(n_nodes_max/2)
 integer :: n_nodes, n_elems, ierr, i, j, ifile = 143, min_elem, max_elem
+
+integer :: nelems_comp, istart, iend
 character(len=80) :: buffer
 character(len=12) :: str1, str2
+character(len=2) :: str3
 character(len=1), parameter :: lf = char(10)
 character(len=20), parameter :: node_file='x.dat', elem_file='ix.dat'
 
@@ -95,72 +98,6 @@ write(*,*) '  Indices last  element: ', elemnode(n_elems,:)
 write(*,*)
 
 
-! --- export to VTK
-if ( ascii ) then
-   open(ifile, file='3dwall.vtk', form='formatted', status='replace')
-else
-  open(ifile, file='3dwall.vtk', form='binary', convert='BIG_ENDIAN', status='replace')
-end if
-
-if ( ascii ) then
-  write(ifile,'(a)')'# vtk DataFile Version 3.0'
-  write(ifile,'(a)')'vtk output'
-  write(ifile,'(a)')'ASCII'
-  write(ifile,'(a)')'DATASET UNSTRUCTURED_GRID'
-  write(str1,'(i12)') n_nodes
-  write(ifile,'(a)')'POINTS '//str1//'  float'
-else
-  buffer = '# vtk DataFile Version 3.0'//lf    ; write(ifile) trim(buffer)
-  buffer = 'vtk output'//lf                    ; write(ifile) trim(buffer)
-  buffer = 'BINARY'//lf                        ; write(ifile) trim(buffer)
-  buffer = 'DATASET UNSTRUCTURED_GRID'//lf     ; write(ifile) trim(buffer)
-  
-  write(str1,'(i12)') n_nodes
-  buffer = 'POINTS '//str1//'  float'//lf      ; write(ifile) trim(buffer)
-end if
-if ( ascii ) then
-  do j = 1, n_nodes
-    write(ifile,'(99f12.5)') xyznode(j,:)
-  end do
-else
-  write(ifile) ((real(xyznode(j,i),4),i=1,3),j=1,n_nodes)
-end if
-
-if ( ascii ) then
-  write(str1(1:12),'(i12)') n_elems
-  write(str2(1:12),'(i12)') (nodes_per_elem+1)*n_elems
-  write(ifile,'(a)') 'CELLS '//str1//' '//str2
-  do j = 1, n_elems
-    write(ifile,'(99i10)') nodes_per_elem, elemnode(j,:)-1
-  end do
-else
-  write(str1(1:12),'(i12)') n_elems
-  write(str2(1:12),'(i12)') (nodes_per_elem+1)*n_elems
-  buffer = lf//'CELLS '//str1//' '//str2//lf  ; write(ifile) trim(buffer)
-  write(ifile) (int(nodes_per_elem,4), (int(elemnode(j,i),4),i=1,nodes_per_elem), j=1,n_elems)
-end if
-
-if ( ascii ) then
-  write(str1(1:12),'(i12)') n_elems
-  write(ifile,'(a)') 'CELL_TYPES'//str1
-  if ( nodes_per_elem == 8 ) then
-    write(ifile,'(4i10)') (12, i=1,n_elems)
-  elseif ( nodes_per_elem == 6 ) then
-    write(ifile,'(4i10)') (13, i=1,n_elems)
-  else
-    write(*,*) 'not implemented'
-    stop
-  end if
-else
-  write(str1(1:12),'(i12)') n_elems
-  buffer = lf//'CELL_TYPES'//str1//lf         ; write(ifile) trim(buffer)
-  if ( nodes_per_elem == 8 ) then
-    write(ifile) (int(12,4),i=1,n_elems)
-  else
-    write(ifile) (int(13,4),i=1,n_elems)
-  end if
-end if
-
 ! ================= Convert wall currents =================================
 call HDF5_open('jorek_restart.h5',file_id,error)
 call HDF5_integer_reading(file_id,n_wall_curr,"n_wall_curr")
@@ -169,16 +106,6 @@ allocate(wall_curr(n_wall_curr),S(n_wall_curr,n_wall_curr),wall_curr_real(n_wall
 call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
 call HDF5_close(file_id)
 
-!open(13, file='wall_curr.dat', action='read')
-!i=0
-!
-!do
-!  i = i + 1
-!  read(13,*, iostat=ierr) wall_curr(i)
-!  if ( ierr /= 0 ) exit
-!end do
-!close(13)
-!write(*,*) 'wall_curr', sum(abs(wall_curr))
 !#============== LOAD number of DOFS per element
 open(13, file='ndofel.dat', action='read')
 allocate(ndofel(n_elems))
@@ -193,10 +120,10 @@ allocate(gmat_sp(ind_max,3),ind_g(ind_max,2))
 ind_g=0; gmat_sp=0.d0
 i=0
 do
-   i = i + 1
-   read(13,*,iostat=ierr) ind_g(i,:), gmat_sp(i,:)
-   if ( ierr /= 0 ) exit
-   ind_last = i
+  i = i + 1
+  read(13,*,iostat=ierr) ind_g(i,:), gmat_sp(i,:)
+  if ( ierr /= 0 ) exit
+  ind_last = i
 end do
 close(13)
 ! Transform into full matrix
@@ -204,7 +131,7 @@ l1=maxval(ind_g(:,1));l2=maxval(ind_g(:,2))
 allocate(gmat(l1,l2,3))
 gmat=0.d0
 do i = 1,ind_last
-   gmat(ind_g(i,1),ind_g(i,2),:) = gmat_sp(i,:)
+  gmat(ind_g(i,1),ind_g(i,2),:) = gmat_sp(i,:)
 end do
 deallocate(gmat_sp)
 
@@ -212,10 +139,10 @@ deallocate(gmat_sp)
 open(13, file='iglobdof.dat', action='read')
 i=0
 do
-   i = i + 1
-   read(13,*,iostat=ierr) ij_glob(i,:), ind_glob(i)
-   if ( ierr /= 0 ) exit
-   ind_last=i
+  i = i + 1
+  read(13,*,iostat=ierr) ij_glob(i,:), ind_glob(i)
+  if ( ierr /= 0 ) exit
+  ind_last=i
 end do
 close(13)
 l1=maxval(ij_glob(:,1));l2=maxval(ij_glob(:,2))
@@ -223,10 +150,10 @@ l1=maxval(ij_glob(:,1));l2=maxval(ij_glob(:,2))
 allocate(full_glob(l1,l2))
 full_glob=0.d0
 do i =1,ind_last
-   full_glob(ij_glob(i,1),ij_glob(i,2)) = ind_glob(i)
+  full_glob(ij_glob(i,1),ij_glob(i,2)) = ind_glob(i)
 end do
 
-
+! Load S matrix
 open(13, file='S_mat.bin', status='old', form='unformatted', access='stream', action='read')
 read(13) S
 close(13)
@@ -237,60 +164,224 @@ deallocate(wall_curr)
 
 open(13, file='wall_curr_test.dat')
 do i=1,n_wall_curr
-   write(13, '(ES16.8)') wall_curr_real(i)/4e-7/3.141592653589793
+  write(13, '(ES16.8)') wall_curr_real(i)/4e-7/3.141592653589793
 end do
 close(13)
 allocate(wall_curr_el(n_elems),jx(n_elems),jy(n_elems),jz(n_elems), jphi(n_elems))
 wall_curr_el=0.d0
 
+! ----------------- Calculate current density in element center of mass ----------------------------------
 jx=0.d0;   jy=0.d0;    jz=0.d0
 do i = 1, n_elems
-   do j = 1, ndofel(i)
-      dof = full_glob(i,j)
-      if (dof > (n_wall_curr-32)) cycle
-      jx(i) =jx(i) + gmat(i,j,1)*wall_curr_real(dof)/4e-7/PI
-      jy(i) =jy(i) + gmat(i,j,2)*wall_curr_real(dof)/4e-7/PI
-      jz(i) =jz(i) + gmat(i,j,3)*wall_curr_real(dof)/4e-7/PI
-   end do
-   do j = 1,nodes_per_elem
-      xyz_e(:) = xyznode(elemnode(i,j),:)/nodes_per_elem
-   end do
-   phi = atan2(xyz_e(2),xyz_e(1))
-   jphi(i) = jx(i) * sin(phi) - jy(i) * cos(phi)
-   wall_curr_el(i) = (jx(i)**2+jy(i)**2+jz(i)**2)**.5
+  do j = 1, ndofel(i)
+    dof = full_glob(i,j)
+    jx(i) =jx(i) + gmat(i,j,1)*wall_curr_real(dof)/4e-7/PI
+    jy(i) =jy(i) + gmat(i,j,2)*wall_curr_real(dof)/4e-7/PI
+    jz(i) =jz(i) + gmat(i,j,3)*wall_curr_real(dof)/4e-7/PI
+  end do
+  do j = 1,nodes_per_elem
+    xyz_e(:) = xyznode(elemnode(i,j),:)/nodes_per_elem
+  end do
+  phi = atan2(xyz_e(2),xyz_e(1))
+  jphi(i) = jx(i) * sin(phi) - jy(i) * cos(phi)
+  wall_curr_el(i) = (jx(i)**2+jy(i)**2+jz(i)**2)**.5
 end do
-if ( ascii ) then
-   write(ifile,'(a,i)')'CELL_DATA ',n_elems
-   write(ifile,'(a)')'Scalars j_w(Am^-3) float 1'
-   write(ifile,'(a)')'LOOKUP_TABLE default'
-   write(ifile,'(4es28.9)') (wall_curr_el(i), i=1,n_elems)
-else
-   write(*,*) 'not implemented'
-endif
-if ( ascii ) then
-   write(ifile,'(a)')'Scalars I*e_phi float 1'
-   write(ifile,'(a)')'LOOKUP_TABLE default'
-   write(ifile,'(4es28.9)') (jphi(i), i=1,n_elems)
-else
-   write(*,*) 'not implemented'
-endif
 
-if ( ascii ) then
-   write(ifile,'(a,i)')'VECTORS vectors float'
-   write(ifile,'(4es28.9)') ((/jx(i),jy(i),jz(i)/), i=1,n_elems)
-else
-   write(*,*) 'not implemented'
-endif
+! --- export to VTK
+call write_header('3dwall.vtk',ifile, n_nodes, xyznode)
+! components to plot (0=all)
+call det_comp(elem_component, 0, 0, n_elems, istart, iend, nelems_comp)
+call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
+call write_header_scalar(ifile, nelems_comp)
+call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
+call write_scalar('I*e_phi', ifile, istart, iend, jphi)
+call write_vector('J', ifile, istart, iend, jx, jy, jz)
 close(ifile)
-stop
+
+call write_header('3dwall_comp_passive.vtk',ifile, n_nodes, xyznode)
+call det_comp(elem_component, 1,98-32, n_elems, istart, iend, nelems_comp)
+write(*,*) 'passive', istart, iend, nelems_comp, n_elems
+call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
+call write_header_scalar(ifile, nelems_comp)
+call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
+call write_scalar('I*e_phi', ifile, istart, iend, jphi)
+call write_vector('J', ifile, istart, iend, jx, jy, jz)
+close(ifile)
+call write_header('3dwall_comp_PSL.vtk',ifile, n_nodes, xyznode)
+call det_comp(elem_component, 98-33, 98-32, n_elems, istart, iend, nelems_comp)
+write(*,*) 'passive', istart, iend, nelems_comp, n_elems
+call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
+call write_header_scalar(ifile, nelems_comp)
+call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
+call write_scalar('I*e_phi', ifile, istart, iend, jphi)
+call write_vector('J', ifile, istart, iend, jx, jy, jz)
+close(ifile)
+
+contains
+  subroutine write_header(filename, ifile, nnodes, xyznode)
+    integer, intent(in)             :: nnodes, ifile
+    real*8,  intent(in)             :: xyznode(:,:)
+    character(len=*), intent(in)    :: filename
+    character(len=80)               :: buffer
+
+    integer           :: i, j
+    integer           :: type
+    character(len=12) :: str1, str2
+
+    
+    if ( ascii ) then
+      open(ifile, file=filename, form='formatted', status='replace')
+    else
+      open(ifile, file=filename, form='binary', convert='BIG_ENDIAN', status='replace')
+    end if
+    
+    if ( ascii ) then
+      write(ifile,'(a)')'# vtk DataFile Version 3.0'
+      write(ifile,'(a)')'vtk output'
+      write(ifile,'(a)')'ASCII'
+      write(ifile,'(a)')'DATASET UNSTRUCTURED_GRID'
+      write(str1,'(i12)') nnodes
+      write(ifile,'(a)')'POINTS '//str1//'  float'
+    else
+      buffer = '# vtk DataFile Version 3.0'//lf    ; write(ifile) trim(buffer)
+      buffer = 'vtk output'//lf                    ; write(ifile) trim(buffer)
+      buffer = 'BINARY'//lf                        ; write(ifile) trim(buffer)
+      buffer = 'DATASET UNSTRUCTURED_GRID'//lf     ; write(ifile) trim(buffer)
+      write(str1,'(i12)') nnodes
+      buffer = 'POINTS '//str1//'  float'//lf      ; write(ifile) trim(buffer)
+    end if
+    
+    if ( ascii ) then
+        write(ifile,'(99f12.5)') ((xyznode(j,i),i=1,3),j=1,nnodes)
+    else
+      write(ifile) ((real(xyznode(j,i),4),i=1,3),j=1,nnodes)
+    end if
+    
+  end subroutine write_header
+
+  subroutine write_cell(ifile, nelems, elemnode, istart, iend, nelems_final)
+    integer, intent(in)             :: nelems, ifile
+    integer, intent(in)             :: istart, iend, nelems_final
+    integer, intent(in)             :: elemnode(:,:)
+    character(len=80)               :: buffer
+
+    integer           :: i, j
+    integer           :: type
+    character(len=12) :: str1, str2
+    
+    if ( ascii ) then
+      write(str1(1:12),'(i12)') nelems_final
+      write(str2(1:12),'(i12)') (nodes_per_elem+1)*nelems_final
+      write(ifile,'(a)') 'CELLS '//str1//' '//str2
+      do j = istart, iend
+        write(ifile,'(99i10)') nodes_per_elem, elemnode(j,:)-1
+      end do
+    else
+      write(str1(1:12),'(i12)') nelems_final
+      write(str2(1:12),'(i12)') (nodes_per_elem+1)*nelems_final
+      buffer = lf//'CELLS '//str1//' '//str2//lf  ; write(ifile) trim(buffer)
+      do j = istart, iend
+        write(ifile) int(nodes_per_elem,4)
+        write(ifile) (int(elemnode(j,i)-1,4),i=1,nodes_per_elem)
+      end do
+    end if
+
+    if (nodes_per_elem==6) then
+      type=13
+    elseif (nodes_per_elem==8) then
+      type=12
+    else
+      write(*,*) 'not implemented'
+      stop
+    end if
+
+    if ( ascii ) then
+      write(str1(1:12),'(i12)') nelems_final
+      write(ifile,'(a)') 'CELL_TYPES'//str1
+      write(ifile,'(4i10)') (type, i=1,nelems_final)
+    else
+      write(str1(1:12),'(i12)') nelems_final
+      buffer = lf//'CELL_TYPES '//str1//lf; write(ifile) trim(buffer)
+      write(ifile) (int(type,4), i=1,nelems_final)
+    end if
+
+  end subroutine write_cell
 
 
+  
+  subroutine write_header_scalar(ifile, nelems)
+    integer, intent(in)             :: nelems, ifile
+    character(len=80) :: buffer
+    
+    character(len=12) :: str1
+    if (ascii) then
+      write(ifile,'(a,i)')'CELL_DATA ',nelems
+    else
+      write(str1, '(i12)') nelems
+      buffer = lf//'CELL_DATA '//str1//lf; write(ifile) trim(buffer)
+    end if
+  end subroutine write_header_scalar
+  
+  subroutine write_scalar(name, ifile, istart, iend, values)
+    real*8 , intent(in)             :: values(:)
+    integer, intent(in)             :: istart, iend, ifile
+    character(len=*), intent(in)    :: name
+    
+    integer :: i
 
-write(str1(1:12),'(i12)') n_elems
-buffer = lf//'CELL_DATA '//str1            ; write(ifile) trim(buffer)
+    if ( ascii ) then
+      write(ifile,'(a)')'Scalars '//trim(name)//' float 1'
+      write(ifile,'(a)')'LOOKUP_TABLE default'
+      write(ifile,'(4es28.9)') (values(i), i=istart, iend)
+    else
+      buffer = lf//'Scalars '//trim(name)//' float 1'//lf;write(ifile) trim(buffer)
+      buffer = lf//'LOOKUP_TABLE default'//lf;write(ifile) trim(buffer)
+      write(ifile) (real(values(i),4), i=istart, iend)
+    endif
 
-buffer = lf//'SCALARS '//'blank'//' float'//lf ; write(ifile) trim(buffer)
-buffer = 'LOOKUP_TABLE default'//lf;                                write(ifile) trim(buffer)
+  end subroutine write_scalar
+  
+  subroutine write_vector(name, ifile, istart, iend, v1, v2, v3)
+    real*8 , intent(in)             :: v1(:),v2(:),v3(:)
+    integer, intent(in)             :: istart, iend, ifile
+    character(len=*), intent(in)    :: name
+    
+    integer :: i
+    write(*,*) istart, iend
+    if ( ascii ) then
+      write(ifile,'(a,i)')'VECTORS '//trim(name)//' float'
+      write(ifile,'(4es28.9)') ((/v1(i),v2(i),v3(i)/), i=istart, iend)
+    else
+      buffer = lf//'VECTORS '//trim(name)//' float'//lf; write(ifile) trim(buffer)
+      write(ifile) ((real(v1(i),4),real(v2(i),4),real(v3(i),4)), i=istart, iend)
+    endif
+
+  end subroutine write_vector
+
+
+  subroutine det_comp(elem_component, comp1, comp2, nelems, istart, iend, nelems_final)
+    integer, intent(in)             :: nelems, comp1, comp2
+    integer, intent(in)             :: elem_component(:)
+    integer, intent(out)            :: istart, iend, nelems_final
+
+    character(len=80)               :: buffer
+    integer           :: i
+    istart = -1
+    if (comp1 ==0) then
+      nelems_final = nelems
+      istart = 1; iend = nelems
+    else
+      nelems_final=0
+      do i=1, nelems
+        if (elem_component(i)>=comp1 .and. elem_component(i)<=comp2 ) then
+          if (istart == -1) istart = i
+          iend = i
+          nelems_final = nelems_final+1
+        end if
+      end do
+    end if
+  end subroutine det_comp
+  
 end program convert
 
 

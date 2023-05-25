@@ -53,7 +53,7 @@ contains
 !>   n_cpu:           (integer)(optional) number of mpi tasks in the commworld
 !> outputs:
 !>   sim: (particle_sim) the particle simulation
-subroutine initialize(sim,num_groups,skip_jorek2help,my_id,n_cpu)
+subroutine initialize(sim,num_groups,skip_jorek2help,my_id,n_cpu,do_jorek_init_in)
   use mod_mpi_tools,     only: init_mpi_threads
   use mod_mpi_tools,     only: get_mpi_wtime
   use mod_parameters,    only: n_tor, n_period
@@ -63,8 +63,9 @@ subroutine initialize(sim,num_groups,skip_jorek2help,my_id,n_cpu)
   !$ use omp_lib
   class(particle_sim), intent(inout) :: sim
   integer, intent(in)                :: num_groups
-  logical,intent(in), optional       :: skip_jorek2help
+  logical,intent(in), optional       :: skip_jorek2help,do_jorek_init_in
   integer,intent(in),optional        :: my_id,n_cpu
+  logical                            :: do_jorek_init
   integer                            :: ierr, i_tor,nthreads
 
   !> initialise the mpi comm world with threads if required
@@ -76,27 +77,33 @@ subroutine initialize(sim,num_groups,skip_jorek2help,my_id,n_cpu)
   endif
   !> allocate the simulation particle groups
   call sim%allocate_groups(num_groups)
-  
-  call init_threads()
 
-  if (present(skip_jorek2help)) then
-    if (sim%my_id .eq. 0 .and. .not. skip_jorek2help) call jorek2help(sim%n_cpu, nbthreads)
-  end if
+ !> check if the initialisation of JOREK should be performed or not
+  do_jorek_init = .true.
+  if(present(do_jorek_init_in)) do_jorek_init = do_jorek_init_in  
+  if(do_jorek_init) then 
+    !> perform the initialisation if requried
+    call init_threads()
 
-  ! Initialise mode numbers
-  call det_modes()
+    if (present(skip_jorek2help)) then
+      if (sim%my_id .eq. 0 .and. .not. skip_jorek2help) call jorek2help(sim%n_cpu, nbthreads)
+    end if
 
-  ! Initialise parameters
-  call initialise_and_broadcast_parameters(sim%my_id, "__NO_FILENAME__")
+    ! Initialise mode numbers
+    call det_modes()
 
-  ! Broadcast physics parameters
-  call broadcast_phys(sim%my_id)
+    ! Initialise parameters
+    call initialise_and_broadcast_parameters(sim%my_id, "__NO_FILENAME__")
 
-  ! Set up normalisation factors
-  call sim%set_t_norm()
+    ! Broadcast physics parameters
+    call broadcast_phys(sim%my_id)
 
-  ! Initialise the gaussian points at basis functions
-  call initialise_basis
+    ! Set up normalisation factors
+    call sim%set_t_norm()
+
+    ! Initialise the gaussian points at basis functions
+    call initialise_basis
+  endif
 end subroutine
 
 !> Actions to perform when stopping the simulation.

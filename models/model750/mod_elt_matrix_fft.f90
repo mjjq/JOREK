@@ -6208,11 +6208,11 @@ CASE(13)
                                + rho0_corr * frad_bg 
     endif
     if(with_impurities)then
-      res(var_T) = res(T) &
+      res(var_T) = res(var_T) &
                  + rhoimp0 * (alpha_imp + dalpha_imp_dT*T0) * UgradT + T0 * alpha_imp * UgradRhoimp   &
                  + gamma * pf0 * divU - (gamma-1.d0) * 0.5d0 * vv2 * (source_bg + source_imp)         &
                  -  heat_source(ms,mt) - (gamma-1.d0) * Qvisc_T - (gamma-1.0d0) * eta_T_ohm * JJ2     &
-                 - (rho0 + alpha_e*rhoimp0) * rhoimp0 * Lrad - (rho0 + alpha_e*rhoimp0) * frad_bg     &
+                 - (rho0 + alpha_imp*rhoimp0) * rhoimp0 * Lrad - (rho0 + alpha_imp*rhoimp0) * frad_bg     &
                  - (gamma-1.d0) * (rhoimp0 * dE_ion_dT * UgradT + E_ion * UgradRhoimp + E_ion_bg * (UgradRho - UgradRhoimp)) &
                  + (gamma-1.d0) * rhoimp0 * E_ion * divU                             &
                  + (gamma-1.d0) * (rho0-rhoimp0) * E_ion_bg * divU                   &
@@ -6401,7 +6401,7 @@ CASE(13)
 
   !! equation rhon
   if(with_neutrals)then
-    vms_rhon__p (var_rhon)= - Dn0R * (rhon_R/R + rhon_RR) + Dn0Z * rhon_ZZ
+    vms_rhon__p (var_rhon)= - Dn0R * (rhon_R/R + rhon_RR) - Dn0Z * rhon_ZZ
     !vms_rhon__kk(var_rhon)= - Dn0p * rhon_pp/R**2 ! not availabble
   endif
 
@@ -6447,24 +6447,24 @@ Qvec_p(var_rho)= Qvec_p(var_rho)- vms_coeff_rho* tscale * dot_product(res, vms_r
 Qvec_k(var_rho)= Qvec_k(var_rho)- vms_coeff_rho* tscale * dot_product(res, vms_rho__k)
 
 if(with_TiTe)then
-  Qvec_p(var_Ti)  = Qvec_p(var_Ti)  - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__p)
-  Qvec_k(var_Ti)  = Qvec_k(var_Ti)  - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__k)
+  Qvec_p(var_Ti) = Qvec_p(var_Ti) - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__p)
+  Qvec_k(var_Ti) = Qvec_k(var_Ti) - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__k)
 
-  Qvec_p(var_Te)  = Qvec_p(var_Te)  - vms_coeff_Te  * tscale * dot_product(res, vms_Te__p)
-  Qvec_k(var_Te)  = Qvec_k(var_Te)  - vms_coeff_Te  * tscale * dot_product(res, vms_Te__k)
+  Qvec_p(var_Te) = Qvec_p(var_Te) - vms_coeff_Te  * tscale * dot_product(res, vms_Te__p)
+  Qvec_k(var_Te) = Qvec_k(var_Te) - vms_coeff_Te  * tscale * dot_product(res, vms_Te__k)
 else
-  Qvec_p(var_T)  = Qvec_p(var_T)  - vms_coeff_T  * tscale * dot_product(res, vms_T__p)
-  Qvec_k(var_T)  = Qvec_k(var_T)  - vms_coeff_T  * tscale * dot_product(res, vms_T__k)
+  Qvec_p(var_T) = Qvec_p(var_T)  - vms_coeff_T  * tscale * dot_product(res, vms_T__p)
+  Qvec_k(var_T) = Qvec_k(var_T)  - vms_coeff_T  * tscale * dot_product(res, vms_T__k)
 endif
 
 if(with_neutrals)then
-  Qvec_p(var_rhon)= Qvec_p(var_rhon)- vms_coeff_rhon* tscale * dot_product(res, vms_rhon__p)
-  Qvec_k(var_rhon)= Qvec_k(var_rhon)- vms_coeff_rhon* tscale * dot_product(res, vms_rhon__k)
+  Qvec_p(var_rhon) = Qvec_p(var_rhon) - vms_coeff_rhon * tscale * dot_product(res, vms_rhon__p)
+  Qvec_k(var_rhon) = Qvec_k(var_rhon) - vms_coeff_rhon * tscale * dot_product(res, vms_rhon__k)
 endif
 
 if(with_impurities)then
-  Qvec_p(var_rhoimp)= Qvec_p(var_rhoimp)- vms_coeff_rhoimp* tscale * dot_product(res, vms_rhoimp__p)
-  Qvec_k(var_rhoimp)= Qvec_k(var_rhoimp)- vms_coeff_rhoimp* tscale * dot_product(res, vms_rhoimp__k)
+  Qvec_p(var_rhoimp) = Qvec_p(var_rhoimp) - vms_coeff_rhoimp * tscale * dot_product(res, vms_rhoimp__p)
+  Qvec_k(var_rhoimp) = Qvec_k(var_rhoimp) - vms_coeff_rhoimp * tscale * dot_product(res, vms_rhoimp__k)
 endif
 
 end subroutine add_vms_to_rhs

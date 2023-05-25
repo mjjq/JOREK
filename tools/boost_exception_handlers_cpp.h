@@ -5,7 +5,6 @@
   #include <limits>
   #include <iostream>
   #include <iomanip>
-  #include <numbers>
   #include <boost/math/special_functions.hpp>
   #include <boost/format.hpp>
   using boost::io::group;

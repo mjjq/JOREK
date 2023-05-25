@@ -17,7 +17,6 @@ program camera_RE_gyroaverage_synchrotron_example
 use constants,                      only: PI
 use mod_mpi_tools,                  only: init_mpi_threads,finalize_mpi_threads
 use particle_tracer
-use mod_particle_io,                only: read_simulation_hdf5,get_simulation_hdf5_time
 use mod_spectra_deterministic,      only: spectrum_integrator_2nd
 use mod_pinhole_lens,               only: pinhole_lens
 use mod_filter_unity,               only: filter_unity
@@ -30,7 +29,7 @@ use mod_fast_camera_io,             only: write_pixel_intensity_hdf5
 implicit none
 
 !> Variables -------------------------------------------------------------------------------
-type(event)                        :: field_reader
+type(event)                        :: field_reader,particle_reader
 type(pinhole_lens)                 :: lens
 type(spectrum_integrator_2nd)      :: spectra
 type(filter_unity)                 :: filter_image,filter_time
@@ -38,7 +37,7 @@ type(filter_unity),dimension(:),allocatable :: filter_spectra
 type(camera_perspective_static)          :: camera
 type(gyroaverage_synchrotron_light_dist) :: synch_sources
 type(particle_sim),dimension(:),allocatable :: sims,sims_gc
-logical                            :: write_gc_in_txt
+logical                            :: write_gc_in_txt,do_jorek_init
 integer                            :: ii,n_1d,n_2d,t0,t1
 integer                            :: n_groups,my_id,n_cpus,n_x,ierr
 integer                            :: n_wavelengths,n_spectra
@@ -49,62 +48,69 @@ real*8,dimension(:),allocatable    :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable    :: real_camera_param,sim_times
 real*8,dimension(:,:),allocatable :: x_pixel_positions,y_pixel_positions
 real*8,dimension(:,:,:,:,:),allocatable :: pixel_filter_values
+character(len=3)                   :: hdf5ext
 character(len=4)                   :: extension
-character(len=15)                  :: particle_filename
 character(len=17)                  :: fields_filename
 character(len=24)                  :: image_filename
 character(len=27)                  :: filename_gc_txt_root
 character(len=33)                  :: filename_gc_txt
+character(len=60),dimension(:),allocatable :: particle_filenames
+
+!> Variable presets -----------------------------------------------------------------------
+extension = '.txt'; hdf5ext = '.h5'
+n_1d = 1; n_2d = 2; n_x = 3 !< number of spatial coordinates
 
 !> Variable definitions -------------------------------------------------------------------
-particle_filename    = 'part_restart.h5'
+n_times              = 1
 fields_filename      = 'jorek_equilibrium'
 image_filename       = 'pixel_filter_intensities'
 filename_gc_txt_root = 'jorek_relativistic_gc_data_'
-extension            = '.txt'
-n_1d = 1; n_2d = 2;
-n_x = 3 !< number of spatial coordinates
 n_groups = 1 !< number of particle groups
 n_spectra     = 1
 n_wavelengths = 40
 n_int_camera_param  = 5
 n_real_camera_param = 9
-n_times = 1
 write_gc_in_txt = .false.
+!> se the list of particle restart files to be read
+allocate(character(len=60)::particle_filenames(n_times)); particle_filenames = ''
+particle_filenames = [character(len=15)::'part_restart']
 !> JET KDLT-E5WC wavelength: 3d-6 - 3.5d-6 [m]
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
 allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
-allocate(filter_spectra(n_spectra));
 allocate(pinhole_positions(n_x)); pinhole_positions = [-8.86d-1,-4.002,-3.32d-1];
 !> one pinhole => n_lens_samples=1, JET KLDT-E5WC pixels nx=120,ny=176
 allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,120,176,0,1];
-allocate(real_camera_param(n_real_camera_param))
-allocate(x_pixel_positions(int_camera_param(2),n_times))
-allocate(y_pixel_positions(int_camera_param(3),n_times))
 !> JET KLDT-E5WC camera inputs:
 !> 1:3 -> half width, half height and orientation of the visual plane angle
 !> 4:6 -> camera focal direction: focal distance, latitude, azimuth
 !> 7:9 -> camera position in the tokamak reference system
+allocate(real_camera_param(n_real_camera_param))
 real_camera_param = [5.23d-1,5.23d-1,5d-1*PI,9.998025d-1,1.5807965,2.09801,-8.86d-1,-4.002,-3.32d-1];
-allocate(sim_times(n_times)); allocate(sims(n_times)); 
-allocate(sims_gc(n_times))
 
 !> Initialisation  ------------------------------------------------------------------------
 !> Initialise MPI communicator
 call init_mpi_threads(my_id,n_cpus,ierr)
 
-!> read particle, time, MHD fields data and transform to gc if needed
+!> allocate structures, read particle, time, MHD fields data and transform to gc if needed
 write(*,*) 'Reading particle data ...'
+allocate(filter_spectra(n_spectra));
+allocate(x_pixel_positions(int_camera_param(2),n_times))
+allocate(y_pixel_positions(int_camera_param(3),n_times))
+allocate(sim_times(n_times)); allocate(sims(n_times)); 
+allocate(sims_gc(n_times)); do_jorek_init = .true.
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(fields_filename),i=-1))
 do ii=1,n_times
-  call sims(ii)%initialize(n_groups,.true.,my_id,n_cpus)
-  call read_simulation_hdf5(sims(ii),particle_filename)
-  sim_times(ii) = get_simulation_hdf5_time(particle_filename) 
+  call sims(ii)%initialize(n_groups,.true.,my_id,n_cpus,do_jorek_init)
+  write(*,*) 'my_id: ',sims(ii)%my_id,'doing particle restart file: ',trim(particle_filenames(ii))
+  particle_reader = event(read_action(filename=trim(particle_filenames(ii))//trim(hdf5ext)))
+  call with(sims(ii),particle_reader); sim_times(ii) = sims(ii)%time; 
   call with(sims_gc(ii),field_reader)
   !> transform particle kinetic relativistic to relativistic gc or store relativistic gc
-  call relativistic_kinetic_sim_to_relativistic_gc_sim(sims(ii),sims_gc(ii)) 
+  call relativistic_kinetic_sim_to_relativistic_gc_sim(sims(ii),sims_gc(ii))
+  if(do_jorek_init) do_jorek_init = .false.
 enddo
-if(allocated(sims)) deallocate(sims)
+if(allocated(particle_filenames)) deallocate(particle_filenames)
+if(allocated(sims))               deallocate(sims)
 write(*,*) 'Reading particle data: completed!' 
 
 if(write_gc_in_txt) then

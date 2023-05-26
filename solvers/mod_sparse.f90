@@ -22,6 +22,9 @@ module mod_sparse
 #else
     use mod_distribute_preconditioner, only: update_pc_mat
 #endif
+#ifdef USE_STRUMPACK
+    use mod_strumpack, only: spk_delete_factors
+#endif
 #ifdef USE_BICGSTAB
     use mod_bicgstab, only: bicgstab_driver
 #else
@@ -117,6 +120,9 @@ module mod_sparse
 
 ! Finding PC solution
       if (.not.solver%solve_only) then
+#ifdef USE_STRUMPACK
+        if ((solver%library.eq.strumpack).and.(solver%spss%analyzed)) call spk_delete_factors(solver%spss%sscp)
+#endif
         call update_pc_mat(solver%pc,a_mat,mhd_sim)
       endif
 

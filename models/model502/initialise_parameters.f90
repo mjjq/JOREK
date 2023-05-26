@@ -154,7 +154,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ZK_prof_neg_thresh, ZK_prof_neg, ZK_par_neg_thresh, &
                 ZK_par_neg, Z_xpoint_limit, visco_par_heating,      &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
-                alpha_Newton
+                alpha_Newton, strumpack_matching
 
 if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

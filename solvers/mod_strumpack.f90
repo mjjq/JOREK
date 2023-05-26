@@ -20,7 +20,8 @@ module mod_strumpack
   private
   public :: type_STRUMPACK_SOLVER, &
             strumpack_init, strumpack_set_mat, strumpack_analyze, &
-            strumpack_factorize, strumpack_solve, strumpack_finalize
+            strumpack_factorize, strumpack_solve, strumpack_finalize, &
+            spk_delete_factors
 
   interface
     subroutine spk() bind(C)
@@ -77,6 +78,13 @@ module mod_strumpack
       !integer(kind=C_INT_ALL), dimension(:), pointer, intent(in) :: dist
       integer, intent(in) :: comm
     end subroutine spk_solve
+
+    subroutine spk_delete_factors(sscp) bind(C)
+      use iso_c_binding
+      implicit none
+
+      type(c_ptr), intent(inout) :: sscp
+    end subroutine spk_delete_factors
 
     subroutine spk_finalize(sscp,comm) bind(C)
       use iso_c_binding

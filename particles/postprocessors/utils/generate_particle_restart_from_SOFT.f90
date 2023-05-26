@@ -51,7 +51,7 @@ fields_filename        = 'jorek_equilibrium' !< jorek restart filename
 soft_magfield_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field file
 particle_filename      = 'part_restart_soft_orbits.h5'  !< particle restart filename 
 soft_pdf_filename      = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
-soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a97_nowall' !< soft orbit filename
+soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall_angdist_trapz_noDrift' !< soft orbit filename
 filename_jorek_hdf5 = 'jorek_particles_from_soft'
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator
@@ -388,6 +388,7 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   use constants, only: ATOMIC_MASS_UNIT,TWOPI
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
+  use hdf5_io_module, only: HDF5_is_dataset_in_file
   use hdf5_io_module, only: HDF5_allocatable_array1D_reading_int
   use hdf5_io_module, only: HDF5_allocatable_array1D_reading
   use hdf5_io_module, only: HDF5_allocatable_array2D_reading
@@ -404,6 +405,7 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   real*8,dimension(:),allocatable,intent(out)   :: ppar,pperp,weights
   real*8,dimension(:,:),allocatable,intent(out) :: x
   !> variables:
+  logical        :: weights_not_in_file
   integer(HID_T) :: file_id
   integer        :: ii,jj,id,n_orbits,n_times,n_active_orbits,ierr
   integer,dimension(:),allocatable   :: classification_loc,valid_orbit_id
@@ -418,7 +420,16 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   call HDF5_allocatable_array1D_reading(file_id,orbit_xi_mesh,'/param2') !< cospitch mesh 
   call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")        !< parallel momentum
   call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")      !< perpendicular momentum
-  call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobian*dpoloidal*dminorradius
+  !> check if the particle weights is in hdf5 file
+  call HDF5_is_dataset_in_file(file_id,"/f",weights_not_in_file)
+  weights_not_in_file = .not.weights_not_in_file
+  if(weights_not_in_file) then
+    write(*,*) "SOFT particle weights not found: compute from jacobian!"
+    call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobian*dpoloidal*dminorradius
+  else
+    write(*,*) "SOFT particle weights found!"
+    call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/f")        !< weight
+  endif
   call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")              !< position in xyz coordinates
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
@@ -431,17 +442,20 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   !> extract and compute the pdf for each orbit: be aware the pdf is taken at t=0
   !> and then replicated for nt times for each orbit
   allocate(orbit_pdf_loc(n_orbits)); orbit_pdf_loc = 0d0;
-  call compute_pdf_orbit(n_vec,n_times,n_orbits,RZaxis,x_loc,ppar_loc,pperp_loc,&
-  Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdf_loc)
-  !> multiply the Jdtdrho by the pdf
-  do ii=1,n_orbits
-    weights_loc(:,ii) = weights_loc(:,ii)*orbit_pdf_loc(ii)
-  enddo
+  if(weights_not_in_file) then
+    call compute_pdf_orbit(n_vec,n_times,n_orbits,RZaxis,x_loc,ppar_loc,pperp_loc,&
+    Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdf_loc)
+    !> multiply the Jdtdrho by the pdf
+    do ii=1,n_orbits
+      weights_loc(:,ii) = weights_loc(:,ii)*orbit_pdf_loc(ii)
+    enddo
+  endif
   !> reshape arrays
   x_loc              = reshape(x_loc,[n_vec,n_soft_points])
   ppar_loc           = reshape(ppar_loc,[n_soft_points,1])
   pperp_loc          = reshape(pperp_loc,[n_soft_points,1])
-  weights_loc        = TWOPI*orbit_dp*orbit_dxi*(ppar_loc**2+pperp_loc**2)*reshape(weights_loc,[n_soft_points,1])
+  weights_loc        = reshape(weights_loc,[n_soft_points,1])
+  if(weights_not_in_file) weights_loc = TWOPI*orbit_dp*orbit_dxi*(ppar_loc**2+pperp_loc**2)*weights_loc
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_orbits
@@ -567,6 +581,7 @@ orbit_pperp,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdfs)
                     pdf_list(ids_pflux(2))%p,pdf_list(ids_pflux(2))%xi,pdf_list(ids_pflux(2))%pdf)
     !> interpolate and store the pdfs w.r.t. the minor radius
     orbit_pdfs(ii) = linear_interp(pflux_pos,values_pflux,pdf_values)
+    if(orbit_pdfs(ii).lt.0d0) write(*,*) "dioporco: ",ids_pflux,values_pflux
   enddo
   !$omp end parallel do
   if(allocated(poloidal_flux_pdf)) deallocate(poloidal_flux_pdf)

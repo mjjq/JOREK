@@ -65,6 +65,19 @@ module hdf5_io_module
     call H5Fclose_f(file_id,error)
   end subroutine HDF5_close
 
+  !----------------------------------------
+  ! check if dataset is in HDF5 file
+  !----------------------------------------
+  subroutine HDF5_is_dataset_in_file(file_id,dsetname,in_file)
+    use H5LT, only: h5ltfind_dataset_f
+    !> inputs:
+    integer(HID_T),intent(in)   :: file_id
+    character(len=*),intent(in) :: dsetname
+    !> outputs:
+    logical,intent(out) :: in_file
+    in_file = h5ltfind_dataset_f(file_id,dsetname).ge.1
+  end subroutine HDF5_is_dataset_in_file
+
   !---------------------------------------- 
   ! extract dataset rank and shape
   !----------------------------------------

@@ -398,6 +398,64 @@ module hdf5_io_module
     call H5Dclose_f(dataset,error)
   end subroutine HDF5_array2D_saving_int
 
+  !---------------------------------------- 
+  ! gzip HDF5 saving for a 3D array integer
+  !----------------------------------------
+  subroutine HDF5_array3D_saving_int(file_id,array3D, &
+    dim1,dim2,dim3,dsetname,start,compress_level)
+    integer(HID_T)          , intent(in) :: file_id   ! file identifier
+    integer, dimension(:,:,:), intent(in) :: array3D
+    integer                 , intent(in) :: dim1, dim2, dim3
+    character(LEN=*)        , intent(in) :: dsetname  ! dataset name
+    integer(HSIZE_T), dimension(3), intent(in), optional :: start !< Offset of array to write
+    integer, intent(in), optional :: compress_level !< if set and start is not provided compress with this level
+
+    integer             :: error      ! error flag
+    integer             :: rank       ! dataset rank
+    integer(HSIZE_T), &
+      dimension(3)      :: dim        ! dataset dimensions
+    integer(HID_T)      :: dataset    ! dataset identifier
+    integer(HID_T)      :: dataspace  ! dataspace identifier
+    integer(HID_T)      :: filespace  ! dataspace identifier
+    integer(HID_T)      :: property   ! Property list identifier 
+
+    !*** Create and initialize dataspaces for datasets ***
+    dim(1) = dim1
+    dim(2) = dim2
+    dim(3) = dim3
+    rank   = 3
+    call H5Screate_simple_f(rank,dim,filespace,error)
+
+    !*** Get compression property list ***
+    if (present(compress_level)) then
+      property = get_HDF5_plist(rank, dim, .not. present(start), compress_level)
+    else
+      property = get_HDF5_plist(rank, dim, .false.)
+    end if
+
+    !*** Create real dataset ***
+    call H5Dcreate_f(file_id,trim(dsetname),H5T_NATIVE_INTEGER, &
+      filespace,dataset,error,property)
+
+    !*** Write the real*8 array data to the dataset ***
+    !***   using default transfer properties        ***
+    if (present(start)) then
+      call H5Screate_simple_f(3,shape(array3D,kind=HSIZE_T),dataspace,error)
+      call H5Sselect_hyperslab_f(filespace, H5S_SELECT_SET_F, &
+      start=start, count=shape(array3D,kind=HSIZE_T), hdferr=error)
+      call H5Dwrite_f(dataset,H5T_NATIVE_INTEGER,array3D,dim,error, &
+          file_space_id=filespace, mem_space_id=dataspace)
+      call H5Sclose_f(dataspace,error)
+    else
+      call H5Dwrite_f(dataset,H5T_NATIVE_INTEGER,array3D,dim,error)
+    end if
+
+    !*** Closing ***
+    call H5Pclose_f(property,error)
+    call H5Sclose_f(filespace,error)
+    call H5Dclose_f(dataset,error)
+  end subroutine HDF5_array3D_saving_int
+
 
   !---------------------------------------- 
   ! gzip HDF5 saving for a 1D array of real*4

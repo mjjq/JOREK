@@ -42,7 +42,7 @@ integer                            :: ii,n_1d,n_2d,t0,t1
 integer                            :: n_groups,my_id,n_cpus,n_x,ierr
 integer                            :: n_wavelengths,n_spectra
 integer                            :: n_int_camera_param,n_real_camera_param
-integer                            :: n_times
+integer                            :: n_times,n_frames
 integer,dimension(:),allocatable   :: int_camera_param 
 real*8,dimension(:),allocatable    :: min_spectra,max_spectra,pinhole_positions
 real*8,dimension(:),allocatable    :: real_camera_param,sim_times
@@ -61,8 +61,9 @@ extension = '.txt'; hdf5ext = '.h5'
 n_1d = 1; n_2d = 2; n_x = 3 !< number of spatial coordinates
 
 !> Variable definitions -------------------------------------------------------------------
-n_times              = 1
-fields_filename      = 'jorek_equilibrium'
+n_frames             = 1
+n_times              = 11
+fields_filename      = 'jorek01610'
 image_filename       = 'pixel_filter_intensities'
 filename_gc_txt_root = 'jorek_relativistic_gc_data_'
 n_groups = 1 !< number of particle groups
@@ -73,13 +74,18 @@ n_real_camera_param = 9
 write_gc_in_txt = .false.
 !> se the list of particle restart files to be read
 allocate(character(len=60)::particle_filenames(n_times)); particle_filenames = ''
-particle_filenames = [character(len=15)::'part_restart']
+particle_filenames = [character(len=60)::'part_restart000.00339941',&
+'part_restart000.00349941','part_restart000.00359941',&
+'part_restart000.00369941','part_restart000.00379941',&
+'part_restart000.00389941','part_restart000.00399941',&
+'part_restart000.00409941','part_restart000.00419941',&
+'part_restart000.00429941','part_restart000.00439941']
 !> JET KDLT-E5WC wavelength: 3d-6 - 3.5d-6 [m]
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
 allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
 allocate(pinhole_positions(n_x)); pinhole_positions = [-8.86d-1,-4.002,-3.32d-1];
 !> one pinhole => n_lens_samples=1, JET KLDT-E5WC pixels nx=120,ny=176
-allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,120,176,0,1];
+allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,600,600,0,1];
 !> JET KLDT-E5WC camera inputs:
 !> 1:3 -> half width, half height and orientation of the visual plane angle
 !> 4:6 -> camera focal direction: focal distance, latitude, azimuth
@@ -94,8 +100,8 @@ call init_mpi_threads(my_id,n_cpus,ierr)
 !> allocate structures, read particle, time, MHD fields data and transform to gc if needed
 write(*,*) 'Reading particle data ...'
 allocate(filter_spectra(n_spectra));
-allocate(x_pixel_positions(int_camera_param(2),n_times))
-allocate(y_pixel_positions(int_camera_param(3),n_times))
+allocate(x_pixel_positions(int_camera_param(2),n_frames))
+allocate(y_pixel_positions(int_camera_param(3),n_frames))
 allocate(sim_times(n_times)); allocate(sims(n_times)); 
 allocate(sims_gc(n_times)); do_jorek_init = .true.
 field_reader = event(read_jorek_fields_interp_linear(basename=trim(fields_filename),i=-1))
@@ -140,7 +146,7 @@ write(*,*) 'Initialise synthetic camera and light sources: completed'
 write(*,*) my_id, 'System time fast camera initialisation (s): ',real(t1-t0,kind=8)/1d3
 
 !> allocate image and filter arrays
-allocate(pixel_filter_values(n_spectra,2,int_camera_param(2),int_camera_param(3),n_times))
+allocate(pixel_filter_values(n_spectra,2,int_camera_param(2),int_camera_param(3),n_frames))
 
 !> Compute image --------------------------------------------------------------------------
 write(*,*) 'Computing image and filters per each time ...'
@@ -156,7 +162,7 @@ write(*,*) my_id, 'System time computing image and filters (s): ',real(t1-t0,kin
 if(my_id.eq.0) then
   write(*,*) 'Write image and filters in HDF5 file ...'
   call write_pixel_intensity_hdf5(image_filename,n_spectra,2,int_camera_param(2),&
-  int_camera_param(3),n_times,x_pixel_positions,y_pixel_positions,pixel_filter_values,ierr)
+  int_camera_param(3),n_frames,x_pixel_positions,y_pixel_positions,pixel_filter_values,ierr)
   write(*,*) 'Write image and filters in HDF5 file: completed!'
 endif
 #endif

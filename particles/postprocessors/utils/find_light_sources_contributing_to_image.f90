@@ -53,14 +53,15 @@ n_spectra              = 1 !< number of spectra
 n_wavelengths          = 40 !< number of wavelengths per spectrum
 n_int_camera_param     = 5
 n_real_camera_param    = 9
-n_times                = 9
+n_times                = 11
 !> se the list of particle restart files to be read
 allocate(character(len=60)::particle_filenames(n_times)); particle_filenames = ''
 particle_filenames = [character(len=60)::'part_restart000.00339941',&
 'part_restart000.00349941','part_restart000.00359941',&
 'part_restart000.00369941','part_restart000.00379941',&
 'part_restart000.00389941','part_restart000.00399941',&
-'part_restart000.00409941','part_restart000.00419941']
+'part_restart000.00409941','part_restart000.00419941',&
+'part_restart000.00429941','part_restart000.00439941']
 !> JET KLDT-E5WC wavlength: 3d-6 , 3.5d-6 [m]
 allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
 allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];

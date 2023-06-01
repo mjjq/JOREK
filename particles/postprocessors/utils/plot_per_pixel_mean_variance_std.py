@@ -31,7 +31,7 @@ def write_statistics_in_hdf5(average,variance,stddev,filename,filepath,separator
   dset = average.shape
   dset = fhandler.create_dataset('average',average.shape,dtype=average.dtype)
   dset = average
-  dset = fhandler.create_dataset('average',variance.shape,dtype=variance.dtype)
+  dset = fhandler.create_dataset('variance',variance.shape,dtype=variance.dtype)
   dset = variance
   dset = fhandler.create_dataset('standard_deviation',stddev.shape,dtype=stddev.dtype)
   dset = stddev
@@ -58,11 +58,11 @@ def compute_per_pixel_average(n_pixels_spectra,light_data):
   from numpy import zeros
   from numpy import float64 as npfloat64
   n_particles = 0
+  average_intensity = zeros((n_pixels_spectra[1],n_pixels_spectra[2],\
+  n_pixels_spectra[0]),dtype=npfloat64)
   for light_dataset in light_data:
     pixel_ids = light_dataset["contributing_light_pixel_indexes"]
     light_intensities = light_dataset["contributing_light_intensities"]
-    average_intensity = zeros((n_pixels_spectra[1],n_pixels_spectra[2],\
-    n_pixels_spectra[0]),dtype=npfloat64)
     for timesId,times in enumerate(pixel_ids):
       for pixelId,pixel in enumerate(times):
         average_intensity[pixel[0]-1,pixel[1]-1,:] = average_intensity[pixel[0]-1,pixel[1]-1,:] + \
@@ -75,11 +75,11 @@ def compute_per_pixel_variance_stddev(n_pixels_spectra,average,light_data):
   from numpy import zeros,power,sqrt
   from numpy import float64 as npfloat64
   n_particles = 0
+  variance_intensity = zeros((n_pixels_spectra[1],n_pixels_spectra[2],\
+  n_pixels_spectra[0]),dtype=npfloat64)
   for light_dataset in light_data:
     pixel_ids = light_dataset["contributing_light_pixel_indexes"]
     light_intensities = light_dataset["contributing_light_intensities"]
-    variance_intensity = zeros((n_pixels_spectra[1],n_pixels_spectra[2],\
-    n_pixels_spectra[0]),dtype=npfloat64)
     for timesId,times in enumerate(pixel_ids):
       for pixelId,pixel in enumerate(times):
         variance_intensity[pixel[0]-1,pixel[1]-1,:] = variance_intensity[pixel[0]-1,pixel[1]-1,:] + \
@@ -98,7 +98,7 @@ def compute_per_pixel_variance_stddev(n_pixels_spectra,average,light_data):
 #   title:          (string) figure title, default: empty
 def imshow_3d(frame,x_positions=[],y_positions=[],title=""):
   from numpy import newaxis
-  from matplotlib.pyplot import figure,imshow,colorbar
+  from matplotlib.pyplot import figure,imshow,colorbar,show
   from matplotlib.pyplot import title as tit
   # plot with extension
   if(not ((len(x_positions)==0) and (len(y_positions)==0))):
@@ -113,6 +113,7 @@ def imshow_3d(frame,x_positions=[],y_positions=[],title=""):
     imshow(spectrum,extent=ext)
     colorbar()
     tit("".join([title,' spectrum N# ',str(spectrum_id+1)]))
+  show()
   return
 
 # Main function
@@ -142,7 +143,7 @@ light_dataset=["contributing_light_positions","contributing_light_intensities",\
 "limiter_major_radius","limiter_vertical_coordinate",\
 "contributing_light_pixel_indexes","contributing_light_local_pixel_coordinates"],\
 camera_dataset=["point_on_lens_positions","image_plane_vertices",\
-"image_plane_directions","n_pixels_n_spectra"],stats_filename="image_statitics.h5",\
+"image_plane_directions","n_pixels_n_spectra"],stats_filename="image_statistics.h5",\
 separator="/",font_size=16):
   from numpy import transpose
   # Read data from files
@@ -163,9 +164,9 @@ separator="/",font_size=16):
   print("write data in hdf5 file")
   write_statistics_in_hdf5(average,variance,stddev,stats_filename,filepath,separator)
   print("Plotting data")
-  imshow_3d(transpose(average,axes=[0,1,2]),title="Per pixel light intensity average for ")
-  imshow_3d(transpose(variance,axes=[0,1,2]),title="Per pixel light intensity variance for ")
-  imshow_3d(transpose(stddev,axes=[0,1,2]),title="Per pixel light intensity std deviation for ")
+  imshow_3d(transpose(average,axes=[2,0,1]),title="Per pixel light intensity average for ")
+  imshow_3d(transpose(variance,axes=[2,0,1]),title="Per pixel light intensity variance for ")
+  imshow_3d(transpose(stddev,axes=[2,0,1]),title="Per pixel light intensity std deviation for ")
 
 def generate_argument_parser():
   import argparse
@@ -191,7 +192,7 @@ def generate_argument_parser():
   parser.add_argument('--fontsize','-font',type=int,required=False,\
   dest='fontsize',action='store',default=16,help='plot font size, default: 16')
   parser.add_argument('--stats_filename','-sf',type=str,dest='stats_filename',\
-  default = "image_statitics.h5",action='store',required=False,\
+  default = "image_statistics.h5",action='store',required=False,\
   help='filename in which the image statistics are written, default: image_statitics.h5')
   return parser.parse_args()
 

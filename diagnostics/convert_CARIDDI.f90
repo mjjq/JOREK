@@ -6,7 +6,7 @@ program convert
 implicit none
 integer, parameter :: ind_max =    1000000
 integer, parameter :: n_nodes_max = 100000
-integer, parameter :: nodes_per_elem = 6
+integer, parameter :: nodes_per_elem = 8
 logical, parameter :: ascii = .false.
 real*8,  parameter :: PI = 3.141592653589793
 
@@ -53,7 +53,7 @@ end do
 close(42)
 n_nodes = i-1
 write(*,*) 'Read ', n_nodes, ' nodes.'
-
+elem_component=0
 ! --- Read elements
 open(42, file=trim(elem_file), status='old', action='read')
 i = 0
@@ -184,7 +184,7 @@ end do
 
 ! --- export to VTK
 call write_header('3dwall.vtk',ifile, n_nodes, xyznode)
-! components to plot (0=all)
+!components to plot (0=all)
 call det_comp(elem_component, 0, 0, n_elems, istart, iend, nelems_comp)
 call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
 call write_header_scalar(ifile, nelems_comp)
@@ -194,7 +194,7 @@ call write_vector('J', ifile, istart, iend, jx, jy, jz)
 close(ifile)
 
 call write_header('3dwall_comp_passive.vtk',ifile, n_nodes, xyznode)
-call det_comp(elem_component, 1,98-32, n_elems, istart, iend, nelems_comp)
+call det_comp(elem_component, 1,38-32, n_elems, istart, iend, nelems_comp)
 write(*,*) 'passive', istart, iend, nelems_comp, n_elems
 call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
 call write_header_scalar(ifile, nelems_comp)
@@ -203,8 +203,17 @@ call write_scalar('I*e_phi', ifile, istart, iend, jphi)
 call write_vector('J', ifile, istart, iend, jx, jy, jz)
 close(ifile)
 call write_header('3dwall_comp_PSL.vtk',ifile, n_nodes, xyznode)
-call det_comp(elem_component, 98-33, 98-32, n_elems, istart, iend, nelems_comp)
-write(*,*) 'passive', istart, iend, nelems_comp, n_elems
+call det_comp(elem_component, 1, 4, n_elems, istart, iend, nelems_comp)
+write(*,*) 'PSL', istart, iend, nelems_comp, n_elems
+call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
+call write_header_scalar(ifile, nelems_comp)
+call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
+call write_scalar('I*e_phi', ifile, istart, iend, jphi)
+call write_vector('J', ifile, istart, iend, jx, jy, jz)
+close(ifile)
+call write_header('3dwall_comp_wall.vtk',ifile, n_nodes, xyznode)
+call det_comp(elem_component, 5, 6, n_elems, istart, iend, nelems_comp)
+write(*,*) 'wall', istart, iend, nelems_comp, n_elems
 call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
 call write_header_scalar(ifile, nelems_comp)
 call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
@@ -212,7 +221,7 @@ call write_scalar('I*e_phi', ifile, istart, iend, jphi)
 call write_vector('J', ifile, istart, iend, jx, jy, jz)
 close(ifile)
 call write_header('3dwall_comp_PF.vtk',ifile, n_nodes, xyznode)
-call det_comp(elem_component, 98-31, 98, n_elems, istart, iend, nelems_comp)
+call det_comp(elem_component, 38-31, 38, n_elems, istart, iend, nelems_comp)
 call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
 call write_header_scalar(ifile, nelems_comp)
 call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)

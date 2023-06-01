@@ -2,7 +2,7 @@ program test_generalised_initialisation_gc_H_mu_psi
 !> the program is for comparing the generic initialisation method 
 !> contained in mod_initialise_particles and the case specific 
 !> initialize_particles_H_mu_psi implemented in mod_initialise_particles
-use constants only: TWOPI,PI,ATOMIC_MASS_UNIT,EL_CHG
+use constants, only: TWOPI,PI,ATOMIC_MASS_UNIT,EL_CHG
 use particle_tracer
 implicit none
 type(pcg32_rng) :: rng_pcg32
@@ -10,11 +10,11 @@ type(event)     :: field_reader,particle_writer
 integer         :: n_variables,n_particles,n_int_pdf_param,n_real_pdf_param,ifail
 integer         :: n_int_weight_param,n_real_weight_param
 integer         :: n_int_gdf_param,n_real_gdf_param
-integer         :: n_int_pdf_tp_part_coord_param,n_real_pdf_to_part_coord_param
-integer         : include_vpar,particle_tyoe
-integer,dimension(:),allocatable :: int_pdf_param,int_weight_param.int_gdf_param
+integer         :: n_int_pdf_to_part_coord_param,n_real_pdf_to_part_coord_param
+integer         :: include_vpar,particle_type,t1,t2,t3,t4
+integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
-real*8          :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound,t1,t2,t3,t4
+real*8          :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
 real*8,dimension(2)                 :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)                 :: Ekinbound,Vbound,Pitchbound,Gyrobound,Chargebound
 real*8,dimension(:),allocatable     :: real_pdf_to_part_coord_param
@@ -37,7 +37,7 @@ original_h_mu_psi_filename = 'part_restart_H_mu_psi_original.h5'
 particle_type             = 1
 n_variables               = 7
 n_particles               = 1000000
-incluce_vpar              = 0
+include_vpar              = 0
 start_time                = 0d0
 mass                      = 2.01410177811*ATOMIC_MASS_UNIT 
 Rbound                    = [-9.99d2,9.99d2]
@@ -47,7 +47,7 @@ Ekinbound                 = [-9.99d9,9.99d9] !< in eV not required
 Pitchbound                = [0d0,PI]
 Gyrobound                 = [0d0,TWOPI]
 Chargebound               = 1d0
-allocate(character(25) : :jorek_filename)
+allocate(character(25) :: jorek_filename)
 jorek_filename            = 'jorek_equilibrium'
 
 !> Initialisations -------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ pdf_to_use         => pdf_psi_H_mu
 n_int_pdf_param    = 0
 n_real_pdf_param   = 0
 pdf_upper_bound    = sup_pdf_psi_H_mu(n_variables,&
-phase_space_bounds(:,1),,phase_space_bounds(:,2),&
+phase_space_bounds(:,1),phase_space_bounds(:,2),&
 n_real_pdf_param,real_pdf_param,&
 n_int_pdf_param,int_pdf_param)
 !> define the gdf inputs
@@ -84,7 +84,7 @@ int_gdf_param(1)   = include_vpar
 n_real_gdf_param   = 0
 n_real_gdf_param  = 0
 gdf_upper_bound   = sup_gdf_psi_H_mu(n_variables,&
-phase_space_bounds(:,1),,phase_space_bounds(:,2),&
+phase_space_bounds(:,1),phase_space_bounds(:,2),&
 n_real_gdf_param,real_gdf_param,&
 n_int_gdf_param,int_gdf_param)
 !> define the weights inputs:
@@ -116,10 +116,10 @@ write(*,*) "Test H_mu_psi initialisation generic vs original, initialise particl
 
 write(*,*) "Test H_mu_psi initialisation generic vs original, initialise particles originasl method ... "
 call allocate_particle_list(particle_type,n_particles,sim%groups(1)%particles)
-particle_writer = event(write_action(filename=trim(original_particle_filename)))
+particle_writer = event(write_action(filename=trim(original_h_mu_psi_filename)))
 call system_clock(t3)
 call initialise_particles_H_mu_psi(sim%groups(1)%particles, sim%fields,rng_pcg32,mass,&
-include_vpar=include_vpar.eq.1, charge=charge)
+include_vpar=include_vpar.eq.1, charge=int(charge))
 call system_clock(t4)
 call with(sim,particle_writer)
 write(*,*) "Test H_mu_psi initialisation generic vs original, initialise particles original method: completed!"
@@ -325,6 +325,7 @@ n_real_param,real_param,n_int_param,int_param)
   use constants,          only: MU_ZERO,EL_CHG,ATOMIC_MASS_UNIT
   use phys_module,        only: central_density
   use mod_model_settings, only: var_T,var_Vpar
+  use mod_sampling,       only: sample_chi_squared_3
   use mod_fields,         only: fields_base
   implicit none
   !> Inputs:
@@ -332,14 +333,14 @@ n_real_param,real_param,n_int_param,int_param)
   integer,dimension(:),allocatable,intent(in) :: int_param
   real*8,intent(in)                           :: time
   real*8,dimension(n_x),intent(in)            :: x_min,x_max
-  real*8,dimension(:),allocatable,intent(:)   :: real_param
+  real*8,dimension(:),allocatable,intent(in)  :: real_param
   class(fields_base),intent(in)               :: fields
   !> Inputs-Outputs:
   integer,intent(inout)               :: i_elm
   real*8,dimension(2),intent(inout)   :: st
   real*8,dimension(n_x),intent(inout) :: x
   !> Variables:
-  real*8 :: psi,U,normB,R,Z,electric_potential,u,temperature_ev
+  real*8 :: psi,normB,R,Z,electric_potential,u,temperature_ev
   real*8,dimension(1) :: P
   real*8,dimension(3) :: B,E
 
@@ -450,7 +451,7 @@ n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
   p_gc%weight = p_inout%weight; p_gc%i_life = p_inout%i_life;
   p_gc%t_birth = p_inout%t_birth;
   p_gc%E = x(4); p_gc%mu = x(5); p_gc%q = int(x(7),kind=1);
-  select type (p==p_inout)
+  select type (p=>p_inout)
   type is (particle_gc)
      p = p_gc
   type is (particle_kinetic_leapfrog)
@@ -459,7 +460,7 @@ n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
      p%q = p_gc%q
    type is (particle_gc_vpar)
      call fields%calc_EBpsiU(time,p%i_elm,p%st,p%x(3),Evec,Bvec,psi,electric_potential);
-     call convert_gc_to_gc_vpar(p_gc,norm2(B),real_param(1),p_gc) 
+     call convert_gc_to_gc_vpar(p_gc,norm2(Bvec),real_param(1),p) 
      p%q = p_gc%q
   endselect
 end subroutine copy_H_mu_psi_sample_to_p_gc

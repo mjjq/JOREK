@@ -5,6 +5,8 @@ program convert
   use constants
   
 implicit none
+integer, parameter :: n_components_max = 100
+
 integer, parameter :: ind_max =    1000000
 integer, parameter :: n_nodes_max = 100000
 integer, parameter :: nodes_per_elem = 8
@@ -26,7 +28,7 @@ character(len=2) :: str3
 character(len=1), parameter :: lf = char(10)
 character(len=20), parameter :: node_file='x.dat', elem_file='ix.dat'
 
-logical :: include_struct(50)
+logical :: include_struct(n_components_max) = .true.
 
 ! for current conversion
 integer(HID_T)     :: file_id
@@ -39,8 +41,7 @@ real*8, allocatable, dimension(:,:)   :: S, gmat_sp
 real*8, allocatable, dimension(:,:,:) :: gmat
 
 integer, allocatable :: ndofel(:), ind_g(:,:), full_glob(:,:)
-include_struct(:) = .true.
-include_struct(1:50) = .true.
+
 min_elem = 1
 max_elem = 100000
 
@@ -419,7 +420,7 @@ subroutine write_header_pov(ifile)
   write(ifile,980) ''
   write(ifile,980) 'camera{'
   write(ifile,980) '    angle 42'
-  write(ifile,980) '    location<0.3,-7,5>'
+  write(ifile,980) '    location<0.3,-11,4>'
   write(ifile,980) '    look_at <0.3,1,0>'
   write(ifile,980) '    up<0,0,6>'
   write(ifile,980) '    right<8,0,0>'
@@ -454,6 +455,7 @@ subroutine write_currdens_pov(ifile)
   real*8, dimension(4)  :: rgbt
   
   do i = 1, n_elems
+    if ( .not. include_struct(elem_component(i)) ) cycle
     
     select case (povray_colormap)
     case (1)

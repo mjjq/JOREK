@@ -18,8 +18,8 @@ implicit none
 
 integer, parameter :: ifile   = 53 !< File handle
 logical, parameter :: surface = .true.
-real*8,  parameter :: phimin  = 0.d0
-real*8,  parameter :: phimax  = 270.d0 / 360.d0 * 2.d0 * PI
+real*8,  parameter :: phimin  = -180.d0 / 360.d0 * 2.d0 * PI
+real*8,  parameter :: phimax  =  +90.d0 / 360.d0 * 2.d0 * PI
 integer, parameter :: n_phi   = 64
 integer, parameter :: nsub    = 4
 integer, parameter :: ivar    = 5
@@ -193,7 +193,7 @@ subroutine write_header_pov(ifile)
   write(ifile,980) ''
   write(ifile,980) 'camera{'
   write(ifile,980) '    angle 42'
-  write(ifile,980) '    location<0.3,-11,4>'
+  write(ifile,980) '    location<0.3,-11,-4>'
   write(ifile,980) '    look_at <0.3,0,0>'
   write(ifile,980) '    up<0,0,6>'
   write(ifile,980) '    right<8,0,0>'

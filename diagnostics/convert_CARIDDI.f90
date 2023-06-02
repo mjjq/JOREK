@@ -10,6 +10,8 @@ integer, parameter :: n_nodes_max = 100000
 integer, parameter :: nodes_per_elem = 8
 logical, parameter :: ascii = .false.
 integer, parameter :: povray_colormap = 1
+real*8,  parameter :: povray_wallcurr_min = 0.d0
+real*8,  parameter :: povray_wallcurr_max = 1.d7
 
 real*8  :: xyznode(n_nodes_max,3), xyzav(3), maxdist
 integer :: elemnode(n_nodes_max/2, nodes_per_elem)
@@ -453,18 +455,18 @@ subroutine write_currdens_pov(ifile)
   
   do i = 1, n_elems
     
+    select case (povray_colormap)
+    case (1)
+      rgbt = colormap1(wall_curr_el(i), povray_wallcurr_min, povray_wallcurr_max)
+    case default
+      rgbt = colormap0(wall_curr_el(i), povray_wallcurr_min, povray_wallcurr_max)
+    end select
+    
     do j = 1, nodes_per_elem
       
       x(j) = xyznode(elemnode(i,j),1)
       y(j) = xyznode(elemnode(i,j),2)
       z(j) = xyznode(elemnode(i,j),3)
-      
-      select case (povray_colormap)
-      case (1)
-        rgbt = colormap1(1.,0.,1.)
-      case default
-        rgbt = colormap0(1.,0.,1.)
-      end select
       
     end do
     
@@ -542,7 +544,7 @@ function colormap1(v, vmin, vmax)
   else
     v_norm = min(max(v,vmin),vmax) / (vmax-vmin) ! crop to min/max range and normalize
     
-    colormap1 = (/ v_norm, 0.d0, 0.d0, 0.3d0 /)
+    colormap1 = (/ v_norm, 1.d0, 1.d0, 0.0d0 /)
   end if
   
 end function colormap1

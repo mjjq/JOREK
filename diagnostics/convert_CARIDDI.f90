@@ -9,6 +9,7 @@ integer, parameter :: ind_max =    1000000
 integer, parameter :: n_nodes_max = 100000
 integer, parameter :: nodes_per_elem = 8
 logical, parameter :: ascii = .false.
+integer, parameter :: povray_colormap = 1
 
 real*8  :: xyznode(n_nodes_max,3), xyzav(3), maxdist
 integer :: elemnode(n_nodes_max/2, nodes_per_elem)
@@ -229,6 +230,10 @@ call write_scalar('I*e_phi', ifile, istart, iend, jphi)
 call write_vector('J', ifile, istart, iend, jx, jy, jz)
 close(ifile)
 
+! --- export to Povray
+open(ifile, file='3dwall.pov', form='formatted', status='replace')
+call write_header_pov(ifile)
+
 contains
   subroutine write_header(filename, ifile, nnodes, xyznode)
     integer, intent(in)             :: nnodes, ifile
@@ -434,6 +439,39 @@ subroutine write_header_pov(ifile)
   write(ifile,980) '  '
   
 end subroutine write_header_pov
+
+
+
+subroutine write_currdens_pov(ifile)
+  integer,              intent(in) :: ifile
+  
+  integer :: i, j
+  real*8, dimension(8) :: x, y, z
+  real*8, dimension(4)  :: rgbt
+  
+  do i = 1, n_elems
+    
+    do j = 1, nodes_per_elem
+      
+      x(j) = xyznode(elemnode(i,j),1)
+      y(j) = xyznode(elemnode(i,j),2)
+      z(j) = xyznode(elemnode(i,j),3)
+      
+      select case (povray_colormap)
+      case (1)
+        rgbt = colormap1(1.,0.,1.)
+      case default
+        write(*,*) 'wrong colorbar'
+        stop
+      end select
+      
+    end do
+    
+    call write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
+    
+  end do
+
+end subroutine write_currdens_pov
 
 
 

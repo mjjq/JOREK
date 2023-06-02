@@ -10,7 +10,6 @@ use nodes_elements
 use phys_module
 use mod_import_restart
 use mod_interp
-use basis_at_gaussian
 use mod_basisfunctions
 use mod_boundary
 use equil_info
@@ -23,9 +22,10 @@ real*8,  parameter :: phimin  = 0.d0
 real*8,  parameter :: phimax  = 270.d0 / 360.d0 * 2.d0 * PI
 integer, parameter :: n_phi   = 64
 integer, parameter :: nsub    = 4
+integer, parameter :: ivar    = 1
 
 integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof
-real*8  :: s, t, phi, v1, v2
+real*8  :: s, t, phi, v1, v2, itor
 real*8  :: HH(nsub+1,nsub+1,4,n_degrees)
 real*8  :: val(nsub+1,nsub+1)
 real*8  :: R(nsub+1,nsub+1)
@@ -40,10 +40,7 @@ my_id = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 call det_modes()
 call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
-call initialise_basis()
-
 call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
-
 call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
 
 open(ifile, file='jorek_3d.pov', form='formatted', status='replace')
@@ -62,13 +59,14 @@ do i_elm = 1, element_list%n_elements
   val(:,:) = 0.d0
   R(:,:)   = 0.d0
   Z(:,:)   = 0.d0
+  itor = 1 !###
   do i_s = 1, nsub+1
     do i_t = 1, nsub+1
       do iv = 1, 4
         do idof = 1, 4
-          R(i_s,i_t) = R(i_s,i_t) + nodes(iv)%x(1,idof,1)
-          Z(i_s,i_t) = Z(i_s,i_t) + nodes(iv)%x(1,idof,2)
-          !### val
+          R  (i_s,i_t) = R  (i_s,i_t) + nodes(iv)%x(1,idof,1) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
+          Z  (i_s,i_t) = Z  (i_s,i_t) + nodes(iv)%x(1,idof,2) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
+          val(i_s,i_t) = val(i_s,i_t) + nodes(iv)%values(itor,idof,ivar) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
         end do
       end do
     end do

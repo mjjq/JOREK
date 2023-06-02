@@ -51,7 +51,7 @@ fields_filename        = 'jorek_equilibrium' !< jorek restart filename
 soft_magfield_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field file
 particle_filename      = 'part_restart_soft_orbits.h5'  !< particle restart filename 
 soft_pdf_filename      = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
-soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall_angdist_trapz_noDrift' !< soft orbit filename
+soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall_angdist_trapz_noDrift_image_distWithAxis' !< soft orbit filename
 filename_jorek_hdf5 = 'jorek_particles_from_soft'
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator
@@ -410,7 +410,7 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   integer        :: ii,jj,id,n_orbits,n_times,n_active_orbits,ierr
   integer,dimension(:),allocatable   :: classification_loc,valid_orbit_id
   real*8                             :: orbit_dp,orbit_dxi
-  real*8,dimension(:),allocatable    :: orbit_pdf_loc,orbit_p_mesh,orbit_xi_mesh
+  real*8,dimension(:),allocatable    :: orbit_pdf_loc,orbit_p_mesh,orbit_xi_mesh,dummy_real_1d
   real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,weights_loc
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
@@ -418,23 +418,28 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   call HDF5_allocatable_array1D_reading_int(file_id,classification_loc,'/classification') !< orbit classification
   call HDF5_allocatable_array1D_reading(file_id,orbit_p_mesh,'/param1')  !< momentum mesh
   call HDF5_allocatable_array1D_reading(file_id,orbit_xi_mesh,'/param2') !< cospitch mesh 
-  call HDF5_allocatable_array2D_reading(file_id,ppar_loc,"/ppar")        !< parallel momentum
-  call HDF5_allocatable_array2D_reading(file_id,pperp_loc,"/pperp")      !< perpendicular momentum
+  call HDF5_allocatable_array2D_reading(file_id,ppar_loc,'/ppar')        !< parallel momentum
+  call HDF5_allocatable_array2D_reading(file_id,pperp_loc,'/pperp')      !< perpendicular momentum
   !> check if the particle weights is in hdf5 file
-  call HDF5_is_dataset_in_file(file_id,"/f",weights_not_in_file)
+  call HDF5_is_dataset_in_file(file_id,'f',weights_not_in_file)
   weights_not_in_file = .not.weights_not_in_file
+  n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1);
   if(weights_not_in_file) then
     write(*,*) "SOFT particle weights not found: compute from jacobian!"
     call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobian*dpoloidal*dminorradius
   else
     write(*,*) "SOFT particle weights found!"
-    call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/f")        !< weight
+    call HDF5_allocatable_array1D_reading(file_id,dummy_real_1d,'/f')    !< weight
+    allocate(weights_loc(n_times,n_orbits))
+    do ii=1,n_orbits
+      weights_loc(:,ii) = dummy_real_1d(ii)
+    enddo
+    deallocate(dummy_real_1d)
   endif
-  call HDF5_allocatable_array2D_reading(file_id,x_loc,"/x")              !< position in xyz coordinates
+  call HDF5_allocatable_array2D_reading(file_id,x_loc,'/x')              !< position in xyz coordinates
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
   !> remove zero orbits
-  n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1);
   n_soft_points = n_orbits*n_times; n_active_orbits = 0;
   !> check if the momentum and cospitch angle mesh are uniform and extract their value
   call check_uniform_mesh_extract_length_1d(orbit_dp,orbit_p_mesh)

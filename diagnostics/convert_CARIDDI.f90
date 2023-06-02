@@ -500,6 +500,7 @@ subroutine write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
   real*8, dimension(4), intent(in) :: rgbt
   
   call write_triangle_pov(ifile, (/x(1), x(2), x(3)/), (/y(1), y(2), y(3)/), (/z(1), z(2), z(3)/), rgbt)
+  call write_triangle_pov(ifile, (/x(1), x(3), x(4)/), (/y(1), y(3), y(4)/), (/z(1), z(3), z(4)/), rgbt)
   ! ### ...
   
 end subroutine write_hexahedron_as_triangles_pov

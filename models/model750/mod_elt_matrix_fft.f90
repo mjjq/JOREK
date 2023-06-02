@@ -985,6 +985,7 @@ do i=1,n_vertex_max
                       + UR0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                       + UR0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - UR0_Z * xjac_Z / xjac
+          UR0_pp = eq_pp(mp,var_UR,ms,mt)
 
           ! --- UZ
           UZ0   = eq_g(mp,var_UZ,ms,mt)
@@ -1006,6 +1007,8 @@ do i=1,n_vertex_max
                       + UZ0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                       + UZ0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - UZ0_Z * xjac_Z / xjac
+          UZ0_pp = eq_pp(mp,var_UZ,ms,mt)
+
 
           ! --- Up is defined u0_phi : V = .. + Up0 * e_phi (physical component)
           Up0   = eq_g(mp,var_Up,ms,mt)
@@ -1027,6 +1030,7 @@ do i=1,n_vertex_max
                       + Up0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                       + Up0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - Up0_Z * xjac_Z / xjac
+          Up0_pp = eq_pp(mp,var_Up,ms,mt)
 
           ! --- rho
           rho0      = eq_g(mp,var_rho,ms,mt)
@@ -1050,6 +1054,7 @@ do i=1,n_vertex_max
                       + rho0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                       + rho0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - rho0_Z * xjac_Z / xjac
+          rho0_pp = eq_pp(mp,var_rho,ms,mt)
 
           ! --- T
           if(with_TiTe)then
@@ -1074,6 +1079,7 @@ do i=1,n_vertex_max
                          + Ti0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                          + Ti0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                          - Ti0_Z * xjac_Z / xjac
+            Ti0_pp = eq_pp(mp,var_Ti,ms,mt)
 
             Te0      = eq_g(mp,var_Te,ms,mt)
             Te0_corr = max(Te0,1.d-12)!corr_neg_temp1(Te0)
@@ -1096,6 +1102,7 @@ do i=1,n_vertex_max
                          + Te0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                          + Te0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                          - Te0_Z * xjac_Z / xjac
+            Te0_pp = eq_pp(mp,var_Te,ms,mt)
 
             T0          = (Ti0+Te0)
             T0_corr     = max(T0,1.d-12)!corr_neg_temp1(T0)
@@ -1110,7 +1117,8 @@ do i=1,n_vertex_max
             T0_tt       = (Ti0_tt+Te0_tt) 
             T0_RR       = (Ti0_RR+Te0_RR) 
             T0_ZZ       = (Ti0_ZZ+Te0_ZZ) 
-                 
+            T0_pp       = (Ti0_pp+Te0_pp)
+     
             ! ---Temperature parameters used for general T-dependent functions (eta, visco, etc)
             T_or_Te          = Te0
             T_or_Te_corr     = Te0_corr
@@ -1140,6 +1148,7 @@ do i=1,n_vertex_max
                          + T0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                          + T0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                          - T0_Z * xjac_Z / xjac
+            T0_pp = eq_pp(mp,var_T,ms,mt)
 
             Ti0      = T0 / 2.d0
             Ti0_corr = T0_corr / 2.d0
@@ -1153,6 +1162,8 @@ do i=1,n_vertex_max
             Ti0_tt   = T0_tt / 2.d0
             Ti0_RR   = T0_RR / 2.d0
             Ti0_ZZ   = T0_ZZ / 2.d0
+            Ti0_pp   = T0_pp / 2.d0
+
             dTi0_corr_dT = 1.d0
 
             Te0      = Ti0
@@ -1167,6 +1178,8 @@ do i=1,n_vertex_max
             Te0_tt   = Ti0_tt
             Te0_RR   = Ti0_RR
             Te0_ZZ   = Ti0_ZZ
+            Te0_pp   = Ti0_pp
+
             dTe0_corr_dT = dTi0_corr_dT
 
             ! --- Temperature parameters used for general T-dependent functions
@@ -1190,6 +1203,7 @@ do i=1,n_vertex_max
           rhon0_tt   = 0.d0
           rhon0_RR   = 0.d0
           rhon0_ZZ   = 0.d0
+          rhon0_pp   = 0.d0
           
           ! --- rho neutrals
           if (with_neutrals) then
@@ -1213,6 +1227,7 @@ do i=1,n_vertex_max
                          + rhon0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                          + rhon0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                          - rhon0_Z * xjac_Z / xjac
+            rhon0_pp   = eq_pp(mp,var_rhon,ms,mt)
           endif
 
           rhoimp0      = 0.d0
@@ -1227,6 +1242,7 @@ do i=1,n_vertex_max
           rhoimp0_tt   = 0.d0
           rhoimp0_RR   = 0.d0
           rhoimp0_ZZ   = 0.d0
+          rhoimp0_pp   = 0.d0
           drhoimp0_corr_dn = 0.d0
           
           if (with_impurities) then
@@ -1250,6 +1266,7 @@ do i=1,n_vertex_max
                          + rhoimp0_s * (x_st(ms,mt)*x_t(ms,mt) - x_tt(ms,mt)*x_s(ms,mt) )                &
                          + rhoimp0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                          - rhoimp0_Z * xjac_Z / xjac
+            rhoimp0_pp   = eq_pp(mp,var_rhoimp,ms,mt)
             drhoimp0_corr_dn = 0.d0 ! dcorr_neg_dens_drho(rhoimp0, (/ 0.d-5, 1.d-5 /))
           endif
 

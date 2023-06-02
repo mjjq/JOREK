@@ -421,7 +421,7 @@ subroutine write_header_pov(ifile)
   write(ifile,980) 'camera{'
   write(ifile,980) '    angle 42'
   write(ifile,980) '    location<0.3,-11,4>'
-  write(ifile,980) '    look_at <0.3,1,0>'
+  write(ifile,980) '    look_at <0.3,0,0>'
   write(ifile,980) '    up<0,0,6>'
   write(ifile,980) '    right<8,0,0>'
   write(ifile,980) '}'

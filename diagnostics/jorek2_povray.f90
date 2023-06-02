@@ -87,9 +87,9 @@ do i_elm = 1, element_list%n_elements
         (/ z(i_s,i_t), z(i_s+1,i_t), z(i_s+1,i_t+1) /), &
         (/ 1.d0, 1.d0, 1.d0, 0.d0 /))
       call write_triangle_pov(ifile, &
-        (/ x(i_s,i_t), x(i_s,i_t+1), x(i_s,i_t+1) /), &
-        (/ y(i_s,i_t), y(i_s,i_t+1), y(i_s,i_t+1) /), &
-        (/ z(i_s,i_t), z(i_s,i_t+1), z(i_s,i_t+1) /), &
+        (/ x(i_s,i_t), x(i_s,i_t+1), x(i_s+1,i_t+1) /), &
+        (/ y(i_s,i_t), y(i_s,i_t+1), y(i_s+1,i_t+1) /), &
+        (/ z(i_s,i_t), z(i_s,i_t+1), z(i_s+1,i_t+1) /), &
         (/ 1.d0, 1.d0, 1.d0, 0.d0 /))
     end do
   end do

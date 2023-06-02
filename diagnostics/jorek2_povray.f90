@@ -26,17 +26,18 @@ integer, parameter :: ivar    = 5
 real*8,  parameter :: valmin  = 0.d0
 real*8,  parameter :: valmax  = 0.4d0
 
-integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof, itor, iplane
+integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof, itor, iplane, idir
 real*8  :: s, t, phi, v1, v2
-real*8  :: HH(nsub+1,nsub+1,4,n_degrees), HZ(n_tor, n_phi)
-real*8  :: val(nsub+1,nsub+1)
-real*8  :: R(nsub+1,nsub+1)
-real*8  :: Z(nsub+1,nsub+1)
-real*8  :: x(nsub+1,nsub+1)
-real*8  :: y(nsub+1,nsub+1)
+real*8  :: HH(nsub+1,nsub+1,4,n_degrees), H1(nsub+1,2,2), HZ(n_tor, n_phi)
+real*8  :: val(nsub+1,nsub+1), vv(nsub+1, n_phi)
+real*8  :: R(nsub+1,nsub+1),   RR(nsub+1, n_phi)
+real*8  :: Z(nsub+1,nsub+1),   ZZ(nsub+1, n_phi)
+real*8  :: x(nsub+1,nsub+1),   xx(nsub+1, n_phi)
+real*8  :: y(nsub+1,nsub+1),   yy(nsub+1, n_phi)
 real*8  :: rgbt1(4), rgbt2(4)
-type(type_element) :: element
-type(type_node)    :: nodes(4)
+type(type_element)     :: element
+type(type_bnd_element) :: bnd_element
+type(type_node)        :: nodes(4)
 
 ! --- Initialize
 my_id = 0
@@ -47,6 +48,12 @@ call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xca
 call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
 
 open(ifile, file='jorek_3d.pov', form='formatted', status='replace')
+call write_header_pov(ifile)
+
+do i_s = 1, nsub+1
+  s = real(i_s-1)/real(nsub)
+  call basisfunctions1(s, H1(i_s, :, :))
+end do
 
 do i_s = 1, nsub+1
   s = real(i_s-1)/real(nsub)
@@ -68,7 +75,7 @@ do itor = 1, n_tor
 end do
 
 ! --- Write the first and last poloidal cut
-do iplane = 1, n_phi, n_phi
+do iplane = 1, n_phi, n_phi-1
   phi = phimin + real(iplane-1)/real(n_phi-1) * (phimax - phimin)
   do i_elm = 1, element_list%n_elements
     element  = element_list%element(i_elm)
@@ -81,8 +88,10 @@ do iplane = 1, n_phi, n_phi
         do i_t = 1, nsub+1
           do iv = 1, 4
             do idof = 1, 4
-              R  (i_s,i_t) = R  (i_s,i_t) + nodes(iv)%x(1,idof,1)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
-              Z  (i_s,i_t) = Z  (i_s,i_t) + nodes(iv)%x(1,idof,2)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+              if ( itor == 1 ) then
+                R  (i_s,i_t) = R  (i_s,i_t) + nodes(iv)%x(1,idof,1) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
+                Z  (i_s,i_t) = Z  (i_s,i_t) + nodes(iv)%x(1,idof,2) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
+              end if
               val(i_s,i_t) = val(i_s,i_t) + nodes(iv)%values(itor,idof,ivar) * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
             end do
           end do
@@ -116,13 +125,98 @@ do iplane = 1, n_phi, n_phi
 end do
 
 ! --- Write the boundary
+do i_elm = 1, bnd_elm_list%n_bnd_elements
+  bnd_element = bnd_elm_list%bnd_element(i_elm)
+  nodes(1:2)  = node_list%node(bnd_element%vertex(:))
+  
+  RR(:,:) = 0.d0
+  ZZ(:,:) = 0.d0
+  vv(:,:) = 0.d0
+  do i_s = 1, nsub+1
+    do iplane = 1, n_phi
+      phi = phimin + real(iplane-1)/real(n_phi-1) * (phimax - phimin)
+      do iv = 1, 2
+        do idof = 1, 2
+          idir = bnd_element%direction(iv,idof)
+          RR(i_s,iplane) = RR(i_s,iplane) + nodes(iv)%x(1,idir,1) * H1(i_s, iv, idof) * bnd_element%size(iv, idof)
+          ZZ(i_s,iplane) = ZZ(i_s,iplane) + nodes(iv)%x(1,idir,2) * H1(i_s, iv, idof) * bnd_element%size(iv, idof)
+          xx(i_s,iplane) =   RR(i_s,iplane) * cos(phi)
+          yy(i_s,iplane) = - RR(i_s,iplane) * sin(phi)
+          do itor = 1, n_tor
+            vv(i_s,iplane) = vv(i_s,iplane) + nodes(iv)%values(itor,idir,ivar) * H1(i_s, iv, idof) * bnd_element%size(iv, idof) * HZ(itor,iplane)
+          end do
+        end do
+      end do
+    end do
+  end do
+  
+  do i_s = 1, nsub
+    do iplane = 1, n_phi-1
+      v1 = ( vv(i_s,iplane) + val(i_s+1,iplane) + val(i_s+1,iplane+1) ) / 3.d0
+      v2 = ( vv(i_s,iplane) + val(i_s,iplane+1) + val(i_s+1,iplane+1) ) / 3.d0
+      rgbt1 = colormap1(v1, valmin, valmax)
+      rgbt2 = colormap1(v2, valmin, valmax)
+      call write_triangle_pov(ifile, &
+        (/ xx(i_s,iplane), xx(i_s+1,iplane), xx(i_s+1,iplane+1) /), &
+        (/ yy(i_s,iplane), yy(i_s+1,iplane), yy(i_s+1,iplane+1) /), &
+        (/ zz(i_s,iplane), zz(i_s+1,iplane), zz(i_s+1,iplane+1) /), &
+        rgbt1)
+      call write_triangle_pov(ifile, &
+        (/ xx(i_s,iplane), xx(i_s,iplane+1), xx(i_s+1,iplane+1) /), &
+        (/ yy(i_s,iplane), yy(i_s,iplane+1), yy(i_s+1,iplane+1) /), &
+        (/ zz(i_s,iplane), zz(i_s,iplane+1), zz(i_s+1,iplane+1) /), &
+        rgbt2)
+    end do
+  end do
 
+end do
 
 close(ifile)
 
 
 
 contains
+
+
+
+subroutine write_header_pov(ifile)
+  integer,              intent(in) :: ifile
+  
+  980 format(a)
+  write(ifile,980) '#include "colors.inc"'
+  write(ifile,980) '#include "textures.inc"'
+  write(ifile,980) ''
+  write(ifile,980) 'global_settings{'
+  write(ifile,980) '    assumed_gamma   1.0 '
+  write(ifile,980) '    max_trace_level 50'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'camera{'
+  write(ifile,980) '    angle 42'
+  write(ifile,980) '    location<0.3,-11,4>'
+  write(ifile,980) '    look_at <0.3,0,0>'
+  write(ifile,980) '    up<0,0,6>'
+  write(ifile,980) '    right<8,0,0>'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'light_source{'
+  write(ifile,980) '    <+0.5,-3,3>'
+  write(ifile,980) '    color White'
+  write(ifile,980) '    shadowless'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'light_source{'
+  write(ifile,980) '    <-0.3,+1.2,-3.0>'
+  write(ifile,980) '    color rgb<0.5,0.5,0.5>'
+  write(ifile,980) '    shadowless'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'background{'
+  write(ifile,980) '    White'
+  write(ifile,980) '}'
+  write(ifile,980) '  '
+  
+end subroutine write_header_pov
 
 
 

@@ -24,7 +24,7 @@ integer, parameter :: n_phi   = 64
 integer, parameter :: nsub    = 4
 integer, parameter :: ivar    = 5
 real*8,  parameter :: valmin  = 0.d0
-real*8,  parameter :: valmax  = 1.d0
+real*8,  parameter :: valmax  = 0.4d0
 
 integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof, itor, iplane
 real*8  :: s, t, phi, v1, v2
@@ -67,52 +67,56 @@ do itor = 1, n_tor
   end do
 end do
 
-do i_elm = 1, element_list%n_elements
-  element  = element_list%element(i_elm)
-  nodes(:) = node_list%node(element%vertex(:))
-  val(:,:) = 0.d0
-  R(:,:)   = 0.d0
-  Z(:,:)   = 0.d0
-  iplane = 1 !###
-  do itor = 1, n_tor
-    do i_s = 1, nsub+1
-      do i_t = 1, nsub+1
-        do iv = 1, 4
-          do idof = 1, 4
-            R  (i_s,i_t) = R  (i_s,i_t) + nodes(iv)%x(1,idof,1)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
-            Z  (i_s,i_t) = Z  (i_s,i_t) + nodes(iv)%x(1,idof,2)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
-            val(i_s,i_t) = val(i_s,i_t) + nodes(iv)%values(itor,idof,ivar) * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+! --- Write the first and last poloidal cut
+do iplane = 1, n_phi, n_phi
+  phi = phimin + real(iplane-1)/real(n_phi-1) * (phimax - phimin)
+  do i_elm = 1, element_list%n_elements
+    element  = element_list%element(i_elm)
+    nodes(:) = node_list%node(element%vertex(:))
+    val(:,:) = 0.d0
+    R(:,:)   = 0.d0
+    Z(:,:)   = 0.d0
+    do itor = 1, n_tor
+      do i_s = 1, nsub+1
+        do i_t = 1, nsub+1
+          do iv = 1, 4
+            do idof = 1, 4
+              R  (i_s,i_t) = R  (i_s,i_t) + nodes(iv)%x(1,idof,1)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+              Z  (i_s,i_t) = Z  (i_s,i_t) + nodes(iv)%x(1,idof,2)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+              val(i_s,i_t) = val(i_s,i_t) + nodes(iv)%values(itor,idof,ivar) * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+            end do
           end do
         end do
       end do
     end do
-  end do
-  
-  phi = 0.d0 !###
-  x(:,:) =   R(:,:) * cos(phi)
-  y(:,:) = - R(:,:) * sin(phi)
-  
-  
-  do i_s = 1, nsub
-    do i_t = 1, nsub
-      v1 = ( val(i_s,i_t) + val(i_s+1,i_t) + val(i_s+1,i_t+1) ) / 3.d0
-      v2 = ( val(i_s,i_t) + val(i_s,i_t+1) + val(i_s+1,i_t+1) ) / 3.d0
-      rgbt1 = colormap1(v1, valmin, valmax)
-      rgbt2 = colormap1(v2, valmin, valmax)
-      call write_triangle_pov(ifile, &
-        (/ x(i_s,i_t), x(i_s+1,i_t), x(i_s+1,i_t+1) /), &
-        (/ y(i_s,i_t), y(i_s+1,i_t), y(i_s+1,i_t+1) /), &
-        (/ z(i_s,i_t), z(i_s+1,i_t), z(i_s+1,i_t+1) /), &
-        rgbt1)
-      call write_triangle_pov(ifile, &
-        (/ x(i_s,i_t), x(i_s,i_t+1), x(i_s+1,i_t+1) /), &
-        (/ y(i_s,i_t), y(i_s,i_t+1), y(i_s+1,i_t+1) /), &
-        (/ z(i_s,i_t), z(i_s,i_t+1), z(i_s+1,i_t+1) /), &
-        rgbt2)
+    
+    x(:,:) =   R(:,:) * cos(phi)
+    y(:,:) = - R(:,:) * sin(phi)
+    
+    do i_s = 1, nsub
+      do i_t = 1, nsub
+        v1 = ( val(i_s,i_t) + val(i_s+1,i_t) + val(i_s+1,i_t+1) ) / 3.d0
+        v2 = ( val(i_s,i_t) + val(i_s,i_t+1) + val(i_s+1,i_t+1) ) / 3.d0
+        rgbt1 = colormap1(v1, valmin, valmax)
+        rgbt2 = colormap1(v2, valmin, valmax)
+        call write_triangle_pov(ifile, &
+          (/ x(i_s,i_t), x(i_s+1,i_t), x(i_s+1,i_t+1) /), &
+          (/ y(i_s,i_t), y(i_s+1,i_t), y(i_s+1,i_t+1) /), &
+          (/ z(i_s,i_t), z(i_s+1,i_t), z(i_s+1,i_t+1) /), &
+          rgbt1)
+        call write_triangle_pov(ifile, &
+          (/ x(i_s,i_t), x(i_s,i_t+1), x(i_s+1,i_t+1) /), &
+          (/ y(i_s,i_t), y(i_s,i_t+1), y(i_s+1,i_t+1) /), &
+          (/ z(i_s,i_t), z(i_s,i_t+1), z(i_s+1,i_t+1) /), &
+          rgbt2)
+      end do
     end do
+    
   end do
-  
 end do
+
+! --- Write the boundary
+
 
 close(ifile)
 

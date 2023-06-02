@@ -22,16 +22,19 @@ real*8,  parameter :: phimin  = 0.d0
 real*8,  parameter :: phimax  = 270.d0 / 360.d0 * 2.d0 * PI
 integer, parameter :: n_phi   = 64
 integer, parameter :: nsub    = 4
-integer, parameter :: ivar    = 1
+integer, parameter :: ivar    = 5
+real*8,  parameter :: valmin  = 0.d0
+real*8,  parameter :: valmax  = 1.d0
 
-integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof
-real*8  :: s, t, phi, v1, v2, itor, iplane
-real*8  :: HH(nsub+1,nsub+1,4,n_degrees)
+integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof, itor, iplane
+real*8  :: s, t, phi, v1, v2
+real*8  :: HH(nsub+1,nsub+1,4,n_degrees), HZ(n_tor, n_phi)
 real*8  :: val(nsub+1,nsub+1)
 real*8  :: R(nsub+1,nsub+1)
 real*8  :: Z(nsub+1,nsub+1)
 real*8  :: x(nsub+1,nsub+1)
 real*8  :: y(nsub+1,nsub+1)
+real*8  :: rgbt1(4), rgbt2(4)
 type(type_element) :: element
 type(type_node)    :: nodes(4)
 
@@ -53,20 +56,33 @@ do i_s = 1, nsub+1
   end do
 end do
 
+do itor = 1, n_tor
+  do iplane = 1, n_phi
+    phi = phimin + real(iplane-1)/real(n_phi-1) * (phimax - phimin)
+    if ( (itor == 1) .or. (mod(itor,2)==1) ) then
+      HZ(itor,iplane) = cos(mode(itor)*phi)
+    else
+      HZ(itor,iplane) = sin(mode(itor)*phi)
+    end if
+  end do
+end do
+
 do i_elm = 1, element_list%n_elements
   element  = element_list%element(i_elm)
   nodes(:) = node_list%node(element%vertex(:))
   val(:,:) = 0.d0
   R(:,:)   = 0.d0
   Z(:,:)   = 0.d0
-  itor = 1 !###
-  do i_s = 1, nsub+1
-    do i_t = 1, nsub+1
-      do iv = 1, 4
-        do idof = 1, 4
-          R  (i_s,i_t) = R  (i_s,i_t) + nodes(iv)%x(1,idof,1) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
-          Z  (i_s,i_t) = Z  (i_s,i_t) + nodes(iv)%x(1,idof,2) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
-          val(i_s,i_t) = val(i_s,i_t) + nodes(iv)%values(itor,idof,ivar) * HH(i_s, i_t, iv, idof) * element%size(iv, idof)
+  iplane = 1 !###
+  do itor = 1, n_tor
+    do i_s = 1, nsub+1
+      do i_t = 1, nsub+1
+        do iv = 1, 4
+          do idof = 1, 4
+            R  (i_s,i_t) = R  (i_s,i_t) + nodes(iv)%x(1,idof,1)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+            Z  (i_s,i_t) = Z  (i_s,i_t) + nodes(iv)%x(1,idof,2)            * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+            val(i_s,i_t) = val(i_s,i_t) + nodes(iv)%values(itor,idof,ivar) * HH(i_s, i_t, iv, idof) * element%size(iv, idof) * HZ(itor,iplane)
+          end do
         end do
       end do
     end do
@@ -81,16 +97,18 @@ do i_elm = 1, element_list%n_elements
     do i_t = 1, nsub
       v1 = ( val(i_s,i_t) + val(i_s+1,i_t) + val(i_s+1,i_t+1) ) / 3.d0
       v2 = ( val(i_s,i_t) + val(i_s,i_t+1) + val(i_s+1,i_t+1) ) / 3.d0
+      rgbt1 = colormap1(v1, valmin, valmax)
+      rgbt2 = colormap1(v2, valmin, valmax)
       call write_triangle_pov(ifile, &
         (/ x(i_s,i_t), x(i_s+1,i_t), x(i_s+1,i_t+1) /), &
         (/ y(i_s,i_t), y(i_s+1,i_t), y(i_s+1,i_t+1) /), &
         (/ z(i_s,i_t), z(i_s+1,i_t), z(i_s+1,i_t+1) /), &
-        (/ 1.d0, 1.d0, 1.d0, 0.d0 /))
+        rgbt1)
       call write_triangle_pov(ifile, &
         (/ x(i_s,i_t), x(i_s,i_t+1), x(i_s+1,i_t+1) /), &
         (/ y(i_s,i_t), y(i_s,i_t+1), y(i_s+1,i_t+1) /), &
         (/ z(i_s,i_t), z(i_s,i_t+1), z(i_s+1,i_t+1) /), &
-        (/ 1.d0, 1.d0, 1.d0, 0.d0 /))
+        rgbt2)
     end do
   end do
   
@@ -122,4 +140,22 @@ end subroutine write_triangle_pov
 
 
 
+function colormap1(v, vmin, vmax)
+  real*8, dimension(4) :: colormap1
+  real*8,               intent(in)  :: v, vmin, vmax
+  
+  real*8 :: v_norm
+  
+  if ( vmax<=vmin ) then
+    colormap1 = (/ 0.d0, 0.d0, 0.d0, 1.d0 /) ! write invisible triangle
+  else
+    v_norm = min(max(v,vmin),vmax) / (vmax-vmin) ! crop to min/max range and normalize
+    
+    colormap1 = (/ 1.d0, 1.d0-v_norm, 1.d0-v_norm, 0.0d0 /)
+  end if
+  
+end function colormap1
+
+
+  
 end program jorek2_povray

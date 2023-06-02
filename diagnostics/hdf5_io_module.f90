@@ -75,7 +75,7 @@ module hdf5_io_module
     character(len=*),intent(in) :: dsetname
     !> outputs:
     logical,intent(out) :: in_file
-    in_file = h5ltfind_dataset_f(file_id,dsetname).ge.1
+    in_file = h5ltfind_dataset_f(file_id,trim(dsetname)).ge.1
   end subroutine HDF5_is_dataset_in_file
 
   !---------------------------------------- 

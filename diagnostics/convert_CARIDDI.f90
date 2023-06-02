@@ -406,7 +406,7 @@ contains
 subroutine write_header_pov(ifile)
   integer,              intent(in) :: ifile
   
-  980 format('a')
+  980 format(a)
   write(ifile,980) '#include "colors.inc"'
   write(ifile,980) '#include "textures.inc"'
   write(ifile,980) ''
@@ -463,8 +463,7 @@ subroutine write_currdens_pov(ifile)
       case (1)
         rgbt = colormap1(1.,0.,1.)
       case default
-        write(*,*) 'wrong colorbar'
-        stop
+        rgbt = colormap0(1.,0.,1.)
       end select
       
     end do
@@ -485,7 +484,7 @@ subroutine write_triangle_pov(ifile, x, y, z, rgbt)
   990 format(a)
   991 format('  <',f15.6,',',f15.6,',',f15.6,'>, <',f15.6,',',f15.6,',',f15.6,'>, <',f15.6, &
     ',',f15.6,',',f15.6,'>')
-  992 format('  pigment{color rgbt<',f15.6,','f15.6,','f15.6,'>}')
+  992 format('  pigment{color rgbt<',f15.6,','f15.6,','f15.6,','f15.6,'>}')
   write(ifile,990) 'triangle {'
   write(ifile,991) x(1), y(1), z(1), x(2), y(2), z(2), x(3), y(3), z(3)
   write(ifile,992) rgbt
@@ -504,6 +503,16 @@ subroutine write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
   ! ### ...
   
 end subroutine write_hexahedron_as_triangles_pov
+
+
+
+function colormap0(v, vmin, vmax)
+  real*8, dimension(4) :: colormap0
+  real*8,               intent(in)  :: v, vmin, vmax
+  
+  colormap0 = (/ 1.d0, 1.d0, 1.d0, 0.0d0 /)
+  
+end function colormap0
 
 
 

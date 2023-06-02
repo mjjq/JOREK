@@ -501,6 +501,8 @@ subroutine write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
   
   call write_triangle_pov(ifile, (/x(1), x(2), x(3)/), (/y(1), y(2), y(3)/), (/z(1), z(2), z(3)/), rgbt)
   call write_triangle_pov(ifile, (/x(1), x(3), x(4)/), (/y(1), y(3), y(4)/), (/z(1), z(3), z(4)/), rgbt)
+  call write_triangle_pov(ifile, (/x(5), x(6), x(7)/), (/y(5), y(6), y(7)/), (/z(5), z(6), z(7)/), rgbt)
+  call write_triangle_pov(ifile, (/x(5), x(7), x(8)/), (/y(5), y(7), y(8)/), (/z(5), z(7), z(8)/), rgbt)
   ! ### ...
   
 end subroutine write_hexahedron_as_triangles_pov

@@ -25,7 +25,7 @@ integer, parameter :: nsub    = 4
 integer, parameter :: ivar    = 1
 
 integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof
-real*8  :: s, t, phi, v1, v2, itor
+real*8  :: s, t, phi, v1, v2, itor, iplane
 real*8  :: HH(nsub+1,nsub+1,4,n_degrees)
 real*8  :: val(nsub+1,nsub+1)
 real*8  :: R(nsub+1,nsub+1)
@@ -73,8 +73,8 @@ do i_elm = 1, element_list%n_elements
   end do
   
   phi = 0.d0 !###
-  x(:,:) = R(:,:) * cos(phi)
-  y(:,:) = R(:,:) * sin(phi)
+  x(:,:) =   R(:,:) * cos(phi)
+  y(:,:) = - R(:,:) * sin(phi)
   
   
   do i_s = 1, nsub
@@ -93,8 +93,6 @@ do i_elm = 1, element_list%n_elements
         (/ 1.d0, 1.d0, 1.d0, 0.d0 /))
     end do
   end do
-  
-  stop !###
   
 end do
 

@@ -14,7 +14,7 @@ logical, parameter :: ascii = .false.
 integer, parameter :: povray_colormap = 1
 real*8,  parameter :: povray_wallcurr_min = 0.d0
 real*8,  parameter :: povray_wallcurr_max = 1.d7
-
+real*8             :: phimin = 2*pi/2., phimax = 2*pi
 real*8  :: xyznode(n_nodes_max,3), xyzav(3), maxdist
 integer :: elemnode(n_nodes_max/2, nodes_per_elem)
 integer :: tmp_elemnode(nodes_per_elem)
@@ -234,6 +234,8 @@ call write_vector('J', ifile, istart, iend, jx, jy, jz)
 close(ifile)
 
 ! --- export to Povray
+include_struct(:) = .false.
+include_struct(1:6) = .true.
 open(ifile, file='3dwall.pov', form='formatted', status='replace')
 call write_header_pov(ifile)
 call write_currdens_pov(ifile)
@@ -471,7 +473,11 @@ subroutine write_currdens_pov(ifile)
       z(j) = xyznode(elemnode(i,j),3)
       
     end do
-    
+    phi = atan2(sum(y)/real(nodes_per_elem),sum(x)/real(nodes_per_elem))
+    if (phi<0) phi = phi + 2* pi
+    if (phi > phimax) cycle
+    if (phi < phimin) cycle
+    write(*,*) i, phi, phimin, phimax
     call write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
     
   end do

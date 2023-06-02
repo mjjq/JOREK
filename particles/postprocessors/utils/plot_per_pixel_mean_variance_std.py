@@ -27,14 +27,10 @@ def write_statistics_in_hdf5(average,variance,stddev,filename,filepath,separator
   from h5py import File
   from numpy import float64 as npfloat64
   fhandler = File("".join([filepath,separator,filename]),'w')
-  dset = fhandler.create_dataset('stat_size',average.shape,dtype=int)
-  dset = average.shape
-  dset = fhandler.create_dataset('average',average.shape,dtype=average.dtype)
-  dset = average
-  dset = fhandler.create_dataset('variance',variance.shape,dtype=variance.dtype)
-  dset = variance
-  dset = fhandler.create_dataset('standard_deviation',stddev.shape,dtype=stddev.dtype)
-  dset = stddev
+  dset = fhandler.create_dataset('stat_size',len(average.shape),dtype=int,data=average.shape)
+  dset = fhandler.create_dataset('average',average.shape,dtype=average.dtype,data=average)
+  dset = fhandler.create_dataset('variance',variance.shape,dtype=variance.dtype,data=variance)
+  dset = fhandler.create_dataset('standard_deviation',stddev.shape,dtype=stddev.dtype,data=stddev)
   fhandler.close()
 
 # Check the consistency of the light data:

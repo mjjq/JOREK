@@ -2,13 +2,13 @@ program convert
 
   use hdf5
   use hdf5_io_module
+  use constants
   
 implicit none
 integer, parameter :: ind_max =    1000000
 integer, parameter :: n_nodes_max = 100000
 integer, parameter :: nodes_per_elem = 8
 logical, parameter :: ascii = .false.
-real*8,  parameter :: PI = 3.141592653589793
 
 real*8  :: xyznode(n_nodes_max,3), xyzav(3), maxdist
 integer :: elemnode(n_nodes_max/2, nodes_per_elem)
@@ -393,6 +393,97 @@ contains
       end do
     end if
   end subroutine det_comp
+
+
+
+subroutine write_header_pov(ifile)
+  integer,              intent(in) :: ifile
+  
+  980 format('a')
+  write(ifile,980) '#include "colors.inc"'
+  write(ifile,980) '#include "textures.inc"'
+  write(ifile,980) ''
+  write(ifile,980) 'global_settings{'
+  write(ifile,980) '    assumed_gamma   1.0 '
+  write(ifile,980) '    max_trace_level 50'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'camera{'
+  write(ifile,980) '    angle 42'
+  write(ifile,980) '    location<0.3,-7,5>'
+  write(ifile,980) '    look_at <0.3,1,0>'
+  write(ifile,980) '    up<0,0,6>'
+  write(ifile,980) '    right<8,0,0>'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'light_source{'
+  write(ifile,980) '    <+0.5,-3,3>'
+  write(ifile,980) '    color White'
+  write(ifile,980) '    shadowless'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'light_source{'
+  write(ifile,980) '    <-0.3,+1.2,-3.0>'
+  write(ifile,980) '    color rgb<0.5,0.5,0.5>'
+  write(ifile,980) '    shadowless'
+  write(ifile,980) '}'
+  write(ifile,980) ''
+  write(ifile,980) 'background{'
+  write(ifile,980) '    White'
+  write(ifile,980) '}'
+  write(ifile,980) '  '
+  
+end subroutine write_header_pov
+
+
+
+subroutine write_triangle_pov(ifile, x, y, z, rgbt)
+  integer,              intent(in) :: ifile
+  real*8, dimension(3), intent(in) :: x, y, z
+  real*8, dimension(4), intent(in) :: rgbt
+  
+  990 format(a)
+  991 format('  <',f15.6,',',f15.6,',',f15.6,'>, <',f15.6,',',f15.6,',',f15.6,'>, <',f15.6, &
+    ',',f15.6,',',f15.6,'>')
+  992 format('  pigment{color rgbt<',f15.6,','f15.6,','f15.6,'>}')
+  write(ifile,990) 'triangle {'
+  write(ifile,991) x(1), y(1), z(1), x(2), y(2), z(2), x(3), y(3), z(3)
+  write(ifile,992) rgbt
+  write(ifile,990) '}'
+
+end subroutine write_triangle_pov
+
+
+
+subroutine write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
+  integer,              intent(in) :: ifile
+  real*8, dimension(8), intent(in) :: x, y, z
+  real*8, dimension(4), intent(in) :: rgbt
+  
+  call write_triangle_pov(ifile, (/x(1), x(2), x(3)/), (/y(1), y(2), y(3)/), (/z(1), z(2), z(3)/), rgbt)
+  ! ### ...
+  
+end subroutine write_hexahedron_as_triangles_pov
+
+
+
+function colormap1(v, vmin, vmax)
+  real*8, dimension(4) :: colormap1
+  real*8,               intent(in)  :: v, vmin, vmax
+  
+  real*8 :: v_norm
+  
+  if ( vmax<=vmin ) then
+    colormap1 = (/ 0.d0, 0.d0, 0.d0, 1.d0 /) ! write invisible triangle
+  else
+    v_norm = min(max(v,vmin),vmax) / (vmax-vmin) ! crop to min/max range and normalize
+    
+    colormap1 = (/ v_norm, 0.d0, 0.d0, 0.3d0 /)
+  end if
+  
+end function colormap1
+
+
   
 end program convert
 

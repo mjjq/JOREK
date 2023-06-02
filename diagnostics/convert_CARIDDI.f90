@@ -233,6 +233,8 @@ close(ifile)
 ! --- export to Povray
 open(ifile, file='3dwall.pov', form='formatted', status='replace')
 call write_header_pov(ifile)
+call write_currdens_pov(ifile)
+close(ifile)
 
 contains
   subroutine write_header(filename, ifile, nnodes, xyznode)

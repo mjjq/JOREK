@@ -25,7 +25,7 @@ integer, parameter :: n_phi   = 64
 integer, parameter :: nsub    = 4
 
 integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof
-real*8  :: s, t, phi
+real*8  :: s, t, phi, v1, v2
 real*8  :: HH(nsub+1,nsub+1,4,n_degrees)
 real*8  :: val(nsub+1,nsub+1)
 real*8  :: R(nsub+1,nsub+1)
@@ -48,10 +48,10 @@ call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, ou
 
 open(ifile, file='jorek_3d.pov', form='formatted', status='replace')
 
-do i_s = 1, nsub-1
-  s = real(i_s-1)/real(nsub-1)
-  do i_t = 1, nsub-1
-    t = real(i_t-1)/real(nsub-1)
+do i_s = 1, nsub+1
+  s = real(i_s-1)/real(nsub)
+  do i_t = 1, nsub+1
+    t = real(i_t-1)/real(nsub)
     call basisfunctions(s, t, HH(i_s, i_t, :, :))
   end do
 end do
@@ -75,12 +75,14 @@ do i_elm = 1, element_list%n_elements
   end do
   
   phi = 0.d0 !###
-  x(:,:) = R(:,:) * sin(phi)
-  y(:,:) = R(:,:) * cos(phi)
+  x(:,:) = R(:,:) * cos(phi)
+  y(:,:) = R(:,:) * sin(phi)
   
   
   do i_s = 1, nsub
     do i_t = 1, nsub
+      v1 = ( val(i_s,i_t) + val(i_s+1,i_t) + val(i_s+1,i_t+1) ) / 3.d0
+      v2 = ( val(i_s,i_t) + val(i_s,i_t+1) + val(i_s+1,i_t+1) ) / 3.d0
       call write_triangle_pov(ifile, &
         (/ x(i_s,i_t), x(i_s+1,i_t), x(i_s+1,i_t+1) /), &
         (/ y(i_s,i_t), y(i_s+1,i_t), y(i_s+1,i_t+1) /), &
@@ -93,6 +95,8 @@ do i_elm = 1, element_list%n_elements
         (/ 1.d0, 1.d0, 1.d0, 0.d0 /))
     end do
   end do
+  
+  stop !###
   
 end do
 

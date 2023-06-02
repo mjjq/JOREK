@@ -67,7 +67,7 @@ do i_elm = 1, element_list%n_elements
       do iv = 1, 4
         do idof = 1, 4
           R(i_s,i_t) = R(i_s,i_t) + nodes(iv)%x(1,idof,1)
-          Z(i_s,i_t) = Z(i_s,i_t) + nodes(iv)%x(1,idof,1)
+          Z(i_s,i_t) = Z(i_s,i_t) + nodes(iv)%x(1,idof,2)
           !### val
         end do
       end do

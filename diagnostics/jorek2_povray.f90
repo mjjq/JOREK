@@ -152,8 +152,8 @@ do i_elm = 1, bnd_elm_list%n_bnd_elements
   
   do i_s = 1, nsub
     do iplane = 1, n_phi-1
-      v1 = ( vv(i_s,iplane) + val(i_s+1,iplane) + val(i_s+1,iplane+1) ) / 3.d0
-      v2 = ( vv(i_s,iplane) + val(i_s,iplane+1) + val(i_s+1,iplane+1) ) / 3.d0
+      v1 = ( vv(i_s,iplane) + vv(i_s+1,iplane) + vv(i_s+1,iplane+1) ) / 3.d0
+      v2 = ( vv(i_s,iplane) + vv(i_s,iplane+1) + vv(i_s+1,iplane+1) ) / 3.d0
       rgbt1 = colormap1(v1, valmin, valmax)
       rgbt2 = colormap1(v2, valmin, valmax)
       call write_triangle_pov(ifile, &

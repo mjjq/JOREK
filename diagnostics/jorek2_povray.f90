@@ -22,9 +22,9 @@ real*8,  parameter :: phimin  = -180.d0 / 360.d0 * 2.d0 * PI
 real*8,  parameter :: phimax  =  +90.d0 / 360.d0 * 2.d0 * PI
 integer, parameter :: n_phi   = 64
 integer, parameter :: nsub    = 4
-integer, parameter :: ivar    = 5
-real*8,  parameter :: valmin  = 0.d0
-real*8,  parameter :: valmax  = 0.4d0
+integer, parameter :: ivar    = 3
+real*8,  parameter :: valmin  = -8.d0
+real*8,  parameter :: valmax  = 8.d0
 
 integer :: ierr, my_id, i_elm, i_s, i_t, iv, idof, itor, iplane, idir
 real*8  :: s, t, phi, v1, v2
@@ -249,7 +249,7 @@ function colormap1(v, vmin, vmax)
   else
     v_norm = min(max(v,vmin),vmax) / (vmax-vmin) ! crop to min/max range and normalize
     
-    colormap1 = (/ 1.d0, 1.d0-v_norm, 1.d0-v_norm, 0.0d0 /)
+    colormap1 = (/ v_norm, 1.d0, 1.d0-v_norm, 0.0d0 /)
   end if
   
 end function colormap1

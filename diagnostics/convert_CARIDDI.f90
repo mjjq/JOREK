@@ -181,8 +181,8 @@ do i = 1, n_elems
   do j = 1,nodes_per_elem
     xyz_e(:) = xyznode(elemnode(i,j),:)/nodes_per_elem
   end do
-  phi = -atan2(xyz_e(2),xyz_e(1))
-  jphi(i) = jx(i) * sin(phi) - jy(i) * cos(phi)
+  phi = atan2(xyz_e(2),xyz_e(1))
+  jphi(i) = -jx(i) * sin(phi) + jy(i) * cos(phi)
   wall_curr_el(i) = (jx(i)**2+jy(i)**2+jz(i)**2)**.5
 end do
 

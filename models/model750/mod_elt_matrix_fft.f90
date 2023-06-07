@@ -7612,7 +7612,7 @@ CASE(13)
   res_jac__n(var_UR,var_A3 ) =  rho0 * ( VdiaGradUR_A3__n  - VdiaP0_A3__n * Up0 / R ) - PneoR_A3__n
 
   res_jac__p(var_UR, var_UR) =  rho0 * UgradUR_UR__p + rho0 * VdiaGradUR_UR__p &
-                               - visco_T * vsR_UR__p - PneoR_UR - particle_source(ms,mt) * UR 
+                               - visco_T * vsR_UR__p - PneoR_UR + particle_source(ms,mt) * UR 
   res_jac__n(var_UR, var_UR) =  rho0 * UgradUR_UR__n + rho0 * VdiaGradUR_UR__n &
                                - visco_T * vsR_UR__n
   res_jac__nn(var_UR, var_UR)= - visco_T * vsR_UR__nn
@@ -7703,7 +7703,7 @@ CASE(13)
   res_jac__n(var_UZ, var_UR) =                    - visco_T * vsR_UR__n           
   res_jac__nn(var_UZ, var_UR)=                    - visco_T * vsR_UR__nn          
 
-  res_jac__p(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__p - visco_T * vsZ_UZ__p - PneoZ_UZ - particle_source(ms,mt) * UZ
+  res_jac__p(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__p - visco_T * vsZ_UZ__p - PneoZ_UZ + particle_source(ms,mt) * UZ
   res_jac__n(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__n - visco_T * vsZ_UZ__n
   res_jac__nn(var_UZ, var_UZ)=                      - visco_T * vsZ_UZ__nn
 
@@ -7777,7 +7777,7 @@ CASE(13)
   res_jac__nn(var_Up, var_UZ)=                    - visco_T * vsp_UZ__nn
 
   res_jac__p(var_Up, var_Up) =  rho0 * UgradUp_Up__p + rho0 * UR0 * Up / R - rho0 * VdiaGradUp_Up__p &
-                                             - visco_T * vsR_Up__p - particle_source(ms,mt) * Up
+                                             - visco_T * vsR_Up__p + particle_source(ms,mt) * Up
   res_jac__n(var_Up, var_Up) =  rho0 * UgradUp_Up__n                       - rho0 * VdiaGradUp_Up__n &
                                              - visco_T * vsR_Up__n 
   res_jac__nn(var_Up, var_Up)=               - visco_T * vsR_Up__nn

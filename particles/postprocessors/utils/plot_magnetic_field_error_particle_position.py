@@ -11,11 +11,11 @@ def read_datasets_from_hdf5(filename,filepath,datasets,separator):
 
 # extract a subdictionary of all keys containing a string
 def extract_subdict_from_string(string,dictionary):
-  subdict = dict()
+  subdict = {}
   for key,data in dictionary.items():
     if(string in key):
       subdict[key] = data
-  return data
+  return subdict
 
 # plot scatter 2d
 def plot_scatter_2d(ax,xy,values,title='',xlab='x',ylab='y',fontsize=12,\
@@ -24,7 +24,7 @@ markertype='.',markersize='1',colormap='inferno',aspect='equal'):
   mask = ((xy[:,0]==0.)&(xy[:,1]==0.))==False
   ax.scatter(xy[mask,0],xy[mask,1],s=markersize,\
   marker=markertype,c=values[mask],cmap=colormap,\
-  vmin=amin(values[mask],vmax=amax(values[mask])))
+  vmin=amin(values[mask]),vmax=amax(values[mask]))
   if(len(aspect)!=0):
     ax.set_aspect(aspect)
   ax.set_title(title,fontsize=fontsize)
@@ -70,11 +70,10 @@ colormap='inferno',aspect='equal',ncols=3):
   nerrors = len(error_dict)
   nrows = compute_number_of_subplot_rows(nerrors,ncols)
   fig     = figure(facecolor='white',edgecolor='white')
-  print([int("".join([str(nrows),str(ncols),str(ids+1)])) for ids in range(nerrors)])
   axs = [fig.add_subplot(int("".join([str(nrows),str(ncols),str(ids+1)]))) for ids in range(nerrors)]
   for errorid,errorkey in enumerate(error_dict.keys()):
     plot_scatter_2d(axs[errorid],RZPhi[:,0:2],error_dict[errorkey],\
-    title=().join(['Error field: ',errorkey]),xlab='R [m]',ylab='Z [m]',\
+    title="".join(['Error field: ',errorkey]),xlab='R [m]',ylab='Z [m]',\
     fontsize=fontsize, markertype=markertype,markersize=markersize,\
     colormap=colormap,aspect=aspect)
   show()
@@ -90,7 +89,7 @@ colormap='inferno',aspect='equal',rotate=False,ncols=3):
   projection='3d') for ids in range(nerrors)]
   for errorid,errorkey in enumerate(error_dict.keys()):
     plot_scatter_3d(axs[errorid],pos,error_dict[errorkey],\
-    title=().join(['Error field: ',errorkey]),xlab='x [m]',ylab='y [m]',zlab='z [m]',\
+    title="".join(['Error field: ',errorkey]),xlab='x [m]',ylab='y [m]',zlab='z [m]',\
     fontsize=fontsize,markertype=markertype,markersize=markersize,markercolor=markercolor,\
     aspect=aspect,colormap=colormap,rotate=rotate)
   show()
@@ -98,7 +97,7 @@ colormap='inferno',aspect='equal',rotate=False,ncols=3):
 # plot the magnetic field errors
 def read_plot_magnetic_field_error(datasets,filename,filepath='.',separator='/',\
   error_str='error',rzphi_str='RZPhi',pos_str='x',fontsize=12,markertype='.',\
-  markersize=1,colormap='inferno',aspect=True,rotate=False,ncols=3):
+  markersize=1,colormap='inferno',aspect='equal',rotate=False,ncols=3):
   data_dict = read_datasets_from_hdf5(filename,filepath,datasets,separator)
   # extract error dictionary
   error_dict = extract_subdict_from_string(error_str,data_dict)
@@ -135,8 +134,8 @@ def generate_argument_parser():
   dest='colormap',action='store',default='inferno',help='plot colormap, default: inferno')
   parser.add_argument('--n_plot_columns','-ncols',type=int,required=False,\
   dest='ncols',action='store',default=3,help='number of plot columns, default: 3')
-  parser.add_argument('--aspect_equal','-asp',type=bool,required=False,\
-  dest='aspect',action='store',default=True,help='use aspect equal for plotting, default: True')
+  parser.add_argument('--aspect','-asp',type=str,required=False,\
+  dest='aspect',action='store',default='equal',help='use aspect equal for plotting, default: equal')
   parser.add_argument('--rotate_3d_plot','-rot3d',type=bool,required=False,\
   dest='rotate',action='store',default=False,help='rotate a 3d plot, default: False')
   parser.add_argument('--error_string','-estr',type=str,required=False,\

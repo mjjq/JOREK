@@ -10,9 +10,9 @@ def read_datasets_from_hdf5(filenames,filepath,separator):
     path = "".join([filepath,separator,filename])
     print('Reading file: ',path)
     fhandler = File(path)
-    stddev.append(transpose(array(fhandler['standard_deviation']),[2,0,1]))
-    variance.append(transpose(array(fhandler['variance']),[2,0,1]))
-    average.append(transpose(array(fhandler['average']),[2,0,1]))
+    stddev.append(transpose(array(fhandler['standard_deviation']),[2,1,0]))
+    variance.append(transpose(array(fhandler['variance']),[2,1,0]))
+    average.append(transpose(array(fhandler['average']),[2,1,0]))
     fhandler.close()
   return stddev,variance,average
 

@@ -24,13 +24,6 @@ def compute_convergence_rate(x,y):
   linregress(log(x),y=log(y),alternative='two-sided')
   return slope
 
-# compute the number of rows of a subplot given the number
-# of plots and subplot columns
-def compute_number_of_subplot_rows(nplots,ncols):
-  from numpy import ceil
-  nrows = int(ceil(nplots/ncols))
-  return nrows
-
 # Method used for plotting 4d arrays as 2d image
 def imshow_3d(fig,ax,frame,x_positions=[],y_positions=[],title="",fontsize=12):
   from numpy import newaxis
@@ -81,64 +74,57 @@ ylabel='error',loglog=True,linewidth=3,markersize=10,markertype='s'):
   ax.grid()
 
 # plot multiple subplots
-def plot_frame_lists(data,titleroot,fontsize=12,ncols=3):
+def plot_frame_lists(data,titleroot,fontsize=12):
   from numpy import array
   from matplotlib.pyplot import figure,show
-  nplots = len(data)
-  nrows = compute_number_of_subplot_rows(nplots,ncols)
-  if(nplots<=ncols):
-    ncols = nplots
-    nrows = 1
   # plot variance
-  fig = figure(facecolor='white',edgecolor='white')
-  axs = [fig.add_subplot(int("".join([str(nrows),str(ncols),str(ids+1)]))) for ids in range(nplots)]
+  figs = []; axs = [];
   for datid,dat in enumerate(data):
-    imshow_3d(fig,axs[datid],dat,title=titleroot,fontsize=fontsize) 
+    figs.append(figure(facecolor='white',edgecolor='white'))
+    axs.append([figs[datid].add_subplot(111)])
+    imshow_3d(figs[datid],axs[datid][0],dat,title=titleroot,fontsize=fontsize) 
   show()
 
 # plot the variance and standard deviation values per pixel
 def plot_per_pixel_quantities(x,data,title='',accept_rate=0.2,fontsize=12,xlabel='x',\
-ylabel='error',loglog=True,linewidth=3,markersize=10,markertype='s',ncols=3):
+ylabel='error',loglog=True,linewidth=3,markersize=10,markertype='s'):
   from numpy import array,transpose
   from matplotlib.pyplot import figure,show
-  fig = figure(facecolor='white',edgecolor='white')
   data = transpose(array(data),[1,2,3,0])
-  nrows = compute_number_of_subplot_rows(data.shape[0],ncols)
-  if(data.shape[0]<=ncols):
-    ncols = data.shape[0]
-    nrows = 1
-  axs = [fig.add_subplot(int("".join([str(nrows),str(ncols),str(ids+1)]))) for ids in range(data.shape[0])]
+  figs = []; axs = [];
   for dataid,dat in enumerate(data):
-    plot_convergence_3d(axs[dataid],x,dat,accept_rate=accept_rate,\
+    figs.append(figure(facecolor='white',edgecolor='white'))
+    axs.append([figs[dataid].add_subplot(111)])
+    plot_convergence_3d(axs[dataid][0],x,dat,accept_rate=accept_rate,\
     title="".join([title,' for spectrum id: ',str(dataid)]),\
     fontsize=fontsize,xlabel=xlabel,ylabel=ylabel,loglog=loglog,linewidth=linewidth,\
     markersize=markersize,markertype=markertype)
   show()
 
 # plot average,variance and standard deviation
-def plot_average_variance_stddev(average,variance,stddev,fontsize=12,ncols=3):
-  plot_frame_lists(average,'Image intensity mean: ',fontsize=fontsize,ncols=ncols)
-  plot_frame_lists(variance,'Image intensity variance: ',fontsize=fontsize,ncols=ncols)
-  plot_frame_lists(stddev,'Image intensity std deviation: ',fontsize=fontsize,ncols=ncols)
+def plot_average_variance_stddev(average,variance,stddev,fontsize=12):
+  plot_frame_lists(average,'Image intensity mean: ',fontsize=fontsize)
+  plot_frame_lists(variance,'Image intensity variance: ',fontsize=fontsize)
+  plot_frame_lists(stddev,'Image intensity std deviation: ',fontsize=fontsize)
 
 # plot convergence w.r.t. x of the variance and the standard deviation
 def plot_variance_stdded_covergence_per_pixel(x,variance,stddev,accept_rate=0.2,\
-nplots=10,fontsize=12,xlabel='x',loglog=True,linewidth=3,markersize=10,markertype='s',ncols=3,):
+nplots=10,fontsize=12,xlabel='x',loglog=True,linewidth=3,markersize=10,markertype='s'):
   plot_per_pixel_quantities(x,stddev,accept_rate=accept_rate,title='Standard deviation convergence',\
   fontsize=fontsize,xlabel=xlabel,ylabel='$\sigma$',loglog=loglog,\
-  linewidth=linewidth,markersize=markersize,markertype=markertype,ncols=ncols)
+  linewidth=linewidth,markersize=markersize,markertype=markertype)
   plot_per_pixel_quantities(x,variance,accept_rate=accept_rate,title='Variance convergence',\
   fontsize=fontsize,xlabel=xlabel,ylabel='$\sigma^2$',loglog=loglog,\
-  linewidth=linewidth,markersize=markersize,markertype=markertype,ncols=ncols)
+  linewidth=linewidth,markersize=markersize,markertype=markertype)
 
 # main functions
 def read_and_plot_data(x,filenames,filepath,separator,accept_rate=0.2,fontsize=12,\
-xlabel='x',loglog=True,linewidth=3,markersize=10,markertype='s',ncols=3):
+xlabel='x',loglog=True,linewidth=3,markersize=10,markertype='s'):
   stddev,variance,average = read_datasets_from_hdf5(filenames,filepath,separator)
-  plot_average_variance_stddev(average,variance,stddev,ncols=ncols,fontsize=fontsize)
+  plot_average_variance_stddev(average,variance,stddev,fontsize=fontsize)
   plot_variance_stdded_covergence_per_pixel(x,variance,stddev,accept_rate=accept_rate,\
   fontsize=fontsize,xlabel=xlabel,loglog=True,linewidth=linewidth,markersize=markersize,\
-  markertype=markertype,ncols=ncols)
+  markertype=markertype)
 
 # argument parser
 def generate_argumet_parser():
@@ -161,8 +147,6 @@ def generate_argumet_parser():
   dest='markertype',action='store',default='s',help='marker type, default: s (square)')
   parser.add_argument('--linewidth','-lw',type=int,required=False,\
   dest='linewidth',action='store',default=3,help='line width, default: 3')
-  parser.add_argument('--n_plot_columns','-ncols',type=int,required=False,\
-  dest='ncols',action='store',default=2,help='number of plot columns, default: 2')
   parser.add_argument('--xlabel','-xlab',type=str,required=False,dest='xlabel',action='store',\
   default='N# particles',help='name of the convergence parameter, default: N# particles')
   parser.add_argument('--loglog_plot','-logp',type=bool,required=False,\
@@ -175,4 +159,4 @@ if __name__ == '__main__':
   args = generate_argumet_parser() 
   read_and_plot_data(args.x,args.filenames,args.filepath,args.separator,accept_rate=args.accept_rate,\
   xlabel=args.xlabel,loglog=args.loglog,linewidth=args.linewidth,markersize=args.markersize,\
-  markertype=args.markertype,fontsize=args.fontsize,ncols=args.ncols)
+  markertype=args.markertype,fontsize=args.fontsize)

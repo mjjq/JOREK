@@ -516,6 +516,7 @@ subroutine compute_error_soft_jorek_particles_magnetic_field(fields,n_vec,time,&
 discarded_label,soft_orbit_filename_in,Bfield_error_filename_in)
   use hdf5
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
   use mod_fields,     only: fields_base
   use hdf5_io_module, only: HDF5_open,HDF5_open_or_create,HDF5_close
   use hdf5_io_module, only: HDF5_allocatable_array1D_reading_int
@@ -581,7 +582,7 @@ discarded_label,soft_orbit_filename_in,Bfield_error_filename_in)
     endif
     if(i_elm.le.0) cycle
       call fields%calc_EBpsiU(time,i_elm,st,RZPhi(3),Evec_jorek,Bvec_jorek,psi,U) 
-      error_Bvec(:,ii)      = Bvec_jorek-Bvec_soft_loc(:,ii)
+      error_Bvec(:,ii)      = Bvec_jorek-vector_cartesian_to_cylindrical(RZPhi(3),Bvec_soft_loc(:,ii))
       error_Bvec_norm(:,ii) = error_Bvec(:,ii)/Bvec_jorek
       error_Babs(ii)        = norm2(Bvec_jorek)-Babs_soft_loc(1,ii)
       error_Babs_norm (ii)  = error_Babs(ii)/norm2(Bvec_jorek)

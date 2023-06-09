@@ -126,7 +126,7 @@ xlabel='x',loglog=True,linewidth=3,markersize=10,markertype='s',ncols=3):
   markertype=markertype,ncols=ncols)
 
 # argument parser
-def generate_argumet_parser():
+def generate_argument_parser():
   from numpy import float64
   import argparse
   parser = argparse.ArgumentParser(description='plot per pixel light intensity avrage, variance and standard deviation')
@@ -157,7 +157,7 @@ def generate_argumet_parser():
   return parser.parse_args()
 
 if __name__ == '__main__':
-  args = generate_argumet_parser() 
+  args = generate_argument_parser() 
   read_and_plot_data(args.x,args.filenames,args.filepath,args.separator,accept_rate=args.accept_rate,\
   xlabel=args.xlabel,loglog=args.loglog,linewidth=args.linewidth,markersize=args.markersize,\
   markertype=args.markertype,fontsize=args.fontsize,ncols=args.ncols)

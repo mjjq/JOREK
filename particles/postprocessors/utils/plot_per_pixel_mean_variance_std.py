@@ -160,9 +160,9 @@ separator="/",font_size=16):
   print("write data in hdf5 file")
   write_statistics_in_hdf5(average,variance,stddev,stats_filename,filepath,separator)
   print("Plotting data")
-  imshow_3d(transpose(average,axes=[2,0,1]),title="Per pixel light intensity average for ")
-  imshow_3d(transpose(variance,axes=[2,0,1]),title="Per pixel light intensity variance for ")
-  imshow_3d(transpose(stddev,axes=[2,0,1]),title="Per pixel light intensity std deviation for ")
+  imshow_3d(transpose(average,axes=[2,1,0]),title="Per pixel light intensity average for ")
+  imshow_3d(transpose(variance,axes=[2,1,0]),title="Per pixel light intensity variance for ")
+  imshow_3d(transpose(stddev,axes=[2,1,0]),title="Per pixel light intensity std deviation for ")
 
 def generate_argument_parser():
   import argparse

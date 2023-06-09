@@ -21,6 +21,7 @@ type(pcg32_rng)      :: rng_type
 type(event)          :: field_reader
 type(type_soft_pdf),dimension(:),allocatable :: soft_pdf_list
 logical              :: do_write_particles_in_hdf5,use_random_toroidal_angle
+logical              :: compute_magnetic_field_error
 integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi
 integer              :: n_r_pdf_mesh,discarded_orbit
 integer,dimension(2) :: dims
@@ -36,9 +37,11 @@ character(len=28)    :: soft_magfield_filename
 character(len=125)   :: particle_filename
 character(len=250)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
+character(len=40)    :: Bfield_error_filename
 !> Variable definitions --------------------------------------------------------------------
-do_write_particles_in_hdf5 = .false.         !< writeh particle in hdf5 if true
-use_random_toroidal_angle  = .true.          !< if true use random toroidal angle 
+do_write_particles_in_hdf5   = .false.       !< writeh particle in hdf5 if true
+use_random_toroidal_angle    = .true.        !< if true use random toroidal angle 
+compute_magnetic_field_error = .true.        !< if true the error of the SOFT-JOREK B-field is computed
 n_groups               = 1                   !< number of jorek particle groups
 n_vec                  = 3                   !< component of a vector
 n_phi                  = 6                   !< number of toroidal positions to be sampled for each particle
@@ -52,7 +55,8 @@ soft_magfield_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field f
 particle_filename      = 'part_restart_soft_orbits.h5'  !< particle restart filename 
 soft_pdf_filename      = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
 soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall_angdist_trapz_noDrift_image_distWithAxis' !< soft orbit filename
-filename_jorek_hdf5 = 'jorek_particles_from_soft'
+filename_jorek_hdf5   = 'jorek_particles_from_soft'
+Bfield_error_filename = 'soft_jorek_magnetic_field_error' 
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator
 call init_mpi_threads(my_id,n_cpus,ierr)
@@ -66,6 +70,11 @@ write(*,*) "Reading MHD data: completed!"
 write(*,*) "Reading SOFT magnetic field, pdf and orbit files ..."
 !> compute and broadcast the minor radii array
 if(my_id.eq.0) then
+  if(compute_magnetic_field_error) then
+    !> compute and dump in hdf5 file the soft-jorek magnetic field error
+    call compute_error_soft_jorek_particles_magnetic_field(sim%fields,n_vec,time,&
+    discarded_orbit,soft_orbit_filename,Bfield_error_filename)
+  endif
   !> compute and broadcast the minor radii array
   call read_soft_maxis_and_poloidal_flux(soft_magfield_filename,soft_RZ_axis,soft_R_mesh,&
   soft_Z_mesh,soft_poloidal_flux)
@@ -491,6 +500,121 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   if(allocated(orbit_pdf_loc))      deallocate(orbit_pdf_loc)
   if(allocated(x_loc))              deallocate(x_loc)
 end subroutine read_and_compute_soft_orbit_data
+
+!> compute the error between the SOFT and the JOREK magnetic fields at the 
+!> particle position and write it in a HDF5 file, both magnetic fields are
+!> expressed in cylindrical coordinates: 1: R,2: Z,3: phi
+!> inputs:
+!>   fields:                   (fields_base) JOREK MHD fields
+!>   n_vec:                    (integer) size of the position and magnetic field vector: 3
+!>   time:                     (real8) time of the MHD field
+!>   discarded_label:          (integer) SOFT label for discarded particles
+!>   soft_orbit_filename_in:   (character) name of the SOFT orbit file
+!>   Bfield_error_filename_in: (character) name of the hdf5 in which the 
+!>                             SOFT-JOREK errors in the magnetic field are saved
+subroutine compute_error_soft_jorek_particles_magnetic_field(fields,n_vec,time,&
+discarded_label,soft_orbit_filename_in,Bfield_error_filename_in)
+  use hdf5
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  use mod_fields,     only: fields_base
+  use hdf5_io_module, only: HDF5_open,HDF5_open_or_create,HDF5_close
+  use hdf5_io_module, only: HDF5_allocatable_array1D_reading_int
+  use hdf5_io_module, only: HDF5_allocatable_array2D_reading
+  use hdf5_io_module, only: HDF5_array1D_saving,HDF5_array2D_saving
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in) :: fields 
+  character(len=*),intent(in)   :: soft_orbit_filename_in
+  character(len=*),intent(in)   :: Bfield_error_filename_in
+  integer,intent(in)            :: n_vec,discarded_label
+  real*8,intent(in)             :: time
+  !> variables
+  integer(HID_T) :: file_id
+  integer        :: ii,jj,kk,n_orbits,n_times,n_soft_points,ierr,i_elm
+  real*8         :: psi,U
+  real*8,dimension(2) :: st,Rbox,Zbox
+  real*8,dimension(3) :: RZPhi,Bvec_jorek,Evec_jorek
+  integer,dimension(:),allocatable   :: classification_loc
+  real*8,dimension(:),allocatable    :: error_Babs,error_Babs_norm
+  real*8,dimension(:,:),allocatable  :: RZphi_loc,x_loc,Bvec_soft_loc
+  real*8,dimension(:,:),allocatable  :: Babs_soft_loc,error_Bvec,error_Bvec_norm
+  
+  write(*,*) "Computing the magnetic field error at the particle position ..."
+  !> open the soft orbit hdf5 file
+  call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
+  !> read sofit particles
+  call HDF5_allocatable_array1D_reading_int(file_id,classification_loc,'/classification') !< orbit classification
+  call HDF5_allocatable_array2D_reading(file_id,Babs_soft_loc,'/Babs') !< orbit magnetic field magnitude
+  call HDF5_allocatable_array2D_reading(file_id,x_loc,'/x')            !< orbit x positions
+  call HDF5_allocatable_array2D_reading(file_id,Bvec_soft_loc,'/B')    !< orbit magnetic field
+  !> close the soft orbit hdf5 file
+  call HDF5_close(file_id)
+  !> reshape arrays
+  n_orbits = size(Babs_soft_loc,2); n_times  = size(Babs_soft_loc,1);
+  n_soft_points = n_orbits*n_times;
+  x_loc         = reshape(x_loc,[n_vec,n_soft_points])
+  Bvec_soft_loc = reshape(Bvec_soft_loc,[n_vec,n_soft_points])
+  Babs_soft_loc = reshape(Babs_soft_loc,[1,n_soft_points])
+  !> compute the error between the JOREK and SOFT magnetic fields\
+  !> initialise and allocate particle simulation array
+  call domain_bounding_box(fields%node_list,fields%element_list,Rbox(1),Rbox(2),Zbox(1),Zbox(2))
+  allocate(error_Bvec(n_vec,n_soft_points)); error_Bvec = 0d0;
+  allocate(error_Bvec_norm(n_vec,n_soft_points)); error_Bvec_norm = 0d0;
+  allocate(RZPhi_loc(n_vec,n_soft_points)); RZPhi_loc = 0d0;
+  allocate(error_Babs(n_soft_points)); error_Babs = 0d0;
+  allocate(error_Babs_norm(n_soft_points)); error_Babs_norm = 0d0;
+  !$omp parallel do default(none) firstprivate(n_orbits,n_times,discarded_label,&
+  !$omp Rbox,Zbox,time) shared(classification_loc,x_loc,fields,error_Bvec,error_Babs,&
+  !$omp error_Bvec_norm,error_Babs_norm,RZPhi_loc,Bvec_soft_loc,Babs_soft_loc) &
+  !$omp private(kk,jj,ii,RZPhi,i_elm,st,ierr,Evec_jorek,Bvec_jorek,psi,U) collapse(2)
+  do kk=1,n_orbits
+    do jj=1,n_times
+      if(classification_loc(kk).eq.discarded_label) cycle
+      ii=(kk-1)*n_times+jj
+      !> transform the soft orbit coordinates in jorek global/local coordinates
+      RZphi = cartesian_to_cylindrical(x_loc(:,ii)); i_elm = -1;
+      if(((RZphi(1).ge.Rbox(1)).and.(RZphi(1).le.Rbox(2))).and.((RZphi(2).ge.Zbox(1)).and.(RZphi(2).le.Zbox(2)))) then
+        call find_RZ(fields%node_list,fields%element_list,RZphi(1),RZphi(2),&
+        RZphi(1),RZphi(2),i_elm,st(1),st(2),ierr)
+      else
+        cycle
+    endif
+    if(i_elm.le.0) cycle
+      call fields%calc_EBpsiU(time,i_elm,st,RZPhi(3),Evec_jorek,Bvec_jorek,psi,U) 
+      error_Bvec(:,ii)      = Bvec_jorek-Bvec_soft_loc(:,ii)
+      error_Bvec_norm(:,ii) = error_Bvec(:,ii)/Bvec_jorek
+      error_Babs(ii)        = norm2(Bvec_jorek)-Babs_soft_loc(1,ii)
+      error_Babs_norm (ii)  = error_Babs(ii)/norm2(Bvec_jorek)
+      RZPhi_loc(:,ii)       = RZPhi
+    enddo
+  enddo
+  !$omp end parallel do
+  !> Open SOFT-JOREK magnetic field error
+  call HDF5_open_or_create(trim(Bfield_error_filename_in)//".h5",H5P_DEFAULT_F,file_id,ierr,H5F_ACC_TRUNC_F)
+  call HDF5_array2D_saving(file_id,x_loc,n_vec,n_soft_points,'x')
+  call HDF5_array2D_saving(file_id,RZPhi_loc,n_vec,n_soft_points,'RZPhi')
+  call HDF5_array1D_saving(file_id,error_Bvec(1,:),n_soft_points,'error_BR')
+  call HDF5_array1D_saving(file_id,error_Bvec(2,:),n_soft_points,'error_BZ')
+  call HDF5_array1D_saving(file_id,error_Bvec(3,:),n_soft_points,'error_Bphi')
+  call HDF5_array1D_saving(file_id,error_Bvec_norm(1,:),n_soft_points,'error_BR_norm')
+  call HDF5_array1D_saving(file_id,error_Bvec_norm(2,:),n_soft_points,'error_BZ_norm')
+  call HDF5_array1D_saving(file_id,error_Bvec_norm(3,:),n_soft_points,'error_Bphi_norm')
+  call HDF5_array1D_saving(file_id,error_Babs,n_soft_points,'error_Babs')
+  call HDF5_array1D_saving(file_id,error_Babs_norm,n_soft_points,'error_Babs_norm')
+  call HDF5_close(file_id)
+
+  !> cleanup
+  if(allocated(classification_loc)) deallocate(classification_loc)
+  if(allocated(Babs_soft_loc))      deallocate(Babs_soft_loc) 
+  if(allocated(Bvec_soft_loc))      deallocate(Bvec_soft_loc)
+  if(allocated(x_loc))              deallocate(x_loc)
+  if(allocated(RZPhi_loc))          deallocate(RZPhi_loc)
+  if(allocated(error_Babs))         deallocate(error_Babs)
+  if(allocated(error_Bvec))         deallocate(error_Bvec)
+  if(allocated(error_Babs_norm))    deallocate(error_Babs_norm)
+  if(allocated(error_Bvec_norm))    deallocate(error_Bvec_norm)
+  write(*,*) "Computing the magnetic field error at particle position: terminated!"
+end subroutine compute_error_soft_jorek_particles_magnetic_field
 
 !> check if the mesh is uniform and extract the element size
 !> inputs:

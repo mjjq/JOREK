@@ -16,6 +16,14 @@ def read_datasets_from_hdf5(filenames,filepath,separator):
     fhandler.close()
   return stddev,variance,average
 
+# compute the convergence rate via linear regression
+def compute_convergence_rate(x,y):
+  from scipy.stats import linregress
+  from numpy import log
+  slope,intercept,rvalue,pvalue,stderr = \
+  linregress(log(x),y=log(y),alternative='two-sided')
+  return slope
+
 # compute the number of rows of a subplot given the number
 # of plots and subplot columns
 def compute_number_of_subplot_rows(nplots,ncols):
@@ -45,20 +53,27 @@ def imshow_3d(fig,ax,frame,x_positions=[],y_positions=[],title="",fontsize=12):
 # Plot convergence for 3d arrays of the form [nx,ny,nerror]
 def plot_convergence_3d(ax,x,values,accept_rate=2e-1,title='',fontsize=12,xlabel='x',\
 ylabel='error',loglog=True,linewidth=3,markersize=10,markertype='s'):
+  from numpy import round as npround
+  from numpy import array,mean
   from numpy.random import rand
+  slopes = []; count = 0
+  # ok this part can be improved using a function pointer
   if(loglog):
     for valuesyid,valuesy in enumerate(values):
       print('Doing pixel row: ',valuesyid,' accept rate: ',accept_rate)
       for valuesx in valuesy:
         if(all(valuesx>0e0) and rand()<accept_rate):
+          slopes.append(compute_convergence_rate(x,valuesx))
           ax.loglog(x,valuesx,linewidth=linewidth,markersize=markersize,marker=markertype)
   else:
     for valuesyid,valuesy in enumerate(values):
       print('Doing pixel row: ',valuesyid,'accept rate: ',accept_rate)
       for valuesx in valuesy:
         if(all(valuesx>0e0) and rand()<accept_rate):
+          slopes.append(compute_convergence_rate(x,valuesx))
           ax.plot(x,valuesx,linewidth=linewidth,markersize=markersize,maker=markertype)
-  ax.set_title(title,fontsize=fontsize)
+  ax.set_title("".join([title," average conv. rate: ",\
+  str(npround(mean(slopes),decimals=3))]),fontsize=fontsize)
   ax.set_xlabel(xlabel,fontsize=fontsize)
   ax.set_ylabel(ylabel,fontsize=fontsize)
   ax.tick_params(axis='x',labelsize=fontsize)

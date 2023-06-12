@@ -103,10 +103,17 @@ loglog=True,linewidth=3,markersize=10,markertype='s'):
 
 # compute the differences and error between a set of images and a reference image
 def compute_difference_between_images(test_images,reference_image):
-  image_difference = []
+  from numpy import amax
+  from numpy import abs as npabs
+  image_difference = []; normalised_image_difference = [];
   for test_image in test_images:
     image_difference.append(test_image-reference_image) 
-  return image_difference
+  # compute the normalised difference
+  normalised_reference_image = reference_image/amax(npabs(reference_image))
+  for test_image in test_images:
+    normalised_image_difference.append((test_image/amax(npabs(test_image)))-\
+    normalised_reference_image)
+  return image_difference,normalised_image_difference
 
 # compute the integrated errors for both pixel and filter intensities
 def compute_integrate_error(image_differences,\
@@ -131,7 +138,8 @@ norm_dict={'norm_1':norm_1,'norm_2':norm_2,'norm_inf':norm_inf},fontsize=12,xlab
 loglog=True,linewidth=3,markersize=10,markertype='s',title='image'):
   from matplotlib.pyplot import figure,show
   # compute image differences and norm errors
-  image_differences = compute_difference_between_images(test_images,reference_image)
+  image_differences,normalised_image_differences = compute_difference_between_images(\
+  test_images,reference_image)
   norm_errors = compute_integrate_error(image_differences,norm_dict=norm_dict)
   # plot image differences
   figs = []; axs = [];
@@ -141,6 +149,15 @@ loglog=True,linewidth=3,markersize=10,markertype='s',title='image'):
     imshow_3d(figs[image_diff_id],axs[image_diff_id][0],image_diff,\
     x_positions=test_x_positions[image_diff_id],y_positions=test_y_positions[image_diff_id],\
     title="".join(["Differences test ",title," N#: ",str(image_diff_id)]),fontsize=fontsize)
+  show()
+  # plot normalised image defferences
+  figs = []; axs = [];
+  for image_diff_id,image_diff in enumerate(normalised_image_differences):
+    figs.append(figure(image_diff_id+1,facecolor='white',edgecolor='white'))
+    axs.append([figs[image_diff_id].add_subplot(111)])
+    imshow_3d(figs[image_diff_id],axs[image_diff_id][0],image_diff,\
+    x_positions=test_x_positions[image_diff_id],y_positions=test_y_positions[image_diff_id],\
+    title="".join(["Normalised differences test ",title," N#: ",str(image_diff_id)]),fontsize=fontsize)
   show()
   # plot the error w.r.t.a set of norms
   figs = []; axs = [];

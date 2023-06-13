@@ -160,7 +160,17 @@ if ( eqdsk_string_r_min .ne. '' ) then
   endif
 
   write(*,*),"a_minor:  ",a_minor,' m'
-  if ( a0_in .eq. -1.d0 ) a0_in = a_minor ! if a0_in is not in the namelist, set it to a_minor found through eqdsk_string_r_min
+  if ( a0_in .eq. -1.d0 ) then 
+    a0_in = a_minor ! if a0_in is not in the namelist, set it to a_minor found through eqdsk_string_r_min
+  else
+    write(*,*) '!!!! WARNING: the minor radius used to build the boundary was set by the namelist parameter a0_in !!!!'
+    write(*,*) '!!!!          and not by the value found with the search string: eqdsk_string_r_min               !!!!'
+    write(*,*) '!!!!                                                                                              !!!!'
+    write(*,*) '!!!! EXCEPTION: tokamak_name .eq. "JET" and boundary_type .eq. "CIRCULAR"                         !!!!'
+    write(*,*) '!!!!            with these parameters, the minor radius is always set with the value found with   !!!!'
+    write(*,*) '!!!!            the search string: eqdsk_string_r_min                                             !!!!'
+    write(*,*) '!!!!                                                                                              !!!!'
+  endif
 else
   a_minor = 1.d0
   if ( a0_in .eq. -1.d0 ) a0_in = 1.d0    ! if a0_in is not in the namelist default to 1.d0

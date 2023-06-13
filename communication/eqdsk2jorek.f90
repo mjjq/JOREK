@@ -23,7 +23,7 @@ real*8             :: angle, ellip, tria_u, tria_l, quad_u, quad_l, r0, z0, a0, 
 real*8             :: dummy(3), xdim,zdim,rzero,rgrid1,zmid,rmaxis,zmaxis,ssimag,ssibry,bcentr,a_minor
 real*8             :: xip,xdum1,xdum2,xdum3,xdum4,xdum5
 real*8             :: psi_sep, sig_sep, tanh1, zmu0, zn0, zmd, rho_bnd
-real*8             :: p_bnd, sig_ext, dpdpsi_sep
+real*8             :: pres_bnd, sig_ext, dpdpsi_sep
 real*8             :: xb ,xe, yb, ye, smth, fp, fout
 real*8             :: B_scale, I_scale, R_scale, F_axis, factor, dfactor
 real*8             :: ellip_in,tria_up_in,tria_low_in,quad_up_in,quad_low_in,r0_in,z0_in,a0_in
@@ -34,9 +34,8 @@ character          :: buffer*80, lf*1, str1*12, str2*24, string_in*250,eqdsk_str
 
 namelist /eqdsk2jorek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
                               tria_low_in,quad_up_in,quad_low_in,n_tht_in,r0_in,&
-                              z0_in,a0_in,B_scale,I_scale,R_scale,smth,eqdsk_string_r_min
+                              z0_in,a0_in,pres_bnd,B_scale,I_scale,R_scale,smth,eqdsk_string_r_min
 
-!----------------------------- read eqdsk file -----------
 B_scale = 1.d0/1.d0  ! scaling factor for the vacuum toroidal field 
 I_scale = 1.d0/1.d0  ! scaling factor for the toroidal current
 R_scale = 1.d0/1.d0  ! scaling factor for the space coordinates 
@@ -53,12 +52,14 @@ tokamak_name  = 'ITER'
 !> DIII-D: OUTSIDE_WALL, NIMROD_M3DC1
 !>
 !> eqdsk_string_r_min: string of the EQDSK file identifying the plasma minor radius
-!>   default value: 'MINOR RADIUS -> A [m]'
+!>   default value: ''
+!>   example value: 'MINOR RADIUS -> A [m]'
 boundary_type = 'OUTSIDE_WALL'
-eqdsk_string_r_min = 'MINOR RADIUS -> A [m]'
+eqdsk_string_r_min = ''
 ellip_in    = 1.d0; tria_up_in  = 0.d0; tria_low_in = 0.d0;
 quad_up_in  = 0.d0; quad_low_in = 0.d0; n_tht_in    = 259;
 r0_in       = 3.d0; z0_in       = 0.d0; a0_in       = 1.d0;
+pres_bnd    = 1.d1 ! default to 10 Pa
 smth = 1.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
              ! May need hand tuning, based on a visual inspection of the output.
              ! For more details, see the documentation of regrid.f in libdierckx or the "Tips and Tricks" section of the Wiki page https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90. 
@@ -75,12 +76,14 @@ end if
 write(*,*) '   Tokamak = ', tokamak_name
 write(*,*) '   Boundary type = ',boundary_type
 write(*,*) '   EQDSK minor radius string = ',eqdsk_string_r_min
+write(*,*) '   pres_bnd = ',pres_bnd,' Pa'
 
 read(5,'(A52,2i4)') AA,nr,nz
 
 write(*,*) AA
 write(*,'(A,2i5)') ' nr, nz : ',nr,nz
 
+!----------------------------- read eqdsk file -----------
 read(5,'(5e16.9)') xdim,zdim,rzero,rgrid1,zmid
 read(5,'(5e16.9)') rmaxis,zmaxis,ssimag,ssibry,bcentr
 read(5,'(5e16.9)') xip,ssimag,xdum1,rmaxis,xdum2
@@ -139,17 +142,21 @@ close(21)
 
 
 
-! ------------------- find and read the plasma minor radius
-iostatus = 0; str_id = 0;string_in = ''; 
-do while(.true.)
-  read(5,'(A)',IOSTAT=iostatus) string_in
-  str_id = index(trim(string_in),trim(eqdsk_string_r_min));
-  if(str_id.ne.0 .or. iostatus.ne.0) exit
-enddo
-string_in = trim(string_in(str_id+len(trim(eqdsk_string_r_min))+1:len(string_in)))
-read(string_in,fmt=*) a_minor
-if(iostatus.ne.0) write(*,*) '!!!! WARNING SOMETHING WENT WRONG READING THE PLASMA MINOR RADIUS !!!!' 
-write(*,*),"a_minor:  ",a_minor,' m'
+if ( eqdsk_string_r_min .ne. '' ) then
+  ! ------------------- find and read the plasma minor radius
+  iostatus = 0; str_id = 0;string_in = ''; 
+  do while(.true.)
+    read(5,'(A)',IOSTAT=iostatus) string_in
+    str_id = index(trim(string_in),trim(eqdsk_string_r_min));
+    if(str_id.ne.0 .or. iostatus.ne.0) exit
+  enddo
+  string_in = trim(string_in(str_id+len(trim(eqdsk_string_r_min))+1:len(string_in)))
+  read(string_in,fmt=*) a_minor
+  if(iostatus.ne.0) write(*,*) '!!!! WARNING SOMETHING WENT WRONG READING THE PLASMA MINOR RADIUS !!!!' 
+  write(*,*),"a_minor:  ",a_minor,' m'
+else
+  a_minor = 1.d0
+endif
 
 write(*,*) ' done reading'
 
@@ -457,20 +464,19 @@ enddo
 zmu0 = 4.d-7 * PI
 ! extend the pressure profile (ends at psin=1) towards the SOL
 ! by considering a tanh decay of the following type:
-! p_ext(psi) = (p(n_psi)-p_bnd)*( 1 - tanh((psi-psi_ext(n_psi))/sig_ext) ) + p_bnd
+! p_ext(psi) = (p(n_psi)-pres_bnd)*( 1 - tanh((psi-psi_ext(n_psi))/sig_ext) ) + pres_bnd
 !
-! where sig_ext = (p_bnd - p(n_psi)) / (dpdpsi_sep)
+! where sig_ext = (pres_bnd - p(n_psi)) / (dpdpsi_sep)
 ! with dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
 !
-! the equation above matches p(n_psi) at psi(n_psi) and it goes down to p_bnd with 
+! the equation above matches p(n_psi) at psi(n_psi) and it goes down to pres_bnd with 
 ! a slope sig_ext that matches dp/dpsi at psi(n_psi)
 
-p_bnd      =  p(n_psi) * 1.e-2 ! make p_bnd 100 times smaller than p_sep
 dpdpsi_sep = (p(n_psi)-p(n_psi-1))/(psi(n_psi)-psi(n_psi-1))
-sig_ext    = (p_bnd - p(n_psi)) / dpdpsi_sep
+sig_ext    = (pres_bnd - p(n_psi)) / dpdpsi_sep
 
 p_ext(      1:n_psi) = p(1:n_psi)
-p_ext(n_psi+1:n_ext) = (p(n_psi)-p_bnd)*( 1 - tanh((psi_ext(n_psi+1:n_ext)-psi_ext(n_psi))/sig_ext) ) + p_bnd
+p_ext(n_psi+1:n_ext) = (p(n_psi)-pres_bnd)*( 1 - tanh((psi_ext(n_psi+1:n_ext)-psi_ext(n_psi))/sig_ext) ) + pres_bnd
 
 do i=1,n_ext
   tanh1 = tanh((psi_ext(i) - psi_sep)/sig_sep)

@@ -81,7 +81,7 @@ def compute_per_pixel_variance_stddev(n_pixels_spectra,average,light_data):
         variance_intensity[pixel[0]-1,pixel[1]-1,:] = variance_intensity[pixel[0]-1,pixel[1]-1,:] + \
         power((light_intensities[timesId,pixelId,:]-average[pixel[0]-1,pixel[1]-1,:]),2)
     n_particles = n_particles + light_intensities.shape[1]
-  variance_intensity = variance_intensity/n_particles
+  variance_intensity = variance_intensity/(n_particles-1)
   return variance_intensity,sqrt(variance_intensity) 
 
 # Method used for plotting 4d arrays as 2d images

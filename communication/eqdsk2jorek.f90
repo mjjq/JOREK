@@ -58,7 +58,7 @@ boundary_type = 'OUTSIDE_WALL'
 eqdsk_string_r_min = ''
 ellip_in    = 1.d0; tria_up_in  = 0.d0; tria_low_in = 0.d0;
 quad_up_in  = 0.d0; quad_low_in = 0.d0; n_tht_in    = 259;
-r0_in       = 3.d0; z0_in       = 0.d0; a0_in       = 1.d0;
+r0_in       = 3.d0; z0_in       = 0.d0; a0_in       = -1.d0; ! a0_in is later set to +1.0 if the user has not changed it with the namelist
 pres_bnd    = 1.d1 ! default to 10 Pa
 smth = 1.d-6 ! Controls the tradeoff between closeness of fit and smoothness of fit. When too small, can lead to noise pick-up. When too large, can lead to inaccurate fit.
              ! May need hand tuning, based on a visual inspection of the output.
@@ -141,7 +141,8 @@ open(21,file='boundary.dat')
 close(21)
 
 
-
+! eqdsk files created with CHEESE print the minor radius and it can be
+! found with eqdsk_string_r_min.
 if ( eqdsk_string_r_min .ne. '' ) then
   ! ------------------- find and read the plasma minor radius
   iostatus = 0; str_id = 0;string_in = ''; 
@@ -152,10 +153,17 @@ if ( eqdsk_string_r_min .ne. '' ) then
   enddo
   string_in = trim(string_in(str_id+len(trim(eqdsk_string_r_min))+1:len(string_in)))
   read(string_in,fmt=*) a_minor
-  if(iostatus.ne.0) write(*,*) '!!!! WARNING SOMETHING WENT WRONG READING THE PLASMA MINOR RADIUS !!!!' 
+  if ( iostatus.ne.0 ) then
+    write(*,*) '!!!! WARNING SOMETHING WENT WRONG READING THE PLASMA MINOR RADIUS !!!!'
+    write(*,*) '!!!! Exiting                                                      !!!!'
+    stop
+  endif
+
   write(*,*),"a_minor:  ",a_minor,' m'
+  if ( a0_in .eq. -1.d0 ) a0_in = a_minor ! if a0_in is not in the namelist, set it to a_minor found through eqdsk_string_r_min
 else
   a_minor = 1.d0
+  if ( a0_in .eq. -1.d0 ) a0_in = 1.d0    ! if a0_in is not in the namelist default to 1.d0
 endif
 
 write(*,*) ' done reading'

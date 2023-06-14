@@ -150,64 +150,54 @@ slice_data_intervals,flags,deathvalues,bins2d=[]):
   return histos,n_histograms 
 
 # plot 1d histograms
-def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18,ncols=3):
-  from numpy import ceil as npceil
-  from matplotlib.pyplot import subplots,stairs
-  n_histos = len(hists)
-  nrows = max(int(npceil(n_histos/ncols)),1)
-  if(ncols>n_histos):
-    ncols = n_histos
-  fig,axs = subplots(nrows=nrows,ncols=ncols,facecolor='white',edgecolor='white')
-  if(n_histos==1):
-    axs = [axs]
+def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18):
+  from matplotlib.pyplot import figure,stairs
+  figs = []; axs = [];
   for histo_id,histo in enumerate(hists):
-    axs[histo_id].stairs(histo[0],edges=histo[1],fill=True)
+    figs.append(figure(histo_id+1,facecolor='white',edgecolor='white'))
+    axs.append([figs[histo_id].add_subplot(111)])
+    axs[histo_id][0].stairs(histo[0],edges=histo[1],fill=True)
     if(len(titles)>histo_id):
-      axs[histo_id].set_title(titles[histo_id],fontsize=fontsize)
+      axs[histo_id][0].set_title(titles[histo_id],fontsize=fontsize)
     if(len(xlabels)>histo_id):
-      axs[histo_id].set_xlabel(xlabels[histo_id],fontsize=fontsize)
+      axs[histo_id][0].set_xlabel(xlabels[histo_id],fontsize=fontsize)
     if(len(ylabels)>histo_id):
-      axs[histo_id].set_ylabel(ylabels[histo_id],fontsize=fontsize)
-    axs[histo_id].tick_params(axis='x',labelsize=fontsize)
-    axs[histo_id].tick_params(axis='y',labelsize=fontsize)
-    axs[histo_id].grid()
-  return fig,axs
+      axs[histo_id][0].set_ylabel(ylabels[histo_id],fontsize=fontsize)
+    axs[histo_id][0].tick_params(axis='x',labelsize=fontsize)
+    axs[histo_id][0].tick_params(axis='y',labelsize=fontsize)
+    axs[histo_id][0].grid()
+  return figs,axs
 
 # plot 2d histograms
 def plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectequal,\
-fontsize=18,ncols=3,colormap='inferno'):
-  from numpy import ceil as npceil
+fontsize=18,colormap='inferno'):
   from numpy import amax,transpose
-  from matplotlib.pyplot import subplots,pcolormesh
-  count = 0
-  nrows = max(int(npceil(n_histos/ncols)),1)
-  if(ncols>n_histos):
-    ncols = n_histos
-  fig,axs = subplots(nrows=nrows,ncols=ncols,facecolor='white',edgecolor='white')
-  if(n_histos==1): 
-    axs = [axs]
+  from matplotlib.pyplot import figure,pcolormesh
+  count = 0; figs = []; axs = [];
   for histos_id,histos in enumerate(hists2d):
     for histo_id,histo in enumerate(histos):
-      im = axs[count].pcolormesh(histo[1],histo[2],transpose(histo[0]),\
+      figs.append(figure(count+1,facecolor='white',edgecolor='white'))
+      axs.append([figs[count].add_subplot(111)])
+      im = axs[count][0].pcolormesh(histo[1],histo[2],transpose(histo[0]),\
       cmap=colormap,vmin=0.,vmax=amax(histo[0]),edgecolors='none',shading='flat')
       if(len(titles)>count):
-        axs[count].set_title(titles[count],fontsize=fontsize)
+        axs[count][0].set_title(titles[count],fontsize=fontsize)
       if(len(xlabels)>count):
-        axs[count].set_xlabel(xlabels[count],fontsize=fontsize)
+        axs[count][0].set_xlabel(xlabels[count],fontsize=fontsize)
       if(len(ylabels)>count):
-        axs[count].set_ylabel(ylabels[count],fontsize=fontsize)
-      axs[count].tick_params(axis='x',labelsize=fontsize)
-      axs[count].tick_params(axis='y',labelsize=fontsize)
+        axs[count][0].set_ylabel(ylabels[count],fontsize=fontsize)
+      axs[count][0].tick_params(axis='x',labelsize=fontsize)
+      axs[count][0].tick_params(axis='y',labelsize=fontsize)
       if(len(aspectequal)>count):
         if(aspectequal[count]):
-          axs[count].set_aspect('equal',adjustable='datalim')
-      fig.colorbar(im,ax=axs[count])
+          axs[count][0].set_aspect('equal',adjustable='datalim')
+      figs[count].colorbar(im,ax=axs[count][0])
       count = count + 1
-  return fig,axs
+  return figs,axs
       
 # generate and plot 1d histograms from the jorek particle distribution
 def computes_1d_histograms_jorek_particles(groups,key,deathvalue,bins=[100,100,100],\
-ylabels=['','',''],n_cols=3,fontsize=18):
+ylabels=['','',''],fontsize=18):
   from matplotlib.pyplot import show
   for group in groups: 
     # extract titles and x lables
@@ -215,12 +205,12 @@ ylabels=['','',''],n_cols=3,fontsize=18):
     # compute histograms physical space and plot it
     hists = create_phase_space_1d_histograms(group[key],group['weight'],group['i_elm'],\
     deathvalue,bins=bins)
-    fig,axs = plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=fontsize,ncols=n_cols)
+    figs,axs = plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=fontsize)
     show()
 
 # generate and plot 2d histograms from the jorek particle distribution
 def computes_2d_histograms_jorek_particles(groups,key,deathvalue=0,bins=[100,100,100],\
-n_cols=3,fontsize=18,colormap='inferno'):
+fontsize=18,colormap='inferno'):
   from matplotlib.pyplot import show
   for group in groups:
     # extract titles, xlabels, ylabels and plot aspect ratio
@@ -229,14 +219,14 @@ n_cols=3,fontsize=18,colormap='inferno'):
     hists2d,n_histos = create_phase_space_2d_histograms(group[key],group['weight'],group['i_elm'],\
     deathvalue,bins2d=bins)
     fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
-    fontsize=fontsize,ncols=n_cols,colormap=colormap)
+    fontsize=fontsize,colormap=colormap)
     show()
 
 # generate and plot 2d histogrames from jorek particle distribution
 # give a set of coordinate slices
 def computes_phase_space_2d_sliced_histograms(groups,key,slice_data_ids=[],\
 slice_data_intervals=[],deathvalue=0,bins=[100,100,100],\
-n_cols=3,fontsize=18,colormap='inferno'):
+fontsize=18,colormap='inferno'):
   from numpy import array,reshape
   from matplotlib.pyplot import show
   slice_data_intervals = reshape(slice_data_intervals,(len(slice_data_ids),2))
@@ -245,20 +235,17 @@ n_cols=3,fontsize=18,colormap='inferno'):
     if(slice_data_ids==[2,1,0]):
       titles,xlabels,ylabels,aspectratio = define_histogram_labels_titles_aspectratio_2d(key,group['type']) 
     else:
-      titles      = []
-      xlabels     = []
-      ylabels     = []
-      aspectratio = [True]
+      titles = []; xlabels = []; ylabels = []; aspectratio = [True];
     # compute histograms physical space slacing values and plot it
     hists2d,n_histos = create_phase_space_2d_sliced_histograms(group[key],group['weight'],\
     array(slice_data_ids),slice_data_intervals,group['i_elm'],deathvalue,bins2d=bins)
     fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
-    fontsize=fontsize,ncols=n_cols,colormap=colormap)
+    fontsize=fontsize,colormap=colormap)
     show()
 
 # main function
 def read_analyse_plot_jorek_restart(filename,filepath,separator,deathvalue=0,bins1d=[100,100,100],
-bins2d=[100,100,100],n_cols=3,fontsize=18,colormap='inferno',spatial_slice_ids=[],\
+bins2d=[100,100,100],fontsize=18,colormap='inferno',spatial_slice_ids=[],\
 spatial_slice_intervals=[],velocity_slice_ids=[],velocity_slice_intervals=[]):
   # read the jorek particle restart data
   p_groups,sim_time = read_jorek_particle_restart_file(filename,filepath,separator)
@@ -266,27 +253,27 @@ spatial_slice_intervals=[],velocity_slice_ids=[],velocity_slice_intervals=[]):
   compute_uninitialised_particles(p_groups,['i_elm','weight'],[0,0.])
   # plot 1d histograms
   computes_1d_histograms_jorek_particles(p_groups,'x',deathvalue,bins=bins1d,\
-  ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols,fontsize=fontsize)
+  ylabels=['Nphys','Nphys','Nphys'],fontsize=fontsize)
   computes_1d_histograms_jorek_particles(p_groups,'v',deathvalue,bins=bins1d,\
-  ylabels=['Nphys','Nphys','Nphys'],n_cols=n_cols,fontsize=fontsize)
+  ylabels=['Nphys','Nphys','Nphys'],fontsize=fontsize)
   # plot 2d histograms
   computes_2d_histograms_jorek_particles(p_groups,'x',deathvalue,bins=bins2d,\
-  n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+  fontsize=fontsize,colormap=colormap)
   computes_2d_histograms_jorek_particles(p_groups,'v',deathvalue,bins=bins2d,\
-  n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+  fontsize=fontsize,colormap=colormap)
   # plot 2d histograms with slicing
   if(len(spatial_slice_ids)!=0 and len(spatial_slice_intervals)==2*len(spatial_slice_ids)):
     computes_phase_space_2d_sliced_histograms(p_groups,'x',slice_data_ids=spatial_slice_ids,\
     slice_data_intervals=spatial_slice_intervals,deathvalue=deathvalue,bins=bins2d,\
-    n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+    fontsize=fontsize,colormap=colormap)
   else:
-    print("spatial slice lists not compatible of empty: skip spatial slices histograms")
+    print("spatial slice lists not compatible or empty: skip spatial slices histograms")
   if(len(velocity_slice_ids)!=0 and len(velocity_slice_intervals)==2*len(velocity_slice_ids)):
     computes_phase_space_2d_sliced_histograms(p_groups,'v',slice_data_ids=spatial_slice_ids,\
     slice_data_intervals=spatial_slice_intervals,deathvalue=deathvalue,bins=bins2d,\
-    n_cols=n_cols,fontsize=fontsize,colormap=colormap)
+    fontsize=fontsize,colormap=colormap)
   else:
-    print("velocity slice lists not compatible of empty: skip velocity slices histograms") 
+    print("velocity slice lists not compatible or empty: skip velocity slices histograms") 
 
 # argument parser 
 def generate_argument_parser():
@@ -305,8 +292,6 @@ def generate_argument_parser():
   parser.add_argument('--bins2d','-pbins2d',type=int,nargs='*',action='store',\
   required=False,default=[1000,1000,1000],dest='bins2d',\
   help='number of or method for computing the bins for 2D histograms, default: 100')
-  parser.add_argument('--n_cols_subplots','-ncsp',type=int,action='store',required=False,\
-  dest='n_cols',default=3,help='number of columns for histogram subplots, default: 3')
   parser.add_argument('--fontsize','-fsize',type=int,action='store',required=False,\
   dest='fontsize',default=18,help='plot font size, default: 18')
   parser.add_argument('--colormap','-cmap',type=str,action='store',required=False,\
@@ -333,7 +318,7 @@ if __name__ == "__main__":
   args = generate_argument_parser()
   read_analyse_plot_jorek_restart(args.filename,args.filepath,args.separator,\
   deathvalue=args.deathvalue,bins1d=args.bins1d,bins2d=args.bins2d,\
-  n_cols=args.n_cols,fontsize=args.fontsize,colormap=args.colormap,\
+  fontsize=args.fontsize,colormap=args.colormap,\
   spatial_slice_ids=args.spatial_slice_ids,\
   spatial_slice_intervals=args.spatial_slice_intervals,\
   velocity_slice_ids=args.velocity_slice_ids,\

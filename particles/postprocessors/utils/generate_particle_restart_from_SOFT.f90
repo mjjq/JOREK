@@ -20,8 +20,7 @@ end type type_soft_pdf
 type(pcg32_rng)      :: rng_type
 type(event)          :: field_reader
 type(type_soft_pdf),dimension(:),allocatable :: soft_pdf_list
-logical              :: do_write_particles_in_hdf5,use_random_toroidal_angle
-logical              :: compute_magnetic_field_error
+logical              :: do_write_particles_in_hdf5,compute_magnetic_field_error
 integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi
 integer              :: n_r_pdf_mesh,n_accepted_orbit_labels
 integer,dimension(2) :: dims
@@ -33,6 +32,7 @@ real*8,dimension(:),allocatable   :: soft_orbit_weights_local,soft_orbit_ppar
 real*8,dimension(:),allocatable   :: soft_orbit_pperp,soft_orbit_weights,soft_pdf_r_mesh
 real*8,dimension(:),allocatable   :: soft_R_mesh,soft_Z_mesh
 real*8,dimension(:,:),allocatable :: soft_orbit_x,soft_orbit_x_local,soft_poloidal_flux
+character(len=30)    :: generator_type
 character(len=17)    :: fields_filename,soft_pdf_filename
 character(len=28)    :: soft_magfield_filename
 character(len=125)   :: particle_filename
@@ -40,8 +40,7 @@ character(len=250)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
 character(len=40)    :: Bfield_error_filename
 !> Variable definitions --------------------------------------------------------------------
-do_write_particles_in_hdf5   = .false.        !< writeh particle in hdf5 if true
-use_random_toroidal_angle    = .true.         !< if true use random toroidal angle 
+do_write_particles_in_hdf5   = .false.        !< writeh particle in hdf5 if true 
 compute_magnetic_field_error = .false.        !< if true the error of the SOFT-JOREK B-field is computed
 n_accepted_orbit_labels = 2                   !< number of labels of accepted orbits
 allocate(accepted_orbit(n_accepted_orbit_labels)) 
@@ -53,6 +52,7 @@ time                    = 0d0                 !< simulation time
 mass                    = 5.48579909065d-4    !< electron mass in AMU 
 charge                  = -1d0                !< electron charge
 phi_interval            = [0d0,PI]            !< toroidal angle interval in which particles are sampled
+generator_type          = 'deterministic_toroidal_angle' !< select the type of particle generator
 fields_filename         = 'jorek_equilibrium' !< jorek restart filename
 soft_magfield_filename  = 'magnetic_field_jorek_to_soft' !< soft magnetic field file
 particle_filename       = 'part_restart_soft_orbits.h5'  !< particle restart filename 
@@ -112,10 +112,15 @@ if(allocated(soft_orbit_weights)) deallocate(soft_orbit_weights)
 write(*,*) "Reading SOFT magnetic field, pdf and orbit files: completed!"
 !> Generate JOREK relativistic gc from SOFT orbits -----------------------------------------
 write(*,*) 'Converting soft orbit to JOREK relativistic gc ...'
-if(use_random_toroidal_angle) then
+if(trim(generator_type)=='random_toroidal_angle') then
   write(*,*) "use random the toroidal angle"
   call convert_soft_orbits_in_jorek_relativistic_gcs_rnd_phi(sim,rng_type,my_id,n_cpus,\
   time,mass,charge,n_vec,dims(2),n_phi,phi_interval,soft_orbit_x_local,soft_orbit_ppar_local,\
+  soft_orbit_pperp_local,soft_orbit_weights_local)
+elseif(trim(generator_type)=='deterministic_toroidal_angle') then
+  write(*,*) "use deterministic the toroidal angle"
+  call convert_soft_orbits_in_jorek_relativistic_gcs_det_phi(sim,my_id,n_cpus,time,\
+  mass,charge,n_vec,dims(2),n_phi,phi_interval,soft_orbit_x_local,soft_orbit_ppar_local,\
   soft_orbit_pperp_local,soft_orbit_weights_local)
 else
   write(*,*) "use SOFT toroidal angle"
@@ -329,6 +334,92 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   !> clean-up
   if(allocated(rngs)) deallocate(rngs)
 end subroutine convert_soft_orbits_in_jorek_relativistic_gcs_rnd_phi
+
+!> generate jorek particle relativistic gc from soft orbits on deterministic
+!> toroidal planes
+!> inputs:
+!>   sim:                (particle_sim) particle simulation type to be initialised
+!>   my_id:              (integer) MPI task rank
+!>   n_cpus:             (integer) number of MPI tasks
+!>   time:               (real8) simulation time
+!>   mass:               (real8) particle mass in AMU
+!>   charge:             (real8) particle charge (RE: -1)
+!>   n_vec:              (integer) size of the position vector
+!>   n_points:           (integer) number of soft valid points
+!>   n_phi:              (integer) number of toroidal samples per particles
+!>   phi_interval:       (real8)(2) toroidal angle interval for sampling
+!>   soft_orbit_x:       (real8)(n_vec,n_points) soft positions in xyz
+!>   soft_orbit_ppar:    (real8)(n_points) soft parallel momentum
+!>   soft_orbit_pperp:   (real8)(n_points) soft perpendicular momentum
+!>   soft_orbit_weights: (real8)(n_points) soft orbit weight:
+!>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle
+!> outpus:
+!>   sim: (particle_sim) initialised particle simulation
+!>   soft_orbit_weights: (real8)(n_points) soft orbit weight:
+!>                       jacobian*dpoloidal*dminor_radius*dmomentum*dcospitchangle*dtorangle
+subroutine convert_soft_orbits_in_jorek_relativistic_gcs_det_phi(sim,&
+my_id,n_cpus,time,mass,charge,n_vec,n_points,n_phi,phi_interval,&
+soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
+  use mpi
+  use constants,                 only: SPEED_OF_LIGHT
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  !$ use omp_lib
+  implicit none
+  !> inputs-outputs:
+  type(particle_sim),intent(inout)         :: sim
+  real*8,dimension(n_points),intent(inout) :: soft_orbit_weights
+  !> inputs:
+  integer,intent(in)               :: my_id,n_cpus,n_vec
+  integer,intent(in)               :: n_points,n_phi
+  real*8,intent(in)                :: time,mass,charge
+  real*8,dimension(2),intent(in)   :: phi_interval
+  real*8,dimension(n_points),intent(in)       :: soft_orbit_ppar
+  real*8,dimension(n_points),intent(in)       :: soft_orbit_pperp
+  real*8,dimension(n_vec,n_points),intent(in) :: soft_orbit_x
+
+  !> variables:
+  integer                 :: ii,jj,i_elm,ifail
+  real*8                  :: U,psi,delta_phi
+  real*8,dimension(2)     :: st,Rbox,Zbox
+  real*8,dimension(3)     :: RZphi,B_field,E_field
+  real*8,dimension(n_phi) :: phi_array
+  !> initialise and allocate particle simulation array
+  delta_phi = (phi_interval(2)-phi_interval(1))/real(n_phi,kind=8)
+  phi_array = (phi_interval(1)+(delta_phi*real(ii-1,kind=8)),ii=1,n_phi)
+  call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,&
+  Rbox(1),Rbox(2),Zbox(1),Zbox(2))
+  sim%time = time; sim%groups(1)%mass = mass; 
+  allocate(particle_gc_relativistic::sim%groups(1)%particles(n_points*n_phi))
+  !> the differential of the toroidal angle for having the total number of particles
+  soft_orbit_weights = soft_orbit_weights*delta_phi
+  !> loop on the soft orbits
+  !$omp parallel do default(shared) firstprivate(n_points,n_vec,time,charge,n_phi,mass,&
+  !$omp Rbox,Zbox,phi_interval,phi_array) private(ii,jj,RZphi,i_elm,st,B_field,E_field,&
+  !$omp U,psi,ifail)
+  do ii=1,n_points
+    !> transform the soft orbit coordinates in jorek global/local coordinates
+    RZphi = cartesian_to_cylindrical(soft_orbit_x(:,ii)); i_elm = -1;
+    if(((RZphi(1).ge.Rbox(1)).and.(RZphi(1).le.Rbox(2))).and.((RZphi(2).ge.Zbox(1)).and.(RZphi(2).le.Zbox(2)))) &
+    call find_RZ(sim%fields%node_list,sim%fields%element_list,RZphi(1),RZphi(2),&
+    RZphi(1),RZphi(2),i_elm,st(1),st(2),ifail)
+    do jj=1,n_phi
+      select type (p=>sim%groups(1)%particles((ii-1)*n_phi+jj))
+        type is (particle_gc_relativistic)
+        if(i_elm.le.0) then
+          p%x = 0d0; p%st = 0d0; p%weight = 0d0; p%i_elm = 0; p%i_life = 0; p%t_birth = 0.;
+          p%p = 0d0; p%q = int(0,kind=1);
+        else
+          p%x = [RZphi(1),RZphi(2),phi_array(jj)]; p%st = st; p%weight = soft_orbit_weights(ii);
+          p%i_elm = i_elm; p%i_life = 0; p%t_birth = 0.;
+          call sim%fields%calc_EBpsiU(time,i_elm,st,p%x(3),E_field,B_field,psi,U)
+          p%p = SPEED_OF_LIGHT*mass*[soft_orbit_ppar(ii),(5d-1*SPEED_OF_LIGHT*&
+          (soft_orbit_pperp(ii)**2))/(norm2(B_field))]; p%q = int(charge,kind=1);
+        endif
+      end select
+    enddo
+  enddo
+  !$omp end parallel do
+end subroutine convert_soft_orbits_in_jorek_relativistic_det_phi
 
 !> scatter 2D array between MPI processes, the scattering is performed
 !> along the second index

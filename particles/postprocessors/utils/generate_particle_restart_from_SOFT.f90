@@ -46,7 +46,7 @@ n_accepted_orbit_labels = 2                   !< number of labels of accepted or
 allocate(accepted_orbit(n_accepted_orbit_labels)) 
 n_groups                = 1                   !< number of jorek particle groups
 n_vec                   = 3                   !< component of a vector
-n_phi                   = 6                   !< number of toroidal positions to be sampled for each particle
+n_phi                   = 10                   !< number of toroidal positions to be sampled for each particle
 accepted_orbit          = [3,4]               !< label of SOFT orbit to be used (discard all others)
 time                    = 0d0                 !< simulation time
 mass                    = 5.48579909065d-4    !< electron mass in AMU 
@@ -278,7 +278,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
 
   !> variables:
   class(type_rng),dimension(:),allocatable :: rngs
-  integer :: ii,jj,i_elm,ifail,n_threads,thread_id
+  integer :: ii,jj,i_elm,ifail,n_threads,thread_id,n_particles
   real*8                  :: U,psi
   real*8,dimension(2)     :: st,Rbox,Zbox
   real*8,dimension(3)     :: RZphi,B_field,E_field
@@ -294,8 +294,9 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   !> initialise and allocate particle simulation array
   call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,&
   Rbox(1),Rbox(2),Zbox(1),Zbox(2))
-  sim%time = time; sim%groups(1)%mass = mass; 
-  allocate(particle_gc_relativistic::sim%groups(1)%particles(n_points*n_phi))
+  sim%time = time; sim%groups(1)%mass = mass; n_particles = n_points*n_phi;
+  write(*,*) "Total number of particles: ",n_particles
+  allocate(particle_gc_relativistic::sim%groups(1)%particles(n_particles))
   !> the differential of the toroidal angle for having the total number of particles
   soft_orbit_weights = soft_orbit_weights*((phi_interval(2)-phi_interval(1))/real(n_phi,kind=8))
   !> loop on the soft orbits
@@ -378,7 +379,7 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   real*8,dimension(n_vec,n_points),intent(in) :: soft_orbit_x
 
   !> variables:
-  integer                 :: ii,jj,i_elm,ifail
+  integer                 :: ii,jj,i_elm,ifail,n_particles
   real*8                  :: U,psi,delta_phi
   real*8,dimension(2)     :: st,Rbox,Zbox
   real*8,dimension(3)     :: RZphi,B_field,E_field
@@ -388,8 +389,9 @@ soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   phi_array =(/ ((phi_interval(1)+(delta_phi*real(ii-1,kind=8))),ii=1,n_phi)/)
   call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,&
   Rbox(1),Rbox(2),Zbox(1),Zbox(2))
-  sim%time = time; sim%groups(1)%mass = mass; 
-  allocate(particle_gc_relativistic::sim%groups(1)%particles(n_points*n_phi))
+  sim%time = time; sim%groups(1)%mass = mass; n_particles = n_points*n_phi;
+  write(*,*) "Total number of particles: ",n_particles
+  allocate(particle_gc_relativistic::sim%groups(1)%particles(n_particles))
   !> the differential of the toroidal angle for having the total number of particles
   soft_orbit_weights = soft_orbit_weights*delta_phi
   !> loop on the soft orbits

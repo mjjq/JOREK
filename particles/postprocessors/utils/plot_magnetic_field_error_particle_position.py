@@ -75,7 +75,7 @@ colormap='inferno',aspect='equal',ncols=2):
 def plot_xyz_error_fields(pos,error_dict,fontsize=10,markertype='.',markersize=1,\
 colormap='inferno',aspect='equal',rotate=False,ncols=2):
   from matplotlib.pyplot import figure,show
-  fig = []; axs = [];
+  figs = []; axs = [];
   for errorid,errorkey in enumerate(error_dict.keys()):
     figs.append(figure(errorid,facecolor='white',edgecolor='white'))
     axs.append([figs[errorid].add_subplot(111,projection='3d')])

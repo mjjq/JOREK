@@ -24,7 +24,8 @@ logical              :: do_write_particles_in_hdf5,use_random_toroidal_angle
 logical              :: compute_magnetic_field_error
 integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi
 integer              :: n_r_pdf_mesh,n_accepted_orbit_labels
-integer,dimension(:),allocatable :: dims,accepted_orbit
+integer,dimension(2) :: dims
+integer,dimension(:),allocatable :: accepted_orbit
 real*8               :: time,mass,charge
 real*8,dimension(2)  :: phi_interval,soft_RZ_axis
 real*8,dimension(:),allocatable   :: soft_orbit_ppar_local,soft_orbit_pperp_local
@@ -41,7 +42,7 @@ character(len=40)    :: Bfield_error_filename
 !> Variable definitions --------------------------------------------------------------------
 do_write_particles_in_hdf5   = .false.        !< writeh particle in hdf5 if true
 use_random_toroidal_angle    = .true.         !< if true use random toroidal angle 
-compute_magnetic_field_error = .true.         !< if true the error of the SOFT-JOREK B-field is computed
+compute_magnetic_field_error = .false.        !< if true the error of the SOFT-JOREK B-field is computed
 n_accepted_orbit_labels = 2                   !< number of labels of accepted orbits
 allocate(accepted_orbit(n_accepted_orbit_labels)) 
 n_groups                = 1                   !< number of jorek particle groups
@@ -407,8 +408,9 @@ accepted_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,ppe
   implicit none
   !> inputs:
   type(type_soft_pdf),dimension(:),allocatable,intent(in) :: pdf_list
-  character(len=*),intent(in)    :: soft_orbit_filename_in
-  integer,dimension(:),allocatable,intent(in)  :: n_vec,accepted_label
+  character(len=*),intent(in)                  :: soft_orbit_filename_in
+  integer,intent(in)                           :: n_vec
+  integer,dimension(:),allocatable,intent(in)  :: accepted_label
   real*8,dimension(2),intent(in)               :: RZaxis
   real*8,dimension(:),allocatable,intent(in)   :: Rmesh,Zmesh,r_minor_mesh
   real*8,dimension(:,:),allocatable,intent(in) :: poloidal_flux
@@ -422,7 +424,7 @@ accepted_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,ppe
   integer        :: ii,jj,id,n_orbits,n_times,n_active_orbits,ierr
   integer,dimension(:),allocatable   :: classification_loc,valid_orbit_id
   real*8                             :: orbit_dp,orbit_dxi
-  real*8,dimension(:),allocatable    :: orbit_pdf_loc,orbit_p_mesh,orbit_xi_mesh,dummy_real_1d
+  real*8,dimension(:),allocatable    :: orbit_pdf_loc,orbit_p_mesh,orbit_xi_mesh
   real*8,dimension(:,:),allocatable  :: x_loc,ppar_loc,pperp_loc,weights_loc
   !> open the soft orbit hdf5 file
   call HDF5_open(trim(soft_orbit_filename_in)//".h5",file_id,ierr)
@@ -432,47 +434,40 @@ accepted_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,ppe
   call HDF5_allocatable_array1D_reading(file_id,orbit_xi_mesh,'/param2') !< cospitch mesh 
   call HDF5_allocatable_array2D_reading(file_id,ppar_loc,'/ppar')        !< parallel momentum
   call HDF5_allocatable_array2D_reading(file_id,pperp_loc,'/pperp')      !< perpendicular momentum
+  call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobian*dpoloidal*dminorradius
+  call HDF5_allocatable_array2D_reading(file_id,x_loc,'/x')              !< position in xyz coordinates
+  n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1);
+  allocate(orbit_pdf_loc(n_orbits)); orbit_pdf_loc = 0d0;
   !> check if the particle weights is in hdf5 file
   call HDF5_is_dataset_in_file(file_id,'f',weights_not_in_file)
   weights_not_in_file = .not.weights_not_in_file
-  n_orbits = size(ppar_loc,2); n_times  = size(ppar_loc,1);
   if(weights_not_in_file) then
-    write(*,*) "SOFT particle weights not found: compute from jacobian!"
-    call HDF5_allocatable_array2D_reading(file_id,weights_loc,"/Jdtdrho")  !< jacobian*dpoloidal*dminorradius
+    !> extract and compute the pdf for each orbit: be aware the pdf is taken at t=0
+    !> and then replicated for nt times for each orbit
+    write(*,*) "SOFT particle distribution not found: interpolate!"
+    call compute_pdf_orbit(n_vec,n_times,n_orbits,RZaxis,x_loc,ppar_loc,pperp_loc,&
+    Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdf_loc)
   else
-    write(*,*) "SOFT particle weights found!"
-    call HDF5_allocatable_array1D_reading(file_id,dummy_real_1d,'/f')    !< weight
-    allocate(weights_loc(n_times,n_orbits))
-    do ii=1,n_orbits
-      weights_loc(:,ii) = dummy_real_1d(ii)
-    enddo
-    deallocate(dummy_real_1d)
+    write(*,*) "SOFT particle distribution found!"
+    call HDF5_allocatable_array1D_reading(file_id,orbit_pdf_loc,'/f')    !< weight
   endif
-  call HDF5_allocatable_array2D_reading(file_id,x_loc,'/x')              !< position in xyz coordinates
   !> close the soft orbit hdf5 file
   call HDF5_close(file_id)
-  !> remove zero orbits
-  n_soft_points = n_orbits*n_times; n_active_orbits = 0;
+  !> multiply the Jdtdrho by the pdf
+  do ii=1,n_orbits
+    weights_loc(:,ii) = weights_loc(:,ii)*orbit_pdf_loc(ii)
+  enddo
   !> check if the momentum and cospitch angle mesh are uniform and extract their value
   call check_uniform_mesh_extract_length_1d(orbit_dp,orbit_p_mesh)
   call check_uniform_mesh_extract_length_1d(orbit_dxi,orbit_xi_mesh)
-  !> extract and compute the pdf for each orbit: be aware the pdf is taken at t=0
-  !> and then replicated for nt times for each orbit
-  allocate(orbit_pdf_loc(n_orbits)); orbit_pdf_loc = 0d0;
-  if(weights_not_in_file) then
-    call compute_pdf_orbit(n_vec,n_times,n_orbits,RZaxis,x_loc,ppar_loc,pperp_loc,&
-    Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,orbit_pdf_loc)
-    !> multiply the Jdtdrho by the pdf
-    do ii=1,n_orbits
-      weights_loc(:,ii) = weights_loc(:,ii)*orbit_pdf_loc(ii)
-    enddo
-  endif
+  !> remove zero orbits
+  n_soft_points = n_orbits*n_times; n_active_orbits = 0;
   !> reshape arrays
   x_loc              = reshape(x_loc,[n_vec,n_soft_points])
   ppar_loc           = reshape(ppar_loc,[n_soft_points,1])
   pperp_loc          = reshape(pperp_loc,[n_soft_points,1])
   weights_loc        = reshape(weights_loc,[n_soft_points,1])
-  if(weights_not_in_file) weights_loc = TWOPI*orbit_dp*orbit_dxi*(ppar_loc**2+pperp_loc**2)*weights_loc
+  weights_loc        = TWOPI*orbit_dp*orbit_dxi*(ppar_loc**2+pperp_loc**2)*weights_loc
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_orbits
@@ -530,7 +525,7 @@ accepted_label,soft_orbit_filename_in,Bfield_error_filename_in)
   class(fields_base),intent(in)               :: fields 
   character(len=*),intent(in)                 :: soft_orbit_filename_in
   character(len=*),intent(in)                 :: Bfield_error_filename_in
-  integer,intent(in)                          :: n_vec,
+  integer,intent(in)                          :: n_vec
   integer,dimension(:),allocatable,intent(in) :: accepted_label
   real*8,intent(in)                           :: time
   !> variables

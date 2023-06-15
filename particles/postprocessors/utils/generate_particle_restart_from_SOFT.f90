@@ -23,8 +23,8 @@ type(type_soft_pdf),dimension(:),allocatable :: soft_pdf_list
 logical              :: do_write_particles_in_hdf5,use_random_toroidal_angle
 logical              :: compute_magnetic_field_error
 integer              :: my_id,n_cpus,ierr,n_vec,n_groups,n_phi
-integer              :: n_r_pdf_mesh,discarded_orbit
-integer,dimension(2) :: dims
+integer              :: n_r_pdf_mesh,n_accepted_orbit_labels
+integer,dimension(:),allocatable :: dims,accepted_orbit
 real*8               :: time,mass,charge
 real*8,dimension(2)  :: phi_interval,soft_RZ_axis
 real*8,dimension(:),allocatable   :: soft_orbit_ppar_local,soft_orbit_pperp_local
@@ -39,24 +39,26 @@ character(len=250)   :: soft_orbit_filename
 character(len=25)    :: filename_jorek_hdf5
 character(len=40)    :: Bfield_error_filename
 !> Variable definitions --------------------------------------------------------------------
-do_write_particles_in_hdf5   = .false.       !< writeh particle in hdf5 if true
-use_random_toroidal_angle    = .true.        !< if true use random toroidal angle 
-compute_magnetic_field_error = .true.        !< if true the error of the SOFT-JOREK B-field is computed
-n_groups               = 1                   !< number of jorek particle groups
-n_vec                  = 3                   !< component of a vector
-n_phi                  = 6                   !< number of toroidal positions to be sampled for each particle
-discarded_orbit        = 5                   !< label of SOFT discarded orbit
-time                   = 0d0                 !< simulation time
-mass                   = 5.48579909065d-4    !< electron mass in AMU 
-charge                 = -1d0                !< electron charge
-phi_interval           = [0d0,PI]            !< toroidal angle interval in which particles are sampled
-fields_filename        = 'jorek_equilibrium' !< jorek restart filename
-soft_magfield_filename = 'magnetic_field_jorek_to_soft' !< soft magnetic field file
-particle_filename      = 'part_restart_soft_orbits.h5'  !< particle restart filename 
-soft_pdf_filename      = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
-soft_orbit_filename    = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall_angdist_trapz_noDrift_image_distWithAxis' !< soft orbit filename
-filename_jorek_hdf5   = 'jorek_particles_from_soft'
-Bfield_error_filename = 'soft_jorek_magnetic_field_error' 
+do_write_particles_in_hdf5   = .false.        !< writeh particle in hdf5 if true
+use_random_toroidal_angle    = .true.         !< if true use random toroidal angle 
+compute_magnetic_field_error = .true.         !< if true the error of the SOFT-JOREK B-field is computed
+n_accepted_orbit_labels = 2                   !< number of labels of accepted orbits
+allocate(accepted_orbit(n_accepted_orbit_labels)) 
+n_groups                = 1                   !< number of jorek particle groups
+n_vec                   = 3                   !< component of a vector
+n_phi                   = 6                   !< number of toroidal positions to be sampled for each particle
+accepted_orbit          = [3,4]               !< label of SOFT orbit to be used (discard all others)
+time                    = 0d0                 !< simulation time
+mass                    = 5.48579909065d-4    !< electron mass in AMU 
+charge                  = -1d0                !< electron charge
+phi_interval            = [0d0,PI]            !< toroidal angle interval in which particles are sampled
+fields_filename         = 'jorek_equilibrium' !< jorek restart filename
+soft_magfield_filename  = 'magnetic_field_jorek_to_soft' !< soft magnetic field file
+particle_filename       = 'part_restart_soft_orbits.h5'  !< particle restart filename 
+soft_pdf_filename       = 'pdf_jorek_to_soft'            !< soft distribution field input from jorek
+soft_orbit_filename     = 'orbit_test_jorek_JET_pulse95135_t48dot54_parabolic_qprofile_q95_6dot8_press0_res1r5dot88en1m5_res2r4dot705en1m4_Ip612en1MA_Ekin20MeV_np10_theta1_2dot85_itheta2_pi_nitheta100_norbits100_a96_wall_angdist_trapz_noDrift_image_distWithAxis' !< soft orbit filename
+filename_jorek_hdf5    = 'jorek_particles_from_soft'
+Bfield_error_filename  = 'soft_jorek_magnetic_field_error' 
 !> Initialisation --------------------------------------------------------------------------
 !> initialise the MPI communicator
 call init_mpi_threads(my_id,n_cpus,ierr)
@@ -73,14 +75,14 @@ if(my_id.eq.0) then
   if(compute_magnetic_field_error) then
     !> compute and dump in hdf5 file the soft-jorek magnetic field error
     call compute_error_soft_jorek_particles_magnetic_field(sim%fields,n_vec,time,&
-    discarded_orbit,soft_orbit_filename,Bfield_error_filename)
+    accepted_orbit,soft_orbit_filename,Bfield_error_filename)
   endif
   !> compute and broadcast the minor radii array
   call read_soft_maxis_and_poloidal_flux(soft_magfield_filename,soft_RZ_axis,soft_R_mesh,&
   soft_Z_mesh,soft_poloidal_flux)
   !> read the soft_pdf_file
   call read_soft_pdf_file(soft_pdf_filename,n_r_pdf_mesh,soft_pdf_r_mesh,soft_pdf_list)
-  call read_and_compute_soft_orbit_data(soft_orbit_filename,n_vec,dims(1),discarded_orbit,\
+  call read_and_compute_soft_orbit_data(soft_orbit_filename,n_vec,dims(1),accepted_orbit,\
   soft_RZ_axis,soft_R_mesh,soft_Z_mesh,soft_poloidal_flux,soft_pdf_r_mesh,soft_pdf_list,\
   soft_orbit_x,soft_orbit_ppar,soft_orbit_pperp,soft_orbit_weights)
   !> scatter the global arrays to each mpi process)
@@ -130,6 +132,7 @@ if(do_write_particles_in_hdf5) then
   write(*,*) 'Writing JOREK particles in HDF5 file: completed!'
 endif
 !> Finalisation ----------------------------------------------------------------------------
+if(allocated(accepted_orbit))           deallocate(accepted_orbit)
 if(allocated(soft_orbit_x))             deallocate(soft_orbit_x)
 if(allocated(soft_orbit_ppar))          deallocate(soft_orbit_ppar)
 if(allocated(soft_orbit_pperp))         deallocate(soft_orbit_pperp)
@@ -379,7 +382,7 @@ end subroutine scatter_2D_arrays
 !> inputs:
 !>   soft_orbit_filename_in: (character)(*) name of the soft orbit file
 !>   n_vec:                  (integer) size of the position vector
-!>   discarded_label:        (integer) classification label of discarded orbit
+!>   accepted_label:         (integer) classification label of accepted orbit
 !>   RZ_axis:                (real8)(2) position of the magnetic axis
 !>   Rmesh:                  (real8)(nR) major radius mesh of the minor radii
 !>   Zmesh:                  (real8)(nZ) vertical coordinate mesh of the minor radii
@@ -393,7 +396,7 @@ end subroutine scatter_2D_arrays
 !>   pperp:         (real8)(n_soft_particles) soft perpendicular momentum
 !>   weights:       (real8)(n_soft_particles) orbit weight: pdf(t=0)*Jdtdrho*dp*dxi
 subroutine read_and_compute_soft_orbit_data(soft_orbit_filename_in,n_vec,n_soft_points,&
-discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
+accepted_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pperp,weights)
   use constants, only: ATOMIC_MASS_UNIT,TWOPI
   use hdf5
   use hdf5_io_module, only: HDF5_open,HDF5_close
@@ -405,7 +408,7 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   !> inputs:
   type(type_soft_pdf),dimension(:),allocatable,intent(in) :: pdf_list
   character(len=*),intent(in)    :: soft_orbit_filename_in
-  integer,intent(in)             :: n_vec,discarded_label
+  integer,dimension(:),allocatable,intent(in)  :: n_vec,accepted_label
   real*8,dimension(2),intent(in)               :: RZaxis
   real*8,dimension(:),allocatable,intent(in)   :: Rmesh,Zmesh,r_minor_mesh
   real*8,dimension(:,:),allocatable,intent(in) :: poloidal_flux
@@ -473,7 +476,7 @@ discarded_label,RZaxis,Rmesh,Zmesh,poloidal_flux,r_minor_mesh,pdf_list,x,ppar,pp
   !> find id of active orbits
   allocate(valid_orbit_id(n_soft_points)); valid_orbit_id  = 0;
   do ii=1,n_orbits
-    if(classification_loc(ii).eq.discarded_label) cycle
+    if(.not.(any(classification_loc(ii).eq.accepted_label))) cycle
     do jj=1,n_times
       id = (ii-1)*n_times+jj
       if((x_loc(1,id).eq.0d0).and.(x_loc(2,id).eq.0d0).and.(x_loc(3,id).eq.0d0)) cycle
@@ -508,12 +511,12 @@ end subroutine read_and_compute_soft_orbit_data
 !>   fields:                   (fields_base) JOREK MHD fields
 !>   n_vec:                    (integer) size of the position and magnetic field vector: 3
 !>   time:                     (real8) time of the MHD field
-!>   discarded_label:          (integer) SOFT label for discarded particles
+!>   accepted_label:           (integer) SOFT label for accepted particles
 !>   soft_orbit_filename_in:   (character) name of the SOFT orbit file
 !>   Bfield_error_filename_in: (character) name of the hdf5 in which the 
 !>                             SOFT-JOREK errors in the magnetic field are saved
 subroutine compute_error_soft_jorek_particles_magnetic_field(fields,n_vec,time,&
-discarded_label,soft_orbit_filename_in,Bfield_error_filename_in)
+accepted_label,soft_orbit_filename_in,Bfield_error_filename_in)
   use hdf5
   use mod_coordinate_transforms, only: cartesian_to_cylindrical
   use mod_coordinate_transforms, only: vector_cartesian_to_cylindrical
@@ -524,11 +527,12 @@ discarded_label,soft_orbit_filename_in,Bfield_error_filename_in)
   use hdf5_io_module, only: HDF5_array1D_saving,HDF5_array2D_saving
   implicit none
   !> inputs:
-  class(fields_base),intent(in) :: fields 
-  character(len=*),intent(in)   :: soft_orbit_filename_in
-  character(len=*),intent(in)   :: Bfield_error_filename_in
-  integer,intent(in)            :: n_vec,discarded_label
-  real*8,intent(in)             :: time
+  class(fields_base),intent(in)               :: fields 
+  character(len=*),intent(in)                 :: soft_orbit_filename_in
+  character(len=*),intent(in)                 :: Bfield_error_filename_in
+  integer,intent(in)                          :: n_vec,
+  integer,dimension(:),allocatable,intent(in) :: accepted_label
+  real*8,intent(in)                           :: time
   !> variables
   integer(HID_T) :: file_id
   integer        :: ii,jj,kk,n_orbits,n_times,n_soft_points,ierr,i_elm
@@ -564,13 +568,13 @@ discarded_label,soft_orbit_filename_in,Bfield_error_filename_in)
   allocate(RZPhi_loc(n_vec,n_soft_points)); RZPhi_loc = 0d0;
   allocate(error_Babs(n_soft_points)); error_Babs = 0d0;
   allocate(error_Babs_norm(n_soft_points)); error_Babs_norm = 0d0;
-  !$omp parallel do default(none) firstprivate(n_orbits,n_times,discarded_label,&
+  !$omp parallel do default(none) firstprivate(n_orbits,n_times,accepted_label,&
   !$omp Rbox,Zbox,time) shared(classification_loc,x_loc,fields,error_Bvec,error_Babs,&
   !$omp error_Bvec_norm,error_Babs_norm,RZPhi_loc,Bvec_soft_loc,Babs_soft_loc) &
   !$omp private(kk,jj,ii,RZPhi,i_elm,st,ierr,Evec_jorek,Bvec_jorek,psi,U) collapse(2)
   do kk=1,n_orbits
     do jj=1,n_times
-      if(classification_loc(kk).eq.discarded_label) cycle
+      if(.not.(any(classification_loc(kk).eq.accepted_label))) cycle
       ii=(kk-1)*n_times+jj
       !> transform the soft orbit coordinates in jorek global/local coordinates
       RZphi = cartesian_to_cylindrical(x_loc(:,ii)); i_elm = -1;

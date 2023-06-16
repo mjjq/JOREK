@@ -105,7 +105,7 @@ pixel_intensities,ierr)
     !$omp light_time_weights,spectral_weights) &
     !$omp shared(light_inout,camera_inout,spectra_inout,&
     !$omp filter_image_inout,filter_spectra_inout,filter_time_inout) &
-    !$omp reduction(+:pixel_intensities)
+    !$omp reduction(+:pixel_intensities) collapse(2)
     !> loop on the points on lens
     do ii=1,camera_inout%n_vertices
       !> loop on the active lights per time

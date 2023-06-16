@@ -328,14 +328,14 @@ particle_types,n_active_particles,active_particles_id)
   integer :: ii,jj,kk,pp
   real*8  :: psi,U
   real*8,dimension(light_vert%n_mhd) :: mhd_fields
-
+  mhd_fields = 0d0
   !> compute synchrotron light properties from particle simulations
   do ii=1,light_vert%n_times
     pp = 0
     do jj=1,n_groups(ii)
         if(all(particle_types(jj,ii).ne.light_vert%particle_types)) cycle
-        !$omp parallel do default(private) firstprivate(ii,jj,pp,n_active_particles) &
-        !$omp shared(sims_particles,active_particles_id,light_vert)
+        !$omp parallel do default(private) firstprivate(ii,jj,pp,n_active_particles,&
+        !$omp mhd_fields) shared(sims_particles,active_particles_id,light_vert)
         do kk=1,n_active_particles(jj,ii)
           call light_vert%store_light_x_from_particle_id(pp+kk,ii,&
           sims_particles(ii)%groups(jj)%particles(active_particles_id(kk,jj,ii))) !< store position

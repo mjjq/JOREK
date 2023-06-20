@@ -300,7 +300,6 @@ subroutine preset_parameters
   vms_coeff_Ti     = 0.d0  
   vms_coeff_rhon   = 0.d0 
   vms_coeff_rhoimp = 0.d0
-  vms_type         = -1  ! 11, 12
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7

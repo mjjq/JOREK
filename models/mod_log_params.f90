@@ -524,7 +524,6 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,REAL_FMT) 'D_par_imp_sc_num      ', D_par_imp_sc_num
 
   write(*,LOGI_FMT) 'use_vms                ', use_vms
-  write(*,INTG_FMT) 'vms_type               ', vms_type
   write(*,REAL_FMT) 'vms_coeff_AR           ', vms_coeff_AR
   write(*,REAL_FMT) 'vms_coeff_AZ           ', vms_coeff_AZ
   write(*,REAL_FMT) 'vms_coeff_A3           ', vms_coeff_A3

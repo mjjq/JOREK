@@ -43,10 +43,6 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int_all>** spss_, i
 
   *spss_= new StrumpackSparseSolverMPIDist<double,int_all>(comm);
   spss = *spss_;
-  
-  for (int i=0; i<5; i++){
-    std::cout << "iparm[" << i << "] "<<iparm[i]<<std::endl;
-  }
 
   if (iparm[0] == 1) {
     spss->options().set_Krylov_solver(KrylovSolver::DIRECT);

@@ -45,8 +45,6 @@ module vacuum
   type(t_distrib_mat)  :: response_m_g                   !< \f$\hat{G}\f$ in the documentation
   real*8, allocatable  :: response_m_h(:,:)              !< \f$\hat{H}\f$ in the documentation
   real*8, allocatable  :: response_m_j(:,:)              !< \f$\hat{J}\f$ in the documentation
-  real*8, allocatable  :: response_m_k(:,:)              !< \f$\hat{K}\f$ in the documentation
-  real*8, allocatable  :: response_m_l(:,:)              !< \f$\hat{L}\f$ in the documentation
   type(t_distrib_mat)  :: response_m_v                   !< \f$\hat{V}\f$ in the documentation
   real*8, allocatable  :: response_m_eq(:,:)             !< Response matrix for vacuum_equil
 
@@ -141,7 +139,6 @@ module vacuum
     type(t_distrib_mat)  :: a_ey
     type(t_distrib_mat)  :: a_ee
     type(t_distrib_mat)  :: a_id
-    type(t_distrib_mat)  :: a_nw
     type(t_distrib_mat)  :: s_ww
     type(t_distrib_mat)  :: s_ww_inv
     real*8,  allocatable :: xyzpot_w(:,:)

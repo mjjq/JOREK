@@ -696,9 +696,6 @@ module vacuum_response
 
     ! --- Compute ideal-wall and no-wall response matrices.
     
-    call  alloc_distr(my_id, sr%a_nw,(/sr%nd_bez, sr%nd_bez/), .true.)
-
-    sr%a_nw%loc_mat(:,:) = sr%a_ee%loc_mat(:,:)
     call matrix_multiplication(my_id,sr%a_ey,mat2=sr%a_ye, res_mat=sr%a_id )
     sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:)
 
@@ -1044,7 +1041,7 @@ module vacuum_response
     
     if ( vacuum_debug ) then
       loc_sum = sum(sr%a_ye%loc_mat) + sum(sr%a_ey%loc_mat) + sum(sr%a_ee%loc_mat) + &
-                sum(sr%a_nw%loc_mat)  + sum(sr%s_ww_inv%loc_mat)   
+                sum(sr%s_ww_inv%loc_mat)   
 
       if (my_id==0) then
 
@@ -1166,14 +1163,6 @@ module vacuum_response
         if (my_id == 0) write(*,36) 'a_id         '
       end if
 
-      test_sum=0.0
-      if (allocated(sr%a_nw%loc_mat)) then
-        call MPI_Reduce(sum(sr%a_nw%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if (my_id == 0) write(*,34) 'a_nw         ', test_sum
-      else
-        if (my_id == 0) write(*,36) 'a_nw         '
-      end if
-      
       test_sum=0.0
       if (allocated(sr%s_ww%loc_mat)) then
         call MPI_Reduce(sum(sr%s_ww%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -2670,8 +2659,6 @@ module vacuum_response
                  .or. ( .not. allocated(response_m_g%loc_mat) ) &
                  .or. ( .not. allocated(response_m_h)         ) &
                  .or. ( .not. allocated(response_m_j)         ) &
-                 .or. ( .not. allocated(response_m_k)         ) &
-                 .or. ( .not. allocated(response_m_l)         ) &
                  .or. ( .not. allocated(response_m_v%loc_mat) ) &
                  .or. ( .not. allocated(response_m_eq)        )
 
@@ -2688,7 +2675,6 @@ module vacuum_response
       if ( .not. allocated(response_d_b) ) allocate( response_d_b(n_wall_curr) )
       if ( .not. allocated(response_d_c) ) allocate( response_d_c(n_wall_curr) )
       if ( .not. allocated(response_m_h) ) allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
-      if ( .not. allocated(response_m_k) ) allocate( response_m_k(n_wall_curr, sr%ncoil) )   
 
       if( .not. allocated (response_m_a%loc_mat) ) &
             call  alloc_distr(my_id, response_m_a, (/n_wall_curr, n_dof_starwall/), .false.)
@@ -2768,20 +2754,6 @@ module vacuum_response
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-        response_m_k=0.0
-        if (.not. CARIDDI_mode) then
-          do k = 1, n_wall_curr
-            do j = 1, sr%ncoil
-              if(sr%s_ww%ind_start<=j .AND. sr%s_ww%ind_end>=j) then   
-                response_m_k(k,j) = -tstep * sr%d_yy(k) * sr%s_ww%loc_mat(j,k)
-              end if
-            end do
-          end do
-          call MPI_AllREDUCE(MPI_IN_PLACE,response_m_k,size(response_m_k),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        end if
-        call matrix_multiplication(my_id,sr%a_ey,mat2_not_distr=response_m_k,res_mat_not_distr=response_m_l)
-        call MPI_AllREDUCE(MPI_IN_PLACE,response_m_l,size(response_m_l),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-
         do k = 1, n_wall_curr
           response_m_v%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
         end do
@@ -2807,8 +2779,6 @@ module vacuum_response
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
         response_m_j(:,:) = 0.d0
-        response_m_k(:,:) = 0.d0 !####
-        response_m_l(:,:) = 0.d0 !####
         response_m_v%loc_mat(:,:) = 0.d0 !####
 
       end if
@@ -2845,8 +2815,6 @@ module vacuum_response
         if(my_id == 0)   write(*,*) 'm_g:',test_sum2, test_sum
         if(my_id == 0)   write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
         if(my_id == 0)   write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
-        if(my_id == 0)   write(*,*) 'm_k:', sum(abs(response_m_k)), sum(response_m_k)
-        if(my_id == 0)   write(*,*) 'm_l:', sum(abs(response_m_l)), sum(response_m_l)
     
         test_sum=0.0
         test_sum2=0.0
@@ -3079,7 +3047,6 @@ module vacuum_response
     write(*,101)'a_ey        ', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
     write(*,101)'a_ee        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'a_id        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
-    write(*,101)'a_nw        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'response_m_a', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'response_m_d', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks

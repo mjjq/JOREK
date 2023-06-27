@@ -195,7 +195,7 @@ subroutine write_header_pov(ifile)
   write(ifile,980) '    angle 42'
   write(ifile,980) '    location<0.3,-11,-4>'
   write(ifile,980) '    look_at <0.3,0,0>'
-  write(ifile,980) '    up<0,0,6>'
+  write(ifile,980) '    up<0,0,-6>'
   write(ifile,980) '    right<8,0,0>'
   write(ifile,980) '}'
   write(ifile,980) ''
@@ -249,7 +249,7 @@ function colormap1(v, vmin, vmax)
   else
     v_norm = min(max(v,vmin),vmax) / (vmax-vmin) ! crop to min/max range and normalize
     
-    colormap1 = (/ min(1.d0,2.d0-2.d0*v_norm), 1.d0-2.d0*(v_norm-0.5d0), min(1.d0,2.d0*v_norm), 0.0d0 /)
+    colormap1 = (/ min(1.d0,2.d0-2.d0*v_norm), 1.d0-2.d0*abs(v_norm-0.5d0), min(1.d0,2.d0*v_norm), 0.0d0 /)
   end if
   
 end function colormap1

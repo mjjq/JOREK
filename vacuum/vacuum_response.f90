@@ -726,6 +726,157 @@ module vacuum_response
   
   
   
+  !> Calculate c . M . D . alpha or c . D . M . alpha as extended matrix-vector
+  !product
+  !! c is a constant
+  !! alpha is a vector
+  !! M is a response matrix (distributed and/or compressed)
+  !! D is a diagonal matrix (represented as vector)
+  !! if MD==.true., calculate c . M . D . alpha, otherwise c . D . M. alpha
+  subroutine extended_matrix_vector(my_id, c, M, D, alpha, MD, result)
+
+    use mpi_mod
+    implicit none
+  
+    ! --- Input parameters
+    integer,              intent(in)    :: my_id
+    real*8,               intent(in)    :: c
+    type(t_distrib_mat),  intent(in)    :: M
+    real*8, allocatable,  intent(in)    :: D(:)
+    real*8, allocatable,  intent(in)    :: alpha(:)
+    logical,              intent(in)    :: MD
+    real*8, allocatable,  intent(inout) :: result(:)
+  
+    ! --- Local variables
+    logical :: correct_dims
+    integer :: dim(2)
+    integer :: j, loc_size, jloc, jglob
+    integer :: ntasks
+    integer :: ierr
+
+    !> Find the number of ranks involved in the calculation
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+  
+    !> WARNING: up to now there is no check regarding the matrix representation
+    !!          but we would need to add that when we will implemet the compressed
+    !!          matrices' treatment
+ 
+    ! --- Check for correct dimensions
+    if ( MD ) then
+      correct_dims = ( M%dim(2)==size(D)       ) .and. &
+                     ( M%dim(2)==size(alpha,1) ) .and. &
+                     ( M%dim(1)==size(result)  )
+    else
+      correct_dims = ( M%dim(1)==size(D)       ) .and. &
+                     ( M%dim(2)==size(alpha,1) ) .and. &
+                     ( M%dim(1)==size(result)  )
+    end if
+    if ( .not. correct_dims ) then
+      write(*,*) 'Error in extended_matrix_vector: wrong dimensions of input'
+      write(*,*) 'M:      ', M%dim
+      write(*,*) 'D:      ', size(D)
+      write(*,*) 'alpha:  ', size(alpha)
+      write(*,*) 'result: ', size(result)
+      stop
+    end if
+  
+    result(:) = 0.d0
+
+    !> WARNING: Given that we are not checking what king of distribution is
+    !!          for the matrix M, we here need to differentiate the tratment for
+    !!          rowwise and columnwise JOREK's distributions
+    !> NOTE: Recalling the indexing convention for JOREK's kind of distribution,
+    !!       the relation between the local and global extrema of indices (for
+    !!       rows in rowise or column in columnwise) is as follows:
+    !!
+    !!       -----------------------------------------------------------
+    !!       | LOCAL |               GLOBAL                            |
+    !!       -----------------------------------------------------------
+    !!       |   1   | matrix%ind_start = my_id*matrix%step + 1        |
+    !!       | last  | matrix%ind_end   = my_id*matrix%step + loc_size |
+    !!       -----------------------------------------------------------
+    !!
+    !!       with loc_size = matrix%step or matrix%step + dim - ntasks * matrix%step
+    !!       in the case of the last task.
+    !!       Therefore, we could probably generalize with the following
+    !!       definition of global indices from the local one:
+    !!
+    !!       jglob = my_id*matrix%step + jloc
+    if (M%row_wise) then
+      !> Here the matrix is distributed row-wisely, therefore the rows'
+      !! index runs from 1 to loc_size on each MPI rank and the result array can
+      !! be populated in parallel if we apply the index conversion reported
+      !! above for the rows' indices
+      loc_size = M%step
+      if (my_id==ntasks-1) loc_size = M%step + dim(1) - ntasks * M%step
+      do jloc = 1, loc_size
+        jglob = my_id*M%step + jloc
+        if ( MD ) then
+          !> The general j-term of the result vector, may be written as
+          !!
+          !! result(j) = Sum_{k=1}^{M%dim(2)} [ M(j,k) * D(k,k) * alpha(k) ],
+          !! with j = 1,...,M%dim(1)
+          !!
+          !> Here, we don't need to put result(jglob) as a first additive term in
+          !! the rhs of the following equation, because result(:) = 0 at line 776
+          result(jglob) = sum( M%loc_mat(jloc,:) * D(:) * alpha(:) )
+        else
+          !> The general j-term of the result vector, may be written as
+          !!
+          !! result(j) = D(j,j) * { Sum_{k=1}^{M%dim(2)} [ M(j,k) * alpha(k) ] },
+          !! with j = 1,...,M%dim(1)
+          !!
+          !> Here, we don't need to put result(jglob) as a first additive term in
+          !! the rhs of the following equation, because result(:) = 0 at line 776
+          result(jglob) = result(jglob) + D(jglob) * &
+                          sum( M%loc_mat(jloc,:) * alpha(:) )
+        end if
+      end do
+      !> We need to call and MPI_BARRIER here, to be sure all indices of result
+      !! to be populate by the different ranks
+      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    else ! M%row_wise
+      !> Here the matrix is distributed column-wisely, therefore the rows'
+      !! index runs from 1 to M%dim(1) on each MPI rank, but each rank has only
+      !! loc_size columns, ranging from M%ind_start to M%ind_end. Therefore, we
+      !! need a final MPI_SUM reduction of the array result, in order to make 
+      !! it include the contributions from all the ranks
+      do j = 1, M%dim(1)
+        if ( MD ) then
+          !> The general j-term of the result vector, may be written as
+          !!
+          !! result(j) = Sum_{k=1}^{M%dim(2)} [ M(j,k) * D(k,k) * alpha(k) ],
+          !! with j = 1,...,M%dim(1)
+          !!
+          !> Here, we don't need to put result(jglob) as a first additive term in
+          !! the rhs of the following equation, because result(:) = 0 at line 776
+          result(j) = sum( M%loc_mat(j,:) * D(M%ind_start:M%ind_end) * &
+                           alpha(M%ind_start:M%ind_end) )
+        else
+          !> The general j-term of the result vector, may be written as
+          !!
+          !! result(j) = D(j,j) * { Sum_{k=1}^{M%dim(2)} [ M(j,k) * alpha(k) ]
+          !},
+          !! with j = 1,...,M%dim(1)
+          !!
+          !> Here, we don't need to put result(jglob) as a first additive term in
+          !! the rhs of the following equation, because result(:) = 0 at line 776
+          result(j) = D(j) * sum( M%loc_mat(j,:) * alpha(M%ind_start:M%ind_end) )
+        end if
+      end do
+      !> We need to call and MPI_ALLREDUCE here, in order to add the
+      !! contributions from all the ranks to each index of result
+      call MPI_ALLReduce(MPI_IN_PLACE, result, size(result), MPI_DOUBLE_PRECISION, &
+                         MPI_SUM, MPI_COMM_WORLD, ierr)
+    end if ! M%row_wise
+
+    !> Just before exiting, we multiply by constant c
+    result(:) = c * result(:)
+  
+  end subroutine extended_matrix_vector 
+  
+  
+  
   !> Routine for multiplying two (distributed) matrices.
   subroutine matrix_multiplication(my_id, mat1, mat2, mat2_not_distr, res_mat, res_mat_not_distr)
     

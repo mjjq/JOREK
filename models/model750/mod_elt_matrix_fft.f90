@@ -6537,11 +6537,6 @@ res_jac__p = 0.d0 ; res_jac__n = 0.d0 ; res_jac__nn = 0.d0
 
   else ! T equation
 
-    res(var_T) = rho0 * UgradT + T0 * UgradRho + gamma * p0 * divU &
-               - heat_source(ms,mt) - (gamma-1.d0) * Qvisc_T - (gamma-1.d0) * eta_T_ohm * JJ2 &
-               - ZK_prof * (T0_R / R + T0_RR + T0_ZZ + T0_pp/R**2)                         &
-               - (gamma-1.d0) * 0.5d0 * vv2 * particle_source(ms,mt)
-
     res_jac__p(var_T, var_UR) =  res_jac__p(var_T, var_UR) &
                               +  rho0 * UR * T0_R + T * UR0 * rho0_R + gamma * p0 * divU_UR &
                               - (gamma-1.d0) * 0.5d0 * vv2_UR * particle_source(ms,mt) 

@@ -726,14 +726,14 @@ module vacuum_response
   
   
   
-  !> Calculate c . M . D . alpha or c . D . M . alpha as extended matrix-vector
-  !product
+  !> Calculate c . M . D . alpha or c . D . M . alpha as extended matrix-vector product
   !! c is a constant
   !! alpha is a vector
   !! M is a response matrix (distributed and/or compressed)
   !! D is a diagonal matrix (represented as vector)
   !! if MD==.true., calculate c . M . D . alpha, otherwise c . D . M. alpha
-  subroutine extended_matrix_vector(my_id, c, M, D, alpha, MD, result)
+  !! WARNING: res is assumed to be initialized
+  subroutine extended_matrix_vector(my_id, c, M, D, alpha, MD, res, red)
 
     use mpi_mod
     implicit none
@@ -743,14 +743,15 @@ module vacuum_response
     real*8,               intent(in)    :: c
     type(t_distrib_mat),  intent(in)    :: M
     real*8, allocatable,  intent(in)    :: D(:)
-    real*8, allocatable,  intent(in)    :: alpha(:)
+    real*8,               intent(in)    :: alpha(:)
     logical,              intent(in)    :: MD
-    real*8, allocatable,  intent(inout) :: result(:)
+    real*8, allocatable,  intent(inout) :: res(:)
+    logical,              intent(in)    :: red
   
     ! --- Local variables
     logical :: correct_dims
     integer :: dim(2)
-    integer :: j, loc_size, jloc, jglob
+    integer :: j, jloc, jglob
     integer :: ntasks
     integer :: ierr
 
@@ -760,28 +761,26 @@ module vacuum_response
     !> WARNING: up to now there is no check regarding the matrix representation
     !!          but we would need to add that when we will implemet the compressed
     !!          matrices' treatment
- 
+
     ! --- Check for correct dimensions
     if ( MD ) then
       correct_dims = ( M%dim(2)==size(D)       ) .and. &
                      ( M%dim(2)==size(alpha,1) ) .and. &
-                     ( M%dim(1)==size(result)  )
+                     ( M%dim(1)==size(res)     )
     else
       correct_dims = ( M%dim(1)==size(D)       ) .and. &
                      ( M%dim(2)==size(alpha,1) ) .and. &
-                     ( M%dim(1)==size(result)  )
+                     ( M%dim(1)==size(res)     )
     end if
     if ( .not. correct_dims ) then
       write(*,*) 'Error in extended_matrix_vector: wrong dimensions of input'
       write(*,*) 'M:      ', M%dim
       write(*,*) 'D:      ', size(D)
       write(*,*) 'alpha:  ', size(alpha)
-      write(*,*) 'result: ', size(result)
+      write(*,*) 'result: ', size(res)
       stop
     end if
   
-    result(:) = 0.d0
-
     !> WARNING: Given that we are not checking what king of distribution is
     !!          for the matrix M, we here need to differentiate the tratment for
     !!          rowwise and columnwise JOREK's distributions
@@ -799,42 +798,33 @@ module vacuum_response
     !!       with loc_size = matrix%step or matrix%step + dim - ntasks * matrix%step
     !!       in the case of the last task.
     !!       Therefore, we could probably generalize with the following
-    !!       definition of global indices from the local one:
+    !!       definition of local indices from the global one:
     !!
     !!       jglob = my_id*matrix%step + jloc
     if (M%row_wise) then
       !> Here the matrix is distributed row-wisely, therefore the rows'
-      !! index runs from 1 to loc_size on each MPI rank and the result array can
-      !! be populated in parallel if we apply the index conversion reported
-      !! above for the rows' indices
-      loc_size = M%step
-      if (my_id==ntasks-1) loc_size = M%step + dim(1) - ntasks * M%step
-      do jloc = 1, loc_size
-        jglob = my_id*M%step + jloc
+      !! index runs from matrix%ind_start to matrix%ind_end, and each MPI 
+      !! rank and the result array has its part of each matrix column. The
+      !! array can be populated in parallel if we apply the index conversion 
+      !! reported above for the rows' indices
+      do jglob = M%ind_start, M%ind_end
+        jloc = jglob - my_id*M%step
         if ( MD ) then
           !> The general j-term of the result vector, may be written as
           !!
           !! result(j) = Sum_{k=1}^{M%dim(2)} [ M(j,k) * D(k,k) * alpha(k) ],
           !! with j = 1,...,M%dim(1)
-          !!
-          !> Here, we don't need to put result(jglob) as a first additive term in
-          !! the rhs of the following equation, because result(:) = 0 at line 776
-          result(jglob) = sum( M%loc_mat(jloc,:) * D(:) * alpha(:) )
+          res(jglob) = res(jglob) + c * sum( M%loc_mat(jloc,:) * D(:) * &
+                                             alpha(:) )
         else
           !> The general j-term of the result vector, may be written as
           !!
           !! result(j) = D(j,j) * { Sum_{k=1}^{M%dim(2)} [ M(j,k) * alpha(k) ] },
           !! with j = 1,...,M%dim(1)
-          !!
-          !> Here, we don't need to put result(jglob) as a first additive term in
-          !! the rhs of the following equation, because result(:) = 0 at line 776
-          result(jglob) = result(jglob) + D(jglob) * &
-                          sum( M%loc_mat(jloc,:) * alpha(:) )
+          res(jglob) = res(jglob) + c * D(jglob) * sum( M%loc_mat(jloc,:) * &
+                                                        alpha(:) )
         end if
       end do
-      !> We need to call and MPI_BARRIER here, to be sure all indices of result
-      !! to be populate by the different ranks
-      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     else ! M%row_wise
       !> Here the matrix is distributed column-wisely, therefore the rows'
       !! index runs from 1 to M%dim(1) on each MPI rank, but each rank has only
@@ -847,32 +837,26 @@ module vacuum_response
           !!
           !! result(j) = Sum_{k=1}^{M%dim(2)} [ M(j,k) * D(k,k) * alpha(k) ],
           !! with j = 1,...,M%dim(1)
-          !!
-          !> Here, we don't need to put result(jglob) as a first additive term in
-          !! the rhs of the following equation, because result(:) = 0 at line 776
-          result(j) = sum( M%loc_mat(j,:) * D(M%ind_start:M%ind_end) * &
-                           alpha(M%ind_start:M%ind_end) )
+          res(j) = res(j) + c * sum( M%loc_mat(j,:) * D(M%ind_start:M%ind_end) * &
+                                     alpha(M%ind_start:M%ind_end) )
         else
           !> The general j-term of the result vector, may be written as
           !!
           !! result(j) = D(j,j) * { Sum_{k=1}^{M%dim(2)} [ M(j,k) * alpha(k) ]
           !},
           !! with j = 1,...,M%dim(1)
-          !!
-          !> Here, we don't need to put result(jglob) as a first additive term in
-          !! the rhs of the following equation, because result(:) = 0 at line 776
-          result(j) = D(j) * sum( M%loc_mat(j,:) * alpha(M%ind_start:M%ind_end) )
+          res(j) = res(j) + c * D(j) * sum( M%loc_mat(j,:) * &
+                                            alpha(M%ind_start:M%ind_end) )
         end if
       end do
-      !> We need to call and MPI_ALLREDUCE here, in order to add the
-      !! contributions from all the ranks to each index of result
-      call MPI_ALLReduce(MPI_IN_PLACE, result, size(result), MPI_DOUBLE_PRECISION, &
-                         MPI_SUM, MPI_COMM_WORLD, ierr)
     end if ! M%row_wise
 
-    !> Just before exiting, we multiply by constant c
-    result(:) = c * result(:)
-  
+    !> Only if red, we need to call MPI_ALLREDUCE here, in order to add the
+    !! contributions from all the ranks
+    if (red) call MPI_ALLReduce(MPI_IN_PLACE, res, size(res), MPI_DOUBLE_PRECISION, &
+                                MPI_SUM, MPI_COMM_WORLD, ierr)
+
+
   end subroutine extended_matrix_vector 
   
   
@@ -1148,7 +1132,7 @@ module vacuum_response
       if ( sr%ncoil > 0) then
         if ( .not. CARIDDI_mode ) then
           if (allocated(sr%jtri_c)       ) deallocate(sr%jtri_c);        allocate(sr%jtri_c(sr%ncoil))
-          if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
+         if (allocated(sr%x_coil)       ) deallocate(sr%x_coil);        allocate(sr%x_coil(sr%ntri_c,3))
           if (allocated(sr%y_coil)       ) deallocate(sr%y_coil);        allocate(sr%y_coil(sr%ntri_c,3))
           if (allocated(sr%z_coil)       ) deallocate(sr%z_coil);        allocate(sr%z_coil(sr%ntri_c,3))
           if (allocated(sr%phi_coil)     ) deallocate(sr%phi_coil);      allocate(sr%phi_coil(sr%ntri_c,3))
@@ -1910,6 +1894,7 @@ module vacuum_response
     logical, save  :: PF_perturbation = .true.
     integer  :: ierr,i
     real*8, allocatable :: rhs_contrib_arr(:)
+    real*8, allocatable :: diag_1(:)
 
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Skipping vacuum_boundary_integral since sr%n_tor==0.'
@@ -1948,14 +1933,19 @@ module vacuum_response
     call boundary_check(my_id)
     allocate(rhs_contrib_arr(n_dof_starwall))
     rhs_contrib_arr=0.0
-
-    do i = response_m_f%ind_start,response_m_f%ind_end
-      rhs_contrib_arr(i) =  sum(response_m_f%loc_mat(i-my_id*response_m_f%step, :) *  wall_curr(:) )  &
-        +sum(response_m_g%loc_mat(i-my_id*response_m_g%step, :) * dwall_curr(:) )  &
-        -sum(response_m_v%loc_mat(i-my_id*response_m_v%step, :) *   Y_coils0(:) )
-    enddo
-    call MPI_ALLReduce(MPI_IN_PLACE, rhs_contrib_arr, size(rhs_contrib_arr),MPI_DOUBLE_PRECISION, &
-                       MPI_SUM, MPI_COMM_WORLD, ierr)
+    !> WARNING: the arrays response_d_b and response_d_c are allocated and
+    !!          populated within the above call to update_response
+    !> part of the old response_m_f
+    if (.not. allocated(diag_1)) allocate(diag_1(n_wall_curr))
+    diag_1(:) = ( 1.d0 + response_d_b(:) ) 
+    call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, diag_1, &
+                                wall_curr(:), .true., rhs_contrib_arr, .false.)
+    !> part of the old response_m_g
+    call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, response_d_c, &
+                                dwall_curr(:), .true., rhs_contrib_arr, .false.)
+    !> part of the old response_m_v
+    call extended_matrix_vector(my_id, -1.0d0, sr%a_ey, response_d_b, &
+                                Y_coils0(:), .true., rhs_contrib_arr, .true.)
 
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
@@ -2478,7 +2468,7 @@ module vacuum_response
   !> Perform the time-evolution of the wall currents (resistive wall).
   subroutine evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
     
-    use phys_module, only: index_now, index_start, nstep, resistive_wall
+    use phys_module, only: index_now, index_start, nstep, resistive_wall, time_evol_theta, time_evol_zeta, tstep
     use mpi_mod
     
     implicit none
@@ -2493,6 +2483,9 @@ module vacuum_response
     integer              :: ierr
     real *8, allocatable :: dwall_curr_2(:)
     real *8, allocatable :: tmp_coil_curr(:)
+    real *8              :: zeta, theta
+    real *8, allocatable :: tmp_d_s(:)
+    real *8, allocatable :: inv_tmp_d_s(:)
 
     if  (.not. allocated(dwall_curr_2)) allocate (dwall_curr_2(n_wall_curr))
     if ( vacuum_debug ) write(*,*) 'wall_curr(before)', sum(abs(wall_curr)), sum(wall_curr)    
@@ -2502,21 +2495,33 @@ module vacuum_response
       allocate( old_dpsibnd_vec(n_dof_starwall) )
     end if    
 
+    !> To be used for the computations of the terms for dwall_curr
+    theta = time_evol_theta
+    zeta  = time_evol_zeta
+
+    if  (.not. allocated(tmp_d_s)     ) allocate (tmp_d_s     (n_wall_curr))
+    if  (.not. allocated(inv_tmp_d_s) ) allocate (inv_tmp_d_s (n_wall_curr))
+
+    tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
+    inv_tmp_d_s(:) = 1.0d0 / tmp_d_s(:)
+    dwall_curr(:) = 0.0d0
+    !> Old usage of response_m_a
+    call extended_matrix_vector(my_id, -(1.d0+zeta), sr%a_ye, inv_tmp_d_s, &
+                                dpsibnd_vec(:), .false., dwall_curr, .false.)
+    !> Old usage of response_m_d
+    call extended_matrix_vector(my_id, zeta, sr%a_ye, inv_tmp_d_s, &
+                                old_dpsibnd_vec(:), .false., dwall_curr, .true.)
+
      do k = 1, n_wall_curr
 
        ! --- contribution from not distributed matrices
        dwall_curr_2(k) = response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
          + response_d_c(k) * dwall_curr(k)
        
-       ! --- contribution from distributed matrices
-       dwall_curr(k) = sum(response_m_a%loc_mat(k,:) * dpsibnd_vec(response_m_a%ind_start:response_m_a%ind_end)) &
-         + sum(response_m_d%loc_mat(k,:) * old_dpsibnd_vec(response_m_d%ind_start:response_m_d%ind_end) )
-
      end do
 
-    call MPI_ALLReduce(MPI_IN_PLACE, dwall_curr,size(dwall_curr),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-    dwall_curr(:)= dwall_curr(:)+dwall_curr_2(:)
+    !> Gathering all the terms into dwall_curr
+    dwall_curr(:) = dwall_curr(:)+dwall_curr_2(:)
 
     if (index_now <= 1 ) dwall_curr = 0.d0
     wall_curr(:) = wall_curr(:) + dwall_curr(:)

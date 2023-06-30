@@ -36,16 +36,11 @@ module vacuum
 
   !> @name JOREK vacuum response matrices
   !! Response matrices derived from STARWALL response (w=wall, p=plasma)
-  type(t_distrib_mat)  :: response_m_a                   !< \f$\hat{A}\f$ in the documentation
   real*8, allocatable  :: response_d_b(:)                !< \f$\hat{B}\f$ in the documentation
   real*8, allocatable  :: response_d_c(:)                !< \f$\hat{C}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_d                   !< \f$\hat{D}\f$ in the documentation
   real*8, allocatable  :: response_m_e(:,:)              !< \f$\hat{E}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_f                   !< \f$\hat{F}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_g                   !< \f$\hat{G}\f$ in the documentation
   real*8, allocatable  :: response_m_h(:,:)              !< \f$\hat{H}\f$ in the documentation
   real*8, allocatable  :: response_m_j(:,:)              !< \f$\hat{J}\f$ in the documentation
-  type(t_distrib_mat)  :: response_m_v                   !< \f$\hat{V}\f$ in the documentation
   real*8, allocatable  :: response_m_eq(:,:)             !< Response matrix for vacuum_equil
 
   !> @name Equilibrium coil contributions
@@ -90,6 +85,7 @@ module vacuum
   
   type :: t_starwall_response
     integer :: file_version           = 9999
+    logical :: initialized            = .false.
     integer :: n_bnd                  = -1
     integer :: nd_bez                 = -1
     integer :: ncoil                  = -1

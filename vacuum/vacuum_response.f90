@@ -98,6 +98,7 @@ module vacuum_response
    
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     call log_starwall_response(my_id, sr)
+    call init_vacuum_response(my_id,  freeboundary_equil)
               
   end subroutine get_vacuum_response
 
@@ -385,7 +386,7 @@ module vacuum_response
     if (present(skip)) then
       skip2 = skip
     end if
-    write(*,*) 'skip, skip', skip2
+
     if (my_id==0) then
       call MPI_FILE_READ(filehandle, marker,   int(sizeof(marker), 4),   MPI_CHARACTER, status, ierr)
       call MPI_FILE_READ(filehandle, name,     int(sizeof(name), 4),     MPI_CHARACTER, status, ierr)
@@ -479,7 +480,7 @@ module vacuum_response
       !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
     end if
     disp = disp + sizeof(1.d0)*dim(1)*dim(2)
-    write(*,*) 'skip', size(float2d%loc_mat)
+
     ! Return to ordinary file view
     call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr)
 
@@ -502,6 +503,7 @@ module vacuum_response
 
     use constants
     use mod_parameters, only: n_tor, n_period
+    use phys_module, only : resistive_wall
     use mpi_mod
 
     implicit none
@@ -686,8 +688,8 @@ module vacuum_response
     call read_array_par    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye,     .false.)    
     call read_array_par    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey,     .true. )
     call read_array_par    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee,     .true. )
-    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true.)
-    call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true.)
+    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true. )
+    call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true. )
 
     if(my_id == 0 .and. .not. CARIDDI_mode) then
      call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
@@ -707,10 +709,10 @@ module vacuum_response
     if ( vacuum_debug .and. (my_id==0) ) write(*,*) 'Applied import normalization.'
 
     ! --- Compute ideal-wall and no-wall response matrices.
-    
-    call matrix_multiplication(my_id,sr%a_ey,mat2=sr%a_ye, res_mat=sr%a_id )
-    sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:)
-
+    if (.not. resistive_wall) then
+      call matrix_multiplication(my_id,sr%a_ey,mat2=sr%a_ye, res_mat=sr%a_id )
+      sr%a_id%loc_mat(:,:) = sr%a_ee%loc_mat(:,:) - sr%a_id%loc_mat(:,:)
+    end if
     ! --- Transform STARWALL harmonics to account for periodicity
     if ( my_id==0 ) then
       j = 0
@@ -870,7 +872,7 @@ module vacuum_response
 
 
   end subroutine extended_matrix_vector 
-  
+
   
   
   !> Routine for multiplying two (distributed) matrices.
@@ -1220,6 +1222,7 @@ module vacuum_response
   subroutine log_starwall_response(my_id, sr)
 
     use mod_parameters, only: n_period
+    use phys_module, only: resistive_wall
     use mpi_mod
 
     implicit none
@@ -1302,14 +1305,15 @@ module vacuum_response
         if (my_id == 0) write(*,36) 'a_ee         '
       end if
 
-      test_sum=0.0
-      if (allocated(sr%a_id%loc_mat)) then
-        call MPI_Reduce(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        if (my_id == 0) write(*,34) 'a_id         ', test_sum
-      else
-        if (my_id == 0) write(*,36) 'a_id         '
+      if (.not. resistive_wall) then
+        test_sum=0.0
+        if (allocated(sr%a_id%loc_mat)) then
+          call MPI_Reduce(sum(sr%a_id%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+          if (my_id == 0) write(*,34) 'a_id         ', test_sum
+        else
+          if (my_id == 0) write(*,36) 'a_id         '
+        end if
       end if
-
       test_sum=0.0
       if (allocated(sr%s_ww%loc_mat)) then
         call MPI_Reduce(sum(sr%s_ww%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -1929,7 +1933,7 @@ module vacuum_response
     endif
 
     ! --- Update the derived response matrices
-    call update_response(my_id, tstep, freeboundary_equil, resistive_wall)
+    call update_response(my_id, tstep, resistive_wall)
 
     ! --- Perform the time-stepping for the wall currents.
     if ( resistive_wall .and.  (sr%n_tor>0) ) call evolve_wall_currents(my_id, psibnd_vec, dpsibnd_vec)
@@ -1948,16 +1952,18 @@ module vacuum_response
     !> WARNING: the arrays response_d_b and response_d_c are allocated and
     !!          populated within the above call to update_response
     !> part of the old response_m_f
-    if (.not. allocated(diag_1)) allocate(diag_1(n_wall_curr))
-    diag_1(:) = ( 1.d0 + response_d_b(:) ) 
-    call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, diag_1, &
-                                wall_curr(:), .true., rhs_contrib_arr, .false.)
-    !> part of the old response_m_g
-    call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, response_d_c, &
-                                dwall_curr(:), .true., rhs_contrib_arr, .false.)
-    !> part of the old response_m_v
-    call extended_matrix_vector(my_id, -1.0d0, sr%a_ey, response_d_b, &
-                                Y_coils0(:), .true., rhs_contrib_arr, .true.)
+    if (resistive_wall) then
+      if (.not. allocated(diag_1)) allocate(diag_1(n_wall_curr))
+      diag_1(:) = ( 1.d0 + response_d_b(:) ) 
+      call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, diag_1, &
+          wall_curr(:), .true., rhs_contrib_arr, .false.)
+      !> part of the old response_m_g
+      call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, response_d_c, &
+          dwall_curr(:), .true., rhs_contrib_arr, .false.)
+      !> part of the old response_m_v
+      call extended_matrix_vector(my_id, -1.0d0, sr%a_ey, response_d_b, &
+          Y_coils0(:), .true., rhs_contrib_arr, .true.)
+    end if
 
 #ifdef __GFORTRAN__
     wgauss_copy(1:4) = wgauss(1:4)
@@ -1966,12 +1972,12 @@ module vacuum_response
     !$omp parallel do                                                                                         &
     !$omp default(none)                                                                                       &    
     !$omp shared(my_id, a_mat, rhs_loc, bnd_elm_list, bnd_node_list, node_list, index_min, index_max,          &
-    !$omp   response_m_e, response_m_f, response_m_g, response_m_h, response_m_j, H1, HZ, sr,                 &
+    !$omp   response_m_e, response_m_h, response_m_j, H1, HZ, sr,                 &
     !$omp   bext_tan, I_coils, wall_curr, dwall_curr, psibnd_vec, dpsibnd_vec,psibnd_coils,                   &
 #ifdef __GFORTRAN__
     !$omp   wgauss_copy,                                                                                      &
 #endif
-    !$omp   starwall_equil_coils, response_m_v, Y_coils0,rhs_contrib_arr, resistive_wall) &
+    !$omp   starwall_equil_coils,  Y_coils0,rhs_contrib_arr, resistive_wall) &
     !$omp private(m_bndelem, bndelem_m, x_s, y_s, l_vertex, l_dof, l_node,l_dir, l_node_bnd,                  &
     !$omp   l_index, l_size, l_tor, l_row_j, l_row_psi, ms, dA, m_plane,common_prefactor,                     &
     !$omp   testfunc_l, i_vertex, i_dof, i_node, i_dir, i_node_bnd, i_index, i_size, i_starwall,              &
@@ -2402,7 +2408,7 @@ module vacuum_response
     integer                   :: i, ierr
     real*8, allocatable       :: potentials_real_0(:)
     real*8, save, allocatable :: delta_Icoils_0(:)
-    real*8, save              :: t_last, Z_p = 1.d10
+    real*8, save              :: t_last=-1e3, Z_p = 1.d10
     logical, save             :: initialized=.false.
     real*8                    :: z_ref_inter, Z_n
     if( my_id == 0 ) write(*,*) ' Imposing PF coil currents with a current source term '
@@ -2418,7 +2424,7 @@ module vacuum_response
       end do
       initialized = .true.
     end if
-    
+    if (t_last==-1e3) t_last=tstep
 
     ! --- Calculate the specified coil currents at present time 
     do i=1, n_coils
@@ -2768,12 +2774,68 @@ module vacuum_response
   end subroutine log_wall_curr
   
   
-  
+  subroutine init_vacuum_response(my_id,  freeboundary_equil)
+
+    use mpi_mod
+
+    implicit none
+
+    ! --- Routine parameters
+    integer,                     intent(in) :: my_id              !< MPI task ID
+    logical,                     intent(in) :: freeboundary_equil !< Resistive or ideal wall?
+
+    ! --- Local variables
+    integer :: i, j, k, j2, k2
+    integer :: ierr
+
+    if ( sr%n_tor == 0 ) then
+      write(*,*) 'Remark: Routine init_vacuum_response is not doing anything since sr%n_tor==0.'
+      return
+    end if
+
+    if ( .not. freeboundary_equil ) then
+      write(*,*) 'Remark: Routine init_vacuum_response is not doing anything since freeboundary_equil=.false..'
+      return
+    end if
+
+    if (sr%initialized) return
+
+    ! --- Allocate matrices if required
+    if ( .not. allocated(response_m_eq)) allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
+    ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
+    response_m_eq = 0.d0
+
+    do j = 1, sr%nd_bez/sr%n_tor0, 2
+      j2 = (j-1)*sr%n_tor0 + 1
+      do k = 1, sr%nd_bez/sr%n_tor0, 2
+        k2 = (k-1)*sr%n_tor0 + 1
+
+        if ( sr%a_ee%row_wise ) then
+
+          if ( (j2>=sr%a_ee%ind_start) .and. (j2<=sr%a_ee%ind_end) ) then
+            response_m_eq(j,k:k+1) = sr%a_ee%loc_mat(j2-sr%a_ee%step*my_id,k2:k2+1)
+          end if
+
+          if( ((j2+1)>=sr%a_ee%ind_start) .and. ((j2+1)<=sr%a_ee%ind_end) ) then
+            response_m_eq(j+1,k:k+1) = sr%a_ee%loc_mat((j2+1)-sr%a_ee%step*my_id,k2:k2+1)
+          end if
+
+        end if
+
+      end do
+    end do
+
+    call MPI_AllREDUCE(MPI_IN_PLACE,response_m_eq,size(response_m_eq),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
+    sr%initialized=.true.
+
+  end subroutine init_vacuum_response
+
+ 
   !> Update vacuum response
   !! This is necessary
   !! - right after the start or restart of the code
   !! - when wall resistivity, tstep, or some other parameters have changed.
-  subroutine update_response(my_id, tstep, freeboundary_equil, resistive_wall)
+  subroutine update_response(my_id, tstep, resistive_wall)
 
     use phys_module, only: time_evol_theta, time_evol_zeta
     use mpi_mod
@@ -2783,7 +2845,6 @@ module vacuum_response
     ! --- Routine parameters
     integer,                     intent(in) :: my_id              !< MPI task ID
     real*8,                      intent(in) :: tstep              !< delta t,timestep
-    logical,                     intent(in) :: freeboundary_equil !< Use free boundary equilibrium?
     logical,                     intent(in) :: resistive_wall     !< Resistive or ideal wall?
 
     ! --- Local variables
@@ -2793,6 +2854,9 @@ module vacuum_response
     logical :: update_required
     integer :: ierr,loc_size,ntasks
     real*8  :: test_sum,test_sum2
+    type(t_distrib_mat)  :: response_m_d                   !< \f$\hat{D}\f$ in the documentation
+    type(t_distrib_mat)  :: response_m_a                   !< \f$\hat{A}\f$ in the documentation
+
 
 ! --- Local variables to store the previous values of some parameters.
     real*8,  save :: old_thick   = 0.0
@@ -2818,17 +2882,11 @@ module vacuum_response
                  .or. ( old_theta   /= theta                  ) &
                  .or. ( old_zeta    /= zeta                   ) &
                  .or. ( old_reswall .neqv. resistive_wall     ) &
-                 .or. ( .not. allocated(response_m_a%loc_mat) ) &
                  .or. ( .not. allocated(response_d_b)         ) &
                  .or. ( .not. allocated(response_d_c)         ) &
-                 .or. ( .not. allocated(response_m_d%loc_mat) ) &
                  .or. ( .not. allocated(response_m_e)         ) &
-                 .or. ( .not. allocated(response_m_f%loc_mat) ) &
-                 .or. ( .not. allocated(response_m_g%loc_mat) ) &
                  .or. ( .not. allocated(response_m_h)         ) &
-                 .or. ( .not. allocated(response_m_j)         ) &
-                 .or. ( .not. allocated(response_m_v%loc_mat) ) &
-                 .or. ( .not. allocated(response_m_eq)        )
+                 .or. ( .not. allocated(response_m_j)         )
 
     if ( update_required ) then
       ! --- Remember parameter values.
@@ -2839,7 +2897,6 @@ module vacuum_response
       old_reswall = resistive_wall
 
       ! --- Allocate matrices if required
-      if ( .not. allocated(response_m_eq)) allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
       if ( .not. allocated(response_d_b) ) allocate( response_d_b(n_wall_curr) )
       if ( .not. allocated(response_d_c) ) allocate( response_d_c(n_wall_curr) )
       if ( .not. allocated(response_m_h) ) allocate( response_m_h(n_dof_starwall, n_dof_starwall) )
@@ -2848,37 +2905,7 @@ module vacuum_response
             call  alloc_distr(my_id, response_m_a, (/n_wall_curr, n_dof_starwall/), .false.)
       if( .not. allocated (response_m_d%loc_mat) ) &
             call  alloc_distr(my_id, response_m_d, (/n_wall_curr, n_dof_starwall/), .false.)
-      if( .not. allocated (response_m_f%loc_mat) ) &
-            call  alloc_distr(my_id, response_m_f, (/n_dof_starwall, n_wall_curr/), .true.)
-      if( .not. allocated (response_m_g%loc_mat) ) & 
-            call  alloc_distr(my_id, response_m_g, (/n_dof_starwall, n_wall_curr/), .true.)
-      if( .not. allocated (response_m_v%loc_mat) ) &
-            call  alloc_distr(my_id, response_m_v, (/n_dof_starwall, n_wall_curr/), .true.)
 
-      ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)
-      response_m_eq = 0.d0
-
-      do j = 1, sr%nd_bez/sr%n_tor0, 2
-        j2 = (j-1)*sr%n_tor0 + 1
-        do k = 1, sr%nd_bez/sr%n_tor0, 2
-          k2 = (k-1)*sr%n_tor0 + 1
-
-           if ( sr%a_ee%row_wise ) then
-
-             if ( (j2>=sr%a_ee%ind_start) .and. (j2<=sr%a_ee%ind_end) ) then
-               response_m_eq(j,k:k+1) = sr%a_ee%loc_mat(j2-sr%a_ee%step*my_id,k2:k2+1)
-             end if
-
-             if( ((j2+1)>=sr%a_ee%ind_start) .and. ((j2+1)<=sr%a_ee%ind_end) ) then
-               response_m_eq(j+1,k:k+1) = sr%a_ee%loc_mat((j2+1)-sr%a_ee%step*my_id,k2:k2+1)
-             end if
-
-           end if
-        
-        end do
-      end do
-
-      call MPI_AllREDUCE(MPI_IN_PLACE,response_m_eq,size(response_m_eq),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
       ! --- Derived response matrices for time-evolution
       if ( resistive_wall) then
@@ -2906,14 +2933,6 @@ module vacuum_response
         end do
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_e,size(response_m_e),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-        do k = 1, n_wall_curr
-          response_m_f%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( 1.d0 + response_d_b(k) )
-        end do
-
-        do k = 1, n_wall_curr
-          response_m_g%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * response_d_c(k)
-        end do
-
         response_m_h =0.0
         response_m_h(sr%a_ee%ind_start:sr%a_ee%ind_end,:) = sr%a_ee%loc_mat(:,:)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -2921,10 +2940,8 @@ module vacuum_response
         ! --- m_j =  matmul(a_ey, m_d)
         call matrix_multiplication(my_id,sr%a_ey,mat2=response_m_d,res_mat_not_distr=response_m_j)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_j,size(response_m_j),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-
-        do k = 1, n_wall_curr
-          response_m_v%loc_mat(:,k) = sr%a_ey%loc_mat(:,k) * ( response_d_b(k) )
-        end do
+        call  dealloc_distr(response_m_a)
+        call  dealloc_distr(response_m_d)
         
         deallocate( tmp_d_s )
 
@@ -2933,21 +2950,17 @@ module vacuum_response
         response_m_a%loc_mat(:,:) = 0.d0
         response_d_b(:)   = 0.d0
         response_d_c(:)   = 0.d0
-        response_m_d%loc_mat(:,:) = 0.d0
 
         response_m_e=0.0
         response_m_e(sr%a_id%ind_start:sr%a_id%ind_end,:) =sr%a_id%loc_mat(:,:)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_e,size(response_m_e),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
-        response_m_f%loc_mat(:,:) = 0.d0
-        response_m_g%loc_mat(:,:) = 0.d0
 
         response_m_h =0.0
         response_m_h(sr%a_id%ind_start:sr%a_id%ind_end,:) = sr%a_id%loc_mat(:,:)
         call MPI_AllREDUCE(MPI_IN_PLACE,response_m_h,size(response_m_h),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
 
         response_m_j(:,:) = 0.d0
-        response_m_v%loc_mat(:,:) = 0.d0 !####
 
       end if
 
@@ -2956,40 +2969,17 @@ module vacuum_response
 
         test_sum=0.0
         test_sum2=0.0
-        call MPI_AllREDUCE(sum(abs(response_m_a%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        call MPI_AllREDUCE(sum(response_m_a%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(my_id == 0)   write(*,*) 'm_a:', test_sum2, test_sum
         if(my_id == 0)   write(*,*) 'd_b:', sum(abs(response_d_b)), sum(response_d_b)
         if(my_id == 0)   write(*,*) '1+d_b:',sum(abs(1.d0+response_d_b)), sum(1.d0+response_d_b)
         if(my_id == 0)   write(*,*) 'd_c:', sum(abs(response_d_c)), sum(response_d_c)
 
         test_sum=0.0
         test_sum2=0.0
-        call MPI_AllREDUCE(sum(abs(response_m_d%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        call MPI_AllREDUCE(sum(response_m_d%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(my_id == 0)   write(*,*) 'm_d:', test_sum2, test_sum
         if(my_id == 0)   write(*,*) 'm_e:', sum(abs(response_m_e)), sum(response_m_e)
 
-        test_sum=0.0
-        test_sum2=0.0
-        call MPI_AllREDUCE(sum(abs(response_m_f%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        call MPI_AllREDUCE(sum(response_m_f%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(my_id == 0)   write(*,*) 'm_f:',test_sum2, test_sum
-
-        test_sum=0.0
-        test_sum2=0.0
-        call MPI_AllREDUCE(sum(abs(response_m_g%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        call MPI_AllREDUCE(sum(response_m_g%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(my_id == 0)   write(*,*) 'm_g:',test_sum2, test_sum
         if(my_id == 0)   write(*,*) 'm_h:', sum(abs(response_m_h)), sum(response_m_h)
         if(my_id == 0)   write(*,*) 'm_j:', sum(abs(response_m_j)), sum(response_m_j)
     
-        test_sum=0.0
-        test_sum2=0.0
-        call MPI_AllREDUCE(sum(abs(response_m_v%loc_mat)),test_sum2,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        call MPI_AllREDUCE(sum(response_m_v%loc_mat),test_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(my_id == 0)   write(*,*) 'm_v:',test_sum2, test_sum
-        if(my_id == 0)   write(*,*) 'm_eq:', sum(abs(response_m_eq)), sum(response_m_eq)
         if(my_id == 0)   write(*,*) 'END: Checksums'
       end if
 
@@ -3216,10 +3206,6 @@ module vacuum_response
     write(*,101)'a_ee        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'a_id        ', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'response_m_a', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
-    write(*,101)'response_m_d', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
-    write(*,101)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
-    write(*,101)'response_m_g', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
-    write(*,101)'response_m_f', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks
     write(*,101)'response_m_h', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'response_m_j', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'response_m_e', nd_bez,   nd_bez,   real_nd_bez * real_nd_bez * gbyte_conv, real_nd_bez * real_nd_bez * gbyte_conv / ntasks

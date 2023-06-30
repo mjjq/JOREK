@@ -354,7 +354,7 @@ module vacuum_response
   
   
   !> Read an array from the STARWALL respone file
-  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, row_wise)
+  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, row_wise, skip)
 
     use mpi_mod
     implicit none
@@ -366,7 +366,8 @@ module vacuum_response
     integer(kind=MPI_OFFSET_KIND),  intent(inout)   :: disp !< Present location in the file
     integer,                        intent(in)      :: my_id
     type(t_distrib_mat),            intent(inout)   :: float2d
-    logical,                        intent(in)      :: row_wise ! if  .true. -  rowwise reading; .false. - columnwise    
+    logical,                        intent(in)      :: row_wise ! if  .true. -  rowwise reading; .false. - columnwise
+    logical, optional,              intent(in)      :: skip           
 
     ! --- Local variables
     integer, dimension (MPI_STATUS_SIZE) :: status
@@ -377,7 +378,14 @@ module vacuum_response
     integer           :: my_subarray
     integer           :: num_read_elements, n_step_read, step_read
     integer(KIND=8)   :: local_num_elements, num_read_elements_const, i, i_ind, j_ind
+    logical           :: skip2
+
     
+    skip2 = .false.
+    if (present(skip)) then
+      skip2 = skip
+    end if
+    write(*,*) 'skip, skip', skip2
     if (my_id==0) then
       call MPI_FILE_READ(filehandle, marker,   int(sizeof(marker), 4),   MPI_CHARACTER, status, ierr)
       call MPI_FILE_READ(filehandle, name,     int(sizeof(name), 4),     MPI_CHARACTER, status, ierr)
@@ -417,57 +425,61 @@ module vacuum_response
     endif
 
     local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
+    if (.not. skip2) then
+      call  alloc_distr(my_id, float2d, dim , row_wise)
+    
 
-    call  alloc_distr(my_id, float2d, dim , row_wise)
-
-    call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
-    call MPI_Type_commit(my_subarray,ierr)
+      call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
+      call MPI_Type_commit(my_subarray,ierr)
+    end if
     call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION, my_subarray, "native", MPI_INFO_NULL, ierr)
 
-    ! -----------------------------------
-    ! The following is a work around for an Intel MPI limitation not allowing to read more than 2 GB
-    ! of data per MPI task in each call corresponding to 268435455 double precision values.
-    num_read_elements_const = 250000000
+    if (.not. skip2) then
 
-    if (num_read_elements_const>local_num_elements) then
-      num_read_elements = local_num_elements
-      n_step_read       = 1
-    else
-      n_step_read       = local_num_elements/num_read_elements_const + 1
-      num_read_elements = num_read_elements_const
-    end if
+      ! -----------------------------------
+      ! The following is a work around for an Intel MPI limitation not allowing to read more than 2 GB
+      ! of data per MPI task in each call corresponding to 268435455 double precision values.
+      num_read_elements_const = 250000000
 
-    call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+      if (num_read_elements_const>local_num_elements) then
+        num_read_elements = local_num_elements
+        n_step_read       = 1
+      else
+        n_step_read       = local_num_elements/num_read_elements_const + 1
+        num_read_elements = num_read_elements_const
+      end if
 
-    i_ind=1
-    j_ind=1
+      call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
 
-    do i = 1, n_step_read
-      call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, &
-        MPI_DOUBLE_PRECISION, status, ierr)
+      i_ind=1
+      j_ind=1
 
-      ! Calculation of starting indices of each slice in local array     
-      j_ind = int(num_read_elements,8)*i/loc_sizes(1) + 1
-      i_ind = int(num_read_elements,8)*i-int((j_ind-1),8)*int(loc_sizes(1),8) + 1
+      do i = 1, n_step_read
+        call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, &
+            MPI_DOUBLE_PRECISION, status, ierr)
 
-      ! If number of reading step is not eaqual for each MPI task.         
-      if (num_read_elements_const*int((i+1),8)>local_num_elements) then
-        num_read_elements = local_num_elements-i*num_read_elements_const
-        if (num_read_elements <= 0) then
-          num_read_elements = 0
-          j_ind = 1
-          i_ind = 1
+        ! Calculation of starting indices of each slice in local array     
+        j_ind = int(num_read_elements,8)*i/loc_sizes(1) + 1
+        i_ind = int(num_read_elements,8)*i-int((j_ind-1),8)*int(loc_sizes(1),8) + 1
+
+        ! If number of reading step is not eaqual for each MPI task.         
+        if (num_read_elements_const*int((i+1),8)>local_num_elements) then
+          num_read_elements = local_num_elements-i*num_read_elements_const
+          if (num_read_elements <= 0) then
+            num_read_elements = 0
+            j_ind = 1
+            i_ind = 1
+          endif
         endif
-      endif
-    end do
-    ! End of workaround for Intel MPI limitation
-    ! -----------------------------------
-      
-    !The following line can replace the workaround in the future
-    !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
+      end do
+      ! End of workaround for Intel MPI limitation
+      ! -----------------------------------
 
-    disp = disp + sizeof(float2d%loc_mat(1,1))*dim(1)*dim(2)
-
+      !The following line can replace the workaround in the future
+      !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
+    end if
+    disp = disp + sizeof(1.d0)*dim(1)*dim(2)
+    write(*,*) 'skip', size(float2d%loc_mat)
     ! Return to ordinary file view
     call MPI_File_set_view(filehandle, disp, MPI_BYTE, MPI_BYTE,"native",MPI_INFO_NULL, ierr)
 
@@ -674,8 +686,8 @@ module vacuum_response
     call read_array_par    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye,     .false.)    
     call read_array_par    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey,     .true. )
     call read_array_par    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee,     .true. )
-    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true. )
-    call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true. )
+    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true.)
+    call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true.)
 
     if(my_id == 0 .and. .not. CARIDDI_mode) then
      call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)

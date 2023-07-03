@@ -355,7 +355,7 @@ module vacuum_response
   
   
   !> Read an array from the STARWALL respone file
-  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, row_wise, loc_start2, loc_length2, loc_row)
+  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, row_wise, loc_start, loc_len, loc_row)
 
     use mpi_mod
     implicit none
@@ -368,9 +368,9 @@ module vacuum_response
     integer,                        intent(in)      :: my_id
     type(t_distrib_mat),            intent(inout)   :: float2d
     logical,                        intent(in)      :: row_wise ! if  .true. -  rowwise reading; .false. - columnwise
-    integer, optional,              intent(in)      :: loc_start2
-    integer, optional,              intent(in)      :: loc_length2
-    logical, optional,              intent(in)      :: loc_row
+    integer, optional,              intent(in)      :: loc_start    ! start index of partial read in direction loc_row
+    integer, optional,              intent(in)      :: loc_len      ! length partial read in direction loc_row
+    logical, optional,              intent(in)      :: loc_row      ! direction of partial read (has to be opposite of row_wise)
 
 
     ! --- Local variables
@@ -382,21 +382,26 @@ module vacuum_response
     integer           :: my_subarray
     integer           :: num_read_elements, n_step_read, step_read
     integer(KIND=8)   :: local_num_elements, num_read_elements_const, i, i_ind, j_ind
-    integer           :: loc_start, loc_length
-    
-    if (present(loc_start2)) then
-      if (loc_row .eq. row_wise) then
-        write(*,*) 'partial read not implemented for this combination, loc_row, row_wise',loc_row, row_wise, array_name
+    integer           :: read_start, read_len
+
+    if  (.not. ( (present(loc_start) .eqv.  present(loc_len))  .and.  (present(loc_start) .eqv. present(loc_row))) ) then
+      write(*,*) 'If you want to read a matrix partially you have to specify loc_start, loc_len, loc_row'
+      stop
+    end if
+
+    if (present(loc_start)) then
+      if (loc_row .eqv. row_wise) then
+        write(*,*) 'partial read not implemented for this combination, loc_row, row_wise', loc_row, row_wise, array_name
         stop
       end if
-      loc_length=loc_length2
-      loc_start=loc_start2 -1
+      read_len=loc_len
+      read_start =loc_start -1
     else
-      loc_start = 0
+      read_start = 0
       if (row_wise) then
-        loc_length   =  dim(2)
+        read_len   =  dim(2)
       else
-        loc_length   =  dim(1)
+        read_len   =  dim(1)
       end if
     end if
 
@@ -426,23 +431,23 @@ module vacuum_response
 
     if(row_wise) then ! If we read matrix rowwise
       float2d%step       = dim(1) / ntasks
-      loc_starts(:)      = (/ my_id*float2d%step, loc_start /)
-      loc_sizes(:)       = (/ float2d%step, loc_length /)
+      loc_starts(:)      = (/ my_id*float2d%step, read_start /)
+      loc_sizes(:)       = (/ float2d%step, read_len /)
       if (my_id==ntasks-1) loc_sizes(1) = float2d%step + dim(1)-ntasks*float2d%step
       float2d%row_wise   = .true.
     else             ! If we read matrix columnwise
       float2d%step       = dim(2) / ntasks
-      loc_starts(:)      = (/ loc_start, my_id*float2d%step /)
-      loc_sizes(:)       = (/ loc_length, float2d%step /)
+      loc_starts(:)      = (/ read_start, my_id*float2d%step /)
+      loc_sizes(:)       = (/ read_len, float2d%step /)
       if (my_id==ntasks-1) loc_sizes(2) = float2d%step + dim(2)-ntasks*float2d%step
       float2d%row_wise   = .false.
     endif
 
     local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
     if (row_wise) then
-      call  alloc_distr(my_id, float2d, (/dim(1) , loc_length /) , row_wise)
+      call  alloc_distr(my_id, float2d, (/dim(1) , read_len /) , row_wise)
     else
-      call  alloc_distr(my_id, float2d, (/loc_length, dim(2)/) , row_wise)
+      call  alloc_distr(my_id, float2d, (/read_len, dim(2)/) , row_wise)
     end if
     
     call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
@@ -491,10 +496,6 @@ module vacuum_response
       
     !The following line can replace the workaround in the future
     !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
-
-      !The following line can replace the workaround in the future
-      !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
-    end if
     disp = disp + sizeof(1.d0)*dim(1)*dim(2)
 
     ! Return to ordinary file view
@@ -706,10 +707,17 @@ module vacuum_response
     call read_array_par    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye,     .false.)    
     call read_array_par    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey,     .true. )
     call read_array_par    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee,     .true. )
-    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .false. , &
-        loc_start2=sr%ind_start_coils, loc_length2=sr%ncoil, loc_row=.true. )
-    call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true., &
-        loc_start2=sr%ind_start_coils, loc_length2=sr%ncoil, loc_row=.false. )
+    if (.not. vacuum_min) then
+      if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .false.)
+      call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true.)
+    else
+      if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .false. , &
+          loc_start=sr%ind_start_coils, loc_len=sr%ncoil, loc_row=.true. )
+      call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true., &
+          loc_start=sr%ind_start_coils, loc_len=sr%ncoil, loc_row=.false. )
+      sr%ind_start_coils = 1
+    end if
+      
     if(my_id == 0 .and. .not. CARIDDI_mode) then
      call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
      call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
@@ -1259,7 +1267,6 @@ module vacuum_response
   
     if (my_id == 0) then
        write(*,*)
-       if (vacuum_min) 'WARNING: vacuum_min = .true. this means you can only diagnose coil currents during the run'
        write(*,32)
        write(*,33) 'STARWALL RESPONSE INFORMATION:'
        write(*,32)
@@ -1289,6 +1296,7 @@ module vacuum_response
        write(*,33) 'ind_start_diag_coils    =', sr%ind_start_diag_coils
       if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
       if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
+      if (vacuum_min) write(*,*) 'WARNING: vacuum_min = .true. this means you can only diagnose coil currents during the run'
     end if 
 
 
@@ -1969,18 +1977,16 @@ module vacuum_response
     call boundary_check(my_id)
     allocate(rhs_contrib_arr(n_dof_starwall))
     rhs_contrib_arr=0.0
-    !> WARNING: the arrays response_d_b and response_d_c are allocated and
-    !!          populated within the above call to update_response
-    !> part of the old response_m_f
     if (resistive_wall) then
       if (.not. allocated(diag_1)) allocate(diag_1(n_wall_curr))
-      diag_1(:) = ( 1.d0 + response_d_b(:) ) 
+      diag_1(:) = ( 1.d0 + response_d_b(:) )
+      !> corresponds to matrix F in documentation
       call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, diag_1, &
           wall_curr(:), .true., rhs_contrib_arr, .false.)
-      !> part of the old response_m_g
+      !> corresponds to matrix G in documentation
       call extended_matrix_vector(my_id,  1.0d0, sr%a_ey, response_d_c, &
           dwall_curr(:), .true., rhs_contrib_arr, .false.)
-      !> part of the old response_m_v
+      !> corresponds to matrix V in documentation
       call extended_matrix_vector(my_id, -1.0d0, sr%a_ey, response_d_b, &
           Y_coils0(:), .true., rhs_contrib_arr, .true.)
     end if
@@ -2419,7 +2425,7 @@ module vacuum_response
    
     ! --- Routine parameters
     integer, intent(in)       :: my_id  
-    integer                   :: i, ierr
+    integer                   :: i, i1, i2, ierr
     real*8, allocatable       :: potentials_real_0(:)
     real*8, save, allocatable :: delta_Icoils_0(:)
     real*8, save              :: t_last=-1e3, Z_p = 1.d10
@@ -2486,9 +2492,10 @@ module vacuum_response
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
     potentials_real_0(:) = I_coils(:)  * mu_zero
+    i1 = sr%ind_start_coils;       i2 = sr%ind_start_coils + sr%ncoil -1
     do i = 1, n_wall_curr
       if ( (i>=sr%s_ww_inv%ind_start) .and. (i<=sr%s_ww_inv%ind_end) ) then
-        Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:)*potentials_real_0(:))
+        Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,i1:i2)*potentials_real_0(:))
       end if
     end do
     call MPI_ALLReduce(MPI_IN_PLACE, Y_coils0, size(Y_coils0),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -2775,8 +2782,9 @@ module vacuum_response
     deallocate( tripot_w )
     
   end subroutine log_wall_curr
+
   
-  
+  !> Calculate matrix response_m_eq needed for freeboundary equilibrium
   subroutine init_vacuum_response(my_id,  freeboundary_equil)
 
     use mpi_mod
@@ -3198,8 +3206,14 @@ module vacuum_response
 
     ! --- Local variables
     real*8    :: tot_mem, gbyte_conv, real_n_w, real_nd_bez
+    real*8    :: s_ww_dim
+    real_n_w = real(n_w,8); real_nd_bez = real(nd_bez,8)
 
-    real_n_w = real(n_w,8); real_nd_bez = real(nd_bez,8) 
+    if (vacuum_min) then
+      s_ww_dim = real(real_n_w * sr%ncoil,8)
+    else
+      s_ww_dim = real(real_n_w * real_n_w,8)
+    end if
 
     100 format(80('-'))
     101 format(5x, a,'(',i6,',',i6,') = ',E11.3E2,' GB total / ',E11.3E2, ' GB per MPI task')
@@ -3207,11 +3221,11 @@ module vacuum_response
     
     !1 DP converted to GB 
     gbyte_conv = 8.d0/1024.d0/1024.d0/1024.d0
- 
+    
     write(*,100)  
     write(*,*) 'Predicted memory consumption in the JOREK-STARWALL part:'
     write(*,*)
-    write(*,101)'s_ww        ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv, real_n_w    * real_n_w    * gbyte_conv / ntasks
+    write(*,101)'s_ww        ', n_w,      n_w,      s_ww_dim    *               gbyte_conv, s_ww_dim    *               gbyte_conv / ntasks
     write(*,101)'s_ww_inv    ', n_w,      n_w,      real_n_w    * real_n_w    * gbyte_conv, real_n_w    * real_n_w    * gbyte_conv / ntasks
     write(*,101)'a_ye        ', n_w,      nd_bez,   real_n_w    * real_nd_bez * gbyte_conv, real_n_w    * real_nd_bez * gbyte_conv / ntasks
     write(*,101)'a_ey        ', nd_bez,   n_w,      real_nd_bez * real_n_w    * gbyte_conv, real_nd_bez * real_n_w    * gbyte_conv / ntasks

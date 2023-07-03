@@ -226,13 +226,12 @@ module vacuum_equilibrium
       i_start_pf = sr%ind_start_pol_coils
       i_end_pf   = i_start_pf + sr%n_pol_coils -1
       if ( .not. allocated(wall_curr) )       allocate( wall_curr(n_wall_curr) ) 
-      if ( .not. allocated (potentials_real)) allocate(potentials_real(n_wall_curr))      
+      if ( .not. allocated (potentials_real)) allocate(potentials_real(sr%ncoil))      
       wall_curr       = 0.d0
       potentials_real = 0.d0
-      potentials_real(1:sr%ncoil) = 0.d0
-      potentials_real(i_start_pf+i_start_coil:i_end_pf+i_start_coil) = &
+      potentials_real(i_start_pf:i_end_pf) = &
            I_coils(i_start_pf:i_end_pf) * mu_zero
-
+      
       do i = 1, n_wall_curr
         if ( (i>=sr%s_ww_inv%ind_start) .and. (i<=sr%s_ww_inv%ind_end) ) then
           wall_curr(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:) *potentials_real(:))

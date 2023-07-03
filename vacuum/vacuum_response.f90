@@ -355,7 +355,7 @@ module vacuum_response
   
   
   !> Read an array from the STARWALL respone file
-  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, row_wise, skip)
+  subroutine read_array_par(filehandle, array_name, dim, disp, my_id, float2d, row_wise, loc_start2, loc_length2, loc_row)
 
     use mpi_mod
     implicit none
@@ -368,7 +368,10 @@ module vacuum_response
     integer,                        intent(in)      :: my_id
     type(t_distrib_mat),            intent(inout)   :: float2d
     logical,                        intent(in)      :: row_wise ! if  .true. -  rowwise reading; .false. - columnwise
-    logical, optional,              intent(in)      :: skip           
+    integer, optional,              intent(in)      :: loc_start2
+    integer, optional,              intent(in)      :: loc_length2
+    logical, optional,              intent(in)      :: loc_row
+
 
     ! --- Local variables
     integer, dimension (MPI_STATUS_SIZE) :: status
@@ -379,12 +382,22 @@ module vacuum_response
     integer           :: my_subarray
     integer           :: num_read_elements, n_step_read, step_read
     integer(KIND=8)   :: local_num_elements, num_read_elements_const, i, i_ind, j_ind
-    logical           :: skip2
-
+    integer           :: loc_start, loc_length
     
-    skip2 = .false.
-    if (present(skip)) then
-      skip2 = skip
+    if (present(loc_start2)) then
+      if (loc_row .eq. row_wise) then
+        write(*,*) 'partial read not implemented for this combination, loc_row, row_wise',loc_row, row_wise, array_name
+        stop
+      end if
+      loc_length=loc_length2
+      loc_start=loc_start2 -1
+    else
+      loc_start = 0
+      if (row_wise) then
+        loc_length   =  dim(2)
+      else
+        loc_length   =  dim(1)
+      end if
     end if
 
     if (my_id==0) then
@@ -413,68 +426,71 @@ module vacuum_response
 
     if(row_wise) then ! If we read matrix rowwise
       float2d%step       = dim(1) / ntasks
-      loc_starts(:)      = (/ my_id*float2d%step, 0 /)
-      loc_sizes(:)       = (/ float2d%step, dim(2) /)
+      loc_starts(:)      = (/ my_id*float2d%step, loc_start /)
+      loc_sizes(:)       = (/ float2d%step, loc_length /)
       if (my_id==ntasks-1) loc_sizes(1) = float2d%step + dim(1)-ntasks*float2d%step
       float2d%row_wise   = .true.
     else             ! If we read matrix columnwise
       float2d%step       = dim(2) / ntasks
-      loc_starts(:)      = (/ 0, my_id*float2d%step /)
-      loc_sizes(:)       = (/ dim(1), float2d%step /)
+      loc_starts(:)      = (/ loc_start, my_id*float2d%step /)
+      loc_sizes(:)       = (/ loc_length, float2d%step /)
       if (my_id==ntasks-1) loc_sizes(2) = float2d%step + dim(2)-ntasks*float2d%step
       float2d%row_wise   = .false.
     endif
 
     local_num_elements = int(loc_sizes(1),8) * int(loc_sizes(2),8)
-    if (.not. skip2) then
-      call  alloc_distr(my_id, float2d, dim , row_wise)
-    
-
-      call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
-      call MPI_Type_commit(my_subarray,ierr)
+    if (row_wise) then
+      call  alloc_distr(my_id, float2d, (/dim(1) , loc_length /) , row_wise)
+    else
+      call  alloc_distr(my_id, float2d, (/loc_length, dim(2)/) , row_wise)
     end if
+    
+    call MPI_TYPE_CREATE_SUBARRAY(2,dim,loc_sizes,loc_starts,MPI_ORDER_FORTRAN,MPI_DOUBLE_PRECISION,my_subarray,ierr)
+    call MPI_Type_commit(my_subarray,ierr)
+
     call MPI_File_set_view(filehandle, disp, MPI_DOUBLE_PRECISION, my_subarray, "native", MPI_INFO_NULL, ierr)
 
-    if (.not. skip2) then
+    ! -----------------------------------
+    ! The following is a work around for an Intel MPI limitation not allowing to read more than 2 GB
+    ! of data per MPI task in each call corresponding to 268435455 double precision values.
+    num_read_elements_const = 250000000
 
-      ! -----------------------------------
-      ! The following is a work around for an Intel MPI limitation not allowing to read more than 2 GB
-      ! of data per MPI task in each call corresponding to 268435455 double precision values.
-      num_read_elements_const = 250000000
+    if (num_read_elements_const>local_num_elements) then
+      num_read_elements = local_num_elements
+      n_step_read       = 1
+    else
+      n_step_read       = local_num_elements/num_read_elements_const + 1
+      num_read_elements = num_read_elements_const
+    end if
 
-      if (num_read_elements_const>local_num_elements) then
-        num_read_elements = local_num_elements
-        n_step_read       = 1
-      else
-        n_step_read       = local_num_elements/num_read_elements_const + 1
-        num_read_elements = num_read_elements_const
-      end if
+    call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
 
-      call MPI_AllREDUCE(MPI_IN_PLACE,n_step_read,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,ierr)
+    i_ind=1
+    j_ind=1
 
-      i_ind=1
-      j_ind=1
+    do i = 1, n_step_read
+      call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, &
+        MPI_DOUBLE_PRECISION, status, ierr)
 
-      do i = 1, n_step_read
-        call MPI_File_read_all(filehandle, float2d%loc_mat(i_ind, j_ind),num_read_elements, &
-            MPI_DOUBLE_PRECISION, status, ierr)
+      ! Calculation of starting indices of each slice in local array     
+      j_ind = int(num_read_elements,8)*i/loc_sizes(1) + 1
+      i_ind = int(num_read_elements,8)*i-int((j_ind-1),8)*int(loc_sizes(1),8) + 1
 
-        ! Calculation of starting indices of each slice in local array     
-        j_ind = int(num_read_elements,8)*i/loc_sizes(1) + 1
-        i_ind = int(num_read_elements,8)*i-int((j_ind-1),8)*int(loc_sizes(1),8) + 1
-
-        ! If number of reading step is not eaqual for each MPI task.         
-        if (num_read_elements_const*int((i+1),8)>local_num_elements) then
-          num_read_elements = local_num_elements-i*num_read_elements_const
-          if (num_read_elements <= 0) then
-            num_read_elements = 0
-            j_ind = 1
-            i_ind = 1
-          endif
+      ! If number of reading step is not eaqual for each MPI task.         
+      if (num_read_elements_const*int((i+1),8)>local_num_elements) then
+        num_read_elements = local_num_elements-i*num_read_elements_const
+        if (num_read_elements <= 0) then
+          num_read_elements = 0
+          j_ind = 1
+          i_ind = 1
         endif
-      end do
-      ! End of workaround for Intel MPI limitation
-      ! -----------------------------------
+      endif
+    end do
+    ! End of workaround for Intel MPI limitation
+    ! -----------------------------------
+      
+    !The following line can replace the workaround in the future
+    !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
 
       !The following line can replace the workaround in the future
       !call MPI_File_read_all(filehandle, float2d%loc_mat, loc_sizes(1)*loc_sizes(2), MPI_DOUBLE_PRECISION,status, ierr)
@@ -683,14 +699,17 @@ module vacuum_response
 
     call MPI_BCAST(sr%n_w,    1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
     call MPI_BCAST(sr%nd_bez, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, err)
+    call MPI_bcast(sr%ind_start_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, err)
+    call MPI_bcast(sr%ncoil,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, err)
 
     ! Last parameter defines how matrix should be distributed: .false. - rowwise; .true. - columnwise
     call read_array_par    (filehandle, 'ye',       (/sr%n_w,sr%nd_bez/),    disp, my_id,  sr%a_ye,     .false.)    
     call read_array_par    (filehandle, 'ey',       (/sr%nd_bez,sr%n_w/),    disp, my_id,  sr%a_ey,     .true. )
     call read_array_par    (filehandle, 'ee',       (/sr%nd_bez,sr%nd_bez/), disp, my_id,  sr%a_ee,     .true. )
-    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .true. )
-    call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true. )
-
+    if (.not. CARIDDI_mode) call read_array_par    (filehandle, 's_ww',     (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww,     .false. , &
+        loc_start2=sr%ind_start_coils, loc_length2=sr%ncoil, loc_row=.true. )
+    call read_array_par    (filehandle, 's_ww_inv', (/sr%n_w,sr%n_w/),       disp, my_id,  sr%s_ww_inv, .true., &
+        loc_start2=sr%ind_start_coils, loc_length2=sr%ncoil, loc_row=.false. )
     if(my_id == 0 .and. .not. CARIDDI_mode) then
      call read_array_not_distr(filehandle, 'xyzpot_w', (/sr%npot_w,3/), disp, float2d=sr%xyzpot_w)
      call read_array_not_distr(filehandle, 'jpot_w',   (/sr%ntri_w,3/), disp, int2d=sr%jpot_w)
@@ -1094,7 +1113,6 @@ module vacuum_response
     call MPI_bcast(sr%file_version,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_bnd,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%nd_bez,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ncoil,                   1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%npot_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_w,                     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ntri_w,                  1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -1115,7 +1133,6 @@ module vacuum_response
     call MPI_bcast(sr%n_voltage_coils,         1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%n_diag_coils,            1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_pol_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
-    call MPI_bcast(sr%ind_start_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_rmp_coils,     1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_voltage_coils, 1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
     call MPI_bcast(sr%ind_start_diag_coils,    1, MPI_INTEGER,  0, MPI_COMM_WORLD, ierr)
@@ -1314,6 +1331,7 @@ module vacuum_response
           if (my_id == 0) write(*,36) 'a_id         '
         end if
       end if
+
       test_sum=0.0
       if (allocated(sr%s_ww%loc_mat)) then
         call MPI_Reduce(sum(sr%s_ww%loc_mat), test_sum, 1, MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
@@ -2282,7 +2300,7 @@ module vacuum_response
     real*8, allocatable :: dpsibnd_vec(:)   ! Vector of deltaPsi values at the boundary
     real*8, allocatable :: wall_and_coil_curr(:)
     real*8, allocatable :: tmp_coil_curr(:)
-    integer             :: k, k2, global_index, ierr
+    integer             :: k, k2, ierr
     
     call det_psibnd_vec(bnd_node_list, node_list, psibnd_vec, dpsibnd_vec)
     
@@ -2314,7 +2332,7 @@ module vacuum_response
     allocate( old_dpsibnd_vec(n_dof_starwall) )
     old_dpsibnd_vec(:) = 0.d0
 
-    if (.not. CARIDDI_mode) call write_wall_vtk(0, resistive_wall, my_id)
+!    if (.not. CARIDDI_mode) call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
 
     ! --- Initialize net toroidal wall current (for plot_live_data)
@@ -2325,10 +2343,7 @@ module vacuum_response
       end if
       if (.not. CARIDDI_mode) then
         k2 = sr%ncoil + 1 
-        if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-          global_index = my_id*sr%s_ww%step
-          net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-        endif
+        net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
         call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
       end if
     end if
@@ -2340,10 +2355,7 @@ module vacuum_response
       tmp_coil_curr = 0.d0
       if (.not. CARIDDI_mode) then
         do k = 1, sr%ncoil
-          if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
-            global_index = my_id*sr%s_ww%step
-            tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
-          endif
+          tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
         end do
         call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
       end if
@@ -2467,11 +2479,11 @@ module vacuum_response
 
 
     if (.not. allocated (Y_coils0)) allocate(Y_coils0(n_wall_curr))
-    if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_wall_curr))
+    if (.not. allocated (potentials_real_0)) allocate(potentials_real_0(n_coils))
     ! --- Transform real currents into starwall currents
     Y_coils0          = 0.d0
     potentials_real_0 = 0.d0
-    potentials_real_0(sr%ind_start_coils:sr%ind_start_coils+n_coils-1) = I_coils(1:n_coils)  * mu_zero
+    potentials_real_0(:) = I_coils(:)  * mu_zero
     do i = 1, n_wall_curr
       if ( (i>=sr%s_ww_inv%ind_start) .and. (i<=sr%s_ww_inv%ind_end) ) then
         Y_coils0(i) = sum(sr%s_ww_inv%loc_mat(i-my_id*sr%s_ww_inv%step,:)*potentials_real_0(:))
@@ -2497,7 +2509,7 @@ module vacuum_response
     real*8,  intent(in) :: dpsibnd_vec(n_dof_starwall) !< Vector of deltaPsi boundary values
     
     ! --- Local variables
-    integer              :: k, k2, global_index
+    integer              :: k, k2
     integer              :: ierr
     real *8, allocatable :: dwall_curr_2(:)
     real *8, allocatable :: tmp_coil_curr(:)
@@ -2544,30 +2556,27 @@ module vacuum_response
     if (index_now <= 1 ) dwall_curr = 0.d0
     wall_curr(:) = wall_curr(:) + dwall_curr(:)
 
-    if (.not. CARIDDI_mode) then
-      call write_wall_vtk(index_now, resistive_wall, my_id)
+!    if (.not. CARIDDI_mode) then
+!      call write_wall_vtk(index_now, resistive_wall, my_id)
 
-      if ( vacuum_debug .and. resistive_wall ) then
-        call log_wall_curr(my_id)
+!      if ( vacuum_debug .and. resistive_wall ) then
+!        call log_wall_curr(my_id)
 !        call log_coil_curr()
-     end if
-  end if
+!     end if
+!  end if
 
     ! --- Extract net toroidal wall current such that it can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if ( (.not. allocated(net_tor_wall_curr)) .and. (index_start+nstep >0) ) then
       allocate( net_tor_wall_curr(index_start+nstep) )
       net_tor_wall_curr(:) = 0.d0
     end if
-    if (.not. CARIDDI_mode) then
-      if (index_now>0) then
-        k2 = sr%ncoil + 1
-        if ( (k2 >= sr%s_ww%ind_start) .and. (k2 <= sr%s_ww%ind_end) ) then
-          global_index = my_id*sr%s_ww%step
-          net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2 - global_index,:) * wall_curr(:))
-        endif
-     endif
-     call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    endif
+!    if (.not. CARIDDI_mode) then
+!      if (index_now>0) then
+!        k2 = sr%ncoil + 1
+!        net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
+!      endif
+!      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+!    endif
 
 
     ! --- Extract coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
@@ -2577,10 +2586,8 @@ module vacuum_response
       tmp_coil_curr = 0.d0
       if (.not. CARIDDI_mode) then
         do k = 1, sr%ncoil
-          if ( (k >= sr%s_ww%ind_start) .and. (k <= sr%s_ww%ind_end) ) then
-            global_index = my_id*sr%s_ww%step
-            tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k - global_index,:) * wall_curr(:))
-          endif
+          tmp_coil_curr(k) = sum(sr%s_ww%loc_mat(k,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
+            
         end do
         call MPI_ALLReduce(MPI_IN_PLACE, tmp_coil_curr,sr%ncoil,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
       end if
@@ -2659,7 +2666,7 @@ module vacuum_response
     real*8,  optional,   intent(inout) :: Iw_net_tor 
 
     ! --- Local variables
-    integer              :: i, j, ierr, global_index, ntasks
+    integer              :: i, j, ierr
     integer              :: count=1
     real*8, allocatable  :: pot_tmp(:)
 
@@ -2670,13 +2677,10 @@ module vacuum_response
 
     ! --- multiply by the similarity transform matrix to get the physical wall potentials
     if ( allocated(wall_curr) ) then
-      global_index = my_id*sr%s_ww%step
 
       do i = 1, sr%npot_w
         j = i + sr%ncoil
-        if ( (j >= sr%s_ww%ind_start) .and. (j <= sr%s_ww%ind_end) ) then
-          pot_tmp(i) = sum(sr%s_ww%loc_mat(j - global_index,:) * wall_curr(:))
-        end if  
+        pot_tmp(i) = sum(sr%s_ww%loc_mat(j,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
       end do
      
     end if
@@ -2728,7 +2732,7 @@ module vacuum_response
     integer,             intent(in)    :: my_id
 
     ! --- Local variables
-    integer              :: i, j, ierr, global_index, ntasks
+    integer              :: i, j, ierr
     integer              :: count=1
 
     if (sr%ncoil < 1 ) return
@@ -2738,12 +2742,9 @@ module vacuum_response
 
     ! --- multiply by the similarity transform matrix to get the physical wall potentials
     if ( allocated(wall_curr) ) then
-      global_index = my_id*sr%s_ww%step
 
       do i = 1, sr%ncoil
-        if ( (i >= sr%s_ww%ind_start) .and. (i <= sr%s_ww%ind_end) ) then
-          pot_c(i) = sum(sr%s_ww%loc_mat(i - global_index,:) * wall_curr(:))
-        end if  
+        pot_c(i) = sum(sr%s_ww%loc_mat(i,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
       end do
      
     end if
@@ -2777,7 +2778,7 @@ module vacuum_response
   subroutine init_vacuum_response(my_id,  freeboundary_equil)
 
     use mpi_mod
-
+    use phys_module, only: restart
     implicit none
 
     ! --- Routine parameters
@@ -2790,16 +2791,25 @@ module vacuum_response
 
     if ( sr%n_tor == 0 ) then
       write(*,*) 'Remark: Routine init_vacuum_response is not doing anything since sr%n_tor==0.'
+      sr%initialized = .true.
       return
     end if
 
     if ( .not. freeboundary_equil ) then
       write(*,*) 'Remark: Routine init_vacuum_response is not doing anything since freeboundary_equil=.false..'
+      sr%initialized = .true.
       return
     end if
 
+    if ( restart ) then
+      write(*,*) 'response_m_eq only required in equilibrium, return.'
+      sr%initialized = .true.
+      return
+    end if
+    
     if (sr%initialized) return
 
+    if (my_id .eq. 0) write(*,*) 'INIT vacuum response, calculate response_m_eq'
     ! --- Allocate matrices if required
     if ( .not. allocated(response_m_eq)) allocate( response_m_eq(sr%nd_bez/sr%n_tor, sr%nd_bez/sr%n_tor) )
     ! --- Derived response matrix for equilibrium (extract n=0 part from STARWALL EE matrix)

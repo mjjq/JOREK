@@ -13,6 +13,7 @@ module vacuum
   integer             :: n_dof_bnd                       !< Total number of boundary dofs per harmonic
   integer             :: n_dof_starwall                  !< Total number of boundary dofs in STARWALL response
   logical             :: CARIDDI_mode                    !< CARIDDI or STARWALL
+  logical             :: vacuum_min                      !< Mode to minimalize memory consumption
   
   !> @name Resistive wall only
   real*8              :: wall_resistivity_fact           !< Scaling factor for the wall and coil resistivities specified in STARWALL
@@ -417,6 +418,7 @@ module vacuum
     
     ! --- Preset namelist input parameters.
     CARIDDI_mode         = .false.            !< True if CARIDDI input file
+    vacuum_min           = .false.
     freeboundary_equil   = .false.
     starwall_equil_coils = .false.
     find_pf_coil_currents= .false.

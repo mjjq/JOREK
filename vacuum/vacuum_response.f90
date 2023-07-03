@@ -1258,7 +1258,8 @@ module vacuum_response
     37 format(3x,a,es25.15)
   
     if (my_id == 0) then
-         write(*,*)
+       write(*,*)
+       if (vacuum_min) 'WARNING: vacuum_min = .true. this means you can only diagnose coil currents during the run'
        write(*,32)
        write(*,33) 'STARWALL RESPONSE INFORMATION:'
        write(*,32)
@@ -1289,6 +1290,7 @@ module vacuum_response
       if ( sr%file_version >= 2) write(*,37) 'eta_thin_w        =', sr%eta_thin_w
       if (allocated(sr%i_tor)) write(*,33) 'i_tor               ='//trim(modes_to_str(sr%i_tor,sr%n_tor,n_period))
     end if 
+
 
     if ( vacuum_debug ) then
       
@@ -2332,7 +2334,7 @@ module vacuum_response
     allocate( old_dpsibnd_vec(n_dof_starwall) )
     old_dpsibnd_vec(:) = 0.d0
 
-!    if (.not. CARIDDI_mode) call write_wall_vtk(0, resistive_wall, my_id)
+    if (.not. CARIDDI_mode .and. .not. vacuum_min) call write_wall_vtk(0, resistive_wall, my_id)
     deallocate( psibnd_vec, dpsibnd_vec )
 
     ! --- Initialize net toroidal wall current (for plot_live_data)
@@ -2341,7 +2343,7 @@ module vacuum_response
         allocate( net_tor_wall_curr(index_start+nstep) )
         net_tor_wall_curr(:) = 0.d0
       end if
-      if (.not. CARIDDI_mode) then
+      if (.not. CARIDDI_mode .and. .not. vacuum_min) then
         k2 = sr%ncoil + 1 
         net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
         call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
@@ -2556,27 +2558,27 @@ module vacuum_response
     if (index_now <= 1 ) dwall_curr = 0.d0
     wall_curr(:) = wall_curr(:) + dwall_curr(:)
 
-!    if (.not. CARIDDI_mode) then
-!      call write_wall_vtk(index_now, resistive_wall, my_id)
+    if (.not. CARIDDI_mode  .and. .not. vacuum_min) then
+      call write_wall_vtk(index_now, resistive_wall, my_id)
 
-!      if ( vacuum_debug .and. resistive_wall ) then
-!        call log_wall_curr(my_id)
+      if ( vacuum_debug .and. resistive_wall ) then
+        call log_wall_curr(my_id)
 !        call log_coil_curr()
-!     end if
-!  end if
+     end if
+  end if
 
     ! --- Extract net toroidal wall current such that it can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)
     if ( (.not. allocated(net_tor_wall_curr)) .and. (index_start+nstep >0) ) then
       allocate( net_tor_wall_curr(index_start+nstep) )
       net_tor_wall_curr(:) = 0.d0
     end if
-!    if (.not. CARIDDI_mode) then
-!      if (index_now>0) then
-!        k2 = sr%ncoil + 1
-!        net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
-!      endif
-!      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-!    endif
+    if (.not. CARIDDI_mode .and. .not. vacuum_min) then
+      if (index_now>0) then
+        k2 = sr%ncoil + 1
+        net_tor_wall_curr(index_now) = sum(sr%s_ww%loc_mat(k2,:) * wall_curr(sr%s_ww%ind_start:sr%s_ww%ind_end))
+      endif
+      call MPI_ALLReduce(MPI_IN_PLACE, net_tor_wall_curr(index_now),1 ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+    endif
 
 
     ! --- Extract coil currents such that they can be written to the macroscopic_vars.dat file (e.g., for ./util/plot_live_data.sh)

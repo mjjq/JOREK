@@ -1258,7 +1258,11 @@ do i=1,n_vertex_max
             source_neutral       = 0.d0; source_neutral_arr       = 0.d0
             source_neutral_drift = 0.d0; source_neutral_drift_arr = 0.d0
 
-            call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+            if (with_impurities) then ! If with_impurities, we have to use the mixed pellet ablation laws and extract the neutral hydrogen isotope ablation rate
+              call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,NULL,m_i_over_m_imp,index_main_imp, source_neutral_drift_arr)
+            else
+              call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+            endif
 
             do i_inj = 1,n_inj
               source_neutral       = source_neutral + source_neutral_arr(i_inj)
@@ -1307,6 +1311,8 @@ do i=1,n_vertex_max
           source_bg  = 0.d0; source_bg_arr = 0.d0
           if (with_impurities) then
             call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp)
+            if (with_neutrals) source_bg_arr = 0.d0 ! When with_neutrals, background species is generated into the neutrals instead!
+
             do i_inj = 1,n_inj
               source_imp = source_imp + source_imp_arr(i_inj)
               source_bg  = source_bg  + source_bg_arr(i_inj)

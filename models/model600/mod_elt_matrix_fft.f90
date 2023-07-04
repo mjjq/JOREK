@@ -1308,10 +1308,10 @@ do i=1,n_vertex_max
           end do
 
           ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
-          if (.not. (with_neutrals .and. with_impurities)) source_imp = 0.d0; source_imp_arr = 0.d0 ! if with_neutrals and with_impurities we should already called this once above
+          if (.not. (with_neutrals .and. with_impurities)) source_imp = 0.d0; source_imp_arr = 0.d0 ! if with_neutrals and with_impurities we should already have called this once above
           source_bg  = 0.d0; source_bg_arr = 0.d0
           if (with_impurities) then
-            if (.not. with_neutrals) call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp) ! if with_neutrals and with_impurities we should already called this once above
+            if (.not. with_neutrals) call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp) ! if with_neutrals and with_impurities we should already have called this once above
 
             do i_inj = 1,n_inj
               source_imp = source_imp + source_imp_arr(i_inj)

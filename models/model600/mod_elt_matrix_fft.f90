@@ -1262,7 +1262,7 @@ do i=1,n_vertex_max
 
             if (with_impurities) then ! If with_impurities, we have to use the mixed pellet ablation laws and extract the neutral hydrogen isotope ablation rate
               source_imp       = 0.d0; source_imp_arr       = 0.d0
-              source_imp_dirft = 0.d0; source_imp_drift_arr = 0.d0
+              source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
               call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_neutral_drift_arr, source_imp_drift_arr)
             else
               call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
@@ -1313,7 +1313,7 @@ do i=1,n_vertex_max
           ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
           if (.not. (with_neutrals .and. with_impurities)) then ! if with_neutrals and with_impurities we should already have called this once above
             source_imp       = 0.d0; source_imp_arr       = 0.d0
-            source_imp_dirft = 0.d0; source_imp_drift_arr = 0.d0
+            source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
           endif
 
           source_bg        = 0.d0; source_bg_arr       = 0.d0

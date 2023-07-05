@@ -1530,8 +1530,14 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ZK_i_prof     = get_zk_iperp(psi_n)
  
       if (ZKpar_T_dependent) then
-        ZK_e_par_T = ZK_e_par * (max(T0e,Te_min_ZKpar)/Te_0)**( 2.5d0)
-        ZK_i_par_T = ZK_i_par * (max(T0i,Ti_min_ZKpar)/Ti_0)**( 2.5d0)
+        ZK_e_par_T = ZK_e_par * (T0e_corr/Te_0)**(+2.5d0)
+        ZK_i_par_T = ZK_i_par * (T0i_corr/Ti_0)**(+2.5d0)
+        if (T0e_corr .lt. Te_min_ZKpar) then
+          ZK_e_par_T = ZK_e_par * (max(T0e_corr,Te_min_ZKpar)/Te_0)**( 2.5d0)
+        endif
+        if (T0i_corr .lt. Ti_min_ZKpar) then
+          ZK_i_par_T = ZK_i_par * (max(T0i_corr,Ti_min_ZKpar)/Ti_0)**( 2.5d0)
+        endif
         if (ZK_e_par_T .gt. ZK_par_max)  ZK_e_par_T   = ZK_par_max
         if (ZK_i_par_T .gt. ZK_par_max)  ZK_i_par_T   = ZK_par_max
       else
@@ -1545,7 +1551,10 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       ZK_prof = get_zkperp(psi_n)
 
       if (ZKpar_T_dependent) then
-        ZKpar_T = ZK_par * (max(T0,T_min_ZKpar)/T_0)**( 2.5d0)
+        ZKpar_T = ZK_par * (T0_corr/T_0)**(+2.5d0) 
+        if (T0_corr .lt. T_min_ZKpar) then
+          ZKpar_T = ZK_par * (max(T0_corr,T_min_ZKpar)/T_0)**(+2.5d0)
+        endif
         if (ZKpar_T .gt. ZK_par_max)  ZKpar_T   = ZK_par_max
       else
         ZKpar_T = ZK_par

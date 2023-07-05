@@ -1398,8 +1398,8 @@ module mod_expression
                 ZKi_par_T   = Zk_par_max
                 dZKi_par_dT = 0.d0
               end if
-              if ( Ti0 .lt. Ti_min_ZKpar ) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
+              if ( Ti0_corr .lt. Ti_min_ZKpar ) then
+                ZKi_par_T   = ZK_i_par * (max(Ti0_corr,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
                 dZKi_par_dT = 0.d0
               endif
 
@@ -1409,8 +1409,8 @@ module mod_expression
                 ZKe_par_T   = Zk_par_max
                 dZKe_par_dT = 0.d0
               end if
-              if ( Te0 .lt. Te_min_ZKpar ) then
-                ZKe_par_T   = ZK_e_par * (max(Te0,Te_min_ZKpar)/Te_0)**(+2.5d0)
+              if ( Te0_corr .lt. Te_min_ZKpar ) then
+                ZKe_par_T   = ZK_e_par * (max(Te0_corr,Te_min_ZKpar)/Te_0)**(+2.5d0)
                 dZKe_par_dT = 0.d0
               endif
             else
@@ -1429,8 +1429,8 @@ module mod_expression
                 ZKpar_T   = Zk_par_max
                 dZKpar_dT = 0.d0
               end if
-              if ( T0 .lt. T_min_ZKpar ) then
-                ZKpar_T   = ZK_par * (max(T0,T_min_ZKpar)/T_0)**(+2.5d0)
+              if ( T0_corr .lt. T_min_ZKpar ) then
+                ZKpar_T   = ZK_par * (max(T0_corr,T_min_ZKpar)/T_0)**(+2.5d0)
                 dZKpar_dT = 0.d0
               endif
 

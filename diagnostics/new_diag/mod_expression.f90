@@ -1301,7 +1301,7 @@ module mod_expression
                 d2eta_d2T =   0.d0
               end if
               if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
-                eta_T     =   eta   * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                eta_T     =   eta   * (T_min/Te_0)**(-1.5d0)
                 deta_dT   =   0.d0
                 d2eta_d2T =   0.d0
               end if
@@ -1321,7 +1321,7 @@ module mod_expression
                 d2eta_d2T =   0.d0
               end if
               if ( eq%xpoint .and. (T0 .lt. T_min) ) then
-                eta_T     =   eta   * (max(T0,T_min)/T_0)**(-1.5d0)
+                eta_T     =   eta   * (T_min/T_0)**(-1.5d0)
                 deta_dT   =   0.d0
                 d2eta_d2T =   0.d0
               end if
@@ -1338,14 +1338,14 @@ module mod_expression
               visco_T   =   visco * (Te0_corr/Te_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
               if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
-                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                visco_T     = visco  * (T_min/Te_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
               endif
             else ! (with_TiTe), i.e. with single temperature ***************************************
               visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
               if ( eq%xpoint .and. (T0 .lt. T_min) ) then
-                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+                visco_T     = visco  * (T_min/T_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
               endif
             end if ! (with_TiTe) *******************************************************************
@@ -1361,12 +1361,12 @@ module mod_expression
             if ( with_TiTe) then ! (with_TiTe) *****************************************************
               eta_num_T     = eta_num   * (Te0/Te_0)**(-3.d0)
               if (Te0 .lt. T_min) then
-                eta_num_T   = eta_num   * (max(Te0,T_min)/Te_0)**(-3.d0)
+                eta_num_T   = eta_num   * (T_min/Te_0)**(-3.d0)
               endif
             else !(with_TiTe), i.e. with single temperature ***************************************
               eta_num_T     = eta_num   * (T0/T_0)**(-3.d0)
               if (T0 .lt. T_min) then
-                eta_num_T   = eta_num   * (max(T0,T_min)/T_0)**(-3.d0)
+                eta_num_T   = eta_num   * (T_min/T_0)**(-3.d0)
               endif
             end if 
           else
@@ -1378,12 +1378,12 @@ module mod_expression
             if ( with_TiTe) then ! (with_TiTe) *****************************************************
               visco_num_T     = visco_num   * (Te0/Te_0)**(-3.d0)
               if (Te0 .lt. T_min) then
-                visco_num_T   = visco_num   * (max(Te0,T_min)/Te_0)**(-3.d0)
+                visco_num_T   = visco_num   * (T_min/Te_0)**(-3.d0)
               endif
             else !(with_TiTe), i.e. with single temperature ***************************************
               visco_num_T     = visco_num   * (T0/T_0)**(-3.d0)
               if (T0 .lt. T_min) then
-                visco_num_T   = visco_num   * (max(T0,T_min)/T_0)**(-3.d0)
+                visco_num_T   = visco_num   * (T_min/T_0)**(-3.d0)
               endif
             end if
           else
@@ -1399,7 +1399,7 @@ module mod_expression
                 dZKi_par_dT = 0.d0
               end if
               if ( Ti0_corr .lt. Ti_min_ZKpar ) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0_corr,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
+                ZKi_par_T   = ZK_i_par * (Ti_min_ZKpar/Ti_0)**(+2.5d0)
                 dZKi_par_dT = 0.d0
               endif
 
@@ -1410,7 +1410,7 @@ module mod_expression
                 dZKe_par_dT = 0.d0
               end if
               if ( Te0_corr .lt. Te_min_ZKpar ) then
-                ZKe_par_T   = ZK_e_par * (max(Te0_corr,Te_min_ZKpar)/Te_0)**(+2.5d0)
+                ZKe_par_T   = ZK_e_par * (Te_min_ZKpar/Te_0)**(+2.5d0)
                 dZKe_par_dT = 0.d0
               endif
             else
@@ -1430,7 +1430,7 @@ module mod_expression
                 dZKpar_dT = 0.d0
               end if
               if ( T0_corr .lt. T_min_ZKpar ) then
-                ZKpar_T   = ZK_par * (max(T0_corr,T_min_ZKpar)/T_0)**(+2.5d0)
+                ZKpar_T   = ZK_par * (T_min_ZKpar/T_0)**(+2.5d0)
                 dZKpar_dT = 0.d0
               endif
 

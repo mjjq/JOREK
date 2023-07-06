@@ -596,7 +596,7 @@ do ms=1, n_gauss
          dZKpar_dT = 0.d0
        endif
        if (T0_corr .lt. T_min_ZKpar) then
-         ZKpar_T = ZK_par * (max(T0_corr,T_min_ZKpar)/T_0)**(+2.5d0)
+         ZKpar_T = ZK_par * (T_min_ZKpar/T_0)**(+2.5d0)
          dZKpar_dT = 0.d0
        endif
      else

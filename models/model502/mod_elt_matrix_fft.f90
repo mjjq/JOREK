@@ -683,7 +683,7 @@ do ms=1, n_gauss
          dZK_i_par_dT = 0.d0
        endif
        if (Ti0_corr .lt. Ti_min_ZKpar) then
-         ZK_i_par_T   = ZK_i_par * (max(Ti0_corr,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
+         ZK_i_par_T   = ZK_i_par * (Ti_min_ZKpar/Ti_0)**(+2.5d0)
          dZK_i_par_dT = 0.d0
        endif
 
@@ -694,7 +694,7 @@ do ms=1, n_gauss
          dZK_e_par_dT = 0.d0
        endif
        if (Te0_corr .lt. Te_min_ZKpar) then
-         ZK_e_par_T   = ZK_e_par * (max(Te0_corr,Te_min_ZKpar)/Te_0)**(+2.5d0)
+         ZK_e_par_T   = ZK_e_par * (Te_min_ZKpar/Te_0)**(+2.5d0)
          dZK_e_par_dT = 0.d0
        endif
      else

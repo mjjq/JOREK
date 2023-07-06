@@ -96,13 +96,13 @@ real*8, allocatable :: qval(:), radav(:)
 
 real*8  :: R_axis,Z_axis,s_axis,t_axis
 real*8  :: current_tot, beta_p, beta_n, beta_t, aminor, current_MA
-real*8  :: xjac, xjac_R, xjac_Z, BigR, wst, P_int, P_e_int, P_i_int, C_intern, zj0, ps0, r0, T0, T0e, T0i
+real*8  :: xjac, xjac_R, xjac_Z, BigR, wst, P_int, P_e_int, P_i_int, C_intern, zj0, ps0, r0, T0, Te0, Ti0
 real*8  :: Vol, Volume, Area, Bgeo, area1 
 real*8  :: psi_as_coord
 real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
 real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
 real*8  :: BR_Z, BZ_R
-real*8  :: r0_corr, T0_corr, T0e_corr, T0i_corr, dT0e_corr_dT 
+real*8  :: r0_corr, T0_corr, Te0_corr, Ti0_corr, dTe0_corr_dT 
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: pressure_e, pressure_e_in, pressure_e_out, pressure_i, pressure_i_in, pressure_i_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
@@ -391,14 +391,14 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
 !$omp           x_ss, x_tt, x_st, y_ss, y_tt, y_st, eq_ss, eq_tt, eq_st, eq_sp, eq_tp,         &
 !$omp           psi_axisym,                                                                    &
-!$omp           wst, BigR, r0, T0, T0e, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
-!$omp           dpdx, dpdy, phi, T0i, psi_as_coord,                                            &
+!$omp           wst, BigR, r0, T0, Te0, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
+!$omp           dpdx, dpdy, phi, Ti0, psi_as_coord,                                            &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
 !$omp           heat_source, heat_source_i, heat_source_e, particle_source, current_source, rotation_source, &
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
-!$omp           u0_x, u0_y, T0e_corr, T0i_corr,                                                &
+!$omp           u0_x, u0_y, Te0_corr, Ti0_corr,                                                &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, fric_disp, p0_p, T0_corr, r0_corr, u0_p,     &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
@@ -574,17 +574,17 @@ do ife = ife_min, ife_max
         r0     = eq_g(mp,var_rho,ms,mt)
         r0_corr = corr_neg_dens(r0)
 #ifdef WITH_TiTe
-        T0i    = eq_g(mp,var_Ti,ms,mt)
-        T0e    = eq_g(mp,var_Te,ms,mt)
-        T0e_corr = corr_neg_temp(T0e*2.d0) / 2.d0
-        T0i_corr = corr_neg_temp(T0i*2.d0) / 2.d0
+        Ti0    = eq_g(mp,var_Ti,ms,mt)
+        Te0    = eq_g(mp,var_Te,ms,mt)
+        Te0_corr = corr_neg_temp(Te0*2.d0) / 2.d0
+        Ti0_corr = corr_neg_temp(Ti0*2.d0) / 2.d0
 #else
         T0       = eq_g(mp,var_T,ms,mt)
-        T0i      = eq_g(mp,var_T,ms,mt) /2.d0
-        T0e      = eq_g(mp,var_T,ms,mt) /2.d0
+        Ti0      = eq_g(mp,var_T,ms,mt) /2.d0
+        Te0      = eq_g(mp,var_T,ms,mt) /2.d0
         T0_corr  = corr_neg_temp(T0)
-        T0e_corr = T0_corr / 2.d0
-        T0i_corr = T0_corr / 2.d0
+        Te0_corr = T0_corr / 2.d0
+        Ti0_corr = T0_corr / 2.d0
 #endif
         zj0    = eq_g(mp,var_zj,ms,mt)
         ps0    = eq_g(mp,var_psi,ms,mt)
@@ -654,8 +654,8 @@ do ife = ife_min, ife_max
         psi_as_coord = ps0
 #endif
 #ifdef WITH_TiTe
-        eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
-        eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
+        eta_T         = resistivity(eta, Te0_corr, T_max_eta, Te_0)  
+        eta_T_ohm     = resistivity(eta_ohmic, Te0_corr, T_max_eta_ohm, Te_0)
 #else
         eta_T         = resistivity(eta, T0_corr, T_max_eta, T_0)  
         eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm, T_0)
@@ -702,7 +702,7 @@ do ife = ife_min, ife_max
 #if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
         ! --- Get ionization, recombination and radiation coefficients for Deuterium 
 #ifdef WITH_TiTe
-        call atomic_coeff_deuterium  (   T0e, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
+        call atomic_coeff_deuterium  (   Te0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
                                             LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT, r0, rn0, .true. ) 
 #else
         call atomic_coeff_deuterium(0.5d0*T0, Sion_T, dSion_dT, Srec_T, dSrec_dT,        &
@@ -718,8 +718,8 @@ do ife = ife_min, ife_max
         ne_SI = r0_corr * 1.d20 * central_density !electron density (SI)
 
         if (with_TiTe) then 
-          Te_corr_eV =       T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
-          Te_eV =       T0e/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
+          Te_corr_eV =       Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
+          Te_eV =       Te0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
         else
           Te_corr_eV = 0.5d0* T0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
           Te_eV = 0.5d0* T0/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV, uncorrected
@@ -795,10 +795,10 @@ do ife = ife_min, ife_max
 
         ! Temperatures in eV and corrected values:
         if (with_TiTe) then 
-          Ti_eV      = T0i          /(EL_CHG*MU_ZERO*central_density*1.d20)
-          Te_eV      = T0e          /(EL_CHG*MU_ZERO*central_density*1.d20)  
-          Ti_corr_eV = T0i_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)
-          Te_corr_eV = T0e_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Ti_eV      = Ti0          /(EL_CHG*MU_ZERO*central_density*1.d20)
+          Te_eV      = Te0          /(EL_CHG*MU_ZERO*central_density*1.d20)  
+          Ti_corr_eV = Ti0_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)
+          Te_corr_eV = Te0_corr     /(EL_CHG*MU_ZERO*central_density*1.d20)  
         else
           Ti_eV      = 0.5d0*T0     /(EL_CHG*MU_ZERO*central_density*1.d20)  
           Te_eV      = 0.5d0*T0     /(EL_CHG*MU_ZERO*central_density*1.d20)  
@@ -926,11 +926,11 @@ do ife = ife_min, ife_max
         endif
         nu_e_imp     = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*m_imp) ** 0.5&
                        * Z_eff_imp * (1.d14*central_density*rimp0_corr*m_i_over_m_imp) * lambda_e_imp &
-                       / (1.d3*(MASS_ELECTRON*T0i_corr+T0e_corr*MASS_PROTON*m_imp)&
+                       / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*m_imp)&
                        / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5
         nu_e_bg      = 1.8d-19*(1.d6*MASS_ELECTRON*MASS_PROTON*central_mass) ** 0.5&
                        * (1.d14*central_density*(r0_corr-rimp0_corr)) * lambda_e_bg &
-                       / (1.d3*(MASS_ELECTRON*T0i_corr+T0e_corr*MASS_PROTON*central_mass)&
+                       / (1.d3*(MASS_ELECTRON*Ti0_corr+Te0_corr*MASS_PROTON*central_mass)&
                        / (EL_CHG * MU_ZERO * central_density * 1.d20)) ** 1.5 ! Assuming bg_charge is 1!
     
         if (nu_e_imp < 0.) nu_e_imp = 0.
@@ -943,22 +943,22 @@ do ife = ife_min, ife_max
 #ifdef WITH_Impurities
         D_tot  = D_tot  + (r0-rimp0) * xjac * BigR * wst * delta_phi 
 #ifdef WITH_TiTe
-        P_e_tot = P_e_tot + (r0+alpha_e*rimp0) * T0e * xjac * BigR * wst * delta_phi
-        P_i_tot = P_i_tot + (r0+alpha_i*rimp0) * T0i * xjac * BigR * wst * delta_phi
+        P_e_tot = P_e_tot + (r0+alpha_e*rimp0) * Te0 * xjac * BigR * wst * delta_phi
+        P_i_tot = P_i_tot + (r0+alpha_i*rimp0) * Ti0 * xjac * BigR * wst * delta_phi
         P_tot   = P_e_tot + P_i_tot
 
         p0_s   = (r0+alpha_i*rimp0)*eq_s(mp,var_Ti,ms,mt) &
-                 + T0i * (eq_s(mp,var_rho,ms,mt)+alpha_i*eq_s(mp,var_rhoimp,ms,mt))&
-                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*T0e)*eq_s(mp,var_Te,ms,mt)&
-                 + T0e * (eq_s(mp,var_rho,ms,mt)+alpha_e*eq_s(mp,var_rhoimp,ms,mt))
+                 + Ti0 * (eq_s(mp,var_rho,ms,mt)+alpha_i*eq_s(mp,var_rhoimp,ms,mt))&
+                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*Te0)*eq_s(mp,var_Te,ms,mt)&
+                 + Te0 * (eq_s(mp,var_rho,ms,mt)+alpha_e*eq_s(mp,var_rhoimp,ms,mt))
         p0_t   = (r0+alpha_i*rimp0)*eq_t(mp,var_Ti,ms,mt) &
-                 + T0i * (eq_t(mp,var_rho,ms,mt)+alpha_i*eq_t(mp,var_rhoimp,ms,mt))&
-                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*T0e)*eq_t(mp,var_Te,ms,mt)&
-                 + T0e * (eq_t(mp,var_rho,ms,mt)+alpha_e*eq_t(mp,var_rhoimp,ms,mt))
+                 + Ti0 * (eq_t(mp,var_rho,ms,mt)+alpha_i*eq_t(mp,var_rhoimp,ms,mt))&
+                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*Te0)*eq_t(mp,var_Te,ms,mt)&
+                 + Te0 * (eq_t(mp,var_rho,ms,mt)+alpha_e*eq_t(mp,var_rhoimp,ms,mt))
         p0_p   = (r0+alpha_i*rimp0)*eq_p(mp,var_Ti,ms,mt) &
-                 + T0i * (eq_p(mp,var_rho,ms,mt)+alpha_i*eq_p(mp,var_rhoimp,ms,mt))&
-                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*T0e)*eq_p(mp,var_Te,ms,mt)&
-                 + T0e * (eq_p(mp,var_rho,ms,mt)+alpha_e*eq_p(mp,var_rhoimp,ms,mt))
+                 + Ti0 * (eq_p(mp,var_rho,ms,mt)+alpha_i*eq_p(mp,var_rhoimp,ms,mt))&
+                 + (r0+alpha_e*rimp0+dalpha_e_dT*rimp0*Te0)*eq_p(mp,var_Te,ms,mt)&
+                 + Te0 * (eq_p(mp,var_rho,ms,mt)+alpha_e*eq_p(mp,var_rhoimp,ms,mt))
 #else /* WITH_TiTe */
         P_tot  = P_tot  + (r0+alpha_imp*rimp0) * T0 * xjac * BigR * wst * delta_phi
         P_e_tot = P_tot / 2.
@@ -974,16 +974,16 @@ do ife = ife_min, ife_max
 #else /* WITH_Impurities */
         D_tot  = D_tot  + r0       * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
-        P_e_tot = P_e_tot + r0 * T0e * xjac * BigR * wst * delta_phi
-        P_i_tot = P_i_tot + r0 * T0i * xjac * BigR * wst * delta_phi
+        P_e_tot = P_e_tot + r0 * Te0 * xjac * BigR * wst * delta_phi
+        P_i_tot = P_i_tot + r0 * Ti0 * xjac * BigR * wst * delta_phi
         P_tot   = P_e_tot + P_i_tot
 
-        p0_s   = r0*eq_s(mp,var_Te,ms,mt) + T0e * eq_s(mp,var_rho,ms,mt) &
-                 +r0*eq_s(mp,var_Ti,ms,mt) + T0i * eq_s(mp,var_rho,ms,mt)
-        p0_t   = r0*eq_t(mp,var_Te,ms,mt) + T0e * eq_t(mp,var_rho,ms,mt) &
-                 +r0*eq_t(mp,var_Ti,ms,mt) + T0i * eq_t(mp,var_rho,ms,mt)
-        p0_p   = r0*eq_p(mp,var_Te,ms,mt) + T0e * eq_p(mp,var_rho,ms,mt) &
-                 +r0*eq_p(mp,var_Ti,ms,mt) + T0i * eq_p(mp,var_rho,ms,mt)
+        p0_s   = r0*eq_s(mp,var_Te,ms,mt) + Te0 * eq_s(mp,var_rho,ms,mt) &
+                 +r0*eq_s(mp,var_Ti,ms,mt) + Ti0 * eq_s(mp,var_rho,ms,mt)
+        p0_t   = r0*eq_t(mp,var_Te,ms,mt) + Te0 * eq_t(mp,var_rho,ms,mt) &
+                 +r0*eq_t(mp,var_Ti,ms,mt) + Ti0 * eq_t(mp,var_rho,ms,mt)
+        p0_p   = r0*eq_p(mp,var_Te,ms,mt) + Te0 * eq_p(mp,var_rho,ms,mt) &
+                 +r0*eq_p(mp,var_Ti,ms,mt) + Ti0 * eq_p(mp,var_rho,ms,mt)
 #else /* WITH_TiTe */
         P_tot  = P_tot  + r0 * T0 * xjac * BigR * wst * delta_phi
         P_e_tot = P_tot / 2.
@@ -1193,8 +1193,8 @@ do ife = ife_min, ife_max
 #ifdef WITH_Impurities
           D_int = D_int + (r0-rimp0) * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
-          P_e_int = P_e_int + (r0+alpha_e*rimp0) * T0e * xjac * BigR * wst * delta_phi
-          P_i_int = P_i_int + (r0+alpha_i*rimp0) * T0i * xjac * BigR * wst * delta_phi
+          P_e_int = P_e_int + (r0+alpha_e*rimp0) * Te0 * xjac * BigR * wst * delta_phi
+          P_i_int = P_i_int + (r0+alpha_i*rimp0) * Ti0 * xjac * BigR * wst * delta_phi
           P_int   = P_e_int + P_i_int
 #else /* WITH_TiTe */
           P_int = P_int + (r0+alpha_imp*rimp0) * T0   * xjac * BigR * wst * delta_phi
@@ -1204,8 +1204,8 @@ do ife = ife_min, ife_max
 #else /* WITH_Impurities */
           D_int = D_int + r0        * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
-          P_e_int = P_e_int + r0 * T0e * xjac * BigR * wst * delta_phi
-          P_i_int = P_i_int + r0 * T0i * xjac * BigR * wst * delta_phi
+          P_e_int = P_e_int + r0 * Te0 * xjac * BigR * wst * delta_phi
+          P_i_int = P_i_int + r0 * Ti0 * xjac * BigR * wst * delta_phi
           P_int   = P_e_int + P_i_int
 #else /* WITH_TiTe */
           P_int = P_int + r0 * T0   * xjac * BigR * wst * delta_phi
@@ -1216,10 +1216,10 @@ do ife = ife_min, ife_max
 #ifdef WITH_TiTe
 		  !H_impl_int Te
           H_impl_int = H_impl_int +implicit_heat_source*(gamma-1.d0)   *xjac*BigR*wst*delta_phi&
-               *( 0.5d0*Tie_min_neg* (1+exp( (min(T0e,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg) )) -min(T0e,Tie_min_neg))
+               *( 0.5d0*Tie_min_neg* (1+exp( (min(Te0,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg) )) -min(Te0,Tie_min_neg))
 		  !H_impl_int Ti
           H_impl_int = H_impl_int +implicit_heat_source*(gamma-1.d0)  *xjac*BigR*wst*delta_phi & 
-               *( 0.5d0*Tie_min_neg* (1+exp( (min(T0i,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg) )) -min(T0i,Tie_min_neg))
+               *( 0.5d0*Tie_min_neg* (1+exp( (min(Ti0,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg) )) -min(Ti0,Tie_min_neg))
 #else /* WITH_TiTe */
 		  !H_impl_int T0
           H_impl_int = H_impl_int + implicit_heat_source*(gamma-1.d0) *xjac*BigR*wst*delta_phi &
@@ -1238,8 +1238,8 @@ do ife = ife_min, ife_max
 #ifdef WITH_Impurities
           D_ext = D_ext + (r0-rimp0) * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
-          P_e_ext = P_e_ext + (r0+alpha_e*rimp0) * T0e * xjac * BigR * wst * delta_phi
-          P_i_ext = P_i_ext + (r0+alpha_i*rimp0) * T0i * xjac * BigR * wst * delta_phi
+          P_e_ext = P_e_ext + (r0+alpha_e*rimp0) * Te0 * xjac * BigR * wst * delta_phi
+          P_i_ext = P_i_ext + (r0+alpha_i*rimp0) * Ti0 * xjac * BigR * wst * delta_phi
           P_ext   = P_e_ext + P_i_ext
 #else /* WITH_TiTe */
           P_ext = P_ext + (r0+alpha_imp*rimp0) * T0   * xjac * BigR * wst * delta_phi
@@ -1249,8 +1249,8 @@ do ife = ife_min, ife_max
 #else /* WITH_Impurities */
           D_ext = D_ext + r0 * xjac * BigR * wst * delta_phi
 #ifdef WITH_TiTe
-          P_e_ext = P_e_ext + r0 * T0e * xjac * BigR * wst * delta_phi
-          P_i_ext = P_i_ext + r0 * T0i * xjac * BigR * wst * delta_phi
+          P_e_ext = P_e_ext + r0 * Te0 * xjac * BigR * wst * delta_phi
+          P_i_ext = P_i_ext + r0 * Ti0 * xjac * BigR * wst * delta_phi
           P_ext   = P_e_ext + P_i_ext
 #else /* WITH_TiTe */
           P_ext = P_ext + r0 * T0   * xjac * BigR * wst * delta_phi
@@ -1261,10 +1261,10 @@ do ife = ife_min, ife_max
 #ifdef WITH_TiTe
 		  !H_impl_ext Te
           H_impl_ext = H_impl_ext +implicit_heat_source*(gamma-1.d0)*xjac*BigR*wst*delta_phi & 
-               *(0.5d0*Tie_min_neg * (1 + exp( (min(T0e,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg) )) -min(T0e,Tie_min_neg))
+               *(0.5d0*Tie_min_neg * (1 + exp( (min(Te0,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg) )) -min(Te0,Tie_min_neg))
 		  !H_iml_ext Ti
           H_impl_ext = H_impl_ext +implicit_heat_source*(gamma-1.d0)*xjac*BigR*wst*delta_phi & 
-               *(  0.5d0*Tie_min_neg*(1 + exp( (min(T0i,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg))) -min(T0i,Tie_min_neg))
+               *(  0.5d0*Tie_min_neg*(1 + exp( (min(Ti0,Tie_min_neg)-Tie_min_neg)/(0.5d0*Tie_min_neg))) -min(Ti0,Tie_min_neg))
 #else /* WITH_TiTe */
 		  !H_impl_ext T0
           H_impl_ext = H_impl_ext + implicit_heat_source*(gamma-1.d0)*xjac*BigR*wst*delta_phi&
@@ -1381,15 +1381,15 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       r0_corr  = corr_neg_dens(r0)
       T0       = eq_g_1D(mp,var_T   ,ms) 
 #ifdef WITH_TiTe
-      T0i      = eq_g_1D(mp,var_Ti,ms)
-      T0e      = eq_g_1D(mp,var_Te,ms)
+      Ti0      = eq_g_1D(mp,var_Ti,ms)
+      Te0      = eq_g_1D(mp,var_Te,ms)
 #else
-      T0i      = eq_g_1D(mp,var_T,ms) /2.d0
-      T0e      = eq_g_1D(mp,var_T,ms) /2.d0
+      Ti0      = eq_g_1D(mp,var_T,ms) /2.d0
+      Te0      = eq_g_1D(mp,var_T,ms) /2.d0
       T0_corr  = corr_neg_temp(T0) 
 #endif
-      T0e_corr     =     corr_neg_temp(T0e * 2.d0) / 2.d0
-      dT0e_corr_dT = dcorr_neg_temp_dT(T0e * 2.d0) / 2.d0
+      Te0_corr     =     corr_neg_temp(Te0 * 2.d0) / 2.d0
+      dTe0_corr_dT = dcorr_neg_temp_dT(Te0 * 2.d0) / 2.d0
 
 #ifdef WITH_Vpar
       vpar0    = eq_g_1D(mp,var_vpar,ms)
@@ -1523,19 +1523,19 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       psi_n = get_psi_n(ps0,Z)
  
 #ifdef WITH_TiTe
-      eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
-      eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
+      eta_T         = resistivity(eta, Te0_corr, T_max_eta, Te_0)  
+      eta_T_ohm     = resistivity(eta_ohmic, Te0_corr, T_max_eta_ohm, Te_0)
 
       ZK_e_prof     = get_zk_eperp(psi_n)
       ZK_i_prof     = get_zk_iperp(psi_n)
  
       if (ZKpar_T_dependent) then
-        ZK_e_par_T = ZK_e_par * (T0e_corr/Te_0)**(+2.5d0)
-        ZK_i_par_T = ZK_i_par * (T0i_corr/Ti_0)**(+2.5d0)
-        if (T0e_corr .lt. Te_min_ZKpar) then
+        ZK_e_par_T = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)
+        ZK_i_par_T = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)
+        if (Te0_corr .lt. Te_min_ZKpar) then
           ZK_e_par_T = ZK_e_par * (Te_min_ZKpar/Te_0)**( 2.5d0)
         endif
-        if (T0i_corr .lt. Ti_min_ZKpar) then
+        if (Ti0_corr .lt. Ti_min_ZKpar) then
           ZK_i_par_T = ZK_i_par * (Ti_min_ZKpar/Ti_0)**( 2.5d0)
         endif
         if (ZK_e_par_T .gt. ZK_par_max)  ZK_e_par_T   = ZK_par_max
@@ -1562,16 +1562,16 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 #endif
 
       if ( with_TiTe ) then ! (with_TiTe) ****************************************************
-        if (T0i .lt. ZK_i_prof_neg_thresh) then
+        if (Ti0 .lt. ZK_i_prof_neg_thresh) then
           ZK_i_prof = ZK_i_prof_neg
         end if
-        if (T0i .lt. ZK_i_par_neg_thresh) then
+        if (Ti0 .lt. ZK_i_par_neg_thresh) then
           ZK_i_par_T = ZK_i_par_neg
         endif
-        if (T0e .lt. ZK_e_prof_neg_thresh) then
+        if (Te0 .lt. ZK_e_prof_neg_thresh) then
           ZK_e_prof = ZK_e_prof_neg
         end if
-        if (T0e .lt. ZK_e_par_neg_thresh) then
+        if (Te0 .lt. ZK_e_par_neg_thresh) then
           ZK_e_par_T = ZK_e_par_neg
         endif
       else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
@@ -1602,8 +1602,8 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
           m_i_over_m_imp = central_mass/2.
       end select
 
-      Te_corr_eV = T0e_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
-      Te_eV = T0e/(EL_CHG*MU_ZERO*central_density*1.d20)
+      Te_corr_eV = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)
+      Te_eV = Te0/(EL_CHG*MU_ZERO*central_density*1.d20)
    
       if (allocated(P_imp)) deallocate(P_imp)
       allocate(P_imp(0:imp_adas(index_main_imp)%n_Z))
@@ -1613,7 +1613,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       dZ_imp_dT = dZ_imp_dT *EL_CHG / K_BOLTZ
       ! Derivative wrt to T, with T in JOREK units
       dZ_imp_dT = dZ_imp_dT / (EL_CHG*MU_ZERO*central_density*1.d20)
-      dZ_imp_dT = dZ_imp_dT * dT0e_corr_dT
+      dZ_imp_dT = dZ_imp_dT * dTe0_corr_dT
 #ifdef WITH_TiTe
       alpha_i       = m_i_over_m_imp - 1.
       alpha_e       = m_i_over_m_imp*Z_imp - 1.
@@ -1661,10 +1661,10 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
         eta_T_ohm    = eta_T_ohm * eta_coef
       endif
 
-      dPedx  = ne_JOREK * dTedx + T0e * dne_JOREK_dx
-      dPedy  = ne_JOREK * dTedy + T0e * dne_JOREK_dy
-      dPidx  = (r0 + alpha_i*rimp0) * dTidx + T0i * (drhodx + alpha_i*drhoimpdx)
-      dPidy  = (r0 + alpha_i*rimp0) * dTidy + T0i * (drhody + alpha_i*drhoimpdy)
+      dPedx  = ne_JOREK * dTedx + Te0 * dne_JOREK_dx
+      dPedy  = ne_JOREK * dTedy + Te0 * dne_JOREK_dy
+      dPidx  = (r0 + alpha_i*rimp0) * dTidx + Ti0 * (drhodx + alpha_i*drhoimpdx)
+      dPidy  = (r0 + alpha_i*rimp0) * dTidy + Ti0 * (drhody + alpha_i*drhoimpdy)
       dPdx   = dPedx + dPidx
       dPdy   = dPedy + dPidy
 #else /* WITH_Impurities */

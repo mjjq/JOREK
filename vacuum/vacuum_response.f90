@@ -2534,7 +2534,19 @@ module vacuum_response
       allocate( old_dpsibnd_vec(n_dof_starwall) )
     end if    
 
-    !> To be used for the computations of the terms for dwall_curr
+    !> WARNING: The following computation of dwall_curr_2 contains the term
+    !!          dwall_curr which refers to the previous time-step
+    do k = 1, n_wall_curr
+
+      ! --- contribution from not distributed matrices
+      dwall_curr_2(k) = response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
+         + response_d_c(k) * dwall_curr(k)
+
+    end do
+
+    
+    !> WARNING: Now we can compute the dwall_curr term for the current time-step
+    !!          to be added to the contribution from the previous time-step
     theta = time_evol_theta
     zeta  = time_evol_zeta
 
@@ -2544,20 +2556,12 @@ module vacuum_response
     tmp_d_s(:) = 1.d0 + zeta + tstep * theta * wall_resistivity * sr%d_yy(:)
     inv_tmp_d_s(:) = 1.0d0 / tmp_d_s(:)
     dwall_curr(:) = 0.0d0
-    !> Old usage of response_m_a
+    !> corresponds to matrix A in documentation
     call extended_matrix_vector(my_id, -(1.d0+zeta), sr%a_ye, inv_tmp_d_s, &
                                 dpsibnd_vec(:), .false., dwall_curr, .false.)
-    !> Old usage of response_m_d
+    !> corresponds to matrix D in documentation
     call extended_matrix_vector(my_id, zeta, sr%a_ye, inv_tmp_d_s, &
                                 old_dpsibnd_vec(:), .false., dwall_curr, .true.)
-
-     do k = 1, n_wall_curr
-
-       ! --- contribution from not distributed matrices
-       dwall_curr_2(k) = response_d_b(k) * (wall_curr(k) - Y_coils0(k)) &
-         + response_d_c(k) * dwall_curr(k)
-       
-     end do
 
     !> Gathering all the terms into dwall_curr
     dwall_curr(:) = dwall_curr(:)+dwall_curr_2(:)

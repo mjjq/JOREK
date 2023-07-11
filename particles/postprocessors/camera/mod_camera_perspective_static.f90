@@ -108,7 +108,7 @@ pixel_intensities,ierr)
     !$omp filter_image_inout,filter_spectra_inout,filter_time_inout) &
     !$omp private(ii,kk,material_value,intersect,plane_line_coords,&
     !$omp i_pixel,pixel_coords,pixel_filter_weight,visibility_geometry) &
-    !$omp reduction(+:pixel_intensities) !collapse(2)
+    !$omp reduction(+:pixel_intensities) collapse(2)
     !> loop on the points on lens
     do ii=1,camera_inout%n_vertices
       !> loop on the active lights per time

@@ -211,7 +211,7 @@ x_shaded,light_spec_irradiance)
     !$omp end taskloop
 #endif
   else
-    !$omp parallel do default(shared) private(ii,jj)
+    !$omp parallel do default(shared) private(ii,jj) &
     !$omp firstprivate(light_id,time_id) collapse(2)
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points

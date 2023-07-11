@@ -196,7 +196,7 @@ subroutine integrate_rng_uniform(spectrum,dat,integrals)
     !> Not all compilers support reduction clauses with taskloop
     !> hence only the outer loop is parallelised
 #ifdef USE_TASKLOOP
-    !$omp taskloop
+    !$omp taskloop default(shared) private(ii)
 #endif
     do ii=1,spectrum%n_spectra
       integrals(ii) = sum(dat(:,ii))

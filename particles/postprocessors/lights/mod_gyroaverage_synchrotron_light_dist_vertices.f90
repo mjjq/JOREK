@@ -89,7 +89,8 @@ time_id,light_id,x_shaded,light_dstb)
   !> compute the directionality function
   if(in_parallel) then
 #ifdef USE_TASKLOOP
-    !$omp taskloop collapse(2)
+    !$omp taskloop default(shared) private(ii,jj) &
+    !$omp firstprivate(fact_1,fact_2,fact_3) collapse(2)
 #endif
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points

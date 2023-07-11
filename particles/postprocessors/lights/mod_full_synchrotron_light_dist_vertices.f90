@@ -105,7 +105,9 @@ light_id,x_shaded,light_dstb)
   (light_properties(11)**8)*(light_properties(12)**3)))
   if(in_parallel) then
 #ifdef USE_TASKLOOP
-    !$omp taskloop collapse(2)
+    !$omp taskloop default(shared) private(ii,jj) &
+    !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&
+    !$omp factor_2,z_value,z2_value,factor_1) collapse(2)
 #endif
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points

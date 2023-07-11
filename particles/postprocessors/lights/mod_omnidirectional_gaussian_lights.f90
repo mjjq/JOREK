@@ -196,7 +196,8 @@ x_shaded,light_spec_irradiance)
   !> compute irradiance
   if(in_parallel) then
 #ifdef USE_TASKLOOP
-    !$omp taskloop collapse(2)
+    !$omp taskloop default(shared) private(ii,jj) &
+    !$omp firstprivate(light_id,time_id) collapse(2)
 #endif
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points
@@ -210,7 +211,8 @@ x_shaded,light_spec_irradiance)
     !$omp end taskloop
 #endif
   else
-    !$omp parallel do collapse(2)
+    !$omp parallel do default(shared) private(ii,jj)
+    !$omp firstprivate(light_id,time_id) collapse(2)
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points
         light_spec_irradiance(jj,ii) = light_vert%light_intensity*&

@@ -175,15 +175,14 @@ subroutine integrate_spectrum_rectangle(spectrum,dat,integrals)
     !> reduction clause in taskloop seems not to be supported by all compilers
     !> so a single loop is implemented with no parallelization on the summatory
 #ifdef USE_TASKLOOP
-    !$omp taskloop !nogroup
+    !$omp taskloop  !nogroup
 #endif
     do ii=1,spectrum%n_spectra
       integrals(ii) = sum(dat(:,ii))
     enddo
-#ifdef USE_TASK_LOOP
+#ifdef USE_TASKLOOP
     !$omp end taskloop
 #endif
-
   else
     !$omp parallel default(private) shared(spectrum,dat,residual_id) &
     !$omp firstprivate(n_threads) reduction(+:integrals)

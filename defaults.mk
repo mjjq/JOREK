@@ -313,6 +313,9 @@ ifeq (1, $(USE_CATALYST))
   DEFINES  := $(DEFINES) -DUSE_CATALYST
 endif
 
+ifeq (1, $(USE_TASKLOOP))
+  DEFINES  := $(DEFINES) -DUSE_TASKLOOP
+endif
 
 # Do not check to make these files to speed up and clean -d output
 Makefile: ;

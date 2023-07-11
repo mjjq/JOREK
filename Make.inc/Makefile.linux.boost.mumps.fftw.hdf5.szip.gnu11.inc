@@ -1,4 +1,5 @@
 # Configuration file for jorek
+
 # model directory
 MODEL = model600
 
@@ -36,6 +37,7 @@ USE_FFTW = 1
 USE_HDF5 = 1
 USE_BOOST = 1
 USE_STD_BESSELK = 0
+USE_TASKLOOP = 1
 
 #Scotch library
 SCOTCH_HOME  = $(SCOTCH_ROOT)

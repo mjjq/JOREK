@@ -88,15 +88,18 @@ time_id,light_id,x_shaded,light_dstb)
   fact_1 = (sqrt(((1d0-cospsi)**3)/(5d-1*cospsi)))*(light_properties(4)**3)
   !> compute the directionality function
   if(in_parallel) then
-    !$omp taskloop default(shared) private(ii,jj) &
-    !$omp firstprivate(fact_1,fact_2,fact_3) collapse(2)
+#ifdef USE_TASKLOOP
+    !$omp taskloop collapse(2)
+#endif
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points
         call compute_synchrotron_directionality_funct(spectra%points(jj,ii),&
         light_properties(8),fact_1,fact_2,fact_3,light_properties(9),light_dstb(jj,ii))
       enddo
     enddo
+#ifdef USE_TASKLOOP
     !$omp end taskloop
+#endif
   else
     !$omp parallel do default(shared) private(ii,jj) &
     !$omp firstprivate(fact_1,fact_2,fact_3) collapse(2)

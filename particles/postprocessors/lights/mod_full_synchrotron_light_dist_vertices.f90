@@ -104,9 +104,9 @@ light_id,x_shaded,light_dstb)
   factor_1 = ((3.d0*TWOPI*(factor_1**2))/(sqrt3*(light_properties(10)**4)*&
   (light_properties(11)**8)*(light_properties(12)**3)))
   if(in_parallel) then
-    !$omp taskloop default(shared) private(ii,jj) &
-    !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&
-    !$omp factor_2,z_value,z2_value,factor_1) collapse(2)
+#ifdef USE_TASKLOOP
+    !$omp taskloop collapse(2)
+#endif
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points
         call compute_synchrotron_directionality_funct(light_vert%n_x,&
@@ -114,7 +114,9 @@ light_id,x_shaded,light_dstb)
         z_cos,factor_2,z_value,z2_value,factor_1,light_dstb(jj,ii))
       enddo
     enddo
+#ifdef USE_TASKLOOP
     !$omp end taskloop
+#endif
   else
     !$omp parallel do default(shared) private(ii,jj) &
     !$omp firstprivate(one_over_gamma,rpsichi,z_cos,&

@@ -195,7 +195,9 @@ x_shaded,light_spec_irradiance)
   spectra_midpoint = spectra%points(1,:)+5.d-1*spectra_bin
   !> compute irradiance
   if(in_parallel) then
-    !$omp taskloop default(shared) private(ii,jj) collapse(2)
+#ifdef USE_TASKLOOP
+    !$omp taskloop collapse(2)
+#endif
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points
         light_spec_irradiance(jj,ii) = light_vert%light_intensity*&
@@ -204,9 +206,11 @@ x_shaded,light_spec_irradiance)
         spectra_bin(ii)*light_vert%properties(1,light_id,time_id)))
       enddo
     enddo
+#ifdef USE_TASKLOOP
     !$omp end taskloop
+#endif
   else
-    !$omp parallel do default(shared) private(ii,jj) collapse(2)
+    !$omp parallel do collapse(2)
     do ii=1,spectra%n_spectra
       do jj=1,spectra%n_points
         light_spec_irradiance(jj,ii) = light_vert%light_intensity*&

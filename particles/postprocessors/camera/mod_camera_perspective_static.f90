@@ -84,7 +84,7 @@ pixel_intensities,ierr)
   real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
 
   !> compute and store the exposure time and the pixel area
-  pixel_intensities = 0.d0
+  pixel_intensities = 0.d0; spectral_irradiance = 0d0; integrated_irradiance = 0d0;
   camera_inout%exposure_time = light_inout%times(light_inout%n_times) - light_inout%times(1)
   if(camera_inout%exposure_time.le.0.d0) camera_inout%exposure_time = 1.d0
   pixel_area = (norm2(camera_inout%image_plane(:,2,1)-camera_inout%image_plane(:,1,1))*&
@@ -101,11 +101,14 @@ pixel_intensities,ierr)
 
   !> loop on the light times
   do jj=1,light_inout%n_times
-    !$omp parallel do default(private) firstprivate(jj,pixel_area,&
-    !$omp light_time_weights,spectral_weights) &
+    !$omp parallel do default(none) firstprivate(jj,pixel_area,&
+    !$omp light_time_weights,spectral_weights,spectral_irradiance,&
+    !$omp integrated_irradiance) &
     !$omp shared(light_inout,camera_inout,spectra_inout,&
     !$omp filter_image_inout,filter_spectra_inout,filter_time_inout) &
-    !$omp reduction(+:pixel_intensities) collapse(2)
+    !$omp private(ii,kk,material_value,intersect,plane_line_coords,&
+    !$omp i_pixel,pixel_coords,pixel_filter_weight,visibility_geometry) &
+    !$omp reduction(+:pixel_intensities) !collapse(2)
     !> loop on the points on lens
     do ii=1,camera_inout%n_vertices
       !> loop on the active lights per time

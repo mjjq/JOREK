@@ -11,10 +11,11 @@ integer         :: n_variables,n_particles,n_int_pdf_param,n_real_pdf_param,ifai
 integer         :: n_int_weight_param,n_real_weight_param
 integer         :: n_int_gdf_param,n_real_gdf_param
 integer         :: n_int_pdf_to_part_coord_param,n_real_pdf_to_part_coord_param
-integer         :: include_vpar,particle_type,t1,t2,t3,t4
+integer         :: include_vpar,particle_type,t1,t2,t3,t4,dummy_int
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
 real*8          :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
+real*8          :: dummy_real8_1,dummy_real8_2,dummy_real8_3
 real*8,dimension(2)                 :: Rbox,Zbox,Rbound,Zbound,Phibound
 real*8,dimension(2)                 :: Ekinbound,Vbound,Pitchbound,Gyrobound,Chargebound
 real*8,dimension(:),allocatable     :: real_pdf_to_part_coord_param
@@ -36,7 +37,7 @@ generic_particle_filename  = 'part_restart_H_mu_psi_generic.h5'
 original_h_mu_psi_filename = 'part_restart_H_mu_psi_original.h5'
 particle_type             = 1
 n_variables               = 7
-n_particles               = 1000000
+n_particles               = 100000000
 include_vpar              = 0
 start_time                = 0d0
 mass                      = 2.01410177811*ATOMIC_MASS_UNIT 
@@ -81,8 +82,13 @@ gdf_sampler_to_use => gdf_psi_H_mu_sampler
 n_int_gdf_param    = 1
 allocate(int_gdf_param(n_int_gdf_param))
 int_gdf_param(1)   = include_vpar
-n_real_gdf_param   = 0
-n_real_gdf_param  = 0
+n_real_gdf_param   = 2*sim%fields%element_list%n_elements+3
+allocate(real_gdf_param(n_real_gdf_param))
+call extract_element_psi_minmax(sim%fields,real_gdf_param(1:2*sim%fields%element_list%n_elements))
+call find_axis(sim%my_id,sim%fields%node_list,sim%fields%element_list,dummy_real8_1,&
+real_gdf_param(2*sim%fields%element_list%n_elements+1),&
+real_gdf_param(2*sim%fields%element_list%n_elements+2),dummy_int,dummy_real8_2,dummy_real8_3,ifail)
+real_gdf_param(2*sim%fields%element_list%n_elements+3) = mass
 gdf_upper_bound   = sup_gdf_psi_H_mu(n_variables,&
 phase_space_bounds(:,1),phase_space_bounds(:,2),&
 n_real_gdf_param,real_gdf_param,&
@@ -464,5 +470,36 @@ n_x,x,time,fields,n_real_param,real_param,n_int_param,int_param)
      p%q = p_gc%q
   endselect
 end subroutine copy_H_mu_psi_sample_to_p_gc
+
+!> extract minimum and maximum poloidal flux for each mesh element
+!> inputs:
+!>   fields: (fields_base) JOREK MHD fields
+!> outputs:
+!>   psi_minmax_list_1d: (real8)(2*n_elements) mimimum (1:n_elements)
+!>                       and maximum (n_elements+1:2*n_elements)
+!>                       poloidal flux values for each element
+subroutine extract_element_psi_minmax(fields,psi_minmax_list_1d)
+  use mod_fields, only: fields_base
+  implicit none
+  !> inputs:
+  class(fields_base),intent(in)  :: fields
+  !> outputs:
+  real*8,dimension(2*fields%element_list%n_elements),intent(out) :: psi_minmax_list_1d
+  !> variables:
+  integer :: ii
+  real*8,dimension(fields%element_list%n_elements,2) :: psi_minmax_list
+  !> initialisation
+  psi_minmax_list = 0d0
+  !> extract maximum and minimun
+  !$omp parallel do default(shared) private(ii)
+  do ii=1,fields%element_list%n_elements
+    call psi_minmax(fields%node_list,fields%element_list,ii,psi_minmax_list(ii,1),&
+    psi_minmax_list(ii,2))
+  enddo
+  !$omp end parallel do
+  psi_minmax_list_1d(1:fields%element_list%n_elements) = psi_minmax_list(:,1)
+  psi_minmax_list_1d(fields%element_list%n_elements+1:2*fields%element_list%n_elements) = &
+  psi_minmax_list(:,2)
+end subroutine extract_element_psi_minmax
 
 end program test_generalised_initialisation_gc_H_mu_psi

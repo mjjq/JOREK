@@ -93,6 +93,9 @@ subroutine run_fruit_besselk()
   call test_besselk_x_array
   call test_besselk_nu_array
   call test_besselk_x_nu_array
+#ifdef UNIT_TESTS
+  call test_handle_float_exceptions
+#endif
   write(*,'(/A)') "  ... tearing-down: besselk tests" 
   call teardown !< cleanup test variables  
   
@@ -327,5 +330,28 @@ subroutine test_besselk_x_nu_array()
   "Error: no match between Python and JOREK modified bessel function 2nd kind (x-nu-arrays)")
 
 end subroutine test_besselk_x_nu_array
+
+#ifdef UNIT_TESTS
+! test the floating point exception handlers of the besselk functions
+subroutine test_handle_float_exceptions()
+  use, intrinsic :: ieee_arithmetic, only: IEEE_Value,IEEE_QUIET_NAN
+  use, intrinsic :: ieee_arithmetic, only: IEEE_POSITIVE_INF,IEEE_NEGATIVE_INF
+  use mod_besselk, only: handle_float_exceptions
+  implicit none
+  ! tests
+  call assert_equals(handle_float_exceptions(IEEE_Value(0d0,IEEE_QUIET_NAN)),0d0,0d0,&
+  "Error: handle of nan by besselk float exception handler failed!")
+  call assert_equals(handle_float_exceptions(IEEE_Value(0d0,IEEE_POSITIVE_INF)),0d0,0d0,&
+  "Error: handle of positive overflows by besselk float exception handler failed!") 
+  call assert_equals(handle_float_exceptions(IEEE_Value(0d0,IEEE_NEGATIVE_INF)),0d0,0d0,&
+  "Error: handle of negative overflows by besselk float exception handler failed!")
+  call assert_equals(handle_float_exceptions(tiny(0d0)*tiny(0d0)),0d0,0d0,&
+  "Error: handle of positive underflows by besselk float exception handler failed!")
+  call assert_equals(handle_float_exceptions(-tiny(0d0)*tiny(0d0)),0d0,0d0,&
+  "Error: handle of negative underflows by besselk float exception handler failed!")
+  call assert_equals(handle_float_exceptions(2.35d0),2.35d0,0d0,&
+  "Error: return of variables by besselk float exception handler failed!")
+end subroutine test_handle_float_exceptions 
+#endif
 
 end module mod_besselk_test

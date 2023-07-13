@@ -10,6 +10,9 @@ implicit none
 
 private
 public ::  f_besselk,besselk
+#ifdef UNIT_TESTS
+public :: handle_float_exceptions
+#endif
 
 ! binding interface to the cyl_bessel_k
 interface 
@@ -48,7 +51,7 @@ function f_besselk_single_cpp(nu,x) result(bknu)
   real*8, intent(in) :: nu,x
   ! outputs
   real*8 :: bknu
-  bknu = besselk_cpp(nu,x)
+  bknu = handle_float_exceptions(besselk_cpp(nu,x))
 end function f_besselk_single_cpp
 
 ! besselk is a specialization of the cyl_bessel_k
@@ -64,7 +67,7 @@ subroutine besselk_single_cpp(nu,x,bknu)
   real*8, intent(in) :: nu,x
   ! outputs
   real*8,intent(out) :: bknu
-  bknu = besselk_cpp(nu,x)
+  bknu = handle_float_exceptions(besselk_cpp(nu,x))
 end subroutine besselk_single_cpp
 
 ! besselk_x_array computes the modified bessel
@@ -87,7 +90,7 @@ subroutine besselk_x_array_cpp(Nx,nu,x,bknu)
   integer :: ii
 
   do ii=1,Nx
-    bknu(ii) = besselk_cpp(nu,x(ii))
+    bknu(ii) = handle_float_exceptions(besselk_cpp(nu,x(ii)))
   enddo
 end subroutine besselk_x_array_cpp
 
@@ -112,7 +115,7 @@ subroutine besselk_nu_array_cpp(Nnu,nu,x,bknu)
   integer :: ii
 
   do ii=1,Nnu
-    bknu(ii) = besselk_cpp(nu(ii),x)
+    bknu(ii) = handle_float_exceptions(besselk_cpp(nu(ii),x))
   enddo
 end subroutine besselk_nu_array_cpp
 
@@ -136,13 +139,29 @@ subroutine besselk_x_nu_array_cpp(Nx,Nnu,nu,x,bknu)
   real*8,dimension(Nx,Nnu),intent(out) :: bknu
   ! variables
   integer :: ii,jj
-
   do jj=1,Nnu
     do ii=1,Nx
-      bknu(ii,jj) = besselk_cpp(nu(jj),x(ii))
+      bknu(ii,jj) = handle_float_exceptions(besselk_cpp(nu(jj),x(ii)))
     enddo
   enddo
-
 end subroutine besselk_x_nu_array_cpp
+
+! method used for handling bessel function exceptions
+! inputs:
+!   val:  (real8) value to be checked
+! outpus:
+!   val: (real8) val if tests pass 0 otherwise
+function handle_float_exceptions(val_in) result(val)
+  implicit none
+  !> inputs
+  real*8,intent(in) :: val_in
+  !> outputs
+  real*8 :: val
+  !> checks
+  val = val_in
+  if(isnan(val).or.(abs(val).gt.huge(0d0)).or.(abs(val).lt.tiny(0d0))) then
+    val = 0d0; return;
+  endif
+end function handle_float_exceptions
 
 end module mod_besselk

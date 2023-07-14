@@ -16,7 +16,7 @@ integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
 real*8          :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
 real*8          :: dummy_real8_1,dummy_real8_2,dummy_real8_3
-real*8,dimension(2)                 :: Rbox,Zbox,Rbound,Zbound,Phibound
+real*8,dimension(2)                 :: Poloidalbound,Phibound 
 real*8,dimension(2)                 :: Ekinbound,Vbound,Pitchbound,Gyrobound,Chargebound
 real*8,dimension(:),allocatable     :: real_pdf_to_part_coord_param
 real*8,dimension(:),allocatable     :: real_pdf_param,real_weight_param,real_gdf_param
@@ -41,9 +41,8 @@ n_particles               = 100000000
 include_vpar              = 0
 start_time                = 0d0
 mass                      = 2.01410177811*ATOMIC_MASS_UNIT 
-Rbound                    = [-9.99d2,9.99d2]
-Zbound                    = [-9.99d2,9.99d2]
-phibound                  = [0d0,TWOPI]
+Poloidalbound             = [0d0,TWOPI]
+Phibound                  = [0d0,TWOPI]
 Ekinbound                 = [-9.99d9,9.99d9] !< in eV not required
 Pitchbound                = [0d0,PI]
 Gyrobound                 = [0d0,TWOPI]
@@ -58,16 +57,6 @@ call with(sim,field_reader)
 !> initailise simulation parameters
 sim%time = start_time
 sim%groups(1)%mass = mass
-call domain_bounding_box(sim%fields%node_list,sim%fields%element_list,Rbox(1),Rbox(2),Zbox(1),Zbox(2))
-if(Rbox(1).ge.Rbound(1)) Rbound(1) = Rbox(1)
-if((Rbox(2).lt.Rbound(2)).and.((Rbox(2)-Rbound(1)).gt.0.d0)) Rbound(2) = Rbox(2)
-if((Zbox(1).gt.0.d0).and.(Zbound(1).ge.Zbox(1))) Zbound(1) = Zbox(1)
-if((Zbox(1).lt.0.d0).and.(Zbound(1).lt.Zbox(1))) Zbound(1) = Zbox(1)
-if((Zbox(2).gt.0.d0).and.(Zbound(2).ge.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
-if((Zbox(2).lt.0.d0).and.(Zbound(2).lt.Zbox(2)).and.((Zbox(2)-Zbound(1)).gt.0.d0)) Zbound(2) = Zbox(2)
-Vbound = sqrt(2.d0*Ekinbound*EL_CHG/mass)
-phase_space_bounds(:,1) = [Rbound(1),Zbound(1),Phibound(1),Vbound(1),Pitchbound(1),Gyrobound(1),charge]
-phase_space_bounds(:,2) = [Rbound(2),Zbound(2),Phibound(2),Vbound(2),Pitchbound(2),Gyrobound(2),charge]
 !> define the pdf inputs
 pdf_to_use         => pdf_psi_H_mu
 n_int_pdf_param    = 0
@@ -103,6 +92,13 @@ n_int_pdf_to_part_coord_param = 0
 n_real_pdf_to_part_coord_param = 1
 allocate(real_pdf_to_part_coord_param(n_real_pdf_to_part_coord_param))
 real_pdf_to_part_coord_param(1) = mass
+!> Define the sample box
+Vbound = sqrt(2.d0*Ekinbound*EL_CHG/mass)
+phase_space_bounds(:,1) = [minval(real_gdf_param(1:sim%fields%element_list%n_elements)),&
+                          Poloidalbound(1),Phibound(1),Vbound(1),Pitchbound(1),Gyrobound(1),charge]
+phase_space_bounds(:,2) = [maxval(real_gdf_param(sim%fields%element_list%n_elements+1:&
+                          2*sim%fields%element_list%n_elements)),Poloidalbound(2),Phibound(2),&
+                          Vbound(2),Pitchbound(2),Gyrobound(2),charge]
 write(*,*) "Test H_mu_psi initialisation generic vs original, initialise parameters: completed"
 
 write(*,*) "Test H_mu_psi initialisation generic vs original, initialise particles generic method ... "
@@ -346,8 +342,9 @@ n_real_param,real_param,n_int_param,int_param)
   real*8,dimension(2),intent(inout)   :: st
   real*8,dimension(n_x),intent(inout) :: x
   !> Variables:
-  real*8 :: psi,normB,R,Z,electric_potential,u,temperature_ev
-  real*8,dimension(1) :: P
+  real*8 :: psi,normB,electric_potential,u,temperature_ev
+  real*8 :: R,R_s,R_t,Z,Z_s,Z_t
+  real*8,dimension(1) :: P,P_s,P_t,P_phi
   real*8,dimension(3) :: B,E
 
   !> compute the psi,theta,phi coordinates
@@ -359,7 +356,8 @@ n_real_param,real_param,n_int_param,int_param)
   if(i_elm.gt.0) then
     call fields%calc_EBpsiU(time,i_elm,st,x(3),E,B,psi,electric_potential); normB = norm2(B);
     !> compute the temperature
-    call interp_PRZ(fields%node_list,fields%element_list,i_elm,[var_T],1,st(1),st(2),x(3),P,R,Z)
+    call interp_PRZ(fields%node_list,fields%element_list,i_elm,[var_T],1,st(1),st(2),x(3),P,P_s,P_t,P_phi,&
+    R,R_s,R_t,Z,Z_s,Z_t)
     temperature_ev = P(1)/(2d0*MU_ZERO*central_density*1d20*EL_CHG) !< temperature [eV]
 #ifdef WITH_TiTe
     temperature_ev = 2d0*temperature_ev
@@ -369,7 +367,8 @@ n_real_param,real_param,n_int_param,int_param)
     x(5) = sign(x(4)*(2d0*u-u**2),x(5)-0.5d0)
     !> include parallel velocity if required
     if(int_param(1).eq.1) then
-      call interp_PRZ(fields%node_list,fields%element_list,i_elm,[var_Vpar],1,st(1),st(2),x(3),P,R,Z)
+      call interp_PRZ(fields%node_list,fields%element_list,i_elm,[var_Vpar],1,st(1),st(2),x(3),P,P_s,P_t,P_phi,&
+      R,R_s,R_t,Z,Z_s,Z_t)
       P(1) = P(1)*sqrt(real_param(2*fields%element_list%n_elements+3)*ATOMIC_MASS_UNIT/EL_CHG)
       x(4) = x(4) + P(1)*(P(1) + 2d0*sign(sqrt(x(4)-x(5)),x(5)))
     endif

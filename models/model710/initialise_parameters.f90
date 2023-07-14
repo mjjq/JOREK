@@ -120,18 +120,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 filter_perp_n0, filter_hyper_n0, filter_par_n0,     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs, use_pcs_full,            &
-                cte_current_FB_fact, Z_xpoint_limit,                &
-                vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3,           &
-                vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up,           &
-                vms_coeff_rho, vms_coeff_T,                         &
-                use_sc, add_sources_in_sc, visco_sc_num,            &
-                D_perp_sc_num, D_par_sc_num, ZK_perp_sc_num,        &
-                ZK_par_sc_num, ZK_i_perp_sc_num, ZK_i_par_sc_num,   &
-                ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
-                Dn_pol_sc_num, Dn_p_sc_num, force_central_node,     &
                 cte_current_FB_fact, Z_xpoint_limit, eta_ohmic,     &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
                 alpha_Newton, vacuum_min
+
 
 if (my_id .eq. 0) then
 

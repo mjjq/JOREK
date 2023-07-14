@@ -131,7 +131,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 Dn_pol_sc_num, Dn_p_sc_num, force_central_node,     &
                 cte_current_FB_fact, Z_xpoint_limit, eta_ohmic,     &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
-                alpha_Newton
+                alpha_Newton, vacuum_min
 
 if (my_id .eq. 0) then
 

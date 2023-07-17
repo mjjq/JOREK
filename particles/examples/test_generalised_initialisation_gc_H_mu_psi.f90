@@ -18,7 +18,7 @@ real*8          :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
 real*8          :: dummy_real8_1,dummy_real8_2,dummy_real8_3
 real*8,dimension(2)                 :: Poloidalbound,Phibound 
 real*8,dimension(2)                 :: Ekinbound,Vbound,Pitchbound,Gyrobound,Chargebound
-real*8,dimension(:),allocatable     :: real_pdf_to_part_coord_param
+real*8,dimension(:),allocatable     :: psi_minmax_loc,real_pdf_to_part_coord_param
 real*8,dimension(:),allocatable     :: real_pdf_param,real_weight_param,real_gdf_param
 real*8,dimension(7,2)               :: phase_space_bounds
 character(len=125)                  :: generic_particle_filename,original_h_mu_psi_filename
@@ -57,6 +57,15 @@ call with(sim,field_reader)
 !> initailise simulation parameters
 sim%time = start_time
 sim%groups(1)%mass = mass
+!> Define the sample box
+Vbound = sqrt(2.d0*Ekinbound*EL_CHG/mass)
+allocate(psi_minmax_loc(2*sim%fields%element_list%n_elements))
+call extract_element_psi_minmax(sim%fields,psi_minmax_loc)
+phase_space_bounds(:,1) = [minval(psi_minmax_loc(1:sim%fields%element_list%n_elements)),&
+                          Poloidalbound(1),Phibound(1),Vbound(1),Pitchbound(1),Gyrobound(1),charge]
+phase_space_bounds(:,2) = [maxval(psi_minmax_loc(sim%fields%element_list%n_elements+1:&
+                          2*sim%fields%element_list%n_elements)),Poloidalbound(2),Phibound(2),&
+                          Vbound(2),Pitchbound(2),Gyrobound(2),charge]
 !> define the pdf inputs
 pdf_to_use         => pdf_psi_H_mu
 n_int_pdf_param    = 0
@@ -73,7 +82,8 @@ allocate(int_gdf_param(n_int_gdf_param))
 int_gdf_param(1)   = include_vpar
 n_real_gdf_param   = 2*sim%fields%element_list%n_elements+3
 allocate(real_gdf_param(n_real_gdf_param))
-call extract_element_psi_minmax(sim%fields,real_gdf_param(1:2*sim%fields%element_list%n_elements))
+real_gdf_param(1:2*sim%fields%element_list%n_elements) = psi_minmax_loc
+deallocate(psi_minmax_loc)
 call find_axis(sim%my_id,sim%fields%node_list,sim%fields%element_list,dummy_real8_1,&
 real_gdf_param(2*sim%fields%element_list%n_elements+1),&
 real_gdf_param(2*sim%fields%element_list%n_elements+2),dummy_int,dummy_real8_2,dummy_real8_3,ifail)
@@ -92,13 +102,7 @@ n_int_pdf_to_part_coord_param = 0
 n_real_pdf_to_part_coord_param = 1
 allocate(real_pdf_to_part_coord_param(n_real_pdf_to_part_coord_param))
 real_pdf_to_part_coord_param(1) = mass
-!> Define the sample box
-Vbound = sqrt(2.d0*Ekinbound*EL_CHG/mass)
-phase_space_bounds(:,1) = [minval(real_gdf_param(1:sim%fields%element_list%n_elements)),&
-                          Poloidalbound(1),Phibound(1),Vbound(1),Pitchbound(1),Gyrobound(1),charge]
-phase_space_bounds(:,2) = [maxval(real_gdf_param(sim%fields%element_list%n_elements+1:&
-                          2*sim%fields%element_list%n_elements)),Poloidalbound(2),Phibound(2),&
-                          Vbound(2),Pitchbound(2),Gyrobound(2),charge]
+
 write(*,*) "Test H_mu_psi initialisation generic vs original, initialise parameters: completed"
 
 write(*,*) "Test H_mu_psi initialisation generic vs original, initialise particles generic method ... "
@@ -129,6 +133,7 @@ write(*,*) sim%my_id, 'System time H mu psi initialisation generic method (s): '
 write(*,*) sim%my_id, 'System time H mu psi initialisation original method (s): ',real(t4-t3,kind=8)/1d3
 
 ! Clean-up ---------------------------------------------------------------------------------------
+if(allocated(psi_minmax_loc))               deallocate(psi_minmax_loc)
 if(allocated(int_pdf_param))                deallocate(int_pdf_param)
 if(allocated(int_weight_param))             deallocate(int_weight_param)
 if(allocated(int_gdf_param))                deallocate(int_gdf_param)

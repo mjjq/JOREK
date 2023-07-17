@@ -35,6 +35,9 @@ def define_histogram_labels_titles(key,ptype):
     elif(ptype=='particle_gc_relativistic'):
       titles = ['Parallel momentum','Magnetic moment']
       labels = ['p_par [AMUm/s]','mu [AMUm^2/Cs]']
+    elif(ptype=='particle_gc'):
+      titles = ['Energy','Magnetic moment']
+      labels = ['E [eV]','mu [m^2/s]']
     else:
       titles = ['velocity 1','velocity 2','velocity 3']
       labels = ['v1','v2','v3']
@@ -59,12 +62,28 @@ def define_histogram_labels_titles_aspectratio_2d(key,ptype):
       xlabels = ['p_par [AMUm/s]']
       ylabels = ['mu [AMUm^2/Cs]']
       aspectratio = [False]
+    elif(ptype=='particle_gc'):
+      titles   = ['Energy - magnetic moment']
+      xlabels = ['E [eV]']
+      ylabels = ['mu [m^2/s]']
+      aspectratio = [False]
     else:
       titles  = ['velocities v1-v2','velocities v1-v3','velocities v2-v3']
       xlabels = ['v1','v1','v2']
       ylabels = ['v2','v3','v3']
       aspectratio = [False,False,False]
   return titles,xlabels,ylabels,aspectratio
+
+# return same velocity structure as a function of the particle type
+def homogenize_particle_structure(groups):
+  from numpy import zeros
+  for group_id,group in enumerate(groups):
+    if(group['type']=='particle_gc'):
+      v = zeros((2,group['E'].size),dtype=group['E'].dtype)
+      v[0,:] = group['E']; v[1,:] = group['mu']
+      group['v'] = v; del group['E'], group['mu']
+      groups[group_id] = group
+  return groups
 
 # Read a jorek particle restart file. Zero ended bytes structre 
 # ('S'-type) are identified and transformed in strings
@@ -249,6 +268,7 @@ bins2d=[100,100,100],fontsize=18,colormap='inferno',spatial_slice_ids=[],\
 spatial_slice_intervals=[],velocity_slice_ids=[],velocity_slice_intervals=[]):
   # read the jorek particle restart data
   p_groups,sim_time = read_jorek_particle_restart_file(filename,filepath,separator)
+  p_groups = homogenize_particle_structure(p_groups)
   # 0d analysis
   compute_uninitialised_particles(p_groups,['i_elm','weight'],[0,0.])
   # plot 1d histograms

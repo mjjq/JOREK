@@ -298,8 +298,12 @@ module phys_module
   logical :: visco_num_T_dependent!< Hyper-visocsity dependent on temperature? Otherwise constant.
   logical :: add_sources_in_sc    !< Whether to add effect of sources in shock-capturing stabilization or not
 
-  !> @name VMS terms
-  logical    :: use_vms
+  !> @name VMS terms: The logical flag 'use_vms' enables to use variable
+  !multiscale based stabilization in fullmhd model 750. The coefficients
+  !vms_coeff_var are the real parameters to scale the stabilization added in
+  !each eqaition. Link to wiki page to be appeared. The paper for the related
+  !work: https://doi.org/10.1016/j.camwa.2023.04.034
+  logical    :: use_vms !< Use VMS stabilization in model 750 only
   real*8     :: vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3
   real*8     :: vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up
   real*8     :: vms_coeff_T, vms_coeff_Te, vms_coeff_Ti

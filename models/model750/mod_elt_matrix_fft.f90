@@ -448,23 +448,6 @@ real*8     :: vms_rhon__p(n_var), vms_rhon__k(n_var)
 real*8     :: vms_rhoimp__p(n_var), vms_rhoimp__k(n_var)
 real*8     :: Pvec_prev_k(n_var), Pjac_k(n_var,n_var)
 real*8     :: res(n_var), res_jac__p(n_var, n_var), res_jac__n(n_var, n_var), res_jac__nn(n_var,n_var)
-real*8     :: rho_eff_R, rho_eff_Z, rho_eff_p
-real*8     :: rhoi_eff_R, rhoi_eff_Z, rhoi_eff_p
-real*8     :: rhoe_eff_R, rhoe_eff_Z, rhoe_eff_p
-real*8     :: T_eff_R, T_eff_Z, T_eff_p
-real*8     :: Ti_eff_R, Ti_eff_Z, Ti_eff_p
-real*8     :: Te_eff_R, Te_eff_Z, Te_eff_p
-real*8     :: UgradRho_eff, UgradRhoi_eff, UgradRhoe_eff
-real*8     :: UgradT_eff, UgradTi_eff, UgradTe_eff
-real*8     :: rho_eff_rho, rho_eff_T, rho_eff_rhoimp
-real*8     :: rhoi_eff_rho, rhoi_eff_Ti, rhoi_eff_Te, rhoi_eff_rhoimp
-real*8     :: rhoe_eff_rho, rhoe_eff_Ti, rhoe_eff_Te, rhoe_eff_rhoimp
-real*8     :: p_eff_rho, p_eff_T, p_eff_rhoimp
-real*8     :: pi_eff_rho, pi_eff_Ti, pi_eff_Te, pi_eff_rhoimp
-real*8     :: pe_eff_rho, pe_eff_Ti, pe_eff_Te, pe_eff_rhoimp
-real*8     :: T_eff_rho, T_eff_T, T_eff_rhoimp
-real*8     :: Ti_eff_rho, Ti_eff_Ti, Ti_eff_Te, Ti_eff_rhoimp
-real*8     :: Te_eff_rho, Te_eff_Ti, Te_eff_Te, Te_eff_rhoimp
 real*8     :: vsR, vsR_UR__p, vsR_UR__n, vsR_UR__nn, vsR_UZ__p, vsR_UZ__n, vsR_UZ__nn, vsR_Up__p, vsR_Up__n, vsR_Up__nn
 real*8     :: vsZ, vsZ_UR__p, vsZ_UR__n, vsZ_UR__nn, vsZ_UZ__p, vsZ_UZ__n, vsZ_UZ__nn, vsZ_Up__p, vsZ_Up__n, vsZ_Up__nn
 real*8     :: vsp, vsp_UR__p, vsp_UR__n, vsp_UR__nn, vsp_UZ__p, vsp_UZ__n, vsp_UZ__nn, vsp_Up__p, vsp_Up__n, vsp_Up__nn

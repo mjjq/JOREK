@@ -301,8 +301,8 @@ module phys_module
   !> @name VMS terms: The logical flag 'use_vms' enables to use variable
   !multiscale based stabilization in fullmhd model 750. The coefficients
   !vms_coeff_var are the real parameters to scale the stabilization added in
-  !each eqaition. Link to wiki page to be appeared. The paper for the related
-  !work: https://doi.org/10.1016/j.camwa.2023.04.034
+  !each equation. For brief description please look at the wiki page:
+  ! https://www.jorek.eu/wiki/doku.php?id=vms
   logical    :: use_vms !< Use VMS stabilization in model 750 only
   real*8     :: vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3
   real*8     :: vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up

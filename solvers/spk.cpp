@@ -22,12 +22,6 @@
 #define int_all int
 #endif
 
-#ifdef SPKVER
-#define spk_version SPKVER
-#else
-#define spk_version 5
-#endif
-
 using namespace strumpack;
 
 extern "C" void spk(void) {}
@@ -66,7 +60,7 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int_all>** spss_, i
     spss->options().set_reordering_method(ReorderingStrategy::PTSCOTCH);
   }
   // set reordering to METIS and MatchingJob to MAX_DIAGONAL_PRODUCT_SCALING as needed for older version
-  if (spk_version<7) {iparm[1] = 1; iparm[2] = 1;}
+  if (STRUMPACK_VERSION_MAJOR<7) {iparm[1] = 1; iparm[2] = 1;}
   spss->options().enable_METIS_NodeND();
 
   if (iparm[2] == 0) {

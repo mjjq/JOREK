@@ -22,6 +22,12 @@
 #define int_all int
 #endif
 
+#ifdef SPKVER
+#define spk_version SPKVER
+#else
+#define spk_version 5
+#endif
+
 using namespace strumpack;
 
 extern "C" void spk(void) {}
@@ -43,10 +49,6 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int_all>** spss_, i
 
   *spss_= new StrumpackSparseSolverMPIDist<double,int_all>(comm);
   spss = *spss_;
-  
-  for (int i=0; i<5; i++){
-    std::cout << "iparm[" << i << "] "<<iparm[i]<<std::endl;
-  }
 
   if (iparm[0] == 1) {
     spss->options().set_Krylov_solver(KrylovSolver::DIRECT);
@@ -63,6 +65,8 @@ extern "C" void spk_init(StrumpackSparseSolverMPIDist<double,int_all>** spss_, i
   } else if (iparm[1] == 3) {
     spss->options().set_reordering_method(ReorderingStrategy::PTSCOTCH);
   }
+  // set reordering to METIS and MatchingJob to MAX_DIAGONAL_PRODUCT_SCALING as needed for older version
+  if (spk_version<7) {iparm[1] = 1; iparm[2] = 1;}
   spss->options().enable_METIS_NodeND();
 
   if (iparm[2] == 0) {

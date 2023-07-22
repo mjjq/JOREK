@@ -1388,6 +1388,7 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       Te0      = eq_g_1D(mp,var_T,ms) /2.d0
       T0_corr  = corr_neg_temp(T0) 
 #endif
+      Ti0_corr     =     corr_neg_temp(Ti0 * 2.d0) / 2.d0
       Te0_corr     =     corr_neg_temp(Te0 * 2.d0) / 2.d0
       dTe0_corr_dT = dcorr_neg_temp_dT(Te0 * 2.d0) / 2.d0
 

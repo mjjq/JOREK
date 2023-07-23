@@ -199,7 +199,7 @@ real*8     :: T_or_Te, T_or_Te_corr, T_or_Te_0, dT_or_Te_corr_dT
 real*8     :: fact_conservative_u = 1.d0
 
 ! --- Factor to use old viscosity model
-real*8     :: visco_fact_old(2)
+real*8     :: visco_fact_old, visco_fact_new
 
 #define DIM1 n_plane
 #define DIM2 1:n_vertex_max*n_var*n_degrees
@@ -1086,10 +1086,11 @@ do i=1,n_vertex_max
 
           ! --- Switch to use old viscosity model
           if (visco_old_setup) then
-            visco_fact_old(1) = 1.d0 / BigR**2.d0    ! Recover R^2 dependence
-            visco_fact_old(2) = 0.d0                 ! Switch off new viscosity terms
+            visco_fact_old = 1.d0 / BigR**2.d0    ! Recover R^2 dependence
+            visco_fact_new = 0.d0                 ! Switch off new viscosity terms
           else
             visco_fact_old = 1.d0 
+            visco_fact_new = 1.d0 
           endif
 
           ! --- Viscosity heating
@@ -1461,9 +1462,9 @@ do i=1,n_vertex_max
                          - r0_hat * BigR**2 * w0 * (v_s * u0_t - v_t * u0_s)                                       * tstep * factor(var_u,1) &
                          + v * (ps0_s * zj0_t - ps0_t * zj0_s )                                                    * tstep * factor(var_u,2) &
 
-                         - visco_T * BigR**2.0 * (v_x * w0_x + v_y * w0_y)  * visco_fact_old(1)     * BigR  * xjac * tstep * factor(var_u,3) &
-                         - 2.d0 * visco_T * BigR * w0 * v_x                 * visco_fact_old(2)     * BigR  * xjac * tstep * factor(var_u,3) &
-                         - visco_T *  (v_x * u0_xpp + v_y * u0_ypp)         * visco_fact_old(2)     * BigR  * xjac * tstep * factor(var_u,3) &
+                         - visco_T * BigR**2.0 * (v_x * w0_x + v_y * w0_y)  * visco_fact_old     * BigR  * xjac * tstep * factor(var_u,3) &
+                         - 2.d0 * visco_T * BigR * w0 * v_x                 * visco_fact_new     * BigR  * xjac * tstep * factor(var_u,3) &
+                         - visco_T *  (v_x * u0_xpp + v_y * u0_ypp)         * visco_fact_new     * BigR  * xjac * tstep * factor(var_u,3) &
 
                          - v * F0 / BigR * zj0_p                                                            * xjac * tstep * factor(var_u,2) &
                          + BigR**2 * (v_s * p0_t - v_t * p0_s)                                                     * tstep * factor(var_u,4) &
@@ -1695,9 +1696,9 @@ do i=1,n_vertex_max
                          + (GAMMA - 1.) * vpar0 * BigR * visco_par_heating * (v_x * vpar0_x     + v_y * vpar0_y) * xjac * tstep * factor(var_Ti,12) &
                          !==========================End of viscous heating terms==============================
                             !============================ The perpendicular viscous heating terms================
-                            -(GAMMA-1.) * v * visco_T_heating * BigR**2.0 * (u0_x * w0_x + u0_y * w0_y) * visco_fact_old(1) * BigR * xjac * tstep * factor(var_Ti,14) &
-                            -(GAMMA-1.) * v * visco_T_heating * 2.d0 * BigR * w0 * u0_x                 * visco_fact_old(2) * BigR * xjac * tstep * factor(var_Ti,14) &
-                            -(GAMMA-1.) * v * visco_T_heating *  (u0_x * u0_xpp + u0_y * u0_ypp)        * visco_fact_old(2) * BigR * xjac * tstep * factor(var_Ti,14) &
+                            -(GAMMA-1.) * v * visco_T_heating * BigR**2.0 * (u0_x * w0_x + u0_y * w0_y) * visco_fact_old * BigR * xjac * tstep * factor(var_Ti,14) &
+                            -(GAMMA-1.) * v * visco_T_heating * 2.d0 * BigR * w0 * u0_x                 * visco_fact_new * BigR * xjac * tstep * factor(var_Ti,14) &
+                            -(GAMMA-1.) * v * visco_T_heating *  (u0_x * u0_xpp + u0_y * u0_ypp)        * visco_fact_new * BigR * xjac * tstep * factor(var_Ti,14) &
                             !============================End perpendicular viscous heating terms=================
 
                          + zeta * v * (r0_corr + rimp0_corr*alpha_i) * delta_g(mp,var_Ti,ms,mt) * BigR * xjac         * factor(var_Ti,9)   &
@@ -1879,9 +1880,9 @@ do i=1,n_vertex_max
                              + (GAMMA - 1.) * vpar0 * BigR * visco_par_heating * (v_x * vpar0_x     + v_y * vpar0_y) * xjac * tstep * factor(var_T,19) &
                              !==========================End of viscous heating terms==============================
                              !============================ The perpendicular viscous heating terms================
-                             -(GAMMA-1.) * v * visco_T_heating * BigR**2.0 * (u0_x * w0_x + u0_y * w0_y) * visco_fact_old(1) * BigR * xjac * tstep * factor(var_T,20) &
-                             -(GAMMA-1.) * v * visco_T_heating * 2.d0 * BigR * w0 * u0_x                 * visco_fact_old(2) * BigR * xjac * tstep * factor(var_T,20) &
-                             -(GAMMA-1.) * v * visco_T_heating *  (u0_x * u0_xpp + u0_y * u0_ypp)        * visco_fact_old(2) * BigR * xjac * tstep * factor(var_T,20) &
+                             -(GAMMA-1.) * v * visco_T_heating * BigR**2.0 * (u0_x * w0_x + u0_y * w0_y) * visco_fact_old * BigR * xjac * tstep * factor(var_T,20) &
+                             -(GAMMA-1.) * v * visco_T_heating * 2.d0 * BigR * w0 * u0_x                 * visco_fact_new * BigR * xjac * tstep * factor(var_T,20) &
+                             -(GAMMA-1.) * v * visco_T_heating *  (u0_x * u0_xpp + u0_y * u0_ypp)        * visco_fact_new * BigR * xjac * tstep * factor(var_T,20) &
                              !============================End perpendicular viscous heating terms=================
 
                              - v * BigR * ksiion  * (r0+alpha_e*rimp0) * rn0 * Sion_T           * xjac * tstep * factor(var_T,12) &
@@ -2339,15 +2340,15 @@ do i=1,n_vertex_max
                               * BigR * xjac * theta * tstep
                   endif
                   !---------------------------------------- NEO
-                  amat_nn(var_u,var_u) = visco_T *  (v_x * u_xpp + v_y * u_ypp)  * visco_fact_old(2)   * BigR * xjac * theta * tstep 
+                  amat_nn(var_u,var_u) = visco_T *  (v_x * u_xpp + v_y * u_ypp)  * visco_fact_new   * BigR * xjac * theta * tstep 
 
                   amat(var_u,var_zj)   = - v * (ps0_s * zj_t  - ps0_t * zj_s)                                              * theta * tstep
                                                                                                                     
                   amat_n(var_u,var_zj) = + F0 / BigR * v * zj_p  * xjac                                                    * theta * tstep
                                                                                                                     
                   amat(var_u,var_w) = r0_hat * BigR**2 * w  * ( v_s * u0_t - v_t * u0_s)                                   * theta * tstep &
-                                    + BigR**2.d0 * ( v_x * w_x + v_y * w_y) * visco_T * visco_fact_old(1)  * BigR * xjac   * theta * tstep &
-                                    + 2.d0 * BigR * w *  v_x                * visco_T * visco_fact_old(2)  * BigR * xjac   * theta * tstep &
+                                    + BigR**2.d0 * ( v_x * w_x + v_y * w_y) * visco_T * visco_fact_old  * BigR * xjac   * theta * tstep &
+                                    + 2.d0 * BigR * w *  v_x                * visco_T * visco_fact_new  * BigR * xjac   * theta * tstep &
  
                                     + v * tauIC*2. * BigR**4 * (Pi0_s * w_t - Pi0_t * w_s)                                 * theta * tstep &
                                                                                                                     
@@ -2442,9 +2443,9 @@ do i=1,n_vertex_max
                     amat(var_u,var_Te) = - BigR**2 * (v_s * r0_t * Te   - v_t * r0_s * Te)           * theta * tstep  &
                                 - BigR**2 * (v_s * r0   * Te_t - v_t * r0   * Te_s)         * theta * tstep  &
 
-                                + dvisco_dT * Te * ( v_x * w0_x + v_y * w0_y ) * BigR**3.d0 * visco_fact_old(1) * xjac * theta * tstep  &
-                                + dvisco_dT * Te * 2.d0 * v_x * w0             * BigR**2.d0 * visco_fact_old(2) * xjac * theta * tstep  &
-                                + dvisco_dT * Te * (v_x*u0_xpp + v_y*u0_ypp)   * BigR       * visco_fact_old(2) * xjac * theta * tstep  &
+                                + dvisco_dT * Te * ( v_x * w0_x + v_y * w0_y ) * BigR**3.d0 * visco_fact_old * xjac * theta * tstep  &
+                                + dvisco_dT * Te * 2.d0 * v_x * w0             * BigR**2.d0 * visco_fact_new * xjac * theta * tstep  &
+                                + dvisco_dT * Te * (v_x*u0_xpp + v_y*u0_ypp)   * BigR       * visco_fact_new * xjac * theta * tstep  &
 
                                 - d2visco_dT2*Te * bigR * W_dia   * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
                                 - dvisco_dT*Te   * bigR * W_dia   * (v_xx + v_x/bigR + v_yy) * xjac * theta * tstep
@@ -2462,9 +2463,9 @@ do i=1,n_vertex_max
                                                       - (T_xy * r0 + T_x*r0_y + T_y*r0_x + T*r0_xy) * (u0_xx - u0_yy))  &
                                                     * xjac * theta * tstep                                                  &
 
-                              + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR**3.d0 * visco_fact_old(1) * xjac * theta * tstep  &
-                              + dvisco_dT * T * 2.d0 * v_x * w0             * BigR**2.d0 * visco_fact_old(2) * xjac * theta * tstep  &
-                              + dvisco_dT * T * (v_x*u0_xpp + v_y*u0_ypp)   * BigR       * visco_fact_old(2) * xjac * theta * tstep  &
+                              + dvisco_dT * T * ( v_x * w0_x + v_y * w0_y ) * BigR**3.d0 * visco_fact_old * xjac * theta * tstep  &
+                              + dvisco_dT * T * 2.d0 * v_x * w0             * BigR**2.d0 * visco_fact_new * xjac * theta * tstep  &
+                              + dvisco_dT * T * (v_x*u0_xpp + v_y*u0_ypp)   * BigR       * visco_fact_new * xjac * theta * tstep  &
 
                               ! --- Contributions of the diamagnetic viscosity 
                               - dvisco_dT     * bigR * W_dia_Ti * (v_x*Ti0_x + v_y*Ti0_y)  * xjac * theta * tstep  &
@@ -3100,9 +3101,9 @@ do i=1,n_vertex_max
                                     * (source_bg_drift + source_imp_drift)                                              * xjac * theta * tstep &
                                !==============================End of friction terms===================
 
-                                + (GAMMA-1.) * v * BigR**2.d0 * ( u_x * w0_x + u_y * w0_y) * visco_T_heating * visco_fact_old(1)  * BigR * xjac * theta * tstep &
-                                + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u_x                 * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
-                                + (GAMMA-1.) * v * (u_x * u0_xpp + u_y * u0_ypp)           * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * BigR**2.d0 * ( u_x * w0_x + u_y * w0_y) * visco_T_heating * visco_fact_old  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u_x                 * visco_T_heating * visco_fact_new  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * (u_x * u0_xpp + u_y * u0_ypp)           * visco_T_heating * visco_fact_new  * BigR * xjac * theta * tstep &
 
                            + tgnum_Ti* 0.25d0 * BigR**2 * Ti0* ((r0_x+alpha_i*rimp0_x) * u_y - (r0_y+alpha_i*rimp0_y) * u_x)                &
                                               * ( v_x * u0_y - v_y * u0_x) * xjac * theta*tstep*tstep  &
@@ -3113,10 +3114,10 @@ do i=1,n_vertex_max
                            + tgnum_Ti* 0.25d0 * BigR**2 * (r0+alpha_i*rimp0) * (Ti0_x * u0_y - Ti0_y * u0_x)              &
                                               * ( v_x * u_y - v_y * u_x) * xjac * theta*tstep*tstep 
 
-                    amat_nn(var_Ti,var_u) = (GAMMA-1.) * v * visco_T_heating *  (u0_x * u_xpp + u0_y * u_ypp)       * visco_fact_old(2)  * BigR * xjac * theta * tstep
+                    amat_nn(var_Ti,var_u) = (GAMMA-1.) * v * visco_T_heating *  (u0_x * u_xpp + u0_y * u_ypp)       * visco_fact_new  * BigR * xjac * theta * tstep
  
-                    amat(var_Ti,var_w) = (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w_x + u0_y * w_y) * visco_T_heating * visco_fact_old(1)  * BigR * xjac * theta * tstep &
-                                       + (GAMMA-1.) * v * 2.d0 * BigR * w *  u0_x                 * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep 
+                    amat(var_Ti,var_w) = (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w_x + u0_y * w_y) * visco_T_heating * visco_fact_old  * BigR * xjac * theta * tstep &
+                                       + (GAMMA-1.) * v * 2.d0 * BigR * w *  u0_x                 * visco_T_heating * visco_fact_new  * BigR * xjac * theta * tstep 
  
  
                     amat(var_Ti,var_rho) = v * rho * Ti0    * BigR * xjac * (1.d0 + zeta)     &
@@ -3275,9 +3276,9 @@ do i=1,n_vertex_max
   
                     amat(var_Ti,var_Te) = - v * BigR * ddTi_e_dTe * Te                           * xjac * theta * tstep &
 
-                                          + (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w0_x + u0_y * w0_y) * dvisco_dT_heating * Te * visco_fact_old(1)  * BigR * xjac * theta * tstep &
-                                          + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u0_x                  * dvisco_dT_heating * Te * visco_fact_old(2)  * BigR * xjac * theta * tstep &
-                                          + (GAMMA-1.) * v * (u0_x * u0_xpp + u0_y * u0_ypp)           * dvisco_dT_heating * Te * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                          + (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w0_x + u0_y * w0_y) * dvisco_dT_heating * Te * visco_fact_old  * BigR * xjac * theta * tstep &
+                                          + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u0_x                  * dvisco_dT_heating * Te * visco_fact_new  * BigR * xjac * theta * tstep &
+                                          + (GAMMA-1.) * v * (u0_x * u0_xpp + u0_y * u0_ypp)           * dvisco_dT_heating * Te * visco_fact_new  * BigR * xjac * theta * tstep &
  
                     !===================== Additional terms from friction terms============
                                           - v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 &
@@ -3854,9 +3855,9 @@ do i=1,n_vertex_max
                                         - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
                                             * ((r0+alpha_e*rimp0)*rn0*Sion_T+source_bg_drift + source_imp_drift)            * xjac * theta * tstep &
                     !==============================End of friction terms===================
-                                + (GAMMA-1.) * v * BigR**2.d0 * ( u_x * w0_x + u_y * w0_y) * visco_T_heating * visco_fact_old(1)  * BigR * xjac * theta * tstep &
-                                + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u_x                 * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
-                                + (GAMMA-1.) * v * (u_x * u0_xpp + u_y * u0_ypp)           * visco_T_heating * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * BigR**2.d0 * ( u_x * w0_x + u_y * w0_y) * visco_T_heating * visco_fact_old  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u_x                 * visco_T_heating * visco_fact_new  * BigR * xjac * theta * tstep &
+                                + (GAMMA-1.) * v * (u_x * u0_xpp + u_y * u0_ypp)           * visco_T_heating * visco_fact_new  * BigR * xjac * theta * tstep &
   
                           + tgnum_T * 0.25d0 * BigR**2 * T0* ((r0_x+alpha_imp*rimp0_x) * u_y - (r0_y+alpha_imp*rimp0_y) * u_x)                                &
                                              * ( v_x * u0_y - v_y * u0_x)              * xjac * theta * tstep * tstep &
@@ -3867,12 +3868,12 @@ do i=1,n_vertex_max
                           + tgnum_T * 0.25d0 * BigR**2 * (r0+alpha_imp_bis*rimp0) * (T0_x * u0_y - T0_y * u0_x)                              &
                                              * ( v_x * u_y - v_y * u_x)                * xjac * theta * tstep * tstep 
   
-                    amat_nn(var_T,var_u)= (GAMMA-1.) * v * visco_T_heating *  (u0_x * u_xpp + u0_y * u_ypp) * visco_fact_old(2)  * BigR * xjac * theta * tstep
+                    amat_nn(var_T,var_u)= (GAMMA-1.) * v * visco_T_heating *  (u0_x * u_xpp + u0_y * u_ypp) * visco_fact_new  * BigR * xjac * theta * tstep
                     
                     amat(var_T,var_zj)  = - v * (gamma-1.d0) * eta_T_ohm * 2.d0 * zj * zj0/(BigR**2.d0) * BigR * xjac * theta * tstep
   
-                    amat(var_T,var_w)   = (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w_x + u0_y * w_y) * visco_T_heating * visco_fact_old(1) * BigR * xjac * theta * tstep &
-                                        + (GAMMA-1.) * v * 2.d0 * BigR * w *  u0_x                 * visco_T_heating * visco_fact_old(2) * BigR * xjac * theta * tstep 
+                    amat(var_T,var_w)   = (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w_x + u0_y * w_y) * visco_T_heating * visco_fact_old * BigR * xjac * theta * tstep &
+                                        + (GAMMA-1.) * v * 2.d0 * BigR * w *  u0_x                 * visco_T_heating * visco_fact_new * BigR * xjac * theta * tstep 
  
                     amat(var_T,var_rho) =   v * rho * T0   * BigR * xjac * (1.d0 + zeta)     &
                                           - v * rho * BigR**2 * ( T0_s  * u0_t - T0_t  * u0_s)                        * theta * tstep &
@@ -4018,9 +4019,9 @@ do i=1,n_vertex_max
                                       - v * BigR * ((GAMMA - 1.)/2.) * vv2 &
                                           * ((r0+alpha_e*rimp0)*rn0*dSion_dT) * T * xjac * theta * tstep &
                     !==============================End of friction terms=================
-                                      + (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w0_x + u0_y * w0_y) * dvisco_dT_heating * T * visco_fact_old(1)  * BigR * xjac * theta * tstep &
-                                      + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u0_x                  * dvisco_dT_heating * T * visco_fact_old(2)  * BigR * xjac * theta * tstep &
-                                      + (GAMMA-1.) * v * (u0_x * u0_xpp + u0_y * u0_ypp)           * dvisco_dT_heating * T * visco_fact_old(2)  * BigR * xjac * theta * tstep &
+                                      + (GAMMA-1.) * v * BigR**2.d0 * ( u0_x * w0_x + u0_y * w0_y) * dvisco_dT_heating * T * visco_fact_old  * BigR * xjac * theta * tstep &
+                                      + (GAMMA-1.) * v * 2.d0 * BigR * w0 *  u0_x                  * dvisco_dT_heating * T * visco_fact_new  * BigR * xjac * theta * tstep &
+                                      + (GAMMA-1.) * v * (u0_x * u0_xpp + u0_y * u0_ypp)           * dvisco_dT_heating * T * visco_fact_new  * BigR * xjac * theta * tstep &
 
                           + tgnum_T * 0.25d0 * BigR**2 * T* ((r0_x+alpha_imp_bis*rimp0_x) * u0_y &
                                                              - (r0_y+alpha_imp_bis*rimp0_y) * u0_x)                               &

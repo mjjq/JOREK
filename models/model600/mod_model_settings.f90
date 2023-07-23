@@ -24,7 +24,7 @@ logical, parameter :: hydrodynamics   = .false.
 logical, parameter :: reduced_MHD     = .true.
 logical, parameter :: full_MHD        = .false.
 
-logical, parameter :: model_family      = .true. !< Is this 
+logical, parameter :: model_family      = .true.
 character(len=42)  :: base_mod_descr    = 'Model family for tokamak reduced MHD'
 
 ! --- extensions to it
@@ -41,8 +41,8 @@ logical, parameter :: with_ext(n_mod_ext) = &
 integer, parameter :: n_var_base        = 6         !< number of variables in base model
 integer, parameter :: n_var_TiTe        = sum(merge( (/1/), (/0/), with_TiTe      ))
 integer, parameter :: n_var_vpar        = sum(merge( (/1/), (/0/), with_vpar      ))
-integer, parameter :: n_var_neutrals    = sum(merge( (/1/), (/0/), with_neutrals  )) !### not yet
-integer, parameter :: n_var_impurities  = sum(merge( (/1/), (/0/), with_impurities)) !### not yet
+integer, parameter :: n_var_neutrals    = sum(merge( (/1/), (/0/), with_neutrals  ))
+integer, parameter :: n_var_impurities  = sum(merge( (/1/), (/0/), with_impurities))
 integer, parameter :: n_var_refluid     = sum(merge( (/1/), (/0/), with_refluid   )) !### not yet
 integer, parameter :: n_var_ext(n_mod_ext) = (/ n_var_TiTe, n_var_vpar, n_var_neutrals,         &
   n_var_impurities, n_var_refluid /)
@@ -79,9 +79,9 @@ integer,  parameter :: n_terms_u    = 11
 integer,  parameter :: n_terms_zj   = 1
 integer,  parameter :: n_terms_w    = 1
 integer,  parameter :: n_terms_rho  = 12
-integer,  parameter :: n_terms_T    = 20
-integer,  parameter :: n_terms_Te   = 18
-integer,  parameter :: n_terms_Ti   = 13
+integer,  parameter :: n_terms_T    = 21
+integer,  parameter :: n_terms_Te   = 19
+integer,  parameter :: n_terms_Ti   = 14
 integer,  parameter :: n_terms_vpar = 10
 integer,  parameter :: n_terms_rhon = 7
 integer,  parameter :: n_terms_rhoimp = 10
@@ -147,7 +147,8 @@ character*36, dimension(n_terms_T),     parameter :: T_term_names=  &
                                                  'T_Eq__imp_ionization   ', &  ! 17:
                                                  'T_Eq__power_teleported ', &  ! 18:
                                                  'T_Eq__viscopar_heating ', &  ! 19:
-                                                 'T_Eq__visco_heating    '/)   ! 20:
+                                                 'T_Eq__impl_heating     ', &  ! 20:
+                                                 'T_Eq__visco_heating    '/)   ! 21:
 
 character*36, dimension(n_terms_Ti),    parameter :: Ti_term_names=  &
                                               (/ 'Ti_Eq__ext_heat_source ', &  !  1:
@@ -162,7 +163,8 @@ character*36, dimension(n_terms_Ti),    parameter :: Ti_term_names=  &
                                                  'Ti_Eq__neutral_friction', &  ! 10:
                                                  'Ti_Eq__TiTe_energy_exch', &  ! 11:
                                                  'Ti_Eq__viscopar_heating', &  ! 12:
-                                                 'Ti_Eq__visco_heating   '/)   ! 13:
+                                                 'Ti_Eq__implicit_heating', &  ! 13:
+                                                 'Ti_Eq__visco_heating   '/)   ! 14:
 
 character*36, dimension(n_terms_Te),    parameter :: Te_term_names=  &
                                               (/ 'Te_Eq__ext_heat_source ', &  !  1:
@@ -182,7 +184,8 @@ character*36, dimension(n_terms_Te),    parameter :: Te_term_names=  &
                                                  'Te_Eq__backg_imp_radiat', &  ! 15:
                                                  'Te_Eq__main_imp_radiat ', &  ! 16:
                                                  'Te_Eq__imp_ionization  ', &  ! 17:
-                                                 'Te_Eq__power_teleported'/)   ! 18:
+                                                 'Te_Eq__power_teleported', &  ! 19:
+                                                 'Te_Eq__implicit_heating'/)   ! 20:
 
 
 character*36, dimension(n_terms_vpar),  parameter :: vpar_term_names=  &

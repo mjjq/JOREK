@@ -20,7 +20,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 rst_hdf5, rst_hdf5_version, keep_current_prof,      &
                 restart, regrid, write_ps, time_evol_theta,         &
                 time_evol_zeta, force_horizontal_Xline,             &
-                Mach1_openBC,                                       &
+                Mach1_openBC, Mach1_fix_B,                          &
                 eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       &
                 tauIC_ARAZ_on,                                      &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
@@ -121,7 +121,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 use_cx, use_sputtering, use_ionisation,             &
                 use_ncs, use_pcs, use_ccs, use_pcs_full,            &
                 cte_current_FB_fact, Z_xpoint_limit, eta_ohmic,     &
-                CARIDDI_mode
+                CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
+                alpha_Newton, vacuum_min
 
 
 if (my_id .eq. 0) then

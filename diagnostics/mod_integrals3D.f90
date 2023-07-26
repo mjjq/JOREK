@@ -1118,13 +1118,13 @@ do ife = ife_min, ife_max
         source_neutral     = 0.d0
         source_neutral_arr = 0.d0
 
-        if (with_impurities) then ! If with_impurities, we have to use the mixed pellet ablation laws and extract the neutral hydrogen isotope ablation rate
-          source_imp       = 0.d0; source_imp_arr       = 0.d0
-          source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
-          call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_neutral_drift_arr, source_imp_drift_arr)
-        else
-          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
-        endif
+#if (defined WITH_Impurities)
+        source_imp       = 0.d0; source_imp_arr       = 0.d0
+        source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
+        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_neutral_drift_arr, source_imp_drift_arr)
+      else
+        call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+#endif /* WITH_Impurities */ 
 
         do i_inj = 1,n_inj
           if (drift_distance(i_inj) /= 0.d0) then

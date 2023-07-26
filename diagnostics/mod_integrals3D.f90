@@ -113,7 +113,7 @@ real*8  :: kin_par_in, kin_par_out, kin_par_tot, kin_perp_in, kin_perp_out, kin_
 real*8  :: VM_int, VM_ext, VM_tot, mag_in, mag_out, mag_tot, J2_int, J2_ext, J2_tot, ohm_in, ohm_tot, ohm_out
 real*8  :: heli_tot, thm_wk, thm_wk_tot, mag_wk, mag_wk_tot, thermal_work_tot
 real*8  :: vpar_disp_tot, vpar_disp, viscopar_dissip_tot, source_tot, heating_tot
-real*8  :: vprp_disp_tot, vprp_disp, visco_dissip_tot, visco_T
+real*8  :: vprp_disp_tot, vprp_disp, visco_dissip_tot, visco_T, visco_fact_old, visco_fact_new
 real*8  :: fric_disp_tot, fric_disp, friction_dissip_tot
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
@@ -372,7 +372,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          central_density, pellet_particles,pellet_density, pellet_volume,                &
 !$omp          local_pellet_particles, local_plasma_particles, local_pellet_volume,            &
 !$omp          heli_tot,  keep_current_prof, psi_off, visco_par, visco_par_heating, thm_wk_tot,&
-!$omp          visco, visco_T_dependent,                                                       &
+!$omp          visco, visco_T_dependent, visco_old_setup,                                      &
 !$omp          mag_wk_tot, vpar_disp_tot, vprp_disp_tot, fric_disp_tot, area1, mag_src_tot,                   &
 !$omp          eta_ohmic, central_mass, R2curr_tmp, Zcurr_tmp,                                 &
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -405,7 +405,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
-!$omp           u0_x, u0_y, T0e_corr, T0i_corr,                                                &
+!$omp           u0_x, u0_y, T0e_corr, T0i_corr, visco_fact_old, visco_fact_new,                &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, fric_disp, p0_p, T0_corr, r0_corr, u0_p,     &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
@@ -675,11 +675,20 @@ do ife = ife_min, ife_max
         eta_T         = resistivity(eta, T_or_Te_corr, T_max_eta, T_or_Te_0)  
         eta_T_ohm     = resistivity(eta_ohmic, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0)
 
-                ! --- Temperature dependent viscosity
-                if ( visco_T_dependent ) then
-                  visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
+        ! --- Switch to use old viscosity model
+        if (visco_old_setup) then
+          visco_fact_old = 1.d0 / BigR**2.d0    ! Recover R^2 dependence
+          visco_fact_new = 0.d0                 ! Switch off new viscosity terms
+        else
+          visco_fact_old = 1.d0 
+          visco_fact_new = 1.d0 
+        endif
+
+        ! --- Temperature dependent viscosity
+        if ( visco_T_dependent ) then
+          visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
           if (T_or_Te .lt. T_min) then
-            visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+            visco_T   = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
           endif
         else
           visco_T     = visco
@@ -1033,9 +1042,9 @@ do ife = ife_min, ife_max
                      + F0 * zj0 * u0_p / (BigR**2.d0)
 
         vpar_disp  = visco_par * (vpar_x**2.d0+vpar_y**2.d0 ) 
-        vprp_disp  = -visco_T * ( BigR**2.d0 * ( dwdx*dudx + dwdy*dudy )          &
-                                 + 2.d0 * BigR * w0 * dudx                        &
-                                 + u0_xpp * dudx + u0_ypp * dudy   )
+        vprp_disp  = -visco_T * ( BigR**2.d0 * ( dwdx*dudx + dwdy*dudy ) * visco_fact_old  &
+                                 + 2.d0 * BigR * w0 * dudx               * visco_fact_new  &
+                                 + u0_xpp * dudx + u0_ypp * dudy   )     * visco_fact_new
 
         VP_tot = VP_tot + r0 * vpar0**2 * BB2 * xjac * BigR * wst * delta_phi
         VK_tot = VK_tot + r0 * (dudx**2 + dudy**2) * BigR**2 * xjac * BigR * wst * delta_phi

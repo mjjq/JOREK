@@ -159,8 +159,9 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
         if (prod > 0.d0) is_private = .true.
       endif
 
-      ! --- Define private regions
-      if ( ES%xpoint .and. (ES%ifail_xpoint==0) .and. (ES%ifail_axis==0) ) then
+      ! --- Second method to double check that the limiter does not belong to a private region
+      ! ---    Use X-points to check region (if available and properly found) 
+      if (ES%axis_init .and. ES%xpoint_init .and. ES%xpoint .and. (ES%ifail_axis==0) .and. (ES%ifail_xpoint==0) ) then
 
         ! --- The boundary will be initially guessed as the active xpoint
         if (ES%xcase == 1) then
@@ -187,7 +188,7 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
           is_private = .false.
         endif
 
-      endif ! --- Define private regions
+      endif ! --- end second method to check private regions
       
       if (.not. is_private) then
         psma = max(psma,psmima)

@@ -2148,7 +2148,7 @@ if (my_id .eq. 0) then
       case ( 'Viscpar_diss' )
         res(iexpr+1) = viscopar_dissip_tot
 
-      case ( 'Friction_diss' )
+      case ( 'Fric_diss' )
         res(iexpr+1) = friction_dissip_tot
 
       case ( 'Wmag_src_tot' )

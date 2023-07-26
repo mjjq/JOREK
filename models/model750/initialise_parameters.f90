@@ -163,7 +163,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up,           &
                 vms_coeff_rho, vms_coeff_Ti, vms_coeff_Te,          &
                 vms_coeff_T, vms_coeff_rhon, vms_coeff_rhoimp,      &
-                vacuum_min
+                vacuum_min, strumpack_matching
 
 if (my_id .eq. 0) then
 

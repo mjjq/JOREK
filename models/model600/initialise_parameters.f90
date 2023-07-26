@@ -208,7 +208,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 visco_par_heating, constant_imp_source,             &
                 T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar,              &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
-                alpha_Newton, vacuum_min, visco_old_setup, visco_heating
+                alpha_Newton, vacuum_min, strumpack_matching,       &
+                visco_old_setup, visco_heating
 
 
 if (my_id .eq. 0) then

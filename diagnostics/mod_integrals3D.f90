@@ -149,8 +149,8 @@ real*8  :: source_neutral, source_neutral_drift
 real*8  :: source_neutral_arr(n_inj_max), source_neutral_drift_arr(n_inj_max)
 #endif
 #ifdef WITH_Impurities
-real*8  :: source_bg, source_imp, source_bg_drift
-real*8  :: source_bg_arr(n_inj_max), source_imp_arr(n_inj_max), source_bg_drift_arr(n_inj_max) 
+real*8  :: source_bg, source_imp, source_bg_drift, source_imp_drift
+real*8  :: source_bg_arr(n_inj_max), source_imp_arr(n_inj_max), source_bg_drift_arr(n_inj_max), source_imp_drift_arr(n_inj_max) 
 #endif
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 real*8  :: local_radiation, local_radiation_bg, local_E_ion, total_radiation, total_radiation_bg, total_E_ion, local_P_ei, total_P_ei
@@ -411,8 +411,8 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp           n_spi_tmp, source_tmp, ns_shape, ns_shape_drift,                               &
 #endif
 #ifdef WITH_Impurities
-!$omp           source_bg, source_imp, source_bg_drift,                                        &
-!$omp           source_bg_arr, source_imp_arr, source_bg_drift_arr,                            &
+!$omp           source_bg, source_imp, source_bg_drift, source_imp_drift,                      &
+!$omp           source_bg_arr, source_imp_arr, source_bg_drift_arr, source_imp_drift_arr,      &
 !$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT,                                       &
 !$omp           ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,                                 &
 !$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV,                                 &
@@ -1112,13 +1112,19 @@ do ife = ife_min, ife_max
         end if
 #endif
 
-#if ( (defined WITH_Neutrals) && (! defined WITH_Impurities) )
+#if (defined WITH_Neutrals)
         !--- We calculate here the number of neutrals particles injected per second with n_particles_inj and the number of neutrals in the plasma
 
         source_neutral     = 0.d0
         source_neutral_arr = 0.d0
 
-        call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr, source_neutral_drift_arr)
+        if (with_impurities) then ! If with_impurities, we have to use the mixed pellet ablation laws and extract the neutral hydrogen isotope ablation rate
+          source_imp       = 0.d0; source_imp_arr       = 0.d0
+          source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
+          call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_neutral_drift_arr, source_imp_drift_arr)
+        else
+          call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+        endif
 
         do i_inj = 1,n_inj
           if (drift_distance(i_inj) /= 0.d0) then
@@ -1147,40 +1153,58 @@ do ife = ife_min, ife_max
         fric_disp_tot = fric_disp_tot + fric_disp * BigR * xjac * wst * delta_phi 
 #endif
 #ifdef WITH_Impurities
-        !--- Calculate the neutral injection rate and the number of neutrals in the plasma
+        ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
+        if (.not. (with_neutrals .and. with_impurities)) then ! if with_neutrals and with_impurities we should already have called this once above
+          source_imp       = 0.d0; source_imp_arr       = 0.d0
+          source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
+        endif
 
-        source_imp      = 0.d0
-        source_bg       = 0.d0
-        source_bg_drift = 0.d0
+        source_bg        = 0.d0; source_bg_arr       = 0.d0
+        source_bg_drift  = 0.d0; source_bg_drift_arr = 0.d0
 
-        source_imp_arr      = 0.d0
-        source_bg_arr       = 0.d0
-        source_bg_drift_arr = 0.d0
-
-        call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_bg_drift_arr)
+        if (.not. with_neutrals) call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_bg_drift_arr, source_imp_drift_arr) ! if with_neutrals and with_impurities we should already have called this once above
 
         do i_inj = 1,n_inj
-          source_imp = source_imp + source_imp_arr(i_inj)
-          if (drift_distance(i_inj) /= 0.d0) then
-            source_bg = source_bg + source_bg_drift_arr(i_inj)
-          else
-            source_bg = source_bg + source_bg_arr(i_inj)
-          end if
+          source_imp       = source_imp + source_imp_arr(i_inj)
+          source_imp_drift = source_imp_drift + source_imp_drift_arr(i_inj)
+          source_bg        = source_bg  + source_bg_arr(i_inj)
+          source_bg_drift  = source_bg_drift + source_bg_drift_arr(i_inj)
         end do
+        ! This is to detect N/A
+        if (source_imp /= source_imp .or. source_bg /= source_bg) then
+          write(*,*) "WARNING: source_imp = ", source_imp
+          write(*,*) "WARNING: source_bg = ", source_bg
+          stop
+        end if
+        if (source_imp_drift /= source_imp_drift .or. source_bg_drift /= source_bg_drift) then
+          write(*,*) "WARNING: source_imp_drift = ", source_imp_drift
+          write(*,*) "WARNING: source_bg_drift = ", source_bg_drift
+          stop
+        end if
+        source_imp       = max(source_imp,0.d0)
+        source_bg        = max(source_bg,0.d0)
+        source_imp_drift = max(source_imp_drift,0.d0)
+        source_bg_drift  = max(source_bg_drift,0.d0)
 
         ! This is to detect N/A
         if (source_imp /= source_imp .or. source_bg /= source_bg) then
-          write(*,*) "ERROR in mod_integrals_3D: source_imp = ", source_imp
-          write(*,*) "ERROR in mod_integrals_3D: source_bg = ", source_bg
+          write(*,*) "WARNING: source_imp = ", source_imp
+          write(*,*) "WARNING: source_bg = ", source_bg
           stop
         end if
-
-        source_imp = max(0., source_imp)
-        source_bg  = max(0., source_bg)
+        if (source_imp_drift /= source_imp_drift .or. source_bg_drift /= source_bg_drift) then
+          write(*,*) "WARNING: source_imp_drift = ", source_imp_drift
+          write(*,*) "WARNING: source_bg_drift = ", source_bg_drift
+          stop
+        end if
+        source_imp       = max(source_imp,0.d0)
+        source_bg        = max(source_bg,0.d0)
+        source_imp_drift = max(source_imp_drift,0.d0)
+        source_bg_drift  = max(source_bg_drift,0.d0)
 
         ! Frictional heat source
-        fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg + source_imp)&
-                        + 0.5 * vpar0**2 * BB2 * (source_bg + source_imp)
+        fric_disp     =   0.5 * BigR**2 * (u0_x**2.0 + u0_y**2.0) * (source_bg_drift + source_imp_drift)&
+                        + 0.5 * vpar0**2 * BB2 * (source_bg_drift + source_imp_drift)
         fric_disp_tot = fric_disp_tot + fric_disp * BigR * xjac * wst * delta_phi 
 
         ! Neutral injection rate in particles/s

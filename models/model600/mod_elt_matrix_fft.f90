@@ -29,6 +29,7 @@ use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_impurity, only: radiation_function, radiation_function_linear
 use mod_sources
 use mod_model_settings
+use mod_plasma_functions
 
 implicit none
 
@@ -99,7 +100,7 @@ real*8     :: Pi0_x_Ti,  Pi0_xx_Ti,  Pi0_y_Ti,  Pi0_yy_Ti,  Pi0_xy_Ti
 real*8     :: Pe0, Pe0_s, Pe0_t, Pe0_x, Pe0_y, Pe0_p, Pe0_ss, Pe0_st, Pe0_tt, Pe0_xx, Pe0_xy, Pe0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_Ti
-real*8     :: eta_T_ohm, deta_dT_ohm,  deta_num_dT,  dvisco_num_dT, D_perp_num_psin, ZK_perp_num_psin, ZK_i_perp_num_psin, ZK_e_perp_num_psin
+real*8     :: eta_T_ohm, deta_dT_ohm, d2eta_d2T_ohm, deta_num_dT,  dvisco_num_dT, D_perp_num_psin, ZK_perp_num_psin, ZK_i_perp_num_psin, ZK_e_perp_num_psin
 real*8     :: deta_dr0, deta_drimp0, deta_dr0_ohm, deta_drimp0_ohm
 real*8     :: Ti0_ps0_x, Ti_ps0_x, Ti0_psi_x, Ti0_ps0_y, Ti_ps0_y, Ti0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: Te0_ps0_x, Te_ps0_x, Te0_psi_x, Te0_ps0_y, Te_ps0_y, Te0_psi_y
@@ -989,71 +990,17 @@ do i=1,n_vertex_max
             
           end if ! (with_TiTe) *********************************************************************
 
+          if (.not. with_impurities) Z_eff = 1.d0
+
           ! --- Eta
-          eta_T     = 0.d0
-          deta_dT   = 0.d0
-          d2eta_d2T = 0.d0
-          deta_dr0  = 0.d0
-          deta_drimp0 = 0.d0
-          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta) then
-            eta_T     =   eta   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta) then
-            eta_T     = eta   * (T_max_eta/T_or_Te_0)**(-1.5d0)
-          else
-            eta_T     = eta
-          end if
-          
-          ! --- Eta for ohmic heating
-          eta_T_ohm     = 0.d0
-          deta_dT_ohm   = 0.d0
-          deta_dr0_ohm  = 0.d0
-          deta_drimp0_ohm = 0.d0
-          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
-            eta_T_ohm     =   eta_ohmic   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta_ohm) then
-            eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_or_Te_0)**(-1.5d0)
-          else
-            eta_T_ohm     = eta_ohmic
-          end if
+          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T,      & 
+                           dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn,   & 
+                           deta_dT, d2eta_d2T, deta_dr0, deta_drimp0)           
 
-          if ( eta_T_dependent .and. (T_or_Te .lt. T_min) ) then
-            eta_T     = eta       * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-            deta_dr0  = 0.
-            deta_drimp0 = 0.
-
-            eta_T_ohm = eta_ohmic * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = 0.
-            deta_dr0_ohm  = 0.
-            deta_drimp0_ohm = 0.
-          end if
-
-          if (with_impurities) then
-            ! Z_eff-related factor in resistivity
-            eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-            eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
-  
-            deta_coef_dZeff = (1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-            deta_coef_dZeff = deta_coef_dZeff + Z_eff*(1.198+2.*0.222*Z_eff)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-            deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
-            deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
-  
-            if ( eta_T_dependent ) then
-              deta_dr0    = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-              deta_drimp0 = eta_T * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
-              deta_dT     = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT
-              eta_T       = eta_T * eta_coef
-  
-              deta_dr0_ohm    = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-              deta_drimp0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
-              deta_dT_ohm     = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT
-              eta_T_ohm       = eta_T_ohm * eta_coef
-            end if
-          endif
+          ! --- Eta ohmic
+          call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, eta_T_ohm,  &
+                           dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn,             & 
+                           deta_dT_ohm, d2eta_d2T_ohm, deta_dr0_ohm, deta_drimp0_ohm)           
 
           ! --- Viscosity
           if ( visco_T_dependent ) then

@@ -1061,7 +1061,11 @@ do i=1,n_vertex_max
             dvisco_dT   = - visco * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
             d2visco_dT2 =   visco * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
             if (T_or_Te .lt. T_min) then
-              visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+              visco_T     = visco  * (T_min/T_or_Te_0)**(-1.5d0)
+              dvisco_dT   = 0.d0
+              d2visco_dT2 = 0.d0
+            elseif (T_or_Te .gt. T_max_visco) then
+              visco_T     = visco  * (T_max_visco/T_or_Te_0)**(-1.5d0)
               dvisco_dT   = 0.d0
               d2visco_dT2 = 0.d0
             endif

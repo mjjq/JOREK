@@ -25,6 +25,7 @@ module mod_expression
   use mod_poloidal_currents
   use mod_impurity, only: radiation_function, radiation_function_linear
   use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
+  use mod_plasma_functions
 
   implicit none
   
@@ -588,6 +589,7 @@ module mod_expression
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
       ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt 
     real*8 :: T0_corr, Ti0_corr, Te0_corr, r0_corr, rn0_corr
+    real*8 :: T_or_Te, T_or_Te_corr, T_or_Te_0 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
@@ -612,6 +614,8 @@ module mod_expression
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     real*8  :: Arad_bg, Brad_bg, Crad_bg
 #endif
+    !   -Effective charge of all species
+    real*8  :: Z_eff
 #ifdef WITH_Impurities
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
     real*8  :: rimp0_corr
@@ -620,8 +624,6 @@ module mod_expression
     real*8  :: m_i_over_m_imp
     !   -Mean impurity ionization state
     real*8  :: Z_imp, T0_Zimp, alpha_Zimp
-    !   -Effective charge of all species
-    real*8  :: Z_eff
     !   -Coefficients related to Z_imp
     real*8  :: alpha_imp
     real*8  :: beta_imp
@@ -1285,53 +1287,15 @@ module mod_expression
           VperpZ   =  VZ - Vpar_tot * BZ / Btot
 
           ! --- Some input profiles
-          if ( eta_T_dependent ) then
-            if ( with_TiTe) then ! (with_TiTe) *****************************************************
-              if ( Te0_corr <= T_max_eta ) then
-                eta_T     =   eta   * (Te0_corr/Te_0)**(-1.5d0)
-                deta_dT   = - eta   * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-                d2eta_d2T =   eta   * (3.75d0) * Te0_corr**(-3.5d0) * Te_0**(1.5d0)
-              else if ( Te0_corr > T_max_eta ) then
-                eta_T     =   eta   * (T_max_eta/Te_0)**(-1.5d0)
-                deta_dT   =   0.
-                d2eta_d2T =   0.
-              else
-                eta_T     =   eta
-                deta_dT   =   0.d0
-                d2eta_d2T =   0.d0
-              end if
-              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
-                eta_T     =   eta   * (max(Te0,T_min)/Te_0)**(-1.5d0)
-                deta_dT   =   0.d0
-                d2eta_d2T =   0.d0
-              end if
-
-            else ! (with_TiTe), i.e. with single temperature ***************************************
-              if ( T0_corr <= T_max_eta ) then
-                eta_T     =   eta   * (T0_corr/T_0)**(-1.5d0)
-                deta_dT   = - eta   * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-                d2eta_d2T =   eta   * (3.75d0) * T0_corr**(-3.5d0) * T_0**(1.5d0)
-              else if ( T0_corr > T_max_eta ) then
-                eta_T     =   eta   * (T_max_eta/T_0)**(-1.5d0)
-                deta_dT   =   0.
-                d2eta_d2T =   0.
-              else
-                eta_T     =   eta
-                deta_dT   =   0.d0
-                d2eta_d2T =   0.d0
-              end if
-              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
-                eta_T     =   eta   * (max(T0,T_min)/T_0)**(-1.5d0)
-                deta_dT   =   0.d0
-                d2eta_d2T =   0.d0
-              end if
-
-            end if ! (with_TiTe) *******************************************************************
+          if (with_TiTe) then
+            T_or_Te          = Te0
+            T_or_Te_corr     = Te0_corr
+            T_or_Te_0        = Te_0
           else
-            eta_T     = eta
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-          end if
+            T_or_Te          = T0
+            T_or_Te_corr     = T0_corr
+            T_or_Te_0        = T_0
+          endif
 
           if ( visco_T_dependent ) then
             if ( with_TiTe) then ! (with_TiTe) *****************************************************
@@ -1682,6 +1646,9 @@ module mod_expression
           if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
   
 #endif
+          if ( .not. with_impurities ) Z_eff = 1
+          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T)           
+
 
           ! --- Factors for switching between JOREK normalized and SI units.
           if ( units == SI_UNITS ) then

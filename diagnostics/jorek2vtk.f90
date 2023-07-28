@@ -13,6 +13,7 @@ use corr_neg
 use mod_import_restart
 use equil_info
 use mod_boundary
+use mod_plasma_functions
 use mod_vtk
 use mod_interp
 use mod_poloidal_currents
@@ -106,7 +107,7 @@ real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp_bg
 real*8                :: Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
 real*8                :: r0_real8, rn0_real8
-real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK
+real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_corr, T_or_Te_0 
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
 integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2)
@@ -1243,10 +1244,16 @@ enddo  ! n_elements
         T_real8 = scalars(i,var_Te)
         Te_corr_eV = corr_neg_temp(T_real8*2.d0)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
         Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
+        T_or_Te      = T_real8 
+        T_or_Te_corr = corr_neg_temp(T_real8*2.d0)/2.d0
+        T_or_Te_0    = Te_0
       else
         T_real8 = scalars(i,var_T)
         Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
         Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+        T_or_Te      = T_real8 
+        T_or_Te_corr = corr_neg_temp(T_real8)
+        T_or_Te_0    = T_0
       endif
 
 #if (defined WITH_Neutrals) 
@@ -1266,9 +1273,7 @@ enddo  ! n_elements
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT,r0_real8,rn0_real8,.true. ) 
       endif
 
-
-      eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
-                              *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
+      call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, eta_Sp)           
 
       scalars(i,ineu(1)) = ksiion * scalars(i,var_rho) * scalars(i,var_rhon) * Sion_T
       scalars(i,ineu(2)) = scalars(i,var_rho) * scalars(i,var_rhon) * LradDrays_T
@@ -1349,15 +1354,18 @@ enddo  ! n_elements
        T_real8 = scalars(i,var_Te)
        Te_corr_eV = corr_neg_temp(T_real8*2.d0)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        Te_eV = T_real8/(EL_CHG*MU_ZERO*central_density*1.d20)
+       T_or_Te      = T_real8 
+       T_or_Te_corr = corr_neg_temp(T_real8*2.d0)/2.d0
+       T_or_Te_0    = Te_0
      else
        T_real8 = scalars(i,var_T)
        Te_corr_eV = corr_neg_temp(T_real8)/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
        Te_eV = T_real8/(2.d0*EL_CHG*MU_ZERO*central_density*1.d20)
+       T_or_Te      = T_real8 
+       T_or_Te_corr = corr_neg_temp(T_real8)
+       T_or_Te_0    = T_0
      endif
      
-     eta_Sp = 1.65d-9*17*(1.d-3*Te_corr_eV)**(-1.5d0) &
-                        *(central_mass*MASS_PROTON*central_density * 1.d20/MU_ZERO)**(0.5d0)
-
      r0_real8 = scalars(i,var_rho)
      rimp0_real8 = scalars(i,var_rhoimp)
 
@@ -1425,11 +1433,7 @@ enddo  ! n_elements
 
      scalars(i,iimp(5)) = Z_eff
 
-     ! This is to represent the dependence on Z_eff in resistivity
-     eta_coef = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2) 
-     eta_coef = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
-
-     eta_Sp = eta_Sp * eta_coef
+     call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_Sp)           
 
   !-------------------------------------------
   ! --- Radiative function, using interpolation

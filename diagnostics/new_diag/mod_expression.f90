@@ -1340,11 +1340,9 @@ module mod_expression
               if (Te0 .lt. T_min) then
                 visco_T     = visco  * (T_min/Te_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
-                d2visco_dT2 = 0.d0
               elseif (Te0 .gt. T_max_visco) then
                 visco_T     = visco  * (T_max_visco/Te_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
-                d2visco_dT2 = 0.d0
               endif
             else ! (with_TiTe), i.e. with single temperature ***************************************
               visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
@@ -1352,11 +1350,9 @@ module mod_expression
               if (T0 .lt. T_min) then
                 visco_T     = visco  * (T_min/T_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
-                d2visco_dT2 = 0.d0
               elseif (T0 .gt. T_max_visco) then
                 visco_T     = visco  * (T_max_visco/T_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
-                d2visco_dT2 = 0.d0
               endif
             end if ! (with_TiTe) *******************************************************************
           else

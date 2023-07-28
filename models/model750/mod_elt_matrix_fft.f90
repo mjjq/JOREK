@@ -1267,34 +1267,11 @@ do i=1,n_vertex_max
           ! --- Temperature dependent parallel heat diffusivity
           if ( with_TiTe ) then
 
-            if ( ZKpar_T_dependent ) then
-              ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-              dZKi_par_dT = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0) * dTi0_corr_dT
-              if (ZKi_par_T .gt. ZK_par_max) then
-                ZKi_par_T   = Zk_par_max
-                dZKi_par_dT = 0.d0
-              endif
-              if ( xpoint2 .and. (Ti0 .lt. T_min) ) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0,T_min)/Ti_0)**(+2.5d0)
-                dZKi_par_dT = 0.d0
-              endif
-
-              ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-              dZKe_par_dT = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0) * dTe0_corr_dT
-              if (ZKe_par_T .gt. ZK_par_max) then
-                ZKe_par_T   = Zk_par_max
-                dZKe_par_dT = 0.d0
-              endif
-              if ( xpoint2 .and. (Te0 .lt. T_min) ) then
-                ZKe_par_T   = ZK_e_par * (max(Te0,T_min)/Te_0)**(+2.5d0)
-                dZKe_par_dT = 0.d0
-              endif
-            else
-              ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
-              dZKi_par_dT = 0.d0
-              ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
-              dZKe_par_dT = 0.d0
-            endif
+            ! --- Temperature dependent parallel heat conductivity
+            call conductivity_parallel(ZK_i_par, ZK_par_max, Ti0, Ti0_corr, Ti_min_ZKpar, Ti_0, &
+                                       ZKi_par_T,  ZK_i_par_neg_thresh, ZK_i_par_neg, dTi0_corr_dT, dZKi_par_dT)
+            call conductivity_parallel(ZK_e_par, ZK_par_max, Te0, Te0_corr, Te_min_ZKpar, Te_0, &
+                                       ZKe_par_T,  ZK_e_par_neg_thresh, ZK_e_par_neg, dTe0_corr_dT, dZKe_par_dT)
 
             ! --- Ion-electron energy transfer
             if (thermalization) then
@@ -1354,23 +1331,10 @@ do i=1,n_vertex_max
 
 
           else ! with_TiTe
+            ! --- Temperature dependent parallel heat diffusivity
+            call conductivity_parallel(ZK_par, ZK_par_max, T0, T0_corr, T_min_ZKpar, T_0, &
+                                       ZK_par_T, ZK_par_neg_thresh, ZK_par_neg, dT0_corr_dT, dZK_par_dT)
 
-            if ( ZKpar_T_dependent ) then
-              ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)              ! temperature dependent parallel conductivity
-              dZK_par_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0) * dT0_corr_dT
-              if (ZK_par_T .gt. ZK_par_max) then
-                ZK_par_T   = Zk_par_max
-                dZK_par_dT = 0.d0
-              endif
-              if ( xpoint2 .and. (T0 .lt. T_min) ) then
-                ZK_par_T   = ZK_par * (max(T0,T_min)/T_0)**(+2.5d0)
-                dZK_par_dT = 0.d0
-              endif
-
-            else
-              ZK_par_T   = ZK_par ! parallel conductivity
-              dZK_par_dT = 0.d0
-            endif
 
           endif ! with_TiTe
 

@@ -901,37 +901,11 @@ do i=1,n_vertex_max
 
           if ( with_TiTe ) then ! ******************************************************************
 
-            ! --- Temperature dependent parallel heat diffusivity
-            if ( ZKpar_T_dependent ) then
-
-              ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)        
-              dZKi_par_dT = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0) * dTi0_corr_dT
-              if (ZKi_par_T .gt. ZK_par_max) then
-                ZKi_par_T   = Zk_par_max
-                dZKi_par_dT = 0.d0
-              endif
-              if (Ti0 .lt. Ti_min_ZKpar) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
-                dZKi_par_dT = 0.d0
-              endif
-              
-              ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)            
-              dZKe_par_dT = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0) * dTe0_corr_dT
-              if (ZKe_par_T .gt. ZK_par_max) then
-                ZKe_par_T   = Zk_par_max
-                dZKe_par_dT = 0.d0
-              endif
-              if (Te0 .lt. Te_min_ZKpar) then
-                ZKe_par_T   = ZK_e_par * (max(Te0,Te_min_ZKpar)/Te_0)**(+2.5d0)
-                dZKe_par_dT = 0.d0
-              endif
-
-            else
-              ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
-              dZKi_par_dT = 0.d0
-              ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
-              dZKe_par_dT = 0.d0
-            endif
+            ! --- Temperature dependent parallel heat conductivity
+            call conductivity_parallel(ZK_i_par, ZK_par_max, Ti0, Ti0_corr, Ti_min_ZKpar, Ti_0, &
+                                       ZKi_par_T,  ZK_i_par_neg_thresh, ZK_i_par_neg, dTi0_corr_dT, dZKi_par_dT)
+            call conductivity_parallel(ZK_e_par, ZK_par_max, Te0, Te0_corr, Te_min_ZKpar, Te_0, &
+                                       ZKe_par_T,  ZK_e_par_neg_thresh, ZK_e_par_neg, dTe0_corr_dT, dZKe_par_dT)
 
             if (with_impurities) call construct_imp_charge_states()
                           
@@ -962,21 +936,8 @@ do i=1,n_vertex_max
           else ! (with_TiTe = .f.), i.e. with single temperature *****************************************
 
             ! --- Temperature dependent parallel heat diffusivity
-            if ( ZKpar_T_dependent ) then
-              ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)   
-              dZK_par_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0) * dT0_corr_dT
-              if (ZK_par_T .gt. ZK_par_max) then
-                ZK_par_T   = Zk_par_max
-                dZK_par_dT = 0.d0
-              endif
-              if (T0 .lt. T_min_ZKpar) then
-                ZK_par_T   = ZK_par * (max(T0,T_min_ZKpar)/T_0)**(+2.5d0)
-                dZK_par_dT = 0.d0
-              endif
-            else
-              ZK_par_T   = ZK_par                      
-              dZK_par_dT = 0.d0
-            endif
+            call conductivity_parallel(ZK_par, ZK_par_max, T0, T0_corr, T_min_ZKpar, T_0, &
+                                       ZK_par_T, ZK_par_neg_thresh, ZK_par_neg, dT0_corr_dT, dZK_par_dT)
 
             if (with_impurities) call construct_imp_charge_states()
                
@@ -1139,22 +1100,13 @@ do i=1,n_vertex_max
             if (Ti0 .lt. ZK_i_prof_neg_thresh) then
               ZKi_prof = ZK_i_prof_neg
             end if
-            if (Ti0 .lt. ZK_i_par_neg_thresh) then
-              ZKi_par_T = ZK_i_par_neg
-            endif
             if (Te0 .lt. ZK_e_prof_neg_thresh) then
               ZKe_prof = ZK_e_prof_neg
             end if
-            if (Te0 .lt. ZK_e_par_neg_thresh) then
-              ZKe_par_T = ZK_e_par_neg
-            endif
           else ! (with_TiTe = .f.), i.e. with single temperature
             if (T0 .lt. ZK_prof_neg_thresh) then
               ZK_prof = ZK_prof_neg
             end if
-            if (T0 .lt. ZK_par_neg_thresh) then
-              ZK_par_T = ZK_par_neg
-            endif
           endif ! (with_TiTe)
 
           ! --- Parallel momentum source

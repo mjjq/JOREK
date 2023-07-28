@@ -1355,53 +1355,16 @@ module mod_expression
           end if
           
           if ( with_TiTe ) then ! (with_TiTe) ******************************************************
-            if ( ZKpar_T_dependent ) then
-              ZKi_par_T     = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)
-              dZKi_par_dT   = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0)
-              if (ZKi_par_T .gt. ZK_par_max) then
-                ZKi_par_T   = Zk_par_max
-                dZKi_par_dT = 0.d0
-              end if
-              if ( Ti0 .lt. Ti_min_ZKpar ) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
-                dZKi_par_dT = 0.d0
-              endif
 
-              ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)
-              dZKe_par_dT = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0)
-              if (ZKe_par_T .gt. ZK_par_max) then
-                ZKe_par_T   = Zk_par_max
-                dZKe_par_dT = 0.d0
-              end if
-              if ( Te0 .lt. Te_min_ZKpar ) then
-                ZKe_par_T   = ZK_e_par * (max(Te0,Te_min_ZKpar)/Te_0)**(+2.5d0)
-                dZKe_par_dT = 0.d0
-              endif
-            else
-              ZKi_par_T   = ZK_i_par
-              dZKi_par_dT = 0.d0
+            call conductivity_parallel(ZK_i_par, ZK_par_max, Ti0, Ti0_corr, Ti_min_ZKpar, Ti_0, &
+                                       ZKi_par_T, ZK_i_par_neg_thresh, ZK_i_par_neg)
 
-              ZKe_par_T   = ZK_e_par
-              dZKe_par_dT = 0.d0
-            end if
-            ZKpar_T   = 0.d0
+            call conductivity_parallel(ZK_e_par, ZK_par_max, Te0, Te0_corr, Te_min_ZKpar, Te_0, &
+                                       ZKe_par_T, ZK_e_par_neg_thresh, ZK_e_par_neg)
           else ! (with_TiTe), i.e. with single temperature *****************************************
-            if ( ZKpar_T_dependent ) then
-              ZKpar_T     = ZK_par * (T0_corr/T_0)**(+2.5d0)
-              dZKpar_dT   = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0)
-              if (ZKpar_T .gt. ZK_par_max) then
-                ZKpar_T   = Zk_par_max
-                dZKpar_dT = 0.d0
-              end if
-              if ( T0 .lt. T_min_ZKpar ) then
-                ZKpar_T   = ZK_par * (max(T0,T_min_ZKpar)/T_0)**(+2.5d0)
-                dZKpar_dT = 0.d0
-              endif
 
-            else
-              ZKpar_T   = ZK_par
-              dZKpar_dT = 0.d0
-            end if
+            call conductivity_parallel(ZK_par, ZK_par_max, T0, T0_corr, T_min_ZKpar, T_0,       &
+                                      ZKpar_T, ZK_par_neg_thresh, ZK_par_neg)
             ZKi_par_T   = ZKpar_T
             ZKe_par_T   = ZKpar_T
           end if ! (with_TiTe) *********************************************************************

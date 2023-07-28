@@ -1523,47 +1523,33 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 #ifdef WITH_TiTe
       ZK_e_prof     = get_zk_eperp(psi_n)
       ZK_i_prof     = get_zk_iperp(psi_n)
- 
-      if (ZKpar_T_dependent) then
-        ZK_e_par_T = ZK_e_par * (max(T0e,Te_min_ZKpar)/Te_0)**( 2.5d0)
-        ZK_i_par_T = ZK_i_par * (max(T0i,Ti_min_ZKpar)/Ti_0)**( 2.5d0)
-        if (ZK_e_par_T .gt. ZK_par_max)  ZK_e_par_T   = ZK_par_max
-        if (ZK_i_par_T .gt. ZK_par_max)  ZK_i_par_T   = ZK_par_max
-      else
-        ZK_e_par_T = ZK_e_par 
-        ZK_i_par_T = ZK_i_par 
-      endif
+
+      ! --- Temperature dependent parallel heat conductivity
+      call conductivity_parallel(ZK_i_par, ZK_par_max, T0i, T0i_corr, Ti_min_ZKpar, Ti_0,  & 
+                                 ZK_i_par_T, ZK_i_par_neg_thresh, ZK_i_par_neg)
+      call conductivity_parallel(ZK_e_par, ZK_par_max, T0e, T0e_corr, Te_min_ZKpar, Te_0,  &
+                                 ZK_e_par_T, ZK_e_par_neg_thresh, ZK_e_par_neg)
+
 #else
       ZK_prof = get_zkperp(psi_n)
 
-      if (ZKpar_T_dependent) then
-        ZKpar_T = ZK_par * (max(T0,T_min_ZKpar)/T_0)**( 2.5d0)
-        if (ZKpar_T .gt. ZK_par_max)  ZKpar_T   = ZK_par_max
-      else
-        ZKpar_T = ZK_par
-      endif
+      ! --- Temperature dependent parallel heat conductivity
+      call conductivity_parallel(ZK_par, ZK_par_max, T0, T0_corr, T_min_ZKpar, T_0, &
+                                 ZKpar_T, ZK_par_neg_thresh, ZK_par_neg)
+
 #endif
 
       if ( with_TiTe ) then ! (with_TiTe) ****************************************************
         if (T0i .lt. ZK_i_prof_neg_thresh) then
           ZK_i_prof = ZK_i_prof_neg
         end if
-        if (T0i .lt. ZK_i_par_neg_thresh) then
-          ZK_i_par_T = ZK_i_par_neg
-        endif
         if (T0e .lt. ZK_e_prof_neg_thresh) then
           ZK_e_prof = ZK_e_prof_neg
         end if
-        if (T0e .lt. ZK_e_par_neg_thresh) then
-          ZK_e_par_T = ZK_e_par_neg
-        endif
-      else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
+       else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
         if (T0 .lt. ZK_prof_neg_thresh) then
           ZK_prof = ZK_prof_neg
         end if
-        if (T0 .lt. ZK_par_neg_thresh) then
-          ZKpar_T = ZK_par_neg
-        endif
       endif ! (with_TiTe) ********************************************************************
 
 

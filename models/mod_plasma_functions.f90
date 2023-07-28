@@ -1,18 +1,18 @@
 !> Module containing plasma functions t
 module mod_plasma_functions 
   
-  use phys_module, only: eta_T_dependent, T_min 
+  use phys_module, only: eta_T_dependent, T_min, ZKpar_T_dependent 
   use mod_model_settings, only:  with_impurities
     
   implicit none
   
   private
-  public resistivity
+  public resistivity, conductivity_parallel
   
   contains
   
   
-  !> Determine resistivity
+  !> Determine resistivity (input/output in JOREK units)
   pure subroutine resistivity(eta_0, T_raw, T_corr, T_max, T0, Z_eff, eta_T,                       & 
                               dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn,   & 
                               deta_dT, d2eta_d2T, deta_dr0, deta_drimp0) 
@@ -86,6 +86,64 @@ module mod_plasma_functions
     endif
 
   end subroutine resistivity
+
+
+
+
+
+
+  ! --- Parallel conductivity (input-output in JOREK units)
+  pure subroutine conductivity_parallel(ZK_par0, ZK_par_max, T_raw, T_corr, T_min_ZKpar, T0, ZK_par_T, &
+                                         ZKpar_neg_thresh, ZK_par_neg, dT0_corr_dT, dZK_par_dT)
+
+    real*8, intent(in)             :: ZK_par0          ! central parallel conduction
+    real*8, intent(in)             :: ZK_par_max       ! maximum value for parallel conduction
+    real*8, intent(in)             :: T_raw            ! temperature without correction
+    real*8, intent(in)             :: T_corr           ! corrected temperature > 0
+    real*8, intent(in)             :: T_min_ZKpar      ! min temperature to use in the function
+    real*8, intent(in)             :: T0               ! central temperature at equilibrium
+    real*8, intent(out)            :: ZK_par_T         ! output parallel conduction
+    real*8, optional, intent(in)   :: ZKpar_neg_thresh ! threshold for negative correction             
+    real*8, optional, intent(in)   :: ZK_par_neg       ! value after negative correction             
+    real*8, optional, intent(in)   :: dT0_corr_dT      ! derivative of temperature correction
+    real*8, optional, intent(out)  :: dZK_par_dT       ! temperature derviative of parallel conduction
+
+    ! --- Local parameters
+    real*8 :: dZK_par_dT_tmp
+
+    if ( ZKpar_T_dependent ) then
+      ZK_par_T       = ZK_par0 * (T_corr/T0)**(+2.5d0)   
+      dZK_par_dT_tmp = ZK_par0 * (2.5d0)  * T_corr**(+1.5d0) * T0**(-2.5d0) 
+      if (ZK_par_T .gt. ZK_par_max) then
+        ZK_par_T       = Zk_par_max
+        dZK_par_dT_tmp = 0.d0
+      endif
+      if (T_raw .lt. T_min_ZKpar) then
+        ZK_par_T       = ZK_par0 * (T_min_ZKpar/T0)**(+2.5d0)
+        dZK_par_dT_tmp = 0.d0
+      endif
+    else
+      ZK_par_T   = ZK_par0 
+    endif
+
+    if (present(dZK_par_dT)) then
+      dZK_par_dT = dZK_par_dT_tmp
+      if (present(dT0_corr_dT)) dZK_par_dT = dZK_par_dT * dT0_corr_dT
+    endif
+
+    ! --- Increase value to avoid negative temperatures
+    if (present(ZKpar_neg_thresh) .and. present(ZK_par_neg)) then
+      if (T_raw .lt. ZKpar_neg_thresh) then
+        ZK_par_T = ZK_par_neg
+        if (present(dZK_par_dT)) dZK_par_dT = 0.d0
+      endif
+    endif
+
+  end subroutine conductivity_parallel 
+
+
+
+
 
 
 end module mod_plasma_functions

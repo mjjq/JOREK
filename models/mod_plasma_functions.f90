@@ -1,13 +1,15 @@
 !> Module containing plasma functions t
 module mod_plasma_functions 
   
-  use phys_module, only: eta_T_dependent, T_min, ZKpar_T_dependent, visco_T_dependent 
+  use phys_module, only: eta_T_dependent, T_min, ZKpar_T_dependent, visco_T_dependent,  &
+                         eta_num, eta_num_T_dependent, eta_num_psin_dependent, eta_num_prof, &
+                         visco_num, visco_num_T_dependent 
   use mod_model_settings, only:  with_impurities
     
   implicit none
   
   private
-  public resistivity, conductivity_parallel, viscosity
+  public resistivity, conductivity_parallel, viscosity, hyper_resistivity, hyper_viscosity
   
   contains
   
@@ -92,6 +94,43 @@ module mod_plasma_functions
 
 
 
+
+
+  !> Determine hyper resistivity (input/output in JOREK units)
+  pure subroutine hyper_resistivity(T_raw, T_corr, T0, psi_norm, eta_num_T, deta_num_dT) 
+
+    implicit none
+    
+    real*8, intent(in)             :: T_raw            ! temperature without correction
+    real*8, intent(in)             :: T_corr           ! corrected temperature > 0
+    real*8, intent(in)             :: T0               ! central temperature at equilibrium
+    real*8, intent(in)             :: psi_norm         ! normalized poloidal flux          
+    real*8, intent(out)            :: eta_num_T        ! output hyper resistivity
+    real*8, optional, intent(out)  :: deta_num_dT      ! Derivative w.r.t. the temperature 
+
+    ! --- Hyper-resistivity
+    if ( eta_num_psin_dependent ) then
+      eta_num_T   = eta_num * 0.5d0 * ( 1.d0 - tanh( (psi_norm-eta_num_prof(1))/eta_num_prof(2)) )      
+      if (present(deta_num_dT))  deta_num_dT = 0.d0      
+    else if ( eta_num_T_dependent ) then
+      eta_num_T     =   eta_num   * (T_corr/T0)**(-3.d0)
+      if (present(deta_num_dT))  deta_num_dT   = - eta_num   * (3.d0)  * T_corr**(-4.d0) * T0**(3.d0)
+      if (T_raw .lt. T_min) then
+        eta_num_T     = eta_num    * (max(T_raw,T_min)/T0)**(-3.d0)
+        if (present(deta_num_dT)) deta_num_dT   = 0.d0
+      endif
+    else
+      eta_num_T     = eta_num
+      if (present(deta_num_dT))   deta_num_dT   = 0.d0
+    end if
+
+  end subroutine hyper_resistivity
+
+
+
+
+
+
   ! --- Parallel conductivity (input-output in JOREK units)
   pure subroutine conductivity_parallel(ZK_par0, ZK_par_max, T_raw, T_corr, T_min_ZKpar, T0, ZK_par_T, &
                                          ZKpar_neg_thresh, ZK_par_neg, dT0_corr_dT, dZK_par_dT)
@@ -140,6 +179,39 @@ module mod_plasma_functions
     endif
 
   end subroutine conductivity_parallel 
+
+
+
+
+
+
+  !> Determine hyper viscosity (input/output in JOREK units)
+  pure subroutine hyper_viscosity(T_raw, T_corr, T0, visco_num_T, dvisco_num_dT) 
+
+    implicit none
+    
+    real*8, intent(in)             :: T_raw            ! temperature without correction
+    real*8, intent(in)             :: T_corr           ! corrected temperature > 0
+    real*8, intent(in)             :: T0               ! central temperature at equilibrium
+    real*8, intent(out)            :: visco_num_T        ! output viscosity
+    real*8, optional, intent(out)  :: dvisco_num_dT      ! Derivative of Zeff w.r.t. the temperature 
+
+    if ( visco_num_T_dependent ) then
+      visco_num_T     =   visco_num   * (T_corr/T0)**(-3.d0)
+      if (present(dvisco_num_dT))  dvisco_num_dT   = - visco_num   * (3.d0)  * T_corr**(-4.d0) * T0**(3.d0)
+      if (T_raw .lt. T_min) then
+        visco_num_T     = visco_num    * (max(T_raw,T_min)/T0)**(-3.d0)
+        if (present(dvisco_num_dT)) dvisco_num_dT   = 0.d0
+      endif
+    else
+      visco_num_T     = visco_num
+      if (present(dvisco_num_dT))   dvisco_num_dT   = 0.d0
+    end if
+
+  end subroutine hyper_viscosity
+
+
+
 
 
 

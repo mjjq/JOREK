@@ -966,36 +966,14 @@ do i=1,n_vertex_max
           ! --- Viscosity
           call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T, dvisco_dT, d2visco_dT2)
 
+          ! --- Normalized poloidal flux
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
           
           ! --- Hyper-resistivity
-          if ( eta_num_psin_dependent ) then
-            eta_num_T   = eta_num * 0.5d0 * ( 1.d0 - tanh( (psi_norm-eta_num_prof(1))/eta_num_prof(2)) )      
-            deta_num_dT = 0.d0      
-          else if ( eta_num_T_dependent ) then
-            eta_num_T     =   eta_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
-            deta_num_dT   = - eta_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
-            if (T_or_Te .lt. T_min) then
-              eta_num_T     = eta_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
-              deta_num_dT   = 0.d0
-            endif
-          else
-            eta_num_T     = eta_num
-            deta_num_dT   = 0.d0
-          end if
+          call hyper_resistivity(T_or_Te, T_or_Te_corr, T_or_Te_0, psi_norm, eta_num_T, deta_num_dT) 
           
           ! --- Hyper-viscosity
-          if ( visco_num_T_dependent ) then
-            visco_num_T     =   visco_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
-            dvisco_num_dT   = - visco_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
-            if (T_or_Te .lt. T_min) then
-              visco_num_T     = visco_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
-              dvisco_num_dT   = 0.d0
-            endif
-          else
-            visco_num_T     = visco_num
-            dvisco_num_dT   = 0.d0
-          end if
+          call hyper_viscosity(T_or_Te, T_or_Te_corr, T_or_Te_0, visco_num_T, dvisco_num_dT) 
 
           ! --- Diamagnetic viscosity
           if (Wdia) then

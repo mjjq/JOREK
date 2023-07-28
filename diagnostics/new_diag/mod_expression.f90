@@ -1299,41 +1299,9 @@ module mod_expression
 
           call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T)
         
-          ! --- Hyper-resistivity
-          if ( eta_num_psin_dependent ) then
-            eta_num_T = eta_num * 0.5d0 * ( 1.d0 - tanh( (psi_norm-eta_num_prof(1))/eta_num_prof(2)) )      
-          else if ( eta_num_T_dependent ) then
-            if ( with_TiTe) then ! (with_TiTe) *****************************************************
-              eta_num_T     = eta_num   * (Te0/Te_0)**(-3.d0)
-              if (Te0 .lt. T_min) then
-                eta_num_T   = eta_num   * (max(Te0,T_min)/Te_0)**(-3.d0)
-              endif
-            else !(with_TiTe), i.e. with single temperature ***************************************
-              eta_num_T     = eta_num   * (T0/T_0)**(-3.d0)
-              if (T0 .lt. T_min) then
-                eta_num_T   = eta_num   * (max(T0,T_min)/T_0)**(-3.d0)
-              endif
-            end if 
-          else
-            eta_num_T     = eta_num
-          end if
+          call hyper_resistivity(T_or_Te, T_or_Te_corr, T_or_Te_0, psi_norm, eta_num_T) 
           
-          ! --- Temperature dependent hyper-viscosity
-          if ( visco_num_T_dependent ) then
-            if ( with_TiTe) then ! (with_TiTe) *****************************************************
-              visco_num_T     = visco_num   * (Te0/Te_0)**(-3.d0)
-              if (Te0 .lt. T_min) then
-                visco_num_T   = visco_num   * (max(Te0,T_min)/Te_0)**(-3.d0)
-              endif
-            else !(with_TiTe), i.e. with single temperature ***************************************
-              visco_num_T     = visco_num   * (T0/T_0)**(-3.d0)
-              if (T0 .lt. T_min) then
-                visco_num_T   = visco_num   * (max(T0,T_min)/T_0)**(-3.d0)
-              endif
-            end if
-          else
-            visco_num_T     = visco_num
-          end if
+          call hyper_viscosity(T_or_Te, T_or_Te_corr, T_or_Te_0, visco_num_T) 
           
           if ( with_TiTe ) then ! (with_TiTe) ******************************************************
 

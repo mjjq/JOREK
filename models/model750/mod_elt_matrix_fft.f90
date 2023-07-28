@@ -25,6 +25,7 @@ use mod_neutral_source
 use mod_injection_source
 use mod_impurity, only: radiation_function, radiation_function_linear
 use mod_sources
+use mod_plasma_functions
 
 implicit none
 
@@ -260,7 +261,7 @@ real*8     :: ZKi_prof, ZKe_prof, ZK_prof, D_prof, psi_norm, D_prof_imp
 real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T
 real*8     :: eta_num_T, eta_R, eta_Z, eta_p, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT, ZK_par_T, dZK_par_dT
 real*8     :: eta_T_T, eta_R_T, eta_Z_T, eta_p_T__p, eta_p_T__n
-real*8     :: eta_T_ohm, deta_dT_ohm
+real*8     :: eta_T_ohm, deta_dT_ohm, d2eta_d2T_ohm 
 
 real*8     :: Qconv_UR
 real*8     :: Qconv_UR_AR__p,  Qconv_UR_AR__n
@@ -1246,50 +1247,6 @@ do i=1,n_vertex_max
             ZK_prof = get_zkperp(psi_norm)
           endif
 
-          ! --- Resistivity
-          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta) then
-            eta_T     =   eta   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta) then
-            eta_T     = eta   * (T_max_eta/T_or_Te_0)**(-1.5d0)
-            deta_dT   = 0.
-            d2eta_d2T = 0.
-          else
-            eta_T     = eta
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-          end if
-          if(with_TiTe)then
-            eta_R = deta_dT * Te0_R
-            eta_Z = deta_dT * Te0_Z
-            eta_p = deta_dT * Te0_p
-          else
-            eta_R = deta_dT * T0_R
-            eta_Z = deta_dT * T0_Z
-            eta_p = deta_dT * T0_p
-          endif               
-
-          ! --- Eta for ohmic heating 
-          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
-            eta_T_ohm     =   eta_ohmic   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta_ohm) then
-            eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = 0.
-          else
-            eta_T_ohm     = eta_ohmic
-            deta_dT_ohm   = 0.d0
-          end if
-
-          if ( eta_T_dependent .and. xpoint2 .and. (T_or_Te .lt. T_min) ) then
-            eta_T     = eta       * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-
-            eta_T_ohm = eta_ohmic * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = 0.
-          end if
 
           ! --- Viscosity
           if ( visco_T_dependent ) then
@@ -1575,6 +1532,29 @@ do i=1,n_vertex_max
           BgradRhoimp = BR0 * rhoimp0_R + BZ0 * rhoimp0_Z + Bp0 * rhoimp0_p / R
           
           if (with_impurities) call impurities_modeling()
+
+          if (.not. with_impurities) Z_eff = 1.d0
+
+          ! --- Eta
+          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T,              & 
+                           dZ_eff_dT, dZ_eff_drho0, dZ_eff_drhoimp0, drho0_corr_dn, drhoimp0_corr_dn,   & 
+                           deta_dT, d2eta_d2T, deta_drho0, deta_drhoimp0)           
+
+          ! --- Eta ohmic
+          call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, eta_T_ohm,  &
+                           dZ_eff_dT, dZ_eff_drho0, dZ_eff_drhoimp0, drho0_corr_dn, drhoimp0_corr_dn,     & 
+                           deta_dT_ohm, d2eta_d2T_ohm, deta_drho0_ohm, deta_drhoimp0_ohm)           
+
+          ! --- Resistivity
+          if(with_TiTe)then
+            eta_R = deta_dT * Te0_R
+            eta_Z = deta_dT * Te0_Z
+            eta_p = deta_dT * Te0_p
+          else
+            eta_R = deta_dT * T0_R
+            eta_Z = deta_dT * T0_Z
+            eta_p = deta_dT * T0_p
+          endif               
 
           source_imp = source_imp + constant_imp_source
           
@@ -4943,27 +4923,6 @@ subroutine impurities_modeling()
   endif
 
   call construct_imp_charge_states()
-
-  ! Z_eff-related factor in resistivity
-  eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-  eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
-
-  deta_coef_dZeff = (1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-  deta_coef_dZeff = deta_coef_dZeff + Z_eff*(1.198+2.*0.222*Z_eff)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-  deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
-  deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
-
-  if ( eta_T_dependent ) then
-    deta_drho0    = eta_T * deta_coef_dZeff * dZ_eff_drho0 * drho0_corr_dn
-    deta_drhoimp0 = eta_T * deta_coef_dZeff * dZ_eff_drhoimp0 * drhoimp0_corr_dn
-    deta_dT       = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT
-    eta_T         = eta_T * eta_coef
-
-    deta_drho0_ohm    = eta_T_ohm * deta_coef_dZeff * dZ_eff_drho0 * drho0_corr_dn
-    deta_drhoimp0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drhoimp0 * drhoimp0_corr_dn
-    deta_dT_ohm       = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT
-    eta_T_ohm         = eta_T_ohm * eta_coef
-  end if
   
   call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,A30,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp)
   do i_inj = 1,n_inj

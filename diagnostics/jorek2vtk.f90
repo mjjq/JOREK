@@ -753,18 +753,23 @@ do i=1,element_list%n_elements
           call interp(node_list,element_list,i,var_rho,i_tor,s,t,ZN0,ZN0_s,ZN0_t,ZN0_st,ZN0_ss,ZN0_tt)
 
           if (with_TiTe) then
-             call interp(node_list,element_list,i,var_Te,  i_tor,s,t,Te0, Te0_s, Te0_t, Te0_st, Te0_ss, Te0_tt)
-             call interp(node_list,element_list,i,var_Ti,  i_tor,s,t,Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt)
-             T0   = Ti0   + Te0
-             T0_s = Ti0_s + Te0_s
-             T0_t = Ti0_t + Te0_t
+            call interp(node_list,element_list,i,var_Te,  i_tor,s,t,Te0, Te0_s, Te0_t, Te0_st, Te0_ss, Te0_tt)
+            call interp(node_list,element_list,i,var_Ti,  i_tor,s,t,Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt)
+            T0   = Ti0   + Te0
+            T0_s = Ti0_s + Te0_s
+            T0_t = Ti0_t + Te0_t
+            T_or_Te      = Te0 
+            T_or_Te_corr = corr_neg_temp(Te0*2.d0)/2.d0
+            T_or_Te_0    = Te_0
           else
             call interp(node_list,element_list,i,var_T,  i_tor,s,t,T0, T0_s, T0_t, T0_st, T0_ss, T0_tt)
             Te0    = T0  /2.d0;     Ti0    = T0  /2.d0
             Te0_s  = T0_s/2.d0;     Ti0_s  = T0_s/2.d0
             Te0_t  = T0_t/2.d0;     Ti0_t  = T0_t/2.d0
+            T_or_Te      = T0 
+            T_or_Te_corr = corr_neg_temp(T0)
+            T_or_Te_0    = T_0
           endif
-
 
           if (i_tor == 1) then
             call interp(node_list,element_list,i,710,i_tor,s,t,F_prof  ,F_prof_s  ,F_prof_t  ,W_st,W_ss,W_tt)
@@ -915,11 +920,7 @@ do i=1,element_list%n_elements
         D_prof  = get_dperp (psi_norm)
         ZK_prof = get_zkperp(psi_norm)
 
-        if ( eta_T_dependent ) then
-          eta_T = eta * (max(TT,0.d0)/T_0)**(-1.5d0)
-        else
-          eta_T = eta
-        end if
+        call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, eta_T)  ! NEEDS TO BE ADAPTED FOR IMPURITIES (Z_eff)!! 
 
         if (include_bootstrap) then
           call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&

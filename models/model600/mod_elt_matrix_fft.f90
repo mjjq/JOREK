@@ -964,20 +964,7 @@ do i=1,n_vertex_max
                            deta_dT_ohm, d2eta_d2T_ohm, deta_dr0_ohm, deta_drimp0_ohm)           
 
           ! --- Viscosity
-          if ( visco_T_dependent ) then
-            visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            dvisco_dT   = - visco * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-            d2visco_dT2 =   visco * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
-            if (T_or_Te .lt. T_min) then
-              visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-              dvisco_dT   = 0.d0
-              d2visco_dT2 = 0.d0
-            endif
-          else
-            visco_T     = visco
-            dvisco_dT   = 0.d0
-            d2visco_dT2 = 0.d0
-          end if
+          call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T, dvisco_dT, d2visco_dT2)
 
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
           

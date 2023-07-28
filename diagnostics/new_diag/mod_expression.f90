@@ -1297,26 +1297,7 @@ module mod_expression
             T_or_Te_0        = T_0
           endif
 
-          if ( visco_T_dependent ) then
-            if ( with_TiTe) then ! (with_TiTe) *****************************************************
-              visco_T   =   visco * (Te0_corr/Te_0)**(-1.5d0)
-              dvisco_dT = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
-                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
-                dvisco_dT   = 0.d0
-              endif
-            else ! (with_TiTe), i.e. with single temperature ***************************************
-              visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
-              dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
-                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
-                dvisco_dT   = 0.d0
-              endif
-            end if ! (with_TiTe) *******************************************************************
-          else
-            visco_T   = visco
-            dvisco_dT = 0.d0
-          end if
+          call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T)
         
           ! --- Hyper-resistivity
           if ( eta_num_psin_dependent ) then

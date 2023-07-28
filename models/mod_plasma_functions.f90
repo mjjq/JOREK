@@ -1,13 +1,13 @@
 !> Module containing plasma functions t
 module mod_plasma_functions 
   
-  use phys_module, only: eta_T_dependent, T_min, ZKpar_T_dependent 
+  use phys_module, only: eta_T_dependent, T_min, ZKpar_T_dependent, visco_T_dependent 
   use mod_model_settings, only:  with_impurities
     
   implicit none
   
   private
-  public resistivity, conductivity_parallel
+  public resistivity, conductivity_parallel, viscosity
   
   contains
   
@@ -140,6 +140,40 @@ module mod_plasma_functions
     endif
 
   end subroutine conductivity_parallel 
+
+
+
+
+
+
+  ! --- Viscosity (input-output in JOREK units)
+  pure subroutine viscosity(visco, T_raw, T_corr,T0, visco_T, dvisco_dT, d2visco_d2T)
+
+    real*8, intent(in)             :: visco            ! temperature without correction
+    real*8, intent(in)             :: T_raw            ! temperature without correction
+    real*8, intent(in)             :: T_corr           ! corrected temperature > 0
+    real*8, intent(in)             :: T0               ! central temperature at equilibrium
+    real*8, intent(out)            :: visco_T          ! output viscosity          
+    real*8, optional, intent(out)  :: dvisco_dT        ! 1st derivative w.r.t. temperature   
+    real*8, optional, intent(out)  :: d2visco_d2T      ! 2nd derivative w.r.t. temperature           
+
+    if ( visco_T_dependent ) then
+      visco_T     =   visco * (T_corr/T0)**(-1.5d0)
+      if (present(dvisco_dT))   dvisco_dT   = - visco * (1.5d0)  * T_corr**(-2.5d0) * T0**(1.5d0)
+      if (present(d2visco_d2T)) d2visco_d2T =   visco * (3.75d0) * T_corr**(-3.5d0) * T0**(1.5d0)
+      if (T_raw .lt. T_min) then
+        visco_T     = visco  * (T_min/T0)**(-1.5d0)
+        if (present(dvisco_dT  )) dvisco_dT   = 0.d0
+        if (present(d2visco_d2T)) d2visco_d2T = 0.d0
+      endif
+    else
+      visco_T     = visco
+      if (present(dvisco_dT))   dvisco_dT   = 0.d0
+      if (present(d2visco_d2T)) d2visco_d2T = 0.d0
+    end if
+
+  end subroutine viscosity 
+
 
 
 

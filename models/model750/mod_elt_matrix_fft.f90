@@ -1249,20 +1249,7 @@ do i=1,n_vertex_max
 
 
           ! --- Viscosity
-          if ( visco_T_dependent ) then
-            visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            dvisco_dT   = - visco * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-            d2visco_dT2 =   visco * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
-            if (xpoint2 .and. T_or_Te .lt. T_min) then
-              visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-              dvisco_dT   = 0.d0
-              d2visco_dT2 = 0.d0
-            endif
-          else
-            visco_T     = visco
-            dvisco_dT   = 0.d0
-            d2visco_dT2 = 0.d0
-          end if
+          call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T, dvisco_dT, d2visco_dT2)
 
           ! --- Temperature dependent parallel heat diffusivity
           if ( with_TiTe ) then

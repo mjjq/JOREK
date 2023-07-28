@@ -29,6 +29,7 @@ use mod_atomic_coeff_deuterium, only : atomic_coeff_deuterium
 use mod_impurity, only: radiation_function, radiation_function_linear
 use mod_sources
 use mod_model_settings
+use mod_plasma_functions
 
 implicit none
 
@@ -99,7 +100,7 @@ real*8     :: Pi0_x_Ti,  Pi0_xx_Ti,  Pi0_y_Ti,  Pi0_yy_Ti,  Pi0_xy_Ti
 real*8     :: Pe0, Pe0_s, Pe0_t, Pe0_x, Pe0_y, Pe0_p, Pe0_ss, Pe0_st, Pe0_tt, Pe0_xx, Pe0_xy, Pe0_yy
 real*8     :: Vpar0, Vpar0_s, Vpar0_t, Vpar0_p, Vpar0_x, Vpar0_y, Vpar0_ss, Vpar0_st, Vpar0_tt, Vpar0_xx, Vpar0_yy,Vpar0_xy
 real*8     :: BigR_x, vv2, eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, d2visco_dT2, visco_num_T, eta_num_T, W_dia, W_dia_rho, W_dia_Ti
-real*8     :: eta_T_ohm, deta_dT_ohm,  deta_num_dT,  dvisco_num_dT, D_perp_num_psin, ZK_perp_num_psin, ZK_i_perp_num_psin, ZK_e_perp_num_psin
+real*8     :: eta_T_ohm, deta_dT_ohm, d2eta_d2T_ohm, deta_num_dT,  dvisco_num_dT, D_perp_num_psin, ZK_perp_num_psin, ZK_i_perp_num_psin, ZK_e_perp_num_psin
 real*8     :: deta_dr0, deta_drimp0, deta_dr0_ohm, deta_drimp0_ohm
 real*8     :: Ti0_ps0_x, Ti_ps0_x, Ti0_psi_x, Ti0_ps0_y, Ti_ps0_y, Ti0_psi_y, v_ps0_x, v_psi_x, v_ps0_y, v_psi_y
 real*8     :: Te0_ps0_x, Te_ps0_x, Te0_psi_x, Te0_ps0_y, Te_ps0_y, Te0_psi_y
@@ -900,37 +901,11 @@ do i=1,n_vertex_max
 
           if ( with_TiTe ) then ! ******************************************************************
 
-            ! --- Temperature dependent parallel heat diffusivity
-            if ( ZKpar_T_dependent ) then
-
-              ZKi_par_T   = ZK_i_par * (Ti0_corr/Ti_0)**(+2.5d0)        
-              dZKi_par_dT = ZK_i_par * (2.5d0)  * Ti0_corr**(+1.5d0) * Ti_0**(-2.5d0) * dTi0_corr_dT
-              if (ZKi_par_T .gt. ZK_par_max) then
-                ZKi_par_T   = Zk_par_max
-                dZKi_par_dT = 0.d0
-              endif
-              if (Ti0 .lt. Ti_min_ZKpar) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
-                dZKi_par_dT = 0.d0
-              endif
-              
-              ZKe_par_T   = ZK_e_par * (Te0_corr/Te_0)**(+2.5d0)            
-              dZKe_par_dT = ZK_e_par * (2.5d0)  * Te0_corr**(+1.5d0) * Te_0**(-2.5d0) * dTe0_corr_dT
-              if (ZKe_par_T .gt. ZK_par_max) then
-                ZKe_par_T   = Zk_par_max
-                dZKe_par_dT = 0.d0
-              endif
-              if (Te0 .lt. Te_min_ZKpar) then
-                ZKe_par_T   = ZK_e_par * (max(Te0,Te_min_ZKpar)/Te_0)**(+2.5d0)
-                dZKe_par_dT = 0.d0
-              endif
-
-            else
-              ZKi_par_T   = ZK_i_par                                            ! parallel conductivity
-              dZKi_par_dT = 0.d0
-              ZKe_par_T   = ZK_e_par                                            ! parallel conductivity
-              dZKe_par_dT = 0.d0
-            endif
+            ! --- Temperature dependent parallel heat conductivity
+            call conductivity_parallel(ZK_i_par, ZK_par_max, Ti0, Ti0_corr, Ti_min_ZKpar, Ti_0, &
+                                       ZKi_par_T,  ZK_i_par_neg_thresh, ZK_i_par_neg, dTi0_corr_dT, dZKi_par_dT)
+            call conductivity_parallel(ZK_e_par, ZK_par_max, Te0, Te0_corr, Te_min_ZKpar, Te_0, &
+                                       ZKe_par_T,  ZK_e_par_neg_thresh, ZK_e_par_neg, dTe0_corr_dT, dZKe_par_dT)
 
             if (with_impurities) call construct_imp_charge_states()
                           
@@ -961,21 +936,8 @@ do i=1,n_vertex_max
           else ! (with_TiTe = .f.), i.e. with single temperature *****************************************
 
             ! --- Temperature dependent parallel heat diffusivity
-            if ( ZKpar_T_dependent ) then
-              ZK_par_T   = ZK_par * (T0_corr/T_0)**(+2.5d0)   
-              dZK_par_dT = ZK_par * (2.5d0)  * T0_corr**(+1.5d0) * T_0**(-2.5d0) * dT0_corr_dT
-              if (ZK_par_T .gt. ZK_par_max) then
-                ZK_par_T   = Zk_par_max
-                dZK_par_dT = 0.d0
-              endif
-              if (T0 .lt. T_min_ZKpar) then
-                ZK_par_T   = ZK_par * (max(T0,T_min_ZKpar)/T_0)**(+2.5d0)
-                dZK_par_dT = 0.d0
-              endif
-            else
-              ZK_par_T   = ZK_par                      
-              dZK_par_dT = 0.d0
-            endif
+            call conductivity_parallel(ZK_par, ZK_par_max, T0, T0_corr, T_min_ZKpar, T_0, &
+                                       ZK_par_T, ZK_par_neg_thresh, ZK_par_neg, dT0_corr_dT, dZK_par_dT)
 
             if (with_impurities) call construct_imp_charge_states()
                
@@ -989,118 +951,29 @@ do i=1,n_vertex_max
             
           end if ! (with_TiTe) *********************************************************************
 
+          if (.not. with_impurities) Z_eff = 1.d0
+
           ! --- Eta
-          eta_T     = 0.d0
-          deta_dT   = 0.d0
-          d2eta_d2T = 0.d0
-          deta_dr0  = 0.d0
-          deta_drimp0 = 0.d0
-          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta) then
-            eta_T     =   eta   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            deta_dT   = - eta   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-            d2eta_d2T =   eta   * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta) then
-            eta_T     = eta   * (T_max_eta/T_or_Te_0)**(-1.5d0)
-          else
-            eta_T     = eta
-          end if
-          
-          ! --- Eta for ohmic heating
-          eta_T_ohm     = 0.d0
-          deta_dT_ohm   = 0.d0
-          deta_dr0_ohm  = 0.d0
-          deta_drimp0_ohm = 0.d0
-          if ( eta_T_dependent .and. T_or_Te_corr <= T_max_eta_ohm) then
-            eta_T_ohm     =   eta_ohmic   * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = - eta_ohmic   * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-          else if ( eta_T_dependent .and. T_or_Te_corr > T_max_eta_ohm) then
-            eta_T_ohm     =   eta_ohmic   * (T_max_eta_ohm/T_or_Te_0)**(-1.5d0)
-          else
-            eta_T_ohm     = eta_ohmic
-          end if
+          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T,      & 
+                           dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn,   & 
+                           deta_dT, d2eta_d2T, deta_dr0, deta_drimp0)           
 
-          if ( eta_T_dependent .and. (T_or_Te .lt. T_min) ) then
-            eta_T     = eta       * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-            deta_dT   = 0.d0
-            d2eta_d2T = 0.d0
-            deta_dr0  = 0.
-            deta_drimp0 = 0.
-
-            eta_T_ohm = eta_ohmic * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-            deta_dT_ohm   = 0.
-            deta_dr0_ohm  = 0.
-            deta_drimp0_ohm = 0.
-          end if
-
-          if (with_impurities) then
-            ! Z_eff-related factor in resistivity
-            eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-            eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
-  
-            deta_coef_dZeff = (1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-            deta_coef_dZeff = deta_coef_dZeff + Z_eff*(1.198+2.*0.222*Z_eff)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-            deta_coef_dZeff = deta_coef_dZeff - Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)*(2.966+2.*0.753*Z_eff)/((1.+2.966*Z_eff+0.753*Z_eff**2)**2)
-            deta_coef_dZeff = deta_coef_dZeff / ((1.+1.198+0.222)/(1.+2.966+0.753))
-  
-            if ( eta_T_dependent ) then
-              deta_dr0    = eta_T * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-              deta_drimp0 = eta_T * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
-              deta_dT     = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT
-              eta_T       = eta_T * eta_coef
-  
-              deta_dr0_ohm    = eta_T_ohm * deta_coef_dZeff * dZ_eff_dr0 * dr0_corr_dn
-              deta_drimp0_ohm = eta_T_ohm * deta_coef_dZeff * dZ_eff_drimp0 * drimp0_corr_dn
-              deta_dT_ohm     = deta_dT_ohm * eta_coef + eta_T_ohm * deta_coef_dZeff * dZ_eff_dT
-              eta_T_ohm       = eta_T_ohm * eta_coef
-            end if
-          endif
+          ! --- Eta ohmic
+          call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, eta_T_ohm,  &
+                           dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn,             & 
+                           deta_dT_ohm, d2eta_d2T_ohm, deta_dr0_ohm, deta_drimp0_ohm)           
 
           ! --- Viscosity
-          if ( visco_T_dependent ) then
-            visco_T     =   visco * (T_or_Te_corr/T_or_Te_0)**(-1.5d0)
-            dvisco_dT   = - visco * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
-            d2visco_dT2 =   visco * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
-            if (T_or_Te .lt. T_min) then
-              visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
-              dvisco_dT   = 0.d0
-              d2visco_dT2 = 0.d0
-            endif
-          else
-            visco_T     = visco
-            dvisco_dT   = 0.d0
-            d2visco_dT2 = 0.d0
-          end if
+          call viscosity(visco, T_or_Te, T_or_Te_corr,T_or_Te_0, visco_T, dvisco_dT, d2visco_dT2)
 
+          ! --- Normalized poloidal flux
           psi_norm = get_psi_n( ps0, y_g(ms,mt))
           
           ! --- Hyper-resistivity
-          if ( eta_num_psin_dependent ) then
-            eta_num_T   = eta_num * 0.5d0 * ( 1.d0 - tanh( (psi_norm-eta_num_prof(1))/eta_num_prof(2)) )      
-            deta_num_dT = 0.d0      
-          else if ( eta_num_T_dependent ) then
-            eta_num_T     =   eta_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
-            deta_num_dT   = - eta_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
-            if (T_or_Te .lt. T_min) then
-              eta_num_T     = eta_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
-              deta_num_dT   = 0.d0
-            endif
-          else
-            eta_num_T     = eta_num
-            deta_num_dT   = 0.d0
-          end if
+          call hyper_resistivity(T_or_Te, T_or_Te_corr, T_or_Te_0, psi_norm, eta_num_T, deta_num_dT) 
           
           ! --- Hyper-viscosity
-          if ( visco_num_T_dependent ) then
-            visco_num_T     =   visco_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
-            dvisco_num_dT   = - visco_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
-            if (T_or_Te .lt. T_min) then
-              visco_num_T     = visco_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
-              dvisco_num_dT   = 0.d0
-            endif
-          else
-            visco_num_T     = visco_num
-            dvisco_num_dT   = 0.d0
-          end if
+          call hyper_viscosity(T_or_Te, T_or_Te_corr, T_or_Te_0, visco_num_T, dvisco_num_dT) 
 
           ! --- Diamagnetic viscosity
           if (Wdia) then
@@ -1192,22 +1065,13 @@ do i=1,n_vertex_max
             if (Ti0 .lt. ZK_i_prof_neg_thresh) then
               ZKi_prof = ZK_i_prof_neg
             end if
-            if (Ti0 .lt. ZK_i_par_neg_thresh) then
-              ZKi_par_T = ZK_i_par_neg
-            endif
             if (Te0 .lt. ZK_e_prof_neg_thresh) then
               ZKe_prof = ZK_e_prof_neg
             end if
-            if (Te0 .lt. ZK_e_par_neg_thresh) then
-              ZKe_par_T = ZK_e_par_neg
-            endif
           else ! (with_TiTe = .f.), i.e. with single temperature
             if (T0 .lt. ZK_prof_neg_thresh) then
               ZK_prof = ZK_prof_neg
             end if
-            if (T0 .lt. ZK_par_neg_thresh) then
-              ZK_par_T = ZK_par_neg
-            endif
           endif ! (with_TiTe)
 
           ! --- Parallel momentum source

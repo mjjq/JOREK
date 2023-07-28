@@ -15,7 +15,7 @@ module mod_integrals3D
   use convert_character
   use mpi_mod
   use mod_expression
-  use mod_resistivity
+  use mod_plasma_functions
   use mod_poloidal_currents, only : integrated_normal_bnd_curr 
   use corr_neg
   use pellet_module
@@ -102,7 +102,7 @@ real*8  :: psi_as_coord
 real*8  :: AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30
 real*8  :: A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ
 real*8  :: BR_Z, BZ_R
-real*8  :: r0_corr, T0_corr, T0e_corr, T0i_corr, dT0e_corr_dT 
+real*8  :: r0_corr, T0_corr, T0e_corr, T0i_corr, dT0e_corr_dT, T_or_Te, T_or_Te_corr, T_or_Te_0 
 real*8  :: density_tot, density_in, density_out,  pressure, pressure_in, pressure_out
 real*8  :: pressure_e, pressure_e_in, pressure_e_out, pressure_i, pressure_i_in, pressure_i_out
 real*8  :: current_in, current_out, D_int, D_ext, P_ext, C_ext, delta_phi, phi, P_tot, D_tot
@@ -117,7 +117,7 @@ real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, sourc
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy, drhoimpdx, drhoimpdy
 real*8  :: dTedx, dTedy, dTidx, dTidy, dPedx, dPedy, dPidx, dPidy
-real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm
+real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm, Z_eff
 real*8  :: local_pellet_particles, local_plasma_particles, local_pellet_volume
 real*8  :: local_n_particles_inj, local_n_particles, rn0, rn0_corr, neut_particles_tot, rimp0, rimp0_corr
 real*8  :: E_tot, E_in, E_out, Zkpar_T, D_prof, ZK_prof, sheath_heatflux
@@ -181,7 +181,7 @@ real*8, allocatable :: local_source_volume(:), local_source_volume_drift(:)
 !   -Mass ratio between main ions and impurites (m_i/m_imp)
 real*8  :: m_i_over_m_imp, m_imp
 !   -Mean impurity ionization state
-real*8  :: Z_imp, dZ_imp_dT, Z_eff, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
+real*8  :: Z_imp, dZ_imp_dT, eta_coef, ne_JOREK, dne_JOREK_dx, dne_JOREK_dy
 real*8  :: Z_eff_imp
 !   -Corrected plasma temperature and density for radiation calculation
 real*8  :: Ti_corr_eV
@@ -398,11 +398,11 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp           dn_dpsi,dn_dz,dn_dpsi2,dn_dz2,dn_dpsi_dz,dn_dpsi3,dn_dpsi_dz2, dn_dpsi2_dz,    &
 !$omp           dT_dpsi,dT_dz,dT_dpsi2,dT_dz2,dT_dpsi_dz,dT_dpsi3,dT_dpsi_dz2, dT_dpsi2_dz,    &
 !$omp           hel1, vpar_x, vpar_y, ps0_s, ps0_t, u0_s, u0_t, p0_s, p0_t, vpar_s, vpar_t,    &
-!$omp           u0_x, u0_y, T0e_corr, T0i_corr,                                                &
+!$omp           u0_x, u0_y, T0e_corr, T0i_corr, T_or_Te, T_or_Te_corr, T_or_Te_0,              &
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, fric_disp, p0_p, T0_corr, r0_corr, u0_p,     &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
-!$omp           eta_T_ohm, rn0, rn0_corr, rimp0, rimp0_corr,                                   &
+!$omp           eta_T_ohm, rn0, rn0_corr, rimp0, rimp0_corr, Z_eff,                            &
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,                     &
@@ -415,7 +415,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp           source_bg_arr, source_imp_arr, source_bg_drift_arr,                            &
 !$omp           m_i_over_m_imp, m_imp, Z_imp, dZ_imp_dT,                                       &
 !$omp           ne_JOREK, P_imp, Lrad, E_ion, E_ion_bg, ion_i,                                 &
-!$omp           ion_k, Z_eff, Z_eff_imp, eta_coef, Ti_corr_eV,                                 &
+!$omp           ion_k, Z_eff_imp, eta_coef, Ti_corr_eV,                                        &
 #endif
 #if (defined WITH_Impurities) && (defined WITH_TiTe)
 !$omp           alpha_i, alpha_e, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i,  &
@@ -578,6 +578,9 @@ do ife = ife_min, ife_max
         T0e    = eq_g(mp,var_Te,ms,mt)
         T0e_corr = corr_neg_temp(T0e*2.d0) / 2.d0
         T0i_corr = corr_neg_temp(T0i*2.d0) / 2.d0
+        T_or_Te       = T0e
+        T_or_Te_corr  = T0e_corr
+        T_or_Te_0     = Te_0
 #else
         T0       = eq_g(mp,var_T,ms,mt)
         T0i      = eq_g(mp,var_T,ms,mt) /2.d0
@@ -585,6 +588,9 @@ do ife = ife_min, ife_max
         T0_corr  = corr_neg_temp(T0)
         T0e_corr = T0_corr / 2.d0
         T0i_corr = T0_corr / 2.d0
+        T_or_Te       = T0
+        T_or_Te_corr  = T0_corr
+        T_or_Te_0     = T_0
 #endif
         zj0    = eq_g(mp,var_zj,ms,mt)
         ps0    = eq_g(mp,var_psi,ms,mt)
@@ -652,13 +658,6 @@ do ife = ife_min, ife_max
         psi_as_coord = psi_axisym(ms,mt)
 #else
         psi_as_coord = ps0
-#endif
-#ifdef WITH_TiTe
-        eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
-        eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
-#else
-        eta_T         = resistivity(eta, T0_corr, T_max_eta, T_0)  
-        eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm, T_0)
 #endif
         ! This is currently broken for two temperature models !
         ! Some of these do not seem to be doing anything so I'm commenting them off !
@@ -866,14 +865,6 @@ do ife = ife_min, ife_max
         if (Z_eff < 1) Z_eff = 1.
         if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
    
-        ! This is to represent the dependence on Z_eff in resistivity
-        if ( eta_T_dependent ) then
-          eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-          eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
-          eta_T        = eta_T * eta_coef
-          eta_T_ohm    = eta_T_ohm * eta_coef
-        endif
-
         if (ne_SI > ne_SI_min .and. Te_eV > Te_eV_min .and. rimp0 > rn0_min) then
           Lrad = 0.0
           !call radiation_function(imp_adas(index_main_imp),imp_cor(index_main_imp),log10(ne_SI),log10(Te_corr_eV*EL_CHG/K_BOLTZ),Lrad)
@@ -940,6 +931,13 @@ do ife = ife_min, ife_max
         local_P_ei = local_P_ei + ne_SI * dTe_i * bigR * xjac * wst * delta_phi 
 #endif /* WITH_TiTe */
 #endif /* WITH_Impurities */
+
+#if (! defined WITH_Impurities)
+        Z_eff = 1.d0
+#endif 
+        call resistivity(eta,       T_or_Te, T_or_Te_corr, T_max_eta,     T_or_Te_0, Z_eff, eta_T    )           
+        call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, eta_T_ohm)           
+
 #ifdef WITH_Impurities
         D_tot  = D_tot  + (r0-rimp0) * xjac * BigR * wst * delta_phi 
 #ifdef WITH_TiTe
@@ -1523,55 +1521,35 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
       psi_n = get_psi_n(ps0,Z)
  
 #ifdef WITH_TiTe
-      eta_T         = resistivity(eta, T0e_corr, T_max_eta, Te_0)  
-      eta_T_ohm     = resistivity(eta_ohmic, T0e_corr, T_max_eta_ohm, Te_0)
-
       ZK_e_prof     = get_zk_eperp(psi_n)
       ZK_i_prof     = get_zk_iperp(psi_n)
- 
-      if (ZKpar_T_dependent) then
-        ZK_e_par_T = ZK_e_par * (max(T0e,Te_min_ZKpar)/Te_0)**( 2.5d0)
-        ZK_i_par_T = ZK_i_par * (max(T0i,Ti_min_ZKpar)/Ti_0)**( 2.5d0)
-        if (ZK_e_par_T .gt. ZK_par_max)  ZK_e_par_T   = ZK_par_max
-        if (ZK_i_par_T .gt. ZK_par_max)  ZK_i_par_T   = ZK_par_max
-      else
-        ZK_e_par_T = ZK_e_par 
-        ZK_i_par_T = ZK_i_par 
-      endif
-#else
-      eta_T         = resistivity(eta, T0_corr, T_max_eta, T_0)  
-      eta_T_ohm     = resistivity(eta_ohmic, T0_corr, T_max_eta_ohm, T_0)
 
+      ! --- Temperature dependent parallel heat conductivity
+      call conductivity_parallel(ZK_i_par, ZK_par_max, T0i, T0i_corr, Ti_min_ZKpar, Ti_0,  & 
+                                 ZK_i_par_T, ZK_i_par_neg_thresh, ZK_i_par_neg)
+      call conductivity_parallel(ZK_e_par, ZK_par_max, T0e, T0e_corr, Te_min_ZKpar, Te_0,  &
+                                 ZK_e_par_T, ZK_e_par_neg_thresh, ZK_e_par_neg)
+
+#else
       ZK_prof = get_zkperp(psi_n)
 
-      if (ZKpar_T_dependent) then
-        ZKpar_T = ZK_par * (max(T0,T_min_ZKpar)/T_0)**( 2.5d0)
-        if (ZKpar_T .gt. ZK_par_max)  ZKpar_T   = ZK_par_max
-      else
-        ZKpar_T = ZK_par
-      endif
+      ! --- Temperature dependent parallel heat conductivity
+      call conductivity_parallel(ZK_par, ZK_par_max, T0, T0_corr, T_min_ZKpar, T_0, &
+                                 ZKpar_T, ZK_par_neg_thresh, ZK_par_neg)
+
 #endif
 
       if ( with_TiTe ) then ! (with_TiTe) ****************************************************
         if (T0i .lt. ZK_i_prof_neg_thresh) then
           ZK_i_prof = ZK_i_prof_neg
         end if
-        if (T0i .lt. ZK_i_par_neg_thresh) then
-          ZK_i_par_T = ZK_i_par_neg
-        endif
         if (T0e .lt. ZK_e_prof_neg_thresh) then
           ZK_e_prof = ZK_e_prof_neg
         end if
-        if (T0e .lt. ZK_e_par_neg_thresh) then
-          ZK_e_par_T = ZK_e_par_neg
-        endif
-      else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
+       else ! (with_TiTe = .f.), i.e. with single temperature ***************************************
         if (T0 .lt. ZK_prof_neg_thresh) then
           ZK_prof = ZK_prof_neg
         end if
-        if (T0 .lt. ZK_par_neg_thresh) then
-          ZKpar_T = ZK_par_neg
-        endif
       endif ! (with_TiTe) ********************************************************************
 
 
@@ -1643,14 +1621,6 @@ do m_bndelem = 1, bnd_elm_list%n_bnd_elements
 
       if (Z_eff < 1) Z_eff = 1.
       if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
-
-      ! This is to represent the dependence on Z_eff in resistivity
-      if ( eta_T_dependent ) then
-        eta_coef     = Z_eff*(1.+1.198*Z_eff+0.222*Z_eff**2)/(1.+2.966*Z_eff+0.753*Z_eff**2)
-        eta_coef     = eta_coef / ((1.+1.198+0.222)/(1.+2.966+0.753))
-        eta_T        = eta_T * eta_coef
-        eta_T_ohm    = eta_T_ohm * eta_coef
-      endif
 
       dPedx  = ne_JOREK * dTedx + T0e * dne_JOREK_dx
       dPedy  = ne_JOREK * dTedy + T0e * dne_JOREK_dy

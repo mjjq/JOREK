@@ -36,9 +36,9 @@ subroutine preset_parameters
   eta_num_prof(2) = 0.03d0
 
   eta           = 1.d-5
-  T_max_eta     = 1.d3
+  T_max_eta     = 1.d99
   eta_ohmic     = 0.d0
-  T_max_eta_ohm = 1.d3
+  T_max_eta_ohm = 1.d99
 
   visco = 1.d-5
   T_max_visco   = 1.d99

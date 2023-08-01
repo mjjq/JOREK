@@ -287,6 +287,20 @@ subroutine preset_parameters
   Dn_p_sc_num      = 0.d0
   D_perp_imp_sc_num= 0.d0
   D_par_imp_sc_num = 0.d0
+ 
+  use_vms = .false.
+  vms_coeff_AR     = 0.d0
+  vms_coeff_AZ     = 0.d0
+  vms_coeff_A3     = 0.d0
+  vms_coeff_UR     = 0.d0
+  vms_coeff_UZ     = 0.d0
+  vms_coeff_Up     = 0.d0
+  vms_coeff_rho    = 0.d0 
+  vms_coeff_T      = 0.d0
+  vms_coeff_Te     = 0.d0
+  vms_coeff_Ti     = 0.d0  
+  vms_coeff_rhon   = 0.d0 
+  vms_coeff_rhoimp = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7

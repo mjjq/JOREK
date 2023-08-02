@@ -663,15 +663,19 @@ do ms=1, n_gauss
 
      ! --- Temperature dependent viscosity
      ! --- Note: No good physics basis, simply for keeping the magnetic Prandtl number constant
-     if ( visco_T_dependent .and. Te0_corr <= T_max_eta ) then       
-       visco_T   = visco * (Te0_corr/Te_0)**(-1.5d0)
-       dvisco_dT = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0) * dTe0_corr_dT
-     else if (visco_T_dependent .and. Te0_corr > T_max_eta) then
-       visco_T   = visco * (T_max_eta/Te_0)**(-1.5d0)
-       dvisco_dT = 0.
+     if ( visco_T_dependent ) then
+       visco_T     =   visco * (Te0_corr/Te_0)**(-1.5d0)
+       dvisco_dT   = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0) * dTe0_corr_dT
+       if (Te0_corr .lt. T_min) then
+         visco_T     = visco  * (T_min/Te_0)**(-1.5d0)
+         dvisco_dT   = 0.d0
+       elseif (Te0_corr .gt. T_max_visco) then
+         visco_T     = visco  * (T_max_visco/Te_0)**(-1.5d0)
+         dvisco_dT   = 0.d0
+       endif
      else
-       visco_T   = visco
-       dvisco_dT = 0.d0
+       visco_T     = visco
+       dvisco_dT   = 0.d0
      end if
      
      ! --- Temperature dependent parallel heat diffusivity

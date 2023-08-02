@@ -36,11 +36,12 @@ subroutine preset_parameters
   eta_num_prof(2) = 0.03d0
 
   eta           = 1.d-5
-  T_max_eta     = 1.d3
+  T_max_eta     = 1.d99
   eta_ohmic     = 0.d0
-  T_max_eta_ohm = 1.d3
+  T_max_eta_ohm = 1.d99
 
   visco = 1.d-5
+  T_max_visco   = 1.d99
   visco_par = 1.d-5
   visco_par_heating = 0.d0
   
@@ -286,6 +287,20 @@ subroutine preset_parameters
   Dn_p_sc_num      = 0.d0
   D_perp_imp_sc_num= 0.d0
   D_par_imp_sc_num = 0.d0
+ 
+  use_vms = .false.
+  vms_coeff_AR     = 0.d0
+  vms_coeff_AZ     = 0.d0
+  vms_coeff_A3     = 0.d0
+  vms_coeff_UR     = 0.d0
+  vms_coeff_UZ     = 0.d0
+  vms_coeff_Up     = 0.d0
+  vms_coeff_rho    = 0.d0 
+  vms_coeff_T      = 0.d0
+  vms_coeff_Te     = 0.d0
+  vms_coeff_Ti     = 0.d0  
+  vms_coeff_rhon   = 0.d0 
+  vms_coeff_rhoimp = 0.d0
 
   heatsource          = 1.e-7
   heatsource_e        = 0.5e-7

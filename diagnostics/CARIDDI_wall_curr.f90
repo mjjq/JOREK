@@ -1,3 +1,15 @@
+!> Program to convert CARIDDI currents into vtk and povray
+! Several files from the CARIDDI run are necessary:
+! ndofel.dat
+! gmat.dat
+! iglobdof.dat
+! S_mat.bin   
+! x.dat
+! ix.dat
+! Then jorek_restart.h5 is converted into the vtk and povray
+! Different components can be plotted separately (hardcoded)
+! The correct mesh has to be chosen (nodes_per_elem = 6 or 8)
+!===========================================================
 program convert
 
   use hdf5
@@ -22,9 +34,11 @@ integer :: elem_component(n_nodes_max/2)
 integer :: n_nodes, n_elems, ierr, i, j, ifile = 143, min_elem, max_elem
 
 integer :: nelems_comp, istart, iend
+integer :: ncomponents, comp_start(n_components_max), comp_end(n_components_max)
 character(len=80) :: buffer
+character(len=3) :: ic
 character(len=12) :: str1, str2
-character(len=2) :: str3
+character(len=20) :: comp_name(n_components_max)
 character(len=1), parameter :: lf = char(10)
 character(len=20), parameter :: node_file='x.dat', elem_file='ix.dat'
 
@@ -41,6 +55,10 @@ real*8, allocatable, dimension(:,:)   :: S, gmat_sp
 real*8, allocatable, dimension(:,:,:) :: gmat
 
 integer, allocatable :: ndofel(:), ind_g(:,:), full_glob(:,:)
+
+
+namelist /CARIDDI_plot/ phimin, phimax, ncomponents, comp_start, comp_end, comp_name
+
 
 min_elem = 1
 max_elem = 100000
@@ -186,52 +204,48 @@ do i = 1, n_elems
   wall_curr_el(i) = (jx(i)**2+jy(i)**2+jz(i)**2)**.5
 end do
 
-! --- export to VTK
-call write_header('3dwall.vtk',ifile, n_nodes, xyznode)
-!components to plot (0=all)
-call det_comp(elem_component, 0, 0, n_elems, istart, iend, nelems_comp)
-call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
-call write_header_scalar(ifile, nelems_comp)
-call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
-call write_scalar('I*e_phi', ifile, istart, iend, jphi)
-call write_vector('J', ifile, istart, iend, jx, jy, jz)
-close(ifile)
 
-call write_header('3dwall_comp_passive.vtk',ifile, n_nodes, xyznode)
-call det_comp(elem_component, 1,38-32, n_elems, istart, iend, nelems_comp)
-write(*,*) 'passive', istart, iend, nelems_comp, n_elems
-call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
-call write_header_scalar(ifile, nelems_comp)
-call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
-call write_scalar('I*e_phi', ifile, istart, iend, jphi)
-call write_vector('J', ifile, istart, iend, jx, jy, jz)
-close(ifile)
-call write_header('3dwall_comp_PSL.vtk',ifile, n_nodes, xyznode)
-call det_comp(elem_component, 1, 4, n_elems, istart, iend, nelems_comp)
-write(*,*) 'PSL', istart, iend, nelems_comp, n_elems
-call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
-call write_header_scalar(ifile, nelems_comp)
-call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
-call write_scalar('I*e_phi', ifile, istart, iend, jphi)
-call write_vector('J', ifile, istart, iend, jx, jy, jz)
-close(ifile)
-call write_header('3dwall_comp_wall.vtk',ifile, n_nodes, xyznode)
-call det_comp(elem_component, 5, 6, n_elems, istart, iend, nelems_comp)
-write(*,*) 'wall', istart, iend, nelems_comp, n_elems
-call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
-call write_header_scalar(ifile, nelems_comp)
-call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
-call write_scalar('I*e_phi', ifile, istart, iend, jphi)
-call write_vector('J', ifile, istart, iend, jx, jy, jz)
-close(ifile)
-call write_header('3dwall_comp_PF.vtk',ifile, n_nodes, xyznode)
-call det_comp(elem_component, 38-31, 38, n_elems, istart, iend, nelems_comp)
-call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
-call write_header_scalar(ifile, nelems_comp)
-call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
-call write_scalar('I*e_phi', ifile, istart, iend, jphi)
-call write_vector('J', ifile, istart, iend, jx, jy, jz)
-close(ifile)
+ncomponents  = 1
+comp_start   = 0
+comp_end     = 0
+comp_name(1) ='CARIDDI_all'
+
+open(42, file='CARIDDI_plot.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+  write(*,*) 'Reading parameters from vtk.nml namelist.'
+  read(42,CARIDDI_plot)
+  close(42)
+end if
+
+
+! --- export to VTK
+!components to plot (0=all)
+do i = 1, ncomponents
+  if (( comp_start(i) .eq. -1) .and. (comp_end(i) .eq. -1)) then
+    do j = 1, maxval(elem_component)
+      write(ic,'(I0.3)') j
+      call write_header('CARIDDI_comp'//trim(ic)//'.vtk',ifile, n_nodes, xyznode)
+      call det_comp(elem_component, j, j,&
+          n_elems, istart, iend, nelems_comp)
+      call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
+      call write_header_scalar(ifile, nelems_comp)
+      call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
+      call write_scalar('I*e_phi', ifile, istart, iend, jphi)
+      call write_vector('J', ifile, istart, iend, jx, jy, jz)
+      close(ifile)
+    end do
+  else
+    call write_header(trim(comp_name(i))//'.vtk',ifile, n_nodes, xyznode)
+    call det_comp(elem_component, comp_start(i), comp_end(i),&
+        n_elems, istart, iend, nelems_comp)
+    call write_cell(ifile, n_elems, elemnode, istart, iend, nelems_comp)
+    call write_header_scalar(ifile, nelems_comp)
+    call write_scalar('j_w(Am^-3)', ifile, istart, iend, wall_curr_el)
+    call write_scalar('I*e_phi', ifile, istart, iend, jphi)
+    call write_vector('J', ifile, istart, iend, jx, jy, jz)
+    close(ifile)
+  end if
+end do
 
 ! --- export to Povray
 include_struct(:) = .false.
@@ -243,6 +257,7 @@ close(ifile)
 
 contains
   subroutine write_header(filename, ifile, nnodes, xyznode)
+    !> Write header for vtk file
     integer, intent(in)             :: nnodes, ifile
     real*8,  intent(in)             :: xyznode(:,:)
     character(len=*), intent(in)    :: filename
@@ -284,6 +299,7 @@ contains
   end subroutine write_header
 
   subroutine write_cell(ifile, nelems, elemnode, istart, iend, nelems_final)
+    !> write information between dof and node into file
     integer, intent(in)             :: nelems, ifile
     integer, intent(in)             :: istart, iend, nelems_final
     integer, intent(in)             :: elemnode(:,:)
@@ -334,6 +350,7 @@ contains
 
   
   subroutine write_header_scalar(ifile, nelems)
+    !> header for scalar quantities (needed once for multiple quantities)
     integer, intent(in)             :: nelems, ifile
     character(len=80) :: buffer
     
@@ -347,6 +364,7 @@ contains
   end subroutine write_header_scalar
   
   subroutine write_scalar(name, ifile, istart, iend, values)
+    !> values of scalars
     real*8 , intent(in)             :: values(:)
     integer, intent(in)             :: istart, iend, ifile
     character(len=*), intent(in)    :: name
@@ -366,12 +384,12 @@ contains
   end subroutine write_scalar
   
   subroutine write_vector(name, ifile, istart, iend, v1, v2, v3)
+    !> Write vector information with header
     real*8 , intent(in)             :: v1(:),v2(:),v3(:)
     integer, intent(in)             :: istart, iend, ifile
     character(len=*), intent(in)    :: name
     
     integer :: i
-    write(*,*) istart, iend
     if ( ascii ) then
       write(ifile,'(a,i12)')'VECTORS '//trim(name)//' float'
       write(ifile,'(4es28.9)') ((/v1(i),v2(i),v3(i)/), i=istart, iend)
@@ -384,6 +402,7 @@ contains
 
 
   subroutine det_comp(elem_component, comp1, comp2, nelems, istart, iend, nelems_final)
+    !> determine start and end index for different components
     integer, intent(in)             :: nelems, comp1, comp2
     integer, intent(in)             :: elem_component(:)
     integer, intent(out)            :: istart, iend, nelems_final
@@ -409,6 +428,7 @@ contains
 
 
 subroutine write_header_pov(ifile)
+    !> head for pov, viewing angles are hardcoded
   integer,              intent(in) :: ifile
   
   980 format(a)
@@ -450,6 +470,7 @@ end subroutine write_header_pov
 
 
 subroutine write_currdens_pov(ifile)
+  !> write coordinates and scalar 
   integer,              intent(in) :: ifile
   
   integer :: i, j
@@ -477,7 +498,6 @@ subroutine write_currdens_pov(ifile)
     if (phi<0) phi = phi + 2* pi
     if (phi > phimax) cycle
     if (phi < phimin) cycle
-    write(*,*) i, phi, phimin, phimax
     call write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
     
   end do
@@ -505,6 +525,7 @@ end subroutine write_triangle_pov
 
 
 subroutine write_hexahedron_as_triangles_pov(ifile, x, y, z, rgbt)
+  !> subdivide hexagon information into triangles
   integer,              intent(in) :: ifile
   real*8, dimension(8), intent(in) :: x, y, z
   real*8, dimension(4), intent(in) :: rgbt

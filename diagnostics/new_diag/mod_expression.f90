@@ -276,7 +276,7 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
-    call add(exprs_all_int, 'Friction_diss','Total frictional dissipation                          ')
+    call add(exprs_all_int, 'Fric_diss   ', 'Total frictional dissipation                          ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
     call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
@@ -1337,15 +1337,21 @@ module mod_expression
             if ( with_TiTe) then ! (with_TiTe) *****************************************************
               visco_T   =   visco * (Te0_corr/Te_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
+              if (Te0 .lt. T_min) then
                 visco_T     = visco  * (T_min/Te_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              elseif (Te0 .gt. T_max_visco) then
+                visco_T     = visco  * (T_max_visco/Te_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
               endif
             else ! (with_TiTe), i.e. with single temperature ***************************************
               visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
+              if (T0 .lt. T_min) then
                 visco_T     = visco  * (T_min/T_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              elseif (T0 .gt. T_max_visco) then
+                visco_T     = visco  * (T_max_visco/T_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
               endif
             end if ! (with_TiTe) *******************************************************************

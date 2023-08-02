@@ -131,7 +131,7 @@ most: jorek2_connection2 \
       jorek2_fieldlines_vtk \
       jorek2_four \
       jorek2_IDS \
-      convert_CARIDDI \
+      CARIDDI_wall_curr \
       jorek2_poincare \
       jorek2_powers \
       jorek2_target2vtk \

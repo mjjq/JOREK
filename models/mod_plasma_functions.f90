@@ -3,7 +3,7 @@ module mod_plasma_functions
   
   use phys_module, only: eta_T_dependent, T_min, ZKpar_T_dependent, visco_T_dependent,  &
                          eta_num, eta_num_T_dependent, eta_num_psin_dependent, eta_num_prof, &
-                         visco_num, visco_num_T_dependent 
+                         visco_num, visco_num_T_dependent, T_max_visco 
   use mod_model_settings, only:  with_impurities
     
   implicit none
@@ -13,7 +13,11 @@ module mod_plasma_functions
   
   contains
   
-  
+ 
+
+
+
+ 
   !> Determine resistivity (input/output in JOREK units)
   pure subroutine resistivity(eta_0, T_raw, T_corr, T_max, T0, Z_eff, eta_T,                       & 
                               dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn,   & 
@@ -57,7 +61,7 @@ module mod_plasma_functions
     end if
 
     if ( eta_T_dependent .and. (T_raw .lt. T_min) ) then
-      eta_T       = eta_0     * (max(T_raw, T_min)/T0)**(-1.5d0)
+      eta_T       = eta_0     * (T_min/T0)**(-1.5d0)
       if (present(deta_dT))     deta_dT    = 0.d0
       if (present(d2eta_d2T))   d2eta_d2T  = 0.d0
     endif
@@ -116,7 +120,7 @@ module mod_plasma_functions
       eta_num_T     =   eta_num   * (T_corr/T0)**(-3.d0)
       if (present(deta_num_dT))  deta_num_dT   = - eta_num   * (3.d0)  * T_corr**(-4.d0) * T0**(3.d0)
       if (T_raw .lt. T_min) then
-        eta_num_T     = eta_num    * (max(T_raw,T_min)/T0)**(-3.d0)
+        eta_num_T     = eta_num    * (T_min/T0)**(-3.d0)
         if (present(deta_num_dT)) deta_num_dT   = 0.d0
       endif
     else
@@ -162,7 +166,8 @@ module mod_plasma_functions
         dZK_par_dT_tmp = 0.d0
       endif
     else
-      ZK_par_T   = ZK_par0 
+      ZK_par_T      = ZK_par0 
+      dZK_par_dT_tmp = 0.d0
     endif
 
     if (present(dZK_par_dT)) then
@@ -200,7 +205,7 @@ module mod_plasma_functions
       visco_num_T     =   visco_num   * (T_corr/T0)**(-3.d0)
       if (present(dvisco_num_dT))  dvisco_num_dT   = - visco_num   * (3.d0)  * T_corr**(-4.d0) * T0**(3.d0)
       if (T_raw .lt. T_min) then
-        visco_num_T     = visco_num    * (max(T_raw,T_min)/T0)**(-3.d0)
+        visco_num_T     = visco_num    * (T_min/T0)**(-3.d0)
         if (present(dvisco_num_dT)) dvisco_num_dT   = 0.d0
       endif
     else
@@ -235,6 +240,10 @@ module mod_plasma_functions
       if (present(d2visco_d2T)) d2visco_d2T =   visco * (3.75d0) * T_corr**(-3.5d0) * T0**(1.5d0)
       if (T_raw .lt. T_min) then
         visco_T     = visco  * (T_min/T0)**(-1.5d0)
+        if (present(dvisco_dT  )) dvisco_dT   = 0.d0
+        if (present(d2visco_d2T)) d2visco_d2T = 0.d0
+      else if (T_raw .gt. T_max_visco) then
+        visco_T     =   visco * (T_max_visco/T0)**(-1.5d0)
         if (present(dvisco_dT  )) dvisco_dT   = 0.d0
         if (present(d2visco_d2T)) d2visco_d2T = 0.d0
       endif

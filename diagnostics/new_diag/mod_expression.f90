@@ -178,7 +178,8 @@ module mod_expression
     call add(exprs_all, 'V_neo       ', 'Neoclassical Velocity                                 ')
     call add(exprs_all, 'Vperp_e     ', 'Electron Perpendicular Velocity                       ')
     call add(exprs_all, 'Vperp_i     ', 'Ion Perpendicular Velocity                            ')
-    call add(exprs_all, 'V_ExB       ', 'ExB Velocity                                          ')
+    call add(exprs_all, 'V_ExB_pol   ', 'Poloidal component of ExB Velocity                    ')
+    call add(exprs_all, 'V_ExB_R     ', 'R component of ExB Velocity                           ')
     call add(exprs_all, 'Vstar_e     ', 'Electron Diamagnetic Velocity                         ')
     call add(exprs_all, 'Vstar_i     ', 'Ion Diamagnetic Velocity                              ')
     call add(exprs_all, 'ki_neo      ', 'Neoclassical Heat Diffusivity                         ')
@@ -228,6 +229,7 @@ module mod_expression
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
     call add(exprs_all, 'brem        ', 'Brem terms for bolometry diagnostic                   ')
     call add(exprs_all, 'line_rad    ', 'D neutral line radiation                              ')
+    call add(exprs_all, 'bg_imp_rad  ', 'Background impurity radiation                          ')
 #endif
     ! --- List of volume and boundary integrals
     call add(exprs_all_int, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
@@ -274,7 +276,7 @@ module mod_expression
     call add(exprs_all_int, 'Heat_src_in ', 'Heat source (inside  LCFS)                            ')
     call add(exprs_all_int, 'Heat_src_out', 'Heat source (outside LCFS)                            ')
     call add(exprs_all_int, 'Viscpar_diss', 'Total parallel viscosity dissipation                  ')
-    call add(exprs_all_int, 'Friction_diss','Total frictional dissipation                          ')
+    call add(exprs_all_int, 'Fric_diss   ', 'Total frictional dissipation                          ')
     call add(exprs_all_int, 'Wmag_src_tot', 'Total magnetic energy source (from current source)    ')
     call add(exprs_all_int, 'Ohmic_tot   ', 'Total ohmic heating                                   ')
     call add(exprs_all_int, 'Ohmic_in    ', 'Ohmic heating (inside  LCFS)                          ')
@@ -1299,7 +1301,7 @@ module mod_expression
                 d2eta_d2T =   0.d0
               end if
               if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
-                eta_T     =   eta   * (max(Te0,T_min)/Te_0)**(-1.5d0)
+                eta_T     =   eta   * (T_min/Te_0)**(-1.5d0)
                 deta_dT   =   0.d0
                 d2eta_d2T =   0.d0
               end if
@@ -1319,7 +1321,7 @@ module mod_expression
                 d2eta_d2T =   0.d0
               end if
               if ( eq%xpoint .and. (T0 .lt. T_min) ) then
-                eta_T     =   eta   * (max(T0,T_min)/T_0)**(-1.5d0)
+                eta_T     =   eta   * (T_min/T_0)**(-1.5d0)
                 deta_dT   =   0.d0
                 d2eta_d2T =   0.d0
               end if
@@ -1335,15 +1337,21 @@ module mod_expression
             if ( with_TiTe) then ! (with_TiTe) *****************************************************
               visco_T   =   visco * (Te0_corr/Te_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * Te0_corr**(-2.5d0) * Te_0**(1.5d0)
-              if ( eq%xpoint .and. (Te0 .lt. T_min) ) then
-                visco_T     = visco  * (max(Te0,T_min)/Te_0)**(-1.5d0)
+              if (Te0 .lt. T_min) then
+                visco_T     = visco  * (T_min/Te_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              elseif (Te0 .gt. T_max_visco) then
+                visco_T     = visco  * (T_max_visco/Te_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
               endif
             else ! (with_TiTe), i.e. with single temperature ***************************************
               visco_T   = visco * (T0_corr/T_0)**(-1.5d0)
               dvisco_dT = - visco * (1.5d0)  * T0_corr**(-2.5d0) * T_0**(1.5d0)
-              if ( eq%xpoint .and. (T0 .lt. T_min) ) then
-                visco_T     = visco  * (max(T0,T_min)/T_0)**(-1.5d0)
+              if (T0 .lt. T_min) then
+                visco_T     = visco  * (T_min/T_0)**(-1.5d0)
+                dvisco_dT   = 0.d0
+              elseif (T0 .gt. T_max_visco) then
+                visco_T     = visco  * (T_max_visco/T_0)**(-1.5d0)
                 dvisco_dT   = 0.d0
               endif
             end if ! (with_TiTe) *******************************************************************
@@ -1359,12 +1367,12 @@ module mod_expression
             if ( with_TiTe) then ! (with_TiTe) *****************************************************
               eta_num_T     = eta_num   * (Te0/Te_0)**(-3.d0)
               if (Te0 .lt. T_min) then
-                eta_num_T   = eta_num   * (max(Te0,T_min)/Te_0)**(-3.d0)
+                eta_num_T   = eta_num   * (T_min/Te_0)**(-3.d0)
               endif
             else !(with_TiTe), i.e. with single temperature ***************************************
               eta_num_T     = eta_num   * (T0/T_0)**(-3.d0)
               if (T0 .lt. T_min) then
-                eta_num_T   = eta_num   * (max(T0,T_min)/T_0)**(-3.d0)
+                eta_num_T   = eta_num   * (T_min/T_0)**(-3.d0)
               endif
             end if 
           else
@@ -1376,12 +1384,12 @@ module mod_expression
             if ( with_TiTe) then ! (with_TiTe) *****************************************************
               visco_num_T     = visco_num   * (Te0/Te_0)**(-3.d0)
               if (Te0 .lt. T_min) then
-                visco_num_T   = visco_num   * (max(Te0,T_min)/Te_0)**(-3.d0)
+                visco_num_T   = visco_num   * (T_min/Te_0)**(-3.d0)
               endif
             else !(with_TiTe), i.e. with single temperature ***************************************
               visco_num_T     = visco_num   * (T0/T_0)**(-3.d0)
               if (T0 .lt. T_min) then
-                visco_num_T   = visco_num   * (max(T0,T_min)/T_0)**(-3.d0)
+                visco_num_T   = visco_num   * (T_min/T_0)**(-3.d0)
               endif
             end if
           else
@@ -1396,8 +1404,8 @@ module mod_expression
                 ZKi_par_T   = Zk_par_max
                 dZKi_par_dT = 0.d0
               end if
-              if ( Ti0 .lt. Ti_min_ZKpar ) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
+              if ( Ti0_corr .lt. Ti_min_ZKpar ) then
+                ZKi_par_T   = ZK_i_par * (Ti_min_ZKpar/Ti_0)**(+2.5d0)
                 dZKi_par_dT = 0.d0
               endif
 
@@ -1407,8 +1415,8 @@ module mod_expression
                 ZKe_par_T   = Zk_par_max
                 dZKe_par_dT = 0.d0
               end if
-              if ( Te0 .lt. Te_min_ZKpar ) then
-                ZKe_par_T   = ZK_e_par * (max(Te0,Te_min_ZKpar)/Te_0)**(+2.5d0)
+              if ( Te0_corr .lt. Te_min_ZKpar ) then
+                ZKe_par_T   = ZK_e_par * (Te_min_ZKpar/Te_0)**(+2.5d0)
                 dZKe_par_dT = 0.d0
               endif
             else
@@ -1427,8 +1435,8 @@ module mod_expression
                 ZKpar_T   = Zk_par_max
                 dZKpar_dT = 0.d0
               end if
-              if ( T0 .lt. T_min_ZKpar ) then
-                ZKpar_T   = ZK_par * (max(T0,T_min_ZKpar)/T_0)**(+2.5d0)
+              if ( T0_corr .lt. T_min_ZKpar ) then
+                ZKpar_T   = ZK_par * (T_min_ZKpar/T_0)**(+2.5d0)
                 dZKpar_dT = 0.d0
               endif
 
@@ -1940,9 +1948,12 @@ module mod_expression
               case ( 'Vperp_i' )
                 res = Vperp_i / fact_time
                 
-              case ( 'V_ExB' )
+              case ( 'V_ExB_pol' )
                 res = V_ExB / fact_time
-                
+
+              case ( 'V_ExB_R' )
+                res = -R*u0_Z / fact_time 
+
               case ( 'Vstar_e' )
                 res = Vstar_e / fact_time
                 
@@ -2080,6 +2091,9 @@ module mod_expression
 
               case ('line_rad')
                 res = r0 * max(rn0,0.d0) * LradDrays_T * fact_rad
+
+              case ('bg_imp_rad')
+                res = r0 * fact_ne * frad_bg
 #endif
 #ifdef WITH_Impurities
               case ( 'radiation' )

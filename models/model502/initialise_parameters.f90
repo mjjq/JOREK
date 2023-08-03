@@ -81,7 +81,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 refinement, force_central_node,                     &
                 fix_axis_nodes, use_strumpack,                      &
                 adaptive_time, equil, bench_without_plot,           &
-                eta_T_dependent, visco_T_dependent,                 &
+                eta_T_dependent, visco_T_dependent, T_max_visco,    &
                 eta_num_T_dependent, visco_num_T_dependent,         &
                 zkpar_T_dependent, T_max_eta, T_max_eta_ohm,        & 
                 heatsource_psin, heatsource_sig,                    &
@@ -153,8 +153,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 ranks_per_family, cte_current_FB_fact, treat_axis,  &
                 ZK_prof_neg_thresh, ZK_prof_neg, ZK_par_neg_thresh, &
                 ZK_par_neg, Z_xpoint_limit, visco_par_heating,      &
+                Ti_min_ZKpar,Te_min_ZKpar,                          &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
-                alpha_Newton
+                alpha_Newton, vacuum_min, strumpack_matching
 
 if (my_id .eq. 0) then
   ! --- Preset input parameters to reasonable default values.

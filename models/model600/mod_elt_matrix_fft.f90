@@ -126,6 +126,8 @@ real*8     :: source_neutral_drift, source_neutral_drift_arr(n_inj_max) ! Neutra
 real*8     :: power_dens_teleport_ju, power_dens_teleport_ju_arr(n_inj_max) ! Teleported power density in JOREK unit (sink at R and source at R+drift)
 real*8     :: source_imp, source_imp_arr(n_inj_max)
 real*8     :: source_bg, source_bg_arr(n_inj_max)
+real*8     :: source_imp_drift, source_imp_drift_arr(n_inj_max)
+real*8     :: source_bg_drift, source_bg_drift_arr(n_inj_max)
 
 ! time normalisation
 real*8     :: t_norm
@@ -907,8 +909,8 @@ do i=1,n_vertex_max
                 ZKi_par_T   = Zk_par_max
                 dZKi_par_dT = 0.d0
               endif
-              if (Ti0 .lt. Ti_min_ZKpar) then
-                ZKi_par_T   = ZK_i_par * (max(Ti0,Ti_min_ZKpar)/Ti_0)**(+2.5d0)
+              if (Ti0_corr .lt. Ti_min_ZKpar) then
+                ZKi_par_T   = ZK_i_par * (Ti_min_ZKpar/Ti_0)**(+2.5d0)
                 dZKi_par_dT = 0.d0
               endif
               
@@ -918,8 +920,8 @@ do i=1,n_vertex_max
                 ZKe_par_T   = Zk_par_max
                 dZKe_par_dT = 0.d0
               endif
-              if (Te0 .lt. Te_min_ZKpar) then
-                ZKe_par_T   = ZK_e_par * (max(Te0,Te_min_ZKpar)/Te_0)**(+2.5d0)
+              if (Te0_corr .lt. Te_min_ZKpar) then
+                ZKe_par_T   = ZK_e_par * (Te_min_ZKpar/Te_0)**(+2.5d0)
                 dZKe_par_dT = 0.d0
               endif
 
@@ -966,8 +968,8 @@ do i=1,n_vertex_max
                 ZK_par_T   = Zk_par_max
                 dZK_par_dT = 0.d0
               endif
-              if (T0 .lt. T_min_ZKpar) then
-                ZK_par_T   = ZK_par * (max(T0,T_min_ZKpar)/T_0)**(+2.5d0)
+              if (T0_corr .lt. T_min_ZKpar) then
+                ZK_par_T   = ZK_par * (T_min_ZKpar/T_0)**(+2.5d0)
                 dZK_par_dT = 0.d0
               endif
             else
@@ -1018,13 +1020,13 @@ do i=1,n_vertex_max
           end if
 
           if ( eta_T_dependent .and. (T_or_Te .lt. T_min) ) then
-            eta_T     = eta       * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+            eta_T     = eta       * (T_min/T_or_Te_0)**(-1.5d0)
             deta_dT   = 0.d0
             d2eta_d2T = 0.d0
             deta_dr0  = 0.
             deta_drimp0 = 0.
 
-            eta_T_ohm = eta_ohmic * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+            eta_T_ohm = eta_ohmic * (T_min/T_or_Te_0)**(-1.5d0)
             deta_dT_ohm   = 0.
             deta_dr0_ohm  = 0.
             deta_drimp0_ohm = 0.
@@ -1059,7 +1061,11 @@ do i=1,n_vertex_max
             dvisco_dT   = - visco * (1.5d0)  * T_or_Te_corr**(-2.5d0) * T_or_Te_0**(1.5d0)
             d2visco_dT2 =   visco * (3.75d0) * T_or_Te_corr**(-3.5d0) * T_or_Te_0**(1.5d0)
             if (T_or_Te .lt. T_min) then
-              visco_T     = visco  * (max(T_or_Te,T_min)/T_or_Te_0)**(-1.5d0)
+              visco_T     = visco  * (T_min/T_or_Te_0)**(-1.5d0)
+              dvisco_dT   = 0.d0
+              d2visco_dT2 = 0.d0
+            elseif (T_or_Te .gt. T_max_visco) then
+              visco_T     = visco  * (T_max_visco/T_or_Te_0)**(-1.5d0)
               dvisco_dT   = 0.d0
               d2visco_dT2 = 0.d0
             endif
@@ -1079,7 +1085,7 @@ do i=1,n_vertex_max
             eta_num_T     =   eta_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
             deta_num_dT   = - eta_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
             if (T_or_Te .lt. T_min) then
-              eta_num_T     = eta_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
+              eta_num_T     = eta_num    * (T_min/T_or_Te_0)**(-3.d0)
               deta_num_dT   = 0.d0
             endif
           else
@@ -1092,7 +1098,7 @@ do i=1,n_vertex_max
             visco_num_T     =   visco_num   * (T_or_Te_corr/T_or_Te_0)**(-3.d0)
             dvisco_num_dT   = - visco_num   * (3.d0)  * T_or_Te_corr**(-4.d0) * T_or_Te_0**(3.d0)
             if (T_or_Te .lt. T_min) then
-              visco_num_T     = visco_num    * (max(T_or_Te,T_min)/T_or_Te_0)**(-3.d0)
+              visco_num_T     = visco_num    * (T_min/T_or_Te_0)**(-3.d0)
               dvisco_num_dT   = 0.d0
             endif
           else
@@ -1258,7 +1264,13 @@ do i=1,n_vertex_max
             source_neutral       = 0.d0; source_neutral_arr       = 0.d0
             source_neutral_drift = 0.d0; source_neutral_drift_arr = 0.d0
 
-            call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+            if (with_impurities) then ! If with_impurities, we have to use the mixed pellet ablation laws and extract the neutral hydrogen isotope ablation rate
+              source_imp       = 0.d0; source_imp_arr       = 0.d0
+              source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
+              call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_neutral_drift_arr, source_imp_drift_arr)
+            else
+              call total_neutral_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_neutral_arr,source_neutral_drift_arr)
+            endif
 
             do i_inj = 1,n_inj
               source_neutral       = source_neutral + source_neutral_arr(i_inj)
@@ -1303,13 +1315,21 @@ do i=1,n_vertex_max
           end do
 
           ! --- Source of impurities (e.g. from MGI or SPI) and main ions (e.g. for mixed SPI)
-          source_imp = 0.d0; source_imp_arr = 0.d0
-          source_bg  = 0.d0; source_bg_arr = 0.d0
+          if (.not. (with_neutrals .and. with_impurities)) then ! if with_neutrals and with_impurities we should already have called this once above
+            source_imp       = 0.d0; source_imp_arr       = 0.d0
+            source_imp_drift = 0.d0; source_imp_drift_arr = 0.d0
+          endif
+
+          source_bg        = 0.d0; source_bg_arr       = 0.d0
+          source_bg_drift  = 0.d0; source_bg_drift_arr = 0.d0
           if (with_impurities) then
-            call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp)
+            if (.not. with_neutrals) call total_imp_source(x_g(ms,mt),y_g(ms,mt),phi,ps0,source_bg_arr,source_imp_arr,m_i_over_m_imp,index_main_imp, source_bg_drift_arr, source_imp_drift_arr) ! if with_neutrals and with_impurities we should already have called this once above
+
             do i_inj = 1,n_inj
-              source_imp = source_imp + source_imp_arr(i_inj)
-              source_bg  = source_bg  + source_bg_arr(i_inj)
+              source_imp       = source_imp + source_imp_arr(i_inj)
+              source_imp_drift = source_imp_drift + source_imp_drift_arr(i_inj)
+              source_bg        = source_bg  + source_bg_arr(i_inj)
+              source_bg_drift  = source_bg_drift + source_bg_drift_arr(i_inj)
             end do
             ! This is to detect N/A
             if (source_imp /= source_imp .or. source_bg /= source_bg) then
@@ -1317,10 +1337,18 @@ do i=1,n_vertex_max
               write(*,*) "WARNING: source_bg = ", source_bg
               stop
             end if
-            source_imp = max(source_imp,0.d0)
-            source_bg  = max(source_bg,0.d0)
+            if (source_imp_drift /= source_imp_drift .or. source_bg_drift /= source_bg_drift) then
+              write(*,*) "WARNING: source_imp_drift = ", source_imp_drift
+              write(*,*) "WARNING: source_bg_drift = ", source_bg_drift
+              stop
+            end if
+            source_imp       = max(source_imp,0.d0)
+            source_bg        = max(source_bg,0.d0)
+            source_imp_drift = max(source_imp_drift,0.d0)
+            source_bg_drift  = max(source_bg_drift,0.d0)
           endif
-          source_imp = source_imp + constant_imp_source
+          source_imp       = source_imp + constant_imp_source
+          source_imp_drift = source_imp_drift + constant_imp_source
 
           ! --- Construction of radiative terms, using ADAS (by default)
           call construct_radiation_parameters()
@@ -1438,7 +1466,7 @@ do i=1,n_vertex_max
                         - zeta * BigR * r0_hat * (v_x * delta_u_x + v_y * delta_u_y) * xjac * factor(var_u,9)      &
 
                          ! Not to be included in conservative form
-                         + BigR**3 * (particle_source(ms,mt)+source_pellet+source_bg+source_imp) * (v_x * u0_x + v_y * u0_y) * xjac* tstep* factor(var_u,10)  &
+                         + BigR**3 * (particle_source(ms,mt)+source_pellet+source_bg_drift+source_imp_drift) * (v_x * u0_x + v_y * u0_y) * xjac* tstep* factor(var_u,10)  &
                                    * (1.d0 - fact_conservative_u)  &          
  
                          ! New terms coming from -(\partial_t \rho + \nabla \cdot (\rho \mathbf{v})) \mathbf{v} in RHS of momentum equation
@@ -1478,7 +1506,7 @@ do i=1,n_vertex_max
             !#  Density Equation                                                                               #
             !###################################################################################################
 
-            rhs_ij(var_rho)  = v * BigR * (particle_source(ms,mt) + source_pellet + source_bg + source_imp)               * xjac * tstep * factor(var_rho,1) &
+            rhs_ij(var_rho)  = v * BigR * (particle_source(ms,mt) + source_pellet + source_bg_drift + source_imp_drift)               * xjac * tstep * factor(var_rho,1) &
                        + v * BigR**2 * ( r0_s * u0_t - r0_t * u0_s)                                                              * tstep * factor(var_rho,2) &
                        + v * 2.d0 * BigR * r0 * u0_y                                                                      * xjac * tstep * factor(var_rho,3) &
                        - ((D_par+D_par_sc_num*tau_sc) - D_prof)  * BigR / BB2 * Bgrad_rho_star * (Bgrad_rho-Bgrad_rhoimp) * xjac * tstep * factor(var_rho,4) &
@@ -1522,7 +1550,7 @@ do i=1,n_vertex_max
                                  - v * (P0_s * ps0_t - P0_t * ps0_s)                                                           * tstep * factor(var_vpar,1) &
 
                                 ! Not to be included in the conservative form
-                                 - v*(particle_source(ms,mt)+source_pellet+source_bg+source_imp) * vpar0 * BB2 * BigR   * xjac * tstep * factor(var_vpar,2) &
+                                 - v*(particle_source(ms,mt)+source_pellet+source_bg_drift+source_imp_drift) * vpar0 * BB2 * BigR   * xjac * tstep * factor(var_vpar,2) &
                                      * (1.d0 - fact_conservative_u)  &          
                                                                                                                        
                                  - 0.5d0 * r0 * vpar0**2 * BB2 * (ps0_s * v_t - ps0_t * v_s)                                   * tstep * factor(var_vpar,3) &
@@ -1634,8 +1662,8 @@ do i=1,n_vertex_max
                          !===================== Additional terms from friction terms============
                          + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * ((r0+alpha_e*rimp0)*rn0*Sion_T) * xjac * tstep * factor(var_Ti,10) &
                          + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (((r0+alpha_e*rimp0)*rn0*Sion_T))          * xjac * tstep * factor(var_Ti,10) &
-                         + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp)        * xjac * tstep * factor(var_Ti,10) &
-                         + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)                   * xjac * tstep * factor(var_Ti,10) &
+                         + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg_drift + source_imp_drift)        * xjac * tstep * factor(var_Ti,10) &
+                         + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg_drift + source_imp_drift)                   * xjac * tstep * factor(var_Ti,10) &
                          !==============================End of friction terms=================
   
                          !============================Behold, the parallel viscous heating terms!=============
@@ -1813,8 +1841,8 @@ do i=1,n_vertex_max
                              !===================== Additional terms from friction terms============
                              + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * ((r0+alpha_e*rimp0)*rn0*Sion_T) * xjac * tstep * factor(var_T,11) &
                              + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (((r0+alpha_e*rimp0)*rn0*Sion_T))   * xjac * tstep * factor(var_T,11) &
-                             + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp) * xjac * tstep * factor(var_T,11) &
-                             + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            * xjac * tstep * factor(var_T,11) &
+                             + v * BigR * ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg_drift + source_imp_drift) * xjac * tstep * factor(var_T,11) &
+                             + v * BigR * ((GAMMA - 1.)/2.) * vv2 * (source_bg_drift + source_imp_drift)            * xjac * tstep * factor(var_T,11) &
                              !==============================End of friction terms=================
 
                              !============================Behold, the parallel viscous heating terms!=============
@@ -1962,7 +1990,7 @@ do i=1,n_vertex_max
                     * (rimp0_x * ps0_y - rimp0_y * ps0_x + F0 / BigR * rimp0_p)                    &
                     * ( v_x * ps0_y -  v_y * ps0_x) * xjac * tstep * tstep * factor(var_rhoimp,7)  &
                     
-                    + BigR * v * source_imp                                                                          * xjac * tstep * factor(var_rhoimp,8)&
+                    + BigR * v * source_imp_drift      * xjac * tstep * factor(var_rhoimp,8)&
                     
                     + v * delta_g(mp,var_rhoimp,ms,mt) * BigR * xjac * zeta * factor(var_rhoimp,9) &
                     - Dn_perp_num * (v_xx + v_x/Bigr + v_yy)*(rimp0_xx + rimp0_x/Bigr + rimp0_yy) &
@@ -2245,7 +2273,7 @@ do i=1,n_vertex_max
                                         - BigR**2 * vpar0 * (r0_x * ps0_y - r0_y * ps0_x)    * (v_x * u_x + v_y * u_y)   * xjac * theta * tstep &
                                                             ) &
                                     ! Not to be included in conservative form
-                                    - BigR**3 * (particle_source(ms,mt)+source_pellet+source_bg+source_imp) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
+                                    - BigR**3 * (particle_source(ms,mt)+source_pellet+source_bg_drift+source_imp_drift) * (v_x * u_x + v_y * u_y) * xjac * theta * tstep &
                                               * (1.d0 - fact_conservative_u) &
 
                                     + tgnum_u * 0.25d0 * r0_hat * BigR**3 * (w0_x * u_y - w0_y * u_x)                                 &
@@ -2641,7 +2669,7 @@ do i=1,n_vertex_max
                                                         ) &
   
                               ! Not to be included in conservative form
-                              + v*(particle_source(ms,mt)+source_pellet+source_bg+source_imp)*vpar0* BB2_psi * BigR * xjac * theta * tstep &
+                              + v*(particle_source(ms,mt)+source_pellet+source_bg_drift+source_imp_drift)*vpar0* BB2_psi * BigR * xjac * theta * tstep &
                                  * (1.d0 - fact_conservative_u)  &
 
                               + (1.d0 - delta_n_convection) * (  &  
@@ -2828,7 +2856,7 @@ do i=1,n_vertex_max
                                                     ) &
 
                              ! Not to be included in conservative form
-                            + v*(particle_source(ms,mt)+source_pellet+source_bg+source_imp)*vpar*BB2 * BigR * xjac * theta * tstep &
+                            + v*(particle_source(ms,mt)+source_pellet+source_bg_drift+source_imp_drift)*vpar*BB2 * BigR * xjac * theta * tstep &
                                *(1.d0 - fact_conservative_u) &
   
                             + r0 * vpar0 * vpar * BB2 * (ps0_s * v_t - ps0_t * v_s)             * theta * tstep &
@@ -2988,7 +3016,7 @@ do i=1,n_vertex_max
                               - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)&
                                   * ((r0+alpha_e*rimp0)*rn0*Sion_T)                                          * xjac * theta * tstep &
                               - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)&
-                                  * (source_bg + source_imp)                                                 * xjac * theta * tstep &
+                                  * (source_bg_drift + source_imp_drift)                                                 * xjac * theta * tstep &
                               !==============================End of friction terms=================
  
                            + tgnum_Ti* 0.25d0 / BigR * vpar0**2                                                         &
@@ -3024,7 +3052,7 @@ do i=1,n_vertex_max
                                 - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
                                     * ((r0+alpha_e*rimp0)*rn0*Sion_T)                                       * xjac * theta * tstep &
                                 - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
-                                    * (source_bg + source_imp)                                              * xjac * theta * tstep &
+                                    * (source_bg_drift + source_imp_drift)                                              * xjac * theta * tstep &
                                !==============================End of friction terms===================
 
                            + tgnum_Ti* 0.25d0 * BigR**2 * Ti0* ((r0_x+alpha_i*rimp0_x) * u_y - (r0_y+alpha_i*rimp0_y) * u_x)                &
@@ -3163,7 +3191,7 @@ do i=1,n_vertex_max
 
                       !===================== Additional terms from friction terms============
                                 - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * ((r0+rimp0*alpha_e)*rn0*Sion_T) * xjac * theta * tstep &
-                                - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg + source_imp)        * xjac * theta * tstep &
+                                - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * (source_bg_drift + source_imp_drift)        * xjac * theta * tstep &
                       !==============================End of friction terms=================
 
                       !============================Behold, the parallel viscous heating terms!=============
@@ -3719,7 +3747,7 @@ do i=1,n_vertex_max
                     !================= End ionization potential energy ===========================
                     !===================== Additional terms from friction terms============
                                           - v * ((GAMMA - 1.) / BigR) * vpar0**2 * (psi_x * ps0_x + psi_y * ps0_y)&
-                                              * ((r0+alpha_e*rimp0)*rn0*Sion_T + source_bg + source_imp) * xjac * theta * tstep &
+                                              * ((r0+alpha_e*rimp0)*rn0*Sion_T + source_bg_drift + source_imp_drift) * xjac * theta * tstep &
                     !==============================End of friction terms=================
   
                           + tgnum_T * 0.25d0 / BigR * vpar0**2                                                        &
@@ -3766,7 +3794,7 @@ do i=1,n_vertex_max
                     !================= End ionization potential energy ===========================
                     !===================== Additional terms from friction terms============
                                         - v * BigR**3 * (GAMMA - 1.) * (u_x * u0_x + u_y * u0_y)  &
-                                            * ((r0+alpha_e*rimp0)*rn0*Sion_T+source_bg + source_imp)                        * xjac * theta * tstep &
+                                            * ((r0+alpha_e*rimp0)*rn0*Sion_T+source_bg_drift + source_imp_drift)            * xjac * theta * tstep &
                     !==============================End of friction terms===================
   
                           + tgnum_T * 0.25d0 * BigR**2 * T0* ((r0_x+alpha_imp*rimp0_x) * u_y - (r0_y+alpha_imp*rimp0_y) * u_x)                                &
@@ -4000,7 +4028,7 @@ do i=1,n_vertex_max
                       !================= End ionization potential energy ===========================
 
                       !===================== Additional terms from friction terms============
-                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * ((r0+alpha_e*rimp0)*rn0*Sion_T+source_bg + source_imp) * xjac * theta * tstep &
+                            - v * BigR *(GAMMA - 1.) * vpar0 * Vpar * BB2 * ((r0+alpha_e*rimp0)*rn0*Sion_T+source_bg_drift + source_imp_drift) * xjac * theta * tstep &
                       !==============================End of friction terms=================
 
                       !============================Behold, the parallel viscous heating terms!=============
@@ -4750,6 +4778,20 @@ if ( with_TiTe ) then ! (with_TiTe)
     Ptot_p   = Ptot_p    + rn0 * Ti0_p + rn0_p * Ti0
     Ptot_x   = Ptot_x    + rn0 * Ti0_x + rn0_x * Ti0
     Ptot_y   = Ptot_y    + rn0 * Ti0_y + rn0_y * Ti0
+
+    ! R_Ti = (\boldsymbol{v} \cdot \nabla Ti) + (GAMMA-1.d0) * Ti0 * divU
+    R_Ti = (GAMMA-1.d0) * Ti0 * divU &
+         + Vpar0 * (Ti0_x * ps0_y - Ti0_y * ps0_x) / BigR &
+         - BigR  * (Ti0_x * u0_y  - Ti0_y * u0_x)         &
+         + F0    * Vpar0 * Ti0_p / BigR**2
+
+    ! R_Te = (\boldsymbol{v} \cdot \nabla Te) + (GAMMA-1.d0) * Te0 * divU
+    R_Te = (GAMMA-1.d0) * Te0 * divU &
+         + Vpar0 * (Te0_x * ps0_y - Te0_y * ps0_x) / BigR &
+         - BigR  * (Te0_x * u0_y  - Te0_y * u0_x)         &
+         + F0    * Vpar0 * Te0_p / BigR**2
+
+    d_p = (Ti0+Te0)*R_rho + (r0+rn0)*R_Ti + r0*R_Te + Ti0*R_rhon
   endif
 
   if( with_impurities ) then
@@ -4758,39 +4800,47 @@ if ( with_TiTe ) then ! (with_TiTe)
     Ptot     = Ptot      + (GAMMA-1.d0) * rimp0 * E_ion
     Ptot_corr= Ptot_corr + rimp0_corr * alpha_i * Ti0_corr + rimp0_corr * alpha_e * Te0_corr &
                          + (GAMMA-1.d0) * rimp0_corr * E_ion
-    Ptot_p   = Ptot_p    + (GAMMA-1.d0) * (rimp0 * dE_ion_dT * T0_p + rimp0_p * E_ion)
-    Ptot_x   = Ptot_x    + (GAMMA-1.d0) * (rimp0 * dE_ion_dT * T0_x + rimp0_x * E_ion)
-    Ptot_y   = Ptot_y    + (GAMMA-1.d0) * (rimp0 * dE_ion_dT * T0_y + rimp0_y * E_ion)
+    Ptot_p   = Ptot_p    + (GAMMA-1.d0) * (rimp0 * dE_ion_dT * Te0_p + rimp0_p * E_ion)
+    Ptot_x   = Ptot_x    + (GAMMA-1.d0) * (rimp0 * dE_ion_dT * Te0_x + rimp0_x * E_ion)
+    Ptot_y   = Ptot_y    + (GAMMA-1.d0) * (rimp0 * dE_ion_dT * Te0_y + rimp0_y * E_ion)
 
     rhoi_eff = r0_corr + alpha_i*rimp0 + rimp0*Ti0*dalpha_i_dT
     rhoe_eff = r0_corr + alpha_e*rimp0 + rimp0*Te0*dalpha_e_dT + (GAMMA-1.d0)*rimp0*dE_ion_dT
+
+    ! R_Ti = (\boldsymbol{v} \cdot \nabla Ti) + (GAMMA-1.d0) * (r0 + alpha_i*rimp0)*Ti0 / rhoi_eff * divU
+    R_Ti = (GAMMA-1.d0) * (r0 + alpha_i*rimp0)*Ti0 / rhoi_eff * divU &
+         + Vpar0 * (Ti0_x * ps0_y - Ti0_y * ps0_x) / BigR &
+         - BigR  * (Ti0_x * u0_y  - Ti0_y * u0_x)         &
+         + F0    * Vpar0 * Ti0_p / BigR**2
+
+    ! R_Te = (\boldsymbol{v} \cdot \nabla Te) + (GAMMA-1.d0) * (r0 + alpha_e*rimp0)*Te0 / rhoe_eff * divU
+    R_Te = (GAMMA-1.d0) * (r0 + alpha_e*rimp0)*Te0 / rhoe_eff * divU &
+         + Vpar0 * (Te0_x * ps0_y - Te0_y * ps0_x) / BigR &
+         - BigR  * (Te0_x * u0_y  - Te0_y * u0_x)         &
+         + F0    * Vpar0 * Te0_p / BigR**2
+
+    d_p = (Ti0+Te0)*R_rho + rhoi_eff*R_Ti + rhoe_eff*R_Te + Ti0*R_rhon &
+        + (alpha_i*Ti0 + alpha_e*Te0 + (GAMMA-1.d0)*E_ion)*R_rhoimp
   endif
-
-  ! R_Ti = (\boldsymbol{v} \cdot \nabla Ti) + (GAMMA-1.d0) * (r0 + alpha_i*rimp0)*Ti0 / rhoi_eff * divU
-  R_Ti = (GAMMA-1.d0) * (r0 + alpha_i*rimp0)*Ti0 / rhoi_eff * divU &
-       + Vpar0 * (Ti0_x * ps0_y - Ti0_y * ps0_x) / BigR &
-       - BigR  * (Ti0_x * u0_y  - Ti0_y * u0_x)         &
-       + F0    * Vpar0 * Ti0_p / BigR**2
-
-  ! R_Te = (\boldsymbol{v} \cdot \nabla Te) + (GAMMA-1.d0) * (r0 + alpha_e*rimp0)*Te0 / rhoe_eff * divU
-  R_Te = (GAMMA-1.d0) * (r0 + alpha_e*rimp0)*Te0 / rhoe_eff * divU &
-       + Vpar0 * (Te0_x * ps0_y - Te0_y * ps0_x) / BigR &
-       - BigR  * (Te0_x * u0_y  - Te0_y * u0_x)         &
-       + F0    * Vpar0 * Te0_p / BigR**2
-
-  d_p = (Ti0+Te0)*R_rho + rhoi_eff*R_Ti + rhoe_eff*R_Te + Ti0*R_rhon &
-      + (alpha_i*Ti0 + alpha_e*Te0 + (GAMMA-1.d0)*E_ion)*R_rhoimp
 else
 
   Ptot_corr = r0_corr * T0_corr
   rho_eff   = r0_corr
 
   if (with_neutrals)then
-    Ptot     = Ptot      + rn0 * T0
-    Ptot_corr= Ptot_corr + rn0_corr * T0_corr
-    Ptot_p   = Ptot_p    + (rn0 * T0_p + rn0_p * T0)
-    Ptot_x   = Ptot_x    + (rn0 * T0_x + rn0_x * T0)
-    Ptot_y   = Ptot_y    + (rn0 * T0_y + rn0_y * T0)
+    Ptot     = Ptot      + 0.5d0 * rn0 * T0
+    Ptot_corr= Ptot_corr + 0.5d0 * rn0_corr * T0_corr
+    Ptot_p   = Ptot_p    + 0.5d0 * (rn0 * T0_p + rn0_p * T0)
+    Ptot_x   = Ptot_x    + 0.5d0 * (rn0 * T0_x + rn0_x * T0)
+    Ptot_y   = Ptot_y    + 0.5d0 * (rn0 * T0_y + rn0_y * T0)
+
+    ! R_T = (\boldsymbol{v} \cdot \nabla T) + (GAMMA-1.d0) * T0 * divU
+    R_T  = (GAMMA-1.d0) * T0 * divU &
+         + Vpar0 * (T0_x * ps0_y - T0_y * ps0_x) / BigR &
+         - BigR  * (T0_x * u0_y  - T0_y * u0_x)         &
+         + F0    * Vpar0 * T0_p / BigR**2
+
+    d_p = T0*R_rho + (r0+0.5d0*rn0)*R_T + 0.5d0*T0*R_rhon 
   endif
 
   if (with_impurities)then
@@ -4801,15 +4851,15 @@ else
     Ptot_y   = Ptot_y    + (GAMMA-1.d0) * (rimp0 * dE_ion_dT * T0_y + rimp0_y * E_ion)
 
     rho_eff  = r0_corr + alpha_imp*rimp0 + rimp0*dalpha_imp_dT*T0 + (GAMMA-1.d0)*rimp0*dE_ion_dT
-  endif
              
-  ! R_T = (\boldsymbol{v} \cdot \nabla T) + (GAMMA-1.d0) * (r0 + alpha_imp*rimp0)*T0 / rho_eff * divU
-  R_T  = (GAMMA-1.d0) * (r0 + alpha_imp*rimp0)*T0 / rho_eff * divU &
-       + Vpar0 * (T0_x * ps0_y - T0_y * ps0_x) / BigR &
-       - BigR  * (T0_x * u0_y  - T0_y * u0_x)         &
-       + F0    * Vpar0 * T0_p / BigR**2
+    ! R_T = (\boldsymbol{v} \cdot \nabla T) + (GAMMA-1.d0) * (r0 + alpha_imp*rimp0)*T0 / rho_eff * divU
+    R_T  = (GAMMA-1.d0) * (r0 + alpha_imp*rimp0)*T0 / rho_eff * divU &
+         + Vpar0 * (T0_x * ps0_y - T0_y * ps0_x) / BigR &
+         - BigR  * (T0_x * u0_y  - T0_y * u0_x)         &
+         + F0    * Vpar0 * T0_p / BigR**2
 
-  d_p = T0*R_rho +  rho_eff*R_T + T0*R_rhon + (alpha_imp*T0+(GAMMA-1.d0)*E_ion)*R_rhoimp
+    d_p = T0*R_rho +  rho_eff*R_T + T0*R_rhon + (alpha_imp*T0+(GAMMA-1.d0)*E_ion)*R_rhoimp
+  endif
 endif
 
 ! step 2.1: update modulation term by including sources (s_p)
@@ -4833,8 +4883,8 @@ if(add_sources_in_sc)then
     endif
     if(with_impurities)then
       src_pi = src_pi                                                        &
-             + ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp) &
-             + ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)
+             + ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg_drift + source_imp_drift) &
+             + ((GAMMA - 1.)/2.) * vv2 * (source_bg_drift + source_imp_drift)
       src_pe = src_pe                                                 &
              - v * (r0_corr+alpha_e*rimp0_corr) * frad_bg             &
              - v * (r0_corr+alpha_e*rimp0_corr) * rimp0_corr * Lrad  
@@ -4852,8 +4902,8 @@ if(add_sources_in_sc)then
     endif
     if(with_impurities)then
       src_p = src_p                                                         &
-            + ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg + source_imp) &
-            + ((GAMMA - 1.)/2.) * vv2 * (source_bg + source_imp)            & 
+            + ((GAMMA - 1.)/2.) * vpar0**2 * BB2 * (source_bg_drift + source_imp_drift) &
+            + ((GAMMA - 1.)/2.) * vv2 * (source_bg_drift + source_imp_drift)            & 
             - v * (r0_corr+alpha_e*rimp0_corr) * frad_bg                    &
             - v * (r0_corr+alpha_e*rimp0_corr) * rimp0_corr * Lrad
     endif

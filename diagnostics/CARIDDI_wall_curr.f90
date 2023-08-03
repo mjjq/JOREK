@@ -35,7 +35,7 @@ integer :: n_nodes, n_elems, ierr, i, j, ifile = 143, min_elem, max_elem
 
 integer :: nelems_comp, istart, iend
 integer :: ncomponents, comp_start(n_components_max), comp_end(n_components_max)
-character(len=80) :: buffer
+character(len=80) :: buffer, dir_struct
 character(len=3) :: ic
 character(len=12) :: str1, str2
 character(len=20) :: comp_name(n_components_max)
@@ -57,14 +57,28 @@ real*8, allocatable, dimension(:,:,:) :: gmat
 integer, allocatable :: ndofel(:), ind_g(:,:), full_glob(:,:)
 
 
-namelist /CARIDDI_plot/ phimin, phimax, ncomponents, comp_start, comp_end, comp_name
+namelist /CARIDDI_plot/ phimin, phimax, ncomponents, comp_start, comp_end, comp_name, dir_struct
+
+dir_struct = './'
+
+ncomponents  = 1
+comp_start   = 0
+comp_end     = 0
+comp_name(1) ='CARIDDI_all'
+
+open(42, file='CARIDDI_plot.nml', action='read', status='old', iostat=ierr)
+if ( ierr == 0 ) then
+  write(*,*) 'Reading parameters from CARIDDI_plot.nml namelist.'
+  read(42,CARIDDI_plot)
+  close(42)
+end if
 
 
 min_elem = 1
 max_elem = 100000
 
 ! --- Read nodes
-open(42, file=trim(node_file), status='old', action='read')
+open(42, file=trim(dir_struct)//trim(node_file), status='old', action='read')
 i = 0
 do
   i = i + 1
@@ -77,7 +91,7 @@ n_nodes = i-1
 write(*,*) 'Read ', n_nodes, ' nodes.'
 elem_component=0
 ! --- Read elements
-open(42, file=trim(elem_file), status='old', action='read')
+open(42, file=trim(dir_struct)//trim(elem_file), status='old', action='read')
 i = 0
 do
   i = i + 1
@@ -121,7 +135,7 @@ write(*,*)
 
 
 !#============== LOAD number of DOFS per element
-open(13, file='ndofel.dat', action='read')
+open(13, file=trim(dir_struct)//'ndofel.dat', action='read')
 allocate(ndofel(n_elems))
 do i=1,n_elems
   read(13,'(i12)') ndofel(i)
@@ -129,7 +143,7 @@ end do
 close(13)
 
 !=== gives current at baricenter of each element, i_element , i_edge, jx, jy, jz
-open(13, file='gmat.dat', action='read')
+open(13, file=trim(dir_struct)//'gmat.dat', action='read')
 allocate(gmat_sp(ind_max,3),ind_g(ind_max,2))
 ind_g=0; gmat_sp=0.d0
 i=0
@@ -150,7 +164,7 @@ end do
 deallocate(gmat_sp)
 
 ! relationship between dof and element
-open(13, file='iglobdof.dat', action='read')
+open(13, file=trim(dir_struct)//'iglobdof.dat', action='read')
 i=0
 do
   i = i + 1
@@ -176,7 +190,7 @@ call HDF5_array1D_reading(file_id,wall_curr,"wall_curr")
 call HDF5_close(file_id)
 
 ! Load S matrix
-open(13, file='S_mat.bin', status='old', form='unformatted', access='stream', action='read')
+open(13, file=trim(dir_struct)//'S_mat.bin', status='old', form='unformatted', access='stream', action='read')
 read(13) S
 close(13)
 do i = 1, n_wall_curr
@@ -204,18 +218,6 @@ do i = 1, n_elems
   wall_curr_el(i) = (jx(i)**2+jy(i)**2+jz(i)**2)**.5
 end do
 
-
-ncomponents  = 1
-comp_start   = 0
-comp_end     = 0
-comp_name(1) ='CARIDDI_all'
-
-open(42, file='CARIDDI_plot.nml', action='read', status='old', iostat=ierr)
-if ( ierr == 0 ) then
-  write(*,*) 'Reading parameters from vtk.nml namelist.'
-  read(42,CARIDDI_plot)
-  close(42)
-end if
 
 
 ! --- export to VTK

@@ -229,6 +229,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,REAL_FMT) 'eta_Spitzer (not input parameter; printed for reference in JOREK units)', eta_Spitzer
   write(*,REAL_FMT) 'T_max_eta             ', T_max_eta
   write(*,REAL_FMT) 'T_max_eta_ohm         ', T_max_eta_ohm  
+  write(*,REAL_FMT) 'T_max_visco           ', T_max_visco
   write(*,LOGI_FMT) 'visco_T_dependent     ', visco_T_dependent
   write(*,LOGI_FMT) 'visco_old_setup       ', visco_old_setup
   write(*,REAL_FMT) 'visco                 ', visco
@@ -524,6 +525,22 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,REAL_FMT) 'Dn_p_sc_num           ', Dn_p_sc_num
   write(*,REAL_FMT) 'D_perp_imp_sc_num     ', D_perp_imp_sc_num
   write(*,REAL_FMT) 'D_par_imp_sc_num      ', D_par_imp_sc_num
+
+  write(*,LOGI_FMT) 'use_vms                ', use_vms
+  if(use_vms)then
+    write(*,REAL_FMT) 'vms_coeff_AR           ', vms_coeff_AR
+    write(*,REAL_FMT) 'vms_coeff_AZ           ', vms_coeff_AZ
+    write(*,REAL_FMT) 'vms_coeff_A3           ', vms_coeff_A3
+    write(*,REAL_FMT) 'vms_coeff_UR           ', vms_coeff_UR
+    write(*,REAL_FMT) 'vms_coeff_UZ           ', vms_coeff_UZ
+    write(*,REAL_FMT) 'vms_coeff_Up           ', vms_coeff_Up
+    write(*,REAL_FMT) 'vms_coeff_rho          ', vms_coeff_rho
+    write(*,REAL_FMT) 'vms_coeff_T            ', vms_coeff_T
+    write(*,REAL_FMT) 'vms_coeff_Te           ', vms_coeff_Te
+    write(*,REAL_FMT) 'vms_coeff_Ti           ', vms_coeff_Ti
+    write(*,REAL_FMT) 'vms_coeff_rhon         ', vms_coeff_rhon
+    write(*,REAL_FMT) 'vms_coeff_rhoimp       ', vms_coeff_rhoimp
+  endif
 
   if(jorek_model == 004 ) then
     write(*,REAL_FMT) 'HW_coef               ', HW_coef(1:2)

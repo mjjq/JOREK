@@ -3,7 +3,7 @@ implicit none
 contains
 !> Export the current simulation state as a restart file that can be read back into JOREK or into
 !! a diagnostic program by the routine import_restart.
-subroutine export_restart(node_list,element_list,filename)
+subroutine export_restart(node_list,aux_node_list,element_list,filename)
 
   use mod_parameters
   use data_structure
@@ -14,6 +14,7 @@ subroutine export_restart(node_list,element_list,filename)
 
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
+  type(type_node_list),    intent(in) :: aux_node_list
   type(type_element_list), intent(in) :: element_list
   character(len=*)       , intent(in) :: filename
 
@@ -23,19 +24,19 @@ subroutine export_restart(node_list,element_list,filename)
     ! --- Write restart binary file
     fileout = trim(filename)//".rst"
     write (6,*) " =============>, jorek2, filename = ", fileout
-    call export_binary_restart(node_list, element_list, fileout)
+    call export_binary_restart(node_list, aux_node_list, element_list, fileout)
   elseif ( rst_hdf5 == 1 ) then
     ! --- Write restart HDF5 file
     fileout = trim(filename)//".h5"
     write (6,*) " =============>, jorek2, filename = ", fileout
-    call export_hdf5_restart(node_list, element_list, fileout)
+    call export_hdf5_restart(node_list, aux_node_list, element_list, fileout)
   end if
 
 end subroutine export_restart
 
 !
 ! Export in a binary restart file
-subroutine export_binary_restart(node_list,element_list,filename)
+subroutine export_binary_restart(node_list,aux_node_list,element_list,filename)
 
   use mod_parameters
   use data_structure
@@ -49,6 +50,7 @@ subroutine export_binary_restart(node_list,element_list,filename)
 
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
+  type(type_node_list),    intent(in) :: aux_node_list
   type(type_element_list), intent(in) :: element_list
   character(len=*),        intent(in) :: filename
 
@@ -84,6 +86,9 @@ subroutine export_binary_restart(node_list,element_list,filename)
      write(21) node_list%node(i)%x
      write(21) node_list%node(i)%values
      write(21) node_list%node(i)%deltas
+     if(export_aux_node_list) then
+        write(21) aux_node_list%node(i)%values
+     endif
 #ifdef fullmhd
      write(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
      write(21) node_list%node(i)%Fprof_eq             !< equilibrium profile R*B_phi at the nodes
@@ -262,7 +267,7 @@ end subroutine export_binary_restart
 
  ! 
  ! Export in a HDF5 binary restart file
-subroutine export_hdf5_restart(node_list,element_list,filename)
+subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
  
   use data_structure
   use phys_module
@@ -282,6 +287,7 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
  
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
+  type(type_node_list),    intent(in) :: aux_node_list
   type(type_element_list), intent(in) :: element_list
   character*(*),           intent(in) :: filename
 
@@ -297,6 +303,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   real(RKIND), allocatable :: t_x(:,:,:,:)                 ! n_coord_tor, n_degrees, n_dim
   real(RKIND), allocatable :: t_values(:,:,:,:)            !       n_tor, n_degrees, n_var
   real(RKIND), allocatable :: t_deltas(:,:,:,:)            !       n_tor, n_degrees, n_var
+  real(RKIND), allocatable :: t_aux_values(:,:,:,:)        !       n_tor, n_degrees, n_var
+
 
   real(RKIND), allocatable :: t_psi_eq(:,:)                ! n_degrees
   real(RKIND), allocatable :: t_Fprof_eq(:,:)              ! n_degrees
@@ -362,6 +370,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
        "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor,1,n_degrees,1,n_var, &
        "node_list%deltas",CAT_UNKNOWN)
+  call tr_allocate(t_aux_values,1,node_list%n_nodes,1,n_tor,1,n_degrees,1,n_var, &
+       "aux_node_list%values",CAT_UNKNOWN)
 
 #ifdef fullmhd
   call tr_allocate(t_psi_eq,1,node_list%n_nodes,1,n_degrees, &
@@ -423,9 +433,10 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
 
   !
   do i=1,node_list%n_nodes
-     t_x(i,:,:,:)        = node_list%node(i)%x
-     t_values(i,:,:,:) = node_list%node(i)%values
-     t_deltas(i,:,:,:) = node_list%node(i)%deltas
+     t_x(i,:,:,:)          = node_list%node(i)%x
+     t_values(i,:,:,:)     = node_list%node(i)%values
+     t_deltas(i,:,:,:)     = node_list%node(i)%deltas
+     t_aux_values(i,:,:,:) = aux_node_list%node(i)%values
 
 #ifdef fullmhd
      t_psi_eq(i,:)     = node_list%node(i)%psi_eq
@@ -522,6 +533,8 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
        node_list%n_nodes,n_tor,n_degrees,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &
        node_list%n_nodes,n_tor,n_degrees,n_var,'deltas'//char(0))
+  call HDF5_array4D_saving(file_id,t_aux_values, &
+       node_list%n_nodes,n_tor,n_degrees,n_var,'aux_values'//char(0))
 
 #ifdef fullmhd
   call HDF5_array2D_saving(file_id,t_psi_eq, &
@@ -819,13 +832,14 @@ subroutine export_hdf5_restart(node_list,element_list,filename)
   ! Export restart vacuum 
   call export_HDF5_restart_vacuum(file_id, freeboundary, resistive_wall)
 
-  ! -> clode file
+  ! -> close file
   call HDF5_close(file_id)
 
   ! -> Deallocate arrays
   call tr_deallocate(t_x,"x",CAT_UNKNOWN)
   call tr_deallocate(t_values,"values",CAT_UNKNOWN)
   call tr_deallocate(t_deltas,"deltas",CAT_UNKNOWN)
+  call tr_deallocate(t_aux_values,"aux_values",CAT_UNKNOWN)
 #ifdef fullmhd
   call tr_deallocate(t_psi_eq,"psi_eq",CAT_UNKNOWN)
   call tr_deallocate(t_Fprof_eq,"Fprof_eq",CAT_UNKNOWN)

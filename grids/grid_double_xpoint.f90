@@ -1,4 +1,4 @@
-subroutine grid_double_xpoint(node_list, element_list)
+subroutine grid_double_xpoint(node_list, aux_node_list, element_list)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
@@ -22,6 +22,7 @@ implicit none
 
 ! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
+type (type_node_list),    intent(inout) :: aux_node_list
 type (type_element_list), intent(inout) :: element_list
 
 ! --- local variables

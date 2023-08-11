@@ -317,9 +317,9 @@ mpi_required = 0
       if (xpoint)  then
         if ( (xcase .ge. UPPER_XPOINT) .or. (RZ_grid_inside_wall) ) then
           if (grid_to_wall) then
-            call grid_double_xpoint_inside_wall(node_list, element_list)
+            call grid_double_xpoint_inside_wall(node_list, aux_node_list, element_list)
           else
-            call grid_double_xpoint(node_list, element_list)
+            call grid_double_xpoint(node_list, aux_node_list, element_list)
           endif
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &

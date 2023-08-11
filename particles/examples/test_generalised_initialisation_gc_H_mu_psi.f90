@@ -493,7 +493,7 @@ subroutine extract_element_psi_minmax(fields,psi_minmax_list_1d)
   integer :: ii
   real*8,dimension(fields%element_list%n_elements,2) :: psi_minmax_list
   !> initialisation
-  psi_minmax_list = 0d0
+  psi_minmax_list(:,1) = 1d10; psi_minmax_list(:,2) = -1d10;
   !> extract maximum and minimun
   !$omp parallel do default(shared) private(ii)
   do ii=1,fields%element_list%n_elements

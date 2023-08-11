@@ -10,7 +10,7 @@ implicit none
 ! --- Routine parameters
 integer,                    intent(in) :: my_id
 type(type_node_list),       intent(in) :: node_list
-type(type_aux_node_list),   intent(in) :: aux_node_list
+type(type_node_list),       intent(in) :: aux_node_list
 type(type_element_list),    intent(in) :: element_list
 
 ! --- Hard-coded parameters: where to check inside an element

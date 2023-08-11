@@ -40,7 +40,7 @@ type, extends(action) :: jorek_timestep_action
 
   ! Coupling data for in construct_matrix
   type(type_node_list), pointer                 :: node_list => null() !< Current node list
-  type(type_aux_node_list), pointer             :: aux_node_list => null() !< Current node list for particles
+  type(type_node_list), pointer                 :: aux_node_list => null() !< Current node list for particles
   type(type_element_list), pointer              :: element_list => null() !< Current element list    
   type(type_bnd_element_list), pointer          :: bnd_elm_list !< List of boundary elements
   type(type_bnd_node_list), pointer             :: bnd_node_list !< List of boundary nodes.  

@@ -20,7 +20,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   real*8,                  intent(in)    :: Z_end          !< Z-max (square grid)
   logical,                 intent(in)    :: boundary       !< Fill boundary information?
   type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
-  type(type_aux_node_list),intent(inout) :: aux_node_list  !< list of grid nodes for particles
+  type(type_node_list),    intent(inout) :: aux_node_list  !< list of grid nodes for particles
   type(type_element_list), intent(inout) :: element_list   !< list of finite elements
   
   ! --- Local variables

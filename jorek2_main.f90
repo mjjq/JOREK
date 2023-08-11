@@ -96,7 +96,7 @@ program JOREK2
       integer(kind=4),             intent(in)    :: my_id
       integer(kind=4),             intent(in)    :: xcase2
       type (type_node_list),       intent(inout) :: node_list
-      type (type_aux_node_list),   intent(inout) :: aux_node_list
+      type (type_node_list),       intent(inout) :: aux_node_list
       type (type_element_list),    intent(inout) :: element_list
       type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list    
       type (type_bnd_element_list),intent(inout) :: bnd_elm_list    

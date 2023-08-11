@@ -391,7 +391,7 @@ mpi_required = 0
     ! --- Determine a flux surface aligned grid and re-calculate the equilibrium on it
     if (n_flux > 1) then
 
-      call flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+      call flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
       
       if ( freeb_equil2) then
         freeboundary_equil = .true.

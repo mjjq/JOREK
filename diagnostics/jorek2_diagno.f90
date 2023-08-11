@@ -21,6 +21,7 @@ use mod_impurity
 implicit none
 
 type (type_node_list)    :: node_list
+type (type_node_list)    :: aux_node_list
 type (type_element_list) :: element_list
 integer :: i, in, i_tor
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out
@@ -52,7 +53,7 @@ do i_tor=1, n_tor
   write(*,*) ' toroidal mode numbers : ',i_tor,mode(i_tor)
 enddo
 
-call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
+call import_restart(node_list,aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 

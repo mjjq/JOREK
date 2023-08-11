@@ -112,7 +112,7 @@ program jorek2_connection_fmhd
   call broadcast_phys(my_id)                                  ! physics parameters
   call broadcast_equil_state(my_id)                           ! equil_state
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
-  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+  call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
   call initialise_basis                                       ! define the basis functions at the Gaussian points
   
   ! --- Broadcast accross MPIs

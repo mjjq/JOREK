@@ -319,7 +319,7 @@ module exec_commands
     write(*,*)
     
     ! --- Load the restart file
-    call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
+    call import_restart(node_list, aux_node_list, element_list, file_name, rst_format, ierr, .true.)
     if ( ierr /= 0 ) return
     call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
     
@@ -584,7 +584,7 @@ module exec_commands
 
       ! --- Get xtime from the restart file with the highest step number
       write (file_name,'(a, i5.5)') 'jorek', available_steps(n_avail)
-      call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
+      call import_restart(node_list, aux_node_list, element_list, file_name, rst_format, ierr, .true.)
       if ( ierr /= 0 ) return
 
       ! --- Set time unit correctly

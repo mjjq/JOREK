@@ -20,6 +20,7 @@ use mod_import_restart
 implicit none
 
 type (type_node_list)   , pointer :: node_list
+type (type_node_list)   , pointer :: aux_node_list
 type (type_element_list), pointer :: element_list
 
 integer :: my_id, k_tor, i_node, ierr, i_ext, i_part
@@ -42,7 +43,7 @@ do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr)
 call initialise_basis                              ! define the basis functions at the Gaussian points
 
 ! --- First, find out which bnd nodes are our starting/ending points

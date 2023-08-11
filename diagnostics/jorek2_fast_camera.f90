@@ -17,6 +17,7 @@ program jorek2_fast_camera
   !include 'mpif.h'
 
   type (type_node_list)   , pointer :: node_list
+  type (type_node_list)   , pointer :: aux_node_list
   type (type_element_list), pointer :: element_list
   type (type_surface_list)          :: flux_list
 
@@ -366,8 +367,8 @@ program jorek2_fast_camera
   do k_tor=1, n_tor
     mode(k_tor) = + int(k_tor / 2) * n_period
   enddo
-  !call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
-  if (my_id .eq. 0) call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+  !call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+  if (my_id .eq. 0) call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
   call MPI_Barrier(MPI_COMM_WORLD,ierr)
   call initialise_basis
   call broadcast_elements(my_id, element_list)                ! elements

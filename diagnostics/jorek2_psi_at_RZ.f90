@@ -20,6 +20,7 @@ use mod_boundary
 implicit none
 
 type (type_node_list)   ,     pointer :: node_list
+type (type_node_list)   ,     pointer :: aux_node_list
 type (type_element_list),     pointer :: element_list
 type (type_bnd_element_list), pointer :: bnd_elm_list    
 type (type_bnd_node_list), pointer :: bnd_node_list    
@@ -45,7 +46,7 @@ call initialise_parameters(my_id, "__NO_FILENAME__")
 
 call flush_it(6)
 
-call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
 call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)

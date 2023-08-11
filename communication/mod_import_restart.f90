@@ -4,7 +4,7 @@ implicit none
 contains
 !> Imports a restart file written out by the routine export_restart.
 
-subroutine import_restart(node_list, element_list, filename, format_rst, ierr, no_perturbations)
+subroutine import_restart(node_list, aux_node_list, element_list, filename, format_rst, ierr, no_perturbations)
 
   use tr_module
   use data_structure
@@ -18,6 +18,7 @@ subroutine import_restart(node_list, element_list, filename, format_rst, ierr, n
   
   ! --- Routine parameters
   type(type_node_list),    intent(inout) :: node_list
+  type(type_node_list),    intent(inout) :: aux_node_list
   type(type_element_list), intent(inout) :: element_list
   character*(*)          , intent(in)    :: filename
   integer,                 intent(out)   :: ierr

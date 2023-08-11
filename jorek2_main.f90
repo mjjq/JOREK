@@ -277,7 +277,7 @@ mpi_required = 0
 
   if ( restart .and. (my_id == 0) ) then
     
-    call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+    call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr)
     if ( ierr /= 0 ) stop
 
     ! for variable time step Gears method

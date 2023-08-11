@@ -350,7 +350,7 @@ mpi_required = 0
   if_not_restart: if (.not. restart) then
     call tr_resetfile()
     
-    call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+    call initial_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
     
     ! --- Synchronizing MPI processes avoid deadlock issues on some machine
     call MPI_Barrier(MPI_COMM_WORLD,ierr)

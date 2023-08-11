@@ -1,4 +1,4 @@
-subroutine grid_patches_on_existing_grid(node_list, aux_note_list, element_list)
+subroutine grid_patches_on_existing_grid(node_list, aux_node_list, element_list)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point

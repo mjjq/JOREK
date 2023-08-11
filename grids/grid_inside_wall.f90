@@ -20,6 +20,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   real*8,                  intent(in)    :: Z_end          !< Z-max (square grid)
   logical,                 intent(in)    :: boundary       !< Fill boundary information?
   type(type_node_list),    intent(inout) :: node_list      !< list of grid nodes
+  type(type_aux_node_list),intent(inout) :: aux_node_list  !< list of grid nodes for particles
   type(type_element_list), intent(inout) :: element_list   !< list of finite elements
   
   ! --- Local variables
@@ -318,7 +319,7 @@ subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_li
   enddo
   
   ! --- This is just for debug, it could be removed (or not?)
-  call export_restart(node_list, element_list, 'grid_initial')
+  call export_restart(node_list, aux_node_list, element_list, 'grid_initial')
   
   ! --- Also for debug: Print a python file that plots a cross with the 4 nodes of each element
   if (plot_grid) then

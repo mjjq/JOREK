@@ -96,6 +96,7 @@ program JOREK2
       integer(kind=4),             intent(in)    :: my_id
       integer(kind=4),             intent(in)    :: xcase2
       type (type_node_list),       intent(inout) :: node_list
+      type (type_aux_node_list),   intent(inout) :: aux_node_list
       type (type_element_list),    intent(inout) :: element_list
       type (type_bnd_node_list)   ,intent(inout) :: bnd_node_list    
       type (type_bnd_element_list),intent(inout) :: bnd_elm_list    
@@ -548,7 +549,7 @@ mpi_required = 0
   if ( (my_id == 0) .and. (.not. restart) ) then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
     fileout = 'jorek00000'
-    call export_restart(node_list, element_list, fileout)
+    call export_restart(node_list, aux_node_list, element_list, fileout)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
   end if
   
@@ -834,7 +835,7 @@ mpi_required = 0
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
       write(fileout,'(A5,i5.5)') 'jorek',index_now
-      call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
+      call export_restart(mhd_sim%node_list, aux_node_list, mhd_sim%element_list, fileout)
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     endif
     
@@ -922,7 +923,7 @@ mpi_required = 0
   if (my_id .eq. 0)  then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
     fileout = 'jorek_restart'
-    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
+    call export_restart(mhd_sim%node_list, aux_node_list, mhd_sim%element_list, fileout)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     if ( write_ps ) then
       if (.not. bench_without_plot) then

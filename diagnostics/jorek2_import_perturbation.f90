@@ -19,6 +19,7 @@ program jorek2_import_perturbation
   real*8, allocatable :: energies_save(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
 
   type(type_node_list) :: node_list2
+  type(type_aux_node_list) :: aux_node_list
   type(type_element_list) :: element_list2
 
   
@@ -145,7 +146,7 @@ program jorek2_import_perturbation
   ! Export restart file with perturbation
   write(*,*)' '
   write(*,*)'Exporting restart...'
-  call export_restart(node_list,element_list,'jorek_restart')
+  call export_restart(node_list, aux_node_list, element_list,'jorek_restart')
 
   write(*,*)'Finished'
 

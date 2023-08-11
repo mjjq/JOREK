@@ -88,7 +88,7 @@ call jorek_penning_fields(sim%fields%node_list, sim%fields%element_list)
 ! Write a restart file containing the grid
 write(*,*) "INFO: Exporting grid to jorek_restart.h5"
 rst_hdf5 = 1
-call export_restart(sim%fields%node_list,sim%fields%element_list,'jorek_restart')
+call export_restart(sim%fields%node_list,aux_node_list,sim%fields%element_list,'jorek_restart')
 
 ! interpret tstep_n as [s] instead of jorek units
 do i=1,size(tstep_n)

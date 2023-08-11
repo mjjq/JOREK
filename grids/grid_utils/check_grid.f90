@@ -10,6 +10,7 @@ implicit none
 ! --- Routine parameters
 integer,                    intent(in) :: my_id
 type(type_node_list),       intent(in) :: node_list
+type(type_aux_node_list),   intent(in) :: aux_node_list
 type(type_element_list),    intent(in) :: element_list
 
 ! --- Hard-coded parameters: where to check inside an element
@@ -73,7 +74,7 @@ do ielm = 1, element_list%n_elements
 end do
 
 if ( problem_found ) then
-  call export_restart(node_list, element_list, 'jorek_stopped')
+  call export_restart(node_list, aux_node_list, element_list, 'jorek_stopped')
   stop
 else
   write(*,*) 'Routine check_grid did not find issues.'

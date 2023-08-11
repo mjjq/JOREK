@@ -126,7 +126,7 @@ F0 = 1.d0
 
 ! Write a restart file containing the grid
 write(*,*) "INFO: Exporting grid to jorek_restart.h5"
-call export_restart(fields%node_list,fields%element_list,'jorek_restart')
+call export_restart(fields%node_list,aux_node_list,fields%element_list,'jorek_restart')
 
 ! Initialize the particle list
 

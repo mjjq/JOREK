@@ -436,7 +436,6 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
      t_x(i,:,:,:)          = node_list%node(i)%x
      t_values(i,:,:,:)     = node_list%node(i)%values
      t_deltas(i,:,:,:)     = node_list%node(i)%deltas
-     t_aux_values(i,:,:,:) = aux_node_list%node(i)%values
 
 #ifdef fullmhd
      t_psi_eq(i,:)     = node_list%node(i)%psi_eq
@@ -463,6 +462,12 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
         t_constrained(i)  = 'F'
      end if
   end do
+
+  if(export_aux_node_list) then
+     do i=1,aux_node_list%n_nodes
+        t_aux_values(i,:,:,:) = aux_node_list%node(i)%values
+     enddo
+  endif
 
   do i=1,element_list%n_elements
      t_vertex(i,:)       = element_list%element(i)%vertex
@@ -533,8 +538,10 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
        node_list%n_nodes,n_tor,n_degrees,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &
        node_list%n_nodes,n_tor,n_degrees,n_var,'deltas'//char(0))
-  call HDF5_array4D_saving(file_id,t_aux_values, &
-       node_list%n_nodes,n_tor,n_degrees,n_var,'aux_values'//char(0))
+  if(export_aux_node_list .and. aux_node_list%n_nodes .gt. 0) then
+     call HDF5_array4D_saving(file_id,t_aux_values, &
+          node_list%n_nodes,n_tor,n_degrees,n_var,'aux_values'//char(0))
+  endif
 
 #ifdef fullmhd
   call HDF5_array2D_saving(file_id,t_psi_eq, &

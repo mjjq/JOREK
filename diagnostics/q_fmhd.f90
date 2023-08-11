@@ -65,7 +65,7 @@ end if
 call det_modes()
 call initialise_parameters(my_id,  "__NO_FILENAME__")
 call log_parameters(my_id)
-if ( my_id == 0 ) call import_restart(node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
+if ( my_id == 0 ) call import_restart(node_list,aux_node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
 call broadcast_phys(my_id)  
 call broadcast_elements(my_id, element_list)                ! elements
 call broadcast_nodes(my_id, node_list)                      ! nodes

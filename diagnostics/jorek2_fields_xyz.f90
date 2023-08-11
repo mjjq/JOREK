@@ -172,7 +172,7 @@ program jorek2_fields_xyz
     write(file_in,'(A5,i5.5)') 'jorek', istep
 
     if ( my_id == 0 ) then
-      call import_restart(node_list, element_list, file_in, rst_format, ierr)
+      call import_restart(node_list, aux_node_list,element_list, file_in, rst_format, ierr)
     endif
 
     call MPI_BCAST(ierr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr2)

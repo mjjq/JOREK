@@ -91,7 +91,7 @@ subroutine flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_
   endif ! if (my_id == 0) then        
 
   ! --- Check sanity of grid
-  call check_grid(my_id, node_list, element_list)
+  call check_grid(my_id, node_list, aux_node_list, element_list)
 
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) 
 

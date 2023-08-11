@@ -377,7 +377,7 @@ mpi_required = 0
     end if
     
     ! --- Check sanity of grid
-    if (.not. RZ_grid_inside_wall) call check_grid(my_id, node_list, element_list)
+    if (.not. RZ_grid_inside_wall) call check_grid(my_id, node_list, aux_node_list, element_list)
 
     ! --- Compute the plasma equilibrium
     if (equil) then

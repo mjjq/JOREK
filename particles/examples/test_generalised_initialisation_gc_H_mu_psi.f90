@@ -357,7 +357,7 @@ n_real_param,real_param,n_int_param,int_param)
   call find_theta_psi(fields%node_list,fields%element_list,[real_param(1:fields%element_list%n_elements),\
   real_param(fields%element_list%n_elements+1:2*fields%element_list%n_elements)],\
   x(2),x(1),x(3),real_param(2*fields%element_list%n_elements+1),\
-  real_param(2*fields%element_list%n_elements+2),i_elm,st(1),st(2),x(1),x(2))
+  real_param(2*fields%element_list%n_elements+2),i_elm,st(1),st(2),R,Z); x(1:2) = [R,Z];
   if(i_elm.gt.0) then
     call fields%calc_EBpsiU(time,i_elm,st,x(3),E,B,psi,electric_potential); normB = norm2(B);
     !> compute the temperature

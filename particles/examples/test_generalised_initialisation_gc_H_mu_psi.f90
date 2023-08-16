@@ -14,7 +14,7 @@ integer         :: n_int_pdf_to_part_coord_param,n_real_pdf_to_part_coord_param
 integer         :: include_vpar,particle_type,t1,t2,t3,t4,dummy_int
 integer,dimension(:),allocatable :: int_pdf_param,int_weight_param,int_gdf_param
 integer,dimension(:),allocatable :: int_pdf_to_part_coord_param
-real*8          :: start_time,mass,charge,pdf_upper_bound,gdf_upper_bound
+real*8          :: start_time,mass,pdf_upper_bound,gdf_upper_bound
 real*8          :: dummy_real8_1,dummy_real8_2,dummy_real8_3
 real*8,dimension(2)                 :: Poloidalbound,Phibound 
 real*8,dimension(2)                 :: Ekinbound,Vbound,Pitchbound,Gyrobound,Chargebound
@@ -62,10 +62,10 @@ Vbound = sqrt(2.d0*Ekinbound*EL_CHG/mass)
 allocate(psi_minmax_loc(2*sim%fields%element_list%n_elements))
 call extract_element_psi_minmax(sim%fields,psi_minmax_loc)
 phase_space_bounds(:,1) = [minval(psi_minmax_loc(1:sim%fields%element_list%n_elements)),&
-                          Poloidalbound(1),Phibound(1),Vbound(1),Pitchbound(1),Gyrobound(1),charge]
+                          Poloidalbound(1),Phibound(1),Vbound(1),Pitchbound(1),Gyrobound(1),Chargebound(1)]
 phase_space_bounds(:,2) = [maxval(psi_minmax_loc(sim%fields%element_list%n_elements+1:&
                           2*sim%fields%element_list%n_elements)),Poloidalbound(2),Phibound(2),&
-                          Vbound(2),Pitchbound(2),Gyrobound(2),charge]
+                          Vbound(2),Pitchbound(2),Gyrobound(2),Chargebound(2)]
 !> define the pdf inputs
 pdf_to_use         => pdf_psi_H_mu
 n_int_pdf_param    = 0
@@ -125,7 +125,7 @@ call allocate_particle_list(particle_type,n_particles,sim%groups(1)%particles)
 particle_writer = event(write_action(filename=trim(original_h_mu_psi_filename)))
 call system_clock(t3)
 call initialise_particles_H_mu_psi(sim%groups(1)%particles, sim%fields,rng_pcg32,mass,&
-include_vpar=include_vpar.eq.1, charge=int(charge))
+include_vpar=include_vpar.eq.1, charge=int(Chargebound(1)))
 call system_clock(t4)
 call with(sim,particle_writer)
 write(*,*) "Test H_mu_psi initialisation generic vs original, initialise particles original method: completed!"

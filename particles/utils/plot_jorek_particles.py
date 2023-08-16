@@ -2,7 +2,7 @@
 # The function plots the particle properties read by
 # a JOREK restart file
 # ----------------------------------------------------- #
-# Read datasets from HDF5 files
+# Transform cylindrical in cartesian coordinates
 def cylindrical_to_cartesian(RZphi):
   from numpy import cos,sin
   return np.array([RZphi[0]*cos(-RZphi[2]),RZphip[0]*sin(-RZphi[2]),RZphi[1]])

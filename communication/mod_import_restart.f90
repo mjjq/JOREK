@@ -17,13 +17,13 @@ subroutine import_restart(node_list, aux_node_list, element_list, filename, form
   implicit none
   
   ! --- Routine parameters
-  type(type_node_list),    intent(inout) :: node_list
-  type(type_node_list),    intent(inout) :: aux_node_list
-  type(type_element_list), intent(inout) :: element_list
-  character*(*)          , intent(in)    :: filename
-  integer,                 intent(out)   :: ierr
-  integer,                 intent(in)    :: format_rst  ! format of restart file 
-  logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
+  type(type_node_list),         intent(inout) :: node_list
+  type(type_node_list),pointer, intent(inout) :: aux_node_list
+  type(type_element_list),      intent(inout) :: element_list
+  character*(*)          ,      intent(in)    :: filename
+  integer,                      intent(out)   :: ierr
+  integer,                      intent(in)    :: format_rst  ! format of restart file 
+  logical, optional,            intent(in)    :: no_perturbations ! don't initialize new harmonics
  
   ! --- Local parameters
   type (type_bnd_element_list)           :: bnd_elm_list    
@@ -31,11 +31,11 @@ subroutine import_restart(node_list, aux_node_list, element_list, filename, form
 
   if ( rst_hdf5 == 0 ) then
     write(*,*) " Restart from BINARY file " // trim(filename) // '.rst'
-    call import_binary_restart(node_list, element_list, trim(filename)//'.rst', &
+    call import_binary_restart(node_list, aux_node_list, element_list, trim(filename)//'.rst', &
             format_rst, ierr, no_perturbations)
   else if ( rst_hdf5 == 1 ) then
     write(*,*) " Restart from HDF5 file " // trim(filename) // '.h5'
-    call import_hdf5_restart(node_list, element_list, trim(filename)//'.h5', &
+    call import_hdf5_restart(node_list, aux_node_list, element_list, trim(filename)//'.h5', &
             format_rst,ierr, no_perturbations)
   end if
   
@@ -51,7 +51,7 @@ end subroutine import_restart
 
 !
 ! Import a binary restart file
-subroutine import_binary_restart(node_list, element_list, filename, format_rst, error, no_perturbations)
+subroutine import_binary_restart(node_list, aux_node_list, element_list, filename, format_rst, error, no_perturbations)
 
   use tr_module 
   use data_structure
@@ -63,18 +63,19 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   implicit none
   
   ! --- Routine parameters
-  type(type_node_list),    intent(inout) :: node_list
-  type(type_element_list), intent(inout) :: element_list
-  character(len=*),        intent(in)    :: filename
-  integer,                 intent(out)   :: error
-  integer,                 intent(in)    :: format_rst  ! format of restart file
-  logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
+  type(type_node_list),          intent(inout) :: node_list
+  type(type_node_list), pointer, intent(inout) :: aux_node_list
+  type(type_element_list),       intent(inout) :: element_list
+  character(len=*),              intent(in)    :: filename
+  integer,                       intent(out)   :: error
+  integer,                       intent(in)    :: format_rst  ! format of restart file
+  logical, optional,             intent(in)    :: no_perturbations ! don't initialize new harmonics
   
   ! --- Local variables
   integer              :: i, j, m, k, n_tor_tmp
   real*8               :: growth_mag, growth_kin, amplitude
   integer, allocatable :: mode_tmp(:)
-  real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:)
+  real*8,  allocatable :: values_tmp(:,:,:), deltas_tmp(:,:,:), aux_values_tmp(:,:,:)
   real*8,  allocatable :: spi_R_arr (:)
   real*8,  allocatable :: spi_Z_arr (:)
   real*8,  allocatable :: spi_phi_arr (:)
@@ -127,7 +128,10 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
   read(21) n_tor_tmp
 
   allocate(mode_tmp(n_tor_tmp), values_tmp(n_tor_tmp,n_degrees,n_var), deltas_tmp(n_tor_tmp,n_degrees,n_var))
-
+  if(export_aux_node_list .and. associated(aux_node_list)) then
+     allocate(aux_values_tmp(n_tor_tmp,n_degrees,n_var))
+  endif
+  
   if (format_rst == 1) then
     read(21) mode_tmp
     write(*,*) ' NEW format (1) : ',mode_tmp
@@ -167,6 +171,9 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
     read(21) node_list%node(i)%x
     read(21) values_tmp
     read(21) deltas_tmp
+    if(export_aux_node_list .and. associated(aux_node_list)) then
+       read(21) aux_values_tmp
+    endif
 
 #ifdef fullmhd
     read(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
@@ -191,17 +198,33 @@ subroutine import_binary_restart(node_list, element_list, filename, format_rst, 
       do k=1, n_tor,2
         if (mode_tmp(m) .eq. mode(k)) then
           if ((m .eq. 1) .and. (k.eq.1)) then
-            node_list%node(i)%values(k,:,:) = values_tmp(m,:,:)
-            node_list%node(i)%deltas(k,:,:) = deltas_tmp(m,:,:)
+            node_list%node(i)%values(k,:,:)     = values_tmp(m,:,:)
+            node_list%node(i)%deltas(k,:,:)     = deltas_tmp(m,:,:)
           else
-            node_list%node(i)%values(k-1,:,:) = values_tmp(m-1,:,:)
-            node_list%node(i)%deltas(k-1,:,:) = deltas_tmp(m-1,:,:)
-            node_list%node(i)%values(k,:,:)   = values_tmp(m,:,:)
-            node_list%node(i)%deltas(k,:,:)   = deltas_tmp(m,:,:)
+            node_list%node(i)%values(k-1,:,:)     = values_tmp(m-1,:,:)
+            node_list%node(i)%deltas(k-1,:,:)     = deltas_tmp(m-1,:,:)
+            node_list%node(i)%values(k,:,:)       = values_tmp(m,:,:)
+            node_list%node(i)%deltas(k,:,:)       = deltas_tmp(m,:,:)
           endif
         endif
       enddo
     enddo
+
+    if(export_aux_node_list .and. associated(aux_node_list)) then
+     do m=1,n_tor_tmp,2
+      do k=1, n_tor,2
+        if (mode_tmp(m) .eq. mode(k)) then
+          if ((m .eq. 1) .and. (k.eq.1)) then
+            aux_node_list%node(i)%values(k,:,:) = aux_values_tmp(m,:,:)
+          else
+            aux_node_list%node(i)%values(k-1,:,:) = aux_values_tmp(m-1,:,:)
+            aux_node_list%node(i)%values(k,:,:)   = aux_values_tmp(m,:,:)
+          endif
+        endif
+      enddo
+     enddo
+   endif
+
   enddo
 
   read(21) element_list%element(1:element_list%n_elements)
@@ -826,9 +849,10 @@ endif
   !call add_pellet(node_list,element_list,25.d0,0.06d0,0.03d0,3.78d0,0.14d0)
 
   ! -> Deallocate temporary arrays 
-  if (allocated(mode_tmp))   call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
-  if (allocated(values_tmp)) call tr_deallocate(values_tmp,"values_tmp",CAT_UNKNOWN)
-  if (allocated(deltas_tmp)) call tr_deallocate(deltas_tmp,"deltas_tmp",CAT_UNKNOWN)
+  if (allocated(mode_tmp))       call tr_deallocate(mode_tmp,"mode_tmp",CAT_UNKNOWN)
+  if (allocated(values_tmp))     call tr_deallocate(values_tmp,"values_tmp",CAT_UNKNOWN)
+  if (allocated(deltas_tmp))     call tr_deallocate(deltas_tmp,"deltas_tmp",CAT_UNKNOWN)
+  if (allocated(aux_values_tmp)) call tr_deallocate(aux_values_tmp,"aux_values_tmp",CAT_UNKNOWN)
 
   call populate_element_rtree(node_list, element_list)
   
@@ -840,7 +864,7 @@ end subroutine import_binary_restart
 
 !
 ! Import an HDF5 restart file
-subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, error, no_perturbations)
+subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename, format_rst, error, no_perturbations)
 
 #include "version.h"
 
@@ -859,12 +883,13 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   implicit none
   
   ! --- Routine parameters
-  type(type_node_list),    intent(inout) :: node_list
-  type(type_element_list), intent(inout) :: element_list
-  character(len=*),        intent(in)    :: filename
-  integer,                 intent(in)    :: format_rst  ! format of restart file
-  integer,                 intent(out)   :: error
-  logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
+  type(type_node_list),         intent(inout) :: node_list
+  type(type_node_list),pointer, intent(inout) :: aux_node_list
+  type(type_element_list),      intent(inout) :: element_list
+  character(len=*),             intent(in)    :: filename
+  integer,                      intent(in)    :: format_rst  ! format of restart file
+  integer,                      intent(out)   :: error
+  logical, optional,            intent(in)    :: no_perturbations ! don't initialize new harmonics
   
   ! --- Perturbation-Import variables
   type (type_node_list)   , pointer	:: node_list_perturbation
@@ -891,6 +916,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   real(RKIND), allocatable :: t_x(:,:,:,:)
   real(RKIND), allocatable :: t_values(:,:,:,:)
   real(RKIND), allocatable :: t_deltas(:,:,:,:)
+  real(RKIND), allocatable :: t_aux_values(:,:,:,:)
 
   real(RKIND), allocatable :: t_psi_eq(:,:)
   real(RKIND), allocatable :: t_Fprof_eq(:,:)
@@ -1066,6 +1092,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_degrees_tmp,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
+  if(export_aux_node_list .and. allocated(aux_node_list)) then
+     call tr_allocate(t_aux_values,1,aux_node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "aux_node_list%values",CAT_UNKNOWN)
+  end if
  
 #ifdef fullmhd
   call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees_tmp, "node_list%psi_eq",  CAT_UNKNOWN)
@@ -1102,6 +1131,9 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   endif
   call HDF5_array4D_reading(file_id,t_values,   'values')
   call HDF5_array4D_reading(file_id,t_deltas,   'deltas')
+  if(export_aux_node_list .and. allocated(aux_node_list)) then
+     call HDF5_array4D_reading(file_id,t_aux_values,   'aux_values')
+  endif
 
 #ifdef fullmhd
   call HDF5_array2D_reading(file_id,t_psi_eq,   'psi_eq')
@@ -1165,6 +1197,23 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
       end do
     end do
 
+    if(export_aux_node_list .and. associated(aux_node_list))
+     do m=1,n_tor_tmp,2
+      do k=1, n_tor,2
+        do j=1,n_degrees_tmp 
+          if (mode_tmp(m) .eq. mode(k)) then
+            if ((m .eq. 1) .and. (k.eq.1)) then
+              aux_node_list%node(i)%values(k,j,1:n_var_tmp)   = t_aux_values(i,m,j,1:n_var_tmp)
+            else
+              aux_node_list%node(i)%values(k-1,j,1:n_var_tmp) = t_aux_values(i,m-1,j,1:n_var_tmp)
+              aux_node_list%node(i)%values(k,j,1:n_var_tmp)   = t_aux_values(i,m,j,1:n_var_tmp) 
+            end if
+          end if
+        enddo
+      end do
+     end do
+    endif
+     
     ! --- Split "total" temperature into electron and ion temperature
     if ( import_3xx_4xx ) then
       do j=1,n_degrees_tmp
@@ -2000,6 +2049,7 @@ subroutine import_hdf5_restart(node_list, element_list, filename, format_rst, er
   call tr_deallocate(t_x,"t_x",CAT_UNKNOWN)
   call tr_deallocate(t_values,"t_values",CAT_UNKNOWN)
   call tr_deallocate(t_deltas,"t_deltas",CAT_UNKNOWN)
+  call tr_deallocate(t_aux_values,"t_aux_values",CAT_UNKNOWN)
   call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
 
 #ifdef JECCD                   

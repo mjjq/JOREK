@@ -146,6 +146,16 @@ module mod_expression
     call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
     call add(exprs_all, 'Z_eff       ', 'Effective charge of all species                       ')
 #endif
+    call add(exprs_all, 'aux01       ', 'Particle projection #01                               ')
+    call add(exprs_all, 'aux02       ', 'Particle projection #02                               ')
+    call add(exprs_all, 'aux03       ', 'Particle projection #03                               ')
+    call add(exprs_all, 'aux04       ', 'Particle projection #04                               ')
+    call add(exprs_all, 'aux05       ', 'Particle projection #05                               ')
+    call add(exprs_all, 'aux06       ', 'Particle projection #06                               ')
+    call add(exprs_all, 'aux07       ', 'Particle projection #07                               ')
+    call add(exprs_all, 'aux08       ', 'Particle projection #08                               ')
+    call add(exprs_all, 'aux09       ', 'Particle projection #09                               ')
+    call add(exprs_all, 'aux10       ', 'Particle projection #10                               ')
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
     call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
@@ -561,7 +571,7 @@ module mod_expression
     type(t_tor_pos), pointer :: tor_pos
     type(type_element)       :: element
     type(type_node)          :: nodes(n_vertex_max)
-    integer :: ipolpos, jpolpos, itorpos, iexpr, ielm, i, j, k, i_tor
+    integer :: ipolpos, jpolpos, itorpos, iexpr, ielm, i, j, k, i_tor, n
     real*8  :: xjac, xjac_R, xjac_Z, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, &
       s, t, H(n_vertex_max,n_degrees), H_s(n_vertex_max,n_degrees), H_t(n_vertex_max,n_degrees),   &
       H_st(n_vertex_max,n_degrees), H_ss(n_vertex_max,n_degrees), H_tt(n_vertex_max,n_degrees),    &
@@ -588,12 +598,12 @@ module mod_expression
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
-      ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt 
+      ne0_20, ln_Lambda, ln_Lambda0, dpsi_dt
     real*8 :: T0_corr, Ti0_corr, Te0_corr, r0_corr, rn0_corr
     real*8 :: T_or_Te, T_or_Te_corr, T_or_Te_0 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
-    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
+    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var), va(n_var), aux(n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Fluxes
     real*8  ::  ZKpar_flux, ZKipar_flux, ZKepar_flux, ZKperp_flux, ZKiperp_flux, ZKeperp_flux,     &
@@ -804,6 +814,9 @@ module mod_expression
                 hhz_pp = HZ_pp(i_tor)
                 vv(:)  = 0.d0
                 vv(1:n_var)  = nodes(i)%values(i_tor,j,:)
+		aux = 0.d0
+		va(:)  = 0.d0
+                va(1:n_var)  = nodes(i)%values(i_tor,j,:)
                 
                 ! --- Poloidal Flux
                 ps0      = ps0      + vv(var_psi) * sz * hh    * hhz
@@ -915,6 +928,10 @@ module mod_expression
                 rimp0_p   = rimp0_p     + vv(var_rhoimp) * sz * hh    * hhz_p
                 rimp0_pp  = rimp0_pp    + vv(var_rhoimp) * sz * hh    * hhz_pp
 
+                ! --- Particle projections
+		do n = 1, n_var
+                  aux(n) = aux(n) + va(n) * sz * hh    * hhz
+                end do
 
                 ! --- AR
                 AR0      = AR0      + vv(var_AR) * sz * hh    * hhz
@@ -1671,6 +1688,36 @@ module mod_expression
               case ( 'Z_eff' )
                 res = Z_eff
 #endif
+              
+              case ( 'aux01' )
+                res = aux(1)
+
+              case ( 'aux02' )
+                res = aux(2)
+
+              case ( 'aux03' )
+                res = aux(3)
+
+              case ( 'aux04' )
+                res = aux(4)
+
+              case ( 'aux05' )
+                res = aux(5)
+
+              case ( 'aux06' )
+                res = aux(6)
+
+              case ( 'aux07' )
+                res = aux(7)
+
+              case ( 'aux08' )
+                res = aux(8)
+
+              case ( 'aux09' )
+                res = aux(9)
+
+              case ( 'aux10' )
+                res = aux(10)
 
               case ( 'T' )
                 res = T0 * fact_T

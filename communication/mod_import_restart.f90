@@ -1092,7 +1092,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_degrees_tmp,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
-  if(export_aux_node_list .and. allocated(aux_node_list)) then
+  if(export_aux_node_list .and. associated(aux_node_list)) then
      call tr_allocate(t_aux_values,1,aux_node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "aux_node_list%values",CAT_UNKNOWN)
   end if
  
@@ -1131,7 +1131,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   endif
   call HDF5_array4D_reading(file_id,t_values,   'values')
   call HDF5_array4D_reading(file_id,t_deltas,   'deltas')
-  if(export_aux_node_list .and. allocated(aux_node_list)) then
+  if(export_aux_node_list .and. associated(aux_node_list)) then
      call HDF5_array4D_reading(file_id,t_aux_values,   'aux_values')
   endif
 
@@ -1197,7 +1197,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
       end do
     end do
 
-    if(export_aux_node_list .and. associated(aux_node_list))
+    if(export_aux_node_list .and. associated(aux_node_list)) then
      do m=1,n_tor_tmp,2
       do k=1, n_tor,2
         do j=1,n_degrees_tmp 

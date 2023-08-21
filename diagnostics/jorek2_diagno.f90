@@ -21,7 +21,7 @@ use mod_impurity
 implicit none
 
 type (type_node_list)    :: node_list
-type (type_node_list)    :: aux_node_list
+type (type_node_list), pointer :: aux_node_list
 type (type_element_list) :: element_list
 integer :: i, in, i_tor
 real*8  :: growth_kin, growth_mag,density,density_in,density_out,pressure,pressure_in,pressure_out

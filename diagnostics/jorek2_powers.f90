@@ -25,7 +25,7 @@ use mod_interp
 implicit none
 
 type (type_node_list)    :: node_list
-type (type_node_list)    :: aux_node_list
+type (type_node_list), pointer :: aux_node_list
 type (type_element_list) :: element_list
 
 integer :: inode, ielm, my_id

@@ -24,7 +24,7 @@ use mod_expression, only: exprs_all_int, init_expr, t_expr_list
 implicit none
 
 type (type_node_list)        :: node_list
-type (type_node_list)        :: aux_node_list
+type (type_node_list), pointer :: aux_node_list
 type (type_element_list)     :: element_list
 type (type_bnd_node_list)    :: bnd_node_list
 type (type_bnd_element_list) :: bnd_elm_list

@@ -14,7 +14,7 @@ subroutine export_restart(node_list,aux_node_list,element_list,filename)
 
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
-  type(type_node_list),    intent(in) :: aux_node_list
+  type(type_node_list),pointer, intent(in) :: aux_node_list
   type(type_element_list), intent(in) :: element_list
   character(len=*)       , intent(in) :: filename
 
@@ -50,7 +50,7 @@ subroutine export_binary_restart(node_list,aux_node_list,element_list,filename)
 
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
-  type(type_node_list),    intent(in) :: aux_node_list
+  type(type_node_list), pointer,    intent(in) :: aux_node_list
   type(type_element_list), intent(in) :: element_list
   character(len=*),        intent(in) :: filename
 
@@ -287,7 +287,7 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
  
   ! --- Routine parameters
   type(type_node_list),    intent(in) :: node_list
-  type(type_node_list),    intent(in) :: aux_node_list
+  type(type_node_list), pointer,    intent(in) :: aux_node_list
   type(type_element_list), intent(in) :: element_list
   character*(*),           intent(in) :: filename
 

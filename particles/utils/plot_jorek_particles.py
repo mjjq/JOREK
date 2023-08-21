@@ -189,16 +189,19 @@ def plot_1d_histograms(hists,titles,xlabels,ylabels,fontsize=18):
 
 # plot 2d histograms
 def plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectequal,\
-fontsize=18,colormap='inferno'):
+fontsize=18,colormap='inferno',colorbarmaxval=[1.,1.,1.,1.]):
   from numpy import amax,transpose
   from matplotlib.pyplot import figure,pcolormesh
   count = 0; figs = []; axs = [];
   for histos_id,histos in enumerate(hists2d):
     for histo_id,histo in enumerate(histos):
+      scaling = 1e0;
+      if(count<len(colorbarmaxval)):
+        scaling = colorbarmaxval[count]
       figs.append(figure(count+1,facecolor='white',edgecolor='white'))
       axs.append([figs[count].add_subplot(111)])
       im = axs[count][0].pcolormesh(histo[1],histo[2],transpose(histo[0]),\
-      cmap=colormap,vmin=0.,vmax=amax(histo[0]),edgecolors='none',shading='flat')
+      cmap=colormap,vmin=0.,vmax=scaling*amax(histo[0]),edgecolors='none',shading='flat')
       if(len(titles)>count):
         axs[count][0].set_title(titles[count],fontsize=fontsize)
       if(len(xlabels)>count):
@@ -229,7 +232,7 @@ ylabels=['','',''],fontsize=18):
 
 # generate and plot 2d histograms from the jorek particle distribution
 def computes_2d_histograms_jorek_particles(groups,key,deathvalue=0,bins=[100,100,100],\
-fontsize=18,colormap='inferno'):
+fontsize=18,colormap='inferno',colorbarmaxval=[1.,1.,1.,1.]):
   from matplotlib.pyplot import show
   for group in groups:
     # extract titles, xlabels, ylabels and plot aspect ratio
@@ -238,14 +241,14 @@ fontsize=18,colormap='inferno'):
     hists2d,n_histos = create_phase_space_2d_histograms(group[key],group['weight'],group['i_elm'],\
     deathvalue,bins2d=bins)
     fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
-    fontsize=fontsize,colormap=colormap)
+    fontsize=fontsize,colormap=colormap,colorbarmaxval=colorbarmaxval)
     show()
 
 # generate and plot 2d histogrames from jorek particle distribution
 # give a set of coordinate slices
 def computes_phase_space_2d_sliced_histograms(groups,key,slice_data_ids=[],\
 slice_data_intervals=[],deathvalue=0,bins=[100,100,100],\
-fontsize=18,colormap='inferno'):
+fontsize=18,colormap='inferno',colorbarmaxval=[1.,1.,1.,1.]):
   from numpy import array,reshape
   from matplotlib.pyplot import show
   slice_data_intervals = reshape(slice_data_intervals,(len(slice_data_ids),2))
@@ -259,13 +262,14 @@ fontsize=18,colormap='inferno'):
     hists2d,n_histos = create_phase_space_2d_sliced_histograms(group[key],group['weight'],\
     array(slice_data_ids),slice_data_intervals,group['i_elm'],deathvalue,bins2d=bins)
     fig,axs = plot_2d_histograms(hists2d,n_histos,titles,xlabels,ylabels,aspectratio,\
-    fontsize=fontsize,colormap=colormap)
+    fontsize=fontsize,colormap=colormap,colorbarmaxval=colorbarmaxval)
     show()
 
 # main function
 def read_analyse_plot_jorek_restart(filename,filepath,separator,deathvalue=0,bins1d=[100,100,100],
 bins2d=[100,100,100],fontsize=18,colormap='inferno',spatial_slice_ids=[],\
-spatial_slice_intervals=[],velocity_slice_ids=[],velocity_slice_intervals=[]):
+spatial_slice_intervals=[],velocity_slice_ids=[],velocity_slice_intervals=[],\
+colorbarmaxval=[1.,1.,1.,1.]):
   # read the jorek particle restart data
   p_groups,sim_time = read_jorek_particle_restart_file(filename,filepath,separator)
   p_groups = homogenize_particle_structure(p_groups)
@@ -278,20 +282,20 @@ spatial_slice_intervals=[],velocity_slice_ids=[],velocity_slice_intervals=[]):
   ylabels=['Nphys','Nphys','Nphys'],fontsize=fontsize)
   # plot 2d histograms
   computes_2d_histograms_jorek_particles(p_groups,'x',deathvalue,bins=bins2d,\
-  fontsize=fontsize,colormap=colormap)
+  fontsize=fontsize,colormap=colormap,colorbarmaxval=colorbarmaxval)
   computes_2d_histograms_jorek_particles(p_groups,'v',deathvalue,bins=bins2d,\
-  fontsize=fontsize,colormap=colormap)
+  fontsize=fontsize,colormap=colormap,colorbarmaxval=colorbarmaxval)
   # plot 2d histograms with slicing
   if(len(spatial_slice_ids)!=0 and len(spatial_slice_intervals)==2*len(spatial_slice_ids)):
     computes_phase_space_2d_sliced_histograms(p_groups,'x',slice_data_ids=spatial_slice_ids,\
     slice_data_intervals=spatial_slice_intervals,deathvalue=deathvalue,bins=bins2d,\
-    fontsize=fontsize,colormap=colormap)
+    fontsize=fontsize,colormap=colormap,colorbarmaxval=colorbarmaxval)
   else:
     print("spatial slice lists not compatible or empty: skip spatial slices histograms")
   if(len(velocity_slice_ids)!=0 and len(velocity_slice_intervals)==2*len(velocity_slice_ids)):
     computes_phase_space_2d_sliced_histograms(p_groups,'v',slice_data_ids=spatial_slice_ids,\
     slice_data_intervals=spatial_slice_intervals,deathvalue=deathvalue,bins=bins2d,\
-    fontsize=fontsize,colormap=colormap)
+    fontsize=fontsize,colormap=colormap,colorbarmaxval=colorbarmaxval)
   else:
     print("velocity slice lists not compatible or empty: skip velocity slices histograms") 
 
@@ -316,6 +320,9 @@ def generate_argument_parser():
   dest='fontsize',default=18,help='plot font size, default: 18')
   parser.add_argument('--colormap','-cmap',type=str,action='store',required=False,\
   dest='colormap',default='inferno',help='colormap of 2D histograms, default: inferno')
+  parser.add_argument('--colorbarmaxval','-cbmv',type=float,nargs='*',action='store',\
+  required=False,dest='colorbarmaxval',default=[1e0,1e0,1e0,1e0],\
+  help='colorbar scaling values of 2D histograms, default: [1.,1.,1.,1.]')
   parser.add_argument('--deathvalue','-dval',type=int,action='store',required=False,\
   dest='deathvalue',default=0,\
   help='flag value below which a particle is set to inactive, default: 0') 
@@ -342,6 +349,7 @@ if __name__ == "__main__":
   spatial_slice_ids=args.spatial_slice_ids,\
   spatial_slice_intervals=args.spatial_slice_intervals,\
   velocity_slice_ids=args.velocity_slice_ids,\
-  velocity_slice_intervals=args.velocity_slice_intervals)
+  velocity_slice_intervals=args.velocity_slice_intervals,\
+  colorbarmaxval=args.colorbarmaxval)
 
 # ----------------------------------------------------- #

@@ -76,6 +76,7 @@ def assemble_common_coordinate_ranges(test_tables,ref_tables):
     upper_bound = amax(array([test_coordinate_ranges[1,:],ref_coordinate_ranges[1,:]]),axis=0)
     common_coordintate_ranges.append(array([lower_bound,upper_bound]))
   common_coordintate_ranges = transpose(array(common_coordintate_ranges),axes=[0,2,1])
+  print('histogram range: ',common_coordintate_ranges)
   return common_coordintate_ranges
 
 # compute the multivariate histograms for all particle tables    
@@ -110,7 +111,7 @@ def compute_L_error(diff_histogram,order=2,axis=None,bins=[]):
     L_error = L_error/prod(bins[axis])
   return L_error 
 
-# compute L-order error between histograms, the number of particle tables between
+# compute L-order error between histograms. The number of particle tables between
 # test and reference simulations must be the same
 def compute_histogram_L_error(test_histograms,ref_histograms,orders=[1,2],axis=None,bins=[]):
   from numpy import array
@@ -129,7 +130,7 @@ def log_histogram_L_errors(histogram_L_errors,orders):
       print("".join(['Particle table N#: ',str(L_errors_id),' histogram L-',\
       str(orders[L_error_id]),' error: ',str(L_error)]))
 
-# log or plot the histogram L errors
+# log the histogram L errors
 def show_histogram_errors(histogram_L_errors,histogram_edges,orders):
   if(histogram_L_errors.ndim==2):
     log_histogram_L_errors(histogram_L_errors,orders)
@@ -153,8 +154,8 @@ nbins,L_error_orders):
   del test_tables,test_weights,ref_tables,ref_weights
   # compute histograms overall error 
   L_errors_all = compute_histogram_L_error(test_histograms,ref_histograms,\
-  orders=L_error_orders,axis=None)
-  # log or plot L-norm errors
+  orders=L_error_orders,axis=None,bins=[])
+  # log L-norm errors
   show_histogram_errors(L_errors_all,test_edges,L_error_orders)
 
 # argument parser

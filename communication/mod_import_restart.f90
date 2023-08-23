@@ -1093,7 +1093,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
   if(export_aux_node_list .and. associated(aux_node_list)) then
-     call tr_allocate(t_aux_values,1,aux_node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "aux_node_list%values",CAT_UNKNOWN)
+     call tr_allocate(t_aux_values,1,aux_node_list%n_nodes,1,n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "aux_node_list%values",CAT_UNKNOWN)
   end if
  
 #ifdef fullmhd
@@ -1198,6 +1198,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
     end do
 
     if(export_aux_node_list .and. associated(aux_node_list)) then
+     aux_node_list%node(i)%values = 0.d0
      do m=1,n_tor_tmp,2
       do k=1, n_tor,2
         do j=1,n_degrees_tmp 
@@ -2049,7 +2050,9 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   call tr_deallocate(t_x,"t_x",CAT_UNKNOWN)
   call tr_deallocate(t_values,"t_values",CAT_UNKNOWN)
   call tr_deallocate(t_deltas,"t_deltas",CAT_UNKNOWN)
-  call tr_deallocate(t_aux_values,"t_aux_values",CAT_UNKNOWN)
+  if(export_aux_node_list .and. associated(aux_node_list)) then
+     call tr_deallocate(t_aux_values,"t_aux_values",CAT_UNKNOWN)
+  endif
   call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
 
 #ifdef JECCD                   

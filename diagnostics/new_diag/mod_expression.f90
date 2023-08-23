@@ -554,6 +554,7 @@ module mod_expression
   
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
   subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+    use nodes_elements, only: aux_node_list
 
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
@@ -571,6 +572,7 @@ module mod_expression
     type(t_tor_pos), pointer :: tor_pos
     type(type_element)       :: element
     type(type_node)          :: nodes(n_vertex_max)
+    type(type_node)          :: aux_nodes(n_vertex_max)
     integer :: ipolpos, jpolpos, itorpos, iexpr, ielm, i, j, k, i_tor, n
     real*8  :: xjac, xjac_R, xjac_Z, R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt, &
       s, t, H(n_vertex_max,n_degrees), H_s(n_vertex_max,n_degrees), H_t(n_vertex_max,n_degrees),   &
@@ -603,7 +605,7 @@ module mod_expression
     real*8 :: T_or_Te, T_or_Te_corr, T_or_Te_0 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
-    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var), va(n_var), aux(n_var)
+    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var), va(n_var), aux(10)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Fluxes
     real*8  ::  ZKpar_flux, ZKipar_flux, ZKepar_flux, ZKperp_flux, ZKiperp_flux, ZKeperp_flux,     &
@@ -744,6 +746,9 @@ module mod_expression
         ! --- Elements and nodes
         element  = pol_pos%element
         nodes(:) = pol_pos%nodes(:)
+        if(export_aux_node_list .and. associated(aux_node_list)) then
+           aux_nodes(:) = aux_node_list%node(pol_pos%element%vertex(:))
+        endif
         
         ! --- Loop over toroidal positions
         loop_tor: do itorpos = 1, tor_pos_list%n_pos
@@ -788,6 +793,7 @@ module mod_expression
 
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
           Fprofile = 0.d0;  Fprofile_s = 0.d0;  Fprofile_t = 0.d0
+          aux = 0.d0
           
           ! --- Reconstruct variables
           do i = 1, n_vertex_max
@@ -814,9 +820,10 @@ module mod_expression
                 hhz_pp = HZ_pp(i_tor)
                 vv(:)  = 0.d0
                 vv(1:n_var)  = nodes(i)%values(i_tor,j,:)
-		aux = 0.d0
 		va(:)  = 0.d0
-                va(1:n_var)  = nodes(i)%values(i_tor,j,:)
+                if(export_aux_node_list .and. associated(aux_node_list)) then
+                   va(1:n_var)  = aux_nodes(i)%values(i_tor,j,:)
+                endif
                 
                 ! --- Poloidal Flux
                 ps0      = ps0      + vv(var_psi) * sz * hh    * hhz

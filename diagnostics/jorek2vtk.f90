@@ -179,7 +179,7 @@ write(*,*) '***************************************'
 call flush_it(6)
 
 allocate(node_list)
-allocate(aux_node_list)
+!allocate(aux_node_list)
 allocate(element_list)
 allocate(bnd_elm_list)
 allocate(bnd_node_list)
@@ -335,10 +335,17 @@ if (use_pellet) then
 endif
 
 if (include_psi_norm) then
-  call add_vtk_entry('psi_norm    ', 'psi_norm    ',    i_psin, n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('psi_norm    ', 'psi_norm    ',    i_psin, n_scalars, si_units, scalar_names)
 endif
 
 allocate(iibg(n_adas),iproj(n_var))
+
+if (include_projections) then
+  do i = 1, n_var
+    write(proj_label, '(a4,i2.2)') 'aux_', i
+    call add_vtk_entry(proj_label, proj_label, iproj(i), n_scalars, si_units, scalar_names) 
+  end do
+end if
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   if (include_neutral_dens) then
@@ -355,13 +362,6 @@ if (include_radiation) then
   call add_vtk_entry('Brems       ', 'Brems_Wm-3  ',    ineu(3), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Joule       ', 'Joule_Wm-3  ',    ineu(4), n_scalars, si_units, scalar_names) 
 #endif
-
-if (include_projections) then
-  do i = 1, n_var
-    write(proj_label, '(a4,i2.2)') 'aux_', i
-    call add_vtk_entry(proj_label, proj_label, iproj(i), n_scalars, si_units, scalar_names) 
-  end do
-end if
 
 #ifdef WITH_Impurities
   call add_vtk_entry('Ionis       ', 'Ionis_Jm-3  ',    iimp(1), n_scalars, si_units, scalar_names) 
@@ -425,15 +425,20 @@ do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-if (include_projections) then
-  filename_proj = trim(proj_basename)//'_restart.h5' ! only hdf5 format supported for particle projections
-  call import_hdf5_restart_aux(aux_node_list, filename_proj, rst_format, ierr)
-  if (ierr .ne. 0) then
-    write(*,*) 'ERROR: Cannot find projection restart file. Check if proj_basename is set properly.'
-    stop
-  end if
-end if
+!if (include_projections) then
+!  allocate(aux_node_list)
+!  filename_proj = trim(proj_basename)//'_restart.h5' ! only hdf5 format supported for particle projections
+!  call import_hdf5_restart_aux(aux_node_list, filename_proj, rst_format, ierr)
+!  if (ierr .ne. 0) then
+!    write(*,*) 'ERROR: Cannot find projection restart file. Check if proj_basename is set properly.'
+!    stop
+!  end if
+!end if
 
+if(include_projections) then
+   call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+   allocate(aux_node_list, source=node_list)   !!Maybe there is a better way. With this it writes restart time 2x
+endif
 call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points

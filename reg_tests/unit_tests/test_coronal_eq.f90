@@ -30,6 +30,7 @@ end subroutine setup_test_coronal_eq
 
 !> For a single density test that <Z> is increasing with T
 subroutine test_coronal_Z_increasing
+  use mod_impurity, only: output_coronal
   type(coronal) :: cor
   integer :: i, j, i_set
   real*8 :: Z_eff, Z_eff_old
@@ -37,7 +38,7 @@ subroutine test_coronal_Z_increasing
 
   do i_set = 1,size(sets,1)
     cor = coronal(adas(i_set))
-    if (i_set .eq. 7) call output_coronal(cor)
+    if (i_set .eq. 7) call output_coronal(cor,i_set)
     Z_eff_old = 0.d0
     do i=1,size(cor%temperature,1)
       Z_eff = sum(cor%Z(1, i, :) * [(j,j=0,cor%n_Z)])

@@ -197,17 +197,16 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       endif ! --- end second method to check private regions
       
       if (.not. is_private) then
-        psma = max(psma,psmima)
-        psmi = min(psmi,psmima) 
+
     
-        if (psmi .lt. psi_min) then
-          psi_min = psmi
+        if (psmima .lt. psi_min) then
+          psi_min = psmima
           r_min   = r
           i_min   = ibnd
         endif
     
-        if (psma .gt. psi_max) then
-          psi_max = psma
+        if (psmima .gt. psi_max) then
+          psi_max = psmima
           r_max   = r
           i_max   = ibnd
         endif

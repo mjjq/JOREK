@@ -104,17 +104,22 @@ function scanfile() {
       has_setup=1
     fi
   fi
-  # Look for any subroutines called setup_* or *_setup
-  grep -o 'subroutine setup_[^ ]*\|subroutine [^ ]*_setup' "$file" >> $outfile.setup
-  # Look for any subroutines called test_* or *_test
   # might contain duplicates due to end subroutine. Remove those later
-  grep -o 'subroutine test_[^ ]*' "$file" >> $outfile.tests
-  # Look for any subroutines called teardown_* or *_teardo
-  grep -o 'subroutine teardown_[^ ]*\|subroutine [^ ]*_teardown' "$file" >> $outfile.teardown
-
-  # Look for teardown subroutine (global, can be only one)
-  if grep -q 'subroutine \bteardown\b' "$file"; then
-    has_teardown=1
+  # if a test wrapper is found then just use the test wrapper and skip
+  # otherwise use all test functions
+  if grep -Eq '*subroutine run_fruit_*' "$file"; then
+    grep -o 'subroutine run_fruit_[^ ]*' "$file" >> $outfile.tests
+  else
+    # Look for any subroutines called setup_* or *_setup
+    grep -o 'subroutine setup_[^ ]*\|subroutine [^ ]*_setup' "$file" >> $outfile.setup
+    # Look for any subroutines called test_* or *_test
+    grep -o 'subroutine test_[^ ]*' "$file" >> $outfile.tests
+    # Look for any subroutines called teardown_* or *_teardo
+    grep -o 'subroutine teardown_[^ ]*\|subroutine [^ ]*_teardown' "$file" >> $outfile.teardown
+    # Look for teardown subroutine (global, can be only one)
+    if grep -q 'subroutine \bteardown\b' "$file"; then
+      has_teardown=1
+    fi
   fi
 }
 
@@ -131,6 +136,8 @@ function writetest() {
   if [ ! -z "$test_only" ]; then
     # Filter out the subroutine if we wish to test only one
     uniq $outfile.tests | grep -F "subroutine $test_only" | sed -e 's/subroutine \([^ ]*\)/call run_test_case(\1,"\1")/g' >> $outfile.f90
+  elif grep -Eq 'subroutine run_fruit_*' $outfile.tests; then
+    uniq $outfile.tests | grep -F "*subroutine run_fruit" | sed -e 's/subroutine/call/g' >> $outfile.f90
   else
     uniq $outfile.tests | sed -e 's/subroutine \([^ ]*\)/call run_test_case(\1,"\1")/g' >> $outfile.f90
   fi

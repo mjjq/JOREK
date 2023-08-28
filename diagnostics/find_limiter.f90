@@ -182,7 +182,7 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
           if (get_psi_n(P,Z) > 1.d0) then
             if ((P < ES%psi_bnd) .and. (ES%axis_is_psi_minimum)) then
               is_private = .true.
-            elseif (P > ES%psi_bnd) .and. (.not. ES%axis_is_psi_minimum)) then           
+            else if ((P > ES%psi_bnd) .and. (.not. ES%axis_is_psi_minimum)) then           
               is_private = .true. 
             else
               is_private = .false.

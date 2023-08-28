@@ -95,7 +95,7 @@ function scanfile() {
   fi
   echo "Scanning $file"
   # Look for any lines named module *
-  grep -Eo '^ *module [[:alnum:]_]*' "$file" | sed 's/module/use/g' >> $outfile.mods
+  grep -Eo '^ *module [[:alnum:]_]*' "$file" | grep -vE "*module procedure*" | sed 's/module/use/g' >> $outfile.mods
   # Look for setup subroutine (global, can be only one)
   if grep -q 'subroutine \bsetup\b' "$file"; then
     if [ "$has_setup" -eq 1 ]; then

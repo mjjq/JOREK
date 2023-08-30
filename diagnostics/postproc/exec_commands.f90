@@ -303,7 +303,12 @@ module exec_commands
     
     ierr = 0
     
-    write(file_name,'(a,i5.5)') 'jorek', istep
+    if ( more_outfile_digits) then
+      write(file_name,'(a,i6.6)') 'jorek', istep
+    else
+      write(file_name,'(a,i5.5)') 'jorek', istep
+    end if
+
     if ( rst_hdf5 .ne. 0 ) then
       inquire (file=trim(file_name)//'.h5', exist=file_exists)
     else
@@ -315,7 +320,11 @@ module exec_commands
     end if
     
     write(*,*)
-    write(*,'(a,i5.5,a)') '#################### TIME STEP ', istep, ' ####################'
+    if ( more_outfile_digits) then
+      write(*,'(a,i6.6,a)') '#################### TIME STEP ', istep, ' ####################'
+    else
+      write(*,'(a,i5.5,a)') '#################### TIME STEP ', istep, ' ####################'
+    end if
     write(*,*)
     
     ! --- Load the restart file
@@ -567,23 +576,44 @@ module exec_commands
       ! --- Get list of available restart files
       n_avail=0
       allocate(available_steps(100000))
-      do istep = 0, 99999
-        if ( rst_hdf5 .ne. 0 ) then
-          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.h5'
-          inquire (file=file_name, exist=file_exists)
-        else
-          write (file_name,'(a, i5.5, a)') 'jorek', istep, '.rst'
-          inquire (file=file_name, exist=file_exists)
-        end if
+      if ( more_outfile_digits) then
+        do istep = 0, 999999
+          if ( rst_hdf5 .ne. 0 ) then
+            write (file_name,'(a, i6.6, a)') 'jorek', istep, '.h5'
+            inquire (file=file_name, exist=file_exists)
+          else
+            write (file_name,'(a, i6.6, a)') 'jorek', istep, '.rst'
+            inquire (file=file_name, exist=file_exists)
+          end if
 
-        if ( file_exists ) then
-          n_avail=n_avail+1					
-          available_steps(n_avail) = istep
-        end if
-      end do
+          if ( file_exists ) then
+            n_avail=n_avail+1					
+            available_steps(n_avail) = istep
+          end if
+        end do
+      else
+        do istep = 0, 99999
+          if ( rst_hdf5 .ne. 0 ) then
+            write (file_name,'(a, i5.5, a)') 'jorek', istep, '.h5'
+            inquire (file=file_name, exist=file_exists)
+          else
+            write (file_name,'(a, i5.5, a)') 'jorek', istep, '.rst'
+            inquire (file=file_name, exist=file_exists)
+          end if
+
+          if ( file_exists ) then
+            n_avail=n_avail+1					
+            available_steps(n_avail) = istep
+          end if
+        end do
+      end if
 
       ! --- Get xtime from the restart file with the highest step number
-      write (file_name,'(a, i5.5)') 'jorek', available_steps(n_avail)
+      if ( more_outfile_digits) then
+        write (file_name,'(a, i6.6)') 'jorek', available_steps(n_avail)
+      else
+        write (file_name,'(a, i5.5)') 'jorek', available_steps(n_avail)
+      end if
       call import_restart(node_list, element_list, file_name, rst_format, ierr, .true.)
       if ( ierr /= 0 ) return
 
@@ -628,8 +658,13 @@ module exec_commands
           n_select                 = n_select+1
           selected_steps(n_select) = temp_select
 
-          write(*,'(a, i5.5, a,f13.6)') 'Selected Step: ', selected_steps(n_select),&
-          ' at t=',xtime(selected_steps(n_select))
+          if ( more_outfile_digits) then
+            write(*,'(a, i6.6, a,f13.6)') 'Selected Step: ', selected_steps(n_select),&
+            ' at t=',xtime(selected_steps(n_select))
+          else
+            write(*,'(a, i5.5, a,f13.6)') 'Selected Step: ', selected_steps(n_select),&
+            ' at t=',xtime(selected_steps(n_select))
+          end if
           write(*,'(a,f13.6,a)') '                        (=',xtime(selected_steps(n_select))*loop_fact_Time*1000,' ms)'
         end if
 
@@ -666,8 +701,13 @@ module exec_commands
     end do
     
     if ( first_step ) then
-      write(*,'(a,i5.5,a,i5.5,a)') 'WARNING: There were no restart files for steps ',              &
-        loop_min_step, ' to ', loop_max_step, '.'
+      if ( more_outfile_digits) then
+        write(*,'(a,i6.6,a,i6.6,a)') 'WARNING: There were no restart files for steps ',              &
+               loop_min_step, ' to ', loop_max_step, '.'
+      else
+        write(*,'(a,i5.5,a,i5.5,a)') 'WARNING: There were no restart files for steps ',              &
+               loop_min_step, ' to ', loop_max_step, '.'
+      end if
     end if
     
     n_queued_commands = 0
@@ -778,14 +818,25 @@ module exec_commands
     integer             :: i
     
     write(*,'(a)') 'Available restart files:'
-    do i = 0, 99999
-      write (filename,'(a, i5.5, a)') 'jorek', i, '.rst'
-      inquire (file=filename, exist=file_exists)
-      if (file_exists) write(*,'(i6)',advance='no') i
-      write (filename,'(a, i5.5, a)') 'jorek', i, '.h5'
-      inquire (file=filename, exist=file_exists)
-      if (file_exists) write(*,'(i6)',advance='no') i
-    end do
+    if ( more_outfile_digits) then
+      do i = 0, 999999
+        write (filename,'(a, i6.6, a)') 'jorek', i, '.rst'
+        inquire (file=filename, exist=file_exists)
+        if (file_exists) write(*,'(i6)',advance='no') i
+        write (filename,'(a, i6.6, a)') 'jorek', i, '.h5'
+        inquire (file=filename, exist=file_exists)
+        if (file_exists) write(*,'(i6)',advance='no') i
+      end do
+    else
+      do i = 0, 99999
+        write (filename,'(a, i5.5, a)') 'jorek', i, '.rst'
+        inquire (file=filename, exist=file_exists)
+        if (file_exists) write(*,'(i6)',advance='no') i
+        write (filename,'(a, i5.5, a)') 'jorek', i, '.h5'
+        inquire (file=filename, exist=file_exists)
+        if (file_exists) write(*,'(i6)',advance='no') i
+      end do
+    end if
     write(*,*)
     
   end subroutine timesteps
@@ -1062,10 +1113,18 @@ module exec_commands
       prefix='_t'
     end if
 
-    if ( min_step /= max_step ) then
-      write(step_range_string,'(a,i5.5,a,i5.5)') prefix, min_step, '..', max_step
+    if ( more_outfile_digits) then
+      if ( min_step /= max_step ) then
+        write(step_range_string,'(a,i6.6,a,i6.6)') prefix, min_step, '..', max_step
+      else
+        write(step_range_string,'(a,i6.6)') prefix, min_step
+      end if
     else
-      write(step_range_string,'(a,i5.5)') prefix, min_step
+      if ( min_step /= max_step ) then
+        write(step_range_string,'(a,i5.5,a,i5.5)') prefix, min_step, '..', max_step
+      else
+        write(step_range_string,'(a,i5.5)') prefix, min_step
+      end if
     end if
 
   end function step_range_string

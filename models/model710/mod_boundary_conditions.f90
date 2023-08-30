@@ -28,6 +28,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 xcase2, R_axis, Z_axis, psi_axis, psi_bnd,                &
                                 R_xpoint, Z_xpoint, psi_xpoint, a_mat)
 
+use constants
 use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
 use data_structure
 use vacuum, ONLY: is_freebound
@@ -35,13 +36,15 @@ use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_co
        psi_RMP_sin, dpsi_RMP_sin_dR, dpsi_RMP_sin_dZ, t_now, RMP_growth_rate, RMP_ramp_up_time,            &
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
        mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef, no_mach1_bc, Mach1_openBC, Mach1_fix_B, &
-       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const
+       Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const, &
+       loop_voltage, loop_voltage_control, central_density, central_mass
 use tr_module
 use mpi_mod
 use mod_basisfunctions
 use mod_interp
 use mod_integer_types
 use mod_node_indices
+use mod_locate_irn_jcn
 
 implicit none
 
@@ -137,6 +140,8 @@ real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, 
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), index_tmp, kk, ll
 logical, parameter :: include_2nd_derivatives = .false.
 
+integer               :: n_tor_local
+
 
 RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
@@ -186,6 +191,7 @@ RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
 
 end if RMPspectrum
 
+n_tor_local = a_mat%i_tor_max - a_mat%i_tor_min +1 
 zbig        = 1.d12
 zbig_backup = zbig
 
@@ -405,6 +411,48 @@ do i=1, n_local_elms !=== do elements
             endif
 
           endif ! --- apply Dirichlet
+
+          !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
+          if ((node_list%node(inode)%boundary == 2) .or. (node_list%node(inode)%boundary == 3)) then
+
+            if ( (.not. is_freebound(in,k)) ) then ! apply fixed boundary conditions where necessary
+
+              index_node = node_list%node(inode)%index(1)
+              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+
+                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
+                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-a_mat%i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
+
+                a_mat%irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
+                a_mat%jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
+                a_mat%val(ilarge2) = zbig
+
+                if ( ( loop_voltage .ne. 0.d0 ) .or. ( loop_voltage_control .ne. 0.d0 ) ) then     
+                  if ( (k == 1) .and. (in == 1) ) then
+                    call boundary_conditions_add_RHS(       &
+                          index_node, k, in,               & ! use_murge, use_murge_element,      &
+                          index_min, index_max,              &
+                          RHS_loc, ZBIG * ((loop_voltage_control+loop_voltage)/2.d0/PI*sqrt(MU_ZERO*central_density*central_mass*mass_proton*1.d20)) * tstep, &
+                          a_mat%i_tor_min, a_mat%i_tor_max)
+                  end if
+                end if
+
+              endif
+
+              index_node = node_list%node(inode)%index(3)
+              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
+
+                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
+                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-a_mat%i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
+
+                a_mat%irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
+                a_mat%jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
+                a_mat%val(ilarge2) = zbig
+              end if
+
+            endif
+          endif
+
         enddo ! ---  variables
 
         ! --- Apply Mach1

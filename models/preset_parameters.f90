@@ -13,6 +13,12 @@ subroutine preset_parameters
   
   n_tor_fft_thresh = 2
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
+
+  loop_voltage = 0.d0
+  loop_voltage_prop = 0.d0
+  loop_voltage_der = 0.d0
+  loop_voltage_int = 0.d0
+  I_target = 0.d0
   
   ! --- DoubleNull flag
   xcase = LOWER_XPOINT
@@ -337,6 +343,11 @@ subroutine preset_parameters
   neutral_line_R_end        = 2.d20
   neutral_line_Z_end        = 2.d20
 
+  particlesource_fix_profile                = .false.
+  particlesource_fix_profile_allow_negative = .false.
+  particlesource_fix_profile_tsteps         = 2.0
+  particlesource_fix_profile_psi_max        = 0.9
+
   ! ------------------------------------------
   ! --- Default boundary conditions ----------
   ! ------------------------------------------
@@ -558,6 +569,8 @@ subroutine preset_parameters
   R_Z_psi_bnd_file   = 'none'
   wall_file          = 'none'
   rot_file           = 'none'
+  Jsource_file       = 'none'
+  heatsource_file    = 'none'
   normalized_velocity_profile = .true.
 
   n_Fprofile_internal = 300 ! model710 only: size of internal numerical F-profile
@@ -655,6 +668,9 @@ subroutine preset_parameters
   pastix_blr_abs_tol = .true.               ! Use absolute tolerance
   epsilon_BLR        = 0.                   ! Accuracy of BLR compression (0. = lossless)
   just_in_time_BLR   = .true.               ! Use Just-in-time strategy for BLR compression (.false. = memory-optimal)
+
+  more_outfile_digits = .false.             ! .true. for having 6 digit time stamps in h5 output instead of 5
+
   pastix_maxthrd     = 1024
   use_newton         = .false.
   maxNewton          = 20

@@ -201,6 +201,26 @@ if (with_TiTe) then
   end if
 end if
 
+if ( num_Jsource ) then
+  call MPI_BCAST(num_Jsource_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_Jsource_x,1,num_Jsource_len,"num_Jsource_x")
+     call tr_allocate(num_Jsource_y,1,num_Jsource_len,"num_Jsource_y")
+  end if
+  call MPI_BCAST(num_Jsource_x,num_Jsource_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_Jsource_y,num_Jsource_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
+if ( num_heatsource ) then
+  call MPI_BCAST(num_heatsource_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_heatsource_x,1,num_heatsource_len,"num_heatsource_x")
+     call tr_allocate(num_heatsource_y,1,num_heatsource_len,"num_heatsource_y")
+  end if
+  call MPI_BCAST(num_heatsource_x,num_heatsource_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_heatsource_y,num_heatsource_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
 if (NEO) then
    if ( num_neo_file ) then
       call MPI_BCAST(num_neo_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)

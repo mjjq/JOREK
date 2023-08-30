@@ -110,6 +110,7 @@ program JOREK2
 
   end interface
   
+  real*8                   :: deriv, integ, I_error
   type (type_surface_list) :: surface_list
   real*8                   :: W_mag(n_tor), W_kin(n_tor), growth_mag, growth_kin, growth_mag0, growth_kin0
 #ifdef JECCD
@@ -547,7 +548,11 @@ mpi_required = 0
   ! --- Export a restart file before the first timestep
   if ( (my_id == 0) .and. (.not. restart) ) then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
-    fileout = 'jorek00000'
+    if ( more_outfile_digits) then
+      fileout = 'jorek000000'
+    else
+      fileout = 'jorek00000'
+    end if
     call export_restart(node_list, element_list, fileout)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
   end if
@@ -595,7 +600,41 @@ mpi_required = 0
 
     ! start from t=0 
     if (index_now <= 1) tstep_prev = tstep
+
+    loop_voltage_control = 0.d0
     
+    if ( my_id == 0 ) then
+      loop_voltage_control = 0.d0
+      if ( index_now > 2 ) then
+     
+          !if ( (loop_voltage_prop .ne. 0.d0) .or. (loop_voltage_der .ne. 0.d0) .or. (loop_voltage_int .ne. 0.d0) ) then
+          !  ! --- loop voltage feedback control
+          !  deriv = - ( current_t(index_now) - current_t(index_now-1) ) / (xtime(index_now) - xtime(index_now-1) )
+          !  integ = 0.d0
+          !  do i = 1, index_now-1
+          !    integ = integ + ( I_target - ( current_t(i) + current_t(i+1) ) * 0.5d0 ) * ( xtime(i+1) - xtime(i) )
+          !  end do
+          !  I_error = I_target - current_t(index_now)
+          !  loop_voltage_control = loop_voltage_prop * I_error + loop_voltage_der * deriv + loop_voltage_int * integ 
+          !end if
+	
+	        if ( (loop_voltage_prop .ne. 0.d0) .or. (loop_voltage_der .ne. 0.d0) .or. (loop_voltage_int .ne. 0.d0) ) then
+            ! --- loop voltage feedback control
+            deriv =  ( Ip_tot_t(index_now) - Ip_tot_t(index_now-1) ) / (xtime(index_now) - xtime(index_now-1) )
+            integ = 0.d0
+            do i = 1, index_now-1
+              integ = integ + ( I_target + ( Ip_tot_t(i) + Ip_tot_t(i+1) ) * 0.5d0 ) * ( xtime(i+1) - xtime(i) )
+            end do
+            I_error = I_target + Ip_tot_t(index_now)
+            loop_voltage_control = loop_voltage_prop * I_error + loop_voltage_der * deriv + loop_voltage_int * integ 
+          end if
+        
+      end if 
+    end if
+
+    call MPI_BCAST(loop_voltage_control,   1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)  
+    write(*,*) 'LOOP VOLTAGE CONTROL  ', my_id, index_now, loop_voltage_control
+
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'
       write(*,'(A17,3i7,2f14.5,A)') ' *   time step : ',jstep,istep,index_now,tstep,tstep_prev,'  *'
@@ -833,7 +872,11 @@ mpi_required = 0
     ! --- Write a restart file every nout timesteps
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
-      write(fileout,'(A5,i5.5)') 'jorek',index_now
+      if ( more_outfile_digits) then
+        write(fileout,'(A5,i6.6)') 'jorek',index_now
+      else
+        write(fileout,'(A5,i5.5)') 'jorek',index_now
+      end if
       call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     endif

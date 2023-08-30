@@ -8,6 +8,13 @@ module phys_module
   use mod_coronal
 
   implicit none
+
+  real*8  :: loop_voltage
+  real*8  :: loop_voltage_control
+  real*8  :: loop_voltage_prop
+  real*8  :: loop_voltage_der
+  real*8  :: loop_voltage_int
+  real*8  :: I_target
   
   !> @name Various parameters
   real*8  :: eta                  !< Resistivity at plasma cener (normalized)
@@ -114,6 +121,7 @@ module phys_module
   logical :: export_for_nemec     !< Export equilibrium information for the NEMEC code?
   logical :: use_murge            !< (Deprecated, Cannot be used any more)
   logical :: use_murge_element    !< (Deprecated, Cannot be used any more)
+  logical :: more_outfile_digits  !< set number of digits for output file time stamp to 6 instead of 5
   logical :: use_BLR_compression  !< Use Block-Low-Rank (BLR) compression in MUMPS / PaStiX 6 solvers
   real*8  :: epsilon_BLR          !< Accuracy of BLR compression
   logical :: just_in_time_BLR     !< Use Just-in-time strategy for BLR compression (speed optimized)
@@ -280,6 +288,11 @@ module phys_module
   real*8  :: heatsource_gauss_e_sig    !< Width over which electrons Gaussian source extends
   real*8  :: heatsource_gauss_i_psin   !< Position around which ions Gaussian source is located
   real*8  :: heatsource_gauss_i_sig    !< Width over which ions Gaussian source extends
+
+  logical :: particlesource_fix_profile                  !< adaptive source to fix profile onto input Grad-Shafranov profile
+  logical :: particlesource_fix_profile_allow_negative   !< allow a negative source
+  real*8  :: particlesource_fix_profile_tsteps           !< time-scale over which this is enforced (ideally >=2)
+  real*8  :: particlesource_fix_profile_psi_max          !< max psi-norm where this is applied
   real*8  :: constant_imp_source       !< Adds a constant impurity source
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
@@ -637,6 +650,20 @@ module phys_module
   real*8, allocatable :: num_zk_e_perp_y(:) !< ZK_perp values of zk_e_perp profile
   real*8, allocatable :: num_zk_i_perp_x(:) !< Psi_N values of zk_i_perp profile
   real*8, allocatable :: num_zk_i_perp_y(:) !< ZK_perp values of zk_i_perp profile
+
+  !> @name Numerical toroidal current source profile
+  character(len=512)  :: Jsource_file       !< ASCII file with toroidal current density source profile
+  logical             :: num_Jsource        !< automatically set true if Jsource_file /= 'none'
+  integer             :: num_Jsource_len    !< Number of datapoints in Jsource profile
+  real*8, allocatable :: num_Jsource_x(:)   !< Psi_N values of Jsource profile
+  real*8, allocatable :: num_Jsource_y(:)   !< Jsource values of Jsource profile
+
+  !> @name Numerical heat source profile
+  character(len=512)  :: heatsource_file       !< ASCII file with heat source profile
+  logical             :: num_heatsource        !< automatically set true if heatsource_file /= 'none'
+  integer             :: num_heatsource_len    !< Number of datapoints in heatsource profile
+  real*8, allocatable :: num_heatsource_x(:)   !< Psi_N values of heatsource profile
+  real*8, allocatable :: num_heatsource_y(:)   !< heatsource values of heatsource profile
   
   !> @name Analytical input profile for the density
   real*8  :: rho_0             !< Central normalized density (usually 1)

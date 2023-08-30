@@ -464,8 +464,12 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
     write(*,REAL_FMT) 'ZK_par_SpitzerHaerm (not input parameter; printed for reference in JOREK units)', ZK_par_SpitzerHaerm
     write(*,LOGI_FMT) 'ZKpar_T_dependent     ', ZKpar_T_dependent
     write(*,REAL_FMT) 'heatsource            ', heatsource
-    write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
-    write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
+    if ( .not. num_heatsource ) then
+      write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
+      write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
+    else
+      write(*,CHAR_FMT) 'heatsource_file          ', trim(heatsource_file)
+    end if
     write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
     write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
     write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
@@ -476,6 +480,9 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   else
     write(*,CHAR_FMT) 'D_perp_file           ', trim(D_perp_file)
   end if
+  if ( num_Jsource ) then
+    write(*,CHAR_FMT) 'Jsource_file          ', trim(Jsource_file)
+  end if
 #ifdef WITH_Impurities
   write(*,REAL_FMT) 'D_par_imp               ', D_par_imp
   if ( .not. num_d_perp_imp ) then
@@ -484,12 +491,22 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
     write(*,CHAR_FMT) 'D_perp_imp_file       ', trim(D_perp_imp_file)
   end if
 #endif
+  write(*,REAL_FMT) 'loop_voltage          ', loop_voltage
+  write(*,REAL_FMT) 'loop_voltage_control  ', loop_voltage_control
+  write(*,REAL_FMT) 'loop_voltage_prop     ', loop_voltage_prop
+  write(*,REAL_FMT) 'loop_voltage_der      ', loop_voltage_der
+  write(*,REAL_FMT) 'loop_voltage_int      ', loop_voltage_int
+  write(*,REAL_FMT) 'I_target              ', I_target
   write(*,REAL_FMT) 'particlesource        ', particlesource
   write(*,REAL_FMT) 'particlesource_psin   ', particlesource_psin
   write(*,REAL_FMT) 'particlesource_sig    ', particlesource_sig
   write(*,REAL_FMT) 'edgeparticlesource    ', edgeparticlesource
   write(*,REAL_FMT) 'edgeparticlesource_psin', edgeparticlesource_psin
   write(*,REAL_FMT) 'edgeparticlesource_sig', edgeparticlesource_sig
+  write(*,LOGI_FMT) 'particlesource_fix_profile               ',particlesource_fix_profile
+  write(*,LOGI_FMT) 'particlesource_fix_profile_allow_negative',particlesource_fix_profile_allow_negative
+  write(*,REAL_FMT) 'particlesource_fix_profile_tsteps        ',particlesource_fix_profile_tsteps
+  write(*,REAL_FMT) 'particlesource_fix_profile_psi_max       ',particlesource_fix_profile_psi_max
   write(*,REAL_FMT) 'particlesource_gauss  ', particlesource_gauss
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig
@@ -796,6 +813,7 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,LOGI_FMT) 'adaptive_time         ', adaptive_time
   write(*,LOGI_FMT) 'equil                 ', equil
   write(*,LOGI_FMT) 'bench_without_plot    ', bench_without_plot
+  write(*,LOGI_FMT) 'more_outfile_digits   ', more_outfile_digits
   write(*,LOGI_FMT) 'mach_one_bnd_integral ', mach_one_bnd_integral
   write(*,LOGI_FMT) 'deuterium_adas        ', deuterium_adas       
   write(*,LOGI_FMT) 'deuterium_adas_1e20   ', deuterium_adas_1e20

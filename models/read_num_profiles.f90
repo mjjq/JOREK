@@ -174,8 +174,20 @@ subroutine read_num_profiles(my_id)
     call readProf(num_rot_x, num_rot_y0, num_rot_len, rot_file)
     call check_num_prof(num_rot, num_rot_x, num_rot_y0, num_rot_len, 'rot', check_positive=.false.)
   end if
+
+  num_Jsource = ( Jsource_file /= 'none' )
+  if ( num_Jsource .and. ( my_id == 0 ) ) then
+    call readProf(num_Jsource_x, num_Jsource_y, num_Jsource_len, Jsource_file)
+    call check_num_prof(num_Jsource, num_Jsource_x, num_Jsource_y, num_Jsource_len, 'Jsource',          &
+      check_positive=.false.)
+  end if
   
-  
+  num_heatsource = ( heatsource_file /= 'none' )
+  if ( num_heatsource .and. ( my_id == 0 ) ) then
+    call readProf(num_heatsource_x, num_heatsource_y, num_heatsource_len, heatsource_file)
+    call check_num_prof(num_heatsource, num_heatsource_x, num_heatsource_y, num_heatsource_len, 'heatsource',          &
+      check_positive=.true.)
+  end if    
   
   contains
   

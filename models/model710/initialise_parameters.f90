@@ -50,16 +50,22 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 tokamak_device, manipulate_psi_map,                 &
                 F0, gamma, gamma_stangeby,                          &
                 zjz_0, zjz_1, zj_coef,                              &
+                loop_voltage, loop_voltage_prop,                    &
+                loop_voltage_der, loop_voltage_int, I_target,       &
                 rho_0, rho_1, rho_coef, rho_min,                    &
                 T_0,   T_1,   T_coef, T_min,                        &
-				T_min_neg,rho_min_neg,                              &
-				corr_neg_temp_coef, corr_neg_dens_coef,             &
+				        T_min_neg,rho_min_neg,                              &
+				        corr_neg_temp_coef, corr_neg_dens_coef,             &
                 FF_0,  FF_1,  FF_coef,                              &
                 V_0, V_1, V_coef,                                   &
                 ZK_par, ZK_perp, ZK_par_max, D_par, D_perp,         &
                 eta, visco, visco_par, ZK_perp_num,                 &
                 eta_num, visco_num, visco_par_num, D_perp_num,      &
                 particlesource, heatsource, tauIC,                  &
+                particlesource_fix_profile               ,          &
+                particlesource_fix_profile_allow_negative,          &
+                particlesource_fix_profile_tsteps        ,          &
+                particlesource_fix_profile_psi_max       ,          &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi,                       &
@@ -69,6 +75,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xcase, time_evol_scheme,                            &
                 freeboundary_equil,                                 &
                 rho_file, T_file, ffprime_file, Fprofile_file,      &
+                Jsource_file, ZK_perp_file, heatsource_file,                      &
                 bc_natural_open, bc_natural_flux, gamma_sheath,     &
                 freeboundary, resistive_wall, freeb_change_indices, &
                 use_mumps_eq, use_pastix_eq, use_strumpack_eq,      &
@@ -113,7 +120,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 autodistribute_modes, modes_per_family,             &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
-                ranks_per_family, treat_axis, force_central_node,   &
+                ranks_per_family, treat_axis,                       &
+                more_outfile_digits,                                &
+                force_central_node,                                 &
                 n_particles, tstep_particles, nstep_particles,      & !Particles extension
                 nsubstep_particles, restart_particles,              &
                 filter_perp,    filter_hyper,    filter_par,        &

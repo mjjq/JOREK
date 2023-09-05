@@ -411,7 +411,7 @@ do i=1, n_local_elms !=== do elements
             endif
 
           endif ! --- apply Dirichlet
-
+#if 0
           !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
           if ((node_list%node(inode)%boundary == 2) .or. (node_list%node(inode)%boundary == 3)) then
 
@@ -452,7 +452,7 @@ do i=1, n_local_elms !=== do elements
 
             endif
           endif
-
+#endif
         enddo ! ---  variables
 
         ! --- Apply Mach1

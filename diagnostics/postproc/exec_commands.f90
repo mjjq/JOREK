@@ -1721,16 +1721,17 @@ module exec_commands
 
 
   !> Toroidally and poloidally averaged expressions.
-  subroutine average(command, first_step, ierr, res1d_tmp)
+  subroutine average(command, first_step, ierr, res1d_tmp, flux_av)
     
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
     integer,            intent(out) :: ierr        !< Error flag
     real*8, allocatable, optional, intent(out) :: res1d_tmp(:,:)
+    logical, optional, intent(in)   :: flux_av     !< Perform proper flux average
     
     ! --- Local variables
-    integer :: units, npts, nsmall
+    integer :: units, npts, nsmall, i_exp
     character(len=1024) :: filename, comment
     type(t_pol_pos_list), save :: pol_pos_list
     type(t_tor_pos_list), save :: tor_pos_list
@@ -1753,10 +1754,22 @@ module exec_commands
     pol_pos_list = pol_pos(node_list, element_list, ES, nPsiN=npts, nTht=max(150,6*n_plane),                &
       nsmallsteps=nsmall)
     tor_pos_list = tor_pos(nphi=max(n_plane,2))
-    
-    call eval_expr(ES, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+
+    if (present(flux_av)) then 
+      call add(expr_list, 'unity       ', 'Cylindrical Coordinate phi                            ')
+    endif
+
+    call eval_expr(ES, units, expr_list, pol_pos_list, tor_pos_list, result, ierr, flux_av)
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
     call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
+
+    if (present(flux_av)) then 
+      if (flux_av) then
+        do i_exp=1, expr_list%n_expr
+          res1d(:,i_exp) = res1d(:,i_exp) / res1d(:,expr_list%n_expr)  ! Need to normalize for flux average
+        enddo
+      endif      
+    endif
     
     if (present(res1d_tmp)) then
       allocate( res1d_tmp(size(res1d,1),size(res1d,2)) )

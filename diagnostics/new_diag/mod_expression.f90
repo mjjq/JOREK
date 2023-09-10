@@ -34,7 +34,7 @@ module mod_expression
   
   
   public
-  private add
+  !private add
   
   
   
@@ -191,6 +191,7 @@ module mod_expression
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
     call add(exprs_all, 'theta_geo   ', 'Polar angle with respect to Rgeo, Zgeo                ')
+    call add(exprs_all, 'unity       ', 'Just 1, trick needed for flux surface average         ')
     call add(exprs_all, 'bnd_normal_R', 'R component of unit vector pointing outside JOREKs bnd', 'boundary    ')
     call add(exprs_all, 'bnd_normal_Z', 'Z component of unit vector pointing outside JOREKs bnd', 'boundary    ')
     call add(exprs_all, 'Bnorm       ', 'Normal     magnetic field to the JOREKs boundary      ', 'boundary    ')
@@ -543,7 +544,7 @@ module mod_expression
   
   
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
-  subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+  subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr, flux_av)
 
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
@@ -555,6 +556,7 @@ module mod_expression
     type(t_tor_pos_list), target, intent(in)    :: tor_pos_list
     real*8, allocatable,          intent(inout) :: result(:,:,:,:)
     integer,                      intent(out)   :: ierr
+    logical, optional,            intent(in)    :: flux_av   !< Prepare data for proper flux surface average?
     
     ! --- Local variables
     type(t_pol_pos), pointer :: pol_pos
@@ -604,6 +606,7 @@ module mod_expression
       fact_resistiv, fact_Er, fact_flux, fact_rad
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: rimp0, rimp0_s, rimp0_t, rimp0_ss, rimp0_tt, rimp0_st, rimp0_p, rimp0_pp, rimp0_R, rimp0_Z
+    real*8  :: flux_av_fact
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     real*8  :: Te_corr_eV, Te_eV
@@ -1269,6 +1272,10 @@ module mod_expression
             FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
           endif
 #endif
+          flux_av_fact = 1.d0
+          if (present(flux_av)) then 
+            if (flux_av) flux_av_fact = R**2.0
+          endif
 
           Kappa_R    = ( Btot*BR*BR_R - BR*BR*B_R   - BZ*BR*B_Z   + Btot*BZ*BR_Z - Btot*Btor**2/BigR ) / Btot**3.
           Kappa_Z    = ( Btot*BR*BZ_R - BR*BZ*B_R   - BZ*BZ*B_Z   + Btot*BZ*BZ_Z                     ) / Btot**3.
@@ -1857,6 +1864,9 @@ module mod_expression
 
               case ( 'theta_geo'    )
                 res = theta_geo
+              
+              case ( 'unity' )
+                res = 1.d0
 
               case ( 'bnd_normal_R' )
                 res = nmlR
@@ -1985,7 +1995,7 @@ module mod_expression
                 
             end select
             
-            result(itorpos, ipolpos, jpolpos, iexpr) = res
+            result(itorpos, ipolpos, jpolpos, iexpr) = res * flux_av_fact  ! factor is R^2 for proper flux surface average, otherwise 1
             
           end do loop_expr
         end do loop_tor

@@ -300,6 +300,7 @@ module mod_jorek2IMAS
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
     real*8     :: fact_time, rho0, fact_rad
     real*8, allocatable :: result(:,:)
+    character(10)       :: str
     type(type_command)  :: command_tmp
     
     
@@ -341,11 +342,12 @@ module mod_jorek2IMAS
     if (first_step) then 
       call init_new_diag(.false.)
       call preset_parameters()
+      write(str, '(I0)') n_grid
       call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
       call set_setting('loop_units',      '0',     ierr, 'Use which units for time-loops (1=JOREK, 0=SI)'     )
       call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
       call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
-      call set_setting('surfaces',        '100',   ierr, 'number for flux surfaces e.g. for qprofile'         )
+      call set_setting('surfaces',         str,    ierr, 'number for flux surfaces e.g. for qprofile'         )
       call set_setting('nsmallsteps',     '3',     ierr, 'numerical parameter for field line tracing'         )
       call set_setting('nmaxsteps',       '2500',  ierr, 'numerical parameter for field line tracing'         )
       call set_setting('deltaphi',        '0.3',   ierr, 'numerical parameter for field line tracing'         )
@@ -356,8 +358,8 @@ module mod_jorek2IMAS
 
     command_tmp%n_args = 0
     call clean_up()
-    expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres'/), 5)
-    call average(command_tmp, first_step==.true., ierr, result)
+    expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres'/), 6)
+    call average(command_tmp, first_step==.true., ierr, result, .true.)
 
     do i_exp=1, expr_list%n_expr
 
@@ -390,7 +392,6 @@ module mod_jorek2IMAS
         allocate( core_profiles_ids%profiles_1d(i_slice)%pressure_thermal(n_grid) )
         core_profiles_ids%profiles_1d(i_slice)%pressure_thermal(:) = result(:,i_exp)
       endif
-
 
     end do
     

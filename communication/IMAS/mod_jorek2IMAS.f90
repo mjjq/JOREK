@@ -310,7 +310,7 @@ module mod_jorek2IMAS
     
     integer:: num_nodes, stat
     
-    integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
+    integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid, i_exp
     ! **********************************************************************************
     
     n_grid = 100
@@ -321,7 +321,6 @@ module mod_jorek2IMAS
 
     allocate( core_profiles_ids%profiles_1d(n_slice) )
     allocate( core_profiles_ids%time(n_slice) )
-    allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(n_grid) )
     allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(n_grid) )
 
     ! --- Normalization factors for IMAS
@@ -357,15 +356,46 @@ module mod_jorek2IMAS
 
     command_tmp%n_args = 0
     call clean_up()
-    expr_list = exprs((/'Psi_N', 'Te', 'ne'/), 3)
+    expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres'/), 5)
     call average(command_tmp, first_step==.true., ierr, result)
 
-    ! --- Temperature
-    allocate( core_profiles_ids%profiles_1d(i_slice)%electrons%temperature(n_grid) )
-    core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(:)     = result(:,1)
-    core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(:)     = sqrt(result(:,1))
-    core_profiles_ids%profiles_1d(i_slice)%electrons%temperature(:) = result(:,2)
+    do i_exp=1, expr_list%n_expr
 
+      ! --- Psi_N
+      if (expr_list%expr(i_exp)%name=='Psi_N') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(:) = sqrt(result(:,i_exp))
+      endif
+
+      ! --- Ion temperature
+      if (expr_list%expr(i_exp)%name=='T_i') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%t_i_average(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%t_i_average(:) = result(:,i_exp)
+      endif
+
+      ! --- Electron temperature
+      if (expr_list%expr(i_exp)%name=='T_e') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%electrons%temperature(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%electrons%temperature(:) = result(:,i_exp)
+      endif
+
+      ! --- Electron density
+      if (expr_list%expr(i_exp)%name=='ne') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%electrons%density(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%electrons%density(:) = result(:,i_exp)
+      endif
+
+      ! --- Total pressure
+      if (expr_list%expr(i_exp)%name=='pres') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%pressure_thermal(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%pressure_thermal(:) = result(:,i_exp)
+      endif
+
+
+    end do
+    
+    core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(:)     = result(:,1)
+    
     ! --- Put data into local database
     if (first_step) then  
       call ids_put(idx,'core_profiles',core_profiles_ids,stat)

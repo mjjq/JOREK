@@ -7,9 +7,14 @@ module mod_jorek2IMAS
      imas_create_env, imas_close, ids_get, ids_put, ids_put_slice
 
   use mod_parameters 
+  use mod_new_diag
   use data_structure
   use nodes_elements
   use constants
+  use mod_expression, only: exprs
+  use exec_commands,  only: average, expr_list, clean_up, step_imported
+  use parse_commands, only: type_command
+  use settings,       only: set_setting
   
   implicit none
   
@@ -277,6 +282,104 @@ module mod_jorek2IMAS
 
   end subroutine fill_radiation_IDS
 
+
+
+
+  subroutine fill_core_profiles_IDS(first_step, idx)  
+
+    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass, imp_type, &
+                           gamma, index_main_imp
+    implicit none
+
+    ! --- External parameters
+    logical,      intent(in) :: first_step   ! is this the first step?
+    integer,      intent(in) :: idx          ! IMAS identifier
+   
+    ! --- Local parameters 
+    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
+    real*8     :: fact_time, rho0, fact_rad
+    real*8, allocatable :: result(:,:)
+    type(type_command)  :: command_tmp
+    
+    
+    ! **********************************************************************************
+    ! ******************************* IMAS **********************************************
+    ! **********************************************************************************
+    type(ids_core_profiles),     target  :: core_profiles_ids
+    
+    integer:: num_nodes, stat
+    
+    integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
+    ! **********************************************************************************
+    
+    n_grid = 100
+
+    ! --- Set times
+    n_slice = 1  
+    i_slice = 1
+
+    allocate( core_profiles_ids%profiles_1d(n_slice) )
+    allocate( core_profiles_ids%time(n_slice) )
+    allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(n_grid) )
+    allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(n_grid) )
+
+    ! --- Normalization factors for IMAS
+    rho0               = central_density * 1.d20 * central_mass * mass_proton
+    sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
+    sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
+
+    fact_rad = 1.d0 / ( (gamma-1.d0) * MU_ZERO * sqrt_mu0_rho0 )
+    fact_time =  sqrt_mu0_rho0 
+    
+    core_profiles_ids%ids_properties%homogeneous_time = 1    
+    core_profiles_ids%time(i_slice) = t_start * fact_time 
+
+    ! --- Call expressions and do a poloidal average
+    step_imported = .true.
+  
+  ! --- Preset namelist input parameters
+    if (first_step) then 
+      call init_new_diag(.false.)
+      call preset_parameters()
+      call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
+      call set_setting('loop_units',      '0',     ierr, 'Use which units for time-loops (1=JOREK, 0=SI)'     )
+      call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
+      call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
+      call set_setting('surfaces',        '100',   ierr, 'number for flux surfaces e.g. for qprofile'         )
+      call set_setting('nsmallsteps',     '3',     ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('nmaxsteps',       '2500',  ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('deltaphi',        '0.3',   ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('rad_range_min',   '0.001', ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('rad_range_max',   '0.999', ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('nTht',            '32',    ierr, 'numerical parameter for field line tracing'         )
+    endif
+
+    command_tmp%n_args = 0
+    call clean_up()
+    expr_list = exprs((/'Psi_N', 'Te', 'ne'/), 3)
+    call average(command_tmp, first_step==.true., ierr, result)
+
+    ! --- Temperature
+    allocate( core_profiles_ids%profiles_1d(i_slice)%electrons%temperature(n_grid) )
+    core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(:)     = result(:,1)
+    core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(:)     = sqrt(result(:,1))
+    core_profiles_ids%profiles_1d(i_slice)%electrons%temperature(:) = result(:,2)
+
+    ! --- Put data into local database
+    if (first_step) then  
+      call ids_put(idx,'core_profiles',core_profiles_ids,stat)
+    else
+      call ids_put_slice(idx,'core_profiles',core_profiles_ids,stat)
+    endif
+
+    if (stat==0) then
+       write(*,*) '    core_profiles IDS exported'
+    else
+       write(*,*) '    Something went wrong writting the core_profiles IDS!'
+    endif
+
+  end subroutine fill_core_profiles_IDS
 
 
 

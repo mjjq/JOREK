@@ -20,10 +20,10 @@ program jorek2_IDS
   integer :: shot_number, run_number, i_begin, i_end, i_step
   integer :: ierr, idx, stat
   logical :: first_step
-  logical :: export_MHD, export_radiation
+  logical :: export_MHD, export_radiation, export_core_profiles
 
   namelist /imas_params/ shot_number, run_number, user, database, i_begin, i_end, &
-                         export_mhd, export_radiation
+                         export_mhd, export_radiation, export_core_profiles
 
   ! --- Necessary initialization ------------------
   ! --- Initialize mode and mode_type arrays
@@ -44,8 +44,9 @@ program jorek2_IDS
   shot_number = 111112;   run_number=1;   
   i_begin     = 0                         ! Starting restart file index
   i_end       = 99999                     ! Ending restart file index
-  export_MHD       = .true.
-  export_radiation = .false.
+  export_MHD           = .true.
+  export_radiation     = .false.
+  export_core_profiles = .false. 
 
   call getenv('USER',user)
   
@@ -88,6 +89,9 @@ program jorek2_IDS
 
     ! --- Fill and export an MHD IDS
     if (export_mhd)  call fill_mhd_IDS(first_step, idx)  
+
+    ! --- Fill and export a core_profiles IDS
+    if (export_core_profiles)  call fill_core_profiles_IDS(first_step, idx)  
 
     ! --- Fill and export a radiation IDS
     if (export_radiation) then

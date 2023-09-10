@@ -50,11 +50,11 @@ module exec_commands
   
   character(len=1024)                :: input_file
   logical,             private, save :: input_loaded  = .false. !< Has an input file been loaded?
-  logical,             private, save :: step_imported = .false. !< Has a restart file been imported?
+  logical,                      save :: step_imported = .false. !< Has a restart file been imported?
   logical,             private, save :: dir_created   = .false. !< Postproc directory created?
   logical,             private, save :: verbose
   logical,             private, save :: debug
-  type(t_expr_list),   private, save :: expr_list, expr_list_four
+  type(t_expr_list),            save :: expr_list, expr_list_four
   real*8, allocatable, private, save :: result(:,:,:,:), res2d(:,:,:), res1d(:,:), res0d(:), the_sum(:)
   complex*16, allocatable, private, save :: cp(:,:,:,:)
   real*8,              private, save :: time_now !< Time of current restart file in selected units
@@ -66,7 +66,7 @@ module exec_commands
   
   
   private
-  public exec_command, general_help, specific_help, clean_up
+  public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported
   
   
   
@@ -1721,12 +1721,13 @@ module exec_commands
 
 
   !> Toroidally and poloidally averaged expressions.
-  subroutine average(command, first_step, ierr)
+  subroutine average(command, first_step, ierr, res1d_tmp)
     
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
     integer,            intent(out) :: ierr        !< Error flag
+    real*8, allocatable, optional, intent(out) :: res1d_tmp(:,:)
     
     ! --- Local variables
     integer :: units, npts, nsmall
@@ -1757,10 +1758,15 @@ module exec_commands
     call apply_four_filter(result, simple_filter(m=0,n=0), expr_list%n_coord, ierr)
     call reduce_result_to_1d(ierr, result, res1d, i1=1, i2=1)
     
-    write(comment,'(a,i6.6)') 'time step #', index_now
+    if (present(res1d_tmp)) then
+      allocate( res1d_tmp(size(res1d,1),size(res1d,2)) )
+      res1d_tmp = res1d
+    else
+      write(comment,'(a,i6.6)') 'time step #', index_now
     
-    call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                     &
-      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+      call write_ascii_1d(ierr, ES, expr_list, res1d, FORM_TABLE, header=.true.,                     &
+        filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+    endif
     
   end subroutine average
   

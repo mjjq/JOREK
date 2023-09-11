@@ -344,7 +344,6 @@ module mod_jorek2IMAS
       call preset_parameters()
       write(str, '(I0)') n_grid
       call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
-      call set_setting('loop_units',      '0',     ierr, 'Use which units for time-loops (1=JOREK, 0=SI)'     )
       call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
       call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
       call set_setting('surfaces',         str,    ierr, 'number for flux surfaces e.g. for qprofile'         )
@@ -358,7 +357,8 @@ module mod_jorek2IMAS
 
     command_tmp%n_args = 0
     call clean_up()
-    expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres'/), 6)
+    expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
+                        'Jpar', 'E_||', 'Er'/), 10)
     call average(command_tmp, first_step==.true., ierr, result, .true.)
 
     do i_exp=1, expr_list%n_expr
@@ -391,6 +391,36 @@ module mod_jorek2IMAS
       if (expr_list%expr(i_exp)%name=='pres') then
         allocate( core_profiles_ids%profiles_1d(i_slice)%pressure_thermal(n_grid) )
         core_profiles_ids%profiles_1d(i_slice)%pressure_thermal(:) = result(:,i_exp)
+      endif
+
+      ! --- Electrostatic potential
+      if (expr_list%expr(i_exp)%name=='Phi') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%phi_potential(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%phi_potential(:) = result(:,i_exp)
+      endif
+
+      ! --- Parallel conductivity
+      if (expr_list%expr(i_exp)%name=='eta_T') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%conductivity_parallel(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%conductivity_parallel(:) = 1.d0 / result(:,i_exp)
+      endif
+
+      ! --- Parallel current density
+      if (expr_list%expr(i_exp)%name=='Jpar') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%j_total(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%j_total(:) = result(:,i_exp)
+      endif
+
+      ! --- Parallel electric field
+      if (expr_list%expr(i_exp)%name=='E_||') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%e_field%parallel(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%e_field%parallel(:) = result(:,i_exp)
+      endif
+
+      ! --- Radial electric field
+      if (expr_list%expr(i_exp)%name=='Er') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%e_field%radial(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%e_field%radial(:) = result(:,i_exp)
       endif
 
     end do

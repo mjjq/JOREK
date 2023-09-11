@@ -359,13 +359,16 @@ module mod_jorek2IMAS
     command_tmp%n_args = 0
     call clean_up()
     expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
-                        'Jpar', 'E_||', 'Er'/), 10)
+                        'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i'/), 13)
     call average(command_tmp, first_step==.true., ierr, result, .true.)
     call clean_up()
     call qprofile(command_tmp, first_step==.true., ierr, q_prof)
     ! --- Correct first and last points
     q_prof(1)      = q_prof(2)        + (q_prof(2)-q_prof(3))
     q_prof(n_grid) = q_prof(n_grid-1) + (q_prof(n_grid-1)-q_prof(n_grid-2))
+
+    ! --- Some allocations
+    allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1) )
 
     ! --- Fill expressions in IDSs
     do i_exp=1, expr_list%n_expr
@@ -430,6 +433,24 @@ module mod_jorek2IMAS
       if (expr_list%expr(i_exp)%name=='Er') then
         allocate( core_profiles_ids%profiles_1d(i_slice)%e_field%radial(n_grid) )
         core_profiles_ids%profiles_1d(i_slice)%e_field%radial(:) = result(:,i_exp)
+      endif
+
+      ! --- Parallel velocity
+      if (expr_list%expr(i_exp)%name=='vpar') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%parallel(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%parallel(:) = result(:,i_exp)
+      endif
+
+      ! --- Poloidal velocity
+      if (expr_list%expr(i_exp)%name=='Vtheta_i') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%poloidal(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%poloidal(:) = result(:,i_exp)
+      endif
+
+       ! --- Diamagnetic velocity
+      if (expr_list%expr(i_exp)%name=='Vstar_i') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(:) = result(:,i_exp)
       endif
 
     end do

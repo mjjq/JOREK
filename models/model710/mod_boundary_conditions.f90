@@ -411,48 +411,21 @@ do i=1, n_local_elms !=== do elements
             endif
 
           endif ! --- apply Dirichlet
-#if 0
-          !------------------------------------ wall aligned with fluxsurface (in case of x-point grid)
-          if ((node_list%node(inode)%boundary == 2) .or. (node_list%node(inode)%boundary == 3)) then
 
-            if ( (.not. is_freebound(in,k)) ) then ! apply fixed boundary conditions where necessary
-
-              index_node = node_list%node(inode)%index(1)
-              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
-                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
-                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-a_mat%i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
-
-                a_mat%irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
-                a_mat%jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
-                a_mat%val(ilarge2) = zbig
-
-                if ( ( loop_voltage .ne. 0.d0 ) .or. ( loop_voltage_control .ne. 0.d0 ) ) then     
-                  if ( (k == 1) .and. (in == 1) ) then
-                    call boundary_conditions_add_RHS(       &
-                          index_node, k, in,               & ! use_murge, use_murge_element,      &
-                          index_min, index_max,              &
+          ! --- Apply loop voltage, suggestion from Pamela, Stanislas JP <Stanislas.Pamela@ukaea.uk>
+          if ( (.not. is_freebound(in,k)) ) then
+            if ( ( loop_voltage .ne. 0.d0 ) .or. ( loop_voltage_control .ne. 0.d0 ) ) then
+              if ( (k == var_A3) .and. (in == 1) ) then
+                index_node = node_list%node(inode)%index(1)
+                call boundary_conditions_add_RHS(       &
+                          index_node, k, in,     &
+                          index_min, index_max,  &
                           RHS_loc, ZBIG * ((loop_voltage_control+loop_voltage)/2.d0/PI*sqrt(MU_ZERO*central_density*central_mass*mass_proton*1.d20)) * tstep, &
                           a_mat%i_tor_min, a_mat%i_tor_max)
-                  end if
-                end if
-
               endif
-
-              index_node = node_list%node(inode)%index(3)
-              if ((index_node .ge. index_min) .and. (index_node .le. index_max)) then
-
-                call locate_irn_jcn(index_node,index_node,index_min,index_max,ijA_position,a_mat)
-                ilarge2 = ijA_position - 1 + ((k-1)*n_tor_local +in-a_mat%i_tor_min) * n_var*n_tor_local + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
-
-                a_mat%irn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
-                a_mat%jcn(ilarge2)   =  n_tor_local * n_var * (index_node-1) + (k-1)*n_tor_local + in - a_mat%i_tor_min +1
-                a_mat%val(ilarge2) = zbig
-              end if
-
             endif
           endif
-#endif
+
         enddo ! ---  variables
 
         ! --- Apply Mach1

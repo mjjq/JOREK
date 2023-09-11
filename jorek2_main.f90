@@ -594,46 +594,49 @@ mpi_required = 0
     flush stdout
     call tr_debug_write("JMAIN:Index_now",index_now)
 
+    loop_voltage_control = 0.d0
+    
+    if ( my_id == 0 ) then
+
+      loop_voltage_control = 0.d0
+      
+      if ( index_now > 2 ) then
+     
+        !if ( (loop_voltage_prop .ne. 0.d0) .or. (loop_voltage_der .ne. 0.d0) .or. (loop_voltage_int .ne. 0.d0) ) then
+        !  ! --- loop voltage feedback control
+        !  deriv = - ( current_t(index_now) - current_t(index_now-1) ) / (xtime(index_now) - xtime(index_now-1) )
+        !  integ = 0.d0
+        !  do i = 1, index_now-1
+        !    integ = integ + ( I_target - ( current_t(i) + current_t(i+1) ) * 0.5d0 ) * ( xtime(i+1) - xtime(i) )
+        !  end do
+        !  I_error = I_target - current_t(index_now)
+        !  loop_voltage_control = loop_voltage_prop * I_error + loop_voltage_der * deriv + loop_voltage_int * integ 
+        !end if
+	
+	      if ( (loop_voltage_prop .ne. 0.d0) .or. (loop_voltage_der .ne. 0.d0) .or. (loop_voltage_int .ne. 0.d0) ) then
+          ! --- loop voltage feedback control
+          deriv =  ( Ip_tot_t(index_now) - Ip_tot_t(index_now-1) ) / (xtime(index_now) - xtime(index_now-1) )
+          integ = 0.d0
+          do i = 1, index_now-1
+            integ = integ + ( I_target + ( Ip_tot_t(i) + Ip_tot_t(i+1) ) * 0.5d0 ) * ( xtime(i+1) - xtime(i) )
+          end do
+          I_error = I_target + Ip_tot_t(index_now)
+          loop_voltage_control = loop_voltage_prop * I_error + loop_voltage_der * deriv + loop_voltage_int * integ 
+        end if
+
+      end if
+    
+    end if
+
+    call MPI_BCAST(loop_voltage_control,   1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)  
+    write(*,*) 'LOOP VOLTAGE CONTROL  ', my_id, index_now, loop_voltage_control
+
     index_now = index_now + 1
     
     tstep = tstep_n(jstep)
 
     ! start from t=0 
     if (index_now <= 1) tstep_prev = tstep
-
-    loop_voltage_control = 0.d0
-    
-    if ( my_id == 0 ) then
-      loop_voltage_control = 0.d0
-      if ( index_now > 2 ) then
-     
-          !if ( (loop_voltage_prop .ne. 0.d0) .or. (loop_voltage_der .ne. 0.d0) .or. (loop_voltage_int .ne. 0.d0) ) then
-          !  ! --- loop voltage feedback control
-          !  deriv = - ( current_t(index_now) - current_t(index_now-1) ) / (xtime(index_now) - xtime(index_now-1) )
-          !  integ = 0.d0
-          !  do i = 1, index_now-1
-          !    integ = integ + ( I_target - ( current_t(i) + current_t(i+1) ) * 0.5d0 ) * ( xtime(i+1) - xtime(i) )
-          !  end do
-          !  I_error = I_target - current_t(index_now)
-          !  loop_voltage_control = loop_voltage_prop * I_error + loop_voltage_der * deriv + loop_voltage_int * integ 
-          !end if
-	
-	        if ( (loop_voltage_prop .ne. 0.d0) .or. (loop_voltage_der .ne. 0.d0) .or. (loop_voltage_int .ne. 0.d0) ) then
-            ! --- loop voltage feedback control
-            deriv =  ( Ip_tot_t(index_now) - Ip_tot_t(index_now-1) ) / (xtime(index_now) - xtime(index_now-1) )
-            integ = 0.d0
-            do i = 1, index_now-1
-              integ = integ + ( I_target + ( Ip_tot_t(i) + Ip_tot_t(i+1) ) * 0.5d0 ) * ( xtime(i+1) - xtime(i) )
-            end do
-            I_error = I_target + Ip_tot_t(index_now)
-            loop_voltage_control = loop_voltage_prop * I_error + loop_voltage_der * deriv + loop_voltage_int * integ 
-          end if
-        
-      end if 
-    end if
-
-    call MPI_BCAST(loop_voltage_control,   1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)  
-    write(*,*) 'LOOP VOLTAGE CONTROL  ', my_id, index_now, loop_voltage_control
 
     if ( my_id == 0 ) then
       write(*,*) '******************************************************'

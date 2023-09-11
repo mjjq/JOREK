@@ -66,7 +66,8 @@ module exec_commands
   
   
   private
-  public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported
+  public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported, qprofile
+
   
   
   
@@ -2220,12 +2221,13 @@ module exec_commands
 
  
   !> Output the q-profile as a function of Psi_N
-  recursive subroutine qprofile(command, first_step, ierr)
+  recursive subroutine qprofile(command, first_step, ierr, q_out)
   
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
     integer,            intent(out) :: ierr        !< Error flag
+    real*8, optional, allocatable,intent(out) :: q_out(:) !< Option to export q-profile
 
     
     ! --- Local variables
@@ -2256,6 +2258,10 @@ module exec_commands
     call determine_q_profile(node_list, element_list, surface_list, ES%psi_axis, ES%psi_xpoint,    &
       ES%Z_xpoint, q, rad)
     
+    if (present(q_out)) then 
+      allocate(q_out(size(q,1)))
+      q_out = q
+    endif
 !    ! --- Clean up q-profile from "jumps" -- TODO: a better solution is needed
 !    do k = 5, 1, -1
 !      do i = k+1, npts-k

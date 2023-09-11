@@ -12,7 +12,7 @@ module mod_jorek2IMAS
   use nodes_elements
   use constants
   use mod_expression, only: exprs
-  use exec_commands,  only: average, expr_list, clean_up, step_imported
+  use exec_commands,  only: average, expr_list, clean_up, step_imported, qprofile
   use parse_commands, only: type_command
   use settings,       only: set_setting
   
@@ -298,8 +298,8 @@ module mod_jorek2IMAS
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_time, rho0, fact_rad
-    real*8, allocatable :: result(:,:)
+    real*8     :: fact_time, rho0, fact_rad, fact_psi
+    real*8, allocatable :: result(:,:), q_prof(:), rho_tor(:)
     character(10)       :: str
     type(type_command)  :: command_tmp
     
@@ -309,7 +309,7 @@ module mod_jorek2IMAS
     ! **********************************************************************************
     type(ids_core_profiles),     target  :: core_profiles_ids
     
-    integer:: num_nodes, stat
+    integer:: num_nodes, stat, i_psi
     
     integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid, i_exp
     ! **********************************************************************************
@@ -322,7 +322,6 @@ module mod_jorek2IMAS
 
     allocate( core_profiles_ids%profiles_1d(n_slice) )
     allocate( core_profiles_ids%time(n_slice) )
-    allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(n_grid) )
 
     ! --- Normalization factors for IMAS
     rho0               = central_density * 1.d20 * central_mass * mass_proton
@@ -331,6 +330,7 @@ module mod_jorek2IMAS
 
     fact_rad = 1.d0 / ( (gamma-1.d0) * MU_ZERO * sqrt_mu0_rho0 )
     fact_time =  sqrt_mu0_rho0 
+    fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
     
     core_profiles_ids%ids_properties%homogeneous_time = 1    
     core_profiles_ids%time(i_slice) = t_start * fact_time 
@@ -338,12 +338,12 @@ module mod_jorek2IMAS
     ! --- Call expressions and do a poloidal average
     step_imported = .true.
   
-  ! --- Preset namelist input parameters
+  ! --- Preset namelist input parameters for jorek2_postproc
     if (first_step) then 
       call init_new_diag(.false.)
-      call preset_parameters()
       write(str, '(I0)') n_grid
       call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
+      call set_setting('loop_units',      '1',     ierr, 'Use which units for time-loops (0=JOREK, 1=SI)'     )
       call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
       call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
       call set_setting('surfaces',         str,    ierr, 'number for flux surfaces e.g. for qprofile'         )
@@ -355,18 +355,27 @@ module mod_jorek2IMAS
       call set_setting('nTht',            '32',    ierr, 'numerical parameter for field line tracing'         )
     endif
 
+    ! --- Get average and q-profile
     command_tmp%n_args = 0
     call clean_up()
     expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
                         'Jpar', 'E_||', 'Er'/), 10)
     call average(command_tmp, first_step==.true., ierr, result, .true.)
+    call clean_up()
+    call qprofile(command_tmp, first_step==.true., ierr, q_prof)
+    ! --- Correct first and last points
+    q_prof(1)      = q_prof(2)        + (q_prof(2)-q_prof(3))
+    q_prof(n_grid) = q_prof(n_grid-1) + (q_prof(n_grid-1)-q_prof(n_grid-2))
 
+    ! --- Fill expressions in IDSs
     do i_exp=1, expr_list%n_expr
 
       ! --- Psi_N
       if (expr_list%expr(i_exp)%name=='Psi_N') then
         allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(n_grid) )
-        core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(:) = sqrt(result(:,i_exp))
+        core_profiles_ids%profiles_1d(i_slice)%grid%psi_magnetic_axis = ES%Psi_axis * fact_psi
+        core_profiles_ids%profiles_1d(i_slice)%grid%psi_boundary      = ES%Psi_bnd  * fact_psi
+        core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(:)   = sqrt(result(:,i_exp))
       endif
 
       ! --- Ion temperature
@@ -425,7 +434,18 @@ module mod_jorek2IMAS
 
     end do
     
-    core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(:)     = result(:,1)
+    ! --- q-profile
+    allocate( core_profiles_ids%profiles_1d(i_slice)%q(n_grid) )
+    core_profiles_ids%profiles_1d(i_slice)%q(:) = q_prof(:)
+
+    ! --- Get rho_norm_tor from psi_N and q_profile
+    allocate( core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(n_grid) )
+    allocate(rho_tor(n_grid))
+    rho_tor(:) = 0.d0
+    do i_psi=2, n_grid
+      rho_tor(i_psi) = sum(q_prof(1:i_psi)) ! Assuming equidistant psi grid!!
+    end do
+    core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(:) = rho_tor(:)/rho_tor(n_grid)
     
     ! --- Put data into local database
     if (first_step) then  

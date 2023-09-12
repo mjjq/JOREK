@@ -373,9 +373,6 @@ do i=1, n_local_elms !=== do elements
             if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
             if (in .eq. 1)                                                               apply_psi_BC = .true.
             if (is_freebound(in,k))                                                      apply_psi_BC = .false.                     
-            if ( ( loop_voltage .ne. 0.d0 ) .or. ( loop_voltage_control .ne. 0.d0 ) ) then
-              if ( (k == var_A3) .and. (in == 1) .and. (.not. is_freebound(in,k)) )      apply_psi_BC = .false.
-            endif
           endif
                 
           ! --- Apply Dirichlet
@@ -402,7 +399,7 @@ do i=1, n_local_elms !=== do elements
             enddo
 
             ! --- Fix A3 also across boundary???
-            if (k .eq. var_A3) then
+            if ( (k .eq. var_A3) .and. (loop_voltage .eq. 0.d0) .and. (loop_voltage_control .eq. 0.d0) ) then
               index_node = node_list%node(inode)%index(iv_perp_dir)
               call boundary_conditions_add_one_entry(                 &
                      index_node, k, in, index_node, k, in,            &

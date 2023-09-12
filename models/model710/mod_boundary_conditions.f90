@@ -373,6 +373,9 @@ do i=1, n_local_elms !=== do elements
             if ( (.not. RMP_on) .and. (in .ge. 2)              )                         apply_psi_BC = .true.
             if (in .eq. 1)                                                               apply_psi_BC = .true.
             if (is_freebound(in,k))                                                      apply_psi_BC = .false.                     
+            if ( ( loop_voltage .ne. 0.d0 ) .or. ( loop_voltage_control .ne. 0.d0 ) ) then
+              if ( (k == var_A3) .and. (in == 1) .and. (.not. is_freebound(in,k)) )      apply_psi_BC = .false.
+            endif
           endif
                 
           ! --- Apply Dirichlet

@@ -204,7 +204,7 @@ x_shaded,light_spec_irradiance)
         light_spec_irradiance(jj,ii) = light_vert%light_intensity*&
         exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
         (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*&
-        spectra_bin(ii)*light_vert%properties(1,light_id,time_id)))
+        (spectra_bin(ii)**2)*light_vert%properties(1,light_id,time_id)))
       enddo
     enddo
 #ifdef USE_TASKLOOP
@@ -218,7 +218,7 @@ x_shaded,light_spec_irradiance)
         light_spec_irradiance(jj,ii) = light_vert%light_intensity*&
         exp(-((spectra%points(jj,ii)-spectra_midpoint(ii))*&
         (spectra%points(jj,ii)-spectra_midpoint(ii)))/(2.d0*&
-        spectra_bin(ii)*light_vert%properties(1,light_id,time_id)))
+        (spectra_bin(ii)**2)*light_vert%properties(1,light_id,time_id)))
       enddo
     enddo
     !$omp end parallel do

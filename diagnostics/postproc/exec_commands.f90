@@ -1756,8 +1756,8 @@ module exec_commands
       nsmallsteps=nsmall)
     tor_pos_list = tor_pos(nphi=max(n_plane,2))
 
-    if (present(flux_av)) then 
-      call add(expr_list, 'unity       ', 'Cylindrical Coordinate phi                            ')
+    if (present(flux_av)) then
+      call add(expr_list, 'unity       ', 'Just unity, used to get R^2 average                   ')
     endif
 
     call eval_expr(ES, units, expr_list, pol_pos_list, tor_pos_list, result, ierr, flux_av)

@@ -285,7 +285,9 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_core_profiles_IDS(first_step, idx)  
+
+
+  subroutine fill_core_profiles_IDS(first_step, idx, n_grid)  
 
     use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
@@ -295,6 +297,7 @@ module mod_jorek2IMAS
     ! --- External parameters
     logical,      intent(in) :: first_step   ! is this the first step?
     integer,      intent(in) :: idx          ! IMAS identifier
+    integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
@@ -303,22 +306,15 @@ module mod_jorek2IMAS
     character(10)       :: str
     type(type_command)  :: command_tmp
     
-    
     ! **********************************************************************************
     ! ******************************* IMAS **********************************************
     ! **********************************************************************************
     type(ids_core_profiles),     target  :: core_profiles_ids
-    
-    integer:: num_nodes, stat, i_psi
-    
-    integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid, i_exp
+    integer :: n_slice, i_slice, i_exp, stat, i_psi
     ! **********************************************************************************
-    
-    n_grid = 100
 
     ! --- Set times
-    n_slice = 1  
-    i_slice = 1
+    n_slice = 1;   i_slice = 1
 
     allocate( core_profiles_ids%profiles_1d(n_slice) )
     allocate( core_profiles_ids%time(n_slice) )
@@ -326,16 +322,14 @@ module mod_jorek2IMAS
     ! --- Normalization factors for IMAS
     rho0               = central_density * 1.d20 * central_mass * mass_proton
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
-    sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
 
-    fact_rad = 1.d0 / ( (gamma-1.d0) * MU_ZERO * sqrt_mu0_rho0 )
     fact_time =  sqrt_mu0_rho0 
     fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
     
     core_profiles_ids%ids_properties%homogeneous_time = 1    
     core_profiles_ids%time(i_slice) = t_start * fact_time 
 
-    ! --- Call expressions and do a poloidal average
+    ! --- Call expressions and do a flux average
     step_imported = .true.
   
   ! --- Preset namelist input parameters for jorek2_postproc
@@ -485,7 +479,7 @@ module mod_jorek2IMAS
 
 
 
- 
+
 
 
   ! --- Fills Bezier coefficients in GGD

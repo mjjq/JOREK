@@ -167,7 +167,7 @@ separator="/",font_size=16):
 def generate_argument_parser():
   import argparse
   parser = argparse.ArgumentParser(\
-  description='read and plot particles contributing to an image')
+  description='plot the mean value, the variance and the standard deviation of the light intensity of each pixel')
   parser.add_argument('--light_names','-ln',type=str,nargs='*',\
   action='store',required=True,help='list of ligth files to be read')
   parser.add_argument('--camera_names','-cn',type=str,nargs='*',\

@@ -313,7 +313,8 @@ end subroutine F_profile
 subroutine integrate_F_profile()
 
   use phys_module, only: xpoint, F0, FF_0, FF_1, FF_coef, psi_axis_init
-  use phys_module, only: n_Fprofile_internal, Fprofile_internal, Fprofile_internal_psi, Fprofile_psi_max
+  use phys_module, only: n_Fprofile_internal_max, n_Fprofile_internal
+  use phys_module, only: Fprofile_internal, Fprofile_internal_psi, Fprofile_psi_max
   use phys_module, only: num_ffprime, num_ffprime_x, num_ffprime_y0, num_ffprime_len
   use phys_module, only: num_Fprofile, num_Fprofile_len, num_Fprofile_x, num_Fprofile_y0
 
@@ -329,6 +330,13 @@ subroutine integrate_F_profile()
   real*8  :: Z_fake, Z_xpoint_fake(2),  psi_axis_fake, psi_bnd_fake
   real*8  :: ff2,ff3,ff4,ff5,ff6
   real*8, allocatable  :: integral_large(:), psi_large(:)
+  real*8  :: sign_F
+  logical :: use_original_grids
+
+  if (F0 .eq. 0.d0) then
+    write(*,*) "ERROR: F0 cannot equal zero!!!"
+    call exit(-1)
+  endif
 
   ! --- Because when we integrate the F-profile, we don't know the plasma yet...
   Z_fake        = 0.d0
@@ -348,11 +356,26 @@ subroutine integrate_F_profile()
     stop
   endif
 
-  if (num_ffprime) then
+  ! --- Haowei ZHANG <haowei.zhang@ipp.mpg.de>:
+  ! --- Determin whether using the original 1D psi grid for integration, if false, use the eqdistant grid.
+  ! --- Both methods should work out for num_ffprime cases
+  ! --- It is disabled by default as some regression tests will fail.
+  use_original_grids = .false.
 
+  if (num_ffprime .and. use_original_grids) then
+
+    ! --- Haowei ZHANG <haowei.zhang@ipp.mpg.de>:
+    ! --- Correct the sign of F-profile depending on F0
+    sign_F        = F0 / abs(F0)
     delta_psi = 1.d0 !psi_axis_init
 
     n_Fprofile_internal = num_ffprime_len
+
+    if(n_Fprofile_internal .gt. n_Fprofile_internal_max) then
+      write(*,*) "ERROR: n_Fprofile_internal should be smaller than n_Fprofile_internal_max!!!"
+      call exit(-1)
+    endif
+
     allocate(integral_large(n_Fprofile_internal))
     allocate(psi_large(n_Fprofile_internal))
     
@@ -367,12 +390,18 @@ subroutine integrate_F_profile()
     enddo
 
     do i_prof = 1, n_Fprofile_internal
-      Fprofile_internal(i_prof) = sqrt(F0**2 + delta_psi * abs(integral_large(i_prof))) 
+      Fprofile_internal(i_prof) = sign_F * sqrt(F0**2 + delta_psi * abs(integral_large(i_prof))) 
     enddo
 
-    Fprofile_internal(1:n_Fprofile_internal)     = Fprofile_internal(1:n_Fprofile_internal) - Fprofile_internal(n_Fprofile_internal) + F0   
+    Fprofile_internal(1:n_Fprofile_internal)     = Fprofile_internal(1:n_Fprofile_internal) - Fprofile_internal(n_Fprofile_internal) + F0
 
   else
+
+    if(n_Fprofile_internal .gt. n_Fprofile_internal_max) then
+      write(*,*) "ERROR: n_Fprofile_internal should be smaller than n_Fprofile_internal_max!!!"
+      call exit(-1)
+    endif
+
     ! --- The equilibrium psi amplitude
     delta_psi = (psi_bnd_fake - psi_axis_fake)
     no_delta_psi = 1.d0
@@ -516,10 +545,9 @@ subroutine integrate_F_profile()
       endif
     enddo
   
+    ! --- Correct the sign of F-profile depending on F0
+    if (F0 .lt. 0.d0) Fprofile_internal = - Fprofile_internal
   endif
-
-  ! --- Correct the sign of F-profile depending on F0
-  if (F0 .lt. 0.d0) Fprofile_internal = - Fprofile_internal
   
   deallocate(integral_large)
   deallocate(psi_large)
@@ -582,6 +610,10 @@ subroutine check_F_profile_accuracy()
     enddo
     write(*,'(A,1e15.7)')'averaged error (%):',diff_average_percent
     stop
+  else
+    do i_prof = 1,n_Fprofile_internal
+      write(*,'(A,4e15.7)')'Correct profile:',psi_n(i_prof),ff1(i_prof),iff1(i_prof),abs(ff1(i_prof)-iff1(i_prof))
+    enddo
   endif
 
   return

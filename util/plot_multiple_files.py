@@ -1,0 +1,109 @@
+#! /usr/bin/env python3
+
+import numpy as np
+import matplotlib.pyplot as plt
+import argparse
+
+
+def read_ascii_file(file_path, skiprows):
+    """
+    Read data from an ASCII file.
+
+    Args:
+        file_path (str): The path to the ASCII file.
+
+    Returns:
+        tuple: A tuple containing the column names (as a list) and the data (as a NumPy array).
+    """
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    # Extract column names from the first line and remove leading/trailing whitespace
+    column_names = lines[0].strip().split()
+    if skiprows >= 1:
+        column_names = lines[skiprows - 1].strip().split()
+
+    # Read data from the remaining lines, converting them to a NumPy array
+    data = np.genfromtxt(lines[skiprows:], dtype=float)
+
+    return column_names, data
+
+
+def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, shift_first_file, color_first_file):
+    """
+    Plot lines from multiple ASCII files in the same plot.
+
+    Args:
+        file_paths (list): List of file paths to the ASCII files.
+    """
+    # Define line styles (you can customize this list with different line styles)
+    linestyles = ['-', '--', '-.', ':']
+
+    plt.figure(figsize=(10, 6))  # Set the figure size
+
+    for i, file_path in enumerate(file_paths):
+        column_names, data = read_ascii_file(file_path, skiprows)
+        if column_plot_for_X >= data.shape[1]:
+            print("Error: Value of -xc is out of range!!!")
+            exit(-1)
+        x = data[:, column_plot_for_X]  # Assuming the first column is the x-axis data
+        y = data[:, 1:]  # Assuming the remaining columns are y-axis data
+
+        if i == 0:
+            x = x + float(shift_first_file)
+
+        linestyle = linestyles[i % len(linestyles)]  # Cycle through linestyles
+
+        if columns_plot_for_Y == -1:
+            columns_plot_for_Y = range(y.shape[1])  # Plot all columns
+        elif i == 0:
+            columns_plot_for_Y = [j - 1 for j in columns_plot_for_Y]
+
+        for j in columns_plot_for_Y:
+            if j < y.shape[1]:
+                if (i == 0) and (color_first_file != ""):
+                    plt.plot(x, y[:, j], label=f'{column_names[j + 1]} ({file_path})', linestyle=linestyle, color=color_first_file)
+                else:
+                    plt.plot(x, y[:, j], label=f'{column_names[j + 1]} ({file_path})', linestyle=linestyle)
+            else:
+                print("Error: Value of -yc is out of range!!!")
+                exit(-2)
+
+    plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel)  # Set the x-axis label based on the first file
+    plt.ylabel('Y-axis Label' if ylabel == "" else ylabel)  # Set the y-axis label (customize as needed)
+    plt.legend()  # Show legends for each line
+    plt.title(title)  # Set the plot title
+    plt.grid(True)  # Show grid lines
+    plt.xscale(xscaleType)  # Set linear or log for the x scale
+    plt.yscale(yscaleType)  # Set linear or log for the y scale
+
+    plt.show()
+
+
+if __name__ == "__main__":
+    # Provide a list of file paths as command-line arguments
+    # Example usage: python script.py file1 file2 ... -xs log (or linear) -ys log (or linear) -ti "title name" -xl "xlabel name" -yl "ylabel name"
+    parser = argparse.ArgumentParser(description="Plot lines from multiple ASCII files.")
+    parser.add_argument("-xs", "--xscale", choices=["linear", "log"], default="linear",
+                        help="X-scale (linear or log). Default is linear.")
+    parser.add_argument("-ys", "--yscale", choices=["linear", "log"], default="linear",
+                        help="Y-scale (linear or log). Default is linear.")
+    parser.add_argument("-ti", "--title", default="Multiple ASCII Files Plot", help="Manually define the title.")
+    parser.add_argument("-xl", "--xlabel", default="", help="Manually define the xlabel.")
+    parser.add_argument("-yl", "--ylabel", default="", help="Manually define the ylabel.")
+    parser.add_argument("-yc", "--columns_plot_for_Y", type=int, nargs="+", default=-1,
+                        help="Columns to be plotted (default is -1 for plotting all) as Y values.")
+    parser.add_argument("-xc", "--column_plot_for_X", type=int, default=0,
+                        help="Columns to be plotted (default is 0) as X value.")
+    parser.add_argument("-sk", "--skiprows", default=1,
+                        help="Define how many rows will be skiped when reading the data.")
+    parser.add_argument("-sf", "--shift_first_file", default=0,
+                        help="Shift the data for the first file horizontally (in X direction).")
+    parser.add_argument("-co", "--color_first_file", default="",
+                        help="Specify the color for the first file.")
+    parser.add_argument("file_paths", nargs="+", help="List of file paths to the ASCII files.")
+
+    args = parser.parse_args()
+
+    plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
+                     int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file)

@@ -435,7 +435,7 @@ subroutine integrate_F_profile()
     ! --- The steps for integration. Assume the full profile will be as large as minimal step
     step     = 1.d-6
     step_min = 1.d-7
-    step_max = 1.d-4
+    step_max = 1.d-3
     n_integral_max = int(2*psi_edge/step_min)
     allocate(integral_large(n_integral_max))
     allocate(psi_large(n_integral_max))
@@ -443,7 +443,7 @@ subroutine integrate_F_profile()
 
     ! --- Tollerance to deviate from straight line
     quad_tol_min = 1.d-6
-    quad_tol_max = 0.001 ! 0.5% of FFprime amplitude should be enough...
+    quad_tol_max = 0.005 ! 0.5% of FFprime amplitude should be enough...
 
     ! --- Start integral
     psi_prev = 0.d0

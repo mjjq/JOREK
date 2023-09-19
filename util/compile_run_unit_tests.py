@@ -18,6 +18,9 @@ def generate_argument_parser():
 
 # Execute script ------------------------------------------------ #
 if __name__ == '__main__':
+  import sys
   args = generate_argument_parser()
   print('Test directories: ',args.test_dirs)
+  # exit program with success
+  sys.exit(0)
 # End-of-the-scripts -------------------------------------------- #

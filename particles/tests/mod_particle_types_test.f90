@@ -28,7 +28,7 @@ subroutine run_fruit_particle_types
   write(*,'(/A)') "  ... setting-up: particle types tests"
   call setup
   write(*,'(/A)') "  ... running: particle types tests"
-!  call run_test_case(test_particle_copy,'test_particle_copy')
+  call run_test_case(test_particle_copy,'test_particle_copy')
   call run_test_case(test_individual_particle_copy,'test_individual_particle_copy')
   call run_test_case(test_particle_get_q,'test_particle_get_q')
   write(*,'(/A)') "  ... tearing-up: particle types tests"

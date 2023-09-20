@@ -5,6 +5,7 @@
 # on the ITER HPC infrastructure.                                 #
 # --------------------------------------------------------------- #
 
+# general purpose routines -------------------------------------- #
 # remove file if requested
 # inputs:
 #   filename: (string) filename of file to be removed
@@ -24,6 +25,8 @@ def create_list_dictionary_from_keys(keys_list):
   for key in list(set(keys_list)):
     list_dict[key] = []
   return list_dict
+
+# routines for handling unit test drivers ----------------------- #
 
 # write the pre-fruit basket calls in the unit test file
 # inputs:
@@ -119,11 +122,11 @@ test_prefix,test_suffix,test_ext,driver_suffix):
 # inputs:
 #   driver_path: (path) path posix of the test driver
 def compile_unit_test_driver(driver_path):
-  import os
+  from os import system
   exec_name = driver_path.name.replace(driver_path.suffix,'')
-  os.system('make cleanall')
-  os.system(''.join(['rm -f ',exec_name]))
-  os.system(''.join(['make -j8 ',exec_name]))
+  system('make cleanall')
+  system(''.join(['rm -f ',exec_name]))
+  system(''.join(['make -j8 ',exec_name]))
 
 # run the unit test driver using 2 mpi tasks maximum 
 # and 2 omp threads maximum
@@ -131,14 +134,21 @@ def compile_unit_test_driver(driver_path):
 #   driver_path:   (path) path posix of the test driver
 #   test_parallel: (string) type of unit test parallelism
 def run_unit_test_driver(driver_path,test_parallel):
-  import os
-  # set the number of OMP threads 
-  os.system('export OMP_NUM_THREADS=2')
+  from os import system,environ
+  # set the number of OMP threads
+  omp_num_threads_old = environ('export OMP_NUM_THREADS') 
+  system('export OMP_NUM_THREADS=2')
   exec_name = driver_path.name.replace(driver_path.suffix,'')
   if(test_parallel=='serial'):
-    os.system(''.join(['./',exec_name]))
+    system(''.join(['./',exec_name]))
   # remove executable
-  os.system(''.join(['rm -f ',exec_name]))
+  system(''.join(['rm -f ',exec_name]))
+  # restore original number of omp threads
+  system(''.join(['export OMP_NUM_THREADS=',omp_num_threads_old]))
+
+# routines for handling FRUIT XML files ------------------------- #
+
+# global unit test routines ------------------------------------- #
 
 # execute unit test: generate, compile, run unit test driver
 #   test_path:          (path) path posix of the test module
@@ -164,8 +174,8 @@ test_prefix,test_suffix,test_ext,driver_suffix,remove_driver):
 # outpus:
 #   parser: (namespace) namespace having the inputs as attributes
 def generate_argument_parser():
-  import argparse
-  parser = argparse.ArgumentParser(\
+  from argparse import ArgumentParser 
+  parser = ArgumentParser(\
   description='generate, compile and execute JOREK unit tests')
   parser.add_argument('--directories','-d',type=str,nargs='*',\
   required=False,action='store',dest='test_dirs',default=[\
@@ -175,12 +185,12 @@ def generate_argument_parser():
 
 # Execute script ------------------------------------------------ #
 if __name__ == '__main__':
-  import sys
+  from sys import exit as sysexit
   args = generate_argument_parser()
   test_modules = find_unit_test_modules(args.test_dirs[0],'mod_','_test',\
   'f90',['mpi'])
   execute_unit_test(test_modules['serial'][0],'serial',\
   'run_fruit_','mod_','_test','f90','_test_driver',True)
   # exit program with success
-  sys.exit(0)
+  sysexit(0)
 # End-of-the-scripts -------------------------------------------- #

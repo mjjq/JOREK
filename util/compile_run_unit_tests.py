@@ -136,7 +136,7 @@ def compile_unit_test_driver(driver_path):
 def run_unit_test_driver(driver_path,test_parallel):
   from os import system,environ
   # set the number of OMP threads
-  omp_num_threads_old = environ('export OMP_NUM_THREADS') 
+  omp_num_threads_old = environ['OMP_NUM_THREADS']
   system('export OMP_NUM_THREADS=2')
   exec_name = driver_path.name.replace(driver_path.suffix,'')
   if(test_parallel=='serial'):
@@ -147,6 +147,38 @@ def run_unit_test_driver(driver_path,test_parallel):
   system(''.join(['export OMP_NUM_THREADS=',omp_num_threads_old]))
 
 # routines for handling FRUIT XML files ------------------------- #
+
+# Read the file containing the test results as run by FRUIT.
+# The total number of successes and failures is returned.
+# inputs:
+#   fruit_filename:   (string) filename of the FRUIT result file
+#   fruit_ext:        (string) extension of the FRUIT result file
+#   fruit_result_map: (dict) dictionary containing the association
+#                     between the fruit errors,tests,failures,id
+#                     fields and the index of the integer in list
+# outputs:
+#   n_successes: (int) number of test ending in success
+#   n_failures:  (int) number of test ending in failures
+#   n_errors:    (int) number of test ending in errors
+#   test_id:     (int) test id
+def read_fruit_result_file(fruit_filename,fruit_ext,fruit_result_map):
+  from pathlib import Path
+  from re import findall
+  result_path = Path(''.join([fruit_filename,'.',fruit_ext]))
+  with result_path.open(mode='r') as result:
+    lines = result.readlines()
+  result_values = []
+  # extract the line containing the results
+  for line in lines:
+    if('failures' in line):
+      results = [int(result) for result in findall(r'\d+',line)]
+      break
+  # return results
+  return results[fruit_result_map['tests']]-\
+  results[fruit_result_map['failures']],\
+  results[fruit_result_map['failures']],\
+  results[fruit_result_map['errors']],\
+  results[fruit_result_map['id']]
 
 # global unit test routines ------------------------------------- #
 
@@ -186,11 +218,15 @@ def generate_argument_parser():
 # Execute script ------------------------------------------------ #
 if __name__ == '__main__':
   from sys import exit as sysexit
+  fruit_result_map = {'errors':0,'tests':1,'failures':2,'id':3}
   args = generate_argument_parser()
   test_modules = find_unit_test_modules(args.test_dirs[0],'mod_','_test',\
   'f90',['mpi'])
   execute_unit_test(test_modules['serial'][0],'serial',\
   'run_fruit_','mod_','_test','f90','_test_driver',True)
+  n_successes,n_failures,n_errors,test_id = read_fruit_result_file(\
+  'result','xml',fruit_result_map)
+  print(n_successes,n_failures,n_errors,test_id)
   # exit program with success
   sysexit(0)
 # End-of-the-scripts -------------------------------------------- #

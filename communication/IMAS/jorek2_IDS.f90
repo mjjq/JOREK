@@ -20,10 +20,11 @@ program jorek2_IDS
   integer :: shot_number, run_number, i_begin, i_end, i_step
   integer :: ierr, idx, stat, n_grid
   logical :: first_step
-  logical :: export_MHD, export_radiation, export_core_profiles
+  logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
 
   namelist /imas_params/ shot_number, run_number, user, database, i_begin, i_end, &
-                         export_mhd, export_radiation, export_core_profiles, n_grid
+                         export_mhd, export_radiation, export_core_profiles, n_grid, &
+                         export_equilibrium
 
   ! --- Necessary initialization ------------------
   ! --- Initialize mode and mode_type arrays
@@ -47,6 +48,7 @@ program jorek2_IDS
   export_MHD           = .true.
   export_radiation     = .false.
   export_core_profiles = .false. 
+  export_equilibrium   = .false.
   n_grid               = 100              !< Number of radial points used for 1D profiles  
 
   call getenv('USER',user)
@@ -93,6 +95,9 @@ program jorek2_IDS
 
     ! --- Fill and export a core_profiles IDS
     if (export_core_profiles)  call fill_core_profiles_IDS(first_step, idx, n_grid)  
+
+    ! --- Fill and export an equilibrium IDS
+    if (export_equilibrium)  call fill_equilibrium_IDS(first_step, idx, n_grid)
 
     ! --- Fill and export a radiation IDS
     if (export_radiation) then

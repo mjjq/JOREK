@@ -128,6 +128,7 @@ module mod_expression
     call add(exprs_all, 'Jtor        ', 'Physical current density (phi component)              ')
     call add(exprs_all, 'Jpol        ', 'Poloidal current value in the poloidal field direction')
     call add(exprs_all, 'FFprime_loc ', 'Local FFprime value, calculated from 3D JxB= grad p   ')
+    call add(exprs_all, 'p_prime_loc ', 'Local derivative of the pressure w.r.t. psi           ')
     call add(exprs_all, 'JxB_R       ', 'JxB force (R component)                               ')
     call add(exprs_all, 'JxB_Z       ', 'JxB force (Z component)                               ')
     call add(exprs_all, 'JxB_phi     ', 'JxB force (phi component)                             ')
@@ -594,6 +595,7 @@ module mod_expression
     real*8 :: T0_corr, Ti0_corr, Te0_corr, r0_corr, rn0_corr
     real*8 :: T_or_Te, T_or_Te_corr, T_or_Te_0 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
+    real*8 :: p_prime_loc
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
@@ -603,7 +605,7 @@ module mod_expression
     real*8  ::  pres_flux_par, pres_flux_tot, kin_flux_par, kin_flux_tot, neut_part_flux, ExB_norm 
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
-      fact_resistiv, fact_Er, fact_flux, fact_rad
+      fact_resistiv, fact_Er, fact_flux, fact_rad, fact_ffp_si
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: rimp0, rimp0_s, rimp0_t, rimp0_ss, rimp0_tt, rimp0_st, rimp0_p, rimp0_pp, rimp0_R, rimp0_Z
     real*8  :: flux_av_fact
@@ -1237,11 +1239,12 @@ module mod_expression
 
           psi_norm = get_psi_n(A30, Z)
           psi_abs  = sqrt(A30_R*A30_R + A30_Z * A30_Z)
+          
+          p_prime_loc = 0.d0
           if (psi_abs > 1.d-6) then
-            FFprime_loc = zj0 + (R**2.d0) * (A30_R*P0_R + A30_Z*P0_Z)/(psi_abs**2.d0)
-          else
-            FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
+            p_prime_loc = (A30_R*P0_R + A30_Z*P0_Z)/(psi_abs**2.d0)
           endif
+          FFprime_loc = zj0 + (R**2.d0) * p_prime_loc
 
 #else
           BB2      = (F0*F0 + ps0_R * ps0_R + ps0_Z * ps0_Z ) / BigR**2
@@ -1265,12 +1268,12 @@ module mod_expression
           Bp_Z     =   0.
           B_R      = ( BR_R + BZ_R + Bp_R ) / Btot
           B_Z      = ( BR_Z + BZ_Z + Bp_Z ) / Btot
-
+          
+          p_prime_loc = 0.d0
           if (psi_abs > 1.d-6) then
-            FFprime_loc = zj0 + (R**2.d0) * (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
-          else
-            FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
+            p_prime_loc = (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
           endif
+          FFprime_loc = zj0 + (R**2.d0) * p_prime_loc
 #endif
           flux_av_fact = 1.d0
           if (present(flux_av)) then 
@@ -1586,6 +1589,7 @@ module mod_expression
              fact_Er       = F0 / fact_time
              fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0) ! factor for Prad (not Lrad)
              fact_flux     = 1.d0/(mu_zero*fact_time)  
+             fact_ffp_si   = -1.d0   ! En SI:  J_phi * mu_0 * R ~ FF'_SI, then FF'_SI = -FF'_JOREK
           else if ( units == JOREK_UNITS ) then
              rho_norm      = 1.d0
              fact_time     = 1.d0
@@ -1598,6 +1602,7 @@ module mod_expression
              fact_Er       = 1.d0
              fact_rad      = 1.d0
              fact_flux     = 1.d0 
+             fact_ffp_si   = 1.d0
           end if
           
           ! --- factor to calculate ion saturation current in JOREK units
@@ -1770,7 +1775,10 @@ module mod_expression
                 res = Jtor / fact_mu_zero
 
               case ( 'FFprime_loc' )
-                res = FFprime_loc
+                res = FFprime_loc * fact_ffp_si
+
+              case ( 'p_prime_loc' )
+                res = p_prime_loc / fact_mu_zero
 
               case ( 'Jpol' )
                 res = Jpol / fact_mu_zero

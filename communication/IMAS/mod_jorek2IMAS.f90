@@ -482,6 +482,153 @@ module mod_jorek2IMAS
 
 
 
+  subroutine fill_equilibrium_IDS(first_step, idx, n_grid)  
+
+    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass, imp_type, &
+                           gamma, index_main_imp
+    implicit none
+
+    ! --- External parameters
+    logical,      intent(in) :: first_step   ! is this the first step?
+    integer,      intent(in) :: idx          ! IMAS identifier
+    integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
+   
+    ! --- Local parameters 
+    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
+    real*8     :: fact_time, rho0, fact_rad, fact_psi
+    real*8, allocatable :: result(:,:), q_prof(:), rho_tor(:)
+    character(10)       :: str
+    type(type_command)  :: command_tmp
+    
+    ! **********************************************************************************
+    ! ******************************* IMAS **********************************************
+    ! **********************************************************************************
+    type(ids_equilibrium),     target  :: equilibrium_ids
+    integer :: n_slice, i_slice, i_exp, stat, i_psi
+    ! **********************************************************************************
+
+    ! --- Set times
+    n_slice = 1;   i_slice = 1
+
+    allocate( equilibrium_ids%time_slice(n_slice) )
+    allocate( equilibrium_ids%time(n_slice) )
+
+    ! --- Normalization factors for IMAS
+    rho0               = central_density * 1.d20 * central_mass * mass_proton
+    sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
+
+    fact_time =  sqrt_mu0_rho0 
+    fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
+    
+    equilibrium_ids%ids_properties%homogeneous_time = 1    
+    equilibrium_ids%time(i_slice) = t_start * fact_time 
+
+    ! --- Call expressions and do a flux average
+    step_imported = .true.
+  
+  ! --- Preset namelist input parameters for jorek2_postproc
+    if (first_step) then 
+      call init_new_diag(.false.)
+      write(str, '(I0)') n_grid
+      call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
+      call set_setting('loop_units',      '1',     ierr, 'Use which units for time-loops (0=JOREK, 1=SI)'     )
+      call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
+      call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
+      call set_setting('surfaces',         str,    ierr, 'number for flux surfaces e.g. for qprofile'         )
+      call set_setting('nsmallsteps',     '3',     ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('nmaxsteps',       '2500',  ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('deltaphi',        '0.3',   ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('rad_range_min',   '0.001', ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('rad_range_max',   '0.999', ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('nTht',            '32',    ierr, 'numerical parameter for field line tracing'         )
+    endif
+
+    ! --- Get average and q-profile
+    command_tmp%n_args = 0
+    call clean_up()
+    expr_list = exprs((/'Psi', 'pres', 'FFprime_loc', 'p_prime_loc', 'Jpar'/), 5)
+    call average(command_tmp, first_step==.true., ierr, result, .true.)
+    call clean_up()
+    call qprofile(command_tmp, first_step==.true., ierr, q_prof)
+    ! --- Correct first and last points
+    q_prof(1)      = q_prof(2)        + (q_prof(2)-q_prof(3))
+    q_prof(n_grid) = q_prof(n_grid-1) + (q_prof(n_grid-1)-q_prof(n_grid-2))
+
+    ! --- Fill profiles
+    do i_exp=1, expr_list%n_expr
+
+      ! --- psi
+      if (expr_list%expr(i_exp)%name=='Psi') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_1d%psi(n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_1d%psi(:)   = result(:,i_exp) * fact_psi
+      endif
+
+      ! --- pressure
+      if (expr_list%expr(i_exp)%name=='pres') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_1d%pressure(n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_1d%pressure(:)   = result(:,i_exp) 
+      endif
+
+      ! --- p'
+      if (expr_list%expr(i_exp)%name=='p_prime_loc') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_1d%dpressure_dpsi(n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_1d%dpressure_dpsi(:)   = result(:,i_exp) / fact_psi
+      endif
+
+      ! --- FF'
+      if (expr_list%expr(i_exp)%name=='FFprime_loc') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_1d%f_df_dpsi(n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_1d%f_df_dpsi(:) = result(:,i_exp) / fact_psi
+      endif
+
+      ! --- Parallel current
+      if (expr_list%expr(i_exp)%name=='Jpar') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_1d%j_parallel(n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_1d%j_parallel(:) = result(:,i_exp) 
+      endif
+
+
+    end do
+    
+    ! --- q-profile
+    allocate( equilibrium_ids%time_slice(i_slice)%profiles_1d%q(n_grid) )
+    equilibrium_ids%time_slice(i_slice)%profiles_1d%q(:) = q_prof(:)
+
+    ! --- Get rho_norm_tor from psi_N and q_profile
+    allocate( equilibrium_ids%time_slice(i_slice)%profiles_1d%rho_tor_norm(n_grid) )
+    allocate(rho_tor(n_grid))
+    rho_tor(:) = 0.d0
+    do i_psi=2, n_grid
+      rho_tor(i_psi) = sum(q_prof(1:i_psi)) ! Assuming equidistant psi grid!!
+    end do
+    equilibrium_ids%time_slice(i_slice)%profiles_1d%rho_tor_norm(:) = rho_tor(:)/rho_tor(n_grid)
+    
+    ! --- Fill global quantities (call mod_integrals3D)
+    equilibrium_ids%time_slice(i_slice)%global_quantities%psi_axis     = ES%Psi_axis * fact_psi
+    equilibrium_ids%time_slice(i_slice)%global_quantities%psi_boundary = ES%Psi_bnd  * fact_psi
+
+    ! --- Put data into local database
+    if (first_step) then  
+      call ids_put(idx,'equilibrium',equilibrium_ids,stat)
+    else
+      call ids_put_slice(idx,'equilibrium',equilibrium_ids,stat)
+    endif
+
+    if (stat==0) then
+       write(*,*) '    equilibrium IDS exported'
+    else
+       write(*,*) '    Something went wrong writting the equilibrium IDS!'
+    endif
+
+  end subroutine fill_equilibrium_IDS
+
+
+
+
+
+
+
   ! --- Fills Bezier coefficients in GGD
   subroutine fill_Bezier_coefficients( ggd_scalar, node_list, var_index, grid_ind, grid_sub_ind, res_fact )
   

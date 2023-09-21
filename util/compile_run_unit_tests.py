@@ -182,6 +182,26 @@ def read_fruit_result_file(fruit_filename,fruit_ext,fruit_result_map):
 
 # global unit test routines ------------------------------------- #
 
+# check results, if there is a non-zero number of failures
+# or a non zero number of erros, the script return the 
+# error exit code of 1. The success exit code of 0 is 
+# returned otherwise
+# inputs: 
+#   n_failures: (integer) total number of failed tests
+#   n_errors:   (integer) total number of errors
+def check_results_exit(n_failures,n_errors):
+  from sys import exit as sysexit
+  if(n_failures!=0):
+    print(''.join(['Unit test failed: N# failures: ',\
+    str(n_failures),' N# errors: ',str(n_errors)]))
+    sysexit(1)
+  if(n_errors!=0):
+    print(''.join(['Unit test failed: N# failures: ',\
+    str(n_failures),' N# errors: ',str(n_errors)]))
+    sysexit(1)
+  print('Unit test successfully completed!')
+  sysexit(0)
+
 # execute unit test: generate, compile, run unit test driver
 #   test_path:          (path) path posix of the test module
 #   test_dir:           (string) unit test directory
@@ -226,7 +246,6 @@ if __name__ == '__main__':
   'run_fruit_','mod_','_test','f90','_test_driver',True)
   n_successes,n_failures,n_errors,test_id = read_fruit_result_file(\
   'result','xml',fruit_result_map)
-  print(n_successes,n_failures,n_errors,test_id)
-  # exit program with success
-  sysexit(0)
+  # check for failures / errors and  exit program
+  check_results_exit(n_failures,n_errors)
 # End-of-the-scripts -------------------------------------------- #

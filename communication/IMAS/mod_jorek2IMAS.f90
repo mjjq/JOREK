@@ -13,7 +13,7 @@ module mod_jorek2IMAS
   use constants
   use mod_expression, only: exprs, exprs_all_int
   use exec_commands,  only: average, expr_list, clean_up, step_imported, qprofile, &
-                            zeroD_quantities
+                            zeroD_quantities, separatrix
   use parse_commands, only: type_command
   use settings,       only: set_setting
   
@@ -500,7 +500,7 @@ module mod_jorek2IMAS
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
     real*8     :: fact_time, rho0, fact_rad
-    real*8, allocatable :: result(:,:), res0D(:), q_prof(:), rho_tor(:)
+    real*8, allocatable :: result(:,:), res0D(:), q_prof(:), rho_tor(:), R_sep(:), Z_sep(:)
     character(10)       :: str
     type(type_command)  :: command_tmp
     
@@ -682,8 +682,37 @@ module mod_jorek2IMAS
         equilibrium_ids%time_slice(i_slice)%global_quantities%energy_mhd = res0D(i_exp)
       endif
 
-
     end do
+
+    ! --- Shaping parameters, T. Luce, PPCF 55 (2013) 095009, equations (1-6)
+    if (ES%limiter_plasma) then
+      equilibrium_ids%time_slice(i_slice)%boundary_separatrix%type = 0
+    else
+      equilibrium_ids%time_slice(i_slice)%boundary_separatrix%type = 1
+    endif
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%psi                    = ES%Psi_bnd * fact_psi
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%minor_radius           = ES%LCFS_a
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%elongation             = ES%LCFS_kappa
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%triangularity_upper    = ES%LCFS_deltaU
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%triangularity_lower    = ES%LCFS_deltaL
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%geometric_axis%r       = ES%LCFS_Rgeo
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%geometric_axis%z       = ES%LCFS_Zgeo
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%active_limiter_point%r = ES%R_lim
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%active_limiter_point%z = ES%Z_lim
+
+    allocate(equilibrium_ids%time_slice(i_slice)%boundary_separatrix%x_point(2))
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%x_point(:)%r = ES%R_xpoint(:)
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%x_point(:)%z = ES%Z_xpoint(:)
+
+    ! --- Export separatrix
+    call separatrix(command_tmp, ierr, R_sep, Z_sep)
+    allocate(equilibrium_ids%time_slice(i_slice)%boundary_separatrix%outline%r(size(R_sep)))
+    allocate(equilibrium_ids%time_slice(i_slice)%boundary_separatrix%outline%z(size(R_sep)))
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%outline%r(:) = R_sep(:)
+    equilibrium_ids%time_slice(i_slice)%boundary_separatrix%outline%z(:) = Z_sep(:)
+
+
+
     ! --- Put data into local database
     if (first_step) then  
       call ids_put(idx,'equilibrium',equilibrium_ids,stat)

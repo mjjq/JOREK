@@ -67,7 +67,7 @@ module exec_commands
   
   private
   public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported, qprofile, &
-         zeroD_quantities
+         zeroD_quantities, separatrix
 
   
   
@@ -3329,14 +3329,15 @@ module exec_commands
   end subroutine RHS_terms_vtk   
   
   !> Output the separatrix.
-  recursive subroutine separatrix(command, ierr)
+  recursive subroutine separatrix(command, ierr, R_sep, Z_sep)
   
     ! --- Routine parameters
     type(type_command), intent(in)  :: command     !< Command to be executed
     integer,            intent(out) :: ierr        !< Error flag
-    
+    real*8, optional, allocatable, intent(inout) :: R_sep(:), Z_sep(:)
+
     ! --- Local variables
-    integer                  :: i, j, i_elm, npts, ip, nplot, i_file
+    integer                  :: i, j, i_elm, npts, ip, nplot, i_file, i_count
     type (type_surface_list) :: surface_list
     character(len=1024)      :: filename, comment
     type(t_expr_list)        :: tmp_expr_list
@@ -3359,12 +3360,20 @@ module exec_commands
     allocate( surface_list%psi_values(1) )
     surface_list%psi_values(1) = ES%psi_bnd
     call find_flux_surfaces(0,xpoint, xcase, node_list, element_list, surface_list)
-    
+
     ! --- Write out flux surfaces
     nplot  = 5
     i_file = 111
     call open_ascii_file(ierr, i_file, filename, .false.)
     i = 1
+
+    if (present(R_sep) .and. present(Z_sep)) then
+      allocate(R_sep(surface_list%flux_surfaces(i)%n_pieces*nplot))
+      allocate(Z_sep(surface_list%flux_surfaces(i)%n_pieces*nplot))
+    endif
+
+    i_count = 0
+
     ! --- Loop over all segments of this flux surface
     do j=1,surface_list%flux_surfaces(i)%n_pieces
       
@@ -3394,6 +3403,13 @@ module exec_commands
           
         ! --- Write out the (R,Z)-coordinates
         write(i_file,'(2ES16.7)') R, Z
+
+        i_count = i_count + 1
+
+        if (present(R_sep) .and. present(Z_sep)) then
+          R_sep(i_count) = R
+          Z_sep(i_count) = Z
+        endif
       end do
       
       write(i_file,*)

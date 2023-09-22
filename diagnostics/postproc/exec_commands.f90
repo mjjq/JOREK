@@ -66,7 +66,8 @@ module exec_commands
   
   
   private
-  public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported, qprofile
+  public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported, qprofile, &
+         zeroD_quantities
 
   
   
@@ -2503,7 +2504,7 @@ module exec_commands
 
   
 
-  subroutine zeroD_quantities(command, first_step, ierr)
+  subroutine zeroD_quantities(command, first_step, ierr, res_out)
 
     use mod_integrals3D_nompi
 
@@ -2511,6 +2512,8 @@ module exec_commands
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
     integer,            intent(out) :: ierr        !< Error flag
+    
+    real*8, allocatable,optional, intent(inout) :: res_out(:) 
     
     ! --- Local variables
     integer :: i_file, i, units
@@ -2526,7 +2529,11 @@ module exec_commands
     units = get_int_setting('units', ierr)
 
     allocate(res(exprs_all_int%n_expr+1))
-    res = 0.d0   
+    res = 0.d0  
+    if (present(res_out)) then
+      allocate(res_out(exprs_all_int%n_expr+1))
+      res_out = 0.d0
+    endif 
  
     write(filename,'(4a)') trim(DIR), 'zeroD_quantities',  &
        trim(step_range_string(loop_min_step,loop_max_step)), '.dat'
@@ -2543,7 +2550,6 @@ module exec_commands
         iostat=ierr)
     
     if ( first_step ) then
-      write(i_file,'(a)',advance='no') '# time                   '
       do i = 1, exprs_all_int%n_expr
         s = trim(exprs_all_int%expr(i)%name)
         write(i_file,'(a)',advance='no') s
@@ -2552,10 +2558,10 @@ module exec_commands
     end if
     close(i_file)
  
-   call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
+    call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
 
-   call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
-     filename=filename, append=.true., blanks=.false.)
+    call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
+      filename=filename, append=.true., blanks=.false.)
 
     i_file =1569    
     open(i_file, file='0D_quantities_list.txt', form='formatted', status=trim(status), access=trim(access),  &
@@ -2564,14 +2570,15 @@ module exec_commands
     if ( first_step ) then
       write(i_file,'(a)') 'Column |  Quantity                | Description'
       write(i_file,'(a)') '-------------------------------------------------------------------------------------'
-      write(i_file,'(1I6,2a)') 1,' |  ' ,'Time                    | Time'
       do i = 1, exprs_all_int%n_expr
         s    = trim(exprs_all_int%expr(i)%name)
         desc = trim(exprs_all_int%expr(i)%descr)
-        write(i_file,'(1I6,4a)') i+1,' |  ' ,s, ' | ', desc
+        write(i_file,'(1I6,4a)') i,' |  ' ,s, ' | ', desc
       end do
     end if
     close(i_file)
+
+    res_out = res
  
   end subroutine zeroD_quantities 
   

@@ -11,8 +11,9 @@ module mod_jorek2IMAS
   use data_structure
   use nodes_elements
   use constants
-  use mod_expression, only: exprs
-  use exec_commands,  only: average, expr_list, clean_up, step_imported, qprofile
+  use mod_expression, only: exprs, exprs_all_int
+  use exec_commands,  only: average, expr_list, clean_up, step_imported, qprofile, &
+                            zeroD_quantities
   use parse_commands, only: type_command
   use settings,       only: set_setting
   
@@ -21,6 +22,10 @@ module mod_jorek2IMAS
  
   public
  
+  ! Transform to COCOS convention 8 --> 11
+  real*8 :: fact_psi = -2.d0 * PI
+  real*8 :: fact_Ip  = -1.d0
+
   contains
 
 
@@ -71,12 +76,11 @@ module mod_jorek2IMAS
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
     sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
   
-    fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
     fact_time =  sqrt_mu0_rho0 
     fact_v    =  1.d0 /  sqrt_mu0_rho0 
     fact_w    = -1.d0 /  sqrt_mu0_rho0      ! Transform for COCOS convention of toroidal direction (anti-clockwise) 
     fact_phi  = -1.d0 /  sqrt_mu0_rho0 * F0 ! COCOS convection: F0 depends on phi direction
-    fact_zj   = -1.d0 / mu_zero * (-1.d0)   ! Last sign due to COCOS transformation
+    fact_zj   = -1.d0 / mu_zero * fact_Ip   ! Last sign due to COCOS transformation
     fact_rho  =  rho0 
     fact_T    =  1.d0 / ( EL_CHG * mu_zero * central_density * 1.d20 )   
   
@@ -301,7 +305,7 @@ module mod_jorek2IMAS
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_time, rho0, fact_rad, fact_psi
+    real*8     :: fact_time, rho0
     real*8, allocatable :: result(:,:), q_prof(:), rho_tor(:)
     character(10)       :: str
     type(type_command)  :: command_tmp
@@ -324,7 +328,6 @@ module mod_jorek2IMAS
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
 
     fact_time =  sqrt_mu0_rho0 
-    fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
     
     core_profiles_ids%ids_properties%homogeneous_time = 1    
     core_profiles_ids%time(i_slice) = t_start * fact_time 
@@ -496,8 +499,8 @@ module mod_jorek2IMAS
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_time, rho0, fact_rad, fact_psi
-    real*8, allocatable :: result(:,:), q_prof(:), rho_tor(:)
+    real*8     :: fact_time, rho0, fact_rad
+    real*8, allocatable :: result(:,:), res0D(:), q_prof(:), rho_tor(:)
     character(10)       :: str
     type(type_command)  :: command_tmp
     
@@ -519,7 +522,6 @@ module mod_jorek2IMAS
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
 
     fact_time =  sqrt_mu0_rho0 
-    fact_psi  = -2.d0 * PI                  ! Transform to COCOS convention 8 --> 11
     
     equilibrium_ids%ids_properties%homogeneous_time = 1    
     equilibrium_ids%time(i_slice) = t_start * fact_time 
@@ -588,7 +590,6 @@ module mod_jorek2IMAS
         equilibrium_ids%time_slice(i_slice)%profiles_1d%j_parallel(:) = result(:,i_exp) 
       endif
 
-
     end do
     
     ! --- q-profile
@@ -603,11 +604,86 @@ module mod_jorek2IMAS
       rho_tor(i_psi) = sum(q_prof(1:i_psi)) ! Assuming equidistant psi grid!!
     end do
     equilibrium_ids%time_slice(i_slice)%profiles_1d%rho_tor_norm(:) = rho_tor(:)/rho_tor(n_grid)
+
+    ! --- Information about the toroidal field
+    equilibrium_ids%vacuum_toroidal_field%r0 = R_geo
+    allocate(equilibrium_ids%vacuum_toroidal_field%b0(n_slice))
+    equilibrium_ids%vacuum_toroidal_field%b0(i_slice) = F0/R_geo * fact_Ip
     
     ! --- Fill global quantities (call mod_integrals3D)
-    equilibrium_ids%time_slice(i_slice)%global_quantities%psi_axis     = ES%Psi_axis * fact_psi
-    equilibrium_ids%time_slice(i_slice)%global_quantities%psi_boundary = ES%Psi_bnd  * fact_psi
+    equilibrium_ids%time_slice(i_slice)%global_quantities%psi_axis        = ES%Psi_axis * fact_psi
+    equilibrium_ids%time_slice(i_slice)%global_quantities%psi_boundary    = ES%Psi_bnd  * fact_psi
+    equilibrium_ids%time_slice(i_slice)%global_quantities%magnetic_axis%r = ES%R_axis
+    equilibrium_ids%time_slice(i_slice)%global_quantities%magnetic_axis%z = ES%Z_axis
 
+    command_tmp%n_args = 0
+    call clean_up()
+    call zeroD_quantities(command_tmp, first_step==.true., ierr, res0D)
+    
+    do i_exp=1, exprs_all_int%n_expr
+
+      ! --- Beta poloidal
+      if (exprs_all_int%expr(i_exp)%name=='beta_p') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%beta_pol   = res0D(i_exp)
+      endif
+
+      ! --- Beta poloidal
+      if (exprs_all_int%expr(i_exp)%name=='beta_t') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%beta_tor   = res0D(i_exp)
+      endif
+
+      ! --- Normalized beta
+      if (exprs_all_int%expr(i_exp)%name=='beta_n') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%beta_normal = res0D(i_exp)
+      endif
+
+      ! --- Total current
+      if (exprs_all_int%expr(i_exp)%name=='Ip_tot') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%ip = res0D(i_exp) * fact_Ip
+      endif
+
+      ! --- li(3)
+      if (exprs_all_int%expr(i_exp)%name=='li3') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%li_3 = res0D(i_exp)
+      endif
+
+      ! --- Volume
+      if (exprs_all_int%expr(i_exp)%name=='volume') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%volume = res0D(i_exp)
+      endif
+
+      ! --- Area of poloidal cross section inside LCFS
+      if (exprs_all_int%expr(i_exp)%name=='area') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%area = res0D(i_exp)
+      endif
+
+      ! --- Current centre - R
+      if (exprs_all_int%expr(i_exp)%name=='R_curr_cent') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%current_centre%r = res0D(i_exp)
+      endif
+
+      ! --- Current centre - Z
+      if (exprs_all_int%expr(i_exp)%name=='Z_curr_cent') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%current_centre%z = res0D(i_exp)
+      endif
+
+      ! --- q_axis
+      if (exprs_all_int%expr(i_exp)%name=='q02') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%q_axis = res0D(i_exp)
+      endif
+
+      ! --- q_95
+      if (exprs_all_int%expr(i_exp)%name=='q95') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%q_95 = res0D(i_exp)
+      endif
+
+      ! --- Thermal energy
+      if (exprs_all_int%expr(i_exp)%name=='Thermal_tot') then
+        equilibrium_ids%time_slice(i_slice)%global_quantities%energy_mhd = res0D(i_exp)
+      endif
+
+
+    end do
     ! --- Put data into local database
     if (first_step) then  
       call ids_put(idx,'equilibrium',equilibrium_ids,stat)

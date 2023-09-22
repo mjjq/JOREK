@@ -546,7 +546,7 @@ module mod_expression
   
   
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
-  subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr, flux_av)
+  subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr, flux_av, only_n0)
 
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
@@ -559,6 +559,7 @@ module mod_expression
     real*8, allocatable,          intent(inout) :: result(:,:,:,:)
     integer,                      intent(out)   :: ierr
     logical, optional,            intent(in)    :: flux_av   !< Prepare data for proper flux surface average?
+    logical, optional,            intent(in)    :: only_n0   !< only use n=0 toroidal harmonic
     
     ! --- Local variables
     type(t_pol_pos), pointer :: pol_pos
@@ -805,6 +806,10 @@ module mod_expression
               
               do i_tor = 1, n_tor
                 
+                if (present(only_n0)) then 
+                  if (only_n0 .and. (i_tor>1)) cycle
+                endif
+
                 hhz    = HZ   (i_tor)
                 hhz_p  = HZ_p (i_tor)
                 hhz_pp = HZ_pp(i_tor)

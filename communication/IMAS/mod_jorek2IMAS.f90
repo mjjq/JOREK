@@ -13,7 +13,7 @@ module mod_jorek2IMAS
   use constants
   use mod_expression, only: exprs, exprs_all_int
   use exec_commands,  only: average, expr_list, clean_up, step_imported, qprofile, &
-                            zeroD_quantities, separatrix
+                            zeroD_quantities, separatrix, rectangle
   use parse_commands, only: type_command
   use settings,       only: set_setting
   
@@ -23,7 +23,7 @@ module mod_jorek2IMAS
   public
  
   ! Transform to COCOS convention 8 --> 11
-  real*8 :: fact_psi = -2.d0 * PI
+  real*8 :: fact_psi =  2.d0 * PI
   real*8 :: fact_Ip  = -1.d0
 
   contains
@@ -356,7 +356,7 @@ module mod_jorek2IMAS
     command_tmp%n_args = 0
     call clean_up()
     expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
-                        'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i'/), 13)
+                        'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i', 'rho', 'Psi'/), 15)
     call average(command_tmp, first_step==.true., ierr, result, .true.)
     call clean_up()
     call qprofile(command_tmp, first_step==.true., ierr, q_prof)
@@ -376,6 +376,12 @@ module mod_jorek2IMAS
         core_profiles_ids%profiles_1d(i_slice)%grid%psi_magnetic_axis = ES%Psi_axis * fact_psi
         core_profiles_ids%profiles_1d(i_slice)%grid%psi_boundary      = ES%Psi_bnd  * fact_psi
         core_profiles_ids%profiles_1d(i_slice)%grid%rho_pol_norm(:)   = sqrt(result(:,i_exp))
+      endif
+
+      ! --- Psi
+      if (expr_list%expr(i_exp)%name=='Psi') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%grid%psi(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%grid%psi(:)   = result(:,i_exp) * fact_psi
       endif
 
       ! --- Ion temperature
@@ -444,10 +450,18 @@ module mod_jorek2IMAS
         core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%poloidal(:) = result(:,i_exp)
       endif
 
-       ! --- Diamagnetic velocity
+      ! --- Diamagnetic velocity
       if (expr_list%expr(i_exp)%name=='Vstar_i') then
         allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(n_grid) )
         core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(:) = result(:,i_exp)
+      endif
+
+      ! --- Ion density
+      if (expr_list%expr(i_exp)%name=='rho') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%density(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(1)%density(:) = result(:,i_exp) / (central_mass*MASS_PROTON)
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%element(1) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(1)%element(1)%a = central_mass
       endif
 
     end do
@@ -499,9 +513,10 @@ module mod_jorek2IMAS
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_time, rho0, fact_rad
+    real*8     :: fact_time, rho0, fact_rad, R_min, Z_min, R_max, Z_max, R_node, Z_node
     real*8, allocatable :: result(:,:), res0D(:), q_prof(:), rho_tor(:), R_sep(:), Z_sep(:)
-    character(10)       :: str
+    real*8, allocatable :: result2D(:,:,:), R_vec(:), Z_vec(:)
+    character(30)       :: str
     type(type_command)  :: command_tmp
     
     ! **********************************************************************************
@@ -711,7 +726,96 @@ module mod_jorek2IMAS
     equilibrium_ids%time_slice(i_slice)%boundary_separatrix%outline%r(:) = R_sep(:)
     equilibrium_ids%time_slice(i_slice)%boundary_separatrix%outline%z(:) = Z_sep(:)
 
+    ! --- Export 2D quantities on a rectangular grid
+    call clean_up()
 
+    ! --- Find out range for the rectangular grid
+    R_min = 1.d99;  R_max = -1.d99
+    Z_min = 1.d99;  Z_max = -1.d99
+    do i=1, node_list%n_nodes
+      R_node = node_list%node(i)%x(1,1,1)
+      Z_node = node_list%node(i)%x(1,1,2)
+      if (R_node < R_min) R_min = R_node
+      if (Z_node < Z_min) Z_min = Z_node
+      if (R_node > R_max) R_max = R_node
+      if (Z_node > Z_max) Z_max = Z_node
+    enddo
+
+    command_tmp%n_args = 7
+    write(str, '(F16.12)') R_min
+    command_tmp%args(1) = str  ! Rmin
+    write(str, '(F16.12)') R_max
+    command_tmp%args(2) = str  ! Rmax
+    write(str, '(I0)') n_grid
+    command_tmp%args(3) = str  ! nR
+    write(str, '(F16.12)') Z_min
+    command_tmp%args(4) = str  ! Zmin
+    write(str, '(F16.12)') Z_max
+    command_tmp%args(5) = str  ! Zmax
+    write(str, '(I0)') n_grid
+    command_tmp%args(6) = str  ! nZ
+    command_tmp%args(7) = '0'  ! phi
+
+    allocate(R_vec(n_grid), Z_vec(n_grid))
+    R_vec = [(R_min + float((i-1)) * (R_max-R_min) / float((n_grid - 1)), i = 1, n_grid)]
+    Z_vec = [(Z_min + float((i-1)) * (Z_max-Z_min) / float((n_grid - 1)), i = 1, n_grid)]
+    
+    expr_list = exprs((/'Psi', 'Jtor', 'BR', 'BZ', 'Btor'/), 5)
+    call rectangle(command_tmp, first_step, ierr, only_n0=.true., res2D_out=result2D)
+    
+    allocate(equilibrium_ids%time_slice(i_slice)%profiles_2d(1))
+    equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%type%index      = 0
+    equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%grid_type%index = 1 ! --- Rectangular
+    
+    allocate(equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%grid%dim1(n_grid))
+    allocate(equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%grid%dim2(n_grid))
+    
+    equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%grid%dim1(:) = R_vec(:)
+    equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%grid%dim2(:) = Z_vec(:)
+    
+    allocate( equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%r(n_grid, n_grid) )
+    allocate( equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%z(n_grid, n_grid) )
+    do i=1, n_grid
+      do j=1, n_grid
+        equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%r(i,j) = R_vec(i)  ! --- Som plotting tools use this field as well
+        equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%z(i,j) = Z_vec(j)
+      enddo
+    enddo
+
+    ! --- Fill profiles
+    do i_exp=1, expr_list%n_expr
+
+      ! --- psi
+      if (expr_list%expr(i_exp)%name=='Psi') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%psi(n_grid, n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%psi(:,:) = result2D(:,:,i_exp) * fact_psi
+      endif
+
+      ! --- Jtor
+      if (expr_list%expr(i_exp)%name=='Jtor') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%j_tor(n_grid, n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%j_tor(:,:) = result2D(:,:,i_exp) * fact_Ip
+      endif
+
+      ! --- B_R
+      if (expr_list%expr(i_exp)%name=='BR') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%b_field_r(n_grid, n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%b_field_r(:,:) = result2D(:,:,i_exp)
+      endif
+
+      ! --- B_Z
+      if (expr_list%expr(i_exp)%name=='BZ') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%b_field_z(n_grid, n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%b_field_z(:,:) = result2D(:,:,i_exp)
+      endif
+
+      ! --- B_tor
+      if (expr_list%expr(i_exp)%name=='Btor') then
+        allocate( equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%b_field_tor(n_grid, n_grid) )
+        equilibrium_ids%time_slice(i_slice)%profiles_2d(1)%b_field_tor(:,:) = result2D(:,:,i_exp) * fact_Ip
+      endif
+
+    enddo
 
     ! --- Put data into local database
     if (first_step) then  

@@ -67,7 +67,7 @@ module exec_commands
   
   private
   public exec_command, general_help, specific_help, clean_up, average, expr_list, step_imported, qprofile, &
-         zeroD_quantities, separatrix
+         zeroD_quantities, separatrix, rectangle
 
   
   
@@ -1539,7 +1539,7 @@ module exec_commands
   
   
   !> Expressions in a rectangular area.
-  subroutine rectangle(command, first_step, ierr)
+  subroutine rectangle(command, first_step, ierr, only_n0, res2D_out)
     
     use mod_position, only: pol_pos, tor_pos
     
@@ -1547,10 +1547,14 @@ module exec_commands
     type(type_command), intent(in)  :: command     !< Command to be executed
     logical,            intent(in)  :: first_step  !< First time step of a for loop?
     integer,            intent(out) :: ierr        !< Error flag
+    logical, optional,  intent(in)  :: only_n0     !< Only use n=0 component
+    
+    real*8, allocatable, optional, intent(inout) :: res2D_out(:,:,:)
     
     ! --- Local variables
     real*8  :: Rmin, Rmax, Zmin, Zmax, phi
     integer :: nR, nZ, units
+    logical :: just_n0
     character(len=1024) :: filename, comment
     
     ierr = 0
@@ -1575,13 +1579,26 @@ module exec_commands
       trim(step_range_string(index_now,index_now)), '.h5'
       
     comment = 'Output produced by jorek2_postproc command "rectangle"'
+
+    just_n0 = .false.
+    if (present(only_n0)) then
+      just_n0 = only_n0
+    endif
     
     call eval_expr(ES, units, expr_list,                                                           &
        pol_pos(node_list,element_list,ES,Rmin=Rmin,Rmax=Rmax,nR=nR,Zmin=Zmin,Zmax=Zmax,nZ=nZ),     &
-       tor_pos(phi=phi), result, ierr)
+       tor_pos(phi=phi), result, ierr,only_n0=just_n0)
     
     call reduce_result_to_2d(ierr, result, res2d, i1=1)
-    call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment), include_time=.true.)
+
+    if (.not. present(res2D_out)) then
+      call write_hdf5_2d(ierr, expr_list, res2d, trim(filename), comment=trim(comment), include_time=.true.)
+    endif
+
+    if (present(res2D_out)) then
+      allocate(res2D_out(size(res2d,1), size(res2d,2),size(res2d,3)))
+      res2D_out = res2d
+    endif
     
     if ( allocated(result) ) deallocate(result)
     if ( allocated(res2d ) ) deallocate(res2d )
@@ -2285,9 +2302,11 @@ module exec_commands
       k = k2 + 1 ! to avoid first and last point of q-profile which often is bad
       res1d(k2,:) = (/ get_psi_n(surface_list%psi_values(k)) , q(k) /)
     end do
-    
-    call write_ascii_1d(ierr, ES, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
-      filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+
+    if (.not. present(q_out)) then
+      call write_ascii_1d(ierr, ES, tmp_expr_list, res1d, FORM_TABLE, header=.true.,                 &
+        filename=trim(filename), append=(.not.first_step), blanks=.true., comment=trim(comment))
+    endif
     
     ! --- Clean up.
     if ( allocated(surface_list%psi_values)    ) deallocate(surface_list%psi_values)
@@ -2560,8 +2579,10 @@ module exec_commands
  
     call int3d_new(0, node_list, element_list, bnd_node_list, bnd_elm_list, exprs_all_int, res, units)        
 
-    call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
-      filename=filename, append=.true., blanks=.false.)
+    if (.not. present(res_out)) then
+      call write_ascii_0d(ierr, ES, expr_list, res, FORM_TABLE, header=.false.,                   &
+        filename=filename, append=.true., blanks=.false.)
+    endif
 
     i_file =1569    
     open(i_file, file='0D_quantities_list.txt', form='formatted', status=trim(status), access=trim(access),  &
@@ -2578,7 +2599,9 @@ module exec_commands
     end if
     close(i_file)
 
-    res_out = res
+    if (present(res_out)) then
+      res_out = res
+    endif
  
   end subroutine zeroD_quantities 
   

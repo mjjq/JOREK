@@ -1,5 +1,12 @@
 #! /usr/bin/env python3
 
+#
+# Purpose: Plot 1D lines from multiple ASCII files.
+#
+# Date: 2023-09-18
+# Author: Haowei Zhang, IPP Garching
+#
+
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse

@@ -136,7 +136,9 @@ def compile_unit_test_driver(driver_path):
 def run_unit_test_driver(driver_path,test_parallel):
   from os import system,environ
   # set the number of OMP threads
-  omp_num_threads_old = environ['OMP_NUM_THREADS']
+  omp_num_threads_old = 1
+  if('OMP_NUM_THREADS' in environ):
+    omp_num_threads_old = environ['OMP_NUM_THREADS']
   system('export OMP_NUM_THREADS=2')
   exec_name = driver_path.name.replace(driver_path.suffix,'')
   if(test_parallel=='serial'):
@@ -179,6 +181,8 @@ def read_fruit_result_file(fruit_filename,fruit_ext,fruit_result_map):
   results[fruit_result_map['failures']],\
   results[fruit_result_map['errors']],\
   results[fruit_result_map['id']]
+
+# Read multiple fruit
 
 # global unit test routines ------------------------------------- #
 

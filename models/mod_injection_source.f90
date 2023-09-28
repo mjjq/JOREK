@@ -426,7 +426,7 @@ module mod_injection_source
 
       ! Converting number density into mass density for each species respectively
       source_impurity_arr = source_impurity_arr / mass_ratio
-      source_impurity_drift_arr = source_impurity_drift_arr / mass_ratio
+      if (present(source_impurity_drift_arr)) source_impurity_drift_arr = source_impurity_drift_arr / mass_ratio
 
     end if
 

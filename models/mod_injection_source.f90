@@ -413,7 +413,7 @@ module mod_injection_source
             call inj_source(ns_amplitude(i_inj),ns_R(i_inj)+drift_distance(i_inj),ns_Z(i_inj),ns_phi(i_inj),spi_psi_tmp,spi_grad_psi_tmp, &
                             ns_radius,ns_deltaphi,ns_delta_minor_rad,ns_tor_norm, &
                             A_Dmv,K_Dmv,V_Dmv,P_Dmv,t_ns(i_inj),L_tube,R,Z,phi,psi, &
-                            source_tmp,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp,i_main_imp)
+                            source_tmp_drift,t_now,JET_MGI,ASDEX_MGI,central_density,central_mass,spi_vol_tmp,i_main_imp)
           else
             source_tmp_drift = source_tmp
           end if 

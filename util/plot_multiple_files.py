@@ -36,7 +36,8 @@ def read_ascii_file(file_path, skiprows):
     return column_names, data
 
 
-def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, shift_first_file, color_first_file):
+def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, 
+                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y):
     """
     Plot lines from multiple ASCII files in the same plot.
 
@@ -55,6 +56,18 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
             exit(-1)
         x = data[:, column_plot_for_X]  # Assuming the first column is the x-axis data
         y = data[:, 1:]  # Assuming the remaining columns are y-axis data
+
+        if pow_for_X != 1.0:
+            x = pow(x, pow_for_X)
+        
+        if pow_for_Y != 1.0:
+            y = pow(y, pow_for_Y)
+
+        if multiplier_for_X != 1.0:
+            x = x * multiplier_for_X
+        
+        if multiplier_for_Y != 1.0:
+            y = y * multiplier_for_Y
 
         if i == 0:
             x = x + float(shift_first_file)
@@ -108,9 +121,18 @@ if __name__ == "__main__":
                         help="Shift the data for the first file horizontally (in X direction).")
     parser.add_argument("-co", "--color_first_file", default="",
                         help="Specify the color for the first file.")
+    parser.add_argument("-xp", "--pow_for_X", type=float, default=1.0,
+                        help="Set power for the X-axis, e.g., r_n = pow(psi_N, 0.5).")
+    parser.add_argument("-yp", "--pow_for_Y", type=float, default=1.0,
+                        help="Set power for the Y-axis, e.g., f = pow(f, 0.5).")
+    parser.add_argument("-xm", "--multiplier_for_X", type=float, default=1.0,
+                        help="Multiple the X-data with the specified value.")
+    parser.add_argument("-ym", "--multiplier_for_Y", type=float, default=1.0,
+                        help="Multiple the Y-data with the specified value.")
     parser.add_argument("file_paths", nargs="+", help="List of file paths to the ASCII files.")
 
     args = parser.parse_args()
 
     plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
-                     int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file)
+                     int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
+                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y)

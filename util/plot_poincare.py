@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 """
 Script for reading and plotting the output from diagnostics/poincare.f90
 """

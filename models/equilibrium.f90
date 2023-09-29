@@ -46,7 +46,7 @@ real*8     :: R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2), psi_xpoint(2)
 real*8     :: zjz, dj_dpsi, dj_dR, dj_dZ, dj_dR_dZ, dj_dR_DR, dj_dZ_dZ, dj_dpsi2, dj_dR_dpsi, dj_dZ_dpsi, psi_n
 real*8     :: ps0_s, ps0_t, p_s, p_t, p_ss, p_st, p_tt 
 real*8     :: zj0_s, zj0_t, equil_error, equil_value, ps0_x, ps0_y, Z_s, Z_t, xjac, direction, Btot
-real*8     :: current_tot, current_int, diff, prev_diff, R_xpoint2(2), Z_xpoint2(2)
+real*8     :: current_tot, current_int, diff, R_xpoint2(2), Z_xpoint2(2)
 real*8     :: sigmas(17), dZ_axis, dR_axis, Z_axis_int, Z_axis_old, R_axis_old, R_axis_int, area_ref
 integer    :: n_grids(12)
 logical    :: freeboundary_equil2
@@ -99,7 +99,6 @@ R_xpoint(:)  = R_geo
 vertical_FB  = 0.d0
 i_elm_xpoint = 0 
 current_tot  = 0.
-prev_diff = +99.d0
 
 if (my_id == 0) then
 
@@ -157,18 +156,17 @@ if (my_id == 0) then
     if(xcase2 .eq. UPPER_XPOINT) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(2),ES%ifail_xpoint
 
     write(*,'(A,1f14.8)')                       ' PSI_BND - PSI_AXIS : ', ES%psi_bnd-ES%psi_axis 
-    write(*,'(A,1f14.8)')                       ' amix : ', amix
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1
 
-    if ( (my_id == 0) .and. (xcase2 .eq. DOUBLE_NULL) .and. (prev_diff .le. SDN_threshold) ) then
-      write(*,'(A,2f10.5)')'In Force DN, prev diff, SDN_thres = ',prev_diff, SDN_threshold
-      ! --- Force symetric double null
-      ! --- Project psi to force symmetry of psi at midplane
-      call Poisson(0,0,node_list,element_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
-                   0.0,1.0,.true.,xcase,ES%Z_xpoint,.false.,.false.,1)
-      call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
+    if ( (my_id == 0) .and. forceSDN .and. iter .gt. 2) then
+      if (abs(ES%psi_xpoint(1)-ES%psi_xpoint(2)) .ge. SDN_threshold) then
+        ! --- Project psi to enforce up/down symmetry
+        call Poisson(0,0,node_list,element_list,bnd_node_list,bnd_elm_list, var_psi,var_psi,1, &
+                     0.0,1.0,.true.,xcase,ES%Z_xpoint,.false.,.false.,1)
+        call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
+      end if
     end if
 
     diff = 0.d0
@@ -176,7 +174,6 @@ if (my_id == 0) then
       diff = diff + abs(node_list%node(i)%deltas(1,1,1))
     enddo  
     diff = diff / float(node_list%n_nodes)
-    prev_diff = diff
 
     ! Error handling, really is no point continuing if diff is NaN
     if (ISNAN(diff)) then

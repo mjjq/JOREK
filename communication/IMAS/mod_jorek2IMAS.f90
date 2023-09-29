@@ -4,7 +4,7 @@ module mod_jorek2IMAS
 #ifdef USE_IMAS
   use ids_schemas !, only: ids_equilibrium
   use ids_routines, only: imas_open_env, &
-     imas_create_env, imas_close, ids_get, ids_put, ids_put_slice
+     imas_create_env, imas_close, ids_get
 
   use mod_parameters 
   use mod_new_diag
@@ -29,7 +29,7 @@ module mod_jorek2IMAS
   contains
 
 
-  subroutine fill_mhd_IDS(first_step, idx)  
+  subroutine fill_mhd_IDS(first_step, mhd_ids)  
 
     use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass
@@ -37,23 +37,22 @@ module mod_jorek2IMAS
     implicit none
 
     ! --- External parameters
-    logical,            intent(in) :: first_step   ! is this the first step?
-    integer,            intent(in) :: idx          ! IMAS identifier
+    logical,            intent(in)           :: first_step   ! is this the first step?
+    type(ids_mhd), target,     intent(inout) :: mhd_ids
 
    
     ! --- Local parameters 
     integer    :: i, j, k, m, etype, irst, int, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_T, fact_time, fact_v, fact_zj, fact_psi, rho0, fact_phi, fact_rho, fact_w
+    real*8     :: fact_T, fact_time, fact_v, fact_zj, rho0, fact_phi, fact_rho, fact_w
     
     
     ! **********************************************************************************
     ! ******************************* IMAS **********************************************
     ! **********************************************************************************
-    type(ids_mhd),                      target  :: mhd_ids
     type(ids_generic_grid_scalar),      pointer :: ggd_scalar
     type(ids_generic_grid_aos3_root),   pointer :: grid
     
-    integer:: num_nodes, stat
+    integer:: num_nodes
     
     integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
     ! **********************************************************************************
@@ -169,19 +168,6 @@ module mod_jorek2IMAS
       endif
   
     enddo
-  
-    ! --- Put data into local database
-    if (first_step) then  
-      call ids_put(idx,'mhd',mhd_ids,stat)
-    else
-      call ids_put_slice(idx,'mhd',mhd_ids,stat)
-    endif
-
-    if (stat==0) then
-       write(*,*) '    MHD IDS exported'
-    else
-       write(*,*) '    Something went wrong writting the MHD IDS!'
-    endif
 
   end subroutine fill_mhd_IDS
 
@@ -192,7 +178,7 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_radiation_IDS(first_step, idx)  
+  subroutine fill_radiation_IDS(first_step, radiation_ids)  
 
     use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
@@ -200,22 +186,20 @@ module mod_jorek2IMAS
     implicit none
 
     ! --- External parameters
-    logical,      intent(in) :: first_step   ! is this the first step?
-    integer,      intent(in) :: idx          ! IMAS identifier
+    logical,                 intent(in) :: first_step   ! is this the first step?
+    type(ids_radiation),  intent(inout) :: radiation_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
     real*8     :: fact_time, rho0, fact_rad
     
-    
     ! **********************************************************************************
     ! ******************************* IMAS **********************************************
     ! **********************************************************************************
-    type(ids_radiation),                target  :: radiation_ids
     type(ids_generic_grid_scalar),      pointer :: ggd_scalar
     type(ids_generic_grid_aos3_root),   pointer :: grid
     
-    integer:: num_nodes, stat
+    integer:: num_nodes
     
     integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
     ! **********************************************************************************
@@ -252,8 +236,6 @@ module mod_jorek2IMAS
   
     radiation_ids%time(i_slice)                = t_start * fact_time 
     radiation_ids%process(1)%ggd(i_slice)%time = t_start * fact_time
-
-
  
     ! --- Fill radiation data 
     var_rad = 2
@@ -271,19 +253,6 @@ module mod_jorek2IMAS
     ggd_scalar => radiation_ids%process(1)%ggd(i_slice)%ion(1)%emissivity(grid_sub_ind)
     call fill_Bezier_coefficients( ggd_scalar, aux_node_list, var_rad, grid_ind, grid_sub_ind, fact_rad )
 
-    ! --- Put data into local database
-    if (first_step) then  
-      call ids_put(idx,'radiation',radiation_ids,stat)
-    else
-      call ids_put_slice(idx,'radiation',radiation_ids,stat)
-    endif
-
-    if (stat==0) then
-       write(*,*) '    Radiation IDS exported'
-    else
-       write(*,*) '    Something went wrong writting the radiation IDS!'
-    endif
-
   end subroutine fill_radiation_IDS
 
 
@@ -291,7 +260,7 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_core_profiles_IDS(first_step, idx, n_grid)  
+  subroutine fill_core_profiles_IDS(first_step, core_profiles_ids, n_grid)  
 
     use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
@@ -300,8 +269,8 @@ module mod_jorek2IMAS
 
     ! --- External parameters
     logical,      intent(in) :: first_step   ! is this the first step?
-    integer,      intent(in) :: idx          ! IMAS identifier
     integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
+    type(ids_core_profiles),   intent(inout) :: core_profiles_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
@@ -313,8 +282,7 @@ module mod_jorek2IMAS
     ! **********************************************************************************
     ! ******************************* IMAS **********************************************
     ! **********************************************************************************
-    type(ids_core_profiles),     target  :: core_profiles_ids
-    integer :: n_slice, i_slice, i_exp, stat, i_psi
+    integer :: n_slice, i_slice, i_exp, i_psi
     ! **********************************************************************************
 
     ! --- Set times
@@ -478,19 +446,6 @@ module mod_jorek2IMAS
       rho_tor(i_psi) = sum(q_prof(1:i_psi)) ! Assuming equidistant psi grid!!
     end do
     core_profiles_ids%profiles_1d(i_slice)%grid%rho_tor_norm(:) = rho_tor(:)/rho_tor(n_grid)
-    
-    ! --- Put data into local database
-    if (first_step) then  
-      call ids_put(idx,'core_profiles',core_profiles_ids,stat)
-    else
-      call ids_put_slice(idx,'core_profiles',core_profiles_ids,stat)
-    endif
-
-    if (stat==0) then
-       write(*,*) '    core_profiles IDS exported'
-    else
-       write(*,*) '    Something went wrong writting the core_profiles IDS!'
-    endif
 
   end subroutine fill_core_profiles_IDS
 
@@ -499,7 +454,7 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_equilibrium_IDS(first_step, idx, n_grid)  
+  subroutine fill_equilibrium_IDS(first_step, equilibrium_ids, n_grid)  
 
     use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
@@ -508,8 +463,8 @@ module mod_jorek2IMAS
 
     ! --- External parameters
     logical,      intent(in) :: first_step   ! is this the first step?
-    integer,      intent(in) :: idx          ! IMAS identifier
     integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
+    type(ids_equilibrium),  intent(inout)  :: equilibrium_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
@@ -522,8 +477,7 @@ module mod_jorek2IMAS
     ! **********************************************************************************
     ! ******************************* IMAS **********************************************
     ! **********************************************************************************
-    type(ids_equilibrium),     target  :: equilibrium_ids
-    integer :: n_slice, i_slice, i_exp, stat, i_psi
+    integer :: n_slice, i_slice, i_exp, i_psi
     ! **********************************************************************************
 
     ! --- Set times
@@ -816,19 +770,6 @@ module mod_jorek2IMAS
       endif
 
     enddo
-
-    ! --- Put data into local database
-    if (first_step) then  
-      call ids_put(idx,'equilibrium',equilibrium_ids,stat)
-    else
-      call ids_put_slice(idx,'equilibrium',equilibrium_ids,stat)
-    endif
-
-    if (stat==0) then
-       write(*,*) '    equilibrium IDS exported'
-    else
-       write(*,*) '    Something went wrong writting the equilibrium IDS!'
-    endif
 
   end subroutine fill_equilibrium_IDS
 

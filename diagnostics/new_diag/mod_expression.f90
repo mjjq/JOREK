@@ -187,6 +187,8 @@ module mod_expression
     call add(exprs_all, 'mu_neo      ', 'Neoclassical Friction Coefficient                     ')
     call add(exprs_all, 'T_e         ', 'Electron temperature                                  ')
     call add(exprs_all, 'T_i         ', 'Ion temperature                                       ')
+    call add(exprs_all, 'VXBt        ', 'Dynamo loop voltage term (n=1)                        ')
+    call add(exprs_all, 'VXBt_all    ', 'Dynamo loop voltage term (n>=1)                       ')
     call add(exprs_all, 'E_||        ', 'E_|| for RE acceleration                              ')
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
@@ -573,7 +575,9 @@ module mod_expression
       Vpar0_tt, Vpar0_st, Vpar0_p, Vpar0_pp, psi_norm, AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp,   &
       AR0_ss, AR0_tt, AR0_st, AR0_pp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_ss, AZ0_tt,    &
       AZ0_st, AZ0_pp, A30, A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_sp, A30_tp, A30_pp,    &
-      Fprofile, Fprofile_s, Fprofile_t, Fprofile_R, Fprofile_Z
+      Fprofile, Fprofile_s, Fprofile_t, Fprofile_R, Fprofile_Z,                                    &
+      AR0_1_p, AZ0_1_p, A30_1_s, A30_1_t, A30_1_R, A30_1_Z, BR_1, BZ_1, uR_1, uZ_1, uPhi_1,        &
+      AR0_all_p, AZ0_all_p, A30_all_s, A30_all_t, A30_all_R, A30_all_Z, BR_all, BZ_all, uR_all, uZ_all
     real*8  :: ps0_R, ps0_Z, ps0_RR, ps0_ZZ, ps0_RZ, u0_R, u0_Z, u0_RR, u0_ZZ, u0_RZ, vv2, zj0_R,  &
       zj0_Z, zj0_RR, zj0_ZZ, zj0_RZ, w0_R, w0_Z, w0_RR, w0_ZZ, w0_RZ, r0_R, r0_Z, r0_RR, r0_ZZ,    &
       r0_RZ, r0_hat, r0_R_hat, r0_Z_hat, T0_R, T0_Z, T0_RR, T0_ZZ, T0_RZ, T0_ps0_R, T0_ps0_Z,      &
@@ -585,6 +589,7 @@ module mod_expression
       BP_Z, BP_R, BR_R, BZ_Z, B_R, B_Z, Kappa_R, Kappa_Z, Kappa_phi
     real*8  :: eta_T, deta_dT, d2eta_d2T, visco_T, dvisco_dT, D_prof, ZK_prof, ZKi_prof, ZKe_prof, &
       ZKpar_T, dZKpar_dT, ZKi_par_T, dZKi_par_dT, ZKe_par_T, dZKe_par_dT, eta_num_T, visco_num_T
+    real*8  :: VXB_tor, VXB_tor_all
     real*8 :: Ti0, Ti0_s, Ti0_t, Ti0_st, Ti0_ss, Ti0_tt, Ti0_p, Ti0_pp, Te0, Te0_s, Te0_t, Te0_st, &
       Te0_ss, Te0_tt, Te0_p, Te0_pp, Ti0_R, Ti0_Z, Te0_R, Te0_Z, Er, Vtheta, Mach_par, Mach_pol,   &
       Vsound, Vneo, Vperp_e, Vperp_i, V_ExB, Vstar_e, Vstar_i, mu_neo, ki_neo, J_boot, Te0_eV,     &
@@ -601,7 +606,7 @@ module mod_expression
     real*8  ::  pres_flux_par, pres_flux_tot, kin_flux_par, kin_flux_tot, neut_part_flux, ExB_norm 
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
-      fact_resistiv, fact_Er, fact_flux, fact_rad
+      fact_resistiv, fact_Er, fact_flux, fact_rad, fact_VXB
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: rimp0, rimp0_s, rimp0_t, rimp0_ss, rimp0_tt, rimp0_st, rimp0_p, rimp0_pp, rimp0_R, rimp0_Z
 
@@ -775,6 +780,14 @@ module mod_expression
           AR0_sp   = 0.d0; AR0_tp   = 0.d0
           AZ0_sp   = 0.d0; AZ0_tp   = 0.d0
           A30_sp   = 0.d0; A30_tp   = 0.d0
+
+	        ! For dynamo loop voltage calculation
+          AR0_1_p  = 0.d0; AZ0_1_p   = 0.d0
+          A30_1_s  = 0.d0; A30_1_t  = 0.d0
+          uR_1     = 0.d0; uZ_1     = 0.d0; uPhi_1     = 0.d0
+          AR0_all_p  = 0.d0; AZ0_all_p   = 0.d0
+          A30_all_s  = 0.d0; A30_all_t  = 0.d0
+          uR_all     = 0.d0; uZ_all     = 0.d0
 
           delta_g(:) = 0.d0; delta_s(:) = 0.d0; delta_t(:) = 0.d0
           Fprofile = 0.d0;  Fprofile_s = 0.d0;  Fprofile_t = 0.d0
@@ -952,6 +965,24 @@ module mod_expression
                 A30_sp   = A30_sp   + vv(var_A3) * sz * hh_s  * hhz_p
                 A30_tp   = A30_tp   + vv(var_A3) * sz * hh_t  * hhz_p
 
+                if ( ( i_tor ==  2 ) .or. ( i_tor == 3 ) ) then
+                  AR0_1_p    = AR0_1_p    + vv(var_AR) * sz * hh    * hhz_p
+                  AZ0_1_p    = AZ0_1_p    + vv(var_AZ) * sz * hh    * hhz_p
+                  A30_1_s    = A30_1_s    + vv(var_A3) * sz * hh_s  * hhz
+                  A30_1_t    = A30_1_t    + vv(var_A3) * sz * hh_t  * hhz                
+                  uR_1       = uR_1       + vv(var_uR) * sz * hh    * hhz
+                  uZ_1       = uZ_1       + vv(var_uZ) * sz * hh    * hhz
+		              uPhi_1     = uPhi_1     + vv(var_up) * sz * hh    * hhz
+                end if
+
+                if ( i_tor .ge. 2 ) then
+                  AR0_all_p    = AR0_all_p    + vv(var_AR) * sz * hh    * hhz_p
+                  AZ0_all_p    = AZ0_all_p    + vv(var_AZ) * sz * hh    * hhz_p
+                  A30_all_s    = A30_all_s    + vv(var_A3) * sz * hh_s  * hhz
+                  A30_all_t    = A30_all_t    + vv(var_A3) * sz * hh_t  * hhz                
+                  uR_all       = uR_all       + vv(var_uR) * sz * hh    * hhz
+                  uZ_all       = uZ_all       + vv(var_uZ) * sz * hh    * hhz
+                end if
 
                 ! --- Deltas
                 do k = 1, n_var
@@ -1127,6 +1158,11 @@ module mod_expression
           AZ0_Z = ( - R_t * AZ0_s  + R_s * AZ0_t ) / xjac
           A30_R = (   Z_t * A30_s  - Z_s * A30_t ) / xjac
           A30_Z = ( - R_t * A30_s  + R_s * A30_t ) / xjac
+          A30_1_R = (   Z_t * A30_1_s  - Z_s * A30_1_t ) / xjac
+          A30_1_Z = ( - R_t * A30_1_s  + R_s * A30_1_t ) / xjac
+
+          A30_all_R = (   Z_t * A30_all_s  - Z_s * A30_all_t ) / xjac
+          A30_all_Z = ( - R_t * A30_all_s  + R_s * A30_all_t ) / xjac
 
           AR0_Rp = (   Z_t * AR0_sp  - Z_s * AR0_tp ) / xjac
           AR0_Zp = ( - R_t * AR0_sp  + R_s * AR0_tp ) / xjac
@@ -1224,6 +1260,12 @@ module mod_expression
           BP_Z = ( AZ0_RZ - AR0_ZZ ) + Fprofile_Z/BigR
           B_R  = ( BR_R + BZ_R + Bp_R ) / Btot
           B_Z  = ( BR_Z + BZ_Z + Bp_Z ) / Btot
+
+          BR_1 = ( A30_1_Z - AZ0_1_p )/ BigR
+          BZ_1 = ( AR0_1_p - A30_1_R )/ BigR
+
+          BR_all = ( A30_all_Z - AZ0_all_p )/ BigR
+          BZ_all = ( AR0_all_p - A30_all_R )/ BigR
 
           Btheta   = sqrt( BR*BR + BZ*BZ )
           BB2      = Btor**2 + BR**2 + BZ**2
@@ -1386,6 +1428,8 @@ module mod_expression
           V_ExB    = 0.d0 
           Vstar_e  = 0.d0
           Vstar_i  = 0.d0
+          VXB_tor  = 0.d0
+	        VXB_tor_all  = 0.d0
           
           if ( (psi_abs > 1.d-6) .and. (r0 > 1.d-6) .and. (abs(Btheta) > 1.d-6) ) then
             
@@ -1503,6 +1547,12 @@ module mod_expression
 
 #endif
 
+          ! --- Dynamo loop voltage
+#ifdef fullmhd
+          VXB_tor = uR_1 * BZ_1 - uZ_1 * BR_1
+          VXB_tor_all = uR_all * BZ_all - uZ_all * BR_all
+#endif
+
 #ifdef WITH_Impurities
 
           Te_corr_eV   = Te0_corr/(EL_CHG*MU_ZERO*central_density*1.d20)  ! Te in eV
@@ -1576,6 +1626,7 @@ module mod_expression
              fact_Er       = F0 / fact_time
              fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0) ! factor for Prad (not Lrad)
              fact_flux     = 1.d0/(mu_zero*fact_time)  
+             fact_VXB      = 1.d0 / sqrt( MU_zero * central_mass * central_density * 1.d20 * MASS_PROTON )
           else if ( units == JOREK_UNITS ) then
              rho_norm      = 1.d0
              fact_time     = 1.d0
@@ -1588,6 +1639,7 @@ module mod_expression
              fact_Er       = 1.d0
              fact_rad      = 1.d0
              fact_flux     = 1.d0 
+             fact_VXB      = 1.d0
           end if
           
           ! --- factor to calculate ion saturation current in JOREK units
@@ -1846,6 +1898,12 @@ module mod_expression
               case ( 'T_i' )
                 res = Ti0 * fact_T
                 
+              case ( 'VXBt' )
+                res = VXB_tor * fact_VXB
+                
+              case ( 'VXBt_all' )
+                res = VXB_tor_all * fact_VXB
+
               case ( 'E_||' )
                 res = E_par / fact_time
                 

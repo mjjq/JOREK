@@ -317,6 +317,7 @@ subroutine integrate_F_profile()
   use phys_module, only: Fprofile_internal, Fprofile_internal_psi, Fprofile_psi_max
   use phys_module, only: num_ffprime, num_ffprime_x, num_ffprime_y0, num_ffprime_len
   use phys_module, only: num_Fprofile, num_Fprofile_len, num_Fprofile_x, num_Fprofile_y0
+  use phys_module, only: intg_original_grids
 
   implicit none
   
@@ -331,7 +332,6 @@ subroutine integrate_F_profile()
   real*8  :: ff2,ff3,ff4,ff5,ff6
   real*8, allocatable  :: integral_large(:), psi_large(:)
   real*8  :: sign_F
-  logical :: use_original_grids
 
   if (F0 .eq. 0.d0) then
     write(*,*) "ERROR: F0 cannot equal zero!!!"
@@ -360,9 +360,8 @@ subroutine integrate_F_profile()
   ! --- Determin whether using the original 1D psi grid for integration, if false, use the eqdistant grid.
   ! --- Both methods should work out for num_ffprime cases
   ! --- It is disabled by default as some regression tests will fail.
-  use_original_grids = .false.
 
-  if (num_ffprime .and. use_original_grids) then
+  if (num_ffprime .and. intg_original_grids) then
 
     ! --- Haowei ZHANG <haowei.zhang@ipp.mpg.de>:
     ! --- Correct the sign of F-profile depending on F0

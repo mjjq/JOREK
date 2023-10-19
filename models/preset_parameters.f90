@@ -14,6 +14,7 @@ subroutine preset_parameters
   n_tor_fft_thresh = 2
   if(jorek_model == 305 .or. jorek_model == 306) n_tor_fft_thresh = 99
 
+  loop_voltage_control = 0.d0
   loop_voltage = 0.d0
   loop_voltage_prop = 0.d0
   loop_voltage_der = 0.d0
@@ -347,6 +348,18 @@ subroutine preset_parameters
   particlesource_fix_profile_allow_negative = .false.
   particlesource_fix_profile_tsteps         = 2.0
   particlesource_fix_profile_psi_max        = 0.9
+  heatsource_fix_profile                    = .false.
+  heatsource_fix_profile_allow_negative     = .false.
+  heatsource_fix_profile_tsteps             = 2.0
+  heatsource_fix_profile_psi_max            = 0.9
+  heatsource_i_fix_profile                  = .false.
+  heatsource_i_fix_profile_allow_negative   = .false.
+  heatsource_i_fix_profile_tsteps           = 2.0
+  heatsource_i_fix_profile_psi_max          = 0.9
+  heatsource_e_fix_profile                    = .false.
+  heatsource_e_fix_profile_allow_negative     = .false.
+  heatsource_e_fix_profile_tsteps             = 2.0
+  heatsource_e_fix_profile_psi_max            = 0.9
 
   ! ------------------------------------------
   ! --- Default boundary conditions ----------
@@ -571,6 +584,8 @@ subroutine preset_parameters
   rot_file           = 'none'
   Jsource_file       = 'none'
   heatsource_file    = 'none'
+  heatsource_i_file  = 'none'
+  heatsource_e_file  = 'none'
   normalized_velocity_profile = .true.
 
   n_Fprofile_internal = 300 ! model710 only: size of internal numerical F-profile, shoud be smaller than n_Fprofile_internal_max

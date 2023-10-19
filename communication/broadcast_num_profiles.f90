@@ -221,6 +221,26 @@ if ( num_heatsource ) then
   call MPI_BCAST(num_heatsource_y,num_heatsource_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 end if
 
+if ( num_heatsource_i ) then
+  call MPI_BCAST(num_heatsource_i_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_heatsource_i_x,1,num_heatsource_i_len,"num_heatsource_i_x")
+     call tr_allocate(num_heatsource_i_y,1,num_heatsource_i_len,"num_heatsource_i_y")
+  end if
+  call MPI_BCAST(num_heatsource_i_x,num_heatsource_i_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_heatsource_i_y,num_heatsource_i_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
+if ( num_heatsource_e ) then
+  call MPI_BCAST(num_heatsource_e_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+  if ( my_id /= 0 ) then
+     call tr_allocate(num_heatsource_e_x,1,num_heatsource_e_len,"num_heatsource_e_x")
+     call tr_allocate(num_heatsource_e_y,1,num_heatsource_e_len,"num_heatsource_e_y")
+  end if
+  call MPI_BCAST(num_heatsource_e_x,num_heatsource_e_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+  call MPI_BCAST(num_heatsource_e_y,num_heatsource_e_len,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+end if
+
 if (NEO) then
    if ( num_neo_file ) then
       call MPI_BCAST(num_neo_len,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)

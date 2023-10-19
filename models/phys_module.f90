@@ -293,6 +293,18 @@ module phys_module
   logical :: particlesource_fix_profile_allow_negative   !< allow a negative source
   real*8  :: particlesource_fix_profile_tsteps           !< time-scale over which this is enforced (ideally >=2)
   real*8  :: particlesource_fix_profile_psi_max          !< max psi-norm where this is applied
+  logical :: heatsource_fix_profile                      !< adaptive source to fix profile onto input Grad-Shafranov profile
+  logical :: heatsource_fix_profile_allow_negative       !< allow a negative source
+  real*8  :: heatsource_fix_profile_tsteps               !< time-scale over which this is enforced (ideally >=2)
+  real*8  :: heatsource_fix_profile_psi_max              !< max psi-norm where this is applied
+  logical :: heatsource_i_fix_profile                    !< adaptive source to fix profile onto input Grad-Shafranov profile
+  logical :: heatsource_i_fix_profile_allow_negative     !< allow a negative source
+  real*8  :: heatsource_i_fix_profile_tsteps             !< time-scale over which this is enforced (ideally >=2)
+  real*8  :: heatsource_i_fix_profile_psi_max            !< max psi-norm where this is applied
+  logical :: heatsource_e_fix_profile                    !< adaptive source to fix profile onto input Grad-Shafranov profile
+  logical :: heatsource_e_fix_profile_allow_negative     !< allow a negative source
+  real*8  :: heatsource_e_fix_profile_tsteps             !< time-scale over which this is enforced (ideally >=2)
+  real*8  :: heatsource_e_fix_profile_psi_max            !< max psi-norm where this is applied
   real*8  :: constant_imp_source       !< Adds a constant impurity source
   
   !> @name Hyper-resistivity, -viscosity and -diffusivities
@@ -664,6 +676,20 @@ module phys_module
   integer             :: num_heatsource_len    !< Number of datapoints in heatsource profile
   real*8, allocatable :: num_heatsource_x(:)   !< Psi_N values of heatsource profile
   real*8, allocatable :: num_heatsource_y(:)   !< heatsource values of heatsource profile
+
+  !> @name Numerical heat source profile for ion (model711+)
+  character(len=512)  :: heatsource_i_file       !< ASCII file with heat source profile
+  logical             :: num_heatsource_i        !< automatically set true if heatsource_i_file /= 'none'
+  integer             :: num_heatsource_i_len    !< Number of datapoints in heatsource profile
+  real*8, allocatable :: num_heatsource_i_x(:)   !< Psi_N values of heatsource profile
+  real*8, allocatable :: num_heatsource_i_y(:)   !< heatsource values of heatsource profile
+
+  !> @name Numerical heat source profile for electron (model711+)
+  character(len=512)  :: heatsource_e_file       !< ASCII file with heat source profile
+  logical             :: num_heatsource_e        !< automatically set true if heatsource_e_file /= 'none'
+  integer             :: num_heatsource_e_len    !< Number of datapoints in heatsource profile
+  real*8, allocatable :: num_heatsource_e_x(:)   !< Psi_N values of heatsource profile
+  real*8, allocatable :: num_heatsource_e_y(:)   !< heatsource values of heatsource profile
   
   !> @name Analytical input profile for the density
   real*8  :: rho_0             !< Central normalized density (usually 1)

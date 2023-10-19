@@ -188,7 +188,21 @@ subroutine read_num_profiles(my_id)
     call check_num_prof(num_heatsource, num_heatsource_x, num_heatsource_y, num_heatsource_len, 'heatsource',          &
       check_positive=.true.)
   end if    
-  
+
+  num_heatsource_i = ( heatsource_i_file /= 'none' )
+  if ( num_heatsource_i .and. ( my_id == 0 ) ) then
+    call readProf(num_heatsource_i_x, num_heatsource_i_y, num_heatsource_i_len, heatsource_i_file)
+    call check_num_prof(num_heatsource_i, num_heatsource_i_x, num_heatsource_i_y, num_heatsource_i_len, 'heatsource_i',          &
+      check_positive=.true.)
+  end if    
+
+  num_heatsource_e = ( heatsource_e_file /= 'none' )
+  if ( num_heatsource_e .and. ( my_id == 0 ) ) then
+    call readProf(num_heatsource_e_x, num_heatsource_e_y, num_heatsource_e_len, heatsource_e_file)
+    call check_num_prof(num_heatsource_e, num_heatsource_e_x, num_heatsource_e_y, num_heatsource_e_len, 'heatsource_e',          &
+      check_positive=.true.)
+  end if    
+
   contains
   
   

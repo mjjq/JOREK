@@ -425,14 +425,22 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
       write(*,CHAR_FMT) 'ZK_i_perp_file        ', trim(ZK_i_perp_file)
     end if
     write(*,REAL_FMT) 'heatsource_e           ', heatsource_e
-    write(*,REAL_FMT) 'heatsource_e_psin      ', heatsource_e_psin
-    write(*,REAL_FMT) 'heatsource_e_sig       ', heatsource_e_sig
+    if (num_heatsource_e) then
+      write(*,CHAR_FMT) 'heatsource_e_file     ', trim(heatsource_e_file)
+    else
+      write(*,REAL_FMT) 'heatsource_e_psin      ', heatsource_e_psin
+      write(*,REAL_FMT) 'heatsource_e_sig       ', heatsource_e_sig
+    endif
     write(*,REAL_FMT) 'heatsource_gauss_e     ', heatsource_gauss_e
     write(*,REAL_FMT) 'heatsource_gauss_e_psin', heatsource_gauss_e_psin
     write(*,REAL_FMT) 'heatsource_gauss_e_sig ', heatsource_gauss_e_sig
     write(*,REAL_FMT) 'heatsource_i           ', heatsource_i
-    write(*,REAL_FMT) 'heatsource_i_psin      ', heatsource_i_psin
-    write(*,REAL_FMT) 'heatsource_i_sig       ', heatsource_i_sig
+    if (num_heatsource_i) then
+      write(*,CHAR_FMT) 'heatsource_i_file     ', trim(heatsource_i_file)
+    else
+      write(*,REAL_FMT) 'heatsource_i_psin      ', heatsource_i_psin
+      write(*,REAL_FMT) 'heatsource_i_sig       ', heatsource_i_sig
+    endif
     write(*,REAL_FMT) 'heatsource_gauss_i     ', heatsource_gauss_i
     write(*,REAL_FMT) 'heatsource_gauss_i_psin', heatsource_gauss_i_psin
     write(*,REAL_FMT) 'heatsource_gauss_i_sig ', heatsource_gauss_i_sig
@@ -465,12 +473,14 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
     write(*,REAL_FMT) 'ZK_par_SpitzerHaerm (not input parameter; printed for reference in JOREK units)', ZK_par_SpitzerHaerm
     write(*,LOGI_FMT) 'ZKpar_T_dependent     ', ZKpar_T_dependent
     write(*,REAL_FMT) 'heatsource            ', heatsource
-    if ( .not. num_heatsource ) then
+
+    if (num_heatsource) then
+      write(*,CHAR_FMT) 'heatsource_file       ', trim(heatsource_file)
+    else
       write(*,REAL_FMT) 'heatsource_psin       ', heatsource_psin
       write(*,REAL_FMT) 'heatsource_sig        ', heatsource_sig
-    else
-      write(*,CHAR_FMT) 'heatsource_file          ', trim(heatsource_file)
-    end if
+    endif
+
     write(*,REAL_FMT) 'heatsource_gauss      ', heatsource_gauss
     write(*,REAL_FMT) 'heatsource_gauss_psin ', heatsource_gauss_psin
     write(*,REAL_FMT) 'heatsource_gauss_sig  ', heatsource_gauss_sig
@@ -508,6 +518,18 @@ write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
   write(*,LOGI_FMT) 'particlesource_fix_profile_allow_negative',particlesource_fix_profile_allow_negative
   write(*,REAL_FMT) 'particlesource_fix_profile_tsteps        ',particlesource_fix_profile_tsteps
   write(*,REAL_FMT) 'particlesource_fix_profile_psi_max       ',particlesource_fix_profile_psi_max
+  write(*,LOGI_FMT) 'heatsource_fix_profile                   ',heatsource_fix_profile
+  write(*,LOGI_FMT) 'heatsource_fix_profile_allow_negative    ',heatsource_fix_profile_allow_negative
+  write(*,REAL_FMT) 'heatsource_fix_profile_tsteps            ',heatsource_fix_profile_tsteps
+  write(*,REAL_FMT) 'heatsource_fix_profile_psi_max           ',heatsource_fix_profile_psi_max
+  write(*,LOGI_FMT) 'heatsource_i_fix_profile                 ',heatsource_i_fix_profile
+  write(*,LOGI_FMT) 'heatsource_i_fix_profile_allow_negative  ',heatsource_i_fix_profile_allow_negative
+  write(*,REAL_FMT) 'heatsource_i_fix_profile_tsteps          ',heatsource_i_fix_profile_tsteps
+  write(*,REAL_FMT) 'heatsource_i_fix_profile_psi_max         ',heatsource_i_fix_profile_psi_max
+  write(*,LOGI_FMT) 'heatsource_e_fix_profile                 ',heatsource_e_fix_profile
+  write(*,LOGI_FMT) 'heatsource_e_fix_profile_allow_negative  ',heatsource_e_fix_profile_allow_negative
+  write(*,REAL_FMT) 'heatsource_e_fix_profile_tsteps          ',heatsource_e_fix_profile_tsteps
+  write(*,REAL_FMT) 'heatsource_e_fix_profile_psi_max         ',heatsource_e_fix_profile_psi_max
   write(*,REAL_FMT) 'particlesource_gauss  ', particlesource_gauss
   write(*,REAL_FMT) 'particlesource_gauss_psin', particlesource_gauss_psin
   write(*,REAL_FMT) 'particlesource_gauss_sig ', particlesource_gauss_sig

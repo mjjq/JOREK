@@ -6,6 +6,18 @@
 # --------------------------------------------------------------- #
 
 # general purpose routines -------------------------------------- #
+# return a boolean from a string
+# inputs:
+#   string: (character) string to be converted in bool,
+#           it must be: true,True,False,false
+def return_bool_from_string(string):
+  if((string=='True')or(string=='true')):
+    return True
+  elif((string=='False')or(string=='false')):
+    return False
+  else:
+    raise ValueError("Error string cannot be converted to bool, not: True,true,False,false")
+
 # remove file if requested
 # inputs:
 #   filename: (string) filename of file to be removed
@@ -445,14 +457,14 @@ def generate_argument_parser():
   parser.add_argument('--result-extension','-re',type=str,required=False,\
   action='store',dest='result_ext',default='xml',\
   help='extension of the test result file, default: xml')
-  parser.add_argument('--remove-driver','-rmd',type=bool,required=False,\
-  action='store',dest='remove_drivers',default=True,\
+  parser.add_argument('--remove-driver','-rmd',type=str,required=False,\
+  action='store',dest='remove_drivers',default='True',\
   help='if true the test drivers are removed after execution, default: true')
-  parser.add_argument('--remove-results','-rmr',type=bool,required=False,\
-  action='store',dest='remove_results',default=True,\
+  parser.add_argument('--remove-results','-rmr',type=str,required=False,\
+  action='store',dest='remove_results',default='True',\
   help='if true the test results are removed after execution, default: true')
-  parser.add_argument('--log-fruit-summary','-lfs',type=bool,required=False,\
-  action='store',dest='log_fruit_summary',default=False,\
+  parser.add_argument('--log-fruit-summary','-lfs',type=str,required=False,\
+  action='store',dest='log_fruit_summary',default='False',\
   help='if true the fruit summary is logged, default: false')
   parser.add_argument('--fruit-result-map','-frm',type=int,nargs='*',\
   required=False,action='store',dest='list_fruit_result_map',default=[0,1,2,3],\
@@ -475,8 +487,8 @@ if __name__ == '__main__':
   exit_code = execute_all_unit_tests(args.test_dirs,args.test_parallel,\
   args.test_basket_prefix,args.test_prefix,args.test_suffix,args.test_ext,\
   args.driver_suffix,launchers,args.result_dir,args.result_prefix,\
-  args.result_ext,fruit_result_map,args.remove_drivers,args.remove_results,\
-  args.log_fruit_summary) 
+  args.result_ext,fruit_result_map,return_bool_from_string(args.remove_drivers),\
+  return_bool_from_string(args.remove_results),return_bool_from_string(args.log_fruit_summary)) 
   # exit with the appropriate exit code
   sysexit(exit_code)
 

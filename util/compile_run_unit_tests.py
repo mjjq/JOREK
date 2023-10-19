@@ -337,6 +337,16 @@ result_prefix,result_ext,result_map,remove_driver,remove_results):
   result_dir,result_prefix,result_ext,result_map,remove_results)
   return n_successes,n_failures,n_errors
 
+# log unit tests results
+# inputs: 
+#   unit_test_log: (list(characters)) path of the unit tests to be logged
+#   log_header:    (character) header of the unit test log to be printed
+def log_unit_test_results(unit_test_log,log_header):
+  if(len(unit_test_log)>0):
+    print(log_header)
+    for unit_test in unit_test_log:
+      print("".join(['  ',unit_test]))
+
 # execute the overall suite of unit tests
 # inputs:
 #   test_dirs:          (list)(string) list of paths to the search directories
@@ -359,11 +369,10 @@ def execute_all_unit_tests(test_dirs,test_parallel,test_basket_prefix,\
 test_prefix,test_suffix,test_ext,driver_suffix,launchers,result_dir,\
 result_prefix,result_ext,result_map,remove_driver,remove_results):
   # initialise the failure and error counters
-  n_failures=0; n_errors=0;
+  n_failures=0; n_errors=0; failed_tests=[]; error_tests=[];
   # loop over all test directories
   for test_dir in test_dirs:
     # find all unit test modules in test_dir
-    print(test_dir,test_prefix,test_suffix,test_ext,test_parallel)
     test_modules =  find_unit_test_modules(test_dir,test_prefix,\
     test_suffix,test_ext,test_parallel)
     # execute all unit tests in the test modules
@@ -374,9 +383,18 @@ result_prefix,result_ext,result_map,remove_driver,remove_results):
         execute_unit_test(test,test_basket_prefix,test_prefix,\
         test_suffix,test_ext,driver_suffix,launchers,result_dir,\
         result_prefix,result_ext,result_map,remove_driver,remove_results)
+        # store the name of failed tests
+        if(n_failures_loc!=0): 
+          failed_tests.append("".join([test_dir,'/',test.name]))
+        # store the name of tests with errors
+        if(n_errors_loc!=0):
+          error_tests.append("".join([test_dir,'/',test.name]))
         # reduce the total number of successes, failures and errors
         n_failures  = n_failures + n_failures_loc
         n_errors    = n_errors + n_errors_loc
+  # log tests with failures and/or errors
+  log_unit_test_results(failed_tests,'Unit test module with failed tests:')
+  log_unit_test_results(error_tests,'Unit test module with errors:')
   # check the validity of the overall result
   return check_results(n_failures,n_errors)
      

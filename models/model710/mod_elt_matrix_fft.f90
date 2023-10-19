@@ -641,6 +641,14 @@ do ms=1, n_gauss
 	        particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt))
       endif
     endif
+    if (heatsource_fix_profile) then
+      if (psi_norm .lt. heatsource_fix_profile_psi_max) then
+        call temperature(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, T_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+        if ( (T_axisym(ms,mt)   .lt. T_GS  ) .or. heatsource_fix_profile_allow_negative ) &
+          heat_source(ms,mt)     = (1.0/heatsource_fix_profile_tsteps) * (T_GS  -T_axisym(ms,mt)  ) / tstep
+      endif
+    endif
+    
     ! --- Bootstrap current 
     if (bootstrap) then
       T0     = eq_g(1,var_T,ms,mt)

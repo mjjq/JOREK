@@ -28,7 +28,7 @@ subroutine boundary_conditions( my_id, node_list, element_list, bnd_node_list, l
                                 xcase2, R_axis, Z_axis, psi_axis, psi_bnd,                &
                                 R_xpoint, Z_xpoint, psi_xpoint, a_mat)
 
-use constants
+use constants, only : PI, MU_ZERO, MASS_PROTON
 use mod_assembly, only : boundary_conditions_add_one_entry, boundary_conditions_add_RHS
 use data_structure
 use vacuum, ONLY: is_freebound
@@ -44,7 +44,6 @@ use mod_basisfunctions
 use mod_interp
 use mod_integer_types
 use mod_node_indices
-use mod_locate_irn_jcn
 
 implicit none
 
@@ -140,8 +139,6 @@ real*8  :: delta_psi_rmp, delta_psi_rmp_dR, delta_psi_rmp_dZ, delta_psi_rmp_ds, 
 integer :: node_indices( (n_order+1)/2, (n_order+1)/2 ), index_tmp, kk, ll
 logical, parameter :: include_2nd_derivatives = .false.
 
-integer               :: n_tor_local
-
 
 RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
   
@@ -191,7 +188,6 @@ RMPspectrum: if (RMP_on .and. (n_tor .ge. 3)) then !*****
 
 end if RMPspectrum
 
-n_tor_local = a_mat%i_tor_max - a_mat%i_tor_min +1 
 zbig        = 1.d12
 zbig_backup = zbig
 
@@ -420,7 +416,7 @@ do i=1, n_local_elms !=== do elements
                 call boundary_conditions_add_RHS(       &
                           index_node, k, in,     &
                           index_min, index_max,  &
-                          RHS_loc, ZBIG * ((loop_voltage_control+loop_voltage)/2.d0/PI*sqrt(MU_ZERO*central_density*central_mass*mass_proton*1.d20)) * tstep, &
+                          RHS_loc, ZBIG * ((loop_voltage_control+loop_voltage)/2.d0/PI*sqrt(MU_ZERO*central_density*central_mass*MASS_PROTON*1.d20)) * tstep, &
                           a_mat%i_tor_min, a_mat%i_tor_max)
               endif
             endif

@@ -472,7 +472,6 @@ if __name__ == '__main__':
   'id':args.list_fruit_result_map[3]}
   launchers = {'serial':args.list_launchers[0],'mpi':args.list_launchers[1]}
   # run all unit test suites
-  print(args.remove_drivers)
   exit_code = execute_all_unit_tests(args.test_dirs,args.test_parallel,\
   args.test_basket_prefix,args.test_prefix,args.test_suffix,args.test_ext,\
   args.driver_suffix,launchers,args.result_dir,args.result_prefix,\

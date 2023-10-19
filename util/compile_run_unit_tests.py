@@ -436,25 +436,25 @@ def generate_argument_parser():
   parser.add_argument('--test-driver-suffix','-ds',type=str,required=False,\
   action='store',dest='driver_suffix',default='_test_driver',\
   help='suffix of unit test driver file, default: _test_driver')
-  parser.add_argument('--result_dir','-rd',type=str,required=False,\
+  parser.add_argument('--result-dir','-rd',type=str,required=False,\
   action='store',dest='result_dir',default='.',\
   help='folder of the unit test results, default: .')
-  parser.add_argument('--result_prefix','-rp',type=str,required=False,\
+  parser.add_argument('--result-prefix','-rp',type=str,required=False,\
   action='store',dest='result_prefix',default='result',\
   help='prefix of the test result file, default: result')
-  parser.add_argument('--result_extension','-re',type=str,required=False,\
+  parser.add_argument('--result-extension','-re',type=str,required=False,\
   action='store',dest='result_ext',default='xml',\
   help='extension of the test result file, default: xml')
-  parser.add_argument('--remove_driver','-rmd',type=bool,required=False,\
+  parser.add_argument('--remove-driver','-rmd',type=bool,required=False,\
   action='store',dest='remove_drivers',default=True,\
   help='if true the test drivers are removed after execution, default: true')
-  parser.add_argument('--remove_results','-rmr',type=bool,required=False,\
+  parser.add_argument('--remove-results','-rmr',type=bool,required=False,\
   action='store',dest='remove_results',default=True,\
   help='if true the test results are removed after execution, default: true')
   parser.add_argument('--log-fruit-summary','-lfs',type=bool,required=False,\
   action='store',dest='log_fruit_summary',default=False,\
   help='if true the fruit summary is logged, default: false')
-  parser.add_argument('--fruit_result_map','-frm',type=int,nargs='*',\
+  parser.add_argument('--fruit-result-map','-frm',type=int,nargs='*',\
   required=False,action='store',dest='list_fruit_result_map',default=[0,1,2,3],\
   help='relative position of the fruit error,tests,failures,id as read by result file, default: [0,1,2,3]')
   parser.add_argument('--launchers','-l',type=str,nargs='*',\
@@ -472,6 +472,7 @@ if __name__ == '__main__':
   'id':args.list_fruit_result_map[3]}
   launchers = {'serial':args.list_launchers[0],'mpi':args.list_launchers[1]}
   # run all unit test suites
+  print(args.remove_drivers)
   exit_code = execute_all_unit_tests(args.test_dirs,args.test_parallel,\
   args.test_basket_prefix,args.test_prefix,args.test_suffix,args.test_ext,\
   args.driver_suffix,launchers,args.result_dir,args.result_prefix,\

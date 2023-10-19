@@ -28,7 +28,7 @@ def create_list_dictionary_from_keys(keys_list):
 
 # routines for handling unit test drivers ----------------------- #
 
-# write the pre-fruit basket calls in the unit test file
+# write the driver file for fruit serial unit tests
 # inputs:
 #   driver_path:        (path)   path to the unit test driver file
 #   test_name:          (string) basename of the unit test
@@ -58,6 +58,48 @@ driver_suffix,test_prefix,test_suffix):
     driver.write('  call fruit_summary\n')
     driver.write('  call fruit_finalize\n')
     driver.write(''.join(['end program ',test_name,driver_suffix,'\n']))
+
+# write the driver file for fruit mpi-enabled unit tests
+# inputs:
+#   driver_path:        (path)   path to the unit test driver file
+#   test_name:          (string) basename of the unit test
+#   test_basket_prefix: (string) prefix of the basket subroutine
+#   driver_suffix:      (string) suffix of the unit test driver
+#   test_prefix:        (string) prefix of the unit test module
+#   test_suffix:        (string) suffix of the unit test module
+# outputs: 
+def write_test_driver_parallel(driver_path,test_name,test_basket_prefix,\
+driver_suffix,test_prefix,test_suffix):
+  with driver_path.open(mode='w') as driver:
+     driver.write(''.join(['program ',test_name,driver_suffix,'\n'])) 
+     driver.write('use fruit\n')
+     driver.write('use fruit_mpi\n')   
+     driver.write('use mod_mpi_tools, only: init_mpi_threads\n')
+     driver.write('use mod_mpi_tools, only: finalize_mpi_threads\n')
+     driver.write(''.join(['use ',''.join([test_prefix,test_name,\
+     test_suffix,', only: ',test_basket_prefix,test_name,'\n'])]))
+     driver.write('  implicit none\n')
+     driver.write('  integer :: rank,n_tasks,ifail\n')
+     driver.write('\n')
+     driver.write('  ! init the mpi communicator\n')
+     driver.write('  call init_mpi_threads(rank,n_tasks,ifail)\n')
+     driver.write('\n')
+     driver.write('  ! init the fruit suit\n')
+     driver.write('  call init_fruit\n')
+     driver.write('  call fruit_init_mpi_xml(rank)\n')
+     driver.write('\n')
+     driver.write(''.join(['  ! run ',test_name,' test basket\n']))
+     driver.write(''.join(['  call ',test_basket_prefix,test_name,\
+     '(rank,n_tasks,ifail)','\n']))
+     driver.write('\n')  
+     driver.write('  ! write test summary and finalize test suit\n')
+     driver.write('  call fruit_summary_mpi(n_tasks,rank)\n')
+     driver.write('  call fruit_summary_mpi_xml(n_tasks,rank)\n')
+     driver.write('  call fruit_finalize_mpi(n_tasks,rank)\n')
+     driver.write('\n')
+     driver.write('  ! finalize MPI communicator\n')
+     driver.write('  call finalize_mpi_threads(ifail)\n')
+     driver.write(''.join(['end program ',test_name,driver_suffix,'\n']))
 
 # Find unit test modules in a given folder. Unit test modules are
 # identified via the prefix mod_, the suffix _test and the
@@ -96,13 +138,12 @@ test_ext,test_parallel):
 # inputs:
 #   test_path:          (path) path posix of the test module
 #   test_dir:           (string) unit test directory
-#   test_parallel:      (string) type of unit test parallelism
 #   test_basket_prefix: (string) prefix of the unit test basket
 #   test_ext:           (string) test extension
 #   driver_suffix:      (string) suffix of the unit test driver
 # outputs:
 #   driver_path:        (path) path posix of the test driver
-def generate_unit_test_driver(test_path,test_parallel,test_basket_prefix,\
+def generate_unit_test_driver(test_path,test_basket_prefix,\
 test_prefix,test_suffix,test_ext,driver_suffix):
   from pathlib import Path
   # create the unit test driver path
@@ -113,7 +154,10 @@ test_prefix,test_suffix,test_ext,driver_suffix):
   driver_path.unlink(missing_ok=True)
   driver_path.touch()
   # write unit test driver as a function of the parallelism
-  if(test_parallel=='serial'):
+  if('mpi' in test_name):
+    write_test_driver_parallel(driver_path,test_name,test_basket_prefix,\
+    driver_suffix,test_prefix,test_suffix)
+  else:
     write_test_driver_serial(driver_path,test_name,test_basket_prefix,\
     driver_suffix,test_prefix,test_suffix)
   return driver_path
@@ -128,12 +172,22 @@ def compile_unit_test_driver(driver_path):
   system(''.join(['rm -f ',exec_name]))
   system(''.join(['make -j8 ',exec_name]))
 
+# find the right launcher for the application
+# inputs:
+#   exec_name: (string) name of the application
+def find_launcher_type(exec_name):
+  if('mpi' in exec_name):
+    return 'mpi'
+  else:
+    return 'serial'
+
 # run the unit test driver using 2 mpi tasks maximum 
 # and 2 omp threads maximum
 # inputs:
 #   driver_path:   (path) path posix of the test driver
-#   test_parallel: (string) type of unit test parallelism
-def run_unit_test_driver(driver_path,test_parallel):
+#   launchers:     (dict(string)) launchers to be invoked for 
+#                  executing a unit test application
+def run_unit_test_driver(driver_path,launchers):
   from os import system,environ
   # set the number of OMP threads
   omp_num_threads_old = str(1)
@@ -141,8 +195,7 @@ def run_unit_test_driver(driver_path,test_parallel):
     omp_num_threads_old = environ['OMP_NUM_THREADS']
   system('export OMP_NUM_THREADS=2')
   exec_name = driver_path.name.replace(driver_path.suffix,'')
-  if(test_parallel=='serial'):
-    system(''.join(['./',exec_name]))
+  system(''.join([launchers[find_launcher_type(exec_name)],exec_name]))
   # remove executable
   system(''.join(['rm -f ',exec_name]))
   # restore original number of omp threads
@@ -251,7 +304,6 @@ def check_results_exit(n_failures,n_errors):
 # read and reduce fruit result for the unit test
 #   test_path:          (path) path posix of the test module
 #   test_dir:           (string) unit test directory
-#   test_parallel:      (string) type of unit test parallelism
 #   test_basket_prefix: (string) prefix of the unit test basket
 #   test_ext:           (string) test extension
 #   driver_suffix:      (string) suffix of the unit test driver
@@ -263,16 +315,16 @@ def check_results_exit(n_failures,n_errors):
 #                              fields and the index of the integer in list
 #   remove_driver:      (boolean) if true the driver file
 #   remove_results:     (boolean) if True result files are removed
-def execute_unit_test(test_path,test_parallel,test_basket_prefix,\
-test_prefix,test_suffix,test_ext,driver_suffix,result_dir,\
+def execute_unit_test(test_path,test_basket_prefix,test_prefix,\
+test_suffix,test_ext,driver_suffix,launchers,result_dir,\
 result_prefix,result_ext,result_map,remove_driver,remove_results):
   # generate the unit test driver
-  driver_path = generate_unit_test_driver(test_path,test_parallel,\
-  test_basket_prefix,test_prefix,test_suffix,test_ext,driver_suffix) 
+  driver_path = generate_unit_test_driver(test_path,test_basket_prefix,\
+  test_prefix,test_suffix,test_ext,driver_suffix) 
   # compile the unit test driver
   compile_unit_test_driver(driver_path)
   # execute the unit test driver
-  run_unit_test_driver(driver_path,test_parallel)
+  run_unit_test_driver(driver_path,launchers)
   # remove the driver
   remove_file(driver_path.name,remove_driver)
   # find, read and reduce all FRUIT results and remove result files
@@ -297,13 +349,14 @@ def generate_argument_parser():
 if __name__ == '__main__':
   from sys import exit as sysexit
   fruit_result_map = {'errors':0,'tests':1,'failures':2,'id':3}
+  launchers = {'serial':'./','mpi':'mpirun -np 2 '}
   args = generate_argument_parser()
   test_modules = find_unit_test_modules(args.test_dirs[0],'mod_','_test',\
   'f90',['mpi'])
-  n_successes,n_failures,n_errors = execute_unit_test(\
-  test_modules['serial'][0],'serial','run_fruit_','mod_',\
-  '_test','f90','_test_driver','.','result','xml',\
-  fruit_result_map,True,True)
+  n_successes,n_failures,n_errors = execute_unit_test(test_modules['mpi'][0],\
+  'run_fruit_','mod_','_test','f90','_test_driver',launchers,'.',\
+  'result','xml',fruit_result_map,True,True)
   # check for failures / errors and  exit program
   check_results_exit(n_failures,n_errors)
+
 # End-of-the-scripts -------------------------------------------- #

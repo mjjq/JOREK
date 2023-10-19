@@ -150,40 +150,80 @@ def run_unit_test_driver(driver_path,test_parallel):
 
 # routines for handling FRUIT XML files ------------------------- #
 
+# Read multiple fruit files and store their path in list. Discard
+# temporary result file.
+# inputs:
+#   result_dir:    (string) directory containing the FRUIT results
+#   result_prefix: (string) root of the FRUIT result filenames
+#   result_ext:    (string) extension of the FRUIT result filenames
+# outputs:
+#   result_paths:  (list,path) path list of all FRUIT result files
+def find_fruit_result_file(result_dir,result_prefix,result_ext):
+  from pathlib import Path
+  result_dir_path = Path(result_dir)
+  result_paths = [result for result in result_dir_path.glob(\
+  "".join([result_prefix,'*','.',result_ext])) \
+  if '_tmp' not in result.name]
+  return result_paths
+
 # Read the file containing the test results as run by FRUIT.
 # The total number of successes and failures is returned.
 # inputs:
-#   fruit_filename:   (string) filename of the FRUIT result file
-#   fruit_ext:        (string) extension of the FRUIT result file
-#   fruit_result_map: (dict) dictionary containing the association
-#                     between the fruit errors,tests,failures,id
-#                     fields and the index of the integer in list
+#   result_path:   (path) path of the FRUIT result file
+#   result_map:    (dict) dictionary containing the association
+#                         between the fruit errors,tests,failures,id
+#                         fields and the index of the integer in list
+#   remove_result: (bool) if True result files are removed
 # outputs:
 #   n_successes: (int) number of test ending in success
 #   n_failures:  (int) number of test ending in failures
 #   n_errors:    (int) number of test ending in errors
 #   test_id:     (int) test id
-def read_fruit_result_file(fruit_filename,fruit_ext,fruit_result_map):
-  from pathlib import Path
+def read_fruit_result_file(result_path,result_map,remove_result):
   from re import findall
-  result_path = Path(''.join([fruit_filename,'.',fruit_ext]))
   with result_path.open(mode='r') as result:
     lines = result.readlines()
-  result_values = []
   # extract the line containing the results
   for line in lines:
     if('failures' in line):
       results = [int(result) for result in findall(r'\d+',line)]
       break
+  # remove result file if required
+  remove_file(result_path.name,remove_result)
   # return results
-  return results[fruit_result_map['tests']]-\
-  results[fruit_result_map['failures']],\
-  results[fruit_result_map['failures']],\
-  results[fruit_result_map['errors']],\
-  results[fruit_result_map['id']]
+  return results[result_map['tests']]-results[result_map['failures']],\
+  results[result_map['failures']],results[result_map['errors']],\
+  results[result_map['id']]
 
-# Read multiple fruit files and store their results in arrays
-#def find_
+# Read and reduce all fruit results (more than one result file can
+# exist for the same FRUIT test if run using MPI)
+# inputs:
+#   result_dir:     (string) directory containing the FRUIT results
+#   result_prefix:  (string) root of the FRUIT result filenames
+#   result_ext:     (string) extension of the FRUIT result filenames
+#   result_map:     (dict) dictionary containing the association
+#                          between the fruit errors,tests,failures,id
+#                          fields and the index of the integer in list
+#   remove_results: (boolean) if True result files are removed
+# outputs:
+#   n_successes_tot: (int) total number of test ending in success
+#   n_failures_tot:  (int) total number of test ending in failures
+#   n_errors_tot:    (int) total number of test ending in errors
+def read_reduce_fruit_results(result_dir,result_prefix,result_ext,\
+result_map,remove_results):
+  # initialisations
+  n_successes_tot=0; n_failures_tot=0; n_errors_tot=0;
+  # find all FRUIT result paths
+  result_path_list = find_fruit_result_file(result_dir,\
+  result_prefix,result_ext)
+  # read and reduce fruit results
+  for result_path in result_path_list:
+    n_successes,n_failures,n_errors,test_id = read_fruit_result_file(\
+   result_path,result_map,remove_results)
+    n_successes_tot = n_successes_tot + n_successes
+    n_failures_tot = n_failures_tot + n_failures
+    n_errors_tot = n_errors_tot + n_errors    
+  return n_successes_tot,n_failures_tot,n_errors_tot
 
 # global unit test routines ------------------------------------- #
 
@@ -207,16 +247,25 @@ def check_results_exit(n_failures,n_errors):
   print('Unit test successfully completed!')
   sysexit(0)
 
-# execute unit test: generate, compile, run unit test driver
+# execute unit test: generate, compile, run unit test driver,
+# read and reduce fruit result for the unit test
 #   test_path:          (path) path posix of the test module
 #   test_dir:           (string) unit test directory
 #   test_parallel:      (string) type of unit test parallelism
 #   test_basket_prefix: (string) prefix of the unit test basket
 #   test_ext:           (string) test extension
 #   driver_suffix:      (string) suffix of the unit test driver
+#   result_dir:         (string) directory containing the FRUIT results
+#   result_prefix:      (string) root of the FRUIT result filenames
+#   result_ext:         (string) extension of the FRUIT result filenames
+#   result_map:         (dict) dictionary containing the association
+#                              between the fruit errors,tests,failures,id
+#                              fields and the index of the integer in list
 #   remove_driver:      (boolean) if true the driver file
+#   remove_results:     (boolean) if True result files are removed
 def execute_unit_test(test_path,test_parallel,test_basket_prefix,\
-test_prefix,test_suffix,test_ext,driver_suffix,remove_driver):
+test_prefix,test_suffix,test_ext,driver_suffix,result_dir,\
+result_prefix,result_ext,result_map,remove_driver,remove_results):
   # generate the unit test driver
   driver_path = generate_unit_test_driver(test_path,test_parallel,\
   test_basket_prefix,test_prefix,test_suffix,test_ext,driver_suffix) 
@@ -226,6 +275,10 @@ test_prefix,test_suffix,test_ext,driver_suffix,remove_driver):
   run_unit_test_driver(driver_path,test_parallel)
   # remove the driver
   remove_file(driver_path.name,remove_driver)
+  # find, read and reduce all FRUIT results and remove result files
+  n_success,n_failures,n_errors = read_reduce_fruit_results(\
+  result_dir,result_prefix,result_ext,result_map,remove_results)
+  return n_success,n_failures,n_errors
 
 # Argument parsers ---------------------------------------------- #
 # outpus:
@@ -247,10 +300,10 @@ if __name__ == '__main__':
   args = generate_argument_parser()
   test_modules = find_unit_test_modules(args.test_dirs[0],'mod_','_test',\
   'f90',['mpi'])
-  execute_unit_test(test_modules['serial'][0],'serial',\
-  'run_fruit_','mod_','_test','f90','_test_driver',True)
-  n_successes,n_failures,n_errors,test_id = read_fruit_result_file(\
-  'result','xml',fruit_result_map)
+  n_successes,n_failures,n_errors = execute_unit_test(\
+  test_modules['serial'][0],'serial','run_fruit_','mod_',\
+  '_test','f90','_test_driver','.','result','xml',\
+  fruit_result_map,True,True)
   # check for failures / errors and  exit program
   check_results_exit(n_failures,n_errors)
 # End-of-the-scripts -------------------------------------------- #

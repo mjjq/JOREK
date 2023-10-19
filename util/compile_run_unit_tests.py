@@ -209,14 +209,20 @@ def run_unit_test_driver(driver_path,launchers):
 #   result_dir:    (string) directory containing the FRUIT results
 #   result_prefix: (string) root of the FRUIT result filenames
 #   result_ext:    (string) extension of the FRUIT result filenames
+#   remove_result: (bool) if True temporary result files are removed  
 # outputs:
 #   result_paths:  (list,path) path list of all FRUIT result files
-def find_fruit_result_file(result_dir,result_prefix,result_ext):
+def find_fruit_result_file(result_dir,result_prefix,\
+result_ext,remove_result):
   from pathlib import Path
   result_dir_path = Path(result_dir)
-  result_paths = [result for result in result_dir_path.glob(\
-  "".join([result_prefix,'*','.',result_ext])) \
-  if '_tmp' not in result.name]
+  result_paths = []
+  for result in result_dir_path.glob("".join(\
+  [result_prefix,'*','.',result_ext])):
+    if('_tmp' not in result.name):
+      result_paths.append(result)
+    else:
+      remove_file(result.name,remove_result)
   return result_paths
 
 # Read the file containing the test results as run by FRUIT.
@@ -268,7 +274,7 @@ result_map,remove_results):
   n_successes_tot=0; n_failures_tot=0; n_errors_tot=0;
   # find all FRUIT result paths
   result_path_list = find_fruit_result_file(result_dir,\
-  result_prefix,result_ext)
+  result_prefix,result_ext,remove_results)
   # read and reduce fruit results
   for result_path in result_path_list:
     n_successes,n_failures,n_errors,test_id = read_fruit_result_file(\

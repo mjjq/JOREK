@@ -293,23 +293,22 @@ result_map,remove_results):
 # inputs: 
 #   n_failures: (integer) total number of failed tests
 #   n_errors:   (integer) total number of errors
-def check_results_exit(n_failures,n_errors):
-  from sys import exit as sysexit
+def check_results(n_failures,n_errors):
   if(n_failures!=0):
     print(''.join(['Unit test failed: N# failures: ',\
     str(n_failures),' N# errors: ',str(n_errors)]))
-    sysexit(1)
+    return 1
   if(n_errors!=0):
     print(''.join(['Unit test failed: N# failures: ',\
     str(n_failures),' N# errors: ',str(n_errors)]))
-    sysexit(1)
-  print('Unit test successfully completed!')
-  sysexit(0)
+    return 1
+  else: 
+    print('Unit test successfully completed!')
+    return 0
 
 # execute unit test: generate, compile, run unit test driver,
 # read and reduce fruit result for the unit test
 #   test_path:          (path) path posix of the test module
-#   test_dir:           (string) unit test directory
 #   test_basket_prefix: (string) prefix of the unit test basket
 #   test_ext:           (string) test extension
 #   driver_suffix:      (string) suffix of the unit test driver
@@ -334,10 +333,53 @@ result_prefix,result_ext,result_map,remove_driver,remove_results):
   # remove the driver
   remove_file(driver_path.name,remove_driver)
   # find, read and reduce all FRUIT results and remove result files
-  n_success,n_failures,n_errors = read_reduce_fruit_results(\
+  n_successes,n_failures,n_errors = read_reduce_fruit_results(\
   result_dir,result_prefix,result_ext,result_map,remove_results)
-  return n_success,n_failures,n_errors
+  return n_successes,n_failures,n_errors
 
+# execute the overall suite of unit tests
+# inputs:
+#   test_dirs:          (list)(string) list of paths to the search directories
+#   test_parallel:      (list,string) list of the parallelization types 
+#   test_basket_prefix: (string) prefix of the unit test basket
+#   test_ext:           (string) test extension
+#   driver_suffix:      (string) suffix of the unit test driver
+#   result_dir:         (string) directory containing the FRUIT results
+#   result_prefix:      (string) root of the FRUIT result filenames
+#   result_ext:         (string) extension of the FRUIT result filenames
+#   result_map:         (dict) dictionary containing the association
+#                              between the fruit errors,tests,failures,id
+#                              fields and the index of the integer in list
+#   remove_driver:      (boolean) if true the driver file
+#   remove_results:     (boolean) if True result files are removed
+# outputs:
+#   exit_code:          (integer) 0 if all tests terminated successfully
+#                                 1 otherwise
+def execute_all_unit_tests(test_dirs,test_parallel,test_basket_prefix,\
+test_prefix,test_suffix,test_ext,driver_suffix,launchers,result_dir,\
+result_prefix,result_ext,result_map,remove_driver,remove_results):
+  # initialise the failure and error counters
+  n_failures=0; n_errors=0;
+  # loop over all test directories
+  for test_dir in test_dirs:
+    # find all unit test modules in test_dir
+    print(test_dir,test_prefix,test_suffix,test_ext,test_parallel)
+    test_modules =  find_unit_test_modules(test_dir,test_prefix,\
+    test_suffix,test_ext,test_parallel)
+    # execute all unit tests in the test modules
+    for tests in test_modules.values():
+      for test in tests:
+        # execute a unit test
+        n_successes_loc,n_failures_loc,n_errors_loc = \
+        execute_unit_test(test,test_basket_prefix,test_prefix,\
+        test_suffix,test_ext,driver_suffix,launchers,result_dir,\
+        result_prefix,result_ext,result_map,remove_driver,remove_results)
+        # reduce the total number of successes, failures and errors
+        n_failures  = n_failures + n_failures_loc
+        n_errors    = n_errors + n_errors_loc
+  # check the validity of the overall result
+  return check_results(n_failures,n_errors)
+     
 # Argument parsers ---------------------------------------------- #
 # outpus:
 #   parser: (namespace) namespace having the inputs as attributes
@@ -354,15 +396,14 @@ def generate_argument_parser():
 # Execute script ------------------------------------------------ #
 if __name__ == '__main__':
   from sys import exit as sysexit
+  test_dirs = ['./particles/tests']
   fruit_result_map = {'errors':0,'tests':1,'failures':2,'id':3}
   launchers = {'serial':'./','mpi':'mpirun -np 2 '}
   args = generate_argument_parser()
-  test_modules = find_unit_test_modules(args.test_dirs[0],'mod_','_test',\
-  'f90',['mpi'])
-  n_successes,n_failures,n_errors = execute_unit_test(test_modules['mpi'][0],\
-  'run_fruit_','mod_','_test','f90','_test_driver',launchers,'.',\
-  'result','xml',fruit_result_map,True,True)
-  # check for failures / errors and  exit program
-  check_results_exit(n_failures,n_errors)
+  exit_code = execute_all_unit_tests(args.test_dirs,['mpi'],'run_fruit_',\
+  'mod_','_test','f90','_test_driver',launchers,'.','result','xml',\
+  fruit_result_map,True,True) 
+  # exit with the appropriate exit code
+  sysexit(exit_code)
 
 # End-of-the-scripts -------------------------------------------- #

@@ -406,21 +406,63 @@ def generate_argument_parser():
   parser = ArgumentParser(\
   description='generate, compile and execute JOREK unit tests')
   parser.add_argument('--directories','-d',type=str,nargs='*',\
-  required=False,action='store',dest='test_dirs',default=[\
-  './particles/tests','./non_regression_tests/unit_tests'],\
+  required=False,action='store',dest='test_dirs',default=['./particles/tests'],\
   help='relative paths of the directories containing unit tests')
+  parser.add_argument('--parallelisms','-p',type=str,nargs='*',\
+  required=False,action='store',dest='test_parallel',\
+  default=['mpi'],help='type of parallelism of the unit tests,default: mpi')
+  parser.add_argument('--fruit-basket-prefix','-fbp',type=str,\
+  required=False,action='store',dest='test_basket_prefix',default='run_fruit_',\
+  help='prefix of the fruit basket to be run,default: run_fruit_')
+  parser.add_argument('--test-prefix','-tp',type=str,required=False,\
+  action='store',dest='test_prefix',default='mod_',\
+  help='prefix of the unit test module file, default: mod_')
+  parser.add_argument('--test-suffix','-ts',type=str,required=False,\
+  action='store',dest='test_suffix',default='_test',\
+  help='suffix of the unit test module file, default: _test') 
+  parser.add_argument('--test-extension','-te',type=str,required=False,\
+  action='store',dest='test_ext',default='f90',\
+  help='extension of the unit test module file, default: f90')
+  parser.add_argument('--test-driver-suffix','-ds',type=str,required=False,\
+  action='store',dest='driver_suffix',default='_test_driver',\
+  help='suffix of unit test driver file, default: _test_driver')
+  parser.add_argument('--result_dir','-rd',type=str,required=False,\
+  action='store',dest='result_dir',default='.',\
+  help='folder of the unit test results, default: .')
+  parser.add_argument('--result_prefix','-rp',type=str,required=False,\
+  action='store',dest='result_prefix',default='result',\
+  help='prefix of the test result file, default: result')
+  parser.add_argument('--result_extension','-re',type=str,required=False,\
+  action='store',dest='result_ext',default='xml',\
+  help='extension of the test result file, default: xml')
+  parser.add_argument('--remove_driver','-rmd',type=bool,required=False,\
+  action='store',dest='remove_drivers',default=True,\
+  help='if true the test drivers are removed after execution, default: true')
+  parser.add_argument('--remove_results','-rmr',type=bool,required=False,\
+  action='store',dest='remove_results',default=True,\
+  help='if true the test results are removed after execution, default: true')
+  parser.add_argument('--fruit_result_map','-frm',type=int,nargs='*',\
+  required=False,action='store',dest='list_fruit_result_map',default=[0,1,2,3],\
+  help='relative position of the fruit error,tests,failures,id as read by result file, default: [0,1,2,3]')
+  parser.add_argument('--launchers','-l',type=str,nargs='*',\
+  required=False,action='store',dest='list_launchers',default=['./','mpirun -np 2 '],\
+  help='launcher to be used for executing a test in the order: serial, mpi, default: [./,mpirun -np 2 ]')  
   return parser.parse_args()
 
 # Execute script ------------------------------------------------ #
 if __name__ == '__main__':
   from sys import exit as sysexit
-  test_dirs = ['./particles/tests']
-  fruit_result_map = {'errors':0,'tests':1,'failures':2,'id':3}
-  launchers = {'serial':'./','mpi':'mpirun -np 2 '}
+  # parse the inputs
   args = generate_argument_parser()
-  exit_code = execute_all_unit_tests(args.test_dirs,['mpi'],'run_fruit_',\
-  'mod_','_test','f90','_test_driver',launchers,'.','result','xml',\
-  fruit_result_map,True,True) 
+  fruit_result_map = {'errors':args.list_fruit_result_map[0],\
+  'tests':args.list_fruit_result_map[1],'failures':args.list_fruit_result_map[2],\
+  'id':args.list_fruit_result_map[3]}
+  launchers = {'serial':args.list_launchers[0],'mpi':args.list_launchers[1]}
+  # run all unit test suites
+  exit_code = execute_all_unit_tests(args.test_dirs,args.test_parallel,\
+  args.test_basket_prefix,args.test_prefix,args.test_suffix,args.test_ext,\
+  args.driver_suffix,launchers,args.result_dir,args.result_prefix,\
+  args.result_ext,fruit_result_map,args.remove_drivers,args.remove_results) 
   # exit with the appropriate exit code
   sysexit(exit_code)
 

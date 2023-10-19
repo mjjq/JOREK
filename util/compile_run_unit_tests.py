@@ -55,7 +55,6 @@ driver_suffix,test_prefix,test_suffix):
     driver.write('\n')
     driver.write('  ! write test summary and finalize test suit\n')
     driver.write('  call fruit_summary_xml\n')
-    driver.write('  call fruit_summary\n')
     driver.write('  call fruit_finalize\n')
     driver.write(''.join(['end program ',test_name,driver_suffix,'\n']))
 
@@ -93,7 +92,6 @@ driver_suffix,test_prefix,test_suffix):
      '(rank,n_tasks,ifail)','\n']))
      driver.write('\n')  
      driver.write('  ! write test summary and finalize test suit\n')
-     driver.write('  call fruit_summary_mpi(n_tasks,rank)\n')
      driver.write('  call fruit_summary_mpi_xml(n_tasks,rank)\n')
      driver.write('  call fruit_finalize_mpi(n_tasks,rank)\n')
      driver.write('\n')

@@ -36,9 +36,9 @@ def create_list_dictionary_from_keys(keys_list):
 #   driver_suffix:      (string) suffix of the unit test driver
 #   test_prefix:        (string) prefix of the unit test module
 #   test_suffix:        (string) suffix of the unit test module
-# outputs: 
+#   log_fruit_summary:  (bool) if true, the fruit summary is logged 
 def write_test_driver_serial(driver_path,test_name,test_basket_prefix,\
-driver_suffix,test_prefix,test_suffix):
+driver_suffix,test_prefix,test_suffix,log_fruit_summary):
   with driver_path.open(mode='w') as driver:
     driver.write(''.join(['program ',test_name,driver_suffix,'\n']))
     driver.write('use fruit\n')
@@ -47,14 +47,17 @@ driver_suffix,test_prefix,test_suffix):
     driver.write('  implicit none\n')
     driver.write('\n')
     driver.write('  ! init fruit suite\n')
-    driver.write(' call init_fruit_xml\n')
-    driver.write(' call init_fruit\n')
+    driver.write('  call init_fruit_xml\n')
+    driver.write('  call init_fruit\n')
+    driver.write('  call fruit_hide_dots')
     driver.write('\n')
     driver.write(''.join(['  ! run ',test_name,' test basket\n']))
     driver.write(''.join(['  call ',test_basket_prefix,test_name,'\n']))
     driver.write('\n')
     driver.write('  ! write test summary and finalize test suit\n')
     driver.write('  call fruit_summary_xml\n')
+    if(log_fruit_summary):
+      driver.write('  call fruit_summary\n')
     driver.write('  call fruit_finalize\n')
     driver.write(''.join(['end program ',test_name,driver_suffix,'\n']))
 
@@ -66,9 +69,9 @@ driver_suffix,test_prefix,test_suffix):
 #   driver_suffix:      (string) suffix of the unit test driver
 #   test_prefix:        (string) prefix of the unit test module
 #   test_suffix:        (string) suffix of the unit test module
-# outputs: 
+#   log_fruit_summary:  (bool) if true, the fruit summary is logged
 def write_test_driver_parallel(driver_path,test_name,test_basket_prefix,\
-driver_suffix,test_prefix,test_suffix):
+driver_suffix,test_prefix,test_suffix,log_fruit_summary):
   with driver_path.open(mode='w') as driver:
      driver.write(''.join(['program ',test_name,driver_suffix,'\n'])) 
      driver.write('use fruit\n')
@@ -86,12 +89,15 @@ driver_suffix,test_prefix,test_suffix):
      driver.write('  ! init the fruit suit\n')
      driver.write('  call init_fruit\n')
      driver.write('  call fruit_init_mpi_xml(rank)\n')
+     driver.write('  call fruit_hide_dots')
      driver.write('\n')
      driver.write(''.join(['  ! run ',test_name,' test basket\n']))
      driver.write(''.join(['  call ',test_basket_prefix,test_name,\
      '(rank,n_tasks,ifail)','\n']))
      driver.write('\n')  
      driver.write('  ! write test summary and finalize test suit\n')
+     if(log_fruit_summary):
+       driver.write('  call fruit_summary_mpi(n_tasks,rank)\n')
      driver.write('  call fruit_summary_mpi_xml(n_tasks,rank)\n')
      driver.write('  call fruit_finalize_mpi(n_tasks,rank)\n')
      driver.write('\n')
@@ -139,10 +145,11 @@ test_ext,test_parallel):
 #   test_basket_prefix: (string) prefix of the unit test basket
 #   test_ext:           (string) test extension
 #   driver_suffix:      (string) suffix of the unit test driver
+#   log_fruit_summary:  (bool) if true, the fruit summary is logged 
 # outputs:
 #   driver_path:        (path) path posix of the test driver
 def generate_unit_test_driver(test_path,test_basket_prefix,\
-test_prefix,test_suffix,test_ext,driver_suffix):
+test_prefix,test_suffix,test_ext,driver_suffix,log_fruit_summary):
   from pathlib import Path
   # create the unit test driver path
   test_name = test_path.name.replace(test_prefix,'').replace(\
@@ -154,10 +161,10 @@ test_prefix,test_suffix,test_ext,driver_suffix):
   # write unit test driver as a function of the parallelism
   if('mpi' in test_name):
     write_test_driver_parallel(driver_path,test_name,test_basket_prefix,\
-    driver_suffix,test_prefix,test_suffix)
+    driver_suffix,test_prefix,test_suffix,log_fruit_summary)
   else:
     write_test_driver_serial(driver_path,test_name,test_basket_prefix,\
-    driver_suffix,test_prefix,test_suffix)
+    driver_suffix,test_prefix,test_suffix,log_fruit_summary)
   return driver_path
 
 # compile the unit test driver using 8 threads
@@ -318,12 +325,14 @@ def check_results(n_failures,n_errors):
 #                              fields and the index of the integer in list
 #   remove_driver:      (boolean) if true the driver file
 #   remove_results:     (boolean) if True result files are removed
+#   log_fruit_summary:  (bool) if true, the fruit summary is logged 
 def execute_unit_test(test_path,test_basket_prefix,test_prefix,\
 test_suffix,test_ext,driver_suffix,launchers,result_dir,\
-result_prefix,result_ext,result_map,remove_driver,remove_results):
+result_prefix,result_ext,result_map,remove_driver,remove_results,\
+log_fruit_summary):
   # generate the unit test driver
   driver_path = generate_unit_test_driver(test_path,test_basket_prefix,\
-  test_prefix,test_suffix,test_ext,driver_suffix) 
+  test_prefix,test_suffix,test_ext,driver_suffix,log_fruit_summary) 
   # compile the unit test driver
   compile_unit_test_driver(driver_path)
   # execute the unit test driver
@@ -360,12 +369,14 @@ def log_unit_test_results(unit_test_log,log_header):
 #                              fields and the index of the integer in list
 #   remove_driver:      (boolean) if true the driver file
 #   remove_results:     (boolean) if True result files are removed
+#   log_fruit_summary:  (bool) if true, the fruit summary is logged 
 # outputs:
 #   exit_code:          (integer) 0 if all tests terminated successfully
 #                                 1 otherwise
 def execute_all_unit_tests(test_dirs,test_parallel,test_basket_prefix,\
 test_prefix,test_suffix,test_ext,driver_suffix,launchers,result_dir,\
-result_prefix,result_ext,result_map,remove_driver,remove_results):
+result_prefix,result_ext,result_map,remove_driver,remove_results,\
+log_fruit_summary):
   # initialise the failure and error counters
   n_failures=0; n_errors=0; failed_tests=[]; error_tests=[];
   # loop over all test directories
@@ -380,7 +391,8 @@ result_prefix,result_ext,result_map,remove_driver,remove_results):
         n_successes_loc,n_failures_loc,n_errors_loc = \
         execute_unit_test(test,test_basket_prefix,test_prefix,\
         test_suffix,test_ext,driver_suffix,launchers,result_dir,\
-        result_prefix,result_ext,result_map,remove_driver,remove_results)
+        result_prefix,result_ext,result_map,remove_driver,\
+        remove_results,log_fruit_summary)
         # store the name of failed tests
         if(n_failures_loc!=0): 
           failed_tests.append("".join([test_dir,'/',test.name]))
@@ -439,6 +451,9 @@ def generate_argument_parser():
   parser.add_argument('--remove_results','-rmr',type=bool,required=False,\
   action='store',dest='remove_results',default=True,\
   help='if true the test results are removed after execution, default: true')
+  parser.add_argument('--log-fruit-summary','-lfs',type=bool,required=False,\
+  action='store',dest='log_fruit_summary',default=False,\
+  help='if true the fruit summary is logged, default: false')
   parser.add_argument('--fruit_result_map','-frm',type=int,nargs='*',\
   required=False,action='store',dest='list_fruit_result_map',default=[0,1,2,3],\
   help='relative position of the fruit error,tests,failures,id as read by result file, default: [0,1,2,3]')
@@ -460,7 +475,8 @@ if __name__ == '__main__':
   exit_code = execute_all_unit_tests(args.test_dirs,args.test_parallel,\
   args.test_basket_prefix,args.test_prefix,args.test_suffix,args.test_ext,\
   args.driver_suffix,launchers,args.result_dir,args.result_prefix,\
-  args.result_ext,fruit_result_map,args.remove_drivers,args.remove_results) 
+  args.result_ext,fruit_result_map,args.remove_drivers,args.remove_results,\
+  args.log_fruit_summary) 
   # exit with the appropriate exit code
   sysexit(exit_code)
 

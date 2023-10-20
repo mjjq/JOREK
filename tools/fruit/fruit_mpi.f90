@@ -73,6 +73,9 @@ contains
     character(len = MSG_LENGTH_HERE), allocatable :: msgs(:)
     character(len = MSG_LENGTH_HERE), allocatable :: msgs_all(:)
 
+    !> initialise to zero the sum of the asserts
+    fail_assert_sum=0; succ_assert_sum=0; fail_case_sum=0; succ_case_sum=0;
+
     call get_assert_and_case_count(&
     & fail_assert,  succ_assert, &
     & fail_case,    succ_case)
@@ -180,6 +183,9 @@ contains
     integer :: i
     integer :: status(MPI_STATUS_SIZE)
     integer :: ierr
+
+    !> initialise to zero the sum of the asserts
+    fail_assert_sum=0; succ_assert_sum=0; fail_case_sum=0; succ_case_sum=0;
 
     call get_xml_filename_work(xml_filename_work)
 

@@ -7,7 +7,7 @@ module fruit_mpi
   integer, parameter :: XML_OPEN = 20
   integer, parameter :: XML_WORK = 21
   character(len = *), parameter :: xml_filename = "result.xml"
-  integer, parameter :: NUMBER_LENGTH = 20
+  integer, parameter :: NUMBER_LENGTH = 10
   integer, parameter :: FN_LENGTH = 50
 
   public ::          fruit_init_mpi_xml
@@ -255,7 +255,7 @@ contains
     integer, intent(in) :: i
     character(LEN = NUMBER_LENGTH) :: int_to_str
 
-    write(int_to_str, '(i20)') i
+    write(int_to_str, '(i10)') i
     int_to_str = adjustl(int_to_str)
   end function int_to_str
 end module fruit_mpi

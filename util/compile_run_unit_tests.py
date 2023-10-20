@@ -85,7 +85,7 @@ driver_suffix,test_prefix,test_suffix,log_fruit_summary):
 def write_test_driver_parallel(driver_path,test_name,test_basket_prefix,\
 driver_suffix,test_prefix,test_suffix,log_fruit_summary):
   with driver_path.open(mode='w') as driver:
-     driver.write(''.join(['program ',test_name,driver_suffix,'\n'])) 
+     driver.write(''.join(['program ',test_name,driver_suffix,'\n']))
      driver.write('use fruit\n')
      driver.write('use fruit_mpi\n')   
      driver.write('use mod_mpi_tools, only: init_mpi_threads\n')

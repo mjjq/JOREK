@@ -71,6 +71,7 @@ end subroutine test_get_filename
 
 subroutine test_write_read_sim_time
   use mpi
+  implicit none
   type(particle_sim) :: sim_to_write, sim_to_read
   class(write_action), allocatable :: writer
   class(read_action), allocatable  :: reader
@@ -95,6 +96,8 @@ subroutine test_write_read_sim_time
 end subroutine test_write_read_sim_time
 
 subroutine test_write_sim_one_particle_kinetic_leapfrog
+  use mpi
+  implicit none
   type(particle_sim) :: sim_to_write, sim_to_read
   class(write_action), allocatable :: writer
   class(read_action), allocatable  :: reader
@@ -131,6 +134,8 @@ subroutine test_write_sim_one_particle_kinetic_leapfrog
 end subroutine test_write_sim_one_particle_kinetic_leapfrog
 
 subroutine test_write_sim_one_group_boris
+  use mpi
+  implicit none
   type(particle_sim) :: sim_to_write, sim_to_read
   class(write_action), allocatable :: writer
   class(read_action), allocatable  :: reader
@@ -174,6 +179,8 @@ subroutine test_write_sim_one_group_boris
 end subroutine test_write_sim_one_group_boris
 
 subroutine test_write_sim_two_groups_boris
+  use mpi
+  implicit none
   type(particle_sim) :: sim_to_write, sim_to_read
   class(write_action), allocatable :: writer
   class(read_action), allocatable  :: reader

@@ -212,7 +212,8 @@ def run_unit_test_driver(driver_path,launchers):
     omp_num_threads_old = environ['OMP_NUM_THREADS']
   system('export OMP_NUM_THREADS=2')
   exec_name = driver_path.name.replace(driver_path.suffix,'')
-  system(''.join([launchers[find_launcher_type(exec_name)],exec_name]))
+  system(''.join([launchers[find_launcher_type(exec_name)],\
+  ' ./',exec_name]))
   # remove executable
   system(''.join(['rm -f ',exec_name]))
   # restore original number of omp threads
@@ -470,8 +471,8 @@ def generate_argument_parser():
   required=False,action='store',dest='list_fruit_result_map',default=[0,1,2,3],\
   help='relative position of the fruit error,tests,failures,id as read by result file, default: [0,1,2,3]')
   parser.add_argument('--launchers','-l',type=str,nargs='*',\
-  required=False,action='store',dest='list_launchers',default=['./','mpirun -np 2 '],\
-  help='launcher to be used for executing a test in the order: serial, mpi, default: [./,mpirun -np 2 ]')  
+  required=False,action='store',dest='list_launchers',default=['./','mpirun -np 2'],\
+  help='launcher to be used for executing a test in the order: serial, mpi, default: [./,mpirun -np 2]')  
   return parser.parse_args()
 
 # Execute script ------------------------------------------------ #

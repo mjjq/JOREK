@@ -81,10 +81,8 @@ subroutine test_octree
 
   ! Free resources and second initialization
   call octree_free(tree)
-!> BUGGY IMPLEMENTATION PROBABLY THE CHILDREN VARIABLE IN THE
-!> 'octree_node' DATA STRUCTURE SHOUDLD BE AN ARRAY OF POINTERS
-!> INSTEAD OF A POINTER TO AN ARRAY => DISCARDED FOR NOW
-!  max_depth = 3
+!> SEGMENTATION FAULT OF OCTREE_INIT WHEN MAX_DEPTH>2
+!  max_depth = 4!3
 !  call octree_init(triangles, max_depth, boundary, tree, err)
 !  call assert_equals(0, err, "A new initialization successful.")
  

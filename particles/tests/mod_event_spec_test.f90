@@ -10,12 +10,12 @@ contains
 !> Fruit basket -----------------------------------
 subroutine run_fruit_event_spec
   implicit none
-  write(*,'(/A)') "  ... setting-up: "
-  write(*,'(/A)') "  ... running: "
+  write(*,'(/A)') "  ... setting-up: event spec"
+  write(*,'(/A)') "  ... running: event spec"
   call run_test_case(test_create_event_with_stop_action,'test_create_event_with_stop_action')
   call run_test_case(test_event_run_at,'test_event_run_at')
   call run_test_case(test_next_event_at,'test_next_event_at')
-  write(*,'(/A)') "  ... tearing-down: "
+  write(*,'(/A)') "  ... tearing-down: event spec"
 end subroutine run_fruit_event_spec
 
 !> Tests ------------------------------------------

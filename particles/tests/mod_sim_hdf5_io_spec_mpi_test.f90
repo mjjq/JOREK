@@ -70,6 +70,7 @@ subroutine test_get_filename
 end subroutine test_get_filename
 
 subroutine test_write_read_sim_time
+  use mpi
   type(particle_sim) :: sim_to_write, sim_to_read
   class(write_action), allocatable :: writer
   class(read_action), allocatable  :: reader
@@ -80,6 +81,7 @@ subroutine test_write_read_sim_time
   writer%decimal_digits = 2; writer%fractional_digits = 0
 
   call writer%run(sim_to_write)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
   ! test if a file with the right name was created
   inquire(file='part21.h5', exist=file_exists)
   call assert_true(file_exists, 'file with the right name should be created')
@@ -105,6 +107,7 @@ subroutine test_write_sim_one_particle_kinetic_leapfrog
   sim_to_write%time = 21.d0
 
   call writer%run(sim_to_write)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
   ! test if a file with the right name was created
   inquire(file='part021.00000000.h5', exist=file_exists)
   call assert_true(file_exists, 'file with the right name should be created')
@@ -142,6 +145,7 @@ subroutine test_write_sim_one_group_boris
   sim_to_write%groups(1)%mass = 2.0
 
   call writer%run(sim_to_write)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
   ! test if a file with the right name was created
   inquire(file='part021.00000000.h5', exist=file_exists)
   call assert_true(file_exists, 'file with the right name should be created')
@@ -183,6 +187,7 @@ subroutine test_write_sim_two_groups_boris
   sim_to_write%time = 21.d0
 
   call writer%run(sim_to_write)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
   ! test if a file with the right name was created
   inquire(file='part021.00000000.h5', exist=file_exists)
   call assert_true(file_exists, 'file with the right name should be created')

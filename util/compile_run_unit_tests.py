@@ -108,8 +108,8 @@ driver_suffix,test_prefix,test_suffix,log_fruit_summary):
      '(rank,n_tasks,ifail)','\n']))
      driver.write('\n')  
      driver.write('  ! write test summary and finalize test suit\n')
-     if(log_fruit_summary):
-       driver.write('  call fruit_summary_mpi(n_tasks,rank)\n')
+     #if(log_fruit_summary):
+     driver.write('  call fruit_summary_mpi(n_tasks,rank)\n')
      driver.write('  call fruit_summary_mpi_xml(n_tasks,rank)\n')
      driver.write('  call fruit_finalize_mpi(n_tasks,rank)\n')
      driver.write('\n')

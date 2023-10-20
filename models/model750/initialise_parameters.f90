@@ -52,10 +52,13 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 F0, gamma, gamma_stangeby,                          &
                 gamma_sheath_i, gamma_sheath_e,                     &
                 zjz_0, zjz_1, zj_coef,                              &
+                loop_voltage_control,                               &
+                loop_voltage, loop_voltage_prop,                    &
+                loop_voltage_der, loop_voltage_int, I_target,       &
                 rho_0, rho_1, rho_coef, rho_min,                    &
                 T_0,   T_1,   T_coef, T_min,                        &
-				T_min_neg,rho_min_neg,                              &
-				corr_neg_temp_coef, corr_neg_dens_coef,             &
+                T_min_neg,rho_min_neg,                              &
+                corr_neg_temp_coef, corr_neg_dens_coef,             &
                 Ti_0,  Ti_1,  Ti_coef,                              &
                 Te_0,  Te_1,  Te_coef,                              &
                 FF_0,  FF_1,  FF_coef,                              &
@@ -75,6 +78,22 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 heatsource_gauss_psin, heatsource_gauss_sig,        &
                 particlesource_gauss_psin, particlesource_gauss_sig,&
                 particlesource, heatsource, tauIC,                  &
+                particlesource_fix_profile               ,          &
+                particlesource_fix_profile_allow_negative,          &
+                particlesource_fix_profile_tsteps        ,          &
+                particlesource_fix_profile_psi_max       ,          &
+                heatsource_fix_profile                   ,          &
+                heatsource_fix_profile_allow_negative    ,          &
+                heatsource_fix_profile_tsteps            ,          &
+                heatsource_fix_profile_psi_max           ,          &
+                heatsource_i_fix_profile                 ,          &
+                heatsource_i_fix_profile_allow_negative  ,          &
+                heatsource_i_fix_profile_tsteps          ,          &
+                heatsource_i_fix_profile_psi_max         ,          &
+                heatsource_e_fix_profile                 ,          &
+                heatsource_e_fix_profile_allow_negative  ,          &
+                heatsource_e_fix_profile_tsteps          ,          &
+                heatsource_e_fix_profile_psi_max         ,          &
                 pellet_amplitude, pellet_R, pellet_Z, pellet_phi,   &
                 pellet_radius, pellet_sig, pellet_length,           &
                 pellet_psi, pellet_delta_psi,                       &
@@ -86,6 +105,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 freeboundary_equil,                                 &
                 rho_file, T_file, ffprime_file, Fprofile_file,      &
                 intg_original_grids,                                &
+                Jsource_file, ZK_perp_file,                         &
+                ZK_i_perp_file, ZK_e_perp_file,                     &
+                heatsource_file,                                    &
+                heatsource_i_file, heatsource_e_file,               &
                 Ti_file, Te_file,                                   &
                 bc_natural_open, bc_natural_flux, gamma_sheath,     &
                 freeboundary, resistive_wall, freeb_change_indices, &
@@ -138,6 +161,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 voltage_coils, vert_FB_amp, find_pf_coil_currents,  &
                 delta_psi_GS, newton_GS_fixbnd, newton_GS_freebnd,  &
                 pastix_maxthrd, centralize_harm_mat, treat_axis,    &
+                more_outfile_digits,                                &
                 n_particles, tstep_particles, nstep_particles,      & !Particles extension
                 nsubstep_particles, restart_particles,              &
                 filter_perp,    filter_hyper,    filter_par,        &

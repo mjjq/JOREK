@@ -18,6 +18,7 @@ contains
 subroutine sources_TiTe(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particle_source, heat_source_i, heat_source_e)
 
 use phys_module
+use profiles,    only: interpolProf
 
 implicit none
 
@@ -47,11 +48,18 @@ particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_p
      + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))&
      + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
 
-heat_source_i     = heatsource_i     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-      + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
-
-heat_source_e     = heatsource_e     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-      + heatsource_gauss_e * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+if (num_heatsource_i) then
+  heat_source_i = interpolProf(num_heatsource_i_x, num_heatsource_i_y, num_heatsource_i_len, psi_n) * heatsource_i
+else
+  heat_source_i     = heatsource_i     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+        + heatsource_gauss_i * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+endif
+if (num_heatsource_e) then
+  heat_source_e = interpolProf(num_heatsource_e_x, num_heatsource_e_y, num_heatsource_e_len, psi_n) * heatsource_e
+else
+  heat_source_e     = heatsource_e     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+        + heatsource_gauss_e * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+endif
 
 return
 end subroutine sources_TiTe
@@ -59,6 +67,7 @@ end subroutine sources_TiTe
 subroutine sources_T(xpoint2, xcase2, Z, Z_xpoint, psi, psi_axis, psi_bnd, particle_source, heat_source)
 
 use phys_module
+use profiles,    only: interpolProf
 
 implicit none
 
@@ -88,8 +97,12 @@ particle_source = particlesource * (0.5d0 - 0.5d0*tanh((psi_n - particlesource_p
      + edgeparticlesource * (0.5d0 + 0.5d0*tanh((psi_n - edgeparticlesource_psin)/edgeparticlesource_sig))&
      + particlesource_gauss * exp(-(psi_n - particlesource_gauss_psin)**2/(particlesource_gauss_sig**2))
 
-heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
-      + heatsource_gauss * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+if (num_heatsource) then
+  heat_source = interpolProf(num_heatsource_x, num_heatsource_y, num_heatsource_len, psi_n) * heatsource
+else
+  heat_source     = heatsource     * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))  &
+     + heatsource_gauss * exp(-(psi_n - heatsource_gauss_psin)**2/(heatsource_gauss_sig**2))
+end if
 
 return
 end subroutine sources_T

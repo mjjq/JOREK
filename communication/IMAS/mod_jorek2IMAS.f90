@@ -603,7 +603,7 @@ module mod_jorek2IMAS
 
       ! --- Normalized beta
       if (exprs_all_int%expr(i_exp)%name=='beta_n') then
-        equilibrium_ids%time_slice(i_slice)%global_quantities%beta_normal = res0D(i_exp)
+        equilibrium_ids%time_slice(i_slice)%global_quantities%beta_normal = abs(res0D(i_exp))
       endif
 
       ! --- Total current

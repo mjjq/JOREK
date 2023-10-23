@@ -220,13 +220,17 @@ test_prefix,test_suffix,test_ext,driver_suffix,log_fruit_summary):
     driver_suffix,test_prefix,test_suffix,log_fruit_summary)
   return driver_path
 
+# cean all jorek compilation files:
+def make_cleanall():
+  from os import system
+  system('make cleanall')
+
 # compile the unit test driver using 8 threads
 # inputs:
 #   driver_path: (path) path posix of the test driver
 def compile_unit_test_driver(driver_path):
   from os import system
   exec_name = driver_path.name.replace(driver_path.suffix,'')
-  system('make cleanall')
   system(''.join(['rm -f ',exec_name]))
   system(''.join(['make -j8 ',exec_name]))
 
@@ -444,6 +448,8 @@ log_fruit_summary,test_modules_to_be_run=[]):
     # find all unit test modules in test_dir
     test_modules =  find_unit_test_modules(test_dirs,test_prefix,\
     test_suffix,test_ext,test_parallel)
+  # remove all jorek compilation files
+  make_cleanall()
   # execute all unit tests in the test modules
   for tests in test_modules.values():
     for test in tests:

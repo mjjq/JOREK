@@ -80,7 +80,7 @@ subroutine test_project_1_flux_40_31
   use phys_module
   use nodes_elements
   if (.not. EXTRATEST) return
-  call default_flux_grid_31(node_list, element_list)
+  call default_flux_grid_31(0,node_list, element_list)
   call project_f_with_assert_and_write(node_list, element_list, f_1, 1.d0, 0.d0, '1_flux_40_31')
   write(*,*) ' completed test_project_1_flux_40_31'
 end subroutine test_project_1_flux_40_31
@@ -91,7 +91,7 @@ subroutine test_project_1_flux_40_32
   use phys_module
   use nodes_elements
   if (.not. EXTRATEST) return
-  call default_flux_grid_32(node_list, element_list)
+  call default_flux_grid_32(0,node_list, element_list)
   call project_f_with_assert_and_write(node_list, element_list, f_1, 1.d0, 0.d0, '1_flux_40_32')
   write(*,*) ' completed test_project_1_flux_40_32'
 end subroutine test_project_1_flux_40_32

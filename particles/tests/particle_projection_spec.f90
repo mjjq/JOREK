@@ -61,7 +61,7 @@ subroutine test_flux_40_31_pcg
   use nodes_elements
   real*8 :: w
   if (.not. EXTRATEST) return
-  call default_flux_grid_31(node_list, element_list)
+  call default_flux_grid_31(0,node_list, element_list)
   w=TWOPI**2*R_geo*amin**2/2.d0
   call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_31', volume=w, mean_tol=2d-5*[1,1,1], rms_tol=45d0/sqrt([1d3,1d4,1d5]))
   write(*,*) ' completed test_flux_40_31_pcg'
@@ -72,7 +72,7 @@ subroutine test_flux_40_32_pcg
   use nodes_elements
   real*8 :: w
   if (.not. EXTRATEST) return
-  call default_flux_grid_32(node_list, element_list)
+  call default_flux_grid_32(0,node_list, element_list)
   w=TWOPI**2*R_geo*amin**2/2.d0
   call project_n(node_list, element_list, [1000,10000,100000], pcg32_rng(), 'flux_40_32', volume=w, mean_tol=2d-5*[1,1,1], rms_tol=45d0/sqrt([1d3,1d4,1d5]))
   write(*,*) ' completed test_polar_40_32_pcg'

@@ -17,12 +17,13 @@ end interface
 procedure (f), pointer :: f_ptr
 
 integer :: i, j, u
-integer :: ierr, provided
+integer :: ierr, my_id, provided
 type(type_node_list) :: node_list
 type(type_element_list) :: element_list
 real*8 :: m, e
 
 call MPI_INIT_THREAD(MPI_THREAD_SINGLE, provided, ierr)
+call MPI_COMM_RANK(MPI_COMM_WORKD,my_id,ierr)
 call initialise_basis
 
 open(newunit=u, file='project_f.csv', status='replace')
@@ -41,10 +42,10 @@ do i=1,5
     call default_polar_grid(node_list, element_list, 32)
     write(u,"(A)",advance="no") "polar_30_32"
   case(4)
-    call default_flux_grid(node_list, element_list, 31)
+    call default_flux_grid(my_id,node_list, element_list, 31)
     write(u,"(A)",advance="no") "flux_30_31"
   case(5)
-    call default_flux_grid(node_list, element_list, 32)
+    call default_flux_grid(my_id,node_list, element_list, 32)
     write(u,"(A)",advance="no") "flux_30_32"
   end select
 

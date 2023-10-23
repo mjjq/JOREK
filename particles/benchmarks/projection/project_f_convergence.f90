@@ -23,7 +23,7 @@ type(type_element_list) :: element_list
 real*8 :: m, e
 
 call MPI_INIT_THREAD(MPI_THREAD_SINGLE, provided, ierr)
-call MPI_COMM_RANK(MPI_COMM_WORKD,my_id,ierr)
+call MPI_COMM_RANK(MPI_COMM_WORLD,my_id,ierr)
 call initialise_basis
 
 open(newunit=u, file='project_f.csv', status='replace')

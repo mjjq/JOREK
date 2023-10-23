@@ -121,7 +121,7 @@ driver_suffix,test_prefix,test_suffix,log_fruit_summary):
 # identified via the prefix mod_, the suffix _test and the
 # extension .f90
 # inputs:
-#   test_dir:      (string) path to the search directory
+#   test_dirs:     (list)(string) list paths to the search directories
 #   test_prefix:   (string) prefix identifying a test module
 #   test_suffix:   (string) suffix identifying a test module
 #   test_ext:      (string) file extension identifying a test module
@@ -129,24 +129,28 @@ driver_suffix,test_prefix,test_suffix,log_fruit_summary):
 # outputs:
 #   test_modules: (dict) dictionary containing the path associated
 #                 to the test modules
-def find_unit_test_modules(test_dir,test_prefix,test_suffix,\
+def find_unit_test_modules(test_dirs,test_prefix,test_suffix,\
 test_ext,test_parallel):
   from pathlib import Path
   # initialize test module dictionary
   test_parallel.append('serial')
   test_modules = create_list_dictionary_from_keys(test_parallel)
   test_parallel.remove('serial')
-  # loop on the paths for all test modules in test_dir 
-  # and store them in the test_modules dictionary as a 
-  # function of their parallelism
-  test_dir_path = Path(test_dir)
-  for posix_path in  test_dir_path.glob(\
-  "".join([test_prefix,'*',test_suffix,'.',test_ext])):
-   for key in test_parallel:
-     if(key in posix_path.name):
-       test_modules[key].append(posix_path)
-     else:
-       test_modules['serial'].append(posix_path)
+  # loop on all directories in which perform the search
+  for test_dir in test_dirs:
+    # loop on the paths for all test modules in test_dir 
+    # and store them in the test_modules dictionary as a 
+    # function of their parallelism
+    test_dir_path = Path(test_dir)
+    for posix_path in  test_dir_path.glob(\
+    "".join([test_prefix,'*',test_suffix,'.',test_ext])):
+     for key in test_parallel:
+       if(key in posix_path.name):
+         if(posix_path not in test_modules[key]):
+           test_modules[key].append(posix_path)
+       else:
+         if(posix_path not in test_modules['serial']):
+           test_modules['serial'].append(posix_path)
   # return the module dictionary   
   return test_modules
 
@@ -394,29 +398,27 @@ result_prefix,result_ext,result_map,remove_driver,remove_results,\
 log_fruit_summary):
   # initialise the failure and error counters
   n_failures=0; n_errors=0; failed_tests=[]; error_tests=[];
-  # loop over all test directories
-  for test_dir in test_dirs:
-    # find all unit test modules in test_dir
-    test_modules =  find_unit_test_modules(test_dir,test_prefix,\
-    test_suffix,test_ext,test_parallel)
-    # execute all unit tests in the test modules
-    for tests in test_modules.values():
-      for test in tests:
-        # execute a unit test
-        n_successes_loc,n_failures_loc,n_errors_loc = \
-        execute_unit_test(test,test_basket_prefix,test_prefix,\
-        test_suffix,test_ext,driver_suffix,launchers,result_dir,\
-        result_prefix,result_ext,result_map,remove_driver,\
-        remove_results,log_fruit_summary)
-        # store the name of failed tests
-        if(n_failures_loc!=0): 
-          failed_tests.append("".join([test_dir,'/',test.name]))
-        # store the name of tests with errors
-        if(n_errors_loc!=0):
-          error_tests.append("".join([test_dir,'/',test.name]))
-        # reduce the total number of successes, failures and errors
-        n_failures  = n_failures + n_failures_loc
-        n_errors    = n_errors + n_errors_loc
+  # find all unit test modules in test_dir
+  test_modules =  find_unit_test_modules(test_dirs,test_prefix,\
+  test_suffix,test_ext,test_parallel)
+  # execute all unit tests in the test modules
+  for tests in test_modules.values():
+    for test in tests:
+      # execute a unit test
+      n_successes_loc,n_failures_loc,n_errors_loc = \
+      execute_unit_test(test,test_basket_prefix,test_prefix,\
+      test_suffix,test_ext,driver_suffix,launchers,result_dir,\
+      result_prefix,result_ext,result_map,remove_driver,\
+      remove_results,log_fruit_summary)
+      # store the name of failed tests
+      if(n_failures_loc!=0): 
+        failed_tests.append(test.name)
+      # store the name of tests with errors
+      if(n_errors_loc!=0):
+        error_tests.append(test.name)
+      # reduce the total number of successes, failures and errors
+      n_failures  = n_failures + n_failures_loc
+      n_errors    = n_errors + n_errors_loc
   # log tests with failures and/or errors
   log_unit_test_results(failed_tests,'Unit test module with failed tests:')
   log_unit_test_results(error_tests,'Unit test module with errors:')

@@ -147,64 +147,110 @@ subroutine default_flux_grid(node_list, element_list, npol)
   ! Start with a polar grid
   call preset_parameters()
   ! Copy input file for simple case
-  F0 = 3.0
+
+  tstep_n = 5.d0
+  nstep_n = 0
+
+  tgnum_psi  = 2.d-1
+  tgnum_T    = 2.d-1
+  tgnum_u    = 2.d-1
+  tgnum_w    = 2.d-1
+  tgnum_vpar = 2.d-1
+  tgnum_rho  = 2.d-1
+  tgnum_zj   = 2.d-1
+ 
+  min_sheath_angle = 0.d0
+
+  F0 = 3.d0
   fbnd(1) = 2.d0
   fbnd(2:4) = 0.d0
   fpsi = 0.d0
   mf = 0
-  n_radial = 30
-  n_pol = 32
-  R_geo = 1.5
-  Z_geo = 0.0
-  amin = 1.0
-  ellip  = 1.
-  tria_u = 0.
-  tria_l = 0.
-  quad_u = -0.
-  quad_l = -0.
+  n_radial = 41!30
+  n_pol    = 64!32
+  R_geo  = 3.d0!1.5
+  Z_geo  = 0.d0
+  amin   = 1.d0
+  ellip  = 1.d0
+  tria_u = 0.d0
+  tria_l = 0.d0
+  quad_u = -0.d0
+  quad_l = -0.d0
   xpoint = .false.
 
   rho_0 = 1.d0
-  rho_1 = 1.d-1
-  rho_coef(1)  =  -1.0d0
-  rho_coef(2)  =  0.0
-  rho_coef(3)  =  0.0
-  rho_coef(4)  =  1.d0
-  rho_coef(5)  =  5.d0
-  T_0 = 2.d-3
-  T_1 = 1.d-8
-  T_coef(1) = -0.8d0
-  T_coef(2) = +0.0d0
-  T_coef(3) = 0.d0
-  T_coef(4) = 1.d0
-  T_coef(5) = 5.d0
-  FF_0 = 2.d0
-  FF_1 = 0.
-  FF_coef(1)  = -1.0
+  rho_1 = 0.01d0!1.d-1
+  rho_coef(1)  =  0.d0!-1.0d0
+  rho_coef(2)  =  0.d0
+  rho_coef(3)  =  0.d0
+  rho_coef(4)  =  0.08d0!1.d0
+  rho_coef(5)  =  0.94d0!5.d0
+
+  T_0 = 1.5d-2!2.d-3
+  T_1 = 3.d-4!1.d-8
+  T_coef(1) = -0.66d0!-0.8d0
+  T_coef(2) = 0.d0!+0.0d0
+  T_coef(3) = 0.d0!0.d0
+  T_coef(4) = 0.08d0!1.d0
+  T_coef(5) = 0.94d0!5.d0
+
+  FF_0 = 1.6d0!2.d0
+  FF_1 = 0.d0
+  FF_coef(1)  = -1.d0
   FF_coef(2)  = 0.d0
   FF_coef(3)  = 0.d0
   FF_coef(4)  = 0.03d0
-  FF_coef(5)  = 5.0d0
-  FF_coef(6)  = 1.d0
-  FF_coef(7)  = 10.d0
-  FF_coef(8)  = 1.d0
+  FF_coef(5)  = 1.0d0!5.0d0
+  FF_coef(6)  = -0.06d0!1.d0
+  FF_coef(7)  = 0.9d0!10.d0
+  FF_coef(8)  = 0.07d0!1.d0
+
   D_par  = 0.d0
   D_perp = 1.d-5
+  D_perp(1) = 1d-5
+  D_perp(2) = 0.85d0
+  D_perp(3) = 0.d0
+  D_perp(4) = 0.01d0
+  D_perp(5) = 0.92d0
 
-  ZK_par  = 1.d0
-  ZK_perp = 1.d-5
+  ZK_par  = 1.d2!1.d0
+  !ZK_perp = 1.d-5
+  ZK_perp(1) = 1.d-5
+  ZK_perp(2) = 0.85d0
+  ZK_perp(3) = 0.d0
+  ZK_perp(4) = 0.01d0
+  ZK_perp(5) = 0.92d0
   
-  eta   = 1.d-5
-  visco = 1.d-6
-  visco_par = 1.d-6
+  eta       = 1.d-5
+  eta_ohmic = 1.d-7
+  visco = 4.d-6!1.d-6
+  visco_par = 1.d-4!1.d-6
 
-  eta_T_dependent = .false.
-  visco_T_dependent = .false.
+  visco_old_setup = .true.
+  visco_par_num   = 1.d-11 !3.d-10
+  eta_num         = 3.-10!1.d-11!3.d-10
+  treat_axis      = .true.
+  !eta_T_dependent = .false.
+  !visco_T_dependent = .false.
 
-  heatsource     = 0.d0
-  particlesource = 0.d0
-  rst_hdf5 = 1
+  heatsource                = 1.d-7!0.d0
+  particlesource            = 5.d-6!0.d0
+  edgeparticlesource        = 1.d-7
+  edgeparticlesource_psin   = 1.d0
+  edgeparticlesource_sig    = 0.03d0
+  particlesource_gauss      = 1.d-7
+  particlesource_gauss_psin = 0.d0
+  particlesource_gauss_sig  = 0.1d0
+  heatsource_gauss          = 1.d-8
+  heatsource_gauss_psin     = 0.d0
+  heatsource_gauss_sig      = 0.1d0
 
+  rst_hdf5       = 1
+  iter_precon    = 22
+  gmres_m        = 20
+  gmres_4        = 1.d0
+  gmres_max_iter = 200
+  gmres_tol      = 1.d-6
 
   node_list%n_nodes = 0
   element_list%n_elements = 0

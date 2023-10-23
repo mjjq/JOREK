@@ -50,11 +50,9 @@ function get_filename(this, time) result(filename)
     write(format,'(A,I0,A)') '(A,I', this%decimal_digits, ',A)'
     write(filename,trim(format)) trim(this%basename), int(time), this%extension
   else
-    write(format,'(A,I0,A,I0,A,I0,A)') '(A,I', this%decimal_digits, '.', this%decimal_digits, &
-        ',f0.', this%fractional_digits, ',A)'
-    write(filename,trim(format)) trim(this%basename), int(time), &
-    aint(((time-real(int(time)))*(1d1**this%fractional_digits))/(this%fractional_digits)), &
-    this%extension
+    write(format,'(A,I0,A,I0,A,I0,A,I0,A)') '(A,I', this%decimal_digits, '.', this%decimal_digits, &
+        ',f',this%fractional_digits+1,'.', this%fractional_digits, ',A)'
+    write(filename,trim(format)) trim(this%basename), int(time), time-real(int(time)), this%extension
   end if
 end function get_filename
 

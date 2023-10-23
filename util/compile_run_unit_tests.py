@@ -126,14 +126,39 @@ driver_suffix,test_prefix,test_suffix,log_fruit_summary):
 #   path_dict: (dict) filled dictionary to be filled with path
 def reorder_store_test_paths_in_dict(path_list,test_parallel,path_dict):
   for posix_path in path_list:
-    for key in test_parallel:
-      if(key in posix_path.name):
-        if(posix_path not in path_dict[key]):
-          path_dict[key].append(posix_path)
-      else:
-        if(posix_path not in path_dict['serial']):
-          path_dict['serial'].append(posix_path)
+    if(posix_path.is_file()):
+      for key in test_parallel:
+        if(key in posix_path.name):
+          if(posix_path not in path_dict[key]):
+            path_dict[key].append(posix_path)
+        else:
+          if(posix_path not in path_dict['serial']):
+            path_dict['serial'].append(posix_path)
+    else:
+      print("".join(['Warning: ',posix_path.name,' is not a file: skip!']))
   return path_dict
+
+# reorder and store user selected unit tests to be run 
+# inputs:
+#   test_list:     (list,string) list relative paths of unit test
+#                                to be run from root folder 
+#   test_parallel: (list,string) list of the parallelization types 
+# outputs:
+#   test_modules: (dict) dictionary containing the path associated
+#                 to the test modules
+def reorder_store_unit_tests(test_list,test_parallel):
+  from pathlib import Path
+  # generate path list
+  path_list = [Path("".join(['./',filepath])) for filepath in test_list]
+  # initialize test module dictionary
+  test_parallel.append('serial')
+  test_modules = create_list_dictionary_from_keys(test_parallel)
+  test_parallel.remove('serial')
+  # loop on the path to be stored
+  for test in path_list:
+    test_modules = reorder_store_test_paths_in_dict(path_list,\
+    test_parallel,test_modules) 
+  return test_modules
 
 # Find unit test modules in a given folder. Unit test modules are
 # identified via the prefix mod_, the suffix _test and the
@@ -412,9 +437,13 @@ result_prefix,result_ext,result_map,remove_driver,remove_results,\
 log_fruit_summary,test_modules_to_be_run=[]):
   # initialise the failure and error counters
   n_failures=0; n_errors=0; failed_tests=[]; error_tests=[];
-  # find all unit test modules in test_dir
-  test_modules =  find_unit_test_modules(test_dirs,test_prefix,\
-  test_suffix,test_ext,test_parallel)
+  if(len(test_modules_to_be_run)>0):
+    # re-order and store unit tests to be run
+    test_modules = reorder_store_unit_tests(test_modules_to_be_run,test_parallel)
+  else:
+    # find all unit test modules in test_dir
+    test_modules =  find_unit_test_modules(test_dirs,test_prefix,\
+    test_suffix,test_ext,test_parallel)
   # execute all unit tests in the test modules
   for tests in test_modules.values():
     for test in tests:
@@ -491,6 +520,9 @@ def generate_argument_parser():
   parser.add_argument('--launchers','-l',type=str,nargs='*',\
   required=False,action='store',dest='list_launchers',default=['./','mpirun -np 2 ./'],\
   help='launcher to be used for executing a test in the order: serial, mpi, default: [./,mpirun -np 2]')  
+  parser.add_argument('--test_to_run','-ttr',type=str,nargs='*',\
+  required=False,action='store',dest='tests_to_run',default=[],\
+  help='path from root flder to the tests to be run, default: []')
   return parser.parse_args()
 
 # Execute script ------------------------------------------------ #
@@ -507,7 +539,8 @@ if __name__ == '__main__':
   args.test_basket_prefix,args.test_prefix,args.test_suffix,args.test_ext,\
   args.driver_suffix,launchers,args.result_dir,args.result_prefix,\
   args.result_ext,fruit_result_map,return_bool_from_string(args.remove_drivers),\
-  return_bool_from_string(args.remove_results),return_bool_from_string(args.log_fruit_summary)) 
+  return_bool_from_string(args.remove_results),return_bool_from_string(args.log_fruit_summary),\
+  test_modules_to_be_run=args.tests_to_run) 
   # exit with the appropriate exit code
   sysexit(exit_code)
 

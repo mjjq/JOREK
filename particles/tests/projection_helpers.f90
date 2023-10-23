@@ -210,8 +210,8 @@ subroutine default_flux_grid(node_list, element_list, npol)
   element_list%n_elements = 0
   bnd_elm_list%n_bnd_elements  = 0
 
-  use_mumps_eq  = .true.
-  use_pastix_eq = .false.
+  use_mumps_eq  = .false.
+  use_pastix_eq = .true.
 
   call define_boundary()
 

@@ -174,6 +174,7 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   mf = 0
   n_radial    = 41!30
   n_pol       = 64!32
+  n_flux      = 30 
   R_geo       = 3.d0!1.5
   Z_geo       = 0.d0
   amin        = 1.d0
@@ -184,6 +185,7 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   quad_l      = -0.d0
   xpoint      = .false.
   xpoint2     = .false.
+  xcase       = 0
   xcase2      = 0
   nice_q      = .true.
   acentre     = 0d0
@@ -282,8 +284,9 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2,nice_q) 
 
   ! Set parameters for making flux grid
-  call grid_flux_surface(.false., 0, node_list, element_list, &
-      surface_list, n_flux=30, n_tht=npol, xr1=xr1, sig1=sig1, xr2=xr2, sig2=sig2, refinement=.false.)
+  call grid_flux_surface(xpoint, xcase, node_list, element_list, &
+      surface_list, n_flux=n_flux, n_tht=npol, xr1=xr1, sig1=sig1, &
+      xr2=xr2, sig2=sig2, refinement=.false.)
 end subroutine default_flux_grid
 
 

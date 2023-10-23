@@ -41,16 +41,27 @@ contains
 !> this%fractional_digits behind the `.`. Set these two to 0 to just set the name.
 function get_filename(this, time) result(filename)
   class(io_action), intent(in) :: this
+  integer                      :: n_decimal_digits,n_fractional_digits
   real*8, intent(in)           :: time
   character(len=120)           :: filename
-  character(len=20)            :: format
+  character(len=20)            :: format_write_2
+  character(len=50)            :: format,format_write_1
   if (this%decimal_digits .eq. 0 .and. this%fractional_digits .eq. 0) then
     write(filename,'(A,A)') trim(this%basename), this%extension
   else if (this%fractional_digits .eq. 0) then
-    write(format,'(A,I0,A)') '(A,I', this%decimal_digits, ',A)'
+    n_decimal_digits    = floor(log10(real(this%decimal_digits,kind=8))+1)
+    write(format_write_2,'(A,I1,A)') '(A,I',floor(log10(real(n_decimal_digits,kind=8))+1),',A)'
+    write(format_write_1,trim(format_write_2)) '(A,I',floor(log10(real(this%decimal_digits,kind=8))+1),',A)'
+    write(format,trim(format_write_1)) '(A,I',this%decimal_digits,',A)'
     write(filename,trim(format)) trim(this%basename), int(time), this%extension
   else
-    write(format,'(A,I0,A,I0,A,I0,A)') '(A,I', this%decimal_digits, '.', this%decimal_digits, &
+    n_decimal_digits    = floor(log10(real(this%decimal_digits,kind=8))+1)
+    n_fractional_digits = floor(log10(real(this%fractional_digits,kind=8))+1)
+    write(format_write_2,'(A,I1,A,I1,A,I1,A)') '(A,I',floor(log10(real(n_decimal_digits,kind=8))+1),',A,I',&
+    floor(log10(real(n_decimal_digits,kind=8))+1),',A,I',floor(log10(real(n_fractional_digits,kind=8))+1),',A)'
+    write(format_write_1,trim(format_write_2)) '(A,I',n_decimal_digits,',A,I',n_decimal_digits,&
+    ',A,I',n_fractional_digits,',A)'
+    write(format,trim(format_write_1)) '(A,I', this%decimal_digits, '.', this%decimal_digits, &
         ',f0.', this%fractional_digits, ',A)'
     write(filename,trim(format)) trim(this%basename), int(time), time-real(int(time)), this%extension
   end if

@@ -15,6 +15,7 @@ private
 public :: run_fruit_fieldline_spec_mpi
 !> Variables --------------------------------------
 integer,parameter :: master_rank=0
+integer :: rank_loc,n_tasks_loc,ifail_loc
 contains
 !> Fruit basket -----------------------------------
 subroutine run_fruit_fieldline_spec_mpi(rank,n_tasks,ifail)
@@ -25,19 +26,29 @@ subroutine run_fruit_fieldline_spec_mpi(rank,n_tasks,ifail)
   integer,intent(in) :: rank,n_tasks
   if(rank.eq.master_rank) write(*,'(/A)') "  ... setting-up: fieldline spec"
   if(rank.eq.master_rank) write(*,'(/A)') "  ... running: fieldline spec"
-  call setup_fieldline_spec
+  call setup_fieldline_spec(rank,n_tasks,ifail)
   call run_test_case(test_fieldline_backforth_euler,'test_fieldline_backforth_euler')
-  call setup_fieldline_spec
+  call setup_fieldline_spec(rank,n_tasks,ifail)
   call run_test_case(test_fieldline_backforth_adams_bashforth,'test_fieldline_backforth_adams_bashforth')
   if(rank.eq.master_rank) write(*,'(/A)') "  ... tearing-down: fieldline spec"
+  call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_fieldline_spec_mpi
 
 !> Set-up and tear-down ---------------------------
 !> Actions to perform before any of these tests
-subroutine setup_fieldline_spec
+subroutine setup_fieldline_spec(rank,n_tasks,ifail)
   use basis_at_gaussian
+  integer,intent(inout) :: ifail
+  integer,intent(in)    :: rank,n_tasks
+  rank_loc = rank; n_tasks_loc = n_tasks; ifail_loc = ifail;
   call initialise_basis !< Calculate the basis functions at the gaussian points
 end subroutine setup_fieldline_spec
+
+subroutine teardown(rank,n_tasks,ifail)
+  integer,intent(inout) :: ifail
+  integer,intent(in)    :: rank,n_tasks
+  rank_loc = 0; n_tasks_loc = 0; ifail = ifail_loc;
+end subroutine teardown
 
 !> Tests ------------------------------------------
 !> Test tracing a fieldline back and forth with euler
@@ -56,7 +67,7 @@ subroutine test_fieldline_backforth_euler
   if (.not. associated(f%node_list))    allocate(f%node_list)
   if (.not. associated(f%element_list)) allocate(f%element_list)
   
-  call default_flux_grid_31(f%node_list, f%element_list)
+  call default_flux_grid_31(rank_loc, f%node_list, f%element_list)
   
   ! Call this once to setup the rtree
   call find_RZ(f%node_list,f%element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
@@ -131,7 +142,7 @@ subroutine test_fieldline_backforth_adams_bashforth
   if (.not. associated(f%node_list))    allocate(f%node_list)
   if (.not. associated(f%element_list)) allocate(f%element_list)
   
-  call default_flux_grid_31(f%node_list, f%element_list)
+  call default_flux_grid_31(rank_loc,f%node_list, f%element_list)
   
   ! Call this once to setup the rtree
   call find_RZ(f%node_list,f%element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)

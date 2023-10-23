@@ -97,30 +97,32 @@ subroutine default_polar_grid(node_list, element_list, npol)
     node_list, element_list)
 end subroutine default_polar_grid
 
-subroutine default_flux_grid_31(node_list,element_list)
+subroutine default_flux_grid_31(my_id,node_list,element_list)
   type(type_node_list), intent(out) :: node_list
   type(type_element_list), intent(out) :: element_list
   type(type_node_list), allocatable, save :: cache_node_list
   type(type_element_list), allocatable, save :: cache_element_list
+  integer,intent(in) :: my_id
   logical, save :: saved = .false.
   if (.not. saved) then
     allocate(cache_node_list,cache_element_list)
-    call default_flux_grid(cache_node_list, cache_element_list, 31)
+    call default_flux_grid(my_id,cache_node_list, cache_element_list, 31)
     saved = .true.
   end if
   node_list = cache_node_list
   element_list = cache_element_list
 end subroutine default_flux_grid_31
 
-subroutine default_flux_grid_32(node_list,element_list)
+subroutine default_flux_grid_32(my_id,node_list,element_list)
   type(type_node_list), intent(out) :: node_list
   type(type_element_list), intent(out) :: element_list
   type(type_node_list), allocatable, save :: cache_node_list
   type(type_element_list), allocatable, save :: cache_element_list
+  integer,intent(in) :: my_id
   logical, save :: saved = .false.
   if (.not. saved) then
     allocate(cache_node_list,cache_element_list)
-    call default_flux_grid(cache_node_list, cache_element_list, 32)
+    call default_flux_grid(my_id,cache_node_list, cache_element_list, 32)
     saved = .true.
   end if
   node_list = cache_node_list
@@ -130,17 +132,21 @@ end subroutine default_flux_grid_32
 
 !> Create a simple flux aligned grid with npol nodes in the poloidal direction, 40 radial
 !> by calculating equilibrium and creating flux aligned grid (like in jorek2_main)
-subroutine default_flux_grid(node_list, element_list, npol)
+subroutine default_flux_grid(my_id,node_list, element_list, npol)
   use phys_module
   use mod_boundary
   use mpi_mod
   use mod_export_restart
   type(type_node_list), intent(out) :: node_list
   type(type_element_list), intent(out) :: element_list
+  integer,intent(in)  :: my_id
   integer, intent(in) :: npol !< number of nodes in each dimension
   type (type_surface_list) :: surface_list
   type(type_bnd_node_list) :: bnd_node_list
   type(type_bnd_element_list) :: bnd_elm_list
+  integer :: xcase2
+  logical :: xpoint2,nice_q
+  real(kind=8) :: acentre,angle_start
 
   call tr_resetfile()
   call det_modes()
@@ -166,17 +172,22 @@ subroutine default_flux_grid(node_list, element_list, npol)
   fbnd(2:4) = 0.d0
   fpsi = 0.d0
   mf = 0
-  n_radial = 41!30
-  n_pol    = 64!32
-  R_geo  = 3.d0!1.5
-  Z_geo  = 0.d0
-  amin   = 1.d0
-  ellip  = 1.d0
-  tria_u = 0.d0
-  tria_l = 0.d0
-  quad_u = -0.d0
-  quad_l = -0.d0
-  xpoint = .false.
+  n_radial    = 41!30
+  n_pol       = 64!32
+  R_geo       = 3.d0!1.5
+  Z_geo       = 0.d0
+  amin        = 1.d0
+  ellip       = 1.d0
+  tria_u      = 0.d0
+  tria_l      = 0.d0
+  quad_u      = -0.d0
+  quad_l      = -0.d0
+  xpoint      = .false.
+  xpoint2     = .false.
+  xcase2      = 0
+  nice_q      = .true.
+  acentre     = 0d0
+  angle_start = 0d0
 
   rho_0 = 1.d0
   rho_1 = 0.01d0!1.d-1
@@ -261,14 +272,14 @@ subroutine default_flux_grid(node_list, element_list, npol)
 
   call define_boundary()
 
-  call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, n_pol,    &
-    node_list, element_list)
+  call grid_polar_bezier(R_geo, Z_geo, amin, acentre, angle_start, fbnd, &
+    fpsi, mf, n_radial, n_pol, node_list, element_list)
 
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
   call initialise_mumps(MPI_COMM_WORLD)
 
-  call equilibrium(0,node_list,element_list,bnd_node_list,bnd_elm_list,.false., 0, .true.) 
+  call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2,nice_q) 
 
   ! Set parameters for making flux grid
   call grid_flux_surface(.false., 0, node_list, element_list, &

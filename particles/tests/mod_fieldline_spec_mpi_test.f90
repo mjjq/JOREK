@@ -15,6 +15,8 @@ private
 public :: run_fruit_fieldline_spec_mpi
 !> Variables --------------------------------------
 integer,parameter :: master_rank=0
+real*8,parameter  :: R_init=1.5d0
+real*8,parameter  :: Z_init=2.d-1
 integer :: rank_loc,n_tasks_loc,ifail_loc
 contains
 !> Fruit basket -----------------------------------
@@ -70,7 +72,7 @@ subroutine test_fieldline_backforth_euler
   call default_flux_grid_31(rank_loc, f%node_list, f%element_list)
   
   ! Call this once to setup the rtree
-  call find_RZ(f%node_list,f%element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  call find_RZ(f%node_list,f%element_list,R_init,Z_init,R_out,Z_out,ielm_out,s_out,t_out,ifail)
   
   ! Setup neighbour information for the run
   call update_neighbours(f%node_list, f%element_list)
@@ -143,9 +145,9 @@ subroutine test_fieldline_backforth_adams_bashforth
   if (.not. associated(f%element_list)) allocate(f%element_list)
   
   call default_flux_grid_31(rank_loc,f%node_list, f%element_list)
-  
+ 
   ! Call this once to setup the rtree
-  call find_RZ(f%node_list,f%element_list,2.d0,1.d0,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  call find_RZ(f%node_list,f%element_list,R_init,Z_init,R_out,Z_out,ielm_out,s_out,t_out,ifail)
   
   ! Setup neighbour information for the run
   call update_neighbours(f%node_list, f%element_list)

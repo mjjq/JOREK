@@ -137,6 +137,7 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   use mod_boundary
   use mpi_mod
   use mod_export_restart
+  use equil_info, only: update_equil_state
   type(type_node_list), intent(out) :: node_list
   type(type_element_list), intent(out) :: element_list
   integer,intent(in)  :: my_id
@@ -282,6 +283,8 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   call initialise_mumps(MPI_COMM_WORLD)
 
   call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2,nice_q) 
+
+  call update_equil_state(my_id,node_list,element_list,bnd_elm_list,xpoint,xcase)
 
   ! Set parameters for making flux grid
   call grid_flux_surface(xpoint, xcase, node_list, element_list, &

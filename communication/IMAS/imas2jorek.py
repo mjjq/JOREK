@@ -62,6 +62,20 @@ def build_JOREK_boundary(tokamak_name):
     r0     = 2.85 * R_scale
     z0     = 0.15 * R_scale
     a0     = 1.1  * R_scale
+
+  elif (tokamak_name == 'inxflow'):
+    
+    #-------------------- contour outside JET wall
+    # blue contour in https://www.jorek.eu/wiki/doku.php?id=eqdsk2jorek.f90
+    ellip  = 1.7
+    tria_u = 0.0
+    tria_l = 0.0
+    quad_u = 0
+    quad_l = -0.4
+    n_tht  = 257
+    r0     = 3.0  * R_scale
+    z0     = 0.0  * R_scale
+    a0     = 0.98 * R_scale
   
   elif (tokamak_name == 'DIII-D'):
   
@@ -122,6 +136,7 @@ parser.add_argument("-u", "--user", type=str, default=getpass.getuser(),
                     help="Location of ~$USER/public/imasdb")
 parser.add_argument("-d", "--database", type=str, default="test_db", help="Database name under public/imasdb/")
 parser.add_argument("-o", "--occurrence", type=int, default=0, help="Occurrence number")
+parser.add_argument("-tk", "--tokamak", type=str, default="ITER", help="Name of the tokamak (to construct R,Z boundary)")
 parser.add_argument("-f", "--backend", type=int, default=imasdef.MDSPLUS_BACKEND,
                     help="Database format: 12=MDSPLUS, 13=HDF5")
 parser.add_argument("-ts", "--time_slice", type=int, default=0, help="The time slice index")
@@ -141,7 +156,7 @@ input.pf_active.get()
 input.core_profiles.get()
 
 ########## Create boundary of the JOREK domain ###############
-boundary_line = build_JOREK_boundary('ITER')
+boundary_line = build_JOREK_boundary(args.tokamak)
 R_bnd = boundary_line[0] 
 Z_bnd = boundary_line[1] 
 R_geo = boundary_line[2] 
@@ -154,7 +169,7 @@ m_proton = 1.67262192e-27
 e_ch     = 1.6021766e-19
 
 # Read 0D parameters
-a_min        = input.equilibrium.time_slice[it].boundary.minor_radius
+a_min        = input.equilibrium.time_slice[it].boundary_separatrix.minor_radius
 eps          = a_min / R_geo
 B_geo        = input.equilibrium.vacuum_toroidal_field.r0 * input.equilibrium.vacuum_toroidal_field.b0[0] / R_geo * cocos_Bphi
 xip          = input.equilibrium.time_slice[it].global_quantities.ip           * cocos_curr
@@ -275,12 +290,9 @@ np.savetxt('jorek_ffprime',         np.transpose( [psi_norm_ext, ffprime_1d_ext]
 # Write namelist files
 namelist = open('jorek_namelist', 'w')
   
-namelist.write( "**********************************************\n")
+namelist.write( "***********************************************\n")
 namelist.write( "* namelist from imas2jorek.py                 *\n")
-namelist.write("***********************************************\n")
-namelist.write(" B_geo = "+str(B_geo)+"\n")
-namelist.write(" R_geo = "+str(R_geo)+"\n")
-namelist.write("***********************************************\n")
+namelist.write( "***********************************************\n")
 
 namelist.write(" &in1"+"\n")
 
@@ -291,13 +303,14 @@ namelist.write("  freeboundary       = .f."+"\n")
 namelist.write("  resistive_wall     = .f."+"\n")
 namelist.write("  freeboundary_equil = .f."+"\n")
 namelist.write("\n")
-namelist.write("  psi_axis_init = "+str(psi_axis)+"\n")
+namelist.write("  psi_axis_init = %18.9e \n"%(psi_axis))
 namelist.write("  amix          = 0.d0"+"\n")
 namelist.write("  amix_freeb    = 0.d0"+"\n")
 namelist.write("  use_mumps_eq  = .t."+"\n")
 namelist.write("\n")
 for i in range(0, len(coils)):
-    namelist.write("  pf_coils("+str(i+1)+")%current = "+str(coils[i].current.data[it]*cocos_curr)+"  !"+coils[i].name+"\n")
+    namelist.write("  pf_coils(%3d)%current = %18.9e  ! %s \n"%(i, coils[i].current.data[it]*cocos_curr, coils[i].name))
+    
 namelist.write("\n")
 namelist.write("  n_R      = 0"+"\n")
 namelist.write("  n_Z      = 0"+"\n")
@@ -317,7 +330,7 @@ namelist.write("  ffprime_file = 'jorek_ffprime'"+"\n")
 namelist.write(" "+"\n")
 
 namelist.write(" "+"\n")
-namelist.write("  F0 = "+str(R_geo * B_geo)+"\n")
+namelist.write("  F0 = %18.9e \n"%(R_geo * B_geo))
 namelist.write("  xpoint = .t."+"\n")
 namelist.write("\n")
 namelist.write("  D_par     = 0.d0"+"\n")
@@ -336,16 +349,16 @@ namelist.write(""+"\n")
 namelist.write("  heatsource     = 0.d0"+"\n")
 namelist.write("  particlesource = 0.d0"+"\n")
 namelist.write(""+"\n")
-namelist.write("  central_mass    = "+str(central_mass)    + "\n")
-namelist.write("  central_density = "+str(central_density) + "\n")
+namelist.write("  central_mass    = %18.9e \n"%(central_mass))
+namelist.write("  central_density = %18.9e \n"%(central_density))
 namelist.write(""+"\n")
-namelist.write("  R_geo = "+str(R_geo)+"\n")
-namelist.write("  Z_geo = "+str(Z_geo)+"\n")
+namelist.write("  R_geo = %18.9e \n"%(R_geo))
+namelist.write("  Z_geo = %18.9e \n"%(Z_geo))
 namelist.write("  mf = 0 \n")
 namelist.write("  n_boundary = "+str(len(R_bnd))+"\n")
 
 for i in range(0, len(R_bnd)):
-    namelist.write("  R_boundary(%3d)= %18.12e, Z_boundary(%3d)= %18.12e, psi_boundary(%3d)= %18.12e \n" %(i+1, R_bnd[i], i+1, Z_bnd[i], i+1, psi_bnd[i]) )
+    namelist.write("  R_boundary(%3d)= %18.9e, Z_boundary(%3d)= %18.9e, psi_boundary(%3d)= %18.9e \n" %(i+1, R_bnd[i], i+1, Z_bnd[i], i+1, psi_bnd[i]) )
 
 namelist.write( "/"+"\n")
 namelist.close()

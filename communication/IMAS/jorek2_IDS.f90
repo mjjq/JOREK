@@ -18,7 +18,7 @@ program jorek2_IDS
   character(len=200):: user, database
   character(len=64) :: file_name
   integer :: shot_number, run_number, i_begin, i_end, i_step
-  integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid
+  integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid, stat
   logical :: first_step
   logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
 

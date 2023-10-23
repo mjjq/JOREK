@@ -117,6 +117,24 @@ driver_suffix,test_prefix,test_suffix,log_fruit_summary):
      driver.write('  call finalize_mpi_threads(ifail)\n')
      driver.write(''.join(['end program ',test_name,driver_suffix,'\n']))
 
+# reorder and store path to be tested in dictionary
+# inputs:
+#   path_list: (list(string)) string of path to be reordered
+#   test_parallel: (list,string) list of the parallelization types 
+#   path_dict: (dict) initialised dictionary to be filled with path
+# output:
+#   path_dict: (dict) filled dictionary to be filled with path
+def reorder_store_test_paths_in_dict(path_list,test_parallel,path_dict):
+  for posix_path in path_list:
+    for key in test_parallel:
+      if(key in posix_path.name):
+        if(posix_path not in path_dict[key]):
+          path_dict[key].append(posix_path)
+      else:
+        if(posix_path not in path_dict['serial']):
+          path_dict['serial'].append(posix_path)
+  return path_dict
+
 # Find unit test modules in a given folder. Unit test modules are
 # identified via the prefix mod_, the suffix _test and the
 # extension .f90
@@ -142,15 +160,9 @@ test_ext,test_parallel):
     # and store them in the test_modules dictionary as a 
     # function of their parallelism
     test_dir_path = Path(test_dir)
-    for posix_path in  test_dir_path.glob(\
-    "".join([test_prefix,'*',test_suffix,'.',test_ext])):
-     for key in test_parallel:
-       if(key in posix_path.name):
-         if(posix_path not in test_modules[key]):
-           test_modules[key].append(posix_path)
-       else:
-         if(posix_path not in test_modules['serial']):
-           test_modules['serial'].append(posix_path)
+    test_modules = reorder_store_test_paths_in_dict(\
+    test_dir_path.glob("".join([test_prefix,'*',test_suffix,\
+    '.',test_ext])),test_parallel,test_modules)
   # return the module dictionary   
   return test_modules
 
@@ -375,27 +387,29 @@ def log_unit_test_results(unit_test_log,log_header):
 
 # execute the overall suite of unit tests
 # inputs:
-#   test_dirs:          (list)(string) list of paths to the search directories
-#   test_parallel:      (list,string) list of the parallelization types 
-#   test_basket_prefix: (string) prefix of the unit test basket
-#   test_ext:           (string) test extension
-#   driver_suffix:      (string) suffix of the unit test driver
-#   result_dir:         (string) directory containing the FRUIT results
-#   result_prefix:      (string) root of the FRUIT result filenames
-#   result_ext:         (string) extension of the FRUIT result filenames
-#   result_map:         (dict) dictionary containing the association
-#                              between the fruit errors,tests,failures,id
-#                              fields and the index of the integer in list
-#   remove_driver:      (boolean) if true the driver file
-#   remove_results:     (boolean) if True result files are removed
-#   log_fruit_summary:  (bool) if true, the fruit summary is logged 
+#   test_dirs:             (list(string)) list of paths to the search directories
+#   test_parallel:         (list(string)) list of the parallelization types 
+#   test_basket_prefix:    (string) prefix of the unit test basket
+#   test_ext:              (string) test extension
+#   driver_suffix:         (string) suffix of the unit test driver
+#   result_dir:            (string) directory containing the FRUIT results
+#   result_prefix:         (string) root of the FRUIT result filenames
+#   result_ext:            (string) extension of the FRUIT result filenames
+#   result_map:            (dict) dictionary containing the association
+#                                 between the fruit errors,tests,failures,id
+#                                 fields and the index of the integer in list
+#   remove_driver:         (boolean) if true the driver file
+#   remove_results:        (boolean) if True result files are removed
+#   log_fruit_summary:     (bool) if true, the fruit summary is logged 
+#   test_module_to_be_run: (list(string)) list of test module paths selected
+#                                         by the user to be run
 # outputs:
 #   exit_code:          (integer) 0 if all tests terminated successfully
 #                                 1 otherwise
 def execute_all_unit_tests(test_dirs,test_parallel,test_basket_prefix,\
 test_prefix,test_suffix,test_ext,driver_suffix,launchers,result_dir,\
 result_prefix,result_ext,result_map,remove_driver,remove_results,\
-log_fruit_summary):
+log_fruit_summary,test_modules_to_be_run=[]):
   # initialise the failure and error counters
   n_failures=0; n_errors=0; failed_tests=[]; error_tests=[];
   # find all unit test modules in test_dir

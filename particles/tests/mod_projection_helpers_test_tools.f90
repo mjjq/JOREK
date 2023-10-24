@@ -7,6 +7,8 @@ module mod_projection_helpers_test_tools
 use mod_project_particles
 use data_structure
 use mod_particle_types
+private
+public :: default_flux_grid
 implicit none
 
 !> Variables ------------------------------------------------------
@@ -88,40 +90,6 @@ subroutine default_polar_grid(node_list, element_list, npol)
   call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, npol,    &
     node_list, element_list)
 end subroutine default_polar_grid
-
-subroutine default_flux_grid_31(my_id,n_cpu,node_list,element_list,ifail)
-  type(type_node_list), intent(out) :: node_list
-  type(type_element_list), intent(out) :: element_list
-  type(type_node_list), allocatable, save :: cache_node_list
-  type(type_element_list), allocatable, save :: cache_element_list
-  integer,intent(inout) :: ifail
-  integer,intent(in) :: my_id,n_cpu
-  logical, save :: saved = .false.
-  if (.not. saved) then
-    allocate(cache_node_list,cache_element_list)
-    call default_flux_grid(my_id,n_cpu,31,cache_node_list, cache_element_list,ifail)
-    saved = .true.
-  end if
-  node_list = cache_node_list
-  element_list = cache_element_list
-end subroutine default_flux_grid_31
-
-subroutine default_flux_grid_32(my_id,n_cpu,node_list,element_list,ifail)
-  type(type_node_list), intent(out) :: node_list
-  type(type_element_list), intent(out) :: element_list
-  type(type_node_list), allocatable, save :: cache_node_list
-  type(type_element_list), allocatable, save :: cache_element_list
-  integer,intent(inout) :: ifail
-  integer,intent(in) :: my_id,n_cpu
-  logical, save :: saved = .false.
-  if (.not. saved) then
-    allocate(cache_node_list,cache_element_list)
-    call default_flux_grid(my_id,n_cpu,32,cache_node_list, cache_element_list,ifail)
-    saved = .true.
-  end if
-  node_list = cache_node_list
-  element_list = cache_element_list
-end subroutine default_flux_grid_32
 
 !> subroutine used for setting the JOREK equilibrium parameters
 !> compatible with JOREK model 600

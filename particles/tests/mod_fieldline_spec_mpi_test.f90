@@ -7,7 +7,7 @@ use mod_particle_types
 use mod_sobseq_rng
 use mod_initialise_particles
 use mod_fields_linear
-use mod_projection_helpers_test_tools, only: default_flux_grid_31
+use mod_projection_helpers_test_tools, only: default_flux_grid
 use mod_fieldline_euler
 use mod_neighbours
 implicit none
@@ -15,9 +15,13 @@ private
 public :: run_fruit_fieldline_spec_mpi
 !> Variables --------------------------------------
 integer,parameter :: master_rank=0
+integer,parameter :: n_poloidal_nodes=31
 real*8,parameter  :: R_init=1.5d0
 real*8,parameter  :: Z_init=2.d-1
 integer :: rank_loc,n_tasks_loc,ifail_loc
+type(type_node_list),target      :: node_list_sol
+type(type_element_list),target   :: element_list_sol
+type(jorek_fields_interp_linear) :: fields_sol
 contains
 !> Fruit basket -----------------------------------
 subroutine run_fruit_fieldline_spec_mpi(rank,n_tasks,ifail)
@@ -28,9 +32,8 @@ subroutine run_fruit_fieldline_spec_mpi(rank,n_tasks,ifail)
   integer,intent(in) :: rank,n_tasks
   if(rank.eq.master_rank) write(*,'(/A)') "  ... setting-up: fieldline spec"
   if(rank.eq.master_rank) write(*,'(/A)') "  ... running: fieldline spec"
-  call setup_fieldline_spec(rank,n_tasks,ifail)
+  call setup(rank,n_tasks,ifail)
   call run_test_case(test_fieldline_backforth_euler,'test_fieldline_backforth_euler')
-  call setup_fieldline_spec(rank,n_tasks,ifail)
   call run_test_case(test_fieldline_backforth_adams_bashforth,'test_fieldline_backforth_adams_bashforth')
   if(rank.eq.master_rank) write(*,'(/A)') "  ... tearing-down: fieldline spec"
   call teardown(rank,n_tasks,ifail)
@@ -38,25 +41,29 @@ end subroutine run_fruit_fieldline_spec_mpi
 
 !> Set-up and tear-down ---------------------------
 !> Actions to perform before any of these tests
-subroutine setup_fieldline_spec(rank,n_tasks,ifail)
-  use basis_at_gaussian
+subroutine setup(rank,n_tasks,ifail)
   integer,intent(inout) :: ifail
   integer,intent(in)    :: rank,n_tasks
   rank_loc = rank; n_tasks_loc = n_tasks; ifail_loc = ifail;
-  call initialise_basis !< Calculate the basis functions at the gaussian points
-end subroutine setup_fieldline_spec
+  fields_sol%node_list    => node_list_sol
+  fields_sol%element_list => element_list_sol
+  !> compute the MHD equilibrium and define the flux grid
+  call default_flux_grid(rank_loc,n_tasks_loc,n_poloidal_nodes,&
+  fields_sol%node_list,fields_sol%element_list,ifail_loc)
+end subroutine setup
 
 subroutine teardown(rank,n_tasks,ifail)
   integer,intent(inout) :: ifail
   integer,intent(in)    :: rank,n_tasks
   rank_loc = 0; n_tasks_loc = 0; ifail = ifail_loc;
+  if(associated(fields_sol%node_list))    fields_sol%node_list => NULL()
+  if(associated(fields_sol%element_list)) fields_sol%element_list => NULL()
 end subroutine teardown
 
 !> Tests ------------------------------------------
 !> Test tracing a fieldline back and forth with euler
 subroutine test_fieldline_backforth_euler
   use mod_find_rz_nearby
-  type(jorek_fields_interp_linear) :: f
   integer, parameter       :: n_p = 2
   type(particle_fieldline) :: p(n_p)
   real*8, parameter        :: v = 1d5 ! 20 meters around the torus at this velocity
@@ -65,29 +72,25 @@ subroutine test_fieldline_backforth_euler
   integer                  :: ielm_out ! against find_RZ trouble
   integer                  :: i, j, k, ifail, i_elm_old
   character(len=2)         :: is
-
-  if (.not. associated(f%node_list))    allocate(f%node_list)
-  if (.not. associated(f%element_list)) allocate(f%element_list)
-  
-  call default_flux_grid_31(rank_loc, f%node_list, f%element_list)
   
   ! Call this once to setup the rtree
-  call find_RZ(f%node_list,f%element_list,R_init,Z_init,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  call find_RZ(fields_sol%node_list,fields_sol%element_list,R_init,Z_init,&
+  R_out,Z_out,ielm_out,s_out,t_out,ifail)
   
   ! Setup neighbour information for the run
-  call update_neighbours(f%node_list, f%element_list)
+  call update_neighbours(fields_sol%node_list, fields_sol%element_list)
   
   do i=-9,-7
     
     write(is,"(i2)") i
     dt = 10.d0**i
-    call initialise_particles(p, f%node_list, f%element_list, sobseq_rng())
+    call initialise_particles(p, fields_sol%node_list, fields_sol%element_list, sobseq_rng())
 
     do k=1,n_p
     
       p(k)%v = v
       
-      call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi0, u)
+      call fields_sol%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi0, u)
       
       phi0 = p(k)%x(3)
       
@@ -104,10 +107,11 @@ subroutine test_fieldline_backforth_euler
 
         call fieldline_euler_push_cylindrical(p(k), B, dt)
 
-        call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-                            p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
+        call find_RZ_nearby(fields_sol%node_list, fields_sol%element_list, &
+             rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+            p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
 
-        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, U)
+        call fields_sol%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, U)
 
         if (j .eq. 10*10**(-(i+5))) then
           call assert_equals(0.d0, psi-psi0, 16d4*dt, "Must not leave flux surface mid dt=1e"//is)
@@ -117,7 +121,7 @@ subroutine test_fieldline_backforth_euler
       end do
 
       if (p(k)%i_elm .gt. 0) then
-        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, u)
+        call fields_sol%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, u)
         call assert_equals(0.d0, psi-psi0, 32d4*dt, "Must not leave flux surface dt=1e"//is)
         call assert_equals(0.d0, p(k)%x(3)-phi0, 7d6*dt, "Must be back at same phi dt=1e"//is)
       else
@@ -131,7 +135,6 @@ end subroutine test_fieldline_backforth_euler
 !> Test tracing a fieldline back and forth with Adams-Bashforth
 subroutine test_fieldline_backforth_adams_bashforth
   use mod_find_rz_nearby
-  type(jorek_fields_interp_linear) :: f
   integer, parameter       :: n_p = 2
   type(particle_fieldline) :: p(n_p)
   real*8, parameter        :: v = 1d5 ! 20 meters around the torus at this velocity
@@ -140,30 +143,26 @@ subroutine test_fieldline_backforth_adams_bashforth
   integer                  :: ielm_out ! against find_RZ trouble
   integer                  :: i, j, k, ifail, i_elm_old
   character(len=2)         :: is
-
-  if (.not. associated(f%node_list))    allocate(f%node_list)
-  if (.not. associated(f%element_list)) allocate(f%element_list)
-  
-  call default_flux_grid_31(rank_loc,f%node_list, f%element_list)
  
   ! Call this once to setup the rtree
-  call find_RZ(f%node_list,f%element_list,R_init,Z_init,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  call find_RZ(fields_sol%node_list,fields_sol%element_list,R_init,Z_init,&
+   R_out,Z_out,ielm_out,s_out,t_out,ifail)
   
   ! Setup neighbour information for the run
-  call update_neighbours(f%node_list, f%element_list)
+  call update_neighbours(fields_sol%node_list, fields_sol%element_list)
   
   do i=-9,-6
     
     write(is,"(i2)") i
     dt = 10.d0**i
     
-    call initialise_particles(p, f%node_list, f%element_list, sobseq_rng())
+    call initialise_particles(p, fields_sol%node_list, fields_sol%element_list, sobseq_rng())
 
     do k=1,n_p
     
       p(k)%v = v
       
-      call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi0, u)
+      call fields_sol%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi0, u)
       
       phi0 = p(k)%x(3)
       ! Do a single euler step forward to setup the adams-bashforth method
@@ -173,8 +172,9 @@ subroutine test_fieldline_backforth_adams_bashforth
 
       call fieldline_euler_push_cylindrical(p(k), B, dt)
       
-      call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-                          p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
+      call find_RZ_nearby(fields_sol%node_list, fields_sol%element_list, &
+           rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+           p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
       
       p(k)%B_hat_prev = B/norm2(B)
 
@@ -185,7 +185,7 @@ subroutine test_fieldline_backforth_adams_bashforth
           exit
         end if
 
-        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, U)
+        call fields_sol%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, U)
 
         rz_old    = p(k)%x(1:2)
         st_old    = p(k)%st
@@ -193,8 +193,9 @@ subroutine test_fieldline_backforth_adams_bashforth
 
         call fieldline_adams_bashforth_push_cylindrical(p(k), B, dt)
         
-        call find_RZ_nearby(f%node_list, f%element_list, rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
-                            p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
+        call find_RZ_nearby(fields_sol%node_list, fields_sol%element_list, &
+             rz_old(1), rz_old(2), st_old(1), st_old(2), i_elm_old, &
+             p(k)%x(1), p(k)%x(2), p(k)%st(1), p(k)%st(2), p(k)%i_elm, ifail)
         
         if (j .eq. 10*10**(-(i+5))) then
           call assert_equals(0.d0, psi-psi0, 2d9*dt**2, "Must not leave flux surface mid dt=1e"//is)
@@ -204,7 +205,7 @@ subroutine test_fieldline_backforth_adams_bashforth
       end do
       
       if (p(k)%i_elm .gt. 0) then
-        call f%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, u)
+        call fields_sol%calc_EBpsiU(0.d0, p(k)%i_elm, p(k)%st, p(k)%x(3), E, B, psi, u)
         call assert_equals(0.d0, psi-psi0, 2d9*dt**2, "Must not leave flux surface dt=1e"//is)
         call assert_equals(0.d0, p(k)%x(3)-phi0, 8d4*dt, "Must be back at same phi dt=1e"//is) ! WARNING: this is linear instead of quadratic
       else

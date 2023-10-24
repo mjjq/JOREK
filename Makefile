@@ -22,7 +22,10 @@ jorek_model$(MODEL_NUMBER): $(OBJDIR)/jorek2_main.o $(shell ./util/obj_deps $(DE
 	$(FC) $(FLAGS) $(DEFINES) $(INCLUDES) -o $@ $^ $(LIBS)
 
 
-.PHONY: clean cleanall cleandep duplicates
+# Define the directory where the executable files will be moved
+INSTALL_DIR = bin/
+
+.PHONY: clean cleanall cleandep duplicates install
 cleanall: clean cleandep
 clean:
 	@echo ">> Deleting Object Files <<"
@@ -43,6 +46,20 @@ nrt_unit:
 doc docs:
 	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search $(INCLUDES)
+# Rule to move executable files to the bin directory
+install:
+	@if [ ! -d "$(INSTALL_DIR)" ]; then \
+		echo "Creating install directory: $(INSTALL_DIR)"; \
+		mkdir -p $(INSTALL_DIR); \
+	else \
+		echo "Install directory $(INSTALL_DIR) already exists"; \
+	fi
+	@for file in $(wildcard *); do \
+		if [ -x "$$file" ] && [ ! -d "$$file" ]; then \
+			echo "Moving $$file to $(INSTALL_DIR)"; \
+			mv "$$file" $(INSTALL_DIR); \
+		fi; \
+	done
 
 
 

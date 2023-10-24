@@ -80,7 +80,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 xcase, time_evol_scheme,                            &
                 freeboundary_equil,                                 &
                 rho_file, T_file, ffprime_file, Fprofile_file,      &
-                intg_original_grids,                                &
+                intg_original_grids, Fprofile_psi_max,              &
                 Jsource_file, ZK_perp_file, heatsource_file,        &
                 bc_natural_open, bc_natural_flux, gamma_sheath,     &
                 freeboundary, resistive_wall, freeb_change_indices, &

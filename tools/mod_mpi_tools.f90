@@ -21,6 +21,7 @@ contains
 !   start_time_out: (real8)(optional) start time
 subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
   use mpi
+  use data_structure, only: init_threads
   implicit none
   ! outputs:
   integer,intent(out)         :: my_id,n_tasks,ierr
@@ -43,7 +44,10 @@ subroutine init_mpi_threads(my_id,n_tasks,ierr,start_time_out)
 
   ! check if mpi_init has already been called
   call MPI_Initialized(initialised,ierr)
-  if(.not.initialised) call MPI_Init_thread(required,provided,ierr)
+  if(.not.initialised) then 
+    call MPI_Init_thread(required,provided,ierr)
+    call init_threads()
+  endif
   if(ierr.ne.0) write(*,*) "Error: ",ierr," in MPI_Init_thread"
   if((my_id.eq.0).and.(provided.ne.required)) write(*,*) &
   "WARNING: provided(",provided,"different than required (",&

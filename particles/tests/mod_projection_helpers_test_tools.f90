@@ -7,9 +7,9 @@ module mod_projection_helpers_test_tools
 use mod_project_particles
 use data_structure
 use mod_particle_types
+implicit none
 private
 public :: default_flux_grid
-implicit none
 
 !> Variables ------------------------------------------------------
 logical,parameter :: nice_q=.true.

@@ -10,24 +10,11 @@ use mod_particle_types
 implicit none
 
 !> Variables ------------------------------------------------------
-
+logical,parameter :: nice_q=.true.
 !> Interfaces -----------------------------------------------------
 !> interface of the subroutine grid_flux_surface
 interface
-  subroutine grid_flux_surface(xpoint,xcase,node_list,element_list,&
-   surface_list,n_flux,n_tht,xr1,sig1,xr2,sig2,refinement)
-    use data_structure
-    ! --- Routine parameters
-    logical,                  intent(in)    :: xpoint, refinement
-    type (type_node_list),    intent(inout) :: node_list
-    type (type_element_list), intent(inout) :: element_list
-    type (type_surface_list), intent(inout) :: surface_list
-    integer,                  intent(in)    :: xcase
-    integer,                  intent(in)    :: n_flux
-    integer,                  intent(in)    :: n_tht
-    real*8,                   intent(in)    :: xr1, xr2
-    real*8,                   intent(in)    :: sig1, sig2
-  end subroutine grid_flux_surface
+
 end interface
 
 contains
@@ -102,67 +89,53 @@ subroutine default_polar_grid(node_list, element_list, npol)
     node_list, element_list)
 end subroutine default_polar_grid
 
-subroutine default_flux_grid_31(my_id,node_list,element_list)
+subroutine default_flux_grid_31(my_id,n_cpu,node_list,element_list,ifail)
   type(type_node_list), intent(out) :: node_list
   type(type_element_list), intent(out) :: element_list
   type(type_node_list), allocatable, save :: cache_node_list
   type(type_element_list), allocatable, save :: cache_element_list
-  integer,intent(in) :: my_id
+  integer,intent(inout) :: ifail
+  integer,intent(in) :: my_id,n_cpu
   logical, save :: saved = .false.
   if (.not. saved) then
     allocate(cache_node_list,cache_element_list)
-    call default_flux_grid(my_id,cache_node_list, cache_element_list, 31)
+    call default_flux_grid(my_id,n_cpu,31,cache_node_list, cache_element_list,ifail)
     saved = .true.
   end if
   node_list = cache_node_list
   element_list = cache_element_list
 end subroutine default_flux_grid_31
 
-subroutine default_flux_grid_32(my_id,node_list,element_list)
+subroutine default_flux_grid_32(my_id,n_cpu,node_list,element_list,ifail)
   type(type_node_list), intent(out) :: node_list
   type(type_element_list), intent(out) :: element_list
   type(type_node_list), allocatable, save :: cache_node_list
   type(type_element_list), allocatable, save :: cache_element_list
-  integer,intent(in) :: my_id
+  integer,intent(inout) :: ifail
+  integer,intent(in) :: my_id,n_cpu
   logical, save :: saved = .false.
   if (.not. saved) then
     allocate(cache_node_list,cache_element_list)
-    call default_flux_grid(my_id,cache_node_list, cache_element_list, 32)
+    call default_flux_grid(my_id,n_cpu,32,cache_node_list, cache_element_list,ifail)
     saved = .true.
   end if
   node_list = cache_node_list
   element_list = cache_element_list
 end subroutine default_flux_grid_32
 
-
-!> Create a simple flux aligned grid with npol nodes in the poloidal direction, 40 radial
-!> by calculating equilibrium and creating flux aligned grid (like in jorek2_main)
-subroutine default_flux_grid(my_id,node_list, element_list, npol)
-  use phys_module
-  use mod_boundary
+!> subroutine used for setting the JOREK equilibrium parameters
+!> compatible with JOREK model 600
+!> inputs:
+!>   ifail: (integer) MPI error code
+!> outputs:
+!>   ifail: (integer) MPI error code
+subroutine set_test_equilibrium_parameters(ifail)
   use mpi_mod
-  use mod_export_restart
-  use equil_info, only: update_equil_state
-  type(type_node_list), intent(out) :: node_list
-  type(type_element_list), intent(out) :: element_list
-  integer,intent(in)  :: my_id
-  integer, intent(in) :: npol !< number of nodes in each dimension
-  type (type_surface_list) :: surface_list
-  type(type_bnd_node_list) :: bnd_node_list
-  type(type_bnd_element_list) :: bnd_elm_list
-  integer :: xcase2
-  logical :: xpoint2,nice_q
-  real(kind=8) :: acentre,angle_start
-
-  call tr_resetfile()
-  call det_modes()
-  ! Start with a polar grid
-  call preset_parameters()
-  ! Copy input file for simple case
-
+  use phys_module
+  implicit none
+  integer,intent(inout) :: ifail
   tstep_n = 5.d0
   nstep_n = 0
-
   tgnum_psi  = 2.d-1
   tgnum_T    = 2.d-1
   tgnum_u    = 2.d-1
@@ -170,9 +143,7 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   tgnum_vpar = 2.d-1
   tgnum_rho  = 2.d-1
   tgnum_zj   = 2.d-1
- 
   min_sheath_angle = 0.d0
-
   F0 = 3.d0
   fbnd(1) = 2.d0
   fbnd(2:4) = 0.d0
@@ -190,13 +161,7 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   quad_u      = -0.d0
   quad_l      = -0.d0
   xpoint      = .false.
-  xpoint2     = .false.
   xcase       = 0
-  xcase2      = 0
-  nice_q      = .true.
-  acentre     = 0d0
-  angle_start = 0d0
-
   rho_0 = 1.d0
   rho_1 = 0.01d0!1.d-1
   rho_coef(1)  =  0.d0!-1.0d0
@@ -204,7 +169,6 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   rho_coef(3)  =  0.d0
   rho_coef(4)  =  0.08d0!1.d0
   rho_coef(5)  =  0.94d0!5.d0
-
   T_0 = 1.5d-2!2.d-3
   T_1 = 3.d-4!1.d-8
   T_coef(1) = -0.66d0!-0.8d0
@@ -212,7 +176,6 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   T_coef(3) = 0.d0!0.d0
   T_coef(4) = 0.08d0!1.d0
   T_coef(5) = 0.94d0!5.d0
-
   FF_0 = 1.6d0!2.d0
   FF_1 = 0.d0
   FF_coef(1)  = -1.d0
@@ -223,7 +186,6 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   FF_coef(6)  = -0.06d0!1.d0
   FF_coef(7)  = 0.9d0!10.d0
   FF_coef(8)  = 0.07d0!1.d0
-
   D_par  = 0.d0
   D_perp = 1.d-5
   D_perp(1) = 1d-5
@@ -231,7 +193,6 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   D_perp(3) = 0.d0
   D_perp(4) = 0.01d0
   D_perp(5) = 0.92d0
-
   ZK_par  = 1.d2!1.d0
   !ZK_perp = 1.d-5
   ZK_perp(1) = 1.d-5
@@ -239,19 +200,16 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   ZK_perp(3) = 0.d0
   ZK_perp(4) = 0.01d0
   ZK_perp(5) = 0.92d0
-  
   eta       = 1.d-5
   eta_ohmic = 1.d-7
   visco = 4.d-6!1.d-6
   visco_par = 1.d-4!1.d-6
-
   visco_old_setup = .true.
   visco_par_num   = 1.d-11 !3.d-10
   eta_num         = 3.-10!1.d-11!3.d-10
   treat_axis      = .true.
   !eta_T_dependent = .false.
   !visco_T_dependent = .false.
-
   heatsource                = 1.d-7!0.d0
   particlesource            = 5.d-6!0.d0
   edgeparticlesource        = 1.d-7
@@ -263,41 +221,74 @@ subroutine default_flux_grid(my_id,node_list, element_list, npol)
   heatsource_gauss          = 1.d-8
   heatsource_gauss_psin     = 0.d0
   heatsource_gauss_sig      = 0.1d0
-
   rst_hdf5       = 1
   iter_precon    = 22
   gmres_m        = 20
   gmres_4        = 1.d0
   gmres_max_iter = 200
   gmres_tol      = 1.d-6
-
-  node_list%n_nodes = 0
-  element_list%n_elements = 0
-  bnd_elm_list%n_bnd_elements  = 0
-
   use_mumps_eq  = .true.
   use_pastix_eq = .false.
+  output_bnd_elements = .false.
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
+end subroutine set_test_equilibrium_parameters
 
-  call define_boundary()
+!> Create a simple flux aligned grid with npol nodes in the poloidal direction, 40 radial
+!> by calculating equilibrium and creating flux aligned grid (like in jorek2_main)
+subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
+  use phys_module
+  use mpi_mod
+  use mod_clock,         only: clck_init 
+  use basis_at_gaussian, only: initialise_basis
+  use mod_initial_grid,  only: initial_grid
+  use mod_boundary,      only: boundary_from_grid
+  use mod_element_rtree, only: populate_element_rtree
+  use equil_info,        only: update_equil_state,broadcast_equil_state
+  use mod_flux_grid,     only: flux_grid
+  implicit none
+  integer,intent(inout)                :: ifail
+  type(type_node_list), intent(out)    :: node_list
+  type(type_element_list), intent(out) :: element_list
+  integer,intent(in)                   :: my_id,n_cpu
+  integer, intent(in)                  :: npol !< number of nodes in each dimension
+  type (type_surface_list) :: surface_list
+  type(type_bnd_node_list) :: bnd_node_list
+  type(type_bnd_element_list) :: bnd_elm_list
 
-  call grid_polar_bezier(R_geo, Z_geo, amin, acentre, angle_start, fbnd, &
-    fpsi, mf, n_radial, n_pol, node_list, element_list)
-
-  call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
-
-  call initialise_mumps(MPI_COMM_WORLD)
-
-  call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint2,xcase2,nice_q) 
-
+  !> initialisations 
+  call tr_meminit(my_id,n_cpu) !< initialise memory tracing
+  call clck_init(); call r3_info_init() !< initialise timing
+  call det_modes() !< initialise mode and mode_type arrays
+  call initialise_basis() !< initialise the basis functions
+  ! Start with a polar grid
+  call preset_parameters()
+  ! Copy input file for simple case
+  call set_test_equilibrium_parameters(ifail)
+  call broadcast_phys(my_id)
+  !> compute th initial grid
+  call tr_resetfile()
+  call initial_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
+  call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+  !> compute and update the plasma equilibrium
+  call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase,nice_q)
+  if(my_id.eq.0) call update_equil_state(my_id,node_list,element_list,bnd_elm_list,xpoint,xcase) 
+  !> compute the flux aligned grid and recompute the equilibrium
+  call flux_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
+  call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase,nice_q)
+  if(my_id.eq.0) then 
+    call update_equil_state(my_id,node_list,element_list,bnd_elm_list,xpoint,xcase)
+    call boundary_from_grid(node_list,element_list,bnd_node_list,bnd_elm_list,output_bnd_elements) 
+  endif
+  !> broadcast all calculations
+  call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+  call broadcast_elements(my_id,element_list)
+  call broadcast_nodes(my_id,node_list)
+  call broadcast_equil_state(my_id)
+  call populate_element_rtree(node_list,element_list)
   call update_equil_state(my_id,node_list,element_list,bnd_elm_list,xpoint,xcase)
-
-  ! Set parameters for making flux grid
-  call grid_flux_surface(xpoint, xcase, node_list, element_list, &
-      surface_list, n_flux=n_flux, n_tht=npol, xr1=xr1, sig1=sig1, &
-      xr2=xr2, sig2=sig2, refinement=.false.)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
 end subroutine default_flux_grid
-
-
 
 !> Project a function onto the JOREK elements
 subroutine project_f(node_list, element_list, f, filter, filter_hyper, integral)

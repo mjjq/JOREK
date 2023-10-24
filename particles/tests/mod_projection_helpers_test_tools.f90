@@ -205,7 +205,7 @@ subroutine set_test_equilibrium_parameters(ifail)
   visco_par                 = 1.d-4
   visco_old_setup           = .true.
   visco_par_num             = 1.d-11
-  eta_num                   = 3.-10
+  eta_num                   = 3.d-10
   treat_axis                = .true.
   heatsource                = 1.d-7
   particlesource            = 5.d-6

@@ -499,4 +499,4 @@ end subroutine elements_mean_rms
 
 !> Internal procedures --------------------------------------------
 !> ----------------------------------------------------------------
-module mod_projection_helpers_test_tools
+end module mod_projection_helpers_test_tools

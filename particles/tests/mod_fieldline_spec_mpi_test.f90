@@ -7,7 +7,7 @@ use mod_particle_types
 use mod_sobseq_rng
 use mod_initialise_particles
 use mod_fields_linear
-use projection_helpers
+use mod_projection_helpers_test_tools, only: default_flux_grid_31
 use mod_fieldline_euler
 use mod_neighbours
 implicit none

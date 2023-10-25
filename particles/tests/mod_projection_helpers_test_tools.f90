@@ -261,7 +261,6 @@ subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
   !> compute th initial grid
   call tr_resetfile()
   call initial_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
   call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
   !> compute and update the plasma equilibrium
   call equilibrium(my_id,node_list,element_list,bnd_node_list,bnd_elm_list,xpoint,xcase,nice_q)

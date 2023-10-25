@@ -9,16 +9,11 @@ use data_structure
 use mod_particle_types
 implicit none
 private
-public :: default_flux_grid
+public :: default_flux_grid,default_square_grid,default_polar_grid
 
 !> Variables ------------------------------------------------------
 logical,parameter :: nice_q=.true.
-!> Interfaces -----------------------------------------------------
-!> interface of the subroutine grid_flux_surface
-interface
-
-end interface
-
+real*8 :: acentre,angle_start
 contains
 !> External procedures --------------------------------------------
 !> Functions to project
@@ -55,53 +50,84 @@ function f_a2(R, Z)
   f_a2 = norm2([(R-R_geo),Z-Z_geo])**1.8d0
 end function f_a2
 
+!> initialise parameters for generating squre grids
+subroutine initialize_square_grid_parameters(nx,ny)
+  use phys_module
+  implicit none
+  integer,intent(in) :: nx,ny
+  R_begin=5.d-1; R_end = 1.5d0; Z_begin=-5.d-1; Z_end=5.d-1; 
+  n_R=nx; n_Z=ny; n_radial=0; RZ_grid_inside_wall=.false.;
+end subroutine initialize_square_grid_parameters
 
 !> Create a simple square grid with n nodes in each dimension
-subroutine default_square_grid(node_list, element_list, n)
-  type(type_node_list), intent(out) :: node_list
+subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,element_list,ifail)
+  use mpi_mod
+  use phys_module
+  use basis_at_gaussian, only: initialise_basis
+  use mod_initial_grid,  only: initial_grid
+  use mod_element_rtree, only: populate_element_rtree
+  implicit none
+  integer,intent(inout)                :: ifail
+  type(type_node_list), intent(out)    :: node_list
   type(type_element_list), intent(out) :: element_list
-  integer, intent(in) :: n !< number of nodes in each dimension
-  real*8, parameter :: R_geo = 1.d0, Z_geo = 0.d0, amin = 0.5d0
-  node_list%n_nodes = 0
-  element_list%n_elements = 0
-  call grid_bezier_square(n, n, R_geo-amin,R_geo+amin, Z_geo-amin, Z_geo+amin, .true., node_list, element_list)
-  write(*,*) ' completed default_square_grid'
-end subroutine
+  integer, intent(in)                  :: nx,ny,my_id,n_cpu
+  type(type_bnd_node_list)             :: bnd_node_list
+  type(type_bnd_element_list)          :: bnd_elm_list
+  call preset_parameters()
+  call initialize_square_grid_parameters(nx,ny)
+  call det_modes(); call initialise_basis()
+  call broadcast_phys(my_id)
+  call initial_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
+  call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+  call broadcast_elements(my_id,element_list)
+  call broadcast_nodes(my_id,node_list)
+  call populate_element_rtree(node_list,element_list)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
+end subroutine default_square_grid
+
+!> initialise parameters for generating squre grids
+subroutine initialize_polar_grid_parameters(npol,nrad)
+  use phys_module
+  implicit none
+  integer,intent(in) :: npol,nrad
+  fbnd(1)=2.d0; fbnd(2:4)=0.d0; fpsi=0.d0;
+  mf=0; n_radial=30; R_geo=1.5; Z_geo=0.0; 
+  amin=1.0; acentre=0.d0; angle_start=0.d0;
+  n_radial = nrad; n_pol = npol;
+end subroutine initialize_polar_grid_parameters
 
 !> Create a simple polar grid with npol nodes in the poloidal direction, 30 radial
 !> volume = 2 pi^2 R a^2
-subroutine default_polar_grid(node_list, element_list, npol)
+subroutine default_polar_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
+  use mpi_mod
   use phys_module
-  type(type_node_list), intent(out) :: node_list
+  use basis_at_gaussian, only: initialise_basis
+  use mod_initial_grid,  only: initial_grid
+  use mod_element_rtree, only: populate_element_rtree
+  implicit none
+  integer,intent(inout)                :: ifail
+  type(type_node_list), intent(out)    :: node_list
   type(type_element_list), intent(out) :: element_list
-  integer, intent(in) :: npol !< number of nodes in each dimension
+  integer,intent(in)                   :: my_id,n_cpu,npol,nrad
+  type(type_bnd_node_list)             :: bnd_node_list
+  type(type_bnd_element_list)          :: bnd_elm_list
   call preset_parameters()
-  fbnd(1) = 2.d0
-  fbnd(2:4) = 0.d0
-  fpsi = 0.d0
-  mf = 0
-  n_radial = 30
-  R_geo = 1.5
-  Z_geo = 0.0
-  amin = 1.0
-
-  node_list%n_nodes = 0
-  element_list%n_elements = 0
-  call grid_polar_bezier(R_geo, Z_geo, amin, 0.d0, 0.d0, fbnd, fpsi, mf, n_radial, npol,    &
-    node_list, element_list)
+  call initialize_polar_grid_parameters(npol,nrad)
+  call det_modes(); call initialise_basis();
+  call broadcast_phys(my_id)
+  call initial_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
+  call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
+  call broadcast_elements(my_id,element_list)
+  call broadcast_nodes(my_id,node_list)
+  call populate_element_rtree(node_list,element_list)
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
 end subroutine default_polar_grid
 
 !> subroutine used for setting the JOREK equilibrium parameters
 !> compatible with JOREK model 600
-!> inputs:
-!>   ifail: (integer) MPI error code
-!> outputs:
-!>   ifail: (integer) MPI error code
-subroutine set_test_equilibrium_parameters(ifail)
-  use mpi_mod
+subroutine set_test_equilibrium_parameters()
   use phys_module
   implicit none
-  integer,intent(inout) :: ifail
   tstep_n                   = 5.d0
   nstep_n                   = 0
   tgnum_psi                 = 2.d-1
@@ -195,7 +221,6 @@ subroutine set_test_equilibrium_parameters(ifail)
   use_mumps_eq              = .true.
   use_pastix_eq             = .false.
   output_bnd_elements       = .false.
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
 end subroutine set_test_equilibrium_parameters
 
 !> Create a simple flux aligned grid with npol nodes in the poloidal direction, 40 radial
@@ -216,8 +241,8 @@ subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
   type(type_element_list), intent(out) :: element_list
   integer,intent(in)                   :: my_id,n_cpu
   integer, intent(in)                  :: npol !< number of nodes in each dimension
-  type (type_surface_list) :: surface_list
-  type(type_bnd_node_list) :: bnd_node_list
+  type(type_surface_list)     :: surface_list
+  type(type_bnd_node_list)    :: bnd_node_list
   type(type_bnd_element_list) :: bnd_elm_list
 
   !> assign new poloidal grid size
@@ -231,7 +256,7 @@ subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
   ! Start with a polar grid
   call preset_parameters()
   ! Copy input file for simple case
-  call set_test_equilibrium_parameters(ifail)
+  call set_test_equilibrium_parameters()
   call broadcast_phys(my_id)
   !> compute th initial grid
   call tr_resetfile()

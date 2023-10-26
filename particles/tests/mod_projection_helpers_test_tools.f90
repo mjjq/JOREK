@@ -10,6 +10,9 @@ use mod_particle_types
 implicit none
 private
 public :: default_flux_grid,default_square_grid,default_polar_grid
+public :: project_f
+public :: elements_mean_rms
+public :: f_0,f_1,f_R,f_RZ,f_R4,f_a2
 
 !> Variables ------------------------------------------------------
 logical,parameter :: nice_q=.true.

@@ -6,8 +6,8 @@ private
 public :: run_fruit_penning_case_jorek_spec_mpi
 !> Variables --------------------------------------
 integer,parameter             :: message_len=100
-integer,parameter             :: nx=10
-integer,parameter             :: ny=10
+integer,parameter             :: nx=30
+integer,parameter             :: ny=30
 integer,parameter             :: nrad=30
 integer,parameter             :: npol=32
 real*8,parameter              :: time_sol=0.d0

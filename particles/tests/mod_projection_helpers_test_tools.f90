@@ -63,19 +63,21 @@ subroutine initialize_square_grid_parameters(nx,ny)
 end subroutine initialize_square_grid_parameters
 
 !> Create a simple square grid with n nodes in each dimension
+!subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,element_list,ifail)
 subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,element_list,ifail)
   use mpi_mod
+  use data_structure
   use phys_module
   use basis_at_gaussian, only: initialise_basis
   use mod_initial_grid,  only: initial_grid
   use mod_element_rtree, only: populate_element_rtree
   implicit none
-  integer,intent(inout)                :: ifail
-  type(type_node_list), intent(out)    :: node_list
-  type(type_element_list), intent(out) :: element_list
-  integer, intent(in)                  :: nx,ny,my_id,n_cpu
-  type(type_bnd_node_list)             :: bnd_node_list
-  type(type_bnd_element_list)          :: bnd_elm_list
+  integer,intent(inout)                 :: ifail
+  type(type_node_list),intent(inout)    :: node_list
+  type(type_element_list),intent(inout) :: element_list
+  integer, intent(in)                   :: nx,ny,my_id,n_cpu
+  type(type_bnd_node_list)              :: bnd_node_list
+  type(type_bnd_element_list)           :: bnd_elm_list
   call preset_parameters()
   call initialize_square_grid_parameters(nx,ny)
   call det_modes(); call initialise_basis()
@@ -104,16 +106,17 @@ end subroutine initialize_polar_grid_parameters
 subroutine default_polar_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
   use mpi_mod
   use phys_module
+  use data_structure
   use basis_at_gaussian, only: initialise_basis
   use mod_initial_grid,  only: initial_grid
   use mod_element_rtree, only: populate_element_rtree
   implicit none
-  integer,intent(inout)                :: ifail
-  type(type_node_list), intent(out)    :: node_list
-  type(type_element_list), intent(out) :: element_list
-  integer,intent(in)                   :: my_id,n_cpu,npol,nrad
-  type(type_bnd_node_list)             :: bnd_node_list
-  type(type_bnd_element_list)          :: bnd_elm_list
+  integer,intent(inout)                  :: ifail
+  type(type_node_list), intent(inout)    :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  integer,intent(in)                     :: my_id,n_cpu,npol,nrad
+  type(type_bnd_node_list)               :: bnd_node_list
+  type(type_bnd_element_list)            :: bnd_elm_list
   call preset_parameters()
   call initialize_polar_grid_parameters(npol,nrad)
   call det_modes(); call initialise_basis();
@@ -239,14 +242,14 @@ subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
   use equil_info,        only: update_equil_state,broadcast_equil_state
   use mod_flux_grid,     only: flux_grid
   implicit none
-  integer,intent(inout)                :: ifail
-  type(type_node_list), intent(out)    :: node_list
-  type(type_element_list), intent(out) :: element_list
-  integer,intent(in)                   :: my_id,n_cpu
-  integer, intent(in)                  :: npol !< number of nodes in each dimension
-  type(type_surface_list)     :: surface_list
-  type(type_bnd_node_list)    :: bnd_node_list
-  type(type_bnd_element_list) :: bnd_elm_list
+  integer,intent(inout)                  :: ifail
+  type(type_node_list), intent(inout)    :: node_list
+  type(type_element_list), intent(inout) :: element_list
+  integer,intent(in)                     :: my_id,n_cpu
+  integer, intent(in)                    :: npol !< number of nodes in each dimension
+  type(type_surface_list)                :: surface_list
+  type(type_bnd_node_list)               :: bnd_node_list
+  type(type_bnd_element_list)            :: bnd_elm_list
 
   !> assign new poloidal grid size
   n_pol = npol
@@ -298,8 +301,8 @@ subroutine project_f(node_list, element_list, f, filter, filter_hyper, integral)
   integer :: i, k, index, i_tor_local, n_tor_local, mpi_comm_n, mpi_comm_master, ierr
   real*8  :: my_filter, my_filter_hyper, area, volume
 
-  call MPI_Comm_dup(MPI_COMM_WORLD, mpi_comm_n, ierr)
-  call MPI_Comm_dup(MPI_COMM_WORLD, mpi_comm_master, ierr)
+  call MPI_Comm_dup(MPI_COMM_WORLD,mpi_comm_n,ierr)
+  call MPI_Comm_dup(MPI_COMM_WORLD,mpi_comm_master,ierr)
 
   i_tor_local     = 1
   n_tor_local     = 1
@@ -310,13 +313,13 @@ subroutine project_f(node_list, element_list, f, filter, filter_hyper, integral)
   if (present(filter))       my_filter       = filter 
   if (present(filter_hyper)) my_filter_hyper = filter_hyper 
   
-!  if (present(integral)) then  
   if (i_tor_local .eq. 1) then  
-    call prepare_mumps_par_n0(node_list, element_list, n_tor_local, i_tor_local, mpi_comm_world, mpi_comm_n, mpi_comm_master, &
-                              p,  area, volume, filter=my_filter, filter_hyper=my_filter_hyper, filter_parallel=0.d0, integral_weights=this_integral_weights)
+    call prepare_mumps_par_n0(node_list,element_list,n_tor_local,i_tor_local,mpi_comm_world,mpi_comm_n,&
+         mpi_comm_master,p,area,volume,filter=my_filter,filter_hyper=my_filter_hyper,&
+         filter_parallel=0.d0,integral_weights=this_integral_weights)
   else
-    call prepare_mumps_par(node_list, element_list, n_tor_local, i_tor_local, mpi_comm_world, mpi_comm_n, mpi_comm_master, &
-                           p, filter=my_filter, filter_hyper=my_filter_hyper, filter_parallel=0.d0)
+    call prepare_mumps_par(node_list,element_list,n_tor_local,i_tor_local,mpi_comm_world,mpi_comm_n,&
+         mpi_comm_master,p,filter=my_filter,filter_hyper=my_filter_hyper,filter_parallel=0.d0)
   endif
 
   ! Project manually

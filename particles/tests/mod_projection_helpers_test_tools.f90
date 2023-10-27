@@ -54,17 +54,19 @@ function f_a2(R, Z)
 end function f_a2
 
 !> initialise parameters for generating squre grids
-subroutine initialize_square_grid_parameters(nx,ny)
+subroutine initialize_square_grid_parameters(&
+nx,ny,Rbegin,Rend,Zbegin,Zend)
   use phys_module
   implicit none
   integer,intent(in) :: nx,ny
-  R_begin=5.d-1; R_end = 1.5d0; Z_begin=-5.d-1; Z_end=5.d-1; 
+  real*8,intent(in)  :: Rbegin,Rend,Zbegin,Zend
+  R_begin=Rbegin; R_end=Rend; Z_begin=Zbegin; Z_end=Zend; 
   n_R=nx; n_Z=ny; n_radial=0; RZ_grid_inside_wall=.false.;
 end subroutine initialize_square_grid_parameters
 
 !> Create a simple square grid with n nodes in each dimension
-!subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,element_list,ifail)
-subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,element_list,ifail)
+subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,&
+element_list,ifail,Rbegin_in,Rend_in,Zbegin_in,Zend_in)
   use mpi_mod
   use data_structure
   use phys_module
@@ -76,10 +78,19 @@ subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,element_list,ifail)
   type(type_node_list),intent(inout)    :: node_list
   type(type_element_list),intent(inout) :: element_list
   integer, intent(in)                   :: nx,ny,my_id,n_cpu
+  real*8,intent(in),optional            :: Rbegin_in,Rend_in
+  real*8,intent(in),optional            :: Zbegin_in,Zend_in
   type(type_bnd_node_list)              :: bnd_node_list
   type(type_bnd_element_list)           :: bnd_elm_list
+  real*8                                :: Rbegin,Rend,Zbegin,Zend
+  !> set-parameters
+  Rbegin = 5.d-1; if(present(Rbegin_in)) Rbegin = Rbegin_in;
+  Rend   = 1.5d0; if(present(Rend_in))   Rend   = Rend_in;
+  Zbegin = -5d-1; if(present(Zbegin_in)) Zbegin = Zbegin_in;
+  Zend   = 5d-1;  if(present(Zend_in))   Zend   = Zend_in;
+  !> compute grid
   call preset_parameters()
-  call initialize_square_grid_parameters(nx,ny)
+  call initialize_square_grid_parameters(nx,ny,Rbegin,Rend,Zbegin,Zend)
   call det_modes(); call initialise_basis()
   call broadcast_phys(my_id)
   call initial_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
@@ -131,9 +142,13 @@ end subroutine default_polar_grid
 
 !> subroutine used for setting the JOREK equilibrium parameters
 !> compatible with JOREK model 600
-subroutine set_test_equilibrium_parameters()
+!> inputs:
+!>   npol: (integer)(optional) number of angular grid points
+!>   nrad: (integer)(optional) number of radial grid points
+subroutine set_test_equilibrium_parameters(npol,nrad)
   use phys_module
   implicit none
+  integer,intent(in),optional :: npol,nrad
   tstep_n                   = 5.d0
   nstep_n                   = 0
   tgnum_psi                 = 2.d-1
@@ -227,11 +242,13 @@ subroutine set_test_equilibrium_parameters()
   use_mumps_eq              = .true.
   use_pastix_eq             = .false.
   output_bnd_elements       = .false.
+ if(present(nrad)) n_radial = nrad
+ if(present(npol)) n_pol    = npol
 end subroutine set_test_equilibrium_parameters
 
 !> Create a simple flux aligned grid with npol nodes in the poloidal direction, 40 radial
 !> by calculating equilibrium and creating flux aligned grid (like in jorek2_main)
-subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
+subroutine default_flux_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
   use phys_module
   use mpi_mod
   use mod_clock,         only: clck_init 
@@ -246,13 +263,10 @@ subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
   type(type_node_list), intent(inout)    :: node_list
   type(type_element_list), intent(inout) :: element_list
   integer,intent(in)                     :: my_id,n_cpu
-  integer, intent(in)                    :: npol !< number of nodes in each dimension
+  integer, intent(in)                    :: npol,nrad !< Number of nodes (poloidal,radial)
   type(type_surface_list)                :: surface_list
   type(type_bnd_node_list)               :: bnd_node_list
   type(type_bnd_element_list)            :: bnd_elm_list
-
-  !> assign new poloidal grid size
-  n_pol = npol
 
   !> initialisations 
   call tr_meminit(my_id,n_cpu) !< initialise memory tracing
@@ -262,7 +276,7 @@ subroutine default_flux_grid(my_id,n_cpu,npol,node_list,element_list,ifail)
   ! Start with a polar grid
   call preset_parameters()
   ! Copy input file for simple case
-  call set_test_equilibrium_parameters()
+  call set_test_equilibrium_parameters(npol,nrad)
   call broadcast_phys(my_id)
   !> compute th initial grid
   call tr_resetfile()

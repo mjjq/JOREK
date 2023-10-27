@@ -230,9 +230,16 @@ def make_cleanall():
 #   driver_path: (path) path posix of the test driver
 def compile_unit_test_driver(driver_path):
   from os import system
+  error = 0
   exec_name = driver_path.name.replace(driver_path.suffix,'')
-  system(''.join(['rm -f ',exec_name]))
-  system(''.join(['make -j8 ',exec_name]))
+  # check if the driver is valid
+  if(driver_path.is_file()):
+    system(''.join(['rm -f ',exec_name]))
+    system(''.join(['make -j8 ',exec_name]))
+  else:
+    print('Warning: driver is not a valid file!')
+    error = 0
+  return error
 
 # find the right launcher for the application
 # inputs:
@@ -250,18 +257,26 @@ def find_launcher_type(exec_name):
 #   launchers:     (dict(string)) launchers to be invoked for 
 #                  executing a unit test application
 def run_unit_test_driver(driver_path,launchers):
+  from pathlib import Path
   from os import system,environ
-  # set the number of OMP threads
-  omp_num_threads_old = str(1)
+  # set error and the number of OMP threads
+  error = 0; omp_num_threads_old = str(1);
   if('OMP_NUM_THREADS' in environ):
     omp_num_threads_old = environ['OMP_NUM_THREADS']
   system('export OMP_NUM_THREADS=2')
   exec_name = driver_path.name.replace(driver_path.suffix,'')
-  system(''.join([launchers[find_launcher_type(exec_name)],exec_name]))
-  # remove executable
-  system(''.join(['rm -f ',exec_name]))
+  # check if the exec exists and is a file
+  exec_path = Path(exec_name)
+  if(exec_path.is_file()):
+    system(''.join([launchers[find_launcher_type(exec_name)],exec_name]))
+    # remove executable
+    system(''.join(['rm -f ',exec_name]))
+  else:
+    print('Warning: executable is not a valid file!')
+    error = 1
   # restore original number of omp threads
   system(''.join(['export OMP_NUM_THREADS=',omp_num_threads_old]))
+  return error
 
 # routines for handling FRUIT XML files ------------------------- #
 
@@ -394,14 +409,15 @@ log_fruit_summary):
   driver_path = generate_unit_test_driver(test_path,test_basket_prefix,\
   test_prefix,test_suffix,test_ext,driver_suffix,log_fruit_summary) 
   # compile the unit test driver
-  compile_unit_test_driver(driver_path)
+  error_driver = compile_unit_test_driver(driver_path)
   # execute the unit test driver
-  run_unit_test_driver(driver_path,launchers)
+  error_exec = run_unit_test_driver(driver_path,launchers)
   # remove the driver
   remove_file(driver_path.name,remove_driver)
   # find, read and reduce all FRUIT results and remove result files
   n_successes,n_failures,n_errors = read_reduce_fruit_results(\
   result_dir,result_prefix,result_ext,result_map,remove_results)
+  n_errors = n_errors + error_driver + error_exec
   return n_successes,n_failures,n_errors
 
 # log unit tests results

@@ -7,7 +7,6 @@ use mod_particle_types
 use mod_sobseq_rng
 use mod_initialise_particles
 use mod_fields_linear
-use mod_projection_helpers_test_tools, only: default_flux_grid
 use mod_fieldline_euler
 use mod_neighbours
 implicit none
@@ -16,6 +15,7 @@ public :: run_fruit_fieldline_spec_mpi
 !> Variables --------------------------------------
 integer,parameter :: master_rank=0
 integer,parameter :: n_poloidal_nodes=31
+integer,parameter :: n_radial_nodes=30
 real*8,parameter  :: R_init=1.5d0
 real*8,parameter  :: Z_init=2.d-1
 integer :: rank_loc,n_tasks_loc,ifail_loc
@@ -42,6 +42,8 @@ end subroutine run_fruit_fieldline_spec_mpi
 !> Set-up and tear-down ---------------------------
 !> Actions to perform before any of these tests
 subroutine setup(rank,n_tasks,ifail)
+  use mod_projection_helpers_test_tools, only: default_flux_grid
+  implicit none
   integer,intent(inout) :: ifail
   integer,intent(in)    :: rank,n_tasks
   rank_loc = rank; n_tasks_loc = n_tasks; ifail_loc = ifail;
@@ -49,7 +51,7 @@ subroutine setup(rank,n_tasks,ifail)
   fields_sol%element_list => element_list_sol
   !> compute the MHD equilibrium and define the flux grid
   call default_flux_grid(rank_loc,n_tasks_loc,n_poloidal_nodes,&
-  fields_sol%node_list,fields_sol%element_list,ifail_loc)
+  n_radial_nodes,fields_sol%node_list,fields_sol%element_list,ifail_loc)
 end subroutine setup
 
 subroutine teardown(rank,n_tasks,ifail)

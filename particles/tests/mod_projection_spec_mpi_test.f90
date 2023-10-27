@@ -264,8 +264,9 @@ end subroutine test_project_peak_gaussian_square_20_20
 !> Test the exact form of the projection matrix for a simple grid.
 !> Reference integrals calculated with Mathematica
 subroutine test_projection_matrix_square
-  use constants,             only: TWOPI
-  use mod_project_particles, only: DMUMPS_STRUC
+  use constants,                         only: TWOPI
+  use mod_project_particles,             only: DMUMPS_STRUC
+  use mod_projection_helpers_test_tools, only: close_dmumps
   implicit none
   integer,parameter          :: nstep_test=2
   type(DMUMPS_STRUC)         :: mumps_data
@@ -280,12 +281,14 @@ subroutine test_projection_matrix_square
     if(mumps_data%irn(ii)==1) call assert_equals(TWOPI*ref2D((mumps_data%jcn(ii)-1)/2+1),&
     mumps_data%A(ii),tol2D,trim(message))
   enddo
+  call close_dmumps(mumps_data)
 end subroutine test_projection_matrix_square
 
 !> Test the construction of the projection matrix with and without openmp
 !> for a simple grid.
 subroutine test_omp_projection_matrix_square
-  use mod_project_particles, only: DMUMPS_STRUC
+  use mod_project_particles,             only: DMUMPS_STRUC
+  use mod_projection_helpers_test_tools, only: close_dmumps
   !$use omp_lib
   implicit none
   type(DMUMPS_STRUC) :: mumps_data_serial,mumps_data_parallel
@@ -304,6 +307,7 @@ subroutine test_omp_projection_matrix_square
   hyper_filter2D,parallel_filter2D,test_node_list,test_element_list,&
   mumps_data_serial,ifail_loc) 
   call construct_matrix_from_mumps(mumps_data_serial,A_serial)
+  call close_dmumps(mumps_data_serial)
   !> compute the threaded matrix
   !$ call omp_set_num_threads(n_threads)
   call compute_projection_matrix_square_grid(rank_loc,n_tasks_loc,&
@@ -311,6 +315,7 @@ subroutine test_omp_projection_matrix_square
   hyper_filter2D,parallel_filter2D,test_node_list,test_element_list,&
   mumps_data_parallel,ifail_loc) 
   call construct_matrix_from_mumps(mumps_data_parallel,A_parallel)
+  call close_dmumps(mumps_data_parallel)
   !> checks
   call assert_equals(A_serial,A_parallel,size(A_serial,1),size(A_serial,2),&
   tol2D,'Error test omp projection matrix square: matrix mismatch!')
@@ -430,7 +435,6 @@ hyper_filter,parallel_filter,node_list,element_list,mumps_data,ifail)
   endif
   !> broadcast matrix
   call broadcast_dmumps_struct_A_irn_jcn(rank,master_rank,mumps_data,ifail)
-
 end subroutine compute_projection_matrix_square_grid
 
 !> construct the projected matrix from mumps data

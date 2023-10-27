@@ -11,7 +11,7 @@ implicit none
 private
 public :: default_flux_grid,default_square_grid,default_polar_grid
 public :: project_f,broadcast_dmumps_struct_A_irn_jcn
-public :: elements_mean_rms
+public :: elements_mean_rms,close_dmumps
 public :: f_0,f_1,f_R,f_RZ,f_R4,f_a2
 
 !> Variables ------------------------------------------------------
@@ -347,6 +347,12 @@ subroutine project_f(node_list, element_list, f, filter, filter_hyper, integral)
 
   call DMUMPS(p)
 
+  !!! DATI DA TRANSFERIRE !!!
+  !> INTEGER :: COMM,JOB,SYM,PAR,N,NRHS,LRHS,NZ
+  !> INTEGER ARRAY JCN,IRN,INCTL
+  !> REAL ARRAY A,RHS
+  !> IMPLEMENTARE FUNZIONE PER CHIUDERE DMUMPS
+
   if (present(integral)) integral = dot_product(p%rhs, this_integral_weights)
 
   do i=1,node_list%n_nodes
@@ -537,6 +543,14 @@ subroutine broadcast_dmumps_struct_A_irn_jcn(rank,master,mumps_data,ifail)
  call MPI_Bcast(mumps_data%jcn,n_sizes(2),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
  call MPI_Bcast(mumps_data%A,n_sizes(3),MPI_REAL8,master,MPI_COMM_WORLD,ifail)
 end subroutine broadcast_dmumps_struct_A_irn_jcn
+
+!> close dmumps
+subroutine close_dmumps(mumps_data)
+implicit none
+  type(DMUMPS_STRUC),intent(inout) :: mumps_data
+  mumps_data%JOB=-2
+  call DMUMPS(mumps_data)
+end subroutine close_dmumps
 
 !> Internal procedures --------------------------------------------
 !> ----------------------------------------------------------------

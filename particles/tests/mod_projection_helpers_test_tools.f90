@@ -10,7 +10,7 @@ use mod_particle_types
 implicit none
 private
 public :: default_flux_grid,default_square_grid,default_polar_grid
-public :: project_f
+public :: project_f,broadcast_dmumps_struct_A_irn_jcn
 public :: elements_mean_rms
 public :: f_0,f_1,f_R,f_RZ,f_R4,f_a2
 
@@ -499,6 +499,44 @@ subroutine elements_mean_rms(node_list, element_list, f, mean, rms, volume)
   mean = mean/my_volume
   if (present(volume)) volume = my_volume
 end subroutine elements_mean_rms
+
+!> construct the projected matrix from mumps data
+subroutine construct_matrix_from_mumps(mumps_data,matrix)
+  use mod_project_particles, only: DMUMPS_STRUC
+  implicit none
+  type(DMUMPS_STRUC),intent(inout)              :: mumps_data
+  real*8,dimension(:,:),allocatable,intent(out) :: matrix
+  integer :: ii
+  if(allocated(matrix)) deallocate(matrix)
+  allocate(matrix(minval(mumps_data%irn):maxval(mumps_data%irn),&
+  minval(mumps_data%jcn):maxval(mumps_data%jcn))); matrix = 0.d0;
+  do ii=1,size(mumps_data%A)
+    matrix(mumps_data%irn(ii),mumps_data%jcn(ii)) = &
+    matrix(mumps_data%irn(ii),mumps_data%jcn(ii)) + mumps_data%A(ii)
+  enddo
+end subroutine construct_matrix_from_mumps
+
+!> broadcast dmumps structure A,irn,jcn
+subroutine broadcast_dmumps_struct_A_irn_jcn(rank,master,mumps_data,ifail)
+ use mpi_mod
+ use mod_project_particles, only: DMUMPS_STRUC
+ implicit none
+ type(DMUMPS_STRUC),intent(inout) :: mumps_data
+ integer,intent(inout) :: ifail
+ integer,intent(in)    :: rank,master
+ integer,dimension(3)  :: n_sizes
+ if(rank.eq.master) then
+   n_sizes = (/size(mumps_data%irn),size(mumps_data%jcn),size(mumps_data%A)/)
+ endif
+ call MPI_Bcast(n_sizes,size(n_sizes),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
+ if(rank.ne.master) then
+   allocate(mumps_data%irn(n_sizes(1)),mumps_data%jcn(n_sizes(2)),&
+   mumps_data%A(n_sizes(3)))
+ endif
+ call MPI_Bcast(mumps_data%irn,n_sizes(1),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
+ call MPI_Bcast(mumps_data%jcn,n_sizes(2),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
+ call MPI_Bcast(mumps_data%A,n_sizes(3),MPI_REAL8,master,MPI_COMM_WORLD,ifail)
+end subroutine broadcast_dmumps_struct_A_irn_jcn
 
 !> Internal procedures --------------------------------------------
 !> ----------------------------------------------------------------

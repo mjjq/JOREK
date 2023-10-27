@@ -13,6 +13,7 @@ public :: run_fruit_projection_spec_mpi
 !> Variables --------------------------------------
 !> Set to true to wrtie restart files with the projected density
 logical,parameter :: write_proj_output=.true.
+integer,parameter :: master_rank=0
 integer,parameter :: message_len=100
 integer,parameter :: filename_len=100
 integer,parameter :: n_fields_1=1
@@ -53,6 +54,7 @@ integer                         :: rank_loc,n_tasks_loc,ifail_loc
 contains
 !> Fruit basket -----------------------------------
 subroutine run_fruit_projection_spec_mpi(rank,n_tasks,ifail)
+  use mpi_mod
   implicit none
   integer,intent(inout) :: ifail
   integer,intent(in)    :: rank,n_tasks
@@ -396,6 +398,8 @@ hyper_filter,parallel_filter,node_list,element_list,mumps_data,ifail)
   use mod_project_particles,             only: prepare_mumps_par_n0
   use mod_project_particles,             only: prepare_mumps_par
   use mod_projection_helpers_test_tools, only: default_square_grid
+  use mod_projection_helpers_test_tools, only: broadcast_dmumps_struct_A_irn_jcn
+
   implicit none
   type(type_node_list),intent(inout)    :: node_list
   type(type_element_list),intent(inout) :: element_list
@@ -424,13 +428,16 @@ hyper_filter,parallel_filter,node_list,element_list,mumps_data,ifail)
     MPI_COMM_WORLD,mpi_comm_n,mpi_comm_master,mumps_data,filter=local_filter,&
     filter_hyper=hyper_filter,filter_parallel=parallel_filter)
   endif
+  !> broadcast matrix
+  call broadcast_dmumps_struct_A_irn_jcn(rank,master_rank,mumps_data,ifail)
+
 end subroutine compute_projection_matrix_square_grid
 
 !> construct the projected matrix from mumps data
 subroutine construct_matrix_from_mumps(mumps_data,matrix)
   use mod_project_particles, only: DMUMPS_STRUC
   implicit none
-  type(DMUMPS_STRUC),intent(in)                 :: mumps_data
+  type(DMUMPS_STRUC),intent(inout)              :: mumps_data
   real*8,dimension(:,:),allocatable,intent(out) :: matrix
   integer :: ii
   if(allocated(matrix)) deallocate(matrix)
@@ -441,5 +448,6 @@ subroutine construct_matrix_from_mumps(mumps_data,matrix)
     matrix(mumps_data%irn(ii),mumps_data%jcn(ii)) + mumps_data%A(ii)
   enddo
 end subroutine construct_matrix_from_mumps
+
 !> ------------------------------------------------
 end module mod_projection_spec_mpi_test

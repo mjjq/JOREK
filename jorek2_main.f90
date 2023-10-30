@@ -311,6 +311,26 @@ mpi_required = 0
       end do
     end if
     
+    ! --- Optional: Redo flux aligned grid (DOES NOT WORK CURRENTLY)
+    if (regrid) then
+      if (xpoint)  then
+        if ( (xcase .ge. UPPER_XPOINT) .or. (RZ_grid_inside_wall) ) then
+          if (grid_to_wall) then
+            call grid_double_xpoint_inside_wall(node_list, element_list)
+          else
+            call grid_double_xpoint(node_list, element_list)
+          endif
+        else
+	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &
+                           SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
+        endif
+      else
+        call grid_flux_surface(xpoint,xcase, node_list, element_list, surface_list, n_flux, n_tht, xr1,  &
+                               sig1, xr2, sig2, refinement)
+      end if
+
+    end if
+
     if ( freeboundary .and. freeb_change_indices) call exchange_indices(node_list, my_id, n_cpu, .false.)
     
  end if !   if ( restart .and. (my_id == 0) ) then
@@ -329,7 +349,7 @@ mpi_required = 0
   if_not_restart: if (.not. restart) then
     call tr_resetfile()
 
-    if_not_regrid: if(.not. regrid) then
+    if_not_regrid_from_rz: if(.not. regrid_from_rz) then
 
       call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
 
@@ -375,7 +395,7 @@ mpi_required = 0
         write(*,*)'Restart from r/z grid equilibrium'
         call import_restart(node_list, element_list, 'jorek_equil_rz', rst_format, ierr)
         if ( ierr /= 0 ) stop
-    end if if_not_regrid
+    end if if_not_regrid_from_rz
 
     ! --- Determine a flux surface aligned grid and re-calculate the equilibrium on it
     if (n_flux > 1) then

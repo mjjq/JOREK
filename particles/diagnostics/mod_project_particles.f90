@@ -1122,7 +1122,7 @@ end subroutine save_to_h5
 subroutine prepare_mumps_par(node_list, element_list, n_tor_local, i_tor_local,           &
                              this_mpi_comm_world, this_mpi_comm_n, this_mpi_comm_master,  &
                              mumps_par, filter, filter_hyper, filter_parallel,            &
-                             skip_factorisation)
+                             skip_factorisation, apply_dirichlet_condition_in)
 use phys_module, only : F0, TWOPI, mode
 use data_structure
 use basis_at_gaussian
@@ -1140,6 +1140,7 @@ real*8, intent(in)                   :: filter
 real*8, intent(in)                   :: filter_hyper
 real*8, intent(in)                   :: filter_parallel
 logical, intent(in), optional        :: skip_factorisation
+logical,intent(in),optional          :: apply_dirichlet_condition_in
 
 type (type_element)      :: element
 type (type_node)         :: nodes(n_vertex_max)
@@ -1176,6 +1177,7 @@ nz_AA = 4 * element_list%n_elements * (n_vertex_max * n_degrees)**2
 n_AA  = 2 * maxval(node_list%node(1:node_list%n_nodes)%index(4))
 
 apply_dirichlet_condition = .true.
+if(present(apply_dirichlet_condition_in)) apply_dirichlet_condition = apply_dirichlet_condition_in
 
 nz_bnd = 0
 if (apply_dirichlet_condition) then
@@ -1517,7 +1519,8 @@ subroutine prepare_mumps_par_n0(node_list, element_list, n_tor_local, i_tor_loca
                                 this_mpi_comm_world, this_mpi_comm_n, this_mpi_comm_master,  &
                                 mumps_par, area, volume,                                     &
                                 filter, filter_hyper, filter_parallel,                       &
-                                integral_weights, skip_factorisation, do_zonal)
+                                integral_weights, skip_factorisation, do_zonal,              &
+                                apply_dirichlet_condition_in)
 use phys_module, only : F0, TWOPI
 use data_structure
 use basis_at_gaussian
@@ -1536,6 +1539,7 @@ real*8, intent(in)                   :: filter_hyper
 real*8, intent(in)                   :: filter_parallel
 logical, intent(in), optional        :: do_zonal
 logical, intent(in), optional        :: skip_factorisation
+logical, intent(in), optional        :: apply_dirichlet_condition_in
 real*8, intent(out), dimension(:), allocatable :: integral_weights !< these will be filled with the volume of each basis function
 real*8, intent(out)                  :: area, volume
 type (type_element)      :: element
@@ -1575,6 +1579,7 @@ apply_zonal = .false.
 if (present(do_zonal)) apply_zonal = do_zonal
 
 apply_dirichlet_condition = .true.
+if (present(apply_dirichlet_condition_in)) apply_dirichlet_condition = apply_dirichlet_condition_in
 if (apply_zonal)  apply_dirichlet_condition = .true.
 
 

@@ -10,10 +10,12 @@ integer,parameter             :: nx=30
 integer,parameter             :: ny=30
 integer,parameter             :: nrad=30
 integer,parameter             :: npol=32
+integer,parameter             :: master_rank=0
 real*8,parameter              :: time_sol=0.d0
 real*8,parameter              :: tor_angle_sol=0.d0
 real*8,parameter              :: central_mass_sol=2.d0
 real*8,parameter              :: central_density_sol=1.d0
+logical,parameter             :: apply_dirichlet_bnd=.false.
 real*8,dimension(2),parameter :: st_sol=(/5.d-1,5.d-1/)
 real*8,dimension(3),parameter :: tolsE=(/1.d-10,3.d-11,0.d0/)
 real*8,dimension(3),parameter :: tolsB=(/2.d-11,2.d-11,2.d0/)
@@ -68,7 +70,9 @@ subroutine test_penning_case_jorek_square_10_10()
   allocate(fields%node_list,fields%element_list)
   call default_square_grid(rank_loc,n_tasks_loc,nx,ny,fields%node_list,&
   fields%element_list,ifail_loc)
-  call jorek_penning_fields(fields%node_list,fields%element_list)
+  call jorek_penning_fields(fields%node_list,fields%element_list,&
+  apply_dirichlet_in=apply_dirichlet_bnd,rank_in=rank_loc,&
+  master_in=master_rank,ifail_out=ifail_loc)
   call verify_solution(fields,trim(message))
   deallocate(fields%node_list,fields%element_list);
 end subroutine test_penning_case_jorek_square_10_10
@@ -83,7 +87,9 @@ subroutine test_penning_case_jorek_polar_30_32()
   allocate(fields%node_list,fields%element_list)
   call default_polar_grid(rank_loc,n_tasks_loc,npol,nrad,&
   fields%node_list,fields%element_list,ifail_loc)
-  call jorek_penning_fields(fields%node_list,fields%element_list)
+  call jorek_penning_fields(fields%node_list,fields%element_list,&
+  apply_dirichlet_in=apply_dirichlet_bnd,rank_in=rank_loc,&
+  master_in=master_rank,ifail_out=ifail_loc)
   call verify_solution(fields,trim(message))
   deallocate(fields%node_list,fields%element_list);
 end subroutine test_penning_case_jorek_polar_30_32

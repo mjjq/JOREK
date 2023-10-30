@@ -11,6 +11,7 @@ implicit none
 private
 public :: default_flux_grid,default_square_grid,default_polar_grid
 public :: project_f,broadcast_dmumps_struct_A_irn_jcn
+public :: broadcast_dmumps_project_struct
 public :: elements_mean_rms,close_dmumps
 public :: f_0,f_1,f_R,f_RZ,f_R4,f_a2
 
@@ -333,7 +334,7 @@ subroutine project_f(rank,master,node_list,element_list,f,ifail,filter,filter_hy
 
   if (present(filter))       my_filter       = filter 
   if (present(filter_hyper)) my_filter_hyper = filter_hyper 
-  if(present(apply_dirichlet_bnd_in)) apply_dirichlet_bnd = apply_dirichlet_bnd_in
+  if (present(apply_dirichlet_bnd_in)) apply_dirichlet_bnd = apply_dirichlet_bnd_in
   
   if (i_tor_local .eq. 1) then  
     call prepare_mumps_par_n0(node_list,element_list,n_tor_local,i_tor_local,mpi_comm_world,mpi_comm_n,&

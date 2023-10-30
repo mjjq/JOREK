@@ -284,7 +284,6 @@ subroutine test_projection_matrix_square
     ii,' test: matrix-reference mismatch!'
     if(mumps_data%irn(ii)==1) call assert_equals(ref2D((mumps_data%jcn(ii)-1)/2+1)*TWOPI,&
     mumps_data%A(ii),tol2D,trim(message))
-    if(mumps_data%irn(ii)==1) write(*,*) mumps_data%A(ii),ref2D((mumps_data%jcn(ii)-1)/2+1)*TWOPI
   enddo
   call close_dmumps(mumps_data)
 end subroutine test_projection_matrix_square

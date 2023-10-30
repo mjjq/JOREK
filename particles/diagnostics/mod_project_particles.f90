@@ -107,6 +107,8 @@ type, extends(io_action) :: projection
   real*8, dimension(:,:,:,:,:), allocatable :: rhs_f !< dim (n_degrees,n_vertex_max,n_elements,n_tor,n_proj) storage
   !< location for proj_f output
 
+  logical :: apply_dirichlet   ! if .true. (default) the Dirichlet boundary conditions are applied
+
   integer :: mpi_comm_world    ! mpi communicator of the whole world
   integer :: mpi_comm_n        ! mpi communicator of each toroidal harmonic
   integer :: mpi_comm_master   ! mpi communicator of the group of masters (of each harmonic)
@@ -427,8 +429,8 @@ function new_projection(node_list, element_list,                                
                         filter,    filter_hyper,    filter_parallel,                                &
                         filter_n0, filter_hyper_n0, filter_parallel_n0,                             &
                         f, do_zonal, to_h5, to_vtk, index_h5,                                       &
-                        nsub, filename, basename, decimal_digits, fractional_digits, calc_integrals &
-                        ) result(new)
+                        nsub, filename, basename, decimal_digits, fractional_digits, calc_integrals,&
+                        do_dirichlet) result(new)
   use mpi_mod
   !use mod_parameters, only n_node_max
   type(projection) :: new
@@ -447,6 +449,7 @@ function new_projection(node_list, element_list,                                
   integer, intent(in), optional          :: decimal_digits
   integer, intent(in), optional          :: fractional_digits
   logical, intent(in), optional          :: calc_integrals !< After projecting, calculate and print the integral of each projected quantity
+  logical, intent(in), optional          :: do_dirichlet
 
   integer              :: ierr, my_nsub, inode, n_masters, i
   integer, allocatable :: i_tor(:)
@@ -517,6 +520,8 @@ function new_projection(node_list, element_list,                                
 
   new%do_zonal = .false.
   if (present(do_zonal)) new%do_zonal = do_zonal
+  new%apply_dirichlet = .true.
+  if (present(do_dirichlet)) new%apply_dirichlet = do_dirichlet
 
   if (present(to_vtk)) then
     if (to_vtk) then
@@ -548,7 +553,8 @@ function new_projection(node_list, element_list,                                
                               new%mpi_comm_world, new%mpi_comm_n, new%mpi_comm_master,              &
                               new%mumps_par, new%area, new%volume,                                  &
                               new%filter_n0, new%filter_hyper_n0, new%filter_parallel_n0,           &
-                              integral_weights=new%integral_weights, do_zonal=new%do_zonal)  
+                              integral_weights=new%integral_weights, do_zonal=new%do_zonal,         &
+                              apply_dirichlet_condition_in=new%apply_dirichlet)  
 
     new%n_dof = new%mumps_par%n / 2
   
@@ -556,7 +562,8 @@ function new_projection(node_list, element_list,                                
 
     call prepare_mumps_par(node_list, element_list, new%n_tor_local, new%i_tor_local,            &
                            new%mpi_comm_world, new%mpi_comm_n, new%mpi_comm_master,              &
-                           new%mumps_par, new%filter, new%filter_hyper, new%filter_parallel)
+                           new%mumps_par, new%filter, new%filter_hyper, new%filter_parallel,     &
+                           apply_dirichlet_condition_in=new%apply_dirichlet)
 
     new%n_dof = new%mumps_par%n / new%n_tor_local
 

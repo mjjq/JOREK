@@ -35,6 +35,7 @@ real*8,parameter  :: filter2D=0.d0
 real*8,parameter  :: hyper_filter2D=0.d0
 real*8,parameter  :: parallel_filter2D=0.d0
 real*8,parameter  :: tol2D=1d-6
+logical,parameter :: apply_dirichlet_bnd=.false.
 integer,dimension(2),parameter :: nx=(/10,20/) !< x-dimension size of square mesh
 integer,dimension(2),parameter :: ny=(/10,20/) !< y-dimension size of square mesh
 integer,dimension(2),parameter :: nx2D=(/2,10/)
@@ -101,7 +102,7 @@ subroutine test_project_0_square()
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),ny(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_0,mean_sol(1),rms_sol(1),trim(filename),trim(message))
+  f_0,mean_sol(1),rms_sol(1),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_0_square 
 
 !> Project one onto a square grid
@@ -127,7 +128,7 @@ subroutine test_project_1_square()
   call assert_equals(size(index,1),count(index.gt.0),trim(message)//': all indices must be used!')
   call assert_equals(0,count(index.gt.1),trim(message)//': no duplicate indices in this grid!')
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_1,mean_sol(2),rms_sol(2),trim(filename),trim(message))
+  f_1,mean_sol(2),rms_sol(2),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_1_square
 
 !> Project one onto two polar grids. One with an even number of elements in the poloidal direction
@@ -141,7 +142,7 @@ subroutine test_project_1_polar_odd
   call default_polar_grid(rank_loc,n_tasks_loc,npol(1),nrad(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_1,mean_sol(3),rms_sol(3),trim(filename),trim(message))
+  f_1,mean_sol(3),rms_sol(3),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_1_polar_odd
 
 subroutine test_project_1_polar_even
@@ -153,7 +154,7 @@ subroutine test_project_1_polar_even
   call default_polar_grid(rank_loc,n_tasks_loc,npol(2),nrad(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_1,mean_sol(4),rms_sol(4),trim(filename),trim(message))
+  f_1,mean_sol(4),rms_sol(4),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_1_polar_even
 
 subroutine test_project_1_flux_odd
@@ -165,7 +166,7 @@ subroutine test_project_1_flux_odd
   call default_flux_grid(rank_loc,n_tasks_loc,npol(1),nrad(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_1,mean_sol(5),rms_sol(5),trim(filename),trim(message))
+  f_1,mean_sol(5),rms_sol(5),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_1_flux_odd
 
 subroutine test_project_1_flux_even
@@ -177,7 +178,7 @@ subroutine test_project_1_flux_even
   call default_flux_grid(rank_loc,n_tasks_loc,npol(2),nrad(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_1,mean_sol(6),rms_sol(6),trim(filename),trim(message))
+  f_1,mean_sol(6),rms_sol(6),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_1_flux_even
 
 !> Project R onto a square grid
@@ -190,7 +191,7 @@ subroutine test_project_R_square_10_10
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),ny(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_R,mean_sol(7),rms_sol(7),trim(filename),trim(message))
+  f_R,mean_sol(7),rms_sol(7),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_R_square_10_10
 
 !> Project RZ onto a square grid
@@ -203,7 +204,7 @@ subroutine test_project_RZ_square_10_10
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),ny(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_RZ,mean_sol(8),rms_sol(8),trim(filename),trim(message))
+  f_RZ,mean_sol(8),rms_sol(8),trim(filename),trim(message),apply_dirichlet_bnd)
 end subroutine test_project_RZ_square_10_10
 
 !> Project R^4 onto a square grid
@@ -217,7 +218,8 @@ subroutine test_project_R4_square_10_10
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),ny(1),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_R4,mean_sol(9),rms_sol(9),trim(filename),trim(message),rms_tol_in=tol)
+  f_R4,mean_sol(9),rms_sol(9),trim(filename),trim(message),apply_dirichlet_bnd,&
+  rms_tol_in=tol)
 end subroutine test_project_R4_square_10_10
 
 !> Project R^4 onto a few square grids and verify convergence with n
@@ -235,7 +237,7 @@ subroutine test_project_R4_square_convergence
     call default_square_grid(rank_loc,n_tasks_loc,ii,ii,&
     test_node_list,test_element_list,ifail_loc)
     call project_f_with_assert_and_write(test_node_list,test_element_list,&
-    f_R4,mean_sol(10),rms_sol(10),trim(filename),trim(message),&
+    f_R4,mean_sol(10),rms_sol(10),trim(filename),trim(message),apply_dirichlet_bnd,&
     rms_tol_in=(tol_base/(real(ii,kind=8)**conv_order)))
   enddo
 end subroutine test_project_R4_square_convergence
@@ -257,8 +259,9 @@ subroutine test_project_peak_gaussian_square_20_20
   call default_square_grid(rank_loc,n_tasks_loc,nx(2),ny(2),&
   test_node_list,test_element_list,ifail_loc)
   call project_f_with_assert_and_write(test_node_list,test_element_list,&
-  f_R4,mean_sol(11),rms_sol(11),trim(filename),trim(message),mean_tol_in=meantol,&
-  rms_tol_in=rmstol,filter_in=filter_gauss,hyper_filter_in=hyper_filter_gauss)
+  f_R4,mean_sol(11),rms_sol(11),trim(filename),trim(message),apply_dirichlet_bnd,&
+  mean_tol_in=meantol,rms_tol_in=rmstol,filter_in=filter_gauss,&
+  hyper_filter_in=hyper_filter_gauss)
 end subroutine test_project_peak_gaussian_square_20_20
 
 !> Test the exact form of the projection matrix for a simple grid.
@@ -274,12 +277,14 @@ subroutine test_projection_matrix_square
   character(len=message_len) :: message
   call compute_projection_matrix_square_grid(rank_loc,n_tasks_loc,nx2D(1),ny2D(1),&
   Rbegin2D,Rend2D,Zbegin2D,Zend2D,i_tor2D,n_tor2D,filter2D,hyper_filter2D,&
-  parallel_filter2D,test_node_list,test_element_list,mumps_data,ifail_loc)
+  parallel_filter2D,apply_dirichlet_bnd,test_node_list,test_element_list,&
+  mumps_data,ifail_loc)
   do ii=1,size(mumps_data%irn),nstep_test
     write(message,'(A,I0,A)') 'Error projection matrix square irn ',&
     ii,' test: matrix-reference mismatch!'
-    if(mumps_data%irn(ii)==1) call assert_equals(TWOPI*ref2D((mumps_data%jcn(ii)-1)/2+1),&
+    if(mumps_data%irn(ii)==1) call assert_equals(ref2D((mumps_data%jcn(ii)-1)/2+1)*TWOPI,&
     mumps_data%A(ii),tol2D,trim(message))
+    if(mumps_data%irn(ii)==1) write(*,*) mumps_data%A(ii),ref2D((mumps_data%jcn(ii)-1)/2+1)*TWOPI
   enddo
   call close_dmumps(mumps_data)
 end subroutine test_projection_matrix_square
@@ -304,16 +309,16 @@ subroutine test_omp_projection_matrix_square
   !$ call omp_set_num_threads(1)
   call compute_projection_matrix_square_grid(rank_loc,n_tasks_loc,&
   nx2D(1),ny2D(1),Rbegin2D,Rend2D,Zbegin2D,Zend2D,i_tor2D,n_tor2D,filter2D,&
-  hyper_filter2D,parallel_filter2D,test_node_list,test_element_list,&
-  mumps_data_serial,ifail_loc) 
+  hyper_filter2D,parallel_filter2D,apply_dirichlet_bnd,test_node_list,&
+  test_element_list,mumps_data_serial,ifail_loc) 
   call construct_matrix_from_mumps(mumps_data_serial,A_serial)
   call close_dmumps(mumps_data_serial)
   !> compute the threaded matrix
   !$ call omp_set_num_threads(n_threads)
   call compute_projection_matrix_square_grid(rank_loc,n_tasks_loc,&
   nx2D(1),ny2D(1),Rbegin2D,Rend2D,Zbegin2D,Zend2D,i_tor2D,n_tor2D,filter2D,&
-  hyper_filter2D,parallel_filter2D,test_node_list,test_element_list,&
-  mumps_data_parallel,ifail_loc) 
+  hyper_filter2D,parallel_filter2D,apply_dirichlet_bnd,test_node_list,&
+  test_element_list,mumps_data_parallel,ifail_loc) 
   call construct_matrix_from_mumps(mumps_data_parallel,A_parallel)
   call close_dmumps(mumps_data_parallel)
   !> checks
@@ -358,7 +363,8 @@ end function f_peak
 !>   node_list:    (type_node_list) JOREK node list
 !>   element_list: (type_element_list) JOREK element list
 subroutine project_f_with_assert_and_write(node_list,element_list,f,mean,&
-RMS,pfilename,message_root,mean_tol_in,rms_tol_in,filter_in,hyper_filter_in)
+RMS,pfilename,message_root,apply_dirichlet,mean_tol_in,rms_tol_in,&
+filter_in,hyper_filter_in)
   use data_structure,                    only: type_node_list
   use data_structure,                    only: type_element_list
   use mod_project_particles,             only: write_particle_distribution_to_h5
@@ -371,6 +377,7 @@ RMS,pfilename,message_root,mean_tol_in,rms_tol_in,filter_in,hyper_filter_in)
   character(len=*),intent(in)           :: pfilename,message_root
   real*8,intent(in),optional            :: mean_tol_in,rms_tol_in
   real*8,intent(in),optional            :: filter_in,hyper_filter_in
+  logical,intent(in)                    :: apply_dirichlet
   real*8 :: mean_test,rms_test,rms_tol,mean_tol,filter,hyper_filter
   character(len=2*message_len) :: message
   !> initialisation
@@ -379,12 +386,13 @@ RMS,pfilename,message_root,mean_tol_in,rms_tol_in,filter_in,hyper_filter_in)
   mean_tol=1.d-12;   if(present(mean_tol_in))     mean_tol=mean_tol_in;
   rms_tol=1.d-12;    if(present(rms_tol_in))      rms_tol=rms_tol_in;
   !> project the function and compute mean and rms
-  call project_f(node_list,element_list,f,filter,hyper_filter)
+  call project_f(rank_loc,master_rank,node_list,element_list,f,ifail_loc,filter,&
+  hyper_filter,apply_dirichlet_bnd_in=apply_dirichlet)
   call elements_mean_rms(node_list,element_list,f,mean_test,rms_test)
   !> checks
-  write(message,'(A,A)') trim(message_root),': unexpected mean value!'
+  write(message,'(A,A,I0,A)') trim(message_root),': rank ',rank_loc,' unexpected mean value!'
   call assert_equals(mean,mean_test,mean_tol,trim(message))
-  write(message,'(A,A)') trim(message_root),': unexpected RMS value!'
+  write(message,'(A,A,I0,A)') trim(message_root),': rank ,',rank_loc,' unexpected RMS value!'
   call assert_equals(RMS,rms_test,rms_tol,trim(message))
   !> write projection in file if requried
   if(write_proj_output) then
@@ -396,7 +404,7 @@ end subroutine project_f_with_assert_and_write
 !> Compute the projection matrix for s simple square grid 
 subroutine compute_projection_matrix_square_grid(rank,n_tasks,nx_loc,ny_loc,&
 Rbegin_loc,Rend_loc,Zbegin_loc,Zend_loc,i_tor_local,n_tor_local,local_filter,&
-hyper_filter,parallel_filter,node_list,element_list,mumps_data,ifail)
+hyper_filter,parallel_filter,apply_dirichlet,node_list,element_list,mumps_data,ifail)
   use mpi_mod
   use data_structure
   use mod_project_particles,             only: DMUMPS_STRUC
@@ -404,15 +412,15 @@ hyper_filter,parallel_filter,node_list,element_list,mumps_data,ifail)
   use mod_project_particles,             only: prepare_mumps_par
   use mod_projection_helpers_test_tools, only: default_square_grid
   use mod_projection_helpers_test_tools, only: broadcast_dmumps_struct_A_irn_jcn
-
   implicit none
   type(type_node_list),intent(inout)    :: node_list
   type(type_element_list),intent(inout) :: element_list
   integer,intent(inout)                 :: ifail
-  integer,intent(in) :: rank,n_tasks
-  integer,intent(in) :: nx_loc,ny_loc,i_tor_local,n_tor_local
-  real*8,intent(in)  :: Rbegin_loc,Rend_loc,Zbegin_loc,Zend_loc
-  real*8,intent(in)  :: local_filter,hyper_filter,parallel_filter
+  integer,intent(in)   :: rank,n_tasks
+  integer,intent(in)   :: nx_loc,ny_loc,i_tor_local,n_tor_local
+  real*8,intent(in)    :: Rbegin_loc,Rend_loc,Zbegin_loc,Zend_loc
+  real*8,intent(in)    :: local_filter,hyper_filter,parallel_filter
+  logical,intent(in)   :: apply_dirichlet
   type(DMUMPS_STRUC),intent(inout) :: mumps_data
   integer :: mpi_comm_n,mpi_comm_master
   real*8  :: area,volume
@@ -427,11 +435,12 @@ hyper_filter,parallel_filter,node_list,element_list,mumps_data,ifail)
     call prepare_mumps_par_n0(node_list,element_list,n_tor_local,i_tor_local,&
     MPI_COMM_WORLD,mpi_comm_n,mpi_comm_master,mumps_data,area,volume,&
     filter=local_filter,filter_hyper=hyper_filter,filter_parallel=parallel_filter,&
-    integral_weights=integral_weights)
+    apply_dirichlet_condition_in=apply_dirichlet,integral_weights=integral_weights)
   else
     call prepare_mumps_par(node_list,element_list,n_tor_local,i_tor_local,&
     MPI_COMM_WORLD,mpi_comm_n,mpi_comm_master,mumps_data,filter=local_filter,&
-    filter_hyper=hyper_filter,filter_parallel=parallel_filter)
+    filter_hyper=hyper_filter,filter_parallel=parallel_filter,&
+    apply_dirichlet_condition_in=apply_dirichlet)
   endif
   !> broadcast matrix
   call broadcast_dmumps_struct_A_irn_jcn(rank,master_rank,mumps_data,ifail)

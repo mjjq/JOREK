@@ -303,17 +303,22 @@ subroutine default_flux_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
 end subroutine default_flux_grid
 
 !> Project a function onto the JOREK elements
-subroutine project_f(node_list, element_list, f, filter, filter_hyper, integral)
+subroutine project_f(rank,master,node_list,element_list,f,ifail,filter,filter_hyper,integral,&
+  apply_dirichlet_bnd_in)
   use mpi_mod
   type(type_node_list), intent(inout)    :: node_list
   type(type_element_list), intent(inout) :: element_list
+  integer,intent(inout)                  :: ifail
+  integer,intent(in)                     :: rank,master
   real*8, external                       :: f
   real*8, optional, intent(in)           :: filter, filter_hyper !< smoothing and hyper-smoothing
+  logical,intent(in),optional            :: apply_dirichlet_bnd_in
   real*8, optional, intent(out)          :: integral !< The integral of the projected function, from the weights
   real*8, dimension(:), allocatable      :: this_integral_weights
   type(DMUMPS_STRUC)                     :: p
   integer :: i, k, index, i_tor_local, n_tor_local, mpi_comm_n, mpi_comm_master, ierr
   real*8  :: my_filter, my_filter_hyper, area, volume
+  logical :: apply_dirichlet_bnd
 
   call MPI_Comm_dup(MPI_COMM_WORLD,mpi_comm_n,ierr)
   call MPI_Comm_dup(MPI_COMM_WORLD,mpi_comm_master,ierr)
@@ -324,16 +329,21 @@ subroutine project_f(node_list, element_list, f, filter, filter_hyper, integral)
   my_filter       = 0.d0
   my_filter_hyper = 0.d0
 
+  apply_dirichlet_bnd = .true.
+
   if (present(filter))       my_filter       = filter 
   if (present(filter_hyper)) my_filter_hyper = filter_hyper 
+  if(present(apply_dirichlet_bnd_in)) apply_dirichlet_bnd = apply_dirichlet_bnd_in
   
   if (i_tor_local .eq. 1) then  
     call prepare_mumps_par_n0(node_list,element_list,n_tor_local,i_tor_local,mpi_comm_world,mpi_comm_n,&
          mpi_comm_master,p,area,volume,filter=my_filter,filter_hyper=my_filter_hyper,&
-         filter_parallel=0.d0,integral_weights=this_integral_weights)
+         filter_parallel=0.d0,apply_dirichlet_condition_in=apply_dirichlet_bnd,&
+         integral_weights=this_integral_weights)
   else
     call prepare_mumps_par(node_list,element_list,n_tor_local,i_tor_local,mpi_comm_world,mpi_comm_n,&
-         mpi_comm_master,p,filter=my_filter,filter_hyper=my_filter_hyper,filter_parallel=0.d0)
+         mpi_comm_master,p,filter=my_filter,filter_hyper=my_filter_hyper,filter_parallel=0.d0,&
+         apply_dirichlet_condition_in=apply_dirichlet_bnd)
   endif
 
   ! Project manually
@@ -347,11 +357,8 @@ subroutine project_f(node_list, element_list, f, filter, filter_hyper, integral)
 
   call DMUMPS(p)
 
-  !!! DATI DA TRANSFERIRE !!!
-  !> INTEGER :: COMM,JOB,SYM,PAR,N,NRHS,LRHS,NZ
-  !> INTEGER ARRAY JCN,IRN,INCTL
-  !> REAL ARRAY A,RHS
-  !> IMPLEMENTARE FUNZIONE PER CHIUDERE DMUMPS
+  !> broadcast solution to all MPI tasks
+  call broadcast_dmumps_project_struct(rank,master,p,ifail)
 
   if (present(integral)) integral = dot_product(p%rhs, this_integral_weights)
 
@@ -523,6 +530,14 @@ subroutine construct_matrix_from_mumps(mumps_data,matrix)
 end subroutine construct_matrix_from_mumps
 
 !> broadcast dmumps structure A,irn,jcn
+!> inputs:
+!>   rank:       (integer) MPI task rank
+!>   master:     (integer) ID of the MPI master task
+!>   mumps_data: (DMUMPS_STRUC) MUMPS structure in double precision
+!>   ifail:      (integer) MPI failure/error code
+!> outputs:
+!>   mumps_data: (DMUMPS_STRUC) MUMPS structure in double precision
+!>   ifail:      (integer) MPI failure/error code
 subroutine broadcast_dmumps_struct_A_irn_jcn(rank,master,mumps_data,ifail)
  use mpi_mod
  use mod_project_particles, only: DMUMPS_STRUC
@@ -543,6 +558,45 @@ subroutine broadcast_dmumps_struct_A_irn_jcn(rank,master,mumps_data,ifail)
  call MPI_Bcast(mumps_data%jcn,n_sizes(2),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
  call MPI_Bcast(mumps_data%A,n_sizes(3),MPI_REAL8,master,MPI_COMM_WORLD,ifail)
 end subroutine broadcast_dmumps_struct_A_irn_jcn
+
+!> broadcast dumumps structure used for projections
+!> inputs:
+!>   rank:       (integer) MPI task rank
+!>   master:     (integer) ID of the MPI master task
+!>   mumps_data: (DMUMPS_STRUC) MUMPS structure in double precision
+!>   ifail:      (integer) MPI failure/error code
+!> outputs:
+!>   mumps_data: (DMUMPS_STRUC) MUMPS structure in double precision
+!>   ifail:      (integer) MPI failure/error code
+subroutine broadcast_dmumps_project_struct(rank,master,mumps_data,ifail)
+  use mpi_mod
+  use mod_project_particles, only: DMUMPS_STRUC
+  implicit none
+  type(DMUMPS_STRUC),intent(inout) :: mumps_data
+  integer,intent(inout) :: ifail
+  integer,intent(in)    :: rank,master
+  integer,dimension(12) :: struct_integers
+  if(rank.eq.master) then
+    struct_integers = (/mumps_data%job,mumps_data%sym,mumps_data%par,&
+    mumps_data%n,mumps_data%nrhs,mumps_data%lrhs,mumps_data%nz,&
+    size(mumps_data%jcn),size(mumps_data%irn),size(mumps_data%icntl),&
+    size(mumps_data%A),size(mumps_data%rhs)/)
+  endif
+  call MPI_Bcast(struct_integers,size(struct_integers),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
+  if(rank.ne.master) then
+    mumps_data%job  = struct_integers(1); mumps_data%sym  = struct_integers(2);
+    mumps_data%par  = struct_integers(3); mumps_data%n    = struct_integers(4);
+    mumps_data%nrhs = struct_integers(5); mumps_data%lrhs = struct_integers(6);
+    mumps_data%nz   = struct_integers(7); 
+    allocate(mumps_data%jcn(struct_integers(8)),mumps_data%irn(struct_integers(9)),&
+    mumps_data%A(struct_integers(11)),mumps_data%rhs(struct_integers(12)))
+  endif
+  call MPI_Bcast(mumps_data%jcn,struct_integers(8),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
+  call MPI_Bcast(mumps_data%irn,struct_integers(9),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
+  call MPI_Bcast(mumps_data%icntl,struct_integers(10),MPI_INTEGER,master,MPI_COMM_WORLD,ifail)
+  call MPI_Bcast(mumps_data%A,struct_integers(11),MPI_REAL8,master,MPI_COMM_WORLD,ifail)
+  call MPI_Bcast(mumps_data%rhs,struct_integers(12),MPI_REAL8,master,MPI_COMM_WORLD,ifail)
+end subroutine broadcast_dmumps_project_struct
 
 !> close dmumps
 subroutine close_dmumps(mumps_data)

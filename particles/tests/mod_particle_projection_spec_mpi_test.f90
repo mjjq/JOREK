@@ -43,6 +43,8 @@ subroutine run_fruit_particle_projection_spec_mpi(rank,n_tasks,ifail)
   'test_particle_projection_polar_40_31_pcg32')
   call run_test_case(test_particle_projection_flux_40_32_pcg32,&
   'test_particle_projection_polar_40_32_pcg32')
+  call run_test_case(test_particle_projection_polar_30_22_10000_sob_smoothing,&
+  'test_particle_projection_polar_30_22_10000_sob_smoothing')
   write(*,'(/A)') "  ... tearing-down: particle projection spec mpi"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_particle_projection_spec_mpi
@@ -240,6 +242,40 @@ subroutine test_particle_projection_flux_40_32_pcg32
   tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_flux_40_32_pcg32
+
+!> Test convergence of RHS for 10000 particles with varying filter factor
+subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
+  use constants,                         only: TWOPI
+  use phys_module,                       only: R_geo,amin
+  use mod_sobseq_rng,                    only: sobseq_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_polar_grid
+  implicit none
+  integer,parameter              :: n_trials=7
+  real*8,parameter               :: expect_mean=1.d0
+  real*8,parameter               :: expect_rms=0.d0
+  real*8,dimension(1),parameter  :: tol_mean=(/2.d-5/)
+  integer              :: ii
+  real*8               :: weight,x,smoothing
+  real*8,dimension(1)  :: tol_rms 
+  character(len=message_len)    :: message
+  character(len=filename_len)   :: filename
+  call default_polar_grid(rank_loc,n_tasks_loc,npol(1),nrad(1),&
+  test_nodes,test_elements,ifail_loc)
+  weight = 5d-1*R_geo*((amin*TWOPI)**2)
+  do ii=1,n_trials
+    x = real(ii-n_trials+1,kind=8); smoothing =1d1**(ii-n_trials+1);
+    write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection polar smoothing nrad: ',&
+    nrad(1),' npol: ',npol(1),' pcg32 rank: ',rank_loc,':'
+    write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_smoothing_rank',&
+    rank_loc,'_nrad',nrad(1),'_npol',npol(1),'_pcg32'
+    tol_rms = (/(10.d0**(-0.0738*x**2 - 0.972*x - 3.71))*1.2/)
+    call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
+    [n_particles(2)],sobseq_rng(),weight,expect_mean,expect_rms,tol_mean,&
+    tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,smoothing_in=smoothing,&
+    apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)   
+  enddo
+end subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
 
 !> Tool -------------------------------------------
 !> Helper function to project n particles onto a grid in nod_list,

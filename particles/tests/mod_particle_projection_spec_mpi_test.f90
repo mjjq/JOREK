@@ -45,6 +45,10 @@ subroutine run_fruit_particle_projection_spec_mpi(rank,n_tasks,ifail)
   'test_particle_projection_polar_40_32_pcg32')
   call run_test_case(test_particle_projection_polar_30_22_10000_sob_smoothing,&
   'test_particle_projection_polar_30_22_10000_sob_smoothing')
+  call run_test_case(test_rhs_square_10_10_pcg32,&
+  'test_rhs_square_10_10_pcg32')
+  call run_test_case(test_rhs_square_10_10_sobseq,&
+  'test_rhs_square_10_10_sobseq')
   write(*,'(/A)') "  ... tearing-down: particle projection spec mpi"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_particle_projection_spec_mpi
@@ -277,8 +281,54 @@ subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
   enddo
 end subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
 
+!> Test convergence of RHS for n_particles on square grid PCG32
+subroutine test_rhs_square_10_10_pcg32
+  use constants,                         only: TWOPI
+  use mod_pcg32_rng,                     only: pcg32_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_square_grid 
+  implicit none
+  real*8,parameter            :: expect_mean=0.d0
+  integer                     :: ii
+  real*8                      :: tol
+  character(len=message_len)  :: message
+  write(message,'(A,I0,A,I0,A,I0,A)') 'Error RHS convergence square nx: ',&
+  nx(1),' ny: ',ny(1),' pcg rank: ',rank_loc,':'
+  call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
+  test_nodes,test_elements,ifail_loc)
+  do ii=1,size(n_particles)
+    tol = TWOPI*(7d0/sqrt(real(n_particles(ii),kind=8)))
+    call rhs_convergence(test_nodes,test_elements,&
+    n_particles(ii),expect_mean,tol,f_1,proj_one,&
+    pcg32_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)
+  enddo
+end subroutine test_rhs_square_10_10_pcg32
+
+!> Test convergence of RHS for n_particles on square grid sobseq
+subroutine test_rhs_square_10_10_sobseq
+  use constants,                         only: TWOPI
+  use mod_sobseq_rng,                    only: sobseq_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_square_grid 
+  implicit none
+  real*8,parameter            :: expect_mean=0.d0
+  integer                     :: ii
+  real*8                      :: tol
+  character(len=message_len)  :: message
+  write(message,'(A,I0,A,I0,A,I0,A)') 'Error RHS convergence square nx: ',&
+  nx(1),' ny: ',ny(1),' sobseq rank: ',rank_loc,':'
+  call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
+  test_nodes,test_elements,ifail_loc)
+  do ii=1,size(n_particles)
+    tol = TWOPI*(65d0/sqrt(real(n_particles(ii),kind=8)))
+    call rhs_convergence(test_nodes,test_elements,&
+    n_particles(ii),expect_mean,tol,f_1,proj_one,&
+    sobseq_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)
+  enddo
+end subroutine test_rhs_square_10_10_sobseq
+
 !> Tool -------------------------------------------
-!> Helper function to project n particles onto a grid in nod_list,
+!> Helper function to project n particles onto a grid in node_list,
 !> element list with optional smoothing. It creates a projection
 !> type behind the scenes and uses that. We also need to create
 !> a particle-sim here.
@@ -286,6 +336,7 @@ subroutine project_n(rank,master,node_list,element_list,proj_f_proj,&
 f_proj,n,rng,volume,mean_expect,rms_expect,mean_tol,rms_tol,message,&
 fname,ifail,smoothing_in,n_tor_local_in,i_tor_local_in,&
 apply_dirichlet_in,write_particle_in,n_fields_write_in)
+  use mpi_mod
   use data_structure
   use mod_rng,                           only: type_rng
   use mod_initialise_particles,          only: initialise_particles
@@ -367,7 +418,95 @@ apply_dirichlet_in,write_particle_in,n_fields_write_in)
       trim(adjustl(group_string))//trim(fname)//'.h5',n_fields=n_fields_write,time=test_time)
     endif
   enddo
-  call project%close_mumps()
+  deallocate(sim%groups); call project%close_mumps();
 end subroutine project_n
+
+!> Create RHS by integrating f and with monte carlo methods and
+!> check that they are close. This guards against errors in
+!> node indices etc
+subroutine rhs_convergence(node_list,element_list,n_particles,&
+mean_expect,tol,funct,f_proj,rng,message,ifail,&
+n_tor_local_in,i_tor_local_in,smoothing_in,apply_dirichlet_in)
+  use mpi_mod
+  use constants,                         only: TWOPI
+  use data_structure,                    only: type_node_list,type_element_list
+  use mod_rng,                           only: type_rng
+  use mod_initialise_particles,          only: initialise_particles
+  use mod_particle_sim,                  only: particle_sim
+  use mod_project_particles,             only: projection,new_projection
+  use mod_project_particles,             only: proj_f,sample_rhs
+  use mod_particle_types,                only: particle_fieldline
+  use mod_projection_helpers_test_tools, only: calc_rhs_f
+  implicit none
+  type(type_node_list),intent(inout)    :: node_list
+  type(type_element_list),intent(inout) :: element_list 
+  integer,intent(inout)                 :: ifail
+  class(type_rng),intent(in)            :: rng
+  integer,intent(in)                    :: n_particles
+  real*8,intent(in)                     :: tol,mean_expect
+  character(len=*),intent(in)           :: message
+  real*8,external                       :: funct,f_proj
+  integer,intent(in),optional           :: n_tor_local_in,i_tor_local_in
+  real*8,intent(in),optional            :: smoothing_in
+  logical,intent(in),optional           :: apply_dirichlet_in
+  type(projection)                :: project
+  type(particle_sim)              :: sim
+  integer                         :: ii,jj,n_AA,ielm_out,i_elm
+  integer                         :: inode,index_ij,index_large_i
+  integer                         :: n_tor_local,i_tor_local
+  real*8                          :: R_out,Z_out,s_out,t_out,smoothing
+  real*8,dimension(:),allocatable :: rhs_f,my_rhs
+  character*8                     :: n_particles_string
+  logical                         :: apply_dirichlet
+  !> initialisation
+  n_tor_local=1; if(present(n_tor_local_in)) n_tor_local=n_tor_local_in;
+  i_tor_local=1; if(present(i_tor_local_in)) i_tor_local=i_tor_local_in;
+  smoothing=0.d0; if(present(smoothing_in)) smoothing=smoothing_in;
+  apply_dirichlet=.true.; 
+  if(present(apply_dirichlet_in)) apply_dirichlet=apply_dirichlet_in;
+  write(n_particles_string,'(I8)') n_particles
+  n_AA = maxval(node_list%node(1:node_list%n_nodes)%index(4)); 
+  allocate(rhs_f(2*n_AA)); rhs_f=0.d0; allocate(my_rhs(2*n_AA)); my_rhs=0.d0;
+  allocate(project%node_list,project%element_list)
+  project%node_list=node_list; project%element_list=element_list;
+  allocate(project%f(1)); project%f(1)%group=1; project%f(1)=proj_f(f_proj,group=1);
+  project%n_tor_local = n_tor_local; project%i_tor_local = i_tor_local;
+  !> initialise particles
+  allocate(sim%groups(1)); 
+  allocate(particle_fieldline::sim%groups(1)%particles(n_particles));
+  !> to prevent omp trouble (!?)
+  call find_RZ(node_list,element_list,R_particle_in,Z_particle_in,&
+  R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  call initialise_particles(sim%groups(1)%particles,node_list,element_list,rng)
+  do ii=1,n_particles
+    sim%groups(1)%particles(ii)%weight = TWOPI/real(n_particles,kind=8)
+  enddo
+  call sample_rhs(project,sim) !< comput the rhs using the projection method
+  !> cleanup
+  deallocate(sim%groups(1)%particles); deallocate(sim%groups);
+  !> convert RHS per element to 1D
+  do i_elm=1,element_list%n_elements
+    do ii=1,n_vertex_max
+      inode = element_list%element(i_elm)%vertex(ii)
+      do jj=1,n_degrees
+        index_large_i = 2*(node_list%node(inode)%index(jj)-1)+1
+        my_rhs(index_large_i) = my_rhs(index_large_i) + project%rhs_f(jj,ii,i_elm,1,1)
+      enddo
+    enddo
+  enddo
+  call calc_rhs_f(node_list,element_list,funct,rhs_f) !< rhs size 2*n_AA
+  !> checks
+  call assert_false(isnan(sum(rhs_f)),message//' sum integrated rhs is nan for n='//&
+  trim(adjustl(n_particles_string)))
+  call assert_false(isnan(sum(my_rhs)),message//' sum Monte Carlo rhs is nan for n='//&
+  trim(adjustl(n_particles_string)))
+  call assert_equals(mean_expect,sum(abs(rhs_f-my_rhs)),tol,message//' |integrated-MC rhs|_1 n='//&
+  trim(adjustl(n_particles_string)))
+  call assert_equals(mean_expect,maxval(abs(rhs_f-my_rhs)),tol,message//' |integrated-MC rhs|_inf n='//&
+  trim(adjustl(n_particles_string)))
+  call MPI_Barrier(MPI_COMM_WORLD,ifail)
+  deallocate(rhs_f); deallocate(my_rhs);! call project%close_mumps() !< cleanup
+end subroutine rhs_convergence
+
 !> ------------------------------------------------
 end module mod_particle_projection_spec_mpi_test

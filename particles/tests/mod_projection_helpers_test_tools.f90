@@ -11,7 +11,7 @@ implicit none
 private
 public :: default_flux_grid,default_square_grid,default_polar_grid
 public :: project_f,broadcast_dmumps_struct_A_irn_jcn
-public :: broadcast_dmumps_project_struct
+public :: broadcast_dmumps_project_struct,calc_rhs_f
 public :: elements_mean_rms,close_dmumps
 public :: f_0,f_1,f_R,f_RZ,f_R4,f_a2
 

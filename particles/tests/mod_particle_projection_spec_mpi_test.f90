@@ -93,10 +93,11 @@ subroutine test_particle_projection_square_10_10_pcg
   rank_loc,'_nx',nx(1),'_ny',ny(1),'_pcg'
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
   test_nodes,test_elements,ifail_loc)
-  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
-  n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
-  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
+  proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,&
+  expect_rms,tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),&
+  ifail_loc,apply_dirichlet_in=impose_dirichlet,&
+  write_particle_in=write_projection_output)
 end subroutine test_particle_projection_square_10_10_pcg
 
 !> Project 10^3-10^5 particles generated with sobseq ont square grid
@@ -121,9 +122,9 @@ subroutine test_particle_projection_square_10_10_sobseq
   rank_loc,'_nx',nx(1),'_ny',ny(1),'_sobseq'
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
   test_nodes,test_elements,ifail_loc)
-  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
-  n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
+  proj_one,f_1,n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,&
+  tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_square_10_10_sobseq
 
@@ -151,9 +152,9 @@ subroutine test_particle_projection_polar_30_22_sobseq
   call default_polar_grid(rank_loc,n_tasks_loc,npol(1),nrad(1),&
   test_nodes,test_elements,ifail_loc)
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
-  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
-  n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
+  proj_one,f_1,n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,&
+  tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_polar_30_22_sobseq
 
@@ -181,8 +182,8 @@ subroutine test_particle_projection_polar_30_21_sobseq
   call default_polar_grid(rank_loc,n_tasks_loc,npol(2),nrad(1),&
   test_nodes,test_elements,ifail_loc)
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
-  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
-  n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
+  proj_one,f_1,n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
   tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_polar_30_21_sobseq
@@ -211,8 +212,8 @@ subroutine test_particle_projection_flux_40_31_pcg32
   call default_flux_grid(rank_loc,n_tasks_loc,npol(3),nrad(2),&
   test_nodes,test_elements,ifail_loc)
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
-  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
-  n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
+  proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
   tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_flux_40_31_pcg32
@@ -241,8 +242,8 @@ subroutine test_particle_projection_flux_40_32_pcg32
   call default_flux_grid(rank_loc,n_tasks_loc,npol(4),nrad(2),&
   test_nodes,test_elements,ifail_loc)
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
-  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
-  n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
+  proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
   tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_flux_40_32_pcg32
@@ -274,8 +275,8 @@ subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
     write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_smoothing_rank',&
     rank_loc,'_nrad',nrad(1),'_npol',npol(1),'_pcg32'
     tol_rms = (/(10.d0**(-0.0738*x**2 - 0.972*x - 3.71))*1.2/)
-    call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
-    [n_particles(2)],sobseq_rng(),weight,expect_mean,expect_rms,tol_mean,&
+    call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
+    proj_one,f_1,[n_particles(2)],sobseq_rng(),weight,expect_mean,expect_rms,tol_mean,&
     tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,smoothing_in=smoothing,&
     apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)   
   enddo
@@ -332,7 +333,7 @@ end subroutine test_rhs_square_10_10_sobseq
 !> element list with optional smoothing. It creates a projection
 !> type behind the scenes and uses that. We also need to create
 !> a particle-sim here.
-subroutine project_n(rank,master,node_list,element_list,proj_f_proj,&
+subroutine project_n(rank,master,n_tasks,node_list,element_list,proj_f_proj,&
 f_proj,n,rng,volume,mean_expect,rms_expect,mean_tol,rms_tol,message,&
 fname,ifail,smoothing_in,n_tor_local_in,i_tor_local_in,&
 apply_dirichlet_in,write_particle_in,n_fields_write_in)
@@ -350,7 +351,7 @@ apply_dirichlet_in,write_particle_in,n_fields_write_in)
   type(type_element_list),intent(inout) :: element_list
   class(type_rng),intent(in)            :: rng
   integer,intent(inout)                 :: ifail
-  integer,intent(in)                    :: rank,master
+  integer,intent(in)                    :: rank,master,n_tasks
   integer,dimension(:),intent(in)       :: n
   real*8,intent(in)                     :: volume,mean_expect,rms_expect
   real*8,dimension(:),intent(in)        :: rms_tol,mean_tol
@@ -386,7 +387,7 @@ apply_dirichlet_in,write_particle_in,n_fields_write_in)
   project = new_projection(node_list,element_list,filter_n0=smoothing,&
   f=[proj_f(proj_f_proj,group=1)],do_dirichlet=apply_dirichlet)
   project%n_tor_local = n_tor_local; project%i_tor_local = i_tor_local;
-  allocate(sim%groups(1));
+  sim%my_id=rank; sim%n_cpu=n_tasks; allocate(sim%groups(1));
   !> fill the particle structure
   do kk=1,size(n)
     write(number_particles,'(I8)') n(kk)
@@ -397,7 +398,7 @@ apply_dirichlet_in,write_particle_in,n_fields_write_in)
     R_out,Z_out,ielm_out,s_out,t_out,ifail)
     call initialise_particles(sim%groups(1)%particles,node_list,element_list,rng)
     do ii=1,n(kk)
-      sim%groups(1)%particles(ii)%weight = volume/real(n(kk),kind=8)
+      sim%groups(1)%particles(ii)%weight = volume/real(n_tasks*n(kk),kind=8)
     enddo
     call project%do(sim) !< project particles, results in node_list
     deallocate(sim%groups(1)%particles) !< cleanup

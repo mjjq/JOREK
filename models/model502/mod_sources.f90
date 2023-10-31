@@ -49,9 +49,9 @@ heat_i_source   = heatsource_i   * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin 
 heat_e_source   = heatsource_e   * (0.5d0 - 0.5d0*tanh((psi_n - heatsource_psin    )/heatsource_sig    ))
 
 do i = 1, 5
-  heat_i_source = heat_source_i  + heatsource_gauss_i(i) *                                                &
+  heat_i_source = heat_i_source  + heatsource_gauss_i(i) *                                                &
     exp(-(psi_n - heatsource_gauss_psin(i))**2 / (heatsource_gauss_sig(i)**2))
-  heat_e_source = heat_source_e  + heatsource_gauss_e(i) *                                                &
+  heat_e_source = heat_e_source  + heatsource_gauss_e(i) *                                                &
     exp(-(psi_n - heatsource_gauss_psin(i))**2 / (heatsource_gauss_sig(i)**2))
   particle_source =  particle_source + particlesource_gauss(i) *                                          &
     exp(-(psi_n - particlesource_gauss_psin(i))**2 / (particlesource_gauss_sig(i)**2))

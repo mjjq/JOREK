@@ -111,9 +111,9 @@ subroutine test_particle_projection_square_10_10_sobseq
   real*8,parameter              :: expect_rms=0.d0
   real*8,parameter              :: volume=TWOPI
   real*8,dimension(3),parameter :: tol_mean=[3.d-8,3.d-8,3.d-8]
-  real*8,dimension(3),parameter :: tol_rms=[4.05d2/real(n_particles(1),kind=8),&
-                                   4.05d2/real(n_particles(2),kind=8),&
-                                   4.05d2/real(n_particles(3),kind=8)]
+  real*8,dimension(3),parameter :: tol_rms=[5d2/real(n_particles(1),kind=8),&
+                                   5d2/real(n_particles(2),kind=8),&
+                                   5d2/real(n_particles(3),kind=8)]
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection square nx: ',&

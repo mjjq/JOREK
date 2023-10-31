@@ -93,32 +93,34 @@ contains
     num_msgs_sum = sum(num_msgs_rank(:))
     allocate(msgs_all(num_msgs_sum))
 
-    ! array msgs_all:
-    !
-    ! | msgs(:) of rank 0  | msgs(:) of rank 1   | msgs(:) of rank 2  |
-    ! |                    |                     |                    |
-    ! | num_msgs_rank(1)   |  num_msgs_rank(2)   | num_msgs_rank(3)   |
-    ! |                    |                     |                    |
-    ! |                    |                     |                    |
-    !                       A                     A                  A
-    !                       |                     |                  |
-    !              sum(num_msgs_rank(1:1))+1      |             num_msgs_sum
-    !                                    sum(num_msgs_rank(1:2))+1
+    if(num_msgs_sum>0) then 
+      ! array msgs_all:
+      !
+      ! | msgs(:) of rank 0  | msgs(:) of rank 1   | msgs(:) of rank 2  |
+      ! |                    |                     |                    |
+      ! | num_msgs_rank(1)   |  num_msgs_rank(2)   | num_msgs_rank(3)   |
+      ! |                    |                     |                    |
+      ! |                    |                     |                    |
+      !                       A                     A                  A
+      !                       |                     |                  |
+      !              sum(num_msgs_rank(1:1))+1      |             num_msgs_sum
+      !                                    sum(num_msgs_rank(1:2))+1
 
-    if (rank == 0) then
-      msgs_all(1:num_msgs) = msgs(1:num_msgs)
-      do i = 1, size - 1
-        imsg = sum(num_msgs_rank(1:i)) + 1
-        call MPI_RECV(&
-        & msgs_all(imsg), &
-        & num_msgs_rank(i + 1) * MSG_LENGTH_HERE, MPI_CHARACTER, &
-        & i, 7, MPI_COMM_WORLD, status, ierr)
-      enddo
-    else
-      call MPI_Send(&
-      & msgs, &
-      & num_msgs * MSG_LENGTH_HERE               , MPI_CHARACTER, &
-      & 0, 7, MPI_COMM_WORLD, ierr)
+      if (rank == 0) then
+        msgs_all(1:num_msgs) = msgs(1:num_msgs)
+        do i = 1, size - 1
+          imsg = sum(num_msgs_rank(1:i)) + 1
+          call MPI_RECV(&
+          & msgs_all(imsg), &
+          & num_msgs_rank(i + 1) * MSG_LENGTH_HERE, MPI_CHARACTER, &
+          & i, 7, MPI_COMM_WORLD, status, ierr)
+        enddo
+      else
+        call MPI_Send(&
+        & msgs, &
+        & num_msgs * MSG_LENGTH_HERE               , MPI_CHARACTER, &
+        & 0, 7, MPI_COMM_WORLD, ierr)
+      endif
     endif
 
     call MPI_REDUCE(&

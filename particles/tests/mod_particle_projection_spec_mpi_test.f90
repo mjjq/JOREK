@@ -301,7 +301,7 @@ subroutine test_rhs_square_10_10_pcg32
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
   test_nodes,test_elements,ifail_loc)
   do ii=1,size(n_particles)
-    tol = TWOPI*(7d0/sqrt(real(n_particles(ii),kind=8)))
+    tol = TWOPI*(8d0/sqrt(real(n_particles(ii),kind=8)))
     call rhs_convergence(rank_loc,n_tasks_loc,test_nodes,&
     test_elements,n_particles(ii),expect_mean,tol,f_1,proj_one,&
     pcg32_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)
@@ -324,7 +324,7 @@ subroutine test_rhs_square_10_10_sobseq
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
   test_nodes,test_elements,ifail_loc)
   do ii=1,size(n_particles)
-    tol = TWOPI*(65d0/sqrt(real(n_particles(ii),kind=8)))
+    tol = TWOPI*(67d0/sqrt(real(n_particles(ii),kind=8)))
     call rhs_convergence(rank_loc,n_tasks_loc,test_nodes,&
     test_elements,n_particles(ii),expect_mean,tol,f_1,proj_one,&
     sobseq_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)

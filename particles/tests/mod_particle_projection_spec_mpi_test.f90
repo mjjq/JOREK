@@ -17,6 +17,8 @@ real*8,parameter  :: test_time=0.d0
 integer,dimension(4),parameter :: n_particles=(/1000,10000,100000,1000000/)
 integer,dimension(1),parameter :: nx=(/10/)
 integer,dimension(1),parameter :: ny=(/10/)
+integer,dimension(2),parameter :: nrad=(/30,40/)
+integer,dimension(4),parameter :: npol=(/22,21,31,32/)
 type(type_node_list),pointer    :: test_nodes
 type(type_element_list),pointer :: test_elements
 integer :: rank_loc,n_tasks_loc,ifail_loc
@@ -31,6 +33,16 @@ subroutine run_fruit_particle_projection_spec_mpi(rank,n_tasks,ifail)
   write(*,'(/A)') "  ... running: particle projection spec mpi"
   call run_test_case(test_particle_projection_square_10_10_pcg,&
   'test_particle_projection_square_10_10_pcg')
+  call run_test_case(test_particle_projection_square_10_10_sobseq,&
+  'test_particle_projection_square_10_10_sobseq')
+  call run_test_case(test_particle_projection_polar_30_22_sobseq,&
+  'test_particle_projection_polar_30_22_sobseq')
+  call run_test_case(test_particle_projection_polar_30_21_sobseq,&
+  'test_particle_projection_polar_30_21_sobseq')
+  call run_test_case(test_particle_projection_flux_40_31_pcg32,&
+  'test_particle_projection_polar_40_31_pcg32')
+  call run_test_case(test_particle_projection_flux_40_32_pcg32,&
+  'test_particle_projection_polar_40_32_pcg32')
   write(*,'(/A)') "  ... tearing-down: particle projection spec mpi"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_particle_projection_spec_mpi
@@ -81,6 +93,153 @@ subroutine test_particle_projection_square_10_10_pcg
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_square_10_10_pcg
 
+!> Project 10^3-10^5 particles generated with sobseq ont square grid
+subroutine test_particle_projection_square_10_10_sobseq
+  use constants,                         only: TWOPI
+  use mod_sobseq_rng,                    only: sobseq_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_square_grid
+  implicit none
+  real*8,parameter              :: expect_mean=1.d0
+  real*8,parameter              :: expect_rms=0.d0
+  real*8,parameter              :: volume=TWOPI
+  real*8,dimension(3),parameter :: tol_mean=[3.d-8,3.d-8,3.d-8]
+  real*8,dimension(3),parameter :: tol_rms=[4.05d2/real(n_particles(1),kind=8),&
+                                   4.05d2/real(n_particles(2),kind=8),&
+                                   4.05d2/real(n_particles(3),kind=8)]
+  character(len=message_len)    :: message
+  character(len=filename_len)   :: filename
+  write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection square nx: ',&
+  nx(1),' ny: ',ny(1),' sobseq rank: ',rank_loc,':'
+  write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_square_rank',&
+  rank_loc,'_nx',nx(1),'_ny',ny(1),'_sobseq'
+  call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
+  test_nodes,test_elements,ifail_loc)
+  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
+  n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+end subroutine test_particle_projection_square_10_10_sobseq
+
+!> Project 10^3-10^5 particles generated with sobseq ont even polar grid
+subroutine test_particle_projection_polar_30_22_sobseq
+  use constants,                         only: TWOPI
+  use phys_module,                       only: R_geo,amin
+  use mod_sobseq_rng,                    only: sobseq_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_polar_grid
+  implicit none
+  real*8,parameter              :: expect_mean=1.d0
+  real*8,parameter              :: expect_rms=0.d0
+  real*8,dimension(3),parameter :: tol_mean=[3.d-5,3.d-5,3.d-5]
+  real*8,dimension(3),parameter :: tol_rms=[5d4/real(n_particles(1),kind=8),&
+                                   5d4/real(n_particles(2),kind=8),&
+                                   5d4/real(n_particles(3),kind=8)]
+  real*8                        :: volume
+  character(len=message_len)    :: message
+  character(len=filename_len)   :: filename
+  write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection polar nrad: ',&
+  nrad(1),' npol: ',npol(1),' sobseq rank: ',rank_loc,':'
+  write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_polar_rank',&
+  rank_loc,'_nrad',nrad(1),'_npol',npol(1),'_sobseq'
+  call default_polar_grid(rank_loc,n_tasks_loc,npol(1),nrad(1),&
+  test_nodes,test_elements,ifail_loc)
+  volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
+  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
+  n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+end subroutine test_particle_projection_polar_30_22_sobseq
+
+!> Project 10^3-10^5 particles generated with sobseq ont odd polar grid
+subroutine test_particle_projection_polar_30_21_sobseq
+  use constants,                         only: TWOPI
+  use phys_module,                       only: R_geo,amin
+  use mod_sobseq_rng,                    only: sobseq_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_polar_grid
+  implicit none
+  real*8,parameter              :: expect_mean=1.d0
+  real*8,parameter              :: expect_rms=0.d0
+  real*8,dimension(3),parameter :: tol_mean=[3.d-5,3.d-5,3.d-5]
+  real*8,dimension(3),parameter :: tol_rms=[5d4/real(n_particles(1),kind=8),&
+                                   5d4/real(n_particles(2),kind=8),&
+                                   5d4/real(n_particles(3),kind=8)]
+  real*8                        :: volume
+  character(len=message_len)    :: message
+  character(len=filename_len)   :: filename
+  write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection polar nrad: ',&
+  nrad(1),' npol: ',npol(2),' sobseq rank: ',rank_loc,':'
+  write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_polar_rank',&
+  rank_loc,'_nrad',nrad(1),'_npol',npol(2),'_sobseq'
+  call default_polar_grid(rank_loc,n_tasks_loc,npol(2),nrad(1),&
+  test_nodes,test_elements,ifail_loc)
+  volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
+  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
+  n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+end subroutine test_particle_projection_polar_30_21_sobseq
+
+!> Project 10^3-10^5 particles generated with pcg32 ont odd flux grid
+subroutine test_particle_projection_flux_40_31_pcg32
+  use constants,                         only: TWOPI
+  use phys_module,                       only: R_geo,amin
+  use mod_pcg32_rng,                     only: pcg32_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_flux_grid
+  implicit none
+  real*8,parameter              :: expect_mean=1.d0
+  real*8,parameter              :: expect_rms=0.d0
+  real*8,dimension(3),parameter :: tol_mean=[2.d-5,2.d-5,2.d-5]
+  real*8,dimension(3),parameter :: tol_rms=[4.5d1/real(n_particles(1),kind=8),&
+                                   4.5d1/real(n_particles(2),kind=8),&
+                                   4.5d1/real(n_particles(3),kind=8)]
+  real*8                        :: volume
+  character(len=message_len)    :: message
+  character(len=filename_len)   :: filename
+  write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection flux nrad: ',&
+  nrad(2),' npol: ',npol(3),' pcg32 rank: ',rank_loc,':'
+  write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_flux_rank',&
+  rank_loc,'_nrad',nrad(2),'_npol',npol(3),'_pcg32'
+  call default_flux_grid(rank_loc,n_tasks_loc,npol(3),nrad(2),&
+  test_nodes,test_elements,ifail_loc)
+  volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
+  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
+  n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+end subroutine test_particle_projection_flux_40_31_pcg32
+
+!> Project 10^3-10^5 particles generated with pcg32 ont even flux grid
+subroutine test_particle_projection_flux_40_32_pcg32
+  use constants,                         only: TWOPI
+  use phys_module,                       only: R_geo,amin
+  use mod_pcg32_rng,                     only: pcg32_rng
+  use mod_project_particles,             only: proj_one
+  use mod_projection_helpers_test_tools, only: f_1,default_flux_grid
+  implicit none
+  real*8,parameter              :: expect_mean=1.d0
+  real*8,parameter              :: expect_rms=0.d0
+  real*8,dimension(3),parameter :: tol_mean=[2.d-5,2.d-5,2.d-5]
+  real*8,dimension(3),parameter :: tol_rms=[4.5d1/real(n_particles(1),kind=8),&
+                                   4.5d1/real(n_particles(2),kind=8),&
+                                   4.5d1/real(n_particles(3),kind=8)]
+  real*8                        :: volume
+  character(len=message_len)    :: message
+  character(len=filename_len)   :: filename
+  write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection flux nrad: ',&
+  nrad(2),' npol: ',npol(4),' pcg32 rank: ',rank_loc,':'
+  write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_flux_rank',&
+  rank_loc,'_nrad',nrad(2),'_npol',npol(4),'_pcg32'
+  call default_flux_grid(rank_loc,n_tasks_loc,npol(4),nrad(2),&
+  test_nodes,test_elements,ifail_loc)
+  volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
+  call project_n(rank_loc,master_rank,test_nodes,test_elements,proj_one,f_1,&
+  n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
+  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+end subroutine test_particle_projection_flux_40_32_pcg32
 
 !> Tool -------------------------------------------
 !> Helper function to project n particles onto a grid in nod_list,

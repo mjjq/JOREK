@@ -80,13 +80,13 @@ subroutine test_particle_projection_square_10_10_pcg32
   implicit none
   real*8,parameter              :: expect_mean=1.d0
   real*8,parameter              :: expect_rms=0.d0
+  real*8,parameter              :: tol_rms_const=2.3d1
   real*8,parameter              :: volume=TWOPI
   real*8,dimension(3),parameter :: tol_mean=[3.d-8,3.d-8,3.d-8]
-  real*8,dimension(3),parameter :: tol_rms=[2.3d1/real(n_particles(1),kind=8),&
-                                   2.3d1/real(n_particles(2),kind=8),&
-                                   2.3d1/real(n_particles(3),kind=8)]
+  real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  tol_rms = tol_rms_const/sqrt(real(n_particles(1:3)*n_tasks_loc,kind=8))
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection square nx: ',&
   nx(1),' ny: ',ny(1),' pcg32 rank: ',rank_loc,':'
   write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_square_rank',&
@@ -94,9 +94,8 @@ subroutine test_particle_projection_square_10_10_pcg32
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
   test_nodes,test_elements,ifail_loc)
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
-  proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,&
-  expect_rms,tol_mean,tol_rms/real(n_tasks_loc,kind=8),&
-  trim(adjustl(message)),trim(adjustl(filename)),&
+  proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,&
+  tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),&
   ifail_loc,apply_dirichlet_in=impose_dirichlet,&
   write_particle_in=write_projection_output)
 end subroutine test_particle_projection_square_10_10_pcg32
@@ -201,13 +200,13 @@ subroutine test_particle_projection_flux_40_31_pcg32
   implicit none
   real*8,parameter              :: expect_mean=1.d0
   real*8,parameter              :: expect_rms=0.d0
+  real*8,parameter              :: tol_rms_const=4.5d1
   real*8,dimension(3),parameter :: tol_mean=[2.d-5,2.d-5,2.d-5]
-  real*8,dimension(3),parameter :: tol_rms=[4.5d1/real(n_particles(1),kind=8),&
-                                   4.5d1/real(n_particles(2),kind=8),&
-                                   4.5d1/real(n_particles(3),kind=8)]
   real*8                        :: volume
+  real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  tol_rms = tol_rms_const/sqrt(real(n_tasks_loc*n_particles(1:3),kind=8))
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection flux nrad: ',&
   nrad(2),' npol: ',npol(3),' pcg32 rank: ',rank_loc,':'
   write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_flux_rank',&
@@ -217,8 +216,8 @@ subroutine test_particle_projection_flux_40_31_pcg32
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),trim(adjustl(filename)),&
-  ifail_loc,apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_flux_40_31_pcg32
 
 !> Project 10^3-10^5 particles generated with pcg32 ont even flux grid
@@ -231,13 +230,13 @@ subroutine test_particle_projection_flux_40_32_pcg32
   implicit none
   real*8,parameter              :: expect_mean=1.d0
   real*8,parameter              :: expect_rms=0.d0
+  real*8,parameter              :: tol_rms_const=4.5d1
   real*8,dimension(3),parameter :: tol_mean=[2.d-5,2.d-5,2.d-5]
-  real*8,dimension(3),parameter :: tol_rms=[4.5d1/real(n_particles(1),kind=8),&
-                                   4.5d1/real(n_particles(2),kind=8),&
-                                   4.5d1/real(n_particles(3),kind=8)]
   real*8                        :: volume
+  real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  tol_rms = tol_rms_const/sqrt(real(n_tasks_loc*n_particles(1:3),kind=8))
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection flux nrad: ',&
   nrad(2),' npol: ',npol(4),' pcg32 rank: ',rank_loc,':'
   write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_flux_rank',&
@@ -247,8 +246,8 @@ subroutine test_particle_projection_flux_40_32_pcg32
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),trim(adjustl(filename)),&
-  ifail_loc,apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
+  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_flux_40_32_pcg32
 
 !> Test convergence of RHS for 10000 particles with varying filter factor

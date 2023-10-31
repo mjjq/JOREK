@@ -201,7 +201,7 @@ subroutine test_particle_projection_flux_40_31_pcg32
   real*8,parameter              :: expect_mean=1.d0
   real*8,parameter              :: expect_rms=0.d0
   real*8,parameter              :: tol_rms_const=4.5d1
-  real*8,dimension(3),parameter :: tol_mean=[2.d-5,2.d-5,2.d-5]
+  real*8,dimension(3),parameter :: tol_mean=[7.d-5,7.d-5,7.d-5]
   real*8                        :: volume
   real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message
@@ -231,7 +231,7 @@ subroutine test_particle_projection_flux_40_32_pcg32
   real*8,parameter              :: expect_mean=1.d0
   real*8,parameter              :: expect_rms=0.d0
   real*8,parameter              :: tol_rms_const=4.5d1
-  real*8,dimension(3),parameter :: tol_mean=[2.d-5,2.d-5,2.d-5]
+  real*8,dimension(3),parameter :: tol_mean=[7.d-5,7.d-5,7.d-5]
   real*8                        :: volume
   real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message

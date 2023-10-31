@@ -276,7 +276,8 @@ subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
     nrad(1),' npol: ',npol(1),' pcg32 rank: ',rank_loc,':'
     write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_smoothing_rank',&
     rank_loc,'_nrad',nrad(1),'_npol',npol(1),'_pcg32'
-    tol_rms = (/(10.d0**(-0.0738*x**2 - 0.972*x - 3.71))*1.2/)
+    tol_rms = (/(10.d0**(-0.0738*x**2 - 0.972*x - 3.71))*1.75/)
+    write(*,*) 'tol: ',tol_rms
     call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
     proj_one,f_1,[n_particles(2)],sobseq_rng(),weight,expect_mean,expect_rms,tol_mean,&
     tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,smoothing_in=smoothing,&

@@ -31,8 +31,8 @@ subroutine run_fruit_particle_projection_spec_mpi(rank,n_tasks,ifail)
   write(*,'(/A)') "  ... setting-up: particle projection spec mpi"
   call setup(rank,n_tasks,ifail)
   write(*,'(/A)') "  ... running: particle projection spec mpi"
-  call run_test_case(test_particle_projection_square_10_10_pcg,&
-  'test_particle_projection_square_10_10_pcg')
+  call run_test_case(test_particle_projection_square_10_10_pcg32,&
+  'test_particle_projection_square_10_10_pcg32')
   call run_test_case(test_particle_projection_square_10_10_sobseq,&
   'test_particle_projection_square_10_10_sobseq')
   call run_test_case(test_particle_projection_polar_30_22_sobseq,&
@@ -72,7 +72,7 @@ end subroutine teardown
 
 !> Tests ------------------------------------------
 !> Project 10^3-10^5 particles generated with pcg ont square grid
-subroutine test_particle_projection_square_10_10_pcg
+subroutine test_particle_projection_square_10_10_pcg32
   use constants,                         only: TWOPI
   use mod_pcg32_rng,                     only: pcg32_rng
   use mod_project_particles,             only: proj_one
@@ -88,17 +88,18 @@ subroutine test_particle_projection_square_10_10_pcg
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection square nx: ',&
-  nx(1),' ny: ',ny(1),' pcg rank: ',rank_loc,':'
+  nx(1),' ny: ',ny(1),' pcg32 rank: ',rank_loc,':'
   write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_square_rank',&
-  rank_loc,'_nx',nx(1),'_ny',ny(1),'_pcg'
+  rank_loc,'_nx',nx(1),'_ny',ny(1),'_pcg32'
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
   test_nodes,test_elements,ifail_loc)
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,&
-  expect_rms,tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),&
+  expect_rms,tol_mean,tol_rms/real(n_tasks_loc,kind=8),&
+  trim(adjustl(message)),trim(adjustl(filename)),&
   ifail_loc,apply_dirichlet_in=impose_dirichlet,&
   write_particle_in=write_projection_output)
-end subroutine test_particle_projection_square_10_10_pcg
+end subroutine test_particle_projection_square_10_10_pcg32
 
 !> Project 10^3-10^5 particles generated with sobseq ont square grid
 subroutine test_particle_projection_square_10_10_sobseq
@@ -124,8 +125,9 @@ subroutine test_particle_projection_square_10_10_sobseq
   test_nodes,test_elements,ifail_loc)
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,&
-  tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
-  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  tol_mean,tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),&
+  trim(adjustl(filename)),ifail_loc,apply_dirichlet_in=impose_dirichlet,&
+  write_particle_in=write_projection_output)
 end subroutine test_particle_projection_square_10_10_sobseq
 
 !> Project 10^3-10^5 particles generated with sobseq ont even polar grid
@@ -154,8 +156,9 @@ subroutine test_particle_projection_polar_30_22_sobseq
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,&
-  tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
-  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  tol_mean,tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),&
+  trim(adjustl(filename)),ifail_loc,apply_dirichlet_in=impose_dirichlet,&
+  write_particle_in=write_projection_output)
 end subroutine test_particle_projection_polar_30_22_sobseq
 
 !> Project 10^3-10^5 particles generated with sobseq ont odd polar grid
@@ -184,8 +187,8 @@ subroutine test_particle_projection_polar_30_21_sobseq
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
-  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),trim(adjustl(filename)),&
+  ifail_loc,apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_polar_30_21_sobseq
 
 !> Project 10^3-10^5 particles generated with pcg32 ont odd flux grid
@@ -214,8 +217,8 @@ subroutine test_particle_projection_flux_40_31_pcg32
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
-  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),trim(adjustl(filename)),&
+  ifail_loc,apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_flux_40_31_pcg32
 
 !> Project 10^3-10^5 particles generated with pcg32 ont even flux grid
@@ -244,8 +247,8 @@ subroutine test_particle_projection_flux_40_32_pcg32
   volume=5d-1*R_geo*((TWOPI*amin)**2)!< compute the volume
   call project_n(rank_loc,master_rank,n_tasks_loc,test_nodes,test_elements,&
   proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
-  tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
-  apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),trim(adjustl(filename)),&
+  ifail_loc,apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
 end subroutine test_particle_projection_flux_40_32_pcg32
 
 !> Test convergence of RHS for 10000 particles with varying filter factor
@@ -294,13 +297,13 @@ subroutine test_rhs_square_10_10_pcg32
   real*8                      :: tol
   character(len=message_len)  :: message
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error RHS convergence square nx: ',&
-  nx(1),' ny: ',ny(1),' pcg rank: ',rank_loc,':'
+  nx(1),' ny: ',ny(1),' pcg32 rank: ',rank_loc,':'
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
   test_nodes,test_elements,ifail_loc)
   do ii=1,size(n_particles)
     tol = TWOPI*(7d0/sqrt(real(n_particles(ii),kind=8)))
-    call rhs_convergence(test_nodes,test_elements,&
-    n_particles(ii),expect_mean,tol,f_1,proj_one,&
+    call rhs_convergence(rank_loc,n_tasks_loc,test_nodes,&
+    test_elements,n_particles(ii),expect_mean,tol,f_1,proj_one,&
     pcg32_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)
   enddo
 end subroutine test_rhs_square_10_10_pcg32
@@ -322,8 +325,8 @@ subroutine test_rhs_square_10_10_sobseq
   test_nodes,test_elements,ifail_loc)
   do ii=1,size(n_particles)
     tol = TWOPI*(65d0/sqrt(real(n_particles(ii),kind=8)))
-    call rhs_convergence(test_nodes,test_elements,&
-    n_particles(ii),expect_mean,tol,f_1,proj_one,&
+    call rhs_convergence(rank_loc,n_tasks_loc,test_nodes,&
+    test_elements,n_particles(ii),expect_mean,tol,f_1,proj_one,&
     sobseq_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)
   enddo
 end subroutine test_rhs_square_10_10_sobseq
@@ -425,8 +428,8 @@ end subroutine project_n
 !> Create RHS by integrating f and with monte carlo methods and
 !> check that they are close. This guards against errors in
 !> node indices etc
-subroutine rhs_convergence(node_list,element_list,n_particles,&
-mean_expect,tol,funct,f_proj,rng,message,ifail,&
+subroutine rhs_convergence(rank,n_tasks,node_list,element_list,&
+n_particles,mean_expect,tol,funct,f_proj,rng,message,ifail,&
 n_tor_local_in,i_tor_local_in,smoothing_in,apply_dirichlet_in)
   use mpi_mod
   use constants,                         only: TWOPI
@@ -443,7 +446,7 @@ n_tor_local_in,i_tor_local_in,smoothing_in,apply_dirichlet_in)
   type(type_element_list),intent(inout) :: element_list 
   integer,intent(inout)                 :: ifail
   class(type_rng),intent(in)            :: rng
-  integer,intent(in)                    :: n_particles
+  integer,intent(in)                    :: n_particles,rank,n_tasks
   real*8,intent(in)                     :: tol,mean_expect
   character(len=*),intent(in)           :: message
   real*8,external                       :: funct,f_proj
@@ -473,7 +476,7 @@ n_tor_local_in,i_tor_local_in,smoothing_in,apply_dirichlet_in)
   allocate(project%f(1)); project%f(1)%group=1; project%f(1)=proj_f(f_proj,group=1);
   project%n_tor_local = n_tor_local; project%i_tor_local = i_tor_local;
   !> initialise particles
-  allocate(sim%groups(1)); 
+  sim%my_id=rank; sim%n_cpu=n_tasks; allocate(sim%groups(1)); 
   allocate(particle_fieldline::sim%groups(1)%particles(n_particles));
   !> to prevent omp trouble (!?)
   call find_RZ(node_list,element_list,R_particle_in,Z_particle_in,&

@@ -84,10 +84,6 @@ subroutine test_octree
 
   max_depth = 3
   call octree_init(triangles, max_depth, boundary, tree, err)
-  write(*,*) 'depth: ',tree%depth,' allocated contained: ',allocated(tree%contained),&
-  ' associated children: ',associated(tree%children)
-  if(associated(tree%children)) write(*,*) 'size children: ',size(tree%children)
-  if(allocated(tree%contained)) write(*,*) 'size associated: ',size(tree%children)
   call assert_equals(0, err, "A new initialization successful.")
  
   ! A box that fully contains a triangle and corners two others

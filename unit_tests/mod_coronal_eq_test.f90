@@ -1,9 +1,8 @@
 !> Module testing Coronal equilibrium for selected elements
 !> IMPORTANT NOTE: the original set of adas data have been 
-!> shortened specifically, 96_li, 96_n 50_w adas datafile
-!> have been removed since the respective xcd and ccd files
-!> downloaded from the ADAS are error files (they do not
-!> exists in the ADAS database)
+!> shortened specifically, 96_li, 96_n 50_w, 96_c adas datafile
+!> have been removed since the respective xcd, ccd files
+!> and/or prc datafiles downloaded from the ADAS presents errors
 module mod_coronal_eq_test
 use fruit
 use mod_openadas, only: ADF11_all
@@ -12,12 +11,13 @@ private
 public :: run_fruit_coronal_eq
 !> Variables --------------------------------------
 integer,parameter                       :: set_len=200
-integer,parameter                       :: n_sets=5
+integer,parameter                       :: n_sets=4
 real*8,parameter                        :: sleep_time=0.5
 logical,parameter                       :: write_coronal=.false.
-character(len=5),dimension(n_sets),parameter :: sets=(/'89_b ','96_c ',&
-                                                '96_n ','89_ar','96_he'/)
-character(len=2),dimension(n_sets),parameter :: type_imp=(/'B ','C ','N ','Ar','He'/)
+logical,parameter                       :: download_adas=.false.
+character(len=5),dimension(n_sets),parameter :: sets=(/'89_b ','96_n ',&
+                                                       '89_ar','96_he'/)
+character(len=2),dimension(n_sets),parameter :: type_imp=(/'B ','N ','Ar','He'/)
 type(ADF11_all),dimension(n_sets) :: adas
 contains
 !> Fruit basket -----------------------------------
@@ -38,12 +38,16 @@ subroutine setup()
   implicit none
   integer :: ii
   character(len=set_len) :: set,sleep_command
-  set = '';
-  do ii=1,n_sets
-    set = trim(set)//' '//trim(sets(ii))
-  enddo
   !> read all set data on one go
-  call system('util/fetch_openadas.sh'//trim(set))
+  if(download_adas) then
+      set = ''
+    do ii=1,n_sets
+      set = trim(set)//' '//trim(sets(ii))
+    enddo
+    call system('util/fetch_openadas.sh'//trim(set))
+  else
+    call system('cp unit_tests/adas_files/*.dat .')
+  endif
   !> wait until system finishes
   write(sleep_command,'(A,F0.3)') 'sleep ',sleep_time
   call system(sleep_command)
@@ -57,7 +61,11 @@ end subroutine setup
 subroutine teardown()
   use phys_module,  only: imp_type
   implicit none
+  integer :: ii
   imp_type(1:n_sets) = ''
+  do ii=1,n_sets
+    call system('rm *'//trim(sets(ii))//'.dat')
+  enddo
 end subroutine teardown
 
 !> Tests ------------------------------------------

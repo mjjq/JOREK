@@ -81,46 +81,50 @@ subroutine test_octree
 
   ! Free resources and second initialization
   call octree_free(tree)
-!> SEGMENTATION FAULT OF OCTREE_INIT WHEN MAX_DEPTH>2
-!  max_depth = 4!3
-!  call octree_init(triangles, max_depth, boundary, tree, err)
-!  call assert_equals(0, err, "A new initialization successful.")
+
+  max_depth = 3
+  call octree_init(triangles, max_depth, boundary, tree, err)
+  write(*,*) 'depth: ',tree%depth,' allocated contained: ',allocated(tree%contained),&
+  ' associated children: ',associated(tree%children)
+  if(associated(tree%children)) write(*,*) 'size children: ',size(tree%children)
+  if(allocated(tree%contained)) write(*,*) 'size associated: ',size(tree%children)
+  call assert_equals(0, err, "A new initialization successful.")
  
   ! A box that fully contains a triangle and corners two others
-!  x = (/ -0.5, 0.5, 1.5 /)
-!  call octree_find(tree, x, node, err)
-!  call assert_equals(0, err, "Query successful.")
+  x = (/ -0.5, 0.5, 1.5 /)
+  call octree_find(tree, x, node, err)
+  call assert_equals(0, err, "Query successful.")
 
-!  err = 3
-!  do i = 1,size(node%contained)
-!     if( any( node%contained(i)%triangle_id .eq. (/2,3,4/) ) ) err = err - 1
-!  end do
-!  call assert_equals(0, err, "Queried node fully contains one triangle, vertex of second triangle, and corners side of a third.")
+  err = 3
+  do i = 1,size(node%contained)
+     if( any( node%contained(i)%triangle_id .eq. (/2,3,4/) ) ) err = err - 1
+  end do
+  call assert_equals(0, err, "Queried node fully contains one triangle, vertex of second triangle, and corners side of a third.")
 
   ! A box completely inside a triangle
-!  x = (/ -0.5, -0.5, 0.5 /)
-!  call octree_find(tree, x, node, err)
-!  call assert_equals(0, err, "Query successful.")
-!  err = 1
-!  if( size(node%contained) .eq. 1 .and. node%contained(1)%triangle_id .eq. 1 ) err = 0
-!  call assert_equals(0, err, "Queried a node completely within a triangle.")
+  x = (/ -0.5, -0.5, 0.5 /)
+  call octree_find(tree, x, node, err)
+  call assert_equals(0, err, "Query successful.")
+  err = 1
+  if( size(node%contained) .eq. 1 .and. node%contained(1)%triangle_id .eq. 1 ) err = 0
+  call assert_equals(0, err, "Queried a node completely within a triangle.")
 
   ! A box which is outside the triangle but inside its bounding box
-!  x = (/ 1.5, 1.5, 0.5 /)
-!  call octree_find(tree, x, node, err)
-!  call assert_equals(0, err, "Query successful.")
-!  if( size(node%contained) .eq.1 .and.node%contained(1)%triangle_id .eq. 1 ) err =0
-!  call assert_equals(0, err, "Queried a node outside triangle but within the triangle's bounding box.")
+  x = (/ 1.5, 1.5, 0.5 /)
+  call octree_find(tree, x, node, err)
+  call assert_equals(0, err, "Query successful.")
+  if( size(node%contained) .eq.1 .and.node%contained(1)%triangle_id .eq. 1 ) err =0
+  call assert_equals(0, err, "Queried a node outside triangle but within the triangle's bounding box.")
 
   ! This box was already empty in previous iteration, so it should not have been divided
-!  x = (/ -1.0, -1.0, -1.0 /)
-!  call octree_find(tree, x, node, err)
-!  call assert_equals(0, err, "Query successful.")
-!  call assert_true( all(node%boundary .eq. emptybox), "No children spawned for already empty node.")
+  x = (/ -1.0, -1.0, -1.0 /)
+  call octree_find(tree, x, node, err)
+  call assert_equals(0, err, "Query successful.")
+  call assert_true( all(node%boundary .eq. emptybox), "No children spawned for already empty node.")
 
   ! Free resources and third initialization which fails as a triangle is outside the box
-!  call octree_free(tree)
-!> DEBUG DEBUG
+  call octree_free(tree)
+
   boundary  = reshape((/ -2, 2, -2, 2, -1, 1 /), shape(boundary))
   max_depth = 1
   call octree_init(triangles, max_depth, boundary, tree, err)

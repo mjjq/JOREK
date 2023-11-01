@@ -89,11 +89,13 @@ element_list,ifail,Rbegin_in,Rend_in,Zbegin_in,Zend_in)
   Rend   = 1.5d0; if(present(Rend_in))   Rend   = Rend_in;
   Zbegin = -5d-1; if(present(Zbegin_in)) Zbegin = Zbegin_in;
   Zend   = 5d-1;  if(present(Zend_in))   Zend   = Zend_in;
-  !> compute grid
+  !> compute gridi
+  call tr_meminit(my_id,n_cpu) !< initialise memory tracing
   call preset_parameters()
   call initialize_square_grid_parameters(nx,ny,Rbegin,Rend,Zbegin,Zend)
   call det_modes(); call initialise_basis()
   call broadcast_phys(my_id)
+  call tr_resetfile()
   call initial_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
   call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
   call broadcast_elements(my_id,element_list)
@@ -129,10 +131,12 @@ subroutine default_polar_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail
   integer,intent(in)                     :: my_id,n_cpu,npol,nrad
   type(type_bnd_node_list)               :: bnd_node_list
   type(type_bnd_element_list)            :: bnd_elm_list
+  call tr_meminit(my_id,n_cpu) !< initialise memory tracing
   call preset_parameters()
   call initialize_polar_grid_parameters(npol,nrad)
   call det_modes(); call initialise_basis();
   call broadcast_phys(my_id)
+  call tr_resetfile()
   call initial_grid(node_list,element_list,bnd_node_list,bnd_elm_list,my_id,n_cpu)
   call broadcast_boundary(my_id,bnd_elm_list,bnd_node_list)
   call broadcast_elements(my_id,element_list)

@@ -499,7 +499,7 @@ def generate_argument_parser():
   description='generate, compile and execute JOREK unit tests')
   parser.add_argument('--directories','-d',type=str,nargs='*',\
   required=False,action='store',dest='test_dirs',\
-  default=['./particles/tests','./non_regression_tests/unit_tests'],\
+  default=['./particles/tests','./unit_tests'],\
   help='relative paths of the directories containing unit tests')
   parser.add_argument('--parallelisms','-p',type=str,nargs='*',\
   required=False,action='store',dest='test_parallel',\

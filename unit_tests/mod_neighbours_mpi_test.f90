@@ -11,6 +11,7 @@ integer,parameter :: ny=2
 real*8,parameter  :: R_begin=0d0
 real*8,parameter  :: Z_begin=0d0
 real*8,parameter  :: Z_end=1.d0
+real*8,parameter  :: tol=1d-12
 logical,parameter :: fill_boundary=.false.
 type(type_node_list)    :: test_nodes
 type(type_element_list) :: test_elements
@@ -26,7 +27,8 @@ subroutine run_fruit_neighbours_mpi(rank,n_tasks,ifail)
   write(*,'(/A)') "  ... running: neighbours mpi"
   call run_test_case(test_nearby_elements,'test_nearby_elements')
   call run_test_case(test_update_neighbours,'test_update_neighbours')
-!  call run_test_case(,'')
+  call run_test_case(test_coordinate_in_neighbour_square,&
+  'test_coordinate_in_neighbour_square')
   write(*,'(/A)') "  ... tearing-down: neighbours mpi"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_neighbours_mpi
@@ -144,6 +146,116 @@ subroutine test_update_neighbours
     'Error update neighbours: element 2 not next to 1 after update!')
   enddo
 end subroutine test_update_neighbours
+
+subroutine test_coordinate_in_neighbour_square()
+  use mod_settings,                      only: n_vertex_max
+  use mod_element_rtree,                 only: rtree_initialized
+  use mod_neighbours,                    only: neighbours
+  use mod_neighbours,                    only: update_neighbours
+  use mod_neighbours,                    only: coord_in_neighbour
+  use mod_projection_helpers_test_tools, only: default_square_grid
+  implicit none
+  integer,parameter :: nx=3
+  integer,parameter :: neighbour_sol=2
+  integer,dimension(n_vertex_max,2),parameter :: vertices_elm1=reshape(&
+                                                 (/1,2,5,4,2,5,4,1/),&
+                                                 (/n_vertex_max,2/))
+  integer,dimension(n_vertex_max,3),parameter :: vertices_elm2=reshape(&
+                                                 (/2,3,6,5,3,6,5,2,3,2,5,6/),&
+                                                 (/n_vertex_max,3/))
+  real*8,parameter  :: R_end=2d0
+  real*8,dimension(3),parameter  :: s_sol=(/0d0,1d0,3d-1/)
+  real*8,dimension(3),parameter  :: t_sol=(/0d0,1d0,3d-1/)
+  real*8,dimension(2),parameter  :: s_test=(/1d0,3d-1/)
+  real*8,dimension(2),parameter  :: t_test=(/3d-1,0d0/)
+  integer             :: neighbour_id
+  real*8,dimension(2) :: st
+  
+  ! Construct a specific set of elements
+  ! 4-------5-------6 x(2) = 1
+  ! |       |       |
+  ! |   1   |   2   |
+  ! |       |       |
+  ! 1-------2-------3 x(2) = 0
+  ! 0       1       2
+  !x(1)
+  call default_square_grid(rank_loc,n_tasks_loc,nx,ny,test_nodes,&
+  test_elements,ifail_loc,R_begin,R_end,Z_begin,Z_end)
+  ! test default element orientation
+  ! 4-------5-------6 (node number)
+  ! |4     3|4     3| (vertex number)
+  ! |   1   |   2   |
+  ! |1     2x1     2|
+  ! 1-------2-------3
+  test_elements%element(1)%vertex = vertices_elm1(:,1)
+  test_elements%element(2)%vertex = vertices_elm2(:,1)
+  call update_neighbours(test_nodes,test_elements)
+  !> test 1 position on the boundary and check if 
+  !> the transformation is correct
+  st = (/s_test(1),t_test(1)/)
+  call coord_in_neighbour(test_nodes,test_elements,1,neighbour_id,st)
+  call assert_equals(neighbour_sol,neighbour_id,&
+  'Error coordinate in neighbour square test: right element id is not 1 (default)!')
+  call assert_equals([s_sol(1),t_sol(3)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 1 (default)!')
+  call coord_in_neighbour(test_nodes,test_elements,2,neighbour_id,st)
+  call assert_equals([s_sol(2),t_sol(3)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 2 (default)!')
+  ! Rotate the right element and retest
+  ! 4-------5-------6 (node number)
+  ! |4     3|3     2| (vertex number)
+  ! |   1   |   2   |
+  ! |1     2x4     1|
+  ! 1-------2-------3
+  test_elements%element(2)%vertex = vertices_elm2(:,2)
+  rtree_initialized = .false.
+  call update_neighbours(test_nodes,test_elements)
+  st = (/s_test(1),t_test(1)/)
+  call coord_in_neighbour(test_nodes,test_elements,1,neighbour_id,st)
+  call assert_equals(neighbour_sol,neighbour_id,&
+  'Error coordinate in neighbour square test: right element id is not 2 (right rotation)!')
+  call assert_equals([s_sol(3),t_sol(2)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 1 (right rotation)!')
+  call coord_in_neighbour(test_nodes,test_elements,2,neighbour_id,st)
+  call assert_equals([s_sol(2),t_sol(3)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 2 (right rotation)!')
+  ! Rotate the left element and retest
+  ! 4-------5-------6 (node number)
+  ! |3     2|3     2| (vertex number)
+  ! |   1   |   2   |
+  ! |4     1x4     1|
+  ! 1-------2-------3
+  test_elements%element(1)%vertex = vertices_elm1(:,2)
+  rtree_initialized = .false.
+  call update_neighbours(test_nodes,test_elements)
+  st = (/s_test(2),t_test(2)/)
+  call coord_in_neighbour(test_nodes,test_elements,1,neighbour_id,st)
+  call assert_equals(neighbour_sol,neighbour_id,&
+  'Error coordinate in neighbour square test: right element id is not 3 (left rotation)!')
+  call assert_equals([s_sol(3),t_sol(2)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 1 (left rotation)!')
+  call coord_in_neighbour(test_nodes,test_elements,2,neighbour_id,st)
+  call assert_equals([s_sol(3),t_sol(1)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 2 (left rotation)!')
+  ! Reverse orientation of right element and retest
+  ! 4-------5-------6 (node number)
+  ! |3     2|3     4| (vertex number)
+  ! |   1   |   2   |
+  ! |4     1x2     1|
+  ! 1-------2-------3
+  test_elements%element(2)%vertex = vertices_elm2(:,3)
+  rtree_initialized = .false.
+  call update_neighbours(test_nodes,test_elements)
+  st = (/s_test(2),t_test(2)/)
+  call coord_in_neighbour(test_nodes,test_elements,1,neighbour_id,st)
+  call assert_equals(neighbour_sol,neighbour_id,&
+  'Error coordinate in neighbour square test: right element id is not 4 (right reverse)!')
+  call assert_equals([s_sol(2),t_sol(3)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 1 (right reverse)!')
+  call coord_in_neighbour(test_nodes,test_elements,2,neighbour_id,st)
+  call assert_equals([s_sol(3),t_sol(1)],st,2,tol,&
+  'Error coordinate in neighbour square test: st mismatch elm 2 (right reverse)!')  
+end subroutine test_coordinate_in_neighbour_square
 
 !> ------------------------------------------------
 end module mod_neighbours_mpi_test

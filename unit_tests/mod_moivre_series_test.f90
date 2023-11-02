@@ -1,5 +1,6 @@
 module mod_moivre_series_test
 use fruit
+use fruit_mpi
 #ifndef UNIT_TESTS
 use mod_parameters, only: n_tor,n_period
 #endif

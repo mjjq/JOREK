@@ -305,35 +305,19 @@ end subroutine moivre
 ! Assumes that mode is of the form [0 1 1 2 2 3 3 4 4] ([0 4 4 8 8 12 12])
 ! This is roughly 3-4 times faster in my tests than just calculating the sines
 ! and cosines (even when that is vectorized).
-#ifdef UNIT_TESTS
-pure subroutine mode_moivre(n_tor_loc,n_period_loc,phi,HZ)
-  integer,intent(in) :: n_tor_loc,n_period_loc
-  real*8, intent(out) :: HZ(n_tor_loc)
-#else
 pure subroutine mode_moivre(phi,HZ)
   integer, parameter  :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
-  real*8, intent(out) :: HZ(n_tor)
-#endif
   real*8, intent(in)  :: phi
-#ifdef UNIT_TESTS
-  integer    :: n_mode
-#endif
+  real*8, intent(out) :: HZ(n_tor)
+
   real*8     :: phase
   complex*16 :: H_complex
   integer    :: i
 
-#ifdef UNIT_TESTS
-  n_mode = (n_tor_loc-1)/2
-#endif
-
   HZ(1) = 1.d0
   
   do i=1, n_mode
-#ifdef UNIT_TESTS
-    phase     = real(n_period_loc*i,8)*phi
-#else
     phase     = real(n_period*i,8)*phi
-#endif
     H_complex = exp(cmplx(0.d0,1.d0)*phase)
     HZ(2*i)   = real(H_complex)
     HZ(2*i+1) = aimag(H_complex)

@@ -51,19 +51,15 @@ subroutine test_moivre_sincos()
   enddo
 end subroutine test_moivre_sincos
 
+#ifdef UNIT_TESTS
 subroutine test_mode_moivre
   use mod_interp, only: mode_moivre
   implicit none
   integer                      :: ii,jj
   real*8                       :: angle
   character(len=id_string_len) :: id_string
-  HZ = 0d0;
   do jj=1,n_phi
-#ifdef UNIT_TESTS
-    call mode_moivre(n_tor_test,n_period_test,phi0(jj),HZ)
-#else
-    call mode_moivre(phi0(jj),HZ)
-#endif
+    call mode_moivre(phi0(jj),HZ,n_tor_test,n_period_test)
     call assert_equals(1.d0,HZ(1),tol,&
     'Error mode moivre: cos n=0 mismatch!')
     if(size(HZ)>1) then
@@ -78,7 +74,91 @@ subroutine test_mode_moivre
     endif
   enddo 
 end subroutine test_mode_moivre
+#else
+subroutine test_mode_moivre
+  use mod_interp, only: mode_moivre
+  implicit none
+  integer                      :: ii,jj
+  real*8                       :: angle
+  character(len=id_string_len) :: id_string
+  do jj=1,n_phi
+    call mode_moivre(phi0(jj),HZ)
+    call assert_equals(1.d0,HZ(1),tol,&
+    'Error mode moivre: cos n=0 mismatch!')
+    if(size(HZ)>1) then
+      do ii=1,(n_tor-1)/2
+        write(id_string,'(I3)') ii
+        angle = real(n_period*ii,kind=8)*phi0(jj)
+        call assert_equals(cos(angle),HZ(2*ii),tol,&
+       'Error mode moivre: cos mismatch id: '//id_string//'!')
+        call assert_equals(sin(angle),HZ(2*ii+1),tol,&
+       'Error mode moivre: sin mismatch id: '//id_string//'!')
+      enddo
+    endif
+  enddo 
+end subroutine test_mode_moivre
+#endif
 
-
+#ifdef UNIT_TESTS
+subroutine test_sincosperiod_moivre
+  use mod_interp, only: sincosperiod_moivre
+  implicit none
+  integer                      :: ii,jj
+  real*8                       :: cosphi,sinphi
+  character(len=id_string_len) :: id_string 
+  do jj=1,n_phi
+    call sincosperiod_moivre(phi0(jj),HZ,dHZ,n_tor_test,n_period_test)
+    call assert_equals(1.d0,HZ(1),tol,&
+    'Error mode sincosperiod moivre: cos n=0 mismatch!')
+    call assert_equals(0.d0,dHZ(1),tol,&
+    'Error mode sincosperiod moivre: dcos n=0 mismatch!')
+    if(size(HZ)>1) then
+      do ii=1,(n_tor_test-1)/2
+        write(id_string,'(I3)') ii
+        cosphi = cos(real(n_period_test*ii,kind=8)*phi0(jj))
+        sinphi = sin(real(n_period_test*ii,kind=8)*phi0(jj))
+        call assert_equals(cosphi,HZ(2*ii),tol,&
+        'Error mode sincosperiod moivre: cos mismatch id: '//id_string//'!')
+        call assert_equals(sinphi,HZ(2*ii+1),tol,&
+        'Error mode sincosperiod moivre: sin mismatch id: '//id_string//'!')
+        call assert_equals(n_period_test*sinphi,dHZ(2*ii),tol,&
+        'Error mode sincosperiod moivre: dcos mismatch id: '//id_string//'!')
+        call assert_equals(-n_period_test*cosphi,dHZ(2*ii+1),tol,&
+        'Error mode sincosperiod moivre: dsin mismatch id: '//id_string//'!')
+      enddo
+    endif
+  enddo
+end subroutine test_sincosperiod_moivre
+#else
+subroutine test_sincosperiod_moivre
+  use mod_interp, only: sincosperiod_moivre
+  implicit none
+  integer                      :: ii,jj
+  real*8                       :: cosphi,sinphi
+  character(len=id_string_len) :: id_string 
+  do jj=1,n_phi
+    call sincosperiod_moivre(phi0(jj),HZ,dHZ)
+    call assert_equals(1.d0,HZ(1),tol,&
+    'Error mode sincosperiod moivre: cos n=0 mismatch!')
+    call assert_equals(0.d0,dHZ(1),tol,&
+    'Error mode sincosperiod moivre: dcos n=0 mismatch!')
+    if(size(HZ)>1) then
+      do ii=1,(n_tor-1)/2
+        write(id_string,'(I3)') ii
+        cosphi = cos(real(n_period*ii,kind=8)*phi0(jj))
+        sinphi = sin(real(n_period*ii,kind=8)*phi0(jj))
+        call assert_equals(cosphi,HZ(2*ii),tol,&
+        'Error mode sincosperiod moivre: cos mismatch id: '//id_string//'!')
+        call assert_equals(sinphi,HZ(2*ii+1),tol,&
+        'Error mode sincosperiod moivre: sin mismatch id: '//id_string//'!')
+        call assert_equals(n_period*sinphi,dHZ(2*ii),tol,&
+        'Error mode sincosperiod moivre: dcos mismatch id: '//id_string//'!')
+        call assert_equals(-n_period*cosphi,dHZ(2*ii+1),tol,&
+        'Error mode sincosperiod moivre: dsin mismatch id: '//id_string//'!')
+      enddo
+    endif
+  enddo
+end subroutine test_sincosperiod_moivre
+#endif
 !> ------------------------------------------------
 end module mod_moivre_series_test

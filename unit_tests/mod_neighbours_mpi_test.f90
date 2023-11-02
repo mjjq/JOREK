@@ -1,5 +1,6 @@
 module mod_neighbours_mpi_test
 use fruit
+use fruit_mpi
 use data_structure
 implicit none
 private

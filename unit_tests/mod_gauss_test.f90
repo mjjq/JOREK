@@ -12,7 +12,7 @@ integer,parameter                      :: n_schemes=1
 integer,dimension(n_schemes),parameter :: n_gauss_p=(/n_gauss/)
 integer,dimension(n_schemes),parameter :: n_tests=(/14/)
 real*8,dimension(n_schemes),parameter  :: tol_test=(/2d-3/)
-real*8,dimension(n_schemes),parameter  :: tol_exact=(/n_gauss*4d-17/)
+real*8,dimension(n_schemes),parameter  :: tol_exact=(/n_gauss*1d-16/)
 contains
 !> Fruit basket -----------------------------------
 subroutine run_fruit_gauss

@@ -342,6 +342,14 @@ real*8     :: JZ0 , JZ0_AR__p, JZ0_AR__n, JZ0_AR__nn, JZ0_AZ__p, JZ0_AZ__n, JZ0_
 real*8     :: Jp0 , Jp0_AR__p, Jp0_AR__n, Jp0_AR__nn, Jp0_AZ__p, Jp0_AZ__n, Jp0_AZ__nn, Jp0_A3__p, Jp0_A3__n, Jp0_A3__nn
 real*8     :: JJ2,  JJ2_AR__p, JJ2_AR__n, JJ2_AR__nn, JJ2_AZ__p, JJ2_AZ__n, JJ2_AZ__nn, JJ2_A3__p, JJ2_A3__n, JJ2_A3__nn
 
+!  --- For shock capturing stabilization
+real*8     :: midp_edge1(1:2), midp_edge2(1:2), midp_edge3(1:2), midp_edge4(1:2)
+real*8     :: len1, len2, h_e
+real*8     :: Ptot_R,  Ptot_Z,  Ptot_p, Ptot_corr
+real*8     :: f_p, d_p, tau_sc, R_rho, R_Ti, R_Te
+real*8     :: s_p, src_rho, src_pi, src_pe
+real*8     :: rhoi_eff, rhoe_eff
+
 ! --- Switches for numerical stability of resistive and diamagnetic terms in AR and AZ equations
 eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
 tauIC_ARAZ= 0.d0  ! =0.0 to switch off diamagnetic terms for AR and AZ equations
@@ -492,6 +500,17 @@ do i=1,n_vertex_max
     enddo
   enddo
 enddo
+
+! approximate estimate of the element length h_e
+! needed for Shock capturing stabilzation
+midp_edge1(:) =  0.5d0 * ( nodes(1)%x(1,1,:) + nodes(2)%x(1,1,:) )
+midp_edge2(:) =  0.5d0 * ( nodes(2)%x(1,1,:) + nodes(3)%x(1,1,:) )
+midp_edge3(:) =  0.5d0 * ( nodes(3)%x(1,1,:) + nodes(4)%x(1,1,:) )
+midp_edge4(:) =  0.5d0 * ( nodes(4)%x(1,1,:) + nodes(1)%x(1,1,:) )
+
+len1 = sqrt( (midp_edge1(1)-midp_edge3(1))**2 + (midp_edge1(2)-midp_edge3(2))**2)
+len2 = sqrt( (midp_edge2(1)-midp_edge4(1))**2 + (midp_edge2(2)-midp_edge4(2))**2)
+h_e = dmin1(len1, len2)
 
 ! --- Sources
 ! --- Note about the current sources:
@@ -1176,6 +1195,10 @@ do i=1,n_vertex_max
           Jp0 = BZ0_R - BR0_Z
 
           JJ2 = JR0*JR0 + JZ0*JZ0 + Jp0*Jp0
+
+          ! For shock capturing stabilization
+          tau_sc = 0.d0
+          if (use_sc) call calculate_sc_quantities()
 
           do im=n_tor_start, n_tor_end
 
@@ -3112,6 +3135,55 @@ return
 
 CONTAINS
 
+! subroutine that calculates shock-capturing stabilization related terms
+subroutine calculate_sc_quantities()
+
+  d_p = 0.d0      
+  ! approximate residuals
+  R_rho    = rho0 * divU + UgradRho
+  R_Ti     = 0.d0
+  R_Te     = 0.d0
+  
+  ! total pressure including neutrals and impurities
+  Ptot_corr= rho0_corr * (Ti0_corr + Te0_corr)
+  Ptot_p   = Pi0_p + Pe0_p
+  Ptot_R   = Pi0_R + Pe0_R
+  Ptot_Z   = Pi0_Z + Pe0_Z
+
+  rhoi_eff = rho0_corr 
+  rhoe_eff = rho0_corr
+  R_Ti = UgradTi + (gamma-1.d0) * pi0 / rhoi_eff * divU
+  R_Te = UgradTe + (gamma-1.d0) * pe0 / rhoe_eff * divU
+
+  d_p  = (Ti0 + Te0) * R_rho + rhoi_eff * R_Ti + rhoe_eff * R_Te
+  
+  ! Shock-detector term based on the total pressure gradient
+  f_p = dsqrt( Ptot_R*Ptot_R + Ptot_Z*Ptot_Z + Ptot_p*Ptot_p/ (R*R) ) / Ptot_corr * h_e
+  ! Estimation of the numerical stabilization coefficient
+  tau_sc = h_e * h_e * abs(d_p) / Ptot_corr * f_p
+  
+  ! Use of source terms to increase the stabilization coefficients
+  if(add_sources_in_sc)then
+    src_rho = particle_source(ms,mt)
+    src_pi  = heat_source_i(ms,mt)
+    src_pe  = heat_source_e(ms,mt)
+    s_p = (Ti0 + Te0) * src_rho + src_pi + src_pe
+  
+    tau_sc = h_e * h_e * (abs(d_p) + abs(s_p)) / Ptot_corr * f_p
+  endif
+  
+  ! Updates in the physical diffusivities to locally add numerical
+  ! stabilization.
+  ! visco_par = visco_par + visco_par_sc_num * tau_sc ! unused
+  visco_T   = visco_T   + visco_sc_num     * tau_sc
+  D_par     = D_par     + D_par_sc_num     * tau_sc
+  D_prof    = D_prof    + D_perp_sc_num    * tau_sc
+  ZKi_par_T = ZKi_par_T + ZK_i_par_sc_num  * tau_sc
+  ZKi_prof  = ZKi_prof  + ZK_i_perp_sc_num * tau_sc
+  ZKe_par_T = ZKe_par_T + ZK_e_par_sc_num  * tau_sc
+  ZKe_prof  = ZKe_prof  + ZK_e_perp_sc_num * tau_sc
+
+end subroutine calculate_sc_quantities
 
 subroutine my_fft(in_fft,out_fft,n)
   implicit none

@@ -137,6 +137,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 mode_families_modes, n_mode_families,               &
                 weights_per_family, autodistribute_ranks,           &
                 ranks_per_family, treat_axis, Z_xpoint_limit,       &
+                use_sc, add_sources_in_sc, visco_sc_num,            &
+                D_perp_sc_num, D_par_sc_num,                        &
+                ZK_i_perp_sc_num, ZK_i_par_sc_num,                  &
+                ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
                 more_outfile_digits,                                &
                 force_central_node,                                 &
                 n_particles, tstep_particles, nstep_particles,      & !Particles extension

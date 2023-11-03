@@ -67,7 +67,8 @@ end subroutine initialize_square_grid_parameters
 
 !> Create a simple square grid with n nodes in each dimension
 subroutine default_square_grid(my_id,n_cpu,nx,ny,node_list,&
-element_list,ifail,Rbegin_in,Rend_in,Zbegin_in,Zend_in)
+element_list,ifail,Rbegin_in,Rend_in,Zbegin_in,Zend_in,&
+bnd_node_list_out,bnd_element_list_out)
   use mpi_mod
   use data_structure
   use phys_module
@@ -78,6 +79,8 @@ element_list,ifail,Rbegin_in,Rend_in,Zbegin_in,Zend_in)
   integer,intent(inout)                 :: ifail
   type(type_node_list),intent(inout)    :: node_list
   type(type_element_list),intent(inout) :: element_list
+  type(type_bnd_node_list),intent(out),optional    :: bnd_node_list_out
+  type(type_bnd_element_list),intent(out),optional :: bnd_element_list_out
   integer, intent(in)                   :: nx,ny,my_id,n_cpu
   real*8,intent(in),optional            :: Rbegin_in,Rend_in
   real*8,intent(in),optional            :: Zbegin_in,Zend_in
@@ -101,6 +104,8 @@ element_list,ifail,Rbegin_in,Rend_in,Zbegin_in,Zend_in)
   call broadcast_elements(my_id,element_list)
   call broadcast_nodes(my_id,node_list)
   call populate_element_rtree(node_list,element_list)
+  if(present(bnd_node_list_out))    bnd_node_list_out      = bnd_node_list
+  if(present(bnd_element_list_out)) bnd_element_list_out   = bnd_elm_list
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
 end subroutine default_square_grid
 
@@ -117,7 +122,8 @@ end subroutine initialize_polar_grid_parameters
 
 !> Create a simple polar grid with npol nodes in the poloidal direction, 30 radial
 !> volume = 2 pi^2 R a^2
-subroutine default_polar_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
+subroutine default_polar_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail,&
+ bnd_node_list_out,bnd_element_list_out)
   use mpi_mod
   use phys_module
   use data_structure
@@ -129,6 +135,8 @@ subroutine default_polar_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail
   type(type_node_list), intent(inout)    :: node_list
   type(type_element_list), intent(inout) :: element_list
   integer,intent(in)                     :: my_id,n_cpu,npol,nrad
+  type(type_bnd_node_list),intent(out),optional    :: bnd_node_list_out
+  type(type_bnd_element_list),intent(out),optional :: bnd_element_list_out
   type(type_bnd_node_list)               :: bnd_node_list
   type(type_bnd_element_list)            :: bnd_elm_list
   call tr_meminit(my_id,n_cpu) !< initialise memory tracing
@@ -142,6 +150,8 @@ subroutine default_polar_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail
   call broadcast_elements(my_id,element_list)
   call broadcast_nodes(my_id,node_list)
   call populate_element_rtree(node_list,element_list)
+  if(present(bnd_node_list_out))    bnd_node_list_out      = bnd_node_list
+  if(present(bnd_element_list_out)) bnd_element_list_out   = bnd_elm_list
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
 end subroutine default_polar_grid
 
@@ -253,7 +263,8 @@ end subroutine set_test_equilibrium_parameters
 
 !> Create a simple flux aligned grid with npol nodes in the poloidal direction, 40 radial
 !> by calculating equilibrium and creating flux aligned grid (like in jorek2_main)
-subroutine default_flux_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
+subroutine default_flux_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail,&
+bnd_node_list_out,bnd_element_list_out)
   use phys_module
   use mpi_mod
   use mod_clock,         only: clck_init 
@@ -269,6 +280,8 @@ subroutine default_flux_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
   type(type_element_list), intent(inout) :: element_list
   integer,intent(in)                     :: my_id,n_cpu
   integer, intent(in)                    :: npol,nrad !< Number of nodes (poloidal,radial)
+  type(type_bnd_node_list),intent(out),optional    :: bnd_node_list_out
+  type(type_bnd_element_list),intent(out),optional :: bnd_element_list_out
   type(type_surface_list)                :: surface_list
   type(type_bnd_node_list)               :: bnd_node_list
   type(type_bnd_element_list)            :: bnd_elm_list
@@ -304,6 +317,8 @@ subroutine default_flux_grid(my_id,n_cpu,npol,nrad,node_list,element_list,ifail)
   call broadcast_equil_state(my_id)
   call populate_element_rtree(node_list,element_list)
   call update_equil_state(my_id,node_list,element_list,bnd_elm_list,xpoint,xcase)
+  if(present(bnd_node_list_out))    bnd_node_list_out      = bnd_node_list
+  if(present(bnd_element_list_out)) bnd_element_list_out   = bnd_elm_list
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
 end subroutine default_flux_grid
 

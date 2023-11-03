@@ -46,7 +46,7 @@ subroutine setup()
     enddo
     call system('util/fetch_openadas.sh'//trim(set))
   else
-    call system('cp unit_tests/adas_files/*.dat .')
+    call system('cp reg_tests/unit_tests/adas_files/*.dat .')
   endif
   !> wait until system finishes
   write(sleep_command,'(A,F0.3)') 'sleep ',sleep_time

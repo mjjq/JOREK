@@ -38,12 +38,17 @@ subroutine run_fruit_spectra_deterministic_test()
   call setup
   call write_spectrum_inputs
   write(*,'(/A)') "  ... running: spectra deterministic integrator tests"
-  call test_spectrum_input_reader
-  call test_deterministic_allocation_noinit
-  call test_deterministic_allocation_init
-  call test_set_spectrum_int_2nd_properties
-  call test_generate_midpoint_spectra
-  call test_2nd_order_rectangle_integrator
+  call run_test_case(test_spectrum_input_reader,'test_spectrum_input_reader')
+  call run_test_case(test_deterministic_allocation_noinit,&
+  'test_deterministic_allocation_noinit')
+  call run_test_case(test_deterministic_allocation_init,&
+  'test_deterministic_allocation_init')
+  call run_test_case(test_set_spectrum_int_2nd_properties,&
+  'test_set_spectrum_int_2nd_properties')
+  call run_test_case(test_generate_midpoint_spectra,&
+  'test_generate_midpoint_spectra')
+  call run_test_case(test_2nd_order_rectangle_integrator,&
+  'test_2nd_order_rectangle_integrator')
   write(*,'(/A)') "  ... tearing-down: spectra deterministic integrator tests"
   call teardown
 end subroutine run_fruit_spectra_deterministic_test
@@ -101,11 +106,11 @@ subroutine test_spectrum_input_reader()
   int_param,real_param)
   close(read_unit)
   !> checks
-  call assert_equals(n_inputs,(/2,2*n_spectra/),2,&
+  call assert_equals((/2,2*n_spectra/),n_inputs,2,&
   "Error spectrum deterministic 2nd input reader: N# inputs mismatch!")
-  call assert_equals(int_param,(/n_points,n_spectra/),2,&
+  call assert_equals((/n_points,n_spectra/),int_param,2,&
   "Error spectrum deterministic 2nd input reader: N# integer parameters mismatch!")
-  call assert_equals(real_param,(/min_wlen(1),min_wlen(2),max_wlen(1),max_wlen(2)/),4,&
+  call assert_equals((/min_wlen(1),min_wlen(2),max_wlen(1),max_wlen(2)/),real_param,4,&
   "Error spectrum deterministic 2nd input reader: N# real parameters mismatch!")
   !> cleanup
   if(allocated(int_param)) deallocate(int_param)
@@ -123,25 +128,25 @@ subroutine test_deterministic_allocation_noinit()
 
   !> test allocation and deallocation
   call spectrum%allocate_spectrum(n_points,n_spectra)
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum integration 2nd allocation: n_points do not match!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum integration 2nd allocation: n_spectra do not match!")
   call assert_equals_allocatable_arrays(n_points,n_spectra,spectrum%points,&
   "Error spectrum integration 2nd allocation: points")
   call spectrum%deallocate_spectrum
-  call assert_equals(spectrum%n_points,-1,&
+  call assert_equals(-1,spectrum%n_points,&
   "Error spectrum integration 2nd deallocation: n_points not set to default!")
-  call assert_equals(spectrum%n_spectra,-1,&
+  call assert_equals(-1,spectrum%n_spectra,&
   "Error spectrum integration 2nd deallocation: n_spectra not set to default!")
   call assert_false(allocated(spectrum%points),&
   "Error spectrum integration 2nd deallocation: points not deallocated!")
 
   !> test constructor
   spectrum = spectrum_integrator_2nd(n_points,n_spectra)
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum integration 2nd construction: n_points do not match!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum integration 2nd construction: n_spectra do not match!")
   call assert_equals_allocatable_arrays(n_points,n_spectra,spectrum%points,&
   "Error spectrum integration 2nd construction: points")
@@ -164,9 +169,9 @@ subroutine test_deterministic_allocation_init()
   real8_param(n_spectra+1:2*n_spectra) = max_wlen
   !> test allocation and deallocation with initialisation
   call spectrum%allocate_spectrum(n_points,n_spectra,real8_param)
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum integration 2nd allocation init: n_points do not match!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum integration 2nd allocation init: n_spectra do not match!")
   call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,min_wlen,&
   tol_grid,"Error spectrum integration 2nd allocation init: min wavelengths")
@@ -175,9 +180,9 @@ subroutine test_deterministic_allocation_init()
   call assert_equals_allocatable_arrays(n_points,n_spectra,spectrum%points,&
   "Error spectrum integration 2nd allocation init: points")
   call spectrum%deallocate_spectrum
-  call assert_equals(spectrum%n_points,-1,&
+  call assert_equals(-1,spectrum%n_points,&
   "Error spectrum integration 2nd deallocation init: n_points not set to default!")
-  call assert_equals(spectrum%n_spectra,-1,&
+  call assert_equals(-1,spectrum%n_spectra,&
   "Error spectrum integration 2nd deallocation init: n_spectra not set to default!")
   call assert_false(allocated(spectrum%points),&
   "Error spectrum integration 2nd deallocation init: points not deallocated!")
@@ -188,9 +193,9 @@ subroutine test_deterministic_allocation_init()
 
   !> test construction with initialisation
   spectrum = spectrum_integrator_2nd(n_points,n_spectra,min_wlen,max_wlen)
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum integration 2nd construction init: n_points do not match!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum integration 2nd construction init: n_spectra do not match!")
   call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,min_wlen,&
   tol_grid,"Error spectrum integration 2nd construction init: min wavelengths")
@@ -221,29 +226,29 @@ subroutine test_set_spectrum_int_2nd_properties()
   !> test settings on unallocated properties
   spectrum = spectrum_integrator_2nd(n_points,n_spectra)
   call spectrum%set_spectrum_interval(n_spectra,min_wlen,max_wlen)
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum integration set interval not allocated: n_spectra do not match!")
-  call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,&
+  call assert_equals(min_wlen,spectrum%min_wlen,n_spectra,&
   "Error spectrum integration set interval not allocated: min_wlen mismatch!")
-  call assert_equals(spectrum%wbin_size,wbin_size,n_spectra,&
+  call assert_equals(wbin_size,spectrum%wbin_size,n_spectra,&
   "Error spectrum integration set interval not allocated: wbin_size mismatch!")
 
   !> Test change of interval alrady allocated
   call spectrum%set_spectrum_interval(n_spectra,min_wlen_2,max_wlen_2)
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum integration set interval allocated: n_spectra do not match!")
-  call assert_equals(spectrum%min_wlen,min_wlen_2,n_spectra,&
+  call assert_equals(min_wlen_2,spectrum%min_wlen,n_spectra,&
   "Error spectrum integration set interval allocated: min_wlen mismatch!")
-  call assert_equals(spectrum%wbin_size,wbin_size_2,n_spectra,&
+  call assert_equals(wbin_size_2,spectrum%wbin_size,n_spectra,&
   "Error spectrum integration set interval allocated: wbin_size mismatch!")
 
   !> Test change of interval alrady with re-allocated
   call spectrum%set_spectrum_interval(2*n_spectra,min_wlen_3,max_wlen_3)
   call assert_equals(spectrum%n_spectra,2*n_spectra,&
   "Error spectrum integration set interval reallocated: n_spectra do not match!")
-  call assert_equals(spectrum%min_wlen,min_wlen_3,2*n_spectra,&
+  call assert_equals(min_wlen_3,spectrum%min_wlen,2*n_spectra,&
   "Error spectrum integration set interval reallocated: min_wlen mismatch!")
-  call assert_equals(spectrum%wbin_size,wbin_size_3,2*n_spectra,&
+  call assert_equals(wbin_size_3,spectrum%wbin_size,2*n_spectra,&
   "Error spectrum integration set interval reallocated: wbin_size mismatch!")
 
   !> cleanup
@@ -271,7 +276,7 @@ subroutine test_generate_midpoint_spectra()
     grid_nodes(n_points+1) = (spectrum%points(n_points,jj)+5.d-1*spectrum%wbin_size(jj))
     grid_nodes = grid_nodes/interval_nodes
     interval_nodes = 1.d0
-    call assert_equals(grid_nodes,interval_nodes,n_points,tol_grid,&
+    call assert_equals(interval_nodes,grid_nodes,n_points,tol_grid,&
     "Error spectrum integration generate spectrum: spectral grid mismatch!")
   enddo
   !> cleanaup
@@ -334,13 +339,13 @@ subroutine test_2nd_order_rectangle_integrator()
   do ii=1,n_spectra
     call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
     log10(rel_int_error(ii,:)),conv_coeff)
-    call assert_equals(conv_coeff(1),accuracy_order,tol_accuracy,&
+    call assert_equals(accuracy_order,conv_coeff(1),tol_accuracy,&
     "Error spectrum integration: expected accuracy order not matched!")
     call assert_true(rel_int_error(ii,n_convergence).lt.tol_int_error,&
     "Error spectrum integration: expected minimum error not achieved!")
     call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
     log10(rel_int_error_taskloop(ii,:)),conv_coeff)
-    call assert_equals(conv_coeff(1),accuracy_order,tol_accuracy,&
+    call assert_equals(accuracy_order,conv_coeff(1),tol_accuracy,&
     "Error spectrum integration taskloop: expected accuracy order not matched!")
     call assert_true(rel_int_error_taskloop(ii,n_convergence).lt.tol_int_error,&
     "Error spectrum integration taskloop: expected minimum error not achieved!")

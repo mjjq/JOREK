@@ -14,7 +14,6 @@ integer,parameter                       :: set_len=200
 integer,parameter                       :: n_sets=4
 real*8,parameter                        :: sleep_time=0.5
 logical,parameter                       :: write_coronal=.false.
-logical,parameter                       :: download_adas=.false.
 character(len=5),dimension(n_sets),parameter :: sets=(/'89_b ','96_n ',&
                                                        '89_ar','96_he'/)
 character(len=2),dimension(n_sets),parameter :: type_imp=(/'B ','N ','Ar','He'/)
@@ -37,17 +36,9 @@ subroutine setup()
   use mod_openadas, only: read_adf11
   implicit none
   integer :: ii
-  character(len=set_len) :: set,sleep_command
-  !> read all set data on one go
-  if(download_adas) then
-      set = ''
-    do ii=1,n_sets
-      set = trim(set)//' '//trim(sets(ii))
-    enddo
-    call system('util/fetch_openadas.sh'//trim(set))
-  else
-    call system('cp reg_tests/unit_tests/adas_files/*.dat .')
-  endif
+  character(len=set_len) :: sleep_command
+  !> copy adas data from regression test folder
+  call system('cp reg_tests/unit_tests/adas_files/*.dat .')
   !> wait until system finishes
   write(sleep_command,'(A,F0.3)') 'sleep ',sleep_time
   call system(sleep_command)

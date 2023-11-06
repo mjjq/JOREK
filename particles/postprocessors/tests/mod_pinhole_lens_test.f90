@@ -29,10 +29,10 @@ subroutine run_fruit_pinhole_lens()
   call setup
   call write_pinhole_lens_inputs
   write(*,'(/A)') "  ... running: lens tests"
-  call test_pinhole_lens_inputs
-  call test_pinhole_lens_sampling
-  call test_pinhole_initialisation
-  call test_pinhole_lens_pdf
+  call run_test_case(test_pinhole_lens_inputs,'test_pinhole_lens_inputs')
+  call run_test_case(test_pinhole_lens_sampling,'test_pinhole_lens_sampling')
+  call run_test_case(test_pinhole_initialisation,'test_pinhole_initialisation')
+  call run_test_case(test_pinhole_lens_pdf,'test_pinhole_lens_pdf')
   write(*,'(/A)') "  ... tearing-down: lens tests"
   call teardown
 end subroutine run_fruit_pinhole_lens
@@ -91,11 +91,11 @@ subroutine test_pinhole_lens_inputs()
   call pinhole%read_lens_inputs(rank,read_unit,n_inputs,int_param,real_param)
   close(read_unit)
   !> checks
-  call assert_equals(n_inputs,(/1,3/),2,&
+  call assert_equals((/1,3/),n_inputs,2,&
   "Error pinhole lens read inputs: N# inputs mismatch!")
-  call assert_equals(int_param,(/n_x/),1,&
+  call assert_equals((/n_x/),int_param,1,&
   "Error pinhole lens read inputs: integer parameters mismatch!")
-  call assert_equals(real_param,center_sol,n_x,tol_r8,&
+  call assert_equals(center_sol,real_param,n_x,tol_r8,&
   "Error pinhole lens read inputs: real parameters mismatch!")
   !> cleanup
   if(allocated(int_param)) deallocate(int_param)
@@ -108,12 +108,12 @@ subroutine test_pinhole_initialisation()
   implicit none
   type(pinhole_lens) :: pinhole
   call pinhole%init_pinhole(n_x,center_sol)
-  call assert_equals(pinhole%n_x,n_x,&
+  call assert_equals(n_x,pinhole%n_x,&
   "Error pinhole lens initialisation: n_x mismatch!")
   call assert_true(allocated(pinhole%center),&
   "Error pinhole lens initialisation: center not allocated!")
   if(allocated(pinhole%center)) &
-  call assert_equals(pinhole%center,center_sol,n_x,tol_r8,&
+  call assert_equals(center_sol,pinhole%center,n_x,tol_r8,&
   "Error pinhole lens initialisation: center mismatch!")
   call pinhole%deallocate_lens
 end subroutine test_pinhole_initialisation
@@ -126,7 +126,7 @@ subroutine test_pinhole_lens_sampling()
   real*8,dimension(n_x,n_samples) :: x_loc
   call pinhole%init_pinhole(n_x,center_sol)
   call pinhole%sampling(n_samples,x_loc)
-  call assert_equals(x_loc,x_sol,n_x,n_samples,tol_r8,&
+  call assert_equals(x_sol,x_loc,n_x,n_samples,tol_r8,&
   "Error pinhole lens sampling: positions mismatch!")
   call pinhole%deallocate_lens
 end subroutine test_pinhole_lens_sampling
@@ -139,7 +139,7 @@ subroutine test_pinhole_lens_pdf()
   real*8,dimension(n_samples) :: pdf_loc
   call pinhole%init_pinhole(n_x,center_sol)
   call pinhole%pdf(n_samples,x_sol,pdf_loc)
-  call assert_equals(pdf_loc,ones_r8,n_samples,tol_r8,&
+  call assert_equals(ones_r8,pdf_loc,n_samples,tol_r8,&
   "Error pinhole lens sampling: positions mismatch!")
   call pinhole%deallocate_lens
 end subroutine test_pinhole_lens_pdf

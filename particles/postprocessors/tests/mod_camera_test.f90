@@ -48,10 +48,13 @@ subroutine run_fruit_camera
   write(*,'(/A)') "  ... setting-up: camera tests"
   call setup()
   write(*,'(/A)') "  ... running: camera tests"
-  call test_de_allocate_camera
-  call test_computation_pixel_ids_st_plane_point
-  call test_computation_pixel_to_scaled_plane_point
-  call test_compute_scaled_pixel_position_on_plane
+  call run_test_case(test_de_allocate_camera,'test_de_allocate_camera')
+  call run_test_case(test_computation_pixel_ids_st_plane_point,&
+  'test_computation_pixel_ids_st_plane_point')
+  call run_test_case(test_computation_pixel_to_scaled_plane_point,&
+  'test_computation_pixel_to_scaled_plane_point')
+  call run_test_case(test_compute_scaled_pixel_position_on_plane,&
+  'test_compute_scaled_pixel_position_on_plane')
   write(*,'(/A)') "  ... tearing-down: camera tests"
   call teardown()
 end subroutine run_fruit_camera
@@ -94,12 +97,13 @@ subroutine test_de_allocate_camera()
   !> test allocation from allocated
   call camera_sol%allocate_camera(n_times_sol,n_vertices_sol,&
   n_pixels_x_sol,n_pixels_y_sol,n_spectra_sol)
-  call assert_equals(camera_sol%n_times,n_times_sol,&
+  call assert_equals(n_times_sol,camera_sol%n_times,&
   "Error allocate camera from unallocated: n_times mismatch!")
-  call assert_equals(camera_sol%n_vertices,n_vertices_sol,&
+  call assert_equals(n_vertices_sol,camera_sol%n_vertices,&
   "Error allocate camera from unallocated: n_vertices mismatch!")
-  call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra_sol,n_pixels_x_sol,&
-  n_pixels_y_sol/),3,"Error allocate camera from unallocated: n_pixels_spectra mismatch!")
+  call assert_equals((/n_spectra_sol,n_pixels_x_sol,n_pixels_y_sol/),&
+  camera_sol%n_pixels_spectra,3,&
+  "Error allocate camera from unallocated: n_pixels_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_times_sol,camera_sol%n_active_vertices,0,&
   "Error allocate camera from unallocated: n_active_vertices")  
   call assert_equals_allocatable_arrays(n_times_sol,camera_sol%times,0.d0,&
@@ -120,12 +124,13 @@ subroutine test_de_allocate_camera()
   camera_sol%n_plane_points = n_plane_points_2_sol
   call camera_sol%allocate_camera(n_times_2_sol,n_vertices_2_sol,&
   n_pixels_x_2_sol,n_pixels_y_2_sol,n_spectra_2_sol)
-  call assert_equals(camera_sol%n_times,n_times_2_sol,&
+  call assert_equals(n_times_2_sol,camera_sol%n_times,&
   "Error allocate camera from allocated: n_times mismatch!")
-  call assert_equals(camera_sol%n_vertices,n_vertices_2_sol,&
+  call assert_equals(n_vertices_2_sol,camera_sol%n_vertices,&
   "Error allocate camera from allocated: n_vertices mismatch!")
-  call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra_2_sol,n_pixels_x_2_sol,&
-  n_pixels_y_2_sol/),3,"Error allocate camera from allocated: n_pixels_spectra mismatch!")
+  call assert_equals((/n_spectra_2_sol,n_pixels_x_2_sol,n_pixels_y_2_sol/),&
+  camera_sol%n_pixels_spectra,3,&
+  "Error allocate camera from allocated: n_pixels_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_times_2_sol,camera_sol%n_active_vertices,0,&
   "Error allocate camera from allocated: n_active_vertices")  
   call assert_equals_allocatable_arrays(n_times_2_sol,camera_sol%times,0.d0,&
@@ -142,15 +147,15 @@ subroutine test_de_allocate_camera()
   camera_sol%image_plane,0.d0,"Error allocate camera from allocated: image_plane_direction")
   !> test deallocation
   call camera_sol%deallocate_camera
-  call assert_equals(camera_sol%n_times,0,&
+  call assert_equals(0,camera_sol%n_times,&
   "Error deallocate camera: n_times not zero!")
-  call assert_equals(camera_sol%n_vertices,0,&
+  call assert_equals(0,camera_sol%n_vertices,&
   "Error deallocate camera: n_vertices not zero!")
-  call assert_equals(camera_sol%n_plane_points,0,&
+  call assert_equals(0,camera_sol%n_plane_points,&
   "Error deallocate camera: n_plane_points not zero!")
-  call assert_equals(camera_sol%n_pixels_spectra,(/0,0,0/),3,&
+  call assert_equals((/0,0,0/),camera_sol%n_pixels_spectra,3,&
   "Error deallocate camera: n_pixels_spectra not zero!")
-  call assert_equals(camera_sol%pixel_size,(/0d0,0d0/),2,&
+  call assert_equals((/0.d0,0.d0/),camera_sol%pixel_size,2,&
   "Error deallocate camera: pixels_size not zero!")
   call assert_false(allocated(camera_sol%n_active_vertices),&
   "Error deallocate camera: n_active_vertices allocated!")
@@ -200,10 +205,10 @@ subroutine test_computation_pixel_ids_st_plane_point()
   enddo
   !> test results
   call assert_equals_extended(n_st_sol,n_points_per_pixel_sol,n_pixels_x_sol,&
-  n_pixels_y_sol,pixel_ids,pixel_ids_sol,&
+  n_pixels_y_sol,pixel_ids_sol,pixel_ids,&
   "Error computation position in pixel coordinates: pixel ids mismatch!")
   call assert_equals_rel_error(n_st_sol,n_points_per_pixel_sol,n_pixels_x_sol,&
-  n_pixels_y_sol,st_point_on_pixels,st_point_on_pixels_sol,tol_real8_rel,&
+  n_pixels_y_sol,st_point_on_pixels_sol,st_point_on_pixels,tol_real8_rel,&
   "Error computation position in pixel coordinates: pixel coords. mismatch!")
   !> cleanup
   camera_sol%pixel_size = 0.d0
@@ -237,7 +242,7 @@ subroutine test_computation_pixel_to_scaled_plane_point()
   enddo
   !> check test results
   call assert_equals_extended(2,n_pixels_x_3_sol,n_pixels_y_3_sol,&
-  n_times_sol,st_out,st_in,tol_real8,&
+  n_times_sol,st_in,st_out,tol_real8,&
   "Error computation scaled position: local pixel coord. mismatch!")
   !> cleanup
   call camera_sol%deallocate_camera
@@ -273,9 +278,9 @@ subroutine test_compute_scaled_pixel_position_on_plane()
     camera_sol%plane_edge_length(2,ii))) - y_pixel_ids
   enddo
   !> test results
-  call assert_equals(x_pixels,dot5_x,n_pixels_x_3_sol,n_times_sol,tol_real8,&
+  call assert_equals(dot5_x,x_pixels,n_pixels_x_3_sol,n_times_sol,tol_real8,&
   "Error computation scaled pixel positions: x pixel positions mismatch!")
-  call assert_equals(y_pixels,dot5_y,n_pixels_y_3_sol,n_times_sol,tol_real8,&
+  call assert_equals(dot5_y,y_pixels,n_pixels_y_3_sol,n_times_sol,tol_real8,&
   "Error computation scaled pixel positions: y pixel positions mismatch!")
   !> cleanup
   call camera_sol%deallocate_camera

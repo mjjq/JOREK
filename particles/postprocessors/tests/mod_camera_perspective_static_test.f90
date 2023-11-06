@@ -67,10 +67,14 @@ subroutine run_fruit_camera_perspective_static
   write(*,'(/A)') "  ... setting-up: camera perspective static tests"
   call setup
   write(*,'(/A)') "  ... running: camera perspective static tests"
-  call test_de_allocation_camera_perspective_static
-  call test_init_camera_perspective_static_pinhole
-  call test_cosine_view_angle_static
-  call test_material_funct_perspective_static 
+  call run_test_case(test_de_allocation_camera_perspective_static,&
+  'test_de_allocation_camera_perspective_static')
+  call run_test_case(test_init_camera_perspective_static_pinhole,&
+  'test_init_camera_perspective_static_pinhole')
+  call run_test_case(test_cosine_view_angle_static,&
+  'test_cosine_view_angle_static')
+  call run_test_case(test_material_funct_perspective_static,&
+  'test_material_funct_perspective_static') 
   write(*,'(/A)') "  ... tearing-up: camera perspective static tests"
   call teardown
 end subroutine run_fruit_camera_perspective_static
@@ -139,9 +143,9 @@ subroutine test_init_camera_perspective_static_pinhole()
   call camera_sol%init_camera(pinhole_sol,spectrum_sol,&
   n_int_param,n_real_param,int_param,real_param)
   !> perform tests
-  call assert_equals(camera_sol%n_times,1,&
+  call assert_equals(1,camera_sol%n_times,&
   "Error init camera perspective static pinhole: n_times is not 1")
-  call assert_equals(camera_sol%n_vertices,1,&
+  call assert_equals(1,camera_sol%n_vertices,&
   "Error init camera perspective static pinhole: n vertices is not 1")
   call assert_equals_allocatable_arrays(n_times_sol,camera_sol%n_active_vertices,&
   "Error init camera perspective static pinhole: n active vertices")
@@ -149,14 +153,14 @@ subroutine test_init_camera_perspective_static_pinhole()
   "Error init camera perspective static pinhole: times")
   call assert_equals_allocatable_arrays(n_x_sol,1,&
   n_times_sol,camera_sol%x,"Error init camera perspective static pinhole: x")
-  call assert_equals_allocatable_arrays(n_properties,1,n_times_sol,&
+  call assert_equals_allocatable_arrays(1,n_properties,n_times_sol,&
   camera_sol%properties,"Error init camera perspective static pinhole: properties")
-  call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra,n_pixels_x,n_pixels_y/),&
+  call assert_equals((/n_spectra,n_pixels_x,n_pixels_y/),camera_sol%n_pixels_spectra,&
   3,"Error init camera perspective static pinhole: n pixels / spectra")
   call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
   camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
   ":Error init camera perspective static pinhole: points on lens")
-  call assert_equals_allocatable_arrays(n_properties,camera_sol%n_vertices,&
+  call assert_equals_allocatable_arrays(camera_sol%n_vertices,n_properties,&
   camera_sol%n_times,camera_sol%properties,pdf_points_on_lens,tol_real8,&
   "Error init camera perspective static pinhole: pdf points on lens") 
   call assert_equals_allocatable_arrays(n_x_sol,n_times_sol,camera_sol%image_plane_direction,&
@@ -166,7 +170,7 @@ subroutine test_init_camera_perspective_static_pinhole()
     atan2(camera_sol%image_plane_direction(2,1),camera_sol%image_plane_direction(1,1))/)
     if(direction_test(3).lt.0.d0) direction_test(3) = TWOPI + direction_test(3)
     direction_sol = (/1.d0,image_plane_coords(2,1),image_plane_coords(3,1)/)
-    call assert_equals(direction_test,direction_sol,n_x_sol,tol_real8,&
+    call assert_equals(direction_sol,direction_test,n_x_sol,tol_real8,&
     "Error init camera perspective static pinhole: image plane mismatch!")
   endif
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_vertices,n_times_sol,&
@@ -174,7 +178,7 @@ subroutine test_init_camera_perspective_static_pinhole()
   if(allocated(camera_sol%image_plane)) then
     call define_plane_from_half_angles(mirror_xy_sol(:,1),half_angle_sol(:,1),&
     image_plane_coords(:,1),pupil_positions(:,1),image_plane_sol)
-    call assert_equals(camera_sol%image_plane(:,:,1),image_plane_sol,n_x_sol,&
+    call assert_equals(image_plane_sol,camera_sol%image_plane(:,:,1),n_x_sol,&
     n_plane_vertices,tol_real8,&
     "Error init camera perspective static pinhole: image plane mismatch!")
   endif
@@ -206,7 +210,7 @@ subroutine test_de_allocation_camera_perspective_static()
   n_times_sol,camera_sol%x,"Error allocate camera perspective static: x")
   call assert_equals_allocatable_arrays(n_properties,n_points_on_lens_sol,n_times_sol,&
   camera_sol%properties,"Error allocate camera perspective static: properties")
-  call assert_equals(camera_sol%n_pixels_spectra,(/n_spectra,n_pixels_x,n_pixels_y/),&
+  call assert_equals((/n_spectra,n_pixels_x,n_pixels_y/),camera_sol%n_pixels_spectra,&
   3,"Error allocate camera perspective static: n pixels / spectra")
   call assert_equals_allocatable_arrays(n_x_sol,n_times_sol,camera_sol%image_plane_direction,&
   "Error allocate camera perspective static: image plane direction")
@@ -216,7 +220,7 @@ subroutine test_de_allocation_camera_perspective_static()
   call camera_sol%deallocate_camera_perspective_static
   call assert_equals(camera_sol%n_vertices,0,&
   "Error deallocate camera perspective static: n vertices not 0!")
-  call assert_equals(camera_sol%n_pixels_spectra,(/0,0,0/),3,&
+  call assert_equals((/0,0,0/),camera_sol%n_pixels_spectra,3,&
   "Error deallocate camera perspective static: n pixels spectra not 0!")
   call assert_false(allocated(camera_sol%n_active_vertices),&
   "Error deallocate camera perspective static: n active vertices not deallocated!")
@@ -269,7 +273,7 @@ subroutine test_cosine_view_angle_static()
     call camera_sol%deallocate_camera_perspective_static
   enddo
   !> check solutions
-  call assert_equals(cos_view_angle_test,cos_view_angle_sol,n_planes,tol_real8,&
+  call assert_equals(cos_view_angle_sol,cos_view_angle_test,n_planes,tol_real8,&
   "Error computation cosine view angle perspective static: cosine view angles mismatch!")
   !> deallocate lens
   call pinhole%deallocate_lens
@@ -310,7 +314,7 @@ subroutine test_material_funct_perspective_static()
     call camera_sol%deallocate_camera_perspective_static
   enddo
   !> check solutions
-  call assert_equals(material_test,material_sol,n_planes,tol_real8,&
+  call assert_equals(material_sol,material_test,n_planes,tol_real8,&
   "Error computation physical material funct perspective static: cosine view angles mismatch!")
   !> deallocate lens
   call pinhole%deallocate_lens

@@ -58,15 +58,19 @@ subroutine run_fruit_light_vertices()
   call prepare_input_file
   call setup
   write(*,'(/A)') "  ... running: light vertices tests"
-  call test_deallocate_light_vertices
-  call test_ligth_read_inputs
-  call test_find_all_active_particles_ids
-  call test_find_all_active_particles_ids_types
-  call test_store_light_from_particle_id
-  call test_extract_all_particle_types
-  call test_extract_all_n_particles
-  call test_extract_all_n_groups
-  call test_fill_time_vector
+  call run_test_case(test_deallocate_light_vertices,'test_deallocate_light_vertices')
+  call run_test_case(test_ligth_read_inputs,'test_ligth_read_inputs')
+  call run_test_case(test_find_all_active_particles_ids,&
+  'test_find_all_active_particles_ids')
+  call run_test_case(test_find_all_active_particles_ids_types,&
+  'test_find_all_active_particles_ids_types')
+  call run_test_case(test_store_light_from_particle_id,&
+  'test_store_light_from_particle_id')
+  call run_test_case(test_extract_all_particle_types,&
+  'test_extract_all_particle_types')
+  call run_test_case(test_extract_all_n_particles,'test_extract_all_n_particles')
+  call run_test_case(test_extract_all_n_groups,'test_extract_all_n_groups')
+  call run_test_case(test_fill_time_vector,'test_fill_time_vector')
   write(*,'(/A)') "  ... tearing-down: light vertices tests"
   call teardown
 end subroutine run_fruit_light_vertices
@@ -143,15 +147,15 @@ subroutine test_deallocate_light_vertices()
   call vertex_test%setup_light_class
   call vertex_test%deallocate_light_vertices
   !> check deallocation of main variables 
-  call assert_equals(vertex_test%n_mhd,0,&
+  call assert_equals(0,vertex_test%n_mhd,&
   "Error deallocate light vertices: n_mhd not 0!")
-  call assert_equals(vertex_test%n_particle_types,0,&
+  call assert_equals(0,vertex_test%n_particle_types,&
   "Error deallocate light vertices: n_particle_types not 0!")
   call assert_false(allocated(vertex_test%particle_types),&
   "Error deallocate light vertices: particle_types not deallocated!")
-  call assert_equals(vertex_test%n_times,0,&
+  call assert_equals(0,vertex_test%n_times,&
   "Error deallocate light vertices: n_times not reset!")
-  call assert_equals(vertex_test%n_vertices,0,&
+  call assert_equals(0,vertex_test%n_vertices,&
   "Error deallocate light vertices: n_vertices not reset!")
   call assert_false(allocated(vertex_test%n_active_vertices),&
   "Error deallocate light vertices: n_active_vertices allocated!")
@@ -179,9 +183,9 @@ subroutine test_ligth_read_inputs()
   call vertex_sol%read_light_inputs(rank,read_unit,int_param,real_param)
   close(read_unit)
   !> checks
-  call assert_equals(n_input_params,n_input_params_sol,2,&
+  call assert_equals(n_input_params_sol,n_input_params,2,&
   "Error light read inputs: N# input parameters mismatch!")
-  call assert_equals(int_param,(/n_times_sol,n_lights_sol/),2,&
+  call assert_equals((/n_times_sol,n_lights_sol/),int_param,2,&
   "Error light read inputs: int parameters mismatch!")
   call assert_false(allocated(real_param),&
   "Error light read inputs: real parameters allocated!")
@@ -202,12 +206,12 @@ subroutine test_find_all_active_particles_ids()
   n_groups_per_sim,n_particles_per_group,sims_particles,n_active_particles,&
   active_particle_ids)
   !> check solutions
-  call assert_equals(n_active_particles,n_active_particles_sol,n_groups_max,n_times_sol,&
+  call assert_equals(n_active_particles_sol,n_active_particles,n_groups_max,n_times_sol,&
   "Error light vertices find all active particle ids: N active particles mismatch!")
-  call assert_equals(vertex_sol%n_active_vertices,n_active_vertices_sol,n_times_sol,&
+  call assert_equals(n_active_vertices_sol,vertex_sol%n_active_vertices,n_times_sol,&
   "Error light vertices find all active particle ids: N active vertices mismatch!")
   do ii=1,n_times_sol
-    call assert_equals(active_particle_ids(:,:,ii),active_particle_ids_sol(:,:,ii),&
+    call assert_equals(active_particle_ids_sol(:,:,ii),active_particle_ids(:,:,ii),&
     n_particles_max,n_groups_max,&
     "Error light vertices find all active particle ids: active particle ids mismatch!")
   enddo
@@ -244,12 +248,12 @@ subroutine test_find_all_active_particles_ids_types()
   enddo
   n_active_vertices_loc = sum(n_active_particles_loc,dim=1)
   !> check solutions
-  call assert_equals(n_active_particles,n_active_particles_loc,n_groups_max,n_times_sol,&
+  call assert_equals(n_active_particles_loc,n_active_particles,n_groups_max,n_times_sol,&
   "Error light vertices find active particle ids type: N active particles mismatch!")
-  call assert_equals(vertex_sol%n_active_vertices,n_active_vertices_loc,n_times_sol,&
+  call assert_equals(n_active_vertices_loc,vertex_sol%n_active_vertices,n_times_sol,&
   "Error light vertices find active particle ids type: N active vertices mismatch!")
   do jj=1,n_times_sol
-    call assert_equals(active_particle_ids(:,:,jj),active_particle_ids_loc(:,:,jj),&
+    call assert_equals(active_particle_ids_loc(:,:,jj),active_particle_ids(:,:,jj),&
     n_particles_max,n_groups_max,&
     "Error light vertices find active particle ids type: active particle ids mismatch!")
   enddo
@@ -274,7 +278,7 @@ subroutine test_store_light_from_particle_id()
   enddo
   !> check solution
   do ii=1,n_times_sol
-    call assert_equals(vertex_sol%x(:,:,ii),x_cart_sol(:,:,ii),n_particles_max,n_groups_max,&
+    call assert_equals(x_cart_sol(:,:,ii),vertex_sol%x(:,:,ii),n_particles_max,n_groups_max,&
     tol_real8,"Error light vertices store light x from particles: positions mismatch!")
   enddo
 end subroutine test_store_light_from_particle_id
@@ -285,7 +289,7 @@ subroutine test_extract_all_particle_types()
   integer,dimension(n_groups_max,n_times_sol) :: particle_types
   call vertex_sol%extract_particle_types_all_particle_sims(&
   sims_particles,n_groups_max,particle_types)
-  call assert_equals(particle_types,particle_types_sol,n_groups_max,n_times_sol,&
+  call assert_equals(particle_types_sol,particle_types,n_groups_max,n_times_sol,&
   "Error light vertices extract all particle types: particle types mismatch!")
 end subroutine test_extract_all_particle_types
 
@@ -294,7 +298,7 @@ subroutine test_extract_all_n_particles()
   implicit none
   integer,dimension(n_groups_max,n_times_sol) :: n_particles
   call vertex_sol%extract_n_particles_all_particle_sims(sims_particles,n_groups_max,n_particles)
-  call assert_equals(n_particles,n_particles_per_group,n_groups_max,n_times_sol,&
+  call assert_equals(n_particles_per_group,n_particles,n_groups_max,n_times_sol,&
   "Error light vertices extract all particle numbers: N particles mismatch!")
 end subroutine test_extract_all_n_particles
 
@@ -303,7 +307,7 @@ subroutine test_extract_all_n_groups()
   implicit none
   integer,dimension(n_times_sol) :: n_groups
   call vertex_sol%extract_n_groups_all_particle_sims(sims_particles,n_groups)
-  call assert_equals(n_groups,n_groups_per_sim,n_times_sol,&
+  call assert_equals(n_groups_per_sim,n_groups,n_times_sol,&
   "Error light vertices extract all group numbers: N groups mismatch!")
 end subroutine test_extract_all_n_groups
 
@@ -311,7 +315,7 @@ end subroutine test_extract_all_n_groups
 subroutine test_fill_time_vector()
   implicit none
   call vertex_sol%fill_time_vector_particle_sims(sims_particles)
-  call assert_equals(vertex_sol%times,time_vector_sol,n_times_sol,tol_real8,&
+  call assert_equals(time_vector_sol,vertex_sol%times,n_times_sol,tol_real8,&
   "Error light vertices fill time vector: time vector mismatch!")
 end subroutine test_fill_time_vector
 

@@ -24,7 +24,8 @@ subroutine run_fruit_lens()
   write(*,'(/A)') "  ... setting-up: lens tests"
   call setup
   write(*,'(/A)') "  ... running: lens tests"
-  call test_lens_allocation_deallocation
+  call run_test_case(test_lens_allocation_deallocation,&
+  'test_lens_allocation_deallocation')
   write(*,'(/A)') "  ... tearing-down: lens tests"
   call teardown
 end subroutine run_fruit_lens
@@ -54,25 +55,25 @@ subroutine test_lens_allocation_deallocation()
   type(pinhole_lens) :: lens_loc
   !> allocate lens initialised to zero
   call lens_loc%allocate_lens(n_x)
-  call assert_equals(lens_loc%n_x,n_x,&
+  call assert_equals(n_x,lens_loc%n_x,&
   "Error lens allocation to zero: n_x mismatch!")
   call assert_equals_allocatable_arrays(n_x,lens_loc%center,0.d0,&
   "Error lens allocation to zero: center array not allocated!")
   !> deallocate lens
   call lens_loc%deallocate_lens()
-  call assert_equals(lens_loc%n_x,0,&
+  call assert_equals(0,lens_loc%n_x,&
   "Error lens deallocation: n_x not to zero!")
   call assert_false(allocated(lens_loc%center),&
   "Error lens deallocation: center not deallocated!")
   !> allocate lens with initialisation
   call lens_loc%allocate_lens(n_x,center_sol)
-  call assert_equals(lens_loc%n_x,n_x,&
+  call assert_equals(n_x,lens_loc%n_x,&
   "Error lens allocation to value: n_x mismatch!")
   call assert_equals_allocatable_arrays(n_x,lens_loc%center,&
   center_sol,tol_r8,"Error lens allocation to value: center array")
   !> deallocate lens
   call lens_loc%deallocate_lens()
-  call assert_equals(lens_loc%n_x,0,&
+  call assert_equals(0,lens_loc%n_x,&
   "Error lens deallocation: n_x not to zero!")
   call assert_false(allocated(lens_loc%center),&
   "Error lens deallocation: center not deallocated!")

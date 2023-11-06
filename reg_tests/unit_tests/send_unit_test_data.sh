@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Variables
-INFOFILE=info.txt
+INOFILE=.info
+VERSIONFILE=.version
 
 # This script upload data for JOREK unit tests.
 UNITTESTDIR="$1"
@@ -27,7 +28,7 @@ fi
 
 #compute the checksum for all files
 VERSION="_`cat ${unit_test_files[@]} | md5sum | sed -e 's/^ //' -e 's/ .*$//'`"
-echo ${VERSION} > .version
+echo ${VERSION} > ${VERSIONFILE}
 
 printf "date: "      > ${INFOFILE}
 date                >> ${INFOFILE}

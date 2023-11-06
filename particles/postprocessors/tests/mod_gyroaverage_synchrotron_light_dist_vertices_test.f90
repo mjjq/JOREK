@@ -76,13 +76,20 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   write(*,'(/A)') "  ... setting-up: gyroaverage synchrotron light vertices tests"
   call setup
   write(*,'(/A)') "  ... running: gyroaverage synchrotron light vertices tests"
-  call test_setup_gyroaverage_synchrotron_radiation_class
-  call test_compute_gyroaverage_synchrotron_mhd_fields
-  call test_compute_gyroaverage_synchrotron_light_properties
-  call test_init_gyroaverage_synchrotron_lights_from_gc
-  call test_check_shaded_angles_in_gyroaverage_synchrotron_cone
-  call test_gyroaverage_synchrotron_irradiance_directionality_funct
-  call test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
+  call run_test_case(test_setup_gyroaverage_synchrotron_radiation_class,&
+  'test_setup_gyroaverage_synchrotron_radiation_class')
+  call run_test_case(test_compute_gyroaverage_synchrotron_mhd_fields,&
+  'test_compute_gyroaverage_synchrotron_mhd_fields')
+  call run_test_case(test_compute_gyroaverage_synchrotron_light_properties,&
+  'test_compute_gyroaverage_synchrotron_light_properties')
+  call run_test_case(test_init_gyroaverage_synchrotron_lights_from_gc,&
+  'test_init_gyroaverage_synchrotron_lights_from_gc')
+  call run_test_case(test_check_shaded_angles_in_gyroaverage_synchrotron_cone,&
+  'test_check_shaded_angles_in_gyroaverage_synchrotron_cone')
+  call run_test_case(test_gyroaverage_synchrotron_irradiance_directionality_funct,&
+  'test_gyroaverage_synchrotron_irradiance_directionality_funct')
+  call run_test_case(test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop,&
+  'test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop')
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices
@@ -162,13 +169,13 @@ subroutine test_setup_gyroaverage_synchrotron_radiation_class()
   implicit none
   !> setup the gyroaverage synchrotron light class
   call vertex_sol%setup_light_class
-  call assert_equals(vertex_sol%n_property_vertex,n_properties,&
+  call assert_equals(n_properties,vertex_sol%n_property_vertex,&
   "Error check setup gyroaverage synchrotron light class: wrong size of the vertex properties array!")
-  call assert_equals(vertex_sol%n_mhd,n_mhd_sol,&
+  call assert_equals(n_mhd_sol,vertex_sol%n_mhd,&
   "Error check setup gyroaverage synchrotron light class: wrong size of the mhd array!")
-  call assert_equals(vertex_sol%n_particle_types,n_particle_types_check_sol,&
+  call assert_equals(n_particle_types_check_sol,vertex_sol%n_particle_types,&
   "Error check setup gyroaverage synchrotron light class: wrong size of the particle types array!")
-  call assert_equals(vertex_sol%particle_types,particle_types_check_sol,&
+  call assert_equals(particle_types_check_sol,vertex_sol%particle_types,&
   n_particle_types_check_sol,"Error check setup gyroaverage synchrotron light class: wrong particle types list!")
 end subroutine test_setup_gyroaverage_synchrotron_radiation_class
 
@@ -197,7 +204,7 @@ subroutine test_compute_gyroaverage_synchrotron_mhd_fields()
       enddo
     enddo
     !> check the results
-    call assert_equals(mhd_fields_test,mhd_fields_sol,n_mhd_sol,n_particles_max*n_groups_max,&
+    call assert_equals(mhd_fields_sol,mhd_fields_test,n_mhd_sol,n_particles_max*n_groups_max,&
     tol_real8,"Error gyroaverage synchrotron light compute MHD fields: too large errors!")
   enddo
 end subroutine test_compute_gyroaverage_synchrotron_mhd_fields
@@ -243,9 +250,9 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
     where(properties_sol(:,:,kk).ne.0d0) error = abs((vertex_sol%properties(:,:,kk) - &
     properties_sol(:,:,kk))/properties_sol(:,:,kk))
     !> check if the properties arrays are equal
-    call assert_equals(error,zeros,n_properties,n_particles_max*n_groups_max,&
+    call assert_equals(zeros,error,n_properties,n_particles_max*n_groups_max,&
     tol_real8,"Error gyroaverage synchrotron light compute properties: too large errors!")
-    call assert_equals(error_coeff,zeros_1,n_particles_max*n_groups_max,&
+    call assert_equals(zeros_1,error_coeff,n_particles_max*n_groups_max,&
     tol_real8,"Error gyroaverage synchrotron light compute properties: normalisation mismatch!")
   enddo
 end subroutine test_compute_gyroaverage_synchrotron_light_properties
@@ -263,10 +270,10 @@ subroutine test_init_gyroaverage_synchrotron_lights_from_gc()
   call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles,&
   n_particles_max*n_groups_max)
   call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
-  vertex_sol%x,x_cart_sol,tol_real8,&
+  x_cart_sol,vertex_sol%x,tol_real8,&
   "Error init gyroaverage synchrotron lights from particles set n lights large: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_particles_max*n_groups_max,&
-  n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
+  n_times_sol,properties_sol,vertex_sol%properties,tol_real8,&
   "Error init gyroaverage synchrotron lights from particles set n lights large: properties errors too large!")
 
   !> copy values of x and properties
@@ -277,28 +284,28 @@ subroutine test_init_gyroaverage_synchrotron_lights_from_gc()
   enddo
   !> test lights initialisation without inputs
   call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
-  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  call assert_equals(shape(x_cart_loc),shape(vertex_sol%x),3,&
   "Error init gyroaverage synchrotron lights from particles: positions shape mismatch!")
-  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  call assert_equals(shape(properties_loc),shape(vertex_sol%properties),3,&
   "Error init gyroaverage synchrotron lights from particles: properties shape mismatch!")
   call assert_equals_rel_error(n_x,n_gc_RE_max,n_times_sol,&
-  vertex_sol%x,x_cart_loc,tol_real8,&
+  x_cart_loc,vertex_sol%x,tol_real8,&
   "Error init gyroaverage synchrotron lights from particles: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_gc_RE_max,&
-  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  n_times_sol,properties_loc,vertex_sol%properties,tol_real8,&
   "Error init gyroaverage synchrotron lights from particles: properties errors too large!")
 
   !> test lights initialisation with too small number of vertices
   call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles,n_synch_fail)
-  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  call assert_equals(shape(x_cart_loc),shape(vertex_sol%x),3,&
   "Error init gyroaverage synchrotron lights from particles set n lights small: positions shape mismatch!")
-  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  call assert_equals(shape(properties_loc),shape(vertex_sol%properties),3,&
   "Error init gyroaverage synchrotron lights from particles set n lights small: properties shape mismatch!")
   call assert_equals_rel_error(n_x,n_gc_RE_max,n_times_sol,&
-  vertex_sol%x,x_cart_loc,tol_real8,&
+  x_cart_loc,vertex_sol%x,tol_real8,&
   "Error init gyroaverage synchrotron lights from particles set n lights small: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_gc_RE_max,&
-  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  n_times_sol,properties_loc,vertex_sol%properties,tol_real8,&
   "Error init gyroaverage synchrotron lights from particles set n lights small: properties errors too large!")  
 
 end subroutine test_init_gyroaverage_synchrotron_lights_from_gc
@@ -419,10 +426,10 @@ subroutine test_gyroaverage_synchrotron_irradiance_directionality_funct()
       enddo
       !> check the solution via relative error
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shaded_points_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
+      n_shaded_points_per_particle,dir_fun_sol,dir_fun,tol2_real8,&
       "Error gyroaverage synchrotron directionality function: directionality function mismatch!")
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shaded_points_per_particle,irradiance,irradiance_sol,tol3_real8,&
+      n_shaded_points_per_particle,irradiance_sol,irradiance,tol3_real8,&
       "Error gyroaverage synchrotron directionality function: irradiance mismatch!")
     enddo
   enddo
@@ -466,10 +473,10 @@ subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop()
       enddo
       !> check the solution via relative error
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shaded_points_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
+      n_shaded_points_per_particle,dir_fun_sol,dir_fun,tol2_real8,&
       "Error gyroaverage synchrotron directionality function taskloop: directionality function mismatch!")
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shaded_points_per_particle,irradiance,irradiance_sol,tol3_real8,&
+      n_shaded_points_per_particle,irradiance_sol,irradiance,tol3_real8,&
       "Error gyroaverage synchrotron directionality function taskloop: irradiance mismatch!")
     enddo
   enddo

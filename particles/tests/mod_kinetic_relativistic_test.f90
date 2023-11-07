@@ -38,7 +38,8 @@ subroutine run_fruit_kinetic_relativistic()
   write(*,'(/A)') "  ... setting-up: kinetic relativistic tests"
   call setup
   write(*,'(/A)') "  ... running: kinetic relativistic tests"
-  call test_relativistic_kinetic_orbital_basis
+  call run_test_case(test_relativistic_kinetic_orbital_basis,&
+  'test_relativistic_kinetic_orbital_basis')
   write(*,'(/A)') "  ... tearing-up: kinetic relativistic tests"
   call teardown
 end subroutine run_fruit_kinetic_relativistic
@@ -107,11 +108,11 @@ subroutine test_relativistic_kinetic_orbital_basis()
   !> test orthonormality
   call test_orthonormality_basis(T_cart,N_cart,B_cart,tol_basis)
   !> test solution
-  call assert_equals(T_cart,T_cart_sol,3,tol_basis,& 
+  call assert_equals(T_cart_sol,T_cart,3,tol_basis,& 
   "Error relativistic kinetic orbital basis: T direction mismatch!")
-  call assert_equals(N_cart,N_cart_sol,3,tol_basis,& 
+  call assert_equals(N_cart_sol,N_cart,3,tol_basis,& 
   "Error relativistic kinetic orbital basis: N direction mismatch!")
-  call assert_equals(B_cart,B_cart_sol,3,tol_basis,& 
+  call assert_equals(B_cart_sol,B_cart,3,tol_basis,& 
   "Error relativistic kinetic orbital basis: B direction mismatch!")
 end subroutine test_relativistic_kinetic_orbital_basis
 
@@ -121,17 +122,17 @@ subroutine test_orthonormality_basis(v1,v2,v3,tol)
   implicit none
   real*8 :: tol
   real*8,dimension(3),intent(in) :: v1,v2,v3
-  call assert_equals(dot_product(v1,v1),1.d0,tol,&
+  call assert_equals(1.d0,dot_product(v1,v1),tol,&
   "Error basis orthonormality (double): v1 is not normalized!")
-  call assert_equals(dot_product(v2,v2),1.d0,tol,&
+  call assert_equals(1.d0,dot_product(v2,v2),tol,&
   "Error basis orthonormality (double): v2 is not normalized!")
-  call assert_equals(dot_product(v3,v3),1.d0,tol,&
+  call assert_equals(1.d0,dot_product(v3,v3),tol,&
   "Error basis orthonormality (double): v3 is not normalized!")
-  call assert_equals(dot_product(v1,v2),0.d0,tol,&
+  call assert_equals(0.d0,dot_product(v1,v2),tol,&
   "Error basis orthonormality (double): v1 and v2 are not orthogonal!")
-  call assert_equals(dot_product(v1,v3),0.d0,tol,&
+  call assert_equals(0.d0,dot_product(v1,v3),tol,&
   "Error basis orthonormality (double): v1 and v3 are not orthogonal!")
-  call assert_equals(dot_product(v2,v3),0.d0,tol,&
+  call assert_equals(0.d0,dot_product(v2,v3),tol,&
   "Error basis orthonormality (double): v2 and v3 are not orthogonal!")
 end subroutine test_orthonormality_basis
 

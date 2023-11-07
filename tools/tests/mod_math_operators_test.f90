@@ -35,9 +35,11 @@ subroutine run_fruit_math_operators()
   write(*,'(/A)') "  ... setting-up: math operators tests"
   call setup
   write(*,'(/A)') "  ... running: math operators tests"
-  call test_cross_product
-  call test_solve_2x2_linear_problem
-  call test_solve_3x3_linear_problem
+  call run_test_case(test_cross_product,'test_cross_product')
+  call run_test_case(test_solve_2x2_linear_problem,&
+  'test_solve_2x2_linear_problem')
+  call run_test_case(test_solve_3x3_linear_problem,&
+  'test_solve_3x3_linear_problem')
   write(*,'(/A)') "  ... tearing-down: math operators tests"
   call teardown
 end subroutine run_fruit_math_operators
@@ -90,9 +92,9 @@ subroutine test_cross_product()
   enddo
   do ii=1,n_vectors
     vec_c_r8 = cross_product(vec_a_3_r8(:,ii),vec_b_3_r8(:,ii))
-    call assert_equals(dot_product(vec_a_3_r8(:,ii),vec_c_r8),0.d0,tol_r8,&
+    call assert_equals(0.d0,dot_product(vec_a_3_r8(:,ii),vec_c_r8),tol_r8,&
     "Error math operators cross product (double): vectors a and c not orthogonal")
-    call assert_equals(dot_product(vec_b_3_r8(:,ii),vec_c_r8),0.d0,tol_r8,&
+    call assert_equals(0.d0,dot_product(vec_b_3_r8(:,ii),vec_c_r8),tol_r8,&
     "Error math operators cross product (double): vectors b and c not orthogonal")
   enddo
 end subroutine test_cross_product
@@ -107,14 +109,12 @@ subroutine test_solve_2x2_linear_problem()
   !> test single precision 2x2 linear solver
   do ii=1,n_vectors
     call solve_2x2_linear_problem(matrix_2x2_r4(:,:,ii),vec_a_2_r4(:,ii),x_r4)
-    call assert_equals(matmul(matrix_2x2_r4(:,:,ii),x_r4),&
-    vec_a_2_r4(:,ii),2,tol_r4,&
+    call assert_equals(vec_a_2_r4(:,ii),matmul(matrix_2x2_r4(:,:,ii),x_r4),2,tol_r4,&
     "Error math operators solve 2x2 linear problems (float): rhs mismatch!") 
   enddo
   do ii=1,n_vectors
     call solve_2x2_linear_problem(matrix_2x2_r8(:,:,ii),vec_a_2_r8(:,ii),x_r8)
-    call assert_equals(matmul(matrix_2x2_r8(:,:,ii),x_r8),&
-    vec_a_2_r8(:,ii),2,tol_r8,&
+    call assert_equals(vec_a_2_r8(:,ii),matmul(matrix_2x2_r8(:,:,ii),x_r8),2,tol_r8,&
     "Error math operators solve 2x2 linear problems (double): rhs mismatch!") 
   enddo
 end subroutine test_solve_2x2_linear_problem
@@ -129,14 +129,12 @@ subroutine test_solve_3x3_linear_problem()
   !> test single precision 2x2 linear solver
   do ii=1,n_vectors
     call solve_3x3_linear_problem(matrix_3x3_r4(:,:,ii),vec_a_3_r4(:,ii),x_r4)
-    call assert_equals(matmul(matrix_3x3_r4(:,:,ii),x_r4),&
-    vec_a_3_r4(:,ii),2,tol_r4,&
+    call assert_equals(vec_a_3_r4(:,ii),matmul(matrix_3x3_r4(:,:,ii),x_r4),2,tol_r4,&
     "Error math operators solve 3x3 linear problems (float): rhs mismatch!") 
   enddo
   do ii=1,n_vectors
     call solve_3x3_linear_problem(matrix_3x3_r8(:,:,ii),vec_a_3_r8(:,ii),x_r8)
-    call assert_equals(matmul(matrix_3x3_r8(:,:,ii),x_r8),&
-    vec_a_3_r8(:,ii),3,tol_r8,&
+    call assert_equals(vec_a_3_r8(:,ii),matmul(matrix_3x3_r8(:,:,ii),x_r8),3,tol_r8,&
     "Error math operators solve 3x3 linear problems (double): rhs mismatch!") 
   enddo
 end subroutine test_solve_3x3_linear_problem

@@ -170,7 +170,7 @@ subroutine test_get_simulation_hdf5_time()
   implicit none
   real*8 :: time_new
   time_new = get_simulation_hdf5_time(test_filename)
-  call assert_equals(time_new,sim_particles%time,tol_real8,&
+  call assert_equals(sim_particles%time,time_new,tol_real8,&
   "Error get simulation time hdf5: time mismatch!")
 end subroutine test_get_simulation_hdf5_time
 

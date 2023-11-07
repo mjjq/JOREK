@@ -21,6 +21,7 @@ integer,parameter :: fill_type=-1
 integer,parameter :: n_groups=7!8
 integer,parameter :: n_particles=5 !< N# of particles per group per task
 real*8,parameter  :: tol_real8=1.d-15
+integer           :: rank_loc,n_tasks_loc,ifail_loc
 
 !> Interfaces -------------------------------------------
 contains
@@ -43,7 +44,7 @@ subroutine run_fruit_particle_io_mpi(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... setting-up: particle io mpi tests"
   call setup(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... running: particle io mpi tests"
-  call test_particle_mpi_io(rank,n_tasks,ifail)
+  call run_test_case(test_particle_mpi_io,'test_particle_mpi_io')
   !call test_get_simulation_hdf5_time()
   if(rank.eq.0) write(*,'(/A)') "  ... tearing-down: particle io mpi tests"
   call teardown(rank,n_tasks,ifail)
@@ -76,6 +77,9 @@ subroutine setup(rank,n_tasks,ifail)
 
   !> inputs-outputs
   integer,intent(inout) :: ifail
+
+  !> store mpi variables
+  ranK_loc = rank; n_tasks_loc = n_tasks; ifail_loc = ifail;
 
   !> initialize the particle simulation (requires jorek inputfile)
   call sim_particles%initialize(n_groups,.false.,rank,n_tasks)
@@ -122,26 +126,23 @@ subroutine teardown(rank,n_tasks,ifail)
   call MPI_Barrier(MPI_COMM_WORLD,ifail)
   !> remove test file
   if(rank.eq.0) call system("rm "//test_filename)
+  rank_loc = -1; n_tasks_loc = -1; ifail = ifail_loc;
 end subroutine teardown
 !> Tests ------------------------------------------------
 !> procedure for testing the particle io
-subroutine test_particle_mpi_io(rank,n_tasks,ifail)
+subroutine test_particle_mpi_io
   use mod_particle_common_test_tools, only: copy_group_fieldline_B_hat_prev
   use mod_particle_assert_equal,      only: assert_equal_particle
   use mod_particle_sim,               only: particle_sim
   use mod_particle_io,                only: read_simulation_hdf5
   implicit none
-  !> inputs
-  integer,intent(in) :: rank,n_tasks
-  !> inputs-outputs
-  integer,intent(inout) :: ifail
   !> variables
   type(particle_sim) :: sim_particles_new
   integer :: ii
   real*8 :: comp_real8_1,comp_real8_2
 
   !> initialize the new particle simulation (requires jorek inputfile)
-  call sim_particles_new%initialize(n_groups,.false.,rank,n_tasks)
+  call sim_particles_new%initialize(n_groups,.false.,rank_loc,n_tasks_loc)
 
   !> read default simulation from file and store in new sim
   call read_simulation_hdf5(sim_particles_new,trim(test_filename))

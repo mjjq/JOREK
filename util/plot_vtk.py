@@ -314,6 +314,35 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
 
         ifile += 1
 
+def read_data(file_path, reader, variable_list, itor):
+
+    reader.SetFileName(file_path)
+    reader.ReadAllScalarsOn()
+    reader.Update()
+    dataset = reader.GetOutput()
+
+    scalar_names = [reader.GetScalarsNameInFile(
+        i) for i in range(0, reader.GetNumberOfScalarsInFile())]
+    if itor == 0:
+        print('Variable names:\n', scalar_names)
+    print('Loading: ', file_path)
+    time = dataset.GetFieldData().GetArray("TIME").GetValue(0)
+    Point_cordinates = reader.GetOutput().GetPoints().GetData()
+    numpy_coordinates = vtk_nump.vtk_to_numpy(Point_cordinates)
+
+    data_list = np.zeros((len(numpy_coordinates), len(variable_list)), dtype=float)
+
+    for ivar, variable in enumerate(variable_list):
+        var = variable
+
+        if var not in scalar_names:
+            print("Error input variable name: " + var + ", retry!!!")
+            exit(-1)
+        data_array = dataset.GetPointData().GetArray(var) 
+        # Convert the VTK data array to a NumPy array
+        data_list[:, ivar] = vtk_nump.vtk_to_numpy(data_array)
+    
+    return data_list, numpy_coordinates, time
 
 if __name__ == "__main__":
 

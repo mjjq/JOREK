@@ -34,8 +34,8 @@ subroutine run_fruit_linear_reg()
   write(*,'(/A)') "  ... setting-up: linear regression tests"
   call setup
   write(*,'(/A)') "  ... running: linear regression tests"
-  call linear_ref_exact_y_test
-  call linear_reg_noise_y_test
+  call run_test_case(linear_ref_exact_y_test,'linear_ref_exact_y_test')
+  call run_test_case(linear_reg_noise_y_test,'linear_reg_noise_y_test')
   write(*,'(/A)') "  ... tearing-down: linear regression tests"
   call teardown
 
@@ -84,7 +84,7 @@ subroutine linear_ref_exact_y_test()
   !> compute linear regression
   call linear_regression(N_points,x,y_exact,lin_reg_coeff)
   !> tests
-  call assert_equals(lin_reg_coeff/line_coeff,line_coeff/line_coeff,N_coeff,tol,&
+  call assert_equals(line_coeff/line_coeff,lin_reg_coeff/line_coeff,N_coeff,tol,&
   "Error linear regression exact: regression and line coefficients do not match!")
 
 end subroutine linear_ref_exact_y_test

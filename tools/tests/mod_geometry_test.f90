@@ -54,13 +54,20 @@ subroutine run_fruit_geometry()
   call setup_plane_line_intersection_test
   call setup_plane_definition_from_half_angle
   write(*,'(/A)') "  ... running: geometry tests"
-  call test_compute_test_line_intersect_cart_points
-  call test_define_standard_plane_from_half_angle
-  call test_define_direction_plane_from_half_angle
-  call test_define_direction_plane_from_half_angle_origin
-  call test_vertex_spherical_coord_standard
-  call test_vertex_spherical_coord_origin
-  call test_compute_edge_length
+  call run_test_case(test_compute_test_line_intersect_cart_points,&
+  'test_compute_test_line_intersect_cart_points')
+  call run_test_case(test_define_standard_plane_from_half_angle,&
+  'test_define_standard_plane_from_half_angle')
+  call run_test_case(test_define_direction_plane_from_half_angle,&
+  'test_define_direction_plane_from_half_angle')
+  call run_test_case(test_define_direction_plane_from_half_angle_origin,&
+  'test_define_direction_plane_from_half_angle_origin')
+  call run_test_case(test_vertex_spherical_coord_standard,&
+  'test_vertex_spherical_coord_standard')
+  call run_test_case(test_vertex_spherical_coord_origin,&
+  'test_vertex_spherical_coord_origin')
+  call run_test_case(test_compute_edge_length,&
+  'test_compute_edge_length')
   write(*,'(/A)') "  ... tearing-down: geometry tests"
 end subroutine run_fruit_geometry
 
@@ -147,7 +154,7 @@ subroutine test_vertex_spherical_coord_standard()
     atan2(vertex_test(2),vertex_test(1))/)
   enddo
   where(rthetaphi_test(3,:).lt.0.d0) rthetaphi_test(3,:) = TWOPI + rthetaphi_test(3,:)
-  call assert_equals(rthetaphi_test,rthetaphi_sol,3,n_planes,tol_real8,&
+  call assert_equals(rthetaphi_sol,rthetaphi_test,3,n_planes,tol_real8,&
   "Error vertex spherical coordinates standard: spherical coord. mismatch!")
 end subroutine test_vertex_spherical_coord_standard
 
@@ -169,7 +176,7 @@ subroutine test_vertex_spherical_coord_origin()
     atan2(vertex_test(2),vertex_test(1))/)
   enddo
   where(rthetaphi_test(3,:).lt.0.d0) rthetaphi_test(3,:) = TWOPI + rthetaphi_test(3,:)
-  call assert_equals(rthetaphi_test,rthetaphi_sol,3,n_planes,tol_real8,&
+  call assert_equals(rthetaphi_sol,rthetaphi_test,3,n_planes,tol_real8,&
   "Error vertex spherical coordinates origins: spherical coord. mismatch!")
 end subroutine test_vertex_spherical_coord_origin
 
@@ -192,11 +199,11 @@ subroutine test_compute_test_line_intersect_cart_points()
       pos = compute_global_cart_coord_plane_points(&
       pp_sol(:,:,ii),stq(1:2))
       !> check solutions
-      call assert_equals_rel_error(3,stq,stq_sol(:,jj,ii),tol_real8,&
+      call assert_equals_rel_error(3,stq_sol(:,jj,ii),stq,tol_real8,&
       "Error compute plane line intersection cart: stq mismatch!")
-      call assert_equals_rel_error(3,pos,pos_intersect_sol(:,jj,ii),tol_real8,&
+      call assert_equals_rel_error(3,pos_intersect_sol(:,jj,ii),pos,tol_real8,&
       "Error compute plane line intersection cart: pos intersect mismatch!")
-      call assert_equals(intersect,intersect_sol(jj,ii),&
+      call assert_equals(intersect_sol(jj,ii),intersect,&
       "Error compute plane line intersection cart: intersect mismatch!")
     enddo
   enddo
@@ -224,19 +231,19 @@ subroutine test_define_standard_plane_from_half_angle()
     distance_loc(:,ii),orthogonal(:,ii),plane_angle(ii))
   enddo
   !> check values 
-  call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
+  call assert_equals(half_angles_sol(1,:),half_width_angle_loc(1,:),n_planes,&
   tol_real8,"Error define standard plane from half angles: width angle 1 mismatch!")
-  call assert_equals(half_width_angle_loc(2,:),half_angles_sol(1,:),n_planes,&
+  call assert_equals(half_angles_sol(1,:),half_width_angle_loc(2,:),n_planes,&
   tol_real8,"Error define standard plane from half angles: width angle 2 mismatch!")
-  call assert_equals(half_height_angle_loc(1,:),half_angles_sol(2,:),n_planes,&
+  call assert_equals(half_angles_sol(2,:),half_height_angle_loc(1,:),n_planes,&
   tol_real8,"Error define standard plane from half angles: height angle 1 mismatch!")
-  call assert_equals(half_height_angle_loc(2,:),half_angles_sol(2,:),n_planes,&
+  call assert_equals(half_angles_sol(2,:),half_height_angle_loc(2,:),n_planes,&
   tol_real8,"Error define standard plane from half angles: height angle 2 mismatch!")
-  call assert_equals(distance_loc,ones_4Xn_planes_r8,4,n_planes,&
+  call assert_equals(ones_4Xn_planes_r8,distance_loc,4,n_planes,&
   tol_real8,"Error define standard plane from half angles: distance is not unity!")
-  call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
+  call assert_equals(zeros_5Xn_planes_r8,orthogonal,5,n_planes,&
   tol_real8,"Error define standard plane from half angles: axis not orthogonal!")
-  call assert_equals(plane_angle,half_angles_sol(3,:),n_planes,&
+  call assert_equals(half_angles_sol(3,:),plane_angle,n_planes,&
   tol_real8,"Error define standard plane from half angles: plane angle mismatch!")
 end subroutine test_define_standard_plane_from_half_angle
 
@@ -266,19 +273,19 @@ subroutine test_define_direction_plane_from_half_angle()
     distance_loc(:,ii),orthogonal(:,ii),plane_angle(ii))
   enddo
   !> check values 
-  call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
+  call assert_equals(half_angles_sol(1,:),half_width_angle_loc(1,:),n_planes,&
   tol_real8,"Error define direction plane from half angles: width angle 1 mismatch!")
-  call assert_equals(half_width_angle_loc(2,:),half_angles_sol(1,:),n_planes,&
+  call assert_equals(half_angles_sol(1,:),half_width_angle_loc(2,:),n_planes,&
   tol_real8,"Error define direction plane from half angles: width angle 2 mismatch!")
-  call assert_equals(half_height_angle_loc(1,:),half_angles_sol(2,:),n_planes,&
+  call assert_equals(half_angles_sol(2,:),half_height_angle_loc(1,:),n_planes,&
   tol_real8,"Error define direction plane from half angles: height angle 1 mismatch!")
-  call assert_equals(half_height_angle_loc(2,:),half_angles_sol(2,:),n_planes,&
+  call assert_equals(half_angles_sol(2,:),half_height_angle_loc(2,:),n_planes,&
   tol_real8,"Error define direction plane from half angles: height angle 2 mismatch!")
   call assert_equals(distance_loc,distance_loc,4,n_planes,&
   tol_real8,"Error define direction plane from half angles: distance is not unity!")
-  call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
+  call assert_equals(zeros_5Xn_planes_r8,orthogonal,5,n_planes,&
   tol_real8,"Error define direction plane from half angles: axis not orthogonal!")
-  call assert_equals(plane_angle,half_angles_sol(3,:),n_planes,&
+  call assert_equals(half_angles_sol(3,:),plane_angle,n_planes,&
   tol_real8,"Error define direction plane from half angles: plane angle mismatch!")
 end subroutine test_define_direction_plane_from_half_angle
 
@@ -307,19 +314,19 @@ subroutine test_define_direction_plane_from_half_angle_origin()
     distance_loc(:,ii),orthogonal(:,ii),plane_angle(ii))
   enddo
   !> check values 
-  call assert_equals(half_width_angle_loc(1,:),half_angles_sol(1,:),n_planes,&
+  call assert_equals(half_angles_sol(1,:),half_width_angle_loc(1,:),n_planes,&
   tol_real8,"Error define direction plane from half angles origin: width angle 1 mismatch!")
-  call assert_equals(half_width_angle_loc(2,:),half_angles_sol(1,:),n_planes,&
+  call assert_equals(half_angles_sol(1,:),half_width_angle_loc(2,:),n_planes,&
   tol_real8,"Error define direction plane from half angles origin: width angle 2 mismatch!")
-  call assert_equals(half_height_angle_loc(1,:),half_angles_sol(2,:),n_planes,&
+  call assert_equals(half_angles_sol(2,:),half_height_angle_loc(1,:),n_planes,&
   tol_real8,"Error define direction plane from half angles origin: height angle 1 mismatch!")
-  call assert_equals(half_height_angle_loc(2,:),half_angles_sol(2,:),n_planes,&
+  call assert_equals(half_angles_sol(2,:),half_height_angle_loc(2,:),n_planes,&
   tol_real8,"Error define direction plane from half angles origin: height angle 2 mismatch!")
   call assert_equals(distance_loc,distance_loc,4,n_planes,&
   tol_real8,"Error define direction plane from half angles origin: distance is not unity!")
-  call assert_equals(orthogonal,zeros_5Xn_planes_r8,5,n_planes,&
+  call assert_equals(zeros_5Xn_planes_r8,orthogonal,5,n_planes,&
   tol_real8,"Error define direction plane from half angles origin: axis not orthogonal!")
-  call assert_equals(plane_angle,half_angles_sol(3,:),n_planes,&
+  call assert_equals(half_angles_sol(3,:),plane_angle,n_planes,&
   tol_real8,"Error define direction plane from half angles origin: plane angle mismatch!")
 end subroutine test_define_direction_plane_from_half_angle_origin
 
@@ -337,7 +344,7 @@ subroutine test_compute_edge_length()
     norm2(pp_sol(:,3,ii)-pp_sol(:,1,ii))]
   enddo
   !> test results 
-  call assert_equals(test_length,solution_length,2,n_planes,&
+  call assert_equals(solution_length,test_length,2,n_planes,&
   tol_real8,"Error computing length of plane edges: edge length mismatch!")
 end subroutine test_compute_edge_length
 

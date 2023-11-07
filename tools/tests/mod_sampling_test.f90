@@ -44,12 +44,18 @@ subroutine run_fruit_sampling()
   call setup_cone
   call setup_sphere
   write(*,*) "  ... running: sampling tests"
-  call test_sample_uniform_standard_cone
-  call test_sample_uniform_direction_cone
-  call test_sample_uniform_direction_length_cone
-  call test_sample_uniform_sphere
-  call test_sample_uniform_sphere_corona_rthetaphi
-  call test_sample_uniform_sphere_corona_rcosphi
+  call run_test_case(test_sample_uniform_standard_cone,&
+  'test_sample_uniform_standard_cone')
+  call run_test_case(test_sample_uniform_direction_cone,&
+  'test_sample_uniform_direction_cone')
+  call run_test_case(test_sample_uniform_direction_length_cone,&
+  'test_sample_uniform_direction_length_cone')
+  call run_test_case(test_sample_uniform_sphere,&
+  'test_sample_uniform_sphere')
+  call run_test_case(test_sample_uniform_sphere_corona_rthetaphi,&
+  'test_sample_uniform_sphere_corona_rthetaphi')
+  call run_test_case(test_sample_uniform_sphere_corona_rcosphi,&
+  'test_sample_uniform_sphere_corona_rcosphi')
   write(*,*) "  ... tearing-down: sampling tests"
 end subroutine run_fruit_sampling
 
@@ -152,7 +158,7 @@ subroutine test_sample_uniform_direction_cone()
         call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj,1)).and.&
         (cos_half_angle.le.cos_half_angle_sol(jj,2))),&
         "Error uniform sampling direction cone: rays cosinus half angle out-of-bound!")
-        call assert_equals(ray_length,ones,n_rays,tol_real8,&
+        call assert_equals(ones,ray_length,n_rays,tol_real8,&
         "Error uniform sampling direction cone: rays length not unitary!")
       enddo
     enddo
@@ -181,7 +187,7 @@ subroutine test_sample_uniform_standard_cone()
     call assert_true(all((cos_half_angle.ge.cos_half_angle_sol(jj,1)).and.&
     (cos_half_angle.le.cos_half_angle_sol(jj,2))),&
     "Error uniform sampling standard cone: rays cosinus half angle out-of-bound!")
-    call assert_equals(ray_length,ones,n_rays,tol_real8,&
+    call assert_equals(ones,ray_length,n_rays,tol_real8,&
     "Error uniform sampling standard cone: rays length not unitary!")
   enddo
 end subroutine test_sample_uniform_standard_cone
@@ -205,7 +211,7 @@ subroutine test_sample_uniform_sphere()
     (RThetaPhi(3)-azimuth_sphere_int(1))/(azimuth_sphere_int(2)-azimuth_sphere_int(1))/)
   enddo
   !> checks
-  call assert_equals(rand_test,rand_sol,n_x,n_samples,tol_real8,&
+  call assert_equals(rand_sol,rand_test,n_x,n_samples,tol_real8,&
   "Error uniform sampling sphere: random number mismatch!")
 end subroutine test_sample_uniform_sphere
 
@@ -229,7 +235,7 @@ subroutine test_sample_uniform_sphere_corona_rthetaphi()
     (RThetaPhi(3)-azimuth_sphere_int(1))/(azimuth_sphere_int(2)-azimuth_sphere_int(1))/)
   enddo
   !> checks
-  call assert_equals(rand_test,rand_sol,n_x,n_samples,tol_real8,&
+  call assert_equals(rand_sol,rand_test,n_x,n_samples,tol_real8,&
   "Error uniform sampling sphere corona angles: random number mismatch!")
 end subroutine test_sample_uniform_sphere_corona_rthetaphi
 
@@ -252,7 +258,7 @@ subroutine test_sample_uniform_sphere_corona_rcosphi()
     (RCosPhi(3)-azimuth_sphere_int(1))/(azimuth_sphere_int(2)-azimuth_sphere_int(1))/)
   enddo
   !> checks
-  call assert_equals(rand_test,rand_sol,n_x,n_samples,tol_real8,&
+  call assert_equals(rand_sol,rand_test,n_x,n_samples,tol_real8,&
   "Error uniform sampling sphere corona cosine: random number mismatch!")
 end subroutine test_sample_uniform_sphere_corona_rcosphi
 

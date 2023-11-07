@@ -46,8 +46,8 @@ subroutine run_fruit_particle_type_openmp()
   write(*,"(/A)") "  ... set-up particle type openmp tests"
   call setup
   write(*,"(/A)") "  ... run particle type openmp tests"
-  call test_particle_to_array
-  call test_particle_copy
+  call run_test_case(test_particle_to_array,'test_particle_to_array')
+  call run_test_case(test_particle_copy,'test_particle_copy')
   write(*,"(/A)") "  ... tear-down particle type openmp tests"
   call teardown
   
@@ -161,17 +161,17 @@ subroutine test_particle_to_array()
   !$omp end parallel do
 
   ! checks
-  call assert_equals(int(int1_rel_fo),int(int1_rel_fo_sol),n_particles,&
+  call assert_equals(int(int1_rel_fo_sol),int(int1_rel_fo),n_particles,&
   "Error particle to array: relativistic full orbit q do not match")
-  call assert_equals(int(int1_gc),int(int1_gc_sol),n_particles,&
+  call assert_equals(int(int1_gc_sol),int(int1_gc),n_particles,&
   "Error particle to array: guiding center q do not match")
-  call assert_equals(int_rel_fo,int_rel_fo_sol,n_particles,&
+  call assert_equals(int_rel_fo_sol,int_rel_fo,n_particles,&
   "Error particle to array: relativistic full orbit i_elm do not match")
-  call assert_equals(int_gc,int_gc_sol,n_particles,&
+  call assert_equals(int_gc_sol,int_gc,n_particles,&
   "Error particle to array: guiding center i_elm do not match")
-  call assert_equals(real8_rel_fo,real8_rel_fo_sol,n_fields_rel_fo,&
+  call assert_equals(real8_rel_fo_sol,real8_rel_fo,n_fields_rel_fo,&
   n_particles,"Error particle array: relativistic full orbit x, st, p do not match")
-  call assert_equals(real8_gc,real8_gc_sol,n_fields_gc,n_particles,&
+  call assert_equals(real8_gc_sol,real8_gc,n_fields_gc,n_particles,&
   "Error particle array: guiding center x, st, E and mu do not match")
 
 end subroutine test_particle_to_array
@@ -202,17 +202,17 @@ subroutine test_particle_copy()
   int1_gc,int_gc,real8_gc)
 
   ! checks  
-  call assert_equals(int(int1_rel_fo),int(int1_rel_fo_sol),n_particles,&
+  call assert_equals(int(int1_rel_fo_sol),int(int1_rel_fo),n_particles,&
   "Error particle copy: relativistic full orbit q do not match")
-  call assert_equals(int(int1_gc),int(int1_gc_sol),n_particles,&
+  call assert_equals(int(int1_gc_sol),int(int1_gc),n_particles,&
   "Error particle copy: guiding center q do not match")
-  call assert_equals(int_rel_fo,int_rel_fo_sol,n_particles,&
+  call assert_equals(int_rel_fo_sol,int_rel_fo,n_particles,&
   "Error particle copy: relativistic full orbit i_elm do not match")
-  call assert_equals(int_gc,int_gc_sol,n_particles,&
+  call assert_equals(int_gc_sol,int_gc,n_particles,&
   "Error particle copy: guiding center i_elm do not match")
-  call assert_equals(real8_rel_fo,real8_rel_fo_sol,n_fields_rel_fo,&
+  call assert_equals(real8_rel_fo_sol,real8_rel_fo,n_fields_rel_fo,&
   n_particles,"Error particle copy: relativistic full orbit x, st, p do not match")
-  call assert_equals(real8_gc,real8_gc_sol,n_fields_gc,n_particles,&
+  call assert_equals(real8_gc_sol,real8_gc,n_fields_gc,n_particles,&
   "Error particle copy: guiding center x, st, E and mu do not match")
 
 end subroutine test_particle_copy

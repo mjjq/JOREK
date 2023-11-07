@@ -106,20 +106,20 @@ subroutine test_de_allocate_camera()
   "Error allocate camera from unallocated: n_pixels_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_times_sol,camera_sol%n_active_vertices,0,&
   "Error allocate camera from unallocated: n_active_vertices")  
-  call assert_equals_allocatable_arrays(n_times_sol,camera_sol%times,0.d0,&
+  call assert_equals_allocatable_arrays(n_times_sol,0.d0,camera_sol%times,&
   "Error allocate camera from unallocated: times") 
   call assert_equals_allocatable_arrays(n_x_sol,n_vertices_sol,n_times_sol,&
-  camera_sol%x,0.d0,"Error allocate camera from unallocated: x")
+  0.d0,camera_sol%x,"Error allocate camera from unallocated: x")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_sol,n_times_sol,&
-  camera_sol%properties,0.d0,"Error allocate camera from unallocated: properties")
+  0.d0,camera_sol%properties,"Error allocate camera from unallocated: properties")
   call assert_true(camera_sol%exposure_time.eq.0.d0,&
   "Error allocate camera from unallocated: exposure_time not zero!")
-  call assert_equals_allocatable_arrays(2,n_times_sol,camera_sol%plane_edge_length,&
-  0.d0,"Error allocate camera from unallocated: plane_edge_length")
-  call assert_equals_allocatable_arrays(n_x_sol,n_times_sol,camera_sol%image_plane_direction,&
-  0.d0,"Error allocate camera from unallocated: image_plane_direction")
+  call assert_equals_allocatable_arrays(2,n_times_sol,0.d0,camera_sol%plane_edge_length,&
+  "Error allocate camera from unallocated: plane_edge_length")
+  call assert_equals_allocatable_arrays(n_x_sol,n_times_sol,0.d0,camera_sol%image_plane_direction,&
+  "Error allocate camera from unallocated: image_plane_direction")
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_points_sol,n_times_sol,&
-  camera_sol%image_plane,0.d0,"Error allocate camera from unallocated: image_plane_direction")
+  0.d0,camera_sol%image_plane,"Error allocate camera from unallocated: image_plane_direction")
   !> test allocation from allocated
   camera_sol%n_plane_points = n_plane_points_2_sol
   call camera_sol%allocate_camera(n_times_2_sol,n_vertices_2_sol,&
@@ -133,18 +133,18 @@ subroutine test_de_allocate_camera()
   "Error allocate camera from allocated: n_pixels_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_times_2_sol,camera_sol%n_active_vertices,0,&
   "Error allocate camera from allocated: n_active_vertices")  
-  call assert_equals_allocatable_arrays(n_times_2_sol,camera_sol%times,0.d0,&
+  call assert_equals_allocatable_arrays(n_times_2_sol,0.d0,camera_sol%times,&
   "Error allocate camera from allocated: times") 
   call assert_equals_allocatable_arrays(n_x_sol,n_vertices_2_sol,n_times_2_sol,&
-  camera_sol%x,0.d0,"Error allocate camera from allocated: x")
+  0.d0,camera_sol%x,"Error allocate camera from allocated: x")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_2_sol,n_times_2_sol,&
-  camera_sol%properties,0.d0,"Error allocate camera from allocated: properties")
-  call assert_equals_allocatable_arrays(2,n_times_2_sol,camera_sol%plane_edge_length,&
-  0.d0,"Error allocate camera from allocated: plane_edge_length")
-  call assert_equals_allocatable_arrays(n_x_sol,n_times_2_sol,camera_sol%image_plane_direction,&
-  0.d0,"Error allocate camera from allocated: image_plane_direction")
+  0.d0,camera_sol%properties,"Error allocate camera from allocated: properties")
+  call assert_equals_allocatable_arrays(2,n_times_2_sol,0.d0,camera_sol%plane_edge_length,&
+  "Error allocate camera from allocated: plane_edge_length")
+  call assert_equals_allocatable_arrays(n_x_sol,n_times_2_sol,0.d0,camera_sol%image_plane_direction,&
+  "Error allocate camera from allocated: image_plane_direction")
   call assert_equals_allocatable_arrays(n_x_sol,n_plane_points_2_sol,n_times_2_sol,&
-  camera_sol%image_plane,0.d0,"Error allocate camera from allocated: image_plane_direction")
+  0.d0,camera_sol%image_plane,"Error allocate camera from allocated: image_plane_direction")
   !> test deallocation
   call camera_sol%deallocate_camera
   call assert_equals(0,camera_sol%n_times,&

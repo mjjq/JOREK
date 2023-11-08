@@ -3,44 +3,148 @@ module mod_plasma_functions
   
   use phys_module, only: eta_T_dependent, T_min, ZKpar_T_dependent, visco_T_dependent,  &
                          eta_num, eta_num_T_dependent, eta_num_psin_dependent, eta_num_prof, &
-                         visco_num, visco_num_T_dependent, T_max_visco 
-  use mod_model_settings, only:  with_impurities
+                         visco_num, visco_num_T_dependent, T_max_visco, T_0, Te_0, central_density, &
+                         eta_coul_log_dep 
+  use mod_model_settings, only:  with_impurities, with_TiTe
+  use constants
     
   implicit none
   
   private
-  public resistivity, conductivity_parallel, viscosity, hyper_resistivity, hyper_viscosity
+  public resistivity, conductivity_parallel, viscosity, hyper_resistivity, hyper_viscosity, coulomb_log_ei
   
   contains
   
+  
+  
+  
+  
+  
+  !> Determine Coulomb logartihm describing electron collisions with ions
+  pure subroutine coulomb_log_ei(T_raw, T_corr, r0_raw, r0_corr, rimp0_raw, rimp0_corr, alpha_e, lambda, dalpha_e_dT,  &
+                                 dlambda_dT, d2lambda_dT2, dlambda_dr0, dlambda_drimp0, normalize_to_central )
+    implicit none
+
+    real*8, intent(in)             :: T_raw                !< temperature (without correction)
+    real*8, intent(in)             :: T_corr               !< corrected temperature > 0
+    real*8, intent(in)             :: r0_raw               !< total ion mass (without correction)
+    real*8, intent(in)             :: r0_corr              !< corrected total ion mass
+    real*8, intent(in)             :: rimp0_raw            !< impurity mass (without correction)
+    real*8, intent(in)             :: rimp0_corr           !< corrected impurity mass
+    real*8, intent(in)             :: alpha_e              !< coefficient to recover ne 
+    real*8, intent(out)            :: lambda               !< output coulomb logartihm
+    real*8, optional, intent(in)   :: dalpha_e_dT          !< derivative of coefficient to recover ne
+    real*8, optional, intent(out)  :: dlambda_dT           !< 1st derivative with respect to the temperature
+    real*8, optional, intent(out)  :: d2lambda_dT2         !< 2nd derivative with respect to the temperature
+    real*8, optional, intent(out)  :: dlambda_dr0          !< 1st derivative with respect to the total density
+    real*8, optional, intent(out)  :: dlambda_drimp0       !< 1st derivative with respect to the impurity density
+    logical, optional,intent( in)  :: normalize_to_central !< If true, lambda is normalized to lambda_central
+
+    !> Local parameters
+    real*8 :: ne_cm3, Te_corr_eV, dTe_corr_eV_dT, dne_cm3_dT, dne_cm3_dr0, dne_cm3_drimp0
+    real*8 :: ne_cm3_central, Te_central, lambda_central
+    logical:: norm2central
+
+    if (present(dlambda_dT))       dlambda_dT     = 0.d0
+    if (present(d2lambda_dT2))     d2lambda_dT2   = 0.d0
+    if (present(dlambda_dr0))      dlambda_dr0    = 0.d0
+    if (present(dlambda_drimp0))   dlambda_drimp0 = 0.d0
+
+    !> Get electron density in cm^-3 units and its derivatives
+    ne_cm3         = (r0_corr + alpha_e * rimp0_corr) * 1.d20 * central_density * 1.d-6
+    dne_cm3_dT     =        dalpha_e_dT * rimp0_corr  * 1.d20 * central_density * 1.d-6
+    dne_cm3_dr0    =  1.d0                            * 1.d20 * central_density * 1.d-6
+    dne_cm3_drimp0 =            alpha_e * 1.d0        * 1.d20 * central_density * 1.d-6
+    
+    if (ne_cm3 < 1.d10  )       ne_cm3         = 1.d10 ! To prevent absurd numbers in the Coulomb log
+    if (r0_raw < r0_corr)       dne_cm3_dr0    = 0.d0
+    if (rimp0_raw < rimp0_corr) dne_cm3_drimp0 = 0.d0
+
+    !> Get electron temperature in eVs and its derivatives
+    if (with_TiTe) then
+      Te_corr_eV     = T_corr / (EL_CHG*MU_ZERO*central_density*1.d20)
+      dTe_corr_eV_dT = 1.0d0  / (EL_CHG*MU_ZERO*central_density*1.d20)
+      Te_central     = Te_0   / (EL_CHG*MU_ZERO*central_density*1.d20)
+    else
+      Te_corr_eV     = T_corr / (EL_CHG*MU_ZERO*central_density*1.d20 * 2.d0)
+      dTe_corr_eV_dT = 1.0d0  / (EL_CHG*MU_ZERO*central_density*1.d20 * 2.d0)
+      Te_central     = T_0    / (EL_CHG*MU_ZERO*central_density*1.d20 * 2.d0)
+    endif
+    if (T_raw  <  T_corr)  dTe_corr_eV_dT = 0.d0
+    
+    !> Evaluate the coulomb logarithm and its derivatives
+    if (Te_corr_eV < 10.d0) then
+      lambda  = 23.0    - 0.5*log(ne_cm3) +  1.5*log(Te_corr_eV)  ! Assuming bg_charge is 1!
+      if (present(dlambda_dT))    dlambda_dT     = - 0.5/ne_cm3 * dne_cm3_dT +  1.5/Te_corr_eV * dTe_corr_eV_dT
+      if (present(d2lambda_dT2))  d2lambda_dT2   = + 0.5/ne_cm3**2 * dne_cm3_dT**2 - 1.5/Te_corr_eV**2 * dTe_corr_eV_dT
+    else
+      lambda  = 24.1513 - 0.5*log(ne_cm3) +  1.0*log(Te_corr_eV)
+      if (present(dlambda_dT))    dlambda_dT     = - 0.5/ne_cm3 * dne_cm3_dT +  1.0/Te_corr_eV * dTe_corr_eV_dT
+      if (present(d2lambda_dT2))  d2lambda_dT2   = + 0.5/ne_cm3**2 * dne_cm3_dT**2 - 1.0/Te_corr_eV**2 * dTe_corr_eV_dT
+    endif
+
+    if (present(dlambda_dr0))     dlambda_dr0    = - 0.5/ne_cm3 * dne_cm3_dr0
+    if (present(dlambda_drimp0))  dlambda_drimp0 = - 0.5/ne_cm3 * dne_cm3_drimp0
+
+    if (present(normalize_to_central)) then
+      norm2central = normalize_to_central
+    else 
+      norm2central = .false.
+    endif
+
+    if (eta_coul_log_dep) then
+      if (norm2central) then
+        ne_cm3_central = 1.d20 * central_density * 1.d-6
+        if (Te_central < 10.d0) then
+          lambda_central = 23.0    - 0.5*log(ne_cm3_central) +  1.5*log(Te_central) 
+        else
+          lambda_central = 24.1513 - 0.5*log(ne_cm3_central) +  1.0*log(Te_central)
+        endif
+        lambda = lambda / lambda_central
+        
+        if (present(dlambda_dT))      dlambda_dT     = dlambda_dT     / lambda_central
+        if (present(d2lambda_dT2))    d2lambda_dT2   = d2lambda_dT2   / lambda_central
+        if (present(dlambda_dr0))     dlambda_dr0    = dlambda_dr0    / lambda_central   
+        if (present(dlambda_drimp0))  dlambda_drimp0 = dlambda_drimp0 / lambda_central
+      endif
+    endif
+
+  end subroutine coulomb_log_ei
  
 
 
 
- 
+
+
   !> Determine resistivity (input/output in JOREK units)
-  pure subroutine resistivity(eta_0, T_raw, T_corr, T_max, T0, Z_eff, eta_T,                       & 
+  pure subroutine resistivity(eta_0, T_raw, T_corr, T_max, T0, Z_eff, lambda_c_norm, eta_T,        & 
                               dZ_eff_dT, dZ_eff_dr0, dZ_eff_drimp0, dr0_corr_dn, drimp0_corr_dn,   & 
-                              deta_dT, d2eta_d2T, deta_dr0, deta_drimp0) 
+                              deta_dT, d2eta_d2T, deta_dr0, deta_drimp0,                           &
+                              dlambda_c_norm_dT, d2lambda_c_norm_dT2, dlambda_c_norm_dr0, dlambda_c_norm_drimp0) 
 
     implicit none
     
-    real*8, intent(in)             :: eta_0            ! central resistivity
-    real*8, intent(in)             :: T_raw            ! temperature without correction
-    real*8, intent(in)             :: T_corr           ! corrected temperature > 0
-    real*8, intent(in)             :: T_max            ! max temperature to use in the function
-    real*8, intent(in)             :: T0               ! central temperature at equilibrium
-    real*8, intent(in)             :: Z_eff            ! effective charge (only used with_impurities at the moment)
-    real*8, intent(out)            :: eta_T            ! output resistivity
-    real*8, optional, intent(in)   :: dZ_eff_dT        ! Derivative of Zeff w.r.t. the temperature 
-    real*8, optional, intent(in)   :: dZ_eff_dr0       ! Derivative of Zeff w.r.t. the total density 
-    real*8, optional, intent(in)   :: dZ_eff_drimp0    ! Derivative of Zeff w.r.t. the impurity density
-    real*8, optional, intent(in)   :: dr0_corr_dn      ! Derivative of density correction  
-    real*8, optional, intent(in)   :: drimp0_corr_dn   ! Derivative of impurity density correction  
-    real*8, optional, intent(out)  :: deta_dT          ! 1st derivative with respect to the temperature
-    real*8, optional, intent(out)  :: d2eta_d2T        ! 2nd derivative with respect to the temperature
-    real*8, optional, intent(out)  :: deta_dr0         ! 1st derivative with respect to the total density
-    real*8, optional, intent(out)  :: deta_drimp0      ! 1st derivative with respect to the timpurity density
+    real*8, intent(in)             :: eta_0                ! central resistivity
+    real*8, intent(in)             :: T_raw                ! temperature without correction
+    real*8, intent(in)             :: T_corr               ! corrected temperature > 0
+    real*8, intent(in)             :: T_max                ! max temperature to use in the function
+    real*8, intent(in)             :: T0                   ! central temperature at equilibrium
+    real*8, intent(in)             :: Z_eff                ! effective charge (only used with_impurities at the moment)
+    real*8, intent(in)             :: lambda_c_norm        ! Coulomb logarithm normalized by the central coulomb logarithm (i.e. at T0 and rho0)
+    real*8, intent(out)            :: eta_T                ! output resistivity
+    real*8, optional, intent(in)   :: dZ_eff_dT            ! Derivative of Zeff w.r.t. the temperature 
+    real*8, optional, intent(in)   :: dZ_eff_dr0           ! Derivative of Zeff w.r.t. the total density 
+    real*8, optional, intent(in)   :: dZ_eff_drimp0        ! Derivative of Zeff w.r.t. the impurity density
+    real*8, optional, intent(in)   :: dr0_corr_dn          ! Derivative of density correction  
+    real*8, optional, intent(in)   :: drimp0_corr_dn       ! Derivative of impurity density correction  
+    real*8, optional, intent(out)  :: deta_dT              ! 1st derivative with respect to the temperature
+    real*8, optional, intent(out)  :: d2eta_d2T            ! 2nd derivative with respect to the temperature
+    real*8, optional, intent(out)  :: deta_dr0             ! 1st derivative with respect to the total density
+    real*8, optional, intent(out)  :: deta_drimp0          ! 1st derivative with respect to the impurity density
+    real*8, optional, intent( in)  :: dlambda_c_norm_dT    ! 1st derivative with respect to the temperature
+    real*8, optional, intent( in)  :: d2lambda_c_norm_dT2  ! 2nd derivative with respect to the temperature
+    real*8, optional, intent( in)  :: dlambda_c_norm_dr0   ! 1st derivative with respect to the total density
+    real*8, optional, intent( in)  :: dlambda_c_norm_drimp0! 1st derivative with respect to the impurity density
 
     !--- Local parameters
     real*8 :: eta_coef, deta_coef_dZeff
@@ -87,8 +191,26 @@ module mod_plasma_functions
         if (present(deta_dT) .and. present(dZ_eff_dT)) then
           deta_dT     = deta_dT * eta_coef + eta_T * deta_coef_dZeff * dZ_eff_dT
         endif
+        if (present(deta_dT) .and. present(d2eta_d2T) .and. present(dZ_eff_dT)) then
+          d2eta_d2T   = d2eta_d2T * eta_coef + 2.d0*deta_dT * deta_coef_dZeff * dZ_eff_dT  ! Missing d2Zeff_dT2 term!
+        endif
       end if
 
+    endif
+
+    ! --- Add dependencies for the Coulomb logarithm
+    eta_T = eta_T * lambda_c_norm
+    if (present(deta_dT) .and. present(dlambda_c_norm_dT)) then
+      deta_dT     = deta_dT * lambda_c_norm + eta_T * dlambda_c_norm_dT
+    endif
+    if (present(d2eta_d2T) .and. present(deta_dT) .and. present(dlambda_c_norm_dT) .and. present(d2lambda_c_norm_dT2))  then
+      d2eta_d2T   = d2eta_d2T * lambda_c_norm + 2.d0 * deta_dT * dlambda_c_norm_dT + eta_T * d2lambda_c_norm_dT2 
+    endif
+    if (present(deta_dr0) .and. present(dlambda_c_norm_dr0)) then
+      deta_dr0    = deta_dr0    * lambda_c_norm + eta_T * dlambda_c_norm_dr0
+    endif
+    if (present(deta_drimp0).and. present(dlambda_c_norm_drimp0)) then
+      deta_drimp0 = deta_drimp0 * lambda_c_norm + eta_T * dlambda_c_norm_drimp0
     endif
 
   end subroutine resistivity

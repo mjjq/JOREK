@@ -210,7 +210,8 @@ module mod_expression
     call add(exprs_all, 'heatF_par_cv', 'Convective parallel heat flux (normal to the boundary)', 'boundary    ')
     call add(exprs_all, 'heatF_prp_cv', 'Convective perpend  heat flux (normal to the boundary)', 'boundary    ')
     call add(exprs_all, 'heatF_tot_cv', 'Convective total    heat flux (normal to the boundary)', 'boundary    ')
-    call add(exprs_all, 'heatF_total ', 'Total heat flux (normal to the boundary)              ', 'boundary    ')
+    call add(exprs_all, 'heatF_tot_th', 'Total thermal       heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_total ', 'Total               heat flux (normal to the boundary)', 'boundary    ')
     call add(exprs_all, 'kinEn_F_perp', 'Perpend kinetic energy flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'kinEn_F_par ', 'Parall  kinetic energy flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'kinEn_F_tot ', 'Total   kinetic energy flux (normal to the boundary)  ', 'boundary    ')
@@ -1942,8 +1943,11 @@ module mod_expression
               case ( 'heatF_tot_cv' )
                 res = pres_flux_tot * fact_flux
 
-              case ( 'heatF_total'  )
+              case ( 'heatF_tot_th'  )
                 res = (pres_flux_tot + ZKperp_flux + ZKpar_flux) * fact_flux
+
+              case ( 'heatF_total'  )
+                res = (pres_flux_tot + ZKperp_flux + ZKpar_flux + kin_flux_tot) * fact_flux
 
               case ( 'kinEn_F_par' )
                 res = kin_flux_par * fact_flux

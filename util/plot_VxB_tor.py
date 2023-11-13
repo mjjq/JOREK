@@ -36,7 +36,8 @@ if __name__ == "__main__":
                         help="Value of delta, i.e., singular grids with distance away from (R_geo, Z_geo) smaller than delta will be set to zero.")
     parser.add_argument('-me', "--method", choices=["it", "sc"], default="it: interpolate",
                         help="Use the specified method to plot the data, including 1. it: interpolate; 2. sc: scatter.")
-
+    parser.add_argument("-fz", "--fontsize", default=15,
+                        help="Define the fontsize of figure.")
     args = parser.parse_args()
 
     reader = vtk.vtkDataSetReader()
@@ -68,11 +69,11 @@ if __name__ == "__main__":
         #         coordniates[:, 0], coordniates[:, 1], VXB_tor, 'VxB_tor_' + str(int(itor + 1)), args.folder_name, time)
     if args.method == "sc":
         pltvtk.plot2D_scatter(
-                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time)
+                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize)
     else:
         pltvtk.plot2D_interpolated(
-                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time)
+                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize)
 
-    plt.connect('motion_notify_event',
-                lambda event: pltvtk.display_values(event, coordniates[:, 0], coordniates[:, 1], VXB_tor_n0))
+    # plt.connect('motion_notify_event',
+    #             lambda event: pltvtk.display_values(event, coordniates[:, 0], coordniates[:, 1], VXB_tor_n0))
     plt.show()

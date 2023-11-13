@@ -9,6 +9,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import argparse
 
 
@@ -37,7 +38,7 @@ def read_ascii_file(file_path, skiprows):
 
 
 def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, 
-                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y):
+                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width):
     """
     Plot lines from multiple ASCII files in the same plot.
 
@@ -46,6 +47,8 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
     """
     # Define line styles (you can customize this list with different line styles)
     linestyles = ['-', '--', '-.', ':']
+    # Set the default linewidth for all lines
+    mpl.rcParams['lines.linewidth'] = line_width
 
     plt.figure(figsize=(10, 6))  # Set the figure size
 
@@ -89,13 +92,22 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
                 print("Error: Value of -yc is out of range!!!")
                 exit(-2)
 
-    plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel)  # Set the x-axis label based on the first file
-    plt.ylabel('Y-axis Label' if ylabel == "" else ylabel)  # Set the y-axis label (customize as needed)
-    plt.legend()  # Show legends for each line
-    plt.title(title)  # Set the plot title
+    plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel, fontsize=font_size)  # Set the x-axis label based on the first file
+    plt.ylabel('Y-axis Label' if ylabel == "" else ylabel, fontsize=font_size)  # Set the y-axis label (customize as needed)
+    legend = plt.legend()  # Show legends for each line
+    for label in legend.get_texts():
+        label.set_fontsize(10)
+    plt.title(title, fontsize=font_size)  # Set the plot title
     plt.grid(True)  # Show grid lines
     plt.xscale(xscaleType)  # Set linear or log for the x scale
     plt.yscale(yscaleType)  # Set linear or log for the y scale
+
+    # Access the y-axis OffsetText object
+    plt.gca().get_yaxis().get_offset_text().set_size(font_size)
+
+    # Axis tick label font size
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
 
     plt.show()
 
@@ -130,9 +142,13 @@ if __name__ == "__main__":
     parser.add_argument("-ym", "--multiplier_for_Y", type=float, default=1.0,
                         help="Multiple the Y-data with the specified value.")
     parser.add_argument("file_paths", nargs="+", help="List of file paths to the ASCII files.")
+    parser.add_argument("-fz", "--fontsize", default=15,
+                        help="Define the fontsize of figure.")
+    parser.add_argument("-lw", "--linewidth", default=2,
+                        help="Define the linewidth of figure.")
 
     args = parser.parse_args()
 
     plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
-                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y)
+                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth)

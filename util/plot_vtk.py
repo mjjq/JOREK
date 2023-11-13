@@ -39,7 +39,7 @@ def display_values(event, x, y, z):
             f"Mouse at (x, y): ({x_data:.2e}, {y_data:.2e}), z: {z_value:.2e}")
 
 
-def plot3D_unstructed(x, y, z, title, file_path, time):
+def plot3D_unstructed(x, y, z, title, file_path, time, font_size):
     fig = plt.figure(figsize=(9, 7), constrained_layout=True)
     # ax = fig.add_subplot(1,1,1)
     ax = fig.add_subplot(111, projection='3d')
@@ -50,10 +50,14 @@ def plot3D_unstructed(x, y, z, title, file_path, time):
                         location='left', shrink=0.5)
 
     # Optional: You can add labels to the axes
-    ax.set_xlabel('R')
-    ax.set_ylabel('Z')
+    ax.set_xlabel('R', fontsize=font_size)
+    ax.set_ylabel('Z', fontsize=font_size)
     ax.set_title(title + " @ Time = " +
-                 "{:.2f}".format(time) + " of " + file_path)
+                 "{:.2f}".format(time) + " of " + file_path, fontsize=font_size)
+
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
+    # plt.legend(fontsize=font_size)
 
     # # Remove the Z axis
     # ax.zaxis.line.set_lw(0.)
@@ -104,7 +108,7 @@ def plot3D_unstructed(x, y, z, title, file_path, time):
     # plt.show()
 
 
-def plot2D_scatter(x, y, z, title, file_path, time):
+def plot2D_scatter(x, y, z, title, file_path, time, font_size):
 
     plt.figure(figsize=(9, 7), constrained_layout=True)
 
@@ -116,11 +120,11 @@ def plot2D_scatter(x, y, z, title, file_path, time):
     plt.colorbar()
 
     # Optional: You can add labels to the axes
-    plt.xlabel('R')
-    plt.ylabel('Z')
+    plt.xlabel('R', fontsize=font_size)
+    plt.ylabel('Z', fontsize=font_size)
 
     plt.title(title + " @ Time = " +
-              "{:.2f}".format(time) + " (" + file_path + ")")
+              "{:.2f}".format(time) + " (" + file_path + ")", fontsize=font_size)
 
     # plt.xlim([min(x), max(x)])
     # plt.ylim([min(y), max(y)])
@@ -134,14 +138,17 @@ def plot2D_scatter(x, y, z, title, file_path, time):
 
     # Show the plot
     # plt.show()
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
+    # plt.legend(fontsize=font_size)
 
 
-def plot2D_flow_field(x, y, vx, vy, title, file_path, time):
+def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size):
 
     plt.figure(figsize=(9, 7), constrained_layout=True)
     # Define a regular grid for the contour plot
-    x_grid = np.linspace(min(x), max(x), 40)
-    y_grid = np.linspace(min(y), max(y), 40)
+    x_grid = np.linspace(min(x), max(x), 100)
+    y_grid = np.linspace(min(y), max(y), 100)
 
     X, Y = np.meshgrid(x_grid, y_grid)
 
@@ -152,20 +159,22 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time):
     # You can choose a different interpolation method if needed
     V_Y = sci_intp.griddata((x, y), vy, (X, Y), method='cubic')
     V = pow(V_X * V_X + V_Y * V_Y, 0.5)
+    V_max = max((vx ** 2 + vy ** 2)**0.5)
+
 
     # Create a quiver plot
     # You can choose a different colormap if desired
-    plt.quiver(X, Y, V_X, V_Y, V, cmap='hot')
+    plt.quiver(X, Y, V_X/V_max, V_Y/V_max, V, cmap='winter', scale=1.e1)
 
     # Add a colorbar for reference
     plt.colorbar()
 
     # Optional: You can add labels to the axes
-    plt.xlabel('R')
-    plt.ylabel('Z')
+    plt.xlabel('R', fontsize=font_size)
+    plt.ylabel('Z', fontsize=font_size)
 
     plt.title(title + " @ Time = " +
-              "{:.2f}".format(time) + " (" + file_path + ")")
+              "{:.2f}".format(time) + " (" + file_path + ")", fontsize=font_size)
 
     # plt.xlim([min(x), max(x)])
     # plt.ylim([min(y), max(y)])
@@ -175,9 +184,12 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time):
 
     # Show the plot
     # plt.show()
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
+    # plt.legend(fontsize=font_size)
 
 
-def plot2D_interpolated(x, y, z, title, file_path, time):
+def plot2D_interpolated(x, y, z, title, file_path, time, font_size):
 
     plt.figure(figsize=(9, 7), constrained_layout=True)
     # Define a regular grid for the contour plot
@@ -199,11 +211,11 @@ def plot2D_interpolated(x, y, z, title, file_path, time):
     plt.colorbar()
 
     # Optional: You can add labels to the axes
-    plt.xlabel('R')
-    plt.ylabel('Z')
+    plt.xlabel('R', fontsize=font_size)
+    plt.ylabel('Z', fontsize=font_size)
 
     plt.title(title + " @ Time = " +
-              "{:.2f}".format(time) + " (" + file_path + ")")
+              "{:.2f}".format(time) + " (" + file_path + ")", fontsize=font_size)
 
     # plt.xlim([min(x), max(x)])
     # plt.ylim([min(y), max(y)])
@@ -217,6 +229,9 @@ def plot2D_interpolated(x, y, z, title, file_path, time):
 
     # Show the plot
     # plt.show()
+    plt.xticks(fontsize=font_size)
+    plt.yticks(fontsize=font_size)
+    # plt.legend(fontsize=font_size)
 
 
 def read_reference(args, reader, variable):
@@ -295,10 +310,10 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
               variable + " of " + file_path + " ========")
         if args.method == "sc":
             plot2D_scatter(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize)
         elif args.method == "sf":
             plot3D_unstructed(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize)
         elif args.method == "ff":
             UR_array = dataset.GetPointData().GetArray("UR")
             UZ_array = dataset.GetPointData().GetArray("UZ")
@@ -307,10 +322,10 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
             UZ = vtk_nump.vtk_to_numpy(UZ_array)
             # Uphi = vtk_nump.vtk_to_numpy(Uphi_array)
             plot2D_flow_field(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], UR, UZ, "2D Flow field", file_path, time)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], UR, UZ, "2D Flow field", file_path, time, args.fontsize)
         else:
             plot2D_interpolated(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize)
 
         ifile += 1
 
@@ -358,6 +373,8 @@ if __name__ == "__main__":
                         help="Substract with the reference dataset, e.g., to plot deltaT = T - T0, input the path for jorek.00000.vtk.")
     # parser.add_argument('-it', "--interpolate", type=str_to_bool, nargs='?', choices=[True, False], default=False,
     #                     help="Interpolate unstructed data in to structed grids? Default is True.")
+    parser.add_argument("-fz", "--fontsize", default=15,
+                        help="Define the fontsize of figure.")
 
     args = parser.parse_args()
 

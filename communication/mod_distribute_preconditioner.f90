@@ -73,9 +73,16 @@ contains
     if (.not.pc%structured) call set_pc_structure(pc,a_mat)
 
 ! --- Allocate PC matrices
-    if (.not.associated(pc%mat%val)) allocate(pc%mat%val(pc%mat%nnz))
-    if (.not.associated(pc%mat%irn)) allocate(pc%mat%irn(pc%mat%nnz))
-    if (.not.associated(pc%mat%jcn)) allocate(pc%mat%jcn(pc%mat%nnz))
+    if(pc%mat%nnz .ge. 0) then
+      if (.not.associated(pc%mat%val)) allocate(pc%mat%val(pc%mat%nnz))
+      if (.not.associated(pc%mat%irn)) allocate(pc%mat%irn(pc%mat%nnz))
+      if (.not.associated(pc%mat%jcn)) allocate(pc%mat%jcn(pc%mat%nnz))
+    else
+      print*, 'Error, negative size for allocate, pc%mat%nnz = ', pc%mat%nnz, ', my_id = ', my_id
+      print*, 'associated(pc%mat%val) = ', associated(pc%mat%val), ', my_id = ', my_id
+      print*, 'associated(pc%mat%irn) = ', associated(pc%mat%irn), ', my_id = ', my_id
+      print*, 'associated(pc%mat%jcn) = ', associated(pc%mat%jcn), ', my_id = ', my_id
+    endif
 
 ! --- Loop over communication splits
     do isplit = 1, pc%nsplit
@@ -297,6 +304,10 @@ contains
       nnz = nnz + sum(pc%recv_counts(isplit,1:pc%n_cpu))
     enddo
     pc%mat%nnz=nnz
+    if(pc%mat%nnz .ne. nnz) then
+      write(*,*) 'my_id = ', pc%my_id, ', nnz = ', nnz, ', pc%mat%nnz = ', pc%mat%nnz
+      write(*,*) 'Error, nnz exceeds int32 limit for pc%mat%nnz, please try setting USE_INTSIZE64=1.'
+    endif
 
     do isplit = 1, pc%nsplit
       pc%send_disp(isplit,1) = 0

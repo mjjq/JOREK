@@ -43,13 +43,13 @@ module tr_module
 
   !*** surdefinition for allocation ***
   interface tr_allocatep
-     module procedure tr_allocatep1d_i,       &
-          tr_allocatep1d_d, tr_allocatep1d_ll,&
-          tr_allocatep1d_ld,tr_allocatep1d_il,&
-          tr_allocatep1d_li,                  &
-          tr_allocatep2d_d, tr_allocatep2d_i, &
-          tr_allocatep2d_ll,                  &
-          tr_allocatep3d_d, tr_allocatep3d_i, &
+     module procedure tr_allocatep1d_i,         &
+          tr_allocatep1d_d, tr_allocatep1d_ll,  &
+          tr_allocatep1d_ld,tr_allocatep1d_il,  &
+          tr_allocatep1d_lfd,tr_allocatep1d_li, &
+          tr_allocatep2d_d, tr_allocatep2d_i,   &
+          tr_allocatep2d_ll,                    &
+          tr_allocatep3d_d, tr_allocatep3d_i,   &
           tr_allocatep4d_d, tr_allocatep4d_i
   end interface
 
@@ -610,6 +610,49 @@ contains
     nb_allocate(category) = nb_allocate(category) + size_array
     max_allocate = max(max_allocate,SUM(nb_allocate(MIN_CAT:MAX_CAT)))
   end subroutine tr_allocatep1d_ld
+
+  subroutine tr_allocatep1d_lfd(array1d,begin_dim1,end_dim1,var_name,ocategory,pzeroing)
+    real(RKIND), dimension(:), pointer    :: array1d
+    integer*8                , intent(in) :: begin_dim1
+    integer                  , intent(in) :: end_dim1
+    character*(*), intent(in)             :: var_name
+    logical        , optional, intent(in) :: pzeroing
+    integer        , optional, intent(in) :: ocategory
+    logical :: zeroing
+    integer :: category
+
+    integer   :: err
+    integer*8 :: i1
+    integer*8 :: size_array 
+
+    if (.not. present(ocategory)) then
+      category = CAT_UNKNOWN
+    else
+      category = ocategory
+    end if
+    if (.not. present(pzeroing)) then
+      zeroing = .true.
+    else
+      zeroing = pzeroing
+    end if
+    allocate(array1d(begin_dim1:end_dim1),stat=err)
+    size_array = (end_dim1-begin_dim1+1) * sizeof(myreal)
+    call tr_memwriteadd(size_array,'double array1D',var_name,category)
+    if (err.eq.0) then
+       if (zeroing) then
+          do i1 = begin_dim1,end_dim1
+             array1d(i1) = 0._RKIND
+          end do
+       end if
+    else
+       print*,'problem in allocating ',var_name
+       print*,'-> required memory (in Bytes) = ',size_array
+       stop
+    end if
+
+    nb_allocate(category) = nb_allocate(category) + size_array
+    max_allocate = max(max_allocate,SUM(nb_allocate(MIN_CAT:MAX_CAT)))
+  end subroutine tr_allocatep1d_lfd
 
   subroutine tr_allocatep1d_il(array1d,begin_dim1,end_dim1,var_name,ocategory)
     integer*8, dimension(:)  , pointer    :: array1d

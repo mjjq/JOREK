@@ -633,6 +633,8 @@ do ms=1, n_gauss
       endif
     endif
     call sources(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source(ms,mt))
+    ! --- Adaptive source to make sure density/temperature stays exactly at input profiles
+    psi_norm = get_psi_n(psi_axisym(ms,mt), y_g(ms,mt))
     if (particlesource_fix_profile) then
       if (psi_norm .lt. particlesource_fix_profile_psi_max) then
         call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)

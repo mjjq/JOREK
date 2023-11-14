@@ -722,14 +722,8 @@ do ms=1, n_gauss
         current_source_JZ(ms,mt) = 0.d0
       endif
     endif
-    if (particlesource_fix_profile) then
-      if (psi_norm .lt. particlesource_fix_profile_psi_max) then
-        call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
-        if ( (rho_axisym(ms,mt) .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
-          ! particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) / tstep
-	        particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt))
-      endif
-    endif
+    ! --- Adaptive source to make sure density/temperature stays exactly at input profiles
+    psi_norm = get_psi_n(psi_axisym(ms,mt), y_g(ms,mt))
     if ( with_TiTe ) then
       call sources_TiTe(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd,particle_source(ms,mt),heat_source_i(ms,mt),heat_source_e(ms,mt))
       if (heatsource_i_fix_profile) then
@@ -756,6 +750,14 @@ do ms=1, n_gauss
         endif
       endif
     endif      
+    if (particlesource_fix_profile) then
+      if (psi_norm .lt. particlesource_fix_profile_psi_max) then
+        call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
+        if ( (rho_axisym(ms,mt) .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
+          ! particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) / tstep
+	        particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt))
+      endif
+    endif
     ! --- Bootstrap current 
     if (bootstrap) then
       if (with_TiTe) then            

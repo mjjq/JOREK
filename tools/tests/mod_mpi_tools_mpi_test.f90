@@ -22,9 +22,9 @@ subroutine run_fruit_mpi_tools_mpi
   write(*,"(/A)") "  ... setting-up: mpi_tools tests"
   call setup
   write(*,"(/A)") "  ... running: mpi_tools tests"
-  call test_init_mpi_threads
-  call test_get_mpi_wtime
-  call test_finalize_mpi_threads
+  call run_test_case(test_init_mpi_threads,'test_init_mpi_threads')
+  call run_test_case(test_get_mpi_wtime,'test_get_mpi_wtime')
+  call run_test_case(test_finalize_mpi_threads,'test_finalize_mpi_threads')
   write(*,"(/A)") "  ... tearing-down: mpi_tools tests" 
   !call teardown
 
@@ -71,7 +71,7 @@ subroutine test_init_mpi_threads()
 
   ! checks
   call assert_true(is_initialised,"Error: init mpi threads: COMM_WORLD not initialised")
-  call assert_equals(ierr,0,"Error: init mpi threads: en error occurred")
+  call assert_equals(0,ierr,"Error: init mpi threads: en error occurred")
   call assert_true(my_id.ge.0,"Error: my_id must be non-negative")
   call assert_true(n_tasks.gt.0,"Error: number of tasks must be positive")
 
@@ -79,11 +79,11 @@ subroutine test_init_mpi_threads()
   call init_mpi_threads(my_id_2,n_tasks_2,ierr,start_time)
 
   ! checks
-  call assert_equals(ierr,0,"Error: init mpi threads: en error occurred")
+  call assert_equals(0,ierr,"Error: init mpi threads: en error occurred")
   call assert_true(my_id_2.ge.0,"Error: my_id must be non-negative")
   call assert_true(n_tasks_2.gt.0,"Error: number of tasks must be positive")
-  call assert_equals(my_id,my_id_2,"Error: tasks id must be equal")
-  call assert_equals(n_tasks,n_tasks_2,"Error: number of tasks must be equal")
+  call assert_equals(my_id_2,my_id,"Error: tasks id must be equal")
+  call assert_equals(n_tasks_2,n_tasks,"Error: number of tasks must be equal")
   call assert_true(start_time.ge.0.d0,"Error: the start time must be non-negative")
   
 end subroutine test_init_mpi_threads
@@ -104,7 +104,7 @@ subroutine test_finalize_mpi_threads()
   integer :: ierr
   ierr = 0; stop_time = -9.d3;
   call finalize_mpi_threads(ierr,stop_time)
-  call assert_equals(ierr,0,"Error: mpi threads finalize: en error occurred")
+  call assert_equals(0,ierr,"Error: mpi threads finalize: en error occurred")
   call assert_true(stop_time.ge.0.d0,"Error: mpi threads finalize: stop time must be non negative")
 end subroutine test_finalize_mpi_threads
 

@@ -88,13 +88,14 @@ subroutine run_fruit_besselk()
   write(*,'(/A)') "  ... setting-up: besselk tests" 
   call setup !< setup test variables
   write(*,'(/A)') "  ... running: besselk tests"
-  call test_f_besselk
-  call test_besselk
-  call test_besselk_x_array
-  call test_besselk_nu_array
-  call test_besselk_x_nu_array
+  call run_test_case(test_f_besselk,'test_f_besselk')
+  call run_test_case(test_besselk,'test_besselk')
+  call run_test_case(test_besselk_x_array,'test_besselk_x_array')
+  call run_test_case(test_besselk_nu_array,'test_besselk_nu_array')
+  call run_test_case(test_besselk_x_nu_array,'test_besselk_x_nu_array')
 #ifdef UNIT_TESTS
-  call test_handle_float_exceptions
+  call run_test_case(test_handle_float_exceptions,&
+  'test_handle_float_exceptions')
 #endif
   write(*,'(/A)') "  ... tearing-down: besselk tests" 
   call teardown !< cleanup test variables  
@@ -136,7 +137,7 @@ subroutine setup()
   ! randomize matlab and python solutions for testing
   do ii=1,Nnu
     call gnu_rng_array_norep(Nx,(/1,Nx/),ids,ierr,max_it)
-    call assert_equals(ierr,0,&
+    call assert_equals(0,ierr,&
     "Error, setup: generate random indices failed reached max_it")
     x_all(ids(1:Nx_lt_2),ii)    = x_lt_2
     x_all(ids(Nx_lt_2+1:Nx),ii) = x_ge_2
@@ -191,13 +192,13 @@ subroutine test_f_besselk()
   bknu_2 = f_besselk(nu_2,x_2)
 
   ! check solution
-  call assert_equals(bknu_1/bknu_ref_mat(1),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_1/bknu_ref_mat(1),test_tol,&
   "Error: no match between Matlab and JOREK modified bessel function 2nd kind (function)")
-  call assert_equals(bknu_1/bknu_ref_py(1),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_1/bknu_ref_py(1),test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (function)")
-  call assert_equals(bknu_2/bknu_ref_mat(2),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_2/bknu_ref_mat(2),test_tol,&
   "Error: no match between Matlab and JOREK modified bessel function 2nd kind (function)")
-  call assert_equals(bknu_2/bknu_ref_py(2),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_2/bknu_ref_py(2),test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (function)")
 
 end subroutine test_f_besselk
@@ -231,13 +232,13 @@ subroutine test_besselk()
   call besselk(nu_2,x_2,bknu_2)
 
   ! check solution
-  call assert_equals(bknu_1/bknu_ref_mat(1),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_1/bknu_ref_mat(1),test_tol,&
   "Error: no match between Matlab and JOREK modified bessel function 2nd kind (subroutine)")
-  call assert_equals(bknu_1/bknu_ref_py(1),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_1/bknu_ref_py(1),test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (subroutine)")
-  call assert_equals(bknu_2/bknu_ref_mat(2),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_2/bknu_ref_mat(2),test_tol,&
   "Error: no match between Matlab and JOREK modified bessel function 2nd kind (subroutine)")
-  call assert_equals(bknu_2/bknu_ref_py(2),1.d0,test_tol,&
+  call assert_equals(1.d0,bknu_2/bknu_ref_py(2),test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (subroutine)")
 
 end subroutine test_besselk
@@ -268,9 +269,9 @@ subroutine test_besselk_x_array()
   enddo
 
   ! check solution
-  call assert_equals(bknu/bknu_mat_loc,bknu_mat_loc/bknu_mat_loc,Nx*Nnu_loc,test_tol,&
+  call assert_equals(bknu_mat_loc/bknu_mat_loc,bknu/bknu_mat_loc,Nx*Nnu_loc,test_tol,&
   "Error: no match between Matlab and JOREK modified bessel function 2nd kind (x-array)")
-  call assert_equals(bknu/bknu_py_loc,bknu_py_loc/bknu_py_loc,Nx*Nnu_loc,test_tol,&
+  call assert_equals(bknu_py_loc/bknu_py_loc,bknu/bknu_py_loc,Nx*Nnu_loc,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (x-array)")
 
 end subroutine test_besselk_x_array
@@ -299,9 +300,9 @@ subroutine test_besselk_nu_array()
   enddo
 
   ! check solutions
-  call assert_equals(bknu/bknu_mat(id,:),bknu_mat(id,:)/bknu_mat(id,:),Nnu,test_tol,&
+  call assert_equals(bknu_mat(id,:)/bknu_mat(id,:),bknu/bknu_mat(id,:),Nnu,test_tol,&
   "Error: no match between Matlab and JOREK modified bessel function 2nd kind (nu-array)")
-  call assert_equals(bknu/bknu_py(id,:),bknu_py(id,:)/bknu_py(id,:),Nnu,test_tol,&
+  call assert_equals(bknu_py(id,:)/bknu_py(id,:),bknu/bknu_py(id,:),Nnu,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (nu-array)")
 
 end subroutine test_besselk_nu_array
@@ -324,9 +325,9 @@ subroutine test_besselk_x_nu_array()
   enddo
 
   ! check solution
-  call assert_equals(bknu/bknu_mat,bknu_mat/bknu_mat,Nx,Nnu,test_tol,&
+  call assert_equals(bknu_mat/bknu_mat,bknu/bknu_mat,Nx,Nnu,test_tol,&
   "Error: no match between Matlab and JOREK modified bessel function 2nd kind (x-nu-arrays)")
-  call assert_equals(bknu/bknu_mat,bknu_mat/bknu_mat,Nx,Nnu,test_tol,&
+  call assert_equals(bknu_mat/bknu_mat,bknu/bknu_mat,Nx,Nnu,test_tol,&
   "Error: no match between Python and JOREK modified bessel function 2nd kind (x-nu-arrays)")
 
 end subroutine test_besselk_x_nu_array
@@ -339,17 +340,17 @@ subroutine test_handle_float_exceptions()
   use mod_besselk, only: handle_float_exceptions
   implicit none
   ! tests
-  call assert_equals(handle_float_exceptions(IEEE_Value(0d0,IEEE_QUIET_NAN)),0d0,0d0,&
+  call assert_equals(0d0,handle_float_exceptions(IEEE_Value(0d0,IEEE_QUIET_NAN)),0d0,&
   "Error: handle of nan by besselk float exception handler failed!")
-  call assert_equals(handle_float_exceptions(IEEE_Value(0d0,IEEE_POSITIVE_INF)),0d0,0d0,&
+  call assert_equals(0d0,handle_float_exceptions(IEEE_Value(0d0,IEEE_POSITIVE_INF)),0d0,&
   "Error: handle of positive overflows by besselk float exception handler failed!") 
-  call assert_equals(handle_float_exceptions(IEEE_Value(0d0,IEEE_NEGATIVE_INF)),0d0,0d0,&
+  call assert_equals(0d0,handle_float_exceptions(IEEE_Value(0d0,IEEE_NEGATIVE_INF)),0d0,&
   "Error: handle of negative overflows by besselk float exception handler failed!")
-  call assert_equals(handle_float_exceptions(tiny(0d0)*tiny(0d0)),0d0,0d0,&
+  call assert_equals(0d0,handle_float_exceptions(tiny(0d0)*tiny(0d0)),0d0,&
   "Error: handle of positive underflows by besselk float exception handler failed!")
-  call assert_equals(handle_float_exceptions(-tiny(0d0)*tiny(0d0)),0d0,0d0,&
+  call assert_equals(0d0,handle_float_exceptions(-tiny(0d0)*tiny(0d0)),0d0,&
   "Error: handle of negative underflows by besselk float exception handler failed!")
-  call assert_equals(handle_float_exceptions(2.35d0),2.35d0,0d0,&
+  call assert_equals(2.35d0,handle_float_exceptions(2.35d0),0d0,&
   "Error: return of variables by besselk float exception handler failed!")
 end subroutine test_handle_float_exceptions 
 #endif

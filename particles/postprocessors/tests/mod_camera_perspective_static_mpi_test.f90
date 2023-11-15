@@ -56,6 +56,7 @@ type(camera_perspective_static)             :: camera_sol
 type(omnidirectional_gaussian_lights)       :: lights_rank
 type(filter_unity),dimension(n_spectra_sol) :: filter_spectra_sol
 integer                                     :: n_particles_time
+integer                                     :: rank_loc,n_tasks_loc,ifail_loc
 integer,dimension(5)                        :: int_param_sol
 real*8                                      :: pixel_area_sol
 real*8,dimension(9)                         :: real_param_sol
@@ -75,34 +76,42 @@ subroutine run_fruit_camera_perspective_static_mpi(rank,n_tasks,ifail)
   !> inputs:
   integer,intent(in) :: rank,n_tasks
   if(rank.eq.0) write(*,*) "  ... setting-up: camera perspective static mpi tests"
-  call setup_spectra_filters(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
-  call setup_camera(rank,n_tasks,ifail)
-  call write_camera_input_file(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
-  call setup_lights(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
-  call setup_image(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
+  call setup_baseline(rank,n_tasks,ifail)
+  call setup_spectra_filters
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
+  call setup_camera
+  call write_camera_input_file
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
+  call setup_lights
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
+  call setup_image
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
   if(rank.eq.0) write(*,*) "  ... running: camera perspective static mpi tests"
-  call test_camera_perspective_static_inputs(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
-  call test_reduce_particle_light_image_static(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
-  call test_compute_images(rank,n_tasks,ifail)
-  call MPI_Barrier(MPI_COMM_WORLD,ifail)
+  call run_test_case(test_camera_perspective_static_inputs,&
+  'test_camera_perspective_static_inputs')
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
+  call run_test_case(test_reduce_particle_light_image_static,&
+  'test_reduce_particle_light_image_static')
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
+  call run_test_case(test_compute_images,'test_compute_images')
+  call MPI_Barrier(MPI_COMM_WORLD,ifail_loc)
   if(rank.eq.0) write(*,*) "  ... tearing-down: camera perspective static mpi tests"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_camera_perspective_static_mpi
 
 !> Set-up and tear-down ------------------------------------------------------
-!> set-up spectra and filter types
-subroutine setup_spectra_filters(rank,n_tasks,ifail)
+subroutine setup_baseline(rank,n_tasks,ifail)
   implicit none
-  !> inputs-outputs:
+  !> inputs-outputs
   integer,intent(inout) :: ifail
-  !> inputs:
+  !> inputs
   integer,intent(in)    :: rank,n_tasks
+  rank_loc = rank; n_tasks_loc = n_tasks; ifail_loc = ifail;
+end subroutine setup_baseline
+
+!> set-up spectra and filter types
+subroutine setup_spectra_filters()
+  implicit none
   !> variables
   integer :: ii,n_1d,n_2d
   !> initialisations
@@ -118,15 +127,11 @@ subroutine setup_spectra_filters(rank,n_tasks,ifail)
 end subroutine setup_spectra_filters
 
 !> set-up the pinhole and camera features
-subroutine setup_camera(rank,n_tasks,ifail)
+subroutine setup_camera
   use mpi
   use mod_gnu_rng,  only: gnu_rng_interval
   use mod_sampling, only: sample_uniform_sphere
   implicit none
-  !> inputs-outputs:
-  integer,intent(inout) :: ifail
-  !> inputs:
-  integer,intent(in)    :: rank,n_tasks
   !> variables:
   integer :: ii,n_int_param,n_real_param
   integer,dimension(:),allocatable :: int_param
@@ -137,17 +142,17 @@ subroutine setup_camera(rank,n_tasks,ifail)
   if(.not.allocated(int_param))  allocate(int_param(n_int_param))
   if(.not.allocated(real_param)) allocate(real_param(n_real_param))
   !> initialise pinhole object 
-  if(rank.eq.0) then 
+  if(rank_loc.eq.0) then 
     int_param(1:3) = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y/)
     call gnu_rng_interval(2,mirror_xy_interval,int_param(4:5))
     call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,center)
   endif 
-  call MPI_Bcast(int_param,n_int_param,MPI_INTEGER,0,MPI_COMM_WORLD,ifail)
-  call MPI_Bcast(center,n_x_sol,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
+  call MPI_Bcast(int_param,n_int_param,MPI_INTEGER,0,MPI_COMM_WORLD,ifail_loc)
+  call MPI_Bcast(center,n_x_sol,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail_loc)
   call pinhole_sol%init_pinhole(n_x_sol,center)
   !> initialise camera object
   int_param_sol = (/n_lines_per_spectrum_sol,n_pixels_x,n_pixels_y,int_param(4),int_param(5)/)
-  if(rank.eq.0) then
+  if(rank_loc.eq.0) then
     call gnu_rng_interval(3,half_angle_lowbnd,half_angle_uppbnd,real_param_sol(1:3))
     call random_number(real_param_sol(4:6))
     real_param_sol(4:6) = sample_uniform_sphere(plane_distance_sol,&
@@ -155,7 +160,7 @@ subroutine setup_camera(rank,n_tasks,ifail)
     call gnu_rng_interval(n_x_sol,center_pos_lowbnd,center_pos_uppbnd,real_param_sol(7:9))
     real_param = real_param_sol
   endif
-  call MPI_Bcast(real_param,n_real_param,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
+  call MPI_Bcast(real_param,n_real_param,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail_loc)
   call camera_sol%init_camera(pinhole_sol,spectra_sol,n_int_param,&
   n_real_param,int_param,real_param)
   !> compute the pixel area for squared pixels
@@ -167,14 +172,10 @@ subroutine setup_camera(rank,n_tasks,ifail)
 end subroutine setup_camera
 
 !> write the camera input file
-subroutine write_camera_input_file(rank,n_tasks,ifail)
+subroutine write_camera_input_file
   implicit none
-  !> inputs-outputs:
-  integer,intent(inout) :: ifail
-  !> inputs:
-  integer,intent(in)    :: rank,n_tasks
-  if(rank.eq.0) then
-    open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail)
+  if(rank_loc.eq.0) then
+    open(read_unit,file=input_file,status='unknown',action='write',iostat=ifail_loc)
     write(read_unit,'(/A)') '&camera_in'
     write(read_unit,'(/A,I10)') 'n_lens_samples = ',                     int_param_sol(1)
     write(read_unit,'(/A,I10)') 'n_pixels_x = ',                         int_param_sol(2)
@@ -196,17 +197,13 @@ subroutine write_camera_input_file(rank,n_tasks,ifail)
 end subroutine write_camera_input_file
 
 !> set-up the light features
-subroutine setup_lights(rank,n_tasks,ifail)
+subroutine setup_lights
   use mpi
   use mod_gnu_rng,                    only: gnu_rng_interval
   use mod_particle_common_test_tools, only: fill_particle_simulations_no_init
   use mod_particle_types,             only: particle_kinetic_relativistic_id
   use mod_particle_sim,               only: particle_sim
   implicit none
-  !> inputs-outputs:
-  integer,intent(inout) :: ifail
-  !> inputs:
-  integer,intent(in)    :: rank,n_tasks
   !> variables:
   integer :: ii
 
@@ -215,35 +212,31 @@ subroutine setup_lights(rank,n_tasks,ifail)
   lights_rank%light_intensity = light_intensity
   call lights_rank%allocate_vertices(n_times,n_active_light_time_rank)
   lights_rank%n_active_vertices = n_active_light_time_rank
-  if(rank.eq.0) then
+  if(rank_loc.eq.0) then
     do ii=1,n_times
       call gnu_rng_interval((/(ii-1)*dt_sol,ii*dt_sol/),lights_rank%times(ii))
     enddo
   endif
-  call MPI_Bcast(lights_rank%times,n_times,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail)
+  call MPI_Bcast(lights_rank%times,n_times,MPI_DOUBLE,0,MPI_COMM_WORLD,ifail_loc)
   !> compute and store the exposure time
   camera_sol%exposure_time = lights_rank%times(n_times)-lights_rank%times(1)
-  call fill_omnidirectional_light(rank,n_tasks,ifail) !< prepare particle lights
+  call fill_omnidirectional_light(rank_loc,n_tasks_loc,ifail_loc) !< prepare particle lights
 end subroutine setup_lights
 
 !> set up the solution image
-subroutine setup_image(rank,n_tasks,ifail)
+subroutine setup_image
   implicit none
-  !> inputs-outpus:
-  integer,intent(inout)   :: ifail
-  !> inputs:
-  integer,intent(in) :: rank,n_tasks
   !> compute the image-filter for each rank
   image_filter_rank = 0.d0
-  call compute_contribution_image_plane(rank,n_tasks,ifail)
+  call compute_contribution_image_plane(rank_loc,n_tasks_loc,ifail_loc)
   !> compute the final image in the rank 0 tasks
-  if(rank.eq.0) then
+  if(rank_loc.eq.0) then
     if(.not.allocated(image_sol)) allocate(image_sol(n_spectra_sol,n_pixels_x,n_pixels_y,1))
     if(.not.allocated(image_filter_sol)) allocate(image_filter_sol(&
     n_spectra_sol,2,n_pixels_x,n_pixels_y,1))
     image_sol = 0.d0; image_filter_sol = 0.d0;
   endif
-  call compute_solution_image(rank,n_tasks,ifail)
+  call compute_solution_image(rank_loc,n_tasks_loc,ifail_loc)
 end subroutine setup_image
  
 !> tear-down all test features
@@ -267,36 +260,33 @@ subroutine teardown(rank,n_tasks,ifail)
   if(allocated(image_sol))        deallocate(image_sol)
   if(allocated(image_filter_sol)) deallocate(image_filter_sol)
   if(rank.eq.0) call system("rm "//input_file)
+  rank_loc = -1; n_tasks_loc = -1; ifail = ifail_loc;
 end subroutine teardown
 
 !> Tests ---------------------------------------------------------------------
 !> test the procedure used for reading lght input files
-subroutine test_camera_perspective_static_inputs(rank,n_tasks,ifail)
+subroutine test_camera_perspective_static_inputs
   implicit none
-  !> inputs-outputs:
-  integer,intent(inout) :: ifail
-  !> inputs:
-  integer,intent(in) :: rank,n_tasks
   !> variables
   integer,dimension(2) :: n_inputs
   integer,dimension(:),allocatable :: int_param
   real*8,dimension(:),allocatable  :: real_param
   !> read values
-  if(rank.eq.0) then
+  if(rank_loc.eq.0) then
     n_inputs = camera_sol%return_n_camera_inputs()
-    open(read_unit,file=input_file,status='old',action='read',iostat=ifail)
-    call camera_sol%read_camera_inputs(rank,read_unit,int_param,real_param)
+    open(read_unit,file=input_file,status='old',action='read',iostat=ifail_loc)
+    call camera_sol%read_camera_inputs(rank_loc,read_unit,int_param,real_param)
     close(read_unit)
   else
     n_inputs = n_inputs_sol; int_param = int_param_sol;
     real_param = real_param_sol
   endif
   !> checks
-  call assert_equals(n_inputs,n_inputs_sol,2,&
+  call assert_equals(n_inputs_sol,n_inputs,2,&
   "Error read input camera perspective: N# of inputs mismatch!")
-  call assert_equals(int_param,int_param_sol,n_inputs_sol(1),&
+  call assert_equals(int_param_sol,int_param,n_inputs_sol(1),&
   "Error read input camera perspective: integer inputs mismatch!")
-  call assert_equals(real_param,real_param_sol,n_inputs_sol(2),tol_real8,&
+  call assert_equals(real_param_sol,real_param,n_inputs_sol(2),tol_real8,&
   "Error read input camera perspective: real inputs mismatch!")
   !> cleanup
   if(allocated(int_param))  deallocate(int_param)
@@ -304,43 +294,36 @@ subroutine test_camera_perspective_static_inputs(rank,n_tasks,ifail)
 end subroutine test_camera_perspective_static_inputs 
 
 !> test the reduction of all light sources and filters on image plane
-subroutine test_reduce_particle_light_image_static(rank,n_tasks,ifail)
+subroutine test_reduce_particle_light_image_static
   use mod_assert_equals_tools, only: assert_equals_rel_error
   implicit none
-  !> inputs-outputs:
-  integer,intent(inout) :: ifail
   !> inputs:
-  integer,intent(in) :: rank,n_tasks
   real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: error
   real*8,dimension(n_spectra_sol,2,n_pixels_x,n_pixels_y,1) :: pixel_intensities_test
   error = 0.d0
   !> execute reduce particle using omnidirectional light sources
   call camera_sol%reduce_light_image(lights_rank,spectra_sol,filter_pixel_sol,&
-  filter_spectra_sol,filter_time_sol,rank,pixel_intensities_test,ifail)
+  filter_spectra_sol,filter_time_sol,rank_loc,pixel_intensities_test,ifail_loc)
   !> test reduction
-  if(rank.eq.0) then
+  if(rank_loc.eq.0) then
   call assert_equals_rel_error(n_spectra_sol,2,n_pixels_x,n_pixels_y,1,&
-  pixel_intensities_test,image_filter_sol,tol_real8_rel,&
+  image_filter_sol,pixel_intensities_test,tol_real8_rel,&
   "Error camera reduction particle light image static: pixel intensity mismatch!")
   endif
 end subroutine test_reduce_particle_light_image_static
 
 !> test image generation
-subroutine test_compute_images(rank,n_tasks,ifail)
+subroutine test_compute_images
   use mod_assert_equals_tools, only: assert_equals_rel_error
   implicit none
-  !> inputs-outputs:
-  integer,intent(inout) :: ifail
-  !> inputs:
-  integer,intent(in) :: rank,n_tasks
   !> variables
   real*8,dimension(n_spectra_sol,n_pixels_x,n_pixels_y,1) :: test_image,error
   error = 0.d0
   !> generate image from distribution of omnidirectional light sources
   call camera_sol%compute_images(lights_rank,spectra_sol,filter_pixel_sol,&
-  filter_spectra_sol,filter_time_sol,rank,test_image,ifail)
-  if(rank.eq.0) call assert_equals_rel_error(n_spectra_sol,n_pixels_x,n_pixels_y,1,&
-  test_image,image_sol,tol_real8_rel,"Error camera compute images: images mismatch!")
+  filter_spectra_sol,filter_time_sol,rank_loc,test_image,ifail_loc)
+  if(rank_loc.eq.0) call assert_equals_rel_error(n_spectra_sol,n_pixels_x,n_pixels_y,1,&
+  image_sol,test_image,tol_real8_rel,"Error camera compute images: images mismatch!")
 end subroutine test_compute_images
 
 !> Tools ---------------------------------------------------------------------

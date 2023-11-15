@@ -33,13 +33,15 @@ subroutine run_fruit_particle_sim()
   write(*,'(/A)') "  ... setting-up: particle sim tests"
   call setup
   write(*,'(/A)') "  ... running: particle sim tests"
-  call test_set_t_norm
-  call test_compute_group_size
-  call test_compute_particle_size
-  call test_allocate_groups_sim
-  call test_codify_particle_sim
-  call test_find_active_particle_id
-  call test_find_active_particle_id_type
+  call run_test_case(test_set_t_norm,'test_set_t_norm')
+  call run_test_case(test_compute_group_size,'test_compute_group_size')
+  call run_test_case(test_compute_particle_size,'test_compute_particle_size')
+  call run_test_case(test_allocate_groups_sim,'test_allocate_groups_sim')
+  call run_test_case(test_codify_particle_sim,'test_codify_particle_sim')
+  call run_test_case(test_find_active_particle_id,&
+  'test_find_active_particle_id')
+  call run_test_case(test_find_active_particle_id_type,&
+  'test_find_active_particle_id_type')
   write(*,'(/A)') "  ... tearing-down: particle sim tests"
   call teardown
 end subroutine run_fruit_particle_sim
@@ -106,14 +108,14 @@ subroutine test_set_t_norm()
   real*8 :: t_norm_sol
   t_norm_sol = sqrt(MU_ZERO*MASS_PROTON*central_mass*central_density*1.d20)
   call sim_sol%set_t_norm()
-  call assert_equals(sim_sol%t_norm,t_norm_sol,tol_real8,&
+  call assert_equals(t_norm_sol,sim_sol%t_norm,tol_real8,&
   "Error particle_sim set t_norm: t_norm mismatch!")
 end subroutine test_set_t_norm
 
 !> test compute group size
 subroutine test_compute_group_size()
   implicit none
-  call assert_equals(sim_sol%compute_group_size(),n_particle_types,&
+  call assert_equals(n_particle_types,sim_sol%compute_group_size(),&
   "Error particle_sim compute group: group size mismatch!")
 end subroutine test_compute_group_size
 
@@ -124,9 +126,9 @@ subroutine test_compute_particle_size()
   integer,dimension(n_particle_types) :: n_particle_array,n_part_array_sol
   n_part_array_sol = n_particles; n_groups = n_particle_types;
   call sim_sol%compute_particle_sizes(n_groups,n_particle_array)
-  call assert_equals(n_groups,n_particle_types,&
+  call assert_equals(n_particle_types,n_groups,&
   "Error in particle_sim compute particle sizes: n_groups mismatch!")
-  call assert_equals(n_particle_array,n_part_array_sol,n_particle_types,&
+  call assert_equals(n_part_array_sol,n_particle_array,n_particle_types,&
   "Error in particle_sim compute particle sizes: particle sizes mismatch!")
 end subroutine test_compute_particle_size
 
@@ -146,7 +148,7 @@ subroutine test_allocate_groups_sim()
   call assert_true((size(sim_test%groups).eq.n_groups),&
   "Error in particle_sim allocate group: allocated group not resized!")
   call sim_sol%allocate_groups(n_particle_types)
-  call assert_equals(size(sim_sol%groups(1)%particles),n_particles,&
+  call assert_equals(n_particles,size(sim_sol%groups(1)%particles),&
   "Error in particle_sim allocate group: allocated group modified one it should not!") 
 end subroutine test_allocate_groups_sim
 
@@ -159,7 +161,7 @@ subroutine test_codify_particle_sim()
 
   !> extract particle list code 
   call sim_sol%find_particle_types(n_particle_types,list_code)
-  call assert_equals(list_code,particle_type_list_sol,n_particle_types,&
+  call assert_equals(particle_type_list_sol,list_code,n_particle_types,&
   "Error in particle_sim codify particle: particle types mismatch!")
 end subroutine test_codify_particle_sim
 
@@ -176,9 +178,9 @@ subroutine test_find_active_particle_id()
   call sim_sol%find_active_particles_groups(n_particle_types,n_particles,&
   n_particles_array,n_active_particles,active_particle_ids)
   !> check results
-  call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
+  call assert_equals(n_active_particles_sol,n_active_particles,n_particle_types,&
   "Error particle_sim find active particle notype: n_active_particles mismatch!")
-  call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
+  call assert_equals(active_particle_ids_sol,active_particle_ids,n_particles,n_particle_types,&
   "Error particle_sim find active particle notype: active_particle_ids mismatch!")
 end subroutine test_find_active_particle_id
 
@@ -195,9 +197,9 @@ subroutine test_find_active_particle_id_type()
   n_particle_array,n_active_particles,active_particle_ids,&
   n_particle_types,particle_type_list_sol)
   !> check correctness of the identification
-  call assert_equals(n_active_particles,n_active_particles_sol,n_particle_types,&
+  call assert_equals(n_active_particles_sol,n_active_particles,n_particle_types,&
   "Error particle_sim find active particle type: n_active_particles mismatch!")
-  call assert_equals(active_particle_ids,active_particle_ids_sol,n_particles,n_particle_types,&
+  call assert_equals(active_particle_ids_sol,active_particle_ids,n_particles,n_particle_types,&
   "Error particle_sim find active particle type: active_particle_ids mismatch!")
 end subroutine test_find_active_particle_id_type
 

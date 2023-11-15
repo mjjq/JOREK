@@ -41,12 +41,17 @@ implicit none
   call setup
   call write_spectrum_inputs
   write(*,'(/A)') "  ... running: spectra Monte-Carlo tests"
-  call test_spectrum_input_reader
-  call test_spectrum_rng_uniform_construction_noinit
-  call test_set_uniform_spectrum_interval
-  call test_spectrum_rng_uniform_construction_init
-  call test_spectrum_generation_rng_uniform
-  call test_spectrum_integration_rng_uniform
+  call run_test_case(test_spectrum_input_reader,'test_spectrum_input_reader')
+  call run_test_case(test_spectrum_rng_uniform_construction_noinit,&
+  'test_spectrum_rng_uniform_construction_noinit')
+  call run_test_case(test_set_uniform_spectrum_interval,&
+  'test_set_uniform_spectrum_interval')
+  call run_test_case(test_spectrum_rng_uniform_construction_init,&
+  'test_spectrum_rng_uniform_construction_init')
+  call run_test_case(test_spectrum_generation_rng_uniform,&
+  'test_spectrum_generation_rng_uniform')
+  call run_test_case(test_spectrum_integration_rng_uniform,&
+  'test_spectrum_integration_rng_uniform')
   write(*,'(/A)') "  ... tearing-down: spectra Monte-Carlo tests"
   call teardown
 end subroutine run_fruit_spectra_monte_carlo_test
@@ -60,7 +65,6 @@ subroutine setup()
   implicit none
   !> variables
   integer :: n_threads
-
   !> set the inverse of the pdf
   i_pdf = max_wlen-min_wlen
   !> initialise the rngs using the pcg32
@@ -116,11 +120,11 @@ subroutine test_spectrum_input_reader()
   int_param,real_param)
   close(read_unit)
   !> checks
-  call assert_equals(n_inputs,(/2,2*n_spectra/),2,&
+  call assert_equals((/2,2*n_spectra/),n_inputs,2,&
   "Error spectrum monte carlo uniform input reader: N# inputs mismatch!")
-  call assert_equals(int_param,(/n_points,n_spectra/),2,&
+  call assert_equals((/n_points,n_spectra/),int_param,2,&
   "Error spectrum monte carlo uniform input reader: N# integer parameters mismatch!")
-  call assert_equals(real_param,(/min_wlen(1),min_wlen(2),max_wlen(1),max_wlen(2)/),4,&
+  call assert_equals((/min_wlen(1),min_wlen(2),max_wlen(1),max_wlen(2)/),real_param,4,&
   "Error spectrum monte carlo uniform input reader: N# real parameters mismatch!")
   !> cleanup
   if(allocated(int_param)) deallocate(int_param)
@@ -137,27 +141,27 @@ subroutine test_spectrum_rng_uniform_construction_noinit()
 
   !> try allocation
   call spectrum%allocate_spectrum(n_points,n_spectra)
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum base allocation: n_points mismatch!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum base allocation: n_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_points,n_spectra,&
   spectrum%points,"Error spectrum base allocation: points")
 
   !> try deallocate
   call spectrum%deallocate_spectrum
-  call assert_equals(spectrum%n_points,-1,&
+  call assert_equals(-1,spectrum%n_points,&
   "Error spectrum base deallocation: failed cleaning n_points!")
-  call assert_equals(spectrum%n_spectra,-1,&
+  call assert_equals(-1,spectrum%n_spectra,&
   "Error spectrum base deallocation: failed cleaning n_spectra!")
   call assert_false(allocated(spectrum%points),&
   "Error spectrum base deallocation: points still allocated!")
 
   !> try construction
   spectrum = spectrum_rng_uniform(n_points,n_spectra) 
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum base construction: n_points mismatch!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum base construction: n_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_points,n_spectra,&
   spectrum%points,"Error spectrum base construction: points")
@@ -178,28 +182,28 @@ subroutine test_set_uniform_spectrum_interval()
   !> test setting of min_wlen,max_wlen
   spectrum = spectrum_rng_uniform(n_points,n_spectra)
   call spectrum%set_spectrum_interval(n_spectra,min_wlen,max_wlen)
-  call assert_equals(spectrum%n_spectra,n_spectra,"Error set uniform interval: n_spectra mismatch!")
-  call assert_equals(spectrum%min_wlen,min_wlen,n_spectra,tol_real8,&
+  call assert_equals(n_spectra,spectrum%n_spectra,"Error set uniform interval: n_spectra mismatch!")
+  call assert_equals(min_wlen,spectrum%min_wlen,n_spectra,tol_real8,&
   "Error set uniform interval: min_wlen mismatch")
-  call assert_equals(spectrum%i_pdf,i_pdf,n_spectra,tol_real8,&
+  call assert_equals(i_pdf,spectrum%i_pdf,n_spectra,tol_real8,&
   "Error set uniform interval: i_pdf mismatch")
 
   !> test change with equal number of spectral intervals
   call spectrum%set_spectrum_interval(n_spectra,min_wlen_2,max_wlen_2)
-  call assert_equals(spectrum%min_wlen,min_wlen_2,n_spectra,tol_real8,&
+  call assert_equals(min_wlen_2,spectrum%min_wlen,n_spectra,tol_real8,&
   "Error set uniform interval: min_wlen_2 mismatch")
-  call assert_equals(spectrum%i_pdf,max_wlen_2-min_wlen_2,n_spectra,tol_real8,&
+  call assert_equals(max_wlen_2-min_wlen_2,spectrum%i_pdf,n_spectra,tol_real8,&
   "Error set uniform interval: i_pdf_2 mismatch")
 
   !> test change with different number of intervals
   min_wlen_3(1:n_spectra) = min_wlen; min_wlen_3(n_spectra+1:2*n_spectra) = min_wlen_2;
   max_wlen_3(1:n_spectra) = max_wlen; max_wlen_3(n_spectra+1:2*n_spectra) = max_wlen_2;
   call spectrum%set_spectrum_interval(2*n_spectra,min_wlen_3,max_wlen_3)
-  call assert_equals(spectrum%n_spectra,2*n_spectra,&
+  call assert_equals(2*n_spectra,spectrum%n_spectra,&
   "Error set uniform interval: n_spectra_2 mismatch!")
-  call assert_equals(spectrum%min_wlen,min_wlen_3,2*n_spectra,tol_real8,&
+  call assert_equals(min_wlen_3,spectrum%min_wlen,2*n_spectra,tol_real8,&
   "Error set uniform interval: min_wlen_3 mismatch")
-  call assert_equals(spectrum%i_pdf,max_wlen_3-min_wlen_3,2*n_spectra,tol_real8,&
+  call assert_equals(max_wlen_3-min_wlen_3,spectrum%i_pdf,2*n_spectra,tol_real8,&
   "Error set uniform interval: i_pdf_3 mismatch")  
 
   !> deallocate variables
@@ -220,30 +224,30 @@ subroutine test_spectrum_rng_uniform_construction_init()
   real8_param(n_spectra+1:2*n_spectra) = max_wlen
   spectrum = spectrum_rng_uniform(n_points,n_spectra)
   call spectrum%allocate_spectrum(n_points,n_spectra,real8_param)
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum rng uniform allocation: n_points mismatch!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum rng uniform allocation: n_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_points,n_spectra,&
   spectrum%points,"Error spectrum rng uniform allocation: points")
-  call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,&
-  min_wlen,tol_real8,"Error spectrum rng uniform allocation: min_wlen")
-  call assert_equals_allocatable_arrays(n_spectra,spectrum%i_pdf,&
-  i_pdf,tol_real8,"Error spectrum rng uniform allocation: i_pdf")
+  call assert_equals_allocatable_arrays(n_spectra,min_wlen,spectrum%min_wlen,&
+  tol_real8,"Error spectrum rng uniform allocation: min_wlen")
+  call assert_equals_allocatable_arrays(n_spectra,i_pdf,spectrum%i_pdf,&
+  tol_real8,"Error spectrum rng uniform allocation: i_pdf")
   call spectrum%deallocate_spectrum
 
   !> test constructor with initialisation
   spectrum = spectrum_rng_uniform(n_points,n_spectra,min_wlen,max_wlen)
-  call assert_equals(spectrum%n_points,n_points,&
+  call assert_equals(n_points,spectrum%n_points,&
   "Error spectrum rng uniform constructor: n_points mismatch!")
-  call assert_equals(spectrum%n_spectra,n_spectra,&
+  call assert_equals(n_spectra,spectrum%n_spectra,&
   "Error spectrum rng uniform constructor: n_spectra mismatch!")
   call assert_equals_allocatable_arrays(n_points,n_spectra,&
   spectrum%points,"Error spectrum rng uniform constructor: points")
-  call assert_equals_allocatable_arrays(n_spectra,spectrum%min_wlen,&
-  min_wlen,tol_real8,"Error spectrum rng uniform constructor: min_wlen")
-  call assert_equals_allocatable_arrays(n_spectra,spectrum%i_pdf,&
-  i_pdf,tol_real8,"Error spectrum rng uniform constructor: i_pdf")
+  call assert_equals_allocatable_arrays(n_spectra,min_wlen,spectrum%min_wlen,&
+  tol_real8,"Error spectrum rng uniform constructor: min_wlen")
+  call assert_equals_allocatable_arrays(n_spectra,i_pdf,spectrum%i_pdf,&
+  tol_real8,"Error spectrum rng uniform constructor: i_pdf")
   call spectrum%deallocate_spectrum
 
 end subroutine test_spectrum_rng_uniform_construction_init
@@ -369,14 +373,14 @@ subroutine test_spectrum_integration_rng_uniform()
     call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
     log10(std_dev(ii,:)),std_conv_coeff)
     !> check that the convergence coefficient of the standard deviation ~0.5
-    call assert_equals(std_conv_coeff(1),expected_std_conv_coeff,tol_std_conv_coeff,&
+    call assert_equals(expected_std_conv_coeff,std_conv_coeff(1),tol_std_conv_coeff,&
     "Error integrate uniform random spectrum: std convergence rate is not 1/2!")
     call assert_true(int_error(ii,n_convergence).lt.tol_min_int_error,&
     "Error integrate uniform random spectrum: minimum error larger than expected!") 
     call linear_regression(n_convergence,log10(real(n_points_conv,kind=8)),&
     log10(std_dev_taskloop(ii,:)),std_conv_coeff)
     !> check that the convergence coefficient of the standard deviation ~0.5
-    call assert_equals(std_conv_coeff(1),expected_std_conv_coeff,tol_std_conv_coeff,&
+    call assert_equals(expected_std_conv_coeff,std_conv_coeff(1),tol_std_conv_coeff,&
     "Error integrate uniform random spectrum taskloop: std convergence rate is not 1/2!")
     call assert_true(int_error_taskloop(ii,n_convergence).lt.tol_min_int_error,&
     "Error integrate uniform random spectrum taskloop: minimum error larger than expected!") 

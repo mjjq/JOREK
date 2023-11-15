@@ -35,12 +35,12 @@ subroutine run_fruit_tiles()
   write(*,'(/A)') "  ... setting-up: tiles tests"
   call setup 
   write(*,'(/A)') "  ... running: tiles tests"
-  call test_alloc_dealloc_noinit      !< test tile de-allocation, init=0
-  call test_alloc_dealloc_init        !< test tile de-allocation, init=data
-  call test_tile_resize               !< test resize tile array
-  call test_tile_resize_offsets       !< test resize tile array with offset
-  call test_tile_resize_fail          !< test resize tile array fail
-  call test_tile_resize_fail_offsets  !< test resize tile array fail with offset
+  call run_test_case(test_alloc_dealloc_noinit,'test_alloc_dealloc_noinit')
+  call run_test_case(test_alloc_dealloc_init,'test_alloc_dealloc_init')
+  call run_test_case(test_tile_resize,'test_tile_resize')
+  call run_test_case(test_tile_resize_offsets,'test_tile_resize_offsets')
+  call run_test_case(test_tile_resize_fail,'test_tile_resize_fail')
+  call run_test_case(test_tile_resize_fail_offsets,'test_tile_resize_fail_offsets')
   write(*,'(/A)') "  ... tearing-down: tiles tests"
   call teardown
 
@@ -152,58 +152,58 @@ subroutine test_alloc_dealloc_noinit()
   ! check allocation and allocation for each tile type
   !> int_tile_2d
   call int_tile_1d%allocate_tile(N_rows,ierr)
-  call assert_equals(int_tile_1d%N_rows,N_rows,&
+  call assert_equals(N_rows,int_tile_1d%N_rows,&
   "Error: allocation of tile interger-1D N_rows does not match!")
-  call assert_equals(int_tile_1d%data_array,int_zero_array_1d,N_rows,&
+  call assert_equals(int_zero_array_1d,int_tile_1d%data_array,N_rows,&
   "Error: allocation of tile interger-1D failed!")
   call int_tile_1d%deallocate_tile(ierr)
-  call assert_equals(int_tile_1d%N_rows,0,&
+  call assert_equals(0,int_tile_1d%N_rows,&
   "Error: deallocation of tile interger-1D N_rows is not 0!")
   call assert_false(allocated(int_tile_2d%data_array),&
   "Error: deallocation of tile integer-1D failed!")
   !> int_tile_2d
   call int_tile_2d%allocate_tile(N_rows,N_cols,ierr)
-  call assert_equals(int_tile_2d%N_rows,N_rows,&
+  call assert_equals(N_rows,int_tile_2d%N_rows,&
   "Error: allocation of tile interger-2D N_rows does not match!")
-  call assert_equals(int_tile_2d%N_cols,N_cols,&
+  call assert_equals(N_cols,int_tile_2d%N_cols,&
   "Error: allocation of tile interger-1D N_cols does not match!")
-  call assert_equals(int_tile_2d%data_array,int_zero_array_2d,N_rows,&
+  call assert_equals(int_zero_array_2d,int_tile_2d%data_array,N_rows,&
   N_cols,"Error: allocation and init to data of tile interger-1D failed!")
   call int_tile_2d%deallocate_tile(ierr)
   call assert_false(allocated(int_tile_2d%data_array),&
   "Error: deallocation of tile integer-2D failed!")
-  call assert_equals(int_tile_2d%N_rows,0,&
+  call assert_equals(0,int_tile_2d%N_rows,&
   "Error: deallocation of tile interger-2D N_rows is not 0!")
-  call assert_equals(int_tile_2d%N_cols,0,&
+  call assert_equals(0,int_tile_2d%N_cols,&
   "Error: deallocation of tile interger-1D N_cols is not 0!")
   !> real8_tile_1d
   call real8_tile_1d%allocate_tile(N_rows,ierr)
-  call assert_equals(real8_tile_1d%N_rows,N_rows,&
+  call assert_equals(N_rows,real8_tile_1d%N_rows,&
   "Error: allocation of tile double-1D N_rows does not match!")
-  call assert_equals(real8_tile_1d%data_array,real8_zero_array_1d,&
+  call assert_equals(real8_zero_array_1d,real8_tile_1d%data_array,&
   N_rows,tol_real8,"Error: allocation of tile double-1D failed!")
   call real8_tile_1d%deallocate_tile(ierr)
-  call assert_equals(real8_tile_1d%N_rows,0,&
+  call assert_equals(0,real8_tile_1d%N_rows,&
   "Error: deallocation of tile interger-1D N_rows is not 0!")
   call assert_false(allocated(real8_tile_1d%data_array),&
   "Error: deallocation of tile double-1D failed!")
   !> real8_tile_2d
   call real8_tile_2d%allocate_tile(N_rows,N_cols,ierr)
-  call assert_equals(real8_tile_2d%N_rows,N_rows,&
+  call assert_equals(N_rows,real8_tile_2d%N_rows,&
   "Error: allocation of tile double-2D N_rows does not match!")
-  call assert_equals(real8_tile_2d%N_cols,N_cols,&
+  call assert_equals(N_cols,real8_tile_2d%N_cols,&
   "Error: allocation of tile double-2D N_cols does not match!")
-  call assert_equals(real8_tile_2d%data_array,real8_zero_array_2d,N_rows,N_cols,&
+  call assert_equals(real8_zero_array_2d,real8_tile_2d%data_array,N_rows,N_cols,&
   tol_real8,"Error: allocation and double to data of tile double-1D failed!")
   call real8_tile_2d%deallocate_tile(ierr)
   call assert_false(allocated(real8_tile_2d%data_array),&
   "Error: deallocation of tile double-2D failed!")
-  call assert_equals(real8_tile_2d%N_rows,0,&
+  call assert_equals(0,real8_tile_2d%N_rows,&
   "Error: deallocation of tile double-2D N_rows is not 0!")
-  call assert_equals(real8_tile_2d%N_cols,0,&
+  call assert_equals(0,real8_tile_2d%N_cols,&
   "Error: deallocation of tile double-2D N_cols is not 0!")
 
-  call assert_equals(ierr,0,"Error: tile allocation, an allocation is skipped")
+  call assert_equals(0,ierr,"Error: tile allocation, an allocation is skipped")
 
 end subroutine test_alloc_dealloc_noinit
 
@@ -226,58 +226,58 @@ subroutine test_alloc_dealloc_init()
   ! check allocation with data initialisation and deallocation
   !> int_tile_1d
   call int_tile_1d%allocate_tile(N_rows,ierr,data_int_1d)
-  call assert_equals(int_tile_1d%N_rows,N_rows,&
+  call assert_equals(N_rows,int_tile_1d%N_rows,&
   "Error: allocation and init to data of tile interger-1D N_rows does not match!")
-  call assert_equals(int_tile_1d%data_array,data_int_1d,N_rows,&
+  call assert_equals(data_int_1d,int_tile_1d%data_array,N_rows,&
   "Error: allocation and init to data of tile interger-1D failed!")
   call int_tile_1d%deallocate_tile(ierr)
-  call assert_equals(int_tile_1d%N_rows,0,&
+  call assert_equals(0,int_tile_1d%N_rows,&
   "Error: deallocation of tile interger-1D N_rows is not 0!")
   call assert_false(allocated(int_tile_2d%data_array),&
   "Error: deallocation of tile integer-1D failed!")
   !> int_tile_2d
   call int_tile_2d%allocate_tile(N_rows,N_cols,ierr,data_int_2d)
-  call assert_equals(int_tile_2d%N_rows,N_rows,&
+  call assert_equals(N_rows,int_tile_2d%N_rows,&
   "Error: allocation and init to data of tile interger-2D N_rows does not match!")
-  call assert_equals(int_tile_2d%N_cols,N_cols,&
+  call assert_equals(N_cols,int_tile_2d%N_cols,&
   "Error: allocation and init to data of tile interger-1D N_cols does not match!")
-  call assert_equals(int_tile_2d%data_array,data_int_2d,N_rows,&
+  call assert_equals(data_int_2d,int_tile_2d%data_array,N_rows,&
   N_cols,"Error: allocation and init to data of tile interger-1D failed!")
   call int_tile_2d%deallocate_tile(ierr)
   call assert_false(allocated(int_tile_2d%data_array),&
   "Error: deallocation of tile integer-2D failed!")
-  call assert_equals(int_tile_2d%N_rows,0,&
+  call assert_equals(0,int_tile_2d%N_rows,&
   "Error: deallocation of tile interger-2D N_rows is not 0!")
-  call assert_equals(int_tile_2d%N_cols,0,&
+  call assert_equals(0,int_tile_2d%N_cols,&
   "Error: deallocation of tile interger-1D N_cols is not 0!")
   !> real8_tile_1d
   call real8_tile_1d%allocate_tile(N_rows,ierr,data_real8_1d)
-  call assert_equals(real8_tile_1d%N_rows,N_rows,&
+  call assert_equals(N_rows,real8_tile_1d%N_rows,&
   "Error: allocation and init to data of tile double-1D N_rows does not match!")
-  call assert_equals(real8_tile_1d%data_array,data_real8_1d,N_rows,&
+  call assert_equals(data_real8_1d,real8_tile_1d%data_array,N_rows,&
   tol_real8,"Error: allocation and init to data of tile double-1D failed!")
   call real8_tile_1d%deallocate_tile(ierr)
-  call assert_equals(real8_tile_1d%N_rows,0,&
+  call assert_equals(0,real8_tile_1d%N_rows,&
   "Error: deallocation of tile interger-1D N_rows is not 0!")
   call assert_false(allocated(real8_tile_1d%data_array),&
   "Error: deallocation of tile double-1D failed!")
   !> real8_tile_2d
   call real8_tile_2d%allocate_tile(N_rows,N_cols,ierr,data_real8_2d)
-  call assert_equals(real8_tile_2d%N_rows,N_rows,&
+  call assert_equals(N_rows,real8_tile_2d%N_rows,&
   "Error: allocation and init to data of tile double-2D N_rows does not match!")
-  call assert_equals(real8_tile_2d%N_cols,N_cols,&
+  call assert_equals(N_cols,real8_tile_2d%N_cols,&
   "Error: allocation and init to data of tile double-2D N_cols does not match!")
-  call assert_equals(real8_tile_2d%data_array,data_real8_2d,N_rows,N_cols,&
+  call assert_equals(data_real8_2d,real8_tile_2d%data_array,N_rows,N_cols,&
   tol_real8,"Error: allocation and double to data of tile double-1D failed!")
   call real8_tile_2d%deallocate_tile(ierr)
   call assert_false(allocated(real8_tile_2d%data_array),&
   "Error: deallocation of tile double-2D failed!")
-  call assert_equals(real8_tile_2d%N_rows,0,&
+  call assert_equals(0,real8_tile_2d%N_rows,&
   "Error: deallocation of tile double-2D N_rows is not 0!")
-  call assert_equals(real8_tile_2d%N_cols,0,&
+  call assert_equals(0,real8_tile_2d%N_cols,&
   "Error: deallocation of tile double-2D N_cols is not 0!")
 
-  call assert_equals(ierr,0,"Error: tile allocation, an allocation is skipped")
+  call assert_equals(0,ierr,"Error: tile allocation, an allocation is skipped")
 
 end subroutine test_alloc_dealloc_init
 
@@ -328,26 +328,26 @@ subroutine test_tile_resize()
   call real8_tile_2d%resize_tile(N_rows_new,N_cols_new,N_rows_data,N_cols_data,ierr)
 
   ! check procedures
-  call assert_equals(ierr,0,"Error: a resize tile routine internally failed")
-  call assert_equals(int_tile_1d%N_rows,N_rows_new,&
+  call assert_equals(0,ierr,"Error: a resize tile routine internally failed")
+  call assert_equals(N_rows_new,int_tile_1d%N_rows,&
   "Error: resize tile arre integer-1D tile N_rows does not match N_rows_new")
-  call assert_equals(int_tile_1d%data_array,resize_data_int_1d,N_rows_new,&
+  call assert_equals(resize_data_int_1d,int_tile_1d%data_array,N_rows_new,&
   "Error: resize tile array interger-1D failed!")
-  call assert_equals(int_tile_2d%N_rows,N_rows_new,&
+  call assert_equals(N_rows_new,int_tile_2d%N_rows,&
   "Error: resize tile arre integer-2D tile N_rows does not match N_rows_new")
-  call assert_equals(int_tile_2d%N_cols,N_cols_new,&
+  call assert_equals(N_cols_new,int_tile_2d%N_cols,&
   "Error: resize tile arre integer-2D tile N_cols does not match N_cols_new")
-  call assert_equals(int_tile_2d%data_array,resize_data_int_2d,N_rows_new,&
+  call assert_equals(resize_data_int_2d,int_tile_2d%data_array,N_rows_new,&
   N_cols_new,"Error: resize tile array interger-2D failed!")
-  call assert_equals(real8_tile_1d%N_rows,N_rows_new,&
+  call assert_equals(N_rows_new,real8_tile_1d%N_rows,&
   "Error: resize tile arre double-1D tile N_rows does not match N_rows_new")
-  call assert_equals(real8_tile_1d%data_array,resize_data_real8_1d,N_rows_new,&
+  call assert_equals(resize_data_real8_1d,real8_tile_1d%data_array,N_rows_new,&
   tol_real8,"Error: resize tile array double-1D failed!")
-  call assert_equals(real8_tile_2d%N_rows,N_rows_new,&
+  call assert_equals(N_rows_new,real8_tile_2d%N_rows,&
   "Error: resize tile arre double-2D tile N_rows does not match N_rows_new")
-  call assert_equals(real8_tile_2d%N_cols,N_cols_new,&
+  call assert_equals(N_cols_new,real8_tile_2d%N_cols,&
   "Error: resize tile arre double-2D tile N_cols does not match N_cols_new")
-  call assert_equals(real8_tile_2d%data_array,resize_data_real8_2d,N_rows_new,&
+  call assert_equals(resize_data_real8_2d,real8_tile_2d%data_array,N_rows_new,&
   N_cols_new,tol_real8,"Error: resize tile array double-2D failed!")
 
   ! deallocate tiles
@@ -409,26 +409,26 @@ subroutine test_tile_resize_offsets()
   ierr,offset_rows,offset_cols)
 
   ! check procedures
-  call assert_equals(ierr,0,"Error: a resize tile routine internally failed")
-  call assert_equals(int_tile_1d%N_rows,N_rows_new,&
+  call assert_equals(0,ierr,"Error: a resize tile routine internally failed")
+  call assert_equals(N_rows_new,int_tile_1d%N_rows,&
   "Error: resize tile arre integer-1D tile N_rows does not match N_rows_new")
-  call assert_equals(int_tile_1d%data_array,resize_data_int_1d,N_rows_new,&
+  call assert_equals(resize_data_int_1d,int_tile_1d%data_array,N_rows_new,&
   "Error: resize tile array interger-1D failed!")
-  call assert_equals(int_tile_2d%N_rows,N_rows_new,&
+  call assert_equals(N_rows_new,int_tile_2d%N_rows,&
   "Error: resize tile arre integer-2D tile N_rows does not match N_rows_new")
-  call assert_equals(int_tile_2d%N_cols,N_cols_new,&
+  call assert_equals(N_cols_new,int_tile_2d%N_cols,&
   "Error: resize tile arre integer-2D tile N_cols does not match N_cols_new")
-  call assert_equals(int_tile_2d%data_array,resize_data_int_2d,N_rows_new,&
+  call assert_equals(resize_data_int_2d,int_tile_2d%data_array,N_rows_new,&
   N_cols_new,"Error: resize tile array interger-2D failed!")
-  call assert_equals(real8_tile_1d%N_rows,N_rows_new,&
+  call assert_equals(N_rows_new,real8_tile_1d%N_rows,&
   "Error: resize tile arre double-1D tile N_rows does not match N_rows_new")
-  call assert_equals(real8_tile_1d%data_array,resize_data_real8_1d,N_rows_new,&
+  call assert_equals(resize_data_real8_1d,real8_tile_1d%data_array,N_rows_new,&
   tol_real8,"Error: resize tile array double-1D failed!")
-  call assert_equals(real8_tile_2d%N_rows,N_rows_new,&
+  call assert_equals(N_rows_new,real8_tile_2d%N_rows,&
   "Error: resize tile arre double-2D tile N_rows does not match N_rows_new")
-  call assert_equals(real8_tile_2d%N_cols,N_cols_new,&
+  call assert_equals(N_cols_new,real8_tile_2d%N_cols,&
   "Error: resize tile arre double-1D tile N_cols does not match N_cols_new")
-  call assert_equals(real8_tile_2d%data_array,resize_data_real8_2d,N_rows_new,&
+  call assert_equals(resize_data_real8_2d,real8_tile_2d%data_array,N_rows_new,&
   N_cols_new,tol_real8,"Error: resize tile array double-2D failed!")
 
 
@@ -464,22 +464,22 @@ subroutine test_tile_resize_fail()
   ! resize tiles and check for failures
   ierr = 0
   call int_tile_1d%resize_tile(N_rows_new,N_rows_data_fail,ierr)
-  call assert_equals(ierr,1,"Error: resize tile array integer-1D no failure for data overflow")
+  call assert_equals(1,ierr,"Error: resize tile array integer-1D no failure for data overflow")
   ierr = 0
   call int_tile_2d%resize_tile(N_rows_new,N_cols_new,N_rows_data_fail,N_cols_data,ierr)
-  call assert_equals(ierr,1,"Error: resize tile array integer-2D no failure for rows data overflow")
+  call assert_equals(1,ierr,"Error: resize tile array integer-2D no failure for rows data overflow")
   ierr = 0
   call int_tile_2d_2%resize_tile(N_rows_new,N_cols_new,N_rows_data,N_cols_data_fail,ierr)
-  call assert_equals(ierr,1,"Error: resize tile array integer-2D no failure for columns data overflow")
+  call assert_equals(1,ierr,"Error: resize tile array integer-2D no failure for columns data overflow")
   ierr = 0
   call real8_tile_1d%resize_tile(N_rows_new,N_rows_data_fail,ierr)
-  call assert_equals(ierr,1,"Error: resize tile array double-1D no failure for data overflow")
+  call assert_equals(1,ierr,"Error: resize tile array double-1D no failure for data overflow")
   ierr = 0
   call real8_tile_2d%resize_tile(N_rows_new,N_cols_new,N_rows_data_fail,N_cols_data,ierr)
-  call assert_equals(ierr,1,"Error: resize tile array double-2D no failure for row data overflow")
+  call assert_equals(1,ierr,"Error: resize tile array double-2D no failure for row data overflow")
   ierr = 0
   call real8_tile_2d_2%resize_tile(N_rows_new,N_cols_new,N_rows_data,N_cols_data_fail,ierr)
-  call assert_equals(ierr,1,"Error: resize tile array double-2D no failure for column data overflow")
+  call assert_equals(1,ierr,"Error: resize tile array double-2D no failure for column data overflow")
 
   ! deallocate tiles
   call int_tile_1d%deallocate_tile(ierr)
@@ -516,26 +516,26 @@ subroutine test_tile_resize_fail_offsets()
   ! resize tiles and check for failures
   ierr = 0
   call int_tile_1d%resize_tile(N_rows_new,N_rows_data,ierr,offset_rows_fail)
-  call assert_equals(ierr,1,"Error: resize tile array integer-1D no failure for offset overflow")
+  call assert_equals(1,ierr,"Error: resize tile array integer-1D no failure for offset overflow")
   ierr = 0
   call int_tile_2d%resize_tile(N_rows_new,N_cols_new,N_rows_data,N_cols_data,ierr,&
   offset_rows_fail,offset_cols)
-  call assert_equals(ierr,1,"Error: resize tile array integer-2D no failure for row offset overflow")
+  call assert_equals(1,ierr,"Error: resize tile array integer-2D no failure for row offset overflow")
   ierr = 0
   call int_tile_2d_2%resize_tile(N_rows_new,N_cols_new,N_rows_data,N_cols_data,ierr,&
   offset_rows,offset_cols_fail)
-  call assert_equals(ierr,1,"Error: resize tile array integer-2D no failure for column offset overflow")
+  call assert_equals(1,ierr,"Error: resize tile array integer-2D no failure for column offset overflow")
   ierr = 0
   call real8_tile_1d%resize_tile(N_rows_new,N_rows_data,ierr,offset_rows_fail)
-  call assert_equals(ierr,1,"Error: resize tile array double-1D no failure for offset overflow")
+  call assert_equals(1,ierr,"Error: resize tile array double-1D no failure for offset overflow")
   ierr = 0
   call real8_tile_2d%resize_tile(N_rows_new,N_cols_new,N_rows_data,N_cols_data,&
   ierr,offset_rows_fail,offset_cols)
-  call assert_equals(ierr,1,"Error: resize tile array double-2D no failure for row offset overflow")
+  call assert_equals(1,ierr,"Error: resize tile array double-2D no failure for row offset overflow")
   ierr = 0
   call real8_tile_2d_2%resize_tile(N_rows_new,N_cols_new,N_rows_data,N_cols_data,&
   ierr,offset_rows,offset_cols_fail)
-  call assert_equals(ierr,1,"Error: resize tile array double-2D no failure for column offset overflow")
+  call assert_equals(1,ierr,"Error: resize tile array double-2D no failure for column offset overflow")
 
   ! deallocate tiles
   call int_tile_1d%deallocate_tile(ierr)

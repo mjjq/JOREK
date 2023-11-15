@@ -71,9 +71,12 @@ subroutine run_fruit_camera_static()
   write(*,'(/A)') "  ... setting-up: camera static tests"
   call setup
   write(*,'(/A)') "  ... running: camera static tests"
-  call test_points_on_lens_pdf_pinhole
-  call test_image_plane_pixel_size_definitions
-  call test_find_ray_image_plane_intersection
+  call run_test_case(test_points_on_lens_pdf_pinhole,&
+  'test_points_on_lens_pdf_pinhole')
+  call run_test_case(test_image_plane_pixel_size_definitions,&
+  'test_image_plane_pixel_size_definitions')
+  call run_test_case(test_find_ray_image_plane_intersection,&
+  'test_find_ray_image_plane_intersection')
   write(*,'(/A)') "  ... tearing-up: camera static tests"
   call teardown
 end subroutine run_fruit_camera_static
@@ -139,7 +142,7 @@ subroutine test_points_on_lens_pdf_pinhole()
   call pinhole_sol%pdf(1,points_on_lens(:,:,1),pdf_points_on_lens(:,1,1))
   !> test generation without input number of points
   call camera_sol%generate_points_on_lens_pdf(pinhole_sol)
-  call assert_equals(camera_sol%n_vertices,1,&
+  call assert_equals(1,camera_sol%n_vertices,&
   "Error camera perspective static generate points on pinhole: n vertices not 1!")
   call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
   camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
@@ -149,7 +152,7 @@ subroutine test_points_on_lens_pdf_pinhole()
   "Error camera perspective static generate points on pinhole: pdf points on lens")
   !> test generation with input number points
   call camera_sol%generate_points_on_lens_pdf(pinhole_sol,n_points_on_lens_sol)
-  call assert_equals(camera_sol%n_vertices,1,&
+  call assert_equals(1,camera_sol%n_vertices,&
   "Error camera perspective static generate points on pinhole: n vertices not 1!")
   call assert_equals_allocatable_arrays(n_x_sol,camera_sol%n_vertices,&
   camera_sol%n_times,camera_sol%x,points_on_lens,tol_real8,&
@@ -197,12 +200,12 @@ subroutine test_image_plane_pixel_size_definitions()
     if(direction_test(3).lt.0.d0) direction_test(3) = TWOPI + direction_test(3)
     direction_sol = (/1.d0,real_param(5),real_param(6)/)
     !> test plane and pixel size
-    call assert_equals(direction_test,direction_sol,n_x_sol,tol_real8,&
+    call assert_equals(direction_sol,direction_test,n_x_sol,tol_real8,&
     "Error camera perspective static define image plane: image plane direction mismatch!")
-    call assert_equals(camera_sol%image_plane(:,:,1),image_plane_sol,n_x_sol,&
+    call assert_equals(image_plane_sol,camera_sol%image_plane(:,:,1),n_x_sol,&
     n_plane_vertices,tol_real8,&
     "Error camera perspective static define image plane: image plane mismatch!")
-    call assert_equals(camera_sol%pixel_size,pixel_size_sol,2,tol_real8,&
+    call assert_equals(pixel_size_sol,camera_sol%pixel_size,2,tol_real8,&
     "Error camera perspective static define image plane: pixel size mismatch!")
   enddo
   !> deallocate camera
@@ -235,9 +238,9 @@ subroutine test_find_ray_image_plane_intersection()
     test_intersection(ii),test_ray_stq(:,ii))
   enddo
   !> check solutions
-  call assert_equals(test_intersection,accept_ray_sol,n_rays_sol,&
+  call assert_equals(accept_ray_sol,test_intersection,n_rays_sol,&
   "Error find ray image plane intersection: intersections mismatch!")
-  call assert_equals(test_ray_stq,test_ray_stq_sol,n_stq_sol,n_rays_sol,&
+  call assert_equals(test_ray_stq_sol,test_ray_stq,n_stq_sol,n_rays_sol,&
   tol_real8_2,"Error find ray image plane intersection: local coordinates mismatch!")
   !> cleanup
   call camera_sol%deallocate_camera_perspective_static

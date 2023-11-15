@@ -72,14 +72,22 @@ subroutine run_fruit_full_synchrotron_light_dist_vertices()
   write(*,'(/A)') "  ... setting-up: synchrotron light vertices tests"
   call setup
   write(*,'(/A)') "  ... running: synchrotron light vertices tests"
-  call test_setup_synchrotron_radiation_class
-  call test_compute_synchrotron_mhd_fields
-  call test_compute_synchrotron_light_properties
-  call test_fill_synchrotron_lights_from_particles
-  call test_init_synchrotron_lights_from_particles
-  call test_check_shaded_x_in_synchrotron_cone 
-  call test_synchrotron_irradiance_directional_func
-  call test_synchrotron_irradiance_directional_func_taskloop
+  call run_test_case(test_setup_synchrotron_radiation_class,&
+  'test_setup_synchrotron_radiation_class')
+  call run_test_case(test_compute_synchrotron_mhd_fields,&
+  'test_compute_synchrotron_mhd_fields')
+  call run_test_case(test_compute_synchrotron_light_properties,&
+  'test_compute_synchrotron_light_properties')
+  call run_test_case(test_fill_synchrotron_lights_from_particles,&
+  'test_fill_synchrotron_lights_from_particles')
+  call run_test_case(test_init_synchrotron_lights_from_particles,&
+  'test_init_synchrotron_lights_from_particles')
+  call run_test_case(test_check_shaded_x_in_synchrotron_cone,&
+  'test_check_shaded_x_in_synchrotron_cone ') 
+  call run_test_case(test_synchrotron_irradiance_directional_func,&
+  'test_synchrotron_irradiance_directional_func')
+  call run_test_case(test_synchrotron_irradiance_directional_func_taskloop,&
+  'test_synchrotron_irradiance_directional_func_taskloop')
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_full_synchrotron_light_dist_vertices
@@ -168,13 +176,13 @@ subroutine test_setup_synchrotron_radiation_class()
   !> setup the synchrotron light class
   call vertex_sol%setup_light_class
   !> perform checks
-  call assert_equals(vertex_sol%n_property_vertex,n_properties,&
+  call assert_equals(n_properties,vertex_sol%n_property_vertex,&
   "Error check setup synchrotron light class: wrong size of the vertex properties array!")
-  call assert_equals(vertex_sol%n_mhd,n_mhd_sol,&
+  call assert_equals(n_mhd_sol,vertex_sol%n_mhd,&
   "Error check setup synchrotron light class: wrong size of the mhd array!")
-  call assert_equals(vertex_sol%n_particle_types,n_particle_types_check_sol,&
+  call assert_equals(n_particle_types_check_sol,vertex_sol%n_particle_types,&
   "Error check setup synchrotron light class: wrong size of the particle types array!")
-  call assert_equals(vertex_sol%particle_types,particle_types_check_sol,&
+  call assert_equals(particle_types_check_sol,vertex_sol%particle_types,&
   n_particle_types_check_sol,"Error check setup synchrotron light class: wrong particle types list!")
 end subroutine test_setup_synchrotron_radiation_class
 
@@ -286,10 +294,10 @@ subroutine test_synchrotron_irradiance_directional_func_taskloop()
       enddo
       !> check the solution via relative error
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shadowed_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
+      n_shadowed_per_particle,dir_fun_sol,dir_fun,tol2_real8,&
       "Error synchrotron directionality function taskloop: directionality function mismatch!")
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shadowed_per_particle,irradiance,irradiance_sol,tol2_real8,&
+      n_shadowed_per_particle,irradiance_sol,irradiance,tol2_real8,&
       "Error synchrotron irradiance taskloop: irradiance mismatch!")
     enddo
   enddo
@@ -333,10 +341,10 @@ subroutine test_synchrotron_irradiance_directional_func()
       enddo
       !> check the solution via relative error
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shadowed_per_particle,dir_fun,dir_fun_sol,tol2_real8,&
+      n_shadowed_per_particle,dir_fun_sol,dir_fun,tol2_real8,&
       "Error synchrotron directionality function: directionality function mismatch!")
       call assert_equals_rel_error(spectrum%n_points,spectrum%n_spectra,&
-      n_shadowed_per_particle,irradiance,irradiance_sol,tol2_real8,&
+      n_shadowed_per_particle,irradiance_sol,irradiance,tol2_real8,&
       "Error synchrotron irradiance: irradiance mismatch!")
     enddo
   enddo
@@ -355,10 +363,10 @@ subroutine test_init_synchrotron_lights_from_particles()
   call vertex_sol%init_lights_from_particles(n_times_sol,&
   sims_particles,n_particles_max*n_groups_max)
   call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
-  vertex_sol%x,x_cart_sol,tol_real8,&
+  x_cart_sol,vertex_sol%x,tol_real8,&
   "Error init synchrotron lights from particles set n lights large: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_particles_max*n_groups_max,&
-  n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
+  n_times_sol,properties_sol,vertex_sol%properties,tol_real8,&
   "Error init synchrotron lights from particles set n lights large: properties errors too large!")
 
   !> copy valued of x and properties
@@ -370,28 +378,28 @@ subroutine test_init_synchrotron_lights_from_particles()
   enddo
   !> test vertices initialisation no inputs
   call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles)
-  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  call assert_equals(shape(x_cart_loc),shape(vertex_sol%x),3,&
   "Error init synchrotron lights from particles: positions shape mismatch!")
-  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  call assert_equals(shape(properties_loc),shape(vertex_sol%properties),3,&
   "Error init synchrotron lights from particles: properties shape mismatch!")
   call assert_equals_rel_error(n_x,n_particles_RE_max,n_times_sol,&
-  vertex_sol%x,x_cart_loc,tol_real8,&
+  x_cart_loc,vertex_sol%x,tol_real8,&
   "Error init synchrotron lights from particles: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_particles_RE_max,&
-  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  n_times_sol,properties_loc,vertex_sol%properties,tol_real8,&
   "Error init synchrotron lights from particles: properties errors too large!")
 
   !> test vertices initilisation with too small number of lights
   call vertex_sol%init_lights_from_particles(n_times_sol,sims_particles,n_sync_fail)
-  call assert_equals(shape(vertex_sol%x),shape(x_cart_loc),3,&
+  call assert_equals(shape(x_cart_loc),shape(vertex_sol%x),3,&
   "Error init synchrotron lights from particles set n lights small: positions shape mismatch!")
-  call assert_equals(shape(vertex_sol%properties),shape(properties_loc),3,&
+  call assert_equals(shape(properties_loc),shape(vertex_sol%properties),3,&
   "Error init synchrotron lights from particles set n lights small: properties shape mismatch!")
   call assert_equals_rel_error(n_x,n_particles_RE_max,n_times_sol,&
-  vertex_sol%x,x_cart_loc,tol_real8,&
+  x_cart_loc,vertex_sol%x,tol_real8,&
   "Error init synchrotron lights from particles set n lights small: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_particles_RE_max,&
-  n_times_sol,vertex_sol%properties,properties_loc,tol_real8,&
+  n_times_sol,properties_loc,vertex_sol%properties,tol_real8,&
   "Error init synchrotron lights from particles set n lights small: properties errors too large!")
 end subroutine test_init_synchrotron_lights_from_particles 
 
@@ -407,10 +415,10 @@ integer :: ii,jj
   n_particles_max,n_groups_per_sim,particle_types_sol,n_active_particles_sol,&
   active_particle_ids_sol)
   call assert_equals_rel_error(n_x,n_particles_max*n_groups_max,n_times_sol,&
-  vertex_sol%x,x_cart_sol,tol_real8,&
+  x_cart_sol,vertex_sol%x,tol_real8,&
   "Error fill synchrotron lights from particles: positions errors too large!")
   call assert_equals_rel_error(n_properties,n_particles_max*n_groups_max,&
-  n_times_sol,vertex_sol%properties,properties_sol,tol_real8,&
+  n_times_sol,properties_sol,vertex_sol%properties,tol_real8,&
   "Error fill synchrotron lights from particles: properties errors too large!")
 end subroutine test_fill_synchrotron_lights_from_particles
 
@@ -438,7 +446,7 @@ subroutine test_compute_synchrotron_mhd_fields()
       enddo
     enddo
     !> check the results
-    call assert_equals(mhd_fields_test,mhd_fields_sol,n_mhd_sol,&
+    call assert_equals(mhd_fields_sol,mhd_fields_test,n_mhd_sol,&
     n_particles_max*n_groups_max,tol_real8,&
     "Error synchrotron light compute mhd fields: too large errors!")
   enddo
@@ -471,7 +479,7 @@ subroutine test_compute_synchrotron_light_properties()
     where(properties_sol(:,:,kk).ne.0d0) error = abs((properties_sol(:,:,kk)-&
     vertex_sol%properties(:,:,kk))/properties_sol(:,:,kk))
     !> check if the properties arrays are equal
-    call assert_equals(error,zeros,n_properties,n_particles_max*n_groups_max,&
+    call assert_equals(zeros,error,n_properties,n_particles_max*n_groups_max,&
     tol_real8,"Error synchrotron light compute properties: too large errors!")
   enddo
 end subroutine test_compute_synchrotron_light_properties

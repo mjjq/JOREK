@@ -34,12 +34,17 @@ subroutine run_fruit_filter()
   call setup
   call write_filter_input_file
   write(*,*) "  ... running: filter tests"
-  call test_read_filter_inputs
-  call test_filter_allocation_deallocation
-  call test_initialisation_filter_unity
-  call test_compute_weights_filter_unity
-  call test_compute_weights_filter_unity_vectorial
-  call test_compute_weights_filter_unity_matrix
+  call run_test_case(test_read_filter_inputs,'test_read_filter_inputs')
+  call run_test_case(test_filter_allocation_deallocation,&
+  'test_filter_allocation_deallocation')
+  call run_test_case(test_initialisation_filter_unity,&
+  'test_initialisation_filter_unity')
+  call run_test_case(test_compute_weights_filter_unity,&
+  'test_compute_weights_filter_unity')
+  call run_test_case(test_compute_weights_filter_unity_vectorial,&
+  'test_compute_weights_filter_unity_vectorial')
+  call run_test_case(test_compute_weights_filter_unity_matrix,&
+  'test_compute_weights_filter_unity_matrix')
   write(*,*) "  ... tearing-down: filter tests"
   call teardown
 end subroutine run_fruit_filter
@@ -108,9 +113,9 @@ subroutine test_read_filter_inputs()
   int_param,real_param)
   close(read_unit)
   !> checks
-  call assert_equals(n_inputs,(/n_dimensions_sol+1,0/),2,&
+  call assert_equals((/n_dimensions_sol+1,0/),n_inputs,2,&
   "Error filter unity read inputs: N# inputs mismatch!")
-  call assert_equals(int_param,int_param_sol,1+n_dimensions_sol,&
+  call assert_equals(int_param_sol,int_param,1+n_dimensions_sol,&
   "Error filter unity read inputs: integer inputs mismatch!")
   call assert_false(allocated(real_param),&
   "Error filter unity read inputs: real input array allocated!")
@@ -128,13 +133,13 @@ subroutine test_filter_allocation_deallocation()
   type(filter_unity) :: filter_test
   !> tests allocation
   call filter_test%allocate_filter(n_dimensions_sol)
-  call assert_equals(filter_test%n_dimensions,n_dimensions_sol,&
+  call assert_equals(n_dimensions_sol,filter_test%n_dimensions,&
   "Error allocate filter: n_dimensions mistmatech!")
   call assert_equals_allocatable_arrays(n_dimensions_sol,&
   filter_test%stencil_shape,0,"Error allocate filter: stencil_shape")
   !> test deallocation
   call filter_test%deallocate_filter
-  call assert_equals(filter_test%n_dimensions,0,&
+  call assert_equals(0,filter_test%n_dimensions,&
   "Error deallocate filter: n_dimensions not reset to 0!")
   call assert_false(allocated(filter_test%stencil_shape),&
   "Error deallocate filter: stencil shape not deallocated!")
@@ -148,12 +153,12 @@ subroutine test_initialisation_filter_unity()
   type(filter_unity) :: filter_test
   !> test initialisation without stencil shape
   call filter_test%init_filter(n_dimensions_sol)
-  call assert_equals(filter_test%n_dimensions,n_dimensions_sol,&
+  call assert_equals(n_dimensions_sol,filter_test%n_dimensions,&
   "Error filter unity initialisation: n dimensions mismatch")
   call filter_test%deallocate_filter
   !> test initialisation with stencil shape
   call filter_test%init_filter(n_dimensions_sol,filter_shape_sol)
-  call assert_equals(filter_test%n_dimensions,n_dimensions_sol,&
+  call assert_equals(n_dimensions_sol,filter_test%n_dimensions,&
   "Error filter unity initialisation stencil shape: n dimensions mismatch")
 end subroutine test_initialisation_filter_unity 
 
@@ -171,7 +176,7 @@ subroutine test_compute_weights_filter_unity()
   do ii=1,n_positions_sol
     call filter_test%compute_filter_from_position(positions_sol(:,ii),weights(ii))
   enddo
-  call assert_equals(weights,weights_sol,n_positions_sol,tol_real8,&
+  call assert_equals(weights_sol,weights,n_positions_sol,tol_real8,&
   "Error filter unity compute filter form positions: filter weights mistmatch!")
   !> deallocation
   call filter_test%deallocate_filter
@@ -188,7 +193,7 @@ subroutine test_compute_weights_filter_unity_vectorial()
   call filter_test%init_filter(n_dimensions_sol)
   !> test
   call filter_test%compute_filter_from_position_vectorial(n_positions_sol,positions_sol,weights)
-  call assert_equals(weights,weights_sol,n_positions_sol,tol_real8,&
+  call assert_equals(weights_sol,weights,n_positions_sol,tol_real8,&
   "Error filter unity compute filter form positions (vectorial): filter weights mistmatch!")
   !> deallocation
   call filter_test%deallocate_filter
@@ -206,7 +211,7 @@ subroutine test_compute_weights_filter_unity_matrix()
   !> test
   call filter_test%compute_filter_from_position_matrix(n_positions_sol,n_intervals_sol,&
   positions_2d_sol,weights_2d)
-  call assert_equals(weights_2d,weights_2d_sol,n_positions_sol,n_intervals_sol,tol_real8,&
+  call assert_equals(weights_2d_sol,weights_2d,n_positions_sol,n_intervals_sol,tol_real8,&
   "Error filter unity compute filter form positions (matrix): filter weights mistmatch!")
   !> deallocation
   call filter_test%deallocate_filter

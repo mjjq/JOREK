@@ -44,15 +44,22 @@ subroutine run_fruit_vertices()
   write(*,'(/A)') "  ... setting-up: vertices tests"
   call setup
   write(*,'(/A)') "  ... running: vertices tests"
-  call test_de_allocate_time_vector 
-  call test_de_allocates_vertex_x_properties
-  call test_de_allocates_vertices
+  call run_test_case(test_de_allocate_time_vector,&
+  'test_de_allocate_time_vector') 
+  call run_test_case(test_de_allocates_vertex_x_properties,&
+  'test_de_allocates_vertex_x_properties')
+  call run_test_case(test_de_allocates_vertices,&
+  'test_de_allocates_vertices')
 #ifdef UNIT_TESTS
-  call test_vertices_resize_nodataloss_seq
-  call test_vertices_resize_nodataloss_omp
+  call run_test_case(test_vertices_resize_nodataloss_seq,&
+  'test_vertices_resize_nodataloss_seq')
+  call run_test_case(test_vertices_resize_nodataloss_omp,&
+  'test_vertices_resize_nodataloss_omp')
 #endif
-  call test_vertices_resize_nodataloss
-  call test_fit_tables_to_active_vertices
+  call run_test_case(test_vertices_resize_nodataloss,&
+  'test_vertices_resize_nodataloss')
+  call run_test_case(test_fit_tables_to_active_vertices,&
+  'test_fit_tables_to_active_vertices')
   write(*,'(/A)') "  ... tearing-down: vertices tests"
   call teardown
 end subroutine run_fruit_vertices
@@ -107,21 +114,21 @@ subroutine test_de_allocate_time_vector()
   call vertex_sol%allocate_time_vector(n_times_sol)
   call assert_equals(vertex_sol%n_times,n_times_sol,&
   "Error allocate vertices time vector from unallocated: n_times mismatch!")
-  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%n_active_vertices,0,&
-  "Error allocate vertices time vector from unallocated: n_active_vertices")
-  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%times,0.d0,&
+  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%n_active_vertices,&
+  0,"Error allocate vertices time vector from unallocated: n_active_vertices")
+  call assert_equals_allocatable_arrays(n_times_sol,0.d0,vertex_sol%times,&
   "Error allocate vertices time vector from unallocated: times")
   !> test allocated time vector from allocated vector
   call vertex_sol%allocate_time_vector(n_times_2_sol) 
   call assert_equals(vertex_sol%n_times,n_times_2_sol,&
   "Error allocate vertices time vector from allocated: n_times mismatch!")
-  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%n_active_vertices,0,&
-  "Error allocate vertices time vector from allocated: n_active_vertices")
-  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%times,0.d0,&
+  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%n_active_vertices,&
+  0,"Error allocate vertices time vector from allocated: n_active_vertices")
+  call assert_equals_allocatable_arrays(n_times_2_sol,0.d0,vertex_sol%times,&
   "Error allocate vertices time vector from allocated: times")
   !> test deallocate time vector
   call vertex_sol%deallocate_time_vector
-  call assert_equals(vertex_sol%n_times,0,&
+  call assert_equals(0,vertex_sol%n_times,&
   "Error deallocate vertices time vector: n_times not reset!")
   call assert_false(allocated(vertex_sol%n_active_vertices),&
   "Error deallocate vertices time vector: n_active_vertices allocated!")
@@ -137,25 +144,25 @@ subroutine test_de_allocates_vertex_x_properties()
   call vertex_sol%allocate_time_vector(n_times_sol) 
   !> allocate x and properties from unallocated vertex
   call vertex_sol%allocate_x_properties(n_vertices_sol)
-  call assert_equals(vertex_sol%n_vertices,n_vertices_sol,&
+  call assert_equals(n_vertices_sol,vertex_sol%n_vertices,&
   "Error allocate vertices x-property vector from unallocated: n_vertices mismatch!")
-  call assert_equals_allocatable_arrays(n_x,n_vertices_sol,n_times_sol,vertex_sol%x,&
-  0.d0,"Error allocate vertices  x-property vector from unallocated: x")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_sol,n_times_sol,0.d0,&
+  vertex_sol%x,"Error allocate vertices  x-property vector from unallocated: x")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_sol,n_times_sol,&
-  vertex_sol%properties,0.d0,&
+  0.d0,vertex_sol%properties,&
   "Error allocate vertices  x-property vector from unallocated: properties")
   !> allocate x and properties from allocated vertes
   call vertex_sol%allocate_x_properties(n_vertices_2_sol)
-  call assert_equals(vertex_sol%n_vertices,n_vertices_2_sol,&
+  call assert_equals(n_vertices_2_sol,vertex_sol%n_vertices,&
   "Error allocate vertices x-property vector from allocated: n_vertices mismatch!")
-  call assert_equals_allocatable_arrays(n_x,n_vertices_2_sol,n_times_sol,vertex_sol%x,&
-  0.d0,"Error allocate vertices  x-property vector from allocated: x")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_2_sol,n_times_sol,0.d0,&
+  vertex_sol%x,"Error allocate vertices  x-property vector from allocated: x")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_2_sol,n_times_sol,&
-  vertex_sol%properties,0.d0,&
+  0.d0,vertex_sol%properties,&
   "Error allocate vertices  x-property vector from allocated: properties")
   !> deallocate x and properties
   call vertex_sol%deallocate_x_properties
-  call assert_equals(vertex_sol%n_vertices,0,&
+  call assert_equals(0,vertex_sol%n_vertices,&
   "Error deallocate vertices x-property vector: n_vertices not reset!")
   call assert_false(allocated(vertex_sol%x),&
   "Error deallocate vertices x-property vector: x allocated!")
@@ -169,39 +176,38 @@ subroutine test_de_allocates_vertices()
   implicit none
   !> test vertex allocation from unallocated
   call vertex_sol%allocate_vertices(n_times_sol,n_vertices_sol)
-  call assert_equals(vertex_sol%n_times,n_times_sol,&
+  call assert_equals(n_times_sol,vertex_sol%n_times,&
   "Error allocate vertices from unallocated: n_times mismatch!")
-  call assert_equals(vertex_sol%n_vertices,n_vertices_sol,&
+  call assert_equals(n_vertices_sol,vertex_sol%n_vertices,&
   "Error allocate vertices from unallocated: n_vertices mismatch!")
-  call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%n_active_vertices,&
-  0,"Error allocate vertices from unallocated: n_active_vertices")
+  call assert_equals_allocatable_arrays(n_times_sol,&
+  vertex_sol%n_active_vertices,0,"Error allocate vertices from unallocated: n_active_vertices")
   call assert_equals_allocatable_arrays(n_times_sol,vertex_sol%times,&
-  0.d0,"Error allocate vertices from unallocated: times")
-  call assert_equals_allocatable_arrays(n_x,n_vertices_sol,n_times_sol,vertex_sol%x,&
-  0.d0,"Error allocate vertices from unallocated: x size")
+  "Error allocate vertices from unallocated: times")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_sol,n_times_sol,&
+  vertex_sol%x,"Error allocate vertices from unallocated: x size")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_sol,n_times_sol,&
-  vertex_sol%properties,0.d0,&
-  "Error allocate vertices from unallocated: properties size")
+  0.d0,vertex_sol%properties,"Error allocate vertices from unallocated: properties size")
   !> test vertex allocation from allocated
   call vertex_sol%allocate_vertices(n_times_2_sol,n_vertices_2_sol)
-  call assert_equals(vertex_sol%n_times,n_times_2_sol,&
+  call assert_equals(n_times_2_sol,vertex_sol%n_times,&
   "Error allocate vertices from allocated: n_times mismatch!")
-  call assert_equals(vertex_sol%n_vertices,n_vertices_2_sol,&
+  call assert_equals(n_vertices_2_sol,vertex_sol%n_vertices,&
   "Error allocate vertices from allocated: n_vertices mismatch!")
   call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%n_active_vertices,&
   0,"Error allocate vertices from allocated: n_active_vertices")
-  call assert_equals_allocatable_arrays(n_times_2_sol,vertex_sol%times,&
-  0.d0,"Error allocate vertices from allocated: times")
-  call assert_equals_allocatable_arrays(n_x,n_vertices_2_sol,n_times_2_sol,vertex_sol%x,&
-  0.d0,"Error allocate vertices from allocated: x size")
+  call assert_equals_allocatable_arrays(n_times_2_sol,0.d0,vertex_sol%times,&
+  "Error allocate vertices from allocated: times")
+  call assert_equals_allocatable_arrays(n_x,n_vertices_2_sol,n_times_2_sol,0.d0,&
+  vertex_sol%x,"Error allocate vertices from allocated: x size")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_2_sol,n_times_2_sol,&
-  vertex_sol%properties,0.d0,&
+  0.d0,vertex_sol%properties,&
   "Error allocate vertices from allocated: properties size")
   !> test vertex deallocation
   call vertex_sol%deallocate_vertices
-  call assert_equals(vertex_sol%n_times,0,&
+  call assert_equals(0,vertex_sol%n_times,&
   "Error deallocate vertices: n_times not reset!")
-  call assert_equals(vertex_sol%n_vertices,0,&
+  call assert_equals(0,vertex_sol%n_vertices,&
   "Error deallocate vertices: n_vertices not reset!")
   call assert_false(allocated(vertex_sol%n_active_vertices),&
   "Error deallocate vertices: n_active_vertices allocated!")
@@ -227,21 +233,21 @@ subroutine test_vertices_resize_nodataloss_seq
   vertex_sol%n_active_vertices = n_active_vertices_sol;
   !> test the procedure failing
   call resize_vertices_noloss_seq(vertex_sol,n_new_vertex_fail,ifail)
-  call assert_equals(ifail,code_resize_fail,"Error resize vertices seq: loss of data!")
-  call assert_equals(vertex_sol%n_vertices,n_vertices_sol,&
+  call assert_equals(code_resize_fail,ifail,"Error resize vertices seq: loss of data!")
+  call assert_equals(n_vertices_sol,vertex_sol%n_vertices,&
   "Error resize vertices seq: unexpected update of n_vertices!")
   !> test the table resize success
   call resize_vertices_noloss_seq(vertex_sol,n_new_vertex_success,ifail)
-  call assert_equals(vertex_sol%n_vertices,n_new_vertex_success,&
+  call assert_equals(n_new_vertex_success,vertex_sol%n_vertices,&
   "Error resize vertices seq: n_vertices mismatch!")
   call assert_equals_allocatable_arrays(n_x,n_new_vertex_success,n_times_sol,vertex_sol%x,&
   "Error resize vertices seq: unexpected positions") 
   call assert_equals_allocatable_arrays(n_properties_sol,n_new_vertex_success,n_times_sol,&
   vertex_sol%properties,"Error resize vertices seq: unexpected properties")
   do ii=1,n_times_sol
-    call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_new_vertex_success,ii),n_x,&
+    call assert_equals(x_sol(:,1:n_new_vertex_success,ii),vertex_sol%x(:,:,ii),n_x,&
     n_new_vertex_success,tol_real8, "Error resize vertices seq: positions are not the same!")
-    call assert_equals(vertex_sol%properties(:,:,ii),properties_sol(:,1:n_new_vertex_success,ii),&
+    call assert_equals(properties_sol(:,1:n_new_vertex_success,ii),vertex_sol%properties(:,:,ii),&
     n_x,n_new_vertex_success,tol_real8,"Error resize vertices seq: properties are not the same!")
   enddo
   !> deallocate everything
@@ -262,21 +268,21 @@ subroutine test_vertices_resize_nodataloss_omp
   vertex_sol%n_active_vertices = n_active_vertices_sol;
   !> test the procedure failing
   call resize_vertices_noloss_omp(vertex_sol,n_new_vertex_fail,ifail)
-  call assert_equals(ifail,code_resize_fail,"Error resize vertices omp: loss of data!")
-  call assert_equals(vertex_sol%n_vertices,n_vertices_sol,&
+  call assert_equals(code_resize_fail,ifail,"Error resize vertices omp: loss of data!")
+  call assert_equals(n_vertices_sol,vertex_sol%n_vertices,&
   "Error resize vertices omp: unexpected update of n_vertices!")
   !> test the table resize success
   call resize_vertices_noloss_omp(vertex_sol,n_new_vertex_success,ifail)
-  call assert_equals(vertex_sol%n_vertices,n_new_vertex_success,&
+  call assert_equals(n_new_vertex_success,vertex_sol%n_vertices,&
   "Error resize vertices omp: n_vertices mismatch!")
   call assert_equals_allocatable_arrays(n_x,n_new_vertex_success,n_times_sol,&
   vertex_sol%x,"Error resize vertices omp: unexpected positions")
   call assert_equals_allocatable_arrays(n_properties_sol,n_new_vertex_success,n_times_sol,&
   vertex_sol%properties,"Error resize vertices omp: unexpected properties")
   do ii=1,n_times_sol
-    call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_new_vertex_success,ii),n_x,&
+    call assert_equals(x_sol(:,1:n_new_vertex_success,ii),vertex_sol%x(:,:,ii),n_x,&
     n_new_vertex_success,tol_real8, "Error resize vertices omp: positions are not the same!")
-    call assert_equals(vertex_sol%properties(:,:,ii),properties_sol(:,1:n_new_vertex_success,ii),&
+    call assert_equals(properties_sol(:,1:n_new_vertex_success,ii),vertex_sol%properties(:,:,ii),&
     n_x,n_new_vertex_success,tol_real8,"Error resize vertices omp: properties are not the same!")
   enddo 
   !> deallocate everything
@@ -297,21 +303,21 @@ subroutine test_vertices_resize_nodataloss
   vertex_sol%n_active_vertices = n_active_vertices_sol;
   !> test the procedure failing
   call vertex_sol%resize_vertices_noloss(n_new_vertex_fail,ifail)
-  call assert_equals(ifail,code_resize_fail,"Error resize vertices: loss of data!")
-  call assert_equals(vertex_sol%n_vertices,n_vertices_sol,&
+  call assert_equals(code_resize_fail,ifail,"Error resize vertices: loss of data!")
+  call assert_equals(n_vertices_sol,vertex_sol%n_vertices,&
   "Error resize vertices: unexpected update of n_vertices!")
   !> test the table resize success
   call vertex_sol%resize_vertices_noloss(n_new_vertex_success,ifail)
-  call assert_equals(vertex_sol%n_vertices,n_new_vertex_success,&
+  call assert_equals(n_new_vertex_success,vertex_sol%n_vertices,&
   "Error resize vertices: n_vertices mismatch!")
   call assert_equals_allocatable_arrays(n_x,n_new_vertex_success,n_times_sol,&
   vertex_sol%x,"Error resize vertices: unexpected positions")
   call assert_equals_allocatable_arrays(n_properties_sol,n_new_vertex_success,n_times_sol,&
   vertex_sol%properties,"Error resize vertices: unexpected properties")
   do ii=1,n_times_sol
-    call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_new_vertex_success,ii),n_x,&
+    call assert_equals(x_sol(:,1:n_new_vertex_success,ii),vertex_sol%x(:,:,ii),n_x,&
     n_new_vertex_success,tol_real8, "Error resize vertices: positions are not the same!")
-    call assert_equals(vertex_sol%properties(:,:,ii),properties_sol(:,1:n_new_vertex_success,ii),&
+    call assert_equals(properties_sol(:,1:n_new_vertex_success,ii),vertex_sol%properties(:,:,ii),&
     n_x,n_new_vertex_success,tol_real8,"Error resize vertices: properties are not the same!")
   enddo
   !> deallocate everything
@@ -332,17 +338,17 @@ subroutine test_fit_tables_to_active_vertices
   n_vertices_expected = maxval(n_active_vertices_sol)
   !> test the table resize success
   call vertex_sol%fit_tables_to_active_vertices(ifail)
-  call assert_equals(ifail,0,"Error fit table to active vertices: unexpected failure!")
-  call assert_equals(vertex_sol%n_vertices,n_vertices_expected,&
+  call assert_equals(0,ifail,"Error fit table to active vertices: unexpected failure!")
+  call assert_equals(n_vertices_expected,vertex_sol%n_vertices,&
   "Error fit table to active vertices: n_vertices mismatch!")
   call assert_equals_allocatable_arrays(n_x,n_vertices_expected,n_times_sol,&
   vertex_sol%x,"Error fit table to active vertices: unexpected positions")
   call assert_equals_allocatable_arrays(n_properties_sol,n_vertices_expected,n_times_sol,&
   vertex_sol%properties,"Error fit table to active vertices: unexpected properties")
   do ii=1,n_times_sol
-    call assert_equals(vertex_sol%x(:,:,ii),x_sol(:,1:n_vertices_expected,ii),n_x,&
+    call assert_equals(x_sol(:,1:n_vertices_expected,ii),vertex_sol%x(:,:,ii),n_x,&
     n_vertices_expected,tol_real8, "Error fit table to active vertices: positions are not the same!")
-    call assert_equals(vertex_sol%properties(:,:,ii),properties_sol(:,1:n_vertices_expected,ii),&
+    call assert_equals(properties_sol(:,1:n_vertices_expected,ii),vertex_sol%properties(:,:,ii),&
     n_x,n_vertices_expected,tol_real8,"Error fit table to active vertices: properties are not the same!")
   enddo
   !> deallocate everything
@@ -374,7 +380,7 @@ subroutine test_visibility_geometry_funct_nosurfaces()
     enddo
   enddo
   !> check solution
-  call assert_equals(visibility_distances,visibility_distances_sol,n_distances,tol_real8,&
+  call assert_equals(visibility_distances_sol,visibility_distances,n_distances,tol_real8,&
   "Error compute visibility visibility/geometry funct no surfaces: visibility/geometry mismatch!")
   !> deallocate everything
   call vertex_sol%deallocate_vertices; call vertex_2_sol%deallocate_vertices; 

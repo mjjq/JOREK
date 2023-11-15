@@ -63,16 +63,23 @@ subroutine run_fruit_coordinate_transforms()
   write(*,'(/A)') "  ... setting-up: coordinate transfroms tests"
   call setup
   write(*,'(/A)') "  ... running: coordinate transforms tests"
-  call test_cartesian_tofrom_cylindrical_transform
-  call test_cartesian_tofrom_cylindrical_velocity_transform
-  call test_cartesian_tofrom_spherical_latitude_transform
-  call test_cartesian_tofrom_spherical_colatitude_std_transform
-  call test_cartesian_tofrom_cylindrical_vector_rotation
-  call test_vectors_to_orthonormal_basis
-  call test_cartesian_tofrom_spherical
-  call test_rotate_vectors_cart_z
-  call test_mirror_around_cart_x
-  call test_mirror_around_cart_y
+  call run_test_case(test_cartesian_tofrom_cylindrical_transform,&
+  'test_cartesian_tofrom_cylindrical_transform')
+  call run_test_case(test_cartesian_tofrom_cylindrical_velocity_transform,&
+  'test_cartesian_tofrom_cylindrical_velocity_transform')
+  call run_test_case(test_cartesian_tofrom_spherical_latitude_transform,&
+  'test_cartesian_tofrom_spherical_latitude_transform')
+  call run_test_case(test_cartesian_tofrom_spherical_colatitude_std_transform,&
+  'test_cartesian_tofrom_spherical_colatitude_std_transform')
+  call run_test_case(test_cartesian_tofrom_cylindrical_vector_rotation,&
+  'test_cartesian_tofrom_cylindrical_vector_rotation')
+  call run_test_case(test_vectors_to_orthonormal_basis,&
+  'test_vectors_to_orthonormal_basis')
+  call run_test_case(test_cartesian_tofrom_spherical,&
+  'test_cartesian_tofrom_spherical')
+  call run_test_case(test_rotate_vectors_cart_z,'test_rotate_vectors_cart_z')
+  call run_test_case(test_mirror_around_cart_x,'test_mirror_around_cart_x')
+  call run_test_case(test_mirror_around_cart_y,'test_mirror_around_cart_y')
   write(*,'(/A)') "  ... tearing-down: coordinate transforms tests"
   call teardown
 end subroutine run_fruit_coordinate_transforms
@@ -154,9 +161,9 @@ subroutine test_mirror_around_cart_x()
   x_new_r4 = x_r4; call mirror_around_cart_x(n_points,x_new_r4);
   x_new_r8 = x_r8; call mirror_around_cart_x(n_points,x_new_r8);
   x_new_r4(2,:) = -x_new_r4(2,:); x_new_r8(2,:) = -x_new_r8(2,:);
-  call assert_equals(x_new_r4,x_r4,3,n_points,tol_calc_r4,&
+  call assert_equals(x_r4,x_new_r4,3,n_points,tol_calc_r4,&
   "Error test cartesian x-mirroring (float): position  mismatch!")
-  call assert_equals(x_new_r8,x_r8,3,n_points,tol_calc_r8,&
+  call assert_equals(x_r8,x_new_r8,3,n_points,tol_calc_r8,&
   "Error test cartesian x-mirroring (double): position  mismatch!")
 end subroutine test_mirror_around_cart_x
 
@@ -169,9 +176,9 @@ subroutine test_mirror_around_cart_y()
   x_new_r4 = x_r4; call mirror_around_cart_y(n_points,x_new_r4);
   x_new_r8 = x_r8; call mirror_around_cart_y(n_points,x_new_r8);
   x_new_r4(1,:) = -x_new_r4(1,:); x_new_r8(1,:) = -x_new_r8(1,:);
-  call assert_equals(x_new_r4,x_r4,3,n_points,tol_calc_r4,&
+  call assert_equals(x_r4,x_new_r4,3,n_points,tol_calc_r4,&
   "Error test cartesian y-mirroring (float): position  mismatch!")
-  call assert_equals(x_new_r8,x_r8,3,n_points,tol_calc_r8,&
+  call assert_equals(x_r8,x_new_r8,3,n_points,tol_calc_r8,&
   "Error test cartesian y-mirroring (double): position  mismatch!")
 end subroutine test_mirror_around_cart_y
 
@@ -192,9 +199,9 @@ subroutine test_rotate_vectors_cart_z()
     phi_test_r4 = atan2(x_new_r4(1,:)*x_r4(2,:)-x_new_r4(2,:)*x_r4(1,:),&
     x_new_r4(1,:)*x_r4(1,:)+x_new_r4(2,:)*x_r4(2,:))
     where(phi_test_r4.lt.zero_r4) phi_test_r4 = real(TWOPI,kind=4)+phi_test_r4
-    call assert_equals(phi_test_r4-phi_r4(ii)*ones_nv_r4,zeros_nv_r4,&
+    call assert_equals(zeros_nv_r4,phi_test_r4-phi_r4(ii)*ones_nv_r4,&
     n_points,tol_calc_r4,"Error test cartesian z-rotation (float): angle  mismatch!")
-    call assert_equals(x_new_r4(3,:),x_r4(3,:),&
+    call assert_equals(x_r4(3,:),x_new_r4(3,:),&
     n_points,tol_calc_r4,"Error test cartesian z-rotation (float): z  mismatch!")
   enddo
   ones_nv_r8 = 1d0; zeros_nv_r8 = 0d0;
@@ -204,9 +211,9 @@ subroutine test_rotate_vectors_cart_z()
     phi_test_r8 = atan2(x_new_r8(1,:)*x_r8(2,:)-x_new_r8(2,:)*x_r8(1,:),&
     x_new_r8(1,:)*x_r8(1,:)+x_new_r8(2,:)*x_r8(2,:))
     where(phi_test_r8.lt.0d0) phi_test_r8 = TWOPI+phi_test_r8
-    call assert_equals(phi_test_r8-phi_r8(ii)*ones_nv_r8,zeros_nv_r8,&
+    call assert_equals(zeros_nv_r8,phi_test_r8-phi_r8(ii)*ones_nv_r8,&
     n_points,tol_calc_r8,"Error test cartesian z-rotation (double): angle  mismatch!")
-    call assert_equals(x_new_r8(3,:),x_r8(3,:),&
+    call assert_equals(x_r8(3,:),x_new_r8(3,:),&
     n_points,tol_calc_r8,"Error test cartesian z-rotation (double): z  mismatch!")
   enddo
 end subroutine test_rotate_vectors_cart_z
@@ -227,7 +234,7 @@ subroutine test_cartesian_tofrom_spherical()
     x_cart_new_r4 = x_r4;
     call vectors_cartesian_to_spherical(n_points,rthetaphi_r4(:,ii),x_cart_new_r4)
     call vectors_spherical_to_cartesian(n_points,rthetaphi_r4(:,ii),x_cart_new_r4)
-    call assert_equals(x_r4-x_cart_new_r4,zeros_3nv_r4,3,n_points,tol_calc_r4,&
+    call assert_equals(zeros_3nv_r4,x_r4-x_cart_new_r4,3,n_points,tol_calc_r4,&
     "Error test cartesian to/from spherical (float): x-cartesian mismatch!")
   enddo
   zeros_3nv_r8 = 0d0;
@@ -235,7 +242,7 @@ subroutine test_cartesian_tofrom_spherical()
     x_cart_new_r8 = x_r8;
     call vectors_cartesian_to_spherical(n_points,rthetaphi_r8(:,ii),x_cart_new_r8)
     call vectors_spherical_to_cartesian(n_points,rthetaphi_r8(:,ii),x_cart_new_r8)
-    call assert_equals(x_r8-x_cart_new_r8,zeros_3nv_r8,3,n_points,tol_calc_r8,&
+    call assert_equals(zeros_3nv_r8,x_r8-x_cart_new_r8,3,n_points,tol_calc_r8,&
     "Error test cartesian to/from spherical (double): x-cartesian mismatch!")
   enddo
 end subroutine test_cartesian_tofrom_spherical
@@ -255,14 +262,14 @@ subroutine test_cartesian_tofrom_cylindrical_transform()
   do ii=1,n_points
     x_cyl_r4 = cartesian_to_cylindrical(x_r4(:,ii))
     x_cart_new_r4 = cylindrical_to_cartesian(x_cyl_r4)   
-    call assert_equals(x_r4(:,ii)-x_cart_new_r4,zeros_r4,3,tol_calc_r4,&
+    call assert_equals(zeros_r4,x_r4(:,ii)-x_cart_new_r4,3,tol_calc_r4,&
     "Error test cartesian to/from cylindrical (float): x-cartesian mismatch!")
   enddo
   !> test double procision
   do ii=1,n_points
     x_cyl_r8 = cartesian_to_cylindrical(x_r8(:,ii))
     x_cart_new_r8 = cylindrical_to_cartesian(x_cyl_r8)
-    call assert_equals(x_r8(:,ii)-x_cart_new_r8,zeros_r8,3,tol_calc_r8,&
+    call assert_equals(zeros_r8,x_r8(:,ii)-x_cart_new_r8,3,tol_calc_r8,&
     "Error test cartesian to/from cylindrical (double): x-cartesian mismatch!")
   enddo
 end subroutine test_cartesian_tofrom_cylindrical_transform
@@ -284,7 +291,7 @@ subroutine test_cartesian_tofrom_cylindrical_velocity_transform
     x_cyl_r4 = cartesian_to_cylindrical(x_r4(:,ii))
     v_cyl_r4 = cartesian_to_cylindrical_velocity(x_r4(1,ii),x_r4(2,ii),v_xyz_r4(:,ii))
     v_xyz_new_r4 = cylindrical_to_cartesian_velocity(x_cyl_r4(1),x_cyl_r4(3),v_cyl_r4)
-    call assert_equals(abs(v_xyz_r4(:,ii)-v_xyz_new_r4),zeros_r4,3,tol_calc_r4,&
+    call assert_equals(zeros_r4,abs(v_xyz_r4(:,ii)-v_xyz_new_r4),3,tol_calc_r4,&
     "Error test cartesian to/from cylindrical velocity (single): v-cartesian mismatch!")
   enddo
   !> test double precision
@@ -292,7 +299,7 @@ subroutine test_cartesian_tofrom_cylindrical_velocity_transform
     x_cyl_r8 = cartesian_to_cylindrical(x_r8(:,ii))
     v_cyl_r8 = cartesian_to_cylindrical_velocity(x_r8(1,ii),x_r8(2,ii),v_xyz_r8(:,ii))
     v_xyz_new_r8 = cylindrical_to_cartesian_velocity(x_cyl_r8(1),x_cyl_r8(3),v_cyl_r8)
-    call assert_equals(abs(v_xyz_r8(:,ii)-v_xyz_new_r8),zeros_r8,3,tol_calc_r8,&
+    call assert_equals(zeros_r8,abs(v_xyz_r8(:,ii)-v_xyz_new_r8),3,tol_calc_r8,&
     "Error test cartesian to/from cylindrical velocity (double): v-cartesian mismatch!")
   enddo
 end subroutine test_cartesian_tofrom_cylindrical_velocity_transform
@@ -315,7 +322,7 @@ subroutine test_cartesian_tofrom_spherical_latitude_transform()
       origin_r4(:,jj),T_r4(:,jj),N_r4(:,jj),B_r4(:,jj))
       x_cart_new_r4 = spherical_latitude_to_cartesian(rpsichi_r4,&
       origin_r4(:,jj),T_r4(:,jj),N_r4(:,jj),B_r4(:,jj))
-      call assert_equals(x_r4(:,ii)-x_cart_new_r4,zeros_r4,3,tol_calc_r4,&
+      call assert_equals(zeros_r4,x_r4(:,ii)-x_cart_new_r4,3,tol_calc_r4,&
       "Error test cartesian to/from spherical-latitude (float): x-cartesian mismatch!") 
     enddo
   end do
@@ -326,7 +333,7 @@ subroutine test_cartesian_tofrom_spherical_latitude_transform()
       origin_r8(:,jj),T_r8(:,jj),N_r8(:,jj),B_r8(:,jj))
       x_cart_new_r8 = spherical_latitude_to_cartesian(rpsichi_r8,&
       origin_r8(:,jj),T_r8(:,jj),N_r8(:,jj),B_r8(:,jj))
-      call assert_equals(x_r8(:,ii)-x_cart_new_r8,zeros_r8,3,tol_calc_r8,&
+      call assert_equals(zeros_r8,x_r8(:,ii)-x_cart_new_r8,3,tol_calc_r8,&
       "Error test cartesian to/from spherical-latitude (double): x-cartesian mismatch!") 
     enddo
   end do
@@ -348,7 +355,7 @@ subroutine test_cartesian_tofrom_spherical_colatitude_std_transform()
     do ii=1,n_points
       rthetachi_r4 = cartesian_to_spherical_colatitude(x_r4(:,ii),origin_r4(:,jj))
       x_cart_new_r4 = spherical_colatitude_to_cartesian(rthetachi_r4,origin_r4(:,jj))
-      call assert_equals(x_r4(:,ii)-x_cart_new_r4,zeros_r4,3,tol_calc_r4,&
+      call assert_equals(zeros_r4,x_r4(:,ii)-x_cart_new_r4,3,tol_calc_r4,&
       "Error test cartesian to/from spherical-colatitude standard (float): x-cartesian mismatch!") 
     enddo
   end do
@@ -357,7 +364,7 @@ subroutine test_cartesian_tofrom_spherical_colatitude_std_transform()
     do ii=1,n_points
       rthetachi_r8 = cartesian_to_spherical_colatitude(x_r8(:,ii),origin_r8(:,jj))
       x_cart_new_r8 = spherical_colatitude_to_cartesian(rthetachi_r8,origin_r8(:,jj))
-      call assert_equals(x_r8(:,ii)-x_cart_new_r8,zeros_r8,3,tol_calc_r8,&
+      call assert_equals(zeros_r8,x_r8(:,ii)-x_cart_new_r8,3,tol_calc_r8,&
       "Error test cartesian to/from spherical-colatitude standard (double): x-cartesian mismatch!") 
     enddo
   end do
@@ -375,22 +382,22 @@ subroutine test_vectors_to_orthonormal_basis()
   do ii=1,n_origins
     call vectors_to_orthonormal_basis(v1_r4(:,ii),v2_r4(:,ii),T_new_r4,N_new_r4,B_new_r4)
     call test_orthonormality_basis(T_new_r4,N_new_r4,B_new_r4)
-    call assert_equals(T_r4(:,ii),T_new_r4,3,tol_r4,&
+    call assert_equals(T_new_r4,T_r4(:,ii),3,tol_r4,&
     "Error vectors to orhtonormal basis (float): T basis mismatch!)")
-    call assert_equals(N_r4(:,ii),N_new_r4,3,tol_r4,&
+    call assert_equals(N_new_r4,N_r4(:,ii),3,tol_r4,&
     "Error vectors to orhtonormal basis (float): T basis mismatch!)")
-    call assert_equals(B_r4(:,ii),B_new_r4,3,tol_r4,&
+    call assert_equals(B_new_r4,B_r4(:,ii),3,tol_r4,&
     "Error vectors to orhtonormal basis (float): B basis mismatch!)")
   enddo
   !> test orthonormal basis double precision
   do ii=1,n_origins
     call vectors_to_orthonormal_basis(v1_r8(:,ii),v2_r8(:,ii),T_new_r8,N_new_r8,B_new_r8)
     call test_orthonormality_basis(T_new_r8,N_new_r8,B_new_r8)
-    call assert_equals(T_r8(:,ii),T_new_r8,3,tol_r8,&
+    call assert_equals(T_new_r8,T_r8(:,ii),3,tol_r8,&
     "Error vectors to orhtonormal basis (double): T basis mismatch!)")
-    call assert_equals(N_r8(:,ii),N_new_r8,3,tol_r8,&
+    call assert_equals(N_new_r8,N_r8(:,ii),3,tol_r8,&
     "Error vectors to orhtonormal basis (double): T basis mismatch!)")
-    call assert_equals(B_r8(:,ii),B_new_r8,3,tol_r8,&
+    call assert_equals(B_new_r8,B_r8(:,ii),3,tol_r8,&
     "Error vectors to orhtonormal basis (double): B basis mismatch!)")
   enddo 
 
@@ -418,11 +425,11 @@ subroutine test_cartesian_tofrom_cylindrical_vector_rotation()
       N_cart_r8 = vector_cylindrical_to_cartesian(phi_r8(ii),N_cyl_r8)
       B_cart_r8 = vector_cylindrical_to_cartesian(phi_r8(ii),B_cyl_r8)
       !> check correctness
-      call assert_equals(T_cart_r8,T_r8(:,jj),3,tol_r8,&
+      call assert_equals(T_r8(:,jj),T_cart_r8,3,tol_r8,&
       "Error test vector cartesian to/from cylindrical: T vector mismatch!")
-      call assert_equals(N_cart_r8,N_r8(:,jj),3,tol_r8,&
+      call assert_equals(N_r8(:,jj),N_cart_r8,3,tol_r8,&
       "Error test vector cartesian to/from cylindrical: N vector mismatch!")
-      call assert_equals(B_cart_r8,B_r8(:,jj),3,tol_r8,&
+      call assert_equals(B_r8(:,jj),B_cart_r8,3,tol_r8,&
       "Error test vector cartesian to/from cylindrical: B vector mismatch!")
     enddo
   enddo
@@ -448,11 +455,11 @@ subroutine test_vector_rotation_toroidal_angle()
       T_rot_bck_r8 = cartesian_velocity_to_cylindrical(T_rot_fwd_r8,phi_r8(ii))
       N_rot_bck_r8 = cartesian_velocity_to_cylindrical(N_rot_fwd_r8,phi_r8(ii))
       B_rot_bck_r8 = cartesian_velocity_to_cylindrical(B_rot_fwd_r8,phi_r8(ii))
-      call assert_equals(T_rot_bck_r8,T_r8(:,jj),3,tol_r8,&
+      call assert_equals(T_r8(:,jj),T_rot_bck_r8,3,tol_r8,&
       "Error test vector rotation (toroidal): T vector mismatch!")
-      call assert_equals(N_rot_bck_r8,N_r8(:,jj),3,tol_r8,&
+      call assert_equals(N_r8(:,jj),N_rot_bck_r8,3,tol_r8,&
       "Error test vector rotation (toroidal): N vector mismatch!")
-      call assert_equals(B_rot_bck_r8,B_r8(:,jj),3,tol_r8,&
+      call assert_equals(B_r8(:,jj),B_rot_bck_r8,3,tol_r8,&
       "Error test vector rotation (toroidal): B vector mismatch!")
     enddo
   enddo
@@ -464,17 +471,17 @@ end subroutine test_vector_rotation_toroidal_angle
 subroutine test_orthonormality_basis_r4(v1,v2,v3)
   implicit none
   real*4,dimension(3),intent(in) :: v1,v2,v3
-  call assert_equals(dot_product(v1,v1),one_r4,tol_r4,&
+  call assert_equals(one_r4,dot_product(v1,v1),tol_r4,&
   "Error basis orthonormality (float): v1 is not normalized!")
-  call assert_equals(dot_product(v2,v2),one_r4,tol_r4,&
+  call assert_equals(one_r4,dot_product(v2,v2),tol_r4,&
   "Error basis orthonormality (float): v2 is not normalized!")
-  call assert_equals(dot_product(v3,v3),one_r4,tol_r4,&
+  call assert_equals(one_r4,dot_product(v3,v3),tol_r4,&
   "Error basis orthonormality (float): v3 is not normalized!")
-  call assert_equals(dot_product(v1,v2),zero_r4,tol_r4,&
+  call assert_equals(zero_r4,dot_product(v1,v2),tol_r4,&
   "Error basis orthonormality (float): v1 and v2 are not orthogonal!")
-  call assert_equals(dot_product(v1,v3),zero_r4,tol_r4,&
+  call assert_equals(zero_r4,dot_product(v1,v3),tol_r4,&
   "Error basis orthonormality (float): v1 and v3 are not orthogonal!")
-  call assert_equals(dot_product(v2,v3),zero_r4,tol_r4,&
+  call assert_equals(zero_r4,dot_product(v2,v3),tol_r4,&
   "Error basis orthonormality (float): v2 and v3 are not orthogonal!")
 end subroutine test_orthonormality_basis_r4
 

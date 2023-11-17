@@ -56,6 +56,8 @@ class ParseDictionary(Action):
   def __init__(self,option_strings,dest,nargs=None,\
     dict_delimiter='+',entries_delimiter=':',\
     values_delimiter=',',*args,**kwargs):
+    if(nargs not None):
+      print('Warning dictionary argument parser: only one dictionary is parsed!')
     super().__init__(option_strings,dest,**kwargs)
     self.dict_delimiter=dict_delimiter
     self.values_delimiter=values_delimiter

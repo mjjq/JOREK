@@ -6,13 +6,26 @@
 # right input parameters for running non        #
 # regression tests.                             #
 # --------------------------------------------- #
+# Tools -----------------------------------------
+# Append path of packages
+# inputs:
+#   package_path: (list,string) package paths to add
+#   position:     (integer) position in the path list  
+def insert_packages_paths(package_paths,position=0):
+  import os; import sys;
+  for package_path in package_paths:
+    sys.path.insert(position,os.path.abspath(package_path))
 
 # Argument parser -------------------------------
 # outputs:
 #   parser: (namespace) namespace containing the 
 #           inputs as attributes
-def generate_argument_parser():
+def generate_argument_parser(dict_path='./util/python_utils'):
   from argparse import ArgumentParser
+  # add dictionary path
+  insert_packages_paths([dict_path])
+  from dictionary_parser_class import ParseDictionary
+  # define parser
   parser = ArgumentParser(description=\
   "Automatically generate Fast camera example files with user's inputs")
   parser.add_argument('--example_dir','-ed',type=str,required=False,\
@@ -21,9 +34,19 @@ def generate_argument_parser():
   parser.add_argument('--example_name','-efn',type=str,required=False,\
   action='store',dest='example_name',default='camera_RE_gyroaverage_synchrotron_example',\
   help='Filename of the example to be modified, default: camera_RE_gyroaverage_synchrotron_example')
+  parser.add_argument('-dptc','--dict-params-to-change',dest='param_to_change_dict',\
+  action=ParseDictionary,required=None,default={'n_frames':1,'n_times':1,\
+  'fields_filename':'jorek_restart','image_filename':'result_intensities',\
+  'n_groups':1,'n_spectra':1,'n_wavelengths':40,'n_int_camera_param':5,\
+  'n_real_camera_param':9,'write_gc_in_txt':False,'particle_filenames':['particle_restart'],\
+  'min_spectra':[3e-6],'max_spectra':[3.5e-6],'pinhole_position':[-8.86e-1,-4.002,-3.32e-1],\
+  'int_camera_param':[0,600,600,0,1],'real_camera_param':[5.23e-1,5.23e-1,\
+  1.5707963267948966,9.998025e-1,1.5807965,2.09801,-8.86e-1,-4.002,-3.32e-1]},\
+  help='Dictionary of the parameter to change, default: camera_RE_gyroaverage_synchrotron_example inputs')
   return parser.parse_args()
 
 # Execute script --------------------------------
 if __name__ == "__main__":
   args = generate_argument_parser()
+  print(args.param_to_change_dict,args.example_name,args.example_dir)
 # -----------------------------------------------

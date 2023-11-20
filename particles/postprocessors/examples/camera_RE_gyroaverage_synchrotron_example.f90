@@ -73,8 +73,7 @@ n_int_camera_param  = 5
 n_real_camera_param = 9
 write_gc_in_txt = .false.
 !> se the list of particle restart files to be read
-allocate(character(len=60)::particle_filenames(n_times)); 
-particle_filenames = ''
+allocate(character(len=60)::particle_filenames(n_times)); particle_filenames = '';
 particle_filenames = [character(len=60)::'part_restart000.00339941',&
 'part_restart000.00349941','part_restart000.00359941',&
 'part_restart000.00369941','part_restart000.00379941',&
@@ -82,15 +81,11 @@ particle_filenames = [character(len=60)::'part_restart000.00339941',&
 'part_restart000.00409941','part_restart000.00419941',&
 'part_restart000.00429941','part_restart000.00439941']
 !> JET KDLT-E5WC wavelength: 3d-6 - 3.5d-6 [m]
-allocate(min_spectra(n_spectra)); 
-min_spectra = [3d-6];
-allocate(max_spectra(n_spectra)); 
-max_spectra = [3.5d-6];
-allocate(pinhole_positions(n_x)); 
-pinhole_positions = [-8.86d-1,-4.002,-3.32d-1];
+allocate(min_spectra(n_spectra)); min_spectra = [3d-6];
+allocate(max_spectra(n_spectra)); max_spectra = [3.5d-6];
+allocate(pinhole_positions(n_x)); pinhole_positions = [-8.86d-1,-4.002,-3.32d-1];
 !> one pinhole => n_lens_samples=1, JET KLDT-E5WC pixels nx=120,ny=176
-allocate(int_camera_param(n_int_camera_param)); 
-int_camera_param = [1,600,600,0,1];
+allocate(int_camera_param(n_int_camera_param)); int_camera_param = [1,600,600,0,1];
 !> JET KLDT-E5WC camera inputs:
 !> 1:3 -> half width, half height and orientation of the visual plane angle
 !> 4:6 -> camera focal direction: focal distance, latitude, azimuth

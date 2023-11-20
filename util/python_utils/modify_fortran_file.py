@@ -65,20 +65,16 @@ class ModifyFortranFile():
     from string import whitespace
     import re
     # create dictionary of compiled regular expression
-    dict_compile_reg = dict((key,re.compile(re.escape("".join([key,'=']))+\
-    ".*?(;|$)")) for key in dict_variables.keys())
+    dict_compile_reg    = dict((key,re.compile(re.escape(key+\
+    "(\s+|)=.*?(;|$)")) for key in dict_variables.keys())
+    dict_substitute_str = dict((key,"".join([key,'=',self.convert_variable_fortran_string(\
+    variable),';'])) for key,variable in dict_variables.items()) 
     with self.dest_path.open(mode='r+') as file:
       for line in file:
-        replaced_line = []
+        replaced_line = line
         if(any(key in line for key in dict_variables)):
-          line_no_space = line.translate(str.maketrans(dict.fromkeys(whitespace)))
-          #substring_map = [(key in line and '=' in line) for key in key_list]
-          replaced_line = [dict_compile_reg[key].sub(\
-          "".join([key,'=',self.convert_variable_fortran_string(variable),';']),\
-          line_no_space) for key,variable in dict_variables.items()]
-          # remove copy
-          replaced_line = [value for value in replaced_line if value not in line_no_space]
-        if(len(replaced_line)<=0): replaced_line = line
+          for key,substitute in dict_substitute_str.items():
+            replaced_line = dict_compile_reg[key].sub(substitute,replaced_line)
         print(replaced_line)
 
 # Test main

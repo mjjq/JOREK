@@ -34,13 +34,11 @@ class ModifyFortranFile():
     return "".join(['Class for modiying FORTRAN ocdes source: ',\
     self.source_path.as_posix(),', destination: ',self.dest_path.as_posix()])
 
-  # Copy file from source to destination
-  def copy_file(self):
-    # define substring to search for
-    from shutil import copyfile
-    copyfile(str(self.source_path),str(self.dest_path))
-
   # convert a variable in a fortran string
+  # inputs:
+  #   variable: (*) python variable to be converted in string
+  # output: 
+  #   fortran_string: (string) variable converted in string
   def convert_variable_fortran_string(self,variable):
     if(variable is dict):
       print('Warning dictionaries are not converted in fortran string!')
@@ -54,6 +52,21 @@ class ModifyFortranFile():
     fortran_string = fortran_string.replace('}',']')
     return fortran_string
 
+  # modify a string using regex
+  # inputs:
+  #   string:          (string) string to modify
+  #   dict_substitute: (dict) dictionary containing the
+  #                    substitution strings
+  #   dict_regex:      (dict) dictionary containing the
+  #                    compiled regexes
+  # outputs:
+  #   string: (string) modified string
+  def modify_string_regex(self,string,dict_substitutes,dict_regex):
+    if(any(key in string for key in dict_substitutes.keys())):
+      for key,substitute in dict_substitutes.items():
+        string = dict_regex[key].sub(substitute,string)
+    return string
+
   # Modify variables in destination files from dictionary.
   # variables are identified looking for 'key =' substrings
   # while reading the file. Warning: the substitution 
@@ -64,21 +77,23 @@ class ModifyFortranFile():
   def modify_variables(self,dict_variables):
     from string import whitespace
     import re
-    # create dictionary of compiled regular expression
-    dict_compile_reg    = dict((key,re.compile(re.escape(key+\
+    # create dictionary of compiled regular expression and substitution strings
+    dict_compiled_regex = dict((key,re.compile(re.escape(key)+\
     "(\s+|)=.*?(;|$)")) for key in dict_variables.keys())
     dict_substitute_str = dict((key,"".join([key,'=',self.convert_variable_fortran_string(\
     variable),';'])) for key,variable in dict_variables.items()) 
-    with self.dest_path.open(mode='r+') as file:
-      for line in file:
-        replaced_line = line
-        if(any(key in line for key in dict_variables)):
-          for key,substitute in dict_substitute_str.items():
-            replaced_line = dict_compile_reg[key].sub(substitute,replaced_line)
-        print(replaced_line)
+    # read the line from srouce, apply the regex and write the line to destination
+    # create destination if does not exit
+    with self.source_path.open(mode='r') as source:
+      with(self.dest_path.open(mode='w+')) as destination:
+        for line in source:
+          line = self.modify_string_regex(line,dict_substitute_str,dict_compiled_regex)
+          destination.write(line)
 
 # Test main
 if __name__ == '__main__':
+
+  # test data
   source_file    = 'ex1.f90'
   source_dir     = './particles/examples'
   dest_dir       = './particles'
@@ -90,9 +105,4 @@ if __name__ == '__main__':
   fortran_modifier = ModifyFortranFile(source_file,source_dir=source_dir,\
   dest_dir=dest_dir,modify_name=modify_name,separator=separator)  
   print(fortran_modifier)
-  del fortran_modifier
-  fortran_modifier = ModifyFortranFile(source_file,source_dir=source_dir)  
-  print(fortran_modifier)
-  fortran_modifier.copy_file()
-  fortran_modifier.modify_variables(dict_variables)
   del fortran_modifier 

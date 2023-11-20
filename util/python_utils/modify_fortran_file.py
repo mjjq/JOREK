@@ -117,9 +117,9 @@ class ModifyFortranFile():
     # create dictionary of compiled regular expression and substitution strings
     regex_return_break = re.compile(r"^.*?;")
     regex_double_return = re.compile(r"^.*,&$")
-    dict_compiled_regex_return = dict((key,re.compile(re.escape(key)+\
+    dict_compiled_regex_return = dict(("(;|\s+|^)"+key,re.compile(re.escape(key)+\
     "(\s+|)=.*&$")) for key in dict_variables.keys())
-    dict_compiled_regex_sub    = dict((key,re.compile(re.escape(key)+\
+    dict_compiled_regex_sub    = dict((key,re.compile("(;|\s+|^)"+re.escape(key)+\
     "(\s+|)=.*?(;|$)")) for key in dict_variables.keys())
     dict_substitute_str = dict((key,"".join([key,'=',self.convert_variable_fortran_string(\
     variable),';'])) for key,variable in dict_variables.items()) 

@@ -6,6 +6,15 @@
 # --------------------------------------------------------------- #
 
 # general purpose routines -------------------------------------- #
+# Append path of packages
+# inputs:
+#   package_path: (list,string) package paths to add
+#   position:     (integer) position in the path list  
+def insert_packages_paths(package_paths,position=0):
+  import os; import sys;
+  for package_path in package_paths:
+    sys.path.insert(position,os.path.abspath(package_path))
+
 # return a boolean from a string
 # inputs:
 #   string: (character) string to be converted in bool,
@@ -493,8 +502,12 @@ log_fruit_summary,test_modules_to_be_run=[]):
 # Argument parsers ---------------------------------------------- #
 # outpus:
 #   parser: (namespace) namespace having the inputs as attributes
-def generate_argument_parser():
+def generate_argument_parser(dict_path='./util/python_utils' ):
   from argparse import ArgumentParser 
+  # add dictionary path
+  insert_packages_paths([dict_path])
+  from dictionary_parser_class import ParseDictionary
+  # define parser
   parser = ArgumentParser(\
   description='generate, compile and execute JOREK unit tests')
   parser.add_argument('--directories','-d',type=str,nargs='*',\
@@ -538,12 +551,12 @@ def generate_argument_parser():
   parser.add_argument('--log-fruit-summary','-lfs',type=str,required=False,\
   action='store',dest='log_fruit_summary',default='False',\
   help='if true the fruit summary is logged, default: false')
-  parser.add_argument('--fruit-result-map','-frm',type=int,nargs='*',\
-  required=False,action='store',dest='list_fruit_result_map',default=[0,1,2,3],\
-  help='relative position of the fruit error,tests,failures,id as read by result file, default: [0,1,2,3]')
-  parser.add_argument('--launchers','-l',type=str,nargs='*',\
-  required=False,action='store',dest='list_launchers',default=['./','mpirun -np 2 ./'],\
-  help='launcher to be used for executing a test in the order: serial, mpi, default: [./,mpirun -np 2]')  
+  parser.add_argument('--fruit-result-map','-frm',required=False,action=ParseDictionary,\
+  dest='fruit_result_map',default={'errors':0,'tests':1,'failures':2,'id':3},
+  help='relative position of fruit results as read by result file, default: errors:0,tests:1,failures:2,id:3')
+  parser.add_argument('--launchers','-l',required=False,action=ParseDictionary,
+  dest='launchers',default={'serial':'./','mpi':'mpirun -np 2 ./'},\
+  help='launcher to be used for executing a test in the order: default: serial:./,mpi:mpirun -np 2]')
   parser.add_argument('--test_to_run','-ttr',type=str,nargs='*',\
   required=False,action='store',dest='tests_to_run',default=[],\
   help='path from root flder to the tests to be run, default: []')
@@ -554,15 +567,11 @@ if __name__ == '__main__':
   from sys import exit as sysexit
   # parse the inputs
   args = generate_argument_parser()
-  fruit_result_map = {'errors':args.list_fruit_result_map[0],\
-  'tests':args.list_fruit_result_map[1],'failures':args.list_fruit_result_map[2],\
-  'id':args.list_fruit_result_map[3]}
-  launchers = {'serial':args.list_launchers[0],'mpi':args.list_launchers[1]}
   # run all unit test suites
   exit_code = execute_all_unit_tests(args.test_dirs,args.test_parallel,\
   args.test_basket_prefix,args.test_prefix,args.test_suffix,args.test_ext,\
-  args.driver_suffix,launchers,args.result_dir,args.result_prefix,\
-  args.result_ext,fruit_result_map,return_bool_from_string(args.remove_drivers),\
+  args.driver_suffix,args.launchers,args.result_dir,args.result_prefix,\
+  args.result_ext,args.fruit_result_map,return_bool_from_string(args.remove_drivers),\
   return_bool_from_string(args.remove_results),return_bool_from_string(args.log_fruit_summary),\
   test_modules_to_be_run=args.tests_to_run) 
   # exit with the appropriate exit code

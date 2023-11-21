@@ -3,11 +3,16 @@ jorekmodel="600"
 tor_harmonics=3
 fourier_planes=128
 period_harmonics=1
+debugoptions= "-g -p -fcheck=all"
 options="with_vpar=.true. with_TiTe=.true. with_neutrals=.false. with_impurities=.false. with_refluid=.false."
 description="Ballooning mode, simple X-point plasma, model$jorekmodel, n_tor=3 + FFT, many terms switched on."
 mpitasks=2
 requiredfiles="input jorek_restart.h5"
 extra_remote_files="jorek_restart.h5"
+particle_restart_file="particle_restart.h5"
+result_file="result_intensities.h5"
+threshold=1.e-8
+test_dataset="pixel_filter_intensities"
 particle_example="camera_RE_gyroaverage_synchrotron_example"
 particle_example_dir="particles/postprocessors/examples"
 example_name_modifier="_modified"
@@ -18,20 +23,25 @@ binaries_initial=""
 # --- Compile the code for the test case
 function compile_jorek () {
     ./util/config.sh model=$jorekmodel n_tor=$tor_harmonics \
-    n_plane=$fourier_planes  n_period=$period_harmonics $options          || exit 1
+    n_plane=$fourier_planes  n_period=$period_harmonics $options                || exit 1
     python3 "${codedir}/particles/utils/create_temporary_example.py" \
     -ed "${codedir}/$particle_example_dir" -efn "${particle_example}.f90" \
-    -dd $codedir -nm $example_name_modifier -dptc $example_inputs         || exit 1
-    make $compilopt $debugoptions ${binaries}                             || exit 1
+    -dd $codedir -nm $example_name_modifier -dptc $example_inputs               || exit 1
+    make $compilopt $debugoptions ${binaries}                                   || exit 1
+}
+
+# --- Dummy initial run
+function initial_run() {
+  dummy_initial_run_particles                                                   || exit 1
 }
 
 # --- Carry out the test case
 function restart_run () {
-  $MPIRUN $mpitasks ./$binaries < input | tee logfile               || exit 1
+  $MPIRUN $mpitasks ./$binaries < input | tee logfile                           || exit 1
 }
 
 
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
-  compare_results_generic 1.e-8                                                     || exit 1
+  compare_particle_results_generic $threshold $result_file end.h5 $test_dataset || exit 1
 }

@@ -49,6 +49,10 @@ function dummy_initial_run() {
   touch jorek_restart.h5
 }
 
+function dummy_initial_run_particles() {
+  touch jorek_restart.h3 particle_restart.h5
+}
+
 # --- Generic function for comparing test results (values of end.h5 versus jorek_restart.h5).
 #     This function may be used for all testcases, but it is also possible to define specific
 #     functions in the testcase settings.sh files.
@@ -59,6 +63,20 @@ function compare_results_generic() {
     echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference.py` (threshold: $threshold)"
   fi
   h5diff -d $threshold jorek_restart.h5 end.h5 values                                || exit 1
+}
+
+# --- Generic function for comparing particle test results (results in end.h5).
+#     This function may be used for all particle testcases, but it is also
+#     possible to define specific functions in the testcase settings.sh files.
+function compare_particle_results_generic() {
+  threshold=$1
+  resultfile=$2
+  values=$3
+  ln -s ${testcasedir}/end.h5 end.h5
+  if [ "$printdiff" == "yes" ]; then
+    echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference-arguments -fn1 end.h5 -fn2 ${resultfile} -dn ${values}` (threshold: $threshold)"
+  fi
+  h5diff -d $threshold $resultfile end.h5 $values
 }
 
 if [ -z "$PRERUN" ]; then
@@ -85,6 +103,7 @@ printdiff="no"          # (preset)
 debugoptions=""         # (preset)
 checkexists="no"        # (preset)
 compiletest="no"        # (preset)
+isparticletest="no"     # (preset)
 if [ -z "$compilethreads" ]; then
     compilethreads="8"  # (preset)
 fi
@@ -172,6 +191,11 @@ while [ $# -gt 0 ]; do
 done
 echo " tmpdir = " $tmpdir
 
+# --- Detect if a particle testcase must be run
+if [[ "$testcase" =~ .*"particle".* ]]; then
+  isparticletest="yes"  
+  printf "\n$NO_COL Particle test case detected\n"
+fi
 
 # --- Detect which case of test (run test or compile test)
 if [ "${testcase:0:17}" == "compile_objs_all_" ]; then
@@ -190,7 +214,6 @@ elif [ ! -d  "${startdir}/testcases/$testcase" ]; then
   printf "\n$ERROR_COL ERROR: Testcase '$testcase' does not exist. Use command line option -l to list available test cases.$NO_COL\n"
   exit 1
 fi
-
 
 if [ "$checkexists" == "yes" ]; then
   echo "Case $testcase exists."
@@ -232,6 +255,14 @@ if [ "$compiletest" != "yes" ]; then
   source $testcasedir/settings.sh
 fi
 
+# --- Check if the particle example exists
+if [ "$isparticletest" == "yes" ]; then
+  # --- Check if the particle example exists
+  if [ ! -f "${codedir}/${particle_example_dir}/${particle_example}.f90" ]; then
+    printf "\n$ERROR_COL ERROR: Testcase '$testcase', particle example '$particle_example' does not exist.$NO_COL\n"
+    exit 1
+  fi
+fi
 
 # --- Set hard-coded parameters and compile
 if [ "$compile" == "yes" ]; then
@@ -291,7 +322,11 @@ if [ "$runit" == "yes" ]; then
 
   # --- Run the test case
   if [ "$initialrun" == "no" ]; then
-    cp ${testcasedir}/begin.h5 jorek_restart.h5           || exit 1
+    if [ "$isparticletest" == "yes" ]; then
+      cp ${testcasedir}/begin.h5 $particle_restart_file
+    else
+      cp ${testcasedir}/begin.h5 jorek_restart.h5         || exit 1
+    fi
     restart_run                                           || exit 1
     compare_results
     returncode=$?
@@ -302,9 +337,17 @@ if [ "$runit" == "yes" ]; then
     fi
   else
     initial_run                                           || exit 1
-    cp jorek_restart.h5 ${testcasedir}/begin.h5           || exit 1
+    if [ "$isparticletest" == "yes" ]; then
+      cp $particle_restart_file ${testcasedir}/begin.h5   || exit 1
+    else
+      cp jorek_restart.h5 ${testcasedir}/begin.h5         || exit 1
+    fi
     restart_run                                           || exit 1
-    cp jorek_restart.h5 ${testcasedir}/end.h5             || exit 1
+    if [ "$isparticletest" == "yes" ]; then
+      cp $result_file ${testcasedir}/end.h5               || exit 1
+    else
+      cp jorek_restart.h5 ${testcasedir}/end.h5           || exit 1
+    fi
   fi
 
   # --- Remove the temporary directory

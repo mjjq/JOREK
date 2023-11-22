@@ -10,7 +10,7 @@ program jorek2_IDS
   use nodes_elements
   use data_structure
   use mod_import_restart
-  use phys_module, only : rst_format
+  use phys_module, only : rst_format, n_tor_restart
   use basis_at_gaussian, only: initialise_basis
   
   implicit none
@@ -93,6 +93,13 @@ program jorek2_IDS
     if (ierr /=0 ) then
        write(*,*) '  Could not read the restart file'
        stop
+    endif
+
+    ! --- Check whether jorek2_IDS has been compiled with a sufficient number of harmonics
+    if (n_tor < n_tor_restart) then
+      write(*,*) '  You must compile jorek2_IDS at least with n_tor = ', n_tor_restart
+      write(*,*) '  Otherwise you are cutting information for the IDSs'
+      stop
     endif
 
     ! --- Fill and export an MHD IDS

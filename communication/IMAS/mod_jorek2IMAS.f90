@@ -791,24 +791,24 @@ module mod_jorek2IMAS
     real*8,                intent(in)  :: res_fact
   
     ! --- Local parameters
-    integer :: num_nodes, idof, inode, icoeff
+    integer :: num_nodes, inode, inode_glob, itor
     
     num_nodes = node_list%n_nodes
-  
+
     if ( associated(ggd_scalar%coefficients) ) then
       deallocate( ggd_scalar%coefficients )
-      allocate( ggd_scalar%coefficients(n_tor, num_nodes*(n_order+1)) ) 
+      allocate( ggd_scalar%coefficients(num_nodes*n_tor, n_degrees) ) 
     else
-      allocate( ggd_scalar%coefficients(n_tor, num_nodes*(n_order+1)) ) 
+      allocate( ggd_scalar%coefficients(num_nodes*n_tor, n_degrees) )
     endif
   
-    do inode=1, num_nodes
-      do idof=1, n_order+1
+    do inode=1, num_nodes    
+      do itor=1, n_tor
+        
+        inode_glob = inode + (itor-1)*num_nodes 
   
-        icoeff = inode + (idof-1)*num_nodes
-  
-        ggd_scalar%coefficients(:,icoeff)=node_list%node(inode)%values(:,idof,var_index)
-  
+        ggd_scalar%coefficients(inode_glob,:)=node_list%node(inode)%values(itor,:,var_index)
+
       enddo
     enddo
   
@@ -860,7 +860,7 @@ module mod_jorek2IMAS
   
     ! Write grid geometry
     allocate(  grid%space(2)                           )
-    allocate(  grid%space(1)%objects_per_dimension(4)  )
+    allocate(  grid%space(1)%objects_per_dimension(3)  )
     allocate(  grid%space(1)%coordinates_type(2)       )
   
     ! Set coordinates type to [R, Z]
@@ -868,9 +868,10 @@ module mod_jorek2IMAS
   
     allocate(grid%identifier%description(1))
     allocate(grid%identifier%name(1))
-    grid%identifier%description(1) = "Mesh JOREK output HDF5 file grid with quantities"
-    grid%identifier%name = "JOREK output HDF5 file grid with quantities"
-    grid%identifier%index = 1
+    grid%identifier%description(1) = "Mesh coming from the JOREK code: combined 2D finite elements space in the poloidal plane &
+                                      with Fourier space for the toroidal angle dependence"
+    grid%identifier%name  = "JOREK mesh"
+    grid%identifier%index = 0   ! Unspecified
   
     num_nodes = size(RZ,1)
     space_RZ  => grid%space(1)
@@ -897,54 +898,27 @@ module mod_jorek2IMAS
     enddo
   
     ! Writing grid_subsets
-    allocate(grid%grid_subset(2))  ! 2 grid subsets 
+    allocate(grid%grid_subset(1))  
   
-    ! Subset for points
+    ! Subset for nodes in the combined space
     gs_index = 1
   
     allocate( grid%grid_subset(gs_index)%identifier%name(1)         )
     allocate( grid%grid_subset(gs_index)%identifier%description(1)  )
-    grid%grid_subset(gs_index)%identifier%name(1)        = "Nodes"
-    grid%grid_subset(gs_index)%identifier%index          = gs_index 
-    grid%grid_subset(gs_index)%identifier%description(1) = "All points/nodes/vertices/0D objects in the domain."
-    grid%grid_subset(gs_index)%dimension                 = 1
-   
-    allocate( grid%grid_subset(gs_index)%element(num_nodes) )
-   
-    do i=1, num_nodes  
-      allocate(  grid%grid_subset(gs_index)%element(i)%object(1)   )
-      grid%grid_subset(gs_index)%element(i)%object(1)%space     = 1
-      grid%grid_subset(gs_index)%element(i)%object(1)%index     = i 
-      grid%grid_subset(gs_index)%element(i)%object(1)%dimension = 1
-    enddo 
+    grid%grid_subset(gs_index)%identifier%name(1)        = "nodes"
+    grid%grid_subset(gs_index)%identifier%index          = 1 
+    grid%grid_subset(gs_index)%identifier%description(1) = "The elements of the grid subset are the 0D nodes &
+                                                         of the combined RZ x Fourier space (number of nodes &
+                                                         is N_poloidal_nodes x N_fourier). "
+    grid%grid_subset(gs_index)%dimension                 = 1    ! 1 is the convention for 0D nodes
   
-    ! Subset for cells
-    gs_index = 2
-  
-    allocate(grid%grid_subset(gs_index)%identifier%name(1))
-    allocate(grid%grid_subset(gs_index)%identifier%description(1))
-  
-    grid%grid_subset(gs_index)%identifier%name(1)        = "2D cells "
-    grid%grid_subset(gs_index)%identifier%index          = gs_index 
-    grid%grid_subset(gs_index)%identifier%description(1) = "All points/nodes/vertices/0D objects in the domain."
-    grid%grid_subset(gs_index)%dimension                 = 3   ! A bit confusing, but 1 means point, 2 line and 3 surface
-   
-    allocate( grid%grid_subset(gs_index)%element(num_cells) )
-  
-    do i=1, num_cells
-      allocate(  grid%grid_subset(gs_index)%element(i)%object(1)   )
-      grid%grid_subset(gs_index)%element(i)%object(1)%space     = 1
-      grid%grid_subset(gs_index)%element(i)%object(1)%index     = i 
-      grid%grid_subset(gs_index)%element(i)%object(1)%dimension = 3
-    enddo 
-  
-    ! Fill toroidal space (must be adapted for multiple time slices?)
+    ! Fill toroidal space 
     space_fourier  => grid%space(2)
     allocate(    space_fourier%coordinates_type(1)    )
     allocate(    space_fourier%identifier%description(1)  )
     space_fourier%coordinates_type(1) = 5          ! The coordinate type is 5, phi angle
     space_fourier%geometry_type%index = n_period   ! Fourier periodicity
-    space_fourier%identifier%description(1) = "Toroidal space"             
+    space_fourier%identifier%description(1) = "Toroidal Fourier space"             
   
     allocate(  space_fourier%objects_per_dimension(1)               )  ! We have only one dimension of
     allocate(  space_fourier%objects_per_dimension(1)%object(n_tor) )  ! toroidal harmonics
@@ -958,14 +932,14 @@ module mod_jorek2IMAS
     ! Needs generalization for JOREK 3D STELLERATOR EXTENSION!!
     space_RZ%geometry_type%index = 0  ! Standard geometry (non Fourier)
     do i=1, num_nodes
-      allocate( space_RZ%objects_per_dimension(1)%object(i)%geometry_2d(2,n_order+1) )
+      allocate( space_RZ%objects_per_dimension(1)%object(i)%geometry_2d(2,n_degrees) )
       space_RZ%objects_per_dimension(1)%object(i)%geometry_2d(1,:) = node_list%node(i)%x(1,:,1 )   ! R dofs
       space_RZ%objects_per_dimension(1)%object(i)%geometry_2d(2,:) = node_list%node(i)%x(1,:,2 )   ! Z dofs
     enddo
   
     ! JOREK element sizes
     do i=1, num_cells
-      allocate( space_RZ%objects_per_dimension(3)%object(i)%geometry_2d(n_order+1, n_vertex_max) )
+      allocate( space_RZ%objects_per_dimension(3)%object(i)%geometry_2d(n_degrees, n_vertex_max) )
       do j=1, n_vertex_max
         space_RZ%objects_per_dimension(3)%object(i)%geometry_2d(:,j) = element_list%element(i)%size(j,:)   
       enddo

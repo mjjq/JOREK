@@ -66,6 +66,7 @@ module phys_module
   logical :: forceSDN             !< Force a symmetric double null, within the accuracy of SDN_threshold
   real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
+  integer :: n_tor_restart        !< Number of toroidal harmonics read in the restart file
   logical :: restart              !< Restart a code run from the restart file jorek_restart.h5?
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
   logical :: import_equil         !< (presently unused)

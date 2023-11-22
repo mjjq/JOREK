@@ -57,12 +57,12 @@ function dummy_initial_run_particles() {
 #     This function may be used for all particle testcases, but it is also
 #     possible to define specific functions in the testcase settings.sh files.
 function compare_results_generic() {
-  if [ -z "$1"]; then
+  if [ -z "$1" ]; then
     printf "\n$ERROR_COL ERROR: No threshold provided for results comparison\n $NO_COL"
     exit 1
   fi
   threshold=$1
-  if [ -z "$2"]; then
+  if [ -z "$2" ]; then
     resultfile="jorek_restart.h5"
   else
     resultfile=$2
@@ -74,7 +74,7 @@ function compare_results_generic() {
   fi
   ln -s ${testcasedir}/end.h5 end.h5
   if [ "$printdiff" == "yes" ]; then
-    echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference-arguments -fn1 end.h5 -fn2 ${resultfile} -dn ${values}` (threshold: $threshold)"
+    echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference.py -fn1 end.h5 -fn2 ${resultfile} -dn ${values}` (threshold: $threshold)"
   fi
   h5diff -d $threshold $resultfile end.h5 $values
 }

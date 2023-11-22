@@ -140,7 +140,7 @@ def visualise():
             #values
             try:
                 ids_r = data_entry.get("radiation")
-                data_r = ids_r.process[0].ggd.array[0]
+                data_r = ids_r.process[0].ggd.array[slice]
                 radiation = True
             except:
                 radiation = False

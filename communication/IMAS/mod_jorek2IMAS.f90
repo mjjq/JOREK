@@ -29,21 +29,23 @@ module mod_jorek2IMAS
   contains
 
 
-  subroutine fill_mhd_IDS(first_step, mhd_ids)  
+  subroutine fill_mhd_IDS(first_step, time_SI, mhd_ids)  
 
-    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass
 
     implicit none
 
     ! --- External parameters
-    logical,            intent(in)           :: first_step   ! is this the first step?
+    logical,   intent(in) :: first_step   ! is this the first step?
+    real*8,    intent(in) :: time_SI
+    
     type(ids_mhd), target,     intent(inout) :: mhd_ids
 
    
     ! --- Local parameters 
     integer    :: i, j, k, m, etype, irst, int, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_T, fact_time, fact_v, fact_zj, rho0, fact_phi, fact_rho, fact_w
+    real*8     :: fact_T, fact_v, fact_zj, rho0, fact_phi, fact_rho, fact_w
     
     
     ! **********************************************************************************
@@ -75,7 +77,6 @@ module mod_jorek2IMAS
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
     sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
   
-    fact_time =  sqrt_mu0_rho0 
     fact_v    =  1.d0 /  sqrt_mu0_rho0 
     fact_w    = -1.d0 /  sqrt_mu0_rho0      ! Transform for COCOS convention of toroidal direction (anti-clockwise) 
     fact_phi  = -1.d0 /  sqrt_mu0_rho0 * F0 ! COCOS convection: F0 depends on phi direction
@@ -92,8 +93,8 @@ module mod_jorek2IMAS
 
     mhd_ids%ids_properties%homogeneous_time = 1
   
-    mhd_ids%time(i_slice)     = t_start * fact_time 
-    mhd_ids%ggd(i_slice)%time = t_start * fact_time
+    mhd_ids%time(i_slice)     = time_SI 
+    mhd_ids%ggd(i_slice)%time = time_SI
 
     ! --- Fill MHD data
     do i=1, n_var 
@@ -178,20 +179,21 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_radiation_IDS(first_step, radiation_ids)  
+  subroutine fill_radiation_IDS(first_step, time_SI, radiation_ids)  
 
-    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
                            gamma, index_main_imp
     implicit none
 
     ! --- External parameters
     logical,                 intent(in) :: first_step   ! is this the first step?
+    real*8,                  intent(in) :: time_SI
     type(ids_radiation),  intent(inout) :: radiation_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_time, rho0, fact_rad
+    real*8     :: rho0, fact_rad
     
     ! **********************************************************************************
     ! ******************************* IMAS **********************************************
@@ -223,7 +225,6 @@ module mod_jorek2IMAS
     sqrt_mu0_over_rho0 = sqrt( mu_zero / rho0 )
 
     fact_rad = 1.d0 / ( (gamma-1.d0) * MU_ZERO * sqrt_mu0_rho0 )
-    fact_time =  sqrt_mu0_rho0 
 
     ! --- Set times
     n_slice = 1  
@@ -234,8 +235,8 @@ module mod_jorek2IMAS
     allocate( radiation_ids%process(1))   ! --- 1 type of radiation
     allocate( radiation_ids%process(1)%ggd(n_slice) )
   
-    radiation_ids%time(i_slice)                = t_start * fact_time 
-    radiation_ids%process(1)%ggd(i_slice)%time = t_start * fact_time
+    radiation_ids%time(i_slice)                = time_SI 
+    radiation_ids%process(1)%ggd(i_slice)%time = time_SI
  
     ! --- Fill radiation data 
     var_rad = 2
@@ -260,21 +261,22 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_core_profiles_IDS(first_step, core_profiles_ids, n_grid)  
+  subroutine fill_core_profiles_IDS(first_step, time_SI, core_profiles_ids, n_grid)  
 
-    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
                            gamma, index_main_imp
     implicit none
 
     ! --- External parameters
     logical,      intent(in) :: first_step   ! is this the first step?
+    real*8,       intent(in) :: time_SI
     integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
     type(ids_core_profiles),   intent(inout) :: core_profiles_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_time, rho0
+    real*8     :: rho0
     real*8, allocatable :: result(:,:), q_prof(:), rho_tor(:)
     character(10)       :: str
     type(type_command)  :: command_tmp
@@ -294,11 +296,9 @@ module mod_jorek2IMAS
     ! --- Normalization factors for IMAS
     rho0               = central_density * 1.d20 * central_mass * mass_proton
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
-
-    fact_time =  sqrt_mu0_rho0 
     
     core_profiles_ids%ids_properties%homogeneous_time = 1    
-    core_profiles_ids%time(i_slice) = t_start * fact_time 
+    core_profiles_ids%time(i_slice) = time_SI 
 
     ! --- Call expressions and do a flux average
     step_imported = .true.
@@ -454,21 +454,22 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_equilibrium_IDS(first_step, equilibrium_ids, n_grid)  
+  subroutine fill_equilibrium_IDS(first_step, time_SI, equilibrium_ids, n_grid)  
 
-    use phys_module, only : t_start, F0, central_density, sqrt_mu0_rho0, &
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
                            gamma, index_main_imp
     implicit none
 
     ! --- External parameters
     logical,      intent(in) :: first_step   ! is this the first step?
+    real*8,       intent(in) :: time_SI
     integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
     type(ids_equilibrium),  intent(inout)  :: equilibrium_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: fact_time, rho0, fact_rad, R_min, Z_min, R_max, Z_max, R_node, Z_node
+    real*8     :: rho0, fact_rad, R_min, Z_min, R_max, Z_max, R_node, Z_node
     real*8, allocatable :: result(:,:), res0D(:), q_prof(:), rho_tor(:), R_sep(:), Z_sep(:)
     real*8, allocatable :: result2D(:,:,:), R_vec(:), Z_vec(:)
     character(30)       :: str
@@ -489,11 +490,9 @@ module mod_jorek2IMAS
     ! --- Normalization factors for IMAS
     rho0               = central_density * 1.d20 * central_mass * mass_proton
     sqrt_mu0_rho0      = sqrt( mu_zero * rho0 )
-
-    fact_time =  sqrt_mu0_rho0 
     
     equilibrium_ids%ids_properties%homogeneous_time = 1    
-    equilibrium_ids%time(i_slice) = t_start * fact_time 
+    equilibrium_ids%time(i_slice) = time_SI 
 
     ! --- Call expressions and do a flux average
     step_imported = .true.

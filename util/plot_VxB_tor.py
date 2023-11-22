@@ -24,20 +24,22 @@ if __name__ == "__main__":
         description="Plot 2D distribution of VxB_tor from .vtk files.")
     parser.add_argument("folder_name",
                         help="The general name of folders contain the target vtk files, e.g., vtk_no0_iplane.")
-    parser.add_argument("-np", "--nplane", default=8, 
+    parser.add_argument("-np", "--nplane", type=int, default=8, 
                         help="Value of nplane.")
-    parser.add_argument('-ns', "--nstep", default=4000,
+    parser.add_argument('-ns', "--nstep", type=int, default=4000,
                         help="Value of nstep.")
-    parser.add_argument('-Rg', "--R_geo", default=1.65,
+    parser.add_argument('-Rg', "--R_geo", type=float, default=1.65,
                         help="Value of R_geo, i.e., axis of the grids in JORKE code.")
-    parser.add_argument('-Zg', "--Z_geo", default=0.0,
+    parser.add_argument('-Zg', "--Z_geo", type=float, default=0.0,
                         help="Value of Z_geo, i.e., axis of the grids in JORKE code.")
-    parser.add_argument('-de', "--delta", default=0.005,
+    parser.add_argument('-de', "--delta", type=float, default=0.005,
                         help="Value of delta, i.e., singular grids with distance away from (R_geo, Z_geo) smaller than delta will be set to zero.")
     parser.add_argument('-me', "--method", choices=["it", "sc"], default="it: interpolate",
                         help="Use the specified method to plot the data, including 1. it: interpolate; 2. sc: scatter.")
-    parser.add_argument("-fz", "--fontsize", default=15,
+    parser.add_argument("-fz", "--fontsize", type=int, default=15,
                         help="Define the fontsize of figure.")
+    parser.add_argument('-xylim', nargs=4, type=float, metavar=('xmin', 'xmax', 'ymin', 'ymax'),
+                        help='Specify xmin, xmax, ymin, ymax for the plot.')
     args = parser.parse_args()
 
     reader = vtk.vtkDataSetReader()
@@ -76,4 +78,8 @@ if __name__ == "__main__":
 
     # plt.connect('motion_notify_event',
     #             lambda event: pltvtk.display_values(event, coordniates[:, 0], coordniates[:, 1], VXB_tor_n0))
+    if args.xylim:
+        xmin, xmax, ymin, ymax = args.xylim
+        plt.xlim(xmin, xmax)
+        plt.ylim(ymin, ymax)
     plt.show()

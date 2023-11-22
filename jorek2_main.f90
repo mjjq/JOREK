@@ -967,6 +967,12 @@ mpi_required = 0
 
   if (my_id .eq. 0)  then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
+    if ( more_outfile_digits) then
+      write(fileout,'(A5,i6.6)') 'jorek',index_now
+    else
+      write(fileout,'(A5,i5.5)') 'jorek',index_now
+    end if
+    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
     fileout = 'jorek_restart'
     call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)

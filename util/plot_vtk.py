@@ -329,6 +329,11 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
 
         ifile += 1
 
+        if args.xylim:
+            xmin, xmax, ymin, ymax = args.xylim
+            plt.xlim(xmin, xmax)
+            plt.ylim(ymin, ymax)
+
 def read_data(file_path, reader, variable_list, itor):
 
     reader.SetFileName(file_path)
@@ -373,8 +378,10 @@ if __name__ == "__main__":
                         help="Substract with the reference dataset, e.g., to plot deltaT = T - T0, input the path for jorek.00000.vtk.")
     # parser.add_argument('-it', "--interpolate", type=str_to_bool, nargs='?', choices=[True, False], default=False,
     #                     help="Interpolate unstructed data in to structed grids? Default is True.")
-    parser.add_argument("-fz", "--fontsize", default=15,
+    parser.add_argument("-fz", "--fontsize", type=int, default=15,
                         help="Define the fontsize of figure.")
+    parser.add_argument('-xylim', nargs=4, type=float, metavar=('xmin', 'xmax', 'ymin', 'ymax'),
+                        help='Specify xmin, xmax, ymin, ymax for the plot.')
 
     args = parser.parse_args()
 

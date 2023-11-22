@@ -53,25 +53,25 @@ function dummy_initial_run_particles() {
   touch jorek_restart.h3 particle_restart.h5
 }
 
-# --- Generic function for comparing test results (values of end.h5 versus jorek_restart.h5).
-#     This function may be used for all testcases, but it is also possible to define specific
-#     functions in the testcase settings.sh files.
-function compare_results_generic() {
-  threshold=$1
-  ln -s ${testcasedir}/end.h5 end.h5                                                 || exit 1
-  if [ "$printdiff" == "yes" ]; then
-    echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference.py` (threshold: $threshold)"
-  fi
-  h5diff -d $threshold jorek_restart.h5 end.h5 values                                || exit 1
-}
-
 # --- Generic function for comparing particle test results (results in end.h5).
 #     This function may be used for all particle testcases, but it is also
 #     possible to define specific functions in the testcase settings.sh files.
-function compare_particle_results_generic() {
+function compare_results_generic() {
+  if [ -z "$1"]; then
+    printf "\n$ERROR_COL ERROR: No threshold provided for results comparison\n $NO_COL"
+    exit 1
+  fi
   threshold=$1
-  resultfile=$2
-  values=$3
+  if [ -z "$2"]; then
+    resultfile="jorek_restart.h5"
+  else
+    resultfile=$2
+  fi
+  if [ -z "$3" ]; then
+    values="values "
+  else
+    values=$3
+  fi
   ln -s ${testcasedir}/end.h5 end.h5
   if [ "$printdiff" == "yes" ]; then
     echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference-arguments -fn1 end.h5 -fn2 ${resultfile} -dn ${values}` (threshold: $threshold)"
@@ -255,6 +255,15 @@ if [ "$compiletest" != "yes" ]; then
   source $testcasedir/settings.sh
 fi
 
+# --- Check if the restart_file and the result_file variables are set
+#     if not, set them respectively to jorek_restart.h5
+if [ -z ${restart_file+x} ]; then
+  restart_file="jorek_restart.h5"
+fi
+if [ -z ${result_file+x} ]; then
+  result_file="jorek_restart.h5"
+fi
+
 # --- Check if the particle example exists
 if [ "$isparticletest" == "yes" ]; then
   # --- Check if the particle example exists
@@ -311,7 +320,7 @@ if [ "$runit" == "yes" ]; then
     cp $binaries_initial $tmpdir                          || exit 1
   fi
   cd $tmpdir                                              || exit 1
-    
+
   # --- Some preparations
   if [ -n "$PRERUN" ]; then
     eval $PRERUN                                          || exit 1
@@ -322,11 +331,7 @@ if [ "$runit" == "yes" ]; then
 
   # --- Run the test case
   if [ "$initialrun" == "no" ]; then
-    if [ "$isparticletest" == "yes" ]; then
-      cp ${testcasedir}/begin.h5 $particle_restart_file
-    else
-      cp ${testcasedir}/begin.h5 jorek_restart.h5         || exit 1
-    fi
+    cp ${testcasedir}/begin.h5 $restart_file              || exit 1
     restart_run                                           || exit 1
     compare_results
     returncode=$?
@@ -336,18 +341,11 @@ if [ "$runit" == "yes" ]; then
       echo "Test '$testcase' failed."
     fi
   else
+    echo "${restart_file} ${result_file}"
     initial_run                                           || exit 1
-    if [ "$isparticletest" == "yes" ]; then
-      cp $particle_restart_file ${testcasedir}/begin.h5   || exit 1
-    else
-      cp jorek_restart.h5 ${testcasedir}/begin.h5         || exit 1
-    fi
+    cp $restart_file ${testcasedir}/begin.h5              || exit 1
     restart_run                                           || exit 1
-    if [ "$isparticletest" == "yes" ]; then
-      cp $result_file ${testcasedir}/end.h5               || exit 1
-    else
-      cp jorek_restart.h5 ${testcasedir}/end.h5           || exit 1
-    fi
+    cp $result_file ${testcasedir}/end.h5                 || exit 1
   fi
 
   # --- Remove the temporary directory

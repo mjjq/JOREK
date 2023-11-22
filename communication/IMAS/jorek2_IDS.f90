@@ -12,6 +12,7 @@ program jorek2_IDS
   use data_structure
   use mod_import_restart
   use phys_module, only : rst_format, n_tor_restart, central_density, central_mass, t_start
+  use mod_impurity, only: init_imp_adas 
   use basis_at_gaussian, only: initialise_basis
   
   implicit none
@@ -45,6 +46,16 @@ program jorek2_IDS
 
   ! --- Read input file
   call initialise_parameters(0, "__NO_FILENAME__")
+
+  ! --- Initialize ADAS
+#if (defined WITH_Neutrals) || (defined WITH_Impurities)
+    ! --- Read ADAS data and generate coronal equilibrium if needed
+    call init_imp_adas(0)
+#else
+    if (use_imp_adas .and. (nimp_bg(1) > 0.d0)) then
+      call init_imp_adas(0)
+    endif
+#endif
   ! -----------------------------------------------
   
   ! --- Preset parameters for this program

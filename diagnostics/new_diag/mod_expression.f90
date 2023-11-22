@@ -628,7 +628,7 @@ module mod_expression
 #endif
     !   -Effective charge of all species
     real*8  :: Z_eff
-#ifdef WITH_Impurities
+
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
     real*8  :: rimp0_corr
     ! Atomic physics coefficients:
@@ -647,7 +647,6 @@ module mod_expression
     real*8, allocatable :: P_imp(:)
     real*8  :: E_ion
     integer*8  :: ion_i, ion_k
-#endif
     
     ierr = 0
     
@@ -1574,8 +1573,16 @@ module mod_expression
           if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
   
 #endif
-          if ( .not. with_impurities ) Z_eff = 1
-          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T)          
+          if ( .not. with_impurities ) then 
+            Z_eff      = 1
+            r0_corr    = corr_neg_dens(r0)
+            rimp0      = 0.d0
+            rimp0_corr = 0.d0
+            beta_imp   = 0.d0
+          endif
+
+          call coulomb_log_ei(T_or_Te, T_or_Te_corr, r0, r0_corr, rimp0, rimp0_corr, beta_imp, ln_Lambda)
+          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, ln_Lambda, eta_T)          
           
 #ifdef fullmhd
           dpsi_dt   = delta_g(var_A3) / tstep 

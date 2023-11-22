@@ -35,6 +35,7 @@ function compile_jorek () {
     -ed "${codedir}/$particle_example_dir" -efn "${particle_example}.f90" \
     -dd $codedir -nm $example_name_modifier -dptc $example_inputs               || exit 1
     make $compilopt $debugoptions ${binaries}                                   || exit 1
+    rm "${codedir}/${particle_example}${example_name_modifier}.f90"             || exit 1
 }
 
 # --- Dummy initial run

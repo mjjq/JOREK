@@ -9,7 +9,7 @@ description="Ballooning mode, simple X-point plasma, model$jorekmodel, n_tor=3 +
 mpitasks=2
 requiredfiles="input jorek_restart.h5"
 extra_remote_files="jorek_restart.h5"
-particle_restart_file="particle_restart.h5"
+restart_file="particle_restart.h5"
 result_file="result_intensities.h5"
 threshold=1.e-8
 test_dataset="pixel_filter_intensities"
@@ -43,5 +43,5 @@ function restart_run () {
 
 # --- Compare the results of the test case to the reference solution
 function compare_results () {
-  compare_particle_results_generic $threshold $result_file end.h5 $test_dataset || exit 1
+  compare_results_generic $threshold $result_file end.h5 $test_dataset || exit 1
 }

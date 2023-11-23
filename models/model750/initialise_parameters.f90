@@ -3,6 +3,7 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
+use mod_plasma_functions, only: initialise_reference_parameters
 use vacuum
 use live_data
 use pellet_module
@@ -238,6 +239,8 @@ if (my_id .eq. 0) then
   else
     gamma_i_stangeby = gamma_sheath_i / (gamma-1.d0) + 1.d0 + gamma
   end if
+
+  call initialise_reference_parameters()
 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)

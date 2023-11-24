@@ -172,6 +172,122 @@ module mod_jorek2IMAS
 
   end subroutine fill_mhd_IDS
 
+
+
+
+
+  subroutine fill_wall_IDS(first_step, time_SI, wall_ids)  
+
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass, imp_type, &
+                           gamma, index_main_imp
+    use vacuum
+
+    implicit none
+
+    ! --- External parameters
+    logical,                 intent(in) :: first_step   ! is this the first step?
+    real*8,                  intent(in) :: time_SI
+    type(ids_wall),  target,     intent(inout) :: wall_ids
+   
+    ! --- Local parameters 
+    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
+    real*8     :: rho0, fact_rad
+    
+    ! **********************************************************************************
+    ! ******************************* IMAS **********************************************
+    ! **********************************************************************************
+    type(ids_generic_grid_scalar),      pointer :: ggd_scalar
+    type(ids_generic_grid_aos3_root),   pointer :: grid
+    
+    integer:: n_wall_nodes, n_wall_triangles
+    
+    integer :: n_slice, i_slice, grid_ind, grid_sub_ind, n_grid_sub, n_grid
+    ! **********************************************************************************
+  
+    ! --- Number of grids and grid subsets
+    n_grid       = 1
+    n_grid_sub   = 1
+    grid_ind     = 1  ! Index
+    grid_sub_ind = 1  ! Index    
+
+    wall_ids%ids_properties%homogeneous_time = 1
+
+    
+
+    if (first_step) then
+
+      allocate( wall_ids%description_ggd(1))
+
+      ! --- Put the wall grid in GGD
+      allocate( wall_ids%description_ggd(1)%grid_ggd(n_grid) )
+
+      wall_ids%description_ggd(1)%type%index  = 2  ! For thin wall description
+      
+      grid => wall_ids%description_ggd(1)%grid_ggd(grid_ind)
+      
+      grid%identifier%index = 0   ! Unspecified
+      allocate( grid%identifier%description(1))
+      grid%identifier%description(1) = "Thin wall described with thin triangles"
+
+      allocate(grid%space(1))
+      grid%space(1)%identifier%index = 1  ! Primary space
+
+      grid%space(1)%geometry_type%index = 0  ! Standard (not Fourier)
+      allocate(grid%space(1)%coordinates_type(3))
+
+      grid%space(1)%coordinates_type(:) = (/ 1, 2, 3 /)  ! Identifiers for x, y, z type coordinates
+
+      allocate(grid%space(1)%objects_per_dimension(3))
+
+      ! --- Save wall grid nodes
+      n_wall_nodes = sr%npot_w
+      allocate(grid%space(1)%objects_per_dimension(1)%object(n_wall_nodes))
+      grid%space(1)%objects_per_dimension(1)%geometry_content%index = 1  ! node coordinates
+      do i=1, n_wall_nodes
+        allocate( grid%space(1)%objects_per_dimension(1)%object(i)%geometry(3) ) ! Allocate dimensions for each node
+        grid%space(1)%objects_per_dimension(1)%object(i)%geometry(:) = sr%xyzpot_w(i,:)
+      enddo
+
+      ! --- Save thin wall triangles 
+      n_wall_triangles = sr%ntri_w
+      allocate(grid%space(1)%objects_per_dimension(3)%object(n_wall_triangles))  ! Index 3 for 2D objects (faces)
+      do i=1, n_wall_triangles
+        allocate( grid%space(1)%objects_per_dimension(3)%object(i)%nodes(3) ) ! 3 nodes per triangle
+        grid%space(1)%objects_per_dimension(3)%object(i)%nodes(:) = sr%jpot_w(i,:)  ! The node indices of this triangle
+      enddo
+
+      ! --- Create a grid subset where the wall triangles are the elements of the subset
+      ! --- 1 current density value will be assigned per triangle 
+      allocate(grid%grid_subset(1))
+      grid%grid_subset(1)%identifier%index = 5  ! Identifier index for 2D cells in the dictionary
+      grid%grid_subset(1)%dimension        = 3  ! Index 3 means 2 dimensions in the dictionary
+
+    endif
+
+    ! --- Set times
+    n_slice = 1  
+    i_slice = 1
+    allocate(  wall_ids%time(n_slice) )
+
+    allocate( wall_ids%description_ggd(1)%ggd(n_slice) )
+  
+    wall_ids%time(i_slice) = time_SI 
+    wall_ids%description_ggd(1)%ggd(i_slice)%time = time_SI
+    
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%temperature(n_grid_sub) )
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%values(sr%ntri_w) ) ! --- one value per triangle
+
+    wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%grid_index        = 1
+    wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%grid_subset_index = 1
+
+    do i=1, sr%ntri_w
+      wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%values(i) = 1.d0 / float(i)
+    enddo
+ 
+  
+
+  end subroutine fill_wall_IDS
  
 
 

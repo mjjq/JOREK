@@ -11,7 +11,11 @@ program jorek2_IDS
   use nodes_elements
   use data_structure
   use mod_import_restart
-  use phys_module, only : rst_format, n_tor_restart, central_density, central_mass, t_start
+  use phys_module
+  use mod_boundary,        only: boundary_from_grid
+  use vacuum
+  use vacuum_response,     only: get_vacuum_response, broadcast_starwall_response, init_wall_currents
+  use vacuum_equilibrium,  only: import_external_fields
   use mod_impurity, only: init_imp_adas 
   use basis_at_gaussian, only: initialise_basis
   
@@ -20,21 +24,60 @@ program jorek2_IDS
   character(len=200):: user, database
   character(len=64) :: file_name, name_proj
   integer :: shot_number, run_number, i_begin, i_end, i_step
-  integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid, stat
+  integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid, stat, stat_wall
   logical :: first_step, file_exists, rad_only_projections_h5
   logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
+  logical :: export_wall
   real*8  :: rho0, fact_time, time_SI
+
+  integer   :: my_id, my_id_n, my_id_master, ierr2
+  integer   :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
+  integer   :: MPI_COMM_N, MPI_GROUP_MASTER, MPI_GROUP_WORLD, MPI_COMM_MASTER, MPI_COMM_TRANS
+  integer   :: required,provided,StatInfo, resultlength
+  integer*4 :: rank, comm_size 
+  character(len=MPI_MAX_PROCESSOR_NAME) :: name
 
   type(ids_mhd), target   :: mhd_ids
   type(ids_equilibrium)   :: equilibrium_ids
   type(ids_core_profiles) :: core_profiles_ids
   type(ids_radiation)     :: radiation_ids
+  type(ids_wall), target  :: wall_ids
 
   namelist /imas_params/ shot_number, run_number, user, database, i_begin, i_end, &
                          export_mhd, export_radiation, export_core_profiles, n_grid, &
-                         export_equilibrium, rad_only_projections_h5
+                         export_equilibrium, rad_only_projections_h5, export_wall
 
   ! --- Necessary initialization ------------------
+  ! --- MPI initialization (for wall current resconstruction)
+#ifdef FUNNELED
+    required = MPI_THREAD_FUNNELED
+#else
+    required = MPI_THREAD_MULTIPLE
+#endif
+
+  call MPI_Init_thread(required, provided, StatInfo)
+
+  call init_threads()  ! on some systems init_threads needs to come after mpi_init_thread
+
+  ! --- Determine number of MPI procs
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
+  n_cpu = comm_size
+  
+  if (n_cpu > 1) then
+    write(*,*) '  jorek2_IDS needs to be adapated for several MPI processes'
+    write(*,*) '  please run with 1 MPI process for the moment'
+    write(*,*) n_cpu
+    stop
+  endif
+
+  ! --- Determine ID of each MPI proc
+  call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
+  my_id = rank
+
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+  CALL MPI_GET_PROCESSOR_NAME (name,resultlength,ierr)
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
+
   ! --- Initialize mode and mode_type arrays
   call det_modes()
   
@@ -44,8 +87,13 @@ program jorek2_IDS
   ! --- Preset namelist input parameters
   call preset_parameters()
 
-  ! --- Read input file
-  call initialise_parameters(0, "__NO_FILENAME__")
+  ! --- Initialize and broadcast input parameters
+  call initialise_and_broadcast_parameters(my_id, "__NO_FILENAME__")
+  
+  ! --- Initialize the vacuum part.
+  call vacuum_init(my_id, freeboundary_equil, freeboundary, resistive_wall)
+
+  call MPI_Barrier(MPI_COMM_WORLD,ierr)
 
   ! --- Initialize ADAS
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
@@ -56,7 +104,7 @@ program jorek2_IDS
       call init_imp_adas(0)
     endif
 #endif
-  ! -----------------------------------------------
+  ! ------------------ end initialization ------------------------
   
   ! --- Preset parameters for this program
   database    = 'test'                    !< Name of the database to export the results
@@ -67,6 +115,7 @@ program jorek2_IDS
   export_radiation     = .false.
   export_core_profiles = .false. 
   export_equilibrium   = .false.
+  export_wall          = .false.
   rad_only_projections_h5 = .false.    !< use only *.h5 projection files for radiation IDS (single jorek_restart.h5 still needed)
   n_grid               = 100              !< Number of points used for 1D and 2D profiles  
 
@@ -81,12 +130,12 @@ program jorek2_IDS
   end if
 
   ! --- Try to open shot and number if it exists
-  call imas_open_env( 'ids', shot_number,run_number,idx,user,database,'3',stat)! 3 is the database version  
+  !call imas_open_env( 'ids', shot_number,run_number,idx,user,database,'3',stat)! 3 is the database version  
   
-  if (stat /= 0) then  ! --- Create a new shot if it doesn't exist
-    write(*,*) '  Shot/run number did not exist, creating new one...'
+  !if (stat /= 0) then  ! --- Create a new shot if it doesn't exist
+  !  write(*,*) '  Shot/run number did not exist, creating new one...'
     call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3') 
-  endif
+  !endif
 
   if (export_radiation)  allocate( aux_node_list )
 
@@ -130,6 +179,15 @@ program jorek2_IDS
       stop
     endif
 
+    ! --- Read STARWALL response to export wall currents for wall_IDS
+    if (first_step .and. freeboundary .and. export_wall) then
+      call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
+      call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
+           resistive_wall)
+      call import_external_fields('coil_field.dat', my_id)
+      if ( .not. wall_curr_initialized ) call init_wall_currents(my_id, resistive_wall)
+   endif
+
     ! --- Fill and export an MHD IDS
     if (export_mhd)  call fill_mhd_IDS(first_step, time_SI, mhd_ids)  
 
@@ -138,6 +196,9 @@ program jorek2_IDS
 
     ! --- Fill and export an equilibrium IDS
     if (export_equilibrium)  call fill_equilibrium_IDS(first_step, time_SI, equilibrium_ids, n_grid)
+
+    ! --- Fill and export a wall IDS
+    if (export_wall)  call fill_wall_IDS(first_step, time_SI, wall_ids)  
 
     ! --- Fill and export a radiation IDS
     if (export_radiation) then
@@ -149,7 +210,7 @@ program jorek2_IDS
       call fill_radiation_IDS(first_step, t_start*fact_time, radiation_ids)  
     endif
 
-    stat_mhd = 1;   stat_core = 1;   stat_rad = 1;   stat_eq = 1;
+    stat_mhd = 1;   stat_core = 1;   stat_rad = 1;   stat_eq = 1;   stat_wall = 1;
 
     ! --- Put IDSs into database
     if (first_step) then  
@@ -157,22 +218,26 @@ program jorek2_IDS
       if (export_core_profiles)    call ids_put(idx,'core_profiles',core_profiles_ids,stat_core)
       if (export_equilibrium)      call ids_put(idx,'equilibrium',equilibrium_ids,stat_eq)
       if (export_radiation)        call ids_put(idx,'radiation',radiation_ids,stat_rad)
+      if (export_wall)             call ids_put(idx,'wall',wall_ids,stat_wall)
     else
       if (export_mhd)              call ids_put_slice(idx,'mhd',mhd_ids,stat_mhd)
       if (export_core_profiles)    call ids_put_slice(idx,'core_profiles',core_profiles_ids,stat_core)
       if (export_equilibrium)      call ids_put_slice(idx,'equilibrium',equilibrium_ids,stat_eq)
       if (export_radiation)        call ids_put_slice(idx,'radiation',radiation_ids,stat_rad)
+      if (export_wall)             call ids_put_slice(idx,'wall',wall_ids,stat_wall)
     endif
 
     if (export_mhd           .and. (stat_mhd==0 ))   write(*,*) '    MHD IDS exported'
     if (export_core_profiles .and. (stat_core==0))   write(*,*) '    Core profiles IDS exported'
     if (export_equilibrium   .and. (stat_eq==0  ))   write(*,*) '    Equlibrium IDS exported'
     if (export_radiation     .and. (stat_rad==0 ))   write(*,*) '    Radiation IDS exported'
+    if (export_wall          .and. (stat_wall==0 ))  write(*,*) '    Wall IDS exported'
 
     if (export_mhd           .and. (stat_mhd/=0 ))   write(*,*) '    Problem saving MHD IDS'
     if (export_core_profiles .and. (stat_core/=0))   write(*,*) '    Problem saving Core profiles IDS'
     if (export_equilibrium   .and. (stat_eq/=0  ))   write(*,*) '    Problem saving Equlibrium IDS'
     if (export_radiation     .and. (stat_rad/=0 ))   write(*,*) '    Problem saving Radiation IDS'
+    if (export_wall          .and. (stat_wall/=0))   write(*,*) '    Problem saving wall IDS'
 
     first_step = .false.
 

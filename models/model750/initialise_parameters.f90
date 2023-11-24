@@ -240,7 +240,6 @@ if (my_id .eq. 0) then
     gamma_i_stangeby = gamma_sheath_i / (gamma-1.d0) + 1.d0 + gamma
   end if
 
-  call initialise_reference_parameters()
 
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
@@ -339,6 +338,8 @@ if ( my_id == 0 ) then
   endif
 
 endif
+
+call initialise_reference_parameters()
 
 return
 end subroutine initialise_parameters

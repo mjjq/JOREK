@@ -274,8 +274,6 @@ if (my_id .eq. 0) then
     end if
   end if
 
-  call initialise_reference_parameters()
-
   if (sum(nstep_n) .gt. 0) then
     nstep = sum(nstep_n)
   else
@@ -365,6 +363,8 @@ if ( my_id == 0 ) then
   endif
 
 end if
+
+call initialise_reference_parameters()
 
 return
 end subroutine initialise_parameters

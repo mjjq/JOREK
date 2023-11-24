@@ -23,7 +23,7 @@ subroutine preset_parameters
   nstep_n  = 0
   
   eta_T_dependent   = .true.
-  eta_coul_log_dep  = .false.
+  eta_coul_log_dep  = .true.
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 

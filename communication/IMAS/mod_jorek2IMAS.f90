@@ -182,6 +182,7 @@ module mod_jorek2IMAS
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
                            gamma, index_main_imp
     use vacuum
+    use vacuum_response,  only: reconstruct_triangle_potentials
 
     implicit none
 
@@ -191,8 +192,12 @@ module mod_jorek2IMAS
     type(ids_wall),  target,     intent(inout) :: wall_ids
    
     ! --- Local parameters 
-    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
-    real*8     :: rho0, fact_rad
+    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id=0, ierr
+    real*8     :: rho0, fact_rad, co, si, Rtri
+    real*8     :: phi1, phi2, phi3, r1(3), r2(3), r3(3), r21(3), r32(3), r13(3), r21_cross_r32(3)
+    real*8     :: j_lin(3), r_mid(3), Iw_net_tor
+    real*8     :: thickness = 0.01        !< thin wall effective thickness
+    real*8, allocatable :: tripot_w(:)
     
     ! **********************************************************************************
     ! ******************************* IMAS **********************************************
@@ -212,8 +217,7 @@ module mod_jorek2IMAS
     grid_sub_ind = 1  ! Index    
 
     wall_ids%ids_properties%homogeneous_time = 1
-
-    
+    n_wall_triangles = sr%ntri_w
 
     if (first_step) then
 
@@ -250,7 +254,6 @@ module mod_jorek2IMAS
       enddo
 
       ! --- Save thin wall triangles 
-      n_wall_triangles = sr%ntri_w
       allocate(grid%space(1)%objects_per_dimension(3)%object(n_wall_triangles))  ! Index 3 for 2D objects (faces)
       do i=1, n_wall_triangles
         allocate( grid%space(1)%objects_per_dimension(3)%object(i)%nodes(3) ) ! 3 nodes per triangle
@@ -262,6 +265,16 @@ module mod_jorek2IMAS
       allocate(grid%grid_subset(1))
       grid%grid_subset(1)%identifier%index = 5  ! Identifier index for 2D cells in the dictionary
       grid%grid_subset(1)%dimension        = 3  ! Index 3 means 2 dimensions in the dictionary
+
+      ! --- Save wall thickness
+      allocate(wall_ids%description_ggd(1)%thickness(n_grid))
+      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(n_grid_sub))
+      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(n_wall_triangles))
+
+      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_index        = 1
+      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_subset_index = 1
+
+      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(:) = thickness
 
     endif
 
@@ -275,17 +288,56 @@ module mod_jorek2IMAS
     wall_ids%time(i_slice) = time_SI 
     wall_ids%description_ggd(1)%ggd(i_slice)%time = time_SI
     
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%temperature(n_grid_sub) )
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%values(sr%ntri_w) ) ! --- one value per triangle
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(n_grid_sub) )
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(n_wall_triangles) ) ! --- one value per triangle
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(n_wall_triangles) ) ! --- one value per triangle
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(n_wall_triangles) ) ! --- one value per triangle
 
-    wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%grid_index        = 1
-    wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%grid_subset_index = 1
+    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_index        = 1
+    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_subset_index = 1
 
-    do i=1, sr%ntri_w
-      wall_ids%description_ggd(1)%ggd(i_slice)%temperature(1)%values(i) = 1.d0 / float(i)
+    ! --- Get the current density per triangle
+    ! --- The triangle current density
+    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
+
+    do i = 1, n_wall_triangles
+
+      ! --- Wall potential at triangle nodes
+      phi1   = tripot_w(sr%jpot_w(i,1)) + Iw_net_tor*sr%phi0_w(i,1) 
+      phi2   = tripot_w(sr%jpot_w(i,2)) + Iw_net_tor*sr%phi0_w(i,2) 
+      phi3   = tripot_w(sr%jpot_w(i,3)) + Iw_net_tor*sr%phi0_w(i,3) 
+
+      ! --- Position of triangle nodes
+      r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+      r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+      r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+      r21(:) = r1(:)-r2(:)
+      r32(:) = r2(:)-r3(:)
+      r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+        r21(1)*r32(2) - r21(2)*r32(1) /)
+
+      j_lin(:) = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2) ) / mu_zero 
+
+      r_mid(:) = (r1 + r2 + r3) / 3.d0   ! Middle point of the triangle
+
+      Rtri = sqrt( r_mid(1)**2.d0 + r_mid(2)**2.d0 )
+      co   =  r_mid(1) / Rtri
+      si   = -r_mid(2) / Rtri
+
+      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(i)        =  ( j_lin(1)*co - j_lin(2)*si ) / thickness
+      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(i)        =    j_lin(3)                    / thickness
+      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(i) =  (-j_lin(1)*si - j_lin(2)*co ) / thickness * fact_Ip   
     enddo
+
+    if (first_step) then
+      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(n_grid_sub) )
+      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(n_wall_triangles) ) 
+      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(:) = sr%eta_thin_w * thickness * wall_resistivity_fact
+
+      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_index        = 1
+      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_subset_index = 1
+    endif
  
-  
 
   end subroutine fill_wall_IDS
  

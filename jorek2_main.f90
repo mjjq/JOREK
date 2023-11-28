@@ -872,8 +872,9 @@ mpi_required = 0
     call catalyst_adaptor_execute(index_now, t_now)
 #endif
     
-    ! --- Write a restart file every nout timesteps
-    if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
+    inquire(file='OUTPUT_NOW', exist=file_exists)
+    ! --- Write a restart file every nout timesteps or when detecting the file OUTPUT_NOW
+    if ( (my_id == 0) .and. (mod(index_now,nout) == 0 .or. file_exists) ) then
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
       if ( more_outfile_digits) then
         write(fileout,'(A5,i6.6)') 'jorek',index_now
@@ -882,6 +883,10 @@ mpi_required = 0
       end if
       call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
+      if ( file_exists ) then
+        open(42, file='OUTPUT_NOW', iostat=ierr)
+        if ( ierr == 0 ) close(42, status='delete')
+      endif
     endif
     
     ! --- Exit the code if a file "STOP_NOW" exists in the run directory.

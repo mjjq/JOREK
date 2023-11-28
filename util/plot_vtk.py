@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import argparse
 import scipy.interpolate as sci_intp
 import mpl_toolkits.mplot3d as plt3d
+import re
+import os
 # import matplotlib.tri as mtri
 
 
@@ -263,6 +265,16 @@ def read_reference(args, reader, variable):
     else:
         return 0
 
+def read_and_plot_q(q_surface, vtk_file):
+    file_q = 'postproc/q_surface_' + "{:.4f}".format(q_surface) + '_s' + re.findall(r'\d+', vtk_file)[-1] + '.txt'
+    if os.path.exists(file_q):
+        data_q_surface = np.loadtxt(file_q)
+        plt.plot(data_q_surface[:, 0], data_q_surface[:, 1], '.', MarkerSize = 1.0, color='white')
+        plt.text(data_q_surface[0, 0], data_q_surface[0, 1], "{:.1f}".format(abs(q_surface)), fontsize=10, ha='center', va='center', color='black')
+    else:
+        print(f"The file {file_q} does not exist. Skipping.")
+    
+
 
 def read_and_plot_data(args, reader, variable, data_reference=0):
 
@@ -326,6 +338,10 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
         else:
             plot2D_interpolated(
                 numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize)
+        
+        if args.method != "sf" and not isinstance(args.q_surfaces, float):
+            for q_surface in args.q_surfaces:
+                read_and_plot_q(q_surface, file_path)
 
         ifile += 1
 
@@ -382,6 +398,8 @@ if __name__ == "__main__":
                         help="Define the fontsize of figure.")
     parser.add_argument('-xylim', nargs=4, type=float, metavar=('xmin', 'xmax', 'ymin', 'ymax'),
                         help='Specify xmin, xmax, ymin, ymax for the plot.')
+    parser.add_argument("-qs", "--q_surfaces", nargs="+", type=float, default=0.0,
+                        help="Plot the surface(s) for specified safety factor q (please note the pm sign).")
 
     args = parser.parse_args()
 

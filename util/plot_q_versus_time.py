@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 #
-# Purpose: Plot radial distribution of q (y-axis) versus time (x-axis) from postproc files.
+# Purpose: Plot radial (y-axis) distribution of q versus time (x-axis) from postproc files.
 #
 # Date: 2023-11-28
 # Author: Haowei Zhang, IPP Garching
@@ -12,35 +12,11 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import plot_vtk as pltvtk
+import plot_multiple_files as pltmpf
 
 # Function to extract the number from the filename
 def extract_number(filename):
     return int(filename.split('_s')[1].split('.')[0])
-
-# Function to read the second column of a file and return it as a list of floats
-def read_specified_column(filename, n):
-    data = []
-    with open(filename, 'r') as file:
-        for line in file:
-            # Assuming columns are space-separated, change the delimiter if needed
-            columns = line.split()
-            if len(columns) > n:
-                data.append(float(columns[n]))
-    return data
-
-# Function to read two columns of a file and return them as separate lists
-def read_two_columns(filename):
-    col0 = []
-    col1 = []
-    with open(filename, 'r') as file:
-        # Skip the first line
-        next(file)
-        for line in file:
-            columns = line.split()
-            if len(columns) >= 2:
-                col0.append(int(columns[0]))
-                col1.append(float(columns[1]))  # Assuming time is a floating-point number
-    return col0, col1
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -51,11 +27,16 @@ if __name__ == "__main__":
                         help="Define the fontsize of figure.")
     parser.add_argument("-qc", "--q_cut", type=float, default=1.3,
                         help="Define the cutoff of the q for plotting.")
-    parser.add_argument('-xylim', nargs=4, type=float, metavar=('xmin', 'xmax', 'ymin', 'ymax'),
-                        help='Specify xmin, xmax, ymin, ymax for the plot.')
-    parser.add_argument("-qs", "--q_surfaces", nargs="+", type=float, default=[1.0],
+    parser.add_argument('-xlim', nargs=2, type=float, metavar=('xmin', 'xmax'),
+                        help='Specify xmin, xmax for the plot.')
+    parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
+                        help='Specify ymin, ymax for the plot.')
+    parser.add_argument("-cs", "--contour_surfaces", nargs="+", type=float, default=[1.0],
                         help="Plot the lines where q equals the specified value.")
-    
+    parser.add_argument("-xl", "--xlabel", default="", help="Manually define the xlabel.")
+    parser.add_argument("-yl", "--ylabel", default="", help="Manually define the ylabel.")
+    parser.add_argument("-ti", "--title", default="", help="Manually define the title.")
+
     args = parser.parse_args()
     
     font_size = args.fontsize
@@ -78,14 +59,16 @@ if __name__ == "__main__":
     for i, file_name in enumerate(sorted_file_names):
         file_path = os.path.join(directory, file_name)
         numbers_1d_array.append(extract_number(file_path))
-        second_column_data = read_specified_column(file_path, 1)
-        data_2d_array.append(second_column_data)
+        column_names, data = pltmpf.read_ascii_file(file_path, 0)
+        data_2d_array.append(data[:,1])
         if i == 0:
-            psin_1d_array = read_specified_column(file_path, 0)
+            psin_1d_array = data[:,0]
 
     timefile = 'times.dat'
     if os.path.exists(timefile):
-        step_all_1d, times_all_1d = read_two_columns(timefile)
+        column_names, data = pltmpf.read_ascii_file(timefile, 1)
+        step_all_1d = data[:,0]
+        times_all_1d = data[:,1]
         times_1d_array = [0]
         for it in numbers_1d_array:
             for i, step in enumerate(step_all_1d):
@@ -115,13 +98,13 @@ if __name__ == "__main__":
     plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 100, cmap='jet')
 
     plt.colorbar()
-    plt.title(r'radial distribution of $q$ versus time', fontsize=font_size)
-    plt.xlabel('normalized time', fontsize=font_size)
-    plt.ylabel(r'$\sqrt{\psi_n}$', fontsize=font_size)
+    plt.title(r'radial distribution of $q$ versus time' if args.title == "" else args.title, fontsize=font_size)
+    plt.xlabel(r'normalized time' if args.xlabel == "" else args.xlabel, fontsize=font_size)
+    plt.ylabel(r'$\sqrt{\psi_n}$' if args.ylabel == "" else args.ylabel, fontsize=font_size)
     plt.xticks(fontsize=font_size)
     plt.yticks(fontsize=font_size)
 
-    contour_line = plt.contour(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), levels=args.q_surfaces, colors='k', linestyles = 'dotted')
+    contour_line = plt.contour(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), levels=args.contour_surfaces, colors='k', linestyles = 'dotted')
     plt.clabel(contour_line, inline=True, fontsize=8)
     plt.tight_layout()
 
@@ -129,9 +112,11 @@ if __name__ == "__main__":
     y = np.reshape(np.sqrt(psin_2d), data_2d_num)
     z = np.reshape(abs(data_2d), data_2d_num)
 
-    if args.xylim:
-        xmin, xmax, ymin, ymax = args.xylim
+    if args.xlim:
+        xmin, xmax = args.xlim
         plt.xlim(xmin, xmax)
+    if args.ylim:
+        ymin, ymax = args.ylim
         plt.ylim(ymin, ymax)
 
     plt.connect('motion_notify_event', 

@@ -362,9 +362,9 @@ if ( my_id == 0 ) then
     stop
   endif
 
-end if
+  call initialise_reference_parameters()
 
-call initialise_reference_parameters()
+end if
 
 return
 end subroutine initialise_parameters

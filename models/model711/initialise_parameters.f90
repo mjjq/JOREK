@@ -26,8 +26,9 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 tauIC_ARAZ_on,                                      &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
-                n_open, n_private, n_leg,                           &
-                n_outer, n_inner, n_up_priv, n_up_leg,              &
+                n_open, n_private, n_leg, n_leg_out, n_ext,         &
+                n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
+                n_tht_equidistant,                                  &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &

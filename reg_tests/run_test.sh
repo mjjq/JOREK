@@ -50,12 +50,14 @@ function dummy_initial_run() {
 }
 
 function dummy_initial_run_particles() {
-  touch jorek_restart.h3 particle_restart.h5
+  touch jorek_restart.h5 particle_restart.h5
 }
 
-# --- Generic function for comparing particle test results (results in end.h5).
-#     This function may be used for all particle testcases, but it is also
-#     possible to define specific functions in the testcase settings.sh files.
+# --- Generic function for comparing test results (dataset of end.h5 versus 
+#     output of the executed code, default output: jorek_restart.h5, 
+#     default dataset name: values). This function may be used for all testcases,
+#     but it is also possible to define specific functions in the testcase 
+#     settings.sh files.
 function compare_results_generic() {
   if [ -z "$1" ]; then
     printf "\n$ERROR_COL ERROR: No threshold provided for results comparison\n $NO_COL"

@@ -26,6 +26,60 @@ module mod_jorek2IMAS
   real*8 :: fact_psi =  2.d0 * PI
   real*8 :: fact_Ip  = -1.d0
 
+    
+  ! *******************************************************************************************************
+  ! *************** Data structures needed to read geometry of the STARWALL coils *************************
+  ! *******************************************************************************************************
+  ! --- Constants for STARWALL coils 
+  character(len=12), parameter    :: AXISYM_THICK = 'axisym_thick' !< Axisymmetric coils with dR,dZ extent
+  character(len=12), parameter    :: AXISYM_FILA  = 'axisym_fila ' !< Axisymmetric coils specified by filaments
+  character(len=12), parameter    :: GENERAL_THIN = 'general_thin' !< 3D coils specified by a list of points
+  integer, parameter              :: N_MAX_FILA  = 2001       !< Maximum number of filaments per c
+  integer, parameter              :: N_MAX_PARTS = 2001       !< Maximum number of parts per coil 
+  integer, parameter              :: N_MAX_PTS   = 2001       !< Maximum number of points per coil
+
+  ! --- Data structure for a single STARWALL coil of arbitrary type
+  type :: t_coil_starwall
+    ! --- For all coil types
+    character(len=128)   :: name     = 'NONE'        !< Name of the coil
+    character(len=32)    :: coil_type                !< Coil type according to constants specified above
+    real*8               :: resist   = -999.         !< Total coil resistivity in Ohm
+    real*8               :: nturns   = -1d4          !< Total number of turns in the coil
+    integer              :: ntorpts  = 0             !< Number of toroidal points (axisym coils)
+    ! --- For axisymmetric coils with dR and dZ extent
+    real*8               :: R(N_MAX_PARTS)        = -999.      !< Position in R (center of coil)
+    real*8               :: Z(N_MAX_PARTS)        = -999.      !< Position in Z (center of coil)
+    real*8               :: dR(N_MAX_PARTS)       = -999.      !< Full width in R
+    real*8               :: dZ(N_MAX_PARTS)       = -999.      !< Full width in Z
+    integer              :: nbands_R = 0                       !< #radial bands for each coil part
+    integer              :: nbands_Z = 0                       !< #toroidal bands for each coil part
+    real*8               :: n_thick_turns(N_MAX_PARTS) = -1.d4 !< Number of turns in each coil part
+    integer              :: nparts_coil  = 1                  !< Number of bands
+    ! --- For coils specified by filaments
+    integer              :: n_fila   = 0                  !< Number of filaments for the coil
+    real*8               :: n_fila_turns(N_MAX_FILA) = 1. !< Number of turns in each filament
+    real*8               :: R_fila(N_MAX_FILA) = -999.    !< R-position of filaments
+    real*8               :: Z_fila(N_MAX_FILA) = -999.    !< Z-position of filaments
+    ! --- For 3D coil specified by a list of points
+    integer              :: n_pts    = 0             !< Number of points along the coil
+    real*8               :: width    = -999.         !< Width of coil
+    real*8               :: xpts(N_MAX_PTS) = -999.  !< x-Position of points
+    real*8               :: ypts(N_MAX_PTS) = -999.  !< y-Position of points
+    real*8               :: zpts(N_MAX_PTS) = -999.  !< z-Position of points
+    real*8               :: dir3d(3*N_MAX_PTS) = -999. !< optional, band direction for each point
+  end type t_coil_starwall
+
+  ! --- Data structure for a coil set
+  type :: t_coil_set_starwall
+    character(len=32)    :: name         = 'NONE'    !< Name of coil set (should not be changed by user)
+    character(len=256)   :: description  = 'NONE'    !< Human readable description
+    integer              :: ncoil        = 0         !< Number of coils in the set
+    integer              :: index_start  = -999      !< Index of first coil of this set in all_coil_set
+    type(t_coil_starwall), allocatable :: coil(:)             !< Coils in this coil set
+  end type t_coil_set_starwall
+  ! *******************************************************************************************************
+
+
   contains
 
 
@@ -175,7 +229,7 @@ module mod_jorek2IMAS
 
 
 
-
+  ! --- Fill a wall IDS from STARWALL data, needs to be adapted to CARIDDI!
   subroutine fill_wall_IDS(first_step, time_SI, wall_ids)  
 
     use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
@@ -219,128 +273,219 @@ module mod_jorek2IMAS
     wall_ids%ids_properties%homogeneous_time = 1
     n_wall_triangles = sr%ntri_w
 
-    if (first_step) then
+    ! if (first_step) then
 
-      allocate( wall_ids%description_ggd(1))
+    !   allocate( wall_ids%description_ggd(1))
 
-      ! --- Put the wall grid in GGD
-      allocate( wall_ids%description_ggd(1)%grid_ggd(n_grid) )
+    !   ! --- Put the wall grid in GGD
+    !   allocate( wall_ids%description_ggd(1)%grid_ggd(n_grid) )
 
-      wall_ids%description_ggd(1)%type%index  = 2  ! For thin wall description
+    !   wall_ids%description_ggd(1)%type%index  = 2  ! For thin wall description
       
-      grid => wall_ids%description_ggd(1)%grid_ggd(grid_ind)
+    !   grid => wall_ids%description_ggd(1)%grid_ggd(grid_ind)
       
-      grid%identifier%index = 0   ! Unspecified
-      allocate( grid%identifier%description(1))
-      grid%identifier%description(1) = "Thin wall described with thin triangles"
+    !   grid%identifier%index = 0   ! Unspecified
+    !   allocate( grid%identifier%description(1))
+    !   grid%identifier%description(1) = "Thin wall described with thin triangles"
 
-      allocate(grid%space(1))
-      grid%space(1)%identifier%index = 1  ! Primary space
+    !   allocate(grid%space(1))
+    !   grid%space(1)%identifier%index = 1  ! Primary space
 
-      grid%space(1)%geometry_type%index = 0  ! Standard (not Fourier)
-      allocate(grid%space(1)%coordinates_type(3))
+    !   grid%space(1)%geometry_type%index = 0  ! Standard (not Fourier)
+    !   allocate(grid%space(1)%coordinates_type(3))
 
-      grid%space(1)%coordinates_type(:) = (/ 1, 2, 3 /)  ! Identifiers for x, y, z type coordinates
+    !   grid%space(1)%coordinates_type(:) = (/ 1, 2, 3 /)  ! Identifiers for x, y, z type coordinates
 
-      allocate(grid%space(1)%objects_per_dimension(3))
+    !   allocate(grid%space(1)%objects_per_dimension(3))
 
-      ! --- Save wall grid nodes
-      n_wall_nodes = sr%npot_w
-      allocate(grid%space(1)%objects_per_dimension(1)%object(n_wall_nodes))
-      grid%space(1)%objects_per_dimension(1)%geometry_content%index = 1  ! node coordinates
-      do i=1, n_wall_nodes
-        allocate( grid%space(1)%objects_per_dimension(1)%object(i)%geometry(3) ) ! Allocate dimensions for each node
-        grid%space(1)%objects_per_dimension(1)%object(i)%geometry(:) = sr%xyzpot_w(i,:)
-      enddo
+    !   ! --- Save wall grid nodes
+    !   n_wall_nodes = sr%npot_w
+    !   allocate(grid%space(1)%objects_per_dimension(1)%object(n_wall_nodes))
+    !   grid%space(1)%objects_per_dimension(1)%geometry_content%index = 1  ! node coordinates
+    !   do i=1, n_wall_nodes
+    !     allocate( grid%space(1)%objects_per_dimension(1)%object(i)%geometry(3) ) ! Allocate dimensions for each node
+    !     grid%space(1)%objects_per_dimension(1)%object(i)%geometry(:) = sr%xyzpot_w(i,:)
+    !   enddo
 
-      ! --- Save thin wall triangles 
-      allocate(grid%space(1)%objects_per_dimension(3)%object(n_wall_triangles))  ! Index 3 for 2D objects (faces)
-      do i=1, n_wall_triangles
-        allocate( grid%space(1)%objects_per_dimension(3)%object(i)%nodes(3) ) ! 3 nodes per triangle
-        grid%space(1)%objects_per_dimension(3)%object(i)%nodes(:) = sr%jpot_w(i,:)  ! The node indices of this triangle
-      enddo
+    !   ! --- Save thin wall triangles 
+    !   allocate(grid%space(1)%objects_per_dimension(3)%object(n_wall_triangles))  ! Index 3 for 2D objects (faces)
+    !   do i=1, n_wall_triangles
+    !     allocate( grid%space(1)%objects_per_dimension(3)%object(i)%nodes(3) ) ! 3 nodes per triangle
+    !     grid%space(1)%objects_per_dimension(3)%object(i)%nodes(:) = sr%jpot_w(i,:)  ! The node indices of this triangle
+    !   enddo
 
-      ! --- Create a grid subset where the wall triangles are the elements of the subset
-      ! --- 1 current density value will be assigned per triangle 
-      allocate(grid%grid_subset(1))
-      grid%grid_subset(1)%identifier%index = 5  ! Identifier index for 2D cells in the dictionary
-      grid%grid_subset(1)%dimension        = 3  ! Index 3 means 2 dimensions in the dictionary
+    !   ! --- Create a grid subset where the wall triangles are the elements of the subset
+    !   ! --- 1 current density value will be assigned per triangle 
+    !   allocate(grid%grid_subset(1))
+    !   grid%grid_subset(1)%identifier%index = 5  ! Identifier index for 2D cells in the dictionary
+    !   grid%grid_subset(1)%dimension        = 3  ! Index 3 means 2 dimensions in the dictionary
 
-      ! --- Save wall thickness
-      allocate(wall_ids%description_ggd(1)%thickness(n_grid))
-      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(n_grid_sub))
-      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(n_wall_triangles))
+    !   ! --- Save wall thickness
+    !   allocate(wall_ids%description_ggd(1)%thickness(n_grid))
+    !   allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(n_grid_sub))
+    !   allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(n_wall_triangles))
 
-      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_index        = 1
-      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_subset_index = 1
+    !   wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_index        = 1
+    !   wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_subset_index = 1
 
-      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(:) = thickness
+    !   wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(:) = thickness
 
-    endif
+    ! endif
 
-    ! --- Set times
-    n_slice = 1  
-    i_slice = 1
-    allocate(  wall_ids%time(n_slice) )
+    ! ! --- Set times
+    ! n_slice = 1  
+    ! i_slice = 1
+    ! allocate(  wall_ids%time(n_slice) )
 
-    allocate( wall_ids%description_ggd(1)%ggd(n_slice) )
+    ! allocate( wall_ids%description_ggd(1)%ggd(n_slice) )
   
-    wall_ids%time(i_slice) = time_SI 
-    wall_ids%description_ggd(1)%ggd(i_slice)%time = time_SI
+    ! wall_ids%time(i_slice) = time_SI 
+    ! wall_ids%description_ggd(1)%ggd(i_slice)%time = time_SI
     
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(n_grid_sub) )
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(n_wall_triangles) ) ! --- one value per triangle
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(n_wall_triangles) ) ! --- one value per triangle
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(n_wall_triangles) ) ! --- one value per triangle
+    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(n_grid_sub) )
+    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(n_wall_triangles) ) ! --- one value per triangle
+    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(n_wall_triangles) ) ! --- one value per triangle
+    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(n_wall_triangles) ) ! --- one value per triangle
 
-    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_index        = 1
-    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_subset_index = 1
+    ! wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_index        = 1
+    ! wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_subset_index = 1
 
-    ! --- Get the current density per triangle
-    ! --- The triangle current density
-    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
+    ! ! --- Get the current density per triangle
+    ! ! --- The triangle current density
+    ! call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
 
-    do i = 1, n_wall_triangles
+    ! do i = 1, n_wall_triangles
 
-      ! --- Wall potential at triangle nodes
-      phi1   = tripot_w(sr%jpot_w(i,1)) + Iw_net_tor*sr%phi0_w(i,1) 
-      phi2   = tripot_w(sr%jpot_w(i,2)) + Iw_net_tor*sr%phi0_w(i,2) 
-      phi3   = tripot_w(sr%jpot_w(i,3)) + Iw_net_tor*sr%phi0_w(i,3) 
+    !   ! --- Wall potential at triangle nodes
+    !   phi1   = tripot_w(sr%jpot_w(i,1)) + Iw_net_tor*sr%phi0_w(i,1) 
+    !   phi2   = tripot_w(sr%jpot_w(i,2)) + Iw_net_tor*sr%phi0_w(i,2) 
+    !   phi3   = tripot_w(sr%jpot_w(i,3)) + Iw_net_tor*sr%phi0_w(i,3) 
 
-      ! --- Position of triangle nodes
-      r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-      r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-      r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-      r21(:) = r1(:)-r2(:)
-      r32(:) = r2(:)-r3(:)
-      r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-        r21(1)*r32(2) - r21(2)*r32(1) /)
+    !   ! --- Position of triangle nodes
+    !   r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+    !   r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+    !   r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+    !   r21(:) = r1(:)-r2(:)
+    !   r32(:) = r2(:)-r3(:)
+    !   r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+    !     r21(1)*r32(2) - r21(2)*r32(1) /)
 
-      j_lin(:) = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2) ) / mu_zero 
+    !   j_lin(:) = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2) ) / mu_zero 
 
-      r_mid(:) = (r1 + r2 + r3) / 3.d0   ! Middle point of the triangle
+    !   r_mid(:) = (r1 + r2 + r3) / 3.d0   ! Middle point of the triangle
 
-      Rtri = sqrt( r_mid(1)**2.d0 + r_mid(2)**2.d0 )
-      co   =  r_mid(1) / Rtri
-      si   = -r_mid(2) / Rtri
+    !   Rtri = sqrt( r_mid(1)**2.d0 + r_mid(2)**2.d0 )
+    !   co   =  r_mid(1) / Rtri
+    !   si   = -r_mid(2) / Rtri
 
-      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(i)        =  ( j_lin(1)*co - j_lin(2)*si ) / thickness
-      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(i)        =    j_lin(3)                    / thickness
-      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(i) =  (-j_lin(1)*si - j_lin(2)*co ) / thickness * fact_Ip   
-    enddo
+    !   wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(i)        =  ( j_lin(1)*co - j_lin(2)*si ) / thickness
+    !   wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(i)        =    j_lin(3)                    / thickness
+    !   wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(i) =  (-j_lin(1)*si - j_lin(2)*co ) / thickness * fact_Ip   
+    ! enddo
 
-    if (first_step) then
-      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(n_grid_sub) )
-      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(n_wall_triangles) ) 
-      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(:) = sr%eta_thin_w * thickness * wall_resistivity_fact
+    ! if (first_step) then
+    !   allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(n_grid_sub) )
+    !   allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(n_wall_triangles) ) 
+    !   wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(:) = sr%eta_thin_w * thickness * wall_resistivity_fact
 
-      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_index        = 1
-      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_subset_index = 1
-    endif
- 
+    !   wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_index        = 1
+    !   wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_subset_index = 1
+    ! endif
 
   end subroutine fill_wall_IDS
  
+
+
+
+
+  ! --- Fill a pf_passive IDS from STARWALL data, needs to be adapted to CARIDDI!
+  subroutine fill_pf_passive_IDS(first_step, time_SI, pf_passive, passive_coil_geo_file)  
+
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass, imp_type, &
+                           gamma, index_main_imp
+    use vacuum
+    use vacuum_response,  only: reconstruct_coil_potentials
+
+    implicit none
+
+    ! --- External parameters
+    logical,                 intent(in) :: first_step   ! is this the first step?
+    real*8,                  intent(in) :: time_SI
+    type(ids_pf_passive), intent(inout) :: pf_passive
+    character(len=*),        intent(in) :: passive_coil_geo_file
+   
+    ! --- Local parameters 
+    integer :: i, j, k, m, my_id=0, ierr, i_coil
+    integer :: n_slice=1, i_slice=1
+    logical :: found_coil
+    real*8, allocatable :: pot_c(:) 
+    type(t_coil_set_starwall) :: coil_set
+   
+    pf_passive%ids_properties%homogeneous_time = 1
+
+    if (sr%n_diag_coils == 0) then
+      write(*,*) '  No diagnostic coils in the STARWALL response file'
+      write(*,*) '  needed for pf_passive IDS'
+      stop
+    endif
+
+    ! --- Read STARWALL coil geometry input file for passive conductors
+    call read_coil_set_starwall(passive_coil_geo_file, coil_set)
+
+    ! --- Set times
+    allocate( pf_passive%time(n_slice) )
+    pf_passive%time(i_slice) = time_SI 
+
+    if (first_step) then
+      allocate(pf_passive%loop(coil_set%ncoil))
+    endif
+
+    ! --- Reconstruct currents from wall_curr
+    call reconstruct_coil_potentials(pot_c, wall_curr, my_id)
+
+    do i_coil=1, coil_set%ncoil
+       ! --- Check if the coil given in the input file exists in the JOREK restart
+      found_coil = .false.
+      do i=1, sr%ncoil
+        if (INDEX(trim(sr%coil_name(i)),trim(coil_set%coil(i_coil)%name)) > 0) then
+          found_coil = .true.
+          exit
+        endif
+      enddo
+      if ( .not. found_coil) then
+        write(*,*) coil_set%coil(i_coil)%name, " is not part of the starwall_response.dat file data!"
+        stop
+      endif
+
+      if (coil_set%coil(i_coil)%coil_type /= AXISYM_THICK) then
+        write(*,*) coil_set%coil(i_coil)%coil_type," coil type in pf_passive not supported yet in jorek2_IDS"
+        stop
+      endif
+
+      ! --- Fill coil geometry for first time step
+      if (first_step) then
+        allocate( pf_passive%loop(i_coil)%name(1) )
+        pf_passive%loop(i_coil)%name       = trim(coil_set%coil(i_coil)%name)   
+        pf_passive%loop(i_coil)%resistance = coil_set%coil(i_coil)%resist * wall_resistivity_fact
+        allocate( pf_passive%loop(i_coil)%element(coil_set%coil(i_coil)%nparts_coil) )
+        do k=1, coil_set%coil(i_coil)%nparts_coil
+          pf_passive%loop(i_coil)%element(k)%turns_with_sign           = coil_set%coil(i_coil)%n_thick_turns(k)
+          pf_passive%loop(i_coil)%element(k)%geometry.geometry_type    = 2 ! Rectangle type
+          pf_passive%loop(i_coil)%element(k)%geometry.rectangle.r      = coil_set%coil(i_coil)%R(k)
+          pf_passive%loop(i_coil)%element(k)%geometry.rectangle.z      = coil_set%coil(i_coil)%Z(k)
+          pf_passive%loop(i_coil)%element(k)%geometry.rectangle.width  = coil_set%coil(i_coil)%dR(k)
+          pf_passive%loop(i_coil)%element(k)%geometry.rectangle.height = coil_set%coil(i_coil)%dZ(k)
+        enddo
+      endif
+
+      allocate( pf_passive%loop(i_coil)%current(n_slice) )
+
+      pf_passive%loop(i_coil)%current(i_slice) = pot_c(i) / MU_ZERO * fact_Ip
+
+    enddo
+
+  end subroutine fill_pf_passive_IDS
 
 
 
@@ -1135,6 +1280,73 @@ module mod_jorek2IMAS
     end if
 
   end function restart_file_exists
+
+
+
+
+
+  !> Read one coils set from a STARWALL coil file
+  subroutine read_coil_set_starwall(filename, coil_set)
+    
+    ! --- Routine parameters
+    character(len=*), intent(in)              :: filename
+    type(t_coil_set_starwall), intent(inout)  :: coil_set
+    
+    ! --- Local variables
+    character(len=256)        :: description
+    integer                   :: i, ncoil, err
+    integer, parameter        :: IOCH = 167
+    type(t_coil_starwall), allocatable :: coil(:)
+    
+    ! --- Namelists
+    namelist /coil_set_nml/ description, ncoil
+    namelist /coils_nml   / coil
+    
+    write(*,*) '  reading passive pf coil file =  ', trim(filename)
+      
+    open(IOCH, file=trim(filename), status='old', action='read', iostat=err)
+    if ( err /= 0 ) then
+      write(*,*) '  ERROR opening file', trim(filename), '!'
+      stop
+    end if
+      
+    ! --- First namelist
+    read(IOCH, coil_set_nml)
+    coil_set%description = description
+    coil_set%ncoil       = ncoil
+      
+    ! --- Second namelist
+    allocate( coil_set%coil(coil_set%ncoil), coil(coil_set%ncoil) )
+    read(IOCH, coils_nml)
+
+    ! --- Calculate turns for AXISYM_FILA coils from n_fila_turns
+    do i = 1, coil_set%ncoil
+      if ( coil(i)%coil_type == AXISYM_FILA ) then
+        coil(i)%nturns = sum( abs( coil(i)%n_fila_turns(1:coil(i)%n_fila) ) )
+      end if
+      if (  coil(i)%coil_type == AXISYM_THICK) then
+        if (minval(coil(i)%n_thick_turns(1:coil(i)%nparts_coil)) > -1.d4) then
+          coil(i)%nturns = sum( abs(coil(i)%n_thick_turns(1:coil(i)%nparts_coil)) )
+          !write(*,*) 'Warning: As n_thick_turns was specified nturns will automatically be calculated from it.'
+        else if (coil(i)%nparts_coil .eq. 1) then
+          coil(i)%n_thick_turns(1) = coil(i)%nturns
+          !write(*,*) 'Warning: The number of turns is now specified by n_thick_turns'
+          !write(*,*) 'To model the old behavior n_thick_turns is set to nturns'
+        else
+          write(*,*) 'Error: When nparts_coil is bigger than 1'
+          write(*,*) 'the value the turns has to be given in n_thick_turns'
+          stop
+        end if
+        !write(*,*) 'Coil ',i,' has ', coil(i)%nturns, ' turns'
+      end if
+    end do
+    coil_set%coil(:) = coil(:)
+    deallocate(coil)
+    
+    close(IOCH)
+      
+    
+  end subroutine read_coil_set_starwall
 
 
 

@@ -21,13 +21,14 @@ program jorek2_IDS
   
   implicit none
   
-  character(len=200):: user, database
+  character(len=200):: user, database, passive_coil_geo_file
   character(len=64) :: file_name, name_proj
   integer :: shot_number, run_number, i_begin, i_end, i_step
   integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid, stat, stat_wall
+  integer :: stat_pass
   logical :: first_step, file_exists, rad_only_projections_h5
   logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
-  logical :: export_wall
+  logical :: export_wall, export_pf_passive
   real*8  :: rho0, fact_time, time_SI
 
   integer   :: my_id, my_id_n, my_id_master, ierr2
@@ -42,10 +43,12 @@ program jorek2_IDS
   type(ids_core_profiles) :: core_profiles_ids
   type(ids_radiation)     :: radiation_ids
   type(ids_wall), target  :: wall_ids
+  type(ids_pf_passive)    :: pf_passive
 
   namelist /imas_params/ shot_number, run_number, user, database, i_begin, i_end, &
                          export_mhd, export_radiation, export_core_profiles, n_grid, &
-                         export_equilibrium, rad_only_projections_h5, export_wall
+                         export_equilibrium, rad_only_projections_h5, export_wall,   &
+                         export_pf_passive, passive_coil_geo_file
 
   ! --- Necessary initialization ------------------
   ! --- MPI initialization (for wall current resconstruction)
@@ -116,8 +119,10 @@ program jorek2_IDS
   export_core_profiles = .false. 
   export_equilibrium   = .false.
   export_wall          = .false.
+  export_pf_passive    = .false.
   rad_only_projections_h5 = .false.    !< use only *.h5 projection files for radiation IDS (single jorek_restart.h5 still needed)
   n_grid               = 100              !< Number of points used for 1D and 2D profiles  
+  passive_coil_geo_file= 'None'
 
   call getenv('USER',user)
   
@@ -180,7 +185,7 @@ program jorek2_IDS
     endif
 
     ! --- Read STARWALL response to export wall currents for wall_IDS
-    if (first_step .and. freeboundary .and. export_wall) then
+    if (first_step .and. freeboundary .and. (export_wall .or. export_pf_passive)) then
       call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
            resistive_wall)
@@ -200,6 +205,9 @@ program jorek2_IDS
     ! --- Fill and export a wall IDS
     if (export_wall)  call fill_wall_IDS(first_step, time_SI, wall_ids)  
 
+    ! --- Fill and export a pf_passive IDS
+    if (export_pf_passive)  call fill_pf_passive_IDS(first_step, time_SI, pf_passive, passive_coil_geo_file)  
+
     ! --- Fill and export a radiation IDS
     if (export_radiation) then
       call import_hdf5_restart_aux(aux_node_list, name_proj, rst_format, ierr)
@@ -211,6 +219,7 @@ program jorek2_IDS
     endif
 
     stat_mhd = 1;   stat_core = 1;   stat_rad = 1;   stat_eq = 1;   stat_wall = 1;
+    stat_pass= 1; 
 
     ! --- Put IDSs into database
     if (first_step) then  
@@ -219,12 +228,14 @@ program jorek2_IDS
       if (export_equilibrium)      call ids_put(idx,'equilibrium',equilibrium_ids,stat_eq)
       if (export_radiation)        call ids_put(idx,'radiation',radiation_ids,stat_rad)
       if (export_wall)             call ids_put(idx,'wall',wall_ids,stat_wall)
+      if (export_pf_passive)       call ids_put(idx,'pf_passive',pf_passive,stat_pass)
     else
       if (export_mhd)              call ids_put_slice(idx,'mhd',mhd_ids,stat_mhd)
       if (export_core_profiles)    call ids_put_slice(idx,'core_profiles',core_profiles_ids,stat_core)
       if (export_equilibrium)      call ids_put_slice(idx,'equilibrium',equilibrium_ids,stat_eq)
       if (export_radiation)        call ids_put_slice(idx,'radiation',radiation_ids,stat_rad)
       if (export_wall)             call ids_put_slice(idx,'wall',wall_ids,stat_wall)
+      if (export_pf_passive)       call ids_put_slice(idx,'pf_passive',pf_passive,stat_pass)
     endif
 
     if (export_mhd           .and. (stat_mhd==0 ))   write(*,*) '    MHD IDS exported'
@@ -232,12 +243,14 @@ program jorek2_IDS
     if (export_equilibrium   .and. (stat_eq==0  ))   write(*,*) '    Equlibrium IDS exported'
     if (export_radiation     .and. (stat_rad==0 ))   write(*,*) '    Radiation IDS exported'
     if (export_wall          .and. (stat_wall==0 ))  write(*,*) '    Wall IDS exported'
+    if (export_pf_passive    .and. (stat_pass==0 ))  write(*,*) '    Pf passive IDS exported'
 
     if (export_mhd           .and. (stat_mhd/=0 ))   write(*,*) '    Problem saving MHD IDS'
     if (export_core_profiles .and. (stat_core/=0))   write(*,*) '    Problem saving Core profiles IDS'
     if (export_equilibrium   .and. (stat_eq/=0  ))   write(*,*) '    Problem saving Equlibrium IDS'
     if (export_radiation     .and. (stat_rad/=0 ))   write(*,*) '    Problem saving Radiation IDS'
     if (export_wall          .and. (stat_wall/=0))   write(*,*) '    Problem saving wall IDS'
+    if (export_pf_passive    .and. (stat_pass/=0))   write(*,*) '    Problem saving PF passive IDS'
 
     first_step = .false.
 

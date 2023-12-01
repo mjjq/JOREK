@@ -29,7 +29,7 @@ program jorek2_IDS
   logical :: first_step, file_exists, rad_only_projections_h5
   logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
   logical :: export_wall, export_pf_passive, export_pf_active
-  real*8  :: rho0, fact_time, time_SI
+  real*8  :: rho0, fact_time, time_SI, wall_thickness
 
   integer   :: my_id, my_id_n, my_id_master, ierr2
   integer   :: i_rank(n_tor), n_cpu, n_cpu_n, n_cpu_master, m_cpu, n_masters, n_cpu_trans, my_id_trans
@@ -50,7 +50,7 @@ program jorek2_IDS
                          export_mhd, export_radiation, export_core_profiles, n_grid, &
                          export_equilibrium, rad_only_projections_h5, export_wall,   &
                          export_pf_passive, export_pf_active, passive_coil_geo_file, &
-                         active_coil_geo_file
+                         active_coil_geo_file, wall_thickness
 
   ! --- Necessary initialization ------------------
   ! --- MPI initialization (for wall current resconstruction)
@@ -124,7 +124,8 @@ program jorek2_IDS
   export_pf_passive    = .false.
   export_pf_active     = .false.
   rad_only_projections_h5 = .false.    !< use only *.h5 projection files for radiation IDS (single jorek_restart.h5 still needed)
-  n_grid               = 100              !< Number of points used for 1D and 2D profiles  
+  n_grid               = 100           !< Number of points used for 1D and 2D profiles  
+  wall_thickness       = 0.06          !< Thickness used for the STARWALL thin wall (default value is for ITER)
   passive_coil_geo_file= 'None'
 
   call getenv('USER',user)
@@ -206,7 +207,7 @@ program jorek2_IDS
     if (export_equilibrium)  call fill_equilibrium_IDS(first_step, time_SI, equilibrium_ids, n_grid)
 
     ! --- Fill and export a wall IDS
-    if (export_wall)  call fill_wall_IDS(first_step, time_SI, wall_ids)  
+    if (export_wall)  call fill_wall_IDS(first_step, time_SI, wall_thickness, wall_ids)  
 
     ! --- Fill and export a pf_passive IDS
     if (export_pf_passive)  call fill_pf_passive_IDS(first_step, time_SI, pf_passive, passive_coil_geo_file)  

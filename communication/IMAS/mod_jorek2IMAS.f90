@@ -230,7 +230,7 @@ module mod_jorek2IMAS
 
 
   ! --- Fill a wall IDS from STARWALL data, needs to be adapted to CARIDDI!
-  subroutine fill_wall_IDS(first_step, time_SI, wall_ids)  
+  subroutine fill_wall_IDS(first_step, time_SI, wall_thickness, wall_ids)  
 
     use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
@@ -241,16 +241,16 @@ module mod_jorek2IMAS
     implicit none
 
     ! --- External parameters
-    logical,                 intent(in) :: first_step   ! is this the first step?
-    real*8,                  intent(in) :: time_SI
-    type(ids_wall),  target,     intent(inout) :: wall_ids
+    logical,                 intent(in)    :: first_step      ! is this the first step?
+    real*8,                  intent(in)    :: time_SI
+    real*8,                  intent(in)    :: wall_thickness  !< effective thin wall thickness
+    type(ids_wall),  target, intent(inout) :: wall_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id=0, ierr
     real*8     :: rho0, fact_rad, co, si, Rtri
     real*8     :: phi1, phi2, phi3, r1(3), r2(3), r3(3), r21(3), r32(3), r13(3), r21_cross_r32(3)
     real*8     :: j_lin(3), r_mid(3), Iw_net_tor
-    real*8     :: thickness = 0.01        !< thin wall effective thickness
     real*8, allocatable :: tripot_w(:)
     
     ! **********************************************************************************
@@ -273,124 +273,124 @@ module mod_jorek2IMAS
     wall_ids%ids_properties%homogeneous_time = 1
     n_wall_triangles = sr%ntri_w
 
-    ! if (first_step) then
+    if (first_step) then
 
-    !   allocate( wall_ids%description_ggd(1))
+      allocate( wall_ids%description_ggd(1))
 
-    !   ! --- Put the wall grid in GGD
-    !   allocate( wall_ids%description_ggd(1)%grid_ggd(n_grid) )
+      ! --- Put the wall grid in GGD
+      allocate( wall_ids%description_ggd(1)%grid_ggd(n_grid) )
 
-    !   wall_ids%description_ggd(1)%type%index  = 2  ! For thin wall description
+      wall_ids%description_ggd(1)%type%index  = 2  ! For thin wall description
       
-    !   grid => wall_ids%description_ggd(1)%grid_ggd(grid_ind)
+      grid => wall_ids%description_ggd(1)%grid_ggd(grid_ind)
       
-    !   grid%identifier%index = 0   ! Unspecified
-    !   allocate( grid%identifier%description(1))
-    !   grid%identifier%description(1) = "Thin wall described with thin triangles"
+      grid%identifier%index = 0   ! Unspecified
+      allocate( grid%identifier%description(1))
+      grid%identifier%description(1) = "Thin wall described with thin triangles"
 
-    !   allocate(grid%space(1))
-    !   grid%space(1)%identifier%index = 1  ! Primary space
+      allocate(grid%space(1))
+      grid%space(1)%identifier%index = 1  ! Primary space
 
-    !   grid%space(1)%geometry_type%index = 0  ! Standard (not Fourier)
-    !   allocate(grid%space(1)%coordinates_type(3))
+      grid%space(1)%geometry_type%index = 0  ! Standard (not Fourier)
+      allocate(grid%space(1)%coordinates_type(3))
 
-    !   grid%space(1)%coordinates_type(:) = (/ 1, 2, 3 /)  ! Identifiers for x, y, z type coordinates
+      grid%space(1)%coordinates_type(:) = (/ 1, 2, 3 /)  ! Identifiers for x, y, z type coordinates
 
-    !   allocate(grid%space(1)%objects_per_dimension(3))
+      allocate(grid%space(1)%objects_per_dimension(3))
 
-    !   ! --- Save wall grid nodes
-    !   n_wall_nodes = sr%npot_w
-    !   allocate(grid%space(1)%objects_per_dimension(1)%object(n_wall_nodes))
-    !   grid%space(1)%objects_per_dimension(1)%geometry_content%index = 1  ! node coordinates
-    !   do i=1, n_wall_nodes
-    !     allocate( grid%space(1)%objects_per_dimension(1)%object(i)%geometry(3) ) ! Allocate dimensions for each node
-    !     grid%space(1)%objects_per_dimension(1)%object(i)%geometry(:) = sr%xyzpot_w(i,:)
-    !   enddo
+      ! --- Save wall grid nodes
+      n_wall_nodes = sr%npot_w
+      allocate(grid%space(1)%objects_per_dimension(1)%object(n_wall_nodes))
+      grid%space(1)%objects_per_dimension(1)%geometry_content%index = 1  ! node coordinates
+      do i=1, n_wall_nodes
+        allocate( grid%space(1)%objects_per_dimension(1)%object(i)%geometry(3) ) ! Allocate dimensions for each node
+        grid%space(1)%objects_per_dimension(1)%object(i)%geometry(:) = sr%xyzpot_w(i,:)
+      enddo
 
-    !   ! --- Save thin wall triangles 
-    !   allocate(grid%space(1)%objects_per_dimension(3)%object(n_wall_triangles))  ! Index 3 for 2D objects (faces)
-    !   do i=1, n_wall_triangles
-    !     allocate( grid%space(1)%objects_per_dimension(3)%object(i)%nodes(3) ) ! 3 nodes per triangle
-    !     grid%space(1)%objects_per_dimension(3)%object(i)%nodes(:) = sr%jpot_w(i,:)  ! The node indices of this triangle
-    !   enddo
+      ! --- Save thin wall triangles 
+      allocate(grid%space(1)%objects_per_dimension(3)%object(n_wall_triangles))  ! Index 3 for 2D objects (faces)
+      do i=1, n_wall_triangles
+        allocate( grid%space(1)%objects_per_dimension(3)%object(i)%nodes(3) ) ! 3 nodes per triangle
+        grid%space(1)%objects_per_dimension(3)%object(i)%nodes(:) = sr%jpot_w(i,:)  ! The node indices of this triangle
+      enddo
 
-    !   ! --- Create a grid subset where the wall triangles are the elements of the subset
-    !   ! --- 1 current density value will be assigned per triangle 
-    !   allocate(grid%grid_subset(1))
-    !   grid%grid_subset(1)%identifier%index = 5  ! Identifier index for 2D cells in the dictionary
-    !   grid%grid_subset(1)%dimension        = 3  ! Index 3 means 2 dimensions in the dictionary
+      ! --- Create a grid subset where the wall triangles are the elements of the subset
+      ! --- 1 current density value will be assigned per triangle 
+      allocate(grid%grid_subset(1))
+      grid%grid_subset(1)%identifier%index = 5  ! Identifier index for 2D cells in the dictionary
+      grid%grid_subset(1)%dimension        = 3  ! Index 3 means 2 dimensions in the dictionary
 
-    !   ! --- Save wall thickness
-    !   allocate(wall_ids%description_ggd(1)%thickness(n_grid))
-    !   allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(n_grid_sub))
-    !   allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(n_wall_triangles))
+      ! --- Save wall thickness
+      allocate(wall_ids%description_ggd(1)%thickness(n_grid))
+      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(n_grid_sub))
+      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(n_wall_triangles))
 
-    !   wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_index        = 1
-    !   wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_subset_index = 1
+      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_index        = 1
+      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_subset_index = 1
 
-    !   wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(:) = thickness
+      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(:) = wall_thickness
 
-    ! endif
+    endif
 
-    ! ! --- Set times
-    ! n_slice = 1  
-    ! i_slice = 1
-    ! allocate(  wall_ids%time(n_slice) )
+    ! --- Set times
+    n_slice = 1  
+    i_slice = 1
+    allocate(  wall_ids%time(n_slice) )
 
-    ! allocate( wall_ids%description_ggd(1)%ggd(n_slice) )
+    allocate( wall_ids%description_ggd(1)%ggd(n_slice) )
   
-    ! wall_ids%time(i_slice) = time_SI 
-    ! wall_ids%description_ggd(1)%ggd(i_slice)%time = time_SI
+    wall_ids%time(i_slice) = time_SI 
+    wall_ids%description_ggd(1)%ggd(i_slice)%time = time_SI
     
-    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(n_grid_sub) )
-    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(n_wall_triangles) ) ! --- one value per triangle
-    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(n_wall_triangles) ) ! --- one value per triangle
-    ! allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(n_wall_triangles) ) ! --- one value per triangle
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(n_grid_sub) )
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(n_wall_triangles) ) ! --- one value per triangle
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(n_wall_triangles) ) ! --- one value per triangle
+    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(n_wall_triangles) ) ! --- one value per triangle
 
-    ! wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_index        = 1
-    ! wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_subset_index = 1
+    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_index        = 1
+    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_subset_index = 1
 
-    ! ! --- Get the current density per triangle
-    ! ! --- The triangle current density
-    ! call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
+    ! --- Get the current density per triangle
+    ! --- The triangle current density
+    call reconstruct_triangle_potentials(tripot_w, wall_curr, my_id, Iw_net_tor)
 
-    ! do i = 1, n_wall_triangles
+    do i = 1, n_wall_triangles
 
-    !   ! --- Wall potential at triangle nodes
-    !   phi1   = tripot_w(sr%jpot_w(i,1)) + Iw_net_tor*sr%phi0_w(i,1) 
-    !   phi2   = tripot_w(sr%jpot_w(i,2)) + Iw_net_tor*sr%phi0_w(i,2) 
-    !   phi3   = tripot_w(sr%jpot_w(i,3)) + Iw_net_tor*sr%phi0_w(i,3) 
+      ! --- Wall potential at triangle nodes
+      phi1   = tripot_w(sr%jpot_w(i,1)) + Iw_net_tor*sr%phi0_w(i,1) 
+      phi2   = tripot_w(sr%jpot_w(i,2)) + Iw_net_tor*sr%phi0_w(i,2) 
+      phi3   = tripot_w(sr%jpot_w(i,3)) + Iw_net_tor*sr%phi0_w(i,3) 
 
-    !   ! --- Position of triangle nodes
-    !   r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
-    !   r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
-    !   r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
-    !   r21(:) = r1(:)-r2(:)
-    !   r32(:) = r2(:)-r3(:)
-    !   r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
-    !     r21(1)*r32(2) - r21(2)*r32(1) /)
+      ! --- Position of triangle nodes
+      r1(:)  = sr%xyzpot_w(sr%jpot_w(i,1),:)
+      r2(:)  = sr%xyzpot_w(sr%jpot_w(i,2),:)
+      r3(:)  = sr%xyzpot_w(sr%jpot_w(i,3),:)
+      r21(:) = r1(:)-r2(:)
+      r32(:) = r2(:)-r3(:)
+      r21_cross_r32(:) = (/ r21(2)*r32(3) - r21(3)*r32(2), r21(3)*r32(1) - r21(1)*r32(3),          &
+        r21(1)*r32(2) - r21(2)*r32(1) /)
 
-    !   j_lin(:) = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2) ) / mu_zero 
+      j_lin(:) = ( phi1*(r3-r2)+phi2*(r1-r3)+phi3*(r2-r1) ) / sqrt(sum(r21_cross_r32**2) ) / mu_zero 
 
-    !   r_mid(:) = (r1 + r2 + r3) / 3.d0   ! Middle point of the triangle
+      r_mid(:) = (r1 + r2 + r3) / 3.d0   ! Middle point of the triangle
 
-    !   Rtri = sqrt( r_mid(1)**2.d0 + r_mid(2)**2.d0 )
-    !   co   =  r_mid(1) / Rtri
-    !   si   = -r_mid(2) / Rtri
+      Rtri = sqrt( r_mid(1)**2.d0 + r_mid(2)**2.d0 )
+      co   =  r_mid(1) / Rtri
+      si   = -r_mid(2) / Rtri
 
-    !   wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(i)        =  ( j_lin(1)*co - j_lin(2)*si ) / thickness
-    !   wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(i)        =    j_lin(3)                    / thickness
-    !   wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(i) =  (-j_lin(1)*si - j_lin(2)*co ) / thickness * fact_Ip   
-    ! enddo
+      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(i)        =  ( j_lin(1)*co - j_lin(2)*si ) / wall_thickness
+      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(i)        =    j_lin(3)                    / wall_thickness
+      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(i) =  (-j_lin(1)*si - j_lin(2)*co ) / wall_thickness * fact_Ip   
+    enddo
 
-    ! if (first_step) then
-    !   allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(n_grid_sub) )
-    !   allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(n_wall_triangles) ) 
-    !   wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(:) = sr%eta_thin_w * thickness * wall_resistivity_fact
+    if (first_step) then
+      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(n_grid_sub) )
+      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(n_wall_triangles) ) 
+      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(:) = sr%eta_thin_w * wall_thickness * wall_resistivity_fact
 
-    !   wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_index        = 1
-    !   wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_subset_index = 1
-    ! endif
+      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_index        = 1
+      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_subset_index = 1
+    endif
 
   end subroutine fill_wall_IDS
  

@@ -491,6 +491,99 @@ module mod_jorek2IMAS
 
 
 
+   ! --- Fill a pf_active IDS from STARWALL data, needs to be adapted to CARIDDI!
+  subroutine fill_pf_active_IDS(first_step, time_SI, pf_active, active_coil_geo_file)  
+
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass, imp_type, &
+                           gamma, index_main_imp
+    use vacuum
+    use vacuum_response,  only: reconstruct_coil_potentials
+
+    implicit none
+
+    ! --- External parameters
+    logical,                 intent(in) :: first_step   ! is this the first step?
+    real*8,                  intent(in) :: time_SI
+    type(ids_pf_active),  intent(inout) :: pf_active
+    character(len=*),        intent(in) :: active_coil_geo_file
+   
+    ! --- Local parameters 
+    integer :: i, j, k, m, my_id=0, ierr, i_coil
+    integer :: n_slice=1, i_slice=1
+    logical :: found_coil
+    real*8, allocatable :: pot_c(:) 
+    type(t_coil_set_starwall) :: coil_set
+   
+    pf_active%ids_properties%homogeneous_time = 1
+
+    if (sr%n_pol_coils == 0) then
+      write(*,*) '  No poloidal active coils in the STARWALL response file'
+      write(*,*) '  needed for pf_active IDS'
+      stop
+    endif
+
+    ! --- Read STARWALL coil geometry input file for active conductors
+    call read_coil_set_starwall(active_coil_geo_file, coil_set)
+
+    ! --- Set times
+    allocate( pf_active%time(n_slice) )
+    pf_active%time(i_slice) = time_SI 
+
+    if (first_step) then
+      allocate(pf_active%coil(coil_set%ncoil))
+    endif
+
+    ! --- Reconstruct currents from wall_curr
+    call reconstruct_coil_potentials(pot_c, wall_curr, my_id)
+
+    do i_coil=1, coil_set%ncoil
+       ! --- Check if the coil given in the input file exists in the JOREK restart
+      found_coil = .false.
+      do i=1, sr%ncoil
+        if (INDEX(trim(sr%coil_name(i)),trim(coil_set%coil(i_coil)%name)) > 0) then
+          found_coil = .true.
+          exit
+        endif
+      enddo
+      if ( .not. found_coil) then
+        write(*,*) coil_set%coil(i_coil)%name, " is not part of the starwall_response.dat file data!"
+        stop
+      endif
+
+      if (coil_set%coil(i_coil)%coil_type /= AXISYM_THICK) then
+        write(*,*) coil_set%coil(i_coil)%coil_type," coil type in pf_active not supported yet in jorek2_IDS"
+        stop
+      endif
+
+      ! --- Fill coil geometry for first time step
+      if (first_step) then
+        allocate( pf_active%coil(i_coil)%name(1) )
+        pf_active%coil(i_coil)%name       = trim(coil_set%coil(i_coil)%name)   
+        pf_active%coil(i_coil)%resistance = coil_set%coil(i_coil)%resist * wall_resistivity_fact
+        allocate( pf_active%coil(i_coil)%element(coil_set%coil(i_coil)%nparts_coil) )
+        do k=1, coil_set%coil(i_coil)%nparts_coil
+          pf_active%coil(i_coil)%element(k)%turns_with_sign           = coil_set%coil(i_coil)%n_thick_turns(k)
+          pf_active%coil(i_coil)%element(k)%geometry.geometry_type    = 2 ! Rectangle type
+          pf_active%coil(i_coil)%element(k)%geometry.rectangle.r      = coil_set%coil(i_coil)%R(k)
+          pf_active%coil(i_coil)%element(k)%geometry.rectangle.z      = coil_set%coil(i_coil)%Z(k)
+          pf_active%coil(i_coil)%element(k)%geometry.rectangle.width  = coil_set%coil(i_coil)%dR(k)
+          pf_active%coil(i_coil)%element(k)%geometry.rectangle.height = coil_set%coil(i_coil)%dZ(k)
+        enddo
+      endif
+
+      allocate( pf_active%coil(i_coil)%current%data(n_slice) )
+
+      pf_active%coil(i_coil)%current%data(i_slice) = pot_c(i) / MU_ZERO * fact_Ip
+
+    enddo
+
+  end subroutine fill_pf_active_IDS
+
+
+
+
+
 
   subroutine fill_radiation_IDS(first_step, time_SI, radiation_ids)  
 
@@ -1302,7 +1395,7 @@ module mod_jorek2IMAS
     namelist /coil_set_nml/ description, ncoil
     namelist /coils_nml   / coil
     
-    write(*,*) '  reading passive pf coil file =  ', trim(filename)
+    write(*,*) '  reading coil file =  ', trim(filename)
       
     open(IOCH, file=trim(filename), status='old', action='read', iostat=err)
     if ( err /= 0 ) then

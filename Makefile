@@ -61,17 +61,17 @@ DIRS := diagnostics			       \
 	particles/examples 		       \
 	particles/diagnostics 		       \
 	particles/tests 		       \
-        particles/tests/drivers                \
-        particles/postprocessors               \
-        particles/postprocessors/spectra       \
-        particles/postprocessors/lights        \
-        particles/postprocessors/lens          \
-        particles/postprocessors/filters       \
-        particles/postprocessors/camera        \
-        particles/postprocessors/examples      \
-        particles/postprocessors/tests         \
-        particles/postprocessors/tests/drivers \
-        particles/postprocessors/utils	       \
+	particles/tests/drivers                \
+	particles/postprocessors               \
+	particles/postprocessors/spectra       \
+	particles/postprocessors/lights        \
+	particles/postprocessors/lens          \
+	particles/postprocessors/filters       \
+	particles/postprocessors/camera        \
+	particles/postprocessors/examples      \
+	particles/postprocessors/tests         \
+	particles/postprocessors/tests/drivers \
+	particles/postprocessors/utils	       \
 	particles/projection_functions         \
 	particles/benchmarks/pusher_cartesian  \
 	particles/benchmarks/pusher	       \
@@ -84,8 +84,8 @@ DIRS := diagnostics			       \
 	tools				       \
 	tools/rng                              \
 	tools/fruit                            \
-        tools/tests                            \
-        tools/tests/drivers                    \
+	tools/tests                            \
+	tools/tests/drivers                    \
 	non_regression_tests/unit_tests        \
 	datatypes		     	       \
 	benchmarks                             \

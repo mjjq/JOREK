@@ -718,15 +718,27 @@ module mod_jorek2IMAS
     expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
                         'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i', 'rho', 'Psi', &
                         'Z_eff', 'nimp', 'ni_main', 'nn_main'/), 19)
-    call average(command_tmp, first_step==.true., ierr, result, .true.)
-    call clean_up()
-    call qprofile(command_tmp, first_step==.true., ierr, q_prof)
+    
+    ! --- If loss of LCFS, abort core_profiles
+    if ( .not. ES%LCFS_is_lost ) then
+      call average(command_tmp, first_step==.true., ierr, result, .true.)
+      call clean_up()
+      call qprofile(command_tmp, first_step==.true., ierr, q_prof)
+    else 
+      if(allocated(result)) deallocate(result)
+      if(allocated(q_prof)) deallocate(q_prof)
+      allocate(result(n_grid, expr_list%n_expr))
+      allocate(q_prof(n_grid))
+      result = -1.d99;   q_prof = -1.d99;
+      write(*,*) '  core_profiles cannot be produced without closed flux surfaces'
+    endif
     ! --- Correct first and last points
     q_prof(1)      = q_prof(2)        + (q_prof(2)-q_prof(3))
     q_prof(n_grid) = q_prof(n_grid-1) + (q_prof(n_grid-1)-q_prof(n_grid-2))
 
     ! --- Some allocations
     allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1+n_adas) ) ! First index is for main ions
+    allocate( core_profiles_ids%profiles_1d(i_slice)%neutral(1+n_adas) )
     i_ion_main = 1;  i_ion_imp = 2;
 
     ! --- Fill expressions in IDSs
@@ -978,13 +990,24 @@ module mod_jorek2IMAS
     equilibrium_ids%time(i_slice) = time_SI 
 
     ! --- Call expressions and do a flux average
+    
     ! --- Get average and q-profile
     command_tmp%n_args = 0
     call clean_up()
     expr_list = exprs((/'Psi', 'pres', 'FFprime_loc', 'p_prime_loc', 'Jpar'/), 5)
-    call average(command_tmp, first_step==.true., ierr, result, .true.)
-    call clean_up()
-    call qprofile(command_tmp, first_step==.true., ierr, q_prof)
+    ! --- If loss of LCFS, abort profiles
+    if ( .not. ES%LCFS_is_lost ) then
+      call average(command_tmp, first_step==.true., ierr, result, .true.)
+      call clean_up()
+      call qprofile(command_tmp, first_step==.true., ierr, q_prof)
+    else 
+      if(allocated(result)) deallocate(result)
+      if(allocated(q_prof)) deallocate(q_prof)
+      allocate(result(n_grid, expr_list%n_expr))
+      allocate(q_prof(n_grid))
+      result = -1.d99;   q_prof = -1.d99;
+      write(*,*) '  profiles cannot be produced without closed flux surfaces'
+    endif
     ! --- Correct first and last points
     q_prof(1)      = q_prof(2)        + (q_prof(2)-q_prof(3))
     q_prof(n_grid) = q_prof(n_grid-1) + (q_prof(n_grid-1)-q_prof(n_grid-2))

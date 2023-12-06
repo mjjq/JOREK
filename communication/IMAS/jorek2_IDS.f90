@@ -26,7 +26,7 @@ program jorek2_IDS
   integer :: shot_number, run_number, i_begin, i_end, i_step
   integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid, stat, stat_wall
   integer :: stat_pass, stat_act, stat_sum, stat_dis
-  logical :: first_step, file_exists, rad_only_projections_h5
+  logical :: first_step, file_exists, rad_only_projections_h5, overwrite_entry
   logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
   logical :: export_wall, export_pf_passive, export_pf_active, export_summary, export_disruption
   real*8  :: rho0, fact_time, time_SI, wall_thickness
@@ -53,7 +53,7 @@ program jorek2_IDS
                          export_equilibrium, rad_only_projections_h5, export_wall,   &
                          export_pf_passive, export_pf_active, passive_coil_geo_file, &
                          active_coil_geo_file, wall_thickness, export_disruption,    &
-                         export_summary
+                         export_summary, overwrite_entry
 
   ! --- Necessary initialization ------------------
   ! --- MPI initialization (for wall current resconstruction)
@@ -129,6 +129,8 @@ program jorek2_IDS
   export_summary       = .false.
   export_disruption    = .false.
   rad_only_projections_h5 = .false.    !< use only *.h5 projection files for radiation IDS (single jorek_restart.h5 still needed)
+  overwrite_entry      = .false.       !< If true, it overwrites the shot/run even if it already exists in the database.
+                                       !  Otherwise it appends the IDSs to the existing entry
   n_grid               = 100           !< Number of points used for 1D and 2D profiles  
   wall_thickness       = 0.06          !< Thickness used for the STARWALL thin wall (default value is for ITER)
   passive_coil_geo_file= 'None'
@@ -143,13 +145,17 @@ program jorek2_IDS
     close(42)
   end if
 
-  ! --- Try to open shot and number if it exists
-  !call imas_open_env( 'ids', shot_number,run_number,idx,user,database,'3',stat)! 3 is the database version  
+  if (overwrite_entry) then
+    call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3')
+  else
+    ! --- Try to open shot and number if it exists
+    call imas_open_env( 'ids', shot_number,run_number,idx,user,database,'3',stat)! 3 is the database version  
   
-  !if (stat /= 0) then  ! --- Create a new shot if it doesn't exist
-  !  write(*,*) '  Shot/run number did not exist, creating new one...'
-    call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3') 
-  !endif
+    if (stat /= 0) then  ! --- Create a new shot if it doesn't exist
+      write(*,*) '  Shot/run number did not exist, creating new one...'
+      call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3') 
+    endif
+  endif
 
   if (export_radiation)  allocate( aux_node_list )
 

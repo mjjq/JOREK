@@ -717,7 +717,7 @@ module mod_jorek2IMAS
     call clean_up()
     expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
                         'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i', 'rho', 'Psi', &
-                        'Z_eff', 'nimp', 'ni_main'/), 18)
+                        'Z_eff', 'nimp', 'ni_main', 'nn_main'/), 19)
     call average(command_tmp, first_step==.true., ierr, result, .true.)
     call clean_up()
     call qprofile(command_tmp, first_step==.true., ierr, q_prof)
@@ -831,6 +831,15 @@ module mod_jorek2IMAS
         allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%element(1) )
         core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%element(1)%a   = central_mass
         core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%element(1)%z_n = 1   ! Main ions have Z=1
+      endif
+
+      ! --- Neutral density (of main ions)
+      if (expr_list%expr(i_exp)%name=='nn_main') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%neutral(i_ion_main)%density(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%neutral(i_ion_main)%density(:) = result(:,i_exp) 
+        allocate( core_profiles_ids%profiles_1d(i_slice)%neutral(i_ion_main)%element(1) )
+        core_profiles_ids%profiles_1d(i_slice)%neutral(i_ion_main)%element(1)%a   = central_mass
+        core_profiles_ids%profiles_1d(i_slice)%neutral(i_ion_main)%element(1)%z_n = 1   ! Main ions have Z=1
       endif
 
       ! --- Main impurity density

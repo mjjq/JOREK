@@ -682,6 +682,7 @@ module mod_jorek2IMAS
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
+    integer    :: a_imp, z_imp, i_ion_main, i_ion_imp
     real*8     :: rho0
     real*8, allocatable :: result(:,:), q_prof(:), rho_tor(:)
     character(10)       :: str
@@ -716,7 +717,7 @@ module mod_jorek2IMAS
     call clean_up()
     expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
                         'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i', 'rho', 'Psi', &
-                        'Z_eff'/), 16)
+                        'Z_eff', 'nimp', 'ni_main'/), 18)
     call average(command_tmp, first_step==.true., ierr, result, .true.)
     call clean_up()
     call qprofile(command_tmp, first_step==.true., ierr, q_prof)
@@ -725,7 +726,8 @@ module mod_jorek2IMAS
     q_prof(n_grid) = q_prof(n_grid-1) + (q_prof(n_grid-1)-q_prof(n_grid-2))
 
     ! --- Some allocations
-    allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1) )
+    allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1+n_adas) ) ! First index is for main ions
+    i_ion_main = 1;  i_ion_imp = 2;
 
     ! --- Fill expressions in IDSs
     do i_exp=1, expr_list%n_expr
@@ -800,20 +802,20 @@ module mod_jorek2IMAS
 
       ! --- Parallel velocity
       if (expr_list%expr(i_exp)%name=='vpar') then
-        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%parallel(n_grid) )
-        core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%parallel(:) = result(:,i_exp)
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%velocity%parallel(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%velocity%parallel(:) = result(:,i_exp)
       endif
 
       ! --- Poloidal velocity
       if (expr_list%expr(i_exp)%name=='Vtheta_i') then
-        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%poloidal(n_grid) )
-        core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%poloidal(:) = result(:,i_exp)
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%velocity%poloidal(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%velocity%poloidal(:) = result(:,i_exp)
       endif
 
       ! --- Diamagnetic velocity
       if (expr_list%expr(i_exp)%name=='Vstar_i') then
-        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(n_grid) )
-        core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(:) = result(:,i_exp)
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%velocity%diamagnetic(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%velocity%diamagnetic(:) = result(:,i_exp)
       endif
 
       ! --- Z_eff
@@ -823,11 +825,43 @@ module mod_jorek2IMAS
       endif
 
       ! --- Ion density
-      if (expr_list%expr(i_exp)%name=='rho') then
-        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%density(n_grid) )
-        core_profiles_ids%profiles_1d(i_slice)%ion(1)%density(:) = result(:,i_exp) / (central_mass*MASS_PROTON)
-        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%element(1) )
-        core_profiles_ids%profiles_1d(i_slice)%ion(1)%element(1)%a = central_mass
+      if (expr_list%expr(i_exp)%name=='ni_main') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%density(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%density(:) = result(:,i_exp) 
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%element(1) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%element(1)%a   = central_mass
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_main)%element(1)%z_n = 1   ! Main ions have Z=1
+      endif
+
+      ! --- Main impurity density
+      if (expr_list%expr(i_exp)%name=='nimp') then   ! ion index 2 is for the main impurity species
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_imp)%density(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_imp)%density(:) = result(:,i_exp)
+        allocate( core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_imp)%element(1) )
+        select case ( trim(imp_type(index_main_imp)) )
+        case('D2')
+           a_imp  = 2
+           z_imp  = 1
+        case('Ar')
+           a_imp  = 40
+           z_imp  = 18
+        case('Ne')
+           a_imp  = 20
+           z_imp  = 10
+        case('Be')
+            a_imp  = 9
+            z_imp  = 4
+        case('W')
+            a_imp  = 184
+            z_imp  = 74
+        case default
+            write(*,*) '!! Impurity type "', trim(imp_type(index_main_imp)), '" unknown !!'
+            write(*,*) '=> We assume D2.'
+            a_imp  = 2
+            z_imp  = 1
+        end select
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_imp)%element(1)%a   = a_imp
+        core_profiles_ids%profiles_1d(i_slice)%ion(i_ion_imp)%element(1)%z_n = z_imp
       endif
 
     end do

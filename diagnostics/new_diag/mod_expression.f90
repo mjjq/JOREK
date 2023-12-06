@@ -143,6 +143,7 @@ module mod_expression
     call add(exprs_all, 'omega       ', 'Toroidal Vorticity Component                          ')
     call add(exprs_all, 'rho         ', 'Mass Density                                          ')
     call add(exprs_all, 'ne          ', 'Electron Density                                      ')
+    call add(exprs_all, 'ni_main     ', 'Main ion Density                                      ')
 #ifdef WITH_Impurities
     call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
     call add(exprs_all, 'Z_eff       ', 'Effective charge of all species                       ')
@@ -1695,6 +1696,12 @@ module mod_expression
                 res = ne_JOREK * fact_ne 
 #else
                 res = r0 * fact_ne
+#endif
+              case ( 'ni_main' )
+#ifdef WITH_Impurities
+                  res = (r0-rimp0) * fact_ne 
+#else
+                  res = r0 * fact_ne
 #endif
 
 #ifdef WITH_Impurities

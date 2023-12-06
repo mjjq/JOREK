@@ -23,7 +23,7 @@ program jorek2_IDS
   
   character(len=200):: user, database, passive_coil_geo_file, active_coil_geo_file
   character(len=64) :: file_name, name_proj
-  integer :: shot_number, run_number, i_begin, i_end, i_step
+  integer :: shot_number, run_number, i_begin, i_end, i_step, i_jump_steps
   integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid, stat, stat_wall
   integer :: stat_pass, stat_act, stat_sum, stat_dis
   logical :: first_step, file_exists, rad_only_projections_h5, overwrite_entry
@@ -53,7 +53,7 @@ program jorek2_IDS
                          export_equilibrium, rad_only_projections_h5, export_wall,   &
                          export_pf_passive, export_pf_active, passive_coil_geo_file, &
                          active_coil_geo_file, wall_thickness, export_disruption,    &
-                         export_summary, overwrite_entry
+                         export_summary, overwrite_entry, i_jump_steps 
 
   ! --- Necessary initialization ------------------
   ! --- MPI initialization (for wall current resconstruction)
@@ -119,6 +119,7 @@ program jorek2_IDS
   shot_number = 111112;   run_number=1;   
   i_begin     = 0                         !< Starting restart file index
   i_end       = 99999                     !< Ending restart file index
+  i_jump_steps= 1                         !< Jump this many steps to read the next restart file
   export_MHD           = .true.
   export_radiation     = .false.
   export_core_profiles = .false. 
@@ -166,7 +167,7 @@ program jorek2_IDS
   first_step = .true.
 
   ! --- Loop over
-  do i_step = i_begin, i_end
+  do i_step = i_begin, i_end, i_jump_steps
  
     ! --- Cycle when required files don't exist 
     if (rad_only_projections_h5 .and. export_radiation) then

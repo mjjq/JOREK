@@ -36,10 +36,6 @@ cleandep:
 	-@rm -r $(DEPDIR)
 	-@find . -name '*.d' -delete 2>/dev/null
 test: particle_test nrt_unit
-particle_test:
-	+./util/fruit.sh particles/tests
-nrt_unit:
-	+./util/fruit.sh non_regression_tests/unit_tests
 doc docs:
 	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search $(INCLUDES)

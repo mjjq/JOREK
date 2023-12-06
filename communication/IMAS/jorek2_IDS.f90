@@ -180,6 +180,7 @@ program jorek2_IDS
     write(*,'(a,i9.9,a)') '#################### STEP ', i_step, ' ####################'
     write(*,*)
     call import_restart(node_list, element_list, file_name, rst_format, ierr)
+    call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
     if (ierr /=0 ) then
        write(*,*) '  Could not read the JOREK restart file'
        stop
@@ -195,7 +196,6 @@ program jorek2_IDS
 
     ! --- Read STARWALL response to export wall currents for wall_IDS
     if (first_step .and. freeboundary .and. (export_wall .or. export_pf_passive .or. export_pf_active)) then
-      call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
       call get_vacuum_response(my_id, node_list, bnd_elm_list, bnd_node_list, freeboundary_equil,    &
            resistive_wall)
       call import_external_fields('coil_field.dat', my_id)

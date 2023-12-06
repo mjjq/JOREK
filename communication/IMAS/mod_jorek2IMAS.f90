@@ -708,24 +708,9 @@ module mod_jorek2IMAS
 
     ! --- Call expressions and do a flux average
     step_imported = .true.
-  
-  ! --- Preset namelist input parameters for jorek2_postproc
-    if (first_step) then 
-      call init_new_diag(.false.)
-      write(str, '(I0)') n_grid
-      call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
-      call set_setting('loop_units',      '1',     ierr, 'Use which units for time-loops (0=JOREK, 1=SI)'     )
-      call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
-      call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
-      call set_setting('surfaces',         str,    ierr, 'number for flux surfaces e.g. for qprofile'         )
-      call set_setting('nsmallsteps',     '3',     ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('nmaxsteps',       '2500',  ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('deltaphi',        '0.3',   ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('rad_range_min',   '0.001', ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('rad_range_max',   '0.999', ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('nTht',            '32',    ierr, 'numerical parameter for field line tracing'         )
-    endif
 
+    call initialise_postproc_settings(first_step, n_grid)
+  
     ! --- Get average and q-profile
     command_tmp%n_args = 0
     call clean_up()
@@ -881,12 +866,16 @@ module mod_jorek2IMAS
     integer             :: ierr
     type(type_command)  :: command_tmp
 
+    step_imported = .true.
+    call initialise_postproc_settings(first_step, n_grid)
+
     command_tmp%n_args = 0
     call clean_up()
     call zeroD_quantities(command_tmp, first_step==.true., ierr, res0D)
 
-    if (export_equil)    call fill_equilibrium_IDS(first_step, time_SI, n_grid, res0D, equilibrium_ids)  
-    if (export_summary)  call fill_summary_IDS(first_step, time_SI, res0D, summary_ids)  
+    if (export_equil)       call fill_equilibrium_IDS(first_step, time_SI, n_grid, res0D, equilibrium_ids)  
+    if (export_summary)     call fill_summary_IDS(first_step, time_SI, res0D, summary_ids)  
+    if (export_disruption)  call fill_disruption_IDS(first_step, time_SI, res0D, disruption_ids) 
   
   
   end subroutine fill_IDSs_w_common_quantities
@@ -904,10 +893,11 @@ module mod_jorek2IMAS
     implicit none
 
     ! --- External parameters
-    logical,      intent(in) :: first_step   ! is this the first step?
-    real*8,       intent(in) :: time_SI
-    integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
-    real*8,      allocatable :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
+    logical,             intent(in) :: first_step   ! is this the first step?
+    real*8,              intent(in) :: time_SI
+    integer,             intent(in) :: n_grid       ! Number of flux surfaces to compute average
+    real*8, allocatable, intent(in) :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
+    
     type(ids_equilibrium),  intent(inout)  :: equilibrium_ids
    
     ! --- Local parameters 
@@ -938,25 +928,6 @@ module mod_jorek2IMAS
     equilibrium_ids%time(i_slice) = time_SI 
 
     ! --- Call expressions and do a flux average
-    step_imported = .true.
-  
-  ! --- Preset namelist input parameters for jorek2_postproc
-    if (first_step) then 
-      call init_new_diag(.false.)
-      write(str, '(I0)') n_grid
-      call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
-      call set_setting('loop_units',      '1',     ierr, 'Use which units for time-loops (0=JOREK, 1=SI)'     )
-      call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
-      call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
-      call set_setting('surfaces',         str,    ierr, 'number for flux surfaces e.g. for qprofile'         )
-      call set_setting('nsmallsteps',     '3',     ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('nmaxsteps',       '2500',  ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('deltaphi',        '0.3',   ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('rad_range_min',   '0.001', ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('rad_range_max',   '0.999', ierr, 'numerical parameter for field line tracing'         )
-      call set_setting('nTht',            '32',    ierr, 'numerical parameter for field line tracing'         )
-    endif
-
     ! --- Get average and q-profile
     command_tmp%n_args = 0
     call clean_up()
@@ -1218,15 +1189,12 @@ module mod_jorek2IMAS
 
   subroutine fill_summary_IDS(first_step, time_SI, res0D, summary_ids)  
 
-    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
-                           sqrt_mu0_over_rho0, central_mass, imp_type, &
-                           gamma, index_main_imp
     implicit none
 
     ! --- External parameters
-    logical,      intent(in) :: first_step   ! is this the first step?
-    real*8,       intent(in) :: time_SI
-    real*8,      allocatable :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
+    logical,             intent(in) :: first_step   ! is this the first step?
+    real*8,              intent(in) :: time_SI
+    real*8, allocatable, intent(in) :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
     type(ids_summary),  intent(inout)  :: summary_ids
    
     ! --- Local parameters 
@@ -1246,7 +1214,8 @@ module mod_jorek2IMAS
 
     ! --- Information about the toroidal field
     summary_ids%global_quantities%r0%value = R_geo
-    summary_ids%global_quantities%b0%value = F0/R_geo * fact_Ip
+    allocate(summary_ids%global_quantities%b0%value(n_slice))
+    summary_ids%global_quantities%b0%value(i_slice) = F0/R_geo * fact_Ip
     
     do i_exp=1, exprs_all_int%n_expr
 
@@ -1364,6 +1333,89 @@ module mod_jorek2IMAS
 
   end subroutine fill_summary_IDS
 
+
+
+
+
+
+  subroutine fill_disruption_IDS(first_step, time_SI, res0D, disruption_ids)  
+
+    implicit none
+
+    ! --- External parameters
+    logical,             intent(in) :: first_step   ! is this the first step?
+    real*8,              intent(in) :: time_SI
+    real*8, allocatable, intent(in) :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
+    type(ids_disruption),  intent(inout)  :: disruption_ids
+   
+    ! --- Local parameters 
+    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
+    real*8     :: vpar_power, kinpar_power
+    
+    ! **********************************************************************************
+    ! ******************************* IMAS **********************************************
+    ! **********************************************************************************
+    integer :: n_slice, i_slice, i_exp, i_psi
+    ! **********************************************************************************
+
+    ! --- Set times
+    n_slice = 1;   i_slice = 1
+    allocate( disruption_ids%time(n_slice) )
+    disruption_ids%ids_properties%homogeneous_time = 1    
+    disruption_ids%time(i_slice) = time_SI 
+
+    do i_exp=1, exprs_all_int%n_expr
+
+      ! --- Poloidal halos (defined as positive)
+      if (exprs_all_int%expr(i_exp)%name=='I_halo') then
+        allocate(disruption_ids%global_quantities%current_halo_pol(n_slice))
+        disruption_ids%global_quantities%current_halo_pol(i_slice) = res0D(i_exp) * 1.0d6  ! This diagnostic is in MA
+      endif
+
+      ! --- Toroidal halos
+      if (exprs_all_int%expr(i_exp)%name=='Ip_out') then
+        allocate(disruption_ids%global_quantities%current_halo_tor(n_slice))
+        disruption_ids%global_quantities%current_halo_tor(i_slice) = res0D(i_exp) * fact_Ip
+      endif
+
+      ! --- Total ohmic power
+      if (exprs_all_int%expr(i_exp)%name=='Ohmic_tot') then
+        allocate(disruption_ids%global_quantities%power_ohm(n_slice))
+        disruption_ids%global_quantities%power_ohm(i_slice) = res0D(i_exp) 
+      endif
+
+      ! --- Halo ohmic power
+      if (exprs_all_int%expr(i_exp)%name=='Ohmic_out') then
+        allocate(disruption_ids%global_quantities%power_ohm_halo(n_slice))
+        disruption_ids%global_quantities%power_ohm_halo(i_slice) = res0D(i_exp) 
+      endif
+
+      ! --- Total thermal and kinetic power flowing into the wall 
+      if (exprs_all_int%expr(i_exp)%name=='qn_par') then
+        allocate(disruption_ids%global_quantities%power_parallel_halo(n_slice))
+        vpar_power   = 0.d0
+        kinpar_power = 0.d0
+        ! --- Get other contributions to this power
+        do j=1, exprs_all_int%n_expr
+          if (exprs_all_int%expr(j)%name=='P_vn') then
+            vpar_power = res0D(j) 
+          endif
+          if (exprs_all_int%expr(j)%name=='kinpar_flux') then
+            kinpar_power = res0D(j) 
+          endif
+        enddo
+        disruption_ids%global_quantities%power_parallel_halo(i_slice) = res0D(i_exp) + vpar_power + kinpar_power 
+      endif
+
+      ! --- Total radiated power
+      if (exprs_all_int%expr(i_exp)%name=='Rad_tot') then
+        allocate(disruption_ids%global_quantities%power_radiated_electrons_impurities(n_slice))
+        disruption_ids%global_quantities%power_radiated_electrons_impurities(i_slice) = res0D(i_exp) 
+      endif
+
+    end do
+
+  end subroutine fill_disruption_IDS
 
 
 
@@ -1626,6 +1678,40 @@ module mod_jorek2IMAS
       
     
   end subroutine read_coil_set_starwall
+
+
+
+
+
+
+  subroutine initialise_postproc_settings(first_step, n_grid)
+    
+    implicit none
+
+    logical, intent(in) :: first_step
+    integer, intent(in) :: n_grid
+    
+    character(30)       :: str
+    integer             :: ierr
+
+    if (first_step) then 
+      call init_new_diag(.false.)
+      write(str, '(I0)') n_grid
+      call set_setting('units',           '1',     ierr, 'Calculate quantities in which units (0=JOREK, 1=SI)')
+      call set_setting('loop_units',      '1',     ierr, 'Use which units for time-loops (0=JOREK, 1=SI)'     )
+      call set_setting('linepoints',      '200',   ierr, 'Number of points along a line e.g. for pol_line'    )
+      call set_setting('tor_points',      '200',   ierr, 'Number of toroidal points e.g. for tor_line'        )
+      call set_setting('surfaces',         str,    ierr, 'number for flux surfaces e.g. for qprofile'         )
+      call set_setting('nsmallsteps',     '3',     ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('nmaxsteps',       '2500',  ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('deltaphi',        '0.3',   ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('rad_range_min',   '0.001', ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('rad_range_max',   '0.999', ierr, 'numerical parameter for field line tracing'         )
+      call set_setting('nTht',            '32',    ierr, 'numerical parameter for field line tracing'         )
+    endif
+  
+  end subroutine initialise_postproc_settings
+
 
 
 

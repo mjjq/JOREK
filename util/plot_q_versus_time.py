@@ -36,7 +36,11 @@ if __name__ == "__main__":
     parser.add_argument("-xl", "--xlabel", default="", help="Manually define the xlabel.")
     parser.add_argument("-yl", "--ylabel", default="", help="Manually define the ylabel.")
     parser.add_argument("-ti", "--title", default="", help="Manually define the title.")
-
+    parser.add_argument("-xm", "--multiplier_for_X", type=float, default=1.0,
+                        help="Multiple the X-data with the specified value.")
+    parser.add_argument('-clim', nargs=2, type=float, metavar=('cmin', 'cmax'),
+                        help='Specify cmin, cmax for the contourf.')
+    
     args = parser.parse_args()
     
     font_size = args.fontsize
@@ -90,12 +94,17 @@ if __name__ == "__main__":
         print('shape of data_2d  = ', np.shape(data_2d))
         exit(-1)
 
+    times_1d = times_1d * args.multiplier_for_X
+
     psin_2d, times_2d = np.meshgrid(psin_1d, times_1d)
     data_2d_plt = data_2d
     data_2d_plt[np.where(abs(data_2d) > q_cut)] = q_cut # math.nan
 
     plt.figure(figsize=(10, 6)) 
-    plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 100, cmap='jet')
+    if args.clim:
+        plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 100, levels = np.linspace(args.clim[0], args.clim[1], 100), cmap='jet')#, extend = 'both')
+    else:
+        plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 100, cmap='jet')
 
     plt.colorbar()
     plt.title(r'radial distribution of $q$ versus time' if args.title == "" else args.title, fontsize=font_size)

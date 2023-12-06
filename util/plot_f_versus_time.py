@@ -44,6 +44,8 @@ if __name__ == "__main__":
     parser.add_argument("-ti", "--title", default="", help="Manually define the title.")
     parser.add_argument("-cs", "--contour_surfaces", nargs="+", type=float, default=[],
                         help="Plot the lines where q equals the specified value.")
+    parser.add_argument("-xm", "--multiplier_for_X", type=float, default=1.0,
+                        help="Multiple the X-data with the specified value.")
     
     args = parser.parse_args()
     
@@ -103,6 +105,8 @@ if __name__ == "__main__":
         radial_1d = radial_1d ** args.pow_for_r
         coord_name = coord_name + '^' + "{:.1f}".format(args.pow_for_r)
 
+    times_1d = times_1d * args.multiplier_for_X
+    
     radial_2d, times_2d = np.meshgrid(radial_1d, times_1d)
     data_2d_plt = copy.deepcopy(data_2d)
 

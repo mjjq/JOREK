@@ -74,10 +74,10 @@ if __name__ == "__main__":
     # filename = 'poinc_R-Z.dat'
     lines_to_skip = 1
     for filename in filenames:
-        if filename == 'poinc_R-Z.dat':
+        if 'poinc_R-Z' in filename: # 'poinc_R-Z.dat':
             xlabel_name = 'R'
             ylabel_name = 'Z'
-        elif filename == 'poinc_rho-theta.dat':
+        elif 'poinc_rho-theta' in filename: # 'poinc_rho-theta.dat':
             xlabel_name = r'$\rho$'
             ylabel_name = r'$\theta$'
             lines_to_skip = 4

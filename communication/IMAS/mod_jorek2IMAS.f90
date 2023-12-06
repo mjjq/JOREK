@@ -715,7 +715,8 @@ module mod_jorek2IMAS
     command_tmp%n_args = 0
     call clean_up()
     expr_list = exprs((/'Psi_N', 'T_i', 'T_e', 'ne', 'pres', 'Phi', 'eta_T', &
-                        'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i', 'rho', 'Psi'/), 15)
+                        'Jpar', 'E_||', 'Er', 'vpar', 'Vtheta_i', 'Vstar_i', 'rho', 'Psi', &
+                        'Z_eff'/), 16)
     call average(command_tmp, first_step==.true., ierr, result, .true.)
     call clean_up()
     call qprofile(command_tmp, first_step==.true., ierr, q_prof)
@@ -813,6 +814,12 @@ module mod_jorek2IMAS
       if (expr_list%expr(i_exp)%name=='Vstar_i') then
         allocate( core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(n_grid) )
         core_profiles_ids%profiles_1d(i_slice)%ion(1)%velocity%diamagnetic(:) = result(:,i_exp)
+      endif
+
+      ! --- Z_eff
+      if (expr_list%expr(i_exp)%name=='Z_eff') then
+        allocate( core_profiles_ids%profiles_1d(i_slice)%zeff(n_grid) )
+        core_profiles_ids%profiles_1d(i_slice)%zeff(:) = result(:,i_exp)
       endif
 
       ! --- Ion density

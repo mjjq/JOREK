@@ -25,10 +25,10 @@ program jorek2_IDS
   character(len=64) :: file_name, name_proj
   integer :: shot_number, run_number, i_begin, i_end, i_step
   integer :: ierr, idx, stat_mhd, stat_core, stat_rad, stat_eq, n_grid, stat, stat_wall
-  integer :: stat_pass, stat_act
+  integer :: stat_pass, stat_act, stat_sum, stat_dis
   logical :: first_step, file_exists, rad_only_projections_h5
   logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
-  logical :: export_wall, export_pf_passive, export_pf_active
+  logical :: export_wall, export_pf_passive, export_pf_active, export_summary, export_disruption
   real*8  :: rho0, fact_time, time_SI, wall_thickness
 
   integer   :: my_id, my_id_n, my_id_master, ierr2
@@ -40,17 +40,20 @@ program jorek2_IDS
 
   type(ids_mhd), target   :: mhd_ids
   type(ids_equilibrium)   :: equilibrium_ids
+  type(ids_summary)       :: summary_ids
   type(ids_core_profiles) :: core_profiles_ids
   type(ids_radiation)     :: radiation_ids
   type(ids_wall), target  :: wall_ids
   type(ids_pf_passive)    :: pf_passive
   type(ids_pf_active)     :: pf_active
+  type(ids_disruption)    :: disruption_ids
 
   namelist /imas_params/ shot_number, run_number, user, database, i_begin, i_end, &
                          export_mhd, export_radiation, export_core_profiles, n_grid, &
                          export_equilibrium, rad_only_projections_h5, export_wall,   &
                          export_pf_passive, export_pf_active, passive_coil_geo_file, &
-                         active_coil_geo_file, wall_thickness
+                         active_coil_geo_file, wall_thickness, export_disruption,    &
+                         export_summary
 
   ! --- Necessary initialization ------------------
   ! --- MPI initialization (for wall current resconstruction)
@@ -123,6 +126,8 @@ program jorek2_IDS
   export_wall          = .false.
   export_pf_passive    = .false.
   export_pf_active     = .false.
+  export_summary       = .false.
+  export_disruption    = .false.
   rad_only_projections_h5 = .false.    !< use only *.h5 projection files for radiation IDS (single jorek_restart.h5 still needed)
   n_grid               = 100           !< Number of points used for 1D and 2D profiles  
   wall_thickness       = 0.06          !< Thickness used for the STARWALL thin wall (default value is for ITER)
@@ -203,8 +208,11 @@ program jorek2_IDS
     ! --- Fill and export a core_profiles IDS
     if (export_core_profiles)  call fill_core_profiles_IDS(first_step, time_SI, core_profiles_ids, n_grid)  
 
-    ! --- Fill and export an equilibrium IDS
-    if (export_equilibrium)  call fill_equilibrium_IDS(first_step, time_SI, equilibrium_ids, n_grid)
+    ! --- Fill IDSs that share common quantities
+    if (export_equilibrium .or. export_summary .or. export_disruption)  then
+      call fill_IDSs_w_common_quantities(first_step, time_SI, n_grid, export_equilibrium, export_summary, export_disruption, &
+                                        equilibrium_ids, summary_ids, disruption_ids)
+    endif
 
     ! --- Fill and export a wall IDS
     if (export_wall)  call fill_wall_IDS(first_step, time_SI, wall_thickness, wall_ids)  
@@ -237,6 +245,8 @@ program jorek2_IDS
       if (export_wall)             call ids_put(idx,'wall',wall_ids,stat_wall)
       if (export_pf_passive)       call ids_put(idx,'pf_passive',pf_passive,stat_pass)
       if (export_pf_active)        call ids_put(idx,'pf_active',pf_active,stat_act)
+      if (export_summary)          call ids_put(idx,'summary',summary_ids,stat_sum)
+      if (export_disruption)       call ids_put(idx,'disruption',disruption_ids,stat_dis)
     else
       if (export_mhd)              call ids_put_slice(idx,'mhd',mhd_ids,stat_mhd)
       if (export_core_profiles)    call ids_put_slice(idx,'core_profiles',core_profiles_ids,stat_core)
@@ -245,6 +255,8 @@ program jorek2_IDS
       if (export_wall)             call ids_put_slice(idx,'wall',wall_ids,stat_wall)
       if (export_pf_passive)       call ids_put_slice(idx,'pf_passive',pf_passive,stat_pass)
       if (export_pf_active)        call ids_put_slice(idx,'pf_active',pf_active,stat_act)
+      if (export_summary)          call ids_put_slice(idx,'summary',summary_ids,stat_sum)
+      if (export_disruption)       call ids_put_slice(idx,'disruption',disruption_ids,stat_dis)
     endif
 
     if (export_mhd           .and. (stat_mhd==0 ))   write(*,*) '    MHD IDS exported'
@@ -254,6 +266,8 @@ program jorek2_IDS
     if (export_wall          .and. (stat_wall==0 ))  write(*,*) '    Wall IDS exported'
     if (export_pf_passive    .and. (stat_pass==0 ))  write(*,*) '    Pf passive IDS exported'
     if (export_pf_active     .and. (stat_act==0 ))   write(*,*) '    Pf active IDS exported'
+    if (export_summary       .and. (stat_sum==0 ))   write(*,*) '    Summary IDS exported'
+    if (export_disruption    .and. (stat_dis==0 ))   write(*,*) '    Disruption IDS exported'
 
     if (export_mhd           .and. (stat_mhd/=0 ))   write(*,*) '    Problem saving MHD IDS'
     if (export_core_profiles .and. (stat_core/=0))   write(*,*) '    Problem saving Core profiles IDS'
@@ -262,6 +276,8 @@ program jorek2_IDS
     if (export_wall          .and. (stat_wall/=0))   write(*,*) '    Problem saving wall IDS'
     if (export_pf_passive    .and. (stat_pass/=0))   write(*,*) '    Problem saving PF passive IDS'
     if (export_pf_active     .and. (stat_act/=0 ))   write(*,*) '    Problem saving PF active IDS'
+    if (export_summary       .and. (stat_sum/=0 ))   write(*,*) '    Problem saving summary IDS'
+    if (export_disruption    .and. (stat_dis/=0 ))   write(*,*) '    Problem saving disruption IDS'
 
     first_step = .false.
 

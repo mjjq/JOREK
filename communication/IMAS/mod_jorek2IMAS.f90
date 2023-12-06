@@ -321,14 +321,14 @@ module mod_jorek2IMAS
       grid%grid_subset(1)%dimension        = 3  ! Index 3 means 2 dimensions in the dictionary
 
       ! --- Save wall thickness
-      allocate(wall_ids%description_ggd(1)%thickness(n_grid))
-      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(n_grid_sub))
-      allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(n_wall_triangles))
+      ! allocate(wall_ids%description_ggd(1)%thickness(n_grid))
+      ! allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(n_grid_sub))
+      ! allocate(wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(n_wall_triangles))
 
-      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_index        = 1
-      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_subset_index = 1
+      ! wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_index        = 1
+      ! wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%grid_subset_index = 1
 
-      wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(:) = wall_thickness
+      ! wall_ids%description_ggd(1)%thickness(1)%grid_subset(1)%values(:) = wall_thickness
 
     endif
 
@@ -342,13 +342,13 @@ module mod_jorek2IMAS
     wall_ids%time(i_slice) = time_SI 
     wall_ids%description_ggd(1)%ggd(i_slice)%time = time_SI
     
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(n_grid_sub) )
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(n_wall_triangles) ) ! --- one value per triangle
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(n_wall_triangles) ) ! --- one value per triangle
-    allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(n_wall_triangles) ) ! --- one value per triangle
+    !allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(n_grid_sub) )
+    !allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(n_wall_triangles) ) ! --- one value per triangle
+    !allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(n_wall_triangles) ) ! --- one value per triangle
+    !allocate( wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(n_wall_triangles) ) ! --- one value per triangle
 
-    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_index        = 1
-    wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_subset_index = 1
+    !wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_index        = 1
+    !wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%grid_subset_index = 1
 
     ! --- Get the current density per triangle
     ! --- The triangle current density
@@ -378,18 +378,18 @@ module mod_jorek2IMAS
       co   =  r_mid(1) / Rtri
       si   = -r_mid(2) / Rtri
 
-      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(i)        =  ( j_lin(1)*co - j_lin(2)*si ) / wall_thickness
-      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(i)        =    j_lin(3)                    / wall_thickness
-      wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(i) =  (-j_lin(1)*si - j_lin(2)*co ) / wall_thickness * fact_Ip   
+     ! wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%r(i)        =  ( j_lin(1)*co - j_lin(2)*si ) / wall_thickness
+     ! wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%z(i)        =    j_lin(3)                    / wall_thickness
+     ! wall_ids%description_ggd(1)%ggd(i_slice)%j_total(1)%toroidal(i) =  (-j_lin(1)*si - j_lin(2)*co ) / wall_thickness * fact_Ip   
     enddo
 
     if (first_step) then
-      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(n_grid_sub) )
-      allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(n_wall_triangles) ) 
-      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(:) = sr%eta_thin_w * wall_thickness * wall_resistivity_fact
+    !  allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(n_grid_sub) )
+    !  allocate( wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(n_wall_triangles) ) 
+    !  wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%values(:) = sr%eta_thin_w * wall_thickness * wall_resistivity_fact
 
-      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_index        = 1
-      wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_subset_index = 1
+     ! wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_index        = 1
+     ! wall_ids%description_ggd(1)%ggd(i_slice)%resistivity(1)%grid_subset_index = 1
     endif
 
   end subroutine fill_wall_IDS
@@ -860,7 +860,43 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_equilibrium_IDS(first_step, time_SI, equilibrium_ids, n_grid)  
+  ! --- This subroutine fills different IDSs, they are filled together here to calculate 0D
+  ! --- quantities by calling mod_integrals3D only once and avoid duplications
+  subroutine fill_IDSs_w_common_quantities(first_step, time_SI, n_grid, export_equil, export_summary, export_disruption, &
+                                           equilibrium_ids, summary_ids, disruption_ids)
+
+    implicit none
+
+    ! --- External parameters
+    logical,      intent(in) :: first_step   ! is this the first step?
+    real*8,       intent(in) :: time_SI
+    logical,      intent(in) :: export_equil, export_summary, export_disruption
+    integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
+    type(ids_equilibrium),  intent(inout)  :: equilibrium_ids
+    type(ids_summary),      intent(inout)  :: summary_ids
+    type(ids_disruption),   intent(inout)  :: disruption_ids
+
+    ! --- Local parameters
+    real*8, allocatable :: res0D(:)
+    integer             :: ierr
+    type(type_command)  :: command_tmp
+
+    command_tmp%n_args = 0
+    call clean_up()
+    call zeroD_quantities(command_tmp, first_step==.true., ierr, res0D)
+
+    if (export_equil)    call fill_equilibrium_IDS(first_step, time_SI, n_grid, res0D, equilibrium_ids)  
+    if (export_summary)  call fill_summary_IDS(first_step, time_SI, res0D, summary_ids)  
+  
+  
+  end subroutine fill_IDSs_w_common_quantities
+
+
+
+
+
+
+  subroutine fill_equilibrium_IDS(first_step, time_SI, n_grid, res0D, equilibrium_ids)  
 
     use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
                            sqrt_mu0_over_rho0, central_mass, imp_type, &
@@ -871,12 +907,13 @@ module mod_jorek2IMAS
     logical,      intent(in) :: first_step   ! is this the first step?
     real*8,       intent(in) :: time_SI
     integer,      intent(in) :: n_grid       ! Number of flux surfaces to compute average
+    real*8,      allocatable :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
     type(ids_equilibrium),  intent(inout)  :: equilibrium_ids
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
     real*8     :: rho0, fact_rad, R_min, Z_min, R_max, Z_max, R_node, Z_node
-    real*8, allocatable :: result(:,:), res0D(:), q_prof(:), rho_tor(:), R_sep(:), Z_sep(:)
+    real*8, allocatable :: result(:,:), q_prof(:), rho_tor(:), R_sep(:), Z_sep(:)
     real*8, allocatable :: result2D(:,:,:), R_vec(:), Z_vec(:)
     character(30)       :: str
     type(type_command)  :: command_tmp
@@ -989,10 +1026,6 @@ module mod_jorek2IMAS
     equilibrium_ids%time_slice(i_slice)%global_quantities%psi_boundary    = ES%Psi_bnd  * fact_psi
     equilibrium_ids%time_slice(i_slice)%global_quantities%magnetic_axis%r = ES%R_axis
     equilibrium_ids%time_slice(i_slice)%global_quantities%magnetic_axis%z = ES%Z_axis
-
-    command_tmp%n_args = 0
-    call clean_up()
-    call zeroD_quantities(command_tmp, first_step==.true., ierr, res0D)
     
     do i_exp=1, exprs_all_int%n_expr
 
@@ -1177,6 +1210,159 @@ module mod_jorek2IMAS
     enddo
 
   end subroutine fill_equilibrium_IDS
+
+
+
+
+
+
+  subroutine fill_summary_IDS(first_step, time_SI, res0D, summary_ids)  
+
+    use phys_module, only : F0, central_density, sqrt_mu0_rho0, &
+                           sqrt_mu0_over_rho0, central_mass, imp_type, &
+                           gamma, index_main_imp
+    implicit none
+
+    ! --- External parameters
+    logical,      intent(in) :: first_step   ! is this the first step?
+    real*8,       intent(in) :: time_SI
+    real*8,      allocatable :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
+    type(ids_summary),  intent(inout)  :: summary_ids
+   
+    ! --- Local parameters 
+    integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
+    
+    ! **********************************************************************************
+    ! ******************************* IMAS **********************************************
+    ! **********************************************************************************
+    integer :: n_slice, i_slice, i_exp, i_psi
+    ! **********************************************************************************
+
+    ! --- Set times
+    n_slice = 1;   i_slice = 1
+    allocate( summary_ids%time(n_slice) )
+    summary_ids%ids_properties%homogeneous_time = 1    
+    summary_ids%time(i_slice) = time_SI 
+
+    ! --- Information about the toroidal field
+    summary_ids%global_quantities%r0%value = R_geo
+    summary_ids%global_quantities%b0%value = F0/R_geo * fact_Ip
+    
+    do i_exp=1, exprs_all_int%n_expr
+
+      ! --- Beta poloidal
+      if (exprs_all_int%expr(i_exp)%name=='beta_p') then
+        allocate(summary_ids%global_quantities%beta_pol%value(n_slice))
+        summary_ids%global_quantities%beta_pol%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Beta toroidal
+      if (exprs_all_int%expr(i_exp)%name=='beta_t') then
+        allocate(summary_ids%global_quantities%beta_tor%value(n_slice))
+        summary_ids%global_quantities%beta_tor%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Normalized beta
+      if (exprs_all_int%expr(i_exp)%name=='beta_n') then
+        allocate(summary_ids%global_quantities%beta_tor_norm%value(n_slice))
+        summary_ids%global_quantities%beta_tor_norm%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Total current
+      if (exprs_all_int%expr(i_exp)%name=='Ip_tot') then
+        allocate(summary_ids%global_quantities%ip%value(n_slice))
+        summary_ids%global_quantities%ip%value(i_slice) = res0D(i_exp) * fact_Ip
+      endif
+
+      ! --- li(3)
+      if (exprs_all_int%expr(i_exp)%name=='li3') then
+        allocate(summary_ids%global_quantities%li%value(n_slice))
+        summary_ids%global_quantities%li%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Volume
+      if (exprs_all_int%expr(i_exp)%name=='volume') then
+        allocate(summary_ids%global_quantities%volume%value(n_slice))
+        summary_ids%global_quantities%volume%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- q_95
+      if (exprs_all_int%expr(i_exp)%name=='q95') then
+        allocate(summary_ids%global_quantities%q_95%value(n_slice))
+        summary_ids%global_quantities%q_95%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Thermal energy
+      if (exprs_all_int%expr(i_exp)%name=='Thermal_in') then
+        allocate(summary_ids%global_quantities%energy_thermal%value(n_slice))
+        summary_ids%global_quantities%energy_thermal%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Magnetic energy
+      if (exprs_all_int%expr(i_exp)%name=='Wmag_in') then
+        allocate(summary_ids%global_quantities%energy_b_field_pol%value(n_slice))
+        summary_ids%global_quantities%energy_b_field_pol%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Ohmic power
+      if (exprs_all_int%expr(i_exp)%name=='Ohmic_tot') then
+        allocate(summary_ids%global_quantities%power_ohm%value(n_slice))
+        summary_ids%global_quantities%power_ohm%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Radiated power
+      if (exprs_all_int%expr(i_exp)%name=='Rad_tot') then
+        allocate(summary_ids%global_quantities%power_radiated%value(n_slice))
+        summary_ids%global_quantities%power_radiated%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Heating power
+      if (exprs_all_int%expr(i_exp)%name=='Heat_src_tot') then
+        allocate(summary_ids%heating_current_drive%power_additional%value(n_slice))
+        summary_ids%heating_current_drive%power_additional%value(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- R_axis
+      if (exprs_all_int%expr(i_exp)%name=='R_axis') then
+        allocate(summary_ids%local%magnetic_axis%position%r(n_slice))
+        summary_ids%local%magnetic_axis%position%r(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- Z_axis
+      if (exprs_all_int%expr(i_exp)%name=='Z_axis') then
+        allocate(summary_ids%local%magnetic_axis%position%z(n_slice))
+        summary_ids%local%magnetic_axis%position%z(i_slice) = res0D(i_exp)
+      endif
+
+      ! --- psi_axis
+      if (exprs_all_int%expr(i_exp)%name=='psi_axis') then
+        allocate(summary_ids%local%magnetic_axis%position%psi(n_slice))
+        summary_ids%local%magnetic_axis%position%psi(i_slice) = res0D(i_exp) * fact_psi
+      endif
+
+    end do
+
+    ! --- Shaping parameters, T. Luce, PPCF 55 (2013) 095009, equations (1-6)
+    allocate(summary_ids%boundary%type%value(n_slice))
+    if (ES%limiter_plasma) then
+      summary_ids%boundary%type%value(i_slice)  = 0
+    else
+      summary_ids%boundary%type%value(i_slice)  = 1
+    endif
+    allocate(summary_ids%boundary%minor_radius%value(n_slice))
+    summary_ids%boundary%minor_radius%value(i_slice)           = ES%LCFS_a
+    allocate(summary_ids%boundary%elongation%value(n_slice))
+    summary_ids%boundary%elongation%value(i_slice)             = ES%LCFS_kappa
+    allocate(summary_ids%boundary%triangularity_upper%value(n_slice))
+    summary_ids%boundary%triangularity_upper%value(i_slice)    = ES%LCFS_deltaU
+    allocate(summary_ids%boundary%triangularity_lower%value(n_slice))
+    summary_ids%boundary%triangularity_lower%value(i_slice)    = ES%LCFS_deltaL
+    allocate(summary_ids%boundary%geometric_axis_r%value(n_slice))
+    summary_ids%boundary%geometric_axis_r%value(i_slice)       = ES%LCFS_Rgeo
+    allocate(summary_ids%boundary%geometric_axis_z%value(n_slice))
+    summary_ids%boundary%geometric_axis_z%value(i_slice)       = ES%LCFS_Zgeo
+
+  end subroutine fill_summary_IDS
 
 
 

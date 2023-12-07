@@ -41,7 +41,7 @@ def display_values(event, x, y, z):
             f"Mouse at (x, y): ({x_data:.2e}, {y_data:.2e}), z: {z_value:.2e}")
 
 
-def plot3D_unstructed(x, y, z, title, file_path, time, font_size):
+def plot3D_unstructed(x, y, z, title, file_path, time, font_size, si_unit = False):
     fig = plt.figure(figsize=(9, 7), constrained_layout=True)
     # ax = fig.add_subplot(1,1,1)
     ax = fig.add_subplot(111, projection='3d')
@@ -54,8 +54,12 @@ def plot3D_unstructed(x, y, z, title, file_path, time, font_size):
     # Optional: You can add labels to the axes
     ax.set_xlabel('R', fontsize=font_size)
     ax.set_ylabel('Z', fontsize=font_size)
+
+    time_str = "{:.2f}".format(time)
+    if si_unit:
+        time_str += '[ms]'
     ax.set_title(title + " @ Time = " +
-                 "{:.2f}".format(time) + " of " + file_path, fontsize=font_size)
+                 time_str + " of " + file_path, fontsize=font_size)
 
     plt.xticks(fontsize=font_size)
     plt.yticks(fontsize=font_size)
@@ -110,13 +114,16 @@ def plot3D_unstructed(x, y, z, title, file_path, time, font_size):
     # plt.show()
 
 
-def plot2D_scatter(x, y, z, title, file_path, time, font_size):
+def plot2D_scatter(x, y, z, title, file_path, time, font_size, si_unit = False, clim = []):
 
     plt.figure(figsize=(9, 7), constrained_layout=True)
 
     # Create a scatter plot
     # You can choose a different colormap and marker style
-    plt.scatter(x, y, c=z, cmap='jet', marker='o', s=50)
+    if clim:
+        plt.scatter(x, y, c=z, cmap='jet', marker='o', s=50, vmin=clim[0], vmax=clim[1])
+    else:
+        plt.scatter(x, y, c=z, cmap='jet', marker='o', s=50)
 
     # Add a colorbar for reference
     plt.colorbar()
@@ -124,9 +131,12 @@ def plot2D_scatter(x, y, z, title, file_path, time, font_size):
     # Optional: You can add labels to the axes
     plt.xlabel('R', fontsize=font_size)
     plt.ylabel('Z', fontsize=font_size)
-
+    
+    time_str = "{:.2f}".format(time)
+    if si_unit:
+        time_str += '[ms]'
     plt.title(title + " @ Time = " +
-              "{:.2f}".format(time) + " (" + file_path + ")", fontsize=font_size)
+              time_str + " (" + file_path + ")", fontsize=font_size)
 
     # plt.xlim([min(x), max(x)])
     # plt.ylim([min(y), max(y)])
@@ -145,7 +155,7 @@ def plot2D_scatter(x, y, z, title, file_path, time, font_size):
     # plt.legend(fontsize=font_size)
 
 
-def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size):
+def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size, si_unit = False):
 
     plt.figure(figsize=(9, 7), constrained_layout=True)
     # Define a regular grid for the contour plot
@@ -175,8 +185,11 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size):
     plt.xlabel('R', fontsize=font_size)
     plt.ylabel('Z', fontsize=font_size)
 
+    time_str = "{:.2f}".format(time)
+    if si_unit:
+        time_str += '[ms]'
     plt.title(title + " @ Time = " +
-              "{:.2f}".format(time) + " (" + file_path + ")", fontsize=font_size)
+              time_str + " (" + file_path + ")", fontsize=font_size)
 
     # plt.xlim([min(x), max(x)])
     # plt.ylim([min(y), max(y)])
@@ -191,7 +204,7 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size):
     # plt.legend(fontsize=font_size)
 
 
-def plot2D_interpolated(x, y, z, title, file_path, time, font_size):
+def plot2D_interpolated(x, y, z, title, file_path, time, font_size, si_unit = False, clim = []):
 
     plt.figure(figsize=(9, 7), constrained_layout=True)
     # Define a regular grid for the contour plot
@@ -207,7 +220,10 @@ def plot2D_interpolated(x, y, z, title, file_path, time, font_size):
 
     # Create a contour plot
     # You can choose a different colormap if desired
-    plt.contourf(X, Y, Z, 50, cmap='jet')
+    if clim:
+        plt.contourf(X, Y, Z, 50, levels = np.linspace(clim[0], clim[1], 50), cmap='jet')#, extend = 'both')
+    else:
+        plt.contourf(X, Y, Z, 50, cmap='jet')
 
     # Add a colorbar for reference
     plt.colorbar()
@@ -216,8 +232,11 @@ def plot2D_interpolated(x, y, z, title, file_path, time, font_size):
     plt.xlabel('R', fontsize=font_size)
     plt.ylabel('Z', fontsize=font_size)
 
+    time_str = "{:.2f}".format(time)
+    if si_unit:
+        time_str += '[ms]'
     plt.title(title + " @ Time = " +
-              "{:.2f}".format(time) + " (" + file_path + ")", fontsize=font_size)
+              time_str + " (" + file_path + ")", fontsize=font_size)
 
     # plt.xlim([min(x), max(x)])
     # plt.ylim([min(y), max(y)])
@@ -269,7 +288,7 @@ def read_and_plot_q(q_surface, vtk_file):
     file_q = 'postproc/q_surface_' + "{:.4f}".format(q_surface) + '_s' + re.findall(r'\d+', vtk_file)[-1] + '.txt'
     if os.path.exists(file_q):
         data_q_surface = np.loadtxt(file_q)
-        plt.plot(data_q_surface[:, 0], data_q_surface[:, 1], '.', MarkerSize = 1.0, color='white')
+        plt.plot(data_q_surface[:, 0], data_q_surface[:, 1], '.', MarkerSize = 1.0, color='black')
         plt.text(data_q_surface[0, 0], data_q_surface[0, 1], "{:.1f}".format(abs(q_surface)), fontsize=10, ha='center', va='center', color='black')
     else:
         print(f"The file {file_q} does not exist. Skipping.")
@@ -294,7 +313,7 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
 
         # time = reader.GetOutput().GetInformation().Get(vtk.vtkDataObject.DATA_TIME_STEP())
         # cycle = reader.GetOutput().GetInformation().Get(vtk.vtkDataObject.DATA_TIME_INDEX())
-        time = dataset.GetFieldData().GetArray("TIME").GetValue(0)
+        time = dataset.GetFieldData().GetArray("TIME").GetValue(0) * args.multiplier_for_time
 
         # Print dataset information
         # print("Dataset Information:")
@@ -320,12 +339,13 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
 
         print("======== " + str(ifile) + " Plotting " +
               variable + " of " + file_path + " ========")
+        si_unit = False if args.multiplier_for_time == 1.0 else True
         if args.method == "sc":
             plot2D_scatter(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize, si_unit, args.clim)
         elif args.method == "sf":
             plot3D_unstructed(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize, si_unit)
         elif args.method == "ff":
             UR_array = dataset.GetPointData().GetArray("UR")
             UZ_array = dataset.GetPointData().GetArray("UZ")
@@ -334,10 +354,10 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
             UZ = vtk_nump.vtk_to_numpy(UZ_array)
             # Uphi = vtk_nump.vtk_to_numpy(Uphi_array)
             plot2D_flow_field(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], UR, UZ, "2D Flow field", file_path, time, args.fontsize)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], UR, UZ, "2D Flow field", file_path, time, args.fontsize, si_unit)
         else:
             plot2D_interpolated(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize, si_unit, args.clim)
         
         if args.method != "sf" and not isinstance(args.q_surfaces, float):
             for q_surface in args.q_surfaces:
@@ -400,6 +420,10 @@ if __name__ == "__main__":
                         help='Specify xmin, xmax, ymin, ymax for the plot.')
     parser.add_argument("-qs", "--q_surfaces", nargs="+", type=float, default=0.0,
                         help="Plot the surface(s) for specified safety factor q (please note the pm sign).")
+    parser.add_argument("-tm", "--multiplier_for_time", type=float, default=1.0,
+                        help="Multiple the time-data with the specified value.")
+    parser.add_argument('-clim', nargs=2, type=float, metavar=('cmin', 'cmax'),
+                        help='Specify cmin, cmax for the contourf.')
 
     args = parser.parse_args()
 

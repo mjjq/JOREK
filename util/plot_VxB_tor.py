@@ -40,6 +40,12 @@ if __name__ == "__main__":
                         help="Define the fontsize of figure.")
     parser.add_argument('-xylim', nargs=4, type=float, metavar=('xmin', 'xmax', 'ymin', 'ymax'),
                         help='Specify xmin, xmax, ymin, ymax for the plot.')
+    parser.add_argument("-qs", "--q_surfaces", nargs="+", type=float, default=0.0,
+                        help="Plot the surface(s) for specified safety factor q (please note the pm sign).")
+    parser.add_argument("-tm", "--multiplier_for_time", type=float, default=1.0,
+                        help="Multiple the time-data with the specified value.")
+    parser.add_argument('-clim', nargs=2, type=float, metavar=('cmin', 'cmax'),
+                        help='Specify cmin, cmax for the contourf.')
     args = parser.parse_args()
 
     reader = vtk.vtkDataSetReader()
@@ -47,6 +53,7 @@ if __name__ == "__main__":
         file_path = args.folder_name + str(int(itor + 1)) + '/jorek.' + str(int(args.nstep)).zfill(5) + '.vtk'
         
         data_list, coordniates, time = pltvtk.read_data(file_path, reader, ['UR', 'UZ', 'B_R', 'B_Z'], itor)
+        time = time * args.multiplier_for_time
         UR = data_list[:, 0]
         UZ = data_list[:, 1]
         BR = data_list[:, 2]
@@ -69,12 +76,17 @@ if __name__ == "__main__":
 
         # pltvtk.plot2D_interpolated(
         #         coordniates[:, 0], coordniates[:, 1], VXB_tor, 'VxB_tor_' + str(int(itor + 1)), args.folder_name, time)
+    si_unit = False if args.multiplier_for_time == 1.0 else True
     if args.method == "sc":
         pltvtk.plot2D_scatter(
-                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize)
+                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize, si_unit, args.clim)
     else:
         pltvtk.plot2D_interpolated(
-                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize)
+                coordniates[:, 0], coordniates[:, 1], VXB_tor_n0, r'$(V \times B)_{\varphi,\ n = 0}$', args.folder_name, time, args.fontsize, si_unit, args.clim)
+        
+    if args.method != "sf" and not isinstance(args.q_surfaces, float):
+        for q_surface in args.q_surfaces:
+            pltvtk.read_and_plot_q(q_surface, file_path)
 
     # plt.connect('motion_notify_event',
     #             lambda event: pltvtk.display_values(event, coordniates[:, 0], coordniates[:, 1], VXB_tor_n0))

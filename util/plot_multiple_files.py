@@ -78,11 +78,11 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
         linestyle = linestyles[i % len(linestyles)]  # Cycle through linestyles
 
         if columns_plot_for_Y == -1:
-            columns_plot_for_Y = range(y.shape[1])  # Plot all columns
+            columns_plot_for_Y_mdf = range(y.shape[1])  # Plot all columns
         elif i == 0:
-            columns_plot_for_Y = [j - 1 for j in columns_plot_for_Y]
+            columns_plot_for_Y_mdf = [j - 1 for j in columns_plot_for_Y]
 
-        for j in columns_plot_for_Y:
+        for j in columns_plot_for_Y_mdf:
             if j < y.shape[1]:
                 if (i == 0) and (color_first_file != ""):
                     plt.plot(x, y[:, j], label=f'{column_names[j + 1]} ({file_path})', linestyle=linestyle, color=color_first_file)
@@ -90,11 +90,13 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
                     plt.plot(x, y[:, j], label=f'{column_names[j + 1]} ({file_path})', linestyle=linestyle)
             else:
                 print("Error: Value of -yc is out of range!!!")
+                print("file_path: ", file_path)
                 exit(-2)
 
     plt.xlabel(column_names[column_plot_for_X] if xlabel == "" else xlabel, fontsize=font_size)  # Set the x-axis label based on the first file
     plt.ylabel('Y-axis Label' if ylabel == "" else ylabel, fontsize=font_size)  # Set the y-axis label (customize as needed)
     legend = plt.legend()  # Show legends for each line
+    legend.set_draggable(True)
     for label in legend.get_texts():
         label.set_fontsize(10)
     plt.title(title, fontsize=font_size)  # Set the plot title

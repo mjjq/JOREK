@@ -236,15 +236,18 @@ def make_cleanall():
 
 # compile the unit test driver using 8 threads
 # inputs:
-#   driver_path: (path) path posix of the test driver
-def compile_unit_test_driver(driver_path):
+#   driver_path:   (path) path posix of the test driver
+#   debug_options: (string) define which set of pre-defined
+#                  debug options to use for compilation
+def compile_unit_test_driver(driver_path,debug_options):
   from os import system
   error = 0
   exec_name = driver_path.name.replace(driver_path.suffix,'')
   # check if the driver is valid
   if(driver_path.is_file()):
     system(''.join(['rm -f ',exec_name]))
-    system(''.join(['make -j8 ',exec_name]))
+    system(''.join(['make -j8 ',debug_options,\
+    ' ',exec_name]))
   else:
     print('Warning: driver is not a valid file!')
     error = 0
@@ -410,15 +413,17 @@ def check_results(n_failures,n_errors):
 #   remove_driver:      (boolean) if true the driver file
 #   remove_results:     (boolean) if True result files are removed
 #   log_fruit_summary:  (bool) if true, the fruit summary is logged 
+#   debug_options:      (string) define which set of pre-defined
+#                       debug options to use for compilation
 def execute_unit_test(test_path,test_basket_prefix,test_prefix,\
 test_suffix,test_ext,driver_suffix,launchers,result_dir,\
 result_prefix,result_ext,result_map,remove_driver,remove_results,\
-log_fruit_summary):
+log_fruit_summary,debug_options):
   # generate the unit test driver
   driver_path = generate_unit_test_driver(test_path,test_basket_prefix,\
   test_prefix,test_suffix,test_ext,driver_suffix,log_fruit_summary) 
   # compile the unit test driver
-  error_driver = compile_unit_test_driver(driver_path)
+  error_driver = compile_unit_test_driver(driver_path,debug_options)
   # execute the unit test driver
   error_exec = run_unit_test_driver(driver_path,launchers)
   # remove the driver
@@ -457,13 +462,15 @@ def log_unit_test_results(unit_test_log,log_header):
 #   log_fruit_summary:     (bool) if true, the fruit summary is logged 
 #   test_module_to_be_run: (list(string)) list of test module paths selected
 #                                         by the user to be run
+#   debug_options:         (string) define which set of pre-defined
+#                          debug options to use for compilation
 # outputs:
 #   exit_code:          (integer) 0 if all tests terminated successfully
 #                                 1 otherwise
 def execute_all_unit_tests(test_dirs,test_parallel,test_basket_prefix,\
 test_prefix,test_suffix,test_ext,driver_suffix,launchers,result_dir,\
 result_prefix,result_ext,result_map,remove_driver,remove_results,\
-log_fruit_summary,test_modules_to_be_run=[]):
+log_fruit_summary,test_modules_to_be_run=[],debug_options=0):
   # initialise the failure and error counters
   n_failures=0; n_errors=0; failed_tests=[]; error_tests=[];
   if(len(test_modules_to_be_run)>0):
@@ -483,7 +490,7 @@ log_fruit_summary,test_modules_to_be_run=[]):
       execute_unit_test(test,test_basket_prefix,test_prefix,\
       test_suffix,test_ext,driver_suffix,launchers,result_dir,\
       result_prefix,result_ext,result_map,remove_driver,\
-      remove_results,log_fruit_summary)
+      remove_results,log_fruit_summary,debug_options)
       # store the name of failed tests
       if(n_failures_loc!=0): 
         failed_tests.append(test.name)
@@ -560,6 +567,9 @@ def generate_argument_parser(dict_path='./util/python_utils' ):
   parser.add_argument('--test_to_run','-ttr',type=str,nargs='*',\
   required=False,action='store',dest='tests_to_run',default=[],\
   help='path from root flder to the tests to be run, default: []')
+  parser.add_argument('--debug-options','-debug',type=str,\
+  required=False,action='store',dest='debug_options',default='',\
+  help='integer defining the compilation debug option, default: empty string')
   return parser.parse_args()
 
 # Execute script ------------------------------------------------ #
@@ -573,7 +583,7 @@ if __name__ == '__main__':
   args.driver_suffix,args.launchers,args.result_dir,args.result_prefix,\
   args.result_ext,args.fruit_result_map,return_bool_from_string(args.remove_drivers),\
   return_bool_from_string(args.remove_results),return_bool_from_string(args.log_fruit_summary),\
-  test_modules_to_be_run=args.tests_to_run) 
+  test_modules_to_be_run=args.tests_to_run,debug_options=args.debug_options) 
   # exit with the appropriate exit code
   sysexit(exit_code)
 

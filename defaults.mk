@@ -283,16 +283,18 @@ ifeq (1, $(USE_STRUMPACK))
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++14
 endif
 
+ifeq (1, $(USE_STD_BESSELK))
+  DEFINES := $(DEFINES) -DUSE_STD_BESSELK
+  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++17
+  USE_BOOST = 0
+endif
+
 ifeq (1, $(USE_BOOST))
   DEFINES := $(DEFINES) -DUSE_BOOST
   LIBS    := $(LIBS) $(LIB_BOOST)
   INCLUDES := $(INCLUDES) $(INC_BOOST)
   EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++17
-endif
-
-ifeq (1, $(USE_STD_BESSELK))
-  DEFINES := $(DEFINES) -DUSE_STD_BESSELK
-  EXTRA_FLAGS := $(EXTRA_FLAGS) -lstdc++ -std=c++17
+  USE_STD_BESSELK = 0
 endif
 
 ifeq (1, $(USE_BICGSTAB))

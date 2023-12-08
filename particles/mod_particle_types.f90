@@ -195,10 +195,10 @@ contains
         p_out%B_norm  = p_in%B_norm
         p_out%q       = p_in%q
       class default
-        p_out%vpar   = 0.d0
-        p_out%mu     = 0.d0
-        p_out%B_norm = 0.d0
-        p_out%q      = 0
+        p_out%vpar    = 0.d0
+        p_out%mu      = 0.d0
+        p_out%B_norm  = 0.d0
+        p_out%q       = 0
       end select
     type is (particle_gc_Qin)
     select type (p_in => particle_in)

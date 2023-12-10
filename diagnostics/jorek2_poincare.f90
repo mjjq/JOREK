@@ -15,8 +15,10 @@ implicit none
 
 character(len=512) :: s
 real*8,allocatable  :: rp(:), zp(:), tp(:), pp(:)
-integer, allocatable :: n_turn(:)
-integer :: my_id, nr, ntour, curr
+real*8,allocatable  :: rp_all(:), zp_all(:), tp_all(:), pp_all(:)
+integer,allocatable :: ip_all(:)
+integer, allocatable :: n_turn(:), n_phis(:)
+integer :: my_id, nr, ntour, curr, nphi
 real*8  :: rr, zz, psi
 integer :: i, j, iside_i, iside_j, ip, i_lines, n_lines, i_tor, i_harm, i_var_psi, iplot_type
 integer :: i_elm, ifail, i_phi, n_phi, i_turn, i_elm_out, i_elm_prev, i_elm_tmp,i_steps
@@ -28,6 +30,9 @@ real*8  :: small_delta, small_delta_s, small_delta_t, delta_phi_local, delta_phi
 real*8  :: atmp, cur_pert
 real*8  :: psi_out
 integer :: ierr
+integer :: status
+real*8  :: loc_Pi
+integer :: loc_n_period
 
 
 write(*,*) '***************************************'
@@ -80,10 +85,10 @@ enddo
 !   +-------------------------------------------------------
 !   |# n_lines
 !   |  11
-!   |# nr   R_start   Z_start    psi_start   n_turns
-!   |   1    1.700      0.000     0.000      100
-!   |  10    1.800      0.000     0.000      200
-!   |  11    1.850      0.200     0.000      800
+!   |# nr   R_start   Z_start    psi_start   n_turns   n_phis
+!   |   1    1.700      0.000     0.000      100       1500
+!   |  10    1.800      0.000     0.000      200       1500
+!   |  11    1.850      0.200     0.000      800       1500
 !   +-------------------------------------------------------
 !
 open(21, file='stpts', status='old', action='read', iostat=ierr)
@@ -98,19 +103,20 @@ if ( ierr == 0 ) then ! stpts file exists, use it.
   end if
   read(21, '(A)') s ! read comment line (ignored)
   
-  allocate( R_start(n_lines), Z_start(n_lines), P_start(n_lines), n_turn(n_lines) )
+  allocate( R_start(n_lines), Z_start(n_lines), P_start(n_lines), n_turn(n_lines), n_phis(n_lines) )
   
   curr = 0
   do
     if ( curr >= n_lines ) exit
     
-    read(21, *) nr, rr, zz, psi, ntour
+    read(21, *) nr, rr, zz, psi, ntour, nphi
     
     if ( ( nr == 1 ) .and. ( curr == 0 ) ) then
       R_start(1) = rr
       Z_start(1) = zz
       P_start(1) = psi
       n_turn(1)  = ntour
+      n_phis(1)  = nphi
     else if ( curr == 0 ) then
       write(*,*) 'ERROR in stpts file: first start point must be nr=1.'
       stop
@@ -127,6 +133,7 @@ if ( ierr == 0 ) then ! stpts file exists, use it.
         Z_start(i_lines) = Z_start(curr) + ( zz - Z_start(curr) ) * ( real(i_lines-curr) / real(nr-curr) )
         P_start(i_lines) = P_start(curr) + ( psi- P_start(curr) ) * ( real(i_lines-curr) / real(nr-curr) )
         n_turn(i_lines)  = nint( n_turn(curr) + real( ntour - n_turn(curr) ) * ( real(i_lines-curr) / real(nr-curr) ) )
+        n_phis(i_lines)  = nphi
       end do
       
     end if
@@ -147,19 +154,20 @@ else ! if no stpts file exists, use the following hard-coded default startpoints
     R_start(i_lines) = 1.7156 + (2.18-1.7156) * float(i_lines-1)/float(n_lines-1)
     Z_start(i_lines) = 0.12237
     P_start(i_lines) = 0.d0
+    n_phis(i_lines)  = 1500
   end do
 
   n_turn  = 500
  
 end if
 
-n_phi   = 1500
-delta_phi = 2.d0 * PI / float(n_period*n_phi)
 tol       = 1.d-6
 
 i_var_psi = 1
 
 allocate(Rp(maxval(n_turn)),Zp(maxval(n_turn)), Tp(maxval(n_turn)),Pp(maxval(n_turn)))
+allocate(Rp_all(maxval(n_turn) * n_lines),Zp_all(maxval(n_turn) * n_lines), Tp_all(maxval(n_turn) * n_lines),Pp_all(maxval(n_turn) * n_lines))
+allocate(ip_all(n_lines))
 
 Rmin = 1.d20; Rmax = -1.d20; Zmin = 1.d20; Zmax=-1.d20
 do i=1,node_list%n_nodes
@@ -195,17 +203,39 @@ else
   call nframe(1,11,1,0.d0,1.2d0,-PI,PI,'Poincare',8,'r [m]',4,'theta',5)
 endif
 
+loc_Pi       = PI
+loc_n_period = n_period
+Rp_all = 0.d0
+Zp_all = 0.d0
+Pp_all = 0.d0
+Tp_all = 0.d0
+ip_all = 0
 ! --- Trace the fieldlines
+!$omp parallel do default(none) &
+!$omp shared(n_lines, n_phis, R_start, Z_start, P_start, &
+!$omp node_list, element_list, n_turn, element_neighbours, ES, &
+!$omp loc_Pi, loc_n_period, Rp_all, Zp_all, Pp_all, Tp_all, ip_all) &
+!$omp private(i_lines, n_phi, delta_phi, &
+!$omp ip, R_out, Z_out, i_elm, s_out, t_out, ifail, &
+!$omp R_line, Z_line, p_line, s_line, t_line, i_turn, &
+!$omp i_phi, delta_phi_local, i_steps, delta_phi_step, &
+!$omp delta_s, delta_t, s_mid, t_mid, p_mid, small_delta_s, &
+!$omp small_delta_t, small_delta, i_elm_prev, i_elm_tmp, R_in, &
+!$omp Z_in, R, Z, Rp, Zp, Tp, Pp, psi_out, iplot_type)  &
+!$omp schedule(static)
 L_IL: do i_lines=1,n_lines
+  n_phi   = n_phis(i_lines) !1500
+  delta_phi = 2.d0 * loc_Pi / float(loc_n_period*n_phi)
+
   ip = 0
 
   write(*,*)
-  write(*,'(1x,2(a,i6),a,2f8.3)') 'Line',i_lines,' of',n_lines,' started at',R_start(i_lines),Z_start(i_lines)
+  write(*,'(1x,3(a,i6),a,2f8.3)') 'Line',i_lines,' of',n_lines,', n_phi = ', n_phi,', started at',R_start(i_lines),Z_start(i_lines)
 
   call find_RZ(node_list,element_list,R_start(i_lines),Z_start(i_lines),R_out,Z_out,i_elm,s_out,t_out,ifail)
  
-  if (ifail .ne. 0) write(*,*) "Can not find RZ,", ifail 
-  if (ifail .ne. 0) exit
+  if (ifail .ne. 0) write(*,*) "Can not find RZ,", ifail, ' for line: ', i_lines
+  if (ifail .ne. 0) continue
 
   R_line = R_start(i_lines)
   Z_line = Z_start(i_lines)
@@ -215,7 +245,7 @@ L_IL: do i_lines=1,n_lines
   
   L_IT: do i_turn = 1, n_turn(i_lines)
     if ( mod(i_turn-1,max(n_turn(i_lines)/6+1,5)) == 0 ) then
-      write(*,'(3x,2(a,i6))') 'Turn',i_turn,' of',n_turn(i_lines)
+      write(*,'(3x,3(a,i6))') 'Turn',i_turn,' of',n_turn(i_lines), ' for line: ', i_lines
     end if
 
     do i_phi=1,n_phi
@@ -416,7 +446,26 @@ L_IL: do i_lines=1,n_lines
      
   enddo L_IT
   
-  write(*,'(3x,a,i6,a)') '=>',ip,' points'
+
+  ip_all(i_lines) = ip
+  Rp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Rp(1 : ip)
+  Zp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Zp(1 : ip)
+  Pp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Pp(1 : ip)
+  Tp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Tp(1 : ip)
+
+end do L_IL
+!$omp end parallel do
+!$omp barrier
+
+! write the data into files
+do i_lines=1,n_lines
+  ip = ip_all(i_lines)
+  Rp(1 : ip) = Rp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
+  Zp(1 : ip) = Zp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
+  Pp(1 : ip) = Pp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
+  Tp(1 : ip) = Tp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
+
+  write(*,'(3x,a,i6,a,i6)') '=>',ip,' points for line: ', i_lines
 
   do i=1,ip
     write(21,'(4e18.8)') Rp(i),Zp(i)
@@ -427,16 +476,17 @@ L_IL: do i_lines=1,n_lines
   write(21,*)
   write(22,*)
   write(22,*)
-  
+
   call lincol(mod(i_lines,8))
-   
+  
   if (iplot_type .eq. 1) then
     call pplot(1,1,Rp,Zp,ip,1)
   else
     call pplot(1,1,Pp,Tp,ip,1)
   endif
-  
-end do L_IL
+enddo
+
+
 
 close(21)
 close(22)

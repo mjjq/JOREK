@@ -240,8 +240,8 @@ program jorek2_IDS
       call fill_radiation_IDS(first_step, t_start*fact_time, radiation_ids)  
     endif
 
-    stat_mhd = 1;   stat_core = 1;   stat_rad = 1;   stat_eq = 1;   stat_wall = 1;
-    stat_pass= 1;   stat_act  = 1;
+    stat_mhd = 1;   stat_core = 1;   stat_rad = 1;   stat_eq  = 1;   stat_wall = 1;
+    stat_pass= 1;   stat_act  = 1;   stat_sum = 1;   stat_dis = 1; 
 
     ! --- Put IDSs into database
     if (first_step) then  

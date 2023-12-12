@@ -34,7 +34,7 @@ module mod_expression
   
   
   public
-  private add
+  !private add
   
   
   
@@ -128,6 +128,7 @@ module mod_expression
     call add(exprs_all, 'Jtor        ', 'Physical current density (phi component)              ')
     call add(exprs_all, 'Jpol        ', 'Poloidal current value in the poloidal field direction')
     call add(exprs_all, 'FFprime_loc ', 'Local FFprime value, calculated from 3D JxB= grad p   ')
+    call add(exprs_all, 'p_prime_loc ', 'Local derivative of the pressure w.r.t. psi           ')
     call add(exprs_all, 'JxB_R       ', 'JxB force (R component)                               ')
     call add(exprs_all, 'JxB_Z       ', 'JxB force (Z component)                               ')
     call add(exprs_all, 'JxB_phi     ', 'JxB force (phi component)                             ')
@@ -201,6 +202,7 @@ module mod_expression
     call add(exprs_all, 'E_crit      ', 'E_crit for RE avalanching (Connor-Hastie)             ')
     call add(exprs_all, 'E_dreicer   ', 'Electrical field for Dreicer RE primary source        ')
     call add(exprs_all, 'theta_geo   ', 'Polar angle with respect to Rgeo, Zgeo                ')
+    call add(exprs_all, 'unity       ', 'Just 1, trick needed for flux surface average         ')
     call add(exprs_all, 'bnd_normal_R', 'R component of unit vector pointing outside JOREKs bnd', 'boundary    ')
     call add(exprs_all, 'bnd_normal_Z', 'Z component of unit vector pointing outside JOREKs bnd', 'boundary    ')
     call add(exprs_all, 'Bnorm       ', 'Normal     magnetic field to the JOREKs boundary      ', 'boundary    ')
@@ -218,7 +220,8 @@ module mod_expression
     call add(exprs_all, 'heatF_par_cv', 'Convective parallel heat flux (normal to the boundary)', 'boundary    ')
     call add(exprs_all, 'heatF_prp_cv', 'Convective perpend  heat flux (normal to the boundary)', 'boundary    ')
     call add(exprs_all, 'heatF_tot_cv', 'Convective total    heat flux (normal to the boundary)', 'boundary    ')
-    call add(exprs_all, 'heatF_total ', 'Total heat flux (normal to the boundary)              ', 'boundary    ')
+    call add(exprs_all, 'heatF_tot_th', 'Total thermal       heat flux (normal to the boundary)', 'boundary    ')
+    call add(exprs_all, 'heatF_total ', 'Total               heat flux (normal to the boundary)', 'boundary    ')
     call add(exprs_all, 'kinEn_F_perp', 'Perpend kinetic energy flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'kinEn_F_par ', 'Parall  kinetic energy flux (normal to the boundary)  ', 'boundary    ')
     call add(exprs_all, 'kinEn_F_tot ', 'Total   kinetic energy flux (normal to the boundary)  ', 'boundary    ')
@@ -243,6 +246,7 @@ module mod_expression
     call add(exprs_all, 'bg_imp_rad  ', 'Background impurity radiation                          ')
 #endif
     ! --- List of volume and boundary integrals
+    call add(exprs_all_int, 'Time        ', 'Time                                                  ')
     call add(exprs_all_int, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
     call add(exprs_all_int, 'psi_axis    ', 'psi at magnetic axis                                  ')
     call add(exprs_all_int, 'R_axis      ', 'R of magnetic axis                                    ')
@@ -310,6 +314,9 @@ module mod_expression
     call add(exprs_all_int, 'Ip_tot      ', 'Total toroidal plasma current                         ')
     call add(exprs_all_int, 'Ip_in       ', 'Toroidal plasma current (inside  LCFS)                ')
     call add(exprs_all_int, 'Ip_out      ', 'Toroidal plasma current (outside LCFS)                ')
+    call add(exprs_all_int, 'int3d_jR_tot', 'Integral of the toroidal current density               ')
+    call add(exprs_all_int, 'int3d_jR_in ', 'Integral of the toroidal current density (inside  LCFS)')
+    call add(exprs_all_int, 'int3d_jR_out', 'Integral of the toroidal current density (outside LCFS)')
     call add(exprs_all_int, 'li3         ', 'Internal inductance inside LCFS, li(3)                ')
     call add(exprs_all_int, 'li3_tot     ', 'Internal inductance inside grid, li(3)                ')
     call add(exprs_all_int, 'beta_p      ', 'Poloidal beta, of the plasma inside LCFS              ')
@@ -553,9 +560,9 @@ module mod_expression
   
   
   !> Evaluate one/several expressions at one/several poloidal and one/several toroidal positions.
-  subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr)
+  subroutine eval_expr(eq, units, expr_list, pol_pos_list, tor_pos_list, result, ierr, flux_av, only_n0)
     use nodes_elements, only: aux_node_list
-
+    
     character(len=64), parameter :: THIS_ROUTINE_NAME = trim(THIS_MOD_NAME) // ':eval_expr'
     
     ! --- Routine parameters
@@ -566,6 +573,8 @@ module mod_expression
     type(t_tor_pos_list), target, intent(in)    :: tor_pos_list
     real*8, allocatable,          intent(inout) :: result(:,:,:,:)
     integer,                      intent(out)   :: ierr
+    logical, optional,            intent(in)    :: flux_av   !< Prepare data for proper flux surface average?
+    logical, optional,            intent(in)    :: only_n0   !< only use n=0 toroidal harmonic
     
     ! --- Local variables
     type(t_pol_pos), pointer :: pol_pos
@@ -604,6 +613,7 @@ module mod_expression
     real*8 :: T0_corr, Ti0_corr, Te0_corr, r0_corr, rn0_corr
     real*8 :: T_or_Te, T_or_Te_corr, T_or_Te_0 
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
+    real*8 :: p_prime_loc
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
     real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var), va(n_var), aux(10)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
@@ -613,9 +623,10 @@ module mod_expression
     real*8  ::  pres_flux_par, pres_flux_tot, kin_flux_par, kin_flux_tot, neut_part_flux, ExB_norm 
     ! --- Normalization factors
     real*8  :: rho_norm, fact_time, fact_mu_zero, fact_ne, fact_rho, fact_T, fact_vpar,            &
-      fact_resistiv, fact_Er, fact_flux, fact_rad
+      fact_resistiv, fact_Er, fact_flux, fact_rad, fact_ffp_si
     real*8  :: rn0, rn0_s, rn0_t, rn0_ss, rn0_tt, rn0_st, rn0_p, rn0_pp, rn0_R, rn0_Z
     real*8  :: rimp0, rimp0_s, rimp0_t, rimp0_ss, rimp0_tt, rimp0_st, rimp0_p, rimp0_pp, rimp0_R, rimp0_Z
+    real*8  :: flux_av_fact
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
     real*8  :: Te_corr_eV, Te_eV
@@ -629,7 +640,7 @@ module mod_expression
 #endif
     !   -Effective charge of all species
     real*8  :: Z_eff
-#ifdef WITH_Impurities
+
     ! See https://www.jorek.eu/wiki/doku.php?id=model500_501_555 for details
     real*8  :: rimp0_corr
     ! Atomic physics coefficients:
@@ -648,7 +659,6 @@ module mod_expression
     real*8, allocatable :: P_imp(:)
     real*8  :: E_ion
     integer*8  :: ion_i, ion_k
-#endif
     
     ierr = 0
     
@@ -815,6 +825,10 @@ module mod_expression
               
               do i_tor = 1, n_tor
                 
+                if (present(only_n0)) then 
+                  if (only_n0 .and. (i_tor>1)) cycle
+                endif
+
                 hhz    = HZ   (i_tor)
                 hhz_p  = HZ_p (i_tor)
                 hhz_pp = HZ_pp(i_tor)
@@ -1258,11 +1272,12 @@ module mod_expression
 
           psi_norm = get_psi_n(A30, Z)
           psi_abs  = sqrt(A30_R*A30_R + A30_Z * A30_Z)
+          
+          p_prime_loc = 0.d0
           if (psi_abs > 1.d-6) then
-            FFprime_loc = zj0 + (R**2.d0) * (A30_R*P0_R + A30_Z*P0_Z)/(psi_abs**2.d0)
-          else
-            FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
+            p_prime_loc = (A30_R*P0_R + A30_Z*P0_Z)/(psi_abs**2.d0)
           endif
+          FFprime_loc = zj0 + (R**2.d0) * p_prime_loc
 
 #else
           BB2      = (F0*F0 + ps0_R * ps0_R + ps0_Z * ps0_Z ) / BigR**2
@@ -1286,13 +1301,17 @@ module mod_expression
           Bp_Z     =   0.
           B_R      = ( BR_R + BZ_R + Bp_R ) / Btot
           B_Z      = ( BR_Z + BZ_Z + Bp_Z ) / Btot
-
+          
+          p_prime_loc = 0.d0
           if (psi_abs > 1.d-6) then
-            FFprime_loc = zj0 + (R**2.d0) * (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
-          else
-            FFprime_loc = zj0 !--- not fully correct, but better than to put 0...
+            p_prime_loc = (ps0_R*P0_R + ps0_Z*P0_Z)/(psi_abs**2.d0)
           endif
+          FFprime_loc = zj0 + (R**2.d0) * p_prime_loc
 #endif
+          flux_av_fact = 1.d0
+          if (present(flux_av)) then 
+            if (flux_av) flux_av_fact = R**2.0
+          endif
 
           Kappa_R    = ( Btot*BR*BR_R - BR*BR*B_R   - BZ*BR*B_Z   + Btot*BZ*BR_Z - Btot*Btor**2/BigR ) / Btot**3.
           Kappa_Z    = ( Btot*BR*BZ_R - BR*BZ*B_R   - BZ*BZ*B_Z   + Btot*BZ*BZ_Z                     ) / Btot**3.
@@ -1300,7 +1319,7 @@ module mod_expression
 
           Jtor        = -zj0/BigR
           Jpol        = FFprime_loc * Btheta     / F0     !Jpol = F' Bpol
-          Jpar        = (JpolR*BR + JpolZ*BZ + Jtor*Btor) / Btot
+          Jpar        = (JpolR*BR + JpolZ*BZ + Jtor*Btor) / Btot * sign(1.d0, F0)
           Jpar_ionsat = r0 * vpar0 * Btot 
 
           ! --- Velocity
@@ -1393,8 +1412,6 @@ module mod_expression
 #else
           neut_part_flux= 0.d0
 #endif    
-          dpsi_dt   = BigR*(ps0_s*u0_t - ps0_t*u0_s)/xjac + eta_T*zj0 - F0*u0_p 
-          ExB_norm  = -dpsi_dt * (ps0_R*nmlR + ps0_Z*nmlZ) / (BigR**2.d0) 
          
           ! --- Other parameters (combination of the main variables)
           Er       = 0.d0
@@ -1459,10 +1476,7 @@ module mod_expression
           ne0_20     = max(1.d-8, r0) * central_density
           ln_Lambda0 = 14.9 - 0.5 * log( ne0_20 ) + log( Te0_eV / 1000.d0 ) ! Eq. (2.7) at thermal speeds
           ln_Lambda  = 14.6 + 0.5 * log( Te0_eV / ne0_20 )                  ! Eq. (2.9) at relativistic energies
-          
-          E_par = - R * ( eta_T * zj0 / R**2                                                       &
-                        + 2.d0*tauIC / r0 * ( (Pi0_R * Ps0_Z - Pi0_Z * Ps0_R) / R + F0 * Pi0_p / R**2 ) )
-          
+                  
           E_crit = C_LIGHT**2 * EL_CHG**3 * ln_Lambda * MU_ZERO**2.5 * (central_density*1.d20*central_mass*MASS_PROTON)**1.5 * r0 / ( 4 * PI * MASS_ELECTRON * MASS_PROTON * central_mass )
           
           E_dreicer = EL_CHG**3 * ln_Lambda0 * MU_ZERO**1.5 * (central_density*1.d20*central_mass*MASS_PROTON)**2.5 * r0 / ( 2.d0 * PI * EPS_ZERO**2 * (MASS_PROTON*central_mass)**2 * T0 )
@@ -1583,9 +1597,25 @@ module mod_expression
           if (Z_eff > imp_adas(1)%n_Z)  Z_eff = imp_adas(1)%n_Z
   
 #endif
-          if ( .not. with_impurities ) Z_eff = 1
-          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_T)           
+          if ( .not. with_impurities ) then 
+            Z_eff      = 1
+            r0_corr    = corr_neg_dens(r0)
+            rimp0      = 0.d0
+            rimp0_corr = 0.d0
+            beta_imp   = 0.d0
+          endif
 
+          call coulomb_log_ei(T_or_Te, T_or_Te_corr, r0, r0_corr, rimp0, rimp0_corr, beta_imp, ln_Lambda)
+          call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, ln_Lambda, eta_T)          
+          
+#ifdef fullmhd
+          dpsi_dt   = delta_g(var_A3) / tstep 
+#else
+          dpsi_dt   = delta_g(var_psi) / tstep  !BigR*(ps0_s*u0_t - ps0_t*u0_s)/xjac + eta_T*zj0 - F0*u0_p 
+#endif
+          ExB_norm  = -dpsi_dt * (ps0_R*nmlR + ps0_Z*nmlZ) / (BigR**2.d0)   
+          E_par     = - R * ( eta_T * zj0 / R**2                                                       &
+                        + 2.d0*tauIC / r0 * ( (Pi0_R * Ps0_Z - Pi0_Z * Ps0_R) / R + F0 * Pi0_p / R**2 ) )
 
           ! --- Factors for switching between JOREK normalized and SI units.
           if ( units == SI_UNITS ) then
@@ -1600,6 +1630,7 @@ module mod_expression
              fact_Er       = F0 / fact_time
              fact_rad      = 1.d0/(2.d0/3.d0*MU_ZERO**1.5d0*(central_mass*MASS_PROTON*central_density*1.d20)**0.5d0) ! factor for Prad (not Lrad)
              fact_flux     = 1.d0/(mu_zero*fact_time)  
+             fact_ffp_si   = -1.d0   ! En SI:  J_phi * mu_0 * R ~ FF'_SI, then FF'_SI = -FF'_JOREK
           else if ( units == JOREK_UNITS ) then
              rho_norm      = 1.d0
              fact_time     = 1.d0
@@ -1612,6 +1643,7 @@ module mod_expression
              fact_Er       = 1.d0
              fact_rad      = 1.d0
              fact_flux     = 1.d0 
+             fact_ffp_si   = 1.d0
           end if
           
           ! --- factor to calculate ion saturation current in JOREK units
@@ -1671,7 +1703,7 @@ module mod_expression
                 res = u0
                 
               case ( 'Phi' )
-                res = u0 * F0 !### sign?
+                res = u0 * F0 / fact_time !### sign?
                 
               case ( 'zj' )
                 res = zj0 / fact_mu_zero
@@ -1814,7 +1846,10 @@ module mod_expression
                 res = Jtor / fact_mu_zero
 
               case ( 'FFprime_loc' )
-                res = FFprime_loc
+                res = FFprime_loc * fact_ffp_si
+
+              case ( 'p_prime_loc' )
+                res = p_prime_loc / fact_mu_zero
 
               case ( 'Jpol' )
                 res = Jpol / fact_mu_zero
@@ -1911,6 +1946,9 @@ module mod_expression
 
               case ( 'theta_geo'    )
                 res = theta_geo
+              
+              case ( 'unity' )
+                res = 1.d0
 
               case ( 'bnd_normal_R' )
                 res = nmlR
@@ -1966,8 +2004,11 @@ module mod_expression
               case ( 'heatF_tot_cv' )
                 res = pres_flux_tot * fact_flux
 
-              case ( 'heatF_total'  )
+              case ( 'heatF_tot_th'  )
                 res = (pres_flux_tot + ZKperp_flux + ZKpar_flux) * fact_flux
+
+              case ( 'heatF_total'  )
+                res = (pres_flux_tot + ZKperp_flux + ZKpar_flux + kin_flux_tot) * fact_flux
 
               case ( 'kinEn_F_par' )
                 res = kin_flux_par * fact_flux
@@ -2039,7 +2080,7 @@ module mod_expression
                 
             end select
             
-            result(itorpos, ipolpos, jpolpos, iexpr) = res
+            result(itorpos, ipolpos, jpolpos, iexpr) = res * flux_av_fact  ! factor is R^2 for proper flux surface average, otherwise 1
             
           end do loop_expr
         end do loop_tor

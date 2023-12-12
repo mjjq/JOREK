@@ -55,6 +55,7 @@ subroutine preset_parameters
   restart      = .false.
   import_equil = .false.
   regrid       = .false.
+  regrid_from_rz = .false.
   rst_format   = 0             ! use 'old' format for restart import
   write_ps     = .true.           ! write postscript file at the end of the run 
   

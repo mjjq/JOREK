@@ -45,6 +45,11 @@ module mod_plasma_functions
     tauIC_nominal      = central_mass * mass_proton / ( EL_CHG * F0 * sqrt_mu0_rho0 * 2.d0 )
     eta_Spitzer        = ( 1.65d-9 * lnA_center * Te0_keV**(-1.5d+0) ) / sqrt_mu0_over_rho0
 
+    ! --- Assign minimum values for parallel conduction if not given
+    if (T_min_ZKpar  < -1.d10) T_min_ZKpar  = T_min   
+    if (Ti_min_ZKpar < -1.d10) Ti_min_ZKpar = T_min   
+    if (Te_min_ZKpar < -1.d10) Te_min_ZKpar = T_min   
+
   
   end subroutine initialise_reference_parameters
   

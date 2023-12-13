@@ -8,7 +8,7 @@ n_nodes=150001
 n_elements=150001
 n_boundary=1001
 n_pieces=10001
-debugoptions= "-g -p -fcheck=all"
+debugoptions=""
 options=""
 description="Gyroaverage synchrotron image from gc distribution, model$jorekmodel, n_tor=$tor_harmonics."
 mpitasks=2
@@ -16,7 +16,7 @@ requiredfiles="input jorek_restart.h5"
 extra_remote_files="jorek_restart.h5 ffprime_generated jorek_temperature_highres jorek_density_highres"
 restart_file="particle_restart.h5"
 result_file="result_intensities.h5"
-threshold=1.e-8
+threshold=1.e-16
 test_dataset="pixel_filter_intensities"
 particle_example="camera_RE_gyroaverage_synchrotron_example"
 particle_example_dir="particles/postprocessors/examples"

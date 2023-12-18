@@ -37,6 +37,7 @@ program jorek2_IDS
   integer   :: required,provided,StatInfo, resultlength
   integer*4 :: rank, comm_size 
   character(len=MPI_MAX_PROCESSOR_NAME) :: name
+  character(len=1000) :: simulation_description
 
   type(ids_mhd), target   :: mhd_ids
   type(ids_equilibrium)   :: equilibrium_ids
@@ -48,12 +49,13 @@ program jorek2_IDS
   type(ids_pf_active)     :: pf_active
   type(ids_disruption)    :: disruption_ids
 
-  namelist /imas_params/ shot_number, run_number, user, database, i_begin, i_end, &
+  namelist /imas_params/ shot_number, run_number, user, database, i_begin, i_end,    &
                          export_mhd, export_radiation, export_core_profiles, n_grid, &
                          export_equilibrium, rad_only_projections_h5, export_wall,   &
                          export_pf_passive, export_pf_active, passive_coil_geo_file, &
                          active_coil_geo_file, wall_thickness, export_disruption,    &
-                         export_summary, overwrite_entry, i_jump_steps 
+                         export_summary, overwrite_entry, i_jump_steps,              &
+                         simulation_description 
 
   ! --- Necessary initialization ------------------
   ! --- MPI initialization (for wall current resconstruction)
@@ -135,6 +137,8 @@ program jorek2_IDS
   n_grid               = 100           !< Number of points used for 1D and 2D profiles  
   wall_thickness       = 0.06          !< Thickness used for the STARWALL thin wall (default value is for ITER)
   passive_coil_geo_file= 'None'
+  active_coil_geo_file = 'None'
+  simulation_description = 'JOREK simulation'
 
   call getenv('USER',user)
   
@@ -218,7 +222,7 @@ program jorek2_IDS
     ! --- Fill IDSs that share common quantities
     if (export_equilibrium .or. export_summary .or. export_disruption)  then
       call fill_IDSs_w_common_quantities(first_step, time_SI, n_grid, export_equilibrium, export_summary, export_disruption, &
-                                        equilibrium_ids, summary_ids, disruption_ids)
+                                        equilibrium_ids, summary_ids, disruption_ids, simulation_description)
     endif
 
     ! --- Fill and export a wall IDS

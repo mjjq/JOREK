@@ -1137,7 +1137,7 @@ module mod_jorek2IMAS
   ! --- This subroutine fills different IDSs, they are filled together here to calculate 0D
   ! --- quantities by calling mod_integrals3D only once and avoid duplications
   subroutine fill_IDSs_w_common_quantities(first_step, time_SI, n_grid, export_equil, export_summary, export_disruption, &
-                                           equilibrium_ids, summary_ids, disruption_ids)
+                                           equilibrium_ids, summary_ids, disruption_ids, simulation_description)
 
     implicit none
 
@@ -1149,6 +1149,7 @@ module mod_jorek2IMAS
     type(ids_equilibrium),  intent(inout)  :: equilibrium_ids
     type(ids_summary),      intent(inout)  :: summary_ids
     type(ids_disruption),   intent(inout)  :: disruption_ids
+    character(len=1000)                    :: simulation_description
 
     ! --- Local parameters
     real*8, allocatable :: res0D(:)
@@ -1163,7 +1164,7 @@ module mod_jorek2IMAS
     call zeroD_quantities(command_tmp, first_step==.true., ierr, res0D)
 
     if (export_equil)       call fill_equilibrium_IDS(first_step, time_SI, n_grid, res0D, equilibrium_ids)  
-    if (export_summary)     call fill_summary_IDS(first_step, time_SI, res0D, summary_ids)  
+    if (export_summary)     call fill_summary_IDS(first_step, time_SI, res0D, summary_ids, simulation_description)  
     if (export_disruption)  call fill_disruption_IDS(first_step, time_SI, res0D, disruption_ids) 
   
   
@@ -1487,7 +1488,7 @@ module mod_jorek2IMAS
 
 
 
-  subroutine fill_summary_IDS(first_step, time_SI, res0D, summary_ids)  
+  subroutine fill_summary_IDS(first_step, time_SI, res0D, summary_ids, simulation_description)  
 
     implicit none
 
@@ -1496,6 +1497,7 @@ module mod_jorek2IMAS
     real*8,              intent(in) :: time_SI
     real*8, allocatable, intent(in) :: res0D(:)     ! List of 0D quantities defined in exprs_all_int (mod_expressions.f90)
     type(ids_summary),  intent(inout)  :: summary_ids
+    character(len=1000)             :: simulation_description
    
     ! --- Local parameters 
     integer    :: i, j, k, m, var_rad, i_var, i_tor, index, index_node, my_id, ierr
@@ -1510,6 +1512,8 @@ module mod_jorek2IMAS
     n_slice = 1;   i_slice = 1
     allocate( summary_ids%time(n_slice) )
     summary_ids%ids_properties%homogeneous_time = 1    
+    allocate(summary_ids%ids_properties%comment(1000))
+    summary_ids%ids_properties%comment = simulation_description
     summary_ids%time(i_slice) = time_SI 
 
     ! --- Information about the toroidal field

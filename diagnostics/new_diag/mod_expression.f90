@@ -99,6 +99,7 @@ module mod_expression
   
   !> Initialization for the module. Should be called before any other 
   subroutine init_expr()
+    character(25)    :: s1, s2  
     
     exprs_all%n_expr     = 0
     exprs_all_int%n_expr = 0
@@ -147,16 +148,11 @@ module mod_expression
     call add(exprs_all, 'nimp        ', 'Impurity Density                                      ')
     call add(exprs_all, 'Z_eff       ', 'Effective charge of all species                       ')
 #endif
-    call add(exprs_all, 'aux01       ', 'Particle projection #01                               ')
-    call add(exprs_all, 'aux02       ', 'Particle projection #02                               ')
-    call add(exprs_all, 'aux03       ', 'Particle projection #03                               ')
-    call add(exprs_all, 'aux04       ', 'Particle projection #04                               ')
-    call add(exprs_all, 'aux05       ', 'Particle projection #05                               ')
-    call add(exprs_all, 'aux06       ', 'Particle projection #06                               ')
-    call add(exprs_all, 'aux07       ', 'Particle projection #07                               ')
-    call add(exprs_all, 'aux08       ', 'Particle projection #08                               ')
-    call add(exprs_all, 'aux09       ', 'Particle projection #09                               ')
-    call add(exprs_all, 'aux10       ', 'Particle projection #10                               ')
+    do i = 1,n_var
+      write(s1,'(a,i2.2)') 'aux', i
+      write(s2,'(a,i2.2)') 'Particle projection #', i
+      call add(exprs_all, s1, s2)
+    enddo 
     call add(exprs_all, 'T           ', 'Temperature (Electrons plus Ions)                     ')
     call add(exprs_all, 'Te          ', 'Electron temperature (assuming Ti=Te)                 ')
     call add(exprs_all, 'vpar        ', 'Parallel Velocity (along magnetic field lines)        ')
@@ -615,7 +611,7 @@ module mod_expression
     real*8 :: FFprime_loc, Jpol, JpolR, JpolZ, Btot, Jpar, Jpar_ionsat, fact_jsat, Bnorm, Btan, Jtor
     real*8 :: p_prime_loc
     real*8 :: nmlR, nmlZ, theta_geo, VR, VZ, V_phi, Vpar_tot, VperpR, VperpZ
-    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var), va(n_var), aux(10)
+    real*8 :: hh, hh_s, hh_t, hh_ss, hh_tt, hh_st, hhz, hhz_p, hhz_pp, sz, vv(0:n_var), va(n_var), aux(20)
     real*8 :: delta_g(n_var), delta_s(n_var), delta_t(n_var)
     ! --- Fluxes
     real*8  ::  ZKpar_flux, ZKipar_flux, ZKepar_flux, ZKperp_flux, ZKiperp_flux, ZKeperp_flux,     &
@@ -950,8 +946,8 @@ module mod_expression
                 rimp0_pp  = rimp0_pp    + vv(var_rhoimp) * sz * hh    * hhz_pp
 
                 ! --- Particle projections
-		do n = 1, n_var
-                  aux(n) = aux(n) + va(n) * sz * hh    * hhz
+                do n = 1, n_var
+                   aux(n) = aux(n) + va(n) * sz * hh    * hhz
                 end do
 
                 ! --- AR

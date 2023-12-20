@@ -1,4 +1,4 @@
-subroutine grid_double_xpoint_inside_wall(node_list, aux_node_list, element_list)
+subroutine grid_double_xpoint_inside_wall(node_list, element_list)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point

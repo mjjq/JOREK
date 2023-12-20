@@ -1,5 +1,5 @@
 !> Create a square grid based on the Bezier/modified cubic Hermite representation
-subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_list,aux_node_list,element_list)
+subroutine grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,boundary,node_list,element_list)
 
   use mod_parameters
   use data_structure

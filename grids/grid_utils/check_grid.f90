@@ -1,4 +1,4 @@
-subroutine check_grid(my_id, node_list, aux_node_list, element_list)
+subroutine check_grid(my_id, node_list, element_list)
 
 use mod_parameters
 use data_structure

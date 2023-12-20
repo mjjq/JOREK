@@ -22,7 +22,6 @@ implicit none
 
 ! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
-type (type_node_list), pointer, intent(inout) :: aux_node_list
 type (type_element_list), intent(inout) :: element_list
 
 ! --- local variables

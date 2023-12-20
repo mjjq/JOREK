@@ -11,7 +11,7 @@ contains
 
 
 !< Create a grid from parameters n_flux, n_pol
-subroutine flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+subroutine flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
   use phys_module
   use data_structure
   use mpi_mod
@@ -44,7 +44,7 @@ subroutine flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id
         if (grid_to_wall) then
           call grid_double_xpoint_inside_wall(node_list, aux_node_list, element_list)
         else
-          call grid_double_xpoint(node_list, aux_node_list, element_list)
+          call grid_double_xpoint(node_list, element_list)
         endif
       else
   

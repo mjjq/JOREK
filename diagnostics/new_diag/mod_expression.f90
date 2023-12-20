@@ -99,8 +99,9 @@ module mod_expression
   
   !> Initialization for the module. Should be called before any other 
   subroutine init_expr()
-    character(25)    :: s1, s2
-    integer          :: i
+    character(5)    :: s1
+    character(23)     :: s2
+    integer         :: i
     
     exprs_all%n_expr     = 0
     exprs_all_int%n_expr = 0

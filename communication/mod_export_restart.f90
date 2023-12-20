@@ -86,7 +86,7 @@ subroutine export_binary_restart(node_list,aux_node_list,element_list,filename)
      write(21) node_list%node(i)%x
      write(21) node_list%node(i)%values
      write(21) node_list%node(i)%deltas
-     if(export_aux_node_list) then
+     if(export_aux_node_list .and. associated(aux_node_list) .and. aux_node_list%n_nodes .gt. 0) then
         write(21) aux_node_list%node(i)%values
      endif
 #ifdef fullmhd
@@ -286,10 +286,10 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
 #include "version.h"
  
   ! --- Routine parameters
-  type(type_node_list),    intent(in) :: node_list
-  type(type_node_list), pointer,    intent(in) :: aux_node_list
-  type(type_element_list), intent(in) :: element_list
-  character*(*),           intent(in) :: filename
+  type(type_node_list),         intent(in) :: node_list
+  type(type_node_list), pointer,intent(in) :: aux_node_list
+  type(type_element_list),      intent(in) :: element_list
+  character*(*),                intent(in) :: filename
 
   ! --- Local variables
   integer :: i
@@ -370,8 +370,10 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
        "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,n_tor,1,n_degrees,1,n_var, &
        "node_list%deltas",CAT_UNKNOWN)
-  call tr_allocate(t_aux_values,1,node_list%n_nodes,1,n_tor,1,n_degrees,1,n_var, &
-       "aux_node_list%values",CAT_UNKNOWN)
+  if(export_aux_node_list .and. associated(aux_node_list)) then
+     call tr_allocate(t_aux_values,1,node_list%n_nodes,1,n_tor,1,n_degrees,1,n_var, &
+          "aux_node_list%values",CAT_UNKNOWN)
+  endif
 
 #ifdef fullmhd
   call tr_allocate(t_psi_eq,1,node_list%n_nodes,1,n_degrees, &
@@ -463,7 +465,7 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
      end if
   end do
 
-  if(export_aux_node_list) then
+  if(export_aux_node_list .and. associated(aux_node_list)) then
      do i=1,aux_node_list%n_nodes
         t_aux_values(i,:,:,:) = aux_node_list%node(i)%values
      enddo
@@ -538,7 +540,7 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
        node_list%n_nodes,n_tor,n_degrees,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &
        node_list%n_nodes,n_tor,n_degrees,n_var,'deltas'//char(0))
-  if(export_aux_node_list .and. aux_node_list%n_nodes .gt. 0) then
+  if(export_aux_node_list .and. associated(aux_node_list) .and. aux_node_list%n_nodes .gt. 0) then
      call HDF5_array4D_saving(file_id,t_aux_values, &
           node_list%n_nodes,n_tor,n_degrees,n_var,'aux_values'//char(0))
   endif
@@ -846,7 +848,9 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
   call tr_deallocate(t_x,"x",CAT_UNKNOWN)
   call tr_deallocate(t_values,"values",CAT_UNKNOWN)
   call tr_deallocate(t_deltas,"deltas",CAT_UNKNOWN)
-  call tr_deallocate(t_aux_values,"aux_values",CAT_UNKNOWN)
+  if(export_aux_node_list .and. associated(aux_node_list)) then
+     call tr_deallocate(t_aux_values,"aux_values",CAT_UNKNOWN)
+  endif
 #ifdef fullmhd
   call tr_deallocate(t_psi_eq,"psi_eq",CAT_UNKNOWN)
   call tr_deallocate(t_Fprof_eq,"Fprof_eq",CAT_UNKNOWN)

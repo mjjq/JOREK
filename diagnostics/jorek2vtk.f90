@@ -106,7 +106,7 @@ real*8                :: Arad_bg, Brad_bg, Crad_bg, frad_bg
 real*8                :: Te_eV, ne_SI, Lrad_imp, r_imp_bg
 real*8                :: Te_corr_eV, coef_rad_1, Sion_T, eta_Sp, ksiion, LradDcont_T
 real*8                :: LradDrays_T, coef_ion_1, coef_ion_2, coef_ion_3, S_ion_puiss
-real*8                :: r0_real8, rn0_real8
+real*8                :: r0_real8, rn0_real8, lnA
 real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_corr, T_or_Te_0 
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
@@ -179,7 +179,7 @@ write(*,*) '***************************************'
 call flush_it(6)
 
 allocate(node_list)
-allocate(aux_node_list)
+!allocate(aux_node_list)
 allocate(element_list)
 allocate(bnd_elm_list)
 allocate(bnd_node_list)
@@ -335,10 +335,17 @@ if (use_pellet) then
 endif
 
 if (include_psi_norm) then
-  call add_vtk_entry('psi_norm    ', 'psi_norm    ',    i_psin, n_scalars, si_units, scalar_names) 
+  call add_vtk_entry('psi_norm    ', 'psi_norm    ',    i_psin, n_scalars, si_units, scalar_names)
 endif
 
 allocate(iibg(n_adas),iproj(n_var))
+
+if (include_projections) then
+  do i = 1, n_var
+    write(proj_label, '(a4,i2.2)') 'aux_', i
+    call add_vtk_entry(proj_label, proj_label, iproj(i), n_scalars, si_units, scalar_names) 
+  end do
+end if
 
 #if (defined WITH_Neutrals) && (!defined WITH_Impurities)
   if (include_neutral_dens) then
@@ -355,13 +362,6 @@ if (include_radiation) then
   call add_vtk_entry('Brems       ', 'Brems_Wm-3  ',    ineu(3), n_scalars, si_units, scalar_names) 
   call add_vtk_entry('Joule       ', 'Joule_Wm-3  ',    ineu(4), n_scalars, si_units, scalar_names) 
 #endif
-
-if (include_projections) then
-  do i = 1, n_var
-    write(proj_label, '(a4,i2.2)') 'aux_', i
-    call add_vtk_entry(proj_label, proj_label, iproj(i), n_scalars, si_units, scalar_names) 
-  end do
-end if
 
 #ifdef WITH_Impurities
   call add_vtk_entry('Ionis       ', 'Ionis_Jm-3  ',    iimp(1), n_scalars, si_units, scalar_names) 
@@ -425,15 +425,20 @@ do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-if (include_projections) then
-  filename_proj = trim(proj_basename)//'_restart.h5' ! only hdf5 format supported for particle projections
-  call import_hdf5_restart_aux(aux_node_list, filename_proj, rst_format, ierr)
-  if (ierr .ne. 0) then
-    write(*,*) 'ERROR: Cannot find projection restart file. Check if proj_basename is set properly.'
-    stop
-  end if
-end if
+!if (include_projections) then
+!  allocate(aux_node_list)
+!  filename_proj = trim(proj_basename)//'_restart.h5' ! only hdf5 format supported for particle projections
+!  call import_hdf5_restart_aux(aux_node_list, filename_proj, rst_format, ierr)
+!  if (ierr .ne. 0) then
+!    write(*,*) 'ERROR: Cannot find projection restart file. Check if proj_basename is set properly.'
+!    stop
+!  end if
+!end if
 
+if(include_projections) then
+   call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+   allocate(aux_node_list, source=node_list)   !!Maybe there is a better way. With this it writes restart time 2x
+endif
 call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points
@@ -920,7 +925,8 @@ do i=1,element_list%n_elements
         D_prof  = get_dperp (psi_norm)
         ZK_prof = get_zkperp(psi_norm)
 
-        call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, eta_T)  ! NEEDS TO BE ADAPTED FOR IMPURITIES (Z_eff)!! 
+        call coulomb_log_ei(T_or_Te, T_or_Te_corr, rho, corr_neg_dens1(rho), 0.0, 0.0, 0.0, lnA)
+        call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, lnA, eta_T)  ! NEEDS TO BE ADAPTED FOR IMPURITIES (Z_eff)!! 
 
         if (include_bootstrap) then
           call bootstrap_current(R, Z, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%R_xpoint, ES%Z_xpoint, ES%psi_bnd, psi_norm,&
@@ -1102,8 +1108,8 @@ do i=1,element_list%n_elements
                   - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
 
             ! --- Full toroidal electric field evaluated at t_now - dt/2
-            E_R   = E_R   - F0*(U_x-0.5d0*dU_x)*HZ(i_tor,i_plane)
-            E_Z   = E_Z   - F0*(U_y-0.5d0*dU_y)*HZ(i_tor,i_plane) 
+            E_R   = E_R   - F0 * (U_x - 0.5d0*dU_x)
+            E_Z   = E_Z   - F0 * (U_y - 0.5d0*dU_y)
             E_phi = E_phi - dpsi/tstep * HZ(i_tor,i_plane)/BigR - F0*(U-0.5d0*dU)*HZ_p(i_tor,i_plane)/BigR 
 
           endif ! xjac
@@ -1274,7 +1280,8 @@ enddo  ! n_elements
                                   LradDcont_T, dLradDcont_dT, LradDrays_T, dLradDrays_dT,r0_real8,rn0_real8,.true. ) 
       endif
 
-      call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, eta_Sp)           
+      call coulomb_log_ei(T_or_Te, T_or_Te_corr, rho, corr_neg_dens1(rho), 0.0, 0.0, 0.0, lnA)
+      call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, 1.d0, lnA, eta_Sp)           
 
       scalars(i,ineu(1)) = ksiion * scalars(i,var_rho) * scalars(i,var_rhon) * Sion_T
       scalars(i,ineu(2)) = scalars(i,var_rho) * scalars(i,var_rhon) * LradDrays_T
@@ -1434,7 +1441,9 @@ enddo  ! n_elements
 
      scalars(i,iimp(5)) = Z_eff
 
-     call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, eta_Sp)           
+     call coulomb_log_ei(T_or_Te, T_or_Te_corr, r0_real8, r0_corr, rimp0_real8, rimp0_corr, &
+                          beta_imp, lnA)
+     call resistivity(eta, T_or_Te, T_or_Te_corr, T_max_eta, T_or_Te_0, Z_eff, lnA, eta_Sp)           
 
   !-------------------------------------------
   ! --- Radiative function, using interpolation

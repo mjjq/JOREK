@@ -179,7 +179,6 @@ write(*,*) '***************************************'
 call flush_it(6)
 
 allocate(node_list)
-!allocate(aux_node_list)
 allocate(element_list)
 allocate(bnd_elm_list)
 allocate(bnd_node_list)
@@ -425,15 +424,6 @@ do k_tor=1, n_tor
   mode(k_tor) = + int(k_tor / 2) * n_period
 enddo
 
-!if (include_projections) then
-!  allocate(aux_node_list)
-!  filename_proj = trim(proj_basename)//'_restart.h5' ! only hdf5 format supported for particle projections
-!  call import_hdf5_restart_aux(aux_node_list, filename_proj, rst_format, ierr)
-!  if (ierr .ne. 0) then
-!    write(*,*) 'ERROR: Cannot find projection restart file. Check if proj_basename is set properly.'
-!    stop
-!  end if
-!end if
 
 if(include_projections) then
    call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)

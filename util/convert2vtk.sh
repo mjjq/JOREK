@@ -37,7 +37,7 @@ function usage () {
   echo "  -only <step>,<step>         Convert only listed time steps"
   echo "  -only <step>-<step>         Convert only time steps in the given range"
   echo "  -only <step>-<dstep>-<step> Convert only time steps in the given range with given interval"
-  echo "  -donly <dstep>              Equivalent to -only 0-<dstep>-99999"
+  echo "  -donly <dstep>              Equivalent to -only 0-<dstep>-99999, or -999999 (more_outfile_digits = true)"
   echo "  -time <time>,<time>         Selects time step roughly at <time> (default in JOREK-units)"
   echo "  -time <time>-<dtime>-<time> Selects time step within given time range with given interval"
   echo "  -dtime <dtime>              Equivalent to -time 0-<dtime>-infinity"
@@ -134,7 +134,11 @@ function do_convert () {
   cd ${tmpdir[$ithread]}
   
   stepnum=${file##*/} # Remove directory from filename
-  stepnum=${stepnum:5:5}
+  if [ "$more_outfile_digits" = true ]; then
+    stepnum=${stepnum:5:6}
+  else
+    stepnum=${stepnum:5:5}
+  fi
   targetFile="jorek.$stepnum.vtk" # Target filename with same number as source
   targetFile="$targetDir/$targetFile" # Target filename with full path
 
@@ -184,11 +188,15 @@ function do_convert () {
 
 SCRIPTDIR=`dirname $0`; SCRIPTDIR=`readlink -f $SCRIPTDIR`
 
-
+more_outfile_digits=false # If ... = true, then the step is in 6 digits. Otherwise (= false), it is in 5 digits.
 
 # --- Process command line parameters
 nthreads="1"
-selected_steps="0-99999"
+if [ "$more_outfile_digits" = true ]; then
+  selected_steps="0-999999"
+else
+  selected_steps="0-99999"
+fi
 select_arguments=""
 customdir=""
 nsub=""
@@ -217,7 +225,11 @@ while [ $# -gt 1 ]; do
     selected_steps="$2"
     shift 2
   elif [ "$1" == "-donly" ]; then
-    selected_steps="0-$2-99999"
+    if [ "$more_outfile_digits" = true ]; then
+      selected_steps="0-$2-999999"
+    else
+      selected_steps="0-$2-99999"
+    fi
     shift 2
   elif ( [ "$1" == "-time" ] || [ "$1" == "-dtime" ] ) ; then
     select_arguments="$select_arguments $1 $2"
@@ -327,7 +339,11 @@ if [ ! -z "$select_arguments" ] && [[ "$select_arguments" != *"time"* ]]; then
   echo "WARNING: -l and -ms parameters will be ignored, if -(d)time is not set."
   select_arguments=""
 fi
-regexp_steps="^[0-9]{1,5}(-[0-9]{1,5}){0,2}(,[0-9]{1,5}(-[0-9]{1,5}){0,2})*$"
+if [ "$more_outfile_digits" = true ]; then
+  regexp_steps="^[0-9]{1,6}(-[0-9]{1,6}){0,2}(,[0-9]{1,6}(-[0-9]{1,6}){0,2})*$"
+else
+  regexp_steps="^[0-9]{1,5}(-[0-9]{1,5}){0,2}(,[0-9]{1,5}(-[0-9]{1,5}){0,2})*$"
+fi
 if [[ ! "$selected_steps" =~ $regexp_steps   ]]; then
   echo "ERROR: -(d)only-parameter given in wrong format."
   usage
@@ -469,7 +485,11 @@ fi
 
 # --- Select files for conversion
 if [ -z "$select_arguments" ]; then
-  files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
+  if [ "$more_outfile_digits" = true ]; then
+    files=`ls $sourceDir/jorek??????.${RST_TYPE} 2> /dev/null`
+  else
+    files=`ls $sourceDir/jorek?????.${RST_TYPE} 2> /dev/null`
+  fi
 else
   files=`${SCRIPTDIR}/select_restart_files.sh $select_arguments`
   if [ "${files:0:5}" == "ERROR" ] ; then
@@ -566,7 +586,12 @@ for i in `seq $nthreads`; do
 done
 
 # --- Create a list of available selected files ---------------------------------
-if [ $selected_steps == "0-99999" ]; then
+if [ "$more_outfile_digits" = true ]; then
+  step_ranges="0-999999"
+else
+  step_ranges="0-99999"
+fi
+if [ $selected_steps == $step_ranges ]; then
   selected_available_files=$files
 else
 
@@ -574,7 +599,11 @@ else
   file_selected_restarts="selected_restart_files.txt"
   
   rm -f $file_available_restarts $file_selected_restarts
-  ls -1 $sourceDir/jorek?????.${RST_TYPE} > $file_available_restarts
+  if [ "$more_outfile_digits" = true ]; then
+    ls -1 $sourceDir/jorek??????.${RST_TYPE} > $file_available_restarts
+  else
+    ls -1 $sourceDir/jorek?????.${RST_TYPE} > $file_available_restarts
+  fi
   
   step_ranges=`echo $selected_steps | tr ',' ' '`
   for step_range in $step_ranges; do
@@ -588,7 +617,11 @@ else
     fi
 
     for i in `seq $istart $istep $iend`; do
-      padnumber=`printf "%05d" $i`
+      if [ "$more_outfile_digits" = true ]; then
+        padnumber=`printf "%06d" $i`
+      else
+        padnumber=`printf "%05d" $i`
+      fi
       echo $padnumber >> $file_selected_restarts
     done
   done

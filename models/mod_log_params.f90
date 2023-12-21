@@ -138,7 +138,7 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-  write(*,'(1x,a)',advance='no') ' PRINT_ELM_RHS : '
+  write(*,'(1x,a)',advance='no') ' PRINT_ELM_RHS       : '
 #ifdef PRINT_ELM_RHS
   write(*,*) 'on'
 #else
@@ -152,7 +152,7 @@ if (my_id == 0) then
   write(*,*) 'off'
 #endif
 
-write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
+write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND   : '
 #ifdef USE_COMPLEX_PRECOND
   write(*,*) 'on'
 #else
@@ -166,15 +166,337 @@ write(*,'(1x,a)',advance='no') ' USE_COMPLEX_PRECOND          : '
   write(*,*) 'Preprocessor flag not set. Thus, n_gauss=', n_gauss
 #endif
 
-write(*,'(1x,a)',advance='no') ' USE_BICGSTAB : '
+write(*,'(1x,a)',advance='no') ' USE_BICGSTAB          : '
 #ifdef USE_BICGSTAB
   write(*,*) 'on'
 #else
   write(*,*) 'off'
 #endif
 
-write(*,'(1x,a)',advance='no') ' USE_CATALYST : '
+write(*,'(1x,a)',advance='no') ' USE_CATALYST          : '
 #ifdef USE_CATALYST
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USE_IMAS              : '
+#ifdef USE_IMAS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' fullmhd               : '
+#ifdef fullmhd
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' WITH_Impurities       : '
+#ifdef WITH_Impurities
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' JEC2DIAG              : '
+#ifdef JEC2DIAG
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' WITH_TiTe             : '
+#ifdef WITH_TiTe
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' WITH_Neutrals         : '
+#ifdef WITH_Neutrals
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' IBM_MACHINE           : '
+#ifdef IBM_MACHINE
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' LAHEY                 : '
+#ifdef LAHEY
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' MPI_F08               : '
+#ifdef MPI_F08
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' INCLUDE_MPIFH         : '
+#ifdef INCLUDE_MPIFH
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' FUNNELED              : '
+#ifdef FUNNELED
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' _OPENMP               : '
+#ifdef _OPENMP
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' OPENMP                : '
+#ifdef OPENMP
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' INTSIZE64             : '
+#ifdef INTSIZE64
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' WITH_Vpar             : '
+#ifdef WITH_Vpar
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' DEBUG                 : '
+#ifdef DEBUG
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' __GFORTRAN__          : '
+#ifdef __GFORTRAN__
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' D3D_WALL              : '
+#ifdef D3D_WALL
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' AUG_WALL              : '
+#ifdef AUG_WALL
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' PRINT_ELM_RHS         : '
+#ifdef PRINT_ELM_RHS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' NORMTRACE             : '
+#ifdef NORMTRACE
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USEMKL                : '
+#ifdef USEMKL
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' altcs                 : '
+#ifdef altcs
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' MODEL_FAMILY          : '
+#ifdef MODEL_FAMILY
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USE_PASTIX6           : '
+#ifdef USE_PASTIX6
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' IMPORT_PERTURBATIONS  : '
+#ifdef IMPORT_PERTURBATIONS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' TEST                  : '
+#ifdef TEST
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' PROJECTION_EXTRATEST  : '
+#ifdef PROJECTION_EXTRATEST
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USE_STRUMPACK         : '
+#ifdef USE_STRUMPACK
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USE_GMRES             : '
+#ifdef USE_GMRES
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' SAVEMATRIX            : '
+#ifdef SAVEMATRIX
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' NEWSPK                : '
+#ifdef NEWSPK
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' USE_WSMP              : '
+#ifdef USE_WSMP
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' f2003                 : '
+#ifdef f2003
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' TIMER_BARRIER         : '
+#ifdef TIMER_BARRIER
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' MEMORY_USAGE          : '
+#ifdef MEMORY_USAGE
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' RTREE_DONT_USE_MEMPOOLS : '
+#ifdef RTREE_DONT_USE_MEMPOOLS
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' RTREE_USE_SPHERICAL_VOLUME : '
+#ifdef RTREE_USE_SPHERICAL_VOLUME
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' _DEBUG                : '
+#ifdef _DEBUG
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' STAN_FLAG             : '
+#ifdef STAN_FLAG
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' CATALYST_ADAPTOR_H_   : '
+#ifdef CATALYST_ADAPTOR_H_
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' NO_HELP               : '
+#ifdef NO_HELP
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' NOMPIVERSION          : '
+#ifdef NOMPIVERSION
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' __NVCOMPILER          : '
+#ifdef __NVCOMPILER
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' PCG_BASIC_H_INCLUDED  : '
+#ifdef PCG_BASIC_H_INCLUDED
+  write(*,*) 'on'
+#else
+  write(*,*) 'off'
+#endif
+
+write(*,'(1x,a)',advance='no') ' RTREE_H               : '
+#ifdef RTREE_H
   write(*,*) 'on'
 #else
   write(*,*) 'off'

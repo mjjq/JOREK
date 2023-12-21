@@ -100,11 +100,11 @@ if __name__ == "__main__":
     data_2d_plt = data_2d
     data_2d_plt[np.where(abs(data_2d) > q_cut)] = q_cut # math.nan
 
-    plt.figure(figsize=(10, 6)) 
+    plt.figure(figsize=(10, 5)) 
     if args.clim:
-        plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 100, levels = np.linspace(args.clim[0], args.clim[1], 100), cmap='jet')#, extend = 'both')
+        plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 50, levels = np.linspace(args.clim[0], args.clim[1], 100), cmap='viridis_r')#, extend = 'both')
     else:
-        plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 100, cmap='jet')
+        plt.contourf(times_2d, np.sqrt(psin_2d), abs(data_2d_plt), 50, cmap='viridis_r')
 
     plt.colorbar()
     plt.title(r'radial distribution of $q$ versus time' if args.title == "" else args.title, fontsize=font_size)

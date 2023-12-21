@@ -119,7 +119,7 @@ if __name__ == "__main__":
         data_2d_plt[np.where(radial_2d < ymin)] = math.nan
         data_2d_plt[np.where(radial_2d > ymax)] = math.nan
 
-    plt.figure(figsize=(10, 6)) 
+    plt.figure(figsize=(10, 5)) 
     n_level = 100
     if args.clim:
         plt.contourf(times_2d, radial_2d, data_2d_plt, n_level, levels = np.linspace(args.clim[0], args.clim[1], n_level), cmap='jet', extend = 'both')

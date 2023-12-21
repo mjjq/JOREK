@@ -322,7 +322,7 @@ mpi_required = 0
             call grid_double_xpoint(node_list, element_list)
           endif
         else
-	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &
+	        call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &
                            SIG_open,SIG_closed,SIG_private,SIG_theta,SIG_leg_0,SIG_leg_1,dPSI_open,dPSI_private, xcase)
         endif
       else

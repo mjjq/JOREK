@@ -29,6 +29,7 @@ program jorek2_IDS
   logical :: first_step, file_exists, rad_only_projections_h5, overwrite_entry
   logical :: export_MHD, export_radiation, export_core_profiles, export_equilibrium
   logical :: export_wall, export_pf_passive, export_pf_active, export_summary, export_disruption
+  logical :: new_entry
   real*8  :: rho0, fact_time, time_SI, wall_thickness
 
   integer   :: my_id, my_id_n, my_id_master, ierr2
@@ -150,15 +151,18 @@ program jorek2_IDS
     close(42)
   end if
 
+  new_entry = .true.
   if (overwrite_entry) then
     call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3')
   else
     ! --- Try to open shot and number if it exists
     call imas_open_env( 'ids', shot_number,run_number,idx,user,database,'3',stat)! 3 is the database version  
-  
+    new_entry = .false.
+
     if (stat /= 0) then  ! --- Create a new shot if it doesn't exist
       write(*,*) '  Shot/run number did not exist, creating new one...'
       call imas_create_env('ids',shot_number,run_number, 0,0,idx,user,database,'3') 
+      new_entry = .true.
     endif
   endif
 
@@ -248,7 +252,7 @@ program jorek2_IDS
     stat_pass= 1;   stat_act  = 1;   stat_sum = 1;   stat_dis = 1; 
 
     ! --- Put IDSs into database
-    if (first_step) then  
+    if (first_step .and. new_entry) then  
       if (export_mhd)              call ids_put(idx,'mhd',mhd_ids,stat_mhd)
       if (export_core_profiles)    call ids_put(idx,'core_profiles',core_profiles_ids,stat_core)
       if (export_equilibrium)      call ids_put(idx,'equilibrium',equilibrium_ids,stat_eq)

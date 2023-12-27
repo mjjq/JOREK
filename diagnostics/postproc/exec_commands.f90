@@ -2707,26 +2707,14 @@ module exec_commands
     
     write(filename,'(5a)') trim(DIR), 'fluxsurface_at_psi_', trim(real2str(target_psi)), &
       trim(step_range_string(index_start,index_start)), '.dat'
-    
-    ! --- Find minimum and maximum psi values
-    psi_min=+1.d99
-    psi_max=-1.d99
-    do i_elm = 1, element_list%n_elements
-      call psi_minmax(node_list, element_list, i_elm, psi_min2, psi_max2)
-      psi_min = min(psi_min,psi_min2)
-      psi_max = max(psi_max,psi_max2)
-    end do
-    psi_min = psi_min + 0.001*(psi_max-psi_min)
-    psi_max = psi_max - 0.001*(psi_max-psi_min)
 
     if (target_psi < 0.0 .or. target_psi > 1.0) then
       write(*,*), 'fluxsurface target psi must be a valid normalised psi.'
       return
     endif
 
-    ! TODO: is this robust (i.e. are psi_min always psi_axis and psi_max always psi_bnd)?
-    target_psi = psi_min + target_psi * (psi_max - psi_min)
-    
+    target_psi = ES%psi_axis + target_psi * (ES%psi_bnd - ES%psi_axis)
+
     ! --- Find flux surfaces
     surface_list%n_psi = 1
     allocate( surface_list%psi_values(1) )

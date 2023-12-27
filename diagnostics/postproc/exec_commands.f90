@@ -238,7 +238,7 @@ module exec_commands
       select case ( trim(command%args(0)) )
         case ( 'expressions', 'expressions_int', 'mark_coords', 'int2d', 'int3d','midplane',       &
           'average', 'point', 'pol_line', 'int_along_pol_line', 'tor_line', 'equil_params',        &
-          'qprofile', 'q_at_psin', 'fluxsurfaces', 'fluxsurface' 'separatrix', 'set', 'four2d',    &
+          'qprofile', 'q_at_psin', 'fluxsurfaces', 'fluxsurface', 'separatrix', 'set', 'four2d',   &
           'gourdon', 'jorek-units', 'jnorm_bnd_curr', 'si-units', 'grid', 'grid_diagnostics',      &
           'rectangle', 'rectangular_torus', 'energy_spectrum', 'average_h5', 'I_halo_TPF',         &
           'spi-state', 'shards', 'zeroD_quantities', 'boundary_quantities', 'find_q_surface',      &

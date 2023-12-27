@@ -1511,9 +1511,11 @@ module mod_jorek2IMAS
     ! --- Set times
     n_slice = 1;   i_slice = 1
     allocate( summary_ids%time(n_slice) )
-    summary_ids%ids_properties%homogeneous_time = 1    
-    allocate(summary_ids%ids_properties%comment(1000))
-    summary_ids%ids_properties%comment = simulation_description
+    summary_ids%ids_properties%homogeneous_time = 1   
+    if (first_step) then 
+      allocate(summary_ids%ids_properties%comment(1))
+      summary_ids%ids_properties%comment = simulation_description
+    endif
     summary_ids%time(i_slice) = time_SI 
 
     ! --- Information about the toroidal field

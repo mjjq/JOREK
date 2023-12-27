@@ -152,6 +152,8 @@ module exec_commands
           call expressions_four(command, ierr)
         case ( 'fluxsurfaces' )
           call fluxsurfaces(command, ierr)
+        case ( 'fluxsurface' )
+          call fluxsurface(command, ierr)
         case ( 'for' )
           call loop_start(command, ierr)
         case ( 'four2d' )

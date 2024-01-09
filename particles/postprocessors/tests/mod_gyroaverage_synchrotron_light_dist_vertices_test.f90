@@ -514,7 +514,7 @@ subroutine test_particle_from_gyroaverage_synchrotron_lights()
               type is (particle_gc_relativistic)
               p_out = p_list(ii); 
             end select
-            cycle;
+            cycle
           endif
           counter = counter + 1
           !> compute the analytical MHD fields for computing the GC velocity
@@ -536,7 +536,6 @@ subroutine test_particle_from_gyroaverage_synchrotron_lights()
             p_out%q = (p_list(ii)%q/abs(p_list(ii)%q))*p_out%q;
             p_out%p(1) = (p_list(ii)%p(1)/abs(p_list(ii)%p(1)))*p_out%p(1);
           end select
-          !> compute errors
         enddo
         !> check solutions
         call assert_equal_particle(n_particles_per_group(jj,kk),p_list,&

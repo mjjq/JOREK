@@ -14,24 +14,25 @@ type,abstract,extends(vertices) :: light_vertices
   integer                          :: n_particle_types !< number of particles types
   integer,dimension(:),allocatable :: particle_types   !< list of particles type ids
   contains
-  procedure,pass(light_vert)                            :: return_n_light_inputs
-  procedure,pass(light_vert)                            :: read_light_inputs
-  procedure,pass(light_vert)                            :: fill_time_vector_particle_sims
-  procedure,pass(light_vert)                            :: extract_n_groups_all_particle_sims 
-  procedure,pass(light_vert)                            :: extract_n_particles_all_particle_sims
-  procedure,pass(light_vert)                            :: extract_particle_types_all_particle_sims
-  procedure,pass(light_vert)                            :: store_light_x_from_particle_id
-  procedure,pass(light_vert)                            :: find_active_particles_id_time
-  procedure,pass(light_vert)                            :: init_lights_from_particles
-  procedure,pass(light_vert)                            :: fill_lights_from_particles
-  procedure,pass(light_vert)                            :: deallocate_light_vertices
-  procedure(direct_funct),pass(light_vert),deferred     :: directionality_funct
-  procedure(spect_irradiance),pass(light_vert),deferred :: spectral_irradiance
-  procedure(comp_light_prop),pass(light_vert),deferred  :: compute_light_properties
-  procedure(comp_mhd_fields),pass(light_vert),deferred  :: compute_mhd_fields
-  procedure(setup_light),pass(light_vert),deferred      :: setup_light_class
-  procedure(check_x_shaded),nopass,deferred             :: check_x_shaded_in_emission_zone 
-  procedure(check_angles_shaded),nopass,deferred        :: check_angles_shaded_in_emission_zone
+  procedure,pass(light_vert)                                    :: return_n_light_inputs
+  procedure,pass(light_vert)                                    :: read_light_inputs
+  procedure,pass(light_vert)                                    :: fill_time_vector_particle_sims
+  procedure,pass(light_vert)                                    :: extract_n_groups_all_particle_sims 
+  procedure,pass(light_vert)                                    :: extract_n_particles_all_particle_sims
+  procedure,pass(light_vert)                                    :: extract_particle_types_all_particle_sims
+  procedure,pass(light_vert)                                    :: store_light_x_from_particle_id
+  procedure,pass(light_vert)                                    :: find_active_particles_id_time
+  procedure,pass(light_vert)                                    :: init_lights_from_particles
+  procedure,pass(light_vert)                                    :: fill_lights_from_particles
+  procedure,pass(light_vert)                                    :: deallocate_light_vertices
+  procedure(direct_funct),pass(light_vert),deferred             :: directionality_funct
+  procedure(spect_irradiance),pass(light_vert),deferred         :: spectral_irradiance
+  procedure(comp_light_prop),pass(light_vert),deferred          :: compute_light_properties
+  procedure(comp_mhd_fields),pass(light_vert),deferred          :: compute_mhd_fields
+  procedure(setup_light),pass(light_vert),deferred              :: setup_light_class
+  procedure(comp_particle_from_light),pass(light_vert),deferred :: compute_particle_from_light
+  procedure(check_x_shaded),nopass,deferred                     :: check_x_shaded_in_emission_zone 
+  procedure(check_angles_shaded),nopass,deferred                :: check_angles_shaded_in_emission_zone
 end type light_vertices
 
 !> Interfaces -------------------------------------------
@@ -154,6 +155,30 @@ interface
     class(light_vertices),intent(inout) :: light_vert   
   end subroutine setup_light
 
+  !> Reconstruct a particle given a light property
+  !> inputs: 
+  !>   light_vert:   (light_vertices) light vertices
+  !>   fields:       (fields_base) JOREK MHD fields data structure
+  !>   light_id:     (integer) index of the light to treat 
+  !>   time_id:      (integer) index of the time light to treat
+  !>   mass:         (real8) particle mass
+  !> outputs:
+  !>   particle_out: (particle_base) reconstructed particle 
+  subroutine comp_particle_from_light(light_vert,&
+  fields,light_id,time_id,mass,particle_out)
+  use mod_fields,         only: fields_base
+  use mod_particle_types, only: particle_base
+  IMPORT :: light_vertices
+  implicit none
+  !> inputs
+  class(light_vertices),intent(in) :: light_vert
+  class(fields_base),intent(in)    :: fields
+  integer,intent(in)               :: light_id,time_id
+  real*8,intent(in)                :: mass
+  !> outputs:
+  class(particle_base),intent(out) :: particle_out
+  end subroutine comp_particle_from_light
+
   !> check if a gather point is within the emission cone of a light source
   !> inputs:
   !>   n_x:          (integer) size of the spatial coordinate vector
@@ -162,7 +187,7 @@ interface
   !>   n_int_param:  (integer) size of the integer parameter array 
   !>   n_real_param: (integer) size of the real parameter array
   !>   int_param:    (integer)(n_integer_param) integer parameter array
-  !>   int_reak:     (real8)(n_real_param) real parameter array
+  !>   int_real:     (real8)(n_real_param) real parameter array
   !> outputs:
   !>   in_range:     (logical) true is the gather point is shaded by the light
   function check_x_shaded(n_x,x_shaded,x_light,n_int_param,n_real_param,&

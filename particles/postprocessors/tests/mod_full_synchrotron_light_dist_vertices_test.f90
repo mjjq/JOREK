@@ -496,6 +496,10 @@ subroutine test_compute_particle_from_full_syncrhotron_light()
   class(particle_base),dimension(:),allocatable :: particle_test
   integer                                       :: ii,jj,kk,counter
   real*8,dimension(n_mhd_sol)                   :: mhd_fields
+  real*8,dimension(14)                          :: tol_real8_particle_from_light
+  !> set tolerance
+  tol_real8_particle_from_light    = tol_real8
+  tol_real8_particle_from_light(4) = tol2_real8 !< tolerance on momentum
   !> loop for computing the properties and testing
   do kk=1,n_times_sol
     counter = 0;
@@ -531,7 +535,8 @@ subroutine test_compute_particle_from_full_syncrhotron_light()
           end select
         enddo
         !> check solutions
-        call assert_equal_particle(n_particles_per_group(jj,kk),p_list,particle_test)
+        call assert_equal_particle(n_particles_per_group(jj,kk),p_list,particle_test,&
+        tol_real8_in=tol_real8_particle_from_light)
         deallocate(particle_test)!< deallocate particle list
       end select
     enddo

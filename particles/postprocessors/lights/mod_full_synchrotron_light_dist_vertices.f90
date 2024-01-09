@@ -319,9 +319,10 @@ end subroutine setup_synchrotron_light_class
 !>   particle_out: (particle_base) reconstructed particle
 subroutine compute_particle_from_full_synchrotron_light(&
 light_vert,fields,light_id,time_id,mass,particle_out)
-  use constants,                      only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
+  use constants,                      only: TWOPI,PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
   use mod_math_operators,             only: cross_product
   use mod_coordinate_transforms,      only: cartesian_to_cylindrical
+  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
   use mod_fields,                     only: fields_base
   use mod_particle_types,             only: particle_base,particle_kinetic_relativistic
   !> used only for unit testing but required for compilation
@@ -337,13 +338,14 @@ light_vert,fields,light_id,time_id,mass,particle_out)
   !> variables:
   integer                          :: ifail
   real*8                           :: dummy_real8,dummy_real8_2
-  real*8,dimension(light_vert%n_x) :: B_fields,E_fields
+  real*8,dimension(light_vert%n_x) :: B_fields,E_fields,dummy_v3_real8
   select type (p_out => particle_out)
   type is (particle_kinetic_relativistic)
     !> initialise unknown variables
-    p_out%weight = 1d0; p_out%i_life = 0; p_out%t_birth = 0.0;
+    p_out%i_life = 0; p_out%t_birth = 0.0;
     !> compute spatial global and local coordinates
     p_out%x = cartesian_to_cylindrical(light_vert%x(:,light_id,time_id))
+    if(p_out%x(3).lt.0d0) p_out%x(3) = TWOPI+p_out%x(3)
 #ifndef UNIT_TESTS_AFIELDS
     call find_RZ(fields%node_list,fields%element_list,p_out%x(1),p_out%x(2),&
     p_out%x(1),p_out%x(2),p_out%i_elm,p_out%st(1),p_out%st(2),ifail)
@@ -353,20 +355,23 @@ light_vert,fields,light_id,time_id,mass,particle_out)
 #else
     call compute_test_E_B_fields(p_out%x,E_fields,B_fields)
 #endif
+    E_fields = vector_cylindrical_to_cartesian(p_out%x(3),E_fields)
+    B_fields = vector_cylindrical_to_cartesian(p_out%x(3),B_fields)
     !> compute the particle position in momentum space
-    p_out%q = nint(sqrt((6d0*PI*EPS_ZERO*light_vert%properties(13,light_id,time_id))/&
-    (SPEED_OF_LIGHT*((light_vert%properties(10,light_id,time_id)*&
-    light_vert%properties(11,light_id,time_id))**4)*&
-    (light_vert%properties(12,light_id,time_id)**2))),kind=1)
-    dummy_real8 = norm2(cross_product(light_vert%properties(1:3,light_id,time_id),&
-    E_fields+cross_product(light_vert%properties(1:3,light_id,time_id),B_fields)))
+    dummy_v3_real8 = cross_product(SPEED_OF_LIGHT*light_vert%properties(10,light_id,time_id)*&
+    light_vert%properties(1:3,light_id,time_id),B_fields)
+    dummy_v3_real8 = E_fields + dummy_v3_real8
+    dummy_v3_real8 = cross_product(light_vert%properties(1:3,light_id,time_id),dummy_v3_real8)
+    p_out%q = nint((light_vert%properties(12,light_id,time_id)*mass*ATOMIC_MASS_UNIT*&
+    ((light_vert%properties(10,light_id,time_id)*SPEED_OF_LIGHT)**2)*&
+    light_vert%properties(11,light_id,time_id))/(EL_CHG*norm2(dummy_v3_real8)),kind=1)
     p_out%p = mass*SPEED_OF_LIGHT*light_vert%properties(1:3,light_id,time_id)*&
     light_vert%properties(10,light_id,time_id)*light_vert%properties(11,light_id,time_id)
     p_out%weight = (6d0*PI*EPS_ZERO*light_vert%properties(13,light_id,time_id))/&
-    ((real(p_out%q,kind=8)*EL_CHG*SPEED_OF_LIGHT*((&
+    ((SPEED_OF_LIGHT*(real(p_out%q,kind=8)*EL_CHG*((&
     light_vert%properties(10,light_id,time_id)*&
     light_vert%properties(11,light_id,time_id))**2)*&
-    light_vert%properties(12,light_id,time_id))**2)
+    light_vert%properties(12,light_id,time_id))**2))
   end select
 end subroutine compute_particle_from_full_synchrotron_light
 

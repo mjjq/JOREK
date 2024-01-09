@@ -26,6 +26,8 @@ type,extends(synchrotron_light) :: full_synchrotron_light_dist
                                 compute_synchrotron_light_properties
   procedure,pass(light_vert) :: setup_light_class => &
                                 setup_synchrotron_light_class
+  procedure,pass(light_vert) :: compute_particle_from_light => &
+                                compute_particle_from_full_synchrotron_light
 end type full_synchrotron_light_dist
 !> Interfaces --------------------------------------
 
@@ -305,6 +307,68 @@ subroutine setup_synchrotron_light_class(light_vert)
   allocate(light_vert%particle_types(light_vert%n_particle_types))
   light_vert%particle_types = [particle_kinetic_relativistic_id]
 end subroutine setup_synchrotron_light_class
+
+!> Reconstruct the particle light from the full synchrotron light
+!> inputs:
+!>   light_vert:   (full_synchrotron_light_dist) synchrotron lights class
+!>   fields:       (fields_base) JOREK MHD fields data structure
+!>   light_id:     (integer) index to the light to be treated
+!>   time_id:      (integer) time index
+!>   mass:         (real8) particle mass
+!> outputs:
+!>   particle_out: (particle_base) reconstructed particle
+subroutine compute_particle_from_full_synchrotron_light(&
+light_vert,fields,light_id,time_id,mass,particle_out)
+  use constants,                      only: PI,EPS_ZERO,EL_CHG,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
+  use mod_math_operators,             only: cross_product
+  use mod_coordinate_transforms,      only: cartesian_to_cylindrical
+  use mod_fields,                     only: fields_base
+  use mod_particle_types,             only: particle_base,particle_kinetic_relativistic
+  !> used only for unit testing but required for compilation
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields
+  implicit none
+  !> inputs:
+  class(full_synchrotron_light_dist),intent(in) :: light_vert 
+  class(fields_base),intent(in)                 :: fields
+  integer,intent(in)                            :: light_id,time_id
+  real*8,intent(in)                             :: mass
+  !> outputs:
+  class(particle_base),intent(out) :: particle_out
+  !> variables:
+  integer                          :: ifail
+  real*8                           :: dummy_real8,dummy_real8_2
+  real*8,dimension(light_vert%n_x) :: B_fields,E_fields
+  select type (p_out => particle_out)
+  type is (particle_kinetic_relativistic)
+    !> initialise unknown variables
+    p_out%weight = 1d0; p_out%i_life = 0; p_out%t_birth = 0.0;
+    !> compute spatial global and local coordinates
+    p_out%x = cartesian_to_cylindrical(light_vert%x(:,light_id,time_id))
+#ifndef UNIT_TESTS_AFIELDS
+    call find_RZ(fields%node_list,fields%element_list,p_out%x(1),p_out%x(2),&
+    p_out%x(1),p_out%x(2),p_out%i_elm,p_out%st(1),p_out%st(2),ifail)
+    if(p_out%i_elm.le.0) return !< return if the particle is out-of-mesh
+    call fields%calc_EBpsiU(light_vert%time(time_id),p_out%i_elm,p_out%st,p_out%x(3),&
+    E_fields,B_fields,dummy_real8,dummy_real8_2)
+#else
+    call compute_test_E_B_fields(p_out%x,E_fields,B_fields)
+#endif
+    !> compute the particle position in momentum space
+    p_out%q = nint(sqrt((6d0*PI*EPS_ZERO*light_vert%properties(13,light_id,time_id))/&
+    (SPEED_OF_LIGHT*((light_vert%properties(10,light_id,time_id)*&
+    light_vert%properties(11,light_id,time_id))**4)*&
+    (light_vert%properties(12,light_id,time_id)**2))),kind=1)
+    dummy_real8 = norm2(cross_product(light_vert%properties(1:3,light_id,time_id),&
+    E_fields+cross_product(light_vert%properties(1:3,light_id,time_id),B_fields)))
+    p_out%p = mass*SPEED_OF_LIGHT*light_vert%properties(1:3,light_id,time_id)*&
+    light_vert%properties(10,light_id,time_id)*light_vert%properties(11,light_id,time_id)
+    p_out%weight = (6d0*PI*EPS_ZERO*light_vert%properties(13,light_id,time_id))/&
+    ((real(p_out%q,kind=8)*EL_CHG*SPEED_OF_LIGHT*((&
+    light_vert%properties(10,light_id,time_id)*&
+    light_vert%properties(11,light_id,time_id))**2)*&
+    light_vert%properties(12,light_id,time_id))**2)
+  end select
+end subroutine compute_particle_from_full_synchrotron_light
 
 !> Tools ------------------------------------------
 !> compute the synchrotron radiation directionality function

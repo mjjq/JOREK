@@ -88,6 +88,8 @@ subroutine run_fruit_full_synchrotron_light_dist_vertices()
   'test_synchrotron_irradiance_directional_func')
   call run_test_case(test_synchrotron_irradiance_directional_func_taskloop,&
   'test_synchrotron_irradiance_directional_func_taskloop')
+  call run_test_case(test_compute_particle_from_full_syncrhotron_light,&
+  'test_compute_particle_from_full_syncrhotron_light')
   write(*,'(/A)') "  ... tearing-down: synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_full_synchrotron_light_dist_vertices
@@ -483,6 +485,58 @@ subroutine test_compute_synchrotron_light_properties()
     tol_real8,"Error synchrotron light compute properties: too large errors!")
   enddo
 end subroutine test_compute_synchrotron_light_properties
+
+!> test the reconstruction of full relativistic particles from full
+!> synchrotron lights
+subroutine test_compute_particle_from_full_syncrhotron_light()
+  use mod_particle_types,        only: particle_base,particle_kinetic_relativistic
+  use mod_particle_assert_equal, only: assert_equal_particle
+  implicit none
+  !> variables
+  class(particle_base),dimension(:),allocatable :: particle_test
+  integer                                       :: ii,jj,kk,counter
+  real*8,dimension(n_mhd_sol)                   :: mhd_fields
+  !> loop for computing the properties and testing
+  do kk=1,n_times_sol
+    counter = 0;
+    do jj=1,n_groups_per_sim(kk)
+      select type(p_list=>sims_particles(kk)%groups(jj)%particles)
+        type is(particle_kinetic_relativistic)
+        allocate(particle_kinetic_relativistic::particle_test(n_particles_per_group(jj,kk)))
+        do ii=1,n_particles_per_group(jj,kk)
+          if(p_list(ii)%i_elm.le.0) then
+            select type (p_test=>particle_test(ii))
+              type is (particle_kinetic_relativistic)
+              p_test = p_list(ii) 
+            end select
+            cycle
+          endif
+          counter = counter + 1
+          !> compute the magnetic and electric fields
+          call compute_EB_fields_cart(p_list(ii),mhd_fields(1:3),mhd_fields(4:6))
+          !> compute the light properties
+          call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
+          sims_particles(kk)%groups(jj)%mass,mhd_fields)
+          !> reconstruct particle properties
+          call vertex_sol%compute_particle_from_light(sims_particles(kk)%fields,&
+          counter,kk,sims_particles(kk)%groups(jj)%mass,particle_test(ii))
+#ifdef UNIT_TESTS_AFIELDS
+          particle_test(ii)%i_elm = p_list(ii)%i_elm; particle_test(ii)%st = p_list(ii)%st;
+#endif
+          particle_test(ii)%i_life  = p_list(ii)%i_life
+          particle_test(ii)%t_birth = p_list(ii)%t_birth
+          select type (p_test=>particle_test(ii))
+            type is (particle_kinetic_relativistic)
+            p_test%q = nint(real(p_list(ii)%q,kind=8)/abs(real(p_list(ii)%q,kind=8)),kind=1)*p_test%q
+          end select
+        enddo
+        !> check solutions
+        call assert_equal_particle(n_particles_per_group(jj,kk),p_list,particle_test)
+        deallocate(particle_test)!< deallocate particle list
+      end select
+    enddo
+  enddo
+end subroutine test_compute_particle_from_full_syncrhotron_light 
 
 !> Tools -------------------------------------------------------------
 !> compute the positions of points shadowed by particle lights.

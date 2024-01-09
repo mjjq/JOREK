@@ -20,6 +20,8 @@ type,extends(light_vertices) :: omnidirectional_gaussian_lights
                                 compute_omnidirectional_mhd_fields
   procedure,pass(light_vert) :: compute_light_properties => & 
                                 compute_omnidirectional_light_properties
+  procedure,pass(light_vert) :: compute_particle_from_light => &
+                                compute_particle_from_omnidirectional_light
   procedure,pass(light_vert) :: setup_light_class => &
                                 setup_omnidirectional_light_class
   procedure,nopass           :: check_x_shaded_in_emission_zone => &
@@ -275,6 +277,64 @@ subroutine setup_omnidirectional_light_class(light_vert)
   light_vert%particle_types = [particle_kinetic_relativistic_id,&
                                particle_gc_relativistic_id]
 end subroutine setup_omnidirectional_light_class
+
+!> Reconstruct a particle position in phase space give an omnidirectional
+!> light properties. The particle is assumed to be an electron with 
+!> momentum parallel to the magnetic field line.
+!> inputs:
+!>   light_vert:   (omnidirectional_gaussian_lights) omnidirectional lights class
+!>   fields:       (fields_base) JOREK MHD fields structure
+!>   light_id:     (integer) index of the light to be treated
+!>   time_id:      (integer) index of the time to treat
+!>   mass:         (real8) mass in AMU
+!> outputs:
+!>   particle_out: (particle_base) particle initialised from light
+subroutine compute_particle_from_omnidirectional_light(light_vert,fields,&
+light_id,time_id,mass,particle_out)
+  use constants,                      only: SPEED_OF_LIGHT,TWOPI
+  use mod_coordinate_transforms,      only: cartesian_to_cylindrical
+  use mod_coordinate_transforms,      only: vector_cylindrical_to_cartesian
+  use mod_fields,                     only: fields_base
+  use mod_particle_types,             only: particle_base,particle_kinetic_relativistic
+  !> used only for unit testing but required for compilation
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields
+  implicit none
+  !> inputs:
+  class(omnidirectional_gaussian_lights),intent(in) :: light_vert
+  class(fields_base),intent(in)                     :: fields
+  integer,intent(in)                                :: light_id,time_id
+  real*8,intent(in)                                 :: mass
+  !> outputs:
+  class(particle_base),intent(out) :: particle_out
+  !> variables:
+  integer                          :: ifail
+  real*8                           :: dummy_variable,dummy_variable_2
+  real*8,dimension(light_vert%n_x) :: Efields,Bfields
+  select type (p_out => particle_out)
+  type is (particle_kinetic_relativistic)
+    !> initialise unknown variable assuming to be an electron
+    p_out%i_life = 0; p_out%t_birth = 0.0; p_out%q = int(-1,kind=1);
+    !> compute particle position in physical space
+    p_out%x = cartesian_to_cylindrical(light_vert%x(:,light_id,time_id))
+    if(p_out%x(3).lt.0d0) p_out%x(3) = TWOPI+p_out%x(3)
+#ifndef UNIT_TESTS_AFIELDS
+    call find_RZ(fields%node_list,fields%element_list,p_out%x(1),p_out%x(2),&
+    p_out%x(1),p_out%x(2),p_out%i_elm,p_out%st(1),p_out%st(2),ifail)
+    if(p_out%i_elm.le.0) return !< return if particle out-of-mesh
+    !> compute particle position in velocity space
+    call fields%calc_EBpsiU(light_vert%time(time_id),p_out%i_elm,p_out%st,&
+    p_out%x(3),Efields,Bfields,dummy_variable,dummy_variable_2)
+#else
+    call compute_test_E_B_fields(p_out%x,Efields,Bfields)
+    Efields = vector_cylindrical_to_cartesian(p_out%x(3),Efields)
+    Bfields = vector_cylindrical_to_cartesian(p_out%x(3),Bfields)
+#endif
+    p_out%p = (mass*SPEED_OF_LIGHT*sqrt((light_vert%properties(1,light_id,time_id)**2)-&
+    1d0)*Bfields)/norm2(Bfields)
+    p_out%weight = sqrt(TWOPI*light_vert%properties(1,light_id,time_id))*&
+    light_vert%properties(2,light_id,time_id)
+  end select
+end subroutine compute_particle_from_omnidirectional_light
 
 !> Tools --------------------------------------------------------
 

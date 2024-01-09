@@ -25,6 +25,8 @@ type,extends(synchrotron_light) :: gyroaverage_synchrotron_light_dist
                                 compute_gyroaverage_synchrotron_light_properties
   procedure,pass(light_vert) :: setup_light_class => &
                                 setup_gyroaverage_synchrotron_light_class
+  procedure,pass(light_vert) :: compute_particle_from_light => &
+                                compute_particle_from_gyroaverage_synchrotron_light
 end type gyroaverage_synchrotron_light_dist
 !> Interfaces --------------------------------------------
 
@@ -298,6 +300,66 @@ subroutine setup_gyroaverage_synchrotron_light_class(light_vert)
   if(allocated(light_vert%particle_types)) deallocate(light_vert%particle_types)
   light_vert%particle_types = [particle_gc_relativistic_id]
 end subroutine setup_gyroaverage_synchrotron_light_class
+
+!> Reconstruct the particle light from the gyroaverage synchrotron light properties
+!> inputs:
+!>   light_vert:   (gyroaverage_synchrotron_light_dist) gyroaverage synchrotron lights
+!>                 with empty synchrotron properties
+!>   fields:       (fields_base) JOREK MHD fields data structure
+!>   light_id:     (integer) index of the light to be treated
+!>   time_id:      (integer) time index
+!>   mass:         (real8) particle mass
+!> outputs:
+!>   particle_out: (particle_gc_relativistic) jorek relativistic gc
+subroutine compute_particle_from_gyroaverage_synchrotron_light(&
+light_vert,fields,light_id,time_id,mass,particle_out)
+  use constants,                 only: TWOPI,PI,EL_CHG,EPS_ZERO,ATOMIC_MASS_UNIT,SPEED_OF_LIGHT
+  use mod_coordinate_transforms, only: cartesian_to_cylindrical
+  use mod_fields,                only: fields_base
+  use mod_particle_types,        only: particle_base,particle_gc_relativistic
+  !> used only for unit testing but it is required for compilation
+  use mod_particle_common_test_tools, only: compute_test_E_B_fields
+  implicit none
+  !> inputs
+  class(gyroaverage_synchrotron_light_dist),intent(in) :: light_vert
+  class(fields_base),intent(in)                        :: fields
+  integer,intent(in)                                   :: light_id,time_id
+  real*8,intent(in)                                    :: mass
+  !> outputs
+  class(particle_base),intent(out) :: particle_out
+  !> variables
+  integer                          :: ifail
+  real*8                           :: gamma_parallel,p_norm,U,Bnorm
+  real*8,dimension(light_vert%n_x) :: B_field,E_field,dummy_v3_r8,dummy_v3_r8_2,dummy_v3_r8_3
+  select type (p_out => particle_out)
+  type is (particle_gc_relativistic)
+    !> initialise unknown variables
+    p_out%i_life=0; p_out%t_birth=0.0;
+    !> compute spatial global and local coordinates
+    p_out%x = cartesian_to_cylindrical(light_vert%x(:,light_id,time_id))
+    if(p_out%x(3).le.0d0) p_out%x(3) = p_out%x(3)+TWOPI
+#ifndef UNIT_TESTS_AFIELDS
+    call find_RZ(fields%node_list,fields%element_list,p_out%x(1),p_out%x(2),&
+    p_out%x(1),p_out%x(2),p_out%i_elm,p_out%st(1),p_out%st(2),ifail)
+    if(p_out%i_elm.le.0) return !< return if particle out-of-mesh
+    call fields%calc_EBpsiU(light_vert%time(time_id),p_out%i_elm,p_out%st,p_out%x(3),&
+    E_field,B_field,p_norm,U)
+#else
+    call compute_test_E_B_fields(p_out%x,E_field,B_field)
+#endif
+    Bnorm = norm2(B_field) 
+    p_norm = mass*SPEED_OF_LIGHT*sqrt((light_vert%properties(4,light_id,time_id)**2)-1d0)
+    p_out%p = (/p_norm*light_vert%properties(6,light_id,time_id),&
+    ((p_norm*light_vert%properties(7,light_id,time_id))**2)/(2d0*mass*Bnorm)/)
+    gamma_parallel = sqrt(((mass*SPEED_OF_LIGHT*light_vert%properties(4,light_id,time_id))**2)/&
+    (((mass*SPEED_OF_LIGHT*light_vert%properties(4,light_id,time_id))**2)-(p_out%p(1)**2)))
+    p_out%q = nint((4d0*PI*mass*ATOMIC_MASS_UNIT*SPEED_OF_LIGHT*gamma_parallel)/(3d0*EL_CHG*Bnorm*&
+    light_vert%properties(8,light_id,time_id)*(light_vert%properties(4,light_id,time_id)**2)),kind=1)
+    p_out%weight = (6d0*PI*EPS_ZERO*SPEED_OF_LIGHT*light_vert%properties(10,light_id,time_id)*&
+    ((mass*ATOMIC_MASS_UNIT)**2))/((((real(p_out%q,kind=8)*EL_CHG)**2)*Bnorm*gamma_parallel*&
+    light_vert%properties(4,light_id,time_id)*light_vert%properties(5,light_id,time_id))**2)
+  end select
+end subroutine compute_particle_from_gyroaverage_synchrotron_light
 
 !> Tools -------------------------------------------------
 !> compute the gyroaverage synchrotron radiation directionality function

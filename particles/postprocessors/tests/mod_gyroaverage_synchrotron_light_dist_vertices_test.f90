@@ -21,6 +21,7 @@ real*8,parameter :: twothirds=2d0/3d0
 real*8,parameter :: tol_real8=5d-12
 real*8,parameter :: tol2_real8=5d-1
 real*8,parameter :: tol3_real8=5d-8
+real*8,parameter :: tol4_real8=5d1
 real*8,parameter :: mass_RE=5.48579909065d-4
 !> parameters for generating synchrotron lights
 integer,parameter :: n_mhd_sol=16
@@ -90,6 +91,8 @@ subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices()
   'test_gyroaverage_synchrotron_irradiance_directionality_funct')
   call run_test_case(test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop,&
   'test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop')
+  call run_test_case(test_particle_from_gyroaverage_synchrotron_lights,&
+  'test_particle_from_gyroaverage_synchrotron_lights')
   write(*,'(/A)') "  ... tearing-down: gyroaverage synchrotron light vertices tests"
   call teardown
 end subroutine run_fruit_gyroaverage_synchrotron_light_dist_vertices
@@ -481,6 +484,68 @@ subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop()
     enddo
   enddo
 end subroutine test_gyroaverage_synchrotron_irradiance_dir_funct_taskloop
+
+!> Test the generation of particles gc relativistic from gyroaverage synchrotron lights
+subroutine test_particle_from_gyroaverage_synchrotron_lights()
+  use mod_particle_types,        only: particle_base,particle_gc_relativistic
+  use mod_particle_assert_equal, only: assert_equal_particle
+  implicit none
+  !> variables
+  class(particle_base),dimension(:),allocatable :: particles_test
+  real*8,dimension(n_mhd_sol)                   :: mhd_fields
+  real*8,dimension(14)                          :: tol_real8_particle_from_light
+  integer                                       :: kk,jj,ii,counter
+  !> set tolerance for particle comparison
+  tol_real8_particle_from_light    = tol_real8
+  tol_real8_particle_from_light(3) = tol3_real8 !< tolerance weight
+  tol_real8_particle_from_light(4) = tol4_real8!< tolerance for parallel momentum/magnetic moment
+  do kk=1,n_times_sol
+    counter = 0;
+    do jj=1,n_groups_per_sim(kk)
+      select type(p_list=>sims_particles(kk)%groups(jj)%particles)
+        type is (particle_gc_relativistic)
+        !> allocate particle lists
+        allocate(particle_gc_relativistic::particles_test(n_particles_per_group(jj,kk)))
+        !> loop on the particles
+        do ii=1,n_particles_per_group(jj,kk)
+          !> override comparison if particle is null
+          if(p_list(ii)%i_elm.le.0) then
+            select type (p_out=>particles_test(ii))
+              type is (particle_gc_relativistic)
+              p_out = p_list(ii); 
+            end select
+            cycle;
+          endif
+          counter = counter + 1
+          !> compute the analytical MHD fields for computing the GC velocity
+          call compute_mhd_fields_gc_cyl(p_list(ii),mhd_fields(1:3),mhd_fields(4:6),&
+          mhd_fields(7),mhd_fields(8:10),mhd_fields(11:13),mhd_fields(14:16))
+          !> compute the light properties
+          call vertex_sol%compute_light_properties(counter,kk,p_list(ii),&
+          sims_particles(kk)%groups(jj)%mass,mhd_fields)
+          !> reconstruct particles the property
+          call vertex_sol%compute_particle_from_light(sims_particles(kk)%fields,&
+          counter,kk,sims_particles(kk)%groups(jj)%mass,particles_test(ii))
+#ifdef UNIT_TESTS_AFIELDS
+          particles_test(ii)%i_elm = p_list(ii)%i_elm; particles_test(ii)%st = p_list(ii)%st;
+#endif
+          particles_test(ii)%i_life  = p_list(ii)%i_life 
+          particles_test(ii)%t_birth = p_list(ii)%t_birth
+          select type (p_out=>particles_test(ii))
+            type is (particle_gc_relativistic)
+            p_out%q = (p_list(ii)%q/abs(p_list(ii)%q))*p_out%q;
+            p_out%p(1) = (p_list(ii)%p(1)/abs(p_list(ii)%p(1)))*p_out%p(1);
+          end select
+          !> compute errors
+        enddo
+        !> check solutions
+        call assert_equal_particle(n_particles_per_group(jj,kk),p_list,&
+        particles_test,tol_real8_in=tol_real8_particle_from_light)
+        deallocate(particles_test); !< deallocate particle lists
+      end select
+    enddo
+  enddo
+end subroutine test_particle_from_gyroaverage_synchrotron_lights
 
 !> Tools -------------------------------------------------------------
 !> compute the gyroaverage synchrotron lights irradiance and directionality functions

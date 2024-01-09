@@ -350,7 +350,7 @@ light_vert,fields,light_id,time_id,mass,particle_out)
     call find_RZ(fields%node_list,fields%element_list,p_out%x(1),p_out%x(2),&
     p_out%x(1),p_out%x(2),p_out%i_elm,p_out%st(1),p_out%st(2),ifail)
     if(p_out%i_elm.le.0) return !< return if the particle is out-of-mesh
-    call fields%calc_EBpsiU(light_vert%time(time_id),p_out%i_elm,p_out%st,p_out%x(3),&
+    call fields%calc_EBpsiU(light_vert%times(time_id),p_out%i_elm,p_out%st,p_out%x(3),&
     E_fields,B_fields,dummy_real8,dummy_real8_2)
 #else
     call compute_test_E_B_fields(p_out%x,E_fields,B_fields)

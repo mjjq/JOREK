@@ -322,7 +322,7 @@ light_id,time_id,mass,particle_out)
     p_out%x(1),p_out%x(2),p_out%i_elm,p_out%st(1),p_out%st(2),ifail)
     if(p_out%i_elm.le.0) return !< return if particle out-of-mesh
     !> compute particle position in velocity space
-    call fields%calc_EBpsiU(light_vert%time(time_id),p_out%i_elm,p_out%st,&
+    call fields%calc_EBpsiU(light_vert%times(time_id),p_out%i_elm,p_out%st,&
     p_out%x(3),Efields,Bfields,dummy_variable,dummy_variable_2)
 #else
     call compute_test_E_B_fields(p_out%x,Efields,Bfields)

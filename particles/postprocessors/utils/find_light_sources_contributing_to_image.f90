@@ -192,14 +192,10 @@ pixel_ids_light_source,pixel_coords_light_source)
   real*8,dimension(2,n_particles,camera_inout%n_vertices),intent(inout)  :: pixel_coords_light_source
 
   !> variables:
-  logical              :: intersect
-  integer              :: ii,jj,kk,base_counter
-  integer,dimension(2) :: i_pixel
-  real*8,dimension(2)  :: pixel_coords
-  real*8               :: material_value,visibility_geometry
-  real*8,dimension(3)                                              :: plane_line_coords
-  real*8,dimension(spectra_inout%n_spectra)                        :: integrated_irradiance
-  real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
+  integer                                   :: ii,jj,kk,base_counter
+  integer,dimension(2)                      :: i_pixel
+  real*8,dimension(2)                       :: pixel_coords
+  real*8,dimension(spectra_inout%n_spectra) :: intensity
   !> initialisation 
   base_counter = 0
   !> compute the contribution of each light for each time
@@ -210,26 +206,12 @@ pixel_ids_light_source,pixel_coords_light_source)
       !$omp active_light_source_positions,active_light_source_intensities,&
       !$omp pixel_ids_light_source,pixel_coords_light_source)
       do kk=1,lights_inout%n_active_vertices(jj) !< loop on the lights
-        !> compute the material function skip is <= 0
-        call camera_inout%physical_material_funct(lights_inout%x(:,kk,jj),ii,material_value)
-        if(material_value.le.0.d0) cycle;
-        !> compute the intersection camera - light source, skip if not
-        call camera_inout%find_ray_image_plane_intersection(lights_inout%x(:,kk,jj),ii,&
-        intersect,plane_line_coords); 
-        if(.not.intersect) cycle;
-        !> compute the intersection point pixel coordinates
-        call camera_inout%plane_to_pixel_local_coord(plane_line_coords(1:2),&
-        i_pixel,pixel_coords)
-        !> compute the geometry and visibility functions
-        call camera_inout%visibility_geometry_funct(lights_inout,1,jj,ii,kk,visibility_geometry)
-        !> compute the spectral irradiance
-        call lights_inout%spectral_irradiance(spectra_inout,jj,kk,camera_inout%x(:,ii,1),&
-        spectral_irradiance)
-        call spectra_inout%integrate_data(spectral_irradiance,integrated_irradiance)
+        !> compute the light intensity
+        call compute_received_light_intensity(camera_inout,lights_inout,spectra_inout,&
+        ii,kk,jj,i_pixel,pixel_coords,intensity)
         !> store the light position and light contribution
-        active_light_source_positions(:,base_counter+kk,ii) = lights_inout%x(:,kk,jj)
-        active_light_source_intensities(:,base_counter+kk,ii) = integrated_irradiance*&
-        material_value*visibility_geometry
+        active_light_source_positions(:,base_counter+kk,ii)   = lights_inout%x(:,kk,jj)
+        active_light_source_intensities(:,base_counter+kk,ii) = intensity
         !> store pixel indexes and pixel-ray intersection position for each contribution
         pixel_ids_light_source(:,base_counter+kk,ii)    = i_pixel
         pixel_coords_light_source(:,base_counter+kk,ii) = pixel_coords
@@ -239,6 +221,65 @@ pixel_ids_light_source,pixel_coords_light_source)
     base_counter = base_counter + lights_inout%n_active_vertices(jj)
   enddo
 end subroutine compute_contribution_light_source_to_image_static
+
+!> Method used for computing the radiation intensity emitted by 
+!> a light and recived by a camera  
+!> inputs:
+!>   camera_inout:  (camera_static)  class defining a static camera
+!>   lights_inout:  (light_vertices) class containing all active lights
+!>   spectra_inout: (spectral_base)  camera spectrum class
+!>   camera_id:     (integer) index of the camera vertex
+!>   light_id:      (integer) index of the light vertex
+!>   time_id:       (integer) index of the time to be treated 
+!> outputs:
+!>   i_pixel:       (integer)(2) indexes defining the illuminated pixel
+!>   pixel_coords:  (real8)(2) coordinatres of the illuminated point
+!>   intensity:     (real8)(n_spectra) light intensity for each spectral interval
+subroutine compute_received_light_intensity(camera_inout,lights_inout,spectra_inout,&
+camera_id,light_id,time_id,i_pixel,pixel_coords,intensity)
+  use mod_spectra,        only: spectrum_base
+  use mod_light_vertices, only: light_vertices
+  use mod_camera_static,  only: camera_static
+  implicit none
+  !> implicit-none
+  class(camera_static),intent(inout)  :: camera_inout
+  class(light_vertices),intent(inout) :: lights_inout
+  class(spectrum_base),intent(inout)  :: spectra_inout
+  !> inputs:
+  integer,intent(in) :: camera_id,light_id,time_id
+  !> outputs
+  integer,dimension(2),intent(out)                      :: i_pixel
+  real*8,dimension(2),intent(out)                       :: pixel_coords 
+  real*8,dimension(spectra_inout%n_spectra),intent(out) :: intensity
+  !> variables
+  logical :: intersect
+  real*8  :: material_value,visibility_geometry
+  real*8,dimension(3)                                              :: plane_line_coords
+  real*8,dimension(spectra_inout%n_points,spectra_inout%n_spectra) :: spectral_irradiance
+  !> initialisation
+  i_pixel = -999; pixel_coords = -9d9; intensity = 0d0;
+  !> compute the material function skip is <= 0
+  call camera_inout%physical_material_funct(lights_inout%x(:,light_id,time_id),&
+  camera_id,material_value)
+  if(material_value.le.0.d0) return
+  !> compute the intersection camera - light source, skip if not
+  call camera_inout%find_ray_image_plane_intersection(&
+  lights_inout%x(:,light_id,time_id),camera_id,intersect,plane_line_coords); 
+  if(.not.intersect) return
+  !> compute the intersection point pixel coordinates
+  call camera_inout%plane_to_pixel_local_coord(plane_line_coords(1:2),&
+  i_pixel,pixel_coords)
+  !> compute the geometry and visibility functions
+  call camera_inout%visibility_geometry_funct(lights_inout,1,time_id,&
+  camera_id,light_id,visibility_geometry)
+  !> compute the spectral irradiance
+  call lights_inout%spectral_irradiance(spectra_inout,time_id,light_id,&
+  camera_inout%x(:,camera_id,1),spectral_irradiance)
+  !> integrate the spectral irradiance within each interval
+  call spectra_inout%integrate_data(spectral_irradiance,intensity)
+  !> compute the light intensity in each spectral interval
+  intensity = intensity*material_value*visibility_geometry
+end subroutine compute_received_light_intensity
 
 !> write the source light positions and spectral contribution to hdf5 file.
 !> inputs:

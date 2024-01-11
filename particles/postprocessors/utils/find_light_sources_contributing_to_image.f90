@@ -313,14 +313,16 @@ masses,times,active_light_source_intensities,signs_charge,sims_particle_out,sign
   type(particle_sim),dimension(:),allocatable,intent(out) :: sims_particle_out
   !> variables:
   integer :: ii
-  !> allocate particle simulations
+  integer,dimension(n_times) :: signs_p_parallel
+  !> initialization
+  signs_p_parallel = 1; if(present(signs_p_parallel_in)) signs_p_parallel = signs_p_parallel_in
   allocate(sims_particle_out(n_times))
   !> loop for initialising particles
   do ii=1,n_times
     call generate_particle_simulation_from_active_light_sources(lights_inout,&
     rng,fields,my_id,n_cpus,n_dead_particles,n_particles,n_spectra,accept_threshold,&
     masses(ii),times(ii),active_light_source_intensities(:,:,ii),signs_charge(ii),&
-    sims_particle_out(ii),sign_p_parallel_in=signs_p_parallel_in(ii))
+    sims_particle_out(ii),sign_p_parallel_in=signs_p_parallel(ii))
   enddo
 end subroutine generate_particle_simulations_from_active_light_sources
 
@@ -412,12 +414,13 @@ mass,time,active_light_source_intensities,sign_charge,sim_particle_out,sign_p_pa
       (random_numbers(ii).gt.accept_threshold)) cycle
       call lights_inout%compute_particle_from_light(sim_particle_out%fields,&
       ii,jj,sim_particle_out%groups(1)%mass,particle_list(ii,jj))
+      if(particle_list(ii,jj)%i_elm.le.0) cycle
       select type (p_out=>particle_list(ii,jj))
         type is (particle_kinetic_relativistic)
-          p_out%p(1) = sign_p_parallel*p_out%p(1)
           p_out%q    = int(sign_charge,kind=1)*p_out%q
         type is (particle_gc_relativistic)
           p_out%q = int(sign_charge,kind=1)*p_out%q
+          p_out%p(1) = real(sign_p_parallel,kind=8)*p_out%p(1)
       end select
       check_particle_to_copy(ii,jj) = .true.
     enddo

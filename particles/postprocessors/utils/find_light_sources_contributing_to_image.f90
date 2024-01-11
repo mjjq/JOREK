@@ -14,46 +14,57 @@ use mod_gyroaverage_synchrotron_light_dist_vertices, only: gyroaverage_synchrotr
 implicit none
 
 !> Variables -----------------------------------------------------------------------------------------------
+type(pcg32_rng)                             :: rng_pcg32
 type(event)                                 :: field_reader,particle_reader
 type(pinhole_lens)                          :: lens
 type(spectrum_integrator_2nd)               :: spectra
 type(camera_perspective_static)             :: camera
 type(gyroaverage_synchrotron_light_dist)    :: synch_sources
-type(particle_sim),dimension(:),allocatable :: sims
+type(particle_sim),dimension(:),allocatable :: sims,sims_particle_reconstructed
 logical                                     :: do_jorek_init
 integer                                     :: ii,n_particles_tot
 integer                                     :: n_groups,my_id,n_cpus,n_x,ierr
 integer                                     :: n_times,n_wavelengths,n_spectra
 integer                                     :: n_int_camera_param,n_real_camera_param
-integer,dimension(:),allocatable            :: int_camera_param
+integer                                     :: n_null_particles
+integer,dimension(1)                        :: signs_p_parallel_gc_ref,signs_charge_ref
+integer,dimension(:),allocatable            :: int_camera_param,signs_p_gc_parallel,signs_charge
 integer,dimension(:,:,:),allocatable        :: active_light_pixel_ids
-real*8                                      :: t1,t0
+real*8                                      :: t1,t0,accept_dark_lights_threshold
+real*8,dimension(1)                         :: masses_ref 
 real*8,dimension(:),allocatable             :: min_spectra,max_spectra,pinhole_positions
-real*8,dimension(:),allocatable             :: real_camera_param,sim_times
+real*8,dimension(:),allocatable             :: masses,real_camera_param,sim_times
 real*8,dimension(:,:,:),allocatable         :: active_light_source_positions
 real*8,dimension(:,:,:),allocatable         :: active_light_source_intensities
 real*8,dimension(:,:,:),allocatable         :: active_light_pixel_coordinates
+logical                                     :: write_particle_restart_from_light
 character(len=3)                            :: hdf5ext
 character(len=15)                           :: particle_filename
 character(len=17)                           :: fields_filename
 character(len=29)                           :: light_output_filename
 character(len=30)                           :: camera_output_filename
-character(len=60),dimension(:),allocatable :: particle_filenames
+character(len=60),dimension(:),allocatable  :: particle_filenames
 
 !> Variable presets -----------------------------------------------------------------------
 hdf5ext = '.h5'
 
 !> Variables definitions -----------------------------------------------------------------------------------
-fields_filename        = 'jorek_equilibrium'
-light_output_filename  = 'contributing_light_intesities'
-camera_output_filename = 'contributing_camera_intesities'
-n_x                    = 3 !< size of the spatial coordinates array
-n_groups               = 1 !< number of particle groups
-n_spectra              = 1 !< number of spectra
-n_wavelengths          = 40 !< number of wavelengths per spectrum
-n_int_camera_param     = 5
-n_real_camera_param    = 9
-n_times                = 11
+fields_filename                   = 'jorek_equilibrium'
+light_output_filename             = 'contributing_light_intesities'
+camera_output_filename            = 'contributing_camera_intesities'
+n_x                               = 3 !< size of the spatial coordinates array
+n_groups                          = 1 !< number of particle groups
+n_spectra                         = 1 !< number of spectra
+n_wavelengths                     = 40 !< number of wavelengths per spectrum
+n_int_camera_param                = 5
+n_real_camera_param               = 9
+n_times                           = 11
+write_particle_restart_from_light = .false.
+n_null_particles                  = 15 !< number of null particles to be kept reconstructed particles
+accept_dark_lights_threshold      = 1d-1 !< probability of accepting dark particles
+masses_ref                        = 5.48579909065d-4 !< electron mass in AMU 
+signs_p_parallel_gc_ref           = -1; !< sign of the gc parallel momentum for gc reconstruction
+signs_charge_ref                  = -1; !< sign of the particle charge for particle reconstruction
 !> se the list of particle restart files to be read
 allocate(character(len=60)::particle_filenames(n_times)); particle_filenames = ''
 particle_filenames = [character(len=60)::'part_restart000.00339941',&
@@ -125,6 +136,29 @@ t1 = MPI_Wtime()
 write(*,*) "Findig light sources contributing to an image and computing spectral intensities: completed!"
 write(*,*) my_id,'System time finding contributing light sources and computing intensities (s): ',t1-t0
 
+!> generate particle list from active lights if required ---------------------------------------------------
+if(write_particle_restart_from_light) then
+write(*,*) "Generate particle simulations from light spectral intensities: ..."
+t0 = MPI_Wtime()
+if(allocated(masses))           deallocate(masses)
+if(allocated(signs_p_gc_parallel)) deallocate(signs_p_gc_parallel)
+if(allocated(signs_charge))     deallocate(signs_charge)
+allocate(masses(camera%n_vertices));           allocate(masses(camera%n_vertices))
+allocate(signs_p_gc_parallel(camera%n_vertices)); allocate(signs_p_gc_parallel(camera%n_vertices))
+allocate(signs_charge(camera%n_vertices));     allocate(signs_charge(camera%n_vertices))
+masses = masses_ref(1); if(size(masses_ref).eq.camera%n_vertices) masses = masses_ref; 
+signs_p_gc_parallel= signs_p_parallel_gc_ref(1) 
+if(size(signs_p_parallel_gc_ref).eq.camera%n_vertices) signs_p_gc_parallel = signs_p_parallel_gc_ref;
+signs_charge = signs_charge_ref(1)
+if(size(signs_charge_ref).eq.camera%n_vertices) signs_charge = signs_charge_ref
+call generate_particle_simulations_from_active_light_sources(synch_sources,&
+rng_pcg32,sims(1)%fields,my_id,n_cpus,camera%n_times,n_null_particles,n_particles_tot,&
+spectra%n_spectra,accept_dark_lights_threshold,masses,camera%times,active_light_source_intensities,&
+signs_charge,sims_particle_reconstructed,signs_p_parallel_in=signs_p_parallel_gc_ref)
+t1 = MPI_Wtime()
+write(*,*) "Generating particle simulations from light spectral intensities: completed!"
+write(*,*) my_id,'System time generating particle simulations from light spectral intensities (s): ',t1-t0
+endif
 !> Write active light sources ------------------------------------------------------------------------------
 #ifdef USE_HDF5
   write(*,*) "Write contributing light sources in HDF5 file ..."
@@ -148,6 +182,9 @@ if(allocated(active_light_source_positions))   deallocate(active_light_source_po
 if(allocated(active_light_source_intensities)) deallocate(active_light_source_intensities);
 if(allocated(active_light_pixel_ids))          deallocate(active_light_pixel_ids);
 if(allocated(active_light_pixel_coordinates))  deallocate(active_light_pixel_coordinates);
+if(allocated(masses))                deallocate(masses)
+if(allocated(signs_p_gc_parallel))   deallocate(signs_p_gc_parallel)
+if(allocated(signs_charge))          deallocate(signs_charge)
 call finalize_mpi_threads(ierr)
 
 contains
@@ -221,6 +258,223 @@ pixel_ids_light_source,pixel_coords_light_source)
     base_counter = base_counter + lights_inout%n_active_vertices(jj)
   enddo
 end subroutine compute_contribution_light_source_to_image_static
+
+!> Method used for generating multiple particle simulations from contributing
+!> and non contributing light sources
+!> inputs:
+!>   lights_inout:                    (light_vertices) class containing all active lights
+!>   rng:                             (type_rng) random number generator
+!>   fields:                          (fields_base) JOREK MHD fields
+!>   my_id:                           (integer) id of the current mpi task
+!>   n_cpus:                          (integer) number of mpi tasks
+!>   n_times:                         (integer) number of times to be treated
+!>   n_dead_particles:                (integer) number of required dead particles
+!>   n_particles:                     (integer) number of active lights
+!>   n_spectra:                       (integer) number of spectra
+!>   accept_threshold:                (real8) theshold for accepting non emitting lights
+!>   masses:                          (real8)(n_times) particle masses for each time
+!>   times:                           (real8) simulation time for each time
+!>   active_light_source_intensities: (real8)(n_spectra,n_particles,n_times) intensity of active lights
+!>   signs_charge:                    (integer)(n_times) sign of the particle charge for each time
+!>   signs_p_parallel_in:             (integer)(n_times) optional sign of parallel momentum for for
+!>                                    each time relativistic guiding center particles, default: 1
+!> outputs:
+!>   sims_particle_out:                (type_particle_sim)(n_times) initialised particle simulations
+subroutine generate_particle_simulations_from_active_light_sources(lights_inout,&
+rng,fields,my_id,n_cpus,n_times,n_dead_particles,n_particles,n_spectra,accept_threshold,&
+masses,times,active_light_source_intensities,signs_charge,sims_particle_out,signs_p_parallel_in)
+  use mod_rng
+  use mod_fields,         only: fields_base
+  use mod_particle_sim,   only: particle_sim
+  use mod_light_vertices, only: light_vertices
+  implicit none
+  !> inputs-outputs:
+  class(light_vertices),intent(inout) :: lights_inout
+  class(type_rng),intent(inout)       :: rng
+  !> inputs:
+  class(fields_base),intent(in)                              :: fields
+  integer,intent(in)                                         :: n_dead_particles,n_particles,n_cpus,my_id
+  integer,intent(in)                                         :: n_times,n_spectra
+  integer,dimension(n_times),intent(in)                      :: signs_charge
+  real*8,intent(in)                                          :: accept_threshold
+  real*8,dimension(n_times),intent(in)                       :: times,masses
+  real*8,dimension(n_spectra,n_particles,n_times),intent(in) :: active_light_source_intensities
+  integer,dimension(n_times),intent(in),optional             :: signs_p_parallel_in
+  !> outputs:
+  type(particle_sim),dimension(:),allocatable,intent(out) :: sims_particle_out
+  !> variables:
+  integer :: ii
+  !> allocate particle simulations
+  allocate(sims_particle_out(n_times))
+  !> loop for initialising particles
+  do ii=1,n_times
+    call generate_particle_simulation_from_active_light_sources(lights_inout,&
+    rng,fields,my_id,n_cpus,n_dead_particles,n_particles,n_spectra,accept_threshold,&
+    masses(ii),times(ii),active_light_source_intensities(:,:,ii),signs_charge(ii),&
+    sims_particle_out(ii),sign_p_parallel_in=signs_p_parallel_in(ii))
+  enddo
+end subroutine generate_particle_simulations_from_active_light_sources
+
+
+!> Method used for generating a particle simulation from contributing and 
+!> non contributing light sources
+!> inputs:
+!>   lights_inout:                    (light_vertices) class containing all active lights
+!>   rng:                             (type_rng) random number generator
+!>   fields:                          (fields_base) JOREK MHD fields
+!>   my_id:                           (integer) id of the current mpi task
+!>   n_cpus:                          (integer) number of mpi tasks
+!>   n_dead_particles:                (integer) number of required dead particles
+!>   n_particles:                     (integer) number of active lights
+!>   n_spectra:                       (integer) number of spectra
+!>   accept_threshold:                (real8) theshold for accepting non emitting lights
+!>   mass:                            (real8) particle mass
+!>   time:                            (real8) simulation time
+!>   active_light_source_intensities: (real8)(n_spectra,n_particles) intensity of active lights
+!>   sign_charge:                     (integer) sign of the particle charge
+!>   sign_p_parallel_in:              (integer) optional sign of parallel momentum for
+!>                                    relativistic guiding center particles, default: 1
+!> outputs:
+!>   sim_particle_out:                (type_particle_sim) initialised particle simulation
+subroutine generate_particle_simulation_from_active_light_sources(lights_inout,&
+rng,fields,my_id,n_cpus,n_dead_particles,n_particles,n_spectra,accept_threshold,&
+mass,time,active_light_source_intensities,sign_charge,sim_particle_out,sign_p_parallel_in)
+  use mod_rng
+  use mod_random_seed
+  use mod_fields,         only: fields_base
+  use mod_particle_types, only: particle_base
+  use mod_particle_types, only: particle_gc_relativistic
+  use mod_particle_types, only: particle_kinetic_relativistic
+  use mod_particle_sim,   only: particle_sim
+  use mod_light_vertices, only: light_vertices
+  use mod_full_synchrotron_light_dist_vertices,        only: full_synchrotron_light_dist
+  use mod_gyroaverage_synchrotron_light_dist_vertices, only: gyroaverage_synchrotron_light_dist
+  implicit none
+  !> inputs-outputs:
+  class(light_vertices),intent(inout) :: lights_inout
+  class(type_rng),intent(inout)       :: rng
+  !> inputs:
+  class(fields_base),intent(in)                      :: fields
+  integer,intent(in)                                 :: n_dead_particles,n_particles,n_cpus,my_id
+  integer,intent(in)                                 :: n_spectra,sign_charge
+  real*8,intent(in)                                  :: time,mass,accept_threshold
+  real*8,dimension(n_spectra,n_particles),intent(in) :: active_light_source_intensities
+  integer,intent(in),optional                        :: sign_p_parallel_in
+  !> outputs:
+  type(particle_sim),intent(out) :: sim_particle_out
+  !> variables:
+  class(particle_base),dimension(:),allocatable   :: particle_list
+  integer                                         :: ii,time_id,ifail,sign_p_parallel
+  integer                                         :: n_sim_particles,counter
+  real*8,dimension(n_particles)                   :: random_numbers
+  logical,dimension(n_particles)                  :: check_particle_to_copy
+  !> initialisation
+  sign_p_parallel = 1; if(present(sign_p_parallel_in)) sign_p_parallel = sign_p_parallel_in;
+  check_particle_to_copy = .false.; ifail = 0;
+  !> generate random numbers
+  call rng%initialize(n_particles,random_seed(),n_cpus,my_id,ifail)
+  if(ifail.eq.0) call MPI_ABORT(MPI_COMM_WORLD,-1,ifail)  
+  call rng%next(random_numbers)
+  !> initialise particle simulation
+  call sim_particle_out%initialize(1,.true.,my_id,n_cpus,.false.)
+  sim_particle_out%time           = time
+  sim_particle_out%fields         = fields
+  sim_particle_out%groups(:)%mass = mass
+  !> initialise support particle list
+  select type (light=>lights_inout)
+    type is (full_synchrotron_light_dist)
+      allocate(particle_kinetic_relativistic::particle_list(n_particles))
+    type is (gyroaverage_synchrotron_light_dist)
+      allocate(particle_gc_relativistic::particle_list(n_particles))
+    class default
+      call MPI_ABORT(MPI_COMM_WORLD,-1,ifail)
+  end select
+  call initialise_particle_list(n_particles,particle_list)
+  !> generate active particles and a fraction of the non active particles
+  !$omp parallel do default(shared) private(ii,time_id) &
+  !$omp firstprivate(n_particles,accept_threshold,sign_p_parallel,sign_charge)
+  do ii=1,n_particles
+    if(all(active_light_source_intensities(:,ii).eq.0d0).and.&
+    (random_numbers(ii).gt.accept_threshold)) cycle
+    call lights_inout%compute_particle_from_light(sim_particle_out%fields,&
+    ii,time_id,sim_particle_out%groups(1)%mass,particle_list(ii))
+    select type (p_out=>particle_list(ii))
+      type is (particle_kinetic_relativistic)
+        p_out%p(1) = sign_p_parallel*p_out%p(1)
+        p_out%q    = int(sign_charge,kind=1)*p_out%q
+      type is (particle_gc_relativistic)
+        p_out%q = int(sign_charge,kind=1)*p_out%q
+    end select
+    check_particle_to_copy(ii) = .true.
+  enddo
+  !$omp end parallel do  
+  !> initialise new simulation particle list
+  n_sim_particles = count(check_particle_to_copy)
+  select type (p_list=>particle_list)
+    type is (particle_kinetic_relativistic)
+      allocate(particle_kinetic_relativistic::sim_particle_out%groups(1)%particles(&
+      n_sim_particles+n_dead_particles))
+    type is (particle_gc_relativistic)
+      allocate(particle_gc_relativistic::sim_particle_out%groups(1)%particles(&
+      n_sim_particles+n_dead_particles))
+  end select
+  call initialise_particle_list(n_sim_particles+n_dead_particles,&
+  sim_particle_out%groups(1)%particles)
+  !> store only selected particles
+  counter = 1; check_particle_to_copy = .not.check_particle_to_copy;
+  do ii=1,n_particles
+    if(check_particle_to_copy(ii)) cycle
+    sim_particle_out%groups(1)%particles(counter) = particle_list(ii)
+    counter = counter+1
+  enddo
+  !> deallocate particles
+  if(allocated(particle_list)) deallocate(particle_list)
+end subroutine generate_particle_simulation_from_active_light_sources
+
+!> initialise particle list
+!> inputs:
+!>   n_particles: 
+!>   particle_list: (particle_base) list of particles to be initialised
+!> outputs:
+!>   particle_list: (particle_base) initialised particle list
+subroutine initialise_particle_list(n_particles,particle_list)
+  use mod_particle_types, only: particle_base
+  use mod_particle_types, only: particle_gc_relativistic
+  use mod_particle_types, only: particle_kinetic_relativistic
+  implicit none
+  !> inputs: 
+  integer,intent(in) :: n_particles
+  !> inputs-outputs:
+  class(particle_base),dimension(n_particles),intent(inout) :: particle_list
+  !> variables:
+  integer :: ii
+  !$omp parallel do default(shared) private(ii) firstprivate(n_particles)
+  do ii=1,n_particles
+    call initialise_particle_base(particle_list(ii))
+    select type (p_inout=>particle_list(ii))
+      type is (particle_kinetic_relativistic)
+        p_inout%p = 0d0; p_inout%q = 0;
+      type is (particle_gc_relativistic)
+        p_inout%p = 0d0; p_inout%q =0;
+    end select
+  enddo
+  !$omp end parallel do
+end subroutine initialise_particle_list
+
+!> initialise particle base
+!> inputs
+!>   particle: (particle_base) particle to be initialised
+!> outputs:
+!>   particle: (particle_base) initialised particle
+subroutine initialise_particle_base(particle)
+  use mod_particle_types, only: particle_base 
+  implicit none
+  !> inputs-outputs:
+  class(particle_base),intent(inout) :: particle
+  !> initialise particle base
+  particle%x = 0d0; particle%st = 0d0; particle%i_elm = -1;
+  particle%weight = -1d99; particle%i_life = 0; particle%t_birth = 0.; 
+end subroutine initialise_particle_base
 
 !> Method used for computing the radiation intensity emitted by 
 !> a light and recived by a camera  

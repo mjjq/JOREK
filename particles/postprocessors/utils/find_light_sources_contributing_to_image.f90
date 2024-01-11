@@ -15,7 +15,7 @@ implicit none
 
 !> Variables -----------------------------------------------------------------------------------------------
 type(pcg32_rng)                             :: rng_pcg32
-type(event)                                 :: field_reader,particle_reader
+type(event)                                 :: field_reader,particle_reader,particle_writer
 type(pinhole_lens)                          :: lens
 type(spectrum_integrator_2nd)               :: spectra
 type(camera_perspective_static)             :: camera
@@ -43,6 +43,7 @@ character(len=15)                           :: particle_filename
 character(len=17)                           :: fields_filename
 character(len=29)                           :: light_output_filename
 character(len=30)                           :: camera_output_filename
+character(len=30)                           :: reconstruct_particle_filename
 character(len=60),dimension(:),allocatable  :: particle_filenames
 
 !> Variable presets -----------------------------------------------------------------------
@@ -65,6 +66,7 @@ accept_dark_lights_threshold      = 1d-1 !< probability of accepting dark partic
 masses_ref                        = 5.48579909065d-4 !< electron mass in AMU 
 signs_p_parallel_gc_ref           = -1; !< sign of the gc parallel momentum for gc reconstruction
 signs_charge_ref                  = -1; !< sign of the particle charge for particle reconstruction
+reconstruct_particle_filename     = 'reconstructed_particle_restart'
 !> se the list of particle restart files to be read
 allocate(character(len=60)::particle_filenames(n_times)); particle_filenames = ''
 particle_filenames = [character(len=60)::'part_restart000.00339941',&
@@ -148,9 +150,9 @@ allocate(signs_p_gc_parallel(camera%n_vertices)); allocate(signs_p_gc_parallel(c
 allocate(signs_charge(camera%n_vertices));     allocate(signs_charge(camera%n_vertices))
 masses = masses_ref(1); if(size(masses_ref).eq.camera%n_vertices) masses = masses_ref; 
 signs_p_gc_parallel= signs_p_parallel_gc_ref(1) 
-if(size(signs_p_parallel_gc_ref).eq.camera%n_vertices) signs_p_gc_parallel = signs_p_parallel_gc_ref;
+if(size(signs_p_parallel_gc_ref).eq.camera%n_times) signs_p_gc_parallel = signs_p_parallel_gc_ref;
 signs_charge = signs_charge_ref(1)
-if(size(signs_charge_ref).eq.camera%n_vertices) signs_charge = signs_charge_ref
+if(size(signs_charge_ref).eq.camera%n_times) signs_charge = signs_charge_ref
 call generate_particle_simulations_from_active_light_sources(synch_sources,&
 rng_pcg32,sims(1)%fields,my_id,n_cpus,camera%n_times,n_null_particles,n_particles_tot,&
 spectra%n_spectra,accept_dark_lights_threshold,masses,camera%times,active_light_source_intensities,&
@@ -161,14 +163,22 @@ write(*,*) my_id,'System time generating particle simulations from light spectra
 endif
 !> Write active light sources ------------------------------------------------------------------------------
 #ifdef USE_HDF5
-  write(*,*) "Write contributing light sources in HDF5 file ..."
-  call write_source_light_positions_contributions_in_hdf5(light_output_filename,my_id,n_x,&
-  n_spectra,n_particles_tot,camera%n_vertices,active_light_source_positions,&
-  active_light_source_intensities,active_light_pixel_ids,active_light_pixel_coordinates,ierr)
-  write(*,*) "Write contributing light sources in HDF5 file: completed!"
-  write(*,*) "Write camera data in HDF5 file ..."
-  call write_pinholes_planes_directions_in_hdf5(camera_output_filename,my_id,camera,ierr)
-  write(*,*) "Write camera data in HDF5 file: completed!"
+write(*,*) "Write contributing light sources in HDF5 file ..."
+call write_source_light_positions_contributions_in_hdf5(light_output_filename,my_id,n_x,&
+n_spectra,n_particles_tot,camera%n_vertices,active_light_source_positions,&
+active_light_source_intensities,active_light_pixel_ids,active_light_pixel_coordinates,ierr)
+write(*,*) "Writing contributing light sources in HDF5 file: completed!"
+write(*,*) "Write camera data in HDF5 file ..."
+call write_pinholes_planes_directions_in_hdf5(camera_output_filename,my_id,camera,ierr)
+write(*,*) "Writing camera data in HDF5 file: completed!"
+if(write_particle_restart_from_light) then
+  write(*,*) "Write reconstructed particle lists in HDF5 file ..."
+  do ii=1,size(sims_particle_reconstructed)
+    particle_writer = event(write_action(basename=reconstruct_particle_filename,decimal_digits=ii))
+    call with(sims_particle_reconstructed(ii),particle_writer)
+  enddo
+  write(*,*) "Writing reconstructed particle lists in HDF5: completed!"
+endif
 #endif
 !> Finalisation --------------------------------------------------------------------------------------------
 if(allocated(min_spectra))           deallocate(min_spectra);

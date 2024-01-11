@@ -60,13 +60,13 @@ n_wavelengths                     = 40 !< number of wavelengths per spectrum
 n_int_camera_param                = 5
 n_real_camera_param               = 9
 n_times                           = 11
-write_particle_restart_from_light = .false.
+write_particle_restart_from_light = .true.
 n_null_particles                  = 15 !< number of null particles to be kept reconstructed particles
 accept_dark_lights_threshold      = 1d-1 !< probability of accepting dark particles
 masses_ref                        = 5.48579909065d-4 !< electron mass in AMU 
 signs_p_parallel_gc_ref           = -1; !< sign of the gc parallel momentum for gc reconstruction
 signs_charge_ref                  = -1; !< sign of the particle charge for particle reconstruction
-reconstruct_particle_filename     = 'reconstructed_particle_restart'
+reconstruct_particle_filename     = 'reconstructed_particle_restart' 
 !> se the list of particle restart files to be read
 allocate(character(len=60)::particle_filenames(n_times)); particle_filenames = ''
 particle_filenames = [character(len=60)::'part_restart000.00339941',&
@@ -145,9 +145,8 @@ t0 = MPI_Wtime()
 if(allocated(masses))           deallocate(masses)
 if(allocated(signs_p_gc_parallel)) deallocate(signs_p_gc_parallel)
 if(allocated(signs_charge))     deallocate(signs_charge)
-allocate(masses(camera%n_vertices));           allocate(masses(camera%n_vertices))
-allocate(signs_p_gc_parallel(camera%n_vertices)); allocate(signs_p_gc_parallel(camera%n_vertices))
-allocate(signs_charge(camera%n_vertices));     allocate(signs_charge(camera%n_vertices))
+allocate(masses(camera%n_vertices)); allocate(signs_p_gc_parallel(camera%n_vertices));
+allocate(signs_charge(camera%n_vertices));
 masses = masses_ref(1); if(size(masses_ref).eq.camera%n_vertices) masses = masses_ref; 
 signs_p_gc_parallel= signs_p_parallel_gc_ref(1) 
 if(size(signs_p_parallel_gc_ref).eq.camera%n_times) signs_p_gc_parallel = signs_p_parallel_gc_ref;
@@ -174,7 +173,7 @@ write(*,*) "Writing camera data in HDF5 file: completed!"
 if(write_particle_restart_from_light) then
   write(*,*) "Write reconstructed particle lists in HDF5 file ..."
   do ii=1,size(sims_particle_reconstructed)
-    particle_writer = event(write_action(basename=reconstruct_particle_filename,decimal_digits=ii))
+    particle_writer = event(write_action(basename=reconstruct_particle_filename))
     call with(sims_particle_reconstructed(ii),particle_writer)
   enddo
   write(*,*) "Writing reconstructed particle lists in HDF5: completed!"
@@ -373,17 +372,17 @@ mass,time,active_light_source_intensities,sign_charge,sim_particle_out,sign_p_pa
   !> outputs:
   type(particle_sim),intent(out) :: sim_particle_out
   !> variables:
-  class(particle_base),dimension(:),allocatable   :: particle_list
-  integer                                         :: ii,time_id,ifail,sign_p_parallel
-  integer                                         :: n_sim_particles,counter
-  real*8,dimension(n_particles)                   :: random_numbers
-  logical,dimension(n_particles)                  :: check_particle_to_copy
+  class(particle_base),dimension(:,:),allocatable     :: particle_list
+  integer                                             :: ii,jj,ifail,sign_p_parallel
+  integer                                             :: n_sim_particles,counter
+  real*8,dimension(n_particles)                       :: random_numbers
+  logical,dimension(n_particles,lights_inout%n_times) :: check_particle_to_copy
   !> initialisation
   sign_p_parallel = 1; if(present(sign_p_parallel_in)) sign_p_parallel = sign_p_parallel_in;
   check_particle_to_copy = .false.; ifail = 0;
   !> generate random numbers
   call rng%initialize(n_particles,random_seed(),n_cpus,my_id,ifail)
-  if(ifail.eq.0) call MPI_ABORT(MPI_COMM_WORLD,-1,ifail)  
+  if(ifail.ne.0) call MPI_ABORT(MPI_COMM_WORLD,-1,ifail)  
   call rng%next(random_numbers)
   !> initialise particle simulation
   call sim_particle_out%initialize(1,.true.,my_id,n_cpus,.false.)
@@ -391,31 +390,37 @@ mass,time,active_light_source_intensities,sign_charge,sim_particle_out,sign_p_pa
   sim_particle_out%fields         = fields
   sim_particle_out%groups(:)%mass = mass
   !> initialise support particle list
+  ifail = 1
   select type (light=>lights_inout)
     type is (full_synchrotron_light_dist)
-      allocate(particle_kinetic_relativistic::particle_list(n_particles))
+      allocate(particle_kinetic_relativistic::particle_list(n_particles,lights_inout%n_times))
+      ifail = 0
     type is (gyroaverage_synchrotron_light_dist)
-      allocate(particle_gc_relativistic::particle_list(n_particles))
-    class default
-      call MPI_ABORT(MPI_COMM_WORLD,-1,ifail)
+      allocate(particle_gc_relativistic::particle_list(n_particles,lights_inout%n_times))
+      ifail = 0
   end select
-  call initialise_particle_list(n_particles,particle_list)
+  if(ifail.ne.0) call MPI_ABORT(MPI_COMM_WORLD,-1,ifail)
+  do jj=1,lights_inout%n_times 
+    call initialise_particle_list(n_particles,particle_list(:,jj))
+  enddo
   !> generate active particles and a fraction of the non active particles
-  !$omp parallel do default(shared) private(ii,time_id) &
+  !$omp parallel do default(shared) private(ii,jj) &
   !$omp firstprivate(n_particles,accept_threshold,sign_p_parallel,sign_charge)
-  do ii=1,n_particles
-    if(all(active_light_source_intensities(:,ii).eq.0d0).and.&
-    (random_numbers(ii).gt.accept_threshold)) cycle
-    call lights_inout%compute_particle_from_light(sim_particle_out%fields,&
-    ii,time_id,sim_particle_out%groups(1)%mass,particle_list(ii))
-    select type (p_out=>particle_list(ii))
-      type is (particle_kinetic_relativistic)
-        p_out%p(1) = sign_p_parallel*p_out%p(1)
-        p_out%q    = int(sign_charge,kind=1)*p_out%q
-      type is (particle_gc_relativistic)
-        p_out%q = int(sign_charge,kind=1)*p_out%q
-    end select
-    check_particle_to_copy(ii) = .true.
+  do jj=1,lights_inout%n_times
+    do ii=1,n_particles
+      if(all(active_light_source_intensities(:,ii).eq.0d0).and.&
+      (random_numbers(ii).gt.accept_threshold)) cycle
+      call lights_inout%compute_particle_from_light(sim_particle_out%fields,&
+      ii,jj,sim_particle_out%groups(1)%mass,particle_list(ii,jj))
+      select type (p_out=>particle_list(ii,jj))
+        type is (particle_kinetic_relativistic)
+          p_out%p(1) = sign_p_parallel*p_out%p(1)
+          p_out%q    = int(sign_charge,kind=1)*p_out%q
+        type is (particle_gc_relativistic)
+          p_out%q = int(sign_charge,kind=1)*p_out%q
+      end select
+      check_particle_to_copy(ii,jj) = .true.
+    enddo
   enddo
   !$omp end parallel do  
   !> initialise new simulation particle list
@@ -432,10 +437,12 @@ mass,time,active_light_source_intensities,sign_charge,sim_particle_out,sign_p_pa
   sim_particle_out%groups(1)%particles)
   !> store only selected particles
   counter = 1; check_particle_to_copy = .not.check_particle_to_copy;
-  do ii=1,n_particles
-    if(check_particle_to_copy(ii)) cycle
-    sim_particle_out%groups(1)%particles(counter) = particle_list(ii)
-    counter = counter+1
+  do jj=1,lights_inout%n_times
+    do ii=1,n_particles
+      if(check_particle_to_copy(ii,jj)) cycle
+      sim_particle_out%groups(1)%particles(counter) = particle_list(ii,jj)
+      counter = counter+1
+    enddo
   enddo
   !> deallocate particles
   if(allocated(particle_list)) deallocate(particle_list)

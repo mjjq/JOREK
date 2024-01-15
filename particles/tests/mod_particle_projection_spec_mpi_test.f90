@@ -408,6 +408,7 @@ apply_dirichlet_in,write_particle_in,n_fields_write_in)
     !> perform checks on the mean and rms
     call elements_mean_rms(project%node_list,project%element_list,&
     f_proj,mean,rms_error)
+    write(*,*),mean,mean_expect,mean_tol(kk)
     write(tol_s,'(g8.1)') mean_tol(kk)
     call assert_equals(mean_expect,mean,mean_tol(kk),message//&
     ' mean value not matched for n='//trim(adjustl(number_particles))//&

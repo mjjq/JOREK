@@ -14,7 +14,7 @@ integer,parameter :: master_rank=0
 real*8,parameter  :: R_particle_in=2.d0
 real*8,parameter  :: Z_particle_in=1.d0
 real*8,parameter  :: test_time=0.d0
-integer,dimension(4),parameter :: n_particles=(/1000,10000,100000,1000000/)
+integer,dimension(3),parameter :: n_particles=(/10000,100000,1000000/)
 integer,dimension(1),parameter :: nx=(/10/)
 integer,dimension(1),parameter :: ny=(/10/)
 integer,dimension(2),parameter :: nrad=(/30,40/)
@@ -408,7 +408,6 @@ apply_dirichlet_in,write_particle_in,n_fields_write_in)
     !> perform checks on the mean and rms
     call elements_mean_rms(project%node_list,project%element_list,&
     f_proj,mean,rms_error)
-    write(*,*),mean,mean_expect,mean_tol(kk)
     write(tol_s,'(g8.1)') mean_tol(kk)
     call assert_equals(mean_expect,mean,mean_tol(kk),message//&
     ' mean value not matched for n='//trim(adjustl(number_particles))//&

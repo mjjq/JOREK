@@ -40,9 +40,9 @@ subroutine run_fruit_particle_projection_spec_mpi(rank,n_tasks,ifail)
   call run_test_case(test_particle_projection_polar_30_21_sobseq,&
   'test_particle_projection_polar_30_21_sobseq')
   call run_test_case(test_particle_projection_flux_40_31_pcg32,&
-  'test_particle_projection_polar_40_31_pcg32')
+  'test_particle_projection_flux_40_31_pcg32')
   call run_test_case(test_particle_projection_flux_40_32_pcg32,&
-  'test_particle_projection_polar_40_32_pcg32')
+  'test_particle_projection_flux_40_32_pcg32')
   call run_test_case(test_particle_projection_polar_30_22_10000_sob_smoothing,&
   'test_particle_projection_polar_30_22_10000_sob_smoothing')
   call run_test_case(test_rhs_square_10_10_pcg32,&
@@ -59,7 +59,6 @@ subroutine setup(rank,n_tasks,ifail)
   integer,intent(inout) :: ifail
   integer,intent(in)    :: rank,n_tasks
   rank_loc=rank; n_tasks_loc=n_tasks; ifail_loc=ifail;
-  allocate(test_nodes); allocate(test_elements);
 end subroutine setup
 
 subroutine teardown(rank,n_tasks,ifail)
@@ -67,7 +66,6 @@ subroutine teardown(rank,n_tasks,ifail)
   integer,intent(inout) :: ifail
   integer,intent(in)    :: rank,n_tasks
   rank_loc = -1; n_tasks_loc = 0; ifail=ifail_loc;
-  deallocate(test_nodes); deallocate(test_elements);
 end subroutine teardown
 
 !> Tests ------------------------------------------
@@ -86,6 +84,7 @@ subroutine test_particle_projection_square_10_10_pcg32
   real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  allocate(test_nodes); allocate(test_elements);
   tol_rms = tol_rms_const/sqrt(real(n_particles(1:3)*n_tasks_loc,kind=8))
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection square nx: ',&
   nx(1),' ny: ',ny(1),' pcg32 rank: ',rank_loc,':'
@@ -98,6 +97,7 @@ subroutine test_particle_projection_square_10_10_pcg32
   tol_mean,tol_rms,trim(adjustl(message)),trim(adjustl(filename)),&
   ifail_loc,apply_dirichlet_in=impose_dirichlet,&
   write_particle_in=write_projection_output)
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_particle_projection_square_10_10_pcg32
 
 !> Project 10^3-10^5 particles generated with sobseq ont square grid
@@ -116,6 +116,7 @@ subroutine test_particle_projection_square_10_10_sobseq
                                    5d2/real(n_particles(3),kind=8)]
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  allocate(test_nodes); allocate(test_elements);
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection square nx: ',&
   nx(1),' ny: ',ny(1),' sobseq rank: ',rank_loc,':'
   write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_square_rank',&
@@ -127,6 +128,7 @@ subroutine test_particle_projection_square_10_10_sobseq
   tol_mean,tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),&
   trim(adjustl(filename)),ifail_loc,apply_dirichlet_in=impose_dirichlet,&
   write_particle_in=write_projection_output)
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_particle_projection_square_10_10_sobseq
 
 !> Project 10^3-10^5 particles generated with sobseq ont even polar grid
@@ -146,6 +148,7 @@ subroutine test_particle_projection_polar_30_22_sobseq
   real*8                        :: volume
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  allocate(test_nodes); allocate(test_elements);
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection polar nrad: ',&
   nrad(1),' npol: ',npol(1),' sobseq rank: ',rank_loc,':'
   write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_polar_rank',&
@@ -158,6 +161,7 @@ subroutine test_particle_projection_polar_30_22_sobseq
   tol_mean,tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),&
   trim(adjustl(filename)),ifail_loc,apply_dirichlet_in=impose_dirichlet,&
   write_particle_in=write_projection_output)
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_particle_projection_polar_30_22_sobseq
 
 !> Project 10^3-10^5 particles generated with sobseq ont odd polar grid
@@ -177,6 +181,7 @@ subroutine test_particle_projection_polar_30_21_sobseq
   real*8                        :: volume
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  allocate(test_nodes); allocate(test_elements);
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection polar nrad: ',&
   nrad(1),' npol: ',npol(2),' sobseq rank: ',rank_loc,':'
   write(filename,'(A,I0,A,I0,A,I0,A)') '_test_projection_polar_rank',&
@@ -188,6 +193,7 @@ subroutine test_particle_projection_polar_30_21_sobseq
   proj_one,f_1,n_particles(1:3),sobseq_rng(),volume,expect_mean,expect_rms,tol_mean,&
   tol_rms/real(n_tasks_loc,kind=8),trim(adjustl(message)),trim(adjustl(filename)),&
   ifail_loc,apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_particle_projection_polar_30_21_sobseq
 
 !> Project 10^3-10^5 particles generated with pcg32 ont odd flux grid
@@ -206,6 +212,7 @@ subroutine test_particle_projection_flux_40_31_pcg32
   real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  allocate(test_nodes); allocate(test_elements);
   tol_rms = tol_rms_const/sqrt(real(n_tasks_loc*n_particles(1:3),kind=8))
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection flux nrad: ',&
   nrad(2),' npol: ',npol(3),' pcg32 rank: ',rank_loc,':'
@@ -218,6 +225,7 @@ subroutine test_particle_projection_flux_40_31_pcg32
   proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
   tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_particle_projection_flux_40_31_pcg32
 
 !> Project 10^3-10^5 particles generated with pcg32 ont even flux grid
@@ -236,6 +244,7 @@ subroutine test_particle_projection_flux_40_32_pcg32
   real*8,dimension(3)           :: tol_rms
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  allocate(test_nodes); allocate(test_elements);
   tol_rms = tol_rms_const/sqrt(real(n_tasks_loc*n_particles(1:3),kind=8))
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error particle projection flux nrad: ',&
   nrad(2),' npol: ',npol(4),' pcg32 rank: ',rank_loc,':'
@@ -248,6 +257,7 @@ subroutine test_particle_projection_flux_40_32_pcg32
   proj_one,f_1,n_particles(1:3),pcg32_rng(),volume,expect_mean,expect_rms,tol_mean,&
   tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,&
   apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_particle_projection_flux_40_32_pcg32
 
 !> Test convergence of RHS for 10000 particles with varying filter factor
@@ -267,6 +277,7 @@ subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
   real*8,dimension(1)  :: tol_rms 
   character(len=message_len)    :: message
   character(len=filename_len)   :: filename
+  allocate(test_nodes); allocate(test_elements);
   call default_polar_grid(rank_loc,n_tasks_loc,npol(1),nrad(1),&
   test_nodes,test_elements,ifail_loc)
   weight = 5d-1*R_geo*((amin*TWOPI)**2)
@@ -283,6 +294,7 @@ subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
     tol_rms,trim(adjustl(message)),trim(adjustl(filename)),ifail_loc,smoothing_in=smoothing,&
     apply_dirichlet_in=impose_dirichlet,write_particle_in=write_projection_output)   
   enddo
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_particle_projection_polar_30_22_10000_sob_smoothing
 
 !> Test convergence of RHS for n_particles on square grid PCG32
@@ -296,6 +308,7 @@ subroutine test_rhs_square_10_10_pcg32
   integer                     :: ii
   real*8                      :: tol
   character(len=message_len)  :: message
+  allocate(test_nodes); allocate(test_elements);
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error RHS convergence square nx: ',&
   nx(1),' ny: ',ny(1),' pcg32 rank: ',rank_loc,':'
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
@@ -306,6 +319,7 @@ subroutine test_rhs_square_10_10_pcg32
     test_elements,n_particles(ii),expect_mean,tol,f_1,proj_one,&
     pcg32_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)
   enddo
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_rhs_square_10_10_pcg32
 
 !> Test convergence of RHS for n_particles on square grid sobseq
@@ -319,6 +333,7 @@ subroutine test_rhs_square_10_10_sobseq
   integer                     :: ii
   real*8                      :: tol
   character(len=message_len)  :: message
+  allocate(test_nodes); allocate(test_elements);
   write(message,'(A,I0,A,I0,A,I0,A)') 'Error RHS convergence square nx: ',&
   nx(1),' ny: ',ny(1),' sobseq rank: ',rank_loc,':'
   call default_square_grid(rank_loc,n_tasks_loc,nx(1),nx(1),&
@@ -329,6 +344,7 @@ subroutine test_rhs_square_10_10_sobseq
     test_elements,n_particles(ii),expect_mean,tol,f_1,proj_one,&
     sobseq_rng(),message,ifail_loc,apply_dirichlet_in=impose_dirichlet)
   enddo
+  deallocate(test_nodes); deallocate(test_elements);
 end subroutine test_rhs_square_10_10_sobseq
 
 !> Tool -------------------------------------------

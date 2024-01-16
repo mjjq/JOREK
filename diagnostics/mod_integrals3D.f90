@@ -146,7 +146,7 @@ real*8  :: viscopar_flux, viscopar_f, vpar_s, vpar_t, vpar_x, vpar_y, li3_tot, l
 real*8  :: varmin(n_var), varmax(n_var), V_min(n_var), V_max(n_var)
 real*8  :: R_curr_cent, Z_curr_cent, Zcurr_tmp, R2curr_tmp, R2curr
 real*8  :: heating_impl_in, heating_impl_out, H_impl_int, H_impl_ext,heating_impl_tot
-real*8  :: Tie_min_neg
+real*8  :: Tie_min_neg, lnA
 #if (defined WITH_Neutrals)
 real*8  :: source_neutral, source_neutral_drift
 real*8  :: source_neutral_arr(n_inj_max), source_neutral_drift_arr(n_inj_max)
@@ -193,19 +193,13 @@ real*8, allocatable :: P_imp(:)
 real*8     :: E_ion, Lrad, E_ion_bg
 integer    :: ion_i, ion_k
 #endif
-#ifdef WITH_Impurities
-#ifdef WITH_TiTe
+
 !   -Coefficients related to Z_imp
 real*8  :: alpha_i, alpha_e, dalpha_e_dT
 
 !   -Ion-electron energy transfer
-real*8     :: nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i
-#else /* WITH_TiTe */
-!   -Coefficients related to Z_imp
-real*8  :: alpha_i, alpha_e, dalpha_e_dT
+real*8  :: nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i
 real*8  :: alpha_imp, dalpha_imp_dT, beta_imp, dbeta_imp_dT
-#endif /* WITH_TiTe */
-#endif /* WITH_Impurities */
 
 ! Additional variables related to the radiated power
 #if (defined WITH_Neutrals)
@@ -410,7 +404,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp           thm_wk, mag_wk, eta_T, vpar_disp, fric_disp, p0_p, T0_corr, r0_corr, u0_p,     &
 !$omp           AR0, AR0_p, AR0_s, AR0_t, AR0_sp, AR0_tp, AR0_Rp, AZ0, AZ0_p, AZ0_s, AZ0_t, AZ0_sp, AZ0_tp, AZ0_Zp, A30, &
 !$omp           A30_p, A30_s, A30_t, A30_ss, A30_tt, A30_st, A30_R, A30_RR, A30_ZZ, BR_Z, BZ_R,&
-!$omp           eta_T_ohm, rn0, rn0_corr, rimp0, rimp0_corr, Z_eff,                            &
+!$omp           eta_T_ohm, rn0, rn0_corr, rimp0, rimp0_corr, Z_eff, lnA, alpha_e,              &
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
 !$omp           i_imp, frad_bg, Lrad_imp, Te_corr_eV, Te_eV, ne_SI, Ti_eV,                     &
@@ -426,7 +420,7 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp           ion_k, Z_eff_imp, eta_coef, Ti_corr_eV,                                        &
 #endif
 #if (defined WITH_Impurities) && (defined WITH_TiTe)
-!$omp           alpha_i, alpha_e, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i,  &
+!$omp           alpha_i, nu_e_imp, nu_e_bg, lambda_e_imp, lambda_e_bg, dTi_e, dTe_i,           &
 !$omp           dalpha_e_dT,                                                                   &
 #endif
 #if (defined WITH_Impurities) && (!defined WITH_TiTe) 
@@ -860,6 +854,7 @@ do ife = ife_min, ife_max
         alpha_imp    = 0.5*m_i_over_m_imp*(Z_imp+1.) - 1.
         dalpha_imp_dT= 0.5*m_i_over_m_imp*dZ_imp_dT
         beta_imp     = m_i_over_m_imp*Z_imp - 1.
+        alpha_e      = beta_imp
         ne_SI        = (r0_corr + beta_imp * rimp0_corr) * 1.d20 * central_density !electron density (SI)
         ne_JOREK     = r0_corr + beta_imp * rimp0_corr ! Electron density in JOREK unit
         ne_JOREK     = corr_neg_dens(ne_JOREK,(/1.d-1,1.d-1/),1.d-3) ! Correction for negative electron density
@@ -952,10 +947,14 @@ do ife = ife_min, ife_max
 #endif /* WITH_Impurities */
 
 #if (! defined WITH_Impurities)
-        Z_eff = 1.d0
+        Z_eff      = 1.d0
+        rimp0      = 0.d0
+        rimp0_corr = 0.d0
+        alpha_e    = 0.d0
 #endif 
-        call resistivity(eta,       T_or_Te, T_or_Te_corr, T_max_eta,     T_or_Te_0, Z_eff, eta_T    )           
-        call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, eta_T_ohm)           
+        call coulomb_log_ei(T_or_Te, T_or_Te_corr, r0, r0_corr, rimp0, rimp0_corr, alpha_e, lnA)
+        call resistivity(eta,       T_or_Te, T_or_Te_corr, T_max_eta,     T_or_Te_0, Z_eff, lnA, eta_T    )           
+        call resistivity(eta_ohmic, T_or_Te, T_or_Te_corr, T_max_eta_ohm, T_or_Te_0, Z_eff, lnA, eta_T_ohm)           
 
         ! --- Switch to use old viscosity model
         if (visco_old_setup) then
@@ -2007,7 +2006,7 @@ current_MA   = current_in * 1.d-6 * (1.d0/fact_mu0) * (1/mu_zero)
 current_R    = current_R_in * (1.d0/fact_mu0) * (1/mu_zero)
 beta_p       = 4.d0 * pressure_in/(R_geo * current_in**2 )     * (GAMMA-1)*fact_mu0
 beta_t       = 2.d0 * pressure_in / volume / Bgeo**2           * (GAMMA-1)/fact_mu0
-beta_n       = 100.d0 * beta_t * Bgeo/current_MA * sqrt(area/PI)
+beta_n       = 100.d0 * beta_t * Bgeo/current_MA * ES%LCFS_a
 li3          = 2.d0 * mag_in /0.5  /( current_in**2 * R_geo ) * fact_mu0
 li3_tot      = 2.d0 * mag_tot/0.5  /(current_tot**2 * R_geo ) * fact_mu0
 sheath_heatflux =  gamma_stangeby * (gamma-1)/(2.d0*gamma) * vn_p0 ! the factor comes to obtain n T_e v from vn_p0
@@ -2052,213 +2051,215 @@ if (my_id .eq. 0) then
   endif
 
   ! --- Export or save quantities
-  res(1)  =  xt*t_norm2
   loop_expr: do iexpr = 1, expr_list%n_expr
             
     select case ( trim(expr_list%expr(iexpr)%name) )
 
+      case ( 'Time' )
+        res(iexpr) = xt*t_norm2
+
       case ( 'index_now' )
-        res(iexpr+1) = real(index_now) 
+        res(iexpr) = real(index_now) 
 
       case ( 'psi_axis' )
-        res(iexpr+1) = ES%psi_axis 
+        res(iexpr) = ES%psi_axis 
 
       case ( 'R_axis' )
-        res(iexpr+1) = ES%R_axis 
+        res(iexpr) = ES%R_axis 
 
       case ( 'Z_axis' )
-        res(iexpr+1) = ES%Z_axis
+        res(iexpr) = ES%Z_axis
 
       case ( 'R_curr_cent' )
-        res(iexpr+1) = R_curr_cent 
+        res(iexpr) = R_curr_cent 
 
       case ( 'Z_curr_cent' )
-        res(iexpr+1) = Z_curr_cent
+        res(iexpr) = Z_curr_cent
 
       case ( 'psi_bnd' )
-        res(iexpr+1) = ES%psi_bnd 
+        res(iexpr) = ES%psi_bnd 
 
       case ( 'R_bnd' )
-        res(iexpr+1) = ES%R_bnd 
+        res(iexpr) = ES%R_bnd 
 
       case ( 'Z_bnd' )
-        res(iexpr+1) = ES%Z_bnd
+        res(iexpr) = ES%Z_bnd
 
       case ( 'E_tot' )
-        res(iexpr+1) = E_tot 
+        res(iexpr) = E_tot 
 
       case ( 'E_in' )
-        res(iexpr+1) = E_in 
+        res(iexpr) = E_in 
 
       case ( 'E_out' )
-        res(iexpr+1) = E_out
+        res(iexpr) = E_out
 
       case ( 'Wmag_tot' )
-        res(iexpr+1) = mag_tot 
+        res(iexpr) = mag_tot 
 
       case ( 'Wmag_in' )
-        res(iexpr+1) = mag_in 
+        res(iexpr) = mag_in 
 
       case ( 'Wmag_out' )
-        res(iexpr+1) = mag_out 
+        res(iexpr) = mag_out 
      
       case ( 'Thermal_tot' )
-        res(iexpr+1) = pressure 
+        res(iexpr) = pressure 
 
       case ( 'Thermal_in' )
-        res(iexpr+1) = pressure_in 
+        res(iexpr) = pressure_in 
 
       case ( 'Thermal_out' )
-        res(iexpr+1) = pressure_out 
+        res(iexpr) = pressure_out 
 
       case ( 'Thermal_e_tot' )
-        res(iexpr+1) = pressure_e
+        res(iexpr) = pressure_e
 
       case ( 'Thermal_e_in' )
-        res(iexpr+1) = pressure_e_in 
+        res(iexpr) = pressure_e_in 
 
       case ( 'Thermal_e_out' )
-        res(iexpr+1) = pressure_e_out 
+        res(iexpr) = pressure_e_out 
 
       case ( 'Thermal_i_tot' )
-        res(iexpr+1) = pressure_i
+        res(iexpr) = pressure_i
 
       case ( 'Thermal_i_in' )
-        res(iexpr+1) = pressure_i_in 
+        res(iexpr) = pressure_i_in 
 
       case ( 'Thermal_i_out' )
-        res(iexpr+1) = pressure_i_out 
+        res(iexpr) = pressure_i_out 
 
       case ( 'Kin_par_tot' )
-        res(iexpr+1) = kin_par_tot 
+        res(iexpr) = kin_par_tot 
 
       case ( 'Kin_par_in' )
-        res(iexpr+1) = kin_par_in 
+        res(iexpr) = kin_par_in 
 
       case ( 'Kin_par_out' )
-        res(iexpr+1) = kin_par_out 
+        res(iexpr) = kin_par_out 
 
       case ( 'Kin_perp_tot' )
-        res(iexpr+1) = kin_perp_tot 
+        res(iexpr) = kin_perp_tot 
 
       case ( 'Kin_perp_in' )
-        res(iexpr+1) = kin_perp_in 
+        res(iexpr) = kin_perp_in 
 
       case ( 'Kin_perp_out' )
-        res(iexpr+1) = kin_perp_out 
+        res(iexpr) = kin_perp_out 
 
       case ( 'Part_tot' ) 
-        res(iexpr+1) = density_tot 
+        res(iexpr) = density_tot 
 
       case ( 'Part_in' ) 
-        res(iexpr+1) = density_in 
+        res(iexpr) = density_in 
 
       case ( 'Part_out' ) 
-        res(iexpr+1) = density_out 
+        res(iexpr) = density_out 
 
       case ( 'NPart_tot' ) 
-        res(iexpr+1) = neut_particles_tot  
+        res(iexpr) = neut_particles_tot  
 
       case ( 'Helicity_tot' )
-        res(iexpr+1) = helicity_tot 
+        res(iexpr) = helicity_tot 
 
       case ( 'Mag_work_tot' )
-        res(iexpr+1) = mag_work_tot
+        res(iexpr) = mag_work_tot
 
       case ( 'Thm_work_tot' )
-        res(iexpr+1) = thermal_work_tot
+        res(iexpr) = thermal_work_tot
 
       case ( 'Part_src_tot' )
-        res(iexpr+1) = source_tot
+        res(iexpr) = source_tot
 
       case ( 'Part_src_in' )
-        res(iexpr+1) = source_in
+        res(iexpr) = source_in
 
       case ( 'Part_src_out' )
-        res(iexpr+1) = source_out
+        res(iexpr) = source_out
 
       case ( 'Heat_src_tot' )
-        res(iexpr+1) = heating_tot
+        res(iexpr) = heating_tot
 
       case ( 'Heat_src_in' )
-        res(iexpr+1) = heating_in
+        res(iexpr) = heating_in
 
       case ( 'Heat_src_out' )
-        res(iexpr+1) = heating_out
+        res(iexpr) = heating_out
 
       case ( 'Viscpar_diss' )
-        res(iexpr+1) = viscopar_dissip_tot
+        res(iexpr) = viscopar_dissip_tot
 
       case ( 'Visc_diss' )
-        res(iexpr+1) = visco_dissip_tot
+        res(iexpr) = visco_dissip_tot
 
       case ( 'Fric_diss' )
-        res(iexpr+1) = friction_dissip_tot
+        res(iexpr) = friction_dissip_tot
 
       case ( 'Wmag_src_tot' )
-        res(iexpr+1) = mag_source_tot 
+        res(iexpr) = mag_source_tot 
 
       case ( 'Ohmic_tot' )
-        res(iexpr+1) = ohm_tot 
+        res(iexpr) = ohm_tot 
 
       case ( 'Ohmic_in' )
-        res(iexpr+1) = ohm_in 
+        res(iexpr) = ohm_in 
 
       case ( 'Ohmic_out' )
-        res(iexpr+1) = ohm_out 
+        res(iexpr) = ohm_out 
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
       case ( 'Rad_tot' )
-        res(iexpr+1) = total_radiation
+        res(iexpr) = total_radiation
 
       case ( 'Rad_bg_tot' )
-        res(iexpr+1) = total_radiation_bg
+        res(iexpr) = total_radiation_bg
 #endif
 
       case ( 'P_vn' )
-        res(iexpr+1) = vn_p0 
+        res(iexpr) = vn_p0 
 
       case ( 'qn_par' )
-        res(iexpr+1) = qn_par 
+        res(iexpr) = qn_par 
 
       case ( 'qn_perp' )
-        res(iexpr+1) = qn_perp
+        res(iexpr) = qn_perp
 
       case ( 'sheath_heat' )
-        res(iexpr+1) = sheath_heatflux 
+        res(iexpr) = sheath_heatflux 
 
       case ( 'kinpar_flux' )
-        res(iexpr+1) = kinpar_flux
+        res(iexpr) = kinpar_flux
 
       case ( 'Poynting_flx' )
-        res(iexpr+1) = poynting_flux
+        res(iexpr) = poynting_flux
 
       case ( 'vispar_flux' )
-        res(iexpr+1) = viscopar_flux
+        res(iexpr) = viscopar_flux
 
       case ( 'Dpar_pt_flx' )
-        res(iexpr+1) = Dpar_part_flux
+        res(iexpr) = Dpar_part_flux
 
       case ( 'Dperp_pt_flx' )
-        res(iexpr+1) = Dperp_part_flux
+        res(iexpr) = Dperp_part_flux
 
       case ( 'vpar_pt_flx' )
-        res(iexpr+1) = vpar_part_flux
+        res(iexpr) = vpar_part_flux
 
       case ( 'vperp_pt_flx' )
-        res(iexpr+1) = vperp_part_flux
+        res(iexpr) = vperp_part_flux
 
       case ( 'neut_pt_flx' )
-        res(iexpr+1) = neut_part_flux
+        res(iexpr) = neut_part_flux
 
       case ( 'Ip_tot' )
-        res(iexpr+1) = current_tot 
+        res(iexpr) = current_tot 
 
       case ( 'Ip_in' )
-        res(iexpr+1) = current_in 
+        res(iexpr) = current_in 
 
       case ( 'Ip_out' )
-        res(iexpr+1) = current_out 
+        res(iexpr) = current_out 
 
       case ( 'int3d_jR_tot' )
         res(iexpr+1) = current_R_tot 
@@ -2270,65 +2271,65 @@ if (my_id .eq. 0) then
         res(iexpr+1) = current_R_out 
 
       case ( 'li3' )
-        res(iexpr+1) = li3
+        res(iexpr) = li3
 
       case ( 'li3_tot' )
-        res(iexpr+1) = li3_tot
+        res(iexpr) = li3_tot
 
       case ( 'beta_p' )
-        res(iexpr+1) = beta_p 
+        res(iexpr) = beta_p 
 
       case ( 'beta_t' )
-        res(iexpr+1) = beta_t 
+        res(iexpr) = beta_t 
 
       case ( 'beta_n' )
-        res(iexpr+1) = beta_n 
+        res(iexpr) = beta_n 
 
       case ( 'area' )
-        res(iexpr+1) = area 
+        res(iexpr) = area 
 
       case ( 'volume' )
-        res(iexpr+1) = volume
+        res(iexpr) = volume
 
       case ( 'q02' )
-        res(iexpr+1) = q02 
+        res(iexpr) = q02 
 
       case ( 'q95' )
-        res(iexpr+1) = q95 
+        res(iexpr) = q95 
 
       case ( 'q99' )
-        res(iexpr+1) = q99 
+        res(iexpr) = q99 
 
       case ( 'I_halo' )
-        res(iexpr+1) = I_halo 
+        res(iexpr) = I_halo 
 
       case ( 'TPF_halo' )
-        res(iexpr+1) = TPF 
+        res(iexpr) = TPF 
 
       case ( 'LCFS_Rgeo' )
-        res(iexpr+1) = ES%LCFS_Rgeo 
+        res(iexpr) = ES%LCFS_Rgeo 
 
       case ( 'LCFS_a' )
-        res(iexpr+1) = ES%LCFS_a
+        res(iexpr) = ES%LCFS_a
 
       case ( 'LCFS_epsilon' )
-        res(iexpr+1) = ES%LCFS_epsilon
+        res(iexpr) = ES%LCFS_epsilon
 
       case ( 'LCFS_kappa' )
-        res(iexpr+1) = ES%LCFS_kappa
+        res(iexpr) = ES%LCFS_kappa
 
       case ( 'LCFS_deltaU' )
-        res(iexpr+1) = ES%LCFS_deltaU 
+        res(iexpr) = ES%LCFS_deltaU 
 
       case ( 'LCFS_deltaL' )
-        res(iexpr+1) = ES%LCFS_deltaL
+        res(iexpr) = ES%LCFS_deltaL
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
       case ( 'tot_radiated' )
-        res(iexpr+1) = total_radiation
+        res(iexpr) = total_radiation
 #else
       case ( 'tot_radiated' )
-        res(iexpr+1) = 0.d0 
+        res(iexpr) = 0.d0 
 #endif
 
     end select

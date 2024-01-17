@@ -78,7 +78,7 @@ function compare_results_generic() {
   if [ "$printdiff" == "yes" ]; then
     echo "Difference of 'values' between result and reference: `python $startdir/tools/maximum-difference.py -fn1 end.h5 -fn2 ${resultfile} -dn ${values}` (threshold: $threshold)"
   fi
-  h5diff -d $threshold $resultfile end.h5 $values
+  h5diff -v -r -d $threshold $resultfile end.h5 $values
 }
 
 if [ -z "$PRERUN" ]; then

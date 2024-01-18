@@ -11,7 +11,7 @@ n_pieces=6001
 debugoptions=""
 options=""
 description="Gyroaverage synchrotron image from gc distribution, model$jorekmodel, n_tor=$tor_harmonics."
-mpitasks=2
+mpitasks=1
 requiredfiles="input jorek_restart.h5"
 extra_remote_files="jorek_restart.h5"
 restart_file="particle_restart.h5"
@@ -28,7 +28,7 @@ binaries_initial=""
 # --- Compile the code for the test case
 function compile_jorek () {
     ./util/config.sh model=$jorekmodel n_tor=$tor_harmonics \
-    n_order=$order n_plane=$fourier_planes  n_period=$period_harmonics  \
+    n_order=$order n_plane=$fourier_planes n_period=$period_harmonics \
     n_nodes_max=$n_nodes n_elements_max=$n_elements n_boundary_max=$n_boundary \
     n_pieces_max=$n_pieces $options                                             || exit 1
     python3 "${codedir}/particles/utils/create_temporary_example.py" \

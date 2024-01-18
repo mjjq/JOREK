@@ -33,6 +33,8 @@ def cast_type(type_str,value):
       return True
     else:
       return False
+  elif(type_str=='str'):
+    return str(type_str)
   else:
     print(''.join(['Unrecognised type ',type_str,\
     ' for casting for value: ',value,'!']))

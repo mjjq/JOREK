@@ -34,7 +34,7 @@ def cast_type(type_str,value):
     else:
       return False
   elif(type_str=='str'):
-    return str(type_str)
+    return str(value)
   else:
     print(''.join(['Unrecognised type ',type_str,\
     ' for casting for value: ',value,'!']))

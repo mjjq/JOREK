@@ -11,7 +11,7 @@ n_pieces=6001
 debugoptions=""
 options=""
 description="Gyroaverage synchrotron image from gc distribution, model$jorekmodel, n_tor=$tor_harmonics."
-mpitasks=1
+mpitasks=2
 requiredfiles="input jorek_restart.h5"
 extra_remote_files="jorek_restart.h5"
 restart_file="particle_restart.h5"

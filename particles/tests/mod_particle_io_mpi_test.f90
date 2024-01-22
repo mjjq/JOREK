@@ -45,7 +45,7 @@ subroutine run_fruit_particle_io_mpi(rank,n_tasks,ifail)
   call setup(rank,n_tasks,ifail)
   if(rank.eq.0) write(*,'(/A)') "  ... running: particle io mpi tests"
   call run_test_case(test_particle_mpi_io,'test_particle_mpi_io')
-  !call test_get_simulation_hdf5_time()
+  call test_get_simulation_hdf5_time()
   if(rank.eq.0) write(*,'(/A)') "  ... tearing-down: particle io mpi tests"
   call teardown(rank,n_tasks,ifail)
 end subroutine run_fruit_particle_io_mpi
@@ -79,10 +79,10 @@ subroutine setup(rank,n_tasks,ifail)
   integer,intent(inout) :: ifail
 
   !> store mpi variables
-  ranK_loc = rank; n_tasks_loc = n_tasks; ifail_loc = ifail;
+  rank_loc = rank; n_tasks_loc = n_tasks; ifail_loc = ifail;
 
-  !> initialize the particle simulation (requires jorek inputfile)
-  call sim_particles%initialize(n_groups,.false.,rank,n_tasks)
+  !> initialize the particle simulation
+  call sim_particles%initialize(n_groups,.false.,rank,n_tasks,.false.)
 
   !> set and broadcast simulation time
   if(rank.eq.0) then
@@ -141,8 +141,8 @@ subroutine test_particle_mpi_io
   integer :: ii
   real*8 :: comp_real8_1,comp_real8_2
 
-  !> initialize the new particle simulation (requires jorek inputfile)
-  call sim_particles_new%initialize(n_groups,.false.,rank_loc,n_tasks_loc)
+  !> initialize the new particle simulation
+  call sim_particles_new%initialize(n_groups,.false.,rank_loc,n_tasks_loc,.false.)
 
   !> read default simulation from file and store in new sim
   call read_simulation_hdf5(sim_particles_new,trim(test_filename))

@@ -39,7 +39,7 @@ particle_list_2,tol_real4_in,tol_real8_in,enable_openmp_in)
   logical                                                :: enable_openmp
   tol_real4 = tol_real4_preset; if(present(tol_real4_in)) tol_real4 = tol_real4_in
   tol_real8 = tol_real8_preset; if(present(tol_real8_in)) tol_real8 = tol_real8_in
-  enable_openmp = .false. if(present(enable_openmp_in)) enable_openmp = enable_openmp_in
+  enable_openmp = .false.; if(present(enable_openmp_in)) enable_openmp = enable_openmp_in
   if(enable_openmp) then
     !$omp parallel do default(private) firstprivate(tol_real4,tol_real8) & 
     !$omp shared(n_particles,particle_list_1,particle_list_2)

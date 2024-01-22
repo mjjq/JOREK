@@ -520,7 +520,8 @@ def generate_argument_parser(dict_path='./util/python_utils' ):
   parser.add_argument('--directories','-d',type=str,nargs='*',\
   required=False,action='store',dest='test_dirs',\
   default=['./particles/tests','./elements/tests','./diagnostics/tests',\
-  './communication/tests','./core/tests','./grids/tests','./tools/tests'],\
+  './communication/tests','./core/tests','./grids/tests',\
+  './tools/tests','./particles/postprocessors/tests'],\
   help='relative paths of the directories containing unit tests')
   parser.add_argument('--parallelisms','-p',type=str,nargs='*',\
   required=False,action='store',dest='test_parallel',\

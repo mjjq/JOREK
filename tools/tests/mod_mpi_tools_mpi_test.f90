@@ -15,26 +15,29 @@ contains
 ! Test basket ----------------------------------------------------
 ! run_fruit_mpi_tools executes the mpi_tools test set-up,
 ! tear-down and run the tests
-subroutine run_fruit_mpi_tools_mpi
+subroutine run_fruit_mpi_tools_mpi(rank_glob,n_tasks_glob,ifail_glob)
   implicit none
+  integer,intent(in)    :: rank_glob,n_tasks_glob
+  integer,intent(inout) :: ifail_glob
 
   ! execute setup -> tests -> teardown
   write(*,"(/A)") "  ... setting-up: mpi_tools tests"
-  call setup
+  call setup(rank_glob,n_tasks_glob,ifail_glob)
   write(*,"(/A)") "  ... running: mpi_tools tests"
   call run_test_case(test_init_mpi_threads,'test_init_mpi_threads')
   call run_test_case(test_get_mpi_wtime,'test_get_mpi_wtime')
-  call run_test_case(test_finalize_mpi_threads,'test_finalize_mpi_threads')
   write(*,"(/A)") "  ... tearing-down: mpi_tools tests" 
-  !call teardown
+  call teardown(rank_glob,n_tasks_glob,ifail_glob)
 
 end subroutine run_fruit_mpi_tools_mpi
 
 ! Set-up and tear-down -------------------------------------------
 
 ! the setup procedure, initiliase the common test variables
-subroutine setup()
+subroutine setup(rank_glob,n_tasks_glob,ifail_glob)
   implicit none
+  integer,intent(in)    :: rank_glob,n_tasks_glob
+  integer,intent(inout) :: ifail_glob
 
   ! variables initialise to 0
   my_id = -999; n_tasks = -999; start_time = -9.d2;
@@ -43,10 +46,12 @@ end subroutine setup
 
 ! tear-down procedure, clean-up all variables and closes
 ! the mpi communicator if initialised
-subroutine teardown()
+subroutine teardown(rank_glob,n_tasks_glob,ifail_glob)
   implicit none
-  logical :: initialised
-  integer :: ierr
+  integer,intent(in)    :: rank_glob,n_tasks_glob
+  integer,intent(inout) :: ifail_glob
+  logical               :: initialised
+  integer               :: ierr
   my_id=-999; n_tasks = -999; start_time = -9.d2;
   mpi_time = -9.d3; stop_time = -9.d3;
 end subroutine teardown

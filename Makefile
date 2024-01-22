@@ -36,10 +36,6 @@ cleandep:
 	-@rm -r $(DEPDIR)
 	-@find . -name '*.d' -delete 2>/dev/null
 test: particle_test nrt_unit
-particle_test:
-	+./util/fruit.sh particles/tests
-nrt_unit:
-	+./util/fruit.sh non_regression_tests/unit_tests
 doc docs:
 	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search $(INCLUDES)
@@ -48,10 +44,13 @@ doc docs:
 
 # Directories containing sources, ordered by number of files
 DIRS := diagnostics				\
+        diagnostics/tests			\
 	models					\
 	communication				\
 	communication/IMAS			\
+	communication/tests             	\
 	grids/grid_utils			\
+	grids/tests   				\
 	solvers					\
 	models/$(MODEL)				\
 	refinement				\
@@ -77,6 +76,7 @@ DIRS := diagnostics				\
 	particles/benchmarks/pusher		\
 	particles/benchmarks/projection		\
 	elements				\
+	elements/tests				\
 	grids					\
 	plots					\
 	diagnostics/new_diag			\
@@ -90,6 +90,7 @@ DIRS := diagnostics				\
 	datatypes				\
 	benchmarks				\
 	core					\
+	core/tests                      	\
 	.					\
 	vacuum
 

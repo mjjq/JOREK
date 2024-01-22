@@ -24,25 +24,36 @@ contains
 !> Procedures -----------------------------------------------------
 
 !> compare two particle lists
-subroutine assert_equal_particle_list(n_particles,particle_list_1,particle_list_2,&
-tol_real4_in,tol_real8_in)
+subroutine assert_equal_particle_list(n_particles,particle_list_1,&
+particle_list_2,tol_real4_in,tol_real8_in,enable_openmp_in)
   implicit none
   class(particle_base),dimension(n_particles),intent(in) :: particle_list_1
   class(particle_base),dimension(n_particles),intent(in) :: particle_list_2
   integer,intent(in)                                     :: n_particles
   real*4,intent(in),optional                             :: tol_real4_in
   real*8,dimension(14),intent(in),optional               :: tol_real8_in
+  logical,intent(in),optional                            :: enable_openmp_in
   integer                                                :: ii
   real*4                                                 :: tol_real4
   real*8,dimension(14)                                   :: tol_real8
+  logical                                                :: enable_openmp
   tol_real4 = tol_real4_preset; if(present(tol_real4_in)) tol_real4 = tol_real4_in
   tol_real8 = tol_real8_preset; if(present(tol_real8_in)) tol_real8 = tol_real8_in
-  !$omp parallel do default(private) firstprivate(tol_real4,tol_real8) &
-  !$omp shared(n_particles,particle_list_1,particle_list_2)
-  do ii=1,n_particles
-    call assert_equal_particle_single(particle_list_1(ii),particle_list_2(ii),tol_real4,tol_real8)
-  enddo
-  !$omp end parallel do
+  enable_openmp = .false. if(present(enable_openmp_in)) enable_openmp = enable_openmp_in
+  if(enable_openmp) then
+    !$omp parallel do default(private) firstprivate(tol_real4,tol_real8) & 
+    !$omp shared(n_particles,particle_list_1,particle_list_2)
+    do ii=1,n_particles
+      call assert_equal_particle_single(particle_list_1(ii),&
+      particle_list_2(ii),tol_real4,tol_real8)
+    enddo
+    !$omp end parallel do
+  else
+    do ii=1,n_particles
+      call assert_equal_particle_single(particle_list_1(ii),particle_list_2(ii),&
+      tol_real4,tol_real8)
+    enddo
+  endif
 end subroutine assert_equal_particle_list
 
 !> compare two particles 

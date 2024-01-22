@@ -5,7 +5,7 @@ use fruit
 implicit none
 
 private
-public :: run_fruit_spectra_deterministic_test
+public :: run_fruit_spectra_deterministic
 
 !> Variables --------------------------------------------------------
 character(len=33),parameter :: input_file='spectrum_deterministic_2nd_inputs'
@@ -32,7 +32,7 @@ contains
 !> Fruit basket -----------------------------------------------------
 !> run_fruit_spectra_deterministic executes the set-up, runs the tests
 !> and clean-up all test features
-subroutine run_fruit_spectra_deterministic_test()
+subroutine run_fruit_spectra_deterministic()
   implicit none
   write(*,'(/A)') "  ... setting-up: spectra deterministic integrator tests"
   call setup
@@ -51,7 +51,7 @@ subroutine run_fruit_spectra_deterministic_test()
   'test_2nd_order_rectangle_integrator')
   write(*,'(/A)') "  ... tearing-down: spectra deterministic integrator tests"
   call teardown
-end subroutine run_fruit_spectra_deterministic_test
+end subroutine run_fruit_spectra_deterministic
 
 !> Set-up and tear-down ---------------------------------------------
 !> Set-up the test variables

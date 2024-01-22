@@ -7,7 +7,7 @@ use mod_rng, only: type_rng
 implicit none
 
 private
-public :: run_fruit_spectra_monte_carlo_test
+public :: run_fruit_spectra_monte_carlo
 
 !> Variables -----------------------------------------------------------------
 character(len=33),parameter :: input_file='spectrum_deterministic_2nd_inputs'
@@ -35,7 +35,7 @@ real*8,dimension(n_spectra)              :: i_pdf !< 1/pdf=min_wlen,max_wlen
 contains
 !> Test basket ---------------------------------------------------------------
 !> test basket for executing the simulation set-up, tests and tear-down
-subroutine run_fruit_spectra_monte_carlo_test()
+subroutine run_fruit_spectra_monte_carlo()
 implicit none
   write(*,'(/A)') "  ... setting-up: spectra Monte-Carlo tests"
   call setup
@@ -54,7 +54,7 @@ implicit none
   'test_spectrum_integration_rng_uniform')
   write(*,'(/A)') "  ... tearing-down: spectra Monte-Carlo tests"
   call teardown
-end subroutine run_fruit_spectra_monte_carlo_test
+end subroutine run_fruit_spectra_monte_carlo
 
 !> Set-up and tear-down ------------------------------------------------------
 !> Set-up test variables

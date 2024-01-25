@@ -1881,7 +1881,7 @@ do i_elm=1,element_list%n_elements
               mumps_par%irn(ilarge) = index_large_i
               mumps_par%jcn(ilarge) = index_large_k
 
-              if( fix_axis_nodes .and.  (node_list%node(inode)%axis_node .and. (j .eq. 3 .or. j .eq. 4)) &                               .and. (index_large_i .eq. index_large_k) ) then
+              if( fix_axis_nodes .and.  (node_list%node(inode)%axis_node .and. (j .eq. 3 .or. j .eq. 4)) .and. (index_large_i .eq. index_large_k) ) then
                   mumps_par%A(ilarge) = 1.d12
               else
                   mumps_par%A(ilarge)   = ELM(index_ij,index_kl) * TWOPI

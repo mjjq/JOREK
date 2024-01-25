@@ -207,10 +207,9 @@ module equil_info
       
       ! --- Has the X-plasma changed to a limiter plasma?
       if (freeboundary) then
-        if ( abs(ES%psi_axis-ES%psi_lim) < abs(ES%psi_axis-ES%psi_bnd) ) then
+        if (( abs(ES%psi_axis-ES%psi_lim) < abs(ES%psi_axis-ES%psi_bnd) ) .or. ES%ifail_xpoint == 1) then
           ES%psi_bnd        = ES%psi_lim
           ES%limiter_plasma = .true.
-          ES%active_xpoint  = 0
         endif 
       endif 
       

@@ -6,6 +6,7 @@ use data_structure
 use gauss
 use basis_at_gaussian
 use phys_module, only: tokamak_device, Z_xpoint_limit
+use equil_info, only : ES
 use mod_interp
 
 implicit none
@@ -27,8 +28,10 @@ integer,                  intent(out)   :: ifail
 real*8  :: ps_s, ps_t, ps_x, ps_y, xjac
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: x(2), s, t, xerr, ferr, s_xp_init(2), t_xp_init(2)
-integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries
+real*8  :: R_axis0, Z_axis0, R_xpoint0, Z_xpoint0, r_margin, s_axis, t_axis, psi_axis, fac_axis_xpoint       
+integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_init       
 integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
+integer :: i_elm_axis, ifail_axis, ifail_lw, ifail_up      
 logical :: found_upper, found_lower
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt_lw(:,:,:), include_pt_up(:,:,:)
@@ -40,7 +43,11 @@ if (my_id .eq. 0) then
 endif
 
 ifail   = 1
+ifail_lw = 1
+ifail_up = 1
 n_tries = 500
+r_margin = 0.05          ! x_point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop                
+fac_axis_xpoint = 9      ! If the distance from the x-point finally found to the axis is closer than fac_axis_xpoint*r_margin, assume that x-point has vanished and find_xpoint fails.
 
 psi_xpoint = 0.
 R_xpoint   = 0.;    Z_xpoint = 0.
@@ -56,6 +63,14 @@ include_pt_up = .false.
 
 found_upper = .false. 
 found_lower = .false.
+
+if (.not. ES%initialized) then    
+  call find_axis(99, node_list, element_list, psi_axis, R_axis0, Z_axis0, i_elm_axis, s_axis, &
+  t_axis, ifail_axis)
+else
+  R_axis0 = ES%R_axis
+  Z_axis0 = ES%Z_axis
+endif
 
 
 do i=1,element_list%n_elements    ! --- loop over elements
@@ -101,7 +116,7 @@ do i=1,element_list%n_elements    ! --- loop over elements
       if (xcase .ne. UPPER_XPOINT) then
         if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (tokamak_device(1:7) .ne. 'COMPASS') .and. (Z .lt. Z_xpoint_limit(1))) &
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))  &
-            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) then
+            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0)) ) then
           include_pt_lw(i,ms,mt) = .true.        
         endif
       endif
@@ -121,6 +136,9 @@ enddo    ! --- end loop over elements
 
 
 if(xcase .ne. UPPER_XPOINT) then
+
+  i_init = 0
+
   do i_tries=1,  n_tries  ! --- start attempts to find the lower x-point
     
     ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
@@ -133,7 +151,7 @@ if(xcase .ne. UPPER_XPOINT) then
       t_xp_init(1)     = 0.d0
       i_elm_xp_init(1) = 1
       exit
-    else if  (min_indices_lw(1) == 0) then   ! --- if all elements have been excluded, exit search
+    elseif  (min_indices_lw(1) == 0) then   ! --- if all elements have been excluded, exit search
       found_lower = .false.
       exit
     endif
@@ -145,21 +163,29 @@ if(xcase .ne. UPPER_XPOINT) then
     call mnewtax(node_list,element_list,i_elm_xpoint(1),s,t,xerr,ferr,ifail)
     if (ifail .ne. 0 ) then      ! --- if Newton's method failed, exclude element in next search
       include_pt_lw(i_elm_xpoint(1),:,:) = .false.
-    else
+    endif
+    call interp_RZ(node_list,element_list,i_elm_xpoint(1),s,t,R_xpoint0,R_s,R_t,Z_xpoint0,Z_s,Z_t)
+    if (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) then
+      include_pt_lw(i_elm_xpoint(1),:,:) = .false.                                  ! If the point is within the r=r_margin circle around axis, exclude it
+    elseif (include_pt_lw(i_elm_xpoint(1),1,1)) then 
       found_lower   = .true.
       s_xpoint(1)   = s
       t_xpoint(1)   = t
       exit
-    endif
-    if (i_tries == 1) then    ! --- save first attempt in case all the attempts fail
-      s_xp_init(1)     = s
+    elseif (i_init == 0) then           ! --- save first attempt outside axis region in case all the attempts fail. Aka. the min|grad\psi| point not excluded
+      s_xp_init(1)     = s              ! ---possibly a x-point where \psi map is nosiy and |grad\psi|=0 fails to be solved
       t_xp_init(1)     = t
-      i_elm_xp_init(1) = i_elm_xpoint(1)
-    endif     
+      i_elm_xp_init(1) = i_elm_xpoint(1)       
+      i_init = 1
+    endif
+     
   enddo
+  
 endif
 
 if(xcase .ne. LOWER_XPOINT) then
+
+  i_init = 0
 
   do i_tries=1,  n_tries  ! --- start attempts to find the upper x-point
 
@@ -171,9 +197,9 @@ if(xcase .ne. LOWER_XPOINT) then
       found_upper      = .false.
       s_xp_init(2)     = 0.d0                             
       t_xp_init(2)     = 0.d0
-      i_elm_xp_init(2) = 1
+      i_elm_xp_init(2) = 1                
       exit
-    else if  (min_indices_up(1) == 0) then   ! --- if all elements have been excluded, exit search
+    elseif  (min_indices_up(1) == 0) then   ! --- if all elements have been excluded, exit search
       found_upper     = .false.
       exit
     endif
@@ -185,17 +211,22 @@ if(xcase .ne. LOWER_XPOINT) then
     call mnewtax(node_list,element_list,i_elm_xpoint(2),s,t,xerr,ferr,ifail)
     if (ifail .ne. 0 ) then       ! --- if Newton's method failed, exclude element in next search
       include_pt_up(i_elm_xpoint(2),:,:) = .false.
-    else
+    endif
+    call interp_RZ(node_list,element_list,i_elm_xpoint(2),s,t,R_xpoint0,R_s,R_t,Z_xpoint0,Z_s,Z_t)
+    if (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) then
+      include_pt_up(i_elm_xpoint(2),:,:) = .false.                                                   ! If the point is within the r=r_margin circle around axis, exclude it
+    elseif ( include_pt_up(i_elm_xpoint(2),1,1) ) then
       found_upper   = .true.
       s_xpoint(2)   = s
       t_xpoint(2)   = t
       exit
-    endif 
-    if (i_tries == 1) then    ! --- save first attempt in case all the attempts fail
+    elseif (i_init == 0) then        ! --- save first attempt outside axis region in case all the attempts fail. Aka. the min|grad\psi| point not excluded   
       s_xp_init(2)     = s
       t_xp_init(2)     = t
-      i_elm_xp_init(2) = i_elm_xpoint(2)
-    endif
+      i_elm_xp_init(2) = i_elm_xpoint(2)   ! ---possibly a x-point where \psi map is nosiy and |grad\psi|=0 fails to be solved 
+      i_init = 1 
+    endif    
+
   enddo ! --- end attempts     
 
 endif  
@@ -203,6 +234,8 @@ endif
 
 
 if(xcase .ne. UPPER_XPOINT) then
+
+  ifail_lw = 0
   if (.not. found_lower) then    ! --- if all the attempts failed, take the initial solution
     s_xpoint(1)     = s_xp_init(1)     
     t_xpoint(1)     = t_xp_init(1)     
@@ -215,14 +248,22 @@ if(xcase .ne. UPPER_XPOINT) then
   xjac = R_s * Z_t - R_t * Z_s
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
+  
+  if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  ifail_lw = 1              ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, find lower xpoint fails 
 
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Lower X-point : ',i_elm_xpoint(1),R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
   endif
+  write(*,'(A,4f14.8)') ' Lw Xp(R,Z,psi,grad_psi): ',R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
+  
   if ((.not. found_lower )) write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
+  if (ifail_lw == 1) write(*,*) 'WARNING: lower X-point might have vanished'
 endif
 
+
 if(xcase .ne. LOWER_XPOINT) then 
+
+  ifail_up = 0
   if (.not. found_upper) then    ! --- if all the attempts failed, take the initial solution
     s_xpoint(2)     = s_xp_init(2)     
     t_xpoint(2)     = t_xp_init(2)     
@@ -235,12 +276,18 @@ if(xcase .ne. LOWER_XPOINT) then
   xjac = R_s * Z_t - R_t * Z_s
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
+  
+  if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  ifail_up = 1    ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, find upper xpoint fails
 
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Upper X-point : ',i_elm_xpoint(2),R_xpoint(2),Z_xpoint(2),psi_xpoint(2),sqrt(ps_x**2+ps_y**2)
-  endif  
+  endif
+    
   if ((.not. found_upper )) write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
+  if (ifail_up == 1) write(*,*) 'WARNING: upper X-point might have vanished'
 endif
+
+ifail = ifail_lw*ifail_up                              ! If all x-points which existed are not found, find_xpoint fails.
 
 deallocate(include_pt_lw,include_pt_up, grad_psi)
 

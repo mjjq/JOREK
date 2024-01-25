@@ -155,7 +155,7 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       !--- decide if we are inside a private region
       is_private = .false.
       
-      if(ES%ifail_xpoint==0)) then                       ! No private region if x-point is not found
+      if(ES%ifail_xpoint==0) then                       ! No private region if x-point is not found
         if (ES%axis_is_psi_minimum) then
           if (prod < 0.d0) is_private = .true.
         else

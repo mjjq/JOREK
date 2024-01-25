@@ -210,6 +210,7 @@ module equil_info
         if (( abs(ES%psi_axis-ES%psi_lim) < abs(ES%psi_axis-ES%psi_bnd) ) .or. ES%ifail_xpoint == 1) then
           ES%psi_bnd        = ES%psi_lim
           ES%limiter_plasma = .true.
+	  ES%active_xpoint  = 0
         endif 
       endif 
       

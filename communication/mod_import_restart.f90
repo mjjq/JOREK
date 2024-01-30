@@ -963,7 +963,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   integer,allocatable :: plasmoid_in_domain_arr (:)
 
   integer :: err_exists, dterr, n_spi_begin, i_inj
-  logical :: flag_exists, type_match
+  logical :: flag_exists, type_match, aux_values_read
 
   real*8, allocatable :: t_energies(:,:,:)   !< Magnetic and kinetic mode energies at previous timesteps.
   real*8, allocatable :: t_energies2(:,:,:)  !< Magnetic and kinetic mode energies at previous timesteps.
@@ -1088,14 +1088,21 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   call HDF5_integer_reading(file_id,element_list%n_elements,"n_elements")
   call HDF5_integer_reading(file_id,node_list%n_dof,"n_dof")
 
+  aux_values_read = .false.
+  call h5lexists_f(file_id,'aux_values',flag_exists,err_exists)
+  if(flag_exists .and. err_exists == 0) then
+     aux_values_read = .true.
+     allocate(aux_node_list,source=node_list)
+  endif
+
   ! -> Allocate temporary arrays 
   call tr_allocate(t_x,     1,node_list%n_nodes,1,n_coord_tor_tmp,1,n_degrees_tmp,1,n_dim,         "node_list%x",     CAT_UNKNOWN)
   call tr_allocate(t_values,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%values",CAT_UNKNOWN)
   call tr_allocate(t_deltas,1,node_list%n_nodes,1,      n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "node_list%deltas",CAT_UNKNOWN)
-  if(export_aux_node_list .and. associated(aux_node_list)) then
-     call tr_allocate(t_aux_values,1,aux_node_list%n_nodes,1,n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "aux_node_list%values",CAT_UNKNOWN)
-  end if
- 
+  if(aux_values_read) then
+    call tr_allocate(t_aux_values,1,aux_node_list%n_nodes,1,n_tor_tmp,1,n_degrees_tmp,1,n_var_tmp, "aux_node_list%values",CAT_UNKNOWN)
+  endif
+  
 #ifdef fullmhd
   call tr_allocate(t_psi_eq,  1,node_list%n_nodes,1,n_degrees_tmp, "node_list%psi_eq",  CAT_UNKNOWN)
   call tr_allocate(t_Fprof_eq,1,node_list%n_nodes,1,n_degrees_tmp, "node_list%Fprof_eq",CAT_UNKNOWN)
@@ -1131,7 +1138,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   endif
   call HDF5_array4D_reading(file_id,t_values,   'values')
   call HDF5_array4D_reading(file_id,t_deltas,   'deltas')
-  if(export_aux_node_list .and. associated(aux_node_list)) then
+  if(aux_values_read) then
      call HDF5_array4D_reading(file_id,t_aux_values,   'aux_values')
   endif
 
@@ -1197,7 +1204,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
       end do
     end do
 
-    if(export_aux_node_list .and. associated(aux_node_list)) then
+    if(aux_values_read) then
      aux_node_list%node(i)%values = 0.d0
      do m=1,n_tor_tmp,2
       do k=1, n_tor,2
@@ -2050,8 +2057,8 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   call tr_deallocate(t_x,"t_x",CAT_UNKNOWN)
   call tr_deallocate(t_values,"t_values",CAT_UNKNOWN)
   call tr_deallocate(t_deltas,"t_deltas",CAT_UNKNOWN)
-  if(export_aux_node_list .and. associated(aux_node_list)) then
-     call tr_deallocate(t_aux_values,"t_aux_values",CAT_UNKNOWN)
+  if(aux_values_read) then
+    call tr_deallocate(t_aux_values,"t_aux_values",CAT_UNKNOWN)
   endif
   call tr_deallocate(t_energies,"t_energies",CAT_UNKNOWN)
 

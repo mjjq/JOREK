@@ -425,10 +425,6 @@ do k_tor=1, n_tor
 enddo
 
 
-if(include_projections) then
-   call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
-   allocate(aux_node_list, source=node_list)   !!Maybe there is a better way. With this it writes restart time 2x
-endif
 call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 
 call initialise_basis                              ! define the basis functions at the Gaussian points

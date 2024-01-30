@@ -51,12 +51,6 @@ program jorek2_postproc
   ! --- Print getting started information
   call specific_help('getting_started')
 
-  ! --- Allocate aux_node_list if needed
-  if(export_aux_node_list) then
-     call import_restart(node_list,aux_node_list,element_list, "jorek_restart", rst_format, ierr)  !Trick: read the restart file to get
-     allocate(aux_node_list, source=node_list)                                                     !aux_node_list pointer associated.
-  endif                                                                                            !Next call of import_restart will 
-                                                                                                   !then read values of aux_node_list.
   do ! (main loop: Read, parse, and execute one command after the other)
     
     ! --- Read and parse a command line

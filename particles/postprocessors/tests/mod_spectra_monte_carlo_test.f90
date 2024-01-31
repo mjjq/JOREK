@@ -403,6 +403,8 @@ avg_integrals,std_dev,error)
   real*8,dimension(n_values),intent(out) :: avg_integrals,std_dev,error
   !> variables
   integer :: jj
+  !> initialisation
+  std_dev = 0d0; error = 0d0; avg_integrals = 0d0;
   !> compute the average solution
   avg_integrals = sum(integrals,dim=2)/real(n_trials,kind=8)
   !> compute standard deviation

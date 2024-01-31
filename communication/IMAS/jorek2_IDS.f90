@@ -89,7 +89,7 @@ program jorek2_IDS
     write(*,'(a,i5.5,a)') '#################### STEP ', i_step, ' ####################'
     write(*,*)
     write(file_name,'(a,i5.5)') 'jorek', i_step
-    call import_restart(node_list, element_list, file_name, rst_format, ierr)
+    call import_restart(node_list, aux_node_list, element_list, file_name, rst_format, ierr)
     if (ierr /=0 ) then
        write(*,*) '  Could not read the restart file'
        stop

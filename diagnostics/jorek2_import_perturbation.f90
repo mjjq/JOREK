@@ -19,7 +19,6 @@ program jorek2_import_perturbation
   real*8, allocatable :: energies_save(:,:,:)  !< Magnetic and kinetic mode energies at timesteps.
 
   type(type_node_list) :: node_list2
-  type(type_node_list), pointer :: aux_node_list
   type(type_element_list) :: element_list2
 
   

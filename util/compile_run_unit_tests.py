@@ -19,7 +19,11 @@ def get_launchers_from_environment(launchers):
   from os import getenv
   if("MPIRUN" in environ):
     print("Found variable for MPI launcher: override!")
-    launchers["mpi"] = getenv("MPIRUN")+" 2 "
+    launchers["mpi"] = getenv("MPIRUN")+"2 "
+    if("SERIALRUN" in environ):
+      launchers["mpi"] = launchers["mpi"]+getenv("SERIALRUN")
+    else:
+      launchers["mpi"] = launchers["mpi"]+"./"
     print(launchers["mpi"])
   if("SERIALRUN" in environ):
     print("Found variable for MPI launcher: override!")

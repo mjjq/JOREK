@@ -79,6 +79,7 @@ DIRS := diagnostics				\
 	plots					\
 	diagnostics/new_diag			\
 	diagnostics/postproc			\
+	diagnostics/tests			\
 	tools					\
 	tools/rng				\
 	tools/fruit				\

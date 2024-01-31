@@ -86,8 +86,10 @@ subroutine export_binary_restart(node_list,aux_node_list,element_list,filename)
      write(21) node_list%node(i)%x
      write(21) node_list%node(i)%values
      write(21) node_list%node(i)%deltas
-     if(export_aux_node_list .and. associated(aux_node_list) .and. aux_node_list%n_nodes .gt. 0) then
-        write(21) aux_node_list%node(i)%values
+     if(export_aux_node_list .and. associated(aux_node_list)) then
+       if(aux_node_list%n_nodes .gt. 0) then
+         write(21) aux_node_list%node(i)%values
+       endif
      endif
 #ifdef fullmhd
      write(21) node_list%node(i)%psi_eq               !< equilibrium flux at the nodes
@@ -540,9 +542,11 @@ subroutine export_hdf5_restart(node_list,aux_node_list,element_list,filename)
        node_list%n_nodes,n_tor,n_degrees,n_var,'values'//char(0))
   call HDF5_array4D_saving(file_id,t_deltas, &
        node_list%n_nodes,n_tor,n_degrees,n_var,'deltas'//char(0))
-  if(export_aux_node_list .and. associated(aux_node_list) .and. aux_node_list%n_nodes .gt. 0) then
-     call HDF5_array4D_saving(file_id,t_aux_values, &
-          node_list%n_nodes,n_tor,n_degrees,n_var,'aux_values'//char(0))
+  if(export_aux_node_list .and. associated(aux_node_list)) then
+    if(aux_node_list%n_nodes .gt. 0) then
+      call HDF5_array4D_saving(file_id,t_aux_values, &
+           node_list%n_nodes,n_tor,n_degrees,n_var,'aux_values'//char(0))
+    endif
   endif
 
 #ifdef fullmhd

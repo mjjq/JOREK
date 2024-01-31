@@ -42,7 +42,7 @@ subroutine initial_grid(node_list, aux_node_list, element_list, bnd_node_list, b
     
     if ((n_R > 0) .and. (n_Z > 0) .and. RZ_grid_inside_wall) then
       
-      call grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,fbnd,node_list,element_list)
+      call grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,fbnd,node_list,aux_node_list,element_list)
       
     else if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
       

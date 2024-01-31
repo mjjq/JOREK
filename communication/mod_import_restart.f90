@@ -1019,6 +1019,7 @@ subroutine import_hdf5_restart(node_list, aux_node_list, element_list, filename,
   end if
   call HDF5_integer_reading(file_id,n_order_tmp,"n_order")
   call HDF5_integer_reading(file_id,n_tor_tmp, "n_tor")
+  n_tor_restart = n_tor_tmp
   if (rst_hdf5_version_tmp .eq. 2) then
     call HDF5_integer_reading(file_id,n_coord_tor_tmp, "n_coord_tor")
   else

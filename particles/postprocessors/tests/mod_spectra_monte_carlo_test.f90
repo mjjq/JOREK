@@ -10,6 +10,7 @@ private
 public :: run_fruit_spectra_monte_carlo
 
 !> Variables -----------------------------------------------------------------
+logical,parameter :: use_xor_time_pid=.true.
 character(len=33),parameter :: input_file='spectrum_deterministic_2nd_inputs'
 integer,parameter :: read_unit=43     !< file read unit
 integer,parameter :: n_trials=50      !< number of trials for computing std deviation
@@ -71,7 +72,8 @@ subroutine setup()
   n_threads = 1
   !$ n_threads = omp_get_max_threads()
   allocate(pcg32_rng::rngs(n_threads))
-  call omp_initialize_rngs(n_points,n_threads,rngs)
+  call omp_initialize_rngs(n_points,n_threads,rngs,&
+  use_xor_time_pid_in=use_xor_time_pid)
 end subroutine setup
 
 !> write an input for testing the reading routines

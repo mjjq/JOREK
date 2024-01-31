@@ -6,12 +6,13 @@ module mod_random_seed
   public :: random_seed
 contains
   !> Try some methods to get a nice random seed
-  function random_seed() result(seed)
+  function random_seed(use_xor_time_pid) result(seed)
     implicit none
+    logical,optional :: use_xor_time_pid
     integer :: seed
     integer :: ierr
-
-    call read_urandom_int(seed, ierr)
+    ierr = 1
+    if(.not.use_xor_time_pid) call read_urandom_int(seed, ierr)
     if (ierr .ne. 0) seed = xor_time_pid()
 end function random_seed
 

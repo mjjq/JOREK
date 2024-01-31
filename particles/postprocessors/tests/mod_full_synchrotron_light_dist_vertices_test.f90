@@ -15,6 +15,7 @@ public :: run_fruit_full_synchrotron_light_dist_vertices
 
 !> Variables ---------------------------------------------------------
 !> general parameters
+logical,parameter                           :: use_xor_time_pid=.true.
 real*8,parameter                            :: tol_real8=2.5d-11
 real*8,parameter                            :: tol2_real8=3.5d-8
 real*8,parameter                            :: mass_RE=5.48579909065d-4
@@ -154,7 +155,7 @@ subroutine setup()
 
   !> initialise monte-carlo spectra
   allocate(pcg32_rng::rngs(n_threads))
-  call omp_initialize_rngs(n_lines_per_spectrum,n_threads,rngs)
+  call omp_initialize_rngs(n_lines_per_spectrum,n_threads,rngs,use_xor_time_pid_in=use_xor_time_pid)
   spectrum = spectrum_rng_uniform(n_lines_per_spectrum,n_spectra,min_wlen,max_wlen)
   call spectrum%generate_spectrum(rngs)
   deallocate(rngs)

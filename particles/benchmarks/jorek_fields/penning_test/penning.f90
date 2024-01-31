@@ -25,6 +25,7 @@ use mod_find_rz_nearby
 implicit none
 
 type(jorek_fields_interp_linear) :: fields
+type (type_node_list)   ,     pointer :: aux_node_list
 
 ! Define our particle list
 type(particle_kinetic_leapfrog) :: particle

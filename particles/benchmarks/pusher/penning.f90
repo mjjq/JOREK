@@ -38,6 +38,7 @@ real*8  :: x_a(3), x_e(3), err_norm, err_ref
 real*8  :: rz_old(2), st_old(2)
 
 type(particle_kinetic_leapfrog) :: particle
+type (type_node_list)   ,     pointer :: aux_node_list
 
 ! For the initial half-step
 real*8  :: E(3), B(3), psi, U

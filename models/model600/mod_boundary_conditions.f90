@@ -348,17 +348,6 @@ do i=1, n_local_elms !=== do elements
               enddo
             enddo
             
-            ! --- Fix Psi also across boundary???
-            if ( (k .eq. var_psi) .and. (loop_voltage .eq. 0.d0) .and. (loop_voltage_control .eq. 0.d0) ) then
-              index_node = node_list%node(inode)%index(iv_perp_dir)
-              call boundary_conditions_add_one_entry(                 &
-                     index_node, k, in, index_node, k, in,            &
-                     zbig, index_min, index_max, a_mat)
-              index_node = node_list%node(inode)%index(4)
-              call boundary_conditions_add_one_entry(                 &
-                     index_node, k, in, index_node, k, in,            &
-                     zbig, index_min, index_max, a_mat)
-            endif
 
           endif
           
@@ -372,7 +361,7 @@ do i=1, n_local_elms !=== do elements
                 call boundary_conditions_add_RHS(       &
                           index_node, k, in,     &
                           index_min, index_max,  &
-                          RHS_loc, ZBIG *((loop_voltage_control+loop_voltage)/2.d0/PI*sqrt(MU_ZERO*central_density*central_mass*MASS_PROTON*1.d20))* tstep, &
+                          RHS_loc, ZBIG*((loop_voltage_control+loop_voltage)*sqrt(MU_ZERO*central_density*central_mass*MASS_PROTON*1.d20))* tstep, &
                           a_mat%i_tor_min, a_mat%i_tor_max)
               endif
             endif

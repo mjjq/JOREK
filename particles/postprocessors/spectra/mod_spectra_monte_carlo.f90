@@ -188,9 +188,8 @@ subroutine integrate_rng_uniform(spectrum,dat,integrals)
   integer :: ii,thread_id,n_threads,n_points_per_thread,residual_id
   logical :: in_parallel
   !> integrate
-  in_parallel = .true.
-  thread_id = 0
-  n_threads = 1
+  in_parallel = .true.; thread_id = 0; 
+  n_threads = 1; integrals = 0d0;
   !$ in_parallel = omp_in_parallel()
   if(in_parallel) then
     !> Not all compilers support reduction clauses with taskloop

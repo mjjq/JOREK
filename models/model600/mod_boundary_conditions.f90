@@ -351,8 +351,6 @@ do i=1, n_local_elms !=== do elements
 
           endif
           
-          ! --- Apply loop voltage, suggestion from Pamela, Stanislas JP
-          ! <Stanislas.Pamela@ukaea.uk>
 
           if ( (.not. is_freebound(in,k)) ) then
             if ( ( loop_voltage .ne. 0.d0 ) .or. ( loop_voltage_control .ne. 0.d0 ) ) then

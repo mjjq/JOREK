@@ -35,7 +35,7 @@ subroutine omp_initialize_rngs(n_points_loc,n_rngs,rngs,use_xor_time_pid_in)
   !$ n_threads = omp_get_num_threads()
   n_points_per_thread = n_points_loc/n_threads
   call rngs(thread_id)%initialize(n_dims=n_points_per_thread,&
-  seed=random_seed(use_xor_time_pid=use_xor_time_pid),&
+  seed=random_seed(use_xor_time_pid_in=use_xor_time_pid),&
   n_streams=n_threads,i_stream=thread_id,ierr=ifail)
   !$omp end parallel 
 end subroutine omp_initialize_rngs

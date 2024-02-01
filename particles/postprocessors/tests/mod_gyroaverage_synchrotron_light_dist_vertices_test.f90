@@ -224,7 +224,7 @@ subroutine test_compute_gyroaverage_synchrotron_light_properties()
   real*8,dimension(n_particles_max*n_groups_max)              :: error_coeff,zeros_1
   real*8,dimension(n_properties,n_particles_max*n_groups_max) :: error,zeros
   !> loop for computing the properties and do the testing
-  zeros = 0d0; zeros_1 = 0d0;
+  zeros = 0d0; zeros_1 = 0d0; error_coeff = 0d0; error = 0d0;
   do kk=1,n_times_sol
     counter = 0; error = 0d0;
     do jj=1,n_groups_per_sim(kk)

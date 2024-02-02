@@ -9,7 +9,6 @@ private
 public :: run_fruit_math_operators
 
 !> Variables --------------------------------------------
-integer,parameter :: zero_r4=real(0.d0,kind=4)
 integer,parameter :: n_vectors=4
 real*4,parameter  :: tol_r4=real(1.0d-1,kind=4)
 real*8,parameter  :: tol_r8=2.5d-10
@@ -66,11 +65,11 @@ end subroutine setup
 subroutine teardown()
   implicit none
   !> set all static vectors to zero
-  vec_a_2_r8 = 0.d0;  vec_a_2_r4 = zero_r4;
-  vec_a_3_r4 = zero_r4; vec_b_3_r4 = zero_r4;
-  vec_a_3_r8 = 0.d0; vec_b_3_r8 = 0.d0;
-  matrix_2x2_r8 = 0.d0; matrix_2x2_r4 = zero_r4;
-  matrix_3x3_r8 = 0.d0; matrix_3x3_r4 = zero_r4;
+  vec_a_2_r8 = 0.d0;    vec_a_2_r4 = 0.;
+  vec_a_3_r4 = 0.;      vec_b_3_r4 = 0.;
+  vec_a_3_r8 = 0.d0;    vec_b_3_r8 = 0.d0;
+  matrix_2x2_r8 = 0.d0; matrix_2x2_r4 = 0.;
+  matrix_3x3_r8 = 0.d0; matrix_3x3_r4 = 0.;
 end subroutine teardown
 
 !> Tests ------------------------------------------------

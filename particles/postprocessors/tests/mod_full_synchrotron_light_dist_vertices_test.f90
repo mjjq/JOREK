@@ -268,6 +268,7 @@ subroutine test_synchrotron_irradiance_directional_func_taskloop()
   real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shadowed_per_particle) :: dir_fun_sol,irradiance_sol
   !> initialise the synchrotron lights (for safety)
    x_cart_loc = 0.d0; properties_loc = 0.d0; n_particles_time = 0;
+   dir_fun_sol = 0d0; dir_fun = 0d0;
   do ii=1,n_times_sol
     n_particles_time(ii) = sum(n_active_particles_sol(:,ii))
     x_cart_loc(:,1:n_particles_time(ii),ii) = x_cart_sol(:,1:n_particles_time(ii),ii)
@@ -319,6 +320,7 @@ subroutine test_synchrotron_irradiance_directional_func()
   real*8,dimension(spectrum%n_points,spectrum%n_spectra,n_shadowed_per_particle) :: dir_fun_sol,irradiance_sol
   !> initialise the synchrotron lights (for safety)
    x_cart_loc = 0.d0; properties_loc = 0.d0; n_particles_time = 0;
+   dir_fun_sol = 0d0; dir_fun = 0d0;
   do ii=1,n_times_sol
     n_particles_time(ii) = sum(n_active_particles_sol(:,ii))
     x_cart_loc(:,1:n_particles_time(ii),ii) = x_cart_sol(:,1:n_particles_time(ii),ii)

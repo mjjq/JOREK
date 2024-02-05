@@ -46,7 +46,7 @@ ifail   = 1
 ifail_lw = 1
 ifail_up = 1
 n_tries = 500
-r_margin = 0.05          ! x_point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop                
+r_margin = -0.05          ! x_point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop                
 fac_axis_xpoint = 9      ! If the distance from the x-point finally found to the axis is closer than fac_axis_xpoint*r_margin, assume that x-point has vanished and find_xpoint fails.
 
 psi_xpoint = 0.

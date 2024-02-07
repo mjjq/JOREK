@@ -29,14 +29,14 @@ real*8  :: aux1, aux2, Z_star, Z_star_u
 
 delta_psi = psi_bnd - psi_axis
 
-if (delta_psi .ne. 0) then
-    psi_n     = (psi - psi_axis) / delta_psi
-    psi_n = max( min(psi_n, 2.), 0. )
-else if ((psi - psi_axis) .gt. 0) then
-    psi_n = 2.
-else 
-    psi_n = 0.
+if (delta_psi .eq. 0) then
+   delta_psi = 1.
 endif
+
+
+psi_n     = (psi - psi_axis) / delta_psi
+psi_n = max( min(psi_n, 2.), 0. )
+
 
 !factor = 1.d0
 !if (xpoint2) then

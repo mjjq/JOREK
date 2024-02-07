@@ -117,17 +117,16 @@ do i=1,element_list%n_elements    ! --- loop over elements
     
       ! --- Look for the lower Xpoint
       if (xcase .ne. UPPER_XPOINT) then
-        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (tokamak_device(1:7) .ne. 'COMPASS') .and. (Z .lt. Z_xpoint_limit(1))) &
-            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))  &
-            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0)) ) then
+        if (   (Z .lt. (Z_axis0 + r_margin)) .and. ((tokamak_device(1:4) .ne. 'MAST') &
+            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0)))) then
           include_pt_lw(i,ms,mt) = .true.        
         endif
       endif
       
       ! --- And for the upper Xpoint
       if (xcase .ne. LOWER_XPOINT) then
-        if (     ((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  Z_xpoint_limit(2))) &
-            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0)) ) then
+        if (   (Z .gt. (Z_axis0 - r_margin)) .and. ((tokamak_device(1:4) .ne. 'MAST')  &
+            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0)) )) then
           include_pt_up(i,ms,mt) = .true.
         endif
       endif
@@ -168,7 +167,7 @@ if(xcase .ne. UPPER_XPOINT) then
       include_pt_lw(i_elm_xpoint(1),:,:) = .false.
     endif
     call interp_RZ(node_list,element_list,i_elm_xpoint(1),s,t,R_xpoint0,R_s,R_t,Z_xpoint0,Z_s,Z_t)
-    if ( (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) .or. (Z_xpoint0 .gt. Z_axis0)) then
+    if (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin)  then
       include_pt_lw(i_elm_xpoint(1),:,:) = .false.                                  ! If the point is within the r=r_margin circle around axis, exclude it
     elseif (include_pt_lw(i_elm_xpoint(1),1,1)) then 
       found_lower   = .true.
@@ -216,7 +215,7 @@ if(xcase .ne. LOWER_XPOINT) then
       include_pt_up(i_elm_xpoint(2),:,:) = .false.
     endif
     call interp_RZ(node_list,element_list,i_elm_xpoint(2),s,t,R_xpoint0,R_s,R_t,Z_xpoint0,Z_s,Z_t)
-    if ((sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) .or. (Z_xpoint0 .lt. Z_axis0)) then
+    if (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) then
       include_pt_up(i_elm_xpoint(2),:,:) = .false.                                                   ! If the point is within the r=r_margin circle around axis, exclude it
     elseif ( include_pt_up(i_elm_xpoint(2),1,1) ) then
       found_upper   = .true.
@@ -259,6 +258,7 @@ if(xcase .ne. UPPER_XPOINT) then
   endif
   
   if ((.not. found_lower )) write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
+  
 endif
 
 

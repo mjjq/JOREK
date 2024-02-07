@@ -56,6 +56,7 @@ real*8     :: density_prof
 real*8, allocatable     :: density_profile(:)
 integer    :: nj
 real*8     :: rr,ww, drr_dR, drr_dZ, drr_dR2, drr_dZ2, drr_dRdZ
+logical    :: proper_xpoint(2)
 
 if (my_id .eq. 0) then
   write(*,*) '***************************************'
@@ -400,7 +401,7 @@ if (my_id == 0) then
   psi_bnd = 0.d0
   
   if (xpoint2) then
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,proper_xpoint,ifail)
     if (ifail .ne. 1) then      
       psi_bnd  = psi_xpoint(1)
       if( (xcase2 .eq. 2) .or. ((xcase2 .eq. 3) .and. (abs(psi_xpoint(2)-psi_axis) .lt. abs(psi_xpoint(1)-psi_axis))) ) then
@@ -577,7 +578,7 @@ if (my_id == 0) then
   ! --- except dn_dpsi and dT_dpsi for current profile...)
   if (n_order .ge. 5) then
     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,proper_xpoint,ifail)
     if (xpoint2) then
       ES%xpoint = xpoint2
       ES%Z_xpoint = Z_xpoint
@@ -597,7 +598,7 @@ if (my_id == 0) then
   if (xpoint2 .and. (n_flux .gt. 1)) then
     
     call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,ifail)
+    call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint2,Z_xpoint2,i_elm_xpoint,s_xpoint,t_xpoint,xcase2,proper_xpoint,ifail)
     
     n_grids = 0
     sigmas  = 0.d0

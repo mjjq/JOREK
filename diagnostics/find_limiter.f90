@@ -34,7 +34,7 @@ real*8  :: s_pt, t_pt, s_or_t, xjac, prod, psi_bnd_save
 real*8  :: R_axis, Z_axis, psi_axis, s_axis, t_axis
 real*8  :: P, P_s, P_t, P_st, P_ss, P_tt, P_R, P_Z
 real*8  :: RR, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
-logical :: s_const, is_private            ! Is the bound. elem. an s=const side of the 2D element?
+logical :: s_const, is_private           ! Is the bound. elem. an s=const side of the 2D element?
 integer :: ifail, i_elm, i_elm_axis, ifail_axis
 
 real*8, external :: root
@@ -155,27 +155,28 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       !--- decide if we are inside a private region
       is_private = .false.
       
-      if(ES%ifail_xpoint==0) then                       ! No private region if x-point is not found
+      
+      if ((ES%proper_xpoint(1) .or. ES%proper_xpoint(2))) then
         if (ES%axis_is_psi_minimum) then
           if (prod < 0.d0) is_private = .true.
         else
           if (prod > 0.d0) is_private = .true.
         endif
-      endif
+      end if
       
 
       ! --- Second method to double check that the limiter does not belong to a private region
       ! ---    Use X-points to check region (if available and properly found) 
       if (ES%axis_init .and. ES%xpoint_init) then
 
-        if( ES%xpoint .and. (ES%ifail_axis==0) .and. (ES%ifail_xpoint==0) ) then
+        if (( ES%xpoint .and. (ES%ifail_axis==0)) .and. (ES%proper_xpoint(1) .or. ES%proper_xpoint(2))) then
 
           if (ES%initialized) psi_bnd_save = ES%psi_bnd  ! Avoid perturbing psi_bnd
 
-          ! --- The boundary will be initially guessed as the active xpoint
-          if (ES%xcase == 1) then
+          ! --- The boundary will be initially guessed as the active xpoint	  
+          if (.not. ES%proper_xpoint(2)) then
             ES%psi_bnd = ES%psi_xpoint(1)
-          else if (ES%xcase == 2) then
+          else if (.not. ES%proper_xpoint(1)) then
             ES%psi_bnd = ES%psi_xpoint(2)
           else
             if ( abs(ES%psi_axis-ES%psi_xpoint(1)) < abs(ES%psi_axis-ES%psi_xpoint(2)) ) then

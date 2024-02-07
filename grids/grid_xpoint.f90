@@ -61,6 +61,7 @@ character*4         :: label
 integer             :: i_elm1, i_vertex1, i_node1, i_node_save
 integer             :: i_elm2, i_vertex2, i_node2
 integer             :: node_indices( (n_order+1)/2, (n_order+1)/2 ), ii, jj
+logical             :: proper_xpoint(2)
 
 xpoint = .true.
 my_id  = 0
@@ -72,7 +73,7 @@ write(*,*) '*************************************'
 
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
 
 !-------------------------------- double values to find the mid_points
 n_flux_2    = 2 * (n_flux - 1)
@@ -1542,7 +1543,7 @@ deallocate(newelement_list)
 
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
 
 call tr_deallocate(s_values,"s_values",CAT_GRID)
 call tr_deallocate(theta_sep,"theta_sep",CAT_GRID)

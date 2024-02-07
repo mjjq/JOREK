@@ -54,6 +54,7 @@ real*8              :: R0,Z0, RP,ZP, dR0, dZ0, dRP, dZP, size_0, size_p, denom
 character*4         :: label
 logical, parameter  :: plot_grid = .true.
 integer             :: node_indices( (n_order+1)/2, (n_order+1)/2 ), ii, jj
+logical             :: proper_xpoint(2)
 
 
 write(*,*) '*****************************************'
@@ -1422,7 +1423,7 @@ deallocate(newelement_list)
 
 my_id = 0 !Now we want the output...
 call find_axis(my_id,node_list,element_list,ES%psi_axis,ES%R_axis,ES%Z_axis,ES%i_elm_axis,ES%s_axis,ES%t_axis,ifail)
-call find_xpoint(my_id,node_list,element_list,ES%psi_xpoint,ES%R_xpoint,ES%Z_xpoint,ES%i_elm_xpoint,ES%s_xpoint,ES%t_xpoint,xcase,ifail)
+call find_xpoint(my_id,node_list,element_list,ES%psi_xpoint,ES%R_xpoint,ES%Z_xpoint,ES%i_elm_xpoint,ES%s_xpoint,ES%t_xpoint,xcase,proper_xpoint,ifail)
 
 return
 end subroutine 

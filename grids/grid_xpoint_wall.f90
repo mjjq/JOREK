@@ -75,6 +75,8 @@ integer             :: i_elm1, i_vertex1, i_node1, i_node_save, iv1, iv2, iv3, i
 integer             :: i_elm2, i_vertex2, i_node2
 integer             :: n_remove_elements, n_remove_nodes, remove_elements(100), remove_nodes(100), newnode_index(n_nodes_max), skip_index
 integer             :: node_indices( (n_order+1)/2, (n_order+1)/2 )
+logical             :: proper_xpoint(2) 
+
 
 xpoint = .true.
 extend = .true.;   if (n_ext .lt. 1) extend = .false.
@@ -100,7 +102,7 @@ close(23)
 
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
-call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
 
 
 

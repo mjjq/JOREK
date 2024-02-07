@@ -414,6 +414,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   integer :: domain, i_elm_axis, i_elm_xpoint(2)
   real*8  :: R_axis, Z_axis, s_axis, t_axis
   real*8, dimension(2) :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
+  logical :: proper_xpoint(2)
 
   real*8 :: real_stats_tmp(n_real8_var+n_real4_var) !< Temporary storage for real8 and real4 stats
   integer :: i_real8, i_real4, i_tmp, j
@@ -422,7 +423,7 @@ subroutine calculate_particle_diagnostics(fields, time, particles, mass, real8_s
   call find_axis(1,fields%node_list,fields%element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
   if (xpoint) then
-    call find_xpoint(1,fields%node_list,fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+    call find_xpoint(1,fields%node_list,fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
     psi_limit  = psi_xpoint(1)
     if(ES%active_xpoint .eq. UPPER_XPOINT) then
       psi_limit = psi_xpoint(2)
@@ -599,13 +600,14 @@ function particles_in_regions(node_list, element_list, particles)
   real*8  :: psi, psi_s, psi_t, psi_st, psi_ss, psi_tt
   real*8  :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_limit
   real*8, dimension(2) :: psi_xpoint, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
+  logical :: proper_xpoint(2)
 
 
   !! Preparation (force my_id to 1 to suppress message)
   call find_axis(1,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
   if (xpoint) then
-    call find_xpoint(1,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+    call find_xpoint(1,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
     psi_limit  = psi_xpoint(1)
     if(ES%active_xpoint .eq. UPPER_XPOINT) then
       psi_limit = psi_xpoint(2)

@@ -67,6 +67,7 @@ module equil_info
     real*8           :: t_xpoint(2)              !< t coordinate of X-point within element.
     integer          :: ifail_xpoint             !< Error code for X-point determination.
     logical          :: xpoint_init = .false.    !< Has the find_xpoint routine been called in update_equil_state?
+    logical          :: proper_xpoint(2)         !< Is the position of the X-point proper? 
     
     ! --- Boundary point (point defining the plasma LCFS, either the active limiter point or X-point)
     real*8           :: R_bnd                    !< R coordinate of boundary point.
@@ -140,9 +141,10 @@ module equil_info
     ES%xpoint       = xpoint
     ES%xcase        = xcase
     ES%ifail_xpoint = 0
+    ES%proper_xpoint(:) = .false. 
     if ( xpoint ) then 
       call find_xpoint(my_id_fake, node_list, element_list, ES%psi_xpoint, ES%R_xpoint,     &
-        ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint, ES%xcase, ES%ifail_xpoint)
+        ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint, ES%xcase, ES%proper_xpoint,ES%ifail_xpoint)
 
       ES%xpoint_init = .true.
     endif
@@ -153,21 +155,21 @@ module equil_info
     call find_RZ(node_list, element_list, ES%R_lim, ES%Z_lim, R_out, Z_out, ES%i_elm_lim, ES%s_lim,&
       ES%t_lim, ES%ifail_lim)
     
-    if ( xpoint ) then ! (X-point plasma)
+    if ( xpoint  .and. (ES%proper_xpoint(1) .or. ES%proper_xpoint(2)))  then ! (X-point plasma)
       
-      if ( (xcase==LOWER_XPOINT) ) then
+      if ( .not. ES%proper_xpoint(2) ) then
         
         ES%psi_bnd        = ES%psi_xpoint(1)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = LOWER_XPOINT
         
-      else if ( (xcase==UPPER_XPOINT) ) then
+      else if ( .not. ES%proper_xpoint(1) ) then
         
         ES%psi_bnd        = ES%psi_xpoint(2)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = UPPER_XPOINT
         
-      else if ( (xcase==DOUBLE_NULL) ) then
+      else
         
         ES%limiter_plasma = .false.
 
@@ -200,14 +202,12 @@ module equil_info
           ES%active_xpoint = SYMMETRIC_XPOINT
         endif
         
-      else ! This should never happen.
-        write(*,*) 'ERROR: ILLEGAL VALUE FOR XCASE:', xcase
-        stop
+
       end if
       
       ! --- Has the X-plasma changed to a limiter plasma?
       if (freeboundary) then
-        if (( abs(ES%psi_axis-ES%psi_lim) < abs(ES%psi_axis-ES%psi_bnd) ) .or. ES%ifail_xpoint == 1) then
+        if (( abs(ES%psi_axis-ES%psi_lim) < abs(ES%psi_axis-ES%psi_bnd) )) then
           ES%psi_bnd        = ES%psi_lim
           ES%limiter_plasma = .true.
 	  ES%active_xpoint  = 0

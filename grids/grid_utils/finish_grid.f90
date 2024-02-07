@@ -61,6 +61,7 @@ character*4         :: label
 logical             :: normal_eqdsk, normal_eqdsk_wall
 logical, parameter  :: plot_grid = .false.
 integer             :: node_indices( (n_order+1)/2, (n_order+1)/2 )
+logical             :: proper_xpoint(2)
 
 
 write(*,*) '*****************************************'
@@ -562,7 +563,7 @@ call update_boundary_types_final(element_list,node_list)
 
 my_id = 0 !Now we want the output...
 call find_axis(my_id,node_list,element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
-if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+if (xpoint) call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
 
 
 !----------------------------------- Print a python file that plots a cross with the 4 nodes of each element

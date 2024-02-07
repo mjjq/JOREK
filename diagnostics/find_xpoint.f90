@@ -1,5 +1,5 @@
 !> Routine determines the position(s) of the xpoint(s).
-subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
 
 use constants
 use data_structure
@@ -22,6 +22,7 @@ integer,                  intent(out)   :: i_elm_xpoint(2)
 real*8,                   intent(out)   :: s_xpoint(2)
 real*8,                   intent(out)   :: t_xpoint(2)
 integer,                  intent(in)    :: xcase
+logical,                  intent(out)   :: proper_xpoint(2)        
 integer,                  intent(out)   :: ifail
 
 ! --- Local variables
@@ -31,7 +32,7 @@ real*8  :: x(2), s, t, xerr, ferr, s_xp_init(2), t_xp_init(2)
 real*8  :: R_axis0, Z_axis0, R_xpoint0, Z_xpoint0, r_margin, s_axis, t_axis, psi_axis, fac_axis_xpoint       
 integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries, i_init       
 integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
-integer :: i_elm_axis, ifail_axis, ifail_lw, ifail_up      
+integer :: i_elm_axis, ifail_axis   
 logical :: found_upper, found_lower
 real*8,  allocatable :: grad_psi(:,:,:)
 logical, allocatable :: include_pt_lw(:,:,:), include_pt_up(:,:,:)
@@ -43,11 +44,10 @@ if (my_id .eq. 0) then
 endif
 
 ifail   = 1
-ifail_lw = 1
-ifail_up = 1
 n_tries = 500
-r_margin = -0.05          ! x_point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop                
+r_margin = 0.05          ! x_point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop                
 fac_axis_xpoint = 9      ! If the distance from the x-point finally found to the axis is closer than fac_axis_xpoint*r_margin, assume that x-point has vanished and find_xpoint fails.
+proper_xpoint(:) = .false.
 
 psi_xpoint = 0.
 R_xpoint   = 0.;    Z_xpoint = 0.
@@ -63,6 +63,9 @@ include_pt_up = .false.
 
 found_upper = .false. 
 found_lower = .false.
+
+
+
 
 if (.not. ES%initialized) then    
   call find_axis(99, node_list, element_list, psi_axis, R_axis0, Z_axis0, i_elm_axis, s_axis, &
@@ -165,7 +168,7 @@ if(xcase .ne. UPPER_XPOINT) then
       include_pt_lw(i_elm_xpoint(1),:,:) = .false.
     endif
     call interp_RZ(node_list,element_list,i_elm_xpoint(1),s,t,R_xpoint0,R_s,R_t,Z_xpoint0,Z_s,Z_t)
-    if (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) then
+    if ( (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) .or. (Z_xpoint0 .gt. Z_axis0)) then
       include_pt_lw(i_elm_xpoint(1),:,:) = .false.                                  ! If the point is within the r=r_margin circle around axis, exclude it
     elseif (include_pt_lw(i_elm_xpoint(1),1,1)) then 
       found_lower   = .true.
@@ -213,7 +216,7 @@ if(xcase .ne. LOWER_XPOINT) then
       include_pt_up(i_elm_xpoint(2),:,:) = .false.
     endif
     call interp_RZ(node_list,element_list,i_elm_xpoint(2),s,t,R_xpoint0,R_s,R_t,Z_xpoint0,Z_s,Z_t)
-    if (sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) then
+    if ((sqrt((R_axis0-R_xpoint0)**2 + (Z_xpoint0-Z_axis0)**2) .lt. r_margin) .or. (Z_xpoint0 .lt. Z_axis0)) then
       include_pt_up(i_elm_xpoint(2),:,:) = .false.                                                   ! If the point is within the r=r_margin circle around axis, exclude it
     elseif ( include_pt_up(i_elm_xpoint(2),1,1) ) then
       found_upper   = .true.
@@ -235,7 +238,7 @@ endif
 
 if(xcase .ne. UPPER_XPOINT) then
 
-  ifail_lw = 0
+  proper_xpoint(1) = .true.
   if (.not. found_lower) then    ! --- if all the attempts failed, take the initial solution
     s_xpoint(1)     = s_xp_init(1)     
     t_xpoint(1)     = t_xp_init(1)     
@@ -249,21 +252,20 @@ if(xcase .ne. UPPER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  ifail_lw = 1              ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, find lower xpoint fails 
+  if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(1) = .false.              ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, lower xpoint is not at a proper position
 
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Lower X-point : ',i_elm_xpoint(1),R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
   endif
-  write(*,'(A,4f14.8)') ' Lw Xp(R,Z,psi,grad_psi): ',R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
   
   if ((.not. found_lower )) write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
-  if (ifail_lw == 1) write(*,*) 'WARNING: lower X-point might have vanished'
 endif
 
 
 if(xcase .ne. LOWER_XPOINT) then 
 
-  ifail_up = 0
+  proper_xpoint(2) = .true.
+
   if (.not. found_upper) then    ! --- if all the attempts failed, take the initial solution
     s_xpoint(2)     = s_xp_init(2)     
     t_xpoint(2)     = t_xp_init(2)     
@@ -277,17 +279,17 @@ if(xcase .ne. LOWER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  ifail_up = 1    ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, find upper xpoint fails
+  if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(2) = .false.              ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, upper xpoint is not at a proper position
+
 
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Upper X-point : ',i_elm_xpoint(2),R_xpoint(2),Z_xpoint(2),psi_xpoint(2),sqrt(ps_x**2+ps_y**2)
   endif
     
   if ((.not. found_upper )) write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
-  if (ifail_up == 1) write(*,*) 'WARNING: upper X-point might have vanished'
+
 endif
 
-ifail = ifail_lw*ifail_up                              ! If all x-points which existed are not found, find_xpoint fails.
 
 deallocate(include_pt_lw,include_pt_up, grad_psi)
 

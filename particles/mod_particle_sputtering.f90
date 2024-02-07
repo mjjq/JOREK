@@ -1044,6 +1044,7 @@ subroutine project_sputter_vars_on_edge(sim, n_relative, background_species, coe
   real*8, parameter :: gamma = 5.d0 / 3.d0 !< Heat capacity ratio, for adiabatic
   real*8 :: psi_axis, R_axis, Z_axis, s_axis, t_axis, psi_xpoint(2), psi_limit, R_xpoint, Z_xpoint, s_xpoint, t_xpoint
   integer :: i_elm_axis, ifail, i_elm_xpoint
+  logical :: proper_xpoint(2)
 
   if (present(diagnostics)) then
     ! Preparation (force my_id to 1 to suppress message)
@@ -1053,7 +1054,7 @@ subroutine project_sputter_vars_on_edge(sim, n_relative, background_species, coe
     call find_axis(1,sim%fields%node_list,sim%fields%element_list,psi_axis,R_axis,Z_axis,i_elm_axis,s_axis,t_axis,ifail)
 
     if (xpoint) then
-      call find_xpoint(1,sim%fields%node_list,sim%fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
+      call find_xpoint(1,sim%fields%node_list,sim%fields%element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
       psi_limit  = psi_xpoint(1)
       if((xcase .eq. 2) .or. ((xcase .eq. 3) .and. (psi_xpoint(2) .lt. psi_xpoint(1)))) then
         psi_limit = psi_xpoint(2)

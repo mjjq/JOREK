@@ -28,9 +28,15 @@ integer :: left, right, mid
 real*8  :: aux1, aux2, Z_star, Z_star_u
 
 delta_psi = psi_bnd - psi_axis
-psi_n     = (psi - psi_axis) / delta_psi
 
-psi_n = max( min(psi_n, 2.), 0. )
+if (delta_psi .ne. 0) then
+    psi_n     = (psi - psi_axis) / delta_psi
+    psi_n = max( min(psi_n, 2.), 0. )
+else if ((psi - pai_axis) .gt. 0) then
+    psi_n = 2.
+else 
+    psi_n = 0.
+endif
 
 !factor = 1.d0
 !if (xpoint2) then

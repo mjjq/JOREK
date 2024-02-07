@@ -38,7 +38,7 @@ def read_ascii_file(file_path, skiprows):
 
 
 def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, 
-                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width):
+                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim):
     """
     Plot lines from multiple ASCII files in the same plot.
 
@@ -111,6 +111,13 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
     plt.xticks(fontsize=font_size)
     plt.yticks(fontsize=font_size)
 
+    if xlim:
+        xmin, xmax = xlim
+        plt.xlim(xmin, xmax)
+    if ylim:
+        ymin, ymax = ylim
+        plt.ylim(ymin, ymax)
+
     plt.show()
 
 
@@ -148,9 +155,13 @@ if __name__ == "__main__":
                         help="Define the fontsize of figure.")
     parser.add_argument("-lw", "--linewidth", default=2,
                         help="Define the linewidth of figure.")
+    parser.add_argument('-xlim', nargs=2, type=float, metavar=('xmin', 'xmax'),
+                        help='Specify xmin, xmax for the plot.')
+    parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
+                        help='Specify ymin, ymax for the plot.')
 
     args = parser.parse_args()
 
     plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
-                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth)
+                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim)

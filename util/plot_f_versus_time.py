@@ -16,6 +16,10 @@ import plot_vtk as pltvtk
 import plot_multiple_files as pltmpf
 import plot_q_versus_time as pltqvst
 
+def find_nearest(array, target):
+    idx = (np.abs(array - target)).argmin()
+    return idx
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Plot radial distribution of q (y-axis) versus time (x-axis) from postproc files.")
@@ -91,6 +95,7 @@ if __name__ == "__main__":
 
     # numbers_1d = np.array(numbers_1d_array)
     times_1d = np.array(times_1d_array)
+    psi_n_1d = np.array(radial_1d_array)
     radial_1d = np.array(radial_1d_array)
     data_2d = np.array(data_2d_array)
     data_2d_num = np.shape(data_2d)[0] * np.shape(data_2d)[1]
@@ -151,3 +156,87 @@ if __name__ == "__main__":
                 lambda event: pltvtk.display_values(event, x, y, z))
 
     plt.show()
+
+    if False: # plot Jtor over time, $ plot_f_versus_time.py -xm $time2si -fn exprs_averaged -yc 8 -xl "time [ms]" -rp 0.5 -clim 0 3.3 
+        rmin = 0.07
+        rmax = 0.14
+        tmin = 0 # ms
+        tid = find_nearest(times_1d, tmin)
+        idmin = find_nearest(radial_1d, rmin)
+        idmax = find_nearest(radial_1d, rmax)
+        print("idmin = ", idmin, ", rmin = ", radial_1d[idmin])
+        print("idmax = ", idmax, ", rmax = ", radial_1d[idmax])
+        # plot 1D radial averaged quantities over time
+        plt.figure(figsize=(10, 5))
+        data_1D_intg = np.trapz(data_2d_plt[:,idmin:idmax+1], psi_n_1d[idmin:idmax+1], axis = 1) / (psi_n_1d[idmax] - psi_n_1d[idmin])
+        # data_1D_intg = np.mean(data_2d_plt[:,idmin:idmax+1], axis = 1)
+        # data_1D_intg = np.max(data_2d_plt[:,idmin:idmax+1], axis = 1)
+        plt.plot(times_1d, data_1D_intg, linewidth =2, label='Original data')
+
+        time_extrap = np.linspace(times_1d[tid], 400, 20000)
+        degree = 2
+        coefficients = np.polyfit(times_1d[tid:], data_1D_intg[tid:], degree)
+        fitted_curve = np.poly1d(coefficients)
+        # fitted_equation_str = f'{coefficients[0]:.2e}x^2 + {coefficients[1]:.2e}x + {coefficients[2]:.2e}'
+        # For higher-degree polynomials, generalize the string representation
+        func_coeff_reverse = coefficients[::-1]  # Reverse the order of coefficients
+        terms = [f"{coeff:.2e}" if deg == 0 else f"{coeff:.2e}$t^{deg}$" for deg, coeff in enumerate(func_coeff_reverse)]
+        fitted_equation_str = "f = " + f"\n   + ".join(terms)
+        values_extrap = fitted_curve(time_extrap)
+        plt.plot(time_extrap, values_extrap, '--',linewidth =2, label=f'Extrap: {fitted_equation_str}')
+
+        plt.xlabel(r'normalized time' if args.xlabel == "" else args.xlabel, fontsize=font_size)
+        plt.ylabel(r'radially averaged ' + variable_name, fontsize=font_size)
+        plt.title(r'radially averaged ' + variable_name + ' versus time', fontsize=font_size)
+        plt.xticks(fontsize=font_size)
+        plt.yticks(fontsize=font_size)
+        plt.legend(fontsize=font_size)
+        plt.grid()
+        
+        if args.xlim:
+            plt.xlim(xmin, xmax)
+        plt.ylim(3.00, 3.35)
+        plt.show()
+    
+    if False: # plot q over time, $ plot_f_versus_time.py -xm $time2si -fn qprofile -yc 1 -xl "time [ms]" -rp 0.5 
+        rmin = 0.115
+        rmax = 0.185
+        tmin = 0 # ms
+        tid = find_nearest(times_1d, tmin)
+        idmin = find_nearest(radial_1d, rmin)
+        idmax = find_nearest(radial_1d, rmax)
+        print("idmin = ", idmin, ", rmin = ", radial_1d[idmin])
+        print("idmax = ", idmax, ", rmax = ", radial_1d[idmax])
+        # plot 1D radial averaged quantities over time
+        plt.figure(figsize=(10, 5))
+        data_2d_plt = np.abs(data_2d_plt)
+        data_1D_intg = np.trapz(data_2d_plt[:,idmin:idmax+1], psi_n_1d[idmin:idmax+1], axis = 1) / (psi_n_1d[idmax] - psi_n_1d[idmin])
+        # data_1D_intg = np.mean(data_2d_plt[:,idmin:idmax+1], axis = 1)
+        # data_1D_intg = np.max(data_2d_plt[:,idmin:idmax+1], axis = 1)
+        # data_1D_intg = np.min(data_2d_plt, axis = 1)
+        plt.plot(times_1d, data_1D_intg, linewidth =2, label='Original data')
+
+        time_extrap = np.linspace(times_1d[tid], 400, 20000)
+        degree = 2
+        coefficients = np.polyfit(times_1d[tid:], data_1D_intg[tid:], degree)
+        fitted_curve = np.poly1d(coefficients)
+        # fitted_equation_str = f'{coefficients[0]:.2e}x^2 + {coefficients[1]:.2e}x + {coefficients[2]:.2e}'
+        # For higher-degree polynomials, generalize the string representation
+        func_coeff_reverse = coefficients[::-1]  # Reverse the order of coefficients
+        terms = [f"{coeff:.2e}" if deg == 0 else f"{coeff:.2e}$t^{deg}$" for deg, coeff in enumerate(func_coeff_reverse)]
+        fitted_equation_str = "f = " + f"\n   + ".join(terms)
+        values_extrap = fitted_curve(time_extrap)
+        plt.plot(time_extrap, values_extrap, '--',linewidth =2, label=f'Extrap: {fitted_equation_str}')
+
+        plt.xlabel(r'normalized time' if args.xlabel == "" else args.xlabel, fontsize=font_size)
+        plt.ylabel(r'radially averaged q', fontsize=font_size)
+        plt.title(r'radially averaged q versus time', fontsize=font_size)
+        plt.xticks(fontsize=font_size)
+        plt.yticks(fontsize=font_size)
+        plt.legend(fontsize=font_size)
+        plt.grid()
+        
+        if args.xlim:
+            plt.xlim(xmin, xmax)
+        plt.ylim(0.94, 1.04)
+        plt.show()

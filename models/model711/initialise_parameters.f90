@@ -22,7 +22,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 time_evol_zeta, force_horizontal_Xline,             &
                 Mach1_openBC, thermalization,                       &
                 eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       & 
-                tauIC_ARAZ_on,                                      &
+                tauIC_ARAZ_on, tauIC_AP_on, tauIC_tanh,             &
+                tauIC_shift, tauIC_steep, bootstrap,                &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
                 n_R, n_Z, n_radial, n_pol, n_tht, n_flux,           &
                 n_open, n_private, n_leg,                           &

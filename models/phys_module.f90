@@ -113,6 +113,10 @@ module phys_module
   logical :: eta_ARAZ_simple      !< Full-MHD: remove the Fprof dependence of Bphi in the resistive terms for AR and AZ (which should be compensated by current source anyway)
 
   logical :: tauIC_ARAZ_on        !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
+  logical :: tauIC_AP_on          !< Full-MHD: to switch on/off diamagnetic terms for A_phi equation
+  logical :: tauIC_tanh           !< Full-MHD: suppress the diamagnetic term near the boundary
+  real*8  :: tauIC_shift          !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
+  real*8  :: tauIC_steep          !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
   logical :: bench_without_plot   !< if .true., do not produce certain output plots (e.g., for benchmarking)
   logical :: gmres                !< Use iterative GMRES solver
   integer :: gmres_max_iter       !< Maximum number of GMRES iterations

@@ -18,6 +18,7 @@ function usage() {
   echo "  -ps                Plot to .ps files (default: plot to screen)"
   echo "  -si                Plot with si units"
   echo "  -no0               Plot without the n=0 mode"
+  echo "  -noplot            Only extract data but do not plot it"
   echo "  -(no)log           (Non-)Logarithmic y-axis (default: '-log')"
   echo "  -title <title>     Add this to title (after given quantity)"
   echo "  -xrange <x0>:<xf>  X range for plotting."
@@ -57,6 +58,7 @@ fi
 ps=0
 qtty="energies"
 si=0
+noplot=0
 no0=0
 logy2=""
 file="macroscopic_vars.dat"
@@ -91,6 +93,9 @@ while [ $# -gt 0 ]; do
     shift
   elif [ "$1" == "-no0" ]; then
     no0=1
+    shift
+  elif [ "$1" == "-noplot" ]; then
+    noplot=1
     shift
   elif [ "$1" == "-log" ]; then
     logy2=1
@@ -159,6 +164,13 @@ if [ -z "$logy" ]; then
   logy="1"
 fi
 $extract_live_data ${qtty} ${qtty}.dat -f $file
+
+if [ $noplot -eq 1 ]; then
+  echo "Only extract data: ${qtty} into ${qtty}.dat, but do not plot it"
+  exit
+else
+  echo "Extract data: ${qtty} into ${qtty}.dat, and plot it"
+fi
 
 # --- Plot the quantity
 cat $SCRIPTDIR/plot_live_data.gnuplot                                                     \

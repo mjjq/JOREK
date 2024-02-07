@@ -313,13 +313,6 @@ write(*,'(1x,a)',advance='no') ' AUG_WALL              : '
   write(*,*) 'off'
 #endif
 
-write(*,'(1x,a)',advance='no') ' PRINT_ELM_RHS         : '
-#ifdef PRINT_ELM_RHS
-  write(*,*) 'on'
-#else
-  write(*,*) 'off'
-#endif
-
 write(*,'(1x,a)',advance='no') ' NORMTRACE             : '
 #ifdef NORMTRACE
   write(*,*) 'on'
@@ -1178,6 +1171,10 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
     write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
     write(*,LOGI_FMT) 'eta_ARAZ_simple       ', eta_ARAZ_simple
     write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
+    write(*,LOGI_FMT) 'tauIC_AP_on           ', tauIC_AP_on
+    write(*,LOGI_FMT) 'tauIC_tanh            ', tauIC_tanh
+    write(*,REAL_FMT) 'tauIC_shift           ', tauIC_shift
+    write(*,REAL_FMT) 'tauIC_steep           ', tauIC_steep
 #endif
 
   write(*,LOGI_FMT) 'fix_axis_nodes        ',fix_axis_nodes 

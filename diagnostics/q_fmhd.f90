@@ -20,7 +20,7 @@ implicit none
 !--- Input parameters --------------------!
 !-----------------------------------------!
 real*8, parameter  :: stepsize = 1.d-3
-integer, parameter :: npoints = 200
+integer, parameter :: npoints = 500
 !-----------------------------------------!
 !-----------------------------------------!
 
@@ -45,6 +45,11 @@ logical   :: responsible(npoints)
 
 real*8    :: psin_arr(npoints) = 0.d0, polturns_arr(npoints) = 0.d0, torturns_arr(npoints) = 0.d0, phi_arr(npoints) = 0.d0, R_arr(npoints) = 0.d0
 real*8    :: psin_arr_tot(npoints) = 0.d0, phi_arr_tot(npoints) = 0.d0, R_arr_tot(npoints) = 0.d0
+
+! --- Used to integrate 1/(2*pi)*int(dl/(R^2 B_poloidal))
+real*8    :: B_p_intg, dl, F_val, F_count
+real*8    :: B_p_intg_arr(npoints) = 0.d0, B_p_intg_arr_tot(npoints) = 0.d0, psi_arr(npoints) = 0.d0, psi_arr_tot(npoints) = 0.d0
+real*8    :: F_arr(npoints) = 0.d0, F_arr_tot(npoints) = 0.d0
 
 required = MPI_THREAD_FUNNELED
 call MPI_Init_thread(required, provided, StatInfo)
@@ -103,7 +108,10 @@ do i = 1, npoints
   if ( .not. responsible(i) ) then
     psin_arr(i) = 0.d0
     phi_arr(i)  = 0.d0
-    R_arr(i)  = 0.d0
+    R_arr(i)    = 0.d0
+    B_p_intg_arr(i) = 0.d0
+    psi_arr(i)  = 0.d0
+    F_arr(i)    = 0.d0
     cycle
   end if
   
@@ -119,6 +127,10 @@ do i = 1, npoints
   polturns     = 0.d0
   torturns     = 0.d0
   j            = 0
+  B_p_intg     = 0.d0
+  dl           = 0.d0
+  F_val        = 0.d0
+  F_count      = 0.d0
   
   do while( .not. stop_tracing )
     
@@ -140,8 +152,10 @@ do i = 1, npoints
     end if  
     
   end do
-  
+  B_p_intg_arr(i) = B_p_intg / (2.d0 * PI) / polturns
   psin_arr(i)     = get_psi_n(A3, ZZ)
+  psi_arr(i)      = A3
+  F_arr(i)        = F_val / F_count
   if ( phi > 0.d0 ) then
     phi_arr(i)      = phiold + (phi - phiold) * ((Zold - ES%Z_axis)/ (Zold - ZZ)) + torturns * 2.d0 * PI
   else if ( phi < 0.d0 ) then
@@ -166,13 +180,16 @@ call MPI_Barrier(MPI_COMM_WORLD,ierr)
 call MPI_Reduce(psin_arr,  psin_arr_tot,  npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 call MPI_Reduce(phi_arr,   phi_arr_tot,   npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 call MPI_Reduce(R_arr,     R_arr_tot,     npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+call MPI_Reduce(B_p_intg_arr,B_p_intg_arr_tot,npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+call MPI_Reduce(psi_arr,   psi_arr_tot,   npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+call MPI_Reduce(F_arr,     F_arr_tot,     npoints,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
 
 ! --- Write out result
 if ( my_id == 0 ) then
   open(99, file='q_profile.dat', action='write', status='replace')
-  write(99,*) '# Psi_N | Safety factor | Radius at LFS midplane [m]'
+  write(99,*) '# Psi_N | Safety factor | R at LFS midplane [m] | ∫dl/(R^2Bp)/2Pi | Psi | F'
   do i = 1, npoints
-    write(99,'(3es23.5)') psin_arr_tot(i), phi_arr_tot(i)/(2.d0*PI), R_arr_tot(i)
+    write(99,'(6es23.5)') psin_arr_tot(i), phi_arr_tot(i)/(2.d0*PI), R_arr_tot(i), B_p_intg_arr_tot(i), psi_arr_tot(i), F_arr_tot(i)
   end do
   close(99)
 end if
@@ -234,6 +251,11 @@ contains
     stop_tracing = .true.
     return
   end if
+
+  dl       = dsqrt((stepsize * BR / BB)**2 + (stepsize * BZ / BB)**2)
+  B_p_intg = B_p_intg + dl / (RR ** 2 * dsqrt(BR ** 2 + BZ ** 2))
+  F_val    = F_val + RR * Bp
+  F_count  = F_count + 1.d0
 
   end subroutine do_step
  

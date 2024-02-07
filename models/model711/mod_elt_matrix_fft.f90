@@ -72,7 +72,7 @@ real*8     :: Jb, Jb_0
 real*8     :: amu_neo_prof(n_gauss,n_gauss), aki_neo_prof(n_gauss,n_gauss)
 real*8     :: V_source(n_gauss,n_gauss), dV_dpsi_source(n_gauss,n_gauss),dV_dz_source(n_gauss,n_gauss)
 real*8     :: dV_dpsi2,dV_dz2,dV_dpsi_dz,dV_dpsi3,dV_dpsi_dz2, dV_dpsi2_dz
-real*8     :: eta_ARAZ, tauIC_ARAZ
+real*8     :: eta_ARAZ, tauIC_ARAZ, tauIC_AP
 logical    :: use_fft
 
 
@@ -353,8 +353,10 @@ real*8     :: rhoi_eff, rhoe_eff
 ! --- Switches for numerical stability of resistive and diamagnetic terms in AR and AZ equations
 eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
 tauIC_ARAZ= 0.d0  ! =0.0 to switch off diamagnetic terms for AR and AZ equations
+tauIC_AP  = 0.d0  ! =0.0 to switch off diamagnetic terms for A_phi equation
 if (eta_ARAZ_on  ) eta_ARAZ   = 1.d0 ! switched on by default
 if (tauIC_ARAZ_on) tauIC_ARAZ = 1.d0 ! switched on by default
+if (tauIC_AP_on)   tauIC_AP   = 1.d0 ! switched on by default
 
 ! --- Initialise
 ELM_p  = 0.d0
@@ -878,7 +880,7 @@ do i=1,n_vertex_max
                       + rho0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                       - rho0_Z * xjac_Z / xjac
 
-          ! --- T
+          ! --- Ti
           Ti0      = eq_g(mp,var_Ti,ms,mt)
           Ti0_corr = max(Ti0,1.d-12)!corr_neg_temp1(Ti0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
           dTi0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Ti0) ! Improve the correction
@@ -901,7 +903,7 @@ do i=1,n_vertex_max
                        + Ti0_t * (x_st(ms,mt)*x_s(ms,mt) - x_ss(ms,mt)*x_t(ms,mt) )   )/ xjac**2   &
                        - Ti0_Z * xjac_Z / xjac
 
-          ! --- T
+          ! --- Te
           Te0      = eq_g(mp,var_Te,ms,mt)
           Te0_corr = max(Te0,1.d-12)!corr_neg_temp1(Te0) ! CAREFUL! FULL-MHD DOESN'T LIKE THE CORR FUNCTIONS AT ALL
           dTe0_corr_dT = 0.d0 !dcorr_neg_temp_dT(Te0) ! Improve the correction
@@ -1142,13 +1144,16 @@ do i=1,n_vertex_max
           ! --- Note-1: Phi component defined as physical component VdiaP*e_phi, like V and B
           ! --- Note-2: Factor of F0 is here so that we have the same definition of tau_IC in RMHD and FMHD
           tau_IC = tauIC
-          !distance_bnd = 1.d10
-          !do im=1,n_vertex_max
-          !  if (nodes(im)%boundary .eq. 1) then
-          !    distance_bnd = min(distance_bnd, sqrt((R-nodes(im)%x(1,1,1))**2 + (Z-nodes(im)%x(1,1,2))**2) )
-          !  endif
-          !enddo
-          !tau_IC = tauIC * (0.5d0 - 0.5d0 * tanh(-(distance_bnd - 0.02)/0.01) )
+          if (tauIC_tanh) then ! suppress the diamagnetic term near the boundary
+            ! distance_bnd = 1.d10
+            ! do im=1,n_vertex_max
+            !   if (nodes(im)%boundary .eq. 1) then
+            !     distance_bnd = min(distance_bnd, sqrt((R-nodes(im)%x(1,1,1))**2 + (Z-nodes(im)%x(1,1,2))**2) )
+            !   endif
+            ! enddo
+            distance_bnd = 1.d0 - dsqrt(psi_norm)
+            tau_IC = tauIC * (0.5d0 - 0.5d0 * tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
+          endif
           VdiaR0 = tau_IC*F0 / (R * rho0_corr * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z)
           VdiaZ0 = tau_IC*F0 / (R * rho0_corr * BB2) * (R*BP0*pi0_R -   BR0*pi0_p)
           VdiaP0 = tau_IC*F0 / (    rho0_corr * BB2) * (  BR0*pi0_Z -   BZ0*pi0_R)
@@ -1330,7 +1335,7 @@ do i=1,n_vertex_max
             Pvec_prev(var_A3) =   v * delta_g(mp,var_A3,ms,mt)
 
             Qvec_p(var_A3) = + R * v * (UR0 * BZ0 - UZ0 * BR0)              &
-                             + v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe&
+                             + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe&
                              - eta_T * v_Z * R                * BR0         &
                              + eta_T * ( 2.d0 * v + R * v_R ) * BZ0         &
                              + R * v * (eta_R * BZ0 - eta_Z * BR0)          &
@@ -2214,32 +2219,32 @@ do i=1,n_vertex_max
                   Pjac   (var_A3,var_A3) =   v * A3
 
                   Qjac_p (var_A3,var_AR) = + R * v * (- UZ0 * BR0_AR)                &
-                                           + v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPe &
-                                           + v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__p &
-                                           - v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__p &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPe &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__p &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__p &
                                            - eta_T * v_Z * R                * BR0_AR &
                                            + R * v * (- eta_Z * BR0_AR)
                   Qjac_n (var_A3,var_AR) = + R * v * (UR0 * BZ0_AR__n)                  &
-                                           + v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__n &
-                                           - v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__n &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__n &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__n &
                                            + eta_T * ( 2.d0 * v + R * v_R ) * BZ0_AR__n &
                                            + R * v * (eta_R * BZ0_AR__n)
 
                   Qjac_p (var_A3,var_AZ) = + R * v * (UR0 * BZ0_AZ)                  &
-                                           + v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPe &
-                                           + v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__p &
-                                           - v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__p &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPe &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__p &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__p &
                                            + eta_T * ( 2.d0 * v + R * v_R ) * BZ0_AZ &
                                             + R * v * (eta_R * BZ0_AZ)
                   Qjac_n (var_A3,var_AZ) = + R * v * (- UZ0 * BR0_AZ__n)                &
-                                           + v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__n &
-                                           - v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__n &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__n &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__n &
                                            - eta_T * v_Z * R                * BR0_AZ__n &
                                            + R * v * (- eta_Z * BR0_AZ__n)
 
                   Qjac_p (var_A3,var_A3) = + R * v * (UR0 * BZ0_A3 - UZ0 * BR0_A3)   &
-                                           + v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_A3 &
-                                           - v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_A3 &
+                                           + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_A3 &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_A3 &
                                            - eta_T * v_Z * R                * BR0_A3 &
                                            + eta_T * ( 2.d0 * v + R * v_R ) * BZ0_A3 &
                                            + R * v * (eta_R * BZ0_A3 - eta_Z * BR0_A3) &
@@ -2248,16 +2253,16 @@ do i=1,n_vertex_max
                   Qjac_p (var_A3,var_UR) = + R * v * (  UR * BZ0)
                   Qjac_p (var_A3,var_UZ) = + R * v * (- UZ * BR0)
 
-                  Qjac_p (var_A3,var_rho)= + v * tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__p &
-                                           - v * tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPe * rho
-                  Qjac_n (var_A3,var_rho)= + v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_rho__n
+                  Qjac_p (var_A3,var_rho)= + tauIC_AP * v * tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__p &
+                                           - tauIC_AP * v * tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPe * rho
+                  Qjac_n (var_A3,var_rho)= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_rho__n
 
-                  Qjac_p (var_A3,var_Te )= + v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p &
+                  Qjac_p (var_A3,var_Te )= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p &
                                            - eta_T_T * v_Z * R                * BR0 &
                                            + eta_T_T * ( 2.d0 * v + R * v_R ) * BZ0 &
                                            + eta_T_T * v * current_source_Jp(ms,mt) &
                                            + R * v * (eta_R_T * BZ0 - eta_Z_T * BR0)
-                  Qjac_n (var_A3,var_Te )= + v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
+                  Qjac_n (var_A3,var_Te )= + tauIC_AP * v * tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
 
                   !###################################################################################################
                   !#  equation 4   (R component momentum equation)                                                   #

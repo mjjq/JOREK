@@ -676,6 +676,10 @@ subroutine preset_parameters
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
   eta_ARAZ_simple    = .false.              !< Full-MHD: remove the Fprof dependence of Bphi in the resistive terms for AR and AZ (which should be compensated by current source anyway)
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
+  tauIC_AP_on        = .true.               !< Full-MHD: to switch on/off diamagnetic terms for A_phi equation
+  tauIC_tanh         = .false.              !< Full-MHD: suppress the diamagnetic term near the boundary
+  tauIC_shift        = 0.02                 !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
+  tauIC_steep        = 0.01                 !< Full-MHD: tau_IC = tauIC * (0.5e0 - 0.5e0 * np.tanh(-(distance_bnd - tauIC_shift)/tauIC_steep) )
 
   bench_without_plot = .false.              ! .true. for benchmark (mesuring elapsed time without plot phases) 
 

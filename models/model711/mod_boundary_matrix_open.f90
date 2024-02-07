@@ -86,6 +86,7 @@ real*8     :: normal(2), normal_direction(2)
 real*8     :: grad_s(2), grad_t(2)
 real*8     :: Mach1
 integer    :: n_tor_local
+real*8     :: tau_IC
 
 type (type_node)         :: tmp_node
 
@@ -96,6 +97,11 @@ theta = time_evol_theta
 !zeta  = time_evol_zeta
 ! change zeta for variable dt
 zeta  = time_evol_zeta * 2.0d0 * tstep / (tstep + tstep_prev)
+
+tau_IC = tauIC
+if (tauIC_tanh) then ! suppress the diamagnetic term near the boundary
+  tau_IC = tauIC * (0.5d0 - 0.5d0 * tanh(-(0.d0 - tauIC_shift)/tauIC_steep) )
+endif
 
 ! --- Needs adaptation for t-derivatives
 if (direction(2) == 3) return
@@ -281,8 +287,8 @@ do ms=1, n_gauss
     BB2 = BR0*BR0 + BZ0*BZ0 + Bp0*Bp0
 
     ! --- Diamagnetic velocity (times rho)
-    rhoVdiaR0 = tauIC*F0 / (R * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z)
-    rhoVdiaZ0 = tauIC*F0 / (R * BB2) * (R*BP0*pi0_R -   BR0*pi0_p)
+    rhoVdiaR0 = tau_IC*F0 / (R * BB2) * (  BZ0*pi0_p - R*Bp0*pi0_Z)
+    rhoVdiaZ0 = tau_IC*F0 / (R * BB2) * (R*BP0*pi0_R -   BR0*pi0_p)
     rhoVdia_dot_n = rhoVdiaR0 * normal(1) + rhoVdiaZ0 * normal(2)
 
     ! --- Magnetic field direction at target
@@ -384,23 +390,23 @@ do ms=1, n_gauss
                 BB2_A3 = 2.d0*(BR0_A3 * BR0 + BZ0_A3 * BZ0 + Bp0_A3 * Bp0 )
 
                 ! --- Diamagnetic BC's variables
-                rhoVdiaR0_AR  = + tauIC*F0 / (R * BB2   ) * (  BZ0_AR*pi0_p - R*Bp0_AR*pi0_Z) &
-                                - tauIC*F0 / (R * BB2**2) * (  BZ0   *pi0_p - R*Bp0   *pi0_Z) * BB2_AR
-                rhoVdiaR0_AZ  = + tauIC*F0 / (R * BB2   ) * (  BZ0_AZ*pi0_p - R*Bp0_AZ*pi0_Z) &
-                                - tauIC*F0 / (R * BB2**2) * (  BZ0   *pi0_p - R*Bp0   *pi0_Z) * BB2_AZ
-                rhoVdiaR0_A3  = + tauIC*F0 / (R * BB2   ) * (  BZ0_A3*pi0_p - R*Bp0_A3*pi0_Z) &
-                                - tauIC*F0 / (R * BB2**2) * (  BZ0   *pi0_p - R*Bp0   *pi0_Z) * BB2_A3
-                rhoVdiaR0_rho = + tauIC*F0 / (R * BB2   ) * (  BZ0*(rho*Ti0_p+rho_p*Ti0) - R*Bp0*(rho*Ti0_Z+rho_Z*Ti0))
-                rhoVdiaR0_Ti  = + tauIC*F0 / (R * BB2   ) * (  BZ0*(rho0*Ti_p+rho0_p*Ti) - R*Bp0*(rho0*Ti_Z+rho0_Z*Ti))
+                rhoVdiaR0_AR  = + tau_IC*F0 / (R * BB2   ) * (  BZ0_AR*pi0_p - R*Bp0_AR*pi0_Z) &
+                                - tau_IC*F0 / (R * BB2**2) * (  BZ0   *pi0_p - R*Bp0   *pi0_Z) * BB2_AR
+                rhoVdiaR0_AZ  = + tau_IC*F0 / (R * BB2   ) * (  BZ0_AZ*pi0_p - R*Bp0_AZ*pi0_Z) &
+                                - tau_IC*F0 / (R * BB2**2) * (  BZ0   *pi0_p - R*Bp0   *pi0_Z) * BB2_AZ
+                rhoVdiaR0_A3  = + tau_IC*F0 / (R * BB2   ) * (  BZ0_A3*pi0_p - R*Bp0_A3*pi0_Z) &
+                                - tau_IC*F0 / (R * BB2**2) * (  BZ0   *pi0_p - R*Bp0   *pi0_Z) * BB2_A3
+                rhoVdiaR0_rho = + tau_IC*F0 / (R * BB2   ) * (  BZ0*(rho*Ti0_p+rho_p*Ti0) - R*Bp0*(rho*Ti0_Z+rho_Z*Ti0))
+                rhoVdiaR0_Ti  = + tau_IC*F0 / (R * BB2   ) * (  BZ0*(rho0*Ti_p+rho0_p*Ti) - R*Bp0*(rho0*Ti_Z+rho0_Z*Ti))
 
-                rhoVdiaZ0_AR  = + tauIC*F0 / (R * BB2   ) * (R*BP0_AR*pi0_R -   BR0_AR*pi0_p) &
-                                - tauIC*F0 / (R * BB2**2) * (R*BP0   *pi0_R -   BR0   *pi0_p) * BB2_AR
-                rhoVdiaZ0_AZ  = + tauIC*F0 / (R * BB2   ) * (R*BP0_AZ*pi0_R -   BR0_AZ*pi0_p) &
-                                - tauIC*F0 / (R * BB2**2) * (R*BP0   *pi0_R -   BR0   *pi0_p) * BB2_AZ
-                rhoVdiaZ0_A3  = + tauIC*F0 / (R * BB2   ) * (R*BP0_A3*pi0_R -   BR0_A3*pi0_p) &
-                                - tauIC*F0 / (R * BB2**2) * (R*BP0   *pi0_R -   BR0   *pi0_p) * BB2_A3
-                rhoVdiaZ0_rho = + tauIC*F0 / (R * BB2   ) * (R*BP0*(rho*Ti0_R+rho_R*Ti0) -   BR0*(rho*Ti0_p+rho_p*Ti0))
-                rhoVdiaZ0_Ti  = + tauIC*F0 / (R * BB2   ) * (R*BP0*(rho0*Ti_R+rho0_R*Ti) -   BR0*(rho0*Ti_p+rho0_p*Ti))
+                rhoVdiaZ0_AR  = + tau_IC*F0 / (R * BB2   ) * (R*BP0_AR*pi0_R -   BR0_AR*pi0_p) &
+                                - tau_IC*F0 / (R * BB2**2) * (R*BP0   *pi0_R -   BR0   *pi0_p) * BB2_AR
+                rhoVdiaZ0_AZ  = + tau_IC*F0 / (R * BB2   ) * (R*BP0_AZ*pi0_R -   BR0_AZ*pi0_p) &
+                                - tau_IC*F0 / (R * BB2**2) * (R*BP0   *pi0_R -   BR0   *pi0_p) * BB2_AZ
+                rhoVdiaZ0_A3  = + tau_IC*F0 / (R * BB2   ) * (R*BP0_A3*pi0_R -   BR0_A3*pi0_p) &
+                                - tau_IC*F0 / (R * BB2**2) * (R*BP0   *pi0_R -   BR0   *pi0_p) * BB2_A3
+                rhoVdiaZ0_rho = + tau_IC*F0 / (R * BB2   ) * (R*BP0*(rho*Ti0_R+rho_R*Ti0) -   BR0*(rho*Ti0_p+rho_p*Ti0))
+                rhoVdiaZ0_Ti  = + tau_IC*F0 / (R * BB2   ) * (R*BP0*(rho0*Ti_R+rho0_R*Ti) -   BR0*(rho0*Ti_p+rho0_p*Ti))
 
                 rhoVdia_dot_n_AR  = rhoVdiaR0_AR  * normal(1) + rhoVdiaZ0_AR  * normal(2)
                 rhoVdia_dot_n_AZ  = rhoVdiaR0_AZ  * normal(1) + rhoVdiaZ0_AZ  * normal(2)

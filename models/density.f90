@@ -32,7 +32,7 @@ delta_psi = psi_bnd - psi_axis
 if (delta_psi .ne. 0) then
     psi_n     = (psi - psi_axis) / delta_psi
     psi_n = max( min(psi_n, 2.), 0. )
-else if ((psi - psi_axis) .gt. 0) then
+else if ((psi - pai_axis) .gt. 0) then
     psi_n = 2.
 else 
     psi_n = 0.

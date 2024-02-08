@@ -244,6 +244,10 @@ module equil_info
             
     end if
     
+    if (ES%psi_bnd .eq. ES%psi_axis) then             ! This may happen when there is no closed FS
+        ES%psi_bnd = ES%psi_bnd -0.001
+    endif
+    
     ! --- psi_axis < psi_bnd or > psi_bnd?
     ES%axis_is_psi_minimum = ( ES%psi_axis < ES%psi_bnd )
     

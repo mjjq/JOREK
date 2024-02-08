@@ -157,11 +157,6 @@ if (my_id == 0) then
     if(xcase2 .eq. UPPER_XPOINT) write(*,'(A,3es14.6,i3)') ' PSI_AXIS, PSI_BND  : ',ES%psi_axis,ES%psi_bnd,ES%Z_xpoint(2),ES%ifail_xpoint
 
     write(*,'(A,1f14.8)')                       ' PSI_BND - PSI_AXIS : ', ES%psi_bnd-ES%psi_axis 
-    
-    
-    if (ES%psi_bnd .eq. ES%psi_axis) then             ! This may happen when there is no closed FS
-        ES%psi_bnd = ES%psi_bnd -0.001
-    endif
 
     call poisson(my_id,-1,node_list,element_list,bnd_node_list,bnd_elm_list,3,1,1, &
                  ES%psi_axis,ES%psi_bnd,xpoint2,xcase2,ES%Z_xpoint,freeboundary_equil,refinement,iter)   !----------- for GS use -1

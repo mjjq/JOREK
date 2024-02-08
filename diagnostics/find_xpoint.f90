@@ -114,19 +114,21 @@ do i=1,element_list%n_elements    ! --- loop over elements
       ps_y = (- ps_s * R_t + ps_t * R_s)/ xjac
 
       grad_psi(i,ms,mt) = sqrt(ps_x*ps_x + ps_y*ps_y)
-    
+
+      
       ! --- Look for the lower Xpoint
       if (xcase .ne. UPPER_XPOINT) then
-        if (   (Z .lt. (Z_axis0 + r_margin)) .and. ((tokamak_device(1:4) .ne. 'MAST') &
-            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0)))) then
+        if (     (((tokamak_device(1:4) .ne. 'MAST') .and. (tokamak_device(1:7) .ne. 'COMPASS') .and. (Z .lt. Z_xpoint_limit(1))) &
+            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))  &
+            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) .and. (Z .lt. (Z_axis0 + r_margin))    ) then
           include_pt_lw(i,ms,mt) = .true.        
         endif
       endif
       
       ! --- And for the upper Xpoint
       if (xcase .ne. LOWER_XPOINT) then
-        if (   (Z .gt. (Z_axis0 - r_margin)) .and. ((tokamak_device(1:4) .ne. 'MAST')  &
-            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0)) )) then
+        if (   (Z .gt. (Z_axis0 - r_margin)) .and. (((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  Z_xpoint_limit(2))) &
+            .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))) ) then
           include_pt_up(i,ms,mt) = .true.
         endif
       endif
@@ -251,7 +253,8 @@ if(xcase .ne. UPPER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(1) = .false.              ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, lower xpoint is not at a proper position
+  if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(1) = .false.              
+ ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, lower xpoint is not at a proper position
 
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Lower X-point : ',i_elm_xpoint(1),R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
@@ -279,7 +282,8 @@ if(xcase .ne. LOWER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(2) = .false.              ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, upper xpoint is not at a proper position
+  if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(2) = .false.             
+   ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, upper xpoint is not at a proper position
 
 
   if (my_id .eq. 0) then

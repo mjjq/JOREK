@@ -120,14 +120,14 @@ do i=1,element_list%n_elements    ! --- loop over elements
       if (xcase .ne. UPPER_XPOINT) then
         if (     (((tokamak_device(1:4) .ne. 'MAST') .and. (tokamak_device(1:7) .ne. 'COMPASS') .and. (Z .lt. Z_xpoint_limit(1))) &
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))  &
-            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) .and. (Z .lt. (Z_axis0 + r_margin))    ) then
+            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) .and. (Z .lt. (Z_axis0 + 0.5))    ) then
           include_pt_lw(i,ms,mt) = .true.        
         endif
       endif
       
       ! --- And for the upper Xpoint
       if (xcase .ne. LOWER_XPOINT) then
-        if (   (Z .gt. (Z_axis0 - r_margin)) .and. (((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  Z_xpoint_limit(2))) &
+        if (   (Z .gt. (Z_axis0 - 0.5)) .and. (((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  Z_xpoint_limit(2))) &
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))) ) then
           include_pt_up(i,ms,mt) = .true.
         endif

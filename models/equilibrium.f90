@@ -298,6 +298,10 @@ if (freeboundary_equil) then
         call iterate2area(node_list,element_list, ES%psi_axis, ES%psi_lim, xpoint2, xcase2, area_ref, ES%psi_bnd)
       endif
       
+      if (ES%psi_bnd .eq. ES%psi_axis) then             ! This may happen when there is no closed FS
+         ES%psi_bnd = ES%psi_bnd -0.001
+      endif
+      
       write(*,'(A,1f8.3)') ' Psi_bnd = ', ES%psi_bnd   
       
       ! Calculate current feedback
@@ -439,6 +443,10 @@ if (my_id == 0) then
   !------------------------------- end of equilibrium, start filling data
   psi_axis = psi_axis - psi_offset_freeb
   psi_bnd  = psi_bnd  - psi_offset_freeb
+  
+    if (psi_bnd .eq. psi_axis) then             ! This may happen when there is no closed FS
+        psi_bnd = psi_bnd -0.001
+    endif
 
   ! --- This fills in the data for the current variable "zj" (for R-MHD only)
 #ifndef fullmhd
@@ -593,6 +601,11 @@ if (my_id == 0) then
     ES%Z_xpoint = Z_xpoint
     ES%xpoint   = xpoint
     ES%xcase    = xcase
+    
+    if (psi_bnd .eq. psi_axis) then             ! This may happen when there is no closed FS
+        psi_bnd = psi_bnd -0.001
+    endif
+    
     call Poisson(my_id,0,node_list,element_list,bnd_node_list,bnd_elm_list, &
                  var_psi,var_zj,1, psi_axis,psi_bnd,xpoint2,xcase2,Z_xpoint,freeboundary_equil,refinement,1)
   endif

@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 #
-# Purpose: Calculate the target F and FFprime with specified q-profile.
+# Purpose: Calculate the target F and FFprime with specified q-profile (unfinished).
 #
 # Date: 2024-01-27
 # Author: Haowei Zhang, IPP Garching

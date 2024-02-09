@@ -156,7 +156,7 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       is_private = .false.
       
       
-      if ((ES%proper_xpoint(1) .or. ES%proper_xpoint(2))) then
+      if ((ES%proper_xpoint(1) .or. ES%proper_xpoint(2))) then         ! When X-point(s) exists
         if (ES%axis_is_psi_minimum) then
           if (prod < 0.d0) is_private = .true.
         else

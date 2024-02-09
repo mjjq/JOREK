@@ -44,10 +44,11 @@ if (my_id .eq. 0) then
 endif
 
 ifail   = 1
-n_tries = 500
-r_margin = 0.05          ! x_point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop                
-fac_axis_xpoint = 9      ! If the distance from the x-point finally found to the axis is closer than fac_axis_xpoint*r_margin, assume that x-point has vanished and find_xpoint fails.
-proper_xpoint(:) = .false.
+n_tries = 500             
+r_margin = 0.05          ! X-point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop. ! Grids in this circle must < n_tries                
+fac_axis_xpoint = 9      ! If the min(|grad_psi|) point fulfilling the previous comment is closer to the axis than (fac_axis_xpoint * r_margin), assume that x-point is not found properly.
+                         ! X-point where |grad_psi|=0 has no root, but where |grad_psi| ~< r_margin * div_psi(axis) can be accepted. 
+proper_xpoint(:) = .false.   !Is the X-point(s) farther than (fac_axis_xpoint * r_margin) from the axis?
 
 psi_xpoint = 0.
 R_xpoint   = 0.;    Z_xpoint = 0.
@@ -253,7 +254,7 @@ if(xcase .ne. UPPER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(1) = .false.              
+  if ((.not. found_lower) .and. (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin))  proper_xpoint(1) = .false.              
  ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, lower xpoint is not at a proper position
 
   if (my_id .eq. 0) then
@@ -261,6 +262,7 @@ if(xcase .ne. UPPER_XPOINT) then
   endif
   
   if ((.not. found_lower )) write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
+  if (.not.  proper_xpoint(1)) write(*,*) 'WARNING: lower X-point may not exist!'
   
 endif
 
@@ -282,7 +284,7 @@ if(xcase .ne. LOWER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  proper_xpoint(2) = .false.             
+  if ((.not. found_upper) .and. (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin))  proper_xpoint(2) = .false.             
    ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, upper xpoint is not at a proper position
 
 
@@ -291,6 +293,7 @@ if(xcase .ne. LOWER_XPOINT) then
   endif
     
   if ((.not. found_upper )) write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
+  if (.not.  proper_xpoint(2)) write(*,*) 'WARNING: upper X-point may not exist!'
 
 endif
 

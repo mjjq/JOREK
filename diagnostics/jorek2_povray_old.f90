@@ -29,8 +29,7 @@ program jorek2_povray_old
     P_ss, P_tt, min_val, max_val
   real*8, allocatable :: x_cart(:,:), y_cart(:,:), z_cart(:,:), value(:,:), x_cart2(:,:,:),        &
     y_cart2(:,:,:), z_cart2(:,:,:), value2(:,:,:)
-  type(type_surface_list) :: surface_list  
-  logical          :: proper_xpoint(2)
+  type(type_surface_list) :: surface_list
   
   ! --- Settings
   logical :: no_zero, no_private, symmetric, volume, cover
@@ -78,7 +77,7 @@ program jorek2_povray_old
     ifail)
   if ( xpoint ) then
     call find_xpoint(0, node_list, element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm_xpoint,     &
-      s_xpoint, t_xpoint, xcase, proper_xpoint, ifail)
+      s_xpoint, t_xpoint, xcase, ifail)
     if ( (xcase == DOUBLE_NULL) ) then
       psi_bnd = minval( psi_xpoint(:) )
     else

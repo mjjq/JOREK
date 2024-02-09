@@ -32,7 +32,6 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   integer :: nplot, j, k, i_elm, node1, node2, node3, node4, ip
   real*8  :: rr1, drr1, rr2, drr2, ss1, dss1, ss2, dss2, t, ri, dri, si, dsi
   real*8  :: R,Z
-  logical :: proper_xpoint(2)
   
   write(*,*) 'BEGIN: export_nemec'
   
@@ -41,7 +40,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   psi_bnd = 0.d0
   if (xpoint) then
     call find_xpoint(0,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,  &
-      t_xpoint,xcase,proper_xpoint,ifail)
+      t_xpoint,xcase,ifail)
     if (ifail .ne. 1) then
       psi_bnd  = psi_xpoint(1)
       if( ES%active_xpoint .eq. UPPER_XPOINT ) then

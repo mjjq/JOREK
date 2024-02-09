@@ -156,7 +156,7 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       is_private = .false.
       
       
-      if ((ES%proper_xpoint(1) .or. ES%proper_xpoint(2))) then         ! When X-point(s) exists
+      if ((ES%accepted_xpoint(1) .or. ES%accepted_xpoint(2))) then         ! When X-point(s) exists
         if (ES%axis_is_psi_minimum) then
           if (prod < 0.d0) is_private = .true.
         else
@@ -169,14 +169,14 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       ! ---    Use X-points to check region (if available and properly found) 
       if (ES%axis_init .and. ES%xpoint_init) then
 
-        if (( ES%xpoint .and. (ES%ifail_axis==0)) .and. (ES%proper_xpoint(1) .or. ES%proper_xpoint(2))) then
+        if (( ES%xpoint .and. (ES%ifail_axis==0)) .and. (ES%accepted_xpoint(1) .or. ES%accepted_xpoint(2))) then
 
           if (ES%initialized) psi_bnd_save = ES%psi_bnd  ! Avoid perturbing psi_bnd
 
           ! --- The boundary will be initially guessed as the active xpoint	  
-          if (.not. ES%proper_xpoint(2)) then
+          if (.not. ES%accepted_xpoint(2)) then
             ES%psi_bnd = ES%psi_xpoint(1)
-          else if (.not. ES%proper_xpoint(1)) then
+          else if (.not. ES%accepted_xpoint(1)) then
             ES%psi_bnd = ES%psi_xpoint(2)
           else
             if ( abs(ES%psi_axis-ES%psi_xpoint(1)) < abs(ES%psi_axis-ES%psi_xpoint(2)) ) then

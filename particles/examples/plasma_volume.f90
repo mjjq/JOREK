@@ -30,7 +30,6 @@ integer :: i_v, i_x
 real*8 :: s, t, x(3), psi_N, R, Z, Phi, grad_Psi(2)
 real*8 :: Rmin, Rmax, Zmin, Zmax, Z_xpoint
 real*8 :: psi_axis, psi_xpoint(2)
-logical :: proper_xpoint(2)
 real*8 :: E(3), B(3), psi, U, v(3)
 character(len=20) :: time_s
 
@@ -48,7 +47,7 @@ call fieldreader%do(sim)
 
 ! Calculate normalization coefficients psi_axis and psi_xpoint(1)
 call find_axis(0, sim%fields%node_list, sim%fields%element_list, psi_axis, x(1), x(2), i_elm, s, t, ifail)
-call find_xpoint(0, sim%fields%node_list, sim%fields%element_list, psi_xpoint, x(1), Z_xpoint, i_elm, s, t, xcase, proper_xpoint, ifail)
+call find_xpoint(0, sim%fields%node_list, sim%fields%element_list, psi_xpoint, x(1), Z_xpoint, i_elm, s, t, xcase, ifail)
 ! Get the size of the domain
 call domain_bounding_box(sim%fields%node_list, sim%fields%element_list, Rmin, Rmax, Zmin, Zmax)
 write(*,*) "Box size: R=[", Rmin, ",", Rmax, "], Z=[", Zmin, ",", Zmax, "]"

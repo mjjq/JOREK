@@ -46,7 +46,6 @@ subroutine do_save_E(this, sim, ev)
   real*8 :: s, t
   real*8 :: psi_axis, psi_xpoint(2)
   real*8 :: R_axis, Z_axis, R_xpoint, Z_xpoint
-  logical :: proper_xpoint(2)
   character(len=12) time_s
 
   write(time_s,'(f12.8)') sim%time
@@ -63,7 +62,7 @@ subroutine do_save_E(this, sim, ev)
     s, t, 0.d0, P, P_s, P_t, P_phi, P_time, R, R_s, R_t, Z, Z_s, Z_t)
   T_ref = P(1)
 
-  call find_xpoint(0, sim%fields%node_list, sim%fields%element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm, s, t, xcase, proper_xpoint, ifail)
+  call find_xpoint(0, sim%fields%node_list, sim%fields%element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm, s, t, xcase, ifail)
 
   do i=1,1 ! do not support multiple groups for now
     do j=1,size(sim%groups(i)%particles,1)
@@ -177,7 +176,6 @@ integer :: i_elm, ifail, i, j, k, ierr
 real*8 :: psi_n, delta_t
 real*8 :: psi_axis, psi_xpoint(2)
 real*8 :: R_axis, Z_axis, R_xpoint, Z_xpoint
-logical:: proper_xpoint(2)
 real*8, allocatable :: psi_minmax_list(:,:)
 real*8 :: s, t, R, Z, phi, theta
 character(len=20) :: time_s, suffix
@@ -216,7 +214,7 @@ call with(sim, events(1))
 ! Calculate normalization coefficients psi_axis and psi_xpoint(1)
 ! hack for asdex upgrade case since find_axis fails there
 call find_axis(0, sim%fields%node_list, sim%fields%element_list, psi_axis, R_axis, Z_axis, i_elm, s, t, ifail)
-call find_xpoint(0, sim%fields%node_list, sim%fields%element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm, s, t, xcase, proper_xpoint, ifail)
+call find_xpoint(0, sim%fields%node_list, sim%fields%element_list, psi_xpoint, R_xpoint, Z_xpoint, i_elm, s, t, xcase, ifail)
 write(*,*) "Psi_xpoint: ", psi_xpoint(1), " Psi_axis: ", psi_axis
 if (abs(psi_xpoint(1) - psi_axis) .le. 1d-3) then
   write(*,*) "error in find_axis! same as xpoint... exiting"

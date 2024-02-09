@@ -67,7 +67,7 @@ module equil_info
     real*8           :: t_xpoint(2)              !< t coordinate of X-point within element.
     integer          :: ifail_xpoint             !< Error code for X-point determination.
     logical          :: xpoint_init = .false.    !< Has the find_xpoint routine been called in update_equil_state?
-    logical          :: proper_xpoint(2)         !< Is the position of the X-point proper? 
+    logical          :: accepted_xpoint(2)         !< Is the position of the X-point proper? 
     
     ! --- Boundary point (point defining the plasma LCFS, either the active limiter point or X-point)
     real*8           :: R_bnd                    !< R coordinate of boundary point.
@@ -141,10 +141,10 @@ module equil_info
     ES%xpoint       = xpoint
     ES%xcase        = xcase
     ES%ifail_xpoint = 0
-    ES%proper_xpoint(:) = .false. 
+    ES%accepted_xpoint(:) = .false. 
     if ( xpoint ) then 
       call find_xpoint(my_id_fake, node_list, element_list, ES%psi_xpoint, ES%R_xpoint,     &
-        ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint, ES%xcase, ES%proper_xpoint,ES%ifail_xpoint)
+        ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint, ES%xcase, ES%ifail_xpoint,ES%accepted_xpoint)
 
       ES%xpoint_init = .true.
     endif
@@ -155,15 +155,15 @@ module equil_info
     call find_RZ(node_list, element_list, ES%R_lim, ES%Z_lim, R_out, Z_out, ES%i_elm_lim, ES%s_lim,&
       ES%t_lim, ES%ifail_lim)
     
-    if ( xpoint  .and. (ES%proper_xpoint(1) .or. ES%proper_xpoint(2)))  then ! (X-point plasma)
+    if ( xpoint  .and. (ES%accepted_xpoint(1) .or. ES%accepted_xpoint(2)))  then ! (X-point plasma)
       
-      if ( .not. ES%proper_xpoint(2) ) then
+      if ( .not. ES%accepted_xpoint(2) ) then
         
         ES%psi_bnd        = ES%psi_xpoint(1)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = LOWER_XPOINT
         
-      else if ( .not. ES%proper_xpoint(1) ) then
+      else if ( .not. ES%accepted_xpoint(1) ) then
         
         ES%psi_bnd        = ES%psi_xpoint(2)
         ES%limiter_plasma = .false.

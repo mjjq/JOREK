@@ -36,7 +36,6 @@ real*8 :: dRRgi_dt, dZZgi_dt, RZjac, PSI_R, PSI_Z, grad_psi, B_tot2, P0gi, dP0gi
 real*8 :: density, density_in, density_out, pressure, pressure_in, pressure_out, heat_src_in, heat_src_out, part_src_in, part_src_out
 integer :: i_elm_axis, i_elm_xpoint(2), nplot, i, j, n_bnd, i_elm, k, ip, ig
 integer :: node1, node2, node3, node4, ifail, my_id
-logical :: proper_xpoint(2)
 
 !--------------------------------------- gaussian points between (-1.,1.)
 real*8 :: xgs(4), wgs(4)
@@ -55,7 +54,7 @@ Z_xpoint(1) = -99.d0
 Z_xpoint(2) = +99.d0
    
 if (xpoint) then
-  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,proper_xpoint,ifail)
+  call find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail)
   if (ifail .ne. 1) then      
     psi_bnd  = psi_xpoint(1)
     if( ES%active_xpoint .eq. UPPER_XPOINT ) then

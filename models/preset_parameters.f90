@@ -117,6 +117,8 @@ subroutine preset_parameters
   
   n_ext        = 0
 
+  export_polar_boundary = .false.
+
   psi_axis_init = -0.1d0
   XR_r(:)       = 999.d0
   SIG_r(:)      = 999.d0

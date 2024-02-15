@@ -28,7 +28,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 n_outer, n_inner, n_up_priv, n_up_leg, n_up_leg_out,&
                 n_tht_equidistant,                                  &
                 psi_axis_init, XR_r, SIG_r, XR_tht, SIG_tht,        &
-                XR_z, SIG_z, bgf_r, bgf_z,                          &
+                XR_z, SIG_z, bgf_r, bgf_z, bgf_tht,                 &
                 SIG_closed, SIG_open, SIG_private, SIG_theta,       &
                 SIG_leg_0, SIG_leg_1, dPSI_open, dPSI_private,      &
                 SIG_up_leg_0, SIG_up_leg_1, SIG_up_priv,            &
@@ -225,6 +225,12 @@ if (my_id .eq. 0) then
       read(243,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
       write(*,*) R_boundary(i),Z_boundary(i),psi_boundary(i)
     enddo
+  endif
+
+  ! --- If polar grid, set bfg parameters to be consistent with existing defaults.
+  if (n_radial > 0 .and. n_pol > 0) then
+    bgf_r         = 0.6
+    bgf_tht       = 0.6
   endif
 
   ! --- Calculate JOREK gamma_sheath from gamma_stangeby if provided (otherwise the other way around)

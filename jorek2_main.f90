@@ -418,7 +418,7 @@ mpi_required = 0
       call equilibrium(my_id, node_list, element_list, bnd_node_list, bnd_elm_list, xpoint,xcase, .false.)
 
     else
-      if (export_polar_boundary) then
+      if (my_id == 0 .and. export_polar_boundary) then
         call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.) 
         call export_boundary(node_list, bnd_elm_list, bnd_node_list)
       endif

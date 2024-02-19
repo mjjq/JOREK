@@ -496,7 +496,7 @@ subroutine do_jorek_timestep(this, sim, ev)
   ! --- Write a restart file every nout timesteps
   if ( (sim%my_id == 0) .and. (mod(index_now,nout) == 0) ) then
     write(fileout,'(A5,i5.5)') 'jorek',index_now
-    call export_restart(sim%fields%node_list, aux_node_list, sim%fields%element_list, fileout)
+    call export_restart(sim%fields%node_list, sim%fields%element_list, fileout, aux_node_list)
   endif
   
   ! --- Exit the code if NaNs are detected.
@@ -524,7 +524,7 @@ subroutine do_jorek_timestep(this, sim, ev)
 
   ! Write a restart file on code exit
   if (sim%stop_now .and. sim%my_id .eq. 0) then
-    call export_restart(sim%fields%node_list, aux_node_list, sim%fields%element_list, 'jorek_restart')
+    call export_restart(sim%fields%node_list, sim%fields%element_list, 'jorek_restart', aux_node_list)
   end if
 
   select type (fields => sim%fields)

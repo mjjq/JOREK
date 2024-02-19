@@ -77,6 +77,6 @@ program RST_convert_hdf52bin
 
   ! -- Write the BINARY restart file
   if (verbose) write (6,*) " =============> rst_hdf52bin, write BIN file = ",fileout
-  call export_binary_restart(node_list, aux_node_list, element_list, fileout)
+  call export_binary_restart(node_list, element_list, fileout, aux_node_list)
 
 end program RST_convert_hdf52bin

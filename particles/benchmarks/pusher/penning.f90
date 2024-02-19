@@ -38,7 +38,6 @@ real*8  :: x_a(3), x_e(3), err_norm, err_ref
 real*8  :: rz_old(2), st_old(2)
 
 type(particle_kinetic_leapfrog) :: particle
-type (type_node_list)   ,     pointer :: aux_node_list
 
 ! For the initial half-step
 real*8  :: E(3), B(3), psi, U
@@ -89,7 +88,7 @@ call jorek_penning_fields(sim%fields%node_list, sim%fields%element_list)
 ! Write a restart file containing the grid
 write(*,*) "INFO: Exporting grid to jorek_restart.h5"
 rst_hdf5 = 1
-call export_restart(sim%fields%node_list,aux_node_list,sim%fields%element_list,'jorek_restart')
+call export_restart(sim%fields%node_list,sim%fields%element_list,'jorek_restart')
 
 ! interpret tstep_n as [s] instead of jorek units
 do i=1,size(tstep_n)

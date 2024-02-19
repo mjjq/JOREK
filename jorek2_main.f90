@@ -318,9 +318,9 @@ mpi_required = 0
       if (xpoint)  then
         if ( (xcase .ge. UPPER_XPOINT) .or. (RZ_grid_inside_wall) ) then
           if (grid_to_wall) then
-            call grid_double_xpoint_inside_wall(node_list, aux_node_list, element_list)
+            call grid_double_xpoint_inside_wall(node_list, element_list)
           else
-            call grid_double_xpoint(node_list, aux_node_list, element_list)
+            call grid_double_xpoint(node_list, element_list)
           endif
         else
 	  call grid_xpoint(node_list,element_list,n_flux,n_open,n_private,n_leg,n_tht,  &
@@ -353,7 +353,7 @@ mpi_required = 0
 
     if_not_regrid_from_rz: if(.not. regrid_from_rz) then
 
-      call initial_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+      call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
 
       ! --- Synchronizing MPI processes avoid deadlock issues on some machine
       call MPI_Barrier(MPI_COMM_WORLD,ierr)
@@ -380,7 +380,7 @@ mpi_required = 0
       end if
 
       ! --- Check sanity of grid
-      if (.not. RZ_grid_inside_wall) call check_grid(my_id, node_list, aux_node_list, element_list)
+      if (.not. RZ_grid_inside_wall) call check_grid(my_id, node_list, element_list)
 
       ! --- Compute the plasma equilibrium
       if (equil) then
@@ -391,7 +391,7 @@ mpi_required = 0
         if (my_id == 0) call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
         if (.not. freeboundary) then
           fileout = 'jorek_equil_rz'
-          call export_restart(node_list, aux_node_list, element_list, fileout)
+          call export_restart(node_list, element_list, fileout, aux_node_list)
         end if
       end if ! if (equil) then
 
@@ -404,7 +404,7 @@ mpi_required = 0
     ! --- Determine a flux surface aligned grid and re-calculate the equilibrium on it
     if (n_flux > 1) then
 
-      call flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+      call flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
       
       if ( freeb_equil2) then
         freeboundary_equil = .true.
@@ -562,7 +562,7 @@ mpi_required = 0
   if ( (my_id == 0) .and. (.not. restart) ) then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
     fileout = 'jorek00000'
-    call export_restart(node_list, aux_node_list, element_list, fileout)
+    call export_restart(node_list, element_list, fileout, aux_node_list)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
   end if
   
@@ -847,7 +847,7 @@ mpi_required = 0
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
       write(fileout,'(A5,i5.5)') 'jorek',index_now
-      call export_restart(mhd_sim%node_list, aux_node_list, mhd_sim%element_list, fileout)
+      call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout, aux_node_list)
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     endif
     
@@ -935,7 +935,7 @@ mpi_required = 0
   if (my_id .eq. 0)  then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
     fileout = 'jorek_restart'
-    call export_restart(mhd_sim%node_list, aux_node_list, mhd_sim%element_list, fileout)
+    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout, aux_node_list)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     if ( write_ps ) then
       if (.not. bench_without_plot) then

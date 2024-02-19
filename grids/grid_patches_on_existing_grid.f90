@@ -1,4 +1,4 @@
-subroutine grid_patches_on_existing_grid(node_list, aux_node_list, element_list)
+subroutine grid_patches_on_existing_grid(node_list, element_list)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
@@ -19,7 +19,6 @@ implicit none
 
 ! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
-type (type_node_list), pointer, intent(inout) :: aux_node_list
 type (type_element_list), intent(inout) :: element_list
 
 ! --- local variables
@@ -73,7 +72,7 @@ if (sum(element_list%element(1)%neighbours) .eq. 0) then
   call update_neighbours_basic(element_list,node_list)
 endif
 call temporary_element_sizes(node_list, element_list)
-call export_restart(node_list, aux_node_list, element_list, 'grid_no_patch')
+call export_restart(node_list, element_list, 'grid_no_patch')
 
 ! --- Allocate data structures for new nodes and initialize them
 allocate(node_list_tmp,node_list_tmp2,node_list_new)
@@ -98,7 +97,7 @@ do i_ext = 1,n_wall_blocks
   if (i_ext .ge. 10) write(char_patch,'(i2)') i_ext
   write(filename,'(A10,A)')'grid_patch',trim(char_patch)
   call temporary_element_sizes(node_list_tmp, element_list_tmp)
-  call export_restart(node_list_tmp, aux_node_list, element_list_tmp, filename)
+  call export_restart(node_list_tmp, element_list_tmp, filename)
   ! --- create restart file for vtk plots END
   call join_grid_patches(node_list_new,  element_list_new, &
                          node_list_tmp,  element_list_tmp, &
@@ -120,7 +119,7 @@ call get_eqdsk_style(normal_eqdsk, normal_eqdsk_wall, ier)
 if ( (ier .ne. 0) .and. (n_flux .eq. 0) ) include_psi = .false.
 call finish_grid(node_list, element_list, node_list_new, element_list_new, n_grids, include_axis, include_xpoint, include_psi)
 
-call export_restart(node_list, aux_node_list, element_list, 'jorek_grid')
+call export_restart(node_list, element_list, 'jorek_grid')
 
 
 

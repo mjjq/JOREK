@@ -1,4 +1,4 @@
-subroutine grid_double_xpoint_inside_wall(node_list,aux_node_list, element_list)
+subroutine grid_double_xpoint_inside_wall(node_list, element_list)
 !-----------------------------------------------------------------------
 ! subroutine defines a flux surface aligned finite element grid
 ! inclduing a single x-point
@@ -25,7 +25,6 @@ implicit none
 
 ! --- Routine parameters
 type (type_node_list),    intent(inout) :: node_list
-type (type_node_list), pointer, intent(inout) :: aux_node_list
 type (type_element_list), intent(inout) :: element_list
 
 ! --- local variables
@@ -296,7 +295,7 @@ if (xcase .ne. LOWER_XPOINT) then
   call update_boundary_types  (element_list_new,node_list_new, 1)
 endif
 call temporary_element_sizes(node_list_new, element_list_new)
-call export_restart(node_list_new, aux_node_list, element_list_new, 'grid_no_patch')
+call export_restart(node_list_new, element_list_new, 'grid_no_patch')
 
 !-------------------------------- Now the wall extension
 do i_ext = 1,n_wall_blocks
@@ -308,7 +307,7 @@ do i_ext = 1,n_wall_blocks
   if (i_ext .ge. 10) write(char_patch,'(i2)') i_ext
   write(filename,'(A10,A)')'grid_patch',trim(char_patch)
   call temporary_element_sizes(node_list_tmp, element_list_tmp)
-  call export_restart(node_list_tmp, aux_node_list, element_list_tmp, filename)
+  call export_restart(node_list_tmp, element_list_tmp, filename)
   ! --- create restart file for vtk plots END
   call join_grid_patches(node_list_new,  element_list_new, &
                          node_list_tmp,  element_list_tmp, &
@@ -322,7 +321,7 @@ enddo
 
 !-------------------------------- Finalise grid (element size, nodes index etc.)
 call finish_grid(node_list, element_list, node_list_new, element_list_new, n_grids, .true., .true., .true.)
-call export_restart(node_list, aux_node_list, element_list, 'jorek_grid')
+call export_restart(node_list, element_list, 'jorek_grid')
 
 
 

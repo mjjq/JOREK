@@ -11,7 +11,7 @@ contains
 
 
 !< Create a grid from parameters n_flux, n_pol
-subroutine flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+subroutine flux_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
   use phys_module
   use data_structure
   use mpi_mod
@@ -25,7 +25,6 @@ subroutine flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_
   implicit none
   
   type(type_node_list),        intent(inout) :: node_list
-  type(type_node_list), pointer, intent(inout) :: aux_node_list
   type(type_element_list),     intent(inout) :: element_list
   type(type_bnd_node_list),    intent(inout) :: bnd_node_list
   type(type_bnd_element_list), intent(inout) :: bnd_elm_list
@@ -42,7 +41,7 @@ subroutine flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_
 
       if ( (xcase .ge. UPPER_XPOINT) .or. (grid_to_wall .and. (n_wall_blocks .gt. 0)) .or. RZ_grid_inside_wall ) then
         if (grid_to_wall) then
-          call grid_double_xpoint_inside_wall(node_list, aux_node_list, element_list)
+          call grid_double_xpoint_inside_wall(node_list, element_list)
         else
           call grid_double_xpoint(node_list, element_list)
         endif
@@ -80,7 +79,7 @@ subroutine flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_
 
     ! --- Optional: Add patches to an existing grid imported from restart file
     if (extend_existing_grid) &
-        call grid_patches_on_existing_grid(node_list, aux_node_list, element_list)
+        call grid_patches_on_existing_grid(node_list, element_list)
 
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
 
@@ -91,7 +90,7 @@ subroutine flux_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_
   endif ! if (my_id == 0) then        
 
   ! --- Check sanity of grid
-  call check_grid(my_id, node_list, aux_node_list, element_list)
+  call check_grid(my_id, node_list, element_list)
 
   call broadcast_boundary(my_id, bnd_elm_list, bnd_node_list) 
 

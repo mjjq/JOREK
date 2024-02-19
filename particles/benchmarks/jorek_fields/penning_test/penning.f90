@@ -25,7 +25,6 @@ use mod_find_rz_nearby
 implicit none
 
 type(jorek_fields_interp_linear) :: fields
-type (type_node_list)   ,     pointer :: aux_node_list
 
 ! Define our particle list
 type(particle_kinetic_leapfrog) :: particle
@@ -127,7 +126,7 @@ F0 = 1.d0
 
 ! Write a restart file containing the grid
 write(*,*) "INFO: Exporting grid to jorek_restart.h5"
-call export_restart(fields%node_list,aux_node_list,fields%element_list,'jorek_restart')
+call export_restart(fields%node_list,fields%element_list,'jorek_restart')
 
 ! Initialize the particle list
 

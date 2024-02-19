@@ -77,6 +77,6 @@ program RST_convert_bin2hdf5
 
   ! -- Write the HDF5 restart file
   if (verbose) write (6,*) " =============> rst_bin2hdf5, write HDF5 file = ",fileout
-  call export_hdf5_restart(node_list, aux_node_list, element_list, fileout)
+  call export_hdf5_restart(node_list, element_list, fileout, aux_node_list)
 
 end program RST_convert_bin2hdf5

@@ -1149,7 +1149,7 @@ module exec_commands
     do i = 1, node_list%n_nodes
       node_list%node(i)%values(:,:,:) = values(:,:,:,i) / total_weight
     end do
-    call export_restart(node_list, aux_node_list, element_list, 'jorek99999')
+    call export_restart(node_list, element_list, 'jorek99999', aux_node_list)
     deallocate(values)
     
   end subroutine average_h5_finalize

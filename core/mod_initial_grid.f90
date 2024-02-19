@@ -11,7 +11,7 @@ contains
 
 
 !< Create a grid from parameters n_R, n_Z, n_radial, n_pol
-subroutine initial_grid(node_list, aux_node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
+subroutine initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
   use phys_module
   use data_structure
   use mpi_mod
@@ -22,7 +22,6 @@ subroutine initial_grid(node_list, aux_node_list, element_list, bnd_node_list, b
   implicit none
   
   type(type_node_list),         intent(inout) :: node_list
-  type(type_node_list),         intent(inout) :: aux_node_list
   type(type_element_list),      intent(inout) :: element_list
   type(type_bnd_node_list),     intent(inout) :: bnd_node_list
   type(type_bnd_element_list),  intent(inout) :: bnd_elm_list
@@ -42,7 +41,7 @@ subroutine initial_grid(node_list, aux_node_list, element_list, bnd_node_list, b
     
     if ((n_R > 0) .and. (n_Z > 0) .and. RZ_grid_inside_wall) then
       
-      call grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,fbnd,node_list,aux_node_list,element_list)
+      call grid_inside_wall(n_R,n_Z,R_begin,R_end,Z_begin,Z_end,fbnd,node_list,element_list)
       
     else if ((n_R > 0) .and. (n_Z > 0) .and. (n_radial > 0)) then
       
@@ -67,7 +66,7 @@ subroutine initial_grid(node_list, aux_node_list, element_list, bnd_node_list, b
 
     ! --- Optional: Add patches to an existing grid imported from restart file
     if ( extend_existing_grid .and. (n_flux .le. 0) ) &
-        call grid_patches_on_existing_grid(node_list, aux_node_list, element_list)
+        call grid_patches_on_existing_grid(node_list, element_list)
 
     if ( freeboundary .and. (n_flux==0) .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
     

@@ -13,7 +13,7 @@ module equil_info
   use data_structure, only: type_node_list, type_element_list, type_bnd_element_list
   use phys_module,    only: R_geo, Z_geo, FF_0, psi_axis_t, psi_bnd_t, Z_xpoint_t, index_now, SDN_threshold
   use mod_interp
-  
+  use mod_find_xpoint
   
   
   implicit none

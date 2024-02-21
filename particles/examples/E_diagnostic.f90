@@ -11,6 +11,7 @@
 !> No MPI support
 module write_E_time
   use mod_event, only: event, action
+  use mod_find_xpoint
   implicit none
 
   type, extends(action) :: save_E

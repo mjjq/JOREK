@@ -15,6 +15,8 @@ use vacuum
 use mpi_mod
 use mod_interp, only: interp
 use mod_F_profile
+use mod_find_xpoint
+
 implicit none
 
           

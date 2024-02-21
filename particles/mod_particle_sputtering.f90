@@ -67,6 +67,7 @@ module mod_particle_sputtering
   use mod_atomic_elements !< chemical elements
   use mod_particle_sim
   use mod_event
+  use mod_find_xpoint
   !$ use omp_lib 
   
   implicit none

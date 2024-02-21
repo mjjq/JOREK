@@ -11,6 +11,7 @@ subroutine export_nemec(node_list, element_list, xpoint, xcase)
   use data_structure
   use mod_interp, only: interp_RZ
   use equil_info
+  use mod_find_xpoint
   
   implicit none
   

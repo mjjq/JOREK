@@ -1,15 +1,23 @@
-!> Routine determines the position(s) of the xpoint(s).
-subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail,accepted_xpoint)
+module mod_find_xpoint
 
 use constants
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: tokamak_device, Z_xpoint_limit
-use equil_info, only : ES
+use phys_module, only: R_geo, tokamak_device, Z_xpoint_limit
 use mod_interp
 
 implicit none
+
+private
+
+public :: find_xpoint
+
+contains
+
+!> Routine determines the position(s) of the xpoint(s).
+subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail,accepted_xpoint)
+
 
 ! --- Routine parameters
 integer,                  intent(in)    :: my_id
@@ -45,8 +53,8 @@ endif
 
 ifail   = 1
 n_tries = 500             
-r_margin = 0.05          ! X-point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop. ! Grids in this circle must < n_tries                
-fac_axis_xpoint = 9      ! If the min(|grad_psi|) point fulfilling the previous comment is closer to the axis than (fac_axis_xpoint * r_margin), assume that x-point is not found properly.
+r_margin = 0.015*R_geo          ! X-point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop. ! Grids in this circle must < n_tries                
+fac_axis_xpoint = 4      ! If the min(|grad_psi|) point fulfilling the previous comment is closer to the axis than (fac_axis_xpoint * r_margin), assume that x-point is not found properly.
                          ! X-point where |grad_psi|=0 has no root, but where |grad_psi| ~< r_margin * div_psi(axis) can be accepted. 
 
 psi_xpoint = 0.
@@ -67,13 +75,8 @@ found_lower = .false.
 
 
 
-if (.not. ES%initialized) then    
-  call find_axis(99, node_list, element_list, psi_axis, R_axis0, Z_axis0, i_elm_axis, s_axis, &
-  t_axis, ifail_axis)
-else
-  R_axis0 = ES%R_axis
-  Z_axis0 = ES%Z_axis
-endif
+   
+call find_axis(99, node_list, element_list, psi_axis, R_axis0, Z_axis0, i_elm_axis, s_axis, t_axis, ifail_axis)
 
 
 do i=1,element_list%n_elements    ! --- loop over elements
@@ -120,14 +123,14 @@ do i=1,element_list%n_elements    ! --- loop over elements
       if (xcase .ne. UPPER_XPOINT) then
         if (     (((tokamak_device(1:4) .ne. 'MAST') .and. (tokamak_device(1:7) .ne. 'COMPASS') .and. (Z .lt. Z_xpoint_limit(1))) &
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .lt. -0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))  &
-            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) .and. (Z .lt. (Z_axis0 + 0.2))    ) then
+            .or. ((tokamak_device(1:7) .eq. 'COMPASS') .and. (Z .lt. -0.2d0))) .and. (Z .lt. (Z_axis0 + 0.03*R_geo))    ) then
           include_pt_lw(i,ms,mt) = .true.        
         endif
       endif
       
       ! --- And for the upper Xpoint
       if (xcase .ne. LOWER_XPOINT) then
-        if (   (Z .gt. (Z_axis0 - 0.2)) .and. (((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  Z_xpoint_limit(2))) &
+        if (   (Z .gt. (Z_axis0 - 0.03*R_geo)) .and. (((tokamak_device(1:4) .ne. 'MAST') .and. (Z .gt.  Z_xpoint_limit(2))) &
             .or. ((tokamak_device(1:4) .eq. 'MAST') .and. (Z .gt.  0.4d0) .and. (R .gt. 0.45d0) .and. (R .lt. 1.d0))) ) then
           include_pt_up(i,ms,mt) = .true.
         endif
@@ -302,3 +305,5 @@ deallocate(include_pt_lw,include_pt_up, grad_psi)
 
 return
 end subroutine find_xpoint
+
+end module mod_find_xpoint

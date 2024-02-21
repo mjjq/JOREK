@@ -18,6 +18,7 @@ use constants, only: TWOPI
 use mod_initialise_particles, only: domain_bounding_box
 use mod_math_operators, only: cross_product
 use domains
+use mod_find_xpoint
 !$ use omp_lib
 implicit none
 

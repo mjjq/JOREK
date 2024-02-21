@@ -16,6 +16,7 @@ use mod_initialise_particles, only: domain_bounding_box
 use domains
 use hdf5_io_module
 use mod_sampling, only: transform_uniform_cylindrical
+use mod_find_xpoint
 !$ use omp_lib
 implicit none
 

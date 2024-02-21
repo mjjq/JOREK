@@ -37,7 +37,7 @@ use phys_module, only: F0, GAMMA, freeboundary, RMP_on, psi_RMP_cos, dpsi_RMP_co
        RMP_start_time, tstep, RMP_har_cos, RMP_har_sin, T_min,                                             &
        mach_one_bnd_integral, Vpar_smoothing, vpar_smoothing_coef, no_mach1_bc,                            &
        Number_RMP_harmonics, RMP_har_cos_spectrum,RMP_har_sin_spectrum, grid_to_wall, n_wall_blocks, keep_n0_const, &
-       bcs, loop_voltage, loop_voltage_control, central_density, central_mass 
+       bcs, loop_voltage, central_density, central_mass 
 use tr_module
 use mpi_mod
 use mod_basisfunctions
@@ -353,13 +353,13 @@ do i=1, n_local_elms !=== do elements
           
 
           if ( (.not. is_freebound(in,k)) ) then
-            if ( ( loop_voltage .ne. 0.d0 ) .or. ( loop_voltage_control .ne. 0.d0 ) ) then
+            if ( ( loop_voltage .ne. 0.d0 ) ) then
               if ( (k == var_psi) .and. (in == 1) ) then
                 index_node = node_list%node(inode)%index(1)
                 call boundary_conditions_add_RHS(       &
                           index_node, k, in,     &
                           index_min, index_max,  &
-                          RHS_loc, ZBIG*((loop_voltage_control+loop_voltage)*sqrt(MU_ZERO*central_density*central_mass*MASS_PROTON*1.d20))* tstep, &
+                          RHS_loc, ZBIG*(loop_voltage*sqrt(MU_ZERO*central_density*central_mass*MASS_PROTON*1.d20))* tstep, &
                           a_mat%i_tor_min, a_mat%i_tor_max)
               endif
             endif

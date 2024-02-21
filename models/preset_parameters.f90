@@ -200,6 +200,7 @@ subroutine preset_parameters
   force_horizontal_Xline = .false.
   Z_xpoint_limit(1) = -0.4d0
   Z_xpoint_limit(2) =  0.4d0
+  xpoint_search_tries = 500
 
   xr1  = 9999.d0
   sig1 = 9999.d0

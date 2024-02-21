@@ -5,7 +5,7 @@ use constants
 use data_structure
 use gauss
 use basis_at_gaussian
-use phys_module, only: tokamak_device, Z_xpoint_limit
+use phys_module, only: tokamak_device, Z_xpoint_limit, xpoint_search_tries
 use mod_interp
 
 implicit none
@@ -27,7 +27,7 @@ integer,                  intent(out)   :: ifail
 real*8  :: ps_s, ps_t, ps_x, ps_y, xjac
 real*8  :: R, R_s, R_t, Z, Z_s, Z_t, P, P_s, P_t, P_st, P_ss, P_tt
 real*8  :: x(2), s, t, xerr, ferr, s_xp_init(2), t_xp_init(2)
-integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries, n_tries
+integer :: ij_xpoint(2,2), i, iv, ms, mt, kf, kv, i_tries
 integer :: i_elm_xp_init(2), min_indices_lw(3), min_indices_up(3)
 logical :: found_upper, found_lower
 real*8,  allocatable :: grad_psi(:,:,:)
@@ -40,7 +40,6 @@ if (my_id .eq. 0) then
 endif
 
 ifail   = 1
-n_tries = 500
 
 psi_xpoint = 0.
 R_xpoint   = 0.;    Z_xpoint = 0.
@@ -121,7 +120,7 @@ enddo    ! --- end loop over elements
 
 
 if(xcase .ne. UPPER_XPOINT) then
-  do i_tries=1,  n_tries  ! --- start attempts to find the lower x-point
+  do i_tries=1,  xpoint_search_tries  ! --- start attempts to find the lower x-point
     
     ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
     min_indices_lw(:) = minloc(grad_psi, mask=include_pt_lw)
@@ -161,7 +160,7 @@ endif
 
 if(xcase .ne. LOWER_XPOINT) then
 
-  do i_tries=1,  n_tries  ! --- start attempts to find the upper x-point
+  do i_tries=1,  xpoint_search_tries  ! --- start attempts to find the upper x-point
 
     ! --- min_indices = indices for gaussian point with min |grad_psi|,   (1) = element index, (2) = s-gaussian point index, (3) = t-gaussian point index
     min_indices_up(:) = minloc(grad_psi, mask=include_pt_up)
@@ -219,7 +218,7 @@ if(xcase .ne. UPPER_XPOINT) then
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Lower X-point : ',i_elm_xpoint(1),R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
   endif
-  if ((.not. found_lower )) write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
+  if ((.not. found_lower )) write(*,*) 'WARNING: lower X-point not properly found after ', xpoint_search_tries, ' attempts'
 endif
 
 if(xcase .ne. LOWER_XPOINT) then 
@@ -239,7 +238,7 @@ if(xcase .ne. LOWER_XPOINT) then
   if (my_id .eq. 0) then
     write(*,'(A,i6,4f14.8)') ' Upper X-point : ',i_elm_xpoint(2),R_xpoint(2),Z_xpoint(2),psi_xpoint(2),sqrt(ps_x**2+ps_y**2)
   endif  
-  if ((.not. found_upper )) write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
+  if ((.not. found_upper )) write(*,*) 'WARNING: upper X-point not properly found after ', xpoint_search_tries, ' attempts'
 endif
 
 deallocate(include_pt_lw,include_pt_up, grad_psi)

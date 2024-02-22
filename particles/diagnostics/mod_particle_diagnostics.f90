@@ -5,7 +5,7 @@ use mod_particle_sim
 use mod_fields
 use mod_particle_types
 use hdf5
-use mod_find_xpoint
+
 implicit none
 private
 public write_particle_diagnostics, calculate_particle_diagnostics

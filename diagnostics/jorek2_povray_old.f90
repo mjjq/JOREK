@@ -16,7 +16,7 @@ program jorek2_povray_old
   use mod_import_restart
   use mod_interp
   use basis_at_gaussian, only: initialise_basis
-  use mod_find_xpoint
+  use equil_info, only: find_xpoint
   
   implicit none
   

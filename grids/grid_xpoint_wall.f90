@@ -17,7 +17,7 @@ use mod_interp
 use mod_grid_conversions
 use mod_poiss
 use mod_node_indices
-use mod_find_xpoint
+use equil_info, only: find_xpoint
 
 implicit none
 

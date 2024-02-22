@@ -8,7 +8,6 @@ use data_structure
 use phys_module
 use mod_interp
 use equil_info
-use mod_find_xpoint
 
 implicit none
 

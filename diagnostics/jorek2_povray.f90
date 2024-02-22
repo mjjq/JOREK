@@ -12,7 +12,7 @@ use mod_import_restart
 use mod_interp
 use mod_basisfunctions
 use mod_boundary
-use equil_info
+use equil_info, only:update_equil_state
 
 implicit none
 

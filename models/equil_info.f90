@@ -9,11 +9,11 @@ module equil_info
   
   
   
-  use constants,      only: LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL,SYMMETRIC_XPOINT
-  use data_structure, only: type_node_list, type_element_list, type_bnd_element_list
+  use constants,          only: LOWER_XPOINT, UPPER_XPOINT, DOUBLE_NULL,SYMMETRIC_XPOINT
+  use data_structure,     only: type_node_list, type_element_list, type_bnd_element_list
   use gauss
-  use basis_at_gaussian
-  use phys_module,    only: R_geo, Z_geo, FF_0, psi_axis_t, psi_bnd_t, Z_xpoint_t, index_now, SDN_threshold, tokamak_device, Z_xpoint_limit
+  use basis_at_gaussian,  only: H, H_s, H_t, n_degrees
+  use phys_module,        only: R_geo, Z_geo, FF_0, psi_axis_t, psi_bnd_t, Z_xpoint_t, index_now, SDN_threshold, tokamak_device, Z_xpoint_limit
   use mod_interp
   
   

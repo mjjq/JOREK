@@ -35,7 +35,7 @@ subroutine do_save_E(this, sim, ev)
                                           "B_r    ", "B_z    ", "B_phi  ", &
                                           "J_r    ", "J_z    ", "J_phi  ", "J_0    ", &
                                           "E_par  ", "E_par2 ", "E_par3 "]
-  integer :: i, j, k, i_elm, i_elm_xpoint, ifail
+  integer :: i, j, k, i_elm, i_elm_xpoint(2), ifail
   integer :: unit(n_var)
   real*8, dimension(4) :: P, P_s, P_t, P_phi, P_time
   real*8 :: R, R_s, R_t, Z, Z_s, Z_t

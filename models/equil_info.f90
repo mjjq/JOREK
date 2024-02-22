@@ -68,7 +68,7 @@ module equil_info
     real*8           :: t_xpoint(2)              !< t coordinate of X-point within element.
     integer          :: ifail_xpoint             !< Error code for X-point determination.
     logical          :: xpoint_init = .false.    !< Has the find_xpoint routine been called in update_equil_state?
-    logical          :: accepted_xpoint(2)         !< Is the position of the X-point proper? 
+    logical          :: far_axis_xpoint(2)         !< Is the the X-point far enough from axis? 
     
     ! --- Boundary point (point defining the plasma LCFS, either the active limiter point or X-point)
     real*8           :: R_bnd                    !< R coordinate of boundary point.
@@ -142,10 +142,10 @@ module equil_info
     ES%xpoint       = xpoint
     ES%xcase        = xcase
     ES%ifail_xpoint = 0
-    ES%accepted_xpoint(:) = .false. 
+    ES%far_axis_xpoint(:) = .false. 
     if ( xpoint ) then 
       call find_xpoint(my_id_fake, node_list, element_list, ES%psi_xpoint, ES%R_xpoint,     &
-        ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint, ES%xcase, ES%ifail_xpoint,ES%accepted_xpoint)
+        ES%Z_xpoint, ES%i_elm_xpoint, ES%s_xpoint, ES%t_xpoint, ES%xcase, ES%ifail_xpoint,ES%far_axis_xpoint)
 
       ES%xpoint_init = .true.
     endif
@@ -156,15 +156,15 @@ module equil_info
     call find_RZ(node_list, element_list, ES%R_lim, ES%Z_lim, R_out, Z_out, ES%i_elm_lim, ES%s_lim,&
       ES%t_lim, ES%ifail_lim)
     
-    if ( xpoint  .and. (ES%accepted_xpoint(1) .or. ES%accepted_xpoint(2)))  then ! (X-point plasma)
+    if ( xpoint  .and. (ES%far_axis_xpoint(1) .or. ES%far_axis_xpoint(2)))  then ! (X-point plasma)
       
-      if ( .not. ES%accepted_xpoint(2) ) then
+      if ( .not. ES%far_axis_xpoint(2) ) then
         
         ES%psi_bnd        = ES%psi_xpoint(1)
         ES%limiter_plasma = .false.
         ES%active_xpoint  = LOWER_XPOINT
         
-      else if ( .not. ES%accepted_xpoint(1) ) then
+      else if ( .not. ES%far_axis_xpoint(1) ) then
         
         ES%psi_bnd        = ES%psi_xpoint(2)
         ES%limiter_plasma = .false.
@@ -391,7 +391,7 @@ module equil_info
   
   
 !> Routine determines the position(s) of the xpoint(s).
-subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail,accepted_xpoint)
+subroutine find_xpoint(my_id,node_list,element_list,psi_xpoint,R_xpoint,Z_xpoint,i_elm_xpoint,s_xpoint,t_xpoint,xcase,ifail,far_axis_xpoint)
 
 
 ! --- Routine parameters
@@ -406,7 +406,7 @@ real*8,                   intent(out)   :: s_xpoint(2)
 real*8,                   intent(out)   :: t_xpoint(2)
 integer,                  intent(in)    :: xcase        
 integer,                  intent(out)   :: ifail
-logical,    optional,     intent(inout) :: accepted_xpoint(2)
+logical,    optional,     intent(inout) :: far_axis_xpoint(2)
 
 ! --- Local variables
 real*8  :: ps_s, ps_t, ps_x, ps_y, xjac
@@ -429,7 +429,7 @@ endif
 ifail   = 1
 n_tries = 500             
 r_margin = 0.015*R_geo          ! X-point found in sqrt((R-R_axis)^2 + (Z-Z_axis)^2) < r_margin will be dismissed and excluded from next loop. ! Grids in this circle must < n_tries                
-fac_axis_xpoint = 4      ! If the min(|grad_psi|) point fulfilling the previous comment is closer to the axis than (fac_axis_xpoint * r_margin), assume that x-point is not found properly.
+fac_axis_xpoint = 4      ! If the min(|grad_psi|) point fulfilling the previous comment is still closer to the axis than (fac_axis_xpoint * r_margin), assume that x-point has disappeared.
                          ! X-point where |grad_psi|=0 has no root, but where |grad_psi| ~< r_margin * div_psi(axis) can be accepted. 
 
 psi_xpoint = 0.
@@ -618,7 +618,7 @@ endif
 
 if(xcase .ne. UPPER_XPOINT) then
 
-  if (present(accepted_xpoint)) accepted_xpoint(1) = .true.
+  if (present(far_axis_xpoint)) far_axis_xpoint(1) = .true.
   if (.not. found_lower) then    ! --- if all the attempts failed, take the initial solution
     s_xpoint(1)     = s_xp_init(1)     
     t_xpoint(1)     = t_xp_init(1)     
@@ -632,8 +632,8 @@ if(xcase .ne. UPPER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (present(accepted_xpoint)) then
-       if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  accepted_xpoint(1) = .false.              
+  if (present(far_axis_xpoint)) then
+       if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  far_axis_xpoint(1) = .false.              
      ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, lower xpoint is not at a proper position
   endif
 
@@ -641,14 +641,14 @@ if(xcase .ne. UPPER_XPOINT) then
     write(*,'(A,i6,4f14.8)') ' Lower X-point : ',i_elm_xpoint(1),R_xpoint(1),Z_xpoint(1),psi_xpoint(1),sqrt(ps_x**2+ps_y**2)
   endif
   
-  if ((.not. found_lower )) write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
-  
+  if (.not. found_lower)         write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
+  if (.not. far_axis_xpoint(1))  write(*,*) 'WARNING: lower X-point might have vanished!'
 endif
 
 
 if(xcase .ne. LOWER_XPOINT) then 
 
-  if (present(accepted_xpoint)) accepted_xpoint(2) = .true.
+  if (present(far_axis_xpoint)) far_axis_xpoint(2) = .true.
 
   if (.not. found_upper) then    ! --- if all the attempts failed, take the initial solution
     s_xpoint(2)     = s_xp_init(2)     
@@ -663,8 +663,8 @@ if(xcase .ne. LOWER_XPOINT) then
   ps_x = (  P_s * Z_t - P_t * Z_s)/ xjac
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
-  if (present(accepted_xpoint)) then
-     if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  accepted_xpoint(2) = .false.             
+  if (present(far_axis_xpoint)) then
+     if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  far_axis_xpoint(2) = .false.             
      ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, upper xpoint is not at a proper position
   endif
 
@@ -672,7 +672,8 @@ if(xcase .ne. LOWER_XPOINT) then
     write(*,'(A,i6,4f14.8)') ' Upper X-point : ',i_elm_xpoint(2),R_xpoint(2),Z_xpoint(2),psi_xpoint(2),sqrt(ps_x**2+ps_y**2)
   endif
     
-  if ((.not. found_upper )) write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
+  if (.not. found_upper)         write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
+  if (.not. far_axis_xpoint(2))  write(*,*) 'WARNING: upper X-point might have vanished!'
 
 endif
 

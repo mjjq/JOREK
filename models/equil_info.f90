@@ -633,8 +633,10 @@ if(xcase .ne. UPPER_XPOINT) then
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
   if (present(far_axis_xpoint)) then
-       if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  far_axis_xpoint(1) = .false.              
-     ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, lower xpoint is not at a proper position
+     if (sqrt((R_axis0-R_xpoint(1))**2 + (Z_xpoint(1)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin) then
+       far_axis_xpoint(1) = .false.              ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, lower xpoint is not at a proper position
+       write(*,*) 'WARNING: lower X-point might have vanished'
+     endif   
   endif
 
   if (my_id .eq. 0) then
@@ -642,7 +644,7 @@ if(xcase .ne. UPPER_XPOINT) then
   endif
   
   if (.not. found_lower)         write(*,*) 'WARNING: lower X-point not properly found after ', n_tries, ' attempts'
-  if (.not. far_axis_xpoint(1))  write(*,*) 'WARNING: lower X-point might have vanished!'
+  
 endif
 
 
@@ -664,8 +666,10 @@ if(xcase .ne. LOWER_XPOINT) then
   ps_y = (- P_s * R_t + P_t * R_s)/ xjac
   
   if (present(far_axis_xpoint)) then
-     if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  far_axis_xpoint(2) = .false.             
-     ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, upper xpoint is not at a proper position
+     if (sqrt((R_axis0-R_xpoint(2))**2 + (Z_xpoint(2)-Z_axis0)**2) .lt. fac_axis_xpoint*r_margin)  then 
+        far_axis_xpoint(2) = .false.         ! If d_{xpoint to axis}<fac_axis_xpoint*r_margin, upper xpoint is not at a proper position
+	write(*,*) 'WARNING: upper X-point might have vanished'
+     endif              
   endif
 
   if (my_id .eq. 0) then
@@ -673,7 +677,6 @@ if(xcase .ne. LOWER_XPOINT) then
   endif
     
   if (.not. found_upper)         write(*,*) 'WARNING: upper X-point not properly found after ', n_tries, ' attempts'
-  if (.not. far_axis_xpoint(2))  write(*,*) 'WARNING: upper X-point might have vanished!'
 
 endif
 

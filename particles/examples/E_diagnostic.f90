@@ -173,7 +173,7 @@ integer, parameter :: n_theta = 2000, n_phi=1
 
 type(particle_sim) :: sim
 type(event) :: fieldreader
-integer :: i_elm, ielm_xpoint(2), ifail, i, j, k, ierr
+integer :: i_elm, i_elm_xpoint(2), ifail, i, j, k, ierr
 real*8 :: psi_n, delta_t
 real*8 :: psi_axis, psi_xpoint(2)
 real*8 :: R_axis, Z_axis, R_xpoint(2), Z_xpoint(2)

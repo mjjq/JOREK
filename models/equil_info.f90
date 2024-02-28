@@ -1013,6 +1013,7 @@ end subroutine find_xpoint
     call MPI_BCAST(ES%i_elm_xpoint,   2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%ifail_xpoint,   1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     call MPI_BCAST(ES%xpoint_init,    1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+    call MPI_BCAST(ES%far_axis_xpoint,2,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
     
     ! --- Boundary Point
     call MPI_BCAST(ES%psi_bnd,     1,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)

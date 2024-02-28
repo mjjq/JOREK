@@ -15,7 +15,6 @@ use vacuum
 use mpi_mod
 use mod_interp, only: interp
 use mod_F_profile
-
 implicit none
 
           

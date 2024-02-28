@@ -17,6 +17,7 @@ module equil_info
   use mod_interp
   
   
+  
   implicit none
   
   
@@ -68,7 +69,7 @@ module equil_info
     real*8           :: t_xpoint(2)              !< t coordinate of X-point within element.
     integer          :: ifail_xpoint             !< Error code for X-point determination.
     logical          :: xpoint_init = .false.    !< Has the find_xpoint routine been called in update_equil_state?
-    logical          :: far_axis_xpoint(2)         !< Is the the X-point far enough from axis? 
+    logical          :: far_axis_xpoint(2)       !< Is the the X-point far enough from axis? 
     
     ! --- Boundary point (point defining the plasma LCFS, either the active limiter point or X-point)
     real*8           :: R_bnd                    !< R coordinate of boundary point.
@@ -208,7 +209,7 @@ module equil_info
       
       ! --- Has the X-plasma changed to a limiter plasma?
       if (freeboundary) then
-        if (( abs(ES%psi_axis-ES%psi_lim) < abs(ES%psi_axis-ES%psi_bnd) )) then
+        if ( abs(ES%psi_axis-ES%psi_lim) < abs(ES%psi_axis-ES%psi_bnd) ) then
           ES%psi_bnd        = ES%psi_lim
           ES%limiter_plasma = .true.
 	  ES%active_xpoint  = 0

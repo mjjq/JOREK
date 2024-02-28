@@ -34,7 +34,7 @@ real*8  :: s_pt, t_pt, s_or_t, xjac, prod, psi_bnd_save
 real*8  :: R_axis, Z_axis, psi_axis, s_axis, t_axis
 real*8  :: P, P_s, P_t, P_st, P_ss, P_tt, P_R, P_Z
 real*8  :: RR, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
-logical :: s_const, is_private           ! Is the bound. elem. an s=const side of the 2D element?
+logical :: s_const, is_private            ! Is the bound. elem. an s=const side of the 2D element?
 integer :: ifail, i_elm, i_elm_axis, ifail_axis
 
 real*8, external :: root
@@ -149,12 +149,10 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       P_Z  = ( - P_s * R_t + P_t * R_s ) / xjac ! dPsi/dZ
   
       !--- multiply grad_psi by vector pointing from axis to limiter
-      prod = P_R * (RR - R_axis) + P_Z * (Z - Z_axis)
-      
+      prod = P_R * (RR - R_axis) + P_Z * (Z - Z_axis)   
   
       !--- decide if we are inside a private region
-      is_private = .false.
-      
+      is_private = .false.    
       
       if ((ES%far_axis_xpoint(1) .or. ES%far_axis_xpoint(2))) then         ! When X-point(s) exists
         if (ES%axis_is_psi_minimum) then
@@ -162,8 +160,7 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
         else
           if (prod > 0.d0) is_private = .true.
         endif
-      end if
-      
+      end if     
 
       ! --- Second method to double check that the limiter does not belong to a private region
       ! ---    Use X-points to check region (if available and properly found) 
@@ -185,9 +182,7 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
               ES%psi_bnd       = ES%psi_xpoint(2)
             end if ! special case of 2 expoints
           endif ! xpoint cases
-	  
-	  
-  
+	  	   
           if (get_psi_n(P,Z) > 1.d0) then
             if ((psmima < ES%psi_bnd) .and. (ES%axis_is_psi_minimum)) then
               is_private = .true.
@@ -206,16 +201,20 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       endif ! --- end second method to check private regions
       
       if (.not. is_private) then        
+  
+  
         if (psmima .lt. psi_min) then
           psi_min = psmima
           r_min   = r
           i_min   = ibnd
         endif
+    
         if (psmima .gt. psi_max) then
           psi_max = psmima
           r_max   = r
           i_max   = ibnd
         endif    
+    
       endif  ! --- is private
       
     endif
@@ -305,7 +304,6 @@ if ( my_id == 0 ) then
   write(*,121) 'Z_lim  ', Z_lim
   write(*,121) 'Psi_lim', Psi_lim
 end if
-
 
 return
 end subroutine find_limiter

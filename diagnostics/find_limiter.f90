@@ -154,13 +154,11 @@ do ibnd=1,bnd_elm_list%n_bnd_elements + n_limiter
       !--- decide if we are inside a private region
       is_private = .false.    
       
-      if ((ES%far_axis_xpoint(1) .or. ES%far_axis_xpoint(2))) then         ! When X-point(s) exists
-        if (ES%axis_is_psi_minimum) then
-          if (prod < 0.d0) is_private = .true.
-        else
-          if (prod > 0.d0) is_private = .true.
-        endif
-      end if     
+      if (ES%axis_is_psi_minimum) then
+        if (prod < 0.d0) is_private = .true.
+      else
+        if (prod > 0.d0) is_private = .true.
+      endif
 
       ! --- Second method to double check that the limiter does not belong to a private region
       ! ---    Use X-points to check region (if available and properly found) 

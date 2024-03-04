@@ -1170,6 +1170,7 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
     write(*,REA3_FMT) 'eta_ARAZ_const        ', eta_ARAZ_const
     write(*,LOGI_FMT) 'eta_ARAZ_on           ', eta_ARAZ_on
     write(*,LOGI_FMT) 'eta_ARAZ_simple       ', eta_ARAZ_simple
+    write(*,LOGI_FMT) 'tauIC_initial         ', tauIC_initial
     write(*,LOGI_FMT) 'tauIC_ARAZ_on         ', tauIC_ARAZ_on
     write(*,LOGI_FMT) 'tauIC_AP_on           ', tauIC_AP_on
     write(*,LOGI_FMT) 'tauIC_tanh            ', tauIC_tanh

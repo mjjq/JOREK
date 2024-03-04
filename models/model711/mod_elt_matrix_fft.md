@@ -255,7 +255,7 @@ $\zeta = time\_evol\_zeta*2*tstep/(tstep + tstep\_prev)$\
         $\ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ -(D_\parallel-D)\{\vec{B}_0\cdot\nabla v\}_{poloidal}\vec{B}_0\cdot\nabla\rho_0/B_0^2$\
         $\ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ +vS_{particle}$\
         $\ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ -D_{\perp, num}\Delta^\star v\Delta^\star\rho_0$
-        * $Qvec\_k(\rho)=+\rho_0\vec{V}_0\cdot\nabla v$\
+        * $Qvec\_k(\rho)=+\rho_0\{\vec{V}_{dia,0}\cdot\nabla v\}_{toroidal}$\
         $\ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ -D\{\nabla\rho_0\cdot\nabla v\}_{toroidal}$\
         $\ \ \ \ \ \ \ \ \ \ \ \ \ \  \ \ \ \ \ \ \ \ \ \ \ -(D_\parallel-D)\{\vec{B}_0\cdot\nabla v\}_{toroidal}\vec{B}_0\cdot\nabla \rho_0/B_0^2$
     * equation 8 (Ion Pressure equation):

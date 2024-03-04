@@ -350,6 +350,25 @@ real*8     :: f_p, d_p, tau_sc, R_rho, R_Ti, R_Te
 real*8     :: s_p, src_rho, src_pi, src_pe
 real*8     :: rhoi_eff, rhoe_eff
 
+!  --- For VMS stabilization
+integer    :: jj
+real*8     :: tscale
+real*8     :: speed(n_plane,n_gauss,n_gauss)
+real*8     :: vms_AR__p(n_var), vms_AR__k(n_var)
+real*8     :: vms_AZ__p(n_var), vms_AZ__k(n_var)
+real*8     :: vms_A3__p(n_var), vms_A3__k(n_var)
+real*8     :: vms_UR__p(n_var), vms_UR__k(n_var)
+real*8     :: vms_UZ__p(n_var), vms_UZ__k(n_var)
+real*8     :: vms_Up__p(n_var), vms_Up__k(n_var)
+real*8     :: vms_rho__p(n_var), vms_rho__k(n_var)
+real*8     :: vms_Ti__p(n_var), vms_Ti__k(n_var)
+real*8     :: vms_Te__p(n_var), vms_Te__k(n_var)
+real*8     :: Pvec_prev_k(n_var), Pjac_k(n_var,n_var)
+real*8     :: res(n_var), res_jac__p(n_var, n_var), res_jac__n(n_var, n_var), res_jac__nn(n_var,n_var)
+real*8     :: vsR, vsR_UR__p, vsR_UR__n, vsR_UR__nn, vsR_UZ__p, vsR_UZ__n, vsR_UZ__nn, vsR_Up__p, vsR_Up__n, vsR_Up__nn
+real*8     :: vsZ, vsZ_UR__p, vsZ_UR__n, vsZ_UR__nn, vsZ_UZ__p, vsZ_UZ__n, vsZ_UZ__nn, vsZ_Up__p, vsZ_Up__n, vsZ_Up__nn
+real*8     :: vsp, vsp_UR__p, vsp_UR__n, vsp_UR__nn, vsp_UZ__p, vsp_UZ__n, vsp_UZ__nn, vsp_Up__p, vsp_Up__n, vsp_Up__nn
+
 ! --- Switches for numerical stability of resistive and diamagnetic terms in AR and AZ equations
 eta_ARAZ  = 0.d0  ! =0.0 to switch off resistive   terms for AR and AZ equations
 tauIC_ARAZ= 0.d0  ! =0.0 to switch off diamagnetic terms for AR and AZ equations
@@ -1443,7 +1462,8 @@ do i=1,n_vertex_max
             Qvec_k(var_Te) = - ZKe_prof * gradTe_gradVstar__k                                  &
                              - (ZKe_par_T-ZKe_prof) * BgradVstar__k * BgradTe / BB2
 
-
+            if (use_vms) call add_vms_to_rhs()
+            
             ! --- Fill Up the RHS
             if (use_fft) then
               index_ij =       n_var*n_degrees*(i-1) +       n_var*(j-1) + 1
@@ -3191,6 +3211,176 @@ subroutine calculate_sc_quantities()
   ZKe_prof  = ZKe_prof  + ZK_e_perp_sc_num * tau_sc
 
 end subroutine calculate_sc_quantities
+
+! subroutines to calculates VMS stabilization terms
+subroutine add_vms_to_rhs()
+
+  vms_AR__p = 0.d0 ; vms_AR__k = 0.d0
+  vms_AZ__p = 0.d0 ; vms_AZ__k = 0.d0
+  vms_A3__p = 0.d0 ; vms_A3__k = 0.d0
+  vms_UR__p = 0.d0 ; vms_UR__k = 0.d0
+  vms_UZ__p = 0.d0 ; vms_UZ__k = 0.d0
+  vms_Up__p = 0.d0 ; vms_UP__k = 0.d0
+  vms_rho__p= 0.d0 ; vms_rho__k= 0.d0
+  vms_Ti__p  = 0.d0; vms_Ti__k  = 0.d0
+  vms_Te__p  = 0.d0; vms_Te__k  = 0.d0
+   
+  res = 0.d0
+  
+  ! viscosity terms in strong form
+  vsR = UR0 / R + UR0_RR + UR0_ZZ + UR0_pp / R**2 - 2.d0 * Up0_p / R - UR0 / R**2
+  vsZ = UZ0 / R + UZ0_RR + UZ0_ZZ + UZ0_pp / R**2 
+  vsp = Up0 / R + Up0_RR + Up0_ZZ + Up0_pp / R**2 + 2.d0 * UR0_p / R - Up0 / R**2
+  
+  ! residual in A
+  res(var_AR) = -     (UZ0 * Bp0 - Up0 * BZ0) - tauIC_ARAZ * tau_IC * F0/rho0_corr/BB2 * BR0  * BgradPe &
+                +     eta_T * (JR0 - current_source_JR(ms,mt))
+  res(var_AZ) = -     (Up0 * BR0 - UR0 * Bp0) - tauIC_ARAZ * tau_IC * F0/rho0_corr/BB2 * BZ0  * BgradPe &
+                +     eta_T * (JZ0 - current_source_JZ(ms,mt))
+  res(var_A3) = - R * (UR0 * BZ0 - UZ0 * BR0) -              tau_IC * F0/rho0_corr/BB2 * R*Bp0* BgradPe &
+                + R * eta_T * (Jp0 - current_source_Jp(ms,mt))
+  
+  ! residual in momentum
+  res(var_UR) = rho0 * UgradUR - rho0 * Up0 * Up0/R + rho0 * VdiaGradUR - rho0 * VdiaP0*Up0 / R &
+              + p0_R   - visco_T * vsR - PneoR + particle_source(ms,mt) * UR0
+  res(var_UZ) = rho0 * UgradUZ                      + rho0 * VdiaGradUZ                  & 
+              + p0_Z   - visco_T * vsZ - PneoZ + particle_source(ms,mt) * UZ0
+  res(var_Up) = rho0 * UgradUp + rho0 * UR0 * Up0/R + rho0 * VdiaGradUp + rho0 * VdiaP0*UR0 / R &
+              + p0_p/R - visco_T * vsp         + particle_source(ms,mt) * Up0
+  
+  ! residual in density equation
+  res(var_rho)=   UgradRho + rho0 * divU - D_prof * (rho0_R / R + rho0_RR + rho0_ZZ + rho0_pp/R**2)
+  
+  ! residual in temperature equations
+  res(var_Ti) = rho0 * UgradTi + Ti0 * UgradRho + gamma * pi0 * divU &
+              - heat_source_i(ms,mt) - (gamma-1.d0) * Qvisc_T        &
+              - ZKi_prof * (Ti0_R / R + Ti0_RR + Ti0_ZZ + Ti0_pp/R**2) - dTi_e
+  res(var_Te) = rho0 * UgradTe + Te0 * UgradRho + gamma * pe0 * divU  &
+              - heat_source_e(ms,mt) - (gamma-1.d0) * Qvisc_T       &
+              - ZKe_prof * (Te0_R / R + Te0_RR + Te0_ZZ + Te0_pp/R**2) - dTe_i &
+              - (gamma-1.0d0) * eta_T_ohm * JJ2  
+    
+  ! stabilization operators based on first derivatives only
+  ! equation A_R
+  vms_AR__p(var_AR) =   UZ0 * v_Z
+  vms_AR__k(var_AR) =   Up0 * v_p / R
+  
+  vms_AR__p(var_AZ) = - UZ0 * v_R
+  
+  vms_AR__p(var_A3) = - Up0 * v_R / R
+  
+  ! equation A_Z
+  vms_AZ__p(var_AR) = - UR0 * v_Z
+  
+  vms_AZ__p(var_AZ) =   UR0 * v_R
+  vms_AZ__k(var_AZ) =   Up0 * v_p / R
+  
+  vms_AZ__p(var_A3) = - Up0 * v_Z / R
+  
+  ! equation A_3
+  vms_A3__k(var_AR) = - UR0 * v_p
+  
+  vms_A3__k(var_AZ) = - UZ0 * v_p
+  
+  vms_A3__p(var_A3) = + UZ0 * v_Z + UR0 * v_R + UR0 * v / R
+    
+  ! equation UR
+  vms_UR__p(var_UR) =  rho0 * UgradVstar__p
+  vms_UR__k(var_UR) =  rho0 * UgradVstar__k
+    
+  vms_UR__p(var_Up) =  rho0 * (Up0 * v / R)
+   
+  vms_UR__p(var_rho)=  (Ti0+Te0) * (v/R + v_R) 
+  vms_UR__p(var_Ti) =  rho0 * (v/R + v_R)
+  vms_UR__p(var_Te) =  rho0 * (v/R + v_R)
+  
+  ! equation UZ
+  vms_UZ__p(var_UZ) =  rho0 * UgradVstar__p
+  vms_UZ__k(var_UZ) =  rho0 * UgradVstar__k
+    
+  vms_UZ__p(var_rho)=  (Ti0+Te0) * v_Z
+  vms_UZ__p(var_Ti) =  rho0 * v_Z
+  vms_UZ__p(var_Te) =  rho0 * v_Z
+  
+  ! equation Up
+  vms_Up__p(var_UR) =  - rho0 * Up0 * v / R 
+    
+  vms_Up__p(var_Up) =  rho0 * UgradVstar__p
+  vms_Up__k(var_Up) =  rho0 * UgradVstar__k
+    
+  vms_Up__k(var_rho)=  (Ti0+Te0) * v_p / R 
+  vms_Up__k(var_Ti) =  rho0 * v_p / R
+  vms_Up__k(var_Te) =  rho0 * v_p / R
+  
+  !! equation rho
+  vms_rho__p(var_UR) =  rho0 * v_R
+  
+  vms_rho__p(var_UZ) =  rho0 * v_Z
+    
+  vms_rho__k(var_Up) = rho0 * v_p / R
+    
+  vms_rho__p(var_rho)=  UgradVstar__p
+  vms_rho__k(var_rho)=  UgradVstar__k
+    
+  !! equation Ti
+  vms_Ti__p(var_UR) = gamma * pi0 * v_R
+      
+  vms_Ti__p(var_UZ) = gamma * pi0 * v_Z
+  
+  vms_Ti__k(var_Up) = gamma * pi0 * v_p / R
+  
+  vms_Ti__p(var_rho)= Ti0 * UgradVstar__p
+  vms_Ti__k(var_rho)= Ti0 * UgradVstar__k
+      
+  vms_Ti__p(var_Ti) = rho0 * UgradVstar__p
+  vms_Ti__k(var_Ti) = rho0 * UgradVstar__k
+  
+  !! equation Te
+  vms_Te__p(var_UR) = gamma * pe0 * v_R
+    
+  vms_Te__p(var_UZ) = gamma * pe0 * v_Z
+  
+  vms_Te__k(var_Up) = gamma * pe0 * v_p / R
+  
+  vms_Te__p(var_rho)=  Te0 * UgradVstar__p
+  vms_Te__k(var_rho)=  Te0 * UgradVstar__k
+    
+  vms_Te__p(var_Te) =  rho0 * UgradVstar__p
+  vms_Te__k(var_Te) =  rho0 * UgradVstar__k
+  
+  ! for B-projection
+  vms_Up__p = BR0*vms_UR__p + BZ0*vms_UZ__p + Bp0*vms_Up__p
+  vms_Up__k = BR0*vms_UR__k + BZ0*vms_UZ__k + Bp0*vms_Up__k
+  
+  Qvec_p(var_AR) = Qvec_p(var_AR) - vms_coeff_AR * tscale * dot_product(res, vms_AR__p)
+  Qvec_k(var_AR) = Qvec_k(var_AR) - vms_coeff_AR * tscale * dot_product(res, vms_AR__k)
+  
+  Qvec_p(var_AZ) = Qvec_p(var_AZ) - vms_coeff_AZ * tscale * dot_product(res, vms_AZ__p)
+  Qvec_k(var_AZ) = Qvec_k(var_AZ) - vms_coeff_AZ * tscale * dot_product(res, vms_AZ__k)
+  
+  Qvec_p(var_A3) = Qvec_p(var_A3) - vms_coeff_A3 * tscale * dot_product(res, vms_A3__p)
+  Qvec_k(var_A3) = Qvec_k(var_A3) - vms_coeff_A3 * tscale * dot_product(res, vms_A3__k)
+  
+  Qvec_p(var_UR) = Qvec_p(var_UR) - vms_coeff_UR * tscale * dot_product(res, vms_UR__p)
+  Qvec_k(var_UR) = Qvec_k(var_UR) - vms_coeff_UR * tscale * dot_product(res, vms_UR__k)
+  
+  Qvec_p(var_UZ) = Qvec_p(var_UZ) - vms_coeff_UZ * tscale * dot_product(res, vms_UZ__p)
+  Qvec_k(var_UZ) = Qvec_k(var_UZ) - vms_coeff_UZ * tscale * dot_product(res, vms_UZ__k)
+  
+  Qvec_p(var_Up) = Qvec_p(var_Up) - vms_coeff_Up * tscale * dot_product(res, vms_Up__p)
+  Qvec_k(var_Up) = Qvec_k(var_Up) - vms_coeff_Up * tscale * dot_product(res, vms_Up__k)
+  
+  Qvec_p(var_rho)= Qvec_p(var_rho)- vms_coeff_rho* tscale * dot_product(res, vms_rho__p)
+  Qvec_k(var_rho)= Qvec_k(var_rho)- vms_coeff_rho* tscale * dot_product(res, vms_rho__k)
+  
+  Qvec_p(var_Ti) = Qvec_p(var_Ti) - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__p)
+  Qvec_k(var_Ti) = Qvec_k(var_Ti) - vms_coeff_Ti  * tscale * dot_product(res, vms_Ti__k)
+  
+  Qvec_p(var_Te) = Qvec_p(var_Te) - vms_coeff_Te  * tscale * dot_product(res, vms_Te__p)
+  Qvec_k(var_Te) = Qvec_k(var_Te) - vms_coeff_Te  * tscale * dot_product(res, vms_Te__k)
+
+  
+end subroutine add_vms_to_rhs
 
 subroutine my_fft(in_fft,out_fft,n)
   implicit none

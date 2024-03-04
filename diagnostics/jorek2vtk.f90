@@ -860,6 +860,7 @@ do i=1,element_list%n_elements
           endif
 
         enddo  ! end loop toroidal harmonics
+        i_tor = i_tor_old
 
         ! --- Derivatives of F-profile
         dF_dR      = (   Z_t * F_prof_s   - Z_s * F_prof_t   ) / xjac

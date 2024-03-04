@@ -38,7 +38,7 @@ def read_ascii_file(file_path, skiprows):
 
 
 def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, skiprows, column_plot_for_X, columns_plot_for_Y, 
-                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim):
+                     shift_first_file, color_first_file, pow_for_X, pow_for_Y, multiplier_for_X, multiplier_for_Y, font_size, line_width, xlim, ylim, data_marker, mylegends=""):
     """
     Plot lines from multiple ASCII files in the same plot.
 
@@ -52,6 +52,7 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
 
     plt.figure(figsize=(10, 6))  # Set the figure size
 
+    ilegend = 0
     for i, file_path in enumerate(file_paths):
         column_names, data = read_ascii_file(file_path, skiprows)
         if column_plot_for_X >= data.shape[1]:
@@ -84,10 +85,15 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
 
         for j in columns_plot_for_Y_mdf:
             if j < y.shape[1]:
-                if (i == 0) and (color_first_file != ""):
-                    plt.plot(x, y[:, j], label=f'{column_names[j + 1]} ({file_path})', linestyle=linestyle, color=color_first_file)
+                if mylegends == "":
+                    mylegend = f'{column_names[j + 1]} ({file_path})'
                 else:
-                    plt.plot(x, y[:, j], label=f'{column_names[j + 1]} ({file_path})', linestyle=linestyle)
+                    mylegend = mylegends[ilegend]
+                    ilegend += 1
+                if (i == 0) and (color_first_file != ""):
+                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle, color=color_first_file)
+                else:
+                    plt.plot(x, y[:, j], data_marker, label=mylegend, linestyle=linestyle)
             else:
                 print("Error: Value of -yc is out of range!!!")
                 print("file_path: ", file_path)
@@ -98,7 +104,7 @@ def plot_ascii_files(file_paths, xscaleType, yscaleType, title, xlabel, ylabel, 
     legend = plt.legend()  # Show legends for each line
     legend.set_draggable(True)
     for label in legend.get_texts():
-        label.set_fontsize(10)
+        label.set_fontsize(font_size)
     plt.title(title, fontsize=font_size)  # Set the plot title
     plt.grid(True)  # Show grid lines
     plt.xscale(xscaleType)  # Set linear or log for the x scale
@@ -132,6 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("-ti", "--title", default="Multiple ASCII Files Plot", help="Manually define the title.")
     parser.add_argument("-xl", "--xlabel", default="", help="Manually define the xlabel.")
     parser.add_argument("-yl", "--ylabel", default="", help="Manually define the ylabel.")
+    parser.add_argument("-dm", "--data_marker", default="", help="Manually define the marker for the data.")
     parser.add_argument("-yc", "--columns_plot_for_Y", type=int, nargs="+", default=-1,
                         help="Columns to be plotted (default is -1 for plotting all) as Y values.")
     parser.add_argument("-xc", "--column_plot_for_X", type=int, default=0,
@@ -159,9 +166,10 @@ if __name__ == "__main__":
                         help='Specify xmin, xmax for the plot.')
     parser.add_argument('-ylim', nargs=2, type=float, metavar=('ymin', 'ymax'),
                         help='Specify ymin, ymax for the plot.')
+    parser.add_argument("-legends", type=str, default="", nargs="+", help="Legends for each line.")
 
     args = parser.parse_args()
 
     plot_ascii_files(args.file_paths, args.xscale, args.yscale, args.title, args.xlabel, args.ylabel,
                      int(args.skiprows), args.column_plot_for_X, args.columns_plot_for_Y, args.shift_first_file, args.color_first_file, 
-                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim)
+                     args.pow_for_X, args.pow_for_Y, args.multiplier_for_X, args.multiplier_for_Y, args.fontsize, args.linewidth, args.xlim, args.ylim, args.data_marker, args.legends)

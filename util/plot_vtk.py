@@ -115,7 +115,11 @@ def plot3D_unstructed(x, y, z, title, file_path, time, font_size, si_unit = Fals
 
 
 def plot2D_scatter(x, y, z, title, file_path, time, font_size, si_unit = False, clim = []):
-
+    nan_indices = np.where(np.isnan(z))
+    if np.size(nan_indices) > 0:
+        z[nan_indices] = 0.e0
+        print("Number of NaN/total elements: ", np.size(nan_indices), " / ", np.size(z))
+        print("Indices of NaN elements: ", nan_indices, ", R = ", x[nan_indices], ", Z = ", y[nan_indices])
     plt.figure(figsize=(9, 7), constrained_layout=True)
 
     # Create a scatter plot
@@ -124,6 +128,9 @@ def plot2D_scatter(x, y, z, title, file_path, time, font_size, si_unit = False, 
         plt.scatter(x, y, c=z, cmap='jet', marker='o', s=50, vmin=clim[0], vmax=clim[1])
     else:
         plt.scatter(x, y, c=z, cmap='jet', marker='o', s=50)
+
+    if np.size(nan_indices) > 0:
+        plt.plot(x[nan_indices], y[nan_indices], '.', MarkerSize = 1.0, color='black')
 
     # Add a colorbar for reference
     plt.colorbar()
@@ -177,6 +184,7 @@ def plot2D_flow_field(x, y, vx, vy, title, file_path, time, font_size, si_unit =
     # Create a quiver plot
     # You can choose a different colormap if desired
     plt.quiver(X, Y, V_X/V_max, V_Y/V_max, V, cmap='winter', scale=1.e1)
+    # plt.quiver(x, y, vx/V_max, vy/V_max, (vx ** 2 + vy ** 2)**0.5, cmap='winter', scale=1.e1)
 
     # Add a colorbar for reference
     plt.colorbar()
@@ -337,8 +345,12 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
         data = vtk_nump.vtk_to_numpy(data_array)
         numpy_coordinates = vtk_nump.vtk_to_numpy(Point_cordinates)
 
-        print("======== " + str(ifile) + " Plotting " +
-              variable + " of " + file_path + " ========")
+        if args.method == "ff":
+            print("======== " + str(ifile) + " Plotting " +
+                "quiver" + " of " + file_path + " ========")
+        else:
+            print("======== " + str(ifile) + " Plotting " +
+                variable + " of " + file_path + " ========")
         si_unit = False if args.multiplier_for_time == 1.0 else True
         if args.method == "sc":
             plot2D_scatter(
@@ -353,8 +365,18 @@ def read_and_plot_data(args, reader, variable, data_reference=0):
             UR = vtk_nump.vtk_to_numpy(UR_array)
             UZ = vtk_nump.vtk_to_numpy(UZ_array)
             # Uphi = vtk_nump.vtk_to_numpy(Uphi_array)
+            nan_indices = np.where(np.isnan(UR))
+            if np.size(nan_indices) > 0:
+                UR[nan_indices] = 0.e0
+                UZ[nan_indices] = 0.e0
+                print("Number of NaN/total elements: ", np.size(nan_indices), " / ", np.size(UR))
+                print("Indices of NaN elements: ", nan_indices, ", R = ", numpy_coordinates[nan_indices,0], ", Z = ", numpy_coordinates[nan_indices,1])
+            
             plot2D_flow_field(
-                numpy_coordinates[:, 0], numpy_coordinates[:, 1], UR, UZ, "2D Flow field", file_path, time, args.fontsize, si_unit)
+                numpy_coordinates[:, 0], numpy_coordinates[:, 1], UR[:], UZ[:], "2D Flow field", file_path, time, args.fontsize, si_unit)
+            
+            if np.size(nan_indices) > 0:
+                plt.plot(numpy_coordinates[nan_indices, 0], numpy_coordinates[nan_indices, 1], '.', MarkerSize = 1.0, color='black')
         else:
             plot2D_interpolated(
                 numpy_coordinates[:, 0], numpy_coordinates[:, 1], data - data_reference, var, file_path, time, args.fontsize, si_unit, args.clim)

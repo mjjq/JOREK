@@ -22,6 +22,7 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 time_evol_zeta, force_horizontal_Xline,             &
                 Mach1_openBC, thermalization,                       &
                 eta_ARAZ_const, eta_ARAZ_on, eta_ARAZ_simple,       & 
+                tauIC_initial,                                      &
                 tauIC_ARAZ_on, tauIC_AP_on, tauIC_tanh,             &
                 tauIC_shift, tauIC_steep, bootstrap,                &
                 n_tor_fft_thresh, fix_axis_nodes,                   &
@@ -142,6 +143,10 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 D_perp_sc_num, D_par_sc_num,                        &
                 ZK_i_perp_sc_num, ZK_i_par_sc_num,                  &
                 ZK_e_perp_sc_num, ZK_e_par_sc_num, visco_par_sc_num,&
+                use_vms,                                            &
+                vms_coeff_AR, vms_coeff_AZ, vms_coeff_A3,           &
+                vms_coeff_UR, vms_coeff_UZ, vms_coeff_Up,           &
+                vms_coeff_rho, vms_coeff_Ti, vms_coeff_Te,          &
                 more_outfile_digits,                                &
                 force_central_node,                                 &
                 n_particles, tstep_particles, nstep_particles,      & !Particles extension

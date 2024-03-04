@@ -112,6 +112,7 @@ module phys_module
   logical :: eta_ARAZ_on          !< Full-MHD: to switch on/off resistive terms for AR and AZ equations
   logical :: eta_ARAZ_simple      !< Full-MHD: remove the Fprof dependence of Bphi in the resistive terms for AR and AZ (which should be compensated by current source anyway)
 
+  logical :: tauIC_initial        !< Full-MHD: add initial velocity to balance the ion-diamagnetic drift, which equals to -v_dia
   logical :: tauIC_ARAZ_on        !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   logical :: tauIC_AP_on          !< Full-MHD: to switch on/off diamagnetic terms for A_phi equation
   logical :: tauIC_tanh           !< Full-MHD: suppress the diamagnetic term near the boundary

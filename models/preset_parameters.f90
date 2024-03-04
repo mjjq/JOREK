@@ -675,6 +675,7 @@ subroutine preset_parameters
   eta_ARAZ_const     = 0.d0                 !< Use uniform resistivity for AR and AZ equations, used only if eta_ARAZ_on=.false.
   eta_ARAZ_on        = .true.               !< Full-MHD: to switch on/off resistive   terms for AR and AZ equations
   eta_ARAZ_simple    = .false.              !< Full-MHD: remove the Fprof dependence of Bphi in the resistive terms for AR and AZ (which should be compensated by current source anyway)
+  tauIC_initial      = .false.              !< Full-MHD: add initial velocity to balance the ion-diamagnetic drift, which equals to -v_dia
   tauIC_ARAZ_on      = .true.               !< Full-MHD: to switch on/off diamagnetic terms for AR and AZ equations
   tauIC_AP_on        = .true.               !< Full-MHD: to switch on/off diamagnetic terms for A_phi equation
   tauIC_tanh         = .false.              !< Full-MHD: suppress the diamagnetic term near the boundary

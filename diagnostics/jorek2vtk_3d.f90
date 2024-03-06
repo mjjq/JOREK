@@ -9,7 +9,6 @@ use mod_interp
 implicit none
 
 type (type_node_list)    :: node_list
-type (type_node_list), pointer :: aux_node_list
 type (type_element_list) :: element_list
 
 integer               :: nnoel, nnos, nel, nsub, inode, ielm, n_scalars, n_vectors
@@ -75,7 +74,7 @@ do i_tor=1, n_tor
   mode(i_tor) = + int(i_tor / 2) * n_period
 enddo
 
-call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 nnos = n_toroidal * nsub*nsub*node_list%n_nodes
 
 allocate(xyz(3,nnos), scalars(nnos,1:n_scalars), scalar_names(n_scalars))

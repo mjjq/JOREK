@@ -13,7 +13,6 @@ program demo
   implicit none
   
   type(type_node_list),         pointer :: node_list
-  type(type_node_list),         pointer :: aux_node_list
   type(type_element_list),      pointer :: element_list
   type (type_bnd_element_list), pointer :: bnd_elm_list
   type (type_bnd_node_list),    pointer :: bnd_node_list
@@ -90,7 +89,7 @@ program demo
   my_id = 0
   call initialise_parameters(my_id, "__NO_FILENAME__")
   call det_modes()
-  call import_restart(node_list, aux_node_list, element_list, 'jorek_restart',  rst_format, ierr, .true.)
+  call import_restart(node_list, element_list, 'jorek_restart',  rst_format, ierr, .true.)
   call initialise_basis()
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
   

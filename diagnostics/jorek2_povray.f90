@@ -43,7 +43,7 @@ type(type_node)        :: nodes(4)
 my_id = 0
 call initialise_parameters(my_id, "__NO_FILENAME__")
 call det_modes()
-call import_restart(node_list, aux_node_list,element_list, 'jorek_restart', rst_format, ierr, .true.)
+call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr, .true.)
 call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
 call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, output_bnd_elements)
 

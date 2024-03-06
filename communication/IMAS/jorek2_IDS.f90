@@ -116,7 +116,7 @@ program jorek2_IDS
     write(*,*)
     write(*,'(a,i9.9,a)') '#################### STEP ', i_step, ' ####################'
     write(*,*)
-    call import_restart(node_list, aux_node_list, element_list, file_name, rst_format, ierr)
+    call import_restart(node_list, element_list, file_name, rst_format, ierr)
     if (ierr /=0 ) then
        write(*,*) '  Could not read the JOREK restart file'
        stop

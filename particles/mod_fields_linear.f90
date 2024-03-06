@@ -349,7 +349,7 @@ subroutine do_read(this, sim, ev)
         end if
         inquire(file=trim(restart_file), exist=file_exists)
         if (file_exists) then
-          call import_hdf5_restart(f%node_list,aux_node_list,f%element_list,restart_file,this%rst_format,ierr)
+          call import_hdf5_restart(f%node_list,f%element_list,restart_file,this%rst_format,ierr)
           f%static = .true.
         else
           if (my_id .eq. 0) write(*,*) "ERROR: file ", trim(restart_file), " does not exist"
@@ -380,7 +380,7 @@ subroutine do_read(this, sim, ev)
           write(restart_file,'(A,i5.5,A)') trim(this%basename), this%i, '.h5'
           inquire(file=trim(restart_file), exist=file_exists)
           if (file_exists) then
-            call import_hdf5_restart(f%node_list,aux_node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
+            call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
             if (ierr .ne. 0) then
               if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
               call exit(1)
@@ -409,7 +409,7 @@ subroutine do_read(this, sim, ev)
           inquire(file=trim(restart_file), exist=file_exists)
           if (file_exists) then
             next_file_found=.true.
-            call merge_restart(f%node_list, aux_node_list, f%element_list, trim(restart_file), this%rst_format,my_id, ierr)
+            call merge_restart(f%node_list, f%element_list, trim(restart_file), this%rst_format,my_id, ierr)
             if (ierr .ne. 0) then
               if (my_id .eq. 0) write(*,*) "ERROR: cannot open restart file"
               call exit(1)
@@ -465,7 +465,7 @@ end subroutine do_read
 
 !> Import a binary restart file and merges it with the values currently known
 !> This can then be used to interpolate linearly between any two restart files
-subroutine merge_restart(node_list,aux_node_list,element_list, restart_file, format_rst,my_id, ierr)
+subroutine merge_restart(node_list,element_list, restart_file, format_rst,my_id, ierr)
   use data_structure
   use phys_module
   use mod_import_restart
@@ -473,7 +473,6 @@ subroutine merge_restart(node_list,aux_node_list,element_list, restart_file, for
 
   ! --- Routine parameters
   type(type_node_list),    intent(inout)     :: node_list
-  type(type_node_list),pointer,intent(inout) :: aux_node_list
   type(type_element_list), intent(inout)     :: element_list
   character(len=*),        intent(in)        :: restart_file !< Filename of new restart file to import
   integer,                 intent(out)       :: ierr
@@ -495,7 +494,7 @@ subroutine merge_restart(node_list,aux_node_list,element_list, restart_file, for
   tstart_old = t_start
 
   ! Import new values
-  call import_hdf5_restart(node_list,aux_node_list,element_list, restart_file, format_rst, ierr)
+  call import_hdf5_restart(node_list,element_list, restart_file, format_rst, ierr)
 
   ! Calculate deltas as values_new - values_old
   !$omp parallel do default(shared) private(inode)

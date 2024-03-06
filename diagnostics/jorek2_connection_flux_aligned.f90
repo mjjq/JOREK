@@ -120,7 +120,7 @@ program jorek2_connection_flux_aligned
   enddo
   
   call broadcast_phys(my_id)                                ! physics parameters
-  call import_restart(node_list, aux_node_list, element_list, 'jorek_restart', rst_format, ierr)
+  call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
   call boundary_from_grid(node_list, element_list, bnd_node_list, bnd_elm_list, .false.)
 
   ! --- Broadcast accross MPIs

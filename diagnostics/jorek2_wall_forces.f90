@@ -121,7 +121,7 @@ program jorek2_wall_forces
     write(file_in,'(A5,i5.5)') 'jorek', istep
 
     if ( my_id == 0 ) then
-      call import_restart(node_list, aux_node_list, element_list, file_in, rst_format, ierr2)
+      call import_restart(node_list, element_list, file_in, rst_format, ierr2)
     endif
     call MPI_BCAST(ierr2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
     if ( ierr2 /= 0 ) cycle

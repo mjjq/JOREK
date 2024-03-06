@@ -405,7 +405,6 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
   use mod_import_restart
   use phys_module
   use mpi
-  use nodes_elements, only: aux_node_list
   class(read_jorek_fields_interp_hermite_birkhoff), intent(inout) :: this
   class(jorek_fields_interp_hermite_birkhoff), intent(inout) :: f
   integer, intent(out) :: i_found
@@ -436,7 +435,7 @@ subroutine read_next_file(this, f, i_found, prefer_plus_2)
         next_file_found=.true.
 
         ! Read the next restart file
-        call import_hdf5_restart(f%node_list,aux_node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
+        call import_hdf5_restart(f%node_list,f%element_list,trim(restart_file),this%rst_format,ierr)
         call broadcast_elements(my_id, f%element_list)
         call broadcast_nodes(my_id, f%node_list)
         call broadcast_phys(my_id) ! we only really use tstep and t_start but this is simpler to write

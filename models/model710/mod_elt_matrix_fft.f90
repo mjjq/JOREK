@@ -639,15 +639,14 @@ do ms=1, n_gauss
       if (psi_norm .lt. particlesource_fix_profile_psi_max) then
         call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
         if ( (rho_axisym(ms,mt) .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
-          ! particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) / tstep
-	        particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt))
+          particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) ! / tstep
       endif
     endif
     if (heatsource_fix_profile) then
       if (psi_norm .lt. heatsource_fix_profile_psi_max) then
         call temperature(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, T_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
         if ( (T_axisym(ms,mt)   .lt. T_GS  ) .or. heatsource_fix_profile_allow_negative ) &
-          heat_source(ms,mt)     = (1.0/heatsource_fix_profile_tsteps) * (T_GS  -T_axisym(ms,mt)  ) / tstep
+          heat_source(ms,mt)     = (1.0/heatsource_fix_profile_tsteps) * (T_GS  -T_axisym(ms,mt)  ) ! / tstep
       endif
     endif
     

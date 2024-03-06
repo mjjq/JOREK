@@ -448,10 +448,10 @@ L_IL: do i_lines=1,n_lines
   
 
   ip_all(i_lines) = ip
-  Rp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Rp(1 : ip)
-  Zp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Zp(1 : ip)
-  Pp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Pp(1 : ip)
-  Tp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip) = Tp(1 : ip)
+  Rp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip) = Rp(1 : ip)
+  Zp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip) = Zp(1 : ip)
+  Pp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip) = Pp(1 : ip)
+  Tp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip) = Tp(1 : ip)
 
 end do L_IL
 !$omp end parallel do
@@ -460,10 +460,10 @@ end do L_IL
 ! write the data into files
 do i_lines=1,n_lines
   ip = ip_all(i_lines)
-  Rp(1 : ip) = Rp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
-  Zp(1 : ip) = Zp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
-  Pp(1 : ip) = Pp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
-  Tp(1 : ip) = Tp_all(i_lines * maxval(n_turn) + 1 : i_lines * maxval(n_turn) + ip)
+  Rp(1 : ip) = Rp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip)
+  Zp(1 : ip) = Zp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip)
+  Pp(1 : ip) = Pp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip)
+  Tp(1 : ip) = Tp_all((i_lines - 1) * maxval(n_turn) + 1 : (i_lines - 1) * maxval(n_turn) + ip)
 
   write(*,'(3x,a,i6,a,i6)') '=>',ip,' points for line: ', i_lines
 

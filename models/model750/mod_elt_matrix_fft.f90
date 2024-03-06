@@ -730,14 +730,14 @@ do ms=1, n_gauss
         if (psi_norm .lt. heatsource_i_fix_profile_psi_max) then
           call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Ti_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
           if ( (Ti_axisym(ms,mt)   .lt. Ti_GS  ) .or. heatsource_i_fix_profile_allow_negative ) &
-            heat_source_i(ms,mt)     = (1.0/heatsource_i_fix_profile_tsteps) * (Ti_GS  -Ti_axisym(ms,mt)  ) / tstep
+            heat_source_i(ms,mt)     = (1.0/heatsource_i_fix_profile_tsteps) * (Ti_GS  -Ti_axisym(ms,mt)  ) ! / tstep
         endif
       endif
       if (heatsource_e_fix_profile) then
         if (psi_norm .lt. heatsource_e_fix_profile_psi_max) then
           call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Te_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
           if ( (Te_axisym(ms,mt)   .lt. Te_GS  ) .or. heatsource_e_fix_profile_allow_negative ) &
-            heat_source_e(ms,mt)     = (1.0/heatsource_e_fix_profile_tsteps) * (Te_GS  -Te_axisym(ms,mt)  ) / tstep
+            heat_source_e(ms,mt)     = (1.0/heatsource_e_fix_profile_tsteps) * (Te_GS  -Te_axisym(ms,mt)  ) ! / tstep
         endif
       endif
     else
@@ -746,7 +746,7 @@ do ms=1, n_gauss
         if (psi_norm .lt. heatsource_fix_profile_psi_max) then
           call temperature(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, T_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
           if ( (T_axisym(ms,mt)   .lt. T_GS  ) .or. heatsource_fix_profile_allow_negative ) &
-            heat_source(ms,mt)     = (1.0/heatsource_fix_profile_tsteps) * (T_GS  -T_axisym(ms,mt)  ) / tstep
+            heat_source(ms,mt)     = (1.0/heatsource_fix_profile_tsteps) * (T_GS  -T_axisym(ms,mt)  ) ! / tstep
         endif
       endif
     endif      
@@ -754,8 +754,7 @@ do ms=1, n_gauss
       if (psi_norm .lt. particlesource_fix_profile_psi_max) then
         call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
         if ( (rho_axisym(ms,mt) .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
-          ! particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) / tstep
-	        particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt))
+          particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) ! / tstep
       endif
     endif
     ! --- Bootstrap current 
@@ -4503,7 +4502,7 @@ do i=1,n_vertex_max
                                                      - ((D_par_imp+D_par_imp_sc_num*tau_sc)-D_prof_imp) * BgradVstar__k * BgradRhoimp_rhoimp__n / BB2
                   endif
 
-                  if (use_sc) call add_vms_to_elm()
+                  if (use_vms) call add_vms_to_elm()
 
                   if (use_fft) then
                     index_kl =       n_var*n_degrees*(k-1) +       n_var*(l-1) + 1
@@ -6066,7 +6065,7 @@ res_jac__p = 0.d0 ; res_jac__n = 0.d0 ; res_jac__nn = 0.d0
                                                                      - PneoR_rho__n   
 
     res_jac__p (var_UR,var_Ti ) = rho0 * VdiaGradUR_Ti__p  - rho0 * VdiaP0_Ti__p * Up0 / R  &
-                                + (rho0_R*Ti     + rho0*Ti_R       ) - PneoR_Ti__p - dvisco_dT * T * Qvisc_UR__p
+                                + (rho0_R*Ti     + rho0*Ti_R       ) - PneoR_Ti__p !- dvisco_dT * Te * Qvisc_UR__p ! this term should not be included ?
     res_jac__n (var_UR,var_Ti ) = rho0 * VdiaGradUR_Ti__n  - rho0 * VdiaP0_Ti__n * Up0 / R &
                                                                       - PneoR_Ti__n 
 

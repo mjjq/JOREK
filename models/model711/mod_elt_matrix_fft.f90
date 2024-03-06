@@ -101,12 +101,12 @@ real*8     :: p0,   p0_R,   p0_Z,   p0_p,   p0_s,   p0_t,   p0_corr
 real*8     :: AR,  AR_R,  AR_Z,  AR_p,  AR_s,  AR_t
 real*8     :: AZ,  AZ_R,  AZ_Z,  AZ_p,  AZ_s,  AZ_t
 real*8     :: A3,  A3_R,  A3_Z,  A3_p,  A3_s,  A3_t
-real*8     :: UR,  UR_R,  UR_Z,  UR_p,  UR_s,  UR_t
-real*8     :: UZ,  UZ_R,  UZ_Z,  UZ_p,  UZ_s,  UZ_t
-real*8     :: Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t
-real*8     :: Ti,  Ti_R,  Ti_Z,  Ti_p,  Ti_s,  Ti_t
-real*8     :: Te,  Te_R,  Te_Z,  Te_p,  Te_s,  Te_t
-real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t
+real*8     :: UR,  UR_R,  UR_Z,  UR_p,  UR_s,  UR_t, UR_RR, UR_ZZ, UR_pp
+real*8     :: UZ,  UZ_R,  UZ_Z,  UZ_p,  UZ_s,  UZ_t, UZ_RR, UZ_ZZ, UZ_pp
+real*8     :: Up,  Up_R,  Up_Z,  Up_p,  Up_s,  Up_t, Up_RR, Up_ZZ, Up_pp
+real*8     :: Ti,  Ti_R,  Ti_Z,  Ti_p,  Ti_s,  Ti_t, Ti_RR, Ti_ZZ, Ti_pp
+real*8     :: Te,  Te_R,  Te_Z,  Te_p,  Te_s,  Te_t, Te_RR, Te_ZZ, Te_pp
+real*8     :: rho, rho_R, rho_Z, rho_p, rho_s, rho_t, rho_RR, rho_ZZ, rho_pp
 
 real*8     :: v,  v_R,  v_Z,  v_s,  v_t,  v_p,  v_ss,  v_st,  v_tt,  v_RR,  v_ZZ
 real*8     :: bf, bf_R, bf_Z, bf_s, bf_t, bf_p, bf_ss, bf_st, bf_tt, bf_RR, bf_ZZ
@@ -232,7 +232,7 @@ real*8     :: PneoZ_rho__p, PneoZ_rho__n
 real*8     :: PneoZ_Ti__p,  PneoZ_Ti__n
 real*8     :: PneoZ_UR,     PneoZ_UZ
 
-real*8     :: ZKi_prof, ZKe_prof, D_prof, psi_norm
+real*8     :: ZKi_prof, ZKe_prof, D_par_prof, D_prof, psi_norm
 
 real*8     :: eta_T, visco_T, deta_dT, d2eta_d2T, dvisco_dT, visco_num_T
 real*8     :: eta_num_T, eta_R, eta_Z, eta_p, Zki_par_T, dZKi_par_dT, Zke_par_T, dZKe_par_dT
@@ -593,22 +593,21 @@ do ms=1, n_gauss
       if (psi_norm .lt. particlesource_fix_profile_psi_max) then
         call density    (xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, rho_GS,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
         if ( (rho_axisym(ms,mt) .lt. rho_GS) .or. particlesource_fix_profile_allow_negative ) &
-          ! particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) / tstep
-	        particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt))
+          particle_source(ms,mt) = (1.0/particlesource_fix_profile_tsteps) * (rho_GS-rho_axisym(ms,mt)) ! / tstep
       endif
     endif
     if (heatsource_i_fix_profile) then
       if (psi_norm .lt. heatsource_i_fix_profile_psi_max) then
         call temperature_i(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Ti_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
         if ( (Ti_axisym(ms,mt)   .lt. Ti_GS  ) .or. heatsource_i_fix_profile_allow_negative ) &
-          heat_source_i(ms,mt)     = (1.0/heatsource_i_fix_profile_tsteps) * (Ti_GS  -Ti_axisym(ms,mt)  ) / tstep
+          heat_source_i(ms,mt)     = (1.0/heatsource_i_fix_profile_tsteps) * (Ti_GS  -Ti_axisym(ms,mt)  ) ! / tstep
       endif
     endif
     if (heatsource_e_fix_profile) then
       if (psi_norm .lt. heatsource_e_fix_profile_psi_max) then
         call temperature_e(xpoint2, xcase2, Z, Z_xpoint, psi_axisym(ms,mt),psi_axis,psi_bnd, Te_GS  ,dd1,dd2,dd3,dd4,dd5,dd6,dd7,dd8)
         if ( (Te_axisym(ms,mt)   .lt. Te_GS  ) .or. heatsource_e_fix_profile_allow_negative ) &
-          heat_source_e(ms,mt)     = (1.0/heatsource_e_fix_profile_tsteps) * (Te_GS  -Te_axisym(ms,mt)  ) / tstep
+          heat_source_e(ms,mt)     = (1.0/heatsource_e_fix_profile_tsteps) * (Te_GS  -Te_axisym(ms,mt)  ) ! / tstep
       endif
     endif
     ! --- Bootstrap current 
@@ -976,6 +975,7 @@ do i=1,n_vertex_max
           psi_norm = get_psi_n(psi_axisym(ms,mt), y_g(ms,mt))
 
           ! --- Diffusions
+          D_par_prof = D_par
           D_prof   = get_dperp (psi_norm)
           ZKi_prof = get_zk_iperp(psi_norm)
           ZKe_prof = get_zk_eperp(psi_norm)
@@ -1421,12 +1421,12 @@ do i=1,n_vertex_max
             Qvec_p(var_rho) = - v * ( rho0 * divU + UgradRho )                  &
                               + rho0 * VdiaGradVstar__p                         &
                               - D_prof * gradRho_gradVstar__p                   &
-                              - (D_par-D_prof) * BgradVstar__p * BgradRho / BB2 &
+                              - (D_par_prof-D_prof) * BgradVstar__p * BgradRho / BB2 &
                               + v * particle_source(ms,mt)                      &
                               - D_perp_num * lap_Vstar * lap_Rho
             Qvec_k(var_rho) = + rho0 * VdiaGradVstar__k                         &
                               - D_prof * gradRho_gradVstar__k                   &
-                              - (D_par-D_prof) * BgradVstar__k * BgradRho / BB2
+                              - (D_par_prof-D_prof) * BgradVstar__k * BgradRho / BB2
 
             !###################################################################################################
             !#  equation 8 (Ion Pressure equation)                                                             #
@@ -1543,6 +1543,14 @@ do i=1,n_vertex_max
                   AR_Rp = bf_Rp ; AR_Zp  = bf_Zp ; AR_pp = bf_pp
                   AZ_Rp = bf_Rp ; AZ_Zp  = bf_Zp ; AZ_pp = bf_pp
                   A3_Rp = bf_Rp ; A3_Zp  = bf_Zp ; A3_pp = bf_pp
+
+                  UR_RR = bf_RR ; UR_ZZ  = bf_ZZ ; UR_pp = bf_pp
+                  UZ_RR = bf_RR ; UZ_ZZ  = bf_ZZ ; UZ_pp = bf_pp
+                  Up_RR = bf_RR ; Up_ZZ  = bf_ZZ ; Up_pp = bf_pp
+
+                  rho_RR= bf_RR ; rho_ZZ = bf_ZZ ; rho_pp= bf_pp
+                  Ti_RR = bf_RR ; Ti_ZZ  = bf_ZZ ; Ti_pp = bf_pp
+                  Te_RR = bf_RR ; Te_ZZ  = bf_ZZ ; Te_pp = bf_pp
 
                   ! --- Linearised quantities
                   BR0_AR    =   0.d0     ; BR0_AZ__n = - AZ_p / R ; BR0_A3 =   A3_Z / R
@@ -2558,46 +2566,46 @@ do i=1,n_vertex_max
                   Pjac   (var_rho,var_rho) =   v * rho
 
                   Qjac_p (var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__p &
-                                             - (D_par-D_prof) * BgradVstar_AR__p * BgradRho       / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__p    * BgradRho_AR__p / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AR__p
+                                             - (D_par_prof-D_prof) * BgradVstar_AR__p * BgradRho       / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AR__p / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AR__p
                   Qjac_n (var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__n &
-                                             - (D_par-D_prof) * BgradVstar_AR__n * BgradRho       / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__p    * BgradRho_AR__n / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AR__n
+                                             - (D_par_prof-D_prof) * BgradVstar_AR__n * BgradRho       / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AR__n / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AR__n
                   Qjac_k (var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__k &
-                                             - (D_par-D_prof) * BgradVstar_AR__k * BgradRho       / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__k    * BgradRho_AR__p / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AR__p
+                                             - (D_par_prof-D_prof) * BgradVstar_AR__k * BgradRho       / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AR__p / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AR__p
                   Qjac_kn(var_rho,var_AR)  = + rho0 * VdiaGradVstar_AR__kn &
-                                             - (D_par-D_prof) * BgradVstar__k    * BgradRho_AR__n / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AR__n
+                                             - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AR__n / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AR__n
 
                   Qjac_p (var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__p &
-                                             - (D_par-D_prof) * BgradVstar_AZ__p * BgradRho       / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__p    * BgradRho_AZ__p / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AZ__p
+                                             - (D_par_prof-D_prof) * BgradVstar_AZ__p * BgradRho       / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AZ__p / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AZ__p
                   Qjac_n (var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__n &
-                                             - (D_par-D_prof) * BgradVstar_AZ__n * BgradRho       / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__p    * BgradRho_AZ__n / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AZ__n
+                                             - (D_par_prof-D_prof) * BgradVstar_AZ__n * BgradRho       / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_AZ__n / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho       / BB2**2 * BB2_AZ__n
                   Qjac_k (var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__k &
-                                             - (D_par-D_prof) * BgradVstar_AZ__k * BgradRho       / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__k    * BgradRho_AZ__p / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AZ__p
+                                             - (D_par_prof-D_prof) * BgradVstar_AZ__k * BgradRho       / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AZ__p / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AZ__p
                   Qjac_kn(var_rho,var_AZ)  = + rho0 * VdiaGradVstar_AZ__kn &
-                                             - (D_par-D_prof) * BgradVstar__k    * BgradRho_AZ__n / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AZ__n
+                                             - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_AZ__n / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho       / BB2**2 * BB2_AZ__n
 
                   Qjac_p (var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__p &
-                                             - (D_par-D_prof) * BgradVstar_A3__p * BgradRho    / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__p    * BgradRho_A3 / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__p    * BgradRho    / BB2**2 * BB2_A3
+                                             - (D_par_prof-D_prof) * BgradVstar_A3__p * BgradRho    / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__p    * BgradRho_A3 / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__p    * BgradRho    / BB2**2 * BB2_A3
                   Qjac_n (var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__n
                   Qjac_k (var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__k &
-                                             - (D_par-D_prof) * BgradVstar_A3__k * BgradRho    / BB2 &
-                                             - (D_par-D_prof) * BgradVstar__k    * BgradRho_A3 / BB2 &
-                                             + (D_par-D_prof) * BgradVstar__k    * BgradRho    / BB2**2 * BB2_A3
+                                             - (D_par_prof-D_prof) * BgradVstar_A3__k * BgradRho    / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__k    * BgradRho_A3 / BB2 &
+                                             + (D_par_prof-D_prof) * BgradVstar__k    * BgradRho    / BB2**2 * BB2_A3
                   Qjac_kn(var_rho,var_A3)  = + rho0 * VdiaGradVstar_A3__kn
 
                   Qjac_p (var_rho,var_UR)  = - v * ( rho0 * divU_UR + UgradRho_UR )
@@ -2611,16 +2619,16 @@ do i=1,n_vertex_max
                                              + rho  * VdiaGradVstar__p &
                                              + rho0 * VdiaGradVstar_rho__p &
                                              - D_prof * gradRho_gradVstar_rho__p                      &
-                                             - (D_par-D_prof) * BgradVstar__p * BgradRho_rho__p / BB2 &
+                                             - (D_par_prof-D_prof) * BgradVstar__p * BgradRho_rho__p / BB2 &
                                              - D_perp_num * lap_Vstar * lap_bf
                   Qjac_n (var_rho,var_rho) = - v * (UgradRho_rho__n )                                 &
                                              + rho0 * VdiaGradVstar_rho__n &
-                                             - (D_par-D_prof) * BgradVstar__p * BgradRho_rho__n / BB2
+                                             - (D_par_prof-D_prof) * BgradVstar__p * BgradRho_rho__n / BB2
                   Qjac_k (var_rho,var_rho) = + rho0 * VdiaGradVstar_rho__k &
-                                             - (D_par-D_prof) * BgradVstar__k * BgradRho_rho__p / BB2
+                                             - (D_par_prof-D_prof) * BgradVstar__k * BgradRho_rho__p / BB2
                   Qjac_kn(var_rho,var_rho) = + rho0 * VdiaGradVstar_rho__kn &
                                              - D_prof * gradRho_gradVstar_rho__kn                     &
-                                             - (D_par-D_prof) * BgradVstar__k * BgradRho_rho__n / BB2
+                                             - (D_par_prof-D_prof) * BgradVstar__k * BgradRho_rho__n / BB2
 
                   Qjac_p (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__p
                   Qjac_n (var_rho,var_Ti ) = + rho0 * VdiaGradVstar_Ti__n
@@ -2779,6 +2787,7 @@ do i=1,n_vertex_max
 
                   Qjac_p (var_Te,var_Ti)  = + v * ddTe_i_dTi
 
+                  if (use_vms) call add_vms_to_elm()
 
                   if (use_fft) then
                     index_kl =       n_var*n_degrees*(k-1) +       n_var*(l-1) + 1
@@ -3201,14 +3210,14 @@ subroutine calculate_sc_quantities()
   
   ! Updates in the physical diffusivities to locally add numerical
   ! stabilization.
-  ! visco_par = visco_par + visco_par_sc_num * tau_sc ! unused
-  visco_T   = visco_T   + visco_sc_num     * tau_sc
-  D_par     = D_par     + D_par_sc_num     * tau_sc
-  D_prof    = D_prof    + D_perp_sc_num    * tau_sc
-  ZKi_par_T = ZKi_par_T + ZK_i_par_sc_num  * tau_sc
-  ZKi_prof  = ZKi_prof  + ZK_i_perp_sc_num * tau_sc
-  ZKe_par_T = ZKe_par_T + ZK_e_par_sc_num  * tau_sc
-  ZKe_prof  = ZKe_prof  + ZK_e_perp_sc_num * tau_sc
+  ! visco_par = visco_par + visco_par_sc_num * tau_sc ! unused, every step visco_par should be reset
+  D_par_prof = D_par_prof + D_par_sc_num     * tau_sc ! every step D_par_prof     should be reset
+  visco_T    = visco_T    + visco_sc_num     * tau_sc
+  D_prof     = D_prof     + D_perp_sc_num    * tau_sc
+  ZKi_par_T  = ZKi_par_T  + ZK_i_par_sc_num  * tau_sc
+  ZKi_prof   = ZKi_prof   + ZK_i_perp_sc_num * tau_sc
+  ZKe_par_T  = ZKe_par_T  + ZK_e_par_sc_num  * tau_sc
+  ZKe_prof   = ZKe_prof   + ZK_e_perp_sc_num * tau_sc
 
 end subroutine calculate_sc_quantities
 
@@ -3381,6 +3390,388 @@ subroutine add_vms_to_rhs()
 
   
 end subroutine add_vms_to_rhs
+
+subroutine add_vms_to_elm()
+
+  res_jac__p = 0.d0 ; res_jac__n = 0.d0 ; res_jac__nn = 0.d0
+  
+  vsR_UR__p = UR / R + UR_RR + UR_ZZ - UR / R**2 + UR / R**2
+  vsR_UR__n = 0.d0
+  vsR_UR__nn= UR_pp / R**2
+  
+  vsR_UZ__p = 0.d0
+  vsR_UZ__n = 0.d0
+  vsR_UZ__nn= 0.d0
+  
+  vsR_Up__p = 0.d0
+  vsR_Up__n = - 2.d0 * Up_p / R
+  vsR_Up__nn= 0.d0
+  
+  vsZ_UR__p = 0.d0
+  vsZ_UR__n = 0.d0
+  vsZ_UR__nn= 0.d0
+  
+  vsZ_UZ__p = UZ / R + UZ_RR + UZ_ZZ
+  vsZ_UZ__n = 0.d0
+  vsZ_UZ__nn= UZ_pp / R**2
+  
+  vsZ_Up__p = 0.d0
+  vsZ_Up__n = 0.d0
+  vsZ_Up__nn= 0.d0
+  
+  vsp_UR__p = 0.d0
+  vsp_UR__n = 2.d0 * UR_p / R
+  vsp_UR__nn= 0.d0
+  
+  vsp_UZ__p = 0.d0
+  vsp_UZ__n = 0.d0
+  vsp_UZ__nn= 0.d0
+  
+  vsp_Up__p = Up / R + Up_RR + Up_ZZ - Up / R**2
+  vsp_Up__n = 0.d0
+  vsp_Up__nn= Up_pp / R**2
+  
+  ! AR equation:
+  res_jac__p(var_AR, var_AR) = - UZ0 * Bp0_AR &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AR__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AR__p &
+                               + eta_T * JR0_AR__p
+  res_jac__n(var_AR, var_AR) =   Up0 * BZ0_AR__n &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AR__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AR__n &
+                               + eta_T * JR0_AR__n
+  res_jac__nn(var_AR, var_AR) = + eta_T * JR0_AR__nn
+  
+  res_jac__p(var_AR, var_AZ) = - UZ0 * Bp0_AZ + Up0 * BZ0_AZ &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0 * BgradPe_AZ__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0 * BgradPe * BB2_AZ__p &
+                               + eta_T * JR0_AZ__p
+  res_jac__n(var_AR, var_AZ) = + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0_AZ__n * BgradPe &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BR0       * BgradPe_AZ__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BR0       * BgradPe * BB2_AZ__n &
+                               + eta_T * JR0_AZ__n
+  res_jac__nn(var_AR, var_AZ)= + eta_T * JR0_AZ__nn
+  
+  res_jac__p(var_AR, var_A3) = - UZ0 * Bp0_A3 + Up0 * BZ0_A3 &
+                               - tauIC_ARAZ* tau_IC*F0/rho0_corr/BB2    * BR0_A3 * BgradPe &
+                               - tauIC_ARAZ* tau_IC*F0/rho0_corr/BB2    * BR0    * BgradPe_A3 &
+                               + tauIC_ARAZ* tau_IC*F0/rho0_corr/BB2**2 * BR0    * BgradPe * BB2_A3 &
+                               + eta_T * JR0_A3__p
+  res_jac__n(var_AR, var_A3) = + eta_T * JR0_A3__n
+  res_jac__nn(var_AR, var_A3)= + eta_T * JR0_A3__nn
+  
+  res_jac__p(var_AR, var_UZ) = - UZ * Bp0 
+  res_jac__p(var_AR, var_Up) =   Up * BZ0 
+  
+  res_jac__p(var_AR, var_rho)= - tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BR0 * BgradPe_rho__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr**2/BB2 * BR0 * BgradPe * rho
+  
+  res_jac__n(var_AR, var_rho)= + tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BR0 * BgradPe_rho__n
+  
+  res_jac__p(var_AR,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__p + eta_T_T * JR0 
+  res_jac__n(var_AR,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BR0 * BgradPe_Te__n
+  
+  ! AZ equation:
+  res_jac__p(var_AZ, var_AR) = - Up0 * BR0_AR + UR0 * Bp0_AR &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AR__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AR__p &
+                               + eta_T * JZ0_AR__p
+  res_jac__n(var_AZ, var_AR) = - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0_AR__n * BgradPe &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0       * BgradPe_AR__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0       * BgradPe * BB2_AR__n &
+                               + eta_T * JZ0_AZ__n
+  res_jac__nn(var_AR, var_AR) = + eta_T * JZ0_AR__nn
+  
+  res_jac__p(var_AZ, var_AZ) = + UR0 * Bp0_AZ &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AZ__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AZ__p &
+                               + eta_T * JZ0_AZ__p
+  res_jac__n(var_AZ, var_AZ) = - Up0 * BR0_AZ__n &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0 * BgradPe_AZ__n &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0 * BgradPe * BB2_AZ__n &
+                               + eta_T * JZ0_AZ__n
+  res_jac__nn(var_AZ, var_AZ) = + eta_T * JZ0_AZ__nn
+  
+  res_jac__p(var_AZ, var_A3) = - Up0 * BR0_A3 + UR0 * Bp0_A3 &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0_A3 * BgradPe &
+                               - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2    * BZ0    * BgradPe_A3 &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2**2 * BZ0    * BgradPe * BB2_A3 &
+                               + eta_T * JZ0_A3__p
+  res_jac__n (var_AZ, var_A3) = + eta_T * JZ0_A3__n
+  res_jac__nn(var_AZ, var_A3) = + eta_T * JZ0_A3__nn
+  
+  res_jac__p (var_AZ,var_UR) =   UR * Bp0
+  res_jac__p (var_AZ,var_Up) = - Up * BR0
+  
+  res_jac__p (var_AZ,var_rho)= - tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BZ0 * BgradPe_rho__p &
+                               + tauIC_ARAZ * tau_IC*F0/rho0_corr**2/BB2 * BZ0 * BgradPe * rho
+  res_jac__n (var_AZ,var_rho)= - tauIC_ARAZ * tau_IC*F0/rho0_corr   /BB2 * BZ0 * BgradPe_rho__n
+  
+  res_jac__p (var_AZ,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__p + eta_T_T * JZ0
+  res_jac__n (var_AZ,var_Te )= - tauIC_ARAZ * tau_IC*F0/rho0_corr/BB2 * BZ0 * BgradPe_Te__n
+  
+  ! A3 equation:
+  res_jac__p(var_A3, var_AR) = + UZ0 * BR0_AR * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0_AR * BgradPe &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__p &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__p &
+                               + R * eta_T * Jp0_AR__p
+  res_jac__n(var_A3, var_AR) = - UR0 * BZ0_AR__n * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AR__n &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AR__n &
+                               + R * eta_T * Jp0_AR__n
+  res_jac__nn(var_A3, var_AR) = + R * eta_T * Jp0_AR__nn
+  
+  res_jac__p(var_A3, var_AZ) = - UR0 * BZ0_AZ * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0_AZ * BgradPe &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__p &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__p &
+                               + R * eta_T * Jp0_AZ__p
+  res_jac__n(var_A3, var_AZ) = + UZ0 * BR0_AZ__n * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_AZ__n &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_AZ__n &
+                               + R * eta_T * Jp0_AZ__n
+  res_jac__nn(var_A3, var_AZ) = + R * eta_T * Jp0_AZ__nn
+  
+  res_jac__p(var_A3, var_A3) = - UR0 * BZ0_A3 * R + UZ0 * BR0_A3 * R &
+                               - tau_IC*F0/rho0_corr/BB2    * R*Bp0    * BgradPe_A3 &
+                               + tau_IC*F0/rho0_corr/BB2**2 * R*Bp0    * BgradPe * BB2_A3 &
+                               + R * eta_T * Jp0_A3__p
+  res_jac__n (var_A3, var_A3) = + R * eta_T * Jp0_A3__n
+  res_jac__nn(var_A3, var_A3) = + R * eta_T * Jp0_A3__nn
+  
+  
+  res_jac__p(var_A3,var_UR) = - UR * BZ0
+  res_jac__n(var_A3,var_UZ) = + UZ * BR0
+  
+  res_jac__p(var_A3,var_rho) = - tau_IC*F0/rho0_corr   /BB2 * R*Bp0 * BgradPe_rho__p &
+                               + tau_IC*F0/rho0_corr**2/BB2 * R*Bp0 * BgradPe * rho
+  res_jac__n (var_A3,var_rho)= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_rho__n
+  
+  res_jac__p (var_A3,var_Te )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__p + R * eta_T_T * Jp0
+  res_jac__n (var_A3,var_Te )= - tau_IC*F0/rho0_corr/BB2 * R*Bp0 * BgradPe_Te__n
+  
+  ! UR equation:
+  res_jac__p(var_UR,var_AR ) =  rho0 * ( VdiaGradUR_AR__p  - VdiaP0_AR__p * Up0 / R ) - PneoR_AR__p
+  res_jac__n(var_UR,var_AR ) =  rho0 * ( VdiaGradUR_AR__n  - VdiaP0_AR__n * Up0 / R ) - PneoR_AR__n
+  
+  res_jac__p(var_UR,var_AZ ) =  rho0 * ( VdiaGradUR_AZ__p  - VdiaP0_AZ__p * Up0 / R ) - PneoR_AZ__p
+  res_jac__n(var_UR,var_AZ ) =  rho0 * ( VdiaGradUR_AZ__n  - VdiaP0_AZ__n * Up0 / R ) - PneoR_AZ__n
+  
+  res_jac__p(var_UR,var_A3 ) =  rho0 * ( VdiaGradUR_A3__p  - VdiaP0_A3__p * Up0 / R ) - PneoR_A3__p
+  res_jac__n(var_UR,var_A3 ) =  rho0 * ( VdiaGradUR_A3__n  - VdiaP0_A3__n * Up0 / R ) - PneoR_A3__n
+  
+  res_jac__p(var_UR, var_UR) =  rho0 * UgradUR_UR__p + rho0 * VdiaGradUR_UR__p &
+                               - visco_T * vsR_UR__p - PneoR_UR + particle_source(ms,mt) * UR 
+  res_jac__n(var_UR, var_UR) =  rho0 * UgradUR_UR__n + rho0 * VdiaGradUR_UR__n &
+                               - visco_T * vsR_UR__n
+  res_jac__nn(var_UR, var_UR)= - visco_T * vsR_UR__nn
+  
+  res_jac__p(var_UR, var_UZ) =  rho0 * UgradUR_UZ - visco_T * vsR_UZ__p - PneoR_UZ
+  res_jac__n(var_UR, var_UZ) =                    - visco_T * vsR_UZ__n           
+  res_jac__nn(var_UR, var_UZ)=                    - visco_T * vsR_UZ__nn          
+  
+  res_jac__p(var_UR, var_Up) = rho0 * UgradUR_Up - 2.0*rho0*Up*Up0**2 / R - rho0 * VdiaP0 * Up / R &
+                                             - visco_T * vsR_Up__p 
+  res_jac__n(var_UR, var_Up) =               - visco_T * vsR_Up__n 
+  res_jac__nn(var_UR, var_Up)=               - visco_T * vsR_Up__nn
+  
+  ! approximation
+  res_jac__p (var_UR,var_rho) = rho * UgradUR - rho * Up0 * Up0 / R                     &
+                              + rho0 * VdiaGradUR_rho__p + rho * VdiaGradUR             &
+                              - rho0 * VdiaP0_rho__p * Up0 / R - rho * VdiaP0 * Up0 / R &
+                              + rho_R*(Ti0+Te0) + rho*(Ti0_R+Te0_R) - PneoR_rho__p
+  res_jac__n (var_UR,var_rho) = rho0 * VdiaGradUR_rho__n                                &
+                              - rho0 * VdiaP0_rho__n * Up0 / R                          &
+                                                                   - PneoR_rho__n   
+  
+  res_jac__p (var_UR,var_Ti ) = rho0 * VdiaGradUR_Ti__p  - rho0 * VdiaP0_Ti__p * Up0 / R  &
+                              + (rho0_R*Ti     + rho0*Ti_R       ) - PneoR_Ti__p !- dvisco_dT * Te * Qvisc_UR__p ! this term should not be included ?
+  res_jac__n (var_UR,var_Ti ) = rho0 * VdiaGradUR_Ti__n  - rho0 * VdiaP0_Ti__n * Up0 / R &
+                                                                    - PneoR_Ti__n 
+  
+  res_jac__p (var_UR,var_Te ) =  (rho0_R*Te     + rho0*Te_R       ) + dvisco_dT * Te * vsR 
+  
+  ! UZ equation:
+  res_jac__p(var_UZ,var_AR ) =  rho0 * VdiaGradUZ_AR__p - PneoZ_AR__p
+  res_jac__n(var_UZ,var_AR ) =  rho0 * VdiaGradUZ_AR__n - PneoZ_AR__n
+  
+  res_jac__p(var_UZ,var_AZ ) =  rho0 * VdiaGradUZ_AZ__p - PneoZ_AZ__p
+  res_jac__n(var_UZ,var_AZ ) =  rho0 * VdiaGradUZ_AZ__n - PneoZ_AZ__n
+  
+  res_jac__p(var_UZ,var_A3 ) =  rho0 * VdiaGradUZ_A3__p - PneoZ_A3__p
+  res_jac__n(var_UZ,var_A3 ) =  rho0 * VdiaGradUZ_A3__n - PneoZ_A3__n
+  
+  res_jac__p(var_UZ, var_UR) =  rho0 * UgradUZ_UR - visco_T * vsZ_UR__p - PneoZ_UR
+  res_jac__n(var_UZ, var_UR) =                    - visco_T * vsR_UR__n           
+  res_jac__nn(var_UZ, var_UR)=                    - visco_T * vsR_UR__nn          
+  
+  res_jac__p(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__p - visco_T * vsZ_UZ__p - PneoZ_UZ + particle_source(ms,mt) * UZ
+  res_jac__n(var_UZ, var_UZ) = rho0 * UgradUZ_UZ__n - visco_T * vsZ_UZ__n
+  res_jac__nn(var_UZ, var_UZ)=                      - visco_T * vsZ_UZ__nn
+  
+  res_jac__p(var_UZ, var_Up) = rho0 * UgradUZ_Up - visco_T * vsZ_Up__p 
+  res_jac__n(var_UZ, var_Up) =                   - visco_T * vsZ_Up__n 
+  res_jac__nn(var_UZ, var_Up)=                   - visco_T * vsZ_Up__nn
+  
+  ! approximation
+  res_jac__p (var_UZ,var_rho) =  rho0 * VdiaGradUZ_rho__p + rho_Z*(Ti0+Te0) + rho*(Ti0_Z+Te0_Z) - PneoZ_rho__p
+  res_jac__n (var_UZ,var_rho) =  rho0 * VdiaGradUZ_rho__n                                        - PneoZ_rho__n
+  
+  res_jac__p (var_UZ,var_Ti ) =  rho0 * VdiaGradUZ_Ti__p  + (rho0_Z*Ti       + rho0*Ti_Z       ) - PneoZ_Ti__p
+  res_jac__n (var_UZ,var_Ti ) =  rho0 * VdiaGradUZ_Ti__n                                         - PneoZ_Ti__n
+  
+  res_jac__p (var_UZ,var_Te ) =  (rho0_Z*Te     + rho0*Te_Z       ) - dvisco_dT * Te * vsZ
+  
+  ! Up equation:
+  res_jac__p(var_Up,var_AR ) =  rho0 * (VdiaGradUp_AR__p  + VdiaP0_AR__p * UR0 / R) - PneoR_AR__p
+  res_jac__n(var_Up,var_AR ) =  rho0 * (VdiaGradUp_AR__n  + VdiaP0_AR__n * UR0 / R) - PneoR_AR__n
+  
+  res_jac__p(var_Up,var_AZ ) =  rho0 * (VdiaGradUp_AZ__p  + VdiaP0_AZ__p * UR0 / R) - PneoR_AZ__p
+  res_jac__n(var_Up,var_AZ ) =  rho0 * (VdiaGradUp_AZ__n  + VdiaP0_AZ__n * UR0 / R) - PneoR_AZ__n
+  
+  res_jac__p(var_Up,var_A3 ) =  rho0 * (VdiaGradUp_A3__p  + VdiaP0_A3__p * UR0 / R) - PneoR_A3__p
+  res_jac__n(var_Up,var_A3 ) =  rho0 * (VdiaGradUp_A3__n  + VdiaP0_A3__n * UR0 / R) - PneoR_A3__n
+  
+  res_jac__p(var_Up, var_UR) =  rho0 * UgradUp_UR     + rho0 * UR * Up0 / R      + rho0 * VdiaP0 * UR / R &
+                               - visco_T * vsp_UR__p
+  res_jac__n(var_Up, var_UR) = - visco_T * vsp_UR__n
+  res_jac__nn(var_Up, var_UR)= - visco_T * vsp_UR__nn
+  
+  res_jac__p(var_Up, var_UZ) =  rho0 * UgradUp_UZ - visco_T * vsp_UZ__p 
+  res_jac__n(var_Up, var_UZ) =                    - visco_T * vsp_UZ__n 
+  res_jac__nn(var_Up, var_UZ)=                    - visco_T * vsp_UZ__nn
+  
+  res_jac__p(var_Up, var_Up) =  rho0 * UgradUp_Up__p + rho0 * UR0 * Up / R - rho0 * VdiaGradUp_Up__p &
+                                             - visco_T * vsR_Up__p + particle_source(ms,mt) * Up
+  res_jac__n(var_Up, var_Up) =  rho0 * UgradUp_Up__n                       - rho0 * VdiaGradUp_Up__n &
+                                             - visco_T * vsR_Up__n 
+  res_jac__nn(var_Up, var_Up)=               - visco_T * vsR_Up__nn
+  
+  res_jac__p (var_Up,var_rho) = rho0 *  ( VdiaGradUp_rho__p + VdiaP0_rho__p * UR0 / R ) &
+                              + rho  *  ( VdiaGradUp        + VdiaP0 * UR0 / R )
+  res_jac__n (var_Up,var_rho) = rho0 *  ( VdiaGradUp_rho__n + VdiaP0_rho__n * UR0 / R ) &
+                              + (rho_p*(Ti0+Te0) + rho*(Ti0_p+Te0_p))/R
+  
+  res_jac__p (var_Up,var_Ti ) = rho0 * ( VdiaGradUp_Ti__p  + VdiaP0_Ti__p * UR0 / R ) 
+  res_jac__n (var_Up,var_Ti ) = rho0 * ( VdiaGradUp_Ti__n  + VdiaP0_Ti__n * UR0 / R ) &
+                              +  (rho0_p * Ti   + rho0 * Ti_p   ) / R
+  
+  res_jac__p (var_Up,var_Te ) =  - dvisco_dT * Te * vsp
+  res_jac__n (var_Up,var_Te ) =  (rho0_p * Te   + rho0 * Te_p   ) / R - dvisco_dT * Te * vsp 
+  
+  ! rho equation
+  res_jac__p(var_rho, var_UR) =  UR * rho0_R + rho0 * divU_UR
+  
+  res_jac__p(var_rho, var_UZ) =  UZ * rho0_Z + rho0 * divU_UZ
+  
+  res_jac__p(var_rho, var_Up) =  Up * rho0_p / R
+  res_jac__n(var_rho, var_Up) =  rho0 * divU_Up__n
+  
+  res_jac__p(var_rho, var_rho) = UR0 * rho_R + UZ0 * rho_Z + rho * divU &
+                               - D_prof * (rho_R / R + rho_RR + rho_ZZ)
+  res_jac__n(var_rho, var_rho) = Up0 * rho_p / R
+  res_jac__nn(var_rho, var_rho) = - D_prof * rho_pp / R**2
+  
+  ! Ti equation
+  res_jac__p(var_Ti, var_UR) =  rho0 * UR * Ti0_R + Ti0 * UR * rho0_R + gamma * p0 * divU_UR
+
+  res_jac__p(var_Ti, var_UZ) =  rho0 * UZ * Ti0_Z + Ti0 * UZ * rho0_Z + gamma * p0 * divU_UZ
+  
+  res_jac__p(var_Ti, var_Up) =  rho0 * Up * Ti0_p / R + Ti0 * Up * rho0_p / R
+  res_jac__n(var_Ti, var_Up) =  gamma * p0 * divU_Up__n
+  
+  res_jac__p(var_Ti, var_rho)=  rho * UgradTi + Ti0 * (UR0*rho_R + UZ0*rho_Z) + gamma * rho * Ti0 * divU  
+  res_jac__n(var_Ti, var_rho)=                  Ti0 * (UZ0*rho_p / R)
+  
+  res_jac__p(var_Ti, var_Ti) =   rho0 * (UR0 * Ti_R + UZ0 * Ti_Z)                      &
+                               + Ti * (UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R) &
+                               + gamma * rho0 * Ti * divU                              &
+                               - ZKi_prof * (Ti_R / R + Ti_RR + Ti_ZZ) 
+  res_jac__n(var_Ti, var_Ti) =   rho0 * Up0 * Ti_p / R
+  res_jac__nn(var_Ti, var_Ti)= - ZKi_prof * Ti_pp / R**2 
+  
+  res_jac__p(var_Ti, var_Te) =   gamma * rho0 * Te * divU
+  
+  ! Te equation
+  res_jac__p(var_Te, var_UR) =  rho0 * UR * Te0_R + Te0 * UR * rho0_R + gamma * p0 * divU_UR
+  
+  res_jac__p(var_Te, var_UZ) =  rho0 * UZ * Te0_Z + Te0 * UZ * rho0_Z + gamma * p0 * divU_UZ
+  
+  res_jac__p(var_Te, var_Up) =  rho0 * Up * Te0_p / R + Te0 * Up * rho0_p / R
+  res_jac__n(var_Te, var_Up) =  gamma * p0 * divU_Up__n
+  
+  res_jac__p(var_Te, var_rho)=  rho * UgradTe + Te0 * (UR0*rho_R + UZ0*rho_Z) + gamma * rho * Te0 * divU
+  res_jac__n(var_Te, var_rho)=                  Te0 * (UZ0*rho_p / R)
+  
+  res_jac__p(var_Te, var_Ti) =  gamma * rho0 * Ti * divU
+  
+  res_jac__p(var_Te, var_Te) =   rho0 * ( UR0 * Te_R + UZ0 * Te_Z )                      &
+                               + Te   * (UR0 * rho0_R + UZ0 * rho0_Z + Up0 * rho0_p / R) &
+                               + gamma * rho0 * Te * divU                                &
+                               - ZKe_prof * (Te_R / R + Te_RR + Te_ZZ )
+  res_jac__n(var_Te, var_Te) =   rho0 * Up0 * Te_p / R
+  res_jac__nn(var_Te, var_Te)= - ZKe_prof * Te_pp / R**2
+
+  do jj =1, n_var
+    Qjac_p (var_AR,jj)  =  Qjac_p (var_AR,jj) - vms_coeff_AR * tscale * dot_product(vms_AR__p(:) , res_jac__p(:, jj))
+    Qjac_k (var_AR,jj)  =  Qjac_k (var_AR,jj) - vms_coeff_AR * tscale * dot_product(vms_AR__k(:) , res_jac__p(:, jj))
+    Qjac_n (var_AR,jj)  =  Qjac_n (var_AR,jj) - vms_coeff_AR * tscale * dot_product(vms_AR__p(:) , res_jac__n(:, jj))
+    Qjac_kn(var_AR,jj)  =  Qjac_kn(var_AR,jj) - vms_coeff_AR * tscale * dot_product(vms_AR__k(:) , res_jac__n(:, jj))
+    Qjac_pnn(var_AR,jj) =  Qjac_pnn(var_AR,jj) - vms_coeff_AR * tscale * dot_product(vms_AR__p(:) , res_jac__nn(:, jj))
+    
+    Qjac_p (var_AZ,jj)  =  Qjac_p (var_AZ,jj) - vms_coeff_AZ * tscale * dot_product(vms_AZ__p(:) , res_jac__p(:, jj))
+    Qjac_k (var_AZ,jj)  =  Qjac_k (var_AZ,jj) - vms_coeff_AZ * tscale * dot_product(vms_AZ__k(:) , res_jac__p(:, jj))
+    Qjac_n (var_AZ,jj)  =  Qjac_n (var_AZ,jj) - vms_coeff_AZ * tscale * dot_product(vms_AZ__p(:) , res_jac__n(:, jj))
+    Qjac_kn(var_AZ,jj)  =  Qjac_kn(var_AZ,jj) - vms_coeff_AZ * tscale * dot_product(vms_AZ__k(:) , res_jac__n(:, jj))
+    Qjac_pnn(var_AZ,jj) =  Qjac_pnn(var_AZ,jj)- vms_coeff_AZ * tscale * dot_product(vms_AZ__p(:) , res_jac__nn(:, jj))
+  
+    Qjac_p (var_A3,jj)  =  Qjac_p (var_A3,jj) - vms_coeff_A3 * tscale * dot_product(vms_A3__p(:) , res_jac__p(:, jj))
+    Qjac_k (var_A3,jj)  =  Qjac_k (var_A3,jj) - vms_coeff_A3 * tscale * dot_product(vms_A3__k(:) , res_jac__p(:, jj))
+    Qjac_n (var_A3,jj)  =  Qjac_n (var_A3,jj) - vms_coeff_A3 * tscale * dot_product(vms_A3__p(:) , res_jac__n(:, jj))
+    Qjac_kn(var_A3,jj)  =  Qjac_kn(var_A3,jj) - vms_coeff_A3 * tscale * dot_product(vms_A3__k(:) , res_jac__n(:, jj))
+    Qjac_pnn(var_A3,jj) =  Qjac_pnn(var_A3,jj)- vms_coeff_A3 * tscale * dot_product(vms_A3__p(:) , res_jac__nn(:, jj))
+    
+    Qjac_p (var_UR,jj)  =  Qjac_p (var_UR,jj) - vms_coeff_UR * tscale * dot_product(vms_UR__p(:) , res_jac__p(:, jj))
+    Qjac_k (var_UR,jj)  =  Qjac_k (var_UR,jj) - vms_coeff_UR * tscale * dot_product(vms_UR__k(:) , res_jac__p(:, jj))
+    Qjac_n (var_UR,jj)  =  Qjac_n (var_UR,jj) - vms_coeff_UR * tscale * dot_product(vms_UR__p(:) , res_jac__n(:, jj))
+    Qjac_kn(var_UR,jj)  =  Qjac_kn(var_UR,jj) - vms_coeff_UR * tscale * dot_product(vms_UR__k(:) , res_jac__n(:, jj))
+    Qjac_pnn(var_UR,jj) =  Qjac_pnn(var_UR,jj)- vms_coeff_UR * tscale * dot_product(vms_UR__p(:) , res_jac__nn(:, jj))
+  
+    Qjac_p (var_UZ,jj)  =  Qjac_p (var_UZ,jj) - vms_coeff_UZ * tscale * dot_product(vms_UZ__p(:) , res_jac__p(:, jj))
+    Qjac_k (var_UZ,jj)  =  Qjac_k (var_UZ,jj) - vms_coeff_UZ * tscale * dot_product(vms_UZ__k(:) , res_jac__p(:, jj))
+    Qjac_n (var_UZ,jj)  =  Qjac_n (var_UZ,jj) - vms_coeff_UZ * tscale * dot_product(vms_UZ__p(:) , res_jac__n(:, jj))
+    Qjac_kn(var_UZ,jj)  =  Qjac_kn(var_UZ,jj) - vms_coeff_UZ * tscale * dot_product(vms_UZ__k(:) , res_jac__n(:, jj))
+    Qjac_pnn(var_UZ,jj) =  Qjac_pnn(var_UZ,jj)- vms_coeff_UZ * tscale * dot_product(vms_UZ__p(:) , res_jac__nn(:, jj))
+    
+    Qjac_p (var_Up,jj)  =  Qjac_p (var_Up,jj) - vms_coeff_Up * tscale * dot_product(vms_Up__p(:) , res_jac__p(:, jj))
+    Qjac_k (var_Up,jj)  =  Qjac_k (var_Up,jj) - vms_coeff_Up * tscale * dot_product(vms_Up__k(:) , res_jac__p(:, jj))
+    Qjac_n (var_Up,jj)  =  Qjac_n (var_Up,jj) - vms_coeff_Up * tscale * dot_product(vms_Up__p(:) , res_jac__n(:, jj))
+    Qjac_kn(var_Up,jj)  =  Qjac_kn(var_Up,jj) - vms_coeff_Up * tscale * dot_product(vms_Up__k(:) , res_jac__n(:, jj))
+    Qjac_pnn(var_Up,jj) =  Qjac_pnn(var_Up,jj)- vms_coeff_Up * tscale * dot_product(vms_Up__p(:) , res_jac__nn(:, jj))
+    
+    Qjac_p (var_rho,jj) =  Qjac_p (var_rho,jj)- vms_coeff_rho* tscale * dot_product(vms_rho__p(:), res_jac__p(:, jj))
+    Qjac_k (var_rho,jj) =  Qjac_k (var_rho,jj)- vms_coeff_rho* tscale * dot_product(vms_rho__k(:), res_jac__p(:, jj))
+    Qjac_n (var_rho,jj) =  Qjac_n (var_rho,jj)- vms_coeff_rho* tscale * dot_product(vms_rho__p(:), res_jac__n(:, jj))
+    Qjac_kn(var_rho,jj) =  Qjac_kn(var_rho,jj)- vms_coeff_rho* tscale * dot_product(vms_rho__k(:), res_jac__n(:, jj))
+    Qjac_pnn(var_rho,jj)=  Qjac_pnn(var_rho,jj)- vms_coeff_rho* tscale *dot_product(vms_rho__p(:), res_jac__nn(:, jj))
+    
+
+    Qjac_p (var_Ti,jj)   =  Qjac_p (var_Ti,jj)  - vms_coeff_Ti  * tscale * dot_product(vms_Ti__p(:)  , res_jac__p(:, jj))
+    Qjac_k (var_Ti,jj)   =  Qjac_k (var_Ti,jj)  - vms_coeff_Ti  * tscale * dot_product(vms_Ti__k(:)  , res_jac__p(:, jj))
+    Qjac_n (var_Ti,jj)   =  Qjac_n (var_Ti,jj)  - vms_coeff_Ti  * tscale * dot_product(vms_Ti__p(:)  , res_jac__n(:, jj))
+    Qjac_kn(var_Ti,jj)   =  Qjac_kn(var_Ti,jj)  - vms_coeff_Ti  * tscale * dot_product(vms_Ti__k(:)  , res_jac__n(:, jj))
+    Qjac_pnn(var_Ti,jj)  =  Qjac_pnn(var_Ti,jj)  - vms_coeff_Ti  * tscale * dot_product(vms_Ti__p(:) , res_jac__nn(:, jj))
+  
+    Qjac_p (var_Te,jj)   =  Qjac_p (var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__p(:)  , res_jac__p(:, jj))
+    Qjac_k (var_Te,jj)   =  Qjac_k (var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__k(:)  , res_jac__p(:, jj))
+    Qjac_n (var_Te,jj)   =  Qjac_n (var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__p(:)  , res_jac__n(:, jj))
+    Qjac_kn(var_Te,jj)   =  Qjac_kn(var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__k(:)  , res_jac__n(:, jj))
+    Qjac_pnn(var_Te,jj)  =  Qjac_pnn(var_Te,jj)  - vms_coeff_Te  * tscale * dot_product(vms_Te__p(:) , res_jac__nn(:, jj))
+  
+  enddo
+       
+  end subroutine add_vms_to_elm
 
 subroutine my_fft(in_fft,out_fft,n)
   implicit none

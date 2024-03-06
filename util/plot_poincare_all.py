@@ -26,7 +26,7 @@ def get_time(num):
 
 # Define a function to read data from the file and create scatter plots for each group
 def read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip=1, font_size = 15, multiplier_for_time = 1.0, colorful = False):
-    plt.figure(figsize=(7, 6))
+    fig = plt.figure(figsize=(7, 6))
     data = []
     current_group = []
     with open(filename, 'r') as file:
@@ -89,13 +89,14 @@ def read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip=1, font
         if multiplier_for_time != 1.0:
             time = time * multiplier_for_time
         
-        time_str = "{:.2f}".format(time)
+        time_str = "{:.3f}".format(time)
         title_str = title_str + ', '
         title_ext = r'normalized time = ' + time_str if multiplier_for_time == 1.0 else r'time = ' + time_str + '[ms]'
         plt.title(title_str + title_ext, fontsize = font_size)
     plt.tight_layout()
     # plt.legend()
     # plt.show()
+    return fig
 
 if __name__ == "__main__":
 
@@ -109,6 +110,8 @@ if __name__ == "__main__":
                         help="Multiple the time-data with the specified value.")
     parser.add_argument("-cful", "--colorful", type=bool, default=False,
                         help="Set different colors for lines.")
+    parser.add_argument("-png", "--png_output", type=bool, default=False,
+                        help="Save results into figures.")
     args = parser.parse_args()
 
     filenames = args.file_paths
@@ -128,6 +131,13 @@ if __name__ == "__main__":
             xlabel_name = 'X'
             ylabel_name = 'Y'
 
-        read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip, args.fontsize, args.multiplier_for_time, args.colorful)
-
-    plt.show()
+        fig = read_and_plot_data(filename, xlabel_name, ylabel_name, lines_to_skip, args.fontsize, args.multiplier_for_time, args.colorful)
+        
+        if(args.png_output):
+            figure_name = filename[:-4] + ".png"
+            plt.savefig(figure_name)
+            print(figure_name + " is saved.")
+            plt.close()    
+    
+    if(not args.png_output):
+        plt.show()

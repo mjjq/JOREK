@@ -482,7 +482,7 @@ do i_lines=1,n_lines
   if (iplot_type .eq. 1) then
     call pplot(1,1,Rp,Zp,ip,1)
   else
-    call pplot(1,1,Pp,Tp,ip,1)
+    call pplot(1,1,SQRT( MAX(Pp, 0.) ),Tp,ip,1)
   endif
 enddo
 

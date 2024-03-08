@@ -712,7 +712,7 @@ do i=1,element_list%n_elements
           ! --- Full toroidal electric field evaluated at t_now - dt/2
           E_R   = - F0 * (U_x - 0.5d0*dU_x)
           E_Z   = - F0 * (U_y - 0.5d0*dU_y)
-          E_phi = - dpsi/tstep /BigR - F0*(U-0.5d0*dU)/BigR 
+          E_phi = - dpsi/tstep /BigR  
            !*** compute diagnostics ***
           v_perp  = R * sqrt(u_x*u_x + u_y*u_y)
 

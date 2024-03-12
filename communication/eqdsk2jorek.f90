@@ -29,9 +29,9 @@ real*8             :: B_scale, I_scale, R_scale, F_axis, factor, dfactor
 real*8             :: ellip_in,tria_up_in,tria_low_in,quad_up_in,quad_low_in,r0_in,z0_in,a0_in
 integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1,iostatus, str_id,ierr
 integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext, ivtk, n_tht_in
-character          :: AA*52, tokamak_name*50,boundary_type*100
+character          :: AA*52, tokamak_name*50,boundary_type*100, name*100, line*100
 character          :: buffer*80, lf*1, str1*12, str2*24, string_in*250,eqdsk_string_r_min*250
-
+integer            :: start_idx, end_idx
 namelist /eqdsk2jorek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
                               tria_low_in,quad_up_in,quad_low_in,n_tht_in,r0_in,&
                               z0_in,a0_in,pres_bnd,B_scale,I_scale,R_scale,smth,eqdsk_string_r_min
@@ -48,7 +48,7 @@ tokamak_name  = 'ITER'
 !>   R = R_axis + r_minor*cos(theta+triangularity*sin(theta)+quadrangularity*sin(2*theta))
 !>   Z = Z_axis + r_minor*ellipticity*sin(theta)
 !> ITER: CLOSE_WALL_FIT, OUTSIDE_WALL (default)
-!> JET: OUTSIDE_WALL, OUTSIDE_WALL_SHORT_LEG, CIRCULAR
+!> JET: OUTSIDE_WALL, OUTSIDE_WALL_SHORT_LEG, CIRCULAR, LIMITER, INSIDE_LIMITER
 !> DIII-D: OUTSIDE_WALL, NIMROD_M3DC1
 !>
 !> eqdsk_string_r_min: string of the EQDSK file identifying the plasma minor radius
@@ -68,7 +68,27 @@ write(*,*) ' EQDSK to JOREK2 '
 ! --- Read parameters from namelist file 'eqdsk2jorek.nml' if it exists
 open(42, file='eqdsk2jorek.nml', action='read', status='old', iostat=ierr)
 if ( ierr == 0 ) then
-  write(*,*) 'Reading parameters from eqdsk2jorek.nml namelist.'
+    ! Read lines until reaching the end of the file
+    do
+        read(42, '(a)', iostat=ierr) line
+        if (ierr /= 0) exit ! Exit loop if end of file or read error
+	! Check for the parameter you are interested in
+        if (index(line, 'tokamak_name') > 0) then
+		if (index(line, '!') > 0 .and. index(line, '!') < index(line,'tokamak_name')) exit ! Check if the line is commented out
+        	start_idx = index(line, "'") +1
+                end_idx = index(line(start_idx:), "'") + start_idx-2
+                ! Extract the tokamak name value
+                tokamak_name = line(start_idx:end_idx)	
+		if (tokamak_name == 'JET') then
+    			boundary_type = 'OUTSIDE_WALL_SHORT_LEG' 
+  		endif
+
+               
+         end if
+    end do
+ rewind(42)
+
+ write(*,*) 'Reading parameters from eqdsk2jorek.nml namelist.'
   read(42,eqdsk2jorek_params)
   close(42)
 end if 

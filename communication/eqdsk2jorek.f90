@@ -301,7 +301,7 @@ else if (tokamak_name == 'JET') then
     z0     = 0.15 * R_scale
     a0     = 1.1  * R_scale
 
-  !-------------------- try circular plasmas
+ !-------------------- try circular plasmas
   else if(boundary_type == 'CIRCULAR') then
     ellip  = 1.
     tria_u = 0.
@@ -312,6 +312,32 @@ else if (tokamak_name == 'JET') then
     r0     = rmaxis * R_scale
     z0     = zmaxis * R_scale
     a0     = a_minor * R_scale
+
+ !-------------------- contour that has same shape as limiter without the legs
+  else if(boundary_type == 'LIMITER') then
+    ellip  = 1.7264
+    tria_u = 0.276
+    tria_l = 0.2497
+    quad_u = -0.07
+    quad_l = 0.1274
+    n_tht  = 257
+    r0     = 2.875 * R_scale
+    z0     = 0.2213 * R_scale
+    a0     = 1.026 * R_scale
+
+ !-------------------- contour that fits inside the limiter and includes part of limiter leg
+  else if(boundary_type == 'INSIDE_LIMITER') then
+    ellip  = 1.785
+    tria_u = 0.26
+    tria_l = 0.2497
+    quad_u = -0.03
+    quad_l = 0.29
+    n_tht  = 257
+    r0     = 2.865 * R_scale
+    z0     = 0.19 * R_scale
+    a0     = 0.999 * R_scale
+
+
   else
     write(*,*) 'JOREK boundary not or wrongly specified, stopping' 
     stop
@@ -431,6 +457,13 @@ do i=n_tht/2+1,n_tht
   z_bnd(i) = z0 + a0 * ellip * sin(angle)
   call bispev(tx,nx,ty,ny,c,kx,ky,r_bnd(i),1,z_bnd(i),1,psi_bnd(i),wrk,lwrk,iwrk,kwrk,ier)
 enddo
+
+! write r_bnd(j), z_bnd(j)                     
+open(21,file='JOREK_bnd.dat')
+  do j=1,n_tht
+    write(21,'(2e16.8)') r_bnd(j), z_bnd(j)
+  enddo
+close(21)
 
 
 write(*,*) ' plotting results'  

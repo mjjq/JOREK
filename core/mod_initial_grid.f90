@@ -16,7 +16,7 @@ subroutine initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my
   use data_structure
   use mpi_mod
   use mod_boundary, only: boundary_from_grid
-#ifdef USE_NO_RTREE
+#ifdef USE_NO_TREE
   use mod_no_tree
 #elif USE_QUADTREE
   use mod_quadtree

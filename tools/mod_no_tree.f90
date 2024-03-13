@@ -7,7 +7,7 @@ integer              :: no_tree_start(n_no_tree,n_no_tree)   ! contains the inde
 real*8               :: no_tree_bounding_box(2,2)
 real*8               :: no_tree_tolerance = 1.d-6
 integer              :: n_entries(n_no_tree,n_no_tree)
-real*8, allocatable  :: r_min(:), r_max(:), z_min(:), z_max(:)
+real*8, allocatable  :: no_tree_r_min(:), no_tree_r_max(:), no_tree_z_min(:), no_tree_z_max(:)
 
 contains
 
@@ -29,18 +29,19 @@ if (element_list%n_elements .le. 0) return
 no_tree_bounding_box(1,:) =  1.d33
 no_tree_bounding_box(2,:) = -1.d33
 
-if (.not. allocated(r_min)) then
-  allocate(r_min(element_list%n_elements), r_max(element_list%n_elements), z_min(element_list%n_elements), z_max(element_list%n_elements))
+if (.not. allocated(no_tree_r_min)) then
+  allocate(no_tree_r_min(element_list%n_elements), no_tree_r_max(element_list%n_elements), &
+           no_tree_z_min(element_list%n_elements), no_tree_z_max(element_list%n_elements))
 endif
 
 do i=1, element_list%n_elements
 
-  call RZ_minmax(node_list, element_list, i, r_min(i), r_max(i), z_min(i), z_max(i))
+  call RZ_minmax(node_list, element_list, i, no_tree_r_min(i), no_tree_r_max(i), no_tree_z_min(i), no_tree_z_max(i))
 
-  no_tree_bounding_box(1,1) = min(no_tree_bounding_box(1,1), r_min(i))
-  no_tree_bounding_box(1,2) = min(no_tree_bounding_box(1,2), z_min(i))
-  no_tree_bounding_box(2,1) = max(no_tree_bounding_box(2,1), r_max(i))
-  no_tree_bounding_box(2,2) = max(no_tree_bounding_box(2,2), z_max(i))
+  no_tree_bounding_box(1,1) = min(no_tree_bounding_box(1,1), no_tree_r_min(i))
+  no_tree_bounding_box(1,2) = min(no_tree_bounding_box(1,2), no_tree_z_min(i))
+  no_tree_bounding_box(2,1) = max(no_tree_bounding_box(2,1), no_tree_r_max(i))
+  no_tree_bounding_box(2,2) = max(no_tree_bounding_box(2,2), no_tree_z_max(i))
 
 end do
 
@@ -55,13 +56,10 @@ do k=1, element_list%n_elements       ! count the number of elements overlapping
 
 ! what if the element is smaller than the box, are the indices still valid???  
 
-  index_i_start = (r_min(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
-  index_i_end   = (r_max(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
-  index_j_start = (z_min(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
-  index_j_end   = (z_max(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
-
-  !write(*,'(4f8.4,4i5)') r_min(k)-no_tree_bounding_box(1,1), r_max(k)-no_tree_bounding_box(1,1), &
-  !                       z_min(k)-no_tree_bounding_box(1,2), z_max(k)-no_tree_bounding_box(1,2), index_i_start, index_i_end, index_j_start, index_j_end
+  index_i_start = (no_tree_r_min(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
+  index_i_end   = (no_tree_r_max(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
+  index_j_start = (no_tree_z_min(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
+  index_j_end   = (no_tree_z_max(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
 
   do i = index_i_start, index_i_end
     do j= index_j_start, index_j_end
@@ -70,12 +68,6 @@ do k=1, element_list%n_elements       ! count the number of elements overlapping
   enddo
 
 enddo
-
-!do i=1, n_no_tree
-!  do j=1, n_no_tree
-!    write(*,*) 'n_entries : ',i,j,n_entries(i,j)
-!  enddo
-!enddo
 
 write(*,*) ' total number of entries : ',sum(n_entries)
 if (allocated(no_tree)) deallocate(no_tree)
@@ -94,8 +86,6 @@ do k = 2, n_no_tree * n_no_tree
 
   no_tree_start(i,j) = i_start_prev + n_entries(i_prev,j_prev)
 
-  !write(*,'(8i5)') k,i,j,i_prev,j_prev,no_tree_start(i,j), n_entries(i_prev,j_prev)
-
   i_start_prev = no_tree_start(i,j)
 
   i_prev = i
@@ -104,31 +94,18 @@ do k = 2, n_no_tree * n_no_tree
 
 enddo
 
-!do i=1, n_no_tree
-!  do j=1, n_no_tree
-!    write(*,*) 'start : ',i,j,no_tree_start(i,j)
-!  enddo
-!enddo
-!write(*,*) 'check : ',maxval(no_tree_start)
-
 offset = 0
 
 do k=1, element_list%n_elements       ! count the number of elements overlapping box(i,j)
 
-! what if the element is smaller than the box, are the indices still valid???  
-
-  index_i_start = (r_min(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
-  index_i_end   = (r_max(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
-  index_j_start = (z_min(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
-  index_j_end   = (z_max(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
-
-  !write(*,'(4f8.4,4i5)') r_min(k)-no_tree_bounding_box(1,1), r_max(k)-no_tree_bounding_box(1,1), &
-  !                       z_min(k)-no_tree_bounding_box(1,2), z_max(k)-no_tree_bounding_box(1,2), index_i_start, index_i_end, index_j_start, index_j_end
+  index_i_start = (no_tree_r_min(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
+  index_i_end   = (no_tree_r_max(k) - no_tree_bounding_box(1,1)) / (no_tree_bounding_box(2,1) - no_tree_bounding_box(1,1)) * n_no_tree + 1
+  index_j_start = (no_tree_z_min(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
+  index_j_end   = (no_tree_z_max(k) - no_tree_bounding_box(1,2)) / (no_tree_bounding_box(2,2) - no_tree_bounding_box(1,2)) * n_no_tree + 1
 
   do i = index_i_start, index_i_end
     do j= index_j_start, index_j_end
- !     write(*,'(12i6)') i,j,k, no_tree_start(i,j),no_tree_start(i,j)+offset(i,j), index_i_start, index_i_end, index_j_start, index_j_end
-      no_tree(no_tree_start(i,j)+offset(i,j)) = k
+      no_tree(no_tree_start(i,j) + offset(i,j)) = k
       offset(i,j) = offset(i,j) + 1
     enddo
   enddo
@@ -203,10 +180,10 @@ else
 
   i_elms_full = no_tree(no_tree_start(i,j):no_tree_start(i,j)+n_entries(i,j)-1)
 
-  r_min_local = r_min(i_elms_full) - tol
-  r_max_local = r_max(i_elms_full) + tol
-  z_min_local = z_min(i_elms_full) - tol
-  z_max_local = z_max(i_elms_full) + tol
+  r_min_local = no_tree_r_min(i_elms_full) - tol
+  r_max_local = no_tree_r_max(i_elms_full) + tol
+  z_min_local = no_tree_z_min(i_elms_full) - tol
+  z_max_local = no_tree_z_max(i_elms_full) + tol
       
   i_elms = pack(i_elms_full, ((R .ge. r_min_local(:)) &
                         .and. (R .le. r_max_local(:)) & 

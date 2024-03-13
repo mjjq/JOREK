@@ -8,7 +8,7 @@ use mod_interp
 
 implicit none
 
-integer, parameter :: max_depth = 6
+integer, parameter :: max_depth = 7
 real*8, parameter  :: tolerance = 1.d-6
 
 !> Quad representing one element.
@@ -415,16 +415,6 @@ subroutine nearby_elements_quadtree2(node_list, element_list, i_elm, i_nearby)
   allocate(i_nearby(size(i_nearby_1)+size(i_nearby_2)+size(i_nearby_3)+size(i_nearby_4)))
 
   i_nearby = [i_nearby_1, i_nearby_2, i_nearby_3, i_nearby_4]
-
-!  if (i_elm .eq. 10422) then
-!    call lincol(3)
-!    write(51,*) 'stroke  1 setlinewidth'
-!    do i=1, size(i_nearby)
-!      if (i_nearby(i) .ne. i_elm)  call plot_element(node_list,element_list,i_nearby(i))
-!    enddo
-!    call lincol(0)
-!    call plot_element(node_list,element_list,i_elm)
-!  endif
   
 end
 

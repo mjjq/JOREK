@@ -389,10 +389,11 @@ subroutine integrate_F_profile()
     enddo
 
     do i_prof = 1, n_Fprofile_internal
-      Fprofile_internal(i_prof) = sign_F * sqrt(F0**2 + delta_psi * abs(integral_large(i_prof))) 
+      ! Fprofile_internal(i_prof) = sign_F * sqrt(F0**2 + delta_psi * abs(integral_large(i_prof))) 
+      Fprofile_internal(i_prof) = sign_F * sqrt(F0**2 + delta_psi * integral_large(i_prof)) 
     enddo
 
-    Fprofile_internal(1:n_Fprofile_internal)     = Fprofile_internal(1:n_Fprofile_internal) - Fprofile_internal(n_Fprofile_internal) + F0
+    ! Fprofile_internal(1:n_Fprofile_internal)     = Fprofile_internal(1:n_Fprofile_internal) - Fprofile_internal(n_Fprofile_internal) + F0
 
   else
 
@@ -406,10 +407,10 @@ subroutine integrate_F_profile()
     no_delta_psi = 1.d0
     if (FF_coef(9) .eq. 1.d0) no_delta_psi = delta_psi
 
-  ! --- The cutoff of the FFprime at the edge is traditionally the tanh at FF_coef(5), not at psi_n=1.0
-  ! --- However, F needs to be F0 outside the plasma, so we take a point far away.
-  ! --- To keep safe, for limiter plasma, the user might have non-zero FF' outside psi_n=1.0, because we
-  ! --- simply don't solve this, so in this case, we use psi_n=1.0
+    ! --- The cutoff of the FFprime at the edge is traditionally the tanh at FF_coef(5), not at psi_n=1.0
+    ! --- However, F needs to be F0 outside the plasma, so we take a point far away.
+    ! --- To keep safe, for limiter plasma, the user might have non-zero FF' outside psi_n=1.0, because we
+    ! --- simply don't solve this, so in this case, we use psi_n=1.0
     psi_edge  = 1.0
     if (xpoint) psi_edge  = max(1.0,FF_coef(5) + 2.0 * FF_coef(4))
 
@@ -521,6 +522,7 @@ subroutine integrate_F_profile()
     ! --- Correct the offset to get F0 at the plasma edge (i.e. in vacuum F=F0)
     diff = F0**2 - integral_large(n_integral)
     integral_large = integral_large + diff
+    ! integral_large = dabs(integral_large - integral_large(n_integral)) + F0**2
     
     ! --- Squared root profile (because FF' = 1/2(F**2)' )
     integral_large(1:n_integral) = integral_large(1:n_integral)**0.5
@@ -547,7 +549,14 @@ subroutine integrate_F_profile()
     ! --- Correct the sign of F-profile depending on F0
     if (F0 .lt. 0.d0) Fprofile_internal = - Fprofile_internal
   endif
-  
+  ! --- Write out the F-profile vs Psi_n for debugging purpose
+  open(unit=10, file='F_profile.dat', status='replace', action='write')
+  write(10, '(A)') 'Fprofile_internal_psi   Fprofile_internal'
+  do i_prof = 1, n_Fprofile_internal
+      write(10, '(2ES15.6)') Fprofile_internal_psi(i_prof), Fprofile_internal(i_prof)
+  end do
+  close(unit=10)
+
   deallocate(integral_large)
   deallocate(psi_large)
   
@@ -562,7 +571,7 @@ end subroutine integrate_F_profile
 ! --- This routine checks that the numerically integrated F-profile is coherent with the input FFprime
 subroutine check_F_profile_accuracy()
 
-  use phys_module, only: n_Fprofile_internal, Fprofile_internal, Fprofile_internal_psi, Fprofile_psi_max, Fprofile_tolerance
+  use phys_module, only: n_Fprofile_internal, Fprofile_internal, Fprofile_internal_psi, Fprofile_psi_max, Fprofile_tolerance!, psi_axis_init, psi_boundary
 
   implicit none
 
@@ -573,6 +582,12 @@ subroutine check_F_profile_accuracy()
   real*8  :: Z_fake, Z_xpoint_fake(2)
   real*8  :: psi_axis_fake, psi_bnd_fake
   real*8  :: accumulated_error, accumulated_profile, diff_average_percent
+  ! logical :: inverse_FFp
+
+  ! write(*,*) 'psi_axis_init = ', psi_axis_init
+  ! write(*,*) 'min(psi_boundary) = ', minval(psi_boundary)
+  ! inverse_FFp = .false.
+  ! if (psi_axis_init < minval(psi_boundary)) inverse_FFp = .true.
 
   Z_fake        = 0.d0
   Z_xpoint_fake = 0.d0
@@ -590,6 +605,9 @@ subroutine check_F_profile_accuracy()
     psi   = psi_n(i_prof)
     call FFprime  (.false.,0,Z_fake,Z_xpoint_fake,psi,psi_axis_fake, psi_bnd_fake,  ff1(i_prof),ff2,ff3,ff4,ff5,ff6, .false.)
     call FFprime  (.false.,0,Z_fake,Z_xpoint_fake,psi,psi_axis_fake, psi_bnd_fake, iff1(i_prof),ff2,ff3,ff4,ff5,ff6, .true.)
+    ! if (inverse_FFp) then
+    !   iff1(i_prof) = -iff1(i_prof)
+    ! endif
     accumulated_error   = accumulated_error   + abs(ff1(i_prof)-iff1(i_prof))
     accumulated_profile = accumulated_profile + abs(ff1(i_prof))
     n_prof_core = n_prof_core + 1 ! count just the core (outside, FFprime should be zero)

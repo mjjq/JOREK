@@ -29,7 +29,7 @@ real*8             :: B_scale, I_scale, R_scale, F_axis, factor, dfactor
 real*8             :: ellip_in,tria_up_in,tria_low_in,quad_up_in,quad_low_in,r0_in,z0_in,a0_in
 integer            :: mx,my,kx,ky,nxest,nyest,lwrk,kwrk,ier,iopt,nx,ny, i1, j1,iostatus, str_id,ierr
 integer            :: nr, nz, n_psi, nbbs, limitr, i,j, nc, n_tht, n_sol, n_ext, ivtk, n_tht_in
-character          :: AA*52, tokamak_name*50,boundary_type*100, name*100, line*100
+character          :: AA*52, tokamak_name*50, boundary_type*50, line*100
 character          :: buffer*80, lf*1, str1*12, str2*24, string_in*250,eqdsk_string_r_min*250
 integer            :: start_idx, end_idx
 namelist /eqdsk2jorek_params/ tokamak_name,boundary_type,ellip_in,tria_up_in,&
@@ -72,26 +72,24 @@ if ( ierr == 0 ) then
     do
         read(42, '(a)', iostat=ierr) line
         if (ierr /= 0) exit ! Exit loop if end of file or read error
-	! Check for the parameter you are interested in
-        if (index(line, 'tokamak_name') > 0) then
-		if (index(line, '!') > 0 .and. index(line, '!') < index(line,'tokamak_name')) exit ! Check if the line is commented out
-        	start_idx = index(line, "'") +1
-                end_idx = index(line(start_idx:), "'") + start_idx-2
-                ! Extract the tokamak name value
-                tokamak_name = line(start_idx:end_idx)	
-		if (tokamak_name == 'JET') then
-    			boundary_type = 'OUTSIDE_WALL_SHORT_LEG' 
-  		endif
-
-               
-         end if
+        if (index(line, 'tokamak_name') > 0) then    ! Check if tokamak_name is specified in the namelist file
+            if (index(line, '!') > 0 .and. index(line, '!') < index(line,'tokamak_name')) exit ! Check if the line is commented out
+            start_idx = index(line, "'") +1
+            end_idx = index(line(start_idx:), "'") + start_idx-2
+            tokamak_name = line(start_idx:end_idx) ! Extract the tokamak name value
+            if (tokamak_name == 'JET') then
+                boundary_type = 'OUTSIDE_WALL_SHORT_LEG' 
+            end if
+        end if
     end do
- rewind(42)
-
- write(*,*) 'Reading parameters from eqdsk2jorek.nml namelist.'
-  read(42,eqdsk2jorek_params)
-  close(42)
+    rewind(42)
+    write(*,*) 'Reading parameters from eqdsk2jorek.nml namelist.'
+    read(42,eqdsk2jorek_params)
+    close(42)
+else
+        write(*,*) '!!!NOTE: No/Could not open namelist file!!!!'
 end if 
+ 
 
 write(*,*) '   Tokamak = ', tokamak_name
 write(*,*) '   Boundary type = ',boundary_type

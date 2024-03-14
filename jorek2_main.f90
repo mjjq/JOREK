@@ -275,8 +275,6 @@ mpi_required = 0
   
   input_treat_axis = treat_axis   ! store the value from the input file
 
-  if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list
-
   if ( restart .and. (my_id == 0) ) then
     
     call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
@@ -391,7 +389,7 @@ mpi_required = 0
         if (my_id == 0) call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
         if (.not. freeboundary) then
           fileout = 'jorek_equil_rz'
-          call export_restart(node_list, element_list, fileout, aux_node_list)
+          call export_restart(node_list, element_list, fileout)
         end if
       end if ! if (equil) then
 
@@ -562,7 +560,7 @@ mpi_required = 0
   if ( (my_id == 0) .and. (.not. restart) ) then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .true.)
     fileout = 'jorek00000'
-    call export_restart(node_list, element_list, fileout, aux_node_list)
+    call export_restart(node_list, element_list, fileout)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(node_list, my_id, n_cpu, .false.)
   end if
   
@@ -589,7 +587,8 @@ mpi_required = 0
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
-  
+
+  if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list
 
   index_now = index_start  ! index_now: Index of current timestep
 
@@ -847,7 +846,7 @@ mpi_required = 0
     if ( (my_id == 0) .and. (mod(index_now,nout) == 0) ) then
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
       write(fileout,'(A5,i5.5)') 'jorek',index_now
-      call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout, aux_node_list)
+      call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
       if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     endif
     
@@ -935,7 +934,7 @@ mpi_required = 0
   if (my_id .eq. 0)  then
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .true.)
     fileout = 'jorek_restart'
-    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout, aux_node_list)
+    call export_restart(mhd_sim%node_list, mhd_sim%element_list, fileout)
     if ( freeboundary .and. freeb_change_indices ) call exchange_indices(mhd_sim%node_list, my_id, n_cpu, .false.)
     if ( write_ps ) then
       if (.not. bench_without_plot) then

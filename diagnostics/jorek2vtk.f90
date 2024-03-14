@@ -665,6 +665,8 @@ do i=1,element_list%n_elements
 
         if ((xjac .gt. 1.d-6)) then
 #ifndef fullmhd
+          call interp_delta(node_list,element_list,i,var_psi,i_tor,s,t,dpsi,dPs_s, dPs_t, dPs_st, dPs_ss, dPs_tt)
+          call interp_delta(node_list,element_list,i,var_u,  i_tor,s,t,dU,dU_s, dU_t, dU_st, dU_ss, dU_tt)         
           call interp(node_list,element_list,i,var_psi,i_tor,s,t,Psi,Ps_s,Ps_t,Ps_st,Ps_ss,Ps_tt)
           call interp(node_list,element_list,i,var_u,  i_tor,s,t,U,U_s,U_t,U_st,U_ss,U_tt)
           call interp(node_list,element_list,i,var_zj, i_tor,s,t,ZJ,ZJ_s,ZJ_t,ZJ_st,ZJ_ss,ZJ_tt)
@@ -698,6 +700,10 @@ do i=1,element_list%n_elements
           zj_x  = (   Z_t * ZJ_s - Z_s * ZJ_t ) / xjac
           zj_y  = ( - R_t * ZJ_s + R_s * ZJ_t ) / xjac
 
+          ! --- Full toroidal electric field evaluated at t_now - dt/2
+          E_R   = - F0 * (U_x - 0.5d0*dU_x)
+          E_Z   = - F0 * (U_y - 0.5d0*dU_y)
+          E_phi = - dpsi/tstep /BigR  
            !*** compute diagnostics ***
           v_perp  = R * sqrt(u_x*u_x + u_y*u_y)
 
@@ -706,6 +712,9 @@ do i=1,element_list%n_elements
           error = psi_J - R_p  ! "error" in Grad_Shafranov equilibrium force balance
 #endif
         endif  ! xjac check
+        if (include_electric_field) then
+          vectors(inode,:,i_vec_E) =  (/ E_R, E_Z, E_phi /)
+        endif
 
       else  ! i_tor
 
@@ -1094,13 +1103,14 @@ do i=1,element_list%n_elements
                   - xjac_y * (- w_s * R_t + w_t * R_s )  / xjac**2
 
             ! --- Full toroidal electric field evaluated at t_now - dt/2
-            E_R   = E_R   - F0 * (U_x - 0.5d0*dU_x)
-            E_Z   = E_Z   - F0 * (U_y - 0.5d0*dU_y)
             E_phi = E_phi - dpsi/tstep * HZ(i_tor,i_plane)/BigR - F0*(U-0.5d0*dU)*HZ_p(i_tor,i_plane)/BigR 
 
           endif ! xjac
 
         enddo  ! end loop toroidal harmonics
+        ! --- Full toroidal electric field evaluated at t_now - dt/2
+        E_R   = - F0 * (U_x - 0.5d0*dU_x)
+        E_Z   = - F0 * (U_y - 0.5d0*dU_y)
         if (jorek_model .lt. 100) cycle
 
         Psi_tot = 0.d0

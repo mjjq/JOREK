@@ -3,6 +3,7 @@ subroutine initialise_parameters(my_id, filename)
 
 use tr_module
 use phys_module
+use mod_plasma_functions, only: initialise_reference_parameters
 use vacuum
 use pellet_module
 use live_data
@@ -211,7 +212,8 @@ namelist /in1/  tstep, nstep, tstep_n, nstep_n,                     &
                 T_min_ZKpar,Ti_min_ZKpar,Te_min_ZKpar,              &
                 CARIDDI_mode, use_newton, maxNewton, gamma_Newton,  &
                 alpha_Newton, vacuum_min, strumpack_matching,       &
-                visco_old_setup, visco_heating, eta_coul_log_dep
+                visco_old_setup, visco_heating, eta_coul_log_dep,   &
+                export_aux_node_list
 
 
 if (my_id .eq. 0) then
@@ -361,6 +363,8 @@ if ( my_id == 0 ) then
     write(*,*) "WARNNING! Currently do not support both with_neutrals and with impurities enabled at the same time while injecting background species! Should be fixed sonn. EXITING!"
     stop
   endif
+
+  call initialise_reference_parameters()
 
 end if
 

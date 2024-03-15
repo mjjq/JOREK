@@ -14,6 +14,14 @@ public :: interp_PRZ !< interp variable + pos at values or deltas
 public :: sincosperiod_moivre, mode_moivre !< public for regtesting, used by interp_PRZ
 public :: interp_PRZ_combined !< same as interp, but for any variable, including R and Z
 
+interface interp
+  module procedure interp_2,interp_1,interp_0_single_harmonic
+end interface interp
+
+interface interp_delta
+  module procedure interp_2_delta,interp_1_delta,interp_0_single_harmonic_delta
+end interface interp_delta
+
 interface interp_RZ
   module procedure interp_RZ_0, interp_RZ_1, interp_RZ_2
 end interface interp_RZ
@@ -270,25 +278,48 @@ end subroutine interp_PRZ_2
 ! This is roughly 3-4 times faster in my tests than just calculating the sines
 ! and cosines (even when that is vectorized). Perhaps that changes for n_tor >> 10
 ! I tested n_tor = 17.
+#ifdef UNIT_TESTS
+pure subroutine sincosperiod_moivre(phi,HZ,dHZ,n_tor_in,n_period_in)
+  real*8, intent(out) :: HZ(:), dHZ(:)
+  integer,intent(in),optional :: n_tor_in,n_period_in
+#else
 pure subroutine sincosperiod_moivre(phi,HZ,dHZ)
   integer, parameter  :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
-  real*8, intent(in)  :: phi
   real*8, intent(out) :: HZ(n_tor), dHZ(n_tor)
-
+#endif
+  real*8, intent(in)  :: phi
+#ifdef UNIT_TESTS
+  integer :: n_tor_loc,n_period_loc,n_mode
+#endif
   integer    :: i
   real*8     :: phase
   complex*16 :: H_complex
 
   HZ(1) = 1.d0
   dHZ(1) = 0.d0
+
+#ifdef UNIT_TESTS
+  n_tor_loc    = n_tor;    if(present(n_tor_in)) n_tor_loc       = n_tor_in
+  n_period_loc = n_period; if(present(n_period_in)) n_period_loc = n_period_in
+  n_mode       = (n_tor_loc-1)/2
+#endif
   
   do i=1,n_mode
+#ifdef UNIT_TESTS
+    phase      = real(n_period_loc*i,8)*phi
+#else
     phase      = real(n_period*i,8)*phi
+#endif
     H_complex  = exp(cmplx(0.d0,1.d0)*phase)
     HZ(2*i)    = real(H_complex)
     HZ(2*i+1)  = aimag(H_complex)
+#ifdef UNIT_TESTS
+    dHZ(2*i)   = HZ(2*i+1)*(-n_period_loc*i)
+    dHZ(2*i+1) = HZ(2*i)  *( n_period_loc*i)
+#else
     dHZ(2*i)   = HZ(2*i+1)*(-n_period*i)
     dHZ(2*i+1) = HZ(2*i)  *( n_period*i)
+#endif
   end do
 
 end subroutine sincosperiod_moivre
@@ -305,19 +336,37 @@ end subroutine moivre
 ! Assumes that mode is of the form [0 1 1 2 2 3 3 4 4] ([0 4 4 8 8 12 12])
 ! This is roughly 3-4 times faster in my tests than just calculating the sines
 ! and cosines (even when that is vectorized).
+#ifdef UNIT_TESTS 
+pure subroutine mode_moivre(phi,HZ,n_tor_in,n_period_in)
+  integer,intent(in),optional :: n_tor_in,n_period_in
+  real*8, intent(out) :: HZ(:)
+#else
 pure subroutine mode_moivre(phi,HZ)
   integer, parameter  :: n_mode = (n_tor-1)/2 ! number of modes excluding 0
-  real*8, intent(in)  :: phi
   real*8, intent(out) :: HZ(n_tor)
-
+#endif
+  real*8, intent(in)  :: phi
+#ifdef UNIT_TESTS
+  integer :: n_tor_loc,n_period_loc,n_mode
+#endif
   real*8     :: phase
   complex*16 :: H_complex
   integer    :: i
 
   HZ(1) = 1.d0
-  
+
+#ifdef UNIT_TESTS
+  n_tor_loc    = n_tor;    if(present(n_tor_in)) n_tor_loc       = n_tor_in
+  n_period_loc = n_period; if(present(n_period_in)) n_period_loc = n_period_in
+  n_mode       = (n_tor_loc-1)/2
+#endif 
+
   do i=1, n_mode
+#ifdef UNIT_TESTS
+    phase     = real(n_period_loc*i,8)*phi
+#else
     phase     = real(n_period*i,8)*phi
+#endif
     H_complex = exp(cmplx(0.d0,1.d0)*phase)
     HZ(2*i)   = real(H_complex)
     HZ(2*i+1) = aimag(H_complex)
@@ -337,7 +386,7 @@ end subroutine mode_moivre
 
 !> subroutine calculates the interpolation within one element (i_elm) for a given position
 !> (s,t) in the local coordinates
-pure subroutine interp(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
+pure subroutine interp_2(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm
@@ -387,12 +436,12 @@ do kv = 1,n_vertex_max  ! 4 vertices
 #endif
   end do
 end do
-end subroutine interp
+end subroutine interp_2
 
 
 !> subroutine calculates the interpolation within one element (i_elm) for a given position
 !> (s,t) in the local coordinates, of the deltas instead of the values
-pure subroutine interp_delta(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
+pure subroutine interp_2_delta(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt)
 type (type_node_list),    intent(in)  :: node_list
 type (type_element_list), intent(in)  :: element_list
 integer,                  intent(in)  :: i_elm
@@ -421,8 +470,149 @@ do kv = 1,n_vertex_max  ! 4 vertices
     P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
   end do
 end do
-end subroutine interp_delta
+end subroutine interp_2_delta
 
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!> (s,t) in the local coordinates (limited to 1st order derivatives)
+pure subroutine interp_1(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P, P_s, P_t
+
+! --- Local variables
+real*8 :: G(4,n_degrees), G_s(4,n_degrees), G_t(4,n_degrees)
+integer :: kv, iv, kf 
+
+call basisfunctions(s,t,G,G_s,G_t)
+
+P = 0.d0; P_s = 0.d0; P_t = 0.d0;
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_degrees       ! basis functions
+
+#ifdef fullmhd
+    if (i_var == 710) then
+      P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+    elseif (i_var == 711) then
+      P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+    else
+#endif
+      P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+      P_s  = P_s  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+      P_t  = P_t  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+#ifdef fullmhd
+    endif
+#endif
+  end do
+end do
+end subroutine interp_1
+
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!> (s,t) in the local coordinates, of the deltas instead of the values (limited to 1st order derivatives)
+pure subroutine interp_1_delta(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P, P_s, P_t
+
+! --- Local variables
+real*8 :: G(4,n_degrees), G_s(4,n_degrees), G_t(4,n_degrees)
+integer :: kv, iv, kf 
+
+call basisfunctions(s,t,G,G_s,G_t)
+
+P = 0.d0; P_s = 0.d0; P_t = 0.d0;
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_degrees       ! basis functions
+    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+    P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
+    P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
+  end do
+end do
+end subroutine interp_1_delta
+
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!> (s,t) in the local coordinates (limited to values)
+pure subroutine interp_0_single_harmonic(node_list, element_list, i_elm, i_var, i_harm, s, t, P)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P
+
+! --- Local variables
+real*8 :: G(4,n_degrees)
+integer :: kv, iv, kf 
+
+call basisfunctions(s,t,G)
+
+P = 0.d0;
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_degrees       ! basis functions
+
+#ifdef fullmhd
+    if (i_var == 710) then
+      P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+    elseif (i_var == 711) then
+      P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+    else
+#endif
+      P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+#ifdef fullmhd
+    endif
+#endif
+  end do
+end do
+end subroutine interp_0_single_harmonic
+
+!> subroutine calculates the interpolation within one element (i_elm) for a given position
+!> (s,t) in the local coordinates, of the deltas instead of the values (limited to value)
+pure subroutine interp_0_single_harmonic_delta(node_list, element_list, i_elm, i_var, i_harm, s, t, P)
+type (type_node_list),    intent(in)  :: node_list
+type (type_element_list), intent(in)  :: element_list
+integer,                  intent(in)  :: i_elm
+integer,                  intent(in)  :: i_var
+integer,                  intent(in)  :: i_harm
+real*8,                   intent(in)  :: s
+real*8,                   intent(in)  :: t
+real*8,                   intent(out) :: P
+
+! --- Local variables
+real*8 :: G(4,n_degrees)
+integer :: kv, iv, kf 
+
+call basisfunctions(s,t,G)
+
+P = 0.d0;
+
+do kv = 1,n_vertex_max  ! 4 vertices
+  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
+  do kf = 1, n_degrees       ! basis functions
+    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
+  end do
+end do
+end subroutine interp_0_single_harmonic_delta
 
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
 pure subroutine interp_0(node_list, element_list, i_elm, i_v, n_v, s, t, phi, P)

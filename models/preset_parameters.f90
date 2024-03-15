@@ -23,7 +23,7 @@ subroutine preset_parameters
   nstep_n  = 0
   
   eta_T_dependent   = .true.
-  eta_coul_log_dep  = .false.
+  eta_coul_log_dep  = .true.
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
@@ -51,6 +51,7 @@ subroutine preset_parameters
   central_density = 1.d0        ! the central density in units 10^20 m^-3
   central_mass    = 2.d0        ! the central average ion mass (D)
 
+  n_tor_restart= 0
   restart      = .false.
   import_equil = .false.
   regrid       = .false.
@@ -573,6 +574,7 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec   = .false.
+  export_aux_node_list = .true.
   
   ! Use iterative solver by default if n_tor>1.
   if ( n_tor == 1) then

@@ -36,10 +36,6 @@ cleandep:
 	-@rm -r $(DEPDIR)
 	-@find . -name '*.d' -delete 2>/dev/null
 test: particle_test nrt_unit
-particle_test:
-	+./util/fruit.sh particles/tests
-nrt_unit:
-	+./util/fruit.sh non_regression_tests/unit_tests
 doc docs:
 	-@rm -r doc/ # workaround for FORD bug
 	ford jorek.md --no-search $(INCLUDES)
@@ -47,38 +43,54 @@ doc docs:
 
 
 # Directories containing sources, ordered by number of files
-DIRS := diagnostics			\
-	models				\
-	communication			\
-	communication/IMAS              \
-	grids/grid_utils		\
-	solvers				\
-	models/$(MODEL)			\
-	refinement			\
-	matrix				\
-	particles 			\
-	particles/pushers 		\
-	particles/examples 		\
-	particles/diagnostics 		\
-	particles/tests 		\
-	particles/projection_functions  \
-	particles/benchmarks/pusher_cartesian \
-	particles/benchmarks/pusher	\
-	particles/benchmarks/projection \
-	elements			\
-	grids				\
-	plots				\
-	diagnostics/new_diag		\
-	diagnostics/postproc		\
-	tools				\
-	tools/rng                       \
-	tools/fruit                     \
-	non_regression_tests/unit_tests \
-	datatypes			\
-	benchmarks                      \
-	core                            \
-	.				\
+DIRS := diagnostics				\
+        diagnostics/tests			\
+	models					\
+	communication				\
+	communication/IMAS			\
+	communication/tests             	\
+	grids/grid_utils			\
+	grids/tests   				\
+	solvers					\
+	models/$(MODEL)				\
+	refinement				\
+	matrix					\
+	particles				\
+	particles/pushers			\
+	particles/examples			\
+	particles/diagnostics			\
+	particles/tests				\
+	particles/postprocessors		\
+	particles/postprocessors/spectra	\
+	particles/postprocessors/lights		\
+	particles/postprocessors/lens		\
+	particles/postprocessors/filters	\
+	particles/postprocessors/camera		\
+	particles/postprocessors/examples	\
+	particles/postprocessors/tests		\
+	particles/postprocessors/utils		\
+	particles/projection_functions		\
+	particles/benchmarks/pusher_cartesian	\
+	particles/benchmarks/pusher		\
+	particles/benchmarks/projection		\
+	elements				\
+	elements/tests				\
+	grids					\
+	plots					\
+	diagnostics/new_diag			\
+	diagnostics/postproc			\
+	tools					\
+	tools/rng				\
+	tools/fruit				\
+	tools/tests				\
+	non_regression_tests/unit_tests		\
+	datatypes				\
+	benchmarks				\
+	core					\
+	core/tests                      	\
+	.					\
 	vacuum
+
 DIRS+=$(EXTRA_DIRS) # Specified in Makefile.inc or commandline
 
 # All .f90 files we should generate .d dependency files for

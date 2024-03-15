@@ -387,8 +387,10 @@ mpi_required = 0
           if(my_id ==0 ) call export_nemec(node_list, element_list, xpoint, xcase)
         endif
         if (my_id == 0) call update_equil_state(my_id,node_list, element_list, bnd_elm_list, xpoint, xcase)
-        fileout = 'jorek_equil_rz'
-        call export_restart(node_list, element_list, fileout)
+        if (.not. freeboundary) then
+          fileout = 'jorek_equil_rz'
+          call export_restart(node_list, element_list, fileout)
+        end if
       end if ! if (equil) then
 
     else
@@ -585,7 +587,7 @@ mpi_required = 0
 
   call tr_print_memsize("BeforeTimeStepping")
   call r3_info_print (-2, -2, 'INITIALIZATION')    ! timing
-  
+
   if (.not. associated(aux_node_list)) allocate(aux_node_list) ! information of particle moments is stored in aux_list
 
   index_now = index_start  ! index_now: Index of current timestep

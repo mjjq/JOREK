@@ -79,6 +79,7 @@ if ( ierr == 0 ) then
             tokamak_name = line(start_idx:end_idx) ! Extract the tokamak name value
             if (tokamak_name == 'JET') then
                 boundary_type = 'OUTSIDE_WALL_SHORT_LEG' 
+                write(*,*) 'Changed the default boundary for JET'
             end if
         end if
     end do
@@ -87,7 +88,7 @@ if ( ierr == 0 ) then
     read(42,eqdsk2jorek_params)
     close(42)
 else
-        write(*,*) '!!!NOTE: No/Could not open namelist file!!!!'
+    write(*,*) '!!!NOTE: No/Could not open namelist file!!!!'
 end if 
  
 

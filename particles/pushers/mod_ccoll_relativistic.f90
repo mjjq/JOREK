@@ -35,13 +35,13 @@ module mod_ccoll_relativistic
      real*8 :: m_i_over_m_imp                      !< Main ion mass / impurity species mass
   end type ccoll_data
 
+  private
+
   public :: ccoll_data, ccoll_compute_L0L1table, ccoll_write_L0L1table, ccoll_read_L0L1table, &
        ccoll_init, ccoll_deallocate, ccoll_kinetic_relativistic_push, ccoll_gc_relativistic_push, &
        ccoll_kinetic_relativistic_explicitpush, ccoll_gc_relativistic_explicitpush, &
        ccoll_explicitpush_partialscreening, ccoll_gc_relativistic_push_partialscreening, &
        ccoll_kinetic_relativistic_push_partialscreening
-
-  private
 
 contains
 
@@ -168,8 +168,15 @@ contains
   subroutine ccoll_deallocate(dat)
     implicit none
     type(ccoll_data), intent(inout) :: dat ! data to be deinitialized
-   
-    deallocate(dat%u,dat%theta,dat%L0,dat%L1,dat%mi,dat%Z0,dat%Zi,dat%Ii,dat%ai)
+  
+    if (allocated(dat%u))     deallocate(dat%u) 
+    if (allocated(dat%theta)) deallocate(dat%theta) 
+    if (allocated(dat%L0))    deallocate(dat%L0) 
+    if (allocated(dat%L1))    deallocate(dat%L1) 
+    if (allocated(dat%mi))    deallocate(dat%mi) 
+    if (allocated(dat%Z0))    deallocate(dat%Z0) 
+    if (allocated(dat%Zi))    deallocate(dat%Zi) 
+    if (allocated(dat%Ii))    deallocate(dat%ai) 
 
   end subroutine ccoll_deallocate
 
@@ -237,30 +244,27 @@ contains
     implicit none
     type(ccoll_data), intent(inout) :: dat
 
-    real*8  :: Iconst_Ar(19), Iconst_Ne(11)
-    integer :: aconst_Ar(19), aconst_Ne(11)
-    integer*1 :: atomnum_imp, i, nions
-
     ! Mean excitation energy [eV] for all charge states from neutral to fully ionized (for which we used a dummy value as it is not used in the computation)
-    Iconst_Ar = (/188.5, 219.4, 253.8, 293.4, 339.1, 394.5, 463.4, 568.0, 728.0, 795.9, 879.8, 989.9, 1138.1, 1369.5, 1791.2, 2497.0, 4677.2, 4838.2, 1.0/)
-    Iconst_Ne = (/137.2, 165.2, 196.9, 235.2, 282.8, 352.6, 475.0, 696.8,  1409.2, 1498.4, 1.0/)
+    real*8, parameter  :: Iconst_Ar(19) = (/188.5, 219.4, 253.8, 293.4, 339.1, 394.5, 463.4, 568.0, 728.0, 795.9, 879.8, 989.9, 1138.1, 1369.5, 1791.2, 2497.0, 4677.2, 4838.2, 1.0/)
+    real*8, parameter  :: Iconst_Ne(11) = (/137.2, 165.2, 196.9, 235.2, 282.8, 352.6, 475.0, 696.8,  1409.2, 1498.4, 1.0/)
 
     ! Normalized effective length scale for all charge states from neutral to fully ionized (for which we used a dummy value as it is not used in the computation)
-    aconst_Ar = (/96, 90, 84, 78, 72, 65, 59, 53, 47, 44, 41, 38, 35, 32, 27, 21, 13, 13, 1/)
-    aconst_Ne = (/111, 100, 90, 80, 71, 62, 52, 40, 24, 23, 1/)
+    integer, parameter :: aconst_Ar(19) = (/96, 90, 84, 78, 72, 65, 59, 53, 47, 44, 41, 38, 35, 32, 27, 21, 13, 13, 1/)
+    integer, parameter :: aconst_Ne(11) = (/111, 100, 90, 80, 71, 62, 52, 40, 24, 23, 1/)
 
+    integer*1 :: atomnum_imp, i, nions
 
     if(with_impurities) then
        if( trim(imp_type(1)) .eq. 'Ne') then
           atomnum_imp = 10
-          dat%m_i_over_m_imp = central_mass/20
+          dat%m_i_over_m_imp = central_mass * 0.05
 
           allocate( dat%Ii(atomnum_imp + 2), dat%ai(atomnum_imp + 2) )
           dat%Ii(2:atomnum_imp) = Iconst_Ne
           dat%ai(2:atomnum_imp) = aconst_Ne
        elseif( trim(imp_type(1)) .eq. 'Ar') then
           atomnum_imp = 18
-          dat%m_i_over_m_imp = central_mass/40
+          dat%m_i_over_m_imp = central_mass * 0.025
 
           allocate( dat%Ii(atomnum_imp + 2), dat%ai(atomnum_imp + 2) )
           dat%Ii(2:atomnum_imp) = Iconst_Ar
@@ -427,8 +431,6 @@ contains
     real*8 :: E(3), B(3), psi, U, ne, rnd(3), pout(3), Te, Ti, the
     real*8, allocatable :: ni(:), thi(:)
 
-    call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
-
     allocate(ni(size(dat%mi)), thi(size(dat%mi)))
     call fields%calc_NjTj(time, prt%i_elm, prt%st, prt%x(3), dat%m_i_over_m_imp, ne, Te, ni, Ti)
     the = Te * K_BOLTZ / ( MASS_ELECTRON * SPEED_OF_LIGHT**2 )
@@ -516,6 +518,7 @@ contains
 
     real*8 :: pnorm, E(3), B(3), psi, U, Te, Ti, the, ne, rnd(2), pin, xiin, pout, xiout
     real*8, allocatable :: ni(:), thi(:)
+    integer :: ierr
 
     allocate(ni(size(dat%mi)), thi(size(dat%mi)))
     call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)                                                                                                                                                                                                          
@@ -531,7 +534,11 @@ contains
     rnd = -1.d0 + 2.d0 * rnd
 
     call ccoll_gc_relativistic_explicitpush(dat, mass * ATOMIC_MASS_UNIT, prt%q,  &
-         ne, the, ni, thi, pin, pout, xiin, xiout, dt, rnd, 1.0e-4)
+         ne, the, ni, thi, pin, pout, xiin, xiout, dt, rnd, 1.0e-4, ierr)
+
+    if (ierr .ne. 0) then
+      prt%i_elm = 0
+      write(*,*) "WARNING: |xiout| > 2 after particle collision, removing particle. Try reducing particle time step"
 
     pnorm = pout * ( mass * SPEED_OF_LIGHT )
     prt%p(1) = pnorm * xiout
@@ -541,7 +548,7 @@ contains
   end subroutine ccoll_gc_relativistic_push
 
   ! Apply Coulomb collisions for guiding center
-  subroutine ccoll_gc_relativistic_explicitpush(dat,ma,qa,ne,the,ni,thi,uin,uout,xiin,xiout,dt,rnd,cutoff)
+  subroutine ccoll_gc_relativistic_explicitpush(dat,ma,qa,ne,the,ni,thi,uin,uout,xiin,xiout,dt,rnd,cutoff,ierr)
     
     class(ccoll_data), intent(in) :: dat !< tabulated L0L1 values
     real*8, intent(in)    :: ma     !< test particle mass [kg]
@@ -556,14 +563,17 @@ contains
     real*8, intent(in)    :: cutoff !< minimum normalized momentum, energies below this are reflected
     real*8, intent(in)    :: rnd(2) !< normally ditributed random numbes
 
-    real*8, intent(out) :: uout  !< updated momentum
-    real*8, intent(out) :: xiout !< updated pitch
+    real*8,   intent(out) :: uout  !< updated momentum
+    real*8,   intent(out) :: xiout !< updated pitch
+    integer,  intent(out) :: ierr
 
     real*8 :: clogae
     real*8, allocatable :: clogai(:)
     real*8 :: kappa, Dpar, dDpar, Dperp, nu ! Collision coefficients
     real*8 :: kappab, Dparb, dDparb, Dperpb ! Coll. coefficients species-wise
     integer :: i
+
+    ierr = 0
 
     allocate(clogai(size(dat%mi)))
     call ccoll_clog(ma,qa*EL_CHG,dat%mi,dat%Z0*EL_CHG,ne,the,ni,thi,uin,clogae,clogai)
@@ -603,6 +613,8 @@ contains
     if(abs(xiout) .gt. 1.D0) then
        ! First make sure xiout is between the interval [-2, 2]. Physics-wise what we do here is not justified,
        ! but neither is having |xiout| > 2 (one should decrease time step if this happens).
+       if (abs(xiout) .gt. 2.D0) ierr = 1
+
        xiout = modulo( xiout, 2.0 )
 
        ! Reflect (this part is ok physics-wise)
@@ -667,15 +679,19 @@ contains
   end subroutine ccoll_coeffs_partialscreening
 
   !> Push electron taking partial screening effect into account
-  subroutine ccoll_explicitpush_partialscreening(dat, ne, the, ni, uin, uout, xiin, xiout, dt, rnd, cutoff)
+  subroutine ccoll_explicitpush_partialscreening(dat, ne, the, ni, uin, uout, xiin, xiout, dt, rnd, cutoff, ierr)
     implicit none
     type(ccoll_data), intent(in) :: dat
     
     real*8, intent(in) :: ne, ni(:),the, uin, xiin
     real*8, intent(in) :: cutoff, dt, rnd(2)
     real*8, intent(out) :: uout, xiout
+    integer, intent(out) :: ierr
 
     real*8 :: nuee_S, nuee_par, nuee_D, nuei_D
+
+    ierr = 0
+
     call ccoll_coeffs_partialscreening(dat, ne, the, ni, uin, nuee_S, nuee_par, nuee_D, nuei_D)
 
     
@@ -686,6 +702,7 @@ contains
     
     xiout = xiin - ( nuee_D + nuei_D ) * xiin * dt + sqrt( ( 1.d0 - xiin**2 ) * ( nuee_D + nuei_D ) * dt  ) * rnd(2)
     if(abs(xiout) .gt. 1.d0) then
+       if (abs(xiout) .gt. 2.D0) ierr = 1
        xiout = modulo( xiout, 2.d0 )
        if(abs(xiout) .gt. 1.d0) then
           xiout = sign(2.d0-abs(xiout), xiout)
@@ -705,6 +722,7 @@ contains
     real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
     real*8 :: pnorm, E(3), B(3), psi, U, Te, Ti, the, ne, rnd(2), pin, xiin, pout, xiout
     real*8, allocatable :: ni(:), thi(:)
+    integer :: ierr
 
     allocate(ni(size(dat%mi)), thi(size(dat%mi)))
     call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
@@ -719,8 +737,12 @@ contains
     rnd = floor(2.d0*rnd)
     rnd = -1.d0 + 2.d0 * rnd
 
-    call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, dt, rnd, DEFAULT_UCUTOFF)
-    
+    call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, dt, rnd, DEFAULT_UCUTOFF, ierr)
+     
+    if (ierr .ne. 0) then
+      prt%i_elm = 0
+      write(*,*) "WARNING: |xiout| > 2 after particle collision, removing particle. Try reducing particle time step"
+
     pnorm = pout * ( mass * SPEED_OF_LIGHT )
     prt%p(1) = pnorm * xiout
     prt%p(2) = ( pnorm**2 - prt%p(1)**2 ) / ( 2 * norm2(B) * mass )
@@ -739,6 +761,7 @@ contains
     real*8,intent(in) :: mass, time, dt !< Mass in AMU and time in seconds
     real*8 :: E(3), B(3), psi, U, ne, rnd(2), pin, pout, xiin, xiout, Te, Ti, the, bperp(3), bhat(3)
     real*8, allocatable :: ni(:), thi(:)
+    integer :: ierr
 
     call fields%calc_EBpsiU(time, prt%i_elm, prt%st, prt%x(3), E, B, psi, U)
     bhat = vector_cylindrical_to_cartesian(prt%x(3), B) / norm2(B)
@@ -754,7 +777,11 @@ contains
     rnd = floor(2.d0*rnd)
     rnd = -1.d0 + 2.d0 * rnd
 
-    call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, dt, rnd, DEFAULT_UCUTOFF)
+    call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, dt, rnd, DEFAULT_UCUTOFF, ierr)
+
+    if (ierr .ne. 0) then
+      prt%i_elm = 0
+      write(*,*) "WARNING: |xiout| > 2 after particle collision, removing particle. Try reducing particle time step"
     
     ! Back to particle coordinates (gyroangle is left invariant)
     bperp = prt%p - dot_product(prt%p, bhat) * bhat
@@ -851,39 +878,5 @@ contains
 
 
 end module mod_ccoll_relativistic
-
-
-!< Simple program that generates a file "ccoll.data" that contains tabulated L0 and L1 values
-!< that should be applicable for every fusion plasma.
-!program ccoll_generate_L0L1
-!  use mod_ccoll_relativistic
-!  
-!  implicit none
-!
-!  type(ccoll_data) :: dat
-!  logical :: storage_file_on_disk
-!  character(20), parameter :: storage_file='ccolldata'
-!
-!   real*8, parameter  :: uminxp  = -3.D0
-!   real*8, parameter  :: umaxxp  = 2.D0
-!   real*8, parameter  :: thminxp = -3.D0
-!   real*8, parameter  :: thmaxxp = -1.D0 
-!   integer, parameter :: nu      = 401
-!   integer, parameter :: nth     = 201
-!
-!   ! Initialize the look-up tables
-!  print*,''
-!  write(*,*) 'Initializing look-up tables...'
-!  inquire(file=storage_file,exist=storage_file_on_disk)
-!  if(storage_file_on_disk) then
-!     write(*,*) 'File already exists.'
-!  else
-!     dat = ccoll_compute_L0L1table(uminxp,umaxxp,thminxp,thmaxxp,nu,nth)
-!     call ccoll_write_L0L1table(dat,storage_file)
-!  end if
-!  print*,'Done!'
-!
-!end program ccoll_generate_L0L1
-
 
 

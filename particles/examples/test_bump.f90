@@ -24,7 +24,7 @@ module testccoll_helpers
 contains
 
 !< Initialize markers with fixed position and momentum
-subroutine init_markers(sim, nprt, mass, chargenum, r, z, p, xi)
+subroutine init_markers(sim, nprt, mass, chargenum, r, z, p, xi, jorek_data)
   implicit none
 
   type(particle_sim), intent(inout) :: sim
@@ -32,7 +32,8 @@ subroutine init_markers(sim, nprt, mass, chargenum, r, z, p, xi)
   real*8, intent(in)    :: mass
   integer, intent(in)   :: chargenum
   real*8, intent(in)    :: r, z, p, xi !< p = p_SI / mc, xi = ppar / p
-  
+  logical, intent(in)   :: jorek_data  
+
   integer*4 :: iprt
   integer*4 :: ifail
   real*8 :: energy, pnorm, E(3), B(3), psi, U
@@ -49,59 +50,77 @@ subroutine init_markers(sim, nprt, mass, chargenum, r, z, p, xi)
         prt%q = chargenum
         prt%x = [r, z, 0.0]
 
-        prt%i_elm = 1
-        !prt%i_elm = 0
-        !call find_RZ(sim%fields%node_list, sim%fields%element_list, &
-        !     prt%x(1), prt%x(2), &
-        !     prt%x(1), prt%x(2), prt%i_elm, prt%st(1), prt%st(2), ifail)
 
-        B = [0.d0, 0.d0, Bnorm]
-        pnorm = p * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
-        prt%p(1) = pnorm * xi
-        prt%p(2) = ( pnorm**2 - prt%p(1)**2 ) / ( 2 * norm2(B) * sim%groups(1)%mass )
+        if (jorek_data) then
 
-        !energy = sqrt( 1.0 + p**2 ) * mass * (ATOMIC_MASS_UNIT*SPEED_OF_LIGHT**2) / EL_CHG
-        !particle_out = relativistic_gc_momenta_from_E_cospitch(&
-        !     prt,energy, xi,sim%groups(1)%mass,&
-        !     sim%fields,sim%time)
-        
-        !prt%p = particle_out%p
+          prt%i_elm = 0
+          call find_RZ(sim%fields%node_list, sim%fields%element_list, &
+               prt%x(1), prt%x(2), &
+               prt%x(1), prt%x(2), prt%i_elm, prt%st(1), prt%st(2), ifail)
+
+          energy = sqrt( 1.0 + p**2 ) * mass * (ATOMIC_MASS_UNIT*SPEED_OF_LIGHT**2) / EL_CHG
+          particle_out = relativistic_gc_momenta_from_E_cospitch(&
+               prt,energy, xi,sim%groups(1)%mass,&
+               sim%fields,sim%time)
+          
+          prt%p = particle_out%p
+
+        else
+
+          prt%i_elm = 1
+
+          B = [0.d0, 0.d0, Bnorm]
+          pnorm = p * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
+          prt%p(1) = pnorm * xi
+          prt%p(2) = ( pnorm**2 - prt%p(1)**2 ) / ( 2 * norm2(B) * sim%groups(1)%mass )
+
+        end if
 
      type is (particle_kinetic_relativistic)
 
         prtgc%q = chargenum
         prtgc%x = [r, z, 0.0]
 
-        prtgc%i_elm = 1
-        !prtgc%i_elm = 0
-        !call find_RZ(sim%fields%node_list, sim%fields%element_list, &
-        !     prtgc%x(1), prtgc%x(2), &
-        !     prtgc%x(1), prtgc%x(2), prtgc%i_elm, prtgc%st(1), prtgc%st(2), ifail)
+        if (jorek_data) then
 
-        B = [0.d0, 0.d0, Bnorm]
-        pnorm = p * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
+          prtgc%i_elm = 0
+          call find_RZ(sim%fields%node_list, sim%fields%element_list, &
+               prtgc%x(1), prtgc%x(2), &
+               prtgc%x(1), prtgc%x(2), prtgc%i_elm, prtgc%st(1), prtgc%st(2), ifail)
 
-        !energy = sqrt( 1.0 + p**2 ) * mass * (ATOMIC_MASS_UNIT*SPEED_OF_LIGHT**2) / EL_CHG
-        !particle_out = relativistic_gc_momenta_from_E_cospitch(&
-        !     prtgc,energy, 0.d0,sim%groups(1)%mass,&
-        !     sim%fields,sim%time)
-        !prtgc%p = particle_out%p
+          energy = sqrt( 1.0 + p**2 ) * mass * (ATOMIC_MASS_UNIT*SPEED_OF_LIGHT**2) / EL_CHG
+          particle_out = relativistic_gc_momenta_from_E_cospitch(&
+               prtgc,energy, 0.d0,sim%groups(1)%mass,&
+               sim%fields,sim%time)
+          prtgc%p = particle_out%p
 
-        !call sim%fields%calc_EBpsiU(sim%time, prtgc%i_elm, prtgc%st, prtgc%x(3), E, B, psi, U)
-        !prtprt = relativistic_gc_to_relativistic_kinetic(sim%fields%node_list, sim%fields%element_list, &
-        !     prtgc,sim%groups(1)%mass,B,0.0)
-        prt%p = [sqrt(1.d0 - xi**2)*pnorm, xi*pnorm, 0.0]
-        !prt%p = prtprt%p
-        prt%q = prtgc%q
-        prt%x = prtgc%x
-        !prt%x = prtprt%x
-        
+          call sim%fields%calc_EBpsiU(sim%time, prtgc%i_elm, prtgc%st, prtgc%x(3), E, B, psi, U)
+          prtprt = relativistic_gc_to_relativistic_kinetic(sim%fields%node_list, sim%fields%element_list, &
+               prtgc,sim%groups(1)%mass,B,0.0)
 
-        prt%i_elm = 1
-        !prt%i_elm = 0
-        !call find_RZ(sim%fields%node_list, sim%fields%element_list, &
-        !     prt%x(1), prt%x(2), &
-        !     prt%x(1), prt%x(2), prt%i_elm, prt%st(1), prt%st(2), ifail)
+          prt%p = prtprt%p
+          prt%x = prtprt%x
+          prt%q = prtgc%q
+
+          prt%i_elm = 0
+          call find_RZ(sim%fields%node_list, sim%fields%element_list, &
+               prt%x(1), prt%x(2), &
+               prt%x(1), prt%x(2), prt%i_elm, prt%st(1), prt%st(2), ifail)
+
+        else
+
+          prtgc%i_elm = 1
+
+          B = [0.d0, 0.d0, Bnorm]
+          pnorm = p * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
+
+          prt%p = [sqrt(1.d0 - xi**2)*pnorm, xi*pnorm, 0.0]
+          prt%x = prtgc%x
+          prt%q = prtgc%q
+
+          prt%i_elm = 1
+
+        end if
 
      end select
   end do
@@ -170,7 +189,7 @@ character(len=40) :: fnout !< File where the output is written
 real*8, allocatable :: p(:), xi(:)
 real*8 :: raxis, zaxis, taxis, saxis, psiaxis, ielmaxis
 integer*4 :: iprt, nprt, istep, chargenum
-
+logical :: full_orbit, jorek_data, part_screen
 real*8 :: E(3), B(3), psi, U, p0, xi0, rc0, zc0
 real*8 :: pnorm, pin, xiin, pout, xiout, rnd(2), rndprt(3), pinprt(3), poutprt(3)
 real*8, dimension(:), allocatable    :: ni
@@ -183,11 +202,19 @@ real*8 :: t0, t1
 type(ccoll_data) :: dat
 
 !!! Simulation options begin !!!
-tstep         = 1.e-7 !< Marker time step
-duration      = 1e0   !< How long markers are traced
-nprt          = 48*1 !< Number of markers
+tstep         = 1.e-7   !< Marker time step
+duration      = 1e0     !< How long markers are traced
+nprt          = 48*1    !< Number of markers
 time_startsim = 0.0
-fnout         = "bump_gc.h5"
+full_orbit    = .false. !< Use full orbit markers instead of guiding-center
+jorek_data    = .false. !< Use field from jorek restart files
+part_screen   = .false. !< Use the partial screening collision operator
+
+if (full_orbit) then
+  fnout = "bump_fo.h5"
+else
+  fnout = "bump_gc.h5"
+end if
 
 ! Define markers
 rc0  = 6.2
@@ -198,10 +225,11 @@ mass = 0.000548579909
 chargenum = -1
 
 call random_seed()
-
-!call sim%initialize(num_groups=1)
-!call init_imp_adas(0)
-!call ccoll_init('ccolldata', dat)
+!!!
+call sim%initialize(num_groups=1)
+call init_imp_adas(0)
+call ccoll_init('ccolldata', dat)
+!!!
 dat = ccoll_read_L0L1table('ccolldata')
 allocate(sim%groups(1))
 allocate( ni(1), dat%mi(1), dat%Z0(1), dat%Zi(1), dat%ai(1), dat%Ii(1))
@@ -212,8 +240,12 @@ dat%ai(1) = 1
 dat%Ii(1) = 1.d0
 
 ! Toggle here between GC and gyro-orbit
-!allocate(particle_gc_relativistic::sim%groups(1)%particles(nprt))
-allocate(particle_kinetic_relativistic::sim%groups(1)%particles(nprt))
+
+if (full_orbit) then
+  allocate(particle_kinetic_relativistic::sim%groups(1)%particles(nprt))
+else
+  allocate(particle_gc_relativistic::sim%groups(1)%particles(nprt))
+end if
 
 ! Allocate and initialize needed data arrays
 allocate( p(nprt), xi(nprt) )
@@ -221,13 +253,16 @@ allocate( p(nprt), xi(nprt) )
 call cpu_time(t0)
 
 ! Begin simulation at new time slice by initializing the field at that point
-!sim%time = time_startsim
-!fieldreader = event(read_jorek_fields_interp_linear(i=-1))!last_file_before_time(sim%time)))
-!call with(sim,fieldreader)
-!events = [fieldreader]
+sim%time = time_startsim
+
+if (jorek_data) then
+  fieldreader = event(read_jorek_fields_interp_linear(i=-1))!last_file_before_time(sim%time)))
+  call with(sim,fieldreader)
+  events = [fieldreader]
+end if
 
 ! Initialize markers
-call init_markers(sim, nprt, mass, chargenum, rc0, zc0, p0, xi0)
+call init_markers(sim, nprt, mass, chargenum, rc0, zc0, p0, xi0, jorek_data)
 
 ! Trace markers for the given duration
 nstep  = nint(duration/tstep)
@@ -254,39 +289,51 @@ do istep=1,nstep
 
          if (prt(iprt)%i_elm .gt. 0) then
 
-            !** Use these when using actual JOREK data **!
-            !call runge_kutta_fixed_dt_gc_push_jorek_radreact(sim%fields,sim%time,deltat, sim%groups(1)%mass, prt(iprt))
-            !call ccoll_gc_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
-            !********************************************!
+            if (jorek_data) then
+              !** Use these when using actual JOREK data **!
+
+              call runge_kutta_fixed_dt_gc_push_jorek_radreact(sim%fields,sim%time,deltat, sim%groups(1)%mass, prt(iprt))
+
+              if (part_screen) then
+                call ccoll_gc_relativistic_push_partialscreening(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+              else
+                call ccoll_gc_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+              end if
             
-            !** Test block **!
-            ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
-            prt(iprt)%p(1) = prt(iprt)%p(1) + (EL_CHG*prt(iprt)%q / ATOMIC_MASS_UNIT) * norm2(E) * deltat
-            call radreactforce_gc(B, deltat, sim%groups(1)%mass, prt(iprt))
-            
-            pnorm = sqrt(prt(iprt)%p(2) * 2 * norm2(B) * sim%groups(1)%mass + prt(iprt)%p(1)**2)
-            pin   = pnorm / ( sim%groups(1)%mass * SPEED_OF_LIGHT )
-            xiin  = prt(iprt)%p(1) / pnorm
+            else
 
-            call random_number(rnd)
-            rnd = floor(2*rnd)
-            rnd = -1.0 + 2.0 * rnd
+              !** Test block **!
+              ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
+              prt(iprt)%p(1) = prt(iprt)%p(1) + (EL_CHG*prt(iprt)%q / ATOMIC_MASS_UNIT) * norm2(E) * deltat
+              call radreactforce_gc(B, deltat, sim%groups(1)%mass, prt(iprt))
+              
+              pnorm = sqrt(prt(iprt)%p(2) * 2 * norm2(B) * sim%groups(1)%mass + prt(iprt)%p(1)**2)
+              pin   = pnorm / ( sim%groups(1)%mass * SPEED_OF_LIGHT )
+              xiin  = prt(iprt)%p(1) / pnorm
 
-            call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
-                 ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
-            !** Use this instead to test the partial screening operator **!
-            !call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
-            !*************************************************************!
+              call random_number(rnd)
+              rnd = floor(2*rnd)
+              rnd = -1.0 + 2.0 * rnd
 
-            p(iprt)  = pout
-            xi(iprt) = xiout
 
-            ! Collisions don't move markers so we can just use the same B here to convert back to GC momentum
-            pnorm = pout * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
-            prt(iprt)%p(1) = pnorm * xiout
-            prt(iprt)%p(2) = ( pnorm**2 - prt(iprt)%p(1)**2 ) / ( 2 * norm2(B) * sim%groups(1)%mass )
-            !** Test block ends **!
+              if (part_screen) then
+                !** Use this instead to test the partial screening operator **!
+                call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+              else
+                call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
+                   ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+              end if
 
+              p(iprt)  = pout
+              xi(iprt) = xiout
+
+              ! Collisions don't move markers so we can just use the same B here to convert back to GC momentum
+              pnorm = pout * ( sim%groups(1)%mass * SPEED_OF_LIGHT )
+              prt(iprt)%p(1) = pnorm * xiout
+              prt(iprt)%p(2) = ( pnorm**2 - prt(iprt)%p(1)**2 ) / ( 2 * norm2(B) * sim%groups(1)%mass )
+              !** Test block ends **!
+
+          end if
          end if
       end do
       !$omp end parallel do
@@ -309,43 +356,60 @@ do istep=1,nstep
           
          if (prt(iprt)%i_elm .gt. 0) then
 
-            !** Use these when using actual JOREK data **!
-            !call volume_preserving_radiation_push_jorek(prt(iprt),sim%fields,sim%groups(1)%mass,sim%time,deltat,ifail)
-            !call ccoll_kinetic_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
-            !********************************************!
+            if (jorek_data) then
+              !** Use these when using actual JOREK data **!
 
-            !** Test block **!
-            ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
-            prt(iprt)%p =  prt(iprt)%p + EL_CHG * prt(iprt)%q * vector_cylindrical_to_cartesian(prt(iprt)%x(3), E) * deltat / ATOMIC_MASS_UNIT
-            call radreactforce_kinetic(B, deltat, sim%groups(1)%mass, prt(iprt))
-            
-            ! For collisions we need to convert from ppar,mu to pnorm,pitch (and then revert)
-            pnorm = norm2(prt(iprt)%p) / (sim%groups(1)%mass * SPEED_OF_LIGHT)
+              call volume_preserving_radiation_push_jorek(prt(iprt),sim%fields,sim%groups(1)%mass,sim%time,deltat,ifail)
 
-            call random_number(rndprt)
-            rndprt = floor(2*rndprt)
-            rndprt = -1.0 + 2.0 * rndprt
+              if (part_screen) then
+                call ccoll_kinetic_relativistic_push_partialscreening(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+              else
+                call ccoll_kinetic_relativistic_push(dat, prt(iprt), sim%fields, sim%groups(1)%mass, sim%time,deltat)
+              end if
 
-            pnorm = norm2(prt(iprt)%p)
+            else
 
-            call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
-                 ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
-            
-            !** Use this instead to test the partial screening operator **!
-            !bhat = vector_cylindrical_to_cartesian(prt(iprt)%x(3), B) / norm2(B)
-            !pin  = norm2(prt(iprt)%p) / (mass * SPEED_OF_LIGHT)
-            !xiin = dot_product(prt(iprt)%p, bhat) / norm2(prt(iprt)%p)
-            !call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rndprt, 1.0e-4)
-            !bperp = prt(iprt)%p - dot_product(prt(iprt)%p, bhat) * bhat
-            !bperp = bperp / norm2(bperp)
-            !poutprt = (xiout * bhat + sqrt( 1.d0 - xiout**2 ) * bperp ) * pout
-            !*************************************************************!
+              !** Test block **!
+              ! Test field is uniform so we can push the marker explicitly (just accelerating it in E-field)
+              prt(iprt)%p =  prt(iprt)%p + EL_CHG * prt(iprt)%q * vector_cylindrical_to_cartesian(prt(iprt)%x(3), E) * deltat / ATOMIC_MASS_UNIT
+              call radreactforce_kinetic(B, deltat, sim%groups(1)%mass, prt(iprt))
+              
+              ! For collisions we need to convert from ppar,mu to pnorm,pitch (and then revert)
+              pnorm = norm2(prt(iprt)%p) / (sim%groups(1)%mass * SPEED_OF_LIGHT)
 
-            prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
-            poutprt = prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT)
-            p(iprt)  = norm2(poutprt) 
-            xi(iprt) = dot_product(prt(iprt)%p, vector_cylindrical_to_cartesian(prt(iprt)%x(3), B)) / ( norm2(prt(iprt)%p) * norm2(B) )
-            !** Test block ends **!
+              call random_number(rndprt)
+              rndprt = floor(2*rndprt)
+              rndprt = -1.0 + 2.0 * rndprt
+
+              pnorm = norm2(prt(iprt)%p)
+
+
+              if (part_screen) then
+              
+                !** Use this instead to test the partial screening operator **!
+                bhat = vector_cylindrical_to_cartesian(prt(iprt)%x(3), B) / norm2(B)
+                pin  = norm2(prt(iprt)%p) / (mass * SPEED_OF_LIGHT)
+                xiin = dot_product(prt(iprt)%p, bhat) / norm2(prt(iprt)%p)
+                call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rndprt, 1.0e-4)
+                bperp = prt(iprt)%p - dot_product(prt(iprt)%p, bhat) * bhat
+                bperp = bperp / norm2(bperp)
+                poutprt = (xiout * bhat + sqrt( 1.d0 - xiout**2 ) * bperp ) * pout
+              
+              else
+
+                call ccoll_kinetic_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
+                    ne, the, ni, thi, deltat, rndprt, prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT), poutprt)
+
+              end if
+
+              prt(iprt)%p = poutprt * (sim%groups(1)%mass * SPEED_OF_LIGHT)
+              poutprt = prt(iprt)%p / (sim%groups(1)%mass * SPEED_OF_LIGHT)
+              p(iprt)  = norm2(poutprt) 
+              xi(iprt) = dot_product(prt(iprt)%p, vector_cylindrical_to_cartesian(prt(iprt)%x(3), B)) / ( norm2(prt(iprt)%p) * norm2(B) )
+
+                !** Test block ends **!
+
+          end if
          end if
       end do
       !$omp end parallel do
@@ -362,6 +426,6 @@ call write_state_hdf5(fnout, p, xi)
 ! Finalize the simulation
 call ccoll_deallocate(dat)
 deallocate ( p, xi, ni )
-!call sim%finalize
+call sim%finalize
 
 end program test_bump

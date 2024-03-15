@@ -23,6 +23,7 @@ subroutine preset_parameters
   nstep_n  = 0
   
   eta_T_dependent   = .true.
+  eta_coul_log_dep  = .false.
   visco_T_dependent = .true.
   ZKpar_T_dependent = .true.
 
@@ -53,6 +54,7 @@ subroutine preset_parameters
   restart      = .false.
   import_equil = .false.
   regrid       = .false.
+  regrid_from_rz = .false.
   rst_format   = 0             ! use 'old' format for restart import
   write_ps     = .true.           ! write postscript file at the end of the run 
   
@@ -142,7 +144,8 @@ subroutine preset_parameters
   dPSI_inner   = 0.11
   dPSI_private = 0.03
   dPSI_up_priv = 0.03
-  
+
+  forceSDN = .false.
   SDN_threshold = 1.d-4
   
   R_geo     = 10.d0
@@ -710,6 +713,7 @@ subroutine preset_parameters
 
   JET_MGI = .false.
   ASDEX_MGI = .false.
+  t_ns  = 2.d3
   ns_amplitude = 0.d0
   ns_R      = 3.2d0
   ns_Z      =  1.5d0
@@ -734,12 +738,14 @@ subroutine preset_parameters
   energy_teleported = 0.d0 
   constant_imp_source = 0.d0
 
+  L_tube = 0. ! Needed to ensure injection starts at t_ns when JET_MGI=ASDEX_MGI=.false.
+
   !====== JET DMV-2 parameters
-  L_tube = 2.4d0
+  !L_tube = 2.4d0
   K_Dmv = 4.d-2
   A_Dmv = 1.77d-2
   V_Dmv = 9.75d-4
-  t_ns  = 2.d3
+
   !======= Additional parameters for SPI =======
   spi_Vel_Rref    = 0.0d0
   spi_Vel_Zref    = 0.0d0

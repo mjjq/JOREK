@@ -14,6 +14,7 @@ module phys_module
   real*8  :: eta_T_0              !< Initial resistivity
   real*8  :: eta_ohmic            !< Resistivity at core for the Ohmic heating term
   logical :: eta_T_dependent      !< Resistivity dependent on temperature? Otherwise constant
+  logical :: eta_coul_log_dep     !< Resistivity dependent on variations of the Coulomb logarithm?
   real*8  :: T_max_eta            !< Temperature above which the resistivity is truncated (use with care; only for numerical reasons)
   real*8  :: T_max_eta_ohm        !< Temperature above which the resistivity used in the Ohmic heating term is truncated (use with care; only for numerical reasons)
   real*8  :: T_max_visco          !< Temperature above which the viscosity is truncated; It is aimed for keeping the Prandtl number constant when T_max_eta is activated. 
@@ -37,6 +38,7 @@ module phys_module
   real*8  :: tauIC                !< Scaling factor for diamagnetic terms (see [[diamag|diamagnetic]])
   real*8  :: tauIC_nominal        !< Nominal scaling factor (considering Ti=Te) for diamagnetic terms (see [[diamag|diamagnetic]])
   real*8  :: eta_spitzer          !< Spitzer resistivity in the core (considering main ion charge Z=1, effective ion charge Zeff=1)
+  real*8  :: lnA_center           !< Coulomb logarithm in the core (used for the resistivity function)
   logical :: Wdia                 !< Include diamagnetic flows in viscosity terms? (see [[wdia|here]])
   logical :: U_sheath             !< Use Stangeby BCs for electric potential
   logical :: renormalise          !< Set true to give all input MHD parameters in S.I. units (ie. renormalise them before equations)
@@ -61,10 +63,12 @@ module phys_module
   integer :: nout_projection      !< Output particle projection every nout_projection timesteps (only for diagnostics)
                                   !< Note that the 'to_h5' or 'to_vtk' flag should be .true. in the 'new_projection' function for this parameter to be in play
   integer :: xcase                !< 1->LowerXpoint. 2->UpperXpoint. 3->doubleNull
+  logical :: forceSDN             !< Force a symmetric double null, within the accuracy of SDN_threshold
   real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
   logical :: restart              !< Restart a code run from the restart file jorek_restart.h5?
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
+  logical :: regrid_from_rz       !< Re-generate the flux-aligned grid from an rz equilibrium
   logical :: import_equil         !< (presently unused)
   logical :: xpoint               !< X-point plasma or not? see also xcase
   real*8  :: Z_xpoint_limit(2)    !< Search the lower X-point in the region Z < Z_xpoint_limit(1) and the upper X-point in the region Z > Z_xpoint_limit(2) 

@@ -277,8 +277,11 @@ mpi_required = 0
   input_treat_axis = treat_axis   ! store the value from the input file
 
   if ( restart .and. (my_id == 0) ) then
-    
-    call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+    if(remap) then
+      call import_restart(node_list_remap, element_list_remap, 'jorek_restart', rst_format, ierr)
+    else
+      call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+    endif
     if ( ierr /= 0 ) stop
 
     ! for variable time step Gears method
@@ -337,17 +340,22 @@ mpi_required = 0
  end if !   if ( restart .and. (my_id == 0) ) then
 
   ! This is necessary for the parallel vacuum version during the code restart 
+  ! if(restart.and. (.not.remap)) then
   if(restart) then
     call broadcast_phys(my_id)  
     if(freeboundary) call broadcast_vacuum(my_id, resistive_wall)
   end if
-  call populate_element_rtree(node_list, element_list)
+  if(remap) then
+    call populate_element_rtree(node_list_remap, element_list_remap)
+  else
+    call populate_element_rtree(node_list, element_list)
+  endif
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
   !***********************************************************************
   
-  if_not_restart: if (.not. restart) then
+  if_not_restart: if ((.not. restart) .or. remap) then
     call tr_resetfile()
     
     call initial_grid(node_list, element_list, bnd_node_list, bnd_elm_list, my_id, n_cpu)
@@ -423,6 +431,17 @@ mpi_required = 0
       write(*,'(A,12e16.8)') ' initial energies : ', W_mag, W_kin
 
     end if ! (my_id == 0)
+
+    ! --- remap the data from node_list_remap & element_list_remap into node_list & element_list
+    if(remap .and. (my_id == 0)) then
+      call remap_from_restart (node_list, element_list, node_list_remap, element_list_remap, ierr)
+      if ( more_outfile_digits) then
+        write(fileout,'(A5,i6.6)') 'jorek',index_now - 1
+      else
+        write(fileout,'(A5,i5.5)') 'jorek',index_now - 1
+      end if
+      call export_restart(node_list, element_list, fileout)
+    endif
     
   end if if_not_restart
   

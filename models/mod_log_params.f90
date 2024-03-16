@@ -557,6 +557,7 @@ write(*,'(1x,a)',advance='no') ' RTREE_H               : '
   write(*,INTG_FMT) 'rst_format            ', rst_format
   write(*,INTG_FMT) 'rst_hdf5              ', rst_hdf5
   write(*,INTG_FMT) 'rst_hdf5_version      ', rst_hdf5_version
+  write(*,LOGI_FMT) 'remap                 ', remap
   write(*,LOGI_FMT) 'regrid                ', regrid
   write(*,LOGI_FMT) 'write_ps              ', write_ps
   write(*,INTG_FMT) 'n_R                   ', n_R

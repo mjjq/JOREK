@@ -31,6 +31,47 @@ if (ifail .eq. 999) ielm_out = 0 ! Otherwise testing ielm=0 on output does not
 ! work anymore (and we don't always check ifail)
 end subroutine find_RZ
 
+subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  !-------------------------------------------------------------------------
+  !< Find all elements for which minmax is correct and run find_RZ_single on those.
+  !< Return the first result.
+  !-------------------------------------------------------------------------
+  use data_structure
+  use mod_element_rtree, only: elements_containing_point
+  implicit none
+  
+  type (type_node_list), intent(in)    :: node_list
+  type (type_element_list), intent(in) :: element_list
+  real*8, intent(in)     :: R_find, Z_find
+  real*8, intent(out)    :: R_out,Z_out,s_out,t_out
+  integer, intent(inout) :: ielm_out
+  integer, intent(out)   :: ifail
+  
+  integer :: k
+  integer, dimension(:), allocatable :: i_elms
+  
+  ielm_out = 0
+  call elements_containing_point(R_find, Z_find, i_elms)
+  
+  ! ! then loop through all
+  ! do k=1,size(i_elms)
+  !   call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+  !   write(*,*) 'In find_RZ, k = ', k, ', i_elms(k) = ', i_elms(k), ', ifail = ', ifail
+  !   if (ifail .eq. 0) exit
+  ! enddo
+  
+  ! then loop through all
+  do k=1,element_list%n_elements
+    call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+    ! write(*,*) 'In find_RZ, k = ', k, ', i_elm = ', k, ', ifail = ', ifail
+    if (ifail .eq. 0) exit
+  enddo
+  
+  if (ielm_out .eq. 0) ifail = 99
+  if (ifail .eq. 999) ielm_out = 0 ! Otherwise testing ielm=0 on output does not
+  ! work anymore (and we don't always check ifail)
+  end subroutine find_RZ_all
+
 subroutine find_RZ_single(node_list,element_list,i_elm,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
 !-------------------------------------------------------------------------
 !< solves two non-linear equations using Newtons method (from numerical recipes)

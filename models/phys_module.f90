@@ -71,6 +71,7 @@ module phys_module
   real*8  :: SDN_threshold        !< threshold, in absolute psi, for a symmetric-double-null grid construction
   integer :: rst_format           !< 0 == old format, 1 == new format for restart file
   logical :: restart              !< Restart a code run from the restart file jorek_restart.h5?
+  logical :: remap                !< Remap the data from the loaded jorek_restart.h5 into new mesh generated based on the equlibrium
   logical :: regrid               !< Re-generate the flux-aligned grid (does not work currently)?
   logical :: import_equil         !< (presently unused)
   logical :: xpoint               !< X-point plasma or not? see also xcase

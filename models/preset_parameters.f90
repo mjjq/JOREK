@@ -574,6 +574,7 @@ subroutine preset_parameters
   linear_run         = .false.
   
   export_for_nemec   = .false.
+  export_aux_node_list = .true.
   
   ! Use iterative solver by default if n_tor>1.
   if ( n_tor == 1) then

@@ -2341,12 +2341,14 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
           else if (ivar .le. (2 * n_var)) then     !< map deltas
             call interp_delta(node_list_src, element_list_src, i_elm_find, ivar - n_var, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
             val_ptrs => node_list_dst%node(inode)%deltas(itor, :, ivar - n_var)
+#ifdef fullmhd
           else if (ivar .eq. (2 * n_var + 1)) then !< map Fprof_eq
             call interp(node_list_src, element_list_src, i_elm_find, 710, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
             val_ptrs => node_list_dst%node(inode)%Fprof_eq(:)
           else if (ivar .eq. (2 * n_var + 2)) then !< map psi_eq
             call interp(node_list_src, element_list_src, i_elm_find, 711, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
             val_ptrs => node_list_dst%node(inode)%psi_eq(:)
+#endif
           else
             write(*,*) "Undefined mapping operations. Please check!"
             cycle
@@ -2369,8 +2371,10 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
 
           val_ptrs(1) = eq_g_tmp
           val_ptrs(2) = eq_g_R * R_s + eq_g_Z * Z_s
+#ifdef fullmhd
           val_ptrs(3) = eq_g_R * R_t + eq_g_Z * Z_t
           val_ptrs(4) = eq_g_R * R_st + eq_g_Z * Z_st + (R_t * Z_s + Z_t * R_s) * eq_g_RZ + R_s * R_t * eq_g_RR + Z_s * Z_t * eq_g_ZZ
+#endif
 
         enddo
       enddo

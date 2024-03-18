@@ -12,7 +12,7 @@ module mod_interp_methods
 
 contains
 
-  !> Bilinear interpolation method
+  !> Bilinear interpolation method (only works with equidistant meshes)
   real(kind=8) function interp_bilinear(x, y, f, xq, yq) 
     implicit none
     

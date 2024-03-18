@@ -471,9 +471,8 @@ subroutine bootstrap_get_averaged_j_spline(my_id, node_list, element_list, psi_a
     endif
   endif
 
-  ! TODO
-  ! Should the condition be n_flux > 0 or else should it be explicit about xpoint also, as in equilibrium?
-  if (n_flux .gt. 0) then
+  ! If we are dealing with an X-point flux-aligned grid, use define_flux values, otherwise use find_flux_values.
+  if (xpoint .and. (n_flux .gt. 1)) then
     ! --- Define number of psi values and allocate flux_list structure
     flux_list%n_psi = n_psi
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
@@ -691,9 +690,8 @@ subroutine bootstrap_get_q_and_ft_splines(my_id, node_list, element_list, psi_ax
     endif
   endif
 
-  ! TODO
-  ! Should the condition be n_flux > 0 or else should it be explicit about xpoint also, as in equilibrium?
-  if (n_flux .gt. 0) then
+  ! If we are dealing with an X-point flux-aligned grid, use define_flux values, otherwise use find_flux_values.
+  if (xpoint .and. (n_flux .gt. 1)) then
     ! --- Define number of psi values and allocate flux_list structure
     flux_list%n_psi = n_psi
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)

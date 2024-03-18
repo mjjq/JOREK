@@ -53,19 +53,19 @@ subroutine find_RZ_all(node_list,element_list,R_find,Z_find,R_out,Z_out,ielm_out
   ielm_out = 0
   call elements_containing_point(R_find, Z_find, i_elms)
   
-  ! ! then loop through all
-  ! do k=1,size(i_elms)
-  !   call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-  !   write(*,*) 'In find_RZ, k = ', k, ', i_elms(k) = ', i_elms(k), ', ifail = ', ifail
-  !   if (ifail .eq. 0) exit
-  ! enddo
-  
   ! then loop through all
-  do k=1,element_list%n_elements
-    call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
-    ! write(*,*) 'In find_RZ, k = ', k, ', i_elm = ', k, ', ifail = ', ifail
+  do k=1,size(i_elms)
+    call find_RZ_single(node_list,element_list,i_elms(k),R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
     if (ifail .eq. 0) exit
   enddo
+  
+  if (ielm_out .eq. 0 .or. ifail .ne. 0) then
+    ! then loop through the whole element_list
+    do k=1,element_list%n_elements
+      call find_RZ_single(node_list,element_list,k,R_find,Z_find,R_out,Z_out,ielm_out,s_out,t_out,ifail)
+      if (ifail .eq. 0) exit
+    enddo
+  endif
   
   if (ielm_out .eq. 0) ifail = 99
   if (ifail .eq. 999) ielm_out = 0 ! Otherwise testing ielm=0 on output does not

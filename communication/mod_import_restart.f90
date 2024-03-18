@@ -2231,7 +2231,7 @@ subroutine import_hdf5_restart_aux(aux_node_list, filename, format_rst, error)
   return
 end subroutine import_hdf5_restart_aux
 
-subroutine remap_from_restart (node_list_dst, element_list_dst, node_list_src, element_list_src, ierr, no_perturbations)
+subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, element_list_src, ierr)
   use tr_module
   use data_structure
   use phys_module
@@ -2239,257 +2239,158 @@ subroutine remap_from_restart (node_list_dst, element_list_dst, node_list_src, e
   use equil_info
   use mod_boundary
   use basis_at_gaussian
+  use mod_element_rtree, only: populate_element_rtree
 
   implicit none
 
   ! --- Routine parameters
-  type(type_node_list),    intent(inout) :: node_list_dst
-  type(type_element_list), intent(inout) :: element_list_dst
-  type(type_node_list),    intent(in)    :: node_list_src
-  type(type_element_list), intent(in)    :: element_list_src
-  integer,                 intent(out)   :: ierr
-  logical, optional,       intent(in)    :: no_perturbations ! don't initialize new harmonics
+  type(type_node_list), target, intent(inout)   :: node_list_dst
+  type(type_element_list), intent(inout)        :: element_list_dst
+  type(type_node_list),    intent(in)           :: node_list_src
+  type(type_element_list), intent(in)           :: element_list_src
+  integer,                 intent(out)          :: ierr
  
   ! --- Local parameters
   type (type_bnd_element_list)           :: bnd_elm_list_dst
   type (type_bnd_node_list)              :: bnd_node_list_dst
-  integer                                :: i_elm_src, inode, itor, ivar
-  real*8                                 :: s_src, t_src, R_dst, Z_dst, R_src, Z_src
-  real*8                                 :: R_g_dst, R_s_dst, R_t_dst, R_st_dst, R_ss_dst, R_tt_dst
-  real*8                                 :: Z_g_dst, Z_s_dst, Z_t_dst, Z_st_dst, Z_ss_dst, Z_tt_dst
-  real*8                                 :: R_s_new, R_t_new, R_st_new
-  real*8                                 :: Z_s_new, Z_t_new, Z_st_new
-  real*8                                 :: eq_g_dst, eq_s_dst, eq_t_dst, eq_st_dst, eq_ss_dst, eq_tt_dst
-  real*8                                 :: eq_g_RR, eq_g_RZ, eq_g_ZZ
-  real*8                                 :: ratio_st
-  real*8                                 :: xjac_src, xjac_R_src, xjac_Z_src
-  real*8                                 :: eq_g_R, eq_g_Z
-  logical                                :: original_mesh
 
-  ratio_st = 1.d0
-  if(n_flux .eq. 0 .and. n_tht .eq. 0 .and. element_list_dst%n_elements .eq. element_list_src%n_elements) then
-    original_mesh = .true.
-  else
-    original_mesh = .false.
-  endif
-! #define DEBUG_OUTPUT
+  integer                                :: inode, itor, ivar, i_elm_find
+  real*8                                 :: s_find, t_find, R_find, Z_find
   
+  real*8                                 :: R_g_tmp, R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp
+  real*8                                 :: Z_g_tmp, Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp
+  real*8                                 :: eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp
+
+  real*8                                 :: R, Z, R_s, R_t, R_st, Z_s, Z_t, Z_st
+  real*8                                 :: eq_g_R, eq_g_Z, eq_g_RR, eq_g_RZ, eq_g_ZZ
+  real*8                                 :: xjac, xjac_R, xjac_Z
+  real*8, dimension(:), pointer          :: val_ptrs => Null()
+
+  real*8                                 :: max_delta_RZ
+  logical                                :: is_different_mesh
+
   ierr = 0
-  write(*,*) 'original_mesh = ', original_mesh
-  write(*,*) 'Start remapping data into new mesh ...'
+  is_different_mesh = .true.
+  
+  if (node_list_src%n_nodes .eq. node_list_dst%n_nodes) then
+    max_delta_RZ = maxval(dsqrt(dabs(node_list_src%node(:)%x(1,1,1) - node_list_dst%node(:)%x(1,1,1))**2 &
+                              + dabs(node_list_src%node(:)%x(1,1,2) - node_list_dst%node(:)%x(1,1,2))**2))
+    if(max_delta_RZ .lt. 1.d-6) is_different_mesh = .false.   
+  endif  
 
-#ifdef DEBUG_OUTPUT
-  open(unit=10, file='node_list_dst.dat', status='unknown', action='write')
-#endif
-  do inode = 1, node_list_dst%n_nodes
-    node_list_dst%node(inode)%values = 0.d0 
-    node_list_dst%node(inode)%deltas = 0.d0 
-    R_dst = node_list_dst%node(inode)%x(1,1,1)
-    Z_dst = node_list_dst%node(inode)%x(1,1,2)
-    !< slight difference might exist between the required (R, Z)_dst and the actual outcome (R, Z)_src
-    call find_RZ_all(node_list_src,element_list_src,R_dst,Z_dst,R_src,Z_src,i_elm_src,s_src,t_src,ierr)
-
-    !< test on original grids
-    if(original_mesh) then
-      if(inode .le. element_list_dst%n_elements) then
-        i_elm_src = inode
-        s_src = 0.d0
-        t_src = 0.d0
-      else ! Boundary layer
-        i_elm_src = inode - (node_list_dst%n_nodes - element_list_dst%n_elements)
-        s_src = 1.d0
-        t_src = 0.d0
-      endif
-    endif
-
-    !< map R Z coordinates
-    call interp_RZ_2_dbg(node_list_src, element_list_src, i_elm_src, s_src, t_src, R_g_dst, R_s_dst, R_t_dst, R_st_dst, R_ss_dst, R_tt_dst, Z_g_dst, Z_s_dst, Z_t_dst, Z_st_dst, Z_ss_dst, Z_tt_dst, ratio_st)
-    ! node_list_dst%node(inode)%x(1,1,1) = R_g_dst
-    ! node_list_dst%node(inode)%x(1,2,1) = R_s_dst  / ratio_st
-    ! node_list_dst%node(inode)%x(1,3,1) = R_t_dst  / ratio_st
-    ! node_list_dst%node(inode)%x(1,4,1) = R_st_dst / ratio_st ** 2
-    ! node_list_dst%node(inode)%x(1,1,2) = Z_g_dst
-    ! node_list_dst%node(inode)%x(1,2,2) = Z_s_dst  / ratio_st
-    ! node_list_dst%node(inode)%x(1,3,2) = Z_t_dst  / ratio_st
-    ! node_list_dst%node(inode)%x(1,4,2) = Z_st_dst / ratio_st ** 2 
-
-    write(*,'(A, I5)') 'inode = ', inode
-    write(*,'(A, I5)') 'i_elm_find = ', i_elm_src
-    write(*,'(A, ES15.6)') 's_find = ', s_src
-    write(*,'(A, ES15.6)') 't_find = ', t_src
-    write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') 'R_dst = ', R_dst, ', R_find = ', R_src, ', R_interp = ', R_g_dst
-    write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') 'Z_dst = ', Z_dst, ', Z_find = ', Z_src, ', Z_interp = ', Z_g_dst
-
-    write(*,'(A, ES15.6, A, ES15.6)') 'R_s_dst  = ', node_list_dst%node(inode)%x(1,2,1), ', R_s_interp  = ', R_s_dst
-    write(*,'(A, ES15.6, A, ES15.6)') 'R_t_dst  = ', node_list_dst%node(inode)%x(1,3,1), ', R_t_interp  = ', R_t_dst
-    write(*,'(A, ES15.6, A, ES15.6)') 'R_st_dst = ', node_list_dst%node(inode)%x(1,4,1), ', R_st_interp = ', R_st_dst
-
-    write(*,'(A, ES15.6, A, ES15.6)') 'Z_s_dst  = ', node_list_dst%node(inode)%x(1,2,2), ', Z_s_interp  = ', Z_s_dst
-    write(*,'(A, ES15.6, A, ES15.6)') 'Z_t_dst  = ', node_list_dst%node(inode)%x(1,3,2), ', Z_t_interp  = ', Z_t_dst
-    write(*,'(A, ES15.6, A, ES15.6)') 'Z_st_dst = ', node_list_dst%node(inode)%x(1,4,2), ', Z_st_interp = ', Z_st_dst
-
-    if(ierr .ne. 0) then
-      write(*,*) 'Failed to remap node: ', inode
-      cycle
-    else
-      write(*,*) 'Succeed to remap node: ', inode
-    endif
-
-#ifdef DEBUG_OUTPUT
-    write(10, '(A)') '0   0    idegree    RZ_data    RZ_interp_data    delta_ratio'
-    write(10, '(3I5, 3ES15.6)') 0, 0, 1, node_list_src%node(inode)%x(1, 1, 1), R_g_dst,  (node_list_src%node(inode)%x(1, 1, 1) - R_g_dst)  / (dabs(node_list_src%node(inode)%x(1, 1, 1)) + 1e-10)
-    write(10, '(3I5, 3ES15.6)') 0, 0, 2, node_list_src%node(inode)%x(1, 2, 1), R_s_dst,  (node_list_src%node(inode)%x(1, 2, 1) - R_s_dst)  / (dabs(node_list_src%node(inode)%x(1, 2, 1)) + 1e-10)
-    write(10, '(3I5, 3ES15.6)') 0, 0, 3, node_list_src%node(inode)%x(1, 3, 1), R_t_dst,  (node_list_src%node(inode)%x(1, 3, 1) - R_t_dst)  / (dabs(node_list_src%node(inode)%x(1, 3, 1)) + 1e-10)
-    write(10, '(3I5, 3ES15.6)') 0, 0, 4, node_list_src%node(inode)%x(1, 4, 1), R_st_dst, (node_list_src%node(inode)%x(1, 4, 1) - R_st_dst) / (dabs(node_list_src%node(inode)%x(1, 4, 1)) + 1e-10)
-    write(10,*) ' '
-
-    write(10, '(3I5, 3ES15.6)') 0, 0, 1, node_list_src%node(inode)%x(1, 1, 2), Z_g_dst,  (node_list_src%node(inode)%x(1, 1, 2) - Z_g_dst)  / (dabs(node_list_src%node(inode)%x(1, 1, 2)) + 1e-10)
-    write(10, '(3I5, 3ES15.6)') 0, 0, 2, node_list_src%node(inode)%x(1, 2, 2), Z_s_dst,  (node_list_src%node(inode)%x(1, 2, 2) - Z_s_dst)  / (dabs(node_list_src%node(inode)%x(1, 2, 2)) + 1e-10)
-    write(10, '(3I5, 3ES15.6)') 0, 0, 3, node_list_src%node(inode)%x(1, 3, 2), Z_t_dst,  (node_list_src%node(inode)%x(1, 3, 2) - Z_t_dst)  / (dabs(node_list_src%node(inode)%x(1, 3, 2)) + 1e-10)
-    write(10, '(3I5, 3ES15.6)') 0, 0, 4, node_list_src%node(inode)%x(1, 4, 2), Z_st_dst, (node_list_src%node(inode)%x(1, 4, 2) - Z_st_dst) / (dabs(node_list_src%node(inode)%x(1, 4, 2)) + 1e-10)
-    write(10,*) ' '
+  if(is_different_mesh) then 
+    write(*,*) 'Start remapping data into new mesh ...'
     
-    write(10, '(A)') 'itor   ivar    idegree    node_data    interp_data    delta_ratio'
-#endif
+    call populate_element_rtree(node_list_src, element_list_src)
 
-    xjac_src = R_s_dst * Z_t_dst - R_t_dst * Z_s_dst
-    if(xjac_src .eq. 0) xjac_src = 1.e19
-    xjac_R_src  = (R_ss_dst*Z_t_dst**2 - Z_ss_dst*R_t_dst*Z_t_dst - 2.d0*R_st_dst*Z_s_dst*Z_t_dst   &
-              + Z_st_dst*(R_s_dst*Z_t_dst + R_t_dst*Z_s_dst)                                               &
-              + R_tt_dst*Z_s_dst**2 - Z_tt_dst*R_s_dst*Z_s_dst) / xjac_src
-    xjac_Z_src  = (Z_tt_dst*R_s_dst**2 - R_tt_dst*Z_s_dst*R_s_dst - 2.d0*Z_st_dst*R_t_dst*R_s_dst   &
-              + R_st_dst*(Z_t_dst*R_s_dst + Z_s_dst*R_t_dst)                                               &
-              + Z_ss_dst*R_t_dst**2 - R_ss_dst*Z_t_dst*R_t_dst) / xjac_src
+    do inode = 1, node_list_dst%n_nodes
+      node_list_dst%node(inode)%values = 0.d0 
+      node_list_dst%node(inode)%deltas = 0.d0 
+      R = node_list_dst%node(inode)%x(1,1,1)
+      Z = node_list_dst%node(inode)%x(1,1,2)
 
-    R_s_new = node_list_dst%node(inode)%x(1,2,1)
-    R_t_new = node_list_dst%node(inode)%x(1,3,1)
-    R_st_new = node_list_dst%node(inode)%x(1,4,1)
+      !< slight difference might exist between the required (R, Z)_dst and the actual outcome (R, Z)_src
+      call find_RZ_all(node_list_src,element_list_src,R,Z,R_find,Z_find,i_elm_find,s_find,t_find,ierr)
 
-    Z_s_new = node_list_dst%node(inode)%x(1,2,2)
-    Z_t_new = node_list_dst%node(inode)%x(1,3,2)
-    Z_st_new = node_list_dst%node(inode)%x(1,4,2)   
+      !< map R Z coordinates
+      call interp_RZ(node_list_src, element_list_src, i_elm_find, s_find, t_find, R_g_tmp, R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp, Z_g_tmp, Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp)
 
-    do itor = 1, n_tor
-      do ivar = 1, n_var
-        !< map values
-        call interp_dbg(node_list_src, element_list_src, i_elm_src, ivar, itor, s_src, t_src, eq_g_dst, eq_s_dst, eq_t_dst, eq_st_dst, eq_ss_dst, eq_tt_dst, ratio_st)
-        eq_g_R = (  Z_t_dst * eq_s_dst - Z_s_dst * eq_t_dst) / xjac_src
-        eq_g_Z = (- R_t_dst * eq_s_dst + R_s_dst * eq_t_dst) / xjac_src
-        eq_g_RZ = (- eq_ss_dst * Z_t_dst*R_t_dst - eq_tt_dst * R_s_dst*Z_s_dst                     &
-                + eq_st_dst * (Z_s_dst*R_t_dst  + Z_t_dst*R_s_dst  ) &
-                - eq_s_dst  * (R_st_dst*Z_t_dst - R_tt_dst*Z_s_dst ) &
-                - eq_t_dst * (R_st_dst*Z_s_dst  - R_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )   / xjac_src**2
-        eq_g_RR = (eq_ss_dst * Z_t_dst**2 - 2.d0*eq_st_dst * Z_s_dst*Z_t_dst + eq_tt_dst * Z_s_dst**2 &
-                + eq_s_dst * (Z_st_dst*Z_t_dst - Z_tt_dst*Z_s_dst ) &
-                + eq_t_dst * (Z_st_dst*Z_s_dst - Z_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (eq_s_dst* Z_t_dst - eq_t_dst * Z_s_dst)  / xjac_src**2
-        eq_g_ZZ = (eq_ss_dst * R_t_dst**2 - 2.d0*eq_st_dst * R_s_dst*R_t_dst + eq_tt_dst * R_s_dst**2 &
-                + eq_s_dst * (R_st_dst*R_t_dst - R_tt_dst*R_s_dst ) &
-                + eq_t_dst * (R_st_dst*R_s_dst - R_ss_dst*R_t_dst ) ) / xjac_src**2             &
-                - xjac_Z_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )  / xjac_src**2
+      write(*,'(A, I5, A, ES15.6, A, ES15.6)') ' i_elm_find = ', i_elm_find, ', s_find = ', s_find, ', t_find = ', t_find
+      write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' R (dst) = ', R, ', R_find = ', R_find, ', R_interp = ', R_g_tmp
+      write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' Z (dst) = ', Z, ', Z_find = ', Z_find, ', Z_interp = ', Z_g_tmp
 
-        eq_s_dst = eq_g_R * R_s_new + eq_g_Z * Z_s_new
-        eq_t_dst = eq_g_R * R_t_new + eq_g_Z * Z_t_new
-        eq_st_dst = eq_g_R * R_st_new + eq_g_Z * Z_st_new + (R_t_new * Z_s_new + Z_t_new * R_s_new) * eq_g_RZ + R_s_new * R_t_new * eq_g_RR + Z_s_new * Z_t_new * eq_g_ZZ
-        node_list_dst%node(inode)%values(itor, 1, ivar) = eq_g_dst
-        node_list_dst%node(inode)%values(itor, 2, ivar) = eq_s_dst  !/ ratio_st
-        node_list_dst%node(inode)%values(itor, 3, ivar) = eq_t_dst  !/ ratio_st
-        node_list_dst%node(inode)%values(itor, 4, ivar) = eq_st_dst !/ ratio_st ** 2
+      if(ierr .ne. 0) then
+        write(*,*) 'Failed to remap node: ', inode, ', please check!'  
+        cycle
+      else
+        write(*,*) 'Succeed to remap node: ', inode
+      endif
 
-#ifdef DEBUG_OUTPUT
-        write(10, '(3I5, 3ES15.6)') itor, ivar, 1, node_list_src%node(inode)%values(itor, 1, ivar), eq_g_dst,  (node_list_src%node(inode)%values(itor, 1, ivar) - eq_g_dst)  / (dabs(node_list_src%node(inode)%values(itor, 1, ivar)) + 1e-10)
-        write(10, '(3I5, 3ES15.6)') itor, ivar, 2, node_list_src%node(inode)%values(itor, 2, ivar), eq_s_dst,  (node_list_src%node(inode)%values(itor, 2, ivar) - eq_s_dst)  / (dabs(node_list_src%node(inode)%values(itor, 2, ivar)) + 1e-10)
-        write(10, '(3I5, 3ES15.6)') itor, ivar, 3, node_list_src%node(inode)%values(itor, 3, ivar), eq_t_dst,  (node_list_src%node(inode)%values(itor, 3, ivar) - eq_t_dst)  / (dabs(node_list_src%node(inode)%values(itor, 3, ivar)) + 1e-10)
-        write(10, '(3I5, 3ES15.6)') itor, ivar, 4, node_list_src%node(inode)%values(itor, 4, ivar), eq_st_dst, (node_list_src%node(inode)%values(itor, 4, ivar) - eq_st_dst) / (dabs(node_list_src%node(inode)%values(itor, 4, ivar)) + 1e-10)
-        write(10,*) ' '
-#endif
-        !< map deltas
-        call interp_delta_dbg(node_list_src, element_list_src, i_elm_src, ivar, itor, s_src, t_src, eq_g_dst, eq_s_dst, eq_t_dst, eq_st_dst, eq_ss_dst, eq_tt_dst, ratio_st)
-        eq_g_R = (  Z_t_dst * eq_s_dst - Z_s_dst * eq_t_dst) / xjac_src
-        eq_g_Z = (- R_t_dst * eq_s_dst + R_s_dst * eq_t_dst) / xjac_src
-        eq_g_RZ = (- eq_ss_dst * Z_t_dst*R_t_dst - eq_tt_dst * R_s_dst*Z_s_dst                     &
-                + eq_st_dst * (Z_s_dst*R_t_dst  + Z_t_dst*R_s_dst  ) &
-                - eq_s_dst  * (R_st_dst*Z_t_dst - R_tt_dst*Z_s_dst ) &
-                - eq_t_dst * (R_st_dst*Z_s_dst  - R_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )   / xjac_src**2
-        eq_g_RR = (eq_ss_dst * Z_t_dst**2 - 2.d0*eq_st_dst * Z_s_dst*Z_t_dst + eq_tt_dst * Z_s_dst**2 &
-                + eq_s_dst * (Z_st_dst*Z_t_dst - Z_tt_dst*Z_s_dst ) &
-                + eq_t_dst * (Z_st_dst*Z_s_dst - Z_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (eq_s_dst* Z_t_dst - eq_t_dst * Z_s_dst)  / xjac_src**2
-        eq_g_ZZ = (eq_ss_dst * R_t_dst**2 - 2.d0*eq_st_dst * R_s_dst*R_t_dst + eq_tt_dst * R_s_dst**2 &
-                + eq_s_dst * (R_st_dst*R_t_dst - R_tt_dst*R_s_dst ) &
-                + eq_t_dst * (R_st_dst*R_s_dst - R_ss_dst*R_t_dst ) ) / xjac_src**2             &
-                - xjac_Z_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )  / xjac_src**2
-        eq_s_dst = eq_g_R * R_s_new + eq_g_Z * Z_s_new
-        eq_t_dst = eq_g_R * R_t_new + eq_g_Z * Z_t_new
-        eq_st_dst = eq_g_R * R_st_new + eq_g_Z * Z_st_new + (R_t_new * Z_s_new + Z_t_new * R_s_new) * eq_g_RZ + R_s_new * R_t_new * eq_g_RR + Z_s_new * Z_t_new * eq_g_ZZ
-        node_list_dst%node(inode)%deltas(itor, 1, ivar) = eq_g_dst
-        node_list_dst%node(inode)%deltas(itor, 2, ivar) = eq_s_dst  !/ ratio_st
-        node_list_dst%node(inode)%deltas(itor, 3, ivar) = eq_t_dst  !/ ratio_st
-        node_list_dst%node(inode)%deltas(itor, 4, ivar) = eq_st_dst !/ ratio_st ** 2
-        call interp_dbg(node_list_src, element_list_src, i_elm_src, 710, itor, s_src, t_src, eq_g_dst, eq_s_dst, eq_t_dst, eq_st_dst, eq_ss_dst, eq_tt_dst, ratio_st)
-        eq_g_R = (  Z_t_dst * eq_s_dst - Z_s_dst * eq_t_dst) / xjac_src
-        eq_g_Z = (- R_t_dst * eq_s_dst + R_s_dst * eq_t_dst) / xjac_src
-        eq_g_RZ = (- eq_ss_dst * Z_t_dst*R_t_dst - eq_tt_dst * R_s_dst*Z_s_dst                     &
-                + eq_st_dst * (Z_s_dst*R_t_dst  + Z_t_dst*R_s_dst  ) &
-                - eq_s_dst  * (R_st_dst*Z_t_dst - R_tt_dst*Z_s_dst ) &
-                - eq_t_dst * (R_st_dst*Z_s_dst  - R_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )   / xjac_src**2
-        eq_g_RR = (eq_ss_dst * Z_t_dst**2 - 2.d0*eq_st_dst * Z_s_dst*Z_t_dst + eq_tt_dst * Z_s_dst**2 &
-                + eq_s_dst * (Z_st_dst*Z_t_dst - Z_tt_dst*Z_s_dst ) &
-                + eq_t_dst * (Z_st_dst*Z_s_dst - Z_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (eq_s_dst* Z_t_dst - eq_t_dst * Z_s_dst)  / xjac_src**2
-        eq_g_ZZ = (eq_ss_dst * R_t_dst**2 - 2.d0*eq_st_dst * R_s_dst*R_t_dst + eq_tt_dst * R_s_dst**2 &
-                + eq_s_dst * (R_st_dst*R_t_dst - R_tt_dst*R_s_dst ) &
-                + eq_t_dst * (R_st_dst*R_s_dst - R_ss_dst*R_t_dst ) ) / xjac_src**2             &
-                - xjac_Z_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )  / xjac_src**2
-        eq_s_dst = eq_g_R * R_s_new + eq_g_Z * Z_s_new
-        eq_t_dst = eq_g_R * R_t_new + eq_g_Z * Z_t_new
-        eq_st_dst = eq_g_R * R_st_new + eq_g_Z * Z_st_new + (R_t_new * Z_s_new + Z_t_new * R_s_new) * eq_g_RZ + R_s_new * R_t_new * eq_g_RR + Z_s_new * Z_t_new * eq_g_ZZ
-        node_list_dst%node(inode)%Fprof_eq(1) = eq_g_dst
-        node_list_dst%node(inode)%Fprof_eq(2) = eq_s_dst  !/ ratio_st
-        node_list_dst%node(inode)%Fprof_eq(3) = eq_t_dst  !/ ratio_st
-        node_list_dst%node(inode)%Fprof_eq(4) = eq_st_dst !/ ratio_st ** 2
-        call interp_dbg(node_list_src, element_list_src, i_elm_src, 711, itor, s_src, t_src, eq_g_dst, eq_s_dst, eq_t_dst, eq_st_dst, eq_ss_dst, eq_tt_dst, ratio_st)
-        eq_g_R = (  Z_t_dst * eq_s_dst - Z_s_dst * eq_t_dst) / xjac_src
-        eq_g_Z = (- R_t_dst * eq_s_dst + R_s_dst * eq_t_dst) / xjac_src
-        eq_g_RZ = (- eq_ss_dst * Z_t_dst*R_t_dst - eq_tt_dst * R_s_dst*Z_s_dst                     &
-                + eq_st_dst * (Z_s_dst*R_t_dst  + Z_t_dst*R_s_dst  ) &
-                - eq_s_dst  * (R_st_dst*Z_t_dst - R_tt_dst*Z_s_dst ) &
-                - eq_t_dst * (R_st_dst*Z_s_dst  - R_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )   / xjac_src**2
-        eq_g_RR = (eq_ss_dst * Z_t_dst**2 - 2.d0*eq_st_dst * Z_s_dst*Z_t_dst + eq_tt_dst * Z_s_dst**2 &
-                + eq_s_dst * (Z_st_dst*Z_t_dst - Z_tt_dst*Z_s_dst ) &
-                + eq_t_dst * (Z_st_dst*Z_s_dst - Z_ss_dst*Z_t_dst ) ) / xjac_src**2             &
-                - xjac_R_src * (eq_s_dst* Z_t_dst - eq_t_dst * Z_s_dst)  / xjac_src**2
-        eq_g_ZZ = (eq_ss_dst * R_t_dst**2 - 2.d0*eq_st_dst * R_s_dst*R_t_dst + eq_tt_dst * R_s_dst**2 &
-                + eq_s_dst * (R_st_dst*R_t_dst - R_tt_dst*R_s_dst ) &
-                + eq_t_dst * (R_st_dst*R_s_dst - R_ss_dst*R_t_dst ) ) / xjac_src**2             &
-                - xjac_Z_src * (- eq_s_dst * R_t_dst + eq_t_dst * R_s_dst )  / xjac_src**2
-        eq_s_dst = eq_g_R * R_s_new + eq_g_Z * Z_s_new
-        eq_t_dst = eq_g_R * R_t_new + eq_g_Z * Z_t_new
-        eq_st_dst = eq_g_R * R_st_new + eq_g_Z * Z_st_new + (R_t_new * Z_s_new + Z_t_new * R_s_new) * eq_g_RZ + R_s_new * R_t_new * eq_g_RR + Z_s_new * Z_t_new * eq_g_ZZ
-        node_list_dst%node(inode)%psi_eq(1) = eq_g_dst
-        node_list_dst%node(inode)%psi_eq(2) = eq_s_dst  !/ ratio_st
-        node_list_dst%node(inode)%psi_eq(3) = eq_t_dst  !/ ratio_st
-        node_list_dst%node(inode)%psi_eq(4) = eq_st_dst !/ ratio_st ** 2
+      xjac = R_s_tmp * Z_t_tmp - R_t_tmp * Z_s_tmp
+      if(xjac .eq. 0) then
+        xjac = 1.e19
+        write(*,*) 'Singularity at Jacobian found, please check!'
+      endif
+      xjac_R  = (R_ss_tmp*Z_t_tmp**2 - Z_ss_tmp*R_t_tmp*Z_t_tmp - 2.d0*R_st_tmp*Z_s_tmp*Z_t_tmp   &
+                + Z_st_tmp*(R_s_tmp*Z_t_tmp + R_t_tmp*Z_s_tmp)                                    &
+                + R_tt_tmp*Z_s_tmp**2 - Z_tt_tmp*R_s_tmp*Z_s_tmp) / xjac
+      xjac_Z  = (Z_tt_tmp*R_s_tmp**2 - R_tt_tmp*Z_s_tmp*R_s_tmp - 2.d0*Z_st_tmp*R_t_tmp*R_s_tmp   &
+                + R_st_tmp*(Z_t_tmp*R_s_tmp + Z_s_tmp*R_t_tmp)                                    &
+                + Z_ss_tmp*R_t_tmp**2 - R_ss_tmp*Z_t_tmp*R_t_tmp) / xjac
 
+      R_s = node_list_dst%node(inode)%x(1,2,1)
+      R_t = node_list_dst%node(inode)%x(1,3,1)
+      R_st = node_list_dst%node(inode)%x(1,4,1)
+
+      Z_s = node_list_dst%node(inode)%x(1,2,2)
+      Z_t = node_list_dst%node(inode)%x(1,3,2)
+      Z_st = node_list_dst%node(inode)%x(1,4,2)   
+
+      do itor = 1, n_tor
+        do ivar = 1, (2 * n_var + 2)
+          
+          if(ivar .gt. (2 * n_var) .and. itor .gt. 1) cycle !< only one interp call is required for Fprof_eq and psi_eq
+
+          if (ivar .le. n_var) then                !< map values
+            call interp(node_list_src, element_list_src, i_elm_find, ivar, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
+            val_ptrs => node_list_dst%node(inode)%values(itor, :, ivar)
+          else if (ivar .le. (2 * n_var)) then     !< map deltas
+            call interp_delta(node_list_src, element_list_src, i_elm_find, ivar - n_var, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
+            val_ptrs => node_list_dst%node(inode)%deltas(itor, :, ivar - n_var)
+          else if (ivar .eq. (2 * n_var + 1)) then !< map Fprof_eq
+            call interp(node_list_src, element_list_src, i_elm_find, 710, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
+            val_ptrs => node_list_dst%node(inode)%Fprof_eq(:)
+          else if (ivar .eq. (2 * n_var + 2)) then !< map psi_eq
+            call interp(node_list_src, element_list_src, i_elm_find, 711, itor, s_find, t_find, eq_g_tmp, eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp)
+            val_ptrs => node_list_dst%node(inode)%psi_eq(:)
+          else
+            write(*,*) "Undefined mapping operations. Please check!"
+            cycle
+          endif
+
+          eq_g_R = (  Z_t_tmp * eq_s_tmp - Z_s_tmp * eq_t_tmp) / xjac
+          eq_g_Z = (- R_t_tmp * eq_s_tmp + R_s_tmp * eq_t_tmp) / xjac
+          eq_g_RZ = (- eq_ss_tmp * Z_t_tmp*R_t_tmp - eq_tt_tmp * R_s_tmp*Z_s_tmp                        &
+                  + eq_st_tmp * (Z_s_tmp*R_t_tmp  + Z_t_tmp*R_s_tmp  )                                  &
+                  - eq_s_tmp  * (R_st_tmp*Z_t_tmp - R_tt_tmp*Z_s_tmp )                                  &
+                  - eq_t_tmp * (R_st_tmp*Z_s_tmp  - R_ss_tmp*Z_t_tmp ) ) / xjac**2                      &
+                  - xjac_R * (- eq_s_tmp * R_t_tmp + eq_t_tmp * R_s_tmp )   / xjac**2
+          eq_g_RR = (eq_ss_tmp * Z_t_tmp**2 - 2.d0*eq_st_tmp * Z_s_tmp*Z_t_tmp + eq_tt_tmp * Z_s_tmp**2 &
+                  + eq_s_tmp * (Z_st_tmp*Z_t_tmp - Z_tt_tmp*Z_s_tmp )                                   &
+                  + eq_t_tmp * (Z_st_tmp*Z_s_tmp - Z_ss_tmp*Z_t_tmp ) ) / xjac**2                       &
+                  - xjac_R * (eq_s_tmp* Z_t_tmp - eq_t_tmp * Z_s_tmp)  / xjac**2
+          eq_g_ZZ = (eq_ss_tmp * R_t_tmp**2 - 2.d0*eq_st_tmp * R_s_tmp*R_t_tmp + eq_tt_tmp * R_s_tmp**2 &
+                  + eq_s_tmp * (R_st_tmp*R_t_tmp - R_tt_tmp*R_s_tmp )                                   &
+                  + eq_t_tmp * (R_st_tmp*R_s_tmp - R_ss_tmp*R_t_tmp ) ) / xjac**2                       &
+                  - xjac_Z * (- eq_s_tmp * R_t_tmp + eq_t_tmp * R_s_tmp )  / xjac**2
+
+          val_ptrs(1) = eq_g_tmp
+          val_ptrs(2) = eq_g_R * R_s + eq_g_Z * Z_s
+          val_ptrs(3) = eq_g_R * R_t + eq_g_Z * Z_t
+          val_ptrs(4) = eq_g_R * R_st + eq_g_Z * Z_st + (R_t * Z_s + Z_t * R_s) * eq_g_RZ + R_s * R_t * eq_g_RR + Z_s * Z_t * eq_g_ZZ
+
+        enddo
       enddo
     enddo
-  enddo
-
-#ifdef DEBUG_OUTPUT
-  close(unit=10)
-#endif
+    write(*,*) " "
+    write(*,*) "The imported data has been remapped "
+  else
+    !< This is just the same grid mesh
+    node_list_dst = node_list_src
+    write(*,*) 'Same mesh as the original, remapping is not required.'
+    write(*,'(A, ES15.6)') ' max_delta_RZ = ', max_delta_RZ
+  endif
 
   ! --- Required initializations to update equilibrium state
-  ! call initialise_basis
-  ! call boundary_from_grid(node_list_dst, element_list_dst, bnd_node_list_dst, bnd_elm_list_dst, .false.)
-  ! call update_equil_state(0,node_list_dst, element_list_dst, bnd_elm_list_dst, xpoint, xcase)
-  write(*,*) " "
-  write(*,*) " The imported data has been remapped "
+  call initialise_basis
+  call boundary_from_grid(node_list_dst, element_list_dst, bnd_node_list_dst, bnd_elm_list_dst, .false.)
+  call update_equil_state(0,node_list_dst, element_list_dst, bnd_elm_list_dst, xpoint, xcase)
+  call populate_element_rtree(node_list_dst, element_list_dst)
+  
+  ! --- Would be better if use pointers and decolate node_list_src and element_list_src here
+  ! deallocate(node_list_src, element_list_src)
 
+  return
 end subroutine remap_from_restart
 
 end module mod_import_restart

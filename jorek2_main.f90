@@ -277,10 +277,10 @@ mpi_required = 0
   input_treat_axis = treat_axis   ! store the value from the input file
 
   if ( restart .and. (my_id == 0) ) then
+    call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
     if(remap) then
-      call import_restart(node_list_remap, element_list_remap, 'jorek_restart', rst_format, ierr)
-    else
-      call import_restart(node_list, element_list, 'jorek_restart', rst_format, ierr)
+      node_list_remap = node_list
+      element_list_remap = element_list
     endif
     if ( ierr /= 0 ) stop
 
@@ -345,11 +345,7 @@ mpi_required = 0
     call broadcast_phys(my_id)  
     if(freeboundary) call broadcast_vacuum(my_id, resistive_wall)
   end if
-  if(remap) then
-    call populate_element_rtree(node_list_remap, element_list_remap)
-  else
-    call populate_element_rtree(node_list, element_list)
-  endif
+  call populate_element_rtree(node_list, element_list)
   
   !***********************************************************************
   !*                  define grid / equilibrium                          *
@@ -435,12 +431,16 @@ mpi_required = 0
     ! --- remap the data from node_list_remap & element_list_remap into node_list & element_list
     if(remap .and. (my_id == 0)) then
       call remap_from_restart (node_list, element_list, node_list_remap, element_list_remap, ierr)
+      if ( ierr /= 0 ) stop
+      index_now = index_now - 1
+      t_now = t_start
       if ( more_outfile_digits) then
-        write(fileout,'(A5,i6.6)') 'jorek',index_now - 1
+        write(fileout,'(A5,i6.6)') 'jorek',index_now
       else
-        write(fileout,'(A5,i5.5)') 'jorek',index_now - 1
+        write(fileout,'(A5,i5.5)') 'jorek',index_now
       end if
       call export_restart(node_list, element_list, fileout)
+      index_now = index_now + 1
     endif
     
   end if if_not_restart

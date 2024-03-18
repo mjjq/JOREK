@@ -13,9 +13,6 @@ public :: interp_RZ !< Interpolate space only
 public :: interp_PRZ !< interp variable + pos at values or deltas
 public :: sincosperiod_moivre, mode_moivre !< public for regtesting, used by interp_PRZ
 public :: interp_PRZ_combined !< same as interp, but for any variable, including R and Z
-public :: interp_RZ_2_dbg
-public :: interp_dbg !< interp a specific harmonic in finite elements
-public :: interp_delta_dbg !< interp a specific harmonic in finite elements, of the deltas
 
 interface interp_RZ
   module procedure interp_RZ_0, interp_RZ_1, interp_RZ_2
@@ -392,67 +389,6 @@ do kv = 1,n_vertex_max  ! 4 vertices
 end do
 end subroutine interp
 
-!> subroutine calculates the interpolation within one element (i_elm) for a given position
-!> (s,t) in the local coordinates
-pure subroutine interp_dbg(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt, ratio_st)
-type (type_node_list),    intent(in)  :: node_list
-type (type_element_list), intent(in)  :: element_list
-integer,                  intent(in)  :: i_elm
-integer,                  intent(in)  :: i_var
-integer,                  intent(in)  :: i_harm
-real*8,                   intent(in)  :: s
-real*8,                   intent(in)  :: t
-real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
-
-real*8,optional,          intent(in)  :: ratio_st
-
-! --- Local variables
-real*8 :: G(4,n_degrees), G_s(4,n_degrees), G_t(4,n_degrees), G_st(4,n_degrees), G_ss(4,n_degrees), G_tt(4,n_degrees)
-integer :: kv, iv, kf 
-
-call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
-
-if(present(ratio_st)) then
-  G_s = G_s / ratio_st
-  G_t = G_t / ratio_st
-  G_st = G_st / ratio_st ** 2
-endif
-
-P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
-
-do kv = 1,n_vertex_max  ! 4 vertices
-  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-  do kf = 1, n_degrees       ! basis functions
-
-#ifdef fullmhd
-    if (i_var == 710) then
-      P    = P    + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + node_list%node(iv)%Fprof_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
-    elseif (i_var == 711) then
-      P    = P    + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + node_list%node(iv)%psi_eq(kf) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
-    else
-#endif
-      P    = P    + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-      P_s  = P_s  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-      P_t  = P_t  + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-      P_st = P_st + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-      P_ss = P_ss + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-      P_tt = P_tt + node_list%node(iv)%values(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
-#ifdef fullmhd
-    endif
-#endif
-  end do
-end do
-end subroutine interp_dbg
 
 
 !> subroutine calculates the interpolation within one element (i_elm) for a given position
@@ -487,49 +423,6 @@ do kv = 1,n_vertex_max  ! 4 vertices
   end do
 end do
 end subroutine interp_delta
-
-
-!> subroutine calculates the interpolation within one element (i_elm) for a given position
-!> (s,t) in the local coordinates, of the deltas instead of the values
-pure subroutine interp_delta_dbg(node_list, element_list, i_elm, i_var, i_harm, s, t, P, P_s, P_t, P_st, P_ss, P_tt, ratio_st)
-type (type_node_list),    intent(in)  :: node_list
-type (type_element_list), intent(in)  :: element_list
-integer,                  intent(in)  :: i_elm
-integer,                  intent(in)  :: i_var
-integer,                  intent(in)  :: i_harm
-real*8,                   intent(in)  :: s
-real*8,                   intent(in)  :: t
-real*8,                   intent(out) :: P, P_s, P_t, P_st, P_ss, P_tt
-
-real*8,optional,          intent(in)  :: ratio_st
-
-! --- Local variables
-real*8 :: G(4,n_degrees), G_s(4,n_degrees), G_t(4,n_degrees), G_st(4,n_degrees), G_ss(4,n_degrees), G_tt(4,n_degrees)
-integer :: kv, iv, kf 
-
-call basisfunctions(s,t,G, G_s, G_t, G_st, G_ss, G_tt)
-
-if(present(ratio_st)) then
-  G_s = G_s / ratio_st
-  G_t = G_t / ratio_st
-  G_st = G_st / ratio_st ** 2
-endif
-
-
-P = 0.d0; P_s = 0.d0; P_t = 0.d0; P_st = 0.d0; P_ss = 0.d0; P_tt = 0.d0
-
-do kv = 1,n_vertex_max  ! 4 vertices
-  iv = element_list%element(i_elm)%vertex(kv)  ! the node number
-  do kf = 1, n_degrees       ! basis functions
-    P    = P    + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G(kv,kf)
-    P_s  = P_s  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_s(kv,kf)
-    P_t  = P_t  + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_t(kv,kf)
-    P_st = P_st + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_st(kv,kf)
-    P_ss = P_ss + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_ss(kv,kf)
-    P_tt = P_tt + node_list%node(iv)%deltas(i_harm,kf,i_var) * element_list%element(i_elm)%size(kv,kf) * G_tt(kv,kf)
-  end do
-end do
-end subroutine interp_delta_dbg
 
 
 !> This subroutine interpolates some variables at a specific position within one element at a given position (s,t)
@@ -711,128 +604,7 @@ Z_tt = sum(xZ*H_tt)
 
 end subroutine interp_RZ_2
 
-!> Calculates the interpolation within one element (i_elm) for a given position (s,t) in local coordinates
-subroutine interp_RZ_2_dbg(node_list,element_list,i_elm,s,t,R,R_s,R_t,R_st,R_ss,R_tt,Z,Z_s,Z_t,Z_st,Z_ss,Z_tt,ratio_st)
-  type (type_node_list),    intent(in)  :: node_list
-  type (type_element_list), intent(in)  :: element_list
-  integer,                  intent(in)  :: i_elm
-  real*8,                   intent(in)  :: s,t
-  real*8,                   intent(out) :: R, R_s, R_t, R_st, R_ss, R_tt, Z, Z_s, Z_t, Z_st, Z_ss, Z_tt
 
-  real*8,optional,          intent(in)  :: ratio_st
-  
-  ! --- Local variables
-  real*8  :: H(n_degrees,4), H_s(n_degrees,4), H_t(n_degrees,4), H_st(n_degrees,4), H_ss(n_degrees,4), H_tt(n_degrees,4)
-  integer :: kv, iv
-  real*8  :: xR(n_degrees,n_vertex_max), xZ(n_degrees,n_vertex_max)
-  real*8  :: sizes(n_degrees)
-  integer :: i,j
-  
-  call basisfunctions_T(s,t,H,H_s,H_t,H_st,H_ss,H_tt)
-  
-  if(present(ratio_st)) then
-    H_s = H_s / ratio_st
-    H_t = H_t / ratio_st
-    H_st = H_st / ratio_st ** 2
-  endif
-
-  ! Preload values and premultiply with sizes(:,kv)
-  do kv = 1,n_vertex_max  ! 4 vertices
-    iv = element_list%element(i_elm)%vertex(kv)
-    sizes(:) = element_list%element(i_elm)%size(kv,:)
-    xR(:,kv) = node_list%node(iv)%x(1,:,1) * sizes(:)
-    xZ(:,kv) = node_list%node(iv)%x(1,:,2) * sizes(:)
-  end do
-  
-  if(i_elm .ge. 100 .and. i_elm .le. 150) then
-    iv = element_list%element(i_elm)%vertex(1)
-  
-    print *, "s = ", s, ", t = ", t
-
-    print *, "The 4x4 size^T is:"
-    do i = 1, 4
-        do j = 1, 4
-            write(*, '(ES15.6E3)', advance='no') element_list%element(i_elm)%size(j,i)
-        end do
-        print *
-    end do
-
-    print *, "The 4x4 xR is:"
-    do i = 1, 4
-        do j = 1, 4
-            write(*, '(ES15.6E3)', advance='no') xR(i, j)
-        end do
-        print *
-    end do
-
-    print *, "The 4x4 H is:"
-    do i = 1, 4
-        do j = 1, 4
-            write(*, '(ES15.6E3)', advance='no') H(i, j)
-        end do
-        print *
-    end do
-
-    print *, "The 4x4 H_s is:"
-    do i = 1, 4
-        do j = 1, 4
-            write(*, '(ES15.6E3)', advance='no') H_s(i, j)
-        end do
-        print *
-    end do
-
-    print *, "The 4x4 H_t is:"
-    do i = 1, 4
-        do j = 1, 4
-            write(*, '(ES15.6E3)', advance='no') H_t(i, j)
-        end do
-        print *
-    end do
-
-    print *, "The 4x4 H_st is:"
-    do i = 1, 4
-        do j = 1, 4
-            write(*, '(ES15.6E3)', advance='no') H_st(i, j)
-        end do
-        print *
-    end do
-
-    print *, "R = sum(xR*H) is: ", sum(xR*H)
-    print *, "Original R = x(1,1,1) is: ", node_list%node(iv)%x(1,1,1)
-
-    print *, "R_s = sum(xR*H_s) is: ", sum(xR*H_s)
-    print *, "Original R_s = x(1,2,1) is: ", node_list%node(iv)%x(1,2,1)
-
-    print *, "R_t = sum(xR*H_t) is: ", sum(xR*H_t)
-    print *, "Original R_t = x(1,3,1) is: ", node_list%node(iv)%x(1,3,1)
-
-    print *, "R_st = sum(xR*H_st) is: ", sum(xR*H_st)
-    print *, "Original R_st = x(1,4,1) is: ", node_list%node(iv)%x(1,4,1)
-
-    print *, "The 4x4 xR*H_s is:"
-    do i = 1, 4
-        do j = 1, 4
-            write(*, '(ES15.6E3)', advance='no') xR(i,j)*H_s(i, j)
-        end do
-        print *
-    end do
-
-  endif
-  
-  R    = sum(xR*H)
-  R_s  = sum(xR*H_s)
-  R_t  = sum(xR*H_t)
-  R_st = sum(xR*H_st)
-  R_ss = sum(xR*H_ss)
-  R_tt = sum(xR*H_tt)
-  Z    = sum(xZ*H)
-  Z_s  = sum(xZ*H_s)
-  Z_t  = sum(xZ*H_t)
-  Z_st = sum(xZ*H_st)
-  Z_ss = sum(xZ*H_ss)
-  Z_tt = sum(xZ*H_tt)
-  
-  end subroutine interp_RZ_2_dbg
 
 !> subroutine calculates the interpolation within one element (i_elm) for a given position
 !> (s,t) in the local coordinates, works for any variable, but also for R and Z, (using i_var = -1 or -2 respectively)

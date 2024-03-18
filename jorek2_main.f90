@@ -431,7 +431,10 @@ mpi_required = 0
     ! --- remap the data from node_list_remap & element_list_remap into node_list & element_list
     if(remap .and. (my_id == 0)) then
       call remap_from_restart (node_list, element_list, node_list_remap, element_list_remap, ierr)
-      if ( ierr /= 0 ) stop
+      if ( ierr /= 0 ) then
+        write(*,*) ' Remapping failed for some nodes, please check!'
+        stop
+      endif
       index_now = index_now - 1
       t_now = t_start
       if ( more_outfile_digits) then

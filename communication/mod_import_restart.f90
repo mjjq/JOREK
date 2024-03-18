@@ -2240,6 +2240,7 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
   use mod_boundary
   use basis_at_gaussian
   use mod_element_rtree, only: populate_element_rtree
+  use mod_math_operators
 
   implicit none
 
@@ -2266,6 +2267,7 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
   real*8                                 :: xjac, xjac_R, xjac_Z
   real*8, dimension(:), pointer          :: val_ptrs => Null()
 
+  integer                                :: n_nodes_update, n_elements_update, n_nodes_each_circle
   real*8                                 :: max_delta_RZ
   logical                                :: is_different_mesh
 
@@ -2283,6 +2285,10 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
     
     call populate_element_rtree(node_list_src, element_list_src)
 
+    n_nodes_update = node_list_dst%n_nodes
+    n_elements_update = element_list_dst%n_elements
+    n_nodes_each_circle = node_list_dst%n_nodes - element_list_dst%n_elements
+
     do inode = 1, node_list_dst%n_nodes
       node_list_dst%node(inode)%values = 0.d0 
       node_list_dst%node(inode)%deltas = 0.d0 
@@ -2292,6 +2298,14 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
       !< slight difference might exist between the required (R, Z)_dst and the actual outcome (R, Z)_src
       call find_RZ_all(node_list_src,element_list_src,R,Z,R_find,Z_find,i_elm_find,s_find,t_find,ierr)
 
+      if(ierr .ne. 0) then
+        n_nodes_update = min(n_nodes_update, inode - 1)
+        write(*,*) 'Failed to find and remap node: ', inode, ', please check!'  
+        cycle
+      else
+        write(*,*) 'Succeed to find and remap node: ', inode
+      endif
+
       !< map R Z coordinates
       call interp_RZ(node_list_src, element_list_src, i_elm_find, s_find, t_find, R_g_tmp, R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp, Z_g_tmp, Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp)
 
@@ -2299,24 +2313,14 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
       write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' R (dst) = ', R, ', R_find = ', R_find, ', R_interp = ', R_g_tmp
       write(*,'(A, ES15.6, A, ES15.6, A, ES15.6)') ' Z (dst) = ', Z, ', Z_find = ', Z_find, ', Z_interp = ', Z_g_tmp
 
-      if(ierr .ne. 0) then
-        write(*,*) 'Failed to remap node: ', inode, ', please check!'  
-        cycle
-      else
-        write(*,*) 'Succeed to remap node: ', inode
-      endif
-
-      xjac = R_s_tmp * Z_t_tmp - R_t_tmp * Z_s_tmp
+      xjac = op_xjac(R_s_tmp, R_t_tmp, Z_s_tmp, Z_t_tmp)
       if(xjac .eq. 0) then
         xjac = 1.e19
         write(*,*) 'Singularity at Jacobian found, please check!'
       endif
-      xjac_R  = (R_ss_tmp*Z_t_tmp**2 - Z_ss_tmp*R_t_tmp*Z_t_tmp - 2.d0*R_st_tmp*Z_s_tmp*Z_t_tmp   &
-                + Z_st_tmp*(R_s_tmp*Z_t_tmp + R_t_tmp*Z_s_tmp)                                    &
-                + R_tt_tmp*Z_s_tmp**2 - Z_tt_tmp*R_s_tmp*Z_s_tmp) / xjac
-      xjac_Z  = (Z_tt_tmp*R_s_tmp**2 - R_tt_tmp*Z_s_tmp*R_s_tmp - 2.d0*Z_st_tmp*R_t_tmp*R_s_tmp   &
-                + R_st_tmp*(Z_t_tmp*R_s_tmp + Z_s_tmp*R_t_tmp)                                    &
-                + Z_ss_tmp*R_t_tmp**2 - R_ss_tmp*Z_t_tmp*R_t_tmp) / xjac
+
+      xjac_R  = op_xjac_R(R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp, Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp, xjac)
+      xjac_Z  = op_xjac_Z(R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp, Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp, xjac)
 
       R_s = node_list_dst%node(inode)%x(1,2,1)
       R_t = node_list_dst%node(inode)%x(1,3,1)
@@ -2348,21 +2352,20 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
             cycle
           endif
 
-          eq_g_R = (  Z_t_tmp * eq_s_tmp - Z_s_tmp * eq_t_tmp) / xjac
-          eq_g_Z = (- R_t_tmp * eq_s_tmp + R_s_tmp * eq_t_tmp) / xjac
-          eq_g_RZ = (- eq_ss_tmp * Z_t_tmp*R_t_tmp - eq_tt_tmp * R_s_tmp*Z_s_tmp                        &
-                  + eq_st_tmp * (Z_s_tmp*R_t_tmp  + Z_t_tmp*R_s_tmp  )                                  &
-                  - eq_s_tmp  * (R_st_tmp*Z_t_tmp - R_tt_tmp*Z_s_tmp )                                  &
-                  - eq_t_tmp * (R_st_tmp*Z_s_tmp  - R_ss_tmp*Z_t_tmp ) ) / xjac**2                      &
-                  - xjac_R * (- eq_s_tmp * R_t_tmp + eq_t_tmp * R_s_tmp )   / xjac**2
-          eq_g_RR = (eq_ss_tmp * Z_t_tmp**2 - 2.d0*eq_st_tmp * Z_s_tmp*Z_t_tmp + eq_tt_tmp * Z_s_tmp**2 &
-                  + eq_s_tmp * (Z_st_tmp*Z_t_tmp - Z_tt_tmp*Z_s_tmp )                                   &
-                  + eq_t_tmp * (Z_st_tmp*Z_s_tmp - Z_ss_tmp*Z_t_tmp ) ) / xjac**2                       &
-                  - xjac_R * (eq_s_tmp* Z_t_tmp - eq_t_tmp * Z_s_tmp)  / xjac**2
-          eq_g_ZZ = (eq_ss_tmp * R_t_tmp**2 - 2.d0*eq_st_tmp * R_s_tmp*R_t_tmp + eq_tt_tmp * R_s_tmp**2 &
-                  + eq_s_tmp * (R_st_tmp*R_t_tmp - R_tt_tmp*R_s_tmp )                                   &
-                  + eq_t_tmp * (R_st_tmp*R_s_tmp - R_ss_tmp*R_t_tmp ) ) / xjac**2                       &
-                  - xjac_Z * (- eq_s_tmp * R_t_tmp + eq_t_tmp * R_s_tmp )  / xjac**2
+          eq_g_R = op_grad_R(eq_s_tmp, eq_t_tmp, R_s_tmp, R_t_tmp, Z_s_tmp, Z_t_tmp, xjac)
+          eq_g_Z = op_grad_Z(eq_s_tmp, eq_t_tmp, R_s_tmp, R_t_tmp, Z_s_tmp, Z_t_tmp, xjac)
+          eq_g_RZ = op_lap_RZ(eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp, &
+                              R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp,      &
+                              Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp,      &
+                              xjac, xjac_R, xjac_Z)
+          eq_g_RR = op_lap_RR(eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp, &
+                              R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp,      &
+                              Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp,      &
+                              xjac, xjac_R, xjac_Z)
+          eq_g_ZZ = op_lap_ZZ(eq_s_tmp, eq_t_tmp, eq_st_tmp, eq_ss_tmp, eq_tt_tmp, &
+                              R_s_tmp, R_t_tmp, R_st_tmp, R_ss_tmp, R_tt_tmp,      &
+                              Z_s_tmp, Z_t_tmp, Z_st_tmp, Z_ss_tmp, Z_tt_tmp,      &
+                              xjac, xjac_R, xjac_Z)
 
           val_ptrs(1) = eq_g_tmp
           val_ptrs(2) = eq_g_R * R_s + eq_g_Z * Z_s
@@ -2373,7 +2376,23 @@ subroutine remap_from_restart(node_list_dst, element_list_dst, node_list_src, el
       enddo
     enddo
     write(*,*) " "
-    write(*,*) "The imported data has been remapped "
+    if(ierr .eq. 0) then
+      write(*,*) "The imported data has been remapped for all nodes."
+    else if(n_nodes_update .ge. n_nodes_each_circle) then
+      write(*,*) "The imported data has been remapped, but failed on some nodes."
+      n_nodes_update = n_nodes_update - mod(n_nodes_update, n_nodes_each_circle)
+      n_elements_update = n_nodes_update - n_nodes_each_circle
+      write(*,*) "Boundary nodes at the last surface are updated."
+      node_list_dst%node(n_nodes_update - n_nodes_each_circle + 1 : n_nodes_update)%boundary = node_list_dst%node(node_list_dst%n_nodes - n_nodes_each_circle + 1 : node_list_dst%n_nodes)%boundary
+      write(*,*) "n_nodes is reduced from from ", node_list_dst%n_nodes, ' to ', n_nodes_update
+      write(*,*) "n_elements is reduced from from ", element_list_dst%n_elements, ' to ', n_elements_update
+      node_list_dst%n_nodes = n_nodes_update
+      element_list_dst%n_elements = n_elements_update
+      ierr = 0
+    else
+      write(*,*) "The imported data has not been remapped, failed on all nodes!!!!"
+      return
+    endif
   else
     !< This is just the same grid mesh
     node_list_dst = node_list_src

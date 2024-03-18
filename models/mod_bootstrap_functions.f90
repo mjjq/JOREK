@@ -234,7 +234,7 @@ end subroutine bootstrap_current
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
+subroutine bootstrap_find_minRad(my_id, node_list, element_list, R_axis, Z_axis, psi_axis, psi_bnd)
 
   use data_structure
   use phys_module
@@ -242,10 +242,11 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
 
   implicit none
   ! --- Routine parameters
-  type (type_node_list),        intent(inout) :: node_list
-  type (type_element_list),     intent(inout) :: element_list
-  real*8, 			intent(in)    :: R_axis, Z_axis
-  real*8, 			intent(in)    :: psi_axis, psi_bnd
+  integer,                  intent(in)    :: my_id
+  type (type_node_list),    intent(inout) :: node_list
+  type (type_element_list), intent(inout) :: element_list
+  real*8, 			            intent(in)    :: R_axis, Z_axis
+  real*8, 			            intent(in)    :: psi_axis, psi_bnd
   
   ! --- Internal parameters
   type (type_surface_list) 	:: surface_list, flux_list
@@ -265,12 +266,12 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
     flux_list%n_psi = 1
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
     flux_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(0, xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(my_id, xpoint,xcase,node_list,element_list,flux_list)
     call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     ! --- If this didn't work, it means psi=1.0 is the grid boundary, try with psi=0.99
     if (i_find .eq. 0) then
       flux_list%psi_values(1) = 0.99 * (psi_bnd - psi_axis) + psi_axis
-      call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
+      call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
       call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     endif
     if (i_find .ne. 0) then
@@ -346,7 +347,7 @@ subroutine bootstrap_find_minRad(node_list, element_list, R_axis, Z_axis, psi_ax
     flux_list%n_psi = 1
     call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
     flux_list%psi_values(1) = psi_bnd
-    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
     call find_theta_surface(node_list, element_list, flux_list, 1, 0.0, R_axis, Z_axis,i_elm_find,s_find,t_find,i_find)
     call interp_RZ(node_list,element_list,i_elm_find(1),s_find(1),t_find(1),R_find,Z_find)
     call tr_deallocate(flux_list%psi_values,"flux_list%psi_values",CAT_GRID)
@@ -373,7 +374,7 @@ end subroutine bootstrap_find_minRad
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+subroutine bootstrap_get_averaged_j_spline(my_id, node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
 
   use data_structure
   use phys_module
@@ -383,6 +384,7 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
 
   implicit none
   ! --- Routine parameters
+  integer,                  intent(in)    :: my_id
   type (type_node_list),    intent(inout) :: node_list
   type (type_element_list), intent(inout) :: element_list
   real*8,                   intent(in)    :: psi_axis, psi_xpoint(2)
@@ -493,19 +495,15 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
     do i=1,flux_list%n_psi
       flux_list%psi_values(i) = psi_axis + 1.2*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
     enddo
-    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
     call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
     ! TODO
     ! I think passing `i` to psi_values accesses wrong element, but Stan didn't get a crash...
     ! either Fortran lets you go out of bounds and the separatrix didn't matter too much, or
     ! somehow this works. Correction expected: psi_values(i) -> psi_values(1)
-    ! TODO
-    ! It looks like this function is called from all MPI nodes, so setting my_id=0 in all of
-    ! them will result in spam. Correction expected: pass my_id to this function and onto find_flux_surfaces
-    ! correctly.
     sep_list%psi_values(i) = psi_bnd
-    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
   endif
   
   
@@ -591,7 +589,7 @@ end subroutine bootstrap_get_averaged_j_spline
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------------------
-subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
+subroutine bootstrap_get_q_and_ft_splines(my_id, node_list, element_list, psi_axis, psi_xpoint, R_xpoint, Z_xpoint)
 
   use data_structure
   use phys_module
@@ -601,6 +599,7 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
 
   implicit none
   ! --- Routine parameters
+  integer,                  intent(in)    :: my_id
   type (type_node_list),    intent(inout) :: node_list
   type (type_element_list), intent(inout) :: element_list
   real*8,                   intent(in)    :: psi_axis, psi_xpoint(2)
@@ -716,19 +715,15 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
     do i=1,flux_list%n_psi
       flux_list%psi_values(i) = psi_axis + 1.2*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
     enddo
-    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,flux_list)
 
     call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
     ! TODO
     ! I think passing `i` to psi_values accesses wrong element, but Stan didn't get a crash...
     ! either Fortran lets you go out of bounds and the separatrix didn't matter too much, or
     ! somehow this works. Correction expected: psi_values(i) -> psi_values(1)
-    ! TODO
-    ! It looks like this function is called from all MPI nodes, so setting my_id=0 in all of
-    ! them will result in spam. Correction expected: pass my_id to this function and onto find_flux_surfaces
-    ! correctly.
     sep_list%psi_values(i) = psi_bnd
-    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)
+    call find_flux_surfaces(my_id,xpoint,xcase,node_list,element_list,sep_list)
   endif
   
   ! -----------------

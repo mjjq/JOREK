@@ -635,8 +635,8 @@ mpi_required = 0
     minRad = 0.0
     
     if (bootstrap) then
-      call bootstrap_find_minRad(mhd_sim%node_list, mhd_sim%element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
-      call bootstrap_get_q_and_ft_splines(mhd_sim%node_list, mhd_sim%element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
+      call bootstrap_find_minRad(my_id,mhd_sim%node_list, mhd_sim%element_list, ES%R_axis, ES%Z_axis, ES%psi_axis, ES%psi_bnd)
+      call bootstrap_get_q_and_ft_splines(my_id,mhd_sim%node_list, mhd_sim%element_list, ES%psi_axis, ES%psi_xpoint, ES%R_xpoint, ES%Z_xpoint)
     endif
     
     call tr_debug_write("JMAIN:Find_axis_R",ES%R_axis)

@@ -469,17 +469,44 @@ subroutine bootstrap_get_averaged_j_spline(node_list, element_list, psi_axis, ps
     endif
   endif
 
-  ! --- Define number of psi values and allocate flux_list structure
-  flux_list%n_psi = n_psi
-  call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-  
-  ! --- Allocate sep_list structure (that's for plotting only)
-  sep_list%n_psi =3
-  if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
-  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
-  
-  ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  ! TODO
+  ! Should the condition be n_flux > 0 or else should it be explicit about xpoint also, as in equilibrium?
+  if (n_flux .gt. 0) then
+    ! --- Define number of psi values and allocate flux_list structure
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Allocate sep_list structure (that's for plotting only)
+    sep_list%n_psi =3
+    if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
+    call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
+
+    ! --- Call the routine
+    call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  else
+    ! --- Define number of psi values and allocate flux_list structure
+    n_psi = n_spline_vtk
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Call the routine
+    do i=1,flux_list%n_psi
+      flux_list%psi_values(i) = psi_axis + 1.2*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
+    enddo
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
+
+    call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
+    ! TODO
+    ! I think passing `i` to psi_values accesses wrong element, but Stan didn't get a crash...
+    ! either Fortran lets you go out of bounds and the separatrix didn't matter too much, or
+    ! somehow this works. Correction expected: psi_values(i) -> psi_values(1)
+    ! TODO
+    ! It looks like this function is called from all MPI nodes, so setting my_id=0 in all of
+    ! them will result in spam. Correction expected: pass my_id to this function and onto find_flux_surfaces
+    ! correctly.
+    sep_list%psi_values(i) = psi_bnd
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)
+  endif
   
   
   ! ---------------------------------------------
@@ -665,17 +692,44 @@ subroutine bootstrap_get_q_and_ft_splines(node_list, element_list, psi_axis, psi
     endif
   endif
 
-  ! --- Define number of psi values and allocate flux_list structure
-  flux_list%n_psi = n_psi
-  call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
-  
-  ! --- Allocate sep_list structure (that's for plotting only)
-  sep_list%n_psi =3
-  if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
-  call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
-  
-  ! --- Call the routine
-  call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  ! TODO
+  ! Should the condition be n_flux > 0 or else should it be explicit about xpoint also, as in equilibrium?
+  if (n_flux .gt. 0) then
+    ! --- Define number of psi values and allocate flux_list structure
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Allocate sep_list structure (that's for plotting only)
+    sep_list%n_psi =3
+    if(xcase .eq. DOUBLE_NULL) sep_list%n_psi =6
+    call tr_allocate(sep_list%psi_values,1,sep_list%n_psi,"sep_list%psi_values",CAT_GRID)
+
+    ! --- Call the routine
+    call define_flux_values(node_list, element_list, flux_list, sep_list, xcase, psi_xpoint_tmp, n_grids, sigmas)
+  else
+    ! --- Define number of psi values and allocate flux_list structure
+    n_psi = n_spline
+    flux_list%n_psi = n_psi
+    call tr_allocate(flux_list%psi_values,1,flux_list%n_psi,"flux_list%psi_values",CAT_GRID)
+
+    ! --- Call the routine
+    do i=1,flux_list%n_psi
+      flux_list%psi_values(i) = psi_axis + 1.2*(psi_bnd - psi_axis) * float(i)/float(flux_list%n_psi)
+    enddo
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,flux_list)
+
+    call tr_allocate(sep_list%psi_values,1,1,"sep_list%psi_values",CAT_GRID)
+    ! TODO
+    ! I think passing `i` to psi_values accesses wrong element, but Stan didn't get a crash...
+    ! either Fortran lets you go out of bounds and the separatrix didn't matter too much, or
+    ! somehow this works. Correction expected: psi_values(i) -> psi_values(1)
+    ! TODO
+    ! It looks like this function is called from all MPI nodes, so setting my_id=0 in all of
+    ! them will result in spam. Correction expected: pass my_id to this function and onto find_flux_surfaces
+    ! correctly.
+    sep_list%psi_values(i) = psi_bnd
+    call find_flux_surfaces(0,xpoint,xcase,node_list,element_list,sep_list)
+  endif
   
   ! -----------------
   ! --- Get q-profile

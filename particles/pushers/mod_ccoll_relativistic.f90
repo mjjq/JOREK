@@ -539,6 +539,7 @@ contains
     if (ierr .ne. 0) then
       prt%i_elm = 0
       write(*,*) "WARNING: |xiout| > 2 after particle collision, removing particle. Try reducing particle time step"
+    end if
 
     pnorm = pout * ( mass * SPEED_OF_LIGHT )
     prt%p(1) = pnorm * xiout
@@ -742,6 +743,7 @@ contains
     if (ierr .ne. 0) then
       prt%i_elm = 0
       write(*,*) "WARNING: |xiout| > 2 after particle collision, removing particle. Try reducing particle time step"
+    end if
 
     pnorm = pout * ( mass * SPEED_OF_LIGHT )
     prt%p(1) = pnorm * xiout
@@ -782,6 +784,7 @@ contains
     if (ierr .ne. 0) then
       prt%i_elm = 0
       write(*,*) "WARNING: |xiout| > 2 after particle collision, removing particle. Try reducing particle time step"
+    end if
     
     ! Back to particle coordinates (gyroangle is left invariant)
     bperp = prt%p - dot_product(prt%p, bhat) * bhat

@@ -195,6 +195,7 @@ real*8 :: pnorm, pin, xiin, pout, xiout, rnd(2), rndprt(3), pinprt(3), poutprt(3
 real*8, dimension(:), allocatable    :: ni
 real*8 :: the, thi(1), ne
 real*8 :: bhat(3), bperp(3)
+integer :: ierr
 
 ! For CPU time
 real*8 :: t0, t1
@@ -226,18 +227,21 @@ chargenum = -1
 
 call random_seed()
 !!!
-call sim%initialize(num_groups=1)
-call init_imp_adas(0)
-call ccoll_init('ccolldata', dat)
-!!!
-dat = ccoll_read_L0L1table('ccolldata')
-allocate(sim%groups(1))
-allocate( ni(1), dat%mi(1), dat%Z0(1), dat%Zi(1), dat%ai(1), dat%Ii(1))
-dat%mi(1) = MASS_PROTON
-dat%Z0(1) = 1
-dat%Zi(1) = 1
-dat%ai(1) = 1
-dat%Ii(1) = 1.d0
+
+if (jorek_data) then
+  call sim%initialize(num_groups=1)
+  call init_imp_adas(0)
+  call ccoll_init('ccolldata', dat)
+else
+  dat = ccoll_read_L0L1table('ccolldata')
+  allocate(sim%groups(1))
+  allocate( ni(1), dat%mi(1), dat%Z0(1), dat%Zi(1), dat%ai(1), dat%Ii(1))
+  dat%mi(1) = MASS_PROTON
+  dat%Z0(1) = 1
+  dat%Zi(1) = 1
+  dat%ai(1) = 1
+  dat%Ii(1) = 1.d0
+end if
 
 ! Toggle here between GC and gyro-orbit
 
@@ -318,10 +322,10 @@ do istep=1,nstep
 
               if (part_screen) then
                 !** Use this instead to test the partial screening operator **!
-                call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+                call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4, ifail)
               else
                 call ccoll_gc_relativistic_explicitpush(dat, sim%groups(1)%mass * ATOMIC_MASS_UNIT, prt(iprt)%q, &
-                   ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4)
+                   ne, the, ni, thi, pin, pout, xiin, xiout, deltat, rnd, 1.0e-4, ifail)
               end if
 
               p(iprt)  = pout
@@ -390,7 +394,7 @@ do istep=1,nstep
                 bhat = vector_cylindrical_to_cartesian(prt(iprt)%x(3), B) / norm2(B)
                 pin  = norm2(prt(iprt)%p) / (mass * SPEED_OF_LIGHT)
                 xiin = dot_product(prt(iprt)%p, bhat) / norm2(prt(iprt)%p)
-                call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rndprt, 1.0e-4)
+                call ccoll_explicitpush_partialscreening(dat, ne, the, ni, pin, pout, xiin, xiout, deltat, rndprt, 1.0e-4, ifail)
                 bperp = prt(iprt)%p - dot_product(prt(iprt)%p, bhat) * bhat
                 bperp = bperp / norm2(bperp)
                 poutprt = (xiout * bhat + sqrt( 1.d0 - xiout**2 ) * bperp ) * pout

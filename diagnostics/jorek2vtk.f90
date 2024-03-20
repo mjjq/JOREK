@@ -110,7 +110,7 @@ real*8                :: r0_real8, rn0_real8, lnA
 real*8                :: T0_corr, r0_corr, rn0_corr, ne_JOREK, T_or_Te, T_or_Te_corr, T_or_Te_0 
 integer               :: i_imp, offset_bgimp, i_bg     ! Loop for more than one background impurity
 integer               :: i_proj
-integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2)
+integer               :: i_psin, i_test, iimp(6), i_ne, ineu(7), ibg_tot, i_pellet(2), i_flux(8), i_neo(10), i_boot(2), i_saw
 integer               :: i_full(11), i_vec_B, i_vec_V, i_vec_E, i_vec_Jpol
 integer, allocatable  :: iibg(:), iproj(:)
 character*36          :: imp_label, proj_label
@@ -382,6 +382,8 @@ end if
   call add_vtk_entry('Imp_bg      ', 'Imp_bg_Wm-3 ',  ibg_tot, n_scalars, si_units, scalar_names)  ! total bg radiation 
 
 endif
+
+  call add_vtk_entry('SAW_energy  ', 'SAW_energy  ',  i_saw, n_scalars, si_units, scalar_names)  ! SAW energy functional (linear MHD)
 
 #ifdef fullmhd
   call add_vtk_entry('B_R         ', 'B_R         ',    i_full( 1), n_scalars, si_units, scalar_names) 
@@ -1211,6 +1213,8 @@ do i=1,element_list%n_elements
 
            scalars(inode,i_pellet(2)) = local_source
         endif ! use_pellet
+        
+        scalars(inode,i_saw) = grad_psi**2 / (BigR**2)- (ps0_x*ps_x + ps0_y*ps_y)**2/(BigR**4*Btot**2)! SAW energy functional (linear MHD)
 
         ! vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
         ! vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot

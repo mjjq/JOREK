@@ -65,6 +65,7 @@ module postproc_help
     write(*,*) '  spi-state             Write out SPI related information'
     write(*,*) '  timesteps             List available restart files'
     write(*,*) '  tor_line              Expressions along line from (R,Z,phi0) to (R,Z,phi1)'
+    write(*,*) '  eval_saw_ene_linear   Evaluate Shear Alfven Wave energy in linear MHD'
     write(*,*) '----------------------------------------------------------------------------'
     write(*,*) '  Enter "help <command>" for details'
     write(*,*) '============================================================================'
@@ -699,6 +700,14 @@ module postproc_help
         write(*,*) '  for step 0 to 100 do'
         write(*,*) '    rectangular_torus 1.7 2.1 10 -0.3 0.3 10 0. 3.141592 60'
         write(*,*) '  done'
+      case ( 'eval_saw_ene_linear' )
+        write(*,*) 'Usage:'
+        write(*,*) '  eval_saw_ene_linear'
+        write(*,*) ''
+        write(*,*) 'Evaluate Shear Alfven Wave energy functional in linear MHD'
+        write(*,*) ''
+        write(*,*) 'Examples:'
+        write(*,*) '  eval_saw_ene_linear'
       case default
         write(*,*) '[This help topic does not exist, sorry]'
     end select

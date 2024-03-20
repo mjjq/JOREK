@@ -85,7 +85,7 @@ module mod_expression
   
   
   ! --- Standard lists of expressions (require init_expr call first!).
-  type(t_expr_list), save :: exprs_all, exprs_all_int, exprs_all_four     !< All available expressions.
+  type(t_expr_list), save :: exprs_all, exprs_all_int, exprs_all_four, exprs_saw_ene     !< All available expressions.
   
   
   
@@ -103,6 +103,7 @@ module mod_expression
     exprs_all%n_expr     = 0
     exprs_all_int%n_expr = 0
     exprs_all_four%n_expr = 0
+    exprs_saw_ene%n_expr = 0
     call add(exprs_all, 'index_now   ', 'Restart file index (or number of run tsteps)          ')
     call add(exprs_all, 'R           ', 'Cylindrical Coordinate R (== Major Radius)            ')
     call add(exprs_all, 'Z           ', 'Cylindrical Coordinate Z                              ')
@@ -331,6 +332,8 @@ module mod_expression
     call add(exprs_all_four, 'real        ', 'Real part      of 2D Fourier analysis                 ')
     call add(exprs_all_four, 'imaginary   ', 'Imaginary part of 2D Fourier analysis                 ')
     call add(exprs_all_four, 'phase       ', 'Complex phase  of 2D Fourier analysis                 ')
+
+    call add(exprs_saw_ene,  'saw_ene     ', 'SAW energy functional (linear MHD)                    ')
 
   end subroutine init_expr
   

@@ -69,6 +69,7 @@ real*8  :: eq_t(n_plane,0:n_var,n_gauss,n_gauss), eq_p(n_plane,0:n_var,n_gauss,n
 real*8  :: eq_ss(n_plane,0:n_var,n_gauss,n_gauss), eq_tt(n_plane,0:n_var,n_gauss,n_gauss), eq_st(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: eq_sp(n_plane,0:n_var,n_gauss,n_gauss), eq_tp(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: eq_spp(n_plane,0:n_var,n_gauss,n_gauss), eq_tpp(n_plane,0:n_var,n_gauss,n_gauss)
+real*8  :: eq_s_3d(n_plane,0:n_var,n_gauss,n_gauss), eq_t_3d(n_plane,0:n_var,n_gauss,n_gauss)
 real*8  :: wgauss_copy(n_gauss)
 real*8  :: psi_axisym(n_gauss,n_gauss)
 
@@ -118,6 +119,7 @@ real*8  :: fric_disp_tot, fric_disp, friction_dissip_tot
 real*8  :: H_int, H_ext, S_int, S_ext, heating_in, heating_out, source_in, source_out
 real*8  :: psi_xpoint(2),R_xpoint(2),Z_xpoint(2),s_xpoint(2),t_xpoint(2)
 real*8  :: dTdx, dTdy, drhodx, drhody, dPdx, dPdy, dpsidx, dpsidy, dudx, dudy, drhondx, drhondy, drhoimpdx, drhoimpdy
+real*8  :: dpsidx_3d, dpsidy_3d
 real*8  :: dTedx, dTedy, dTidx, dTidy, dPedx, dPedy, dPidx, dPidy
 real*8  :: w0, dwdx, dwdy, u0_xpp, u0_ypp
 real*8  :: source_volume, source_pellet, eta_T, eta_T_ohm, Z_eff
@@ -221,6 +223,9 @@ real*8     :: coef_prad_si                                    ! Prad,SI = coef_p
 integer    :: i_imp, i_phi                                    ! Loop for more than one background impurity
 real*8     :: frad_bg, Lrad_imp                               ! Retain hard-coded fitting for argon
 #endif
+
+! SAW energy functional (linear MHD)
+real*8     :: saw_ene_dens, saw_ene  
 
 #ifndef NOMPIVERSION
 call MPI_COMM_SIZE(MPI_COMM_WORLD, n_cpu, ierr) ! number of MPI procs
@@ -353,6 +358,9 @@ ife_max   = min((my_id +1) * ife_delta, element_list%n_elements)
 Tie_min_neg = 0.5*T_min_neg
 #endif
 
+saw_ene_dens = 0.d0
+saw_ene      = 0.d0
+
 !$omp parallel default(none)                                                                   &
 !$omp   shared(element_list,node_list, H, H_s, H_t, HZ, HZ_p, ife_min, ife_max, xpoint, xcase, &
 !$omp          H_ss, H_tt, H_st, HZ_pp,                                                        &
@@ -387,12 +395,14 @@ Tie_min_neg = 0.5*T_min_neg
 !$omp          index_main_imp,                                                                 &
 #endif
 !$omp          T_1, T_max_eta, T_max_eta_ohm, eta_T_dependent,                                 &
+!$omp          saw_ene_dens, saw_ene,                                                          &
 !$omp          wgauss_copy, varmin, varmax)                                                    &
 !$omp   private(ife,iv,inode,element,nodes,i,j, k,in, mp, ms, mt,                              &
 !$omp           x_g, y_g, x_s, y_s, x_t, y_t, xjac, xjac_R, xjac_Z, eq_g, eq_s, eq_t, eq_p,    &
 !$omp           x_ss, x_tt, x_st, y_ss, y_tt, y_st, eq_ss, eq_tt, eq_st, eq_sp, eq_tp,         &
-!$omp           eq_spp, eq_tpp, psi_axisym,                                                    &
+!$omp           eq_spp, eq_tpp, psi_axisym, eq_s_3d, eq_t_3d,                                  &
 !$omp           wst, BigR, r0, T0, Te0, zj0, ps0, dTdx, dTdy, drhodx, drhody, dpsidx, dpsidy, dudx, dudy,  &
+!$omp           dpsidx_3d, dpsidy_3d,                                                          &
 !$omp           w0, dwdx, dwdy, u0_xpp, u0_ypp, visco_T, visco_fact_old, visco_fact_new,       &
 !$omp           dpdx, dpdy, phi, Ti0, psi_as_coord, vprp_disp,                                 &
 !$omp           source_pellet, source_volume, eq_zne, eq_zTe, vpar0, BB2,                      &
@@ -456,7 +466,7 @@ omp_tid      = 0
 !$omp                VM_int, VM_tot, Vol, P_tot, D_tot,J2_tot, J2_int, J2_ext,                &
 !$omp                heli_tot, mag_wk_tot, vpar_disp_tot, thm_wk_tot, area1, mag_src_tot,     &
 !$omp                fric_disp_tot, R2curr_tmp, Zcurr_tmp,C_intern_3d,C_ext_3d,H_impl_int,    &
-!$omp                H_impl_ext, vprp_disp_tot)
+!$omp                H_impl_ext, vprp_disp_tot, saw_ene_dens, saw_ene)
 
 do ife = ife_min, ife_max
 
@@ -503,7 +513,7 @@ do ife = ife_min, ife_max
   enddo
 
   eq_g(:,:,:,:) = 0.d0; eq_s(:,:,:,:) = 0.d0; eq_t(:,:,:,:) = 0.d0; eq_p(:,:,:,:) = 0.d0; eq_ss(:,:,:,:) = 0.d0; eq_tt(:,:,:,:) = 0.d0; eq_st(:,:,:,:) = 0.d0; 
-  eq_sp(:,:,:,:) = 0.d0; eq_tp(:,:,:,:) = 0.d0; eq_spp(:,:,:,:) = 0.d0; eq_tpp(:,:,:,:) = 0.d0;
+  eq_sp(:,:,:,:) = 0.d0; eq_tp(:,:,:,:) = 0.d0; eq_spp(:,:,:,:) = 0.d0; eq_tpp(:,:,:,:) = 0.d0; eq_s_3d(:,:,:,:) = 0.d0; eq_t_3d(:,:,:,:) = 0.d0;
 
   do i=1,n_vertex_max
     do j=1,n_degrees
@@ -526,6 +536,11 @@ do ife = ife_min, ife_max
 
                 eq_spp(mp,k,ms,mt) = eq_spp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)*HZ_pp(in,mp)
                 eq_tpp(mp,k,ms,mt) = eq_tpp(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)*HZ_pp(in,mp)
+                
+                if ( in == 1 ) cycle ! Record only the non-axisymmetric components
+                eq_s_3d(mp,k,ms,mt) = eq_s_3d(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_s(i,j,ms,mt)* HZ(in,mp)
+                eq_t_3d(mp,k,ms,mt) = eq_t_3d(mp,k,ms,mt) + nodes(i)%values(in,j,k) * element%size(i,j) * H_t(i,j,ms,mt)* HZ(in,mp)
+             
               enddo
             enddo
 
@@ -689,6 +704,9 @@ do ife = ife_min, ife_max
         vpar_y = ( - x_t(ms,mt) * vpar_s + x_s(ms,mt) * vpar_t ) / xjac
 
         BB2 = (F0*F0 + dpsidx*dpsidx + dpsidy*dpsidy) / BigR**2
+
+        dpsidx_3d = (   y_t(ms,mt) * eq_s_3d(mp,var_psi,ms,mt) - y_s(ms,mt) * eq_t_3d(mp,var_psi,ms,mt) ) / xjac
+        dpsidy_3d = ( - x_t(ms,mt) * eq_s_3d(mp,var_psi,ms,mt) + x_s(ms,mt) * eq_t_3d(mp,var_psi,ms,mt) ) / xjac
 
         !dPdx = r0 * dTdx + T0 * drhodx
         !dPdy = r0 * dTdy + T0 * drhody
@@ -1334,7 +1352,8 @@ do ife = ife_min, ife_max
           VM_ext = VM_ext + (dpsidx**2+dpsidy**2)/BigR**2 * xjac * BigR * wst * delta_phi
           J2_ext = J2_ext + eta_T_ohm * (ZJ0/BigR)**2.d0 * xjac * BigR * wst * delta_phi
         endif
-
+        saw_ene_dens = (dpsidx_3d**2 + dpsidy_3d**2) / BigR **2  - (dpsidx * dpsidx_3d + dpsidy * dpsidy_3d) ** 2 / (BigR**4 * BB2)
+        saw_ene = saw_ene + saw_ene_dens * xjac * BigR * wst * delta_phi ! SAW energy functional (linear MHD)
       enddo
     enddo
   enddo
@@ -2207,6 +2226,9 @@ if (my_id .eq. 0) then
 
       case ( 'Ohmic_out' )
         res(iexpr) = ohm_out 
+
+      case ( 'saw_ene' )
+        res(iexpr) = saw_ene
 
 #if (defined WITH_Neutrals) || (defined WITH_Impurities)
       case ( 'Rad_tot' )

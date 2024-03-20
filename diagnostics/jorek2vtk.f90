@@ -1215,7 +1215,12 @@ do i=1,element_list%n_elements
            scalars(inode,i_pellet(2)) = local_source
         endif ! use_pellet
         
-        scalars(inode,i_saw) = grad_psi**2 / (BigR**2)- (ps0_x*ps_x + ps0_y*ps_y)**2/(BigR**4*Btot**2)! SAW energy functional (linear MHD)
+        ! SAW energy functional (linear MHD)
+        if ( without_n0_mode ) then
+          scalars(inode,i_saw) = grad_psi**2 / (BigR**2) - (ps_x * (ps_x + ps0_x) + ps_y * (ps_y + ps0_y))**2/(BigR**4*Btot**2)
+        else
+          scalars(inode,i_saw) = ((ps_x-ps0_x)**2 + (ps_y-ps0_y)**2) / (BigR**2) - ((ps_x-ps0_x)*ps_x + (ps_y-ps0_y)*ps_y)**2/(BigR**4*Btot**2)
+        endif
 
         ! vectors(inode,:,1) = (/ - R * u0_y ,   + R * u0_x ,   0.d0 /)
         ! vectors(inode,:,2) = (/ + ps_y /R * scalars(inode,7), - ps_x /R * scalars(inode,7), 0.d0 /) * Btot
